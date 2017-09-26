@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import print_function
 from common_test_openrave import *
 
 class TestCOLLADA(EnvironmentSetup):
@@ -534,7 +535,7 @@ class TestCOLLADA(EnvironmentSetup):
         env3 = Environment()
         
         for body2 in env2.GetBodies():
-            print 'opening ', body2.GetURI()
+            print('opening ', body2.GetURI())
             if body2.IsRobot():
                 body3 = env3.ReadRobotURI(body2.GetURI())
             else:

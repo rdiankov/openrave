@@ -156,7 +156,7 @@ class TestEnvironment(EnvironmentSetup):
             clonedenv.Clone(env, CloningOptions.Bodies)
             endtime=time.time()-starttime
             self.log.info('clone time: %fs',endtime)
-            print endtime
+            print(endtime)
             misc.CompareEnvironments(env,clonedenv,epsilon=g_epsilon)
             clonedrobot = clonedenv.GetRobot(robot.GetName())
             assert(clonedrobot.GetActiveManipulator().GetName() == robot.GetActiveManipulator().GetName())

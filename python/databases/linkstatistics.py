@@ -48,8 +48,8 @@ When using link statics, it is possible to set the joints weights and resolution
        lmodel.autogenerate()
    lmodel.setRobotWeights()
    lmodel.setRobotResolutions(xyzdelta=0.01)
-   print 'robot resolutions: ',repr(robot.GetDOFResolutions())
-   print 'robot weights: ',repr(robot.GetDOFWeights())
+   print('robot resolutions: ',repr(robot.GetDOFResolutions()))
+   print('robot weights: ',repr(robot.GetDOFWeights()))
 
 Class Definitions
 -----------------

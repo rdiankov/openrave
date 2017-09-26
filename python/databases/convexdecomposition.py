@@ -61,7 +61,7 @@ Class Definitions
 -----------------
 
 """
-from __future__ import with_statement # for python 2.5
+from __future__ import with_statement, print_function # for python 2.6
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Apache License, Version 2.0'
@@ -96,7 +96,7 @@ log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 try:
     from .. import convexdecompositionpy
 except Exception as e:
-    print 'failed to import convexdecompositionpy', e
+    print('failed to import convexdecompositionpy', e)
 
 class ConvexDecompositionError(Exception):
     def __init__(self,msg=u''):

@@ -21,7 +21,7 @@ objects the generator relies on are used to produce a unique ID to index the dat
 $OPENRAVE_DATABASE. For example, the grasping database will combine the robot manipulator hash and
 the target object hash.
 """
-from __future__ import with_statement # for python 2.5
+from __future__ import with_statement, print_function # for python 2.6
 
 try:
     import cPickle as pickle
@@ -244,14 +244,14 @@ class DatabaseGenerator(metaclass.AutoReloader):
                 filename=model.getfilename(True)
                 if len(filename) == 0:
                     filename=model.getfilename(False)
-                print filename
+                print(filename)
                 openravepy_int.RaveDestroy()
                 sys.exit(0)
             if options.gethas:
                 hasmodel=model.load()
                 if hasmodel:
                     hasmodel = os.path.isfile(model.getfilename(True))
-                print int(hasmodel)
+                print(int(hasmodel))
                 openravepy_int.RaveDestroy()
                 sys.exit(not hasmodel)
             if options.viewername is not None:

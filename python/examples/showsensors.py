@@ -103,7 +103,7 @@ To OpenRAVE XML to attach a flash LIDAR sensor is:
 
 .. examplepost-block:: showsensors
 """
-from __future__ import with_statement # for python 2.5
+from __future__ import with_statement, print_function # for python 2.6
 __author__ = 'Rosen Diankov'
 
 import time, threading
@@ -124,7 +124,7 @@ def main(env,options):
             else:
                 sensor.Configure(Sensor.ConfigureCommand.PowerOff)
                 sensor.Configure(Sensor.ConfigureCommand.RenderDataOff)
-        print 'showing sensor %s, try moving obstacles'%(sensors[ienablesensor].GetName())
+        print('showing sensor %s, try moving obstacles'%(sensors[ienablesensor].GetName()))
         if sensors[ienablesensor].Supports(Sensor.Type.Laser):
             # if laser, wait for the sensor data to be updated and then print it
             olddata = sensors[ienablesensor].GetSensorData(Sensor.Type.Laser)
@@ -133,7 +133,7 @@ def main(env,options):
                 if data.stamp != olddata.stamp:
                     break
                 time.sleep(0.1)
-            print 'sensor data: ',data.ranges                        
+            print('sensor data: ',data.ranges)
         time.sleep(5)
         ienablesensor = (ienablesensor+1)%len(sensors)
 

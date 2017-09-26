@@ -163,11 +163,11 @@ def ComputeZMP(config,params):
         zddi=com_acc[2]
 
         # Testing purpose
-        # print '-------'
-        # print i
-        # print xddi
-        # print yddi
-        # print zddi
+        # print('-------')
+        # print(i)
+        # print(xddi)
+        # print(yddi)
+        # print(zddi)
 
         # Compute the numerators and denominator
         xnum+=masses[i]*(zddi*xi-xddi*zi)-Mi[1]
@@ -272,11 +272,11 @@ def ComputeCoefsFractionZMP(config_pure,params):
         # Testing purpose
         # sd=1
         # sdd=1
-        # print '-------'
-        # print i
-        # print axdd*sdd+bxdd*sd*sd
-        # print aydd*sdd+bydd*sd*sd
-        # print azdd*sdd+bzdd*sd*sd
+        # print('-------')
+        # print(i)
+        # print(axdd*sdd+bxdd*sd*sd)
+        # print(aydd*sdd+bydd*sd*sd)
+        # print(azdd*sdd+bzdd*sd*sd)
        
         # Terms in omega
         if moment_coef>0:

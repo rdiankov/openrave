@@ -154,7 +154,7 @@ class MemberDefTypeSubRenderer(Renderer):
         try:
             self.document.note_explicit_target(target)
         except Exception as e:
-            print "Failed to register id: %s. It is probably a duplicate." % refid
+            print("Failed to register id: %s. It is probably a duplicate." % refid)
 
         # Build the list item
         nodelist = [target, self.node_factory.definition_list_item("",term, definition)]

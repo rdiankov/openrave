@@ -268,13 +268,13 @@ class TestTrajectory(EnvironmentSetup):
             curtime = 0
             trajdata = traj.Sample(0)
             for i in range(traj.GetNumWaypoints()-1):
-                print curtime
+                print(curtime)
                 start = traj.GetWaypoint(i)
                 end = traj.GetWaypoint(i+1)
                 enddeltatime = spec.ExtractDeltaTime(end)
                 if enddeltatime > stepsize:
                     for t in reversed(arange(curtime+enddeltatime,curtime,-stepsize)):
-                        print t
+                        print(t)
                         newdata = traj.Sample(t)
                         spec.InsertDeltaTime(newdata,t-curtime)
                         curtime = t

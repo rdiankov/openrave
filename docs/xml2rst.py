@@ -55,6 +55,7 @@ a transformation to docutils XML.
 ###############################################################################
 # Import
 
+from __future__ import print_function
 import sys
 import os.path
 import re
@@ -383,7 +384,7 @@ def errorOut(lines):
     """
     scriptName = os.path.basename(sys.argv[0])
     for line in lines:
-        print >>sys.stderr, ("%s: %s" % ( scriptName, line, ))
+        print("%s: %s" % ( scriptName, line, ), file=sys.stderr)
     return 0
 
 ###############################################################################

@@ -138,7 +138,7 @@ Command-line
 Class Definitions
 -----------------
 """
-from __future__ import with_statement # for python 2.5
+from __future__ import with_statement, print_function # for python 2.6
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Apache License, Version 2.0'
@@ -671,7 +671,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 if not dofindices[0] in self.manip.GetArmIndices():
                     raise LookupError("cannot find joint '%s(%d)' in solve joints: %s"%(jointname,dofindices[0],self.manip.GetArmIndices()))
                 freeindices.append(dofindices[0])
-        print 'getIndicesFromJointNames',freeindices,freejoints
+        print('getIndicesFromJointNames',freeindices,freejoints)
         return freeindices
 
     def generate(self,iktype=None, freejoints=None, freeinc=None, freeindices=None, precision=None, forceikbuild=True, outputlang=None, avoidPrismaticAsFree=False, ipython=False, ikfastoptions=0, ikfastmaxcasedepth=3):

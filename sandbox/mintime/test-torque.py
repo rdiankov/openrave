@@ -101,7 +101,7 @@ qd_max=array([3,3,3,3])
 deb=time.time()
 
 
-print 'Running the time parameterization algorithm...'
+print('Running the time parameterization algorithm...')
 
 # Set up a minimum time problem under torque limits
 
@@ -145,9 +145,9 @@ traj2=pwp_traj.ResampleTraj(s_res_u,sdot_res_u,t_step)
 ###################### Plotting ############################
 
 
-print '\n*****************************************************************\n'
-print 'Total execution time: '+str(time.time()-deb)+'s'
-print '\n*****************************************************************\n'
+print('\n*****************************************************************\n')
+print('Total execution time: '+str(time.time()-deb)+'s')
+print('\n*****************************************************************\n')
 
 
 raw_input('Press Enter to execute the trajectory /before/ time-reparameterization (duration='+str(traj.duration)+'s)')

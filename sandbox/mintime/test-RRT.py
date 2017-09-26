@@ -78,7 +78,7 @@ goal_config=[ 2.32883,  1.61082,  0.97706,  1.94169]
 
 deb=time.time()
 
-print 'Searching a collision-free path using bi-rrt...'
+print('Searching a collision-free path using bi-rrt...')
 rave_traj1=RRT_Smooth.RRT(robot,goal_config)
 
 
@@ -109,7 +109,7 @@ tunings.palier=20 #length of the palier around zero inertia points
 tunings.tolerance_ends=1e-2 # 
 
 
-print 'Reparameterizing the RRT path using optimal-time algorithm...'
+print('Reparameterizing the RRT path using optimal-time algorithm...')
 [rave_traj2,traj2]=RRT_Smooth.Retime(robot,rave_traj1,tunings)
 # MintimeProblemTorque.Execute(robot,traj2,0.01)
 
@@ -134,14 +134,14 @@ tunings.dt_sample=0.005 # time step to sample the shortcut
 tunings.dt_integ=0.001 # time step to integrate the limiting curves
 tunings.threshold_waive=1e-2
 
-print 'Running the shortcutting algorithm...'
+print('Running the shortcutting algorithm...')
 time.sleep(1)
 [rave_traj3,traj3]=RRT_Smooth.RepeatIterateSmooth(robot,traj2,tunings)
 
 
-print '\n*****************************************************************\n'
-print 'Total execution time (including RRT): '+str(int(time.time()-deb))+'s'
-print '\n*****************************************************************\n'
+print('\n*****************************************************************\n')
+print('Total execution time (including RRT): '+str(int(time.time()-deb))+'s')
+print('\n*****************************************************************\n')
 
 
 

@@ -1,5 +1,6 @@
 """Do parabolic segment retiming to a goal position without checking collisions.
 """
+from __future__ import print_function
 from openravepy import *
 import numpy
 env = Environment() # create openrave environment
@@ -14,7 +15,7 @@ with env:
     traj.Insert(0,robot.GetActiveDOFValues())
     traj.Insert(1,goalvalues)
     planningutils.RetimeActiveDOFTrajectory(traj,robot,hastimestamps=False,maxvelmult=1,maxaccelmult=1,plannername='ParabolicTrajectoryRetimer')
-    print 'duration',traj.GetDuration()
+    print('duration',traj.GetDuration())
 
 robot.GetController().SetPath(traj)
 robot.WaitForController(0)

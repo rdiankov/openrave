@@ -174,7 +174,7 @@ A. Most likely not, usually an iksolver finishes within 10 minutes.
 
 
 """
-from __future__ import with_statement # for python 2.5
+from __future__ import with_statement, print_function # for python 2.6
 
 from sympy import __version__ as sympy_version
 if sympy_version < '0.7.0':
@@ -1801,7 +1801,7 @@ class IKFastSolver(AutoReloader):
                     neweq = self.SimplifyAtan2(neweq2)
                 else:
                     try:
-                        #print 'simplifying',neweq
+                        #print('simplifying',neweq)
                         neweq = self.SimplifyTransform(neweq)
                     except PolynomialError:
                         # ok if neweq is too complicated
@@ -2289,7 +2289,7 @@ class IKFastSolver(AutoReloader):
 #         LinksRaw2 = []
 #         for Torig in LinksRaw:
 #             T = Matrix(Torig)
-#             #print axisAngleFromRotationMatrix(numpy.array(numpy.array(T[0:3,0:3]),numpy.float64))
+#             #print(axisAngleFromRotationMatrix(numpy.array(numpy.array(T[0:3,0:3]),numpy.float64)))
 #             for i in range(12):
 #                 ti = T[i]
 #                 if ti.is_number and len(str(ti)) > 30:
@@ -2685,7 +2685,7 @@ class IKFastSolver(AutoReloader):
 #                 manipdir /= sqrt(manipdir[0]*manipdir[0]+manipdir[1]*manipdir[1]+manipdir[2]*manipdir[2]) # unfortunately have to do it again...
 #                 manippos = Matrix(3,1,[self.convertRealToRational(x) for x in localpos2])
 #             except Exception as e:
-#                 print 'failed to rotate joint correctly',e
+#                 print('failed to rotate joint correctly',e)
 
         LinksInv = [self.affineInverse(link) for link in Links]
         T = self.multiplyMatrix(Links)
@@ -4050,7 +4050,7 @@ class IKFastSolver(AutoReloader):
 #                 ynew = []
 #                 for i in range(L.shape[0]):
 #                     q,r=div(y[i][0]*DD[i,i],y[i][1],*pvars)
-#                     print 'remainder: ',r
+#                     print('remainder: ',r)
 #                     ynew.append(q)
 #                 
 #                 x = [[ynew[-1],U[-1,-1]]]
@@ -4064,7 +4064,7 @@ class IKFastSolver(AutoReloader):
 #                     res = (commondenom*b[i]-accum)/(commondenom*U[i,i])
 #                     x.append(self.recursiveFraction(res))
 #                 
-#                 print 'ignoring num symbols: ',numsymbols
+#                 print('ignoring num symbols: ',numsymbols)
 #                 continue
 
     def reduceBothSidesSymbolically(self,*args,**kwargs):

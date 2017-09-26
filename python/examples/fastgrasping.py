@@ -87,7 +87,7 @@ def main(env,options):
         self = FastGrasping(robot,target=body)
         grasp,jointvalues = self.computeGrasp()
         if grasp is not None:
-            print 'grasp is found!'
+            print('grasp is found!')
             self.gmodel.showgrasp(grasp)
             self.robot.SetDOFValues(jointvalues)
             raw_input('press any key')

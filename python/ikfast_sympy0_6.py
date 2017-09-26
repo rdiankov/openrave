@@ -173,7 +173,7 @@ A. Most likely not, usually an iksolver finishes within 10 minutes.
 
 
 """
-from __future__ import with_statement # for python 2.5
+from __future__ import with_statement, print_function # for python 2.6
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Lesser GPL, Version 3'
@@ -1203,7 +1203,7 @@ class IKFastSolver(AutoReloader):
                     TLeftjoint = self.affineInverse(self.numpyMatrixToSympy(joint.GetInternalHierarchyRightTransform()))
                     TRightjoint = self.affineInverse(self.numpyMatrixToSympy(joint.GetInternalHierarchyLeftTransform()))
                     axissign = -S.One
-                #print i,TLeftjoint,TRightjoint
+                #print(i,TLeftjoint,TRightjoint)
                 if joint.IsStatic():
                     Tright = self.affineSimplify(Tright * TLeftjoint * TRightjoint)
                 else:
@@ -1949,7 +1949,7 @@ class IKFastSolver(AutoReloader):
 #                 basedir /= sqrt(basedir[0]*basedir[0]+basedir[1]*basedir[1]+basedir[2]*basedir[2]) # unfortunately have to do it again...
 #                 basepos = Matrix(3,1,[self.convertRealToRational(x) for x in localpos2])
 #             except Exception as e:
-#                 print 'failed to rotate joint correctly',e
+#                 print('failed to rotate joint correctly',e)
 
         LinksInv = [self.affineInverse(link) for link in Links]
         T = self.multiplyMatrix(Links)
@@ -2687,7 +2687,7 @@ class IKFastSolver(AutoReloader):
                     if len(reducedeqs) > 0:
                         break;
             except self.CannotSolveError as e:
-                print e
+                print(e)
                 continue
 
         if len(reducedeqs) > 0:
@@ -2799,7 +2799,7 @@ class IKFastSolver(AutoReloader):
 #                 finalnums = S.One
 #                 finaldenoms = S.One
 #                 for i in range(len(newunknowns)):
-#                     print i
+#                     print(i)
 #                     n,d = self.recursiveFraction(L[i,i]*U[i,i]/DD[i,i])
 #                     finalnums *= n
 #                     finaldenoms *= d
@@ -2823,9 +2823,9 @@ class IKFastSolver(AutoReloader):
 # 
 #                 ynew = []
 #                 for i in range(L.shape[0]):
-#                     print i
+#                     print(i)
 #                     q,r=div(y[i][0]*DD[i,i],y[i][1],*pvars)
-#                     print 'remainder: ',r
+#                     print('remainder: ',r)
 #                     ynew.append(q)
 #                 
 #                 x = [[ynew[-1],U[-1,-1]]]
@@ -2839,7 +2839,7 @@ class IKFastSolver(AutoReloader):
 #                     res = (commondenom*b[i]-accum)/(commondenom*U[i,i])
 #                     x.append(self.recursiveFraction(res))
 #                 
-#                 print 'ignoring num symbols: ',numsymbols
+#                 print('ignoring num symbols: ',numsymbols)
 #                 continue
 
     def reduceBothSidesSymbolically(self,*args,**kwargs):
@@ -3116,7 +3116,7 @@ class IKFastSolver(AutoReloader):
                 for peq0, peq1 in combinations(singledegreeeqs,2):
                     AllEquations.append(simplify((peq0.coeff(0)*peq1.coeff(1) - peq0.coeff(1)*peq1.coeff(0)).subs(self.invsubs)))
 
-                print AllEquations
+                print(AllEquations)
                 #sol=self.solvePairVariablesHalfAngle(AllEquations,usedvars[1],usedvars[2],[])
             
         # choose which leftvar can determine the singularity of the following equations!
@@ -3456,7 +3456,7 @@ class IKFastSolver(AutoReloader):
             hassinglevariable |= any([all([__builtin__.sum(monom)==monom[i] for monom in newpeq.monoms]) for i in range(3)])
         
         if hassinglevariable:
-            print 'hassinglevariable, trying with raw equations'
+            print('hassinglevariable, trying with raw equations')
             AllEquations = []
             for eq in reducedeqs:
                 peq = Poly(eq,tvar)
@@ -5687,7 +5687,7 @@ class IKFastSolver(AutoReloader):
 
                         if k > 0:
                             if len(vars) > 0:
-                                #print i,j,M[k-1, k-1]
+                                #print(i,j,M[k-1, k-1])
                                 D,r = div(Poly(D,*vars),M[k-1, k-1])
                             else:
                                 D /= M[k-1, k-1]

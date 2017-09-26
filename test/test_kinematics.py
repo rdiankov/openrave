@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import print_function
 from common_test_openrave import *
 
 class TestKinematics(EnvironmentSetup):
@@ -563,7 +564,7 @@ class TestKinematics(EnvironmentSetup):
                         errmult = 1.0
                         if errfirst[-1] > deltastep*1e-5:
                             errmult = 2.5
-                        #print 'trans',errsecond[-1],errfirst[-1],linalg.norm(realoffset)
+                        #print('trans',errsecond[-1],errfirst[-1],linalg.norm(realoffset))
                         assert(errsecond[-1]*errmult<=errfirst[-1]) # should be way better
                         if len(errfirst) > 2:
                             assert(errfirst[-2]<=errfirst[-1]+1e-15)
@@ -575,7 +576,7 @@ class TestKinematics(EnvironmentSetup):
                         seconddelta = firstdelta + 0.5*dot(newdeltavalues,dot(Ha,newdeltavalues))
                         angleerrorfirst = linalg.norm(firstdelta-axisdelta)
                         angleerrorsecond = linalg.norm(seconddelta-axisdelta)
-                        #print angleerrorfirst,angleerrorsecond,linalg.norm(axisdelta)
+                        #print(angleerrorfirst,angleerrorsecond,linalg.norm(axisdelta))
                         assert(angleerrorfirst <= 1.35*linalg.norm(axisdelta))
                         assert(angleerrorsecond <= 1.35*linalg.norm(axisdelta))
                         #assert(angleerrorsecond <= angleerrorfirst+1e-14) # for some reason not valid all the time

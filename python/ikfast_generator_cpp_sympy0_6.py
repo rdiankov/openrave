@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """generates C++ code from the IKFastSolver AST.
 """
-from __future__ import with_statement # for python 2.5
+from __future__ import with_statement, print_function # for python 2.6
 
 from sympy import __version__ as sympy_version
 if sympy_version >= '0.7.0':
@@ -1431,7 +1431,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
     def endCheckZeros(self, node):
         return ''
     def generateFreeParameter(self, node):
-        #print 'free variable ',node.jointname,': ',self.freevars
+        #print('free variable ',node.jointname,': ',self.freevars)
         self.freevars.append(node.jointname)
         self.freevardependencies.append((node.jointname,node.jointname))
         code = 'IkReal %smul = 1;\n%s=0;\n'%(node.jointname,node.jointname)

@@ -1,3 +1,4 @@
+from __future__ import print_function
 from mpmath import mp, iv, arange
 import numpy as np
 
@@ -121,7 +122,7 @@ def InterpolateArbitraryVelND(x0Vect_, x1Vect_, v0Vect_, v1Vect_, xminVect_, xma
             maxIndex = i        
 
     ## TEMPORARY
-    # print "maxIndex = {0}".format(maxIndex)
+    # print("maxIndex = {0}".format(maxIndex))
     curvesnd = ReinterpolateNDFixedDuration(curves, vmVect, amVect, maxIndex, delta, tryHarder)
 
     newCurves = []
@@ -759,9 +760,9 @@ def Interpolate1DFixedDuration(x0, x1, v0, v1, newDuration, vm, am):
     if Abs(vp) > vm:
         vmnew = Mul(mp.sign(vp), vm)
         D2 = Prod([pointfive, Sqr(Sub(vp, vmnew)), Sub(mp.fdiv(one, a0), mp.fdiv(one, a1))])
-        # print "D2",
+        # print("D2", end=' ')
         # mp.nprint(D2, n=_prec)
-        # print "vmnew",
+        # print("vmnew", end=' ')
         # mp.nprint(vmnew, n=_prec)
         A2 = Sqr(Sub(vmnew, v0))
         B2 = Neg(Sqr(Sub(vmnew, v1)))

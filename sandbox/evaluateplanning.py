@@ -98,7 +98,7 @@ class EvaluateInverseReachability(OpenRAVEEvaluator):
             gr = mobilemanipulation.GraspReachability(robot=self.robot,irgmodels=[(irmodel,gmodel)])
             starttime = time.time()
             densityfn,samplerfn,bounds = gr.computeGraspDistribution(logllthresh=logllthresh)
-            print 'time to build distribution: %fs'%(time.time()-starttime)
+            print('time to build distribution: %fs'%(time.time()-starttime))
             #h = gr.irmodel.showBaseDistribution(densityfn,bounds,self.target.GetTransform()[2,3],thresh=1.0)
             data = StatisticsData()
             data.Nsamples = Nsamples
@@ -140,7 +140,7 @@ class EvaluateInverseReachability(OpenRAVEEvaluator):
             datafilename = self.dataprefix+'.'+gmodel.target.GetName()+'.pp'
             with open(datafilename,'w') as f:
                 pickle.dump(data, f)
-        print 'finished inversereachability'
+        print('finished inversereachability')
             
     @staticmethod
     def gatherdata(robotname):

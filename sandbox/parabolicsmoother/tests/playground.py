@@ -62,10 +62,10 @@ for i in xrange(maxit):
             assert(ramp.IsEqual(ramp.Abs(temp[1].v0), vm))
             assert(ramp.IsEqual(ramp.Abs(temp[2].v0), vm))
     except:
-        print 'x0 = {0}'.format(x0)
-        print 'x1 = {0}'.format(x1)
-        print 'v0 = {0}'.format(v0)
-        print 'v1 = {0}'.format(v1)
+        print('x0 = {0}'.format(x0))
+        print('x1 = {0}'.format(x1))
+        print('v0 = {0}'.format(v0))
+        print('v1 = {0}'.format(v1))
         break
 
 ################################################################################
@@ -139,7 +139,7 @@ for _ in xrange(nTrials):
         assert(ramp.IsEqual(fixedCurve.d, ramp.Sub(mp.mpf(str(x1)), mp.mpf(str(x0)))))
         assert(ramp.IsEqual(fixedCurve.duration, duration))
         nSuccess += 1
-print "Easy bounds : interpolation with fixed duration successful instance = {0}/{1}".format(nSuccess, nTrials)
+print("Easy bounds : interpolation with fixed duration successful instance = {0}/{1}".format(nSuccess, nTrials))
 
 ################################################################################
 # Check interpolation with fixed duration (bounds from a real robot)
@@ -163,7 +163,7 @@ vboundfailed = 0
 xboundfailed = 0
 interpfailed = 0
 for it in xrange(nTrials):
-    print "iteration {0}/{1}".format(it + 1, nTrials)
+    print("iteration {0}/{1}".format(it + 1, nTrials))
     x0Vect = RandVect2(xMin, xMax)
     x1Vect = RandVect2(xMin, xMax)
     v0Vect = RandVect2(vMin, vMax)
@@ -172,7 +172,7 @@ for it in xrange(nTrials):
     curvesnd = InterpolateArbitraryVelND(x0Vect, x1Vect, v0Vect, v1Vect, xMin, xMax, vMax, aMax, tryHarder=True)
     if not curvesnd.isEmpty:
         ret = ramp.CheckParabolicCurvesND(curvesnd, xMin, xMax, vMax, aMax, x0Vect, x1Vect, v0Vect, v1Vect)
-        # print ret
+        # print(ret)
         # raw_input()
         if ret == PCR.Normal:
             nSuccess += 1
@@ -183,7 +183,7 @@ for it in xrange(nTrials):
             xboundfailed += 1
             # IPython.embed()
         else:
-            print ret
+            print(ret)
             raw_input()
         # if ramp.CheckParabolicCurvesND(curvesnd, vMax, aMax, x0Vect=x0Vect, x1Vect=x1Vect):
         #     nSuccess += 1
@@ -191,7 +191,7 @@ for it in xrange(nTrials):
     else:
         interpfailed += 1
         # IPython.embed()
-print "Real bounds : interpolation with fixed duration successful instances = {0}/{1}".format(nSuccess, nTrials)
-print "Real bounds : interpolation failed = {0}/{1}".format(interpfailed, nTrials)
-print "Real bounds : x-bound failed = {0}/{1}".format(xboundfailed, nTrials)
-print "Real bounds : other failures = {0}/{1}".format(nTrials - nSuccess - interpfailed - xboundfailed, nTrials)
+print("Real bounds : interpolation with fixed duration successful instances = {0}/{1}".format(nSuccess, nTrials))
+print("Real bounds : interpolation failed = {0}/{1}".format(interpfailed, nTrials))
+print("Real bounds : x-bound failed = {0}/{1}".format(xboundfailed, nTrials))
+print("Real bounds : other failures = {0}/{1}".format(nTrials - nSuccess - interpfailed - xboundfailed, nTrials))

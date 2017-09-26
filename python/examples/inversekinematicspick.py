@@ -33,7 +33,7 @@ Can also change the inverse kinematics type to use by:
 
 .. examplepost-block:: inversekinematicspick
 """
-from __future__ import with_statement # for python 2.5
+from __future__ import with_statement, print_function # for python 2.6
 __author__ = 'Rosen Diankov'
 
 import threading
@@ -60,7 +60,7 @@ def main(env,options):
         ikmodels = []
         for robot in env.GetRobots():
             for manip in robot.GetManipulators():
-                print manip
+                print(manip)
                 try:
                     robot.SetActiveManipulator(manip)
                     ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=iktype)
@@ -70,7 +70,7 @@ def main(env,options):
                             continue
                     ikmodels.append(ikmodel)
                 except Exception as e:
-                    print 'failed manip %s'%manip, e
+                    print('failed manip %s'%manip, e)
                 
         if len(ikmodels) == 0:
             raveLogWarn('no manipulators found that can be loaded with iktype %s'%str(iktype))

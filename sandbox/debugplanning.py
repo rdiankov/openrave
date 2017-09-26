@@ -10,7 +10,7 @@
 # limitations under the License.
 # random code that helps with debugging/testing the python interfaces and examples
 # this is not meant to be run by normal users
-from __future__ import with_statement # for python 2.5
+from __future__ import with_statement, print_function # for python 2.6
 __copyright__ = 'Copyright (C) 2009-2010'
 __license__ = 'Apache License, Version 2.0'
 
@@ -142,7 +142,7 @@ def test_graspplanning():
     transparency=0.7
     newrobots=[]
     for T,preshape in configs:
-        print len(newrobots)
+        print(len(newrobots))
         newrobot = env.ReadRobotXMLFile(robotfilename)
         for link in newrobot.GetLinks():
             for geom in link.GetGeometries():
@@ -169,7 +169,7 @@ def test_graspreachability():
     self = mobilemanipulation.GraspReachability(robot=robot,gmodel=gmodel)
     starttime = time.time()
     densityfn,samplerfn,bounds,validgrasps = self.computeGraspDistribution(logllthresh=2.4)
-    print 'time to build distribution: %fs'%(time.time()-starttime)
+    print('time to build distribution: %fs'%(time.time()-starttime))
     h = self.irmodel.showBaseDistribution(densityfn,bounds,self.target.GetTransform()[2,3],thresh=1.0)
 
 def test_mobilemanipulation():
@@ -417,7 +417,7 @@ def test_hrp2():
                 if irmodel.load():
                     irmodels.append(irmodel)
                 else:
-                    print 'failed to load irmodel',manip.GetName(),id
+                    print('failed to load irmodel',manip.GetName(),id)
     irgmodels = []
     targets = []
     for manip in manips:
@@ -572,7 +572,7 @@ def test_navigation():
     env.SetDebugLevel(DebugLevel.Debug)
     starttime = time.time()
     self.basemanip.MoveActiveJoints(goal=goal2d,maxiter=3000,steplength=0.05)
-    print time.time()-starttime
+    print(time.time()-starttime)
 
 def test_fatmodels():
     env=Environment()
@@ -633,7 +633,7 @@ def test_calibviews():
         pose = poseMult(pose,relativepose)
         q = self.vmodel.manip.FindIKSolution(dot(matrixFromPose(pose),self.Tpatternrobot),True)
         if q is not None:
-            print i
+            print(i)
             #self.robot.SetJointValues(q,self.vmodel.manip.GetArmJoints())
             self.vmodel.visualprob.ComputeVisibleConfiguration(pose=pose)
             raw_input('asdf')
