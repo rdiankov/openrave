@@ -463,7 +463,7 @@ def convert(inNm=None, outNm=None,inF=None,outF=None,mainXsltF=None):
     inParser = etree.XMLParser()
     try:
         inDoc = etree.parse(inF, inParser)
-    except Exception, e:
+    except Exception as e:
         errorExit(1, ( "Error parsing input file %r: %s" % ( inNm, e, ), ))
     if inFclose:
         inF.close()
@@ -475,7 +475,7 @@ def convert(inNm=None, outNm=None,inF=None,outF=None,mainXsltF=None):
         xsltParams['adornment'] = "'" + options.adornment + "'"
     try:
         result = mainXslt(inDoc, **xsltParams)
-    except Exception, e:
+    except Exception as e:
         errorExit(1, ( "Error transforming input file %r: %s" % ( inNm, e, ), ))
     # Chop off trailing linefeed - added somehow
     outS = str(result)[:-1]

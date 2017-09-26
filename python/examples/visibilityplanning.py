@@ -288,7 +288,7 @@ class VisibilityGrasping:
                     print 'moving up'
                     trajdata = basemanip.MoveHandStraight(direction=[0,0,1],stepsize=0.001,maxsteps=100,execute=False,outputtraj=True)
                     self.starttrajectory(trajdata)
-                except planning_error, e:
+                except planning_error as e:
                     print 'failed to find trajectory',e
 
                 success = True
@@ -296,14 +296,14 @@ class VisibilityGrasping:
                     print 'moving to destination'
                     trajdata = basemanip.MoveToHandPosition(matrices=Tnewgoals, maxiter=1000,maxtries=1, seedik= 4,execute=False,outputtraj=True)
                     self.starttrajectory(trajdata)
-                except planning_error, e:
+                except planning_error as e:
                     print 'failed to find trajectory',e
                     success = False
 
             try:
                 final,trajdata = taskmanip.ReleaseFingers(target=self.target,execute=False,outputtraj=True)
                 self.starttrajectory(trajdata)
-            except planning_error, e:
+            except planning_error as e:
                 self.robot.ReleaseAllGrabbed()
                 print 'failed to release',e
                 success = False

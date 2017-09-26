@@ -69,7 +69,7 @@ def main(env,options):
                         if not ikmodel.has():
                             continue
                     ikmodels.append(ikmodel)
-                except Exception, e:
+                except Exception as e:
                     print 'failed manip %s'%manip, e
                 
         if len(ikmodels) == 0:

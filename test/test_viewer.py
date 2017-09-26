@@ -25,7 +25,7 @@ def _VmB(VmKey):
         t = open(_proc_status)
         v = t.read()
         t.close()
-    except Exception,e:
+    except Exception as e:
         # non-Linux?
         print e
         return 0.0

@@ -132,7 +132,7 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
             resultsstr = ikfastproblem.SendCommand('PerfTiming num 5000 maxtime %f %s'%(options.perftime,ikmodel.getfilename(True)))
             results = [numpy.double(s)*1e-9 for s in resultsstr.split()]
             jointnames = ', '.join(robot.GetJointFromDOFIndex(dof).GetName() for dof in ikmodel.manip.GetArmIndices())
-        except ikfast.IKFastSolver.IKFeasibilityError,e:
+        except ikfast.IKFastSolver.IKFeasibilityError as e:
             # this is expected, and is normal operation, have to notify
             globalstats.append([robotfilename,manip.GetName(),iktypestr,freeindices,description,None,None,None,None,None])
             print e

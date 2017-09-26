@@ -323,7 +323,7 @@ class GraspPlanning(openravepy.metaclass.AutoReloader):
                     print 'use a planner to move the rest of the way'
                     try:
                         self.basemanip.MoveToHandPosition(matrices=[Tglobalgrasp],maxiter=1000,maxtries=1,seedik=4)
-                    except planning_error,e:
+                    except planning_error as e:
                         print 'failed to reach grasp',e
                         continue
                 self.waitrobot(robot)
@@ -350,7 +350,7 @@ class GraspPlanning(openravepy.metaclass.AutoReloader):
                 try:
                     self.basemanip.MoveToHandPosition(ikparams=goals,maxiter=2000,maxtries=2,seedik=8)
                     self.waitrobot(robot)
-                except planning_error,e:
+                except planning_error as e:
                     print 'failed to reach a goal, trying to move goal a little up',e
                     if goals[0].GetType() == IkParameterizationType.Transform6D:
                         Tgoal = goals[0].GetTransform6D()
@@ -360,7 +360,7 @@ class GraspPlanning(openravepy.metaclass.AutoReloader):
                             self.waitrobot(robot)
                             self.basemanip.MoveToHandPosition(ikparams=goals,maxiter=2000,maxtries=2,seedik=8)
                             self.waitrobot(robot)
-                        except planning_error,e:
+                        except planning_error as e:
                             print e
                             success = -1
             if movehanddown:
@@ -396,7 +396,7 @@ class GraspPlanning(openravepy.metaclass.AutoReloader):
                     try:
                         self.basemanip.MoveHandStraight(direction=-dot(gmodel.manip.GetTransform()[0:3,0:3],gmodel.manip.GetDirection()), stepsize=stepsize,minsteps=1,maxsteps=10)
                         self.waitrobot(robot)
-                    except planning_error,e:
+                    except planning_error as e:
                         pass
                     if env.CheckCollision(robot):
                         try:
@@ -437,7 +437,7 @@ class GraspPlanning(openravepy.metaclass.AutoReloader):
                 print 'success: ',success
                 graspables.pop(i)
                 failures = 0
-            except planning_error, e:
+            except planning_error as e:
                 print 'failed to grasp object %s'%graspables[i][0].target.GetName()
                 failures += 1
                 graspables.append(graspables.pop(0)) # push front to back

@@ -75,7 +75,7 @@ Interface Types
                             commandtext = interface.SendCommand('help label %s-%s-'%(type,name.lower()))
                             if commandtext is not None:
                                 itext +=  commandtext
-                        except (openrave_exception,RuntimeError),e:
+                        except (openrave_exception,RuntimeError) as e:
                             print e
                         interfaceinfo[type].append([name,pluginname,itext])
                         interface = None # destroy

@@ -64,7 +64,7 @@ class DatabaseGenerator(metaclass.AutoReloader):
             try:
                 if self._databasefile:
                     self._databasefile.close()
-            except Exception,e:
+            except Exception as e:
                 log.warn(e)
             self._databasefile = None
             
@@ -94,7 +94,7 @@ class DatabaseGenerator(metaclass.AutoReloader):
                 return params
             else:
                 log.error('version is wrong %s!=%s ',modelversion,self.getversion())
-        except MemoryError,e:
+        except MemoryError as e:
             log.error('%s failed: ',filename,e)
         except:
             pass

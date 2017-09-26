@@ -153,7 +153,7 @@ class MemberDefTypeSubRenderer(Renderer):
         # Tell the document about our target
         try:
             self.document.note_explicit_target(target)
-        except Exception, e:
+        except Exception as e:
             print "Failed to register id: %s. It is probably a duplicate." % refid
 
         # Build the list item

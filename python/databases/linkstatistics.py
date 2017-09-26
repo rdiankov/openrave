@@ -113,7 +113,7 @@ class LinkStatisticsModel(DatabaseGenerator):
     def LoadPickle(self):
         try:
             params = DatabaseGenerator.load(self)
-        except Exception, e:
+        except Exception as e:
             log.warn(u'failed to load linkstatistics: %s', e)
             return False
         

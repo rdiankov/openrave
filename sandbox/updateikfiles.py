@@ -248,7 +248,7 @@ if __name__ == "__main__":
         try:
             args[i]['forcegenerate'] = False
             updateik(do_test=False,**args[i])
-        except Exception,e:
+        except Exception as e:
             print e
             print 'error occured in writing file %s.'%args[i]
 

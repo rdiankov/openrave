@@ -139,7 +139,7 @@ class HanoiPuzzle:
                 raveLogInfo('move to dest peg')
                 self.waitrobot() # wait for robot to complete all trajectories
                 return True
-            except planning_error, e:
+            except planning_error as e:
                 raveLogWarn(str(e))
         raise planning_error('failed to put block')
 
@@ -181,7 +181,7 @@ class HanoiPuzzle:
                         self.waitrobot()
                         raveLogInfo('done with one disk')
                         return True
-                    except planning_error,e:
+                    except planning_error as e:
                         raveLogWarn(str(e))
                         with self.env:
                             self.robot.ReleaseAllGrabbed()

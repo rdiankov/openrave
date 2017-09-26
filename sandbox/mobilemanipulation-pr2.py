@@ -165,18 +165,18 @@ if __name__ == "__main__":
                             mmclone.placeObject(target=target,dests=mmclone.getDests(target,maxdist=0.9))
                             try:
                                 mmclone.moveToNeutral(neutraljointvalues=neutraljointvalues,bounds=array(((-0.15,-0.1,-0.05),(0.2,0.1,0.15))))
-                            except planning_error,e:
+                            except planning_error as e:
                                 print e
                             break
                         except planning_error:
                             pass
                     finally:
                         envclone.Destroy()
-            except planning_error,e:
+            except planning_error as e:
                 print 'script planning error',e
-            except openrave_exception,e:
+            except openrave_exception as e:
                 print 'script planning error',e
-            except KeyboardInterrupt,e:
+            except KeyboardInterrupt as e:
                 print 'cancelled by keyboard',e
     finally:
         env.Destroy()

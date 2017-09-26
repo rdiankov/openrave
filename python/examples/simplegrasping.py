@@ -73,7 +73,7 @@ def main(env,options):
             Tgrasp = gmodel.getGlobalGraspTransform(validgrasp,collisionfree=True)
             basemanip.MoveToHandPosition(matrices=[Tgrasp])
             break
-        except planning_error,e:
+        except planning_error as e:
             print 'try again: ',e
 
     robot.WaitForController(10)

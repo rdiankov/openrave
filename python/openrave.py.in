@@ -86,7 +86,7 @@ if __name__ == "__main__":
                         m=__import__('openravepy.databases.'+name)
                         if type(m) is ModuleType:
                             print name
-                    except ImportError, e:
+                    except ImportError as e:
                         print e
             
             RaveDestroy()        
@@ -99,7 +99,7 @@ if __name__ == "__main__":
                         m=__import__('openravepy.examples.'+name)
                         if type(m) is ModuleType:
                             print name
-                    except ImportError, e:
+                    except ImportError as e:
                         print e
             
             RaveDestroy()        

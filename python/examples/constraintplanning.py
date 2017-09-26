@@ -141,7 +141,7 @@ class ConstraintPlanning:
                         constrainttaskmatrix=dot(linalg.inv(Tee),target.GetTransform())
                         constraintmatrix = linalg.inv(target.GetTransform())
                         self.basemanip.MoveToHandPosition(matrices=[T],maxiter=3000,maxtries=1,seedik=40,constraintfreedoms=constraintfreedoms,constraintmatrix=constraintmatrix, constrainttaskmatrix=constrainttaskmatrix,constrainterrorthresh=constrainterrorthresh,steplength=0.002)
-                    except planning_error,e:
+                    except planning_error as e:
                         print e
                     self.robot.WaitForController(0)
         finally:

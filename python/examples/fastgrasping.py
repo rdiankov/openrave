@@ -72,7 +72,7 @@ class FastGrasping:
             self.gmodel.disableallbodies=False
             self.gmodel.generate(preshapes=preshapes,standoffs=standoffs,rolls=rolls,approachrays=approachrays,checkgraspfn=self.checkgraspfn,graspingnoise=0.01)
             return None,None # did not find anything
-        except self.GraspingException, e:
+        except self.GraspingException as e:
             return e.args
 
 def main(env,options):

@@ -66,7 +66,7 @@ def main(env,options):
         inlier1 = env.CheckCollision(Ray(ray1[0:3],ray1[3:6]))
         inlier1 = env.CheckCollision(Ray(ray1[0:3],ray1[3:6]),report1)
         print 'numcontacts: ',len(report1.contacts),' pos: ', report1.contacts[0].pos,' norm: ',report1.contacts[0].norm
-    except openrave_exception,e:
+    except openrave_exception as e:
         print e
 
     robot2 = env.ReadRobotXMLFile('robots/mitsubishi-pa10.zae')

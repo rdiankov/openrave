@@ -868,10 +868,10 @@ def isolatepair():
             for eq in valideqs2:
                 try:
                     peq = Poly(eq,complementvar)
-                except PolynomialError,e:
+                except PolynomialError as e:
                     try:
                         peq = Poly(eq,complementvar)
-                    except PolynomialError,e:
+                    except PolynomialError as e:
                         print 'solvePairVariables: ',e
                         continue                                
                 if peq.degree == 1: # degree > 1 adds sqrt's
@@ -899,7 +899,7 @@ def isolatepair():
                                             break
                                         else:
                                             othervarpoly = None
-                                    except PolynomialError,e:
+                                    except PolynomialError as e:
                                         print e
                             if othervarpoly is not None:
                                 break

@@ -287,9 +287,9 @@ class GraspingModel(DatabaseGenerator):
             self.grasper = interfaces.Grasper(self.robot,friction,avoidlinks = [self.robot.GetLink(name) for name in linknames],plannername=plannername)
             return self.has()
 
-        except MemoryError,e:
+        except MemoryError as e:
             print '%s memory failed: '%filename,e
-        except Exception, e:
+        except Exception as e:
             print '%s failed: '%filename,e
         return False
 
@@ -490,7 +490,7 @@ class GraspingModel(DatabaseGenerator):
             grasp[self.graspindices.get('imanipulatordirection')] = manipulatordirection
             try:
                 contacts,finalconfig,mindist,volume = self.testGrasp(grasp=grasp,graspingnoise=graspingnoise,translate=True,forceclosure=forceclosure,forceclosurethreshold=forceclosurethreshold)
-            except planning_error, e:
+            except planning_error as e:
                 print 'Grasp Failed: '
                 print_exc(e)
                 return ()
@@ -674,7 +674,7 @@ class GraspingModel(DatabaseGenerator):
                             raw_input('press any key to continue: ')
                         elif delay > 0:
                             time.sleep(delay)
-                    except planning_error,e:
+                    except planning_error as e:
                         print 'bad grasp!',e
 
     def showgrasp(self,grasp,collisionfree=False,useik=False,delay=None,showfinal=False):
@@ -862,7 +862,7 @@ class GraspingModel(DatabaseGenerator):
                 if checkcollision and checkgrasper:
                     try:
                         contacts2,finalconfig2,mindist2,volume2 = self.runGraspFromTrans(grasp)
-                    except planning_error, e:
+                    except planning_error as e:
                         continue
                 validgrasps.append(grasp)
                 validindices.append(i)
@@ -903,7 +903,7 @@ class GraspingModel(DatabaseGenerator):
                 if checkcollision and checkgrasper:
                     try:
                         contacts,finalconfig,mindist,volume = self.runGraspFromTrans(grasp)
-                    except planning_error, e:
+                    except planning_error as e:
                         continue
 
             if returnfinal:
@@ -919,7 +919,7 @@ class GraspingModel(DatabaseGenerator):
                 kwargs['translate'] = True
                 kwargs['forceclosure'] = False
                 contacts,finalconfig,mindist,volume = self.runGrasp(grasp=grasp,**kwargs)
-            except planning_error, e:
+            except planning_error as e:
                 print 'grasp failed: ',e
                 return inf
             

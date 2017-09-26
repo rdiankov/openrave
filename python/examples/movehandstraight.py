@@ -100,7 +100,7 @@ def main(env,options):
             h = env.drawlinelist(array([Tee[0:3,3],Tee[0:3,3]+direction*maxsteps*stepsize]),4,[0,0,1])
             robot.WaitForController(0)
             
-        except planning_error,e:
+        except planning_error as e:
             failedattempt += 1
 
 from optparse import OptionParser

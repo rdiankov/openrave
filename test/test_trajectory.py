@@ -315,7 +315,7 @@ class TestTrajectory(EnvironmentSetup):
                 ret=planningutils.RetimeActiveDOFTrajectory(traj,robot,True,maxvelmult=1,maxaccelmult=1,plannername='parabolictrajectoryretimer')
                 assert(ret==PlannerStatus.Failed)
                 
-            except openrave_exception,e:
+            except openrave_exception as e:
                 pass
             
             ret=planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,maxaccelmult=1,plannername='parabolictrajectoryretimer')
@@ -653,7 +653,7 @@ class TestTrajectory(EnvironmentSetup):
             try:
                 self.RunTrajectory(robot,traj)
                 raise ValueError('bad trajectory should throw an exception!')
-            except openrave_exception,e:
+            except openrave_exception as e:
                 pass
             
     def test_reverse(self):
