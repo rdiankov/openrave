@@ -1043,7 +1043,7 @@ public:
             return boost::python::object();
         }
         else {
-            return boost::python::object(boost::python::handle<>(PyString_FromStringAndSize(&output[0], output.size())));
+            return boost::python::object(boost::python::handle<>(PyBytes_FromStringAndSize(&output[0], output.size())));
         }
     }
 
@@ -1946,7 +1946,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
     doc_options.enable_py_signatures();
     doc_options.enable_user_defined();
 #endif
-    import_array();
+    import_array1();
     numeric::array::set_module_and_type("numpy", "ndarray");
     int_from_int();
     uint8_from_int();
