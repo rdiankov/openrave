@@ -19,7 +19,7 @@ from xml.dom import Node
 
 try:
     from generatedssuper import GeneratedsSuper
-except ImportError, exp:
+except ImportError as exp:
 
     class GeneratedsSuper:
         def format_string(self, input_data, input_name=''):
