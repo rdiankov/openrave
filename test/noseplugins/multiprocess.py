@@ -120,7 +120,7 @@ from warnings import warn
 try:
     from cStringIO import StringIO
 except ImportError:
-    import StringIO
+    from io import StringIO
 
 if sys.version_info >= (3, 0):
     def bytes_(s, encoding='utf8'):

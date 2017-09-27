@@ -23,7 +23,10 @@ from docutils.nodes import raw
 from docutils.parsers import rst
 from docutils.parsers.rst import Directive
 import xml2rst
-import StringIO
+try:
+    from StringIO import StringIO
+except:
+    from io import StringIO
 import re
 
 class FunctionArgumentMatcher(breathe.finder.doxygen.ItemMatcher):
@@ -60,7 +63,7 @@ class FunctionArgumentMatcher(breathe.finder.doxygen.ItemMatcher):
                             matches = True
                             for i in range(len(self.params)):
                                 argtype = data_object.get_param()[i].get_type()
-                                outfile=StringIO.StringIO()
+                                outfile=StringIO()
                                 argtype.exportChildren(outfile,0)
                                 outfile.seek(0)
                                 argtypetext = ''.join(s for s in outfile.read().strip() if s != '\n')
@@ -207,8 +210,8 @@ Uses python docutils, sphinx, breathe, and xml2rst.""")
         for id, data_object in comment_objects:
             nodes = builder.build(data_object)
             #failed due to document.note_explicit_target(target) being called
-            inF = StringIO.StringIO()
-            outF = StringIO.StringIO()
+            inF = StringIO()
+            outF = StringIO()
             for node in nodes:
                 if isinstance(node,docutils.nodes.target):
                     # perhaps should link to doxygen?
