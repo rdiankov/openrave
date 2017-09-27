@@ -89,7 +89,7 @@ class TaskManipulation:
         cmd.write('graspplanning target %s approachoffset %.15e grasps %d %d '%(target.GetName(),approachoffset, grasps.shape[0],grasps.shape[1]))
         for f in grasps.flat:
             cmd.write('%.15e '%f)
-        for name,valuerange in graspindices.iteritems():
+        for name,valuerange in graspindices.items():
             if name[0] == 'i' and len(valuerange) > 0 or name == 'grasptrans_nocol':
                 cmd.write(name)
                 cmd.write(' ')

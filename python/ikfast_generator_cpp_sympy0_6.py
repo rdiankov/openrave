@@ -557,7 +557,7 @@ int main(int argc, char** argv)
         code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
 
         # write other functions
-        for name,functioncode in self.functions.iteritems():
+        for name,functioncode in self.functions.items():
             code += self.indentCode(functioncode,4)
         code += "};\n"
         return code
@@ -610,7 +610,7 @@ int main(int argc, char** argv)
         fcode += self.generateTree(node.jointtree)
         code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
         # write other functions
-        for name,functioncode in self.functions.iteritems():
+        for name,functioncode in self.functions.items():
             code += self.indentCode(functioncode,4)
         code += "};\n"
         return code
@@ -675,7 +675,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         fcode += self.generateTree(node.jointtree)
         code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
         # write other functions
-        for name,functioncode in self.functions.iteritems():
+        for name,functioncode in self.functions.items():
             code += self.indentCode(functioncode,4)
         code += "};\n"
         return code
@@ -727,7 +727,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         fcode += self.generateTree(node.jointtree)
         code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
         # write other functions
-        for name,functioncode in self.functions.iteritems():
+        for name,functioncode in self.functions.items():
             code += self.indentCode(functioncode,4)
         code += "};\n"
         return code
@@ -781,7 +781,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
 
         # write other functions
-        for name,functioncode in self.functions.iteritems():
+        for name,functioncode in self.functions.items():
             code += self.indentCode(functioncode,4)
         code += "};\n"
         return code
@@ -845,7 +845,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
 
         # write other functions
-        for name,functioncode in self.functions.iteritems():
+        for name,functioncode in self.functions.items():
             code += self.indentCode(functioncode,4)
         code += "};\n"
         return code
@@ -898,7 +898,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         fcode += self.generateTree(node.jointtree)
         code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n\n"
         # write other functions
-        for name,functioncode in self.functions.iteritems():
+        for name,functioncode in self.functions.items():
             code += self.indentCode(functioncode,4)
         code += "};\n"
         return code
@@ -957,7 +957,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
 
         # write other functions
-        for name,functioncode in self.functions.iteritems():
+        for name,functioncode in self.functions.items():
             code += self.indentCode(functioncode,4)
         code += "};\n"
         return code

@@ -1244,7 +1244,7 @@ class GinacUtils:
                 gcoeff = geq.coeff(gothersymbol,degree)
                 if i+1 < len(gothersymbols):
                     newterms = GinacUtils.GetPolyTermsFromGinac(gcoeff,gothersymbols[i+1:],othersymbols[i+1:])
-                    for newmonom, newcoeff in newterms.iteritems():
+                    for newmonom, newcoeff in newterms.items():
                         assert(len(newmonom)==len(gothersymbols)-i-1)
                         terms[monomprefix+newmonom] = newcoeff
                 else:
@@ -4201,11 +4201,11 @@ class IKFastSolver(AutoReloader):
                 except IndexError:
                     # not enough equations?
                     continue                
-                if solution is not None and all([self.isValidSolution(value.subs(localsymbols)) for key,value in solution.iteritems()]):
+                if solution is not None and all([self.isValidSolution(value.subs(localsymbols)) for key,value in solution.items()]):
                     # substitute 
                     solsubs = []
                     allvalid = True
-                    for key,value in solution.iteritems():
+                    for key,value in solution.items():
                         valuesub = value.subs(localsymbols)
                         solsubs.append((key,valuesub))
                         reducedeqs.append([key.subs(localsymbols),valuesub])
@@ -5011,7 +5011,7 @@ class IKFastSolver(AutoReloader):
                         polyterms = GinacUtils.GetPolyTermsFromGinac(gres1[icol],gothersymbols,othersymbols)
                         # create a new symbol for every term
                         eq = S.Zero
-                        for monom, coeff in polyterms.iteritems():
+                        for monom, coeff in polyterms.items():
                             sym = self.gsymbolgen.next()
                             dictequations.append((sym,coeff))
                             localsymbolmap[sym.name] = swiginac.symbol(sym.name)
@@ -5031,7 +5031,7 @@ class IKFastSolver(AutoReloader):
                         polyterms = GinacUtils.GetPolyTermsFromGinac(gres3[icol],gothersymbols,othersymbols)
                         # create a new symbol for every term
                         eq = S.Zero
-                        for monom, coeff in polyterms.iteritems():
+                        for monom, coeff in polyterms.items():
                             sym = self.gsymbolgen.next()
                             dictequations.append((sym,coeff))
                             localsymbolmap[sym.name] = swiginac.symbol(sym.name)
@@ -6697,7 +6697,7 @@ class IKFastSolver(AutoReloader):
         # first substitute everything that doesn't have othersolvedvar or unknownvars
         numberSubstitutions = []
         otherSubstitutions = []
-        for var, value in newsubsdict.iteritems():
+        for var, value in newsubsdict.items():
             if not value.has(*constantSymbols):
                 numberSubstitutions.append((var,value))
             else:
@@ -9557,11 +9557,11 @@ python ikfast.py --robot=robots/barrettwam.robot.xml --baselink=0 --eelink=7 --s
     parser.add_option('--freeindex', action='append', type='int', dest='freeindices',default=[],
                       help='Optional joint index specifying a free parameter of the manipulator. If not specified, assumes all joints not solving for are free parameters. Can be specified multiple times for multiple free parameters.')
     parser.add_option('--iktype', action='store', dest='iktype',default='transform6d',
-                      help='The iktype to generate the ik for. Possible values are: %s'%(', '.join(name for name,fn in IKFastSolver.GetSolvers().iteritems())))
+                      help='The iktype to generate the ik for. Possible values are: %s'%(', '.join(name for name,fn in IKFastSolver.GetSolvers().items())))
     parser.add_option('--maxcasedepth', action='store', type='int', dest='maxcasedepth',default=3,
                       help='The max depth to go into degenerate cases. If ikfast file is too big, try reducing this, (default=%default).')
     parser.add_option('--lang', action='store',type='string',dest='lang',default='cpp',
-                      help='The language to generate the code in (default=%default), available=('+','.join(name for name,value in CodeGenerators.iteritems())+')')
+                      help='The language to generate the code in (default=%default), available=('+','.join(name for name,value in CodeGenerators.items())+')')
     parser.add_option('--debug','-d', action='store', type='int',dest='debug',default=logging.INFO,
                       help='Debug level for python nose (smaller values allow more text).')
     

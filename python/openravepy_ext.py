@@ -90,7 +90,7 @@ def _registerEnumPicklers():
         return ( _tuple2enum, ( enum, int(e) ) )
     constructor( _tuple2enum)
     pickle(openravepy_int.IkParameterizationType,reduce_enum)
-    #for e in [ e for e in vars(openravepy).itervalues() if isEnumType(e) ]:
+    #for e in [ e for e in vars(openravepy).values() if isEnumType(e) ]:
     #    pickle(e, reduce_enum)
 
 _registerEnumPicklers()
