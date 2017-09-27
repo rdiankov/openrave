@@ -18,7 +18,7 @@ from .. import PlanningError
 
 from numpy import *
 from copy import copy as shallowcopy
-try:
+try: # for python 3.x
     from cStringIO import StringIO
 except:
     from io import StringIO

@@ -25,7 +25,7 @@ if sympy_version < '0.7.0':
     raise ImportError('ikfast needs sympy 0.7.x or greater')
 
 import sys, copy, time, datetime
-try:
+try: # for python 3.x
     from cStringIO import StringIO
 except:
     from io import StringIO

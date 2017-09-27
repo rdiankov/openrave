@@ -156,7 +156,7 @@ __license__ = 'Apache License, Version 2.0'
 from traceback import print_exc
 import time
 import os.path
-try:
+try: # for python 3.x
     import cPickle as pickle
 except:
     import pickle

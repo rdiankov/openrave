@@ -115,9 +115,12 @@ try:
     from unittest.runner import _WritelnDecorator
 except ImportError:
     from unittest import _WritelnDecorator
-from Queue import Empty
+try: # for python 3.x
+    from Queue import Empty
+except:
+    from queue import Empty
 from warnings import warn
-try:
+try: # for python 3.x
     from cStringIO import StringIO
 except ImportError:
     from io import StringIO

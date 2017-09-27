@@ -14,7 +14,7 @@
 from __future__ import with_statement # for python 2.5
 from . import openravepy_int
 import numpy
-try:
+try: # for python 3.x
     import cPickle as pickle
 except:
     import pickle
@@ -81,7 +81,7 @@ def _tuple2enum(enum, value):
 #    return isinstance(o, type) and issubclass(o,int) and not (o is int)
 
 def _registerEnumPicklers(): 
-    try:
+    try: # for python 3.x
         from copy_reg import constructor, pickle
     except:
         from copyreg import constructor, pickle

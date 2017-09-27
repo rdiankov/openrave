@@ -23,7 +23,7 @@ the target object hash.
 """
 from __future__ import with_statement, print_function # for python 2.6
 
-try:
+try: # for python 3.x
     import cPickle as pickle
 except:
     import pickle

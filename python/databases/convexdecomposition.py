@@ -88,7 +88,7 @@ try:
 except:
     izip = zip
 
-try:
+try: # for python 3.x
     from cStringIO import StringIO
 except:
     from io import StringIO

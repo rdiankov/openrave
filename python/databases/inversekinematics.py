@@ -160,7 +160,7 @@ import distutils
 from distutils import ccompiler
 from optparse import OptionParser
 
-try:
+try: # for python 3.x
     import cPickle as pickle
 except:
     import pickle

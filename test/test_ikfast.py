@@ -27,7 +27,10 @@ import time, sys, logging, multiprocessing
 #from nose.plugins import multiprocess
 from noseplugins import multiprocess,xunitmultiprocess, capture, callableclass
 
-import cPickle as pickle
+try: # for python 3.x
+    import cPickle as pickle
+except:
+    import pickle
 
 _multiprocess_can_split_ = True
 

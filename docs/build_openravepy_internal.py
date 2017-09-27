@@ -23,7 +23,7 @@ from docutils.nodes import raw
 from docutils.parsers import rst
 from docutils.parsers.rst import Directive
 import xml2rst
-try:
+try: # for python 3.x
     from StringIO import StringIO
 except:
     from io import StringIO
