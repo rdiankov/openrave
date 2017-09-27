@@ -197,7 +197,7 @@ Load database
         if not self.irmodel.load():
             print('do you want to generate irmodel for your robot? it might take several hours')
             print('or you can go to http://people.csail.mit.edu/liuhuan/pr2/openrave/openrave_database/ to get the database for PR2')
-            input = raw_input('[Y/n]')
+            input = input('[Y/n]')
             if input == 'y' or input == 'Y' or input == '\\n' or input == '':
                 class IrmodelOption:
                 self.irmodel.autogenerate()
@@ -262,7 +262,7 @@ Move robot to valid poses
 
         print('showing %d results'%N)
         for ind,goal in enumerate(goals):
-            raw_input('press ENTER to show goal %d'%ind)
+            input('press ENTER to show goal %d'%ind)
             Tgrasp,pose,values = goal
             self.robot.SetTransform(pose)
             self.robot.SetDOFValues(values)
@@ -328,6 +328,11 @@ if not __openravepy_build_doc__:
 else:
     from numpy import inf
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
+
 class InverseReachabilityDemo:
     def __init__(self,robot):
         self.robot = robot
@@ -349,7 +354,7 @@ class InverseReachabilityDemo:
         if not self.irmodel.load():            
             print('do you want to generate irmodel for your robot? it might take several hours')
             print('or you can go to http://people.csail.mit.edu/liuhuan/pr2/openrave/openrave_database/ to get the database for PR2')
-            input = raw_input('[Y/n]')
+            input = input('[Y/n]')
             if input == 'y' or input == 'Y' or input == '\n' or input == '':
                 self.irmodel.autogenerate()
                 self.irmodel.load()
@@ -412,12 +417,12 @@ class InverseReachabilityDemo:
                             numfailures += 1
         print('showing %d results'%N)
         for ind,goal in enumerate(goals):
-            raw_input('press ENTER to show goal %d'%ind)
+            input('press ENTER to show goal %d'%ind)
             Tgrasp,pose,values = goal
             self.robot.SetTransform(pose)
             self.robot.SetDOFValues(values)
 
-        raw_input('press ENTER to show all results simultaneously')
+        input('press ENTER to show all results simultaneously')
         # Code fragment from `databases.inversereachability`
         transparency = .8
         with self.env: # save the environment state
@@ -462,7 +467,7 @@ class InverseReachabilityDemo:
             probot.SetTransform(O_T_R)
 
 def pause():
-    raw_input('press ENTER to continue...')
+    input('press ENTER to continue...')
 
 def main(env,options):
     "Main example code."

@@ -31,11 +31,16 @@ if not __openravepy_build_doc__:
     from numpy import *
     from openravepy import *
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
+
 def main(env,options):
     "Main example code."
     env.Load('data/pr2test1.env.xml')
     robot=env.GetRobots()[0]
-    raw_input('press key to show at least one contact point')
+    input('press key to show at least one contact point')
     with env:
         # move both arms to collision
         lindex = robot.GetJoint('l_shoulder_pan_joint').GetDOFIndex()
@@ -52,7 +57,7 @@ def main(env,options):
         positions = [c.pos for c in report.contacts]
 
     h1=env.plot3(array(positions),20,[1,0,0])
-    raw_input('press key to show collisions with links')
+    input('press key to show collisions with links')
     with env:
         # collisions with individual links
         positions = []
@@ -63,7 +68,7 @@ def main(env,options):
                 positions += [c.pos for c in report.contacts]
 
     h2=env.plot3(array(positions),20,[1,0,0])
-    raw_input('press any key to exit')
+    input('press any key to exit')
  
 from openravepy.misc import OpenRAVEGlobalArguments
 

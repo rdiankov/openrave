@@ -27,6 +27,11 @@ if not __openravepy_build_doc__:
     from openravepy import *
     from numpy import *
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
+
 ghandle = None
 def itemselectioncb(link,pos,org,env):
     global ghandle
@@ -42,7 +47,7 @@ def main(env,options):
         print('failed to register handle')
         sys.exit(1)
     while True:
-        cmd = raw_input('In selection mode (ESC), click anywhere on the viewer. Enter command (q-quit): ')
+        cmd = input('In selection mode (ESC), click anywhere on the viewer. Enter command (q-quit): ')
         if cmd == 'q':
             break
 

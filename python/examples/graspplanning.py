@@ -106,6 +106,10 @@ try:
 except:
     def cpu_count(): return 1
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
 
 class GraspPlanning(openravepy.metaclass.AutoReloader):
     def __init__(self,robot,randomize=True,dests=None,nodestinations=False,switchpatterns=None,plannername=None,minimumgoalpaths=1):
@@ -337,7 +341,7 @@ class GraspPlanning(openravepy.metaclass.AutoReloader):
             with env:
                 robot.Grab(target)
             if waitforkey:
-                raw_input('press any key to continue grasp')
+                input('press any key to continue grasp')
 
             success = graspindex
             if movehanddown:

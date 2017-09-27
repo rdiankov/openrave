@@ -42,6 +42,11 @@ except:
 
 import time
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
+
 class FastGraspingThreaded:
     def __init__(self,robot,target):
         self.env = robot.GetEnv()
@@ -187,7 +192,7 @@ class FastGraspingThreaded:
             with self.env:
                 self.robot.SetDOFValues(jointvalues[i])
                 self.env.UpdatePublishedBodies()
-                raw_input('press any key')
+                input('press any key')
 
 def main(env,options):
     "Main example code."

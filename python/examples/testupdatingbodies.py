@@ -27,6 +27,11 @@ if not __openravepy_build_doc__:
     from openravepy import *
     from numpy import *
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
+
 def main(env,options):
     env.Load('data/lab1.env.xml')
     robot = env.GetRobots()[0]
@@ -48,7 +53,7 @@ def main(env,options):
             env.StepSimulation(0.01)
             env.UpdatePublishedBodies() # used to publish body information while environment is locked
             time.sleep(0.1)    
-    raw_input('press any key to exit: ')
+    input('press any key to exit: ')
 
 from optparse import OptionParser
 from openravepy.misc import OpenRAVEGlobalArguments

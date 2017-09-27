@@ -25,6 +25,10 @@ import time
 import MintimeProblemTorque
 import RRT_Smooth
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
 
 
 
@@ -149,9 +153,9 @@ print('\n*****************************************************************\n')
 
 
 # Run the trajectories
-raw_input('Press Enter to execute the trajectory /before/ shortcutting (duration='+str(traj2.duration)+'s)')
+input('Press Enter to execute the trajectory /before/ shortcutting (duration='+str(traj2.duration)+'s)')
 MintimeProblemTorque.Execute(robot,traj2,0.02)
-raw_input('Press Enter to execute the trajectory /after/ shortcutting (duration='+str(traj3.duration)+'s)')
+input('Press Enter to execute the trajectory /after/ shortcutting (duration='+str(traj3.duration)+'s)')
 MintimeProblemTorque.Execute(robot,traj3,0.02)
 
 

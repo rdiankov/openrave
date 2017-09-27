@@ -87,6 +87,11 @@ from .. import interfaces
 import logging
 log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
+
 class VisibilityModel(DatabaseGenerator):
     visibilitytransforms = None # a list of camera pose in the pattern coordinate system
     targetlink = None # the target link object
@@ -288,7 +293,7 @@ class VisibilityModel(DatabaseGenerator):
                             print(msg)
                             pilutil.imshow(I)
                         else:
-                            raw_input(msg)
+                            input(msg)
         finally:
             # have to destroy the plot handle
             h = None
@@ -333,7 +338,7 @@ class VisibilityModel(DatabaseGenerator):
                         print(msg)
                         pilutil.imshow(I)
                     else:
-                        raw_input(msg)
+                        input(msg)
         finally:
             # have to destroy the plot handle
             h = None

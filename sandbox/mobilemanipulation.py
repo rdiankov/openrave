@@ -28,6 +28,10 @@ try:
     from itertools import izip
 except:
     izip = zip
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
 # try:
 #     import scipy # used for showing images
 # except ImportError:
@@ -908,7 +912,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             self.waitrobot()
             if usevisibilitycamera.get('dosync',False):
                 if usevisibilitycamera.get('ask',False):
-                    cmd=raw_input('press n key to capture new environment: ')
+                    cmd=input('press n key to capture new environment: ')
                     if cmd == 'n':
                         continue
                 with self.env:

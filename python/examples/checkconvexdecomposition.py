@@ -32,6 +32,11 @@ import openravepy
 from openravepy import databases
 import numpy
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
+
 def main(env,options):
     "Main example code."
     samplingdelta = options.samplingdelta
@@ -54,7 +59,7 @@ def main(env,options):
     print('%d points are inside'%len(plottedpoints))
     h = env.plot3(plottedpoints,2)
     if not options.testmode:
-        raw_input('press any key to exit')
+        input('press any key to exit')
 
 from optparse import OptionParser
 from openravepy.misc import OpenRAVEGlobalArguments

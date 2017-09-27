@@ -25,6 +25,11 @@ try:
 except:
     izip = zip
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
+
 def mm_create(robot,useclone=False):
     print('creating mobile manipulation planners')
     env=robot.GetEnv()
@@ -76,7 +81,7 @@ if __name__ == "__main__":
         else:
             mm = None
         while True:
-            cmd = raw_input('Enter command (q-quit,n-neutral position,d-delete objects,g-grasp,c-reset controller,r-release,i-ipython,p-place,e-enable sensors,s-search objects,d-delete objects,j-jitter robot,m-mobile manipulation,h-head camera): ')
+            cmd = input('Enter command (q-quit,n-neutral position,d-delete objects,g-grasp,c-reset controller,r-release,i-ipython,p-place,e-enable sensors,s-search objects,d-delete objects,j-jitter robot,m-mobile manipulation,h-head camera): ')
             try:
                 if cmd == 'q':
                     break

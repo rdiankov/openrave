@@ -74,6 +74,11 @@ try:
 except ImportError:
     print('could not import scipy.optimize.leastsq')
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
+
 class InverseReachabilityModel(DatabaseGenerator):
     """Inverts the reachability and computes probability distributions of the robot's base given an end effector position"""
     def __init__(self,robot,id=None):
@@ -636,7 +641,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                     newrobot.SetDOFValues(values)
                     newrobots.append(newrobot)
                     #time.sleep(0.1)
-            raw_input('press any key to continue')
+            input('press any key to continue')
         finally:
             for newrobot in newrobots:
                 self.env.Remove(newrobot)
@@ -695,7 +700,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                         self.env.Add(newrobot,True)
                         newrobot.SetTransform(goals[i][0])
                         newrobot.SetDOFValues(goals[i][1])
-                raw_input('press any key to continue')
+                input('press any key to continue')
             finally:
                 h=None
                 for newrobot in newrobots:

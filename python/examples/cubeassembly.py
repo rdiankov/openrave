@@ -46,6 +46,11 @@ except:
 
 from openravepy.examples import graspplanning
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
+
 class CubeAssembly(object):
     def __init__(self,robot):
         self.env=robot.GetEnv()
@@ -112,7 +117,7 @@ class CubeAssembly(object):
                 for gmodel in self.gmodels:
                     savers.append(KinBody.KinBodyStateSaver(gmodel.target))
                     gmodel.target.SetTransform(Tgoal)
-            raw_input('press any key')
+            input('press any key')
         finally:
             for saver in savers:
                 saver.Restore()

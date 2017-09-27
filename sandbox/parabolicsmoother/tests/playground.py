@@ -12,6 +12,11 @@ from ramp import ParabolicCheckReturn as PCR
 import random
 rng = random.SystemRandom()
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
+
 def RandVect1(n, l, u):
     return np.asarray([rng.uniform(l, u) for _ in xrange(n)])
 
@@ -173,7 +178,7 @@ for it in xrange(nTrials):
     if not curvesnd.isEmpty:
         ret = ramp.CheckParabolicCurvesND(curvesnd, xMin, xMax, vMax, aMax, x0Vect, x1Vect, v0Vect, v1Vect)
         # print(ret)
-        # raw_input()
+        # input()
         if ret == PCR.Normal:
             nSuccess += 1
         elif ret == PCR.VBoundViolated:
@@ -184,7 +189,7 @@ for it in xrange(nTrials):
             # IPython.embed()
         else:
             print(ret)
-            raw_input()
+            input()
         # if ramp.CheckParabolicCurvesND(curvesnd, vMax, aMax, x0Vect=x0Vect, x1Vect=x1Vect):
         #     nSuccess += 1
         #     break

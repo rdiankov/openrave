@@ -27,6 +27,11 @@ if not __openravepy_build_doc__:
     from openravepy import *
     from numpy import *
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
+
 class PlotSpinner(threading.Thread):
     def __init__(self,handle):
         threading.Thread.__init__(self)
@@ -79,7 +84,7 @@ def main(env,options):
         Tcamera = eye(4)
         Tcamera[0:3,3] = [-0.37, 0.26, 3.3]
         env.GetViewer().SetCamera(Tcamera)
-        raw_input('Enter any key to quit. ')
+        input('Enter any key to quit. ')
         handles = None
     finally:
         if spinner is not None:

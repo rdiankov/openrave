@@ -35,6 +35,11 @@ if not __openravepy_build_doc__:
     from openravepy import *
     from numpy import *
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
+
 class FastGrasping:
     class GraspingException(Exception):
         def __init__(self,args):
@@ -93,7 +98,7 @@ def main(env,options):
             print('grasp is found!')
             self.gmodel.showgrasp(grasp)
             self.robot.SetDOFValues(jointvalues)
-            raw_input('press any key')
+            input('press any key')
 
 from optparse import OptionParser
 from openravepy.misc import OpenRAVEGlobalArguments

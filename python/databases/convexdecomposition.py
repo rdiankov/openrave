@@ -101,6 +101,11 @@ try:
 except Exception as e:
     print('failed to import convexdecompositionpy', e)
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
+
 class ConvexDecompositionError(Exception):
     def __init__(self,msg=u''):
         self.msg = msg
@@ -586,7 +591,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
                             hulls.append(self.transformHull(geom.GetTransform(),ComputeCylinderYMesh(radius=geom.GetCylinderRadius(),height=geom.GetCylinderHeight())))
                     handles += [self.env.drawtrimesh(points=transformPoints(link.GetTransform(),hull[0]),indices=hull[1],colors=volumecolors[mod(colorindex+i,len(volumecolors))]) for i,hull in enumerate(hulls)]
                     colorindex+=len(hulls)
-            raw_input('Press any key to exit: ')
+            input('Press any key to exit: ')
         finally:
             # close all graphs
             handles = None
@@ -611,13 +616,13 @@ class ConvexDecompositionModel(DatabaseGenerator):
         try:
             if not progressive:
                 handles = [self.env.drawtrimesh(points=transformPoints(link.GetTransform(),hull[0]),indices=hull[1],colors=volumecolors[mod(i,len(volumecolors))]) for i,hull in enumerate(hulls)]
-                raw_input('Press any key to exit: ')
+                input('Press any key to exit: ')
             else:
                 ihull = 0
                 while ihull < len(hulls):
                     hull = hulls[ihull]
                     handles = [self.env.drawtrimesh(points=transformPoints(link.GetTransform(),hull[0]),indices=hull[1],colors=volumecolors[mod(ihull,len(volumecolors))])]
-                    cmd = raw_input(str(ihull))
+                    cmd = input(str(ihull))
                     if cmd == 'p':
                         ihull -= 1
                     else:

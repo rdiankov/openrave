@@ -22,6 +22,11 @@ from openravepy.interfaces import *
 from numpy import *
 import numpy,time
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
+
 def test_grasping():
     import grasping
     env = Environment()
@@ -639,7 +644,7 @@ def test_calibviews():
             print(i)
             #self.robot.SetJointValues(q,self.vmodel.manip.GetArmJoints())
             self.vmodel.visualprob.ComputeVisibleConfiguration(pose=pose)
-            raw_input('asdf')
+            input('asdf')
 
 def test_freejoints():
     env=Environment()

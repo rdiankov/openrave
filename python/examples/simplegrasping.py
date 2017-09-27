@@ -36,6 +36,11 @@ if not __openravepy_build_doc__:
     from openravepy import *
     from numpy import *
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
+
 def main(env,options):
     "Main example code."
     env.Load(options.scene)
@@ -85,7 +90,7 @@ def main(env,options):
     robot.WaitForController(10)
     with env:
         robot.Grab(target)
-    raw_input('press any key to release')
+    input('press any key to release')
     taskmanip.ReleaseFingers(target=target)
     robot.WaitForController(10)
     print('initial values')

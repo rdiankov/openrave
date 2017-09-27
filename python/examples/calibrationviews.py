@@ -57,6 +57,11 @@ else:
 
 from openravepy.misc import SpaceSamplerExtra
 
+try: # for python 3.x
+    input = input
+except NameError:
+    pass
+
 class CalibrationViews:
     def __init__(self,robot,sensorname=None,sensorrobot=None,target=None,maxvelmult=None,randomize=False):
         """Starts a calibration sequencer using a robot and a sensor.
@@ -225,7 +230,7 @@ class CalibrationViews:
                 for i,config in enumerate(configs):
                     self.robot.SetDOFValues(config,self.vmodel.manip.GetArmIndices())
                     self.env.UpdatePublishedBodies()
-                    raw_input('%d: press any key'%i)
+                    input('%d: press any key'%i)
         finally:
             graphs = None
 

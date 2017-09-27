@@ -32,6 +32,11 @@ import ZMP
 #import scipy
 #import Image
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
+
 
 
 ################# Loading the environment ########################
@@ -256,9 +261,9 @@ print('\n*****************************************************************\n')
 print('Total execution time: '+str(time.time()-deb)+'s')
 print('\n*****************************************************************\n')
 
-raw_input('Press Enter to execute the trajectory /before/ time-reparameterization (duration='+str(traj.duration)+'s)')
+input('Press Enter to execute the trajectory /before/ time-reparameterization (duration='+str(traj.duration)+'s)')
 MintimeProblemZMP.Execute(robot,traj,0.02,drawcom=2)
-raw_input('Press Enter to execute the trajectory /after/ time-reparameterization (duration='+str(traj2.duration)+'s)')
+input('Press Enter to execute the trajectory /after/ time-reparameterization (duration='+str(traj2.duration)+'s)')
 MintimeProblemZMP.Execute(robot,traj2,0.02,drawcom=2)
 
 

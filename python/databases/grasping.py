@@ -191,6 +191,11 @@ except:
 import logging
 log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
+
 class GraspingModel(DatabaseGenerator):
     """Holds all functions/data related to a grasp between a robot hand and a target
 
@@ -671,7 +676,7 @@ class GraspingModel(DatabaseGenerator):
                             self.robot.SetTransform(finalconfig[1])
                             self.env.UpdatePublishedBodies()
                         if delay is None:
-                            raw_input('press any key to continue: ')
+                            input('press any key to continue: ')
                         elif delay > 0:
                             time.sleep(delay)
                     except planning_error as e:
@@ -697,7 +702,7 @@ class GraspingModel(DatabaseGenerator):
                     self.env.UpdatePublishedBodies()
                     # wait while environment is locked?
                     if delay is None:
-                        raw_input('press any key to continue: ')
+                        input('press any key to continue: ')
                     elif delay > 0:
                         time.sleep(delay)
     def testGrasp(self,graspingnoise=None,Ngraspingtries = 20,forceclosurethreshold=1e-9,**kwargs):
