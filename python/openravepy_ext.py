@@ -83,7 +83,7 @@ def _tuple2enum(enum, value):
 def _registerEnumPicklers(): 
     try:
         from copy_reg import constructor, pickle
-    except
+    except:
         from copyreg import constructor, pickle
     def reduce_enum(e):
         enum = type(e).__name__.split('.')[-1]
