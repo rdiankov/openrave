@@ -1294,7 +1294,10 @@ class IKFastSolver(AutoReloader):
             return u'%s: %s'%(self.__class__.__name__, self.value)
         
         def __str__(self):
-            return unicode(self).encode('utf-8')
+            output = self.__unicode__()
+            if type(output) != str: # for python 3.x
+                output = output.encode('utf-8')
+            return output
         
         def __repr__(self):
             return '<%s(%r)>'%(self.__class__.__name__, self.value)

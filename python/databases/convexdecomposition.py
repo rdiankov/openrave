@@ -112,7 +112,10 @@ class ConvexDecompositionError(Exception):
     def __unicode__(self):
         return u'Convex Decomposition Error: %s'%self.msg
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        output = self.__unicode__()
+        if type(output) != str: # for python 3.x
+            output = output.encode('utf-8')
+        return output
 
 class ConvexDecompositionModel(DatabaseGenerator):
     """Computes the convex decomposition of all of the robot's links"""

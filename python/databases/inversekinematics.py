@@ -165,19 +165,27 @@ try: # for python 3.x
 except:
     import pickle
 
+try: # for python 3.x
+    unicode_str = unicode
+except:
+    unicode_str = str
+
 import logging
 log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 
 class InverseKinematicsError(Exception):
     def __init__(self,parameter=u''):
-        self.parameter = unicode(parameter)
+        self.parameter = unicode_str(parameter)
         
     def __unicode__(self):
         s = u'Inverse Kinematics Error\n%s'%self.parameter
         return s
         
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        output = self.__unicode__()
+        if type(output) != str: # for python 3.x
+            output = output.encode('utf-8')
+        return output
     
     def __repr__(self):
         return '<openravepy.databases.inversekinematics.InverseKinematicsError(%r)>'%(self.parameter)
