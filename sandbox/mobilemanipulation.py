@@ -24,7 +24,10 @@ from openravepy.databases import inversekinematics,inversereachability,grasping,
 from openravepy.examples import graspplanning
 from numpy import *
 import numpy
-from itertools import izip
+try:
+    from itertools import izip
+except:
+    izip = zip
 # try:
 #     import scipy # used for showing images
 # except ImportError:

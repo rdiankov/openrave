@@ -1070,7 +1070,10 @@ def test_ik():
     import numpy
     import __builtin__
     from openravepy.ikfast import AST, combinations, fmod
-    from itertools import izip
+    try:
+        from itertools import izip
+    except:
+        izip = zip
     from openravepy import axisAngleFromRotationMatrix
     numpy.set_printoptions(15)
     IkType=IkParameterizationType

@@ -92,7 +92,10 @@ from __future__ import with_statement, print_function # for python 2.6
 __author__ = 'Rosen Diankov'
 
 import time
-from itertools import izip
+try:
+    from itertools import izip
+except:
+    izip = zip
 import openravepy
 if not __openravepy_build_doc__:
     from openravepy import *

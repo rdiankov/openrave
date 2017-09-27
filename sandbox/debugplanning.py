@@ -253,7 +253,10 @@ def test_convex():
 
 def test_linkstatistics():
     import linkstatistics
-    from itertools import izip
+    try:
+        from itertools import izip
+    except:
+        izip = zip
     from enthought.tvtk.api import tvtk
     env = openravepy.Environment()
     robot = env.ReadRobotXMLFile('robots/barrettsegway.robot.xml')

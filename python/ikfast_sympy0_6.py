@@ -215,7 +215,10 @@ except ImportError:
     def isinf(x): return _isinf(float(x))
     def isnan(x): return _isnan(float(x))
 
-from itertools import izip
+try:
+    from itertools import izip
+except:
+    izip = zip
 try:
     from itertools import combinations, permutations
 except ImportError:

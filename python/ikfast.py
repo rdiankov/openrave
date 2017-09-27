@@ -219,7 +219,11 @@ except ImportError:
     def isnan(x): return _isnan(float(x))
 
 from operator import itemgetter
-from itertools import izip, chain, product
+try:
+    from itertools import izip
+except:
+    izip = zip
+from itertools import chain, product
 try:
     from itertools import combinations, permutations
 except ImportError:

@@ -30,7 +30,10 @@ except:
     class AutoReloader:
         pass
 
-from itertools import izip
+try:
+    from itertools import izip
+except:
+    izip = zip
 try:
     from itertools import combinations
 except ImportError:

@@ -20,7 +20,10 @@ from openravepy.examples import mobilemanipulation,graspplanning
 from openravepy.databases import inversereachability,linkstatistics
 from numpy import *
 import numpy,time,os,pickle
-from itertools import izip
+try:
+    from itertools import izip
+except:
+    izip = zip
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 from scipy import stats

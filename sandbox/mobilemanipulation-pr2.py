@@ -20,7 +20,10 @@ from openravepy import *
 from numpy import *
 import numpy,time,scipy
 from openravepy.examples import mobilemanipulation
-from itertools import izip
+try:
+    from itertools import izip
+except:
+    izip = zip
 
 def mm_create(robot,useclone=False):
     print('creating mobile manipulation planners')

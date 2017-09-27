@@ -18,7 +18,19 @@ from openravepy import misc
 import numpy
 from numpy import *
 
-from itertools import izip, combinations
+try:
+    from itertools import izip
+except:
+    izip = zip
+try:
+    from itertools import combinations
+except ImportError:
+    def combinations(items,n):
+        if n == 0: yield[]
+        else:
+            for  i in xrange(len(items)):
+                for cc in combinations(items[i+1:],n-1):
+                    yield [items[i]]+cc
 import nose
 from nose.tools import assert_raises
 import fnmatch

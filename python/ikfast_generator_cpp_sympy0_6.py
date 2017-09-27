@@ -62,7 +62,11 @@ except ImportError:
     pass
 
 try:
-    from itertools import izip, combinations
+    from itertools import izip
+except:
+    izip = zip
+try:
+    from itertools import combinations
 except ImportError:
     def combinations(items,n):
         if n == 0: yield[]
