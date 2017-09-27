@@ -83,7 +83,10 @@ import time
 import os.path
 from os import makedirs
 from optparse import OptionParser
-from itertools import izip
+try:
+    from itertools import izip
+except:
+    izip = zip
 
 try:
     from cStringIO import StringIO
@@ -224,7 +227,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
                     for j, ghull in ghulls.iteritems():
                         if 'vertices' in ghull and len(ghull['vertices'].shape) == 2 and 'indices' in ghull and len(ghull['indices'].shape\
 ) == 2 and 'planes' in ghull and len(ghull['planes'].shape) == 2:
-			    hull = [ghull['vertices'].value, ghull['indices'].value, ghull['planes'].value]
+                            hull = [ghull['vertices'].value, ghull['indices'].value, ghull['planes'].value]
                             geometryhulls.append(hull)
                         else:
                             log.warn('could not open link %s geometry %s hull %s: %r', ilink, ig, j, ghull)

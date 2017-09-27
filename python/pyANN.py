@@ -13,8 +13,8 @@
 # limitations under the License. 
 """Imports ANN extentions
 """
-from pyANN_int import *
-from pyANN_int import _pyann_exception_
+from .pyANN_int import *
+from .pyANN_int import _pyann_exception_
 
 class pyann_exception(Exception):
     """wrap up the C++ pyann_exception"""

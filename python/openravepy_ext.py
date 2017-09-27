@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License. 
 from __future__ import with_statement # for python 2.5
-import openravepy_int
+from . import openravepy_int
 import numpy
 try:
     import cPickle as pickle
@@ -81,7 +81,10 @@ def _tuple2enum(enum, value):
 #    return isinstance(o, type) and issubclass(o,int) and not (o is int)
 
 def _registerEnumPicklers(): 
-    from copy_reg import constructor, pickle
+    try:
+        from copy_reg import constructor, pickle
+    except
+        from copyreg import constructor, pickle
     def reduce_enum(e):
         enum = type(e).__name__.split('.')[-1]
         return ( _tuple2enum, ( enum, int(e) ) )

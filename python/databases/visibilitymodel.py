@@ -81,7 +81,7 @@ else:
 
 from ..openravepy_int import RaveGetDefaultViewerType
 from . import DatabaseGenerator
-import inversekinematics, kinematicreachability
+from . import inversekinematics, kinematicreachability
 from .. import interfaces
 
 import logging
