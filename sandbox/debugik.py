@@ -937,7 +937,7 @@ def solveLinearly(self,raweqns,varsyms,othersolvedvars,maxdegree=1):
     if len(allmonoms) > len(newpolyeqs):
         raise self.CannotSolveError('not enough equations %d>%d'%(len(allmonoms),len(newpolyeqs)))
 
-    if __builtin__.sum(allmonoms[0]) != 0:
+    if builtins.sum(allmonoms[0]) != 0:
         raise self.CannotSolveError('need null space')
 
     # try to solve for all pairwise variables
@@ -955,7 +955,7 @@ def solveLinearly(self,raweqns,varsyms,othersolvedvars,maxdegree=1):
         for i,arr in enumerate(eqs):
             for j in range(len(allmonoms)):
                 M[i,j] = arr[j]
-        if __builtin__.sum(allmonoms[0]) == 0:
+        if builtins.sum(allmonoms[0]) == 0:
             # can solve directly
             det = self.det_bareis(M)
             if det != S.Zero:
@@ -1068,7 +1068,10 @@ def test_ik():
     from sympy import *
     from sympy import S, pi, sin, cos, PolynomialError, Symbol
     import numpy
-    import __builtin__
+    try: # for python 3.x
+        import __builtin__ as builtins
+    except:
+        import builtins
     from openravepy.ikfast import AST, combinations, fmod
     try:
         from itertools import izip
