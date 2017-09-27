@@ -22,7 +22,7 @@ __builtins__.__openravepy_version__ = '@OPENRAVE_SOVERSION@'
 try:
     import openravepy
 except ImportError:
-    print "openravepy is not set into PYTHONPATH env variable, attempting to add"
+    print("openravepy is not set into PYTHONPATH env variable, attempting to add")
     # use openrave-config to get the correct install path
     from subprocess import Popen, PIPE
     try:
@@ -92,7 +92,7 @@ public:
     }
 """%interface_args
             GetPluginAttributesValidated += 'info.interfacenames[%(typename)s].push_back("%(name)s");\n'%interface_args
-            interface_tests_py += "    %(name)s = RaveCreate%(createname)s(env,'%(name)s')\n    print %(name)s.SendCommand('help')"%interface_args
+            interface_tests_py += "    %(name)s = RaveCreate%(createname)s(env,'%(name)s')\n    print(%(name)s.SendCommand('help'))"%interface_args
     if options.usecore:
         code_cpp = """#include <openrave-core.h>
 using namespace OpenRAVE;
