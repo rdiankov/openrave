@@ -59,7 +59,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
     if( PYTHON_EXECUTABLE )
       # get the site-packages directory
       execute_process(
-        COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)"
+        COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))"
         OUTPUT_VARIABLE _python_sitepackage
         RESULT_VARIABLE _python_failed)
       if( ${_python_failed} EQUAL 0 )
