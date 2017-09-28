@@ -2157,7 +2157,7 @@ class IKFastSolver(AutoReloader):
             if CodeGenerators.has_key('cpp'):
                 lang = 'cpp'
             else:
-                lang = CodeGenerators.keys()[0]
+                lang = list(CodeGenerators.keys())[0]
         log.info('generating %s code...'%lang)
         if self._checkpreemptfn is not None:
             import weakref
@@ -4538,7 +4538,7 @@ class IKFastSolver(AutoReloader):
             for ipeq,peq in enumerate(neweqs):
                 peq0dict = peq[0].as_dict()
                 if len(peq0dict) == 1:
-                    monomkey = peq0dict.keys()[0]
+                    monomkey = list(peq0dict.keys())[0]
                     monomcoeff = peq0dict[monomkey]
                     monomvalue = peq[1].as_expr()
                     if sympy_smaller_073:
@@ -4687,7 +4687,7 @@ class IKFastSolver(AutoReloader):
                     peq0norm = Poly(peq0norm, *peq[0].gens)
                     peq1norm = Poly(peq1norm, *peq[1].gens)
                     peq0dict = peq0norm.as_dict()
-                    monom, value = peq0dict.items()[0]
+                    monom, value = list(peq0dict.items())[0]
                     if len(peq0dict) == 1 and builtins.sum(monom) == 1:
                         indices = [index for index in range(4) if monom[index] == 1]
                         if len(indices) > 0 and indices[0] < 4:
@@ -4710,7 +4710,7 @@ class IKFastSolver(AutoReloader):
             else:
                 if peq[0] != S.Zero:
                     peq0dict = peq[0].as_dict()
-                    monom, value = peq0dict.items()[0]
+                    monom, value = list(peq0dict.items())[0]
                     if len(peq0dict) == 1 and builtins.sum(monom) == 1:
                         indices = [index for index in range(4) if monom[index] == 1]
                         if len(indices) > 0 and indices[0] < 4:
