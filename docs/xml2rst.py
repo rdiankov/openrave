@@ -179,7 +179,7 @@ def pod2OptionKeywords(pod):
         else:
             result['help'] += line + "\n"
     result['help'] = result['help'].strip()
-    if result.has_key('dest'):
+    if 'dest' in result:
         result['dest'] = result['dest'].replace("-", "_")
     else:
         errorExit(1, ( "Internal error: Missing `dest' in documentation string:",
