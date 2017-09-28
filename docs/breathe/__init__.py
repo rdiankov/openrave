@@ -204,7 +204,7 @@ class ProjectInfoFactory(object):
         name = ""
         path = self.default_path()
 
-        if options.has_key("project"):
+        if "project" in options:
             try:
                 path = self.projects[ options["project"] ]
                 name = options["project"]
@@ -213,7 +213,7 @@ class ProjectInfoFactory(object):
                         "Unable to find project '%s' in breathe_projects dictionary" % options["project"]
                         )
 
-        if options.has_key("path"):
+        if "path" in options:
             path = options["path"]
 
 
