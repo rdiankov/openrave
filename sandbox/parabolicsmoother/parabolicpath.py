@@ -128,7 +128,7 @@ def ConvertDynamicPathStringIntoParabolicPath(dynamicpathstring):
     ndof = int(data[0])
     nlines = ndof + 2 # the number of lines containing the data for 1 ParabolicRampND
 
-    nParabolicRampND = len(data)/(nlines)
+    nParabolicRampND = int(len(data)/(nlines))
 
     parabolicpath = ParabolicPath()
     

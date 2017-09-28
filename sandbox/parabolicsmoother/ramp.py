@@ -1119,7 +1119,7 @@ def DynamicPathStringToParabolicCurvesND(dynamicpathstring):
     nlines = ndof + 2 # the number of lines containing the data for 1 ParabolicRampND
 
     curves = [ParabolicCurve() for _ in xrange(ndof)]
-    nParabolicRampND = len(data)/(nlines)
+    nParabolicRampND = int(len(data)/(nlines))
 
     for iramp in xrange(nParabolicRampND):
         curoffset = iramp*nlines
@@ -1179,7 +1179,7 @@ def ParabolicPathStringToParabolicCurvesND(parabolicpathstring):
     ndof = int(rawdata[0])
     nlines_chunk = 2 + ndof
 
-    nchunks = len(rawdata)/nlines_chunk
+    nchunks = int(len(rawdata)/nlines_chunk)
 
     curvesnd = ParabolicCurvesND()
     for ichunk in xrange(nchunks):
@@ -1188,7 +1188,7 @@ def ParabolicPathStringToParabolicCurvesND(parabolicpathstring):
             curvedata = rawdata[(ichunk*nlines_chunk) + 2 + idof]
             curvedata = curvedata.strip().split(" ")
             curve = ParabolicCurve()
-            nramps = len(curvedata)/4
+            nramps = int(len(curvedata)/4)
             for iramp in xrange(nramps):
                 v, a, t, x0 = [float(dummy) for dummy in curvedata[(iramp*4):((iramp + 1)*4)]]
                 ramp = Ramp(v, a, t, x0)
@@ -1236,14 +1236,14 @@ def GetSpecificChunkFromParabolicPathString(parabolicpathstring, chunkindex):
     ndof = int(rawdata[0])
     nlines_chunk = 2 + ndof
 
-    nchunks = len(rawdata)/nlines_chunk
+    nchunks = int(len(rawdata)/nlines_chunk)
 
     curves = []
     for idof in xrange(ndof):
         curvedata = rawdata[(chunkindex*nlines_chunk) + 2 + idof]
         curvedata = curvedata.strip().split(" ")
         curve = ParabolicCurve()
-        nramps = len(curvedata)/4
+        nramps = int(len(curvedata)/4)
         for iramp in xrange(nramps):
             v, a, t, x0 = [float(dummy) for dummy in curvedata[(iramp*4):((iramp + 1)*4)]]
             ramp = Ramp(v, a, t, x0)

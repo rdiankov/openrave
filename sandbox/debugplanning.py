@@ -333,7 +333,7 @@ def test_contours():
     h = env.plot3 (points=newpoints,pointsize=2.0,colors=array((1,0,0)))
 
     indices = array(o.polys.data)
-    indices = array(reshape(indices,(len(indices)/4,4)),'int')
+    indices = array(reshape(indices,(int(len(indices)/4),4)),'int')
     h2 = env.drawtrimesh (points=newpoints,indices=indices[:,1:4],colors=array((0,0,1,0.5)))
 
 def test_jointweights():

@@ -128,13 +128,13 @@ def evalNumbers(expr):
             evalexprs.append(newresult)
         N = len(evalexprs)
         while N > 1:
-            for i in range(N/2):
+            for i in range(int(N/2)):
                 evalexprs[2*i]+=evalexprs[2*i+1]
                 evalexprs[i] = evalexprs[2*i]
             if N & 1:
-                evalexprs[N/2] = evalexprs[N-1]
+                evalexprs[int(N/2)] = evalexprs[N-1]
                 N += 1
-            N /= 2
+            N = int(N/2)
         return evalexprs[0]
     
     elif expr.is_Pow:

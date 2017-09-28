@@ -835,7 +835,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         with self.robot:
             Trelative = dot(linalg.inv(target.GetTransform()),self.robot.GetActiveManipulator().GetEndEffectorTransform())
             I=random.permutation(range(len(dests)))
-            num = len(I)/50
+            num = int(len(I)/50)
             success = False
             for i in range(num):
                 try:

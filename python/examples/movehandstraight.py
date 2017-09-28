@@ -93,7 +93,7 @@ def main(env,options):
             length = 0.6*random.rand()*armlength
             Tee[0:3,3] = eetrans + x/linalg.norm(x)*(armlength-length)
             maxsteps=int(length/stepsize)+1
-            minsteps = maxsteps/2
+            minsteps = int(maxsteps/2)
             h = env.drawlinelist(array([Tee[0:3,3],Tee[0:3,3]+direction*maxsteps*stepsize]),1)
         try:
             success = basemanip.MoveHandStraight(direction=direction,starteematrix=Tee,stepsize=stepsize,minsteps=minsteps,maxsteps=maxsteps)

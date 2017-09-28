@@ -1712,7 +1712,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         # actually a lot of time can be wasted in this phase...
         if True:
             return code
-        numspaces /= 4
+        numspaces = int(numspaces/4)
         try:
             return re.sub('\n','\n'+' '*numspaces,s)
         except:

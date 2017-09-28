@@ -54,7 +54,7 @@ def ReadShortcutProgress(shortcutprogressstring):
     originaldur = float(generalinfo[0])
     maxiter = int(generalinfo[1])
     nlinespergroup = 9
-    nshortcuts = (len(rawdata) - 1)/nlinespergroup
+    nshortcuts = int((len(rawdata) - 1)/nlinespergroup)
 
     rawdata = rawdata[1:] # pop out the first element (original duration)
 

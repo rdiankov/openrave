@@ -76,7 +76,7 @@ def solvefailed2(self):
     # choose which leftvar can determine the singularity of the following equations!
     testeqs4 = []
     for ipeq,peq in enumerate(testeqs3):
-        maxdenom = [0]*(len(testeqs3[0].symbols)/2)
+        maxdenom = [0]*int(len(testeqs3[0].symbols)/2)
         for monoms in peq.iter_monoms():
             for i in range(len(maxdenom)):
                 maxdenom[i] = max(maxdenom[i],monoms[2*i]+monoms[2*i+1])

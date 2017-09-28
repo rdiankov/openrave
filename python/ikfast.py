@@ -3560,7 +3560,7 @@ class IKFastSolver(AutoReloader):
 
                 newreducedeqs = []
                 for peq in rawpolyeqs:
-                    maxdenom = [0]*(len(polyvars)/2)
+                    maxdenom = [0]*int(len(polyvars)/2)
                     for monoms in peq.monoms():
                         for i in range(len(maxdenom)):
                             maxdenom[i] = max(maxdenom[i],monoms[2*i]+monoms[2*i+1])
@@ -4904,7 +4904,7 @@ class IKFastSolver(AutoReloader):
                         if ideg % 2:
                             sinsubs.append((var.cvar**ideg,var.cvar*(1-var.svar**2)**int((ideg-1)/2)))
                         else:
-                            sinsubs.append((var.cvar**ideg,(1-var.svar**2)**(ideg/2)))
+                            sinsubs.append((var.cvar**ideg,(1-var.svar**2)**int(ideg/2)))
                 for i in range(AUinv.shape[0]):
                     log.info('replacing row %d', i)
                     for j in range(AUinv.shape[1]):
@@ -6206,7 +6206,7 @@ class IKFastSolver(AutoReloader):
         if len(allmonoms)<2*len(dialyticeqs):
             log.warn('solveDialytically equations %d > %d, should be equal...', 2*len(dialyticeqs),len(allmonoms))
             # TODO not sure how to select the equations
-            N = len(allmonoms)/2
+            N = int(len(allmonoms)/2)
             dialyticeqs = dialyticeqs[:N]
         if len(allmonoms) == 0 or len(allmonoms)>2*len(dialyticeqs):
             raise self.CannotSolveError('solveDialytically: more unknowns than equations %d>%d'%(len(allmonoms), 2*len(dialyticeqs)))
@@ -7717,7 +7717,7 @@ class IKFastSolver(AutoReloader):
                 # the denoms for 0,1 and 2,3 are the same
                 for i in [0,2]:
                     denom = fraction(halftansubs[i][1])[1]
-                    term *= denom**(maxdenom[i/2]-monoms[i]-monoms[i+1])
+                    term *= denom**(maxdenom[int(i/2)]-monoms[i]-monoms[i+1])
                 complexityvalue = self.codeComplexity(term.expand())
                 if complexityvalue < 450:
                     eqnew += simplify(term)

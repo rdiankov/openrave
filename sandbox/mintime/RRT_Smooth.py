@@ -67,8 +67,8 @@ def linear_smooth_dichotomy(robot,vp_list,coll_check_step):
             with robot:
                 robot.SetDOFValues(p)
                 if robot.GetEnv().CheckCollision(robot):
-                    l1=linear_smooth_dichotomy(robot,vp_list[0:len(vp_list)/2+1],coll_check_step)
-                    l2=linear_smooth_dichotomy(robot,vp_list[len(vp_list)/2:len(vp_list)],coll_check_step)
+                    l1=linear_smooth_dichotomy(robot,vp_list[0:int(len(vp_list)/2)+1],coll_check_step)
+                    l2=linear_smooth_dichotomy(robot,vp_list[int(len(vp_list)/2):len(vp_list)],coll_check_step)
                     l1.extend(l2[1:])
                     return l1
         return [p1,p2]

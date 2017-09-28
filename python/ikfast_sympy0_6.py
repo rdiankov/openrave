@@ -2451,7 +2451,7 @@ class IKFastSolver(AutoReloader):
 
             newreducedeqs = []
             for peq in rawpolyeqs:
-                maxdenom = [0]*(len(polyvars)/2)
+                maxdenom = [0]*int(len(polyvars)/2)
                 for monoms in peq.iter_monoms():
                     for i in range(len(maxdenom)):
                         maxdenom[i] = max(maxdenom[i],monoms[2*i]+monoms[2*i+1])
@@ -3560,7 +3560,7 @@ class IKFastSolver(AutoReloader):
             raise self.CannotSolveError('coefficients of equations need to match! only got %d reduced equations'%len(neweqs))
 
         # solve the othereqs for symbols without the standalone symbols[2] and symbols[3]
-        for jother in range(len(othersymbols)/2):
+        for jother in range(int(len(othersymbols)/2)):
             if jother == 0:
                 cosmonom = (1,0,0,0)
                 sinmonom = (0,1,0,0)
@@ -3710,7 +3710,7 @@ class IKFastSolver(AutoReloader):
         origmonoms.sort()
         if len(allmonoms)<2*len(newreducedeqs):
             log.warn('solveDialytically equations %d > %d, should be equal...', 2*len(newreducedeqs),len(allmonoms))
-            newreducedeqs = newreducedeqs[0:(len(allmonoms)/2)]
+            newreducedeqs = newreducedeqs[0:int(len(allmonoms)/2)]
         if len(allmonoms)>2*len(newreducedeqs):
             raise self.CannotSolveError('solveDialytically: more unknowns than equations %d>%d'%(len(allmonoms), 2*len(newreducedeqs)))
             
@@ -4323,7 +4323,7 @@ class IKFastSolver(AutoReloader):
                 # the denoms for 0,1 and 2,3 are the same
                 for i in [0,2]:
                     denom = fraction(halftansubs[i][1])[1]
-                    term *= denom**(maxdenom[i/2]-monoms[i]-monoms[i+1])
+                    term *= denom**(maxdenom[int(i/2)]-monoms[i]-monoms[i+1])
                 eqnew += simplify(term)
             polyeq = Poly(eqnew,varsym0.htvar,varsym1.htvar)
             if polyeq.coeff() == S.Zero:
