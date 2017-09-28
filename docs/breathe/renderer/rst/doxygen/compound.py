@@ -53,7 +53,7 @@ class CompoundDefTypeSubRenderer(Renderer):
     def extend_nodelist(self, nodelist, section, title, section_nodelists):
 
         # Add title and contents if found
-        if section_nodelists.has_key(section):
+        if section in section_nodelists:
             nodelist.append(self.node_factory.emphasis(text=title))
             nodelist.append(self.node_factory.block_quote("", *section_nodelists[section]))
 
