@@ -108,7 +108,7 @@ class DatabaseGenerator(metaclass.AutoReloader):
             makedirs(os.path.split(filename)[0])            
         except OSError:
             pass
-        with open(filename, 'w') as f:
+        with open(filename, 'wb') as f:
             pickle.dump((self.getversion(),params), f)
     def generate(self):
         raise NotImplementedError()
