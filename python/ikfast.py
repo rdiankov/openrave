@@ -4882,7 +4882,7 @@ class IKFastSolver(AutoReloader):
                 if AU.shape[0] != AU.shape[1]:
                     raise self.CannotSolveError('could not find non-singular matrix %r'%(AU.shape,))
                 
-            otherrows = range(A.shape[0])
+            otherrows = list(range(A.shape[0]))
             for i,row in enumerate(rows):
                 BU[i] = B[row]
                 otherrows.remove(row)
@@ -7780,7 +7780,7 @@ class IKFastSolver(AutoReloader):
                 if degree+1 <= len(newpolyeqs2):
                     # in order to avoid wrong solutions, have to get resultants for all equations
                     possibilities = []
-                    unusedindices = range(len(newpolyeqs2))
+                    unusedindices = list(range(len(newpolyeqs2)))
                     for eqsindices in combinations(range(len(newpolyeqs2)),degree+1):
                         Mall = zeros((degree+1,degree+1))
                         totalcomplexity = 0

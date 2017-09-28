@@ -3298,7 +3298,7 @@ class IKFastSolver(AutoReloader):
                         AUadjugate[i,j] = self.trigsimp(q.subs(self.freevarsubsinv),self.freejointvars).subs(self.freevarsubs)
                 checkforzeros.append(self.removecommonexprs(AUdet,onlygcd=False,onlynumbers=True))
             log.info('found non-singular AU matrix')
-            otherrows = range(A.shape[0])
+            otherrows = list(range(A.shape[0]))
             for i,row in enumerate(rows):
                 BU[i] = B[row]
                 otherrows.remove(row)
@@ -4382,7 +4382,7 @@ class IKFastSolver(AutoReloader):
                 if degree+1 <= len(newpolyeqs2):
                     # in order to avoid wrong solutions, have to get resultants for all equations
                     possibilities = []
-                    unusedindices = range(len(newpolyeqs2))
+                    unusedindices = list(range(len(newpolyeqs2)))
                     for eqsindices in combinations(range(len(newpolyeqs2)),degree+1):
                         Mall = zeros((degree+1,degree+1))
                         for i,eqindex in enumerate(eqsindices):
