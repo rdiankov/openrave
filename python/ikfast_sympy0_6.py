@@ -229,7 +229,7 @@ except ImportError:
         if n == 0: yield[]
         else:
             _internal_items=list(items)
-            for  i in xrange(len(_internal_items)):
+            for  i in range(len(_internal_items)):
                 for cc in combinations(_internal_items[i+1:],n-1):
                     yield [_internal_items[i]]+cc
                     

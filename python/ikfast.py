@@ -234,7 +234,7 @@ except ImportError:
         if n == 0: yield[]
         else:
             _internal_items=list(items)
-            for  i in xrange(len(_internal_items)):
+            for  i in range(len(_internal_items)):
                 for cc in combinations(_internal_items[i+1:],n-1):
                     yield [_internal_items[i]]+cc
                     
@@ -1261,11 +1261,11 @@ class GinacUtils:
         All parameters have to be ginac objects
         """
         gX = swiginac.symbolic_matrix(gB.rows(),gB.cols(),name)
-        for i in reversed(xrange(gA.rows())):
+        for i in reversed(range(gA.rows())):
             if gA[i, i] == 0:
                 raise ValueError("Matrix must be non-singular.")
             
-            gX[i, 0] = (gB[i, 0] - sum(gA[i, k] * gX[k, 0] for k in xrange(i+1, gA.rows()))) / gA[i, i]
+            gX[i, 0] = (gB[i, 0] - sum(gA[i, k] * gX[k, 0] for k in range(i+1, gA.rows()))) / gA[i, i]
             
         return gX
     

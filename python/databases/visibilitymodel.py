@@ -373,7 +373,7 @@ class VisibilityModel(DatabaseGenerator):
             if randomize:
                 order = random.permutation(len(self.visibilitytransforms))
             else:
-                order = xrange(len(self.visibilitytransforms))
+                order = range(len(self.visibilitytransforms))
             for i in order:
                 pose = self.visibilitytransforms[i]
                 Trelative = dot(linalg.inv(self.attachedsensor.GetTransform()),self.manip.GetEndEffectorTransform())

@@ -18,10 +18,10 @@ except NameError:
     pass
 
 def RandVect1(n, l, u):
-    return np.asarray([rng.uniform(l, u) for _ in xrange(n)])
+    return np.asarray([rng.uniform(l, u) for _ in range(n)])
 
 def RandVect2(l, u):
-    return np.asarray([rng.uniform(l[i], u[i]) for i in xrange(len(l))])
+    return np.asarray([rng.uniform(l[i], u[i]) for i in range(len(l))])
 
 ################################################################################
 # test precision for easy number assignments
@@ -55,7 +55,7 @@ x0 = 0
 x1 = 3
 maxit = 100
 curves = []
-for i in xrange(maxit):
+for i in range(maxit):
     v0 = rng.uniform(-vm, vm)
     v1 = rng.uniform(-vm, vm)
     try:
@@ -128,7 +128,7 @@ assert(ramp.IsEqual(fixedCurve.duration, duration))
 
 nTrials = 0
 nSuccess = 0
-for _ in xrange(nTrials):
+for _ in range(nTrials):
     x0 = mp.rand()
     x1 = mp.rand()*3
     v0 = mp.rand()*(-2)
@@ -167,7 +167,7 @@ nSuccess = 0
 vboundfailed = 0
 xboundfailed = 0
 interpfailed = 0
-for it in xrange(nTrials):
+for it in range(nTrials):
     print("iteration {0}/{1}".format(it + 1, nTrials))
     x0Vect = RandVect2(xMin, xMax)
     x1Vect = RandVect2(xMin, xMax)
