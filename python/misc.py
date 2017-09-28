@@ -504,7 +504,7 @@ class MultiManipIKSolver:
                 for sols in sequence_cross_product(*alljointvalues):
                     dist = numpy.sum([numpy.sum(numpy.abs(sol0-sol1)) for sol0,sol1 in izip(sols,curvalues)])
                     distancesolutions.append([dist, sols])
-                distancesolutions.sort(lambda x,y: int(x[0]-y[0]))
+                distancesolutions.sort(key=lambda x: x[0])
                 for dist,sols in distancesolutions:
                     for sol,manip in izip(sols,self.manips):
                         self.robot.SetDOFValues(sol,manip.GetArmIndices()) 

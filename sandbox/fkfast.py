@@ -276,7 +276,7 @@ class FKFastSolver(AutoReloader):
                         if eq0 != S.Zero and eq0.count_ops() == 1 or eq0.count_ops() == 2+MUL:
                             eliminatevargroup.append((eq0,eq1,int(eq0.count_ops().subs(MUL,4).evalf())))
                 if len(eliminatevargroup) > 0:
-                    eliminatevargroup.sort(lambda x,y: -x[2]+y[2])
+                    eliminatevargroup.sort(key=lambda x: -x[2])
                     eliminatevargroups.append(eliminatevargroup)
 
         reducesubs = []

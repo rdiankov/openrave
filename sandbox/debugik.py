@@ -977,7 +977,7 @@ def solveLinearly(self,raweqns,varsyms,othersolvedvars,maxdegree=1):
             break
     if singleeqs is not None:
         neweqns += singleeqs
-        neweqns.sort(lambda x, y: x[0]-y[0])
+        neweqns.sort(key=lambda x: x[0])
 
 def detdialytically():
     M = Mall[2]*leftvar**2+Mall[1]*leftvar+Mall[0]

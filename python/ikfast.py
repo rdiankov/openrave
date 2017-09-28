@@ -1929,7 +1929,7 @@ class IKFastSolver(AutoReloader):
         return complexity
     
     def sortComplexity(self,exprs):
-        exprs.sort(lambda x, y: self.codeComplexity(x)-self.codeComplexity(y))
+        exprs.sort(key=self.codeComplexity)
         return exprs
 
     def checkForDivideByZero(self,eq):
@@ -3577,7 +3577,7 @@ class IKFastSolver(AutoReloader):
                         eqnew += term
                     newreducedeqs.append(Poly(eqnew,*dummys))
 
-                newreducedeqs.sort(cmp=lambda x,y: len(x.monoms()) - len(y.monoms()))
+                newreducedeqs.sort(key=lambda x: len(x.monoms()))
                 ileftvar = 0
                 leftvar = dummys[ileftvar]
                 exportcoeffeqs=None
@@ -3898,7 +3898,7 @@ class IKFastSolver(AutoReloader):
                         continue
         
         # sort with respect to least number of symbols
-        reducedelayed.sort(lambda x,y: x[3]-y[3])
+        reducedelayed.sort(key=lambda x: x[3])
 
         reducedeqs = []
         tree = []
@@ -3952,7 +3952,7 @@ class IKFastSolver(AutoReloader):
         # ideally we want to try all combinations of simple equations first until we arrive to linearly independent ones.
         # However, in practice most of the first equations are linearly dependent and it takes a lot of time to prune all of them,
         # so start at the most complex
-        systemcoeffs.sort(lambda x,y: -x[0]+y[0])
+        systemcoeffs.sort(key=lambda x: -x[0])
         # sort left and right in the same way
         leftsideeqs = [leftsideeqs[ileft] for rank,ileft,coeffs in systemcoeffs]
         rightsideeqs = [rightsideeqs[ileft] for rank,ileft,coeffs in systemcoeffs]
@@ -4176,7 +4176,7 @@ class IKFastSolver(AutoReloader):
         def _computereducedequations():
             reducedeqs = []
             # order the equations based on the number of terms
-            newleftsideeqs.sort(lambda x,y: len(x.monoms()) - len(y.monoms()))
+            newleftsideeqs.sort(key=lambda x: len(x.monoms()))
             newunknowns = newleftsideeqs[0].gens
             log.info('solving for all pairwise variables in %s, number of symbol coeffs are %s',unknownvars,builtins.sum(numsymbolcoeffs))
             systemcoeffs = []
@@ -4259,7 +4259,7 @@ class IKFastSolver(AutoReloader):
             raise self.CannotSolveError('number of equations %d less than 6'%(len(RightEquations)))
         
         # sort with respect to the number of monomials
-        RightEquations.sort(lambda x, y: len(x.monoms())-len(y.monoms()))
+        RightEquations.sort(key=lambda x: len(x.monoms()))
         
         # substitute with dummy=tan(half angle)
         symbols = RightEquations[0].gens
@@ -6789,7 +6789,7 @@ class IKFastSolver(AutoReloader):
                         complexity += self.codeComplexity(eq)
             if len(raweqns) > 1:
                 curvarsubssol.append((var0,var1,raweqns,complexity))
-        curvarsubssol.sort(lambda x, y: x[3]-y[3])
+        curvarsubssol.sort(key=lambda x: x[3])
         
         if len(curvars) == 2 and self.IsHinge(curvars[0].name) and self.IsHinge(curvars[1].name) and len(curvarsubssol) > 0:
             # there's only two variables left, it might be the case that the axes are aligning and the two variables are dependent on each other
@@ -6993,7 +6993,7 @@ class IKFastSolver(AutoReloader):
         
         if unknownvars is None:
             unknownvars = []
-        solutions.sort(lambda x, y: x[0].score-y[0].score)
+        solutions.sort(key=lambda x: x[0].score)
         hasonesolution = False
         for solution in solutions:
             checkforzeros = solution[0].checkforzeros
@@ -8084,7 +8084,7 @@ class IKFastSolver(AutoReloader):
         othervarsubs = [(sin(v)**2,1-cos(v)**2) for v in othervars]
         eqpolys = [Poly(eq.subs(varsubs),cvar,svar) for eq in raweqns]
         eqpolys = [eq for eq in eqpolys if sum(eq.degree_list()) == 1 and not eq.TC().has(solvevar)]
-        #eqpolys.sort(lambda x,y: iksolver.codeComplexity(x) - iksolver.codeComplexity(y))
+        #eqpolys.sort(key=iksolver.codeComplexity)
         partialsolutions = []
         neweqs = []
         for p0,p1 in combinations(eqpolys,2):
@@ -8099,7 +8099,7 @@ class IKFastSolver(AutoReloader):
             # cos(A)**2 + sin(A)**2 - 1 = 0, useful equation but the squares introduce wrong solutions
             #neweqs.append(partialsolution[0]**2+partialsolution[1]**2-partialsolution[2]**2)
         # try to cross
-        partialsolutions.sort(lambda x, y: int(min(x[0])-min(y[0])))
+        partialsolutions.sort(key=lambda x: min(x[0]))
         for (rank0,ps0),(rank1,ps1) in combinations(partialsolutions,2):
             if self.equal(ps0[0]*ps1[2]-ps1[0]*ps0[2],S.Zero):
                 continue
@@ -8339,7 +8339,7 @@ class IKFastSolver(AutoReloader):
             eqcombinations = []
             for eqs in combinations(neweqns,2):
                 eqcombinations.append((eqs[0][0]+eqs[1][0],[Eq(e[1],0) for e in eqs]))
-            eqcombinations.sort(lambda x, y: x[0]-y[0])
+            eqcombinations.sort(key=lambda x: x[0])
             hasgoodsolution = False
             for icomb,comb in enumerate(eqcombinations):
                 # skip if too complex
@@ -8681,7 +8681,7 @@ class IKFastSolver(AutoReloader):
             eqnew, symbols = self.groupTerms(eq, unknownvars, symbolgen)
             allsymbols += symbols
             orgeqns.append([self.codeComplexity(eq),Poly(eqnew,*unknownvars)])
-        orgeqns.sort(lambda x, y: x[0]-y[0])
+        orgeqns.sort(key=lambda x: x[0])
         neweqns = orgeqns[:]
         
         pairwisesubs = [(svar0*cvar1,Symbol('s0c1')),(svar0*svar1,Symbol('s0s1')),(cvar0*cvar1,Symbol('c0c1')),(cvar0*svar1,Symbol('c0s1')),(cvar0*svar0,Symbol('s0c0')),(cvar1*svar1,Symbol('c1s1'))]
@@ -8764,7 +8764,7 @@ class IKFastSolver(AutoReloader):
                     break
             if singleeqs is not None:
                 neweqns += singleeqs
-                neweqns.sort(lambda x, y: x[0]-y[0])
+                neweqns.sort(key=lambda x: x[0])
 
         # check if any equations are at least degree 1 (if not, try to compute some)
         for ivar in range(2):
@@ -8814,7 +8814,7 @@ class IKFastSolver(AutoReloader):
                                 polyeqs.append([self.codeComplexity(eqnew),Poly(eqnew,*unknownvars)])
                                 addedeqs.append(eq)
             neweqns += polyeqs
-        neweqns.sort(lambda x,y: x[0]-y[0])
+        neweqns.sort(key=lambda x: x[0])
 
         rawsolutions = []
         # try single variable solution, only return if a single solution has been found
