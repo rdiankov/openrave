@@ -145,27 +145,27 @@ class OpenRaveServer(object):
         valueIter = iter(data)
 
         # remove trailing trajectory information
-        valueIter.next()
-        valueIter.next()
-        valueIter.next()
-        valueIter.next()
+        next(valueIter)
+        next(valueIter)
+        next(valueIter)
+        next(valueIter)
         try:
             while True:
                 jointValues = []
                 # time value
-                value = valueIter.next()
+                value = next(valueIter)
 
                 # only the arm joints
                 for i in range(size):
-                    value = valueIter.next()
+                    value = next(valueIter)
                     jointValues.append(float(value))
                 self.trajdata.append(jointValues)
 
                 # go on till the next line
-                while (len(valueIter.next()) is not 0):
+                while (len(next(valueIter)) is not 0):
                     pass
 
-                value = valueIter.next()
+                value = next(valueIter)
         except StopIteration:
             pass
 

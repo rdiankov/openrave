@@ -440,16 +440,16 @@ def sequence_cross_product(*sequences):
     """iterates through the cross product of all items in the sequences"""
     # visualize an odometer, with "wheels" displaying "digits"...:
     wheels = map(iter, sequences)
-    digits = [it.next( ) for it in wheels]
+    digits = [next(it) for it in wheels]
     while True:
         yield tuple(digits)
         for i in range(len(digits)-1, -1, -1):
             try:
-                digits[i] = wheels[i].next( )
+                digits[i] = next(wheels[i])
                 break
             except StopIteration:
                 wheels[i] = iter(sequences[i])
-                digits[i] = wheels[i].next( )
+                digits[i] = next(wheels[i])
         else:
             break
 

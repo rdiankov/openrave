@@ -2305,7 +2305,7 @@ class IKFastSolver(AutoReloader):
 #                 if ti.is_number and len(str(ti)) > 30:
 #                     matchnumber = self.MatchSimilarFraction(ti,numbersubs)
 #                     if matchnumber is None:
-#                         sym = self.gsymbolgen.next()
+#                         sym = next(self.gsymbolgen)
 #                         log.info('adding global symbol %s=%s'%(sym,ti))
 #                         numbersubs.append((sym,ti))
 #                         T[i] = sym
@@ -4094,13 +4094,13 @@ class IKFastSolver(AutoReloader):
         allmonoms = dict()
         for left,right in izip(leftsideeqs,rightsideeqs):
             if right != S.Zero:
-                rightsidedummy.append(symbolgen.next())
+                rightsidedummy.append(next(symbolgen))
                 localsymbols.append((rightsidedummy[-1],right.as_expr().expand()))
             else:
                 rightsidedummy.append(S.Zero)
             for m in left.monoms():
                 if builtins.sum(m) > 0 and not m in allmonoms:
-                    newvar = vargen.next()
+                    newvar = next(vargen)
                     localsymbols.append((newvar,Poly.from_dict({m:S.One},*left.gens).as_expr()))
                     allmonoms[m] = newvar
 
@@ -4153,10 +4153,10 @@ class IKFastSolver(AutoReloader):
                                     gmult = gsym*(-gcommon/common0)
                                     break
                             if gmult is None:
-                                gmult = symbolgen.next()
+                                gmult = next(symbolgen)
                                 dividesymbols.append((gmult,S.One/leftcoeffs[0]))
                             newc = (c*gmult).subs(localsymbols).expand()
-                            sym = symbolgen.next()
+                            sym = next(symbolgen)
                             localsymbols.append((sym,newc))
                             newleft = newleft + sym
                     numsymbolcoeffs.append(0)
@@ -4930,7 +4930,7 @@ class IKFastSolver(AutoReloader):
                                 #raise self.CannotSolveError('cannot get rid of denominator')
                                 
                             # convert back to cos/sin in order to get rid of the denominator term?
-                            sym = self.gsymbolgen.next()
+                            sym = next(self.gsymbolgen)
                             dictequations.append((sym, q / extranumerator))
                             q = sym
                             #div(q.subs(htvarsubsinv).expand(), extranumerator.subs(htvarsubsinv).expand(), *self.freevars)
@@ -5018,7 +5018,7 @@ class IKFastSolver(AutoReloader):
                         # create a new symbol for every term
                         eq = S.Zero
                         for monom, coeff in polyterms.items():
-                            sym = self.gsymbolgen.next()
+                            sym = next(self.gsymbolgen)
                             dictequations.append((sym,coeff))
                             localsymbolmap[sym.name] = swiginac.symbol(sym.name)
                             if sympy_smaller_073:
@@ -5038,7 +5038,7 @@ class IKFastSolver(AutoReloader):
                         # create a new symbol for every term
                         eq = S.Zero
                         for monom, coeff in polyterms.items():
-                            sym = self.gsymbolgen.next()
+                            sym = next(self.gsymbolgen)
                             dictequations.append((sym,coeff))
                             localsymbolmap[sym.name] = swiginac.symbol(sym.name)
                             if sympy_smaller_073:
@@ -5248,7 +5248,7 @@ class IKFastSolver(AutoReloader):
                     log.info('adding equation %d', itest)
                     newpeq = Poly(S.Zero, *othersymbols)
                     for monom, coeff in newpeq.terms():
-                        sym = self.gsymbolgen.next()
+                        sym = next(self.gsymbolgen)
                         dictequations.append((sym,coeff))
                         if sympy_smaller_073:
                             newpeq += sym*Monomial(*monom).as_expr(*othersymbols)
@@ -5644,11 +5644,11 @@ class IKFastSolver(AutoReloader):
                         for i in range(shape[0]):
                             for j in range(shape[1]):
                                 if Mall[idegree][i,j] != S.Zero:
-                                    sym = self.gsymbolgen.next()
+                                    sym = next(self.gsymbolgen)
                                     Malltemp[idegree][i,j] = sym
                                     dictequations2.append((sym,Mall[idegree][i,j]))
                         M += Malltemp[idegree]*leftvar**idegree
-                    tempsymbols = [self.gsymbolgen.next() for i in range(len(M))]
+                    tempsymbols = [next(self.gsymbolgen) for i in range(len(M))]
                     tempsubs = []
                     for i in range(len(tempsymbols)):
                         if M[i] != S.Zero:
@@ -7164,12 +7164,12 @@ class IKFastSolver(AutoReloader):
                                                 dictequations = []
                                                 if not eq.is_number and not eq.has(*allothersolvedvars):
                                                     # not dependent on variables, so it could be in the form of atan(px,py), so convert to a global symbol since it never changes
-                                                    sym = self.gsymbolgen.next()
+                                                    sym = next(self.gsymbolgen)
                                                     dictequations.append((sym,eq))
                                                     #eq = sym
-                                                    sineq = self.gsymbolgen.next()
+                                                    sineq = next(self.gsymbolgen)
                                                     dictequations.append((sineq,self.SimplifyAtan2(sin(eq))))
-                                                    coseq = self.gsymbolgen.next()
+                                                    coseq = next(self.gsymbolgen)
                                                     dictequations.append((coseq,self.SimplifyAtan2(cos(eq))))
                                                 else:
                                                     sineq = sin(eq).evalf(n=30)
@@ -7197,7 +7197,7 @@ class IKFastSolver(AutoReloader):
                                                 else:
                                                     if not eq.is_number and not eq.has(*allothersolvedvars):
                                                         # not dependent on variables, so it could be in the form of atan(px,py), so convert to a global symbol since it never changes
-                                                        sym = self.gsymbolgen.next()
+                                                        sym = next(self.gsymbolgen)
                                                         dictequations.append((sym,eq))
                                                         #eq = sym
                                                     cond=abs(sothervar-eq.evalf(n=30)) + abs(sign(cothervar)-1)
@@ -7242,7 +7242,7 @@ class IKFastSolver(AutoReloader):
                                                 else:
                                                     if not eq.is_number and not eq.has(*allothersolvedvars):
                                                         # not dependent on variables, so it could be in the form of atan(px,py), so convert to a global symbol since it never changes
-                                                        sym = self.gsymbolgen.next()
+                                                        sym = next(self.gsymbolgen)
                                                         dictequations.append((sym,eq))
                                                         eq = sym
                                                     cond=abs(cothervar-eq.evalf(n=30)) + abs(sign(sothervar)-1)
@@ -7830,7 +7830,7 @@ class IKFastSolver(AutoReloader):
                                 prevsolution = AST.SolverBreak('SolvePairVariablesHalfAngle fail')
                                 for divisor,linearsolution in linearsolutions:
                                     assert(len(linearsolution)==1)
-                                    divisorsymbol = self.gsymbolgen.next()
+                                    divisorsymbol = next(self.gsymbolgen)
                                     solversolution = AST.SolverSolution(varsyms[ileftvar].name,jointeval=[2*atan(linearsolution[0]/divisorsymbol)],isHinge=self.IsHinge(varsyms[ileftvar].name))
                                     prevsolution = AST.SolverCheckZeros(varsyms[ileftvar].name,[divisorsymbol],zerobranch=[prevsolution],nonzerobranch=[solversolution],thresh=1e-6)
                                     prevsolution.dictequations = [(divisorsymbol,divisor)]
@@ -7900,13 +7900,13 @@ class IKFastSolver(AutoReloader):
                             for j in range(shape[1]):
                                 if Mall[idegree][i,j] != S.Zero:
                                     if self.codeComplexity(Mall[idegree][i,j])>5:
-                                        sym = self.gsymbolgen.next()
+                                        sym = next(self.gsymbolgen)
                                         Malltemp[idegree][i,j] = sym
                                         dictequations.append((sym,Mall[idegree][i,j]))
                                     else:
                                         Malltemp[idegree][i,j] = Mall[idegree][i,j]
                         M += Malltemp[idegree]*leftvar**idegree
-                    tempsymbols = [self.gsymbolgen.next() for i in range(16)]
+                    tempsymbols = [next(self.gsymbolgen) for i in range(16)]
                     tempsubs = []
                     for i in range(16):
                         if M[i] != S.Zero:
@@ -8423,7 +8423,7 @@ class IKFastSolver(AutoReloader):
                             cvarfracsimp_denom = -cvarfracsimp_denom
                         if self.equal(svarfracsimp_denom,cvarfracsimp_denom) and not svarfracsimp_denom.is_number:
                             log.debug('%s solution: denominator is equal %s, doing a global substitution',var.name,svarfracsimp_denom)
-                            #denom = self.gsymbolgen.next()
+                            #denom = next(self.gsymbolgen)
                             #solversolution.dictequations.append((denom,sign(svarfracsimp_denom)))
                             svarsolsimp = self.SimplifyTransform(self.trigsimp(svarfrac[0],othersolvedvars))#*denom)
                             cvarsolsimp = self.SimplifyTransform(self.trigsimp(cvarfrac[0],othersolvedvars))#*denom)
@@ -8690,7 +8690,7 @@ class IKFastSolver(AutoReloader):
         reduceeqns = [Poly(eq.as_expr().subs(pairwisesubs),*pairwisevars) for rank,eq in orgeqns if rank < 4*maxcomplexity]
         for i,eq in enumerate(reduceeqns):
             if eq.TC != S.Zero and not eq.TC().is_Symbol:
-                n=symbolgen.next()
+                n=next(symbolgen)
                 allsymbols.append((n,eq.TC().subs(allsymbols)))
                 reduceeqns[i] += n-eq.TC()
         
@@ -9172,7 +9172,7 @@ class IKFastSolver(AutoReloader):
             if (c.is_number and len(str(c)) > 40) or (not c.is_number and not c.is_Symbol):
                 # if it is a product of a symbol and a number, then ignore
                 if not c.is_Mul or not all([e.is_number or e.is_Symbol for e in c.args]):
-                    sym = symbolgen.next()
+                    sym = next(symbolgen)
                     symbols.append((sym,c))
                     c = sym
             if builtins.sum(m) == 0:
@@ -9190,7 +9190,7 @@ class IKFastSolver(AutoReloader):
             symbolgen = cse_main.numbered_symbols('const')
         symbols = []
         if expr.is_number:
-            result = symbolgen.next()
+            result = next(symbolgen)
             symbols.append((result,expr))
         elif expr.is_Mul:
             result = S.One
@@ -9486,16 +9486,16 @@ class IKFastSolver(AutoReloader):
         """iterates through the cross product of all items in the sequences"""
         # visualize an odometer, with "wheels" displaying "digits"...:
         wheels = map(iter, sequences)
-        digits = [it.next( ) for it in wheels]
+        digits = [next(it) for it in wheels]
         while True:
             yield tuple(digits)
             for i in range(len(digits)-1, -1, -1):
                 try:
-                    digits[i] = wheels[i].next( )
+                    digits[i] = next(wheels[i])
                     break
                 except StopIteration:
                     wheels[i] = iter(sequences[i])
-                    digits[i] = wheels[i].next( )
+                    digits[i] = next(wheels[i])
             else:
                 break
 

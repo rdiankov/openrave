@@ -156,7 +156,7 @@ def simplifyPolynomial(self,peq,leftvar,symbolgen,localsymbols,localsymbols_redu
                 else:
                     index = None
                 if index is None:
-                    v=symbolgen.next()
+                    v=next(symbolgen)
                     localsymbols.append((v,c2))
                     if localsymbols_reduced is not None:
                         localsymbols_reduced.append(c2clean)
@@ -279,7 +279,7 @@ def computeDixonResultant(self,polyeqs,othersolvedvars):
     for eq in polyeqs:
         neweq = Poly(S.Zero,*orgsymbols)
         for c,m in eq.iter_terms():
-            v = symbolgen.next()
+            v = next(symbolgen)
             dixonsymbols.append((v,c))
             neweq = neweq.add_term(v,m)
         neweqs.append(neweq)
@@ -1020,7 +1020,7 @@ def detdialytically():
     det = Poly(S.Zero,leftvar)
     for eq in eqadds2:
         for c,m in eq.iter_terms():
-            sym=self.gsymbolgen.next()
+            sym=next(self.gsymbolgen)
             dictequations.append([sym,c])
             det += sym*leftvar**m[0]
 

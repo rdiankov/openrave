@@ -150,7 +150,7 @@ class GraspReachability(metaclass.AutoReloader):
                 iterindex = random.randint(len(baseIterators))
                 baseIterator,irmodel,gmodel = baseIterators[iterindex]
                 try:                    
-                    pose,graspindex,jointstate = baseIterator.next()
+                    pose,graspindex,jointstate = next(baseIterator)
                 except planning_error:
                     baseIterators.pop(iterindex)
                     continue
@@ -194,7 +194,7 @@ class GraspReachability(metaclass.AutoReloader):
                 try:
                     with self.env:
                         self.robot.SetDOFValues(jointvalues) # reset to original
-                        pose,values,grasp,graspindex = configsampler.next()
+                        pose,values,grasp,graspindex = next(configsampler)
                         gmodel = graspindex[0]
                         print('found grasp',gmodel.target.GetName(),graspindex[1])
                         self.robot.SetActiveManipulator(gmodel.manip)
@@ -297,7 +297,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
             index=random.randint(len(graspiterators))
             try:
                 with self.env:
-                    grasp,graspindex=graspiterators[index][1].next()
+                    grasp,graspindex=next(graspiterators[index][1])
             except StopIteration:
                 graspiterators.pop(index)
                 continue
@@ -594,7 +594,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         with self.env:
             starttime=time.time()
             while True:
-                pose,values,grasp,graspindex = configsampler.next()
+                pose,values,grasp,graspindex = next(configsampler)
                 gmodel = graspindex[0]
                 dests = [dests for target,dests in targetdests if target == gmodel.target]
                 if len(dests) == 0:
@@ -641,7 +641,7 @@ class MobileManipulationPlanning(metaclass.AutoReloader):
         configsampler = self.grmodel.sampleValidPlacementIterator(weight=weight,logllthresh=logllthresh,randomgrasps=False,randomplacement=False,updateenv=False)
         with self.env:
             starttime=time.time()
-            pose,values,grasp,graspindex = configsampler.next()
+            pose,values,grasp,graspindex = next(configsampler)
             print('found in %fs'%(time.time()-starttime))
         gmodel = self.graspObjectMobile(pose,values,grasp,graspindex,**kwargs)
 #         # move to original position

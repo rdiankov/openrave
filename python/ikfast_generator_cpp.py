@@ -1980,7 +1980,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                 # check for divides by 0 in arguments, this could give two possible solutions?!?
                 # if common arguments is nan! solution is lost!
                 # use IKatan2WithCheck in order to make it robust against NaNs
-                iktansymbol = self.symbolgen.next()
+                iktansymbol = next(self.symbolgen)
                 
                 code2 = StringIO()
                 code2.write('CheckValue<IkReal> %s = IKatan2WithCheck(IkReal('%iktansymbol)
@@ -2059,7 +2059,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                         return code, []
                     else:
                         # need to create a new symbol
-                        ikpowsymbol = self.symbolgen.next()
+                        ikpowsymbol = next(self.symbolgen)
                         code2 = StringIO()
                         code2.write('IkReal ')
                         code2.write(str(ikpowsymbol))
@@ -2074,7 +2074,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                         return code,sepcodelist
                 elif expr.exp.is_integer:
                     # use IKPowWithIntegerCheck in order to make it robust
-                    ikpowsymbol = self.symbolgen.next()
+                    ikpowsymbol = next(self.symbolgen)
                     code2 = StringIO()
                     code2.write('CheckValue<IkReal> %s=IKPowWithIntegerCheck('%ikpowsymbol)
                     code3,sepcodelist = self._WriteExprCode(expr.base, code2)
@@ -2100,7 +2100,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                 elif expr.exp < 0:
                     # use IKPowWithIntegerCheck in order to make it robust
                     # check if exprbase is 0
-                    ikpowsymbol = self.symbolgen.next()
+                    ikpowsymbol = next(self.symbolgen)
                     code2 = StringIO()
                     code2.write('IkReal %s = '%ikpowsymbol)
                     code3,sepcodelist = self._WriteExprCode(expr.base, code2)
