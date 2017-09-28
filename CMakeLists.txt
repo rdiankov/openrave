@@ -95,6 +95,7 @@ if( OPT_PYTHON )
     # look specifically for 2.6
     find_program(PYTHON_EXECUTABLE NAMES python2.6 python PATHS [HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\2.6\\InstallPath])
   endif()
+  set(PYTHON_VERSION ${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR})
 
   # back compat?
   if( NOT PYTHON_INCLUDE_DIRS )
@@ -306,7 +307,11 @@ if(NOT MSVC71 AND NOT MSVC80)
     set(Boost_LIBRARY_DIRS $ENV{BOOST_LIBRARYDIR})
   endif()
   set(Boost_ADDITIONAL_VERSIONS "1.46.1" "1.45" "1.44" "1.43" "1.42" "1.41" "1.40" "1.39" "1.38" "1.37.0" "1.37" "1.35.0" "1.34.1" "1.34.0" "1.34" "1.33.1" "1.33.0" "1.33" ${Boost_ADDITIONAL_VERSIONS})
-  find_package(Boost COMPONENTS regex filesystem system python thread iostreams date_time)
+  find_package(Boost COMPONENTS regex filesystem system python-py${PYTHON_VERSION} thread iostreams date_time)
+  if(Boost_PYTHON-PY${PYTHON_VERSION}_FOUND)
+    set(Boost_PYTHON_FOUND ${Boost_PYTHON-PY${PYTHON_VERSION}_FOUND})
+    set(Boost_PYTHON_LIBRARY ${Boost_PYTHON-PY${PYTHON_VERSION}_LIBRARY})
+  endif()
 else()
   # have to rely on local boost and a hack
   add_definitions(-DTEMP_SPIRIT_HACK)
