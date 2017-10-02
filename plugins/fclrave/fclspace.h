@@ -440,7 +440,7 @@ public:
     {
         int envId = pbody->GetEnvironmentId();
         if ( envId == 0 ) {
-            RAVELOG_WARN_FORMAT("body %s has invalid environment id 0", pbody->GetName());
+            RAVELOG_WARN_FORMAT("env=%d, body %s has invalid environment id 0", pbody->GetEnv()->GetId()%pbody->GetName());
             return KinBodyInfoPtr();
         }
 
