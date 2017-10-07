@@ -199,6 +199,10 @@ except:
 
 import numpy # required for fast eigenvalue computation
 from sympy import *
+if sympy_version > '0.7.1':
+    _zeros, _ones = zeros, ones
+    zeros = lambda args: _zeros(*args)
+    ones = lambda args: _ones(*args)
 try:
     import mpmath # on some distributions, sympy does not have mpmath in its scope
 except ImportError:
@@ -1314,7 +1318,7 @@ class IKFastSolver(AutoReloader):
         __slots__ = ['joint','iaxis']
 
     class Variable:
-        __slots__ = ['var','svar','cvar','tvar','htvar']
+        __slots__ = ['name','var','svar','cvar','tvar','htvar','vars','subs','subsinv']
         def __init__(self, var):
             self.name = var.name
             self.var = var
@@ -3263,7 +3267,7 @@ class IKFastSolver(AutoReloader):
                         endbranchtree=[AST.SolverSequence([leftovervarstree])]
                         unusedsymbols = []
                         for solvejointvar in solvejointvars:
-                            usedinequs = any([var in rawpolyeqs[0][0].gens or var in rawpolyeqs[0][1] for var in self.Variable(solvejointvar).vars])
+                            usedinequs = any([var in rawpolyeqs[0][0].gens or var in rawpolyeqs[0][1].gens for var in self.Variable(solvejointvar).vars])
                             if not usedinequs:
                                 unusedsymbols += self.Variable(solvejointvar).vars
                         AllEquationsExtra = []
@@ -6326,7 +6330,7 @@ class IKFastSolver(AutoReloader):
                         linearlyindependent = True
                     break
                 else:
-                    log.info('not all eigenvalues are > 0. min is %e', min([Abs(f) > eps for f in eigenvals]))
+                    log.info('not all abs(eigenvalues) > %e. min is %e', eps, min([Abs(f) for f in eigenvals if Abs(f) < eps]))
             if not linearlyindependent:
                 raise self.CannotSolveError('equations are not linearly independent')
 
