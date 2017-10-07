@@ -1811,6 +1811,13 @@ void* QtCoinViewer::_drawarrow(SoSwitch* handle, const RaveVector<float>& p1, co
         RAVELOG_WARN("QtCoinViewer::drawarrow - Error: End points are the same.\n");
         return handle;
     }
+    //compute color material
+    SoMaterial* mtrl = new SoMaterial;
+    mtrl->diffuseColor = SbColor(color[0],color[1],color[2]);
+    mtrl->ambientColor = SbColor(color[0],color[1],color[2]);
+    mtrl->transparency = (1.0-color[3]);
+    mtrl->setOverride(true);
+    pparent->addChild(mtrl);
 
     //rotate to face point
     RaveVector<float> qrot = quatRotateDirection(RaveVector<dReal>(0,1,0),RaveVector<dReal>(direction));
@@ -1830,9 +1837,6 @@ void* QtCoinViewer::_drawarrow(SoSwitch* handle, const RaveVector<float>& p1, co
 
     psep->addChild(ptrans);
     pparent->addChild(psep);
-
-    // set a diffuse color
-    _SetMaterial(pparent, color);
 
     SoCylinder* c = new SoCylinder();
     c->radius = fwidth;
