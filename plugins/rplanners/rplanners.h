@@ -214,7 +214,7 @@ public:
 
     inline dReal _ComputeDistance(const dReal* config0, const dReal* config1) const
     {
-        return _distmetricfn(VectorWrapper<const dReal>(config0, config0+_dof), VectorWrapper<dReal>(config1, config1+_dof));
+        return _distmetricfn(VectorWrapper<dReal>(config0, config0+_dof), VectorWrapper<dReal>(config1, config1+_dof));
     }
 
     inline dReal _ComputeDistance(const dReal* config0, const std::vector<dReal>& config1) const
