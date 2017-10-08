@@ -95,6 +95,10 @@ public:
     virtual void SetSize(int w, int h);
     virtual void Move(int x, int y);
 
+    /// \brief sets the zoom factor. only affects orthogonal view
+    /// \param factor > 1.0 = Zoom in. < 1.0 = Zoom out
+    virtual void Zoom(float factor);
+
     /// \brief Set title of the viewer window
     virtual void SetName(const string& name);
 
@@ -324,6 +328,7 @@ public:
     virtual void _SetBkgndColor(const RaveVector<float>& color);
 
     virtual void _SetName(const std::string& name);
+    virtual void _Zoom(float factor);
 
     /// \brief posts a function to be executed in the GUI thread
     ///
@@ -367,6 +372,7 @@ public:
     bool _SetTrackingAngleToUpCommand(ostream& sout, istream& sinput);
     bool _StartViewerLoopCommand(ostream& sout, istream& sinput);
     bool _SetProjectionModeCommand(ostream& sout, istream& sinput);
+    bool _ZoomCommand(ostream& sout, istream& sinput);
 
     //@{ Message Queue
     list<GUIThreadFunctionPtr> _listGUIFunctions; ///< list of GUI functions that should be called in the viewer update thread. protected by _mutexGUIFunctions
