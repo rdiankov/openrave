@@ -3075,6 +3075,8 @@ void init_openravepy_kinbody()
                          .def_readwrite("_robotlinkname",&PyKinBody::PyGrabbedInfo::_robotlinkname)
                          .def_readwrite("_trelative",&PyKinBody::PyGrabbedInfo::_trelative)
                          .def_readwrite("_setRobotLinksToIgnore",&PyKinBody::PyGrabbedInfo::_setRobotLinksToIgnore)
+                         .def("__str__",&PyKinBody::PyGrabbedInfo::__str__)
+                         .def("__unicode__",&PyKinBody::PyGrabbedInfo::__unicode__)
                          .def_pickle(GrabbedInfo_pickle_suite())
     ;
 

@@ -81,6 +81,10 @@ public:
     /// \brief sets the near plane for the camera
     void SetNearPlane(double nearplane);
 
+    /// \brief sets the zoom factor. only affects orthogonal view 
+    /// \param factor > 1.0 = Zoom in. < 1.0 = Zoom out
+    void Zoom(float factor);
+
     /// \brief set the cubemap for skybox
     void SetTextureCubeMap(const std::string& posx,
             const std::string& negx,
@@ -213,6 +217,9 @@ protected:
 
     bool _bLightOn; ///< whether lights are on or not
     bool _bIsSelectiveActive; ///< if true, then can select a new
+    double _zNear; ///< In OSG, znear and zfar are updated by CullVisitor, which
+                   ///  causing getProjectionMatrixAsXXX to return negative 
+                   ///  values. Therefore, we manage zNear ourselves
 };
 
 }

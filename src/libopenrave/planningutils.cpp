@@ -1731,6 +1731,8 @@ void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
         endtime = starttime;
     }
 
+    int nOriginalNumWaypoints = traj->GetNumWaypoints();
+    
     std::vector<dReal> values;
     if( endtime < traj->GetDuration() ) {
         size_t endindex = traj->GetFirstWaypointIndexAfterTime(endtime);
@@ -1769,7 +1771,7 @@ void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
     }
 
     // for debugging purposes
-    OPENRAVE_ASSERT_OP(RaveFabs(traj->GetDuration() - (endtime - starttime)),<=,g_fEpsilonLinear*100);
+    OPENRAVE_ASSERT_OP(RaveFabs(traj->GetDuration() - (endtime - starttime)),<=,g_fEpsilonLinear*nOriginalNumWaypoints); // normalize with respect to number of points!
 }
 
 TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal starttime, dReal endtime)
@@ -1863,7 +1865,7 @@ TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal startt
     }
 
     // for debugging purposes
-    OPENRAVE_ASSERT_OP(RaveFabs(outtraj->GetDuration() - (endtime - starttime)),<=,g_fEpsilonLinear*10);
+    OPENRAVE_ASSERT_OP(RaveFabs(outtraj->GetDuration() - (endtime - starttime)),<=,g_fEpsilonLinear*traj->GetNumWaypoints()); // normalize with respect to number of points!
     return outtraj;
 }
 
