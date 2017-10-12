@@ -22,8 +22,9 @@ public:
     {
         __description = ":Interface Author: Rosen Diankov\n\nPath optimizer using linear shortcuts assuming robot has no constraints and _neighstatefn is just regular addition. Should be faster than shortcut_linear.\n\nIf passing 0 or 1 to the constructor, can enable/disable single-dof smoothing.";
         _linearretimer = RaveCreatePlanner(GetEnv(), "LinearTrajectoryRetimer");
-        _bUseSingleDOFSmoothing = true;
-        sinput >> _bUseSingleDOFSmoothing;
+        _nUseSingleDOFSmoothing = 1;
+        sinput >> _nUseSingleDOFSmoothing;
+        RAVELOG_INFO_FORMAT("_nUseSingleDOFSmoothing=%d", _nUseSingleDOFSmoothing);
     }
     virtual ~LinearSmoother() {
     }
@@ -59,11 +60,44 @@ public:
             _puniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
         }
         _linearretimer->InitPlan(RobotBasePtr(), _parameters);
+
+        _vConfigVelocityLimitInv.resize(_parameters->_vConfigVelocityLimit.size());
+        for(int i = 0; i < (int)_vConfigVelocityLimitInv.size(); ++i) {
+            _vConfigVelocityLimitInv[i] = 1/_parameters->_vConfigVelocityLimit[i];
+        }
         return !!_puniformsampler;
     }
 
     virtual PlannerParametersConstPtr GetParameters() const {
         return _parameters;
+    }
+
+    dReal _ComputeExpectedVelocity(const std::vector<dReal>& vstart, const std::vector<dReal>& vend) {
+        std::vector<dReal> vdiff = vstart;
+        _parameters->_diffstatefn(vdiff, vend);
+        dReal fmaxtime = 0;
+        for(int i = 0; i < (int)_vConfigVelocityLimitInv.size(); ++i) {
+            dReal f = RaveFabs(vdiff[i])*_vConfigVelocityLimitInv[i];
+            if( f > fmaxtime ) {
+                fmaxtime = f;
+            }
+        }
+        return fmaxtime;
+    }
+
+    dReal _ComputeExpectedVelocityGroup(const std::vector<dReal>& vstart, const std::vector<dReal>& vend, int igroup) {
+        std::vector<dReal> vdiff = vstart;
+        _parameters->_diffstatefn(vdiff, vend);
+        dReal fmaxtime = 0;
+        for(int i = 0; i < (int)_vConfigVelocityLimitInv.size(); ++i) {
+            if( (i < (int)_vConfigVelocityLimitInv.size()/2) ^ (igroup>0) ) {
+                dReal f = RaveFabs(vdiff[i])*_vConfigVelocityLimitInv[i];
+                if( f > fmaxtime ) {
+                    fmaxtime = f;
+                }
+            }
+        }
+        return fmaxtime;
     }
 
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
@@ -89,7 +123,13 @@ public:
         listpath.push_back(make_pair(vtrajdata,0));
         for(size_t i = 1; i < ptraj->GetNumWaypoints(); ++i) {
             ptraj->GetWaypoint(i,vtrajdata,parameters->_configurationspecification);
-            dReal dist = parameters->_distmetricfn(listpath.back().first, vtrajdata);
+            dReal dist;
+            if( _nUseSingleDOFSmoothing == 3 ) {
+                dist = _ComputeExpectedVelocity(listpath.back().first, vtrajdata);
+            }
+            else {
+                dist = parameters->_distmetricfn(listpath.back().first, vtrajdata);
+            }
             if( dist > 0 ) {
                 listpath.push_back(make_pair(vtrajdata,dist));
                 totaldist += dist;
@@ -97,7 +137,7 @@ public:
         }
 
         if( listpath.size() > 1 ) {
-            if( _bUseSingleDOFSmoothing ) {
+            if( _nUseSingleDOFSmoothing == 1 ) {
                 dReal newdist1 = _OptimizePath(listpath, totaldist, parameters->_nMaxIterations*8/10);
                 if( newdist1 < 0 ) {
                     return PS_Interrupted;
@@ -109,6 +149,32 @@ public:
                     return PS_Interrupted;
                 }
                 RAVELOG_DEBUG_FORMAT("env=%d, path optimizing second stage - dist %f->%f computation time=%fs", GetEnv()->GetId()%newdist1%newdist2%(0.001f*(float)(utils::GetMilliTime()-basetime2)));
+            }
+            else if( _nUseSingleDOFSmoothing == 2 ) {
+                uint32_t basetime1 = utils::GetMilliTime();
+                int nIterationGroup = parameters->_nMaxIterations/100;
+                int nCurIterations = 0;
+                while(nCurIterations < parameters->_nMaxIterations) {
+                    dReal newdist1 = _OptimizePathSingleGroup(listpath, totaldist, nIterationGroup);
+                    if( newdist1 < 0 ) {
+                        return PS_Interrupted;
+                    }
+                    dReal newdist2 = _OptimizePath(listpath,  newdist1, nIterationGroup);
+                    if( newdist2 < 0 ) {
+                        return PS_Interrupted;
+                    }
+                    RAVELOG_DEBUG_FORMAT("env=%d, path optimizing second stage - dist %f->%f computation time=%fs", GetEnv()->GetId()%totaldist%newdist2%(0.001f*(float)(utils::GetMilliTime()-basetime1)));
+                    totaldist = newdist2;
+                    nCurIterations += 2*nIterationGroup;
+                }
+            }
+            else if( _nUseSingleDOFSmoothing == 3 ) {
+                uint32_t basetime1 = utils::GetMilliTime();
+                dReal newdist1 = _OptimizePathSingleGroupShift(listpath, totaldist, parameters->_nMaxIterations);
+                if( newdist1 < 0 ) {
+                    return PS_Interrupted;
+                }
+                RAVELOG_DEBUG_FORMAT("env=%d, path optimizing second stage - dist %f->%f computation time=%fs", GetEnv()->GetId()%totaldist%newdist1%(0.001f*(float)(utils::GetMilliTime()-basetime1)));
             }
             else {
                 dReal newdist1 = _OptimizePath(listpath, totaldist, parameters->_nMaxIterations);
@@ -340,7 +406,7 @@ protected:
             if( _CallCallbacks(progress) == PA_Interrupt ) {
                 return -1;
             }
-            
+
             dReal fstartdofvalue = vpathvalues.at(0).first.at(ioptdof), flastdofvalue = vpathvalues.at(numnodes+1).first.at(ioptdof);
             dReal fdelta = (flastdofvalue-fstartdofvalue)/(fenddist-fstartdist);
             bool bsuccess = true;
@@ -386,7 +452,7 @@ protected:
             if( _CallCallbacks(progress) == PA_Interrupt ) {
                 return -1;
             }
-            
+
             if( !bsuccess ) {
                 // rejected due to constraints
                 continue;
@@ -430,6 +496,572 @@ protected:
         return totaldist;
     }
 
+    dReal _OptimizePathSingleGroup(list< std::pair< vector<dReal>, dReal> >& listpath, dReal totaldist, int nMaxIterations)
+    {
+        PlannerParametersConstPtr parameters = GetParameters();
+        std::vector< std::pair<std::vector<dReal>, dReal> > vpathvalues;
+        list< std::pair< vector<dReal>, dReal> >::iterator itstartnode, itstartnodeprev, itendnode, itendnodeprev, itnode;
+        size_t numdof = parameters->GetDOF();
+        int iGroupStartIndex = numdof/2;
+        int nrejected = 0;
+        PlannerProgress progress;
+        for(int curiter = 0; curiter < nMaxIterations; ++curiter ) {
+            if( nrejected >= 20 ) {
+                RAVELOG_VERBOSE("smoothing quitting early\n");
+                break;
+            }
+            dReal fstartdist = max(dReal(0),totaldist-parameters->_fStepLength)*_puniformsampler->SampleSequenceOneReal(IT_OpenEnd);
+            dReal fenddist = fstartdist + (totaldist-fstartdist)*_puniformsampler->SampleSequenceOneReal(IT_OpenStart);
+            uint32_t ioptgroup = _puniformsampler->SampleSequenceOneUInt32()%uint32_t(2); // group to optimize
+
+            dReal fstartdistdelta=0, fenddistdelta=0;
+            dReal fcurdist = 0;
+            itstartnodeprev = itstartnode = listpath.begin();
+            while(itstartnode != listpath.end() ) {
+                if( fstartdist >= fcurdist && fstartdist < fcurdist+itstartnode->second ) {
+                    fstartdistdelta = fstartdist-fcurdist;
+                    break;
+                }
+                fcurdist += itstartnode->second;
+                itstartnodeprev = itstartnode;
+                ++itstartnode;
+            }
+
+            itendnodeprev = itstartnodeprev;
+            itendnode = itstartnode;
+            int numnodes=0;
+            while(itendnode != listpath.end() ) {
+                if( fenddist >= fcurdist && fenddist < fcurdist+itendnode->second ) {
+                    fenddistdelta = fenddist-fcurdist;
+                    break;
+                }
+                fcurdist += itendnode->second;
+                itendnodeprev = itendnode;
+                ++itendnode;
+                ++numnodes;
+            }
+
+            if( itstartnode == itendnode ) {
+                // choose a line, so ignore
+                continue;
+            }
+            nrejected++;
+            BOOST_ASSERT(itstartnode != listpath.end());
+            BOOST_ASSERT(itendnode != listpath.end());
+
+            vpathvalues.resize(numnodes+2);
+
+            // compute the actual node values
+            if( RaveFabs(fstartdistdelta) <= g_fEpsilonLinear ) {
+                vpathvalues.at(0).first = itstartnode->first;
+                vpathvalues.at(0).second = 0;
+            }
+            else {
+                std::vector<dReal>& v = vpathvalues.at(0).first;
+                v.resize(numdof);
+                vpathvalues.at(0).second = 0;
+                dReal f = fstartdistdelta/itstartnode->second;
+                for(size_t i = 0; i < numdof; ++i) {
+                    v[i] = itstartnode->first.at(i)*f + itstartnodeprev->first.at(i)*(1-f);
+                }
+            }
+
+            if( RaveFabs(fenddistdelta-itendnode->second) <= g_fEpsilonLinear ) {
+                vpathvalues.at(numnodes+1) = *itendnode;
+            }
+            else {
+                std::vector<dReal>& v = vpathvalues.at(numnodes+1).first;
+                v.resize(numdof);
+                vpathvalues.at(numnodes+1).second = fenddistdelta;
+                dReal f = fenddistdelta/itendnode->second;
+                for(size_t i = 0; i < numdof; ++i) {
+                    v[i] = itendnode->first.at(i)*f + itendnodeprev->first.at(i)*(1-f);
+                }
+            }
+
+            progress._iteration=curiter;
+            if( _CallCallbacks(progress) == PA_Interrupt ) {
+                return -1;
+            }
+
+            std::vector<dReal> vstartdofvalues, vlastdofvalues, vdelta;
+            if( ioptgroup == 0 ) {
+                vstartdofvalues.insert(vstartdofvalues.end(), vpathvalues.at(0).first.begin(), vpathvalues.at(0).first.begin()+iGroupStartIndex);
+                vlastdofvalues.insert(vlastdofvalues.end(), vpathvalues.at(numnodes+1).first.begin(), vpathvalues.at(numnodes+1).first.begin()+iGroupStartIndex);
+            }
+            else {
+                vstartdofvalues.insert(vstartdofvalues.end(), vpathvalues.at(0).first.begin()+iGroupStartIndex, vpathvalues.at(0).first.end());
+                vlastdofvalues.insert(vlastdofvalues.end(), vpathvalues.at(numnodes+1).first.begin()+iGroupStartIndex, vpathvalues.at(numnodes+1).first.end());
+            }
+
+            vdelta.resize(vlastdofvalues.size());
+            for(int index = 0; index < (int)vdelta.size(); ++index) {
+                vdelta[index] = (vlastdofvalues[index]-vstartdofvalues[index])/(fenddist-fstartdist);
+            }
+            bool bsuccess = true;
+            fcurdist = 0;
+            dReal fnewsegmentdist = 0;
+            itnode = itstartnode;
+            int pathindex = 0;
+            do {
+                if( pathindex == 0 ) {
+                    fcurdist = itnode->second - fstartdistdelta;
+                }
+                else {
+                    fcurdist += itnode->second;
+                }
+                vpathvalues.at(pathindex+1).first = itnode->first;
+                if( ioptgroup == 0 ) {
+                    for(int subindex = 0; subindex < iGroupStartIndex; ++subindex) {
+                        vpathvalues.at(pathindex+1).first.at(subindex) = vstartdofvalues[subindex] + fcurdist*vdelta[subindex];
+                    }
+                }
+                else {
+                    for(int subindex = 0; subindex < iGroupStartIndex; ++subindex) {
+                        vpathvalues.at(pathindex+1).first.at(subindex+iGroupStartIndex) = vstartdofvalues[subindex] + fcurdist*vdelta[subindex];
+                    }
+                }
+                dReal fdist = parameters->_distmetricfn(vpathvalues.at(pathindex).first, vpathvalues.at(pathindex+1).first);
+                vpathvalues.at(pathindex+1).second = fdist;
+                fnewsegmentdist += fdist;
+                ++itnode;
+                ++pathindex;
+            } while(itnode != itendnode);
+
+            // have to process the time on the last node
+            dReal fdist = parameters->_distmetricfn(vpathvalues.at(numnodes).first, vpathvalues.at(numnodes+1).first);
+            vpathvalues.at(numnodes+1).second = fdist;
+            fnewsegmentdist += fdist;
+
+            if( fnewsegmentdist > fenddist-fstartdist-0.5*parameters->_fStepLength ) {
+                // expected total distance is not that great
+                continue;
+            }
+
+            for(size_t i = 0; i+1 < vpathvalues.size(); ++i) {
+                IntervalType interval = i+2==vpathvalues.size() ? IT_Open : IT_OpenStart;
+                if (!SegmentFeasible(vpathvalues.at(i).first, vpathvalues.at(i+1).first, interval)) {
+                    bsuccess = false;
+                    break;
+                }
+            }
+
+            progress._iteration=curiter;
+            if( _CallCallbacks(progress) == PA_Interrupt ) {
+                return -1;
+            }
+
+            if( !bsuccess ) {
+                // rejected due to constraints
+                continue;
+            }
+
+            // only insert if not at start
+            if( RaveFabs(fstartdistdelta) > g_fEpsilonLinear ) {
+                vpathvalues.at(0).second = fstartdistdelta;
+                listpath.insert(itstartnode, vpathvalues.at(0));
+            }
+
+            // replace all the values with the new path
+            itnode = itstartnode;
+            pathindex = 1;
+            do {
+                *itnode = vpathvalues.at(pathindex++);
+                ++itnode;
+            } while(itnode != itendnode);
+
+            // only insert if not at end
+            if( RaveFabs(fenddistdelta-itendnode->second) > g_fEpsilonLinear ) {
+                listpath.insert(itendnode, vpathvalues.at(numnodes+1));
+                itendnode->second -= fenddistdelta;
+            }
+            totaldist += fnewsegmentdist - (fenddist-fstartdist);
+            dReal dist = 0;
+            FOREACH(it, listpath) {
+                dist += it->second;
+            }
+            OPENRAVE_ASSERT_OP(RaveFabs(totaldist-dist),<=,1e-7);
+
+            RAVELOG_VERBOSE(str(boost::format("singledof iter %d, totaldist=%f")%curiter%totaldist));
+            nrejected = 0;
+        }
+        // double check the distances
+        dReal dist = 0;
+        FOREACH(it, listpath) {
+            dist += it->second;
+        }
+        OPENRAVE_ASSERT_OP(RaveFabs(totaldist-dist),<=,1e-7);
+        return totaldist;
+    }
+
+    dReal _OptimizePathSingleGroupShift(list< std::pair< vector<dReal>, dReal> >& listpath, dReal totaldist, int nMaxIterations)
+    {
+        PlannerParametersConstPtr parameters = GetParameters();
+        list< std::pair< vector<dReal>, dReal> >::iterator itstartnode, itstartnodeprev, itendnode, itendnodeprev;
+        list< std::pair< vector<dReal>, dReal> >::iterator itmidnode, itmidnodeprev;
+        vector<dReal> vstartvalues(parameters->GetDOF()), vendvalues(parameters->GetDOF()), vmidvalues(parameters->GetDOF());
+        vector<dReal> vadd, vprev = vstartvalues;
+
+        PlannerProgress progress;
+        int iGroupStartIndex = parameters->GetDOF()/2;
+
+        int nrejected = 0;
+        for(int curiter = 0; curiter < nMaxIterations; ++curiter ) {
+            if( nrejected >= 20 ) {
+                RAVELOG_VERBOSE("smoothing quitting early\n");
+                break;
+            }
+            dReal fstartdist = max(dReal(0),totaldist-parameters->_fStepLength)*_puniformsampler->SampleSequenceOneReal(IT_OpenEnd);
+            dReal fenddist = fstartdist + (totaldist-fstartdist)*_puniformsampler->SampleSequenceOneReal(IT_OpenStart);
+            uint32_t ioptgroup = _puniformsampler->SampleSequenceOneUInt32()%uint32_t(2); // group to optimize
+            dReal fstartdistdelta=0, fenddistdelta=0;
+            dReal fcurdist = 0;
+            itstartnodeprev = itstartnode = listpath.begin();
+            while(itstartnode != listpath.end() ) {
+                if( fstartdist >= fcurdist && fstartdist < fcurdist+itstartnode->second ) {
+                    fstartdistdelta = fstartdist-fcurdist;
+                    break;
+                }
+                fcurdist += itstartnode->second;
+                itstartnodeprev = itstartnode;
+                ++itstartnode;
+            }
+            dReal fstartnodedist = fcurdist;
+
+            {
+                itendnodeprev = itstartnodeprev;
+                itendnode = itstartnode;
+                int numnodes=0;
+                while(itendnode != listpath.end() ) {
+                    if( fenddist >= fcurdist && fenddist < fcurdist+itendnode->second ) {
+                        fenddistdelta = fenddist-fcurdist;
+                        break;
+                    }
+                    fcurdist += itendnode->second;
+                    itendnodeprev = itendnode;
+                    ++itendnode;
+                    ++numnodes;
+                }
+            }
+            dReal fendnodedist = fcurdist;
+
+            if( itstartnode == itendnode ) {
+                // choose a line, so ignore
+                continue;
+            }
+
+            nrejected++;
+            BOOST_ASSERT(itstartnode != listpath.end());
+            BOOST_ASSERT(itendnode != listpath.end());
+
+            // compute the actual node values
+            if( itstartnode == listpath.begin() ) {
+                vstartvalues = itstartnode->first;
+            }
+            else {
+                dReal f = fstartdistdelta/itstartnode->second;
+                for(size_t i = 0; i < vstartvalues.size(); ++i) {
+                    vstartvalues[i] = itstartnode->first.at(i)*f + itstartnodeprev->first.at(i)*(1-f);
+                }
+            }
+
+            if( itendnode == --listpath.end() ) {
+                vendvalues = itendnode->first;
+            }
+            else {
+                dReal f = fenddistdelta/itendnode->second;
+                for(int i = 0; i < (int)vendvalues.size(); ++i) {
+                    if( (i < iGroupStartIndex) ^ (ioptgroup>0) ) {
+                        vendvalues[i] = itendnode->first.at(i)*f + itendnodeprev->first.at(i)*(1-f);
+                    }
+                    else {
+                        vendvalues[i] = vstartvalues[i];
+                    }
+                }
+            }
+
+            dReal fTimeToOptGroup = _ComputeExpectedVelocityGroup(vstartvalues, vendvalues, ioptgroup);
+            dReal fmiddist = fstartdist + fTimeToOptGroup;
+            int nummidnodes=0;
+            dReal fmiddistdelta = 0;
+            {
+                itmidnodeprev = itstartnodeprev;
+                itmidnode = itstartnode;
+                fcurdist = fstartnodedist;
+                while(itmidnode != listpath.end() ) {
+                    if( fmiddist >= fcurdist && fmiddist < fcurdist+itmidnode->second ) {
+                        fmiddistdelta = fmiddist-fcurdist;
+                        break;
+                    }
+                    fcurdist += itmidnode->second;
+                    itmidnodeprev = itmidnode;
+                    ++itmidnode;
+                    ++nummidnodes;
+                }
+            }
+
+            // sample the midvalues
+            if( itmidnode == --listpath.end() ) {
+                vmidvalues = itmidnode->first;
+            }
+            else {
+                dReal f = fmiddistdelta/itmidnode->second;
+                for(int i = 0; i < (int)vmidvalues.size(); ++i) {
+                    if( (i < iGroupStartIndex) ^ (ioptgroup>0) ) {
+                        vmidvalues[i] = itmidnode->first.at(i)*f + itmidnodeprev->first.at(i)*(1-f);
+                    }
+                    else {
+                        vmidvalues[i] = vstartvalues[i];
+                    }
+                }
+            }
+
+            for(int i = 0; i < (int)vendvalues.size(); ++i) {
+                if( (i < iGroupStartIndex) ^ (ioptgroup>0) ) {
+                    //
+                }
+                else {
+                    vendvalues[i] = vmidvalues[i];
+                }
+            }
+
+            dReal fnewsegmentdist = _ComputeExpectedVelocity(vstartvalues, vendvalues);
+            if( fnewsegmentdist > fenddist-fstartdist+1e-7 ) {
+                RAVELOG_INFO_FORMAT("expected total distance is not that great: %f > %f, (fTimeToOptGroup=%f)", fnewsegmentdist%(fenddist-fstartdist)%fTimeToOptGroup);
+                continue;
+            }
+
+            progress._iteration=curiter;
+            if( _CallCallbacks(progress) == PA_Interrupt ) {
+                return -1;
+            }
+
+            // create a new path of optgroup and check with the other group
+            bool bIsFeasible = true;
+            list< std::pair< vector<dReal>, dReal> > listNewNodes;
+
+            {
+                list< std::pair< vector<dReal>, dReal> >::iterator itinterpnode, itinterpnodeprev;
+
+                vprev = vstartvalues;
+
+                itinterpnodeprev = itstartnodeprev;
+                itinterpnode = itstartnode;
+                dReal finterpnodedist = fstartnodedist;
+                dReal finterpnodedistdelta = 0;
+                while(itinterpnode != listpath.end() ) {
+                    if( fmiddist >= finterpnodedist && fmiddist < finterpnodedist+itinterpnode->second ) {
+                        finterpnodedistdelta = fmiddist-finterpnodedist;
+                        break;
+                    }
+
+                    dReal f = (finterpnodedist - fstartnodedist) / (fmiddist - fstartnodedist);
+                    vadd = itinterpnode->first;
+                    for(int i = 0; i < (int)vendvalues.size(); ++i) {
+                        if( (i < iGroupStartIndex) ^ (ioptgroup>0) ) {
+                            vadd[i] = vstartvalues[i] + f*(vendvalues[i] - vstartvalues[i]);
+                        }
+                    }
+
+                    if (!SegmentFeasible(vprev, vadd, IT_OpenStart)) {
+                        std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                        ss << "vstartvalues=["; SerializeValues(ss, vstartvalues);
+                        ss << "]; vendvalues=[";
+                        SerializeValues(ss, vendvalues);
+                        ss << "]";
+                        RAVELOG_VERBOSE_FORMAT("not feasible start=%f, end=%f, f=%f; %s", fstartnodedist%finterpnodedist%f%ss.str());
+                        bIsFeasible = false;
+                        break;
+                    }
+                    listNewNodes.push_back(std::make_pair(vadd, _ComputeExpectedVelocity(vprev, vadd)));
+                    vprev = vadd;
+                    finterpnodedist += itinterpnode->second;
+                    itinterpnodeprev = itinterpnode;
+                    ++itinterpnode;
+                }
+                if( !bIsFeasible ) {
+                    continue;
+                }
+
+                if( itinterpnode != listpath.end() ) {
+                    if (!SegmentFeasible(vprev, vendvalues, IT_OpenStart)) {
+                        continue;
+                    }
+                    listNewNodes.push_back(std::make_pair(vendvalues, _ComputeExpectedVelocity(vprev, vendvalues)));
+                    vprev = vendvalues;
+                }
+                else {
+                    // got all the way to the end?
+                    vadd = listpath.back().first;
+                    // check if the nodes can be connected by a straight line
+                    if (!SegmentFeasible(vprev, vadd, IT_OpenStart)) {
+                        continue;
+                    }
+                    listNewNodes.push_back(std::make_pair(vadd, _ComputeExpectedVelocity(vprev, vadd)));
+                    vprev = vadd;
+                }
+
+                // got a path up to vendvalues, now need to get a path to the end
+                dReal fcurdistOptGroup = fenddist - fendnodedist;
+                dReal fOptNodeDist = fendnodedist;
+                dReal fcurdistOtherGroup = finterpnodedistdelta;
+                dReal fOtherNodeDist = finterpnodedist;
+                OPENRAVE_ASSERT_OP(fcurdistOtherGroup, >=, 0);
+                OPENRAVE_ASSERT_OP(fcurdistOptGroup, >=, 0);
+                list< std::pair< vector<dReal>, dReal> >::iterator itoptgroup = itendnode, itothergroup = itinterpnode;
+                list< std::pair< vector<dReal>, dReal> >::iterator itoptgroupprev = itendnodeprev, itothergroupprev = itinterpnodeprev;
+                while(itothergroup != listpath.end() ) { // based on other group
+                    // figure out the min dist until the next node
+
+                    dReal fOtherDist = _ComputeExpectedVelocityGroup(vprev, itothergroup->first, (ioptgroup+1)%2);
+                    //dReal fLeftOverOtherDist = fOtherDist - fcurdistOtherGroup;
+
+                    dReal fOtherNextDist = fOtherNodeDist + fOtherDist;
+                    if( itoptgroup != listpath.end() ) {
+                        dReal fOptDist = 0;
+                        while(itoptgroup != listpath.end() ) {
+                            fOptDist = _ComputeExpectedVelocityGroup(vprev, itoptgroup->first, ioptgroup);
+                            if( fOptDist <= 1e-7 ) {
+                                itoptgroupprev = itoptgroup;
+                                ++itoptgroup;
+                                continue;
+                            }
+                            
+                            if( fOtherNextDist < fOptNodeDist + fOptDist ) {
+                                break;
+                            }
+
+                            // sample at opt dist
+                            dReal fother = 0;
+                            if( fOtherDist > 0 ) {
+                                fother = (fcurdistOtherGroup + std::max((dReal)0, (fOptDist - fcurdistOptGroup)))/fOtherDist;
+                            }
+                            if( fother < 0 ) {
+                                fother = 0;
+                            }
+                            else if( fother > 1 ) {
+                                fother = 1;
+                            }
+
+                            for(int i = 0; i < (int)vprev.size(); ++i) {
+                                if( (i < iGroupStartIndex) ^ (ioptgroup>0) ) {
+                                    vadd[i] = itoptgroup->first.at(i);
+                                }
+                                else {
+                                    vadd[i] = fother*itothergroup->first.at(i) + (1-fother)*itothergroupprev->first.at(i);
+                                }
+                            }
+
+                            if (!SegmentFeasibleNoTol(vprev, vadd, IT_OpenStart)) {
+                                RAVELOG_VERBOSE_FORMAT("not feasible group=%d, start=%f, end=%f, opt=%f, other=%f", ioptgroup%fstartdist%fenddist%fOptNodeDist%fOtherNodeDist);
+                                bIsFeasible = false;
+                                break;
+                            }
+                            listNewNodes.push_back(std::make_pair(vadd, _ComputeExpectedVelocity(vprev, vadd)));
+                            vprev = vadd;
+
+                            fcurdistOtherGroup = fother*fOtherDist;
+                            fcurdistOptGroup = 0;
+                            fOptNodeDist += fOptDist;
+                            itoptgroupprev = itoptgroup;
+                            ++itoptgroup;
+                        }
+
+                        // have to sample at itothergroup
+                        // sample at opt dist
+                        dReal fopt = (fcurdistOptGroup + std::max((dReal)0, (fOtherDist - fcurdistOtherGroup)))/fOptDist;
+                        if( fopt < 0 ) {
+                            fopt = 0;
+                        }
+                        else if( fopt > 1 ) {
+                            fopt = 1;
+                        }
+
+                        for(int i = 0; i < (int)vadd.size(); ++i) {
+                            if( (i < iGroupStartIndex) ^ (ioptgroup>0) ) {
+                                if( itoptgroup != listpath.end() )  {
+                                    vadd[i] = fopt*itoptgroup->first.at(i) + (1-fopt)*itoptgroupprev->first.at(i);
+                                }
+                                else {
+                                    vadd[i] = listpath.back().first.at(i);
+                                }
+                            }
+                            else {
+                                vadd[i] = itothergroup->first.at(i);
+                            }
+                        }
+
+                        if (!SegmentFeasibleNoTol(vprev, vadd, IT_OpenStart)) {
+                            std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                            ss << "optvalues=["; SerializeValues(ss, itoptgroup->first); ss << "]; ";
+                            ss << "othervalues=["; SerializeValues(ss, itothergroup->first); ss << "]; ";
+                            ss << "vprev=["; SerializeValues(ss, vprev);
+                            ss << "]; vadd=[";
+                            SerializeValues(ss, vadd);
+                            ss << "]";
+                            RAVELOG_VERBOSE_FORMAT("not feasible group=%d, optnode=%f, othernode=%f, opt=%f, %s", ioptgroup%fOptNodeDist%fOtherNodeDist%fopt%ss.str());
+                            bIsFeasible = false;
+                            break;
+                        }
+                        listNewNodes.push_back(std::make_pair(vadd, _ComputeExpectedVelocity(vprev, vadd)));
+                        vprev = vadd;
+
+                        fcurdistOptGroup += fopt*fOptDist;
+                    }
+                    else {
+                        // at end so just use vendvalues
+                        vadd = vprev;
+                        for(int i = 0; i < (int)vadd.size(); ++i) {
+                            if( (i < iGroupStartIndex) ^ (ioptgroup>0) ) {
+                                vadd[i] = listpath.back().first.at(i);
+                            }
+                            else {
+                                vadd[i] = itothergroup->first.at(i);
+                            }
+                        }
+
+                        if (!SegmentFeasibleNoTol(vprev, vadd, IT_OpenStart)) {
+                            bIsFeasible = false;
+                            break;
+                        }
+                        listNewNodes.push_back(std::make_pair(vadd, _ComputeExpectedVelocity(vprev, vadd)));
+                        vprev = vadd;
+                    }
+
+                    fOtherNodeDist += itothergroup->second;
+                    fcurdistOtherGroup = 0;
+                    itothergroupprev = itothergroup;
+                    ++itothergroup;
+                }
+            }
+
+            if( !bIsFeasible ) {
+                //RAVELOG_DEBUG_FORMAT("not feasible %f->%f", curiter%dist);
+                continue;
+            }
+
+            ++itstartnode;
+            listpath.erase(itstartnode, listpath.end());
+            listpath.insert(listpath.end(), make_pair(vstartvalues, _ComputeExpectedVelocity(itstartnode->first, vstartvalues)));
+            listpath.splice(listpath.end(), listNewNodes, listNewNodes.begin(), listNewNodes.end());
+            totaldist = 0;
+            FOREACH(it, listpath) {
+                totaldist += it->second;
+            }
+            RAVELOG_DEBUG_FORMAT("smoother iter %d, totaldist=%f", curiter%totaldist);
+            nrejected = 0;
+        }
+        // double check the distances
+        dReal dist = 0;
+        FOREACH(it, listpath) {
+            dist += it->second;
+        }
+//        if( RaveFabs(totaldist-dist) > 0 ) {
+//            RAVELOG_WARN_FORMAT("totaldist=%f, dist=%f", totaldist%dist);//OPENRAVE_ASSERT_OP(RaveFabs(totaldist-dist),<=,1e-7);
+//        }
+        return totaldist;
+    }
+
     /// \brief checks if a segment is feasible using pointtolerance
     inline bool SegmentFeasible(const std::vector<dReal>& a,const std::vector<dReal>& b, IntervalType interval)
     {
@@ -449,11 +1081,22 @@ protected:
         return true;
     }
 
+    inline bool SegmentFeasibleNoTol(const std::vector<dReal>& a,const std::vector<dReal>& b, IntervalType interval)
+    {
+        PlannerParametersConstPtr parameters = GetParameters();
+        // have to also test with tolerances!
+        if( parameters->CheckPathAllConstraints(a,b,std::vector<dReal>(), std::vector<dReal>(), 0, interval) != 0 ) {
+            return false;
+        }
+        return true;
+    }
+
     TrajectoryTimingParametersPtr _parameters;
     SpaceSamplerBasePtr _puniformsampler;
     RobotBasePtr _probot;
     PlannerBasePtr _linearretimer;
-    bool _bUseSingleDOFSmoothing;
+    std::vector<dReal> _vConfigVelocityLimitInv;
+    int _nUseSingleDOFSmoothing;
 };
 
 PlannerBasePtr CreateLinearSmoother(EnvironmentBasePtr penv, std::istream& sinput) {
