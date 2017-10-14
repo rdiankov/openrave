@@ -260,7 +260,7 @@ public:
             ofstream f(filename.c_str());
             f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
             f << *_parameters;
-            RAVELOG_VERBOSE_FORMAT("saved parabolic parameters to %s", filename);
+            RAVELOG_VERBOSE_FORMAT("env=%d, saved parabolic parameters to %s", GetEnv()->GetId()%filename);
         }
         _DumpTrajectory(ptraj, _dumplevel);
 
@@ -2494,7 +2494,7 @@ protected:
         for (std::vector<ParabolicRamp::ParabolicRampND>::const_iterator it = path.ramps.begin(); it != path.ramps.end(); ++it) {
             duration += it->endTime;
         }
-        RavePrintfA(str(boost::format("[%s:%d %s] Wrote a dynamic path to %s (duration = %.15e)")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__%filename%duration), level);
+        RavePrintfA(str(boost::format("[%s:%d %s] env=%d, Wrote a dynamic path to %s (duration = %.15e)")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__%GetEnv()->GetId()%filename%duration), level);
     }
 
     ConstraintTrajectoryTimingParametersPtr _parameters;

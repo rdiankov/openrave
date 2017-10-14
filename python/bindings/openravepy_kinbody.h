@@ -200,7 +200,8 @@ public:
     void SetDOFVelocities(object odofvelocities, uint32_t checklimits=KinBody::CLA_CheckLimits, object oindices = object());
     object GetLinkVelocities() const;
     object GetLinkAccelerations(object odofaccelerations, object oexternalaccelerations) const;
-    object ComputeAABB();
+    object ComputeAABB(bool bEnabledOnlyLinks=false);
+    object ComputeAABBFromTransform(object otransform, bool bEnabledOnlyLinks=false);
     object GetCenterOfMass() const;
     void Enable(bool bEnable);
     bool IsEnabled() const;
@@ -208,7 +209,7 @@ public:
     bool IsVisible() const;
     bool IsDOFRevolute(int dofindex) const;
     bool IsDOFPrismatic(int dofindex) const;
-    void SetTransform(object transform);
+    void SetTransform(object otransform);
     void SetDOFWeights(object o);
     void SetDOFResolutions(object o);
     void SetDOFLimits(object olower, object oupper, object oindices=object());

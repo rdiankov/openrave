@@ -1359,12 +1359,15 @@ KinBody::JointPtr KinBody::GetJointFromDOFIndex(int dofindex) const
     return _vecjoints.at(_vDOFIndices.at(dofindex));
 }
 
-AABB KinBody::ComputeAABB() const
+AABB KinBody::ComputeAABB(bool bEnabledOnlyLinks) const
 {
     Vector vmin, vmax;
     bool binitialized=false;
     AABB ab;
     FOREACHC(itlink,_veclinks) {
+        if( bEnabledOnlyLinks && !(*itlink)->IsEnabled() ) {
+            continue;
+        }
         ab = (*itlink)->ComputeAABB();
         if((ab.extents.x == 0)&&(ab.extents.y == 0)&&(ab.extents.z == 0)) {
             continue;
@@ -1406,6 +1409,12 @@ AABB KinBody::ComputeAABB() const
         ab.extents = vmax - ab.pos;
     }
     return ab;
+}
+
+AABB KinBody::ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnlyLinks) const
+{
+    // not implemented yet
+    BOOST_ASSERT(0);
 }
 
 Vector KinBody::GetCenterOfMass() const

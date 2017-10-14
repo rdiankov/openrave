@@ -1764,7 +1764,16 @@ private:
     virtual void SetTransform(const Transform& transform);
 
     /// \brief Return an axis-aligned bounding box of the entire object in the world coordinate system.
-    virtual AABB ComputeAABB() const;
+    ///
+    /// \brief bEnabledOnlyLinks if true, will only count links that are enabled. By default this is false
+    virtual AABB ComputeAABB(bool bEnabledOnlyLinks=false) const;
+
+    /// \brief returns an axis-aligned bounding box when body has transform tBody.
+    ///
+    /// AABB equivalent to SetTransform(tBody); aabb = ComptueAABB(bEnabledOnlyLinks).
+    /// \brief tBody the transform to put this kinbody in when computing the AABB
+    /// \brief bEnabledOnlyLinks if true, will only count links that are enabled. By default this is false
+    virtual AABB ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnlyLinks=false) const;
 
     /// \brief Return the center of mass of entire robot in the world coordinate system.
     virtual Vector GetCenterOfMass() const;
