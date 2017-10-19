@@ -896,6 +896,7 @@ private:
         }
 
         it->second->Synchronize();
+        //RAVELOG_VERBOSE_FORMAT("env=%d, returning body manager cache %x", GetEnv()->GetId()%it->second.get());
         //it->second->PrintStatus(OpenRAVE::Level_Info);
         return it->second->GetManager();
     }
@@ -932,7 +933,7 @@ private:
         it->second->EnsureBodies(_fclspace->GetEnvBodies());
         it->second->Synchronize();
         //it->second->PrintStatus(OpenRAVE::Level_Info);
-        //RAVELOG_VERBOSE_FORMAT("env=%d, returning manager cache %x", GetEnv()->GetId()%it->second.get());
+        //RAVELOG_VERBOSE_FORMAT("env=%d, returning env manager cache %x", GetEnv()->GetId()%it->second.get());
         return it->second->GetManager();
     }
 
