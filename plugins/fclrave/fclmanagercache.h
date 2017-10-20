@@ -93,7 +93,7 @@ public:
                 _bTrackActiveDOF = true;
             }
         }
-        //RAVELOG_VERBOSE_FORMAT("env=%d, 0x%x init with body %s, activedof=%d", pbody->GetEnv()->GetId()%this%pbody->GetName()%(int)bTrackActiveDOF);
+        //RAVELOG_VERBOSE_FORMAT("env=%d, %x init with body %s, activedof=%d", pbody->GetEnv()->GetId()%this%pbody->GetName()%(int)bTrackActiveDOF);
 
         pmanager->clear();
         _tmpbuffer.resize(0);
@@ -121,7 +121,7 @@ public:
                 }
             }
             if( bsetUpdateStamp ) {
-                //RAVELOG_VERBOSE_FORMAT("env=%d, 0x%x adding body %s linkmask=0x%x, _tmpbuffer.size()=%d", (*itbody)->GetEnv()->GetId()%this%(*itbody)->GetName()%linkmask%_tmpbuffer.size());
+                //RAVELOG_VERBOSE_FORMAT("env=%d, %x adding body %s linkmask=0x%x, _tmpbuffer.size()=%d", (*itbody)->GetEnv()->GetId()%this%(*itbody)->GetName()%linkmask%_tmpbuffer.size());
                 mapCachedBodies[(*itbody)->GetEnvironmentId()] = KinBodyCache(*itbody, pinfo);
                 mapCachedBodies[(*itbody)->GetEnvironmentId()].linkmask = linkmask;
                 mapCachedBodies[(*itbody)->GetEnvironmentId()].vcolobjs.swap(vcolobjs);
@@ -300,7 +300,7 @@ public:
                                     }
                                     else {
                                         if( !isLinkActive && !!ittracking->second.vcolobjs.at(ilink) ) {
-                                            //RAVELOG_VERBOSE_FORMAT("env=%d 0x%x resetting cached colobj %s %d", probot->GetEnv()->GetId()%this%probot->GetName()%ilink);
+                                            //RAVELOG_VERBOSE_FORMAT("env=%d %x resetting cached colobj %s %d", probot->GetEnv()->GetId()%this%probot->GetName()%ilink);
                                             pmanager->unregisterObject(ittracking->second.vcolobjs.at(ilink).get());
                                             ittracking->second.vcolobjs.at(ilink).reset();
                                         }
@@ -474,13 +474,13 @@ public:
             if( pinfo->nLastStamp != itcache->second.nLastStamp ) {
                 if( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
                     //Transform tpose = pbody->GetTransform();
-                    //RAVELOG_VERBOSE_FORMAT("env=%d, 0x%x %u body %s (%d) for cache changed transform %d != %d, num=%d, mask=0x%x, trans=(%.3f, %.3f, %.3f)", pbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%pbody->GetName()%pbody->GetEnvironmentId()%pinfo->nLastStamp%itcache->second.nLastStamp%pinfo->vlinks.size()%itcache->second.linkmask%tpose.trans.x%tpose.trans.y%tpose.trans.z);
+                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x %u body %s (%d) for cache changed transform %d != %d, num=%d, mask=0x%x, trans=(%.3f, %.3f, %.3f)", pbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%pbody->GetName()%pbody->GetEnvironmentId()%pinfo->nLastStamp%itcache->second.nLastStamp%pinfo->vlinks.size()%itcache->second.linkmask%tpose.trans.x%tpose.trans.y%tpose.trans.z);
                 }
                 // transform changed
                 for(uint64_t ilink = 0; ilink < pinfo->vlinks.size(); ++ilink) {
                     if( itcache->second.linkmask & ((uint64_t)1<<ilink) ) {
                         if( !!itcache->second.vcolobjs.at(ilink) ) {
-                            //RAVELOG_VERBOSE_FORMAT("env=%d, body %s updating link %d", pbody->GetEnv()->GetId()%pbody->GetName()%ilink);
+                            RAVELOG_VERBOSE_FORMAT("env=%d, body %s updating link %d", pbody->GetEnv()->GetId()%pbody->GetName()%ilink);
 #ifdef FCLRAVE_USE_BULK_UPDATE
                             pmanager->update(itcache->second.vcolobjs.at(ilink).get(), false);
 #else
@@ -490,7 +490,7 @@ public:
                             bcallsetup = true;
                         }
                         else {
-                            //RAVELOG_VERBOSE_FORMAT("env=%d, 0x%x skipping link %d", pbody->GetEnv()->GetId()%this%ilink);
+                            //RAVELOG_VERBOSE_FORMAT("env=%d, %x skipping link %d", pbody->GetEnv()->GetId()%this%ilink);
                         }
                     }
                 }
@@ -498,6 +498,7 @@ public:
                 itcache->second.nLastStamp = pinfo->nLastStamp;
             }
             if( pinfo->nAttachedBodiesUpdateStamp != itcache->second.nAttachedBodiesUpdateStamp ) {
+                //RAVELOG_VERBOSE_FORMAT("env=%d, %u the nAttachedBodiesUpdateStamp changed %d != %d, trackingbody is %s", pbody->GetEnv()->GetId()%_lastSyncTimeStamp%pinfo->nAttachedBodiesUpdateStamp%itcache->second.nAttachedBodiesUpdateStamp%(!!ptrackingbody ? ptrackingbody->GetName() : std::string()));
                 // bodies changed!
                 if( !!ptrackingbody ) {
                     bAttachedBodiesChanged = true;
@@ -514,7 +515,7 @@ public:
             std::set<KinBodyConstPtr> attachedBodies;
             ptrackingbody->GetAttached(attachedBodies);
             std::vector<CollisionObjectPtr> vcolobjs;
-
+            //RAVELOG_VERBOSE_FORMAT("env=%d, %x %u setting %d attached bodies for body %s (%d)", ptrackingbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%attachedBodies.size()%ptrackingbody->GetName()%ptrackingbody->GetEnvironmentId());
             // add any new bodies
             FOREACH(itbody, attachedBodies) {
                 if( mapCachedBodies.find((*itbody)->GetEnvironmentId()) == mapCachedBodies.end() ) {
@@ -522,11 +523,14 @@ public:
                     uint64_t linkmask = 0;
                     vcolobjs.resize(0);
                     if( _AddBody(*itbody, pinfo, vcolobjs, linkmask, _bTrackActiveDOF&&(*itbody == ptrackingbody)) ) {
-                        mapCachedBodies[(*itbody)->GetEnvironmentId()] = KinBodyCache(*itbody, pinfo);
-                        mapCachedBodies[(*itbody)->GetEnvironmentId()].vcolobjs.swap(vcolobjs);
-                        mapCachedBodies[(*itbody)->GetEnvironmentId()].linkmask = linkmask;
                         bcallsetup = true;
                     }
+                    mapCachedBodies[(*itbody)->GetEnvironmentId()] = KinBodyCache(*itbody, pinfo);
+                    mapCachedBodies[(*itbody)->GetEnvironmentId()].vcolobjs.swap(vcolobjs);
+                    mapCachedBodies[(*itbody)->GetEnvironmentId()].linkmask = linkmask;
+//                    else {
+//                        RAVELOG_VERBOSE_FORMAT("env=%d %x could not add attached body %s for tracking body %s", ptrackingbody->GetEnv()->GetId()%this%(*itbody)->GetName()%ptrackingbody->GetName());
+//                    }
                 }
             }
 
@@ -597,7 +601,7 @@ private:
     bool _AddBody(KinBodyConstPtr pbody, FCLSpace::KinBodyInfoPtr pinfo, std::vector<CollisionObjectPtr>& vcolobjs, uint64_t& linkmask, bool bTrackActiveDOF)
     {
         vcolobjs.resize(0); // reset so that existing collision objects can go away
-        vcolobjs.resize(pbody->GetLinks().size());
+        vcolobjs.resize(pbody->GetLinks().size(), CollisionObjectPtr());
         bool bsetUpdateStamp = false;
         linkmask = 0;
         FOREACH(itlink, (pbody)->GetLinks()) {
