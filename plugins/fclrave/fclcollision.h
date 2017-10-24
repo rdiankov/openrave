@@ -323,6 +323,7 @@ public:
     {
         RAVELOG_VERBOSE(str(boost::format("FCL User data initializing %s in env %d") % _userdatakey % GetEnv()->GetId()));
         _bIsSelfCollisionChecker = false;
+        _fclspace->SetIsSelfCollisionChecker(false);
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
@@ -896,7 +897,7 @@ private:
         }
 
         it->second->Synchronize();
-        //RAVELOG_VERBOSE_FORMAT("env=%d, returning body manager cache %x", GetEnv()->GetId()%it->second.get());
+        //RAVELOG_VERBOSE_FORMAT("env=%d, returning body manager cache %x (self=%d)", GetEnv()->GetId()%it->second.get()%_bIsSelfCollisionChecker);
         //it->second->PrintStatus(OpenRAVE::Level_Info);
         return it->second->GetManager();
     }
@@ -933,7 +934,7 @@ private:
         it->second->EnsureBodies(_fclspace->GetEnvBodies());
         it->second->Synchronize();
         //it->second->PrintStatus(OpenRAVE::Level_Info);
-        //RAVELOG_VERBOSE_FORMAT("env=%d, returning env manager cache %x", GetEnv()->GetId()%it->second.get());
+        //RAVELOG_VERBOSE_FORMAT("env=%d, returning env manager cache %x (self=%d)", GetEnv()->GetId()%it->second.get()%_bIsSelfCollisionChecker);
         return it->second->GetManager();
     }
 

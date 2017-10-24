@@ -163,7 +163,7 @@ public:
     typedef boost::function<void (KinBodyInfoPtr)> SynchronizeCallbackFn;
 
     FCLSpace(EnvironmentBasePtr penv, const std::string& userdatakey)
-        : _penv(penv), _userdatakey(userdatakey)
+        : _penv(penv), _userdatakey(userdatakey), _bIsSelfCollisionChecker(true)
     {
         // After many test, OBB seems to be the only real option (followed by kIOS which is needed for distance checking)
         SetBVHRepresentation("OBB");
@@ -190,7 +190,6 @@ public:
 
     KinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr())
     {
-
         if( !pinfo ) {
             pinfo.reset(new KinBodyInfo());
             pinfo->_geometrygroup = _geometrygroup;
@@ -495,6 +494,16 @@ public:
         return GetInfo(plink->GetParent())->vlinks.at(plink->GetIndex());
     }
 
+    inline void SetIsSelfCollisionChecker(bool bIsSelfCollisionChecker)
+    {
+        _bIsSelfCollisionChecker = bIsSelfCollisionChecker;
+    }
+
+    inline bool IsSelfCollisionChecker() const
+    {
+        return _bIsSelfCollisionChecker;
+    }
+
 private:
     static void _AddGeomInfoToBVHSubmodel(fcl::BVHModel<fcl::OBB>& model, KinBody::GeometryInfo const &info)
     {
@@ -651,8 +660,8 @@ private:
     {
         KinBodyInfoPtr pinfo = _pinfo.lock();
         KinBodyPtr pbody = pinfo->GetBody();
-        //RAVELOG_VERBOSE_FORMAT("Resetting current geometry for kinbody %s (in env %d, key %s)", pbody->GetName()%_penv->GetId()%_userdatakey);
         if( !!pinfo && pinfo->_geometrygroup.size() == 0 ) {
+            //RAVELOG_VERBOSE_FORMAT("env=%d, resetting current geometry for kinbody %s nGeometryUpdateStamp=%d, (key %s, self=%d)", _penv->GetId()%pbody->GetName()%pinfo->nGeometryUpdateStamp%_userdatakey%_bIsSelfCollisionChecker);
             pinfo->nGeometryUpdateStamp++;
             KinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect
             InitKinBody(pbody, pinfo);
@@ -665,8 +674,8 @@ private:
     {
         KinBodyInfoPtr pinfo = _pinfo.lock();
         KinBodyPtr pbody = pinfo->GetBody();
-        RAVELOG_VERBOSE_FORMAT("Resetting geometry groups for kinbody %s (in env %d, key %s)", pbody->GetName()%_penv->GetId()%_userdatakey);
         if( !!pinfo && pinfo->_geometrygroup.size() > 0 ) {
+            //RAVELOG_VERBOSE_FORMAT("env=%d, resetting geometry groups for kinbody %s, nGeometryUpdateStamp=%d (key %s, self=%d)", _penv->GetId()%pbody->GetName()%pinfo->nGeometryUpdateStamp%_userdatakey%_bIsSelfCollisionChecker);
             pinfo->nGeometryUpdateStamp++;
             KinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect
             InitKinBody(pbody, pinfo);
@@ -712,6 +721,8 @@ private:
     std::set<KinBodyConstPtr> _setInitializedBodies; ///< Set of the kinbody initialized in this space
     std::map< int, std::map< std::string, KinBodyInfoPtr > > _cachedpinfo; ///< Associates to each body id and geometry group name the corresponding kinbody info if already initialized and not currently set as user data
     std::map< int, KinBodyInfoPtr> _currentpinfo; ///< maps kinbody environment id to the kinbodyinfo struct constaining fcl objects. The key being environment id makes it easier to compare objects without getting a handle to their pointers.
+
+    bool _bIsSelfCollisionChecker; // Currently not used
 };
 
 #ifdef RAVE_REGISTER_BOOST
