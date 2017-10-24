@@ -245,6 +245,7 @@ public:
     bool Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore);
     void Release(PyKinBodyPtr pbody);
     void ReleaseAllGrabbed();
+    void ReleaseAllGrabbedWithLink(object pylink);
     void RegrabAll();
     object IsGrabbing(PyKinBodyPtr pbody) const;
     object GetGrabbed() const;

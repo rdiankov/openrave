@@ -2447,6 +2447,11 @@ void PyKinBody::Release(PyKinBodyPtr pbody)
 void PyKinBody::ReleaseAllGrabbed() {
     _pbody->ReleaseAllGrabbed();
 }
+void PyKinBody::ReleaseAllGrabbedWithLink(object pylink) {
+    CHECK_POINTER(pylink);
+    KinBody::LinkPtr plink = GetKinBodyLink(pylink);
+    _pbody->ReleaseAllGrabbedWithLink(plink);
+}
 void PyKinBody::RegrabAll()
 {
     _pbody->RegrabAll();
@@ -3219,6 +3224,7 @@ void init_openravepy_kinbody()
                         .def("Grab",pgrab4,args("body","grablink","linkstoignore"), DOXY_FN(KinBody,Grab "KinBodyPtr; LinkPtr; const std::set"))
                         .def("Release",&PyKinBody::Release,args("body"), DOXY_FN(KinBody,Release))
                         .def("ReleaseAllGrabbed",&PyKinBody::ReleaseAllGrabbed, DOXY_FN(KinBody,ReleaseAllGrabbed))
+                        .def("ReleaseAllGrabbedWithLink",&PyKinBody::ReleaseAllGrabbedWithLink, args("grablink"), DOXY_FN(KinBody,ReleaseAllGrabbedWithLink))
                         .def("RegrabAll",&PyKinBody::RegrabAll, DOXY_FN(KinBody,RegrabAll))
                         .def("IsGrabbing",&PyKinBody::IsGrabbing,args("body"), DOXY_FN(KinBody,IsGrabbing))
                         .def("GetGrabbed",&PyKinBody::GetGrabbed, DOXY_FN(KinBody,GetGrabbed))

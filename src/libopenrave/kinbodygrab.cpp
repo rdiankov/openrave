@@ -176,6 +176,31 @@ void KinBody::ReleaseAllGrabbed()
     }
 }
 
+void KinBody::ReleaseAllGrabbedWithLink(LinkPtr pBodyLinkToGrabWith)
+{
+    OPENRAVE_ASSERT_FORMAT(!!pBodyLinkToGrabWith && pBodyLinkToGrabWith->GetParent() == shared_kinbody(), "body %s invalid grab arguments",GetName(), ORE_InvalidArguments);
+
+    if( _vGrabbedBodies.size() > 0 ) {
+        bool bReleased;
+        do {
+            bReleased = false;
+            FOREACH(itgrabbed, _vGrabbedBodies) {
+                GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
+                if( pgrabbed->_plinkrobot == pBodyLinkToGrabWith ) {
+                    KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
+                    if( !!pbody ) {
+                        _RemoveAttachedBody(pbody);
+                    }
+                    _vGrabbedBodies.erase(itgrabbed);
+                    bReleased = true;
+                    break;
+                }
+            }
+        } while (bReleased);
+        _PostprocessChangedParameters(Prop_RobotGrabbed);
+    }
+}
+
 void KinBody::RegrabAll()
 {
     CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();

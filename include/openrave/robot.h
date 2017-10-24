@@ -118,6 +118,12 @@ public:
             return __pEffector;
         }
 
+        /// \brief Release all bodies grabbed by the end effector of this manipualtor
+        virtual void ReleaseAllGrabbed() {
+            RobotBasePtr probot(__probot);
+            probot->ReleaseAllGrabbedWithLink(__pEffector);
+        }
+
         /// \brief Return transform with respect to end effector defining the grasp coordinate system
         virtual Transform GetLocalToolTransform() const {
             return _info._tLocalTool;

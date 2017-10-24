@@ -2198,6 +2198,8 @@ private:
     /// Release all grabbed bodies.
     virtual void ReleaseAllGrabbed();     ///< release all bodies
 
+    virtual void ReleaseAllGrabbedWithLink(LinkPtr pBodyLinkToGrabWith);
+
     /** \brief Releases and grabs all bodies, has the effect of recalculating all the initial collision with the bodies.
 
         This has the effect of resetting the current collisions any grabbed body makes with the body into an ignore list.
