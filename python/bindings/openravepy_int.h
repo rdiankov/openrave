@@ -142,6 +142,10 @@ inline uint64_t GetMicroTime()
 #endif
 }
 
+/// conversion between rapidjson value and pyobject
+object toPyObject(const rapidjson::Value& value);
+void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator);
+
 /// used externally, don't change definitions
 //@{
 Transform ExtractTransform(const object& oraw);
@@ -563,8 +567,10 @@ public:
     object GetUserData(const std::string& key=std::string()) const;
 
     bool SupportsCommand(const string& cmd);
+    bool SupportsJSONCommand(const string& cmd);
 
     object SendCommand(const string& in, bool releasegil=false, bool lockenv=false);
+    object SendJSONCommand(const string& cmd, object input, bool releasegil=false, bool lockenv=false);
 
     virtual object GetReadableInterfaces();
     virtual object GetReadableInterface(const std::string& xmltag);

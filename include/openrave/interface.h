@@ -126,6 +126,9 @@ public:
 
     /// \brief return true if the command is supported
     virtual bool SupportsCommand(const std::string& cmd);
+
+    /// \brief return true if the command is supported
+    virtual bool SupportsJSONCommand(const std::string& cmd);
     
     /** \brief Used to send special commands to the interface and receive output.
 
@@ -153,6 +156,27 @@ public:
             output = soutput.str();
         }
         return bSuccess;
+    }
+
+    /** \brief Used to send special JSON commands to the interface and receive output.
+
+        The command must be registered by \ref RegisterJSONCommand. A special command '\b help' is
+        always supported and provides a way for the user to query the current commands and the help
+        string.
+
+        \param cmdname command name
+        \param input the input rapidjson value
+        \param output the output rapidjson value
+        \param allocator allocator used to set alue on output rapidjson value
+        \exception openrave_exception Throw if the command is not supported.
+     */
+    virtual void SendJSONCommand(const std::string& cmdname, const rapidjson::Value& input, rapidjson::Value& output, rapidjson::Document::AllocatorType& allocator);
+
+    /// \biref Similar to \ref SendJSONCommand except the output is a rapidjson document
+    ///
+    /// This function should not be overridden by the user, therefore it isn't virtual.
+    inline void SendJSONCommand(const std::string& cmdname, const rapidjson::Value& input, rapidjson::Document& output) {
+        SendJSONCommand(cmdname, input, output, output.GetAllocator());
     }
 
     /** \brief serializes the interface
@@ -200,6 +224,34 @@ public:
     /// \brief Unregisters the command. <b>[multi-thread safe]</b>
     virtual void UnregisterCommand(const std::string& cmdname);
 
+    /// \brief The function to be executed for every JSON command.
+    ///
+    /// \param input - input of the command
+    /// \param output - output of the command
+    /// \return If false, there was an error with the command, true if successful
+    typedef boost::function<void (const rapidjson::Value&, rapidjson::Value&, rapidjson::Document::AllocatorType&)> InterfaceJSONCommandFn;
+    class OPENRAVE_API InterfaceJSONCommand
+    {
+public:
+        InterfaceJSONCommand() {
+        }
+        InterfaceJSONCommand(InterfaceJSONCommandFn newfn, const std::string& newhelp) : fn(newfn), help(newhelp) {
+        }
+        InterfaceJSONCommandFn fn; ///< command function to run
+        std::string help; ///< help string explaining command arguments
+    };
+
+    /// \brief Registers a command and its help string. <b>[multi-thread safe]</b>
+    ///
+    /// \param cmdname - command name, converted to lower case
+    /// \param fncmd function to execute for the command
+    /// \param strhelp - help string in reStructuredText, see \ref writing_plugins_doc.
+    /// \exception openrave_exception Throw if there exists a registered command already.
+    virtual void RegisterJSONCommand(const std::string& cmdname, InterfaceJSONCommandFn fncmd, const std::string& strhelp);
+
+    /// \brief Unregisters the command. <b>[multi-thread safe]</b>
+    virtual void UnregisterJSONCommand(const std::string& cmdname);
+
     virtual const char* GetHash() const = 0;
     std::string __description;     /// \see GetDescription()
     std::string __struri; ///< \see GetURI
@@ -211,6 +263,9 @@ public:
 private:
     /// Write the help commands to an output stream
     virtual bool _GetCommandHelp(std::ostream& sout, std::istream& sinput) const;
+
+    /// Write the help commands to an output stream
+    virtual void _GetJSONCommandHelp(const rapidjson::Value& input, rapidjson::Value& output, rapidjson::Document::AllocatorType& allocator) const;
 
     inline InterfaceBase& operator=(const InterfaceBase&r) {
         throw openrave_exception("InterfaceBase copying not allowed");
@@ -227,6 +282,8 @@ private:
     READERSMAP __mapReadableInterfaces; ///< pointers to extra interfaces that are included with this object
     typedef std::map<std::string, boost::shared_ptr<InterfaceCommand>, CaseInsensitiveCompare> CMDMAP;
     CMDMAP __mapCommands; ///< all registered commands
+    typedef std::map<std::string, boost::shared_ptr<InterfaceJSONCommand>, CaseInsensitiveCompare> JSONCMDMAP;
+    JSONCMDMAP __mapJSONCommands; ///< all registered commands
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER

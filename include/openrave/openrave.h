@@ -85,6 +85,8 @@
 
 #endif
 
+#include <rapidjson/document.h>
+
 #if defined(__GNUC__)
 #define RAVE_DEPRECATED __attribute__((deprecated))
 #else
