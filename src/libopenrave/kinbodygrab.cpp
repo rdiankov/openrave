@@ -176,28 +176,28 @@ void KinBody::ReleaseAllGrabbed()
     }
 }
 
-void KinBody::ReleaseAllGrabbedWithLink(LinkPtr pBodyLinkToGrabWith)
+void KinBody::ReleaseAllGrabbedWithLink(LinkPtr pBodyLinkToReleaseWith)
 {
-    OPENRAVE_ASSERT_FORMAT(!!pBodyLinkToGrabWith && pBodyLinkToGrabWith->GetParent() == shared_kinbody(), "body %s invalid grab arguments",GetName(), ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(!!pBodyLinkToReleaseWith && pBodyLinkToReleaseWith->GetParent() == shared_kinbody(), "body %s invalid grab arguments",GetName(), ORE_InvalidArguments);
 
     if( _vGrabbedBodies.size() > 0 ) {
-        bool bReleased;
-        do {
-            bReleased = false;
-            FOREACH(itgrabbed, _vGrabbedBodies) {
-                GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
-                if( pgrabbed->_plinkrobot == pBodyLinkToGrabWith ) {
-                    KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
-                    if( !!pbody ) {
-                        _RemoveAttachedBody(pbody);
-                    }
-                    _vGrabbedBodies.erase(itgrabbed);
-                    bReleased = true;
-                    break;
+        bool bReleased = false;
+        int nCheckIndex = (int)_vGrabbedBodies.size()-1;
+        while(nCheckIndex >= 0) {
+            GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(_vGrabbedBodies.at(nCheckIndex));
+            if( pgrabbed->_plinkrobot == pBodyLinkToReleaseWith ) {
+                KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
+                if( !!pbody ) {
+                    _RemoveAttachedBody(pbody);
                 }
+                _vGrabbedBodies.erase(_vGrabbedBodies.begin()+nCheckIndex);
+                bReleased = true;
             }
-        } while (bReleased);
-        _PostprocessChangedParameters(Prop_RobotGrabbed);
+            --nCheckIndex;
+        }
+        if( bReleased ) {
+            _PostprocessChangedParameters(Prop_RobotGrabbed);
+        }
     }
 }
 
