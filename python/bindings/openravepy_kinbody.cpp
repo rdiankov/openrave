@@ -188,14 +188,14 @@ public:
         info._mass = _mass;
         info._vinertiamoments = ExtractVector3(_vinertiamoments);
         size_t num = len(_mapFloatParameters);
-        object okeyvalueiter = _mapFloatParameters.iteritems();
+        object okeyvalueiter = _mapFloatParameters.items();
         info._mapFloatParameters.clear();
         for(size_t i = 0; i < num; ++i) {
             object okeyvalue = okeyvalueiter.attr("next") ();
             std::string name = extract<std::string>(okeyvalue[0]);
             info._mapFloatParameters[name] = ExtractArray<dReal>(okeyvalue[1]);
         }
-        okeyvalueiter = _mapIntParameters.iteritems();
+        okeyvalueiter = _mapIntParameters.items();
         num = len(_mapIntParameters);
         info._mapIntParameters.clear();
         for(size_t i = 0; i < num; ++i) {
@@ -203,7 +203,7 @@ public:
             std::string name = extract<std::string>(okeyvalue[0]);
             info._mapIntParameters[name] = ExtractArray<int>(okeyvalue[1]);
         }
-        okeyvalueiter = _mapStringParameters.iteritems();
+        okeyvalueiter = _mapStringParameters.items();
         num = len(_mapStringParameters);
         info._mapStringParameters.clear();
         for(size_t i = 0; i < num; ++i) {
@@ -507,14 +507,14 @@ public:
             }
         }
         num = len(_mapFloatParameters);
-        object okeyvalueiter = _mapFloatParameters.iteritems();
+        object okeyvalueiter = _mapFloatParameters.items();
         info._mapFloatParameters.clear();
         for(size_t i = 0; i < num; ++i) {
             object okeyvalue = okeyvalueiter.attr("next") ();
             std::string name = extract<std::string>(okeyvalue[0]);
             info._mapFloatParameters[name] = ExtractArray<dReal>(okeyvalue[1]);
         }
-        okeyvalueiter = _mapIntParameters.iteritems();
+        okeyvalueiter = _mapIntParameters.items();
         num = len(_mapIntParameters);
         info._mapIntParameters.clear();
         for(size_t i = 0; i < num; ++i) {
@@ -522,7 +522,7 @@ public:
             std::string name = extract<std::string>(okeyvalue[0]);
             info._mapIntParameters[name] = ExtractArray<int>(okeyvalue[1]);
         }
-        okeyvalueiter = _mapStringParameters.iteritems();
+        okeyvalueiter = _mapStringParameters.items();
         num = len(_mapStringParameters);
         info._mapStringParameters.clear();
         for(size_t i = 0; i < num; ++i) {
@@ -2026,11 +2026,11 @@ object PyKinBody::GetLinkAccelerations(object odofaccelerations, object oexterna
         //externalaccelerations
         pmapExternalAccelerations.reset(new KinBody::AccelerationMap());
         boost::python::dict odict = (boost::python::dict)oexternalaccelerations;
-        boost::python::list iterkeys = (boost::python::list)odict.iterkeys();
+        boost::python::list keys = (boost::python::list)odict.keys();
         vector<dReal> v;
-        for (int i = 0; i < boost::python::len(iterkeys); i++) {
-            int linkindex = boost::python::extract<int>(iterkeys[i]);
-            object olinkaccelerations = odict[iterkeys[i]];
+        for (int i = 0; i < boost::python::len(keys); i++) {
+            int linkindex = boost::python::extract<int>(keys[i]);
+            object olinkaccelerations = odict[keys[i]];
             OPENRAVE_ASSERT_OP(len(olinkaccelerations),==,6);
             (*pmapExternalAccelerations)[linkindex] = make_pair(Vector(boost::python::extract<dReal>(olinkaccelerations[0]),boost::python::extract<dReal>(olinkaccelerations[1]),boost::python::extract<dReal>(olinkaccelerations[2])),Vector(boost::python::extract<dReal>(olinkaccelerations[3]),boost::python::extract<dReal>(olinkaccelerations[4]),boost::python::extract<dReal>(olinkaccelerations[5])));
         }
@@ -2331,11 +2331,11 @@ object PyKinBody::ComputeInverseDynamics(object odofaccelerations, object oexter
     KinBody::ForceTorqueMap mapExternalForceTorque;
     if( !IS_PYTHONOBJECT_NONE(oexternalforcetorque) ) {
         boost::python::dict odict = (boost::python::dict)oexternalforcetorque;
-        boost::python::list iterkeys = (boost::python::list)odict.iterkeys();
+        boost::python::list keys = (boost::python::list)odict.keys();
         vector<dReal> v;
-        for (int i = 0; i < boost::python::len(iterkeys); i++) {
-            int linkindex = boost::python::extract<int>(iterkeys[i]);
-            object oforcetorque = odict[iterkeys[i]];
+        for (int i = 0; i < boost::python::len(keys); i++) {
+            int linkindex = boost::python::extract<int>(keys[i]);
+            object oforcetorque = odict[keys[i]];
             OPENRAVE_ASSERT_OP(len(oforcetorque),==,6);
             mapExternalForceTorque[linkindex] = make_pair(Vector(boost::python::extract<dReal>(oforcetorque[0]),boost::python::extract<dReal>(oforcetorque[1]),boost::python::extract<dReal>(oforcetorque[2])),Vector(boost::python::extract<dReal>(oforcetorque[3]),boost::python::extract<dReal>(oforcetorque[4]),boost::python::extract<dReal>(oforcetorque[5])));
         }

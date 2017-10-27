@@ -69,12 +69,12 @@ AttributesList toAttributesList(boost::python::dict odict)
 {
     AttributesList atts;
     if( !IS_PYTHONOBJECT_NONE(odict) ) {
-        boost::python::list iterkeys = (boost::python::list)odict.iterkeys();
-        size_t num = boost::python::len(iterkeys);
+        boost::python::list keys = (boost::python::list)odict.keys();
+        size_t num = boost::python::len(keys);
         for (size_t i = 0; i < num; i++) {
             // Because we know they're strings, we can do this
-            std::string key = boost::python::extract<std::string>(iterkeys[i]);
-            std::string value = boost::python::extract<std::string>(odict[iterkeys[i]]);
+            std::string key = boost::python::extract<std::string>(keys[i]);
+            std::string value = boost::python::extract<std::string>(odict[keys[i]]);
             atts.push_back(make_pair(key,value));
         }
     }
