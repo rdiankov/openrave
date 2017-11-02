@@ -4302,9 +4302,8 @@ bool KinBody::_RemoveAttachedBody(KinBodyPtr pbody)
         }
     }
 
-    KinBodyPtr pthisbody = shared_kinbody();
     FOREACH(it,pbody->_listAttachedBodies) {
-        if( it->lock() == pthisbody ) {
+        if( it->lock().get() == this ) { // need to compare lock pointer since cannot rely on shared_kinbody() since in a destructor this will crash
             pbody->_listAttachedBodies.erase(it);
             numremoved++;
             break;
