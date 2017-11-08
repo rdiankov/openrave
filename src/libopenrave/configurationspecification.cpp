@@ -757,7 +757,7 @@ ConfigurationSpecification& ConfigurationSpecification::operator+= (const Config
                 else if( targettokens.at(0).size() >= 13 && targettokens.at(0).substr(0,13) == "outputSignals") {
                     vector<std::string> vUsedSignals;
                     vUsedSignals.resize(itcompatgroup->dof);
-                    for(size_t i = 0; i < vindices.size(); ++i) {
+                    for(size_t i = 0; i < vUsedSignals.size(); ++i) {
                         vUsedSignals[i] = targettokens.at(i+1);
                     }
                     for(int i = 0; i < itrgroup->dof; ++i) {
