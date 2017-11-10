@@ -1736,6 +1736,9 @@ void ConfigurationSpecification::ConvertData(std::vector<dReal>::iterator ittarg
                     RaveGetAffineDOFValuesFromTransform(vdefaultvalues.begin(),tdefault,affinedofs);
                 }
             }
+            else if( name.size() >= 13 && name.substr(0,13) == "outputSignals") {
+                std::fill(vdefaultvalues.begin(), vdefaultvalues.end(), -1);
+            }
             else if( name != "deltatime" ) {
                 // messages are too frequent
                 //RAVELOG_VERBOSE(str(boost::format("cannot initialize unknown group '%s'")%name));
