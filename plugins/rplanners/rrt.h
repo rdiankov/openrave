@@ -350,7 +350,7 @@ Some python code to display data::\n\
         if( _vgoalpaths.capacity() < _parameters->_minimumgoalpaths ) {
             _vgoalpaths.reserve(_parameters->_minimumgoalpaths);
         }
-        RAVELOG_DEBUG_FORMAT("env=%d BiRRT Planner Initialized, initial=%d, goal=%d", GetEnv()->GetId()%_vecInitialNodes.size()%_treeBackward.GetNumNodes());
+        RAVELOG_DEBUG_FORMAT("env=%d BiRRT Planner Initialized, initial=%d, goal=%d, steplength=%f", GetEnv()->GetId()%_vecInitialNodes.size()%_treeBackward.GetNumNodes()%_parameters->_fStepLength);
         return true;
     }
 
