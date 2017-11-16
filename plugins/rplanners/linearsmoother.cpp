@@ -727,25 +727,27 @@ protected:
 
     struct SampleInfo
     {
-        SampleInfo() : fabsnodedist(0), fdeltadist(0) {
+        SampleInfo() : fabsnodedist(0), fdeltadist(0), inode(0) {
         }
-        SampleInfo(std::list< vector<dReal> >::const_iterator itnode, const vector<dReal>& vsample, dReal fabsnodedist, dReal fdeltadist) : itnode(itnode), vsample(vsample), fabsnodedist(fabsnodedist), fdeltadist(fdeltadist) {
+        SampleInfo(std::list< vector<dReal> >::const_iterator itnode, const vector<dReal>& vsample, dReal fabsnodedist, dReal fdeltadist, int inode) : itnode(itnode), vsample(vsample), fabsnodedist(fabsnodedist), fdeltadist(fdeltadist), inode(inode) {
         }
         std::list< vector<dReal> >::const_iterator itnode;
         vector<dReal> vsample; /// the interpolated data
         dReal fabsnodedist; // absolute distance of itnode
         dReal fdeltadist; // the delta distance between itnode and itnode+1
+        int inode; /// index of the node from listpath.begin()
     };
 
     SampleInfo _SampleBasedOnVelocity(const list< vector<dReal> >& listpath, dReal fsearchdist)
     {
+        int inode = 0;
         dReal fcurdist = 0;
         list< vector<dReal> >::const_iterator itprev = listpath.begin();
         list< vector<dReal> >::const_iterator it = itprev; ++it;
         while(it != listpath.end() ) {
             dReal fdeltadist = _ComputeExpectedVelocity(*itprev, *it);
             if( fsearchdist >= fcurdist && fsearchdist < fcurdist+fdeltadist ) {
-                SampleInfo s(itprev, std::vector<dReal>(), fcurdist, fdeltadist);
+                SampleInfo s(itprev, std::vector<dReal>(), fcurdist, fdeltadist, inode);
                 s.vsample.resize(it->size());
                 dReal f = fdeltadist > 0 ? (fsearchdist-fcurdist)/fdeltadist : 0;
                 for(int j = 0; j < (int)s.vsample.size(); ++j) {
@@ -753,11 +755,12 @@ protected:
                 }
                 return s;
             }
+            ++inode;
             fcurdist += fdeltadist;
             itprev = it;
             ++it;
         }
-        return SampleInfo(itprev, listpath.back(), fcurdist, 0); // not found, so use last point
+        return SampleInfo(itprev, listpath.back(), fcurdist, 0, inode); // not found, so use last point
     }
 
     /// \brief interpolates v0*(1-f) + v1*f only for the specific group determined by ioptgroup
@@ -783,7 +786,7 @@ protected:
         }
     }
 
-    bool _AddAndCheck(const std::vector<dReal>& v, std::list< vector<dReal> >& listNewNodes)
+    bool _AddAndCheck(const std::vector<dReal>& v, std::list< vector<dReal> >& listNewNodes, bool bCheckSelfOnly)
     {
         OPENRAVE_ASSERT_OP(listNewNodes.size(),>,0);
         if (!SegmentFeasible(listNewNodes.back(), v, IT_OpenStart)) {
@@ -930,7 +933,7 @@ protected:
                         vmidvalues = *itinterpnode;
                         fTravelTimeToOptGroup += fOtherDeltaDist;
                         _InterpolateValuesGroup(startInfo.vsample, endInfo.vsample, fTravelTimeToOptGroup/fTimeToOptGroup, ioptgroup, vmidvalues);
-                        if( !_AddAndCheck(vmidvalues, listNewNodes) ) {
+                        if( !_AddAndCheck(vmidvalues, listNewNodes, false) ) {
                             bIsFeasible = false;
                             continue;
                         }
@@ -948,7 +951,7 @@ protected:
                                 vmidvalues = *itinterpnode;
                                 fTravelTimeToOptGroup += fOtherDeltaDist;
                                 _InterpolateValuesGroup(startInfo.vsample, endInfo.vsample, fTravelTimeToOptGroup/fTimeToOptGroup, ioptgroup, vmidvalues);
-                                if( !_AddAndCheck(vmidvalues, listNewNodes) ) {
+                                if( !_AddAndCheck(vmidvalues, listNewNodes, false) ) {
                                     bIsFeasible = false;
                                     break;
                                 }
@@ -958,7 +961,7 @@ protected:
                                 _InterpolateValuesGroup(*itinterpnodeprev, *itinterpnode, (fTimeToOptGroup-fTravelTimeToOptGroup)/fOtherDeltaDist, iOtherOptGroup, vmidvalues);
                                 fTravelTimeToOptGroup = fTimeToOptGroup;
                                 //fAlongOtherDeltaDist = fTimeToOptGroup-fTravelTimeToOptGroup;
-                                if( !_AddAndCheck(vmidvalues, listNewNodes) ) {
+                                if( !_AddAndCheck(vmidvalues, listNewNodes, false) ) {
                                     bIsFeasible = false;
                                     break;
                                 }
@@ -975,7 +978,7 @@ protected:
                     _InterpolateValuesGroup(startInfo.vsample, *itinterpnode, fTimeToOptGroup/fOtherDeltaDist, iOtherOptGroup, vmidvalues);
                     fTravelTimeToOptGroup = fTimeToOptGroup;
                     //fAlongOtherDeltaDist = fTimeToOptGroup;
-                    if( !_AddAndCheck(vmidvalues, listNewNodes) ) {
+                    if( !_AddAndCheck(vmidvalues, listNewNodes, false) ) {
                         bIsFeasible = false;
                         continue;
                     }
@@ -991,7 +994,7 @@ protected:
                     vmidvalues = endInfo.vsample;
                     _SetValuesGroup(listpath.back(), iOtherOptGroup, vmidvalues);
                     fTravelTimeToOptGroup = fTimeToOptGroup;
-                    if( !_AddAndCheck(vmidvalues, listNewNodes) ) {
+                    if( !_AddAndCheck(vmidvalues, listNewNodes, false) ) {
                         bIsFeasible = false;
                         break;
                     }
@@ -1036,8 +1039,8 @@ protected:
                             // sample at opt dist
                             vmidvalues = *itoptgroup;
                             _InterpolateValuesGroup(listNewNodes.back(), *itothergroup, fOptDist/fOtherDist, iOtherOptGroup, vmidvalues);
-                            if( !_AddAndCheck(vmidvalues, listNewNodes) ) {
-                                RAVELOG_VERBOSE_FORMAT("not feasible group=%d, start=%f, end=%f", ioptgroup%fstartdist%fenddist);
+                            if( !_AddAndCheck(vmidvalues, listNewNodes, true) ) {
+                                RAVELOG_VERBOSE_FORMAT("not feasible group=%d, start=%f (%d), end=%f (%d), total=%f", ioptgroup%fstartdist%startInfo.inode%fenddist%endInfo.inode%totaldist);
                                 bIsFeasible = false;
                                 break;
                             }
@@ -1063,7 +1066,7 @@ protected:
                             _InterpolateValuesGroup(listNewNodes.back(), listpath.back(), fOtherDist/fOptDist, ioptgroup, vmidvalues);
                         }
 
-                        if( !_AddAndCheck(vmidvalues, listNewNodes) ) {
+                        if( !_AddAndCheck(vmidvalues, listNewNodes, true) ) {
                             RAVELOG_VERBOSE_FORMAT("not feasible group=%d, start=%f, end=%f", ioptgroup%fstartdist%fenddist);
                             bIsFeasible = false;
                             break;
@@ -1072,7 +1075,7 @@ protected:
                     else {
                         vmidvalues = *itothergroup;
                         _SetValuesGroup(listpath.back(),ioptgroup,vmidvalues);
-                        if( !_AddAndCheck(vmidvalues, listNewNodes) ) {
+                        if( !_AddAndCheck(vmidvalues, listNewNodes, true) ) {
                             RAVELOG_VERBOSE_FORMAT("not feasible group=%d, start=%f, end=%f", ioptgroup%fstartdist%fenddist);
                             bIsFeasible = false;
                             break;
@@ -1093,7 +1096,7 @@ protected:
                 while(itoptgroup != listpath.end() ) { // based on other group
                     vmidvalues = *itoptgroup;
                     _SetValuesGroup(listpath.back(),iOtherOptGroup,vmidvalues);
-                    if( !_AddAndCheck(vmidvalues, listNewNodes) ) {
+                    if( !_AddAndCheck(vmidvalues, listNewNodes, true) ) {
                         RAVELOG_VERBOSE_FORMAT("not feasible group=%d, start=%f, end=%f", ioptgroup%fstartdist%fenddist);
                         bIsFeasible = false;
                         break;
@@ -1112,8 +1115,9 @@ protected:
             ++startInfo.itnode;
             listpath.erase(startInfo.itnode, listpath.end());
             listpath.splice(listpath.end(), listNewNodes, listNewNodes.begin(), listNewNodes.end());
-            totaldist = _ComputePathDurationOnVelocity(listpath);
-            RAVELOG_DEBUG_FORMAT("smoother iter %d, totaldist=%f", curiter%totaldist);
+            dReal newtotaldist = _ComputePathDurationOnVelocity(listpath);
+            RAVELOG_INFO_FORMAT("smoother iter %d, totaldist=%f -> %f", curiter%totaldist%newtotaldist);
+            totaldist = newtotaldist;
             nrejected = 0;
         }
         // double check the distances
@@ -1128,7 +1132,7 @@ protected:
     }
 
     /// \brief checks if a segment is feasible using pointtolerance
-    inline bool SegmentFeasible(const std::vector<dReal>& a,const std::vector<dReal>& b, IntervalType interval)
+    inline bool SegmentFeasible(const std::vector<dReal>& a,const std::vector<dReal>& b, IntervalType interval, int options=0xffff)
     {
         PlannerParametersConstPtr parameters = GetParameters();
         // have to also test with tolerances!
@@ -1139,18 +1143,18 @@ protected:
                 anew[i] = a[i] + *itperturbation * parameters->_vConfigResolution.at(i);
                 bnew[i] = b[i] + *itperturbation * parameters->_vConfigResolution.at(i);
             }
-            if( parameters->CheckPathAllConstraints(anew,bnew,std::vector<dReal>(), std::vector<dReal>(), 0, interval) != 0 ) {
+            if( parameters->CheckPathAllConstraints(anew,bnew,std::vector<dReal>(), std::vector<dReal>(), 0, interval, options) != 0 ) {
                 return false;
             }
         }
         return true;
     }
 
-    inline bool SegmentFeasibleNoTol(const std::vector<dReal>& a,const std::vector<dReal>& b, IntervalType interval)
+    inline bool SegmentFeasibleNoTol(const std::vector<dReal>& a,const std::vector<dReal>& b, IntervalType interval, int options=0xffff)
     {
         PlannerParametersConstPtr parameters = GetParameters();
         // have to also test with tolerances!
-        if( parameters->CheckPathAllConstraints(a,b,std::vector<dReal>(), std::vector<dReal>(), 0, interval) != 0 ) {
+        if( parameters->CheckPathAllConstraints(a,b,std::vector<dReal>(), std::vector<dReal>(), 0, interval, options) != 0 ) {
             return false;
         }
         return true;
