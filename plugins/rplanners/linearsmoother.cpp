@@ -148,12 +148,7 @@ public:
                 for(size_t i = 1; i < ptraj->GetNumWaypoints(); ++i) {
                     ptraj->GetWaypoint(i,vtrajdata,parameters->_configurationspecification);
                     dReal dist;
-                    if( _nUseSingleDOFSmoothing == 3 ) {
-                        dist = _ComputeExpectedVelocity(listpath.back().first, vtrajdata);
-                    }
-                    else {
-                        dist = parameters->_distmetricfn(listpath.back().first, vtrajdata);
-                    }
+                    dist = parameters->_distmetricfn(listpath.back().first, vtrajdata);
                     if( dist > 0 ) {
                         listpath.push_back(make_pair(vtrajdata,dist));
                         totaldist += dist;
@@ -789,7 +784,7 @@ protected:
     bool _AddAndCheck(const std::vector<dReal>& v, std::list< vector<dReal> >& listNewNodes, bool bCheckSelfOnly)
     {
         OPENRAVE_ASSERT_OP(listNewNodes.size(),>,0);
-        if (!SegmentFeasible(listNewNodes.back(), v, IT_OpenStart)) {
+        if (!SegmentFeasible(listNewNodes.back(), v, IT_OpenStart, bCheckSelfOnly ? CFO_CheckSelfCollisions : 0xffff)) {
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                 ss << "vstartvalues=["; SerializeValues(ss, listNewNodes.back());
@@ -808,24 +803,21 @@ protected:
     dReal _OptimizePathSingleGroupShift(list< vector<dReal> >& listpath, dReal totaldist, int nMaxIterations)
     {
         const PlannerParameters& parameters = *GetParameters();
-        //list< vector<dReal> >::const_iterator itstartnode, itstartnodeprev, itendnode, itendnodeprev;
         list< vector<dReal> >::iterator itmidnode, itmidnodeprev;
         SampleInfo startInfo, endInfo, midInfo;
         vector<dReal> vmidvalues(parameters.GetDOF());
-        //vector<dReal> vadd, vprev = vstartvalues;
-
+        
         PlannerProgress progress;
-        //int iGroupStartIndex = parameters.GetDOF()/2;
-
+        
         int nrejected = 0;
         for(int curiter = 0; curiter < nMaxIterations; ++curiter ) {
-            if( nrejected >= 20 ) {
+            if( nrejected >= 200 ) {
                 RAVELOG_VERBOSE("smoothing quitting early\n");
                 break;
             }
-            dReal fstartdist = 0.85*totaldist;//max(dReal(0),totaldist-parameters._fStepLength)*_puniformsampler->SampleSequenceOneReal(IT_OpenEnd);
-            dReal fenddist = 0.95*totaldist;//fstartdist + (totaldist-fstartdist)*_puniformsampler->SampleSequenceOneReal(IT_OpenStart);
-            uint32_t ioptgroup = 0;//_puniformsampler->SampleSequenceOneUInt32()%uint32_t(2); // group to optimize
+            dReal fstartdist = max(dReal(0),totaldist-parameters._fStepLength)*_puniformsampler->SampleSequenceOneReal(IT_OpenEnd);
+            dReal fenddist = fstartdist + (totaldist-fstartdist)*_puniformsampler->SampleSequenceOneReal(IT_OpenStart);
+            uint32_t ioptgroup = _puniformsampler->SampleSequenceOneUInt32()%uint32_t(2); // group to optimize
             int iOtherOptGroup = (ioptgroup+1)%2;
             //dReal fstartdistdelta=0, fenddistdelta=0;
             //dReal fcurdist = 0;
@@ -842,6 +834,7 @@ protected:
             
             if( startInfo.itnode == endInfo.itnode || startInfo.itnode == listpath.end() || endInfo.itnode == listpath.end() ) {
                 // choose a line, so ignore
+                RAVELOG_VERBOSE("sampled same node\n");
                 continue;
             }
 
@@ -877,6 +870,7 @@ protected:
             dReal fmiddist = fstartdist + fTimeToOptGroup;
             midInfo = _SampleBasedOnVelocity(listpath, fmiddist);
             if( midInfo.itnode == listpath.end() ) {
+                RAVELOG_VERBOSE_FORMAT("could not find at %f/%f", fmiddist%totaldist);
                 continue;
             }
 
@@ -916,6 +910,7 @@ protected:
                 itinterpnodeprev = itinterpnode = startInfo.itnode;
                 itinterpnode++;
                 if(itinterpnode==listpath.end()) {
+                    RAVELOG_VERBOSE("could not find interp\n");
                     continue;
                 }
 
@@ -937,7 +932,6 @@ protected:
                             bIsFeasible = false;
                             continue;
                         }
-                        //fAlongOtherDeltaDist = 0;
                     }
 
                     itinterpnodeprev = itinterpnode;
@@ -955,7 +949,6 @@ protected:
                                     bIsFeasible = false;
                                     break;
                                 }
-                                //fAlongOtherDeltaDist = 0;
                             }
                             else {
                                 _InterpolateValuesGroup(*itinterpnodeprev, *itinterpnode, (fTimeToOptGroup-fTravelTimeToOptGroup)/fOtherDeltaDist, iOtherOptGroup, vmidvalues);
@@ -996,34 +989,34 @@ protected:
                     fTravelTimeToOptGroup = fTimeToOptGroup;
                     if( !_AddAndCheck(vmidvalues, listNewNodes, false) ) {
                         bIsFeasible = false;
-                        break;
+                        continue;
                     }
-                    //fAlongOtherDeltaDist = 0;
                 }
 
                 // at this point listNewNodes.back() has the new ramp finished for ioptgroup (up to vendvalues) and otherGroup is between itinterpnodeprev and itinterpnode with a dist of fAlongOtherDeltaDist
 
+                //RAVELOG_INFO_FORMAT("new path %d", listNewNodes.size());
+                            
                 // now need to get a path to the end
-                //dReal fcurdistOptGroup = _ComputeExpectedVelocityGroup(endInfo.vsample, *endInfo.itnode, ioptgroup); // distance specific to ioptgroup
-                //dReal fcurdistOtherGroup = fAlongOtherDeltaDist; // distance specific to iOtherOptGroup
-                //dReal fOtherNodeDist = finterpnodedist;
-                //OPENRAVE_ASSERT_OP(fcurdistOtherGroup, >=, 0);
-                //OPENRAVE_ASSERT_OP(fcurdistOptGroup, >=, 0);
                 list< vector<dReal> >::const_iterator itoptgroup = endInfo.itnode, itothergroup = itinterpnode;
                 list< vector<dReal> >::const_iterator itoptgroupprev = endInfo.itnode, itothergroupprev = itinterpnodeprev;
                 itoptgroup++;
-
+                
                 while(itothergroup != listpath.end() ) { // based on other group
                     // figure out the min dist until the next node
                     dReal fOtherDist = _ComputeExpectedVelocityGroup(listNewNodes.back(), *itothergroup, iOtherOptGroup);
-                    //dReal fLeftOverOtherDist = fOtherDist - fcurdistOtherGroup;
-
+                    if( fOtherDist <= 0.01 ) {
+                        itothergroupprev = itothergroup;
+                        ++itothergroup;
+                        continue;
+                    }
+                    
                     //dReal fOtherNextDist = fOtherNodeDist + fOtherDist;
                     if( itoptgroup != listpath.end() ) {
                         dReal fOptDist = 0;
                         while(itoptgroup != listpath.end() ) {
                             fOptDist = _ComputeExpectedVelocityGroup(listNewNodes.back(), *itoptgroup, ioptgroup);
-                            if( fOptDist <= 1e-7 ) {
+                            if( fOptDist <= 0.01 ) {
                                 itoptgroupprev = itoptgroup;
                                 ++itoptgroup;
                                 continue;
@@ -1037,6 +1030,8 @@ protected:
                             // fOtherDist >= fOptDist
 
                             // sample at opt dist
+                            //RAVELOG_INFO_FORMAT("add new path %f/%f = %f", fOptDist%fOtherDist%(fOptDist/fOtherDist));
+
                             vmidvalues = *itoptgroup;
                             _InterpolateValuesGroup(listNewNodes.back(), *itothergroup, fOptDist/fOtherDist, iOtherOptGroup, vmidvalues);
                             if( !_AddAndCheck(vmidvalues, listNewNodes, true) ) {
@@ -1047,32 +1042,34 @@ protected:
                             
                             fOtherDist = _ComputeExpectedVelocityGroup(listNewNodes.back(), *itothergroup, iOtherOptGroup);
                             
-                            //fcurdistOtherGroup = fother*fOtherDist;
-                            //fcurdistOptGroup = 0;
-                            //fOptNodeDist += fOptDist;
                             itoptgroupprev = itoptgroup;
                             ++itoptgroup;
                         }
 
-                        dReal fTestOptDist = _ComputeExpectedVelocityGroup(listNewNodes.back(), *itoptgroup, ioptgroup);
+                        //dReal fTestOptDist = _ComputeExpectedVelocityGroup(listNewNodes.back(), *itoptgroup, ioptgroup);
                         
                         // fOtherDist < fOptDist
+                        
+                        if( fOptDist > g_fEpsilonLinear ) {
+                            vmidvalues = *itothergroup;
+                            if( itoptgroup != listpath.end() ) {
+                                _InterpolateValuesGroup(listNewNodes.back(), *itoptgroup, fOptDist > 0 ? fOtherDist/fOptDist : 1, ioptgroup, vmidvalues);
+                            }
+                            else {
+                                _InterpolateValuesGroup(listNewNodes.back(), listpath.back(), fOptDist > 0 ? fOtherDist/fOptDist : 1, ioptgroup, vmidvalues);
+                            }
 
-                        vmidvalues = *itothergroup;
-                        if( itoptgroup != listpath.end() ) {
-                            _InterpolateValuesGroup(listNewNodes.back(), *itoptgroup, fOtherDist/fOptDist, ioptgroup, vmidvalues);
-                        }
-                        else {
-                            _InterpolateValuesGroup(listNewNodes.back(), listpath.back(), fOtherDist/fOptDist, ioptgroup, vmidvalues);
-                        }
+                            if( !_AddAndCheck(vmidvalues, listNewNodes, true) ) {
+                                RAVELOG_VERBOSE_FORMAT("not feasible group=%d, start=%f, end=%f", ioptgroup%fstartdist%fenddist);
+                                bIsFeasible = false;
+                                break;
+                            }
 
-                        if( !_AddAndCheck(vmidvalues, listNewNodes, true) ) {
-                            RAVELOG_VERBOSE_FORMAT("not feasible group=%d, start=%f, end=%f", ioptgroup%fstartdist%fenddist);
-                            bIsFeasible = false;
-                            break;
+                            fOtherDist = _ComputeExpectedVelocityGroup(listNewNodes.back(), *itothergroup, iOtherOptGroup);
                         }
                     }
-                    else {
+
+                    if( fOtherDist > g_fEpsilonLinear ) {
                         vmidvalues = *itothergroup;
                         _SetValuesGroup(listpath.back(),ioptgroup,vmidvalues);
                         if( !_AddAndCheck(vmidvalues, listNewNodes, true) ) {
@@ -1081,9 +1078,7 @@ protected:
                             break;
                         }
                     }
-
-                    //fOtherNodeDist += itothergroup->second;
-                    //fcurdistOtherGroup = 0;
+                    
                     itothergroupprev = itothergroup;
                     ++itothergroup;
                 }
@@ -1116,7 +1111,7 @@ protected:
             listpath.erase(startInfo.itnode, listpath.end());
             listpath.splice(listpath.end(), listNewNodes, listNewNodes.begin(), listNewNodes.end());
             dReal newtotaldist = _ComputePathDurationOnVelocity(listpath);
-            RAVELOG_INFO_FORMAT("smoother iter %d, totaldist=%f -> %f", curiter%totaldist%newtotaldist);
+            RAVELOG_INFO_FORMAT("smoother iter %d, totaldist=%f -> %f, new path %d", curiter%totaldist%newtotaldist%listpath.size());
             totaldist = newtotaldist;
             nrejected = 0;
         }
