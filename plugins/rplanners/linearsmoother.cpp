@@ -136,6 +136,11 @@ public:
                 }
                 RAVELOG_DEBUG_FORMAT("env=%d, path optimizing shift smoothing - dist %f->%f computation time=%fs", GetEnv()->GetId()%totaldist%newdist1%(0.001f*(float)(utils::GetMilliTime()-basetime1)));
 
+                if( listpath.size() <= 1 ) {
+                    // trajectory contains similar points, so at least add another point and send to the next post-processing stage
+                    listpath.push_back(vtrajdata);
+                }
+
                 ptraj->Init(parameters->_configurationspecification);
                 FOREACH(it, listpath) {
                     ptraj->Insert(ptraj->GetNumWaypoints(),*it);
