@@ -239,7 +239,7 @@ public:
         BOOST_ASSERT(!!_parameters && !!ptraj);
         
         if( ptraj->GetNumWaypoints() < 2 ) {
-            return PS_Failed;
+            return ptraj->GetNumWaypoints() > 0 ? PS_HasSolution : PS_Failed;
         }
 
         // should always set the seed since smoother can be called with different trajectories even though InitPlan was only called once

@@ -306,7 +306,7 @@ public:
         BOOST_ASSERT(!!_parameters && !!ptraj);
 
         if( ptraj->GetNumWaypoints() < 2 ) {
-            return PS_Failed;
+            return ptraj->GetNumWaypoints() > 0 ? PS_HasSolution : PS_Failed;
         }
 
         if( IS_DEBUGLEVEL(Level_Verbose) ) {
