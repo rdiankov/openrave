@@ -867,7 +867,7 @@ protected:
             }
             fOrigOptGroupTime = fenddist - endInfo.fabsnodedist;
 
-            if( fOrigOptGroupTime + fMinDistThresh > fTimeToOptGroup ) {
+            if( fOrigOptGroupTime + fMinDistThresh*0.2 > fTimeToOptGroup ) {
                 continue;
             }
             
