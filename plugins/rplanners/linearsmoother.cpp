@@ -191,6 +191,10 @@ public:
                     RAVELOG_DEBUG(str(boost::format("path optimizing stage - dist %f->%f, computation time=%fs\n")%totaldist%newdist1%(0.001f*(float)(utils::GetMilliTime()-basetime))));
                 }
 
+                if( listpath.size() <= 1 ) {
+                    // trajectory contains similar points, so at least add another point and send to the next post-processing stage
+                    listpath.push_back(make_pair(vtrajdata,0));
+                }
                 ptraj->Init(parameters->_configurationspecification);
                 FOREACH(it, listpath) {
                     ptraj->Insert(ptraj->GetNumWaypoints(),it->first);
