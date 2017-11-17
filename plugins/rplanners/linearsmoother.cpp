@@ -116,6 +116,9 @@ public:
         uint32_t basetime = utils::GetMilliTime();
         PlannerParametersConstPtr parameters = GetParameters();
 
+        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+            _DumpTrajectory(ptraj);
+        }
         vector<dReal> vtrajdata(parameters->GetDOF());
         ptraj->GetWaypoint(0,vtrajdata,parameters->_configurationspecification);
 
@@ -790,7 +793,7 @@ protected:
         }
     }
 
-    bool _AddAndCheck(const std::vector<dReal>& v, std::list< vector<dReal> >& listNewNodes, bool bCheckSelfOnly)
+    bool _AddAndCheck(std::vector<dReal>& v, std::list< vector<dReal> >& listNewNodes, bool bCheckSelfOnly)
     {
         OPENRAVE_ASSERT_OP(listNewNodes.size(),>,0);
         bool bsuccess;
@@ -805,6 +808,14 @@ protected:
         dReal f = 0;
         for(size_t i = 0; i < v.size(); ++i) {
             f += (v[i]-listNewNodes.back()[i])*(v[i]-listNewNodes.back()[i]);
+            if( v[i] < _parameters->_vConfigLowerLimit[i] ) {
+                RAVELOG_WARN_FORMAT("dof %d does not follow lower limit %f < %f", i%v[i]%_parameters->_vConfigLowerLimit[i]);
+                v[i] = _parameters->_vConfigLowerLimit[i];
+            }
+            if( v[i] > _parameters->_vConfigUpperLimit[i] ) {
+                RAVELOG_WARN_FORMAT("dof %d does not follow upper limit %f > %f", i%v[i]%_parameters->_vConfigUpperLimit[i]);
+                v[i] = _parameters->_vConfigUpperLimit[i];
+            }
         }
         if( f > 1e-10 ) {
             if (!bsuccess) {
