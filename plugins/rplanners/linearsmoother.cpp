@@ -800,16 +800,24 @@ protected:
         else {
             bsuccess = SegmentFeasible(listNewNodes.back(), v, IT_OpenStart, 0xffff);
         }
-        if (!bsuccess) {
-            if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                ss << "vstartvalues=["; SerializeValues(ss, listNewNodes.back());
-                ss << "]; vendvalues=[";
-                SerializeValues(ss, v);
-                ss << "]";
-                RAVELOG_VERBOSE_FORMAT("not feasible %s", ss.str());
+
+        // get the distance
+        dReal f = 0;
+        for(size_t i = 0; i < v.size(); ++i) {
+            f += (v[i]-listNewNodes.back()[i])*(v[i]-listNewNodes.back()[i]);
+        }
+        if( f > 1e-10 ) {
+            if (!bsuccess) {
+                if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                    std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                    ss << "vstartvalues=["; SerializeValues(ss, listNewNodes.back());
+                    ss << "]; vendvalues=[";
+                    SerializeValues(ss, v);
+                    ss << "]";
+                    RAVELOG_VERBOSE_FORMAT("not feasible %s", ss.str());
+                }
+                return false;
             }
-            return false;
         }
 
         listNewNodes.push_back(v);
