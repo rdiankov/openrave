@@ -134,7 +134,7 @@ public:
                 if( newdist1 < 0 ) {
                     return PS_Interrupted;
                 }
-                RAVELOG_DEBUG_FORMAT("env=%d, path optimizing second stage - dist %f->%f computation time=%fs", GetEnv()->GetId()%totaldist%newdist1%(0.001f*(float)(utils::GetMilliTime()-basetime1)));
+                RAVELOG_DEBUG_FORMAT("env=%d, path optimizing shift smoothing - dist %f->%f computation time=%fs", GetEnv()->GetId()%totaldist%newdist1%(0.001f*(float)(utils::GetMilliTime()-basetime1)));
 
                 ptraj->Init(parameters->_configurationspecification);
                 FOREACH(it, listpath) {
@@ -784,7 +784,14 @@ protected:
     bool _AddAndCheck(const std::vector<dReal>& v, std::list< vector<dReal> >& listNewNodes, bool bCheckSelfOnly)
     {
         OPENRAVE_ASSERT_OP(listNewNodes.size(),>,0);
-        if (!SegmentFeasible(listNewNodes.back(), v, IT_OpenStart, bCheckSelfOnly ? CFO_CheckSelfCollisions : 0xffff)) {
+        bool bsuccess;
+        if( bCheckSelfOnly ) {
+            bsuccess = SegmentFeasibleNoTol(listNewNodes.back(), v, IT_OpenStart, CFO_CheckSelfCollisions);
+        }
+        else {
+            bsuccess = SegmentFeasible(listNewNodes.back(), v, IT_OpenStart, 0xffff);
+        }
+        if (!bsuccess) {
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                 ss << "vstartvalues=["; SerializeValues(ss, listNewNodes.back());
@@ -808,10 +815,12 @@ protected:
         vector<dReal> vmidvalues(parameters.GetDOF());
         
         PlannerProgress progress;
+
+        dReal fMinDistThresh = 0.01;
         
         int nrejected = 0;
         for(int curiter = 0; curiter < nMaxIterations; ++curiter ) {
-            if( nrejected >= 200 ) {
+            if( nrejected >= 40 ) {
                 RAVELOG_VERBOSE("smoothing quitting early\n");
                 break;
             }
@@ -819,18 +828,10 @@ protected:
             dReal fenddist = fstartdist + (totaldist-fstartdist)*_puniformsampler->SampleSequenceOneReal(IT_OpenStart);
             uint32_t ioptgroup = _puniformsampler->SampleSequenceOneUInt32()%uint32_t(2); // group to optimize
             int iOtherOptGroup = (ioptgroup+1)%2;
-            //dReal fstartdistdelta=0, fenddistdelta=0;
-            //dReal fcurdist = 0;
-
             startInfo = _SampleBasedOnVelocity(listpath, fstartdist);
-            //itstartnode = startInfo.first;
-            //dReal fstartnodedist = startInfo.second;
-            //fstartdistdelta = fstartdist - fstartnodedist;
+
 
             endInfo = _SampleBasedOnVelocity(listpath, fenddist);
-            //itendnode = endInfo.first;
-            //dReal fendnodedist = endInfo.second;
-            //fenddistdelta = fenddist - fendnodedist;
             
             if( startInfo.itnode == endInfo.itnode || startInfo.itnode == listpath.end() || endInfo.itnode == listpath.end() ) {
                 // choose a line, so ignore
@@ -840,33 +841,32 @@ protected:
 
             nrejected++;
 
-//            // compute the actual node values
-//            if( startI == listpath.begin() ) {
-//                vstartvalues = *itstartnode;
-//            }
-//            else {
-//                dReal f = fstartdistdelta/itstartnode->second;
-//                for(size_t i = 0; i < vstartvalues.size(); ++i) {
-//                    vstartvalues[i] = itstartnode->at(i)*f + itstartnodeprev->at(i)*(1-f);
-//                }
-//            }
-//
-//            if( itendnode == --listpath.end() ) {
-//                vendvalues = *itendnode;
-//            }
-//            else {
-//                dReal f = fenddistdelta/itendnode->second;
-//                for(int i = 0; i < (int)vendvalues.size(); ++i) {
-//                    if( (i < iGroupStartIndex) ^ (ioptgroup>0) ) {
-//                        vendvalues[i] = itendnode->at(i)*f + itendnodeprev->at(i)*(1-f);
-//                    }
-//                    else {
-//                        vendvalues[i] = vstartvalues[i];
-//                    }
-//                }
-//            }
-
             dReal fTimeToOptGroup = _ComputeExpectedVelocityGroup(startInfo.vsample, endInfo.vsample, ioptgroup);
+
+            // compute the time from optgroup to go from startInfo to endInfo
+            list< vector<dReal> >::const_iterator itoptgroup = startInfo.itnode; itoptgroup++;
+            list< vector<dReal> >::const_iterator itoptgroupprev = startInfo.itnode;
+
+            dReal fOrigOptGroupTime = startInfo.fabsnodedist + startInfo.fdeltadist - fstartdist;
+
+            if(itoptgroup != listpath.end() ) {
+                itoptgroupprev = itoptgroup;
+                itoptgroup++;
+                while(itoptgroup != listpath.end() ) {
+                    fOrigOptGroupTime += _ComputeExpectedVelocityGroup(*itoptgroupprev, *itoptgroup, ioptgroup);
+                    if( itoptgroup == endInfo.itnode ) {
+                        break;
+                    }
+                    itoptgroupprev = itoptgroup;
+                    itoptgroup++;
+                }
+            }
+            fOrigOptGroupTime = fenddist - endInfo.fabsnodedist;
+
+            if( fOrigOptGroupTime + fMinDistThresh > fTimeToOptGroup ) {
+                continue;
+            }
+            
             dReal fmiddist = fstartdist + fTimeToOptGroup;
             midInfo = _SampleBasedOnVelocity(listpath, fmiddist);
             if( midInfo.itnode == listpath.end() ) {
@@ -998,14 +998,16 @@ protected:
                 //RAVELOG_INFO_FORMAT("new path %d", listNewNodes.size());
                             
                 // now need to get a path to the end
-                list< vector<dReal> >::const_iterator itoptgroup = endInfo.itnode, itothergroup = itinterpnode;
-                list< vector<dReal> >::const_iterator itoptgroupprev = endInfo.itnode, itothergroupprev = itinterpnodeprev;
+                itoptgroup = endInfo.itnode;
+                itoptgroupprev = endInfo.itnode;
+                list< vector<dReal> >::const_iterator itothergroup = itinterpnode;
+                list< vector<dReal> >::const_iterator itothergroupprev = itinterpnodeprev;
                 itoptgroup++;
                 
                 while(itothergroup != listpath.end() ) { // based on other group
                     // figure out the min dist until the next node
                     dReal fOtherDist = _ComputeExpectedVelocityGroup(listNewNodes.back(), *itothergroup, iOtherOptGroup);
-                    if( fOtherDist <= 0.01 ) {
+                    if( fOtherDist <= fMinDistThresh ) {
                         itothergroupprev = itothergroup;
                         ++itothergroup;
                         continue;
@@ -1016,7 +1018,7 @@ protected:
                         dReal fOptDist = 0;
                         while(itoptgroup != listpath.end() ) {
                             fOptDist = _ComputeExpectedVelocityGroup(listNewNodes.back(), *itoptgroup, ioptgroup);
-                            if( fOptDist <= 0.01 ) {
+                            if( fOptDist <= fMinDistThresh ) {
                                 itoptgroupprev = itoptgroup;
                                 ++itoptgroup;
                                 continue;
