@@ -350,7 +350,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
         :param setNormalsAwayFromCenter: if True, then will normalize all normals so that they point away from center-of-geometry.
         """
         M = mean(vertices,0)
-
+        
         # Merge duplicated vertices (+- epsilon)
         indices_raveled = indices.ravel()
         vertices_map = arange(len(vertices), dtype=indices.dtype)
@@ -359,17 +359,17 @@ class ConvexDecompositionModel(DatabaseGenerator):
                 combine = a + 1 + flatnonzero(isclose(vertices[a], vertices[a+1:], rtol, atol).all(axis=1))
                 vertices_map[combine] = a
         indices = vertices_map[indices.ravel()].reshape(-1, 3)
-
+        
         vertices_0 = vertices[indices[:, 0]]
         facenormals = cross(vertices[indices[:, 1]] - vertices_0, vertices[indices[:, 2]] - vertices_0)
         degenerate = isclose(facenormals, 0.0, rtol, atol).all(axis=1)
         facenormals /= norm(facenormals, axis=1)[:, newaxis]
         # Take care of degenerate triangles. Otherwise their normals would be none
         facenormals[degenerate] = 0.0
-
+        
         # make sure normals are facing outward
         newindices = arange(3 * len(facenormals), dtype=int32).reshape(-1, 3)
-        originaledges = empty((3 * len(facenormals), 4), dtype=int32)
+        originaledges = empty((3 * len(facenormals), 5), dtype=int32)
         
         if setNormalsAwayFromCenter:
             flip = inner1d(vertices[indices[:,0]] - M, facenormals) < 0
@@ -378,13 +378,14 @@ class ConvexDecompositionModel(DatabaseGenerator):
         
         offsets = arange(0, 3 * len(facenormals), 3)
         indices_j = [indices[:, j] for j in range(3)]
-        for j0, j1, n in [[0,1,0],[0,2,1],[1,2,2]]:
+        for j0, j1, n in [[0,1,0],[1,2,1],[2,0,2]]:
             swap = indices_j[j0] < indices_j[j1]
             originaledges_n = originaledges[n::3]
             originaledges_n[:, 0] = where(swap, indices_j[j0], indices_j[j1])
             originaledges_n[:, 1] = where(swap, indices_j[j1], indices_j[j0])
-            originaledges_n[:, 2] = offsets + where(swap, j0, j1)
-            originaledges_n[:, 3] = offsets + where(swap, j1, j0)
+            originaledges_n[:, 2] = offsets + j0#where(swap, j0, j1)
+            originaledges_n[:, 3] = offsets + j1#where(swap, j1, j0)
+            originaledges_n[:, 4] = swap
         
         # find the connecting edges across the new faces
         offset = 0
@@ -400,7 +401,11 @@ class ConvexDecompositionModel(DatabaseGenerator):
                 if not edge[1] in verticesofinterest:
                     verticesofinterest[edge[1]] = len(newvertices)+offset
                     offset += 1
-                newindices = r_[newindices,[[edge[2],edge[3],cedge[3]],[edge[2],cedge[3],cedge[2]],[edge[2],cedge[2],verticesofinterest[edge[0]]],[edge[3],cedge[3],verticesofinterest[edge[1]]]]]
+                newindices = r_[newindices,[[edge[2],cedge[3],edge[3]],[edge[3],cedge[3],cedge[2]]]]
+                if edge[4] == 0:
+                    newindices = r_[newindices, [[edge[3],cedge[2],verticesofinterest[edge[0]]],[cedge[3],edge[2],verticesofinterest[edge[1]]]]]
+                else:
+                    newindices = r_[newindices, [[cedge[3],edge[2],verticesofinterest[edge[0]]],[edge[3],cedge[2],verticesofinterest[edge[1]]]]]
         if offset > 0:
             newvertices = r_[newvertices,zeros((offset,3))]
         # for every vertex, add a point representing the mean of surrounding extruded vertices
