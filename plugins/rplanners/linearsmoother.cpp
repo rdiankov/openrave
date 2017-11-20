@@ -124,34 +124,50 @@ public:
 
         // subsample trajectory and add to list
         if( ptraj->GetNumWaypoints() > 1 ) {
+            list< std::pair< vector<dReal>, dReal> > listpath;
+            dReal totaldist = 0;
+                
             if( _nUseSingleDOFSmoothing == 3 ) {
                 uint32_t basetime1 = utils::GetMilliTime();
-                list< vector<dReal> > listpath;
+                list< vector<dReal> > listsimplepath;
                 for(size_t i = 1; i < ptraj->GetNumWaypoints(); ++i) {
                     ptraj->GetWaypoint(i,vtrajdata,parameters->_configurationspecification);
-                    listpath.push_back(vtrajdata);
+                    listsimplepath.push_back(vtrajdata);
                 }
 
-                dReal totaldist = _ComputePathDurationOnVelocity(listpath);
-                dReal newdist1 = _OptimizePathSingleGroupShift(listpath, totaldist, parameters->_nMaxIterations);
+                dReal totalshiftdist = _ComputePathDurationOnVelocity(listsimplepath);
+                dReal newdist1 = _OptimizePathSingleGroupShift(listsimplepath, totalshiftdist, parameters->_nMaxIterations);
                 if( newdist1 < 0 ) {
                     return PS_Interrupted;
                 }
-                RAVELOG_DEBUG_FORMAT("env=%d, path optimizing shift smoothing - dist %f->%f computation time=%fs", GetEnv()->GetId()%totaldist%newdist1%(0.001f*(float)(utils::GetMilliTime()-basetime1)));
+                RAVELOG_DEBUG_FORMAT("env=%d, path optimizing shift smoothing - dist %f->%f computation time=%fs", GetEnv()->GetId()%totalshiftdist%newdist1%(0.001f*(float)(utils::GetMilliTime()-basetime1)));
 
-                if( listpath.size() <= 1 ) {
-                    // trajectory contains similar points, so at least add another point and send to the next post-processing stage
-                    listpath.push_back(vtrajdata);
-                }
+//                if( listsimplepath.size() <= 1 ) {
+//                    // trajectory contains similar points, so at least add another point and send to the next post-processing stage
+//                    listsimplepath.push_back(vtrajdata);
+//                }
 
-                ptraj->Init(parameters->_configurationspecification);
-                FOREACH(it, listpath) {
-                    ptraj->Insert(ptraj->GetNumWaypoints(),*it);
+//                ptraj->Init(parameters->_configurationspecification);
+//                FOREACH(it, listsimplepath) {
+//                    ptraj->Insert(ptraj->GetNumWaypoints(),*it);
+//                }
+
+                totaldist = 0;
+                FOREACH(itvalues, listsimplepath) {
+                    dReal dist = 0;
+                    if( listpath.size() > 0 ) {
+                        dist = parameters->_distmetricfn(listpath.back().first, *itvalues);
+                        if( dist > 0 ) {
+                            listpath.push_back(make_pair(*itvalues,dist));
+                            totaldist += dist;
+                        }
+                    }
+                    else {
+                        listpath.push_back(make_pair(*itvalues,0));
+                    }
                 }
             }
             else {
-                list< std::pair< vector<dReal>, dReal> > listpath;
-                dReal totaldist = 0;
                 listpath.push_back(make_pair(vtrajdata,0));
                 for(size_t i = 1; i < ptraj->GetNumWaypoints(); ++i) {
                     ptraj->GetWaypoint(i,vtrajdata,parameters->_configurationspecification);
@@ -162,6 +178,9 @@ public:
                         totaldist += dist;
                     }
                 }
+            }
+            
+            {
 
                 if( _nUseSingleDOFSmoothing == 1 ) {
                     dReal newdist1 = _OptimizePath(listpath, totaldist, parameters->_nMaxIterations*8/10);
@@ -1117,18 +1136,32 @@ protected:
                     //RAVELOG_DEBUG_FORMAT("not feasible %f->%f", curiter%dist);
                     continue;
                 }
+
                 
-                while(itoptgroup != listpath.end() ) { // based on other group
-                    vmidvalues = *itoptgroup;
-                    _SetValuesGroup(listpath.back(),iOtherOptGroup,vmidvalues);
-                    if( !_AddAndCheck(vmidvalues, listNewNodes, true) ) {
-                        RAVELOG_VERBOSE_FORMAT("not feasible group=%d, start=%f, end=%f", ioptgroup%fstartdist%fenddist);
-                        bIsFeasible = false;
-                        break;
+                if( itoptgroup != listpath.end() ) {
+                    while(itoptgroup != listpath.end() ) { // based on other group
+                        vmidvalues = *itoptgroup;
+                        _SetValuesGroup(listpath.back(),iOtherOptGroup,vmidvalues);
+                        if( !_AddAndCheck(vmidvalues, listNewNodes, true) ) {
+                            RAVELOG_VERBOSE_FORMAT("not feasible group=%d, start=%f, end=%f", ioptgroup%fstartdist%fenddist);
+                            bIsFeasible = false;
+                            break;
+                        }
+
+                        itoptgroupprev = itoptgroup;
+                        ++itoptgroup;
                     }
-                    
-                    itoptgroupprev = itoptgroup;
-                    ++itoptgroup;
+                }
+                else {
+                    // make sure that the last point in listpath is covered!
+                    dReal fFinalDist = _ComputeExpectedVelocity(listNewNodes.back(), listpath.back());
+                    if( fFinalDist > g_fEpsilonLinear ) {
+                        if( !_AddAndCheck(listpath.back(), listNewNodes, true) ) {
+                            RAVELOG_DEBUG_FORMAT("final not feasible group=%d, start=%f, end=%f", ioptgroup%fstartdist%fenddist);
+                            bIsFeasible = false;
+                            continue;
+                        }
+                    }
                 }
                 
                 if( !bIsFeasible ) {
