@@ -792,6 +792,9 @@ protected:
     /// \brief interpolates v0*(1-f) + v1*f only for the specific group determined by ioptgroup
     void _InterpolateValuesGroup(const std::vector<dReal>& v0, const std::vector<dReal>& v1, dReal f, int ioptgroup, std::vector<dReal>& vout)
     {
+        if( f < 0 || f > 1 ) {
+            RAVELOG_WARN_FORMAT("bad interpolation value %f!", f);
+        }
         int iGroupStartIndex = v0.size()/2;
         OPENRAVE_ASSERT_OP(vout.size(), ==, v0.size());
         for(int i = 0; i < (int)v0.size(); ++i) {
