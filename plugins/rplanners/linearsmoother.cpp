@@ -833,7 +833,7 @@ protected:
             }
             if( v[i] > _parameters->_vConfigUpperLimit[i] ) {
                 RAVELOG_WARN_FORMAT("dof %d does not follow upper limit %f > %f", i%v[i]%_parameters->_vConfigUpperLimit[i]);
-                v[i] = _parameters->_vConfigUpperLimit[i];
+                v[i]  = _parameters->_vConfigUpperLimit[i];
             }
         }
         if( f > 1e-10 ) {
@@ -1100,12 +1100,16 @@ protected:
                         // fOtherDist < fOptDist
                         
                         if( fOptDist > g_fEpsilonLinear ) {
+                            dReal f = fOtherDist/fOptDist;
+                            if( f > 1 ) {
+                                f = 1;
+                            }
                             vmidvalues = *itothergroup;
                             if( itoptgroup != listpath.end() ) {
-                                _InterpolateValuesGroup(listNewNodes.back(), *itoptgroup, fOptDist > 0 ? fOtherDist/fOptDist : 1, ioptgroup, vmidvalues);
+                                _InterpolateValuesGroup(listNewNodes.back(), *itoptgroup, f, ioptgroup, vmidvalues);
                             }
                             else {
-                                _InterpolateValuesGroup(listNewNodes.back(), listpath.back(), fOptDist > 0 ? fOtherDist/fOptDist : 1, ioptgroup, vmidvalues);
+                                _InterpolateValuesGroup(listNewNodes.back(), listpath.back(), f, ioptgroup, vmidvalues);
                             }
 
                             if( !_AddAndCheck(vmidvalues, listNewNodes, true) ) {
