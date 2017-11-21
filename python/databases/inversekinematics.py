@@ -292,7 +292,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         return clone
     
     def has(self):
-        return self.iksolver is not None and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype)
+        return self.iksolver is not None and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype) and self.iksolver.GetXMLId() == self.manip.GetIkSolver().GetXMLId()
     
     def save(self):
         statsfilename=self.getstatsfilename(False)
