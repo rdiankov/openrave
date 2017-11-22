@@ -129,7 +129,7 @@ public:
 
     /// \brief return true if the command is supported
     virtual bool SupportsJSONCommand(const std::string& cmd);
-    
+
     /** \brief Used to send special commands to the interface and receive output.
 
         The command must be registered by \ref RegisterCommand. A special command '\b help' is
@@ -158,6 +158,7 @@ public:
         return bSuccess;
     }
 
+#if OPENRAVE_RAPIDJSON
     /** \brief Used to send special JSON commands to the interface and receive output.
 
         The command must be registered by \ref RegisterJSONCommand. A special command '\b help' is
@@ -178,6 +179,8 @@ public:
     inline void SendJSONCommand(const std::string& cmdname, const rapidjson::Value& input, rapidjson::Document& output) {
         SendJSONCommand(cmdname, input, output, output.GetAllocator());
     }
+
+#endif // OPENRAVE_RAPIDJSON
 
     /** \brief serializes the interface
 
@@ -224,6 +227,8 @@ public:
     /// \brief Unregisters the command. <b>[multi-thread safe]</b>
     virtual void UnregisterCommand(const std::string& cmdname);
 
+#if OPENRAVE_RAPIDJSON
+
     /// \brief The function to be executed for every JSON command.
     ///
     /// \param input - input of the command
@@ -252,6 +257,8 @@ public:
     /// \brief Unregisters the command. <b>[multi-thread safe]</b>
     virtual void UnregisterJSONCommand(const std::string& cmdname);
 
+#endif // OPENRAVE_RAPIDJSON
+
     virtual const char* GetHash() const = 0;
     std::string __description;     /// \see GetDescription()
     std::string __struri; ///< \see GetURI
@@ -264,8 +271,10 @@ private:
     /// Write the help commands to an output stream
     virtual bool _GetCommandHelp(std::ostream& sout, std::istream& sinput) const;
 
+#if OPENRAVE_RAPIDJSON
     /// Write the help commands to an output stream
     virtual void _GetJSONCommandHelp(const rapidjson::Value& input, rapidjson::Value& output, rapidjson::Document::AllocatorType& allocator) const;
+#endif // OPENRAVE_RAPIDJSON
 
     inline InterfaceBase& operator=(const InterfaceBase&r) {
         throw openrave_exception("InterfaceBase copying not allowed");
@@ -282,9 +291,12 @@ private:
     READERSMAP __mapReadableInterfaces; ///< pointers to extra interfaces that are included with this object
     typedef std::map<std::string, boost::shared_ptr<InterfaceCommand>, CaseInsensitiveCompare> CMDMAP;
     CMDMAP __mapCommands; ///< all registered commands
+
+#if OPENRAVE_RAPIDJSON
     typedef std::map<std::string, boost::shared_ptr<InterfaceJSONCommand>, CaseInsensitiveCompare> JSONCMDMAP;
     JSONCMDMAP __mapJSONCommands; ///< all registered commands
-
+#endif
+    
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
     friend class Environment;

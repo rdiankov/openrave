@@ -85,8 +85,6 @@
 
 #endif
 
-#include <rapidjson/document.h>
-
 #if defined(__GNUC__)
 #define RAVE_DEPRECATED __attribute__((deprecated))
 #else
@@ -100,6 +98,10 @@ namespace OpenRAVE {
 #include <openrave/interfacehashes.h>
 
 }
+
+#if OPENRAVE_RAPIDJSON
+#include <rapidjson/document.h>
+#endif // OPENRAVE_RAPIDJSON
 
 #include <openrave/logging.h>
 

@@ -87,7 +87,7 @@ class PyConfigurationSpecification;
 class PyIkParameterization;
 class PyXMLReadable;
 class PyCameraIntrinsics;
-    
+
 typedef boost::shared_ptr<PyInterfaceBase> PyInterfaceBasePtr;
 typedef boost::shared_ptr<PyInterfaceBase const> PyInterfaceBaseConstPtr;
 typedef boost::shared_ptr<PyKinBody> PyKinBodyPtr;
@@ -127,7 +127,7 @@ typedef boost::shared_ptr<PyConfigurationSpecification const> PyConfigurationSpe
 typedef boost::shared_ptr<PyIkParameterization> PyIkParameterizationPtr;
 typedef boost::shared_ptr<PyXMLReadable> PyXMLReadablePtr;
 typedef boost::shared_ptr<PyCameraIntrinsics> PyCameraIntrinsicsPtr;
-    
+
 inline uint64_t GetMicroTime()
 {
 #ifdef _WIN32
@@ -142,9 +142,11 @@ inline uint64_t GetMicroTime()
 #endif
 }
 
+#if OPENRAVE_RAPIDJSON
 /// conversion between rapidjson value and pyobject
 object toPyObject(const rapidjson::Value& value);
 void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator);
+#endif // OPENRAVE_RAPIDJSON
 
 /// used externally, don't change definitions
 //@{
@@ -567,10 +569,12 @@ public:
     object GetUserData(const std::string& key=std::string()) const;
 
     bool SupportsCommand(const string& cmd);
-    bool SupportsJSONCommand(const string& cmd);
-
     object SendCommand(const string& in, bool releasegil=false, bool lockenv=false);
+
+#if OPENRAVE_RAPIDJSON
+    bool SupportsJSONCommand(const string& cmd);
     object SendJSONCommand(const string& cmd, object input, bool releasegil=false, bool lockenv=false);
+#endif // OPENRAVE_RAPIDJSON
 
     virtual object GetReadableInterfaces();
     virtual object GetReadableInterface(const std::string& xmltag);
@@ -702,7 +706,7 @@ const ConfigurationSpecification& GetConfigurationSpecification(PyConfigurationS
 
 PyCameraIntrinsicsPtr toPyCameraIntrinsics(const geometry::RaveCameraIntrinsics<float>&);
 PyCameraIntrinsicsPtr toPyCameraIntrinsics(const geometry::RaveCameraIntrinsics<double>&);
-    
+
 PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType type, const std::string& name);
 void init_openravepy_global();
 void InitPlanningUtils();

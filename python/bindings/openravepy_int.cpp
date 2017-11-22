@@ -23,6 +23,8 @@
 namespace openravepy
 {
 
+#if OPENRAVE_RAPIDJSON
+
 // convert from rapidjson to python object
 object toPyObject(const rapidjson::Value& value)
 {
@@ -141,6 +143,8 @@ void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
     }
 }
 
+#endif // OPENRAVE_RAPIDJSON
+    
 /// if set, will return all transforms are 1x7 vectors where first 4 compoonents are quaternion
 static bool s_bReturnTransformQuaternions = false;
 bool GetReturnTransformQuaternions() {
@@ -526,10 +530,12 @@ bool PyInterfaceBase::SupportsCommand(const string& cmd)
     return _pbase->SupportsCommand(cmd);
 }
 
+#if OPENRAVE_RAPIDJSON
 bool PyInterfaceBase::SupportsJSONCommand(const string& cmd)
 {
     return _pbase->SupportsJSONCommand(cmd);
 }
+#endif // OPENRAVE_RAPIDJSON
 
 object PyInterfaceBase::SendCommand(const string& in, bool releasegil, bool lockenv)
 {
@@ -558,6 +564,8 @@ object PyInterfaceBase::SendCommand(const string& in, bool releasegil, bool lock
     return object(sout.str());
 }
 
+#if OPENRAVE_RAPIDJSON
+
 object PyInterfaceBase::SendJSONCommand(const string& cmd, object input, bool releasegil, bool lockenv)
 {
     rapidjson::Document in, out;
@@ -585,6 +593,8 @@ object PyInterfaceBase::SendJSONCommand(const string& cmd, object input, bool re
 
     return toPyObject(out);
 }
+
+#endif // OPENRAVE_RAPIDJSON
 
 object PyInterfaceBase::GetReadableInterfaces()
 {
@@ -2159,8 +2169,10 @@ Because race conditions can pop up when trying to lock the openrave environment 
         .def("GetUserData",&PyInterfaceBase::GetUserData, GetUserData_overloads(args("key"), DOXY_FN(InterfaceBase,GetUserData)))
         .def("SupportsCommand",&PyInterfaceBase::SupportsCommand, args("cmd"), DOXY_FN(InterfaceBase,SupportsCommand))
         .def("SendCommand",&PyInterfaceBase::SendCommand, SendCommand_overloads(args("cmd","releasegil","lockenv"), sSendCommandDoc.c_str()))
+#if OPENRAVE_RAPIDJSON
         .def("SupportsJSONCommand",&PyInterfaceBase::SupportsJSONCommand, args("cmd"), DOXY_FN(InterfaceBase,SupportsJSONCommand))
         .def("SendJSONCommand",&PyInterfaceBase::SendJSONCommand, SendJSONCommand_overloads(args("cmd","input","releasegil","lockenv"), DOXY_FN(InterfaceBase,SendJSONCommand)))
+#endif // OPENRAVE_RAPIDJSON
         .def("GetReadableInterfaces",&PyInterfaceBase::GetReadableInterfaces,DOXY_FN(InterfaceBase,GetReadableInterfaces))
         .def("GetReadableInterface",&PyInterfaceBase::GetReadableInterface,DOXY_FN(InterfaceBase,GetReadableInterface))
         .def("SetReadableInterface",&PyInterfaceBase::SetReadableInterface,args("xmltag","xmlreadable"), DOXY_FN(InterfaceBase,SetReadableInterface))
