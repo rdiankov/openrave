@@ -1582,10 +1582,10 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                         if( p[i] < lowerlim[i] ) {
                             if( p[i] < lowerlim[i]-g_fEpsilonEvalJointLimit ) {
                                 if( checklimits == CLA_CheckLimits ) {
-                                    RAVELOG_WARN(str(boost::format("dof %d value is not in limits %e<%e")%((*it)->GetDOFIndex()+i)%p[i]%lowerlim[i]));
+                                    RAVELOG_WARN(str(boost::format("dof %d value %e is smaller than the lower limit %e")%((*it)->GetDOFIndex()+i)%p[i]%lowerlim[i]));
                                 }
                                 else if( checklimits == CLA_CheckLimitsThrow ) {
-                                    throw OPENRAVE_EXCEPTION_FORMAT(_("dof %d value is not in limits %e<%e"), ((*it)->GetDOFIndex()+i)%p[i]%lowerlim[i], ORE_InvalidArguments);
+                                    throw OPENRAVE_EXCEPTION_FORMAT(_("dof %d value %e is smaller than the lower limit %e"), ((*it)->GetDOFIndex()+i)%p[i]%lowerlim[i], ORE_InvalidArguments);
                                 }
                             }
                             *ptempjoints++ = lowerlim[i];
@@ -1593,10 +1593,10 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                         else if( p[i] > upperlim[i] ) {
                             if( p[i] > upperlim[i]+g_fEpsilonEvalJointLimit ) {
                                 if( checklimits == CLA_CheckLimits ) {
-                                    RAVELOG_WARN(str(boost::format("dof %d value is not in limits %e<%e")%((*it)->GetDOFIndex()+i)%p[i]%upperlim[i]));
+                                    RAVELOG_WARN(str(boost::format("dof %d value %e is greater than the upper limit %e")%((*it)->GetDOFIndex()+i)%p[i]%upperlim[i]));
                                 }
                                 else if( checklimits == CLA_CheckLimitsThrow ) {
-                                    throw OPENRAVE_EXCEPTION_FORMAT(_("dof %d value is not in limits %e>%e"),((*it)->GetDOFIndex()+i)%p[i]%upperlim[i], ORE_InvalidArguments);
+                                    throw OPENRAVE_EXCEPTION_FORMAT(_("dof %d value %e is greater than the upper limit %e"),((*it)->GetDOFIndex()+i)%p[i]%upperlim[i], ORE_InvalidArguments);
                                 }
                             }
                             *ptempjoints++ = upperlim[i];
