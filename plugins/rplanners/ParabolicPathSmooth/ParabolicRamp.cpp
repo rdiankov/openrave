@@ -728,7 +728,7 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
         // RAVELOG_DEBUG_FORMAT("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0%x1%dx0%dx1%vmax%amax%endTime);
 
         // Final check on the accelerations
-        if ((Abs(a1) > amax) || (Abs(a2) > amax)) {
+        if ((Abs(a1) > amax+EpsilonA) || (Abs(a2) > amax+EpsilonA)) { // need to test with EpsilonA here since error can accrue
             PARABOLIC_RAMP_PLOG("Cannot fix accelration bounds violation");
             PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
             return false;
