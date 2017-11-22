@@ -528,6 +528,14 @@ if( CLOCK_GETTIME_FOUND )
   add_definitions(-DCLOCK_GETTIME_FOUND)
 endif()
 
+find_package(RapidJSON)
+if( RAPIDJSON_FOUND )
+  set(OPENRAVE_RAPIDJSON 1)
+else()
+  set(OPENRAVE_RAPIDJSON 0)
+  message(WARNING "rapidjson library not found")
+endif()
+
 find_package(LibXml2)
 
 if( LIBXML2_FOUND )
