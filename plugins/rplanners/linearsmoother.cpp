@@ -1223,7 +1223,20 @@ protected:
         FOREACH(itperturbation,perturbations) {
             for(size_t i = 0; i < a.size(); ++i) {
                 anew[i] = a[i] + *itperturbation * parameters->_vConfigResolution.at(i);
+                if( anew[i] < _parameters->_vConfigLowerLimit[i] ) {
+                    anew[i] = _parameters->_vConfigLowerLimit[i];
+                }
+                if( anew[i] > _parameters->_vConfigUpperLimit[i] ) {
+                    anew[i]  = _parameters->_vConfigUpperLimit[i];
+                }
+
                 bnew[i] = b[i] + *itperturbation * parameters->_vConfigResolution.at(i);
+                if( bnew[i] < _parameters->_vConfigLowerLimit[i] ) {
+                    bnew[i] = _parameters->_vConfigLowerLimit[i];
+                }
+                if( bnew[i] > _parameters->_vConfigUpperLimit[i] ) {
+                    bnew[i]  = _parameters->_vConfigUpperLimit[i];
+                }
             }
             if( parameters->CheckPathAllConstraints(anew,bnew,std::vector<dReal>(), std::vector<dReal>(), 0, interval, options) != 0 ) {
                 return false;
