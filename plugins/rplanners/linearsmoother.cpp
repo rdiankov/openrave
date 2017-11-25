@@ -130,7 +130,7 @@ public:
             if( _nUseSingleDOFSmoothing == 3 ) {
                 uint32_t basetime1 = utils::GetMilliTime();
                 list< vector<dReal> > listsimplepath;
-                for(size_t i = 1; i < ptraj->GetNumWaypoints(); ++i) {
+                for(size_t i = 0; i < ptraj->GetNumWaypoints(); ++i) {
                     ptraj->GetWaypoint(i,vtrajdata,parameters->_configurationspecification);
                     listsimplepath.push_back(vtrajdata);
                 }
@@ -163,6 +163,7 @@ public:
                         }
                     }
                     else {
+                        vtrajdata = *itvalues;
                         listpath.push_back(make_pair(*itvalues,0));
                     }
                 }
@@ -1157,6 +1158,22 @@ protected:
 
                         itoptgroupprev = itoptgroup;
                         ++itoptgroup;
+                    }
+
+                    if( !bIsFeasible ) {
+                        //RAVELOG_DEBUG_FORMAT("not feasible %f->%f", curiter%dist);
+                        continue;
+                    }
+                    
+                    // make sure that the last point in listpath is covered!
+                    dReal fFinalDist = _ComputeExpectedVelocity(listNewNodes.back(), listpath.back());
+                    if( fFinalDist > g_fEpsilonLinear ) {
+                        RAVELOG_WARN_FORMAT("still some distance left %f with optgroup %d, so fill it", fFinalDist%ioptgroup);
+                        if( !_AddAndCheck(listpath.back(), listNewNodes, true) ) {
+                            RAVELOG_DEBUG_FORMAT("final not feasible group=%d, start=%f, end=%f", ioptgroup%fstartdist%fenddist);
+                            bIsFeasible = false;
+                            continue;
+                        }
                     }
                 }
                 else {
