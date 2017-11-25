@@ -867,7 +867,7 @@ protected:
         
         PlannerProgress progress;
 
-        dReal fMinDistThresh = 0.01;
+        dReal fMinDistThresh = 0.005;
         
         int nrejected = 0;
         for(int curiter = 0; curiter < nMaxIterations; ++curiter ) {
