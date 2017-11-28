@@ -422,9 +422,18 @@ public:
             return false;
         }
 
-        _fclspace->SynchronizeWithAttached(plink1->GetParent());
-        if( plink1->GetParent() != plink2->GetParent() ) {
-            _fclspace->SynchronizeWithAttached(plink2->GetParent());
+        KinBodyPtr plink1parent = plink1->GetParent(true);
+        if( !plink1parent ) {
+            throw OPENRAVE_EXCEPTION_FORMAT("Failed to get link %s parent", plink1parent->GetName(), OpenRAVE::ORE_InvalidArguments);
+        }
+        KinBodyPtr plink2parent = plink2->GetParent(true);
+        if( !plink2parent ) {
+            throw OPENRAVE_EXCEPTION_FORMAT("Failed to get link %s parent", plink2parent->GetName(), OpenRAVE::ORE_InvalidArguments);
+        }
+        
+        _fclspace->SynchronizeWithAttached(plink1parent);
+        if( plink1parent != plink2parent ) {
+            _fclspace->SynchronizeWithAttached(plink2parent);
         }
 
         CollisionObjectPtr pcollLink1 = _fclspace->GetLinkBV(plink1), pcollLink2 = _fclspace->GetLinkBV(plink2);

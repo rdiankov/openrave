@@ -78,16 +78,23 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
     }
 
     // check all grabbed bodies with (TODO: support CO_ActiveDOFs option)
-    FOREACHC(itgrabbed, _vGrabbedBodies) {
+    FOREACH(itgrabbed, _vGrabbedBodies) {
         GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
         KinBodyPtr pbody(pgrabbed->_pgrabbedbody);
         if( !pbody ) {
             continue;
         }
-        FOREACHC(itrobotlink,pgrabbed->_listNonCollidingLinks) {
+        FOREACH(itrobotlink,pgrabbed->_listNonCollidingLinks) {
+            KinBody::LinkConstPtr robotlink = *itrobotlink;
+            KinBodyPtr parentlink = (*itrobotlink)->GetParent(true);
+            if( !parentlink ) {
+                RAVELOG_WARN_FORMAT("_listNonCollidingLinks has invalid link %s:%d", (*itrobotlink)->GetName()%(*itrobotlink)->GetIndex());
+                robotlink = _veclinks.at((*itrobotlink)->GetIndex());
+            }
+            
             // have to use link/link collision since link/body checks attached bodies
             FOREACHC(itbodylink,pbody->GetLinks()) {
-                if( collisionchecker->CheckCollision(*itrobotlink,KinBody::LinkConstPtr(*itbodylink),pusereport) ) {
+                if( collisionchecker->CheckCollision(robotlink,KinBody::LinkConstPtr(*itbodylink),pusereport) ) {
                     bCollision = true;
                     if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
                         break;
