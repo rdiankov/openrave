@@ -661,7 +661,7 @@ public:
                 }
             }
 
-            if( !!scene->mMaterials && input_mesh->mMaterialIndex>=0 && input_mesh->mMaterialIndex<scene->mNumMaterials) {
+            if( !!scene->mMaterials&& input_mesh->mMaterialIndex<scene->mNumMaterials) {
                 aiMaterial* mtrl = scene->mMaterials[input_mesh->mMaterialIndex];
                 aiColor4D color;
                 aiGetMaterialColor(mtrl,AI_MATKEY_COLOR_DIFFUSE,&color);
@@ -725,15 +725,23 @@ public:
                 pos = f.tellg();
             }
             if( bFound ) {
-                RAVELOG_INFO(str(boost::format("STL file %s has screen metadata")%filename));
-                stringbuf buf;
-                f.seekg(pos);
-                f.get(buf, 0);
+                RAVELOG_INFO_FORMAT("STL file %s has screen metadata", filename);
 
-                string newdata = buf.str();
-                aiSceneManaged scene(newdata, false);
-                if( !!scene._scene && !!scene._scene->mRootNode && !!scene._scene->HasMeshes() ) {
-                    if( _AssimpCreateGeometries(scene._scene,scene._scene->mRootNode, vscale, listGeometries) ) {
+                f.seekg(0, std::ios::end);
+                stringstream::streampos endpos = f.tellg();                
+                f.seekg(pos);
+                string newdata;
+                newdata.reserve(endpos - pos);
+                newdata.assign((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+                boost::shared_ptr<aiSceneManaged> scene(new aiSceneManaged(newdata, false));
+                if( (!scene->_scene || !scene->_scene->mRootNode) && newdata.size() >= 5 && newdata.substr(0,5) == std::string("solid") ) {
+                    // most likely a binary STL file with the first 5 words being solid. unfortunately assimp does not handle this well, so
+                    newdata[0] = 'x';
+                    scene.reset(new aiSceneManaged(newdata, false, "STL"));
+                }
+                
+                if( !!scene->_scene && !!scene->_scene->mRootNode && !!scene->_scene->HasMeshes() ) {
+                    if( _AssimpCreateGeometries(scene->_scene,scene->_scene->mRootNode, vscale, listGeometries) ) {
                         FOREACH(itgeom, listGeometries) {
                             itgeom->_vDiffuseColor = vcolor;
                             if( bTransformOffset ) {
@@ -774,7 +782,7 @@ public:
                     if( _ParseSpecialSTLFile(penv, filename, vscale, listGeometries) ) {
                         return true;
                     }
-                    RAVELOG_WARN("failed to load STL file %s. If it is in binary format, make sure the first 5 characters of the file are not 'solid'!\n");
+                    RAVELOG_WARN_FORMAT("failed to load STL file %s. If it is in binary format, make sure the first 5 characters of the file are not 'solid'!", filename);
                 }
                 return false;
             }
@@ -2717,16 +2725,16 @@ public:
         if( !!_pcurreader ) {
             if( _pcurreader->endElement(xmlname) ) {
                 _pcurreader.reset();
-                _psensor->psensor = RaveInterfaceCast<SensorBase>(_psensorinterface);
+                _psensor->_psensor = RaveInterfaceCast<SensorBase>(_psensorinterface);
             }
             return false;
         }
         else if( xmlname == "attachedsensor" ) {
-            if( !_psensor->psensor ) {
+            if( !_psensor->_psensor ) {
                 RAVELOG_VERBOSE("Attached robot sensor %s points to no real sensor!\n",_psensor->GetName().c_str());
             }
             else {
-                _psensor->pdata = _psensor->psensor->CreateSensorData();
+                _psensor->pdata = _psensor->_psensor->CreateSensorData();
                 if( _psensor->pattachedlink.expired() ) {
                     RAVELOG_INFOA("no attached link, setting to base of robot\n");
                     if( _probot->GetLinks().size() == 0 ) {

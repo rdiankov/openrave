@@ -292,7 +292,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         return clone
     
     def has(self):
-        return self.iksolver is not None and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype)
+        return self.iksolver is not None and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype) and self.iksolver.GetXMLId() == self.manip.GetIkSolver().GetXMLId()
     
     def save(self):
         statsfilename=self.getstatsfilename(False)
@@ -300,8 +300,8 @@ class InverseKinematicsModel(DatabaseGenerator):
             os.makedirs(os.path.split(statsfilename)[0])
         except OSError:
             pass
-        
-        pickle.dump((self.getversion(),self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc), open(statsfilename, 'w'))
+        with open(statsfilename, 'w') as f:
+            pickle.dump((self.getversion(),self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc), f)
         log.info('inversekinematics generation is done, compiled shared object: %s',self.getfilename(False))
         
     def load(self,freeinc=None,checkforloaded=True,*args,**kwargs):
@@ -309,8 +309,8 @@ class InverseKinematicsModel(DatabaseGenerator):
             filename = self.getstatsfilename(True)
             if len(filename) == 0:
                 return checkforloaded and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype) # might have ik already loaded
-            
-            modelversion,self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc = pickle.load(open(filename, 'r'))
+            with open(filename, 'r') as f:
+                modelversion,self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc = pickle.load(f)
             if modelversion != self.getversion():
                 log.warn('version is wrong %s!=%s',modelversion,self.getversion())
                 return checkforloaded and self.manip.GetIkSolver() is not None  and self.manip.GetIkSolver().Supports(self.iktype) # might have ik already loaded
@@ -692,143 +692,154 @@ class InverseKinematicsModel(DatabaseGenerator):
                 return self.ikfast.IKFastSolver.solveFullIK_Rotation3D(*args,**kwargs)
             solvefn=solveFullIK_Rotation3D
         elif self.iktype == IkParameterizationType.Direction3D:
-            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawmanipdir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
             def solveFullIK_Direction3D(*args,**kwargs):
-                kwargs['rawbasedir'] = rawbasedir
+                kwargs['rawmanipdir'] = rawmanipdir
                 return self.ikfast.IKFastSolver.solveFullIK_Direction3D(*args,**kwargs)
             solvefn=solveFullIK_Direction3D
         elif self.iktype == IkParameterizationType.Ray4D:
-            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
-            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
+            rawmanipdir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawmanippos=self.manip.GetLocalToolTransform()[0:3,3]
             def solveFullIK_Ray4D(*args,**kwargs):
-                kwargs['rawbasedir'] = rawbasedir
-                kwargs['rawbasepos'] = rawbasepos
+                kwargs['rawmanipdir'] = rawmanipdir
+                kwargs['rawmanippos'] = rawmanippos
                 return self.ikfast.IKFastSolver.solveFullIK_Ray4D(*args,**kwargs)
             solvefn=solveFullIK_Ray4D
         elif self.iktype == IkParameterizationType.TranslationDirection5D:
-            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
-            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
+            rawmanipdir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawmanippos=self.manip.GetLocalToolTransform()[0:3,3]
             def solveFullIK_TranslationDirection5D(*args,**kwargs):
-                kwargs['rawbasedir'] = rawbasedir
-                kwargs['rawbasepos'] = rawbasepos
+                kwargs['rawmanipdir'] = rawmanipdir
+                kwargs['rawmanippos'] = rawmanippos
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationDirection5D(*args,**kwargs)
             solvefn=solveFullIK_TranslationDirection5D
         elif self.iktype == IkParameterizationType.Translation3D:
-            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
+            rawmanippos=self.manip.GetLocalToolTransform()[0:3,3]
             def solveFullIK_Translation3D(*args,**kwargs):
-                kwargs['rawbasepos'] = rawbasepos
+                kwargs['rawmanippos'] = rawmanippos
                 return self.ikfast.IKFastSolver.solveFullIK_Translation3D(*args,**kwargs)
             solvefn=solveFullIK_Translation3D
         elif self.iktype == IkParameterizationType.TranslationXY2D:
-            rawbasepos=self.manip.GetLocalToolTransform()[0:2,3]
+            rawmanippos=self.manip.GetLocalToolTransform()[0:2,3]
             def solveFullIK_TranslationXY2D(*args,**kwargs):
-                kwargs['rawbasepos'] = rawbasepos
+                kwargs['rawmanippos'] = rawmanippos
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationXY2D(*args,**kwargs)
             solvefn=solveFullIK_TranslationXY2D
         elif self.iktype == IkParameterizationType.TranslationXYOrientation3D:
-            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
-            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
+            rawmanipdir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawmanippos=self.manip.GetLocalToolTransform()[0:3,3]
             def solveFullIK_TranslationXAxisAngleZNorm4D(*args,**kwargs):
-                kwargs['rawbasedir'] = rawbasedir
-                kwargs['rawbasepos'] = rawbasepos
+                kwargs['rawmanipdir'] = rawmanipdir
+                kwargs['rawmanippos'] = rawmanippos
                 kwargs['rawglobaldir'] = [1.0,0.0,0.0]
-                kwargs['rawnormaldir'] = [0.0,0.0,1.0]
+                kwargs['rawglobalnormaldir'] = [0.0,0.0,1.0]
                 kwargs['ignoreaxis'] = 2
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
             solvefn=solveFullIK_TranslationXAxisAngleZNorm4D
             
-#             rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
-#             rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+#             rawmanippos=self.manip.GetLocalToolTransform()[0:3,3]
+#             rawmanipdir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
 #             def solveFullIK_TranslationXYOrientation3D(*args,**kwargs):
-#                 kwargs['rawbasepos'] = rawbasepos
-#                 kwargs['rawbasedir'] = rawbasedir
+#                 kwargs['rawmanippos'] = rawmanippos
+#                 kwargs['rawmanipdir'] = rawmanipdir
 #                 return self.ikfast.IKFastSolver.solveFullIK_TranslationXYOrientation3D(*args,**kwargs)
 #             solvefn=solveFullIK_TranslationXYOrientation3D
         elif self.iktype == IkParameterizationType.Transform6D:
-            Tgripperraw = eye(4) # newer ikfast versions don't compile with self.manip.GetLocalToolTransform() in order to re-use the same 6D IK for multiple local transforms
+            Tmanipraw = eye(4) # newer ikfast versions don't compile with self.manip.GetLocalToolTransform() in order to re-use the same 6D IK for multiple local transforms
             def solveFullIK_6D(*args,**kwargs):
-                kwargs['Tgripperraw'] = Tgripperraw
+                kwargs['Tmanipraw'] = Tmanipraw
                 return self.ikfast.IKFastSolver.solveFullIK_6D(*args,**kwargs)
             solvefn=solveFullIK_6D
         elif self.iktype == IkParameterizationType.Lookat3D:
-            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
-            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
+            rawmanipdir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawmanippos=self.manip.GetLocalToolTransform()[0:3,3]
             def solveFullIK_Lookat3D(*args,**kwargs):
-                kwargs['rawbasedir'] = rawbasedir
-                kwargs['rawbasepos'] = rawbasepos
+                kwargs['rawmanipdir'] = rawmanipdir
+                kwargs['rawmanippos'] = rawmanippos
                 return self.ikfast.IKFastSolver.solveFullIK_Lookat3D(*args,**kwargs)
             solvefn=solveFullIK_Lookat3D
         elif self.iktype == IkParameterizationType.TranslationLocalGlobal6D:
-            Tgripperraw=self.manip.GetLocalToolTransform()
+            Tmanipraw=self.manip.GetLocalToolTransform()
             def solveFullIK_TranslationLocalGlobal6D(*args,**kwargs):
-                kwargs['Tgripperraw'] = Tgripperraw
+                kwargs['Tmanipraw'] = Tmanipraw
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationLocalGlobal6D(*args,**kwargs)
             solvefn=solveFullIK_TranslationLocalGlobal6D
         elif self.iktype == IkParameterizationType.TranslationXAxisAngle4D:
-            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
-            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
+            rawmanipdir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawmanippos=self.manip.GetLocalToolTransform()[0:3,3]
             def solveFullIK_TranslationXAxisAngle4D(*args,**kwargs):
-                kwargs['rawbasedir'] = rawbasedir
-                kwargs['rawbasepos'] = rawbasepos
+                kwargs['rawmanipdir'] = rawmanipdir
+                kwargs['rawmanippos'] = rawmanippos
                 kwargs['rawglobaldir'] = [1.0,0.0,0.0]
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
             solvefn=solveFullIK_TranslationXAxisAngle4D
         elif self.iktype == IkParameterizationType.TranslationYAxisAngle4D:
-            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
-            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
+            rawmanipdir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawmanippos=self.manip.GetLocalToolTransform()[0:3,3]
             def solveFullIK_TranslationYAxisAngle4D(*args,**kwargs):
-                kwargs['rawbasedir'] = rawbasedir
-                kwargs['rawbasepos'] = rawbasepos
+                kwargs['rawmanipdir'] = rawmanipdir
+                kwargs['rawmanippos'] = rawmanippos
                 kwargs['rawglobaldir'] = [0.0,1.0,0.0]
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
             solvefn=solveFullIK_TranslationYAxisAngle4D
         elif self.iktype == IkParameterizationType.TranslationZAxisAngle4D:
-            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
-            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
+            rawmanipdir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawmanippos=self.manip.GetLocalToolTransform()[0:3,3]
             def solveFullIK_TranslationZAxisAngle4D(*args,**kwargs):
-                kwargs['rawbasedir'] = rawbasedir
-                kwargs['rawbasepos'] = rawbasepos
+                kwargs['rawmanipdir'] = rawmanipdir
+                kwargs['rawmanippos'] = rawmanippos
                 kwargs['rawglobaldir'] = [0.0,0.0,1.0]
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
             solvefn=solveFullIK_TranslationZAxisAngle4D
         elif self.iktype == IkParameterizationType.TranslationXAxisAngleZNorm4D:
-            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
-            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
+            #rawmanipdir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetLocalToolDirection())
+            #rawmanippos=self.manip.GetLocalToolTransform()[0:3,3]
+
+            rawmanipdir=self.manip.GetLocalToolDirection()#dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetLocalToolDirection())
+            #rawmanipdir=self.manip.GetLocalToolDirection()#dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawmanippos=[0.0, 0.0, 0.0]#self.manip.GetLocalToolTransform()[0:3,3]
+            Tmanipraw=self.manip.GetLocalToolTransform()
+            rawglobaldir = [1.0,0.0,0.0]
+            rawglobalnormaldir = [0.0,0.0,1.0]
+            rawmanipnormaldir = dot(linalg.inv(self.manip.GetTransform()[:3,:3]), rawglobalnormaldir)
+            
             def solveFullIK_TranslationXAxisAngleZNorm4D(*args,**kwargs):
-                kwargs['rawbasedir'] = rawbasedir
-                kwargs['rawbasepos'] = rawbasepos
-                kwargs['rawglobaldir'] = [1.0,0.0,0.0]
-                kwargs['rawnormaldir'] = [0.0,0.0,1.0]
+                kwargs['rawmanipdir'] = rawmanipdir
+                kwargs['rawmanippos'] = rawmanippos
+                kwargs['rawglobaldir'] = rawglobaldir
+                kwargs['rawglobalnormaldir'] = rawglobalnormaldir
+                kwargs['rawmanipnormaldir'] = rawmanipnormaldir
+                kwargs['Tmanipraw'] = Tmanipraw
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
             solvefn=solveFullIK_TranslationXAxisAngleZNorm4D
         elif self.iktype == IkParameterizationType.TranslationYAxisAngleXNorm4D:
-            rawbasedir=self.manip.GetDirection()#dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
-            rawbasepos=[0.0, 0.0, 0.0]#self.manip.GetLocalToolTransform()[0:3,3]
-            Tgripperraw=self.manip.GetLocalToolTransform()
-            rawnormaldir = [1.0,0.0,0.0]
-            rawbasenormaldir = dot(linalg.inv(self.manip.GetTransform()[:3,:3]), rawnormaldir)
+            rawmanipdir=self.manip.GetDirection()#dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawmanippos=[0.0, 0.0, 0.0]#self.manip.GetLocalToolTransform()[0:3,3]
+            Tmanipraw=self.manip.GetLocalToolTransform()
+            rawglobalnormaldir = [1.0,0.0,0.0]
+            rawmanipnormaldir = dot(linalg.inv(self.manip.GetTransform()[:3,:3]), rawglobalnormaldir)
             def solveFullIK_TranslationYAxisAngleXNorm4D(*args,**kwargs):
-                kwargs['rawbasedir'] = rawbasedir
-                kwargs['rawbasepos'] = rawbasepos
+                kwargs['rawmanipdir'] = rawmanipdir
+                kwargs['rawmanippos'] = rawmanippos
                 kwargs['rawglobaldir'] = [0.0,1.0,0.0]
-                kwargs['rawnormaldir'] = rawnormaldir
-                kwargs['rawbasenormaldir'] = rawbasenormaldir
-                kwargs['Tgripperraw'] = Tgripperraw
+                kwargs['rawglobalnormaldir'] = rawglobalnormaldir
+                kwargs['rawmanipnormaldir'] = rawmanipnormaldir
+                kwargs['Tmanipraw'] = Tmanipraw
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
             solvefn=solveFullIK_TranslationYAxisAngleXNorm4D
         elif self.iktype == IkParameterizationType.TranslationZAxisAngleYNorm4D:
-            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
-            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
+            rawmanipdir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawmanippos=self.manip.GetLocalToolTransform()[0:3,3]
             def solveFullIK_TranslationZAxisAngleYNorm4D(*args,**kwargs):
-                kwargs['rawbasedir'] = rawbasedir
-                kwargs['rawbasepos'] = rawbasepos
+                kwargs['rawmanipdir'] = rawmanipdir
+                kwargs['rawmanippos'] = rawmanippos
                 kwargs['rawglobaldir'] = [0.0,0.0,1.0]
-                kwargs['rawnormaldir'] = [0.0,1.0,0.0]
+                kwargs['rawglobalnormaldir'] = [0.0,1.0,0.0]
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
             solvefn=solveFullIK_TranslationZAxisAngleYNorm4D
         else:
-            raise InverseKinematicsError(u'bad type')
-
+            raise InverseKinematicsError(u'bad type 0x%x'%self.iktype)
+        
         dofexpected = IkParameterization.GetDOFFromType(self.iktype)
         if freeindices is not None:
             self.freeindices = freeindices
@@ -839,7 +850,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 self.solveindices,self.freeindices = self.GetDefaultIndices(avoidPrismaticAsFree=avoidPrismaticAsFree)
         self.solveindices = [i for i in self.manip.GetArmIndices() if not i in self.freeindices]
         if len(self.solveindices) != dofexpected:
-            raise InverseKinematicsError(u'Manipulator %(manip)s (indices=%(manipindices)r) joint indices to solve for (%(solveindices)r) is not equal to number of expected joints (%(dofexpected)d) for IK type %(iktype)s'%{'manip':self.manip.GetName(),'manipindices':list(self.manip.GetArmIndices()), 'solveindices':list(self.solveindices), 'dofexpected':dofexpected, 'iktype':self.iktype.name})
+            raise InverseKinematicsError(u'Manipulator %(manip)s (indices=%(manipindices)r) joint indices to solve for (%(solveindices)r) is not equal to number of expected joints (%(dofexpected)d) for IK type %(iktype)s. Perhaps the manipulator base link %(baselink)s or end link %(endlink)s are not correct.'%{'manip':self.manip.GetName(),'manipindices':list(self.manip.GetArmIndices()), 'solveindices':list(self.solveindices), 'dofexpected':dofexpected, 'iktype':self.iktype.name, 'baselink':self.manip.GetBase().GetName(), 'endlink':self.manip.GetEndEffector().GetName()})
         
         if freeinc is not None:
             self.freeinc = freeinc
@@ -894,7 +905,8 @@ class InverseKinematicsModel(DatabaseGenerator):
                 
                 self.statistics['generationtime'] = time.time()-generationstart
                 self.statistics['usinglapack'] = solver.usinglapack
-                open(sourcefilename,'w').write(code)
+                with open(sourcefilename,'w') as f:
+                    f.write(code)
                 try:
                     from pkg_resources import resource_filename
                     shutil.copyfile(resource_filename('openravepy','ikfast.h'), os.path.join(sourcedir,'ikfast.h'))

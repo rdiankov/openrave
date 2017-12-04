@@ -68,7 +68,8 @@ def updateik(robotfilename,manipname,iktype,destfilename=None,freeindices=None,r
                 if len(sourcefilename) == 0:
                     raise ValueError(u'robot %s manip %s cannot generate ik %s'%(robot.GetName(),manip.GetName(),iktype))
                 
-                code += open(sourcefilename,'r').read()
+                with open(sourcefilename,'r') as f: 
+                    code += f.read()
                 code += """
 #include "plugindefs.h" 
 namespace IKFAST_NAMESPACE {
@@ -88,7 +89,8 @@ IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, std::istream& sinput, co
 } // end namespace
 """
                 print 'writing %s'%destfilename
-                open(destfilename,'w').write(code)
+                with open(destfilename,'w') as f: 
+                    f.write(code)
     finally:
         print "destroying environment"
         env.Destroy()
@@ -222,7 +224,8 @@ if __name__ == "__main__":
             p.join()
 
     saveresults = [[args[i], finalresults[i]] for i in range(len(finalresults)) if finalresults[i] is not None]
-    pickle.dump(saveresults,open(os.path.join(options.destdir, 'results.pp'),'w'))
+    with open(os.path.join(options.destdir, 'results.pp'),'w') as f:
+        pickle.dump(saveresults, f)
     print 'results: ',saveresults
 
     # select max success rate one in all free indies combinations.

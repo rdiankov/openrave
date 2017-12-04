@@ -350,7 +350,7 @@ Some python code to display data::\n\
         if( _vgoalpaths.capacity() < _parameters->_minimumgoalpaths ) {
             _vgoalpaths.reserve(_parameters->_minimumgoalpaths);
         }
-        RAVELOG_DEBUG_FORMAT("BiRRT Planner Initialized, initial=%d, goal=%d", _vecInitialNodes.size()%_treeBackward.GetNumNodes());
+        RAVELOG_DEBUG_FORMAT("env=%d BiRRT Planner Initialized, initial=%d, goal=%d", GetEnv()->GetId()%_vecInitialNodes.size()%_treeBackward.GetNumNodes());
         return true;
     }
 
@@ -379,7 +379,7 @@ Some python code to display data::\n\
         PlannerProgress progress;
         PlannerAction callbackaction=PA_None;
         while(_vgoalpaths.size() < _parameters->_minimumgoalpaths && iter < 3*_parameters->_nMaxIterations) {
-            RAVELOG_VERBOSE_FORMAT("iter=%d, forward=%d, backward=%d", (iter/3)%_treeForward.GetNumNodes()%_treeBackward.GetNumNodes());
+            RAVELOG_VERBOSE_FORMAT("env=%d, iter=%d, forward=%d, backward=%d", GetEnv()->GetId()%(iter/3)%_treeForward.GetNumNodes()%_treeBackward.GetNumNodes());
             ++iter;
 
             // have to check callbacks at the beginning since code can continue

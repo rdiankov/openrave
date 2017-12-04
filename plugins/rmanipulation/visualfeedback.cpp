@@ -301,7 +301,7 @@ public:
             if( !InConvexHull(tCameraInTarget) ) {
                 RAVELOG_DEBUG("box not in camera vision hull\n");
                 if( bOutputError ) {
-                    errormsg = str(boost::format("{\"type\":\"outofcamera\""));
+                    errormsg = str(boost::format("{\"type\":\"outofcamera\"}"));
                 }
 
                 return false;

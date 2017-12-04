@@ -205,6 +205,19 @@ public:
     }
 };
 
+class AutoPyArrayObjectDereferencer
+{
+public:
+    AutoPyArrayObjectDereferencer(PyArrayObject* pyarrobj) : _pyarrobj(pyarrobj) {
+    }
+    ~AutoPyArrayObjectDereferencer() {
+        Py_DECREF(_pyarrobj);
+    }
+
+private:
+    PyArrayObject* _pyarrobj;
+};
+
 class PyTriMesh
 {
 public:
@@ -225,30 +238,111 @@ public:
 
         dims[0] = mesh.indices.size()/3;
         dims[1] = 3;
-        PyObject *pyindices = PyArray_SimpleNew(2,dims, PyArray_INT);
-        int* pidata = (int*)PyArray_DATA(pyindices);
-        FOREACHC(it, mesh.indices)
-        *pidata++ = *it;
+        PyObject *pyindices = PyArray_SimpleNew(2,dims, PyArray_INT32);
+        int32_t* pidata = reinterpret_cast<int32_t*>PyArray_DATA(pyindices);
+        std::memcpy(pidata, mesh.indices.data(), mesh.indices.size() * sizeof(int32_t));
         indices = static_cast<numeric::array>(handle<>(pyindices));
     }
 
     void GetTriMesh(TriMesh& mesh) {
         int numverts = len(vertices);
         mesh.vertices.resize(numverts);
-        for(int i = 0; i < numverts; ++i) {
-            object ov = vertices[i];
-            mesh.vertices[i].x = extract<dReal>(ov[0]);
-            mesh.vertices[i].y = extract<dReal>(ov[1]);
-            mesh.vertices[i].z = extract<dReal>(ov[2]);
+
+        PyObject *pPyVertices = vertices.ptr();
+        if (PyArray_Check(pPyVertices)) {
+            if (PyArray_NDIM(pPyVertices) != 2) {
+                throw openrave_exception(_("vertices must be a 2D array"), ORE_InvalidArguments);
+            }
+            if (!PyArray_ISFLOAT(pPyVertices)) {
+                throw openrave_exception(_("vertices must be in float"), ORE_InvalidArguments);
+            }
+            PyArrayObject* pPyVerticesContiguous = PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(pPyVertices));
+            AutoPyArrayObjectDereferencer pydecref(pPyVerticesContiguous);
+
+            const size_t typeSize = PyArray_ITEMSIZE(pPyVerticesContiguous);
+            const size_t n = PyArray_DIM(pPyVerticesContiguous, 0);
+            const size_t nElems = PyArray_DIM(pPyVerticesContiguous, 1);
+
+            if (typeSize == sizeof(float)) {
+                const float *vdata = reinterpret_cast<float*>(PyArray_DATA(pPyVerticesContiguous));
+
+                for (size_t i = 0, j = 0; i < n; ++i, j += nElems) {
+                    mesh.vertices[i].x = static_cast<dReal>(vdata[j + 0]);
+                    mesh.vertices[i].y = static_cast<dReal>(vdata[j + 1]);
+                    mesh.vertices[i].z = static_cast<dReal>(vdata[j + 2]);
+                }
+            } else if (typeSize == sizeof(double)) {
+                const double *vdata = reinterpret_cast<double*>(PyArray_DATA(pPyVerticesContiguous));
+
+                for (size_t i = 0, j = 0; i < n; ++i, j += nElems) {
+                    mesh.vertices[i].x = static_cast<dReal>(vdata[j + 0]);
+                    mesh.vertices[i].y = static_cast<dReal>(vdata[j + 1]);
+                    mesh.vertices[i].z = static_cast<dReal>(vdata[j + 2]);
+                }
+            } else {
+                throw openrave_exception(_("Unsupported vertices type"), ORE_InvalidArguments);
+            }
+
+        } else {
+            for(int i = 0; i < numverts; ++i) {
+                object ov = vertices[i];
+                mesh.vertices[i].x = extract<dReal>(ov[0]);
+                mesh.vertices[i].y = extract<dReal>(ov[1]);
+                mesh.vertices[i].z = extract<dReal>(ov[2]);
+            }
         }
 
-        int numtris = len(indices);
+        const size_t numtris = len(indices);
         mesh.indices.resize(3*numtris);
-        for(int i = 0; i < numtris; ++i) {
-            object oi = indices[i];
-            mesh.indices[3*i+0] = extract<int>(oi[0]);
-            mesh.indices[3*i+1] = extract<int>(oi[1]);
-            mesh.indices[3*i+2] = extract<int>(oi[2]);
+        PyObject *pPyIndices = indices.ptr();
+        if (PyArray_Check(pPyIndices)) {
+            if (PyArray_NDIM(pPyIndices) != 2 || PyArray_DIM(pPyIndices, 1) != 3 || !PyArray_ISINTEGER(pPyIndices)) {
+                throw openrave_exception(_("indices must be a Nx3 int array"), ORE_InvalidArguments);
+            }
+            PyArrayObject* pPyIndiciesContiguous = PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(pPyIndices));
+            AutoPyArrayObjectDereferencer pydecref(pPyIndiciesContiguous);
+
+            const size_t typeSize = PyArray_ITEMSIZE(pPyIndiciesContiguous);
+            const bool signedInt = PyArray_ISSIGNED(pPyIndiciesContiguous);
+
+            if (typeSize == sizeof(int32_t)) {
+                if (signedInt) {
+                    const int32_t *idata = reinterpret_cast<int32_t*>(PyArray_DATA(pPyIndiciesContiguous));
+                    std::memcpy(mesh.indices.data(), idata, numtris * 3 * sizeof(int32_t));
+                } else {
+                    const uint32_t *idata = reinterpret_cast<uint32_t*>(PyArray_DATA(pPyIndiciesContiguous));
+                    for (size_t i = 0; i < 3 * numtris; ++i) {
+                        mesh.indices[i] = static_cast<int32_t>(idata[i]);
+                    }
+                }
+            } else if (typeSize == sizeof(int64_t)) {
+                if (signedInt) {
+                    const int64_t *idata = reinterpret_cast<int64_t*>(PyArray_DATA(pPyIndiciesContiguous));
+                    for (size_t i = 0; i < 3 * numtris; ++i) {
+                        mesh.indices[i] = static_cast<int32_t>(idata[i]);
+                    }
+                } else {
+                    const uint64_t *idata = reinterpret_cast<uint64_t*>(PyArray_DATA(pPyIndiciesContiguous));
+                    for (size_t i = 0; i < 3 * numtris; ++i) {
+                        mesh.indices[i] = static_cast<int32_t>(idata[i]);
+                    }
+                }
+            } else if (typeSize == sizeof(uint16_t) && !signedInt) {
+                const uint16_t *idata = reinterpret_cast<uint16_t*>(PyArray_DATA(pPyIndiciesContiguous));
+                for (size_t i = 0; i < 3 * numtris; ++i) {
+                    mesh.indices[i] = static_cast<int32_t>(idata[i]);
+                }
+            } else {
+                throw openrave_exception(_("Unsupported indices type"), ORE_InvalidArguments);
+            }
+
+        } else {
+            for(size_t i = 0; i < numtris; ++i) {
+                object oi = indices[i];
+                mesh.indices[3*i+0] = extract<int32_t>(oi[0]);
+                mesh.indices[3*i+1] = extract<int32_t>(oi[1]);
+                mesh.indices[3*i+2] = extract<int32_t>(oi[2]);
+            }
         }
     }
 
@@ -953,6 +1047,11 @@ object quatRotateDirection(object source, object target)
     return toPyVector4(quatRotateDirection(ExtractVector3(source), ExtractVector3(target)));
 }
 
+object ExtractAxisFromQuat(object oquat, int iaxis)
+{
+    return toPyVector3(ExtractAxisFromQuat(ExtractVector4(oquat), iaxis));
+}
+
 object normalizeAxisRotation(object axis, object quat)
 {
     std::pair<dReal, Vector > res = normalizeAxisRotation(ExtractVector3(axis), ExtractVector4(quat));
@@ -972,6 +1071,13 @@ object InvertQuat(object oquat)
 object MultiplyPose(object opose1, object opose2)
 {
     return toPyArray(ExtractTransformType<dReal>(opose1)*ExtractTransformType<dReal>(opose2));
+}
+
+object poseTransformPoint(object opose, object opoint)
+{
+    Transform t = ExtractTransformType<dReal>(opose);
+    Vector newpoint = t*ExtractVector3(opoint);
+    return toPyVector3(newpoint);
 }
 
 object poseTransformPoints(object opose, object opoints)
@@ -1302,12 +1408,14 @@ void init_openravepy_global()
     def("InvertPoses",openravepy::InvertPoses,args("poses"), "Inverts a Nx7 array of poses where first 4 columns are the quaternion and last 3 are the translation components.\n\n:param poses: nx7 array");
     def("InvertPose",openravepy::InvertPose,args("pose"), "Inverts a 7-element pose where first 4 columns are the quaternion and last 3 are the translation components.\n\n:param pose: 7-element array");
     def("quatRotateDirection",openravepy::quatRotateDirection,args("sourcedir,targetdir"), DOXY_FN1(quatRotateDirection));
+    def("ExtractAxisFromQuat",openravepy::ExtractAxisFromQuat,args("quat","iaxis"),DOXY_FN1(ExtractAxisFromQuat));
     def("MultiplyQuat",openravepy::MultiplyQuat,args("quat0","quat1"),DOXY_FN1(quatMultiply));
     def("quatMult",openravepy::MultiplyQuat,args("quat0","quat1"),DOXY_FN1(quatMultiply));
     def("quatMultiply",openravepy::MultiplyQuat,args("quat0","quat1"),DOXY_FN1(quatMultiply));
     def("InvertQuat",openravepy::InvertQuat,args("quat"),DOXY_FN1(quatInverse));
     def("quatInverse",openravepy::InvertQuat,args("quat"),DOXY_FN1(quatInverse));
     def("MultiplyPose",openravepy::MultiplyPose,args("pose1","pose2"),"multiplies two poses.\n\n:param pose1: 7 values\n\n:param pose2: 7 values\n");
+    def("poseTransformPoint",openravepy::poseTransformPoint,args("pose","point"),"left-transforms a 3D point by a pose transformation.\n\n:param pose: 7 values\n\n:param points: 3 values");
     def("poseTransformPoints",openravepy::poseTransformPoints,args("pose","points"),"left-transforms a set of points by a pose transformation.\n\n:param pose: 7 values\n\n:param points: Nx3 values");
     def("TransformLookat",openravepy::TransformLookat,args("lookat","camerapos","cameraup"),"Returns a camera matrix that looks along a ray with a desired up vector.\n\n:param lookat: unit axis, 3 values\n\n:param camerapos: 3 values\n\n:param cameraup: unit axis, 3 values\n");
     def("transformLookat",openravepy::TransformLookat,args("lookat","camerapos","cameraup"),"Returns a camera matrix that looks along a ray with a desired up vector.\n\n:param lookat: unit axis, 3 values\n\n:param camerapos: 3 values\n\n:param cameraup: unit axis, 3 values\n");

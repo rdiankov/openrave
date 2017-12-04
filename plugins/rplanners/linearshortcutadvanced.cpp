@@ -84,7 +84,24 @@ public:
 
         uint32_t basetime = utils::GetMilliTime();
         PlannerParametersConstPtr parameters = GetParameters();
-
+        
+//        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+//            // store the trajectory
+//            uint32_t randnum;
+//            if( !!_logginguniformsampler ) {
+//                randnum = _logginguniformsampler->SampleSequenceOneUInt32();
+//            }
+//            else {
+//                randnum = RaveRandomInt();
+//            }
+//            string filename = str(boost::format("%s/linearsmoother%d.parameters.xml")%RaveGetHomeDirectory()%(randnum%1000));
+//            ofstream f(filename.c_str());
+//            f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+//            f << *_parameters;
+//            RAVELOG_VERBOSE_FORMAT("saved linear parameters to %s", filename);
+//            _DumpTrajectory(ptraj, Level_Verbose, 0);
+//        }
+        
         // subsample trajectory and add to list
         list< std::pair< vector<dReal>, dReal> > listpath;
 
@@ -297,8 +314,8 @@ protected:
             // always add the last point
             dReal dist = parameters->_distmetricfn(listpath.back().first,q1);
             listpath.push_back(make_pair(q1, dist));
-            q0.swap(q1);
             qcur = q1;
+            q0.swap(q1);
         }
 
         std::copy(vtrajdata.end()-parameters->GetDOF(),vtrajdata.end(),q0.begin());

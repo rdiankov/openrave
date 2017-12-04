@@ -197,6 +197,15 @@ public:
             else {
                 size_t index = it-_vaccumtime.begin();
                 dReal deltatime = time-_vaccumtime.at(index-1);
+                dReal waypointdeltatime = _vtrajdata.at(_spec.GetDOF()*index + _timeoffset);
+                // unfortunately due to floating-point error deltatime might not be in the range [0, waypointdeltatime], so double check!
+                if( deltatime < 0 ) {
+                    // most likely small epsilon
+                    deltatime = 0;
+                }
+                else if( deltatime > waypointdeltatime ) {
+                    deltatime = waypointdeltatime;
+                }
                 for(size_t i = 0; i < _vgroupinterpolators.size(); ++i) {
                     if( !!_vgroupinterpolators[i] ) {
                         _vgroupinterpolators[i](index-1,deltatime,data);
@@ -235,6 +244,15 @@ public:
                 vector<dReal> vinternaldata(_spec.GetDOF(),0);
                 size_t index = it-_vaccumtime.begin();
                 dReal deltatime = time-_vaccumtime.at(index-1);
+                dReal waypointdeltatime = _vtrajdata.at(_spec.GetDOF()*index + _timeoffset);
+                // unfortunately due to floating-point error deltatime might not be in the range [0, waypointdeltatime], so double check!
+                if( deltatime < 0 ) {
+                    // most likely small epsilon
+                    deltatime = 0;
+                }
+                else if( deltatime > waypointdeltatime ) {
+                    deltatime = waypointdeltatime;
+                }
                 for(size_t i = 0; i < _vgroupinterpolators.size(); ++i) {
                     if( !!_vgroupinterpolators[i] ) {
                         _vgroupinterpolators[i](index-1,deltatime,vinternaldata);
@@ -373,6 +391,9 @@ protected:
                         BOOST_ASSERT((int)vdefaultvalues.size()==RaveGetAffineDOF(affinedofs));
                         RaveGetAffineDOFValuesFromTransform(vdefaultvalues.begin(),Transform(),affinedofs);
                     }
+                }
+                else if( groupname.size() >= 13 && groupname.substr(0,13) == "outputSignals") {
+                    std::fill(vdefaultvalues.begin(), vdefaultvalues.end(), -1);
                 }
                 int offset = _spec._vgroups[igroup].offset;
                 for(size_t ielement = 0; ielement < numelements; ++ielement, offset += _spec.GetDOF()) {

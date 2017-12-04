@@ -17,6 +17,7 @@
 #include "qtosg.h"
 #include "osgrenderitem.h"
 #include "osgpick.h"
+#include "osgskybox.h"
 
 #include <QtCore/QTimer>
 #include <QtGui/QApplication>
@@ -79,6 +80,18 @@ public:
 
     /// \brief sets the near plane for the camera
     void SetNearPlane(double nearplane);
+
+    /// \brief sets the zoom factor. only affects orthogonal view 
+    /// \param factor > 1.0 = Zoom in. < 1.0 = Zoom out
+    void Zoom(float factor);
+
+    /// \brief set the cubemap for skybox
+    void SetTextureCubeMap(const std::string& posx,
+            const std::string& negx,
+            const std::string& posy,
+            const std::string& negy,
+            const std::string& posz,
+            const std::string& negz);
 
     /// \brief returns the near plane set on the camera
     double GetCameraNearPlane();
@@ -195,6 +208,8 @@ protected:
     osg::ref_ptr<osgText::Text> _osgHudText; ///< the HUD text in the upper left corner
     std::string _strUserText, _strSelectedItemText, _strRayInfoText; ///< the user hud text
 
+    osg::ref_ptr<Skybox> _osgSkybox;  ///< the skybox moving together with camera
+
     QTimer _timer; ///< Timer for repaint
     EnvironmentBasePtr _penv;
 
@@ -202,6 +217,9 @@ protected:
 
     bool _bLightOn; ///< whether lights are on or not
     bool _bIsSelectiveActive; ///< if true, then can select a new
+    double _zNear; ///< In OSG, znear and zfar are updated by CullVisitor, which
+                   ///  causing getProjectionMatrixAsXXX to return negative 
+                   ///  values. Therefore, we manage zNear ourselves
 };
 
 }

@@ -58,7 +58,9 @@ except ImportError:
         return curdir if not rel_list else join(*rel_list)
 
 def LoadTrajectoryFromFile(env,trajfile,trajtype=''):
-    return openravepy_int.RaveCreateTrajectory(env,trajtype).deserialize(open(trajfile,'r').read())
+    with open(trajfile,'r') as f:
+        traj = openravepy_int.RaveCreateTrajectory(env,trajtype).deserialize(f.read())
+    return traj
 
 def InitOpenRAVELogging(stream=stdout):
     """Sets the python logging **openravepy** scope to the same debug level as OpenRAVE and initializes handles if they are not present
@@ -280,7 +282,7 @@ def ComputeGeodesicSphereMesh(radius=1.0,level=2):
 
 def DrawAxes(env,target,dist=1.0,linewidth=1,colormode='rgb',coloradd=None):
     """draws xyz coordinate system around target.
-
+    
     :param env: Environment
     :param target: can be a 7 element pose, 4x4 matrix, or the name of a kinbody in the environment
     :param dist: how far the lines extend from the origin
@@ -289,9 +291,18 @@ def DrawAxes(env,target,dist=1.0,linewidth=1,colormode='rgb',coloradd=None):
     :param coloradd: an optional 3-element vector for 
     """
     if isinstance(target,basestring):
-        T = self.env.GetKinBody(target).GetTransform()
+        T = env.GetKinBody(target).GetTransform()
+    elif hasattr(target,'GetTransform'):
+        T = target.GetTransform()
+    elif hasattr(target,'GetTransform6D'):
+        T = target.GetTransform6D()
+    elif hasattr(target,'GetTransformPose'):
+        T = openravepy_int.matrixFromPose(target.GetTransformPose())
     elif len(target) == 7:
         T = openravepy_int.matrixFromPose(target)
+    elif isinstance(target,list):
+        return [DrawAxes(env,subtarget,dist,linewidth,colormode,coloradd) for subtarget in target]
+    
     else:
         T = numpy.array(target)
     if colormode == 'cmy':
@@ -304,7 +315,7 @@ def DrawAxes(env,target,dist=1.0,linewidth=1,colormode='rgb',coloradd=None):
 
 def DrawIkparam(env,ikparam,dist=1.0,linewidth=1,coloradd=None):
     """draws an IkParameterization
-
+    
     """
     if ikparam.GetType() == openravepy_int.IkParameterizationType.Transform6D:
         return DrawAxes(env,ikparam.GetTransform6DPose(),dist,linewidth,coloradd)
@@ -385,7 +396,7 @@ def DrawCircle(env, center, normal, radius, linewidth=1, colors=None):
     R = openravepy_int.matrixFromQuat(openravepy_int.quatRotateDirection([0,0,1],normal))
     right = R[0:3,0]*radius
     up = R[0:3,1]*radius
-    return env.drawlinestrip(c_[numpy.dot(numpy.transpose([numpy.cos(angles)]), [right]) + numpy.dot(numpy.transpose([numpy.sin(angles)]), [up]) + numpy.tile(center, (len(angles),1))], linewidth, colors=colors)
+    return env.drawlinestrip(numpy.c_[numpy.dot(numpy.transpose([numpy.cos(angles)]), [right]) + numpy.dot(numpy.transpose([numpy.sin(angles)]), [up]) + numpy.tile(center, (len(angles),1))], linewidth, colors=colors)
 
 def ComputeBoxMesh(extents):
     """Computes a box mesh"""
@@ -415,7 +426,6 @@ def ComputeCylinderYMesh(radius,height,angledelta=0.1):
         iprev = i
     return vertices,numpy.array(indices)
 
-
 def TSP(solutions,distfn=None):
     """solution to travelling salesman problem. orders the set of solutions such that visiting them one after another is fast.
     """
@@ -424,6 +434,7 @@ def TSP(solutions,distfn=None):
         distfn = lambda x,y: sum((x-y)**2)
     
     newsolutions = numpy.array(solutions)
+    newindices = numpy.arange(len(solutions))
     for i in range(newsolutions.shape[0]-2):
         n = newsolutions.shape[0]-i-1
         dists = [distfn(newsolutions[i,:],newsolutions[j,:]) for j in range(i+1,newsolutions.shape[0])]
@@ -431,7 +442,8 @@ def TSP(solutions,distfn=None):
         sol = numpy.array(newsolutions[i+1,:])
         newsolutions[i+1,:] = newsolutions[minind,:]
         newsolutions[minind,:] = sol
-    return newsolutions
+        newindices[i+1], newindices[minind] = newindices[minind], newindices[i+1]
+    return newsolutions, newindices
 
 def sequence_cross_product(*sequences):
     """iterates through the cross product of all items in the sequences"""

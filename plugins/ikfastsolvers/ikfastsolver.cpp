@@ -74,6 +74,11 @@ public:
                         "**Can only be called by a custom filter during a Solve function call.** Gets the indices of the current solution being considered. if large-range joints wrap around, (index>>16) holds the index. So (index&0xffff) is unique to robot link pose, while (index>>16) describes the repetition.");
         RegisterCommand("GetRobotLinkStateRepeatCount", boost::bind(&IkFastSolver<IkReal>::_GetRobotLinkStateRepeatCountCommand,this,_1,_2),
                         "**Can only be called by a custom filter during a Solve function call.**. Returns 1 if the filter was called already with the same robot link positions, 0 otherwise. This is useful in saving computation. ");
+        RegisterCommand("SetBackTraceSelfCollisionLinks",boost::bind(&IkFastSolver<IkReal>::_SetBackTraceSelfCollisionLinksCommand,this,_1,_2),
+                        "format: int int\n\n\
+for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfCollisionWithFree, when pruning self collisions, the number of links to look at. If the tip of the manip self collides with the base, then can safely quit the IK.");
+        _numBacktraceLinksForSelfCollisionWithNonMoving = 2;
+        _numBacktraceLinksForSelfCollisionWithFree = 0;
     }
     virtual ~IkFastSolver() {
     }
@@ -97,17 +102,24 @@ public:
     bool _SetJacobianRefineCommand(ostream& sout, istream& sinput)
     {
 #ifdef OPENRAVE_HAS_LAPACK
-        sinput >> _fRefineWithJacobianInverseAllowedError;
-        _jacobinvsolver.SetErrorThresh(_fRefineWithJacobianInverseAllowedError);
-        int nMaxIterations=-1;
-        sinput >> nMaxIterations;
-        if( !!sinput && nMaxIterations >= 0 ) {
-            _jacobinvsolver.SetMaxIterations(nMaxIterations);
-        }
-
+        dReal f = 0;
+        int nMaxIterations = -1;
+        sinput >> f >> nMaxIterations;
+        _SetJacobianRefine(f, nMaxIterations);
         return true;
 #else
         return false;
+#endif
+    }
+
+    void _SetJacobianRefine(dReal f, int nMaxIterations)
+    {
+#ifdef OPENRAVE_HAS_LAPACK
+        _fRefineWithJacobianInverseAllowedError = f;
+        _jacobinvsolver.SetErrorThresh(_fRefineWithJacobianInverseAllowedError);
+        if( nMaxIterations >= 0 ) {
+            _jacobinvsolver.SetMaxIterations(nMaxIterations);
+        }
 #endif
     }
 
@@ -167,6 +179,12 @@ public:
     bool _GetRobotLinkStateRepeatCountCommand(ostream& sout, istream& sinput)
     {
         sout << _nSameStateRepeatCount;
+        return true;
+    }
+
+    bool _SetBackTraceSelfCollisionLinksCommand(ostream& sout, istream& sinput)
+    {
+        sinput >> _numBacktraceLinksForSelfCollisionWithNonMoving >> _numBacktraceLinksForSelfCollisionWithFree;
         return true;
     }
 
@@ -361,7 +379,7 @@ public:
         // auto-conversion
         if( _nTotalDOF == 4 ) {
             if( _iktype == IKP_Transform6D ) {
-                return iktype == IKP_TranslationXAxisAngleZNorm4D;
+                return iktype == IKP_TranslationXAxisAngleZNorm4D || iktype == IKP_TranslationYAxisAngleXNorm4D;
             }
         }
         else if( _nTotalDOF == 5 ) {
@@ -784,7 +802,12 @@ protected:
         _iktype = r->_iktype;
 
         _kinematicshash = r->_kinematicshash;
+        _numBacktraceLinksForSelfCollisionWithNonMoving = r->_numBacktraceLinksForSelfCollisionWithNonMoving;
+        _numBacktraceLinksForSelfCollisionWithFree = r->_numBacktraceLinksForSelfCollisionWithFree;
         _ikthreshold = r->_ikthreshold;
+#ifdef OPENRAVE_HAS_LAPACK
+        _SetJacobianRefine(r->_fRefineWithJacobianInverseAllowedError, r->_jacobinvsolver._nMaxIterations);
+#endif
 
         _bEmptyTransform6D = r->_bEmptyTransform6D;
     }
@@ -799,13 +822,16 @@ protected:
         // start searching for phi close to q0, as soon as a solution is found for the curphi, return it
         dReal startphi = q0.size() == _qlower.size() ? q0.at(vfreeparams.at(freeindex)) : 0;
         dReal upperphi = _qupper.at(vfreeparams.at(freeindex)), lowerphi = _qlower.at(vfreeparams.at(freeindex)), deltaphi = 0;
-
-        if( _vjointrevolute.at(vfreeparams.at(freeindex)) == 2 ) {
+        dReal lowerChecked = startphi; // lowest value checked
+        dReal upperChecked = startphi; // uppermost value checked
+        int isJointRevolute = _vjointrevolute.at(vfreeparams.at(freeindex));
+        if( isJointRevolute == 2 ) {
             startphi = utils::NormalizeCircularAngle(startphi, -PI, PI);
             lowerphi = startphi-PI;
             upperphi = startphi+PI;
         }
 
+        bool bIsZeroTested = false;
         int iter = 0;
         dReal fFreeInc = vFreeInc.at(freeindex);
         int allres = IKRA_Reject;
@@ -820,6 +846,11 @@ protected:
                     ++iter;
                     continue;
                 }
+                upperChecked = curphi;
+                if( isJointRevolute != 0 && upperChecked - lowerChecked >= 2*PI-g_fEpsilonJointLimit ) {
+                    // reached full circle
+                    break;
+                }
             }
             else { // decrement
                 curphi -= deltaphi;
@@ -831,12 +862,21 @@ protected:
                     ++iter;
                     continue;
                 }
+                lowerChecked = curphi;
+                if( isJointRevolute != 0 && upperChecked - lowerChecked >= 2*PI-fFreeInc*0.1 ) {
+                    // reached full circle
+                    break;
+                }
 
                 deltaphi += fFreeInc; // increment
             }
 
             iter++;
 
+            if( RaveFabs(curphi) <= g_fEpsilonJointLimit ) {
+                bIsZeroTested = true;
+            }
+            //RAVELOG_VERBOSE_FORMAT("index=%d curphi=%.16e, range=%.16e", freeindex%curphi%(upperChecked - lowerChecked));
             vfree.at(freeindex) = curphi;
             IkReturnAction res = ComposeSolution(vfreeparams, vfree, freeindex+1,q0, fn, vFreeInc);
             if( !(res & IKRA_Reject) ) {
@@ -849,7 +889,7 @@ protected:
         }
 
         // explicitly test 0 since many edge cases involve 0s
-        if( _qlower[vfreeparams[freeindex]] <= 0 && _qupper[vfreeparams[freeindex]] >= 0 ) {
+        if( !bIsZeroTested && _qlower[vfreeparams[freeindex]] <= 0 && _qupper[vfreeparams[freeindex]] >= 0 ) {
             vfree.at(freeindex) = 0;
             IkReturnAction res = ComposeSolution(vfreeparams, vfree, freeindex+1,q0, fn, vFreeInc);
             if( !(res & IKRA_Reject) ) {
@@ -1030,6 +1070,24 @@ protected:
 //                }
 //                ss << endl;
                 bool bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
+                if( !bret ) {
+#ifdef OPENRAVE_HAS_LAPACK
+                    if( _fRefineWithJacobianInverseAllowedError > 0 ) {
+                        // since will be refining, can add a little error to see if IK gets recomputed
+                        eetrans[0] += 0.001;
+                        eetrans[1] += 0.001;
+                        eetrans[2] += 0.001;
+                        bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
+                        if( !bret ) {
+                            eetrans[0] -= 0.002;
+                            eetrans[1] -= 0.002;
+                            eetrans[2] -= 0.002;
+                            bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
+                        }
+                        RAVELOG_VERBOSE("ik failed, trying with slight jitter, ret=%d", (int)bret);
+                    }
+#endif
+                }
 //                ss << "ret=" << bret << " numsols=" << solutions.GetNumSolutions();
 //                RAVELOG_INFO(ss.str());
                 return bret;
@@ -1075,10 +1133,35 @@ protected:
                 RAY r = param.GetTranslationDirection5D();
                 IkReal eetrans[3] = {r.pos.x,r.pos.y,r.pos.z};
                 IkReal eerot[9] = {r.dir.x, r.dir.y, r.dir.z,0,0,0,0,0,0};
-                if( !_ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip) ) {
-                    return false;
+                bool bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
+                if( !bret ) {
+#ifdef OPENRAVE_HAS_LAPACK
+                    if( _fRefineWithJacobianInverseAllowedError > 0 ) {
+                        // since will be refining, can add a little error to see if IK gets recomputed
+                        eerot[0] = r.dir.x+0.001;
+                        eerot[1] = r.dir.y+0.001;
+                        eerot[2] = r.dir.z+0.001;
+                        dReal fnorm = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
+                        eerot[0] /= fnorm;
+                        eerot[1] /= fnorm;
+                        eerot[2] /= fnorm;
+                        bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
+                        if( !bret ) {
+                            eerot[0] = r.dir.x-0.001;
+                            eerot[1] = r.dir.y-0.001;
+                            eerot[2] = r.dir.z-0.001;
+                            dReal fnorm = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
+                            eerot[0] /= fnorm;
+                            eerot[1] /= fnorm;
+                            eerot[2] /= fnorm;
+                            bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
+                        }
+                        RAVELOG_VERBOSE("ik failed, trying with slight jitter, ret=%d", (int)bret);
+                    }
+#endif
                 }
-                return true;
+
+                return bret;
             }
             case IKP_TranslationXY2D: {
                 Vector v = param.GetTranslationXY2D();
@@ -1244,7 +1327,12 @@ protected:
         dReal ikworkspacedist = param.ComputeDistanceSqr(paramnew);
         if( _fRefineWithJacobianInverseAllowedError > 0 && ikworkspacedist > _fRefineWithJacobianInverseAllowedError*_fRefineWithJacobianInverseAllowedError ) {
             if( param.GetType() == IKP_Transform6D ) { // only 6d supported for now
-                if( _jacobinvsolver.ComputeSolution(param.GetTransform6D(), manip, vsolution) == 0 ) {
+                int ret = _jacobinvsolver.ComputeSolution(param.GetTransform6D(), manip, vsolution);
+                if( ret == 2 ) {
+                    RAVELOG_VERBOSE("did not converge, try to prioritize translation at least\n");
+                    ret = _jacobinvsolver.ComputeSolutionTranslation(param.GetTransform6D(), manip, vsolution);
+                }
+                if( ret == 0 ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                     ss << "IkParameterization('" << param << "'); sol=[";
                     FOREACH(it, vsolution) {
@@ -1335,7 +1423,7 @@ protected:
                 _CheckRefineSolution(param, *pmanip, itravesol->first);
 
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
-                paramnew = pmanip->GetIkParameterization(param,false);
+                paramnew = pmanip->GetIkParameterization(param,false); // custom data is copied!
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
                 _nSameStateRepeatCount = nSameStateRepeatCount; // could be overwritten by _CallFilters call!
                 IkReturnPtr localret(new IkReturn(IKRA_Success));
@@ -1405,10 +1493,8 @@ protected:
                             potherlink = ptempreport->plink1;
                         }
 
-                        if( !!potherlink ) {
-                            //bool bRigidlyAttached = false;
-                            int numBacktraceLinks = 3;
-                            for(int itestdof = (int)pmanip->GetArmIndices().size()-numBacktraceLinks; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
+                        if( !!potherlink && _numBacktraceLinksForSelfCollisionWithNonMoving > 0 ) {
+                            for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithNonMoving; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
                                 KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
                                 if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(potherlink) ) {
 
@@ -1425,8 +1511,8 @@ protected:
                             }
                         }
 
-                        if( 0 ) {//_vindependentlinks.size() != _vIndependentLinksIncludingFreeJoints.size() ) {
-                            // check 
+                        if( _vindependentlinks.size() != _vIndependentLinksIncludingFreeJoints.size() && _numBacktraceLinksForSelfCollisionWithFree > 0 ) {
+                            // check
                             potherlink.reset();
                             if( find(_vIndependentLinksIncludingFreeJoints.begin(), _vIndependentLinksIncludingFreeJoints.end(), ptempreport->plink1) != _vIndependentLinksIncludingFreeJoints.end() ) {
                                 potherlink = ptempreport->plink2;
@@ -1437,8 +1523,7 @@ protected:
 
                             if( !!potherlink ) {
                                 //bool bRigidlyAttached = false;
-                                int numBacktraceLinks = 2;
-                                for(int itestdof = (int)pmanip->GetArmIndices().size()-numBacktraceLinks; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
+                                for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithFree; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
                                     KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
                                     if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(potherlink) ) {
 
@@ -1455,7 +1540,7 @@ protected:
                                 }
                             }
                         }
-                        
+
                     }
                 }
                 return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision);
@@ -1600,6 +1685,10 @@ protected:
 //            }
             // TODO: iterating vravesols would call the filters vravesols.size() times even if a valid solution is found
             // figure out a way to do short-curcuit the code to check the final solutions
+
+            int nSameStateRepeatCount = 0;
+            _nSameStateRepeatCount = 0;
+
             list<IkReturnPtr> listtestikreturns;
             listtestikreturns.swap(listlocalikreturns);
             FOREACH(ittestreturn, listtestikreturns) {//itravesol, vravesols) {
@@ -1691,6 +1780,7 @@ protected:
             for(size_t isolution = 0; isolution < solutions.GetNumSolutions(); ++isolution) {
                 const ikfast::IkSolution<IkReal>& iksol = dynamic_cast<const ikfast::IkSolution<IkReal>& >(solutions.GetSolution(isolution));
                 iksol.Validate();
+                //RAVELOG_VERBOSE_FORMAT("ikfast solution %d/%d (free=%d)", isolution%solutions.GetNumSolutions()%iksol.GetFree().size());
                 if( iksol.GetFree().size() > 0 ) {
                     // have to search over all the free parameters of the solution!
                     vsolfree.resize(iksol.GetFree().size());
@@ -1720,7 +1810,7 @@ protected:
         int nSameStateRepeatCount = 0;
         _nSameStateRepeatCount = 0;
         std::vector< pair<std::vector<dReal>,int> > vravesols;
-        list<IkReturnPtr> listlocalikreturns; // orderd with respect to vravesols
+        list< std::pair<IkReturnPtr, IkParameterization> > listlocalikreturns; // orderd with respect to vravesols
 
         // find the first valid solutino that satisfies joint constraints and collisions
         if( !(filteroptions&IKFO_IgnoreJointLimits) ) {
@@ -1740,10 +1830,20 @@ protected:
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
 
+//        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+//            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+//            ss << "ikfast solution (free=" << iksol.GetFree().size() << "); iksol=[";
+//            FOREACHC(it, vravesol) {
+//                ss << *it << ", ";
+//            }
+//            ss << "]";
+//            RAVELOG_VERBOSE(ss.str());
+//        }
+
         IkParameterization paramnewglobal, paramnew;
 
         int retactionall = IKRA_Reject;
-        if( !(filteroptions & IKFO_IgnoreCustomFilters) ) {
+        if( !(filteroptions & IKFO_IgnoreCustomFilters) && _HasFilterInRange(1, IKSP_MaxPriority) ) {
 //            unsigned int maxsolutions = 1;
 //            for(size_t i = 0; i < iksol.basesol.size(); ++i) {
 //                unsigned char m = iksol.basesol[i].maxsolutions;
@@ -1771,7 +1871,7 @@ protected:
                     // have to make sure end effector collisions are set, regardless if stateCheck.ResetCheckEndEffectorEnvCollision has been called
                     stateCheck.RestoreCheckEndEffectorEnvCollision();
                 }
-                IkReturnAction retaction = _CallFilters(itravesol->first, pmanip, paramnew,localret);
+                IkReturnAction retaction = _CallFilters(itravesol->first, pmanip, paramnew,localret, 1, IKSP_MaxPriority);
                 if( !(filteroptions & IKFO_IgnoreEndEffectorEnvCollisions) && !bNeedCheckEndEffectorEnvCollision ) {
                     stateCheck.ResetCheckEndEffectorEnvCollision();
                 }
@@ -1783,7 +1883,7 @@ protected:
                 }
                 else if( retaction == IKRA_Success ) {
                     localret->_vsolution.swap(itravesol->first);
-                    listlocalikreturns.push_back(localret);
+                    listlocalikreturns.push_back(std::make_pair(localret, paramnew));
                 }
             }
             if( listlocalikreturns.size() == 0 ) {
@@ -1805,18 +1905,79 @@ protected:
                 IkReturnPtr localret(new IkReturn(IKRA_Success));
                 localret->_mapdata["solutionindices"] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
                 localret->_vsolution.swap(itravesol->first);
-                listlocalikreturns.push_back(localret);
+                listlocalikreturns.push_back(std::make_pair(localret, paramnew));
             }
         }
 
         CollisionReport report;
         CollisionReportPtr ptempreport;
         if( IS_DEBUGLEVEL(Level_Verbose) ) {
-            ptempreport = boost::shared_ptr<CollisionReport>(&report,utils::null_deleter());;
+            ptempreport = boost::shared_ptr<CollisionReport>(&report,utils::null_deleter());
         }
         if( !(filteroptions&IKFO_IgnoreSelfCollisions) ) {
             stateCheck.SetSelfCollisionState();
             if( probot->CheckSelfCollision(ptempreport) ) {
+                if( !!ptempreport ) {
+                    if( !!ptempreport->plink1 && !!ptempreport->plink2 && (paramnewglobal.GetType() == IKP_Transform6D || paramnewglobal.GetDOF() >= pmanip->GetArmDOF()) ) {
+                        // ik constraints the robot pretty well, so any self-collisions might mean the IK itself is impossible.
+                        // check if self-colliding with non-moving part and a link that is pretty high in the chain, then perhaps we should give up...?
+                        KinBody::LinkConstPtr potherlink;
+                        if( find(_vindependentlinks.begin(), _vindependentlinks.end(), ptempreport->plink1) != _vindependentlinks.end() ) {
+                            potherlink = ptempreport->plink2;
+                        }
+                        else if( find(_vindependentlinks.begin(), _vindependentlinks.end(), ptempreport->plink2) != _vindependentlinks.end() ) {
+                            potherlink = ptempreport->plink1;
+                        }
+
+                        if( !!potherlink && _numBacktraceLinksForSelfCollisionWithNonMoving > 0 ) {
+                            for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithNonMoving; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
+                                KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
+                                if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(potherlink) ) {
+
+                                    stateCheck.numImpossibleSelfCollisions++;
+                                    RAVELOG_VERBOSE_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, attempts=%d", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
+                                    if( stateCheck.numImpossibleSelfCollisions > 16 ) { // not sure what a good threshold is here
+                                        RAVELOG_DEBUG_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, giving up after %d attempts", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
+                                        return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision|IKRA_Quit);
+                                    }
+                                    else {
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        if( _vindependentlinks.size() != _vIndependentLinksIncludingFreeJoints.size() && _numBacktraceLinksForSelfCollisionWithFree > 0 ) {
+                            // check
+                            potherlink.reset();
+                            if( find(_vIndependentLinksIncludingFreeJoints.begin(), _vIndependentLinksIncludingFreeJoints.end(), ptempreport->plink1) != _vIndependentLinksIncludingFreeJoints.end() ) {
+                                potherlink = ptempreport->plink2;
+                            }
+                            else if( find(_vIndependentLinksIncludingFreeJoints.begin(), _vIndependentLinksIncludingFreeJoints.end(), ptempreport->plink2) != _vIndependentLinksIncludingFreeJoints.end() ) {
+                                potherlink = ptempreport->plink1;
+                            }
+
+                            if( !!potherlink ) {
+                                //bool bRigidlyAttached = false;
+                                for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithFree; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
+                                    KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
+                                    if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(potherlink) ) {
+
+                                        stateCheck.numImpossibleSelfCollisions++;
+                                        RAVELOG_VERBOSE_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, attempts=%d", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
+                                        if( stateCheck.numImpossibleSelfCollisions > 16 ) { // not sure what a good threshold is here
+                                            RAVELOG_DEBUG_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed for these free parameters, giving up after %d attempts", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
+                                            return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision|IKRA_Quit);
+                                        }
+                                        else {
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision);
             }
         }
@@ -1825,7 +1986,23 @@ protected:
             if( stateCheck.NeedCheckEndEffectorEnvCollision() ) {
                 // only check if the end-effector position is fully determined from the ik
                 if( paramnewglobal.GetType() == IKP_Transform6D ) {// || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
-                    if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform()) ) {
+                    if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform(), ptempreport) ) {
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                            ss << "ikfast collision " << ptempreport->__str__() << " colvalues=[";
+                            std::vector<dReal> vallvalues;
+                            probot->GetDOFValues(vallvalues);
+                            for(size_t i = 0; i < vallvalues.size(); ++i ) {
+                                if( i > 0 ) {
+                                    ss << "," << vallvalues[i];
+                                }
+                                else {
+                                    ss << vallvalues[i];
+                                }
+                            }
+                            ss << "]";
+                            RAVELOG_VERBOSE(ss.str());
+                        }
                         if( paramnewglobal.GetType() == IKP_Transform6D ) {
                             // 6D so end effector is determined
                             return static_cast<IkReturnAction>(retactionall|IKRA_QuitEndEffectorCollision); // stop the search
@@ -1859,13 +2036,52 @@ protected:
             }
         }
 
+        if( !(filteroptions & IKFO_IgnoreCustomFilters) && _HasFilterInRange(IKSP_MinPriority, 0) ) {
+            int nSameStateRepeatCount = 0;
+            _nSameStateRepeatCount = 0;
+
+            list< std::pair<IkReturnPtr, IkParameterization> >::iterator ittestreturn = listlocalikreturns.begin();
+            while(ittestreturn != listlocalikreturns.end()) {
+                IkReturnPtr localret = ittestreturn->first;
+                _vsolutionindices.resize(0);
+                FOREACH(it, localret->_mapdata["solutionindices"]) {
+                    _vsolutionindices.push_back((unsigned int)(*it+0.5)); // round
+                }
+
+                probot->SetActiveDOFValues(localret->_vsolution,false);
+                _nSameStateRepeatCount = nSameStateRepeatCount; // could be overwritten by _CallFilters call!
+
+                bool bNeedCheckEndEffectorEnvCollision = stateCheck.NeedCheckEndEffectorEnvCollision();
+                if( !(filteroptions & IKFO_IgnoreEndEffectorEnvCollisions) ) {
+                    // have to make sure end effector collisions are set, regardless if stateCheck.ResetCheckEndEffectorEnvCollision has been called
+                    stateCheck.RestoreCheckEndEffectorEnvCollision();
+                }
+                IkReturnAction retaction = _CallFilters(localret->_vsolution, pmanip, ittestreturn->second, localret, IKSP_MinPriority, 0);
+                if( !(filteroptions & IKFO_IgnoreEndEffectorEnvCollisions) && !bNeedCheckEndEffectorEnvCollision ) {
+                    stateCheck.ResetCheckEndEffectorEnvCollision();
+                }
+                nSameStateRepeatCount++;
+                _nSameStateRepeatCount = nSameStateRepeatCount;
+                retactionall |= retaction;
+                if( retactionall & IKRA_Quit ) {
+                    return static_cast<IkReturnAction>(retactionall|IKRA_RejectCustomFilter);
+                }
+                else if( retaction == IKRA_Success ) {
+                    ++ittestreturn;
+                }
+                else {
+                    ittestreturn = listlocalikreturns.erase(ittestreturn);
+                }
+            }
+        }
+
         // check that end effector moved in the correct direction
         dReal ikworkspacedist = param.ComputeDistanceSqr(paramnew);
         if( ikworkspacedist > _ikthreshold ) {
             BOOST_ASSERT(listlocalikreturns.size()>0);
             stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
             ss << "ignoring bad ik for " << probot->GetName() << ":" << pmanip->GetName() << " dist=" << RaveSqrt(ikworkspacedist) << ", param=[" << param << "], sol=[";
-            FOREACHC(itvalue,listlocalikreturns.front()->_vsolution) {
+            FOREACHC(itvalue,listlocalikreturns.front().first->_vsolution) {
                 ss << *itvalue << ", ";
             }
             ss << "]" << endl;
@@ -1880,13 +2096,16 @@ protected:
                 stateCheck.RestoreCheckEndEffectorEnvCollision();
             }
             FOREACH(itlocalikreturn, listlocalikreturns) {
-                _CallFinishCallbacks(*itlocalikreturn, pmanip, paramnewglobal);
+                _CallFinishCallbacks(itlocalikreturn->first, pmanip, paramnewglobal);
             }
             if( !(filteroptions & IKFO_IgnoreEndEffectorEnvCollisions) && !bNeedCheckEndEffectorEnvCollision ) {
                 stateCheck.ResetCheckEndEffectorEnvCollision();
             }
         }
-        vikreturns.insert(vikreturns.end(),listlocalikreturns.begin(),listlocalikreturns.end());
+        //RAVELOG_VERBOSE("add %d solutions", listlocalikreturns.size());
+        FOREACH(itlocalikreturn, listlocalikreturns) {
+            vikreturns.push_back(itlocalikreturn->first);
+        }
         return static_cast<IkReturnAction>(retactionall); // signals to continue
     }
 
@@ -2061,12 +2280,22 @@ protected:
         // try to convert localgoal into a different goal suitable for the IK
         if( param.GetType() == IKP_Transform6D ) {
             if( _nTotalDOF == 4 ) {
-                ikdummy.SetTranslationXAxisAngleZNorm4D(param.GetTransform6D().trans, -normalizeAxisRotation(Vector(0,0,1), param.GetTransform6D().rot).first);
+                ikdummy = param; // copy the custom data!
+                RobotBase::ManipulatorPtr pmanip(_pmanip);
+                Vector vglobaldirection = param.GetTransform6D().rotate(pmanip->GetLocalToolDirection());
+                if( _iktype == IKP_TranslationYAxisAngleXNorm4D ) {
+                    ikdummy.SetTranslationYAxisAngleXNorm4D(param.GetTransform6D().trans,RaveAtan2(vglobaldirection.z,vglobaldirection.y));
+                }
+                else {
+                    ikdummy.SetTranslationXAxisAngleZNorm4D(param.GetTransform6D().trans,RaveAtan2(vglobaldirection.y,vglobaldirection.x));
+                }
                 return ikdummy;
             }
             else if( _nTotalDOF == 5 ) {
+                ikdummy = param; // copy the custom data!
                 RobotBase::ManipulatorPtr pmanip(_pmanip);
                 ikdummy.SetTranslationDirection5D(RAY(param.GetTransform6D().trans, quatRotate(param.GetTransform6D().rot, pmanip->GetLocalToolDirection())));
+                // have to copy the custom data!
                 return ikdummy;
             }
         }
@@ -2092,6 +2321,7 @@ protected:
     std::vector<size_t> _qbigrangemaxsols, _qbigrangemaxcumprod;
     IkParameterizationType _iktype;
     std::string _kinematicshash;
+    int _numBacktraceLinksForSelfCollisionWithNonMoving, _numBacktraceLinksForSelfCollisionWithFree; ///< when pruning self collisions, the number of links to look at. If the tip of the manip self collides with the base, then can safely quit the IK. this is used purely for optimization purposes and by default it is mostly disabled. For more complex robots with a lot of joints, can use these parameters to speed up searching for IK.
     dReal _ikthreshold; ///< workspace distance threshold sanity checking between desired workspace goal and the workspace position with the returned ik values.
     dReal _fRefineWithJacobianInverseAllowedError; ///< if > 0, then use jacobian inverse numerical method to refine the results until workspace error drops down this much. By default it is disabled (=-1)
 

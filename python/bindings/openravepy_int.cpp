@@ -23,6 +23,9 @@
 namespace openravepy
 {
 
+#if OPENRAVE_RAPIDJSON
+
+// convert from rapidjson to python object
 object toPyObject(const rapidjson::Value& value)
 {
     switch (value.GetType()) {
@@ -63,6 +66,7 @@ object toPyObject(const rapidjson::Value& value)
     }
 }
 
+// convert from python object to rapidjson
 void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator)
 {
     if (obj.ptr() == Py_None)
@@ -119,7 +123,7 @@ void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
         boost::python::object iterator = d.iteritems();
         value.SetObject();
         for (int i = 0; i < len(d); i++)
-        { 
+        {
             rapidjson::Value keyValue, valueValue;
             boost::python::tuple kv = boost::python::extract<boost::python::tuple>(iterator.attr("next")());
             {
@@ -138,6 +142,8 @@ void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
         throw OPENRAVE_EXCEPTION_FORMAT0(_("unsupported python type"), ORE_InvalidArguments);
     }
 }
+
+#endif // OPENRAVE_RAPIDJSON
 
 /// if set, will return all transforms are 1x7 vectors where first 4 compoonents are quaternion
 static bool s_bReturnTransformQuaternions = false;
@@ -524,6 +530,13 @@ bool PyInterfaceBase::SupportsCommand(const string& cmd)
     return _pbase->SupportsCommand(cmd);
 }
 
+#if OPENRAVE_RAPIDJSON
+bool PyInterfaceBase::SupportsJSONCommand(const string& cmd)
+{
+    return _pbase->SupportsJSONCommand(cmd);
+}
+#endif // OPENRAVE_RAPIDJSON
+
 object PyInterfaceBase::SendCommand(const string& in, bool releasegil, bool lockenv)
 {
     stringstream sin(in), sout;
@@ -550,6 +563,38 @@ object PyInterfaceBase::SendCommand(const string& in, bool releasegil, bool lock
     }
     return object(sout.str());
 }
+
+#if OPENRAVE_RAPIDJSON
+
+object PyInterfaceBase::SendJSONCommand(const string& cmd, object input, bool releasegil, bool lockenv)
+{
+    rapidjson::Document in, out;
+    toRapidJSONValue(input, in, in.GetAllocator());
+
+    {
+        openravepy::PythonThreadSaverPtr statesaver;
+        openravepy::PyEnvironmentLockSaverPtr envsaver;
+        if( releasegil ) {
+            statesaver.reset(new openravepy::PythonThreadSaver());
+            if( lockenv ) {
+                // GIL is already released, so use a regular environment lock
+                envsaver.reset(new openravepy::PyEnvironmentLockSaver(_pyenv, true));
+            }
+        }
+        else {
+            if( lockenv ) {
+                // try to safely lock the environment first
+                envsaver.reset(new openravepy::PyEnvironmentLockSaver(_pyenv, false));
+            }
+        }
+
+        _pbase->SendJSONCommand(cmd, in, out);
+    }
+
+    return toPyObject(out);
+}
+
+#endif // OPENRAVE_RAPIDJSON
 
 object PyInterfaceBase::GetReadableInterfaces()
 {
@@ -1153,6 +1198,27 @@ public:
         }
         else {
             _penv->Save(filename,options,toAttributesList(odictatts));
+        }
+    }
+
+    object WriteToMemory(const string &filetype, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=object()) {
+        std::vector<char> output;
+        extract<std::string> otarget(odictatts);
+        if( otarget.check() ) {
+            // old versions
+            AttributesList atts;
+            atts.push_back(std::make_pair(std::string("target"),(std::string)otarget));
+            _penv->WriteToMemory(filetype,output,options,atts);
+        }
+        else {
+            _penv->WriteToMemory(filetype,output,options,toAttributesList(odictatts));
+        }
+
+        if( output.size() == 0 ) {
+            return boost::python::object();
+        }
+        else {
+            return boost::python::object(boost::python::handle<>(PyString_FromStringAndSize(&output[0], output.size())));
         }
     }
 
@@ -2027,8 +2093,10 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawarrow_overloads, drawarrow, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawbox_overloads, drawbox, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawtrimesh_overloads, drawtrimesh, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SendCommand_overloads, SendCommand, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SendJSONCommand_overloads, SendJSONCommand, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Add_overloads, Add, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Save_overloads, Save, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(WriteToMemory_overloads, WriteToMemory, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetUserData_overloads, GetUserData, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBody_overloads, GetPublishedBody, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodies_overloads, GetPublishedBodies, 0, 1)
@@ -2130,6 +2198,10 @@ Because race conditions can pop up when trying to lock the openrave environment 
         .def("GetUserData",&PyInterfaceBase::GetUserData, GetUserData_overloads(args("key"), DOXY_FN(InterfaceBase,GetUserData)))
         .def("SupportsCommand",&PyInterfaceBase::SupportsCommand, args("cmd"), DOXY_FN(InterfaceBase,SupportsCommand))
         .def("SendCommand",&PyInterfaceBase::SendCommand, SendCommand_overloads(args("cmd","releasegil","lockenv"), sSendCommandDoc.c_str()))
+#if OPENRAVE_RAPIDJSON
+        .def("SupportsJSONCommand",&PyInterfaceBase::SupportsJSONCommand, args("cmd"), DOXY_FN(InterfaceBase,SupportsJSONCommand))
+        .def("SendJSONCommand",&PyInterfaceBase::SendJSONCommand, SendJSONCommand_overloads(args("cmd","input","releasegil","lockenv"), DOXY_FN(InterfaceBase,SendJSONCommand)))
+#endif // OPENRAVE_RAPIDJSON
         .def("GetReadableInterfaces",&PyInterfaceBase::GetReadableInterfaces,DOXY_FN(InterfaceBase,GetReadableInterfaces))
         .def("GetReadableInterface",&PyInterfaceBase::GetReadableInterface,DOXY_FN(InterfaceBase,GetReadableInterface))
         .def("SetReadableInterface",&PyInterfaceBase::SetReadableInterface,args("xmltag","xmlreadable"), DOXY_FN(InterfaceBase,SetReadableInterface))
@@ -2224,13 +2296,14 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("CheckCollision",pcolyr,args("ray"), DOXY_FN(EnvironmentBase,CheckCollision "const RAY; CollisionReportPtr"))
                     .def("CheckCollisionRays",&PyEnvironmentBase::CheckCollisionRays,
                          CheckCollisionRays_overloads(args("rays","body","front_facing_only"),
-                                                      "Check if any rays hit the body and returns their contact points along with a vector specifying if a collision occured or not. Rays is a Nx6 array, first 3 columsn are position, last 3 are direction+range."))
+                                                      "Check if any rays hit the body and returns their contact points along with a vector specifying if a collision occured or not. Rays is a Nx6 array, first 3 columsn are position, last 3 are direction*range."))
                     .def("LoadURI",&PyEnvironmentBase::LoadURI,LoadURI_overloads(args("filename","atts"), DOXY_FN(EnvironmentBase,LoadURI)))
                     .def("Load",load1,args("filename"), DOXY_FN(EnvironmentBase,Load))
                     .def("Load",load2,args("filename","atts"), DOXY_FN(EnvironmentBase,Load))
                     .def("LoadData",loaddata1,args("data"), DOXY_FN(EnvironmentBase,LoadData))
                     .def("LoadData",loaddata2,args("data","atts"), DOXY_FN(EnvironmentBase,LoadData))
                     .def("Save",&PyEnvironmentBase::Save,Save_overloads(args("filename","options","atts"), DOXY_FN(EnvironmentBase,Save)))
+                    .def("WriteToMemory",&PyEnvironmentBase::WriteToMemory,WriteToMemory_overloads(args("filetype","options","atts"), DOXY_FN(EnvironmentBase,WriteToMemory)))
                     .def("ReadRobotURI",readrobotxmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadRobotURI "const std::string"))
                     .def("ReadRobotXMLFile",readrobotxmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadRobotURI "const std::string"))
                     .def("ReadRobotURI",readrobotxmlfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadRobotURI "RobotBasePtr; const std::string; const AttributesList"))

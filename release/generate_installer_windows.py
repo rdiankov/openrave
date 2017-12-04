@@ -850,10 +850,12 @@ if __name__ == "__main__":
                 pass
 
     # edit the config.h
-    config = open(os.path.join(options.installdir,'include','openrave-'+soversion,'openrave','config.h'),'r').read()
+    with open(os.path.join(options.installdir,'include','openrave-'+soversion,'openrave','config.h'),'r') as f:
+      config = f.read()
     pattern=re.compile(args['installdir'].replace('\\','/'),re.IGNORECASE)
     args['openrave_config'] = pattern.sub('__INSTDIR__',config).replace('\n','$\\n').replace('"','$\\"').replace('\r','$\\r')
-    open(os.path.join(options.installdir,'include','openrave-'+soversion,'openrave','config.h'),'w').write(config)
+    with open(os.path.join(options.installdir,'include','openrave-'+soversion,'openrave','config.h'),'w') as f:
+      f.write(config)
 
     # boost installation
     boostversion = Popen(['openrave-config','--boost-version'],stdout=PIPE).communicate()[0].strip()
@@ -897,7 +899,8 @@ if __name__ == "__main__":
     args['python_setuptools_url'] = 'http://pypi.python.org/packages/%(python_version)s/s/setuptools/setuptools-0.6c11.win32-py%(python_version)s.exe'%args
     args['python_sympy_url'] = 'http://sympy.googlecode.com/files/sympy-%(sympy_version)s.win32.exe'%args
 
-    open(args['output_name']+'.nsi','w').write(nsiscript%args)
+    with open(args['output_name']+'.nsi','w') as f:
+      f.write(nsiscript%args)
     os.system('"C:\\Program Files\\NSIS\\makensis.exe" %s.nsi'%args['output_name'])
 
 def test():

@@ -74,16 +74,22 @@ public:
                         RAVELOG_WARN(str(boost::format("daeOpenRAVEURIResolver::resolveElement() - Failed to resolve %s ")%uri.str()));
                         return NULL;
                     }
-                    domCOLLADA* proxy = (domCOLLADA*)dae->open(docurifull);
-                    if( !!proxy ) {
-                        if( !!_preader ) {
-                            // have to convert the first element back to URI with %20 since that's what other functions input
-                            _preader->_mapInverseResolvedURIList.insert(make_pair(docurifull,daeURI(*uri.getDAE(),docuri)));
-                        }
-                        doc = uri.getDAE()->getDatabase()->getDocument(docurifull.c_str(),true);
-                        if( !!doc ) {
-                            // insert it again with the original URI
-                            uri.getDAE()->getDatabase()->insertDocument(docuri.c_str(),doc->getDomRoot(),&doc,doc->isZAERootDocument(),doc->getExtractedFileURI().getURI());
+
+                    // should double check that docurifull is not in the current database
+                    doc = dae->getDatabase()->getDocument(docurifull.c_str(), true);
+                    if( !doc ) {
+                        RAVELOG_DEBUG_FORMAT("could not resolve, so opening %s", docurifull);
+                        domCOLLADA* proxy = (domCOLLADA*)dae->open(docurifull); // be very careful with this call since it can delete prevoiusly opened documents!
+                        if( !!proxy ) {
+                            if( !!_preader ) {
+                                // have to convert the first element back to URI with %20 since that's what other functions input
+                                _preader->_mapInverseResolvedURIList.insert(make_pair(docurifull,daeURI(*uri.getDAE(),docuri)));
+                            }
+                            doc = uri.getDAE()->getDatabase()->getDocument(docurifull.c_str(),true);
+                            if( !!doc ) {
+                                // insert it again with the original URI
+                                uri.getDAE()->getDatabase()->insertDocument(docuri.c_str(),doc->getDomRoot(),&doc,doc->isZAERootDocument(),doc->getExtractedFileURI().getURI());
+                            }
                         }
                     }
                 }
@@ -593,8 +599,8 @@ public:
                                         }
 
                                         if( !!ref_link && !!link ) {
-                                            RobotBasePtr probot = RaveInterfaceCast<RobotBase>(ref_link->GetParent());
-                                            if( !!probot ) {
+                                            KinBodyPtr pbody = RaveInterfaceCast<KinBody>(ref_link->GetParent());
+                                            if( !!pbody ) {
                                                 // see if there are any ignore links
                                                 std::set<int> setRobotLinksToIgnore;
                                                 daeElementRef pchildtec = pchild->getChild("technique");
@@ -636,7 +642,7 @@ public:
                                                         }
                                                     }
                                                 }
-                                                probot->Grab(link->GetParent(),ref_link, setRobotLinksToIgnore);
+                                                pbody->Grab(link->GetParent(),ref_link, setRobotLinksToIgnore);
                                             }
                                             else {
                                                 RAVELOG_WARN(str(boost::format("%s needs to be a robot in order to grab")%ref_link->GetParent()->GetName()));
@@ -725,8 +731,8 @@ public:
 
     /// \extract robot from the scene
     ///
-    /// \param articulatdSystemId If not empty, will extract the first articulated_system whose id matches articulatdSystemId. If empty, will extract the first articulated system found.
-    bool Extract(RobotBasePtr& probot, const std::string& articulatdSystemId=std::string())
+    /// \param articulatedSystemId If not empty, will extract the first articulated_system whose id matches articulatedSystemId. If empty, will extract the first articulated system found.
+    bool Extract(RobotBasePtr& probot, const std::string& articulatedSystemId=std::string())
     {
         std::list< pair<domInstance_kinematics_modelRef, boost::shared_ptr<KinematicsSceneBindings> > > listPossibleBodies;
         domCOLLADA::domSceneRef allscene = _dom->getScene();
@@ -767,9 +773,9 @@ public:
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,*bindings);
             _ExtractPhysicsBindings(allscene,*bindings);
             for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
-                if( articulatdSystemId.size() > 0 ) {
+                if( articulatedSystemId.size() > 0 ) {
                     xsAnyURI articulatedSystemURI = kscene->getInstance_articulated_system_array()[ias]->getUrl();
-                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatdSystemId ) {
+                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatedSystemId ) {
                         continue;
                     }
                 }
@@ -792,9 +798,9 @@ public:
         if( !bSuccess ) {
             KinBodyPtr pbody = probot;
             FOREACH(it, listPossibleBodies) {
-                if( articulatdSystemId.size() > 0 ) {
+                if( articulatedSystemId.size() > 0 ) {
                     xsAnyURI articulatedSystemURI = it->first->getUrl();
-                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatdSystemId ) {
+                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatedSystemId ) {
                         continue;
                     }
                 }
@@ -832,8 +838,8 @@ public:
 
     /// \extract a kinbody from the scene
     ///
-    /// \param articulatdSystemId If not empty, will extract the first articulated_system whose id matches articulatdSystemId. If empty, will extract the first articulated system found.
-    bool Extract(KinBodyPtr& pbody, const std::string& articulatdSystemId=std::string())
+    /// \param articulatedSystemId If not empty, will extract the first articulated_system whose id matches articulatedSystemId. If empty, will extract the first articulated system found.
+    bool Extract(KinBodyPtr& pbody, const std::string& articulatedSystemId=std::string())
     {
         domCOLLADA::domSceneRef allscene = _dom->getScene();
         if( !allscene ) {
@@ -864,9 +870,9 @@ public:
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,*bindings);
             _ExtractPhysicsBindings(allscene,*bindings);
             for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
-                if( articulatdSystemId.size() > 0 ) {
+                if( articulatedSystemId.size() > 0 ) {
                     xsAnyURI articulatedSystemURI = kscene->getInstance_articulated_system_array()[ias]->getUrl();
-                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatdSystemId ) {
+                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatedSystemId ) {
                         continue;
                     }
                 }
@@ -884,9 +890,9 @@ public:
             }
         }
         FOREACH(it, listPossibleBodies) {
-            if( articulatdSystemId.size() > 0 ) {
+            if( articulatedSystemId.size() > 0 ) {
                 xsAnyURI articulatedSystemURI = it->first->getUrl();
-                if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatdSystemId ) {
+                if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatedSystemId ) {
                     continue;
                 }
             }
@@ -1240,7 +1246,8 @@ public:
 
         RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
         if( !!probot ) {
-            ExtractRobotManipulators(probot, articulated_system, bindings);
+            ExtractRobotManipulators(probot, articulated_system->getExtra_array(), articulated_system, bindings);
+            ExtractRobotManipulators(probot, ias->getExtra_array(), articulated_system, bindings); // have to also read from the instance_articulated_system!
             ExtractRobotAttachedSensors(probot, articulated_system, bindings);
             ExtractRobotAttachedActuators(probot, articulated_system, bindings);
         }
@@ -2906,10 +2913,10 @@ public:
     }
 
     /// \brief extract the robot manipulators
-    void ExtractRobotManipulators(RobotBasePtr probot, const domArticulated_systemRef as, const KinematicsSceneBindings& bindings)
+    void ExtractRobotManipulators(RobotBasePtr probot, domExtra_Array& manipulatorExtraArray, const domArticulated_systemRef as, const KinematicsSceneBindings& bindings)
     {
-        for(size_t ie = 0; ie < as->getExtra_array().getCount(); ++ie) {
-            domExtraRef pextra = as->getExtra_array()[ie];
+        for(size_t ie = 0; ie < manipulatorExtraArray.getCount(); ++ie) {
+            domExtraRef pextra = manipulatorExtraArray[ie];
             if( !pextra->getType() ) {
                 continue;
             }
@@ -2970,7 +2977,7 @@ public:
                                 RAVELOG_WARN_FORMAT("invalid direction specified for manip %s, using [0,0,1]", manipinfo._name);
                                 manipinfo._vdirection = Vector(0,0,1);
                             }
-                            
+
                             if( !ss ) {
                                 RAVELOG_WARN(str(boost::format("could not read frame_tip/direction of manipulator %s frame tip %s")%name%pframe_tip->getAttribute("link")));
                             }
@@ -3079,11 +3086,11 @@ public:
                     daeElementRef instance_sensor = tec->getChild("instance_sensor");
                     if( !!instance_sensor ) {
                         std::pair<SensorBasePtr, daeElementRef> result = _ExtractCreateSensor(instance_sensor);
-                        pattachedsensor->psensor = result.first;
-                        if( !!pattachedsensor->psensor ) {
-                            pattachedsensor->psensor->SetName(str(boost::format("%s:%s")%probot->GetName()%name));
+                        pattachedsensor->_psensor = result.first;
+                        if( !!pattachedsensor->_psensor ) {
+                            pattachedsensor->_psensor->SetName(str(boost::format("%s:%s")%probot->GetName()%name));
                             std::string instance_url = instance_sensor->getAttribute("url");
-                            mapSensorURLsToNames[instance_url] = pattachedsensor->psensor->GetName();
+                            mapSensorURLsToNames[instance_url] = pattachedsensor->_psensor->GetName();
                         }
                         listSensorsToExtract.push_back(std::make_pair(pattachedsensor,result.second));
                     }
@@ -3098,12 +3105,12 @@ public:
 
         FOREACH(itextract, listSensorsToExtract) {
             RobotBase::AttachedSensorPtr pattachedsensor = itextract->first;
-            if( !pattachedsensor->psensor ) {
+            if( !pattachedsensor->_psensor ) {
                 continue;
             }
 
             // Create the custom XML reader to read in the data (determined by users)
-            BaseXMLReaderPtr pcurreader = RaveCallXMLReader(PT_Sensor,pattachedsensor->psensor->GetXMLId(),pattachedsensor->psensor, AttributesList());
+            BaseXMLReaderPtr pcurreader = RaveCallXMLReader(PT_Sensor,pattachedsensor->_psensor->GetXMLId(),pattachedsensor->_psensor, AttributesList());
             if( !pcurreader ) {
                 pattachedsensor->pdata = pattachedsensor->GetSensor()->CreateSensorData();
                 continue;
@@ -3111,7 +3118,7 @@ public:
 
             if( _ProcessXMLReader(pcurreader,itextract->second, mapSensorURLsToNames) ) {
                 if( !!pcurreader->GetReadable() ) {
-                    pattachedsensor->psensor->SetReadableInterface(pattachedsensor->psensor->GetXMLId(),pcurreader->GetReadable());
+                    pattachedsensor->_psensor->SetReadableInterface(pattachedsensor->_psensor->GetXMLId(),pcurreader->GetReadable());
                 }
             }
             pattachedsensor->UpdateInfo(); // need to update the _info struct with the latest values
@@ -4224,7 +4231,7 @@ private:
                         else if( pelt->getElementName() == string("bind_instance_geometry") ) {
 
                             // for now don't load since we don't have good way of updating the geometry throughout the system yet.
-                            
+
 //                            const std::string groupname = pelt->getAttribute("type");
 //                            if( groupname == "" ) {
 //                                RAVELOG_WARN("encountered an empty group name");
@@ -4880,7 +4887,7 @@ private:
         daeBool bhas1 = elt1->hasAttribute(attr.c_str());
         daeBool bhas2 = elt2->hasAttribute(attr.c_str());
         if( !bhas1 || !bhas2 ) {
-            if( !bhas1 && !bhas1 && elt1 == elt2 ) {
+            if( !bhas1 && !bhas2 && elt1 == elt2 ) {
                 return 1;
             }
             return -1;
@@ -5167,14 +5174,14 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& pbody, const stri
         return false;
     }
 
-    std::string articulatdSystemId;
+    std::string articulatedSystemId;
     FOREACHC(itatt, atts) {
-        if( itatt->first == "articulatdSystemId" ) {
-            articulatdSystemId = itatt->second;
+        if( itatt->first == "articulatedSystemId" ) {
+            articulatedSystemId = itatt->second;
         }
     }
 
-    return reader.Extract(pbody, articulatdSystemId);
+    return reader.Extract(pbody, articulatedSystemId);
 }
 
 bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& pdata,const AttributesList& atts)
@@ -5185,14 +5192,18 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const s
         return false;
     }
 
-    std::string articulatdSystemId;
+    std::string articulatedSystemId;
     FOREACHC(itatt, atts) {
-        if( itatt->first == "articulatdSystemId" ) {
-            articulatdSystemId = itatt->second;
+        if( itatt->first == "articulatedSystemId" ) {
+            articulatedSystemId = itatt->second;
+        }
+        else if( itatt->first == "articulatedSystemId" ) {
+            RAVELOG_WARN("mispelled articulatedSystemId\n");
+            articulatedSystemId = itatt->second;
         }
     }
 
-    return reader.Extract(probot, articulatdSystemId);
+    return reader.Extract(probot, articulatedSystemId);
 }
 
 // register for typeof (MSVC only)

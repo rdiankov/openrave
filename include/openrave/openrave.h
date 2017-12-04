@@ -102,6 +102,10 @@ namespace OpenRAVE {
 
 }
 
+#if OPENRAVE_RAPIDJSON
+#include <rapidjson/document.h>
+#endif // OPENRAVE_RAPIDJSON
+
 #include <openrave/logging.h>
 
 namespace OpenRAVE {
@@ -399,6 +403,7 @@ enum CloningOptions {
     Clone_RealControllers = 8, ///< if specified, will clone the real controllers of all the robots, otherwise each robot gets ideal controller
     Clone_Sensors = 0x0010, ///< if specified, will clone the sensors attached to the robot and added to the environment
     Clone_Modules = 0x0020, ///< if specified, will clone the modules attached to the environment
+    Clone_IgnoreAttachedBodies = 0x00010001, ///< if set, then ignore cloning any attached bodies so _listAttachedBodies becomes empty. Usually used to control grabbing states.
     Clone_All = 0xffffffff,
 };
 
@@ -2178,7 +2183,7 @@ class OPENRAVE_API TriMesh
 {
 public:
     std::vector<Vector> vertices;
-    std::vector<int> indices;
+    std::vector<int32_t> indices;
 
     void ApplyTransform(const Transform& t);
     void ApplyTransform(const TransformMatrix& t);
@@ -2608,6 +2613,14 @@ typedef bool (*PluginExportFn_OpenRAVEGetPluginAttributes)(PLUGININFO* pinfo, in
 /// \ingroup plugin_exports
 typedef void (*PluginExportFn_DestroyPlugin)();
 
+/// \brief Called when OpenRAVE global runtime is finished initializing. See \ref OnRaveInitialized
+/// \ingroup plugin_exports
+typedef void (*PluginExportFn_OnRaveInitialized)();
+
+/// \brief Called when OpenRAVE global runtime is about to be destroyed. See \ref OnRavePreDestroy.
+/// \ingroup plugin_exports
+typedef void (*PluginExportFn_OnRavePreDestroy)();
+    
 /// \deprecated (12/01/01)
 typedef InterfaceBasePtr (*PluginExportFn_CreateInterface)(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr env) RAVE_DEPRECATED;
 

@@ -86,6 +86,53 @@ public:
 
 class PyKinBody : public PyInterfaceBase
 {
+ public:
+    class PyGrabbedInfo
+{
+public:
+    PyGrabbedInfo() {
+        _trelative = ReturnTransform(Transform());
+    }
+    PyGrabbedInfo(const RobotBase::GrabbedInfo& info) {
+        _grabbedname = ConvertStringToUnicode(info._grabbedname);
+        _robotlinkname = ConvertStringToUnicode(info._robotlinkname);
+        _trelative = ReturnTransform(info._trelative);
+        boost::python::list setRobotLinksToIgnore;
+        FOREACHC(itindex, info._setRobotLinksToIgnore) {
+            setRobotLinksToIgnore.append(*itindex);
+        }
+        _setRobotLinksToIgnore = setRobotLinksToIgnore;
+    }
+
+    RobotBase::GrabbedInfoPtr GetGrabbedInfo() const
+    {
+        RobotBase::GrabbedInfoPtr pinfo(new RobotBase::GrabbedInfo());
+        pinfo->_grabbedname = boost::python::extract<std::string>(_grabbedname);
+        pinfo->_robotlinkname = boost::python::extract<std::string>(_robotlinkname);
+        pinfo->_trelative = ExtractTransform(_trelative);
+        std::vector<int> v = ExtractArray<int>(_setRobotLinksToIgnore);
+        pinfo->_setRobotLinksToIgnore.clear();
+        FOREACHC(it,v) {
+            pinfo->_setRobotLinksToIgnore.insert(*it);
+        }
+        return pinfo;
+    }
+
+    std::string __str__() {
+        std::string robotlinkname = boost::python::extract<std::string>(_robotlinkname);
+        std::string grabbedname = boost::python::extract<std::string>(_grabbedname);
+        return boost::str(boost::format("<grabbedinfo:%s -> %s>")%robotlinkname%grabbedname);
+    }
+    object __unicode__() {
+        return ConvertStringToUnicode(__str__());
+    }
+
+    object _grabbedname, _robotlinkname;
+    object _trelative;
+    object _setRobotLinksToIgnore;
+};
+typedef boost::shared_ptr<PyGrabbedInfo> PyGrabbedInfoPtr;
+
 protected:
     KinBodyPtr _pbody;
     std::list<boost::shared_ptr<void> > _listStateSavers;
@@ -153,7 +200,8 @@ public:
     void SetDOFVelocities(object odofvelocities, uint32_t checklimits=KinBody::CLA_CheckLimits, object oindices = object());
     object GetLinkVelocities() const;
     object GetLinkAccelerations(object odofaccelerations, object oexternalaccelerations) const;
-    object ComputeAABB();
+    object ComputeAABB(bool bEnabledOnlyLinks=false);
+    object ComputeAABBFromTransform(object otransform, bool bEnabledOnlyLinks=false);
     object GetCenterOfMass() const;
     void Enable(bool bEnable);
     bool IsEnabled() const;
@@ -161,7 +209,7 @@ public:
     bool IsVisible() const;
     bool IsDOFRevolute(int dofindex) const;
     bool IsDOFPrismatic(int dofindex) const;
-    void SetTransform(object transform);
+    void SetTransform(object otransform);
     void SetDOFWeights(object o);
     void SetDOFResolutions(object o);
     void SetDOFLimits(object olower, object oupper, object oindices=object());
@@ -193,6 +241,16 @@ public:
     object GetConfigurationSpecificationIndices(object oindices,const std::string& interpolation="") const;
     void SetConfigurationValues(object ovalues, uint32_t checklimits=KinBody::CLA_CheckLimits);
     object GetConfigurationValues() const;
+    bool Grab(PyKinBodyPtr pbody, object pylink_or_linkstoignore);
+    bool Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore);
+    void Release(PyKinBodyPtr pbody);
+    void ReleaseAllGrabbed();
+    void ReleaseAllGrabbedWithLink(object pylink);
+    void RegrabAll();
+    object IsGrabbing(PyKinBodyPtr pbody) const;
+    object GetGrabbed() const;
+    object GetGrabbedInfo() const;
+    void ResetGrabbed(object ograbbedinfos);
     bool IsRobot() const;
     int GetEnvironmentId() const;
     int DoesAffect(int jointindex, int linkindex ) const;

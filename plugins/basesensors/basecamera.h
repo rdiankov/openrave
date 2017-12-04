@@ -275,10 +275,23 @@ public:
     {
         _pdata->vimagedata.resize(0);
         _pdata->__stamp = 0;
-        _vimagedata.resize(3*_pgeom->width*_pgeom->height);
+        _vimagedata.clear(); // do not resize vector here since it might never be used and it will take up lots of memory!
         _fTimeToImage = 0;
         _graphgeometry.reset();
         _dataviewer.reset();
+        _psensor_reference.reset();
+        
+        boost::shared_ptr<CameraGeomData> pgeom = _pgeom;
+        if( !!pgeom && pgeom->sensor_reference.size() > 0 ) {
+            // does not exist yet
+            SensorBasePtr psensor_reference = GetEnv()->GetSensor(pgeom->sensor_reference);
+            if( !psensor_reference ) {
+                RAVELOG_WARN_FORMAT("could not find sensor reference %s of sensor %s", pgeom->sensor_reference%_name);
+            }
+//            else {
+//                _psensor_reference = psensor_reference;
+//            }
+        }
     }
 
     virtual void SetSensorGeometry(SensorGeometryConstPtr pgeometry)
@@ -299,6 +312,7 @@ public:
                 _fTimeToImage = 1 / (float)framerate;
                 GetEnv()->UpdatePublishedBodies();
                 if( !!GetEnv()->GetViewer() ) {
+                    _vimagedata.resize(3*_pgeom->width*_pgeom->height);
                     if( GetEnv()->GetViewer()->GetCameraImage(_vimagedata, _pgeom->width, _pgeom->height, _trans, _pgeom->KK) ) {
                         // copy the data
                         boost::mutex::scoped_lock lock(_mutexdata);
@@ -315,6 +329,12 @@ public:
     virtual SensorGeometryConstPtr GetSensorGeometry(SensorType type)
     {
         if(( type == ST_Invalid) ||( type == ST_Camera) ) {
+            if( !!_pgeom ) {
+                SensorBasePtr psensor_reference = _psensor_reference.lock();
+                if( !!psensor_reference ) {
+                    _pgeom->sensor_reference = psensor_reference->GetName();
+                }
+            }
             CameraGeomData* pgeom = new CameraGeomData();
             *pgeom = *_pgeom;
             return SensorGeometryConstPtr(boost::shared_ptr<CameraGeomData>(pgeom));
@@ -396,6 +416,7 @@ public:
     {
         SensorBase::Clone(preference,cloningoptions);
         boost::shared_ptr<BaseCameraSensor const> r = boost::dynamic_pointer_cast<BaseCameraSensor const>(preference);
+        // r->_pgeom->sensor_reference should already be correct
         *_pgeom = *r->_pgeom;
         _vColor = r->_vColor;
         _trans = r->_trans;
@@ -404,11 +425,18 @@ public:
         _bRenderGeometry = r->_bRenderGeometry;
         _bRenderData = r->_bRenderData;
         _bPower = r->_bPower;
+        _psensor_reference.reset();
         _Reset();
     }
 
     void Serialize(BaseXMLWriterPtr writer, int options=0) const
     {
+        if( !!_pgeom ) {
+            SensorBasePtr psensor_reference = _psensor_reference.lock();
+            if( !!psensor_reference ) {
+                _pgeom->sensor_reference = psensor_reference->GetName();
+            }
+        }
         _pgeom->Serialize(writer, options);
         AttributesList atts;
         stringstream ss;
@@ -431,6 +459,35 @@ public:
 
         RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "color", _vColor);
         RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "format", _channelformat.size() > 0 ? _channelformat : std::string("uint8"));        
+
+    virtual void SetName(const std::string& newname)
+    {
+        boost::shared_ptr<CameraGeomData> pgeom = _pgeom;
+        if( !!pgeom && pgeom->sensor_reference.size() > 0 ) {
+            // does not exist yet
+            SensorBasePtr psensor_reference = _psensor_reference.lock();
+            if( !psensor_reference ) {
+                // HACK for collada: check if pgeom->sensor_reference is in robotname:sensorname and that matches with the current sensor name's robot. If it does, then most likely robot is changing its name and sensor_reference is part of the same changing robot, so have to update sensor_reference! The only way to resolve this issue is to introduce unique IDs in openrave, slated for openrave JSON format.
+                if( newname.find(':') != std::string::npos && _name.find(':') != std::string::npos && pgeom->sensor_reference.find(':') != std::string::npos) {
+                    std::string oldrobotname = _name.substr(0, _name.find(':'));
+                    std::string newrobotname = newname.substr(0, newname.find(':'));
+                    std::string oldreferencerobotname = pgeom->sensor_reference.substr(0, pgeom->sensor_reference.find(':'));
+                    
+                    if( oldrobotname == oldreferencerobotname ) {
+                        std::string newreference = newrobotname + ":" + pgeom->sensor_reference.substr(pgeom->sensor_reference.find(':')+1);
+                        RAVELOG_DEBUG_FORMAT("old reference name %s matches with old sensor %s, so changing name to %s", oldrobotname%pgeom->sensor_reference%newreference);
+                        pgeom->sensor_reference = newreference;
+                        SensorBasePtr psensor_reference = GetEnv()->GetSensor(pgeom->sensor_reference);
+                        if( !!psensor_reference ) {
+                            _psensor_reference = psensor_reference;
+                        }
+                    }
+                }
+                //RAVELOG_WARN_FORMAT("could not find sensor reference %s of sensor %s", pgeom->sensor_reference%_name);
+            }
+        }
+
+        SensorBase::SetName(newname);
     }
 
 protected:
@@ -483,6 +540,7 @@ protected:
     // more geom stuff
     vector<uint8_t> _vimagedata;
     RaveVector<float> _vColor;
+    SensorBaseWeakPtr _psensor_reference; ///< weak pointer to the sensor reference. Used to keep track of name changes!
 
     Transform _trans;
     dReal _fTimeToImage;

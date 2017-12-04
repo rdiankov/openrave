@@ -656,6 +656,9 @@ public:
     object GetTransform() {
         return ReturnTransform(_psensor->GetTransform());
     }
+    object GetTransformPose() {
+        return toPyArray(_psensor->GetTransform());
+    }
 
     object GetName() {
         return ConvertStringToUnicode(_psensor->GetName());
@@ -745,6 +748,7 @@ void init_openravepy_sensor()
                        .def("SetSensorGeometry",&PySensorBase::SetSensorGeometry, DOXY_FN(SensorBase,SetSensorGeometry))
                        .def("SetTransform",&PySensorBase::SetTransform, DOXY_FN(SensorBase,SetTransform))
                        .def("GetTransform",&PySensorBase::GetTransform, DOXY_FN(SensorBase,GetTransform))
+                       .def("GetTransformPose",&PySensorBase::GetTransformPose, DOXY_FN(SensorBase,GetTransform))
                        .def("GetName",&PySensorBase::GetName, DOXY_FN(SensorBase,GetName))
                        .def("SetName",&PySensorBase::SetName, DOXY_FN(SensorBase,SetName))
                        .def("Supports",&PySensorBase::Supports, DOXY_FN(SensorBase,Supports))
