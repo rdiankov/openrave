@@ -60,18 +60,25 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, float v);
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const char* v);
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const std::string& v);
+
 template <typename T1, typename T2>
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const std::pair<T1, T2>& p);
+
 template <typename K, typename V>
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const std::map<K, V>& m);
+
 template <typename T, std::size_t N>
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const boost::array<T, N>& a, std::size_t n = (std::size_t)-1);
+
 template <typename T>
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const std::vector<T>& v, std::size_t n = (std::size_t)-1);
+
 template <typename T>
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const RaveVector<T>& v, bool quat = false);
+
 template <typename T>
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const RaveTransform<T>& t);
+
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const TriMesh& trimesh);
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const IkParameterization& ikparam);
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const SensorBase::CameraIntrinsics& intrinsics);
@@ -135,7 +142,7 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
 
 /// \brief serialize a std::vector as json
 template <typename T>
-inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const std::vector<T>& v, std::size_t n = (std::size_t)-1)
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const std::vector<T>& v, std::size_t n)
 {
     RAVE_SERIALIZEJSON_CLEAR_ARRAY(value);
     for (std::size_t i = 0; i < v.size() && i < n; ++i)
@@ -146,7 +153,7 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
 
 /// \brief serialize a boost::array as json
 template <typename T, std::size_t N>
-inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const boost::array<T, N>& a, std::size_t n = (std::size_t)-1)
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const boost::array<T, N>& a, std::size_t n)
 {
     RAVE_SERIALIZEJSON_CLEAR_ARRAY(value);
     for (std::size_t i = 0; i < a.size() && i < n; ++i)
@@ -157,7 +164,7 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
 
 /// \brief serialize an OpenRAVE Vector as json
 template <typename T>
-inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const RaveVector<T>& v, bool quat = false)
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const RaveVector<T>& v, bool quat)
 {
     RAVE_SERIALIZEJSON_CLEAR_ARRAY(value);
     RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, v[0]);

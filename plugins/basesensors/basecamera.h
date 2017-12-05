@@ -21,7 +21,7 @@
 class BaseCameraSensor : public SensorBase
 {
 protected:
-    class BaseCameraXMLReader : public BaseXMLReader
+  class BaseCameraXMLReader : public BaseXMLReader
     {
 public:
         BaseCameraXMLReader(boost::shared_ptr<BaseCameraSensor> psensor) : _psensor(psensor) {
@@ -165,8 +165,8 @@ protected:
         stringstream ss;
     };
 
-class BaseCameraJSONReader : public BaseJSONReader
-    {
+  class BaseCameraJSONReader : public BaseJSONReader
+  {
 public:
         BaseCameraJSONReader(boost::shared_ptr<BaseCameraSensor> psensor) : BaseJSONReader(), _psensor(psensor) {
         }
@@ -184,6 +184,7 @@ protected:
         boost::shared_ptr<BaseCameraSensor> _psensor;
         
     };
+
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
@@ -458,7 +459,9 @@ public:
         }
 
         RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "color", _vColor);
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "format", _channelformat.size() > 0 ? _channelformat : std::string("uint8"));        
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "format", _channelformat.size() > 0 ? _channelformat : std::string("uint8"));
+    }
+
 
     virtual void SetName(const std::string& newname)
     {
@@ -533,7 +536,7 @@ protected:
             _graphgeometry->SetTransform(_trans);
         }
     }
-
+    
     boost::shared_ptr<CameraGeomData> _pgeom;
     boost::shared_ptr<CameraSensorData> _pdata;
 

@@ -20,6 +20,81 @@
 
 namespace OpenRAVE {
 
+// the following constructor handles mapping from deprecated reference to the actual
+// member, so need to disable deprecation warnings
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+RobotBase::AttachedSensorInfo::AttachedSensorInfo() :
+    XMLReadable("attachedsensor"),
+    _name(name),
+    _linkname(linkName),
+    _trelative(transform),
+    _sensorname(type),
+    _sensorgeometry(sensorGeometry)
+{
+}
+#pragma GCC diagnostic pop
+
+RobotBase::AttachedSensorInfo::AttachedSensorInfo(const AttachedSensorInfo& other) : AttachedSensorInfo()
+{
+    *this = other;
+}
+
+RobotBase::AttachedSensorInfo::~AttachedSensorInfo()
+{
+}
+
+RobotBase::AttachedSensorInfo& RobotBase::AttachedSensorInfo::operator=(const RobotBase::AttachedSensorInfo& other)
+{
+    sid = other.sid;
+    name = other.name;
+    type = other.type;
+    linkName = other.linkName;
+    transform = other.transform;
+    sensorGeometry = other.sensorGeometry;
+    return *this;
+}
+
+void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options) const
+{
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
+
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "sid", sid);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", type);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "linkName", linkName);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", transform);
+
+    rapidjson::Value sensorGeometryValue;
+    if (!!sensorGeometry) {
+        sensorGeometry->SerializeJSON(sensorGeometryValue, allocator, options);
+    }
+    value.AddMember("sensorGeometry", sensorGeometryValue, allocator);
+}
+
+  void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value &value, EnvironmentBasePtr penv)
+{
+    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
+
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "sid", sid);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "name", name);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "type", type);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "linkName", linkName);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "transform", transform);
+
+    if (value.HasMember("sensorGeometry")) {
+        BaseJSONReaderPtr preader = RaveCallJSONReader(PT_Sensor, type, InterfaceBasePtr(), AttributesList());
+        if( !!preader ) {
+            preader->DeserializeJSON(value["sensorGeometry"]);
+            if( !!preader->GetReadable() ) {
+                sensorGeometry = boost::dynamic_pointer_cast<SensorBase::SensorGeometry>(preader->GetReadable());
+            }
+        }
+    }
+}
+
+
+
 RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot) : _probot(probot)
 {
 }
@@ -68,6 +143,10 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const RobotBase::
 RobotBase::AttachedSensor::~AttachedSensor()
 {
 }
+
+
+
+
 
 //void RobotBase::AttachedSensor::_ComputeInternalInformation()
 //{
