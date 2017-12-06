@@ -1094,7 +1094,7 @@ public:
         return bCollision;
     }
 
-    object CheckCollisionRays(object rays, PyKinBodyPtr pbody,bool bFrontFacingOnly=false)
+    object CheckCollisionRays(boost::python::numeric::array rays, PyKinBodyPtr pbody,bool bFrontFacingOnly=false)
     {
         object shape = rays.attr("shape");
         int num = extract<int>(shape[0]);
@@ -1107,38 +1107,60 @@ public:
         CollisionReport report;
         CollisionReportPtr preport(&report,null_deleter());
 
+        PyArrayObject *pPyRays = PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(rays.ptr()));
+        AutoPyArrayObjectDereferencer pyderef(pPyRays);
+
+        bool isFloat = PyArray_ITEMSIZE(pPyRays) == sizeof(float); // or double
+        const float *pRaysFloat = isFloat ? reinterpret_cast<const float*>(PyArray_DATA(pPyRays)) : NULL;
+        const double *pRaysDouble = isFloat ? NULL : reinterpret_cast<const double*>(PyArray_DATA(pPyRays));
+
         RAY r;
         npy_intp dims[] = { num,6};
-        PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+        PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal) == sizeof(double) ? PyArray_DOUBLE : PyArray_FLOAT);
         dReal* ppos = (dReal*)PyArray_DATA(pypos);
         PyObject* pycollision = PyArray_SimpleNew(1,&dims[0], PyArray_BOOL);
         bool* pcollision = (bool*)PyArray_DATA(pycollision);
-        for(int i = 0; i < num; ++i, ppos += 6) {
-            vector<dReal> ray = ExtractArray<dReal>(rays[i]);
-            r.pos.x = ray[0];
-            r.pos.y = ray[1];
-            r.pos.z = ray[2];
-            r.dir.x = ray[3];
-            r.dir.y = ray[4];
-            r.dir.z = ray[5];
-            bool bCollision;
-            if( !pbody ) {
-                bCollision = _penv->CheckCollision(r, preport);
-            }
-            else {
-                bCollision = _penv->CheckCollision(r, KinBodyConstPtr(openravepy::GetKinBody(pbody)), preport);
-            }
-            pcollision[i] = false;
-            ppos[0] = 0; ppos[1] = 0; ppos[2] = 0; ppos[3] = 0; ppos[4] = 0; ppos[5] = 0;
-            if( bCollision &&( report.contacts.size() > 0) ) {
-                if( !bFrontFacingOnly ||( report.contacts[0].norm.dot3(r.dir)<0) ) {
-                    pcollision[i] = true;
-                    ppos[0] = report.contacts[0].pos.x;
-                    ppos[1] = report.contacts[0].pos.y;
-                    ppos[2] = report.contacts[0].pos.z;
-                    ppos[3] = report.contacts[0].norm.x;
-                    ppos[4] = report.contacts[0].norm.y;
-                    ppos[5] = report.contacts[0].norm.z;
+        {
+            openravepy::PythonThreadSaver threadsaver;
+
+            for(int i = 0; i < num; ++i, ppos += 6) {
+                if (isFloat) {
+                    r.pos.x = pRaysFloat[0];
+                    r.pos.y = pRaysFloat[1];
+                    r.pos.z = pRaysFloat[2];
+                    r.dir.x = pRaysFloat[3];
+                    r.dir.y = pRaysFloat[4];
+                    r.dir.z = pRaysFloat[5];
+                    pRaysFloat += 6;
+                } else {
+                    r.pos.x = pRaysDouble[0];
+                    r.pos.y = pRaysDouble[1];
+                    r.pos.z = pRaysDouble[2];
+                    r.dir.x = pRaysDouble[3];
+                    r.dir.y = pRaysDouble[4];
+                    r.dir.z = pRaysDouble[5];
+                    pRaysDouble += 6;
+                }
+
+                bool bCollision;
+                if( !pbody ) {
+                    bCollision = _penv->CheckCollision(r, preport);
+                }
+                else {
+                    bCollision = _penv->CheckCollision(r, KinBodyConstPtr(openravepy::GetKinBody(pbody)), preport);
+                }
+                pcollision[i] = false;
+                ppos[0] = 0; ppos[1] = 0; ppos[2] = 0; ppos[3] = 0; ppos[4] = 0; ppos[5] = 0;
+                if( bCollision &&( report.contacts.size() > 0) ) {
+                    if( !bFrontFacingOnly ||( report.contacts[0].norm.dot3(r.dir)<0) ) {
+                        pcollision[i] = true;
+                        ppos[0] = report.contacts[0].pos.x;
+                        ppos[1] = report.contacts[0].pos.y;
+                        ppos[2] = report.contacts[0].pos.z;
+                        ppos[3] = report.contacts[0].norm.x;
+                        ppos[4] = report.contacts[0].norm.y;
+                        ppos[5] = report.contacts[0].norm.z;
+                    }
                 }
             }
         }
