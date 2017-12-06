@@ -192,6 +192,19 @@ public:
     }
 };
 
+class AutoPyArrayObjectDereferencer
+{
+public:
+    AutoPyArrayObjectDereferencer(PyArrayObject* pyarrobj) : _pyarrobj(pyarrobj) {
+    }
+    ~AutoPyArrayObjectDereferencer() {
+        Py_DECREF(_pyarrobj);
+    }
+
+private:
+    PyArrayObject* _pyarrobj;
+};
+
 typedef boost::shared_ptr<PythonThreadSaver> PythonThreadSaverPtr;
 
 inline RaveVector<float> ExtractFloat3(const object& o)
