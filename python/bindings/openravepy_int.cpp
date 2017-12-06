@@ -1097,8 +1097,8 @@ public:
     object CheckCollisionRays(boost::python::numeric::array rays, PyKinBodyPtr pbody,bool bFrontFacingOnly=false)
     {
         object shape = rays.attr("shape");
-        int num = extract<int>(shape[0]);
-        if( num == 0 ) {
+        int nRays = extract<int>(shape[0]);
+        if( nRays == 0 ) {
             return boost::python::make_tuple(numeric::array(boost::python::list()).astype("i4"),numeric::array(boost::python::list()));
         }
         if( extract<int>(shape[1]) != 6 ) {
@@ -1110,20 +1110,27 @@ public:
         PyArrayObject *pPyRays = PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(rays.ptr()));
         AutoPyArrayObjectDereferencer pyderef(pPyRays);
 
+        if( !PyArray_ISFLOAT(pPyRays) ) {
+            throw openrave_exception(_("rays has to be a float array\n"));
+        }
+
         bool isFloat = PyArray_ITEMSIZE(pPyRays) == sizeof(float); // or double
         const float *pRaysFloat = isFloat ? reinterpret_cast<const float*>(PyArray_DATA(pPyRays)) : NULL;
         const double *pRaysDouble = isFloat ? NULL : reinterpret_cast<const double*>(PyArray_DATA(pPyRays));
 
         RAY r;
-        npy_intp dims[] = { num,6};
+        npy_intp dims[] = { nRays,6};
         PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal) == sizeof(double) ? PyArray_DOUBLE : PyArray_FLOAT);
         dReal* ppos = (dReal*)PyArray_DATA(pypos);
+        std::memset(ppos, 0, nRays * sizeof(dReal));
         PyObject* pycollision = PyArray_SimpleNew(1,&dims[0], PyArray_BOOL);
-        bool* pcollision = (bool*)PyArray_DATA(pycollision);
+        // numpy bool = uint8_t
+        uint8_t* pcollision = (uint8_t*)PyArray_DATA(pycollision);
+        std::memset(pcollision, 0, nRays * sizeof(uint8_t));
         {
             openravepy::PythonThreadSaver threadsaver;
 
-            for(int i = 0; i < num; ++i, ppos += 6) {
+            for(int i = 0; i < nRays; ++i, ppos += 6) {
                 if (isFloat) {
                     r.pos.x = pRaysFloat[0];
                     r.pos.y = pRaysFloat[1];
@@ -1149,8 +1156,7 @@ public:
                 else {
                     bCollision = _penv->CheckCollision(r, KinBodyConstPtr(openravepy::GetKinBody(pbody)), preport);
                 }
-                pcollision[i] = false;
-                ppos[0] = 0; ppos[1] = 0; ppos[2] = 0; ppos[3] = 0; ppos[4] = 0; ppos[5] = 0;
+
                 if( bCollision &&( report.contacts.size() > 0) ) {
                     if( !bFrontFacingOnly ||( report.contacts[0].norm.dot3(r.dir)<0) ) {
                         pcollision[i] = true;
