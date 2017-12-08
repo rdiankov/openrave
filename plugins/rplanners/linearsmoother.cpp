@@ -130,7 +130,7 @@ public:
             if( _nUseSingleDOFSmoothing == 3 ) {
                 uint32_t basetime1 = utils::GetMilliTime();
                 list< vector<dReal> > listsimplepath;
-                for(size_t i = 1; i < ptraj->GetNumWaypoints(); ++i) {
+                for(size_t i = 0; i < ptraj->GetNumWaypoints(); ++i) {
                     ptraj->GetWaypoint(i,vtrajdata,parameters->_configurationspecification);
                     listsimplepath.push_back(vtrajdata);
                 }
@@ -163,6 +163,7 @@ public:
                         }
                     }
                     else {
+                        vtrajdata = *itvalues;
                         listpath.push_back(make_pair(*itvalues,0));
                     }
                 }
@@ -866,7 +867,7 @@ protected:
         
         PlannerProgress progress;
 
-        dReal fMinDistThresh = 0.01;
+        dReal fMinDistThresh = 0.005;
         
         int nrejected = 0;
         for(int curiter = 0; curiter < nMaxIterations; ++curiter ) {
@@ -1158,6 +1159,22 @@ protected:
                         itoptgroupprev = itoptgroup;
                         ++itoptgroup;
                     }
+
+                    if( !bIsFeasible ) {
+                        //RAVELOG_DEBUG_FORMAT("not feasible %f->%f", curiter%dist);
+                        continue;
+                    }
+                    
+                    // make sure that the last point in listpath is covered!
+                    dReal fFinalDist = _ComputeExpectedVelocity(listNewNodes.back(), listpath.back());
+                    if( fFinalDist > g_fEpsilonLinear ) {
+                        RAVELOG_WARN_FORMAT("still some distance left %f with optgroup %d, so fill it", fFinalDist%ioptgroup);
+                        if( !_AddAndCheck(listpath.back(), listNewNodes, true) ) {
+                            RAVELOG_DEBUG_FORMAT("final not feasible group=%d, start=%f, end=%f", ioptgroup%fstartdist%fenddist);
+                            bIsFeasible = false;
+                            continue;
+                        }
+                    }
                 }
                 else {
                     // make sure that the last point in listpath is covered!
@@ -1206,7 +1223,20 @@ protected:
         FOREACH(itperturbation,perturbations) {
             for(size_t i = 0; i < a.size(); ++i) {
                 anew[i] = a[i] + *itperturbation * parameters->_vConfigResolution.at(i);
+                if( anew[i] < _parameters->_vConfigLowerLimit[i] ) {
+                    anew[i] = _parameters->_vConfigLowerLimit[i];
+                }
+                if( anew[i] > _parameters->_vConfigUpperLimit[i] ) {
+                    anew[i]  = _parameters->_vConfigUpperLimit[i];
+                }
+
                 bnew[i] = b[i] + *itperturbation * parameters->_vConfigResolution.at(i);
+                if( bnew[i] < _parameters->_vConfigLowerLimit[i] ) {
+                    bnew[i] = _parameters->_vConfigLowerLimit[i];
+                }
+                if( bnew[i] > _parameters->_vConfigUpperLimit[i] ) {
+                    bnew[i]  = _parameters->_vConfigUpperLimit[i];
+                }
             }
             if( parameters->CheckPathAllConstraints(anew,bnew,std::vector<dReal>(), std::vector<dReal>(), 0, interval, options) != 0 ) {
                 return false;
