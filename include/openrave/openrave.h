@@ -99,6 +99,10 @@ namespace OpenRAVE {
 
 }
 
+#if OPENRAVE_RAPIDJSON
+#include <rapidjson/document.h>
+#endif // OPENRAVE_RAPIDJSON
+
 #include <openrave/logging.h>
 
 namespace OpenRAVE {

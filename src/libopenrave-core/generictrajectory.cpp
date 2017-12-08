@@ -387,6 +387,9 @@ protected:
                         RaveGetAffineDOFValuesFromTransform(vdefaultvalues.begin(),Transform(),affinedofs);
                     }
                 }
+                else if( groupname.size() >= 13 && groupname.substr(0,13) == "outputSignals") {
+                    std::fill(vdefaultvalues.begin(), vdefaultvalues.end(), -1);
+                }
                 int offset = _spec._vgroups[igroup].offset;
                 for(size_t ielement = 0; ielement < numelements; ++ielement, offset += _spec.GetDOF()) {
                     for(int j = 0; j < _spec._vgroups[igroup].dof; ++j) {

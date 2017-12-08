@@ -669,6 +669,7 @@ void RobotBase::SetActiveDOFVelocities(const std::vector<dReal>& velocities, uin
         SetDOFVelocities(velocities,true);
         return;
     }
+    OPENRAVE_ASSERT_OP_FORMAT((int)velocities.size(),>=,GetActiveDOF(), "not enough values %d<%d",velocities.size()%GetActiveDOF(),ORE_InvalidArguments);
 
     Vector linearvel, angularvel;
     if( (int)_vActiveDOFIndices.size() < _nActiveDOF ) {

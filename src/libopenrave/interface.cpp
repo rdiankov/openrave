@@ -20,8 +20,10 @@ namespace OpenRAVE {
 InterfaceBase::InterfaceBase(InterfaceType type, EnvironmentBasePtr penv) : __type(type), __penv(penv)
 {
     RaveInitializeFromState(penv->GlobalState()); // make sure global state is set
-    RegisterCommand("help",boost::bind(&InterfaceBase::_GetCommandHelp,this,_1,_2),
-                    "display help commands.");
+    RegisterCommand("help",boost::bind(&InterfaceBase::_GetCommandHelp,this,_1,_2), "display help commands.");
+#if OPENRAVE_RAPIDJSON
+    RegisterJSONCommand("help",boost::bind(&InterfaceBase::_GetJSONCommandHelp,this,_1,_2,_3), "display help commands.");
+#endif // OPENRAVE_RAPIDJSON
 }
 
 InterfaceBase::~InterfaceBase()
@@ -31,6 +33,9 @@ InterfaceBase::~InterfaceBase()
     __mapUserData.clear();
     __mapReadableInterfaces.clear();
     __penv.reset();
+#if OPENRAVE_RAPIDJSON
+    __mapJSONCommands.clear();
+#endif // OPENRAVE_RAPIDJSON
 }
 
 void InterfaceBase::SetUserData(const std::string& key, UserDataPtr data) const
@@ -121,7 +126,10 @@ bool InterfaceBase::SendCommand(ostream& sout, istream& sinput)
 void InterfaceBase::Serialize(BaseXMLWriterPtr writer, int options) const
 {
     FOREACHC(it, __mapReadableInterfaces) {
-        it->second->Serialize(writer,options);
+        // sometimes interfaces might be disabled
+        if( !!it->second ) {
+            it->second->Serialize(writer,options);
+        }
     }
 }
 
@@ -202,6 +210,61 @@ bool InterfaceBase::_GetCommandHelp(std::ostream& o, std::istream& sinput) const
     return true;
 }
 
+#if OPENRAVE_RAPIDJSON
+
+bool InterfaceBase::SupportsJSONCommand(const std::string& cmd)
+{
+    boost::shared_lock< boost::shared_mutex > lock(_mutexInterface);
+    return __mapJSONCommands.find(cmd) != __mapJSONCommands.end();
+}
+
+void InterfaceBase::RegisterJSONCommand(const std::string& cmdname, InterfaceBase::InterfaceJSONCommandFn fncmd, const std::string& strhelp)
+{
+    boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
+    if((cmdname.size() == 0)|| !utils::IsValidName(cmdname)) {
+        throw openrave_exception(str(boost::format(_("command '%s' invalid"))%cmdname),ORE_InvalidArguments);
+    }
+    if( __mapJSONCommands.find(cmdname) != __mapJSONCommands.end() ) {
+        throw openrave_exception(str(boost::format(_("command '%s' already registered"))%cmdname),ORE_InvalidArguments);
+    }
+    __mapJSONCommands[cmdname] = boost::shared_ptr<InterfaceJSONCommand>(new InterfaceJSONCommand(fncmd, strhelp));
+}
+
+void InterfaceBase::UnregisterJSONCommand(const std::string& cmdname)
+{
+    boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
+    JSONCMDMAP::iterator it = __mapJSONCommands.find(cmdname);
+    if( it != __mapJSONCommands.end() ) {
+        __mapJSONCommands.erase(it);
+    }
+}
+
+void InterfaceBase::SendJSONCommand(const std::string& cmdname, const rapidjson::Value& input, rapidjson::Value& output, rapidjson::Document::AllocatorType& allocator) {
+    output.SetNull();
+
+    boost::shared_ptr<InterfaceJSONCommand> interfacecmd;
+    {
+        boost::shared_lock< boost::shared_mutex > lock(_mutexInterface);
+        JSONCMDMAP::iterator it = __mapJSONCommands.find(cmdname);
+        if( it == __mapJSONCommands.end() ) {
+            throw openrave_exception(str(boost::format(_("failed to find JSON command '%s' in interface %s\n"))%cmdname.c_str()%GetXMLId()),ORE_CommandNotSupported);
+        }
+        interfacecmd = it->second;
+    }
+    interfacecmd->fn(input, output, allocator);
+}
+
+void InterfaceBase::_GetJSONCommandHelp(const rapidjson::Value& input, rapidjson::Value& output, rapidjson::Document::AllocatorType& allocator) const {
+    output.SetObject();
+
+    for(JSONCMDMAP::const_iterator it = __mapJSONCommands.begin(); it != __mapJSONCommands.end(); ++it) {
+        output.AddMember(rapidjson::Value().SetString(it->first.c_str(), allocator), rapidjson::Value().SetString(it->second->help.c_str
+            (), allocator), allocator);
+    }
+}
+
+#endif // OPENRAVE_RAPIDJSON
+
 XMLReadablePtr InterfaceBase::GetReadableInterface(const std::string& xmltag) const
 {
     boost::shared_lock< boost::shared_mutex > lock(_mutexInterface);
@@ -214,11 +277,18 @@ XMLReadablePtr InterfaceBase::SetReadableInterface(const std::string& xmltag, XM
     boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
     READERSMAP::iterator it = __mapReadableInterfaces.find(xmltag);
     if( it == __mapReadableInterfaces.end() ) {
-        __mapReadableInterfaces[xmltag] = readable;
+        if( !!readable ) {
+            __mapReadableInterfaces[xmltag] = readable;
+        }
         return XMLReadablePtr();
     }
     XMLReadablePtr pprev = it->second;
-    it->second = readable;
+    if( !!readable ) {
+        it->second = readable;
+    }
+    else {
+        __mapReadableInterfaces.erase(it);
+    }
     return pprev;
 }
 
