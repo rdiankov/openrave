@@ -877,6 +877,48 @@ public:
         return SensorBasePtr();
     }
 
+    virtual KinBodyPtr CopyKinBody(const std::string& pname, const std::string& newname)
+    {
+        KinBodyPtr pclone=KinBodyPtr();
+        {
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            FOREACHC(it, _vecbodies) {
+                if((*it)->GetName()==pname) {
+                    pclone=RaveClone<KinBody>(*it,Clone_Bodies,boost::dynamic_pointer_cast<Environment>(shared_from_this()));
+                    pclone->SetName(newname);
+                    break;
+                }
+            }
+        }
+        if(pclone) {
+            //need to Add() here because it also uses _mutexInterfaces.
+            //don't consider cmdargs because we are not adding module.
+            Add(pclone,false,"");
+        }
+        return pclone;
+    }
+
+    virtual RobotBasePtr CopyRobot(const std::string& pname, const std::string& newname)
+    {
+        RobotBasePtr pclone=RobotBasePtr();
+        {
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            FOREACHC(it, _vecrobots) {
+                if((*it)->GetName()==pname) {
+                    pclone=RaveClone<RobotBase>(*it,Clone_Bodies,boost::dynamic_pointer_cast<Environment>(shared_from_this()));
+                    pclone->SetName(newname);
+                    break;
+                }
+            }
+        }
+        if(pclone) {
+            //need to Add() here because it also uses _mutexInterfaces.
+            //don't consider cmdargs because we are not adding module.
+            Add(pclone,false,"");
+        }
+        return pclone;
+    }
+
     virtual bool SetPhysicsEngine(PhysicsEngineBasePtr pengine)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
