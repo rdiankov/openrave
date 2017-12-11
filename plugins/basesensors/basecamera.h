@@ -559,6 +559,7 @@ protected:
     bool _bPower;     ///< if true, gather data, otherwise don't
 
     friend class BaseCameraXMLReader;
+    friend class BaseCameraJSONReader;
 };
 
 #endif

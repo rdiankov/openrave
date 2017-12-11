@@ -15,7 +15,6 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
-
 #define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "robot %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetName()%_nHierarchyComputed, ORE_NotInitialized);
 
 namespace OpenRAVE {
@@ -72,7 +71,7 @@ void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapid
     value.AddMember("sensorGeometry", sensorGeometryValue, allocator);
 }
 
-  void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value &value, EnvironmentBasePtr penv)
+void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value &value, EnvironmentBasePtr penv)
 {
     RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
 
@@ -82,14 +81,18 @@ void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapid
     RAVE_DESERIALIZEJSON_REQUIRED(value, "linkName", linkName);
     RAVE_DESERIALIZEJSON_REQUIRED(value, "transform", transform);
 
+    // TODO create a non-null psensor to pass in
     if (value.HasMember("sensorGeometry")) {
-        BaseJSONReaderPtr preader = RaveCallJSONReader(PT_Sensor, type, InterfaceBasePtr(), AttributesList());
-        if( !!preader ) {
-            preader->DeserializeJSON(value["sensorGeometry"]);
-            if( !!preader->GetReadable() ) {
-                sensorGeometry = boost::dynamic_pointer_cast<SensorBase::SensorGeometry>(preader->GetReadable());
-            }
+
+      // BaseJSONReaderPtr preader = RaveCallJSONReader(PT_Sensor, type, InterfaceBasePtr(), AttributesList());
+      SensorBasePtr psensor = RaveCreateSensor(penv, value["type"].GetString());
+      BaseJSONReaderPtr preader = RaveCallJSONReader(PT_Sensor, type, psensor, AttributesList());
+      if( !!preader ) {
+        preader->DeserializeJSON(value["sensorGeometry"]);
+        if( !!preader->GetReadable() ) {
+          sensorGeometry = boost::dynamic_pointer_cast<SensorBase::SensorGeometry>(preader->GetReadable());
         }
+      }
     }
 }
 
