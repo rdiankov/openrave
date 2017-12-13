@@ -1657,6 +1657,7 @@ protected:
 #ifdef QHULL_USE_REENTRANT
         qhT qh_qh;
         qhT *qh= &qh_qh;
+        qh->qhmem.ferr = NULL;
         int exitcode= qh_new_qhull (qh, dim, qpoints.size()/dim, &qpoints[0], ismalloc, flags, outfile, errfile);
 #else
         int exitcode= qh_new_qhull (dim, qpoints.size()/dim, &qpoints[0], ismalloc, flags, outfile, errfile);
