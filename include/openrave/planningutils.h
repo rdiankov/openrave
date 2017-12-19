@@ -572,7 +572,7 @@ protected:
 class OPENRAVE_API ManipulatorIKGoalSampler
 {
 public:
-    ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPtr pmanip, const std::list<IkParameterization>&listparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal fsampleprob=1, bool searchfreeparameters=true, int ikfilteroptions=IKFO_CheckEnvCollisions);
+    ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPtr pmanip, const std::list<IkParameterization>&listparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal fsampleprob=1, bool searchfreeparameters=true, int ikfilteroptions=IKFO_CheckEnvCollisions, const std::vector<dReal>& freevalues = std::vector<dReal>());
     virtual ~ManipulatorIKGoalSampler() {
     }
 
@@ -623,6 +623,7 @@ protected:
     int _tempikindex; ///< if _vikreturns.size() > 0, points to the original ik index of those solutions
     int _ikfilteroptions;
     bool _searchfreeparameters;
+    std::vector<dReal> _vfreegoalvalues;
 };
 
 typedef boost::shared_ptr<ManipulatorIKGoalSampler> ManipulatorIKGoalSamplerPtr;
