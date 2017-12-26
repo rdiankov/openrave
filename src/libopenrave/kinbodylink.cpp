@@ -147,70 +147,25 @@ void KinBody::Link::SetMass(dReal mass)
 
 AABB KinBody::Link::ComputeLocalAABB() const
 {
-    if( _vGeometries.size() == 1) {
-        return _vGeometries.front()->ComputeAABB(Transform());
-    }
-    else if( _vGeometries.size() > 1 ) {
-        Vector vmin, vmax;
-        bool binitialized=false;
-        AABB ab;
-        FOREACHC(itgeom,_vGeometries) {
-            ab = (*itgeom)->ComputeAABB(Transform());
-            if( ab.extents.x <= 0 || ab.extents.y <= 0 || ab.extents.z <= 0 ) {
-                continue;
-            }
-            Vector vnmin = ab.pos - ab.extents;
-            Vector vnmax = ab.pos + ab.extents;
-            if( !binitialized ) {
-                vmin = vnmin;
-                vmax = vnmax;
-                binitialized = true;
-            }
-            else {
-                if( vmin.x > vnmin.x ) {
-                    vmin.x = vnmin.x;
-                }
-                if( vmin.y > vnmin.y ) {
-                    vmin.y = vnmin.y;
-                }
-                if( vmin.z > vnmin.z ) {
-                    vmin.z = vnmin.z;
-                }
-                if( vmax.x < vnmax.x ) {
-                    vmax.x = vnmax.x;
-                }
-                if( vmax.y < vnmax.y ) {
-                    vmax.y = vnmax.y;
-                }
-                if( vmax.z < vnmax.z ) {
-                    vmax.z = vnmax.z;
-                }
-            }
-        }
-        if( !binitialized ) {
-            ab.pos = _info._t.trans;
-            ab.extents = Vector(0,0,0);
-        }
-        else {
-            ab.pos = (dReal)0.5 * (vmin + vmax);
-            ab.extents = vmax - ab.pos;
-        }
-        return ab;
-    }
-    return AABB();
+    return ComputeAABBFromTransform(Transform());
 }
 
 AABB KinBody::Link::ComputeAABB() const
 {
+    return ComputeAABBFromTransform(_info._t);
+}
+
+AABB KinBody::Link::ComputeAABBFromTransform(const Transform& tLink) const
+{
     if( _vGeometries.size() == 1) {
-        return _vGeometries.front()->ComputeAABB(_info._t);
+        return _vGeometries.front()->ComputeAABB(tLink);
     }
     else if( _vGeometries.size() > 1 ) {
         Vector vmin, vmax;
         bool binitialized=false;
         AABB ab;
         FOREACHC(itgeom,_vGeometries) {
-            ab = (*itgeom)->ComputeAABB(_info._t);
+            ab = (*itgeom)->ComputeAABB(tLink);
             if( ab.extents.x <= 0 || ab.extents.y <= 0 || ab.extents.z <= 0 ) {
                 continue;
             }
@@ -243,7 +198,7 @@ AABB KinBody::Link::ComputeAABB() const
             }
         }
         if( !binitialized ) {
-            ab.pos = _info._t.trans;
+            ab.pos = tLink.trans;
             ab.extents = Vector(0,0,0);
         }
         else {
@@ -253,7 +208,7 @@ AABB KinBody::Link::ComputeAABB() const
         return ab;
     }
     // have to at least return the correct position!
-    return AABB(_info._t.trans,Vector(0,0,0));
+    return AABB(tLink.trans,Vector(0,0,0));
 }
 
 void KinBody::Link::serialize(std::ostream& o, int options) const

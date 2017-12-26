@@ -1413,8 +1413,65 @@ AABB KinBody::ComputeAABB(bool bEnabledOnlyLinks) const
 
 AABB KinBody::ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnlyLinks) const
 {
-    // not implemented yet
-    BOOST_ASSERT(0);
+    Vector vmin, vmax;
+    bool binitialized=false;
+    AABB ablocal;
+    Transform tConvertToNewFrame = tBody*GetTransform().inverse();
+    FOREACHC(itlink,_veclinks) {
+        if( bEnabledOnlyLinks && !(*itlink)->IsEnabled() ) {
+            continue;
+        }
+        ablocal = (*itlink)->ComputeLocalAABB();
+        if( ablocal.extents.x == 0 && ablocal.extents.y == 0 && ablocal.extents.z == 0 ) {
+            continue;
+        }
+
+        Transform tlink = tConvertToNewFrame*(*itlink)->GetTransform();
+        TransformMatrix mlink(tlink);
+        Vector projectedExtents(RaveFabs(mlink.m[0]*ablocal.extents[0]) + RaveFabs(mlink.m[1]*ablocal.extents[1]) + RaveFabs(mlink.m[2]*ablocal.extents[2]),
+                               RaveFabs(mlink.m[4]*ablocal.extents[0]) + RaveFabs(mlink.m[5]*ablocal.extents[1]) + RaveFabs(mlink.m[6]*ablocal.extents[2]),
+                               RaveFabs(mlink.m[8]*ablocal.extents[0]) + RaveFabs(mlink.m[9]*ablocal.extents[1]) + RaveFabs(mlink.m[10]*ablocal.extents[2]));
+        Vector vWorldPos = tlink * ablocal.pos;
+        
+        Vector vnmin = vWorldPos - projectedExtents;
+        Vector vnmax = vWorldPos + projectedExtents;
+        if( !binitialized ) {
+            vmin = vnmin;
+            vmax = vnmax;
+            binitialized = true;
+        }
+        else {
+            if( vmin.x > vnmin.x ) {
+                vmin.x = vnmin.x;
+            }
+            if( vmin.y > vnmin.y ) {
+                vmin.y = vnmin.y;
+            }
+            if( vmin.z > vnmin.z ) {
+                vmin.z = vnmin.z;
+            }
+            if( vmax.x < vnmax.x ) {
+                vmax.x = vnmax.x;
+            }
+            if( vmax.y < vnmax.y ) {
+                vmax.y = vnmax.y;
+            }
+            if( vmax.z < vnmax.z ) {
+                vmax.z = vnmax.z;
+            }
+        }
+    }
+
+    AABB ab;
+    if( !binitialized ) {
+        ab.pos = GetTransform().trans;
+        ab.extents = Vector(0,0,0);
+    }
+    else {
+        ab.pos = (dReal)0.5 * (vmin + vmax);
+        ab.extents = vmax - ab.pos;
+    }
+    return ab;
 }
 
 Vector KinBody::GetCenterOfMass() const

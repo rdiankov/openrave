@@ -749,6 +749,11 @@ public:
     object ComputeAABB() const {
         return toPyAABB(_plink->ComputeAABB());
     }
+
+    object ComputeAABBFromTransform(object otransform) const {
+        return toPyAABB(_plink->ComputeAABBFromTransform(ExtractTransform(otransform)));
+    }
+
     object GetTransform() const {
         return ReturnTransform(_plink->GetTransform());
     }
@@ -3311,6 +3316,7 @@ void init_openravepy_kinbody()
                          .def("IsParentLink",&PyLink::IsParentLink, DOXY_FN(KinBody::Link,IsParentLink))
                          .def("GetCollisionData",&PyLink::GetCollisionData, DOXY_FN(KinBody::Link,GetCollisionData))
                          .def("ComputeAABB",&PyLink::ComputeAABB, DOXY_FN(KinBody::Link,ComputeAABB))
+                         .def("ComputeAABBFromTransform",&PyLink::ComputeAABBFromTransform, args("transform"), DOXY_FN(KinBody::Link,ComputeAABB))
                          .def("ComputeLocalAABB",&PyLink::ComputeLocalAABB, DOXY_FN(KinBody::Link,ComputeLocalAABB))
                          .def("GetTransform",&PyLink::GetTransform, DOXY_FN(KinBody::Link,GetTransform))
                          .def("GetTransformPose",&PyLink::GetTransformPose, DOXY_FN(KinBody::Link,GetTransform))

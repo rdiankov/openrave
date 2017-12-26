@@ -446,6 +446,12 @@ protected:
         /// \brief Compute the aabb of all the geometries of the link in the world coordinate system
         virtual AABB ComputeAABB() const;
 
+        /// \brief returns an axis-aligned bounding box when link has transform tLink.
+        ///
+        /// AABB equivalent to setting link transform to tLink and calling ComptueAABB()
+        /// \brief tLink the world transform to put this link in when computing the AABB
+        virtual AABB ComputeAABBFromTransform(const Transform& tLink) const;
+        
         /// \brief Return the current transformation of the link in the world coordinate system.
         inline Transform GetTransform() const {
             return _info._t;
