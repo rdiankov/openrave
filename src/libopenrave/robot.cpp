@@ -170,6 +170,22 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
             _pActiveManipIkSolver = _pManipActive->GetIkSolver();
         }
     }
+    if( _options & Save_ManipulatorsToolTransform ) {
+        RAVELOG_WARN("RobotStateSaver Save_ManipulatorsToolTransform Saving");
+        std::vector<RobotBase::ManipulatorPtr> vmanips = probot->GetManipulators();
+        _vtManipsLocalTool.resize(vmanips.size());
+        _vvManipsLocalDirection.resize(vmanips.size());
+        _vpManipsIkSolver.resize(vmanips.size());
+        for(int imanip = 0; imanip < vmanips.size(); ++imanip){
+            RobotBase::ManipulatorPtr pmanip = vmanips[imanip];
+            if( !!pmanip ){
+                _vtManipsLocalTool[imanip] = pmanip->GetLocalToolTransform();
+                _vvManipsLocalDirection[imanip] = pmanip->GetLocalToolDirection();
+                _vpManipsIkSolver[imanip] = pmanip->GetIkSolver();
+            }
+        }
+        RAVELOG_WARN("RobotStateSaver Save_ManipulatorsToolTransform Saved");
+    }
 }
 
 RobotBase::RobotStateSaver::~RobotStateSaver()
@@ -190,6 +206,7 @@ void RobotBase::RobotStateSaver::Release()
     _probot.reset();
     KinBodyStateSaver::Release();
 }
+
 void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> probot)
 {
     if( !probot ) {
@@ -243,6 +260,21 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
                     }
                 }
             }
+        }
+    }
+    if( _options & Save_ManipulatorsToolTransform ) {
+        if( probot == _probot ) {
+            RAVELOG_WARN("_RestoreingRobot Save_ManipulatorsToolTransform");
+            std::vector<RobotBase::ManipulatorPtr> vmanips = probot->GetManipulators();
+            for(int imanip = 0; imanip < vmanips.size(); ++imanip){
+                RobotBase::ManipulatorPtr pmanip = vmanips[imanip];
+                if( !!pmanip ){
+                    pmanip->SetLocalToolTransform(_vtManipsLocalTool[imanip]);
+                    pmanip->SetLocalToolDirection(_vvManipsLocalDirection[imanip]);
+                    pmanip->SetIkSolver(_vpManipsIkSolver[imanip]);
+                }
+            }
+            RAVELOG_WARN("_RestoredRobot Save_ManipulatorsToolTransform");
         }
     }
 }
