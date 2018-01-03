@@ -623,7 +623,7 @@ public:
                             bCheck = false;
                         }
                         else {
-                            rampndTrimmed.Cut(fTrimEdgesTime, remRampND);
+                            rampndTrimmed.Cut(rampndTrimmed.GetDuration() - fTrimEdgesTime, remRampND);
                             bTrimmedBack = true;
                         }
                     }
