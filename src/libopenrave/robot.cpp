@@ -171,7 +171,6 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
         }
     }
     if( _options & Save_ManipulatorsToolTransform ) {
-        RAVELOG_WARN("RobotStateSaver Save_ManipulatorsToolTransform Saving");
         std::vector<RobotBase::ManipulatorPtr> vmanips = probot->GetManipulators();
         _vtManipsLocalTool.resize(vmanips.size());
         _vvManipsLocalDirection.resize(vmanips.size());
@@ -184,7 +183,6 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
                 _vpManipsIkSolver[imanip] = pmanip->GetIkSolver();
             }
         }
-        RAVELOG_WARN("RobotStateSaver Save_ManipulatorsToolTransform Saved");
     }
 }
 
@@ -264,7 +262,6 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
     }
     if( _options & Save_ManipulatorsToolTransform ) {
         if( probot == _probot ) {
-            RAVELOG_WARN("_RestoreingRobot Save_ManipulatorsToolTransform");
             std::vector<RobotBase::ManipulatorPtr> vmanips = probot->GetManipulators();
             for(int imanip = 0; imanip < vmanips.size(); ++imanip){
                 RobotBase::ManipulatorPtr pmanip = vmanips[imanip];
@@ -274,7 +271,6 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
                     pmanip->SetIkSolver(_vpManipsIkSolver[imanip]);
                 }
             }
-            RAVELOG_WARN("_RestoredRobot Save_ManipulatorsToolTransform");
         }
     }
 }
