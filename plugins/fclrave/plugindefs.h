@@ -99,9 +99,10 @@ using OpenRAVE::ControllerBase;
 using OpenRAVE::AttributesList;
 
 
-#include <fcl/collision.h>
-#include <fcl/BVH/BVH_model.h>
-#include <fcl/broadphase/broadphase.h>
-#include <fcl/shape/geometric_shapes.h>
+#include <fcl/fcl.h>
+
+namespace fclrave {
+    typedef OpenRAVE::dReal dReal;
+}
 
 #endif

@@ -5,6 +5,7 @@
 #include <boost/unordered_set.hpp>
 #include <boost/lexical_cast.hpp>
 #include <openrave/utils.h>
+#include <openrave/openrave.h>
 #include <boost/function_output_iterator.hpp>
 
 #include "fclspace.h"
@@ -697,7 +698,7 @@ private:
         return boost::dynamic_pointer_cast<FCLCollisionChecker>(shared_from_this());
     }
 
-    static bool CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, void *data) {
+    static bool CheckNarrowPhaseCollision(fcl::CollisionObject<dReal> *o1, fcl::CollisionObject<dReal> *o2, void *data) {
         CollisionCallbackData* pcb = static_cast<CollisionCallbackData *>(data);
         return pcb->_pchecker->CheckNarrowPhaseCollision(o1, o2, pcb);
     }
@@ -753,12 +754,12 @@ private:
         return pcb->_bStopChecking;
     }
 
-    static bool CheckNarrowPhaseGeomCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, void *data) {
+    static bool CheckNarrowPhaseGeomCollision(fcl::CollisionObject<dReal> *o1, fcl::CollisionObject<dReal> *o2, void *data) {
         CollisionCallbackData* pcb = static_cast<CollisionCallbackData *>(data);
         return pcb->_pchecker->CheckNarrowPhaseGeomCollision(o1, o2, pcb);
     }
 
-    bool CheckNarrowPhaseGeomCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, CollisionCallbackData* pcb)
+    bool CheckNarrowPhaseGeomCollision(fcl::CollisionObject<dReal> *o1, fcl::CollisionObject<dReal> *o2, CollisionCallbackData* pcb)
     {
         if( pcb->_bStopChecking ) {
             return true; // don't test anymore
