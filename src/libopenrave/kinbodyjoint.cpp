@@ -1163,7 +1163,10 @@ std::pair<dReal, dReal> KinBody::Joint::GetNominalTorqueLimits(int iaxis) const
                     }
 
                     // due to back emf, the deceleration magnitude is less than acceleration?
-                    if( rawvelocity > 0 ) {
+                    if (abs(rawvelocity) < 1.0/360) {
+                        std::make_pair(-finterpolatedtorque, finterpolatedtorque);
+                    }
+                    else if( rawvelocity > 0 ) {
                         return std::make_pair(-0.9*finterpolatedtorque, finterpolatedtorque);
                     }
                     else {

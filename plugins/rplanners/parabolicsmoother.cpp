@@ -782,7 +782,7 @@ public:
             int ret = _parameters->CheckPathAllConstraints(a,a, da, da, 0, IT_OpenStart, options);
             ParabolicRamp::CheckReturn checkret(ret);
             if( ret == CFO_CheckTimeBasedConstraints ) {
-                checkret.fTimeBasedSurpassMult = 0.8; // don't have any other info, so just pick a multiple
+                checkret.fTimeBasedSurpassMult = 0.98; // don't have any other info, so just pick a multiple
             }
             return checkret;
         }
@@ -814,7 +814,7 @@ public:
             if( ret != 0 ) {
                 ParabolicRamp::CheckReturn checkret(ret);
                 if( ret == CFO_CheckTimeBasedConstraints ) {
-                    checkret.fTimeBasedSurpassMult = 0.8; // don't have any other info, so just pick a multiple
+                    checkret.fTimeBasedSurpassMult = 0.98; // don't have any other info, so just pick a multiple
                 }
                 return checkret;
             }
@@ -1092,7 +1092,7 @@ protected:
         std::vector<ParabolicRamp::ParabolicRampND> &outramps=_cacheoutramps;
         //dReal fmult = 0.9;
         ParabolicRamp::CheckReturn retseg(0);
-        for(size_t itry = 0; itry < 30; ++itry) {
+        for(size_t itry = 0; itry < 1000; ++itry) {
             bool res=ramp.SolveMinTimeLinear(accellimits, vellimits);
             _ExtractSwitchTimes(ramp, vswitchtimes);
             ramp.Evaluate(0, x0);
@@ -1925,7 +1925,7 @@ protected:
                 }
 
                 bool bsuccess = false;
-                size_t maxSlowdowns = 4; // will adjust this constant later
+                size_t maxSlowdowns = 100; // will adjust this constant later
 
                 if (0) {
                     if (_parameters->SetStateValues(x0) != 0) {
@@ -2159,7 +2159,7 @@ protected:
                                 }
 
                                 if (retcheck.fMaxManipAccel > _parameters->maxmanipaccel) {
-                                    faccelmult = retcheck.fTimeBasedSurpassMult;
+                                    faccelmult = retcheck.fTimeBasedSurpassMult*retcheck.fTimeBasedSurpassMult;
                                     fcuraccelmult *= faccelmult;
                                     if (fcuraccelmult < 0.01) {
                                         RAVELOG_VERBOSE_FORMAT("env = %d: shortcut iter = %d/%d: fcurACCELmult (%.15e) is too small. continue to the next iteration", GetEnv()->GetId()%iters%numIters%fcuraccelmult);
@@ -2190,12 +2190,12 @@ protected:
                         else {
                             // Scale vellimits and accellimits down using the usual procedure as in _Shortcut
                             fcurvelmult *= retcheck.fTimeBasedSurpassMult;
-                            fcuraccelmult *= retcheck.fTimeBasedSurpassMult;
+                            fcuraccelmult *= retcheck.fTimeBasedSurpassMult*retcheck.fTimeBasedSurpassMult;
                             if (fcurvelmult < 0.01) {
                                 RAVELOG_VERBOSE_FORMAT("env = %d: shortcut iter = %d/%d: fcurvelmult (%.15e) is too small. continue to the next iteration", GetEnv()->GetId()%iters%numIters%fcurvelmult);
                                 break;
                             }
-                            if (fcuraccelmult < 0.01) {
+                            if (fcuraccelmult < 0.0001) {
                                 RAVELOG_VERBOSE_FORMAT("env = %d: shortcut iter = %d/%d: fcurACCELmult (%.15e) is too small. continue to the next iteration", GetEnv()->GetId()%iters%numIters%fcuraccelmult);
                                 break;
                             }
@@ -2204,7 +2204,7 @@ protected:
                             for (size_t j = 0; j < vellimits.size(); ++j) {
                                 dReal fminvel = max(RaveFabs(dx0[j]), RaveFabs(dx1[j]));
                                 vellimits[j] = max(fminvel, retcheck.fTimeBasedSurpassMult * vellimits[j]);
-                                accellimits[j] *= retcheck.fTimeBasedSurpassMult;
+                                accellimits[j] *= retcheck.fTimeBasedSurpassMult*retcheck.fTimeBasedSurpassMult;
                             }
                         }
                     }
