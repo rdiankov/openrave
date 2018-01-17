@@ -42,8 +42,8 @@ namespace fclrave {
 //    return count;
 //}
 
-typedef boost::shared_ptr<fcl::BroadPhaseCollisionManager> BroadPhaseCollisionManagerPtr;
-typedef boost::weak_ptr<fcl::BroadPhaseCollisionManager> BroadPhaseCollisionManagerWeakPtr;
+typedef boost::shared_ptr<fcl::BroadPhaseCollisionManager<dReal>> BroadPhaseCollisionManagerPtr;
+typedef boost::weak_ptr<fcl::BroadPhaseCollisionManager<dReal>> BroadPhaseCollisionManagerWeakPtr;
 
 struct EnvironmentState
 {
@@ -492,7 +492,7 @@ public:
                                 // no replace
                                 if( !!itcache->second.vcolobjs.at(ilink) ) {
                                     //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), body %s unregister cached obj %x ", pbody->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%pbody->GetName()%itcache->second.vcolobjs.at(ilink).get());
-                                    fcl::CollisionObject* ptestobj = itcache->second.vcolobjs.at(ilink).get();
+                                    fcl::CollisionObject<dReal>* ptestobj = itcache->second.vcolobjs.at(ilink).get();
                                     pmanager->unregisterObject(itcache->second.vcolobjs.at(ilink).get());
                                 }
 #ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS

@@ -92,8 +92,8 @@ public:
         }
 
         boost::shared_ptr<FCLCollisionChecker> _pchecker;
-        fcl::CollisionRequest _request;
-        fcl::CollisionResult _result;
+        fcl::CollisionRequest<dReal> _request;
+        fcl::CollisionResult<dReal> _result;
         CollisionReportPtr _report;
         std::vector<KinBodyConstPtr> const& _vbodyexcluded;
         std::vector<LinkConstPtr> const& _vlinkexcluded;
@@ -262,41 +262,41 @@ public:
     BroadPhaseCollisionManagerPtr _CreateManagerFromBroadphaseAlgorithm(std::string const &algorithm)
     {
         if(algorithm == "Naive") {
-            return boost::make_shared<fcl::NaiveCollisionManager>();
+            return boost::make_shared<fcl::NaiveCollisionManager<dReal>>();
         } else if(algorithm == "SaP") {
-            return boost::make_shared<fcl::SaPCollisionManager>();
+            return boost::make_shared<fcl::SaPCollisionManager<dReal>>();
         } else if(algorithm == "SSaP") {
-            return boost::make_shared<fcl::SSaPCollisionManager>();
+            return boost::make_shared<fcl::SSaPCollisionManager<dReal>>();
         } else if(algorithm == "SpatialHashing") {
             throw OPENRAVE_EXCEPTION_FORMAT0("No spatial data provided, spatial hashing needs to be set up  with SetSpatialHashingBroadPhaseAlgorithm", OpenRAVE::ORE_InvalidArguments);
         } else if(algorithm == "IntervalTree") {
-            return boost::make_shared<fcl::IntervalTreeCollisionManager>();
+            return boost::make_shared<fcl::IntervalTreeCollisionManager<dReal>>();
         } else if(algorithm == "DynamicAABBTree") {
-            return boost::make_shared<fcl::DynamicAABBTreeCollisionManager>();
+            return boost::make_shared<fcl::DynamicAABBTreeCollisionManager<dReal>>();
         } else if(algorithm == "DynamicAABBTree1") {
-            boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager>();
+            boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager<dReal>> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager<dReal>>();
             pmanager->tree_init_level = 1;
             return pmanager;
         } else if(algorithm == "DynamicAABBTree2") {
-            boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager>();
+            boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager<dReal>> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager<dReal>>();
             pmanager->tree_init_level = 2;
             return pmanager;
         } else if(algorithm == "DynamicAABBTree3") {
-            boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager>();
+            boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager<dReal>> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager<dReal>>();
             pmanager->tree_init_level = 3;
             return pmanager;
         } else if(algorithm == "DynamicAABBTree_Array") {
-            return boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
+            return boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array<dReal>>();
         } else if(algorithm == "DynamicAABBTree1_Array") {
-            boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
+            boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array<dReal>> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array<dReal>>();
             pmanager->tree_init_level = 1;
             return pmanager;
         } else if(algorithm == "DynamicAABBTree2_Array") {
-            boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
+            boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array<dReal>> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array<dReal>>();
             pmanager->tree_init_level = 2;
             return pmanager;
         } else if(algorithm == "DynamicAABBTree3_Array") {
-            boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
+            boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array<dReal>> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array<dReal>>();
             pmanager->tree_init_level = 3;
             return pmanager;
         } else {
@@ -703,7 +703,7 @@ private:
         return pcb->_pchecker->CheckNarrowPhaseCollision(o1, o2, pcb);
     }
 
-    bool CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, CollisionCallbackData* pcb)
+    bool CheckNarrowPhaseCollision(fcl::CollisionObject<dReal> *o1, fcl::CollisionObject<dReal> *o2, CollisionCallbackData* pcb)
     {
         if( pcb->_bStopChecking ) {
             return true;     // don't test anymore
@@ -803,7 +803,7 @@ private:
                 if( _options & (OpenRAVE::CO_Contacts | OpenRAVE::CO_AllGeometryContacts) ) {
                     _reportcache.contacts.resize(numContacts);
                     for(size_t i = 0; i < numContacts; ++i) {
-                        fcl::Contact const &c = pcb->_result.getContact(i);
+                        fcl::Contact<dReal> const &c = pcb->_result.getContact(i);
                         _reportcache.contacts[i] = CollisionReport::CONTACT(ConvertVectorFromFCL(c.pos), ConvertVectorFromFCL(c.normal), c.penetration_depth);
                     }
                 }
@@ -854,14 +854,14 @@ private:
         return false; // keep checking collision
     }
 
-    static bool CheckNarrowPhaseDistance(fcl::CollisionObject *o1, fcl::CollisionObject *o2, void *data)
+    static bool CheckNarrowPhaseDistance(fcl::CollisionObject<dReal> *o1, fcl::CollisionObject<dReal> *o2, void *data)
     {
         // TODO
         return false;
     }
 
 #ifdef NARROW_COLLISION_CACHING
-    static CollisionPair MakeCollisionPair(fcl::CollisionObject* o1, fcl::CollisionObject* o2)
+    static CollisionPair MakeCollisionPair(fcl::CollisionObject<dReal>* o1, fcl::CollisionObject<dReal>* o2)
     {
         if( o1 < o2 ) {
             return make_pair(o1, o2);
@@ -880,7 +880,7 @@ private:
         }
     }
 
-    LinkConstPtr GetCollisionLink(const fcl::CollisionObject &collObj) {
+    LinkConstPtr GetCollisionLink(const fcl::CollisionObject<dReal> &collObj) {
         FCLSpace::KinBodyInfo::LINK *link_raw = static_cast<FCLSpace::KinBodyInfo::LINK *>(collObj.getUserData());
         if( !!link_raw ) {
             LinkConstPtr plink = link_raw->GetLink();
