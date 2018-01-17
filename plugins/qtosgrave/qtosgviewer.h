@@ -102,6 +102,9 @@ public:
     /// \brief Set title of the viewer window
     virtual void SetName(const string& name);
 
+    virtual const std::string& _GetName();
+    virtual const std::string& GetName() const;
+
     /// \brief notified when a body has been removed from the environment
     virtual void RemoveKinBody(KinBodyPtr pbody) {
         if( !!pbody ) {
@@ -510,6 +513,7 @@ public:
     int _nQuitMainLoop; ///< controls if the main loop's state. If 0, then nothing is initialized. If -1, then currently initializing/running. If 1, then currently quitting from the main loop. If 2, then successfully quit from the main loop.
 
     bool _bRenderFiguresInCamera;
+    std::string _windowTitle;
 
     friend class ItemSelectionCallbackData;
     friend class ViewerThreadCallbackData;
