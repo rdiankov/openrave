@@ -101,9 +101,9 @@ public:
 
     /// \brief Set title of the viewer window
     virtual void SetName(const string& name);
-
-    virtual const std::string& _GetName();
-    virtual const std::string& GetName() const;
+    virtual const std::string& GetName() const {
+        return _name;
+    }
 
     /// \brief notified when a body has been removed from the environment
     virtual void RemoveKinBody(KinBodyPtr pbody) {
@@ -394,6 +394,7 @@ public:
     std::string _userdatakey; ///< the key to use for KinBody::GetUserData and KinBody::SetUserData
     std::map<KinBodyPtr, KinBodyItemPtr> _mapbodies;    ///< mapping of all the bodies created
     ItemPtr _pSelectedItem;     ///< the currently selected item
+    std::string _name;
 
     //@{ camera
     RaveTransform<float> _Tcamera; ///< current position of the camera representing the current view, updated periodically, read only.

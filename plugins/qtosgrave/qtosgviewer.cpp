@@ -1836,23 +1836,13 @@ void QtOSGViewer::_Zoom(float factor)
 
 void QtOSGViewer::SetName(const string& name)
 {
+    _name = name;
     _PostToGUIThread(boost::bind(&QtOSGViewer::_SetName, this, name));
 }
 
 void QtOSGViewer::_SetName(const string& name)
 {
     setWindowTitle(name.c_str());
-}
-
-const std::string& QtOSGViewer::_GetName()
-{
-    _windowTitle=windowTitle().toStdString();
-    return _windowTitle;
-}
-
-const std::string& QtOSGViewer::GetName() const
-{
-    return ((QtOSGViewer*)this)->_GetName();
 }
 
 bool QtOSGViewer::LoadModel(const string& filename)
