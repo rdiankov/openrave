@@ -131,6 +131,7 @@ public:
     virtual void EnvironmentSync();
 
     virtual UserDataPtr RegisterItemSelectionCallback(const ItemSelectionCallbackFn& fncallback);
+    virtual UserDataPtr RegisterViewerImageCallback(const ViewerImageCallbackFn& fncallback);
     virtual UserDataPtr RegisterViewerThreadCallback(const ViewerThreadCallbackFn& fncallback);
 
     /// \brief Locks environment
@@ -376,6 +377,7 @@ public:
     bool _StartViewerLoopCommand(ostream& sout, istream& sinput);
     bool _SetProjectionModeCommand(ostream& sout, istream& sinput);
     bool _ZoomCommand(ostream& sout, istream& sinput);
+    bool _CommandResize(ostream& sout, istream& sinput);
 
     //@{ Message Queue
     list<GUIThreadFunctionPtr> _listGUIFunctions; ///< list of GUI functions that should be called in the viewer update thread. protected by _mutexGUIFunctions
@@ -408,6 +410,7 @@ public:
     //@{ callbacks
     boost::mutex _mutexCallbacks; ///< maintains lock on list of callsbacks viewer has to make like _listRegisteredViewerThreadCallbacks, _listRegisteredItemSelectionCallbacks
     std::list<UserDataWeakPtr> _listRegisteredItemSelectionCallbacks;
+    std::list<UserDataWeakPtr> _listRegisteredViewerImageCallbacks;
     std::list<UserDataWeakPtr> _listRegisteredViewerThreadCallbacks;
     //@}
 
@@ -516,6 +519,7 @@ public:
     std::string _windowTitle;
 
     friend class ItemSelectionCallbackData;
+    friend class ViewerImageCallbackData;
     friend class ViewerThreadCallbackData;
     friend void DeleteItemCallbackSafe(QtOSGViewerWeakPtr, Item*);
 };

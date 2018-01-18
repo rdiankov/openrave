@@ -52,6 +52,27 @@ protected:
 };
 typedef boost::shared_ptr<ItemSelectionCallbackData> ItemSelectionCallbackDataPtr;
 
+class ViewerImageCallbackData : public UserData
+{
+public:
+    ViewerImageCallbackData(const ViewerBase::ViewerImageCallbackFn& callback, boost::shared_ptr<QtOSGViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
+    }
+    virtual ~ViewerImageCallbackData() {
+        boost::shared_ptr<QtOSGViewer> pviewer = _pweakviewer.lock();
+        if( !!pviewer ) {
+            boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
+            pviewer->_listRegisteredViewerImageCallbacks.erase(_iterator);
+        }
+    }
+
+    list<UserDataWeakPtr>::iterator _iterator;
+    ViewerBase::ViewerImageCallbackFn _callback;
+protected:
+    boost::weak_ptr<QtOSGViewer> _pweakviewer;
+};
+typedef boost::shared_ptr<ViewerImageCallbackData> ViewerImageCallbackDataPtr;
+
+
 class ViewerThreadCallbackData : public UserData
 {
 public:
@@ -146,6 +167,8 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
                     "sets the visualization mode of a kinbody/render item in the viewer");
     RegisterCommand("ShowWorldAxes",boost::bind(&QtOSGViewer::_ShowWorldAxesCommand, this, _1, _2),
                     "Accepts 0/1 value that decides whether to render the cross hairs");
+    RegisterCommand("Resize",boost::bind(&QtOSGViewer::_CommandResize,this,_1,_2),
+                    "Accepts width x height to resize internal video frame");
     RegisterCommand("SetNearPlane", boost::bind(&QtOSGViewer::_SetNearPlaneCommand, this, _1, _2),
                     "Sets the near plane for rendering of the image. Useful when tweaking rendering units");
     RegisterCommand("SetTextureCubeMap", boost::bind(&QtOSGViewer::_SetTextureCubeMap, this, _1, _2),
@@ -1269,6 +1292,18 @@ void QtOSGViewer::_SetProjectionMode(const std::string& projectionMode)
     }
 }
 
+bool QtOSGViewer::_CommandResize(ostream& sout, istream& sinput)
+{
+    int nRenderWidth, nRenderHeight;
+    sinput >> nRenderWidth;
+    sinput >> nRenderHeight;
+    if( !!sinput ) {
+        /*resize*/ SetSize(nRenderWidth,nRenderHeight);
+        return true;
+    }
+    return false;
+}
+
 int QtOSGViewer::main(bool bShow)
 {
     if( !QApplication::instance() ) {
@@ -2152,6 +2187,13 @@ UserDataPtr QtOSGViewer::RegisterItemSelectionCallback(const ItemSelectionCallba
 {
     ItemSelectionCallbackDataPtr pdata(new ItemSelectionCallbackData(fncallback,shared_viewer()));
     pdata->_iterator = _listRegisteredItemSelectionCallbacks.insert(_listRegisteredItemSelectionCallbacks.end(),pdata);
+    return pdata;
+}
+
+UserDataPtr QtOSGViewer::RegisterViewerImageCallback(const ViewerImageCallbackFn& fncallback)
+{
+    ViewerImageCallbackDataPtr pdata(new ViewerImageCallbackData(fncallback,shared_viewer()));
+    pdata->_iterator = _listRegisteredViewerImageCallbacks.insert(_listRegisteredViewerImageCallbacks.end(),pdata);
     return pdata;
 }
 
