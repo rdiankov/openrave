@@ -17,7 +17,7 @@ using OpenRAVE::ORE_Assert;
 // Warning : this is the only place where we use std::shared_ptr (for compatibility with fcl)
 typedef std::shared_ptr<fcl::CollisionGeometry<dReal>> CollisionGeometryPtr;
 typedef boost::shared_ptr<fcl::CollisionObject<dReal>> CollisionObjectPtr;
-typedef boost::function<CollisionGeometryPtr (std::vector<fcl::Vector3<dReal>> const &points, std::vector<fcl::Triangle> const &triangles) > MeshFactory;
+typedef boost::function<CollisionGeometryPtr (std::vector<fcl::Vector3<dReal>, Eigen::aligned_allocator<fcl::Vector3<dReal>>> const &points, std::vector<fcl::Triangle> const &triangles) > MeshFactory;
 typedef std::vector<fcl::CollisionObject<dReal> *> CollisionGroup;
 typedef boost::shared_ptr<CollisionGroup> CollisionGroupPtr;
 typedef std::pair<Transform, CollisionObjectPtr> TransformCollisionPair;
@@ -51,7 +51,7 @@ fcl::AABB<dReal> ConvertAABBToFcl(const OpenRAVE::AABB& bv) {
 
 template <class T>
 CollisionGeometryPtr ConvertMeshToFCL(
-    std::vector<fcl::Vector3<decltype(std::declval<T>().size())>> const &points,
+    std::vector<fcl::Vector3<decltype(std::declval<T>().size())>, Eigen::aligned_allocator<fcl::Vector3<decltype(std::declval<T>().size())>>> const &points,
     std::vector<fcl::Triangle> const &triangles)
 {
     std::shared_ptr< fcl::BVHModel<T> > const model = make_shared<fcl::BVHModel<T> >();
@@ -241,7 +241,7 @@ public:
                 }
 
                 // We do not set the transformation here and leave it to _Synchronize
-                CollisionObjectPtr pfclcoll = boost::make_shared<fcl::CollisionObject<dReal>>(pfclgeom);
+                CollisionObjectPtr pfclcoll(new fcl::CollisionObject<dReal>(pfclgeom));
                 pfclcoll->setUserData(link.get());
 
                 link->vgeoms.push_back(TransformCollisionPair(itgeominfo->_t, pfclcoll));
@@ -258,7 +258,7 @@ public:
                     enclosingBV += ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
                 }
                 CollisionGeometryPtr pfclgeomBV = std::make_shared<fcl::Box<dReal>>(enclosingBV.max_ - enclosingBV.min_);
-                CollisionObjectPtr pfclcollBV = boost::make_shared<fcl::CollisionObject<dReal>>(pfclgeomBV);
+                CollisionObjectPtr pfclcollBV(new fcl::CollisionObject<dReal>(pfclgeomBV));
                 Transform trans(Vector(1,0,0,0),ConvertVectorFromFCL<dReal>(0.5 * (enclosingBV.min_ + enclosingBV.max_)));
                 pfclcollBV->setUserData(link.get());
                 link->linkBV = std::make_pair(trans, pfclcollBV);
@@ -520,7 +520,7 @@ private:
         size_t const num_points = mesh.vertices.size();
         size_t const num_triangles = mesh.indices.size() / 3;
 
-        std::vector<fcl::Vector3<dReal>> fcl_points(num_points);
+        std::vector<fcl::Vector3<dReal>, Eigen::aligned_allocator<fcl::Vector3<dReal>>> fcl_points(num_points);
         for (size_t ipoint = 0; ipoint < num_points; ++ipoint) {
             Vector v = info._t*mesh.vertices[ipoint];
             fcl_points[ipoint] = fcl::Vector3<dReal>(v.x, v.y, v.z);
@@ -573,7 +573,7 @@ private:
             size_t const num_points = mesh.vertices.size();
             size_t const num_triangles = mesh.indices.size() / 3;
 
-            std::vector<fcl::Vector3<dReal>> fcl_points(num_points);
+            std::vector<fcl::Vector3<dReal>, Eigen::aligned_allocator<fcl::Vector3<dReal>>> fcl_points(num_points);
             for (size_t ipoint = 0; ipoint < num_points; ++ipoint) {
                 Vector v = mesh.vertices[ipoint];
                 fcl_points[ipoint] = fcl::Vector3<dReal>(v.x, v.y, v.z);
