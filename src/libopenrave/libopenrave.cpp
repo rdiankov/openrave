@@ -351,7 +351,6 @@ dReal RaveCeil(dReal f) {
 
 #endif
 
-static std::set<std::string> _gettextDomainsInitialized;
 static boost::once_flag _onceRaveInitialize = BOOST_ONCE_INIT;
 
 /// there is only once global openrave state. It is created when openrave
@@ -1347,11 +1346,8 @@ std::string RaveGetDefaultViewerType()
 const char *RaveGetLocalizedTextForDomain(const std::string& domainname, const char *msgid)
 {
 #ifndef _WIN32
-    if (_gettextDomainsInitialized.find(domainname) == _gettextDomainsInitialized.end())
-    {
-        bindtextdomain(domainname.c_str(), OPENRAVE_LOCALE_INSTALL_DIR);
-        _gettextDomainsInitialized.insert(domainname);
-    }
+    // bindtextdomain internally has lock and checks for duplicate bindings
+    bindtextdomain(domainname.c_str(), OPENRAVE_LOCALE_INSTALL_DIR);
     return dgettext(domainname.c_str(), msgid);
 #else
     return msgid;
