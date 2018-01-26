@@ -487,6 +487,10 @@ public:
 
     void Destroy()
     {
+        if (!_IsInitialized()) {
+            return;
+        }
+
         if( !!_pdatabase ) {
             // notify all plugins that about to destroy
             _pdatabase->OnRavePreDestroy();
