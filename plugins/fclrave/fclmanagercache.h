@@ -140,6 +140,12 @@ public:
         mapCachedBodies.clear();
         FOREACH(itbody, attachedBodies) {
             FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(*itbody);
+            if( !pinfo ) {
+                // don't init something that isn't initialized in this checker.
+                RAVELOG_VERBOSE_FORMAT("body %s has attached body %s which is not initialized in this checker, ignoring for now", pbody->GetName()%(*itbody)->GetName());
+                continue;
+            }
+   
             bool bsetUpdateStamp = false;
             uint64_t linkmask = 0;
             vcolobjs.resize(0); // reset any existing collision objects
