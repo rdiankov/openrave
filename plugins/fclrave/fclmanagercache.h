@@ -279,7 +279,17 @@ public:
         if( !!ptrackingbody && _bTrackActiveDOF ) {
             std::map<int, KinBodyCache>::iterator ittracking = mapCachedBodies.find(ptrackingbody->GetEnvironmentId());
             if( ittracking == mapCachedBodies.end() ) {
-                RAVELOG_WARN_FORMAT("%u tracking body not in current cached bodies (body %s) (env %d)", _lastSyncTimeStamp%ptrackingbody->GetName()%ptrackingbody->GetEnv()->GetId());
+                std::string ssinfo;
+                FOREACH(itcache, mapCachedBodies) {
+                    KinBodyConstPtr pbody = itcache->second.pwbody.lock(); ///< weak pointer to body
+                    if( !!pbody ) {
+                        ssinfo += str(boost::format("(id=%d, linkmask=0x%x, numcols=%d, name=%s), ")%itcache->first%itcache->second.linkmask%itcache->second.vcolobjs.size()%pbody->GetName());
+                    }
+                    else {
+                        ssinfo += str(boost::format("id=%d, linkmask=0x%x, numcols=%d, name=%s")%itcache->first%itcache->second.linkmask%itcache->second.vcolobjs.size()%pbody->GetName());
+                    }
+                }
+                RAVELOG_WARN_FORMAT("%u tracking body not in current cached bodies (tracking body %s (id=%d)) (env %d). Current cache is: %s", _lastSyncTimeStamp%ptrackingbody->GetName()%ptrackingbody->GetEnvironmentId()%ptrackingbody->GetEnv()->GetId()%ssinfo);
             }
             else {
                 FCLSpace::KinBodyInfoPtr pinfo = ittracking->second.pwinfo.lock();
