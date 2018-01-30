@@ -20,10 +20,24 @@
 #include <boost/thread/mutex.hpp>
 #include <cmath>
 
+
 #ifdef QHULL_FOUND
 
 extern "C"
 {
+#ifdef QHULL_USE_REENTRANT
+
+#include <libqhull_r/libqhull_r.h>
+#include <libqhull_r/mem_r.h>
+#include <libqhull_r/qset_r.h>
+#include <libqhull_r/geom_r.h>
+#include <libqhull_r/merge_r.h>
+#include <libqhull_r/poly_r.h>
+#include <libqhull_r/io_r.h>
+#include <libqhull_r/stat_r.h>
+
+#else
+
 #include <qhull/qhull.h>
 #include <qhull/mem.h>
 #include <qhull/qset.h>
@@ -32,11 +46,11 @@ extern "C"
 #include <qhull/poly.h>
 #include <qhull/io.h>
 #include <qhull/stat.h>
+
+#endif
 }
 
 #endif
-
-#include <boost/thread/once.hpp>
 
 static boost::mutex s_QhullMutex;
 
@@ -1613,7 +1627,6 @@ protected:
     /// \param vconvexplaces the places of the convex hull, dimension is dim+1
     virtual double _ComputeConvexHull(const vector<double>& vpoints, vector<double>& vconvexplanes, boost::shared_ptr< vector<int> > vconvexfaces, int dim)
     {
-        boost::mutex::scoped_lock lock(s_QhullMutex);
         vconvexplanes.resize(0);
 #ifdef QHULL_FOUND
         if ( vpoints.empty() ) {
@@ -1632,6 +1645,8 @@ protected:
         boolT ismalloc = 0;               // True if qhull should free points in qh_freeqhull() or reallocation
         char flags[]= "qhull Tv FA";     // option flags for qhull, see qh_opt.htm, output volume (FA)
 
+        boost::mutex::scoped_lock lock(s_QhullMutex);
+
         if( !outfile ) {
             outfile = tmpfile();        // stdout from qhull code
         }
@@ -1639,7 +1654,14 @@ protected:
             errfile = tmpfile();        // stderr, error messages from qhull code
         }
 
+#ifdef QHULL_USE_REENTRANT
+        qhT qh_qh;
+        qhT *qh= &qh_qh;
+        qh->qhmem.ferr = NULL;
+        int exitcode= qh_new_qhull (qh, dim, qpoints.size()/dim, &qpoints[0], ismalloc, flags, outfile, errfile);
+#else
         int exitcode= qh_new_qhull (dim, qpoints.size()/dim, &qpoints[0], ismalloc, flags, outfile, errfile);
+#endif
         if (!exitcode) {
             vconvexplanes.reserve(1000);
             if( !!vconvexfaces ) {
@@ -1658,7 +1680,12 @@ protected:
                     size_t startindex = vconvexfaces->size();
                     vconvexfaces->push_back(0);
                     FOREACHvertex_(facet->vertices) {
+#ifdef QHULL_USE_REENTRANT
+                        int id = qh_pointid(qh, vertex->point);
+#else
                         int id = qh_pointid(vertex->point);
+#endif
+
                         BOOST_ASSERT(id>=0);
                         vconvexfaces->push_back(id);
                     }
@@ -1674,10 +1701,16 @@ protected:
             }
         }
 
+        int curlong, totlong;         // memory remaining after qh_memfreeshort
+#ifdef QHULL_USE_REENTRANT
+        double totvol = qh->totvol;
+        qh_freeqhull(qh, !qh_ALL);
+        qh_memfreeshort(qh, &curlong, &totlong);
+#else
         double totvol = qh totvol;
         qh_freeqhull(!qh_ALL);
-        int curlong, totlong;         // memory remaining after qh_memfreeshort
-        qh_memfreeshort (&curlong, &totlong);
+        qh_memfreeshort(&curlong, &totlong);
+#endif
         if (curlong || totlong) {
             RAVELOG_ERROR("qhull internal warning (main): did not free %d bytes of long memory (%d pieces)\n", totlong, curlong);
         }

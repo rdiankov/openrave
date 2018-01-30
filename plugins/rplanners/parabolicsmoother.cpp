@@ -272,9 +272,19 @@ public:
             RAVELOG_WARN("there are no used bodies in this configuration\n");
         }
 
+        std::stringstream ssinitial;
+
+        
+        std::vector<uint8_t> venablestates;
         FOREACH(itbody, vusedbodies) {
             KinBody::KinBodyStateSaverPtr statesaver;
             if( (*itbody)->IsRobot() ) {
+                ssinitial << (*itbody)->GetName() << " enablestates=[";
+                (*itbody)->GetLinkEnableStates(venablestates);
+                FOREACH(it, venablestates) {
+                    ssinitial << (int)*it << ", ";
+                }
+                ssinitial << "]; ";
                 statesaver.reset(new RobotBase::RobotStateSaver(RaveInterfaceCast<RobotBase>(*itbody), KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_ActiveDOF|KinBody::Save_ActiveManipulator|KinBody::Save_LinkVelocities));
             }
             else {
@@ -438,7 +448,7 @@ public:
 
         try {
             _bUsePerturbation = true;
-            RAVELOG_DEBUG_FORMAT("env=%d, initial path size=%d, duration=%f, stepLength=%f, pointtolerance=%f, multidof=%d, manipname=%s, maxmanipspeed=%f, maxmanipaccel=%f", GetEnv()->GetId()%dynamicpath.ramps.size()%dynamicpath.GetTotalTime()%parameters->_fStepLength%parameters->_pointtolerance%parameters->_multidofinterp%parameters->manipname%parameters->maxmanipspeed%parameters->maxmanipaccel);
+            RAVELOG_DEBUG_FORMAT("env=%d, initial path size=%d, duration=%f, pointtolerance=%f, multidof=%d, manipname=%s, maxmanipspeed=%f, maxmanipaccel=%f, %s", GetEnv()->GetId()%dynamicpath.ramps.size()%dynamicpath.GetTotalTime()%parameters->_pointtolerance%parameters->_multidofinterp%parameters->manipname%parameters->maxmanipspeed%parameters->maxmanipaccel%ssinitial.str());
             _feasibilitychecker.tol = parameters->_vConfigResolution;
             FOREACH(it, _feasibilitychecker.tol) {
                 *it *= parameters->_pointtolerance;

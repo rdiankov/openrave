@@ -1615,7 +1615,7 @@ protected:
 
                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                    ss << "ikfast collision " << probot->GetName() << ":" << pmanip->GetName() << " " << report.__str__() << " colvalues=[";
+                    ss << "env=" << GetEnv()->GetId() << ", ikfast collision " << probot->GetName() << ":" << pmanip->GetName() << " " << report.__str__() << " colvalues=[";
                     std::vector<dReal> vallvalues;
                     probot->GetDOFValues(vallvalues);
                     for(size_t i = 0; i < vallvalues.size(); ++i ) {
