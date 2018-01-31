@@ -166,24 +166,26 @@ public:
                     linkmask |= ((uint64_t)1 << (uint64_t)(*itlink)->GetIndex());
                 }
             }
+
+            // regardless if the linkmask, have to always add to cache in order to track!
             if( 1 ) {//bsetUpdateStamp ) {
-                RAVELOG_VERBOSE_FORMAT("env=%d, %x adding body %s linkmask=0x%x, _tmpbuffer.size()=%d", (*itbody)->GetEnv()->GetId()%this%(*itbody)->GetName()%linkmask%_tmpbuffer.size());
+                //RAVELOG_VERBOSE_FORMAT("env=%d, %x adding body %s linkmask=0x%x, _tmpbuffer.size()=%d", (*itbody)->GetEnv()->GetId()%this%(*itbody)->GetName()%linkmask%_tmpbuffer.size());
                 mapCachedBodies[(*itbody)->GetEnvironmentId()] = KinBodyCache(*itbody, pinfo);
                 mapCachedBodies[(*itbody)->GetEnvironmentId()].linkmask = linkmask;
                 mapCachedBodies[(*itbody)->GetEnvironmentId()].vcolobjs.swap(vcolobjs);
             }
             else {
-                if( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
-                    std::stringstream ss;
-                    for(size_t ilink = 0; ilink < (*itbody)->GetLinks().size(); ++ilink) {
-                        ss << (int)(*itbody)->GetLinks()[ilink]->IsEnabled();
-                        if( pbody == *itbody ) {
-                            ss << "(" << _vTrackingActiveLinks.at(ilink) << ")";
-                        }
-                        ss << ",";
-                    }
-                    RAVELOG_VERBOSE_FORMAT("env=%d, %x not tracking adding body %s: links=[%s]", (*itbody)->GetEnv()->GetId()%this%(*itbody)->GetName()%ss.str());
-                }
+//                if( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
+//                    std::stringstream ss;
+//                    for(size_t ilink = 0; ilink < (*itbody)->GetLinks().size(); ++ilink) {
+//                        ss << (int)(*itbody)->GetLinks()[ilink]->IsEnabled();
+//                        if( pbody == *itbody ) {
+//                            ss << "(" << _vTrackingActiveLinks.at(ilink) << ")";
+//                        }
+//                        ss << ",";
+//                    }
+//                    RAVELOG_VERBOSE_FORMAT("env=%d, %x not tracking adding body %s: links=[%s]", (*itbody)->GetEnv()->GetId()%this%(*itbody)->GetName()%ss.str());
+//                }
             }
         }
         if( _tmpbuffer.size() > 0 ) {
