@@ -289,7 +289,7 @@ public:
                         ssinfo += str(boost::format("id=%d, linkmask=0x%x, numcols=%d")%itcache->first%itcache->second.linkmask%itcache->second.vcolobjs.size());
                     }
                 }
-                RAVELOG_WARN_FORMAT("%u tracking body not in current cached bodies (tracking body %s (id=%d)) (env %d). Current cache is: %s", _lastSyncTimeStamp%ptrackingbody->GetName()%ptrackingbody->GetEnvironmentId()%ptrackingbody->GetEnv()->GetId()%ssinfo);
+                RAVELOG_WARN_FORMAT("%x tracking body not in current cached bodies (tracking body %s (id=%d)) (env %d). Current cache is: %s", this%_lastSyncTimeStamp%ptrackingbody->GetName()%ptrackingbody->GetEnvironmentId()%ptrackingbody->GetEnv()->GetId()%ssinfo);
             }
             else {
                 FCLSpace::KinBodyInfoPtr pinfo = ittracking->second.pwinfo.lock();
