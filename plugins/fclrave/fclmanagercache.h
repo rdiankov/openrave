@@ -107,7 +107,7 @@ public:
         pmanager->clear();
         // should clear all vcolobjs notifying the destructor that manager has the objects unregistered
         FOREACH(it, mapCachedBodies) {
-            it->second.vcolobjs.resize(0);
+            it->second.vcolobjs.clear();
         }
         mapCachedBodies.clear();
     }
@@ -128,7 +128,7 @@ public:
                 _bTrackActiveDOF = true;
             }
         }
-        RAVELOG_VERBOSE_FORMAT("env=%d, %x init with body %s, activedof=%d", pbody->GetEnv()->GetId()%this%pbody->GetName()%(int)bTrackActiveDOF);
+        RAVELOG_VERBOSE_FORMAT("env=%d, %x init with body %s, activedof=%d, att=%d", pbody->GetEnv()->GetId()%this%pbody->GetName()%(int)bTrackActiveDOF%attachedBodies.size());
 
         pmanager->clear();
         _tmpbuffer.resize(0);
@@ -148,8 +148,8 @@ public:
    
             bool bsetUpdateStamp = false;
             uint64_t linkmask = 0;
-            vcolobjs.resize(0); // reset any existing collision objects
-            vcolobjs.resize((*itbody)->GetLinks().size());
+            vcolobjs.clear(); // reset any existing collision objects
+            vcolobjs.resize((*itbody)->GetLinks().size(),CollisionObjectPtr());
             FOREACH(itlink, (*itbody)->GetLinks()) {
                 if( (*itlink)->IsEnabled() && (*itbody != pbody || !_bTrackActiveDOF || _vTrackingActiveLinks.at((*itlink)->GetIndex())) ) {
                     CollisionObjectPtr pcol = _fclspace.GetLinkBV(pinfo, (*itlink)->GetIndex());
@@ -171,6 +171,19 @@ public:
                 mapCachedBodies[(*itbody)->GetEnvironmentId()] = KinBodyCache(*itbody, pinfo);
                 mapCachedBodies[(*itbody)->GetEnvironmentId()].linkmask = linkmask;
                 mapCachedBodies[(*itbody)->GetEnvironmentId()].vcolobjs.swap(vcolobjs);
+            }
+            else {
+                if( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
+                    std::stringstream ss;
+                    for(size_t ilink = 0; ilink < (*itbody)->GetLinks().size(); ++ilink) {
+                        ss << (int)(*itbody)->GetLinks()[ilink]->IsEnabled();
+                        if( pbody == *itbody ) {
+                            ss << "(" << _vTrackingActiveLinks.at(ilink) << ")";
+                        }
+                        ss << ",";
+                    }
+                    RAVELOG_VERBOSE_FORMAT("env=%d, %x not tracking adding body %s: links=[%s]", (*itbody)->GetEnv()->GetId()%this%(*itbody)->GetName()%ss.str());
+                }
             }
         }
         if( _tmpbuffer.size() > 0 ) {
@@ -537,7 +550,7 @@ public:
             }
             if( pinfo->nLastStamp != itcache->second.nLastStamp ) {
                 if( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
-                    //Transform tpose = pbody->GetTransform();
+                    Transform tpose = pbody->GetTransform();
                     RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d) %u body %s (%d) for cache changed transform %d != %d, num=%d, mask=0x%x, trans=(%.3f, %.3f, %.3f)", pbody->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%pbody->GetName()%pbody->GetEnvironmentId()%pinfo->nLastStamp%itcache->second.nLastStamp%pinfo->vlinks.size()%itcache->second.linkmask%tpose.trans.x%tpose.trans.y%tpose.trans.z);
                 }
                 // transform changed
