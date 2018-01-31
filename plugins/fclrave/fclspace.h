@@ -195,6 +195,8 @@ public:
             pinfo->_geometrygroup = _geometrygroup;
         }
 
+        RAVELOG_VERBOSE_FORMAT("env=%d, init body %s (%d)", pbody->GetEnv()->GetId()%pbody->GetName()%pbody->GetEnvironmentId());
+        
         pinfo->Reset();
         pinfo->_pbody = boost::const_pointer_cast<KinBody>(pbody);
         // make sure that synchronization do occur !
