@@ -286,7 +286,7 @@ public:
                         ssinfo += str(boost::format("(id=%d, linkmask=0x%x, numcols=%d, name=%s), ")%itcache->first%itcache->second.linkmask%itcache->second.vcolobjs.size()%pbody->GetName());
                     }
                     else {
-                        ssinfo += str(boost::format("id=%d, linkmask=0x%x, numcols=%d, name=%s")%itcache->first%itcache->second.linkmask%itcache->second.vcolobjs.size()%pbody->GetName());
+                        ssinfo += str(boost::format("id=%d, linkmask=0x%x, numcols=%d")%itcache->first%itcache->second.linkmask%itcache->second.vcolobjs.size());
                     }
                 }
                 RAVELOG_WARN_FORMAT("%u tracking body not in current cached bodies (tracking body %s (id=%d)) (env %d). Current cache is: %s", _lastSyncTimeStamp%ptrackingbody->GetName()%ptrackingbody->GetEnvironmentId()%ptrackingbody->GetEnv()->GetId()%ssinfo);
