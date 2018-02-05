@@ -1722,6 +1722,10 @@ void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
         RAVELOG_WARN_FORMAT("got an invalid start time %.15e", starttime);
         starttime = 0;
     }
+    if( starttime > traj->GetDuration()+g_fEpsilonLinear ) {
+        RAVELOG_WARN_FORMAT("got an invalid start time %.15e", starttime);
+        starttime = traj->GetDuration();
+    }
     if( endtime > traj->GetDuration()+g_fEpsilonLinear ) {
         RAVELOG_WARN_FORMAT("got an invalid end time %.15e", endtime);
         endtime = traj->GetDuration();
@@ -1745,6 +1749,9 @@ void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
     // TODO there might be a problem here if the first traj point has deltatime > 0
     if( starttime > 0 ) {
         size_t startindex = traj->GetFirstWaypointIndexAfterTime(starttime);
+        if( startindex >= traj->GetNumWaypoints() )
+            startindex = traj->GetNumWaypoints()-1;
+        
         if( startindex > 0 ) {
             ConfigurationSpecification deltatimespec;
             deltatimespec.AddDeltaTimeGroup();
