@@ -235,11 +235,11 @@ class GraspPlanning(openravepy.metaclass.AutoReloader):
             Y = []
             if randomize:
                 for x in arange(Nx):
-                    X = r_[X, random.rand(Ny)*0.5/(Nx+1) + (x+1)/(Nx+1)]
-                    Y = r_[Y, random.rand(Ny)*0.5/(Ny+1) + arange(0.5,Ny,1.0)/(Ny+1)]
+                    X = r_[X, random.rand(int(Ny))*0.5/(Nx+1) + (x+1)/(Nx+1)]
+                    Y = r_[Y, random.rand(int(Ny))*0.5/(Ny+1) + arange(0.5,Ny,1.0)/(Ny+1)]
             else:
                 for x in arange(Nx):
-                    X = r_[X, tile((x+1)/(Nx+1),Ny)]
+                    X = r_[X, tile((x+1)/(Nx+1),int(Ny))]
                     Y = r_[Y, arange(0.5,Ny,1.0)/(Ny+1)]
             translations = c_[p[0]-e[0]+2*e[0]*X,p[1]-e[1]+2*e[1]*Y,tile(p[2]+e[2]+zoffset,len(X))]
             if Trolls is None:
