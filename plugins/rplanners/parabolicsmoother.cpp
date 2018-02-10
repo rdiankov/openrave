@@ -480,7 +480,7 @@ public:
             FOREACH(itramp, dynamicpath.ramps) {
                 dummyDur2 += itramp->endTime;
             }
-            RAVELOG_DEBUG_FORMAT("after shortcutting: duration %.15e -> %.15e, diff = %.15e", dummyDur1%dummyDur2%(dummyDur1 - dummyDur2));
+            RAVELOG_DEBUG_FORMAT("env=%d, after shortcutting: duration %.15e -> %.15e, diff = %.15e", GetEnv()->GetId()%dummyDur1%dummyDur2%(dummyDur1 - dummyDur2));
 
 #ifdef OPENRAVE_TIMING_DEBUGGING
             RAVELOG_VERBOSE_FORMAT("calling checkmanipconstraints %d times, using %.15e sec. = %.15e sec./call", ncheckmanipconstraints%checkmaniptime%(checkmaniptime/ncheckmanipconstraints));
@@ -1143,7 +1143,7 @@ protected:
                 RAVELOG_VERBOSE_FORMAT("env=%d, slowing down ramp %d/%d by %.15e since too fast, try %d", GetEnv()->GetId()%iramp%numramps%retseg.fTimeBasedSurpassMult%itry);
                 for(size_t j = 0; j < vellimits.size(); ++j) {
                     vellimits.at(j) *= retseg.fTimeBasedSurpassMult;
-                    accellimits.at(j) *= retseg.fTimeBasedSurpassMult;
+                    accellimits.at(j) *= retseg.fTimeBasedSurpassMult*retseg.fTimeBasedSurpassMult;
                 }
             }
             else {
@@ -1572,7 +1572,7 @@ protected:
                             // have to watch out that velocities don't drop under dx0 & dx1!
                             dReal fminvel = max(RaveFabs(dx0[j]), RaveFabs(dx1[j]));
                             vellimits[j] = max(vellimits[j]*retcheck.fTimeBasedSurpassMult, fminvel);
-                            accellimits[j] *= retcheck.fTimeBasedSurpassMult;
+                            accellimits[j] *= retcheck.fTimeBasedSurpassMult*retcheck.fTimeBasedSurpassMult;
                         }
                         fcurmult *= retcheck.fTimeBasedSurpassMult;
                         if( fcurmult < 0.01 ) {
@@ -2378,13 +2378,13 @@ protected:
         dReal tshortcuttotal = 0.000001f*(float)(tshortcutend - tshortcutstart);
 #endif
         if (iters == numIters) {
-            RAVELOG_DEBUG_FORMAT("finished at shortcut iter=%d (normal exit), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",iters%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
+            RAVELOG_DEBUG_FORMAT("env=%d, finished at shortcut iter=%d (normal exit), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
         }
         else if (score/currentBestScore < cutoffRatio) {
-            RAVELOG_DEBUG_FORMAT("finished at shortcut iter=%d (current score falls below %.15e), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",iters%cutoffRatio%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
+            RAVELOG_DEBUG_FORMAT("env=%d, finished at shortcut iter=%d (current score falls below %.15e), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%cutoffRatio%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
         }
         else if (nItersFromPrevSuccessful > nCutoffIters) {
-            RAVELOG_DEBUG_FORMAT("finished at shortcut iter=%d (did not make progress in the last %d iterations), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",iters%nCutoffIters%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
+            RAVELOG_DEBUG_FORMAT("env=%d, finished at shortcut iter=%d (did not make progress in the last %d iterations), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%nCutoffIters%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
         }
 #ifdef OPENRAVE_TIMING_DEBUGGING
         RAVELOG_DEBUG_FORMAT("shortcutting time = %.15e s.; avg. time per iteration = %.15e s.", tshortcuttotal%(tshortcuttotal/numIters));
