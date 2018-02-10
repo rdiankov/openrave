@@ -2171,7 +2171,7 @@ protected:
                                 if (retcheck.fMaxManipAccel > _parameters->maxmanipaccel) {
                                     faccelmult = retcheck.fTimeBasedSurpassMult*retcheck.fTimeBasedSurpassMult;
                                     fcuraccelmult *= faccelmult;
-                                    if (fcuraccelmult < 0.01) {
+                                    if (fcuraccelmult < 0.0001) {
                                         RAVELOG_VERBOSE_FORMAT("env = %d: shortcut iter = %d/%d: fcurACCELmult (%.15e) is too small. continue to the next iteration", GetEnv()->GetId()%iters%numIters%fcuraccelmult);
                                         break;
                                     }
