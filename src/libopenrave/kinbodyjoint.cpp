@@ -1096,7 +1096,10 @@ std::pair<dReal, dReal> KinBody::Joint::GetInstantaneousTorqueLimits(int iaxis) 
                     }
 
                     // due to back emf, the deceleration magnitude is less than acceleration?
-                    if( rawvelocity > 0 ) {
+                    if (abs(rawvelocity) < 1.0/360) {
+                        return std::make_pair(-finterpolatedtorque, finterpolatedtorque);
+                    }
+                    else if( rawvelocity > 0 ) {
                         return std::make_pair(-0.9*finterpolatedtorque, finterpolatedtorque);
                     }
                     else {
@@ -1108,7 +1111,10 @@ std::pair<dReal, dReal> KinBody::Joint::GetInstantaneousTorqueLimits(int iaxis) 
             // due to back emf, the deceleration magnitude is less than acceleration?
             // revolutionsPerSecond is huge, return the last point
             dReal f = _info._infoElectricMotor->max_speed_torque_points.back().second*_info._infoElectricMotor->gear_ratio;
-            if( rawvelocity > 0 ) {
+            if (abs(rawvelocity) < 1.0/360) {
+                return std::make_pair(-f, f);
+            }
+            else if( rawvelocity > 0 ) {
                 return std::make_pair(-0.9*f, f);
             }
             else {
@@ -1163,7 +1169,10 @@ std::pair<dReal, dReal> KinBody::Joint::GetNominalTorqueLimits(int iaxis) const
                     }
 
                     // due to back emf, the deceleration magnitude is less than acceleration?
-                    if( rawvelocity > 0 ) {
+                    if (abs(rawvelocity) < 1.0/360) {
+                        return std::make_pair(-finterpolatedtorque, finterpolatedtorque);
+                    }
+                    else if( rawvelocity > 0 ) {
                         return std::make_pair(-0.9*finterpolatedtorque, finterpolatedtorque);
                     }
                     else {
@@ -1175,7 +1184,10 @@ std::pair<dReal, dReal> KinBody::Joint::GetNominalTorqueLimits(int iaxis) const
             // due to back emf, the deceleration magnitude is less than acceleration?
             // revolutionsPerSecond is huge, return the last point
             dReal f = _info._infoElectricMotor->nominal_speed_torque_points.back().second*_info._infoElectricMotor->gear_ratio;
-            if( rawvelocity > 0 ) {
+            if (abs(rawvelocity) < 1.0/360) {
+                return std::make_pair(-f, f);
+            }
+            else if( rawvelocity > 0 ) {
                 return std::make_pair(-0.9*f, f);
             }
             else {
