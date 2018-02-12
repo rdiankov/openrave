@@ -862,8 +862,8 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
 
     // Intervals 1 and 2 are derived from constraints on a0 (the acceleration of the first ramp)
     // I) sum1 <= B/t0
-    if( sum1 == 0 ) {
-        if( B == 0 ) {
+    if( FuzzyZero(sum1, g_fRampEpsilon) ) {
+        if( FuzzyZero(B, g_fRampEpsilon) ) {
             // t0 can be anything
         }
         else {
@@ -881,8 +881,8 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
     }
 
     // II) B/t0 <= sum2
-    if( sum2 == 0 ) {
-        if( B == 0 ) {
+    if( FuzzyZero(sum2, g_fRampEpsilon) ) {
+        if( FuzzyZero(B, g_fRampEpsilon) ) {
             // t0 can be anything
         }
         else {
@@ -912,8 +912,8 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
 
     // Intervals 3 and 4 are derived from constraints on a1 (the acceleration of the second (last) ramp
     // III) sum1 <= B/(t0 - t)
-    if( sum1 == 0 ) {
-        if( B == 0 ) {
+    if( FuzzyZero(sum1, g_fRampEpsilon) ) {
+        if( FuzzyZero(B, g_fRampEpsilon) ) {
             // t0 can be anything
         }
         else {
@@ -931,8 +931,8 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
     }
 
     // IV)
-    if( sum2 == 0 ) {
-        if( B == 0 ) {
+    if( FuzzyZero(sum2, g_fRampEpsilon) ) {
+        if( FuzzyZero(B, g_fRampEpsilon) ) {
             // t0 can be anything
         }
         else {
