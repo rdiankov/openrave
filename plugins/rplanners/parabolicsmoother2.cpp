@@ -309,7 +309,7 @@ public:
             return PS_Failed;
         }
 
-        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+        if( IS_DEBUGLEVEL(_dumplevel) ) {
             // Save parameters for planning
             uint32_t randNum;
             if( !!_logginguniformsampler ) {
@@ -322,9 +322,9 @@ public:
             ofstream f(filename.c_str());
             f << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
             f << *_parameters;
-            RAVELOG_VERBOSE_FORMAT("planner parameters saved to %s", filename);
+	    RavePrintfA(str(boost::format("env=%d: Planner parameters saved to %s")%GetEnv()->GetId()%filename), _dumplevel);
         }
-        _DumpTrajectory(ptraj, Level_Verbose);
+        _DumpTrajectory(ptraj, _dumplevel);
 
         // Save velocities
         std::vector<KinBody::KinBodyStateSaverPtr> vstatesavers;
@@ -499,8 +499,7 @@ public:
                 _DumpTrajectory(ptraj, _dumplevel);
                 return PS_Failed;
             }
-            RAVELOG_DEBUG_FORMAT("env=%d: Finished initializing linear waypoints via _SetMileStones", GetEnv()->GetId());
-            RAVELOG_DEBUG_FORMAT("#waypoint: %d -> %d", ptraj->GetNumWaypoints()%vWaypoints.size());
+            RAVELOG_DEBUG_FORMAT("env=%d: Finished initializing linear waypoints via _SetMileStones. #waypoint: %d -> %d", GetEnv()->GetId()%ptraj->GetNumWaypoints()%vWaypoints.size());
         }
 
         // Tell parabolicsmoother not to check constraints again if we already did (e.g. in linearsmoother, etc.)
@@ -564,7 +563,7 @@ public:
                 OPENRAVE_ASSERT_OP((int) itrampnd->GetDOF(), ==, _parameters->GetDOF());
             }
 
-            RAVELOG_DEBUG("env=%d, start inserting the first waypoint to dummytraj", GetEnv()->GetId());
+            RAVELOG_DEBUG("env=%d: start inserting the first waypoint to dummytraj", GetEnv()->GetId());
             waypoints.resize(newSpec.GetDOF()); // reuse _cacheWaypoints
 
             ConfigurationSpecification::ConvertData(waypoints.begin(), newSpec, parabolicpath.GetRampNDVect().front().GetX0Vect(), posSpec, 1, GetEnv(), true);
@@ -1759,7 +1758,7 @@ protected:
         ofstream f(filename.c_str());
         f << std::setprecision(RampOptimizer::g_nPrec);
         parabolicpath.Serialize(f);
-        RavePrintfA(str(boost::format("Wrote a parabolicpath to %s (duration = %.15e, num=%d)")%filename%parabolicpath.GetDuration()%parabolicpath.GetRampNDVect().size()), level);
+        RavePrintfA(str(boost::format("env=%d: Wrote a parabolicpath to %s (duration = %.15e, num=%d)")%GetEnv()->GetId()%filename%parabolicpath.GetDuration()%parabolicpath.GetRampNDVect().size()), level);
         return;
     }
 
@@ -1767,7 +1766,7 @@ protected:
     {
         if( IS_DEBUGLEVEL(level) ) {
             std::string filename = _DumpTrajectory(ptraj);
-            RavePrintfA(str(boost::format("env=%d: wrote trajectory to %s")%GetEnv()->GetId()%filename), level);
+            RavePrintfA(str(boost::format("env=%d: Wrote trajectory to %s")%GetEnv()->GetId()%filename), level);
             return filename;
         }
         else {
@@ -1784,7 +1783,7 @@ protected:
         else {
             randNum = RaveRandomInt();
         }
-        std::string filename = str(boost::format("%s/parabolicsmoother%d.traj.xml")%RaveGetHomeDirectory()%(randNum%1000));
+        std::string filename = str(boost::format("%s/parabolicsmoother2_%d.traj.xml")%RaveGetHomeDirectory()%(randNum%1000));
         ofstream f(filename.c_str());
         f << std::setprecision(RampOptimizer::g_nPrec);
         ptraj->serialize(f);
