@@ -1259,6 +1259,8 @@ protected:
         // Parameters & variables for early shortcut termination
         size_t nItersFromPrevSuccessful = 0;        // keeps track of the most recent successful shortcut iteration
         size_t nCutoffIters = min(100, numIters/2); // we stop shortcutting if no progress has been made in the past nCutoffIters iterations
+	size_t nTimeBasedConstraintsFailed = 0;     // the number of times that time-based constraints fail between two consecutive successful shortcuts (reset
+						    // every time a shortcut attempt is successful)
 
         dReal score = 1.0;                 // if the current iteration is successful, we calculate a score
         dReal currentBestScore = 1.0;      // keeps track of the best shortcut score so far
@@ -1270,6 +1272,12 @@ protected:
         dReal specialShortcutCutoffTime = 0.75; // when doind special shortcut, we sample one of the remaining zero-velocity waypoints. Then we try to
                                                 // shortcut in the range twaypoint +/- specialShortcutCutoffTime
 
+	dReal fiMinDiscretization = 4.0/(minTimeStep); // mindiscretization is basically the step length to discretize the current trajectory so as to record if
+						       // the two sampled time instances fall into the same two bins. If so, skip the rest of computation.
+	std::vector<uint8_t>& vVisitedDiscretization = _vVisitedDiscretizationCache;
+	vVisitedDiscretization.clear();
+	int nEndTimeDiscretization;
+	
         // Main shortcut loop
         int iters = 0;
         for (iters = 0; iters < numIters; ++iters) {
@@ -1278,11 +1286,16 @@ protected:
                 break;
             }
 
-            nItersFromPrevSuccessful += 1;
-            if( nItersFromPrevSuccessful > nCutoffIters  ) {
+            if( nItersFromPrevSuccessful + nTimeBasedConstraintsFailed > nCutoffIters  ) {
                 // There has been no progress in the last nCutoffIters iterations. Stop right away.
                 break;
             }
+	    nItersFromPrevSuccessful += 1;
+
+	    if( vVisitedDiscretization.size() == 0 ) {
+		nEndTimeDiscretization = (int)(tTotal*fiMinDiscretization) + 1;
+		vVisitedDiscretization.resize(nEndTimeDiscretization*nEndTimeDiscretization, 0);
+	    }
 
             // Sample t0 and t1. We could possibly add some heuristics here to get higher quality
             // shortcuts
@@ -1322,8 +1335,19 @@ protected:
 
             if( t1 - t0 < minTimeStep ) {
                 // The sampled t0 and t1 are too close to be useful
+		RAVELOG_VERBOSE_FORMAT("env=%d: shortcut iter = %d/%d, the sampled t0 = %.15e and t1 = %.15e are too close (minTimeStep = %.15e)", GetEnv()->GetId()%iters%numIters%t0%t1%minTimeStep);
                 continue;
             }
+	    {
+		int t0Index = t0*fiMinDiscretization;
+		int t1Index = t1*fiMinDiscretization;
+		int testPairIndex = t0Index*nEndTimeDiscretization + t1Index;
+		if( testPairIndex < (int)vVisitedDiscretization.size() && vVisitedDiscretization[testPairIndex] ) {
+		    RAVELOG_VERBOSE_FORMAT("env=%d: shortcut iter = %d/%d: the sampled t0 = %.15e and t1 = %.15e have been tested", GetEnv()->GetId()%iters%numIters%t0%t1);
+		    continue;
+		}
+		vVisitedDiscretization[testPairIndex] = 1;
+	    }
 
             uint32_t iIterProgress = 0; // used for debugging purposes
 
@@ -1529,7 +1553,8 @@ protected:
                     }
                     else if( retcheck.retcode == CFO_CheckTimeBasedConstraints ) {
                         // CFO_CheckTimeBasedConstraints can be returned because of two things: torque limit violation and manip constraint violation
-
+			nTimeBasedConstraintsFailed++;
+			
                         // Scale down vellimits and/or accellimits
                         if( _bmanipconstraints && _manipconstraintchecker ) {
                             // Scale down vellimits and accellimits independently according to the violated constraint (manipspeed/manipaccel)
@@ -1648,6 +1673,9 @@ protected:
 
                 // Now this shortcut is really successful
                 ++numShortcuts;
+
+		nTimeBasedConstraintsFailed = 0; // reset
+		vVisitedDiscretization.clear();
 
                 // Keep track of zero-velocity waypoints
                 dReal segmentTime = 0;
@@ -1833,6 +1861,7 @@ protected:
     std::vector<RampOptimizer::RampND> _cacheRampNDVectOut1; ///< stores output from the check function, also used in _Shortcut
 
     // in _Shortcut
+    std::vector<uint8_t> _vVisitedDiscretizationCache;
 
 #ifdef SMOOTHER_TIMING_DEBUG
     // Statistics
