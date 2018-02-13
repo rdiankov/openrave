@@ -1096,7 +1096,8 @@ std::pair<dReal, dReal> KinBody::Joint::GetInstantaneousTorqueLimits(int iaxis) 
                     }
 
                     // due to back emf, the deceleration magnitude is less than acceleration?
-                    if (abs(rawvelocity) < 1.0/360) {
+                    double threshold = IsRevolute(iaxis) ? 1.0/360 : 1.0;
+                    if (abs(rawvelocity) < threshold) {
                         return std::make_pair(-finterpolatedtorque, finterpolatedtorque);
                     }
                     else if( rawvelocity > 0 ) {
@@ -1111,7 +1112,8 @@ std::pair<dReal, dReal> KinBody::Joint::GetInstantaneousTorqueLimits(int iaxis) 
             // due to back emf, the deceleration magnitude is less than acceleration?
             // revolutionsPerSecond is huge, return the last point
             dReal f = _info._infoElectricMotor->max_speed_torque_points.back().second*_info._infoElectricMotor->gear_ratio;
-            if (abs(rawvelocity) < 1.0/360) {
+            double threshold = IsRevolute(iaxis) ? 1.0/360 : 1.0;
+            if (abs(rawvelocity) < threshold) {
                 return std::make_pair(-f, f);
             }
             else if( rawvelocity > 0 ) {
@@ -1169,7 +1171,8 @@ std::pair<dReal, dReal> KinBody::Joint::GetNominalTorqueLimits(int iaxis) const
                     }
 
                     // due to back emf, the deceleration magnitude is less than acceleration?
-                    if (abs(rawvelocity) < 1.0/360) {
+                    double threshold = IsRevolute(iaxis) ? 1.0/360 : 1.0;
+                    if (abs(rawvelocity) < threshold) {
                         return std::make_pair(-finterpolatedtorque, finterpolatedtorque);
                     }
                     else if( rawvelocity > 0 ) {
@@ -1184,7 +1187,8 @@ std::pair<dReal, dReal> KinBody::Joint::GetNominalTorqueLimits(int iaxis) const
             // due to back emf, the deceleration magnitude is less than acceleration?
             // revolutionsPerSecond is huge, return the last point
             dReal f = _info._infoElectricMotor->nominal_speed_torque_points.back().second*_info._infoElectricMotor->gear_ratio;
-            if (abs(rawvelocity) < 1.0/360) {
+            double threshold = IsRevolute(iaxis) ? 1.0/360 : 1.0;
+            if (abs(rawvelocity) < threshold) {
                 return std::make_pair(-f, f);
             }
             else if( rawvelocity > 0 ) {
