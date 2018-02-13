@@ -107,7 +107,7 @@ public:
         pmanager->clear();
         // should clear all vcolobjs notifying the destructor that manager has the objects unregistered
         FOREACH(it, mapCachedBodies) {
-            it->second.vcolobjs.resize(0);
+            it->second.vcolobjs.clear();
         }
         mapCachedBodies.clear();
     }
@@ -140,10 +140,16 @@ public:
         mapCachedBodies.clear();
         FOREACH(itbody, attachedBodies) {
             FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(*itbody);
+            if( !pinfo ) {
+                // don't init something that isn't initialized in this checker.
+                RAVELOG_VERBOSE_FORMAT("body %s has attached body %s which is not initialized in this checker, ignoring for now", pbody->GetName()%(*itbody)->GetName());
+                continue;
+            }
+   
             bool bsetUpdateStamp = false;
             uint64_t linkmask = 0;
-            vcolobjs.resize(0); // reset any existing collision objects
-            vcolobjs.resize((*itbody)->GetLinks().size());
+            vcolobjs.clear(); // reset any existing collision objects
+            vcolobjs.resize((*itbody)->GetLinks().size(),CollisionObjectPtr());
             FOREACH(itlink, (*itbody)->GetLinks()) {
                 if( (*itlink)->IsEnabled() && (*itbody != pbody || !_bTrackActiveDOF || _vTrackingActiveLinks.at((*itlink)->GetIndex())) ) {
                     CollisionObjectPtr pcol = _fclspace.GetLinkBV(pinfo, (*itlink)->GetIndex());
@@ -160,11 +166,26 @@ public:
                     linkmask |= ((uint64_t)1 << (uint64_t)(*itlink)->GetIndex());
                 }
             }
-            if( bsetUpdateStamp ) {
+
+            // regardless if the linkmask, have to always add to cache in order to track!
+            if( 1 ) {//bsetUpdateStamp ) {
                 //RAVELOG_VERBOSE_FORMAT("env=%d, %x adding body %s linkmask=0x%x, _tmpbuffer.size()=%d", (*itbody)->GetEnv()->GetId()%this%(*itbody)->GetName()%linkmask%_tmpbuffer.size());
                 mapCachedBodies[(*itbody)->GetEnvironmentId()] = KinBodyCache(*itbody, pinfo);
                 mapCachedBodies[(*itbody)->GetEnvironmentId()].linkmask = linkmask;
                 mapCachedBodies[(*itbody)->GetEnvironmentId()].vcolobjs.swap(vcolobjs);
+            }
+            else {
+//                if( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
+//                    std::stringstream ss;
+//                    for(size_t ilink = 0; ilink < (*itbody)->GetLinks().size(); ++ilink) {
+//                        ss << (int)(*itbody)->GetLinks()[ilink]->IsEnabled();
+//                        if( pbody == *itbody ) {
+//                            ss << "(" << _vTrackingActiveLinks.at(ilink) << ")";
+//                        }
+//                        ss << ",";
+//                    }
+//                    RAVELOG_VERBOSE_FORMAT("env=%d, %x not tracking adding body %s: links=[%s]", (*itbody)->GetEnv()->GetId()%this%(*itbody)->GetName()%ss.str());
+//                }
             }
         }
         if( _tmpbuffer.size() > 0 ) {
@@ -273,7 +294,17 @@ public:
         if( !!ptrackingbody && _bTrackActiveDOF ) {
             std::map<int, KinBodyCache>::iterator ittracking = mapCachedBodies.find(ptrackingbody->GetEnvironmentId());
             if( ittracking == mapCachedBodies.end() ) {
-                RAVELOG_WARN_FORMAT("%u tracking body not in current cached bodies (body %s) (env %d)", _lastSyncTimeStamp%ptrackingbody->GetName()%ptrackingbody->GetEnv()->GetId());
+                std::string ssinfo;
+                FOREACH(itcache, mapCachedBodies) {
+                    KinBodyConstPtr pbody = itcache->second.pwbody.lock(); ///< weak pointer to body
+                    if( !!pbody ) {
+                        ssinfo += str(boost::format("(id=%d, linkmask=0x%x, numcols=%d, name=%s), ")%itcache->first%itcache->second.linkmask%itcache->second.vcolobjs.size()%pbody->GetName());
+                    }
+                    else {
+                        ssinfo += str(boost::format("id=%d, linkmask=0x%x, numcols=%d")%itcache->first%itcache->second.linkmask%itcache->second.vcolobjs.size());
+                    }
+                }
+                RAVELOG_WARN_FORMAT("%x tracking body not in current cached bodies (tracking body %s (id=%d)) (env %d). Current cache is: %s", this%ptrackingbody->GetName()%ptrackingbody->GetEnvironmentId()%ptrackingbody->GetEnv()->GetId()%ssinfo);
             }
             else {
                 FCLSpace::KinBodyInfoPtr pinfo = ittracking->second.pwinfo.lock();

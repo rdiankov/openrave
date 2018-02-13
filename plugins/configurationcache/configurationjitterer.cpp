@@ -41,6 +41,11 @@ public:
         return tmanip.rotate(vManipDir).dot3(vGlobalDir) >= fCosAngleThresh;
     }
 
+    /// \return the cos of the angle between current tmanip and the global dir
+    inline dReal ComputeCosAngle(const Transform& tmanip) const {
+        return tmanip.rotate(vManipDir).dot3(vGlobalDir);
+    }
+    
     Vector vManipDir; ///< direction on the manipulator
     Vector vGlobalDir; ///< direction in world coordinates
     dReal fCosAngleThresh; ///< the cos angle threshold
@@ -782,7 +787,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                                     ss << "colvalues=[" << _newdof2[i];
                                 }
                             }
-                            ss << "]; quat=[" << _pmanip->GetTransform().rot.x << ", " << _pmanip->GetTransform().rot.y << ", " << _pmanip->GetTransform().rot.z << ", " << _pmanip->GetTransform().rot.w << "]";
+                            ss << "]; cosangle=" << _pConstraintToolDirection->ComputeCosAngle(_pmanip->GetTransform()) << "; quat=[" << _pmanip->GetTransform().rot.x << ", " << _pmanip->GetTransform().rot.y << ", " << _pmanip->GetTransform().rot.z << ", " << _pmanip->GetTransform().rot.w << "]";
                             RAVELOG_VERBOSE(ss.str());
                         }
                         break;
