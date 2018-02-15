@@ -321,6 +321,9 @@ public:
     virtual void _SetCameraDistanceToFocus(float focalDistance);
 
     virtual void _SetProjectionMode(const std::string& projectionMode);
+    virtual void _SetBkgndColor(const RaveVector<float>& color);
+
+    virtual void _SetName(const std::string& name);
 
     /// \brief posts a function to be executed in the GUI thread
     ///
@@ -358,6 +361,7 @@ public:
     bool _ShowWorldAxesCommand(ostream& sout, istream& sinput);
     bool _SetItemVisualizationCommand(ostream& sout, istream& sinput);
     bool _SetNearPlaneCommand(ostream& sout, istream& sinput);
+    bool _SetTextureCubeMap(ostream& out, istream& sinput);
     bool _TrackLinkCommand(ostream& sout, istream& sinput);
     bool _TrackManipulatorCommand(ostream& sout, istream& sinput);
     bool _SetTrackingAngleToUpCommand(ostream& sout, istream& sinput);
@@ -496,6 +500,7 @@ public:
     bool _bUpdateEnvironment; ///< if true, should update the viewer to the openrave environment periodically
     bool _bLockEnvironment; ///< if true, should lock the environment when updating from it. Otherwise, the environment can assumed to be already locked in another thread that the viewer controls
 
+    bool _bExternalLoop; ///< If true, the Qt loop is not started by qtosgviewer, which means qtosgviewer should not terminate the Qt loop during deallocation.
     int _nQuitMainLoop; ///< controls if the main loop's state. If 0, then nothing is initialized. If -1, then currently initializing/running. If 1, then currently quitting from the main loop. If 2, then successfully quit from the main loop.
 
     bool _bRenderFiguresInCamera;

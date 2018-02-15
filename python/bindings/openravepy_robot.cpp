@@ -553,16 +553,15 @@ public:
             return bcollision;
         }
 
-        bool CheckEndEffectorSelfCollision(object otrans, PyCollisionReportPtr pyreport=PyCollisionReportPtr(), int numredundantsamples=0) const
+        bool CheckEndEffectorSelfCollision(object otrans, PyCollisionReportPtr pyreport=PyCollisionReportPtr(), int numredundantsamples=0, bool ignoreManipulatorLinks=false) const
         {
             bool bCollision;
             IkParameterization ikparam;
-            bool bIgnoreManipulatorLinks = false;
             if( ExtractIkParameterization(otrans,ikparam) ) {
-                bCollision = _pmanip->CheckEndEffectorSelfCollision(ikparam, !pyreport ? CollisionReportPtr() : openravepy::GetCollisionReport(pyreport), numredundantsamples, bIgnoreManipulatorLinks);
+                bCollision = _pmanip->CheckEndEffectorSelfCollision(ikparam, !pyreport ? CollisionReportPtr() : openravepy::GetCollisionReport(pyreport), numredundantsamples, ignoreManipulatorLinks);
             }
             else {
-                bCollision = _pmanip->CheckEndEffectorSelfCollision(ExtractTransform(otrans),!pyreport ? CollisionReportPtr() : openravepy::GetCollisionReport(pyreport), numredundantsamples, bIgnoreManipulatorLinks);
+                bCollision = _pmanip->CheckEndEffectorSelfCollision(ExtractTransform(otrans),!pyreport ? CollisionReportPtr() : openravepy::GetCollisionReport(pyreport), numredundantsamples, ignoreManipulatorLinks);
             }
             if( !!pyreport ) {
                 openravepy::UpdateCollisionReport(pyreport,_pyenv);
@@ -759,42 +758,6 @@ public:
         return !pattachedsensor ? PyAttachedSensorPtr() : PyAttachedSensorPtr(new PyAttachedSensor(pattachedsensor, _pyenv));
     }
 
-    class PyGrabbedInfo
-    {
-public:
-        PyGrabbedInfo() {
-            _trelative = ReturnTransform(Transform());
-        }
-        PyGrabbedInfo(const RobotBase::GrabbedInfo& info) {
-            _grabbedname = ConvertStringToUnicode(info._grabbedname);
-            _robotlinkname = ConvertStringToUnicode(info._robotlinkname);
-            _trelative = ReturnTransform(info._trelative);
-            boost::python::list setRobotLinksToIgnore;
-            FOREACHC(itindex, info._setRobotLinksToIgnore) {
-                setRobotLinksToIgnore.append(*itindex);
-            }
-            _setRobotLinksToIgnore = setRobotLinksToIgnore;
-        }
-
-        RobotBase::GrabbedInfoPtr GetGrabbedInfo() const
-        {
-            RobotBase::GrabbedInfoPtr pinfo(new RobotBase::GrabbedInfo());
-            pinfo->_grabbedname = boost::python::extract<std::string>(_grabbedname);
-            pinfo->_robotlinkname = boost::python::extract<std::string>(_robotlinkname);
-            pinfo->_trelative = ExtractTransform(_trelative);
-            std::vector<int> v = ExtractArray<int>(_setRobotLinksToIgnore);
-            pinfo->_setRobotLinksToIgnore.clear();
-            FOREACHC(it,v) {
-                pinfo->_setRobotLinksToIgnore.insert(*it);
-            }
-            return pinfo;
-        }
-
-        object _grabbedname, _robotlinkname;
-        object _trelative;
-        object _setRobotLinksToIgnore;
-    };
-    typedef boost::shared_ptr<PyGrabbedInfo> PyGrabbedInfoPtr;
 
     class PyRobotStateSaver
     {
@@ -1258,6 +1221,8 @@ public:
     bool Grab(PyKinBodyPtr pbody) {
         CHECK_POINTER(pbody); return _probot->Grab(pbody->GetBody());
     }
+
+    // since PyKinBody::Grab is overloaded with (pbody, plink) parameters, have to support both...?
     bool Grab(PyKinBodyPtr pbody, object pylink_or_linkstoignore)
     {
         CHECK_POINTER(pbody);
@@ -1269,62 +1234,6 @@ public:
         // maybe it is a set?
         std::set<int> setlinkstoignore = ExtractSet<int>(pylink_or_linkstoignore);
         return _probot->Grab(pbody->GetBody(), setlinkstoignore);
-    }
-    bool Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore)
-    {
-        CHECK_POINTER(pbody);
-        CHECK_POINTER(pylink);
-        std::set<int> setlinkstoignore = ExtractSet<int>(linkstoignore);
-        return _probot->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignore);
-    }
-    void Release(PyKinBodyPtr pbody) {
-        CHECK_POINTER(pbody); _probot->Release(pbody->GetBody());
-    }
-    void ReleaseAllGrabbed() {
-        _probot->ReleaseAllGrabbed();
-    }
-    void RegrabAll() {
-        _probot->RegrabAll();
-    }
-    object IsGrabbing(PyKinBodyPtr pbody) const {
-        CHECK_POINTER(pbody);
-        KinBody::LinkPtr plink = _probot->IsGrabbing(pbody->GetBody());
-        return toPyKinBodyLink(plink,_pyenv);
-    }
-
-    object GetGrabbed() const
-    {
-        boost::python::list bodies;
-        std::vector<KinBodyPtr> vbodies;
-        _probot->GetGrabbed(vbodies);
-        FOREACH(itbody, vbodies) {
-            bodies.append(PyKinBodyPtr(new PyKinBody(*itbody,_pyenv)));
-        }
-        return bodies;
-    }
-
-    object GetGrabbedInfo() const
-    {
-        boost::python::list ograbbed;
-        std::vector<RobotBase::GrabbedInfoPtr> vgrabbedinfo;
-        _probot->GetGrabbedInfo(vgrabbedinfo);
-        FOREACH(itgrabbed, vgrabbedinfo) {
-            ograbbed.append(PyGrabbedInfoPtr(new PyGrabbedInfo(**itgrabbed)));
-        }
-        return ograbbed;
-    }
-
-    void ResetGrabbed(object ograbbedinfos)
-    {
-        std::vector<RobotBase::GrabbedInfoConstPtr> vgrabbedinfos(len(ograbbedinfos));
-        for(size_t i = 0; i < vgrabbedinfos.size(); ++i) {
-            PyGrabbedInfoPtr pygrabbed = boost::python::extract<PyGrabbedInfoPtr>(ograbbedinfos[i]);
-            if( !pygrabbed ) {
-                throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to Robot.GrabbedInfo"),ORE_InvalidArguments);
-            }
-            vgrabbedinfos[i] = pygrabbed->GetGrabbedInfo();
-        }
-        _probot->ResetGrabbed(vgrabbedinfos);
     }
 
     bool CheckLinkSelfCollision(int ilinkindex, object olinktrans, PyCollisionReportPtr pyreport=PyCollisionReportPtr())
@@ -1418,21 +1327,6 @@ public:
     }
 };
 
-class GrabbedInfo_pickle_suite : public pickle_suite
-{
-public:
-    static boost::python::tuple getstate(const PyRobotBase::PyGrabbedInfo& r)
-    {
-        return boost::python::make_tuple(r._grabbedname, r._robotlinkname, r._trelative, r._setRobotLinksToIgnore);
-    }
-    static void setstate(PyRobotBase::PyGrabbedInfo& r, boost::python::tuple state) {
-        r._grabbedname = state[0];
-        r._robotlinkname = state[1];
-        r._trelative = state[2];
-        r._setRobotLinksToIgnore = state[3];
-    }
-};
-
 RobotBasePtr GetRobot(object o)
 {
     extract<PyRobotBasePtr> pyrobot(o);
@@ -1477,7 +1371,7 @@ PyRobotBasePtr RaveCreateRobot(PyEnvironmentBasePtr pyenv, const std::string& na
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetIkParameterization_overloads, GetIkParameterization, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckEndEffectorCollision_overloads, CheckEndEffectorCollision, 1, 3)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckEndEffectorSelfCollision_overloads, CheckEndEffectorSelfCollision, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckEndEffectorSelfCollision_overloads, CheckEndEffectorSelfCollision, 1, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolution_overloads, FindIKSolution, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolutionFree_overloads, FindIKSolution, 3, 5)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolutions_overloads, FindIKSolutions, 2, 4)
@@ -1532,14 +1426,6 @@ void init_openravepy_robot()
                                 .def_readwrite("_sensorgeometry", &PyRobotBase::PyAttachedSensorInfo::_sensorgeometry)
     ;
 
-    object grabbedinfo = class_<PyRobotBase::PyGrabbedInfo, boost::shared_ptr<PyRobotBase::PyGrabbedInfo> >("GrabbedInfo", DOXY_CLASS(RobotBase::GrabbedInfo))
-                         .def_readwrite("_grabbedname",&PyRobotBase::PyGrabbedInfo::_grabbedname)
-                         .def_readwrite("_robotlinkname",&PyRobotBase::PyGrabbedInfo::_robotlinkname)
-                         .def_readwrite("_trelative",&PyRobotBase::PyGrabbedInfo::_trelative)
-                         .def_readwrite("_setRobotLinksToIgnore",&PyRobotBase::PyGrabbedInfo::_setRobotLinksToIgnore)
-                         .def_pickle(GrabbedInfo_pickle_suite())
-    ;
-
     {
         void (PyRobotBase::*psetactivedofs1)(object) = &PyRobotBase::SetActiveDOFs;
         void (PyRobotBase::*psetactivedofs2)(object, int) = &PyRobotBase::SetActiveDOFs;
@@ -1547,7 +1433,6 @@ void init_openravepy_robot()
 
         bool (PyRobotBase::*pgrab1)(PyKinBodyPtr) = &PyRobotBase::Grab;
         bool (PyRobotBase::*pgrab2)(PyKinBodyPtr,object) = &PyRobotBase::Grab;
-        bool (PyRobotBase::*pgrab4)(PyKinBodyPtr,object,object) = &PyRobotBase::Grab;
 
         PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator1)(int) = &PyRobotBase::SetActiveManipulator;
         PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator2)(const std::string&) = &PyRobotBase::SetActiveManipulator;
@@ -1638,14 +1523,6 @@ void init_openravepy_robot()
                       .def("CalculateActiveAngularVelocityJacobian",&PyRobotBase::CalculateActiveAngularVelocityJacobian,args("linkindex"), DOXY_FN(RobotBase,CalculateActiveAngularVelocityJacobian "int; std::vector"))
                       .def("Grab",pgrab1,args("body"), DOXY_FN(RobotBase,Grab "KinBodyPtr"))
                       .def("Grab",pgrab2,args("body","grablink"), DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr"))
-                      .def("Grab",pgrab4,args("body","grablink","linkstoignore"), DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr; const std::set"))
-                      .def("Release",&PyRobotBase::Release,args("body"), DOXY_FN(RobotBase,Release))
-                      .def("ReleaseAllGrabbed",&PyRobotBase::ReleaseAllGrabbed, DOXY_FN(RobotBase,ReleaseAllGrabbed))
-                      .def("RegrabAll",&PyRobotBase::RegrabAll, DOXY_FN(RobotBase,RegrabAll))
-                      .def("IsGrabbing",&PyRobotBase::IsGrabbing,args("body"), DOXY_FN(RobotBase,IsGrabbing))
-                      .def("GetGrabbed",&PyRobotBase::GetGrabbed, DOXY_FN(RobotBase,GetGrabbed))
-                      .def("GetGrabbedInfo",&PyRobotBase::GetGrabbedInfo, DOXY_FN(RobotBase,GetGrabbedInfo))
-                      .def("ResetGrabbed",&PyRobotBase::ResetGrabbed, args("grabbedinfos"), DOXY_FN(RobotBase,ResetGrabbed))
                       .def("CheckLinkSelfCollision", &PyRobotBase::CheckLinkSelfCollision, CheckLinkSelfCollision_overloads(args("linkindex", "linktrans", "report"), DOXY_FN(RobotBase,CheckLinkSelfCollision)))
                       .def("WaitForController",&PyRobotBase::WaitForController,args("timeout"), "Wait until the robot controller is done")
                       .def("GetRobotStructureHash",&PyRobotBase::GetRobotStructureHash, DOXY_FN(RobotBase,GetRobotStructureHash))
@@ -1657,7 +1534,6 @@ void init_openravepy_robot()
         robot.attr("DOFAffine") = dofaffine; // deprecated (11/10/04)
         robot.attr("ManipulatorInfo") = manipulatorinfo;
         robot.attr("AttachedSensorInfo") = attachedsensorinfo;
-        robot.attr("GrabbedInfo") = grabbedinfo;
 
         object (PyRobotBase::PyManipulator::*pmanipik)(object, int, bool, bool) const = &PyRobotBase::PyManipulator::FindIKSolution;
         object (PyRobotBase::PyManipulator::*pmanipikf)(object, object, int, bool, bool) const = &PyRobotBase::PyManipulator::FindIKSolution;
@@ -1667,7 +1543,7 @@ void init_openravepy_robot()
         bool (PyRobotBase::PyManipulator::*pCheckEndEffectorCollision0)(PyCollisionReportPtr) const = &PyRobotBase::PyManipulator::CheckEndEffectorCollision;
         bool (PyRobotBase::PyManipulator::*pCheckEndEffectorCollision1)(object,PyCollisionReportPtr,int) const = &PyRobotBase::PyManipulator::CheckEndEffectorCollision;
         bool (PyRobotBase::PyManipulator::*pCheckEndEffectorSelfCollision0)(PyCollisionReportPtr) const = &PyRobotBase::PyManipulator::CheckEndEffectorSelfCollision;
-        bool (PyRobotBase::PyManipulator::*pCheckEndEffectorSelfCollision1)(object,PyCollisionReportPtr,int) const = &PyRobotBase::PyManipulator::CheckEndEffectorSelfCollision;
+        bool (PyRobotBase::PyManipulator::*pCheckEndEffectorSelfCollision1)(object,PyCollisionReportPtr,int,bool) const = &PyRobotBase::PyManipulator::CheckEndEffectorSelfCollision;
         bool (PyRobotBase::PyManipulator::*pCheckIndependentCollision1)() const = &PyRobotBase::PyManipulator::CheckIndependentCollision;
         bool (PyRobotBase::PyManipulator::*pCheckIndependentCollision2)(PyCollisionReportPtr) const = &PyRobotBase::PyManipulator::CheckIndependentCollision;
 
@@ -1722,8 +1598,8 @@ void init_openravepy_robot()
         .def("GetIkConfigurationSpecification",&PyRobotBase::PyManipulator::GetIkConfigurationSpecification, GetIkConfigurationSpecification_overloads(args("iktype", "interpolation"),DOXY_FN(RobotBase::Manipulator,GetIkConfigurationSpecification)))
         .def("CheckEndEffectorCollision",pCheckEndEffectorCollision1,CheckEndEffectorCollision_overloads(args("transform", "report", "numredundantsamples"), DOXY_FN(RobotBase::Manipulator,CheckEndEffectorCollision)))
         .def("CheckEndEffectorCollision",pCheckEndEffectorCollision0,args("report"), DOXY_FN(RobotBase::Manipulator,CheckEndEffectorCollision))
-        .def("CheckEndEffectorSelfCollision",pCheckEndEffectorSelfCollision1,CheckEndEffectorSelfCollision_overloads(args("transform", "report", "numredundantsamples"), DOXY_FN(RobotBase::Manipulator,CheckEndEffectorSelfCollision)))
         .def("CheckEndEffectorSelfCollision",pCheckEndEffectorSelfCollision0,args("report"), DOXY_FN(RobotBase::Manipulator,CheckEndEffectorSelfCollision))
+        .def("CheckEndEffectorSelfCollision",pCheckEndEffectorSelfCollision1,CheckEndEffectorSelfCollision_overloads(args("transform", "report", "numredundantsamples","ignoreManipulatorLinks"), DOXY_FN(RobotBase::Manipulator,CheckEndEffectorSelfCollision)))
         .def("CheckIndependentCollision",pCheckIndependentCollision1, DOXY_FN(RobotBase::Manipulator,CheckIndependentCollision))
         .def("CheckIndependentCollision",pCheckIndependentCollision2,args("report"), DOXY_FN(RobotBase::Manipulator,CheckIndependentCollision))
         .def("CalculateJacobian",&PyRobotBase::PyManipulator::CalculateJacobian,DOXY_FN(RobotBase::Manipulator,CalculateJacobian))

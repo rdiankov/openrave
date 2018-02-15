@@ -1731,6 +1731,8 @@ void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
         endtime = starttime;
     }
 
+    int nOriginalNumWaypoints = traj->GetNumWaypoints();
+    
     std::vector<dReal> values;
     if( endtime < traj->GetDuration() ) {
         size_t endindex = traj->GetFirstWaypointIndexAfterTime(endtime);
@@ -1769,7 +1771,7 @@ void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
     }
 
     // for debugging purposes
-    OPENRAVE_ASSERT_OP(RaveFabs(traj->GetDuration() - (endtime - starttime)),<=,g_fEpsilonLinear*100);
+    OPENRAVE_ASSERT_OP(RaveFabs(traj->GetDuration() - (endtime - starttime)),<=,g_fEpsilonLinear*nOriginalNumWaypoints); // normalize with respect to number of points!
 }
 
 TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal starttime, dReal endtime)
@@ -1835,14 +1837,25 @@ TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal startt
         if( !spec.ExtractDeltaTime(startdeltatime, values.begin()) ) {
             throw OPENRAVE_EXCEPTION_FORMAT0("could not extract deltatime, bad traj", ORE_InvalidArguments);
         }
-        
-        spec.InsertDeltaTime(values.begin(), 0); // first waypoint starts at 0 time
-        outtraj->Insert(0,values,true);
 
-        // the second waypoint holds the delta time between new first waypoint
-        traj->GetWaypoint(startindex+1, values);
-        spec.InsertDeltaTime(values.begin(), waypointdeltatime - startdeltatime);
-        outtraj->Insert(1,values,true);
+        if( waypointdeltatime - startdeltatime > g_fEpsilonLinear ) {
+            // there is a delta time so set first point to time 0 and second point to waypoint-startdeltatime
+            
+            spec.InsertDeltaTime(values.begin(), 0); // first waypoint starts at 0 time
+            outtraj->Insert(0,values,true);
+            
+            // the second waypoint holds the delta time between new first waypoint
+            traj->GetWaypoint(startindex+1, values);
+            spec.InsertDeltaTime(values.begin(), waypointdeltatime - startdeltatime);
+            outtraj->Insert(1,values,true);
+        }
+        else {
+            // time between first and second point is non-existent, so remove first point
+            outtraj->Remove(0, 1);
+            outtraj->GetWaypoint(0, values);
+            spec.InsertDeltaTime(values.begin(), 0);
+            outtraj->Insert(0,values, true);
+        }
     }
     
     if( endtime < traj->GetDuration() ) {
@@ -1852,7 +1865,7 @@ TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal startt
     }
 
     // for debugging purposes
-    OPENRAVE_ASSERT_OP(RaveFabs(outtraj->GetDuration() - (endtime - starttime)),<=,g_fEpsilonLinear*10);
+    OPENRAVE_ASSERT_OP(RaveFabs(outtraj->GetDuration() - (endtime - starttime)),<=,g_fEpsilonLinear*traj->GetNumWaypoints()); // normalize with respect to number of points!
     return outtraj;
 }
 
@@ -2093,6 +2106,21 @@ void DynamicsCollisionConstraint::SetPerturbation(dReal perturbation)
 
 int DynamicsCollisionConstraint::_SetAndCheckState(PlannerBase::PlannerParametersConstPtr params, const std::vector<dReal>& vdofvalues, const std::vector<dReal>& vdofvelocities, const std::vector<dReal>& vdofaccels, int options, ConstraintFilterReturnPtr filterreturn)
 {
+//    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+//        stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+//        ss << "checking values=[";
+//            for(size_t i = 0; i < vdofvalues.size(); ++i ) {
+//            if( i > 0 ) {
+//                ss << "," << vdofvalues[i];
+//            }
+//            else {
+//                ss << vdofvalues[i];
+//            }
+//        }
+//        ss << "]";
+//        RAVELOG_VERBOSE(ss.str());
+//    }
+
     if( params->SetStateValues(vdofvalues, 0) != 0 ) {
         return CFO_StateSettingError;
     }
@@ -2950,10 +2978,10 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             // have to recompute the delta based on f and dQ
             dReal fnewscale = 1;
             for(size_t idof = 0; idof < dQ.size(); ++idof) {
-                _vprevtempconfig[idof] = q0[idof] + f*dQ[idof] - _vtempconfig[idof];
+                _vprevtempconfig[idof] = q0[idof] + (f+1)*dQ[idof] - _vtempconfig[idof];
                 // _vprevtempconfig[idof] cannot be too high
                 if( RaveFabs(_vprevtempconfig[idof]) > vConfigResolution[idof] ) {
-                    dReal fscale = RaveFabs(_vprevtempconfig[idof])/vConfigResolution[idof];
+                    dReal fscale = vConfigResolution[idof]/RaveFabs(_vprevtempconfig[idof]);
                     if( fscale < fnewscale ) {
                         fnewscale = fscale;
                     }

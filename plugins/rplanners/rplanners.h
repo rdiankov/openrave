@@ -214,7 +214,7 @@ public:
 
     inline dReal _ComputeDistance(const dReal* config0, const dReal* config1) const
     {
-        return _distmetricfn(VectorWrapper<const dReal>(config0, config0+_dof), VectorWrapper<dReal>(config1, config1+_dof));
+        return _distmetricfn(VectorWrapper<dReal>(config0, config0+_dof), VectorWrapper<dReal>(config1, config1+_dof));
     }
 
     inline dReal _ComputeDistance(const dReal* config0, const std::vector<dReal>& config1) const
@@ -368,6 +368,26 @@ public:
                     return bHasAdded ? ET_Sucess : ET_Failed;
                 }
             }
+
+//            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+//                std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+//                ss << "successfully connected _vCurConfig=[";
+//                for(size_t itempdof = 0; itempdof < _vCurConfig.size(); ++itempdof ) {
+//                    if( itempdof > 0 ) {
+//                        ss << ", ";
+//                    }
+//                    ss << _vCurConfig[itempdof];
+//                }
+//                ss << "]; _vNewConfig=[";
+//                for(size_t itempdof = 0; itempdof < _vNewConfig.size(); ++itempdof ) {
+//                    if( itempdof > 0 ) {
+//                        ss << ", ";
+//                    }
+//                    ss << _vNewConfig[itempdof];
+//                }
+//                ss << "]";
+//                RAVELOG_VERBOSE(ss.str());
+//            }
 
             NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0); ///< set userdata to 0
             if( !!pnewnode ) {

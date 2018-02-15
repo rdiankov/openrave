@@ -114,11 +114,13 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
 
     void _SetJacobianRefine(dReal f, int nMaxIterations)
     {
+#ifdef OPENRAVE_HAS_LAPACK
         _fRefineWithJacobianInverseAllowedError = f;
         _jacobinvsolver.SetErrorThresh(_fRefineWithJacobianInverseAllowedError);
         if( nMaxIterations >= 0 ) {
             _jacobinvsolver.SetMaxIterations(nMaxIterations);
         }
+#endif
     }
 
     bool _SetDefaultIncrementsCommand(ostream& sout, istream& sinput)
@@ -377,7 +379,7 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
         // auto-conversion
         if( _nTotalDOF == 4 ) {
             if( _iktype == IKP_Transform6D ) {
-                return iktype == IKP_TranslationXAxisAngleZNorm4D;
+                return iktype == IKP_TranslationXAxisAngleZNorm4D || iktype == IKP_TranslationYAxisAngleXNorm4D;
             }
         }
         else if( _nTotalDOF == 5 ) {
@@ -803,7 +805,9 @@ protected:
         _numBacktraceLinksForSelfCollisionWithNonMoving = r->_numBacktraceLinksForSelfCollisionWithNonMoving;
         _numBacktraceLinksForSelfCollisionWithFree = r->_numBacktraceLinksForSelfCollisionWithFree;
         _ikthreshold = r->_ikthreshold;
+#ifdef OPENRAVE_HAS_LAPACK
         _SetJacobianRefine(r->_fRefineWithJacobianInverseAllowedError, r->_jacobinvsolver._nMaxIterations);
+#endif
 
         _bEmptyTransform6D = r->_bEmptyTransform6D;
     }
@@ -818,13 +822,16 @@ protected:
         // start searching for phi close to q0, as soon as a solution is found for the curphi, return it
         dReal startphi = q0.size() == _qlower.size() ? q0.at(vfreeparams.at(freeindex)) : 0;
         dReal upperphi = _qupper.at(vfreeparams.at(freeindex)), lowerphi = _qlower.at(vfreeparams.at(freeindex)), deltaphi = 0;
-
-        if( _vjointrevolute.at(vfreeparams.at(freeindex)) == 2 ) {
+        dReal lowerChecked = startphi; // lowest value checked
+        dReal upperChecked = startphi; // uppermost value checked
+        int isJointRevolute = _vjointrevolute.at(vfreeparams.at(freeindex));
+        if( isJointRevolute == 2 ) {
             startphi = utils::NormalizeCircularAngle(startphi, -PI, PI);
             lowerphi = startphi-PI;
             upperphi = startphi+PI;
         }
 
+        bool bIsZeroTested = false;
         int iter = 0;
         dReal fFreeInc = vFreeInc.at(freeindex);
         int allres = IKRA_Reject;
@@ -839,6 +846,11 @@ protected:
                     ++iter;
                     continue;
                 }
+                upperChecked = curphi;
+                if( isJointRevolute != 0 && upperChecked - lowerChecked >= 2*PI-g_fEpsilonJointLimit ) {
+                    // reached full circle
+                    break;
+                }
             }
             else { // decrement
                 curphi -= deltaphi;
@@ -850,12 +862,21 @@ protected:
                     ++iter;
                     continue;
                 }
+                lowerChecked = curphi;
+                if( isJointRevolute != 0 && upperChecked - lowerChecked >= 2*PI-fFreeInc*0.1 ) {
+                    // reached full circle
+                    break;
+                }
 
                 deltaphi += fFreeInc; // increment
             }
 
             iter++;
 
+            if( RaveFabs(curphi) <= g_fEpsilonJointLimit ) {
+                bIsZeroTested = true;
+            }
+            //RAVELOG_VERBOSE_FORMAT("index=%d curphi=%.16e, range=%.16e", freeindex%curphi%(upperChecked - lowerChecked));
             vfree.at(freeindex) = curphi;
             IkReturnAction res = ComposeSolution(vfreeparams, vfree, freeindex+1,q0, fn, vFreeInc);
             if( !(res & IKRA_Reject) ) {
@@ -868,7 +889,7 @@ protected:
         }
 
         // explicitly test 0 since many edge cases involve 0s
-        if( _qlower[vfreeparams[freeindex]] <= 0 && _qupper[vfreeparams[freeindex]] >= 0 ) {
+        if( !bIsZeroTested && _qlower[vfreeparams[freeindex]] <= 0 && _qupper[vfreeparams[freeindex]] >= 0 ) {
             vfree.at(freeindex) = 0;
             IkReturnAction res = ComposeSolution(vfreeparams, vfree, freeindex+1,q0, fn, vFreeInc);
             if( !(res & IKRA_Reject) ) {
@@ -1759,6 +1780,7 @@ protected:
             for(size_t isolution = 0; isolution < solutions.GetNumSolutions(); ++isolution) {
                 const ikfast::IkSolution<IkReal>& iksol = dynamic_cast<const ikfast::IkSolution<IkReal>& >(solutions.GetSolution(isolution));
                 iksol.Validate();
+                //RAVELOG_VERBOSE_FORMAT("ikfast solution %d/%d (free=%d)", isolution%solutions.GetNumSolutions()%iksol.GetFree().size());
                 if( iksol.GetFree().size() > 0 ) {
                     // have to search over all the free parameters of the solution!
                     vsolfree.resize(iksol.GetFree().size());
@@ -1807,6 +1829,16 @@ protected:
         // check for self collisions
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
+
+//        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+//            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+//            ss << "ikfast solution (free=" << iksol.GetFree().size() << "); iksol=[";
+//            FOREACHC(it, vravesol) {
+//                ss << *it << ", ";
+//            }
+//            ss << "]";
+//            RAVELOG_VERBOSE(ss.str());
+//        }
 
         IkParameterization paramnewglobal, paramnew;
 
@@ -1880,7 +1912,7 @@ protected:
         CollisionReport report;
         CollisionReportPtr ptempreport;
         if( IS_DEBUGLEVEL(Level_Verbose) ) {
-            ptempreport = boost::shared_ptr<CollisionReport>(&report,utils::null_deleter());;
+            ptempreport = boost::shared_ptr<CollisionReport>(&report,utils::null_deleter());
         }
         if( !(filteroptions&IKFO_IgnoreSelfCollisions) ) {
             stateCheck.SetSelfCollisionState();
@@ -1954,7 +1986,23 @@ protected:
             if( stateCheck.NeedCheckEndEffectorEnvCollision() ) {
                 // only check if the end-effector position is fully determined from the ik
                 if( paramnewglobal.GetType() == IKP_Transform6D ) {// || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
-                    if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform()) ) {
+                    if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform(), ptempreport) ) {
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                            ss << "ikfast collision " << ptempreport->__str__() << " colvalues=[";
+                            std::vector<dReal> vallvalues;
+                            probot->GetDOFValues(vallvalues);
+                            for(size_t i = 0; i < vallvalues.size(); ++i ) {
+                                if( i > 0 ) {
+                                    ss << "," << vallvalues[i];
+                                }
+                                else {
+                                    ss << vallvalues[i];
+                                }
+                            }
+                            ss << "]";
+                            RAVELOG_VERBOSE(ss.str());
+                        }
                         if( paramnewglobal.GetType() == IKP_Transform6D ) {
                             // 6D so end effector is determined
                             return static_cast<IkReturnAction>(retactionall|IKRA_QuitEndEffectorCollision); // stop the search
@@ -2054,6 +2102,7 @@ protected:
                 stateCheck.ResetCheckEndEffectorEnvCollision();
             }
         }
+        //RAVELOG_VERBOSE("add %d solutions", listlocalikreturns.size());
         FOREACH(itlocalikreturn, listlocalikreturns) {
             vikreturns.push_back(itlocalikreturn->first);
         }
@@ -2232,7 +2281,14 @@ protected:
         if( param.GetType() == IKP_Transform6D ) {
             if( _nTotalDOF == 4 ) {
                 ikdummy = param; // copy the custom data!
-                ikdummy.SetTranslationXAxisAngleZNorm4D(param.GetTransform6D().trans, -normalizeAxisRotation(Vector(0,0,1), param.GetTransform6D().rot).first);
+                RobotBase::ManipulatorPtr pmanip(_pmanip);
+                Vector vglobaldirection = param.GetTransform6D().rotate(pmanip->GetLocalToolDirection());
+                if( _iktype == IKP_TranslationYAxisAngleXNorm4D ) {
+                    ikdummy.SetTranslationYAxisAngleXNorm4D(param.GetTransform6D().trans,RaveAtan2(vglobaldirection.z,vglobaldirection.y));
+                }
+                else {
+                    ikdummy.SetTranslationXAxisAngleZNorm4D(param.GetTransform6D().trans,RaveAtan2(vglobaldirection.y,vglobaldirection.x));
+                }
                 return ikdummy;
             }
             else if( _nTotalDOF == 5 ) {

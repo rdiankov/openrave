@@ -136,6 +136,9 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const 
 void RaveWriteColladaFile(EnvironmentBasePtr penv, const std::string& filename,const AttributesList& atts);
 void RaveWriteColladaFile(KinBodyPtr pbody, const std::string& filename,const AttributesList& atts);
 void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename,const AttributesList& atts);
+void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output,const AttributesList& atts);
+void RaveWriteColladaMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts);
+void RaveWriteColladaMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts);
 
 } // end OpenRAVE namespace
 
@@ -210,6 +213,21 @@ inline void RaveWriteColladaFile(KinBodyPtr pbody, const std::string& filename,c
 }
 
 inline void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename,const AttributesList& atts)
+{
+    RAVELOG_ERROR("collada files not supported\n");
+}
+
+inline void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output,const AttributesList& atts)
+{
+    RAVELOG_ERROR("collada files not supported\n");
+}
+
+inline void RaveWriteColladaMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts)
+{
+    RAVELOG_ERROR("collada files not supported\n");
+}
+
+inline void RaveWriteColladaMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts)
 {
     RAVELOG_ERROR("collada files not supported\n");
 }

@@ -260,31 +260,40 @@ public:
                 _pCurrentChecker->DestroyEnvironment();
             }
 
-            // clear internal interface lists
+            // clear internal interface lists, have to Destroy all kinbodys without locking _mutexInterfaces since some can hold BodyCallbackData, which requires to lock _mutexInterfaces
+            std::vector<RobotBasePtr> vecrobots;
+            std::vector<KinBodyPtr> vecbodies;
+            list<SensorBasePtr> listSensors;
             {
                 boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-                // release all grabbed
-                FOREACH(itrobot,_vecrobots) {
-                    (*itrobot)->ReleaseAllGrabbed();
-                }
-                FOREACH(itbody,_vecbodies) {
-                    (*itbody)->Destroy();
-                }
-                _vecbodies.clear();
-                FOREACH(itrobot,_vecrobots) {
-                    (*itrobot)->Destroy();
-                }
-                _vecrobots.clear();
+                vecrobots.swap(_vecrobots);
+                vecbodies.swap(_vecbodies);
+                listSensors.swap(_listSensors);
                 _vPublishedBodies.clear();
                 _nBodiesModifiedStamp++;
-                FOREACH(itsensor,_listSensors) {
-                    (*itsensor)->Configure(SensorBase::CC_PowerOff);
-                    (*itsensor)->Configure(SensorBase::CC_RenderGeometryOff);
-                }
-                _listSensors.clear();
                 _listModules.clear();
                 _listViewers.clear();
-                _listOwnedInterfaces.clear();
+                _listOwnedInterfaces.clear();            
+            }
+
+            // destroy the dangling pointers outside of _mutexInterfaces
+            
+            // release all grabbed
+            FOREACH(itrobot,vecrobots) {
+                (*itrobot)->ReleaseAllGrabbed();
+            }
+            FOREACH(itbody,vecbodies) {
+                (*itbody)->Destroy();
+            }
+            vecbodies.clear();
+            FOREACH(itrobot,vecrobots) {
+                (*itrobot)->Destroy();
+            }
+            vecrobots.clear();
+            
+            FOREACH(itsensor,listSensors) {
+                (*itsensor)->Configure(SensorBase::CC_PowerOff);
+                (*itsensor)->Configure(SensorBase::CC_RenderGeometryOff);
             }
         }
 
@@ -562,6 +571,70 @@ public:
         }
     }
 
+    virtual void WriteToMemory(const std::string& filetype, std::vector<char>& output, SelectionOptions options=SO_Everything, const AttributesList& atts = AttributesList())
+    {
+        if( filetype != "collada" ) {
+            throw OPENRAVE_EXCEPTION_FORMAT("got invalid filetype %s, only support collada", filetype, ORE_InvalidArguments);
+        }
+        
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        std::list<KinBodyPtr> listbodies;
+        switch(options) {
+        case SO_Everything:
+            RaveWriteColladaMemory(shared_from_this(),output,atts);
+            return;
+
+        case SO_Body: {
+            std::string targetname;
+            FOREACHC(itatt,atts) {
+                if( itatt->first == "target" ) {
+                    KinBodyPtr pbody = GetKinBody(itatt->second);
+                    if( !pbody ) {
+                        RAVELOG_WARN_FORMAT("failed to get body %s", itatt->second);
+                    }
+                    else {
+                        listbodies.push_back(pbody);
+                    }
+                }
+            }
+            break;
+        }
+        case SO_NoRobots:
+            FOREACH(itbody,_vecbodies) {
+                if( !(*itbody)->IsRobot() ) {
+                    listbodies.push_back(*itbody);
+                }
+            }
+            break;
+        case SO_Robots:
+            FOREACH(itrobot,_vecrobots) {
+                listbodies.push_back(*itrobot);
+            }
+            break;
+        case SO_AllExceptBody: {
+            std::list<std::string> listignore;
+            FOREACHC(itatt,atts) {
+                if( itatt->first == "target" ) {
+                    listignore.push_back(itatt->second);
+                }
+            }
+            FOREACH(itbody,_vecbodies) {
+                if( find(listignore.begin(),listignore.end(),(*itbody)->GetName()) == listignore.end() ) {
+                    listbodies.push_back(*itbody);
+                }
+            }
+            break;
+        }
+        }
+
+        if( listbodies.size() == 1 ) {
+            RaveWriteColladaMemory(listbodies.front(),output,atts);
+        }
+        else {
+            RaveWriteColladaMemory(listbodies,output,atts);
+        }
+    }
+    
     virtual void Add(InterfaceBasePtr pinterface, bool bAnonymous, const std::string& cmdargs)
     {
         CHECK_INTERFACE(pinterface);
@@ -640,7 +713,7 @@ public:
             SetEnvironmentId(robot);
             _nBodiesModifiedStamp++;
         }
-        robot->_ComputeInternalInformation();
+        robot->_ComputeInternalInformation(); // have to do this after _vecrobots is added since SensorBase::SetName can call EnvironmentBase::GetSensor to initialize itself
         _pCurrentChecker->InitKinBody(robot);
         _pPhysicsEngine->InitKinBody(robot);
         // send all the changed callbacks of the body since anything could have changed
@@ -2258,7 +2331,7 @@ protected:
                         pnewrobot->__hashrobotstructure = poldrobot->__hashrobotstructure;
                     }
                     else {
-                        KinBody::KinBodyStateSaver saver(*itbody, 0xffffffff);
+                        KinBody::KinBodyStateSaver saver(*itbody, 0xffffffff&~KinBody::Save_GrabbedBodies);
                         saver.Restore(pnewbody);
                     }
                 }
@@ -2299,7 +2372,7 @@ protected:
                     saver.Restore(pnewrobot);
                 }
                 else {
-                    KinBody::KinBodyStateSaver saver(*itbody, KinBody::Save_LinkVelocities); // all the others should have been saved?
+                    KinBody::KinBodyStateSaver saver(*itbody, KinBody::Save_GrabbedBodies|KinBody::Save_LinkVelocities); // all the others should have been saved?
                     saver.Restore(pnewbody);
                 }
             }

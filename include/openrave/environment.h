@@ -251,6 +251,22 @@ public:
         Save(filename,options,atts);
     }
 
+    /** \brief Saves a scene depending on the filename extension.
+
+        \param filetype the type of file to save, can be collada
+        \param output the output data if saving is successful
+        \param options controls what to save
+        \param atts attributes that refine further options. For collada parsing, the options are passed through
+        \code
+        DAE::getIOPlugin()->setOption(key,value).
+        \endcode
+        Several default options are:
+        - 'target' - the target body name of the options, if relevant
+        - 'password' - the password/key to encrypt the data with, collada supports this through zae zip archives
+        \throw openrave_exception Throw if failed to save anything
+     */
+    virtual void WriteToMemory(const std::string& filetype, std::vector<char>& output, SelectionOptions options=SO_Everything, const AttributesList& atts = AttributesList()) = 0;
+    
     /** \brief Initializes a robot from a resource file. The robot is not added to the environment when calling this function. <b>[multi-thread safe]</b>
 
         \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled

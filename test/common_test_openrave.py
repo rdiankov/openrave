@@ -96,6 +96,9 @@ def randpose(N=1):
     poses[:,0:4] /= tile(sqrt(sum(poses[:,0:4]**2,1)),(4,1)).transpose()
     return poses
 
+def randlimit(lower,upper):
+    return lower+random.rand()*(upper-lower)
+
 def randlimits(lower,upper):
     return lower+random.rand(len(lower))*(upper-lower)
 

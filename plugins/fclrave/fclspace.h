@@ -83,7 +83,7 @@ public:
             void Reset() {
                 if( !!linkBV.second ) {
                     if( !!GetLink() ) {
-                        RAVELOG_VERBOSE_FORMAT("resetting link %s:%s col=0x%x (env %d)", GetLink()->GetParent()->GetName()%GetLink()->GetName()%(uint64_t)linkBV.second.get()%GetLink()->GetParent()->GetEnv()->GetId());
+                        RAVELOG_VERBOSE_FORMAT("env=%d, resetting link %s:%s col=0x%x", GetLink()->GetParent()->GetEnv()->GetId()%GetLink()->GetParent()->GetName()%GetLink()->GetName()%(uint64_t)linkBV.second.get());
                     }
                     else {
                         RAVELOG_VERBOSE_FORMAT("resetting unknown link col=0x%x", (uint64_t)linkBV.second.get());
@@ -176,7 +176,7 @@ public:
 
     void DestroyEnvironment()
     {
-        RAVELOG_VERBOSE_FORMAT("destroying fcl collision environment (env %d) (userdatakey %s)\n", _penv->GetId()%_userdatakey);
+        RAVELOG_VERBOSE_FORMAT("destroying fcl collision environment (env %d) (userdatakey %s)", _penv->GetId()%_userdatakey);
         FOREACH(itbody, _setInitializedBodies) {
             KinBodyInfoPtr pinfo = GetInfo(*itbody);
             if( !!pinfo ) {
@@ -429,9 +429,9 @@ public:
 
     void SynchronizeWithAttached(KinBodyConstPtr pbody)
     {
-        _setAttachedpBody.clear();
-        pbody->GetAttached(_setAttachedpBody);
-        FOREACH(itbody, _setAttachedpBody) {
+        std::set<KinBodyPtr> setAttachedpBodyTemp;
+        pbody->GetAttached(setAttachedpBodyTemp);
+        FOREACH(itbody, setAttachedpBodyTemp) {
             Synchronize(*itbody);
         }
     }
@@ -440,7 +440,7 @@ public:
     {
         int envId = pbody->GetEnvironmentId();
         if ( envId == 0 ) {
-            RAVELOG_WARN_FORMAT("body %s has invalid environment id", pbody->GetName());
+            RAVELOG_WARN_FORMAT("env=%d, body %s has invalid environment id 0", pbody->GetEnv()->GetId()%pbody->GetName());
             return KinBodyInfoPtr();
         }
 
@@ -665,7 +665,7 @@ private:
     {
         KinBodyInfoPtr pinfo = _pinfo.lock();
         KinBodyPtr pbody = pinfo->GetBody();
-        //RAVELOG_VERBOSE_FORMAT("Resetting geometry groups for kinbody %s (in env %d, key %s)", pbody->GetName()%_penv->GetId()%_userdatakey);
+        RAVELOG_VERBOSE_FORMAT("Resetting geometry groups for kinbody %s (in env %d, key %s)", pbody->GetName()%_penv->GetId()%_userdatakey);
         if( !!pinfo && pinfo->_geometrygroup.size() > 0 ) {
             pinfo->nGeometryUpdateStamp++;
             KinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect
@@ -712,7 +712,6 @@ private:
     std::set<KinBodyConstPtr> _setInitializedBodies; ///< Set of the kinbody initialized in this space
     std::map< int, std::map< std::string, KinBodyInfoPtr > > _cachedpinfo; ///< Associates to each body id and geometry group name the corresponding kinbody info if already initialized and not currently set as user data
     std::map< int, KinBodyInfoPtr> _currentpinfo; ///< maps kinbody environment id to the kinbodyinfo struct constaining fcl objects. The key being environment id makes it easier to compare objects without getting a handle to their pointers.
-    std::set<KinBodyPtr> _setAttachedpBody;
 };
 
 #ifdef RAVE_REGISTER_BOOST

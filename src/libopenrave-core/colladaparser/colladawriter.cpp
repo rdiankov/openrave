@@ -21,6 +21,7 @@ using namespace ColladaDOM150;
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/time_facet.hpp>
 #include <boost/algorithm/string.hpp>
+#include <ctime>
 
 #define LIBXML_SAX1_ENABLED
 #include <libxml/globals.h>
@@ -360,6 +361,17 @@ private:
             _dae->getDatabase()->removeDocument(_doc);
             _doc = NULL;
         }
+
+        // If GlobalDAE is not resetted, there will be memory leak inside the
+        // Collada library because static daeStringTable in daeStringRef.cpp
+        // will only be cleaned by daeStringRef::releaseStringTable when
+        // the number of DAE instances alive becomes 0.
+        //
+        // There is no simple workaround for libxml2 before 2.9.0. Read
+        // the comments of GetGlobalDAE() in OpenRAVE for more details
+#if LIBXML_VERSION >= 20900
+        SetGlobalDAE(boost::shared_ptr<DAE>());
+#endif
     }
 
     /// \param docname the top level document?
@@ -373,10 +385,12 @@ private:
         domAssetRef asset = daeSafeCast<domAsset>( _dom->add( COLLADA_ELEMENT_ASSET ) );
         {
             // facet becomes owned by locale, so no need to explicitly delete
-            boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%Y-%m-%dT%H:%M:%s");
             std::stringstream ss;
-            ss.imbue(std::locale(ss.getloc(), facet));
-            ss << boost::posix_time::second_clock::local_time();
+            time_t now;
+            time(&now);
+            char timec[80];
+            strftime(timec, sizeof(timec), "%FT%T%z", localtime(&now));
+            ss << timec;
 
             domAsset::domCreatedRef created = daeSafeCast<domAsset::domCreated>( asset->add( COLLADA_ELEMENT_CREATED ) );
             created->setValue(ss.str().c_str());
@@ -452,7 +466,18 @@ private:
             throw openrave_exception(str(boost::format(_("failed to save collada file to %s"))%filename));
         }
     }
-
+    
+    virtual void Save(std::vector<char>& output)
+    {
+#ifdef OPENRAVE_COLLADA_SUPPORT_WRITE_MEMORY
+        if(!_dae->writeToMemory(_doc->getDocumentURI()->getURI(), output) ) {
+            throw openrave_exception(_("failed to save collada to memory"));
+        }
+#else
+        throw OPENRAVE_EXCEPTION_FORMAT0("collada-dom does not support writeToMemory, make sure at least version 2.5.0 is installed", ORE_Assert);
+#endif
+    }
+    
     /// \brief Write down environment
     virtual bool Write(const std::string& scenename=std::string())
     {
@@ -1534,7 +1559,19 @@ private:
                         daeElementRef pelt = pftec->add("equation");
                         pelt->setAttribute("type",sequationids[itype]);
                         KinBody::JointPtr pmimic = itdofformat->jointindex < (int)pbody->GetJoints().size() ? pbody->GetJoints().at(itdofformat->jointindex) : pbody->GetPassiveJoints().at(itdofformat->jointindex-(int)pbody->GetJoints().size());
-                        std::string smimicid = str(boost::format("%s/joint%d")%kmodel->getID()%pmimic->GetJointIndex());
+
+                        int mimicjointindex = -1;
+                        FOREACH(ittestjoint, vjoints) {
+                            if( ittestjoint->second == pmimic ) {
+                                mimicjointindex = ittestjoint->first;
+                                break;
+                            }
+                        }
+                        if( mimicjointindex < 0 ) {
+                            RAVELOG_WARN_FORMAT("cannot find index from joint %s", pmimic->GetName());
+                            mimicjointindex = 0;
+                        }
+                        std::string smimicid = str(boost::format("%s/joint%d")%kmodel->getID()%mimicjointindex);
                         pelt->setAttribute("target",smimicid.c_str());
                         offset += XMLtoDAE::Parse(pelt, sequations[itype].c_str()+offset, sequations[itype].size()-offset);
                         if( offset == 0 ) {
@@ -2002,55 +2039,53 @@ private:
     void _WriteDynamicRigidConstraints(domInstance_with_extraRef piscene, const std::list<boost::shared_ptr<instance_articulated_system_output> >& listModelDatabase)
     {
         domTechniqueRef ptec;
-        // go through every robot and check if it has grabbed bodies
+        // go through every body and check if it has grabbed bodies
         std::vector<KinBodyPtr> vGrabbedBodies;
         size_t idynamicconstraint = 0;
         FOREACHC(itias, listModelDatabase) {
-            if( (*itias)->pbody->IsRobot() ) {
-                RobotBasePtr probot = RaveInterfaceCast<RobotBase>((*itias)->pbody);
-                probot->GetGrabbed(vGrabbedBodies);
-                if( vGrabbedBodies.size() > 0 && !(*itias)->ipmout ) {
-                    RAVELOG_DEBUG_FORMAT("physics info is not written to robot %s, so cannot write any grabbed bodies", probot->GetName());
+            KinBodyPtr pbody = RaveInterfaceCast<KinBody>((*itias)->pbody);
+            pbody->GetGrabbed(vGrabbedBodies);
+            if( vGrabbedBodies.size() > 0 && !(*itias)->ipmout ) {
+                RAVELOG_DEBUG_FORMAT("physics info is not written to body %s, so cannot write any grabbed bodies", pbody->GetName());
+                continue;
+            }
+            FOREACHC(itgrabbed,vGrabbedBodies) {
+                boost::shared_ptr<instance_articulated_system_output> grabbedias;
+                FOREACHC(itias2,listModelDatabase) {
+                    if( (*itias2)->pbody == *itgrabbed ) {
+                        grabbedias = *itias2;
+                        break;
+                    }
+                }
+                if( !grabbedias ) {
+                    RAVELOG_WARN(str(boost::format("grabbed body %s not saved in COLLADA so cannot reference")%(*itgrabbed)->GetName()));
                     continue;
                 }
-                FOREACHC(itgrabbed,vGrabbedBodies) {
-                    boost::shared_ptr<instance_articulated_system_output> grabbedias;
-                    FOREACHC(itias2,listModelDatabase) {
-                        if( (*itias2)->pbody == *itgrabbed ) {
-                            grabbedias = *itias2;
-                            break;
-                        }
-                    }
-                    if( !grabbedias ) {
-                        RAVELOG_WARN(str(boost::format("grabbed body %s not saved in COLLADA so cannot reference")%(*itgrabbed)->GetName()));
-                        continue;
-                    }
 
-                    KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*itgrabbed);
-                    if( !ptec ) {
-                        domExtraRef pextra = daeSafeCast<domExtra>(piscene->add(COLLADA_ELEMENT_EXTRA));
-                        pextra->setType("dynamic_rigid_constraints");
-                        ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
-                        ptec->setProfile("OpenRAVE");
-                    }
+                KinBody::LinkPtr pgrabbinglink = pbody->IsGrabbing(*itgrabbed);
+                if( !ptec ) {
+                    domExtraRef pextra = daeSafeCast<domExtra>(piscene->add(COLLADA_ELEMENT_EXTRA));
+                    pextra->setType("dynamic_rigid_constraints");
+                    ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
+                    ptec->setProfile("OpenRAVE");
+                }
 
-                    daeElementRef pconstraint = ptec->add("rigid_constraint");
-                    pconstraint->setAttribute("sid",str(boost::format("grab%d")%idynamicconstraint).c_str());
-                    idynamicconstraint++;
-                    string rigid_body = str(boost::format("%s/%s")%(*itias)->ipmout->ipm->getSid()%(*itias)->ipmout->pmout->vrigidbodysids.at(pgrabbinglink->GetIndex()));
-                    pconstraint->add("ref_attachment")->setAttribute("rigid_body",rigid_body.c_str());
-                    rigid_body = str(boost::format("%s/%s")%grabbedias->ipmout->ipm->getSid()%grabbedias->ipmout->pmout->vrigidbodysids.at(0));
-                    pconstraint->add("attachment")->setAttribute("rigid_body",rigid_body.c_str());
+                daeElementRef pconstraint = ptec->add("rigid_constraint");
+                pconstraint->setAttribute("sid",str(boost::format("grab%d")%idynamicconstraint).c_str());
+                idynamicconstraint++;
+                string rigid_body = str(boost::format("%s/%s")%(*itias)->ipmout->ipm->getSid()%(*itias)->ipmout->pmout->vrigidbodysids.at(pgrabbinglink->GetIndex()));
+                pconstraint->add("ref_attachment")->setAttribute("rigid_body",rigid_body.c_str());
+                rigid_body = str(boost::format("%s/%s")%grabbedias->ipmout->ipm->getSid()%grabbedias->ipmout->pmout->vrigidbodysids.at(0));
+                pconstraint->add("attachment")->setAttribute("rigid_body",rigid_body.c_str());
 
-                    std::list<KinBody::LinkConstPtr> listIgnoreLinks;
-                    probot->GetIgnoredLinksOfGrabbed(*itgrabbed, listIgnoreLinks);
-                    if( listIgnoreLinks.size() > 0 ) {
-                        daeElementRef pconstrainttec = pconstraint->add("technique");
-                        pconstrainttec->setAttribute("profile","OpenRAVE");
-                        FOREACHC(itignorelink, listIgnoreLinks) {
-                            string linksid = (*itias)->ipmout->pmout->vrigidbodysids.at((*itignorelink)->GetIndex());
-                            pconstrainttec->add("ignore_link")->setAttribute("link",linksid.c_str());
-                        }
+                std::list<KinBody::LinkConstPtr> listIgnoreLinks;
+                pbody->GetIgnoredLinksOfGrabbed(*itgrabbed, listIgnoreLinks);
+                if( listIgnoreLinks.size() > 0 ) {
+                    daeElementRef pconstrainttec = pconstraint->add("technique");
+                    pconstrainttec->setAttribute("profile","OpenRAVE");
+                    FOREACHC(itignorelink, listIgnoreLinks) {
+                        string linksid = (*itias)->ipmout->pmout->vrigidbodysids.at((*itignorelink)->GetIndex());
+                        pconstrainttec->add("ignore_link")->setAttribute("link",linksid.c_str());
                     }
                 }
             }
@@ -2212,7 +2247,7 @@ private:
                 link_collision_state->add("bool")->setCharData((*itlink)->IsEnabled() ? "true" : "false");
             }
         }
-        if( IsWrite("bind_instance_geometry") ) {
+        if( IsForceWrite("bind_instance_geometry") ) {
             FOREACHC(itlink, pbody->GetLinks()) {
                 FOREACHC(itgeomgroup, (*itlink)->GetInfo()._mapExtraGeometries) {
                     int igeom = 0;
@@ -2537,5 +2572,79 @@ void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::st
         writer.Save(filename);
     }
 }
+
+
+void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts)
+{
+    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    ColladaWriter writer(penv, atts);
+    std::string scenename, keywords;
+    FOREACHC(itatt,atts) {
+        if( itatt->first == "scenename" ) {
+            scenename = itatt->second;
+        }
+        else if( itatt->first == "keywords" ) {
+            keywords = itatt->second;
+        }
+    }
+
+    writer.Init("openrave_snapshot", keywords);
+
+    if( scenename.size() == 0 ) {
+        scenename = "scene";
+    }
+    
+    if( !writer.Write(scenename) ) {
+        throw openrave_exception(_("ColladaWriter::Write(EnvironmentBasePtr) failed"));
+    }
+    writer.Save(output);
+}
+
+void RaveWriteColladaMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts)
+{
+    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    ColladaWriter writer(pbody->GetEnv(),atts);
+    std::string keywords;
+    FOREACHC(itatt,atts) {
+        if( itatt->first == "keywords" ) {
+            keywords = itatt->second;
+        }
+    }
+
+    writer.Init("openrave_snapshot", keywords);
+    if( !writer.Write(pbody) ) {
+        throw openrave_exception(_("ColladaWriter::Write(KinBodyPtr) failed"));
+    }
+    writer.Save(output);
+}
+
+void RaveWriteColladaMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output,  const AttributesList& atts)
+{
+    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    output.clear();
+    if( listbodies.size() > 0 ) {
+        ColladaWriter writer(listbodies.front()->GetEnv(),atts);
+        std::string scenename, keywords;
+        FOREACHC(itatt,atts) {
+            if( itatt->first == "scenename" ) {
+                scenename = itatt->second;
+                break;
+            }
+            else if( itatt->first == "keywords" ) {
+                keywords = itatt->second;
+            }
+        }
+        writer.Init("openrave_snapshot", keywords);
+
+        if( scenename.size() == 0 ) {
+            scenename = "scene";
+        }
+        if( !writer.Write(listbodies, scenename) ) {
+            throw openrave_exception(_("ColladaWriter::Write(list<KinBodyPtr>) failed"));
+        }
+        writer.Save(output);
+    }
+}
+
 
 } // end OpenRAVE namespace

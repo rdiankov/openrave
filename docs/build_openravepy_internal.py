@@ -106,7 +106,8 @@ Uses python docutils, sphinx, breathe, and xml2rst.""")
         if not fnmatch.fnmatch(file, searchstring):
             continue
         # brief+detailed descriptions only, do not include entire scope
-        rawcppdata = open(os.path.join(searchpath,file),'r').read()
+        with open(os.path.join(searchpath,file),'r') as f:
+            rawcppdata = f.read()
         functions_temp=re.findall('DOXY_FN\(\s*([\w:]*)\s*,([\s\w:;* <>&"]*)\)',rawcppdata)
         while len(functions_temp) > 0 and functions_temp[0][0] == 'class':
             functions_temp.pop(0) # remove the #define's
@@ -266,7 +267,8 @@ Uses python docutils, sphinx, breathe, and xml2rst.""")
             inF.close()
             outF.close()
 
-    open(options.outfile,'w').write("""// -*- coding: utf-8 -*-
+    with open(options.outfile,'w') as f:
+        f.write("""// -*- coding: utf-8 -*-
 // Copyright (C) 2006-2011 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
@@ -290,5 +292,5 @@ void InitializeComments(std::map<std::string,std::string>& m)
 }
 }
 """%(sys.argv[0],options.infile,comments))
-    print 'Finished writing to doc strings to %s'%options.outfile
+    print('Finished writing to doc strings to %s'%options.outfile)
     mainXsltF.close()
