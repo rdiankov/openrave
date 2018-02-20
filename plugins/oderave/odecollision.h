@@ -706,6 +706,12 @@ public:
         return cb._bCollision;
     }
 
+    virtual bool CheckCollision(const OpenRAVE::TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report)
+    {
+        RAVELOG_WARN("ODE doesn't support trimesh/body collision call");
+        return false; //TODO
+    }
+
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if( _options & OpenRAVE::CO_Distance ) {
