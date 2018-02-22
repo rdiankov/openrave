@@ -1,4 +1,4 @@
-// This class is copied from http://wiki.ogre3d.org/Integrating+Ogre+into+QT5
+// This class is based on http://wiki.ogre3d.org/Integrating+Ogre+into+QT5
 
 #ifndef QTOGREWINDOW_H
 #define QTOGREWINDOW_H
@@ -9,6 +9,10 @@ Qt headers
 #include <QtWidgets/QApplication>
 #include <QtGui/QKeyEvent>
 #include <QtGui/QWindow>
+
+#include <boost/function.hpp>
+#include <boost/bind.hpp>
+#include <boost/thread/mutex.hpp>
 
 /*
 Ogre3D header
@@ -49,6 +53,55 @@ public:
 
     void setAnimating(bool animating);
 
+    Ogre::SceneNode* GetMiscDrawNode() { return m_miscDrawNode; }
+    Ogre::HlmsDatablock *datablockhack;
+
+    class GUIThreadFunction
+    {
+public:
+        GUIThreadFunction(const boost::function<void()>& fn, bool isblocking=false) : _fn(fn), _bcalled(false), _bfinished(false), _bisblocking(isblocking) {
+        }
+
+        void operator()() {
+            // have to set finished at the end
+            boost::shared_ptr<void> finishfn((void*)0, boost::bind(&GUIThreadFunction::SetFinished, this));
+            BOOST_ASSERT(!_bcalled);
+            _bcalled = true;
+            _fn();
+        }
+
+        /// \brief true if function has already been called
+        bool IsCalled() const {
+            return _bcalled;
+        }
+
+        bool IsFinished() const {
+            return _bfinished;
+        }
+
+        bool IsBlocking() const {
+            return _bisblocking;
+        }
+
+        void SetFinished() {
+            _bfinished = true;
+        }
+
+private:
+
+        boost::function<void()> _fn;
+        bool _bcalled; ///< true if function already called
+        bool _bfinished; ///< true if function processing is finished
+        bool _bisblocking; ///< if true, then the caller is blocking until the function completes
+    };
+    typedef boost::shared_ptr<GUIThreadFunction> GUIThreadFunctionPtr;
+
+    void QueueRenderingUpdate(GUIThreadFunctionPtr func) {
+        boost::mutex::scoped_lock lock(_mutexFrameRenderingUpdate);
+        _frameRenderingUpdateQueue.push_back(func);
+        printf("ADddddd\n");
+    }
+
 public slots:
 
     virtual void renderLater();
@@ -76,6 +129,9 @@ protected:
     Ogre::ColourValue m_ogreBackground;
     OgreQtBites::SdkQtCameraMan* m_cameraMan;
 
+    // Node used to store all misc.Draw objects
+    Ogre::SceneNode* m_miscDrawNode;
+
     bool m_update_pending;
     bool m_animating;
 
@@ -91,6 +147,9 @@ protected:
     virtual void mouseReleaseEvent(QMouseEvent* e);
     virtual void exposeEvent(QExposeEvent *event);
     virtual bool event(QEvent *event);
+
+    std::list<GUIThreadFunctionPtr> _frameRenderingUpdateQueue;
+    boost::mutex _mutexFrameRenderingUpdate;
 
     /*
     FrameListener method

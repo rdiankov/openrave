@@ -13,8 +13,8 @@ namespace qtogrerave {
 
 class OgreHandle : public OpenRAVE::GraphHandle {
 public:
-    OgreHandle(Ogre::SceneNode *node) :
-        _node(node) {}
+    OgreHandle() : _node(nullptr) {}
+    OgreHandle(Ogre::SceneNode *node) : _node(node) {}
     ~OgreHandle() {
         _node->getParentSceneNode()->removeAndDestroyChild(_node);
     }

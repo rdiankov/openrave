@@ -17,7 +17,7 @@ class QtOgreViewer : public ViewerBase
 {
 public:
     QtOgreViewer(EnvironmentBasePtr penv, std::istream& sinput);
-    virtual ~QtOgreViewer() {}
+    virtual ~QtOgreViewer();
 
     /// \brief notified when a body has been removed from the environment
     virtual void RemoveKinBody(KinBodyPtr pbody) {
@@ -30,6 +30,8 @@ public:
     ///
     /// \param bShow if true will show the window
     int main(bool bShow = true);
+
+    bool startmainloop(std::ostream& sout, std::istream& sinput);
 
     /// \brief destroys the main loop
     void quitmainloop();
@@ -47,7 +49,7 @@ public:
 
     /// \brief Return the distance to the camera focus position (ie center of rotation)
     virtual float GetCameraDistanceToFocus() const {}
-    
+
     /// \brief Return the closest camera intrinsics that the viewer is rendering the environment at.
     virtual geometry::RaveCameraIntrinsics<float> GetCameraIntrinsics() const {}
 
@@ -103,7 +105,7 @@ public:
     ///
     /// \param showtype If zero, will hide all viewers. If != 0, should show viewers (dependent on plugin could have different meanings)
     virtual void Show(int showtype) {}
-    
+
     virtual const std::string& GetName() const {}
 
     /// \deprecated (11/06/10)
@@ -115,6 +117,8 @@ public:
     {
         return RegisterItemSelectionCallback(fncallback);
     }
+
+    void _drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents);
 
 protected:
     GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle = 0) {}
@@ -128,7 +132,7 @@ protected:
 
     GraphHandlePtr drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color) {}
 
-    GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents) {}
+    GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents);
     GraphHandlePtr drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture) {}
 
     GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color) {}

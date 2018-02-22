@@ -117,5 +117,5 @@ void GetPluginAttributesValidated(PLUGININFO& info)
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()
 {
-    QApplication::quit();
+    // QApplication::quit();
 }

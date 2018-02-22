@@ -204,6 +204,7 @@ void QtOgreWindow::initialize()
     createScene();
 
     m_ogreRoot->addFrameListener(this);
+    m_miscDrawNode = m_ogreSceneMgr->getRootSceneNode()->createChildSceneNode();
 }
 
 void QtOgreWindow::createScene()
@@ -239,11 +240,12 @@ void QtOgreWindow::createScene()
     m_ogreRoot->getHlmsManager()->registerHlms( hlmsPbs );
     Ogre::String datablockName = "sphere material";
     // cleanup??????????????????
-    sphereMesh->setDatablock(hlmsPbs->createDatablock( datablockName,
+    datablockhack = hlmsPbs->createDatablock( datablockName,
                               datablockName,
                               Ogre::HlmsMacroblock(),
                               Ogre::HlmsBlendblock(),
-                              Ogre::HlmsParamVec() ));
+                              Ogre::HlmsParamVec() );
+    sphereMesh->setDatablock(datablockhack);
 
 
     // Ogre::MaterialPtr sphereMaterial = Ogre::MaterialManager::getSingleton().create("SphereMaterial",
@@ -468,6 +470,21 @@ void QtOgreWindow::setAnimating(bool animating)
 bool QtOgreWindow::frameRenderingQueued(const Ogre::FrameEvent& evt)
 {
     m_cameraMan->frameRenderingQueued(evt);
+    std::list<GUIThreadFunctionPtr> localQueue;
+    {
+        boost::mutex::scoped_lock lock(_mutexFrameRenderingUpdate);
+        localQueue = std::move(_frameRenderingUpdateQueue);
+    }
+    for (GUIThreadFunctionPtr& func: localQueue) {
+        (*func)();
+    }
+    // Ogre::SceneNode* parentNode = GetMiscDrawNode();
+    //     Ogre::SceneNode* node = parentNode->createChildSceneNode();
+    //     Ogre::v1::Entity* cube = node->getCreator()->createEntity(Ogre::SceneManager::PT_CUBE);
+    //     cube->setDatablock(datablockhack);
+    //     node->attachObject(cube);
+    //     node->setPosition(Ogre::Vector3(0.0, 0.0, 0.0));
+    //     node->setScale(Ogre::Vector3(0.03, 0.03, 0.03)); // <--------- is this extents?
     return true;
 }
 
