@@ -20,6 +20,7 @@
 
 #include "manipconstraints.h"
 #include "ParabolicPathSmooth/DynamicPath.h"
+#include "trajectoryretimer.h" // _(msgid)
 
 namespace rplanners {
 
