@@ -861,6 +861,10 @@ protected:
                 return std::string("qtcoin");
             }
 
+            if( pdatabase->HasInterface(PT_Viewer, "qtogre") ) {
+                return std::string("qtogre");
+            }
+
             // search for the first viewer found
             std::map<InterfaceType, std::vector<std::string> > interfacenames;
             pdatabase->GetLoadedInterfaces(interfacenames);
