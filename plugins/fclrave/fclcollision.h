@@ -606,7 +606,7 @@ public:
             return false;
         }
 
-        _fclspace->Synchronize();
+        _fclspace->SynchronizeWithAttached(pbody);
         BroadPhaseCollisionManagerPtr bodyManager = _GetBodyManager(pbody, !!(_options & OpenRAVE::CO_ActiveDOFs));
 
         CollisionCallbackData query(shared_checker(), report);
@@ -632,6 +632,7 @@ public:
 
         CollisionGeometryPtr ctrigeom = _fclspace->GetMeshFactory()(_fclPointsCache, _fclTrianglesCache);
         fcl::CollisionObject ctriobj(ctrigeom);
+        //ctriobj.computeAABB(); // necessary?
         ctriobj.setUserData(&objUserData);
         bodyManager->collide(&ctriobj, &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
         return query._bCollision;
