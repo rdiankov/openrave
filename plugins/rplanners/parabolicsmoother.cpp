@@ -1777,9 +1777,6 @@ protected:
         }
         dReal originalEndTime = endTime;
         int nEndTimeDiscretization = (int)(endTime*fiMinDiscretization)+1;
-        if( nEndTimeDiscretization > 46340 ) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("nEndTimeDiscretization^2 must be less than 2^31 (%d^2). Try to increase mintimestep."), nEndTimeDiscretization, ORE_Assert);
-        }
         dReal dummyEndTime;
 
         /*
@@ -1862,7 +1859,10 @@ protected:
             }
 
             if( vVisitedDiscretization.size() == 0 ) {
-                vVisitedDiscretization.resize(nEndTimeDiscretization*nEndTimeDiscretization,0);
+                // if nEndTimeDiscretization is too big, then just ignore vVisitedDiscretization
+                if( nEndTimeDiscretization <= 0x8000 ) {
+                    vVisitedDiscretization.resize(nEndTimeDiscretization*nEndTimeDiscretization,0);
+                }
             }
 
             dReal t1, t2;
@@ -1894,13 +1894,14 @@ protected:
             {
                 int t1index = t1*fiMinDiscretization;
                 int t2index = t2*fiMinDiscretization;
-                int64_t testpairindex = t1index*nEndTimeDiscretization+t2index;
-                OPENRAVE_ASSERT_OP(testpairindex, <, (int64_t)vVisitedDiscretization.size());
-                if( vVisitedDiscretization[testpairindex] ) {
-                    RAVELOG_VERBOSE_FORMAT("env = %d: shortcut iter = %d/%d: the sampled t1 (%f) and t2 (%f) are already tested", GetEnv()->GetId()%iters%numIters%t1%t2);
-                    continue;
+                size_t testpairindex = t1index*nEndTimeDiscretization+t2index;
+                if( testpairindex < vVisitedDiscretization.size() ) {
+                    if( vVisitedDiscretization[testpairindex] ) {
+                        RAVELOG_VERBOSE_FORMAT("env=%d, shortcut iter = %d/%d: the sampled t1 (%f) and t2 (%f) are already tested", GetEnv()->GetId()%iters%numIters%t1%t2);
+                        continue;
+                    }
+                    vVisitedDiscretization[testpairindex] = 1;
                 }
-                vVisitedDiscretization[testpairindex] = 1;
             }
 
             int i1 = std::upper_bound(rampStartTime.begin(), rampStartTime.end(), t1) - rampStartTime.begin() - 1;
