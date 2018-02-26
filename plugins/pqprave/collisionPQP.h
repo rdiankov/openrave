@@ -355,6 +355,12 @@ public:
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
     }
 
+    virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
+    {
+        RAVELOG_WARN("pqp does not support trimesh/body check\n");
+        return false;
+    }
+
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if( pbody->GetLinks().size() <= 1 ) {

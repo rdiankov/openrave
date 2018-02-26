@@ -71,12 +71,15 @@ public:
     class KinBodyInfo : public boost::enable_shared_from_this<KinBodyInfo>, public OpenRAVE::UserData
     {
 public:
-        struct LINK
+        class LinkInfo
         {
-            LINK(KinBody::LinkPtr plink) : _plink(plink) {
+        public:
+            LinkInfo() : bFromKinBodyLink(false) {
+            }
+            LinkInfo(KinBody::LinkPtr plink) : _plink(plink), bFromKinBodyLink(true) {
             }
 
-            virtual ~LINK() {
+            virtual ~LinkInfo() {
                 Reset();
             }
 
@@ -109,6 +112,7 @@ public:
             TransformCollisionPair linkBV; ///< pair of the transformation and collision object corresponding to a bounding OBB for the link
             std::vector<TransformCollisionPair> vgeoms; ///< vector of transformations and collision object; one per geometries
             std::string bodylinkname; // for debugging purposes
+            bool bFromKinBodyLink; ///< if true, then from kinbodylink. Otherwise from standalone object that does not have any KinBody associations
         };
 
         KinBodyInfo() : nLastStamp(0), nLinkUpdateStamp(0), nGeometryUpdateStamp(0), nAttachedBodiesUpdateStamp(0), nActiveDOFUpdateStamp(0)
@@ -142,7 +146,7 @@ public:
         int nAttachedBodiesUpdateStamp; ///< update stamp for when attached bodies change of this body
         int nActiveDOFUpdateStamp; ///< update stamp for when active dofs change of this body
 
-        vector< boost::shared_ptr<LINK> > vlinks; ///< info for every link of the kinbody
+        vector< boost::shared_ptr<LinkInfo> > vlinks; ///< info for every link of the kinbody
 
         OpenRAVE::UserDataPtr _bodyAttachedCallback; ///< handle for the callback called when a body is attached or detached
         OpenRAVE::UserDataPtr _activeDOFsCallback; ///< handle for the callback called when a the activeDOFs have changed
@@ -159,7 +163,7 @@ public:
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
     typedef boost::weak_ptr<KinBodyInfo> KinBodyInfoWeakPtr;
-    typedef boost::shared_ptr<FCLSpace::KinBodyInfo::LINK> LinkInfoPtr;
+    typedef boost::shared_ptr<FCLSpace::KinBodyInfo::LinkInfo> LinkInfoPtr;
     typedef boost::function<void (KinBodyInfoPtr)> SynchronizeCallbackFn;
 
     FCLSpace(EnvironmentBasePtr penv, const std::string& userdatakey)
@@ -205,7 +209,7 @@ public:
         pinfo->vlinks.reserve(pbody->GetLinks().size());
         FOREACHC(itlink, pbody->GetLinks()) {
 
-            boost::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK(*itlink));
+            boost::shared_ptr<KinBodyInfo::LinkInfo> link(new KinBodyInfo::LinkInfo(*itlink));
 
 
             typedef boost::range_detail::any_iterator<KinBody::GeometryInfo, boost::forward_traversal_tag, KinBody::GeometryInfo const&, std::ptrdiff_t> GeometryInfoIterator;
@@ -506,6 +510,10 @@ public:
         return _bIsSelfCollisionChecker;
     }
 
+    inline const MeshFactory& GetMeshFactory() const {
+        return _meshFactory;
+    }
+    
 private:
     static void _AddGeomInfoToBVHSubmodel(fcl::BVHModel<fcl::OBB>& model, KinBody::GeometryInfo const &info)
     {
@@ -731,7 +739,7 @@ private:
 #include BOOST_TYPEOF_REGISTRATION_GROUP()
 BOOST_TYPEOF_REGISTER_TYPE(FCLSpace)
 BOOST_TYPEOF_REGISTER_TYPE(FCLSpace::KinBodyInfo)
-BOOST_TYPEOF_REGISTER_TYPE(FCLSpace::KinBodyInfo::LINK)
+BOOST_TYPEOF_REGISTER_TYPE(FCLSpace::KinBodyInfo::LinkInfo)
 #endif
 
 }

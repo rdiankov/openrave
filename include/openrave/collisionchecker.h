@@ -199,6 +199,13 @@ public:
     /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
+    /// \brief Check collision with a body in the scene and a triangle mesh.
+    ///
+    /// \param trimesh Holds a dynamic triangle mesh to check collision with the body.
+    /// \param pbody the link to collide with. If CO_ActiveDOFs is set, will only check affected links of the body.
+    /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
+    virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
+
     /// \brief Checks self collision only with the links of the passed in body.
     ///
     /// Only checks KinBody::GetNonAdjacentLinks(), Links that are joined together are ignored.
