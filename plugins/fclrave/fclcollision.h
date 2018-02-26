@@ -1053,6 +1053,7 @@ private:
     void _PrintCollisionManagerInstance(const KinBody& body, FCLCollisionManagerInstance& manager)
     {
         RAVELOG_WARN_FORMAT("env=%d, body %s ", GetEnv()->GetId()%body.GetName());
+        _bParentlessCollisionObject = false;
     }
 
     int _options;
