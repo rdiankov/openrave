@@ -391,7 +391,8 @@ public:
 
         // Do we really want to synchronize everything ?
         // We could put the synchronization directly inside GetBodyManager
-        FCLCollisionManagerInstance& body1Manager = _GetBodyManager(pbody1, !!(_options & OpenRAVE::CO_ActiveDOFs)), body2Manager = _GetBodyManager(pbody2, false);
+        FCLCollisionManagerInstance& body1Manager = _GetBodyManager(pbody1, !!(_options & OpenRAVE::CO_ActiveDOFs));
+        FCLCollisionManagerInstance& body2Manager = _GetBodyManager(pbody2, false);
         
         if( _options & OpenRAVE::CO_Distance )
             {
