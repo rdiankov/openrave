@@ -694,7 +694,9 @@ public:
             CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
             ADD_TIMING(_statistics);
             query.bselfCollision = true;
-
+#ifdef FCLRAVE_CHECKPARENTLESS
+            boost::shared_ptr<void> onexit((void*) 0, boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceSelf, this, boost::ref(*pbody)));
+#endif            
             KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
             FOREACH(itset, nonadjacent) {
                 size_t index1 = *itset&0xffff, index2 = *itset>>16;
@@ -1078,7 +1080,15 @@ private:
     void _PrintCollisionManagerInstanceB(const KinBody& body, FCLCollisionManagerInstance& manager)
     {
         if( _bParentlessCollisionObject ) {
-            RAVELOG_WARN_FORMAT("env=%d, body %s ", GetEnv()->GetId()%body.GetName());
+            RAVELOG_WARN_FORMAT("env=%d, self=%d, body %s ", GetEnv()->GetId()%_bIsSelfCollisionChecker%body.GetName());
+            _bParentlessCollisionObject = false;
+        }
+    }
+
+    void _PrintCollisionManagerInstanceSelf(const KinBody& body)
+    {
+        if( _bParentlessCollisionObject ) {
+            RAVELOG_WARN_FORMAT("env=%d, self=%d, body %s ", GetEnv()->GetId()%_bIsSelfCollisionChecker%body.GetName());
             _bParentlessCollisionObject = false;
         }
     }
@@ -1086,7 +1096,7 @@ private:
     void _PrintCollisionManagerInstanceBL(const KinBody& body, FCLCollisionManagerInstance& manager, const KinBody::Link& link)
     {
         if( _bParentlessCollisionObject ) {
-            RAVELOG_WARN_FORMAT("env=%d, body %s with link %s:%s ", GetEnv()->GetId()%body.GetName()%link.GetParent()->GetName()%link.GetName());
+            RAVELOG_WARN_FORMAT("env=%d, self=%d, body %s with link %s:%s (enabled=%d) ", GetEnv()->GetId()%_bIsSelfCollisionChecker%body.GetName()%link.GetParent()->GetName()%link.GetName()%link.IsEnabled());
             _bParentlessCollisionObject = false;
         }
     }
@@ -1094,7 +1104,7 @@ private:
     void _PrintCollisionManagerInstanceBE(const KinBody& body, FCLCollisionManagerInstance& manager, FCLCollisionManagerInstance& envManager)
     {
         if( _bParentlessCollisionObject ) {
-            RAVELOG_WARN_FORMAT("env=%d, body %s ", GetEnv()->GetId()%body.GetName());
+            RAVELOG_WARN_FORMAT("env=%d, self=%d, body %s ", GetEnv()->GetId()%_bIsSelfCollisionChecker%body.GetName());
             _bParentlessCollisionObject = false;
         }
     }
@@ -1102,7 +1112,7 @@ private:
     void _PrintCollisionManagerInstance(const KinBody& body1, FCLCollisionManagerInstance& manager1, const KinBody& body2, FCLCollisionManagerInstance& manager2)
     {
         if( _bParentlessCollisionObject ) {
-            RAVELOG_WARN_FORMAT("env=%d, body1 %s body2 %s ", GetEnv()->GetId()%body1.GetName()%body2.GetName());
+            RAVELOG_WARN_FORMAT("env=%d, self=%d, body1 %s (enabled=%d) body2 %s (enabled=%d) ", GetEnv()->GetId()%_bIsSelfCollisionChecker%body1.GetName()%body1.IsEnabled()%body2.GetName()%body2.IsEnabled());
             _bParentlessCollisionObject = false;
         }
     }
@@ -1110,7 +1120,7 @@ private:
     void _PrintCollisionManagerInstanceLE(const KinBody::Link& link, FCLCollisionManagerInstance& envManager)
     {
         if( _bParentlessCollisionObject ) {
-            RAVELOG_WARN_FORMAT("env=%d, link %s:%s ", GetEnv()->GetId()%link.GetParent()->GetName()%link.GetName());
+            RAVELOG_WARN_FORMAT("env=%d, self=%d, link %s:%s (enabled=%d) ", GetEnv()->GetId()%_bIsSelfCollisionChecker%link.GetParent()->GetName()%link.GetName()%link.IsEnabled());
             _bParentlessCollisionObject = false;
         }
     }
