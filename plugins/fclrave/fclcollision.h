@@ -59,7 +59,7 @@ class FCLCollisionChecker : public OpenRAVE::CollisionCheckerBase
 public:
     class CollisionCallbackData {
 public:
-        CollisionCallbackData(boost::shared_ptr<FCLCollisionChecker> pchecker, CollisionReportPtr report, const std::vector<KinBodyConstPtr>& vbodyexcluded = std::vector<KinBodyConstPtr>(), const std::vector<LinkConstPtr>& vlinkexcluded = std::vector<LinkConstPtr>()) : _pchecker(pchecker), _report(report), _vbodyexcluded(vbodyexcluded), _vlinkexcluded(vlinkexcluded), bselfCollision(false), _bStopChecking(false), _bCollision(false)
+        CollisionCallbackData(boost::shared_ptr<FCLCollisionChecker> pchecker, CollisionReportPtr report, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<LinkConstPtr>& vlinkexcluded) : _pchecker(pchecker), _report(report), _vbodyexcluded(vbodyexcluded), _vlinkexcluded(vlinkexcluded), bselfCollision(false), _bStopChecking(false), _bCollision(false)
         {
             _bHasCallbacks = _pchecker->GetEnv()->HasRegisteredCollisionCallbacks();
             if( _bHasCallbacks && !_report ) {
@@ -398,7 +398,9 @@ public:
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
             return false; //TODO
         } else {
-            CollisionCallbackData query(shared_checker(), report);
+            const std::vector<KinBodyConstPtr> vbodyexcluded;
+            const std::vector<LinkConstPtr> vlinkexcluded;
+            CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
             ADD_TIMING(_statistics);
             body1Manager.GetManager()->collide(body2Manager.GetManager().get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
             return query._bCollision;
@@ -454,7 +456,9 @@ public:
             if( !pcollLink1->getAABB().overlap(pcollLink2->getAABB()) ) {
                 return false;
             }
-            CollisionCallbackData query(shared_checker(), report);
+            const std::vector<KinBodyConstPtr> vbodyexcluded;
+            const std::vector<LinkConstPtr> vlinkexcluded;
+            CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
             ADD_TIMING(_statistics);
             query.bselfCollision = true;  // for ignoring attached information!
             CheckNarrowPhaseCollision(pcollLink1.get(), pcollLink2.get(), &query);
@@ -504,7 +508,9 @@ public:
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
             return false; // TODO
         } else {
-            CollisionCallbackData query(shared_checker(), report);
+            const std::vector<KinBodyConstPtr> vbodyexcluded;
+            const std::vector<LinkConstPtr> vlinkexcluded;
+            CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
             ADD_TIMING(_statistics);
             bodyManager.GetManager()->collide(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
             return query._bCollision;
@@ -614,7 +620,9 @@ public:
         _fclspace->SynchronizeWithAttached(pbody);
         FCLCollisionManagerInstance& bodyManager = _GetBodyManager(pbody, !!(_options & OpenRAVE::CO_ActiveDOFs));
 
-        CollisionCallbackData query(shared_checker(), report);
+        const std::vector<KinBodyConstPtr> vbodyexcluded;
+        const std::vector<LinkConstPtr> vlinkexcluded;
+        CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
         ADD_TIMING(_statistics);
 
         OPENRAVE_ASSERT_OP(trimesh.indices.size() % 3, ==, 0);
@@ -668,7 +676,9 @@ public:
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
             return false; // TODO
         } else {
-            CollisionCallbackData query(shared_checker(), report);
+            const std::vector<KinBodyConstPtr> vbodyexcluded;
+            const std::vector<LinkConstPtr> vlinkexcluded;
+            CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
             ADD_TIMING(_statistics);
             query.bselfCollision = true;
 
@@ -716,7 +726,9 @@ public:
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
             return false; //TODO
         } else {
-            CollisionCallbackData query(shared_checker(), report);
+            const std::vector<KinBodyConstPtr> vbodyexcluded;
+            const std::vector<LinkConstPtr> vlinkexcluded;
+            CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
             ADD_TIMING(_statistics);
             query.bselfCollision = true;
             KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
