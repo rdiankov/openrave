@@ -36,6 +36,109 @@ void QtOgreViewer::quitmainloop()
     QApplication::quit();
 }
 
+GraphHandlePtr QtOgreViewer::plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle)
+{
+    Ogre::VertexData* data = new Ogre::VertexData();
+    data->vertexCount = numPoints;
+    Ogre::VertexDeclaration* decl = data->vertexDeclaration;
+    decl->addElement(0, stride - 3 * sizeof(float), Ogre::VET_FLOAT3, Ogre::VES_POSITION);
+    // Thread safe?
+    HardwareVertexBufferSharedPtr vbuf = Ogre::HardwareBufferManager::getSingleton().createVertexBuffer(
+        decl->getVertexSize(0),                     // This value is the size of a vertex in memory
+        numPoints,                                  // The number of vertices you'll put into this buffer
+        Ogre::HardwareBuffer::HBU_STATIC_WRITE_ONLY // Properties
+    );
+    // float *array
+    vbuf->writeData(0, vbuf->getSizeInBytes(), ppoints, true);
+    Ogre::VertexBufferBinding* bind = data->vertexBufferBinding;
+    bind->setBinding(0, vbuf);
+
+    _ogreWindow->QueueRenderingUpdate(boost::make_shared<QtOgreWindow::GUIThreadFunction>([this, ppoints, numPoints, stride, fPointSize, color, drawstyle]() {
+        Ogre::SceneNode* parentNode = _ogreWindow->GetMiscDrawNode();
+        Ogre::SceneNode* node = parentNode->createChildSceneNode();
+        // Do the mesh and mesh group name have to be unique?
+        Ogre::Mesh* mesh = Ogre::MeshManager::getSingleton().createManual("plot3", "main");
+        Ogre::SubMesh* submesh = mMesh->createSubMesh();
+        submesh->useSharedVertices = false;
+        submesh->vertexData = data;
+        submesh->indexData->indexCount = 0; // Points do not need index buffer
+        submesh->operationType = OT_POINT_LIST;
+        mesh->load();
+        node->attachObject(mesh);
+        // *handle = OgreHandle(node); // fix later
+    }));    
+}
+
+GraphHandlePtr QtOgreViewer::drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
+{
+    Ogre::VertexData* data = new Ogre::VertexData();
+    data->vertexCount = numPoints;
+    Ogre::VertexDeclaration* decl = data->vertexDeclaration;
+    decl->addElement(0, stride - 3 * sizeof(float), Ogre::VET_FLOAT3, Ogre::VES_POSITION);
+    // Thread safe?
+    HardwareVertexBufferSharedPtr vbuf = Ogre::HardwareBufferManager::getSingleton().createVertexBuffer(
+        decl->getVertexSize(0),                     // This value is the size of a vertex in memory
+        numPoints,                                  // The number of vertices you'll put into this buffer
+        Ogre::HardwareBuffer::HBU_STATIC_WRITE_ONLY // Properties
+    );
+    // float *array
+    vbuf->writeData(0, vbuf->getSizeInBytes(), ppoints, true);
+    Ogre::VertexBufferBinding* bind = data->vertexBufferBinding;
+    bind->setBinding(0, vbuf);
+
+    _ogreWindow->QueueRenderingUpdate(boost::make_shared<QtOgreWindow::GUIThreadFunction>([this, points, numPoints, stride, fPointSize, color, drawstyle]() {
+        Ogre::SceneNode* parentNode = _ogreWindow->GetMiscDrawNode();
+        Ogre::SceneNode* node = parentNode->createChildSceneNode();
+        // Do the mesh and mesh group name have to be unique?
+        Ogre::Mesh* mesh = Ogre::MeshManager::getSingleton().createManual("linelist", "main");
+        Ogre::SubMesh* submesh = mMesh->createSubMesh();
+        submesh->useSharedVertices = false;
+        submesh->vertexData = data;
+        submesh->indexData->indexCount = 0; // Points do not need index buffer
+        submesh->operationType = OT_LINE_STRIP;
+        mesh->load();
+        node->attachObject(mesh);
+
+        // VET_COLOUR, VES_DIFFUSE
+        // *handle = OgreHandle(node); // fix later
+    }));
+}
+
+GraphHandlePtr QtOgreViewer::drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
+{
+    Ogre::VertexData* data = new Ogre::VertexData();
+    data->vertexCount = numPoints;
+    Ogre::VertexDeclaration* decl = data->vertexDeclaration;
+    decl->addElement(0, stride - 3 * sizeof(float), Ogre::VET_FLOAT3, Ogre::VES_POSITION);
+    // Thread safe?
+    HardwareVertexBufferSharedPtr vbuf = Ogre::HardwareBufferManager::getSingleton().createVertexBuffer(
+        decl->getVertexSize(0),                     // This value is the size of a vertex in memory
+        numPoints,                                  // The number of vertices you'll put into this buffer
+        Ogre::HardwareBuffer::HBU_STATIC_WRITE_ONLY // Properties
+    );
+    // float *array
+    vbuf->writeData(0, vbuf->getSizeInBytes(), ppoints, true);
+    Ogre::VertexBufferBinding* bind = data->vertexBufferBinding;
+    bind->setBinding(0, vbuf);
+
+    _ogreWindow->QueueRenderingUpdate(boost::make_shared<QtOgreWindow::GUIThreadFunction>([this, points, numPoints, stride, fPointSize, color, drawstyle]() {
+        Ogre::SceneNode* parentNode = _ogreWindow->GetMiscDrawNode();
+        Ogre::SceneNode* node = parentNode->createChildSceneNode();
+        // Do the mesh and mesh group name have to be unique?
+        Ogre::Mesh* mesh = Ogre::MeshManager::getSingleton().createManual("linelist", "main");
+        Ogre::SubMesh* submesh = mMesh->createSubMesh();
+        submesh->useSharedVertices = false;
+        submesh->vertexData = data;
+        submesh->indexData->indexCount = 0; // Points do not need index buffer
+        submesh->operationType = OT_LINE_LIST;
+        mesh->load();
+        node->attachObject(mesh);
+
+        // VET_COLOUR, VES_DIFFUSE
+        // *handle = OgreHandle(node); // fix later
+    }));
+}
+
 GraphHandlePtr QtOgreViewer::drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents)
 {
     _ogreWindow->QueueRenderingUpdate(boost::make_shared<QtOgreWindow::GUIThreadFunction>([this, &vpos, &vextents]() {
