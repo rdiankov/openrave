@@ -38,12 +38,17 @@ void QtOgreViewer::quitmainloop()
 
 GraphHandlePtr QtOgreViewer::plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle)
 {
+    Ogre::RenderSystem *renderSystem = _ogreWindow->GetRoot()->getRenderSystem();
+    Ogre::VaoManager *vaoManager = renderSystem->getVaoManager();
+    
+
+    // --------------------------------------------
     Ogre::VertexData* data = new Ogre::VertexData();
     data->vertexCount = numPoints;
     Ogre::VertexDeclaration* decl = data->vertexDeclaration;
     decl->addElement(0, stride - 3 * sizeof(float), Ogre::VET_FLOAT3, Ogre::VES_POSITION);
     // Thread safe?
-    HardwareVertexBufferSharedPtr vbuf = Ogre::HardwareBufferManager::getSingleton().createVertexBuffer(
+    Ogre::HardwareVertexBufferSharedPtr vbuf = Ogre::HardwareBufferManager::getSingleton().createVertexBuffer(
         decl->getVertexSize(0),                     // This value is the size of a vertex in memory
         numPoints,                                  // The number of vertices you'll put into this buffer
         Ogre::HardwareBuffer::HBU_STATIC_WRITE_ONLY // Properties
