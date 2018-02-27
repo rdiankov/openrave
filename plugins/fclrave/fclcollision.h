@@ -788,12 +788,22 @@ private:
 
         if( !o1info.second ) {
             if( !o1info.first ) {
+                if( _bParentlessCollisionObject ) {
+                    if( !!o2info.second ) {
+                        RAVELOG_WARN_FORMAT("env=%d, fcl::CollisionObject o1 %x collides with link2 %s:%s, but collision ignored", GetEnv()->GetId()%o1%o2info.second->GetParent()->GetName()%o2info.second->GetName());
+                    }
+                }
                 return false;
             }
             // o1 is standalone object
         }
         if( !o2info.second ) {
             if( !o2info.first ) {
+                if( _bParentlessCollisionObject ) {
+                    if( !!o1info.second ) {
+                        RAVELOG_WARN_FORMAT("env=%d, link1 %s:%s collides with fcl::CollisionObject o2 %x, but collision ignored", GetEnv()->GetId()%o1info.second->GetParent()->GetName()%o1info.second->GetName()%o2);
+                    }
+                }
                 return false;
             }
             // o2 is standalone object
