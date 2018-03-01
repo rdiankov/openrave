@@ -17,6 +17,8 @@ public:
     OgreHandle(Ogre::SceneNode *node) : _node(node) {}
     ~OgreHandle() {
         if (_node) {
+            // getParentSceneNode() is None. Why!!!!!
+            printf("%p\n", _node->getParentSceneNode());
             _node->getParentSceneNode()->removeAndDestroyChild(_node);
         }
     }

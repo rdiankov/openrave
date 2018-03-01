@@ -83,7 +83,7 @@ void QtOgreWindow::initialize()
 
     const Ogre::RenderSystemList& rsList = m_ogreRoot->getAvailableRenderers();
     if (rsList.empty()){
-        RAVELOG_FATAL("Cannot get any renderers");
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot get any renderers", OpenRAVE::ORE_Failed);
     }
     Ogre::RenderSystem* rs = rsList[0];
 

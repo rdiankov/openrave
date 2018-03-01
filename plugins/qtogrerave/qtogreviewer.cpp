@@ -100,7 +100,9 @@ GraphHandlePtr QtOgreViewer::plot3(const float* ppoints, int numPoints, int stri
         Ogre::SceneManager *sceneManager = node->getCreator();
         Ogre::Item *item = sceneManager->createItem(mesh);
         node->attachObject(item);
+        printf("---------------------node %p\n", node);
         *handle = OgreHandle(node); // fix later
+        printf("---------------------node %p\n", node); // need to use condition
     }));
 
     return handle; // This segfaults
