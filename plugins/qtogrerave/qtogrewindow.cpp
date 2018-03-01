@@ -261,15 +261,10 @@ void QtOgreWindow::createScene()
     childSceneNode->setPosition(Ogre::Vector3(0.0f, 0.0f, 0.0f));
     childSceneNode->setScale(Ogre::Vector3(0.01f, 0.01f, 0.01f)); // Radius, in theory.
 
-#if OGRE_VERSION >= ((2 << 16) | (0 << 8) | 0)
     Ogre::SceneNode* pLightNode = m_ogreSceneMgr->getRootSceneNode()->createChildSceneNode();
     Ogre::Light* light = m_ogreSceneMgr->createLight();
     pLightNode->attachObject(light);
     pLightNode->setPosition(20.0f, 80.0f, 50.0f);
-#else
-    Ogre::Light* light = m_ogreSceneMgr->createLight("MainLight");
-    light->setPosition(20.0f, 80.0f, 50.0f);
-#endif
 }
 
 #if OGRE_VERSION >= ((2 << 16) | (0 << 8) | 0)

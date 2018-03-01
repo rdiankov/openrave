@@ -16,7 +16,9 @@ public:
     OgreHandle() : _node(nullptr) {}
     OgreHandle(Ogre::SceneNode *node) : _node(node) {}
     ~OgreHandle() {
-        _node->getParentSceneNode()->removeAndDestroyChild(_node);
+        if (_node) {
+            _node->getParentSceneNode()->removeAndDestroyChild(_node);
+        }
     }
 
     // PrivateGraphHandle(QtOgreViewerWeakPtr wviewer, OgreSwitchPtr handle) : _handle(handle), _wviewer(wviewer) {
