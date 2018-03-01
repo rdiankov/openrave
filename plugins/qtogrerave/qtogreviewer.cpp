@@ -1,5 +1,8 @@
 #include "qtogreviewer.h"
 
+#include <mutex>
+#include <condition_variable>
+
 #include <OGRE/OgreMeshManager2.h>
 #include <OGRE/OgreMesh2.h>
 #include <OGRE/OgreItem.h>
@@ -55,9 +58,14 @@ GraphHandlePtr QtOgreViewer::plot3(const float* ppoints, int numPoints, int stri
         ppoints = (float*)((char*)ppoints + stride);
     }
 
+    // TODO: Calculate bounds
+
+    std::mutex cv_m;
+    std::condition_variable cv;
     OgreHandlePtr handle = boost::make_shared<OgreHandle>();
 
-    _ogreWindow->QueueRenderingUpdate(boost::make_shared<QtOgreWindow::GUIThreadFunction>([this, handle, vpoints, numPoints, stride, fPointSize, color, drawstyle]() {
+    _ogreWindow->QueueRenderingUpdate(boost::make_shared<QtOgreWindow::GUIThreadFunction>([this, &cv_m, &cv, &handle, vpoints, numPoints, stride, fPointSize, color, drawstyle]() {
+        std::lock_guard<std::mutex> lk(cv_m);
         Ogre::RenderSystem *renderSystem = _ogreWindow->GetRoot()->getRenderSystem();
         Ogre::VaoManager *vaoManager = renderSystem->getVaoManager();
 
@@ -100,10 +108,16 @@ GraphHandlePtr QtOgreViewer::plot3(const float* ppoints, int numPoints, int stri
         Ogre::SceneManager *sceneManager = node->getCreator();
         Ogre::Item *item = sceneManager->createItem(mesh);
         node->attachObject(item);
-        printf("---------------------node %p\n", node);
-        *handle = OgreHandle(node); // fix later
-        printf("---------------------node %p\n", node); // need to use condition
+        printf("---------------------node %p %p\n", node, node->getParentSceneNode());
+        handle->_node = node;
+
+        cv.notify_all();
     }));
+
+    {
+        std::unique_lock<std::mutex> lk(cv_m);
+        cv.wait(lk);
+    }
 
     return handle; // This segfaults
 }

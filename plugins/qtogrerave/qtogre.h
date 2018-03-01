@@ -15,10 +15,8 @@ class OgreHandle : public OpenRAVE::GraphHandle {
 public:
     OgreHandle() : _node(nullptr) {}
     OgreHandle(Ogre::SceneNode *node) : _node(node) {}
-    ~OgreHandle() {
+    virtual ~OgreHandle() {
         if (_node) {
-            // getParentSceneNode() is None. Why!!!!!
-            printf("%p\n", _node->getParentSceneNode());
             _node->getParentSceneNode()->removeAndDestroyChild(_node);
         }
     }
@@ -51,7 +49,7 @@ public:
         // }
         _node->setVisible(bShow);
     }
-private:
+// private:
     Ogre::SceneNode *_node;
     // QtOgreViewerWeakPtr _wviewer;
 };
