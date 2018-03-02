@@ -1294,7 +1294,9 @@ protected:
 
 	    if( vVisitedDiscretization.size() == 0 ) {
 		nEndTimeDiscretization = (int)(tTotal*fiMinDiscretization) + 1;
-		vVisitedDiscretization.resize(nEndTimeDiscretization*nEndTimeDiscretization, 0);
+		if( nEndTimeDiscretization <= 0x8000 ) {
+		    vVisitedDiscretization.resize(nEndTimeDiscretization*nEndTimeDiscretization, 0);
+		}
 	    }
 
             // Sample t0 and t1. We could possibly add some heuristics here to get higher quality
@@ -1341,10 +1343,12 @@ protected:
 	    {
 		int t0Index = t0*fiMinDiscretization;
 		int t1Index = t1*fiMinDiscretization;
-		int testPairIndex = t0Index*nEndTimeDiscretization + t1Index;
-		if( testPairIndex < (int)vVisitedDiscretization.size() && vVisitedDiscretization[testPairIndex] ) {
-		    RAVELOG_VERBOSE_FORMAT("env=%d: shortcut iter = %d/%d: the sampled t0 = %.15e and t1 = %.15e have been tested", GetEnv()->GetId()%iters%numIters%t0%t1);
-		    continue;
+		size_t testPairIndex = t0Index*nEndTimeDiscretization + t1Index;
+		if( testPairIndex < vVisitedDiscretization.size() ) {
+		    if( vVisitedDiscretization[testPairIndex] ) {
+			RAVELOG_VERBOSE_FORMAT("env=%d: shortcut iter = %d/%d: the sampled t0 = %.15e and t1 = %.15e have been tested", GetEnv()->GetId()%iters%numIters%t0%t1);
+			continue;
+		    }
 		}
 		vVisitedDiscretization[testPairIndex] = 1;
 	    }
