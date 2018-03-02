@@ -767,7 +767,7 @@ private:
     }
 
     void SaveCollisionObjectDebugInfos(fcl::CollisionObject* pcollobj) {
-        FCLSpace::KinBodyInfo::LINK* pLINK = static_cast<FCLSpace::KinBodyInfo::LINK*>(pcollobj->getUserData());
+        FCLSpace::KinBodyInfo::LinkInfo* pLINK = static_cast<FCLSpace::KinBodyInfo::LinkInfo*>(pcollobj->getUserData());
         _mapDebugCollisionObjects.insert(std::make_pair(pcollobj, std::make_pair(pLINK->bodylinkname, _fclspace.GetInfo(pLINK->GetLink()->GetParent())->_geometrygroup)));
     }
 
