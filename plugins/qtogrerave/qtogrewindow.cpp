@@ -465,13 +465,13 @@ void QtOgreWindow::setAnimating(bool animating)
 bool QtOgreWindow::frameRenderingQueued(const Ogre::FrameEvent& evt)
 {
     m_cameraMan->frameRenderingQueued(evt);
-    std::list<GUIThreadFunctionPtr> localQueue;
+    std::list<std::function<void()>> localQueue;
     {
         boost::mutex::scoped_lock lock(_mutexFrameRenderingUpdate);
         localQueue = std::move(_frameRenderingUpdateQueue);
     }
-    for (GUIThreadFunctionPtr& func: localQueue) {
-        (*func)();
+    for (std::function<void()>& func: localQueue) {
+        func();
     }
     // Ogre::SceneNode* parentNode = GetMiscDrawNode();
     //     Ogre::SceneNode* node = parentNode->createChildSceneNode();

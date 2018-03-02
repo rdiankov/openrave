@@ -57,50 +57,9 @@ public:
     Ogre::SceneNode* GetMiscDrawNode() { return m_miscDrawNode; }
     Ogre::HlmsDatablock *datablockhack;
 
-    class GUIThreadFunction
-    {
-public:
-        GUIThreadFunction(const boost::function<void()>& fn, bool isblocking=false) : _fn(fn), _bcalled(false), _bfinished(false), _bisblocking(isblocking) {
-        }
-
-        void operator()() {
-            // have to set finished at the end
-            boost::shared_ptr<void> finishfn((void*)0, boost::bind(&GUIThreadFunction::SetFinished, this));
-            BOOST_ASSERT(!_bcalled);
-            _bcalled = true;
-            _fn();
-        }
-
-        /// \brief true if function has already been called
-        bool IsCalled() const {
-            return _bcalled;
-        }
-
-        bool IsFinished() const {
-            return _bfinished;
-        }
-
-        bool IsBlocking() const {
-            return _bisblocking;
-        }
-
-        void SetFinished() {
-            _bfinished = true;
-        }
-
-private:
-
-        boost::function<void()> _fn;
-        bool _bcalled; ///< true if function already called
-        bool _bfinished; ///< true if function processing is finished
-        bool _bisblocking; ///< if true, then the caller is blocking until the function completes
-    };
-    typedef boost::shared_ptr<GUIThreadFunction> GUIThreadFunctionPtr;
-
-    void QueueRenderingUpdate(GUIThreadFunctionPtr func) {
+    void QueueRenderingUpdate(const boost::function<void()> &func) {
         boost::mutex::scoped_lock lock(_mutexFrameRenderingUpdate);
         _frameRenderingUpdateQueue.push_back(func);
-        printf("ADddddd\n");
     }
 
 public slots:
@@ -149,7 +108,7 @@ protected:
     virtual void exposeEvent(QExposeEvent *event);
     virtual bool event(QEvent *event);
 
-    std::list<GUIThreadFunctionPtr> _frameRenderingUpdateQueue;
+    std::list<std::function<void()>> _frameRenderingUpdateQueue;
     boost::mutex _mutexFrameRenderingUpdate;
 
     /*
