@@ -125,7 +125,9 @@ GraphHandlePtr QtOgreViewer::plot3(const float* ppoints, int numPoints, int stri
         mesh->_setBoundingSphereRadius(aabb.getRadius());
         Ogre::SceneManager *sceneManager = node->getCreator();
         Ogre::Item *item = sceneManager->createItem(mesh);
+        item->setDatablock(_ogreWindow->datablockhack);
         node->attachObject(item);
+        node->setPosition(0.0f, 0.0f, 0.0f);
         handle->_node = node;
 
         cv.notify_all();
@@ -259,9 +261,15 @@ GraphHandlePtr QtOgreViewer::drawlinelist(const float* ppoints, int numPoints, i
     });
 }
 
+
+
 GraphHandlePtr QtOgreViewer::drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents)
 {
-    _ogreWindow->QueueRenderingUpdate([this, &vpos, &vextents]() {
+    std::mutex cv_m;
+    std::condition_variable cv;
+    OgreHandlePtr handle = boost::make_shared<OgreHandle>();
+
+    _ogreWindow->QueueRenderingUpdate([this, &cv_m, &cv, &handle, &vpos, &vextents]() {
         // TODO: Use vertex buffer?
         Ogre::SceneNode* parentNode = _ogreWindow->GetMiscDrawNode();
         Ogre::SceneNode* node = parentNode->createChildSceneNode();
@@ -270,18 +278,17 @@ GraphHandlePtr QtOgreViewer::drawbox(const RaveVector<float>& vpos, const RaveVe
         node->attachObject(cube);
         node->setPosition(Ogre::Vector3(vpos.x, vpos.y, vpos.z));
         node->setScale(Ogre::Vector3(vextents.x, vextents.y, vextents.z)); // <--------- is this extents?
-        // *handle = OgreHandle(node); // fix later
-    });
-    // Ogre::SceneNode* parentNode = _ogreWindow->GetMiscDrawNode();
-    //     Ogre::SceneNode* node = parentNode->createChildSceneNode();
-    //     Ogre::v1::Entity* cube = node->getCreator()->createEntity(Ogre::SceneManager::PT_CUBE);
-    //     cube->setDatablock(_ogreWindow->datablockhack);
-    //     node->attachObject(cube);
-    //     node->setPosition(Ogre::Vector3(vpos.x, vpos.y, vpos.z));
-    //     node->setScale(Ogre::Vector3(vextents.x, vextents.y, vextents.z)); // <--------- is this extents?
+        handle->_node = node;
 
-    //return boost::make_shared<OgreHandle>(node);
-    //return boost::make_shared<OgreHandle>(node);
+        cv.notify_all();
+    });
+
+    {
+        std::unique_lock<std::mutex> lk(cv_m);
+        cv.wait(lk);
+    }
+
+    return handle;
 }
 
 ViewerBasePtr CreateQtOgreViewer(EnvironmentBasePtr penv, std::istream& sinput)
