@@ -261,10 +261,17 @@ void QtOgreWindow::createScene()
     childSceneNode->setPosition(Ogre::Vector3(0.0f, 0.0f, 0.0f));
     childSceneNode->setScale(Ogre::Vector3(0.01f, 0.01f, 0.01f)); // Radius, in theory.
 
-    Ogre::SceneNode* pLightNode = m_ogreSceneMgr->getRootSceneNode()->createChildSceneNode();
-    Ogre::Light* light = m_ogreSceneMgr->createLight();
-    pLightNode->attachObject(light);
-    pLightNode->setPosition(20.0f, 80.0f, 50.0f);
+    // Ogre::SceneNode* pLightNode = m_ogreSceneMgr->getRootSceneNode()->createChildSceneNode();
+    // Ogre::Light* light = m_ogreSceneMgr->createLight();
+    // pLightNode->attachObject(light);
+    // pLightNode->setPosition(20.0f, 80.0f, 50.0f);
+
+    Ogre::Light *light = m_ogreSceneMgr->createLight();
+    Ogre::SceneNode *lightNode = m_ogreSceneMgr->getRootSceneNode()->createChildSceneNode();
+    lightNode->attachObject(light);
+    light->setPowerScale( Ogre::Math::PI ); //Since we don't do HDR, counter the PBS' division by PI
+    light->setType( Ogre::Light::LT_DIRECTIONAL );
+    light->setDirection( Ogre::Vector3( -1, -1, -1 ).normalisedCopy() );
 }
 
 #if OGRE_VERSION >= ((2 << 16) | (0 << 8) | 0)

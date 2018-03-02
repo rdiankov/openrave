@@ -54,6 +54,7 @@ public:
     void setAnimating(bool animating);
 
     Ogre::Root* GetRoot() { return m_ogreRoot; }
+    Ogre::SceneNode* GetRootSceneNode() { return m_ogreSceneMgr->getRootSceneNode(); }
     Ogre::SceneNode* GetMiscDrawNode() { return m_miscDrawNode; }
     Ogre::HlmsDatablock *datablockhack;
 

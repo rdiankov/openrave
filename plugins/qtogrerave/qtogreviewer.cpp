@@ -112,7 +112,7 @@ GraphHandlePtr QtOgreViewer::plot3(const float* ppoints, int numPoints, int stri
             nullptr, // Points do not need index buffer
             Ogre::OT_POINT_LIST);
 
-        Ogre::SceneNode* parentNode = _ogreWindow->GetMiscDrawNode();
+        Ogre::SceneNode* parentNode = _ogreWindow->GetMiscDrawNode(); // _ogreWindow->GetRootSceneNode();//
         Ogre::SceneNode* node = parentNode->createChildSceneNode();
         // Do the mesh and mesh group name have to be unique?
         Ogre::MeshPtr mesh = Ogre::MeshManager::getSingleton().createManual("plot3", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
