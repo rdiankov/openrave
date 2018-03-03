@@ -435,7 +435,7 @@ class RunRobot(EnvironmentSetup):
                 self.RunTrajectory(robot,traj)
                 raise ValueError('controller did not throw limit expected exception!')
             
-            except Exception, e:
+            except Exception as e:
                 pass
 
             traj.Init(robot.GetActiveConfigurationSpecification())
@@ -447,7 +447,7 @@ class RunRobot(EnvironmentSetup):
                 self.RunTrajectory(robot,traj)
                 raise ValueError('controller did not throw velocity limit expected exception!')
             
-            except Exception, e:
+            except Exception as e:
                 pass
 
     def test_bigrange(self):

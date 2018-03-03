@@ -77,7 +77,7 @@ class DoxygenFunctionDirective(BaseDirective):
 
         try:
             data_object = finder.find_one(matcher)
-        except NoMatchesError, e:
+        except NoMatchesError as e:
             warning = 'doxygenfunction: Cannot find function "%s" in doxygen xml output' % function_name
             return [ docutils.nodes.warning( "", docutils.nodes.paragraph("", "", docutils.nodes.Text(warning))),
                     self.state.document.reporter.warning( warning, line=self.lineno) ]
@@ -116,7 +116,7 @@ class DoxygenStructDirective(BaseDirective):
 
         try:
             data_object = finder.find_one(matcher)
-        except NoMatchesError, e:
+        except NoMatchesError as e:
             warning = 'doxygen%s: Cannot find %s "%s" in doxygen xml output' % (self.kind, self.kind, struct_name)
             return [ docutils.nodes.warning( "", docutils.nodes.paragraph("", "", docutils.nodes.Text(warning))),
                     self.state.document.reporter.warning( warning, line=self.lineno) ]
@@ -204,16 +204,16 @@ class ProjectInfoFactory(object):
         name = ""
         path = self.default_path()
 
-        if options.has_key("project"):
+        if "project" in options:
             try:
                 path = self.projects[ options["project"] ]
                 name = options["project"]
-            except KeyError, e:
+            except KeyError as e:
                 sys.stderr.write(
                         "Unable to find project '%s' in breathe_projects dictionary" % options["project"]
                         )
 
-        if options.has_key("path"):
+        if "path" in options:
             path = options["path"]
 
 

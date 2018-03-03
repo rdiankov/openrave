@@ -98,7 +98,7 @@ class ParabolicPath(object):
         i1, rem1 = self.FindParabolicCurvesNDIndex(t1)
 
         newCurvesNDVect = []
-        for i in xrange(i0):
+        for i in range(i0):
             newCurvesNDVect.append(self.curvesndVect[i])
 
         tempCurvesND = ParabolicCurvesND()
@@ -115,7 +115,7 @@ class ParabolicPath(object):
         if (tempCurvesND.duration > 0):
             newCurvesNDVect.append(deepcopy(tempCurvesND))
 
-        for i in xrange(i1 + 1, len(self.curvesndVect)):
+        for i in range(i1 + 1, len(self.curvesndVect)):
             newCurvesNDVect.append(self.curvesndVect[i])
 
         self.Reconstruct(newCurvesNDVect)
@@ -128,14 +128,14 @@ def ConvertDynamicPathStringIntoParabolicPath(dynamicpathstring):
     ndof = int(data[0])
     nlines = ndof + 2 # the number of lines containing the data for 1 ParabolicRampND
 
-    nParabolicRampND = len(data)/(nlines)
+    nParabolicRampND = int(len(data)/(nlines))
 
     parabolicpath = ParabolicPath()
     
-    for iramp in xrange(nParabolicRampND):
+    for iramp in range(nParabolicRampND):
         curoffset = iramp*nlines
-        curves = [ParabolicCurve() for _ in xrange(ndof)]
-        for idof in xrange(ndof):
+        curves = [ParabolicCurve() for _ in range(ndof)]
+        for idof in range(ndof):
             ramp1ddata = data[curoffset + 2 + idof]
             x0, v0, x1, v1, a1, v, a2, tswitch1, tswitch2, ttotal = [mp.mpf(x) for x in ramp1ddata.split(" ")]
             ramps = []

@@ -25,7 +25,7 @@ __builtins__.__openravepy_version__ = '@OPENRAVE_SOVERSION@'
 try:
     import openravepy
 except ImportError:
-    print "openravepy is not set into PYTHONPATH env variable, attempting to add"
+    print("openravepy is not set into PYTHONPATH env variable, attempting to add")
     # use openrave-config to get the correct install path
     from subprocess import Popen, PIPE
     try:
@@ -73,22 +73,22 @@ if __name__ == "__main__":
                 robot=env.ReadRobotXMLFile(args[0],atts={'skipgeometry':'1'})
                 env.Add(robot)
                 for manip in robot.GetManipulators():
-                    print manip.GetName()
+                    print(manip.GetName())
             elif options.dolist.startswith('sensor'):
                 robot=env.ReadRobotXMLFile(args[0],atts={'skipgeometry':'1'})
                 env.Add(robot)
                 for sensor in robot.GetAttachedSensors():
-                    print sensor.GetName()
+                    print(sensor.GetName())
             elif options.dolist.startswith('link'):
                 env.Load(args[0],{'skipgeometry':'1'})
                 body=env.GetBodies()[0]
                 for link in body.GetLinks():
-                    print link.GetName()
+                    print(link.GetName())
             elif options.dolist.startswith('joint'):
                 env.Load(args[0],{'skipgeometry':'1'})
                 body=env.GetBodies()[0]
                 for joint in body.GetJoints():
-                    print joint.GetName()
+                    print(joint.GetName())
             else:
                 sys.exit(1)            
         elif options.doinfo is not None:
@@ -103,9 +103,9 @@ if __name__ == "__main__":
                 rows.append(rows[0])
                 colwidths = [max([len(row[i]) for row in rows]) for i in range(len(rows[0]))]
                 for i,row in enumerate(rows):
-                    print ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
+                    print(' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))]))
                     if i == 0 or i == len(rows)-2:
-                        print '-'*(sum(colwidths)+len(colwidths)-1)
+                        print('-'*(sum(colwidths)+len(colwidths)-1))
             elif options.doinfo.startswith('sensor'):
                 robot=env.ReadRobotXMLFile(args[0],atts={'skipgeometry':'1'})
                 env.Add(robot)
@@ -115,9 +115,9 @@ if __name__ == "__main__":
                 rows.append(rows[0])
                 colwidths = [max([len(row[i]) for row in rows]) for i in range(len(rows[0]))]
                 for i,row in enumerate(rows):
-                    print ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
+                    print(' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))]))
                     if i == 0 or i == len(rows)-2:
-                        print '-'*(sum(colwidths)+len(colwidths)-1)
+                        print('-'*(sum(colwidths)+len(colwidths)-1))
             elif options.doinfo.startswith('link'):
                 env.Load(args[0],{'skipgeometry':'1'})
                 body=env.GetBodies()[0]
@@ -127,9 +127,9 @@ if __name__ == "__main__":
                 rows.append(rows[0])
                 colwidths = [max([len(row[i]) for row in rows]) for i in range(len(rows[0]))]
                 for i,row in enumerate(rows):
-                    print ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
+                    print(' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))]))
                     if i == 0 or i == len(rows)-2:
-                        print '-'*(sum(colwidths)+len(colwidths)-1)
+                        print('-'*(sum(colwidths)+len(colwidths)-1))
             elif options.doinfo.startswith('joint'):
                 env.Load(args[0],{'skipgeometry':'1'})
                 body=env.GetBodies()[0]
@@ -143,9 +143,9 @@ if __name__ == "__main__":
                 rows.append(rows[0])
                 colwidths = [max([len(row[i]) for row in rows]) for i in range(len(rows[0]))]
                 for i,row in enumerate(rows):
-                    print ' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))])
+                    print(' '.join([row[j].ljust(colwidths[j]) for j in range(len(colwidths))]))
                     if i == 0 or i == len(rows)-2:
-                        print '-'*(sum(colwidths)+len(colwidths)-1)
+                        print('-'*(sum(colwidths)+len(colwidths)-1))
             else:
                 sys.exit(1)
         elif options.dohash is not None:
@@ -153,15 +153,15 @@ if __name__ == "__main__":
             env.Load(args[0])
             if options.manipname is not None:
                 if options.dohash == 'kinematics':
-                    print env.GetRobots()[0].GetManipulator(options.manipname).GetKinematicsStructureHash()
+                    print(env.GetRobots()[0].GetManipulator(options.manipname).GetKinematicsStructureHash())
                 else:
-                    print env.GetRobots()[0].GetManipulator(options.manipname).GetStructureHash()
+                    print(env.GetRobots()[0].GetManipulator(options.manipname).GetStructureHash())
             elif options.sensorname is not None:
-                print env.GetRobots()[0].GetSensor(options.sensorname).GetStructureHash()
+                print(env.GetRobots()[0].GetSensor(options.sensorname).GetStructureHash())
             else:
                 if options.dohash == 'robot':
-                    print env.GetRobots()[0].GetRobotStructureHash()
+                    print(env.GetRobots()[0].GetRobotStructureHash())
                 else:
-                    print env.GetBodies()[0].GetKinematicsGeometryHash()
+                    print(env.GetBodies()[0].GetKinematicsGeometryHash())
     finally:
         env.Destroy()

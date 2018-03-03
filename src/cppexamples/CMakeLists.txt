@@ -8,7 +8,7 @@ if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   add_definitions("-fno-strict-aliasing -Wall")
 endif( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
 
-find_package(Boost ${OpenRAVE_Boost_VERSION} EXACT COMPONENTS iostreams python thread system)
+find_package(Boost ${OpenRAVE_Boost_VERSION} EXACT COMPONENTS iostreams python-py${PYTHON_VERSION} thread system)
 
 include_directories(${OpenRAVE_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} )
 if( Boost_INCLUDE_DIRS )
@@ -59,7 +59,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
     if( PYTHON_EXECUTABLE )
       # get the site-packages directory
       execute_process(
-        COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)"
+        COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))"
         OUTPUT_VARIABLE _python_sitepackage
         RESULT_VARIABLE _python_failed)
       if( ${_python_failed} EQUAL 0 )

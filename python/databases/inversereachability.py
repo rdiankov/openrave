@@ -44,7 +44,7 @@ Class Definitions
 -----------------
 
 """
-from __future__ import with_statement # for python 2.5
+from __future__ import with_statement, print_function # for python 2.6
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
@@ -72,7 +72,12 @@ log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 try:
     from scipy.optimize import leastsq
 except ImportError:
-    print 'could not import scipy.optimize.leastsq'
+    print('could not import scipy.optimize.leastsq')
+
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
 
 class InverseReachabilityModel(DatabaseGenerator):
     """Inverts the reachability and computes probability distributions of the robot's base given an end effector position"""
@@ -530,7 +535,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                         self.robot.SetTransform(matrixFromPose(pose))
                         self.robot.SetDOFValues(*jointstate)
                         if self.manip.FindIKSolution(eye(4),0) is None:
-                            #print 'pose failed: ',pose
+                            #print('pose failed: ',pose)
                             failures += 1
                     log.info('height %f, failures: %d',height,failures)
                     allfailures.append(failures)
@@ -636,7 +641,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                     newrobot.SetDOFValues(values)
                     newrobots.append(newrobot)
                     #time.sleep(0.1)
-            raw_input('press any key to continue')
+            input('press any key to continue')
         finally:
             for newrobot in newrobots:
                 self.env.Remove(newrobot)
@@ -695,7 +700,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                         self.env.Add(newrobot,True)
                         newrobot.SetTransform(goals[i][0])
                         newrobot.SetDOFValues(goals[i][1])
-                raw_input('press any key to continue')
+                input('press any key to continue')
             finally:
                 h=None
                 for newrobot in newrobots:

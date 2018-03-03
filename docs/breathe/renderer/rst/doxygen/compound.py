@@ -53,7 +53,7 @@ class CompoundDefTypeSubRenderer(Renderer):
     def extend_nodelist(self, nodelist, section, title, section_nodelists):
 
         # Add title and contents if found
-        if section_nodelists.has_key(section):
+        if section in section_nodelists:
             nodelist.append(self.node_factory.emphasis(text=title))
             nodelist.append(self.node_factory.block_quote("", *section_nodelists[section]))
 
@@ -153,8 +153,8 @@ class MemberDefTypeSubRenderer(Renderer):
         # Tell the document about our target
         try:
             self.document.note_explicit_target(target)
-        except Exception, e:
-            print "Failed to register id: %s. It is probably a duplicate." % refid
+        except Exception as e:
+            print("Failed to register id: %s. It is probably a duplicate." % refid)
 
         # Build the list item
         nodelist = [target, self.node_factory.definition_list_item("",term, definition)]

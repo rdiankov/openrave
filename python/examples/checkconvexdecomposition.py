@@ -32,6 +32,11 @@ import openravepy
 from openravepy import databases
 import numpy
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
+
 def main(env,options):
     "Main example code."
     samplingdelta = options.samplingdelta
@@ -47,14 +52,14 @@ def main(env,options):
     boxmax = ab.pos()+ab.extents()
     X,Y,Z = numpy.mgrid[boxmin[0]:boxmax[0]:samplingdelta,boxmin[1]:boxmax[1]:samplingdelta,boxmin[2]:boxmax[2]:samplingdelta]
     points = numpy.c_[X.flat,Y.flat,Z.flat]
-    print 'computing %d points...'%len(points)
+    print('computing %d points...'%len(points))
     inside = cdmodel.testPointsInside(points)
     plottedpoints = points[numpy.flatnonzero(inside),:]
     plottedpoints[:,1] += ab.extents()[1]*2
-    print '%d points are inside'%len(plottedpoints)
+    print('%d points are inside'%len(plottedpoints))
     h = env.plot3(plottedpoints,2)
     if not options.testmode:
-        raw_input('press any key to exit')
+        input('press any key to exit')
 
 from optparse import OptionParser
 from openravepy.misc import OpenRAVEGlobalArguments

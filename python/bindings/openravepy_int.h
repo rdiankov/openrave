@@ -18,6 +18,7 @@
 #define OPENRAVEPY_INTERNAL_H
 
 #include <Python.h>
+#include "py3.h"
 
 #include "openrave-core.h"
 

@@ -27,6 +27,11 @@ if not __openravepy_build_doc__:
     from openravepy import *
     from numpy import *
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
+
 def main(env,options):
     env.Load('data/lab1.env.xml')
     robot = env.GetRobots()[0]
@@ -38,17 +43,17 @@ def main(env,options):
     env.GetViewer().SetCamera(Tcamera)
     env.GetViewer().EnvironmentSync()
     
-    print 'Stopping the environment loop from updating the simulation'
+    print('Stopping the environment loop from updating the simulation')
     env.StopSimulation()
-    print 'Locking environment and starting to plan'
+    print('Locking environment and starting to plan')
     with env:
         res = manipprob.MoveManipulator(goal=[-0.75,1.24,-0.064,2.33,-1.16,-1.548,1.19])
-        print 'Calling the simulation loop internally to python'
+        print('Calling the simulation loop internally to python')
         while not robot.GetController().IsDone():
             env.StepSimulation(0.01)
             env.UpdatePublishedBodies() # used to publish body information while environment is locked
             time.sleep(0.1)    
-    raw_input('press any key to exit: ')
+    input('press any key to exit: ')
 
 from optparse import OptionParser
 from openravepy.misc import OpenRAVEGlobalArguments

@@ -49,7 +49,7 @@ def main(env,options):
             body.SetTransform(T)
 
         vmodels = []
-        print 'creating visibility structures, please wait...'
+        print('creating visibility structures, please wait...')
         sensors = []
         for sensor in robot.GetAttachedSensors():
             # if sensor is a camera
@@ -67,9 +67,9 @@ def main(env,options):
                     vmodels.append(vmodel)
                 sensors.append(sensor.GetSensor())
 
-    print 'try moving objects in and out of the sensor view. green is inside'
+    print('try moving objects in and out of the sensor view. green is inside')
     while True:
-        print '-----'
+        print('-----')
         with env:
             handles = []
             for vmodel in vmodels:
@@ -78,7 +78,7 @@ def main(env,options):
                     ab = vmodel.target.ComputeAABB()
                     corners = array([[1,1,1],[1,1,-1],[1,-1,1],[1,-1,-1],[-1,1,1],[-1,1,-1],[-1,-1,1],[-1,-1,-1]],float64)
                     handles.append(env.plot3(tile(ab.pos(),(8,1))+corners*tile(ab.extents(),(8,1)),10,[0,1,0]))
-                    print '%s is visible in sensor %s'%(vmodel.target.GetName(),vmodel.sensorname)
+                    print('%s is visible in sensor %s'%(vmodel.target.GetName(),vmodel.sensorname))
             oldhandles = handles # replace
         time.sleep(0.2)
 

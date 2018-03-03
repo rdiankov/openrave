@@ -22,7 +22,7 @@ import numpy
 try:
     from itertools import izip
 except ImportError:
-    pass
+    izip = zip
 
 try:
     from threading import Thread
@@ -144,7 +144,7 @@ class OpenRAVEGlobalArguments:
         ogroup.add_option('--module', action="append",type='string',dest='_modules',default=[],nargs=2,
                           help='module to load, can specify multiple modules. Two arguments are required: "name" "args".')
         ogroup.add_option('--level','-l','--log_level', action="store",type='string',dest='_level',default=None,
-                          help='Debug level, one of (%s)'%(','.join(str(debugname).lower() for debuglevel,debugname in openravepy_int.DebugLevel.values.iteritems())))
+                          help='Debug level, one of (%s)'%(','.join(str(debugname).lower() for debuglevel,debugname in openravepy_int.DebugLevel.values.items())))
         if testmode:
             ogroup.add_option('--testmode', action="store_true",dest='testmode',default=False,
                               help='if set, will run the program in a finite amount of time and spend computation time validating results. Used for testing')
@@ -153,7 +153,7 @@ class OpenRAVEGlobalArguments:
     def parseGlobal(options,**kwargs):
         """Parses all global options independent of the environment"""
         if options._level is not None:
-            for debuglevel,debugname in openravepy_int.DebugLevel.values.iteritems():
+            for debuglevel,debugname in openravepy_int.DebugLevel.values.items():
                 if (not options._level.isdigit() and options._level.lower() == debugname.name.lower()) or (options._level.isdigit() and int(options._level) == int(debuglevel)):
                     openravepy_int.RaveSetDebugLevel(debugname)
                     break
@@ -168,28 +168,28 @@ class OpenRAVEGlobalArguments:
                 cc = openravepy_int.RaveCreateCollisionChecker(env,options._collision)
                 if cc is not None:
                     env.SetCollisionChecker(cc)
-        except openravepy_ext.openrave_exception, e:
+        except openravepy_ext.openrave_exception as e:
             log.warn(e)
         try:
             if options._physics:
                 ph = openravepy_int.RaveCreatePhysicsEngine(env,options._physics)
                 if ph is not None:
                     env.SetPhysicsEngine(ph)
-        except openravepy_ext.openrave_exception, e:
+        except openravepy_ext.openrave_exception as e:
             log.warn(e)
         try:
             if options._server:
                 sr = openravepy_int.RaveCreateModule(env,options._server)
                 if sr is not None:
                     env.Add(sr,True,'%d'%options._serverport)
-        except openravepy_ext.openrave_exception, e:
+        except openravepy_ext.openrave_exception as e:
             log.warn(e)
         for name,args in options._modules:
             try:
                 module = openravepy_int.RaveCreateModule(env,name)
                 if module is not None:
                     env.Add(module,True,args)
-            except openravepy_ext.openrave_exception, e:
+            except openravepy_ext.openrave_exception as e:
                 log.warn(e)
         try:
             viewername=None
@@ -203,7 +203,7 @@ class OpenRAVEGlobalArguments:
                 return viewername
             elif viewername is not None:
                 env.SetViewer(viewername)
-        except openravepy_ext.openrave_exception, e:
+        except openravepy_ext.openrave_exception as e:
             log.warn(e)
             
     @staticmethod
@@ -449,16 +449,16 @@ def sequence_cross_product(*sequences):
     """iterates through the cross product of all items in the sequences"""
     # visualize an odometer, with "wheels" displaying "digits"...:
     wheels = map(iter, sequences)
-    digits = [it.next( ) for it in wheels]
+    digits = [next(it) for it in wheels]
     while True:
         yield tuple(digits)
         for i in range(len(digits)-1, -1, -1):
             try:
-                digits[i] = wheels[i].next( )
+                digits[i] = next(wheels[i])
                 break
             except StopIteration:
                 wheels[i] = iter(sequences[i])
-                digits[i] = wheels[i].next( )
+                digits[i] = next(wheels[i])
         else:
             break
 
@@ -513,7 +513,7 @@ class MultiManipIKSolver:
                 for sols in sequence_cross_product(*alljointvalues):
                     dist = numpy.sum([numpy.sum(numpy.abs(sol0-sol1)) for sol0,sol1 in izip(sols,curvalues)])
                     distancesolutions.append([dist, sols])
-                distancesolutions.sort(lambda x,y: int(x[0]-y[0]))
+                distancesolutions.sort(key=lambda x: x[0])
                 for dist,sols in distancesolutions:
                     for sol,manip in izip(sols,self.manips):
                         self.robot.SetDOFValues(sol,manip.GetArmIndices()) 
@@ -552,7 +552,7 @@ class SpaceSamplerExtra:
             mult = 1
             for i in range(maxiter):
                 oddbits += (indices&1)*mult
-                evenbits += mult*((indices&2)/2)
+                evenbits += mult*((indices&2)//2)
                 indices >>= 2
                 mult *= 2
             self.faceindices = [oddbits+evenbits,oddbits-evenbits]

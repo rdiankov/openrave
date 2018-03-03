@@ -16,7 +16,7 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from __future__ import with_statement # for python 2.5
+from __future__ import with_statement, print_function # for python 2.6
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Lesser GPL, Version 3'
@@ -30,14 +30,17 @@ except:
     class AutoReloader:
         pass
 
-from itertools import izip
+try:
+    from itertools import izip
+except:
+    izip = zip
 try:
     from itertools import combinations
 except ImportError:
     def combinations(items,n):
         if n == 0: yield[]
         else:
-            for  i in xrange(len(items)):
+            for  i in range(len(items)):
                 for cc in combinations(items[i+1:],n-1):
                     yield [items[i]]+cc
 
@@ -150,7 +153,7 @@ class FKFastSolver(AutoReloader):
                     Ttrans[j,3] = separated_trans[j]
             Links[iright+1] = Ttrans * Links[iright+1]
             Links[iright-1] = Links[iright-1] * self.iksolver.affineInverse(Ttrans)
-            print "moved translation ",Ttrans[0:3,3].transpose(),"to right end"
+            print("moved translation ",Ttrans[0:3,3].transpose(),"to right end")
         
         if len(jointinds) > 1:
             ileft = jointinds[0]
@@ -161,7 +164,7 @@ class FKFastSolver(AutoReloader):
                     Ttrans[j,3] = separated_trans[j]
             Links[ileft-1] = Links[ileft-1] * Ttrans
             Links[ileft+1] = self.iksolver.affineInverse(Ttrans) * Links[ileft+1]
-            print "moved translation ",Ttrans[0:3,3].transpose(),"to left end"
+            print("moved translation ",Ttrans[0:3,3].transpose(),"to left end")
 
         if len(jointinds) > 3: # last 3 axes always have to be intersecting, move the translation of the first axis to the left
             ileft = jointinds[-3]
@@ -172,7 +175,7 @@ class FKFastSolver(AutoReloader):
                     Ttrans[j,3] = separated_trans[j]
             Links[ileft-1] = Links[ileft-1] * Ttrans
             Links[ileft+1] = self.iksolver.affineInverse(Ttrans) * Links[ileft+1]
-            print "moved translation on intersecting axis ",Ttrans[0:3,3].transpose(),"to left"
+            print("moved translation on intersecting axis ",Ttrans[0:3,3].transpose(),"to left")
 
         return Links, jointvars, isolvejointvars, ifreejointvars
 
@@ -273,7 +276,7 @@ class FKFastSolver(AutoReloader):
                         if eq0 != S.Zero and eq0.count_ops() == 1 or eq0.count_ops() == 2+MUL:
                             eliminatevargroup.append((eq0,eq1,int(eq0.count_ops().subs(MUL,4).evalf())))
                 if len(eliminatevargroup) > 0:
-                    eliminatevargroup.sort(lambda x,y: -x[2]+y[2])
+                    eliminatevargroup.sort(key=lambda x: -x[2])
                     eliminatevargroups.append(eliminatevargroup)
 
         reducesubs = []
@@ -341,7 +344,7 @@ class FKFastSolver(AutoReloader):
         axes = [j.GetAxis(0) for j in alljoints if j.GetType() == openravepy.KinBody.Joint.Type.Hinge]
         isplanar = all([abs(dot(axis,axes[0]))>0.999999 for axis in axes])
         if isplanar:
-            print 'robot is planar, adding sum of angles of all loops'
+            print('robot is planar, adding sum of angles of all loops')
             angleeqs = []
             commonaxis = None
             for patheqs in pathseqs:
@@ -374,7 +377,7 @@ class FKFastSolver(AutoReloader):
         assert(maxvalue < 5e-10)
         if maxvalue > self.iksolver.accuracy:
             self.iksolver.accuracy = maxvalue*1.1
-            print 'setting new accuracy to: ',self.iksolver.accuracy
+            print('setting new accuracy to: ',self.iksolver.accuracy)
             AllEquations = [self.iksolver.chop(eq,accuracy=maxvalue*2) for eq in AllEquations]
             self.iksolver.sortComplexity(AllEquations)
 
@@ -386,7 +389,7 @@ class FKFastSolver(AutoReloader):
                 if self.IsHinge(v.name):
                     solsubs += [(cos(v),Symbol('c%s'%v.name)),(sin(v),Symbol('s%s'%v.name))]
             tree = self.iksolver.solveAllEquations(AllEquations,curvars=unknownvars,othersolvedvars=possiblefreevars,solsubs=solsubs,endbranchtree=endbranchtree)
-            print 'forward kinematics solved, setting equations!'
+            print('forward kinematics solved, setting equations!')
             self.setMimicEquations(tree)
             return tree
         except self.iksolver.CannotSolveError:

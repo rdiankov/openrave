@@ -22,7 +22,7 @@ There is a __build_doc__ external variable that is set to True only when buildin
 """
 try:
     if __openravepy_build_doc__:
-        print 'openravepy imported in documentation mode'
+        print('openravepy imported in documentation mode')
 except NameError:
     __builtins__['__openravepy_build_doc__'] = False
 

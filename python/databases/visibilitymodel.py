@@ -64,7 +64,7 @@ Class Definitions
 -----------------
 
 """
-from __future__ import with_statement # for python 2.5
+from __future__ import with_statement, print_function # for python 2.6
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
@@ -81,11 +81,16 @@ else:
 
 from ..openravepy_int import RaveGetDefaultViewerType
 from . import DatabaseGenerator
-import inversekinematics, kinematicreachability
+from . import inversekinematics, kinematicreachability
 from .. import interfaces
 
 import logging
 log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
+
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
 
 class VisibilityModel(DatabaseGenerator):
     visibilitytransforms = None # a list of camera pose in the pattern coordinate system
@@ -241,7 +246,7 @@ class VisibilityModel(DatabaseGenerator):
                         if sphere is None:
                             sphere = [3,0.1,0.15,0.2,0.25,0.3]
                         self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(sphere=sphere,conedirangles=conedirangles)
-                print 'total transforms: ',len(self.visibilitytransforms)
+                print('total transforms: ',len(self.visibilitytransforms))
                 self.visualprob.SetCameraTransforms(transforms=self.visibilitytransforms)
         finally:
             for b,enable in bodies:
@@ -289,7 +294,7 @@ class VisibilityModel(DatabaseGenerator):
                             print(msg)
                             pilutil.imshow(I)
                         else:
-                            raw_input(msg)
+                            input(msg)
         finally:
             # have to destroy the plot handle
             h = None
@@ -334,7 +339,7 @@ class VisibilityModel(DatabaseGenerator):
                         print(msg)
                         pilutil.imshow(I)
                     else:
-                        raw_input(msg)
+                        input(msg)
         finally:
             # have to destroy the plot handle
             h = None
@@ -369,7 +374,7 @@ class VisibilityModel(DatabaseGenerator):
             if randomize:
                 order = random.permutation(len(self.visibilitytransforms))
             else:
-                order = xrange(len(self.visibilitytransforms))
+                order = range(len(self.visibilitytransforms))
             for i in order:
                 pose = self.visibilitytransforms[i]
                 Trelative = dot(linalg.inv(self.attachedsensor.GetTransform()),self.manip.GetEndEffectorTransform())
@@ -383,7 +388,7 @@ class VisibilityModel(DatabaseGenerator):
                     validjoints.append((s,i))
                     if not returnall:
                         return validjoints
-                    print 'found',len(validjoints)
+                    print('found',len(validjoints))
             return validjoints
 
     def pruneTransformations(self,thresh=0.04,numminneighs=10,maxdist=None,translationonly=True):
@@ -407,7 +412,7 @@ class VisibilityModel(DatabaseGenerator):
 #         Imask = GetCameraRobotMask(orenv,options.robotfile,sensorindex=options.sensorindex,gripperjoints=gripperjoints,robotjoints=robotjoints,robotjointinds=robotjointinds,rayoffset=options.rayoffset)
 #         # save as a ascii matfile
 #         numpy.savetxt(options.savefile,Imask,'%d')
-#         print 'mask saved to ' + options.savefile
+#         print('mask saved to ' + options.savefile)
 #         try:
 #             scipy.misc.pilutil.imshow(array(Imask*255,'uint8'))
 #         except:

@@ -26,7 +26,10 @@ This type of example is suited for object geometries that are dynamically create
 from __future__ import with_statement # for python 2.5
 __author__ = 'Atsushi Tsuda and Rosen Diankov'
 
-from itertools import izip
+try:
+    from itertools import izip
+except:
+    izip = zip
 import openravepy
 if not __openravepy_build_doc__:
     from openravepy import *
@@ -38,6 +41,11 @@ except:
     def cpu_count(): return 1
 
 import time
+
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
 
 class FastGraspingThreaded:
     def __init__(self,robot,target):
@@ -176,7 +184,7 @@ class FastGraspingThreaded:
 
                 grasps = array(grasps)
                 jointvalues = array(jointvalues)
-                print 'found %d grasps in %.3fs'%(len(grasps),totaltime)
+                print('found %d grasps in %.3fs'%(len(grasps),totaltime))
                 return grasps, jointvalues
 
     def showgrasps(self, grasps, jointvalues):
@@ -184,7 +192,7 @@ class FastGraspingThreaded:
             with self.env:
                 self.robot.SetDOFValues(jointvalues[i])
                 self.env.UpdatePublishedBodies()
-                raw_input('press any key')
+                input('press any key')
 
 def main(env,options):
     "Main example code."

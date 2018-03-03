@@ -55,6 +55,7 @@ a transformation to docutils XML.
 ###############################################################################
 # Import
 
+from __future__ import print_function
 import sys
 import os.path
 import re
@@ -178,7 +179,7 @@ def pod2OptionKeywords(pod):
         else:
             result['help'] += line + "\n"
     result['help'] = result['help'].strip()
-    if result.has_key('dest'):
+    if 'dest' in result:
         result['dest'] = result['dest'].replace("-", "_")
     else:
         errorExit(1, ( "Internal error: Missing `dest' in documentation string:",
@@ -383,7 +384,7 @@ def errorOut(lines):
     """
     scriptName = os.path.basename(sys.argv[0])
     for line in lines:
-        print >>sys.stderr, ("%s: %s" % ( scriptName, line, ))
+        print("%s: %s" % ( scriptName, line, ), file=sys.stderr)
     return 0
 
 ###############################################################################
@@ -463,7 +464,7 @@ def convert(inNm=None, outNm=None,inF=None,outF=None,mainXsltF=None):
     inParser = etree.XMLParser()
     try:
         inDoc = etree.parse(inF, inParser)
-    except Exception, e:
+    except Exception as e:
         errorExit(1, ( "Error parsing input file %r: %s" % ( inNm, e, ), ))
     if inFclose:
         inF.close()
@@ -475,7 +476,7 @@ def convert(inNm=None, outNm=None,inF=None,outF=None,mainXsltF=None):
         xsltParams['adornment'] = "'" + options.adornment + "'"
     try:
         result = mainXslt(inDoc, **xsltParams)
-    except Exception, e:
+    except Exception as e:
         errorExit(1, ( "Error transforming input file %r: %s" % ( inNm, e, ), ))
     # Chop off trailing linefeed - added somehow
     outS = str(result)[:-1]

@@ -54,7 +54,7 @@ def ReadShortcutProgress(shortcutprogressstring):
     originaldur = float(generalinfo[0])
     maxiter = int(generalinfo[1])
     nlinespergroup = 9
-    nshortcuts = (len(rawdata) - 1)/nlinespergroup
+    nshortcuts = int((len(rawdata) - 1)/nlinespergroup)
 
     rawdata = rawdata[1:] # pop out the first element (original duration)
 
@@ -73,7 +73,7 @@ def ReadShortcutProgress(shortcutprogressstring):
     VM = []
     AM = []
     
-    for i in xrange(nshortcuts):
+    for i in range(nshortcuts):
         offset = i*nlinespergroup
         generalinfo = rawdata[offset].strip().split()
         it = int(generalinfo[0])
@@ -146,7 +146,7 @@ def PlotData(index, prefix="/private/cache/openrave/", plot=True, fignum=1, ncol
     
     timefromprevshortcut = []
     timefromprevshortcut.append(successfuliters[0])
-    for i in xrange(len(successfuliters[1:])):
+    for i in range(len(successfuliters[1:])):
         timefromprevshortcut.append(successfuliters[i + 1] - successfuliters[i])
     info['timefromprevshortcut'] = timefromprevshortcut
 
@@ -160,7 +160,7 @@ def PlotData(index, prefix="/private/cache/openrave/", plot=True, fignum=1, ncol
     # The score of the successful iteration i will be relative to the best shortcut happened so far.
     scores2 = []
     scores2.append(1.0)
-    for i in xrange(len(scores1) - 1):
+    for i in range(len(scores1) - 1):
         scores2.append(scores1[i + 1]/max(scores1[0:i + 1]))
     info['scores2'] = scores2
 
@@ -216,7 +216,7 @@ def ConvertOpenRAVETrajToParabolicCurvesND(traj):
     toffset = deltatimegroup.offset
 
     curvesnd = ramp.ParabolicCurvesND()
-    for iwaypoint in xrange(nwaypoints - 1):
+    for iwaypoint in range(nwaypoints - 1):
         x0 = traj.GetWaypoint(iwaypoint)[iwaypoint*xoffset: iwaypoint*xoffset + xdof]
         x1 = traj.GetWaypoint(iwaypoint + 1)[xoffset: xoffset + xdof]
         v0 = traj.GetWaypoint(iwaypoint)[voffset: voffset + vdof]

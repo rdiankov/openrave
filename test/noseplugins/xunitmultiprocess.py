@@ -55,6 +55,11 @@ globalxunitmanager = multiprocessing.Manager()
 globalxunitstream = globalxunitmanager.list() # used for gathering statistics
 globalxunitstats = multiprocessing.Array('i',[0]*4)
 
+try: # for python 3.x
+    unicode_str = unicode
+except:
+    unicode_str = str
+
 # Invalid XML characters, control characters 0-31 sans \t, \n and \r
 CONTROL_CHARACTERS = re.compile(r"[\000-\010\013\014\016-\037]")
 
@@ -100,10 +105,10 @@ def exc_message(exc_info):
             result = str(exc)
         except UnicodeEncodeError:
             try:
-                result = unicode(exc)
+                result = unicode_str(exc)
             except UnicodeError:
                 # Fallback to args as neither str nor
-                # unicode(Exception(u'\xe6')) work in Python < 2.6
+                # unicode_str(Exception(u'\xe6')) work in Python < 2.6
                 result = exc.args[0]
     return xml_safe(result)
 
@@ -197,8 +202,8 @@ class Xunitmp(Plugin):
     def addstream(self,xml):
         try:
             self.xunitstream.append(xml)
-        except Exception, e:
-            print 'xunitmultiprocess add stream len=%d,%s'%(len(xml),str(e))
+        except Exception as e:
+            print('xunitmultiprocess add stream len=%d,%s'%(len(xml),str(e)))
             
     def addError(self, test, err, capt=None):
         """Add error output to Xunit report.

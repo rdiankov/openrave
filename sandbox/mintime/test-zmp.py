@@ -32,6 +32,11 @@ import ZMP
 #import scipy
 #import Image
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
+
 
 
 ################# Loading the environment ########################
@@ -208,7 +213,7 @@ deb=time.time()
 
 # Set up a minimum time problem under ZMP constraints
 
-print 'Running the time parameterization algorithm...'
+print('Running the time parameterization algorithm...')
 
 
 pb=MintimeProblemZMP.MintimeProblemZMP(robot,traj)
@@ -252,13 +257,13 @@ traj2=spline_traj.ResampleTraj(s_res_u,sdot_res_u,t_step)
 
 ##################### Plotting ###########################
 
-print '\n*****************************************************************\n'
-print 'Total execution time: '+str(time.time()-deb)+'s'
-print '\n*****************************************************************\n'
+print('\n*****************************************************************\n')
+print('Total execution time: '+str(time.time()-deb)+'s')
+print('\n*****************************************************************\n')
 
-raw_input('Press Enter to execute the trajectory /before/ time-reparameterization (duration='+str(traj.duration)+'s)')
+input('Press Enter to execute the trajectory /before/ time-reparameterization (duration='+str(traj.duration)+'s)')
 MintimeProblemZMP.Execute(robot,traj,0.02,drawcom=2)
-raw_input('Press Enter to execute the trajectory /after/ time-reparameterization (duration='+str(traj2.duration)+'s)')
+input('Press Enter to execute the trajectory /after/ time-reparameterization (duration='+str(traj2.duration)+'s)')
 MintimeProblemZMP.Execute(robot,traj2,0.02,drawcom=2)
 
 

@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """Simple timing for dynamics computations
 """
+from __future__ import print_function
 from openravepy import *
 from numpy import *
 import time
@@ -25,13 +26,13 @@ def timedynamics():
             body.SetDOFValues(dofvaluesnew)
             body.SetDOFVelocities(dofvelnew)
             torques = body.ComputeInverseDynamics(dofaccel)
-        print 'ComputeInverseDynamics all', (time.time()-starttime)/N
+        print('ComputeInverseDynamics all', (time.time()-starttime)/N)
         starttime=time.time()
         for itry in range(N):
             body.SetDOFValues(dofvaluesnew)
             body.SetDOFVelocities(dofvelnew)
             tm,tc,te = body.ComputeInverseDynamics(dofaccel,None,returncomponents=True)
-        print 'ComputeInverseDynamics components', (time.time()-starttime)/N
+        print('ComputeInverseDynamics components', (time.time()-starttime)/N)
         starttime=time.time()
         for itry in range(N):
             body.SetDOFValues(dofvaluesnew)
@@ -43,7 +44,7 @@ def timedynamics():
             #body.SetDOFVelocities(zeros(body.GetDOF()))
             #tother = body.ComputeInverseDynamics(dofvelnew)
 
-        print 'ComputeInverseDynamics special', (time.time()-starttime)/N
+        print('ComputeInverseDynamics special', (time.time()-starttime)/N)
 
 def timehessian():
     for itry in range(10):
@@ -53,11 +54,11 @@ def timehessian():
         for itry in range(N):
             body.SetDOFValues(dofvaluesnew)
             body.ComputeHessianTranslation(len(body.GetLinks())-1, random.rand(3)-0.5)
-        print 'ComputeHessianTranslation/SetDOFValues all', (time.time()-starttime)/N
+        print('ComputeHessianTranslation/SetDOFValues all', (time.time()-starttime)/N)
         starttime=time.time()
         for itry in range(N):
             body.ComputeHessianTranslation(len(body.GetLinks())-1, random.rand(3)-0.5)
-        print 'ComputeHessianTranslation', (time.time()-starttime)/N
+        print('ComputeHessianTranslation', (time.time()-starttime)/N)
 
 #timehessian()
 timedynamics()

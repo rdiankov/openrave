@@ -57,6 +57,11 @@ else:
 
 from openravepy.misc import SpaceSamplerExtra
 
+try: # for python 3.x
+    input = input
+except NameError:
+    pass
+
 class CalibrationViews:
     def __init__(self,robot,sensorname=None,sensorrobot=None,target=None,maxvelmult=None,randomize=False):
         """Starts a calibration sequencer using a robot and a sensor.
@@ -78,7 +83,7 @@ class CalibrationViews:
         self.vmodel.load()
         self.Tpatternrobot = None
         if self.vmodel.robot != self.vmodel.sensorrobot and target is not None:
-            print 'Assuming target \'%s\' is attached to %s'%(target.GetName(),self.vmodel.manip)
+            print('Assuming target \'%s\' is attached to %s'%(target.GetName(),self.vmodel.manip))
             self.Tpatternrobot = dot(linalg.inv(self.vmodel.target.GetTransform()),self.vmodel.manip.GetEndEffectorTransform())
 
     def computevisibilityposes(self,dists=arange(0.05,1.5,0.2),orientationdensity=1,num=inf):
@@ -182,7 +187,7 @@ class CalibrationViews:
                 with self.env:
                     self.robot.Grab(self.vmodel.target,self.vmodel.manip.GetEndEffector())
             while len(poseorder) > 0:
-                print 'left over poses: %d'%len(poseorder)
+                print('left over poses: %d'%len(poseorder))
                 with self.robot:
                     curconfig=self.robot.GetDOFValues(self.vmodel.manip.GetArmIndices())
                 index=argmin(sum((configs[poseorder]-tile(curconfig,(len(poseorder),1)))**2,1))
@@ -225,7 +230,7 @@ class CalibrationViews:
                 for i,config in enumerate(configs):
                     self.robot.SetDOFValues(config,self.vmodel.manip.GetArmIndices())
                     self.env.UpdatePublishedBodies()
-                    raw_input('%d: press any key'%i)
+                    input('%d: press any key'%i)
         finally:
             graphs = None
 
@@ -265,7 +270,7 @@ def main(env,options):
         attachedsensor.GetSensor().Configure(Sensor.ConfigureCommand.RenderDataOn)
         
     while True:
-        print 'computing all locations, might take more than a minute...'
+        print('computing all locations, might take more than a minute...')
         self.computeAndMoveToObservations(usevisibility=options.usevisibility,posedist=options.posedist)
         if options.testmode:
             break

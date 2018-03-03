@@ -61,7 +61,7 @@ Class Definitions
 -----------------
 
 """
-from __future__ import with_statement # for python 2.5
+from __future__ import with_statement, print_function # for python 2.6
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Apache License, Version 2.0'
@@ -83,20 +83,28 @@ import time
 import os.path
 from os import makedirs
 from optparse import OptionParser
-from itertools import izip
-
 try:
+    from itertools import izip
+except:
+    izip = zip
+
+try: # for python 3.x
     from cStringIO import StringIO
 except:
-    from StringIO import StringIO
+    from io import StringIO
     
 import logging
 log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 
 try:
     from .. import convexdecompositionpy
-except Exception, e:
-    print 'failed to import convexdecompositionpy', e
+except Exception as e:
+    print('failed to import convexdecompositionpy', e)
+
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
 
 class ConvexDecompositionError(Exception):
     def __init__(self,msg=u''):
@@ -104,7 +112,10 @@ class ConvexDecompositionError(Exception):
     def __unicode__(self):
         return u'Convex Decomposition Error: %s'%self.msg
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        output = self.__unicode__()
+        if type(output) != str: # for python 3.x
+            output = output.encode('utf-8')
+        return output
 
 class ConvexDecompositionModel(DatabaseGenerator):
     """Computes the convex decomposition of all of the robot's links"""
@@ -143,7 +154,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
             except ImportError:
                 log.warn('python h5py library not found, will not be able to speedup database access')
                 return self.LoadPickle()
-        except Exception, e:
+        except Exception as e:
             log.warn(e)
             return False
 
@@ -163,7 +174,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
         try:
             f['version'] = self.getversion()
             gparams = f.create_group('params')
-            for name,value in self.convexparams.iteritems():
+            for name,value in self.convexparams.items():
                 gparams[name] = value
             f['padding'] = self._padding
             glinkgeometry = f.create_group('linkgeometry')
@@ -211,20 +222,20 @@ class ConvexDecompositionModel(DatabaseGenerator):
             
             self.convexparams = {}
             gparams = f['params']
-            for name,value in gparams.iteritems():
+            for name,value in gparams.items():
                 self.convexparams[name] = value.value
             self._padding = f['padding'].value
             glinkgeometry = f['linkgeometry']
             self.linkgeometry = []
-            for ilink, glink in glinkgeometry.iteritems():
+            for ilink, glink in glinkgeometry.items():
                 linkgeometry = []
-                for ig, glinkhulls in glink.iteritems():
+                for ig, glinkhulls in glink.items():
                     ghulls = glinkhulls['hulls']
                     geometryhulls = []
-                    for j, ghull in ghulls.iteritems():
+                    for j, ghull in ghulls.items():
                         if 'vertices' in ghull and len(ghull['vertices'].shape) == 2 and 'indices' in ghull and len(ghull['indices'].shape\
 ) == 2 and 'planes' in ghull and len(ghull['planes'].shape) == 2:
-			    hull = [ghull['vertices'].value, ghull['indices'].value, ghull['planes'].value]
+                            hull = [ghull['vertices'].value, ghull['indices'].value, ghull['planes'].value]
                             geometryhulls.append(hull)
                         else:
                             log.warn('could not open link %s geometry %s hull %s: %r', ilink, ig, j, ghull)
@@ -236,7 +247,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
             f = None
             return self.has()
         
-        except Exception,e:
+        except Exception as e:
             log.debug(u'LoadHDF5 for %s: ',filename,e)
             return False
         finally:
@@ -404,7 +415,11 @@ class ConvexDecompositionModel(DatabaseGenerator):
         if offset > 0:
             newvertices = r_[newvertices,zeros((offset,3))]
         # for every vertex, add a point representing the mean of surrounding extruded vertices
-        for originalvertex, newvertex in verticesofinterest.iteritems():
+        try: # for python 3.x
+            itervertices = verticesofinterest.iteritems()
+        except AttributeError:
+            itervertices = verticesofinterest.items()
+        for originalvertex, newvertex in itervertices:
             vertexindices = flatnonzero(indices==originalvertex)
             assert(len(vertexindices) > 0)
             newvertices[newvertex,:] = mean(newvertices[vertexindices],0)
@@ -579,7 +594,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
                             hulls.append(self.transformHull(geom.GetTransform(),ComputeCylinderYMesh(radius=geom.GetCylinderRadius(),height=geom.GetCylinderHeight())))
                     handles += [self.env.drawtrimesh(points=transformPoints(link.GetTransform(),hull[0]),indices=hull[1],colors=volumecolors[mod(colorindex+i,len(volumecolors))]) for i,hull in enumerate(hulls)]
                     colorindex+=len(hulls)
-            raw_input('Press any key to exit: ')
+            input('Press any key to exit: ')
         finally:
             # close all graphs
             handles = None
@@ -604,13 +619,13 @@ class ConvexDecompositionModel(DatabaseGenerator):
         try:
             if not progressive:
                 handles = [self.env.drawtrimesh(points=transformPoints(link.GetTransform(),hull[0]),indices=hull[1],colors=volumecolors[mod(i,len(volumecolors))]) for i,hull in enumerate(hulls)]
-                raw_input('Press any key to exit: ')
+                input('Press any key to exit: ')
             else:
                 ihull = 0
                 while ihull < len(hulls):
                     hull = hulls[ihull]
                     handles = [self.env.drawtrimesh(points=transformPoints(link.GetTransform(),hull[0]),indices=hull[1],colors=volumecolors[mod(ihull,len(volumecolors))])]
-                    cmd = raw_input(str(ihull))
+                    cmd = input(str(ihull))
                     if cmd == 'p':
                         ihull -= 1
                     else:

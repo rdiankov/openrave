@@ -12,12 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License. 
 from __future__ import with_statement # for python 2.5
-import openravepy_int
+from . import openravepy_int
 import numpy
-try:
+try: # for python 3.x
     import cPickle as pickle
 except:
     import pickle
+try: # for python 3.x
+    unicode_str = unicode
+except:
+    unicode_str = str
 
 import logging
 log = logging.getLogger('openravepy')
@@ -81,13 +85,16 @@ def _tuple2enum(enum, value):
 #    return isinstance(o, type) and issubclass(o,int) and not (o is int)
 
 def _registerEnumPicklers(): 
-    from copy_reg import constructor, pickle
+    try: # for python 3.x
+        from copy_reg import constructor, pickle
+    except:
+        from copyreg import constructor, pickle
     def reduce_enum(e):
         enum = type(e).__name__.split('.')[-1]
         return ( _tuple2enum, ( enum, int(e) ) )
     constructor( _tuple2enum)
     pickle(openravepy_int.IkParameterizationType,reduce_enum)
-    #for e in [ e for e in vars(openravepy).itervalues() if isEnumType(e) ]:
+    #for e in [ e for e in vars(openravepy).values() if isEnumType(e) ]:
     #    pickle(e, reduce_enum)
 
 _registerEnumPicklers()
@@ -103,7 +110,7 @@ class openrave_exception(Exception):
     def __str__( self ):
         return str(self._pimpl)
     def __unicode__( self ):
-        return unicode(self._pimpl)
+        return unicode_str(self._pimpl)
     def __getattribute__(self, attr):
         my_pimpl = super(openrave_exception, self).__getattribute__("_pimpl")
         try:
@@ -143,23 +150,26 @@ class PlanningError(Exception):
     def __init__(self,parameter=u'', recoverySuggestions=None):
         """:param recoverySuggestions: list of unicode suggestions to fix or recover from the error
         """
-        self.parameter = unicode(parameter)
+        self.parameter = unicode_str(parameter)
         if recoverySuggestions is None:
             self.recoverySuggestions = []
         else:
-            self.recoverySuggestions = [unicode(s) for s in recoverySuggestions]
+            self.recoverySuggestions = [unicode_str(s) for s in recoverySuggestions]
             
     def __unicode__(self):
         s = u'Planning Error\n%s'%self.parameter
         if len(self.recoverySuggestions) > 0:
             s += u'\nRecovery Suggestions:\n'
             for suggestion in self.recoverySuggestions:
-                s += u'- %s\n'%unicode(suggestion)
+                s += u'- %s\n'%unicode_str(suggestion)
             s += u'\n'
         return s
         
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        output = self.__unicode__()
+        if type(output) != str: # for python 3.x
+            output = output.encode('utf-8')
+        return output
     
     def __repr__(self):
         return '<openravepy.PlanningError(%r,%r)>'%(self.parameter,self.recoverySuggestions)

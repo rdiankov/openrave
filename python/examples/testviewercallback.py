@@ -19,7 +19,7 @@
 
 .. examplepost-block:: testviewercallback
 """
-from __future__ import with_statement # for python 2.5
+from __future__ import with_statement, print_function # for python 2.6
 __author__ = 'Rosen Diankov'
 
 import openravepy
@@ -27,10 +27,15 @@ if not __openravepy_build_doc__:
     from openravepy import *
     from numpy import *
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
+
 ghandle = None
 def itemselectioncb(link,pos,org,env):
     global ghandle
-    print 'in python: body ',link.GetParent().GetName(),':',link.GetName(),'at',reshape(pos,(3))
+    print('in python: body ',link.GetParent().GetName(),':',link.GetName(),'at',reshape(pos,(3)))
     ghandle = env.plot3(points=pos,pointsize=25.0,colors=array((1,0,0)))
     return 0
 
@@ -39,10 +44,10 @@ def main(env,options):
     env.Load(options.scene)
     handle = env.GetViewer().RegisterItemSelectionCallback(lambda link,pos,org: itemselectioncb(link,pos,org,env))
     if handle is None:
-        print 'failed to register handle'
+        print('failed to register handle')
         sys.exit(1)
     while True:
-        cmd = raw_input('In selection mode (ESC), click anywhere on the viewer. Enter command (q-quit): ')
+        cmd = input('In selection mode (ESC), click anywhere on the viewer. Enter command (q-quit): ')
         if cmd == 'q':
             break
 

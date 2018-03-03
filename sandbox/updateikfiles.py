@@ -22,6 +22,7 @@ To update openrave cached ik files run:
   
 """
 
+from __future__ import print_function
 from numpy import *
 from itertools import *
 import time,platform,os,sys
@@ -35,7 +36,7 @@ from openravepy import ikfast
 databases.inversekinematics.log.setLevel(logging.ERROR)
 
 def updateik(robotfilename,manipname,iktype,destfilename=None,freeindices=None,results=None, do_test=True, forcegenerate=False, testnum=5000, delta='0.01'):
-    print robotfilename, manipname, iktype, destfilename
+    print(robotfilename, manipname, iktype, destfilename)
     RaveInitialize()
     env=Environment()
     env.StopSimulation()
@@ -88,16 +89,16 @@ IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, std::istream& sinput, co
 }
 } // end namespace
 """
-                print 'writing %s'%destfilename
+                print('writing %s'%destfilename)
                 with open(destfilename,'w') as f: 
                     f.write(code)
     finally:
-        print "destroying environment"
+        print("destroying environment")
         env.Destroy()
 
 
 def get_freeindies_combinations(robot_file, manip_name):
-    print robot_file, manip_name
+    print(robot_file, manip_name)
     if manip_name == None:
         return [None]
     RaveInitialize()
@@ -135,7 +136,7 @@ if __name__ == "__main__":
     time_limit=int(options.time_limit) #seconds
     robot_manip_type_fouts = None
     if (not options.robot is None and options.manip is None) or (options.robot is None and not options.manip is None):
-        print 'set robot and manip name'
+        print('set robot and manip name')
         sys.exit (0)
     elif not options.robot is None and not options.manip is None:
         fout = os.path.splitext(os.path.basename(options.robot))[0]+'.cpp'
@@ -187,7 +188,7 @@ if __name__ == "__main__":
             kwargs = dict(args[i])
             kwargs['results'] = results
             p = multiprocessing.Process(target=updateik, kwargs=kwargs)
-            print 'start process ('+str(i)+'/'+str(args[i])+')'
+            print('start process ('+str(i)+'/'+str(args[i])+')')
             p.start()
             p.endtime = (time.time()-starttime)+time_limit
             p.index = i
@@ -202,7 +203,7 @@ if __name__ == "__main__":
                 for p in processes:
                     if not p.is_alive():
                         finalresults[p.index] = [p.results[0].value,p.results[1].value,p.results[2].value]
-                        print 'finished %s with %s rate'%(p.kwargs,finalresults[p.index])
+                        print('finished %s with %s rate'%(p.kwargs,finalresults[p.index]))
                         processes.remove(p)
                     elif p.endtime < (time.time()-starttime):
                         terminateprocesses.append(p)
@@ -216,7 +217,7 @@ if __name__ == "__main__":
                     time.sleep(1)
 
         #if None or 0.0, failed. 
-        print finalresults
+        print(finalresults)
 
     finally:
         for p in processes:
@@ -226,7 +227,7 @@ if __name__ == "__main__":
     saveresults = [[args[i], finalresults[i]] for i in range(len(finalresults)) if finalresults[i] is not None]
     with open(os.path.join(options.destdir, 'results.pp'),'w') as f:
         pickle.dump(saveresults, f)
-    print 'results: ',saveresults
+    print('results: ',saveresults)
 
     # select max success rate one in all free indies combinations.
     findices=[]
@@ -248,7 +249,7 @@ if __name__ == "__main__":
         try:
             args[i]['forcegenerate'] = False
             updateik(do_test=False,**args[i])
-        except Exception,e:
-            print e
-            print 'error occured in writing file %s.'%args[i]
+        except Exception as e:
+            print(e)
+            print('error occured in writing file %s.'%args[i])
 

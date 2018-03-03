@@ -67,8 +67,8 @@ def linear_smooth_dichotomy(robot,vp_list,coll_check_step):
             with robot:
                 robot.SetDOFValues(p)
                 if robot.GetEnv().CheckCollision(robot):
-                    l1=linear_smooth_dichotomy(robot,vp_list[0:len(vp_list)/2+1],coll_check_step)
-                    l2=linear_smooth_dichotomy(robot,vp_list[len(vp_list)/2:len(vp_list)],coll_check_step)
+                    l1=linear_smooth_dichotomy(robot,vp_list[0:int(len(vp_list)/2)+1],coll_check_step)
+                    l2=linear_smooth_dichotomy(robot,vp_list[int(len(vp_list)/2):len(vp_list)],coll_check_step)
                     l1.extend(l2[1:])
                     return l1
         return [p1,p2]
@@ -212,10 +212,10 @@ def RepeatIterateSmooth(robot,traj,tunings):
     lc=[]
     i=0
     while i <n_runs:
-        print i
+        print(i)
         [traj3,d_list_s,d_list_all,n_collisions,traj_list_one,ends_list]=IterateSmooth(robot,traj,tunings)
         tau3=MintimeProblemTorque.ComputeTorques(robot,traj3,tunings.grav)
-        print [max(abs(tau3[k,:])) for k in range(4)]
+        print([max(abs(tau3[k,:])) for k in range(4)])
         if (True not in [max(tau3[k,:])/coef_tolerance>tau_max[k] for k in range(4)]) and (True not in [min(tau3[k,:])/coef_tolerance<tau_min[k] for k in range(4)]):  
             trajlist.append(traj3)
             ls.append(d_list_s)
@@ -246,7 +246,7 @@ def RepeatIterateSmooth(robot,traj,tunings):
     txt+= '********************************************************************\n'
     txt+= '********************************************************************\n'
     txt+= '\n'
-    print txt
+    print(txt)
 
     return [rave_traj,traj3]
 
@@ -289,7 +289,7 @@ def IterateSmooth(robot,traj_orig,tunings):
         t2=t1+rand_len
         #if t1<0 or t2>T or t1>t2: continue
         reps+=1
-        print '\n***** '+str(reps)+' *****'
+        print('\n***** '+str(reps)+' *****')
         [success,traj2]=Smooth(robot,traj,t1,t2,tunings)
         d_list_all.append(traj2.duration)
         if success=='great':
@@ -303,12 +303,12 @@ def IterateSmooth(robot,traj_orig,tunings):
 
     duration=traj_orig.t_step*(traj_orig.n_steps-1)
     duration2=traj2.t_step*(traj2.n_steps-1)
-    print '\n\n---------------------------------\n\n'
-    print 'Original duration: '+str(duration)+' s'
-    print 'Final duration: '+str(duration2)+' s (saves '+str(int((duration-duration2)/duration*100))+'%)'
-    print 'Computation time: '+str(time.time()-deb)
-    print 'Number of shortcuts made: '+str(n_shortcuts)
-    print '\n\n---------------------------------\n\n'
+    print('\n\n---------------------------------\n\n')
+    print('Original duration: '+str(duration)+' s')
+    print('Final duration: '+str(duration2)+' s (saves '+str(int((duration-duration2)/duration*100))+'%)')
+    print('Computation time: '+str(time.time()-deb))
+    print('Number of shortcuts made: '+str(n_shortcuts))
+    print('\n\n---------------------------------\n\n')
 
     return [traj2,d_list_s,d_list_all,n_collisions,traj_list_one,ends_list]
 
@@ -353,9 +353,9 @@ def Smooth(robot,traj_orig,t1,t2,tunings):
             i2=i
             break
 
-    print 'Initial time: '+str(t1)
-    print 'Final time: '+str(t2)
-    print 'Duration: '+str(t2-t1)
+    print('Initial time: '+str(t1))
+    print('Final time: '+str(t2))
+    print('Duration: '+str(t2-t1))
 
     c_sdot=1
 
@@ -370,8 +370,8 @@ def Smooth(robot,traj_orig,t1,t2,tunings):
     sample_traj_shortcut=pwp_traj_shortcut.GetSampleTraj(pwp_traj_shortcut.duration,dt_sample)
 
     if MintimeProblemTorque.CheckCollisionTraj(robot,sample_traj_shortcut)[0]:
-        print 'Shortcut collides, returning'
-        print 'Computation time was: '+str(time.time()-deb)
+        print('Shortcut collides, returning')
+        print('Computation time was: '+str(time.time()-deb))
         return ['collision',traj_orig]
 
 
@@ -397,15 +397,15 @@ def Smooth(robot,traj_orig,t1,t2,tunings):
     # Various tests to see if we should keep the shortcut
 
     if not algo.possible:
-        print 'Shortcut is dynamically imposible, returning'
-        print 'Computation time was: '+str(time.time()-deb)
+        print('Shortcut is dynamically imposible, returning')
+        print('Computation time was: '+str(time.time()-deb))
         return ['impossible',traj_orig]
 
     algo.integrate_final()
 
     if not algo.possible:
-        print 'Shortcut is dynamically imposible, returning'
-        print 'Computation time was: '+str(time.time()-deb)
+        print('Shortcut is dynamically imposible, returning')
+        print('Computation time was: '+str(time.time()-deb))
         return ['impossible',traj_orig]
 
     s_res=algo.s_res
@@ -413,16 +413,16 @@ def Smooth(robot,traj_orig,t1,t2,tunings):
     t_shortcut=len(s_res)*algo.dt_integ
     
     if t_shortcut>=t2-t1:
-        print 'Shortcut time ('+str(t_shortcut)+') is longer than original, returning'
-        print 'Computation time was: '+str(time.time()-deb)
+        print('Shortcut time ('+str(t_shortcut)+') is longer than original, returning')
+        print('Computation time was: '+str(time.time()-deb))
         return ['too_long',traj_orig]
     if t2-t1-t_shortcut<threshold_waive:
-        print 'Gain is not significant ('+str(t2-t1-t_shortcut)+'), returning'
-        print 'Computation time was: '+str(time.time()-deb)
+        print('Gain is not significant ('+str(t2-t1-t_shortcut)+'), returning')
+        print('Computation time was: '+str(time.time()-deb))
         return ['not_signif',traj_orig]
         
-    print 'Great! Shortcut time is: '+str(t_shortcut)+' ('+str(int(t_shortcut/(t2-t1)*100))+'% of original, saves '+str(t2-t1-t_shortcut)+' seconds)'
-    print 'Computation time was: '+str(time.time()-deb)+' seconds'    
+    print('Great! Shortcut time is: '+str(t_shortcut)+' ('+str(int(t_shortcut/(t2-t1)*100))+'% of original, saves '+str(t2-t1-t_shortcut)+' seconds)')
+    print('Computation time was: '+str(time.time()-deb)+' seconds'    )
 
     undersample_coef=t_step/algo.dt_integ
     undersample_coef=int(round(undersample_coef))

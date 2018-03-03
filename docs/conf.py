@@ -48,7 +48,7 @@ copyright = u'2006-2012, Rosen Diankov and contributors'
 # The short X.Y version.
 __builtins__['__openravepy_build_doc__'] = True
 import openravepy
-version = unicode(openravepy.__version__)
+version = openravepy.__version__
 # The full version, including alpha/beta/rc tags.
 #import pysvn
 #entry=pysvn.Client().info('..')

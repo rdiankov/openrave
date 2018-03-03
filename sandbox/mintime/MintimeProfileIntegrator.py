@@ -214,7 +214,7 @@ class MintimeProfileIntegrator():
         status="NothingToReport"
         cont=True
         while cont:
-            #print [s_curr,sdot_curr]
+            #print([s_curr,sdot_curr])
             if len(s_res)>width:
                 status="OverpassedPalier"
                 break
@@ -277,7 +277,7 @@ class MintimeProfileIntegrator():
                         # This is taken from the Zlajpah ICRA 1996 paper
                         else:
                             while s_curr+sdot_curr*dt_integ<self.pb.duration:
-                                print 'Zlajpah'
+                                print('Zlajpah')
                                 s_next=s_curr+sdot_curr*dt_integ
                                 sdot_next_vel=self.pb.maxvel_velocity_interp(s_next)
                                 [alpha,beta,ialpha,ibeta]=self.pb.accel_limits(s_curr,sdot_curr)
@@ -285,7 +285,7 @@ class MintimeProfileIntegrator():
                                     self.sws.insert(0,s_curr)
                                     self.swsd.insert(0,sdot_curr)
                                     self.swt.insert(0,'v')
-                                    #print self.sws
+                                    #print(self.sws)
                                     cont2=False
                                     cont=False
                                     status="Zlajpah"
@@ -327,7 +327,7 @@ class MintimeProfileIntegrator():
         sdot_res=[]
         start=0
         while True:
-            #print [s_curr,sdot_curr]
+            #print([s_curr,sdot_curr])
             if len(s_res)>width: 
                 status="OverpassedPalier"
                 break

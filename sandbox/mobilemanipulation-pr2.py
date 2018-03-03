@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from __future__ import with_statement # for python 2.5
+from __future__ import with_statement, print_function # for python 2.6
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
@@ -20,10 +20,18 @@ from openravepy import *
 from numpy import *
 import numpy,time,scipy
 from openravepy.examples import mobilemanipulation
-from itertools import izip
+try:
+    from itertools import izip
+except:
+    izip = zip
+
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
 
 def mm_create(robot,useclone=False):
-    print 'creating mobile manipulation planners'
+    print('creating mobile manipulation planners')
     env=robot.GetEnv()
     manips = [robot.GetManipulator('leftarm'), robot.GetManipulator('leftarm_torso'), robot.GetManipulator('rightarm'), robot.GetManipulator('rightarm_torso')]
     irmodels = []
@@ -37,7 +45,7 @@ def mm_create(robot,useclone=False):
                 if irmodel.load():
                     irmodels.append(irmodel)
                 else:
-                    print 'failed to load irmodel',manip.GetName(),id
+                    print('failed to load irmodel',manip.GetName(),id)
 
     switchpatterns=[('frootloops(\d)*','data/box_frootloops_fat.kinbody.xml')]
     mm = mobilemanipulation.MobileManipulationPlanning(robot,grmodel=mobilemanipulation.GraspReachability(robot,irmodels=irmodels),maxvelmult=0.3,switchpatterns=switchpatterns)
@@ -73,7 +81,7 @@ if __name__ == "__main__":
         else:
             mm = None
         while True:
-            cmd = raw_input('Enter command (q-quit,n-neutral position,d-delete objects,g-grasp,c-reset controller,r-release,i-ipython,p-place,e-enable sensors,s-search objects,d-delete objects,j-jitter robot,m-mobile manipulation,h-head camera): ')
+            cmd = input('Enter command (q-quit,n-neutral position,d-delete objects,g-grasp,c-reset controller,r-release,i-ipython,p-place,e-enable sensors,s-search objects,d-delete objects,j-jitter robot,m-mobile manipulation,h-head camera): ')
             try:
                 if cmd == 'q':
                     break
@@ -82,7 +90,7 @@ if __name__ == "__main__":
                     ipshell = IPShellEmbed(argv='',banner = 'Dropping into IPython',exit_msg = 'Leaving Interpreter, back to program.')
                     ipshell(local_ns=locals())
                 elif cmd == 'n':
-                    print 'moving to neutral position'
+                    print('moving to neutral position')
                     with env:
                         robot.RegrabAll()
                     mm.moveToNeutral(neutraljointvalues=neutraljointvalues,bounds=array(((-0.15,-0.1,-0.05),(0.2,0.1,0.15))))
@@ -119,10 +127,10 @@ if __name__ == "__main__":
                         with env:
                             robot.RegrabAll()
                             robot.SetActiveManipulator(mmclone.robot.GetActiveManipulator())
-                        print 'moving to neutral position'
+                        print('moving to neutral position')
                         mmclone.moveToNeutral(neutraljointvalues=neutraljointvalues,bounds=array(((-0.15,-0.1,-0.05),(0.2,0.1,0.15))))
                         if 'image' in usevisibilitycamera:
-                            print 'saving camera image to cameraimage.png'
+                            print('saving camera image to cameraimage.png')
                             scipy.misc.pilutil.imsave('cameraimage.png',usevisibilitycamera['image'])
                     finally:
                         envclone.Destroy()
@@ -143,7 +151,7 @@ if __name__ == "__main__":
                         with env:
                             robot.RegrabAll()
                             robot.SetActiveManipulator(mmclone.robot.GetActiveManipulator())
-                        print 'moving to neutral position'
+                        print('moving to neutral position')
                         mmclone.moveToNeutral(neutraljointvalues=neutraljointvalues,bounds=array(((-0.15,-0.1,-0.05),(0.2,0.1,0.15))))
                     finally:
                         envclone.Destroy()
@@ -165,18 +173,18 @@ if __name__ == "__main__":
                             mmclone.placeObject(target=target,dests=mmclone.getDests(target,maxdist=0.9))
                             try:
                                 mmclone.moveToNeutral(neutraljointvalues=neutraljointvalues,bounds=array(((-0.15,-0.1,-0.05),(0.2,0.1,0.15))))
-                            except planning_error,e:
-                                print e
+                            except planning_error as e:
+                                print(e)
                             break
                         except planning_error:
                             pass
                     finally:
                         envclone.Destroy()
-            except planning_error,e:
-                print 'script planning error',e
-            except openrave_exception,e:
-                print 'script planning error',e
-            except KeyboardInterrupt,e:
-                print 'cancelled by keyboard',e
+            except planning_error as e:
+                print('script planning error',e)
+            except openrave_exception as e:
+                print('script planning error',e)
+            except KeyboardInterrupt as e:
+                print('cancelled by keyboard',e)
     finally:
         env.Destroy()

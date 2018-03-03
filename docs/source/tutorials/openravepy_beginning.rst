@@ -64,7 +64,7 @@ OpenRAVE C++ exceptions in the form of the openrave_exception class are automati
       env = Environment()
       env.Load('robots/barrettwam.robot.xml')
       env.GetRobots()[0].SetDOFValues([])
-  except openrave_exception, e:
+  except openrave_exception as e:
       print e
 
 Locking/Thread-safety Mechanisms

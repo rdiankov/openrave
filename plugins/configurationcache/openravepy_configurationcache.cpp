@@ -349,7 +349,7 @@ typedef boost::shared_ptr<PyConfigurationCache> PyConfigurationCachePtr;
 BOOST_PYTHON_MODULE(openravepy_configurationcache)
 {
     using namespace configurationcachepy;
-    import_array();
+    import_array1();
     scope().attr("__doc__") = "The module contains configuration cache bindings for openravepy\n";
 
     class_<PyConfigurationCache, PyConfigurationCachePtr >("ConfigurationCache", no_init)

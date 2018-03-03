@@ -78,7 +78,7 @@ class BaseManipulation:
         cmd = 'VerifyTrajectory stream ' + data + ' resettrans %d resettiming %d '%(resettrans,resettiming)
         if samplingstep is not None:
             cmd += 'samplingstep %.15e '%samplingstep
-        print cmd
+        print(cmd)
         return self.prob.SendCommand(cmd)
 
     def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,starteematrix=None,greedysearch=None,execute=None,outputtraj=None,maxdeviationangle=None,steplength=None,planner=None,outputtrajobj=None):
@@ -299,6 +299,6 @@ class BaseManipulation:
             raise PlanningError('FindIKWithFilters')
         resvalues = res.split()
         num = int(resvalues[0])
-        dim = (len(resvalues)-1)/num
+        dim = int((len(resvalues)-1)/num)
         solutions = numpy.reshape([numpy.float64(s) for s in resvalues[1:]],(num,dim))
         return solutions

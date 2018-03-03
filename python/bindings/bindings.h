@@ -19,6 +19,7 @@
 #define OPENRAVE_BOOST_PYTHON_BINDINGS
 
 #include <Python.h>
+#include "py3.h"
 #include <boost/array.hpp>
 #include <boost/multi_array.hpp>
 #include <boost/shared_ptr.hpp>
@@ -290,7 +291,7 @@ struct int_from_int
     static void* convertible( PyObject* obj)
     {
         PyObject* newobj = PyNumber_Int(obj);
-        if (!PyString_Check(obj) && newobj) {
+        if (!PyBytes_Check(obj) && newobj) {
             Py_DECREF(newobj);
             return obj;
         }
@@ -323,7 +324,7 @@ struct uint8_from_int
     static void* convertible( PyObject* obj)
     {
         PyObject* newobj = PyNumber_Int(obj);
-        if (!PyString_Check(obj) && newobj) {
+        if (!PyBytes_Check(obj) && newobj) {
             Py_DECREF(newobj);
             return obj;
         }
@@ -357,7 +358,7 @@ struct T_from_number
     static void* convertible( PyObject* obj)
     {
         PyObject* newobj = PyNumber_Float(obj);
-        if (!PyString_Check(obj) && newobj) {
+        if (!PyBytes_Check(obj) && newobj) {
             Py_DECREF(newobj);
             return obj;
         }
@@ -389,7 +390,7 @@ inline std::string GetPyErrorString()
     if(error != NULL) {
         string = PyObject_Str(value);
         if(string != NULL) {
-            s.assign(PyString_AsString(string));
+            s.assign(PyBytes_AsString(string));
             Py_DECREF(string);
         }
     }

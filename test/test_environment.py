@@ -16,6 +16,11 @@ from subprocess import Popen, PIPE
 import shutil
 import threading
 
+try: # for python 3.x
+    unicode_str = unicode
+except:
+    unicode_str = str
+
 class TestEnvironment(EnvironmentSetup):
     def test_load(self):
         env=self.env
@@ -93,7 +98,7 @@ class TestEnvironment(EnvironmentSetup):
         body.SetName(name)
         env.Add(body)
         assert(body.GetName()==name)
-        assert(unicode(body.GetName())==name)
+        assert(unicode_str(body.GetName())==name)
 
         openrave_config = Popen(['openrave-config','--share-dir'],stdout=PIPE)
         share_dir = openrave_config.communicate()[0].strip()
@@ -117,12 +122,12 @@ class TestEnvironment(EnvironmentSetup):
         robot=self.LoadRobotData(robotxml)
         assert(robot.GetName() == robotname)
         assert(robot.GetLinks()[0].GetName() == linkname)
-        assert(unicode(robot.GetName()).encode('euc-jp') == robotname.encode('euc-jp'))
+        assert(unicode_str(robot.GetName()).encode('euc-jp') == robotname.encode('euc-jp'))
         env.Remove(robot)
 
         robot=self.LoadRobotData(robotxml)
         assert(robot.GetName() == robotname)
-        assert(unicode(robot.GetName()).encode('euc-jp') == robotname.encode('euc-jp'))
+        assert(unicode_str(robot.GetName()).encode('euc-jp') == robotname.encode('euc-jp'))
         assert(robot.GetLinks()[0].GetName() == linkname)
                     
     def test_cloneplan(self):
@@ -156,7 +161,7 @@ class TestEnvironment(EnvironmentSetup):
             clonedenv.Clone(env, CloningOptions.Bodies)
             endtime=time.time()-starttime
             self.log.info('clone time: %fs',endtime)
-            print endtime
+            print(endtime)
             misc.CompareEnvironments(env,clonedenv,epsilon=g_epsilon)
             clonedrobot = clonedenv.GetRobot(robot.GetName())
             assert(clonedrobot.GetActiveManipulator().GetName() == robot.GetActiveManipulator().GetName())

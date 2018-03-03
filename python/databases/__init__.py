@@ -21,9 +21,9 @@ objects the generator relies on are used to produce a unique ID to index the dat
 $OPENRAVE_DATABASE. For example, the grasping database will combine the robot manipulator hash and
 the target object hash.
 """
-from __future__ import with_statement # for python 2.5
+from __future__ import with_statement, print_function # for python 2.6
 
-try:
+try: # for python 3.x
     import cPickle as pickle
 except:
     import pickle
@@ -64,7 +64,7 @@ class DatabaseGenerator(metaclass.AutoReloader):
             try:
                 if self._databasefile:
                     self._databasefile.close()
-            except Exception,e:
+            except Exception as e:
                 log.warn(e)
             self._databasefile = None
             
@@ -94,7 +94,7 @@ class DatabaseGenerator(metaclass.AutoReloader):
                 return params
             else:
                 log.error('version is wrong %s!=%s ',modelversion,self.getversion())
-        except MemoryError,e:
+        except MemoryError as e:
             log.error('%s failed: ',filename,e)
         except:
             pass
@@ -108,7 +108,7 @@ class DatabaseGenerator(metaclass.AutoReloader):
             makedirs(os.path.split(filename)[0])            
         except OSError:
             pass
-        with open(filename, 'w') as f:
+        with open(filename, 'wb') as f:
             pickle.dump((self.getversion(),params), f)
     def generate(self):
         raise NotImplementedError()
@@ -244,14 +244,14 @@ class DatabaseGenerator(metaclass.AutoReloader):
                 filename=model.getfilename(True)
                 if len(filename) == 0:
                     filename=model.getfilename(False)
-                print filename
+                print(filename)
                 openravepy_int.RaveDestroy()
                 sys.exit(0)
             if options.gethas:
                 hasmodel=model.load()
                 if hasmodel:
                     hasmodel = os.path.isfile(model.getfilename(True))
-                print int(hasmodel)
+                print(int(hasmodel))
                 openravepy_int.RaveDestroy()
                 sys.exit(not hasmodel)
             if options.viewername is not None:
@@ -267,16 +267,16 @@ class DatabaseGenerator(metaclass.AutoReloader):
             if destroyenv and env is not None:
                 env.Destroy()
 
-import inversekinematics
-import grasping
-import convexdecomposition
-import linkstatistics
-import kinematicreachability
-import inversereachability
+from . import inversekinematics
+from . import grasping
+from . import convexdecomposition
+from . import linkstatistics
+from . import kinematicreachability
+from . import inversereachability
     
 # python 2.5 raises 'import *' not allowed with 'from .'
 from sys import version_info
 if version_info[0:3]>=(2,6,0):
-    import visibilitymodel
+    from . import visibilitymodel
 else:
     log.warn('some openravepy.datbases cannot be used python versions < 2.6')

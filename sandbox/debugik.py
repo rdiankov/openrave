@@ -10,7 +10,7 @@
 # limitations under the License.
 # random code that helps with debugging/testing the python interfaces and examples
 # this is not meant to be run by normal users
-from __future__ import with_statement # for python 2.5
+from __future__ import with_statement, print_function # for python 2.6
 __copyright__ = 'Copyright (C) 2009-2010'
 __license__ = 'Apache License, Version 2.0'
 
@@ -76,7 +76,7 @@ def solvefailed2(self):
     # choose which leftvar can determine the singularity of the following equations!
     testeqs4 = []
     for ipeq,peq in enumerate(testeqs3):
-        maxdenom = [0]*(len(testeqs3[0].symbols)/2)
+        maxdenom = [0]*int(len(testeqs3[0].symbols)/2)
         for monoms in peq.iter_monoms():
             for i in range(len(maxdenom)):
                 maxdenom[i] = max(maxdenom[i],monoms[2*i]+monoms[2*i+1])
@@ -156,7 +156,7 @@ def simplifyPolynomial(self,peq,leftvar,symbolgen,localsymbols,localsymbols_redu
                 else:
                     index = None
                 if index is None:
-                    v=symbolgen.next()
+                    v=next(symbolgen)
                     localsymbols.append((v,c2))
                     if localsymbols_reduced is not None:
                         localsymbols_reduced.append(c2clean)
@@ -279,7 +279,7 @@ def computeDixonResultant(self,polyeqs,othersolvedvars):
     for eq in polyeqs:
         neweq = Poly(S.Zero,*orgsymbols)
         for c,m in eq.iter_terms():
-            v = symbolgen.next()
+            v = next(symbolgen)
             dixonsymbols.append((v,c))
             neweq = neweq.add_term(v,m)
         neweqs.append(neweq)
@@ -329,7 +329,7 @@ def computeDixonResultant(self,polyeqs,othersolvedvars):
         Mtemp.col_del(j)
         s=linalg.svd(Mtemp,compute_uv=0)
         if numpy.sum(numpy.greater(abs(s),1e-14)) < rank:
-            print j
+            print(j)
     Mvalues = Mdixon.subs(dixonsymbolsvalues)
     for i in range(Mvalues.shape[0]):
         for j in range(Mvalues.shape[1]):
@@ -362,7 +362,7 @@ def characteristic_poly(self,eqs):
     ipower = 0
     remainders = []
     while True:
-        print ipower
+        print(ipower)
         changed = True
         f = Poly(x**ipower,*eqs[0].symbols)
         while changed:
@@ -370,10 +370,10 @@ def characteristic_poly(self,eqs):
             for eq in eqs:
                 q,r = div(f,eq)
                 if q != S.Zero:
-                    print q
+                    print(q)
                     changed = True
                 f = Poly(f,*eqs[0].symbols)
-        print f
+        print(f)
         remainders.append(f)
         ipower += 1
 
@@ -747,7 +747,7 @@ def solveFailed(self):
         Mpowers[0][i,i] += S.One
     multcombs = [(0,0),(0,1),(1,1),(0,3),(1,3),(2,3),(3,3)]
     for indices in multcombs:
-        print indices
+        print(indices)
         Mnew = Mpowers[indices[0]]*Mpowers[indices[1]]
         for i in range(M.shape[0]):
             for j in range(M.shape[0]):
@@ -763,7 +763,7 @@ def solveFailed(self):
     characteristicpolys = []
     for i in range(M.shape[0]):
         for j in range(M.shape[0]):
-            print i,j
+            print(i,j)
             p = Poly(characteristiccoeffs[0],x,*characteristiccoeffs)
             for k in range(M.shape[0]):
                 p = p + characteristiccoeffs[k+1]*Mpowers[k][i,j].as_basic()
@@ -793,12 +793,12 @@ def solveFailed(self):
     raise self.CannotSolveError('not implemented')
 
 def isolatepair():
-    print 'attempting to isolate a variable'
+    print('attempting to isolate a variable')
     finalsolutions = []
     for i in [1,3]: # for every variable, used to be range(4) but it is never the case that [1] fails and [0] succeeds
         # if variable ever appears, it should be alone
         complementvar = unknownvars[[1,0,3,2][i]]
-        print 'var:',unknownvars[i]
+        print('var:',unknownvars[i])
         varsol = None
         for rank,eq in orgeqns:
             if eq.has_any_symbols(unknownvars[i]):
@@ -827,16 +827,16 @@ def isolatepair():
                 if maxdegree <= 1:
                     eqsub = Symbol('tempsym')**maxdegree*eq.as_basic().subs(allsymbols+[(unknownvars[i],varsol)]).subs(fraction(varsol)[1],Symbol('tempsym'))
                     if self.codeComplexity(eqsub) < 70: # bobcat fk has a 75 valued equation that does not simplify
-                        #print eqsub,'complexity: ',self.codeComplexity(eqsub)
+                        #print(eqsub,'complexity: ',self.codeComplexity(eqsub))
                         eqsub = simplify(eqsub)
                     else:
                         eqsub=eqsub.expand()
-                        print 'solvePairVariables: could not simplify eqsub: ',eqsub
+                        print('solvePairVariables: could not simplify eqsub: ',eqsub)
                     eqnew = eqsub.subs(Symbol('tempsym'),fraction(varsol)[1]).expand()
                     if self.codeComplexity(eqnew) < 120:
                         eqnew = simplify(eqnew)
                     else:
-                        print 'solvePairVariables: could not simplify eqnew: ',eqnew
+                        print('solvePairVariables: could not simplify eqnew: ',eqnew)
                     eqnew = eqnew.expand().subs(reducesubs).expand()
                     if self.codeComplexity(eqnew) < 120:
                         eqnewcheck = self.removecommonexprs(eqnew)
@@ -868,11 +868,11 @@ def isolatepair():
             for eq in valideqs2:
                 try:
                     peq = Poly(eq,complementvar)
-                except PolynomialError,e:
+                except PolynomialError as e:
                     try:
                         peq = Poly(eq,complementvar)
-                    except PolynomialError,e:
-                        print 'solvePairVariables: ',e
+                    except PolynomialError as e:
+                        print('solvePairVariables: ',e)
                         continue                                
                 if peq.degree == 1: # degree > 1 adds sqrt's
                     solutions = [-peq.coeff(0).subs(allsymbols),peq.coeff(1).subs(allsymbols)]
@@ -899,8 +899,8 @@ def isolatepair():
                                             break
                                         else:
                                             othervarpoly = None
-                                    except PolynomialError,e:
-                                        print e
+                                    except PolynomialError as e:
+                                        print(e)
                             if othervarpoly is not None:
                                 break
             if othervarpoly is not None:
@@ -914,7 +914,7 @@ def isolatepair():
                     # found a really good solution, so choose it
                     break
                 else:
-                    print 'othervarpoly too complex: ',othervarpoly
+                    print('othervarpoly too complex: ',othervarpoly)
     if len(finalsolutions) > 0:
         # find the equation with the minimal degree, and the least code complexity
         return [min(finalsolutions, key=lambda f: f.poly.degree*1e6 + self.codeComplexity(f.poly.as_basic()))]
@@ -937,7 +937,7 @@ def solveLinearly(self,raweqns,varsyms,othersolvedvars,maxdegree=1):
     if len(allmonoms) > len(newpolyeqs):
         raise self.CannotSolveError('not enough equations %d>%d'%(len(allmonoms),len(newpolyeqs)))
 
-    if __builtin__.sum(allmonoms[0]) != 0:
+    if builtins.sum(allmonoms[0]) != 0:
         raise self.CannotSolveError('need null space')
 
     # try to solve for all pairwise variables
@@ -955,13 +955,13 @@ def solveLinearly(self,raweqns,varsyms,othersolvedvars,maxdegree=1):
         for i,arr in enumerate(eqs):
             for j in range(len(allmonoms)):
                 M[i,j] = arr[j]
-        if __builtin__.sum(allmonoms[0]) == 0:
+        if builtins.sum(allmonoms[0]) == 0:
             # can solve directly
             det = self.det_bareis(M)
             if det != S.Zero:
                 break
             X = M[1:,1:].inv()*M[1:,0]
-            print X
+            print(X)
         else:
             # find a nullspace of M, this means that det(M) = 0
 
@@ -977,7 +977,7 @@ def solveLinearly(self,raweqns,varsyms,othersolvedvars,maxdegree=1):
             break
     if singleeqs is not None:
         neweqns += singleeqs
-        neweqns.sort(lambda x, y: x[0]-y[0])
+        neweqns.sort(key=lambda x: x[0])
 
 def detdialytically():
     M = Mall[2]*leftvar**2+Mall[1]*leftvar+Mall[0]
@@ -1011,7 +1011,7 @@ def detdialytically():
     eqaddsorg=eqadds
     eqadds2 = []
     for eq in eqadds:
-        print 'yo'
+        print('yo')
         eq2 = Poly(S.Zero,leftvar)
         for c,m in eq.iter_terms():
             eq2 = eq2.add_term(simplifyfn(c),m)
@@ -1020,7 +1020,7 @@ def detdialytically():
     det = Poly(S.Zero,leftvar)
     for eq in eqadds2:
         for c,m in eq.iter_terms():
-            sym=self.gsymbolgen.next()
+            sym=next(self.gsymbolgen)
             dictequations.append([sym,c])
             det += sym*leftvar**m[0]
 
@@ -1068,9 +1068,15 @@ def test_ik():
     from sympy import *
     from sympy import S, pi, sin, cos, PolynomialError, Symbol
     import numpy
-    import __builtin__
+    try: # for python 3.x
+        import __builtin__ as builtins
+    except:
+        import builtins
     from openravepy.ikfast import AST, combinations, fmod
-    from itertools import izip
+    try:
+        from itertools import izip
+    except:
+        izip = zip
     from openravepy import axisAngleFromRotationMatrix
     numpy.set_printoptions(15)
     IkType=IkParameterizationType

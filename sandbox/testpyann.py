@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from __future__ import with_statement # for python 2.5
+from __future__ import with_statement, print_function # for python 2.6
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
@@ -23,14 +23,14 @@ import numpy
 def run():
     kdtree = pyANN.KDTree(random.rand(1000,5))
     neighs,dists = kdtree.kSearch(random.rand(5),10,0.001)
-    print neighs,dists
-    print 'radius search, single point'
+    print(neighs,dists)
+    print('radius search, single point')
     neighs,dists,kball = kdtree.kFRSearch(random.rand(5),0.2**2,10,0.001)
-    print neighs,dists,kball
-    print 'radius search, array'
+    print(neighs,dists,kball)
+    print('radius search, array')
     neighs,dists,kball = kdtree.kFRSearchArray(random.rand(10,5),0.2**2,10,0.001)
     for n,d in zip(neighs,dists):
-        print n[n>=0],d[n>=0]
+        print(n[n>=0],d[n>=0])
 
 if __name__=='__main__':
     run()

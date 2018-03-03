@@ -19,7 +19,7 @@
 
 .. examplepost-block:: testphysics_diffdrive
 """
-from __future__ import with_statement # for python 2.5
+from __future__ import with_statement, print_function # for python 2.6
 __author__ = 'Rosen Diankov'
 
 import time
@@ -46,7 +46,7 @@ def main(env,options):
     starttime = time.time()
     while True:
         velocities = 4*(random.rand(robot.GetDOF())-0.5)
-        print 'velocities: ',velocities
+        print('velocities: ',velocities)
         robot.GetController().SendCommand('setvelocity '+' '.join(str(f) for f in velocities))
         time.sleep(2)
 

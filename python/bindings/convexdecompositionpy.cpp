@@ -113,7 +113,7 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(computeConvexDecomposition_overloads, computeCon
 
 BOOST_PYTHON_MODULE(convexdecompositionpy)
 {
-    import_array();
+    import_array1();
     numeric::array::set_module_and_type("numpy", "ndarray");
     int_from_int();
     T_from_number<float>();

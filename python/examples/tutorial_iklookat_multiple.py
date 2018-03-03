@@ -21,7 +21,10 @@
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 
-from itertools import izip
+try:
+    from itertools import izip
+except:
+    izip = zip
 import time
 import random as stdrandom
 import openravepy
@@ -64,7 +67,7 @@ def main(env,options):
                 for ikmodel2 in ikmodels:
                     ikmodel2.robot.Enable(True)
                 if len(robotsolutions) == len(robots):
-                    print 'found solutions for all manipulators, search for a joint collision-free one'
+                    print('found solutions for all manipulators, search for a joint collision-free one')
                     goodsolutions = []
                     # permute randomly to get more interesting solutions
                     allsols = [sols for sols in sequence_cross_product(*robotsolutions)]

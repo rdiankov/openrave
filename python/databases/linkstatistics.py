@@ -48,8 +48,8 @@ When using link statics, it is possible to set the joints weights and resolution
        lmodel.autogenerate()
    lmodel.setRobotWeights()
    lmodel.setRobotResolutions(xyzdelta=0.01)
-   print 'robot resolutions: ',repr(robot.GetDOFResolutions())
-   print 'robot weights: ',repr(robot.GetDOFWeights())
+   print('robot resolutions: ',repr(robot.GetDOFResolutions()))
+   print('robot weights: ',repr(robot.GetDOFWeights()))
 
 Class Definitions
 -----------------
@@ -70,12 +70,15 @@ from ..openravepy_ext import transformPoints, openrave_exception
 from ..openravepy_int import RaveFindDatabaseFile, RaveDestroy, Environment, KinBody, rotationMatrixFromQuat, quatRotateDirection, rotationMatrixFromAxisAngle, RaveGetDefaultViewerType
 from . import DatabaseGenerator
 from .. import pyANN
-import convexdecomposition
+from . import convexdecomposition
 from ..misc import ComputeGeodesicSphereMesh, ComputeBoxMesh, ComputeCylinderYMesh, SpaceSamplerExtra
 import time
 import os.path
 from optparse import OptionParser
-from itertools import izip
+try:
+    from itertools import izip
+except:
+    izip = zip
 from os import makedirs
 
 import logging
@@ -113,7 +116,7 @@ class LinkStatisticsModel(DatabaseGenerator):
     def LoadPickle(self):
         try:
             params = DatabaseGenerator.load(self)
-        except Exception, e:
+        except Exception as e:
             log.warn(u'failed to load linkstatistics: %s', e)
             return False
         

@@ -14,4 +14,4 @@ if __name__=='__main__':
         startindex = data.find(' ',index)
         endindex = data.find(')',startindex)
         versions.append(data[startindex:endindex].strip())
-    print '.'.join(versions)
+    print('.'.join(versions))

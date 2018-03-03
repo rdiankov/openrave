@@ -12,11 +12,16 @@ from ramp import ParabolicCheckReturn as PCR
 import random
 rng = random.SystemRandom()
 
+try: # for python 3.x
+    input = raw_input
+except NameError:
+    pass
+
 def RandVect1(n, l, u):
-    return np.asarray([rng.uniform(l, u) for _ in xrange(n)])
+    return np.asarray([rng.uniform(l, u) for _ in range(n)])
 
 def RandVect2(l, u):
-    return np.asarray([rng.uniform(l[i], u[i]) for i in xrange(len(l))])
+    return np.asarray([rng.uniform(l[i], u[i]) for i in range(len(l))])
 
 ################################################################################
 # test precision for easy number assignments
@@ -50,7 +55,7 @@ x0 = 0
 x1 = 3
 maxit = 100
 curves = []
-for i in xrange(maxit):
+for i in range(maxit):
     v0 = rng.uniform(-vm, vm)
     v1 = rng.uniform(-vm, vm)
     try:
@@ -62,10 +67,10 @@ for i in xrange(maxit):
             assert(ramp.IsEqual(ramp.Abs(temp[1].v0), vm))
             assert(ramp.IsEqual(ramp.Abs(temp[2].v0), vm))
     except:
-        print 'x0 = {0}'.format(x0)
-        print 'x1 = {0}'.format(x1)
-        print 'v0 = {0}'.format(v0)
-        print 'v1 = {0}'.format(v1)
+        print('x0 = {0}'.format(x0))
+        print('x1 = {0}'.format(x1))
+        print('v0 = {0}'.format(v0))
+        print('v1 = {0}'.format(v1))
         break
 
 ################################################################################
@@ -123,7 +128,7 @@ assert(ramp.IsEqual(fixedCurve.duration, duration))
 
 nTrials = 0
 nSuccess = 0
-for _ in xrange(nTrials):
+for _ in range(nTrials):
     x0 = mp.rand()
     x1 = mp.rand()*3
     v0 = mp.rand()*(-2)
@@ -139,7 +144,7 @@ for _ in xrange(nTrials):
         assert(ramp.IsEqual(fixedCurve.d, ramp.Sub(mp.mpf(str(x1)), mp.mpf(str(x0)))))
         assert(ramp.IsEqual(fixedCurve.duration, duration))
         nSuccess += 1
-print "Easy bounds : interpolation with fixed duration successful instance = {0}/{1}".format(nSuccess, nTrials)
+print("Easy bounds : interpolation with fixed duration successful instance = {0}/{1}".format(nSuccess, nTrials))
 
 ################################################################################
 # Check interpolation with fixed duration (bounds from a real robot)
@@ -162,8 +167,8 @@ nSuccess = 0
 vboundfailed = 0
 xboundfailed = 0
 interpfailed = 0
-for it in xrange(nTrials):
-    print "iteration {0}/{1}".format(it + 1, nTrials)
+for it in range(nTrials):
+    print("iteration {0}/{1}".format(it + 1, nTrials))
     x0Vect = RandVect2(xMin, xMax)
     x1Vect = RandVect2(xMin, xMax)
     v0Vect = RandVect2(vMin, vMax)
@@ -172,8 +177,8 @@ for it in xrange(nTrials):
     curvesnd = InterpolateArbitraryVelND(x0Vect, x1Vect, v0Vect, v1Vect, xMin, xMax, vMax, aMax, tryHarder=True)
     if not curvesnd.isEmpty:
         ret = ramp.CheckParabolicCurvesND(curvesnd, xMin, xMax, vMax, aMax, x0Vect, x1Vect, v0Vect, v1Vect)
-        # print ret
-        # raw_input()
+        # print(ret)
+        # input()
         if ret == PCR.Normal:
             nSuccess += 1
         elif ret == PCR.VBoundViolated:
@@ -183,15 +188,15 @@ for it in xrange(nTrials):
             xboundfailed += 1
             # IPython.embed()
         else:
-            print ret
-            raw_input()
+            print(ret)
+            input()
         # if ramp.CheckParabolicCurvesND(curvesnd, vMax, aMax, x0Vect=x0Vect, x1Vect=x1Vect):
         #     nSuccess += 1
         #     break
     else:
         interpfailed += 1
         # IPython.embed()
-print "Real bounds : interpolation with fixed duration successful instances = {0}/{1}".format(nSuccess, nTrials)
-print "Real bounds : interpolation failed = {0}/{1}".format(interpfailed, nTrials)
-print "Real bounds : x-bound failed = {0}/{1}".format(xboundfailed, nTrials)
-print "Real bounds : other failures = {0}/{1}".format(nTrials - nSuccess - interpfailed - xboundfailed, nTrials)
+print("Real bounds : interpolation with fixed duration successful instances = {0}/{1}".format(nSuccess, nTrials))
+print("Real bounds : interpolation failed = {0}/{1}".format(interpfailed, nTrials))
+print("Real bounds : x-bound failed = {0}/{1}".format(xboundfailed, nTrials))
+print("Real bounds : other failures = {0}/{1}".format(nTrials - nSuccess - interpfailed - xboundfailed, nTrials))

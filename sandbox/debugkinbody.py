@@ -16,7 +16,10 @@ __license__ = 'Apache License, Version 2.0'
 
 from openravepy import *
 from numpy import *
-from itertools import izip
+try:
+    from itertools import izip
+except:
+    izip = zip
 
 def test_drawjoints(robot):
     """draws the joint axes of the robot

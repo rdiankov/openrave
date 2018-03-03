@@ -23,11 +23,14 @@ Shows how to use the MoveHandStraight basemanipulation command. The example pick
 
 .. examplepost-block:: movehandstraight
 """
-from __future__ import with_statement # for python 2.5
+from __future__ import with_statement, print_function # for python 2.6
 __author__ = 'Rosen Diankov'
 
 import time
-from itertools import izip
+try:
+    from itertools import izip
+except:
+    izip = zip
 import openravepy
 if not __openravepy_build_doc__:
     from openravepy import *
@@ -71,7 +74,7 @@ def main(env,options):
     success = basemanip.MoveHandStraight(direction=updir,starteematrix=T,stepsize=0.01,minsteps=1,maxsteps=20)
     robot.WaitForController(0)
 
-    print 'checking for existance of trajectories with random queries of moving in a straight line'
+    print('checking for existance of trajectories with random queries of moving in a straight line')
     armlength = 0
     armjoints = [j for j in robot.GetDependencyOrderedJoints() if j.GetJointIndex() in ikmodel.manip.GetArmIndices()]
     eetrans = ikmodel.manip.GetTransform()[0:3,3]
@@ -90,17 +93,17 @@ def main(env,options):
             length = 0.6*random.rand()*armlength
             Tee[0:3,3] = eetrans + x/linalg.norm(x)*(armlength-length)
             maxsteps=int(length/stepsize)+1
-            minsteps = maxsteps/2
+            minsteps = int(maxsteps/2)
             h = env.drawlinelist(array([Tee[0:3,3],Tee[0:3,3]+direction*maxsteps*stepsize]),1)
         try:
             success = basemanip.MoveHandStraight(direction=direction,starteematrix=Tee,stepsize=stepsize,minsteps=minsteps,maxsteps=maxsteps)
             params = (direction,Tee)
-            print '%d failed attemps before found'%failedattempt,repr(params)
+            print('%d failed attemps before found'%failedattempt,repr(params))
             failedattempt = 0
             h = env.drawlinelist(array([Tee[0:3,3],Tee[0:3,3]+direction*maxsteps*stepsize]),4,[0,0,1])
             robot.WaitForController(0)
             
-        except planning_error,e:
+        except planning_error as e:
             failedattempt += 1
 
 from optparse import OptionParser
