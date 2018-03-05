@@ -37,7 +37,7 @@ class QtOgreWindow : public QWindow, public Ogre::FrameListener
     Q_OBJECT
 
 public:
-    explicit QtOgreWindow(QWindow *parent = NULL);
+    explicit QtOgreWindow(const std::function<void()> &environmentUpdateFunc, QWindow *parent = NULL);
     virtual ~QtOgreWindow();
 
     /*
@@ -111,6 +111,7 @@ protected:
 
     std::list<std::function<void()>> _frameRenderingUpdateQueue;
     boost::mutex _mutexFrameRenderingUpdate;
+    std::function<void()> _environmentUpdateFunc;
 
     /*
     FrameListener method

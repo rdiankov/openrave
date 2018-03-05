@@ -10,8 +10,9 @@
 Note that we pass any supplied QWindow parent to the base QWindow class. This is necessary should we
 need to use our class within a container.
 */
-QtOgreWindow::QtOgreWindow(QWindow *parent)
+QtOgreWindow::QtOgreWindow(const std::function<void()> &environmentUpdateFunc, QWindow *parent)
     : QWindow(parent)
+    , _environmentUpdateFunc(environmentUpdateFunc)
     , m_update_pending(false)
     , m_animating(false)
     , m_ogreRoot(NULL)
@@ -480,13 +481,8 @@ bool QtOgreWindow::frameRenderingQueued(const Ogre::FrameEvent& evt)
     for (std::function<void()>& func: localQueue) {
         func();
     }
-    // Ogre::SceneNode* parentNode = GetMiscDrawNode();
-    //     Ogre::SceneNode* node = parentNode->createChildSceneNode();
-    //     Ogre::v1::Entity* cube = node->getCreator()->createEntity(Ogre::SceneManager::PT_CUBE);
-    //     cube->setDatablock(datablockhack);
-    //     node->attachObject(cube);
-    //     node->setPosition(Ogre::Vector3(0.0, 0.0, 0.0));
-    //     node->setScale(Ogre::Vector3(0.03, 0.03, 0.03)); // <--------- is this extents?
+    _environmentUpdateFunc();
+
     return true;
 }
 

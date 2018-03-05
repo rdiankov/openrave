@@ -33,7 +33,7 @@ int QtOgreViewer::main(bool bShow)
     }
 
     // TODO: Take care of bshow
-    _ogreWindow = boost::make_shared<QtOgreWindow>();
+    _ogreWindow = boost::make_shared<QtOgreWindow>([this](){_EnvironmentUpdate();});
     // _ogreWindow->show();
     _ogreWindow->showMaximized();
     QGuiApplication::instance()->exec();
@@ -48,6 +48,12 @@ void QtOgreViewer::quitmainloop()
 {
     QApplication::quit();
 }
+
+void QtOgreViewer::_EnvironmentUpdate()
+{
+
+}
+
 
 static float* FormatPoints(const float* ppoints, int numPoints, int stride, Ogre::Vector3 &min, Ogre::Vector3 &max) {
     // From my experience, graphics driver will convert vec3 to vec4 if vec3 is provided

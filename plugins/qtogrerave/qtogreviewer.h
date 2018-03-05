@@ -121,6 +121,8 @@ public:
     void _drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents);
 
 protected:
+    void _EnvironmentUpdate();
+
     GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle = 0);
     GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle = 0, bool bhasalpha=false) {}
 
