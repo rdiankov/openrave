@@ -138,23 +138,19 @@ GraphHandlePtr QtOgreViewer::plot3(const float* ppoints, int numPoints, int stri
         cv.wait(lk);
     }
 
-    return handle; // This segfaults
+    return handle;
 }
 
 GraphHandlePtr QtOgreViewer::drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
 {
-    // From my experience, graphics driver will convert vec3 to vec4 if vec3 is provided
-    // TODO: Benchmark?
-    std::vector<float> vpoints(4 * numPoints);
-    for (int64_t i = 0; i < 4 * numPoints; i += 4) {
-        vpoints[i] = ppoints[0];
-        vpoints[i + 1] = ppoints[1];
-        vpoints[i + 2] = ppoints[2];
-        vpoints[i + 3] = 1.0f;
-        ppoints = (float*)((char*)ppoints + stride);
-    }
+    Ogre::Vector3 min, max;
+    float* vpoints = FormatPoints(ppoints, numPoints, stride, min, max);
 
-    _ogreWindow->QueueRenderingUpdate([this, vpoints, numPoints, stride, fwidth, color]() {
+    std::mutex cv_m;
+    std::condition_variable cv;
+    OgreHandlePtr handle = boost::make_shared<OgreHandle>();
+
+    _ogreWindow->QueueRenderingUpdate([this, &cv_m, &cv, &handle, vpoints, numPoints, stride, fwidth, color]() {
         Ogre::RenderSystem *renderSystem = _ogreWindow->GetRoot()->getRenderSystem();
         Ogre::VaoManager *vaoManager = renderSystem->getVaoManager();
 
@@ -164,12 +160,11 @@ GraphHandlePtr QtOgreViewer::drawlinestrip(const float* ppoints, int numPoints, 
         Ogre::VertexBufferPacked* vertexBuffer = nullptr;
         try
         {
-            //Create the actual vertex buffer.
             vertexBuffer = vaoManager->createVertexBuffer(
                 vertexElements, numPoints,
                 Ogre::BT_IMMUTABLE,
-                const_cast<float*>(vpoints.data()), // const when keepAsShadow is false
-                false                               // keepAsShadow
+                vpoints,
+                true
             );
         }
         catch(Ogre::Exception &e)
@@ -197,8 +192,16 @@ GraphHandlePtr QtOgreViewer::drawlinestrip(const float* ppoints, int numPoints, 
         Ogre::SceneManager *sceneManager = node->getCreator();
         Ogre::Item *item = sceneManager->createItem(mesh);
         node->attachObject(item);
-        // *handle = OgreHandle(node); // fix later
+        handle->_node = node;
+        cv.notify_all();
     });
+
+    {
+        std::unique_lock<std::mutex> lk(cv_m);
+        cv.wait(lk);
+    }
+
+    return handle;
 }
 
 GraphHandlePtr QtOgreViewer::drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
