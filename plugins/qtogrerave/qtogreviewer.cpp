@@ -3,11 +3,15 @@
 #include <condition_variable>
 #include <limits>
 #include <mutex>
+#include <ctime>
+#include <string>
 
 #include <OGRE/OgreMeshManager2.h>
 #include <OGRE/OgreMesh2.h>
 #include <OGRE/OgreItem.h>
 #include <OGRE/OgreSubMesh2.h>
+#include <OGRE/Hlms/Pbs/OgreHlmsPbs.h>
+#include <OGRE/Hlms/Pbs/OgreHlmsPbsDatablock.h>
 
 namespace qtogrerave {
 
@@ -273,11 +277,22 @@ GraphHandlePtr QtOgreViewer::drawbox(const RaveVector<float>& vpos, const RaveVe
     OgreHandlePtr handle = boost::make_shared<OgreHandle>();
 
     _ogreWindow->QueueRenderingUpdate([this, &cv_m, &cv, &handle, &vpos, &vextents]() {
-        // TODO: Use vertex buffer?
+        Ogre::HlmsManager *hlmsManager = _ogreWindow->GetRoot()->getHlmsManager();
+        // assert(dynamic_cast<Ogre::HlmsPbs*>( hlmsManager->getHlms( Ogre::HLMS_PBS ) ) );
+        Ogre::HlmsPbs *hlmsPbs = static_cast<Ogre::HlmsPbs*>( hlmsManager->getHlms(Ogre::HLMS_PBS) );
+        const std::string datablockName = std::to_string(std::time(nullptr));
+        Ogre::HlmsPbsDatablock *datablock = static_cast<Ogre::HlmsPbsDatablock*>(
+            hlmsPbs->createDatablock(datablockName, datablockName,
+                                     Ogre::HlmsMacroblock(),
+                                     Ogre::HlmsBlendblock(),
+                                     Ogre::HlmsParamVec()));
+        datablock->setDiffuse(Ogre::Vector3(1.0f, 0.0f, 0.0f));
+
         Ogre::SceneNode* parentNode = _ogreWindow->GetMiscDrawNode();
         Ogre::SceneNode* node = parentNode->createChildSceneNode();
         Ogre::v1::Entity* cube = node->getCreator()->createEntity(Ogre::SceneManager::PT_CUBE);
-        cube->setDatablock(_ogreWindow->datablockhack);
+        // cube->setDatablock(_ogreWindow->datablockhack);
+        cube->setDatablock(datablock);
         node->attachObject(cube);
         node->setPosition(Ogre::Vector3(vpos.x, vpos.y, vpos.z));
         node->setScale(Ogre::Vector3(vextents.x, vextents.y, vextents.z)); // <--------- is this extents?
