@@ -156,7 +156,7 @@ protected:
 private:
     std::string _userdatakey; ///< the key to use for KinBody::GetUserData and KinBody::SetUserData
     boost::shared_ptr<QtOgreWindow> _ogreWindow;
-    std::map <KinBody*, Ogre::SceneNode*> _mKinbodyNode;
+    // std::map <KinBody*, Ogre::SceneNode*> _mKinbodyNode;
 };
 
 }; // namespace qtogrerave

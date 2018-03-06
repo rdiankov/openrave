@@ -11,63 +11,12 @@
 
 namespace qtogrerave {
 
-class OgreHandle : public OpenRAVE::GraphHandle {
-public:
-    OgreHandle() : _node(nullptr) {}
-    OgreHandle(Ogre::SceneNode *node) : _node(node) {}
-    virtual ~OgreHandle() {
-        if (_node) {
-            _node->getParentSceneNode()->removeAndDestroyChild(_node);
-        }
-    }
-
-    // PrivateGraphHandle(QtOgreViewerWeakPtr wviewer, OgreSwitchPtr handle) : _handle(handle), _wviewer(wviewer) {
-    //         BOOST_ASSERT(_handle != NULL);
-    //     }
-    //     virtual ~PrivateGraphHandle() {
-    //         boost::shared_ptr<QtOgreViewer> viewer = _wviewer.lock();
-    //         if(!!viewer) {
-    //             viewer->_PostToGUIThread(boost::bind(&QtOgreViewer::_CloseGraphHandle, viewer, _handle)); // _handle is copied, so it will maintain the reference
-    //         }
-    //     }
-
-    virtual void SetTransform(const OpenRAVE::RaveTransform<float>& t)
-    {
-        // boost::shared_ptr<QtOSGViewer> viewer = _wviewer.lock();
-        // if(!!viewer) {
-        //     viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_SetGraphTransform, viewer, _handle, t)); // _handle is copied, so it will maintain the reference
-        // }
-        _node->setOrientation(t.rot.x, t.rot.y, t.rot.z, t.rot.w);
-        _node->setPosition(t.trans.x, t.trans.y, t.trans.z);
-    }
-
-    virtual void SetShow(bool bShow)
-    {
-        // boost::shared_ptr<QtOSGViewer> viewer = _wviewer.lock();
-        // if(!!viewer) {
-        //     viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_SetGraphShow, viewer, _handle, bShow)); // _handle is copied, so it will maintain the reference
-        // }
-        _node->setVisible(bShow);
-    }
-// private:
-    Ogre::SceneNode *_node;
-    // QtOgreViewerWeakPtr _wviewer;
-};
-
-class Item : public boost::enable_shared_from_this<Item>, public OpenRAVE::UserData
+template <typename T>
+static void SetOgreNodeTransform(Ogre::SceneNode *node, const OpenRAVE::RaveTransform<T>& t)
 {
-    Item() : _node(nullptr) {}
-    Item(Ogre::SceneNode *node) : _node(node) {}
-    virtual ~Item() {
-        if (_node) {
-            _node->getParentSceneNode()->removeAndDestroyChild(_node);
-        }
-    }
-private:
-    Ogre::SceneNode *_node;
-};
-
-typedef boost::shared_ptr<OgreHandle> OgreHandlePtr;
+    node->setOrientation(t.rot.x, t.rot.y, t.rot.z, t.rot.w);
+    node->setPosition(t.trans.x, t.trans.y, t.trans.z);
+}
 
 }; // namespace qtogrerave
 

@@ -1,4 +1,5 @@
 #include "qtogreviewer.h"
+#include "ogrehandle.h"
 
 #include <condition_variable>
 #include <limits>
@@ -86,14 +87,14 @@ void QtOgreViewer::_EnvironmentUpdate()
     // Don't need to lock anymore?
     for (const KinBody::BodyState &bs: vecbodies) {
         KinBodyPtr pbody = bs.pbody; // try to use only as an id, don't call any methods!
-        // KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData(_userdatakey));
-        auto search = _mKinbodyNode.find(pbody.get());
-        if (search == _mKinbodyNode.end()) {
-            Ogre::SceneNode* parentNode = _ogreWindow->GetEnvNode();
-            Ogre::SceneNode* node = parentNode->createChildSceneNode();
+        OgreNodeHandlePtr pNodeHandle = boost::dynamic_pointer_cast<OgreNodeHandle>(pbody->GetUserData(_userdatakey));
+
+        if (pNodeHandle.get() != nullptr) {
+            continue; //TODO: continue for now. Update transform later
         }
-        // Ogre::MeshPtr mesh = Ogre::MeshManager::getSingleton().createManual("plot3", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
-        // Ogre::SubMesh* submesh = mesh->createSubMesh();
+
+        *pNodeHandle = OgreNodeHandle(envNode, pbody);
+        pbody->SetUserData(_userdatakey, pNodeHandle);
     }
 }
 
@@ -132,7 +133,7 @@ GraphHandlePtr QtOgreViewer::plot3(const float* ppoints, int numPoints, int stri
 
     std::mutex cv_m;
     std::condition_variable cv;
-    OgreHandlePtr handle = boost::make_shared<OgreHandle>();
+    OgreGraphHandlePtr handle = boost::make_shared<OgreGraphHandle>();
 
     _ogreWindow->QueueRenderingUpdate([this, &cv_m, &cv, &handle, vpoints, numPoints, stride, fPointSize, color, drawstyle, &min, &max]() {
         std::lock_guard<std::mutex> lk(cv_m);
@@ -201,7 +202,7 @@ GraphHandlePtr QtOgreViewer::drawlinestrip(const float* ppoints, int numPoints, 
 
     std::mutex cv_m;
     std::condition_variable cv;
-    OgreHandlePtr handle = boost::make_shared<OgreHandle>();
+    OgreGraphHandlePtr handle = boost::make_shared<OgreGraphHandle>();
 
     _ogreWindow->QueueRenderingUpdate([this, &cv_m, &cv, &handle, vpoints, numPoints, stride, fwidth, color]() {
         Ogre::RenderSystem *renderSystem = _ogreWindow->GetRoot()->getRenderSystem();
@@ -313,7 +314,7 @@ GraphHandlePtr QtOgreViewer::drawlinelist(const float* ppoints, int numPoints, i
         Ogre::SceneManager *sceneManager = node->getCreator();
         Ogre::Item *item = sceneManager->createItem(mesh);
         node->attachObject(item);
-        // *handle = OgreHandle(node); // fix later
+        // *handle = OgreGraphHandle(node); // fix later
     });
 }
 
@@ -323,7 +324,7 @@ GraphHandlePtr QtOgreViewer::drawbox(const RaveVector<float>& vpos, const RaveVe
 {
     std::mutex cv_m;
     std::condition_variable cv;
-    OgreHandlePtr handle = boost::make_shared<OgreHandle>();
+    OgreGraphHandlePtr handle = boost::make_shared<OgreGraphHandle>();
 
     _ogreWindow->QueueRenderingUpdate([this, &cv_m, &cv, &handle, &vpos, &vextents]() {
         Ogre::HlmsManager *hlmsManager = _ogreWindow->GetRoot()->getHlmsManager();
