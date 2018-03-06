@@ -47,15 +47,14 @@ public:
     virtual void render();
     virtual void initialize();
     virtual void createScene();
-#if OGRE_VERSION >= ((2 << 16) | (0 << 8) | 0)
     virtual void createCompositor();
-#endif
 
     void setAnimating(bool animating);
 
     Ogre::Root* GetRoot() { return m_ogreRoot; }
     Ogre::SceneNode* GetRootSceneNode() { return m_ogreSceneMgr->getRootSceneNode(); }
     Ogre::SceneNode* GetMiscDrawNode() { return m_miscDrawNode; }
+    Ogre::SceneNode* GetEnvNode() { return m_envNode; }
     Ogre::HlmsDatablock *datablockhack;
 
     void QueueRenderingUpdate(const boost::function<void()> &func) {
@@ -90,6 +89,7 @@ protected:
     Ogre::ColourValue m_ogreBackground;
     OgreQtBites::SdkQtCameraMan* m_cameraMan;
 
+    Ogre::SceneNode* m_envNode;
     // Node used to store all misc.Draw objects
     Ogre::SceneNode* m_miscDrawNode;
 
@@ -117,12 +117,6 @@ protected:
     FrameListener method
     */
     virtual bool frameRenderingQueued(const Ogre::FrameEvent& evt);
-
-    /*
-    Write log messages to Ogre log
-    */
-    void log(Ogre::String msg);
-    void log(QString msg);
 };
 
 #endif // QTOGREWINDOW_H

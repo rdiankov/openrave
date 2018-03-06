@@ -30,6 +30,7 @@ Upon destruction of the QWindow object we destroy the Ogre3D scene.
 */
 QtOgreWindow::~QtOgreWindow()
 {
+    _frameRenderingUpdateQueue.clear();
     if (m_cameraMan) delete m_cameraMan;
     delete m_ogreRoot;
 }
@@ -206,6 +207,7 @@ void QtOgreWindow::initialize()
 
     m_ogreRoot->addFrameListener(this);
     m_miscDrawNode = m_ogreSceneMgr->getRootSceneNode()->createChildSceneNode();
+    m_envNode = m_ogreSceneMgr->getRootSceneNode()->createChildSceneNode();
 }
 
 void QtOgreWindow::createScene()
@@ -275,7 +277,6 @@ void QtOgreWindow::createScene()
     light->setDirection( Ogre::Vector3( -1, -1, -1 ).normalisedCopy() );
 }
 
-#if OGRE_VERSION >= ((2 << 16) | (0 << 8) | 0)
 void QtOgreWindow::createCompositor()
 {
     /*
@@ -289,7 +290,6 @@ void QtOgreWindow::createCompositor()
     compMan->createBasicWorkspaceDef(workspaceName, m_ogreBackground);
     compMan->addWorkspace(m_ogreSceneMgr, m_ogreWindow, m_ogreCamera, workspaceNameHash, true);
 }
-#endif
 
 void QtOgreWindow::render()
 {
@@ -485,14 +485,3 @@ bool QtOgreWindow::frameRenderingQueued(const Ogre::FrameEvent& evt)
 
     return true;
 }
-
-void QtOgreWindow::log(Ogre::String msg)
-{
-    if(Ogre::LogManager::getSingletonPtr() != NULL) Ogre::LogManager::getSingletonPtr()->logMessage(msg);
-}
-
-void QtOgreWindow::log(QString msg)
-{
-    log(Ogre::String(msg.toStdString().c_str()));
-}
-

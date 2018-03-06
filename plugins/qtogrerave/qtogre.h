@@ -54,6 +54,19 @@ public:
     // QtOgreViewerWeakPtr _wviewer;
 };
 
+class Item : public boost::enable_shared_from_this<Item>, public OpenRAVE::UserData
+{
+    Item() : _node(nullptr) {}
+    Item(Ogre::SceneNode *node) : _node(node) {}
+    virtual ~Item() {
+        if (_node) {
+            _node->getParentSceneNode()->removeAndDestroyChild(_node);
+        }
+    }
+private:
+    Ogre::SceneNode *_node;
+};
+
 typedef boost::shared_ptr<OgreHandle> OgreHandlePtr;
 
 }; // namespace qtogrerave

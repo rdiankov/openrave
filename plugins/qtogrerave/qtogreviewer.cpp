@@ -20,6 +20,8 @@ QtOgreViewer::QtOgreViewer(EnvironmentBasePtr penv, std::istream& sinput) : View
 
     RegisterCommand("StartViewerLoop", boost::bind(&QtOgreViewer::startmainloop, this, _1, _2),
                     "starts the viewer sync loop and shows the viewer. expects someone else will call the qapplication exec fn");
+
+    _userdatakey = std::string("qtogre") + std::to_string(reinterpret_cast<uintptr_t>(this));
 }
 
 QtOgreViewer::~QtOgreViewer() {
@@ -51,7 +53,48 @@ void QtOgreViewer::quitmainloop()
 
 void QtOgreViewer::_EnvironmentUpdate()
 {
+    // boost::mutex::scoped_lock lock(_mutexUpdateModels);
+    std::vector<KinBody::BodyState> vecbodies;
 
+#if BOOST_VERSION >= 103500
+    EnvironmentMutex::scoped_try_lock lockenv(GetEnv()->GetMutex(),boost::defer_lock_t());
+#else
+    EnvironmentMutex::scoped_try_lock lockenv(GetEnv()->GetMutex(),false);
+#endif
+
+    if( /*_bLockEnvironment && */!lockenv ) {
+        uint64_t basetime = utils::GetMicroTime();
+        while(utils::GetMicroTime()-basetime<1000 ) {
+            if( lockenv.try_lock() ) {
+                // acquired the lock, so update the bodies!
+                GetEnv()->UpdatePublishedBodies();
+                break;
+            }
+        }
+    }
+
+    try {
+        GetEnv()->GetPublishedBodies(vecbodies,100000); // 0.1s
+    }
+    catch(const std::exception& ex) {
+        RAVELOG_WARN("timeout of GetPublishedBodies\n");
+        return;
+    }
+
+    Ogre::SceneNode* envNode = _ogreWindow->GetEnvNode();
+
+    // Don't need to lock anymore?
+    for (const KinBody::BodyState &bs: vecbodies) {
+        KinBodyPtr pbody = bs.pbody; // try to use only as an id, don't call any methods!
+        // KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData(_userdatakey));
+        auto search = _mKinbodyNode.find(pbody.get());
+        if (search == _mKinbodyNode.end()) {
+            Ogre::SceneNode* parentNode = _ogreWindow->GetEnvNode();
+            Ogre::SceneNode* node = parentNode->createChildSceneNode();
+        }
+        // Ogre::MeshPtr mesh = Ogre::MeshManager::getSingleton().createManual("plot3", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+        // Ogre::SubMesh* submesh = mesh->createSubMesh();
+    }
 }
 
 

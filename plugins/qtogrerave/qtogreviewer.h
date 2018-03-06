@@ -1,6 +1,9 @@
 #ifndef OPENRAVE_QTOGRE_VIEWER_H
 #define OPENRAVE_QTOGRE_VIEWER_H
 
+#include <string>
+#include <map>
+
 #include "qtogre.h"
 #include "qtogrewindow.h"
 
@@ -22,7 +25,7 @@ public:
     /// \brief notified when a body has been removed from the environment
     virtual void RemoveKinBody(KinBodyPtr pbody) {
         if( !!pbody ) {
-            pbody->RemoveUserData("qtogre");
+            pbody->RemoveUserData(_userdatakey);
         }
     }
 
@@ -151,7 +154,9 @@ protected:
     }
 
 private:
+    std::string _userdatakey; ///< the key to use for KinBody::GetUserData and KinBody::SetUserData
     boost::shared_ptr<QtOgreWindow> _ogreWindow;
+    std::map <KinBody*, Ogre::SceneNode*> _mKinbodyNode;
 };
 
 }; // namespace qtogrerave
