@@ -12,6 +12,7 @@ endif()
 message(STATUS "Build qtogrerave")
 
 set(QTOGRE_SRCS
+	ogrehandle.cpp
     qtogrerave.cpp
     qtogrewindow.cpp
     qtogreviewer.cpp)
@@ -22,7 +23,6 @@ include_directories(${OGRE_INCLUDE_DIRS} ${BOOST_INCLUDE_DIRS} ${Qt5_INCLUDE_DIR
 link_directories(${OPENRAVE_LINK_DIRS})
 
 add_library(qtogrerave SHARED ${QTOGRE_SRCS})
-message(STATUS ">>>>>>>>>>>>>>>>>>>>>>>>>>>> ${OGRE_LIBRARIES}")
 target_link_libraries (qtogrerave ${OGRE_LIBRARIES} ${BOOST_LIBRARIES} libopenrave Qt5::Core Qt5::Gui Qt5::Widgets /home/mujin/mujin/jhbuildapppickworker/install/lib/libOgreHlmsPbs.so)
 
 set_target_properties(qtogrerave PROPERTIES COMPILE_FLAGS "${QTOGRE_COMPILE_FLAGS} ${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${QTOGRE_LINK_FLAGS} ${PLUGIN_LINK_FLAGS}")

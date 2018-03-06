@@ -93,9 +93,31 @@ void QtOgreViewer::_EnvironmentUpdate()
             continue; //TODO: continue for now. Update transform later
         }
 
-        *pNodeHandle = OgreNodeHandle(envNode, pbody);
+        pNodeHandle = boost::make_shared<OgreNodeHandle>(envNode, pbody);
         pbody->SetUserData(_userdatakey, pNodeHandle);
+
+        _mKinbodyNode[pbody.get()] = pNodeHandle; // memory leak?????
     }
+
+    // TODO~~~~~~~~``
+    // FOREACH_NOINC(it, _mapbodies) {
+    //     if( !it->second->GetUserData() ) {
+    //         // item doesn't exist anymore, remove it
+    //         it->first->RemoveUserData(_userdatakey);
+
+    //         if( _pSelectedItem == it->second ) {
+    //             // TODO
+    //             //_pdragger.reset();
+    //             _pSelectedItem.reset();
+    //             //_osgViewerRoot->deselectAll();
+    //         }
+
+    //         _mapbodies.erase(it++);
+    //     }
+    //     else {
+    //         ++it;
+    //     }
+    // }
 }
 
 
