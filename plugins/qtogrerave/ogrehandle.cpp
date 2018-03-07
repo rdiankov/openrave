@@ -116,12 +116,12 @@ OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, Op
     }
 }
 
-virtual OgreNodeHandle::~OgreNodeHandle() {
+OgreNodeHandle::~OgreNodeHandle() {
     if (_rootNode) {
         // TODO: Thow about the children?
         _rootNode->getParentSceneNode()->removeAndDestroyChild(_rootNode);
     }
-    Ogre::HlmsManager *hlmsManager = root->getHlmsManager();
+    Ogre::HlmsManager *hlmsManager = _root->getHlmsManager();
     Ogre::HlmsPbs *hlmsPbs = static_cast<Ogre::HlmsPbs*>( hlmsManager->getHlms(Ogre::HLMS_PBS) );
 
     for (const Ogre::String &materialName: _materialNames) {
