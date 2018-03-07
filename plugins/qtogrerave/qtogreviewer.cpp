@@ -93,7 +93,7 @@ void QtOgreViewer::_EnvironmentUpdate()
             continue; //TODO: continue for now. Update transform later
         }
 
-        pNodeHandle = boost::make_shared<OgreNodeHandle>(envNode, pbody);
+        pNodeHandle = boost::make_shared<OgreNodeHandle>(_ogreWindow->GetRoot(), envNode, pbody);
         pbody->SetUserData(_userdatakey, pNodeHandle);
 
         _mKinbodyNode[pbody.get()] = pNodeHandle; // memory leak?????
@@ -352,7 +352,7 @@ GraphHandlePtr QtOgreViewer::drawbox(const RaveVector<float>& vpos, const RaveVe
         Ogre::HlmsManager *hlmsManager = _ogreWindow->GetRoot()->getHlmsManager();
         // assert(dynamic_cast<Ogre::HlmsPbs*>( hlmsManager->getHlms( Ogre::HLMS_PBS ) ) );
         Ogre::HlmsPbs *hlmsPbs = static_cast<Ogre::HlmsPbs*>( hlmsManager->getHlms(Ogre::HLMS_PBS) );
-        const std::string datablockName = std::to_string(std::time(nullptr));
+        const std::string datablockName = "box" + std::to_string(std::time(nullptr));
         Ogre::HlmsPbsDatablock *datablock = static_cast<Ogre::HlmsPbsDatablock*>(
             hlmsPbs->createDatablock(datablockName, datablockName,
                                      Ogre::HlmsMacroblock(),

@@ -1,14 +1,20 @@
 #include "ogrehandle.h"
 
+#include <OGRE/Hlms/Pbs/OgreHlmsPbs.h>
+#include <OGRE/Hlms/Pbs/OgreHlmsPbsDatablock.h>
+
 namespace qtogrerave {
 
-OgreNodeHandle::OgreNodeHandle(Ogre::SceneNode *parentNode, OpenRAVE::KinBodyPtr pbody)
+OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, OpenRAVE::KinBodyPtr pbody)
 {
 	_rootNode = parentNode->createChildSceneNode();
     const OpenRAVE::Transform &transfBody = pbody->GetTransform();
     SetOgreNodeTransform(_rootNode, transfBody);
 
 	const OpenRAVE::Transform invTransfBody = transfBody.inverse();
+
+    Ogre::HlmsManager *hlmsManager = root->getHlmsManager();
+    Ogre::HlmsPbs *hlmsPbs = static_cast<Ogre::HlmsPbs*>( hlmsManager->getHlms(Ogre::HLMS_PBS) );
 
 	for (const OpenRAVE::KinBody::LinkPtr &pLink: pbody->GetLinks()) {
 		Ogre::SceneNode *linkNode = _rootNode->createChildSceneNode();
@@ -18,6 +24,19 @@ OgreNodeHandle::OgreNodeHandle(Ogre::SceneNode *parentNode, OpenRAVE::KinBodyPtr
 			Ogre::SceneNode *geomNode = linkNode->createChildSceneNode();
 			SetOgreNodeTransform(geomNode, pGeom->GetTransform());
 
+            // TODO: Delete this datablock!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            Ogre::String datablockName = pbody->GetName() + pLink->GetName() + pGeom->GetName() + std::to_string(std::time(nullptr));
+            Ogre::HlmsPbsDatablock *datablock = static_cast<Ogre::HlmsPbsDatablock*>(
+                hlmsPbs->createDatablock(datablockName, datablockName,
+                                         Ogre::HlmsMacroblock(),
+                                         Ogre::HlmsBlendblock(),
+                                         Ogre::HlmsParamVec()));
+
+            const OpenRAVE::RaveVector<float>& diffuse = pGeom->GetDiffuseColor();
+            datablock->setDiffuse(Ogre::Vector3(diffuse.x, diffuse.y, diffuse.z));
+            const OpenRAVE::RaveVector<float>& ambient = pGeom->GetAmbientColor();
+            datablock->setEmissive(Ogre::Vector3(ambient.x, ambient.y, ambient.z));
+
 			// TODO: Set datablock
 			switch(pGeom->GetType()) {
             //  Geometry is defined like a Sphere
@@ -26,6 +45,7 @@ OgreNodeHandle::OgreNodeHandle(Ogre::SceneNode *parentNode, OpenRAVE::KinBodyPtr
             	// TODO: Ditch v1
                	Ogre::v1::Entity* sphere = geomNode->getCreator()->createEntity(Ogre::SceneManager::PT_SPHERE);
         		const float radius = pGeom->GetSphereRadius();
+                sphere->setDatablock(datablock);
 		        geomNode->setScale(Ogre::Vector3(radius, radius, radius));
 		        geomNode->attachObject(sphere);
                 break;
@@ -35,6 +55,7 @@ OgreNodeHandle::OgreNodeHandle(Ogre::SceneNode *parentNode, OpenRAVE::KinBodyPtr
             	// TODO: Ditch v1
                 Ogre::v1::Entity* box = geomNode->getCreator()->createEntity(Ogre::SceneManager::PT_CUBE);
                 const OpenRAVE::Vector &extents = pGeom->GetBoxExtents();
+                box->setDatablock(datablock);
 		        geomNode->setScale(Ogre::Vector3(extents.x, extents.y, extents.z)); // <--------- is this extents?
 		        geomNode->attachObject(box);
                 break;

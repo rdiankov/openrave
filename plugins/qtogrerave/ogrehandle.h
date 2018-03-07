@@ -8,7 +8,7 @@ namespace qtogrerave {
 class OgreNodeHandle : public boost::enable_shared_from_this<OgreNodeHandle>, public OpenRAVE::UserData
 {
 public:
-    OgreNodeHandle(Ogre::SceneNode *parentNode, OpenRAVE::KinBodyPtr pbody);
+    OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, OpenRAVE::KinBodyPtr pbody);
     virtual ~OgreNodeHandle() {
         if (_rootNode) {
         	// TODO: Thow about the children?
