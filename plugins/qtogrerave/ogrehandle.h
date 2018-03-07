@@ -2,6 +2,7 @@
 #define OPENRAVE_OGRENODEHANDLE_H_
 
 #include "qtogre.h"
+#include <vector>
 
 namespace qtogrerave {
 
@@ -9,15 +10,11 @@ class OgreNodeHandle : public boost::enable_shared_from_this<OgreNodeHandle>, pu
 {
 public:
     OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, OpenRAVE::KinBodyPtr pbody);
-    virtual ~OgreNodeHandle() {
-        if (_rootNode) {
-        	// TODO: Thow about the children?
-            _rootNode->getParentSceneNode()->removeAndDestroyChild(_rootNode);
-        }
-    }
+    virtual ~OgreNodeHandle();
 private:
-    // Ogre::SceneNode *_parentNode;
+    Ogre::Root *_root;
     Ogre::SceneNode *_rootNode;
+    std::vector<Ogre::String> _materialNames;
 };
 
 class OgreGraphHandle : public OpenRAVE::GraphHandle {
