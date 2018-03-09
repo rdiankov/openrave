@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "openraveplugindefs.h"
-
+// #define LINEAR_SMOOTHER_DEBUG // uncomment to save trajectories at each planning stage
 class ShortcutLinearPlanner : public PlannerBase
 {
 public:
@@ -261,12 +261,13 @@ protected:
         PlannerParametersConstPtr parameters = GetParameters();
         vector<dReal> q0(parameters->GetDOF()), q1(parameters->GetDOF()), dq(parameters->GetDOF()), qcur(parameters->GetDOF()), dq2;
         vector<dReal> vtrajdata;
+	vector<dReal> _qcurprev;
         ptraj->GetWaypoints(0,ptraj->GetNumWaypoints(),vtrajdata,parameters->_configurationspecification);
 
         std::copy(vtrajdata.begin(),vtrajdata.begin()+parameters->GetDOF(),q0.begin());
         listpath.push_back(make_pair(q0,dReal(0)));
         qcur = q0;
-
+	
         for(size_t ipoint = 1; ipoint < ptraj->GetNumWaypoints(); ++ipoint) {
             std::copy(vtrajdata.begin()+(ipoint)*parameters->GetDOF(),vtrajdata.begin()+(ipoint+1)*parameters->GetDOF(),q1.begin());
             dq = q1;            
@@ -292,16 +293,41 @@ protected:
             int mult = 1;
             for (int f = 1; f < numSteps; f++) {
                 bool bsuccess = false;
+		_qcurprev = qcur;
+		bool bchanged = false;
                 if( mult > 1 ) {
                     dq2 = dq;
                     FOREACHC(it, dq2) {
                         *it *= mult;
                     }
                     bsuccess = parameters->_neighstatefn(qcur,dq2,NSO_OnlyHardConstraints);
+		    for(int itestdof = 0; itestdof < (int)qcur.size(); ++itestdof) {
+			if( RaveFabs(_qcurprev[itestdof] + dq2[itestdof] - qcur[itestdof]) > 0.001 ) {
+			    bchanged = true;
+			    break;
+			}
+		    }
                 }
                 else {
+		    // Make sure the robot is set at the current DOF values before calling neighstatefn
+		    parameters->SetStateValues(qcur, 0);
                     bsuccess = parameters->_neighstatefn(qcur,dq,NSO_OnlyHardConstraints);
+		    for(int itestdof = 0; itestdof < (int)qcur.size(); ++itestdof) {
+			if( RaveFabs(_qcurprev[itestdof] + dq[itestdof] - qcur[itestdof]) > 0.001 ) {
+			    bchanged = true;
+			    break;
+			}
+		    }
+				     
                 }
+
+		if( bchanged ) {
+		    qcur = _qcurprev;
+		    bsuccess = false;
+		    RAVELOG_WARN_FORMAT("env=%d, neighstatef returned different configuration than qcur, stop subsampling segment (%d, %d), numwaypoints=%d", GetEnv()->GetId()%(ipoint-1)%ipoint%ptraj->GetNumWaypoints());
+		    break;
+		}
+		
                 if( !bsuccess ) {
                     RAVELOG_DEBUG_FORMAT("env=%d, neighstatefn failed mult=%d, perhaps non-linear constraints are used?", GetEnv()->GetId()%mult);
                     mult++;
