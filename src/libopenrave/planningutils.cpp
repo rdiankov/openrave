@@ -2976,12 +2976,12 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 	    
 	    // We need to check only configurations in between _vtempconfig2 and _vtempconfig
 	    if( maxnumsteps > 1 ) {
-		dReal isteps = (1.0f)/steps;
+		dReal imaxnumsteps = (1.0f)/maxnumsteps;
 		for( std::vector<dReal>::iterator itdiff = _vdiffconfig.begin(); itdiff != _vdiffconfig.end(); ++itdiff ) {
-		    *itdiff *= isteps;
+		    *itdiff *= imaxnumsteps;
 		}
 		for( std::vector<dReal>::iterator itveldiff = _vdiffvelconfig.begin(); itveldiff != _vdiffvelconfig.end(); ++itveldiff ) {
-		    *itveldiff *= isteps;
+		    *itveldiff *= imaxnumsteps;
 		}
 		for( int s = 1; s < maxnumsteps; s++ ) {
 		    for( int idof = 0; idof < params->GetDOF(); ++idof ) {
@@ -2999,14 +2999,14 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 		    }
 		    if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
 			filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vstepconfig.begin(), _vstepconfig.end());
-			filterreturn->_configurationtimes.push_back((s * isteps)*fisteps);
+			filterreturn->_configurationtimes.push_back((s * imaxnumsteps)*fisteps);
 		    }
 		    if( ret != 0 ) {
 			if( !!filterreturn ) {
 			    filterreturn->_returncode = ret;
 			    filterreturn->_invalidvalues = _vstepconfig;
 			    filterreturn->_invalidvelocities = _vtempvelconfig;
-			    filterreturn->_fTimeWhenInvalid = (s * isteps)*fisteps;
+			    filterreturn->_fTimeWhenInvalid = (s * imaxnumsteps)*fisteps;
 			}
 			return ret;
 		    }
@@ -3051,6 +3051,13 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             }
 
 	    _vtempconfig2 = _vtempconfig; // keep record of the original _vtempconfig before being modified by _neighstatefn
+	    // Make sure that the state is set before calling _neighstatefn
+	    if( params->SetStateValues(_vtempconfig, 0) != 0 ) {
+                if( !!filterreturn ) {
+                    filterreturn->_returncode = CFO_StateSettingError;
+                }
+                return CFO_StateSettingError;
+            }
             if( !params->_neighstatefn(_vtempconfig, _vprevtempconfig, NSO_OnlyHardConstraints) ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
@@ -3078,12 +3085,12 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 		}
 	    }
 	    _vdiffvelconfig = _vtempveldelta;
-	    dReal isteps = (1.0f)/steps;
+	    dReal imaxnumsteps = (1.0f)/maxnumsteps;
 	    for( std::vector<dReal>::iterator itdiff = _vdiffconfig.begin(); itdiff != _vdiffconfig.end(); ++itdiff ) {
-		*itdiff *= isteps;
+		*itdiff *= imaxnumsteps;
 	    }
 	    for( std::vector<dReal>::iterator itveldiff = _vdiffvelconfig.begin(); itveldiff != _vdiffvelconfig.end(); ++itveldiff ) {
-		*itveldiff *= isteps;
+		*itveldiff *= imaxnumsteps;
 	    }
 	    
 	    if( maxnumsteps > 1 ) {
@@ -3105,14 +3112,14 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 		    }
 		    if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
 			filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vstepconfig.begin(), _vstepconfig.end());
-			filterreturn->_configurationtimes.push_back((s * isteps)*fisteps);
+			filterreturn->_configurationtimes.push_back((s * imaxnumsteps)*fisteps);
 		    }
 		    if( ret != 0 ) {
 			if( !!filterreturn ) {
 			    filterreturn->_returncode = ret;
 			    filterreturn->_invalidvalues = _vstepconfig;
 			    filterreturn->_invalidvelocities = _vtempvelconfig;
-			    filterreturn->_fTimeWhenInvalid = (s * isteps)*fisteps;
+			    filterreturn->_fTimeWhenInvalid = (f + (s * imaxnumsteps))*fisteps;
 			}
 			return ret;
 		    }
