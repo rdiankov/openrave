@@ -3070,10 +3070,10 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 	    for( int idof = 0; idof < params->GetDOF(); idof++, itres++ ) {
 		_vdiffconfig[idof] = _vtempconfig[idof] - _vtempconfig2[idof];
 		if( *itres != 0 ) {
-		    steps = (int)(RaveFabs(_vdiffconfig[idof] - _vtempconfig2[idof]) / *itres + 0.99);
+		    steps = (int)(RaveFabs(_vdiffconfig[idof]) / *itres + 0.99);
 		}
 		else {
-		    steps = (int)(RaveFabs(_vdiffconfig[idof] - _vtempconfig2[idof]) * 100);
+		    steps = (int)(RaveFabs(_vdiffconfig[idof]) * 100);
 		}
 		if( steps > maxnumsteps ) {
 		    maxnumsteps = steps;
