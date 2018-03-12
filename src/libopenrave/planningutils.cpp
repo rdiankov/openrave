@@ -2936,6 +2936,9 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             return CFO_StateSettingError;
         }
 
+	_vdiffconfig.resize(dQ.size());
+	_vstepconfig.resize(dQ.size());
+	_vtempconfig2 = _vtempconfig; // keep record of _vtempconfig before being modified in _neighstatefn
         if( start > 0 ) {
             // just in case, have to set the current values to _vtempconfig since neightstatefn expects the state to be set.
             if( params->SetStateValues(_vtempconfig, 0) != 0 ) {
@@ -2950,9 +2953,67 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
                 return CFO_StateSettingError;
             }
-            for(size_t i = 0; i < _vtempveldelta.size(); ++i) {
-                _vtempvelconfig.at(i) += _vtempveldelta[i];
-            }
+	    // When non-linear constraints are enforced, _neighstatefn can return a configuration
+	    // out of the original straight line segment (which connects q0 and q1). We then also
+	    // need to check collision along the new straight line segment that connects new
+	    // _vtempconfig and previous _vtempconfig (before calling _neighstatefn) if the two are
+	    // far apart.
+	    int maxnumsteps = 0, steps;
+	    itres = vConfigResolution.begin();
+	    for( int idof = 0; idof < params->GetDOF(); idof++, itres++ ) {
+		_vdiffconfig[idof] = _vtempconfig[idof] - _vtempconfig2[idof];
+		if( *itres != 0 ) {
+		    steps = (int)(RaveFabs(_vdiffconfig[idof]) / *itres + 0.99);
+		}
+		else {
+		    steps = (int)(RaveFabs(_vdiffconfig[idof]) * 100);
+		}
+		if( steps > maxnumsteps ) {
+		    maxnumsteps = steps;
+		}
+	    }
+	    _vdiffvelconfig = _vtempveldelta;
+	    
+	    // We need to check only configurations in between _vtempconfig2 and _vtempconfig
+	    if( maxnumsteps > 1 ) {
+		dReal isteps = (1.0f)/steps;
+		for( std::vector<dReal>::iterator itdiff = _vdiffconfig.begin(); itdiff != _vdiffconfig.end(); ++itdiff ) {
+		    *itdiff *= isteps;
+		}
+		// if( _vdiffvelconfig.size() > 0 ) {
+		for( std::vector<dReal>::iterator itveldiff = _vdiffvelconfig.begin(); itveldiff != _vdiffvelconfig.end(); ++itveldiff ) {
+		    *itveldiff *= isteps;
+		}
+		// }
+		for( int s = 1; s < maxnumsteps; s++ ) {
+		    for( int idof = 0; idof < params->GetDOF(); ++idof ) {
+			_vstepconfig[idof] = _vtempconfig2[idof] + s*_vdiffconfig[idof];
+		    }
+		    for( size_t idof = 0; idof < _vtempvelconfig.size(); ++idof ) {
+			_vtempvelconfig.at(idof) += _vdiffvelconfig.at(idof);
+		    }
+		    if( s == (maxnumsteps - 1) ) {
+			break;
+		    }
+		    int ret = _SetAndCheckState(params, _vstepconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
+		    if( !!params->_getstatefn ) {
+			params->_getstatefn(_vstepconfig); // query again in order to get normalizations/joint limits
+		    }
+		    if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+			filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vstepconfig.begin(), _vstepconfig.end());
+			filterreturn->_configurationtimes.push_back((s * isteps)*fisteps);
+		    }
+		    if( ret != 0 ) {
+			if( !!filterreturn ) {
+			    filterreturn->_returncode = ret;
+			    filterreturn->_invalidvalues = _vstepconfig;
+			    filterreturn->_invalidvelocities = _vtempvelconfig;
+			    filterreturn->_fTimeWhenInvalid = (s * isteps)*fisteps;
+			}
+			return ret;
+		    }
+		} // end checking configurations between _vtempconfig2 (the previous _vtempconfig) and _vtempconfig (the new one)
+	    }
         }
 
         _vprevtempconfig.resize(dQ.size());
@@ -2991,16 +3052,75 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 _vprevtempconfig[idof] *= fnewscale;
             }
 
+	    _vtempconfig2 = _vtempconfig; // keep record of the original _vtempconfig before being modified by _neighstatefn
             if( !params->_neighstatefn(_vtempconfig, _vprevtempconfig, NSO_OnlyHardConstraints) ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
                 }
                 return CFO_StateSettingError;
             }
-            for(size_t i = 0; i < _vtempveldelta.size(); ++i) {
-                _vtempvelconfig.at(i) += _vtempveldelta[i];
-            }
-        }
+
+	    // When non-linear constraints are enforced, _neighstatefn can return a configuration
+	    // out of the original straight line segment (which connects q0 and q1). We then also
+	    // need to check collision along the new straight line segment that connects new
+	    // _vtempconfig and previous _vtempconfig (before calling _neighstatefn) if the two are
+	    // far apart.
+	    int maxnumsteps = 0, steps;
+	    itres = vConfigResolution.begin();
+	    for( int idof = 0; idof < params->GetDOF(); idof++, itres++ ) {
+		_vdiffconfig[idof] = _vtempconfig[idof] - _vtempconfig2[idof];
+		if( *itres != 0 ) {
+		    steps = (int)(RaveFabs(_vdiffconfig[idof] - _vtempconfig2[idof]) / *itres + 0.99);
+		}
+		else {
+		    steps = (int)(RaveFabs(_vdiffconfig[idof] - _vtempconfig2[idof]) * 100);
+		}
+		if( steps > maxnumsteps ) {
+		    maxnumsteps = steps;
+		}
+	    }
+	    _vdiffvelconfig = _vtempveldelta;
+	    dReal isteps = (1.0f)/steps;
+	    for( std::vector<dReal>::iterator itdiff = _vdiffconfig.begin(); itdiff != _vdiffconfig.end(); ++itdiff ) {
+		*itdiff *= isteps;
+	    }
+	    for( std::vector<dReal>::iterator itveldiff = _vdiffvelconfig.begin(); itveldiff != _vdiffvelconfig.end(); ++itveldiff ) {
+		*itveldiff *= isteps;
+	    }
+	    
+	    if( maxnumsteps > 1 ) {
+		// Need collision checking here but only check from the second configuration to the
+		// second-to-last configuration.
+		for( int s = 1; s < maxnumsteps; s++ ) {
+		    for( int idof = 0; idof < params->GetDOF(); idof++ ) {
+			_vstepconfig[idof] = _vtempconfig2[idof] + s*_vdiffconfig[idof];
+		    }
+		    for( size_t idof = 0; idof < _vtempvelconfig.size(); ++idof ) {
+			_vtempvelconfig.at(idof) += _vdiffvelconfig.at(idof);
+		    }
+		    if( s == (maxnumsteps - 1) ) {
+			break;
+		    }
+		    int ret = _SetAndCheckState(params, _vstepconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
+		    if( !!params->_getstatefn ) {
+			params->_getstatefn(_vstepconfig); // query again in order to get normalizations/joint limits
+		    }
+		    if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+			filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vstepconfig.begin(), _vstepconfig.end());
+			filterreturn->_configurationtimes.push_back((s * isteps)*fisteps);
+		    }
+		    if( ret != 0 ) {
+			if( !!filterreturn ) {
+			    filterreturn->_returncode = ret;
+			    filterreturn->_invalidvalues = _vstepconfig;
+			    filterreturn->_invalidvelocities = _vtempvelconfig;
+			    filterreturn->_fTimeWhenInvalid = (s * isteps)*fisteps;
+			}
+			return ret;
+		    }
+		}
+	    }
+	}
 
         // check if _vtempconfig is close to q1!
         {
