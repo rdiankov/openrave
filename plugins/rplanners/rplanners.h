@@ -358,16 +358,14 @@ public:
                 return ET_Failed;
             }
 
-	    // ConstraintFilterReturnPtr pfilter(new ConstraintFilterReturn());
+	    ConstraintFilterReturnPtr pfilter(new ConstraintFilterReturn());
             if( _fromgoal ) {
-		if( params->CheckPathAllConstraints(_vNewConfig, _vCurConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenEnd) != 0 ) {
-                // if( params->CheckPathAllConstraints(_vNewConfig, _vCurConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenEnd, 0xffff|CFO_FillCheckedConfiguration, pfilter) != 0 ) {
+                if( params->CheckPathAllConstraints(_vNewConfig, _vCurConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenEnd, 0xffff|CFO_FillCheckedConfiguration, pfilter) != 0 ) {
                     return bHasAdded ? ET_Sucess : ET_Failed;
                 }
             }
             else {
-		if( params->CheckPathAllConstraints(_vCurConfig, _vNewConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) != 0 ) {
-                // if( params->CheckPathAllConstraints(_vCurConfig, _vNewConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, 0xffff|CFO_FillCheckedConfiguration, pfilter) != 0 ) {
+                if( params->CheckPathAllConstraints(_vCurConfig, _vNewConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, 0xffff|CFO_FillCheckedConfiguration, pfilter) != 0 ) {
                     return bHasAdded ? ET_Sucess : ET_Failed;
                 }
             }
@@ -393,36 +391,27 @@ public:
 //            }
 
 	    // dReal currentDistance =  _ComputeDistance(&_vCurConfig[0], _vNewConfig);
-	    // RAVELOG_DEBUG_FORMAT("got %d configurations", pfilter->_configurations.size()/_dof);
+	    // RAVELOG_DEBUG_FORMAT("got %d configurations", ((int)pfilter->_configurations.size()/_dof));
 
-            NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0); ///< set userdata to 0
-            if( !!pnewnode ) {
-                pnode = pnewnode;
-                lastnode = pnode;
-                bHasAdded = true;
-                if( bOneStep ) {
-                    return ET_Connected; // is it ok to return ET_Connected rather than ET_Sucess. BasicRRT relies on ET_Connected
-                }
-            }	    
-	    // // Since the path checked by CheckPathAllConstraints can be different from a straight line segment connecting _vNewConfig and _vCurConfig, we add all checked configurations along the checked segment to the tree.
-	    // NodePtr pnewnode = NULL;
-	    // for(int iconfig = 0; iconfig+_dof-1 < pfilter->_configurations.size(); iconfig += _dof) {
-	    // 	_vNewConfig = std::vector<dReal>(pfilter->_configurations.begin() + iconfig, pfilter->_configurations.begin() + iconfig + _dof);
-	    // 	dReal currentDistance =  _ComputeDistance(&_vCurConfig[0], _vNewConfig);
-	    // 	pnewnode = _InsertNode(pnode, _vNewConfig, 0); ///< set userdata to 0
-	    // 	if( !!pnewnode ) {
-	    // 	    bHasAdded = true;
-	    // 	    pnode = pnewnode;
-	    // 	    lastnode = pnode;
-	    // 	}
-	    // 	else {
-	    // 	    break;
-	    // 	}
-	    // }
+	    // Since the path checked by CheckPathAllConstraints can be different from a straight line segment connecting _vNewConfig and _vCurConfig, we add all checked configurations along the checked segment to the tree.
+	    NodePtr pnewnode = NULL;
+	    for(int iconfig = 0; iconfig+_dof-1 < pfilter->_configurations.size(); iconfig += _dof) {
+		_vNewConfig = std::vector<dReal>(pfilter->_configurations.begin() + iconfig, pfilter->_configurations.begin() + iconfig + _dof);
+		dReal currentDistance =  _ComputeDistance(&_vCurConfig[0], _vNewConfig);
+		pnewnode = _InsertNode(pnode, _vNewConfig, 0); ///< set userdata to 0
+		if( !!pnewnode ) {
+		    bHasAdded = true;
+		    pnode = pnewnode;
+		    lastnode = pnode;
+		}
+		else {
+		    break;
+		}
+	    }
 
-	    // if( bHasAdded && bOneStep ) {
-	    // 	return ET_Connected; // is it ok to return ET_Connected rather than ET_Sucess. BasicRRT relies on ET_Connected
-	    // }
+	    if( bHasAdded && bOneStep ) {
+		return ET_Connected; // is it ok to return ET_Connected rather than ET_Sucess. BasicRRT relies on ET_Connected
+	    }
             _vCurConfig.swap(_vNewConfig);
         }
 
