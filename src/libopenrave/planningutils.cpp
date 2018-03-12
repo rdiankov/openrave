@@ -2980,11 +2980,9 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 		for( std::vector<dReal>::iterator itdiff = _vdiffconfig.begin(); itdiff != _vdiffconfig.end(); ++itdiff ) {
 		    *itdiff *= isteps;
 		}
-		// if( _vdiffvelconfig.size() > 0 ) {
 		for( std::vector<dReal>::iterator itveldiff = _vdiffvelconfig.begin(); itveldiff != _vdiffvelconfig.end(); ++itveldiff ) {
 		    *itveldiff *= isteps;
 		}
-		// }
 		for( int s = 1; s < maxnumsteps; s++ ) {
 		    for( int idof = 0; idof < params->GetDOF(); ++idof ) {
 			_vstepconfig[idof] = _vtempconfig2[idof] + s*_vdiffconfig[idof];

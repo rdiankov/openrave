@@ -294,7 +294,7 @@ protected:
             for (int f = 1; f < numSteps; f++) {
                 bool bsuccess = false;
 		_qcurprev = qcur;
-		bool bchanged = false;
+		bool bchanged = false; // indicates if the config got from _neighstatefn is close to what we expect
                 if( mult > 1 ) {
                     dq2 = dq;
                     FOREACHC(it, dq2) {
@@ -314,6 +314,7 @@ protected:
                     bsuccess = parameters->_neighstatefn(qcur,dq,NSO_OnlyHardConstraints);
 		    for(int itestdof = 0; itestdof < (int)qcur.size(); ++itestdof) {
 			if( RaveFabs(_qcurprev[itestdof] + dq[itestdof] - qcur[itestdof]) > 0.001 ) {
+			    // qcur got from _neighstatefn deviates from the straight line
 			    bchanged = true;
 			    break;
 			}
@@ -324,7 +325,7 @@ protected:
 		if( bchanged ) {
 		    qcur = _qcurprev;
 		    bsuccess = false;
-		    RAVELOG_WARN_FORMAT("env=%d, neighstatef returned different configuration than qcur, stop subsampling segment (%d, %d), numwaypoints=%d", GetEnv()->GetId()%(ipoint-1)%ipoint%ptraj->GetNumWaypoints());
+		    RAVELOG_WARN_FORMAT("env=%d, neighstatefn returned different configuration than qcur, stop subsampling segment (%d, %d), numwaypoints=%d", GetEnv()->GetId()%(ipoint-1)%ipoint%ptraj->GetNumWaypoints());
 		    break;
 		}
 		
