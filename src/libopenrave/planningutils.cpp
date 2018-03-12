@@ -2953,11 +2953,13 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
                 return CFO_StateSettingError;
             }
-	    // When non-linear constraints are enforced, _neighstatefn can return a configuration
-	    // out of the original straight line segment (which connects q0 and q1). We then also
-	    // need to check collision along the new straight line segment that connects new
-	    // _vtempconfig and previous _vtempconfig (before calling _neighstatefn) if the two are
-	    // far apart.
+	    // When non-linear constraints are enforced, _neighstatefn(q, qdelta) can return a
+	    // configuration qnew far from both q and q + qdelta. When qnew is further from q than
+	    // the specified stepsize. We ensure that at least the segment (q, qnew) is
+	    // collision-free.
+	    //
+	    // Although being collision-free, the configurations along the segment (q, qnew) may not
+	    // satisfy other constraints. Therefore, we do *not* add then to filterreturn.
 	    int maxnumsteps = 0, steps;
 	    itres = vConfigResolution.begin();
 	    for( int idof = 0; idof < params->GetDOF(); idof++, itres++ ) {
@@ -2997,10 +2999,10 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 		    if( !!params->_getstatefn ) {
 			params->_getstatefn(_vstepconfig); // query again in order to get normalizations/joint limits
 		    }
-		    if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
-			filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vstepconfig.begin(), _vstepconfig.end());
-			filterreturn->_configurationtimes.push_back((s * imaxnumsteps)*fisteps);
-		    }
+		    // if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+		    // 	filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vstepconfig.begin(), _vstepconfig.end());
+		    // 	filterreturn->_configurationtimes.push_back((s * imaxnumsteps)*fisteps);
+		    // }
 		    if( ret != 0 ) {
 			if( !!filterreturn ) {
 			    filterreturn->_returncode = ret;
@@ -3065,11 +3067,13 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 return CFO_StateSettingError;
             }
 
-	    // When non-linear constraints are enforced, _neighstatefn can return a configuration
-	    // out of the original straight line segment (which connects q0 and q1). We then also
-	    // need to check collision along the new straight line segment that connects new
-	    // _vtempconfig and previous _vtempconfig (before calling _neighstatefn) if the two are
-	    // far apart.
+	    // When non-linear constraints are enforced, _neighstatefn(q, qdelta) can return a
+	    // configuration qnew far from both q and q + qdelta. When qnew is further from q than
+	    // the specified stepsize. We ensure that at least the segment (q, qnew) is
+	    // collision-free.
+	    //
+	    // Although being collision-free, the configurations along the segment (q, qnew) may not
+	    // satisfy other constraints. Therefore, we do *not* add then to filterreturn.
 	    int maxnumsteps = 0, steps;
 	    itres = vConfigResolution.begin();
 	    for( int idof = 0; idof < params->GetDOF(); idof++, itres++ ) {
@@ -3110,10 +3114,10 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 		    if( !!params->_getstatefn ) {
 			params->_getstatefn(_vstepconfig); // query again in order to get normalizations/joint limits
 		    }
-		    if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
-			filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vstepconfig.begin(), _vstepconfig.end());
-			filterreturn->_configurationtimes.push_back((s * imaxnumsteps)*fisteps);
-		    }
+		    // if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+		    // 	filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vstepconfig.begin(), _vstepconfig.end());
+		    // 	filterreturn->_configurationtimes.push_back((s * imaxnumsteps)*fisteps);
+		    // }
 		    if( ret != 0 ) {
 			if( !!filterreturn ) {
 			    filterreturn->_returncode = ret;
