@@ -638,7 +638,7 @@ int _CallNeighStateFns(const std::vector< std::pair<PlannerBase::PlannerParamete
         std::vector<dReal> vtemp0, vtemp1; vtemp0.reserve(nMaxDOFForGroup); vtemp1.reserve(nMaxDOFForGroup);
         std::vector<dReal>::const_iterator itdelta = vdelta.begin();
         std::vector<dReal>::iterator itdest = v.begin();
-        int ret = NSS_Reached;
+        int ret = NSS_Failed;
         FOREACHC(itfn, vfunctions) {
             vtemp0.resize(itfn->second);
             std::copy(itdest,itdest+itfn->second,vtemp0.begin());
