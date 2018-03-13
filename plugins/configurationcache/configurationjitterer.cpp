@@ -45,7 +45,7 @@ public:
     inline dReal ComputeCosAngle(const Transform& tmanip) const {
         return tmanip.rotate(vManipDir).dot3(vGlobalDir);
     }
-    
+
     Vector vManipDir; ///< direction on the manipulator
     Vector vGlobalDir; ///< direction in world coordinates
     dReal fCosAngleThresh; ///< the cos angle threshold
@@ -482,7 +482,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                         *it = *itperturbation;
                     }
                     vnewdof = _curdof;
-                    if( !_neighstatefn(vnewdof,_deltadof,0) ) {
+                    if( _neighstatefn(vnewdof,_deltadof,0) == NSS_Failed ) {
                         _probot->SetActiveDOFValues(_curdof);
                         //                    if( setret != 0 ) {
                         //                        // state failed to set, this could mean the initial state is just really bad, so resume jittering
@@ -750,7 +750,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( bConstraint ) {
                     _newdof2 = vnewdof;
                     _probot->SetActiveDOFValues(_newdof2);
-                    if( !_neighstatefn(_newdof2,_deltadof2,0) ) {
+                    if( _neighstatefn(_newdof2,_deltadof2,0) == NSS_Failed ) {
                         if( *itperturbation != 0 ) {
                             RAVELOG_DEBUG(str(boost::format("constraint function failed, pert=%e\n")%*itperturbation));
                         }
@@ -1034,7 +1034,7 @@ protected:
     std::vector<Transform> _vOriginalTransforms, _vOriginalInvTransforms; ///< indexed according to _vLinks
     CollisionReportPtr _report;
 
-    boost::function<bool (std::vector<dReal>&,const std::vector<dReal>&, int)> _neighstatefn; ///< if initialized, then use this function to get nearest neighbor
+    boost::function<int (std::vector<dReal>&,const std::vector<dReal>&, int)> _neighstatefn; ///< if initialized, then use this function to get nearest neighbor
     ///< Advantage of using neightstatefn is that user constraints can be met like maintaining a certain orientation of the gripper.
 
     UserDataPtr _limitscallback, _grabbedcallback; ///< limits,grabbed change handles

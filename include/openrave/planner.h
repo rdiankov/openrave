@@ -74,6 +74,14 @@ enum NeighborStateOptions
     NSO_OnlyHardConstraints=2, ///< if set, then the new neighbor should be as close as possible to q+qdelta, otherwise can prioritize other constraints and only use q+qdelta as a hint. This is used in smoothers when the path is already determined and user just wants to verify that hard constraints are met only; do not modify q+qdelta unless hard constraints fail.
 };
 
+/// \brief the status of _neighstatefn method. The first bit indicates if _neighstatefn call is successful. The second bit indicates, in case the call is successful, if the returned state is obtained from linear interpolation.
+enum NeighborStateStatus
+{
+    NSS_Failed = 0, ///< _neighstatefn failed. The state Filter(q + qdelta) cannot be computed.
+    NSS_Reached = 1, ///< _neighstatefn successful and the returned state is q + qdelta, i.e. linearly interpolated from q.
+    NSS_SuccessfulWithDeviation = 3, ///< _neighstatefn successful but due to constraints, the returned state differs from q + qdelta.
+};
+
 /// \brief Return values for the constraint validation function.
 class OPENRAVE_API ConstraintFilterReturn
 {
@@ -335,15 +343,17 @@ private:
 
         /** \brief Adds a delta state to a curent state, acting like a next-nearest-neighbor function along a given direction.
 
-            success = _neighstatefn(q,qdelta,fromgoal) -> q = Filter(q+qdelta)
-            \param q the current state. In order to save computation, assumes this state is the currently set configuration.
-            \param qdelta the delta to add
-            \param options a set of flags from NeighborStateOptions
+	    status = _neighstatefn(q, qdelta, option) -> q = Filter(q + qdelta)
 
+	    \param q the current state. In order to save computation, assumes this state is the currently set configuration.
+	    \param qdelta the incremental configuration to be added to q
+	    \param options a set of flags from NeighborStateOptions
+	    \return one of NSS_X (NeighborStateStatus)
+	    
             In RRTs this is used for the extension operation. The new state is stored in the first parameter q.
             Note that the function can also add a filter to the final destination (like projecting onto a constraint manifold).
          */
-        typedef boost::function<bool (std::vector<dReal>&,const std::vector<dReal>&, int)> NeighStateFn;
+        typedef boost::function<int (std::vector<dReal>&,const std::vector<dReal>&, int)> NeighStateFn;
         NeighStateFn _neighstatefn;
 
         /// to specify multiple initial or goal configurations, put them into the vector in series

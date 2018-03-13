@@ -55,28 +55,31 @@ void SubtractStates(std::vector<dReal>& q1, const std::vector<dReal>& q2)
     }
 }
 
-bool AddStates(std::vector<dReal>& q, const std::vector<dReal>& qdelta, int fromgoal)
+int AddStates(std::vector<dReal>& q, const std::vector<dReal>& qdelta, int fromgoal)
 {
     BOOST_ASSERT(q.size()==qdelta.size());
     for(size_t i = 0; i < q.size(); ++i) {
         q[i] += qdelta[i];
     }
-    return true;
+    return NSS_Reached;
 }
 
-bool AddStatesWithLimitCheck(std::vector<dReal>& q, const std::vector<dReal>& qdelta, int fromgoal, const std::vector<dReal>& vLowerLimits, const std::vector<dReal>& vUpperLimits)
+int AddStatesWithLimitCheck(std::vector<dReal>& q, const std::vector<dReal>& qdelta, int fromgoal, const std::vector<dReal>& vLowerLimits, const std::vector<dReal>& vUpperLimits)
 {
     BOOST_ASSERT(q.size()==qdelta.size());
+    int status = NSS_Reached;
     for(size_t i = 0; i < q.size(); ++i) {
         q[i] += qdelta[i];
         if( q[i] > vUpperLimits.at(i) ) {
             q[i] = vUpperLimits.at(i);
+            status |= 0x2;
         }
         else if( q[i] < vLowerLimits.at(i) ) {
             q[i] = vLowerLimits.at(i);
+            status |= 0x2;
         }
     }
-    return true;
+    return status;
 }
 
 PlannerBase::PlannerParameters::StateSaver::StateSaver(PlannerParametersPtr params) : _params(params)
@@ -624,7 +627,7 @@ void CallGetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters
     }
 }
 
-bool _CallNeighStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::NeighStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v, const std::vector<dReal>& vdelta, int fromgoal)
+int _CallNeighStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::NeighStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v, const std::vector<dReal>& vdelta, int fromgoal)
 {
     if( vfunctions.size() == 1 ) {
         return vfunctions.at(0).first(v,vdelta,fromgoal);
@@ -635,19 +638,22 @@ bool _CallNeighStateFns(const std::vector< std::pair<PlannerBase::PlannerParamet
         std::vector<dReal> vtemp0, vtemp1; vtemp0.reserve(nMaxDOFForGroup); vtemp1.reserve(nMaxDOFForGroup);
         std::vector<dReal>::const_iterator itdelta = vdelta.begin();
         std::vector<dReal>::iterator itdest = v.begin();
+        int ret = NSS_Reached;
         FOREACHC(itfn, vfunctions) {
             vtemp0.resize(itfn->second);
             std::copy(itdest,itdest+itfn->second,vtemp0.begin());
             vtemp1.resize(itfn->second);
             std::copy(itdelta,itdelta+itfn->second,vtemp1.begin());
-            if( !itfn->first(vtemp0,vtemp1,fromgoal) ) {
-                return false;
+            int status = itfn->first(vtemp0,vtemp1,fromgoal);
+            if( status == NSS_Failed ) {
+                return NSS_Failed;
             }
+            ret |= status;
             std::copy(vtemp0.begin(),vtemp0.end(),itdest);
             itdest += itfn->second;
             itdelta += itfn->second;
         }
-        return true;
+        return ret;
     }
 }
 
@@ -812,7 +818,8 @@ void PlannerBase::PlannerParameters::Validate() const
     if( !!_neighstatefn && vstate.size() > 0 ) {
         vector<dReal> vstate2 = vstate;
         vector<dReal> vzeros(vstate.size());
-        _neighstatefn(vstate2,vzeros,NSO_OnlyHardConstraints);
+        int neighstatus = _neighstatefn(vstate2,vzeros,NSO_OnlyHardConstraints);
+        OPENRAVE_ASSERT_OP(neighstatus,&,1<<0); // LSB indicates if _neighstatefn call is successful
         dReal dist = _distmetricfn(vstate,vstate2);
         if( IS_DEBUGLEVEL(Level_Debug) ) {
             if( dist > 1000*g_fEpsilon ) {
@@ -827,7 +834,7 @@ void PlannerBase::PlannerParameters::Validate() const
                 RAVELOG_DEBUG_FORMAT("unequal states: %s",ss.str());
             }
         }
-        
+
         OPENRAVE_ASSERT_OP(dist,<=,1000*g_fEpsilon);
     }
     if( !!_diffstatefn && vstate.size() > 0 ) {
@@ -895,7 +902,7 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
             }
         }
     }
-        
+
     // transfer the callbacks?
     list<UserDataPtr> listhandles;
     FOREACHC(it,__listRegisteredCallbacks) {

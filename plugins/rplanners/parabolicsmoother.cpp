@@ -1029,7 +1029,7 @@ protected:
                         RAVELOG_WARN_FORMAT("env=%d, could not set values of path %d/%d", GetEnv()->GetId()%iwaypoint%vnewpath.size());
                         return false;
                     }
-                    if( !_parameters->_neighstatefn(xmid, xmiddelta, NSO_OnlyHardConstraints) ) {
+                    if( _parameters->_neighstatefn(xmid, xmiddelta, NSO_OnlyHardConstraints) == NSS_Failed ) {
                         RAVELOG_WARN_FORMAT("env=%d, failed to get the neighbor of the midpoint of path %d/%d", GetEnv()->GetId()%iwaypoint%vnewpath.size());
                         return false;
                     }
