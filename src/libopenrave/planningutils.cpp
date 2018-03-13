@@ -48,7 +48,7 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
                 *it = *itperturbation;
             }
             newdof = curdof;
-            if( !neighstatefn(newdof,deltadof,0) ) {
+            if( neighstatefn(newdof,deltadof,0) == NSS_Failed ) {
                 robot->SetActiveDOFValues(curdof,KinBody::CLA_CheckLimitsSilent);
                 return -1;
             }
@@ -92,7 +92,7 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
             if( bConstraint ) {
                 newdof = curdof;
                 robot->SetActiveDOFValues(newdof,KinBody::CLA_CheckLimitsSilent);
-                if( !neighstatefn(newdof,deltadof2,0) ) {
+                if( neighstatefn(newdof,deltadof2,0) == NSS_Failed ) {
                     if( *itperturbation != 0 ) {
                         RAVELOG_DEBUG(str(boost::format("constraint function failed, pert=%e\n")%*itperturbation));
                     }
@@ -120,7 +120,7 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
             if( bConstraint ) {
                 newdof = curdof;
                 robot->SetActiveDOFValues(newdof,KinBody::CLA_Nothing);
-                if( !neighstatefn(newdof,deltadof,0) ) {
+                if( neighstatefn(newdof,deltadof,0) == NSS_Failed ) {
                     RAVELOG_WARN("neighstatefn failed, but previously succeeded\n");
                     continue;
                 }
@@ -208,7 +208,7 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
                 *it = *itperturbation;
             }
             newdof = curdof;
-            if( !parameters->_neighstatefn(newdof,deltadof,0) ) {
+            if( parameters->_neighstatefn(newdof,deltadof,0) == NSS_Failed ) {
                 int setret = parameters->SetStateValues(curdof, 0);
                 if( setret != 0 ) {
                     // state failed to set, this could mean the initial state is just really bad, so resume jittering
@@ -301,7 +301,7 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
                     bConstraintFailed = true;
                     break;
                 }
-                if( !parameters->_neighstatefn(newdof,deltadof2,0) ) {
+                if( parameters->_neighstatefn(newdof,deltadof2,0) == NSS_Failed ) {
                     if( *itperturbation != 0 ) {
                         RAVELOG_DEBUG(str(boost::format("constraint function failed, pert=%e\n")%*itperturbation));
                     }
@@ -348,7 +348,7 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
                     // get another state
                     continue;
                 }
-                if( !parameters->_neighstatefn(newdof,deltadof,0) ) {
+                if( parameters->_neighstatefn(newdof,deltadof,0) == NSS_Failed ) {
                     RAVELOG_WARN("neighstatefn failed, but previously succeeded\n");
                     continue;
                 }
@@ -449,7 +449,7 @@ public:
             }
             if( !!_parameters->_neighstatefn ) {
                 newq = vdata;
-                if( !_parameters->_neighstatefn(newq,vdiff,NSO_OnlyHardConstraints) ) {
+                if( _parameters->_neighstatefn(newq,vdiff,NSO_OnlyHardConstraints) == NSS_Failed ) {
                     throw OPENRAVE_EXCEPTION_FORMAT(_("neighstatefn is rejecting configuration %d, wrote trajectory %s"),ipoint%DumpTrajectory(trajectory),ORE_InconsistentConstraints);
                 }
                 dReal fdist = _parameters->_distmetricfn(newq,vdata);
@@ -515,7 +515,7 @@ public:
                             throw OPENRAVE_EXCEPTION_FORMAT0(_("time %fs-%fs, failed to set state values"), ORE_InconsistentConstraints);
                         }
                         vector<dReal> vtemp = vprevconfig;
-                        if( !_parameters->_neighstatefn(vtemp,deltaq,NSO_OnlyHardConstraints) ) {
+                        if( _parameters->_neighstatefn(vtemp,deltaq,NSO_OnlyHardConstraints) == NSS_Failed ) {
                             throw OPENRAVE_EXCEPTION_FORMAT(_("time %fs-%fs, neighstatefn is rejecting configurations from CheckPathAllConstraints, wrote trajectory to %s"),*itprevtime%*itsampletime%DumpTrajectory(trajectory),ORE_InconsistentConstraints);
                         }
                         else {
@@ -1732,7 +1732,7 @@ void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
     }
 
     int nOriginalNumWaypoints = traj->GetNumWaypoints();
-    
+
     std::vector<dReal> values;
     if( endtime < traj->GetDuration() ) {
         size_t endindex = traj->GetFirstWaypointIndexAfterTime(endtime);
@@ -1796,7 +1796,7 @@ TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal startt
         RAVELOG_WARN_FORMAT("got an invalid time range %.15e, %.15e, choosing the start time", starttime%endtime);
         endtime = starttime;
     }
-    
+
     int startindex = 0, endindex = traj->GetNumWaypoints()-1;
 
     if( endtime < traj->GetDuration() ) {
@@ -1813,19 +1813,19 @@ TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal startt
         outtraj->Insert(0, values);
         return outtraj;
     }
-    
+
     if( starttime > 0 ) {
         startindex = traj->GetFirstWaypointIndexAfterTime(starttime);
         if( startindex > 0 ) {
             startindex--;
         }
     }
-    
+
     traj->GetWaypoints(startindex, endindex+1, values);
     outtraj->Insert(0, values);
-    
+
     if( starttime > 0 ) {
-        // have to overwrite the first point and 
+        // have to overwrite the first point and
         dReal startdeltatime=0, waypointdeltatime = 0;
         if( !spec.ExtractDeltaTime(waypointdeltatime, values.begin()+spec.GetDOF()) ) {
             throw OPENRAVE_EXCEPTION_FORMAT0("could not extract deltatime, bad traj", ORE_InvalidArguments);
@@ -1840,10 +1840,10 @@ TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal startt
 
         if( waypointdeltatime - startdeltatime > g_fEpsilonLinear ) {
             // there is a delta time so set first point to time 0 and second point to waypoint-startdeltatime
-            
+
             spec.InsertDeltaTime(values.begin(), 0); // first waypoint starts at 0 time
             outtraj->Insert(0,values,true);
-            
+
             // the second waypoint holds the delta time between new first waypoint
             traj->GetWaypoint(startindex+1, values);
             spec.InsertDeltaTime(values.begin(), waypointdeltatime - startdeltatime);
@@ -1857,7 +1857,7 @@ TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal startt
             outtraj->Insert(0,values, true);
         }
     }
-    
+
     if( endtime < traj->GetDuration() ) {
         // have to change the last endpoint, should sample from outtraj instead since both start and end can be within same waypoint range
         outtraj->Sample(values, endtime-starttime);
@@ -2296,6 +2296,18 @@ inline std::ostream& RaveSerializeValues(std::ostream& O, const std::vector<dRea
 int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeelapsed, IntervalType interval, int options, ConstraintFilterReturnPtr filterreturn)
 {
     int maskoptions = options&_filtermask;
+    // bIsCheckedSegmentLinear indicates if all the checked configurations lie on the linear segment
+    // connecting q0 and q1.
+    //
+    // In case the input segment includes terminal velocity dq0 and dq1, and timeelapsed > 0,
+    // bIsCheckedSegmentLinear is immediately marked false. Note that in case the initial path is
+    // assumed to be linear (that is, q0 and q1 are different, dq0 and dq1 are empty, and
+    // timeelapsed is zero), the configurations that we actually checked might not lie on the linear
+    // segment connecting q0 and q1 due to constraints (from _neighstatefn).
+    //
+    // In case bIsCheckedSegmentLinear is true after all checkings have been done, we don't need to
+    // fill in the intermediate configurations.
+    bool bIsCheckedSegmentLinear = true;
     if( !!filterreturn ) {
         filterreturn->Clear();
     }
@@ -2346,6 +2358,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
             }
         }
+        bIsCheckedSegmentLinear = false;
     }
     else {
         // make sure size is set to DOF
@@ -2353,6 +2366,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         FOREACH(it, _vtempaccelconfig) {
             *it = 0;
         }
+        bIsCheckedSegmentLinear = true;
     }
 
     if (bCheckEnd) {
@@ -2779,7 +2793,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
             }
 
-            if( !params->_neighstatefn(_vtempconfig, dQ,NSO_OnlyHardConstraints) ) {
+            if( params->_neighstatefn(_vtempconfig, dQ,NSO_OnlyHardConstraints) == NSS_Failed ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
                 }
@@ -2936,9 +2950,9 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             return CFO_StateSettingError;
         }
 
-	_vdiffconfig.resize(dQ.size());
-	_vstepconfig.resize(dQ.size());
-	_vtempconfig2 = _vtempconfig; // keep record of _vtempconfig before being modified in _neighstatefn
+        _vdiffconfig.resize(dQ.size());
+        _vstepconfig.resize(dQ.size());
+        _vtempconfig2 = _vtempconfig; // keep record of _vtempconfig before being modified in _neighstatefn
         if( start > 0 ) {
             // just in case, have to set the current values to _vtempconfig since neightstatefn expects the state to be set.
             if( params->SetStateValues(_vtempconfig, 0) != 0 ) {
@@ -2947,73 +2961,78 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
                 return CFO_StateSettingError;
             }
-            if( !params->_neighstatefn(_vtempconfig, dQ,NSO_OnlyHardConstraints) ) {
+            int neighstatus = params->_neighstatefn(_vtempconfig, dQ,NSO_OnlyHardConstraints);
+            if( neighstatus == NSS_Failed ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
                 }
                 return CFO_StateSettingError;
             }
-	    // When non-linear constraints are enforced, _neighstatefn(q, qdelta) can return a
-	    // configuration qnew far from both q and q + qdelta. When qnew is further from q than
-	    // the specified stepsize. We ensure that at least the segment (q, qnew) is
-	    // collision-free.
-	    //
-	    // Although being collision-free, the configurations along the segment (q, qnew) may not
-	    // satisfy other constraints. Therefore, we do *not* add then to filterreturn.
-	    int maxnumsteps = 0, steps;
-	    itres = vConfigResolution.begin();
-	    for( int idof = 0; idof < params->GetDOF(); idof++, itres++ ) {
-		_vdiffconfig[idof] = _vtempconfig[idof] - _vtempconfig2[idof];
-		if( *itres != 0 ) {
-		    steps = (int)(RaveFabs(_vdiffconfig[idof]) / *itres + 0.99);
-		}
-		else {
-		    steps = (int)(RaveFabs(_vdiffconfig[idof]) * 100);
-		}
-		if( steps > maxnumsteps ) {
-		    maxnumsteps = steps;
-		}
-	    }
-	    _vdiffvelconfig = _vtempveldelta;
-	    
-	    // We need to check only configurations in between _vtempconfig2 and _vtempconfig
-	    if( maxnumsteps > 1 ) {
-		dReal imaxnumsteps = (1.0f)/maxnumsteps;
-		for( std::vector<dReal>::iterator itdiff = _vdiffconfig.begin(); itdiff != _vdiffconfig.end(); ++itdiff ) {
-		    *itdiff *= imaxnumsteps;
-		}
-		for( std::vector<dReal>::iterator itveldiff = _vdiffvelconfig.begin(); itveldiff != _vdiffvelconfig.end(); ++itveldiff ) {
-		    *itveldiff *= imaxnumsteps;
-		}
-		for( int s = 1; s < maxnumsteps; s++ ) {
-		    for( int idof = 0; idof < params->GetDOF(); ++idof ) {
-			_vstepconfig[idof] = _vtempconfig2[idof] + s*_vdiffconfig[idof];
-		    }
-		    for( size_t idof = 0; idof < _vtempvelconfig.size(); ++idof ) {
-			_vtempvelconfig.at(idof) += _vdiffvelconfig.at(idof);
-		    }
-		    if( s == (maxnumsteps - 1) ) {
-			break;
-		    }
-		    int ret = _SetAndCheckState(params, _vstepconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
-		    if( !!params->_getstatefn ) {
-			params->_getstatefn(_vstepconfig); // query again in order to get normalizations/joint limits
-		    }
-		    // if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
-		    // 	filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vstepconfig.begin(), _vstepconfig.end());
-		    // 	filterreturn->_configurationtimes.push_back((s * imaxnumsteps)*fisteps);
-		    // }
-		    if( ret != 0 ) {
-			if( !!filterreturn ) {
-			    filterreturn->_returncode = ret;
-			    filterreturn->_invalidvalues = _vstepconfig;
-			    filterreturn->_invalidvelocities = _vtempvelconfig;
-			    filterreturn->_fTimeWhenInvalid = (s * imaxnumsteps)*fisteps;
-			}
-			return ret;
-		    }
-		} // end checking configurations between _vtempconfig2 (the previous _vtempconfig) and _vtempconfig (the new one)
-	    }
+            else if( neighstatus == NSS_SuccessfulWithDeviation ) {
+                // When non-linear constraints are enforced, _neighstatefn(q, qdelta) can return a
+                // configuration qnew far from both q and q + qdelta. When qnew is further from q
+                // than the specified stepsize. We ensure that the segment (q, qnew) is at least
+                // collision-free.
+                //
+                // Although being collision-free, the configurations along the segment (q, qnew) may
+                // not satisfy other constraints. Therefore, we do *not* add them to filterreturn.
+                bIsCheckedSegmentLinear = false;
+                int maxnumsteps = 0, steps;
+                itres = vConfigResolution.begin();
+                for( int idof = 0; idof < params->GetDOF(); idof++, itres++ ) {
+                    _vdiffconfig[idof] = _vtempconfig[idof] - _vtempconfig2[idof];
+                    if( *itres != 0 ) {
+                        steps = (int)(RaveFabs(_vdiffconfig[idof]) / *itres + 0.99);
+                    }
+                    else {
+                        steps = (int)(RaveFabs(_vdiffconfig[idof]) * 100);
+                    }
+                    if( steps > maxnumsteps ) {
+                        maxnumsteps = steps;
+                    }
+                }
+                _vdiffvelconfig = _vtempveldelta;
+
+                // We need to check only configurations in between _vtempconfig2 and _vtempconfig
+                if( maxnumsteps > 1 ) {
+                    dReal imaxnumsteps = (1.0f)/maxnumsteps;
+                    for( std::vector<dReal>::iterator itdiff = _vdiffconfig.begin(); itdiff != _vdiffconfig.end(); ++itdiff ) {
+                        *itdiff *= imaxnumsteps;
+                    }
+                    for( std::vector<dReal>::iterator itveldiff = _vdiffvelconfig.begin(); itveldiff != _vdiffvelconfig.end(); ++itveldiff ) {
+                        *itveldiff *= imaxnumsteps;
+                    }
+                    for( int s = 1; s < maxnumsteps; s++ ) {
+                        for( int idof = 0; idof < params->GetDOF(); ++idof ) {
+                            _vstepconfig[idof] = _vtempconfig2[idof] + s*_vdiffconfig[idof];
+                        }
+                        for( size_t idof = 0; idof < _vtempvelconfig.size(); ++idof ) {
+                            _vtempvelconfig.at(idof) += _vdiffvelconfig.at(idof);
+                        }
+                        if( s == (maxnumsteps - 1) ) {
+                            break;
+                        }
+                        int ret = _SetAndCheckState(params, _vstepconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
+                        if( !!params->_getstatefn ) {
+                            params->_getstatefn(_vstepconfig); // query again in order to get normalizations/joint limits
+                        }
+                        // if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+                        //  filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vstepconfig.begin(), _vstepconfig.end());
+                        //  filterreturn->_configurationtimes.push_back((s * imaxnumsteps)*fisteps);
+                        // }
+                        if( ret != 0 ) {
+                            if( !!filterreturn ) {
+                                filterreturn->_returncode = ret;
+                                filterreturn->_invalidvalues = _vstepconfig;
+                                filterreturn->_invalidvelocities = _vtempvelconfig;
+                                filterreturn->_fTimeWhenInvalid = (s * imaxnumsteps)*fisteps;
+                            }
+                            return ret;
+                        }
+                    } // end checking configurations between _vtempconfig2 (the previous _vtempconfig) and _vtempconfig (the new one)
+                } // end if maxnumsteps > 1
+            }
+            // Else, _neighstatefn returns _vtempconfig + dQ.
         }
 
         _vprevtempconfig.resize(dQ.size());
@@ -3052,84 +3071,87 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 _vprevtempconfig[idof] *= fnewscale;
             }
 
-	    _vtempconfig2 = _vtempconfig; // keep record of the original _vtempconfig before being modified by _neighstatefn
-	    // Make sure that the state is set before calling _neighstatefn
-	    if( params->SetStateValues(_vtempconfig, 0) != 0 ) {
+            _vtempconfig2 = _vtempconfig; // keep record of the original _vtempconfig before being modified by _neighstatefn
+            // Make sure that the state is set before calling _neighstatefn
+            if( params->SetStateValues(_vtempconfig, 0) != 0 ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
                 }
                 return CFO_StateSettingError;
             }
-            if( !params->_neighstatefn(_vtempconfig, _vprevtempconfig, NSO_OnlyHardConstraints) ) {
+            int neighstatus = params->_neighstatefn(_vtempconfig, _vprevtempconfig, NSO_OnlyHardConstraints);
+            if( neighstatus == NSS_Failed ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
                 }
                 return CFO_StateSettingError;
             }
+            else if( neighstatus == NSS_SuccessfulWithDeviation ) {
+                // When non-linear constraints are enforced, _neighstatefn(q, qdelta) can return a
+                // configuration qnew far from both q and q + qdelta. When qnew is further from q than
+                // the specified stepsize. We ensure that at least the segment (q, qnew) is
+                // collision-free.
+                //
+                // Although being collision-free, the configurations along the segment (q, qnew) may not
+                // satisfy other constraints. Therefore, we do *not* add them to filterreturn.
+                bIsCheckedSegmentLinear = false;
+                int maxnumsteps = 0, steps;
+                itres = vConfigResolution.begin();
+                for( int idof = 0; idof < params->GetDOF(); idof++, itres++ ) {
+                    _vdiffconfig[idof] = _vtempconfig[idof] - _vtempconfig2[idof];
+                    if( *itres != 0 ) {
+                        steps = (int)(RaveFabs(_vdiffconfig[idof]) / *itres + 0.99);
+                    }
+                    else {
+                        steps = (int)(RaveFabs(_vdiffconfig[idof]) * 100);
+                    }
+                    if( steps > maxnumsteps ) {
+                        maxnumsteps = steps;
+                    }
+                }
+                _vdiffvelconfig = _vtempveldelta;
+                dReal imaxnumsteps = (1.0f)/maxnumsteps;
+                for( std::vector<dReal>::iterator itdiff = _vdiffconfig.begin(); itdiff != _vdiffconfig.end(); ++itdiff ) {
+                    *itdiff *= imaxnumsteps;
+                }
+                for( std::vector<dReal>::iterator itveldiff = _vdiffvelconfig.begin(); itveldiff != _vdiffvelconfig.end(); ++itveldiff ) {
+                    *itveldiff *= imaxnumsteps;
+                }
 
-	    // When non-linear constraints are enforced, _neighstatefn(q, qdelta) can return a
-	    // configuration qnew far from both q and q + qdelta. When qnew is further from q than
-	    // the specified stepsize. We ensure that at least the segment (q, qnew) is
-	    // collision-free.
-	    //
-	    // Although being collision-free, the configurations along the segment (q, qnew) may not
-	    // satisfy other constraints. Therefore, we do *not* add then to filterreturn.
-	    int maxnumsteps = 0, steps;
-	    itres = vConfigResolution.begin();
-	    for( int idof = 0; idof < params->GetDOF(); idof++, itres++ ) {
-		_vdiffconfig[idof] = _vtempconfig[idof] - _vtempconfig2[idof];
-		if( *itres != 0 ) {
-		    steps = (int)(RaveFabs(_vdiffconfig[idof]) / *itres + 0.99);
-		}
-		else {
-		    steps = (int)(RaveFabs(_vdiffconfig[idof]) * 100);
-		}
-		if( steps > maxnumsteps ) {
-		    maxnumsteps = steps;
-		}
-	    }
-	    _vdiffvelconfig = _vtempveldelta;
-	    dReal imaxnumsteps = (1.0f)/maxnumsteps;
-	    for( std::vector<dReal>::iterator itdiff = _vdiffconfig.begin(); itdiff != _vdiffconfig.end(); ++itdiff ) {
-		*itdiff *= imaxnumsteps;
-	    }
-	    for( std::vector<dReal>::iterator itveldiff = _vdiffvelconfig.begin(); itveldiff != _vdiffvelconfig.end(); ++itveldiff ) {
-		*itveldiff *= imaxnumsteps;
-	    }
-	    
-	    if( maxnumsteps > 1 ) {
-		// Need collision checking here but only check from the second configuration to the
-		// second-to-last configuration.
-		for( int s = 1; s < maxnumsteps; s++ ) {
-		    for( int idof = 0; idof < params->GetDOF(); idof++ ) {
-			_vstepconfig[idof] = _vtempconfig2[idof] + s*_vdiffconfig[idof];
-		    }
-		    for( size_t idof = 0; idof < _vtempvelconfig.size(); ++idof ) {
-			_vtempvelconfig.at(idof) += _vdiffvelconfig.at(idof);
-		    }
-		    if( s == (maxnumsteps - 1) ) {
-			break;
-		    }
-		    int ret = _SetAndCheckState(params, _vstepconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
-		    if( !!params->_getstatefn ) {
-			params->_getstatefn(_vstepconfig); // query again in order to get normalizations/joint limits
-		    }
-		    // if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
-		    // 	filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vstepconfig.begin(), _vstepconfig.end());
-		    // 	filterreturn->_configurationtimes.push_back((s * imaxnumsteps)*fisteps);
-		    // }
-		    if( ret != 0 ) {
-			if( !!filterreturn ) {
-			    filterreturn->_returncode = ret;
-			    filterreturn->_invalidvalues = _vstepconfig;
-			    filterreturn->_invalidvelocities = _vtempvelconfig;
-			    filterreturn->_fTimeWhenInvalid = (f + (s * imaxnumsteps))*fisteps;
-			}
-			return ret;
-		    }
-		}
-	    }
-	}
+                if( maxnumsteps > 1 ) {
+                    // Need collision checking here but only check from the second configuration to the
+                    // second-to-last configuration.
+                    for( int s = 1; s < maxnumsteps; s++ ) {
+                        for( int idof = 0; idof < params->GetDOF(); idof++ ) {
+                            _vstepconfig[idof] = _vtempconfig2[idof] + s*_vdiffconfig[idof];
+                        }
+                        for( size_t idof = 0; idof < _vtempvelconfig.size(); ++idof ) {
+                            _vtempvelconfig.at(idof) += _vdiffvelconfig.at(idof);
+                        }
+                        if( s == (maxnumsteps - 1) ) {
+                            break;
+                        }
+                        int ret = _SetAndCheckState(params, _vstepconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
+                        if( !!params->_getstatefn ) {
+                            params->_getstatefn(_vstepconfig); // query again in order to get normalizations/joint limits
+                        }
+                        // if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+                        //  filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vstepconfig.begin(), _vstepconfig.end());
+                        //  filterreturn->_configurationtimes.push_back((s * imaxnumsteps)*fisteps);
+                        // }
+                        if( ret != 0 ) {
+                            if( !!filterreturn ) {
+                                filterreturn->_returncode = ret;
+                                filterreturn->_invalidvalues = _vstepconfig;
+                                filterreturn->_invalidvelocities = _vtempvelconfig;
+                                filterreturn->_fTimeWhenInvalid = (f + (s * imaxnumsteps))*fisteps;
+                            }
+                            return ret;
+                        }
+                    } // end collision checking
+                } // end if maxnumsteps > 1
+            }
+        }
 
         // check if _vtempconfig is close to q1!
         {
@@ -3148,6 +3170,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             }
 
             if( numPostNeighSteps > 1 ) {
+                bIsCheckedSegmentLinear = false;
                 // should never happen, but just in case _neighstatefn is some non-linear constraint projection
                 RAVELOG_WARN_FORMAT("have to divide the arc in %d steps even after original interpolation is done, interval=%d", numPostNeighSteps%interval);
                 // this case should be rare, so can create a vector here. don't look at constraints since we would never converge...
@@ -3194,9 +3217,23 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         }
     }
 
-    if( bCheckEnd && !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
-        filterreturn->_configurations.insert(filterreturn->_configurations.end(), q1.begin(), q1.end());
-        filterreturn->_configurationtimes.push_back(timeelapsed);
+    if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+        if( bIsCheckedSegmentLinear ) {
+            // If the initial path segment is linear and iff the all checked configurations lie on
+            // the linear segment connecting q0 and q1, we don't need to keep them.
+            if( interval == IT_OpenEnd || interval == IT_Closed ) {
+                filterreturn->_configurations.resize(0);
+                filterreturn->_configurationtimes.resize(0);
+            }
+            else {
+                filterreturn->_configurations.resize(q0.size());
+                filterreturn->_configurationtimes.resize(1);
+            }
+        }
+        if( interval == IT_OpenStart || interval == IT_Closed ) {
+            filterreturn->_configurations.insert(filterreturn->_configurations.end(), q1.begin(), q1.end());
+            filterreturn->_configurationtimes.push_back(timeelapsed);
+        }
     }
 
     return 0;
