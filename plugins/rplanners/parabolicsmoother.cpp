@@ -2234,6 +2234,19 @@ protected:
                                     }
                                     fOverallTimeMult = retcheck.fTimeBasedSurpassMult;
                                 }
+                                else {
+                                    dReal fvelmult = retcheck.fTimeBasedSurpassMult;
+                                    fcurvelmult *= fvelmult;
+                                    if (fcurvelmult < 0.01) {
+                                        RAVELOG_VERBOSE_FORMAT("env = %d: shortcut iter = %d/%d: fcurvelmult (%.15e) is too small. continue to the next iteration", GetEnv()->GetId()%iters%numIters%fcurvelmult);
+                                        break;
+                                    }
+                                    for (size_t j = 0; j < accellimits.size(); ++j) {
+                                        dReal fminvel = max(RaveFabs(dx0[j]), RaveFabs(dx1[j]));
+                                        vellimits[j] = max(fminvel, fvelmult * vellimits[j]);
+                                    }
+                                    fOverallTimeMult = retcheck.fTimeBasedSurpassMult;
+                                }
 
                                 numslowdowns += 1;
                                 RAVELOG_VERBOSE_FORMAT("fTimeBasedSurpassMult = %.15e; fcurvelmult = %.15e; fcuraccelmult = %.15e", retcheck.fTimeBasedSurpassMult%fcurvelmult%fcuraccelmult);
