@@ -3219,20 +3219,20 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 
     if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
         if( bIsCheckedSegmentLinear ) {
-            // If the initial path segment is linear and iff the all checked configurations lie on
+            // If the initial path segment is linear and if all the checked configurations lie on
             // the linear segment connecting q0 and q1, we don't need to keep them.
             if( interval == IT_OpenEnd || interval == IT_Closed ) {
-                filterreturn->_configurations.resize(0);
-                filterreturn->_configurationtimes.resize(0);
-            }
-            else {
                 filterreturn->_configurations.resize(q0.size());
                 filterreturn->_configurationtimes.resize(1);
+            }
+            else {
+                filterreturn->_configurations.resize(0);
+                filterreturn->_configurationtimes.resize(0);
             }
         }
         if( interval == IT_OpenStart || interval == IT_Closed ) {
             filterreturn->_configurations.insert(filterreturn->_configurations.end(), q1.begin(), q1.end());
-            filterreturn->_configurationtimes.push_back(timeelapsed);
+            filterreturn->_configurationtimes.push_back(timeelapsed > 0 ? timeelapsed : dReal(1.0));
         }
     }
 
