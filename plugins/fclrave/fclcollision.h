@@ -12,6 +12,8 @@
 
 #include "fclstatistics.h"
 
+#define FCLRAVE_CHECKPARENTLESS
+
 namespace fclrave {
 
 #define START_TIMING_OPT(statistics, label, options, isRobot);           \
@@ -59,7 +61,7 @@ class FCLCollisionChecker : public OpenRAVE::CollisionCheckerBase
 public:
     class CollisionCallbackData {
 public:
-        CollisionCallbackData(boost::shared_ptr<FCLCollisionChecker> pchecker, CollisionReportPtr report, const std::vector<KinBodyConstPtr>& vbodyexcluded = std::vector<KinBodyConstPtr>(), const std::vector<LinkConstPtr>& vlinkexcluded = std::vector<LinkConstPtr>()) : _pchecker(pchecker), _report(report), _vbodyexcluded(vbodyexcluded), _vlinkexcluded(vlinkexcluded), bselfCollision(false), _bStopChecking(false), _bCollision(false)
+        CollisionCallbackData(boost::shared_ptr<FCLCollisionChecker> pchecker, CollisionReportPtr report, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<LinkConstPtr>& vlinkexcluded) : _pchecker(pchecker), _report(report), _vbodyexcluded(vbodyexcluded), _vlinkexcluded(vlinkexcluded), bselfCollision(false), _bStopChecking(false), _bCollision(false)
         {
             _bHasCallbacks = _pchecker->GetEnv()->HasRegisteredCollisionCallbacks();
             if( _bHasCallbacks && !_report ) {
@@ -391,21 +393,22 @@ public:
 
         // Do we really want to synchronize everything ?
         // We could put the synchronization directly inside GetBodyManager
-        FCLCollisionManagerInstance& body1Manager = _GetBodyManager(pbody1, !!(_options & OpenRAVE::CO_ActiveDOFs)), body2Manager = _GetBodyManager(pbody2, false);
-        
+        FCLCollisionManagerInstance& body1Manager = _GetBodyManager(pbody1, !!(_options & OpenRAVE::CO_ActiveDOFs));
+        FCLCollisionManagerInstance& body2Manager = _GetBodyManager(pbody2, false);
+#ifdef FCLRAVE_CHECKPARENTLESS
+        boost::shared_ptr<void> onexit((void*) 0, boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstance, this, boost::ref(*pbody1), boost::ref(body1Manager), boost::ref(*pbody2), boost::ref(body2Manager)));
+#endif
         if( _options & OpenRAVE::CO_Distance )
-            {
+        {
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
             return false; //TODO
         } else {
-            CollisionCallbackData query(shared_checker(), report);
+            const std::vector<KinBodyConstPtr> vbodyexcluded;
+            const std::vector<LinkConstPtr> vlinkexcluded;
+            CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
             ADD_TIMING(_statistics);
             body1Manager.GetManager()->collide(body2Manager.GetManager().get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
             return query._bCollision;
-        }
-        if( _bParentlessCollisionObject ) {
-            _PrintCollisionManagerInstance(*pbody1, body1Manager);
-            _PrintCollisionManagerInstance(*pbody2, body2Manager);
         }
     }
 
@@ -454,7 +457,9 @@ public:
             if( !pcollLink1->getAABB().overlap(pcollLink2->getAABB()) ) {
                 return false;
             }
-            CollisionCallbackData query(shared_checker(), report);
+            const std::vector<KinBodyConstPtr> vbodyexcluded;
+            const std::vector<LinkConstPtr> vlinkexcluded;
+            CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
             ADD_TIMING(_statistics);
             query.bselfCollision = true;  // for ignoring attached information!
             CheckNarrowPhaseCollision(pcollLink1.get(), pcollLink2.get(), &query);
@@ -504,8 +509,13 @@ public:
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
             return false; // TODO
         } else {
-            CollisionCallbackData query(shared_checker(), report);
+            const std::vector<KinBodyConstPtr> vbodyexcluded;
+            const std::vector<LinkConstPtr> vlinkexcluded;
+            CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
             ADD_TIMING(_statistics);
+#ifdef FCLRAVE_CHECKPARENTLESS
+            boost::shared_ptr<void> onexit((void*) 0, boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceBL, this, boost::ref(*pbody), boost::ref(bodyManager), boost::ref(*plink)));
+#endif
             bodyManager.GetManager()->collide(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
             return query._bCollision;
         }
@@ -538,6 +548,9 @@ public:
         else {
             CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
             ADD_TIMING(_statistics);
+#ifdef FCLRAVE_CHECKPARENTLESS
+            boost::shared_ptr<void> onexit((void*) 0, boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceLE, this, boost::ref(*plink), boost::ref(envManager)));
+#endif
             envManager.GetManager()->collide(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
             return query._bCollision;
         }
@@ -578,6 +591,9 @@ public:
 //            BOOST_ASSERT(it1 != _envmanagers.end());
 //            _bodymanager = it0->second;
 //            _envmanager = it1->second;
+#ifdef FCLRAVE_CHECKPARENTLESS
+            boost::shared_ptr<void> onexit((void*) 0, boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceBE, this, boost::ref(*pbody), boost::ref(bodyManager), boost::ref(envManager)));
+#endif
             envManager.GetManager()->collide(bodyManager.GetManager().get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
             return query._bCollision;
         }
@@ -614,7 +630,9 @@ public:
         _fclspace->SynchronizeWithAttached(pbody);
         FCLCollisionManagerInstance& bodyManager = _GetBodyManager(pbody, !!(_options & OpenRAVE::CO_ActiveDOFs));
 
-        CollisionCallbackData query(shared_checker(), report);
+        const std::vector<KinBodyConstPtr> vbodyexcluded;
+        const std::vector<LinkConstPtr> vlinkexcluded;
+        CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
         ADD_TIMING(_statistics);
 
         OPENRAVE_ASSERT_OP(trimesh.indices.size() % 3, ==, 0);
@@ -639,6 +657,9 @@ public:
         fcl::CollisionObject ctriobj(ctrigeom);
         //ctriobj.computeAABB(); // necessary?
         ctriobj.setUserData(&objUserData);
+#ifdef FCLRAVE_CHECKPARENTLESS
+        boost::shared_ptr<void> onexit((void*) 0, boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceB, this, boost::ref(*pbody), boost::ref(bodyManager)));
+#endif
         bodyManager.GetManager()->collide(&ctriobj, &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
         return query._bCollision;
     }
@@ -668,10 +689,14 @@ public:
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
             return false; // TODO
         } else {
-            CollisionCallbackData query(shared_checker(), report);
+            const std::vector<KinBodyConstPtr> vbodyexcluded;
+            const std::vector<LinkConstPtr> vlinkexcluded;
+            CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
             ADD_TIMING(_statistics);
             query.bselfCollision = true;
-
+#ifdef FCLRAVE_CHECKPARENTLESS
+            boost::shared_ptr<void> onexit((void*) 0, boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceSelf, this, boost::ref(*pbody)));
+#endif            
             KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
             FOREACH(itset, nonadjacent) {
                 size_t index1 = *itset&0xffff, index2 = *itset>>16;
@@ -716,7 +741,9 @@ public:
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
             return false; //TODO
         } else {
-            CollisionCallbackData query(shared_checker(), report);
+            const std::vector<KinBodyConstPtr> vbodyexcluded;
+            const std::vector<LinkConstPtr> vlinkexcluded;
+            CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
             ADD_TIMING(_statistics);
             query.bselfCollision = true;
             KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
@@ -761,12 +788,22 @@ private:
 
         if( !o1info.second ) {
             if( !o1info.first ) {
+                if( _bParentlessCollisionObject ) {
+                    if( !!o2info.second ) {
+                        RAVELOG_WARN_FORMAT("env=%d, fcl::CollisionObject o1 %x collides with link2 %s:%s, but collision ignored", GetEnv()->GetId()%o1%o2info.second->GetParent()->GetName()%o2info.second->GetName());
+                    }
+                }
                 return false;
             }
             // o1 is standalone object
         }
         if( !o2info.second ) {
             if( !o2info.first ) {
+                if( _bParentlessCollisionObject ) {
+                    if( !!o1info.second ) {
+                        RAVELOG_WARN_FORMAT("env=%d, link1 %s:%s collides with fcl::CollisionObject o2 %x, but collision ignored", GetEnv()->GetId()%o1info.second->GetParent()->GetName()%o1info.second->GetName()%o2);
+                    }
+                }
                 return false;
             }
             // o2 is standalone object
@@ -880,9 +917,9 @@ private:
                 LinkConstPtr& plink2 = o2info.second;
 
                 // plink1 or plink2 can be None if object is standalone (ie coming from trimesh)
-                
+
                 //LinkConstPtr plink1 = GetCollisionLink(*o1), plink2 = GetCollisionLink(*o2);
-                
+
                 // these should be useless, just to make sure I haven't messed up
                 //BOOST_ASSERT( plink1 && plink2 );
                 //BOOST_ASSERT( plink1->IsEnabled() && plink2->IsEnabled() );
@@ -1050,10 +1087,52 @@ private:
         return *it->second;
     }
 
-    void _PrintCollisionManagerInstance(const KinBody& body, FCLCollisionManagerInstance& manager)
+    void _PrintCollisionManagerInstanceB(const KinBody& body, FCLCollisionManagerInstance& manager)
     {
-        RAVELOG_WARN_FORMAT("env=%d, body %s ", GetEnv()->GetId()%body.GetName());
-        _bParentlessCollisionObject = false;
+        if( _bParentlessCollisionObject ) {
+            RAVELOG_WARN_FORMAT("env=%d, self=%d, body %s ", GetEnv()->GetId()%_bIsSelfCollisionChecker%body.GetName());
+            _bParentlessCollisionObject = false;
+        }
+    }
+
+    void _PrintCollisionManagerInstanceSelf(const KinBody& body)
+    {
+        if( _bParentlessCollisionObject ) {
+            RAVELOG_WARN_FORMAT("env=%d, self=%d, body %s ", GetEnv()->GetId()%_bIsSelfCollisionChecker%body.GetName());
+            _bParentlessCollisionObject = false;
+        }
+    }
+
+    void _PrintCollisionManagerInstanceBL(const KinBody& body, FCLCollisionManagerInstance& manager, const KinBody::Link& link)
+    {
+        if( _bParentlessCollisionObject ) {
+            RAVELOG_WARN_FORMAT("env=%d, self=%d, body %s with link %s:%s (enabled=%d) ", GetEnv()->GetId()%_bIsSelfCollisionChecker%body.GetName()%link.GetParent()->GetName()%link.GetName()%link.IsEnabled());
+            _bParentlessCollisionObject = false;
+        }
+    }
+
+    void _PrintCollisionManagerInstanceBE(const KinBody& body, FCLCollisionManagerInstance& manager, FCLCollisionManagerInstance& envManager)
+    {
+        if( _bParentlessCollisionObject ) {
+            RAVELOG_WARN_FORMAT("env=%d, self=%d, body %s ", GetEnv()->GetId()%_bIsSelfCollisionChecker%body.GetName());
+            _bParentlessCollisionObject = false;
+        }
+    }
+
+    void _PrintCollisionManagerInstance(const KinBody& body1, FCLCollisionManagerInstance& manager1, const KinBody& body2, FCLCollisionManagerInstance& manager2)
+    {
+        if( _bParentlessCollisionObject ) {
+            RAVELOG_WARN_FORMAT("env=%d, self=%d, body1 %s (enabled=%d) body2 %s (enabled=%d) ", GetEnv()->GetId()%_bIsSelfCollisionChecker%body1.GetName()%body1.IsEnabled()%body2.GetName()%body2.IsEnabled());
+            _bParentlessCollisionObject = false;
+        }
+    }
+
+    void _PrintCollisionManagerInstanceLE(const KinBody::Link& link, FCLCollisionManagerInstance& envManager)
+    {
+        if( _bParentlessCollisionObject ) {
+            RAVELOG_WARN_FORMAT("env=%d, self=%d, link %s:%s (enabled=%d) ", GetEnv()->GetId()%_bIsSelfCollisionChecker%link.GetParent()->GetName()%link.GetName()%link.IsEnabled());
+            _bParentlessCollisionObject = false;
+        }
     }
 
     int _options;
