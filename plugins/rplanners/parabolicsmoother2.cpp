@@ -1068,7 +1068,7 @@ protected:
                         return false;
                     }
                     // Steer vNewWaypoints[iwaypoint] by xmidDelta. The resulting state is stored in xmid.
-                    if( !_parameters->_neighstatefn(xmid, xmidDelta, NSO_OnlyHardConstraints) ) {
+                    if( _parameters->_neighstatefn(xmid, xmidDelta, NSO_OnlyHardConstraints) == NSS_Failed ) {
                         RAVELOG_WARN_FORMAT("env=%d: Failed to get the neighbor of waypoint %d", GetEnv()->GetId()%iwaypoint);
                         return false;
                     }
