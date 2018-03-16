@@ -2296,18 +2296,14 @@ inline std::ostream& RaveSerializeValues(std::ostream& O, const std::vector<dRea
 int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeelapsed, IntervalType interval, int options, ConstraintFilterReturnPtr filterreturn)
 {
     int maskoptions = options&_filtermask;
-    // bIsCheckedSegmentLinear indicates if all the checked configurations lie on the linear segment
-    // connecting q0 and q1.
+    // bHasRampDeviatedFromInterpolation indicates if all the checked configurations deviate from the expected interpolation connecting q0 and q1.
     //
     // In case the input segment includes terminal velocity dq0 and dq1, and timeelapsed > 0,
-    // bIsCheckedSegmentLinear is immediately marked false. Note that in case the initial path is
+    // bHasRampDeviatedFromInterpolation is immediately marked false. Note that in case the initial path is
     // assumed to be linear (that is, q0 and q1 are different, dq0 and dq1 are empty, and
     // timeelapsed is zero), the configurations that we actually checked might not lie on the linear
     // segment connecting q0 and q1 due to constraints (from _neighstatefn).
-    //
-    // In case bIsCheckedSegmentLinear is true after all checkings have been done, we don't need to
-    // fill in the intermediate configurations.
-    bool bIsCheckedSegmentLinear = true;
+    bool bHasRampDeviatedFromInterpolation = false;
     if( !!filterreturn ) {
         filterreturn->Clear();
     }
@@ -2358,7 +2354,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
             }
         }
-        bIsCheckedSegmentLinear = false;
     }
     else {
         // make sure size is set to DOF
@@ -2366,7 +2361,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         FOREACH(it, _vtempaccelconfig) {
             *it = 0;
         }
-        bIsCheckedSegmentLinear = true;
     }
 
     if (bCheckEnd) {
@@ -2793,11 +2787,15 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
             }
 
-            if( params->_neighstatefn(_vtempconfig, dQ,NSO_OnlyHardConstraints) == NSS_Failed ) {
+            int neighstatus = params->_neighstatefn(_vtempconfig, dQ,NSO_OnlyHardConstraints);
+            if( neighstatus == NSS_Failed ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
                 }
                 return CFO_StateSettingError;
+            }
+            if( neighstatus == NSS_SuccessfulWithDeviation ) {
+                bHasRampDeviatedFromInterpolation = true;
             }
 
             bool bHasMoved = false;
@@ -2976,7 +2974,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 //
                 // Although being collision-free, the configurations along the segment (q, qnew) may
                 // not satisfy other constraints. Therefore, we do *not* add them to filterreturn.
-                bIsCheckedSegmentLinear = false;
+                bHasRampDeviatedFromInterpolation = true;
                 int maxnumsteps = 0, steps;
                 itres = vConfigResolution.begin();
                 for( int idof = 0; idof < params->GetDOF(); idof++, itres++ ) {
@@ -3094,7 +3092,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 //
                 // Although being collision-free, the configurations along the segment (q, qnew) may not
                 // satisfy other constraints. Therefore, we do *not* add them to filterreturn.
-                bIsCheckedSegmentLinear = false;
+                bHasRampDeviatedFromInterpolation = true;
                 int maxnumsteps = 0, steps;
                 itres = vConfigResolution.begin();
                 for( int idof = 0; idof < params->GetDOF(); idof++, itres++ ) {
@@ -3170,7 +3168,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             }
 
             if( numPostNeighSteps > 1 ) {
-                bIsCheckedSegmentLinear = false;
+                bHasRampDeviatedFromInterpolation = true;
                 // should never happen, but just in case _neighstatefn is some non-linear constraint projection
                 RAVELOG_WARN_FORMAT("have to divide the arc in %d steps even after original interpolation is done, interval=%d", numPostNeighSteps%interval);
                 // this case should be rare, so can create a vector here. don't look at constraints since we would never converge...
@@ -3217,22 +3215,11 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         }
     }
 
-    if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
-        if( bIsCheckedSegmentLinear ) {
-            // If the initial path segment is linear and if all the checked configurations lie on
-            // the linear segment connecting q0 and q1, we don't need to keep them.
-            if( interval == IT_OpenEnd || interval == IT_Closed ) {
-                filterreturn->_configurations.resize(q0.size());
-                filterreturn->_configurationtimes.resize(1);
-            }
-            else {
-                filterreturn->_configurations.resize(0);
-                filterreturn->_configurationtimes.resize(0);
-            }
-        }
-        if( interval == IT_OpenStart || interval == IT_Closed ) {
+    if( !!filterreturn ) {
+        filterreturn->_bHasRampDeviatedFromInterpolation = bHasRampDeviatedFromInterpolation;
+        if (options & CFO_FillCheckedConfiguration) {
             filterreturn->_configurations.insert(filterreturn->_configurations.end(), q1.begin(), q1.end());
-            filterreturn->_configurationtimes.push_back(timeelapsed > 0 ? timeelapsed : dReal(1.0));
+            filterreturn->_configurationtimes.push_back(timeelapsed);
         }
     }
 

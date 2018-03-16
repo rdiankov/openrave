@@ -819,7 +819,7 @@ void PlannerBase::PlannerParameters::Validate() const
         vector<dReal> vstate2 = vstate;
         vector<dReal> vzeros(vstate.size());
         int neighstatus = _neighstatefn(vstate2,vzeros,NSO_OnlyHardConstraints);
-        OPENRAVE_ASSERT_OP(neighstatus,&,1<<0); // LSB indicates if _neighstatefn call is successful
+        OPENRAVE_ASSERT_OP(neighstatus,&,NSS_Reached); // LSB indicates if _neighstatefn call is successful
         dReal dist = _distmetricfn(vstate,vstate2);
         if( IS_DEBUGLEVEL(Level_Debug) ) {
             if( dist > 1000*g_fEpsilon ) {

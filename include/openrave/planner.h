@@ -86,7 +86,7 @@ enum NeighborStateStatus
 class OPENRAVE_API ConstraintFilterReturn
 {
 public:
-    ConstraintFilterReturn() : _fTimeWhenInvalid(0), _returncode(0) {
+    ConstraintFilterReturn() : _fTimeWhenInvalid(0), _returncode(0), _bHasRampDeviatedFromInterpolation(false) {
     }
     /// \brief clears the data
     inline void Clear() {
@@ -96,6 +96,7 @@ public:
         _invalidvelocities.resize(0);
         _returncode = 0;
         _fTimeWhenInvalid = 0;
+        _bHasRampDeviatedFromInterpolation = false;
         _report.Reset();
     }
 
@@ -106,6 +107,7 @@ public:
     dReal _fTimeWhenInvalid; ///< if the constraint has an elapsed time, will contain the time when invalidated
     int _returncode; ///< if == 0, the constraint is good. If != 0 means constraint was violated and bitmasks in ConstraintFilterOptions can be used to find what constraint was violated.
     CollisionReport _report; ///< if in collision (_returncode&(CFO_CheckEnvCollisions|CFO_CheckSelfCollisions)), then stores the collision report
+    bool _bHasRampDeviatedFromInterpolation; ///< if true, then it means that the checked ramp that passed is different from the interpolation expected on the start and end points, and the new points are filled in _configurations
 };
 
 typedef boost::shared_ptr<ConstraintFilterReturn> ConstraintFilterReturnPtr;

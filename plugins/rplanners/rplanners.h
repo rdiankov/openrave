@@ -359,6 +359,7 @@ public:
                 return ET_Failed;
             }
 
+            // necessary to pass in _constraintreturn since _neighstatefn can have constraints and it can change the interpolation. Use _constraintreturn->_bHasRampDeviatedFromInterpolation to figure out if something changed.
             if( _fromgoal ) {
                 if( params->CheckPathAllConstraints(_vNewConfig, _vCurConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenEnd, 0xffff|CFO_FillCheckedConfiguration, _constraintreturn) != 0 ) {
                     return bHasAdded ? ET_Sucess : ET_Failed;
@@ -393,18 +394,27 @@ public:
             // dReal currentDistance =  _ComputeDistance(&_vCurConfig[0], _vNewConfig);
             // RAVELOG_DEBUG_FORMAT("got %d configurations", ((int)pfilter->_configurations.size()/_dof));
 
-            // Since the path checked by CheckPathAllConstraints can be different from a straight line segment connecting _vNewConfig and _vCurConfig, we add all checked configurations along the checked segment to the tree.
-            _pnewnode = NULL;
-            for(int iconfig = 0; iconfig+_dof-1 < (int)_constraintreturn->_configurations.size(); iconfig += _dof) {
-                std::copy(_constraintreturn->_configurations.begin() + iconfig, _constraintreturn->_configurations.begin() + iconfig + _dof, _vNewConfig.begin());
-                _pnewnode = _InsertNode(pnode, _vNewConfig, 0); ///< set userdata to 0
-                if( !!_pnewnode ) {
-                    bHasAdded = true;
-                    pnode = _pnewnode;
-                    lastnode = pnode;
+            if( _constraintreturn->_bHasRampDeviatedFromInterpolation ) {
+                // Since the path checked by CheckPathAllConstraints can be different from a straight line segment connecting _vNewConfig and _vCurConfig, we add all checked configurations along the checked segment to the tree.
+                for(int iconfig = 0; iconfig+_dof-1 < (int)_constraintreturn->_configurations.size(); iconfig += _dof) {
+                    std::copy(_constraintreturn->_configurations.begin() + iconfig, _constraintreturn->_configurations.begin() + iconfig + _dof, _vNewConfig.begin());
+                    NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0); ///< set userdata to 0
+                    if( !!pnewnode ) {
+                        bHasAdded = true;
+                        pnode = pnewnode;
+                        lastnode = pnode;
+                    }
+                    else {
+                        break;
+                    }
                 }
-                else {
-                    break;
+            }
+            else {
+                NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0); ///< set userdata to 0
+                if( !!pnewnode ) {
+                    pnode = pnewnode;
+                    lastnode = pnode;
+                    bHasAdded = true;
                 }
             }
 
@@ -1039,7 +1049,6 @@ private:
     vector<dReal> _vNewConfig, _vDeltaConfig, _vCurConfig;
     mutable vector<dReal> _vTempConfig;
     ConstraintFilterReturnPtr _constraintreturn;
-    NodePtr _pnewnode;
 
     mutable std::vector< std::pair<NodePtr, dReal> > _vCurrentLevelNodes, _vNextLevelNodes;
     mutable std::vector< std::vector<NodePtr> > _vvCacheNodes;
