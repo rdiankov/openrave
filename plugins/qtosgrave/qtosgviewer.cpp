@@ -823,7 +823,9 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
     //  Select kinbody in Viewers
     {
         QTreeWidgetItem* itemKinBody = item;
-        for (;!!itemKinBody->parent();) itemKinBody = itemKinBody->parent();
+        while(!!itemKinBody->parent()) {
+            itemKinBody = itemKinBody->parent();
+        }
         _posgWidget->SelectItemFromName(itemKinBody->text(0).toAscii().data());
     }
 
