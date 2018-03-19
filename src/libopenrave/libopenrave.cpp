@@ -1924,7 +1924,9 @@ std::string CollisionReport::__str__() const
         }
         s << ")";
     }
-    s << ", contacts="<<contacts.size();
+    if( options & CO_Contacts ) {
+        s << ", contacts="<<contacts.size();
+    }
     if( minDistance < 1e10 ) {
         s << ", mindist="<<minDistance;
     }
