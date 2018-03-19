@@ -22,9 +22,9 @@ namespace openravepy {
 class PyCollisionReport
 {
 public:
-    PyCollisionReport() : report(new CollisionReport()) {
+    PyCollisionReport(int coloptions=0) : report(new CollisionReport(coloptions)), options(coloptions), numWithinTol(0) {
     }
-    PyCollisionReport(CollisionReportPtr report) : report(report) {
+    PyCollisionReport(CollisionReportPtr report) : report(report), options(report->options), numWithinTol(report->numWithinTol) {
     }
     virtual ~PyCollisionReport() {
     }
@@ -91,6 +91,11 @@ public:
             newLinkColliding.append(boost::python::make_tuple(pylink1, pylink2));
         }
         vLinkColliding = newLinkColliding;
+    }
+
+    void Reset(int coloptions=0)
+    {
+        return report->Reset(coloptions);
     }
 
     string __str__()
@@ -683,6 +688,7 @@ void init_openravepy_collisionchecker()
     .def("__unicode__",&PyCollisionReport::PYCONTACT::__unicode__)
     ;
     class_<PyCollisionReport, boost::shared_ptr<PyCollisionReport> >("CollisionReport", DOXY_CLASS(CollisionReport))
+    .def(init<int>(args("coloptions")))
     .def_readonly("options",&PyCollisionReport::options)
     .def_readonly("plink1",&PyCollisionReport::plink1)
     .def_readonly("plink2",&PyCollisionReport::plink2)
@@ -691,6 +697,7 @@ void init_openravepy_collisionchecker()
     .def_readonly("contacts",&PyCollisionReport::contacts)
     .def_readonly("vLinkColliding",&PyCollisionReport::vLinkColliding)
     .def_readonly("nKeepPrevious", &PyCollisionReport::nKeepPrevious)
+    .def("Reset",&PyCollisionReport::Reset)
     .def("__str__",&PyCollisionReport::__str__)
     .def("__unicode__",&PyCollisionReport::__unicode__)
     ;
