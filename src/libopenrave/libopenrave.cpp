@@ -1927,7 +1927,7 @@ std::string CollisionReport::__str__() const
     if( options & CO_Contacts ) {
         s << ", contacts="<<contacts.size();
     }
-    if( minDistance < 1e10 ) {
+    if( minDistance > 1e10 ) {
         s << ", mindist="<<minDistance;
     }
     return s.str();
