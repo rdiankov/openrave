@@ -361,13 +361,14 @@ public:
                                             pmanager->registerObject(pcolobj.get());
     #endif
                                             bcallsetup = true;
+                                            ittracking->second.vcolobjs.at(ilink) = pcolobj;
                                         }
                                         else {
                                             if( !!ittracking->second.vcolobjs.at(ilink) ) {
                                                 pmanager->unregisterObject(ittracking->second.vcolobjs.at(ilink).get());
+                                                ittracking->second.vcolobjs.at(ilink).reset();
                                             }
                                         }
-                                        ittracking->second.vcolobjs.at(ilink) = pcolobj;
                                     }
                                     else {
                                         if( !isLinkActive && !!ittracking->second.vcolobjs.at(ilink) ) {
