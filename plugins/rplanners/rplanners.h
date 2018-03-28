@@ -193,6 +193,7 @@ public:
         if( enclevel >= (int)_vsetLevelNodes.size() ) {
             _vsetLevelNodes.resize(enclevel+1);
         }
+        _constraintreturn.reset(new ConstraintFilterReturn());
     }
 
     virtual void Reset()
@@ -344,7 +345,7 @@ public:
                 }
                 return ET_Failed;
             }
-            if( !params->_neighstatefn(_vNewConfig,_vDeltaConfig,_fromgoal ? NSO_GoalToInitial : 0) ) {
+            if( params->_neighstatefn(_vNewConfig,_vDeltaConfig,_fromgoal ? NSO_GoalToInitial : 0) == NSS_Failed ) {
                 if(bHasAdded) {
                     return ET_Sucess;
                 }
@@ -359,13 +360,14 @@ public:
                 return ET_Failed;
             }
 
+            // necessary to pass in _constraintreturn since _neighstatefn can have constraints and it can change the interpolation. Use _constraintreturn->_bHasRampDeviatedFromInterpolation to figure out if something changed.
             if( _fromgoal ) {
-                if( params->CheckPathAllConstraints(_vNewConfig, _vCurConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenEnd) != 0 ) {
+                if( params->CheckPathAllConstraints(_vNewConfig, _vCurConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenEnd, 0xffff|CFO_FillCheckedConfiguration, _constraintreturn) != 0 ) {
                     return bHasAdded ? ET_Sucess : ET_Failed;
                 }
             }
             else {
-                if( params->CheckPathAllConstraints(_vCurConfig, _vNewConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) != 0 ) {
+                if( params->CheckPathAllConstraints(_vCurConfig, _vNewConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, 0xffff|CFO_FillCheckedConfiguration, _constraintreturn) != 0 ) {
                     return bHasAdded ? ET_Sucess : ET_Failed;
                 }
             }
@@ -390,14 +392,35 @@ public:
 //                RAVELOG_VERBOSE(ss.str());
 //            }
 
-            NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0); ///< set userdata to 0
-            if( !!pnewnode ) {
-                pnode = pnewnode;
-                lastnode = pnode;
-                bHasAdded = true;
-                if( bOneStep ) {
-                    return ET_Connected; // is it ok to return ET_Connected rather than ET_Sucess. BasicRRT relies on ET_Connected
+            // dReal currentDistance =  _ComputeDistance(&_vCurConfig[0], _vNewConfig);
+            // RAVELOG_DEBUG_FORMAT("got %d configurations", ((int)pfilter->_configurations.size()/_dof));
+
+            if( _constraintreturn->_bHasRampDeviatedFromInterpolation ) {
+                // Since the path checked by CheckPathAllConstraints can be different from a straight line segment connecting _vNewConfig and _vCurConfig, we add all checked configurations along the checked segment to the tree.
+                for(int iconfig = 0; iconfig+_dof-1 < (int)_constraintreturn->_configurations.size(); iconfig += _dof) {
+                    std::copy(_constraintreturn->_configurations.begin() + iconfig, _constraintreturn->_configurations.begin() + iconfig + _dof, _vNewConfig.begin());
+                    NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0); ///< set userdata to 0
+                    if( !!pnewnode ) {
+                        bHasAdded = true;
+                        pnode = pnewnode;
+                        lastnode = pnode;
+                    }
+                    else {
+                        break;
+                    }
                 }
+            }
+            else {
+                NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0); ///< set userdata to 0
+                if( !!pnewnode ) {
+                    pnode = pnewnode;
+                    lastnode = pnode;
+                    bHasAdded = true;
+                }
+            }
+
+            if( bHasAdded && bOneStep ) {
+                return ET_Connected; // is it ok to return ET_Connected rather than ET_Sucess. BasicRRT relies on ET_Connected
             }
             _vCurConfig.swap(_vNewConfig);
         }
@@ -1026,6 +1049,7 @@ private:
     set<NodePtr> _setchildcache;
     vector<dReal> _vNewConfig, _vDeltaConfig, _vCurConfig;
     mutable vector<dReal> _vTempConfig;
+    ConstraintFilterReturnPtr _constraintreturn;
 
     mutable std::vector< std::pair<NodePtr, dReal> > _vCurrentLevelNodes, _vNextLevelNodes;
     mutable std::vector< std::vector<NodePtr> > _vvCacheNodes;

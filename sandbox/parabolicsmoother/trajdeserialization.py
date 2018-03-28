@@ -217,7 +217,7 @@ def ConvertOpenRAVETrajToParabolicCurvesND(traj):
 
     curvesnd = ramp.ParabolicCurvesND()
     for iwaypoint in xrange(nwaypoints - 1):
-        x0 = traj.GetWaypoint(iwaypoint)[iwaypoint*xoffset: iwaypoint*xoffset + xdof]
+        x0 = traj.GetWaypoint(iwaypoint)[xoffset: xoffset + xdof]
         x1 = traj.GetWaypoint(iwaypoint + 1)[xoffset: xoffset + xdof]
         v0 = traj.GetWaypoint(iwaypoint)[voffset: voffset + vdof]
         v1 = traj.GetWaypoint(iwaypoint + 1)[voffset: voffset + vdof]
@@ -228,4 +228,22 @@ def ConvertOpenRAVETrajToParabolicCurvesND(traj):
 
     return curvesnd
 
-    
+
+def ExtractDOFValuesFromWaypoint(traj, iwaypoint):
+    spec = traj.GetConfigurationSpecification()
+    xgroup = spec.GetGroupFromName('joint_values')
+    xoffset = xgroup.offset
+    xdof = xgroup.dof
+    waypoint = traj.GetWaypoint(iwaypoint)
+    x = waypoint[xoffset: xoffset + xdof]
+    return x
+
+
+def ExtractDOFValues(traj, t):
+    spec = traj.GetConfigurationSpecification()
+    xgroup = spec.GetGroupFromName('joint_values')
+    xoffset = xgroup.offset
+    xdof = xgroup.dof
+    values = traj.Sample(t)
+    x = values[xoffset: xoffset + xdof]
+    return x
