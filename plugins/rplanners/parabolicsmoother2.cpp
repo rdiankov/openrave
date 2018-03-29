@@ -1211,7 +1211,7 @@ protected:
                 ss << "]; v1 = [";
                 SerializeValues(ss, v1Vect);
                 ss << "]; deltatime=" << (rampndVectOut[irampnd].GetDuration());
-                RAVELOG_WARN_FORMAT("env=%d: SegmentFeasibile2 returned error 0x%x; %s, giving up....", GetEnv()->GetId()%retseg.retcode%ss.str());
+                RAVELOG_WARN_FORMAT("env=%d: SegmentFeasible2 returned error 0x%x; %s, giving up....", GetEnv()->GetId()%retseg.retcode%ss.str());
                 return false;
             }
         }

@@ -455,7 +455,7 @@ public:
             retcode = CFO_CheckTimeBasedConstraints;
             // If the actual max value is very close to the bound (i.e., almost not violating
             // the bound), the multiplier will be too large (too close to 1) to be useful.
-            reductionFactor = min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult);
+            reductionFactor = RaveSqrt(min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult));
         }
         // RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxactualmanipspeed%maxactualmanipaccel);
         return RampOptimizerInternal::CheckReturn(retcode, reductionFactor, maxactualmanipspeed, maxactualmanipaccel);
