@@ -192,7 +192,7 @@ public:
         virtual ~GripperJacobianConstrains() {
         }
 
-        bool RetractionConstraint(std::vector<dReal>& vprev, const std::vector<dReal>& vdelta)
+        int RetractionConstraint(std::vector<dReal>& vprev, const std::vector<dReal>& vdelta)
         {
             const T lambda2 = 1e-8;         // normalization constant
             using namespace boost::numeric::ublas;
@@ -209,6 +209,7 @@ public:
                 vnew[i] += vdelta.at(i);
             }
 
+            int status = NSS_Failed;
             size_t armdof = _pmanip->GetArmIndices().size();
             KinBody::KinBodyStateSaver saver(_probot, KinBody::Save_LinkTransformation);
             _probot->SetActiveDOFValues(vnew);
@@ -224,13 +225,15 @@ public:
                         for(size_t i = 0; i < vnew.size(); ++i) {
                             vnew[i] = vnew[i]*t + (1-t)*vprev[i];
                         }
+                        status |= 0x2; // state changed
                         _probot->SetActiveDOFValues(vnew);
                         fdistcur = _distmetricfn(vprev,vnew);
                         continue;
                     }
                     else {
+                        status |= 0x1; // successful
                         vprev = vnew;
-                        return true;
+                        return status;
                     }
                 }
                 // 2.0 is an arbitrary number...
@@ -238,7 +241,7 @@ public:
                     // last adjustment was greater than total distance (jacobian was close to being singular)
                     _iter = -1;
                     //RAVELOG_INFO(str(boost::format("%f > %f && %f > %f\n")%totalerror%_lasterror%fdistcur%fdistprev));
-                    return false;
+                    return NSS_Failed;
                 }
                 _lasterror = totalerror2;
 
@@ -267,18 +270,19 @@ public:
                     if( !_InvertMatrix(_invJJt,_invJJt) ) {
                         RAVELOG_VERBOSE("failed to invert matrix\n");
                         _iter = -1;
-                        return false;
+                        return NSS_Failed;
                     }
                 }
                 catch(...) {
                     _iter = -1;
-                    return false;
+                    return NSS_Failed;
                 }
                 _invJ = prod(_Jt,_invJJt);
                 _qdelta = prod(_invJ,_error);
                 for(size_t i = 0; i < vnew.size(); ++i) {
                     vnew.at(i) += _qdelta(i,0)*_viweights.at(i);
                 }
+                status |= 0x2; // state changed
                 _probot->SetActiveDOFValues(vnew,true);
                 _probot->GetActiveDOFValues(vnew); // have to re-get the joint values since joint limits are involved
                 fdistcur = _distmetricfn(vprev,vnew);
@@ -286,7 +290,7 @@ public:
 
             _iter = -1;
             RAVELOG_VERBOSE("constraint function exceeded iterations\n");
-            return false;
+            return NSS_Failed;
         }
 
         virtual T _ComputeConstraintError(const Transform& tcur, boost::numeric::ublas::matrix<T>& error)
