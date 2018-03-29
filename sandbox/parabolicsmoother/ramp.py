@@ -587,7 +587,7 @@ class ParabolicCurve(object):
 
 
     # Visualization
-    def PlotPos(self, fignum=None, color='g', dt=0.01, lw=2, includingSW=False):
+    def PlotPos(self, fignum=None, color='g', dt=0.01, lw=2, includingSW=False, **kwargs):
         tVect = arange(0, self.duration, dt)
         if tVect[-1] < self.duration:
             tVect = np.append(tVect, self.duration)
@@ -595,7 +595,7 @@ class ParabolicCurve(object):
         xVect = [self.EvalPos(t) for t in tVect]
         if fignum is not None:
             plt.figure(fignum)
-        plt.plot(tVect, xVect, color=color, linewidth=lw)
+        plt.plot(tVect, xVect, color=color, linewidth=lw, **kwargs)
 
         if includingSW:
             ax = plt.gca().axis()
@@ -942,7 +942,7 @@ class ParabolicCurvesND(object):
 
 
     # Visualization
-    def PlotPos(self, fignum='Displacement Profiles', includingSW=False, dt=0.005):
+    def PlotPos(self, fignum='Displacement Profiles', includingSW=False, dt=0.005, **kwargs):
         plt.figure(fignum)
 
         tVect = arange(0, self.duration, dt)
@@ -950,7 +950,7 @@ class ParabolicCurvesND(object):
             tVect = np.append(tVect, self.duration)
 
         xVect = [self.EvalPos(t) for t in tVect]
-        plt.plot(tVect, xVect, linewidth=2)
+        plt.plot(tVect, xVect, linewidth=2, **kwargs)
         handle = ['joint {0}'.format(i + 1) for i in xrange(self.ndof)]
         plt.legend(handle)
 
