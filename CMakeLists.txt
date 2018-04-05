@@ -567,9 +567,9 @@ if( WIN32 )
   endif()
 endif()
 
-find_package(Qt4 COMPONENTS QtCore QtGui QtDeclarative)
-if (NOT QT_FOUND)
-  message(STATUS "WARNING: Qt4 not found, is your QTDIR enviornment variable set?")
+find_package(Qt5 COMPONENTS Core Gui Qml Widgets OpenGL)
+if (NOT (Qt5Gui_FOUND AND Qt5Core_FOUND AND Qt5Qml_FOUND AND Qt5Widgets_FOUND AND Qt5OpenGL_FOUND))
+  message(STATUS "WARNING: Qt5 not found, is your QTDIR enviornment variable set?")
   find_package(Qt5Core)
   find_package(Qt5Gui)
   if( Qt5Core_FOUND AND Qt5Gui_FOUND )
@@ -961,7 +961,7 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   # add once infinite precision computations are enabled:
   # libmpfr-dev libgmp3-dev libmpfi-dev libgmpxx4ldbl python-gmpy
   # plugins:
-  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU ${CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU} libboost-iostreams-dev libboost-regex-dev libqt4-dev qt4-dev-tools libqhull-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libsoqt4-dev "assimp-dev|libassimp-dev" libbullet-dev)# libopenscenegraph-dev)
+  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU ${CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU} libboost-iostreams-dev libboost-regex-dev qtbase5-dev qtbase5-dev-tools libqhull-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libsoqt4-dev "assimp-dev|libassimp-dev" libbullet-dev)# libopenscenegraph-dev)
 
   # debian
   set(CPACK_DEBIAN_PACKAGE_PRIORITY optional)
