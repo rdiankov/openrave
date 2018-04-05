@@ -16,9 +16,15 @@
 
 #include "qtosg.h"
 #include "osgrenderitem.h"
-
+#include <QLayout>
+#include <QComboBox>
+#include <QAbstractButton>
+#include <QFileDialog>
 #include <QMainWindow>
-
+#include <QMessageBox>
+#include <QToolButton>
+#include <QDockWidget>
+#include <QToolBar>
 #include "qtreemodel.h"
 
 namespace qtosgrave {

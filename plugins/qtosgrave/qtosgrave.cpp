@@ -87,6 +87,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             //if( QApplication::startingUp() ) {
 
             //CoreApplication::postEvent ( QObject * receiver, QEvent * event )
+            QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
             QCoreApplication *qapp = QApplication::instance();
             if( !qapp ) {
                 RAVELOG_VERBOSE("qt is not initialized yet, so initializing...\n");
