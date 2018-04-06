@@ -115,7 +115,7 @@ BOOST_PYTHON_MODULE(convexdecompositionpy)
 {
     import_array();
     numeric::array::set_module_and_type("numpy", "ndarray");
-    int_from_int();
+    T_from_number<int>();
     T_from_number<float>();
     T_from_number<double>();
 
