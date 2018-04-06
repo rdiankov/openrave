@@ -11,7 +11,9 @@ if(NOT OPENGL_FOUND)
 endif()
 
 #include(${CMAKE_SOURCE_DIR}/modules-cmake/FindOSG.cmake)
-find_package(OpenSceneGraph 3.4 COMPONENTS osgDB osgQt osgGA osgFX osgText osgViewer osgManipulator)
+find_package(OpenSceneGraph 3.6 COMPONENTS osgDB osgGA osgFX osgText osgViewer osgManipulator)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(OSGQT REQUIRED openscenegraph-osgQt5)
 
 if (Qt5Gui_FOUND AND Qt5Core_FOUND AND Qt5Widgets_FOUND AND Qt5OpenGL_FOUND AND OPENGL_FOUND AND OPENSCENEGRAPH_FOUND AND OSGQT_FOUND)
   message(STATUS "Detected Qt/OSG GUI, making plugin")
@@ -38,7 +40,7 @@ if (Qt5Gui_FOUND AND Qt5Core_FOUND AND Qt5Widgets_FOUND AND Qt5OpenGL_FOUND AND 
   endif()
 
   set (extLIBS ${LIBXML2_LIBRARIES} ${PTHREADS_LIBRARY} ${OPENGL_LIBRARIES} Qt5::Core Qt5::Gui Qt5::Widgets Qt5::OpenGL)
-  set (extLIBS ${extLIBS} ${OPENSCENEGRAPH_LIBRARIES})
+  set (extLIBS ${extLIBS} ${OPENSCENEGRAPH_LIBRARIES} ${OSGQT_LIBRARIES})
   #set (extLIBS ${extLIBS} ${OSGDB_LIBRARY_DEBUG} ${OSGQT_LIBRARY_DEBUG} ${OSGGA_LIBRARY_DEBUG} ${OSGFX_LIBRARY_DEBUG} ${OSGTEXT_LIBRARY_DEBUG} ${OSGVIEWER_LIBRARY_DEBUG} ${OSGMANIPULATOR_LIBRARY_DEBUG})
   
   if( MSVC )
@@ -54,7 +56,7 @@ if (Qt5Gui_FOUND AND Qt5Core_FOUND AND Qt5Widgets_FOUND AND Qt5OpenGL_FOUND AND 
   message(STATUS "Link libraries: ${extLIBS}")
 
   # build sources, moc'd sources, and rcc'd sources
-  add_library(qtosgrave SHARED ${QTOSG_MOC_SRCS} ${QTOSG_RCC_SRCS})
+  add_library(qtosgrave SHARED ${QTOSG_SRCS} ${QTOSG_MOC_SRCS} ${QTOSG_RCC_SRCS})
   target_link_libraries (qtosgrave ${extLIBS} libopenrave)
 
   #if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
