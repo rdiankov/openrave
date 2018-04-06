@@ -524,6 +524,8 @@ public:
 
             int numShortcuts = 0;
             if( !!parameters->_setstatevaluesfn || !!parameters->_setstatefn ) {
+                // TODO: add a check here so that we do merging only when the initial path is linear (i.e. comes directly from a linear smoother or RRT)
+                _MergeConsecutiveSegments(parabolicpath, parameters->_fStepLength*0.99);
                 numShortcuts = _Shortcut(parabolicpath, parameters->_nMaxIterations, this, parameters->_fStepLength*0.99);
                 if( numShortcuts < 0 ) {
                     return PS_Interrupted;
@@ -1019,6 +1021,10 @@ protected:
         if( _zeroVelPoints.capacity() < vWaypoints.size() ) {
             _zeroVelPoints.reserve(vWaypoints.size());
         }
+        _zeroVelPointIndices.resize(0);
+        if( _zeroVelPointIndices.capacity() < vWaypoints.size() ) {
+            _zeroVelPointIndices.reserve(vWaypoints.size());
+        }
 
         size_t ndof = _parameters->GetDOF();
         parabolicpath.Reset();
@@ -1105,10 +1111,12 @@ protected:
 
             OPENRAVE_ASSERT_OP(vNewWaypoints[0].size(), ==, ndof);
             std::vector<RampOptimizer::RampND>& rampndVect = _cacheRampNDVect;
-            for (size_t iwaypoint = 1; iwaypoint < vNewWaypoints.size(); ++iwaypoint) {
+            size_t numWaypoints = vNewWaypoints.size();
+            size_t curIndex = 0;
+            for (size_t iwaypoint = 1; iwaypoint < numWaypoints; ++iwaypoint) {
                 OPENRAVE_ASSERT_OP(vNewWaypoints[iwaypoint].size(), ==, ndof);
 
-                if( !_ComputeRampWithZeroVelEndpoints(vNewWaypoints[iwaypoint - 1], vNewWaypoints[iwaypoint], options, rampndVect) ) {
+                if( !_ComputeRampWithZeroVelEndpoints(vNewWaypoints[iwaypoint - 1], vNewWaypoints[iwaypoint], options, rampndVect, iwaypoint, numWaypoints) ) {
                     RAVELOG_WARN_FORMAT("env=%d: Failed to time-parameterize path connecting waypoints %d and %d", GetEnv()->GetId()%(iwaypoint - 1)%iwaypoint);
                     return false;
                 }
@@ -1125,6 +1133,8 @@ protected:
                     duration += itrampnd->GetDuration();
                     parabolicpath.AppendRampND(*itrampnd);
                 }
+                curIndex += rampndVect.size();
+                _zeroVelPointIndices.push_back(curIndex);
                 if( _zeroVelPoints.size() == 0 ) {
                     _zeroVelPoints.push_back(duration);
                 }
@@ -1133,6 +1143,7 @@ protected:
                 }
             }
             _zeroVelPoints.pop_back(); // now containing all zero-velocity points except the start and the end
+            _zeroVelPointIndices.pop_back();
         }
 
         return true;
@@ -1142,7 +1153,7 @@ protected:
     /// velocities. Manip constraints (if available) is also taken care of by gradually scaling
     /// vellimits and accellimits down until the constraints are no longer violated. Therefore, the
     /// output trajectory (rampnd) is guaranteed to feasible.
-    bool _ComputeRampWithZeroVelEndpoints(const std::vector<dReal>& x0VectIn, const std::vector<dReal>& x1VectIn, int options, std::vector<RampOptimizer::RampND>& rampndVectOut)
+    bool _ComputeRampWithZeroVelEndpoints(const std::vector<dReal>& x0VectIn, const std::vector<dReal>& x1VectIn, int options, std::vector<RampOptimizer::RampND>& rampndVectOut, size_t iwaypoint=0, size_t numWaypoints=0)
     {
         // Cache
         std::vector<dReal> &x0Vect = _cacheX0Vect1, &x1Vect = _cacheX1Vect1, &v0Vect = _cacheV0Vect, &v1Vect = _cacheV1Vect;
@@ -1195,7 +1206,7 @@ protected:
                 break;
             }
             else if( retseg.retcode == CFO_CheckTimeBasedConstraints ) {
-                RAVELOG_VERBOSE_FORMAT("env=%d: scaling vellimits and accellimits by %.15e, itry = %d", GetEnv()->GetId()%retseg.fTimeBasedSurpassMult%itry);
+                RAVELOG_VERBOSE_FORMAT("env=%d: segment (%d, %d); numWaypoints=%d; scaling vellimits and accellimits by %.15e, itry=%d", GetEnv()->GetId()%(iwaypoint - 1)%iwaypoint%numWaypoints%retseg.fTimeBasedSurpassMult%itry);
                 RampOptimizer::ScaleVector(vellimits, retseg.fTimeBasedSurpassMult);
                 RampOptimizer::ScaleVector(accellimits, retseg.fTimeBasedSurpassMult*retseg.fTimeBasedSurpassMult);
             }
@@ -1211,7 +1222,7 @@ protected:
                 ss << "]; v1 = [";
                 SerializeValues(ss, v1Vect);
                 ss << "]; deltatime=" << (rampndVectOut[irampnd].GetDuration());
-                RAVELOG_WARN_FORMAT("env=%d: SegmentFeasible2 returned error 0x%x; %s, giving up....", GetEnv()->GetId()%retseg.retcode%ss.str());
+                RAVELOG_WARN_FORMAT("env=%d: segment (%d, %d); numWaypoints=%d; SegmentFeasibile2 returned error 0x%x; %s, giving up....", GetEnv()->GetId()%(iwaypoint - 1)%iwaypoint%numWaypoints%retseg.retcode%ss.str());
                 return false;
             }
         }
@@ -1219,6 +1230,124 @@ protected:
             return false;
         }
         return true;
+    }
+
+    /// \brief Figure out the direction of the acceleration of the given RampND (negative, zero, or
+    /// positive). Assume that every DOF accelerates in the same direction.
+    int _CheckRampNDAcceleration(RampOptimizer::RampND& rampnd)
+    {
+        dReal sum = 0;
+        for( size_t idof = 0; idof < rampnd.GetDOF(); ++idof ) {
+            sum += rampnd.GetAAt(idof);
+        }
+        if( sum < -RampOptimizer::g_fRampEpsilon ) {
+            return -1;
+        }
+        else if( sum > RampOptimizer::g_fRampEpsilon ) {
+            return 1;
+        }
+        else {
+            return 0;
+        }
+    }
+
+    /// \brief Merge consecutive trajectory segments (i.e. segment connecting waypoints i - 1 and i
+    /// and segment connecting waypoints i and i + 1) by generating a new segment connecting the
+    /// last non-zero velocity switch point of the segment (i - 1, i) and the first non-zero
+    /// velocity switch point of the segment (i, i + 1)
+    void _MergeConsecutiveSegments(RampOptimizer::ParabolicPath& parabolicpath, dReal minTimeStep)
+    {
+        RampOptimizer::ParabolicPath& newparabolicpath = _cacheparabolicpath2;
+        newparabolicpath.Reset();
+
+        std::vector<RampOptimizer::RampND> rampndVect = parabolicpath.GetRampNDVect(); // for convenience
+
+        // Caching stuff
+        std::vector<RampOptimizer::RampND>& shortcutRampNDVect = _cacheRampNDVect; // for storing interpolated trajectory
+        std::vector<RampOptimizer::RampND>& shortcutRampNDVectOut = _cacheRampNDVectOut, &shortcutRampNDVectOut1 = _cacheRampNDVectOut1; // for storing checked trajectory
+        std::vector<dReal>& x0Vect = _cacheX0Vect, &x1Vect = _cacheX1Vect, &v0Vect = _cacheV0Vect, &v1Vect = _cacheV1Vect;
+        std::vector<dReal>& vellimits = _cacheVellimits, &accellimits = _cacheAccelLimits;
+        std::vector<dReal> newzerovelpoints;
+        newzerovelpoints.resize(0);
+        if( newzerovelpoints.capacity() < _zeroVelPointIndices.size() ) {
+            newzerovelpoints.reserve(_zeroVelPointIndices.size());
+        }
+
+        for( size_t index = 0; index < _zeroVelPointIndices.size(); ++index ) {
+            size_t iwaypoint = _zeroVelPointIndices[index] - 1;
+            if( _CheckRampNDAcceleration(rampndVect[iwaypoint]) * _CheckRampNDAcceleration(rampndVect[iwaypoint + 1]) >= 0 ) {
+                // These two consecutive segments already accelerate in the same direction so skip merging here.
+                continue;
+            }
+            dReal originalDuration = rampndVect[iwaypoint].GetDuration() + rampndVect[iwaypoint + 1].GetDuration();
+            rampndVect[iwaypoint].GetX0Vect(x0Vect);
+            rampndVect[iwaypoint + 1].GetX1Vect(x1Vect);
+            rampndVect[iwaypoint].GetV0Vect(v0Vect);
+            rampndVect[iwaypoint + 1].GetV1Vect(v1Vect);
+
+            vellimits = _parameters->_vConfigVelocityLimit;
+            accellimits = _parameters->_vConfigAccelerationLimit;
+            bool bSuccess = false;
+            size_t maxSlowDownTries = 100;
+            for (size_t iSlowDown = 0; iSlowDown < maxSlowDownTries; ++iSlowDown) {
+                // Interpolation
+                bool res = _interpolator.ComputeArbitraryVelNDTrajectory(x0Vect, x1Vect, v0Vect, v1Vect, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, vellimits, accellimits, shortcutRampNDVect, false);
+                if( !res ) {
+                    RAVELOG_VERBOSE_FORMAT("env=%d: zerovelpoint=%d/%d; initial interpolation failed.", GetEnv()->GetId()%index%_zeroVelPointIndices.size());
+                    break;
+                }
+                dReal segmentTime = 0;
+                FOREACHC(itrampnd, shortcutRampNDVect) {
+                    segmentTime += itrampnd->GetDuration();
+                }
+                if( segmentTime + minTimeStep > originalDuration ) {
+                    RAVELOG_VERBOSE_FORMAT("env=%d: zerovelpoint=%d/%d; rejecting merge; originalDuration=%.15e; newDuration=%.15f; diff=%.15d; minTimeStep=%.15e", GetEnv()->GetId()%index%_zeroVelPointIndices.size()%originalDuration%segmentTime%(segmentTime - originalDuration)%minTimeStep);
+                    break;
+                }
+
+                // Checking
+                RampOptimizer::CheckReturn retcheck(0);
+                do {
+                    _parameters->_getstatefn(x1Vect);
+                    retcheck = _feasibilitychecker.Check2(shortcutRampNDVect, 0xffff, shortcutRampNDVectOut);
+                    if( retcheck.retcode != 0 ) {
+                        RAVELOG_VERBOSE_FORMAT("env=%d; zerovelpoints=%d/%d; merged segment doesn't pass Check2", GetEnv()->GetId()%index%_zeroVelPointIndices.size());
+                        break;
+                    }
+
+                    for (size_t irampnd = 0; irampnd < shortcutRampNDVectOut.size(); ++irampnd) {
+                        for (size_t jdof = 0; jdof < shortcutRampNDVectOut[irampnd].GetDOF(); ++jdof) {
+                            dReal fminvel = max(RaveFabs(shortcutRampNDVectOut[irampnd].GetV0At(jdof)), RaveFabs(shortcutRampNDVectOut[irampnd].GetV1At(jdof)));
+                            if( vellimits[jdof] < fminvel ) {
+                                vellimits[jdof] = fminvel;
+                            }
+                        }
+                    }
+
+                    if( retcheck.bDifferentVelocity && shortcutRampNDVectOut.size() > 0 ) {
+                        RAVELOG_VERBOSE_FORMAT("env=%d: new shortcut is *not* aligned with boundary values after running Check2. Start fixing the last segment.", GetEnv()->GetId());
+                    }
+                } while( 0 );
+
+                if( retcheck.retcode == 0 ) {
+                    bSuccess = true;
+                    break;
+                }
+                else if( retcheck.retcode == CFO_CheckTimeBasedConstraints ) {
+                }
+
+            }
+
+            if( !bSuccess ) {
+                continue;
+            }
+            if( shortcutRampNDVectOut.size() == 0 ) {
+                RAVELOG_WARN("merged segment is empty");
+                continue;
+            }
+
+            // Merging is successful.
+        }
     }
 
     /// \brief Return the number of successful shortcut.
@@ -1833,6 +1962,7 @@ protected:
     bool _bUsePerturbation;
     bool _bmanipconstraints;
     std::vector<dReal> _zeroVelPoints; ///< keeps track of original (zero-velocity) waypoints
+    std::vector<size_t> _zeroVelPointIndices; ///< keeps track of the position of zero-velocity points
     RampOptimizer::ParabolicInterpolator _interpolator;
 
     // for logging
@@ -1841,7 +1971,7 @@ protected:
     DebugLevel _dumplevel;  ///< minimum debug level which triggers trajectory saving
 
     /// Caching stuff
-    RampOptimizer::ParabolicPath _cacheparabolicpath;
+    RampOptimizer::ParabolicPath _cacheparabolicpath, _cacheparabolicpath2;
     std::vector<dReal> _cacheWaypoints; ///< stores concatenated waypoints obtained from the input trajectory
     std::vector<std::vector<dReal> > _cacheWaypointVect; ///< each element is a vector storing a waypoint
     std::vector<dReal> _cacheX0Vect, _cacheX1Vect, _cacheV0Vect, _cacheV1Vect, _cacheTVect; ///< used in PlanPath and _Shortcut
