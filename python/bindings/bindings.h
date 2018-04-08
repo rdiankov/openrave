@@ -345,6 +345,11 @@ inline std::string GetPyErrorString()
             Py_DECREF(string);
         }
     }
+    // Does nothing when the ptr is nullptr
+    Py_DECREF(error);
+    Py_DECREF(value);
+    Py_DECREF(traceback);
+
     return s;
 }
 
