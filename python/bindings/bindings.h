@@ -282,52 +282,48 @@ struct exception_translator
 //
 //boost::python::register_ptr_to_python< boost::shared_ptr<const my_class> >();
 
-// https://stackoverflow.com/questions/26595350/extracting-unsigned-char-from-array-of-numpy-uint8
 template<typename T>
-struct T_from_number
+struct float_from_number
 {
-    T_from_number()
+    float_from_number()
     {
         converter::registry::push_back(&convertible, &construct, type_id<T>());
     }
 
     static void* convertible( PyObject* obj)
     {
-        return (PyArray_IsScalar(obj, Float32) ||
-                PyArray_IsScalar(obj, Float64) ||
-                PyArray_IsScalar(obj, Int8)    ||
-                PyArray_IsScalar(obj, Int16)   ||
-                PyArray_IsScalar(obj, Int32)   ||
-                PyArray_IsScalar(obj, Int64)   ||
-                PyArray_IsScalar(obj, UInt8)   ||
-                PyArray_IsScalar(obj, UInt16)  ||
-                PyArray_IsScalar(obj, UInt32)  ||
-                PyArray_IsScalar(obj, UInt64)) ? obj : NULL;
+        return PyNumber_Check(obj) ? obj : NULL;
     }
 
     static void construct(PyObject* _obj, converter::rvalue_from_python_stage1_data* data)
     {
+        PyObject* tmp = PyNumber_Float(_obj);
         T* storage = (T*)((converter::rvalue_from_python_storage<T>*)data)->storage.bytes;
-        if (PyArray_IsScalar(_obj, Float32))
-            *storage = static_cast<T>(PyArrayScalar_VAL(_obj, Float32));
-        else if (PyArray_IsScalar(_obj, Float64))
-            *storage = static_cast<T>(PyArrayScalar_VAL(_obj, Float64));
-        else if (PyArray_IsScalar(_obj, Int8))
-            *storage = static_cast<T>(PyArrayScalar_VAL(_obj, Int8));
-        else if (PyArray_IsScalar(_obj, Int16))
-            *storage = static_cast<T>(PyArrayScalar_VAL(_obj, Int16));
-        else if (PyArray_IsScalar(_obj, Int32))
-            *storage = static_cast<T>(PyArrayScalar_VAL(_obj, Int32));
-        else if (PyArray_IsScalar(_obj, Int64))
-            *storage = static_cast<T>(PyArrayScalar_VAL(_obj, Int64));
-        else if (PyArray_IsScalar(_obj, UInt8))
-            *storage = static_cast<T>(PyArrayScalar_VAL(_obj, UInt8));
-        else if (PyArray_IsScalar(_obj, UInt16))
-            *storage = static_cast<T>(PyArrayScalar_VAL(_obj, UInt16));
-        else if (PyArray_IsScalar(_obj, UInt32))
-            *storage = static_cast<T>(PyArrayScalar_VAL(_obj, UInt32));
-        else if (PyArray_IsScalar(_obj, UInt64))
-            *storage = static_cast<T>(PyArrayScalar_VAL(_obj, UInt64));
+        *storage = boost::python::extract<T>(tmp);
+        Py_DECREF(tmp);
+        data->convertible = storage;
+    }
+};
+
+template<typename T>
+struct int_from_number
+{
+    int_from_number()
+    {
+        converter::registry::push_back(&convertible, &construct, type_id<T>());
+    }
+
+    static void* convertible( PyObject* obj)
+    {
+        return PyNumber_Check(obj) ? obj : NULL;
+    }
+
+    static void construct(PyObject* _obj, converter::rvalue_from_python_stage1_data* data)
+    {
+        PyObject* tmp = PyNumber_Long(_obj);
+        T* storage = (T*)((converter::rvalue_from_python_storage<T>*)data)->storage.bytes;
+        *storage = boost::python::extract<T>(tmp);
+        Py_DECREF(tmp);
         data->convertible = storage;
     }
 };
