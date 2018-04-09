@@ -1029,7 +1029,7 @@ protected:
                         RAVELOG_WARN_FORMAT("env=%d, could not set values of path %d/%d", GetEnv()->GetId()%iwaypoint%vnewpath.size());
                         return false;
                     }
-                    if( !_parameters->_neighstatefn(xmid, xmiddelta, NSO_OnlyHardConstraints) ) {
+                    if( _parameters->_neighstatefn(xmid, xmiddelta, NSO_OnlyHardConstraints) == NSS_Failed ) {
                         RAVELOG_WARN_FORMAT("env=%d, failed to get the neighbor of the midpoint of path %d/%d", GetEnv()->GetId()%iwaypoint%vnewpath.size());
                         return false;
                     }
@@ -2222,6 +2222,19 @@ protected:
                                 }
                                 else if (retcheck.fMaxManipSpeed > _parameters->maxmanipspeed ) {
                                     // If the velocity limit is violated, we don't scale down dof accelerations
+                                    dReal fvelmult = retcheck.fTimeBasedSurpassMult;
+                                    fcurvelmult *= fvelmult;
+                                    if (fcurvelmult < 0.01) {
+                                        RAVELOG_VERBOSE_FORMAT("env = %d: shortcut iter = %d/%d: fcurvelmult (%.15e) is too small. continue to the next iteration", GetEnv()->GetId()%iters%numIters%fcurvelmult);
+                                        break;
+                                    }
+                                    for (size_t j = 0; j < accellimits.size(); ++j) {
+                                        dReal fminvel = max(RaveFabs(dx0[j]), RaveFabs(dx1[j]));
+                                        vellimits[j] = max(fminvel, fvelmult * vellimits[j]);
+                                    }
+                                    fOverallTimeMult = retcheck.fTimeBasedSurpassMult;
+                                }
+                                else {
                                     dReal fvelmult = retcheck.fTimeBasedSurpassMult;
                                     fcurvelmult *= fvelmult;
                                     if (fcurvelmult < 0.01) {

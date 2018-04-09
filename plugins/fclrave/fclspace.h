@@ -73,7 +73,7 @@ public:
 public:
         class LinkInfo
         {
-        public:
+public:
             LinkInfo() : bFromKinBodyLink(false) {
             }
             LinkInfo(KinBody::LinkPtr plink) : _plink(plink), bFromKinBodyLink(true) {
@@ -199,6 +199,8 @@ public:
             pinfo->_geometrygroup = _geometrygroup;
         }
 
+        RAVELOG_VERBOSE_FORMAT("env=%d, self=%d, init body %s (%d)", pbody->GetEnv()->GetId()%_bIsSelfCollisionChecker%pbody->GetName()%pbody->GetEnvironmentId());
+
         pinfo->Reset();
         pinfo->_pbody = boost::const_pointer_cast<KinBody>(pbody);
         // make sure that synchronization do occur !
@@ -226,9 +228,9 @@ public:
                 std::vector<KinBody::Link::GeometryPtr> const &geoms = (*itlink)->GetGeometries();
                 typedef boost::function<KinBody::GeometryInfo const& (KinBody::Link::GeometryPtr const&)> Func;
                 typedef boost::transform_iterator<Func, std::vector<KinBody::Link::GeometryPtr>::const_iterator> PtrGeomInfoIterator;
-                Func getInfo = [] (KinBody::Link::GeometryPtr const &itgeom)->KinBody::GeometryInfo const& {
-                    return itgeom->GetInfo();
-                };
+                Func getInfo = [] (KinBody::Link::GeometryPtr const &itgeom) -> KinBody::GeometryInfo const& {
+                                   return itgeom->GetInfo();
+                               };
                 begingeom = GeometryInfoIterator(PtrGeomInfoIterator(geoms.begin(), getInfo));
                 endgeom = GeometryInfoIterator(PtrGeomInfoIterator(geoms.end(), getInfo));
             }
@@ -511,7 +513,7 @@ public:
     inline const MeshFactory& GetMeshFactory() const {
         return _meshFactory;
     }
-    
+
 private:
     static void _AddGeomInfoToBVHSubmodel(fcl::BVHModel<fcl::OBB>& model, KinBody::GeometryInfo const &info)
     {

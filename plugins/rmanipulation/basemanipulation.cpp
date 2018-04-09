@@ -777,7 +777,7 @@ protected:
             params->_sPostProcessingPlanner = "shortcut_linear";
             params->_sPostProcessingParameters ="<_nmaxiterations>100</_nmaxiterations><_postprocessing planner=\"lineartrajectoryretimer\"></_postprocessing>";
             vector<dReal> vdelta(params->vinitialconfig.size(),0);
-            if( !params->_neighstatefn(params->vinitialconfig,vdelta,0)) {
+            if( params->_neighstatefn(params->vinitialconfig,vdelta,0) == NSS_Failed ) {
                 throw OPENRAVE_EXCEPTION_FORMAT0("initial configuration does not follow constraints",ORE_InconsistentConstraints);
             }
         }
