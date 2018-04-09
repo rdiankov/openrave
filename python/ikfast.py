@@ -1466,8 +1466,7 @@ class IKFastSolver(AutoReloader):
         """given a sympy matrix, will round the matrix and snap all its values to 15, 30, 45, 60, and 90 degrees.
         """
         if axisAngleFromRotationMatrix is not None:
-            Teval = T.evalf()
-            axisangle = axisAngleFromRotationMatrix([[Teval[0,0], Teval[0,1], Teval[0,2]], [Teval[1,0], Teval[1,1], Teval[1,2]], [Teval[2,0], Teval[2,1], Teval[2,2]]])
+            axisangle = axisAngleFromRotationMatrix(numpy.array(T.evalf()[:3, :3].tolist(), dtype=numpy.float64))
             angle = sqrt(axisangle[0]**2+axisangle[1]**2+axisangle[2]**2)
             if abs(angle) < 10**(-self.precision):
                 # rotation is identity
