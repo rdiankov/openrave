@@ -383,11 +383,11 @@ public:
 
     boost::shared_ptr<IkLibrary> _AddIkLibrary(const string& ikname, const string& _libraryname)
     {
-#ifdef HAVE_BOOST_FILESYSTEM
-        string libraryname = boost::filesystem::system_complete(boost::filesystem::path(_libraryname)).string();
-#else
+//#ifdef HAVE_BOOST_FILESYSTEM
+//        string libraryname = boost::filesystem::system_complete(boost::filesystem::path(_libraryname)).string();
+//#else
         string libraryname=_libraryname;
-#endif
+//#endif
 
         // before adding a new library, check for existing
         boost::mutex::scoped_lock lock(GetLibraryMutex());
