@@ -263,13 +263,18 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
     if( _options & Save_ManipulatorsToolTransform ) {
         if( probot == _probot ) {
             std::vector<RobotBase::ManipulatorPtr> vmanips = probot->GetManipulators();
-            for(int imanip = 0; imanip < vmanips.size(); ++imanip){
-                RobotBase::ManipulatorPtr pmanip = vmanips[imanip];
-                if( !!pmanip ){
-                    pmanip->SetLocalToolTransform(_vtManipsLocalTool[imanip]);
-                    pmanip->SetLocalToolDirection(_vvManipsLocalDirection[imanip]);
-                    pmanip->SetIkSolver(_vpManipsIkSolver[imanip]);
+            if(vmanips.size() == _vtManipsLocalTool.size()) {
+                for(int imanip = 0; imanip < vmanips.size(); ++imanip) {
+                    RobotBase::ManipulatorPtr pmanip = vmanips[imanip];
+                    if( !!pmanip ){
+                        pmanip->SetLocalToolTransform(_vtManipsLocalTool.at(imanip));
+                        pmanip->SetLocalToolDirection(_vvManipsLocalDirection.at(imanip));
+                        pmanip->SetIkSolver(_vpManipsIkSolver.at(imanip));
+                    }
                 }
+            }
+            else {
+                RAVELOG_WARN(str(boost::format("failed to restore manipulators tool transform because the number of saved manipulators %i is different from the number of current manipulators %i\n")%_vtManipsLocalTool.size()%vmanips.size()));
             }
         }
     }
