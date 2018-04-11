@@ -22,28 +22,31 @@
 #include <QtCore/QTimer>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QLayout>
+#include <QtWidgets/QOpenGLWidget>
 #include <osgViewer/CompositeViewer>
 #include <osgViewer/ViewerEventHandlers>
 #include <osg/PositionAttitudeTransform>
 #include <osgManipulator/Dragger>
 #include <iostream>
 
-#include <osgQt/GraphicsWindowQt>
+#include "graphicswindowqt2.h"
+
+//#include <osgQt/GraphicsWindowQt>
 
 namespace qtosgrave {
 
 using namespace OpenRAVE;
-using namespace osgQt;
+    //using namespace osgQt;
 
 class OpenRAVETrackball;
-    
+
 /// \brief  Class of the openscene graph 3d viewer
-class ViewerWidget : public QWidget, public osgViewer::CompositeViewer
+class QOSGViewerWidget : public QOpenGLWidget, public osgViewer::CompositeViewer
 {
 public:
-    ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey, const boost::function<bool(int)>& onKeyDown=boost::function<bool(int)>(), double metersinunit=1);
-    virtual ~ViewerWidget();
-    
+    QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey, const boost::function<bool(int)>& onKeyDown=boost::function<bool(int)>(), double metersinunit=1);
+    virtual ~QOSGViewerWidget();
+
     /// \brief Draws bounding box around actual kinbody
     void DrawBoundingBox(bool pressed);
 
@@ -82,21 +85,21 @@ public:
     /// \brief sets the near plane for the camera
     void SetNearPlane(double nearplane);
 
-    /// \brief sets the zoom factor. only affects orthogonal view 
+    /// \brief sets the zoom factor. only affects orthogonal view
     /// \param factor > 1.0 = Zoom in. < 1.0 = Zoom out
     void Zoom(float factor);
 
     /// \brief set the cubemap for skybox
     void SetTextureCubeMap(const std::string& posx,
-            const std::string& negx,
-            const std::string& posy,
-            const std::string& negy,
-            const std::string& posz,
-            const std::string& negz);
+                           const std::string& negx,
+                           const std::string& posy,
+                           const std::string& negy,
+                           const std::string& posz,
+                           const std::string& negz);
 
     /// \brief returns the near plane set on the camera
     double GetCameraNearPlane();
-    
+
     /// \brief called when the qt window size changes
     void SetViewport(int width, int height, double metersinunit);
 
@@ -120,7 +123,7 @@ public:
 
     /// \brief handle case when link is selected
     void SelectOSGLink(OSGNodePtr node, int modkeymask);
-    
+
     osg::Camera *GetCamera();
     osg::ref_ptr<osgGA::CameraManipulator> GetCameraManipulator();
     OSGMatrixTransformPtr GetCameraHUD();
@@ -133,8 +136,139 @@ public:
 
     /// \brief restores cursor to what it was originally set to
     void RestoreCursor();
+
     
+    virtual void resizeGL( int width, int height ) override
+    {
+        RAVELOG_INFO_FORMAT("resize %d %d", width%height);
+        osgViewer::Viewer::Windows windows;
+        getWindows(windows);
+        for(osgViewer::Viewer::Windows::iterator itr = windows.begin(); itr != windows.end(); ++itr) {
+            osgViewer::GraphicsWindow* gw = dynamic_cast<osgViewer::GraphicsWindow*>(*itr);
+            gw->getEventQueue()->windowResize(this->x()*_devicePixelRatio, this->y() * _devicePixelRatio, width*_devicePixelRatio, height*_devicePixelRatio);
+            gw->resized(this->x()*_devicePixelRatio, this->y() * _devicePixelRatio, width*_devicePixelRatio, height*_devicePixelRatio);
+        }
+        GetCamera()->setViewport(0, 0, this->width()*_devicePixelRatio, this->height()* _devicePixelRatio);
+    }
+
+
+    virtual void mouseMoveEvent(QMouseEvent* event) override
+    {
+        osgViewer::Viewer::Windows windows;
+        getWindows(windows);
+        for(osgViewer::Viewer::Windows::iterator itr = windows.begin(); itr != windows.end(); ++itr) {
+            osgViewer::GraphicsWindow* gw = dynamic_cast<osgViewer::GraphicsWindow*>(*itr);
+            gw->getEventQueue()->mouseMotion(event->x()*_devicePixelRatio, event->y()*_devicePixelRatio);
+        }
+    }
+
+    virtual void mousePressEvent(QMouseEvent* event) override
+    {
+        unsigned int button = 0;
+        switch (event->button()) {
+        case Qt::LeftButton:
+            button = 1;
+            break;
+        case Qt::MiddleButton:
+            button = 2;
+            break;
+        case Qt::RightButton:
+            button = 3;
+            break;
+        default:
+            break;
+        }
+        osgViewer::Viewer::Windows windows;
+        getWindows(windows);
+        for(osgViewer::Viewer::Windows::iterator itr = windows.begin(); itr != windows.end(); ++itr) {
+            osgViewer::GraphicsWindow* gw = dynamic_cast<osgViewer::GraphicsWindow*>(*itr);
+            gw->getEventQueue()->mouseButtonPress(event->x()*_devicePixelRatio, event->y()*_devicePixelRatio, button);
+        }
+    }
+
+    virtual void mouseReleaseEvent(QMouseEvent* event) override
+    {
+        unsigned int button = 0;
+        switch (event->button()) {
+        case Qt::LeftButton:
+            button = 1;
+            break;
+        case Qt::MiddleButton:
+            button = 2;
+            break;
+        case Qt::RightButton:
+            button = 3;
+            break;
+        default:
+            break;
+        }
+        osgViewer::Viewer::Windows windows;
+        getWindows(windows);
+        for(osgViewer::Viewer::Windows::iterator itr = windows.begin(); itr != windows.end(); ++itr) {
+            osgViewer::GraphicsWindow* gw = dynamic_cast<osgViewer::GraphicsWindow*>(*itr);
+            gw->getEventQueue()->mouseButtonRelease(event->x()*_devicePixelRatio, event->y()*_devicePixelRatio, button);
+        }
+    }
+
+    virtual void wheelEvent(QWheelEvent* event)
+    {
+        int delta = event->delta();
+        osgGA::GUIEventAdapter::ScrollingMotion motion = delta > 0 ?
+                                                         osgGA::GUIEventAdapter::SCROLL_UP : osgGA::GUIEventAdapter::SCROLL_DOWN;
+        osgViewer::Viewer::Windows windows;
+        getWindows(windows);
+        for(osgViewer::Viewer::Windows::iterator itr = windows.begin(); itr != windows.end(); ++itr) {
+            osgViewer::GraphicsWindow* gw = dynamic_cast<osgViewer::GraphicsWindow*>(*itr);
+            gw->getEventQueue()->mouseScroll(motion);
+        }
+    }
+
+
 protected:
+//    void moveEvent(QMoveEvent *event)
+//    {
+//        int width = this->width();
+//        int height = this->height();
+//        RAVELOG_INFO_FORMAT("resize %d %d", width%height);
+//        osgViewer::Viewer::Windows windows;
+//        getWindows(windows);
+//        for(osgViewer::Viewer::Windows::iterator itr = windows.begin(); itr != windows.end(); ++itr) {
+//            osgViewer::GraphicsWindow* gw = dynamic_cast<osgViewer::GraphicsWindow*>(*itr);
+//            gw->getEventQueue()->windowResize(this->x()*_devicePixelRatio, this->y() * _devicePixelRatio, width*_devicePixelRatio, height*_devicePixelRatio);
+//            gw->resized(this->x()*_devicePixelRatio, this->y() * _devicePixelRatio, width*_devicePixelRatio, height*_devicePixelRatio);
+//        }
+//        GetCamera()->setViewport(0, 0, this->width()*_devicePixelRatio, this->height()* _devicePixelRatio);
+//    }
+    void resizeEvent(QResizeEvent *event)
+    {
+        int width = this->width();
+        int height = this->height();
+        RAVELOG_INFO_FORMAT("resize %d %d", width%height);
+        osgViewer::Viewer::Windows windows;
+        getWindows(windows);
+        for(osgViewer::Viewer::Windows::iterator itr = windows.begin(); itr != windows.end(); ++itr) {
+            osgViewer::GraphicsWindow* gw = dynamic_cast<osgViewer::GraphicsWindow*>(*itr);
+            gw->getEventQueue()->windowResize(this->x()*_devicePixelRatio, this->y() * _devicePixelRatio, width*_devicePixelRatio, height*_devicePixelRatio);
+            gw->resized(this->x()*_devicePixelRatio, this->y() * _devicePixelRatio, width*_devicePixelRatio, height*_devicePixelRatio);
+        }
+        GetCamera()->setViewport(0, 0, this->width()*_devicePixelRatio, this->height()* _devicePixelRatio);
+    }
+//    void showEvent(QShowEvent *event)
+//    {
+//        int width = this->width();
+//        int height = this->height();
+//        RAVELOG_INFO_FORMAT("resize %d %d", width%height);
+//        osgViewer::Viewer::Windows windows;
+//        getWindows(windows);
+//        for(osgViewer::Viewer::Windows::iterator itr = windows.begin(); itr != windows.end(); ++itr) {
+//            osgViewer::GraphicsWindow* gw = dynamic_cast<osgViewer::GraphicsWindow*>(*itr);
+//            gw->getEventQueue()->windowResize(this->x()*_devicePixelRatio, this->y() * _devicePixelRatio, width*_devicePixelRatio, height*_devicePixelRatio);
+//            gw->resized(this->x()*_devicePixelRatio, this->y() * _devicePixelRatio, width*_devicePixelRatio, height*_devicePixelRatio);
+//        }
+//        GetCamera()->setViewport(0, 0, this->width()*_devicePixelRatio, this->height()* _devicePixelRatio);
+//    }
+
+    
     /// \brief handles a key press and looks at the modifier keys
     bool HandleOSGKeyDown(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa);
 
@@ -143,7 +277,7 @@ protected:
 
     /// \brief gather all the necessary text and updates it on the HUD control
     void _UpdateHUDText();
-    
+
     /// \brief Create a viewer widget
     QWidget* _AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view, osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview );
 
@@ -178,7 +312,7 @@ protected:
     /// \param draggerName the type of dragger to create
     /// \param joint if not empty, the joint to create the dragger over (ie for moving the joint value)
     OSGNodePtr _AddDraggerToObject(const std::string& draggerName, KinBodyItemPtr item, KinBody::JointPtr joint);
-    virtual void paintEvent( QPaintEvent* event );
+    virtual void paintGL();
 
     OSGGroupPtr _osgSceneRoot; ///< root scene node
     OSGGroupPtr _osgFigureRoot; ///< the node that all the figures are drawn into
@@ -216,10 +350,12 @@ protected:
 
     boost::function<bool(int)> _onKeyDown; ///< call whenever key press is detected
 
+    qreal _devicePixelRatio; /// QApplication::desktop()->devicePixelRatio()
+
     bool _bLightOn; ///< whether lights are on or not
     bool _bIsSelectiveActive; ///< if true, then can select a new
     double _zNear; ///< In OSG, znear and zfar are updated by CullVisitor, which
-                   ///  causing getProjectionMatrixAsXXX to return negative 
+                   ///  causing getProjectionMatrixAsXXX to return negative
                    ///  values. Therefore, we manage zNear ourselves
 };
 

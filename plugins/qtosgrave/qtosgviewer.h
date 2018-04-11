@@ -29,7 +29,7 @@
 
 namespace qtosgrave {
 
-class ViewerWidget;
+class QOSGViewerWidget;
 class QtOSGViewer;
 typedef boost::shared_ptr<QtOSGViewer> QtOSGViewerPtr;
 typedef boost::weak_ptr<QtOSGViewer> QtOSGViewerWeakPtr;
@@ -419,7 +419,7 @@ public:
 
     QGridLayout* _qCentralLayout;
     QWidget* _qCentralWidget;
-    ViewerWidget* _posgWidget; // cannot be shared_ptr since QMainWindow takes ownership of it internally
+    QOSGViewerWidget* _posgWidget; // cannot be shared_ptr since QMainWindow takes ownership of it internally
 
     QMenu* fileMenu;
     QMenu* viewMenu;
