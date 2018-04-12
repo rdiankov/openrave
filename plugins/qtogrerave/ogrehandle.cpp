@@ -79,6 +79,9 @@ OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, Op
             //  Extract geometry from collision Mesh
             case OpenRAVE::GT_Container:
             case OpenRAVE::GT_TriMesh: {
+                const OpenRAVE::TriMesh& mesh = pGeom->GetCollisionMesh();
+                Ogre::Vector3 min, max;
+                float* vpoints = FormatPoints(reinterpret_cast<const float*>(mesh.vertices.data()), mesh.vertices.size(), sizeof(OpenRAVE::Vector), min, max);
                 #if 0
                 // make triangleMesh
                 osg::ref_ptr<osg::Geometry> geom = new osg::Geometry;
