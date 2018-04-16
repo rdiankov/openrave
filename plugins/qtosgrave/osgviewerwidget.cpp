@@ -35,7 +35,7 @@ namespace qtosgrave {
 class OpenRAVETrackball : public osgGA::TrackballManipulator
 {
 public:
-    OpenRAVETrackball(ViewerWidget* pviewer) {
+    OpenRAVETrackball(QOSGViewerWidget* pviewer) {
         _bInSeekMode = false;
         _pviewer = pviewer;
     }
@@ -305,7 +305,7 @@ public:
     }
 
 private:
-    ViewerWidget* _pviewer;
+    QOSGViewerWidget* _pviewer;
     bool _bInSeekMode; ///< if true, in seek mode
 };
 
@@ -355,7 +355,7 @@ private:
     boost::function<bool(const osgGA::GUIEventAdapter&, osgGA::GUIActionAdapter&)> _onKeyDown; ///< called when key is pressed
 };
 
-//void ViewerWidget::_ShowSceneGraph(const std::string& currLevel,OSGNodePtr currNode)
+//void QOSGViewerWidget::_ShowSceneGraph(const std::string& currLevel,OSGNodePtr currNode)
 //{
 //    std::string level;
 //    OSGGroupPtr currGroup;
@@ -376,7 +376,7 @@ private:
 //    }
 //}
 
-ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey, const boost::function<bool(int)>& onKeyDown, double metersinunit) : QWidget(), _onKeyDown(onKeyDown)
+QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey, const boost::function<bool(int)>& onKeyDown, double metersinunit) : QOpenGLWidget(), _onKeyDown(onKeyDown)
 {
     setKeyEventSetsDone(0); // disable Escape key from killing the viewer!
 
@@ -388,7 +388,7 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     _osghudview = new osgViewer::View();
 
     //  Improve FPS to 60 per viewer
-    setThreadingModel(osgViewer::CompositeViewer::CullDrawThreadPerContext);
+    setThreadingModel(osgViewer::ViewerBase::SingleThreaded);
 
     QWidget* widgetview = _AddViewWidget(_CreateCamera(0,0,100,100, metersinunit), _osgview, _CreateHUDCamera(0,0,100,100, metersinunit), _osghudview);
     QGridLayout* grid = new QGridLayout;
@@ -397,10 +397,10 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     setLayout(grid);
 
     //  Sets pickhandler
-    _picker = new OSGPickHandler(boost::bind(&ViewerWidget::HandleRayPick, this, _1, _2, _3), boost::bind(&ViewerWidget::UpdateFromOSG,this));
+    _picker = new OSGPickHandler(boost::bind(&QOSGViewerWidget::HandleRayPick, this, _1, _2, _3), boost::bind(&QOSGViewerWidget::UpdateFromOSG,this));
     _osgview->addEventHandler(_picker);
 
-    _keyhandler = new OpenRAVEKeyboardEventHandler(boost::bind(&ViewerWidget::HandleOSGKeyDown, this, _1, _2));
+    _keyhandler = new OpenRAVEKeyboardEventHandler(boost::bind(&QOSGViewerWidget::HandleOSGKeyDown, this, _1, _2));
     _osgview->addEventHandler(_keyhandler);
 
     // initialize the environment
@@ -483,7 +483,7 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     RestoreCursor();
 }
 
-ViewerWidget::~ViewerWidget()
+QOSGViewerWidget::~QOSGViewerWidget()
 {
     if( !!_selectedItem ) {
         _selectedItem->SetGrab(false);
@@ -491,7 +491,7 @@ ViewerWidget::~ViewerWidget()
     _selectedItem.reset();
 }
 
-bool ViewerWidget::HandleOSGKeyDown(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa)
+bool QOSGViewerWidget::HandleOSGKeyDown(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa)
 {
     int key = ea.getKey();
     if( !!_onKeyDown ) {
@@ -506,7 +506,7 @@ bool ViewerWidget::HandleOSGKeyDown(const osgGA::GUIEventAdapter& ea,osgGA::GUIA
     return false;
 }
 
-void ViewerWidget::RestoreCursor()
+void QOSGViewerWidget::RestoreCursor()
 {
     osgViewer::Viewer::Windows windows;
     getWindows(windows);
@@ -531,13 +531,13 @@ void ViewerWidget::RestoreCursor()
     }
 }
 
-void ViewerWidget::ActivateSelection(bool active)
+void QOSGViewerWidget::ActivateSelection(bool active)
 {
     _bIsSelectiveActive = active;
     RestoreCursor();
 }
 
-void ViewerWidget::SetDraggerMode(const std::string& draggerName)
+void QOSGViewerWidget::SetDraggerMode(const std::string& draggerName)
 {
     if( draggerName.size() > 0 ) {
         _draggerName = draggerName;
@@ -549,7 +549,7 @@ void ViewerWidget::SetDraggerMode(const std::string& draggerName)
     }
 }
 
-void ViewerWidget::SelectItem(KinBodyItemPtr item, KinBody::JointPtr joint)
+void QOSGViewerWidget::SelectItem(KinBodyItemPtr item, KinBody::JointPtr joint)
 {
     if( _selectedItem != item ) {
         if( !!_selectedItem ) {
@@ -570,12 +570,12 @@ void ViewerWidget::SelectItem(KinBodyItemPtr item, KinBody::JointPtr joint)
     }
 }
 
-void ViewerWidget::SelectItemFromName(const std::string& name)
+void QOSGViewerWidget::SelectItemFromName(const std::string& name)
 {
     SelectItem(_GetItemFromName(name));
 }
 
-void ViewerWidget::SetSceneData()
+void QOSGViewerWidget::SetSceneData()
 {
     OSGGroupPtr rootscene(new osg::Group());
     //  Normalize object normals
@@ -596,13 +596,13 @@ void ViewerWidget::SetSceneData()
     _osgview->setSceneData(rootscene.get());
 }
 
-void ViewerWidget::ResetViewToHome()
+void QOSGViewerWidget::ResetViewToHome()
 {
     SetHome();
     _osgview->home();
 }
 
-void ViewerWidget::SetHome()
+void QOSGViewerWidget::SetHome()
 {
     if (!!_osgLightsGroup) {
         const osg::BoundingSphere& bs = _osgSceneRoot->getBound();
@@ -611,13 +611,13 @@ void ViewerWidget::SetHome()
     }
 }
 
-void ViewerWidget::SetLight(bool enabled)
+void QOSGViewerWidget::SetLight(bool enabled)
 {
     _bLightOn = enabled;
     SetSceneData();
 }
 
-void ViewerWidget::SetFacesMode(bool enabled)
+void QOSGViewerWidget::SetFacesMode(bool enabled)
 {
     if( !_osgview->getSceneData() ) {
         return;
@@ -638,7 +638,7 @@ void ViewerWidget::SetFacesMode(bool enabled)
     _osgview->getSceneData()->setStateSet(stateset);
 }
 
-void ViewerWidget::SetPolygonMode(int mode)
+void QOSGViewerWidget::SetPolygonMode(int mode)
 {
     osg::ref_ptr<osg::PolygonMode> poly(new osg::PolygonMode());
     osg::ref_ptr<osg::ShadeModel> sm(new osg::ShadeModel());
@@ -665,7 +665,7 @@ void ViewerWidget::SetPolygonMode(int mode)
     }
 }
 
-void ViewerWidget::SetWire(OSGNodePtr node)
+void QOSGViewerWidget::SetWire(OSGNodePtr node)
 {
     osg::ref_ptr<osg::PolygonMode> poly(new osg::PolygonMode());
     osg::ref_ptr<osg::ShadeModel> sm(new osg::ShadeModel());
@@ -677,7 +677,7 @@ void ViewerWidget::SetWire(OSGNodePtr node)
     node->getOrCreateStateSet()->setAttribute(sm.get());
 }
 
-void ViewerWidget::HandleRayPick(const osgUtil::LineSegmentIntersector::Intersection& intersection, int buttonPressed, int modkeymask)
+void QOSGViewerWidget::HandleRayPick(const osgUtil::LineSegmentIntersector::Intersection& intersection, int buttonPressed, int modkeymask)
 {
     if (intersection.nodePath.empty()) {
         _strRayInfoText.clear();
@@ -725,7 +725,7 @@ void ViewerWidget::HandleRayPick(const osgUtil::LineSegmentIntersector::Intersec
     }
 }
 
-void ViewerWidget::UpdateFromOSG()
+void QOSGViewerWidget::UpdateFromOSG()
 {
     if( !!_selectedItem ) {
         // have to update the underlying openrave model since dragger is most likely changing the positions
@@ -738,7 +738,7 @@ void ViewerWidget::UpdateFromOSG()
     }
 }
 
-void ViewerWidget::SelectOSGLink(OSGNodePtr node, int modkeymask)
+void QOSGViewerWidget::SelectOSGLink(OSGNodePtr node, int modkeymask)
 {
     if (!node) {
         if( !(modkeymask & osgGA::GUIEventAdapter::MODKEY_CTRL) ) {
@@ -782,7 +782,7 @@ void ViewerWidget::SelectOSGLink(OSGNodePtr node, int modkeymask)
     }
 }
 
-void ViewerWidget::_ClearDragger()
+void QOSGViewerWidget::_ClearDragger()
 {
     if( !!_osgSelectedNodeByDragger && !!_osgDraggerRoot ) {
         OSGGroupPtr parent;
@@ -813,13 +813,13 @@ void ViewerWidget::_ClearDragger()
     _osgDraggerRoot.release();
 }
 
-void ViewerWidget::SetUserHUDText(const std::string& text)
+void QOSGViewerWidget::SetUserHUDText(const std::string& text)
 {
     _strUserText = text;
     _UpdateHUDText();
 }
 
-void ViewerWidget::_UpdateHUDText()
+void QOSGViewerWidget::_UpdateHUDText()
 {
     std::string s;
     if( _strRayInfoText.size() > 0 ) {
@@ -840,7 +840,7 @@ void ViewerWidget::_UpdateHUDText()
     _osgHudText->setText(s);
 }
 
-void ViewerWidget::SetNearPlane(double nearplane)
+void QOSGViewerWidget::SetNearPlane(double nearplane)
 {
     _zNear = nearplane;
     if( _osgview->getCamera()->getProjectionMatrix()(2,3) == 0 ) {
@@ -856,12 +856,12 @@ void ViewerWidget::SetNearPlane(double nearplane)
     }
 }
 
-double ViewerWidget::GetCameraNearPlane()
+double QOSGViewerWidget::GetCameraNearPlane()
 {
     return _zNear;
 }
 
-void ViewerWidget::SetViewType(int isorthogonal)
+void QOSGViewerWidget::SetViewType(int isorthogonal)
 {
     int width = _osgview->getCamera()->getViewport()->width();
     int height = _osgview->getCamera()->getViewport()->height();
@@ -875,7 +875,7 @@ void ViewerWidget::SetViewType(int isorthogonal)
     }
 }
 
-void ViewerWidget::SetViewport(int width, int height, double metersinunit)
+void QOSGViewerWidget::SetViewport(int width, int height, double metersinunit)
 {
     _osgview->getCamera()->setViewport(0,0,width,height);
     _osghudview->getCamera()->setViewport(0,0,width,height);
@@ -890,7 +890,7 @@ void ViewerWidget::SetViewport(int width, int height, double metersinunit)
     _osgHudText->setCharacterSize(textheight);
 }
 
-void ViewerWidget::Zoom(float factor)
+void QOSGViewerWidget::Zoom(float factor)
 {
     // Ortho
     if ( _osgview->getCamera()->getProjectionMatrix()(2,3) == 0 ) {
@@ -904,13 +904,13 @@ void ViewerWidget::Zoom(float factor)
     }
 }
 
-void ViewerWidget::SetTextureCubeMap(const std::string& posx, const std::string& negx, const std::string& posy,
+void QOSGViewerWidget::SetTextureCubeMap(const std::string& posx, const std::string& negx, const std::string& posy,
                                      const std::string& negy, const std::string& posz, const std::string& negz)
 {
     _osgSkybox->setTextureCubeMap(posx, negx, posy, negy, posz, negz);
 }
 
-QWidget* ViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view, osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview )
+QWidget* QOSGViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view, osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview )
 {
     view->setCamera( camera.get() );
     hudview->setCamera( hudcamera.get() );
@@ -933,7 +933,7 @@ QWidget* ViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::re
     return gw ? gw->getGraphWidget() : NULL;
 }
 
-osg::ref_ptr<osg::Camera> ViewerWidget::_CreateCamera( int x, int y, int w, int h, double metersinunit)
+osg::ref_ptr<osg::Camera> QOSGViewerWidget::_CreateCamera( int x, int y, int w, int h, double metersinunit)
 {
     osg::ref_ptr<osg::DisplaySettings> ds = osg::DisplaySettings::instance();
 
@@ -961,7 +961,7 @@ osg::ref_ptr<osg::Camera> ViewerWidget::_CreateCamera( int x, int y, int w, int 
     return camera;
 }
 
-osg::ref_ptr<osg::Camera> ViewerWidget::_CreateHUDCamera( int x, int y, int w, int h, double metersinunit)
+osg::ref_ptr<osg::Camera> QOSGViewerWidget::_CreateHUDCamera( int x, int y, int w, int h, double metersinunit)
 {
     osg::ref_ptr<osg::Camera> camera(new osg::Camera());
     camera->setProjectionMatrix(osg::Matrix::ortho(-1,1,-1,1,1,10));
@@ -982,14 +982,14 @@ osg::ref_ptr<osg::Camera> ViewerWidget::_CreateHUDCamera( int x, int y, int w, i
     return camera;
 }
 
-KinBodyItemPtr ViewerWidget::_GetItemFromName(const std::string& name)
+KinBodyItemPtr QOSGViewerWidget::_GetItemFromName(const std::string& name)
 {
     KinBodyPtr pbody = _penv->GetKinBody(name);
     KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData(_userdatakey));
     return pitem;
 }
 
-KinBodyItemPtr ViewerWidget::FindKinBodyItemFromOSGNode(OSGNodePtr node)
+KinBodyItemPtr QOSGViewerWidget::FindKinBodyItemFromOSGNode(OSGNodePtr node)
 {
     if (!node) {
         return KinBodyItemPtr();
@@ -1019,7 +1019,7 @@ KinBodyItemPtr ViewerWidget::FindKinBodyItemFromOSGNode(OSGNodePtr node)
 }
 
 
-KinBody::JointPtr ViewerWidget::_FindJoint(KinBodyItemPtr pitem, KinBody::LinkPtr link)
+KinBody::JointPtr QOSGViewerWidget::_FindJoint(KinBodyItemPtr pitem, KinBody::LinkPtr link)
 {
     if( !!pitem && !!pitem->GetBody() && !!link ) {
         // search for the joint whose child link is this link
@@ -1032,7 +1032,7 @@ KinBody::JointPtr ViewerWidget::_FindJoint(KinBodyItemPtr pitem, KinBody::LinkPt
     return KinBody::JointPtr();
 }
 
-osg::ref_ptr<osg::Material> ViewerWidget::_CreateSimpleMaterial(osg::Vec4 color)
+osg::ref_ptr<osg::Material> QOSGViewerWidget::_CreateSimpleMaterial(osg::Vec4 color)
 {
     osg::ref_ptr<osg::Material> material(new osg::Material());
     material->setDiffuse(osg::Material::FRONT,  osg::Vec4(0.0, 0.0, 0.0, 1.0));
@@ -1040,7 +1040,7 @@ osg::ref_ptr<osg::Material> ViewerWidget::_CreateSimpleMaterial(osg::Vec4 color)
     return material;
 }
 
-osg::ref_ptr<osg::Light> ViewerWidget::_CreateLight(osg::Vec4 color, int lightid)
+osg::ref_ptr<osg::Light> QOSGViewerWidget::_CreateLight(osg::Vec4 color, int lightid)
 {
     osg::ref_ptr<osg::Light> light(new osg::Light());
     // each light must have a unique number
@@ -1056,7 +1056,7 @@ osg::ref_ptr<osg::Light> ViewerWidget::_CreateLight(osg::Vec4 color, int lightid
     return light;
 }
 
-osg::ref_ptr<osg::Light> ViewerWidget::_CreateAmbientLight(osg::Vec4 color, int lightid)
+osg::ref_ptr<osg::Light> QOSGViewerWidget::_CreateAmbientLight(osg::Vec4 color, int lightid)
 {
     osg::ref_ptr<osg::Light> light(new osg::Light());
     // each light must have a unique number
@@ -1073,7 +1073,7 @@ osg::ref_ptr<osg::Light> ViewerWidget::_CreateAmbientLight(osg::Vec4 color, int 
     return light;
 }
 
-void ViewerWidget::_InitializeLights(int nlights)
+void QOSGViewerWidget::_InitializeLights(int nlights)
 {
     _vLightTransform.resize(nlights);
 
@@ -1126,7 +1126,7 @@ void ViewerWidget::_InitializeLights(int nlights)
     }
 }
 
-//void ViewerWidget::_UpdateFromOSG()
+//void QOSGViewerWidget::_UpdateFromOSG()
 //{
 //    std::vector<KinBody::BodyState> vecbodies;
 //    _penv->GetPublishedBodies(vecbodies);
@@ -1140,32 +1140,32 @@ void ViewerWidget::_InitializeLights(int nlights)
 //    }
 //}
 
-osg::Camera *ViewerWidget::GetCamera()
+osg::Camera *QOSGViewerWidget::GetCamera()
 {
     return _osgview->getCamera();
 }
 
-osg::ref_ptr<osgGA::CameraManipulator> ViewerWidget::GetCameraManipulator()
+osg::ref_ptr<osgGA::CameraManipulator> QOSGViewerWidget::GetCameraManipulator()
 {
     return _osgCameraManipulator;
 }
 
-OSGMatrixTransformPtr ViewerWidget::GetCameraHUD()
+OSGMatrixTransformPtr QOSGViewerWidget::GetCameraHUD()
 {
     return _osgCameraHUD;
 }
 
-void ViewerWidget::_StoreMatrixTransform()
+void QOSGViewerWidget::_StoreMatrixTransform()
 {
     _viewCameraMatrix = _osgview->getCamera()->getViewMatrix();
 }
 
-void ViewerWidget::_LoadMatrixTransform()
+void QOSGViewerWidget::_LoadMatrixTransform()
 {
     _osgview->getCamera()->setViewMatrix(_viewCameraMatrix);
 }
 
-std::vector<osg::ref_ptr<osgManipulator::Dragger> > ViewerWidget::_CreateDragger(const std::string& draggerName)
+std::vector<osg::ref_ptr<osgManipulator::Dragger> > QOSGViewerWidget::_CreateDragger(const std::string& draggerName)
 {
     std::vector<osg::ref_ptr<osgManipulator::Dragger> > draggers;
     if ("TabPlaneDragger" == draggerName)
@@ -1231,7 +1231,7 @@ std::vector<osg::ref_ptr<osgManipulator::Dragger> > ViewerWidget::_CreateDragger
     return draggers;
 }
 
-OSGNodePtr ViewerWidget::_AddDraggerToObject(const std::string& draggerName, KinBodyItemPtr item, KinBody::JointPtr pjoint)
+OSGNodePtr QOSGViewerWidget::_AddDraggerToObject(const std::string& draggerName, KinBodyItemPtr item, KinBody::JointPtr pjoint)
 {
     // Clears dragger
     _ClearDragger();
@@ -1324,7 +1324,7 @@ OSGNodePtr ViewerWidget::_AddDraggerToObject(const std::string& draggerName, Kin
     return _osgDraggerRoot;
 }
 
-void ViewerWidget::paintEvent( QPaintEvent* event )
+void QOSGViewerWidget::paintEvent( QPaintEvent* event )
 {
     try {
         frame(); // osgViewer::CompositeViewer
