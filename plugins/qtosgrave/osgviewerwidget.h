@@ -22,6 +22,7 @@
 #include <QtCore/QTimer>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QLayout>
+#include <QtWidgets/QOpenGLWidget>
 #include <osgViewer/CompositeViewer>
 #include <osgViewer/ViewerEventHandlers>
 #include <osg/PositionAttitudeTransform>
@@ -38,11 +39,11 @@ using namespace osgQt;
 class OpenRAVETrackball;
     
 /// \brief  Class of the openscene graph 3d viewer
-class ViewerWidget : public QWidget, public osgViewer::CompositeViewer
+class QOSGViewerWidget : public QOpenGLWidget, public osgViewer::CompositeViewer
 {
 public:
-    ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey, const boost::function<bool(int)>& onKeyDown=boost::function<bool(int)>(), double metersinunit=1);
-    virtual ~ViewerWidget();
+    QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey, const boost::function<bool(int)>& onKeyDown=boost::function<bool(int)>(), double metersinunit=1);
+    virtual ~QOSGViewerWidget();
     
     /// \brief Draws bounding box around actual kinbody
     void DrawBoundingBox(bool pressed);
