@@ -2154,11 +2154,10 @@ class IKFastSolver(AutoReloader):
                 lang = CodeGenerators.keys()[0]
         log.info('generating %s code...'%lang)
         if self._checkpreemptfn is not None:
-            import weakref
-            weakself = weakref.proxy(self)
+            import weakrefmethod
             def _CheckPreemtCodeGen(msg, progress):
                 # put the progress in the latter half
-                weakself._checkpreemptfn(u'CodeGen %s'%msg, 0.5+0.5*progress)
+                weakrefmethod.WeakMethod(self._checkpreemptfn)(u'CodeGen %s'%msg, 0.5+0.5*progress)
         else:
             _CheckPreemtCodeGen = None
         return CodeGenerators[lang](kinematicshash=self.kinematicshash,version=__version__,iktypestr=self._iktype, checkpreemptfn=_CheckPreemtCodeGen).generate(chaintree)
