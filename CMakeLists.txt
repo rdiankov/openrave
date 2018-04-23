@@ -788,6 +788,10 @@ else()
 endif()
 set(CONVEXDECOMPOSITION_FOUND 1)
 
+if( Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
+  add_definitions(-DHAVE_BOOST_FILESYSTEM)
+endif()
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h IMMEDIATE @ONLY)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
 
