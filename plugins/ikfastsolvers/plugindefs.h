@@ -87,4 +87,10 @@ BOOST_TYPEOF_REGISTER_TEMPLATE(IkSolutionList, 1)
 
 #define _(msgid) OpenRAVE::RaveGetLocalizedTextForDomain("openrave_plugins_ikfastsolvers", msgid)
 
+inline std::ostream& SerializeTransform(std::ostream& O, const Transform& t, char delim=',')
+{
+    O << t.rot.x << delim << t.rot.y << delim << t.rot.z << delim << t.rot.w << delim << t.trans.x << delim << t.trans.y << delim << t.trans.z;
+    return O;
+}
+
 #endif

@@ -196,6 +196,19 @@ public:
     }
 };
 
+class AutoPyArrayObjectDereferencer
+{
+public:
+    AutoPyArrayObjectDereferencer(PyArrayObject* pyarrobj) : _pyarrobj(pyarrobj) {
+    }
+    ~AutoPyArrayObjectDereferencer() {
+        Py_DECREF(_pyarrobj);
+    }
+
+private:
+    PyArrayObject* _pyarrobj;
+};
+
 typedef boost::shared_ptr<PythonThreadSaver> PythonThreadSaverPtr;
 
 inline RaveVector<float> ExtractFloat3(const object& o)
@@ -648,8 +661,10 @@ void init_openravepy_controller();
 ControllerBasePtr GetController(PyControllerBasePtr);
 PyInterfaceBasePtr toPyController(ControllerBasePtr, PyEnvironmentBasePtr);
 void init_openravepy_iksolver();
+IkSolverBasePtr GetIkSolver(object);
 IkSolverBasePtr GetIkSolver(PyIkSolverBasePtr);
 PyInterfaceBasePtr toPyIkSolver(IkSolverBasePtr, PyEnvironmentBasePtr);
+object toPyIkSolver(IkSolverBasePtr, object);
 void init_openravepy_kinbody();
 KinBodyPtr GetKinBody(object);
 KinBodyPtr GetKinBody(PyKinBodyPtr);

@@ -985,13 +985,13 @@ public:
         return _probot->SetController(openravepy::GetController(pController),dofindices,1);
     }
 
-    void SetActiveDOFs(object dofindices) {
+    void SetActiveDOFs(const object& dofindices) {
         _probot->SetActiveDOFs(ExtractArray<int>(dofindices));
     }
-    void SetActiveDOFs(object dofindices, int nAffineDOsBitmask) {
+    void SetActiveDOFs(const object& dofindices, int nAffineDOsBitmask) {
         _probot->SetActiveDOFs(ExtractArray<int>(dofindices), nAffineDOsBitmask);
     }
-    void SetActiveDOFs(object dofindices, int nAffineDOsBitmask, object rotationaxis) {
+    void SetActiveDOFs(const object& dofindices, int nAffineDOsBitmask, object rotationaxis) {
         _probot->SetActiveDOFs(ExtractArray<int>(dofindices), nAffineDOsBitmask, ExtractVector3(rotationaxis));
     }
 
@@ -1463,9 +1463,9 @@ void init_openravepy_robot()
     ;
 
     {
-        void (PyRobotBase::*psetactivedofs1)(object) = &PyRobotBase::SetActiveDOFs;
-        void (PyRobotBase::*psetactivedofs2)(object, int) = &PyRobotBase::SetActiveDOFs;
-        void (PyRobotBase::*psetactivedofs3)(object, int, object) = &PyRobotBase::SetActiveDOFs;
+        void (PyRobotBase::*psetactivedofs1)(const object&) = &PyRobotBase::SetActiveDOFs;
+        void (PyRobotBase::*psetactivedofs2)(const object&, int) = &PyRobotBase::SetActiveDOFs;
+        void (PyRobotBase::*psetactivedofs3)(const object&, int, object) = &PyRobotBase::SetActiveDOFs;
 
         bool (PyRobotBase::*pgrab1)(PyKinBodyPtr) = &PyRobotBase::Grab;
         bool (PyRobotBase::*pgrab2)(PyKinBodyPtr,object) = &PyRobotBase::Grab;

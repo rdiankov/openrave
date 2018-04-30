@@ -126,7 +126,10 @@ bool InterfaceBase::SendCommand(ostream& sout, istream& sinput)
 void InterfaceBase::Serialize(BaseXMLWriterPtr writer, int options) const
 {
     FOREACHC(it, __mapReadableInterfaces) {
-        it->second->Serialize(writer,options);
+        // sometimes interfaces might be disabled
+        if( !!it->second ) {
+            it->second->Serialize(writer,options);
+        }
     }
 }
 
@@ -315,11 +318,18 @@ XMLReadablePtr InterfaceBase::SetReadableInterface(const std::string& xmltag, XM
     boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
     READERSMAP::iterator it = __mapReadableInterfaces.find(xmltag);
     if( it == __mapReadableInterfaces.end() ) {
-        __mapReadableInterfaces[xmltag] = readable;
+        if( !!readable ) {
+            __mapReadableInterfaces[xmltag] = readable;
+        }
         return XMLReadablePtr();
     }
     XMLReadablePtr pprev = it->second;
-    it->second = readable;
+    if( !!readable ) {
+        it->second = readable;
+    }
+    else {
+        __mapReadableInterfaces.erase(it);
+    }
     return pprev;
 }
 

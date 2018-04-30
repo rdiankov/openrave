@@ -370,7 +370,8 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
         _nDebugLevel = Level_Info;
         _nGlobalEnvironmentId = 0;
         _nDataAccessOptions = 0;
-
+        _bcrlibmInit = false;
+        
         _mapinterfacenames[PT_Planner] = "planner";
         _mapinterfacenames[PT_Robot] = "robot";
         _mapinterfacenames[PT_SensorSystem] = "sensorsystem";
@@ -429,7 +430,10 @@ public:
         _InitializeLogging(level);
 
 #ifdef USE_CRLIBM
-        _crlibm_fpu_state = crlibm_init();
+        if( !_bcrlibmInit ) {
+            _crlibm_fpu_state = crlibm_init();
+            _bcrlibmInit = true;
+        }
 #endif
         try {
             // TODO: eventually we should remove this call to set global locale for the process
@@ -533,7 +537,10 @@ public:
 #ifdef HAS_FENV_H
         feclearexcept(-1); // clear any cached exceptions
 #endif
-        crlibm_exit(_crlibm_fpu_state);
+        if( _bcrlibmInit ) {
+            crlibm_exit(_crlibm_fpu_state);
+            _bcrlibmInit = false;
+        }
 #endif
 
 #if OPENRAVE_LOG4CXX
@@ -1102,6 +1109,7 @@ private:
     SpaceSamplerBasePtr _pdefaultsampler;
 #ifdef USE_CRLIBM
     long long _crlibm_fpu_state;
+    bool _bcrlibmInit; ///< true if crlibm is initialized
 #endif
     int _nDataAccessOptions;
 

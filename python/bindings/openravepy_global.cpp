@@ -205,19 +205,6 @@ public:
     }
 };
 
-class AutoPyArrayObjectDereferencer
-{
-public:
-    AutoPyArrayObjectDereferencer(PyArrayObject* pyarrobj) : _pyarrobj(pyarrobj) {
-    }
-    ~AutoPyArrayObjectDereferencer() {
-        Py_DECREF(_pyarrobj);
-    }
-
-private:
-    PyArrayObject* _pyarrobj;
-};
-
 class PyTriMesh
 {
 public:
