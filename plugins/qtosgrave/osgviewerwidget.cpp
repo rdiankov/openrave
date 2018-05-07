@@ -1418,6 +1418,11 @@ void QOSGViewerWidget::keyPressEvent(QKeyEvent *event)
 
 }
 
+void QOSGViewerWidget::keyReleaseEvent(QKeyEvent *event)
+{
+
+}
+
 bool QOSGViewerWidget::event(QEvent *event)
 {
     bool handled = QOpenGLWidget::event(event);
