@@ -499,7 +499,6 @@ osg::ref_ptr<osgViewer::CompositeViewer> QOSGViewerWidget::GetViewer()
 bool QOSGViewerWidget::HandleOSGKeyDown(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa)
 {
     int key = ea.getKey();
-    RAVELOG_ERROR_FORMAT("noooooooooooooooooooooooo %d", key);
     if( !!_onKeyDown ) {
         if( _onKeyDown(key) ) {
             return true;
@@ -1331,7 +1330,7 @@ OSGNodePtr QOSGViewerWidget::_AddDraggerToObject(const std::string& draggerName,
     return _osgDraggerRoot;
 }
 
-void QOSGViewerWidget::paintEvent( QPaintEvent* event )
+void QOSGViewerWidget::paintGL()
 {
     try {
        _osgviewer->frame(); // osgViewer::CompositeViewer
@@ -1341,12 +1340,10 @@ void QOSGViewerWidget::paintEvent( QPaintEvent* event )
     }
 }
 
-void QOSGViewerWidget::resizeEvent(QResizeEvent *event)
+void QOSGViewerWidget::resizeGL(int width, int height)
 {
 
     int scale = this->devicePixelRatio();
-    int width = event->size().width();
-    int height = event->size().height();
     osgViewer::Viewer::Windows windows;
     _osgviewer->getWindows(windows);
     for (osgViewer::Viewer::Windows::iterator itr = windows.begin(); itr != windows.end(); ++itr) {
@@ -1359,6 +1356,73 @@ void QOSGViewerWidget::resizeEvent(QResizeEvent *event)
     camera->setViewport(0, 0, width * scale, height * scale);
     osg::Camera *hudcamera = _osghudview->getCamera();
     hudcamera->setViewport(0, 0, width * scale, height * scale);
+}
+
+void QOSGViewerWidget::mouseMoveEvent(QMouseEvent *event)
+{
+    int scale = this->devicePixelRatio();
+    _osgGraphicWindow->getEventQueue()->mouseMotion(event->x() * scale, event->y() * scale);
+}
+
+void QOSGViewerWidget::mousePressEvent(QMouseEvent *event)
+{
+    int scale = this->devicePixelRatio();
+    unsigned int button = 0;
+    switch (event->button()) {
+        case Qt::LeftButton:
+            button = 1;
+            break;
+        case Qt::MiddleButton:
+            button = 2;
+            break;
+        case Qt::RightButton:
+            button = 3;
+            break;
+        default:
+            break;
+    }
+    _osgGraphicWindow->getEventQueue()->mouseButtonPress(event->x() * scale, event->y() * scale, button);
+}
+
+void QOSGViewerWidget::mouseReleaseEvent(QMouseEvent *event)
+{
+    int scale = this->devicePixelRatio();
+    unsigned int button = 0;
+    switch (event->button()) {
+        case Qt::LeftButton:
+            button = 1;
+            break;
+        case Qt::MiddleButton:
+            button = 2;
+            break;
+        case Qt::RightButton:
+            button = 3;
+            break;
+        default:
+            break;
+    }
+    _osgGraphicWindow->getEventQueue()->mouseButtonRelease(event->x() * scale, event->y() * scale, button);
+}
+
+void QOSGViewerWidget::wheelEvent(QWheelEvent *event)
+{
+    int delta = event->delta();
+    osgGA::GUIEventAdapter::ScrollingMotion motion = delta > 0 ?
+                                                     osgGA::GUIEventAdapter::SCROLL_UP
+                                                               : osgGA::GUIEventAdapter::SCROLL_DOWN;
+    _osgGraphicWindow->getEventQueue()->mouseScroll(motion);
+}
+
+void QOSGViewerWidget::keyPressEvent(QKeyEvent *event)
+{
+
+}
+
+bool QOSGViewerWidget::event(QEvent *event)
+{
+    bool handled = QOpenGLWidget::event(event);
+    this->update();
+    return handled;
 }
 
 
