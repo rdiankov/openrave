@@ -2140,7 +2140,7 @@ protected:
                             }
                         }
                         else {
-                            RAVELOG_VERBOSE("env = %d: new shortcut is aligned with boundary values after running Check2");
+                            RAVELOG_VERBOSE("env = %d: new shortcut is aligned with boundary values after running Check2", GetEnv()->GetId());
                         }
                         accumoutramps.insert(accumoutramps.end(), outramps.begin(), outramps.end());
                     }
