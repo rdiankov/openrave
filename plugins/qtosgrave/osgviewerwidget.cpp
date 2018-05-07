@@ -35,9 +35,10 @@ namespace qtosgrave {
 class OpenRAVETrackball : public osgGA::TrackballManipulator
 {
 public:
-    OpenRAVETrackball(QOSGViewerWidget* pviewer) {
+    OpenRAVETrackball(QOSGViewerWidget* osgviewerwidget) {
         _bInSeekMode = false;
-        _pviewer = pviewer;
+        _posgviewerwidget = osgviewerwidget;
+        _pviewer = osgviewerwidget->GetViewer();
     }
 
     void SetSeekMode(bool bInSeekMode) {
@@ -51,7 +52,7 @@ public:
             }
         }
         else {
-            _pviewer->RestoreCursor();
+            _posgviewerwidget->RestoreCursor();
         }
     }
 
@@ -305,7 +306,8 @@ public:
     }
 
 private:
-    QOSGViewerWidget* _pviewer;
+    QOSGViewerWidget* _posgviewerwidget;
+    osg::ref_ptr<osgViewer::CompositeViewer> _pviewer;
     bool _bInSeekMode; ///< if true, in seek mode
 };
 
@@ -376,9 +378,10 @@ private:
 //    }
 //}
 
-QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey, const boost::function<bool(int)>& onKeyDown, double metersinunit) : QOpenGLWidget(), _onKeyDown(onKeyDown)
+QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey,
+                                   const boost::function<bool(int)>& onKeyDown, double metersinunit,
+                                   QWidget* parent) : QOpenGLWidget(parent), _onKeyDown(onKeyDown)
 {
-    setKeyEventSetsDone(0); // disable Escape key from killing the viewer!
 
     _userdatakey = userdatakey;
     _penv = penv;
@@ -386,15 +389,12 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
     _bIsSelectiveActive = false;
     _osgview = new osgViewer::View();
     _osghudview = new osgViewer::View();
+    _osgviewer = new osgViewer::CompositeViewer();
+    _osgviewer->setKeyEventSetsDone(0); // disable Escape key from killing the viewer!
+    // Qt5 specific thread model
+    _osgviewer->setThreadingModel(osgViewer::CompositeViewer::SingleThreaded);
 
-    //  Improve FPS to 60 per viewer
-    setThreadingModel(osgViewer::ViewerBase::SingleThreaded);
-
-    QWidget* widgetview = _AddViewWidget(_CreateCamera(0,0,100,100, metersinunit), _osgview, _CreateHUDCamera(0,0,100,100, metersinunit), _osghudview);
-    QGridLayout* grid = new QGridLayout;
-    grid->addWidget(widgetview, 0, 0);
-    grid->setContentsMargins(1, 1, 1, 1);
-    setLayout(grid);
+    _AddViewWidget(_CreateCamera(0,0,100,100, metersinunit), _osgview, _CreateHUDCamera(0,0,100,100, metersinunit), _osghudview);
 
     //  Sets pickhandler
     _picker = new OSGPickHandler(boost::bind(&QOSGViewerWidget::HandleRayPick, this, _1, _2, _3), boost::bind(&QOSGViewerWidget::UpdateFromOSG,this));
@@ -491,9 +491,15 @@ QOSGViewerWidget::~QOSGViewerWidget()
     _selectedItem.reset();
 }
 
+osg::ref_ptr<osgViewer::CompositeViewer> QOSGViewerWidget::GetViewer()
+{
+    return _osgviewer;
+}
+
 bool QOSGViewerWidget::HandleOSGKeyDown(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa)
 {
     int key = ea.getKey();
+    RAVELOG_ERROR_FORMAT("noooooooooooooooooooooooo %d", key);
     if( !!_onKeyDown ) {
         if( _onKeyDown(key) ) {
             return true;
@@ -509,10 +515,10 @@ bool QOSGViewerWidget::HandleOSGKeyDown(const osgGA::GUIEventAdapter& ea,osgGA::
 void QOSGViewerWidget::RestoreCursor()
 {
     osgViewer::Viewer::Windows windows;
-    getWindows(windows);
+    _osgviewer->getWindows(windows);
     for(osgViewer::Viewer::Windows::iterator itr = windows.begin(); itr != windows.end(); ++itr) {
         // can do (*itr)->setCursor(osgViewer::GraphicsWindow::HandCursor), but cursors are limited so have to use Qt
-        GraphicsWindowQt* gw = dynamic_cast<GraphicsWindowQt*>(*itr);
+        osgViewer::GraphicsWindowEmbedded* gw = dynamic_cast<osgViewer::GraphicsWindowEmbedded*>(*itr);
         QCursor _currentCursor;
         if( _bIsSelectiveActive ) {
             if( _draggerName == "TranslateTrackballDragger" ) {
@@ -527,7 +533,7 @@ void QOSGViewerWidget::RestoreCursor()
             // need a custom cursor
             _currentCursor = QCursor(QPixmap(":/images/rotation-icon.png"));
         }
-        gw->getGLWidget()->setCursor(_currentCursor);
+        this->setCursor(_currentCursor);
     }
 }
 
@@ -877,16 +883,17 @@ void QOSGViewerWidget::SetViewType(int isorthogonal)
 
 void QOSGViewerWidget::SetViewport(int width, int height, double metersinunit)
 {
-    _osgview->getCamera()->setViewport(0,0,width,height);
-    _osghudview->getCamera()->setViewport(0,0,width,height);
-    _osghudview->getCamera()->setProjectionMatrix(osg::Matrix::ortho(-width/2, width/2, -height/2, height/2, 0.01/metersinunit, 100.0/metersinunit));
+    int scale = this->devicePixelRatio();
+    _osgview->getCamera()->setViewport(0,0,width*scale,height*scale);
+    _osghudview->getCamera()->setViewport(0,0,width*scale,height*scale);
+    _osghudview->getCamera()->setProjectionMatrix(osg::Matrix::ortho(-width*scale/2, width*scale/2, -height*scale/2, height*scale/2, 0.01/metersinunit, 100.0/metersinunit));
 
     osg::Matrix m = _osgCameraManipulator->getInverseMatrix();
-    m.setTrans(width/2 - 40, -height/2 + 40, -50);
+    m.setTrans(width*scale/2 - 40, -height*scale/2 + 40, -50);
     _osgWorldAxis->setMatrix(m);
 
     double textheight = (10.0/480.0)*height;
-    _osgHudText->setPosition(osg::Vec3(-width/2+10, height/2-textheight, -50));
+    _osgHudText->setPosition(osg::Vec3(-width*scale/2+10, height*scale/2-textheight, -50));
     _osgHudText->setCharacterSize(textheight);
 }
 
@@ -910,14 +917,14 @@ void QOSGViewerWidget::SetTextureCubeMap(const std::string& posx, const std::str
     _osgSkybox->setTextureCubeMap(posx, negx, posy, negy, posz, negz);
 }
 
-QWidget* QOSGViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view, osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview )
+void QOSGViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view, osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview )
 {
     view->setCamera( camera.get() );
     hudview->setCamera( hudcamera.get() );
-    addView( view.get() );
-    addView( hudview.get() );
+    _osgviewer->addView( view.get() );
+    _osgviewer->addView( hudview.get() );
 
-    //view->addEventHandler( new osgViewer::StatsHandler );
+    view->addEventHandler( new osgViewer::StatsHandler );
 
     _osgCameraManipulator = new OpenRAVETrackball(this);//osgGA::TrackballManipulator();//NodeTrackerManipulator();
     _osgCameraManipulator->setWheelZoomFactor(0.2);
@@ -927,10 +934,10 @@ QWidget* QOSGViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg
     hudcamera->addChild( _osgCameraHUD.get() );
     _osgCameraHUD->setMatrix(osg::Matrix::identity());
 
-    GraphicsWindowQt* gw = dynamic_cast<GraphicsWindowQt*>( camera->getGraphicsContext() );
-    hudcamera->setGraphicsContext(gw);
-    hudcamera->setViewport(0,0,gw->getTraits()->width, gw->getTraits()->height);
-    return gw ? gw->getGraphWidget() : NULL;
+    _osgGraphicWindow = dynamic_cast<osgViewer::GraphicsWindowEmbedded*>( camera->getGraphicsContext() );
+    camera->setGraphicsContext(_osgGraphicWindow);
+    hudcamera->setGraphicsContext(_osgGraphicWindow);
+    hudcamera->setViewport(0,0,_osgGraphicWindow->getTraits()->width, _osgGraphicWindow->getTraits()->height);
 }
 
 osg::ref_ptr<osg::Camera> QOSGViewerWidget::_CreateCamera( int x, int y, int w, int h, double metersinunit)
@@ -951,7 +958,7 @@ osg::ref_ptr<osg::Camera> QOSGViewerWidget::_CreateCamera( int x, int y, int w, 
     traits->samples = ds->getNumMultiSamples();
 
     osg::ref_ptr<osg::Camera> camera(new osg::Camera());
-    camera->setGraphicsContext(new GraphicsWindowQt(traits.get()));
+    camera->setGraphicsContext(new osgViewer::GraphicsWindowEmbedded(traits.get()));
 
     camera->setClearColor(osg::Vec4(0.95, 0.95, 0.95, 1.0));
     camera->setViewport(new osg::Viewport(0, 0, traits->width, traits->height));
@@ -1327,11 +1334,32 @@ OSGNodePtr QOSGViewerWidget::_AddDraggerToObject(const std::string& draggerName,
 void QOSGViewerWidget::paintEvent( QPaintEvent* event )
 {
     try {
-        frame(); // osgViewer::CompositeViewer
+       _osgviewer->frame(); // osgViewer::CompositeViewer
     }
     catch(const std::exception& ex) {
         RAVELOG_WARN_FORMAT("got exception in paint event: %s", ex.what());
     }
 }
+
+void QOSGViewerWidget::resizeEvent(QResizeEvent *event)
+{
+
+    int scale = this->devicePixelRatio();
+    int width = event->size().width();
+    int height = event->size().height();
+    osgViewer::Viewer::Windows windows;
+    _osgviewer->getWindows(windows);
+    for (osgViewer::Viewer::Windows::iterator itr = windows.begin(); itr != windows.end(); ++itr) {
+        osgViewer::GraphicsWindowEmbedded *gw = dynamic_cast<osgViewer::GraphicsWindowEmbedded *>(*itr);
+        gw->getEventQueue()->windowResize(this->x() * scale, this->y() * scale, width * scale, height * scale);
+        gw->resized(this->x() * scale, this->y() * scale, width * scale, height * scale);
+    }
+
+    osg::Camera *camera = _osgview->getCamera();
+    camera->setViewport(0, 0, width * scale, height * scale);
+    osg::Camera *hudcamera = _osghudview->getCamera();
+    hudcamera->setViewport(0, 0, width * scale, height * scale);
+}
+
 
 } // end namespace qtosgrave
