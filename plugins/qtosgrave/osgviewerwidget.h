@@ -221,7 +221,7 @@ protected:
     std::vector<osg::ref_ptr<osg::PositionAttitudeTransform> > _vLightTransform;
     osg::ref_ptr<osg::StateSet> _lightStateSet;
     osg::ref_ptr<osgViewer::CompositeViewer> _osgviewer;
-    osg::ref_ptr<osgViewer::GraphicsWindowEmbedded> _osgGraphicWindow;
+    osgViewer::GraphicsWindowEmbedded* _osgGraphicWindow;
     osg::ref_ptr<osgViewer::View> _osgview;
     osg::ref_ptr<osgViewer::View> _osghudview;
     osg::ref_ptr<OpenRAVETrackball> _osgCameraManipulator;
