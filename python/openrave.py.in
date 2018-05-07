@@ -20,6 +20,7 @@ __license__ = 'Apache License, Version 2.0'
 import sys,time
 from types import ModuleType
 from numpy import *
+from OpenGL import GL
 from optparse import OptionParser
 
 __builtins__.__openravepy_version__ = '@OPENRAVE_SOVERSION@'
