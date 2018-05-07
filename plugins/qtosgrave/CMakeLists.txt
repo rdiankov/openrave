@@ -11,11 +11,9 @@ if(NOT OPENGL_FOUND)
 endif()
 
 #include(${CMAKE_SOURCE_DIR}/modules-cmake/FindOSG.cmake)
-find_package(OpenSceneGraph 3.6 COMPONENTS osgDB osgGA osgFX osgText osgViewer osgManipulator)
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(OSGQT openscenegraph-osgQt5 REQUIRED)
+find_package(OpenSceneGraph 3.4 COMPONENTS osgDB osgGA osgFX osgText osgViewer osgManipulator)
 
-if (Qt5Gui_FOUND AND Qt5Core_FOUND AND Qt5Widgets_FOUND AND Qt5OpenGL_FOUND AND OPENGL_FOUND AND OPENSCENEGRAPH_FOUND AND OSGQT_FOUND)
+if (Qt5Gui_FOUND AND Qt5Core_FOUND AND Qt5Widgets_FOUND AND Qt5OpenGL_FOUND AND OPENGL_FOUND AND OPENSCENEGRAPH_FOUND)
   message(STATUS "Detected Qt/OSG GUI, making plugin")
   set(CMAKE_INCLUDE_CURRENT_DIR ON)
   include_directories(${OPENSCENEGRAPH_INCLUDE_DIRS})
@@ -40,7 +38,7 @@ if (Qt5Gui_FOUND AND Qt5Core_FOUND AND Qt5Widgets_FOUND AND Qt5OpenGL_FOUND AND 
   endif()
 
   set (extLIBS ${LIBXML2_LIBRARIES} ${PTHREADS_LIBRARY} ${OPENGL_LIBRARIES} Qt5::Core Qt5::Gui Qt5::Widgets Qt5::OpenGL)
-  set (extLIBS ${extLIBS} ${OPENSCENEGRAPH_LIBRARIES} ${OSGQT_LIBRARIES})
+  set (extLIBS ${extLIBS} ${OPENSCENEGRAPH_LIBRARIES})
   #set (extLIBS ${extLIBS} ${OSGDB_LIBRARY_DEBUG} ${OSGQT_LIBRARY_DEBUG} ${OSGGA_LIBRARY_DEBUG} ${OSGFX_LIBRARY_DEBUG} ${OSGTEXT_LIBRARY_DEBUG} ${OSGVIEWER_LIBRARY_DEBUG} ${OSGMANIPULATOR_LIBRARY_DEBUG})
   
   if( MSVC )
