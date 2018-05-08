@@ -974,6 +974,24 @@ void RobotBase::GetActiveDOFAccelerationLimits(std::vector<dReal>& maxaccel) con
     }
 }
 
+void RobotBase::GetActiveDOFJerkLimits(std::vector<dReal>& maxjerk) const
+{
+    if( _nActiveDOF < 0 ) {
+        GetDOFJerkLimits(maxjerk);
+        return;
+    }
+    maxjerk.resize(GetActiveDOF());
+    if( maxjerk.size() == 0 ) {
+        return;
+    }
+    dReal* pMaxJerk = &maxjerk[0];
+
+    GetDOFJerkLimits(_vTempRobotJoints);
+    FOREACHC(it, _vActiveDOFIndices) {
+        *pMaxJerk++ = _vTempRobotJoints[*it];
+    }
+}
+
 void RobotBase::SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const
 {
     if( _nActiveDOF < 0 ) {
