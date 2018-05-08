@@ -34,13 +34,14 @@ enum ShortcutStatus
     SS_RedundantShortcut = 3,          // the sampled time instants t0 and t1 fall into the same bins as a previously failed shortcut. see vVisitedDiscretization for details.
     SS_InitialInterpolationFailed = 4, // interpolation fails.
     SS_InterpolatedSegmentTooLong = 5, // interpolated segment from t0 to t1 is not shorter than t1 - t0 by at least minTimeStep
-    SS_Check2CollisionFailed = 6,      // interpolated segment is not collision free.
-    SS_Check2Failed = 7,               // interpolated segment violates some constraints that are not 0x1 (collision) or 0x4 (time-based).
-    SS_MaxManipSpeedFailed = 8,        // vel and/or accel multipliers get too low because of max manip speed
-    SS_MaxManipAccelFailed = 9,        // vel and/or accel multipliers get too low because of max manip accel
-    SS_SlowDownFailed = 10,            // vel and/or accel multipliers get too low becasue of other time-based constraints
-    SS_LastSegmentFailed = 11,         // interpolation failed or segment too long or check2 failed or ending with different velocity
-    SS_StateSettingFailed = 12,        // error occured when setting a state.
+    SS_InterpolatedSegmentTooLongFromSlowDown = 6, // interpolated segment from t0 to t1 is not shorter than t1 - t0 by at least minTimeStep because of reduced vel/accel limits
+    SS_Check2CollisionFailed = 7,      // interpolated segment is not collision free.
+    SS_Check2Failed = 8,               // interpolated segment violates some constraints that are not 0x1 (collision) or 0x4 (time-based).
+    SS_MaxManipSpeedFailed = 9,        // vel and/or accel multipliers get too low because of max manip speed
+    SS_MaxManipAccelFailed = 10,       // vel and/or accel multipliers get too low because of max manip accel
+    SS_SlowDownFailed = 11,            // vel and/or accel multipliers get too low becasue of other time-based constraints
+    SS_LastSegmentFailed = 12,         // interpolation failed or segment too long or check2 failed or ending with different velocity
+    SS_StateSettingFailed = 13,        // error occured when setting a state.
 };
 
 class ParabolicSmoother2 : public PlannerBase, public RampOptimizer::FeasibilityCheckerBase, public RampOptimizer::RandomNumberGeneratorBase {
@@ -342,7 +343,7 @@ public:
             ofstream f(filename.c_str());
             f << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
             f << *_parameters;
-	    RAVELOG_DEBUG_FORMAT("env=%d, planner parameters saved to %s", GetEnv()->GetId()%filename);
+            RAVELOG_DEBUG_FORMAT("env=%d, planner parameters saved to %s", GetEnv()->GetId()%filename);
         }
         _DumpTrajectory(ptraj, _dumplevel);
 
@@ -1418,6 +1419,7 @@ protected:
         int redundantShortcut = 0;          // the sampled time instants t0 and t1 fall into the same bins as a previously failed shortcut. see vVisitedDiscretization for details.
         int initialInterpolationFailed = 0; // interpolation fails.
         int interpolatedSegmentTooLong = 0; // interpolated segment from t0 to t1 is not shorter than t1 - t0 by at least minTimeStep
+        int interpolatedSegmentTooLongFromSlowDown = 0; // interpolated segment from t0 to t1 is not shorter than t1 - t0 by at least minTimeStep because of reduced vel/accel limits
         int check2CollisionFailed = 0;      // interpolated segment is not collision free.
         int check2Failed = 0;               // interpolated segment violates some constraints that are not 0x1 (collision) or 0x4 (time-based).
         int maxManipSpeedFailed = 0;        // vel and/or accel multipliers get too low because of max manip speed
@@ -1466,7 +1468,7 @@ protected:
         dReal specialShortcutCutoffTime = 0.75; // when doind special shortcut, we sample one of the remaining zero-velocity waypoints. Then we try to
                                                 // shortcut in the range twaypoint +/- specialShortcutCutoffTime
 
-        dReal fiMinDiscretization = 4.0/(minTimeStep); // mindiscretization is basically the step length to discretize the current trajectory so as to record if
+        dReal fiMinDiscretization = 0.5/(minTimeStep); // mindiscretization is basically the step length to discretize the current trajectory so as to record if
                                                        // the two sampled time instances fall into the same two bins. If so, skip the rest of computation.
         std::vector<uint8_t>& vVisitedDiscretization = _vVisitedDiscretizationCache;
         vVisitedDiscretization.clear();
@@ -1552,6 +1554,7 @@ protected:
                 continue;
             }
             {
+                // Keep track of time slots that have already been previously checked (and failed)
                 int t0Index = t0*fiMinDiscretization;
                 int t1Index = t1*fiMinDiscretization;
                 size_t testPairIndex = t0Index*nEndTimeDiscretization + t1Index;
@@ -1565,13 +1568,30 @@ protected:
                         continue;
                     }
                 }
-                vVisitedDiscretization[testPairIndex] = 1;
+
+                if( _bmanipconstraints && _manipconstraintchecker ) {
+                    // In case there are manipconstraints, we also mark neighbor pairs of timeindices as checked
+                    for( int t0TestIndex = t0Index - 1; t0TestIndex < t0Index + 2; ++t0TestIndex ) {
+                        for( int t1TestIndex = t1Index - 1; t1TestIndex < t1Index + 2; ++t1TestIndex ) {
+                            if( t0TestIndex >=0 && t1TestIndex >= 0 && t0TestIndex < nEndTimeDiscretization && t1TestIndex < nEndTimeDiscretization ) {
+                                testPairIndex = t0TestIndex*nEndTimeDiscretization + t1TestIndex;
+                                vVisitedDiscretization[testPairIndex] = 1;
+                            }
+                        }
+                    }
+                }
+                else {
+                    vVisitedDiscretization[testPairIndex] = 1;
+                }
             }
 
             uint32_t iIterProgress = 0; // used for debugging purposes
 
             // Perform shortcut
             try {
+#ifdef SMOOTHER_PROGRESS_DEBUG
+                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, start shortcutting from t0=%.15e to t1=%.15e", GetEnv()->GetId()%iters%numIters%t0%t1);
+#endif
                 int i0, i1;
                 dReal u0, u1;
                 parabolicpath.FindRampNDIndex(t0, i0, u0);
@@ -1630,9 +1650,6 @@ protected:
 
                 dReal fCurVelMult = fStartTimeVelMult;
                 dReal fCurAccelMult = fStartTimeAccelMult;
-#ifdef SMOOTHER_PROGRESS_DEBUG
-                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, start shortcutting from t0=%.15e to t1=%.15e", GetEnv()->GetId()%iters%numIters%t0%t1);
-#endif
 
                 bool bSuccess = false;
                 size_t maxSlowDownTries = 100;
@@ -1666,8 +1683,14 @@ protected:
                         //                        GetEnv()->GetId()%iters%numIters%t0%t1%segmentTime%(t1 - t0)%minTimeStep%parabolicpath.GetDuration());
 #ifdef SMOOTHER_PROGRESS_DEBUG
                         RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, rejecting since it will not make significant improvement. originalSegmentTime=%.15e, newSegmentTime=%.15e, diff=%.15e, minTimeStep=%.15e", GetEnv()->GetId()%iters%numIters%(t1 - t0)%segmentTime%(t1 - t0 - segmentTime)%minTimeStep);
-                        interpolatedSegmentTooLong += 1;
-                        shortcutprogress << SS_InterpolatedSegmentTooLong << "\n";
+                        if( iSlowDown == 0 ) {
+                            interpolatedSegmentTooLong += 1;
+                            shortcutprogress << SS_InterpolatedSegmentTooLong << "\n";
+                        }
+                        else {
+                            interpolatedSegmentTooLongFromSlowDown += 1;
+                            shortcutprogress << SS_InterpolatedSegmentTooLongFromSlowDown << "\n";
+                        }
 #endif
                         break;
                     }
@@ -2111,7 +2134,7 @@ protected:
         f << std::setprecision(RampOptimizer::g_nPrec);
         parabolicpath.Serialize(f);
         // RavePrintfA(str(boost::format("env=%d, Wrote a parabolicpath to %s (duration = %.15e, num=%d)")%GetEnv()->GetId()%filename%parabolicpath.GetDuration()%parabolicpath.GetRampNDVect().size()), level);
-	RAVELOG_DEBUG_FORMAT("env=%d, parabolicpath saved to %s (duration=%.15e, num=%d)", GetEnv()->GetId()%filename%parabolicpath.GetDuration()%parabolicpath.GetRampNDVect().size());
+        RAVELOG_DEBUG_FORMAT("env=%d, parabolicpath saved to %s (duration=%.15e, num=%d)", GetEnv()->GetId()%filename%parabolicpath.GetDuration()%parabolicpath.GetRampNDVect().size());
         return;
     }
 
@@ -2120,7 +2143,7 @@ protected:
         if( IS_DEBUGLEVEL(level) ) {
             std::string filename = _DumpTrajectory(ptraj);
             // RavePrintfA(str(boost::format("env=%d, Wrote trajectory to %s")%GetEnv()->GetId()%filename), level);
-	    RAVELOG_DEBUG_FORMAT("env=%d, trajectory saved to %s", GetEnv()->GetId()%filename);
+            RAVELOG_DEBUG_FORMAT("env=%d, trajectory saved to %s", GetEnv()->GetId()%filename);
             return filename;
         }
         else {
