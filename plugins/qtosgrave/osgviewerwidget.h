@@ -138,7 +138,11 @@ public:
     /// \brief restores cursor to what it was originally set to
     void RestoreCursor();
 
+    /// \brief Get osg composite viewer
     osg::ref_ptr<osgViewer::CompositeViewer> GetViewer();
+
+    /// \brief
+    void SetKeyboardModifiers(QKeyEvent* event);
 
 protected:
     /// \brief handles a key press and looks at the modifier keys
@@ -188,15 +192,24 @@ protected:
     OSGNodePtr _AddDraggerToObject(const std::string &draggerName, KinBodyItemPtr item, KinBody::JointPtr joint);
 
     virtual void paintGL();
+
     virtual void resizeGL(int width, int height);
 
-    virtual void mouseMoveEvent(QMouseEvent* event);
-    virtual void mousePressEvent(QMouseEvent* event);
-    virtual void mouseReleaseEvent(QMouseEvent* event);
-    virtual void wheelEvent(QWheelEvent* event);
-    virtual void keyPressEvent(QKeyEvent* event);
-    virtual void keyReleaseEvent(QKeyEvent* event);
-    virtual bool event(QEvent* event);
+    virtual void mouseMoveEvent(QMouseEvent *event);
+
+    virtual void mousePressEvent(QMouseEvent *event);
+
+    virtual void mouseReleaseEvent(QMouseEvent *event);
+
+    virtual void mouseDoubleClickEvent(QMouseEvent *event);
+
+    virtual void wheelEvent(QWheelEvent *event);
+
+    virtual void keyPressEvent(QKeyEvent *event);
+
+    virtual void keyReleaseEvent(QKeyEvent *event);
+
+    virtual bool event(QEvent *event);
 
     OSGGroupPtr _osgSceneRoot; ///< root scene node
     OSGGroupPtr _osgFigureRoot; ///< the node that all the figures are drawn into
@@ -240,7 +253,73 @@ protected:
     double _zNear; ///< In OSG, znear and zfar are updated by CullVisitor, which
                    ///  causing getProjectionMatrixAsXXX to return negative
                    ///  values. Therefore, we manage zNear ourselves
+
 };
+
+class QtOSGKeyEventTranslator
+{
+public:
+    QtOSGKeyEventTranslator()
+    {
+        keyMap[Qt::Key_Escape    ] = osgGA::GUIEventAdapter::KEY_Escape;
+        keyMap[Qt::Key_Delete    ] = osgGA::GUIEventAdapter::KEY_Delete;
+        keyMap[Qt::Key_Home      ] = osgGA::GUIEventAdapter::KEY_Home;
+        keyMap[Qt::Key_Enter     ] = osgGA::GUIEventAdapter::KEY_KP_Enter;
+        keyMap[Qt::Key_End       ] = osgGA::GUIEventAdapter::KEY_End;
+        keyMap[Qt::Key_Return    ] = osgGA::GUIEventAdapter::KEY_Return;
+        keyMap[Qt::Key_PageUp    ] = osgGA::GUIEventAdapter::KEY_Page_Up;
+        keyMap[Qt::Key_PageDown  ] = osgGA::GUIEventAdapter::KEY_Page_Down;
+        keyMap[Qt::Key_Left      ] = osgGA::GUIEventAdapter::KEY_Left;
+        keyMap[Qt::Key_Right     ] = osgGA::GUIEventAdapter::KEY_Right;
+        keyMap[Qt::Key_Up        ] = osgGA::GUIEventAdapter::KEY_Up;
+        keyMap[Qt::Key_Down      ] = osgGA::GUIEventAdapter::KEY_Down;
+        keyMap[Qt::Key_Backspace ] = osgGA::GUIEventAdapter::KEY_BackSpace;
+        keyMap[Qt::Key_Tab       ] = osgGA::GUIEventAdapter::KEY_Tab;
+        keyMap[Qt::Key_Space     ] = osgGA::GUIEventAdapter::KEY_Space;
+        keyMap[Qt::Key_Delete    ] = osgGA::GUIEventAdapter::KEY_Delete;
+        keyMap[Qt::Key_Alt       ] = osgGA::GUIEventAdapter::KEY_Alt_L;
+        keyMap[Qt::Key_Shift     ] = osgGA::GUIEventAdapter::KEY_Shift_L;
+        keyMap[Qt::Key_Control   ] = osgGA::GUIEventAdapter::KEY_Control_L;
+        keyMap[Qt::Key_Meta      ] = osgGA::GUIEventAdapter::KEY_Meta_L;
+    }
+
+    ~QtOSGKeyEventTranslator() {};
+
+    int GetOSGKeyValue(QKeyEvent* event)
+    {
+        std::map<int, unsigned int>::const_iterator itmap = keyMap.find(event->key());
+
+        if (itmap == keyMap.end()) {
+            return int(*(event->text().toLatin1().data()));
+        } else {
+            return itmap->second;
+        }
+    }
+
+    unsigned int GetOSGButtonValue(QMouseEvent* event)
+    {
+        unsigned int button = 0;
+        switch (event->button()) {
+            case Qt::LeftButton:
+                button = osgGA::GUIEventAdapter::LEFT_MOUSE_BUTTON;;
+                break;
+            case Qt::MiddleButton:
+                button = osgGA::GUIEventAdapter::MIDDLE_MOUSE_BUTTON;;
+                break;
+            case Qt::RightButton:
+                button = osgGA::GUIEventAdapter::RIGHT_MOUSE_BUTTON;
+                break;
+            default:
+                break;
+        }
+        return button;
+    }
+
+private:
+    std::map<int, unsigned int> keyMap;
+};
+
+static QtOSGKeyEventTranslator qtOSGKeyEventTranslator;
 }
 
 #endif
