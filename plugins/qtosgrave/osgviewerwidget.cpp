@@ -882,7 +882,7 @@ void QOSGViewerWidget::SetViewType(int isorthogonal)
 
 void QOSGViewerWidget::SetViewport(int width, int height, double metersinunit)
 {
-    int scale = this->devicePixelRatio();
+    float scale = this->devicePixelRatio();
     _osgview->getCamera()->setViewport(0,0,width*scale,height*scale);
     _osghudview->getCamera()->setViewport(0,0,width*scale,height*scale);
     _osghudview->getCamera()->setProjectionMatrix(osg::Matrix::ortho(-width*scale/2, width*scale/2, -height*scale/2, height*scale/2, 0.01/metersinunit, 100.0/metersinunit));
@@ -1343,7 +1343,7 @@ void QOSGViewerWidget::paintGL()
 void QOSGViewerWidget::resizeGL(int width, int height)
 {
 
-    int scale = this->devicePixelRatio();
+    float scale = this->devicePixelRatio();
     osgViewer::Viewer::Windows windows;
     _osgviewer->getWindows(windows);
     for (osgViewer::Viewer::Windows::iterator itr = windows.begin(); itr != windows.end(); ++itr) {
@@ -1360,14 +1360,14 @@ void QOSGViewerWidget::resizeGL(int width, int height)
 
 void QOSGViewerWidget::mouseMoveEvent(QMouseEvent *event)
 {
-    int scale = this->devicePixelRatio();
+    float scale = this->devicePixelRatio();
     SetKeyboardModifiers(event);
     _osgGraphicWindow->getEventQueue()->mouseMotion(event->x() * scale, event->y() * scale);
 }
 
 void QOSGViewerWidget::mousePressEvent(QMouseEvent *event)
 {
-    int scale = this->devicePixelRatio();
+    float scale = this->devicePixelRatio();
     unsigned int button = qtOSGKeyEventTranslator.GetOSGButtonValue(event);
     SetKeyboardModifiers(event);
     _osgGraphicWindow->getEventQueue()->mouseButtonPress(event->x() * scale, event->y() * scale, button);
@@ -1375,7 +1375,7 @@ void QOSGViewerWidget::mousePressEvent(QMouseEvent *event)
 
 void QOSGViewerWidget::mouseReleaseEvent(QMouseEvent *event)
 {
-    int scale = this->devicePixelRatio();
+    float scale = this->devicePixelRatio();
     unsigned int button = qtOSGKeyEventTranslator.GetOSGButtonValue(event);
     SetKeyboardModifiers(event);
     _osgGraphicWindow->getEventQueue()->mouseButtonRelease(event->x() * scale, event->y() * scale, button);
@@ -1383,7 +1383,7 @@ void QOSGViewerWidget::mouseReleaseEvent(QMouseEvent *event)
 
 void QOSGViewerWidget::mouseDoubleClickEvent(QMouseEvent *event)
 {
-    int scale = this->devicePixelRatio();
+    float scale = this->devicePixelRatio();
     unsigned int button = qtOSGKeyEventTranslator.GetOSGButtonValue(event);
     SetKeyboardModifiers(event);
     _osgGraphicWindow->getEventQueue()->mouseDoubleButtonPress(event->x() * scale, event->y() * scale, button);
