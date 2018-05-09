@@ -46,10 +46,8 @@ public:
         osgViewer::Viewer::Windows windows;
         _pviewer->getWindows(windows);
         if( _bInSeekMode ) {
-            osgViewer::GraphicsWindow::MouseCursor cursortype = _bInSeekMode ? osgViewer::GraphicsWindow::CrosshairCursor : osgViewer::GraphicsWindow::LeftArrowCursor;
-            for(osgViewer::Viewer::Windows::iterator itr = windows.begin(); itr != windows.end(); ++itr) {
-                (*itr)->setCursor(cursortype);
-            }
+            QCursor cursor = _bInSeekMode ? Qt::CrossCursor : Qt::ArrowCursor;
+            _posgviewerwidget->setCursor(cursor);
         }
         else {
             _posgviewerwidget->RestoreCursor();
