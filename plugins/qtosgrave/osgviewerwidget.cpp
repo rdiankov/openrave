@@ -1361,6 +1361,7 @@ void QOSGViewerWidget::resizeGL(int width, int height)
 void QOSGViewerWidget::mouseMoveEvent(QMouseEvent *event)
 {
     int scale = this->devicePixelRatio();
+    SetKeyboardModifiers(event);
     _osgGraphicWindow->getEventQueue()->mouseMotion(event->x() * scale, event->y() * scale);
 }
 
@@ -1368,6 +1369,7 @@ void QOSGViewerWidget::mousePressEvent(QMouseEvent *event)
 {
     int scale = this->devicePixelRatio();
     unsigned int button = qtOSGKeyEventTranslator.GetOSGButtonValue(event);
+    SetKeyboardModifiers(event);
     _osgGraphicWindow->getEventQueue()->mouseButtonPress(event->x() * scale, event->y() * scale, button);
 }
 
@@ -1375,6 +1377,7 @@ void QOSGViewerWidget::mouseReleaseEvent(QMouseEvent *event)
 {
     int scale = this->devicePixelRatio();
     unsigned int button = qtOSGKeyEventTranslator.GetOSGButtonValue(event);
+    SetKeyboardModifiers(event);
     _osgGraphicWindow->getEventQueue()->mouseButtonRelease(event->x() * scale, event->y() * scale, button);
 }
 
@@ -1382,6 +1385,7 @@ void QOSGViewerWidget::mouseDoubleClickEvent(QMouseEvent *event)
 {
     int scale = this->devicePixelRatio();
     unsigned int button = qtOSGKeyEventTranslator.GetOSGButtonValue(event);
+    SetKeyboardModifiers(event);
     _osgGraphicWindow->getEventQueue()->mouseDoubleButtonPress(event->x() * scale, event->y() * scale, button);
 }
 
@@ -1391,23 +1395,27 @@ void QOSGViewerWidget::wheelEvent(QWheelEvent *event)
     osgGA::GUIEventAdapter::ScrollingMotion motion = delta > 0 ?
                                                      osgGA::GUIEventAdapter::SCROLL_UP
                                                                : osgGA::GUIEventAdapter::SCROLL_DOWN;
+    SetKeyboardModifiers(event);
     _osgGraphicWindow->getEventQueue()->mouseScroll(motion);
+
 }
 
 void QOSGViewerWidget::keyPressEvent(QKeyEvent *event)
 {
-    _osgGraphicWindow->getEventQueue()->keyPress(qtOSGKeyEventTranslator.GetOSGKeyValue(event));
     SetKeyboardModifiers(event);
+    _osgGraphicWindow->getEventQueue()->keyPress(qtOSGKeyEventTranslator.GetOSGKeyValue(event));
+
 }
 
 void QOSGViewerWidget::keyReleaseEvent(QKeyEvent *event)
 {
+    SetKeyboardModifiers(event);
     if (event->isAutoRepeat()) {
         event->ignore();
     } else {
+        SetKeyboardModifiers(event);
         _osgGraphicWindow->getEventQueue()->keyRelease(qtOSGKeyEventTranslator.GetOSGKeyValue(event));
     }
-    SetKeyboardModifiers(event);
 }
 
 bool QOSGViewerWidget::event(QEvent *event)
@@ -1417,7 +1425,7 @@ bool QOSGViewerWidget::event(QEvent *event)
     return handled;
 }
 
- void QOSGViewerWidget::SetKeyboardModifiers(QKeyEvent *event)
+ void QOSGViewerWidget::SetKeyboardModifiers(QInputEvent *event)
  {
      int modifierKeys = event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier);
      unsigned int mask = 0;

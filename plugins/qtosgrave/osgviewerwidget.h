@@ -142,7 +142,7 @@ public:
     osg::ref_ptr<osgViewer::CompositeViewer> GetViewer();
 
     /// \brief
-    void SetKeyboardModifiers(QKeyEvent* event);
+    void SetKeyboardModifiers(QInputEvent* event);
 
 protected:
     /// \brief handles a key press and looks at the modifier keys
@@ -301,13 +301,13 @@ public:
         unsigned int button = 0;
         switch (event->button()) {
             case Qt::LeftButton:
-                button = osgGA::GUIEventAdapter::LEFT_MOUSE_BUTTON;;
+                button = 1;
                 break;
             case Qt::MiddleButton:
-                button = osgGA::GUIEventAdapter::MIDDLE_MOUSE_BUTTON;;
+                button = 2;
                 break;
             case Qt::RightButton:
-                button = osgGA::GUIEventAdapter::RIGHT_MOUSE_BUTTON;
+                button = 3;
                 break;
             default:
                 break;
