@@ -383,6 +383,7 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
                                    QWidget* parent) : QOpenGLWidget(parent), _onKeyDown(onKeyDown)
 {
 
+    setFocus( Qt::ActiveWindowFocusReason );
     _userdatakey = userdatakey;
     _penv = penv;
     _bLightOn = true;
@@ -402,6 +403,8 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
 
     _keyhandler = new OpenRAVEKeyboardEventHandler(boost::bind(&QOSGViewerWidget::HandleOSGKeyDown, this, _1, _2));
     _osgview->addEventHandler(_keyhandler);
+
+    _osgview->addEventHandler( new osgViewer::StatsHandler );
 
     // initialize the environment
     _osgSceneRoot = new osg::Group();
@@ -923,8 +926,6 @@ void QOSGViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::re
     _osgviewer->addView( view.get() );
     _osgviewer->addView( hudview.get() );
 
-    view->addEventHandler( new osgViewer::StatsHandler );
-
     _osgCameraManipulator = new OpenRAVETrackball(this);//osgGA::TrackballManipulator();//NodeTrackerManipulator();
     _osgCameraManipulator->setWheelZoomFactor(0.2);
     view->setCameraManipulator( _osgCameraManipulator.get() );
@@ -934,7 +935,6 @@ void QOSGViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::re
     _osgCameraHUD->setMatrix(osg::Matrix::identity());
 
     _osgGraphicWindow = dynamic_cast<osgViewer::GraphicsWindowEmbedded*>( camera->getGraphicsContext() );
-    camera->setGraphicsContext(_osgGraphicWindow);
     hudcamera->setGraphicsContext(_osgGraphicWindow);
     hudcamera->setViewport(0,0,_osgGraphicWindow->getTraits()->width, _osgGraphicWindow->getTraits()->height);
 }
