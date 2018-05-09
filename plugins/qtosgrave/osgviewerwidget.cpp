@@ -506,7 +506,7 @@ bool QOSGViewerWidget::HandleOSGKeyDown(const osgGA::GUIEventAdapter& ea,osgGA::
         }
     }
 
-    if( key == 's' ) {
+    if( key == 'f' ) {
         _osgCameraManipulator->SetSeekMode(!_osgCameraManipulator->InSeekMode());
     }
     return false;
