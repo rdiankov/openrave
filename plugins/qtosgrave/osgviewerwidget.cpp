@@ -382,6 +382,7 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
 {
 
     setFocus( Qt::ActiveWindowFocusReason );
+    setMouseTracking(true);
     _userdatakey = userdatakey;
     _penv = penv;
     _bLightOn = true;
