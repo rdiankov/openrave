@@ -394,7 +394,8 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
     // Qt5 specific thread model
     _osgviewer->setThreadingModel(osgViewer::CompositeViewer::SingleThreaded);
 
-    _AddViewWidget(_CreateCamera(0,0,100,100, metersinunit), _osgview, _CreateHUDCamera(0,0,100,100, metersinunit), _osghudview);
+    _SetupCamera(_CreateCamera(0, 0, 100, 100, metersinunit), _osgview,
+                 _CreateHUDCamera(0, 0, 100, 100, metersinunit), _osghudview);
 
     //  Sets pickhandler
     _picker = new OSGPickHandler(boost::bind(&QOSGViewerWidget::HandleRayPick, this, _1, _2, _3), boost::bind(&QOSGViewerWidget::UpdateFromOSG,this));
@@ -918,7 +919,8 @@ void QOSGViewerWidget::SetTextureCubeMap(const std::string& posx, const std::str
     _osgSkybox->setTextureCubeMap(posx, negx, posy, negy, posz, negz);
 }
 
-void QOSGViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view, osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview )
+void QOSGViewerWidget::_SetupCamera(osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view,
+                                    osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview)
 {
     view->setCamera( camera.get() );
     hudview->setCamera( hudcamera.get() );

@@ -154,9 +154,9 @@ protected:
     /// \brief gather all the necessary text and updates it on the HUD control
     void _UpdateHUDText();
 
-    /// \brief Create a viewer widget
-    void _AddViewWidget(osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view,
-                        osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview);
+    /// \brief Set up cameras
+    void _SetupCamera(osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view,
+                      osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview);
 
     /// \brief Create Open GL Context
     osg::ref_ptr<osg::Camera> _CreateCamera(int x, int y, int w, int h, double metersinunit);
