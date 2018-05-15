@@ -570,6 +570,9 @@ protected:
         Transform _tActiveManipLocalTool;
         Vector _vActiveManipLocalDirection;
         IkSolverBasePtr _pActiveManipIkSolver;
+        std::vector<Transform> _vtManipsLocalTool;
+        std::vector<Vector> _vvManipsLocalDirection;
+        std::vector<IkSolverBasePtr> _vpManipsIkSolver;
 private:
         virtual void _RestoreRobot(boost::shared_ptr<RobotBase> robot);
     };

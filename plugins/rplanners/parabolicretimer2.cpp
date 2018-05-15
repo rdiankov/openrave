@@ -456,16 +456,23 @@ protected:
                 RAVELOG_WARN("Failed solving Interpolate1D for angles\n");
                 return -1;
             }
-            // dReal bmin, bmax;
-            // curve.GetPeaks(bmin, bmax);
-            // if( bmin < -1000 || bmax > angledelta + 1000) {
-            //     RAVELOG_WARN("Failed solving Interpolate1D for angles\n");
-            //     return -1;
-            // }
-
+            
             mintime = _curve.GetDuration();
             trans1 = ikparam.GetTranslationYAxisAngleXNorm4D().first;
             trans0 = ikparamprev.GetTranslationYAxisAngleXNorm4D().first;
+            transoffset = 1;
+            break;
+        }
+        case IKP_TranslationZAxisAngleYNorm4D: {
+            dReal angledelta = utils::SubtractCircularAngle(ikparam.GetTranslationZAxisAngleYNorm4D().second,ikparamprev.GetTranslationZAxisAngleYNorm4D().second);
+            if( !_interpolator.Compute1DTrajectory(0, angledelta, *(itdataprev+info->gvel.offset + 0), *(itdata+info->gvel.offset + 0), info->_vConfigVelocityLimit.at(0), info->_vConfigAccelerationLimit.at(0), _curve)) {
+                RAVELOG_WARN("Failed solving Interpolate1D for angles\n");
+                return -1;
+            }
+
+            mintime = _curve.GetDuration();
+            trans1 = ikparam.GetTranslationZAxisAngleYNorm4D().first;
+            trans0 = ikparamprev.GetTranslationZAxisAngleYNorm4D().first;
             transoffset = 1;
             break;
         }
@@ -726,6 +733,21 @@ protected:
                 transindex = 1;
                 break;
             }
+            case IKP_TranslationZAxisAngleYNorm4D: {
+                _ikinterpolator.Initialize(4);
+                _v0pos.resize(4); _v0vel.resize(4); _v1pos.resize(4); _v1vel.resize(4); vmaxvel.resize(4); vmaxaccel.resize(4);
+                _v0pos[0] = 0;
+                _v1pos[0] = utils::SubtractCircularAngle(ikparam.GetTranslationZAxisAngleYNorm4D().second,ikparamprev.GetTranslationZAxisAngleYNorm4D().second);
+                _v0vel[0] = *(itdataprev+info->gvel.offset+0);
+                _v1vel[0] = *(itdata+info->gvel.offset+0);
+                vmaxvel[0] = info->_vConfigVelocityLimit.at(0);
+                vmaxaccel[0] = info->_vConfigAccelerationLimit.at(0);
+                trans1 = ikparam.GetTranslationZAxisAngleYNorm4D().first;
+                trans0 = ikparamprev.GetTranslationZAxisAngleYNorm4D().first;
+                transoffset = 1;
+                transindex = 1;
+                break;
+            }
             default:
                 throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization 0x%x"), ikparam.GetType(),ORE_InvalidArguments);
             }
@@ -835,6 +857,11 @@ protected:
                     //translation = ikparamprev.GetTranslationYAxisAngleXNorm4D().first;
                     break;
                 }
+                case IKP_TranslationZAxisAngleYNorm4D: {
+                    *(ittargetdata + info->posindex + 0) = ikparamprev.GetTranslationZAxisAngleYNorm4D().second + vpos.at(0);
+                    *(ittargetdata + info->velindex + 0) = vvel.at(0);
+                    break;
+                }
                 default:
                     throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization 0x%x"), ikparam.GetType(),ORE_InvalidArguments);
                 }
@@ -912,6 +939,12 @@ protected:
                 }
                 case IKP_TranslationYAxisAngleXNorm4D: {
                     *(ittargetdata + info->posindex + 0) = ikparamprev.GetTranslationYAxisAngleXNorm4D().second + vpos.at(0);
+                    *(ittargetdata + info->velindex + 0) = vvel.at(0);
+                    //translation = ikparamprev.GetTranslationYAxisAngleXNorm4D().first;
+                    break;
+                }
+                case IKP_TranslationZAxisAngleYNorm4D: {
+                    *(ittargetdata + info->posindex + 0) = ikparamprev.GetTranslationZAxisAngleYNorm4D().second + vpos.at(0);
                     *(ittargetdata + info->velindex + 0) = vvel.at(0);
                     //translation = ikparamprev.GetTranslationYAxisAngleXNorm4D().first;
                     break;
