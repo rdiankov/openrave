@@ -128,6 +128,7 @@ public:
                 _bTrackActiveDOF = true;
             }
         }
+        //RAVELOG_VERBOSE_FORMAT("env=%d, %x init with body %s, activedof=%d, att=%d", pbody->GetEnv()->GetId()%this%pbody->GetName()%(int)bTrackActiveDOF%attachedBodies.size());
 
         pmanager->clear();
         _tmpbuffer.resize(0);
@@ -499,19 +500,19 @@ public:
             if( pinfo->nGeometryUpdateStamp != itcache->second.nGeometryUpdateStamp ) {
 
                 if( itcache->second.geometrygroup.size() == 0 || itcache->second.geometrygroup != pinfo->_geometrygroup ) {
-                    RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), lastsync=%u body %s (%d) for cache changed geometry %d != %d, linkmask=0x%x", pbody->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%pbody->GetName()%pbody->GetEnvironmentId()%pinfo->nGeometryUpdateStamp%itcache->second.nGeometryUpdateStamp%itcache->second.linkmask);
+                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), lastsync=%u body %s (%d) for cache changed geometry %d != %d, linkmask=0x%x", pbody->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%pbody->GetName()%pbody->GetEnvironmentId()%pinfo->nGeometryUpdateStamp%itcache->second.nGeometryUpdateStamp%itcache->second.linkmask);
                     // vcolobjs most likely changed
                     for(uint64_t ilink = 0; ilink < pinfo->vlinks.size(); ++ilink) {
                         if( itcache->second.linkmask & ((uint64_t)1<<ilink) ) {
                             CollisionObjectPtr pcolobj = _fclspace.GetLinkBV(pinfo, ilink);
                             if( !!pcolobj ) {
-                                RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), body %s adding obj %x from link %d", pbody->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%pbody->GetName()%pcolobj.get()%ilink);
+                                //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), body %s adding obj %x from link %d", pbody->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%pbody->GetName()%pcolobj.get()%ilink);
 #ifdef FCLRAVE_USE_REPLACEOBJECT
 #ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
                                 SaveCollisionObjectDebugInfos(pcolobj.get());
 #endif
                                 if( !!itcache->second.vcolobjs.at(ilink) ) {
-                                    RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), body %s replacing cached obj %x with %x ", pbody->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%pbody->GetName()%itcache->second.vcolobjs.at(ilink).get()%pcolobj.get());
+                                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), body %s replacing cached obj %x with %x ", pbody->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%pbody->GetName()%itcache->second.vcolobjs.at(ilink).get()%pcolobj.get());
                                     pmanager->replaceObject(itcache->second.vcolobjs.at(ilink).get(), pcolobj.get(), false);
                                 }
                                 else {
@@ -521,7 +522,7 @@ public:
 
                                 // no replace
                                 if( !!itcache->second.vcolobjs.at(ilink) ) {
-                                    RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), body %s unregister cached obj %x ", pbody->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%pbody->GetName()%itcache->second.vcolobjs.at(ilink).get());
+                                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), body %s unregister cached obj %x ", pbody->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%pbody->GetName()%itcache->second.vcolobjs.at(ilink).get());
                                     fcl::CollisionObject* ptestobj = itcache->second.vcolobjs.at(ilink).get();
                                     pmanager->unregisterObject(itcache->second.vcolobjs.at(ilink).get());
                                 }
@@ -535,7 +536,7 @@ public:
                             }
                             else {
                                 if( !!itcache->second.vcolobjs.at(ilink) ) {
-                                    RAVELOG_VERBOSE_FORMAT("env=%d, %x, body %s removing old obj from link %d", pbody->GetEnv()->GetId()%this%ilink);
+                                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x, body %s removing old obj from link %d", pbody->GetEnv()->GetId()%this%ilink);
                                     pmanager->unregisterObject(itcache->second.vcolobjs.at(ilink).get());
                                     itcache->second.vcolobjs.at(ilink).reset();
                                 }
@@ -545,14 +546,14 @@ public:
                     itcache->second.geometrygroup = pinfo->_geometrygroup;
                 }
                 else {
-                    RAVELOG_VERBOSE_FORMAT("env=%d, %x, lastsync=%u body %s (%d) for cache changed geometry but no update %d != %d, geometrygroup=%s", pbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%pbody->GetName()%pbody->GetEnvironmentId()%pinfo->nGeometryUpdateStamp%itcache->second.nGeometryUpdateStamp%itcache->second.geometrygroup);
+                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x, lastsync=%u body %s (%d) for cache changed geometry but no update %d != %d, geometrygroup=%s", pbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%pbody->GetName()%pbody->GetEnvironmentId()%pinfo->nGeometryUpdateStamp%itcache->second.nGeometryUpdateStamp%itcache->second.geometrygroup);
                 }
                 itcache->second.nGeometryUpdateStamp = pinfo->nGeometryUpdateStamp;
             }
             if( pinfo->nLastStamp != itcache->second.nLastStamp ) {
                 if( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
-                    Transform tpose = pbody->GetTransform();
-                    RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d) %u body %s (%d) for cache changed transform %d != %d, num=%d, mask=0x%x, trans=(%.3f, %.3f, %.3f)", pbody->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%pbody->GetName()%pbody->GetEnvironmentId()%pinfo->nLastStamp%itcache->second.nLastStamp%pinfo->vlinks.size()%itcache->second.linkmask%tpose.trans.x%tpose.trans.y%tpose.trans.z);
+                    //Transform tpose = pbody->GetTransform();
+                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d) %u body %s (%d) for cache changed transform %d != %d, num=%d, mask=0x%x, trans=(%.3f, %.3f, %.3f)", pbody->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%pbody->GetName()%pbody->GetEnvironmentId()%pinfo->nLastStamp%itcache->second.nLastStamp%pinfo->vlinks.size()%itcache->second.linkmask%tpose.trans.x%tpose.trans.y%tpose.trans.z);
                 }
                 // transform changed
                 for(uint64_t ilink = 0; ilink < pinfo->vlinks.size(); ++ilink) {
@@ -614,7 +615,7 @@ public:
                 itcache->second.nLastStamp = pinfo->nLastStamp;
             }
             if( pinfo->nAttachedBodiesUpdateStamp != itcache->second.nAttachedBodiesUpdateStamp ) {
-                RAVELOG_VERBOSE_FORMAT("env=%d, %u the nAttachedBodiesUpdateStamp changed %d != %d, trackingbody is %s", pbody->GetEnv()->GetId()%_lastSyncTimeStamp%pinfo->nAttachedBodiesUpdateStamp%itcache->second.nAttachedBodiesUpdateStamp%(!!ptrackingbody ? ptrackingbody->GetName() : std::string()));
+                //RAVELOG_VERBOSE_FORMAT("env=%d, %u the nAttachedBodiesUpdateStamp changed %d != %d, trackingbody is %s", pbody->GetEnv()->GetId()%_lastSyncTimeStamp%pinfo->nAttachedBodiesUpdateStamp%itcache->second.nAttachedBodiesUpdateStamp%(!!ptrackingbody ? ptrackingbody->GetName() : std::string()));
                 // bodies changed!
                 if( !!ptrackingbody ) {
                     bAttachedBodiesChanged = true;
@@ -631,7 +632,7 @@ public:
             std::set<KinBodyConstPtr> attachedBodies;
             ptrackingbody->GetAttached(attachedBodies);
             std::vector<CollisionObjectPtr> vcolobjs;
-            RAVELOG_VERBOSE_FORMAT("env=%d, %x %u setting %d attached bodies for body %s (%d)", ptrackingbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%attachedBodies.size()%ptrackingbody->GetName()%ptrackingbody->GetEnvironmentId());
+            //RAVELOG_VERBOSE_FORMAT("env=%d, %x %u setting %d attached bodies for body %s (%d)", ptrackingbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%attachedBodies.size()%ptrackingbody->GetName()%ptrackingbody->GetEnvironmentId());
             // add any new bodies
             FOREACH(itbody, attachedBodies) {
                 if( mapCachedBodies.find((*itbody)->GetEnvironmentId()) == mapCachedBodies.end() ) {
@@ -641,7 +642,7 @@ public:
                     if( _AddBody(*itbody, pinfo, vcolobjs, linkmask, _bTrackActiveDOF&&(*itbody == ptrackingbody)) ) {
                         bcallsetup = true;
                     }
-                    RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d) %u adding body %s (%d)", (*itbody)->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%(*itbody)->GetName()%(*itbody)->GetEnvironmentId());
+                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d) %u adding body %s (%d)", (*itbody)->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%(*itbody)->GetName()%(*itbody)->GetEnvironmentId());
                     mapCachedBodies[(*itbody)->GetEnvironmentId()] = KinBodyCache(*itbody, pinfo);
                     mapCachedBodies[(*itbody)->GetEnvironmentId()].vcolobjs.swap(vcolobjs);
                     mapCachedBodies[(*itbody)->GetEnvironmentId()].linkmask = linkmask;
@@ -657,7 +658,7 @@ public:
                 KinBodyConstPtr pbody = itcache->second.pwbody.lock();
                 // could be the case that the same pointer was re-added to the environment so have to check the environment id
                 if( !pbody || attachedBodies.count(pbody) == 0 || pbody->GetEnvironmentId() != itcache->first ) {
-                    RAVELOG_VERBOSE_FORMAT("env=%d, %x, %u removing old cache %d", pbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%itcache->first);
+                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x, %u removing old cache %d", pbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%itcache->first);
                     // not in attached bodies so should remove
                     FOREACH(itcol, itcache->second.vcolobjs) {
                         if( !!itcol->get() ) {
