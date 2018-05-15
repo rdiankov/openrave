@@ -379,7 +379,7 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
         // auto-conversion
         if( _nTotalDOF-GetNumFreeParameters() == 4 ) {
             if( _iktype == IKP_Transform6D ) {
-                return iktype == IKP_TranslationXAxisAngleZNorm4D || iktype == IKP_TranslationYAxisAngleXNorm4D || IKP_TranslationZAxisAngleYNorm4D;
+                return iktype == IKP_TranslationXAxisAngleZNorm4D || iktype == IKP_TranslationYAxisAngleXNorm4D || iktype == IKP_TranslationZAxisAngleYNorm4D || iktype == IKP_TranslationZAxisAngle4D;
             }
         }
         else if( _nTotalDOF-GetNumFreeParameters() == 5 ) {
@@ -2284,6 +2284,10 @@ protected:
         return vFreeInc;
     }
 
+    /// \brief convert ikparam to another type.
+    /// \param param original ik param represented in manipulator's base link coordinate
+    /// \param ikdummy ik param represented as _iktype in manipulator's base link coordinate
+    /// \return constant reference to ikdummy
     inline const IkParameterization& _ConvertIkParameterization(const IkParameterization& param, IkParameterization& ikdummy)
     {
         if( param.GetType() == _iktype ) {
@@ -2301,6 +2305,9 @@ protected:
                 }
                 else if( _iktype == IKP_TranslationZAxisAngleYNorm4D ) {
                     ikdummy.SetTranslationZAxisAngleYNorm4D(param.GetTransform6D().trans,RaveAtan2(vglobaldirection.x,vglobaldirection.z));
+                }
+                else if( _iktype == IKP_TranslationZAxisAngle4D ) {
+                    ikdummy.SetTranslationZAxisAngle4D(param.GetTransform6D().trans,RaveAcos(vglobaldirection.z));
                 }
                 else if( _iktype == IKP_TranslationXAxisAngleZNorm4D ) {
                     ikdummy.SetTranslationXAxisAngleZNorm4D(param.GetTransform6D().trans,RaveAtan2(vglobaldirection.y,vglobaldirection.x));
