@@ -241,7 +241,7 @@ class LinkStatisticsModel(DatabaseGenerator):
                     newsphereradius = max(newsphereradius, linalg.norm(newspherepos - childpos) + childradius)
 
             # go through all the spheres and get the max radius
-            jointspheres[j.GetJointIndex()] = (newspherepos, newsphereradius)
+            jointspheres[j.GetJointIndex()] = (numpy.around(newspherepos, 8), numpy.around(newsphereradius, 8))
         return jointspheres
     
     def show(self,options=None):
