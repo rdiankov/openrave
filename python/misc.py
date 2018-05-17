@@ -339,6 +339,19 @@ def DrawIkparam(env,ikparam,dist=1.0,linewidth=1,coloradd=None):
         T = openravepy_int.matrixFromAxisAngle([0,0,angle])
         T[0:3,3] = pos
         return DrawAxes(env,T,dist,linewidth,coloradd)
+
+    elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationYAxisAngleXNorm4D:
+        pos,angle = ikparam.GetTranslationYAxisAngleXNorm4D()
+        #T = numpy.dot([[1,0,0,0],[0,0,1,0],[0,-1,0,0],[0,0,0,1]], openravepy_int.matrixFromAxisAngle([angle, 0,0]))
+        T = openravepy_int.matrixFromAxisAngle([angle, 0,0])
+        T[0:3,3] = pos
+        return [DrawAxes(env,T,dist,linewidth,coloradd)]
+
+    elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationZAxisAngleYNorm4D:
+        pos,angle = ikparam.GetTranslationZAxisAngleYNorm4D()
+        T = openravepy_int.matrixFromAxisAngle([0,angle,0])
+        T[0:3,3] = pos
+        return [DrawAxes(env,T,dist,linewidth,coloradd)]
     
     else:
         raise NotImplemented('iktype %s'%str(ikparam.GetType()))
@@ -384,7 +397,14 @@ def DrawIkparam2(env,ikparam,dist=1.0,linewidth=1,coloradd=None):
     
     elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationYAxisAngleXNorm4D:
         pos,angle = ikparam.GetTranslationYAxisAngleXNorm4D()
-        T = numpy.dot([[1,0,0,0],[0,0,1,0],[0,-1,0,0],[0,0,0,1]], openravepy_int.matrixFromAxisAngle([angle, 0,0]))
+        #T = numpy.dot([[1,0,0,0],[0,0,1,0],[0,-1,0,0],[0,0,0,1]], openravepy_int.matrixFromAxisAngle([angle, 0,0]))
+        T = openravepy_int.matrixFromAxisAngle([angle, 0,0])
+        T[0:3,3] = pos
+        return [DrawAxes(env,T,dist,linewidth,coloradd)]
+
+    elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationZAxisAngleYNorm4D:
+        pos,angle = ikparam.GetTranslationZAxisAngleYNorm4D()
+        T = openravepy_int.matrixFromAxisAngle([0,angle,0])
         T[0:3,3] = pos
         return [DrawAxes(env,T,dist,linewidth,coloradd)]
     
