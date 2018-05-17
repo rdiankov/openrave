@@ -1016,7 +1016,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
         if( !!report ) {
             // solver failed, should have some way of initializing the report...
             if( numredundantsamples > 0 ) {
-                if( ikparam.GetType() == IKP_TranslationDirection5D ) {
+                if( ikparam.GetType() == IKP_TranslationDirection5D || ikparam.GetType() == IKP_TranslationXAxisAngleZNorm4D || ikparam.GetType() == IKP_TranslationYAxisAngleXNorm4D || ikparam.GetType() == IKP_TranslationZAxisAngleYNorm4D ) {
                     // if here, then already determined that there is a roll that is collision free, so return False
                     return false;
                 }
@@ -1119,7 +1119,7 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const IkParameterizat
         if( !!report ) {
             // solver failed, should have some way of initializing the report...
             if( numredundantsamples > 0 ) {
-                if( ikparam.GetType() == IKP_TranslationDirection5D ) {
+                if( ikparam.GetType() == IKP_TranslationDirection5D || ikparam.GetType() == IKP_TranslationXAxisAngleZNorm4D || ikparam.GetType() == IKP_TranslationYAxisAngleXNorm4D || ikparam.GetType() == IKP_TranslationZAxisAngleYNorm4D ) {
                     // if here, then already determined that there is a roll that is collision free, so return False
                     return false;
                 }
