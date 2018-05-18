@@ -120,40 +120,21 @@ void QtOgreViewer::_EnvironmentUpdate()
     // }
 }
 
-GraphHandlePtr QtOgreViewer::plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle)
+GraphHandlePtr QtOgreViewer::plot3(const float* ppoints, int nPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle)
 {
     Ogre::Vector3 min, max;
-    float* vpoints = FormatPoints(ppoints, numPoints, stride, min, max);
+    float* vpoints = FormatPoints(ppoints, nPoints, stride, min, max);
 
     std::mutex cv_m;
     std::condition_variable cv;
     OgreGraphHandlePtr handle = boost::make_shared<OgreGraphHandle>();
 
-    _ogreWindow->QueueRenderingUpdate([this, &cv_m, &cv, &handle, vpoints, numPoints, stride, fPointSize, color, drawstyle, &min, &max]() {
+    _ogreWindow->QueueRenderingUpdate([this, &cv_m, &cv, &handle, vpoints, nPoints, stride, fPointSize, color, drawstyle, &min, &max]() {
         std::lock_guard<std::mutex> lk(cv_m);
         Ogre::RenderSystem *renderSystem = _ogreWindow->GetRoot()->getRenderSystem();
         Ogre::VaoManager *vaoManager = renderSystem->getVaoManager();
 
-        Ogre::VertexElement2Vec vertexElements;
-        vertexElements.push_back(Ogre::VertexElement2(Ogre::VET_FLOAT4, Ogre::VES_POSITION));
-
-        Ogre::VertexBufferPacked* vertexBuffer = nullptr;
-        try
-        {
-            //Create the actual vertex buffer.
-            vertexBuffer = vaoManager->createVertexBuffer(
-                vertexElements, numPoints,
-                Ogre::BT_IMMUTABLE,
-                vpoints,
-                true
-            );
-        }
-        catch(Ogre::Exception &e)
-        {
-            OGRE_FREE_SIMD(vertexBuffer, Ogre::MEMCATEGORY_GEOMETRY);
-            vertexBuffer = nullptr;
-            throw e; // TODO: throw openrave exception
-        }
+        Ogre::VertexBufferPacked* vertexBuffer = CreatePointsBuffer(vaoManager, nPoints, vpoints);
 
         Ogre::VertexArrayObject* vao = vaoManager->createVertexArrayObject(
             {vertexBuffer},
@@ -189,38 +170,20 @@ GraphHandlePtr QtOgreViewer::plot3(const float* ppoints, int numPoints, int stri
     return handle;
 }
 
-GraphHandlePtr QtOgreViewer::drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
+GraphHandlePtr QtOgreViewer::drawlinestrip(const float* ppoints, int nPoints, int stride, float fwidth, const RaveVector<float>& color)
 {
     Ogre::Vector3 min, max;
-    float* vpoints = FormatPoints(ppoints, numPoints, stride, min, max);
+    float* vpoints = FormatPoints(ppoints, nPoints, stride, min, max);
 
     std::mutex cv_m;
     std::condition_variable cv;
     OgreGraphHandlePtr handle = boost::make_shared<OgreGraphHandle>();
 
-    _ogreWindow->QueueRenderingUpdate([this, &cv_m, &cv, &handle, vpoints, numPoints, stride, fwidth, color]() {
+    _ogreWindow->QueueRenderingUpdate([this, &cv_m, &cv, &handle, vpoints, nPoints, stride, fwidth, color]() {
         Ogre::RenderSystem *renderSystem = _ogreWindow->GetRoot()->getRenderSystem();
         Ogre::VaoManager *vaoManager = renderSystem->getVaoManager();
 
-        Ogre::VertexElement2Vec vertexElements;
-        vertexElements.push_back(Ogre::VertexElement2(Ogre::VET_FLOAT4, Ogre::VES_POSITION));
-
-        Ogre::VertexBufferPacked* vertexBuffer = nullptr;
-        try
-        {
-            vertexBuffer = vaoManager->createVertexBuffer(
-                vertexElements, numPoints,
-                Ogre::BT_IMMUTABLE,
-                vpoints,
-                true
-            );
-        }
-        catch(Ogre::Exception &e)
-        {
-            OGRE_FREE_SIMD(vertexBuffer, Ogre::MEMCATEGORY_GEOMETRY);
-            vertexBuffer = nullptr;
-            throw e; // TODO: throw openrave exception
-        }
+        Ogre::VertexBufferPacked* vertexBuffer = CreatePointsBuffer(vaoManager, nPoints, vpoints);
 
         Ogre::VertexArrayObject* vao = vaoManager->createVertexArrayObject(
             {vertexBuffer},
@@ -252,12 +215,12 @@ GraphHandlePtr QtOgreViewer::drawlinestrip(const float* ppoints, int numPoints, 
     return handle;
 }
 
-GraphHandlePtr QtOgreViewer::drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
+GraphHandlePtr QtOgreViewer::drawlinelist(const float* ppoints, int nPoints, int stride, float fwidth, const RaveVector<float>& color)
 {
     // From my experience, graphics driver will convert vec3 to vec4 if vec3 is provided
     // TODO: Benchmark?
-    std::vector<float> vpoints(4 * numPoints);
-    for (int64_t i = 0; i < 4 * numPoints; i += 4) {
+    std::vector<float> vpoints(4 * nPoints);
+    for (int64_t i = 0; i < 4 * nPoints; i += 4) {
         vpoints[i] = ppoints[0];
         vpoints[i + 1] = ppoints[1];
         vpoints[i + 2] = ppoints[2];
@@ -265,7 +228,7 @@ GraphHandlePtr QtOgreViewer::drawlinelist(const float* ppoints, int numPoints, i
         ppoints = (float*)((char*)ppoints + stride);
     }
 
-    _ogreWindow->QueueRenderingUpdate([this, vpoints, numPoints, stride, fwidth, color]() {
+    _ogreWindow->QueueRenderingUpdate([this, vpoints, nPoints, stride, fwidth, color]() {
         Ogre::RenderSystem *renderSystem = _ogreWindow->GetRoot()->getRenderSystem();
         Ogre::VaoManager *vaoManager = renderSystem->getVaoManager();
 
@@ -277,7 +240,7 @@ GraphHandlePtr QtOgreViewer::drawlinelist(const float* ppoints, int numPoints, i
         {
             //Create the actual vertex buffer.
             vertexBuffer = vaoManager->createVertexBuffer(
-                vertexElements, numPoints,
+                vertexElements, nPoints,
                 Ogre::BT_IMMUTABLE,
                 const_cast<float*>(vpoints.data()), // const when keepAsShadow is false
                 false                               // keepAsShadow

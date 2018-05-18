@@ -45,6 +45,34 @@ static float* FormatPoints(const float* ppoints, int numPoints, int stride, Ogre
     return vpoints;
 }
 
+/**
+ * @param  ogrePoints Nx4 points allocated by OGRE_MALLOC_SIMD. It will be
+ *                    deallocated by Ogre's internal mechanism
+ */
+static Ogre::VertexBufferPacked* CreatePointsBuffer(
+    Ogre::VaoManager* vaoManager, size_t nPoints, float* ogrePoints) {
+
+    Ogre::VertexElement2Vec vertexElements;
+    vertexElements.push_back(Ogre::VertexElement2(Ogre::VET_FLOAT4, Ogre::VES_POSITION));
+
+    Ogre::VertexBufferPacked* vertexBuffer = nullptr;
+    try
+    {
+        return vaoManager->createVertexBuffer(
+            vertexElements, nPoints,
+            Ogre::BT_IMMUTABLE,
+            ogrePoints,
+            true // True - Ogre is responsible for deallocating "ogrePoints"
+        );
+    }
+    catch(Ogre::Exception &e)
+    {
+        OGRE_FREE_SIMD(vertexBuffer, Ogre::MEMCATEGORY_GEOMETRY);
+        throw e; // TODO: throw openrave exception
+    }
+}
+
+
 }; // namespace qtogrerave
 
 #endif

@@ -80,8 +80,13 @@ OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, Op
             case OpenRAVE::GT_Container:
             case OpenRAVE::GT_TriMesh: {
                 const OpenRAVE::TriMesh& mesh = pGeom->GetCollisionMesh();
+                Ogre::RenderSystem *renderSystem = root->getRenderSystem();
+                Ogre::VaoManager *vaoManager = renderSystem->getVaoManager();
                 Ogre::Vector3 min, max;
-                float* vpoints = FormatPoints(reinterpret_cast<const float*>(mesh.vertices.data()), mesh.vertices.size(), sizeof(OpenRAVE::Vector), min, max);
+                const size_t nPoints = mesh.vertices.size();
+                float* vpoints = FormatPoints(reinterpret_cast<const float*>(mesh.vertices.data()), nPoints, sizeof(OpenRAVE::Vector), min, max);
+                Ogre::VertexBufferPacked* vertexBuffer = CreatePointsBuffer(vaoManager, nPoints, vpoints);
+
                 #if 0
                 // make triangleMesh
                 osg::ref_ptr<osg::Geometry> geom = new osg::Geometry;
