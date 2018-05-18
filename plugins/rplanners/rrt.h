@@ -323,12 +323,13 @@ Some python code to display data::\n\
         _nValidGoals = 0;
         for(size_t igoal = 0; igoal < _parameters->vgoalconfig.size(); igoal += _parameters->GetDOF()) {
             std::copy(_parameters->vgoalconfig.begin()+igoal,_parameters->vgoalconfig.begin()+igoal+_parameters->GetDOF(),vgoal.begin());
-            if( _parameters->CheckPathAllConstraints(vgoal,vgoal,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) == 0 ) {
+            int ret = _parameters->CheckPathAllConstraints(vgoal,vgoal,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart);
+            if( ret == 0 ) {
                 _vecGoalNodes.push_back(_treeBackward.InsertNode(NULL, vgoal, _vecGoalNodes.size()));
                 _nValidGoals++;
             }
             else {
-                RAVELOG_WARN(str(boost::format("goal %d fails constraints\n")%igoal));
+                RAVELOG_WARN_FORMAT("goal %d fails constraints with 0x%x", igoal%ret);
                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
                     int ret = _parameters->CheckPathAllConstraints(vgoal,vgoal,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart);
                 }
