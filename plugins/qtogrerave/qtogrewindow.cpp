@@ -85,7 +85,7 @@ void QtOgreWindow::initialize()
 
     const Ogre::RenderSystemList& rsList = m_ogreRoot->getAvailableRenderers();
     if (rsList.empty()){
-        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot get any renderers", OpenRAVE::ORE_Failed);
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot get any renderers. Do you have plugins.cfg in your directory? TODO: Fix this", OpenRAVE::ORE_Failed);
     }
     Ogre::RenderSystem* rs = rsList[0];
 

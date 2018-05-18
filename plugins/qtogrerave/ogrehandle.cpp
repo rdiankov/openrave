@@ -2,6 +2,10 @@
 
 #include <OGRE/Hlms/Pbs/OgreHlmsPbs.h>
 #include <OGRE/Hlms/Pbs/OgreHlmsPbsDatablock.h>
+#include <OGRE/OgreItem.h>
+#include <OGRE/OgreMesh2.h>
+#include <OGRE/OgreMeshManager2.h>
+#include <OGRE/OgreSubMesh2.h>
 
 namespace qtogrerave {
 
@@ -27,11 +31,15 @@ OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, Op
 
             // TODO: Delete this datablock!!!!!!!!!!!!!!!!!!!!!!!!!!!
             Ogre::String datablockName = pbody->GetName() + pLink->GetName() + pGeom->GetName() + std::to_string(std::time(nullptr));
-            Ogre::HlmsPbsDatablock *datablock = static_cast<Ogre::HlmsPbsDatablock*>(
-                hlmsPbs->createDatablock(datablockName, datablockName,
-                                         Ogre::HlmsMacroblock(),
-                                         Ogre::HlmsBlendblock(),
-                                         Ogre::HlmsParamVec()));
+            Ogre::HlmsPbsDatablock *datablock = static_cast<Ogre::HlmsPbsDatablock*>(hlmsPbs->getDatablock(datablockName));
+            if (!datablock) {
+                datablock = static_cast<Ogre::HlmsPbsDatablock*>(
+                    hlmsPbs->createDatablock(datablockName, datablockName,
+                                             Ogre::HlmsMacroblock(),
+                                             Ogre::HlmsBlendblock(),
+                                             Ogre::HlmsParamVec())
+                );
+            }
             _materialNames.push_back(datablockName);
 
             const OpenRAVE::RaveVector<float>& diffuse = pGeom->GetDiffuseColor();
@@ -79,41 +87,39 @@ OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, Op
             //  Extract geometry from collision Mesh
             case OpenRAVE::GT_Container:
             case OpenRAVE::GT_TriMesh: {
-                const OpenRAVE::TriMesh& mesh = pGeom->GetCollisionMesh();
+                const OpenRAVE::TriMesh& oremesh = pGeom->GetCollisionMesh();
                 Ogre::RenderSystem *renderSystem = root->getRenderSystem();
                 Ogre::VaoManager *vaoManager = renderSystem->getVaoManager();
                 Ogre::Vector3 min, max;
-                const size_t nPoints = mesh.vertices.size();
-                float* vpoints = FormatPoints(reinterpret_cast<const float*>(mesh.vertices.data()), nPoints, sizeof(OpenRAVE::Vector), min, max);
+                const size_t nPoints = oremesh.vertices.size();
+                // oremesh.vertices.data() <------------------------------ IT IS DOUBLE, OMG!!!!! TODO FIX 
+                float* vpoints = FormatPoints(reinterpret_cast<const float*>(oremesh.vertices.data()), nPoints, sizeof(OpenRAVE::Vector), min, max);
                 Ogre::VertexBufferPacked* vertexBuffer = CreatePointsBuffer(vaoManager, nPoints, vpoints);
 
-                #if 0
-                // make triangleMesh
-                osg::ref_ptr<osg::Geometry> geom = new osg::Geometry;
+                // TODO: Use try except block
+                Ogre::IndexBufferPacked *indexBuffer = vaoManager->createIndexBuffer(Ogre::IndexBufferPacked::IT_32BIT,
+                                                                                     oremesh.indices.size(), Ogre::BT_IMMUTABLE, // TODO: Really immutable?
+                                                                                     (void*) oremesh.indices.data(),
+                                                                                     false); // OpenRAVE is resposnsible for managing the data
 
-                //geom->setColorBinding(osg::Geometry::BIND_OVERALL); // need to call geom->setColorArray first
+                Ogre::VertexArrayObject* vao = vaoManager->createVertexArrayObject(
+                    {vertexBuffer},
+                    indexBuffer, // Do not need index buffer
+                    Ogre::OT_TRIANGLE_LIST);
 
-                const TriMesh& mesh = orgeom->GetCollisionMesh();
-                osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array();
-                vertices->reserveArray(mesh.vertices.size());
-                for(size_t i = 0; i < mesh.vertices.size(); ++i) {
-                    RaveVector<float> v = mesh.vertices[i];
-                    vertices->push_back(osg::Vec3(v.x, v.y, v.z));
-                }
-                geom->setVertexArray(vertices.get());
+                Ogre::MeshPtr mesh = Ogre::MeshManager::getSingleton().createManual(datablockName, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+                Ogre::SubMesh* submesh = mesh->createSubMesh();
+                submesh->mVao[Ogre::VpNormal].push_back(vao);
+                submesh->mVao[Ogre::VpShadow].push_back(vao);
 
-
-                osg::DrawElementsUInt* geom_prim = new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES, mesh.indices.size());
-                for(size_t i = 0; i < mesh.indices.size(); ++i) {
-                    (*geom_prim)[i] = mesh.indices[i];
-                }
-                geom->addPrimitiveSet(geom_prim);
-
-                osgUtil::SmoothingVisitor::smooth(*geom); // compute vertex normals
-                osg::ref_ptr<osg::Geode> geode = new osg::Geode;
-                geode->addDrawable(geom);   
-                pgeometrydata->addChild(geode);
-                #endif
+                //Set the bounds to get frustum culling and LOD to work correctly
+                Ogre::Aabb aabb = Ogre::Aabb::newFromExtents(min, max);
+                mesh->_setBounds(aabb, false);
+                mesh->_setBoundingSphereRadius(aabb.getRadius());
+        
+                Ogre::SceneManager *sceneManager = geomNode->getCreator();
+                Ogre::Item *item = sceneManager->createItem(mesh);
+                geomNode->attachObject(item);
                 break;
             }
             default:
