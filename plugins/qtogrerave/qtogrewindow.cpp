@@ -52,17 +52,12 @@ void QtOgreWindow::initialize()
     /*
     As shown Ogre3D is initialized normally; just like in other documentation.
     */
-#ifdef _MSC_VER
-    m_ogreRoot = new Ogre::Root(Ogre::String("plugins" OGRE_BUILD_SUFFIX ".cfg"));
-#else
-    m_ogreRoot = new Ogre::Root(Ogre::String("plugins.cfg"));
-#endif
-    Ogre::ConfigFile ogreConfig;
-
+    m_ogreRoot = new Ogre::Root();
+    m_ogreRoot->loadPlugin("RenderSystem_GL3Plus");
     /*
 
     Commended out for simplicity but should you need to initialize resources you can do so normally.
-
+    Ogre::ConfigFile ogreConfig;
     ogreConfig.load("resources/resource_configs/resources.cfg");
 
     Ogre::ConfigFile::SectionIterator seci = ogreConfig.getSectionIterator();
