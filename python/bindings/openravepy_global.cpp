@@ -73,8 +73,11 @@ protected:
 };
 
 XMLReadablePtr ExtractXMLReadable(object o) {
-    extract<PyXMLReadablePtr> pyreadable(o);
-    return ((PyXMLReadablePtr)pyreadable)->GetXMLReadable();
+    if( !IS_PYTHONOBJECT_NONE(o) ) {
+        extract<PyXMLReadablePtr> pyreadable(o);
+        return ((PyXMLReadablePtr)pyreadable)->GetXMLReadable();
+    }
+    return XMLReadablePtr();
 }
 
 object toPyXMLReadable(XMLReadablePtr p) {
