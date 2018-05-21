@@ -92,8 +92,7 @@ OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, Op
                 Ogre::VaoManager *vaoManager = renderSystem->getVaoManager();
                 Ogre::Vector3 min, max;
                 const size_t nPoints = oremesh.vertices.size();
-                // oremesh.vertices.data() <------------------------------ IT IS DOUBLE, OMG!!!!! TODO FIX 
-                float* vpoints = FormatPoints(reinterpret_cast<const float*>(oremesh.vertices.data()), nPoints, sizeof(OpenRAVE::Vector), min, max);
+                float* vpoints = FormatPoints(oremesh.vertices, min, max);
                 Ogre::VertexBufferPacked* vertexBuffer = CreatePointsBuffer(vaoManager, nPoints, vpoints);
 
                 // TODO: Use try except block

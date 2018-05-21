@@ -21,8 +21,6 @@ static void SetOgreNodeTransform(Ogre::SceneNode *node, const OpenRAVE::RaveTran
 static float* FormatPoints(const float* ppoints, int numPoints, int stride, Ogre::Vector3 &min, Ogre::Vector3 &max) {
     // From my experience, graphics driver will convert vec3 to vec4 if vec3 is provided
     // TODO: Benchmark?
-    // float max[3]; max[0] = max[1] = max[2] = std::numeric_limits<float>::min();
-    // float min[3]; min[0] = min[1] = min[2] = std::numeric_limits<float>::min();
     float *vpoints = reinterpret_cast<float*>(OGRE_MALLOC_SIMD(
         4 * numPoints *  sizeof(float), Ogre::MEMCATEGORY_GEOMETRY));
     max[0] = max[1] = max[2] = std::numeric_limits<float>::min();
@@ -40,6 +38,30 @@ static float* FormatPoints(const float* ppoints, int numPoints, int stride, Ogre
         min[1] = std::min(min[1], ppoints[1]);
         min[2] = std::min(min[2], ppoints[2]);
         ppoints = (float*)((char*)ppoints + stride);
+    }
+
+    return vpoints;
+}
+
+static float* FormatPoints(std::vector<OpenRAVE::Vector> vertices, Ogre::Vector3 &min, Ogre::Vector3 &max) {
+    // From my experience, graphics driver will convert vec3 to vec4 if vec3 is provided
+    // TODO: Benchmark?
+    float *vpoints = reinterpret_cast<float*>(OGRE_MALLOC_SIMD(
+        4 * vertices.size() *  sizeof(float), Ogre::MEMCATEGORY_GEOMETRY));
+    max[0] = max[1] = max[2] = std::numeric_limits<float>::min();
+    min[0] = min[1] = min[2] = std::numeric_limits<float>::max();
+    for (int64_t i = 0, j = 0; i < vertices.size(); ++i, j += 4) {
+        const OpenRAVE::Vector &v = vertices[i];
+        vpoints[j] = v[0];
+        vpoints[j + 1] = v[1];
+        vpoints[j + 2] = v[2];
+        vpoints[j + 3] = 1.0f;
+        max[0] = std::max(max[0], vpoints[j]);
+        max[1] = std::max(max[1], vpoints[j + 1]);
+        max[2] = std::max(max[2], vpoints[j + 2]);
+        min[0] = std::min(min[0], vpoints[j]);
+        min[1] = std::min(min[1], vpoints[j + 1]);
+        min[2] = std::min(min[2], vpoints[j + 2]);
     }
 
     return vpoints;
