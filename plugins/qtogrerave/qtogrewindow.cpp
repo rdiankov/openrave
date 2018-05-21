@@ -214,16 +214,6 @@ void QtOgreWindow::createScene()
     */
     m_ogreSceneMgr->setAmbientLight(Ogre::ColourValue(0.5f, 0.5f, 0.5f), Ogre::ColourValue(0.5f, 0.5f, 0.5f), Ogre::Vector3(0.0f, 0.0f, 1.0f));
 
-#if OGRE_VERSION >= ((2 << 16) | (0 << 8) | 0)
-    Ogre::v1::Entity* sphereMesh = m_ogreSceneMgr->createEntity(Ogre::SceneManager::PT_SPHERE);
-#else
-    Ogre::v1::Entity* sphereMesh = m_ogreSceneMgr->createEntity("mySphere", Ogre::SceneManager::PT_SPHERE);
-#endif
-
-    Ogre::SceneNode* childSceneNode = m_ogreSceneMgr->getRootSceneNode()->createChildSceneNode();
-
-    childSceneNode->attachObject(sphereMesh);
-
 // >>>>>>>>>>>>>>>> hack
     Ogre::Archive *archiveLibrary = Ogre::ArchiveManager::getSingletonPtr()->load(
                 "/home/mujin/mujin/checkoutroot/ogre/Samples/Media/Hlms/Common/GLSL",
@@ -236,33 +226,6 @@ void QtOgreWindow::createScene()
     // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< delete?????????
     Ogre::HlmsPbs *hlmsPbs = OGRE_NEW Ogre::HlmsPbs( archivePbs, &library );
     m_ogreRoot->getHlmsManager()->registerHlms( hlmsPbs );
-    Ogre::String datablockName = "sphere material";
-    // cleanup??????????????????
-    datablockhack = hlmsPbs->createDatablock( datablockName,
-                              datablockName,
-                              Ogre::HlmsMacroblock(),
-                              Ogre::HlmsBlendblock(),
-                              Ogre::HlmsParamVec() );
-    sphereMesh->setDatablock(datablockhack);
-
-
-    // Ogre::MaterialPtr sphereMaterial = Ogre::MaterialManager::getSingleton().create("SphereMaterial",
-    //     Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME, true);
-
-    // sphereMaterial->getTechnique(0)->getPass(0)->setAmbient(0.1f, 0.1f, 0.1f);
-    // sphereMaterial->getTechnique(0)->getPass(0)->setDiffuse(0.2f, 0.2f, 0.2f, 1.0f);
-    // sphereMaterial->getTechnique(0)->getPass(0)->setSpecular(0.9f, 0.9f, 0.9f, 1.0f);
-    //sphereMaterial->setAmbient(0.2f, 0.2f, 0.5f);
-    //sphereMaterial->setSelfIllumination(0.2f, 0.2f, 0.1f);
-
-    // sphereMesh->setMaterialName("SphereMaterial");
-    childSceneNode->setPosition(Ogre::Vector3(0.0f, 0.0f, 0.0f));
-    childSceneNode->setScale(Ogre::Vector3(0.01f, 0.01f, 0.01f)); // Radius, in theory.
-
-    // Ogre::SceneNode* pLightNode = m_ogreSceneMgr->getRootSceneNode()->createChildSceneNode();
-    // Ogre::Light* light = m_ogreSceneMgr->createLight();
-    // pLightNode->attachObject(light);
-    // pLightNode->setPosition(20.0f, 80.0f, 50.0f);
 
     Ogre::Light *light = m_ogreSceneMgr->createLight();
     Ogre::SceneNode *lightNode = m_ogreSceneMgr->getRootSceneNode()->createChildSceneNode();
