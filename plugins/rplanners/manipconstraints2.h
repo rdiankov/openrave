@@ -127,6 +127,10 @@ public:
                 RobotBase::ManipulatorPtr pmanip = probot->GetManipulator(manipname);
                 if( !!pmanip ) {
                     OPENRAVE_ASSERT_OP(pmanip->GetArmDOF(),<=,spec.GetDOF()); // make sure the planning dof includes pmanip
+                    _vdotproducts.resize(pmanip->GetArmDOF());
+                    _vindices.resize(pmanip->GetArmDOF());
+                    _vscalingfactors.resize(pmanip->GetArmDOF());
+                    std::fill(_vscalingfactors.begin(), _vscalingfactors.end(), 1.0);
 
                     KinBody::LinkPtr endeffector = pmanip->GetEndEffector();
                     // Insert all child links of endeffector
@@ -177,7 +181,7 @@ public:
         }
     }
 
-    // This function is currently not in use by ParabolicSmoother2.
+    //
     void GetMaxVelocitiesAccelerations(const std::vector<dReal>& curvels, std::vector<dReal>& vellimits, std::vector<dReal>& accellimits)
     {
         if( _maxmanipspeed<=0 && _maxmanipaccel <=0) {
@@ -317,6 +321,8 @@ public:
             return RampOptimizerInternal::CheckReturn(0);
         }
 
+        bool bUseNewHeuristic = true;
+
         Vector endeffvellin, endeffvelang, endeffacclin, endeffaccang;
         dReal maxactualmanipspeed = 0, maxactualmanipaccel = 0;
 
@@ -324,9 +330,13 @@ public:
         dReal multiplier = 0.85;     // a multiplier to the scaling factor computed from the ratio between the violating value and the bound
         int retcode = 0;
         dReal maxallowedmult = 0.92; // the final reduction factor should not less than this value
-        
+
         // Check manipspeed and manipaccel at the beginning of the segment
         std::vector<RampOptimizerInternal::RampND>::const_iterator itrampnd = rampndVect.begin();
+        int velViolationIndex = -1; // index to manipinfo that violates manip vel constraint (-1 if constraints are respected)
+        int accelViolationIndex = -1; // index to manipinfo that violates manip accel constraint (-1 if constraints are respected)
+        Vector vVelViolation, vAccelViolation;
+        int curmanipindex = 0;
         FOREACHC(itmanipinfo, _listCheckManips) {
             KinBodyPtr probot = itmanipinfo->plink->GetParent();
             itrampnd->GetAVect(ac);
@@ -361,6 +371,11 @@ public:
                     dReal actualmanipspeed = RaveSqrt(vpoint.lengthsqr3());
                     if( actualmanipspeed > maxactualmanipspeed ) {
                         maxactualmanipspeed = actualmanipspeed;
+                        velViolationIndex = curmanipindex;
+                        vVelViolation = vpoint;
+                        _vdofvalues = qfillactive;
+                        _vdofvelocities = _vfillactive;
+                        _vdofaccelerations = _afill;
                     }
                 }
 
@@ -369,33 +384,188 @@ public:
                     dReal actualmanipaccel = RaveSqrt(apoint.lengthsqr3());
                     if( actualmanipaccel > maxactualmanipaccel ) {
                         maxactualmanipaccel = actualmanipaccel;
+                        accelViolationIndex = curmanipindex;
+                        vAccelViolation = apoint;
+                        _vdofvalues = qfillactive;
+                        _vdofvelocities = _vfillactive;
+                        _vdofaccelerations = _afill;
                     }
                 }
             }
             // Finished iterating through all checkpoints
+            ++curmanipindex;
         }
         // Finished iterating through all manipulators
-        
+
         if( (itrampnd == rampndVect.end() - 1) && (itrampnd->GetDuration() <= g_fEpsilonLinear) ) {
             // No further checking is needed since the segment contains only one very small ramp.
-            if( _maxmanipspeed > 0 && maxactualmanipspeed > _maxmanipspeed ) {
-                retcode = CFO_CheckTimeBasedConstraints;
-                // If the actual max value is very close to the bound (i.e., almost not violating
-                // the bound), the multiplier will be too large (too close to 1) to be useful.
-                reductionFactor = min(multiplier*_maxmanipspeed/maxactualmanipspeed, maxallowedmult);
+            if( bUseNewHeuristic ) {
+                RampOptimizerInternal::CheckReturn retcheck;
+                retcheck.retcode = 0;
+                retcheck.fTimeBasedSurpassMult = reductionFactor;
+                retcheck.fMaxManipSpeed = maxactualmanipspeed;
+                retcheck.fMaxManipAccel = maxactualmanipaccel;
+
+                if( _maxmanipaccel > 0 && maxactualmanipaccel > _maxmanipaccel ) {
+                    reductionFactor = RaveSqrt(min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult));
+                    retcheck.retcode = CFO_CheckTimeBasedConstraints;
+                    retcheck.fTimeBasedSurpassMult = reductionFactor;
+
+                    std::list< ManipConstraintInfo2 >::iterator itmanipinfo = _listCheckManips.begin();
+                    std::advance(itmanipinfo, accelViolationIndex);
+                    RobotBasePtr probot = itmanipinfo->pmanip->GetRobot();
+                    KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation|KinBody::Save_LinkVelocities);
+                    // Set the robot to the new state
+                    probot->SetDOFValues(_vdofvalues, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
+                    Transform tlink = itmanipinfo->plink->GetTransform();
+                    // compute jacobians, make sure to transform by the world frame
+                    probot->CalculateJacobian(itmanipinfo->plink->GetIndex(), tlink.trans, _vtransjacobian);
+                    int armdof = itmanipinfo->pmanip->GetArmDOF();
+                    for( size_t idof = 0; idof < armdof; ++idof ) {
+                        Vector vtransaxis(_vtransjacobian[idof], _vtransjacobian[armdof+idof], _vtransjacobian[2*armdof+idof]);
+                        _vdotproducts[idof] = _vdofaccelerations[idof] > 0 ? vtransaxis.dot3(vAccelViolation) : -vtransaxis.dot3(vAccelViolation);
+                    }
+                    // sort while keeping indices
+                    std::size_t n(0);
+                    std::generate(_vindices.begin(), _vindices.end(), [&] { return n++; });
+                    std::sort(_vindices.begin(), _vindices.end(), [&](int i1, int i2) {
+                            return _vdotproducts[i1] < _vdotproducts[i2];
+                        });
+
+                    dReal minPositiveDotProduct = _vdotproducts[_vindices.back()];
+                    size_t minPositiveDotProductIndex = 0;
+                    if( minPositiveDotProduct < 0 ) {
+                        // Is this possible?
+                        return retcheck;
+                    }
+                    for( size_t i = 0; i < armdof; ++i ) {
+                        minPositiveDotProduct = _vdotproducts[_vindices[i]];
+                        _vscalingfactors[_vindices[i]] = 1.0;
+                        if( minPositiveDotProduct > 0 ) {
+                            minPositiveDotProductIndex = i;
+                            break;
+                        }
+                    }
+                    // suppose the positive dot products are d1, d2, ..., dn (sorted in the ascending
+                    // order). We want to build a linear function f (for convenience) such that f(d1) =
+                    // 1 (no scaling for the DOF with least contribution) and f(dn) = reductionFactor
+                    // (large reduction factor for DOF with most contribution). Since we build a linear
+                    // function, we have
+                    //         f(i) = m(d1/di) + (1 - m)
+                    // where m = (1 - reductionFactor)/(1 - d1/dn)
+                    dReal m = (1 - reductionFactor) / (1 - minPositiveDotProduct/_vdotproducts[_vindices.back()]);
+                    for( size_t i = minPositiveDotProductIndex; i < armdof; ++i ) {
+                        int idof = _vindices[i];
+                        _vscalingfactors[idof] = m*(minPositiveDotProduct/_vdotproducts[idof]) + (1 - m);
+                    }
+                    retcheck.vReductionFactors = _vscalingfactors;
+                    std::stringstream ss; ss << "env=" << probot->GetEnv()->GetId() << ", vdotproducts=[";
+                    FOREACHC(itval, _vdotproducts) {
+                        ss << *itval << ", ";
+                    }
+                    ss << "]; vindices=[";
+                    FOREACHC(itval, _vindices) {
+                        ss << *itval << ", ";
+                    }
+                    ss << "]; vscalingfactors=[";
+                    FOREACHC(itval, _vscalingfactors) {
+                        ss << *itval << ", ";
+                    }
+                    ss << "];";
+                    RAVELOG_DEBUG(ss.str());
+                }
+                else if( _maxmanipspeed > 0 && maxactualmanipspeed > _maxmanipspeed ) {
+                    reductionFactor = min(multiplier*_maxmanipspeed/maxactualmanipspeed, maxallowedmult);
+                    retcheck.retcode = CFO_CheckTimeBasedConstraints;
+                    retcheck.fTimeBasedSurpassMult = reductionFactor;
+
+                    std::list< ManipConstraintInfo2 >::iterator itmanipinfo = _listCheckManips.begin();
+                    std::advance(itmanipinfo, velViolationIndex);
+                    RobotBasePtr probot = itmanipinfo->pmanip->GetRobot();
+                    KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation|KinBody::Save_LinkVelocities);
+                    // Set the robot to the new state
+                    probot->SetDOFValues(_vdofvalues, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
+                    Transform tlink = itmanipinfo->plink->GetTransform();
+                    // compute jacobians, make sure to transform by the world frame
+                    probot->CalculateJacobian(itmanipinfo->plink->GetIndex(), tlink.trans, _vtransjacobian);
+                    int armdof = itmanipinfo->pmanip->GetArmDOF();
+                    for( size_t idof = 0; idof < armdof; ++idof ) {
+                        Vector vtransaxis(_vtransjacobian[idof], _vtransjacobian[armdof+idof], _vtransjacobian[2*armdof+idof]);
+                        _vdotproducts[idof] = _vdofvelocities[idof] > 0 ? vtransaxis.dot3(vVelViolation) : -vtransaxis.dot3(vVelViolation);
+                    }
+                    // sort while keeping indices
+                    std::size_t n(0);
+                    std::generate(_vindices.begin(), _vindices.end(), [&] { return n++; });
+                    std::sort(_vindices.begin(), _vindices.end(), [&](int i1, int i2) {
+                            return _vdotproducts[i1] < _vdotproducts[i2];
+                        });
+
+
+                    dReal minPositiveDotProduct = _vdotproducts[_vindices.back()];
+                    size_t minPositiveDotProductIndex = 0;
+                    if( minPositiveDotProduct < 0 ) {
+                        // Is this possible?
+                        return retcheck;
+                    }
+                    for( size_t i = 0; i < armdof; ++i ) {
+                        minPositiveDotProduct = _vdotproducts[_vindices[i]];
+                        _vscalingfactors[_vindices[i]] = 1.0;
+                        if( minPositiveDotProduct > 0 ) {
+                            minPositiveDotProductIndex = i;
+                            break;
+                        }
+                    }
+                    // suppose the positive dot products are d1, d2, ..., dn (sorted in the ascending
+                    // order). We want to build a linear function f (for convenience) such that f(d1) =
+                    // 1 (no scaling for the DOF with least contribution) and f(dn) = reductionFactor
+                    // (large reduction factor for DOF with most contribution). Since we build a linear
+                    // function, we have
+                    //         f(i) = m(d1/di) + (1 - m)
+                    // where m = (1 - reductionFactor)/(1 - d1/dn)
+                    dReal m = (1 - reductionFactor) / (1 - minPositiveDotProduct/_vdotproducts[_vindices.back()]);
+                    for( size_t i = minPositiveDotProductIndex; i < armdof; ++i ) {
+                        int idof = _vindices[i];
+                        _vscalingfactors[idof] = m*(minPositiveDotProduct/_vdotproducts[idof]) + (1 - m);
+                    }
+                    retcheck.vReductionFactors = _vscalingfactors;
+                    std::stringstream ss; ss << "env=" << probot->GetEnv()->GetId() << ", vdotproducts=[";
+                    FOREACHC(itval, _vdotproducts) {
+                        ss << *itval << ", ";
+                    }
+                    ss << "]; vindices=[";
+                    FOREACHC(itval, _vindices) {
+                        ss << *itval << ", ";
+                    }
+                    ss << "]; vscalingfactors=[";
+                    FOREACHC(itval, _vscalingfactors) {
+                        ss << *itval << ", ";
+                    }
+                    ss << "];";
+                    RAVELOG_DEBUG(ss.str());
+                }
+                return retcheck;
             }
-            if( _maxmanipaccel > 0 && maxactualmanipaccel > _maxmanipaccel ) {
-                retcode = CFO_CheckTimeBasedConstraints;
-                // If the actual max value is very close to the bound (i.e., almost not violating
-                // the bound), the multiplier will be too large (too close to 1) to be useful.
-                reductionFactor = min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult);
+            else {
+                if( _maxmanipspeed > 0 && maxactualmanipspeed > _maxmanipspeed ) {
+                    retcode = CFO_CheckTimeBasedConstraints;
+                    // If the actual max value is very close to the bound (i.e., almost not violating
+                    // the bound), the multiplier will be too large (too close to 1) to be useful.
+                    reductionFactor = min(multiplier*_maxmanipspeed/maxactualmanipspeed, maxallowedmult);
+                }
+                if( _maxmanipaccel > 0 && maxactualmanipaccel > _maxmanipaccel ) {
+                    retcode = CFO_CheckTimeBasedConstraints;
+                    // If the actual max value is very close to the bound (i.e., almost not violating
+                    // the bound), the multiplier will be too large (too close to 1) to be useful.
+                    reductionFactor = min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult);
+                }
+                // RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxactualmanipspeed%maxactualmanipaccel);
+                return RampOptimizerInternal::CheckReturn(retcode, reductionFactor, maxactualmanipspeed, maxactualmanipaccel);
             }
-            // RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxactualmanipspeed%maxactualmanipaccel);
-            return RampOptimizerInternal::CheckReturn(retcode, reductionFactor, maxactualmanipspeed, maxactualmanipaccel);
         }
 
         // Check manipspeed and manipaccel at the end of the segment
         itrampnd = rampndVect.end() - 1;
+        curmanipindex = 0;
         FOREACHC(itmanipinfo, _listCheckManips) {
             KinBodyPtr probot = itmanipinfo->plink->GetParent();
             itrampnd->GetAVect(ac);
@@ -430,6 +600,11 @@ public:
                     dReal actualmanipspeed = RaveSqrt(vpoint.lengthsqr3());
                     if( actualmanipspeed > maxactualmanipspeed ) {
                         maxactualmanipspeed = actualmanipspeed;
+                        velViolationIndex = curmanipindex;
+                        vVelViolation = vpoint;
+                        _vdofvalues = qfillactive;
+                        _vdofvelocities = _vfillactive;
+                        _vdofaccelerations = _afill;
                     }
                 }
 
@@ -438,29 +613,183 @@ public:
                     dReal actualmanipaccel = RaveSqrt(apoint.lengthsqr3());
                     if( actualmanipaccel > maxactualmanipaccel ) {
                         maxactualmanipaccel = actualmanipaccel;
+                        accelViolationIndex = curmanipindex;
+                        vAccelViolation = apoint;
+                        _vdofvalues = qfillactive;
+                        _vdofvelocities = _vfillactive;
+                        _vdofaccelerations = _afill;
                     }
                 }
             }
             // Finished iterating through all checkpoints
+            ++curmanipindex;
         }
         // Finished iterating through all manipulators
 
-        if( _maxmanipspeed > 0 && maxactualmanipspeed > _maxmanipspeed ) {
-            retcode = CFO_CheckTimeBasedConstraints;
-            // If the actual max value is very close to the bound (i.e., almost not violating
-            // the bound), the multiplier will be too large (too close to 1) to be useful.
-            reductionFactor = min(multiplier*_maxmanipspeed/maxactualmanipspeed, maxallowedmult);
+        if( bUseNewHeuristic ) {
+            RampOptimizerInternal::CheckReturn retcheck;
+            retcheck.retcode = 0;
+            retcheck.fTimeBasedSurpassMult = reductionFactor;
+            retcheck.fMaxManipSpeed = maxactualmanipspeed;
+            retcheck.fMaxManipAccel = maxactualmanipaccel;
+
+            if( _maxmanipaccel > 0 && maxactualmanipaccel > _maxmanipaccel ) {
+                reductionFactor = RaveSqrt(min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult));
+                retcheck.retcode = CFO_CheckTimeBasedConstraints;
+                retcheck.fTimeBasedSurpassMult = reductionFactor;
+
+                std::list< ManipConstraintInfo2 >::iterator itmanipinfo = _listCheckManips.begin();
+                std::advance(itmanipinfo, accelViolationIndex);
+                RobotBasePtr probot = itmanipinfo->pmanip->GetRobot();
+                KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation|KinBody::Save_LinkVelocities);
+                // Set the robot to the new state
+                probot->SetDOFValues(_vdofvalues, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
+                Transform tlink = itmanipinfo->plink->GetTransform();
+                // compute jacobians, make sure to transform by the world frame
+                probot->CalculateJacobian(itmanipinfo->plink->GetIndex(), tlink.trans, _vtransjacobian);
+                int armdof = itmanipinfo->pmanip->GetArmDOF();
+                for( int idof = 0; idof < armdof; ++idof ) {
+                    Vector vtransaxis(_vtransjacobian[idof], _vtransjacobian[armdof+idof], _vtransjacobian[2*armdof+idof]);
+                    _vdotproducts[idof] = _vdofaccelerations[idof] > 0 ? vtransaxis.dot3(vAccelViolation) : -vtransaxis.dot3(vAccelViolation);
+                }
+                // sort while keeping indices
+                std::size_t n(0);
+                std::generate(_vindices.begin(), _vindices.end(), [&] { return n++; });
+                std::sort(_vindices.begin(), _vindices.end(), [&](int i1, int i2) {
+                        return _vdotproducts[i1] < _vdotproducts[i2];
+                    });
+
+                dReal minPositiveDotProduct = _vdotproducts[_vindices.back()];
+                size_t minPositiveDotProductIndex = 0;
+                if( minPositiveDotProduct <= 0 ) {
+                    // Is this possible?
+                    return retcheck;
+                }
+                for( int i = 0; i < armdof; ++i ) {
+                    minPositiveDotProduct = _vdotproducts[_vindices[i]];
+                    _vscalingfactors[_vindices[i]] = 1.0;
+                    if( minPositiveDotProduct > 0 ) {
+                        minPositiveDotProductIndex = i;
+                        break;
+                    }
+                }
+                // suppose the positive dot products are d1, d2, ..., dn (sorted in the ascending
+                // order). We want to build a linear function f (for convenience) such that f(d1) =
+                // 1 (no scaling for the DOF with least contribution) and f(dn) = reductionFactor
+                // (large reduction factor for DOF with most contribution). Since we build a linear
+                // function, we have
+                //         f(i) = m(d1/di) + (1 - m)
+                // where m = (1 - reductionFactor)/(1 - d1/dn)
+                dReal m = (1 - reductionFactor) / (1 - minPositiveDotProduct/_vdotproducts[_vindices.back()]);
+                for( size_t i = minPositiveDotProductIndex; i < armdof; ++i ) {
+                    int idof = _vindices[i];
+                    _vscalingfactors[idof] = m*(minPositiveDotProduct/_vdotproducts[idof]) + (1 - m);
+                }
+                retcheck.vReductionFactors = _vscalingfactors;
+                std::stringstream ss; ss << "env=" << probot->GetEnv()->GetId() << ", vdotproducts=[";
+                FOREACHC(itval, _vdotproducts) {
+                    ss << *itval << ", ";
+                }
+                ss << "]; vindices=[";
+                FOREACHC(itval, _vindices) {
+                    ss << *itval << ", ";
+                }
+                ss << "]; vscalingfactors=[";
+                FOREACHC(itval, _vscalingfactors) {
+                    ss << *itval << ", ";
+                }
+                ss << "];";
+                RAVELOG_DEBUG(ss.str());
+            }
+            else if( _maxmanipspeed > 0 && maxactualmanipspeed > _maxmanipspeed ) {
+                reductionFactor = min(multiplier*_maxmanipspeed/maxactualmanipspeed, maxallowedmult);
+                retcheck.retcode = CFO_CheckTimeBasedConstraints;
+                retcheck.fTimeBasedSurpassMult = reductionFactor;
+
+                std::list< ManipConstraintInfo2 >::iterator itmanipinfo = _listCheckManips.begin();
+                std::advance(itmanipinfo, velViolationIndex);
+                RobotBasePtr probot = itmanipinfo->pmanip->GetRobot();
+                KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation|KinBody::Save_LinkVelocities);
+                // Set the robot to the new state
+                probot->SetDOFValues(_vdofvalues, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
+                Transform tlink = itmanipinfo->plink->GetTransform();
+                // compute jacobians, make sure to transform by the world frame
+                probot->CalculateJacobian(itmanipinfo->plink->GetIndex(), tlink.trans, _vtransjacobian);
+                int armdof = itmanipinfo->pmanip->GetArmDOF();
+                for( int idof = 0; idof < armdof; ++idof ) {
+                    Vector vtransaxis(_vtransjacobian[idof], _vtransjacobian[armdof+idof], _vtransjacobian[2*armdof+idof]);
+                    _vdotproducts[idof] = _vdofvelocities[idof] > 0 ? vtransaxis.dot3(vVelViolation) : -vtransaxis.dot3(vVelViolation);
+                }
+                // sort while keeping indices
+                std::size_t n(0);
+                std::generate(_vindices.begin(), _vindices.end(), [&] { return n++; });
+                std::sort(_vindices.begin(), _vindices.end(), [&](int i1, int i2) {
+                        return _vdotproducts[i1] < _vdotproducts[i2];
+                    });
+
+
+                dReal minPositiveDotProduct = _vdotproducts[_vindices.back()];
+                size_t minPositiveDotProductIndex = 0;
+                if( minPositiveDotProduct <= 0 ) {
+                    // Is this possible?
+                    return retcheck;
+                }
+                for( int i = 0; i < armdof; ++i ) {
+                    minPositiveDotProduct = _vdotproducts[_vindices[i]];
+                    _vscalingfactors[_vindices[i]] = 1.0;
+                    if( minPositiveDotProduct > 0 ) {
+                        minPositiveDotProductIndex = i;
+                        break;
+                    }
+                }
+                // suppose the positive dot products are d1, d2, ..., dn (sorted in the ascending
+                // order). We want to build a linear function f (for convenience) such that f(d1) =
+                // 1 (no scaling for the DOF with least contribution) and f(dn) = reductionFactor
+                // (large reduction factor for DOF with most contribution). Since we build a linear
+                // function, we have
+                //         f(i) = m(d1/di) + (1 - m)
+                // where m = (1 - reductionFactor)/(1 - d1/dn)
+                dReal m = (1 - reductionFactor) / (1 - minPositiveDotProduct/_vdotproducts[_vindices.back()]);
+                for( size_t i = minPositiveDotProductIndex; i < armdof; ++i ) {
+                    int idof = _vindices[i];
+                    _vscalingfactors[idof] = m*(minPositiveDotProduct/_vdotproducts[idof]) + (1 - m);
+                }
+                retcheck.vReductionFactors = _vscalingfactors;
+                std::stringstream ss; ss << "env=" << probot->GetEnv()->GetId() << ", vdotproducts=[";
+                FOREACHC(itval, _vdotproducts) {
+                    ss << *itval << ", ";
+                }
+                ss << "]; vindices=[";
+                FOREACHC(itval, _vindices) {
+                    ss << *itval << ", ";
+                }
+                ss << "]; vscalingfactors=[";
+                FOREACHC(itval, _vscalingfactors) {
+                    ss << *itval << ", ";
+                }
+                ss << "];";
+                RAVELOG_DEBUG(ss.str());
+            }
+            return retcheck;
         }
-        if( _maxmanipaccel > 0 && maxactualmanipaccel > _maxmanipaccel ) {
-            retcode = CFO_CheckTimeBasedConstraints;
-            // If the actual max value is very close to the bound (i.e., almost not violating
-            // the bound), the multiplier will be too large (too close to 1) to be useful.
-            reductionFactor = RaveSqrt(min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult));
+        else {
+            if( _maxmanipspeed > 0 && maxactualmanipspeed > _maxmanipspeed ) {
+                retcode = CFO_CheckTimeBasedConstraints;
+                // If the actual max value is very close to the bound (i.e., almost not violating
+                // the bound), the multiplier will be too large (too close to 1) to be useful.
+                reductionFactor = min(multiplier*_maxmanipspeed/maxactualmanipspeed, maxallowedmult);
+            }
+            if( _maxmanipaccel > 0 && maxactualmanipaccel > _maxmanipaccel ) {
+                retcode = CFO_CheckTimeBasedConstraints;
+                // If the actual max value is very close to the bound (i.e., almost not violating
+                // the bound), the multiplier will be too large (too close to 1) to be useful.
+                reductionFactor = RaveSqrt(min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult));
+            }
+            // RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxactualmanipspeed%maxactualmanipaccel);
+            return RampOptimizerInternal::CheckReturn(retcode, reductionFactor, maxactualmanipspeed, maxactualmanipaccel);
         }
-        // RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxactualmanipspeed%maxactualmanipaccel);
-        return RampOptimizerInternal::CheckReturn(retcode, reductionFactor, maxactualmanipspeed, maxactualmanipaccel);
     }
-    
+
 private:
     EnvironmentBasePtr _penv;
     std::string _manipname;
@@ -474,6 +803,8 @@ private:
     std::vector<dReal> _afill; // full robot DOF
     std::vector<std::pair<Vector,Vector> > endeffvels, endeffaccs;
     std::vector<dReal> _vtransjacobian, _vangularjacobian, _vbestvels2, _vbestaccels2;
+    std::vector<dReal> _vdotproducts, _vscalingfactors, _vdofvalues, _vdofvelocities, _vdofaccelerations;
+    std::vector<int> _vindices;
     //@}
 
 };

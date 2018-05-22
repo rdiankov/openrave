@@ -546,7 +546,7 @@ public:
             int numShortcuts = 0;
             if( !!parameters->_setstatevaluesfn || !!parameters->_setstatefn ) {
                 // TODO: add a check here so that we do merging only when the initial path is linear (i.e. comes directly from a linear smoother or RRT)
-                _MergeConsecutiveSegments(parabolicpath, parameters->_fStepLength*0.99);
+                // _MergeConsecutiveSegments(parabolicpath, parameters->_fStepLength*0.99);
                 numShortcuts = _Shortcut(parabolicpath, parameters->_nMaxIterations, this, parameters->_fStepLength*0.99);
                 if( numShortcuts < 0 ) {
                     return PS_Interrupted;
@@ -1306,104 +1306,305 @@ protected:
     /// velocity switch point of the segment (i, i + 1)
     void _MergeConsecutiveSegments(RampOptimizer::ParabolicPath& parabolicpath, dReal minTimeStep)
     {
-        RampOptimizer::ParabolicPath& newparabolicpath = _cacheparabolicpath2;
-        newparabolicpath.Reset();
+        // int nummerged = 0;
+        // RampOptimizer::ParabolicPath& newparabolicpath = _cacheparabolicpath2;
+        // newparabolicpath.Reset();
 
-        std::vector<RampOptimizer::RampND> rampndVect = parabolicpath.GetRampNDVect(); // for convenience
+        // std::vector<RampOptimizer::RampND> rampndVect = parabolicpath.GetRampNDVect(); // for convenience
 
-        // Caching stuff
-        std::vector<RampOptimizer::RampND>& shortcutRampNDVect = _cacheRampNDVect; // for storing interpolated trajectory
-        std::vector<RampOptimizer::RampND>& shortcutRampNDVectOut = _cacheRampNDVectOut, &shortcutRampNDVectOut1 = _cacheRampNDVectOut1; // for storing checked trajectory
-        std::vector<dReal>& x0Vect = _cacheX0Vect, &x1Vect = _cacheX1Vect, &v0Vect = _cacheV0Vect, &v1Vect = _cacheV1Vect;
-        std::vector<dReal>& vellimits = _cacheVellimits, &accellimits = _cacheAccelLimits;
-        std::vector<dReal> newzerovelpoints;
-        newzerovelpoints.resize(0);
-        if( newzerovelpoints.capacity() < _zeroVelPointIndices.size() ) {
-            newzerovelpoints.reserve(_zeroVelPointIndices.size());
-        }
+        // // Caching stuff
+        // std::vector<RampOptimizer::RampND>& shortcutRampNDVect = _cacheRampNDVect; // for storing interpolated trajectory
+        // std::vector<RampOptimizer::RampND>& shortcutRampNDVectOut = _cacheRampNDVectOut, &shortcutRampNDVectOut1 = _cacheRampNDVectOut1; // for storing checked trajectory
+        // std::vector<dReal>& x0Vect = _cacheX0Vect, &x1Vect = _cacheX1Vect, &v0Vect = _cacheV0Vect, &v1Vect = _cacheV1Vect;
+        // std::vector<dReal>& vellimits = _cacheVellimits, &accellimits = _cacheAccelLimits;
+        // std::vector<dReal> newzerovelpoints;
 
-        for( size_t index = 0; index < _zeroVelPointIndices.size(); ++index ) {
-            size_t iwaypoint = _zeroVelPointIndices[index] - 1;
-            if( _CheckRampNDAcceleration(rampndVect[iwaypoint]) * _CheckRampNDAcceleration(rampndVect[iwaypoint + 1]) >= 0 ) {
-                // These two consecutive segments already accelerate in the same direction so skip merging here.
-                continue;
-            }
-            dReal originalDuration = rampndVect[iwaypoint].GetDuration() + rampndVect[iwaypoint + 1].GetDuration();
-            rampndVect[iwaypoint].GetX0Vect(x0Vect);
-            rampndVect[iwaypoint + 1].GetX1Vect(x1Vect);
-            rampndVect[iwaypoint].GetV0Vect(v0Vect);
-            rampndVect[iwaypoint + 1].GetV1Vect(v1Vect);
+        // dReal fiSearchVelAccelMult = 1.0/_parameters->fSearchVelAccelMult; // magic constant
+        // dReal fStartTimeVelMult = 1.0; // this is the multiplier for scaling down the *initial* velocity in each shortcut iteration. If manip constraints
+        //                                // or dynamic constraints are used, then this will track the most recent successful multiplier. The idea is that if the
+        //                                // recent successful multiplier is some low value, say 0.1, it is unlikely that using the full vel/accel limits, i.e.,
+        //                                // multiplier = 1.0, will succeed the next time
+        // dReal fStartTimeAccelMult = 1.0;
+        // newzerovelpoints.resize(0);
+        // if( newzerovelpoints.capacity() < _zeroVelPointIndices.size() ) {
+        //     newzerovelpoints.reserve(_zeroVelPointIndices.size());
+        // }
 
-            vellimits = _parameters->_vConfigVelocityLimit;
-            accellimits = _parameters->_vConfigAccelerationLimit;
-            bool bSuccess = false;
-            size_t maxSlowDownTries = 100;
-            for (size_t iSlowDown = 0; iSlowDown < maxSlowDownTries; ++iSlowDown) {
-                // Interpolation
-                bool res = _interpolator.ComputeArbitraryVelNDTrajectory(x0Vect, x1Vect, v0Vect, v1Vect, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, vellimits, accellimits, shortcutRampNDVect, false);
-                if( !res ) {
-                    RAVELOG_VERBOSE_FORMAT("env=%d, zerovelpoint=%d/%d; initial interpolation failed.", GetEnv()->GetId()%index%_zeroVelPointIndices.size());
-                    break;
-                }
-                dReal segmentTime = 0;
-                FOREACHC(itrampnd, shortcutRampNDVect) {
-                    segmentTime += itrampnd->GetDuration();
-                }
-                if( segmentTime + minTimeStep > originalDuration ) {
-                    RAVELOG_VERBOSE_FORMAT("env=%d, zerovelpoint=%d/%d; rejecting merge; originalDuration=%.15e; newDuration=%.15f; diff=%.15d; minTimeStep=%.15e", GetEnv()->GetId()%index%_zeroVelPointIndices.size()%originalDuration%segmentTime%(segmentTime - originalDuration)%minTimeStep);
-                    break;
-                }
+        // for( size_t index = 0; index < _zeroVelPointIndices.size(); ++index ) {
+        //     size_t iwaypoint = _zeroVelPointIndices[index] - 1;
+        //     if( _CheckRampNDAcceleration(rampndVect[iwaypoint]) * _CheckRampNDAcceleration(rampndVect[iwaypoint + 1]) >= 0 ) {
+        //         // These two consecutive segments already accelerate in the same direction so skip merging here.
+        //         continue;
+        //     }
+        //     dReal originalDuration = rampndVect[iwaypoint].GetDuration() + rampndVect[iwaypoint + 1].GetDuration();
+        //     rampndVect[iwaypoint].GetX0Vect(x0Vect);
+        //     rampndVect[iwaypoint + 1].GetX1Vect(x1Vect);
+        //     rampndVect[iwaypoint].GetV0Vect(v0Vect);
+        //     rampndVect[iwaypoint + 1].GetV1Vect(v1Vect);
 
-                // Checking
-                RampOptimizer::CheckReturn retcheck(0);
-                do {
-                    _parameters->_getstatefn(x1Vect);
-                    retcheck = _feasibilitychecker.Check2(shortcutRampNDVect, 0xffff, shortcutRampNDVectOut);
-                    if( retcheck.retcode != 0 ) {
-                        RAVELOG_VERBOSE_FORMAT("env=%d, zerovelpoints=%d/%d; merged segment doesn't pass Check2", GetEnv()->GetId()%index%_zeroVelPointIndices.size());
-                        break;
-                    }
+        //     vellimits = _parameters->_vConfigVelocityLimit;
+        //     accellimits = _parameters->_vConfigAccelerationLimit;
+        //     bool bSuccess = false;
+        //     size_t maxSlowDownTries = 100;
+        //     dReal segmentTime = 0;
+        //     for (size_t iSlowDown = 0; iSlowDown < maxSlowDownTries; ++iSlowDown) {
+        //         // Interpolation
+        //         bool res = _interpolator.ComputeArbitraryVelNDTrajectory(x0Vect, x1Vect, v0Vect, v1Vect, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, vellimits, accellimits, shortcutRampNDVect, false);
+        //         if( !res ) {
+        //             RAVELOG_VERBOSE_FORMAT("env=%d, zerovelpoint=%d/%d; initial interpolation failed.", GetEnv()->GetId()%index%_zeroVelPointIndices.size());
+        //             break;
+        //         }
+        //         segmentTime = 0;
+        //         FOREACHC(itrampnd, shortcutRampNDVect) {
+        //             segmentTime += itrampnd->GetDuration();
+        //         }
+        //         if( segmentTime + minTimeStep > originalDuration ) {
+        //             RAVELOG_VERBOSE_FORMAT("env=%d, zerovelpoint=%d/%d; rejecting merge; originalDuration=%.15e; newDuration=%.15f; diff=%.15d; minTimeStep=%.15e", GetEnv()->GetId()%index%_zeroVelPointIndices.size()%originalDuration%segmentTime%(segmentTime - originalDuration)%minTimeStep);
+        //             break;
+        //         }
 
-                    for (size_t irampnd = 0; irampnd < shortcutRampNDVectOut.size(); ++irampnd) {
-                        for (size_t jdof = 0; jdof < shortcutRampNDVectOut[irampnd].GetDOF(); ++jdof) {
-                            dReal fminvel = max(RaveFabs(shortcutRampNDVectOut[irampnd].GetV0At(jdof)), RaveFabs(shortcutRampNDVectOut[irampnd].GetV1At(jdof)));
-                            if( vellimits[jdof] < fminvel ) {
-                                vellimits[jdof] = fminvel;
-                            }
-                        }
-                    }
+        //         // Checking
+        //         RampOptimizer::CheckReturn retcheck(0);
+        //         do {
+        //             _parameters->_getstatefn(x1Vect);
+        //             retcheck = _feasibilitychecker.Check2(shortcutRampNDVect, 0xffff, shortcutRampNDVectOut);
+        //             if( retcheck.retcode != 0 ) {
+        //                 RAVELOG_VERBOSE_FORMAT("env=%d, zerovelpoints=%d/%d; merged segment doesn't pass Check2", GetEnv()->GetId()%index%_zeroVelPointIndices.size());
+        //                 break;
+        //             }
 
-                    if( retcheck.bDifferentVelocity && shortcutRampNDVectOut.size() > 0 ) {
-                        RAVELOG_VERBOSE_FORMAT("env=%d, new shortcut is *not* aligned with boundary values after running Check2. Start fixing the last segment.", GetEnv()->GetId());
-                    }
-                } while( 0 );
+        //             for (size_t irampnd = 0; irampnd < shortcutRampNDVectOut.size(); ++irampnd) {
+        //                 for (size_t jdof = 0; jdof < shortcutRampNDVectOut[irampnd].GetDOF(); ++jdof) {
+        //                     dReal fminvel = max(RaveFabs(shortcutRampNDVectOut[irampnd].GetV0At(jdof)), RaveFabs(shortcutRampNDVectOut[irampnd].GetV1At(jdof)));
+        //                     if( vellimits[jdof] < fminvel ) {
+        //                         vellimits[jdof] = fminvel;
+        //                     }
+        //                 }
+        //             }
 
-                if( retcheck.retcode == 0 ) {
-                    bSuccess = true;
-                    break;
-                }
-                else if( retcheck.retcode == CFO_CheckTimeBasedConstraints ) {
-                }
+        //             if( retcheck.bDifferentVelocity && shortcutRampNDVectOut.size() > 0 ) {
+        //                 RAVELOG_VERBOSE_FORMAT("env=%d, new shortcut is *not* aligned with boundary values after running Check2. Start fixing the last segment.", GetEnv()->GetId());
+        //                 // Modification inside Check2 results in the shortcut trajectory not ending at the desired velocity v1.
+        //                 dReal allowedStretchTime = (t1 - t0) - (segmentTime + minTimeStep); // the time that this segment is allowed to stretch out such that it is still a useful shortcut
 
-            }
+        //                 shortcutRampNDVectOut.back().GetX0Vect(x0Vect);
+        //                 shortcutRampNDVectOut.back().GetV0Vect(v0Vect);
+        //                 bool res2 = _interpolator.ComputeArbitraryVelNDTrajectory(x0Vect, x1Vect, v0Vect, v1Vect, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, vellimits, accellimits, shortcutRampNDVect, true);
 
-            if( !bSuccess ) {
-                continue;
-            }
-            if( shortcutRampNDVectOut.size() == 0 ) {
-                RAVELOG_WARN("merged segment is empty");
-                continue;
-            }
+        //                 if( !res2 ) {
+        //                     // This may be because we cannot fix joint limit violation
+        //                     RAVELOG_VERBOSE_FORMAT("env=%d, failed to InterpolateArbitraryVelND to correct the final velocity", GetEnv()->GetId());
+        //                     retcheck.retcode = CFO_FinalValuesNotReached;
+        //                     break;
+        //                 }
 
-            // Merging is successful.
-        }
+        //                 dReal lastSegmentTime = 0;
+        //                 FOREACHC(itrampnd, shortcutRampNDVect) {
+        //                     lastSegmentTime += itrampnd->GetDuration();
+        //                 }
+        //                 if( lastSegmentTime - shortcutRampNDVectOut.back().GetDuration() > allowedStretchTime ) {
+        //                     retcheck.retcode = CFO_FinalValuesNotReached;
+        //                     break;
+        //                 }
+        //                 retcheck = _feasibilitychecker.Check2(shortcutRampNDVect, 0xffff, shortcutRampNDVectOut1);
+        //                 if( retcheck.retcode != 0 ) {
+        //                     RAVELOG_VERBOSE_FORMAT("env=%d, final segment fixing failed. retcode=0x%x", GetEnv()->GetId()%retcheck.retcode);
+        //                     break;
+        //                 }
+        //                 else if( retcheck.bDifferentVelocity ) {
+        //                     RAVELOG_VERBOSE_FORMAT("env=%d, after final segment fixing, shortcutRampND still does not end at the desired velocity", GetEnv()->GetId());
+        //                     retcheck.retcode = CFO_FinalValuesNotReached;
+        //                     break;
+        //                 }
+        //                 else {
+        //                     // Otherwise, this segment is good.
+        //                     RAVELOG_VERBOSE_FORMAT("env=%d, final velocity correction for the last segment successful", GetEnv()->GetId());
+        //                     shortcutRampNDVectOut.pop_back();
+        //                     shortcutRampNDVectOut.insert(shortcutRampNDVectOut.end(), shortcutRampNDVectOut1.begin(), shortcutRampNDVectOut1.end());
+
+        //                     // Check consistency
+        //                     if( IS_DEBUGLEVEL(Level_Verbose) ) {
+        //                         shortcutRampNDVectOut.front().GetX0Vect(x0Vect);
+        //                         shortcutRampNDVectOut.back().GetX1Vect(x1Vect);
+        //                         shortcutRampNDVectOut.front().GetV0Vect(v0Vect);
+        //                         shortcutRampNDVectOut.back().GetV1Vect(v1Vect);
+        //                         RampOptimizer::ParabolicCheckReturn parabolicret = RampOptimizer::CheckRampNDs(shortcutRampNDVectOut, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, _parameters->_vConfigVelocityLimit, _parameters->_vConfigAccelerationLimit, x0Vect, x1Vect, v0Vect, v1Vect);
+        //                         OPENRAVE_ASSERT_OP(parabolicret, ==, RampOptimizer::PCR_Normal);
+        //                     }
+        //                 }
+        //             }
+        //             else {
+        //                 RAVELOG_VERBOSE_FORMAT("env=%d, new merged segment is aligned with boundary values after running Check2", GetEnv()->GetId());
+        //                 break;
+        //             }
+        //         } while( 0 );
+
+        //         if( retcheck.retcode == 0 ) {
+        //             bSuccess = true;
+        //             break;
+        //         }
+        //         else if( retcheck.retcode == CFO_CheckTimeBasedConstraints ) {
+        //             // Scale down vellimits and/or accellimits
+        //             if( _bmanipconstraints && _manipconstraintchecker ) {
+        //                 // Scale down vellimits and accellimits independently according to the violated constraint (manipspeed/manipaccel)
+        //                 if( iSlowDown == 0 ) {
+        //                     // Try computing estimates of vellimits and accellimits before scaling down
+
+        //                     {// Need to make sure that x0, x1, v0, v1 hold the correct values
+        //                         rampndVect[i0].EvalPos(u0, x0Vect);
+        //                         rampndVect[i1].EvalPos(u1, x1Vect);
+        //                         rampndVect[i0].EvalVel(u0, v0Vect);
+        //                         rampndVect[i1].EvalVel(u1, v1Vect);
+        //                     }
+
+        //                     if( _parameters->SetStateValues(x0Vect) != 0 ) {
+        //                         RAVELOG_WARN_FORMAT("env=%d, state setting error", GetEnv()->GetId());
+        //                         break;
+        //                     }
+        //                     _manipconstraintchecker->GetMaxVelocitiesAccelerations(v0Vect, vellimits, accellimits);
+
+        //                     if( _parameters->SetStateValues(x1Vect) != 0 ) {
+        //                         RAVELOG_WARN_FORMAT("env=%d, state setting error", GetEnv()->GetId());
+        //                         break;
+        //                     }
+        //                     _manipconstraintchecker->GetMaxVelocitiesAccelerations(v1Vect, vellimits, accellimits);
+
+        //                     for (size_t j = 0; j < _parameters->_vConfigVelocityLimit.size(); ++j) {
+        //                         dReal fMinVel = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
+        //                         if( vellimits[j] < fMinVel ) {
+        //                             vellimits[j] = fMinVel;
+        //                         }
+        //                     }
+        //                 }
+        //                 else {
+        //                     // After computing the new vellimits and accellimits and they don't work, we gradually scale vellimits/accellimits down
+        //                     dReal fVelMult, fAccelMult;
+        //                     bool maxManipSpeedViolated = false, maxManipAccelViolated = false;
+        //                     if( retcheck.fMaxManipSpeed > _parameters->maxmanipspeed ) {
+        //                         // Manipspeed is violated. We don't scale down accellimits.
+        //                         maxManipSpeedViolated = true;
+        //                         fVelMult = retcheck.fTimeBasedSurpassMult;
+        //                         fCurVelMult *= fVelMult;
+        //                         if( fCurVelMult < 0.01 ) {
+        //                             break;
+        //                         }
+        //                         for (size_t j = 0; j < vellimits.size(); ++j) {
+        //                             dReal fMinVel = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
+        //                             vellimits[j] = max(fMinVel, fVelMult * vellimits[j]);
+        //                         }
+        //                     }
+
+        //                     if( retcheck.fMaxManipAccel > _parameters->maxmanipaccel ) {
+        //                         // Manipaccel is violated. We scale both vellimits and accellimits down.
+        //                         maxManipAccelViolated = true;
+        //                         fAccelMult = retcheck.fTimeBasedSurpassMult*retcheck.fTimeBasedSurpassMult;
+        //                         fCurAccelMult *= fAccelMult;
+        //                         if( fCurAccelMult < 0.0001 ) {
+        //                             break;
+        //                         }
+        //                         {
+        //                             fVelMult = RaveSqrt(fAccelMult); // larger scaling factor, less reduction. Use a square root here since the velocity has the factor t while the acceleration has t^2
+        //                             fCurVelMult *= fVelMult;
+        //                             if( fCurVelMult < 0.01 ) {
+        //                                 break;
+        //                             }
+        //                             for (size_t j = 0; j < vellimits.size(); ++j) {
+        //                                 dReal fMinVel = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
+        //                                 vellimits[j] = max(fMinVel, fVelMult * vellimits[j]);
+        //                             }
+        //                         }
+        //                         for (size_t j = 0; j < accellimits.size(); ++j) {
+        //                             accellimits[j] *= fAccelMult;
+        //                         }
+        //                     }
+
+        //                     // numSlowDowns += 1;
+        //                 }
+        //             }
+        //             else {
+        //                 // Scale down vellimits and accellimits using the normal procedure
+        //                 fCurVelMult *= retcheck.fTimeBasedSurpassMult;
+        //                 fCurAccelMult *= retcheck.fTimeBasedSurpassMult*retcheck.fTimeBasedSurpassMult;
+        //                 if( fCurVelMult < 0.01 ) {
+        //                     break;
+        //                 }
+        //                 if( fCurAccelMult < 0.0001 ) {
+        //                     break;
+        //                 }
+
+        //                 // numSlowDowns += 1;
+        //                 for (size_t j = 0; j < vellimits.size(); ++j) {
+        //                     dReal fMinVel =  max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
+        //                     vellimits[j] = max(fMinVel, retcheck.fTimeBasedSurpassMult * vellimits[j]);
+        //                     accellimits[j] *= retcheck.fTimeBasedSurpassMult*retcheck.fTimeBasedSurpassMult;
+        //                 }
+        //             }
+        //         }
+        //         else {
+        //      // Rejecting due to other constriants
+        //      break;
+        //         }
+        //     }
+
+        //     if( !bSuccess ) {
+        //         continue;
+        //     }
+        //     if( shortcutRampNDVectOut.size() == 0 ) {
+        //         RAVELOG_WARN("merged segment is empty");
+        //         continue;
+        //     }
+
+        //     // Merging is successful.
+        //     RAVELOG_DEBUG_FORMAT("env=%d, zerovelpoint=%d/%d; merging successful; originalDuration=%.15e; newDuration=%.15f; diff=%.15d; minTimeStep=%.15e", GetEnv()->GetId()%index%_zeroVelPointIndices.size()%originalDuration%segmentTime%(segmentTime - originalDuration)%minTimeStep);
+        //     ++nummerged;
+
+        //     // Keep track of zero-velocity waypoints
+        //     dReal segmentTime = 0;
+        //     FOREACHC(itrampnd, shortcutRampNDVectOut) {
+        //  segmentTime += itrampnd->GetDuration();
+        //     }
+        //     dReal diff = (t1 - t0) - segmentTime;
+
+        //     size_t writeIndex = 0;
+        //     for (size_t readIndex = 0; readIndex < _zeroVelPoints.size(); ++readIndex) {
+        //  if( _zeroVelPoints[readIndex] <= t0 ) {
+        //      writeIndex += 1;
+        //  }
+        //  else if( _zeroVelPoints[readIndex] <= t1 ) {
+        //      // Do nothing.
+        //  }
+        //  else {
+        //      _zeroVelPoints[writeIndex++] = _zeroVelPoints[readIndex] - diff;
+        //  }
+        //     }
+        //     _zeroVelPoints.resize(writeIndex);
+
+        //     // Now replace the original trajectory segment by the shortcut
+        //     parabolicpath.ReplaceSegment(t0, t1, shortcutRampNDVectOut);
+        //     iIterProgress += 0x10000000;
+
+        //     rampndVect = parabolicpath.GetRampNDVect();
+
+        //     // Check consistency
+        //     if( IS_DEBUGLEVEL(Level_Verbose) ) {
+        //  rampndVect.front().GetX0Vect(x0Vect);
+        //  rampndVect.back().GetX1Vect(x1Vect);
+        //  rampndVect.front().GetV0Vect(v0Vect);
+        //  rampndVect.back().GetV1Vect(v1Vect);
+        //  RampOptimizer::ParabolicCheckReturn parabolicret = RampOptimizer::CheckRampNDs(rampndVect, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, _parameters->_vConfigVelocityLimit, _parameters->_vConfigAccelerationLimit, x0Vect, x1Vect, v0Vect, v1Vect);
+        //  OPENRAVE_ASSERT_OP(parabolicret, ==, RampOptimizer::PCR_Normal);
+        //     }
+
+        //     tTotal = parabolicpath.GetDuration();
+        //     RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d successful, numSlowDowns=%d, tTotal=%.15e", GetEnv()->GetId()%iters%numIters%numSlowDowns%tTotal);
+        // }
     }
 
     /// \brief Return the number of successful shortcut.
     int _Shortcut(RampOptimizer::ParabolicPath& parabolicpath, int numIters, RampOptimizer::RandomNumberGeneratorBase* rng, dReal minTimeStep)
     {
         int numShortcuts = 0;
-
+        bool bUseNewHeuristic = true;
         uint32_t fileindex;
         if( !!_logginguniformsampler ) {
             fileindex = _logginguniformsampler->SampleSequenceOneUInt32();
@@ -1451,6 +1652,8 @@ protected:
                                        // recent successful multiplier is some low value, say 0.1, it is unlikely that using the full vel/accel limits, i.e.,
                                        // multiplier = 1.0, will succeed the next time
         dReal fStartTimeAccelMult = 1.0;
+
+        std::vector<dReal> reductionFactors;
 
         // Parameters & variables for early shortcut termination
         size_t nItersFromPrevSuccessful = 0;        // keeps track of the most recent successful shortcut iteration
@@ -1627,26 +1830,33 @@ protected:
                 vellimits = _parameters->_vConfigVelocityLimit;
                 accellimits = _parameters->_vConfigAccelerationLimit;
 
-                for (size_t j = 0; j < _parameters->_vConfigVelocityLimit.size(); ++j) {
-                    // Adjust vellimits and accellimits
-                    dReal fminvel = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
-                    if( vellimits[j] < fminvel ) {
-                        vellimits[j] = fminvel;
-                    }
-                    else {
-                        dReal f = max(fminvel, fStartTimeVelMult * _parameters->_vConfigVelocityLimit[j]);
-                        if( vellimits[j] > f ) {
-                            vellimits[j] = f;
+                if( bUseNewHeuristic ) {
+                    // pass
+                }
+                else {
+                    for (size_t j = 0; j < _parameters->_vConfigVelocityLimit.size(); ++j) {
+                        // Adjust vellimits and accellimits
+                        dReal fminvel = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
+                        if( vellimits[j] < fminvel ) {
+                            vellimits[j] = fminvel;
                         }
-                    }
+                        else {
+                            dReal f = max(fminvel, fStartTimeVelMult * _parameters->_vConfigVelocityLimit[j]);
+                            if( vellimits[j] > f ) {
+                                vellimits[j] = f;
+                            }
+                        }
 
-                    {
-                        dReal f = fStartTimeAccelMult * _parameters->_vConfigAccelerationLimit[j];
-                        if( accellimits[j] > f ) {
-                            accellimits[j] = f;
+                        {
+                            dReal f = fStartTimeAccelMult * _parameters->_vConfigAccelerationLimit[j];
+                            if( accellimits[j] > f ) {
+                                accellimits[j] = f;
+                            }
                         }
                     }
                 }
+
+                std::vector<dReal> reductionFactors2; // keeps track of the reduction factors got from this shortcut
 
                 dReal fCurVelMult = fStartTimeVelMult;
                 dReal fCurAccelMult = fStartTimeAccelMult;
@@ -1694,6 +1904,10 @@ protected:
 #endif
                         break;
                     }
+
+#ifdef SMOOTHER_PROGRESS_DEBUG
+                    RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, finished initial interpolation. originalSegmentTime=%.15e, newSegmentTime=%.15e, diff=%.15e, minTimeStep=%.15e", GetEnv()->GetId()%iters%numIters%(t1 - t0)%segmentTime%(t1 - t0 - segmentTime)%minTimeStep);
+#endif
 
                     if( _CallCallbacks(_progress) == PA_Interrupt ) {
                         return -1;
@@ -1849,7 +2063,7 @@ protected:
                         // Scale down vellimits and/or accellimits
                         if( _bmanipconstraints && _manipconstraintchecker ) {
                             // Scale down vellimits and accellimits independently according to the violated constraint (manipspeed/manipaccel)
-                            if( iSlowDown == 0 ) {
+                            if( iSlowDown == 0 && !bUseNewHeuristic ) {
                                 // Try computing estimates of vellimits and accellimits before scaling down
 
                                 {// Need to make sure that x0, x1, v0, v1 hold the correct values
@@ -1896,44 +2110,28 @@ protected:
                                 if( retcheck.fMaxManipSpeed > _parameters->maxmanipspeed ) {
                                     // Manipspeed is violated. We don't scale down accellimits.
                                     maxManipSpeedViolated = true;
-                                    fVelMult = retcheck.fTimeBasedSurpassMult;
-                                    fCurVelMult *= fVelMult;
-                                    if( fCurVelMult < 0.01 ) {
-#ifdef SMOOTHER_PROGRESS_DEBUG
-                                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d: maxmanipspeed violated but fCurVelMult is too small (%.15e). continue to the next iteration", GetEnv()->GetId()%iters%numIters%fCurVelMult);
-                                        maxManipSpeedFailed += 1;
-                                        shortcutprogress << SS_MaxManipSpeedFailed << "\n";
-
-#endif
-                                        break;
+                                    if( bUseNewHeuristic && retcheck.vReductionFactors.size() > 0 && !(retcheck.fMaxManipAccel > _parameters->maxmanipaccel)) {
+                                        // do vel scaling without accel scaling only when accel limit is not violated
+                                        std::stringstream ss; ss << "env=" << GetEnv()->GetId() << ", maxManipSpeedViolated=1; reductionFactors=[";
+                                        FOREACHC(itval, retcheck.vReductionFactors) {
+                                            ss << *itval << ", ";
+                                        }
+                                        ss << "]";
+                                        RAVELOG_DEBUG(ss.str());
+                                        for( size_t j = 0; j < vellimits.size(); ++j ) {
+                                            vellimits[j] *= retcheck.vReductionFactors[j];
+                                        }
+                                        reductionFactors = retcheck.vReductionFactors;
                                     }
-                                    for (size_t j = 0; j < vellimits.size(); ++j) {
-                                        dReal fMinVel = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
-                                        vellimits[j] = max(fMinVel, fVelMult * vellimits[j]);
-                                    }
-                                }
-
-                                if( retcheck.fMaxManipAccel > _parameters->maxmanipaccel ) {
-                                    // Manipaccel is violated. We scale both vellimits and accellimits down.
-                                    maxManipAccelViolated = true;
-                                    fAccelMult = retcheck.fTimeBasedSurpassMult*retcheck.fTimeBasedSurpassMult;
-                                    fCurAccelMult *= fAccelMult;
-                                    if( fCurAccelMult < 0.0001 ) {
-#ifdef SMOOTHER_PROGRESS_DEBUG
-                                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d: maxmanipaccel violated but fCurAccelMult is too small (%.15e). continue to the next iteration", GetEnv()->GetId()%iters%numIters%fCurAccelMult);
-                                        maxManipAccelFailed += 1;
-                                        shortcutprogress << SS_MaxManipAccelFailed << "\n";
-#endif
-                                        break;
-                                    }
-                                    {
-                                        fVelMult = RaveSqrt(fAccelMult); // larger scaling factor, less reduction. Use a square root here since the velocity has the factor t while the acceleration has t^2
+                                    else {
+                                        fVelMult = retcheck.fTimeBasedSurpassMult;
                                         fCurVelMult *= fVelMult;
                                         if( fCurVelMult < 0.01 ) {
 #ifdef SMOOTHER_PROGRESS_DEBUG
-                                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d: maxmanipaccel violated but fCurVelMult is too small (%.15e). continue to the next iteration", GetEnv()->GetId()%iters%numIters%fCurVelMult);
-                                            maxManipAccelFailed += 1;
-                                            shortcutprogress << SS_MaxManipAccelFailed << "\n";
+                                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d: maxmanipspeed violated but fCurVelMult is too small (%.15e). continue to the next iteration", GetEnv()->GetId()%iters%numIters%fCurVelMult);
+                                            maxManipSpeedFailed += 1;
+                                            shortcutprogress << SS_MaxManipSpeedFailed << "\n";
+
 #endif
                                             break;
                                         }
@@ -1942,11 +2140,56 @@ protected:
                                             vellimits[j] = max(fMinVel, fVelMult * vellimits[j]);
                                         }
                                     }
-                                    for (size_t j = 0; j < accellimits.size(); ++j) {
-                                        accellimits[j] *= fAccelMult;
-                                    }
                                 }
 
+                                if( retcheck.fMaxManipAccel > _parameters->maxmanipaccel ) {
+                                    // Manipaccel is violated. We scale both vellimits and accellimits down.
+                                    maxManipAccelViolated = true;
+                                    if( bUseNewHeuristic && retcheck.vReductionFactors.size() > 0 ) {
+                                        std::stringstream ss; ss << "env=" << GetEnv()->GetId() << ", maxManipAccelViolated=1; reductionFactors=[";
+                                        FOREACHC(itval, retcheck.vReductionFactors) {
+                                            ss << *itval << ", ";
+                                        }
+                                        ss << "]";
+                                        RAVELOG_DEBUG(ss.str());
+                                        for( size_t j = 0; j < vellimits.size(); ++j ) {
+                                            vellimits[j] *= RaveSqrt(retcheck.vReductionFactors[j]);
+                                            accellimits[j] *= retcheck.vReductionFactors[j];
+                                        }
+                                        reductionFactors = retcheck.vReductionFactors;
+                                    }
+                                    else {
+                                        fAccelMult = retcheck.fTimeBasedSurpassMult*retcheck.fTimeBasedSurpassMult;
+                                        fCurAccelMult *= fAccelMult;
+                                        if( fCurAccelMult < 0.0001 ) {
+#ifdef SMOOTHER_PROGRESS_DEBUG
+                                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d: maxmanipaccel violated but fCurAccelMult is too small (%.15e). continue to the next iteration", GetEnv()->GetId()%iters%numIters%fCurAccelMult);
+                                            maxManipAccelFailed += 1;
+                                            shortcutprogress << SS_MaxManipAccelFailed << "\n";
+#endif
+                                            break;
+                                        }
+                                        {
+                                            fVelMult = RaveSqrt(fAccelMult); // larger scaling factor, less reduction. Use a square root here since the velocity has the factor t while the acceleration has t^2
+                                            fCurVelMult *= fVelMult;
+                                            if( fCurVelMult < 0.01 ) {
+#ifdef SMOOTHER_PROGRESS_DEBUG
+                                                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d: maxmanipaccel violated but fCurVelMult is too small (%.15e). continue to the next iteration", GetEnv()->GetId()%iters%numIters%fCurVelMult);
+                                                maxManipAccelFailed += 1;
+                                                shortcutprogress << SS_MaxManipAccelFailed << "\n";
+#endif
+                                                break;
+                                            }
+                                            for (size_t j = 0; j < vellimits.size(); ++j) {
+                                                dReal fMinVel = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
+                                                vellimits[j] = max(fMinVel, fVelMult * vellimits[j]);
+                                            }
+                                        }
+                                        for (size_t j = 0; j < accellimits.size(); ++j) {
+                                            accellimits[j] *= fAccelMult;
+                                        }
+                                    }
+                                }
                                 numSlowDowns += 1;
 #ifdef SMOOTHER_PROGRESS_DEBUG
                                 RAVELOG_DEBUG_FORMAT("env=%d, maxManipSpeedViolated=%d, maxManipAccelViolated=%d, fTimeBasedSurpassMult=%.15e; fCurVelMult=%.15e; fCurAccelMult=%.15e, numSlowDowns=%d", GetEnv()->GetId()%maxManipSpeedViolated%maxManipAccelViolated%retcheck.fTimeBasedSurpassMult%fCurVelMult%fCurAccelMult%numSlowDowns);
@@ -2078,9 +2321,6 @@ protected:
 
         // Report status
         if( iters == numIters ) {
-#ifdef SMOOTHER_PROGRESS_DEBUG
-            shortcutprogress << utils::GetMicroTime() << " " << tTotal << "\n";
-#endif
             RAVELOG_DEBUG_FORMAT("env=%d, finished at shortcut iter=%d (normal exit), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e", GetEnv()->GetId()%iters%numShortcuts%numSlowDowns%tOriginal%tTotal%(tOriginal - tTotal));
         }
         else if( score*iCurrentBestScore < cutoffRatio ) {
@@ -2092,7 +2332,7 @@ protected:
         _DumpParabolicPath(parabolicpath, _dumplevel, fileindex, 1);
 #ifdef SMOOTHER_PROGRESS_DEBUG
         curtime = utils::GetMicroTime();
-        RAVELOG_DEBUG_FORMAT("env=%d, shortcut stats:\n  successful=%d\n  initialInterpolationFailed=%d\n  interpolatedSegmentTooLong=%d\n  timeInstantsTooClose=%d\n  check2CollisionFailed=%d\n  check2Failed=%d\n  lastSegmentFailed=%d\n  maxManipSpeedFailed=%d\n  maxManipAccelFailed=%d\n  slowDownFailed=%d\n  stateSettingFailed=%d\n  redundantShortcut=%d\n  _zeroVelpoints.size()=%d\n  time since last successful shortcut=%.15e", GetEnv()->GetId()%numShortcuts%initialInterpolationFailed%interpolatedSegmentTooLong%timeInstantsTooClose%check2CollisionFailed%check2Failed%lastSegmentFailed%maxManipSpeedFailed%maxManipAccelFailed%slowDownFailed%stateSettingFailed%redundantShortcut%_zeroVelPoints.size()%(0.000001f*(float)(curtime - latestSuccessfulShortcutTimestamp)));
+        RAVELOG_DEBUG_FORMAT("env=%d, shortcut stats:\n  successful=%d\n  initialInterpolationFailed=%d\n  interpolatedSegmentTooLong=%d\n  interpolatedSegmentTooLongFromSlowDown=%d\n timeInstantsTooClose=%d\n  check2CollisionFailed=%d\n  check2Failed=%d\n  lastSegmentFailed=%d\n  maxManipSpeedFailed=%d\n  maxManipAccelFailed=%d\n  slowDownFailed=%d\n  stateSettingFailed=%d\n  redundantShortcut=%d\n  _zeroVelpoints.size()=%d\n  time since last successful shortcut=%.15e\n  final duration percentage=%.15e", GetEnv()->GetId()%numShortcuts%initialInterpolationFailed%interpolatedSegmentTooLong%interpolatedSegmentTooLongFromSlowDown%timeInstantsTooClose%check2CollisionFailed%check2Failed%lastSegmentFailed%maxManipSpeedFailed%maxManipAccelFailed%slowDownFailed%stateSettingFailed%redundantShortcut%_zeroVelPoints.size()%(0.000001f*(float)(curtime - latestSuccessfulShortcutTimestamp))%(tTotal/tOriginal));
         {
             std::string shortcutprogressfilename = str(boost::format("%s/shortcutprogress%d.xml")%RaveGetHomeDirectory()%fileindex);
             std::ofstream f(shortcutprogressfilename.c_str());
