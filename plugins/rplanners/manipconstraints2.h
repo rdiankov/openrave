@@ -437,14 +437,13 @@ public:
                     std::sort(_vindices.begin(), _vindices.end(), [&](int i1, int i2) {
                             return _vdotproducts[i1] < _vdotproducts[i2];
                         });
-
                     dReal minPositiveDotProduct = _vdotproducts[_vindices.back()];
-                    size_t minPositiveDotProductIndex = 0;
-                    if( minPositiveDotProduct < 0 ) {
+                    if( minPositiveDotProduct <= 0 ) {
                         // Is this possible?
                         return retcheck;
                     }
-                    for( size_t i = 0; i < armdof; ++i ) {
+                    int minPositiveDotProductIndex = 0;
+                    for( int i = 0; i < armdof; ++i ) {
                         minPositiveDotProduct = _vdotproducts[_vindices[i]];
                         _vscalingfactors[_vindices[i]] = 1.0;
                         if( minPositiveDotProduct > 0 ) {
@@ -460,12 +459,12 @@ public:
                     //         f(i) = m(d1/di) + (1 - m)
                     // where m = (1 - reductionFactor)/(1 - d1/dn)
                     dReal m = (1 - reductionFactor) / (1 - minPositiveDotProduct/_vdotproducts[_vindices.back()]);
-                    for( size_t i = minPositiveDotProductIndex; i < armdof; ++i ) {
+                    for( int i = minPositiveDotProductIndex; i < armdof; ++i ) {
                         int idof = _vindices[i];
                         _vscalingfactors[idof] = m*(minPositiveDotProduct/_vdotproducts[idof]) + (1 - m);
                     }
                     retcheck.vReductionFactors = _vscalingfactors;
-                    std::stringstream ss; ss << "env=" << probot->GetEnv()->GetId() << ", vdotproducts=[";
+                    std::stringstream ss; ss << "env=" << probot->GetEnv()->GetId() << "; reductionFactor=" << reductionFactor << "; minPositiveDotProductIndex=" << minPositiveDotProductIndex << "; vdotproducts=[";
                     FOREACHC(itval, _vdotproducts) {
                         ss << *itval << ", ";
                     }
@@ -509,15 +508,13 @@ public:
                     std::sort(_vindices.begin(), _vindices.end(), [&](int i1, int i2) {
                             return _vdotproducts[i1] < _vdotproducts[i2];
                         });
-
-
                     dReal minPositiveDotProduct = _vdotproducts[_vindices.back()];
-                    size_t minPositiveDotProductIndex = 0;
-                    if( minPositiveDotProduct < 0 ) {
+                    if( minPositiveDotProduct <= 0 ) {
                         // Is this possible?
                         return retcheck;
                     }
-                    for( size_t i = 0; i < armdof; ++i ) {
+                    int minPositiveDotProductIndex = 0;
+                    for( int i = 0; i < armdof; ++i ) {
                         minPositiveDotProduct = _vdotproducts[_vindices[i]];
                         _vscalingfactors[_vindices[i]] = 1.0;
                         if( minPositiveDotProduct > 0 ) {
@@ -533,12 +530,12 @@ public:
                     //         f(i) = m(d1/di) + (1 - m)
                     // where m = (1 - reductionFactor)/(1 - d1/dn)
                     dReal m = (1 - reductionFactor) / (1 - minPositiveDotProduct/_vdotproducts[_vindices.back()]);
-                    for( size_t i = minPositiveDotProductIndex; i < armdof; ++i ) {
+                    for( int i = minPositiveDotProductIndex; i < armdof; ++i ) {
                         int idof = _vindices[i];
                         _vscalingfactors[idof] = m*(minPositiveDotProduct/_vdotproducts[idof]) + (1 - m);
                     }
                     retcheck.vReductionFactors = _vscalingfactors;
-                    std::stringstream ss; ss << "env=" << probot->GetEnv()->GetId() << ", vdotproducts=[";
+                    std::stringstream ss; ss << "env=" << probot->GetEnv()->GetId() << "; reductionFactor=" << reductionFactor << "; minPositiveDotProductIndex=" << minPositiveDotProductIndex << "; vdotproducts=[";
                     FOREACHC(itval, _vdotproducts) {
                         ss << *itval << ", ";
                     }
@@ -672,13 +669,12 @@ public:
                 std::sort(_vindices.begin(), _vindices.end(), [&](int i1, int i2) {
                         return _vdotproducts[i1] < _vdotproducts[i2];
                     });
-
                 dReal minPositiveDotProduct = _vdotproducts[_vindices.back()];
-                size_t minPositiveDotProductIndex = 0;
                 if( minPositiveDotProduct <= 0 ) {
                     // Is this possible?
                     return retcheck;
                 }
+                int minPositiveDotProductIndex = 0;
                 for( int i = 0; i < armdof; ++i ) {
                     minPositiveDotProduct = _vdotproducts[_vindices[i]];
                     _vscalingfactors[_vindices[i]] = 1.0;
@@ -695,12 +691,12 @@ public:
                 //         f(i) = m(d1/di) + (1 - m)
                 // where m = (1 - reductionFactor)/(1 - d1/dn)
                 dReal m = (1 - reductionFactor) / (1 - minPositiveDotProduct/_vdotproducts[_vindices.back()]);
-                for( size_t i = minPositiveDotProductIndex; i < armdof; ++i ) {
+                for( int i = minPositiveDotProductIndex; i < armdof; ++i ) {
                     int idof = _vindices[i];
                     _vscalingfactors[idof] = m*(minPositiveDotProduct/_vdotproducts[idof]) + (1 - m);
                 }
                 retcheck.vReductionFactors = _vscalingfactors;
-                std::stringstream ss; ss << "env=" << probot->GetEnv()->GetId() << ", vdotproducts=[";
+                std::stringstream ss; ss << "env=" << probot->GetEnv()->GetId() << "; reductionFactor=" << reductionFactor << "; minPositiveDotProductIndex=" << minPositiveDotProductIndex << "; vdotproducts=[";
                 FOREACHC(itval, _vdotproducts) {
                     ss << *itval << ", ";
                 }
@@ -744,14 +740,12 @@ public:
                 std::sort(_vindices.begin(), _vindices.end(), [&](int i1, int i2) {
                         return _vdotproducts[i1] < _vdotproducts[i2];
                     });
-
-
                 dReal minPositiveDotProduct = _vdotproducts[_vindices.back()];
-                size_t minPositiveDotProductIndex = 0;
                 if( minPositiveDotProduct <= 0 ) {
                     // Is this possible?
                     return retcheck;
                 }
+                int minPositiveDotProductIndex = 0;
                 for( int i = 0; i < armdof; ++i ) {
                     minPositiveDotProduct = _vdotproducts[_vindices[i]];
                     _vscalingfactors[_vindices[i]] = 1.0;
@@ -768,12 +762,12 @@ public:
                 //         f(i) = m(d1/di) + (1 - m)
                 // where m = (1 - reductionFactor)/(1 - d1/dn)
                 dReal m = (1 - reductionFactor) / (1 - minPositiveDotProduct/_vdotproducts[_vindices.back()]);
-                for( size_t i = minPositiveDotProductIndex; i < armdof; ++i ) {
+                for( int i = minPositiveDotProductIndex; i < armdof; ++i ) {
                     int idof = _vindices[i];
                     _vscalingfactors[idof] = m*(minPositiveDotProduct/_vdotproducts[idof]) + (1 - m);
                 }
                 retcheck.vReductionFactors = _vscalingfactors;
-                std::stringstream ss; ss << "env=" << probot->GetEnv()->GetId() << ", vdotproducts=[";
+                std::stringstream ss; ss << "env=" << probot->GetEnv()->GetId() << "; reductionFactor=" << reductionFactor << "; minPositiveDotProductIndex=" << minPositiveDotProductIndex << "; vdotproducts=[";
                 FOREACHC(itval, _vdotproducts) {
                     ss << *itval << ", ";
                 }

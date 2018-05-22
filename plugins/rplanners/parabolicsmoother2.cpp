@@ -1830,8 +1830,9 @@ protected:
                 vellimits = _parameters->_vConfigVelocityLimit;
                 accellimits = _parameters->_vConfigAccelerationLimit;
 
-                if( bUseNewHeuristic ) {
+                if( _bmanipconstraints && _manipconstraintchecker && bUseNewHeuristic ) {
                     // pass
+                    // do nothing only when the new heuristic is used while having manipconstraints. otherwise, proceed normally
                 }
                 else {
                     for (size_t j = 0; j < _parameters->_vConfigVelocityLimit.size(); ++j) {
