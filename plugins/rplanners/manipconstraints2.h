@@ -327,6 +327,8 @@ public:
         dReal maxactualmanipspeed = 0, maxactualmanipaccel = 0;
 
         dReal reductionFactor = 1; // default reduction factor
+        dReal reductionFactorCutoff = 0.8;
+
         dReal multiplier = 0.85;     // a multiplier to the scaling factor computed from the ratio between the violating value and the bound
         int retcode = 0;
         dReal maxallowedmult = 0.92; // the final reduction factor should not less than this value
@@ -410,6 +412,10 @@ public:
                     reductionFactor = RaveSqrt(min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult));
                     retcheck.retcode = CFO_CheckTimeBasedConstraints;
                     retcheck.fTimeBasedSurpassMult = reductionFactor;
+                    if( reductionFactor >= reductionFactorCutoff ) {
+                        // Constraints are not severely violated. Don't bother to compute Jacobian and that stuff
+                        return retcheck;
+                    }
 
                     std::list< ManipConstraintInfo2 >::iterator itmanipinfo = _listCheckManips.begin();
                     std::advance(itmanipinfo, accelViolationIndex);
@@ -478,6 +484,10 @@ public:
                     reductionFactor = min(multiplier*_maxmanipspeed/maxactualmanipspeed, maxallowedmult);
                     retcheck.retcode = CFO_CheckTimeBasedConstraints;
                     retcheck.fTimeBasedSurpassMult = reductionFactor;
+                    if( reductionFactor >= reductionFactorCutoff ) {
+                        // Constraints are not severely violated. Don't bother to compute Jacobian and that stuff
+                        return retcheck;
+                    }
 
                     std::list< ManipConstraintInfo2 >::iterator itmanipinfo = _listCheckManips.begin();
                     std::advance(itmanipinfo, velViolationIndex);
@@ -637,6 +647,10 @@ public:
                 reductionFactor = RaveSqrt(min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult));
                 retcheck.retcode = CFO_CheckTimeBasedConstraints;
                 retcheck.fTimeBasedSurpassMult = reductionFactor;
+                if( reductionFactor >= reductionFactorCutoff ) {
+                    // Constraints are not severely violated. Don't bother to compute Jacobian and that stuff
+                    return retcheck;
+                }
 
                 std::list< ManipConstraintInfo2 >::iterator itmanipinfo = _listCheckManips.begin();
                 std::advance(itmanipinfo, accelViolationIndex);
@@ -705,6 +719,10 @@ public:
                 reductionFactor = min(multiplier*_maxmanipspeed/maxactualmanipspeed, maxallowedmult);
                 retcheck.retcode = CFO_CheckTimeBasedConstraints;
                 retcheck.fTimeBasedSurpassMult = reductionFactor;
+                if( reductionFactor >= reductionFactorCutoff ) {
+                    // Constraints are not severely violated. Don't bother to compute Jacobian and that stuff
+                    return retcheck;
+                }
 
                 std::list< ManipConstraintInfo2 >::iterator itmanipinfo = _listCheckManips.begin();
                 std::advance(itmanipinfo, velViolationIndex);
