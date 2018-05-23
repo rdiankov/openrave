@@ -6197,6 +6197,10 @@ class IKFastSolver(AutoReloader):
         allmonoms.sort()
         origmonoms = list(origmonoms)
         origmonoms.sort()
+
+        if len(origmonoms) == 0 or len(allmonoms) == 0:
+            raise self.CannotSolveError('solveDialytically has no equations')
+        
         if len(allmonoms)<2*len(dialyticeqs):
             log.warn('solveDialytically equations %d > %d, should be equal...', 2*len(dialyticeqs),len(allmonoms))
             # TODO not sure how to select the equations
@@ -6228,6 +6232,10 @@ class IKFastSolver(AutoReloader):
                         mlist = list(m)
                         mlist[igen] += 1
                         degree=mlist.pop(ileftvar)
+
+                        if tuple(mlist) not in origmonoms:
+                            raise self.CannotSolveError('equations too simple, monom %r is not in %r'%(mlist, origmonoms))
+                        
                         exportindex = degree*len(origmonoms)*len(dialyticeqs) + len(origmonoms)*ipeq+origmonoms.index(tuple(mlist))
                         assert(exportcoeffeqs[exportindex] == S.Zero)
                         exportcoeffeqs[exportindex] = c
