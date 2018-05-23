@@ -128,7 +128,7 @@ public:
                 _bTrackActiveDOF = true;
             }
         }
-        //RAVELOG_VERBOSE_FORMAT("env=%d, %x init with body %s, activedof=%d", pbody->GetEnv()->GetId()%this%pbody->GetName()%(int)bTrackActiveDOF);
+        //RAVELOG_VERBOSE_FORMAT("env=%d, %x init with body %s, activedof=%d, att=%d", pbody->GetEnv()->GetId()%this%pbody->GetName()%(int)bTrackActiveDOF%attachedBodies.size());
 
         pmanager->clear();
         _tmpbuffer.resize(0);

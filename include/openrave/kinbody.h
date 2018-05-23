@@ -1368,16 +1368,17 @@ private:
     /// \brief Parameters passed into the state savers to control what information gets saved.
     enum SaveParameters
     {
-        Save_LinkTransformation=0x00000001,     ///< [default] save link transformations and joint branches
-        Save_LinkEnable=0x00000002,     ///< [default] save link enable states
-        Save_LinkVelocities=0x00000004,     ///< save the link velocities
-        Save_JointMaxVelocityAndAcceleration=0x00000008, ///< save the max joint velocities and accelerations for the controller DOF
-        Save_JointWeights=0x00000010, ///< saves the dof weights
-        Save_JointLimits=0x00000020, ///< saves the dof limits
-        Save_ActiveDOF=0x00010000,     ///< [robot only], saves and restores the current active degrees of freedom
-        Save_ActiveManipulator=0x00020000,     ///< [robot only], saves the active manipulator
-        Save_GrabbedBodies=0x00040000,     ///< saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies.
-        Save_ActiveManipulatorToolTransform=0x00080000, ///< [robot only], saves the active manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
+        Save_LinkTransformation              = 0x00000001, ///< [default] save link transformations and joint branches
+        Save_LinkEnable                      = 0x00000002, ///< [default] save link enable states
+        Save_LinkVelocities                  = 0x00000004, ///< save the link velocities
+        Save_JointMaxVelocityAndAcceleration = 0x00000008, ///< save the max joint velocities and accelerations for the controller DOF
+        Save_JointWeights                    = 0x00000010, ///< saves the dof weights
+        Save_JointLimits                     = 0x00000020, ///< saves the dof limits
+        Save_ActiveDOF                       = 0x00010000, ///< [robot only], saves and restores the current active degrees of freedom
+        Save_ActiveManipulator               = 0x00020000, ///< [robot only], saves the active manipulator
+        Save_GrabbedBodies                   = 0x00040000, ///< saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies.
+        Save_ActiveManipulatorToolTransform  = 0x00080000, ///< [robot only], saves the active manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
+        Save_ManipulatorsToolTransform       = 0x00100000, ///< [robot only], saves every manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
     };
 
     /// \brief holds all user-set attached sensor information used to initialize the AttachedSensor class.
