@@ -120,6 +120,11 @@ public:
         setCheckedManips.clear();
         _listCheckManips.clear();
         spec.ExtractUsedBodies(_penv, listUsedBodies);
+
+        _vdotproducts.resize(spec.GetDOF());
+        _vindices.resize(spec.GetDOF());
+        _vscalingfactors.resize(spec.GetDOF());
+
         FOREACH(itbody, listUsedBodies) {
             KinBodyPtr pbody = *itbody;
             if( pbody->IsRobot() ) {
@@ -127,10 +132,6 @@ public:
                 RobotBase::ManipulatorPtr pmanip = probot->GetManipulator(manipname);
                 if( !!pmanip ) {
                     OPENRAVE_ASSERT_OP(pmanip->GetArmDOF(),<=,spec.GetDOF()); // make sure the planning dof includes pmanip
-                    _vdotproducts.resize(pmanip->GetArmDOF());
-                    _vindices.resize(pmanip->GetArmDOF());
-                    _vscalingfactors.resize(pmanip->GetArmDOF());
-                    std::fill(_vscalingfactors.begin(), _vscalingfactors.end(), 1.0);
 
                     KinBody::LinkPtr endeffector = pmanip->GetEndEffector();
                     // Insert all child links of endeffector
@@ -315,19 +316,20 @@ public:
     // or decrease monotonically and therefore, the maximum is occuring at either end. We can reduce
     // computational load by only checking at both end instead of checking at every subdivided
     // segment and still having the same result.
-    RampOptimizerInternal::CheckReturn CheckManipConstraints2(const std::vector<RampOptimizerInternal::RampND> &rampndVect)
+    RampOptimizerInternal::CheckReturn CheckManipConstraints2(const std::vector<RampOptimizerInternal::RampND> &rampndVect, IntervalType interval=IT_OpenStart)
     {
         if( _maxmanipspeed <= 0 && _maxmanipaccel <= 0 ) {
             return RampOptimizerInternal::CheckReturn(0);
         }
 
+        BOOST_ASSERT(!(interval == IT_Open));
         bool bUseNewHeuristic = true;
+        dReal reductionFactor = 1; // default reduction factor
+        dReal reductionFactorCutoff = 0.8;
+        dReal fMaxReductionFactor = 1; // scaling factor for the DOF with least contribution to constriant violation
 
         Vector endeffvellin, endeffvelang, endeffacclin, endeffaccang;
         dReal maxactualmanipspeed = 0, maxactualmanipaccel = 0;
-
-        dReal reductionFactor = 1; // default reduction factor
-        dReal reductionFactorCutoff = 0.8;
 
         dReal multiplier = 0.85;     // a multiplier to the scaling factor computed from the ratio between the violating value and the bound
         int retcode = 0;
@@ -339,68 +341,71 @@ public:
         int accelViolationIndex = -1; // index to manipinfo that violates manip accel constraint (-1 if constraints are respected)
         Vector vVelViolation, vAccelViolation;
         int curmanipindex = 0;
-        FOREACHC(itmanipinfo, _listCheckManips) {
-            KinBodyPtr probot = itmanipinfo->plink->GetParent();
-            itrampnd->GetAVect(ac);
-            qfillactive.resize(itmanipinfo->vuseddofindices.size());
-            _vfillactive.resize(itmanipinfo->vuseddofindices.size());
-            _afill.resize(probot->GetDOF());
-            for(size_t index = 0; index < itmanipinfo->vuseddofindices.size(); ++index) {
-                qfillactive[index] = itrampnd->GetX0At(itmanipinfo->vconfigindices.at(index));
-                _vfillactive[index] = itrampnd->GetV0At(itmanipinfo->vconfigindices[index]);
-                _afill[itmanipinfo->vuseddofindices.at(index)] = ac.at(itmanipinfo->vconfigindices[index]);
-            }
-
-            int endeffindex = itmanipinfo->plink->GetIndex();
-            KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation|KinBody::Save_LinkVelocities);
-
-            // Set the robot to the new state
-            probot->SetDOFValues(qfillactive, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
-            probot->SetDOFVelocities(_vfillactive, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
-            probot->GetLinkVelocities(endeffvels);
-            probot->GetLinkAccelerations(_afill,endeffaccs);
-            endeffvellin = endeffvels.at(endeffindex).first;
-            endeffvelang = endeffvels.at(endeffindex).second;
-            endeffacclin = endeffaccs.at(endeffindex).first;
-            endeffaccang = endeffaccs.at(endeffindex).second;
-            Transform R = itmanipinfo->plink->GetTransform();
-
-            FOREACH(itpoint, itmanipinfo->checkpoints) {
-                Vector point = R.rotate(*itpoint);
-
-                if( _maxmanipspeed > 0 ) {
-                    Vector vpoint = endeffvellin + endeffvelang.cross(point);
-                    dReal actualmanipspeed = RaveSqrt(vpoint.lengthsqr3());
-                    if( actualmanipspeed > maxactualmanipspeed ) {
-                        maxactualmanipspeed = actualmanipspeed;
-                        velViolationIndex = curmanipindex;
-                        vVelViolation = vpoint;
-                        _vdofvalues = qfillactive;
-                        _vdofvelocities = _vfillactive;
-                        _vdofaccelerations = _afill;
-                    }
+        bool bBoundExceeded = false;
+        if( !(interval == IT_OpenStart) ) {
+            FOREACHC(itmanipinfo, _listCheckManips) {
+                bBoundExceeded = false;
+                KinBodyPtr probot = itmanipinfo->plink->GetParent();
+                itrampnd->GetAVect(ac);
+                qfillactive.resize(itmanipinfo->vuseddofindices.size());
+                _vfillactive.resize(itmanipinfo->vuseddofindices.size());
+                _afill.resize(probot->GetDOF());
+                for(size_t index = 0; index < itmanipinfo->vuseddofindices.size(); ++index) {
+                    qfillactive[index] = itrampnd->GetX0At(itmanipinfo->vconfigindices.at(index));
+                    _vfillactive[index] = itrampnd->GetV0At(itmanipinfo->vconfigindices[index]);
+                    _afill[itmanipinfo->vuseddofindices.at(index)] = ac.at(itmanipinfo->vconfigindices[index]);
                 }
 
-                if( _maxmanipaccel > 0 ) {
-                    Vector apoint = endeffacclin + endeffvelang.cross(endeffvelang.cross(point)) + endeffaccang.cross(point);
-                    dReal actualmanipaccel = RaveSqrt(apoint.lengthsqr3());
-                    if( actualmanipaccel > maxactualmanipaccel ) {
-                        maxactualmanipaccel = actualmanipaccel;
-                        accelViolationIndex = curmanipindex;
-                        vAccelViolation = apoint;
-                        _vdofvalues = qfillactive;
-                        _vdofvelocities = _vfillactive;
-                        _vdofaccelerations = _afill;
+                int endeffindex = itmanipinfo->plink->GetIndex();
+                KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation|KinBody::Save_LinkVelocities);
+
+                // Set the robot to the new state
+                probot->SetDOFValues(qfillactive, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
+                probot->SetDOFVelocities(_vfillactive, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
+                probot->GetLinkVelocities(endeffvels);
+                probot->GetLinkAccelerations(_afill,endeffaccs);
+                endeffvellin = endeffvels.at(endeffindex).first;
+                endeffvelang = endeffvels.at(endeffindex).second;
+                endeffacclin = endeffaccs.at(endeffindex).first;
+                endeffaccang = endeffaccs.at(endeffindex).second;
+                Transform R = itmanipinfo->plink->GetTransform();
+
+                FOREACH(itpoint, itmanipinfo->checkpoints) {
+                    Vector point = R.rotate(*itpoint);
+
+                    if( _maxmanipspeed > 0 ) {
+                        Vector vpoint = endeffvellin + endeffvelang.cross(point);
+                        dReal actualmanipspeed = RaveSqrt(vpoint.lengthsqr3());
+                        if( actualmanipspeed > maxactualmanipspeed ) {
+                            bBoundExceeded = true;
+                            maxactualmanipspeed = actualmanipspeed;
+                            velViolationIndex = curmanipindex;
+                            vVelViolation = vpoint;
+                        }
+                    }
+
+                    if( _maxmanipaccel > 0 ) {
+                        Vector apoint = endeffacclin + endeffvelang.cross(endeffvelang.cross(point)) + endeffaccang.cross(point);
+                        dReal actualmanipaccel = RaveSqrt(apoint.lengthsqr3());
+                        if( actualmanipaccel > maxactualmanipaccel ) {
+                            bBoundExceeded = true;
+                            maxactualmanipaccel = actualmanipaccel;
+                            accelViolationIndex = curmanipindex;
+                            vAccelViolation = apoint;
+                        }
                     }
                 }
+                if( bBoundExceeded ) {
+                    // Keep these values for later computation if constraints are violated
+                    _vdofvalues = qfillactive;
+                    _vdofvelocities = _vfillactive;
+                    _vdofaccelerations = _afill;
+                }
+                // Finished iterating through all checkpoints
+                ++curmanipindex;
             }
-            // Finished iterating through all checkpoints
-            ++curmanipindex;
-        }
-        // Finished iterating through all manipulators
+            // Finished iterating through all manipulators
 
-        if( (itrampnd == rampndVect.end() - 1) && (itrampnd->GetDuration() <= g_fEpsilonLinear) ) {
-            // No further checking is needed since the segment contains only one very small ramp.
             if( bUseNewHeuristic ) {
                 RampOptimizerInternal::CheckReturn retcheck;
                 retcheck.retcode = 0;
@@ -456,15 +461,15 @@ public:
                     }
                     // suppose the positive dot products are d1, d2, ..., dn (sorted in the ascending
                     // order). We want to build a linear function f (for convenience) such that f(d1) =
-                    // 1 (no scaling for the DOF with least contribution) and f(dn) = reductionFactor
+                    // rmax (least scaling for the DOF with least contribution) and f(dn) = reductionFactor
                     // (large reduction factor for DOF with most contribution). Since we build a linear
                     // function, we have
-                    //         f(i) = m(d1/di) + (1 - m)
-                    // where m = (1 - reductionFactor)/(1 - d1/dn)
-                    dReal m = (1 - reductionFactor) / (1 - minPositiveDotProduct/_vdotproducts[_vindices.back()]);
+                    //         f(i) = m(d1/di) + (rmax - m)
+                    // where m = (rmax - reductionFactor)/(1 - d1/dn)
+                    dReal m = (fMaxReductionFactor - reductionFactor) / (1 - minPositiveDotProduct/_vdotproducts[_vindices.back()]);
                     for( int i = minPositiveDotProductIndex; i < armdof; ++i ) {
                         int idof = _vindices[i];
-                        _vscalingfactors[idof] = m*(minPositiveDotProduct/_vdotproducts[idof]) + (1 - m);
+                        _vscalingfactors[idof] = m*(minPositiveDotProduct/_vdotproducts[idof]) + (fMaxReductionFactor - m);
                     }
                     retcheck.vReductionFactors = _vscalingfactors;
                     std::stringstream ss; ss << "env=" << probot->GetEnv()->GetId() << "; reductionFactor=" << reductionFactor << "; minPositiveDotProductIndex=" << minPositiveDotProductIndex << "; vdotproducts=[";
@@ -533,12 +538,12 @@ public:
                     // 1 (no scaling for the DOF with least contribution) and f(dn) = reductionFactor
                     // (large reduction factor for DOF with most contribution). Since we build a linear
                     // function, we have
-                    //         f(i) = m(d1/di) + (1 - m)
-                    // where m = (1 - reductionFactor)/(1 - d1/dn)
-                    dReal m = (1 - reductionFactor) / (1 - minPositiveDotProduct/_vdotproducts[_vindices.back()]);
+                    //         f(i) = m(d1/di) + (rmax - m)
+                    // where m = (rmax - reductionFactor)/(1 - d1/dn)
+                    dReal m = (fMaxReductionFactor - reductionFactor) / (1 - minPositiveDotProduct/_vdotproducts[_vindices.back()]);
                     for( int i = minPositiveDotProductIndex; i < armdof; ++i ) {
                         int idof = _vindices[i];
-                        _vscalingfactors[idof] = m*(minPositiveDotProduct/_vdotproducts[idof]) + (1 - m);
+                        _vscalingfactors[idof] = m*(minPositiveDotProduct/_vdotproducts[idof]) + (fMaxReductionFactor - m);
                     }
                     retcheck.vReductionFactors = _vscalingfactors;
                     std::stringstream ss; ss << "env=" << probot->GetEnv()->GetId() << "; reductionFactor=" << reductionFactor << "; minPositiveDotProductIndex=" << minPositiveDotProductIndex << "; vdotproducts=[";
@@ -574,12 +579,19 @@ public:
                 // RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxactualmanipspeed%maxactualmanipaccel);
                 return RampOptimizerInternal::CheckReturn(retcode, reductionFactor, maxactualmanipspeed, maxactualmanipaccel);
             }
+
+            // The ramp passes all the check and it's very short so return now.
+            if( (itrampnd == rampndVect.end() - 1) && (itrampnd->GetDuration() <= g_fEpsilonLinear) ) {
+                // No further checking is needed since the segment contains only one very small ramp.
+                return RampOptimizerInternal::CheckReturn(0);
+            }
         }
 
         // Check manipspeed and manipaccel at the end of the segment
         itrampnd = rampndVect.end() - 1;
         curmanipindex = 0;
         FOREACHC(itmanipinfo, _listCheckManips) {
+            bBoundExceeded = false;
             KinBodyPtr probot = itmanipinfo->plink->GetParent();
             itrampnd->GetAVect(ac);
             qfillactive.resize(itmanipinfo->vuseddofindices.size());
@@ -612,12 +624,10 @@ public:
                     Vector vpoint = endeffvellin + endeffvelang.cross(point);
                     dReal actualmanipspeed = RaveSqrt(vpoint.lengthsqr3());
                     if( actualmanipspeed > maxactualmanipspeed ) {
+			bBoundExceeded = true;
                         maxactualmanipspeed = actualmanipspeed;
                         velViolationIndex = curmanipindex;
                         vVelViolation = vpoint;
-                        _vdofvalues = qfillactive;
-                        _vdofvelocities = _vfillactive;
-                        _vdofaccelerations = _afill;
                     }
                 }
 
@@ -625,14 +635,17 @@ public:
                     Vector apoint = endeffacclin + endeffvelang.cross(endeffvelang.cross(point)) + endeffaccang.cross(point);
                     dReal actualmanipaccel = RaveSqrt(apoint.lengthsqr3());
                     if( actualmanipaccel > maxactualmanipaccel ) {
+			bBoundExceeded = true;
                         maxactualmanipaccel = actualmanipaccel;
                         accelViolationIndex = curmanipindex;
                         vAccelViolation = apoint;
-                        _vdofvalues = qfillactive;
-                        _vdofvelocities = _vfillactive;
-                        _vdofaccelerations = _afill;
                     }
                 }
+            }
+            if( bBoundExceeded ) {
+                _vdofvalues = qfillactive;
+                _vdofvelocities = _vfillactive;
+                _vdofaccelerations = _afill;
             }
             // Finished iterating through all checkpoints
             ++curmanipindex;
@@ -697,12 +710,12 @@ public:
                 // 1 (no scaling for the DOF with least contribution) and f(dn) = reductionFactor
                 // (large reduction factor for DOF with most contribution). Since we build a linear
                 // function, we have
-                //         f(i) = m(d1/di) + (1 - m)
-                // where m = (1 - reductionFactor)/(1 - d1/dn)
-                dReal m = (1 - reductionFactor) / (1 - minPositiveDotProduct/_vdotproducts[_vindices.back()]);
+                //         f(i) = m(d1/di) + (rmax - m)
+                // where m = (rmax - reductionFactor)/(1 - d1/dn)
+                dReal m = (fMaxReductionFactor - reductionFactor) / (1 - minPositiveDotProduct/_vdotproducts[_vindices.back()]);
                 for( int i = minPositiveDotProductIndex; i < armdof; ++i ) {
                     int idof = _vindices[i];
-                    _vscalingfactors[idof] = m*(minPositiveDotProduct/_vdotproducts[idof]) + (1 - m);
+                    _vscalingfactors[idof] = m*(minPositiveDotProduct/_vdotproducts[idof]) + (fMaxReductionFactor - m);
                 }
                 retcheck.vReductionFactors = _vscalingfactors;
                 std::stringstream ss; ss << "env=" << probot->GetEnv()->GetId() << "; reductionFactor=" << reductionFactor << "; minPositiveDotProductIndex=" << minPositiveDotProductIndex << "; vdotproducts=[";
@@ -773,10 +786,10 @@ public:
                 // function, we have
                 //         f(i) = m(d1/di) + (1 - m)
                 // where m = (1 - reductionFactor)/(1 - d1/dn)
-                dReal m = (1 - reductionFactor) / (1 - minPositiveDotProduct/_vdotproducts[_vindices.back()]);
+                dReal m = (fMaxReductionFactor - reductionFactor) / (1 - minPositiveDotProduct/_vdotproducts[_vindices.back()]);
                 for( int i = minPositiveDotProductIndex; i < armdof; ++i ) {
                     int idof = _vindices[i];
-                    _vscalingfactors[idof] = m*(minPositiveDotProduct/_vdotproducts[idof]) + (1 - m);
+                    _vscalingfactors[idof] = m*(minPositiveDotProduct/_vdotproducts[idof]) + (fMaxReductionFactor - m);
                 }
                 retcheck.vReductionFactors = _vscalingfactors;
                 std::stringstream ss; ss << "env=" << probot->GetEnv()->GetId() << "; reductionFactor=" << reductionFactor << "; minPositiveDotProductIndex=" << minPositiveDotProductIndex << "; vdotproducts=[";
