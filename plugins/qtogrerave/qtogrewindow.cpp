@@ -22,7 +22,7 @@ QtOgreWindow::QtOgreWindow(const std::function<void()> &environmentUpdateFunc, Q
 {
     setAnimating(true);
     installEventFilter(this);
-    m_ogreBackground = Ogre::ColourValue(0.0f, 0.5f, 1.0f);
+    m_ogreBackground = Ogre::ColourValue(1.0f, 1.0f, 1.0f);
 }
 
 /*
@@ -178,7 +178,7 @@ void QtOgreWindow::initialize()
 #endif
     
     m_ogreCamera = m_ogreSceneMgr->createCamera("MainCamera");
-    m_ogreCamera->setPosition(Ogre::Vector3(0.0f, 0.0f, 10.0f));
+    m_ogreCamera->setPosition(Ogre::Vector3(0.0f, 0.0f, 5.0f));
     m_ogreCamera->lookAt(Ogre::Vector3(0.0f, 0.0f, -300.0f));
     m_ogreCamera->setNearClipDistance(0.1f);
     m_ogreCamera->setFarClipDistance(200.0f);

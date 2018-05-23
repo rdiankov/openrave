@@ -14,6 +14,11 @@ OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, Op
     _root = root;
     _node = parentNode->createChildSceneNode();
     _node->setName(body.GetName());
+
+    // if (!body.IsEnabled()) {
+    //     return;
+    // }
+
     const OpenRAVE::Transform &transfBody = body.GetTransform();
     SetOgreNodeTransform(_node, transfBody);
 
@@ -57,6 +62,10 @@ OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, Op
             datablock->setDiffuse(Ogre::Vector3(diffuse.x, diffuse.y, diffuse.z));
             const OpenRAVE::RaveVector<float>& ambient = pGeom->GetAmbientColor();
             datablock->setEmissive(Ogre::Vector3(ambient.x, ambient.y, ambient.z));
+            const float transparency = pGeom->GetTransparency();
+            if (transparency > 0.0f) {
+                datablock->setTransparency(1.0f - transparency);
+            }
 
             // TODO: Set datablock
             switch(pGeom->GetType()) {
