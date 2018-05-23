@@ -247,7 +247,7 @@ public:
     inline RaveVector<T>& normalize3() {
         T f = x*x+y*y+z*z;
         if(( f < T(1)-std::numeric_limits<T>::epsilon()) ||( f > T(1)+std::numeric_limits<T>::epsilon()) ) {
-            MATH_ASSERT( f > 0 );
+            // MATH_ASSERT( f > 0 );
             f = MATH_SQRT(f);
             x /= f; y /= f; z /= f;
         }

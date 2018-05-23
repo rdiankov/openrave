@@ -134,7 +134,7 @@ GraphHandlePtr QtOgreViewer::plot3(const float* ppoints, int nPoints, int stride
         Ogre::RenderSystem *renderSystem = _ogreWindow->GetRoot()->getRenderSystem();
         Ogre::VaoManager *vaoManager = renderSystem->getVaoManager();
 
-        Ogre::VertexBufferPacked* vertexBuffer = CreatePointsBuffer(vaoManager, nPoints, vpoints);
+        Ogre::VertexBufferPacked* vertexBuffer = CreatePointsBuffer(vaoManager, nPoints, vpoints, Ogre::VES_POSITION);
 
         Ogre::VertexArrayObject* vao = vaoManager->createVertexArrayObject(
             {vertexBuffer},
@@ -183,7 +183,7 @@ GraphHandlePtr QtOgreViewer::drawlinestrip(const float* ppoints, int nPoints, in
         Ogre::RenderSystem *renderSystem = _ogreWindow->GetRoot()->getRenderSystem();
         Ogre::VaoManager *vaoManager = renderSystem->getVaoManager();
 
-        Ogre::VertexBufferPacked* vertexBuffer = CreatePointsBuffer(vaoManager, nPoints, vpoints);
+        Ogre::VertexBufferPacked* vertexBuffer = CreatePointsBuffer(vaoManager, nPoints, vpoints, Ogre::VES_POSITION);
 
         Ogre::VertexArrayObject* vao = vaoManager->createVertexArrayObject(
             {vertexBuffer},

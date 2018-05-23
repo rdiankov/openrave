@@ -92,17 +92,23 @@ OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, Op
                 Ogre::VaoManager *vaoManager = renderSystem->getVaoManager();
                 Ogre::Vector3 min, max;
                 const size_t nPoints = oremesh.vertices.size();
-                float* vpoints = FormatPoints(oremesh.vertices, min, max);
-                Ogre::VertexBufferPacked* vertexBuffer = CreatePointsBuffer(vaoManager, nPoints, vpoints);
+                const size_t nIndices = oremesh.indices.size();
 
-                // TODO: Use try except block
+                if (nPoints == 0 || nIndices == 0) {
+                    continue;
+                }
+
+                // No need to try/except here because the indices are managed by OpenRAVE
                 Ogre::IndexBufferPacked *indexBuffer = vaoManager->createIndexBuffer(Ogre::IndexBufferPacked::IT_32BIT,
-                                                                                     oremesh.indices.size(), Ogre::BT_IMMUTABLE, // TODO: Really immutable?
+                                                                                     nIndices, Ogre::BT_IMMUTABLE, // TODO: Really immutable?
                                                                                      (void*) oremesh.indices.data(),
                                                                                      false); // OpenRAVE is resposnsible for managing the data
 
+                float *pNormals = CalculateNormals(oremesh.vertices, reinterpret_cast<const uint32_t*>(oremesh.indices.data()), oremesh.indices.size());
+                Ogre::VertexBufferPacked* packedBuffer = CreateBufferPacked(vaoManager, oremesh.vertices, oremesh.indices, min, max);
+
                 Ogre::VertexArrayObject* vao = vaoManager->createVertexArrayObject(
-                    {vertexBuffer},
+                    {packedBuffer},
                     indexBuffer, // Do not need index buffer
                     Ogre::OT_TRIANGLE_LIST);
 
