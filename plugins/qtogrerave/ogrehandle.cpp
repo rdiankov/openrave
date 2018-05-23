@@ -12,9 +12,9 @@ namespace qtogrerave {
 OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, OpenRAVE::KinBodyPtr pbody)
 {
     _root = root;
-    _rootNode = parentNode->createChildSceneNode();
+    _node = parentNode->createChildSceneNode();
     const OpenRAVE::Transform &transfBody = pbody->GetTransform();
-    SetOgreNodeTransform(_rootNode, transfBody);
+    SetOgreNodeTransform(_node, transfBody);
 
     const OpenRAVE::Transform invTransfBody = transfBody.inverse();
 
@@ -22,7 +22,7 @@ OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, Op
     Ogre::HlmsPbs *hlmsPbs = static_cast<Ogre::HlmsPbs*>( hlmsManager->getHlms(Ogre::HLMS_PBS) );
 
     for (const OpenRAVE::KinBody::LinkPtr &pLink: pbody->GetLinks()) {
-        Ogre::SceneNode *linkNode = _rootNode->createChildSceneNode();
+        Ogre::SceneNode *linkNode = _node->createChildSceneNode();
         SetOgreNodeTransform(linkNode, invTransfBody * pLink->GetTransform());
 
         for (const OpenRAVE::KinBody::Link::GeometryPtr &pGeom: pLink->GetGeometries()) {
@@ -103,8 +103,6 @@ OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, Op
                                                                                      nIndices, Ogre::BT_IMMUTABLE, // TODO: Really immutable?
                                                                                      (void*) oremesh.indices.data(),
                                                                                      false); // OpenRAVE is resposnsible for managing the data
-
-                float *pNormals = CalculateNormals(oremesh.vertices, reinterpret_cast<const uint32_t*>(oremesh.indices.data()), oremesh.indices.size());
                 Ogre::VertexBufferPacked* packedBuffer = CreateBufferPacked(vaoManager, oremesh.vertices, oremesh.indices, min, max);
 
                 Ogre::VertexArrayObject* vao = vaoManager->createVertexArrayObject(
@@ -136,9 +134,9 @@ OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, Op
 }
 
 OgreNodeHandle::~OgreNodeHandle() {
-    if (_rootNode) {
+    if (_node) {
         // TODO: Thow about the children?
-        _rootNode->getParentSceneNode()->removeAndDestroyChild(_rootNode);
+        _node->getParentSceneNode()->removeAndDestroyChild(_node);
     }
     Ogre::HlmsManager *hlmsManager = _root->getHlmsManager();
     Ogre::HlmsPbs *hlmsPbs = static_cast<Ogre::HlmsPbs*>( hlmsManager->getHlms(Ogre::HLMS_PBS) );

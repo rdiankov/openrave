@@ -66,21 +66,6 @@ static float* FormatPoints(const std::vector<OpenRAVE::Vector> &vertices, Ogre::
     return vpoints;
 }
 
-static float* CalculateNormals(const std::vector<OpenRAVE::Vector> &vertices, const uint32_t *pIndices, size_t nIndices) {
-    float *pNormals = reinterpret_cast<float*>(OGRE_MALLOC_SIMD(
-        4 * vertices.size() *  sizeof(float), Ogre::MEMCATEGORY_GEOMETRY));
-    std::memset(pNormals, 0, 4 * vertices.size() *  sizeof(float));
-
-    for (size_t i = 0; i < nIndices; i += 3) {
-        const OpenRAVE::Vector &v0 = vertices[pIndices[i]];
-        const OpenRAVE::Vector normal = (vertices[pIndices[i + 1]] - v0).cross(vertices[pIndices[i + 2]] - v0);
-        pNormals[i] = normal[0];
-        pNormals[i + 1] = normal[1];
-        pNormals[i + 2] = normal[2];
-    }
-    return pNormals;
-}
-
 static Ogre::VertexBufferPacked* CreateBufferPacked(
     Ogre::VaoManager* vaoManager,
     const std::vector<OpenRAVE::Vector> &vertices,
@@ -105,24 +90,24 @@ static Ogre::VertexBufferPacked* CreateBufferPacked(
         min[2] = std::min(min[2], data[j + 2]);
     }
 
-    for (size_t i = 0, j = 0; i < indices.size(); i += 3) {
+    for (size_t i = 0; i < indices.size(); i += 3) {
         uint32_t i0 = indices[i];
         uint32_t i1 = indices[i + 1];
         uint32_t i2 = indices[i + 2];
         const OpenRAVE::Vector &v0 = vertices[i0];
         const OpenRAVE::Vector normal = (vertices[i1] - v0).cross(vertices[i2] - v0).normalize3();
 
-        data[i0 * j + 4] += normal[0];
-        data[i0 * j + 5] += normal[1];
-        data[i0 * j + 6] += normal[2];
+        data[i0 * 8 + 4] += normal[0];
+        data[i0 * 8 + 5] += normal[1];
+        data[i0 * 8 + 6] += normal[2];
 
-        data[i1 * j + 4] += normal[0];
-        data[i1 * j + 5] += normal[1];
-        data[i1 * j + 6] += normal[2];
+        data[i1 * 8 + 4] += normal[0];
+        data[i1 * 8 + 5] += normal[1];
+        data[i1 * 8 + 6] += normal[2];
 
-        data[i2 * j + 4] += normal[0];
-        data[i2 * j + 5] += normal[1];
-        data[i2 * j + 6] += normal[2];
+        data[i2 * 8 + 4] += normal[0];
+        data[i2 * 8 + 5] += normal[1];
+        data[i2 * 8 + 6] += normal[2];
     }
 
     Ogre::VertexElement2Vec vertexElements;

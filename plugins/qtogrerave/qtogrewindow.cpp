@@ -89,11 +89,11 @@ void QtOgreWindow::initialize()
     */
     Ogre::StringVector renderOrder;
 #if defined(Q_OS_WIN)
-    renderOrder.push_back("Direct3D9");
     renderOrder.push_back("Direct3D11");
+    renderOrder.push_back("Direct3D9");
 #endif
-    renderOrder.push_back("OpenGL");
     renderOrder.push_back("OpenGL 3+");
+    renderOrder.push_back("OpenGL");
     for (Ogre::StringVector::iterator iter = renderOrder.begin(); iter != renderOrder.end(); iter++)
     {
         for (Ogre::RenderSystemList::const_iterator it = rsList.begin(); it != rsList.end(); it++)

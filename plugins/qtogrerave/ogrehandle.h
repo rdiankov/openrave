@@ -13,7 +13,7 @@ public:
     virtual ~OgreNodeHandle();
 private:
     Ogre::Root *_root;
-    Ogre::SceneNode *_rootNode;
+    Ogre::SceneNode *_node; // Node that contains the KinBody
     std::vector<Ogre::String> _materialNames;
 };
 

@@ -68,7 +68,7 @@ namespace OgreQtBites
         {
 
             setCamera(cam);
-            setStyle(CS_FREELOOK);
+            setStyle(CS_ORBIT);
         }
 
         virtual ~SdkQtCameraMan() {}
