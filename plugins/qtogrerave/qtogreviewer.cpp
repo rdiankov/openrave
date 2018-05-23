@@ -90,13 +90,13 @@ void QtOgreViewer::_EnvironmentUpdate()
         OgreNodeHandlePtr pNodeHandle = boost::dynamic_pointer_cast<OgreNodeHandle>(pbody->GetUserData(_userdatakey));
 
         if (pNodeHandle.get() != nullptr) {
-            continue; //TODO: continue for now. Update transform later
+            pNodeHandle->Update(*pbody);
+        } else {
+            pNodeHandle = boost::make_shared<OgreNodeHandle>(_ogreWindow->GetRoot(), envNode, *pbody);
+            pbody->SetUserData(_userdatakey, pNodeHandle);
+
+            _mKinbodyNode[pbody.get()] = pNodeHandle; // memory leak?????
         }
-
-        pNodeHandle = boost::make_shared<OgreNodeHandle>(_ogreWindow->GetRoot(), envNode, pbody);
-        pbody->SetUserData(_userdatakey, pNodeHandle);
-
-        _mKinbodyNode[pbody.get()] = pNodeHandle; // memory leak?????
     }
 
     // TODO~~~~~~~~``

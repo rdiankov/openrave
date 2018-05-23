@@ -9,11 +9,11 @@
 
 namespace qtogrerave {
 
-OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, OpenRAVE::KinBodyPtr pbody)
+OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, OpenRAVE::KinBody &body)
 {
     _root = root;
     _node = parentNode->createChildSceneNode();
-    const OpenRAVE::Transform &transfBody = pbody->GetTransform();
+    const OpenRAVE::Transform &transfBody = body.GetTransform();
     SetOgreNodeTransform(_node, transfBody);
 
     const OpenRAVE::Transform invTransfBody = transfBody.inverse();
@@ -21,7 +21,7 @@ OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, Op
     Ogre::HlmsManager *hlmsManager = root->getHlmsManager();
     Ogre::HlmsPbs *hlmsPbs = static_cast<Ogre::HlmsPbs*>( hlmsManager->getHlms(Ogre::HLMS_PBS) );
 
-    for (const OpenRAVE::KinBody::LinkPtr &pLink: pbody->GetLinks()) {
+    for (const OpenRAVE::KinBody::LinkPtr &pLink: body.GetLinks()) {
         Ogre::SceneNode *linkNode = _node->createChildSceneNode();
         SetOgreNodeTransform(linkNode, invTransfBody * pLink->GetTransform());
 
@@ -30,7 +30,7 @@ OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, Op
             SetOgreNodeTransform(geomNode, pGeom->GetTransform());
 
             // TODO: Delete this datablock!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            Ogre::String datablockName = pbody->GetName() + pLink->GetName() + pGeom->GetName() + std::to_string(std::time(nullptr));
+            Ogre::String datablockName = body.GetName() + pLink->GetName() + pGeom->GetName() + std::to_string(std::time(nullptr));
             Ogre::HlmsPbsDatablock *datablock = static_cast<Ogre::HlmsPbsDatablock*>(hlmsPbs->getDatablock(datablockName));
             if (!datablock) {
                 datablock = static_cast<Ogre::HlmsPbsDatablock*>(
@@ -143,6 +143,32 @@ OgreNodeHandle::~OgreNodeHandle() {
 
     for (const Ogre::String &materialName: _materialNames) {
         hlmsPbs->destroyDatablock(materialName);
+    }
+}
+
+void OgreNodeHandle::Update(const OpenRAVE::KinBody &body)
+{
+    const OpenRAVE::Transform &transfBody = body.GetTransform();
+    SetOgreNodeTransform(_node, transfBody);
+    const OpenRAVE::Transform invTransfBody = transfBody.inverse();
+
+    if (body.GetLinks().size() != _node->numChildren()) {
+        RAVELOG_WARN("TODO: Update links");
+    }
+
+    Ogre::Node::NodeVecIterator itlinknode = _node->getChildIterator();
+    for (const OpenRAVE::KinBody::LinkPtr &pLink: body.GetLinks()) {
+        Ogre::Node* linkNode = itlinknode.getNext();
+        SetOgreNodeTransform(linkNode, invTransfBody * pLink->GetTransform());
+
+        if (pLink->GetGeometries().size() != linkNode->numChildren()) {
+            RAVELOG_WARN("TODO: Update links");
+        }
+        Ogre::Node::NodeVecIterator itgeomnode = linkNode->getChildIterator();
+        for (const OpenRAVE::KinBody::Link::GeometryPtr &pGeom: pLink->GetGeometries()) {
+            Ogre::Node* geomNode = itgeomnode.getNext();
+            SetOgreNodeTransform(geomNode, pGeom->GetTransform());
+        }
     }
 }
 

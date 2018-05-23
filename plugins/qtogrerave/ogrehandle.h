@@ -9,8 +9,10 @@ namespace qtogrerave {
 class OgreNodeHandle : public boost::enable_shared_from_this<OgreNodeHandle>, public OpenRAVE::UserData
 {
 public:
-    OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, OpenRAVE::KinBodyPtr pbody);
+    OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, OpenRAVE::KinBody &body);
     virtual ~OgreNodeHandle();
+
+    void Update(const OpenRAVE::KinBody &body);
 private:
     Ogre::Root *_root;
     Ogre::SceneNode *_node; // Node that contains the KinBody

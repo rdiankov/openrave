@@ -12,7 +12,7 @@
 namespace qtogrerave {
 
 template <typename T>
-static void SetOgreNodeTransform(Ogre::SceneNode *node, const OpenRAVE::RaveTransform<T>& t)
+static void SetOgreNodeTransform(Ogre::Node *node, const OpenRAVE::RaveTransform<T>& t)
 {
     node->setOrientation(t.rot.x, t.rot.y, t.rot.z, t.rot.w);
     node->setPosition(t.trans.x, t.trans.y, t.trans.z);
