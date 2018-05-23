@@ -13,6 +13,7 @@ OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, Op
 {
     _root = root;
     _node = parentNode->createChildSceneNode();
+    _node->setName(body.GetName());
     const OpenRAVE::Transform &transfBody = body.GetTransform();
     SetOgreNodeTransform(_node, transfBody);
 
@@ -23,14 +24,24 @@ OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, Op
 
     for (const OpenRAVE::KinBody::LinkPtr &pLink: body.GetLinks()) {
         Ogre::SceneNode *linkNode = _node->createChildSceneNode();
+        linkNode->setName(pLink->GetName());
         SetOgreNodeTransform(linkNode, invTransfBody * pLink->GetTransform());
 
         for (const OpenRAVE::KinBody::Link::GeometryPtr &pGeom: pLink->GetGeometries()) {
             Ogre::SceneNode *geomNode = linkNode->createChildSceneNode();
+
+            std::string geomName = pGeom->GetName();
+
+            geomNode->setName(body.GetName() + ":" + pLink->GetName() + ":" + geomName);
+
             SetOgreNodeTransform(geomNode, pGeom->GetTransform());
 
+            Ogre::String datablockName = body.GetName() + ":" + pLink->GetName() + ":" +
+                (geomName.empty() ? std::to_string(reinterpret_cast<uintptr_t>(pGeom.get())) :
+                                    geomName);
+
             // TODO: Delete this datablock!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            Ogre::String datablockName = body.GetName() + pLink->GetName() + pGeom->GetName() + std::to_string(std::time(nullptr));
+            geomNode->setName(datablockName);
             Ogre::HlmsPbsDatablock *datablock = static_cast<Ogre::HlmsPbsDatablock*>(hlmsPbs->getDatablock(datablockName));
             if (!datablock) {
                 datablock = static_cast<Ogre::HlmsPbsDatablock*>(
@@ -56,7 +67,7 @@ OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, Op
                 Ogre::v1::Entity* sphere = geomNode->getCreator()->createEntity(Ogre::SceneManager::PT_SPHERE);
                 const float radius = pGeom->GetSphereRadius();
                 sphere->setDatablock(datablock);
-                geomNode->setScale(Ogre::Vector3(radius, radius, radius));
+                geomNode->setScale(Ogre::Vector3(radius, radius, radius) / 50.0f);
                 geomNode->attachObject(sphere);
                 break;
             }
@@ -66,12 +77,14 @@ OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, Op
                 Ogre::v1::Entity* box = geomNode->getCreator()->createEntity(Ogre::SceneManager::PT_CUBE);
                 const OpenRAVE::Vector &extents = pGeom->GetBoxExtents();
                 box->setDatablock(datablock);
-                geomNode->setScale(Ogre::Vector3(extents.x, extents.y, extents.z)); // <--------- is this extents?
+                // Yes, magic number. See OgrePrefabFactory.cpp
+                geomNode->setScale(Ogre::Vector3(extents.x, extents.y, extents.z) / 50.0f); // <--------- is this extents?
                 geomNode->attachObject(box);
                 break;
             }
             //  Geometry is defined like a Cylinder
             case OpenRAVE::GT_Cylinder: {
+                RAVELOG_WARN("TODO: Implement cylinder");
                 #if 0
                 // make SoCylinder point towards z, not y
                 osg::Cylinder* cy = new osg::Cylinder();
@@ -119,7 +132,7 @@ OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, Op
                 Ogre::Aabb aabb = Ogre::Aabb::newFromExtents(min, max);
                 mesh->_setBounds(aabb, false);
                 mesh->_setBoundingSphereRadius(aabb.getRadius());
-        
+
                 Ogre::SceneManager *sceneManager = geomNode->getCreator();
                 Ogre::Item *item = sceneManager->createItem(mesh);
                 geomNode->attachObject(item);
@@ -135,7 +148,7 @@ OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, Op
 
 OgreNodeHandle::~OgreNodeHandle() {
     if (_node) {
-        // TODO: Thow about the children?
+        // TODO: What about _node's children?
         _node->getParentSceneNode()->removeAndDestroyChild(_node);
     }
     Ogre::HlmsManager *hlmsManager = _root->getHlmsManager();
@@ -144,10 +157,14 @@ OgreNodeHandle::~OgreNodeHandle() {
     for (const Ogre::String &materialName: _materialNames) {
         hlmsPbs->destroyDatablock(materialName);
     }
+
+    // TODO: How to delete the vertex buffer?
 }
 
 void OgreNodeHandle::Update(const OpenRAVE::KinBody &body)
 {
+    // TODO: Use dirty bit to track geometry update?
+
     const OpenRAVE::Transform &transfBody = body.GetTransform();
     SetOgreNodeTransform(_node, transfBody);
     const OpenRAVE::Transform invTransfBody = transfBody.inverse();
@@ -158,6 +175,7 @@ void OgreNodeHandle::Update(const OpenRAVE::KinBody &body)
 
     Ogre::Node::NodeVecIterator itlinknode = _node->getChildIterator();
     for (const OpenRAVE::KinBody::LinkPtr &pLink: body.GetLinks()) {
+        // Assume the OpenRAVE / Ogre nodes are in the same order
         Ogre::Node* linkNode = itlinknode.getNext();
         SetOgreNodeTransform(linkNode, invTransfBody * pLink->GetTransform());
 
@@ -165,6 +183,7 @@ void OgreNodeHandle::Update(const OpenRAVE::KinBody &body)
             RAVELOG_WARN("TODO: Update links");
         }
         Ogre::Node::NodeVecIterator itgeomnode = linkNode->getChildIterator();
+        // Assume the OpenRAVE / Ogre nodes are in the same order
         for (const OpenRAVE::KinBody::Link::GeometryPtr &pGeom: pLink->GetGeometries()) {
             Ogre::Node* geomNode = itgeomnode.getNext();
             SetOgreNodeTransform(geomNode, pGeom->GetTransform());

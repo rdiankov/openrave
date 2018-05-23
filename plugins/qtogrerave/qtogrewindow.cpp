@@ -201,6 +201,7 @@ void QtOgreWindow::initialize()
     createScene();
 
     m_ogreRoot->addFrameListener(this);
+    m_ogreSceneMgr->getRootSceneNode()->setName("root");
     m_miscDrawNode = m_ogreSceneMgr->getRootSceneNode()->createChildSceneNode();
     m_envNode = m_ogreSceneMgr->getRootSceneNode()->createChildSceneNode();
 }
@@ -377,6 +378,39 @@ void QtOgreWindow::mouseMoveEvent( QMouseEvent* e )
 
     if(m_cameraMan && (e->buttons() & Qt::LeftButton))
         m_cameraMan->injectMouseMove(relX, relY);
+
+    // Experimental ray intersection code
+    QPoint pos = e->pos();
+    Ogre::Ray mouseRay = m_ogreCamera->getCameraToViewportRay(
+        (Ogre::Real)pos.x() / m_ogreWindow->getWidth(),
+        (Ogre::Real)pos.y() / m_ogreWindow->getHeight());
+    Ogre::RaySceneQuery* pSceneQuery = m_ogreSceneMgr->createRayQuery(mouseRay);
+    pSceneQuery->setSortByDistance(true);
+    Ogre::RaySceneQueryResult vResult = pSceneQuery->execute();
+    for (size_t ui = 0; ui < vResult.size(); ui++) {
+        const Ogre::RaySceneQueryResultEntry &result = vResult[ui];
+        if (result.movable) {
+            // Transform intersection from camera space to world space
+            Ogre::Matrix4 transf;
+            m_ogreCamera->getWorldTransforms(&transf);
+            //const Ogre::Vector3 intersection = transf.inverseAffine() * mouseRay.getPoint(result.distance);
+            const Ogre::Vector3 intersection = mouseRay.getPoint(result.distance);
+
+            printf("%s (%f %f %f)\n", vResult[ui].movable->getParentSceneNode()->getName().c_str(),
+                   intersection[0], intersection[1], intersection[2]);
+        }
+    }
+    // for (size_t ui = 0; ui < vResult.size(); ui++)
+    // {
+    //     if (vResult[ui].movable)
+    //     {
+    //         if (vResult[ui].movable->getMovableType().compare("Entity") == 0)
+    //         {
+    //             emit entitySelected((Ogre::v1::Entity*)vResult[ui].movable);
+    //         }
+    //     }
+    // }
+    m_ogreSceneMgr->destroyQuery(pSceneQuery);
 }
 
 void QtOgreWindow::wheelEvent(QWheelEvent *e)
