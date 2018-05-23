@@ -427,9 +427,12 @@ public:
                     // compute jacobians, make sure to transform by the world frame
                     probot->CalculateJacobian(itmanipinfo->plink->GetIndex(), tlink.trans, _vtransjacobian);
                     int armdof = itmanipinfo->pmanip->GetArmDOF();
-                    for( size_t idof = 0; idof < armdof; ++idof ) {
+                    for( int idof = 0; idof < armdof; ++idof ) {
                         Vector vtransaxis(_vtransjacobian[idof], _vtransjacobian[armdof+idof], _vtransjacobian[2*armdof+idof]);
                         _vdotproducts[idof] = _vdofaccelerations[idof] > 0 ? vtransaxis.dot3(vAccelViolation) : -vtransaxis.dot3(vAccelViolation);
+                        if( RaveFabs(_vdotproducts[idof]) <= g_fEpsilonLinear ) {
+                            _vdotproducts[idof] = 0;
+                        }
                     }
                     // sort while keeping indices
                     std::size_t n(0);
@@ -498,9 +501,12 @@ public:
                     // compute jacobians, make sure to transform by the world frame
                     probot->CalculateJacobian(itmanipinfo->plink->GetIndex(), tlink.trans, _vtransjacobian);
                     int armdof = itmanipinfo->pmanip->GetArmDOF();
-                    for( size_t idof = 0; idof < armdof; ++idof ) {
+                    for( int idof = 0; idof < armdof; ++idof ) {
                         Vector vtransaxis(_vtransjacobian[idof], _vtransjacobian[armdof+idof], _vtransjacobian[2*armdof+idof]);
                         _vdotproducts[idof] = _vdofvelocities[idof] > 0 ? vtransaxis.dot3(vVelViolation) : -vtransaxis.dot3(vVelViolation);
+                        if( RaveFabs(_vdotproducts[idof]) <= g_fEpsilonLinear ) {
+                            _vdotproducts[idof] = 0;
+                        }
                     }
                     // sort while keeping indices
                     std::size_t n(0);
@@ -662,6 +668,9 @@ public:
                 for( int idof = 0; idof < armdof; ++idof ) {
                     Vector vtransaxis(_vtransjacobian[idof], _vtransjacobian[armdof+idof], _vtransjacobian[2*armdof+idof]);
                     _vdotproducts[idof] = _vdofaccelerations[idof] > 0 ? vtransaxis.dot3(vAccelViolation) : -vtransaxis.dot3(vAccelViolation);
+                    if( RaveFabs(_vdotproducts[idof]) <= g_fEpsilonLinear ) {
+                        _vdotproducts[idof] = 0;
+                    }
                 }
                 // sort while keeping indices
                 std::size_t n(0);
@@ -733,6 +742,9 @@ public:
                 for( int idof = 0; idof < armdof; ++idof ) {
                     Vector vtransaxis(_vtransjacobian[idof], _vtransjacobian[armdof+idof], _vtransjacobian[2*armdof+idof]);
                     _vdotproducts[idof] = _vdofvelocities[idof] > 0 ? vtransaxis.dot3(vVelViolation) : -vtransaxis.dot3(vVelViolation);
+                    if( RaveFabs(_vdotproducts[idof]) <= g_fEpsilonLinear ) {
+                        _vdotproducts[idof] = 0;
+                    }
                 }
                 // sort while keeping indices
                 std::size_t n(0);
