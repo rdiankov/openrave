@@ -466,10 +466,16 @@ public:
                     // function, we have
                     //         f(i) = m(d1/di) + (rmax - m)
                     // where m = (rmax - reductionFactor)/(1 - d1/dn)
-                    dReal m = (fMaxReductionFactor - reductionFactor) / (1 - minPositiveDotProduct/_vdotproducts[_vindices.back()]);
-                    for( int i = minPositiveDotProductIndex; i < armdof; ++i ) {
-                        int idof = _vindices[i];
-                        _vscalingfactors[idof] = m*(minPositiveDotProduct/_vdotproducts[idof]) + (fMaxReductionFactor - m);
+                    if( minPositiveDotProductIndex == (int)(_vdotproducts.size() - 1) ) {
+                        // Cannot use the above formula since the denominator is zero so just setting the scaling factor for this one dof.
+                        _vscalingfactors[_vindices[minPositiveDotProductIndex]] = reductionFactor;
+                    }
+                    else {
+                        dReal m = (fMaxReductionFactor - reductionFactor) / (1 - minPositiveDotProduct/_vdotproducts[_vindices.back()]);
+                        for( int i = minPositiveDotProductIndex; i < armdof; ++i ) {
+                            int idof = _vindices[i];
+                            _vscalingfactors[idof] = m*(minPositiveDotProduct/_vdotproducts[idof]) + (fMaxReductionFactor - m);
+                        }
                     }
                     retcheck.vReductionFactors = _vscalingfactors;
                     std::stringstream ss; ss << "env=" << probot->GetEnv()->GetId() << "; reductionFactor=" << reductionFactor << "; minPositiveDotProductIndex=" << minPositiveDotProductIndex << "; vdotproducts=[";
@@ -540,10 +546,16 @@ public:
                     // function, we have
                     //         f(i) = m(d1/di) + (rmax - m)
                     // where m = (rmax - reductionFactor)/(1 - d1/dn)
-                    dReal m = (fMaxReductionFactor - reductionFactor) / (1 - minPositiveDotProduct/_vdotproducts[_vindices.back()]);
-                    for( int i = minPositiveDotProductIndex; i < armdof; ++i ) {
-                        int idof = _vindices[i];
-                        _vscalingfactors[idof] = m*(minPositiveDotProduct/_vdotproducts[idof]) + (fMaxReductionFactor - m);
+                    if( minPositiveDotProductIndex == (int)(_vdotproducts.size() - 1) ) {
+                        // Cannot use the above formula since the denominator is zero so just setting the scaling factor for this one dof.
+                        _vscalingfactors[_vindices[minPositiveDotProductIndex]] = reductionFactor;
+                    }
+                    else {
+                        dReal m = (fMaxReductionFactor - reductionFactor) / (1 - minPositiveDotProduct/_vdotproducts[_vindices.back()]);
+                        for( int i = minPositiveDotProductIndex; i < armdof; ++i ) {
+                            int idof = _vindices[i];
+                            _vscalingfactors[idof] = m*(minPositiveDotProduct/_vdotproducts[idof]) + (fMaxReductionFactor - m);
+                        }
                     }
                     retcheck.vReductionFactors = _vscalingfactors;
                     std::stringstream ss; ss << "env=" << probot->GetEnv()->GetId() << "; reductionFactor=" << reductionFactor << "; minPositiveDotProductIndex=" << minPositiveDotProductIndex << "; vdotproducts=[";
@@ -624,7 +636,7 @@ public:
                     Vector vpoint = endeffvellin + endeffvelang.cross(point);
                     dReal actualmanipspeed = RaveSqrt(vpoint.lengthsqr3());
                     if( actualmanipspeed > maxactualmanipspeed ) {
-			bBoundExceeded = true;
+                        bBoundExceeded = true;
                         maxactualmanipspeed = actualmanipspeed;
                         velViolationIndex = curmanipindex;
                         vVelViolation = vpoint;
@@ -635,7 +647,7 @@ public:
                     Vector apoint = endeffacclin + endeffvelang.cross(endeffvelang.cross(point)) + endeffaccang.cross(point);
                     dReal actualmanipaccel = RaveSqrt(apoint.lengthsqr3());
                     if( actualmanipaccel > maxactualmanipaccel ) {
-			bBoundExceeded = true;
+                        bBoundExceeded = true;
                         maxactualmanipaccel = actualmanipaccel;
                         accelViolationIndex = curmanipindex;
                         vAccelViolation = apoint;
@@ -712,10 +724,16 @@ public:
                 // function, we have
                 //         f(i) = m(d1/di) + (rmax - m)
                 // where m = (rmax - reductionFactor)/(1 - d1/dn)
-                dReal m = (fMaxReductionFactor - reductionFactor) / (1 - minPositiveDotProduct/_vdotproducts[_vindices.back()]);
-                for( int i = minPositiveDotProductIndex; i < armdof; ++i ) {
-                    int idof = _vindices[i];
-                    _vscalingfactors[idof] = m*(minPositiveDotProduct/_vdotproducts[idof]) + (fMaxReductionFactor - m);
+                if( minPositiveDotProductIndex == (int)(_vdotproducts.size() - 1) ) {
+                    // Cannot use the above formula since the denominator is zero so just setting the scaling factor for this one dof.
+                    _vscalingfactors[_vindices[minPositiveDotProductIndex]] = reductionFactor;
+                }
+                else {
+                    dReal m = (fMaxReductionFactor - reductionFactor) / (1 - minPositiveDotProduct/_vdotproducts[_vindices.back()]);
+                    for( int i = minPositiveDotProductIndex; i < armdof; ++i ) {
+                        int idof = _vindices[i];
+                        _vscalingfactors[idof] = m*(minPositiveDotProduct/_vdotproducts[idof]) + (fMaxReductionFactor - m);
+                    }
                 }
                 retcheck.vReductionFactors = _vscalingfactors;
                 std::stringstream ss; ss << "env=" << probot->GetEnv()->GetId() << "; reductionFactor=" << reductionFactor << "; minPositiveDotProductIndex=" << minPositiveDotProductIndex << "; vdotproducts=[";
@@ -786,10 +804,16 @@ public:
                 // function, we have
                 //         f(i) = m(d1/di) + (1 - m)
                 // where m = (1 - reductionFactor)/(1 - d1/dn)
-                dReal m = (fMaxReductionFactor - reductionFactor) / (1 - minPositiveDotProduct/_vdotproducts[_vindices.back()]);
-                for( int i = minPositiveDotProductIndex; i < armdof; ++i ) {
-                    int idof = _vindices[i];
-                    _vscalingfactors[idof] = m*(minPositiveDotProduct/_vdotproducts[idof]) + (fMaxReductionFactor - m);
+                if( minPositiveDotProductIndex == (int)(_vdotproducts.size() - 1) ) {
+                    // Cannot use the above formula since the denominator is zero so just setting the scaling factor for this one dof.
+                    _vscalingfactors[_vindices[minPositiveDotProductIndex]] = reductionFactor;
+                }
+                else {
+                    dReal m = (fMaxReductionFactor - reductionFactor) / (1 - minPositiveDotProduct/_vdotproducts[_vindices.back()]);
+                    for( int i = minPositiveDotProductIndex; i < armdof; ++i ) {
+                        int idof = _vindices[i];
+                        _vscalingfactors[idof] = m*(minPositiveDotProduct/_vdotproducts[idof]) + (fMaxReductionFactor - m);
+                    }
                 }
                 retcheck.vReductionFactors = _vscalingfactors;
                 std::stringstream ss; ss << "env=" << probot->GetEnv()->GetId() << "; reductionFactor=" << reductionFactor << "; minPositiveDotProductIndex=" << minPositiveDotProductIndex << "; vdotproducts=[";
