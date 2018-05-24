@@ -1812,8 +1812,8 @@ protected:
                 if( t0 > t1 ) {
                     RampOptimizer::Swap(t0, t1);
                 }
-                if( t1 - t0 > _maxInitialRampTime ) {
-                    t1 = t0 + _maxInitialRampTime;
+                if( t1 - t0 > 2*_maxInitialRampTime ) {
+                    t1 = t0 + 2*_maxInitialRampTime;
                 }
             }
 
