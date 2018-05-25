@@ -18,6 +18,8 @@
 #include "rampoptimizer/ramp.h"
 #include "rampoptimizer/feasibilitychecker.h"
 
+// #define PROGRESS_DEBUG
+
 namespace rplanners {
 
 struct ManipConstraintInfo2
@@ -316,14 +318,13 @@ public:
     // or decrease monotonically and therefore, the maximum is occuring at either end. We can reduce
     // computational load by only checking at both end instead of checking at every subdivided
     // segment and still having the same result.
-    RampOptimizerInternal::CheckReturn CheckManipConstraints2(const std::vector<RampOptimizerInternal::RampND> &rampndVect, IntervalType interval=IT_OpenStart)
+    RampOptimizerInternal::CheckReturn CheckManipConstraints2(const std::vector<RampOptimizerInternal::RampND> &rampndVect, IntervalType interval=IT_OpenStart, bool bUseNewHeuristic=true)
     {
         if( _maxmanipspeed <= 0 && _maxmanipaccel <= 0 ) {
             return RampOptimizerInternal::CheckReturn(0);
         }
 
         BOOST_ASSERT(!(interval == IT_Open));
-        bool bUseNewHeuristic = true;
         dReal reductionFactor = 1; // default reduction factor
         dReal reductionFactorCutoff = 0.8;
         dReal fMaxReductionFactor = 1; // scaling factor for the DOF with least contribution to constriant violation
@@ -478,6 +479,7 @@ public:
                         }
                     }
                     retcheck.vReductionFactors = _vscalingfactors;
+#ifdef PROGRESS_DEBUG
                     std::stringstream ss; ss << "env=" << probot->GetEnv()->GetId() << "; reductionFactor=" << reductionFactor << "; minPositiveDotProductIndex=" << minPositiveDotProductIndex << "; vdotproducts=[";
                     FOREACHC(itval, _vdotproducts) {
                         ss << *itval << ", ";
@@ -492,6 +494,7 @@ public:
                     }
                     ss << "];";
                     RAVELOG_DEBUG(ss.str());
+#endif
                 }
                 else if( _maxmanipspeed > 0 && maxactualmanipspeed > _maxmanipspeed ) {
                     reductionFactor = min(multiplier*_maxmanipspeed/maxactualmanipspeed, maxallowedmult);
@@ -558,6 +561,7 @@ public:
                         }
                     }
                     retcheck.vReductionFactors = _vscalingfactors;
+#ifdef PROGRESS_DEBUG
                     std::stringstream ss; ss << "env=" << probot->GetEnv()->GetId() << "; reductionFactor=" << reductionFactor << "; minPositiveDotProductIndex=" << minPositiveDotProductIndex << "; vdotproducts=[";
                     FOREACHC(itval, _vdotproducts) {
                         ss << *itval << ", ";
@@ -572,6 +576,7 @@ public:
                     }
                     ss << "];";
                     RAVELOG_DEBUG(ss.str());
+#endif
                 }
                 return retcheck;
             }
@@ -736,6 +741,7 @@ public:
                     }
                 }
                 retcheck.vReductionFactors = _vscalingfactors;
+#ifdef PROGRESS_DEBUG
                 std::stringstream ss; ss << "env=" << probot->GetEnv()->GetId() << "; reductionFactor=" << reductionFactor << "; minPositiveDotProductIndex=" << minPositiveDotProductIndex << "; vdotproducts=[";
                 FOREACHC(itval, _vdotproducts) {
                     ss << *itval << ", ";
@@ -750,6 +756,7 @@ public:
                 }
                 ss << "];";
                 RAVELOG_DEBUG(ss.str());
+#endif
             }
             else if( _maxmanipspeed > 0 && maxactualmanipspeed > _maxmanipspeed ) {
                 reductionFactor = min(multiplier*_maxmanipspeed/maxactualmanipspeed, maxallowedmult);
@@ -816,6 +823,7 @@ public:
                     }
                 }
                 retcheck.vReductionFactors = _vscalingfactors;
+#ifdef PROGRESS_DEBUG
                 std::stringstream ss; ss << "env=" << probot->GetEnv()->GetId() << "; reductionFactor=" << reductionFactor << "; minPositiveDotProductIndex=" << minPositiveDotProductIndex << "; vdotproducts=[";
                 FOREACHC(itval, _vdotproducts) {
                     ss << *itval << ", ";
@@ -830,6 +838,7 @@ public:
                 }
                 ss << "];";
                 RAVELOG_DEBUG(ss.str());
+#endif
             }
             return retcheck;
         }

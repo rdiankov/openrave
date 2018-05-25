@@ -20,8 +20,8 @@
 #include "rampoptimizer/feasibilitychecker.h"
 #include "manipconstraints2.h"
 
-#define SMOOTHER_TIMING_DEBUG
-#define SMOOTHER_PROGRESS_DEBUG
+// #define SMOOTHER_TIMING_DEBUG
+// #define SMOOTHER_PROGRESS_DEBUG
 
 namespace rplanners {
 
@@ -196,6 +196,12 @@ public:
 
             // Collision checking here!
             if( true ) {
+                // Instead of checking configurations sequentially from left to right, we give
+                // higher priority to some configurations. Suppose rampndVectOut.size() is N.
+                // First, check the ramp index: 0, N/2, N/4, 3N/4, N/8, 5N/8, 3N/8, 7N/8. Then we
+                // check the remaining ramps in the usual order.
+
+                // TODO: maybe arranging vsearchsegments totally randomly might have better average performance.
                 vsearchsegments.resize(rampndVectOut.size());
                 for( size_t j = 0; j < vsearchsegments.size(); ++j ) {
                     vsearchsegments[j] = j;
@@ -235,14 +241,6 @@ public:
                     std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
                 } while (0);
 
-                // FOREACHC(itrampnd, rampndVectOut) {
-                //     itrampnd->GetX1Vect(q0);
-                //     itrampnd->GetV1Vect(dq0);
-                //     RampOptimizer::CheckReturn ret = feas->ConfigFeasible2(q0, dq0, CFO_CheckEnvCollisions|CFO_CheckSelfCollisions);
-                //     if( ret.retcode != 0 ) {
-                //         return ret;
-                //     }
-                // }
                 for( size_t j = 0; j < vsearchsegments.size(); ++j ) {
                     rampndVectOut[vsearchsegments[j]].GetX1Vect(q0);
                     rampndVectOut[vsearchsegments[j]].GetV1Vect(dq0);
@@ -337,7 +335,11 @@ public:
         _uniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
 
         _fileIndexMod = 10000; // for trajectory saving
+#ifdef SMOOTHER_PROGRESS_DEBUG
         _dumplevel = Level_Debug;
+#else
+        _dumplevel = Level_Verbose;
+#endif
         _maxInitialRampTime = 0;
 #ifdef SMOOTHER_TIMING_DEBUG
         // Statistics
@@ -352,6 +354,8 @@ public:
         _nCallsCheckPathAllConstraintsInVain = 0;
         _totalTimeCheckPathAllConstraintsInVain = 0;
 #endif
+
+        _bUseNewHeuristic = true;
 
         // Caching stuff
         _cacheCurPos.resize(_parameters->GetDOF());
@@ -952,13 +956,15 @@ public:
                 _nCallsCheckManip += 1;
                 _tStartCheckManip = utils::GetMicroTime();
 #endif
-                RampOptimizer::CheckReturn retmanip = _manipconstraintchecker->CheckManipConstraints2(rampndVectOut, IT_OpenStart);
+                RampOptimizer::CheckReturn retmanip = _manipconstraintchecker->CheckManipConstraints2(rampndVectOut, IT_OpenStart, _bUseNewHeuristic);
 #ifdef SMOOTHER_TIMING_DEBUG
                 _tEndCheckManip = utils::GetMicroTime();
                 _totalTimeCheckManip += 0.000001f*(float)(_tEndCheckManip - _tStartCheckManip);
 #endif
                 if( retmanip.retcode != 0 ) {
+#ifdef SMOOTHER_PROGRESS_DEBUG
                     RAVELOG_DEBUG_FORMAT("env=%d, early rejection due to manipconstraints, CheckManipConstraints2 returns retcode=0x%x", GetEnv()->GetId()%retmanip.retcode);
+#endif
                     return retmanip;
                 }
             }
@@ -980,7 +986,9 @@ public:
             _totalTimeCheckPathAllConstraints_SegmentFeasible2 += 0.000001f*(float)(_tEndCheckPathAllConstraints - _tStartCheckPathAllConstraints);
 #endif
             if( ret != 0 ) {
+#ifdef SMOOTHER_PROGRESS_DEBUG
                 RAVELOG_DEBUG_FORMAT("env=%d, rejection by CheckPathAllConstraints, retcode=0x%x", GetEnv()->GetId()%ret);
+#endif
                 RampOptimizer::CheckReturn checkret(ret);
                 if( ret == CFO_CheckTimeBasedConstraints ) {
                     checkret.fTimeBasedSurpassMult = 0.98;
@@ -1126,13 +1134,15 @@ public:
                 _nCallsCheckManip += 1;
                 _tStartCheckManip = utils::GetMicroTime();
 #endif
-                RampOptimizer::CheckReturn retmanip = _manipconstraintchecker->CheckManipConstraints2(rampndVectOut, IT_OpenStart);
+                RampOptimizer::CheckReturn retmanip = _manipconstraintchecker->CheckManipConstraints2(rampndVectOut, IT_OpenStart, _bUseNewHeuristic);
 #ifdef SMOOTHER_TIMING_DEBUG
                 _tEndCheckManip = utils::GetMicroTime();
                 _totalTimeCheckManip += 0.000001f*(float)(_tEndCheckManip - _tStartCheckManip);
 #endif
                 if( retmanip.retcode != 0 ) {
+#ifdef SMOOTHER_PROGRESS_DEBUG
                     RAVELOG_VERBOSE_FORMAT("env=%d, CheckManipConstraints2 returns retcode=0x%x", GetEnv()->GetId()%retmanip.retcode);
+#endif
                     return retmanip;
                 }
             }
@@ -1714,7 +1724,6 @@ protected:
     int _Shortcut(RampOptimizer::ParabolicPath& parabolicpath, int numIters, RampOptimizer::RandomNumberGeneratorBase* rng, dReal minTimeStep)
     {
         int numShortcuts = 0;
-        bool bUseNewHeuristic = true;
         uint32_t fileindex;
         if( !!_logginguniformsampler ) {
             fileindex = _logginguniformsampler->SampleSequenceOneUInt32();
@@ -1942,7 +1951,7 @@ protected:
                 vellimits = _parameters->_vConfigVelocityLimit;
                 accellimits = _parameters->_vConfigAccelerationLimit;
 
-                if( _bmanipconstraints && _manipconstraintchecker && bUseNewHeuristic ) {
+                if( _bmanipconstraints && _manipconstraintchecker && _bUseNewHeuristic ) {
                     // pass
                     // do nothing only when the new heuristic is used while having manipconstraints. otherwise, proceed normally
                 }
@@ -2202,7 +2211,7 @@ protected:
                         // Scale down vellimits and/or accellimits
                         if( _bmanipconstraints && _manipconstraintchecker ) {
                             // Scale down vellimits and accellimits independently according to the violated constraint (manipspeed/manipaccel)
-                            if( iSlowDown == 0 && !bUseNewHeuristic ) {
+                            if( iSlowDown == 0 && !_bUseNewHeuristic ) {
                                 // Try computing estimates of vellimits and accellimits before scaling down
 
                                 {// Need to make sure that x0, x1, v0, v1 hold the correct values
@@ -2249,7 +2258,7 @@ protected:
                                 if( retcheck.fMaxManipSpeed > _parameters->maxmanipspeed ) {
                                     // Manipspeed is violated. We don't scale down accellimits.
                                     maxManipSpeedViolated = true;
-                                    if( bUseNewHeuristic && retcheck.vReductionFactors.size() > 0 && !(retcheck.fMaxManipAccel > _parameters->maxmanipaccel)) {
+                                    if( _bUseNewHeuristic && retcheck.vReductionFactors.size() > 0 && !(retcheck.fMaxManipAccel > _parameters->maxmanipaccel)) {
                                         // do vel scaling without accel scaling only when accel limit is not violated
                                         std::stringstream ss; ss << "env=" << GetEnv()->GetId() << ", maxManipSpeedViolated=1 (";
                                         ss << retcheck.fMaxManipSpeed << " > " << _parameters->maxmanipspeed << "); reductionFactors=[";
@@ -2293,7 +2302,8 @@ protected:
                                 if( retcheck.fMaxManipAccel > _parameters->maxmanipaccel ) {
                                     // Manipaccel is violated. We scale both vellimits and accellimits down.
                                     maxManipAccelViolated = true;
-                                    if( bUseNewHeuristic && retcheck.vReductionFactors.size() > 0 ) {
+                                    if( _bUseNewHeuristic && retcheck.vReductionFactors.size() > 0 ) {
+#ifdef SMOOTHER_PROGRESS_DEBUG
                                         std::stringstream ss; ss << "env=" << GetEnv()->GetId() << ", maxManipAccelViolated=1 (";
                                         ss << retcheck.fMaxManipAccel << " > " << _parameters->maxmanipaccel << "); reductionFactors=[";
                                         FOREACHC(itval, retcheck.vReductionFactors) {
@@ -2309,6 +2319,7 @@ protected:
                                         }
                                         ss << "];";
                                         RAVELOG_DEBUG(ss.str());
+#endif
                                         for( size_t j = 0; j < vellimits.size(); ++j ) {
                                             vellimits[j] *= RaveSqrt(retcheck.vReductionFactors[j]);
                                             accellimits[j] *= retcheck.vReductionFactors[j];
@@ -2631,6 +2642,8 @@ protected:
     dReal _totalTimeCheckPathAllConstraints_SegmentFeasible2;
     uint32_t _tStartCheckPathAllConstraints, _tEndCheckPathAllConstraints;
 #endif
+
+    bool _bUseNewHeuristic;
 
 }; // end class ParabolicSmoother2
 
