@@ -118,36 +118,15 @@ public:
                 return ret1;
             }
 
-            // Check configurations at all switch time
-            vsearchsegments.resize(_vswitchtimes.size(), 0);
-            for (size_t i = 0; i < vsearchsegments.size(); ++i) {
-                vsearchsegments[i] = i;
-            }
-            size_t midIndex = vsearchsegments.size()/2;
-            std::swap(vsearchsegments[0], vsearchsegments[midIndex]); // put the mid point as the first point to be considered
-
-            if( rampndVect.size() > 1 ) {
-                for (size_t irampnd = 0; irampnd < rampndVect.size() - 1; ++irampnd) {
-                    rampndVect[irampnd].GetX1Vect(q1);
-                    if( feas->NeedDerivativeForFeasibility() ) {
-                        rampndVect[irampnd].GetV1Vect(dq1);
-                    }
-                    RampOptimizer::CheckReturn retconf = feas->ConfigFeasible2(q1, dq1, options);
-                    if( retconf.retcode != 0 ) {
-                        return retconf;
-                    }
-                }
-            }
-            else {
-                // The initial and final configurations have already been checked. No need to do it again.
-            }
-
             rampndVectOut.resize(0);
 
             // Now check each RampND
             rampndVect[0].GetX0Vect(q0);
             rampndVect[0].GetV0Vect(dq0);
             dReal elapsedTime, expectedElapsedTime, newElapsedTime, iElapsedTime, totalWeight;
+
+            // Do lazy collision checking by postponing collision checking until absolutely necessary
+            options = options & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
             for (size_t iswitch = 1; iswitch < _vswitchtimes.size(); ++iswitch) {
                 rampndVect[iswitch - 1].GetX1Vect(q1); // configuration at _vswitchtimes[iswitch]
                 elapsedTime = _vswitchtimes[iswitch] - _vswitchtimes[iswitch - 1]; // current elapsed time of this ramp
@@ -212,6 +191,65 @@ public:
                     rampndVectOut.insert(rampndVectOut.end(), _cacheRampNDVectOut.begin(), _cacheRampNDVectOut.end());
                     rampndVectOut.back().GetX1Vect(q0);
                     rampndVectOut.back().GetV1Vect(dq0);
+                }
+            }
+
+            // Collision checking here!
+            if( true ) {
+                vsearchsegments.resize(rampndVectOut.size());
+                for( size_t j = 0; j < vsearchsegments.size(); ++j ) {
+                    vsearchsegments[j] = j;
+                }
+                do {
+                    size_t index = vsearchsegments.size() * 0.5, index2 = 0;
+                    std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
+                    index = vsearchsegments.size() * 0.25;
+                    if( index <= index2 ) {
+                        break;
+                    }
+                    std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
+                    index *= 3;
+                    if( index <= index2 ) {
+                        break;
+                    }
+                    std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
+                    index = vsearchsegments.size() * 0.125;
+                    if( index <= index2 ) {
+                        break;
+                    }
+                    std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
+                    index *= 5;
+                    if( index <= index2 ) {
+                        break;
+                    }
+                    std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
+                    index = vsearchsegments.size() * 0.375;
+                    if( index <= index2 ) {
+                        break;
+                    }
+                    std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
+                    index = vsearchsegments.size() * 0.875;
+                    if( index <= index2 ) {
+                        break;
+                    }
+                    std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
+                } while (0);
+
+                // FOREACHC(itrampnd, rampndVectOut) {
+                //     itrampnd->GetX1Vect(q0);
+                //     itrampnd->GetV1Vect(dq0);
+                //     RampOptimizer::CheckReturn ret = feas->ConfigFeasible2(q0, dq0, CFO_CheckEnvCollisions|CFO_CheckSelfCollisions);
+                //     if( ret.retcode != 0 ) {
+                //         return ret;
+                //     }
+                // }
+                for( size_t j = 0; j < vsearchsegments.size(); ++j ) {
+                    rampndVectOut[vsearchsegments[j]].GetX1Vect(q0);
+                    rampndVectOut[vsearchsegments[j]].GetV1Vect(dq0);
+                    RampOptimizer::CheckReturn ret = feas->ConfigFeasible2(q0, dq0, CFO_CheckEnvCollisions|CFO_CheckSelfCollisions);
+                    if( ret.retcode != 0 ) {
+                        return ret;
+                    }
                 }
             }
 
