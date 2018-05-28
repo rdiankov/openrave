@@ -18,6 +18,8 @@
 
 #include <openrave/planningutils.h>
 
+#include <openrave/openravejson.h>
+
 namespace OpenRAVE {
 
 static std::string s_linearsmoother = "linearsmoother"; //"shortcut_linear";
@@ -82,6 +84,78 @@ int AddStatesWithLimitCheck(std::vector<dReal>& q, const std::vector<dReal>& qde
     return status;
 }
 
+PlannerBase::PlannerError::PlannerError():
+    _sErrorOrigin(""),
+    _sDescription(""),
+    _report(NULL)
+{
+}
+
+PlannerBase::PlannerError::PlannerError(std::string origin, std::string description, CollisionReportPtr report):
+    _sErrorOrigin(origin),
+    _sDescription(description),
+    _report(report)
+{
+}
+    
+PlannerBase::PlannerError::PlannerError(std::string origin, std::string description, CollisionReportPtr report, IkParameterization ikparam):
+    _sErrorOrigin(origin),
+    _sDescription(description),
+    _report(report),
+    _ikparam(ikparam)
+    //PlannerError(origin, description, report)
+{
+}
+    
+PlannerBase::PlannerError::PlannerError(std::string origin, std::string description, CollisionReportPtr report, std::vector<dReal> jointValues):
+    _sErrorOrigin(origin),
+    _sDescription(description),
+    _report(report),
+    _vJointValues(jointValues)
+    //PlannerError(origin, description, report)
+{
+}
+
+PlannerBase::PlannerError::~PlannerError() {}
+
+bool PlannerBase::PlannerError::serializeToJson(rapidjson::Document& output) const
+{
+    openravejson::SetJsonValueByKey(output, "errorOrigin", _sErrorOrigin);
+    openravejson::SetJsonValueByKey(output, "description", _sDescription);
+    if(_vJointValues.size() > 0){
+        openravejson::SetJsonValueByKey(output, "jointValues", _vJointValues);
+    }
+
+    if(_report != NULL){
+        rapidjson::Document reportjson(rapidjson::kObjectType);
+        openravejson::SetJsonValueByKey(reportjson, "plink1", _report->plink1->GetName());
+        openravejson::SetJsonValueByKey(reportjson, "plink2", _report->plink2->GetName());
+        rapidjson::Document reportContactsjson(rapidjson::kObjectType);
+        for (size_t i=0; i<_report->contacts.size(); ++i) {
+            rapidjson::Document reportContactsPosjson(rapidjson::kObjectType);
+            openravejson::SetJsonValueByKey(reportContactsPosjson, "x", _report->contacts[i].pos.x);
+            openravejson::SetJsonValueByKey(reportContactsPosjson, "y", _report->contacts[i].pos.y);
+            openravejson::SetJsonValueByKey(reportContactsPosjson, "z", _report->contacts[i].pos.z);
+            openravejson::SetJsonValueByKey(reportContactsjson, std::to_string(i), reportContactsPosjson);
+        }
+        openravejson::SetJsonValueByKey(reportjson, "contacts", reportContactsjson);
+        //Eventually, serialization could be in openravejson.h
+        openravejson::SetJsonValueByKey(output, "collisionReport", reportjson);
+    }
+
+    //Eventually, serialization could be in openravejson.h ?
+    std::stringstream ss;
+    ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+    ss << _ikparam;
+    RAVELOG_WARN_FORMAT("IkParameterization (%s)", ss.str());
+    if(ss.str() != "0x0"){
+        openravejson::SetJsonValueByKey(output, "IkParameterization", ss.str());
+     }
+    
+    //return DumpJson(extraoptionsjson);
+    return true;
+}
+    
 PlannerBase::PlannerParameters::StateSaver::StateSaver(PlannerParametersPtr params) : _params(params)
 {
     _params->_getstatefn(_values);
@@ -885,6 +959,16 @@ UserDataPtr PlannerBase::RegisterPlanCallback(const PlanCallbackFn& callbackfn)
     CustomPlannerCallbackDataPtr pdata(new CustomPlannerCallbackData(callbackfn,shared_planner()));
     pdata->_iterator = __listRegisteredCallbacks.insert(__listRegisteredCallbacks.end(),pdata);
     return pdata;
+}
+
+PlannerBase::PlannerError PlannerBase::GetPlannerError()
+{
+    return _plannerError;
+}
+
+void PlannerBase::SetPlannerError(PlannerError plannerError)
+{
+    _plannerError = plannerError;
 }
 
 PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryBasePtr ptraj)

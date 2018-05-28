@@ -499,6 +499,26 @@ public:
         int _iteration;
     };
 
+    /// \brief Planner error information
+    class OPENRAVE_API PlannerError
+    {
+        CollisionReportPtr _report;
+        std::string _sDescription;
+        std::string _sErrorOrigin;
+        std::vector<dReal> _vJointValues;
+        IkParameterization _ikparam;
+        //? Other object position value? -> Should not be necessary since we'll sync planner to viewer to show errors
+
+    public:
+        PlannerError();
+        PlannerError(std::string origin, std::string description, CollisionReportPtr report);
+        PlannerError(std::string origin, std::string description, CollisionReportPtr report, IkParameterization ikapram);
+        PlannerError(std::string origin, std::string description, CollisionReportPtr report, std::vector<dReal> jointValues);
+        virtual ~PlannerError();
+
+        bool serializeToJson(rapidjson::Document& output) const;
+    };
+    
     PlannerBase(EnvironmentBasePtr penv);
     virtual ~PlannerBase() {
     }
@@ -555,6 +575,10 @@ public:
      */
     virtual UserDataPtr RegisterPlanCallback(const PlanCallbackFn& callbackfn);
 
+    virtual PlannerError GetPlannerError();
+
+    virtual void SetPlannerError(PlannerError plannerError);
+    
 protected:
     inline PlannerBasePtr shared_planner() {
         return boost::static_pointer_cast<PlannerBase>(shared_from_this());
@@ -581,6 +605,8 @@ protected:
     ///
     /// \param progress planner progress information
     virtual PlannerAction _CallCallbacks(const PlannerProgress& progress);
+
+    PlannerError _plannerError;
 
 private:
     virtual const char* GetHash() const {

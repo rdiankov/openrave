@@ -316,7 +316,10 @@ public:
                 }
                 if(!res) {
                     std::string filename = _DumpTrajectory(ptraj, Level_Verbose);
-                    RAVELOG_WARN("Could not obtain a feasible trajectory from initial quadratic trajectory\n");
+                    //At the very least, get the errorOrigin and description up by sating in _plannerError and getting it ikplanningmodule
+                    std::string description ="Could not obtain a feasible trajectory from initial quadratic trajectory\n" 
+                    RAVELOG_WARN(description);
+                    _plannerError = PlannerBase::PlannerError("ConstraintParabolicSmoother::PlanPath", description);
                     return PS_Failed;
                 }
                 RAVELOG_DEBUG("Cool: obtained a feasible trajectory from initial quadratic trajectory\n");
@@ -386,7 +389,9 @@ public:
                 FOREACHC(itramp,ramps){
                     if(checker.Check(*itramp,options) != 0) {
                         _DumpTrajectory(ptraj, Level_Verbose);
-                        RAVELOG_WARN_FORMAT("Ramp %d/%d of original traj invalid", iramp%ramps.size());
+                        std::string description = str(boost::format("Ramp %d/%d of original traj invalid")%iramp%ramps.size())
+                        RAVELOG_WARN(description);
+                        _plannerError = PlannerBase::PlannerError("ConstraintParabolicSmoother::PlanPath", description);
                         return PS_Failed;
                     }
                     ++iramp;
@@ -491,7 +496,9 @@ public:
         }
         catch (const std::exception& ex) {
             _DumpTrajectory(ptraj, Level_Verbose);
-            RAVELOG_WARN_FORMAT("parabolic planner failed: %s", ex.what());
+            std::string description = str(boost::format("parabolic planner failed: %s")% ex.what())
+            RAVELOG_WARN(description);
+            _plannerError = PlannerBase::PlannerError("ConstraintParabolicSmoother::PlanPath", description);
             return PS_Failed;
         }
 
