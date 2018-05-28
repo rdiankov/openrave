@@ -326,7 +326,9 @@ public:
 
         BOOST_ASSERT(!(interval == IT_Open));
         dReal reductionFactor = 1; // default reduction factor
-        dReal reductionFactorCutoff = 0.8;
+        dReal reductionFactorCutoff = 0.8; // If the originally computed reductionFactor is *not* less than this value,
+                                           // we don't computed scaling factors separately for each DOF and use the
+                                           // usual procedure.
         dReal fMaxReductionFactor = 1; // scaling factor for the DOF with least contribution to constriant violation
 
         Vector endeffvellin, endeffvelang, endeffacclin, endeffaccang;

@@ -141,7 +141,9 @@ public:
         }
         _DumpTrajectory(ptrajbefore, Level_Debug, 1);
 #endif
+
         _OptimizePathOneDOF(listpath);
+
 #ifdef SHORTCUT_ONEDOF_DEBUG
         FOREACH(it, listpath) {
             ptrajafter->Insert(ptrajafter->GetNumWaypoints(), it->first);
@@ -292,7 +294,11 @@ protected:
             if( listpath.size() <= 2 ) {
                 return;
             }
-            int idof = 5; // TODO: we may put a sampling process here to sample the dof to shortcut instead
+            // Sample a DOF to shortcut. Give the last DOF twice as much chance.
+            uint32_t idof = _puniformsampler->SampleSequenceOneUInt32()%(ndof + 1);
+            if( idof > ndof - 1 ) {
+                idof = ndof - 1;
+            }
 
             // Pick a pair of nodes in listpath.
             uint32_t endIndex = 2 + (_puniformsampler->SampleSequenceOneUInt32()%((uint32_t)listpath.size() - 2));
@@ -313,7 +319,7 @@ protected:
                 totalDistance += itendnode->second;
                 curDOFValue = itendnode->first.at(idof);
             }
-            nrejected++; // currently not used.
+            nrejected++;
 
             dReal expectedDOFDistance = itendnode->first.at(idof) - itstartnode->first.at(idof);
             // RAVELOG_DEBUG_FORMAT("env=%d, prevdofdist=%.15e; newdofdist=%.15e; diff=%.15e", GetEnv()->GetId()%totalDOFDistance%RaveFabs(expectedDOFDistance)%(totalDOFDistance - RaveFabs(expectedDOFDistance)));
@@ -337,7 +343,7 @@ protected:
             vpathvalues.at(0).first = itnode->first;
             vpathvalues.at(0).second = itnode->second;
             // RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, totalDistance=%.15e; fdelta=%.15e", GetEnv()->GetId()%iiter%parameters->_nMaxIterations%totalDistance%fdelta);
-            std::stringstream ss; ss << "dof values=[";
+            // std::stringstream ss; ss << "dof values=[";
             do {
                 ++itnode;
                 ++pathindex;
@@ -347,9 +353,9 @@ protected:
                 vpathvalues.at(pathindex).first.at(idof) = fstartdofvalue + fcurdist*fdelta;
                 dReal fdist = parameters->_distmetricfn(vpathvalues.at(pathindex).first, vpathvalues.at(pathindex - 1).first);
                 vpathvalues.at(pathindex).second = fdist;
-                ss << vpathvalues.at(pathindex).first.at(idof) << ", ";
+                // ss << vpathvalues.at(pathindex).first.at(idof) << ", ";
             } while( itnode != itendnode );
-            ss << "];";
+            // ss << "];";
             // RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, finished computing vpathvalues, size=%d; %s", GetEnv()->GetId()%iiter%parameters->_nMaxIterations%vpathvalues.size()%ss.str());
 
             for( size_t ipath = 0; ipath < vpathvalues.size(); ++ipath ) {
