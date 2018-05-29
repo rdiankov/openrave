@@ -51,6 +51,7 @@ public:
         MyRampNDFeasibilityChecker(RampOptimizer::FeasibilityCheckerBase* feas) : RampOptimizer::RampNDFeasibilityChecker(feas) {
             _bHasParameters = false;
             _cacheRampNDVectIn.resize(1);
+            _envid = -1;
         }
 
         void SetParameters(PlannerParametersConstPtr params)
@@ -58,6 +59,11 @@ public:
             _bHasParameters = true;
             _parameters.reset(new ConstraintTrajectoryTimingParameters());
             _parameters->copy(params);
+        }
+
+        void SetEnvID(int envid)
+        {
+            _envid = envid;
         }
 
         /// \brief A wrapper function for Check2.
@@ -126,6 +132,8 @@ public:
             dReal elapsedTime, expectedElapsedTime, newElapsedTime, iElapsedTime, totalWeight;
 
             // Do lazy collision checking by postponing collision checking until absolutely necessary
+            bool doCheckEnvCollisions = (options & CFO_CheckEnvCollisions) == CFO_CheckEnvCollisions;
+            bool doCheckSelfCollisions = (options & CFO_CheckSelfCollisions) == CFO_CheckSelfCollisions;
             options = options & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
             for (size_t iswitch = 1; iswitch < _vswitchtimes.size(); ++iswitch) {
                 rampndVect[iswitch - 1].GetX1Vect(q1); // configuration at _vswitchtimes[iswitch]
@@ -195,7 +203,7 @@ public:
             }
 
             // Collision checking here!
-            if( true ) {
+            if( doCheckEnvCollisions || doCheckSelfCollisions ) {
                 // Instead of checking configurations sequentially from left to right, we give
                 // higher priority to some configurations. Suppose rampndVectOut.size() is N.
                 // First, check the ramp index: 0, N/2, N/4, 3N/4, N/8, 5N/8, 3N/8, 7N/8. Then we
@@ -241,10 +249,19 @@ public:
                     std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
                 } while (0);
 
+                if( doCheckEnvCollisions && doCheckSelfCollisions ) {
+                    options = CFO_CheckEnvCollisions | CFO_CheckSelfCollisions;
+                }
+                else if( doCheckEnvCollisions ) {
+                    options = CFO_CheckEnvCollisions;
+                }
+                else {
+                    options = CFO_CheckSelfCollisions;
+                }
                 for( size_t j = 0; j < vsearchsegments.size(); ++j ) {
                     rampndVectOut[vsearchsegments[j]].GetX1Vect(q0);
                     rampndVectOut[vsearchsegments[j]].GetV1Vect(dq0);
-                    RampOptimizer::CheckReturn ret = feas->ConfigFeasible2(q0, dq0, CFO_CheckEnvCollisions|CFO_CheckSelfCollisions);
+                    RampOptimizer::CheckReturn ret = feas->ConfigFeasible2(q0, dq0, options);
                     if( ret.retcode != 0 ) {
                         return ret;
                     }
@@ -271,6 +288,7 @@ public:
 private:
         ConstraintTrajectoryTimingParametersPtr _parameters;
         bool _bHasParameters;
+        int _envid;
 
         // Cache
         std::vector<dReal> _vswitchtimes;
@@ -290,6 +308,7 @@ public:
         if (!!_logginguniformsampler) {
             _logginguniformsampler->SetSeed(utils::GetMicroTime());
         }
+        _feasibilitychecker.SetEnvID(GetEnv()->GetId()); // set envid for logging purpose
     }
 
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
