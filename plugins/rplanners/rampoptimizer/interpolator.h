@@ -29,11 +29,11 @@ public:
      */
     ParabolicInterpolator() {
     }
-    ParabolicInterpolator(size_t ndof);
+    ParabolicInterpolator(size_t ndof, int envid=0);
     ~ParabolicInterpolator() {
     }
 
-    void Initialize(size_t ndof);
+    void Initialize(size_t ndof, int envid=0);
 
     /// ND Trajectory
 
@@ -192,6 +192,7 @@ public:
 
 private:
     size_t _ndof;
+    int _envid;
 
     // Caching stuff
     std::vector<dReal> _cacheVect, _cacheSwitchpointsList;

@@ -337,7 +337,7 @@ public:
         _bmanipconstraints = (_parameters->manipname.size() > 0) && (_parameters->maxmanipspeed > 0 || _parameters->maxmanipaccel > 0);
         _feasibilitychecker.SetParameters(GetParameters());
 
-        _interpolator.Initialize(_parameters->GetDOF());
+        _interpolator.Initialize(_parameters->GetDOF(), GetEnv()->GetId());
 
         // Initialize workspace constraints on manipulators
         if( _bmanipconstraints ) {
