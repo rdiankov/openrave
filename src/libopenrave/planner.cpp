@@ -91,29 +91,29 @@ PlannerBase::PlannerError::PlannerError():
 {
 }
 
-PlannerBase::PlannerError::PlannerError(std::string origin, std::string description, CollisionReportPtr report):
-    _sErrorOrigin(origin),
+PlannerBase::PlannerError::PlannerError(const std::string& description):
     _sDescription(description),
-    _report(report)
+    _report(NULL)
 {
+    _sErrorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
 }
     
-PlannerBase::PlannerError::PlannerError(std::string origin, std::string description, CollisionReportPtr report, IkParameterization ikparam):
-    _sErrorOrigin(origin),
+PlannerBase::PlannerError::PlannerError(const std::string& description, CollisionReportPtr report, IkParameterization ikparam):
     _sDescription(description),
     _report(report),
     _ikparam(ikparam)
     //PlannerError(origin, description, report)
 {
+    _sErrorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
 }
     
-PlannerBase::PlannerError::PlannerError(std::string origin, std::string description, CollisionReportPtr report, std::vector<dReal> jointValues):
-    _sErrorOrigin(origin),
+PlannerBase::PlannerError::PlannerError(const std::string& description, CollisionReportPtr report, std::vector<dReal> jointValues):
     _sDescription(description),
     _report(report),
     _vJointValues(jointValues)
     //PlannerError(origin, description, report)
 {
+    _sErrorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
 }
 
 PlannerBase::PlannerError::~PlannerError() {}
@@ -144,13 +144,15 @@ bool PlannerBase::PlannerError::serializeToJson(rapidjson::Document& output) con
     }
 
     //Eventually, serialization could be in openravejson.h ?
-    std::stringstream ss;
-    ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
-    ss << _ikparam;
-    RAVELOG_WARN_FORMAT("IkParameterization (%s)", ss.str());
-    if(ss.str() != "0x0"){
+    try{
+        std::stringstream ss;
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+        ss << _ikparam;
         openravejson::SetJsonValueByKey(output, "IkParameterization", ss.str());
-     }
+    }
+    catch(const openrave_exception& ex){
+       //Ignore empty _ikparam
+    }
     
     //return DumpJson(extraoptionsjson);
     return true;

@@ -511,9 +511,10 @@ public:
 
     public:
         PlannerError();
-        PlannerError(std::string origin, std::string description, CollisionReportPtr report);
-        PlannerError(std::string origin, std::string description, CollisionReportPtr report, IkParameterization ikapram);
-        PlannerError(std::string origin, std::string description, CollisionReportPtr report, std::vector<dReal> jointValues);
+        PlannerError(const std::string& description);
+        PlannerError(const std::string& description, CollisionReportPtr report);
+        PlannerError(const std::string& description, CollisionReportPtr report, IkParameterization ikapram);
+        PlannerError(const std::string& description, CollisionReportPtr report, std::vector<dReal> jointValues);
         virtual ~PlannerError();
 
         bool serializeToJson(rapidjson::Document& output) const;

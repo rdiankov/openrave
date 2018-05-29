@@ -503,7 +503,9 @@ Some python code to display data::\n\
         }
 
         if( _vgoalpaths.size() == 0 ) {
-            RAVELOG_WARN("plan failed, %fs\n",0.001f*(float)(utils::GetMilliTime()-basetime));
+            std::string description = str(boost::format("RRT plan failed to connect after %fs\n")%(0.001f*(float)(utils::GetMilliTime()-basetime)));
+            RAVELOG_WARN(description);
+            _plannerError = PlannerBase::PlannerError(description);
             return PS_Failed;
         }
 
