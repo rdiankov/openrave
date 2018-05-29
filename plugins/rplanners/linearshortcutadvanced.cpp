@@ -278,7 +278,7 @@ protected:
         }
     }
 
-    // Experimental function: shortcut only the last DOF (J6). Although some non-default
+    // Experimental function: shortcut only one DOF at a time. Although some non-default
     // distmetric/neighstatefn/diffstatefn might be used here, we still compute the distance of the
     // shortcut dof simply by taking the difference between two configs.
     void _OptimizePathOneDOF(list< std::pair< vector<dReal>, dReal> >& listpath)
