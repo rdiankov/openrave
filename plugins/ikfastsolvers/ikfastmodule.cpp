@@ -70,6 +70,10 @@
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/lu.hpp>
 
+#if OPENRAVE_RAPIDJSON
+#include <rapidjson/error/en.h>
+#endif
+
 #include "next_combination.h"
 
 #define LOAD_IKFUNCTION0(fnname) { \
@@ -349,6 +353,23 @@ public:
 
     int main(const string& cmd)
     {
+        if( cmd.size() > 0 ) {
+#if OPENRAVE_RAPIDJSON
+            rapidjson::Document document;  ///< contains entire rapid json document to parse parameters.
+            if (document.Parse(cmd.c_str(), cmd.size()).HasParseError()) {
+                throw OPENRAVE_EXCEPTION_FORMAT("Failed to parse cmd (offset %u): %s, data=%s", ((unsigned)document.GetErrorOffset())%(GetParseError_En(document.GetParseError()))%cmd, ORE_InvalidState);
+            }
+            rapidjson::Value root(document, document.GetAllocator());
+            if( root.IsObject() ) {
+                if( root.HasMember("ikfastversion") ) {
+                    _ikfastversion = root["ikfastversion"].GetString();
+                }
+                if( root.HasMember("platform") ) {
+                    _platform = root["platform"].GetString();
+                }
+            }
+#endif
+        }
         return 0;
     }
 
@@ -409,6 +430,14 @@ public:
         return lib;
     }
 
+    void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    {
+        InterfaceBase::Clone(preference,cloningoptions);
+        boost::shared_ptr<IkFastModule const> r = RaveInterfaceConstCast<IkFastModule>(preference);
+        _ikfastversion = r->_ikfastversion;
+        _platform = r->_platform;
+    }
+
 #ifdef Boost_IOSTREAMS_FOUND
 
 #if OPENRAVE_RAPIDJSON
@@ -450,7 +479,7 @@ public:
         std::string ikfilenameprefix = str(boost::format("ikfast%s.%s.%s.")%_ikfastversion%striktype%_platform);
         std::string pluginext = PLUGIN_EXT;
         std::string ikfilenamefound; /// set to non-empty when ikfile was found
-        
+
         for (boost::filesystem::directory_iterator itr(kinematicsfullpath); itr!=boost::filesystem::directory_iterator(); ++itr) {
             std::string ikfilename = itr->path().filename().string();
             if( ikfilename.size() >= ikfilenameprefix.size() && ikfilename.substr(0, ikfilenameprefix.size()) == ikfilenameprefix ) {
@@ -486,10 +515,10 @@ public:
 //                bsuccess = pmanip->SetIkSolver(iksolver);
 //            }
         }
-        // if not forcing the ik, then return true as long as a valid ik solver is set        
+        // if not forcing the ik, then return true as long as a valid ik solver is set
         return bsuccess;
     }
-    
+
 #endif
 
     bool LoadIKFastSolver(ostream& sout, istream& sinput)
@@ -532,7 +561,7 @@ public:
         }
 
         _EnsureIkFastVersion();
-        
+
         string ikfilename;
         for(int iter = 0; iter < 2; ++iter) {
             string ikfilenamefound;
@@ -649,6 +678,7 @@ public:
     {
         // get ikfast version
         if( _ikfastversion.size() == 0 || _platform.size() == 0 ) {
+            RAVELOG_INFO("Getting ikfast version from existing python.\n");
             string output;
             FILE* pipe = MYPOPEN(OPENRAVE_PYTHON_EXECUTABLE " -c \"import openravepy.ikfast; import platform; print(openravepy.ikfast.__version__+' '+platform.machine())\"", "r");
             if (pipe == NULL) {
