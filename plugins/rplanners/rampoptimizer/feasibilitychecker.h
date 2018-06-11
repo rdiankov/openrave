@@ -51,11 +51,6 @@ public:
     {
         return CheckReturn(ConfigFeasible(q0, dq0, options));
     }
-    virtual CheckReturn SegmentFeasible2(const std::vector<dReal>& q0, const std::vector<dReal>& dq0, const std::vector<dReal>& q1, const std::vector<dReal>& dq1, dReal timeElapsed, int options, std::vector<RampND> &rampndVectOut)
-    {
-        BOOST_ASSERT(0);
-        return 0;
-    }
     virtual CheckReturn SegmentFeasible2(const std::vector<dReal>& q0, const std::vector<dReal>& dq0, const std::vector<dReal>& q1, const std::vector<dReal>& dq1, dReal timeElapsed, int options, std::vector<RampND> &rampndVectOut, std::vector<dReal> &vIntermediateConfigurations)
     {
         BOOST_ASSERT(0);

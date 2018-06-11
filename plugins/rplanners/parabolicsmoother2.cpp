@@ -51,7 +51,7 @@ public:
         MyRampNDFeasibilityChecker(RampOptimizer::FeasibilityCheckerBase* feas) : RampOptimizer::RampNDFeasibilityChecker(feas) {
             _bHasParameters = false;
             _cacheRampNDVectIn.resize(1);
-            _envid = -1;
+            _envid = 0;
         }
 
         void SetParameters(PlannerParametersConstPtr params)
@@ -262,8 +262,9 @@ public:
                     options = CFO_CheckSelfCollisions;
                 }
 
-                std::vector<dReal>::const_iterator itconfig = _vcacheintermediateconfigurations.begin();
-                for( size_t j = 0; j < vsearchsegments.size(); ++j, std::advance(itconfig, tol.size()) ) {
+                std::vector<dReal>::const_iterator itconfig;
+                for( size_t j = 0; j < vsearchsegments.size(); ++j ) {
+                    itconfig = _vcacheintermediateconfigurations.begin() + vsearchsegments[j]*tol.size();
                     q0.assign(itconfig, itconfig + tol.size());
                     RampOptimizer::CheckReturn ret = feas->ConfigFeasible2(q0, std::vector<dReal>(), options);
                     if( ret.retcode != 0 ) {
@@ -292,14 +293,14 @@ public:
 private:
         ConstraintTrajectoryTimingParametersPtr _parameters;
         bool _bHasParameters;
-        int _envid;
+        int _envid; ///< useful for logging
 
         // Cache
         std::vector<dReal> _vswitchtimes;
         std::vector<dReal> _q0, _q1, _dq0, _dq1;
         std::vector<uint8_t> _vsearchsegments;
         std::vector<RampOptimizer::RampND> _cacheRampNDVectIn, _cacheRampNDVectOut;
-        std::vector<dReal> _vcacheintermediateconfigurations;
+        std::vector<dReal> _vcacheintermediateconfigurations; ///< for keeping intermediate configurations that are checked in CheckPathAllConstraints
 
     }; // end class MyRampNDFeasibilityChecker
 
@@ -948,7 +949,7 @@ public:
     /// first calls CheckPathAllConstraints to check all constraints. Since the input path may be
     /// modified from inside CheckPathAllConstraints, after the checking this function also try to
     /// correct any discrepancy occured.
-    virtual RampOptimizer::CheckReturn SegmentFeasible2(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeElapsed, int options, std::vector<RampOptimizer::RampND>& rampndVectOut, std::vector<dReal> vIntermediateConfigurations)
+    virtual RampOptimizer::CheckReturn SegmentFeasible2(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeElapsed, int options, std::vector<RampOptimizer::RampND>& rampndVectOut, std::vector<dReal>& vIntermediateConfigurations)
     {
         size_t ndof = q0.size();
 
@@ -1360,6 +1361,7 @@ protected:
         accellimits = _parameters->_vConfigAccelerationLimit;
 
         RampOptimizer::CheckReturn retseg(0);
+        std::vector<dReal> _temp(0);
         size_t numTries = 1000; // number of times allowed to scale down vellimits and accellimits
         for (size_t itry = 0; itry < numTries; ++itry) {
             bool res = _interpolator.ComputeZeroVelNDTrajectory(x0VectIn, x1VectIn, vellimits, accellimits, rampndVectOut);
@@ -1372,7 +1374,7 @@ protected:
                 itrampnd->GetX1Vect(x1Vect);
                 itrampnd->GetV1Vect(v1Vect);
 
-                retseg = SegmentFeasible2(x0Vect, x1Vect, v0Vect, v1Vect, itrampnd->GetDuration(), options, _cacheRampNDVectOut1, std::vector<dReal>());
+                retseg = SegmentFeasible2(x0Vect, x1Vect, v0Vect, v1Vect, itrampnd->GetDuration(), options, _cacheRampNDVectOut1, _temp);
                 if( 0 ) {
                     // For debugging
                     std::stringstream sss;
