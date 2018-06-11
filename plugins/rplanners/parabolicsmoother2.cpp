@@ -95,6 +95,7 @@ public:
             if( _bHasParameters ) {
                 bExpectedModifiedConfigurations = (_parameters->fCosManipAngleThresh > -1 + g_fEpsilonLinear);
             }
+            _vcacheintermediateconfigurations.resize(0);
 
             // Extract all switch points (including t = 0 and t = duration).
             if( _vswitchtimes.size() != rampndVect.size() + 1 ) {
@@ -135,6 +136,7 @@ public:
             bool doCheckEnvCollisions = (options & CFO_CheckEnvCollisions) == CFO_CheckEnvCollisions;
             bool doCheckSelfCollisions = (options & CFO_CheckSelfCollisions) == CFO_CheckSelfCollisions;
             options = options & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
+            options |= CFO_FillCheckedConfiguration; // always do this if we use lazy collision checking
             for (size_t iswitch = 1; iswitch < _vswitchtimes.size(); ++iswitch) {
                 rampndVect[iswitch - 1].GetX1Vect(q1); // configuration at _vswitchtimes[iswitch]
                 elapsedTime = _vswitchtimes[iswitch] - _vswitchtimes[iswitch - 1]; // current elapsed time of this ramp
@@ -180,7 +182,7 @@ public:
                     }
                 }
 
-                RampOptimizer::CheckReturn retseg = feas->SegmentFeasible2(q0, q1, dq0, dq1, elapsedTime, options, _cacheRampNDVectOut);
+                RampOptimizer::CheckReturn retseg = feas->SegmentFeasible2(q0, q1, dq0, dq1, elapsedTime, options, _cacheRampNDVectOut, _vcacheintermediateconfigurations);
                 if( retseg.retcode != 0 ) {
                     return retseg;
                 }
@@ -210,7 +212,8 @@ public:
                 // check the remaining ramps in the usual order.
 
                 // TODO: maybe arranging vsearchsegments totally randomly might have better average performance.
-                vsearchsegments.resize(rampndVectOut.size());
+                size_t nconfigs = _vcacheintermediateconfigurations.size()/tol.size();
+                vsearchsegments.resize(nconfigs);
                 for( size_t j = 0; j < vsearchsegments.size(); ++j ) {
                     vsearchsegments[j] = j;
                 }
@@ -258,10 +261,11 @@ public:
                 else {
                     options = CFO_CheckSelfCollisions;
                 }
-                for( size_t j = 0; j < vsearchsegments.size(); ++j ) {
-                    rampndVectOut[vsearchsegments[j]].GetX1Vect(q0);
-                    rampndVectOut[vsearchsegments[j]].GetV1Vect(dq0);
-                    RampOptimizer::CheckReturn ret = feas->ConfigFeasible2(q0, dq0, options);
+
+                std::vector<dReal>::const_iterator itconfig = _vcacheintermediateconfigurations.begin();
+                for( size_t j = 0; j < vsearchsegments.size(); ++j, std::advance(itconfig, tol.size()) ) {
+                    q0.assign(itconfig, itconfig + tol.size());
+                    RampOptimizer::CheckReturn ret = feas->ConfigFeasible2(q0, std::vector<dReal>(), options);
                     if( ret.retcode != 0 ) {
                         return ret;
                     }
@@ -295,6 +299,7 @@ private:
         std::vector<dReal> _q0, _q1, _dq0, _dq1;
         std::vector<uint8_t> _vsearchsegments;
         std::vector<RampOptimizer::RampND> _cacheRampNDVectIn, _cacheRampNDVectOut;
+        std::vector<dReal> _vcacheintermediateconfigurations;
 
     }; // end class MyRampNDFeasibilityChecker
 
@@ -943,7 +948,7 @@ public:
     /// first calls CheckPathAllConstraints to check all constraints. Since the input path may be
     /// modified from inside CheckPathAllConstraints, after the checking this function also try to
     /// correct any discrepancy occured.
-    virtual RampOptimizer::CheckReturn SegmentFeasible2(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeElapsed, int options, std::vector<RampOptimizer::RampND>& rampndVectOut)
+    virtual RampOptimizer::CheckReturn SegmentFeasible2(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeElapsed, int options, std::vector<RampOptimizer::RampND>& rampndVectOut, std::vector<dReal> vIntermediateConfigurations)
     {
         size_t ndof = q0.size();
 
@@ -1106,8 +1111,11 @@ public:
                 }
             }
         }
-        else {
-            // Try correcting acceleration bound violation if any
+        else if( _constraintreturn->_configurationtimes.size() > 0 ) {
+            // No manip tool direction constraint but CFO_FillCheckedConfiguration is enabled. We do
+            // this because we want to keep the intermediate configurations for collision checking
+            // at a later stage.
+            vIntermediateConfigurations.insert(vIntermediateConfigurations.end(), _constraintreturn->_configurations.begin(), _constraintreturn->_configurations.end());
         }
 
         if( rampndVectOut.size() == 0 ) {
@@ -1364,7 +1372,7 @@ protected:
                 itrampnd->GetX1Vect(x1Vect);
                 itrampnd->GetV1Vect(v1Vect);
 
-                retseg = SegmentFeasible2(x0Vect, x1Vect, v0Vect, v1Vect, itrampnd->GetDuration(), options, _cacheRampNDVectOut1);
+                retseg = SegmentFeasible2(x0Vect, x1Vect, v0Vect, v1Vect, itrampnd->GetDuration(), options, _cacheRampNDVectOut1, std::vector<dReal>());
                 if( 0 ) {
                     // For debugging
                     std::stringstream sss;

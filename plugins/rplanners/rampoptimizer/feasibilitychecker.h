@@ -21,9 +21,9 @@ namespace RampOptimizerInternal {
 
 struct CheckReturn {
     CheckReturn(int retcode=0, dReal fmult=1.0, dReal fvel=0, dReal faccel=0) : retcode(retcode), fTimeBasedSurpassMult(fmult), bDifferentVelocity(false), fMaxManipSpeed(fvel), fMaxManipAccel(faccel) {
-	vReductionFactors.resize(0);
-	// vVelReductionFactors.resize(0);
-	// vAccelReductionFactors.resize(0);
+        vReductionFactors.resize(0);
+        // vVelReductionFactors.resize(0);
+        // vAccelReductionFactors.resize(0);
     }
 
     int retcode; // one of CFO_X defined in planner.h
@@ -52,6 +52,11 @@ public:
         return CheckReturn(ConfigFeasible(q0, dq0, options));
     }
     virtual CheckReturn SegmentFeasible2(const std::vector<dReal>& q0, const std::vector<dReal>& dq0, const std::vector<dReal>& q1, const std::vector<dReal>& dq1, dReal timeElapsed, int options, std::vector<RampND> &rampndVectOut)
+    {
+        BOOST_ASSERT(0);
+        return 0;
+    }
+    virtual CheckReturn SegmentFeasible2(const std::vector<dReal>& q0, const std::vector<dReal>& dq0, const std::vector<dReal>& q1, const std::vector<dReal>& dq1, dReal timeElapsed, int options, std::vector<RampND> &rampndVectOut, std::vector<dReal> &vIntermediateConfigurations)
     {
         BOOST_ASSERT(0);
         return 0;
