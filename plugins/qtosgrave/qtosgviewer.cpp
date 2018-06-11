@@ -208,6 +208,7 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
     }
     
     _posgWidget = new QOSGViewerWidget(GetEnv(), _userdatakey, boost::bind(&QtOSGViewer::_HandleOSGKeyDown, this, _1), GetEnv()->GetUnit().second, this);
+
     setCentralWidget(_posgWidget);
 
     _RepaintWidgets();
@@ -226,6 +227,10 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
         _CreateMenus();
         _CreateToolsBar();
         _CreateDockWidgets();
+    }
+
+    if (!bCreateMenu && !bCreateMenu) {
+        _CreateControlButtons();
     }
 
     resize(1024, 768);
@@ -811,6 +816,36 @@ void QtOSGViewer::_CreateDockWidgets()
     dock->hide();
     addDockWidget(Qt::RightDockWidgetArea, dock);
     viewMenu->addAction(dock->toggleViewAction());
+}
+
+void QtOSGViewer::_CreateControlButtons()
+{
+
+    QWidget *controlWidget = new QWidget(_posgWidget);
+    controlWidget->setGeometry(10, 10, 50, 150);
+
+    QVBoxLayout *qvBoxLayout = new QVBoxLayout(controlWidget);
+    qvBoxLayout->setSpacing(5);
+    qvBoxLayout->setAlignment(Qt::AlignTop);
+    qvBoxLayout->heightForWidth(40);
+
+    QPushButton *zoomInButton = new QPushButton("+");
+    connect(zoomInButton, &QPushButton::pressed, [=](){ this->_posgWidget->Zoom(1.1); });
+
+    QPushButton *zoomOutButton = new QPushButton("-");
+    connect(zoomOutButton, &QPushButton::pressed, [=](){ this->_posgWidget->Zoom(0.9); });
+
+    QPushButton *cameraMoveModeButton = new QPushButton("Rot");
+    connect(cameraMoveModeButton, &QPushButton::pressed, [=]() {
+        _posgWidget->ToggleCameraMoveMode();
+        cameraMoveModeButton->setText(this->_posgWidget->GetCameraMoveMode());
+    });
+
+    qvBoxLayout->addWidget(zoomInButton);
+    qvBoxLayout->addWidget(zoomOutButton);
+    qvBoxLayout->addWidget(cameraMoveModeButton);
+
+    controlWidget->setLayout(qvBoxLayout);
 }
 
 void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)

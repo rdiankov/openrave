@@ -385,6 +385,7 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
     setMouseTracking(true);
     _userdatakey = userdatakey;
     _penv = penv;
+    _bSwitchMouseLeftMiddleButton = true;
     _bLightOn = true;
     _bIsSelectiveActive = false;
     _osgview = new osgViewer::View();
@@ -910,6 +911,9 @@ void QOSGViewerWidget::Zoom(float factor)
         const double distance = 0.5 * _osgCameraManipulator->getDistance() / factor;
 
         _osgview->getCamera()->setProjectionMatrixAsOrtho(-distance, distance, -distance/aspect, distance/aspect, nearplane, 10000*nearplane);
+    } else {
+        _osgCameraManipulator->setDistance(_osgCameraManipulator->getDistance() / factor);
+
     }
 }
 
@@ -1366,11 +1370,21 @@ void QOSGViewerWidget::mouseMoveEvent(QMouseEvent *event)
     _osgGraphicWindow->getEventQueue()->mouseMotion(event->x() * scale, event->y() * scale);
 }
 
+void QOSGViewerWidget::GetSwitchedButtonValue(unsigned int &button) {
+    if (this->_bSwitchMouseLeftMiddleButton && button < 3) {
+        // left button = 1
+        // middle button = 2
+        button = (button << 1) % 3;
+
+    }
+}
+
 void QOSGViewerWidget::mousePressEvent(QMouseEvent *event)
 {
     float scale = this->devicePixelRatio();
     unsigned int button = qtOSGKeyEventTranslator.GetOSGButtonValue(event);
     SetKeyboardModifiers(event);
+    GetSwitchedButtonValue(button);
     _osgGraphicWindow->getEventQueue()->mouseButtonPress(event->x() * scale, event->y() * scale, button);
 }
 
@@ -1379,6 +1393,7 @@ void QOSGViewerWidget::mouseReleaseEvent(QMouseEvent *event)
     float scale = this->devicePixelRatio();
     unsigned int button = qtOSGKeyEventTranslator.GetOSGButtonValue(event);
     SetKeyboardModifiers(event);
+    GetSwitchedButtonValue(button);
     _osgGraphicWindow->getEventQueue()->mouseButtonRelease(event->x() * scale, event->y() * scale, button);
 }
 
@@ -1387,6 +1402,7 @@ void QOSGViewerWidget::mouseDoubleClickEvent(QMouseEvent *event)
     float scale = this->devicePixelRatio();
     unsigned int button = qtOSGKeyEventTranslator.GetOSGButtonValue(event);
     SetKeyboardModifiers(event);
+    GetSwitchedButtonValue(button);
     _osgGraphicWindow->getEventQueue()->mouseDoubleButtonPress(event->x() * scale, event->y() * scale, button);
 }
 

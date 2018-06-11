@@ -18,6 +18,7 @@
 #include "osgrenderitem.h"
 #include <QLayout>
 #include <QComboBox>
+#include <QPushButton>
 #include <QAbstractButton>
 #include <QFileDialog>
 #include <QMainWindow>
@@ -362,6 +363,9 @@ public:
 
     /// \brief Create and set main options of object tree
     QTreeWidget* _CreateObjectTree();
+
+    /// \brief Create viewer control button
+    void _CreateControlButtons();
 
     /// \brief Fills object tree with robot info
     void _FillObjectTree(QTreeWidget *tw);
