@@ -206,14 +206,31 @@ public:
 
             // Collision checking here!
             if( doCheckEnvCollisions || doCheckSelfCollisions ) {
+                if( doCheckEnvCollisions && doCheckSelfCollisions ) {
+                    options = CFO_CheckEnvCollisions | CFO_CheckSelfCollisions;
+                }
+                else if( doCheckEnvCollisions ) {
+                    options = CFO_CheckEnvCollisions;
+                }
+                else {
+                    options = CFO_CheckSelfCollisions;
+                }
+
                 // Instead of checking configurations sequentially from left to right, we give
                 // higher priority to some configurations. Suppose rampndVectOut.size() is N.
                 // First, check the ramp index: 0, N/2, N/4, 3N/4, N/8, 5N/8, 3N/8, 7N/8. Then we
                 // check the remaining ramps in the usual order.
 
                 // TODO: maybe arranging vsearchsegments totally randomly might have better average performance.
-                size_t nconfigs = _vcacheintermediateconfigurations.size()/tol.size();
-                vsearchsegments.resize(nconfigs);
+                if( bExpectedModifiedConfigurations ) {
+                    // In this case, all intermediate configurations are already kept in rampndVectOut.
+                    vsearchsegments.resize(rampndVectOut.size());
+                }
+                else {
+                    size_t nconfigs = _vcacheintermediateconfigurations.size()/tol.size();
+                    BOOST_ASSERT(nconfigs > 0);
+                    vsearchsegments.resize(nconfigs);
+                }
                 for( size_t j = 0; j < vsearchsegments.size(); ++j ) {
                     vsearchsegments[j] = j;
                 }
@@ -252,23 +269,24 @@ public:
                     std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
                 } while (0);
 
-                if( doCheckEnvCollisions && doCheckSelfCollisions ) {
-                    options = CFO_CheckEnvCollisions | CFO_CheckSelfCollisions;
-                }
-                else if( doCheckEnvCollisions ) {
-                    options = CFO_CheckEnvCollisions;
+                if( bExpectedModifiedConfigurations ) {
+                    for( size_t j = 0; j < vsearchsegments.size(); ++j ) {
+                        rampndVectOut[vsearchsegments[j]].GetX1Vect(q0);
+                        RampOptimizer::CheckReturn ret = feas->ConfigFeasible2(q0, std::vector<dReal>(), options);
+                        if( ret.retcode != 0 ) {
+                            return ret;
+                        }
+                    }
                 }
                 else {
-                    options = CFO_CheckSelfCollisions;
-                }
-
-                std::vector<dReal>::const_iterator itconfig;
-                for( size_t j = 0; j < vsearchsegments.size(); ++j ) {
-                    itconfig = _vcacheintermediateconfigurations.begin() + vsearchsegments[j]*tol.size();
-                    q0.assign(itconfig, itconfig + tol.size());
-                    RampOptimizer::CheckReturn ret = feas->ConfigFeasible2(q0, std::vector<dReal>(), options);
-                    if( ret.retcode != 0 ) {
-                        return ret;
+                    std::vector<dReal>::const_iterator itconfig;
+                    for( size_t j = 0; j < vsearchsegments.size(); ++j ) {
+                        itconfig = _vcacheintermediateconfigurations.begin() + vsearchsegments[j]*tol.size();
+                        q0.assign(itconfig, itconfig + tol.size());
+                        RampOptimizer::CheckReturn ret = feas->ConfigFeasible2(q0, std::vector<dReal>(), options);
+                        if( ret.retcode != 0 ) {
+                            return ret;
+                        }
                     }
                 }
             }
