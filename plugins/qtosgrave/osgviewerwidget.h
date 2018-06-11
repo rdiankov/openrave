@@ -144,6 +144,12 @@ public:
     /// \brief
     void SetKeyboardModifiers(QInputEvent* event);
 
+    /// \brief Get osg viewer camera control mode for single finger gesture
+    const char* GetCameraMoveMode() { return _bSwitchMouseLeftMiddleButton ? "Pan" : "Rot"; }
+
+    /// \brief Toggle camera move mode between pan and rotate
+    void ToggleCameraMoveMode() { _bSwitchMouseLeftMiddleButton = !_bSwitchMouseLeftMiddleButton; }
+
 protected:
     /// \brief handles a key press and looks at the modifier keys
     bool HandleOSGKeyDown(const osgGA::GUIEventAdapter &ea, osgGA::GUIActionAdapter &aa);
@@ -248,12 +254,14 @@ protected:
     EnvironmentBasePtr _penv;
 
     boost::function<bool(int)> _onKeyDown; ///< call whenever key press is detected
+    bool _bSwitchMouseLeftMiddleButton;  ///< whether to switch mouse left button and middle button (camera control mode)
     bool _bLightOn; ///< whether lights are on or not
     bool _bIsSelectiveActive; ///< if true, then can select a new
     double _zNear; ///< In OSG, znear and zfar are updated by CullVisitor, which
                    ///  causing getProjectionMatrixAsXXX to return negative
                    ///  values. Therefore, we manage zNear ourselves
 
+    void GetSwitchedButtonValue(unsigned int &button);
 };
 
 class QtOSGKeyEventTranslator
