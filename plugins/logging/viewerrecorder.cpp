@@ -57,6 +57,7 @@ extern "C" {
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
+#include <libavutil/imgutils.h>
 #else
 #include <ffmpeg/avformat.h>
 #include <ffmpeg/avcodec.h>
@@ -69,6 +70,7 @@ public:
     VideoGlobalState()
     {
         av_register_all();
+        avcodec_register_all();
     }
     virtual ~VideoGlobalState() {
     }
@@ -77,6 +79,40 @@ public:
 #endif
 
 static boost::shared_ptr<VideoGlobalState> s_pVideoGlobalState;
+
+// https://ffmpeg.org/doxygen/trunk/encode__video_8c_source.html
+static void encode_frame(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
+                   AVFormatContext *output)
+{
+    int ret;
+
+    ret = avcodec_send_frame(enc_ctx, frame);
+    if (ret < 0) {
+#if LIBAVFORMAT_VERSION_INT >= (55<<16)
+        av_free_packet(pkt);
+#else
+        av_destruct_packet(pkt);
+#endif
+        throw OPENRAVE_EXCEPTION_FORMAT("avcodec_send_frame failed with %d",ret,ORE_Assert);
+    }
+
+    while (ret >= 0) {
+        ret = avcodec_receive_packet(enc_ctx, pkt);
+        if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+            return;
+        else if (ret < 0) {
+#if LIBAVFORMAT_VERSION_INT >= (55<<16)
+            av_free_packet(pkt);
+#else
+            av_destruct_packet(pkt);
+#endif
+            throw OPENRAVE_EXCEPTION_FORMAT("avcodec_receive_packet failed with %d",ret,ORE_Assert);
+        }
+
+        av_write_frame(output, pkt);
+        av_packet_unref(pkt);
+    }
+}
 
 class ViewerRecorder : public ModuleBase
 {
@@ -148,9 +184,7 @@ public:
         _picture = NULL;
         _yuv420p = NULL;
         _picture_buf = NULL;
-        _outbuf = NULL;
         _picture_size = 0;
-        _outbuf_size = 0;
 #endif
         _threadrecord.reset(new boost::thread(boost::bind(&ViewerRecorder::_RecordThread,this)));
     }
@@ -642,17 +676,23 @@ protected:
     AVStream *_stream;
     AVFrame *_picture;
     AVFrame *_yuv420p;
-    char *_picture_buf, *_outbuf;
+    char *_picture_buf;
     int _picture_size;
-    int _outbuf_size;
     bool _bWroteURL, _bWroteHeader;
 
     void _ResetLibrary()
     {
-        free(_picture_buf); _picture_buf = NULL;
+        if( _output != nullptr ) {
+            // Flush the encoder
+            AVPacket pkt;
+            av_init_packet(&pkt);
+            encode_frame(_stream->codec, NULL, &pkt, _output);
+            av_free_packet(&pkt);
+        }
+
+        av_free(_picture_buf); _picture_buf = NULL;
         free(_picture); _picture = NULL;
         free(_yuv420p); _yuv420p = NULL;
-        free(_outbuf); _outbuf = NULL;
         if( !!_stream ) {
             avcodec_close(_stream->codec);
             _stream = NULL;
@@ -786,6 +826,7 @@ protected:
 #else
         codec_ctx->pix_fmt = PIX_FMT_YUV420P;
 #endif
+        _stream->time_base = codec_ctx->time_base;
 
 #if LIBAVFORMAT_VERSION_INT >= (54<<16)
         // not necessary to set parameters?
@@ -827,28 +868,26 @@ protected:
 #if LIBAVFORMAT_VERSION_INT >= (55<<16)
         _picture = av_frame_alloc();
         _yuv420p = av_frame_alloc();
+        AVPixelFormat pixelFormat = AV_PIX_FMT_YUV420P;
 #else
         _picture = avcodec_alloc_frame();
         _yuv420p = avcodec_alloc_frame();
+        AVPixelFormat pixelFormat = PIX_FMT_YUV420P;
 #endif
 
-        _outbuf_size = 500000;
-        _outbuf = (char*)malloc(_outbuf_size);
-        BOOST_ASSERT(!!_outbuf);
-
-#if LIBAVFORMAT_VERSION_INT >= (55<<16)
-        _picture_size = avpicture_get_size(AV_PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
-#else
-        _picture_size = avpicture_get_size(PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
-#endif
-        _picture_buf = (char*)malloc(_picture_size);
+        _picture->width = _yuv420p->width = codec_ctx->width;
+        _picture->height = _yuv420p->height = codec_ctx->height;
+        _picture->format = _yuv420p->format = pixelFormat;
+        _picture_size = av_image_get_buffer_size(
+            pixelFormat,
+            _picture->width,
+            _picture->height,
+            1
+        );
+        _picture_buf = (char*)av_malloc(_picture_size);
         BOOST_ASSERT(!!_picture_buf);
 
-#if LIBAVFORMAT_VERSION_INT >= (55<<16)
-        avpicture_fill((AVPicture*)_yuv420p, (uint8_t*)_picture_buf, AV_PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
-#else
-        avpicture_fill((AVPicture*)_yuv420p, (uint8_t*)_picture_buf, PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
-#endif
+        avpicture_fill((AVPicture*)_yuv420p, (uint8_t*)_picture_buf, pixelFormat, codec_ctx->width, codec_ctx->height);
     }
 
     void _AddFrame(void* pdata)
@@ -890,57 +929,11 @@ protected:
         }
 #endif
 
-
-#if LIBAVFORMAT_VERSION_INT >= (54<<16)
-        int got_packet = 0;
         AVPacket pkt;
         av_init_packet(&pkt);
-        int ret = avcodec_encode_video2(_stream->codec, &pkt, _yuv420p, &got_packet);
-        if( ret < 0 ) {
-#if LIBAVFORMAT_VERSION_INT >= (55<<16)
-            av_free_packet(&pkt);
-#else
-            av_destruct_packet(&pkt);
-#endif
-            throw OPENRAVE_EXCEPTION_FORMAT("avcodec_encode_video2 failed with %d",ret,ORE_Assert);
-        }
-        if( got_packet ) {
-            if( _stream->codec->coded_frame) {
-                _stream->codec->coded_frame->pts       = pkt.pts;
-                _stream->codec->coded_frame->key_frame = !!(pkt.flags & AV_PKT_FLAG_KEY);
-            }
-            if( av_write_frame(_output, &pkt) < 0) {
-#if LIBAVFORMAT_VERSION_INT >= (55<<16)
-                av_free_packet(&pkt);
-#else
-                av_destruct_packet(&pkt);
-#endif
-                throw OPENRAVE_EXCEPTION_FORMAT0("av_write_frame failed",ORE_Assert);
-            }
-        }
-#if LIBAVFORMAT_VERSION_INT >= (55<<16)
+        encode_frame(_stream->codec, _yuv420p, &pkt, _output);
         av_free_packet(&pkt);
-#else
-        av_destruct_packet(&pkt);
-#endif
-#else
-        int size = avcodec_encode_video(_stream->codec, (uint8_t*)_outbuf, _outbuf_size, _yuv420p);
-        if (size < 0) {
-            throw OPENRAVE_EXCEPTION_FORMAT0("error encoding frame",ORE_Assert);
-        }
 
-        AVPacket pkt;
-        av_init_packet(&pkt);
-        pkt.data = (uint8_t*)_outbuf;
-        pkt.size = size;
-        pkt.stream_index = _stream->index;
-        //RAVELOG_INFO("%d\n",index);
-        pkt.pts = _frameindex++;
-        if( av_write_frame(_output, &pkt) < 0) {
-            throw OPENRAVE_EXCEPTION_FORMAT0("av_write_frame failed",ORE_Assert);
-        }
-
-#endif
         _nFrameCount++;
     }
 #endif
