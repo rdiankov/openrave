@@ -762,15 +762,35 @@ protected:
         bool bFixH264 = false;
 #if defined(LIBAVCODEC_VERSION_INT) && LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(54,25,0) // introduced at http://git.libav.org/?p=libav.git;a=commit;h=104e10fb426f903ba9157fdbfe30292d0e4c3d72
         AVCodecID video_codec = codecid == -1 ? AV_CODEC_ID_MPEG4 : (AVCodecID)codecid;
+        if (video_codec == AV_CODEC_ID_H264) {
+            bFixH264 = true;
+        }
+
 #else
         CodecID video_codec = codecid == -1 ? CODEC_ID_MPEG4 : (CodecID)codecid;
 #endif
-        AVOutputFormat *fmt = av_guess_format(nullptr, filename.c_str(), nullptr);
-        BOOST_ASSERT(fmt != nullptr);
+#if LIBAVFORMAT_VERSION_INT >= (52<<16)
+        AVOutputFormat *fmt = av_oformat_next(NULL); //first_oformat;
+#else
+        AVOutputFormat *fmt = first_oformat;
+#endif
 
         _output = NULL;
-        avformat_alloc_output_context2(&_output, fmt, nullptr, nullptr);
-        BOOST_ASSERT(!!_output);
+        if ( bFixH264 ) {
+            avformat_alloc_output_context2(&_output, NULL, "mp4", NULL);
+            BOOST_ASSERT(!!_output);
+        } else {
+            while (fmt != NULL) {
+                if (fmt->video_codec == video_codec) {
+                    break;
+                }
+                fmt = fmt->next;
+            }
+            BOOST_ASSERT(!!fmt);
+            _output = avformat_alloc_context();
+            BOOST_ASSERT(!!_output);
+            _output->oformat = fmt;
+        }
 
         _frameindex = 0;
         
