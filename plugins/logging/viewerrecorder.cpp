@@ -93,7 +93,7 @@ static void encode_frame(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
     ret = avcodec_send_frame(enc_ctx, frame);
     if (ret < 0) {
 #if LIBAVFORMAT_VERSION_INT >= (55<<16)
-        av_free_packet(pkt);
+        av_packet_unref(pkt);
 #else
         av_destruct_packet(pkt);
 #endif
@@ -106,7 +106,7 @@ static void encode_frame(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
             return;
         else if (ret < 0) {
 #if LIBAVFORMAT_VERSION_INT >= (55<<16)
-            av_free_packet(pkt);
+            av_packet_unref(pkt);
 #else
             av_destruct_packet(pkt);
 #endif
@@ -691,7 +691,7 @@ protected:
             AVPacket pkt;
             av_init_packet(&pkt);
             encode_frame(_stream->codec, NULL, &pkt, _output);
-            av_free_packet(&pkt);
+            av_packet_unref(&pkt);
         }
 
         av_free(_picture_buf); _picture_buf = NULL;
@@ -937,7 +937,7 @@ protected:
         AVPacket pkt;
         av_init_packet(&pkt);
         encode_frame(_stream->codec, _yuv420p, &pkt, _output);
-        av_free_packet(&pkt);
+        av_packet_unref(&pkt);
 
         _nFrameCount++;
     }
