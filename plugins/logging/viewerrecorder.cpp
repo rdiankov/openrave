@@ -58,6 +58,7 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
 #include <libavutil/imgutils.h>
+#include <libavutil/opt.h>
 #else
 #include <ffmpeg/avformat.h>
 #include <ffmpeg/avcodec.h>
@@ -759,38 +760,17 @@ protected:
         AVCodecContext *codec_ctx;
         AVCodec *codec;
 
-        bool bFixH264 = false;
 #if defined(LIBAVCODEC_VERSION_INT) && LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(54,25,0) // introduced at http://git.libav.org/?p=libav.git;a=commit;h=104e10fb426f903ba9157fdbfe30292d0e4c3d72
         AVCodecID video_codec = codecid == -1 ? AV_CODEC_ID_MPEG4 : (AVCodecID)codecid;
-        if (video_codec == AV_CODEC_ID_H264) {
-            bFixH264 = true;
-        }
-
 #else
         CodecID video_codec = codecid == -1 ? CODEC_ID_MPEG4 : (CodecID)codecid;
 #endif
-#if LIBAVFORMAT_VERSION_INT >= (52<<16)
-        AVOutputFormat *fmt = av_oformat_next(NULL); //first_oformat;
-#else
-        AVOutputFormat *fmt = first_oformat;
-#endif
 
         _output = NULL;
-        if ( bFixH264 ) {
-            avformat_alloc_output_context2(&_output, NULL, "mp4", NULL);
-            BOOST_ASSERT(!!_output);
-        } else {
-            while (fmt != NULL) {
-                if (fmt->video_codec == video_codec) {
-                    break;
-                }
-                fmt = fmt->next;
-            }
-            BOOST_ASSERT(!!fmt);
-            _output = avformat_alloc_context();
-            BOOST_ASSERT(!!_output);
-            _output->oformat = fmt;
-        }
+        avformat_alloc_output_context2(&_output, NULL, NULL, filename.c_str());
+        BOOST_ASSERT(!!_output);
+        RAVELOG_DEBUG_FORMAT("Format chosen: %s (%s)\n",
+            _output->oformat->name % _output->oformat->long_name);
 
         _frameindex = 0;
         
@@ -806,6 +786,7 @@ protected:
 #endif
         BOOST_ASSERT(!!_stream);
 
+        // avcodec_get_context_defaults3(codec_ctx, codec);
         codec_ctx = _stream->codec;
         codec_ctx->codec_id = video_codec;
 #ifdef HAS_AVMEDIA_TYPE_VIDEO
