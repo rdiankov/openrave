@@ -759,11 +759,15 @@ private:
     virtual void GetActiveDOFWeights(std::vector<dReal>& v) const;
     virtual void GetActiveDOFVelocityLimits(std::vector<dReal>& v) const;
     virtual void GetActiveDOFAccelerationLimits(std::vector<dReal>& v) const;
+    virtual void GetActiveDOFJerkLimits(std::vector<dReal>& v) const;
     virtual void GetActiveDOFMaxVel(std::vector<dReal>& v) const {
         return GetActiveDOFVelocityLimits(v);
     }
     virtual void GetActiveDOFMaxAccel(std::vector<dReal>& v) const {
         return GetActiveDOFAccelerationLimits(v);
+    }
+    virtual void GetActiveDOFMaxJerk(std::vector<dReal>& v) const {
+        return GetActiveDOFJerkLimits(v);
     }
 
     /// computes the configuration difference q1-q2 and stores it in q1. Takes into account joint limits and circular joints

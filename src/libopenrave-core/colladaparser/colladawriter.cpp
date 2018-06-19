@@ -970,6 +970,12 @@ private:
             daeSafeCast<domKinematics_newparam::domFloat>(param_acceleration->add(COLLADA_ELEMENT_FLOAT))->setValue(pjoint->GetMaxAccel(iaxis)*valuemult);
             domCommon_float_or_paramRef acceleration = daeSafeCast<domCommon_float_or_param>(mai->add(COLLADA_ELEMENT_ACCELERATION));
             daeSafeCast<domCommon_param>(acceleration->add(COLLADA_ELEMENT_PARAM))->setValue("acceleration");
+
+            domKinematics_newparamRef param_jerk = daeSafeCast<domKinematics_newparam>(mai->add(COLLADA_ELEMENT_NEWPARAM));
+            param_jerk->setSid("jerk");
+            daeSafeCast<domKinematics_newparam::domFloat>(param_jerk->add(COLLADA_ELEMENT_FLOAT))->setValue(pjoint->GetMaxJerk(iaxis)*valuemult);
+            domCommon_float_or_paramRef jerk = daeSafeCast<domCommon_float_or_param>(mai->add(COLLADA_ELEMENT_JERK));
+            daeSafeCast<domCommon_param>(jerk->add(COLLADA_ELEMENT_PARAM))->setValue("jerk");
         }
 
         // write the bindings
