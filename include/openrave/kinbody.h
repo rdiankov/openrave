@@ -84,7 +84,7 @@ public:
         Prop_JointLimits=0x2,     ///< regular limits
         Prop_JointOffset=0x4,
         Prop_JointProperties=0x8,     ///< resolution, weights
-        Prop_JointAccelerationVelocityTorqueLimits=0x10,     ///< velocity + acceleration + torque
+        Prop_JointAccelerationVelocityTorqueLimits=0x10,     ///< velocity + acceleration + jerk + torque
         Prop_Joints=Prop_JointMimic|Prop_JointLimits|Prop_JointOffset|Prop_JointProperties|Prop_JointAccelerationVelocityTorqueLimits, ///< all properties of all joints
 
         Prop_Name=0x20,     ///< name changed
