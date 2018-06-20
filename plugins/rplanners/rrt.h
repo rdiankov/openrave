@@ -397,7 +397,7 @@ Some python code to display data::\n\
             if( _parameters->_nMaxPlanningTime > 0 ) {
                 uint32_t elapsedtime = utils::GetMilliTime()-basetime;
                 if( elapsedtime >= _parameters->_nMaxPlanningTime ) {
-                    RAVELOG_VERBOSE_FORMAT("time exceeded (%dms) so breaking", elapsedtime);
+                    RAVELOG_DEBUG_FORMAT("time exceeded (%dms) so breaking. iter=%d < %d", elapsedtime%(iter/3)%_parameters->_nMaxIterations);
                     break;
                 }
             }
@@ -495,7 +495,7 @@ Some python code to display data::\n\
             swap(TreeA, TreeB);
             iter += 3;
             if( iter > 3*_parameters->_nMaxIterations ) {
-                RAVELOG_WARN("iterations exceeded\n");
+                RAVELOG_WARN_FORMAT("iterations exceeded %d", _parameters->_nMaxIterations);
                 break;
             }
 
@@ -503,7 +503,7 @@ Some python code to display data::\n\
         }
 
         if( _vgoalpaths.size() == 0 ) {
-            RAVELOG_WARN("plan failed, %fs\n",0.001f*(float)(utils::GetMilliTime()-basetime));
+            RAVELOG_WARN_FORMAT("Plan failed in %fs, iter=%d, nMaxIterations=%d",(0.001f*(float)(utils::GetMilliTime()-basetime))%(iter/3)%_parameters->_nMaxIterations);
             return PS_Failed;
         }
 

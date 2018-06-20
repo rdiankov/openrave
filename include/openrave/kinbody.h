@@ -84,7 +84,7 @@ public:
         Prop_JointLimits=0x2,     ///< regular limits
         Prop_JointOffset=0x4,
         Prop_JointProperties=0x8,     ///< resolution, weights
-        Prop_JointAccelerationVelocityTorqueLimits=0x10,     ///< velocity + acceleration + torque
+        Prop_JointAccelerationVelocityTorqueLimits=0x10,     ///< velocity + acceleration + jerk + torque
         Prop_Joints=Prop_JointMimic|Prop_JointLimits|Prop_JointOffset|Prop_JointProperties|Prop_JointAccelerationVelocityTorqueLimits, ///< all properties of all joints
 
         Prop_Name=0x20,     ///< name changed
@@ -792,6 +792,7 @@ public:
         boost::array<dReal,3> _vmaxvel;                  ///< the soft maximum velocity (rad/s) to move the joint when planning
         boost::array<dReal,3> _vhardmaxvel;              ///< the hard maximum velocity, robot cannot exceed this velocity. used for verification checking
         boost::array<dReal,3> _vmaxaccel;                ///< the maximum acceleration (rad/s^2) of the joint
+        boost::array<dReal,3> _vmaxjerk;                 ///< the maximum jerk (rad/s^3) of the joint
         boost::array<dReal,3> _vmaxtorque;               ///< maximum torque (N.m, kg m^2/s^2) that should be applied to the joint. Usually this is computed from the motor nominal torque and gear ratio. Ignore if values are 0.
         boost::array<dReal,3> _vmaxinertia;             ///< maximum inertia (kg m^2) that the joint can exhibit. Usually this is set for safety reasons. Ignore if values are 0.
         boost::array<dReal,3> _vweights;                ///< the weights of the joint for computing distance metrics.
@@ -861,6 +862,9 @@ public:
         }
         inline dReal GetMaxAccel(int iaxis=0) const {
             return _info._vmaxaccel[iaxis];
+        }
+        inline dReal GetMaxJerk(int iaxis=0) const {
+            return _info._vmaxjerk[iaxis];
         }
 
         ///< \brief gets the max instantaneous torque of the joint
@@ -1027,6 +1031,18 @@ public:
 
         /// \brief \see GetAccelerationLimits
         virtual void SetAccelerationLimits(const std::vector<dReal>& vmax);
+
+        /** \brief Returns the max jerks of the joint
+
+            \param[out] the max jerk
+            \param[in] bAppend if true will append to the end of the vector instead of erasing it
+         */
+        virtual void GetJerkLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
+
+        virtual dReal GetJerkLimit(int iaxis=0) const;
+
+        /// \brief \see GetJerkLimits
+        virtual void SetJerkLimits(const std::vector<dReal>& vmax);
 
         /** \brief Returns the max torques of the joint
 
@@ -1410,7 +1426,7 @@ protected:
         std::vector<uint8_t> _vEnabledLinks;
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<dReal> _vdoflastsetvalues;
-        std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vDOFWeights, _vDOFLimits[2];
+        std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2];
         KinBodyPtr _pbody;
         std::vector<UserDataPtr> _vGrabbedBodies;
         bool _bRestoreOnDestructor;
@@ -1535,6 +1551,11 @@ private:
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
     virtual void GetDOFAccelerationLimits(std::vector<dReal>& maxaccelerations, const std::vector<int>& dofindices = std::vector<int>()) const;
 
+    /// \brief Returns the max jerk for each DOF
+    ///
+    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void GetDOFJerkLimits(std::vector<dReal>& maxjerks, const std::vector<int>& dofindices = std::vector<int>()) const;
+
     /// \brief Returns the max torque for each DOF
     virtual void GetDOFTorqueLimits(std::vector<dReal>& maxaccelerations) const;
 
@@ -1562,6 +1583,9 @@ private:
 
     /// \brief \see GetDOFAccelerationLimits
     virtual void SetDOFAccelerationLimits(const std::vector<dReal>& maxlimits);
+
+    /// \brief \see GetDOFJerkLimits
+    virtual void SetDOFJerkLimits(const std::vector<dReal>& maxlimits);
 
     /// \brief \see GetDOFTorqueLimits
     virtual void SetDOFTorqueLimits(const std::vector<dReal>& maxlimits);
