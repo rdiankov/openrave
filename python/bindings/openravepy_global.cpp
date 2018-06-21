@@ -180,6 +180,12 @@ public:
     AABB ab;
 };
 
+AABB ExtractAABB(object o)
+{
+    extract<boost::shared_ptr<PyAABB> > pyaabb(o);
+    return ((boost::shared_ptr<PyAABB>)pyaabb)->ab;
+}
+
 object toPyAABB(const AABB& ab)
 {
     return object(boost::shared_ptr<PyAABB>(new PyAABB(ab)));
