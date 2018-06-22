@@ -13,7 +13,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#include "openraveplugindefs.h"
+#include "rplanners.h" // openraveplugindefs + _(msgid)
 #include <fstream>
 
 #include <openrave/planningutils.h>
@@ -317,7 +317,7 @@ public:
                 if(!res) {
                     std::string filename = _DumpTrajectory(ptraj, Level_Verbose);
                     //At the very least, get the errorOrigin and description up by sating in _plannerError and getting it ikplanningmodule
-                    std::string description ="Could not obtain a feasible trajectory from initial quadratic trajectory\n";
+                    std::string description = _("Could not obtain a feasible trajectory from initial quadratic trajectory\n");
                     RAVELOG_WARN(description);
                     _plannerError = PlannerBase::PlannerError(description);
                     return PS_Failed;
@@ -389,7 +389,7 @@ public:
                 FOREACHC(itramp,ramps){
                     if(checker.Check(*itramp,options) != 0) {
                         _DumpTrajectory(ptraj, Level_Verbose);
-                        std::string description = str(boost::format("Ramp %d/%d of original traj invalid")%iramp%ramps.size());
+                        std::string description = str(boost::format(_("Ramp %d/%d of original traj invalid"))%iramp%ramps.size());
                         RAVELOG_WARN(description);
                         _plannerError = PlannerBase::PlannerError(description);
                         return PS_Failed;
@@ -496,7 +496,7 @@ public:
         }
         catch (const std::exception& ex) {
             _DumpTrajectory(ptraj, Level_Verbose);
-            std::string description = str(boost::format("parabolic planner failed: %s")% ex.what());
+            std::string description = str(boost::format(_("parabolic planner failed: %s"))% ex.what());
             RAVELOG_WARN(description);
             _plannerError = PlannerBase::PlannerError(description);
             return PS_Failed;
