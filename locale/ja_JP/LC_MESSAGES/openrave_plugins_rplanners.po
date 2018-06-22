@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2018-06-22 14:32+0900\n"
+"POT-Creation-Date: 2018-06-22 14:33+0900\n"
 "PO-Revision-Date: 2015-08-10 16:28+0900\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -16,6 +16,20 @@ msgstr ""
 "Content-Type: text/plain; charset=ASCII\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
+
+#: plugins/rplanners/constraintparabolicsmoother.cpp:320
+msgid "Could not obtain a feasible trajectory from initial quadratic trajectory\n"
+msgstr ""
+
+#: plugins/rplanners/rrt.h:506
+#, c-format
+msgid "RRT plan failed to connect after %fs\n"
+msgstr ""
+
+#: plugins/rplanners/constraintparabolicsmoother.cpp:392
+#, c-format
+msgid "Ramp %d/%d of original traj invalid"
+msgstr ""
 
 #: plugins/rplanners/parabolicretimer.cpp:350 plugins/rplanners/parabolicretimer2.cpp:326 plugins/rplanners/cubicretimer.cpp:273
 msgid "_ComputeMinimumTimeAffine not implemented"
@@ -57,6 +71,11 @@ msgstr ""
 
 #: plugins/rplanners/subparabolicsmoother.cpp:235
 msgid "original ramp is in collision!"
+msgstr ""
+
+#: plugins/rplanners/constraintparabolicsmoother.cpp:499
+#, c-format
+msgid "parabolic planner failed: %s"
 msgstr ""
 
 #: plugins/rplanners/trajectoryretimer.h:151 plugins/rplanners/trajectoryretimer2.h:149
