@@ -383,9 +383,10 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
             }
         }
         else if( _nTotalDOF-GetNumFreeParameters() == 5 ) {
-            if( _iktype == IKP_Transform6D ) {
-                return iktype == IKP_TranslationDirection5D;
-            }
+            // not always true! sometimes 5D robots can only support Transform6D
+//            if( _iktype == IKP_Transform6D ) {
+//                return iktype == IKP_TranslationDirection5D;
+//            }
         }
         return false;
     }
