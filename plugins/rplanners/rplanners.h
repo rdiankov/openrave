@@ -179,6 +179,7 @@ public:
         }
         _planner = planner;
         _distmetricfn = distmetricfn;
+        _fStepLength = fStepLength;
         _dof = dof;
         _vNewConfig.resize(dof);
         _vDeltaConfig.resize(dof);

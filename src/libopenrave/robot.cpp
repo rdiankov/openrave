@@ -170,6 +170,20 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
             _pActiveManipIkSolver = _pManipActive->GetIkSolver();
         }
     }
+    if( _options & Save_ManipulatorsToolTransform ) {
+        std::vector<RobotBase::ManipulatorPtr> vmanips = probot->GetManipulators();
+        _vtManipsLocalTool.resize(vmanips.size());
+        _vvManipsLocalDirection.resize(vmanips.size());
+        _vpManipsIkSolver.resize(vmanips.size());
+        for(int imanip = 0; imanip < vmanips.size(); ++imanip){
+            RobotBase::ManipulatorPtr pmanip = vmanips[imanip];
+            if( !!pmanip ){
+                _vtManipsLocalTool[imanip] = pmanip->GetLocalToolTransform();
+                _vvManipsLocalDirection[imanip] = pmanip->GetLocalToolDirection();
+                _vpManipsIkSolver[imanip] = pmanip->GetIkSolver();
+            }
+        }
+    }
 }
 
 RobotBase::RobotStateSaver::~RobotStateSaver()
@@ -190,6 +204,7 @@ void RobotBase::RobotStateSaver::Release()
     _probot.reset();
     KinBodyStateSaver::Release();
 }
+
 void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> probot)
 {
     if( !probot ) {
@@ -242,6 +257,24 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
                         pmanip->SetIkSolver(IkSolverBasePtr());
                     }
                 }
+            }
+        }
+    }
+    if( _options & Save_ManipulatorsToolTransform ) {
+        if( probot == _probot ) {
+            std::vector<RobotBase::ManipulatorPtr> vmanips = probot->GetManipulators();
+            if(vmanips.size() == _vtManipsLocalTool.size()) {
+                for(int imanip = 0; imanip < vmanips.size(); ++imanip) {
+                    RobotBase::ManipulatorPtr pmanip = vmanips[imanip];
+                    if( !!pmanip ){
+                        pmanip->SetLocalToolTransform(_vtManipsLocalTool.at(imanip));
+                        pmanip->SetLocalToolDirection(_vvManipsLocalDirection.at(imanip));
+                        pmanip->SetIkSolver(_vpManipsIkSolver.at(imanip));
+                    }
+                }
+            }
+            else {
+                RAVELOG_WARN(str(boost::format("failed to restore manipulators tool transform because the number of saved manipulators %i is different from the number of current manipulators %i\n")%_vtManipsLocalTool.size()%vmanips.size()));
             }
         }
     }
@@ -971,6 +1004,24 @@ void RobotBase::GetActiveDOFAccelerationLimits(std::vector<dReal>& maxaccel) con
         *pMaxAccel++ = _fQuatMaxAngleVelocity; // wrong
         *pMaxAccel++ = _fQuatMaxAngleVelocity; // wrong
         *pMaxAccel++ = _fQuatMaxAngleVelocity; // wrong
+    }
+}
+
+void RobotBase::GetActiveDOFJerkLimits(std::vector<dReal>& maxjerk) const
+{
+    if( _nActiveDOF < 0 ) {
+        GetDOFJerkLimits(maxjerk);
+        return;
+    }
+    maxjerk.resize(GetActiveDOF());
+    if( maxjerk.size() == 0 ) {
+        return;
+    }
+    dReal* pMaxJerk = &maxjerk[0];
+
+    GetDOFJerkLimits(_vTempRobotJoints);
+    FOREACHC(it, _vActiveDOFIndices) {
+        *pMaxJerk++ = _vTempRobotJoints[*it];
     }
 }
 

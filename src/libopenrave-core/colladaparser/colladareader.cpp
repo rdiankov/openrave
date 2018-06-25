@@ -1956,6 +1956,13 @@ public:
                             }
                             RAVELOG_VERBOSE("... Joint Acceleration: %f...\n",pjoint->GetMaxAccel());
                         }
+                        if (!!motion_axis_info->getJerk()) {
+                            pjoint->_info._vmaxjerk[ic] = resolveFloat(motion_axis_info->getJerk(),motion_axis_info);
+                            if( !_bBackCompatValuesInRadians ) {
+                                pjoint->_info._vmaxjerk[ic] *= fjointmult;
+                            }
+                            RAVELOG_VERBOSE("... Joint Jerk: %f...\n",pjoint->GetMaxJerk());
+                        }
                     }
 
                     bool joint_locked = false;     // if locked, joint angle is static
