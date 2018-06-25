@@ -402,7 +402,7 @@ Some python code to display data::\n\
                 }
             }
 
-            
+
             if( !!_parameters->_samplegoalfn ) {
                 vector<dReal> vgoal;
                 if( _parameters->_samplegoalfn(vgoal) ) {
@@ -477,11 +477,15 @@ Some python code to display data::\n\
                 int startindex = _vgoalpaths.back().startindex;
                 if( IS_DEBUGLEVEL(Level_Debug) ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                    ss << "env=" << GetEnv()->GetId() << ", found a goal, start index=" << startindex << " goal index=" << goalindex << ", path length=" << _vgoalpaths.back().length << ", values=[";
+                    ss << "env=" << GetEnv()->GetId() << ", found a goal, start index=" << startindex << " goal index=" << goalindex << ", path length=" << _vgoalpaths.back().length << ", startvalues=[";
+                    for(int i = 0; i < _parameters->GetDOF(); ++i) {
+                        ss << _vgoalpaths.front().qall.at(_vgoalpaths.front().qall.size()-_parameters->GetDOF()+i) << ", ";
+                    }
+                    ss << "]; goalvalues=[";
                     for(int i = 0; i < _parameters->GetDOF(); ++i) {
                         ss << _vgoalpaths.back().qall.at(_vgoalpaths.back().qall.size()-_parameters->GetDOF()+i) << ", ";
                     }
-                    ss << "]";
+                    ss << "];";
                     RAVELOG_DEBUG(ss.str());
                 }
                 if( _vgoalpaths.size() >= _parameters->_minimumgoalpaths || _vgoalpaths.size() >= _nValidGoals ) {
@@ -741,7 +745,7 @@ public:
         _startindex = -1;
 
         int numfoundgoals = 0;
-        
+
         while(iter < _parameters->_nMaxIterations) {
             iter++;
             if( !!bestGoalNode && iter >= _parameters->_nMinIterations ) {
