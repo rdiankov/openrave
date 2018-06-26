@@ -479,7 +479,7 @@ Some python code to display data::\n\
                     stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                     ss << "env=" << GetEnv()->GetId() << ", found a goal, start index=" << startindex << " goal index=" << goalindex << ", path length=" << _vgoalpaths.back().length << ", startvalues=[";
                     for(int i = 0; i < _parameters->GetDOF(); ++i) {
-                        ss << _vgoalpaths.front().qall.at(_vgoalpaths.front().qall.size()-_parameters->GetDOF()+i) << ", ";
+                        ss << _vgoalpaths.back().qall.at(i) << ", ";
                     }
                     ss << "]; goalvalues=[";
                     for(int i = 0; i < _parameters->GetDOF(); ++i) {
