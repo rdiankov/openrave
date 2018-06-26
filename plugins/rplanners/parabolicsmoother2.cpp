@@ -2708,8 +2708,20 @@ protected:
                                         RAVELOG_DEBUG(ss.str());
 #endif
                                         for( size_t j = 0; j < vellimits.size(); ++j ) {
-                                            vellimits[j] *= retcheck.vReductionFactors[j];
-                                            velReductionFactors[j] *= retcheck.vReductionFactors[j];
+                                            dReal fMinVelLimit = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
+                                            if( vellimits[j] * retcheck.vReductionFactors[j] < fMinVelLimit ) {
+                                                // In this case, we cannot use the recommended scaling factor since
+                                                // after scaling, the vellimits will fall below max(v0, v1). So we set
+                                                // vellimits to be max(v0, v1) instead.
+                                                velReductionFactors[j] *= (fMinVelLimit / vellimits[j]);
+                                                vellimits[j] = fMinVelLimit + RampOptimizer::g_fRampEpsilon;
+                                            }
+                                            else {
+                                                vellimits[j] *= retcheck.vReductionFactors[j];
+                                                velReductionFactors[j] *= retcheck.vReductionFactors[j];
+                                            }
+                                            // vellimits[j] *= retcheck.vReductionFactors[j];
+                                            // velReductionFactors[j] *= retcheck.vReductionFactors[j];
                                         }
                                     }
                                     else {
@@ -2753,11 +2765,28 @@ protected:
                                         RAVELOG_DEBUG(ss.str());
 #endif
                                         for( size_t j = 0; j < vellimits.size(); ++j ) {
-                                            vellimits[j] *= RaveSqrt(retcheck.vReductionFactors[j]);
+                                            dReal fMinVelLimit = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
+                                            dReal fVelMult = RaveSqrt(retcheck.vReductionFactors[j]);
+                                            if( vellimits[j] * fVelMult < fMinVelLimit ) {
+                                                // In this case, we cannot use the recommended scaling factor since
+                                                // after scaling, the vellimits will fall below max(v0, v1). So we set
+                                                // vellimits to be max(v0, v1) instead.
+                                                velReductionFactors[j] *= (fMinVelLimit / vellimits[j]);
+                                                vellimits[j] = fMinVelLimit + RampOptimizer::g_fRampEpsilon;
+                                            }
+                                            else {
+                                                vellimits[j] *= fVelMult;
+                                                velReductionFactors[j] *= fVelMult;
+                                            }
                                             accellimits[j] *= retcheck.vReductionFactors[j];
-                                            velReductionFactors[j] *= RaveSqrt(retcheck.vReductionFactors[j]);
                                             accelReductionFactors[j] *= retcheck.vReductionFactors[j];
                                         }
+                                        // for( size_t j = 0; j < vellimits.size(); ++j ) {
+                                        //     vellimits[j] *= RaveSqrt(retcheck.vReductionFactors[j]);
+                                        //     accellimits[j] *= retcheck.vReductionFactors[j];
+                                        //     velReductionFactors[j] *= RaveSqrt(retcheck.vReductionFactors[j]);
+                                        //     accelReductionFactors[j] *= retcheck.vReductionFactors[j];
+                                        // }
                                     }
                                     else {
                                         fAccelMult = retcheck.fTimeBasedSurpassMult*retcheck.fTimeBasedSurpassMult;
