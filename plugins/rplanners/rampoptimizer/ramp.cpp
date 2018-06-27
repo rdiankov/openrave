@@ -853,14 +853,24 @@ void RampND::Cut(dReal t, RampND& remRampND)
         return;
     }
     else {
-        EvalPos(t, IT_X1_BEGIN(_data, _ndof)); // update x1
-        std::copy(IT_X1_BEGIN(_data, _ndof), IT_X1_END(_data, _ndof), IT_X0_BEGIN(remRampND._data, _ndof));
-
-        EvalVel(t, IT_V1_BEGIN(_data, _ndof)); // update v1. Note that the update of x1 does not affect velocity calculation
-        std::copy(IT_V1_BEGIN(_data, _ndof), IT_V1_END(_data, _ndof), IT_V0_BEGIN(remRampND._data, _ndof));
-
+        // Update x1 of remRampND
+        std::copy(IT_X1_BEGIN(_data, _ndof), IT_X1_END(_data, _ndof), IT_X1_BEGIN(remRampND._data, _ndof));
+        // Update v1 of remRampND
+        std::copy(IT_V1_BEGIN(_data, _ndof), IT_V1_END(_data, _ndof), IT_V1_BEGIN(remRampND._data, _ndof));
+        // Update a of remRampND
         std::copy(IT_A_BEGIN(_data, _ndof), IT_A_END(_data, _ndof), IT_A_BEGIN(remRampND._data, _ndof));
 
+        // Update x1 of this
+        EvalPos(t, IT_X1_BEGIN(_data, _ndof));
+        // Update v1 of this. Note that the update of x1 does not affect this velocity calculation.
+        EvalVel(t, IT_V1_BEGIN(_data, _ndof));
+
+        // Update x0 of remRampND
+        std::copy(IT_X1_BEGIN(_data, _ndof), IT_X1_END(_data, _ndof), IT_X0_BEGIN(remRampND._data, _ndof));
+        // Update v0 of remRampND
+        std::copy(IT_V1_BEGIN(_data, _ndof), IT_V1_END(_data, _ndof), IT_V0_BEGIN(remRampND._data, _ndof));
+
+        // Update duration
         remRampND._duration = _duration - t;
         _duration = t;
         return;
