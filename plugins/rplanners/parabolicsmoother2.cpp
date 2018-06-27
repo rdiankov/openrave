@@ -724,7 +724,7 @@ public:
 
                 // tempRampNDVect will contain the finalized result of each RampND
                 tempRampNDVect.resize(1);
-                tempRampNDVect[0] = rampndTrimmed;
+                tempRampNDVect[0] = rampndTrimmed; // copy rampndTrimmed into tempRampNDVect[0]
                 ++_progress._iteration;
 
                 // Check constraints if not yet checked.
@@ -811,14 +811,20 @@ public:
 #endif
 
                                     if( newrampndret.retcode == 0 ) {
-                                        // The new RampND passes the check
-                                        if( bTrimmedFront ) {
-                                            tempRampNDVect.insert(tempRampNDVect.begin(), remRampND);
+                                        // The new RampND passes the check. Need to re-populate tempRampNDVect with
+                                        // RampNDs from rampndVectOut instead.
+                                        tempRampNDVect.resize(0);
+                                        if( tempRampNDVect.capacity() < rampndVectOut.size() + 1 ) {
+                                            tempRampNDVect.reserve(rampndVectOut.size() + 1);
                                         }
-                                        else if( bTrimmedBack ) {
-                                            if( tempRampNDVect.capacity() < tempRampNDVect.size() + 1 ) {
-                                                tempRampNDVect.reserve(tempRampNDVect.size() + 1);
-                                            }
+
+                                        if( bTrimmedFront ) {
+                                            tempRampNDVect.push_back(remRampND);
+                                        }
+                                        FOREACHC(itrampndVectOut, rampndVectOut) {
+                                            tempRampNDVect.push_back(*itrampndVectOut);
+                                        }
+                                        if( bTrimmedBack ) {
                                             tempRampNDVect.push_back(remRampND);
                                         }
                                         bSuccess = true;
