@@ -1330,3 +1330,59 @@ def ConvertOpenRAVETrajectoryToParabolicCurvesND(traj):
     
     return curvesnd
 
+
+def ConvertNewParabolicPathStringToOpenRAVETrajectory(env, robot, parabolicpathstring):
+    from openravepy import RaveCreateTrajectory, ConfigurationSpecification
+    
+    parabolicpathstring = parabolicpathstring.strip()
+    rawdata = parabolicpathstring.split("\n")
+    nrampnds = len(rawdata)
+
+    # check soundness
+    ndof = int(rawdata[0].strip().split(" ")[0])
+    for i in xrange(nrampnds):
+        assert( ndof == int((len(rawdata[i].strip().split(" ")) - 2)/5) )
+    assert( robot.GetActiveDOF() == ndof )
+    
+    traj = RaveCreateTrajectory(env, '')
+    newspec = robot.GetActiveConfigurationSpecification('quadratic')
+    newspec += newspec.ConvertToDerivativeSpecification(1)
+    deltatimeoffset = newspec.AddDeltaTimeGroup()
+    traj.Init(newspec)
+
+    # Manage the first waypoint
+    data = rawdata[0].strip().split(" ")
+    data = [float(x) for x in data[1:]]
+    offset = 0
+    x0 = np.array(data[offset : offset + ndof])
+    offset += ndof
+    x1 = np.array(data[offset : offset + ndof])
+    offset += ndof
+    v0 = np.array(data[offset : offset + ndof])
+    offset += ndof
+    v1 = np.array(data[offset : offset + ndof])
+    offset += ndof
+    a = np.array(data[offset : offset + ndof])
+    offset += ndof
+    t = data[offset]
+    waypoint = np.hstack([x0, v0, 0])
+    traj.Insert(0, waypoint)
+    
+    for i in xrange(nrampnds):
+        data = rawdata[i].strip().split(" ")
+        data = [float(x) for x in data[1:]]
+        offset = 0
+        x0 = np.array(data[offset : offset + ndof])
+        offset += ndof
+        x1 = np.array(data[offset : offset + ndof])
+        offset += ndof
+        v0 = np.array(data[offset : offset + ndof])
+        offset += ndof
+        v1 = np.array(data[offset : offset + ndof])
+        offset += ndof
+        a = np.array(data[offset : offset + ndof])
+        offset += ndof
+        t = data[offset]
+        waypoint = np.hstack([x1, v1, t])
+        traj.Insert(traj.GetNumWaypoints(), waypoint)
+    return traj
