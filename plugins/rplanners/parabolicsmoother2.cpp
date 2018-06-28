@@ -398,7 +398,7 @@ public:
         _totalTimeCheckPathAllConstraintsInVain = 0;
 #endif
 
-        _bUseNewHeuristic = true;
+        _bUseNewHeuristic = true; // dof-depending velocity/acceleration scaling factors
 
         // Caching stuff
         _cacheCurPos.resize(_parameters->GetDOF());
@@ -1062,6 +1062,9 @@ public:
             std::vector<dReal>::const_iterator it = _constraintreturn->_configurations.begin();
             dReal curTime = 0;
 
+            std::vector<dReal> vdofscaling(ndof); // for recording limits violation
+            std::fill(vdofscaling.begin(), vdofscaling.end(), 1);
+            bool bviolated = false;
             for (size_t itime = 0; itime < _constraintreturn->_configurationtimes.size(); ++itime, it += ndof) {
                 std::copy(it, it + ndof, newPos.begin());
                 dReal deltaTime = _constraintreturn->_configurationtimes[itime] - curTime;
@@ -1069,18 +1072,28 @@ public:
                     dReal iDeltaTime = 1/deltaTime;
 
                     // Compute the next velocity for each DOF as well as check consistency
+                    bviolated = false;
                     for (size_t idof = 0; idof < ndof; ++idof) {
                         newVel[idof] = 2*iDeltaTime*(newPos[idof] - curPos[idof]) - curVel[idof];
 
                         // Check velocity limit
                         if( RaveFabs(newVel[idof]) > _parameters->_vConfigVelocityLimit[idof] + RampOptimizer::g_fRampEpsilon  ) {
+                            bviolated = true;
                             if( 0.9*_parameters->_vConfigVelocityLimit[idof] < 0.1*RaveFabs(newVel[idof]) ) {
                                 // Warn if the velocity is really too high
                                 RAVELOG_WARN_FORMAT("env=%d, the new velocity for idof=%d is too high. |%.15e| > %.15e", GetEnv()->GetId()%idof%newVel[idof]%_parameters->_vConfigVelocityLimit[idof]);
                             }
-                            RAVELOG_VERBOSE_FORMAT("retcode=0x4; idof=%d; newVel=%.15e; vellimit=%.15e; diff=%.15e", idof%newVel[idof]%_parameters->_vConfigVelocityLimit[idof]%(RaveFabs(newVel[idof]) - _parameters->_vConfigVelocityLimit[idof]));
-                            return RampOptimizer::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_parameters->_vConfigVelocityLimit[idof]/RaveFabs(newVel[idof]));
+#ifdef SMOOTHER_PROGRESS_DEBUG
+                            RAVELOG_DEBUG_FORMAT("env=%d, velocity exceeds limits after CheckPathAllConstraints, idof=%d, newVel=%.15e, vellimit=%.15e, diff=%.15e", GetEnv()->GetId()%idof%newVel[idof]%_parameters->_vConfigVelocityLimit[idof]%(RaveFabs(newVel[idof]) - _parameters->_vConfigVelocityLimit[idof]));
+#endif
+                            if( !_bUseNewHeuristic ) {
+                                return RampOptimizer::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_parameters->_vConfigVelocityLimit[idof]/RaveFabs(newVel[idof]));
+                            }
+                            vdofscaling[idof] = 0.9*_parameters->_vConfigVelocityLimit[idof]/RaveFabs(newVel[idof]);
                         }
+                    }
+                    if( bviolated ) {
+                        return RampOptimizer::CheckReturn(CFO_CheckTimeBasedConstraints, vdofscaling);
                     }
 
                     // The computed next velocity is fine.
@@ -2823,6 +2836,63 @@ protected:
                                         }
                                         for (size_t j = 0; j < accellimits.size(); ++j) {
                                             accellimits[j] *= fAccelMult;
+                                        }
+                                    }
+                                }
+
+                                if( !maxManipSpeedViolated && !maxManipAccelViolated ) {
+                                    // Got a failure due to time-based constraints but manip speed/accel are not
+                                    // violated. This causes by velocity limits violation from ramps that have been
+                                    // modified by CheckPathAllConstraints.
+                                    if( _bUseNewHeuristic && retcheck.vReductionFactors.size() > 0 ) {
+                                        // do vel scaling without accel scaling
+#ifdef SMOOTHER_PROGRESS_DEBUG
+                                        std::stringstream ss; ss << "env=" << GetEnv()->GetId() << ", reductionFactors=[";
+                                        FOREACHC(itval, retcheck.vReductionFactors) {
+                                            ss << *itval << ", ";
+                                        }
+                                        ss << "]; velReductionFactors=[";
+                                        FOREACHC(itval, velReductionFactors) {
+                                            ss << *itval << ", ";
+                                        }
+                                        ss << "]; accelReductionFactors=[";
+                                        FOREACHC(itval, accelReductionFactors) {
+                                            ss << *itval << ", ";
+                                        }
+                                        ss << "];";
+                                        RAVELOG_DEBUG(ss.str());
+#endif
+                                        for( size_t j = 0; j < vellimits.size(); ++j ) {
+                                            dReal fMinVelLimit = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
+                                            if( vellimits[j] * retcheck.vReductionFactors[j] < fMinVelLimit ) {
+                                                // In this case, we cannot use the recommended scaling factor since
+                                                // after scaling, the vellimits will fall below max(v0, v1). So we set
+                                                // vellimits to be max(v0, v1) instead.
+                                                velReductionFactors[j] *= (fMinVelLimit / vellimits[j]);
+                                                vellimits[j] = fMinVelLimit + RampOptimizer::g_fRampEpsilon;
+                                            }
+                                            else {
+                                                vellimits[j] *= retcheck.vReductionFactors[j];
+                                                velReductionFactors[j] *= retcheck.vReductionFactors[j];
+                                            }
+                                            // vellimits[j] *= retcheck.vReductionFactors[j];
+                                            // velReductionFactors[j] *= retcheck.vReductionFactors[j];
+                                        }
+                                    }
+                                    else {
+                                        fVelMult = retcheck.fTimeBasedSurpassMult;
+                                        fCurVelMult *= fVelMult;
+                                        if( fCurVelMult < 0.01 ) {
+#ifdef SMOOTHER_PROGRESS_DEBUG
+                                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d: modified ramps exceed vellimits but fCurVelMult is too small (%.15e). continue to the next iteration", GetEnv()->GetId()%iters%numIters%fCurVelMult);
+                                            maxManipSpeedFailed += 1;
+                                            shortcutprogress << SS_Check2Failed << "\n";
+#endif
+                                            break;
+                                        }
+                                        for (size_t j = 0; j < vellimits.size(); ++j) {
+                                            dReal fMinVel = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
+                                            vellimits[j] = max(fMinVel, fVelMult * vellimits[j]);
                                         }
                                     }
                                 }
