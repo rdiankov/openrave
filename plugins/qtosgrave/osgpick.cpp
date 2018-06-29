@@ -79,6 +79,7 @@ void OSGPickHandler::_Pick(osg::ref_ptr<osgViewer::View> view, const osgGA::GUIE
     try {
         float x = ea.getX();
         float y = ea.getY();
+        RAVELOG_DEBUG_FORMAT("real coordinate %f %f",x%y);
         osgUtil::LineSegmentIntersector::Intersections intersections;
         if (view->computeIntersections(x,y,intersections)) {
             for(osgUtil::LineSegmentIntersector::Intersections::iterator hitr = intersections.begin(); hitr != intersections.end(); ++hitr) {

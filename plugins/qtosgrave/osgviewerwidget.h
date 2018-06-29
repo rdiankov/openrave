@@ -18,7 +18,7 @@
 #include "osgrenderitem.h"
 #include "osgpick.h"
 #include "osgskybox.h"
-
+#include <QGestureEvent>
 #include <QtCore/QTimer>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QLayout>
@@ -216,6 +216,8 @@ protected:
     virtual void keyReleaseEvent(QKeyEvent *event);
 
     virtual bool event(QEvent *event);
+
+    bool HandleGestureEvent(QGestureEvent *event);
 
     OSGGroupPtr _osgSceneRoot; ///< root scene node
     OSGGroupPtr _osgFigureRoot; ///< the node that all the figures are drawn into

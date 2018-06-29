@@ -383,6 +383,7 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
 
     setFocus( Qt::ActiveWindowFocusReason );
     setMouseTracking(true);
+    grabGesture(Qt::TapAndHoldGesture);
     _userdatakey = userdatakey;
     _penv = penv;
     _bSwitchMouseLeftMiddleButton = true;
@@ -1385,6 +1386,7 @@ void QOSGViewerWidget::mousePressEvent(QMouseEvent *event)
     unsigned int button = qtOSGKeyEventTranslator.GetOSGButtonValue(event);
     SetKeyboardModifiers(event);
     GetSwitchedButtonValue(button);
+    RAVELOG_FATAL_FORMAT("sent event coord %f %f",(event->x()*scale)%(event->y()*scale));
     _osgGraphicWindow->getEventQueue()->mouseButtonPress(event->x() * scale, event->y() * scale, button);
 }
 
@@ -1437,6 +1439,10 @@ void QOSGViewerWidget::keyReleaseEvent(QKeyEvent *event)
 
 bool QOSGViewerWidget::event(QEvent *event)
 {
+
+    if (event->type() == QEvent::Gesture) {
+        return HandleGestureEvent(static_cast<QGestureEvent*>(event));
+    }
     bool handled = QOpenGLWidget::event(event);
     this->update();
     return handled;
@@ -1450,6 +1456,47 @@ bool QOSGViewerWidget::event(QEvent *event)
      if ( modifierKeys & Qt::ControlModifier ) mask |= osgGA::GUIEventAdapter::MODKEY_CTRL;
      if ( modifierKeys & Qt::AltModifier ) mask |= osgGA::GUIEventAdapter::MODKEY_ALT;
      _osgGraphicWindow->getEventQueue()->getCurrentEventState()->setModKeyMask(mask);
+ }
+
+ bool QOSGViewerWidget::HandleGestureEvent(QGestureEvent *event)
+ {
+     if (QTapAndHoldGesture *tapAndHoldGesture = static_cast<QTapAndHoldGesture*>(event->gesture(Qt::TapAndHoldGesture))) {
+         RAVELOG_ERROR_FORMAT("going to handle tap and hold gesture, state %s",tapAndHoldGesture->state());
+
+         if (tapAndHoldGesture->state() == Qt::GestureFinished) {
+             float x = static_cast<float>(tapAndHoldGesture->position().x());
+             float y = static_cast<float>(tapAndHoldGesture->position().y());
+             osgUtil::LineSegmentIntersector::Intersections intersections;
+             QPoint p = this->mapFromGlobal(tapAndHoldGesture->position().toPoint());
+             RAVELOG_WARN_FORMAT("mapped at x %f y %f",p.x()%p.y());
+             RAVELOG_WARN_FORMAT("intersections at x %f y %f",x%y);
+             if (_osgview->computeIntersections(x, y, intersections)) {
+                 RAVELOG_WARN("hits somthing?");
+                 for (auto hitr = intersections.begin(); hitr != intersections.end(); ++hitr) {
+                     if (hitr->nodePath.empty()) {
+                         RAVELOG_WARN("nothing hits");
+                         continue;
+                     }
+
+                     FOREACH(itnode, hitr->nodePath) {
+                         if ((*itnode)->getUserData()) {
+                             OSGItemUserData* pdata = dynamic_cast<OSGItemUserData*>((*itnode)->getUserData());
+
+                             if (pdata) {
+                                 OSGNodePtr node = hitr->nodePath.back();
+                                 KinBodyItemPtr item = FindKinBodyItemFromOSGNode(node);
+                                 RAVELOG_ERROR_FORMAT("wooow %s",item->GetName());
+                             }
+                         }
+                     }
+
+                 }
+             }
+             RAVELOG_DEBUG_FORMAT("intersection size %d",intersections.size());
+
+         }
+         return true;
+     }
  }
 
 
