@@ -778,7 +778,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                         nConstraintToolDirFailure++;
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
                             stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                            ss << "direction constraints failed, ";
+                            ss << "env=" << _probot->GetEnv()->GetId() << ", direction constraints failed, ";
                             for(size_t i = 0; i < _newdof2.size(); ++i ) {
                                 if( i > 0 ) {
                                     ss << "," << _newdof2[i];
@@ -799,7 +799,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                         nConstraintToolPositionFailure++;
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
                             stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                            ss << "position constraints failed, ";
+                            ss << "env=" << _probot->GetEnv()->GetId() << ", position constraints failed, ";
                             for(size_t i = 0; i < _newdof2.size(); ++i ) {
                                 if( i > 0 ) {
                                     ss << "," << _newdof2[i];
@@ -827,7 +827,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( bCollision ) {
                     if( IS_DEBUGLEVEL(Level_Verbose) ) {
                         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                        ss << "constraints failed, ";
+                        ss << "env=" << _probot->GetEnv()->GetId() << ", collision failed, ";
                         for(size_t i = 0; i < _newdof2.size(); ++i ) {
                             if( i > 0 ) {
                                 ss << "," << _newdof2[i];
