@@ -21,7 +21,7 @@
 #include "manipconstraints2.h"
 
 // #define SMOOTHER_TIMING_DEBUG
-// #define SMOOTHER_PROGRESS_DEBUG
+#define SMOOTHER_PROGRESS_DEBUG
 
 namespace rplanners {
 
@@ -2031,6 +2031,63 @@ protected:
                                         }
                                         for (size_t j = 0; j < accellimits.size(); ++j) {
                                             accellimits[j] *= fAccelMult;
+                                        }
+                                    }
+                                }
+
+                                if( !maxManipSpeedViolated && !maxManipAccelViolated ) {
+                                    // Got a failure due to time-based constraints but manip speed/accel are not
+                                    // violated. This causes by velocity limits violation from ramps that have been
+                                    // modified by CheckPathAllConstraints.
+                                    if( _bUseNewHeuristic && retcheck.vReductionFactors.size() > 0 ) {
+                                        // do vel scaling without accel scaling
+#ifdef SMOOTHER_PROGRESS_DEBUG
+                                        std::stringstream ss; ss << "env=" << GetEnv()->GetId() << ", reductionFactors=[";
+                                        FOREACHC(itval, retcheck.vReductionFactors) {
+                                            ss << *itval << ", ";
+                                        }
+                                        ss << "]; velReductionFactors=[";
+                                        FOREACHC(itval, velReductionFactors) {
+                                            ss << *itval << ", ";
+                                        }
+                                        ss << "]; accelReductionFactors=[";
+                                        FOREACHC(itval, accelReductionFactors) {
+                                            ss << *itval << ", ";
+                                        }
+                                        ss << "];";
+                                        RAVELOG_DEBUG(ss.str());
+#endif
+                                        for( size_t j = 0; j < vellimits.size(); ++j ) {
+                                            dReal fMinVelLimit = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
+                                            if( vellimits[j] * retcheck.vReductionFactors[j] < fMinVelLimit ) {
+                                                // In this case, we cannot use the recommended scaling factor since
+                                                // after scaling, the vellimits will fall below max(v0, v1). So we set
+                                                // vellimits to be max(v0, v1) instead.
+                                                velReductionFactors[j] *= (fMinVelLimit / vellimits[j]);
+                                                vellimits[j] = fMinVelLimit + RampOptimizer::g_fRampEpsilon;
+                                            }
+                                            else {
+                                                vellimits[j] *= retcheck.vReductionFactors[j];
+                                                velReductionFactors[j] *= retcheck.vReductionFactors[j];
+                                            }
+                                            // vellimits[j] *= retcheck.vReductionFactors[j];
+                                            // velReductionFactors[j] *= retcheck.vReductionFactors[j];
+                                        }
+                                    }
+                                    else {
+                                        fVelMult = retcheck.fTimeBasedSurpassMult;
+                                        fCurVelMult *= fVelMult;
+                                        if( fCurVelMult < 0.01 ) {
+#ifdef SMOOTHER_PROGRESS_DEBUG
+                                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d: modified ramps exceed vellimits but fCurVelMult is too small (%.15e). continue to the next iteration", GetEnv()->GetId()%iters%numIters%fCurVelMult);
+                                            maxManipSpeedFailed += 1;
+                                            shortcutprogress << SS_Check2Failed << "\n";
+#endif
+                                            break;
+                                        }
+                                        for (size_t j = 0; j < vellimits.size(); ++j) {
+                                            dReal fMinVel = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
+                                            vellimits[j] = max(fMinVel, fVelMult * vellimits[j]);
                                         }
                                     }
                                 }
