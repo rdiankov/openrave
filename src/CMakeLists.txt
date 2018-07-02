@@ -73,6 +73,7 @@ if(NOT OPENRAVE_DISABLE_ASSERT_HANDLER)
   add_definitions("-DBOOST_ENABLE_ASSERT_HANDLER") # turns segfault into exception
 endif()
 add_library(boost_assertion_failed STATIC boost_assertion_failed.cpp)
+add_dependencies(boost_assertion_failed interfacehashes_target)
 add_subdirectory(libopenrave)
 add_subdirectory(libopenrave-core)
 
