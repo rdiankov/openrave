@@ -185,13 +185,25 @@ protected:
         int dof = parameters->GetDOF();
         int nrejected = 0;
         int iiter = parameters->_nMaxIterations;
+        int itercount = 0;
+        int numiters = parameters->_nMaxIterations;
         std::vector<dReal> vnewconfig0(dof), vnewconfig1(dof);
-        while(iiter > 0  && nrejected < (int)listpath.size()+4 && listpath.size() > 2 ) {
+#ifdef PROGRESS_DEBUG
+        int numshortcuts = 0; // keep track of the number of successful shortcuts
+        std::stringstream ss;
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+#endif
+        // while(iiter > 0  && nrejected < (int)listpath.size()+4 && listpath.size() > 2 ) {
+        while(iiter > 0 && listpath.size() > 2 ) {
             --iiter;
+            ++itercount;
 
             // pick a random node on the listpath, and a random jump ahead
             uint32_t endIndex = 2+(_puniformsampler->SampleSequenceOneUInt32()%((uint32_t)listpath.size()-2));
             uint32_t startIndex = _puniformsampler->SampleSequenceOneUInt32()%(endIndex-1);
+#ifdef PROGRESS_DEBUG
+            RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, start shortcutting with i0=%d; i1=%d", GetEnv()->GetId()%itercount%numiters%startIndex%endIndex);
+#endif
 
             itstartnode = listpath.begin();
             advance(itstartnode, startIndex);
@@ -206,18 +218,38 @@ protected:
             dReal expectedtotaldistance = parameters->_distmetricfn(itstartnode->first, itendnode->first);
             if( expectedtotaldistance > totaldistance-0.1*parameters->_fStepLength ) {
                 // expected total distance is not that great
+#ifdef PROGRESS_DEBUG
+                RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, rejecting since it may not make significant improvement. originalSegmentDistance=%.15e, expectedNewDistance=%.15e, diff=%.15e, fStepLength=%.15e", GetEnv()->GetId()%itercount%numiters%totaldistance%expectedtotaldistance%(totaldistance - expectedtotaldistance)%parameters->_fStepLength);
+#endif
                 continue;
             }
 
             // check if the nodes can be connected by a straight line
             _filterreturn->Clear();
-            if (parameters->CheckPathAllConstraints(itstartnode->first, itendnode->first, std::vector<dReal>(), std::vector<dReal>(), 0, IT_Open, 0xffff|CFO_FillCheckedConfiguration, _filterreturn) != 0 ) {
-                if( nrejected++ > (int)listpath.size()+8 ) {
+            int ret = parameters->CheckPathAllConstraints(itstartnode->first, itendnode->first, std::vector<dReal>(), std::vector<dReal>(), 0, IT_Open, 0xffff|CFO_FillCheckedConfiguration, _filterreturn);
+            if ( ret != 0 ) {
+#ifdef PROGRESS_DEBUG
+                ss.str(""); ss.clear();
+                ss << "s=" << _filterreturn->_fTimeWhenInvalid << "; vInvalidConfig=[";
+                FOREACH(itval, _filterreturn->_invalidvalues) {
+                    ss << *itval << ", ";
+                }
+                ss << "]";
+                RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, CheckPathAllConstraints failed, retcode=0x%x. %s", GetEnv()->GetId()%itercount%numiters%ret%ss.str());
+#endif
+                // if( nrejected++ > (int)listpath.size()+8 ) {
+                if( false ) {
+#ifdef PROGRESS_DEBUG
+                    RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, breaking due to too many consecutive rejection. nrejected=%d, listpath.size()=%d", GetEnv()->GetId()%itercount%numiters%nrejected%listpath.size());
+#endif
                     break;
                 }
                 continue;
             }
             if(_filterreturn->_configurations.size() == 0 ) {
+#ifdef PROGRESS_DEBUG
+                RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, CheckPathAllConstraints succeeded but did not fill in _filterreturn->_configurations so rejecting.", GetEnv()->GetId()%itercount%numiters%ret);
+#endif
                 continue;
             }
             OPENRAVE_ASSERT_OP(_filterreturn->_configurations.size()%dof, ==, 0);
@@ -245,6 +277,9 @@ protected:
             if( newtotaldistance > totaldistance-0.1*parameters->_fStepLength ) {
                 // new path is not that good, so reject
                 nrejected++;
+#ifdef PROGRESS_DEBUG
+                RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, rejecting since it does not make significant improvement. originalSegmentDistance=%.15e, newSegmentDistance=%.15e, diff=%.15e, fStepLength=%.15e", GetEnv()->GetId()%itercount%numiters%totaldistance%newtotaldistance%(totaldistance - newtotaldistance)%parameters->_fStepLength);
+#endif
                 continue;
             }
 
@@ -264,18 +299,26 @@ protected:
             listpath.erase(itstartnode, itendnode);
             nrejected = 0;
 
+#ifdef PROGRESS_DEBUG
+            ++numshortcuts;
+            dReal newdistance = 0;
+            FOREACH(ittempnode, listpath) {
+                newdistance += ittempnode->second;
+            }
+            RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d successful, listpath.size()=%d, totaldistance=%.15e", GetEnv()->GetId()%itercount%numiters%listpath.size()%newdistance);
+#endif
+
             if( listpath.size() <= 2 ) {
+#ifdef PROGRESS_DEBUG
+                RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, breaking since listpath.size()=%d", GetEnv()->GetId()%itercount%numiters%listpath.size());
+#endif
                 break;
             }
-
-            if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                dReal newdistance = 0;
-                FOREACH(ittempnode, listpath) {
-                    newdistance += ittempnode->second;
-                }
-                RAVELOG_VERBOSE_FORMAT("shortcut iter=%d, path=%d, dist=%f", (parameters->_nMaxIterations-iiter)%listpath.size()%newdistance);
-            }
         }
+#ifdef PROGRESS_DEBUG
+        RAVELOG_DEBUG_FORMAT("env=%d, finished at shortcut iter=%d, successful=%d", GetEnv()->GetId()%itercount%numshortcuts);
+#endif
+
     }
 
     // Experimental function: shortcut only one DOF at a time. Although some non-default
