@@ -73,6 +73,12 @@ public:
         Transform tparentinv = tparent.inverse();
         FOREACHC(itlink,linklist) {
             AABB ablink = (*itlink)->ComputeLocalAABB(); // AABB of the link in its local coordinates
+            if( ablink.extents[0] > 1 || ablink.extents[1] > 1 || ablink.extents[2] > 1 ) {
+                // Very long object. We might have been planning with other task constraints. In
+                // this case, do not include this link into AABB since it's going to distort the
+                // computation of manipspeed and manipaccel.
+                continue;
+            }
             Transform tdelta = tparentinv * (*itlink)->GetTransform();
             TransformMatrix tmdelta(tdelta);
             Vector vabsextents(RaveFabs(tmdelta.m[0])*ablink.extents[0] + RaveFabs(tmdelta.m[1])*ablink.extents[1] + RaveFabs(tmdelta.m[2])*ablink.extents[2],
@@ -169,15 +175,15 @@ public:
                         }
                     }
                     info.fmaxdistfromcenter = RaveSqrt(info.fmaxdistfromcenter);
-                    if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                        std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                        ss << "[";
-                        FOREACH(itpoint, info.checkpoints) {
-                            ss << "[" << itpoint->x << ", " << itpoint->y << ", " << itpoint->z << "], ";
-                        }
-                        ss << "]";
-                        RAVELOG_VERBOSE_FORMAT("env=%d, fmaxdistfromcenter=%f, checkpoints=%s", pbody->GetEnv()->GetId()%info.fmaxdistfromcenter%ss.str());
+#ifdef PROGRESS_DEBUG
+                    std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                    ss << "[";
+                    FOREACH(itpoint, info.checkpoints) {
+                        ss << "[" << itpoint->x << ", " << itpoint->y << ", " << itpoint->z << "], ";
                     }
+                    ss << "]";
+                    RAVELOG_DEBUG_FORMAT("env=%d, fmaxdistfromcenter=%f, checkpoints=%s", pbody->GetEnv()->GetId()%info.fmaxdistfromcenter%ss.str());
+#endif
                     setCheckedManips.insert(endeffector);
                 }
             }
