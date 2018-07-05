@@ -16,6 +16,7 @@
 #include "openraveplugindefs.h"
 
 // #define SHORTCUT_ONEDOF_DEBUG
+#define PROGRESS_DEBUG
 
 class ShortcutLinearPlanner : public PlannerBase
 {
@@ -248,7 +249,7 @@ protected:
             }
             if(_filterreturn->_configurations.size() == 0 ) {
 #ifdef PROGRESS_DEBUG
-                RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, CheckPathAllConstraints succeeded but did not fill in _filterreturn->_configurations so rejecting.", GetEnv()->GetId()%itercount%numiters%ret);
+                RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, CheckPathAllConstraints succeeded but did not fill in _filterreturn->_configurations so rejecting.", GetEnv()->GetId()%itercount%numiters);
 #endif
                 continue;
             }
