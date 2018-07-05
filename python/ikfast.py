@@ -463,6 +463,7 @@ class AST:
         AddHalfTanValue = False
         dictequations = None
         presetcheckforzeros = None
+        checkEquationsUsed = True # if True then check equationsused at the end to make sure solution is consistent
         equationsused = None
         """Meaning of FeasibleIsZeros:
         If set to false, then solution is feasible only if all of these equations evalute to non-zero.
@@ -523,7 +524,11 @@ class AST:
         def getPresetCheckForZeros(self):
             return self.presetcheckforzeros
         def getEquationsUsed(self):
-            return self.equationsused
+            if self.checkEquationsUsed:
+                return self.equationsused
+            
+            return None
+        
         def GetZeroThreshold(self):
             return self.thresh
         
@@ -3194,7 +3199,14 @@ class IKFastSolver(AutoReloader):
             AllEquations = self.buildEquationsFromRotation(T0links,Ree,rotvars,othersolvedvars)
             self.checkSolvability(AllEquations,rotvars,othersolvedvars)
             currotvars = rotvars[:]
+            
             rottree += self.SolveAllEquations(AllEquations,curvars=currotvars,othersolvedvars=othersolvedvars,solsubs=self.freevarsubs[:],endbranchtree=storesolutiontree)
+
+            if len(rotvars) < 3:
+                # since rotation variables are not enough for 3D rotation, do not check equations used
+                for ss in rottree:
+                    ss.checkEquationsUsed = False
+            
             # has to be after SolveAllEquations...?
             for i in range(3):
                 for j in range(3):
