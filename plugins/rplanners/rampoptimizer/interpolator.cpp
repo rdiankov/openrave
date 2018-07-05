@@ -82,6 +82,7 @@ bool ParabolicInterpolator::ComputeZeroVelNDTrajectory(const std::vector<dReal>&
     if( !(vMin < g_fRampInf && aMin < g_fRampInf) ) {
         // Displacements are zero.
         rampndVectOut.resize(1);
+        rampndVectOut[0].Initialize(_ndof);
         rampndVectOut[0].SetConstant(x0Vect, 0);
         return true;
     }
