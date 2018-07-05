@@ -379,7 +379,8 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
         // auto-conversion
         if( _nTotalDOF-GetNumFreeParameters() == 4 ) {
             if( _iktype == IKP_Transform6D ) {
-                return iktype == IKP_TranslationXAxisAngleZNorm4D || iktype == IKP_TranslationYAxisAngleXNorm4D || iktype == IKP_TranslationZAxisAngleYNorm4D || iktype == IKP_TranslationZAxisAngle4D;
+                // not always true! sometimes 4D robots can only support Transform6D (fanuc 4 axis depalletizing)
+                //return iktype == IKP_TranslationXAxisAngleZNorm4D || iktype == IKP_TranslationYAxisAngleXNorm4D || iktype == IKP_TranslationZAxisAngleYNorm4D || iktype == IKP_TranslationZAxisAngle4D;
             }
         }
         else if( _nTotalDOF-GetNumFreeParameters() == 5 ) {

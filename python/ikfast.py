@@ -3014,6 +3014,10 @@ class IKFastSolver(AutoReloader):
         :return: Tlefttrans, NewLinks, Trighttrans
         """
         NewLinks = list(Links)
+        
+        if len(NewLinks) == 1:
+            return eye(4), NewLinks, eye(4)
+
         Trighttrans = eye(4)
         Trighttrans[0:3,3] = NewLinks[-2][0:3,0:3].transpose() * NewLinks[-2][0:3,3]
         Trot_with_trans = Trighttrans * NewLinks[-1]
