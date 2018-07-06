@@ -249,7 +249,7 @@ public:
             }
 
             if( link->vgeoms.size() == 0 ) {
-                RAVELOG_WARN_FORMAT("Initializing link %s/%s with 0 geometries (env %d) (userdatakey %s)",pbody->GetName()%(*itlink)->GetName()%_penv->GetId()%_userdatakey);
+                RAVELOG_DEBUG_FORMAT("Initializing link %s/%s with 0 geometries (env %d) (userdatakey %s)",pbody->GetName()%(*itlink)->GetName()%_penv->GetId()%_userdatakey);
             } else {
                 // create the bounding volume for the link
                 KinBody::Link::Geometry _tmpgeometry(boost::shared_ptr<KinBody::Link>(), *begingeom);
