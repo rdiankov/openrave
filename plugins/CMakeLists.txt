@@ -14,6 +14,10 @@ else()
 endif()
 
 
+if(NOT OPENRAVE_DISABLE_ASSERT_HANDLER)
+  add_definitions("-DBOOST_ENABLE_ASSERT_HANDLER") # turns segfault into exception
+endif()
+
 check_library_exists(lapack cgesdd_ "" LAPACK_FOUND)
 #CheckLibraryExists
 #find_package(LAPACK)
