@@ -28,6 +28,10 @@ else()
   message(STATUS "lapack dev library not found")
 endif()
 
+if(NOT OPENRAVE_DISABLE_ASSERT_HANDLER)
+  add_definitions("-DBOOST_ENABLE_ASSERT_HANDLER") # turns segfault into exception
+endif()
+
 set(PLUGINS_BASE ${COMPONENT_PREFIX}plugins-base)
 string(TOUPPER ${PLUGINS_BASE} PLUGINS_BASE_UPPER)
 set(CPACK_COMPONENT_${PLUGINS_BASE_UPPER}_GROUP "Plugins" PARENT_SCOPE)
