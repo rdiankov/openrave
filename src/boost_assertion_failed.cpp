@@ -1,3 +1,5 @@
+// -*- coding: utf-8 -*-
+// Copyright (C) 2018 Rosen Diankov
 #if !defined(OPENRAVE_DISABLE_ASSERT_HANDLER) && (defined(BOOST_ENABLE_ASSERT_HANDLER))
 
 #include <openrave/openrave.h>

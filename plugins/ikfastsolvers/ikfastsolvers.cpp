@@ -35,7 +35,7 @@ ModuleBasePtr CreateIkFastModule(EnvironmentBasePtr penv, std::istream& sinput);
 void DestroyIkFastLibraries();
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
-{
+{    
     switch(type) {
     case PT_IkSolver: {
         if( interfacename == "ikfast" ) {

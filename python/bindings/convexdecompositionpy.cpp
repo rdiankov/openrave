@@ -12,9 +12,6 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#ifndef OPENRAVE_DISABLE_ASSERT_HANDLER
-#define BOOST_ENABLE_ASSERT_HANDLER
-#endif
 #define PY_ARRAY_UNIQUE_SYMBOL PyArrayHandle
 #include <boost/python.hpp>
 #include <boost/python/exception_translator.hpp>
@@ -26,6 +23,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/format.hpp>
 #include <boost/assert.hpp>
+#include <openrave/config.h>
 
 #define OPENRAVE_BININGS_PYARRAY
 #include "bindings.h"
@@ -36,7 +34,7 @@ using namespace boost::python;
 using namespace std;
 using namespace openravepy;
 
-struct cdpy_exception : std::exception
+struct OPENRAVE_API cdpy_exception : std::exception
 {
     cdpy_exception() : std::exception(), _s("unknown exception") {
     }
