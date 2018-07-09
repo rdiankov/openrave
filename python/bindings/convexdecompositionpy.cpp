@@ -26,6 +26,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/format.hpp>
 #include <boost/assert.hpp>
+#include <openrave/config.h>
 
 #define OPENRAVE_BININGS_PYARRAY
 #include "bindings.h"
@@ -36,7 +37,7 @@ using namespace boost::python;
 using namespace std;
 using namespace openravepy;
 
-struct cdpy_exception : std::exception
+struct OPENRAVE_API cdpy_exception : std::exception
 {
     cdpy_exception() : std::exception(), _s("unknown exception") {
     }
