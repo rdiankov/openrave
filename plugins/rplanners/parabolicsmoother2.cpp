@@ -1037,7 +1037,12 @@ public:
 #endif
             if( ret != 0 ) {
 #ifdef SMOOTHER_PROGRESS_DEBUG
-                RAVELOG_DEBUG_FORMAT("env=%d, rejection by CheckPathAllConstraints, retcode=0x%x", GetEnv()->GetId()%ret);
+                if( _constraintreturn->_configurationtimes.size() > 0 ) {
+                    RAVELOG_DEBUG_FORMAT("env=%d, rejection by CheckPathAllConstraints at timestamp=%.6e/%.6e, retcode=0x%x", GetEnv()->GetId()%_constraintreturn->_configurationtimes.back()%timeElapsed%ret);
+                }
+                else {
+                    RAVELOG_DEBUG_FORMAT("env=%d, rejection by CheckPathAllConstraints, retcode=0x%x", GetEnv()->GetId()%ret);
+                }
 #endif
                 RampOptimizer::CheckReturn checkret(ret);
                 if( ret == CFO_CheckTimeBasedConstraints ) {
@@ -1587,7 +1592,7 @@ protected:
             // Perform shortcut
             try {
 #ifdef SMOOTHER_PROGRESS_DEBUG
-                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, start shortcutting from t0=%.15e to t1=%.15e", GetEnv()->GetId()%iters%numIters%t0%t1);
+                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, start shortcutting with t0=%.15e; t1=%.15e", GetEnv()->GetId()%iters%numIters%t0%t1);
 #endif
                 int i0, i1;
                 dReal u0, u1;
@@ -2420,7 +2425,7 @@ protected:
             // Perform shortcut
             try {
 #ifdef SMOOTHER_PROGRESS_DEBUG
-                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, start shortcutting from t0=%.15e to t1=%.15e", GetEnv()->GetId()%iters%numIters%t0%t1);
+                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, start shortcutting with t0=%.15e; t1=%.15e", GetEnv()->GetId()%iters%numIters%t0%t1);
 #endif
                 int i0, i1;
                 dReal u0, u1;
