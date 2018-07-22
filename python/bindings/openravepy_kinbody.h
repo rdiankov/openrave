@@ -204,6 +204,7 @@ public:
     object GetLinkAccelerations(object odofaccelerations, object oexternalaccelerations) const;
     object ComputeAABB(bool bEnabledOnlyLinks=false);
     object ComputeAABBFromTransform(object otransform, bool bEnabledOnlyLinks=false);
+    object ComputeLocalAABB(bool bEnabledOnlyLinks=false);
     object GetCenterOfMass() const;
     void Enable(bool bEnable);
     bool IsEnabled() const;

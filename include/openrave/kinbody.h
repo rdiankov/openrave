@@ -1806,6 +1806,11 @@ private:
     /// \brief bEnabledOnlyLinks if true, will only count links that are enabled. By default this is false
     virtual AABB ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnlyLinks=false) const;
 
+    /// \brief returns an axis-aligned bounding box when body has identity transform
+    ///
+    /// Internally equivalent to ComputeAABBFromTransform(Transform(), ...)
+    virtual AABB ComputeLocalAABB(bool bEnabledOnlyLinks=false) const;
+    
     /// \brief Return the center of mass of entire robot in the world coordinate system.
     virtual Vector GetCenterOfMass() const;
 
