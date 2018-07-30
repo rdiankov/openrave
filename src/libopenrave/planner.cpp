@@ -128,8 +128,12 @@ bool PlannerBase::PlannerError::serializeToJson(rapidjson::Document& output) con
 
     if(_report != NULL){
         rapidjson::Document reportjson(rapidjson::kObjectType);
-        openravejson::SetJsonValueByKey(reportjson, "plink1", _report->plink1->GetName());
-        openravejson::SetJsonValueByKey(reportjson, "plink2", _report->plink2->GetName());
+        if(_report->plink1){
+            openravejson::SetJsonValueByKey(reportjson, "plink1", _report->plink1->GetName());
+        }
+        if(_report->plink2){
+            openravejson::SetJsonValueByKey(reportjson, "plink2", _report->plink2->GetName());
+        }
         rapidjson::Document reportContactsjson(rapidjson::kObjectType);
         for (size_t i=0; i<_report->contacts.size(); ++i) {
             rapidjson::Document reportContactsPosjson(rapidjson::kObjectType);
