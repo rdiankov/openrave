@@ -2116,6 +2116,11 @@ object PyKinBody::ComputeAABBFromTransform(object otransform, bool bEnabledOnlyL
     return toPyAABB(_pbody->ComputeAABBFromTransform(ExtractTransform(otransform), bEnabledOnlyLinks));
 }
 
+object PyKinBody::ComputeLocalAABB(bool bEnabledOnlyLinks)
+{
+    return toPyAABB(_pbody->ComputeLocalAABB(bEnabledOnlyLinks));
+}
+
 object PyKinBody::GetCenterOfMass() const
 {
     return toPyVector3(_pbody->GetCenterOfMass());
@@ -3029,6 +3034,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromGeometries_overloads, InitFromGeo
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Init_overloads, Init, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABB_overloads, ComputeAABB, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABBFromTransform_overloads, ComputeAABBFromTransform, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeLocalAABB_overloads, ComputeLocalAABB, 0, 1)
 
 void init_openravepy_kinbody()
 {
@@ -3273,6 +3279,7 @@ void init_openravepy_kinbody()
                         .def("SetLinkEnableStates",&PyKinBody::SetLinkEnableStates, DOXY_FN(KinBody,SetLinkEnableStates))
                         .def("ComputeAABB",&PyKinBody::ComputeAABB, ComputeAABB_overloads(args("enabledOnlyLinks"), DOXY_FN(KinBody,ComputeAABB)))
                         .def("ComputeAABBFromTransform",&PyKinBody::ComputeAABBFromTransform, ComputeAABBFromTransform_overloads(args("transform", "enabledOnlyLinks"), DOXY_FN(KinBody,ComputeAABBFromTransform)))
+                        .def("ComputeLocalAABB",&PyKinBody::ComputeLocalAABB, ComputeLocalAABB_overloads(args("enabledOnlyLinks"), DOXY_FN(KinBody,ComputeLocalAABB)))
                         .def("GetCenterOfMass", &PyKinBody::GetCenterOfMass, DOXY_FN(KinBody,GetCenterOfMass))
                         .def("Enable",&PyKinBody::Enable,args("enable"), DOXY_FN(KinBody,Enable))
                         .def("IsEnabled",&PyKinBody::IsEnabled, DOXY_FN(KinBody,IsEnabled))

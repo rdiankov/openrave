@@ -1461,10 +1461,10 @@ AABB KinBody::ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnly
         Transform tlink = tConvertToNewFrame*(*itlink)->GetTransform();
         TransformMatrix mlink(tlink);
         Vector projectedExtents(RaveFabs(mlink.m[0]*ablocal.extents[0]) + RaveFabs(mlink.m[1]*ablocal.extents[1]) + RaveFabs(mlink.m[2]*ablocal.extents[2]),
-                               RaveFabs(mlink.m[4]*ablocal.extents[0]) + RaveFabs(mlink.m[5]*ablocal.extents[1]) + RaveFabs(mlink.m[6]*ablocal.extents[2]),
-                               RaveFabs(mlink.m[8]*ablocal.extents[0]) + RaveFabs(mlink.m[9]*ablocal.extents[1]) + RaveFabs(mlink.m[10]*ablocal.extents[2]));
+                                RaveFabs(mlink.m[4]*ablocal.extents[0]) + RaveFabs(mlink.m[5]*ablocal.extents[1]) + RaveFabs(mlink.m[6]*ablocal.extents[2]),
+                                RaveFabs(mlink.m[8]*ablocal.extents[0]) + RaveFabs(mlink.m[9]*ablocal.extents[1]) + RaveFabs(mlink.m[10]*ablocal.extents[2]));
         Vector vWorldPos = tlink * ablocal.pos;
-        
+
         Vector vnmin = vWorldPos - projectedExtents;
         Vector vnmax = vWorldPos + projectedExtents;
         if( !binitialized ) {
@@ -1504,6 +1504,11 @@ AABB KinBody::ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnly
         ab.extents = vmax - ab.pos;
     }
     return ab;
+}
+
+AABB KinBody::ComputeLocalAABB(bool bEnabledOnlyLinks) const
+{
+    return ComputeAABBFromTransform(Transform(), bEnabledOnlyLinks);
 }
 
 Vector KinBody::GetCenterOfMass() const
