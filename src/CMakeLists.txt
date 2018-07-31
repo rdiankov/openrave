@@ -69,6 +69,11 @@ if( LOG4CXX_FOUND )
   set(openrave_libraries ${openrave_libraries} ${LOG4CXX_LIBRARIES})
 endif()
 
+if(NOT OPENRAVE_DISABLE_ASSERT_HANDLER)
+  add_definitions("-DBOOST_ENABLE_ASSERT_HANDLER") # turns segfault into exception
+endif()
+add_library(boost_assertion_failed STATIC boost_assertion_failed.cpp)
+add_dependencies(boost_assertion_failed interfacehashes_target)
 add_subdirectory(libopenrave)
 add_subdirectory(libopenrave-core)
 
@@ -93,7 +98,8 @@ else()
   set(SOCKET_LIBS)
 endif()
 
-target_link_libraries (openrave ${Boost_DATE_TIME_LIBRARY} ${Boost_THREAD_LIBRARY} ${SOCKET_LIBS} libopenrave libopenrave-core)
+target_link_libraries(openrave ${Boost_DATE_TIME_LIBRARY} ${Boost_THREAD_LIBRARY} ${SOCKET_LIBS} ${openrave_libraries} libopenrave libopenrave-core)
+target_link_libraries(openrave PRIVATE boost_assertion_failed)
 
 install(TARGETS openrave DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base)
 if( OPT_BUILD_PACKAGE_DEFAULT AND OPENRAVE_BIN_SUFFIX )

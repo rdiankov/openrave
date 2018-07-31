@@ -31,6 +31,7 @@ KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsAc
     std::fill(_vmaxvel.begin(), _vmaxvel.end(), 10);
     std::fill(_vhardmaxvel.begin(), _vhardmaxvel.end(), 10);
     std::fill(_vmaxaccel.begin(), _vmaxaccel.end(), 50);
+    std::fill(_vmaxjerk.begin(), _vmaxjerk.end(), 1e5); // Set negligibly large jerk by default which can change acceleration between min and max within a typical time step. We compute 1e5=(50-(-50))/0.001, by assuming max/min accelerations are 50 and -50.
     std::fill(_vmaxtorque.begin(), _vmaxtorque.end(), 0); // set max torque to 0 to notify the system that dynamics parameters might not be valid.
     std::fill(_vmaxinertia.begin(), _vmaxinertia.end(), 0);
     std::fill(_vweights.begin(), _vweights.end(), 1);
@@ -569,6 +570,7 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
     for(int i = 0; i < GetDOF(); ++i) {
         OPENRAVE_ASSERT_OP_FORMAT(_info._vmaxvel[i], >=, 0, "joint %s[%d] max velocity is invalid",_info._name%i, ORE_InvalidArguments);
         OPENRAVE_ASSERT_OP_FORMAT(_info._vmaxaccel[i], >=, 0, "joint %s[%d] max acceleration is invalid",_info._name%i, ORE_InvalidArguments);
+        OPENRAVE_ASSERT_OP_FORMAT(_info._vmaxjerk[i], >=, 0, "joint %s[%d] max jerk is invalid",_info._name%i, ORE_InvalidArguments);
         OPENRAVE_ASSERT_OP_FORMAT(_info._vmaxtorque[i], >=, 0, "joint %s[%d] max torque is invalid",_info._name%i, ORE_InvalidArguments);
         OPENRAVE_ASSERT_OP_FORMAT(_info._vmaxinertia[i], >=, 0, "joint %s[%d] max inertia is invalid",_info._name%i, ORE_InvalidArguments);
     }
@@ -867,6 +869,29 @@ void KinBody::Joint::SetAccelerationLimits(const std::vector<dReal>& vmax)
 {
     for(int i = 0; i < GetDOF(); ++i) {
         _info._vmaxaccel[i] = vmax.at(i);
+    }
+    GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+}
+
+void KinBody::Joint::GetJerkLimits(std::vector<dReal>& vmax, bool bAppend) const
+{
+    if( !bAppend ) {
+        vmax.resize(0);
+    }
+    for(int i = 0; i < GetDOF(); ++i) {
+        vmax.push_back(_info._vmaxjerk[i]);
+    }
+}
+
+dReal KinBody::Joint::GetJerkLimit(int iaxis) const
+{
+    return _info._vmaxjerk.at(iaxis);
+}
+
+void KinBody::Joint::SetJerkLimits(const std::vector<dReal>& vmax)
+{
+    for(int i = 0; i < GetDOF(); ++i) {
+        _info._vmaxjerk[i] = vmax.at(i);
     }
     GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
 }
@@ -1618,6 +1643,7 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
         for(int i = 0; i < GetDOF(); ++i) {
             SerializeRound(o,_info._vmaxvel[i]);
             SerializeRound(o,_info._vmaxaccel[i]);
+            SerializeRound(o,_info._vmaxjerk[i]);
             SerializeRound(o,_info._vmaxtorque[i]);
             SerializeRound(o,_info._vmaxinertia[i]);
             SerializeRound(o,_info._vlowerlimit[i]);

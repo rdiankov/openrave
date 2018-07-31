@@ -528,6 +528,9 @@ void init_openravepy_ikparameterization();
 object toPyAABB(const AABB& ab);
 object toPyRay(const RAY& r);
 RAY ExtractRay(object o);
+
+/// \brief PyAABB -> AABB
+AABB ExtractAABB(object o);
 bool ExtractRay(object o, RAY& r);
 object toPyTriMesh(const TriMesh& mesh);
 bool ExtractTriMesh(object o, TriMesh& mesh);

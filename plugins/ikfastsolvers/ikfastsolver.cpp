@@ -379,13 +379,15 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
         // auto-conversion
         if( _nTotalDOF-GetNumFreeParameters() == 4 ) {
             if( _iktype == IKP_Transform6D ) {
-                return iktype == IKP_TranslationXAxisAngleZNorm4D || iktype == IKP_TranslationYAxisAngleXNorm4D || iktype == IKP_TranslationZAxisAngleYNorm4D || iktype == IKP_TranslationZAxisAngle4D;
+                // not always true! sometimes 4D robots can only support Transform6D (fanuc 4 axis depalletizing)
+                //return iktype == IKP_TranslationXAxisAngleZNorm4D || iktype == IKP_TranslationYAxisAngleXNorm4D || iktype == IKP_TranslationZAxisAngleYNorm4D || iktype == IKP_TranslationZAxisAngle4D;
             }
         }
         else if( _nTotalDOF-GetNumFreeParameters() == 5 ) {
-            if( _iktype == IKP_Transform6D ) {
-                return iktype == IKP_TranslationDirection5D;
-            }
+            // not always true! sometimes 5D robots can only support Transform6D
+//            if( _iktype == IKP_Transform6D ) {
+//                return iktype == IKP_TranslationDirection5D;
+//            }
         }
         return false;
     }
@@ -2091,13 +2093,16 @@ protected:
         // check that end effector moved in the correct direction
         dReal ikworkspacedist = param.ComputeDistanceSqr(paramnew);
         if( ikworkspacedist > _ikthreshold ) {
-            BOOST_ASSERT(listlocalikreturns.size()>0);
             stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-            ss << "ignoring bad ik for " << probot->GetName() << ":" << pmanip->GetName() << " dist=" << RaveSqrt(ikworkspacedist) << ", param=[" << param << "], sol=[";
-            FOREACHC(itvalue,listlocalikreturns.front().first->_vsolution) {
-                ss << *itvalue << ", ";
+            ss << "ignoring bad ik for " << probot->GetName() << ":" << pmanip->GetName() << " dist=" << RaveSqrt(ikworkspacedist) << ", param=[" << param << "]";
+            if( listlocalikreturns.size() > 0 ) {
+                ss << ", sol=[";
+                FOREACHC(itvalue,listlocalikreturns.front().first->_vsolution) {
+                    ss << *itvalue << ", ";
+                }
+                ss << "]";
             }
-            ss << "]" << endl;
+            ss << endl;
             RAVELOG_ERROR(ss.str());
             return static_cast<IkReturnAction>(retactionall); // signals to continue
         }

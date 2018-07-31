@@ -22,6 +22,10 @@
 #ifndef OPENRAVE_INTERFACE_BASE
 #define OPENRAVE_INTERFACE_BASE
 
+#if OPENRAVE_RAPIDJSON
+#include <rapidjson/document.h>
+#endif // OPENRAVE_RAPIDJSON
+
 namespace OpenRAVE {
 
 /// serialization options for interfaces

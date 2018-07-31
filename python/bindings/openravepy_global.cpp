@@ -167,6 +167,13 @@ public:
         return toPyVector3(ab.pos);
     }
 
+    dict toDict() {
+        dict d;
+        d["pos"] = pos();
+        d["extents"] = extents();
+        return d;
+    }
+
     virtual string __repr__() {
         return boost::str(boost::format("AABB([%.15e,%.15e,%.15e],[%.15e,%.15e,%.15e])")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z);
     }
@@ -179,6 +186,12 @@ public:
 
     AABB ab;
 };
+
+AABB ExtractAABB(object o)
+{
+    extract<boost::shared_ptr<PyAABB> > pyaabb(o);
+    return ((boost::shared_ptr<PyAABB>)pyaabb)->ab;
+}
 
 object toPyAABB(const AABB& ab)
 {
@@ -1228,6 +1241,7 @@ void init_openravepy_global()
     .def("__str__",&PyAABB::__str__)
     .def("__unicode__",&PyAABB::__unicode__)
     .def("__repr__",&PyAABB::__repr__)
+    .def("toDict", &PyAABB::toDict)
     .def_pickle(AABB_pickle_suite())
     ;
     class_<PyTriMesh, boost::shared_ptr<PyTriMesh> >("TriMesh", DOXY_CLASS(TriMesh))
