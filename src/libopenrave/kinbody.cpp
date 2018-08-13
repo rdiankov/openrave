@@ -200,6 +200,7 @@ KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _
     if( _options & Save_JointMaxVelocityAndAcceleration ) {
         _pbody->GetDOFVelocityLimits(_vMaxVelocities);
         _pbody->GetDOFAccelerationLimits(_vMaxAccelerations);
+        _pbody->GetDOFJerkLimits(_vMaxJerks);
     }
     if( _options & Save_JointWeights ) {
         _pbody->GetDOFWeights(_vDOFWeights);
@@ -316,6 +317,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
     if( _options & Save_JointMaxVelocityAndAcceleration ) {
         pbody->SetDOFVelocityLimits(_vMaxVelocities);
         pbody->SetDOFAccelerationLimits(_vMaxAccelerations);
+        pbody->SetDOFJerkLimits(_vMaxJerks);
     }
     if( _options & Save_LinkVelocities ) {
         pbody->SetLinkVelocities(_vLinkVelocities);
@@ -900,6 +902,26 @@ void KinBody::GetDOFAccelerationLimits(std::vector<dReal>& v, const std::vector<
     }
 }
 
+void KinBody::GetDOFJerkLimits(std::vector<dReal>& v, const std::vector<int>& dofindices) const
+{
+    if( dofindices.size() == 0 ) {
+        v.resize(0);
+        if( (int)v.capacity() < GetDOF() ) {
+            v.reserve(GetDOF());
+        }
+        FOREACHC(it, _vDOFOrderedJoints) {
+            (*it)->GetJerkLimits(v,true);
+        }
+    }
+    else {
+        v.resize(dofindices.size());
+        for(size_t i = 0; i < dofindices.size(); ++i) {
+            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
+            v[i] = pjoint->GetJerkLimit(dofindices[i]-pjoint->GetDOFIndex());
+        }
+    }
+}
+
 void KinBody::GetDOFTorqueLimits(std::vector<dReal>& v) const
 {
     v.resize(0);
@@ -1080,6 +1102,16 @@ void KinBody::SetDOFAccelerationLimits(const std::vector<dReal>& v)
     std::vector<dReal>::const_iterator itv = v.begin();
     FOREACHC(it, _vDOFOrderedJoints) {
         std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info.maxAccel.begin());
+        itv += (*it)->GetDOF();
+    }
+    _PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+}
+
+void KinBody::SetDOFJerkLimits(const std::vector<dReal>& v)
+{
+    std::vector<dReal>::const_iterator itv = v.begin();
+    FOREACHC(it, _vDOFOrderedJoints) {
+        std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info._vmaxjerk.begin());
         itv += (*it)->GetDOF();
     }
     _PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
@@ -1572,8 +1604,70 @@ AABB KinBody::ComputeAABB(bool bEnabledOnlyLinks) const
 
 AABB KinBody::ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnlyLinks) const
 {
-    // not implemented yet
-    BOOST_ASSERT(0);
+    Vector vmin, vmax;
+    bool binitialized=false;
+    AABB ablocal;
+    Transform tConvertToNewFrame = tBody*GetTransform().inverse();
+    FOREACHC(itlink,_veclinks) {
+        if( bEnabledOnlyLinks && !(*itlink)->IsEnabled() ) {
+            continue;
+        }
+        ablocal = (*itlink)->ComputeLocalAABB();
+        if( ablocal.extents.x == 0 && ablocal.extents.y == 0 && ablocal.extents.z == 0 ) {
+            continue;
+        }
+
+        Transform tlink = tConvertToNewFrame*(*itlink)->GetTransform();
+        TransformMatrix mlink(tlink);
+        Vector projectedExtents(RaveFabs(mlink.m[0]*ablocal.extents[0]) + RaveFabs(mlink.m[1]*ablocal.extents[1]) + RaveFabs(mlink.m[2]*ablocal.extents[2]),
+                                RaveFabs(mlink.m[4]*ablocal.extents[0]) + RaveFabs(mlink.m[5]*ablocal.extents[1]) + RaveFabs(mlink.m[6]*ablocal.extents[2]),
+                                RaveFabs(mlink.m[8]*ablocal.extents[0]) + RaveFabs(mlink.m[9]*ablocal.extents[1]) + RaveFabs(mlink.m[10]*ablocal.extents[2]));
+        Vector vWorldPos = tlink * ablocal.pos;
+
+        Vector vnmin = vWorldPos - projectedExtents;
+        Vector vnmax = vWorldPos + projectedExtents;
+        if( !binitialized ) {
+            vmin = vnmin;
+            vmax = vnmax;
+            binitialized = true;
+        }
+        else {
+            if( vmin.x > vnmin.x ) {
+                vmin.x = vnmin.x;
+            }
+            if( vmin.y > vnmin.y ) {
+                vmin.y = vnmin.y;
+            }
+            if( vmin.z > vnmin.z ) {
+                vmin.z = vnmin.z;
+            }
+            if( vmax.x < vnmax.x ) {
+                vmax.x = vnmax.x;
+            }
+            if( vmax.y < vnmax.y ) {
+                vmax.y = vnmax.y;
+            }
+            if( vmax.z < vnmax.z ) {
+                vmax.z = vnmax.z;
+            }
+        }
+    }
+
+    AABB ab;
+    if( !binitialized ) {
+        ab.pos = GetTransform().trans;
+        ab.extents = Vector(0,0,0);
+    }
+    else {
+        ab.pos = (dReal)0.5 * (vmin + vmax);
+        ab.extents = vmax - ab.pos;
+    }
+    return ab;
+}
+
+AABB KinBody::ComputeLocalAABB(bool bEnabledOnlyLinks) const
+{
+    return ComputeAABBFromTransform(Transform(), bEnabledOnlyLinks);
 }
 
 Vector KinBody::GetCenterOfMass() const
@@ -2955,7 +3049,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
                 doftorques.at(pjoint->GetDOFIndex()) += pjoint->GetAxis(0).dot3(vjointtorque + vcomtoanchor.cross(vcomforce));
             }
             else if( pjoint->GetType() == JointSlider ) {
-                doftorques.at(pjoint->GetDOFIndex()) += pjoint->GetAxis(0).dot3(vcomforce);
+                doftorques.at(pjoint->GetDOFIndex()) += pjoint->GetAxis(0).dot3(vcomforce)/(2*PI);
             }
             else {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), pjoint->GetType(), ORE_Assert);
@@ -2985,7 +3079,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
                 faxistorque = pjoint->GetAxis(0).dot3(vjointtorque + vcomtoanchor.cross(vcomforce));
             }
             else if( pjoint->GetType() == JointSlider ) {
-                faxistorque = pjoint->GetAxis(0).dot3(vcomforce);
+                faxistorque = pjoint->GetAxis(0).dot3(vcomforce)/(2*PI);
             }
             else {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), pjoint->GetType(), ORE_Assert);
@@ -3003,7 +3097,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
         }
         else {
             // joint should be static
-            BOOST_ASSERT(pjoint->IsStatic());
+            OPENRAVE_ASSERT_FORMAT(pjoint->IsStatic(), "joint %s (%d) is expected to be static", pjoint->GetName()%ijoint, ORE_Assert);
         }
     }
 }
@@ -3173,7 +3267,7 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
                     vDOFTorqueComponents[j].at(pjoint->GetDOFIndex()) += pjoint->GetAxis(0).dot3(vjointtorque + vcomtoanchor.cross(vcomforce));
                 }
                 else if( pjoint->GetType() == JointSlider ) {
-                    vDOFTorqueComponents[j].at(pjoint->GetDOFIndex()) += pjoint->GetAxis(0).dot3(vcomforce);
+                    vDOFTorqueComponents[j].at(pjoint->GetDOFIndex()) += pjoint->GetAxis(0).dot3(vcomforce)/(2*PI);
                 }
                 else {
                     throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), pjoint->GetType(), ORE_Assert);
@@ -3187,7 +3281,7 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
                     faxistorque = pjoint->GetAxis(0).dot3(vjointtorque + vcomtoanchor.cross(vcomforce));
                 }
                 else if( pjoint->GetType() == JointSlider ) {
-                    faxistorque = pjoint->GetAxis(0).dot3(vcomforce);
+                    faxistorque = pjoint->GetAxis(0).dot3(vcomforce)/(2*PI);
                 }
                 else {
                     throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), pjoint->GetType(), ORE_Assert);

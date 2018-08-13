@@ -794,7 +794,7 @@ public:
             int ret = _parameters->CheckPathAllConstraints(q0, q0, dq0, dq0, 0, IT_OpenStart, options);
             RampOptimizer::CheckReturn checkret(ret);
             if( ret == CFO_CheckTimeBasedConstraints ) {
-                checkret.fTimeBasedSurpassMult = 0.8;
+                checkret.fTimeBasedSurpassMult = 0.98;
             }
             return checkret;
         }
@@ -837,7 +837,7 @@ public:
             if( ret != 0 ) {
                 RampOptimizer::CheckReturn checkret(ret);
                 if( ret == CFO_CheckTimeBasedConstraints ) {
-                    checkret.fTimeBasedSurpassMult = 0.8;
+                    checkret.fTimeBasedSurpassMult = 0.98;
                 }
                 return checkret;
             }
@@ -1068,7 +1068,7 @@ protected:
                         return false;
                     }
                     // Steer vNewWaypoints[iwaypoint] by xmidDelta. The resulting state is stored in xmid.
-                    if( !_parameters->_neighstatefn(xmid, xmidDelta, NSO_OnlyHardConstraints) ) {
+                    if( _parameters->_neighstatefn(xmid, xmidDelta, NSO_OnlyHardConstraints) == NSS_Failed ) {
                         RAVELOG_WARN_FORMAT("env=%d: Failed to get the neighbor of waypoint %d", GetEnv()->GetId()%iwaypoint);
                         return false;
                     }
@@ -1152,7 +1152,7 @@ protected:
         accellimits = _parameters->_vConfigAccelerationLimit;
 
         RampOptimizer::CheckReturn retseg(0);
-        size_t numTries = 30; // number of times allowed to scale down vellimits and accellimits
+        size_t numTries = 1000; // number of times allowed to scale down vellimits and accellimits
         for (size_t itry = 0; itry < numTries; ++itry) {
             bool res = _interpolator.ComputeZeroVelNDTrajectory(x0VectIn, x1VectIn, vellimits, accellimits, rampndVectOut);
             BOOST_ASSERT(res);
@@ -1198,7 +1198,7 @@ protected:
             else if( retseg.retcode == CFO_CheckTimeBasedConstraints ) {
                 RAVELOG_VERBOSE_FORMAT("env=%d: scaling vellimits and accellimits by %.15e, itry = %d", GetEnv()->GetId()%retseg.fTimeBasedSurpassMult%itry);
                 RampOptimizer::ScaleVector(vellimits, retseg.fTimeBasedSurpassMult);
-                RampOptimizer::ScaleVector(accellimits, retseg.fTimeBasedSurpassMult);
+                RampOptimizer::ScaleVector(accellimits, retseg.fTimeBasedSurpassMult*retseg.fTimeBasedSurpassMult);
             }
             else {
                 std::stringstream ss;
@@ -1383,7 +1383,7 @@ protected:
                 RAVELOG_VERBOSE_FORMAT("env=%d: iter = %d/%d, start shortcutting from t0 = %.15e to t1 = %.15e", GetEnv()->GetId()%iters%numIters%t0%t1);
 
                 bool bSuccess = false;
-                size_t maxSlowDownTries = 4;
+                size_t maxSlowDownTries = 100;
                 for (size_t iSlowDown = 0; iSlowDown < maxSlowDownTries; ++iSlowDown) {
 #ifdef SMOOTHER_TIMING_DEBUG
                     _nCallsInterpolator += 1;
@@ -1582,9 +1582,9 @@ protected:
 
                                 if( retcheck.fMaxManipAccel > _parameters->maxmanipaccel ) {
                                     // Manipaccel is violated. We scale both vellimits and accellimits down.
-                                    fAccelMult = retcheck.fTimeBasedSurpassMult;
+                                    fAccelMult = retcheck.fTimeBasedSurpassMult*retcheck.fTimeBasedSurpassMult;
                                     fCurAccelMult *= fAccelMult;
-                                    if( fCurAccelMult < 0.01 ) {
+                                    if( fCurAccelMult < 0.0001 ) {
                                         RAVELOG_VERBOSE_FORMAT("env=%d: shortcut iter = %d/%d: fCurAccelMult is too small (%.15e). continue to the next iteration", GetEnv()->GetId()%iters%numIters%fCurAccelMult);
                                         break;
                                     }
@@ -1612,12 +1612,12 @@ protected:
                         else {
                             // Scale down vellimits and accellimits using the normal procedure
                             fCurVelMult *= retcheck.fTimeBasedSurpassMult;
-                            fCurAccelMult *= retcheck.fTimeBasedSurpassMult;
+                            fCurAccelMult *= retcheck.fTimeBasedSurpassMult*retcheck.fTimeBasedSurpassMult;
                             if( fCurVelMult < 0.01 ) {
                                 RAVELOG_VERBOSE_FORMAT("env=%d: shortcut iter = %d/%d: fCurVelMult is too small (%.15e). continue to the next iteration", GetEnv()->GetId()%iters%numIters%fCurVelMult);
                                 break;
                             }
-                            if( fCurAccelMult < 0.01 ) {
+                            if( fCurAccelMult < 0.0001 ) {
                                 RAVELOG_VERBOSE_FORMAT("env=%d: shortcut iter = %d/%d: fCurAccelMult is too small (%.15e). continue to the next iteration", GetEnv()->GetId()%iters%numIters%fCurAccelMult);
                                 break;
                             }
@@ -1626,7 +1626,7 @@ protected:
                             for (size_t j = 0; j < vellimits.size(); ++j) {
                                 dReal fMinVel =  max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
                                 vellimits[j] = max(fMinVel, retcheck.fTimeBasedSurpassMult * vellimits[j]);
-                                accellimits[j] *= retcheck.fTimeBasedSurpassMult;
+                                accellimits[j] *= retcheck.fTimeBasedSurpassMult*retcheck.fTimeBasedSurpassMult;
                             }
                         }
                     }

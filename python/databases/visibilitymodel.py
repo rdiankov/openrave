@@ -117,7 +117,7 @@ class VisibilityModel(DatabaseGenerator):
                 for geom,isdraw in self.hiddengeoms:
                     geom.SetDraw(isdraw)
 
-    def __init__(self,robot,targetlink,sensorrobot=None,sensorname=None,maxvelmult=None, ignoresensorcollision=None, targetgeomname=None):
+    def __init__(self,robot,targetlink,sensorrobot=None,sensorname=None,maxvelmult=None, ignoresensorcollision=None, targetgeomname=None, iktype=IkParameterization.Type.Transform6D):
         """Starts a visibility model using a robot, a sensor, and a targetlink
 
         The minimum needed to be specified is the robot and a sensorname. Supports sensors that do
@@ -141,6 +141,7 @@ class VisibilityModel(DatabaseGenerator):
         self.visibilitytransforms = None
         self.rmodel = self.ikmodel = None
         self.preshapes = None
+        self.iktype = iktype
         self.preprocess()
     def clone(self,envother):
         clone = DatabaseGenerator.clone(self,envother)
@@ -176,7 +177,7 @@ class VisibilityModel(DatabaseGenerator):
             assert(self.manipname is None or self.manipname==manipname)
             self.manip = self.robot.SetActiveManipulator(manipname)
             self.attachedsensor = [s for s in self.sensorrobot.GetAttachedSensors() if s.GetName() == self.sensorname][0]
-            self.ikmodel = inversekinematics.InverseKinematicsModel(robot=self.robot,iktype=IkParameterization.Type.Transform6D)
+            self.ikmodel = inversekinematics.InverseKinematicsModel(robot=self.robot,iktype=self.iktype)
             if not self.ikmodel.load():
                 self.ikmodel.autogenerate()
             if self.visibilitytransforms is not None:

@@ -227,6 +227,150 @@ static bool _AssimpCreateTriMesh(const aiScene* scene, aiNode* node, const Vecto
     return true;
 }
 
+static bool _AssimpCreateGeometries(const aiScene* scene, aiNode* node, const Vector& scale, std::list<KinBody::GeometryInfo>& listGeometries)
+{
+    if( !node ) {
+        return false;
+    }
+    aiMatrix4x4 transform = node->mTransformation;
+    aiNode *pnode = node->mParent;
+    while (pnode) {
+        // Don't convert to y-up orientation, which is what the root node is in, Assimp does
+        if (pnode->mParent != NULL) {
+            transform = pnode->mTransformation * transform;
+        }
+        pnode = pnode->mParent;
+    }
+
+    for (size_t i = 0; i < node->mNumMeshes; i++) {
+        listGeometries.push_back(KinBody::GeometryInfo());
+        KinBody::GeometryInfo& g = listGeometries.back();
+        g._type = GT_TriMesh;
+        g._vRenderScale = scale;
+        aiMesh* input_mesh = scene->mMeshes[node->mMeshes[i]];
+        g._meshcollision.vertices.resize(input_mesh->mNumVertices);
+        for (size_t j = 0; j < input_mesh->mNumVertices; j++) {
+            aiVector3D p = input_mesh->mVertices[j];
+            p *= transform;
+            g._meshcollision.vertices[j] = Vector(p.x*scale.x,p.y*scale.y,p.z*scale.z);
+        }
+        size_t indexCount = 0;
+        for (size_t j = 0; j < input_mesh->mNumFaces; j++) {
+            aiFace& face = input_mesh->mFaces[j];
+            indexCount += 3*(face.mNumIndices-2);
+        }
+        g._meshcollision.indices.reserve(indexCount);
+        for (size_t j = 0; j < input_mesh->mNumFaces; j++) {
+            aiFace& face = input_mesh->mFaces[j];
+            if( face.mNumIndices == 3 ) {
+                g._meshcollision.indices.push_back(face.mIndices[0]);
+                g._meshcollision.indices.push_back(face.mIndices[1]);
+                g._meshcollision.indices.push_back(face.mIndices[2]);
+            }
+            else {
+                for (size_t k = 2; k < face.mNumIndices; ++k) {
+                    g._meshcollision.indices.push_back(face.mIndices[0]);
+                    g._meshcollision.indices.push_back(face.mIndices[k-1]);
+                    g._meshcollision.indices.push_back(face.mIndices[k]);
+                }
+            }
+        }
+
+        if( !!scene->mMaterials&& input_mesh->mMaterialIndex<scene->mNumMaterials) {
+            aiMaterial* mtrl = scene->mMaterials[input_mesh->mMaterialIndex];
+            aiColor4D color;
+            aiGetMaterialColor(mtrl,AI_MATKEY_COLOR_DIFFUSE,&color);
+            g._vDiffuseColor = Vector(color.r,color.g,color.b,color.a);
+            aiGetMaterialColor(mtrl,AI_MATKEY_COLOR_AMBIENT,&color);
+            g._vAmbientColor = Vector(color.r,color.g,color.b,color.a);
+        }
+    }
+
+    for (size_t i=0; i < node->mNumChildren; ++i) {
+        _AssimpCreateGeometries(scene, node->mChildren[i], scale, listGeometries);
+    }
+    return true;
+}
+
+static bool _ParseSpecialSTLFile(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::list<KinBody::GeometryInfo>& listGeometries)
+{
+    // some formats (screen) has # in the beginning until the STL solid definition.
+    ifstream f(filename.c_str());
+    string strline;
+    if( !!f ) {
+        bool bTransformOffset = false;
+        Transform toffset;
+        Vector vcolor(0.8,0.8,0.8);
+        bool bFound = false;
+        stringstream::streampos pos = f.tellg();
+        while( !!getline(f, strline) ) {
+            boost::trim(strline);
+            if( strline.size() > 0 && strline[0] == '#' ) {
+                size_t indCURRENT_LOCATION = strline.find("<CURRENT_LOCATION>");
+                if( indCURRENT_LOCATION != string::npos ) {
+                    stringstream ss(strline.substr(indCURRENT_LOCATION+18));
+                    dReal rotx, roty, rotz;
+                    ss >> toffset.trans.x >> toffset.trans.y >> toffset.trans.z >> rotx >> roty >> rotz;
+                    if( !!ss ) {
+                        bTransformOffset = true;
+                        toffset.trans *= vscale;
+                        toffset.rot = quatMultiply(quatFromAxisAngle(Vector(0,0,rotz*PI/180)), quatMultiply(quatFromAxisAngle(Vector(rotx*PI/180,0,0)), quatFromAxisAngle(Vector(0,roty*PI/180,0))));
+                    }
+                    else {
+                        RAVELOG_WARN("<CURRENT_LOCATION> bad format\n");
+                        toffset = Transform();
+                    }
+                }
+                size_t indCOLOR_INFORMATION = strline.find("<COLOR_INFORMATION>");
+                if( indCOLOR_INFORMATION != string::npos ) {
+                    stringstream ss(strline.substr(indCOLOR_INFORMATION+19));
+                    ss >> vcolor.x >> vcolor.y >> vcolor.z;
+                    if( !!ss ) {
+                    }
+                    else {
+                        RAVELOG_WARN("<COLOR_INFORMATION> bad format\n");
+                    }
+                }
+                continue;
+            }
+            if( strline.size() >= 5 && strline.substr(0,5) == string("solid") ) {
+                bFound = true;
+                break;
+            }
+            pos = f.tellg();
+        }
+        if( bFound ) {
+            RAVELOG_INFO_FORMAT("STL file %s has screen metadata", filename);
+
+            f.seekg(0, std::ios::end);
+            stringstream::streampos endpos = f.tellg();                
+            f.seekg(pos);
+            string newdata;
+            newdata.reserve(endpos - pos);
+            newdata.assign((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+            boost::shared_ptr<aiSceneManaged> scene(new aiSceneManaged(newdata, false));
+            if( (!scene->_scene || !scene->_scene->mRootNode) && newdata.size() >= 5 && newdata.substr(0,5) == std::string("solid") ) {
+                // most likely a binary STL file with the first 5 words being solid. unfortunately assimp does not handle this well, so
+                newdata[0] = 'x';
+                scene.reset(new aiSceneManaged(newdata, false, "STL"));
+            }
+
+            if( !!scene->_scene && !!scene->_scene->mRootNode && !!scene->_scene->HasMeshes() ) {
+                if( _AssimpCreateGeometries(scene->_scene,scene->_scene->mRootNode, vscale, listGeometries) ) {
+                    FOREACH(itgeom, listGeometries) {
+                        itgeom->_vDiffuseColor = vcolor;
+                        if( bTransformOffset ) {
+                            itgeom->_meshcollision.ApplyTransform(toffset.inverse());
+                        }
+                    }
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 #endif
 
 bool CreateTriMeshFromFile(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, TriMesh& trimesh, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, float& ftransparency)
@@ -279,6 +423,18 @@ bool CreateTriMeshFromFile(EnvironmentBasePtr penv, const std::string& filename,
                         }
                     }
                 }
+
+#ifdef OPENRAVE_ASSIMP
+                std::list<KinBody::GeometryInfo> listGeometries;
+                if( _ParseSpecialSTLFile(penv, filename, vscale, listGeometries) ) {
+                    trimesh.vertices.clear();
+                    trimesh.indices.clear();
+                    FOREACH(itgeom, listGeometries) {
+                        trimesh.Append(itgeom->_meshcollision, itgeom->_t);
+                    }
+                    return true;
+                }
+#endif
             }
         }
         if( extension == "stl" || extension == "x") {
@@ -611,151 +767,6 @@ protected:
 class LinkXMLReader : public StreamXMLReader
 {
 public:
-#ifdef OPENRAVE_ASSIMP
-    static bool _AssimpCreateGeometries(const aiScene* scene, aiNode* node, const Vector& scale, std::list<KinBody::GeometryInfo>& listGeometries)
-    {
-        if( !node ) {
-            return false;
-        }
-        aiMatrix4x4 transform = node->mTransformation;
-        aiNode *pnode = node->mParent;
-        while (pnode) {
-            // Don't convert to y-up orientation, which is what the root node is in, Assimp does
-            if (pnode->mParent != NULL) {
-                transform = pnode->mTransformation * transform;
-            }
-            pnode = pnode->mParent;
-        }
-
-        for (size_t i = 0; i < node->mNumMeshes; i++) {
-            listGeometries.push_back(KinBody::GeometryInfo());
-            KinBody::GeometryInfo& g = listGeometries.back();
-            g._type = GT_TriMesh;
-            g._vRenderScale = scale;
-            aiMesh* input_mesh = scene->mMeshes[node->mMeshes[i]];
-            g._meshcollision.vertices.resize(input_mesh->mNumVertices);
-            for (size_t j = 0; j < input_mesh->mNumVertices; j++) {
-                aiVector3D p = input_mesh->mVertices[j];
-                p *= transform;
-                g._meshcollision.vertices[j] = Vector(p.x*scale.x,p.y*scale.y,p.z*scale.z);
-            }
-            size_t indexCount = 0;
-            for (size_t j = 0; j < input_mesh->mNumFaces; j++) {
-                aiFace& face = input_mesh->mFaces[j];
-                indexCount += 3*(face.mNumIndices-2);
-            }
-            g._meshcollision.indices.reserve(indexCount);
-            for (size_t j = 0; j < input_mesh->mNumFaces; j++) {
-                aiFace& face = input_mesh->mFaces[j];
-                if( face.mNumIndices == 3 ) {
-                    g._meshcollision.indices.push_back(face.mIndices[0]);
-                    g._meshcollision.indices.push_back(face.mIndices[1]);
-                    g._meshcollision.indices.push_back(face.mIndices[2]);
-                }
-                else {
-                    for (size_t k = 2; k < face.mNumIndices; ++k) {
-                        g._meshcollision.indices.push_back(face.mIndices[0]);
-                        g._meshcollision.indices.push_back(face.mIndices[k-1]);
-                        g._meshcollision.indices.push_back(face.mIndices[k]);
-                    }
-                }
-            }
-
-            if( !!scene->mMaterials&& input_mesh->mMaterialIndex<scene->mNumMaterials) {
-                aiMaterial* mtrl = scene->mMaterials[input_mesh->mMaterialIndex];
-                aiColor4D color;
-                aiGetMaterialColor(mtrl,AI_MATKEY_COLOR_DIFFUSE,&color);
-                g._vDiffuseColor = Vector(color.r,color.g,color.b,color.a);
-                aiGetMaterialColor(mtrl,AI_MATKEY_COLOR_AMBIENT,&color);
-                g._vAmbientColor = Vector(color.r,color.g,color.b,color.a);
-            }
-        }
-
-        for (size_t i=0; i < node->mNumChildren; ++i) {
-            _AssimpCreateGeometries(scene, node->mChildren[i], scale, listGeometries);
-        }
-        return true;
-    }
-
-    static bool _ParseSpecialSTLFile(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::list<KinBody::GeometryInfo>& listGeometries)
-    {
-        // some formats (screen) has # in the beginning until the STL solid definition.
-        ifstream f(filename.c_str());
-        string strline;
-        if( !!f ) {
-            bool bTransformOffset = false;
-            Transform toffset;
-            Vector vcolor(0.8,0.8,0.8);
-            bool bFound = false;
-            stringstream::streampos pos = f.tellg();
-            while( !!getline(f, strline) ) {
-                boost::trim(strline);
-                if( strline.size() > 0 && strline[0] == '#' ) {
-                    size_t indCURRENT_LOCATION = strline.find("<CURRENT_LOCATION>");
-                    if( indCURRENT_LOCATION != string::npos ) {
-                        stringstream ss(strline.substr(indCURRENT_LOCATION+18));
-                        dReal rotx, roty, rotz;
-                        ss >> toffset.trans.x >> toffset.trans.y >> toffset.trans.z >> rotx >> roty >> rotz;
-                        if( !!ss ) {
-                            bTransformOffset = true;
-                            toffset.trans *= vscale;
-                            toffset.rot = quatMultiply(quatFromAxisAngle(Vector(0,0,rotz*PI/180)), quatMultiply(quatFromAxisAngle(Vector(rotx*PI/180,0,0)), quatFromAxisAngle(Vector(0,roty*PI/180,0))));
-                        }
-                        else {
-                            RAVELOG_WARN("<CURRENT_LOCATION> bad format\n");
-                            toffset = Transform();
-                        }
-                    }
-                    size_t indCOLOR_INFORMATION = strline.find("<COLOR_INFORMATION>");
-                    if( indCOLOR_INFORMATION != string::npos ) {
-                        stringstream ss(strline.substr(indCOLOR_INFORMATION+19));
-                        ss >> vcolor.x >> vcolor.y >> vcolor.z;
-                        if( !!ss ) {
-                        }
-                        else {
-                            RAVELOG_WARN("<COLOR_INFORMATION> bad format\n");
-                        }
-                    }
-                    continue;
-                }
-                if( strline.size() >= 5 && strline.substr(0,5) == string("solid") ) {
-                    bFound = true;
-                    break;
-                }
-                pos = f.tellg();
-            }
-            if( bFound ) {
-                RAVELOG_INFO_FORMAT("STL file %s has screen metadata", filename);
-
-                f.seekg(0, std::ios::end);
-                stringstream::streampos endpos = f.tellg();                
-                f.seekg(pos);
-                string newdata;
-                newdata.reserve(endpos - pos);
-                newdata.assign((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
-                boost::shared_ptr<aiSceneManaged> scene(new aiSceneManaged(newdata, false));
-                if( (!scene->_scene || !scene->_scene->mRootNode) && newdata.size() >= 5 && newdata.substr(0,5) == std::string("solid") ) {
-                    // most likely a binary STL file with the first 5 words being solid. unfortunately assimp does not handle this well, so
-                    newdata[0] = 'x';
-                    scene.reset(new aiSceneManaged(newdata, false, "STL"));
-                }
-                
-                if( !!scene->_scene && !!scene->_scene->mRootNode && !!scene->_scene->HasMeshes() ) {
-                    if( _AssimpCreateGeometries(scene->_scene,scene->_scene->mRootNode, vscale, listGeometries) ) {
-                        FOREACH(itgeom, listGeometries) {
-                            itgeom->_vDiffuseColor = vcolor;
-                            if( bTransformOffset ) {
-                                itgeom->_meshcollision.ApplyTransform(toffset.inverse());
-                            }
-                        }
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-#endif
 
     static bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::list<KinBody::GeometryInfo>& listGeometries)
     {

@@ -343,6 +343,7 @@ public:
         _vmaxvel = toPyVector3(Vector(10,10,10));
         _vhardmaxvel = toPyVector3(Vector(10,10,10));
         _vmaxaccel = toPyVector3(Vector(50,50,50));
+        _vmaxjerk = toPyVector3(Vector(1e5,1e5,1e5));
         _vmaxtorque = toPyVector3(Vector(1e5,1e5,1e5));
         _vmaxinertia = toPyVector3(Vector(1e5,1e5,1e5));
         _vweights = toPyVector3(Vector(1,1,1));
@@ -370,6 +371,7 @@ public:
         _vmaxvel = toPyArray<dReal,3>(info._vmaxvel);
         _vhardmaxvel = toPyArray<dReal,3>(info._vhardmaxvel);
         _vmaxaccel = toPyArray<dReal,3>(info._vmaxaccel);
+        _vmaxjerk = toPyArray<dReal,3>(info._vmaxjerk);
         _vmaxtorque = toPyArray<dReal,3>(info._vmaxtorque);
         _vmaxinertia = toPyArray<dReal,3>(info._vmaxinertia);
         _vweights = toPyArray<dReal,3>(info._vweights);
@@ -460,6 +462,12 @@ public:
         OPENRAVE_EXCEPTION_FORMAT0(num == info._vmaxaccel.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
             info._vmaxaccel[i] = boost::python::extract<dReal>(_vmaxaccel[i]);
+        }
+
+        num = len(_vmaxjerk);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info._vmaxjerk.size(), ORE_InvalidState);
+        for(size_t i = 0; i < num; ++i) {
+            info._vmaxjerk[i] = boost::python::extract<dReal>(_vmaxjerk[i]);
         }
 
         num = len(_vmaxtorque);
@@ -554,7 +562,7 @@ public:
     KinBody::JointType _type;
     object sid, _name;
     object _linkname0, _linkname1;
-    object _vanchor, _vaxes, _vcurrentvalues, _vresolution, _vmaxvel, _vhardmaxvel, _vmaxaccel, _vmaxtorque, _vmaxinertia, _vweights, _voffsets, _vlowerlimit, _vupperlimit;
+    object _vanchor, _vaxes, _vcurrentvalues, _vresolution, _vmaxvel, _vhardmaxvel, _vmaxaccel, _vmaxjerk, _vmaxtorque, _vmaxinertia, _vweights, _voffsets, _vlowerlimit, _vupperlimit;
     object _trajfollow;
     PyElectricMotorActuatorInfoPtr _infoElectricMotor;
     boost::python::list _vmimic;
@@ -757,6 +765,11 @@ public:
     object ComputeAABB() const {
         return toPyAABB(_plink->ComputeAABB());
     }
+
+    object ComputeAABBFromTransform(object otransform) const {
+        return toPyAABB(_plink->ComputeAABBFromTransform(ExtractTransform(otransform)));
+    }
+
     object GetTransform() const {
         return ReturnTransform(_plink->GetTransform());
     }
@@ -1018,6 +1031,9 @@ public:
     dReal GetMaxAccel(int iaxis=0) const {
         return _pjoint->GetMaxAccel(iaxis);
     }
+    dReal GetMaxJerk(int iaxis=0) const {
+        return _pjoint->GetMaxJerk(iaxis);
+    }
     dReal GetMaxTorque(int iaxis=0) const {
         return _pjoint->GetMaxTorque(iaxis);
     }
@@ -1128,6 +1144,11 @@ public:
         _pjoint->GetAccelerationLimits(v);
         return toPyArray(v);
     }
+    object GetJerkLimits() const {
+        vector<dReal> v;
+        _pjoint->GetJerkLimits(v);
+        return toPyArray(v);
+    }
     object GetTorqueLimits() const {
         vector<dReal> v;
         _pjoint->GetTorqueLimits(v);
@@ -1161,6 +1182,13 @@ public:
             throw openrave_exception(_("limits are wrong dimensions"));
         }
         _pjoint->SetAccelerationLimits(vmaxlimits);
+    }
+    void SetJerkLimits(object omaxlimits) {
+        vector<dReal> vmaxlimits = ExtractArray<dReal>(omaxlimits);
+        if( (int)vmaxlimits.size() != _pjoint->GetDOF() ) {
+            throw openrave_exception(_("limits are wrong dimensions"));
+        }
+        _pjoint->SetJerkLimits(vmaxlimits);
     }
     void SetTorqueLimits(object omaxlimits) {
         vector<dReal> vmaxlimits = ExtractArray<dReal>(omaxlimits);
@@ -1601,6 +1629,13 @@ object PyKinBody::GetDOFAccelerationLimits() const
     return toPyArray(vmax);
 }
 
+object PyKinBody::GetDOFJerkLimits() const
+{
+    vector<dReal> vmax;
+    _pbody->GetDOFJerkLimits(vmax);
+    return toPyArray(vmax);
+}
+
 object PyKinBody::GetDOFTorqueLimits() const
 {
     vector<dReal> vmax;
@@ -1662,6 +1697,25 @@ object PyKinBody::GetDOFAccelerationLimits(object oindices) const
     FOREACHC(it, vindices) {
         KinBody::JointPtr pjoint = _pbody->GetJointFromDOFIndex(*it);
         pjoint->GetAccelerationLimits(vtempmax,false);
+        vmax.push_back(vtempmax.at(*it-pjoint->GetDOFIndex()));
+    }
+    return toPyArray(vmax);
+}
+
+object PyKinBody::GetDOFJerkLimits(object oindices) const
+{
+    if( IS_PYTHONOBJECT_NONE(oindices) ) {
+        return numeric::array(boost::python::list());
+    }
+    vector<int> vindices = ExtractArray<int>(oindices);
+    if( vindices.size() == 0 ) {
+        return numeric::array(boost::python::list());
+    }
+    vector<dReal> vmax, vtempmax;
+    vmax.reserve(vindices.size());
+    FOREACHC(it, vindices) {
+        KinBody::JointPtr pjoint = _pbody->GetJointFromDOFIndex(*it);
+        pjoint->GetJerkLimits(vtempmax,false);
         vmax.push_back(vtempmax.at(*it-pjoint->GetDOFIndex()));
     }
     return toPyArray(vmax);
@@ -2070,6 +2124,11 @@ object PyKinBody::ComputeAABBFromTransform(object otransform, bool bEnabledOnlyL
     return toPyAABB(_pbody->ComputeAABBFromTransform(ExtractTransform(otransform), bEnabledOnlyLinks));
 }
 
+object PyKinBody::ComputeLocalAABB(bool bEnabledOnlyLinks)
+{
+    return toPyAABB(_pbody->ComputeLocalAABB(bEnabledOnlyLinks));
+}
+
 object PyKinBody::GetCenterOfMass() const
 {
     return toPyVector3(_pbody->GetCenterOfMass());
@@ -2174,6 +2233,18 @@ void PyKinBody::SetDOFAccelerationLimits(object o)
         throw openrave_exception(_("values do not equal to body degrees of freedom"));
     }
     _pbody->SetDOFAccelerationLimits(values);
+}
+
+void PyKinBody::SetDOFJerkLimits(object o)
+{
+    if( _pbody->GetDOF() == 0 ) {
+        return;
+    }
+    vector<dReal> values = ExtractArray<dReal>(o);
+    if( (int)values.size() != GetDOF() ) {
+        throw openrave_exception(_("values do not equal to body degrees of freedom"));
+    }
+    _pbody->SetDOFJerkLimits(values);
 }
 
 void PyKinBody::SetDOFTorqueLimits(object o)
@@ -2890,7 +2961,7 @@ class JointInfo_pickle_suite : public pickle_suite
 public:
     static boost::python::tuple getstate(const PyJointInfo& r)
     {
-        return boost::python::make_tuple(boost::python::make_tuple((int)r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), boost::python::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), boost::python::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular, r._bIsActive, r._mapStringParameters, r._infoElectricMotor, r._vmaxinertia));
+        return boost::python::make_tuple(boost::python::make_tuple((int)r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), boost::python::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), boost::python::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular, r._bIsActive, r._mapStringParameters, r._infoElectricMotor, r._vmaxinertia, r._vmaxjerk));
     }
     static void setstate(PyJointInfo& r, boost::python::tuple state) {
         r._type = (KinBody::JointType)(int)boost::python::extract<int>(state[0][0]);
@@ -2922,6 +2993,9 @@ public:
                 r._infoElectricMotor = boost::python::extract<PyElectricMotorActuatorInfoPtr>(state[2][7]);
                 if( num2 > 8 ) {
                     r._vmaxinertia = state[2][8];
+                    if( num2 > 9 ) {
+                        r._vmaxjerk = state[2][9];
+                    }
                 }
             }
         }
@@ -2954,6 +3028,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetWrapOffset_overloads, GetWrapOffset, 0
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetWrapOffset_overloads, SetWrapOffset, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxVel_overloads, GetMaxVel, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxAccel_overloads, GetMaxAccel, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxJerk_overloads, GetMaxJerk, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxTorque_overloads, GetMaxTorque, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetInstantaneousTorqueLimits_overloads, GetInstantaneousTorqueLimits, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetNominalTorqueLimits_overloads, GetNominalTorqueLimits, 0, 1)
@@ -2984,6 +3059,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Init_overloads, Init, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SerializeJSON_overloads, SerializeJSON, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABB_overloads, ComputeAABB, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABBFromTransform_overloads, ComputeAABBFromTransform, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeLocalAABB_overloads, ComputeLocalAABB, 0, 1)
 
 void init_openravepy_kinbody()
 {
@@ -3092,6 +3168,7 @@ void init_openravepy_kinbody()
                        .def_readwrite("_vmaxvel",&PyJointInfo::_vmaxvel)
                        .def_readwrite("_vhardmaxvel",&PyJointInfo::_vhardmaxvel)
                        .def_readwrite("_vmaxaccel",&PyJointInfo::_vmaxaccel)
+                       .def_readwrite("_vmaxjerk",&PyJointInfo::_vmaxjerk)
                        .def_readwrite("_vmaxtorque",&PyJointInfo::_vmaxtorque)
                        .def_readwrite("_vmaxinertia",&PyJointInfo::_vmaxinertia)
                        .def_readwrite("_vweights",&PyJointInfo::_vweights)
@@ -3138,6 +3215,8 @@ void init_openravepy_kinbody()
         object (PyKinBody::*getdofvelocitylimits2)(object) const = &PyKinBody::GetDOFVelocityLimits;
         object (PyKinBody::*getdofaccelerationlimits1)() const = &PyKinBody::GetDOFAccelerationLimits;
         object (PyKinBody::*getdofaccelerationlimits2)(object) const = &PyKinBody::GetDOFAccelerationLimits;
+        object (PyKinBody::*getdofjerklimits1)() const = &PyKinBody::GetDOFJerkLimits;
+        object (PyKinBody::*getdofjerklimits2)(object) const = &PyKinBody::GetDOFJerkLimits;
         object (PyKinBody::*getdoftorquelimits1)() const = &PyKinBody::GetDOFTorqueLimits;
         object (PyKinBody::*getdoftorquelimits2)(object) const = &PyKinBody::GetDOFTorqueLimits;
         object (PyKinBody::*getlinks1)() const = &PyKinBody::GetLinks;
@@ -3177,6 +3256,8 @@ void init_openravepy_kinbody()
                         .def("GetDOFVelocityLimits",getdofvelocitylimits2, args("indices"),DOXY_FN(KinBody,GetDOFVelocityLimits))
                         .def("GetDOFAccelerationLimits",getdofaccelerationlimits1, DOXY_FN(KinBody,GetDOFAccelerationLimits))
                         .def("GetDOFAccelerationLimits",getdofaccelerationlimits2, args("indices"),DOXY_FN(KinBody,GetDOFAccelerationLimits))
+                        .def("GetDOFJerkLimits",getdofjerklimits1, DOXY_FN(KinBody,GetDOFJerkLimits1))
+                        .def("GetDOFJerkLimits",getdofjerklimits2, args("indices"),DOXY_FN(KinBody,GetDOFJerkLimits2))
                         .def("GetDOFTorqueLimits",getdoftorquelimits1, DOXY_FN(KinBody,GetDOFTorqueLimits))
                         .def("GetDOFTorqueLimits",getdoftorquelimits2, args("indices"),DOXY_FN(KinBody,GetDOFTorqueLimits))
                         .def("GetDOFMaxVel",&PyKinBody::GetDOFMaxVel, DOXY_FN(KinBody,GetDOFMaxVel))
@@ -3189,6 +3270,7 @@ void init_openravepy_kinbody()
                         .def("SetDOFLimits",&PyKinBody::SetDOFLimits, SetDOFLimits_overloads(args("lower","upper","indices"), DOXY_FN(KinBody,SetDOFLimits)))
                         .def("SetDOFVelocityLimits",&PyKinBody::SetDOFVelocityLimits, args("limits"), DOXY_FN(KinBody,SetDOFVelocityLimits))
                         .def("SetDOFAccelerationLimits",&PyKinBody::SetDOFAccelerationLimits, args("limits"), DOXY_FN(KinBody,SetDOFAccelerationLimits))
+                        .def("SetDOFJerkLimits",&PyKinBody::SetDOFJerkLimits, args("limits"), DOXY_FN(KinBody,SetDOFJerkLimits))
                         .def("SetDOFTorqueLimits",&PyKinBody::SetDOFTorqueLimits, args("limits"), DOXY_FN(KinBody,SetDOFTorqueLimits))
                         .def("GetDOFResolutions",getdofresolutions1, DOXY_FN(KinBody,GetDOFResolutions))
                         .def("GetDOFResolutions",getdofresolutions2, DOXY_FN(KinBody,GetDOFResolutions))
@@ -3224,6 +3306,7 @@ void init_openravepy_kinbody()
                         .def("SetLinkEnableStates",&PyKinBody::SetLinkEnableStates, DOXY_FN(KinBody,SetLinkEnableStates))
                         .def("ComputeAABB",&PyKinBody::ComputeAABB, ComputeAABB_overloads(args("enabledOnlyLinks"), DOXY_FN(KinBody,ComputeAABB)))
                         .def("ComputeAABBFromTransform",&PyKinBody::ComputeAABBFromTransform, ComputeAABBFromTransform_overloads(args("transform", "enabledOnlyLinks"), DOXY_FN(KinBody,ComputeAABBFromTransform)))
+                        .def("ComputeLocalAABB",&PyKinBody::ComputeLocalAABB, ComputeLocalAABB_overloads(args("enabledOnlyLinks"), DOXY_FN(KinBody,ComputeLocalAABB)))
                         .def("GetCenterOfMass", &PyKinBody::GetCenterOfMass, DOXY_FN(KinBody,GetCenterOfMass))
                         .def("Enable",&PyKinBody::Enable,args("enable"), DOXY_FN(KinBody,Enable))
                         .def("IsEnabled",&PyKinBody::IsEnabled, DOXY_FN(KinBody,IsEnabled))
@@ -3340,6 +3423,7 @@ void init_openravepy_kinbody()
                          .def("IsParentLink",&PyLink::IsParentLink, DOXY_FN(KinBody::Link,IsParentLink))
                          .def("GetCollisionData",&PyLink::GetCollisionData, DOXY_FN(KinBody::Link,GetCollisionData))
                          .def("ComputeAABB",&PyLink::ComputeAABB, DOXY_FN(KinBody::Link,ComputeAABB))
+                         .def("ComputeAABBFromTransform",&PyLink::ComputeAABBFromTransform, args("transform"), DOXY_FN(KinBody::Link,ComputeAABB))
                          .def("ComputeLocalAABB",&PyLink::ComputeLocalAABB, DOXY_FN(KinBody::Link,ComputeLocalAABB))
                          .def("GetTransform",&PyLink::GetTransform, DOXY_FN(KinBody::Link,GetTransform))
                          .def("GetTransformPose",&PyLink::GetTransformPose, DOXY_FN(KinBody::Link,GetTransform))
@@ -3441,6 +3525,7 @@ void init_openravepy_kinbody()
                           .def("SetMimicEquations", &PyJoint::SetMimicEquations, args("axis","poseq","veleq","acceleq"), DOXY_FN(KinBody::Joint,SetMimicEquations))
                           .def("GetMaxVel", &PyJoint::GetMaxVel, GetMaxVel_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetMaxVel)))
                           .def("GetMaxAccel", &PyJoint::GetMaxAccel, GetMaxAccel_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetMaxAccel)))
+                          .def("GetMaxJerk", &PyJoint::GetMaxJerk, GetMaxJerk_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetMaxJerk)))
                           .def("GetMaxTorque", &PyJoint::GetMaxTorque, GetMaxTorque_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetMaxTorque)))
                           .def("GetInstantaneousTorqueLimits", &PyJoint::GetInstantaneousTorqueLimits, GetInstantaneousTorqueLimits_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetInstantaneousTorqueLimits)))
                           .def("GetNominalTorqueLimits", &PyJoint::GetNominalTorqueLimits, GetNominalTorqueLimits_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetNominalTorqueLimits)))
@@ -3471,12 +3556,14 @@ void init_openravepy_kinbody()
                           .def("GetLimits", &PyJoint::GetLimits, DOXY_FN(KinBody::Joint,GetLimits))
                           .def("GetVelocityLimits", &PyJoint::GetVelocityLimits, DOXY_FN(KinBody::Joint,GetVelocityLimits))
                           .def("GetAccelerationLimits", &PyJoint::GetAccelerationLimits, DOXY_FN(KinBody::Joint,GetAccelerationLimits))
+                          .def("GetJerkLimits", &PyJoint::GetJerkLimits, DOXY_FN(KinBody::Joint,GetJerkLimits))
                           .def("GetTorqueLimits", &PyJoint::GetTorqueLimits, DOXY_FN(KinBody::Joint,GetTorqueLimits))
                           .def("SetWrapOffset",&PyJoint::SetWrapOffset,SetWrapOffset_overloads(args("offset","axis"), DOXY_FN(KinBody::Joint,SetWrapOffset)))
                           .def("GetWrapOffset",&PyJoint::GetWrapOffset,GetWrapOffset_overloads(args("axis"), DOXY_FN(KinBody::Joint,GetWrapOffset)))
                           .def("SetLimits",&PyJoint::SetLimits,args("lower","upper"), DOXY_FN(KinBody::Joint,SetLimits))
                           .def("SetVelocityLimits",&PyJoint::SetVelocityLimits,args("maxlimits"), DOXY_FN(KinBody::Joint,SetVelocityLimits))
                           .def("SetAccelerationLimits",&PyJoint::SetAccelerationLimits,args("maxlimits"), DOXY_FN(KinBody::Joint,SetAccelerationLimits))
+                          .def("SetJerkLimits",&PyJoint::SetJerkLimits,args("maxlimits"), DOXY_FN(KinBody::Joint,SetJerkLimits))
                           .def("SetTorqueLimits",&PyJoint::SetTorqueLimits,args("maxlimits"), DOXY_FN(KinBody::Joint,SetTorqueLimits))
                           .def("GetResolution",&PyJoint::GetResolution,args("axis"), DOXY_FN(KinBody::Joint,GetResolution))
                           .def("GetResolutions",&PyJoint::GetResolutions,DOXY_FN(KinBody::Joint,GetResolutions))

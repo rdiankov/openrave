@@ -18,6 +18,8 @@
 #ifndef OPENRAVE_BOOST_PYTHON_BINDINGS
 #define OPENRAVE_BOOST_PYTHON_BINDINGS
 
+#include <numpy/arrayobject.h>
+#include <numpy/arrayscalars.h>
 #include <Python.h>
 #include <boost/array.hpp>
 #include <boost/multi_array.hpp>
@@ -121,7 +123,7 @@ inline std::vector<T> ExtractArray(const object& o)
     }
     std::vector<T> v(len(o));
     for(size_t i = 0; i < v.size(); ++i) {
-        v[i] = extract<T>(o[i]);
+        v[i] = boost::python::extract<T>(o[i]);
     }
     return v;
 }
@@ -280,102 +282,48 @@ struct exception_translator
 //
 //boost::python::register_ptr_to_python< boost::shared_ptr<const my_class> >();
 
-struct int_from_int
-{
-    int_from_int()
-    {
-        converter::registry::push_back(&convertible, &construct, type_id<int>());
-    }
-
-    static void* convertible( PyObject* obj)
-    {
-        PyObject* newobj = PyNumber_Int(obj);
-        if (!PyString_Check(obj) && newobj) {
-            Py_DECREF(newobj);
-            return obj;
-        }
-        else {
-            if (newobj) {
-                Py_DECREF(newobj);
-            }
-            PyErr_Clear();
-            return 0;
-        }
-    }
-
-    static void construct(PyObject* _obj, converter::rvalue_from_python_stage1_data* data)
-    {
-        PyObject* newobj = PyNumber_Int(_obj);
-        int* storage = (int*)((converter::rvalue_from_python_storage<int>*)data)->storage.bytes;
-        *storage = extract<int>(newobj);
-        Py_DECREF(newobj);
-        data->convertible = storage;
-    }
-};
-
-struct uint8_from_int
-{
-    uint8_from_int()
-    {
-        converter::registry::push_back(&convertible, &construct, type_id<uint8_t>());
-    }
-
-    static void* convertible( PyObject* obj)
-    {
-        PyObject* newobj = PyNumber_Int(obj);
-        if (!PyString_Check(obj) && newobj) {
-            Py_DECREF(newobj);
-            return obj;
-        }
-        else {
-            if (newobj) {
-                Py_DECREF(newobj);
-            }
-            PyErr_Clear();
-            return 0;
-        }
-    }
-
-    static void construct(PyObject* _obj, converter::rvalue_from_python_stage1_data* data)
-    {
-        PyObject* newobj = PyNumber_Int(_obj);
-        uint8_t* storage = (uint8_t*)((converter::rvalue_from_python_storage<uint8_t>*)data)->storage.bytes;
-        *storage = extract<uint8_t>(newobj);
-        Py_DECREF(newobj);
-        data->convertible = storage;
-    }
-};
-
 template<typename T>
-struct T_from_number
+struct float_from_number
 {
-    T_from_number()
+    float_from_number()
     {
         converter::registry::push_back(&convertible, &construct, type_id<T>());
     }
 
     static void* convertible( PyObject* obj)
     {
-        PyObject* newobj = PyNumber_Float(obj);
-        if (!PyString_Check(obj) && newobj) {
-            Py_DECREF(newobj);
-            return obj;
-        }
-        else {
-            if (newobj) {
-                Py_DECREF(newobj);
-            }
-            PyErr_Clear();
-            return 0;
-        }
+        return PyNumber_Check(obj) ? obj : NULL;
     }
 
     static void construct(PyObject* _obj, converter::rvalue_from_python_stage1_data* data)
     {
-        PyObject* newobj = PyNumber_Float(_obj);
+        PyObject* tmp = PyNumber_Float(_obj);
         T* storage = (T*)((converter::rvalue_from_python_storage<T>*)data)->storage.bytes;
-        *storage = extract<T>(newobj);
-        Py_DECREF(newobj);
+        *storage = boost::python::extract<T>(tmp);
+        Py_DECREF(tmp);
+        data->convertible = storage;
+    }
+};
+
+template<typename T>
+struct int_from_number
+{
+    int_from_number()
+    {
+        converter::registry::push_back(&convertible, &construct, type_id<T>());
+    }
+
+    static void* convertible( PyObject* obj)
+    {
+        return PyNumber_Check(obj) ? obj : NULL;
+    }
+
+    static void construct(PyObject* _obj, converter::rvalue_from_python_stage1_data* data)
+    {
+        PyObject* tmp = PyNumber_Long(_obj);
+        T* storage = (T*)((converter::rvalue_from_python_storage<T>*)data)->storage.bytes;
+        *storage = boost::python::extract<T>(tmp);
+        Py_DECREF(tmp);
         data->convertible = storage;
     }
 };
@@ -393,6 +341,11 @@ inline std::string GetPyErrorString()
             Py_DECREF(string);
         }
     }
+    // Does nothing when the ptr is nullptr
+    Py_DECREF(error);
+    Py_DECREF(value);
+    Py_DECREF(traceback);
+
     return s;
 }
 

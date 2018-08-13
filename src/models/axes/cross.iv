@@ -1,0 +1,56 @@
+#Inventor V2.0 ascii
+
+Separator {
+    Group {
+	Material {
+	    diffuseColor	0 1 0
+	}
+	Cylinder {
+	    radius	0.005
+	    height	0.5
+	}
+	RotationXYZ {
+	    axis	X
+	    angle	1.5708
+	}
+	Material {
+	    diffuseColor	0 0 1
+	}
+	Cylinder {
+	    radius	0.005
+	    height	0.5
+	}
+	RotationXYZ {
+	    axis	Z
+	    angle	-1.5708
+	}
+	Material {
+	    diffuseColor	1 0 0
+	}
+	Cylinder {
+	    radius	0.005
+	    height	0.5
+	}
+	Transform {
+	    translation	0 0.23 0
+	}
+	Material {
+	    diffuseColor	1 1 1
+	}
+	Sphere {
+	    radius	0.01
+	}
+	Transform {
+	    translation	0 -0.23 -0.23
+	}
+	Sphere {
+	    radius	0.01
+	}
+	Transform {
+	    translation	-0.23 0 0.23
+	}
+	Sphere {
+	    radius	0.01
+	}
+    }
+}

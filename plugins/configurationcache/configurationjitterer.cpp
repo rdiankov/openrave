@@ -41,6 +41,11 @@ public:
         return tmanip.rotate(vManipDir).dot3(vGlobalDir) >= fCosAngleThresh;
     }
 
+    /// \return the cos of the angle between current tmanip and the global dir
+    inline dReal ComputeCosAngle(const Transform& tmanip) const {
+        return tmanip.rotate(vManipDir).dot3(vGlobalDir);
+    }
+
     Vector vManipDir; ///< direction on the manipulator
     Vector vGlobalDir; ///< direction in world coordinates
     dReal fCosAngleThresh; ///< the cos angle threshold
@@ -477,7 +482,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                         *it = *itperturbation;
                     }
                     vnewdof = _curdof;
-                    if( !_neighstatefn(vnewdof,_deltadof,0) ) {
+                    if( _neighstatefn(vnewdof,_deltadof,0) == NSS_Failed ) {
                         _probot->SetActiveDOFValues(_curdof);
                         //                    if( setret != 0 ) {
                         //                        // state failed to set, this could mean the initial state is just really bad, so resume jittering
@@ -520,12 +525,40 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                     }
                 }
                 if( GetEnv()->CheckCollision(_probot, _report) ) {
+                    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                        stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                        ss << "original env collision failed, ";
+                        for(size_t i = 0; i < vnewdof.size(); ++i ) {
+                            if( i > 0 ) {
+                                ss << "," << vnewdof[i];
+                            }
+                            else {
+                                ss << "colvalues=[" << vnewdof[i];
+                            }
+                        }
+                        ss << "], report=" << _report->__str__();
+                        RAVELOG_VERBOSE(ss.str());
+                    }
                     nEnvCollisionFailure++;
                     bCollision = true;
                     break;
                 }
 
                 if( _probot->CheckSelfCollision(_report) ) {
+                    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                        stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                        ss << "original self collision failed, ";
+                        for(size_t i = 0; i < vnewdof.size(); ++i ) {
+                            if( i > 0 ) {
+                                ss << "," << vnewdof[i];
+                            }
+                            else {
+                                ss << "colvalues=[" << vnewdof[i];
+                            }
+                        }
+                        ss << "], report=" << _report->__str__();
+                        RAVELOG_VERBOSE(ss.str());
+                    }
                     nSelfCollisionFailure++;
                     bCollision = true;
                     break;
@@ -540,6 +573,9 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             }
 
             _nNumIterations++;
+        }
+        else {
+            RAVELOG_VERBOSE_FORMAT("env=%d skipping orig pos check", GetEnv()->GetId());
         }
 
         if( !!_cache ) {
@@ -745,7 +781,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( bConstraint ) {
                     _newdof2 = vnewdof;
                     _probot->SetActiveDOFValues(_newdof2);
-                    if( !_neighstatefn(_newdof2,_deltadof2,0) ) {
+                    if( _neighstatefn(_newdof2,_deltadof2,0) == NSS_Failed ) {
                         if( *itperturbation != 0 ) {
                             RAVELOG_DEBUG(str(boost::format("constraint function failed, pert=%e\n")%*itperturbation));
                         }
@@ -782,7 +818,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                                     ss << "colvalues=[" << _newdof2[i];
                                 }
                             }
-                            ss << "]; quat=[" << _pmanip->GetTransform().rot.x << ", " << _pmanip->GetTransform().rot.y << ", " << _pmanip->GetTransform().rot.z << ", " << _pmanip->GetTransform().rot.w << "]";
+                            ss << "]; cosangle=" << _pConstraintToolDirection->ComputeCosAngle(_pmanip->GetTransform()) << "; quat=[" << _pmanip->GetTransform().rot.x << ", " << _pmanip->GetTransform().rot.y << ", " << _pmanip->GetTransform().rot.z << ", " << _pmanip->GetTransform().rot.w << "]";
                             RAVELOG_VERBOSE(ss.str());
                         }
                         break;
@@ -1029,7 +1065,7 @@ protected:
     std::vector<Transform> _vOriginalTransforms, _vOriginalInvTransforms; ///< indexed according to _vLinks
     CollisionReportPtr _report;
 
-    boost::function<bool (std::vector<dReal>&,const std::vector<dReal>&, int)> _neighstatefn; ///< if initialized, then use this function to get nearest neighbor
+    boost::function<int (std::vector<dReal>&,const std::vector<dReal>&, int)> _neighstatefn; ///< if initialized, then use this function to get nearest neighbor
     ///< Advantage of using neightstatefn is that user constraints can be met like maintaining a certain orientation of the gripper.
 
     UserDataPtr _limitscallback, _grabbedcallback; ///< limits,grabbed change handles

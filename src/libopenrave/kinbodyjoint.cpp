@@ -40,6 +40,7 @@ KinBody::JointInfo::JointInfo() :
     _vmaxvel(maxVel),
     _vhardmaxvel(hardMaxVel),
     _vmaxaccel(maxAccel),
+    _vmaxjerk(maxJerk),
     _vmaxtorque(maxTorque),
     _vmaxinertia(maxInertia),
     _vweights(weights),
@@ -63,6 +64,7 @@ KinBody::JointInfo::JointInfo() :
     std::fill(maxVel.begin(), maxVel.end(), 10);
     std::fill(hardMaxVel.begin(), hardMaxVel.end(), 10);
     std::fill(maxAccel.begin(), maxAccel.end(), 50);
+    std::fill(maxJerk.begin(), maxJerk.end(), 1e5); // Set negligibly large jerk by default which can change acceleration between min and max within a typical time step. We compute 1e5=(50-(-50))/0.001, by assuming max/min accelerations are 50 and -50.
     std::fill(maxTorque.begin(), maxTorque.end(), 0); // set max torque to 0 to notify the system that dynamics parameters might not be valid.
     std::fill(maxInertia.begin(), maxInertia.end(), 0);
     std::fill(weights.begin(), weights.end(), 1);
@@ -814,6 +816,7 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
     for(int i = 0; i < GetDOF(); ++i) {
         OPENRAVE_ASSERT_OP_FORMAT(_info.maxVel[i], >=, 0, "joint %s[%d] max velocity is invalid",_info.name%i, ORE_InvalidArguments);
         OPENRAVE_ASSERT_OP_FORMAT(_info.maxAccel[i], >=, 0, "joint %s[%d] max acceleration is invalid",_info.name%i, ORE_InvalidArguments);
+        OPENRAVE_ASSERT_OP_FORMAT(_info.maxJerk[i], >=, 0, "joint %s[%d] max jerk is invalid",_info._name%i, ORE_InvalidArguments);
         OPENRAVE_ASSERT_OP_FORMAT(_info.maxTorque[i], >=, 0, "joint %s[%d] max torque is invalid",_info.name%i, ORE_InvalidArguments);
         OPENRAVE_ASSERT_OP_FORMAT(_info.maxInertia[i], >=, 0, "joint %s[%d] max inertia is invalid",_info.name%i, ORE_InvalidArguments);
     }
@@ -1129,6 +1132,29 @@ void KinBody::Joint::SetAccelerationLimits(const std::vector<dReal>& vmax)
     GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
 }
 
+void KinBody::Joint::GetJerkLimits(std::vector<dReal>& vmax, bool bAppend) const
+{
+    if( !bAppend ) {
+        vmax.resize(0);
+    }
+    for(int i = 0; i < GetDOF(); ++i) {
+        vmax.push_back(_info.maxJerk[i]);
+    }
+}
+
+dReal KinBody::Joint::GetJerkLimit(int iaxis) const
+{
+    return _info.maxJerk.at(iaxis);
+}
+
+void KinBody::Joint::SetJerkLimits(const std::vector<dReal>& vmax)
+{
+    for(int i = 0; i < GetDOF(); ++i) {
+        _info.maxJerk[i] = vmax.at(i);
+    }
+    GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+}
+
 void KinBody::Joint::GetTorqueLimits(std::vector<dReal>& vmax, bool bAppend) const
 {
     if( !bAppend ) {
@@ -1354,7 +1380,10 @@ std::pair<dReal, dReal> KinBody::Joint::GetInstantaneousTorqueLimits(int iaxis) 
                     }
 
                     // due to back emf, the deceleration magnitude is less than acceleration?
-                    if( rawvelocity > 0 ) {
+                    if (abs(rawvelocity) < 1.0/360) {
+                        return std::make_pair(-finterpolatedtorque, finterpolatedtorque);
+                    }
+                    else if( rawvelocity > 0 ) {
                         return std::make_pair(-0.9*finterpolatedtorque, finterpolatedtorque);
                     }
                     else {
@@ -1366,7 +1395,10 @@ std::pair<dReal, dReal> KinBody::Joint::GetInstantaneousTorqueLimits(int iaxis) 
             // due to back emf, the deceleration magnitude is less than acceleration?
             // revolutionsPerSecond is huge, return the last point
             dReal f = _info.electricMotorActuator->maxSpeedTorquePoints.back().second*_info.electricMotorActuator->gearRatio;
-            if( rawvelocity > 0 ) {
+            if (abs(rawvelocity) < 1.0/360) {
+                return std::make_pair(-f, f);
+            }
+            else if( rawvelocity > 0 ) {
                 return std::make_pair(-0.9*f, f);
             }
             else {
@@ -1421,7 +1453,10 @@ std::pair<dReal, dReal> KinBody::Joint::GetNominalTorqueLimits(int iaxis) const
                     }
 
                     // due to back emf, the deceleration magnitude is less than acceleration?
-                    if( rawvelocity > 0 ) {
+                    if (abs(rawvelocity) < 1.0/360) {
+                        return std::make_pair(-finterpolatedtorque, finterpolatedtorque);
+                    }
+                    else if( rawvelocity > 0 ) {
                         return std::make_pair(-0.9*finterpolatedtorque, finterpolatedtorque);
                     }
                     else {
@@ -1433,7 +1468,10 @@ std::pair<dReal, dReal> KinBody::Joint::GetNominalTorqueLimits(int iaxis) const
             // due to back emf, the deceleration magnitude is less than acceleration?
             // revolutionsPerSecond is huge, return the last point
             dReal f = _info.electricMotorActuator->nominalSpeedTorquePoints.back().second*_info.electricMotorActuator->gearRatio;
-            if( rawvelocity > 0 ) {
+            if (abs(rawvelocity) < 1.0/360) {
+                return std::make_pair(-f, f);
+            }
+            else if( rawvelocity > 0 ) {
                 return std::make_pair(-0.9*f, f);
             }
             else {
@@ -1864,6 +1902,7 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
         for(int i = 0; i < GetDOF(); ++i) {
             SerializeRound(o,_info.maxVel[i]);
             SerializeRound(o,_info.maxAccel[i]);
+            SerializeRound(o,_info.maxJerk[i]);
             SerializeRound(o,_info.maxTorque[i]);
             SerializeRound(o,_info.maxInertia[i]);
             SerializeRound(o,_info.lowerLimit[i]);

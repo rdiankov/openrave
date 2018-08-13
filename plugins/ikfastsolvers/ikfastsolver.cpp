@@ -253,7 +253,7 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
     virtual bool Init(RobotBase::ManipulatorConstPtr pmanip)
     {
         if( _kinematicshash.size() > 0 && pmanip->GetInverseKinematicsStructureHash(_iktype) != _kinematicshash ) {
-            RAVELOG_ERROR(str(boost::format("inverse kinematics hashes do not match for manip %s:%s. IK will not work! %s!=%s\n")%pmanip->GetRobot()->GetName()%pmanip->GetName()%pmanip->GetInverseKinematicsStructureHash(_iktype)%_kinematicshash));
+            RAVELOG_ERROR_FORMAT("env=%d, inverse kinematics hashes do not match for manip %s:%s. IK will not work!  manip (%s) != loaded (%s)", pmanip->GetRobot()->GetEnv()->GetId()%pmanip->GetRobot()->GetName()%pmanip->GetName()%pmanip->GetInverseKinematicsStructureHash(_iktype)%_kinematicshash);
             return false;
         }
         RobotBasePtr probot = pmanip->GetRobot();
@@ -377,15 +377,17 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
             return true;
         }
         // auto-conversion
-        if( _nTotalDOF == 4 ) {
+        if( _nTotalDOF-GetNumFreeParameters() == 4 ) {
             if( _iktype == IKP_Transform6D ) {
-                return iktype == IKP_TranslationXAxisAngleZNorm4D || iktype == IKP_TranslationYAxisAngleXNorm4D;
+                // not always true! sometimes 4D robots can only support Transform6D (fanuc 4 axis depalletizing)
+                //return iktype == IKP_TranslationXAxisAngleZNorm4D || iktype == IKP_TranslationYAxisAngleXNorm4D || iktype == IKP_TranslationZAxisAngleYNorm4D || iktype == IKP_TranslationZAxisAngle4D;
             }
         }
-        else if( _nTotalDOF == 5 ) {
-            if( _iktype == IKP_Transform6D ) {
-                return iktype == IKP_TranslationDirection5D;
-            }
+        else if( _nTotalDOF-GetNumFreeParameters() == 5 ) {
+            // not always true! sometimes 5D robots can only support Transform6D
+//            if( _iktype == IKP_Transform6D ) {
+//                return iktype == IKP_TranslationDirection5D;
+//            }
         }
         return false;
     }
@@ -1035,7 +1037,8 @@ protected:
                 std::pair<Vector,dReal> p = param.GetTranslationZAxisAngleYNorm4D();
                 IkReal eetrans[3] = {p.first.x, p.first.y,p.first.z};
                 IkReal eerot[9] = {p.second, 0, 0, 0, 0, 0, 0, 0, 0};
-                return _ikfunctions->_ComputeIk(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions);
+                //TODO Code review! using &vfree[0] fails 100% of the time for hashimoto, NULL works normally. I don't know why!
+                return _ikfunctions->_ComputeIk(eetrans, eerot, NULL, solutions);
             }
             default:
                 BOOST_ASSERT(0);
@@ -1218,6 +1221,7 @@ protected:
                 std::pair<Vector,dReal> p = param.GetTranslationZAxisAngleYNorm4D();
                 IkReal eetrans[3] = {p.first.x, p.first.y,p.first.z};
                 IkReal eerot[9] = {p.second, 0, 0, 0, 0, 0, 0, 0, 0};
+                //TODO Code review! using NULL fails crash the slave for hashimoto, &vfree[0] works normally. I don't know why!
                 return _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
             }
             default:
@@ -1613,7 +1617,7 @@ protected:
 
                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                    ss << "ikfast collision " << probot->GetName() << ":" << pmanip->GetName() << " " << report.__str__() << " colvalues=[";
+                    ss << "env=" << GetEnv()->GetId() << ", ikfast collision " << probot->GetName() << ":" << pmanip->GetName() << " " << report.__str__() << " colvalues=[";
                     std::vector<dReal> vallvalues;
                     probot->GetDOFValues(vallvalues);
                     for(size_t i = 0; i < vallvalues.size(); ++i ) {
@@ -1989,7 +1993,14 @@ protected:
                     if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform(), ptempreport) ) {
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
                             stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                            ss << "ikfast collision " << ptempreport->__str__() << " colvalues=[";
+                            ss << "env=" << GetEnv()->GetId() << ", ikfast collision " << ptempreport->__str__() << " ";
+                            if( !!ptempreport->plink1 ) {
+                                ss << "num1=" << ptempreport->plink1->GetCollisionData().vertices.size() << " ";
+                            }
+                            if( !!ptempreport->plink2 ) {
+                                ss << "num2=" << ptempreport->plink2->GetCollisionData().vertices.size() << " ";
+                            }
+                            ss << "; colvalues=[";
                             std::vector<dReal> vallvalues;
                             probot->GetDOFValues(vallvalues);
                             for(size_t i = 0; i < vallvalues.size(); ++i ) {
@@ -2000,6 +2011,10 @@ protected:
                                     ss << vallvalues[i];
                                 }
                             }
+                            ss << "], manippose=[";
+                            SerializeTransform(ss, pmanip->GetTransform());
+                            ss << "]; localpose=[";
+                            SerializeTransform(ss, pmanip->GetLocalToolTransform());
                             ss << "]";
                             RAVELOG_VERBOSE(ss.str());
                         }
@@ -2078,13 +2093,16 @@ protected:
         // check that end effector moved in the correct direction
         dReal ikworkspacedist = param.ComputeDistanceSqr(paramnew);
         if( ikworkspacedist > _ikthreshold ) {
-            BOOST_ASSERT(listlocalikreturns.size()>0);
             stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-            ss << "ignoring bad ik for " << probot->GetName() << ":" << pmanip->GetName() << " dist=" << RaveSqrt(ikworkspacedist) << ", param=[" << param << "], sol=[";
-            FOREACHC(itvalue,listlocalikreturns.front().first->_vsolution) {
-                ss << *itvalue << ", ";
+            ss << "ignoring bad ik for " << probot->GetName() << ":" << pmanip->GetName() << " dist=" << RaveSqrt(ikworkspacedist) << ", param=[" << param << "]";
+            if( listlocalikreturns.size() > 0 ) {
+                ss << ", sol=[";
+                FOREACHC(itvalue,listlocalikreturns.front().first->_vsolution) {
+                    ss << *itvalue << ", ";
+                }
+                ss << "]";
             }
-            ss << "]" << endl;
+            ss << endl;
             RAVELOG_ERROR(ss.str());
             return static_cast<IkReturnAction>(retactionall); // signals to continue
         }
@@ -2271,6 +2289,10 @@ protected:
         return vFreeInc;
     }
 
+    /// \brief convert ikparam to another type.
+    /// \param param original ik param represented in manipulator's base link coordinate
+    /// \param ikdummy ik param represented as _iktype in manipulator's base link coordinate
+    /// \return constant reference to ikdummy
     inline const IkParameterization& _ConvertIkParameterization(const IkParameterization& param, IkParameterization& ikdummy)
     {
         if( param.GetType() == _iktype ) {
@@ -2279,19 +2301,28 @@ protected:
 
         // try to convert localgoal into a different goal suitable for the IK
         if( param.GetType() == IKP_Transform6D ) {
-            if( _nTotalDOF == 4 ) {
+            if( _nTotalDOF-GetNumFreeParameters() == 4 ) {
                 ikdummy = param; // copy the custom data!
                 RobotBase::ManipulatorPtr pmanip(_pmanip);
                 Vector vglobaldirection = param.GetTransform6D().rotate(pmanip->GetLocalToolDirection());
                 if( _iktype == IKP_TranslationYAxisAngleXNorm4D ) {
                     ikdummy.SetTranslationYAxisAngleXNorm4D(param.GetTransform6D().trans,RaveAtan2(vglobaldirection.z,vglobaldirection.y));
                 }
-                else {
+                else if( _iktype == IKP_TranslationZAxisAngleYNorm4D ) {
+                    ikdummy.SetTranslationZAxisAngleYNorm4D(param.GetTransform6D().trans,RaveAtan2(vglobaldirection.x,vglobaldirection.z));
+                }
+                else if( _iktype == IKP_TranslationZAxisAngle4D ) {
+                    ikdummy.SetTranslationZAxisAngle4D(param.GetTransform6D().trans,RaveAcos(vglobaldirection.z));
+                }
+                else if( _iktype == IKP_TranslationXAxisAngleZNorm4D ) {
                     ikdummy.SetTranslationXAxisAngleZNorm4D(param.GetTransform6D().trans,RaveAtan2(vglobaldirection.y,vglobaldirection.x));
+                }
+                else{
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("ik solver %s (dof=%d) does not support iktype 0x%x"), GetXMLId()%_nTotalDOF%_iktype, ORE_InvalidArguments);
                 }
                 return ikdummy;
             }
-            else if( _nTotalDOF == 5 ) {
+            else if( _nTotalDOF-GetNumFreeParameters() == 5 ) {
                 ikdummy = param; // copy the custom data!
                 RobotBase::ManipulatorPtr pmanip(_pmanip);
                 ikdummy.SetTranslationDirection5D(RAY(param.GetTransform6D().trans, quatRotate(param.GetTransform6D().rot, pmanip->GetLocalToolDirection())));

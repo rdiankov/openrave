@@ -985,13 +985,13 @@ public:
         return _probot->SetController(openravepy::GetController(pController),dofindices,1);
     }
 
-    void SetActiveDOFs(object dofindices) {
+    void SetActiveDOFs(const object& dofindices) {
         _probot->SetActiveDOFs(ExtractArray<int>(dofindices));
     }
-    void SetActiveDOFs(object dofindices, int nAffineDOsBitmask) {
+    void SetActiveDOFs(const object& dofindices, int nAffineDOsBitmask) {
         _probot->SetActiveDOFs(ExtractArray<int>(dofindices), nAffineDOsBitmask);
     }
-    void SetActiveDOFs(object dofindices, int nAffineDOsBitmask, object rotationaxis) {
+    void SetActiveDOFs(const object& dofindices, int nAffineDOsBitmask, object rotationaxis) {
         _probot->SetActiveDOFs(ExtractArray<int>(dofindices), nAffineDOsBitmask, ExtractVector3(rotationaxis));
     }
 
@@ -1187,6 +1187,16 @@ public:
         }
         vector<dReal> values;
         _probot->GetActiveDOFMaxAccel(values);
+        return toPyArray(values);
+    }
+
+    object GetActiveDOFMaxJerk() const
+    {
+        if( _probot->GetActiveDOF() == 0 ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<dReal> values;
+        _probot->GetActiveDOFMaxJerk(values);
         return toPyArray(values);
     }
 
@@ -1463,9 +1473,9 @@ void init_openravepy_robot()
     ;
 
     {
-        void (PyRobotBase::*psetactivedofs1)(object) = &PyRobotBase::SetActiveDOFs;
-        void (PyRobotBase::*psetactivedofs2)(object, int) = &PyRobotBase::SetActiveDOFs;
-        void (PyRobotBase::*psetactivedofs3)(object, int, object) = &PyRobotBase::SetActiveDOFs;
+        void (PyRobotBase::*psetactivedofs1)(const object&) = &PyRobotBase::SetActiveDOFs;
+        void (PyRobotBase::*psetactivedofs2)(const object&, int) = &PyRobotBase::SetActiveDOFs;
+        void (PyRobotBase::*psetactivedofs3)(const object&, int, object) = &PyRobotBase::SetActiveDOFs;
 
         bool (PyRobotBase::*pgrab1)(PyKinBodyPtr) = &PyRobotBase::Grab;
         bool (PyRobotBase::*pgrab2)(PyKinBodyPtr,object) = &PyRobotBase::Grab;
@@ -1549,6 +1559,7 @@ void init_openravepy_robot()
                       .def("GetActiveDOFLimits",&PyRobotBase::GetActiveDOFLimits, DOXY_FN(RobotBase,GetActiveDOFLimits))
                       .def("GetActiveDOFMaxVel",&PyRobotBase::GetActiveDOFMaxVel, DOXY_FN(RobotBase,GetActiveDOFMaxVel))
                       .def("GetActiveDOFMaxAccel",&PyRobotBase::GetActiveDOFMaxAccel, DOXY_FN(RobotBase,GetActiveDOFMaxAccel))
+                      .def("GetActiveDOFMaxJerk",&PyRobotBase::GetActiveDOFMaxJerk, DOXY_FN(RobotBase,GetActiveDOFMaxJerk))
                       .def("GetActiveDOFResolutions",&PyRobotBase::GetActiveDOFResolutions, DOXY_FN(RobotBase,GetActiveDOFResolutions))
                       .def("GetActiveConfigurationSpecification",&PyRobotBase::GetActiveConfigurationSpecification, GetActiveConfigurationSpecification_overloads(args("interpolation"),DOXY_FN(RobotBase,GetActiveConfigurationSpecification)))
                       .def("GetActiveJointIndices",&PyRobotBase::GetActiveJointIndices)

@@ -274,11 +274,11 @@ public:
                 _nBodiesModifiedStamp++;
                 _listModules.clear();
                 _listViewers.clear();
-                _listOwnedInterfaces.clear();            
+                _listOwnedInterfaces.clear();
             }
 
             // destroy the dangling pointers outside of _mutexInterfaces
-            
+
             // release all grabbed
             FOREACH(itrobot,vecrobots) {
                 (*itrobot)->ReleaseAllGrabbed();
@@ -291,7 +291,7 @@ public:
                 (*itrobot)->Destroy();
             }
             vecrobots.clear();
-            
+
             FOREACH(itsensor,listSensors) {
                 (*itsensor)->Configure(SensorBase::CC_PowerOff);
                 (*itsensor)->Configure(SensorBase::CC_RenderGeometryOff);
@@ -611,7 +611,7 @@ public:
         if( filetype != "collada" ) {
             throw OPENRAVE_EXCEPTION_FORMAT("got invalid filetype %s, only support collada", filetype, ORE_InvalidArguments);
         }
-        
+
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         std::list<KinBodyPtr> listbodies;
         switch(options) {
@@ -669,7 +669,7 @@ public:
             RaveWriteColladaMemory(listbodies,output,atts);
         }
     }
-    
+
     virtual void Add(InterfaceBasePtr pinterface, bool bAnonymous, const std::string& cmdargs)
     {
         CHECK_INTERFACE(pinterface);
@@ -1087,6 +1087,13 @@ public:
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report)
     {
         return _pCurrentChecker->CheckCollision(ray,report);
+    }
+
+    virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report)
+    {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        CHECK_COLLISION_BODY(pbody);
+        return _pCurrentChecker->CheckCollision(trimesh,pbody,report);
     }
 
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)

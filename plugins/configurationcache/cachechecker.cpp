@@ -82,7 +82,7 @@ public:
 
     virtual ~CacheCollisionChecker() {
     }
-    
+
     ConfigurationCachePtr GetCache()
     {
         return _cache;
@@ -303,6 +303,9 @@ public:
         return _pintchecker->CheckCollision(ray, report);
     }
 
+    virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) {
+        return _pintchecker->CheckCollision(trimesh, pbody, report);
+    }
 
     /// \brief collisionchecker checks if there is a configuration in _selfcache within the threshold, and if so, uses that information, if not, runs standard collisioncheck and stores the result.
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) {
@@ -406,7 +409,7 @@ protected:
 
             _SetParams();
         }
-        
+
         // check if a selfcache for this robot exists on this disk
         std::string fulldirname = RaveFindDatabaseFile(("selfcache."+GetCacheHash()));
         if (fulldirname != "" && _selfcache->GetNumKnownNodes() == 0) {

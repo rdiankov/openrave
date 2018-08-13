@@ -1,0 +1,85 @@
+#Inventor V2.0 ascii
+
+Separator {
+    Separator {
+	Rotation {
+	    rotation	0 0 -1  1.5708
+	}
+	Separator {
+	    Transform {
+		scaleFactor	0.01 1 0.01
+	    }
+	    Cylinder {
+	    }
+	}
+	Separator {
+	    Transform {
+		translation	0 1 0
+		scaleFactor	0.05 0.05 0.05
+	    }
+	    Cone {
+	    }
+	}
+	Separator {
+	    Translation {
+		translation	0 1.08 0
+	    }
+	    Text2 {
+		string	"X"
+	    }
+	}
+    }
+    Separator {
+	Separator {
+	    Transform {
+		scaleFactor	0.01 1 0.01
+	    }
+	    Cylinder {
+	    }
+	}
+	Separator {
+	    Transform {
+		translation	0 1 0
+		scaleFactor	0.05 0.05 0.05
+	    }
+	    Cone {
+	    }
+	}
+	Separator {
+	    Translation {
+		translation	0 1.08 0
+	    }
+	    Text2 {
+		string	"Y"
+	    }
+	}
+    }
+    Separator {
+	Rotation {
+	    rotation	1 0 0  1.5708
+	}
+	Separator {
+	    Transform {
+		scaleFactor	0.01 1 0.01
+	    }
+	    Cylinder {
+	    }
+	}
+	Separator {
+	    Transform {
+		translation	0 1 0
+		scaleFactor	0.05 0.05 0.05
+	    }
+	    Cone {
+	    }
+	}
+	Separator {
+	    Translation {
+		translation	0 1.08 0
+	    }
+	    Text2 {
+		string	"Z"
+	    }
+	}
+    }
+}
