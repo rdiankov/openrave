@@ -7,6 +7,9 @@
 */ 
 
 #include <algorithm>
+#include <iostream>
+#include <sstream>
+#include <iomanip>
 #include <dae.h>
 #include <dae/daeURI.h>
 #include <ctype.h>
@@ -774,9 +777,32 @@ string cdom::fixUriForLibxml(const string& uriRef) {
 }
 
 
+string cdom::uriEncode(const string& uri){
+  std::ostringstream escaped;
+  escaped.fill('0');
+  escaped << hex;
+  for(string::const_iterator i  = value.begin(); i != value.end(); i++){
+    string::value_type c = (*i);
+    if(isalnum((unsigned char)c) || c == '-' || c == '_' || c == '.' || c == '/'){
+      escaped << c;
+    } else{
+      escaped << uppercase;
+      escaped << '%' << setw(2) << int((unsigned char)c );
+      escaped << nouppercase;
+    }
+  }
+  return escaped.str();
+}
+
+
+string cdom::uriDecode(const string& uri){
+  std::ostringstream origin;
+
+}
+
 string cdom::nativePathToUri(const string& nativePath, systemType type) {
 	string uri = nativePath;
-
+  
 	if (type == Windows) {
 		// Convert "c:\" to "/c:/"
 		if (uri.length() >= 2  &&  isalpha(uri[0])  &&  uri[1] == ':')
@@ -784,10 +810,9 @@ string cdom::nativePathToUri(const string& nativePath, systemType type) {
 		// Convert backslashes to forward slashes
 		uri = replace(uri, "\\", "/");
 	}
-
 	// Convert spaces to %20
-	uri = replace(uri, " ", "%20");
-
+	// uri = replace(uri, " ", "%20");
+  uri = uriEncode(uri);
 	return uri;
 }
 

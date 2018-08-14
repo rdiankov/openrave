@@ -467,6 +467,8 @@ namespace cdom {
 	DLLSPEC std::string nativePathToUri(const std::string& nativePath,
 	                                    systemType type = getSystemType());
 
+
+  DLLSPEC std::string uriEncode(const std::string& uri);
 	// This function takes a URI reference and converts it to an OS file path. Conversion
 	// can fail if the URI reference is ill-formed, or if the URI contains a scheme other
 	// than "file", in which case an empty string is returned. The 'type' parameter
