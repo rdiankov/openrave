@@ -7,13 +7,13 @@ add_library(rmanipulation SHARED rmanipulation.cpp basemanipulation.cpp    plugi
 if( Boost_REGEX_FOUND )
   message(STATUS "boost regex found")
   set(PLUGIN_COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} -DHAVE_BOOST_REGEX")
-  target_link_libraries(rmanipulation libopenrave ${Boost_REGEX_LIBRARY})
+  target_link_libraries(rmanipulation PUBLIC libopenrave ${Boost_REGEX_LIBRARY}
+                                      PRIVATE boost_assertion_failed)
 else()
   message(STATUS "failed to find boost regex, please install it")
-  target_link_libraries(rmanipulation libopenrave)
+  target_link_libraries(rmanipulation PUBLIC libopenrave
+                                      PRIVATE boost_assertion_failed)
 endif()
-target_link_libraries(rmanipulation PRIVATE boost_assertion_failed)
-
 
 set_target_properties(rmanipulation PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
 install(TARGETS rmanipulation DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${PLUGINS_BASE})
