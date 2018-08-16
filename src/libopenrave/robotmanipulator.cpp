@@ -319,33 +319,75 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
         break;
     }
     case IKP_TranslationXAxisAngle4D: {
-        Vector vglobaldirection = t.rotate(_info._vdirection);
-        ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(vglobaldirection.x));
+        if (inworld) {
+            Transform localt = GetBase()->GetTransform().inverse()*t;
+            const Vector vlocaldirection = localt.rotate(_info._vdirection);
+            ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(vlocaldirection.x));
+        }
+        else {
+            const Vector vlocaldirection = t.rotate(_info._vdirection);
+            ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(vlocaldirection.x));
+        }
         break;
     }
     case IKP_TranslationYAxisAngle4D: {
-        Vector vglobaldirection = t.rotate(_info._vdirection);
-        ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(vglobaldirection.y));
+        if (inworld) {
+            Transform localt = GetBase()->GetTransform().inverse()*t;
+            const Vector vlocaldirection = localt.rotate(_info._vdirection);
+            ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(vlocaldirection.y));
+        }
+        else {
+            const Vector vlocaldirection = t.rotate(_info._vdirection);
+            ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(vlocaldirection.y));
+        }
         break;
     }
     case IKP_TranslationZAxisAngle4D: {
-        Vector vglobaldirection = t.rotate(_info._vdirection);
-        ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(vglobaldirection.z));
+        if (inworld) {
+            Transform localt = GetBase()->GetTransform().inverse()*t;
+            const Vector vlocaldirection = localt.rotate(_info._vdirection);
+            ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(vlocaldirection.z));
+        }
+        else {
+            const Vector vlocaldirection = t.rotate(_info._vdirection);
+            ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(vlocaldirection.z));
+        }
         break;
     }
     case IKP_TranslationXAxisAngleZNorm4D: {
-        Vector vglobaldirection = t.rotate(_info._vdirection);
-        ikp.SetTranslationXAxisAngleZNorm4D(t.trans,RaveAtan2(vglobaldirection.y,vglobaldirection.x));
+        if (inworld) {
+            Transform localt = GetBase()->GetTransform().inverse()*t;
+            const Vector vlocaldirection = localt.rotate(_info._vdirection);
+            ikp.SetTranslationXAxisAngleZNorm4D(t.trans,RaveAtan2(vlocaldirection.y,vlocaldirection.x));
+        }
+        else {
+            Vector vlocaldirection = t.rotate(_info._vdirection);
+            ikp.SetTranslationXAxisAngleZNorm4D(t.trans,RaveAtan2(vlocaldirection.y,vlocaldirection.x));
+        }
         break;
     }
     case IKP_TranslationYAxisAngleXNorm4D: {
-        Vector vglobaldirection = t.rotate(_info._vdirection);
-        ikp.SetTranslationYAxisAngleXNorm4D(t.trans,RaveAtan2(vglobaldirection.z,vglobaldirection.y));
+        if (inworld) {
+            Transform localt = GetBase()->GetTransform().inverse()*t;
+            const Vector vlocaldirection = localt.rotate(_info._vdirection);
+            ikp.SetTranslationYAxisAngleXNorm4D(t.trans,RaveAtan2(vlocaldirection.z,vlocaldirection.y));
+        }
+        else {
+            Vector vlocaldirection = t.rotate(_info._vdirection);
+            ikp.SetTranslationYAxisAngleXNorm4D(t.trans,RaveAtan2(vlocaldirection.z,vlocaldirection.y));
+        }
         break;
     }
     case IKP_TranslationZAxisAngleYNorm4D: {
-        Vector vglobaldirection = t.rotate(_info._vdirection);
-        ikp.SetTranslationZAxisAngleYNorm4D(t.trans,RaveAtan2(vglobaldirection.x,vglobaldirection.z));
+        if (inworld) {
+            Transform localt = GetBase()->GetTransform().inverse()*t;
+            const Vector vlocaldirection = localt.rotate(_info._vdirection);
+            ikp.SetTranslationZAxisAngleYNorm4D(t.trans,RaveAtan2(vlocaldirection.x,vlocaldirection.z));
+        }
+        else {
+            Vector vlocaldirection = t.rotate(_info._vdirection);
+            ikp.SetTranslationZAxisAngleYNorm4D(t.trans,RaveAtan2(vlocaldirection.x,vlocaldirection.z));
+        }
         break;
     }
     // velocities
@@ -422,37 +464,79 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
         ikp.SetTranslationLocalGlobal6D(localtrans,t * localtrans);
         break;
     }
-    case IKP_TranslationXAxisAngle4D: {
-        Vector vglobaldirection = t.rotate(_info._vdirection);
-        ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(vglobaldirection.x));
+     case IKP_TranslationXAxisAngle4D: {
+        if (inworld) {
+            Transform localt = GetBase()->GetTransform().inverse()*t;
+            const Vector vlocaldirection = localt.rotate(_info._vdirection);
+            ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(vlocaldirection.x));
+        }
+        else {
+            const Vector vlocaldirection = t.rotate(_info._vdirection);
+            ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(vlocaldirection.x));
+        }
         break;
     }
     case IKP_TranslationYAxisAngle4D: {
-        Vector vglobaldirection = t.rotate(_info._vdirection);
-        ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(vglobaldirection.y));
+        if (inworld) {
+            Transform localt = GetBase()->GetTransform().inverse()*t;
+            const Vector vlocaldirection = localt.rotate(_info._vdirection);
+            ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(vlocaldirection.y));
+        }
+        else {
+            const Vector vlocaldirection = t.rotate(_info._vdirection);
+            ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(vlocaldirection.y));
+        }
         break;
     }
     case IKP_TranslationZAxisAngle4D: {
-        Vector vglobaldirection = t.rotate(_info._vdirection);
-        ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(vglobaldirection.z));
+        if (inworld) {
+            Transform localt = GetBase()->GetTransform().inverse()*t;
+            const Vector vlocaldirection = localt.rotate(_info._vdirection);
+            ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(vlocaldirection.z));
+        }
+        else {
+            const Vector vlocaldirection = t.rotate(_info._vdirection);
+            ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(vlocaldirection.z));
+        }
         break;
     }
     case IKP_TranslationXAxisAngleZNorm4D: {
-        Vector vglobaldirection = t.rotate(_info._vdirection);
-        ikp.SetTranslationXAxisAngleZNorm4D(t.trans,RaveAtan2(vglobaldirection.y,vglobaldirection.x));
+        if (inworld) {
+            Transform localt = GetBase()->GetTransform().inverse()*t;
+            const Vector vlocaldirection = localt.rotate(_info._vdirection);
+            ikp.SetTranslationXAxisAngleZNorm4D(t.trans,RaveAtan2(vlocaldirection.y,vlocaldirection.x));
+        }
+        else {
+            Vector vlocaldirection = t.rotate(_info._vdirection);
+            ikp.SetTranslationXAxisAngleZNorm4D(t.trans,RaveAtan2(vlocaldirection.y,vlocaldirection.x));
+        }
         break;
     }
     case IKP_TranslationYAxisAngleXNorm4D: {
-        Vector vglobaldirection = t.rotate(_info._vdirection);
-        ikp.SetTranslationYAxisAngleXNorm4D(t.trans,RaveAtan2(vglobaldirection.z,vglobaldirection.y));
+        if (inworld) {
+            Transform localt = GetBase()->GetTransform().inverse()*t;
+            const Vector vlocaldirection = localt.rotate(_info._vdirection);
+            ikp.SetTranslationYAxisAngleXNorm4D(t.trans,RaveAtan2(vlocaldirection.z,vlocaldirection.y));
+        }
+        else {
+            Vector vlocaldirection = t.rotate(_info._vdirection);
+            ikp.SetTranslationYAxisAngleXNorm4D(t.trans,RaveAtan2(vlocaldirection.z,vlocaldirection.y));
+        }
         break;
     }
     case IKP_TranslationZAxisAngleYNorm4D: {
-        Vector vglobaldirection = t.rotate(_info._vdirection);
-        ikp.SetTranslationZAxisAngleYNorm4D(t.trans,RaveAtan2(vglobaldirection.x,vglobaldirection.z));
+        if (inworld) {
+            Transform localt = GetBase()->GetTransform().inverse()*t;
+            const Vector vlocaldirection = localt.rotate(_info._vdirection);
+            ikp.SetTranslationZAxisAngleYNorm4D(t.trans,RaveAtan2(vlocaldirection.x,vlocaldirection.z));
+        }
+        else {
+            Vector vlocaldirection = t.rotate(_info._vdirection);
+            ikp.SetTranslationZAxisAngleYNorm4D(t.trans,RaveAtan2(vlocaldirection.x,vlocaldirection.z));
+        }
         break;
     }
-    // velocities
+   // velocities
     case IKP_Transform6DVelocity: {
         Vector vlinearvel, vangularvel;
         GetEndEffector()->GetVelocity(vlinearvel, vangularvel);
