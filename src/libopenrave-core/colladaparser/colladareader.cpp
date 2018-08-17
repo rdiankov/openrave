@@ -276,7 +276,6 @@ public:
         _bOpeningZAE = uristr.find(".zae") == uristr.size()-4;
         daeURI urioriginal(*_dae, uristr);
         urioriginal.fragment(std::string()); // have to set the fragment to empty!
-        std::string uriresolved;
 
         string uriresolved = "";
         string pathresolved = "";
