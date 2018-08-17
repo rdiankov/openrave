@@ -5140,9 +5140,11 @@ string RaveGetColladaURI(const string uri){
 
 bool RaveParseColladaURI(EnvironmentBasePtr penv, const std::string& uri,const AttributesList& atts)
 {
+    string colladaURI = RaveGetColladaURI(uri);
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
-    if( !reader.InitFromURI(uri,atts) ) {
+    
+    if( !reader.InitFromURI(colladaURI, atts) ) {
         return false;
     }
     return reader.Extract();
