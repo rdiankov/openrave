@@ -2688,6 +2688,11 @@ protected:
         static pcrecpp::RE re("^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?");
         bool bmatch = re.FullMatch(uri, &s1, &scheme, &s3, &authority, &path, &s6, &query, &s8, &fragment);
         return bmatch && scheme.size() > 0 && _IsColladaFile(path); //scheme.size() > 0;
+        cdom::parseUriRef(uri, scheme, authority, path, query, fragment);
+        // static pcrecpp::RE re("^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?");
+        // bool bmatch = re.FullMatch(uri, &s1, &scheme, &s3, &authority, &path, &s6, &query, &s8, &fragment);
+        //return bmatch && scheme.size() > 0 && _IsColladaFile(path); //scheme.size() > 0;
+        return scheme.size() > 0 && _IsColladaFile(path);
     }
 
     static bool _IsColladaFile(const std::string& filename)

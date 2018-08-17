@@ -292,7 +292,17 @@ public:
                 return false;
             }
         }
-        _dom = daeSafeCast<domCOLLADA>(_dae->open(uriresolved.size() > 0 ? uriresolved : urioriginal.str()));
+        // _dom = daeSafeCast<domCOLLADA>(_dae->open(uriresolved.size() > 0 ? uriresolved : urioriginal.str()));
+        if(uriresolved.size() > 0){
+            _dom = daeSafeCast<domCOLLADA>(_dae->open(uriresolved));
+        }
+        else if(urioriginal.scheme() == "file"){
+            _dom = daeSafeCast<domCOLLADA>(_dae->open(urioriginal.getPath()));
+        }
+        else{
+            _dom = daeSafeCast<domCOLLADA>(_dae->open(urioriginal.str()));
+        }
+        
         if( !_dom ) {
             return false;
         }
