@@ -2685,14 +2685,40 @@ protected:
     {
         string scheme, authority, path, query, fragment;
         string s1, s3, s6, s8;
+        bool bmatch = false;
         static pcrecpp::RE re("^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?");
-        bool bmatch = re.FullMatch(uri, &s1, &scheme, &s3, &authority, &path, &s6, &query, &s8, &fragment);
-        return bmatch && scheme.size() > 0 && _IsColladaFile(path); //scheme.size() > 0;
-        cdom::parseUriRef(uri, scheme, authority, path, query, fragment);
-        // static pcrecpp::RE re("^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?");
+        if(_IsColladaFile(uri)){
+            // uri endswith .dae or .zae
+            bmatch = re.FullMatch(uri, &s1, &scheme, &s3, &authority, &path, &s6, &query, &s8, &fragment);
+            if(!query.empty()){
+                path = path + '?' + query;
+            }
+            if(!fragment.empty()){
+                path = path + '#' + fragment;
+            }
+        }
+        else{ 
+            bmatch = re.FullMatch(uri, &s1, &scheme, &s3, &authority, &path, &s6, &query, &s8, &fragment);
+            
+            if(!query.empty()){
+                path = path + "?" + query;
+            }
+            if(!fragment.empty())
+            {
+                size_t fragmentIndex = fragment.rfind('#');
+                string wrongFragment = fragment;
+                if(fragmentIndex != string::npos){
+                    wrongFragment = fragment.substr(0, fragmentIndex);
+                    fragment = fragment.substr(fragmentIndex+1);
+                }
+                path = '#' + wrongFragment;
+            }
+        }
+        //
         // bool bmatch = re.FullMatch(uri, &s1, &scheme, &s3, &authority, &path, &s6, &query, &s8, &fragment);
+        //RAVELOG_ERROR(boost::str(boost::format("bmatch=%s, s1=%s, scheme=%s, s3=%s, authority=%s, path=%s, s6=%s, query=%s, s8=%s, fragment=%s")%false%s1%scheme%s3%authority%path%s6%query%s8%fragment));
         //return bmatch && scheme.size() > 0 && _IsColladaFile(path); //scheme.size() > 0;
-        return scheme.size() > 0 && _IsColladaFile(path);
+        return bmatch && scheme.size() > 0 && _IsColladaFile(path);
     }
 
     static bool _IsColladaFile(const std::string& filename)

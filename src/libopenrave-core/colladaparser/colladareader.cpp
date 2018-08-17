@@ -17,6 +17,8 @@
 #include "colladacommon.h"
 #include <boost/algorithm/string.hpp>
 #include <openrave/xmlreaders.h>
+#include <pcrecpp.h>
+
 
 namespace OpenRAVE
 {
@@ -276,25 +278,28 @@ public:
         urioriginal.fragment(std::string()); // have to set the fragment to empty!
         std::string uriresolved;
 
+        string uriresolved = "";
+        string pathresolved = "";
         if( find(_vOpenRAVESchemeAliases.begin(),_vOpenRAVESchemeAliases.end(),urioriginal.scheme()) != _vOpenRAVESchemeAliases.end() ) {
             if( urioriginal.path().size() == 0 ) {
                 return NULL;
             }
             // remove first slash because we need relative file
-            uriresolved="file:";
             if( urioriginal.path().at(0) == '/' ) {
-                uriresolved += RaveFindLocalFile(urioriginal.path().substr(1), "/");
+                pathresolved = RaveFindLocalFile(urioriginal.path().substr(1), "/");
+                uriresolved = "file:" + cdom::quote(pathresolved);
             }
             else {
-                uriresolved += RaveFindLocalFile(urioriginal.path(), "/");
+                pathresolved = RaveFindLocalFile(urioriginal.path(), "/");
+                uriresolved =  "file:" + cdom::quote(pathresolved);
             }
-            if( uriresolved.size() == 5 ) {
+            if( uriresolved.length() == 5 ) {
                 return false;
             }
         }
         // _dom = daeSafeCast<domCOLLADA>(_dae->open(uriresolved.size() > 0 ? uriresolved : urioriginal.str()));
-        if(uriresolved.size() > 0){
-            _dom = daeSafeCast<domCOLLADA>(_dae->open(uriresolved));
+        if(uriresolved.length()> 0){
+            _dom = daeSafeCast<domCOLLADA>(_dae->open(pathresolved));
         }
         else if(urioriginal.scheme() == "file"){
             _dom = daeSafeCast<domCOLLADA>(_dae->open(urioriginal.getPath()));
@@ -306,7 +311,7 @@ public:
         if( !_dom ) {
             return false;
         }
-        if( uriresolved.size() > 0 ) {
+        if( uriresolved.length() > 0 ) {
             _mapInverseResolvedURIList.insert(make_pair(uriresolved, daeURI(*_dae,urioriginal.str())));
         }
 
@@ -5079,6 +5084,60 @@ private:
     bool _bSkipGeometry;
     bool _bBackCompatValuesInRadians; ///< if true, will assume the speed, acceleration, and dofvalues are in radians instead of degrees (for back compat)
 };
+
+static bool _IsColladaFile(const std::string& filename)
+{
+    size_t len = filename.size();
+    if( len < 4 ) {
+        return false;
+    }
+    if( filename[len-4] == '.' && ::tolower(filename[len-3]) == 'd' && ::tolower(filename[len-2]) == 'a' && ::tolower(filename[len-1]) == 'e' ) {
+        return true;
+    }
+    if( filename[len-4] == '.' && ::tolower(filename[len-3]) == 'z' && ::tolower(filename[len-2]) == 'a' && ::tolower(filename[len-1]) == 'e' ) {
+        return true;
+    }
+    return false;
+}
+
+string RaveGetColladaURI(const string uri){
+    string scheme, authority, path, query, fragment;
+    string s1, s3, s6, s8;
+    bool bmatch = false;
+    static pcrecpp::RE re("^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?");
+    if(_IsColladaFile(uri)){
+        // uri endswith .dae or .zae
+        bmatch = re.FullMatch(uri, &s1, &scheme, &s3, &authority, &path, &s6, &query, &s8, &fragment);
+        if(!query.empty()){
+            path = path + '?' + query;
+            query.clear();
+        }
+        if(!fragment.empty()){
+            path = path + '#' + fragment;
+            fragment.clear();
+        }
+    }
+    else{ 
+        bmatch = re.FullMatch(uri, &s1, &scheme, &s3, &authority, &path, &s6, &query, &s8, &fragment);
+            
+        if(!query.empty()){
+            path = path + "?" + query;
+            query.clear();
+        }
+        if(!fragment.empty())
+        {
+            size_t fragmentIndex = fragment.rfind('#');
+            string wrongFragment = fragment;
+            if(fragmentIndex != string::npos){
+                wrongFragment = fragment.substr(0, fragmentIndex);
+                fragment = fragment.substr(fragmentIndex+1);
+            }
+            path = path + '#' + wrongFragment;
+        }
+    }
+
+    return cdom::assembleUri(scheme, authority, path, query, fragment);
+}
 
 bool RaveParseColladaURI(EnvironmentBasePtr penv, const std::string& uri,const AttributesList& atts)
 {

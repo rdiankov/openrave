@@ -147,6 +147,11 @@ void RaveWriteColladaMemory(const std::list<KinBodyPtr>& listbodies, std::vector
 namespace OpenRAVE
 {
 
+inline bool string RaveGetColladaURI(const string uri){
+    RAVELOG_ERROR("collada files not supported\n");
+    return false;
+}
+
 inline bool RaveParseColladaURI(EnvironmentBasePtr penv, const std::string& uri,const AttributesList& atts)
 {
     RAVELOG_ERROR("collada files not supported\n");
