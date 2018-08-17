@@ -5154,7 +5154,7 @@ bool RaveParseColladaURI(EnvironmentBasePtr penv, KinBodyPtr& pbody, const strin
 {
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
-    if (!reader.InitFromURI(uri,atts)) {
+    if (!reader.InitFromURI(RaveGetColladaURI(uri),atts)) {
         return false;
     }
     // have to extract the fragment
@@ -5167,7 +5167,7 @@ bool RaveParseColladaURI(EnvironmentBasePtr penv, RobotBasePtr& probot, const st
 {
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
-    if (!reader.InitFromURI(uri,atts)) {
+    if (!reader.InitFromURI(RaveGetColladaURI(uri),atts)) {
         return false;
     }
     // have to extract the fragment
