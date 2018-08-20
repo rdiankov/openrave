@@ -2687,19 +2687,15 @@ protected:
         string s1, s3, s6, s8;
         bool bmatch = false;
         static pcrecpp::RE re("^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?");
-        if(_IsColladaFile(uri)){
+        bmatch = re.FullMatch(uri, &s1, &scheme, &s3, &authority, &path, &s6, &query, &s8, &fragment);
+        if(!_IsColladaFile(path)){
             // uri endswith .dae or .zae
-            bmatch = re.FullMatch(uri, &s1, &scheme, &s3, &authority, &path, &s6, &query, &s8, &fragment);
-            if(!query.empty()){
-                path = path + '?' + query;
-            }
-            if(!fragment.empty()){
-                path = path + '#' + fragment;
-            }
-        }
-        else{ 
-            bmatch = re.FullMatch(uri, &s1, &scheme, &s3, &authority, &path, &s6, &query, &s8, &fragment);
-            
+            // if(!query.empty()){
+            //     path = path + '?' + query;
+            // }
+            // if(!fragment.empty()){
+            //     path = path + '#' + fragment;
+            // }
             if(!query.empty()){
                 path = path + "?" + query;
             }
