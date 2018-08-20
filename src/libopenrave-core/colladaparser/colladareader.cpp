@@ -5105,17 +5105,16 @@ string RaveGetColladaURI(const string uri){
     bool bmatch = false;
     static pcrecpp::RE re("^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?");
     bmatch = re.FullMatch(uri, &s1, &scheme, &s3, &authority, &path, &s6, &query, &s8, &fragment);
-    if(_IsColladaFile(path)){
+    if(_IsColladaFile(uri)){
         // uri endswith .dae or .zae
-        // if(!query.empty()){
-        //     path = path + '?' + query;
-        //     query.clear();
-        // }
-        // if(!fragment.empty()){
-        //     path = path + '#' + fragment;
-        //     fragment.clear();
-        // }
-        
+        if(!query.empty()){
+            path = path + '?' + query;
+            query.clear();
+        }
+        if(!fragment.empty()){
+            path = path + '#' + fragment;
+            fragment.clear();
+        }        
     }
     else{
         if(!query.empty()){
@@ -5125,12 +5124,12 @@ string RaveGetColladaURI(const string uri){
         if(!fragment.empty())
         {
             size_t fragmentIndex = fragment.rfind('#');
-            string wrongFragment = fragment;
+            string wrongFragment = "";
             if(fragmentIndex != string::npos){
                 wrongFragment = fragment.substr(0, fragmentIndex);
                 fragment = fragment.substr(fragmentIndex+1);
+                path = path + '#' + wrongFragment;
             }
-            path = path + '#' + wrongFragment;
         }
     }
 
