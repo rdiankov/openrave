@@ -462,7 +462,7 @@ private:
 
     virtual void Save(const string& filename)
     {
-        if(!_dae->writeTo(_doc->getDocumentURI()->getURI(), filename.c_str()) ) {
+        if(!_dae->writeTo(_doc->getDocumentURI()->getPath(), filename.c_str()) ) {
             throw openrave_exception(str(boost::format(_("failed to save collada file to %s"))%filename));
         }
     }
