@@ -286,11 +286,11 @@ public:
             // remove first slash because we need relative file
             if( urioriginal.path().at(0) == '/' ) {
                 pathresolved = RaveFindLocalFile(urioriginal.path().substr(1), "/");
-                uriresolved = "file:" + cdom::quote(pathresolved);
+                uriresolved = "file:" + pathresolved;
             }
             else {
                 pathresolved = RaveFindLocalFile(urioriginal.path(), "/");
-                uriresolved =  "file:" + cdom::quote(pathresolved);
+                uriresolved =  "file:" + pathresolved;
             }
             if( uriresolved.length() == 5 ) {
                 return false;
@@ -298,7 +298,7 @@ public:
         }
         // _dom = daeSafeCast<domCOLLADA>(_dae->open(uriresolved.size() > 0 ? uriresolved : urioriginal.str()));
         if(uriresolved.length()> 0){
-            _dom = daeSafeCast<domCOLLADA>(_dae->open(pathresolved));
+            _dom = daeSafeCast<domCOLLADA>(_dae->open(cdom::unquote(pathresolved)));
         }
         else if(urioriginal.scheme() == "file"){
             _dom = daeSafeCast<domCOLLADA>(_dae->open(urioriginal.getPath()));
@@ -5152,12 +5152,13 @@ bool RaveParseColladaURI(EnvironmentBasePtr penv, KinBodyPtr& pbody, const strin
 {
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
-    if (!reader.InitFromURI(RaveGetColladaURI(uri),atts)) {
+    string colladauri = RaveGetColladaURI(uri);
+    if (!reader.InitFromURI(colladauri,atts)) {
         return false;
     }
     // have to extract the fragment
     std::string scheme, authority, path, query, fragment;
-    cdom::parseUriRef(uri, scheme, authority, path, query, fragment);
+    cdom::parseUriRef(colladauri, scheme, authority, path, query, fragment);
     return reader.Extract(pbody, fragment);
 }
 
@@ -5165,12 +5166,13 @@ bool RaveParseColladaURI(EnvironmentBasePtr penv, RobotBasePtr& probot, const st
 {
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
-    if (!reader.InitFromURI(RaveGetColladaURI(uri),atts)) {
+    string colladauri = RaveGetColladaURI(uri);
+    if (!reader.InitFromURI(colladauri,atts)) {
         return false;
     }
     // have to extract the fragment
     std::string scheme, authority, path, query, fragment;
-    cdom::parseUriRef(uri, scheme, authority, path, query, fragment);
+    cdom::parseUriRef(colladauri, scheme, authority, path, query, fragment);
     return reader.Extract(probot, fragment);
 }
 
