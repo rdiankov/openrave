@@ -21,7 +21,8 @@
  */
 #ifndef OPENRAVE_GEOMETRY_H
 #define OPENRAVE_GEOMETRY_H
-
+#pragma GCC push_options
+#pragma GCC target("no-fma,no-fma4")
 #include <cmath>
 #include <vector>
 #include <string>
@@ -2854,3 +2855,4 @@ T DistVertexOBBSq(const RaveVector<T>& v, const obb<T>& o)
 } // end namespace OpenRAVE
 
 #endif
+#pragma GCC pop_options
