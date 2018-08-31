@@ -1065,7 +1065,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
             }
         }
         else {
-            RAVELOG_WARN_FORMAT("do not support redundant checking for iktype 0x%x", ikparam.GetType());
+            RAVELOG_VERBOSE_FORMAT("do not support redundant checking for iktype 0x%x", ikparam.GetType());
         }
     }
 
@@ -1168,7 +1168,7 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const IkParameterizat
             }
         }
         else {
-            RAVELOG_WARN_FORMAT("do not support redundant checking for iktype 0x%x", ikparam.GetType());
+            RAVELOG_VERBOSE_FORMAT("do not support redundant checking for iktype 0x%x", ikparam.GetType());
         }
     }
     
