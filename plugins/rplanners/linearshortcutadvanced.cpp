@@ -16,7 +16,8 @@
 #include "openraveplugindefs.h"
 
 // #define SHORTCUT_ONEDOF_DEBUG
-#define PROGRESS_DEBUG
+//#define PROGRESS_DEBUG
+// #define PROGRESS_DEBUG
 
 class ShortcutLinearPlanner : public PlannerBase
 {
