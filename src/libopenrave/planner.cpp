@@ -446,15 +446,25 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
 
     using namespace planningutils;
     _distmetricfn = boost::bind(&SimpleDistanceMetric::Eval,boost::shared_ptr<SimpleDistanceMetric>(new SimpleDistanceMetric(robot)),_1,_2);
-    _diffstatefn = boost::bind(&RobotBase::SubtractActiveDOFValues,robot,_1,_2);
+    if( robot->GetActiveDOF() == (int)robot->GetActiveDOFIndices().size() ) {
+        // only roobt joint indices, so use a more resiliant function
+        _getstatefn = boost::bind(&RobotBase::GetDOFValues,robot,_1,robot->GetActiveDOFIndices());
+        _setstatevaluesfn = boost::bind(SetDOFValuesIndicesParameters,robot, _1, robot->GetActiveDOFIndices(), _2);
+        _diffstatefn = boost::bind(&RobotBase::SubtractDOFValues,robot,_1,_2, robot->GetActiveDOFIndices());
+    }
+    else {
+        _getstatefn = boost::bind(&RobotBase::GetActiveDOFValues,robot,_1);
+        _setstatevaluesfn = boost::bind(SetActiveDOFValuesParameters,robot, _1, _2);
+        _diffstatefn = boost::bind(&RobotBase::SubtractActiveDOFValues,robot,_1,_2);
+    }
+    
     SpaceSamplerBasePtr pconfigsampler = RaveCreateSpaceSampler(robot->GetEnv(),str(boost::format("robotconfiguration %s")%robot->GetName()));
     _listInternalSamplers.clear();
     _listInternalSamplers.push_back(pconfigsampler);
+
     boost::shared_ptr<SimpleNeighborhoodSampler> defaultsamplefn(new SimpleNeighborhoodSampler(pconfigsampler,_distmetricfn, _diffstatefn));
     _samplefn = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1);
     _sampleneighfn = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1,_2,_3);
-    _setstatevaluesfn = boost::bind(SetActiveDOFValuesParameters,robot, _1, _2);
-    _getstatefn = boost::bind(&RobotBase::GetActiveDOFValues,robot,_1);
 
     robot->GetActiveDOFLimits(_vConfigLowerLimit,_vConfigUpperLimit);
     robot->GetActiveDOFVelocityLimits(_vConfigVelocityLimit);

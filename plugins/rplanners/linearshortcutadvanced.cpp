@@ -15,6 +15,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "openraveplugindefs.h"
 
+// #define SHORTCUT_ONEDOF_DEBUG
+// #define PROGRESS_DEBUG
+
 class ShortcutLinearPlanner : public PlannerBase
 {
 public:
