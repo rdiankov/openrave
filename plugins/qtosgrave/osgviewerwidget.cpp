@@ -385,7 +385,7 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
     setMouseTracking(true);
     _userdatakey = userdatakey;
     _penv = penv;
-    _bSwitchMouseLeftMiddleButton = true;
+    _bSwitchMouseLeftMiddleButton = false;
     _bLightOn = true;
     _bIsSelectiveActive = false;
     _osgview = new osgViewer::View();

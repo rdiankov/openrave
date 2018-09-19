@@ -836,6 +836,7 @@ void QtOSGViewer::_CreateControlButtons()
     connect(zoomOutButton, &QPushButton::pressed, [=](){ this->_posgWidget->Zoom(0.9); });
 
     QPushButton *cameraMoveModeButton = new QPushButton("Rot");
+    cameraMoveModeButton->setText(this->_posgWidget->GetCameraMoveMode());
     connect(cameraMoveModeButton, &QPushButton::pressed, [=]() {
         _posgWidget->ToggleCameraMoveMode();
         cameraMoveModeButton->setText(this->_posgWidget->GetCameraMoveMode());
