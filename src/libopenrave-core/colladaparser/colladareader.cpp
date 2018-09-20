@@ -280,32 +280,25 @@ public:
         string uriresolved = "";
         string pathresolved = "";
         if( find(_vOpenRAVESchemeAliases.begin(),_vOpenRAVESchemeAliases.end(),urioriginal.scheme()) != _vOpenRAVESchemeAliases.end() ) {
+            //  change scheme to file: if scheme is included in _vOpenRAVESchemeAliases
             if( urioriginal.path().size() == 0 ) {
                 return NULL;
             }
             // remove first slash because we need relative file
             if( urioriginal.path().at(0) == '/' ) {
+                // RaveFindLocalFile will try to find file udner DATA_DIR etc. It will return a absolute path of filename or empty string if file isn't found.
                 pathresolved = RaveFindLocalFile(urioriginal.path().substr(1), "/");
-                uriresolved = "file:" + pathresolved;
             }
             else {
                 pathresolved = RaveFindLocalFile(urioriginal.path(), "/");
-                uriresolved =  "file:" + pathresolved;
             }
-            if( uriresolved.length() == 5 ) {
+            uriresolved =  "file:" + pathresolved;
+            if( uriresolved == "file:" ) {
+                // Init failed
                 return false;
             }
         }
-        // _dom = daeSafeCast<domCOLLADA>(_dae->open(uriresolved.size() > 0 ? uriresolved : urioriginal.str()));
-        if(uriresolved.length()> 0){
-            _dom = daeSafeCast<domCOLLADA>(_dae->open(cdom::unquote(pathresolved)));
-        }
-        else if(urioriginal.scheme() == "file"){
-            _dom = daeSafeCast<domCOLLADA>(_dae->open(urioriginal.getPath()));
-        }
-        else{
-            _dom = daeSafeCast<domCOLLADA>(_dae->open(urioriginal.str()));
-        }
+        _dom = daeSafeCast<domCOLLADA>(_dae->open(uriresolved.size() > 0 ? uriresolved : urioriginal.str()));
         
         if( !_dom ) {
             return false;
