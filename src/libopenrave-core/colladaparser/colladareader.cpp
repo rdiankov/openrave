@@ -1013,6 +1013,7 @@ public:
                 struri = _ResolveInverse(ias->getUrl()).str();
             }
         }
+        struri = cdom::unquote(struri); // uri is quoted from colladadom , need to unquote here to fit openrave uri scheme
         if( !!pbody ) {
             pbody->__struri = struri;
         }
