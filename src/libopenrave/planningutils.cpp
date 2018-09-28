@@ -3556,7 +3556,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
         if( bsuccess ) {
             _tempikindex = orgindex;
             _listreturnedsamples.push_back(orgindex);
-            IkReturnPtr ikreturnlocal = _vikreturns.back();
+            IkReturnPtr ikreturnlocal = _vikreturns.back(); // why return back? shouldn't return closest solution?
             _vikreturns.pop_back();
             if( _vikreturns.size() == 0 ) {
                 _tempikindex = -1;
