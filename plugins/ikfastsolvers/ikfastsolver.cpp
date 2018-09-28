@@ -1203,7 +1203,28 @@ protected:
                 std::pair<Vector,dReal> p = param.GetTranslationZAxisAngle4D();
                 IkReal eetrans[3] = {p.first.x, p.first.y,p.first.z};
                 IkReal eerot[9] = {p.second, 0, 0, 0, 0, 0, 0, 0, 0};
-                return _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
+                bool bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
+                if( !bret ) {
+#ifdef OPENRAVE_HAS_LAPACK
+                    if( _fRefineWithJacobianInverseAllowedError > 0 ) {
+                        // since will be refining, can add a little error to see if IK gets recomputed
+                        eetrans[0] += 0.0001;
+                        eetrans[1] += 0.0001;
+                        eetrans[2] += 0.0001;
+                        eerot[0] += 0.0001;
+                        bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
+                        if( !bret ) {
+                            eetrans[0] -= 0.0002;
+                            eetrans[1] -= 0.0002;
+                            eetrans[2] -= 0.0002;
+                            eerot[0] -= 0.0002;
+                            bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
+                        }
+                        RAVELOG_VERBOSE("ik failed, trying with slight jitter, ret=%d", (int)bret);
+                    }
+#endif
+                }
+                return bret;
             }
             case IKP_TranslationXAxisAngleZNorm4D: {
                 std::pair<Vector,dReal> p = param.GetTranslationXAxisAngleZNorm4D();
@@ -1329,7 +1350,8 @@ protected:
 #ifdef OPENRAVE_HAS_LAPACK
         IkParameterization paramnew = manip.GetIkParameterization(param,false);
         dReal ikworkspacedist = param.ComputeDistanceSqr(paramnew);
-        if( _fRefineWithJacobianInverseAllowedError > 0 && ikworkspacedist > _fRefineWithJacobianInverseAllowedError*_fRefineWithJacobianInverseAllowedError ) {
+        const dReal allowedErrorSqr = _fRefineWithJacobianInverseAllowedError*_fRefineWithJacobianInverseAllowedError;
+        if( _fRefineWithJacobianInverseAllowedError > 0 && ikworkspacedist > allowedErrorSqr ) {
             if( param.GetType() == IKP_Transform6D ) { // only 6d supported for now
                 int ret = _jacobinvsolver.ComputeSolution(param.GetTransform6D(), manip, vsolution);
                 if( ret == 2 ) {
@@ -1345,6 +1367,9 @@ protected:
                     ss << "]";
                     RAVELOG_WARN_FORMAT("failed to refine solution lasterror=%f, %s", RaveSqrt(_jacobinvsolver._lasterror2)%ss.str());
                 }
+            }
+            else {
+                RAVELOG_WARN_FORMAT("solution refinement not supported for ik type %s even though error (%3.2e) exceeeds threshold (%3.2e)", param.GetName()%ikworkspacedist%allowedErrorSqr);
             }
         }
 #endif
