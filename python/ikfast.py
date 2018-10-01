@@ -8310,7 +8310,11 @@ class IKFastSolver(AutoReloader):
                         s3 = self.trigsimp(s2,othersolvedvars)
                         s4 = self.SimplifyTransform(s3)
                         try:
-                            jointsolutions.append(2*atan(s4, evaluate=False)) # don't evalute since chances if this being a number is very low
+                            # check s4 == 0, becasue of a bug in evalf() funcion atan(0, evaluate=False).evalf() fails with NoneTypeError, https://github.com/sympy/sympy/pull/1021. Fixed in sympy version==0.7.2, currently using 0.7.1
+                            if s4 == 0:
+                                jointsolutions.append(2*atan(s4, evaluate=True))
+                            else:
+                                jointsolutions.append(2*atan(s4, evaluate=False)) # don't evalute since chances if this being a number is very low                                                          
                         except RuntimeError, e:
                             log.warn('got runtime error when taking atan: %s', e)
                     if all([self.isValidSolution(s) and s != S.Zero for s in jointsolutions]) and len(jointsolutions)>0:
