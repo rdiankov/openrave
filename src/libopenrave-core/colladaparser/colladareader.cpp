@@ -65,14 +65,14 @@ public:
                         return NULL;
                     }
                     // remove first slash because we need relative file
-                    std::string docurifull="file:";
+                    std::string docurifull="";
                     if( uriNativePath.at(0) == '/' ) {
                         docurifull += cdom::nativePathToUri(RaveFindLocalFile(uriNativePath.substr(1), "/"));
                     }
                     else {
                         docurifull += cdom::nativePathToUri(RaveFindLocalFile(uriNativePath, "/"));
                     }
-                    if( docurifull.size() == 5 ) {
+                    if( docurifull.size() == 0 ) {
                         RAVELOG_WARN(str(boost::format("daeOpenRAVEURIResolver::resolveElement() - Failed to resolve %s ")%uri.str()));
                         return NULL;
                     }
