@@ -577,7 +577,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
         bx1 = xmax;
         ba1 = SolveBrakeAccel(x1, -v1, xmax);
     }
-    else if( v0 < 0 ) {
+    else if( v1 > 0 ) {
         bt1 = SolveBrakeTime(x1, -v1, xmin);
         bx1 = xmin;
         ba1 = SolveBrakeAccel(x1, -v1, xmin);
