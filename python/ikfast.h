@@ -245,11 +245,14 @@ public:
         std::cout << i++ << ": ";
         s.Print();
       }
-      std::cout << "vfree = ";
-      for (auto& i : _vfree) {
-        std::cout << i << ", ";
+      if(!_vfree.empty())
+      {
+        std::cout << "vfree = ";
+        for (auto& i : _vfree) {
+          std::cout << i << ", ";
+        }
+        std::cout << std::endl;
       }
-      std::cout << std::endl;
     }
 
     std::vector< IkSingleDOFSolutionBase<T> > _vbasesol;       ///< solution and their offsets if joints are mimiced
@@ -287,7 +290,7 @@ public:
     }
 
     virtual void Print() const {
-      unsigned int i = 0;      
+      unsigned int i = 0;
       for (const auto& solution : _listsolutions) {
         std::cout << "Solution " << i++ << ":" << std::endl;
         std::cout << "===========" << std::endl;

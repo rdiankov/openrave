@@ -1021,14 +1021,15 @@ class InverseKinematicsModel(DatabaseGenerator):
                      '-----------------------------\n'    + \
                      '             TEST %5d\n'            + \
                      '          SUCCESS %5d\n'            + \
+                     '          NO SOLN %5d\n'            + \
                      '          FAILURE %5d\n'            + \
-                     '                      %%  \n'       + \
+                     '                      %%     \n'    + \
                      '-----------------------------\n'    + \
                      '          SUCCESS %5.1f\n'          + \
                      '          FAILURE %5.1f\n'          + \
                      '          NO SOLN %5.1f\n'          + \
                      '     MISSING SOLN %5.1f'            , \
-                     num_test, num_success, num_failure   , \
+                     num_test, num_success, num_no_soln, num_failure, \
                      success_rate*100, failure_rate*100   , \
                      no_soln_rate*100, ms_soln_rate*100 )
 

@@ -1252,9 +1252,8 @@ protected:
 
         RobotBasePtr probot = pmanip->GetRobot();
         SolutionInfo bestsolution;
-        unsigned ninds = pmanip->GetArmIndices().size();
-        std::vector<dReal> vravesol(ninds);
-        std::vector<IkReal> sol(ninds, 0), vsolfree(ninds, 0);
+        std::vector<dReal> vravesol(pmanip->GetArmIndices().size());
+        std::vector<IkReal> sol(pmanip->GetArmIndices().size()), vsolfree;
         // find the first valid solution that satisfies joint constraints and collisions
         boost::tuple<const vector<IkReal>&, const vector<dReal>&,int> textra(vsolfree, q0, filteroptions);
 
@@ -1265,11 +1264,9 @@ protected:
             for(size_t isolution = 0; isolution < solutions.GetNumSolutions(); ++isolution) {
                 const ikfast::IkSolution<IkReal>& iksol = dynamic_cast<const ikfast::IkSolution<IkReal>& >(solutions.GetSolution(isolution));
                 iksol.Validate();
-                vsolfree = vector<IkReal>(ninds, 0);
-                const vector<int>& vfree = iksol.GetFree();
-                const unsigned int nfree = vfree.size();
-                for(size_t ifree = 0; ifree < nfree; ++ifree) {
-                    vsolfree[vfree[ifree]] = q0[vfree[ifree]];
+                vsolfree.resize(iksol.GetFree().size());
+                for(size_t ifree = 0; ifree < iksol.GetFree().size(); ++ifree) {
+                    vsolfree[ifree] = q0.at(iksol.GetFree()[ifree]);
                 }
                 iksol.GetSolution(sol,vsolfree);
                 for(int i = 0; i < iksol.GetDOF(); ++i) {
@@ -1294,14 +1291,11 @@ protected:
         FOREACH(itindex,vsolutionorder) {
             const ikfast::IkSolution<IkReal>& iksol = dynamic_cast<const ikfast::IkSolution<IkReal>& >(solutions.GetSolution(*itindex));
             IkReturnAction res;
-            const vector<int>& vfree = iksol.GetFree();
-            const unsigned int nfree = vfree.size();
-            if( !vfree.empty() ) {
+            if( iksol.GetFree().size() > 0 ) {
                 // have to search over all the free parameters of the solution!
-                vsolfree = vector<IkReal>(ninds, 0); // TGN
-                std::vector<dReal> vFreeInc(_GetFreeIncFromIndices(vfree));
-                // vsolfree[0] will be assigned curphi in ComposeSolution
-                res = ComposeSolution(vfree, vsolfree, 0, q0, boost::bind(&IkFastSolver::_ValidateSolutionSingle,shared_solver(), boost::ref(iksol), boost::ref(textra), boost::ref(sol), boost::ref(vravesol), boost::ref(bestsolution), boost::ref(param), boost::ref(stateCheck), boost::ref(paramnewglobal)), vFreeInc);
+                vsolfree.resize(iksol.GetFree().size());
+                std::vector<dReal> vFreeInc(_GetFreeIncFromIndices(iksol.GetFree()));
+                res = ComposeSolution(iksol.GetFree(), vsolfree, 0, q0, boost::bind(&IkFastSolver::_ValidateSolutionSingle,shared_solver(), boost::ref(iksol), boost::ref(textra), boost::ref(sol), boost::ref(vravesol), boost::ref(bestsolution), boost::ref(param), boost::ref(stateCheck), boost::ref(paramnewglobal)), vFreeInc);
             }
             else {
                 vsolfree.resize(0);
@@ -1786,20 +1780,16 @@ protected:
         ikfast::IkSolutionList<IkReal> solutions;
         if( _CallIk(param,vfree, pmanip->GetLocalToolTransform(), solutions) ) {
             vector<IkReal> vsolfree;
-            unsigned int ninds = pmanip->GetArmIndices().size();
-            std::vector<IkReal> sol(ninds, 0);
+            std::vector<IkReal> sol(pmanip->GetArmIndices().size());
             for(size_t isolution = 0; isolution < solutions.GetNumSolutions(); ++isolution) {
                 const ikfast::IkSolution<IkReal>& iksol = dynamic_cast<const ikfast::IkSolution<IkReal>& >(solutions.GetSolution(isolution));
                 iksol.Validate();
                 //RAVELOG_VERBOSE_FORMAT("ikfast solution %d/%d (free=%d)", isolution%solutions.GetNumSolutions()%iksol.GetFree().size());
-                const vector<int>& vfree = iksol.GetFree();
-                const unsigned int nfree = vfree.size();
-                if( !vfree.empty() ) {
+                if( iksol.GetFree().size() > 0 ) {
                     // have to search over all the free parameters of the solution!
-                    vsolfree = vector<IkReal>(ninds, 0); // TGN
-                    std::vector<dReal> vFreeInc(_GetFreeIncFromIndices(vfree));
-                    // vsolfree[0] will be assigned curphi in ComposeSolution
-                    IkReturnAction retaction = ComposeSolution(vfree, vsolfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_ValidateSolutionAll,shared_solver(), boost::ref(param), boost::ref(iksol), boost::ref(vsolfree), filteroptions, boost::ref(sol), boost::ref(vikreturns), boost::ref(stateCheck)), vFreeInc);
+                    vsolfree.resize(iksol.GetFree().size());
+                    std::vector<dReal> vFreeInc(_GetFreeIncFromIndices(iksol.GetFree()));
+                    IkReturnAction retaction = ComposeSolution(iksol.GetFree(), vsolfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_ValidateSolutionAll,shared_solver(), boost::ref(param), boost::ref(iksol), boost::ref(vsolfree), filteroptions, boost::ref(sol), boost::ref(vikreturns), boost::ref(stateCheck)), vFreeInc);
                     if( retaction & IKRA_Quit) {
                         return retaction;
                     }
