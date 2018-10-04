@@ -168,16 +168,17 @@ public:
     }
 
     virtual void GetSolution(T* solution, const T* freevalues) const {
+        const T twopi = T(M_PI) * 2.0;
         for(std::size_t i = 0; i < _vbasesol.size(); ++i) {
             if( _vbasesol[i].freeind < 0 )
                 solution[i] = _vbasesol[i].foffset;
             else {
                 solution[i] = freevalues[_vbasesol[i].freeind]*_vbasesol[i].fmul + _vbasesol[i].foffset;
                 while( solution[i] > T(M_PI) ) {
-                    solution[i] -= T(M_PI) * 2.0;
+                    solution[i] -= twopi;
                 }
                 while( solution[i] <= T(-M_PI) ) {
-                    solution[i] += T(M_PI) * 2.0;
+                    solution[i] += twopi;
                 }
             }
         }
