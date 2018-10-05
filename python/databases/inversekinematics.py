@@ -991,8 +991,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             if jacobianthreshold is not None:
                 cmd += 'jacobianthreshold %s '%jacobianthreshold
             res = self.ikfastproblem.SendCommand(cmd).split()
-            numtested = float(res[0])
-            successrate = float(res[1])/numtested
+            # collect solution results
             solutionresults = []
             index = 2
             numvalues=1+IkParameterization.GetNumberOfValuesFromType(self.iktype)+self.manip.GetIkSolver().GetNumFreeParameters()
@@ -1002,9 +1001,39 @@ class InverseKinematicsModel(DatabaseGenerator):
                 samples = reshape(array([float64(s) for s in res[index:(index+num*numvalues)]]),(num,numvalues))
                 solutionresults.append(samples)
                 index += num*numvalues
-            wrongrate = len(solutionresults[0])/numtested
-            log.info('success rate: %f, wrong solutions: %f, no solutions: %f, missing solution: %f',float(res[1])/numtested,wrongrate,len(solutionresults[1])/numtested,len(solutionresults[2])/numtested)
-        return successrate, wrongrate
+
+            # calculate stats
+            num_test    = float(res[0])
+            num_success = float(res[1])
+            num_failure = len(solutionresults[0])
+            num_no_soln = len(solutionresults[1])
+            num_ms_soln = len(solutionresults[2])
+
+            assert( num_test == num_success + num_failure + num_no_soln )
+            
+            success_rate = num_success/num_test
+            failure_rate = num_failure/num_test
+            no_soln_rate = num_no_soln/num_test
+            ms_soln_rate = num_ms_soln/num_test
+            
+            log.info('\n' + \
+                     '  STATISTICS          #  \n'        + \
+                     '-----------------------------\n'    + \
+                     '             TEST %5d\n'            + \
+                     '          SUCCESS %5d\n'            + \
+                     '          NO SOLN %5d\n'            + \
+                     '          FAILURE %5d\n'            + \
+                     '                      %%     \n'    + \
+                     '-----------------------------\n'    + \
+                     '          SUCCESS %5.1f\n'          + \
+                     '          FAILURE %5.1f\n'          + \
+                     '          NO SOLN %5.1f\n'          + \
+                     '     MISSING SOLN %5.1f'            , \
+                     num_test, num_success, num_no_soln, num_failure, \
+                     success_rate*100, failure_rate*100   , \
+                     no_soln_rate*100, ms_soln_rate*100 )
+
+        return success_rate, failure_rate
     
     def show(self,delay=0.1,options=None,forceclosure=True):
         if self.env.GetViewer() is None:

@@ -1104,6 +1104,17 @@ public:
                     }
                 }
 
+                // normalize to (-pi, pi]
+                const dReal twopi = M_PI * 2.0;
+                FOREACH(it, vrealsolution) {
+                  while( *it > M_PI ) {
+                    *it -= twopi;
+                  }
+                  while( *it <= -M_PI ) {
+                    *it += twopi;
+                  }
+                }
+
                 robot->SetActiveDOFValues(vrealsolution,false);
                 if( itiktype->first == IKP_Lookat3D) {
                     twrist.SetLookat3D(Vector(RaveRandomFloat()-0.5,RaveRandomFloat()-0.5,RaveRandomFloat()-0.5)*10);

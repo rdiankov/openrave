@@ -34,6 +34,8 @@
 #include <list>
 #include <stdexcept>
 #include <cmath>
+#include <iostream>
+#include <iomanip>
 
 #ifndef IKFAST_HEADER_COMMON
 #define IKFAST_HEADER_COMMON
@@ -49,14 +51,21 @@ template <typename T>
 class IkSingleDOFSolutionBase
 {
 public:
-    IkSingleDOFSolutionBase() : fmul(0), foffset(0), freeind(-1), maxsolutions(1) {
-        indices[0] = indices[1] = indices[2] = indices[3] = indices[4] = -1;
+#define NUMBER_INDICES 5
+    IkSingleDOFSolutionBase() : fmul(0), foffset(0), freeind(-1), jointtype(0x01), maxsolutions(1) {
+      std::fill_n(indices, NUMBER_INDICES, -1);
     }
     T fmul, foffset; ///< joint value is fmul*sol[freeind]+foffset
     signed char freeind; ///< if >= 0, mimics another joint
     unsigned char jointtype; ///< joint type, 0x01 is revolute, 0x11 is slider
     unsigned char maxsolutions; ///< max possible indices, 0 if controlled by free index or a free joint itself
-    unsigned char indices[5]; ///< unique index of the solution used to keep track on what part it came from. sometimes a solution can be repeated for different indices. store at least another repeated root
+    unsigned char indices[NUMBER_INDICES]; ///< unique index of the solution used to keep track on what part it came from. sometimes a solution can be repeated for different indices. store at least another repeated root
+#undef NUMBER_INDICES
+    virtual void Print() const {
+      std::cout << "(" << ((jointtype == 0x01) ? "R" : "P") << ", "
+                << (int)freeind << "), " << foffset << ", "
+                << fmul << std::endl;
+    }
 };
 
 /// \brief The discrete solutions are returned in this structure.
@@ -159,16 +168,17 @@ public:
     }
 
     virtual void GetSolution(T* solution, const T* freevalues) const {
+        const T twopi = T(M_PI) * 2.0;
         for(std::size_t i = 0; i < _vbasesol.size(); ++i) {
             if( _vbasesol[i].freeind < 0 )
                 solution[i] = _vbasesol[i].foffset;
             else {
                 solution[i] = freevalues[_vbasesol[i].freeind]*_vbasesol[i].fmul + _vbasesol[i].foffset;
-                if( solution[i] > T(3.14159265358979) ) {
-                    solution[i] -= T(6.28318530717959);
+                while( solution[i] > T(M_PI) ) {
+                    solution[i] -= twopi;
                 }
-                else if( solution[i] < T(-3.14159265358979) ) {
-                    solution[i] += T(6.28318530717959);
+                while( solution[i] <= T(-M_PI) ) {
+                    solution[i] += twopi;
                 }
             }
         }
@@ -228,6 +238,23 @@ public:
         }
     }
 
+    virtual void Print() const {
+      std::cout << std::setprecision(16);
+      unsigned int i = 0;
+      for (const auto& s : _vbasesol) {
+        std::cout << i++ << ": ";
+        s.Print();
+      }
+      if(!_vfree.empty())
+      {
+        std::cout << "vfree = ";
+        for (auto& i : _vfree) {
+          std::cout << i << ", ";
+        }
+        std::cout << std::endl;
+      }
+    }
+
     std::vector< IkSingleDOFSolutionBase<T> > _vbasesol;       ///< solution and their offsets if joints are mimiced
     std::vector<int> _vfree;
 };
@@ -260,6 +287,15 @@ public:
 
     virtual void Clear() {
         _listsolutions.clear();
+    }
+
+    virtual void Print() const {
+      unsigned int i = 0;
+      for (const auto& solution : _listsolutions) {
+        std::cout << "Solution " << i++ << ":" << std::endl;
+        std::cout << "===========" << std::endl;
+        solution.Print();
+      }
     }
 
 protected:
