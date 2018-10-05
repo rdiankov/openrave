@@ -376,11 +376,11 @@ public:
             report->Reset(_options);
         }
 
-        if( pbody1->GetLinks().size() == 0 || !pbody1->IsEnabled() ) {
+        if( pbody1->GetLinks().size() == 0 || !_IsEnabled(*pbody1) ) {
             return false;
         }
 
-        if( pbody2->GetLinks().size() == 0 || !pbody2->IsEnabled() ) {
+        if( pbody2->GetLinks().size() == 0 || !_IsEnabled(*pbody2) ) {
             return false;
         }
 
@@ -479,7 +479,7 @@ public:
             return false;
         }
 
-        if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled() ) {
+        if( pbody->GetLinks().size() == 0 || !_IsEnabled(*pbody) ) {
             return false;
         }
 
@@ -562,7 +562,7 @@ public:
             report->Reset(_options);
         }
 
-        if( (pbody->GetLinks().size() == 0) || !pbody->IsEnabled() ) {
+        if( (pbody->GetLinks().size() == 0) || !_IsEnabled(*pbody) ) {
             return false;
         }
 
@@ -623,7 +623,7 @@ public:
             report->Reset(_options);
         }
 
-        if( (pbody->GetLinks().size() == 0) || !pbody->IsEnabled() ) {
+        if( (pbody->GetLinks().size() == 0) || !_IsEnabled(*pbody) ) {
             return false;
         }
 
@@ -1212,6 +1212,23 @@ private:
         }
     }
 
+    inline bool _IsEnabled(const KinBody& body)
+    {
+        if( body.IsEnabled() ) {
+            return true;
+        }
+
+        // check if body has any enabled bodies
+        body.GetGrabbed(_vCachedGrabbedBodies);
+        FOREACH(itbody, _vCachedGrabbedBodies) {
+            if( (*itbody)->IsEnabled() ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+    
     int _options;
     boost::shared_ptr<FCLSpace> _fclspace;
     int _numMaxContacts;
@@ -1241,6 +1258,7 @@ private:
     CollisionReport _reportcache;
     std::vector<fcl::Vec3f> _fclPointsCache;
     std::vector<fcl::Triangle> _fclTrianglesCache;
+    std::vector<KinBodyPtr> _vCachedGrabbedBodies;
 
     bool _bIsSelfCollisionChecker; // Currently not used
     bool _bParentlessCollisionObject; ///< if set to true, the last collision command ran into colliding with an unknown object
