@@ -17,7 +17,6 @@
 #include "colladacommon.h"
 #include <boost/algorithm/string.hpp>
 #include <openrave/xmlreaders.h>
-#include <libxml/xmlversion.h>
 
 namespace OpenRAVE
 {
