@@ -378,6 +378,7 @@ Child Elements
   <bind_instance_geometry> | The geometry used for a particular link | 0 or more
   <ignore_link_pair> | Specifies two links pairs whose self-collision should not be checked | 0 or more
   <link_collision_state> | Contains a **common_bool_or_param_type** that specifies if a link should be used for collision or not. Can enable or disable it. | 0 or more
+  <link_visible_state> | Contains a **common_bool_or_param_type** that specifies if a link should be used for visible or not. Can enable or disable it. | 0 or more
 
 Attributes for <bind_instance_geometry>
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -453,6 +454,22 @@ Example
         </technique>
       </extra>
   </library_kinematics_models> 
+
+Attributes for <link_visible_state>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. csv-table::
+  :class: collada
+  :delim: |
+  :widths: 15, 15, 70
+
+  link | **xs:token** | Required. References the SID of a <link> defined in <kinematics_model>. One of the links defining the pair to be ignored.
+
+Details
+~~~~~~~
+
+By default, all links are visible unless turned off via **<link_visible_state>** or the geometry definition **<visible>** says so.
+
 
 .. _collada_geometry_info:
 
