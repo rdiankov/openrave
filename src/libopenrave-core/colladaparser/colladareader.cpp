@@ -1256,9 +1256,6 @@ public:
         _ExtractVisibleData(pbody,articulated_system,articulated_system->getExtra_array(),bindings.listInstanceLinkBindings);
         _ExtractExtraData(pbody,articulated_system->getExtra_array());
         // also collision data state can be dynamic, so process instance_articulated_system too
-        if( !!ias->getSid() && std::string(ias->getSid()) == "body65_motion_inst" ) {
-            RAVELOG_INFO_FORMAT("yoooooo %s %d", pbody->GetName()%ias->getExtra_array().getCount());
-        }
         _ExtractCollisionData(pbody,ias,ias->getExtra_array(),bindings.listInstanceLinkBindings);
         _ExtractVisibleData(pbody,ias,ias->getExtra_array(),bindings.listInstanceLinkBindings);
         return true;
