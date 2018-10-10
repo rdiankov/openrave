@@ -269,11 +269,18 @@ public:
                     std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
                 } while (0);
 
+#ifdef SMOOTHER_TIMING_DEBUG
+                uint32_t tStartCollisionChecking = utils::GetMicroTime();
+#endif
                 if( bExpectedModifiedConfigurations ) {
                     for( size_t j = 0; j < vsearchsegments.size(); ++j ) {
                         rampndVectOut[vsearchsegments[j]].GetX1Vect(q0);
                         RampOptimizer::CheckReturn ret = feas->ConfigFeasible2(q0, std::vector<dReal>(), options);
                         if( ret.retcode != 0 ) {
+#ifdef SMOOTHER_TIMING_DEBUG
+                            uint32_t tFinishCollisionChecking = utils::GetMicroTime();
+                            RAVELOG_DEBUG_FORMAT("env=%d, time spent for collision checking=%f s", _envid%(0.000001f*(float)(tFinishCollisionChecking - tStartCollisionChecking)));
+#endif
                             return ret;
                         }
                     }
@@ -285,10 +292,18 @@ public:
                         q0.assign(itconfig, itconfig + tol.size());
                         RampOptimizer::CheckReturn ret = feas->ConfigFeasible2(q0, std::vector<dReal>(), options);
                         if( ret.retcode != 0 ) {
+#ifdef SMOOTHER_TIMING_DEBUG
+                            uint32_t tFinishCollisionChecking = utils::GetMicroTime();
+                            RAVELOG_DEBUG_FORMAT("env=%d, time spent for collision checking=%f s", _envid%(0.000001f*(float)(tFinishCollisionChecking - tStartCollisionChecking)));
+#endif
                             return ret;
                         }
                     }
                 }
+#ifdef SMOOTHER_TIMING_DEBUG
+                uint32_t tFinishCollisionChecking = utils::GetMicroTime();
+                RAVELOG_DEBUG_FORMAT("env=%d, time spent for collision checking=%f s", _envid%(0.000001f*(float)(tFinishCollisionChecking - tStartCollisionChecking)));
+#endif
             }
 
             // Note that now q0 and dq0 are actually the final joint position and velocity
@@ -1108,12 +1123,12 @@ public:
                     bool bAccelChanged = false;
                     for (size_t idof = 0; idof < ndof; ++idof) {
                         if( _cacheRampNDSeg.GetAAt(idof) < -_parameters->_vConfigAccelerationLimit[idof] ) {
-                            RAVELOG_VERBOSE_FORMAT("accel changed: %.15e --> %.15e; diff=%.15e", _cacheRampNDSeg.GetAAt(idof)%(-_parameters->_vConfigAccelerationLimit[idof])%(_cacheRampNDSeg.GetAAt(idof) + _parameters->_vConfigAccelerationLimit[idof]));
+                            RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d, accel changed: %.15e --> %.15e; diff=%.15e", GetEnv()->GetId()%idof%_cacheRampNDSeg.GetAAt(idof)%(-_parameters->_vConfigAccelerationLimit[idof])%(_cacheRampNDSeg.GetAAt(idof) + _parameters->_vConfigAccelerationLimit[idof]));
                             _cacheRampNDSeg.GetAAt(idof) = -_parameters->_vConfigAccelerationLimit[idof];
                             bAccelChanged = true;
                         }
                         else if( _cacheRampNDSeg.GetAAt(idof) > _parameters->_vConfigAccelerationLimit[idof] ) {
-                            RAVELOG_VERBOSE_FORMAT("accel changed: %.15e --> %.15e; diff=%.15e", _cacheRampNDSeg.GetAAt(idof)%(_parameters->_vConfigAccelerationLimit[idof])%(_cacheRampNDSeg.GetAAt(idof) - _parameters->_vConfigAccelerationLimit[idof]));
+                            RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d, accel changed: %.15e --> %.15e; diff=%.15e", GetEnv()->GetId()%idof%_cacheRampNDSeg.GetAAt(idof)%(_parameters->_vConfigAccelerationLimit[idof])%(_cacheRampNDSeg.GetAAt(idof) - _parameters->_vConfigAccelerationLimit[idof]));
                             _cacheRampNDSeg.GetAAt(idof) = _parameters->_vConfigAccelerationLimit[idof];
                             bAccelChanged = true;
                         }

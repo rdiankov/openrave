@@ -16,8 +16,8 @@
 #include "openraveplugindefs.h"
 
 // #define SHORTCUT_ONEDOF_DEBUG
-//#define PROGRESS_DEBUG
 // #define PROGRESS_DEBUG
+// #define LINEAR_SMOOTHER_DEBUG
 
 class ShortcutLinearPlanner : public PlannerBase
 {
@@ -190,8 +190,8 @@ protected:
         int itercount = 0;
         int numiters = parameters->_nMaxIterations;
         std::vector<dReal> vnewconfig0(dof), vnewconfig1(dof);
-#ifdef PROGRESS_DEBUG
         int numshortcuts = 0; // keep track of the number of successful shortcuts
+#ifdef PROGRESS_DEBUG
         std::stringstream ss;
         ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
 #endif
@@ -301,8 +301,8 @@ protected:
             listpath.erase(itstartnode, itendnode);
             nrejected = 0;
 
-#ifdef PROGRESS_DEBUG
             ++numshortcuts;
+#ifdef PROGRESS_DEBUG
             dReal newdistance = 0;
             FOREACH(ittempnode, listpath) {
                 newdistance += ittempnode->second;
@@ -317,10 +317,7 @@ protected:
                 break;
             }
         }
-#ifdef PROGRESS_DEBUG
-        RAVELOG_DEBUG_FORMAT("env=%d, finished at shortcut iter=%d, successful=%d", GetEnv()->GetId()%itercount%numshortcuts);
-#endif
-
+        RAVELOG_DEBUG_FORMAT("env=%d, linear shortcut finished at iter=%d, successful=%d", GetEnv()->GetId()%itercount%numshortcuts);
     }
 
     // Experimental function: shortcut only one DOF at a time. Although some non-default
@@ -341,7 +338,7 @@ protected:
             }
             // Sample a DOF to shortcut. Give the last DOF twice as much chance.
             uint32_t idof = _puniformsampler->SampleSequenceOneUInt32()%(ndof + 1);
-            if( idof > ndof - 1 ) {
+            if( idof > (uint32_t)(ndof - 1) ) {
                 idof = ndof - 1;
             }
 
