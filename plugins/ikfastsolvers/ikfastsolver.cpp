@@ -1141,18 +1141,18 @@ protected:
 #ifdef OPENRAVE_HAS_LAPACK
                     if( _fRefineWithJacobianInverseAllowedError > 0 ) {
                         // since will be refining, can add a little error to see if IK gets recomputed
-                        eerot[0] = r.dir.x+0.001;
-                        eerot[1] = r.dir.y+0.001;
-                        eerot[2] = r.dir.z+0.001;
+                        eerot[0] = r.dir.x+0.01;
+                        eerot[1] = r.dir.y+0.01;
+                        eerot[2] = r.dir.z+0.01;
                         dReal fnorm = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
                         eerot[0] /= fnorm;
                         eerot[1] /= fnorm;
                         eerot[2] /= fnorm;
                         bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
                         if( !bret ) {
-                            eerot[0] = r.dir.x-0.001;
-                            eerot[1] = r.dir.y-0.001;
-                            eerot[2] = r.dir.z-0.001;
+                            eerot[0] = r.dir.x-0.01;
+                            eerot[1] = r.dir.y-0.01;
+                            eerot[2] = r.dir.z-0.01;
                             dReal fnorm = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
                             eerot[0] /= fnorm;
                             eerot[1] /= fnorm;
