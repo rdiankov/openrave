@@ -1158,6 +1158,26 @@ protected:
                             eerot[1] /= fnorm;
                             eerot[2] /= fnorm;
                             bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
+                            if( !bret ) {
+                                eerot[0] = r.dir.x-0.02;
+                                eerot[1] = r.dir.y-0.02;
+                                eerot[2] = r.dir.z;
+                                dReal fnorm = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
+                                eerot[0] /= fnorm;
+                                eerot[1] /= fnorm;
+                                eerot[2] /= fnorm;
+                                bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
+                                if( !bret ) {
+                                    eerot[0] = r.dir.x+0.02;
+                                    eerot[1] = r.dir.y+0.02;
+                                    eerot[2] = r.dir.z;
+                                    dReal fnorm = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
+                                    eerot[0] /= fnorm;
+                                    eerot[1] /= fnorm;
+                                    eerot[2] /= fnorm;
+                                    bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
+                                }
+                            }
                         }
                         RAVELOG_VERBOSE("ik failed, trying with slight jitter, ret=%d", (int)bret);
                     }
@@ -1332,6 +1352,32 @@ protected:
         if( _fRefineWithJacobianInverseAllowedError > 0 && ikworkspacedist > _fRefineWithJacobianInverseAllowedError*_fRefineWithJacobianInverseAllowedError ) {
             if( param.GetType() == IKP_Transform6D ) { // only 6d supported for now
                 int ret = _jacobinvsolver.ComputeSolution(param.GetTransform6D(), manip, vsolution);
+                if( ret == 2 ) {
+                    RAVELOG_VERBOSE("did not converge, try to prioritize translation at least\n");
+                    ret = _jacobinvsolver.ComputeSolutionTranslation(param.GetTransform6D(), manip, vsolution);
+                }
+                if( ret == 0 ) {
+                    stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                    ss << "IkParameterization('" << param << "'); sol=[";
+                    FOREACH(it, vsolution) {
+                        ss << *it << ",";
+                    }
+                    ss << "]";
+                    RAVELOG_WARN_FORMAT("failed to refine solution lasterror=%f, %s", RaveSqrt(_jacobinvsolver._lasterror2)%ss.str());
+                }
+            }
+            else if( param.GetType() == IKP_TranslationDirection5D ) { // only 6d supported for now
+                // have to project the current manip into the direction constraints so that direction aligns perfectly
+                Transform tgoal;
+                Transform tnewmanip = manip.GetTransform();
+                tgoal.rot = quatRotateDirection(manip.GetLocalToolDirection(), param.GetTranslationDirection5D().dir);
+
+                dReal frotangle0 = normalizeAxisRotation(param.GetTranslationDirection5D().dir, tnewmanip.rot).first;
+                dReal frotanglegoal = normalizeAxisRotation(param.GetTranslationDirection5D().dir, tgoal.rot).first;
+                tgoal.rot = quatMultiply(quatFromAxisAngle(param.GetTranslationDirection5D().dir, frotanglegoal - frotangle0), tgoal.rot);
+
+                tgoal.trans = param.GetTranslationDirection5D().pos;
+                int ret = _jacobinvsolver.ComputeSolution(tgoal, manip, vsolution);
                 if( ret == 2 ) {
                     RAVELOG_VERBOSE("did not converge, try to prioritize translation at least\n");
                     ret = _jacobinvsolver.ComputeSolutionTranslation(param.GetTransform6D(), manip, vsolution);
