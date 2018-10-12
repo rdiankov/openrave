@@ -1252,12 +1252,11 @@ public:
             ExtractRobotAttachedActuators(probot, articulated_system, bindings);
         }
         _ExtractCollisionData(pbody,articulated_system,articulated_system->getExtra_array(),bindings.listInstanceLinkBindings);
-        //_ExtractCollisionData(pbody,articulated_system,ias->getExtra_array(),bindings.listInstanceLinkBindings);
         _ExtractVisibleData(pbody,articulated_system,articulated_system->getExtra_array(),bindings.listInstanceLinkBindings);
         _ExtractExtraData(pbody,articulated_system->getExtra_array());
         // also collision data state can be dynamic, so process instance_articulated_system too
-        _ExtractCollisionData(pbody,ias,ias->getExtra_array(),bindings.listInstanceLinkBindings);
-        _ExtractVisibleData(pbody,ias,ias->getExtra_array(),bindings.listInstanceLinkBindings);
+        _ExtractCollisionData(pbody,ias,ias->getExtra_array(),bindings.listInstanceLinkBindings, true);
+        _ExtractVisibleData(pbody,ias,ias->getExtra_array(),bindings.listInstanceLinkBindings, true);
         return true;
     }
 
@@ -4177,7 +4176,9 @@ private:
     }
 
     /// \brief extracts collision-specific data infoe
-    InterfaceTypePtr _ExtractCollisionData(KinBodyPtr pbody, daeElementRef referenceElt, const domExtra_Array& arr, const std::list<InstanceLinkBinding>& listInstanceLinkBindings) {
+    ///
+    /// \param bAndWithPrevious if true, then AND collision and visible state with previous values
+    InterfaceTypePtr _ExtractCollisionData(KinBodyPtr pbody, daeElementRef referenceElt, const domExtra_Array& arr, const std::list<InstanceLinkBinding>& listInstanceLinkBindings, bool bAndWithPrevious=false) {
         for(size_t i = 0; i < arr.getCount(); ++i) {
             if( strcmp(arr[i]->getType(),"collision") == 0 ) {
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(arr[i]->getTechnique_array());
@@ -4274,7 +4275,15 @@ private:
                                 continue;
                             }
                             BOOST_ASSERT(plink->GetParent()==pbody);
-                            resolveCommon_bool_or_param(pelt, referenceElt, plink->_info._bIsEnabled);
+                            bool bIsEnabled=true;
+                            if( resolveCommon_bool_or_param(pelt, referenceElt, bIsEnabled) ) {
+                                if( bAndWithPrevious ) {
+                                    plink->_info._bIsEnabled &= bIsEnabled;
+                                }
+                                else {
+                                    plink->_info._bIsEnabled = bIsEnabled;
+                                }
+                            }
                         }
                     }
                     FOREACH(itlinkgeomgroups, mapGeometryGroups) {
@@ -4294,7 +4303,9 @@ private:
     }
 
     /// \brief extracts visible-specific data infoe
-    InterfaceTypePtr _ExtractVisibleData(KinBodyPtr pbody, daeElementRef referenceElt, const domExtra_Array& arr, const std::list<InstanceLinkBinding>& listInstanceLinkBindings) {
+    ///
+    /// \param bAndWithPrevious if true, then AND collision and visible state with previous values
+    InterfaceTypePtr _ExtractVisibleData(KinBodyPtr pbody, daeElementRef referenceElt, const domExtra_Array& arr, const std::list<InstanceLinkBinding>& listInstanceLinkBindings, bool bAndWithPrevious=false) {
         for(size_t i = 0; i < arr.getCount(); ++i) {
             if( strcmp(arr[i]->getType(),"visible") == 0 ) {
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(arr[i]->getTechnique_array());
@@ -4320,7 +4331,12 @@ private:
                             bool bVisible = true;
                             if( resolveCommon_bool_or_param(pelt, referenceElt, bVisible) ) {
                                 FOREACH(itgeometry, plink->_vGeometries) {
-                                    (*itgeometry)->_info._bVisible = bVisible;
+                                    if( bAndWithPrevious ) {
+                                        (*itgeometry)->_info._bVisible &= bVisible;
+                                    }
+                                    else {
+                                        (*itgeometry)->_info._bVisible = bVisible;
+                                    }
                                 }
                             }
                         }
@@ -4330,7 +4346,7 @@ private:
         }
         return InterfaceTypePtr();
     }
-    
+
     std::string _ExtractLinkName(domLinkRef pdomlink) {
         std::string linkname;
         if( !!pdomlink ) {

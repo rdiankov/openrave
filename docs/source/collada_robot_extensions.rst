@@ -416,11 +416,12 @@ Attributes for <link_collision_state>
 Details
 ~~~~~~~
 
-Convex decompositions can be defined by using one geometry per convex hull and attaching multiple geometries to the same link.
-
 <ignore_link_pair> tags help self-collision detection to help prune possibilities. The adjacency information is not just the neighboring links. It is also meant to prune any collisions between two links that *cannot* possibly happen if the robot maintains its joint limits. This information depends not only on the kinematics of the robot, but also on the geometry of every link. Also for triplets of joints j1, j2, j3 that intersect at a common axis, you would want to add (j1,j2),(j2,j3),(j1,j3).
 
 By default, all links are colliding unless turned off via **<link_collision_state>**.
+
+If **<link_collision_state>** is defined at the instance_articulated_system level, then it will do a AND operation with the **<link_collision_state>** defined at the articulated_system level to figure out the true collision of the objects.
+If **<link_visible_state>** is defined at the instance_articulated_system level, then it will do a AND operation with the **<link_visible_state>** defined at the articulated_system level to figure out the true visible of the objects.
 
 Example
 ~~~~~~~
