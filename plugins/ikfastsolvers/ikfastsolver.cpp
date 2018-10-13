@@ -1159,8 +1159,8 @@ protected:
                             eerot[2] /= fnorm;
                             bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
                             if( !bret ) {
-                                eerot[0] = r.dir.x-0.02;
-                                eerot[1] = r.dir.y-0.02;
+                                eerot[0] = r.dir.x-0.04;
+                                eerot[1] = r.dir.y-0.04;
                                 eerot[2] = r.dir.z;
                                 dReal fnorm = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
                                 eerot[0] /= fnorm;
@@ -1168,8 +1168,8 @@ protected:
                                 eerot[2] /= fnorm;
                                 bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
                                 if( !bret ) {
-                                    eerot[0] = r.dir.x+0.02;
-                                    eerot[1] = r.dir.y+0.02;
+                                    eerot[0] = r.dir.x+0.04;
+                                    eerot[1] = r.dir.y+0.04;
                                     eerot[2] = r.dir.z;
                                     dReal fnorm = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
                                     eerot[0] /= fnorm;
@@ -1369,7 +1369,7 @@ protected:
             else if( param.GetType() == IKP_TranslationDirection5D ) { // only 6d supported for now
                 // have to project the current manip into the direction constraints so that direction aligns perfectly
                 Transform tgoal;
-                Transform tnewmanip = manip.GetTransform();
+                Transform tnewmanip = manip.GetBase()->GetTransform().inverse()*manip.GetTransform();
                 tgoal.rot = quatRotateDirection(manip.GetLocalToolDirection(), param.GetTranslationDirection5D().dir);
 
                 dReal frotangle0 = normalizeAxisRotation(param.GetTranslationDirection5D().dir, tnewmanip.rot).first;
@@ -1380,7 +1380,7 @@ protected:
                 int ret = _jacobinvsolver.ComputeSolution(tgoal, manip, vsolution);
                 if( ret == 2 ) {
                     RAVELOG_VERBOSE("did not converge, try to prioritize translation at least\n");
-                    ret = _jacobinvsolver.ComputeSolutionTranslation(param.GetTransform6D(), manip, vsolution);
+                    ret = _jacobinvsolver.ComputeSolutionTranslation(tgoal, manip, vsolution);
                 }
                 if( ret == 0 ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
@@ -1509,8 +1509,8 @@ protected:
                 FOREACH(it,_vsolutionindices) {
                     *it += itravesol->second<<16;
                 }
-                probot->SetActiveDOFValues(vravesol,false);
-                _CheckRefineSolution(param, *pmanip, vravesol);
+                probot->SetActiveDOFValues(itravesol->first,false);
+                _CheckRefineSolution(param, *pmanip, itravesol->first);
 
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false);
