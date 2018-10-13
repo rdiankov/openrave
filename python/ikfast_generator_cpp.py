@@ -340,7 +340,7 @@ inline double IKlog(double f) { return log(f); }
 
 // there are checkpoints in ikfast that are evaluated to make sure they are 0. This threshold speicfies by how much they can deviate
 #ifndef IKFAST_EVALCOND_THRESH
-#define IKFAST_EVALCOND_THRESH ((IkReal)0.00001)
+#define IKFAST_EVALCOND_THRESH ((IkReal)0.03) // 5D IK has some crazy degenerate cases, but can rely on jacobian refinment to make better, just need good starting point
 #endif
 
 
