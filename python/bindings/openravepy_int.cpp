@@ -1844,6 +1844,7 @@ public:
             }
             ostate["linktransforms"] = olinktransforms;
             ostate["jointvalues"] = toPyArray(itstate->jointvalues);
+            ostate["linkEnableStates"] = toPyArray(itstate->vLinkEnableStates);
             ostate["name"] = ConvertStringToUnicode(itstate->strname);
             ostate["uri"] = ConvertStringToUnicode(itstate->uri);
             ostate["updatestamp"] = itstate->updatestamp;
@@ -1870,6 +1871,7 @@ public:
         }
         ostate["linktransforms"] = olinktransforms;
         ostate["jointvalues"] = toPyArray(bodystate.jointvalues);
+        ostate["linkEnableStates"] = toPyArray(bodystate.vLinkEnableStates);
         ostate["name"] = ConvertStringToUnicode(bodystate.strname);
         ostate["uri"] = ConvertStringToUnicode(bodystate.uri);
         ostate["updatestamp"] = bodystate.updatestamp;

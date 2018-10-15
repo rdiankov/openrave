@@ -1311,6 +1311,7 @@ public:
         }
         KinBodyPtr pbody; ///< pointer to the body. if using this, make sure the environment is locked.
         std::vector<Transform> vectrans; ///< \see KinBody::GetLinkTransformations
+        std::vector<uint8_t> vLinkEnableStates; ///< \see KinBody::GetLinkEnableStates
         std::vector<dReal> jointvalues; ///< \see KinBody::GetDOFValues
         std::string strname;         ///< \see KinBody::GetName
         std::string uri; ///< \see KinBody::GetURI

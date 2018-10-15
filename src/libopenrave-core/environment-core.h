@@ -2043,6 +2043,7 @@ public:
             KinBody::BodyState& state = _vPublishedBodies.back();
             state.pbody = *itbody;
             (*itbody)->GetLinkTransformations(state.vectrans, vdoflastsetvalues);
+            (*itbody)->GetLinkEnableStates(state.vLinkEnableStates);
             (*itbody)->GetDOFValues(state.jointvalues);
             state.strname =(*itbody)->GetName();
             state.uri = (*itbody)->GetURI();
