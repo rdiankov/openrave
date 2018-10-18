@@ -1954,7 +1954,7 @@ protected:
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
                 IkReturnPtr localret(new IkReturn(IKRA_Success));
                 localret->_mapdata["solutionindices"] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
-                localret->_vsolution.swap(itravesol->first);
+                localret->_vsolution.swap(vravesol);
                 listlocalikreturns.push_back(std::make_pair(localret, paramnew));
             }
         }
