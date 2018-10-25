@@ -1950,6 +1950,8 @@ public:
                                 pjoint->_info._vmaxvel[ic] *= fjointmult;
                             }
                             RAVELOG_VERBOSE("... Joint Speed: %f...\n",pjoint->GetMaxVel());
+                            pjoint->_info._vhardmaxvel[ic] = pjoint->_info._vmaxvel[ic]; // Set default hardmaxvel because maxvel (soft limit) should not exceed hardmaxvel (hard limit).
+                            RAVELOG_VERBOSE("... Joint Speed Set to Hard Max Vel for Consistency: %f...\n",pjoint->GetHardMaxVel());
                         }
                         if (!!motion_axis_info->getAcceleration()) {
                             pjoint->_info._vmaxaccel[ic] = resolveFloat(motion_axis_info->getAcceleration(),motion_axis_info);
@@ -1957,6 +1959,8 @@ public:
                                 pjoint->_info._vmaxaccel[ic] *= fjointmult;
                             }
                             RAVELOG_VERBOSE("... Joint Acceleration: %f...\n",pjoint->GetMaxAccel());
+                            pjoint->_info._vhardmaxaccel[ic] = pjoint->_info._vmaxaccel[ic]*10; // Set default hardmaxaccel because maxaccel (soft limit) should not exceed hardmaxaccel (hard limit). Hard limit is larger enough than soft limit for acceleration
+                            RAVELOG_VERBOSE("... Joint Acceleration Set to Hard Max Accel for Consistency: %f...\n",pjoint->GetHardMaxAccel());
                         }
                         if (!!motion_axis_info->getJerk()) {
                             pjoint->_info._vmaxjerk[ic] = resolveFloat(motion_axis_info->getJerk(),motion_axis_info);
@@ -1964,6 +1968,8 @@ public:
                                 pjoint->_info._vmaxjerk[ic] *= fjointmult;
                             }
                             RAVELOG_VERBOSE("... Joint Jerk: %f...\n",pjoint->GetMaxJerk());
+                            pjoint->_info._vhardmaxjerk[ic] = pjoint->_info._vmaxjerk[ic]*10; // Set default hardmaxjerk because maxjerk (soft limit) should not exceed hardmaxjerk (hard limit). Hard limit is larger enough than soft limit for jerk
+                            RAVELOG_VERBOSE("... Joint Jerk Set to Hard Max Jerk for Consistency: %f...\n",pjoint->GetHardMaxJerk());
                         }
 
                         // Read hard limits. Hard limits are defined as <bind> tag.
