@@ -1965,6 +1965,36 @@ public:
                             }
                             RAVELOG_VERBOSE("... Joint Jerk: %f...\n",pjoint->GetMaxJerk());
                         }
+
+                        // Read hard limits. Hard limits are defined as <bind> tag.
+                        RAVELOG_VERBOSE("... Bind array size : %d", motion_axis_info->getBind_array().getCount());
+                        for(size_t ib = 0; ib < motion_axis_info->getBind_array().getCount(); ++ib) {
+                            domKinematics_bindRef pbind = motion_axis_info->getBind_array()[ib];
+                            if ( !!pbind->getSymbol() ) {
+                                double hardLimitValue = -1.0;
+                                std::stringstream ss; // Used only for debug message
+                                ss << "... " << pbind->getSymbol() << " : getFloat=" << (!!pbind->getFloat()) << ", getSIDREF=" << (!!pbind->getSIDREF()) << ", getParam=" << (!!pbind->getParam());
+                                if ( !!pbind->getFloat() ) {
+                                    hardLimitValue = pbind->getFloat()->getValue();
+                                } else {
+                                    // TODO : Param and SIDREF are not implemented.
+                                }
+                                if ( hardLimitValue >= 0 ) {
+                                    if ( std::string(pbind->getSymbol()) == "hardMaxVel" ) {
+                                        pjoint->_info._vhardmaxvel[ic] = (pjoint->IsRevolute(ic) ? (PI/180.0f) : _mapJointUnits[pjoint][ic]) * hardLimitValue;
+                                    } else if ( std::string(pbind->getSymbol()) == "hardMaxAccel" ) {
+                                        pjoint->_info._vhardmaxaccel[ic] = (pjoint->IsRevolute(ic) ? (PI/180.0f) : _mapJointUnits[pjoint][ic]) * hardLimitValue;
+                                    } else if ( std::string(pbind->getSymbol()) == "hardMaxJerk" ) {
+                                        pjoint->_info._vhardmaxjerk[ic] = (pjoint->IsRevolute(ic) ? (PI/180.0f) : _mapJointUnits[pjoint][ic]) * hardLimitValue;
+                                    } else {
+                                        ss << ": invalid symbol=" << pbind->getSymbol();
+                                    }
+                                } else {
+                                    ss << ": hardLimitValue is not correctly specified in collada file";
+                                }
+                                RAVELOG_VERBOSE_FORMAT("%s : value=%f...", ss.str() % hardLimitValue);
+                            }
+                        }
                     }
 
                     bool joint_locked = false;     // if locked, joint angle is static
