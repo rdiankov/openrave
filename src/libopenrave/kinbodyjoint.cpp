@@ -898,6 +898,75 @@ void KinBody::Joint::SetJerkLimits(const std::vector<dReal>& vmax)
     GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
 }
 
+void KinBody::Joint::GetHardVelocityLimits(std::vector<dReal>& vmax, bool bAppend) const
+{
+    if( !bAppend ) {
+        vmax.resize(0);
+    }
+    for(int i = 0; i < GetDOF(); ++i) {
+        vmax.push_back(_info._vhardmaxvel[i]);
+    }
+}
+
+dReal KinBody::Joint::GetHardVelocityLimit(int iaxis) const
+{
+    return _info._vhardmaxvel.at(iaxis);
+}
+
+void KinBody::Joint::SetHardVelocityLimits(const std::vector<dReal>& vmax)
+{
+    for(int i = 0; i < GetDOF(); ++i) {
+        _info._vhardmaxvel[i] = vmax.at(i);
+    }
+    GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+}
+
+void KinBody::Joint::GetHardAccelerationLimits(std::vector<dReal>& vmax, bool bAppend) const
+{
+    if( !bAppend ) {
+        vmax.resize(0);
+    }
+    for(int i = 0; i < GetDOF(); ++i) {
+        vmax.push_back(_info._vhardmaxaccel[i]);
+    }
+}
+
+dReal KinBody::Joint::GetHardAccelerationLimit(int iaxis) const
+{
+    return _info._vhardmaxaccel.at(iaxis);
+}
+
+void KinBody::Joint::SetHardAccelerationLimits(const std::vector<dReal>& vmax)
+{
+    for(int i = 0; i < GetDOF(); ++i) {
+        _info._vhardmaxaccel[i] = vmax.at(i);
+    }
+    GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+}
+
+void KinBody::Joint::GetHardJerkLimits(std::vector<dReal>& vmax, bool bAppend) const
+{
+    if( !bAppend ) {
+        vmax.resize(0);
+    }
+    for(int i = 0; i < GetDOF(); ++i) {
+        vmax.push_back(_info._vhardmaxjerk[i]);
+    }
+}
+
+dReal KinBody::Joint::GetHardJerkLimit(int iaxis) const
+{
+    return _info._vhardmaxjerk.at(iaxis);
+}
+
+void KinBody::Joint::SetHardJerkLimits(const std::vector<dReal>& vmax)
+{
+    for(int i = 0; i < GetDOF(); ++i) {
+        _info._vhardmaxjerk[i] = vmax.at(i);
+    }
+    GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+}
+
 void KinBody::Joint::GetTorqueLimits(std::vector<dReal>& vmax, bool bAppend) const
 {
     if( !bAppend ) {

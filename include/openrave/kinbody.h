@@ -869,6 +869,16 @@ public:
             return _info._vmaxjerk[iaxis];
         }
 
+        inline dReal GetHardMaxVel(int iaxis=0) const {
+            return _info._vhardmaxvel[iaxis];
+        }
+        inline dReal GetHardMaxAccel(int iaxis=0) const {
+            return _info._vhardmaxaccel[iaxis];
+        }
+        inline dReal GetHardMaxJerk(int iaxis=0) const {
+            return _info._vhardmaxjerk[iaxis];
+        }
+
         ///< \brief gets the max instantaneous torque of the joint
         ///
         /// If _infoElectricMotor is filled, the will compute the max instantaneous torque depending on the current speed of the joint.
@@ -1045,6 +1055,42 @@ public:
 
         /// \brief \see GetJerkLimits
         virtual void SetJerkLimits(const std::vector<dReal>& vmax);
+
+        /** \brief Returns the hard max velocities of the joint
+
+            \param[out] the max vel
+            \param[in] bAppend if true will append to the end of the vector instead of erasing it
+         */
+        virtual void GetHardVelocityLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
+
+        virtual dReal GetHardVelocityLimit(int iaxis=0) const;
+
+        /// \brief \see GetHardVelocityLimits
+        virtual void SetHardVelocityLimits(const std::vector<dReal>& vmax);
+
+        /** \brief Returns the hard max accelerations of the joint
+
+            \param[out] the max accel
+            \param[in] bAppend if true will append to the end of the vector instead of erasing it
+         */
+        virtual void GetHardAccelerationLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
+
+        virtual dReal GetHardAccelerationLimit(int iaxis=0) const;
+
+        /// \brief \see GetHardAccelerationLimits
+        virtual void SetHardAccelerationLimits(const std::vector<dReal>& vmax);
+
+        /** \brief Returns the hard max jerks of the joint
+
+            \param[out] the max jerk
+            \param[in] bAppend if true will append to the end of the vector instead of erasing it
+         */
+        virtual void GetHardJerkLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
+
+        virtual dReal GetHardJerkLimit(int iaxis=0) const;
+
+        /// \brief \see GetHardJerkLimits
+        virtual void SetHardJerkLimits(const std::vector<dReal>& vmax);
 
         /** \brief Returns the max torques of the joint
 
@@ -1559,6 +1605,21 @@ private:
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
     virtual void GetDOFJerkLimits(std::vector<dReal>& maxjerks, const std::vector<int>& dofindices = std::vector<int>()) const;
 
+    /// \brief Returns the hard max velocity for each DOF
+    ///
+    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void GetDOFHardVelocityLimits(std::vector<dReal>& maxvels, const std::vector<int>& dofindices = std::vector<int>()) const;
+
+    /// \brief Returns the hard max acceleration for each DOF
+    ///
+    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void GetDOFHardAccelerationLimits(std::vector<dReal>& maxaccels, const std::vector<int>& dofindices = std::vector<int>()) const;
+
+    /// \brief Returns the hard max jerk for each DOF
+    ///
+    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void GetDOFHardJerkLimits(std::vector<dReal>& maxjerks, const std::vector<int>& dofindices = std::vector<int>()) const;
+
     /// \brief Returns the max torque for each DOF
     virtual void GetDOFTorqueLimits(std::vector<dReal>& maxaccelerations) const;
 
@@ -1589,6 +1650,15 @@ private:
 
     /// \brief \see GetDOFJerkLimits
     virtual void SetDOFJerkLimits(const std::vector<dReal>& maxlimits);
+
+    /// \brief \see GetDOFHardVelocityLimits
+    virtual void SetDOFHardVelocityLimits(const std::vector<dReal>& maxlimits);
+
+    /// \brief \see GetDOFHardAccelerationLimits
+    virtual void SetDOFHardAccelerationLimits(const std::vector<dReal>& maxlimits);
+
+    /// \brief \see GetDOFHardJerkLimits
+    virtual void SetDOFHardJerkLimits(const std::vector<dReal>& maxlimits);
 
     /// \brief \see GetDOFTorqueLimits
     virtual void SetDOFTorqueLimits(const std::vector<dReal>& maxlimits);
