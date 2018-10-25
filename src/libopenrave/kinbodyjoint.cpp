@@ -31,9 +31,9 @@ KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsAc
     std::fill(_vmaxvel.begin(), _vmaxvel.end(), 10);
     std::fill(_vhardmaxvel.begin(), _vhardmaxvel.end(), 10);
     std::fill(_vmaxaccel.begin(), _vmaxaccel.end(), 50);
-    std::fill(_vhardmaxaccel.begin(), _vhardmaxaccel.end(), 500);
-    std::fill(_vmaxjerk.begin(), _vmaxjerk.end(), 1e5); // Set negligibly large jerk by default which can change acceleration between min and max within a typical time step. We compute 1e5=(50-(-50))/0.001, by assuming max/min accelerations are 50 and -50.
-    std::fill(_vhardmaxjerk.begin(), _vhardmaxjerk.end(), 1e6);
+    std::fill(_vhardmaxaccel.begin(), _vhardmaxaccel.end(), 500); // Hard limit is 10 times larger than soft limit for acceleration.
+    std::fill(_vmaxjerk.begin(), _vmaxjerk.end(), 2e6); // Set negligibly large jerk by default which can change acceleration between min and max within a typical time step. We compute 2e6=(1000-(-1000))/0.001, by assuming max/min accelerations are 1000 and -1000.
+    std::fill(_vhardmaxjerk.begin(), _vhardmaxjerk.end(), 2e7); // Hard limit is 10 times larger than soft limit for jerk.
     std::fill(_vmaxtorque.begin(), _vmaxtorque.end(), 0); // set max torque to 0 to notify the system that dynamics parameters might not be valid.
     std::fill(_vmaxinertia.begin(), _vmaxinertia.end(), 0);
     std::fill(_vweights.begin(), _vweights.end(), 1);
