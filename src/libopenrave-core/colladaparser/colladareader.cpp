@@ -1973,18 +1973,31 @@ public:
                         }
 
                         // Read hard limits. Hard limits are defined as <newparam> tag.
+                        // In below, we check the consistency between hard limit (_vhadmaxXXX) and soft limit (_vmaxXXX). If hard limit is smaller than soft limit, it is invalid and overwrite hard limit by soft limit.
                         RAVELOG_VERBOSE("... Newparam array size : %d", motion_axis_info->getNewparam_array().getCount());
                         for(size_t iparam = 0; iparam < motion_axis_info->getNewparam_array().getCount(); ++iparam) {
                             domKinematics_newparamRef param = motion_axis_info->getNewparam_array()[iparam];
                             if ( !!param->getSid() ) {
                                 if ( std::string(param->getSid()) == "hardMaxVel" ) {
-                                    pjoint->_info._vhardmaxvel[ic] = (pjoint->IsRevolute(ic) ? (PI/180.0f) : _mapJointUnits[pjoint][ic]) * param->getFloat()->getValue();
+                                    pjoint->_info._vhardmaxvel[ic] = fjointmult * param->getFloat()->getValue();
+                                    if ( pjoint->_info._vhardmaxvel[ic] < pjoint->_info._vmaxvel[ic]) {
+                                        RAVELOG_WARN_FORMAT("... %s: hard limit written in collada (%f) is smaller than soft limit (%f). So, overwrite hard limit by soft limit...", param->getSid() % pjoint->_info._vhardmaxvel[ic] % pjoint->_info._vmaxvel[ic]);
+                                        pjoint->_info._vhardmaxvel[ic] = pjoint->_info._vmaxvel[ic];
+                                    }
                                     RAVELOG_VERBOSE_FORMAT("... %s: %f...", param->getSid() % pjoint->_info._vhardmaxvel[ic]);
                                 } else if ( std::string(param->getSid()) == "hardMaxAccel" ) {
-                                    pjoint->_info._vhardmaxaccel[ic] = (pjoint->IsRevolute(ic) ? (PI/180.0f) : _mapJointUnits[pjoint][ic]) * param->getFloat()->getValue();
+                                    pjoint->_info._vhardmaxaccel[ic] = fjointmult * param->getFloat()->getValue();
+                                    if ( pjoint->_info._vhardmaxaccel[ic] < pjoint->_info._vmaxaccel[ic]) {
+                                        RAVELOG_WARN_FORMAT("... %s: hard limit written in collada (%f) is smaller than soft limit (%f). So, overwrite hard limit by soft limit...", param->getSid() % pjoint->_info._vhardmaxaccel[ic] % pjoint->_info._vmaxaccel[ic]);
+                                        pjoint->_info._vhardmaxaccel[ic] = pjoint->_info._vmaxaccel[ic];
+                                    }
                                     RAVELOG_VERBOSE_FORMAT("... %s: %f...", param->getSid() % pjoint->_info._vhardmaxaccel[ic]);
                                 } else if ( std::string(param->getSid()) == "hardMaxJerk" ) {
-                                    pjoint->_info._vhardmaxjerk[ic] = (pjoint->IsRevolute(ic) ? (PI/180.0f) : _mapJointUnits[pjoint][ic]) * param->getFloat()->getValue();
+                                    pjoint->_info._vhardmaxjerk[ic] = fjointmult * param->getFloat()->getValue();
+                                    if ( pjoint->_info._vhardmaxjerk[ic] < pjoint->_info._vmaxjerk[ic]) {
+                                        RAVELOG_WARN_FORMAT("... %s: hard limit written in collada (%f) is smaller than soft limit (%f). So, overwrite hard limit by soft limit...", param->getSid() % pjoint->_info._vhardmaxjerk[ic] % pjoint->_info._vmaxjerk[ic]);
+                                        pjoint->_info._vhardmaxjerk[ic] = pjoint->_info._vmaxjerk[ic];
+                                    }
                                     RAVELOG_VERBOSE_FORMAT("... %s: %f...", param->getSid() % pjoint->_info._vhardmaxjerk[ic]);
                                 }
                             }
