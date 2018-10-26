@@ -1972,33 +1972,21 @@ public:
                             RAVELOG_VERBOSE("... Joint Jerk Set to Hard Max Jerk for Consistency: %f...\n",pjoint->GetHardMaxJerk());
                         }
 
-                        // Read hard limits. Hard limits are defined as <bind> tag.
-                        RAVELOG_VERBOSE("... Bind array size : %d", motion_axis_info->getBind_array().getCount());
-                        for(size_t ib = 0; ib < motion_axis_info->getBind_array().getCount(); ++ib) {
-                            domKinematics_bindRef pbind = motion_axis_info->getBind_array()[ib];
-                            if ( !!pbind->getSymbol() ) {
-                                double hardLimitValue = -1.0;
-                                std::stringstream ss; // Used only for debug message
-                                ss << "... " << pbind->getSymbol() << " : getFloat=" << (!!pbind->getFloat()) << ", getSIDREF=" << (!!pbind->getSIDREF()) << ", getParam=" << (!!pbind->getParam());
-                                if ( !!pbind->getFloat() ) {
-                                    hardLimitValue = pbind->getFloat()->getValue();
-                                } else {
-                                    // TODO : Param and SIDREF are not implemented.
+                        // Read hard limits. Hard limits are defined as <newparam> tag.
+                        RAVELOG_VERBOSE("... Newparam array size : %d", motion_axis_info->getNewparam_array().getCount());
+                        for(size_t iparam = 0; iparam < motion_axis_info->getNewparam_array().getCount(); ++iparam) {
+                            domKinematics_newparamRef param = motion_axis_info->getNewparam_array()[iparam];
+                            if ( !!param->getSid() ) {
+                                if ( std::string(param->getSid()) == "hardMaxVel" ) {
+                                    pjoint->_info._vhardmaxvel[ic] = (pjoint->IsRevolute(ic) ? (PI/180.0f) : _mapJointUnits[pjoint][ic]) * param->getFloat()->getValue();
+                                    RAVELOG_VERBOSE_FORMAT("... %s: %f...", param->getSid() % pjoint->_info._vhardmaxvel[ic]);
+                                } else if ( std::string(param->getSid()) == "hardMaxAccel" ) {
+                                    pjoint->_info._vhardmaxaccel[ic] = (pjoint->IsRevolute(ic) ? (PI/180.0f) : _mapJointUnits[pjoint][ic]) * param->getFloat()->getValue();
+                                    RAVELOG_VERBOSE_FORMAT("... %s: %f...", param->getSid() % pjoint->_info._vhardmaxaccel[ic]);
+                                } else if ( std::string(param->getSid()) == "hardMaxJerk" ) {
+                                    pjoint->_info._vhardmaxjerk[ic] = (pjoint->IsRevolute(ic) ? (PI/180.0f) : _mapJointUnits[pjoint][ic]) * param->getFloat()->getValue();
+                                    RAVELOG_VERBOSE_FORMAT("... %s: %f...", param->getSid() % pjoint->_info._vhardmaxjerk[ic]);
                                 }
-                                if ( hardLimitValue >= 0 ) {
-                                    if ( std::string(pbind->getSymbol()) == "hardMaxVel" ) {
-                                        pjoint->_info._vhardmaxvel[ic] = (pjoint->IsRevolute(ic) ? (PI/180.0f) : _mapJointUnits[pjoint][ic]) * hardLimitValue;
-                                    } else if ( std::string(pbind->getSymbol()) == "hardMaxAccel" ) {
-                                        pjoint->_info._vhardmaxaccel[ic] = (pjoint->IsRevolute(ic) ? (PI/180.0f) : _mapJointUnits[pjoint][ic]) * hardLimitValue;
-                                    } else if ( std::string(pbind->getSymbol()) == "hardMaxJerk" ) {
-                                        pjoint->_info._vhardmaxjerk[ic] = (pjoint->IsRevolute(ic) ? (PI/180.0f) : _mapJointUnits[pjoint][ic]) * hardLimitValue;
-                                    } else {
-                                        ss << ": invalid symbol=" << pbind->getSymbol();
-                                    }
-                                } else {
-                                    ss << ": hardLimitValue is not correctly specified in collada file";
-                                }
-                                RAVELOG_VERBOSE_FORMAT("%s : value=%f...", ss.str() % hardLimitValue);
                             }
                         }
                     }
