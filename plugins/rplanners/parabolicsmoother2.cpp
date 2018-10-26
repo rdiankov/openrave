@@ -1258,15 +1258,11 @@ protected:
     /// consecutive waypoints are too far apart.
     bool _SetMileStones(const std::vector<std::vector<dReal> >& vWaypoints, RampOptimizer::ParabolicPath& parabolicpath)
     {
-        _zeroVelPoints.resize(0);
-        if( _zeroVelPoints.capacity() < vWaypoints.size() ) {
-            _zeroVelPoints.reserve(vWaypoints.size());
-        }
-        _zeroVelPointNeighbors.resize(0);
-        if( _zeroVelPointNeighbors.capacity() < vWaypoints.size() ) {
-            _zeroVelPointNeighbors.reserve(vWaypoints.size());
-        }
-
+        _zeroVelPoints.clear();
+        _zeroVelPoints.reserve(vWaypoints.size());
+        _zeroVelPointNeighbors.clear();
+        _zeroVelPointNeighbors.reserve(vWaypoints.size());
+        
         size_t ndof = _parameters->GetDOF();
         parabolicpath.Reset();
         RAVELOG_VERBOSE_FORMAT("env=%d, Initial numwaypoints = %d", GetEnv()->GetId()%vWaypoints.size());
@@ -3207,7 +3203,7 @@ protected:
     bool _bUsePerturbation;
     bool _bmanipconstraints;
     std::vector<dReal> _zeroVelPoints; ///< keeps track of original (zero-velocity) waypoints
-    std::vector<std::pair<dReal, dReal> > _zeroVelPointNeighbors; // each pair keeps time instants of waypoints before and after a zerovelpoint (for _MergeConsecutiveSegments)
+    std::vector<std::pair<dReal, dReal> > _zeroVelPointNeighbors; // each pair keeps time instants of waypoints before and after a zerovelpoint (for _MergeConsecutiveSegments). Used to focus the sampling around these points so that.
     RampOptimizer::ParabolicInterpolator _interpolator;
     dReal _maxInitialRampTime; ///< max duration of traj segment between two consecutive waypoints
                                /// after calling _SetMileStones. this serves as a cap for how far a

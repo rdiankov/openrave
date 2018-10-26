@@ -73,12 +73,12 @@ public:
         Transform tparentinv = tparent.inverse();
         FOREACHC(itlink,linklist) {
             AABB ablink = (*itlink)->ComputeLocalAABB(); // AABB of the link in its local coordinates
-            if( ablink.extents[0] > 1 || ablink.extents[1] > 1 || ablink.extents[2] > 1 ) {
-                // Very long object. We might have been planning with other task constraints. In
-                // this case, do not include this link into AABB since it's going to distort the
-                // computation of manipspeed and manipaccel.
-                continue;
-            }
+//            if( ablink.extents[0] > 1 || ablink.extents[1] > 1 || ablink.extents[2] > 1 ) {
+//                // Very long object. We might have been planning with other task constraints. In
+//                // this case, do not include this link into AABB since it's going to distort the
+//                // computation of manipspeed and manipaccel.
+//                continue;
+//            }
             Transform tdelta = tparentinv * (*itlink)->GetTransform();
             TransformMatrix tmdelta(tdelta);
             Vector vabsextents(RaveFabs(tmdelta.m[0])*ablink.extents[0] + RaveFabs(tmdelta.m[1])*ablink.extents[1] + RaveFabs(tmdelta.m[2])*ablink.extents[2],

@@ -144,7 +144,8 @@ public:
         _DumpTrajectory(ptrajbefore, Level_Debug, 1);
 #endif
 
-        _OptimizePathOneDOF(listpath);
+        // not ready yet
+        //_OptimizePathOneDOF(listpath);
 
 #ifdef SHORTCUT_ONEDOF_DEBUG
         FOREACH(it, listpath) {
@@ -386,6 +387,7 @@ protected:
             vpathvalues.at(0).second = itnode->second;
             // RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, totalDistance=%.15e; fdelta=%.15e", GetEnv()->GetId()%iiter%parameters->_nMaxIterations%totalDistance%fdelta);
             // std::stringstream ss; ss << "dof values=[";
+            // TODO cannot do linear interpolation!
             do {
                 ++itnode;
                 ++pathindex;
