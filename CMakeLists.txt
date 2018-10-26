@@ -188,7 +188,7 @@ set(REQUIRED_INCLUDES "" CACHE STRING "Includes to always force  when compiling"
 include_directories(${REQUIRED_INCLUDES})
 
 set(COMPILER_IS_CLANG FALSE)
-if( CMAKE_CXX_COMPILER MATCHES "clang[\\+]*" )
+if( CMAKE_CXX_COMPILER_ID MATCHES "Clang" )
   set(COMPILER_IS_CLANG TRUE)
 endif()
 
