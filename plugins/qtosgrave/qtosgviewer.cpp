@@ -206,7 +206,7 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
     else {
         connect(QApplication::instance(), SIGNAL(aboutToQuit()), this, SLOT(_ProcessApplicationQuit()));
     }
-    
+
     _posgWidget = new QOSGViewerWidget(GetEnv(), _userdatakey, boost::bind(&QtOSGViewer::_HandleOSGKeyDown, this, _1), GetEnv()->GetUnit().second, this);
 
     setCentralWidget(_posgWidget);
@@ -830,17 +830,21 @@ void QtOSGViewer::_CreateControlButtons()
     qvBoxLayout->heightForWidth(40);
 
     QPushButton *zoomInButton = new QPushButton("+");
-    connect(zoomInButton, &QPushButton::pressed, [=](){ this->_posgWidget->Zoom(1.1); });
+    connect(zoomInButton, &QPushButton::pressed, [=](){
+            this->_posgWidget->Zoom(1.1);
+        });
 
     QPushButton *zoomOutButton = new QPushButton("-");
-    connect(zoomOutButton, &QPushButton::pressed, [=](){ this->_posgWidget->Zoom(0.9); });
+    connect(zoomOutButton, &QPushButton::pressed, [=](){
+            this->_posgWidget->Zoom(0.9);
+        });
 
     QPushButton *cameraMoveModeButton = new QPushButton("Rot");
     cameraMoveModeButton->setText(this->_posgWidget->GetCameraMoveMode());
     connect(cameraMoveModeButton, &QPushButton::pressed, [=]() {
-        _posgWidget->ToggleCameraMoveMode();
-        cameraMoveModeButton->setText(this->_posgWidget->GetCameraMoveMode());
-    });
+            _posgWidget->ToggleCameraMoveMode();
+            cameraMoveModeButton->setText(this->_posgWidget->GetCameraMoveMode());
+        });
 
     qvBoxLayout->addWidget(zoomInButton);
     qvBoxLayout->addWidget(zoomOutButton);
@@ -1827,7 +1831,7 @@ void QtOSGViewer::Move(int x, int y)
 
 void QtOSGViewer::Zoom(float factor)
 {
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Zoom, this, factor));   
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Zoom, this, factor));
 }
 
 void QtOSGViewer::_Zoom(float factor)
@@ -2079,7 +2083,7 @@ void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, bool block
         // viewer quit, so anything posted won't get processed
         return;
     }
-    
+
     boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
     if( _listGUIFunctions.size() > 1000 ) {
         // can happen if system is especially slow

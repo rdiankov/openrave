@@ -918,7 +918,7 @@ void QOSGViewerWidget::Zoom(float factor)
 }
 
 void QOSGViewerWidget::SetTextureCubeMap(const std::string& posx, const std::string& negx, const std::string& posy,
-                                     const std::string& negy, const std::string& posz, const std::string& negz)
+                                         const std::string& negy, const std::string& posz, const std::string& negz)
 {
     _osgSkybox->setTextureCubeMap(posx, negx, posy, negy, posz, negz);
 }
@@ -1338,7 +1338,7 @@ OSGNodePtr QOSGViewerWidget::_AddDraggerToObject(const std::string& draggerName,
 void QOSGViewerWidget::paintGL()
 {
     try {
-       _osgviewer->frame(); // osgViewer::CompositeViewer
+        _osgviewer->frame(); // osgViewer::CompositeViewer
     }
     catch(const std::exception& ex) {
         RAVELOG_WARN_FORMAT("got exception in paint event: %s", ex.what());
@@ -1411,7 +1411,7 @@ void QOSGViewerWidget::wheelEvent(QWheelEvent *event)
     int delta = event->delta();
     osgGA::GUIEventAdapter::ScrollingMotion motion = delta > 0 ?
                                                      osgGA::GUIEventAdapter::SCROLL_UP
-                                                               : osgGA::GUIEventAdapter::SCROLL_DOWN;
+                                                     : osgGA::GUIEventAdapter::SCROLL_DOWN;
     SetKeyboardModifiers(event);
     _osgGraphicWindow->getEventQueue()->mouseScroll(motion);
 
@@ -1442,15 +1442,15 @@ bool QOSGViewerWidget::event(QEvent *event)
     return handled;
 }
 
- void QOSGViewerWidget::SetKeyboardModifiers(QInputEvent *event)
- {
-     int modifierKeys = event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier);
-     unsigned int mask = 0;
-     if ( modifierKeys & Qt::ShiftModifier ) mask |= osgGA::GUIEventAdapter::MODKEY_SHIFT;
-     if ( modifierKeys & Qt::ControlModifier ) mask |= osgGA::GUIEventAdapter::MODKEY_CTRL;
-     if ( modifierKeys & Qt::AltModifier ) mask |= osgGA::GUIEventAdapter::MODKEY_ALT;
-     _osgGraphicWindow->getEventQueue()->getCurrentEventState()->setModKeyMask(mask);
- }
+void QOSGViewerWidget::SetKeyboardModifiers(QInputEvent *event)
+{
+    int modifierKeys = event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier);
+    unsigned int mask = 0;
+    if ( modifierKeys & Qt::ShiftModifier ) mask |= osgGA::GUIEventAdapter::MODKEY_SHIFT;
+    if ( modifierKeys & Qt::ControlModifier ) mask |= osgGA::GUIEventAdapter::MODKEY_CTRL;
+    if ( modifierKeys & Qt::AltModifier ) mask |= osgGA::GUIEventAdapter::MODKEY_ALT;
+    _osgGraphicWindow->getEventQueue()->getCurrentEventState()->setModKeyMask(mask);
+}
 
 
 } // end namespace qtosgrave

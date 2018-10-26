@@ -145,10 +145,14 @@ public:
     void SetKeyboardModifiers(QInputEvent* event);
 
     /// \brief Get osg viewer camera control mode for single finger gesture
-    const char* GetCameraMoveMode() { return _bSwitchMouseLeftMiddleButton ? "Pan" : "Rot"; }
+    const char* GetCameraMoveMode() {
+        return _bSwitchMouseLeftMiddleButton ? "Pan" : "Rot";
+    }
 
     /// \brief Toggle camera move mode between pan and rotate
-    void ToggleCameraMoveMode() { _bSwitchMouseLeftMiddleButton = !_bSwitchMouseLeftMiddleButton; }
+    void ToggleCameraMoveMode() {
+        _bSwitchMouseLeftMiddleButton = !_bSwitchMouseLeftMiddleButton;
+    }
 
 protected:
     /// \brief handles a key press and looks at the modifier keys
@@ -291,7 +295,8 @@ public:
         keyMap[Qt::Key_Meta      ] = osgGA::GUIEventAdapter::KEY_Meta_L;
     }
 
-    ~QtOSGKeyEventTranslator() {};
+    ~QtOSGKeyEventTranslator() {
+    };
 
     int GetOSGKeyValue(QKeyEvent* event)
     {
@@ -308,17 +313,17 @@ public:
     {
         unsigned int button = 0;
         switch (event->button()) {
-            case Qt::LeftButton:
-                button = 1;
-                break;
-            case Qt::MiddleButton:
-                button = 2;
-                break;
-            case Qt::RightButton:
-                button = 3;
-                break;
-            default:
-                break;
+        case Qt::LeftButton:
+            button = 1;
+            break;
+        case Qt::MiddleButton:
+            button = 2;
+            break;
+        case Qt::RightButton:
+            button = 3;
+            break;
+        default:
+            break;
         }
         return button;
     }
