@@ -340,7 +340,7 @@ public:
         _vmaxvel = toPyVector3(Vector(10,10,10));
         _vhardmaxvel = toPyVector3(Vector(10,10,10));
         _vmaxaccel = toPyVector3(Vector(50,50,50));
-        _vhardmaxaccel = toPyVector3(Vector(500,500,500));
+        _vhardmaxaccel = toPyVector3(Vector(1000,1000,1000));
         _vmaxjerk = toPyVector3(Vector(2e6,2e6,2e6));
         _vhardmaxjerk = toPyVector3(Vector(2e7, 2e7, 2e7));
         _vmaxtorque = toPyVector3(Vector(1e5,1e5,1e5));
