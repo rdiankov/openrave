@@ -617,7 +617,7 @@ public:
         return false; //TODO
     }
 
-    virtual bool CheckCollision(const OpenRAVE::TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(const OpenRAVE::TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) override
     {
         if( !!report ) {
             report->Reset(_options);
@@ -664,7 +664,7 @@ public:
         return query._bCollision;
     }
 
-    virtual bool CheckCollision(const OpenRAVE::TriMesh& trimesh, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(const OpenRAVE::TriMesh& trimesh, CollisionReportPtr report = CollisionReportPtr()) override
     {
         if( !!report ) {
             report->Reset(_options);
@@ -708,7 +708,7 @@ public:
         return query._bCollision;
     }
     
-    virtual bool CheckCollision(const OpenRAVE::AABB& ab, const OpenRAVE::Transform& aabbPose, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(const OpenRAVE::AABB& ab, const OpenRAVE::Transform& aabbPose, CollisionReportPtr report = CollisionReportPtr()) override
     {
         if( !!report ) {
             report->Reset(_options);
@@ -718,6 +718,44 @@ public:
         std::set<KinBodyConstPtr> attachedBodies;
         FCLCollisionManagerInstance& envManager = _GetEnvManager(attachedBodies);
         
+        const std::vector<KinBodyConstPtr> vbodyexcluded;
+        const std::vector<LinkConstPtr> vlinkexcluded;
+        CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
+        ADD_TIMING(_statistics);
+
+        FCLSpace::KinBodyInfo::LinkInfo objUserData;
+
+        CollisionGeometryPtr cboxgeom = make_shared<fcl::Box>(ab.extents.x*2,ab.extents.y*2,ab.extents.z*2);
+        fcl::CollisionObject cboxobj(cboxgeom);
+
+        fcl::Vec3f newPosition = ConvertVectorToFCL(aabbPose * ab.pos);
+        fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(aabbPose.rot);
+        cboxobj.setTranslation(newPosition);
+        cboxobj.setQuatRotation(newOrientation);
+        cboxobj.computeAABB(); // probably necessary since translation changed
+        cboxobj.setUserData(&objUserData);
+#ifdef FCLRAVE_CHECKPARENTLESS
+        //boost::shared_ptr<void> onexit((void*) 0, boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceB, this, boost::ref(*pbody), boost::ref(envManager)));
+#endif
+        envManager.GetManager()->collide(&cboxobj, &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
+        return query._bCollision;
+    }
+
+    virtual bool CheckCollision(const OpenRAVE::AABB& ab, const OpenRAVE::Transform& aabbPose, const std::vector<OpenRAVE::KinBodyConstPtr>& vIncludedBodies, OpenRAVE::CollisionReportPtr report) override
+    {
+        if( !!report ) {
+            report->Reset(_options);
+        }
+
+        _fclspace->Synchronize();
+        std::set<KinBodyConstPtr> excludedBodies;
+        FOREACH(itbody, _fclspace->GetEnvBodies()) {
+            if( find(vIncludedBodies.begin(), vIncludedBodies.end(), *itbody) == vIncludedBodies.end() ) {
+                excludedBodies.insert(*itbody);
+            }
+        }
+        FCLCollisionManagerInstance& envManager = _GetEnvManager(excludedBodies);
+
         const std::vector<KinBodyConstPtr> vbodyexcluded;
         const std::vector<LinkConstPtr> vlinkexcluded;
         CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
