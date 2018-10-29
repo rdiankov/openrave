@@ -44,7 +44,7 @@ public:
     ManipConstraintChecker2(EnvironmentBasePtr penv) : _penv(penv), _maxmanipspeed(0), _maxmanipaccel(0) {
     }
 
-    /// \brief Given a world AABB oriented, return its 8 vertices
+    /// \brief Given a world AABB oriented, return its 8 vertices. All vertices are describted in the parent frame (see ComputeEnclosingAABB).
     static void ConvertAABBtoCheckPoints(const AABB& ab, std::list<Vector>& checkpoints)
     {
         dReal signextents[24] = {1,1,1,   1,1,-1,  1,-1,1,   1,-1,-1,  -1,1,1,   -1,1,-1,  -1,-1,1,   -1,-1,-1};
@@ -167,7 +167,7 @@ public:
                     spec.ExtractUsedIndices(pmanip->GetRobot(), info.vuseddofindices, info.vconfigindices);
                     info.plink = endeffector;
                     ConvertAABBtoCheckPoints(enclosingaabb, info.checkpoints);
-                    info.fmaxdistfromcenter = 0;
+                    info.fmaxdistfromcenter = 0; // maximum distance between any checkpoints to the end-efffector
                     FOREACH(itpoint, info.checkpoints) {
                         dReal f = itpoint->lengthsqr3();
                         if( info.fmaxdistfromcenter < f ) {
@@ -190,7 +190,8 @@ public:
         }
     }
 
-    //
+    // Estimate the max vellimits and accellimits that should be used in the next shortcut iteration based on how fast
+    // checkpoints move and how much vellimits and accellimits are violated.
     void GetMaxVelocitiesAccelerations(const std::vector<dReal>& curvels, std::vector<dReal>& vellimits, std::vector<dReal>& accellimits)
     {
         if( _maxmanipspeed<=0 && _maxmanipaccel <=0) {
@@ -320,10 +321,34 @@ public:
         }
     }
 
-    // Check only the start and the end. Within one parabolic segment, manipaccel tends to increase
-    // or decrease monotonically and therefore, the maximum is occuring at either end. We can reduce
-    // computational load by only checking at both end instead of checking at every subdivided
-    // segment and still having the same result.
+    // Check manipulator's linear velocity and acceleration if they violate the given limits (_maxmanipspeed and
+    // _maxmanipaccel). Linear velocity and accelerations are computed at checkpoints (itmanipinfo->checkpoints).
+    //
+    // Checking is done only at the start and the end of each parabolic segment. Within one parabolic segment,
+    // manipaccel tends to increase or decrease monotonically and therefore, the maximum is occuring at either end. We
+    // can reduce computational load by only checking at both end instead of checking at every subdivided segment and
+    // still having the same result.
+    //
+    // After having found a point where manip constraints are violated, we compute Jacobian at that configuration and
+    // use it to estimate contribution of each dof to the velocity/acceleration at the checkpoint so as to scale the
+    // vellimits/accellimits of that dof down accordingly.
+    // 
+    // Notes:
+    // 1. For acceleration computation, we estimate the relation between joint accel and end-effector accel to be
+    //    a = J * qdd    
+    //    to save computation time.
+    // 2. We compute the contribution of each dof to "linear" velocity/acceleration of the "end-effector point" instead of
+    //    the actual checkpoint.
+    // 3. Consider velocity, for example. From the Jacobian equation v = J*qd, we have that how the velocity of each dof
+    //    contributes to the linear eff velocity depends on the respective column of J. For example, if the i-th column
+    //    of J is perpendicular to v, then dof i does not contribute to the velocity limit violation at that
+    //    moment. Therefore, we can give a score to each dof to indicate how much it contributes to the eff velocity,
+    //    and this score is computed from the dot product between the respective column of J and v. Now we rank dofs
+    //    based on their contributions and the dof with the most contribution will have its velocity limit scaled down
+    //    the most, and so on.
+    // 4. If acceleration limits are violated, the scaling factors will be computed from the acceleration equation,
+    //    regardless of whether or not velocity limits are violated. Otherwise, if velocity limits are violated, the
+    //    scaling factors will be computed from the velocity equation.
     RampOptimizerInternal::CheckReturn CheckManipConstraints2(const std::vector<RampOptimizerInternal::RampND> &rampndVect, IntervalType interval=IT_OpenStart, bool bUseNewHeuristic=true)
     {
         if( _maxmanipspeed <= 0 && _maxmanipaccel <= 0 ) {
@@ -351,6 +376,9 @@ public:
         Vector vVelViolation, vAccelViolation;
         int curmanipindex = 0;
         bool bBoundExceeded = false;
+
+	std::vector<dReal>& vDOFValuesAtViolation = _vdofvalues, &vDOFVelAtViolation = _vdofvelocities, &vDOFAccelAtViolation = _vdofaccelerations;
+	    
         if( !(interval == IT_OpenStart) ) {
             FOREACHC(itmanipinfo, _listCheckManips) {
                 bBoundExceeded = false;
@@ -383,6 +411,7 @@ public:
                     Vector point = R.rotate(*itpoint);
 
                     if( _maxmanipspeed > 0 ) {
+			// Compute the linear velocity: v_total = v + w x r
                         Vector vpoint = endeffvellin + endeffvelang.cross(point);
                         dReal actualmanipspeed = RaveSqrt(vpoint.lengthsqr3());
                         if( actualmanipspeed > maxactualmanipspeed ) {
@@ -394,6 +423,7 @@ public:
                     }
 
                     if( _maxmanipaccel > 0 ) {
+			// Compute the linear acceleration: a_total = a + w x (w x r) + (alpha x r)
                         Vector apoint = endeffacclin + endeffvelang.cross(endeffvelang.cross(point)) + endeffaccang.cross(point);
                         dReal actualmanipaccel = RaveSqrt(apoint.lengthsqr3());
                         if( actualmanipaccel > maxactualmanipaccel ) {
@@ -406,9 +436,9 @@ public:
                 }
                 if( bBoundExceeded ) {
                     // Keep these values for later computation if constraints are violated
-                    _vdofvalues = qfillactive;
-                    _vdofvelocities = _vfillactive;
-                    _vdofaccelerations = _afill;
+                    vDOFValuesAtViolation = qfillactive;
+                    vDOFVelAtViolation = _vfillactive;
+                    vDOFAccelAtViolation = _afill;
                 }
                 // Finished iterating through all checkpoints
                 ++curmanipindex;
@@ -436,14 +466,14 @@ public:
                     RobotBasePtr probot = itmanipinfo->pmanip->GetRobot();
                     KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation|KinBody::Save_LinkVelocities);
                     // Set the robot to the new state
-                    probot->SetDOFValues(_vdofvalues, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
+                    probot->SetDOFValues(vDOFValuesAtViolation, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
                     Transform tlink = itmanipinfo->plink->GetTransform();
                     // compute jacobians, make sure to transform by the world frame
                     probot->CalculateJacobian(itmanipinfo->plink->GetIndex(), tlink.trans, _vtransjacobian);
                     int armdof = itmanipinfo->pmanip->GetArmDOF();
                     for( int idof = 0; idof < armdof; ++idof ) {
                         Vector vtransaxis(_vtransjacobian[idof], _vtransjacobian[armdof+idof], _vtransjacobian[2*armdof+idof]);
-                        _vdotproducts[idof] = _vdofaccelerations[idof] > 0 ? vtransaxis.dot3(vAccelViolation) : -vtransaxis.dot3(vAccelViolation);
+                        _vdotproducts[idof] = vDOFAccelAtViolation[idof] > 0 ? vtransaxis.dot3(vAccelViolation) : -vtransaxis.dot3(vAccelViolation);
                         if( RaveFabs(_vdotproducts[idof]) <= g_fEpsilonLinear ) {
                             _vdotproducts[idof] = 0;
                         }
@@ -518,14 +548,14 @@ public:
                     RobotBasePtr probot = itmanipinfo->pmanip->GetRobot();
                     KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation|KinBody::Save_LinkVelocities);
                     // Set the robot to the new state
-                    probot->SetDOFValues(_vdofvalues, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
+                    probot->SetDOFValues(vDOFValuesAtViolation, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
                     Transform tlink = itmanipinfo->plink->GetTransform();
                     // compute jacobians, make sure to transform by the world frame
                     probot->CalculateJacobian(itmanipinfo->plink->GetIndex(), tlink.trans, _vtransjacobian);
                     int armdof = itmanipinfo->pmanip->GetArmDOF();
                     for( int idof = 0; idof < armdof; ++idof ) {
                         Vector vtransaxis(_vtransjacobian[idof], _vtransjacobian[armdof+idof], _vtransjacobian[2*armdof+idof]);
-                        _vdotproducts[idof] = _vdofvelocities[idof] > 0 ? vtransaxis.dot3(vVelViolation) : -vtransaxis.dot3(vVelViolation);
+                        _vdotproducts[idof] = vDOFVelAtViolation[idof] > 0 ? vtransaxis.dot3(vVelViolation) : -vtransaxis.dot3(vVelViolation);
                         if( RaveFabs(_vdotproducts[idof]) <= g_fEpsilonLinear ) {
                             _vdotproducts[idof] = 0;
                         }
@@ -646,6 +676,7 @@ public:
                 Vector point = R.rotate(*itpoint);
 
                 if( _maxmanipspeed > 0 ) {
+		    // Compute the linear velocity: v_total = v + w x r
                     Vector vpoint = endeffvellin + endeffvelang.cross(point);
                     dReal actualmanipspeed = RaveSqrt(vpoint.lengthsqr3());
                     if( actualmanipspeed > maxactualmanipspeed ) {
@@ -657,6 +688,7 @@ public:
                 }
 
                 if( _maxmanipaccel > 0 ) {
+		    // Compute the linear acceleration: a_total = a + w x (w x r) + (alpha x r)
                     Vector apoint = endeffacclin + endeffvelang.cross(endeffvelang.cross(point)) + endeffaccang.cross(point);
                     dReal actualmanipaccel = RaveSqrt(apoint.lengthsqr3());
                     if( actualmanipaccel > maxactualmanipaccel ) {
@@ -668,9 +700,9 @@ public:
                 }
             }
             if( bBoundExceeded ) {
-                _vdofvalues = qfillactive;
-                _vdofvelocities = _vfillactive;
-                _vdofaccelerations = _afill;
+                vDOFValuesAtViolation = qfillactive;
+                vDOFVelAtViolation = _vfillactive;
+                vDOFAccelAtViolation = _afill;
             }
             // Finished iterating through all checkpoints
             ++curmanipindex;
@@ -698,14 +730,14 @@ public:
                 RobotBasePtr probot = itmanipinfo->pmanip->GetRobot();
                 KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation|KinBody::Save_LinkVelocities);
                 // Set the robot to the new state
-                probot->SetDOFValues(_vdofvalues, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
+                probot->SetDOFValues(vDOFValuesAtViolation, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
                 Transform tlink = itmanipinfo->plink->GetTransform();
                 // compute jacobians, make sure to transform by the world frame
                 probot->CalculateJacobian(itmanipinfo->plink->GetIndex(), tlink.trans, _vtransjacobian);
                 int armdof = itmanipinfo->pmanip->GetArmDOF();
                 for( int idof = 0; idof < armdof; ++idof ) {
                     Vector vtransaxis(_vtransjacobian[idof], _vtransjacobian[armdof+idof], _vtransjacobian[2*armdof+idof]);
-                    _vdotproducts[idof] = _vdofaccelerations[idof] > 0 ? vtransaxis.dot3(vAccelViolation) : -vtransaxis.dot3(vAccelViolation);
+                    _vdotproducts[idof] = vDOFAccelAtViolation[idof] > 0 ? vtransaxis.dot3(vAccelViolation) : -vtransaxis.dot3(vAccelViolation);
                     if( RaveFabs(_vdotproducts[idof]) <= g_fEpsilonLinear ) {
                         _vdotproducts[idof] = 0;
                     }
@@ -780,14 +812,14 @@ public:
                 RobotBasePtr probot = itmanipinfo->pmanip->GetRobot();
                 KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation|KinBody::Save_LinkVelocities);
                 // Set the robot to the new state
-                probot->SetDOFValues(_vdofvalues, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
+                probot->SetDOFValues(vDOFValuesAtViolation, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
                 Transform tlink = itmanipinfo->plink->GetTransform();
                 // compute jacobians, make sure to transform by the world frame
                 probot->CalculateJacobian(itmanipinfo->plink->GetIndex(), tlink.trans, _vtransjacobian);
                 int armdof = itmanipinfo->pmanip->GetArmDOF();
                 for( int idof = 0; idof < armdof; ++idof ) {
                     Vector vtransaxis(_vtransjacobian[idof], _vtransjacobian[armdof+idof], _vtransjacobian[2*armdof+idof]);
-                    _vdotproducts[idof] = _vdofvelocities[idof] > 0 ? vtransaxis.dot3(vVelViolation) : -vtransaxis.dot3(vVelViolation);
+                    _vdotproducts[idof] = vDOFVelAtViolation[idof] > 0 ? vtransaxis.dot3(vVelViolation) : -vtransaxis.dot3(vVelViolation);
                     if( RaveFabs(_vdotproducts[idof]) <= g_fEpsilonLinear ) {
                         _vdotproducts[idof] = 0;
                     }

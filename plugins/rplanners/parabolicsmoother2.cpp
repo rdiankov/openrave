@@ -20,8 +20,8 @@
 #include "rampoptimizer/feasibilitychecker.h"
 #include "manipconstraints2.h"
 
-// #define SMOOTHER_TIMING_DEBUG
-#define SMOOTHER_PROGRESS_DEBUG
+// #define SMOOTHER_TIMING_DEBUG // uncomment this to get more information on time spent for collision checking, manip constraint checking, etc.
+#define SMOOTHER_PROGRESS_DEBUG // uncomment his to get more information on progress during each shortcut iteration
 
 namespace rplanners {
 
@@ -42,6 +42,17 @@ enum ShortcutStatus
     SS_SlowDownFailed = 11,            // vel and/or accel multipliers get too low becasue of other time-based constraints
     SS_LastSegmentFailed = 12,         // interpolation failed or segment too long or check2 failed or ending with different velocity
     SS_StateSettingFailed = 13,        // error occured when setting a state.
+};
+
+/// \brief Keep related information about a zero-velocity point so that we can focus the sampling more around these
+/// points when shortcutting.
+struct ZeroVelPointInfo
+{
+    ZeroVelPointInfo() : point(-1), leftneighbor(-1), rightneighbor(-1) {
+    }
+    dReal point;        // zero-velocity point, i.e., time instant when all dof velocities are zero.
+    dReal leftneighbor; // the first switch time to the left of this zero-velocity point
+    dReal rightneigbor; // the first switch time to the right of this zero-velocity point
 };
 
 class ParabolicSmoother2 : public PlannerBase, public RampOptimizer::FeasibilityCheckerBase, public RampOptimizer::RandomNumberGeneratorBase {
@@ -218,7 +229,7 @@ public:
 
                 // Instead of checking configurations sequentially from left to right, we give
                 // higher priority to some configurations. Suppose rampndVectOut.size() is N.
-                // First, check the ramp index: 0, N/2, N/4, 3N/4, N/8, 5N/8, 3N/8, 7N/8. Then we
+                // First, check the ramp index: 0, 4N/8, 2N/8, 6N/8, N/8, 5N/8, 3N/8, 7N/8. Then we
                 // check the remaining ramps in the usual order.
 
                 // TODO: maybe arranging vsearchsegments totally randomly might have better average performance.
@@ -235,34 +246,42 @@ public:
                     vsearchsegments[j] = j;
                 }
                 do {
-                    size_t index = vsearchsegments.size() * 0.5, index2 = 0;
+                    size_t index, index2 = 0;
+
+                    index = vsearchsegments.size() * (4/8);
                     std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
-                    index = vsearchsegments.size() * 0.25;
+
+                    index = vsearchsegments.size() * (2/8);
                     if( index <= index2 ) {
                         break;
                     }
                     std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
-                    index *= 3;
+
+                    index = vsearchsegments.size() * (6/8);
                     if( index <= index2 ) {
                         break;
                     }
                     std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
-                    index = vsearchsegments.size() * 0.125;
+
+                    index = vsearchsegments.size() * (1/8);
                     if( index <= index2 ) {
                         break;
                     }
                     std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
-                    index *= 5;
+
+                    index = vsearchsegments.size() * (5/8);
                     if( index <= index2 ) {
                         break;
                     }
                     std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
-                    index = vsearchsegments.size() * 0.375;
+
+                    index = vsearchsegments.size() * (3/8);
                     if( index <= index2 ) {
                         break;
                     }
                     std::swap(vsearchsegments[index2], vsearchsegments[index]); index2++;
-                    index = vsearchsegments.size() * 0.875;
+
+                    index = vsearchsegments.size() * (7/8);
                     if( index <= index2 ) {
                         break;
                     }
@@ -1262,7 +1281,7 @@ protected:
         _zeroVelPoints.reserve(vWaypoints.size());
         _zeroVelPointNeighbors.clear();
         _zeroVelPointNeighbors.reserve(vWaypoints.size());
-        
+
         size_t ndof = _parameters->GetDOF();
         parabolicpath.Reset();
         RAVELOG_VERBOSE_FORMAT("env=%d, Initial numwaypoints = %d", GetEnv()->GetId()%vWaypoints.size());
@@ -1505,7 +1524,7 @@ protected:
     }
 
     /// \brief Merge consecutive trajectory segments. Here we try to remove each zeroVelPoint by
-    /// merge the ramps before and after the zeroVelPoint. The content of this function is basically
+    /// merging the ramps before and after the zeroVelPoint. The content of this function is basically
     /// almost identical to _Shortcut except that instead of sampling two time instants t0, t1 at
     /// each iteration, we deterministically choose them to be time instants before and after a
     /// zeroVelPoint, respectively.
@@ -1944,52 +1963,6 @@ protected:
                                 // After computing the new vellimits and accellimits and they don't work, we gradually scale vellimits/accellimits down
                                 dReal fVelMult, fAccelMult;
                                 bool maxManipSpeedViolated = false, maxManipAccelViolated = false;
-                                if( retcheck.fMaxManipSpeed > _parameters->maxmanipspeed ) {
-                                    // Manipspeed is violated. We don't scale down accellimits.
-                                    maxManipSpeedViolated = true;
-                                    if( _bUseNewHeuristic && retcheck.vReductionFactors.size() > 0 && !(retcheck.fMaxManipAccel > _parameters->maxmanipaccel)) {
-                                        // do vel scaling without accel scaling only when accel limit is not violated
-#ifdef SMOOTHER_PROGRESS_DEBUG
-                                        std::stringstream ss; ss << "env=" << GetEnv()->GetId() << ", maxManipSpeedViolated=1 (";
-                                        ss << retcheck.fMaxManipSpeed << " > " << _parameters->maxmanipspeed << "); reductionFactors=[";
-                                        FOREACHC(itval, retcheck.vReductionFactors) {
-                                            ss << *itval << ", ";
-                                        }
-                                        ss << "]; velReductionFactors=[";
-                                        FOREACHC(itval, velReductionFactors) {
-                                            ss << *itval << ", ";
-                                        }
-                                        ss << "]; accelReductionFactors=[";
-                                        FOREACHC(itval, accelReductionFactors) {
-                                            ss << *itval << ", ";
-                                        }
-                                        ss << "];";
-                                        RAVELOG_DEBUG(ss.str());
-#endif
-                                        for( size_t j = 0; j < vellimits.size(); ++j ) {
-                                            vellimits[j] *= retcheck.vReductionFactors[j];
-                                            velReductionFactors[j] *= retcheck.vReductionFactors[j];
-                                        }
-                                    }
-                                    else {
-                                        fVelMult = retcheck.fTimeBasedSurpassMult;
-                                        fCurVelMult *= fVelMult;
-                                        if( fCurVelMult < 0.01 ) {
-#ifdef SMOOTHER_PROGRESS_DEBUG
-                                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d: maxmanipspeed violated but fCurVelMult is too small (%.15e). continue to the next iteration", GetEnv()->GetId()%iters%numIters%fCurVelMult);
-                                            maxManipSpeedFailed += 1;
-                                            shortcutprogress << SS_MaxManipSpeedFailed << "\n";
-
-#endif
-                                            break;
-                                        }
-                                        for (size_t j = 0; j < vellimits.size(); ++j) {
-                                            dReal fMinVel = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
-                                            vellimits[j] = max(fMinVel, fVelMult * vellimits[j]);
-                                        }
-                                    }
-                                }
-
                                 if( retcheck.fMaxManipAccel > _parameters->maxmanipaccel ) {
                                     // Manipaccel is violated. We scale both vellimits and accellimits down.
                                     maxManipAccelViolated = true;
@@ -2047,6 +2020,51 @@ protected:
                                         }
                                         for (size_t j = 0; j < accellimits.size(); ++j) {
                                             accellimits[j] *= fAccelMult;
+                                        }
+                                    }
+                                }
+                                else if( retcheck.fMaxManipSpeed > _parameters->maxmanipspeed ) {
+                                    // Manipspeed is violated. We don't scale down accellimits.
+                                    maxManipSpeedViolated = true;
+                                    if( _bUseNewHeuristic && retcheck.vReductionFactors.size() > 0 && !(retcheck.fMaxManipAccel > _parameters->maxmanipaccel)) {
+                                        // do vel scaling without accel scaling only when accel limit is not violated
+#ifdef SMOOTHER_PROGRESS_DEBUG
+                                        std::stringstream ss; ss << "env=" << GetEnv()->GetId() << ", maxManipSpeedViolated=1 (";
+                                        ss << retcheck.fMaxManipSpeed << " > " << _parameters->maxmanipspeed << "); reductionFactors=[";
+                                        FOREACHC(itval, retcheck.vReductionFactors) {
+                                            ss << *itval << ", ";
+                                        }
+                                        ss << "]; velReductionFactors=[";
+                                        FOREACHC(itval, velReductionFactors) {
+                                            ss << *itval << ", ";
+                                        }
+                                        ss << "]; accelReductionFactors=[";
+                                        FOREACHC(itval, accelReductionFactors) {
+                                            ss << *itval << ", ";
+                                        }
+                                        ss << "];";
+                                        RAVELOG_DEBUG(ss.str());
+#endif
+                                        for( size_t j = 0; j < vellimits.size(); ++j ) {
+                                            vellimits[j] *= retcheck.vReductionFactors[j];
+                                            velReductionFactors[j] *= retcheck.vReductionFactors[j];
+                                        }
+                                    }
+                                    else {
+                                        fVelMult = retcheck.fTimeBasedSurpassMult;
+                                        fCurVelMult *= fVelMult;
+                                        if( fCurVelMult < 0.01 ) {
+#ifdef SMOOTHER_PROGRESS_DEBUG
+                                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d: maxmanipspeed violated but fCurVelMult is too small (%.15e). continue to the next iteration", GetEnv()->GetId()%iters%numIters%fCurVelMult);
+                                            maxManipSpeedFailed += 1;
+                                            shortcutprogress << SS_MaxManipSpeedFailed << "\n";
+
+#endif
+                                            break;
+                                        }
+                                        for (size_t j = 0; j < vellimits.size(); ++j) {
+                                            dReal fMinVel = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
+                                            vellimits[j] = max(fMinVel, fVelMult * vellimits[j]);
                                         }
                                     }
                                 }
@@ -2777,64 +2795,6 @@ protected:
                                 // After computing the new vellimits and accellimits and they don't work, we gradually scale vellimits/accellimits down
                                 dReal fVelMult, fAccelMult;
                                 bool maxManipSpeedViolated = false, maxManipAccelViolated = false;
-                                if( retcheck.fMaxManipSpeed > _parameters->maxmanipspeed ) {
-                                    // Manipspeed is violated. We don't scale down accellimits.
-                                    maxManipSpeedViolated = true;
-                                    if( _bUseNewHeuristic && retcheck.vReductionFactors.size() > 0 && !(retcheck.fMaxManipAccel > _parameters->maxmanipaccel)) {
-                                        // do vel scaling without accel scaling only when accel limit is not violated
-#ifdef SMOOTHER_PROGRESS_DEBUG
-                                        std::stringstream ss; ss << "env=" << GetEnv()->GetId() << ", maxManipSpeedViolated=1 (";
-                                        ss << retcheck.fMaxManipSpeed << " > " << _parameters->maxmanipspeed << "); reductionFactors=[";
-                                        FOREACHC(itval, retcheck.vReductionFactors) {
-                                            ss << *itval << ", ";
-                                        }
-                                        ss << "]; velReductionFactors=[";
-                                        FOREACHC(itval, velReductionFactors) {
-                                            ss << *itval << ", ";
-                                        }
-                                        ss << "]; accelReductionFactors=[";
-                                        FOREACHC(itval, accelReductionFactors) {
-                                            ss << *itval << ", ";
-                                        }
-                                        ss << "];";
-                                        RAVELOG_DEBUG(ss.str());
-#endif
-                                        for( size_t j = 0; j < vellimits.size(); ++j ) {
-                                            dReal fMinVelLimit = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
-                                            if( vellimits[j] * retcheck.vReductionFactors[j] < fMinVelLimit ) {
-                                                // In this case, we cannot use the recommended scaling factor since
-                                                // after scaling, the vellimits will fall below max(v0, v1). So we set
-                                                // vellimits to be max(v0, v1) instead.
-                                                velReductionFactors[j] *= (fMinVelLimit / vellimits[j]);
-                                                vellimits[j] = fMinVelLimit + RampOptimizer::g_fRampEpsilon;
-                                            }
-                                            else {
-                                                vellimits[j] *= retcheck.vReductionFactors[j];
-                                                velReductionFactors[j] *= retcheck.vReductionFactors[j];
-                                            }
-                                            // vellimits[j] *= retcheck.vReductionFactors[j];
-                                            // velReductionFactors[j] *= retcheck.vReductionFactors[j];
-                                        }
-                                    }
-                                    else {
-                                        fVelMult = retcheck.fTimeBasedSurpassMult;
-                                        fCurVelMult *= fVelMult;
-                                        if( fCurVelMult < 0.01 ) {
-#ifdef SMOOTHER_PROGRESS_DEBUG
-                                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d: maxmanipspeed violated but fCurVelMult is too small (%.15e). continue to the next iteration", GetEnv()->GetId()%iters%numIters%fCurVelMult);
-                                            maxManipSpeedFailed += 1;
-                                            shortcutprogress << SS_MaxManipSpeedFailed << "\n";
-
-#endif
-                                            break;
-                                        }
-                                        for (size_t j = 0; j < vellimits.size(); ++j) {
-                                            dReal fMinVel = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
-                                            vellimits[j] = max(fMinVel, fVelMult * vellimits[j]);
-                                        }
-                                    }
-                                }
-
                                 if( retcheck.fMaxManipAccel > _parameters->maxmanipaccel ) {
                                     // Manipaccel is violated. We scale both vellimits and accellimits down.
                                     maxManipAccelViolated = true;
@@ -2909,6 +2869,63 @@ protected:
                                         }
                                         for (size_t j = 0; j < accellimits.size(); ++j) {
                                             accellimits[j] *= fAccelMult;
+                                        }
+                                    }
+                                }
+                                else if( retcheck.fMaxManipSpeed > _parameters->maxmanipspeed ) {
+                                    // Manipspeed is violated. We don't scale down accellimits.
+                                    maxManipSpeedViolated = true;
+                                    if( _bUseNewHeuristic && retcheck.vReductionFactors.size() > 0 && !(retcheck.fMaxManipAccel > _parameters->maxmanipaccel)) {
+                                        // do vel scaling without accel scaling only when accel limit is not violated
+#ifdef SMOOTHER_PROGRESS_DEBUG
+                                        std::stringstream ss; ss << "env=" << GetEnv()->GetId() << ", maxManipSpeedViolated=1 (";
+                                        ss << retcheck.fMaxManipSpeed << " > " << _parameters->maxmanipspeed << "); reductionFactors=[";
+                                        FOREACHC(itval, retcheck.vReductionFactors) {
+                                            ss << *itval << ", ";
+                                        }
+                                        ss << "]; velReductionFactors=[";
+                                        FOREACHC(itval, velReductionFactors) {
+                                            ss << *itval << ", ";
+                                        }
+                                        ss << "]; accelReductionFactors=[";
+                                        FOREACHC(itval, accelReductionFactors) {
+                                            ss << *itval << ", ";
+                                        }
+                                        ss << "];";
+                                        RAVELOG_DEBUG(ss.str());
+#endif
+                                        for( size_t j = 0; j < vellimits.size(); ++j ) {
+                                            dReal fMinVelLimit = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
+                                            if( vellimits[j] * retcheck.vReductionFactors[j] < fMinVelLimit ) {
+                                                // In this case, we cannot use the recommended scaling factor since
+                                                // after scaling, the vellimits will fall below max(v0, v1). So we set
+                                                // vellimits to be max(v0, v1) instead.
+                                                velReductionFactors[j] *= (fMinVelLimit / vellimits[j]);
+                                                vellimits[j] = fMinVelLimit + RampOptimizer::g_fRampEpsilon;
+                                            }
+                                            else {
+                                                vellimits[j] *= retcheck.vReductionFactors[j];
+                                                velReductionFactors[j] *= retcheck.vReductionFactors[j];
+                                            }
+                                            // vellimits[j] *= retcheck.vReductionFactors[j];
+                                            // velReductionFactors[j] *= retcheck.vReductionFactors[j];
+                                        }
+                                    }
+                                    else {
+                                        fVelMult = retcheck.fTimeBasedSurpassMult;
+                                        fCurVelMult *= fVelMult;
+                                        if( fCurVelMult < 0.01 ) {
+#ifdef SMOOTHER_PROGRESS_DEBUG
+                                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d: maxmanipspeed violated but fCurVelMult is too small (%.15e). continue to the next iteration", GetEnv()->GetId()%iters%numIters%fCurVelMult);
+                                            maxManipSpeedFailed += 1;
+                                            shortcutprogress << SS_MaxManipSpeedFailed << "\n";
+
+#endif
+                                            break;
+                                        }
+                                        for (size_t j = 0; j < vellimits.size(); ++j) {
+                                            dReal fMinVel = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
+                                            vellimits[j] = max(fMinVel, fVelMult * vellimits[j]);
                                         }
                                     }
                                 }
@@ -3203,7 +3220,7 @@ protected:
     bool _bUsePerturbation;
     bool _bmanipconstraints;
     std::vector<dReal> _zeroVelPoints; ///< keeps track of original (zero-velocity) waypoints
-    std::vector<std::pair<dReal, dReal> > _zeroVelPointNeighbors; // each pair keeps time instants of waypoints before and after a zerovelpoint (for _MergeConsecutiveSegments). Used to focus the sampling around these points so that.
+    std::vector<std::pair<dReal, dReal> > _zeroVelPointNeighbors; // each pair keeps time instants of waypoints before and after a zerovelpoint (for _MergeConsecutiveSegments). Used to focus the sampling around these points.
     RampOptimizer::ParabolicInterpolator _interpolator;
     dReal _maxInitialRampTime; ///< max duration of traj segment between two consecutive waypoints
                                /// after calling _SetMileStones. this serves as a cap for how far a
