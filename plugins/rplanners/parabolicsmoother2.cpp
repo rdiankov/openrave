@@ -52,7 +52,7 @@ struct ZeroVelPointInfo
     }
     dReal point;        // zero-velocity point, i.e., time instant when all dof velocities are zero.
     dReal leftneighbor; // the first switch time to the left of this zero-velocity point
-    dReal rightneigbor; // the first switch time to the right of this zero-velocity point
+    dReal rightneighbor; // the first switch time to the right of this zero-velocity point
 };
 
 class ParabolicSmoother2 : public PlannerBase, public RampOptimizer::FeasibilityCheckerBase, public RampOptimizer::RandomNumberGeneratorBase {
