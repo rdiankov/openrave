@@ -29,9 +29,11 @@ KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsAc
     }
     std::fill(_vresolution.begin(), _vresolution.end(), 0.02);
     std::fill(_vmaxvel.begin(), _vmaxvel.end(), 10);
-    std::fill(_vhardmaxvel.begin(), _vhardmaxvel.end(), 10);
+    std::fill(_vhardmaxvel.begin(), _vhardmaxvel.end(), 100); // Hard limis is 10 times larger than default soft limit.
     std::fill(_vmaxaccel.begin(), _vmaxaccel.end(), 50);
-    std::fill(_vmaxjerk.begin(), _vmaxjerk.end(), 1e5); // Set negligibly large jerk by default which can change acceleration between min and max within a typical time step. We compute 1e5=(50-(-50))/0.001, by assuming max/min accelerations are 50 and -50.
+    std::fill(_vhardmaxaccel.begin(), _vhardmaxaccel.end(), 1000); // Hard limit is more than 10 times larger than soft limit for acceleration.
+    std::fill(_vmaxjerk.begin(), _vmaxjerk.end(), 2e6); // Set negligibly large jerk by default which can change acceleration between min and max within a typical time step. We compute 2e6=(1000-(-1000))/0.001, by assuming max/min accelerations are 1000 and -1000.
+    std::fill(_vhardmaxjerk.begin(), _vhardmaxjerk.end(), 2e7); // Hard limit is 10 times larger than soft limit for jerk.
     std::fill(_vmaxtorque.begin(), _vmaxtorque.end(), 0); // set max torque to 0 to notify the system that dynamics parameters might not be valid.
     std::fill(_vmaxinertia.begin(), _vmaxinertia.end(), 0);
     std::fill(_vweights.begin(), _vweights.end(), 1);
@@ -892,6 +894,75 @@ void KinBody::Joint::SetJerkLimits(const std::vector<dReal>& vmax)
 {
     for(int i = 0; i < GetDOF(); ++i) {
         _info._vmaxjerk[i] = vmax.at(i);
+    }
+    GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+}
+
+void KinBody::Joint::GetHardVelocityLimits(std::vector<dReal>& vmax, bool bAppend) const
+{
+    if( !bAppend ) {
+        vmax.resize(0);
+    }
+    for(int i = 0; i < GetDOF(); ++i) {
+        vmax.push_back(_info._vhardmaxvel[i]);
+    }
+}
+
+dReal KinBody::Joint::GetHardVelocityLimit(int iaxis) const
+{
+    return _info._vhardmaxvel.at(iaxis);
+}
+
+void KinBody::Joint::SetHardVelocityLimits(const std::vector<dReal>& vmax)
+{
+    for(int i = 0; i < GetDOF(); ++i) {
+        _info._vhardmaxvel[i] = vmax.at(i);
+    }
+    GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+}
+
+void KinBody::Joint::GetHardAccelerationLimits(std::vector<dReal>& vmax, bool bAppend) const
+{
+    if( !bAppend ) {
+        vmax.resize(0);
+    }
+    for(int i = 0; i < GetDOF(); ++i) {
+        vmax.push_back(_info._vhardmaxaccel[i]);
+    }
+}
+
+dReal KinBody::Joint::GetHardAccelerationLimit(int iaxis) const
+{
+    return _info._vhardmaxaccel.at(iaxis);
+}
+
+void KinBody::Joint::SetHardAccelerationLimits(const std::vector<dReal>& vmax)
+{
+    for(int i = 0; i < GetDOF(); ++i) {
+        _info._vhardmaxaccel[i] = vmax.at(i);
+    }
+    GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+}
+
+void KinBody::Joint::GetHardJerkLimits(std::vector<dReal>& vmax, bool bAppend) const
+{
+    if( !bAppend ) {
+        vmax.resize(0);
+    }
+    for(int i = 0; i < GetDOF(); ++i) {
+        vmax.push_back(_info._vhardmaxjerk[i]);
+    }
+}
+
+dReal KinBody::Joint::GetHardJerkLimit(int iaxis) const
+{
+    return _info._vhardmaxjerk.at(iaxis);
+}
+
+void KinBody::Joint::SetHardJerkLimits(const std::vector<dReal>& vmax)
+{
+    for(int i = 0; i < GetDOF(); ++i) {
+        _info._vhardmaxjerk[i] = vmax.at(i);
     }
     GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
 }
