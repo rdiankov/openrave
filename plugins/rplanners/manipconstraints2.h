@@ -332,10 +332,10 @@ public:
     // After having found a point where manip constraints are violated, we compute Jacobian at that configuration and
     // use it to estimate contribution of each dof to the velocity/acceleration at the checkpoint so as to scale the
     // vellimits/accellimits of that dof down accordingly.
-    // 
+    //
     // Notes:
     // 1. For acceleration computation, we estimate the relation between joint accel and end-effector accel to be
-    //    a = J * qdd    
+    //    a = J * qdd
     //    to save computation time.
     // 2. We compute the contribution of each dof to "linear" velocity/acceleration of the "end-effector point" instead of
     //    the actual checkpoint.
@@ -377,8 +377,8 @@ public:
         int curmanipindex = 0;
         bool bBoundExceeded = false;
 
-	std::vector<dReal>& vDOFValuesAtViolation = _vdofvalues, &vDOFVelAtViolation = _vdofvelocities, &vDOFAccelAtViolation = _vdofaccelerations;
-	    
+        std::vector<dReal>& vDOFValuesAtViolation = _vdofvalues, &vDOFVelAtViolation = _vdofvelocities, &vDOFAccelAtViolation = _vdofaccelerations;
+
         if( !(interval == IT_OpenStart) ) {
             FOREACHC(itmanipinfo, _listCheckManips) {
                 bBoundExceeded = false;
@@ -411,7 +411,7 @@ public:
                     Vector point = R.rotate(*itpoint);
 
                     if( _maxmanipspeed > 0 ) {
-			// Compute the linear velocity: v_total = v + w x r
+                        // Compute the linear velocity: v_total = v + w x r
                         Vector vpoint = endeffvellin + endeffvelang.cross(point);
                         dReal actualmanipspeed = RaveSqrt(vpoint.lengthsqr3());
                         if( actualmanipspeed > maxactualmanipspeed ) {
@@ -423,7 +423,7 @@ public:
                     }
 
                     if( _maxmanipaccel > 0 ) {
-			// Compute the linear acceleration: a_total = a + w x (w x r) + (alpha x r)
+                        // Compute the linear acceleration: a_total = a + w x (w x r) + (alpha x r)
                         Vector apoint = endeffacclin + endeffvelang.cross(endeffvelang.cross(point)) + endeffaccang.cross(point);
                         dReal actualmanipaccel = RaveSqrt(apoint.lengthsqr3());
                         if( actualmanipaccel > maxactualmanipaccel ) {
@@ -676,7 +676,7 @@ public:
                 Vector point = R.rotate(*itpoint);
 
                 if( _maxmanipspeed > 0 ) {
-		    // Compute the linear velocity: v_total = v + w x r
+                    // Compute the linear velocity: v_total = v + w x r
                     Vector vpoint = endeffvellin + endeffvelang.cross(point);
                     dReal actualmanipspeed = RaveSqrt(vpoint.lengthsqr3());
                     if( actualmanipspeed > maxactualmanipspeed ) {
@@ -688,7 +688,7 @@ public:
                 }
 
                 if( _maxmanipaccel > 0 ) {
-		    // Compute the linear acceleration: a_total = a + w x (w x r) + (alpha x r)
+                    // Compute the linear acceleration: a_total = a + w x (w x r) + (alpha x r)
                     Vector apoint = endeffacclin + endeffvelang.cross(endeffvelang.cross(point)) + endeffaccang.cross(point);
                     dReal actualmanipaccel = RaveSqrt(apoint.lengthsqr3());
                     if( actualmanipaccel > maxactualmanipaccel ) {
