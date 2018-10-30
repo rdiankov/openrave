@@ -3166,7 +3166,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             for(size_t i = 0; i < _vtempconfig.size(); ++i) {
                 dReal f = RaveFabs(q1[i] - _vtempconfig[i]);
                 if( f > vConfigResolution[i]*1.01 ) {
-                    RAVELOG_DEBUG_FORMAT("scale ratio=%f", (f/vConfigResolution[i]));
+                    // RAVELOG_DEBUG_FORMAT("scale ratio=%f", (f/vConfigResolution[i]));
                     int poststeps = int(f/vConfigResolution[i] + 0.9999);
                     if( poststeps > numPostNeighSteps ) {
                         numPostNeighSteps = poststeps;

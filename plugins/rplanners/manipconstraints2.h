@@ -73,12 +73,6 @@ public:
         Transform tparentinv = tparent.inverse();
         FOREACHC(itlink,linklist) {
             AABB ablink = (*itlink)->ComputeLocalAABB(); // AABB of the link in its local coordinates
-//            if( ablink.extents[0] > 1 || ablink.extents[1] > 1 || ablink.extents[2] > 1 ) {
-//                // Very long object. We might have been planning with other task constraints. In
-//                // this case, do not include this link into AABB since it's going to distort the
-//                // computation of manipspeed and manipaccel.
-//                continue;
-//            }
             Transform tdelta = tparentinv * (*itlink)->GetTransform();
             TransformMatrix tmdelta(tdelta);
             Vector vabsextents(RaveFabs(tmdelta.m[0])*ablink.extents[0] + RaveFabs(tmdelta.m[1])*ablink.extents[1] + RaveFabs(tmdelta.m[2])*ablink.extents[2],
@@ -142,23 +136,32 @@ public:
                     OPENRAVE_ASSERT_OP(pmanip->GetArmDOF(),<=,spec.GetDOF()); // make sure the planning dof includes pmanip
 
                     KinBody::LinkPtr endeffector = pmanip->GetEndEffector();
-                    // Insert all child links of endeffector
+
+                    // When the manipulator is grabbing items, globallinklist will contain all the grabbed
+                    // links. Otherwise, globallinklist will contain the manip's children links. These links will be
+                    // used for computing AABB to obtain checkpoints.
                     std::list<KinBody::LinkPtr> globallinklist;
-                    std::vector<KinBody::LinkPtr> vchildlinks;
-                    pmanip->GetChildLinks(vchildlinks);
-                    FOREACH(itlink,vchildlinks) {
-                        globallinklist.push_back(*itlink);
-                    }
-                    // Insert all links of all bodies that the endeffector is grabbing
+
                     std::vector<KinBodyPtr> grabbedbodies;
                     probot->GetGrabbed(grabbedbodies);
-                    FOREACH(itbody,grabbedbodies) {
-                        if(pmanip->IsGrabbing(*itbody)) {
-                            FOREACH(itlink,(*itbody)->GetLinks()) {
-                                globallinklist.push_back(*itlink);
+
+                    if( grabbedbodies.size() > 0 ) {
+                        FOREACH(itbody, grabbedbodies) {
+                            if( pmanip->IsGrabbing(*itbody) ) {
+                                FOREACH(itlink, (*itbody)->GetLinks()) {
+                                    globallinklist.push_back(*itlink);
+                                }
                             }
                         }
                     }
+                    else {
+                        std::vector<KinBody::LinkPtr> vchildlinks;
+                        pmanip->GetChildLinks(vchildlinks);
+                        FOREACH(itlink, vchildlinks) {
+                            globallinklist.push_back(*itlink);
+                        }
+                    }
+
                     // Compute the enclosing AABB and add its vertices to the checkpoints
                     AABB enclosingaabb = ComputeEnclosingAABB(globallinklist, endeffector->GetTransform());
                     _listCheckManips.push_back(ManipConstraintInfo2());
@@ -453,6 +456,7 @@ public:
                 retcheck.fMaxManipAccel = maxactualmanipaccel;
 
                 if( _maxmanipaccel > 0 && maxactualmanipaccel > _maxmanipaccel ) {
+                    // Accel limits are violated
                     reductionFactor = RaveSqrt(min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult));
                     retcheck.retcode = CFO_CheckTimeBasedConstraints;
                     retcheck.fTimeBasedSurpassMult = reductionFactor;
@@ -498,7 +502,7 @@ public:
                             break;
                         }
                     }
-                    // suppose the positive dot products are d1, d2, ..., dn (sorted in the ascending
+                    // Suppose the positive dot products are d1, d2, ..., dn (sorted in the ascending
                     // order). We want to build a linear function f (for convenience) such that f(d1) =
                     // rmax (least scaling for the DOF with least contribution) and f(dn) = reductionFactor
                     // (large reduction factor for DOF with most contribution). Since we build a linear
@@ -535,6 +539,7 @@ public:
 #endif
                 }
                 else if( _maxmanipspeed > 0 && maxactualmanipspeed > _maxmanipspeed ) {
+                    // Vel limits are violated
                     reductionFactor = min(multiplier*_maxmanipspeed/maxactualmanipspeed, maxallowedmult);
                     retcheck.retcode = CFO_CheckTimeBasedConstraints;
                     retcheck.fTimeBasedSurpassMult = reductionFactor;
@@ -580,7 +585,7 @@ public:
                             break;
                         }
                     }
-                    // suppose the positive dot products are d1, d2, ..., dn (sorted in the ascending
+                    // Suppose the positive dot products are d1, d2, ..., dn (sorted in the ascending
                     // order). We want to build a linear function f (for convenience) such that f(d1) =
                     // 1 (no scaling for the DOF with least contribution) and f(dn) = reductionFactor
                     // (large reduction factor for DOF with most contribution). Since we build a linear
@@ -762,7 +767,7 @@ public:
                         break;
                     }
                 }
-                // suppose the positive dot products are d1, d2, ..., dn (sorted in the ascending
+                // Suppose the positive dot products are d1, d2, ..., dn (sorted in the ascending
                 // order). We want to build a linear function f (for convenience) such that f(d1) =
                 // 1 (no scaling for the DOF with least contribution) and f(dn) = reductionFactor
                 // (large reduction factor for DOF with most contribution). Since we build a linear
@@ -844,7 +849,7 @@ public:
                         break;
                     }
                 }
-                // suppose the positive dot products are d1, d2, ..., dn (sorted in the ascending
+                // Suppose the positive dot products are d1, d2, ..., dn (sorted in the ascending
                 // order). We want to build a linear function f (for convenience) such that f(d1) =
                 // 1 (no scaling for the DOF with least contribution) and f(dn) = reductionFactor
                 // (large reduction factor for DOF with most contribution). Since we build a linear
