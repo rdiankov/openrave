@@ -29,7 +29,7 @@ KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsAc
     }
     std::fill(_vresolution.begin(), _vresolution.end(), 0.02);
     std::fill(_vmaxvel.begin(), _vmaxvel.end(), 10);
-    std::fill(_vhardmaxvel.begin(), _vhardmaxvel.end(), 10);
+    std::fill(_vhardmaxvel.begin(), _vhardmaxvel.end(), 100); // Hard limis is 10 times larger than default soft limit.
     std::fill(_vmaxaccel.begin(), _vmaxaccel.end(), 50);
     std::fill(_vhardmaxaccel.begin(), _vhardmaxaccel.end(), 1000); // Hard limit is more than 10 times larger than soft limit for acceleration.
     std::fill(_vmaxjerk.begin(), _vmaxjerk.end(), 2e6); // Set negligibly large jerk by default which can change acceleration between min and max within a typical time step. We compute 2e6=(1000-(-1000))/0.001, by assuming max/min accelerations are 1000 and -1000.

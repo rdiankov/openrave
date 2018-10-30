@@ -338,7 +338,7 @@ public:
         _vresolution = toPyVector3(Vector(0.02,0.02,0.02));
         // As for initial values for vel, accel, and jerk, please see kinbodyjoint.cpp's definition.
         _vmaxvel = toPyVector3(Vector(10,10,10));
-        _vhardmaxvel = toPyVector3(Vector(10,10,10));
+        _vhardmaxvel = toPyVector3(Vector(100,100,100));
         _vmaxaccel = toPyVector3(Vector(50,50,50));
         _vhardmaxaccel = toPyVector3(Vector(1000,1000,1000));
         _vmaxjerk = toPyVector3(Vector(2e6,2e6,2e6));

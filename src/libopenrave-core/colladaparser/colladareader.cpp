@@ -1942,65 +1942,60 @@ public:
                         RAVELOG_WARN(str(boost::format("No motion axis info for joint %s\n")%pjoint->GetName()));
                     }
 
-                    //  Sets the Speed and the Acceleration of the joint
+                    //  Sets the Speed, the Acceleration, and the Jerk of the joint
                     if (!!motion_axis_info) {
+                        // Read hard limits. Hard limits are defined as <newparam> tag.
+                        RAVELOG_VERBOSE("... Newparam array size for motion_axis_info : %d", motion_axis_info->getNewparam_array().getCount());
+                        for(size_t iparam = 0; iparam < motion_axis_info->getNewparam_array().getCount(); ++iparam) {
+                            domKinematics_newparamRef param = motion_axis_info->getNewparam_array()[iparam];
+                            if ( !!param->getSid() ) {
+                                if ( std::string(param->getSid()) == "hardMaxVel" ) {
+                                    pjoint->_info._vhardmaxvel[ic] = fjointmult * param->getFloat()->getValue();
+                                    RAVELOG_VERBOSE_FORMAT("... %s: %f...", param->getSid() % pjoint->_info._vhardmaxvel[ic]);
+                                } else if ( std::string(param->getSid()) == "hardMaxAccel" ) {
+                                    pjoint->_info._vhardmaxaccel[ic] = fjointmult * param->getFloat()->getValue();
+                                    RAVELOG_VERBOSE_FORMAT("... %s: %f...", param->getSid() % pjoint->_info._vhardmaxaccel[ic]);
+                                } else if ( std::string(param->getSid()) == "hardMaxJerk" ) {
+                                    pjoint->_info._vhardmaxjerk[ic] = fjointmult * param->getFloat()->getValue();
+                                    RAVELOG_VERBOSE_FORMAT("... %s: %f...", param->getSid() % pjoint->_info._vhardmaxjerk[ic]);
+                                }
+                            }
+                        }
+
+                        // Read soft limits. Soft limits are defined as <speed>, <acceleration>, <jerk> tag.
+                        // In below, we check the consistency between hard limit (_vhadmaxXXX) and soft limit (_vmaxXXX). If soft limit is larger than soft limit, it is invalid and overwrite soft limit by hard limit.
                         if (!!motion_axis_info->getSpeed()) {
                             pjoint->_info._vmaxvel[ic] = resolveFloat(motion_axis_info->getSpeed(),motion_axis_info);
                             if( !_bBackCompatValuesInRadians ) {
                                 pjoint->_info._vmaxvel[ic] *= fjointmult;
                             }
+                            if ( pjoint->_info._vhardmaxvel[ic] < pjoint->_info._vmaxvel[ic] ) {
+                                RAVELOG_VERBOSE_FORMAT("... Joint Speed : Tried to set soft limit as %f but it exceeds hard limit. Therefore, reset to hard limit %f for consistency...\n", pjoint->_info._vmaxvel[ic] % pjoint->_info._vhardmaxvel[ic]);
+                                pjoint->_info._vmaxvel[ic] = pjoint->_info._vhardmaxvel[ic];
+                            }
                             RAVELOG_VERBOSE("... Joint Speed: %f...\n",pjoint->GetMaxVel());
-                            pjoint->_info._vhardmaxvel[ic] = pjoint->_info._vmaxvel[ic]; // Set default hardmaxvel because maxvel (soft limit) should not exceed hardmaxvel (hard limit).
-                            RAVELOG_VERBOSE("... Joint Speed Set to Hard Max Vel for Consistency: %f...\n",pjoint->GetHardMaxVel());
                         }
                         if (!!motion_axis_info->getAcceleration()) {
                             pjoint->_info._vmaxaccel[ic] = resolveFloat(motion_axis_info->getAcceleration(),motion_axis_info);
                             if( !_bBackCompatValuesInRadians ) {
                                 pjoint->_info._vmaxaccel[ic] *= fjointmult;
                             }
+                            if ( pjoint->_info._vhardmaxaccel[ic] < pjoint->_info._vmaxaccel[ic] ) {
+                                RAVELOG_VERBOSE_FORMAT("... Joint Acceleration : Tried to set soft limit as %f but it exceeds hard limit. Therefore, reset to hard limit %f for consistency...\n", pjoint->_info._vmaxaccel[ic] % pjoint->_info._vhardmaxaccel[ic]);
+                                pjoint->_info._vmaxaccel[ic] = pjoint->_info._vhardmaxaccel[ic];
+                            }
                             RAVELOG_VERBOSE("... Joint Acceleration: %f...\n",pjoint->GetMaxAccel());
-                            pjoint->_info._vhardmaxaccel[ic] = std::max(1000.0, pjoint->_info._vmaxaccel[ic]); // Set default hardmaxaccel because maxaccel (soft limit) should not exceed hardmaxaccel (hard limit). For default value 1000.0, please see kinbodyjoint.cpp definition.
-                            RAVELOG_VERBOSE("... Joint Acceleration Set to Hard Max Accel for Consistency: %f...\n",pjoint->GetHardMaxAccel());
                         }
                         if (!!motion_axis_info->getJerk()) {
                             pjoint->_info._vmaxjerk[ic] = resolveFloat(motion_axis_info->getJerk(),motion_axis_info);
                             if( !_bBackCompatValuesInRadians ) {
                                 pjoint->_info._vmaxjerk[ic] *= fjointmult;
                             }
-                            RAVELOG_VERBOSE("... Joint Jerk: %f...\n",pjoint->GetMaxJerk());
-                            pjoint->_info._vhardmaxjerk[ic] = std::max(2e7, pjoint->_info._vmaxjerk[ic]); // Set default hardmaxjerk because maxjerk (soft limit) should not exceed hardmaxjerk (hard limit). For default value 2e7, please see kinbodyjoint.cpp definition.
-                            RAVELOG_VERBOSE("... Joint Jerk Set to Hard Max Jerk for Consistency: %f...\n",pjoint->GetHardMaxJerk());
-                        }
-
-                        // Read hard limits. Hard limits are defined as <newparam> tag.
-                        // In below, we check the consistency between hard limit (_vhadmaxXXX) and soft limit (_vmaxXXX). If hard limit is smaller than soft limit, it is invalid and overwrite hard limit by soft limit.
-                        RAVELOG_VERBOSE("... Newparam array size : %d", motion_axis_info->getNewparam_array().getCount());
-                        for(size_t iparam = 0; iparam < motion_axis_info->getNewparam_array().getCount(); ++iparam) {
-                            domKinematics_newparamRef param = motion_axis_info->getNewparam_array()[iparam];
-                            if ( !!param->getSid() ) {
-                                if ( std::string(param->getSid()) == "hardMaxVel" ) {
-                                    pjoint->_info._vhardmaxvel[ic] = fjointmult * param->getFloat()->getValue();
-                                    if ( pjoint->_info._vhardmaxvel[ic] < pjoint->_info._vmaxvel[ic]) {
-                                        RAVELOG_WARN_FORMAT("... %s: hard limit written in collada (%f) is smaller than soft limit (%f). So, overwrite hard limit by soft limit...", param->getSid() % pjoint->_info._vhardmaxvel[ic] % pjoint->_info._vmaxvel[ic]);
-                                        pjoint->_info._vhardmaxvel[ic] = pjoint->_info._vmaxvel[ic];
-                                    }
-                                    RAVELOG_VERBOSE_FORMAT("... %s: %f...", param->getSid() % pjoint->_info._vhardmaxvel[ic]);
-                                } else if ( std::string(param->getSid()) == "hardMaxAccel" ) {
-                                    pjoint->_info._vhardmaxaccel[ic] = fjointmult * param->getFloat()->getValue();
-                                    if ( pjoint->_info._vhardmaxaccel[ic] < pjoint->_info._vmaxaccel[ic]) {
-                                        RAVELOG_WARN_FORMAT("... %s: hard limit written in collada (%f) is smaller than soft limit (%f). So, overwrite hard limit by soft limit...", param->getSid() % pjoint->_info._vhardmaxaccel[ic] % pjoint->_info._vmaxaccel[ic]);
-                                        pjoint->_info._vhardmaxaccel[ic] = pjoint->_info._vmaxaccel[ic];
-                                    }
-                                    RAVELOG_VERBOSE_FORMAT("... %s: %f...", param->getSid() % pjoint->_info._vhardmaxaccel[ic]);
-                                } else if ( std::string(param->getSid()) == "hardMaxJerk" ) {
-                                    pjoint->_info._vhardmaxjerk[ic] = fjointmult * param->getFloat()->getValue();
-                                    if ( pjoint->_info._vhardmaxjerk[ic] < pjoint->_info._vmaxjerk[ic]) {
-                                        RAVELOG_WARN_FORMAT("... %s: hard limit written in collada (%f) is smaller than soft limit (%f). So, overwrite hard limit by soft limit...", param->getSid() % pjoint->_info._vhardmaxjerk[ic] % pjoint->_info._vmaxjerk[ic]);
-                                        pjoint->_info._vhardmaxjerk[ic] = pjoint->_info._vmaxjerk[ic];
-                                    }
-                                    RAVELOG_VERBOSE_FORMAT("... %s: %f...", param->getSid() % pjoint->_info._vhardmaxjerk[ic]);
-                                }
+                            if ( pjoint->_info._vhardmaxjerk[ic] < pjoint->_info._vmaxjerk[ic] ) {
+                                RAVELOG_VERBOSE_FORMAT("... Joint Jerk : Tried to set soft limit as %f but it exceeds hard limit. Therefore, reset to hard limit %f for consistency...\n", pjoint->_info._vmaxjerk[ic] % pjoint->_info._vhardmaxjerk[ic]);
+                                pjoint->_info._vmaxjerk[ic] = pjoint->_info._vhardmaxjerk[ic];
                             }
+                            RAVELOG_VERBOSE("... Joint Jerk: %f...\n",pjoint->GetMaxJerk());
                         }
                     }
 
