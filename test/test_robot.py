@@ -671,6 +671,66 @@ class RunRobot(EnvironmentSetup):
         assert robot.CheckSelfCollision() # succeeds
         assert cloned_robot.CheckSelfCollision() # fails
 
+    def test_4dikparameterization(self):
+        self.log.info('test 4dikparameterization')
+        env=self.env
+        robot=self.LoadRobot('robots/barrettwam.robot.xml')
+
+        random.seed(0)
+        manip = robot.GetActiveManipulator()
+        robot.SetDOFValues(random.rand(robot.GetDOF()))
+
+        t = robot.GetTransform()
+        origt = copy(t)
+        axis = random.rand(3)
+        t[:3,:3] = rotationMatrixFromAxisAngle(axis/linalg.norm(axis), 1)
+        t[:3, 3] = random.rand(3)
+
+        for isNorm in [True, False]:
+            for xyz in 'XYZ':
+                xyzindex = ord(xyz) - ord('X')
+                # construct ikTypeName programatically, don't know if there is cleaner way
+                ikTypeName = 'Translation%sAxisAngle' % xyz
+                if isNorm:
+                    originAxis = 'ZXY'[xyzindex]
+                    ikTypeName += originAxis + 'Norm4D'
+                else:
+                    ikTypeName += '4D'
+
+                # ik param representation when robot is at origin
+                robot.SetTransform(origt)
+                iktype = getattr(IkParameterizationType, ikTypeName)
+                ikp = manip.GetIkParameterization(iktype, inworld=True)
+                origw = getattr(manip.GetIkParameterization(ikp, inworld=True), 'Get' + ikTypeName)()
+                origl = getattr(manip.GetIkParameterization(ikp, inworld=False), 'Get' + ikTypeName)()
+
+                for inworld in [True, False]:
+                    assert manip.GetIkParameterization(ikp, inworld=inworld).ComputeDistanceSqr(manip.GetIkParameterization(iktype, inworld=inworld)) < 1e-10
+
+                # ik param representation when robot is at random transform
+                robot.SetTransform(t)
+                randw = getattr(manip.GetIkParameterization(ikp, inworld=True), 'Get' + ikTypeName)()
+                randl = getattr(manip.GetIkParameterization(ikp, inworld=False), 'Get' + ikTypeName)()
+
+                for inworld in [True, False]:
+                    assert manip.GetIkParameterization(ikp, inworld=inworld).ComputeDistanceSqr(manip.GetIkParameterization(iktype, inworld=inworld)) < 1e-10
+
+                # angle value of 4d ik types should be invariant of robot coord
+                origwangle = origw[1]
+                assert abs(origwangle - randw[1]) < 1e-10
+                assert abs(origwangle - randl[1]) < 1e-10
+                assert abs(origwangle - origl[1]) < 1e-10
+                if not isNorm:
+                   manipGlobalDir = dot(manip.GetTransform()[:3,:3], manip.GetDirection())
+                   assert abs(origwangle - arccos(dot(manipGlobalDir, robot.GetTransform()[:3, xyzindex]))) < 1e-10
+
+                # translation check
+                assert linalg.norm(dot(origt, r_[origl[0], 1])[:3] - origw[0]) < 1e-10
+                assert linalg.norm(dot(t, r_[origl[0], 1])[:3] - randw[0]) < 1e-10
+
+                # optional print check
+                #for inworld in [True, False]:
+                #    print manip.GetIkParameterization(ikp, inworld=inworld)
     
 #generate_classes(RunRobot, globals(), [('ode','ode'),('bullet','bullet')])
 

@@ -763,6 +763,66 @@ void KinBody::GetDOFJerkLimits(std::vector<dReal>& v, const std::vector<int>& do
     }
 }
 
+void KinBody::GetDOFHardVelocityLimits(std::vector<dReal>& v, const std::vector<int>& dofindices) const
+{
+    if( dofindices.size() == 0 ) {
+        v.resize(0);
+        if( (int)v.capacity() < GetDOF() ) {
+            v.reserve(GetDOF());
+        }
+        FOREACHC(it, _vDOFOrderedJoints) {
+            (*it)->GetHardVelocityLimits(v,true);
+        }
+    }
+    else {
+        v.resize(dofindices.size());
+        for(size_t i = 0; i < dofindices.size(); ++i) {
+            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
+            v[i] = pjoint->GetHardVelocityLimit(dofindices[i]-pjoint->GetDOFIndex());
+        }
+    }
+}
+
+void KinBody::GetDOFHardAccelerationLimits(std::vector<dReal>& v, const std::vector<int>& dofindices) const
+{
+    if( dofindices.size() == 0 ) {
+        v.resize(0);
+        if( (int)v.capacity() < GetDOF() ) {
+            v.reserve(GetDOF());
+        }
+        FOREACHC(it, _vDOFOrderedJoints) {
+            (*it)->GetHardAccelerationLimits(v,true);
+        }
+    }
+    else {
+        v.resize(dofindices.size());
+        for(size_t i = 0; i < dofindices.size(); ++i) {
+            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
+            v[i] = pjoint->GetHardAccelerationLimit(dofindices[i]-pjoint->GetDOFIndex());
+        }
+    }
+}
+
+void KinBody::GetDOFHardJerkLimits(std::vector<dReal>& v, const std::vector<int>& dofindices) const
+{
+    if( dofindices.size() == 0 ) {
+        v.resize(0);
+        if( (int)v.capacity() < GetDOF() ) {
+            v.reserve(GetDOF());
+        }
+        FOREACHC(it, _vDOFOrderedJoints) {
+            (*it)->GetHardJerkLimits(v,true);
+        }
+    }
+    else {
+        v.resize(dofindices.size());
+        for(size_t i = 0; i < dofindices.size(); ++i) {
+            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
+            v[i] = pjoint->GetHardJerkLimit(dofindices[i]-pjoint->GetDOFIndex());
+        }
+    }
+}
+
 void KinBody::GetDOFTorqueLimits(std::vector<dReal>& v) const
 {
     v.resize(0);
@@ -953,6 +1013,36 @@ void KinBody::SetDOFJerkLimits(const std::vector<dReal>& v)
     std::vector<dReal>::const_iterator itv = v.begin();
     FOREACHC(it, _vDOFOrderedJoints) {
         std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info._vmaxjerk.begin());
+        itv += (*it)->GetDOF();
+    }
+    _PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+}
+
+void KinBody::SetDOFHardVelocityLimits(const std::vector<dReal>& v)
+{
+    std::vector<dReal>::const_iterator itv = v.begin();
+    FOREACHC(it, _vDOFOrderedJoints) {
+        std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info._vhardmaxvel.begin());
+        itv += (*it)->GetDOF();
+    }
+    _PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+}
+
+void KinBody::SetDOFHardAccelerationLimits(const std::vector<dReal>& v)
+{
+    std::vector<dReal>::const_iterator itv = v.begin();
+    FOREACHC(it, _vDOFOrderedJoints) {
+        std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info._vhardmaxaccel.begin());
+        itv += (*it)->GetDOF();
+    }
+    _PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+}
+
+void KinBody::SetDOFHardJerkLimits(const std::vector<dReal>& v)
+{
+    std::vector<dReal>::const_iterator itv = v.begin();
+    FOREACHC(it, _vDOFOrderedJoints) {
+        std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info._vhardmaxjerk.begin());
         itv += (*it)->GetDOF();
     }
     _PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
