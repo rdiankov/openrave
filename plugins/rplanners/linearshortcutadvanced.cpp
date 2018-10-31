@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2013 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2018 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -13,6 +13,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+// \author Puttichai Lertkultanon and Rosen Diankov
 #include "openraveplugindefs.h"
 
 // #define SHORTCUT_ONEDOF_DEBUG
@@ -89,22 +90,22 @@ public:
         uint32_t basetime = utils::GetMilliTime();
         PlannerParametersConstPtr parameters = GetParameters();
 
-//        if( IS_DEBUGLEVEL(Level_Verbose) ) {
-//            // store the trajectory
-//            uint32_t randnum;
-//            if( !!_logginguniformsampler ) {
-//                randnum = _logginguniformsampler->SampleSequenceOneUInt32();
-//            }
-//            else {
-//                randnum = RaveRandomInt();
-//            }
-//            string filename = str(boost::format("%s/linearsmoother%d.parameters.xml")%RaveGetHomeDirectory()%(randnum%1000));
-//            ofstream f(filename.c_str());
-//            f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
-//            f << *_parameters;
-//            RAVELOG_VERBOSE_FORMAT("saved linear parameters to %s", filename);
-//            _DumpTrajectory(ptraj, Level_Verbose, 0);
-//        }
+        // if( IS_DEBUGLEVEL(Level_Verbose) ) {
+        //     // store the trajectory
+        //     uint32_t randnum;
+        //     if( !!_logginguniformsampler ) {
+        //         randnum = _logginguniformsampler->SampleSequenceOneUInt32();
+        //     }
+        //     else {
+        //         randnum = RaveRandomInt();
+        //     }
+        //     string filename = str(boost::format("%s/linearsmoother%d.parameters.xml")%RaveGetHomeDirectory()%(randnum%1000));
+        //     ofstream f(filename.c_str());
+        //     f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+        //     f << *_parameters;
+        //     RAVELOG_VERBOSE_FORMAT("saved linear parameters to %s", filename);
+        //     _DumpTrajectory(ptraj, Level_Verbose, 0);
+        // }
 
         // subsample trajectory and add to list
         list< std::pair< vector<dReal>, dReal> > listpath;
@@ -144,8 +145,7 @@ public:
         _DumpTrajectory(ptrajbefore, Level_Debug, 1);
 #endif
 
-        // not ready yet
-        //_OptimizePathOneDOF(listpath);
+        _OptimizePathOneDOF(listpath);
 
 #ifdef SHORTCUT_ONEDOF_DEBUG
         FOREACH(it, listpath) {
@@ -177,6 +177,8 @@ public:
     }
 
 protected:
+    /// \brief Iteratively pick two nodes in the path then iterpolate a linear path between them. Note that the
+    /// interpolated path might not be stirctly linear due to _neighstatefn.
     void _OptimizePath(list< std::pair< vector<dReal>, dReal> >& listpath)
     {
         PlannerParametersConstPtr parameters = GetParameters();
@@ -191,6 +193,7 @@ protected:
         int itercount = 0;
         int numiters = parameters->_nMaxIterations;
         std::vector<dReal> vnewconfig0(dof), vnewconfig1(dof);
+
         int numshortcuts = 0; // keep track of the number of successful shortcuts
 #ifdef PROGRESS_DEBUG
         std::stringstream ss;
@@ -219,8 +222,9 @@ protected:
             nrejected++;
 
             dReal expectedtotaldistance = parameters->_distmetricfn(itstartnode->first, itendnode->first);
-            if( expectedtotaldistance > totaldistance-0.1*parameters->_fStepLength ) {
-                // expected total distance is not that great
+            if( expectedtotaldistance > totaldistance - 0.1*parameters->_fStepLength ) {
+                // The shortest possible distance between the start and the end of the shortcut (according to
+                // _distmetricfn) is not really short so reject it.
 #ifdef PROGRESS_DEBUG
                 RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, rejecting since it may not make significant improvement. originalSegmentDistance=%.15e, expectedNewDistance=%.15e, diff=%.15e, fStepLength=%.15e", GetEnv()->GetId()%itercount%numiters%totaldistance%expectedtotaldistance%(totaldistance - expectedtotaldistance)%parameters->_fStepLength);
 #endif
@@ -264,7 +268,7 @@ protected:
             dReal newtotaldistance = parameters->_distmetricfn(itstartnode->first, vnewconfig0);
             *itdist++ = newtotaldistance;
             itnewconfig += dof;
-            while(itnewconfig != _filterreturn->_configurations.end() ) {
+            while( itnewconfig != _filterreturn->_configurations.end() ) {
                 std::copy(itnewconfig, itnewconfig+dof, vnewconfig1.begin());
                 *itdist = parameters->_distmetricfn(vnewconfig0, vnewconfig1);
                 newtotaldistance += *itdist;
@@ -292,7 +296,8 @@ protected:
             itnewconfig = _filterreturn->_configurations.begin();
             while(itnewconfig != _filterreturn->_configurations.end()) {
                 std::copy(itnewconfig, itnewconfig+dof, vnewconfig1.begin());
-                listpath.insert(itstartnode, make_pair(vnewconfig1, *itdist++));
+                // Add (vnewconfig1, dist) before *itstartnode
+                listpath.insert(itstartnode, make_pair(vnewconfig1, *itdist++)); // now itstartnode still points to the same element
                 itnewconfig += dof;
             }
             itendnode->second = *itdist++;
@@ -332,7 +337,18 @@ protected:
         int ndof = parameters->GetDOF();
         int nrejected = 0;
         std::list< std::pair< std::vector<dReal>, dReal > >::iterator itstartnode, itendnode, itnode;
-        std::vector< std::pair< std::vector<dReal>, dReal > > vpathvalues; // for keeping the shortcut segment
+
+        std::list< std::pair< std::vector<dReal>, dReal > > listshortcutpath; // for keeping shortcut path
+        std::vector<dReal> vcurconfig(ndof), vnextconfig(ndof), vnewconfig(ndof);
+        if( !_filterreturn ) {
+            _filterreturn.reset(new ConstraintFilterReturn());
+        }
+
+#ifdef PROGRESS_DEBUG
+        std::stringstream ss;
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+#endif
+
         for( int iiter = 0; iiter < parameters->_nMaxIterations; ++iiter ) {
             if( listpath.size() <= 2 ) {
                 return;
@@ -349,25 +365,31 @@ protected:
             if( endIndex == startIndex + 1 ) {
                 continue;
             }
+#ifdef PROGRESS_DEBUG
+            RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, start shortcutting idof=%d with i0=%d; i1=%d", GetEnv()->GetId()%iiter%parameters->_nMaxIterations%idof%startIndex%endIndex);
+#endif
 
             itstartnode = listpath.begin();
             std::advance(itstartnode, startIndex);
             itendnode = itstartnode;
-            dReal totalDOFDistance = 0; // distance traveled by the dof idof
-            dReal totalDistance = 0;
-            dReal curDOFValue = itstartnode->first.at(idof);
+            dReal fTotalDOFDistance = 0; // distance traveled by the DOF idof
+            dReal fTotalDistance = 0; // distance traveled by all DOFs.
+            dReal fCurDOFValue = itstartnode->first.at(idof);
             for( uint32_t j = 0; j < endIndex - startIndex; ++j ) {
                 ++itendnode;
-                totalDOFDistance += RaveFabs(itendnode->first.at(idof) - curDOFValue);
-                totalDistance += itendnode->second;
-                curDOFValue = itendnode->first.at(idof);
+                fTotalDOFDistance += RaveFabs(itendnode->first.at(idof) - fCurDOFValue);
+                fTotalDistance += itendnode->second;
+                fCurDOFValue = itendnode->first.at(idof);
             }
             nrejected++;
 
-            dReal expectedDOFDistance = itendnode->first.at(idof) - itstartnode->first.at(idof);
+            dReal fExpectedDOFDistance = itendnode->first.at(idof) - itstartnode->first.at(idof);
             // RAVELOG_DEBUG_FORMAT("env=%d, prevdofdist=%.15e; newdofdist=%.15e; diff=%.15e", GetEnv()->GetId()%totalDOFDistance%RaveFabs(expectedDOFDistance)%(totalDOFDistance - RaveFabs(expectedDOFDistance)));
-            if( RaveFabs(expectedDOFDistance) > totalDOFDistance - 0.1*parameters->_vConfigResolution.at(idof) ) {
+            if( RaveFabs(fExpectedDOFDistance) > fTotalDOFDistance - 0.1*parameters->_vConfigResolution.at(idof) ) {
                 // Even after a successful shortcut, the resulting path wouldn't be that much shorter. So skipping.
+#ifdef PROGRESS_DEBUG
+                RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, rejecting since it may not make significant improvement. originalDOFDistance=%.15e, expectedDOFDistance=%.15e, diff=%.15e, dofresolution=%.15e", GetEnv()->GetId()%iiter%parameters->_nMaxIterations%fTotalDOFDistance%fExpectedDOFDistance%(fTotalDOFDistance - fExpectedDOFDistance)%parameters->_vConfigResolution.at(idof));
+#endif
                 continue;
             }
 
@@ -376,78 +398,128 @@ protected:
                 return;
             }
 
-            bool bsuccess = true;
-            vpathvalues.resize(endIndex - startIndex + 1);
-            int pathindex = 0;
-            dReal fdelta = expectedDOFDistance / totalDistance;
-            dReal fcurdist = 0;
-            dReal fstartdofvalue = itstartnode->first.at(idof);
+            // Main shortcut procedure
+            listshortcutpath.clear();
+            bool bSuccess = true;
+            dReal fDelta = fExpectedDOFDistance / fTotalDOFDistance;
+            dReal fCurDist = 0;
+            dReal fStartDOFValue = itstartnode->first.at(idof);
             itnode = itstartnode;
-            vpathvalues.at(0).first = itnode->first;
-            vpathvalues.at(0).second = itnode->second;
-            // RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, totalDistance=%.15e; fdelta=%.15e", GetEnv()->GetId()%iiter%parameters->_nMaxIterations%totalDistance%fdelta);
-            // std::stringstream ss; ss << "dof values=[";
-            // TODO cannot do linear interpolation!
-            do {
-                ++itnode;
-                ++pathindex;
-                fcurdist += itnode->second;
-                vpathvalues.at(pathindex).first = itnode->first;
-                // compute an appropriate value for idof by curdof = startdofvalue + (curdist/alldist)*expectedDOFDistance
-                vpathvalues.at(pathindex).first.at(idof) = fstartdofvalue + fcurdist*fdelta;
-                dReal fdist = parameters->_distmetricfn(vpathvalues.at(pathindex).first, vpathvalues.at(pathindex - 1).first);
-                vpathvalues.at(pathindex).second = fdist;
-                // ss << vpathvalues.at(pathindex).first.at(idof) << ", ";
-            } while( itnode != itendnode );
-            // ss << "];";
-            // RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, finished computing vpathvalues, size=%d; %s", GetEnv()->GetId()%iiter%parameters->_nMaxIterations%vpathvalues.size()%ss.str());
+            vcurconfig = itnode->first;
 
-            for( size_t ipath = 0; ipath < vpathvalues.size(); ++ipath ) {
-                if( !(parameters->CheckPathAllConstraints(vpathvalues.at(ipath).first, vpathvalues.at(ipath).first, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, 0xffff) == 0) ) {
-                    bsuccess = false;
+            dReal fNewDOFDistance = 0;
+            dReal fNewTotalDistance = 0;
+            // Iterate through all expected intermediate configurations and check collision (and other constraints) along the segment preceeding it.
+            do {
+                std::advance(itnode, 1);
+                fCurDist += itnode->second;
+                vnextconfig = itnode->first;
+                // Modify the value for the DOF idof according to linear interpolation:
+                // curdofvalue = startdofvalue + (curdist/totaldist) * expecteddofdistance
+                vnextconfig[idof] = fStartDOFValue + fCurDist*fDelta;
+
+                _filterreturn->Clear();
+                int ret = parameters->CheckPathAllConstraints(vcurconfig, vnextconfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, 0xffff|CFO_FillCheckedConfiguration, _filterreturn);
+                if ( ret != 0 ) {
+#ifdef PROGRESS_DEBUG
+                    ss.str(""); ss.clear();
+                    ss << "s=" << _filterreturn->_fTimeWhenInvalid << "; vInvalidConfig=[";
+                    FOREACH(itval, _filterreturn->_invalidvalues) {
+                        ss << *itval << ", ";
+                    }
+                    ss << "]";
+                    RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, CheckPathAllConstraints failed, retcode=0x%x. %s", GetEnv()->GetId()%itercount%numiters%ret%ss.str());
+#endif
+                    bSuccess = false;
                     break;
                 }
-            }
+                if(_filterreturn->_configurations.size() == 0 ) {
+#ifdef PROGRESS_DEBUG
+                    RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, CheckPathAllConstraints succeeded but did not fill in _filterreturn->_configurations so rejecting.", GetEnv()->GetId()%itercount%numiters);
+#endif
+                    bSuccess = false;
+                    break;
+                }
+                OPENRAVE_ASSERT_OP(_filterreturn->_configurations.size()%ndof, ==, 0);
 
-            progress._iteration = iiter;
+                // The segment has passed the check. Add checked configurations to listshortcutpath
+                std::vector<dReal>::iterator itnewconfig = _filterreturn->_configurations.begin();
+                std::copy(itnewconfig, itnewconfig + ndof, vnewconfig.begin());
+                listshortcutpath.push_back( make_pair(vnewconfig, parameters->_distmetricfn(itstartnode->first, vnewconfig)) );
+                fNewDOFDistance += RaveFabs(vnewconfig.at(idof) - itstartnode->first.at(idof));
+                fNewTotalDistance += listshortcutpath.back().second;
+                itnewconfig += ndof;
+
+                while( itnewconfig != _filterreturn->_configurations.end() ) {
+                    std::copy(itnewconfig, itnewconfig + ndof, vnewconfig.begin());
+                    fNewDOFDistance += RaveFabs(vnewconfig.at(idof) - listshortcutpath.back().first.at(idof));
+                    if( fNewDOFDistance > fTotalDOFDistance - 0.1*parameters->_vConfigResolution.at(idof) ) {
+                        // The distance the DOF idof travels is too much that this shortcut would not be useful
+                        bSuccess = false;
+                        break;
+                    }
+                    listshortcutpath.push_back( make_pair(vnewconfig, parameters->_distmetricfn(listshortcutpath.back().first, vnewconfig)) );
+                    fNewTotalDistance += listshortcutpath.back().second;
+                    if( fNewTotalDistance > 1.1 * fTotalDistance ) {
+                        // The distance along the shortcut path is too much so rejecting it.
+                        bSuccess = false;
+                        break;
+                    }
+                    itnewconfig += ndof;
+                }
+                if( !bSuccess ) {
+                    break;
+                }
+
+                vcurconfig.swap(vnextconfig);
+
+            } while( itnode != itendnode );
+
             if( _CallCallbacks(progress) == PA_Interrupt ) {
                 return;
             }
 
-            if( !bsuccess ) {
-                continue;
+            if( !bSuccess ) {
+                continue; // continue to the next shortcut iteration
             }
 
+            // Shortcut is successful. Replace the original segments with the content in listshortcutpath.
             ++numshortcuts;
-            // Replace the original segment with the new one
-            itnode = itstartnode;
-            pathindex = 1;
-            do {
-                *itnode = vpathvalues.at(pathindex);
-                ++pathindex;
-                ++itnode;
-            } while( itnode != itendnode );
-            nrejected = 0;
+            std::advance(itstartnode, 1);
+            std::advance(itendnode, 1);
+            itnode = listshortcutpath.begin();
+            while( itnode != listshortcutpath.end() ) {
+                listpath.insert(itstartnode, *itnode);
+                std::advance(itnode, 1);
+            }
+            listpath.erase(itstartnode, itendnode);
         }
-        // RAVELOG_DEBUG_FORMAT("env=%d, successful shortcuts=%d", GetEnv()->GetId()%numshortcuts);
+        RAVELOG_DEBUG_FORMAT("env=%d, shortcut one dof; numshortcuts=%d", GetEnv()->GetId()%numshortcuts);
         return;
     }
 
+    /// \brief Subsample the given linear trajectory according to robot config resolution. Subsampling on each linear
+    /// segment is done via calling to _neighstatefn. If this _neighstatefn call returns a config that deviates from the
+    /// original stright line, we give up subsampling that segment and continue to the next one. (We do not perform any
+    /// collision checking here so we cannot allow any config outside of the collision-checked straight line to be in
+    /// the subsampled trajectory.)
+    /// \param[in] ptraj a linear trajectory
+    /// \param[out] listpath list of (config, dist) pairs. Each dist is the distance from config to its predecessor.
     void _SubsampleTrajectory(TrajectoryBasePtr ptraj, list< std::pair< vector<dReal>, dReal> >& listpath) const
     {
         PlannerParametersConstPtr parameters = GetParameters();
         vector<dReal> q0(parameters->GetDOF()), q1(parameters->GetDOF()), dq(parameters->GetDOF()), qcur(parameters->GetDOF()), dq2;
         vector<dReal> vtrajdata;
-        ptraj->GetWaypoints(0,ptraj->GetNumWaypoints(),vtrajdata,parameters->_configurationspecification);
+        ptraj->GetWaypoints(0, ptraj->GetNumWaypoints(), vtrajdata, parameters->_configurationspecification);
 
-        std::copy(vtrajdata.begin(),vtrajdata.begin()+parameters->GetDOF(),q0.begin());
-        listpath.push_back(make_pair(q0,dReal(0)));
+        std::copy(vtrajdata.begin(), vtrajdata.begin() + parameters->GetDOF(), q0.begin());
+        listpath.push_back(make_pair(q0, dReal(0)));
         qcur = q0;
 
         for(size_t ipoint = 1; ipoint < ptraj->GetNumWaypoints(); ++ipoint) {
-            std::copy(vtrajdata.begin()+(ipoint)*parameters->GetDOF(),vtrajdata.begin()+(ipoint+1)*parameters->GetDOF(),q1.begin());
+            std::copy(vtrajdata.begin() + (ipoint)*parameters->GetDOF(), vtrajdata.begin() + (ipoint + 1)*parameters->GetDOF(), q1.begin());
             dq = q1;
-            parameters->_diffstatefn(dq,q0);
+            parameters->_diffstatefn(dq, q0);
             int i, numSteps = 1;
             vector<dReal>::const_iterator itres = parameters->_vConfigResolution.begin();
             for (i = 0; i < parameters->GetDOF(); i++,itres++) {
@@ -463,24 +535,27 @@ protected:
                 }
             }
             dReal fisteps = dReal(1.0f)/numSteps;
-            FOREACH(it,dq) {
+            FOREACH(it, dq) {
                 *it *= fisteps;
             }
+            // Subsampling by recursively computing q + dq to get the next config. If computing q + dq fails, we
+            // continue by computing the next config by q + 2*dq, q + 3*dq, and so on. If computing q + dq returns some
+            // config outside of the original straight line, we give up subsampling.
             int mult = 1;
-            for (int f = 1; f < numSteps; f++) {
+            for( int f = 1; f < numSteps; f++ ) {
                 int neighstatus = NSS_Failed;
                 if( mult > 1 ) {
                     dq2 = dq;
                     FOREACHC(it, dq2) {
                         *it *= mult;
                     }
-                    neighstatus = parameters->_neighstatefn(qcur,dq2,NSO_OnlyHardConstraints);
+                    neighstatus = parameters->_neighstatefn(qcur, dq2, NSO_OnlyHardConstraints);
                 }
                 else {
-                    neighstatus = parameters->_neighstatefn(qcur,dq,NSO_OnlyHardConstraints);
+                    neighstatus = parameters->_neighstatefn(qcur, dq, NSO_OnlyHardConstraints);
                 }
                 if( neighstatus == NSS_SuccessfulWithDeviation ) {
-                    RAVELOG_WARN_FORMAT("env=%d, neighstatefn returned different configuration than qcur, stop subsampling segment (%d, %d) at step %d/%d, numwaypoints=%d", GetEnv()->GetId()%(ipoint-1)%ipoint%f%numSteps%ptraj->GetNumWaypoints());
+                    RAVELOG_WARN_FORMAT("env=%d, neighstatefn returned different configuration than qcur, stop subsampling segment (%d, %d) at step %d/%d, numwaypoints=%d", GetEnv()->GetId()%(ipoint - 1)%ipoint%f%numSteps%ptraj->GetNumWaypoints());
                     qcur = listpath.back().first; // restore qcur
                     break;
                 }
@@ -489,20 +564,20 @@ protected:
                     mult++;
                     continue;
                 }
-                dReal dist = parameters->_distmetricfn(listpath.back().first,qcur);
+                dReal dist = parameters->_distmetricfn(listpath.back().first, qcur);
                 listpath.push_back(make_pair(qcur, dist));
                 mult = 1;
             }
             // always add the last point
-            dReal dist = parameters->_distmetricfn(listpath.back().first,q1);
+            dReal dist = parameters->_distmetricfn(listpath.back().first, q1);
             listpath.push_back(make_pair(q1, dist));
             qcur = q1;
             q0.swap(q1);
         }
 
-        std::copy(vtrajdata.end()-parameters->GetDOF(),vtrajdata.end(),q0.begin());
-        dReal dist = parameters->_distmetricfn(listpath.back().first,q0);
-        listpath.push_back(make_pair(q0,dist));
+        std::copy(vtrajdata.end() - parameters->GetDOF(), vtrajdata.end(), q1.begin());
+        dReal dist = parameters->_distmetricfn(listpath.back().first, q1);
+        listpath.push_back(make_pair(q1, dist));
     }
 
     std::string _DumpTrajectory(TrajectoryBasePtr traj, DebugLevel level, int option)
