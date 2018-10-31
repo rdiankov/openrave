@@ -1025,6 +1025,60 @@ void RobotBase::GetActiveDOFJerkLimits(std::vector<dReal>& maxjerk) const
     }
 }
 
+void RobotBase::GetActiveDOFHardVelocityLimits(std::vector<dReal>& maxvel) const
+{
+    if( _nActiveDOF < 0 ) {
+        GetDOFHardVelocityLimits(maxvel);
+        return;
+    }
+    maxvel.resize(GetActiveDOF());
+    if( maxvel.size() == 0 ) {
+        return;
+    }
+    dReal* pMaxVel = &maxvel[0];
+
+    GetDOFHardVelocityLimits(_vTempRobotJoints);
+    FOREACHC(it, _vActiveDOFIndices) {
+        *pMaxVel++ = _vTempRobotJoints[*it];
+    }
+}
+
+void RobotBase::GetActiveDOFHardAccelerationLimits(std::vector<dReal>& maxaccel) const
+{
+    if( _nActiveDOF < 0 ) {
+        GetDOFHardAccelerationLimits(maxaccel);
+        return;
+    }
+    maxaccel.resize(GetActiveDOF());
+    if( maxaccel.size() == 0 ) {
+        return;
+    }
+    dReal* pMaxAccel = &maxaccel[0];
+
+    GetDOFHardAccelerationLimits(_vTempRobotJoints);
+    FOREACHC(it, _vActiveDOFIndices) {
+        *pMaxAccel++ = _vTempRobotJoints[*it];
+    }
+}
+
+void RobotBase::GetActiveDOFHardJerkLimits(std::vector<dReal>& maxjerk) const
+{
+    if( _nActiveDOF < 0 ) {
+        GetDOFHardJerkLimits(maxjerk);
+        return;
+    }
+    maxjerk.resize(GetActiveDOF());
+    if( maxjerk.size() == 0 ) {
+        return;
+    }
+    dReal* pMaxJerk = &maxjerk[0];
+
+    GetDOFHardJerkLimits(_vTempRobotJoints);
+    FOREACHC(it, _vActiveDOFIndices) {
+        *pMaxJerk++ = _vTempRobotJoints[*it];
+    }
+}
+
 void RobotBase::SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const
 {
     if( _nActiveDOF < 0 ) {

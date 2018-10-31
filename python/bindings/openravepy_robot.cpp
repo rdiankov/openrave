@@ -1176,6 +1176,36 @@ public:
         return toPyArray(values);
     }
 
+    object GetActiveDOFHardMaxVel() const
+    {
+        if( _probot->GetActiveDOF() == 0 ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<dReal> values;
+        _probot->GetActiveDOFHardMaxVel(values);
+        return toPyArray(values);
+    }
+
+    object GetActiveDOFHardMaxAccel() const
+    {
+        if( _probot->GetActiveDOF() == 0 ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<dReal> values;
+        _probot->GetActiveDOFHardMaxAccel(values);
+        return toPyArray(values);
+    }
+
+    object GetActiveDOFHardMaxJerk() const
+    {
+        if( _probot->GetActiveDOF() == 0 ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<dReal> values;
+        _probot->GetActiveDOFHardMaxJerk(values);
+        return toPyArray(values);
+    }
+
     object GetActiveDOFResolutions() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
@@ -1527,6 +1557,9 @@ void init_openravepy_robot()
                       .def("GetActiveDOFMaxVel",&PyRobotBase::GetActiveDOFMaxVel, DOXY_FN(RobotBase,GetActiveDOFMaxVel))
                       .def("GetActiveDOFMaxAccel",&PyRobotBase::GetActiveDOFMaxAccel, DOXY_FN(RobotBase,GetActiveDOFMaxAccel))
                       .def("GetActiveDOFMaxJerk",&PyRobotBase::GetActiveDOFMaxJerk, DOXY_FN(RobotBase,GetActiveDOFMaxJerk))
+                      .def("GetActiveDOFHardMaxVel",&PyRobotBase::GetActiveDOFHardMaxVel, DOXY_FN(RobotBase,GetActiveDOFHardMaxVel))
+                      .def("GetActiveDOFHardMaxAccel",&PyRobotBase::GetActiveDOFHardMaxAccel, DOXY_FN(RobotBase,GetActiveDOFHardMaxAccel))
+                      .def("GetActiveDOFHardMaxJerk",&PyRobotBase::GetActiveDOFHardMaxJerk, DOXY_FN(RobotBase,GetActiveDOFHardMaxJerk))
                       .def("GetActiveDOFResolutions",&PyRobotBase::GetActiveDOFResolutions, DOXY_FN(RobotBase,GetActiveDOFResolutions))
                       .def("GetActiveConfigurationSpecification",&PyRobotBase::GetActiveConfigurationSpecification, GetActiveConfigurationSpecification_overloads(args("interpolation"),DOXY_FN(RobotBase,GetActiveConfigurationSpecification)))
                       .def("GetActiveJointIndices",&PyRobotBase::GetActiveJointIndices)
