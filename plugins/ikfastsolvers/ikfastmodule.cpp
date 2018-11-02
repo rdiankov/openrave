@@ -997,21 +997,23 @@ public:
         RobotBase::RobotStateSaver saver(robot);
         robot->Enable(bTestSelfCollision);
 
-        /* ========== Beginning of requried modifications in DebugIK ========== */
         RobotBase::ManipulatorPtr pmanip = robot->GetActiveManipulator();
         IkSolverBasePtr piksolverbase = pmanip->GetIkSolver();
+        if( !piksolverbase ) {
+            RAVELOG_ERROR(str(boost::format("no ik solver base set on manipulator %s")%pmanip->GetName()));
+            return false;
+        }
         IkFastSolverPtr<dReal> piksolver = boost::dynamic_pointer_cast<IkFastSolver<dReal>>(piksolverbase);
+        if( !piksolver ) {
+            RAVELOG_ERROR(str(boost::format("dynamic pointer cast fails for ik solver base set on manipulator %s")%pmanip->GetName()));
+            return false;
+        }
         boost::shared_ptr<ikfast::IkFastFunctions<dReal> > ikfunctions = piksolver->GetIkFunctions();
         const std::vector<int>& arminds = pmanip->GetArmIndices();
         const size_t narminds = arminds.size();
         int nfreeparams = ikfunctions->_GetNumFreeParameters();
         int* pfreeparams = ikfunctions->_GetFreeParameters();
-        /* ================ End of requried modifications in DebugIK ========== */
-        
-        if( !piksolver ) {
-            RAVELOG_ERROR(str(boost::format("no ik solver set on manipulator %s")%pmanip->GetName()));
-            return false;
-        }
+
         // set the ik threshold to something big so wrong solutions can be returned
         stringstream soutik, sinputik; sinputik << "SetIkThreshold 1000";
         piksolver->SendCommand(soutik,sinputik);
