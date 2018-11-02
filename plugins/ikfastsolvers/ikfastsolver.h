@@ -83,6 +83,10 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
     virtual ~IkFastSolver() {
     }
 
+    const boost::shared_ptr<ikfast::IkFastFunctions<IkReal> > GetIkFunctions() {
+      return _ikfunctions;
+    }
+
     inline boost::shared_ptr<IkFastSolver<IkReal> > shared_solver() {
         return boost::dynamic_pointer_cast<IkFastSolver<IkReal> >(shared_from_this());
     }
