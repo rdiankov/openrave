@@ -75,6 +75,7 @@
 #endif
 
 #include "next_combination.h"
+#include "ikfastsolver.h"
 
 #define LOAD_IKFUNCTION0(fnname) { \
         ikfunctions->_ ## fnname = (typename ikfast::IkFastFunctions<T>::fnname ## Fn)SysLoadSym(plib, # fnname); \
@@ -995,21 +996,31 @@ public:
         RAVELOG_DEBUG("Starting DebugIK... max iterations=%d\n", num_itrs);
         RobotBase::RobotStateSaver saver(robot);
         robot->Enable(bTestSelfCollision);
+
+        /* ========== Beginning of requried modifications in DebugIK ========== */
         RobotBase::ManipulatorPtr pmanip = robot->GetActiveManipulator();
-        if( !pmanip->GetIkSolver() ) {
+        IkSolverBasePtr piksolverbase = pmanip->GetIkSolver();
+        IkFastSolverPtr<dReal> piksolver = boost::dynamic_pointer_cast<IkFastSolver<dReal>>(piksolverbase);
+        boost::shared_ptr<ikfast::IkFastFunctions<dReal> > ikfunctions = piksolver->GetIkFunctions();
+        const std::vector<int>& arminds = pmanip->GetArmIndices();
+        const size_t narminds = arminds.size();
+        int nfreeparams = ikfunctions->_GetNumFreeParameters();
+        int* pfreeparams = ikfunctions->_GetFreeParameters();
+        /* ================ End of requried modifications in DebugIK ========== */
+        
+        if( !piksolver ) {
             RAVELOG_ERROR(str(boost::format("no ik solver set on manipulator %s")%pmanip->GetName()));
             return false;
         }
-
         // set the ik threshold to something big so wrong solutions can be returned
         stringstream soutik, sinputik; sinputik << "SetIkThreshold 1000";
-        pmanip->GetIkSolver()->SendCommand(soutik,sinputik);
+        piksolver->SendCommand(soutik,sinputik);
 
-        vector<dReal> vrealsolution(pmanip->GetArmIndices().size(),0), vrand(pmanip->GetArmIndices().size(),0);
+        vector<dReal> vrealsolution(narminds,0), vrand(narminds,0);
         vector<dReal> vlowerlimit, vupperlimit, viksolution;
         vector< vector<dReal> > viksolutions, viksolutions2;
 
-        robot->SetActiveDOFs(pmanip->GetArmIndices());
+        robot->SetActiveDOFs(arminds);
         robot->GetActiveDOFLimits(vlowerlimit, vupperlimit);
         // shrink the limits to prevent solutions close to limits from returning errors
         for(size_t i = 0; i < vlowerlimit.size(); ++i) {
@@ -1038,16 +1049,16 @@ public:
         vector<pair<IkParameterization, vector<dReal> > >& vnofullsolutions = vsolutionresults[2];     // solution returned, but not all of them
         int success=0;
         int nTotalIterations = 0;
-        int nNumFreeTests = 100*pmanip->GetIkSolver()->GetNumFreeParameters();
+        int nNumFreeTests = 100*piksolver->GetNumFreeParameters();
 
         std::vector<dReal> vjacobian;
         boost::numeric::ublas::matrix<dReal> J, Jt, JJt;
         ublas::matrix<dReal, boost::numeric::ublas::column_major > U(6, 6), Vt(6,6);
         ublas::vector<dReal> S(6);
-        J.resize(6,pmanip->GetArmIndices().size());
+        J.resize(6,narminds);
 
         FOREACHC(itiktype, RaveGetIkParameterizationMap()) {
-            if( !pmanip->GetIkSolver()->Supports(itiktype->first) ) {
+            if( !piksolver->Supports(itiktype->first) ) {
                 continue;
             }
             nTotalIterations += num_itrs;
@@ -1072,7 +1083,7 @@ public:
                         if( jacobianthreshold > 0 ) {
                             // don't want any degenerate cases
                             for(int j = 0; j < (int)vrealsolution.size(); j++) {
-                                int dof = pmanip->GetArmIndices().at(j);
+                                int dof = arminds.at(j);
                                 if( robot->GetJointFromDOFIndex(dof)->IsCircular(dof-robot->GetJointFromDOFIndex(dof)->GetDOFIndex()) ) {
                                     vrealsolution[j] = -PI + 2*PI*RaveRandomFloat();
                                 }
@@ -1084,7 +1095,7 @@ public:
                         else {
                             for(int j = 0; j < (int)vrealsolution.size(); j++) {
                                 if( RaveRandomFloat() >= sampledegeneratecases ) {
-                                    int dof = pmanip->GetArmIndices().at(j);
+                                    int dof = arminds.at(j);
                                     if( robot->GetJointFromDOFIndex(dof)->IsCircular(dof-robot->GetJointFromDOFIndex(dof)->GetDOFIndex()) ) {
                                         vrealsolution[j] = -PI + 2*PI*RaveRandomFloat();
                                     }
@@ -1121,7 +1132,7 @@ public:
                     // compute the jacobian and get its determinant
                     // compute jacobians, make sure to transform by the world frame
                     pmanip->CalculateAngularVelocityJacobian(vjacobian);
-                    size_t armdof = pmanip->GetArmIndices().size();
+                    size_t armdof = narminds;
                     for(size_t j = 0; j < armdof; ++j) {
                         J(0,j) = vjacobian[j];
                         J(1,j) = vjacobian[armdof+j];
@@ -1145,7 +1156,7 @@ public:
                     }
                 }
 
-                if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters_real) ) {
+                if( !piksolver->GetFreeParameters(vfreeparameters_real) ) {
                     RAVELOG_WARN("failed to get freeparameters");
                 }
                 if( bTestSelfCollision && robot->CheckSelfCollision()) {
@@ -1153,10 +1164,25 @@ public:
                     continue;
                 }
 
+                if( !piksolver->GetFreeParameters(vfreeparameters) ) {
+                    RAVELOG_WARN("failed to get freeparameters");
+                }
+                vfreeparameters_out.resize(vfreeparameters.size());
+                
                 // have to start at a random config
                 while(1) {
-                    for(int j = 0; j < (int)vrand.size(); j++) {
+                    for(int j = 0; j < (int) narminds; j++) {
                         vrand[j] = vlowerlimit[j] + (vupperlimit[j]-vlowerlimit[j])*RaveRandomFloat();
+                    }
+                    for(int k = 0; k < (int) nfreeparams; k++) {
+                      // e.g. k = 0, freeparam = 12
+                      const int freeparam = pfreeparams[k];
+                      for(int j = 0; j < (int) narminds; j++) {
+                        // e.g. j = 2, arminds = { 10, 11, 12, 13, 14, 15, 16 }
+                        if ( arminds[j] == freeparam ) {
+                          vrand[j] =  vfreeparameters[k];
+                        }
+                      }
                     }
                     robot->SetActiveDOFValues(vrand, false);
                     if(!bTestSelfCollision || !robot->CheckSelfCollision()) {
@@ -1164,10 +1190,6 @@ public:
                     }
                 }
                 RAVELOG_DEBUG("iteration %d\n",i);
-                if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters) ) {
-                    RAVELOG_WARN("failed to get freeparameters");
-                }
-                vfreeparameters_out.resize(vfreeparameters.size());
 
                 bool bsuccess = true;
                 bool bnoiksolution = false;
@@ -1185,6 +1207,7 @@ public:
                     s << "]" << endl << "ikparameterization=\"" << twrist << "\"" << endl;
                     s << "raw ik command: ";
                     GetIKFastCommand(s, twrist, pmanip);
+                    s << endl << "free parameters: ";
                     FOREACH(itfree,vfreeparameters) {
                         s << *itfree << " ";
                     }
@@ -1194,7 +1217,7 @@ public:
                 else {
                     robot->SetActiveDOFValues(viksolution,false);
                     twrist_out = pmanip->GetIkParameterization(twrist);
-                    if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters_out) ) {
+                    if( !piksolver->GetFreeParameters(vfreeparameters_out) ) {
                         RAVELOG_WARN("failed to get freeparameters");
                     }
                     if( twrist.ComputeDistanceSqr(twrist_out) > fthreshold) {
@@ -1255,7 +1278,7 @@ public:
                     FOREACH(itsol, viksolutions) {
                         robot->SetActiveDOFValues(*itsol, false);
                         twrist_out = pmanip->GetIkParameterization(twrist);
-                        if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters_out) ) {
+                        if( !piksolver->GetFreeParameters(vfreeparameters_out) ) {
                             RAVELOG_WARN("failed to get freeparameters");
                         }
                         if(twrist.ComputeDistanceSqr(twrist_out) > fthreshold ) {
@@ -1308,9 +1331,9 @@ public:
                     }
                 }
 
-                if( pmanip->GetIkSolver()->GetNumFreeParameters() > 0 && nNumFreeTests > 0 ) {
+                if( piksolver->GetNumFreeParameters() > 0 && nNumFreeTests > 0 ) {
                     dReal freerange = 1;
-                    dReal deltafree = freerange/dReal(exp(log(double(nNumFreeTests))/double(pmanip->GetIkSolver()->GetNumFreeParameters())));
+                    dReal deltafree = freerange/dReal(exp(log(double(nNumFreeTests))/double(piksolver->GetNumFreeParameters())));
 
                     // test with the free parameters
                     robot->SetActiveDOFValues(vrand, false);
@@ -1342,10 +1365,10 @@ public:
                         }
 
                         // make sure they are the same
-                        if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters_out) ) {
+                        if( !piksolver->GetFreeParameters(vfreeparameters_out) ) {
                             RAVELOG_WARN("failed to get freeparameters");
                         }
-                        for(int j = 0; j < pmanip->GetIkSolver()->GetNumFreeParameters(); ++j) {
+                        for(int j = 0; j < piksolver->GetNumFreeParameters(); ++j) {
                             if( fabsf(vfreeparameters.at(j)-vfreeparameters_out.at(j)) > 0.0001f ) {
                                 RAVELOG_WARN(str(boost::format("free params %d not equal: %f!=%f\n")%j%vfreeparameters[j]%vfreeparameters_out[j]));
                                 vnofullsolutions.push_back(make_pair(twrist,vfreeparameters));
@@ -1431,7 +1454,7 @@ public:
         // restore the ik threshold
         sinputik.str(""); sinputik.clear();
         sinputik << "SetIkThreshold 1e-6";
-        pmanip->GetIkSolver()->SendCommand(soutik,sinputik);
+        piksolver->SendCommand(soutik,sinputik);
 
         return true;
     }
