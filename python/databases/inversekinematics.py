@@ -1083,6 +1083,8 @@ class InverseKinematicsModel(DatabaseGenerator):
                           help='if true will drop into the ipython interpreter right before ikfast is called')
         parser.add_option('--iktype', action='store',type='string',dest='iktype',default=None,
                           help='The ik type to build the solver current types are: %s'%(', '.join(iktype.name for iktype in IkParameterizationType.values.values() if not int(iktype) & IkParameterizationType.VelocityDataBit )))
+        parser.add_option('--freeindices', action='append', type='int', dest='freeindices',default=None, \
+                          help='Indices of free joints') 
         return parser
     
     @staticmethod
@@ -1098,7 +1100,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                     break
         else:
             iktype = IkParameterizationType.Transform6D
-        Model = lambda robot: InverseKinematicsModel(robot=robot,iktype=iktype,forceikfast=True)
+        Model = lambda robot: InverseKinematicsModel(robot=robot,iktype=iktype,forceikfast=True,freeindices=options.freeindices)
         robotatts={}
         if not options.show:
             robotatts = {'skipgeometry':'1'}
