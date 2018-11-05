@@ -1018,7 +1018,7 @@ public:
         stringstream soutik, sinputik; sinputik << "SetIkThreshold 1000";
         piksolver->SendCommand(soutik,sinputik);
 
-        vector<dReal> vrealsolution(narminds,0), vrand(narminds,0);
+        vector<dReal> vrealsolution(narminds,0), vrand(narminds,0), vrandwfix(narminds,0);
         vector<dReal> vlowerlimit, vupperlimit, viksolution;
         vector< vector<dReal> > viksolutions, viksolutions2;
 
@@ -1045,10 +1045,11 @@ public:
 
         IkParameterization twrist, twrist_out;
         vector<dReal> vfreeparameters_real, vfreeparameters, vfreeparameters_out;
-        boost::array<vector<pair<IkParameterization, vector<dReal> > >, 3> vsolutionresults;
-        vector<pair<IkParameterization, vector<dReal> > >& vwrongsolutions = vsolutionresults[0];     // wrong solution is returned
-        vector<pair<IkParameterization, vector<dReal> > >& vnosolutions = vsolutionresults[1];     // no solution found
-        vector<pair<IkParameterization, vector<dReal> > >& vnofullsolutions = vsolutionresults[2];     // solution returned, but not all of them
+        boost::array<vector<pair<IkParameterization, vector<dReal> > >, 4> vsolutionresults;
+        vector<pair<IkParameterization, vector<dReal> > >& vwrongsolutions  = vsolutionresults[0]; // wrong solution is returned
+        vector<pair<IkParameterization, vector<dReal> > >& vnosolutions     = vsolutionresults[1]; // no solution found with free joint values unknown
+        vector<pair<IkParameterization, vector<dReal> > >& vnofullsolutions = vsolutionresults[2]; // solution returned, but not all of them
+        vector<pair<IkParameterization, vector<dReal> > >& vnosolutionswfix = vsolutionresults[3]; // no solution even with free joint values known
         int success=0;
         int nTotalIterations = 0;
         int nNumFreeTests = 100*piksolver->GetNumFreeParameters();
@@ -1175,6 +1176,7 @@ public:
                 while(1) {
                     for(int j = 0; j < (int) narminds; j++) {
                         vrand[j] = vlowerlimit[j] + (vupperlimit[j]-vlowerlimit[j])*RaveRandomFloat();
+                        vrandwfix[j] = vrand[j];
                     }
                     for(int k = 0; k < (int) nfreeparams; k++) {
                       // e.g. k = 0, freeparam = 12
@@ -1182,17 +1184,26 @@ public:
                       for(int j = 0; j < (int) narminds; j++) {
                         // e.g. j = 2, arminds = { 10, 11, 12, 13, 14, 15, 16 }
                         if ( arminds[j] == freeparam ) {
-                          vrand[j] =  vfreeparameters[k];
+                          vrandwfix[j] =  vfreeparameters[k];
                         }
                       }
                     }
+                    // check collision for vrand
                     robot->SetActiveDOFValues(vrand, false);
-                    if(!bTestSelfCollision || !robot->CheckSelfCollision()) {
+                    const bool bnocollisionvrand = !(bTestSelfCollision && robot->CheckSelfCollision());
+                    // check collision for vrandwfix
+                    robot->SetActiveDOFValues(vrandwfix, false);
+                    const bool bnocollisionvrandwfix = !(bTestSelfCollision && robot->CheckSelfCollision());
+                    if(bnocollisionvrand && bnocollisionvrandwfix) {
+                        // both vrand and vrandwfix yield no collision
                         break;
                     }
                 }
+
                 RAVELOG_DEBUG("iteration %d\n",i);
 
+                // first, use vrand that knows NOT values of free joints
+                robot->SetActiveDOFValues(vrand, false);
                 bool bsuccess = true;
                 bool bnoiksolution = false;
                 if( !pmanip->FindIKSolution(twrist, viksolution, filteroptions) ) {
@@ -1248,6 +1259,64 @@ public:
                         continue;
                     }
                 }
+
+                // second, use vrandwfix that knows values of free joints
+                robot->SetActiveDOFValues(vrandwfix, false);
+                bool bsuccesswfix = true;
+                bool bnoiksolutionwfix = false;
+                if( !pmanip->FindIKSolution(twrist, viksolution, filteroptions) ) {
+                    if( !bnoiksolution ) {
+                        vnosolutionswfix.push_back(make_pair(twrist,vfreeparameters));
+                        bnoiksolutionwfix = true;
+                    }
+                    bsuccesswfix = false;
+                    s.str("");
+                    s << "FindIKSolution: No ik solution found, i = " << i << endl << "jointvalues=[";
+                    FOREACH(it, vrealsolution) {
+                        s << *it << ", ";
+                    }
+                    s << "]" << endl << "ikparameterization=\"" << twrist << "\"" << endl;
+                    s << "raw ik command: ";
+                    GetIKFastCommand(s, twrist, pmanip);
+                    s << endl << "free parameters: ";
+                    FOREACH(itfree,vfreeparameters) {
+                        s << *itfree << " ";
+                    }
+                    s << endl << endl;
+                    RAVELOG_WARN(s.str());
+                }
+                else {
+                    robot->SetActiveDOFValues(viksolution,false);
+                    twrist_out = pmanip->GetIkParameterization(twrist);
+                    if( !piksolver->GetFreeParameters(vfreeparameters_out) ) {
+                        RAVELOG_WARN("failed to get freeparameters");
+                    }
+                    if( twrist.ComputeDistanceSqr(twrist_out) > fthreshold) {
+                        vwrongsolutions.push_back(make_pair(twrist,vfreeparameters_out));
+                        bsuccess = false;
+                        s.str("");
+                        s << "FindIKSolution: Incorrect IK, i = " << i <<" error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
+                          << "originaljointvalues=[";
+                        FOREACH(it, vrealsolution) {
+                            s << *it << ", ";
+                        }
+                        s << "]" << endl << "returnedjointvalues=[";
+                        FOREACH(it, viksolution) {
+                            s << *it << ", ";
+                        }
+                        s << "]" << endl << "ikparamin=\"" << twrist << "\"" << endl;
+                        s << "ikparamout=\"" << twrist_out << "\"" << endl;
+                        s << "raw ik command: ";
+                        GetIKFastCommand(s, twrist, pmanip);
+                        FOREACH(itfree,vfreeparameters_out) {
+                            s << *itfree << " ";
+                        }
+                        s << endl << endl;
+                        RAVELOG_ERROR(s.str());
+                        ++i;
+                        continue;
+                    }
+                }                
 
                 // test all possible solutions
                 robot->SetActiveDOFValues(vrand, false);
@@ -1442,7 +1511,12 @@ public:
 
         dReal itotal = dReal(1.0)/nTotalIterations;
         RAVELOG_DEBUG(str(boost::format("DebugIK done, rates %f, %f, %f, %f\n")%(success*itotal)%(vwrongsolutions.size()*itotal)%(vnosolutions.size()*itotal)%(vnofullsolutions.size()*itotal)));
-        sout << num_itrs << " " << success << " ";
+        sout << num_itrs << " "
+             << success << " "
+             << vwrongsolutions.size() << " "
+             << vnosolutions.size() << " "
+             << vnofullsolutions.size() << " "
+             << vnosolutionswfix.size() << " ";
         FOREACH(itresults,vsolutionresults) {
             sout << itresults->size() << " ";
             FOREACH(it, *itresults) {
