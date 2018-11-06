@@ -791,8 +791,10 @@ public:
         boost::array<dReal,3> _vresolution;              ///< interpolation resolution
         boost::array<dReal,3> _vmaxvel;                  ///< the soft maximum velocity (rad/s) to move the joint when planning
         boost::array<dReal,3> _vhardmaxvel;              ///< the hard maximum velocity, robot cannot exceed this velocity. used for verification checking
-        boost::array<dReal,3> _vmaxaccel;                ///< the maximum acceleration (rad/s^2) of the joint
-        boost::array<dReal,3> _vmaxjerk;                 ///< the maximum jerk (rad/s^3) of the joint
+        boost::array<dReal,3> _vmaxaccel;                ///< the soft maximum acceleration (rad/s^2) of the joint
+        boost::array<dReal,3> _vhardmaxaccel;            ///< the hard maximum acceleration (rad/s^2), robot cannot exceed this acceleration. used for verification checking
+        boost::array<dReal,3> _vmaxjerk;                 ///< the soft maximum jerk (rad/s^3) of the joint
+        boost::array<dReal,3> _vhardmaxjerk;             ///< the hard maximum jerk (rad/s^3), robot cannot exceed this jerk. used for verification checking
         boost::array<dReal,3> _vmaxtorque;               ///< maximum torque (N.m, kg m^2/s^2) that should be applied to the joint. Usually this is computed from the motor nominal torque and gear ratio. Ignore if values are 0.
         boost::array<dReal,3> _vmaxinertia;             ///< maximum inertia (kg m^2) that the joint can exhibit. Usually this is set for safety reasons. Ignore if values are 0.
         boost::array<dReal,3> _vweights;                ///< the weights of the joint for computing distance metrics.
@@ -865,6 +867,16 @@ public:
         }
         inline dReal GetMaxJerk(int iaxis=0) const {
             return _info._vmaxjerk[iaxis];
+        }
+
+        inline dReal GetHardMaxVel(int iaxis=0) const {
+            return _info._vhardmaxvel[iaxis];
+        }
+        inline dReal GetHardMaxAccel(int iaxis=0) const {
+            return _info._vhardmaxaccel[iaxis];
+        }
+        inline dReal GetHardMaxJerk(int iaxis=0) const {
+            return _info._vhardmaxjerk[iaxis];
         }
 
         ///< \brief gets the max instantaneous torque of the joint
@@ -1043,6 +1055,42 @@ public:
 
         /// \brief \see GetJerkLimits
         virtual void SetJerkLimits(const std::vector<dReal>& vmax);
+
+        /** \brief Returns the hard max velocities of the joint
+
+            \param[out] the max vel
+            \param[in] bAppend if true will append to the end of the vector instead of erasing it
+         */
+        virtual void GetHardVelocityLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
+
+        virtual dReal GetHardVelocityLimit(int iaxis=0) const;
+
+        /// \brief \see GetHardVelocityLimits
+        virtual void SetHardVelocityLimits(const std::vector<dReal>& vmax);
+
+        /** \brief Returns the hard max accelerations of the joint
+
+            \param[out] the max accel
+            \param[in] bAppend if true will append to the end of the vector instead of erasing it
+         */
+        virtual void GetHardAccelerationLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
+
+        virtual dReal GetHardAccelerationLimit(int iaxis=0) const;
+
+        /// \brief \see GetHardAccelerationLimits
+        virtual void SetHardAccelerationLimits(const std::vector<dReal>& vmax);
+
+        /** \brief Returns the hard max jerks of the joint
+
+            \param[out] the max jerk
+            \param[in] bAppend if true will append to the end of the vector instead of erasing it
+         */
+        virtual void GetHardJerkLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
+
+        virtual dReal GetHardJerkLimit(int iaxis=0) const;
+
+        /// \brief \see GetHardJerkLimits
+        virtual void SetHardJerkLimits(const std::vector<dReal>& vmax);
 
         /** \brief Returns the max torques of the joint
 
@@ -1557,6 +1605,21 @@ private:
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
     virtual void GetDOFJerkLimits(std::vector<dReal>& maxjerks, const std::vector<int>& dofindices = std::vector<int>()) const;
 
+    /// \brief Returns the hard max velocity for each DOF
+    ///
+    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void GetDOFHardVelocityLimits(std::vector<dReal>& maxvels, const std::vector<int>& dofindices = std::vector<int>()) const;
+
+    /// \brief Returns the hard max acceleration for each DOF
+    ///
+    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void GetDOFHardAccelerationLimits(std::vector<dReal>& maxaccels, const std::vector<int>& dofindices = std::vector<int>()) const;
+
+    /// \brief Returns the hard max jerk for each DOF
+    ///
+    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void GetDOFHardJerkLimits(std::vector<dReal>& maxjerks, const std::vector<int>& dofindices = std::vector<int>()) const;
+
     /// \brief Returns the max torque for each DOF
     virtual void GetDOFTorqueLimits(std::vector<dReal>& maxaccelerations) const;
 
@@ -1587,6 +1650,15 @@ private:
 
     /// \brief \see GetDOFJerkLimits
     virtual void SetDOFJerkLimits(const std::vector<dReal>& maxlimits);
+
+    /// \brief \see GetDOFHardVelocityLimits
+    virtual void SetDOFHardVelocityLimits(const std::vector<dReal>& maxlimits);
+
+    /// \brief \see GetDOFHardAccelerationLimits
+    virtual void SetDOFHardAccelerationLimits(const std::vector<dReal>& maxlimits);
+
+    /// \brief \see GetDOFHardJerkLimits
+    virtual void SetDOFHardJerkLimits(const std::vector<dReal>& maxlimits);
 
     /// \brief \see GetDOFTorqueLimits
     virtual void SetDOFTorqueLimits(const std::vector<dReal>& maxlimits);

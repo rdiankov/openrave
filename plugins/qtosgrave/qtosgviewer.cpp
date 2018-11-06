@@ -206,8 +206,9 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
     else {
         connect(QApplication::instance(), SIGNAL(aboutToQuit()), this, SLOT(_ProcessApplicationQuit()));
     }
-    
-    _posgWidget = new ViewerWidget(GetEnv(), _userdatakey, boost::bind(&QtOSGViewer::_HandleOSGKeyDown, this, _1), GetEnv()->GetUnit().second);
+
+    _posgWidget = new QOSGViewerWidget(GetEnv(), _userdatakey, boost::bind(&QtOSGViewer::_HandleOSGKeyDown, this, _1), GetEnv()->GetUnit().second, this);
+
     setCentralWidget(_posgWidget);
 
     _RepaintWidgets();
@@ -226,6 +227,10 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
         _CreateMenus();
         _CreateToolsBar();
         _CreateDockWidgets();
+    }
+
+    if (!bCreateMenu && !bCreateMenu) {
+        _CreateControlButtons();
     }
 
     resize(1024, 768);
@@ -519,7 +524,7 @@ void QtOSGViewer::LoadEnvironment()
         EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
         GetEnv()->Reset();
 
-        GetEnv()->Load(s.toAscii().data());
+        GetEnv()->Load(s.toLatin1().data());
 
         RAVELOG_INFO("\n---------Refresh--------\n");
 
@@ -532,7 +537,7 @@ void QtOSGViewer::LoadEnvironment()
         _posgWidget->SetHome();
     }
     catch(const std::exception& ex) {
-        RAVELOG_WARN_FORMAT("failed to load environment %s: %s", s.toAscii().data()%ex.what());
+        RAVELOG_WARN_FORMAT("failed to load environment %s: %s", s.toLatin1().data()%ex.what());
     }
 
 }
@@ -547,13 +552,13 @@ void QtOSGViewer::ImportEnvironment()
     }
     try {
         EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
-        GetEnv()->Load(s.toAscii().data());
+        GetEnv()->Load(s.toLatin1().data());
 
         //  Refresh the screen.
         UpdateFromModel();
     }
     catch(const std::exception& ex) {
-        RAVELOG_WARN_FORMAT("failed to import model %s: %s", s.toAscii().data()%ex.what());
+        RAVELOG_WARN_FORMAT("failed to import model %s: %s", s.toLatin1().data()%ex.what());
     }
 }
 
@@ -565,10 +570,10 @@ void QtOSGViewer::SaveEnvironment()
     }
     try {
         EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
-        GetEnv()->Save(s.toAscii().data());
+        GetEnv()->Save(s.toLatin1().data());
     }
     catch(const std::exception& ex) {
-        RAVELOG_WARN_FORMAT("failed to save to file %s: %s", s.toAscii().data()%ex.what());
+        RAVELOG_WARN_FORMAT("failed to save to file %s: %s", s.toLatin1().data()%ex.what());
     }
 }
 
@@ -813,6 +818,41 @@ void QtOSGViewer::_CreateDockWidgets()
     viewMenu->addAction(dock->toggleViewAction());
 }
 
+void QtOSGViewer::_CreateControlButtons()
+{
+
+    QWidget *controlWidget = new QWidget(_posgWidget);
+    controlWidget->setGeometry(10, 10, 50, 150);
+
+    QVBoxLayout *qvBoxLayout = new QVBoxLayout(controlWidget);
+    qvBoxLayout->setSpacing(5);
+    qvBoxLayout->setAlignment(Qt::AlignTop);
+    qvBoxLayout->heightForWidth(40);
+
+    QPushButton *zoomInButton = new QPushButton("+");
+    connect(zoomInButton, &QPushButton::pressed, [=](){
+            this->_posgWidget->Zoom(1.1);
+        });
+
+    QPushButton *zoomOutButton = new QPushButton("-");
+    connect(zoomOutButton, &QPushButton::pressed, [=](){
+            this->_posgWidget->Zoom(0.9);
+        });
+
+    QPushButton *cameraMoveModeButton = new QPushButton("Rot");
+    cameraMoveModeButton->setText(this->_posgWidget->GetCameraMoveMode());
+    connect(cameraMoveModeButton, &QPushButton::pressed, [=]() {
+            _posgWidget->ToggleCameraMoveMode();
+            cameraMoveModeButton->setText(this->_posgWidget->GetCameraMoveMode());
+        });
+
+    qvBoxLayout->addWidget(zoomInButton);
+    qvBoxLayout->addWidget(zoomOutButton);
+    qvBoxLayout->addWidget(cameraMoveModeButton);
+
+    controlWidget->setLayout(qvBoxLayout);
+}
+
 void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
 {
     RobotBasePtr robot;
@@ -822,7 +862,7 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
     std::string mass;
 
     //  Select robot in Viewers
-    _posgWidget->SelectItemFromName(item->text(0).toAscii().data());
+    _posgWidget->SelectItemFromName(item->text(0).toLatin1().data());
 
     //  Clears details
     if (!!_qdetailsTree) {
@@ -837,11 +877,11 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
 
             //  Set Title
             if (!!_qdetailsTree) {
-                _qdetailsTree->setHeaderLabel(item->text(0).toAscii().data());
+                _qdetailsTree->setHeaderLabel(item->text(0).toLatin1().data());
             }
 
-            robot = GetEnv()->GetRobot(item->parent()->parent()->text(0).toAscii().data());
-            link  = robot->GetLink(item->text(0).toAscii().data());
+            robot = GetEnv()->GetRobot(item->parent()->parent()->text(0).toLatin1().data());
+            link  = robot->GetLink(item->text(0).toLatin1().data());
 
             //  Clears output string
             strs.clear();
@@ -855,16 +895,16 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
         else {
             //  Set Title
             if (!!_qdetailsTree) {
-                _qdetailsTree->setHeaderLabel(item->text(0).toAscii().data());
+                _qdetailsTree->setHeaderLabel(item->text(0).toLatin1().data());
             }
         }
     }
     else {
         //  Set Title
         if (!!_qdetailsTree) {
-            _qdetailsTree->setHeaderLabel(item->text(0).toAscii().data());
+            _qdetailsTree->setHeaderLabel(item->text(0).toLatin1().data());
         }
-        kinbody = GetEnv()->GetKinBody(item->text(0).toAscii().data());
+        kinbody = GetEnv()->GetKinBody(item->text(0).toLatin1().data());
         for (size_t i=0; i<kinbody->GetLinks().size(); i++) {
             std::ostringstream strs;
             link = kinbody->GetLinks()[i];
@@ -1791,7 +1831,7 @@ void QtOSGViewer::Move(int x, int y)
 
 void QtOSGViewer::Zoom(float factor)
 {
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Zoom, this, factor));   
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Zoom, this, factor));
 }
 
 void QtOSGViewer::_Zoom(float factor)
@@ -2043,7 +2083,7 @@ void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, bool block
         // viewer quit, so anything posted won't get processed
         return;
     }
-    
+
     boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
     if( _listGUIFunctions.size() > 1000 ) {
         // can happen if system is especially slow
