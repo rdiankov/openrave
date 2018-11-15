@@ -317,7 +317,7 @@ eerot[2]=((-1.0)*x3);
 }
 
 IKFAST_API int GetNumFreeParameters() { return 0; }
-IKFAST_API int* GetFreeIndices() { return NULL; }
+IKFAST_API const int* GetFreeIndices() { return NULL; }
 IKFAST_API int GetNumJoints() { return 2; }
 
 IKFAST_API int GetIkRealSize() { return sizeof(IkReal); }

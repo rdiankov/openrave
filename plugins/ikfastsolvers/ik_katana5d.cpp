@@ -333,7 +333,7 @@ eerot[2]=((-1.0)*x9*((((x13*(((((-1.0)*x18))+x17))))+((x14*((x19+x20)))))));
 }
 
 IKFAST_API int GetNumFreeParameters() { return 0; }
-IKFAST_API int* GetFreeIndices() { return NULL; }
+IKFAST_API const int* GetFreeIndices() { return NULL; }
 IKFAST_API int GetNumJoints() { return 5; }
 
 IKFAST_API int GetIkRealSize() { return sizeof(IkReal); }

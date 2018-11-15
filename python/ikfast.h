@@ -132,7 +132,7 @@ public:
     ComputeFkFn _ComputeFk;
     typedef int (*GetNumFreeParametersFn)();
     GetNumFreeParametersFn _GetNumFreeParameters;
-    typedef int* (*GetFreeIndicesFn)();
+    typedef const int* (*GetFreeIndicesFn)();
     GetFreeIndicesFn _GetFreeIndices;
     typedef int (*GetNumJointsFn)();
     GetNumJointsFn _GetNumJoints;
@@ -316,7 +316,7 @@ IKFAST_API void ComputeFk(const IkReal* joints, IkReal* eetrans, IkReal* eerot);
 IKFAST_API int GetNumFreeParameters();
 
 /// \brief the indices of the free parameters indexed by the chain joints
-IKFAST_API int* GetFreeIndices();
+IKFAST_API const int* GetFreeIndices();
 
 /// \brief the total number of indices of the chain
 IKFAST_API int GetNumJoints();
