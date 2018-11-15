@@ -452,9 +452,9 @@ int main(int argc, char** argv)
     def getClassInit(self,node,iktype,userotation=7,usetranslation=7):
         code = "IKFAST_API int GetNumFreeParameters() { return %d; }\n"%len(node.freejointvars)
         if len(node.freejointvars) == 0:
-            code += "IKFAST_API int* GetFreeIndices() { return NULL; }\n"
+            code += "IKFAST_API const int* GetFreeIndices() { return NULL; }\n"
         else:
-            code += "IKFAST_API int* GetFreeIndices() { static int freeindices[] = {"
+            code += "IKFAST_API const int* GetFreeIndices() { static const int freeindices[] = {"
             for i,freejointvar in enumerate(node.freejointvars):
                 code += "%d"%(freejointvar[1])
                 if i < len(node.freejointvars)-1:

@@ -323,9 +323,9 @@ End Function
         
         code = "Public Function getNumFreeParameters() As Integer\n    getNumFreeParameters = %d\nEnd Function\n"%len(node.freejointvars)
 #         if len(node.freejointvars) == 0:
-#             code += "IKFAST_API int* GetFreeIndices() { return NULL; }\n"
+#             code += "IKFAST_API const int* GetFreeIndices() { return NULL; }\n"
 #         else:
-#             code += "IKFAST_API int* GetFreeIndices() { static int freeindices[] = {"
+#             code += "IKFAST_API const int* GetFreeIndices() { static const int freeindices[] = {"
 #             for i,freejointvar in enumerate(node.freejointvars):
 #                 code += "%d"%(freejointvar[1])
 #                 if i < len(node.freejointvars)-1:
@@ -419,9 +419,9 @@ End Class
         
         code = "IKFAST_API int getNumFreeParameters() { return %d; }\n"%len(node.freejointvars)
         if len(node.freejointvars) == 0:
-            code += "IKFAST_API int* GetFreeIndices() { return NULL; }\n"
+            code += "IKFAST_API const int* GetFreeIndices() { return NULL; }\n"
         else:
-            code += "IKFAST_API int* GetFreeIndices() { static int freeindices[] = {"
+            code += "IKFAST_API const int* GetFreeIndices() { static const int freeindices[] = {"
             for i,freejointvar in enumerate(node.freejointvars):
                 code += "%d"%(freejointvar[1])
                 if i < len(node.freejointvars)-1:
@@ -503,9 +503,9 @@ End Class
         
         code = "IKFAST_API int getNumFreeParameters() { return %d; }\n"%len(node.freejointvars)
         if len(node.freejointvars) == 0:
-            code += "IKFAST_API int* GetFreeIndices() { return NULL; }\n"
+            code += "IKFAST_API const int* GetFreeIndices() { return NULL; }\n"
         else:
-            code += "IKFAST_API int* GetFreeIndices() { static int freeindices[] = {"
+            code += "IKFAST_API const int* GetFreeIndices() { static const int freeindices[] = {"
             for i,freejointvar in enumerate(node.freejointvars):
                 code += "%d"%(freejointvar[1])
                 if i < len(node.freejointvars)-1:
@@ -575,9 +575,9 @@ End Class
         
         code = "IKFAST_API int getNumFreeParameters() { return %d; }\n"%len(node.freejointvars)
         if len(node.freejointvars) == 0:
-            code += "IKFAST_API int* GetFreeIndices() { return NULL; }\n"
+            code += "IKFAST_API const int* GetFreeIndices() { return NULL; }\n"
         else:
-            code += "IKFAST_API int* GetFreeIndices() { static int freeindices[] = {"
+            code += "IKFAST_API const int* GetFreeIndices() { static const int freeindices[] = {"
             for i,freejointvar in enumerate(node.freejointvars):
                 code += "%d"%(freejointvar[1])
                 if i < len(node.freejointvars)-1:
@@ -654,9 +654,9 @@ End Class
 
         code = "Public Function getNumFreeParameters() As Integer\n    getNumFreeParameters = %d\nEnd Function\n"%len(node.freejointvars)
 #         if len(node.freejointvars) == 0:
-#             code += "IKFAST_API int* GetFreeIndices() { return NULL; }\n"
+#             code += "IKFAST_API const int* GetFreeIndices() { return NULL; }\n"
 #         else:
-#             code += "IKFAST_API int* GetFreeIndices() { static int freeindices[] = {"
+#             code += "IKFAST_API const int* GetFreeIndices() { static const int freeindices[] = {"
 #             for i,freejointvar in enumerate(node.freejointvars):
 #                 code += "%d"%(freejointvar[1])
 #                 if i < len(node.freejointvars)-1:

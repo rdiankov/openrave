@@ -358,7 +358,7 @@ eetrans[2]=((1.371)+(((-0.4318)*x4))+(((0.4331)*x21))+(((-1.0)*x16*x4))+(((0.020
 }
 
 IKFAST_API int GetNumFreeParameters() { return 0; }
-IKFAST_API int* GetFreeIndices() { return NULL; }
+IKFAST_API const int* GetFreeIndices() { return NULL; }
 IKFAST_API int GetNumJoints() { return 6; }
 
 IKFAST_API int GetIkRealSize() { return sizeof(IkReal); }
