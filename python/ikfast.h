@@ -40,7 +40,7 @@
 
 /// should be the same as ikfast.__version__
 /// if 0x10000000 bit is set, then the iksolver assumes 6D transforms are done without the manipulator offset taken into account (allows to reuse IK when manipulator offset changes)
-#define IKFAST_VERSION 0x10000048
+#define IKFAST_VERSION 0x1000004b
 
 namespace ikfast {
 
@@ -120,7 +120,7 @@ template <typename T>
 class IkFastFunctions
 {
 public:
-    IkFastFunctions() : _ComputeIk(NULL), _ComputeIk2(NULL), _ComputeFk(NULL), _GetNumFreeParameters(NULL), _GetFreeParameters(NULL), _GetNumJoints(NULL), _GetIkRealSize(NULL), _GetIkFastVersion(NULL), _GetIkType(NULL), _GetKinematicsHash(NULL) {
+    IkFastFunctions() : _ComputeIk(NULL), _ComputeIk2(NULL), _ComputeFk(NULL), _GetNumFreeParameters(NULL), _GetFreeIndices(NULL), _GetNumJoints(NULL), _GetIkRealSize(NULL), _GetIkFastVersion(NULL), _GetIkType(NULL), _GetKinematicsHash(NULL) {
     }
     virtual ~IkFastFunctions() {
     }
@@ -132,8 +132,8 @@ public:
     ComputeFkFn _ComputeFk;
     typedef int (*GetNumFreeParametersFn)();
     GetNumFreeParametersFn _GetNumFreeParameters;
-    typedef int* (*GetFreeParametersFn)();
-    GetFreeParametersFn _GetFreeParameters;
+    typedef int* (*GetFreeIndicesFn)();
+    GetFreeIndicesFn _GetFreeIndices;
     typedef int (*GetNumJointsFn)();
     GetNumJointsFn _GetNumJoints;
     typedef int (*GetIkRealSizeFn)();
@@ -321,7 +321,7 @@ IKFAST_API void ComputeFk(const IkReal* joints, IkReal* eetrans, IkReal* eerot);
 IKFAST_API int GetNumFreeParameters();
 
 /// \brief the indices of the free parameters indexed by the chain joints
-IKFAST_API int* GetFreeParameters();
+IKFAST_API int* GetFreeIndices();
 
 /// \brief the total number of indices of the chain
 IKFAST_API int GetNumJoints();
