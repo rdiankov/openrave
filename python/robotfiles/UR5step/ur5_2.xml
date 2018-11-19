@@ -1,0 +1,131 @@
+<robot name="universalrobots-ur5">
+  <kinbody>
+    <translation> 0.0 0.0 0.025 </translation>
+    <body name="L0">
+      <geom type="trimesh">
+        <RotationAxis>0 1 0 90</RotationAxis>
+        <collision>link0_simpl.stl 0.001</collision>
+      </geom>
+    </body>
+    <body name="L1">
+      <geom type="trimesh">
+        <RotationAxis>0 1 0 90</RotationAxis>
+        <collision>link1_simpl.stl 0.001</collision>
+      </geom>
+    </body>
+    <body name="L2">
+      <geom type="trimesh">
+        <RotationAxis>0 1 0 90</RotationAxis>
+        <collision>link2_simpl.stl 0.001</collision>
+      </geom>
+    </body>
+    <body name="L3">
+      <geom type="trimesh">
+        <RotationAxis>0 1 0 90</RotationAxis>
+        <collision>link3_simpl.stl 0.001</collision>
+      </geom>
+    </body>
+    <body name="L4">
+      <geom type="trimesh">
+        <RotationAxis>0 1 0 90</RotationAxis>
+        <collision>link4_simpl.stl 0.001</collision>
+      </geom>
+    </body>
+    <body name="L5">
+      <geom type="trimesh">
+        <RotationAxis>0 1 0 90</RotationAxis>
+        <collision>link5_simpl.stl 0.001</collision>
+      </geom>
+    </body>
+    <body name="L6">
+      <geom type="trimesh">
+        <RotationAxis>0 1 0 90</RotationAxis>
+        <collision>link6_simpl.stl 0.001</collision>
+      </geom>
+    </body>
+
+    <joint name="J0" type="hinge" enable="True">
+      <body>L0</body>
+      <body>L1</body>
+      <anchor> 0.0 0.0 0.0 </anchor>
+      <!-- <anchor> 0.0 0.0 0.0862 </anchor>   -->
+      <limits>-6.283185307179586 6.283185307179586</limits>
+      <axis>0 0 1</axis>
+      <maxveldeg>180.0</maxveldeg>
+      <maxtorque>3.0</maxtorque>
+      <actuator type="electric_motor">
+        <nominal_torque>2.6</nominal_torque>                    <!--Mapped 2.6-3.0 Nm 3.1.5 torque values-->
+      </actuator>
+    </joint>
+    <joint name="J1" type="hinge" enable="True">
+      <body>L1</body>
+      <body>L2</body>
+      <anchor> 0 0.0 0.0862 </anchor>  
+      <!-- <anchor> 0 0.0753 0.0862 </anchor>   -->
+      <limits>-6.283185307179586 6.283185307179586</limits>
+      <axis>0 1 0</axis>
+      <maxveldeg>180.0</maxveldeg>
+      <maxtorque>3.0</maxtorque>
+      <actuator type="electric_motor">
+        <nominal_torque>2.6</nominal_torque>                    <!--Mapped 2.6-3.0 Nm 3.1.5 torque values-->
+      </actuator>
+    </joint>
+    <joint name="J2" type="hinge" enable="True">
+      <body>L2</body>
+      <body>L3</body>
+      <anchor> 0 0.0 0.5112 </anchor>
+      <!-- <anchor> 0 0.0753 0.5112 </anchor> -->
+      <limits>-6.283185307179586 6.283185307179586</limits>
+      <axis>0 1 0</axis>
+      <maxveldeg>180.0</maxveldeg>
+      <maxtorque>3.0</maxtorque>
+      <actuator type="electric_motor">
+        <nominal_torque>2.6</nominal_torque>                    <!--Mapped 2.6-3.0 Nm 3.1.5 torque values-->
+      </actuator>
+    </joint>
+    <joint name="J3" type="hinge" enable="True">
+      <body>L3</body>
+      <body>L4</body>
+      <anchor> 0 0.0 0.90345 </anchor>
+      <!-- <anchor> 0 0.0753 0.90345 </anchor> -->
+      <limits>-6.283185307179586 6.283185307179586</limits>
+      <axis>0 1 0</axis>
+      <maxveldeg>180.0</maxveldeg>
+      <maxtorque>1.3</maxtorque>
+      <actuator type="electric_motor">
+        <nominal_torque>1.3</nominal_torque>                    <!--Mapped 1.3 Nm 3.1.5 torque values-->
+      </actuator>
+    </joint>
+    <joint name="J4" type="hinge" enable="True">
+      <body>L4</body>
+      <body>L5</body>
+      <anchor> 0 0.110 0.90345 </anchor>
+      <limits>-6.283185307179586 6.283185307179586</limits>
+      <axis>0 0 1</axis>
+      <maxveldeg>180.0</maxveldeg>
+      <maxtorque>1.3</maxtorque>
+      <actuator type="electric_motor">
+        <nominal_torque>1.3</nominal_torque>                    <!--Mapped 1.3 Nm 3.1.5 torque values-->
+      </actuator>
+    </joint>
+    <joint name="J5" type="hinge" enable="True">
+      <body>L5</body>
+      <body>L6</body>
+      <anchor> 0 0.110 0.9982 </anchor>
+      <limits>-6.283185307179586 6.283185307179586</limits>
+      <axis>0 1 0</axis>
+      <maxveldeg>180.0</maxveldeg>
+      <maxtorque>1.3</maxtorque>
+      <actuator type="electric_motor">
+        <nominal_torque>1.3</nominal_torque>                    <!--Mapped 1.3 Nm 3.1.5 torque values-->
+      </actuator>
+    </joint>
+  </kinbody>
+  <manipulator name="Flange">
+    <base>L0</base>
+    <effector>L6</effector>
+    <RotationAxis>1 0 0 -90</RotationAxis>
+    <translation>0.0 0.1915 0.9982</translation>
+    <direction>0 0 1</direction>
+  </manipulator>
+</robot>

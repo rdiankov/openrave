@@ -1,0 +1,16 @@
+<KinBody name="FingerTypeAPlane">
+  <Body name="finger">
+    <Geom type="box" modifiable="false">
+      <Extents>0.0025 0.015 0.0125</Extents>
+      <Translation>-0.0025 0.000 0.0025</Translation>
+    </Geom>
+    <Geom type="box" modifiable="false">
+      <Extents>0.005 0.015 0.0075</Extents>
+      <Translation>-0.0095 0.000 0.0075</Translation>
+    </Geom>
+    <Geom type="box" modifiable="false">
+      <Extents>0.0025 0.015 0.045</Extents>
+      <Translation>-0.012 0.000 0.045</Translation>
+    </Geom>
+  </Body>
+</KinBody>

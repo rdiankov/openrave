@@ -1,0 +1,82 @@
+<robot name="diffdrive_caster">
+  <kinbody>
+    <body name="base">
+      <mass type="box">
+        <total>50</total>
+        <extents>1 1 1</extents>
+      </mass>
+      <geom type="box">
+        <extents>0.1 0.2 0.25</extents>
+        <translation>0 0 0.35</translation>
+      </geom>
+    </body>
+    <body name="wheel_left">
+      <geom type="cylinder">
+        <radius>0.2</radius>
+        <height>0.05</height>
+        <translation>0 0.26 0.2</translation>
+      </geom>
+    </body>
+    <body name="wheel_right">s
+      <geom type="cylinder">
+        <radius>0.2</radius>
+        <height>0.05</height>
+        <translation>0 -0.26 0.2</translation>
+      </geom>
+    </body>
+    <body name="caster_back">
+      <mass type="sphere">
+        <total>4</total>
+        <radius>0.1</radius>
+      </mass>
+      <geom type="sphere">
+        <radius>0.1</radius>
+        <translation>-0.3 0 0.1</translation>
+      </geom>
+    </body>
+    <body name="caster_front">
+      <mass type="sphere">
+        <total>4</total>
+        <radius>0.1</radius>
+      </mass>
+      <geom type="sphere">
+        <radius>0.1</radius>
+        <translation>0.3 0 0.1</translation>
+      </geom>
+    </body>
+    <joint name="wheel_left" type="hinge" circular="true">
+      <body>base</body>
+      <body>wheel_left</body>
+      <anchor>0 0 0.2</anchor>
+      <axis>0 1 0</axis>
+    </joint>
+    <joint name="wheel_right" type="hinge" circular="true">
+      <body>base</body>
+      <body>wheel_right</body>
+      <anchor>0 0 0.2</anchor>
+      <axis>0 1 0</axis>
+    </joint>
+    <joint name="caster_back" type="spherical" enable="false">
+      <body>base</body>
+      <body>caster_back</body>
+      <anchor>-0.3 0 0.1</anchor>
+    </joint>
+    <joint name="caster_front" type="spherical" enable="false">
+      <body>base</body>
+      <body>caster_front</body>
+      <anchor>0.3 0 0.1</anchor>
+    </joint>
+  </kinbody>
+  <robot file="barrettwam.robot.xml">
+  </robot>
+  <kinbody>
+    <body name="wam0">
+      <translation>0 0 0.9</translation>
+    </body>
+    <joint type="hinge" enable="false">
+      <body>base</body>
+      <body>wam0</body>
+      <limits>0 0</limits>
+    </joint>
+  </kinbody>
+</robot>

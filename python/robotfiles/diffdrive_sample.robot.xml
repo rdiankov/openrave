@@ -1,0 +1,61 @@
+<robot name="diffdrive">
+  <kinbody>
+    <body name="base" type="dynamic">
+      <geom type="box">
+        <extents>0.2 0.4 0.02</extents>
+        <translation>-0.1 0 0.25</translation>
+      </geom>
+      <mass type="mimicgeom">
+        <total>10</total>
+      </mass>
+    </body>
+    <body name="wheel_left" type="dynamic">
+      <translation>0 0.46 0.2</translation>
+      <geom type="cylinder">
+        <radius>0.2</radius>
+        <height>0.1</height>
+      </geom>
+      <mass type="mimicgeom">
+        <total>1</total>
+      </mass>
+    </body>
+    <body name="wheel_right"  type="dynamic">
+      <translation>0 -0.46 0.2</translation>
+      <geom type="cylinder">
+        <radius>0.2</radius>
+        <height>0.1</height>
+      </geom>
+      <mass type="mimicgeom">
+        <total>1</total>
+      </mass>
+    </body>
+    <body name="wheel_caster"  type="dynamic">
+      <translation>-0.2 0 0.1</translation>
+      <geom type="cylinder">
+        <radius>0.1</radius>
+        <height>0.02</height>
+      </geom>
+      <mass type="mimicgeom">
+        <total>1</total>
+      </mass>
+    </body>
+    <joint name="wheel_left" type="hinge" circular="true">
+      <body>base</body>
+      <body>wheel_left</body>
+      <anchor>0 0 0.2</anchor>
+      <axis>0 1 0</axis>
+    </joint>
+    <joint name="wheel_right" type="hinge" circular="true">
+      <body>base</body>
+      <body>wheel_right</body>
+      <anchor>0 0 0.2</anchor>
+      <axis>0 1 0</axis>
+    </joint>
+    <joint name="wheel_caster" type="hinge" circular="true" enable="false">
+      <body>base</body>
+      <body>wheel_caster</body>
+      <anchor>-0.2 0 0.1</anchor>
+      <axis>0 1 0</axis>
+    </joint>
+  </kinbody>
+</robot>

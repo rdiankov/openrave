@@ -1,0 +1,19 @@
+<robot>
+  <robot file="pumaarm.zae">
+  </robot>
+  <robot file="pumagripper.zae">
+  </robot>
+  <robot>
+    <Manipulator name="arm">
+      <effector>Puma6</effector>
+	  <base>Base</base>
+      <joints>m1</joints>
+      <!-- joint values of the closed and opened positions -->
+      <closingdirection>1</closingdirection>
+      <direction>0 0 1</direction>
+      <!-- grasp goal with respect to the effector -->
+      <Translation>0 0 0.175</Translation>
+      <IkSolver>PUMAikfast</IkSolver>
+    </Manipulator>
+  </robot>
+</robot>

@@ -1,0 +1,26 @@
+<Robot name="PumaBarrett" file="pumaarm.zae">
+  <!-- include the barrett hand -->
+  <KinBody>
+    <body name="wam7">
+      <offsetfrom>Puma6</offsetfrom>
+      <geom type="box">
+        <extents>0.001 0.001 0.001</extents>
+      </geom>
+    </body>
+    <KinBody file="barretthand.kinbody.xml"></KinBody>
+    <Joint name="dummy0" type="hinge" enable="false">
+      <body>Puma6</body>
+      <body>wam7</body>
+      <limitsdeg>0 0</limitsdeg>
+    </Joint>
+  </KinBody>
+  <Manipulator name="arm">
+    <effector>Puma6</effector>
+	<base>Base</base>
+    <joints>JF1 JF2 JF3</joints>
+    <!-- joint values of the closed and opened positions -->
+    <closingdirection>1.0 1.0 1.0</closingdirection>
+    <direction>0 0 1</direction>
+    <translation>0 0 0.18</translation>
+  </Manipulator>
+</Robot>

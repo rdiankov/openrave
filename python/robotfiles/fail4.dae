@@ -1,0 +1,1412 @@
+<?xml version="1.0"?>
+<COLLADA version="1.5.0" xmlns="http://www.collada.org/2008/03/COLLADASchema">
+<asset>
+<contributor>
+<authoring_tool>
+Eus2Collada</authoring_tool>
+</contributor>
+<unit meter="0.001" name="millimeter">
+</unit>
+<up_axis>
+Z_UP</up_axis>
+</asset>
+<library_visual_scenes id="libvisualscene">
+<visual_scene id="libvisualscenes.scene">
+<node id="visual_root" name="VisualRoot">
+<node id="root_node" name="RootNode">
+<node id="SNAKE-SAMPLE-BODYSET2.node" name="SNAKE-SAMPLE-BODYSET2_node">
+<instance_geometry url="#SNAKE-SAMPLE-BODYSET2.geometry.0">
+<bind_material>
+<technique_common>
+<instance_material symbol="SNAKE-SAMPLE-BODYSET2.geometry.0.material" target="#SNAKE-SAMPLE-BODYSET2.geometry.0.material">
+</instance_material>
+</technique_common>
+</bind_material>
+</instance_geometry>
+</node>
+<node id="SNAKE-SAMPLE-BODYSET3.node" name="SNAKE-SAMPLE-BODYSET3_node">
+<rotate sid="JOINT0_axis0">
+1 0 0 0</rotate>
+<instance_geometry url="#SNAKE-SAMPLE-BODYSET3.geometry.0">
+<bind_material>
+<technique_common>
+<instance_material symbol="SNAKE-SAMPLE-BODYSET3.geometry.0.material" target="#SNAKE-SAMPLE-BODYSET3.geometry.0.material">
+</instance_material>
+</technique_common>
+</bind_material>
+</instance_geometry>
+</node>
+<node id="SNAKE-SAMPLE-BODYSET4.node" name="SNAKE-SAMPLE-BODYSET4_node">
+<rotate sid="JOINT1_axis0">
+1 0 0 0</rotate>
+<instance_geometry url="#SNAKE-SAMPLE-BODYSET4.geometry.0">
+<bind_material>
+<technique_common>
+<instance_material symbol="SNAKE-SAMPLE-BODYSET4.geometry.0.material" target="#SNAKE-SAMPLE-BODYSET4.geometry.0.material">
+</instance_material>
+</technique_common>
+</bind_material>
+</instance_geometry>
+</node>
+<node id="SNAKE-SAMPLE-BODYSET5.node" name="SNAKE-SAMPLE-BODYSET5_node">
+<rotate sid="JOINT2_axis0">
+1 0 0 0</rotate>
+<instance_geometry url="#SNAKE-SAMPLE-BODYSET5.geometry.0">
+<bind_material>
+<technique_common>
+<instance_material symbol="SNAKE-SAMPLE-BODYSET5.geometry.0.material" target="#SNAKE-SAMPLE-BODYSET5.geometry.0.material">
+</instance_material>
+</technique_common>
+</bind_material>
+</instance_geometry>
+</node>
+<node id="SNAKE-SAMPLE-BODYSET6.node" name="SNAKE-SAMPLE-BODYSET6_node">
+<rotate sid="JOINT3_axis0">
+1 0 0 0</rotate>
+<instance_geometry url="#SNAKE-SAMPLE-BODYSET6.geometry.0">
+<bind_material>
+<technique_common>
+<instance_material symbol="SNAKE-SAMPLE-BODYSET6.geometry.0.material" target="#SNAKE-SAMPLE-BODYSET6.geometry.0.material">
+</instance_material>
+</technique_common>
+</bind_material>
+</instance_geometry>
+</node>
+<node id="SNAKE-SAMPLE-BODYSET7.node" name="SNAKE-SAMPLE-BODYSET7_node">
+<rotate sid="JOINT4_axis0">
+1 0 0 0</rotate>
+<instance_geometry url="#SNAKE-SAMPLE-BODYSET7.geometry.0">
+<bind_material>
+<technique_common>
+<instance_material symbol="SNAKE-SAMPLE-BODYSET7.geometry.0.material" target="#SNAKE-SAMPLE-BODYSET7.geometry.0.material">
+</instance_material>
+</technique_common>
+</bind_material>
+</instance_geometry>
+</node>
+<node id="SNAKE-SAMPLE-BODYSET8.node" name="SNAKE-SAMPLE-BODYSET8_node">
+<rotate sid="JOINT5_axis0">
+1 0 0 0</rotate>
+<instance_geometry url="#SNAKE-SAMPLE-BODYSET8.geometry.0">
+<bind_material>
+<technique_common>
+<instance_material symbol="SNAKE-SAMPLE-BODYSET8.geometry.0.material" target="#SNAKE-SAMPLE-BODYSET8.geometry.0.material">
+</instance_material>
+</technique_common>
+</bind_material>
+</instance_geometry>
+</node>
+</node>
+</node>
+</visual_scene>
+</library_visual_scenes>
+<library_joints id="libjoints">
+<joint id="JOINT0" name="JOINT0">
+<revolute sid="axis0">
+<axis>
+1.0 0.0 0.0 
+</axis>
+<limits>
+<min>
+-90.0</min>
+<max>
+90.0</max>
+</limits>
+</revolute>
+</joint>
+<joint id="JOINT1" name="JOINT1">
+<revolute sid="axis0">
+<axis>
+0.0 1.0 0.0 
+</axis>
+<limits>
+<min>
+-90.0</min>
+<max>
+90.0</max>
+</limits>
+</revolute>
+</joint>
+<joint id="JOINT2" name="JOINT2">
+<revolute sid="axis0">
+<axis>
+0.0 0.0 1.0 
+</axis>
+<limits>
+<min>
+-90.0</min>
+<max>
+90.0</max>
+</limits>
+</revolute>
+</joint>
+<joint id="JOINT3" name="JOINT3">
+<revolute sid="axis0">
+<axis>
+1.0 0.0 0.0 
+</axis>
+<limits>
+<min>
+-90.0</min>
+<max>
+90.0</max>
+</limits>
+</revolute>
+</joint>
+<joint id="JOINT4" name="JOINT4">
+<revolute sid="axis0">
+<axis>
+0.0 1.0 0.0 
+</axis>
+<limits>
+<min>
+-90.0</min>
+<max>
+90.0</max>
+</limits>
+</revolute>
+</joint>
+<joint id="JOINT5" name="JOINT5">
+<revolute sid="axis0">
+<axis>
+0.0 0.0 1.0 
+</axis>
+<limits>
+<min>
+-90.0</min>
+<max>
+90.0</max>
+</limits>
+</revolute>
+</joint>
+</library_joints>
+<library_effects id="libeffect">
+<effect id="SNAKE-SAMPLE-BODYSET2.effect.0">
+<profile_COMMON>
+<technique sid="common">
+<phong>
+<ambient>
+<color>
+0.996094 0.0 0.0 1.0</color>
+</ambient>
+<diffuse>
+<color>
+0.996094 0.0 0.0 1.0</color>
+</diffuse>
+</phong>
+</technique>
+</profile_COMMON>
+</effect>
+<effect id="SNAKE-SAMPLE-BODYSET3.effect.0">
+<profile_COMMON>
+<technique sid="common">
+<phong>
+<ambient>
+<color>
+0.996094 0.722656 0.058594 1.0</color>
+</ambient>
+<diffuse>
+<color>
+0.996094 0.722656 0.058594 1.0</color>
+</diffuse>
+</phong>
+</technique>
+</profile_COMMON>
+</effect>
+<effect id="SNAKE-SAMPLE-BODYSET4.effect.0">
+<profile_COMMON>
+<technique sid="common">
+<phong>
+<ambient>
+<color>
+0.496094 0.996094 0.0 1.0</color>
+</ambient>
+<diffuse>
+<color>
+0.496094 0.996094 0.0 1.0</color>
+</diffuse>
+</phong>
+</technique>
+</profile_COMMON>
+</effect>
+<effect id="SNAKE-SAMPLE-BODYSET5.effect.0">
+<profile_COMMON>
+<technique sid="common">
+<phong>
+<ambient>
+<color>
+0.0 0.996094 0.0 1.0</color>
+</ambient>
+<diffuse>
+<color>
+0.0 0.996094 0.0 1.0</color>
+</diffuse>
+</phong>
+</technique>
+</profile_COMMON>
+</effect>
+<effect id="SNAKE-SAMPLE-BODYSET6.effect.0">
+<profile_COMMON>
+<technique sid="common">
+<phong>
+<ambient>
+<color>
+0.0 0.929688 0.929688 1.0</color>
+</ambient>
+<diffuse>
+<color>
+0.0 0.929688 0.929688 1.0</color>
+</diffuse>
+</phong>
+</technique>
+</profile_COMMON>
+</effect>
+<effect id="SNAKE-SAMPLE-BODYSET7.effect.0">
+<profile_COMMON>
+<technique sid="common">
+<phong>
+<ambient>
+<color>
+0.109375 0.523438 0.929688 1.0</color>
+</ambient>
+<diffuse>
+<color>
+0.109375 0.523438 0.929688 1.0</color>
+</diffuse>
+</phong>
+</technique>
+</profile_COMMON>
+</effect>
+<effect id="SNAKE-SAMPLE-BODYSET8.effect.0">
+<profile_COMMON>
+<technique sid="common">
+<phong>
+<ambient>
+<color>
+0.0 0.0 0.996094 1.0</color>
+</ambient>
+<diffuse>
+<color>
+0.0 0.0 0.996094 1.0</color>
+</diffuse>
+</phong>
+</technique>
+</profile_COMMON>
+</effect>
+</library_effects>
+<library_materials id="libmat">
+<material id="SNAKE-SAMPLE-BODYSET2.geometry.0.material">
+<instance_effect url="#SNAKE-SAMPLE-BODYSET2.effect.0">
+</instance_effect>
+</material>
+<material id="SNAKE-SAMPLE-BODYSET2.geometry.1.material">
+<instance_effect url="#SNAKE-SAMPLE-BODYSET2.effect.1">
+</instance_effect>
+</material>
+<material id="SNAKE-SAMPLE-BODYSET3.geometry.0.material">
+<instance_effect url="#SNAKE-SAMPLE-BODYSET3.effect.0">
+</instance_effect>
+</material>
+<material id="SNAKE-SAMPLE-BODYSET3.geometry.1.material">
+<instance_effect url="#SNAKE-SAMPLE-BODYSET3.effect.1">
+</instance_effect>
+</material>
+<material id="SNAKE-SAMPLE-BODYSET4.geometry.0.material">
+<instance_effect url="#SNAKE-SAMPLE-BODYSET4.effect.0">
+</instance_effect>
+</material>
+<material id="SNAKE-SAMPLE-BODYSET4.geometry.1.material">
+<instance_effect url="#SNAKE-SAMPLE-BODYSET4.effect.1">
+</instance_effect>
+</material>
+<material id="SNAKE-SAMPLE-BODYSET5.geometry.0.material">
+<instance_effect url="#SNAKE-SAMPLE-BODYSET5.effect.0">
+</instance_effect>
+</material>
+<material id="SNAKE-SAMPLE-BODYSET5.geometry.1.material">
+<instance_effect url="#SNAKE-SAMPLE-BODYSET5.effect.1">
+</instance_effect>
+</material>
+<material id="SNAKE-SAMPLE-BODYSET6.geometry.0.material">
+<instance_effect url="#SNAKE-SAMPLE-BODYSET6.effect.0">
+</instance_effect>
+</material>
+<material id="SNAKE-SAMPLE-BODYSET6.geometry.1.material">
+<instance_effect url="#SNAKE-SAMPLE-BODYSET6.effect.1">
+</instance_effect>
+</material>
+<material id="SNAKE-SAMPLE-BODYSET7.geometry.0.material">
+<instance_effect url="#SNAKE-SAMPLE-BODYSET7.effect.0">
+</instance_effect>
+</material>
+<material id="SNAKE-SAMPLE-BODYSET7.geometry.1.material">
+<instance_effect url="#SNAKE-SAMPLE-BODYSET7.effect.1">
+</instance_effect>
+</material>
+<material id="SNAKE-SAMPLE-BODYSET8.geometry.0.material">
+<instance_effect url="#SNAKE-SAMPLE-BODYSET8.effect.0">
+</instance_effect>
+</material>
+<material id="SNAKE-SAMPLE-BODYSET8.geometry.1.material">
+<instance_effect url="#SNAKE-SAMPLE-BODYSET8.effect.1">
+</instance_effect>
+</material>
+</library_materials>
+<library_kinematics_models id="libkinmodels">
+<kinematics_model id="kinmodel" name="snake6-robot-kinmodel">
+<technique_common>
+<instance_joint url="#JOINT0" sid="JOINT0">
+</instance_joint>
+<instance_joint url="#JOINT1" sid="JOINT1">
+</instance_joint>
+<instance_joint url="#JOINT2" sid="JOINT2">
+</instance_joint>
+<instance_joint url="#JOINT3" sid="JOINT3">
+</instance_joint>
+<instance_joint url="#JOINT4" sid="JOINT4">
+</instance_joint>
+<instance_joint url="#JOINT5" sid="JOINT5">
+</instance_joint>
+<link sid="SNAKE-SAMPLE-BODYSET2_link" name="SNAKE-SAMPLE-BODYSET2_link">
+<attachment_full joint="kinmodel/JOINT0">
+<translate>
+0.0 0.0 1000.0 
+</translate>
+<rotate>
+0.0 0.0 0.0 0.0 
+</rotate>
+<link sid="SNAKE-SAMPLE-BODYSET3_link" name="SNAKE-SAMPLE-BODYSET3_link">
+<attachment_full joint="kinmodel/JOINT1">
+<translate>
+0.0 0.0 1000.0 
+</translate>
+<rotate>
+0.0 0.0 0.0 0.0 
+</rotate>
+<link sid="SNAKE-SAMPLE-BODYSET4_link" name="SNAKE-SAMPLE-BODYSET4_link">
+<attachment_full joint="kinmodel/JOINT2">
+<translate>
+0.0 0.0 1000.0 
+</translate>
+<rotate>
+0.0 0.0 0.0 0.0 
+</rotate>
+<link sid="SNAKE-SAMPLE-BODYSET5_link" name="SNAKE-SAMPLE-BODYSET5_link">
+<attachment_full joint="kinmodel/JOINT3">
+<translate>
+0.0 0.0 1000.0 
+</translate>
+<rotate>
+0.0 0.0 0.0 0.0 
+</rotate>
+<link sid="SNAKE-SAMPLE-BODYSET6_link" name="SNAKE-SAMPLE-BODYSET6_link">
+<attachment_full joint="kinmodel/JOINT4">
+<translate>
+0.0 0.0 1000.0 
+</translate>
+<rotate>
+0.0 0.0 0.0 0.0 
+</rotate>
+<link sid="SNAKE-SAMPLE-BODYSET7_link" name="SNAKE-SAMPLE-BODYSET7_link">
+<attachment_full joint="kinmodel/JOINT5">
+<translate>
+0.0 0.0 1000.0 
+</translate>
+<rotate>
+0.0 0.0 0.0 0.0 
+</rotate>
+<link sid="SNAKE-SAMPLE-BODYSET8_link" name="SNAKE-SAMPLE-BODYSET8_link">
+</link>
+</attachment_full>
+</link>
+</attachment_full>
+</link>
+</attachment_full>
+</link>
+</attachment_full>
+</link>
+</attachment_full>
+</link>
+</attachment_full>
+</link>
+</technique_common>
+</kinematics_model>
+</library_kinematics_models>
+<library_kinematics_scenes id="libkinscenes">
+<kinematics_scene id="libkinscenes.kinScene">
+<instance_articulated_system url="#kinsystem_motion" sid="inst_kinsystem">
+<newparam sid="libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel">
+<SIDREF>kinsystem_motion/kinsystem_motion.kinsystem_inst</SIDREF></newparam>
+<newparam sid="libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel.JOINT0_axis0">
+<SIDREF>kinsystem_motion/kinsystem_motion.kinsystem_inst.inst_JOINT0_axis0</SIDREF></newparam>
+<newparam sid="libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel.JOINT1_axis0">
+<SIDREF>kinsystem_motion/kinsystem_motion.kinsystem_inst.inst_JOINT1_axis0</SIDREF></newparam>
+<newparam sid="libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel.JOINT2_axis0">
+<SIDREF>kinsystem_motion/kinsystem_motion.kinsystem_inst.inst_JOINT2_axis0</SIDREF></newparam>
+<newparam sid="libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel.JOINT3_axis0">
+<SIDREF>kinsystem_motion/kinsystem_motion.kinsystem_inst.inst_JOINT3_axis0</SIDREF></newparam>
+<newparam sid="libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel.JOINT4_axis0">
+<SIDREF>kinsystem_motion/kinsystem_motion.kinsystem_inst.inst_JOINT4_axis0</SIDREF></newparam>
+<newparam sid="libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel.JOINT5_axis0">
+<SIDREF>kinsystem_motion/kinsystem_motion.kinsystem_inst.inst_JOINT5_axis0</SIDREF></newparam>
+<newparam sid="libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel.JOINT0.value">
+<SIDREF>kinsystem_motion/kinsystem_motion.kinsystem_inst.inst_JOINT0_value</SIDREF></newparam>
+<newparam sid="libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel.JOINT1.value">
+<SIDREF>kinsystem_motion/kinsystem_motion.kinsystem_inst.inst_JOINT1_value</SIDREF></newparam>
+<newparam sid="libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel.JOINT2.value">
+<SIDREF>kinsystem_motion/kinsystem_motion.kinsystem_inst.inst_JOINT2_value</SIDREF></newparam>
+<newparam sid="libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel.JOINT3.value">
+<SIDREF>kinsystem_motion/kinsystem_motion.kinsystem_inst.inst_JOINT3_value</SIDREF></newparam>
+<newparam sid="libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel.JOINT4.value">
+<SIDREF>kinsystem_motion/kinsystem_motion.kinsystem_inst.inst_JOINT4_value</SIDREF></newparam>
+<newparam sid="libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel.JOINT5.value">
+<SIDREF>kinsystem_motion/kinsystem_motion.kinsystem_inst.inst_JOINT5_value</SIDREF></newparam>
+</instance_articulated_system>
+</kinematics_scene>
+</library_kinematics_scenes>
+<library_geometries id="libgeom">
+<geometry id="SNAKE-SAMPLE-BODYSET2.geometry.0" name="SNAKE-SAMPLE-BODYSET2_geometry.0">
+<mesh>
+<source id="SNAKE-SAMPLE-BODYSET2.geometry.0.positions">
+<float_array id="SNAKE-SAMPLE-BODYSET2.geometry.0.positions.float-array" count="108">
+-50.0 -50.0 1000.0 
+50.0 -50.0 1000.0 
+50.0 50.0 1000.0 
+50.0 50.0 1000.0 
+-50.0 50.0 1000.0 
+-50.0 -50.0 1000.0 
+50.0 -50.0 0.0 
+-50.0 -50.0 0.0 
+-50.0 50.0 0.0 
+-50.0 50.0 0.0 
+50.0 50.0 0.0 
+50.0 -50.0 0.0 
+-50.0 50.0 0.0 
+-50.0 50.0 1000.0 
+50.0 50.0 1000.0 
+50.0 50.0 1000.0 
+50.0 50.0 0.0 
+-50.0 50.0 0.0 
+50.0 50.0 0.0 
+50.0 50.0 1000.0 
+50.0 -50.0 1000.0 
+50.0 -50.0 1000.0 
+50.0 -50.0 0.0 
+50.0 50.0 0.0 
+50.0 -50.0 0.0 
+50.0 -50.0 1000.0 
+-50.0 -50.0 1000.0 
+-50.0 -50.0 1000.0 
+-50.0 -50.0 0.0 
+50.0 -50.0 0.0 
+-50.0 -50.0 0.0 
+-50.0 -50.0 1000.0 
+-50.0 50.0 1000.0 
+-50.0 50.0 1000.0 
+-50.0 50.0 0.0 
+-50.0 -50.0 0.0 
+</float_array>
+<technique_common>
+<accessor source="#SNAKE-SAMPLE-BODYSET2.geometry.0.positions.float-array" count="36" stride="3">
+<param name="X" type="float">
+</param>
+<param name="Y" type="float">
+</param>
+<param name="Z" type="float">
+</param>
+</accessor>
+</technique_common>
+</source>
+<source id="SNAKE-SAMPLE-BODYSET2.geometry.0.normals">
+<float_array id="SNAKE-SAMPLE-BODYSET2.geometry.0.normals.float-array" count="36">
+0.0 0.0 1.0 
+0.0 0.0 1.0 
+0.0 0.0 -1.0 
+0.0 0.0 -1.0 
+0.0 1.0 0.0 
+0.0 1.0 0.0 
+1.0 0.0 0.0 
+1.0 0.0 0.0 
+0.0 -1.0 0.0 
+0.0 -1.0 0.0 
+-1.0 0.0 0.0 
+-1.0 0.0 0.0 
+</float_array>
+<technique_common>
+<accessor source="#SNAKE-SAMPLE-BODYSET2.geometry.0.normals.float-array" count="12" stride="3">
+<param name="X" type="float">
+</param>
+<param name="Y" type="float">
+</param>
+<param name="Z" type="float">
+</param>
+</accessor>
+</technique_common>
+</source>
+<vertices id="SNAKE-SAMPLE-BODYSET2.geometry.0.vertices">
+<input semantic="POSITION" source="#SNAKE-SAMPLE-BODYSET2.geometry.0.positions">
+</input>
+</vertices>
+<triangles count="12" material="SNAKE-SAMPLE-BODYSET2.geometry.0.material">
+<input offset="0" semantic="VERTEX" source="SNAKE-SAMPLE-BODYSET2.geometry.0.vertices">
+</input>
+<input offset="1" semantic="NORMAL" source="SNAKE-SAMPLE-BODYSET2.geometry.0.normal">
+</input>
+<p>0 0 1 0 2 0 
+3 1 4 1 5 1 
+6 2 7 2 8 2 
+9 3 10 3 11 3 
+12 4 13 4 14 4 
+15 5 16 5 17 5 
+18 6 19 6 20 6 
+21 7 22 7 23 7 
+24 8 25 8 26 8 
+27 9 28 9 29 9 
+30 10 31 10 32 10 
+33 11 34 11 35 11 
+</p>
+</triangles>
+</mesh>
+</geometry>
+<geometry id="SNAKE-SAMPLE-BODYSET3.geometry.0" name="SNAKE-SAMPLE-BODYSET3_geometry.0">
+<mesh>
+<source id="SNAKE-SAMPLE-BODYSET3.geometry.0.positions">
+<float_array id="SNAKE-SAMPLE-BODYSET3.geometry.0.positions.float-array" count="108">
+-50.0 -50.0 2000.0 
+50.0 -50.0 2000.0 
+50.0 50.0 2000.0 
+50.0 50.0 2000.0 
+-50.0 50.0 2000.0 
+-50.0 -50.0 2000.0 
+50.0 -50.0 1000.0 
+-50.0 -50.0 1000.0 
+-50.0 50.0 1000.0 
+-50.0 50.0 1000.0 
+50.0 50.0 1000.0 
+50.0 -50.0 1000.0 
+-50.0 50.0 1000.0 
+-50.0 50.0 2000.0 
+50.0 50.0 2000.0 
+50.0 50.0 2000.0 
+50.0 50.0 1000.0 
+-50.0 50.0 1000.0 
+50.0 50.0 1000.0 
+50.0 50.0 2000.0 
+50.0 -50.0 2000.0 
+50.0 -50.0 2000.0 
+50.0 -50.0 1000.0 
+50.0 50.0 1000.0 
+50.0 -50.0 1000.0 
+50.0 -50.0 2000.0 
+-50.0 -50.0 2000.0 
+-50.0 -50.0 2000.0 
+-50.0 -50.0 1000.0 
+50.0 -50.0 1000.0 
+-50.0 -50.0 1000.0 
+-50.0 -50.0 2000.0 
+-50.0 50.0 2000.0 
+-50.0 50.0 2000.0 
+-50.0 50.0 1000.0 
+-50.0 -50.0 1000.0 
+</float_array>
+<technique_common>
+<accessor source="#SNAKE-SAMPLE-BODYSET3.geometry.0.positions.float-array" count="36" stride="3">
+<param name="X" type="float">
+</param>
+<param name="Y" type="float">
+</param>
+<param name="Z" type="float">
+</param>
+</accessor>
+</technique_common>
+</source>
+<source id="SNAKE-SAMPLE-BODYSET3.geometry.0.normals">
+<float_array id="SNAKE-SAMPLE-BODYSET3.geometry.0.normals.float-array" count="36">
+0.0 0.0 1.0 
+0.0 0.0 1.0 
+0.0 0.0 -1.0 
+0.0 0.0 -1.0 
+0.0 1.0 0.0 
+0.0 1.0 0.0 
+1.0 0.0 0.0 
+1.0 0.0 0.0 
+0.0 -1.0 0.0 
+0.0 -1.0 0.0 
+-1.0 0.0 0.0 
+-1.0 0.0 0.0 
+</float_array>
+<technique_common>
+<accessor source="#SNAKE-SAMPLE-BODYSET3.geometry.0.normals.float-array" count="12" stride="3">
+<param name="X" type="float">
+</param>
+<param name="Y" type="float">
+</param>
+<param name="Z" type="float">
+</param>
+</accessor>
+</technique_common>
+</source>
+<vertices id="SNAKE-SAMPLE-BODYSET3.geometry.0.vertices">
+<input semantic="POSITION" source="#SNAKE-SAMPLE-BODYSET3.geometry.0.positions">
+</input>
+</vertices>
+<triangles count="12" material="SNAKE-SAMPLE-BODYSET3.geometry.0.material">
+<input offset="0" semantic="VERTEX" source="SNAKE-SAMPLE-BODYSET3.geometry.0.vertices">
+</input>
+<input offset="1" semantic="NORMAL" source="SNAKE-SAMPLE-BODYSET3.geometry.0.normal">
+</input>
+<p>0 0 1 0 2 0 
+3 1 4 1 5 1 
+6 2 7 2 8 2 
+9 3 10 3 11 3 
+12 4 13 4 14 4 
+15 5 16 5 17 5 
+18 6 19 6 20 6 
+21 7 22 7 23 7 
+24 8 25 8 26 8 
+27 9 28 9 29 9 
+30 10 31 10 32 10 
+33 11 34 11 35 11 
+</p>
+</triangles>
+</mesh>
+</geometry>
+<geometry id="SNAKE-SAMPLE-BODYSET4.geometry.0" name="SNAKE-SAMPLE-BODYSET4_geometry.0">
+<mesh>
+<source id="SNAKE-SAMPLE-BODYSET4.geometry.0.positions">
+<float_array id="SNAKE-SAMPLE-BODYSET4.geometry.0.positions.float-array" count="108">
+-50.0 -50.0 3000.0 
+50.0 -50.0 3000.0 
+50.0 50.0 3000.0 
+50.0 50.0 3000.0 
+-50.0 50.0 3000.0 
+-50.0 -50.0 3000.0 
+50.0 -50.0 2000.0 
+-50.0 -50.0 2000.0 
+-50.0 50.0 2000.0 
+-50.0 50.0 2000.0 
+50.0 50.0 2000.0 
+50.0 -50.0 2000.0 
+-50.0 50.0 2000.0 
+-50.0 50.0 3000.0 
+50.0 50.0 3000.0 
+50.0 50.0 3000.0 
+50.0 50.0 2000.0 
+-50.0 50.0 2000.0 
+50.0 50.0 2000.0 
+50.0 50.0 3000.0 
+50.0 -50.0 3000.0 
+50.0 -50.0 3000.0 
+50.0 -50.0 2000.0 
+50.0 50.0 2000.0 
+50.0 -50.0 2000.0 
+50.0 -50.0 3000.0 
+-50.0 -50.0 3000.0 
+-50.0 -50.0 3000.0 
+-50.0 -50.0 2000.0 
+50.0 -50.0 2000.0 
+-50.0 -50.0 2000.0 
+-50.0 -50.0 3000.0 
+-50.0 50.0 3000.0 
+-50.0 50.0 3000.0 
+-50.0 50.0 2000.0 
+-50.0 -50.0 2000.0 
+</float_array>
+<technique_common>
+<accessor source="#SNAKE-SAMPLE-BODYSET4.geometry.0.positions.float-array" count="36" stride="3">
+<param name="X" type="float">
+</param>
+<param name="Y" type="float">
+</param>
+<param name="Z" type="float">
+</param>
+</accessor>
+</technique_common>
+</source>
+<source id="SNAKE-SAMPLE-BODYSET4.geometry.0.normals">
+<float_array id="SNAKE-SAMPLE-BODYSET4.geometry.0.normals.float-array" count="36">
+0.0 0.0 1.0 
+0.0 0.0 1.0 
+0.0 0.0 -1.0 
+0.0 0.0 -1.0 
+0.0 1.0 0.0 
+0.0 1.0 0.0 
+1.0 0.0 0.0 
+1.0 0.0 0.0 
+0.0 -1.0 0.0 
+0.0 -1.0 0.0 
+-1.0 0.0 0.0 
+-1.0 0.0 0.0 
+</float_array>
+<technique_common>
+<accessor source="#SNAKE-SAMPLE-BODYSET4.geometry.0.normals.float-array" count="12" stride="3">
+<param name="X" type="float">
+</param>
+<param name="Y" type="float">
+</param>
+<param name="Z" type="float">
+</param>
+</accessor>
+</technique_common>
+</source>
+<vertices id="SNAKE-SAMPLE-BODYSET4.geometry.0.vertices">
+<input semantic="POSITION" source="#SNAKE-SAMPLE-BODYSET4.geometry.0.positions">
+</input>
+</vertices>
+<triangles count="12" material="SNAKE-SAMPLE-BODYSET4.geometry.0.material">
+<input offset="0" semantic="VERTEX" source="SNAKE-SAMPLE-BODYSET4.geometry.0.vertices">
+</input>
+<input offset="1" semantic="NORMAL" source="SNAKE-SAMPLE-BODYSET4.geometry.0.normal">
+</input>
+<p>0 0 1 0 2 0 
+3 1 4 1 5 1 
+6 2 7 2 8 2 
+9 3 10 3 11 3 
+12 4 13 4 14 4 
+15 5 16 5 17 5 
+18 6 19 6 20 6 
+21 7 22 7 23 7 
+24 8 25 8 26 8 
+27 9 28 9 29 9 
+30 10 31 10 32 10 
+33 11 34 11 35 11 
+</p>
+</triangles>
+</mesh>
+</geometry>
+<geometry id="SNAKE-SAMPLE-BODYSET5.geometry.0" name="SNAKE-SAMPLE-BODYSET5_geometry.0">
+<mesh>
+<source id="SNAKE-SAMPLE-BODYSET5.geometry.0.positions">
+<float_array id="SNAKE-SAMPLE-BODYSET5.geometry.0.positions.float-array" count="108">
+-50.0 -50.0 4000.0 
+50.0 -50.0 4000.0 
+50.0 50.0 4000.0 
+50.0 50.0 4000.0 
+-50.0 50.0 4000.0 
+-50.0 -50.0 4000.0 
+50.0 -50.0 3000.0 
+-50.0 -50.0 3000.0 
+-50.0 50.0 3000.0 
+-50.0 50.0 3000.0 
+50.0 50.0 3000.0 
+50.0 -50.0 3000.0 
+-50.0 50.0 3000.0 
+-50.0 50.0 4000.0 
+50.0 50.0 4000.0 
+50.0 50.0 4000.0 
+50.0 50.0 3000.0 
+-50.0 50.0 3000.0 
+50.0 50.0 3000.0 
+50.0 50.0 4000.0 
+50.0 -50.0 4000.0 
+50.0 -50.0 4000.0 
+50.0 -50.0 3000.0 
+50.0 50.0 3000.0 
+50.0 -50.0 3000.0 
+50.0 -50.0 4000.0 
+-50.0 -50.0 4000.0 
+-50.0 -50.0 4000.0 
+-50.0 -50.0 3000.0 
+50.0 -50.0 3000.0 
+-50.0 -50.0 3000.0 
+-50.0 -50.0 4000.0 
+-50.0 50.0 4000.0 
+-50.0 50.0 4000.0 
+-50.0 50.0 3000.0 
+-50.0 -50.0 3000.0 
+</float_array>
+<technique_common>
+<accessor source="#SNAKE-SAMPLE-BODYSET5.geometry.0.positions.float-array" count="36" stride="3">
+<param name="X" type="float">
+</param>
+<param name="Y" type="float">
+</param>
+<param name="Z" type="float">
+</param>
+</accessor>
+</technique_common>
+</source>
+<source id="SNAKE-SAMPLE-BODYSET5.geometry.0.normals">
+<float_array id="SNAKE-SAMPLE-BODYSET5.geometry.0.normals.float-array" count="36">
+0.0 0.0 1.0 
+0.0 0.0 1.0 
+0.0 0.0 -1.0 
+0.0 0.0 -1.0 
+0.0 1.0 0.0 
+0.0 1.0 0.0 
+1.0 0.0 0.0 
+1.0 0.0 0.0 
+0.0 -1.0 0.0 
+0.0 -1.0 0.0 
+-1.0 0.0 0.0 
+-1.0 0.0 0.0 
+</float_array>
+<technique_common>
+<accessor source="#SNAKE-SAMPLE-BODYSET5.geometry.0.normals.float-array" count="12" stride="3">
+<param name="X" type="float">
+</param>
+<param name="Y" type="float">
+</param>
+<param name="Z" type="float">
+</param>
+</accessor>
+</technique_common>
+</source>
+<vertices id="SNAKE-SAMPLE-BODYSET5.geometry.0.vertices">
+<input semantic="POSITION" source="#SNAKE-SAMPLE-BODYSET5.geometry.0.positions">
+</input>
+</vertices>
+<triangles count="12" material="SNAKE-SAMPLE-BODYSET5.geometry.0.material">
+<input offset="0" semantic="VERTEX" source="SNAKE-SAMPLE-BODYSET5.geometry.0.vertices">
+</input>
+<input offset="1" semantic="NORMAL" source="SNAKE-SAMPLE-BODYSET5.geometry.0.normal">
+</input>
+<p>0 0 1 0 2 0 
+3 1 4 1 5 1 
+6 2 7 2 8 2 
+9 3 10 3 11 3 
+12 4 13 4 14 4 
+15 5 16 5 17 5 
+18 6 19 6 20 6 
+21 7 22 7 23 7 
+24 8 25 8 26 8 
+27 9 28 9 29 9 
+30 10 31 10 32 10 
+33 11 34 11 35 11 
+</p>
+</triangles>
+</mesh>
+</geometry>
+<geometry id="SNAKE-SAMPLE-BODYSET6.geometry.0" name="SNAKE-SAMPLE-BODYSET6_geometry.0">
+<mesh>
+<source id="SNAKE-SAMPLE-BODYSET6.geometry.0.positions">
+<float_array id="SNAKE-SAMPLE-BODYSET6.geometry.0.positions.float-array" count="108">
+-50.0 -50.0 5000.0 
+50.0 -50.0 5000.0 
+50.0 50.0 5000.0 
+50.0 50.0 5000.0 
+-50.0 50.0 5000.0 
+-50.0 -50.0 5000.0 
+50.0 -50.0 4000.0 
+-50.0 -50.0 4000.0 
+-50.0 50.0 4000.0 
+-50.0 50.0 4000.0 
+50.0 50.0 4000.0 
+50.0 -50.0 4000.0 
+-50.0 50.0 4000.0 
+-50.0 50.0 5000.0 
+50.0 50.0 5000.0 
+50.0 50.0 5000.0 
+50.0 50.0 4000.0 
+-50.0 50.0 4000.0 
+50.0 50.0 4000.0 
+50.0 50.0 5000.0 
+50.0 -50.0 5000.0 
+50.0 -50.0 5000.0 
+50.0 -50.0 4000.0 
+50.0 50.0 4000.0 
+50.0 -50.0 4000.0 
+50.0 -50.0 5000.0 
+-50.0 -50.0 5000.0 
+-50.0 -50.0 5000.0 
+-50.0 -50.0 4000.0 
+50.0 -50.0 4000.0 
+-50.0 -50.0 4000.0 
+-50.0 -50.0 5000.0 
+-50.0 50.0 5000.0 
+-50.0 50.0 5000.0 
+-50.0 50.0 4000.0 
+-50.0 -50.0 4000.0 
+</float_array>
+<technique_common>
+<accessor source="#SNAKE-SAMPLE-BODYSET6.geometry.0.positions.float-array" count="36" stride="3">
+<param name="X" type="float">
+</param>
+<param name="Y" type="float">
+</param>
+<param name="Z" type="float">
+</param>
+</accessor>
+</technique_common>
+</source>
+<source id="SNAKE-SAMPLE-BODYSET6.geometry.0.normals">
+<float_array id="SNAKE-SAMPLE-BODYSET6.geometry.0.normals.float-array" count="36">
+0.0 0.0 1.0 
+0.0 0.0 1.0 
+0.0 0.0 -1.0 
+0.0 0.0 -1.0 
+0.0 1.0 0.0 
+0.0 1.0 0.0 
+1.0 0.0 0.0 
+1.0 0.0 0.0 
+0.0 -1.0 0.0 
+0.0 -1.0 0.0 
+-1.0 0.0 0.0 
+-1.0 0.0 0.0 
+</float_array>
+<technique_common>
+<accessor source="#SNAKE-SAMPLE-BODYSET6.geometry.0.normals.float-array" count="12" stride="3">
+<param name="X" type="float">
+</param>
+<param name="Y" type="float">
+</param>
+<param name="Z" type="float">
+</param>
+</accessor>
+</technique_common>
+</source>
+<vertices id="SNAKE-SAMPLE-BODYSET6.geometry.0.vertices">
+<input semantic="POSITION" source="#SNAKE-SAMPLE-BODYSET6.geometry.0.positions">
+</input>
+</vertices>
+<triangles count="12" material="SNAKE-SAMPLE-BODYSET6.geometry.0.material">
+<input offset="0" semantic="VERTEX" source="SNAKE-SAMPLE-BODYSET6.geometry.0.vertices">
+</input>
+<input offset="1" semantic="NORMAL" source="SNAKE-SAMPLE-BODYSET6.geometry.0.normal">
+</input>
+<p>0 0 1 0 2 0 
+3 1 4 1 5 1 
+6 2 7 2 8 2 
+9 3 10 3 11 3 
+12 4 13 4 14 4 
+15 5 16 5 17 5 
+18 6 19 6 20 6 
+21 7 22 7 23 7 
+24 8 25 8 26 8 
+27 9 28 9 29 9 
+30 10 31 10 32 10 
+33 11 34 11 35 11 
+</p>
+</triangles>
+</mesh>
+</geometry>
+<geometry id="SNAKE-SAMPLE-BODYSET7.geometry.0" name="SNAKE-SAMPLE-BODYSET7_geometry.0">
+<mesh>
+<source id="SNAKE-SAMPLE-BODYSET7.geometry.0.positions">
+<float_array id="SNAKE-SAMPLE-BODYSET7.geometry.0.positions.float-array" count="108">
+-50.0 -50.0 6000.0 
+50.0 -50.0 6000.0 
+50.0 50.0 6000.0 
+50.0 50.0 6000.0 
+-50.0 50.0 6000.0 
+-50.0 -50.0 6000.0 
+50.0 -50.0 5000.0 
+-50.0 -50.0 5000.0 
+-50.0 50.0 5000.0 
+-50.0 50.0 5000.0 
+50.0 50.0 5000.0 
+50.0 -50.0 5000.0 
+-50.0 50.0 5000.0 
+-50.0 50.0 6000.0 
+50.0 50.0 6000.0 
+50.0 50.0 6000.0 
+50.0 50.0 5000.0 
+-50.0 50.0 5000.0 
+50.0 50.0 5000.0 
+50.0 50.0 6000.0 
+50.0 -50.0 6000.0 
+50.0 -50.0 6000.0 
+50.0 -50.0 5000.0 
+50.0 50.0 5000.0 
+50.0 -50.0 5000.0 
+50.0 -50.0 6000.0 
+-50.0 -50.0 6000.0 
+-50.0 -50.0 6000.0 
+-50.0 -50.0 5000.0 
+50.0 -50.0 5000.0 
+-50.0 -50.0 5000.0 
+-50.0 -50.0 6000.0 
+-50.0 50.0 6000.0 
+-50.0 50.0 6000.0 
+-50.0 50.0 5000.0 
+-50.0 -50.0 5000.0 
+</float_array>
+<technique_common>
+<accessor source="#SNAKE-SAMPLE-BODYSET7.geometry.0.positions.float-array" count="36" stride="3">
+<param name="X" type="float">
+</param>
+<param name="Y" type="float">
+</param>
+<param name="Z" type="float">
+</param>
+</accessor>
+</technique_common>
+</source>
+<source id="SNAKE-SAMPLE-BODYSET7.geometry.0.normals">
+<float_array id="SNAKE-SAMPLE-BODYSET7.geometry.0.normals.float-array" count="36">
+0.0 0.0 1.0 
+0.0 0.0 1.0 
+0.0 0.0 -1.0 
+0.0 0.0 -1.0 
+0.0 1.0 0.0 
+0.0 1.0 0.0 
+1.0 0.0 0.0 
+1.0 0.0 0.0 
+0.0 -1.0 0.0 
+0.0 -1.0 0.0 
+-1.0 0.0 0.0 
+-1.0 0.0 0.0 
+</float_array>
+<technique_common>
+<accessor source="#SNAKE-SAMPLE-BODYSET7.geometry.0.normals.float-array" count="12" stride="3">
+<param name="X" type="float">
+</param>
+<param name="Y" type="float">
+</param>
+<param name="Z" type="float">
+</param>
+</accessor>
+</technique_common>
+</source>
+<vertices id="SNAKE-SAMPLE-BODYSET7.geometry.0.vertices">
+<input semantic="POSITION" source="#SNAKE-SAMPLE-BODYSET7.geometry.0.positions">
+</input>
+</vertices>
+<triangles count="12" material="SNAKE-SAMPLE-BODYSET7.geometry.0.material">
+<input offset="0" semantic="VERTEX" source="SNAKE-SAMPLE-BODYSET7.geometry.0.vertices">
+</input>
+<input offset="1" semantic="NORMAL" source="SNAKE-SAMPLE-BODYSET7.geometry.0.normal">
+</input>
+<p>0 0 1 0 2 0 
+3 1 4 1 5 1 
+6 2 7 2 8 2 
+9 3 10 3 11 3 
+12 4 13 4 14 4 
+15 5 16 5 17 5 
+18 6 19 6 20 6 
+21 7 22 7 23 7 
+24 8 25 8 26 8 
+27 9 28 9 29 9 
+30 10 31 10 32 10 
+33 11 34 11 35 11 
+</p>
+</triangles>
+</mesh>
+</geometry>
+<geometry id="SNAKE-SAMPLE-BODYSET8.geometry.0" name="SNAKE-SAMPLE-BODYSET8_geometry.0">
+<mesh>
+<source id="SNAKE-SAMPLE-BODYSET8.geometry.0.positions">
+<float_array id="SNAKE-SAMPLE-BODYSET8.geometry.0.positions.float-array" count="108">
+-50.0 -50.0 7000.0 
+50.0 -50.0 7000.0 
+50.0 50.0 7000.0 
+50.0 50.0 7000.0 
+-50.0 50.0 7000.0 
+-50.0 -50.0 7000.0 
+50.0 -50.0 6000.0 
+-50.0 -50.0 6000.0 
+-50.0 50.0 6000.0 
+-50.0 50.0 6000.0 
+50.0 50.0 6000.0 
+50.0 -50.0 6000.0 
+-50.0 50.0 6000.0 
+-50.0 50.0 7000.0 
+50.0 50.0 7000.0 
+50.0 50.0 7000.0 
+50.0 50.0 6000.0 
+-50.0 50.0 6000.0 
+50.0 50.0 6000.0 
+50.0 50.0 7000.0 
+50.0 -50.0 7000.0 
+50.0 -50.0 7000.0 
+50.0 -50.0 6000.0 
+50.0 50.0 6000.0 
+50.0 -50.0 6000.0 
+50.0 -50.0 7000.0 
+-50.0 -50.0 7000.0 
+-50.0 -50.0 7000.0 
+-50.0 -50.0 6000.0 
+50.0 -50.0 6000.0 
+-50.0 -50.0 6000.0 
+-50.0 -50.0 7000.0 
+-50.0 50.0 7000.0 
+-50.0 50.0 7000.0 
+-50.0 50.0 6000.0 
+-50.0 -50.0 6000.0 
+</float_array>
+<technique_common>
+<accessor source="#SNAKE-SAMPLE-BODYSET8.geometry.0.positions.float-array" count="36" stride="3">
+<param name="X" type="float">
+</param>
+<param name="Y" type="float">
+</param>
+<param name="Z" type="float">
+</param>
+</accessor>
+</technique_common>
+</source>
+<source id="SNAKE-SAMPLE-BODYSET8.geometry.0.normals">
+<float_array id="SNAKE-SAMPLE-BODYSET8.geometry.0.normals.float-array" count="36">
+0.0 0.0 1.0 
+0.0 0.0 1.0 
+0.0 0.0 -1.0 
+0.0 0.0 -1.0 
+0.0 1.0 0.0 
+0.0 1.0 0.0 
+1.0 0.0 0.0 
+1.0 0.0 0.0 
+0.0 -1.0 0.0 
+0.0 -1.0 0.0 
+-1.0 0.0 0.0 
+-1.0 0.0 0.0 
+</float_array>
+<technique_common>
+<accessor source="#SNAKE-SAMPLE-BODYSET8.geometry.0.normals.float-array" count="12" stride="3">
+<param name="X" type="float">
+</param>
+<param name="Y" type="float">
+</param>
+<param name="Z" type="float">
+</param>
+</accessor>
+</technique_common>
+</source>
+<vertices id="SNAKE-SAMPLE-BODYSET8.geometry.0.vertices">
+<input semantic="POSITION" source="#SNAKE-SAMPLE-BODYSET8.geometry.0.positions">
+</input>
+</vertices>
+<triangles count="12" material="SNAKE-SAMPLE-BODYSET8.geometry.0.material">
+<input offset="0" semantic="VERTEX" source="SNAKE-SAMPLE-BODYSET8.geometry.0.vertices">
+</input>
+<input offset="1" semantic="NORMAL" source="SNAKE-SAMPLE-BODYSET8.geometry.0.normal">
+</input>
+<p>0 0 1 0 2 0 
+3 1 4 1 5 1 
+6 2 7 2 8 2 
+9 3 10 3 11 3 
+12 4 13 4 14 4 
+15 5 16 5 17 5 
+18 6 19 6 20 6 
+21 7 22 7 23 7 
+24 8 25 8 26 8 
+27 9 28 9 29 9 
+30 10 31 10 32 10 
+33 11 34 11 35 11 
+</p>
+</triangles>
+</mesh>
+</geometry>
+</library_geometries>
+<library_articulated_systems>
+<articulated_system id="kinsystem" name="snake6-robot">
+<kinematics>
+<instance_kinematics_model url="#kinmodel" sid="inst_kinmodel">
+<newparam sid="libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel">
+<SIDREF>kinsystem/inst_kinmodel</SIDREF></newparam>
+<newparam sid="libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel.JOINT0_axis0">
+<SIDREF>kinsystem/inst_kinmodel/JOINT0/axis0</SIDREF>
+</newparam>
+<newparam sid="libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel.JOINT1_axis0">
+<SIDREF>kinsystem/inst_kinmodel/JOINT1/axis0</SIDREF>
+</newparam>
+<newparam sid="libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel.JOINT2_axis0">
+<SIDREF>kinsystem/inst_kinmodel/JOINT2/axis0</SIDREF>
+</newparam>
+<newparam sid="libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel.JOINT3_axis0">
+<SIDREF>kinsystem/inst_kinmodel/JOINT3/axis0</SIDREF>
+</newparam>
+<newparam sid="libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel.JOINT4_axis0">
+<SIDREF>kinsystem/inst_kinmodel/JOINT4/axis0</SIDREF>
+</newparam>
+<newparam sid="libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel.JOINT5_axis0">
+<SIDREF>kinsystem/inst_kinmodel/JOINT5/axis0</SIDREF>
+</newparam>
+<newparam sid="libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel.JOINT0.value">
+<float>
+0</float>
+</newparam>
+<newparam sid="libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel.JOINT1.value">
+<float>
+0</float>
+</newparam>
+<newparam sid="libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel.JOINT2.value">
+<float>
+0</float>
+</newparam>
+<newparam sid="libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel.JOINT3.value">
+<float>
+0</float>
+</newparam>
+<newparam sid="libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel.JOINT4.value">
+<float>
+0</float>
+</newparam>
+<newparam sid="libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel.JOINT5.value">
+<float>
+0</float>
+</newparam>
+</instance_kinematics_model>
+<technique_common>
+<axis_info axis="kinmodel/JOINT0/axis0" sid="JOINT0_info">
+</axis_info>
+<axis_info axis="kinmodel/JOINT1/axis0" sid="JOINT1_info">
+</axis_info>
+<axis_info axis="kinmodel/JOINT2/axis0" sid="JOINT2_info">
+</axis_info>
+<axis_info axis="kinmodel/JOINT3/axis0" sid="JOINT3_info">
+</axis_info>
+<axis_info axis="kinmodel/JOINT4/axis0" sid="JOINT4_info">
+</axis_info>
+<axis_info axis="kinmodel/JOINT5/axis0" sid="JOINT5_info">
+</axis_info>
+</technique_common>
+</kinematics>
+</articulated_system>
+<articulated_system id="kinsystem_motion" name="kinsystem_motion">
+<motion>
+<instance_articulated_system url="#kinsystem" sid="kinsystem_inst">
+<newparam sid="kinsystem_motion.kinsystem_inst">
+<SIDREF>kinsystem/libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel</SIDREF></newparam>
+<newparam sid="kinsystem_motion.kinsystem_inst.inst_JOINT0_axis0">
+<SIDREF>kinsystem/libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel.JOINT0_axis0</SIDREF></newparam>
+<newparam sid="kinsystem_motion.kinsystem_inst.inst_JOINT1_axis0">
+<SIDREF>kinsystem/libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel.JOINT1_axis0</SIDREF></newparam>
+<newparam sid="kinsystem_motion.kinsystem_inst.inst_JOINT2_axis0">
+<SIDREF>kinsystem/libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel.JOINT2_axis0</SIDREF></newparam>
+<newparam sid="kinsystem_motion.kinsystem_inst.inst_JOINT3_axis0">
+<SIDREF>kinsystem/libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel.JOINT3_axis0</SIDREF></newparam>
+<newparam sid="kinsystem_motion.kinsystem_inst.inst_JOINT4_axis0">
+<SIDREF>kinsystem/libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel.JOINT4_axis0</SIDREF></newparam>
+<newparam sid="kinsystem_motion.kinsystem_inst.inst_JOINT5_axis0">
+<SIDREF>kinsystem/libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel.JOINT5_axis0</SIDREF></newparam>
+<newparam sid="kinsystem_motion.kinsystem_inst.inst_JOINT0_value">
+<SIDREF>libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel.JOINT0.value</SIDREF></newparam>
+<newparam sid="kinsystem_motion.kinsystem_inst.inst_JOINT1_value">
+<SIDREF>libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel.JOINT1.value</SIDREF></newparam>
+<newparam sid="kinsystem_motion.kinsystem_inst.inst_JOINT2_value">
+<SIDREF>libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel.JOINT2.value</SIDREF></newparam>
+<newparam sid="kinsystem_motion.kinsystem_inst.inst_JOINT3_value">
+<SIDREF>libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel.JOINT3.value</SIDREF></newparam>
+<newparam sid="kinsystem_motion.kinsystem_inst.inst_JOINT4_value">
+<SIDREF>libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel.JOINT4.value</SIDREF></newparam>
+<newparam sid="kinsystem_motion.kinsystem_inst.inst_JOINT5_value">
+<SIDREF>libarticulated_systems.kinScene_libarticulated_systems.kinScene_inst_kinmodel.JOINT5.value</SIDREF></newparam>
+</instance_articulated_system>
+<technique_common>
+<axis_info axis="kinsystem/JOINT0_info">
+</axis_info>
+<axis_info axis="kinsystem/JOINT1_info">
+</axis_info>
+<axis_info axis="kinsystem/JOINT2_info">
+</axis_info>
+<axis_info axis="kinsystem/JOINT3_info">
+</axis_info>
+<axis_info axis="kinsystem/JOINT4_info">
+</axis_info>
+<axis_info axis="kinsystem/JOINT5_info">
+</axis_info>
+</technique_common>
+</motion>
+<extra name="head" type="manipulator">
+<technique profile="OpenRAVE">
+<frame_origin link="kinmodel/SNAKE-SAMPLE-BODYSET2_link">
+</frame_origin>
+<frame_tip link="kinmodel/SNAKE-SAMPLE-BODYSET8_link">
+</frame_tip>
+</technique>
+</extra>
+<extra name="larm" type="manipulator">
+<technique profile="OpenRAVE">
+<frame_origin link="kinmodel/nil_link">
+</frame_origin>
+<frame_tip link="kinmodel/nil_link">
+</frame_tip>
+</technique>
+</extra>
+<extra name="rarm" type="manipulator">
+<technique profile="OpenRAVE">
+<frame_origin link="kinmodel/nil_link">
+</frame_origin>
+<frame_tip link="kinmodel/nil_link">
+</frame_tip>
+</technique>
+</extra>
+<extra name="lleg" type="manipulator">
+<technique profile="OpenRAVE">
+<frame_origin link="kinmodel/nil_link">
+</frame_origin>
+<frame_tip link="kinmodel/nil_link">
+</frame_tip>
+</technique>
+</extra>
+<extra name="rleg" type="manipulator">
+<technique profile="OpenRAVE">
+<frame_origin link="kinmodel/nil_link">
+</frame_origin>
+<frame_tip link="kinmodel/nil_link">
+</frame_tip>
+</technique>
+</extra>
+</articulated_system>
+</library_articulated_systems>
+<scene>
+<instance_visual_scene url="#libvisualscenes.scene">
+</instance_visual_scene>
+<instance_kinematics_scene url="#libkinscenes.kinScene">
+<bind_kinematics_model node="root_node">
+<param>
+libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel</param>
+</bind_kinematics_model>
+<bind_joint_axis target="SNAKE-SAMPLE-BODYSET3.node/JOINT0_axis0">
+<axis>
+<param>
+libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel.JOINT0_axis0</param>
+</axis>
+<value>
+<param>
+libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel.JOINT0.value</param>
+</value>
+</bind_joint_axis>
+<bind_joint_axis target="SNAKE-SAMPLE-BODYSET4.node/JOINT1_axis0">
+<axis>
+<param>
+libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel.JOINT1_axis0</param>
+</axis>
+<value>
+<param>
+libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel.JOINT1.value</param>
+</value>
+</bind_joint_axis>
+<bind_joint_axis target="SNAKE-SAMPLE-BODYSET5.node/JOINT2_axis0">
+<axis>
+<param>
+libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel.JOINT2_axis0</param>
+</axis>
+<value>
+<param>
+libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel.JOINT2.value</param>
+</value>
+</bind_joint_axis>
+<bind_joint_axis target="SNAKE-SAMPLE-BODYSET6.node/JOINT3_axis0">
+<axis>
+<param>
+libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel.JOINT3_axis0</param>
+</axis>
+<value>
+<param>
+libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel.JOINT3.value</param>
+</value>
+</bind_joint_axis>
+<bind_joint_axis target="SNAKE-SAMPLE-BODYSET7.node/JOINT4_axis0">
+<axis>
+<param>
+libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel.JOINT4_axis0</param>
+</axis>
+<value>
+<param>
+libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel.JOINT4.value</param>
+</value>
+</bind_joint_axis>
+<bind_joint_axis target="SNAKE-SAMPLE-BODYSET8.node/JOINT5_axis0">
+<axis>
+<param>
+libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel.JOINT5_axis0</param>
+</axis>
+<value>
+<param>
+libkinscenes.kinScene_libkinscenes.kinScene_inst_kinmodel.JOINT5.value</param>
+</value>
+</bind_joint_axis>
+</instance_kinematics_scene>
+</scene>
+</COLLADA>

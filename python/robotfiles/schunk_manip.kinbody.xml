@@ -1,0 +1,66 @@
+<KinBody name="SchunkGripperPG70">
+  <Body name="gripper_base" type="dynamic">
+    <Geom type="box" modifiable="false">
+      <Extents>0.040 0.040 0.0025</Extents>
+      <Translation>0.000 0.000 0.0575</Translation>
+    </Geom>
+    <Geom type="cylinder" modifiable="false">
+      <Radius>0.0125</Radius>
+      <height>0.050</height>
+      <Translation>0.000 0.000 0.030</Translation>
+      <RotationAxis>1 0 0 90</RotationAxis>
+    </Geom>
+    <Geom type="cylinder" modifiable="false">
+      <Radius>0.030</Radius>
+      <height>0.005</height>
+      <Translation>0.000 0.000 0.0025</Translation>
+      <RotationAxis>1 0 0 90</RotationAxis>
+    </Geom>
+
+    <Geom type="trimesh" modifiable="false">
+      <Translation>0.000 0.000 0.060</Translation>
+      <RotationAxis>1 0 0 90</RotationAxis>
+      <data>models/schunk_0306087_pg_70_0_stroke.iv </data>
+      <render>models/schunk_0306087_pg_70_0_stroke.iv </render>
+      <diffuseColor>0.79 0.79 0.46</diffuseColor>
+    </Geom>
+    <!-- set the mass of the combined manipulators -->
+    <mass type="custom">
+      <total>0.24</total>
+      <com>0 0 1.3145</com>
+    </mass>
+  </Body>
+
+  <KinBody prefix="L_" file="schunk_fingers/fingerA_plane_reverse.kinbody.xml">
+    <Body name="L_finger">
+      <offsetfrom>gripper_base</offsetfrom>
+      <Translation>0.000 -0.009 0.163</Translation>
+      <RotationAxis>0 0 1 90</RotationAxis>
+    </Body>
+  </KinBody>
+
+  <KinBody prefix="R_" file="schunk_fingers/fingerA_plane_reverse.kinbody.xml">
+    <Body name="R_finger">
+      <offsetfrom>gripper_base</offsetfrom>
+      <Translation>0.000 0.009 0.163</Translation>
+      <RotationAxis>0 0 1 270</RotationAxis>
+    </Body>
+  </KinBody>
+
+  <Joint name="jfinger_L" type="slider">
+    <offsetfrom>gripper_base</offsetfrom>
+    <body>gripper_base</body>
+    <body>L_finger</body>
+    <axis>0 -1 0</axis>
+    <limits>0 0.034</limits>
+    <maxvel>0.02</maxvel>
+  </Joint>
+
+  <Joint name="jfinger_R" type="slider" enable="false" mimic_pos="-jfinger_L" mimic_vel="|jfinger_L -1" mimic_accel="|jfinger_L -1">
+    <offsetfrom>gripper_base</offsetfrom>
+    <body>gripper_base</body>
+    <body>R_finger</body>
+    <axis>0 -1 0</axis>
+    <limits>-0.034 0</limits>
+  </Joint>
+</KinBody>

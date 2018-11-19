@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- combines two barrett wam arms -->
+<Robot name="barrettwam-dual">
+  <KinBody>
+    <body name="chest">
+      <geom type="box">
+        <extents>0.1 0.1 0.4</extents>
+        <translation>0 0 0.4</translation>
+      </geom>
+    </body>
+  </KinBody>
+  <!-- left arm -->
+  <Robot>
+    <Robot prefix="l_" file="robots/barrettwam.robot.xml"></Robot>
+    <RotationAxis>1 0 0 90</RotationAxis>
+    <translation>0 -0.35 0.7</translation>
+  </Robot>
+  <!-- right arm -->
+  <Robot>
+    <Robot prefix="r_" file="robots/barrettwam.robot.xml"></Robot>
+    <RotationAxis>1 0 0 -90</RotationAxis>
+    <translation>0 0.35 0.7</translation>
+  </Robot>
+  <!-- connect the two arms with dummy joints -->
+  <KinBody>
+    <joint name="leftdummy" type="hinge" enable="false">
+      <body>chest</body>
+      <body>l_wam0</body>
+      <limitsdeg>0 0</limitsdeg>
+    </joint>
+    <joint name="rightdummy" type="hinge" enable="false">
+      <body>chest</body>
+      <body>r_wam0</body>
+      <limitsdeg>0 0</limitsdeg>
+    </joint>
+  </KinBody>
+</Robot>
