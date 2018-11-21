@@ -34,6 +34,8 @@
 #include <list>
 #include <stdexcept>
 #include <cmath>
+#include <iostream>
+#include <iomanip>
 
 #ifndef IKFAST_HEADER_COMMON
 #define IKFAST_HEADER_COMMON
@@ -275,6 +277,8 @@ public:
       }
     }
   }
+
+  bool HasFreeIndices() const { return !_vfree.empty(); }
 
   void ResetFreeIndices() {
     for(auto& v : _vbasesol) { v.freeind = v.indices[4] = -1; }
