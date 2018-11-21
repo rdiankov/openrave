@@ -49,7 +49,7 @@ template <typename T>
 class IkSingleDOFSolutionBase
 {
 public:
-    IkSingleDOFSolutionBase() : fmul(0), foffset(0), freeind(-1), maxsolutions(1) {
+    IkSingleDOFSolutionBase() : fmul(0), foffset(0), freeind(-1), jointtype(0x01), maxsolutions(1) {
         indices[0] = indices[1] = indices[2] = indices[3] = indices[4] = -1;
     }
     T fmul, foffset; ///< joint value is fmul*sol[freeind]+foffset
@@ -57,6 +57,25 @@ public:
     unsigned char jointtype; ///< joint type, 0x01 is revolute, 0x11 is slider
     unsigned char maxsolutions; ///< max possible indices, 0 if controlled by free index or a free joint itself
     unsigned char indices[5]; ///< unique index of the solution used to keep track on what part it came from. sometimes a solution can be repeated for different indices. store at least another repeated root
+  void Set(signed char freeind_in, T foffset_in, T fmul_in, unsigned char index4 = -1) {
+    fmul = fmul_in; foffset = foffset_in; freeind = freeind_in;
+    indices[4] = index4; // temporarily put here; (unsigned char) -2 if free on its own
+  }
+  void SetIndex(unsigned char maxsolutions_in, unsigned char index0) {
+    indices[0] = index0;
+    maxsolutions = maxsolutions_in;
+  }
+
+  T GetOffset() const { return foffset; }
+virtual void Print() const {
+      std::cout << "(" << ((jointtype == 0x01) ? "R" : "P") << ", "
+                << (int)freeind << "), (" << foffset << ", "
+                << fmul << "), " << (unsigned int) maxsolutions << " (";
+      for(unsigned int i = 0; i < 5; i++) {
+          std::cout << (unsigned int) indices[i] << ", ";
+      }
+      std::cout << ") " << std::endl;
+    }  
 };
 
 /// \brief The discrete solutions are returned in this structure.
@@ -158,6 +177,14 @@ public:
         _vfree = vfree;
     }
 
+    IkSolution(const std::vector<T>& vtrial, uint32_t nvars) {
+      assert(vtrial.size() > nvars);
+      _vbasesol = std::vector<IkSingleDOFSolutionBase<T>>(nvars);
+      for(uint32_t i = 0; i < nvars; i++) {
+        _vbasesol[i].foffset = vtrial[i];
+      }
+    }
+
     virtual void GetSolution(T* solution, const T* freevalues) const {
         for(std::size_t i = 0; i < _vbasesol.size(); ++i) {
             if( _vbasesol[i].freeind < 0 )
@@ -189,18 +216,18 @@ public:
     virtual void Validate() const {
         for(size_t i = 0; i < _vbasesol.size(); ++i) {
             if( _vbasesol[i].maxsolutions == (unsigned char)-1) {
-                throw std::runtime_error("max solutions for joint not initialized");
+                throw std::runtime_error("max solutions for joint " + std::to_string(i) + "not initialized");
             }
             if( _vbasesol[i].maxsolutions > 0 ) {
                 if( _vbasesol[i].indices[0] >= _vbasesol[i].maxsolutions ) {
-                    throw std::runtime_error("index >= max solutions for joint");
+                    throw std::runtime_error("index >= max solutions for joint " + std::to_string(i));
                 }
                 if( _vbasesol[i].indices[1] != (unsigned char)-1 && _vbasesol[i].indices[1] >= _vbasesol[i].maxsolutions ) {
-                    throw std::runtime_error("2nd index >= max solutions for joint");
+                    throw std::runtime_error("2nd index >= max solutions for joint " + std::to_string(i));
                 }
             }
             if( !std::isfinite(_vbasesol[i].foffset) ) {
-                throw std::runtime_error("foffset was not finite");
+                throw std::runtime_error("foffset for joint " + std::to_string(i) + " was not finite");
             }
         }
     }
@@ -227,6 +254,48 @@ public:
             }
         }
     }
+
+  IkSingleDOFSolutionBase<T>& operator[](size_t i) {
+    assert(i < _vbasesol.size());
+    return _vbasesol[i];
+  }
+  
+  const IkSingleDOFSolutionBase<T>& get(size_t i) const {
+    assert(i < _vbasesol.size());
+    return _vbasesol[i];
+  }  
+  
+  void DeriveFreeIndices() {
+    _vfree.clear();
+    for(uint32_t i = 0; i < _vbasesol.size(); i++) {
+      auto &v = _vbasesol[i];
+      if(v.indices[4] == (unsigned char) -2) {
+        _vfree.push_back(i);
+        v.indices[4] = (unsigned char) -1;
+      }
+    }
+  }
+
+  void ResetFreeIndices() {
+    for(auto& v : _vbasesol) { v.freeind = v.indices[4] = -1; }
+  }
+
+ virtual void Print() const {
+      std::cout << std::setprecision(16);
+      unsigned int i = 0;
+      for (const auto& s : _vbasesol) {
+        std::cout << i++ << ": ";
+        s.Print();
+      }
+      if(!_vfree.empty())
+      {
+        std::cout << "vfree = ";
+        for (auto& i : _vfree) {
+          std::cout << i << ", ";
+        }
+        std::cout << std::endl;
+      }
+    }  
 
     std::vector< IkSingleDOFSolutionBase<T> > _vbasesol;       ///< solution and their offsets if joints are mimiced
     std::vector<int> _vfree;
@@ -262,11 +331,119 @@ public:
         _listsolutions.clear();
     }
 
+  IkSolution<T>& operator[](size_t i) {
+    assert(i < _listsolutions.size());
+    return _listsolutions[i];
+  }
+
+  void SetSolutions(std::vector<IkSolution<T>> &vecsols) {
+    _listsolutions.clear();
+    std::move( vecsols.begin(), vecsols.end(), std::back_inserter(_listsolutions) );
+  }
+
+    virtual void Print() const {
+      unsigned int i = 0;
+      for (const auto& solution : _listsolutions) {
+        std::cout << "Solution " << i++ << ":" << std::endl;
+        std::cout << "===========" << std::endl;
+        solution.Print();
+      }
+    }  
+
 protected:
     std::list< IkSolution<T> > _listsolutions;
 };
 
 }
+
+namespace IKFAST {
+
+  // inline void ikfastfmodtwopi(double& c) {
+  //   // put back to (-PI, PI]
+  //   while (c > 3.1415926535897932384626) {
+  //     c -= 6.2831853071795864769252;
+  //   }
+  //   while (c <= -3.1415926535897932384626) {
+  //     c += 6.2831853071795864769252;
+  //   }
+  // }
+
+  template <typename T>
+  void DeriveSolutionIndices(std::vector<ikfast::IkSolution<T>>& vecsols, const std::vector<uint32_t>& order) {
+    if( vecsols.empty() ) {
+      return;
+    }
+    const uint32_t nallvars = vecsols[0].GetDOF(), nvars = order.size();
+    assert(nvars <= nallvars);
+    
+    for(std::vector<uint32_t>::const_reverse_iterator it = order.rbegin();
+        it != order.rend(); ++it ) {
+      uint32_t i = *it;
+      std::stable_sort(vecsols.begin(), vecsols.end(),
+                [&](const ikfast::IkSolution<T>& a, const ikfast::IkSolution<T>& b) {
+                  return a.get(i).GetOffset() < b.get(i).GetOffset();
+                });
+    }
+
+    // initialize
+    for (uint32_t i = 0; i < nallvars; i++) {
+      vecsols[0][i].indices[0] = (unsigned char) 0;
+    }
+    std::vector<uint32_t> count(nvars, 0);
+
+    // derive solution indices for each joint and maxsolutions
+    for(uint32_t si = 1; si < vecsols.size(); si++){
+      bool index_determined = false;
+      const ikfast::IkSolution<T> &prevsol = vecsols[si-1];
+      ikfast::IkSolution<T> &cursol = vecsols[si];
+      for (uint32_t oi = 0; oi < nvars; oi++) {
+        uint32_t index = order[oi];
+        if(index_determined) {
+          cursol[index].indices[0] = (unsigned char) 0;
+          uint32_t oldsi = count[oi];
+          count[oi] = si;
+          uint32_t maxsolni = prevsol.get(index).indices[0] + 1;
+          for(uint32_t sii = oldsi; sii < si; sii++) {
+            vecsols[sii][index].maxsolutions = (unsigned char) maxsolni;
+          }
+        }
+        else {
+          if(cursol[index].foffset > prevsol.get(index).foffset) {
+            cursol[index].indices[0] = (unsigned char) (prevsol.get(index).indices[0] + 1);
+            index_determined = true;
+          }
+          else {
+            cursol[index].indices[0] = (unsigned char) prevsol.get(index).indices[0];
+          }
+        }
+      }
+    }
+
+    // last round of deriving maxsolutions
+    uint32_t numsolns = vecsols.size();
+    const ikfast::IkSolution<T> &cursol = vecsols[numsolns-1];    
+    for (uint32_t oi = 0; oi < order.size(); oi++) {
+      uint32_t index = order[oi],
+        oldsi = count[oi],
+        maxsolni = cursol.get(index).indices[0] + 1;
+      for(uint32_t sii = oldsi; sii < numsolns; sii++) {
+        vecsols[sii][index].maxsolutions = (unsigned char) maxsolni;
+      }
+    }
+
+    // 
+    for(auto& vecsol : vecsols) {
+      if(!vecsol._vfree.empty()) {
+        for(uint32_t i = 0; i < nallvars; i++) {
+          if(vecsol[i].freeind != (signed char) -1) {
+            vecsol[i].indices[0] = (unsigned char) -1;
+            vecsol[i].maxsolutions = 0;
+          }
+        }
+      }
+    }
+  }
+} // namespace IKFAST
 
 #endif // OPENRAVE_IKFAST_HEADER
 
