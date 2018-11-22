@@ -58,7 +58,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
             RobotBaseConstPtr probot = OpenRAVE::RaveInterfaceConstCast<RobotBase>(_pbody);
             if( pbody != _pbody ) {
                 // pbody could be attached to a robot's link that is not active!
-                KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(pbody);
+                KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*pbody);
                 if( !pgrabbinglink ) {
                     return true;
                 }
@@ -245,7 +245,7 @@ public:
         if(( pbody2->GetLinks().size() == 0) || !pbody2->IsEnabled() ) {
             return false;
         }
-        if( pbody1->IsAttached(pbody2) ) {
+        if( pbody1->IsAttached(*pbody2) ) {
             return false;
         }
         if( _options & OpenRAVE::CO_Distance ) {
@@ -452,7 +452,7 @@ public:
             //RAVELOG_VERBOSE("calling collision on disabled link %s\n", plink->GetName().c_str());
             return false;
         }
-        if( pbody->IsAttached(plink->GetParent()) ) {
+        if( pbody->IsAttached(*plink->GetParent())) {
             return false;
         }
         if( _options & OpenRAVE::CO_Distance ) {
@@ -868,7 +868,7 @@ private:
         }
 
         // only recurse two spaces if exactly one of them is attached to _pbody
-        if( !!pbody1 && !!pbody2 &&( pcb->_pbody->IsAttached(pbody1) == pcb->_pbody->IsAttached(pbody2)) ) {
+        if( !!pbody1 && !!pbody2 &&( pcb->_pbody->IsAttached(*pbody1) == pcb->_pbody->IsAttached(*pbody2)) ) {
             return;
         }
         if (dGeomIsSpace(o1) || dGeomIsSpace(o2)) {
@@ -913,7 +913,7 @@ private:
 
         // redundant but necessary for some versions of ODE
         if( !!pkb1 && !!pkb2 ) {
-            if( pkb1->GetParent()->IsAttached(KinBodyConstPtr(pkb2->GetParent())) ) {
+            if( pkb1->GetParent()->IsAttached(*pkb2->GetParent())) {
                 return;
             }
             if( !!pcb->pvbodyexcluded ) {
@@ -1042,7 +1042,7 @@ private:
                 return;
             }
         }
-        if( !!pkb1 && !!pkb2 && pkb1->GetParent()->IsAttached(KinBodyConstPtr(pkb2->GetParent())) ) {
+        if( !!pkb1 && !!pkb2 && pkb1->GetParent()->IsAttached(*pkb2->GetParent())) {
             return;
         }
 
@@ -1141,13 +1141,13 @@ private:
         }
         if( dGeomIsSpace(o1) ) {
             BOOST_ASSERT(!!o1data);
-            if(( pbody != o1data->GetBody()) && pbody->IsAttached(KinBodyConstPtr(o1data->GetBody())) ) {
+            if(( pbody != o1data->GetBody()) && pbody->IsAttached(*o1data->GetBody()) ) {
                 return;
             }
         }
         if( dGeomIsSpace(o2) ) {
             BOOST_ASSERT(!!o2data);
-            if(( pbody != o2data->GetBody()) && pbody->IsAttached(KinBodyConstPtr(o2data->GetBody())) ) {
+            if(( pbody != o2data->GetBody()) && pbody->IsAttached(*o2data->GetBody())) {
                 return;
             }
         }
@@ -1176,7 +1176,7 @@ private:
             }
         }
 
-        if( !!pkb1 && !!pkb2 && pkb1->GetParent()->IsAttached(KinBodyConstPtr(pkb2->GetParent())) ) {
+        if( !!pkb1 && !!pkb2 && pkb1->GetParent()->IsAttached(*pkb2->GetParent())) {
             return;
         }
 

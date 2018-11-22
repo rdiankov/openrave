@@ -2083,9 +2083,10 @@ protected:
     {
         // before deleting, make sure no robots are grabbing it!!
         FOREACH(itrobot, _vecrobots) {
-            if( (*itrobot)->IsGrabbing(*it) ) {
-                RAVELOG_WARN("destroy %s already grabbed by robot %s!\n", (*it)->GetName().c_str(), (*itrobot)->GetName().c_str());
-                (*itrobot)->Release(*it);
+            KinBody &body = **it;
+            if( (*itrobot)->IsGrabbing(body) ) {
+                RAVELOG_WARN("destroy %s already grabbed by robot %s!\n", body.GetName().c_str(), (*itrobot)->GetName().c_str());
+                (*itrobot)->Release(body);
             }
         }
 

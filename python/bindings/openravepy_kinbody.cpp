@@ -760,7 +760,7 @@ public:
     }
 
     bool IsParentLink(boost::shared_ptr<PyLink> pylink) const {
-        return _plink->IsParentLink(pylink->GetLink());
+        return _plink->IsParentLink(*pylink->GetLink());
     }
 
     object GetCollisionData() {
@@ -915,9 +915,9 @@ public:
         return links;
     }
 
-    bool IsRigidlyAttached(boost::shared_ptr<PyLink>  plink) {
+    bool IsRigidlyAttached(boost::shared_ptr<PyLink> plink) {
         CHECK_POINTER(plink);
-        return _plink->IsRigidlyAttached(plink->GetLink());
+        return _plink->IsRigidlyAttached(*plink->GetLink());
     }
 
     void SetVelocity(object olinear, object oangular) {
@@ -2615,7 +2615,7 @@ bool PyKinBody::CheckSelfCollision(PyCollisionReportPtr pReport, PyCollisionChec
 bool PyKinBody::IsAttached(PyKinBodyPtr pattachbody)
 {
     CHECK_POINTER(pattachbody);
-    return _pbody->IsAttached(pattachbody->GetBody());
+    return _pbody->IsAttached(*pattachbody->GetBody());
 }
 object PyKinBody::GetAttached() const
 {
@@ -2680,7 +2680,7 @@ bool PyKinBody::Grab(PyKinBodyPtr pbody, object pylink)
 
 void PyKinBody::Release(PyKinBodyPtr pbody)
 {
-    CHECK_POINTER(pbody); _pbody->Release(pbody->GetBody());
+    CHECK_POINTER(pbody); _pbody->Release(*pbody->GetBody());
 }
 void PyKinBody::ReleaseAllGrabbed() {
     _pbody->ReleaseAllGrabbed();
@@ -2697,7 +2697,7 @@ void PyKinBody::RegrabAll()
 object PyKinBody::IsGrabbing(PyKinBodyPtr pbody) const
 {
     CHECK_POINTER(pbody);
-    KinBody::LinkPtr plink = _pbody->IsGrabbing(pbody->GetBody());
+    KinBody::LinkPtr plink = _pbody->IsGrabbing(*pbody->GetBody());
     return toPyKinBodyLink(plink,_pyenv);
 }
 

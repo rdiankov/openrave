@@ -505,7 +505,7 @@ protected:
             std::vector<KinBodyPtr> vgrabbedbodies;
             _probot->GetGrabbed(vgrabbedbodies);
             FOREACH(itbody,vgrabbedbodies) {
-                if( find(_vchildlinks.begin(),_vchildlinks.end(),_probot->IsGrabbing(*itbody)) != _vchildlinks.end() ) {
+                if( find(_vchildlinks.begin(),_vchildlinks.end(),_probot->IsGrabbing(**itbody)) != _vchildlinks.end() ) {
                     _listGrabbedSavedStates.push_back(KinBody::KinBodyStateSaver(*itbody, KinBody::Save_LinkEnable));
                 }
             }
@@ -1546,7 +1546,7 @@ protected:
                         if( !!potherlink && _numBacktraceLinksForSelfCollisionWithNonMoving > 0 ) {
                             for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithNonMoving; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
                                 KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
-                                if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(potherlink) ) {
+                                if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(*potherlink) ) {
 
                                     stateCheck.numImpossibleSelfCollisions++;
                                     RAVELOG_VERBOSE_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, attempts=%d", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
@@ -1575,7 +1575,7 @@ protected:
                                 //bool bRigidlyAttached = false;
                                 for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithFree; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
                                     KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
-                                    if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(potherlink) ) {
+                                    if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(*potherlink) ) {
 
                                         stateCheck.numImpossibleSelfCollisions++;
                                         RAVELOG_VERBOSE_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, attempts=%d", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
@@ -1982,7 +1982,7 @@ protected:
                         if( !!potherlink && _numBacktraceLinksForSelfCollisionWithNonMoving > 0 ) {
                             for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithNonMoving; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
                                 KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
-                                if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(potherlink) ) {
+                                if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(*potherlink) ) {
 
                                     stateCheck.numImpossibleSelfCollisions++;
                                     RAVELOG_VERBOSE_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, attempts=%d", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
@@ -2011,7 +2011,7 @@ protected:
                                 //bool bRigidlyAttached = false;
                                 for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithFree; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
                                     KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
-                                    if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(potherlink) ) {
+                                    if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(*potherlink) ) {
 
                                         stateCheck.numImpossibleSelfCollisions++;
                                         RAVELOG_VERBOSE_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, attempts=%d", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);

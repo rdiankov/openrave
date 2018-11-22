@@ -384,7 +384,7 @@ public:
             return false;
         }
 
-        if( pbody1->IsAttached(pbody2) ) {
+        if( pbody1->IsAttached(*pbody2) ) {
             return false;
         }
 
@@ -483,7 +483,7 @@ public:
             return false;
         }
 
-        if( pbody->IsAttached(plink->GetParent()) ) {
+        if( pbody->IsAttached(*plink->GetParent()) ) {
             return false;
         }
 
@@ -946,7 +946,7 @@ private:
         }
 
         if( !!plink1 && !!plink2 ) {
-            if( !pcb->bselfCollision && plink1->GetParent()->IsAttached(KinBodyConstPtr(plink2->GetParent())) ) {
+            if( !pcb->bselfCollision && plink1->GetParent()->IsAttached(*plink2->GetParent())) {
                 return false;
             }
 
@@ -1039,7 +1039,7 @@ private:
                 //BOOST_ASSERT( plink1 && plink2 );
                 //BOOST_ASSERT( plink1->IsEnabled() && plink2->IsEnabled() );
                 if( !!plink1 && !!plink2 ) {
-                    BOOST_ASSERT( pcb->bselfCollision || !plink1->GetParent()->IsAttached(KinBodyConstPtr(plink2->GetParent())) );
+                    BOOST_ASSERT( pcb->bselfCollision || !plink1->GetParent()->IsAttached(*plink2->GetParent()));
                 }
 
                 _reportcache.Reset(_options);

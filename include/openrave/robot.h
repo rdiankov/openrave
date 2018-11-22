@@ -349,7 +349,7 @@ public:
         //virtual bool CheckIndependentCollision(KinBodyConstPtr body, CollisionReportPtr report = CollisionReportPtr()) const;
 
         /// \brief return true if the body is being grabbed by any link on this manipulator
-        virtual bool IsGrabbing(KinBodyConstPtr body) const;
+        virtual bool IsGrabbing(const KinBody &body) const;
 
         /// \brief computes the jacobian of the manipulator arm indices of the current manipulator frame world position.
         ///

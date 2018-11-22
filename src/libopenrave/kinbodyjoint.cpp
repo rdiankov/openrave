@@ -1341,7 +1341,7 @@ std::string KinBody::Joint::GetMimicEquation(int iaxis, int itype, const std::st
         std::string sout;
         KinBodyConstPtr parent(_parent);
         FOREACHC(itdofformat, _vmimic.at(iaxis)->_vdofformat) {
-            JointConstPtr pjoint = itdofformat->GetJoint(parent);
+            JointConstPtr pjoint = itdofformat->GetJoint(*parent);
             if( pjoint->GetDOF() > 1 ) {
                 Vars.push_back(str(boost::format("<csymbol>%s_%d</csymbol>")%pjoint->GetName()%(int)itdofformat->axis));
             }
@@ -1450,7 +1450,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
             dofformat.axis = 0;
         }
         dofformat.dofindex = -1;
-        JointPtr pjoint = dofformat.GetJoint(parent);
+        JointPtr pjoint = dofformat.GetJoint(*parent);
         if((pjoint->GetDOFIndex() >= 0)&& !pjoint->IsMimic(dofformat.axis) ) {
             dofformat.dofindex = pjoint->GetDOFIndex()+dofformat.axis;
             MIMIC::DOFHierarchy h;
@@ -1558,13 +1558,13 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> 
             // not in the cache so compute using the chain rule
             if( vtempvalues.empty() ) {
                 FOREACHC(itdofformat, _vmimic[iaxis]->_vdofformat) {
-                    vtempvalues.push_back(itdofformat->GetJoint(parent)->GetValue(itdofformat->axis));
+                    vtempvalues.push_back(itdofformat->GetJoint(*parent)->GetValue(itdofformat->axis));
                 }
             }
             dReal fvel = _vmimic[iaxis]->_velfns.at(itmimicdof->dofformatindex)->Eval(vtempvalues.empty() ? NULL : &vtempvalues[0]);
             const MIMIC::DOFFormat& dofformat = _vmimic[iaxis]->_vdofformat.at(itmimicdof->dofformatindex);
-            if( dofformat.GetJoint(parent)->IsMimic(dofformat.axis) ) {
-                dofformat.GetJoint(parent)->_ComputePartialVelocities(vtemppartials,dofformat.axis,mapcachedpartials);
+            if( dofformat.GetJoint(*parent)->IsMimic(dofformat.axis) ) {
+                dofformat.GetJoint(*parent)->_ComputePartialVelocities(vtemppartials,dofformat.axis,mapcachedpartials);
                 dReal fpartial = 0;
                 FOREACHC(itpartial,vtemppartials) {
                     if( itpartial->first == itmimicdof->dofindex ) {
@@ -1643,16 +1643,16 @@ bool KinBody::Joint::MIMIC::DOFFormat::operator ==(const KinBody::Joint::MIMIC::
     return jointindex == r.jointindex && dofindex == r.dofindex && axis == r.axis;
 }
 
-KinBody::JointPtr KinBody::Joint::MIMIC::DOFFormat::GetJoint(KinBodyPtr parent) const
+KinBody::JointPtr KinBody::Joint::MIMIC::DOFFormat::GetJoint(KinBody &parent) const
 {
-    int numjoints = (int)parent->GetJoints().size();
-    return jointindex < numjoints ? parent->GetJoints().at(jointindex) : parent->GetPassiveJoints().at(jointindex-numjoints);
+    int numjoints = (int)parent.GetJoints().size();
+    return jointindex < numjoints ? parent.GetJoints().at(jointindex) : parent.GetPassiveJoints().at(jointindex-numjoints);
 }
 
-KinBody::JointConstPtr KinBody::Joint::MIMIC::DOFFormat::GetJoint(KinBodyConstPtr parent) const
+KinBody::JointConstPtr KinBody::Joint::MIMIC::DOFFormat::GetJoint(const KinBody &parent) const
 {
-    int numjoints = (int)parent->GetJoints().size();
-    return jointindex < numjoints ? parent->GetJoints().at(jointindex) : parent->GetPassiveJoints().at(jointindex-numjoints);
+    int numjoints = (int)parent.GetJoints().size();
+    return jointindex < numjoints ? parent.GetJoints().at(jointindex) : parent.GetPassiveJoints().at(jointindex-numjoints);
 }
 
 void KinBody::Joint::SetFloatParameters(const std::string& key, const std::vector<dReal>& parameters)

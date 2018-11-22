@@ -468,7 +468,7 @@ protected:
         ///
         /// \see GetParentLinks
         /// \param link The link to test if it is one of the parents of this link.
-        virtual bool IsParentLink(boost::shared_ptr<Link const> plink) const;
+        virtual bool IsParentLink(const Link &link) const;
 
         /// \brief return center of mass offset in the link's local coordinate frame
         inline Vector GetLocalCOM() const {
@@ -602,7 +602,7 @@ protected:
         virtual bool ValidateContactNormal(const Vector& position, Vector& normal) const;
 
         /// \brief returns true if plink is rigidily attahced to this link.
-        virtual bool IsRigidlyAttached(boost::shared_ptr<Link const> plink) const;
+        virtual bool IsRigidlyAttached(const Link &link) const;
 
         /// \brief Gets all the rigidly attached links to linkindex, also adds the link to the list.
         ///
@@ -750,8 +750,8 @@ public:
             uint8_t axis : 2;         ///< the axis of the joint index
             bool operator <(const DOFFormat& r) const;
             bool operator ==(const DOFFormat& r) const;
-            boost::shared_ptr<Joint> GetJoint(KinBodyPtr parent) const;
-            boost::shared_ptr<Joint const> GetJoint(KinBodyConstPtr parent) const;
+            boost::shared_ptr<Joint> GetJoint(KinBody &parent) const;
+            boost::shared_ptr<Joint const> GetJoint(const KinBody &parent) const;
         };
         struct DOFHierarchy
         {
@@ -2130,7 +2130,7 @@ private:
     //@}
     
     /// \return true if two bodies should be considered as one during collision (ie one is grabbing the other)
-    virtual bool IsAttached(KinBodyConstPtr body) const;
+    virtual bool IsAttached(const KinBody &body) const;
 
     /// \brief Recursively get all attached bodies of this body, including this body.
     ///
@@ -2302,7 +2302,7 @@ private:
 
         \param body body to release
      */
-    virtual void Release(KinBodyPtr body);
+    virtual void Release(KinBody &body);
 
     /// Release all grabbed bodies.
     virtual void ReleaseAllGrabbed();     ///< release all bodies
@@ -2319,7 +2319,7 @@ private:
 
         \param[in] body the body to check
      */
-    virtual LinkPtr IsGrabbing(KinBodyConstPtr body) const;
+    virtual LinkPtr IsGrabbing(const KinBody &body) const;
 
     /** \brief gets all grabbed bodies of the body
 
@@ -2410,7 +2410,7 @@ protected:
     virtual void _PostprocessChangedParameters(uint32_t parameters);
 
     /// \brief Return true if two bodies should be considered as one during collision (ie one is grabbing the other)
-    virtual bool _IsAttached(KinBodyConstPtr body, std::set<KinBodyConstPtr>& setChecked) const;
+    virtual bool _IsAttached(const KinBody &body, std::set<KinBodyConstPtr>& setChecked) const;
 
     /// \brief adds an attached body
     virtual void _AttachBody(KinBodyPtr body);
@@ -2418,7 +2418,7 @@ protected:
     /// \brief removes an attached body
     ///
     /// \return true if body was successfully found and removed
-    virtual bool _RemoveAttachedBody(KinBodyPtr body);
+    virtual bool _RemoveAttachedBody(KinBody &body);
 
     virtual void _UpdateGrabbedBodies();
 

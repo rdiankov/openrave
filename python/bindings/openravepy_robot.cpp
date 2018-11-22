@@ -213,7 +213,7 @@ public:
             return toPyVector3(_pmanip->GetLocalToolDirection());
         }
         bool IsGrabbing(PyKinBodyPtr pbody) {
-            return _pmanip->IsGrabbing(pbody->GetBody());
+            return _pmanip->IsGrabbing(*pbody->GetBody());
         }
 
         int GetNumFreeParameters() const {
