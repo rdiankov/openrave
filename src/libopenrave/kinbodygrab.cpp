@@ -21,8 +21,8 @@ namespace OpenRAVE {
 bool KinBody::Grab(KinBodyPtr pbody, LinkPtr plink)
 {
     OPENRAVE_ASSERT_FORMAT(!!pbody, "body %s invalid body to grab",GetName(),ORE_InvalidArguments);
-    OPENRAVE_ASSERT_FORMAT(!!plink && plink->GetParent() == shared_kinbody(), "body %s grabbing link needs to be part of body",GetName(),ORE_InvalidArguments);
-    OPENRAVE_ASSERT_FORMAT(pbody != shared_kinbody(),"body %s cannot grab itself",GetName(), ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(!!plink && plink->GetParent().get() == this, "body %s grabbing link needs to be part of body",GetName(),ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(pbody.get() != this,"body %s cannot grab itself",GetName(), ORE_InvalidArguments);
 
     //uint64_t starttime0 = utils::GetMicroTime();
 
@@ -176,16 +176,16 @@ void KinBody::ReleaseAllGrabbed()
     }
 }
 
-void KinBody::ReleaseAllGrabbedWithLink(LinkPtr pBodyLinkToReleaseWith)
+void KinBody::ReleaseAllGrabbedWithLink(const KinBody::Link& bodyLinkToReleaseWith)
 {
-    OPENRAVE_ASSERT_FORMAT(!!pBodyLinkToReleaseWith && pBodyLinkToReleaseWith->GetParent() == shared_kinbody(), "body %s invalid grab arguments",GetName(), ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(bodyLinkToReleaseWith.GetParent().get() == this, "body %s invalid grab arguments",GetName(), ORE_InvalidArguments);
 
     if( _vGrabbedBodies.size() > 0 ) {
         bool bReleased = false;
         int nCheckIndex = (int)_vGrabbedBodies.size()-1;
         while(nCheckIndex >= 0) {
             GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(_vGrabbedBodies.at(nCheckIndex));
-            if( pgrabbed->_plinkrobot == pBodyLinkToReleaseWith ) {
+            if( pgrabbed->_plinkrobot.get() == &bodyLinkToReleaseWith ) {
                 KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
                 if( !!pbody ) {
                     _RemoveAttachedBody(*pbody);

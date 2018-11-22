@@ -2688,7 +2688,7 @@ void PyKinBody::ReleaseAllGrabbed() {
 void PyKinBody::ReleaseAllGrabbedWithLink(object pylink) {
     CHECK_POINTER(pylink);
     KinBody::LinkPtr plink = GetKinBodyLink(pylink);
-    _pbody->ReleaseAllGrabbedWithLink(plink);
+    _pbody->ReleaseAllGrabbedWithLink(*plink);
 }
 void PyKinBody::RegrabAll()
 {

@@ -2190,7 +2190,7 @@ protected:
             if( (find(vobjids.begin(),vobjids.end(),(*itbody)->GetEnvironmentId()) == vobjids.end()) ^ !inclusive ) {
                 continue;
             }
-            GetEnv()->Triangulate(trimesh, *itbody);
+            GetEnv()->Triangulate(trimesh, **itbody);
         }
 
         BOOST_ASSERT( (trimesh.indices.size()%3) == 0 );

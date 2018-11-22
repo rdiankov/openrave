@@ -518,7 +518,7 @@ public:
     /// \param[out] trimesh - The output triangle mesh
     /// \param[in] body body the triangulate
     /// \throw openrave_exception Throw if failed to add anything
-    virtual void Triangulate(TriMesh& trimesh, KinBodyConstPtr pbody) = 0;
+    virtual void Triangulate(TriMesh& trimesh, const KinBody &body) = 0;
 
     /// \brief General triangulation of the whole scene. <b>[multi-thread safe]</b>
     ///

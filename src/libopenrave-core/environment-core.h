@@ -1141,10 +1141,10 @@ public:
         }
     }
 
-    virtual void Triangulate(TriMesh& trimesh, KinBodyConstPtr pbody)
+    virtual void Triangulate(TriMesh& trimesh, const KinBody &body)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());     // reading collision data, so don't want anyone modifying it
-        FOREACHC(it, pbody->GetLinks()) {
+        FOREACHC(it, body.GetLinks()) {
             trimesh.Append((*it)->GetCollisionData(), (*it)->GetTransform());
         }
     }
@@ -1160,26 +1160,26 @@ public:
             switch(options) {
             case SO_NoRobots:
                 if( !robot ) {
-                    Triangulate(trimesh, *itbody);
+                    Triangulate(trimesh, **itbody);
                 }
                 break;
 
             case SO_Robots:
                 if( !!robot ) {
-                    Triangulate(trimesh, *itbody);
+                    Triangulate(trimesh, **itbody);
                 }
                 break;
             case SO_Everything:
-                Triangulate(trimesh, *itbody);
+                Triangulate(trimesh, **itbody);
                 break;
             case SO_Body:
                 if( (*itbody)->GetName() == selectname ) {
-                    Triangulate(trimesh, *itbody);
+                    Triangulate(trimesh, **itbody);
                 }
                 break;
             case SO_AllExceptBody:
                 if( (*itbody)->GetName() != selectname ) {
-                    Triangulate(trimesh, *itbody);
+                    Triangulate(trimesh, **itbody);
                 }
                 break;
 //            case SO_BodyList:

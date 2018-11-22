@@ -2307,7 +2307,7 @@ private:
     /// Release all grabbed bodies.
     virtual void ReleaseAllGrabbed();     ///< release all bodies
 
-    virtual void ReleaseAllGrabbedWithLink(LinkPtr pBodyLinkToGrabWith);
+    virtual void ReleaseAllGrabbedWithLink(const KinBody::Link& bodyLinkToGrabWith);
 
     /** \brief Releases and grabs all bodies, has the effect of recalculating all the initial collision with the bodies.
 

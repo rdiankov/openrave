@@ -667,9 +667,9 @@ void RobotBase::Manipulator::GetChildLinks(std::vector<LinkPtr>& vlinks) const
     }
 }
 
-bool RobotBase::Manipulator::IsChildLink(LinkConstPtr plink) const
+bool RobotBase::Manipulator::IsChildLink(const KinBody::Link &link) const
 {
-    if( __pEffector->IsRigidlyAttached(*plink) ) {
+    if( __pEffector->IsRigidlyAttached(link) ) {
         return true;
     }
 
