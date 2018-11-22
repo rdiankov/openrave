@@ -267,18 +267,22 @@ public:
   const IkSingleDOFSolutionBase<T>& get(size_t i) const {
     assert(i < _vbasesol.size());
     return _vbasesol[i];
-  }  
-  
-  void DeriveFreeIndices() {
-    _vfree.clear();
-    for(uint32_t i = 0; i < _vbasesol.size(); i++) {
-      auto &v = _vbasesol[i];
-      if(v.indices[4] == (unsigned char) -2) {
-        _vfree.push_back(i);
-        v.indices[4] = (unsigned char) -1;
-      }
-    }
   }
+
+  void SetFree(std::vector<int> vfree) {
+    _vfree = std::move(vfree);
+  }
+  
+  // void DeriveFreeIndices() {
+  //   _vfree.clear();
+  //   for(uint32_t i = 0; i < _vbasesol.size(); i++) {
+  //     auto &v = _vbasesol[i];
+  //     if(v.indices[4] == (unsigned char) -2) {
+  //       _vfree.push_back(i);
+  //       v.indices[4] = (unsigned char) -1;
+  //     }
+  //   }
+  // }
 
   bool HasFreeIndices() const { return !_vfree.empty(); }
 
@@ -364,15 +368,57 @@ protected:
 
 namespace IKFAST {
 
-  // inline void ikfastfmodtwopi(double& c) {
-  //   // put back to (-PI, PI]
-  //   while (c > 3.1415926535897932384626) {
-  //     c -= 6.2831853071795864769252;
-  //   }
-  //   while (c <= -3.1415926535897932384626) {
-  //     c += 6.2831853071795864769252;
-  //   }
-  // }
+  struct AlignedSolution {
+    uint32_t freejoint = 0;     // jy
+    uint32_t mimicjoint = 0;    // jx
+    uint32_t solutionindex = 0;
+    bool bxpy = true;           // jxpy = jx + jy
+    // false means                 jxmy = jx - jy
+
+    AlignedSolution(uint32_t freejoint_in,
+                    uint32_t mimicjoint_in,
+                    uint32_t solutionindex_in,
+                    bool bxpy_in) {
+      freejoint     = freejoint_in;
+      mimicjoint    = mimicjoint_in;
+      solutionindex = solutionindex_in;
+      bxpy          = bxpy_in;
+    }
+
+    template <typename T>
+    void SetIkSolution(ikfast::IkSolution<T>& solnobj, const std::vector<T>& v) {
+      const uint32_t dof = solnobj.GetDOF();
+      assert(freejoint < dof && mimicjoint < dof);
+      ikfast::IkSingleDOFSolutionBase<T>& freejointsoln = solnobj[freejoint],
+                         &mimicjointsoln = solnobj[mimicjoint];
+
+      // update _vbasesol
+      freejointsoln.fmul = 1.0;
+      freejointsoln.foffset = 0.0;
+      freejointsoln.freeind = 0;
+      freejointsoln.maxsolutions = 0;
+      freejointsoln.indices[0] = (unsigned char) -1;
+
+      mimicjointsoln.fmul = bxpy ? (-1.0) : (1.0);
+      mimicjointsoln.foffset = v[freejoint] - v[mimicjoint] * mimicjointsoln.fmul;
+      mimicjointsoln.freeind = 0;
+      mimicjointsoln.maxsolutions = 0;
+      mimicjointsoln.indices[0] = (unsigned char) -1;
+
+      // update _vfree
+      solnobj.SetFree({freejoint});
+    }
+  };
+
+  inline void ikfastfmodtwopi(double& c) {
+    // put back to (-PI, PI]
+    while (c > 3.1415926535897932384626) {
+      c -= 6.2831853071795864769252;
+    }
+    while (c <= -3.1415926535897932384626) {
+      c += 6.2831853071795864769252;
+    }
+  }
 
   template <typename T>
   void DeriveSolutionIndices(std::vector<ikfast::IkSolution<T>>& vecsols, const std::vector<uint32_t>& order) {
