@@ -30,6 +30,8 @@
    - IKFAST_NAMESPACE - Enclose all functions and classes in this namespace, the ``main`` function is excluded.
 
  */
+#include <cassert>
+#include <algorithm>
 #include <vector>
 #include <list>
 #include <stdexcept>
@@ -380,14 +382,20 @@ namespace IKFAST {
     const uint32_t nallvars = vecsols[0].GetDOF(), nvars = order.size();
     assert(nvars <= nallvars);
     
-    for(std::vector<uint32_t>::const_reverse_iterator it = order.rbegin();
-        it != order.rend(); ++it ) {
-      uint32_t i = *it;
-      std::stable_sort(vecsols.begin(), vecsols.end(),
-                [&](const ikfast::IkSolution<T>& a, const ikfast::IkSolution<T>& b) {
-                  return a.get(i).GetOffset() < b.get(i).GetOffset();
-                });
-    }
+    std::sort(vecsols.begin(), vecsols.end(),
+      [&order](const ikfast::IkSolution<T>& a, const ikfast::IkSolution<T>& b) {
+        for(std::vector<uint32_t>::const_reverse_iterator it = order.rbegin();
+          it != order.rend();
+          ++it) {
+          uint32_t i = *it;
+          const T x = a.get(i).foffset;
+          const T y = b.get(i).foffset;
+          if (x != y) {
+            return x < y;
+          }
+        }
+        return true;
+      });
 
     // initialize
     for (uint32_t i = 0; i < nallvars; i++) {
