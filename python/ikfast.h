@@ -176,12 +176,11 @@ public:
 
     IkSolution() {}
   
-    IkSolution(const std::vector<T>& v, uint32_t nvars) {
-      this->SetSolution(v, nvars);
-    }
+    // IkSolution(const std::vector<T>& v, uint32_t nvars) {
+    //   this->SetSolution(v, nvars);
+    // }
 
-    void SetSolution(const std::vector<T>& v, uint32_t nvars) {
-      assert(v.size() > nvars);
+    void SetSolution(const T v[], uint32_t nvars) {
       _vbasesol.clear();    
       _vbasesol.resize(nvars);
       for(uint32_t i = 0; i < nvars; i++) {
@@ -375,7 +374,7 @@ namespace IKFAST {
     }
 
     template <typename T>
-    void SetIkSolution(ikfast::IkSolution<T>& solnobj, const std::vector<T>& v) {
+    void SetIkSolution(ikfast::IkSolution<T>& solnobj, const T v[]) {
       const uint32_t dof = solnobj.GetDOF();
       assert(freejoint < dof && mimicjoint < dof);
       ikfast::IkSingleDOFSolutionBase<T>& freejointsoln = solnobj[freejoint],
