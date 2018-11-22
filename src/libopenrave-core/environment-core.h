@@ -831,7 +831,7 @@ public:
     virtual UserDataPtr RegisterBodyCallback(const BodyCallbackFn& callback)
     {
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-        BodyCallbackDataPtr pdata(new BodyCallbackData(callback,boost::dynamic_pointer_cast<Environment>(shared_from_this())));
+        BodyCallbackDataPtr pdata(new BodyCallbackData(callback,boost::static_pointer_cast<Environment>(shared_from_this())));
         pdata->_iterator = _listRegisteredBodyCallbacks.insert(_listRegisteredBodyCallbacks.end(),pdata);
         return pdata;
     }
@@ -903,7 +903,7 @@ public:
     virtual UserDataPtr RegisterCollisionCallback(const CollisionCallbackFn& callback)
     {
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-        CollisionCallbackDataPtr pdata(new CollisionCallbackData(callback,boost::dynamic_pointer_cast<Environment>(shared_from_this())));
+        CollisionCallbackDataPtr pdata(new CollisionCallbackData(callback,boost::static_pointer_cast<Environment>(shared_from_this())));
         pdata->_iterator = _listRegisteredCollisionCallbacks.insert(_listRegisteredCollisionCallbacks.end(),pdata);
         return pdata;
     }

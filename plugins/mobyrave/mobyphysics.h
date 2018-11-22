@@ -26,11 +26,11 @@ class MobyPhysics : public PhysicsEngineBase
 {
 
     inline boost::shared_ptr<MobyPhysics> shared_physics() {
-        return boost::dynamic_pointer_cast<MobyPhysics>(shared_from_this());
+        return boost::static_pointer_cast<MobyPhysics>(shared_from_this());
     }
 
     inline boost::shared_ptr<MobyPhysics const> shared_physics_const() const {
-        return boost::dynamic_pointer_cast<MobyPhysics const>(shared_from_this());
+        return boost::static_pointer_cast<MobyPhysics const>(shared_from_this());
     }
 
     class PhysicsPropertiesXMLReader : public BaseXMLReader

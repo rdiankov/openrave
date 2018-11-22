@@ -84,10 +84,10 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
     }
 
     inline boost::shared_ptr<IkFastSolver<IkReal> > shared_solver() {
-        return boost::dynamic_pointer_cast<IkFastSolver<IkReal> >(shared_from_this());
+        return boost::static_pointer_cast<IkFastSolver<IkReal> >(shared_from_this());
     }
     inline boost::shared_ptr<IkFastSolver<IkReal> const> shared_solver_const() const {
-        return boost::dynamic_pointer_cast<IkFastSolver<IkReal> const>(shared_from_this());
+        return boost::static_pointer_cast<IkFastSolver<IkReal> const>(shared_from_this());
     }
     inline boost::weak_ptr<IkFastSolver<IkReal> > weak_solver() {
         return shared_solver();
