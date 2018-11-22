@@ -1,0 +1,84 @@
+#!/bin/bash
+
+#OPENRAVE_DIR=$MUJIN_INSTALL_DIR/lib/python2.7/site-packages/openravepy/_openravepy_0_11
+#CURR_IKFAST_DIR=$MUJIN_JHBUILD_CHECKOUT_DIR/openrave/python
+
+#cp $CURR_IKFAST_DIR/*.py $OPENRAVE_DIR
+
+#cp $CURR_IKFAST_DIR/databases/*.py $OPENRAVE_DIR/databases
+
+#clear && clear
+
+openrave.py --database inversekinematics --robot=$MUJIN_JHBUILD_CHECKOUT_DIR/openrave/python/robotfiles/mitsubishi-rv-7fll_newgripper.mujin.dae --usecached
+
+#openrave.py --database inversekinematics --robot=$MUJIN_JHBUILD_CHECKOUT_DIR/openrave/src/robots/kawada-hironx.zae --iktests=10000 --usecached
+
+#openrave.py --database inversekinematics --robot=$MUJIN_JHBUILD_CHECKOUT_DIR/openrave/src/collada_robots/universalrobots-ur6-85-5-a.zae --iktests=2 --usecached
+
+# IA5D
+#openrave.py --database inversekinematics --robot=robotfiles/cmu-permma.zae --numiktests=1000 --iktype=translationdirection5d
+#openrave.py --database inversekinematics --robot=robotfiles/man1.zae --numiktests=1000 --iktype=translationdirection5d
+#openrave.py --database inversekinematics --robot=robotfiles/barrett-wam-sensors.zae --numiktests=1000 --iktype=translationdirection5d
+
+#openrave.py --database inversekinematics --robot=robotfiles/barrettsegway.robot.xml --freeindices=2 --numiktests=1000
+
+#openrave.py --database inversekinematics --robot=robotfiles/collada_robots_kawada-hironx.zae
+
+#openrave.py --database inversekinematics --robot=robotfiles/schunk-lwa3-dual.robot.xml --numiktests=1000
+
+#openrave.py --database inversekinematic --robot=robotfiles/fail2.robot.xml
+
+
+#openrave.py --database inversekinematics --robot=robotfiles/cmu-permma.zae \
+#            --numiktests=1000
+
+#openrave.py --database inversekinematics --robot=robotfiles/barrettsegway.robot.xml \
+    #            --numiktests=1000 --iktype=translationdirection5d
+
+#openrave.py --database inversekinematics --robot=robotfiles/barrettsegway.robot.xml
+
+# --iktype=translationdirection5d
+
+#unimation-pumaarm.zae
+
+#openrave.py --database inversekinematics --robot=sanyo.mujin.dae \
+#            --numiktests=1000 --iktype=translationdirection5d
+
+
+#openrave.py --database inversekinematics --robot=robotfiles/fail2.robot.xml \
+#            --numiktests=1000
+
+#openrave.py --database inversekinematics --robot=robotfiles/universalrobots-ur6-85-5-a.zae \case 
+    #                --numiktests=1000
+
+# openrave.py --database inversekinematics --robot=robotfiles/pr2-beta-sim.robot.xml --iktype=translationdirection5d
+
+#openrave.py --database inversekinematics --robot=./sanyo.mujin.dae --iktype=translationdirection5d --freeindices=5
+
+#openrave.py --database inversekinematics --robot=./irex2017cnc.mujin.dae --iktype=translationdirection5d #--freeindices=0
+
+# mimic joints
+# openrave.py --database inversekinematics --robot=./fanuc-M-410iB-140H.mujin.dae --iktype=translationdirection5d
+
+#openrave.py --database inversekinematics --robot=robotfiles/exactdynamics-manusarmleft.zae \
+    #            --numiktests=1000
+
+
+
+#openrave.py --database inversekinematics --robot=./nt_techno_scene.mujin.dae --iktype=translationxaxisangleznorm4d --numiktests=1000
+
+#openrave.py --database inversekinematics --robot=./okuma.mujin.dae --iktype=translationzaxisangle4d --numiktests=1000
+
+
+#openrave.py --database inversekinematics --robot=./hashimoto10dof_proper_origin.mujin.dae --iktype=translationzaxisangleynorm4d --freeindices=0 --numiktests=1000
+
+#openrave.py --database inversekinematics --robot=./hashimoto10dof_proper_origin.mujin.dae --iktype=translationzaxisangleynorm4d --freeindices=0 --numiktests=1000
+
+#openrave.py --database inversekinematics --robot=./hashimoto10dof_proper_origin.mujin.dae --iktype=translationxaxisangle4d --freeindices=0 --numiktests=1000
+
+#openrave.py --database inversekinematics --robot=./boltpicking_suction.mujin.dae --numiktests=1000
+
+#openrave.py --database inversekinematics --robot=./boltpicking_suction.mujin.dae --numiktests=1000 --iktype=translationdirection5d --freeindices=5
+
+#openrave.py --database inversekinematics --robot=./kawasaki-RS006L_mehul.mujin.dae --numiktests=1000 --iktype=translationdirection5d
+

@@ -129,6 +129,7 @@ public:
 
     /// \brief clears all current solutions, note that any memory addresses returned from \ref GetSolution will be invalidated.
     virtual void Clear() = 0;
+    virtual void Print() const = 0;
 };
 
 /// \brief holds function pointers for all the exported functions of ikfast
@@ -418,8 +419,8 @@ namespace IKFAST {
     
     std::sort(vecsols.begin(), vecsols.end(),
       [&order](const ikfast::IkSolution<T>& a, const ikfast::IkSolution<T>& b) {
-        for(std::vector<uint32_t>::const_reverse_iterator it = order.rbegin();
-          it != order.rend();
+        for(std::vector<uint32_t>::const_iterator it = order.begin();
+          it != order.end();
           ++it) {
           uint32_t i = *it;
           const T x = a.get(i).foffset;
