@@ -53,24 +53,17 @@ template <typename T>
 class IkSingleDOFSolutionBase
 {
 public:
-    IkSingleDOFSolutionBase() : fmul(0), foffset(0), freeind(-1), jointtype(0x01), maxsolutions(1) {
-        indices[0] = indices[1] = indices[2] = indices[3] = indices[4] = -1;
+    IkSingleDOFSolutionBase() {
+        indices[0] = indices[1] = indices[2] = indices[3] = indices[4] = (unsigned char) -1;
     }
-    T fmul, foffset; ///< joint value is fmul*sol[freeind]+foffset
-    signed char freeind; ///< if >= 0, mimics another joint
-    unsigned char jointtype; ///< joint type, 0x01 is revolute, 0x11 is slider
-    unsigned char maxsolutions; ///< max possible indices, 0 if controlled by free index or a free joint itself
+  
+    T fmul = 0.0, foffset = 0.0; ///< joint value is fmul*sol[freeind]+foffset
+    signed char freeind = -1; ///< if >= 0, mimics another joint
+    unsigned char jointtype = 0x01; ///< joint type, 0x01 is revolute, 0x11 is slider
+    unsigned char maxsolutions = 0; ///< max possible indices, 0 if controlled by free index or a free joint itself
     unsigned char indices[5]; ///< unique index of the solution used to keep track on what part it came from. sometimes a solution can be repeated for different indices. store at least another repeated root
-  void Set(signed char freeind_in, T foffset_in, T fmul_in, unsigned char index4 = -1) {
-    fmul = fmul_in; foffset = foffset_in; freeind = freeind_in;
-    indices[4] = index4; // temporarily put here; (unsigned char) -2 if free on its own
-  }
-  void SetIndex(unsigned char maxsolutions_in, unsigned char index0) {
-    indices[0] = index0;
-    maxsolutions = maxsolutions_in;
-  }
-
-  T GetOffset() const { return foffset; }
+  
+    T GetOffset() const { return foffset; }
 virtual void Print() const {
       std::cout << "(" << ((jointtype == 0x01) ? "R" : "P") << ", "
                 << (int)freeind << "), (" << foffset << ", "
@@ -181,11 +174,18 @@ public:
         _vfree = vfree;
     }
 
-    IkSolution(const std::vector<T>& vtrial, uint32_t nvars) {
-      assert(vtrial.size() > nvars);
-      _vbasesol = std::vector<IkSingleDOFSolutionBase<T>>(nvars);
+    IkSolution() {}
+  
+    IkSolution(const std::vector<T>& v, uint32_t nvars) {
+      this->SetSolution(v, nvars);
+    }
+
+    void SetSolution(const std::vector<T>& v, uint32_t nvars) {
+      assert(v.size() > nvars);
+      _vbasesol.clear();    
+      _vbasesol.resize(nvars);
       for(uint32_t i = 0; i < nvars; i++) {
-        _vbasesol[i].foffset = vtrial[i];
+        _vbasesol[i].foffset = v[i];
       }
     }
 
@@ -272,17 +272,6 @@ public:
   void SetFree(std::vector<int> vfree) {
     _vfree = std::move(vfree);
   }
-  
-  // void DeriveFreeIndices() {
-  //   _vfree.clear();
-  //   for(uint32_t i = 0; i < _vbasesol.size(); i++) {
-  //     auto &v = _vbasesol[i];
-  //     if(v.indices[4] == (unsigned char) -2) {
-  //       _vfree.push_back(i);
-  //       v.indices[4] = (unsigned char) -1;
-  //     }
-  //   }
-  // }
 
   bool HasFreeIndices() const { return !_vfree.empty(); }
 
@@ -406,7 +395,7 @@ namespace IKFAST {
       mimicjointsoln.indices[0] = (unsigned char) -1;
 
       // update _vfree
-      solnobj.SetFree({freejoint});
+      solnobj.SetFree({(int) freejoint});
     }
   };
 
@@ -444,8 +433,8 @@ namespace IKFAST {
       });
 
     // initialize
-    for (uint32_t i = 0; i < nallvars; i++) {
-      vecsols[0][i].indices[0] = (unsigned char) 0;
+    for (uint32_t i = 0; i < nvars; i++) {
+      vecsols[0][order[i]].indices[0] = (unsigned char) 0;
     }
     std::vector<uint32_t> count(nvars, 0);
 
