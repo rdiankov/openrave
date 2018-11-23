@@ -50,6 +50,8 @@
 /// if 0x10000000 bit is set, then the iksolver assumes 6D transforms are done without the manipulator offset taken into account (allows to reuse IK when manipulator offset changes)
 #define IKFAST_VERSION 0x1000004b
 
+#define IKSINGLEDOFSOLUTIONBASE_INDICES_SIZE 5
+
 namespace ikfast {
 
 /// \brief holds the solution for a single dof
@@ -58,20 +60,20 @@ class IkSingleDOFSolutionBase
 {
 public:
     IkSingleDOFSolutionBase() {
-        indices[0] = indices[1] = indices[2] = indices[3] = indices[4] = (unsigned char) -1;
+      std::fill(indices, indices + IKSINGLEDOFSOLUTIONBASE_INDICES_SIZE, (unsigned char) -1);
     }
   
     T fmul = 0.0, foffset = 0.0; ///< joint value is fmul*sol[freeind]+foffset
     signed char freeind = -1; ///< if >= 0, mimics another joint
     unsigned char jointtype = 0x01; ///< joint type, 0x01 is revolute, 0x11 is slider
     unsigned char maxsolutions = 0; ///< max possible indices, 0 if controlled by free index or a free joint itself
-    unsigned char indices[5]; ///< unique index of the solution used to keep track on what part it came from. sometimes a solution can be repeated for different indices. store at least another repeated root
+    unsigned char indices[IKSINGLEDOFSOLUTIONBASE_INDICES_SIZE]; ///< unique index of the solution used to keep track on what part it came from. sometimes a solution can be repeated for different indices. store at least another repeated root
   
 virtual void Print() const {
       std::cout << "(" << ((jointtype == 0x01) ? "R" : "P") << ", "
                 << (int)freeind << "), (" << foffset << ", "
                 << fmul << "), " << (unsigned int) maxsolutions << " (";
-      for(unsigned int i = 0; i < 5; i++) {
+      for(unsigned int i = 0; i < IKSINGLEDOFSOLUTIONBASE_INDICES_SIZE; i++) {
           std::cout << (unsigned int) indices[i] << ", ";
       }
       std::cout << ") " << std::endl;
