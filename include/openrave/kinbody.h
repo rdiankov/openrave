@@ -2318,7 +2318,7 @@ private:
         \param body body to release
      */
     void Release(KinBodyPtr body) RAVE_DEPRECATED {
-        return Release(*body);
+        Release(*body);
     }
     virtual void Release(KinBody &body);
 
@@ -2326,7 +2326,7 @@ private:
     virtual void ReleaseAllGrabbed();     ///< release all bodies
 
     void ReleaseAllGrabbedWithLink(LinkPtr pBodyLinkToGrabWith) {
-        return ReleaseAllGrabbedWithLink(*pBodyLinkToGrabWith);
+        ReleaseAllGrabbedWithLink(*pBodyLinkToGrabWith);
     }
     virtual void ReleaseAllGrabbedWithLink(const KinBody::Link& bodyLinkToGrabWith);
 
