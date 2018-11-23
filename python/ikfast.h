@@ -30,7 +30,6 @@
    - IKFAST_NAMESPACE - Enclose all functions and classes in this namespace, the ``main`` function is excluded.
 
  */
-#include <cassert>
 #include <algorithm>
 #include <vector>
 #include <list>
@@ -38,6 +37,11 @@
 #include <cmath>
 #include <iostream>
 #include <iomanip>
+
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
+#include <cassert>
 
 #ifndef IKFAST_HEADER_COMMON
 #define IKFAST_HEADER_COMMON
@@ -71,7 +75,7 @@ virtual void Print() const {
           std::cout << (unsigned int) indices[i] << ", ";
       }
       std::cout << ") " << std::endl;
-    }  
+    }
 };
 
 /// \brief The discrete solutions are returned in this structure.
@@ -419,30 +423,20 @@ namespace IKFAST {
     for(auto& vecsol : vecsols) {
       assert(vecsol.GetDOF() == nallvars);
     }
-    
+
     std::sort(vecsols.begin(), vecsols.end(),
               [&order](const ikfast::IkSolution<T>& a, const ikfast::IkSolution<T>& b) {
                 for(std::vector<uint32_t>::const_iterator it = order.begin(); it != order.end(); ++it) {
-                  assert( !( &a == nullptr ||  &b == nullptr ) );
-                  std::cout << "a.GetDOF() = " << a.GetDOF() << ", b.GetDOF() = " << b.GetDOF() << std::endl;
-                  if ( a.get(*it).foffset < b.get(*it).foffset ) {
-                    return true;
+                  uint32_t i = *it;
+                  const T x = a.get(i).foffset;
+                  const T y = b.get(i).foffset;
+                  if (x != y) {
+                    return x < y;
                   }
                 }
                 return false;
-              }
-      );
-
-    // for(std::vector<uint32_t>::const_reverse_iterator it = order.rbegin();
-    //     it != order.rend(); ++it ) {
-    //   uint32_t i = *it;
-    //   std::stable_sort(vecsols.begin(), vecsols.end(),
-    //             [&](const ikfast::IkSolution<T>& a, const ikfast::IkSolution<T>& b) {
-    //                return a.get(i).foffset < b.get(i).foffset;
-    //             });
-    // } 
- 
-
+              });
+    
     // initialize
     for (uint32_t i = 0; i < nvars; i++) {
       vecsols[0][order[i]].indices[0] = (unsigned char) 0;
