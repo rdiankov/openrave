@@ -413,77 +413,72 @@ namespace IKFAST {
   }
 
   template <typename T>
-  void DeriveSolutionIndices(std::vector<ikfast::IkSolution<T>>& vecsols, const std::vector<uint32_t>& order) {
+  void DeriveSolutionIndices(std::vector<ikfast::IkSolution<T>>& vecsols, const std::vector<uint32_t>& jointorder) {
     if( vecsols.empty() ) {
       return;
     }
-    const uint32_t nallvars = vecsols[0].GetDOF(), nvars = order.size();
+    const uint32_t nallvars = vecsols[0].GetDOF(), nvars = jointorder.size(), numsolns = vecsols.size();
     assert(nvars <= nallvars);
-
     for(auto& vecsol : vecsols) {
       assert(vecsol.GetDOF() == nallvars);
     }
 
     std::sort(vecsols.begin(), vecsols.end(),
-              [&order](const ikfast::IkSolution<T>& a, const ikfast::IkSolution<T>& b) {
-                for(std::vector<uint32_t>::const_iterator it = order.begin(); it != order.end(); ++it) {
+              [&jointorder](const ikfast::IkSolution<T>& a, const ikfast::IkSolution<T>& b) {
+                for(std::vector<uint32_t>::const_iterator it = jointorder.begin(); it != jointorder.end(); ++it) {
                   uint32_t i = *it;
-                  const T x = a.get(i).foffset;
-                  const T y = b.get(i).foffset;
-                  if (x != y) {
-                    return x < y;
-                  }
+                  const T x = a.get(i).foffset, y = b.get(i).foffset;
+                  if (x != y) { return x < y; }
                 }
                 return false;
               });
     
     // initialize
     for (uint32_t i = 0; i < nvars; i++) {
-      vecsols[0][order[i]].indices[0] = (unsigned char) 0;
+      vecsols[0][jointorder[i]].indices[0] = (unsigned char) 0;
     }
     std::vector<uint32_t> count(nvars, 0);
 
     // derive solution indices for each joint and maxsolutions
-    for(uint32_t si = 1; si < vecsols.size(); si++){
+    for(uint32_t si = 1; si < numsolns; si++){
       bool index_determined = false;
       const ikfast::IkSolution<T> &prevsol = vecsols[si-1];
       ikfast::IkSolution<T> &cursol = vecsols[si];
-      for (uint32_t oi = 0; oi < nvars; oi++) {
-        uint32_t index = order[oi];
-        if(index_determined) {
-          cursol[index].indices[0] = (unsigned char) 0;
-          uint32_t oldsi = count[oi];
-          count[oi] = si;
-          uint32_t maxsolni = prevsol.get(index).indices[0] + 1;
+      
+      for (uint32_t varindex = 0; varindex < nvars; varindex++) {
+        const uint32_t jointindex = jointorder[varindex];
+        const uint32_t lastindex = prevsol.get(jointindex).indices[0];
+        
+        if( index_determined ) {
+          const uint32_t oldsi = count[varindex], maxsolni = lastindex + 1;
+          count[varindex] = si;
+          cursol[jointindex].indices[0] = (unsigned char) 0;
           for(uint32_t sii = oldsi; sii < si; sii++) {
-            vecsols[sii][index].maxsolutions = (unsigned char) maxsolni;
+            vecsols[sii][jointindex].maxsolutions = (unsigned char) maxsolni;
           }
         }
+        else if ( cursol[jointindex].foffset > prevsol.get(jointindex).foffset ) {
+          cursol[jointindex].indices[0] = (unsigned char) (lastindex + 1);
+          index_determined = true;
+        }
         else {
-          if(cursol[index].foffset > prevsol.get(index).foffset) {
-            cursol[index].indices[0] = (unsigned char) (prevsol.get(index).indices[0] + 1);
-            index_determined = true;
-          }
-          else {
-            cursol[index].indices[0] = (unsigned char) prevsol.get(index).indices[0];
-          }
+          cursol[jointindex].indices[0] = (unsigned char) lastindex;
         }
       }
     }
 
     // last round of deriving maxsolutions
-    uint32_t numsolns = vecsols.size();
     const ikfast::IkSolution<T> &cursol = vecsols[numsolns-1];    
-    for (uint32_t oi = 0; oi < order.size(); oi++) {
-      uint32_t index = order[oi],
-        oldsi = count[oi],
-        maxsolni = cursol.get(index).indices[0] + 1;
+    for (uint32_t varindex = 0; varindex < nvars; varindex++) {
+      const uint32_t jointindex = jointorder[varindex],
+        oldsi = count[varindex],
+        maxsolni = cursol.get(jointindex).indices[0] + 1;
       for(uint32_t sii = oldsi; sii < numsolns; sii++) {
-        vecsols[sii][index].maxsolutions = (unsigned char) maxsolni;
+        vecsols[sii][jointindex].maxsolutions = (unsigned char) maxsolni;
       }
     }
 
-    // 
+    // set free & mimic joints to have 0 maxsolutions and index -1
     for(auto& vecsol : vecsols) {
       if(!vecsol._vfree.empty()) {
         for(uint32_t i = 0; i < nallvars; i++) {
