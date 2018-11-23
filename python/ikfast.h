@@ -63,7 +63,6 @@ public:
     unsigned char maxsolutions = 0; ///< max possible indices, 0 if controlled by free index or a free joint itself
     unsigned char indices[5]; ///< unique index of the solution used to keep track on what part it came from. sometimes a solution can be repeated for different indices. store at least another repeated root
   
-    T GetOffset() const { return foffset; }
 virtual void Print() const {
       std::cout << "(" << ((jointtype == 0x01) ? "R" : "P") << ", "
                 << (int)freeind << "), (" << foffset << ", "
@@ -416,21 +415,33 @@ namespace IKFAST {
     }
     const uint32_t nallvars = vecsols[0].GetDOF(), nvars = order.size();
     assert(nvars <= nallvars);
+
+    for(auto& vecsol : vecsols) {
+      assert(vecsol.GetDOF() == nallvars);
+    }
     
     std::sort(vecsols.begin(), vecsols.end(),
-      [&order](const ikfast::IkSolution<T>& a, const ikfast::IkSolution<T>& b) {
-        for(std::vector<uint32_t>::const_iterator it = order.begin();
-          it != order.end();
-          ++it) {
-          uint32_t i = *it;
-          const T x = a.get(i).foffset;
-          const T y = b.get(i).foffset;
-          if (x != y) {
-            return x < y;
-          }
-        }
-        return true;
-      });
+              [&order](const ikfast::IkSolution<T>& a, const ikfast::IkSolution<T>& b) {
+                for(std::vector<uint32_t>::const_iterator it = order.begin(); it != order.end(); ++it) {
+                  assert( !( &a == nullptr ||  &b == nullptr ) );
+                  std::cout << "a.GetDOF() = " << a.GetDOF() << ", b.GetDOF() = " << b.GetDOF() << std::endl;
+                  if ( a.get(*it).foffset < b.get(*it).foffset ) {
+                    return true;
+                  }
+                }
+                return false;
+              }
+      );
+
+    // for(std::vector<uint32_t>::const_reverse_iterator it = order.rbegin();
+    //     it != order.rend(); ++it ) {
+    //   uint32_t i = *it;
+    //   std::stable_sort(vecsols.begin(), vecsols.end(),
+    //             [&](const ikfast::IkSolution<T>& a, const ikfast::IkSolution<T>& b) {
+    //                return a.get(i).foffset < b.get(i).foffset;
+    //             });
+    // } 
+ 
 
     // initialize
     for (uint32_t i = 0; i < nvars; i++) {
