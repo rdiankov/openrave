@@ -468,6 +468,9 @@ protected:
         ///
         /// \see GetParentLinks
         /// \param link The link to test if it is one of the parents of this link.
+        bool IsParentLink(boost::shared_ptr<Link const> plink) const RAVE_DEPRECATED {
+            return IsParentLink(*plink);
+        }
         virtual bool IsParentLink(const Link &link) const;
 
         /// \brief return center of mass offset in the link's local coordinate frame
@@ -602,6 +605,9 @@ protected:
         virtual bool ValidateContactNormal(const Vector& position, Vector& normal) const;
 
         /// \brief returns true if plink is rigidily attahced to this link.
+        bool IsRigidlyAttached(boost::shared_ptr<Link const> plink) const RAVE_DEPRECATED {
+            return IsRigidlyAttached(*plink);
+        }
         virtual bool IsRigidlyAttached(const Link &link) const;
 
         /// \brief Gets all the rigidly attached links to linkindex, also adds the link to the list.
@@ -750,6 +756,12 @@ public:
             uint8_t axis : 2;         ///< the axis of the joint index
             bool operator <(const DOFFormat& r) const;
             bool operator ==(const DOFFormat& r) const;
+            boost::shared_ptr<Joint> GetJoint(KinBodyPtr parent) const RAVE_DEPRECATED {
+                return GetJoint(*parent);
+            }
+            boost::shared_ptr<Joint const> GetJoint(KinBodyConstPtr parent) const RAVE_DEPRECATED {
+                return GetJoint(*parent);
+            }
             boost::shared_ptr<Joint> GetJoint(KinBody &parent) const;
             boost::shared_ptr<Joint const> GetJoint(const KinBody &parent) const;
         };
@@ -2130,6 +2142,9 @@ private:
     //@}
     
     /// \return true if two bodies should be considered as one during collision (ie one is grabbing the other)
+    virtual bool IsAttached(KinBodyConstPtr body) const RAVE_DEPRECATED {
+        return IsAttached(*body);
+    }
     virtual bool IsAttached(const KinBody &body) const;
 
     /// \brief Recursively get all attached bodies of this body, including this body.
@@ -2302,11 +2317,17 @@ private:
 
         \param body body to release
      */
+    void Release(KinBodyPtr body) RAVE_DEPRECATED {
+        return Release(*body);
+    }
     virtual void Release(KinBody &body);
 
     /// Release all grabbed bodies.
     virtual void ReleaseAllGrabbed();     ///< release all bodies
 
+    void ReleaseAllGrabbedWithLink(LinkPtr pBodyLinkToGrabWith) {
+        return ReleaseAllGrabbedWithLink(*pBodyLinkToGrabWith);
+    }
     virtual void ReleaseAllGrabbedWithLink(const KinBody::Link& bodyLinkToGrabWith);
 
     /** \brief Releases and grabs all bodies, has the effect of recalculating all the initial collision with the bodies.
@@ -2319,6 +2340,9 @@ private:
 
         \param[in] body the body to check
      */
+    LinkPtr IsGrabbing(KinBodyConstPtr body) const RAVE_DEPRECATED {
+        return IsGrabbing(*body);
+    }
     virtual LinkPtr IsGrabbing(const KinBody &body) const;
 
     /** \brief gets all grabbed bodies of the body
