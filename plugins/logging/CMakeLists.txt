@@ -73,8 +73,8 @@ if( ENABLE_VIDEORECORDING )
 endif()
 
 add_library(logging SHARED ${logging_SOURCES})
-target_link_libraries(logging libopenrave ${FFMPEG_LIBRARIES})
-target_link_libraries(logging PRIVATE boost_assertion_failed)
+target_link_libraries(logging PUBLIC libopenrave ${FFMPEG_LIBRARIES}
+                              PRIVATE boost_assertion_failed)
 set_target_properties(logging PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
 install(TARGETS logging DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${PLUGINS_BASE})
 

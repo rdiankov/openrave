@@ -30,8 +30,8 @@ set_target_properties(libopenrave PROPERTIES OUTPUT_NAME openrave${OPENRAVE_LIBR
                                   CLEAN_DIRECT_OUTPUT 1
                                   COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} ${FPARSER_CXX_FLAGS} -DOPENRAVE_DLL_EXPORTS -DOPENRAVE_DLL"
                                   LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${FPARSER_LINK_FLAGS}")
-target_link_libraries(libopenrave ${openrave_libraries} ${FPARSER_LIBRARIES} ${Intl_LIBRARIES})
-target_link_libraries(libopenrave PRIVATE boost_assertion_failed)
+target_link_libraries(libopenrave PUBLIC ${openrave_libraries} ${FPARSER_LIBRARIES} ${Intl_LIBRARIES}
+                                  PRIVATE boost_assertion_failed)
 if( MSVC )
   install(TARGETS libopenrave EXPORT openrave-targets RUNTIME DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base LIBRARY DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base ARCHIVE DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}base)
 else()
@@ -74,8 +74,8 @@ if( OPT_STATIC )
                                            COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} ${FPARSER_CXX_FLAGS}"
                                            LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${FPARSER_LINK_FLAGS}")
   
-  target_link_libraries(libopenrave_static ${openrave_libraries} ${FPARSER_LIBRARIES})
-  target_link_libraries(libopenrave_static PRIVATE boost_assertion_failed)
+  target_link_libraries(libopenrave_static PUBLIC ${openrave_libraries} ${FPARSER_LIBRARIES}
+                                           PRIVATE boost_assertion_failed)
   add_dependencies(libopenrave_static interfacehashes_target openrave-md5)
   if( CRLIBM_FOUND )
     add_dependencies(libopenrave_static check_libm_accuracy-native) # forces check to be run before libopenrave is compilde
