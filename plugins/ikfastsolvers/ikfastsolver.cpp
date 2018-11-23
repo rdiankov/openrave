@@ -754,6 +754,22 @@ protected:
         return true;
     }
 
+    virtual bool SetFreeParameters(const std::vector<dReal>& pFreeParameters)
+    {
+        RobotBase::ManipulatorPtr pmanip(_pmanip);
+        RobotBasePtr probot = pmanip->GetRobot();
+        std::vector<dReal> values;
+        std::vector<dReal>::const_iterator itscale = _vfreeparamscales.begin();
+        BOOST_ASSERT(pFreeParameters.size() == _vfreeparams.size());
+        probot->GetDOFValues(values);
+        for(size_t i = 0; i < _vfreeparams.size(); ++i) {
+          values[pmanip->GetArmIndices()[_vfreeparams[i]]] = pFreeParameters[i] / (*itscale) + _qlower[_vfreeparams[i]];
+          ++itscale;
+        }
+        probot->SetDOFValues(values);
+        return true;
+    }
+
     virtual bool GetFreeIndices(std::vector<int>& vFreeIndices) const
     {
         vFreeIndices = _vfreeparams;
