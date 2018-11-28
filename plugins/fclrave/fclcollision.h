@@ -197,12 +197,12 @@ public:
         return _fclspace->GetGeometryGroup();
     }
 
-    void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname)
+    void SetBodyGeometryGroup(const KinBodyConstPtr &pbody, const std::string& groupname)
     {
         _fclspace->SetBodyGeometryGroup(pbody, groupname);
     }
 
-    const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const
+    const std::string& GetBodyGeometryGroup(const KinBodyConstPtr &pbody) const
     {
         return _fclspace->GetBodyGeometryGroup(*pbody);
     }
@@ -341,7 +341,7 @@ public:
         _fclspace->DestroyEnvironment();
     }
 
-    virtual bool InitKinBody(OpenRAVE::KinBodyPtr pbody)
+    virtual bool InitKinBody(const OpenRAVE::KinBodyPtr &pbody)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         FCLSpace::KinBodyInfoPtr pinfo = _fclspace->GetInfo(*pbody);
@@ -351,7 +351,7 @@ public:
         return !pinfo;
     }
 
-    virtual void RemoveKinBody(OpenRAVE::KinBodyPtr pbody)
+    virtual void RemoveKinBody(const OpenRAVE::KinBodyPtr &pbody)
     {
         // remove body from all the managers
         _bodymanagers.erase(std::make_pair(pbody.get(), (int)0));
@@ -362,14 +362,14 @@ public:
         _fclspace->RemoveUserData(pbody);
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(const KinBodyConstPtr &pbody1, CollisionReportPtr report = CollisionReportPtr())
     {
         START_TIMING_OPT(_statistics, "Body/Env",_options,pbody1->IsRobot());
         // TODO : tailor this case when stuff become stable enough
         return CheckCollision(pbody1, std::vector<KinBodyConstPtr>(), std::vector<LinkConstPtr>(), report);
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(const KinBodyConstPtr &pbody1, const KinBodyConstPtr &pbody2, CollisionReportPtr report = CollisionReportPtr())
     {
         START_TIMING_OPT(_statistics, "Body/Body",_options,(pbody1->IsRobot() || pbody2->IsRobot()));
         if( !!report ) {
@@ -412,14 +412,14 @@ public:
         }
     }
 
-    virtual bool CheckCollision(LinkConstPtr plink,CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(const LinkConstPtr &plink,CollisionReportPtr report = CollisionReportPtr())
     {
         START_TIMING_OPT(_statistics, "Link/Env",_options,false);
         // TODO : tailor this case when stuff become stable enough
         return CheckCollision(plink, std::vector<KinBodyConstPtr>(), std::vector<LinkConstPtr>(), report);
     }
 
-    virtual bool CheckCollision(LinkConstPtr plink1, LinkConstPtr plink2, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(const LinkConstPtr &plink1, const LinkConstPtr &plink2, CollisionReportPtr report = CollisionReportPtr())
     {
         START_TIMING_OPT(_statistics, "Link/Link",_options,false);
         if( !!report ) {
@@ -467,7 +467,7 @@ public:
         }
     }
 
-    virtual bool CheckCollision(LinkConstPtr plink, KinBodyConstPtr pbody,CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(const LinkConstPtr &plink, const KinBodyConstPtr &pbody,CollisionReportPtr report = CollisionReportPtr())
     {
         START_TIMING_OPT(_statistics, "Link/Body",_options,pbody->IsRobot());
 
@@ -521,7 +521,7 @@ public:
         }
     }
 
-    virtual bool CheckCollision(LinkConstPtr plink, std::vector<KinBodyConstPtr> const &vbodyexcluded, std::vector<LinkConstPtr> const &vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(const LinkConstPtr &plink, std::vector<KinBodyConstPtr> const &vbodyexcluded, std::vector<LinkConstPtr> const &vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())
     {
         if( !!report ) {
             report->Reset(_options);
@@ -556,7 +556,7 @@ public:
         }
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody, std::vector<KinBodyConstPtr> const &vbodyexcluded, std::vector<LinkConstPtr> const &vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(const KinBodyConstPtr &pbody, std::vector<KinBodyConstPtr> const &vbodyexcluded, std::vector<LinkConstPtr> const &vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())
     {
         if( !!report ) {
             report->Reset(_options);
@@ -599,13 +599,13 @@ public:
         }
     }
 
-    virtual bool CheckCollision(const RAY& ray, LinkConstPtr plink,CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(const RAY& ray, const LinkConstPtr &plink, CollisionReportPtr report = CollisionReportPtr())
     {
         RAVELOG_WARN("fcl doesn't support Ray collisions\n");
         return false; //TODO
     }
 
-    virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(const RAY& ray, const KinBodyConstPtr &pbody, CollisionReportPtr report = CollisionReportPtr())
     {
         RAVELOG_WARN("fcl doesn't support Ray collisions\n");
         return false; //TODO
@@ -617,7 +617,7 @@ public:
         return false; //TODO
     }
 
-    virtual bool CheckCollision(const OpenRAVE::TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) override
+    virtual bool CheckCollision(const OpenRAVE::TriMesh& trimesh, const KinBodyConstPtr &pbody, CollisionReportPtr report = CollisionReportPtr()) override
     {
         if( !!report ) {
             report->Reset(_options);
@@ -779,7 +779,7 @@ public:
         return query._bCollision;
     }
     
-    virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckStandaloneSelfCollision(const KinBodyConstPtr &pbody, CollisionReportPtr report = CollisionReportPtr())
     {
         START_TIMING_OPT(_statistics, "BodySelf",_options,pbody->IsRobot());
         if( !!report ) {
@@ -830,7 +830,7 @@ public:
         }
     }
 
-    virtual bool CheckStandaloneSelfCollision(LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckStandaloneSelfCollision(const LinkConstPtr &plink, CollisionReportPtr report = CollisionReportPtr())
     {
         START_TIMING_OPT(_statistics, "LinkSelf",_options,false);
         if( !!report ) {
@@ -1119,7 +1119,7 @@ private:
     }
 #endif
 
-    static LinkPair MakeLinkPair(LinkConstPtr plink1, LinkConstPtr plink2)
+    static LinkPair MakeLinkPair(const LinkConstPtr &plink1, const LinkConstPtr &plink2)
     {
         if( plink1.get() < plink2.get() ) {
             return make_pair(plink1, plink2);
@@ -1149,7 +1149,7 @@ private:
         return _CreateManagerFromBroadphaseAlgorithm(_broadPhaseCollisionManagerAlgorithm);
     }
 
-    FCLCollisionManagerInstance& _GetBodyManager(KinBodyConstPtr pbody, bool bactiveDOFs)
+    FCLCollisionManagerInstance& _GetBodyManager(const KinBodyConstPtr &pbody, bool bactiveDOFs)
     {
         _bParentlessCollisionObject = false;
         BODYMANAGERSMAP::iterator it = _bodymanagers.find(std::make_pair(pbody.get(), (int)bactiveDOFs));

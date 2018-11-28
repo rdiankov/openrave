@@ -192,7 +192,7 @@ public:
         _setInitializedBodies.clear();
     }
 
-    KinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr())
+    KinBodyInfoPtr InitKinBody(const KinBodyConstPtr &pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr())
     {
         if( !pinfo ) {
             pinfo.reset(new KinBodyInfo());
@@ -321,7 +321,7 @@ public:
     }
 
 
-    void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) {
+    void SetBodyGeometryGroup(const KinBodyConstPtr &pbody, const std::string& groupname) {
         if( HasNamedGeometry(*pbody, groupname) ) {
             // Save the already existing KinBodyInfoPtr for the old geometry group
             KinBodyInfoPtr poldinfo = GetInfo(*pbody);

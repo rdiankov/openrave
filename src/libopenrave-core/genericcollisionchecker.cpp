@@ -39,10 +39,10 @@ public:
     virtual void DestroyEnvironment() {
     }
 
-    virtual bool InitKinBody(KinBodyPtr pbody) {
+    virtual bool InitKinBody(const KinBodyPtr &pbody) {
         return true;
     }
-    virtual void RemoveKinBody(KinBodyPtr pbody) {
+    virtual void RemoveKinBody(const KinBodyPtr &pbody) {
     }
     virtual bool Enable(KinBodyConstPtr pbody, bool bEnable) {
         return true;
@@ -62,47 +62,47 @@ public:
         return true;
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr) {
+    virtual bool CheckCollision(const KinBodyConstPtr &pbody1, CollisionReportPtr) {
         return false;
     }
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr) {
+    virtual bool CheckCollision(const KinBodyConstPtr &pbody1, const KinBodyConstPtr &pbody2, CollisionReportPtr) {
         return false;
     }
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr) {
+    virtual bool CheckCollision(const KinBody::LinkConstPtr &plink, CollisionReportPtr) {
         return false;
     }
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr) {
+    virtual bool CheckCollision(const KinBody::LinkConstPtr &plink1, const KinBody::LinkConstPtr &plink2, CollisionReportPtr) {
         return false;
     }
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr) {
-        return false;
-    }
-
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr) {
-        return false;
-    }
-    virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr) {
+    virtual bool CheckCollision(const KinBody::LinkConstPtr &plink, const KinBodyConstPtr &pbody, CollisionReportPtr) {
         return false;
     }
 
-    virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr) {
+    virtual bool CheckCollision(const KinBody::LinkConstPtr &plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr) {
         return false;
     }
-    virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr) {
+    virtual bool CheckCollision(const KinBodyConstPtr &pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr) {
+        return false;
+    }
+
+    virtual bool CheckCollision(const RAY& ray, const KinBody::LinkConstPtr &plink, CollisionReportPtr) {
+        return false;
+    }
+    virtual bool CheckCollision(const RAY& ray, const KinBodyConstPtr &pbody, CollisionReportPtr) {
         return false;
     }
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr) {
         return false;
     }
 
-    virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr) {
+    virtual bool CheckCollision(const TriMesh& trimesh, const KinBodyConstPtr &pbody, CollisionReportPtr) {
         return false;
     }
     
-    virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr) {
+    virtual bool CheckStandaloneSelfCollision(const KinBodyConstPtr &pbody, CollisionReportPtr) {
         return false;
     }
-    virtual bool CheckStandaloneSelfCollision(KinBody::LinkConstPtr pbody, CollisionReportPtr) {
+    virtual bool CheckStandaloneSelfCollision(const KinBody::LinkConstPtr &pbody, CollisionReportPtr) {
         return false;
     }
 
