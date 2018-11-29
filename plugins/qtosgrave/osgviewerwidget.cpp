@@ -39,6 +39,7 @@ public:
         _bInSeekMode = false;
         _posgviewerwidget = osgviewerwidget;
         _pviewer = osgviewerwidget->GetViewer();
+        setAnimationTime(0.25);
     }
 
     void SetSeekMode(bool bInSeekMode) {
@@ -128,15 +129,17 @@ public:
 
     virtual bool handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
     {
+        if (osgGA::TrackballManipulator::handle(ea, us)) {
+            return true;
+        }
         switch( ea.getEventType() )
         {
-        case osgGA::GUIEventAdapter::DOUBLECLICK:
-            return handleMouseDoubleClick( ea, us );
+            case osgGA::GUIEventAdapter::DOUBLECLICK:
+                return handleMouseDoubleClick( ea, us );
 
-        default:
-            break;
+            default:
+                return false;
         }
-        return osgGA::TrackballManipulator::handle(ea, us);
     }
 
     bool setCenterByMousePointerIntersection( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
@@ -219,8 +222,6 @@ public:
     {
         SetSeekMode(false);
         if( !isAnimating() ) {
-            setAnimationTime(0.25);
-
             // get current transformation
             osg::Vec3d prevCenter, prevEye, prevUp;
             getTransformation( prevEye, prevCenter, prevUp );
@@ -234,8 +235,8 @@ public:
             BOOST_ASSERT( !!ad );
 
             // setup animation data and restore original transformation
+            ad->_eyemovement = (osg::Vec3d(_center) - prevEye) * 0.5;
             ad->start( osg::Vec3d(_center) - prevCenter, ea.getTime() );
-            ad->_eyemovement = (osg::Vec3d(_center) - prevEye)*0.5;
             setTransformation( prevEye, prevCenter, prevUp );
             return true;
         }
@@ -348,7 +349,6 @@ public:
         default:
             return false;
         }
-        return false;
     }
 
 private:
@@ -521,7 +521,6 @@ void QOSGViewerWidget::RestoreCursor()
     _osgviewer->getWindows(windows);
     for(osgViewer::Viewer::Windows::iterator itr = windows.begin(); itr != windows.end(); ++itr) {
         // can do (*itr)->setCursor(osgViewer::GraphicsWindow::HandCursor), but cursors are limited so have to use Qt
-        osgViewer::GraphicsWindowEmbedded* gw = dynamic_cast<osgViewer::GraphicsWindowEmbedded*>(*itr);
         QCursor _currentCursor;
         if( _bIsSelectiveActive ) {
             if( _draggerName == "TranslateTrackballDragger" ) {
@@ -1403,7 +1402,10 @@ void QOSGViewerWidget::mouseDoubleClickEvent(QMouseEvent *event)
     unsigned int button = qtOSGKeyEventTranslator.GetOSGButtonValue(event);
     SetKeyboardModifiers(event);
     GetSwitchedButtonValue(button);
-    _osgGraphicWindow->getEventQueue()->mouseDoubleButtonPress(event->x() * scale, event->y() * scale, button);
+    // OSG's event loop has 2 kinds of timestamp, one is frame reference time and the other is up time
+    // in order to properly handle event related to frame e.g. animation. need to create event using frame referece time
+    _osgGraphicWindow->getEventQueue()->mouseDoubleButtonPress(event->x() * scale, event->y() * scale, button,
+                                                               _osgviewer->getFrameStamp()->getReferenceTime());
 }
 
 void QOSGViewerWidget::wheelEvent(QWheelEvent *event)
