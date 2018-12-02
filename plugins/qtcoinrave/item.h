@@ -126,7 +126,7 @@ protected:
     };
 
     inline boost::shared_ptr<KinBodyItem> shared_kinbody() {
-        return boost::dynamic_pointer_cast<KinBodyItem>(shared_from_this());
+        return boost::static_pointer_cast<KinBodyItem>(shared_from_this());
     }
     inline boost::weak_ptr<KinBodyItem> weak_kinbody() {
         return shared_kinbody();

@@ -2079,7 +2079,7 @@ private:
                     continue;
                 }
 
-                KinBody::LinkPtr pgrabbinglink = pbody->IsGrabbing(*itgrabbed);
+                KinBody::LinkPtr pgrabbinglink = pbody->IsGrabbing(**itgrabbed);
                 if( !ptec ) {
                     domExtraRef pextra = daeSafeCast<domExtra>(piscene->add(COLLADA_ELEMENT_EXTRA));
                     pextra->setType("dynamic_rigid_constraints");

@@ -147,7 +147,7 @@ public:
 
                     if( grabbedbodies.size() > 0 ) {
                         FOREACH(itbody, grabbedbodies) {
-                            if( pmanip->IsGrabbing(*itbody) ) {
+                            if( pmanip->IsGrabbing(**itbody) ) {
                                 FOREACH(itlink, (*itbody)->GetLinks()) {
                                     globallinklist.push_back(*itlink);
                                 }
