@@ -153,9 +153,9 @@ public:
         _pCollisionChecker->SetGeometryGroup(groupname);
     }
 
-    void SetBodyGeometryGroup(PyKinBodyPtr pybody, const std::string& groupname)
+    bool SetBodyGeometryGroup(PyKinBodyPtr pybody, const std::string& groupname)
     {
-        _pCollisionChecker->SetBodyGeometryGroup(openravepy::GetKinBody(pybody), groupname);
+        return _pCollisionChecker->SetBodyGeometryGroup(openravepy::GetKinBody(pybody), groupname);
     }
 
     object GetGeometryGroup()
