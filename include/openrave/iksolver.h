@@ -193,7 +193,7 @@ public:
         \param[in] vFreeParameters is filled with GetNumFreeParameters() parameters in [0,1] range
         \return true if succeeded
      */
-    virtual bool SetFreeParameters(const std::vector<dReal>& vFreeParameters) = 0;
+    // virtual bool SetFreeParameters(const std::vector<dReal>& vFreeParameters) = 0;
 
     /** \brief Return a joint configuration for the given end effector transform.
 
