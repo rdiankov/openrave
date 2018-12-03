@@ -394,7 +394,7 @@ namespace IKFAST {
       freejointsoln.indices[0] = (unsigned char) -1;
 
       mimicjointsoln.fmul = bxpy ? (-1.0) : (1.0);
-      mimicjointsoln.foffset = v[freejoint] - v[mimicjoint] * mimicjointsoln.fmul;
+      mimicjointsoln.foffset = v[mimicjoint] - v[freejoint] * mimicjointsoln.fmul;
       mimicjointsoln.freeind = 0;
       mimicjointsoln.maxsolutions = 0;
       mimicjointsoln.indices[0] = (unsigned char) -1;
