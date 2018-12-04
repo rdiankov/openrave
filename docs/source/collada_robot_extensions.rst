@@ -378,6 +378,7 @@ Child Elements
   <bind_instance_geometry> | The geometry used for a particular link | 0 or more
   <ignore_link_pair> | Specifies two links pairs whose self-collision should not be checked | 0 or more
   <link_collision_state> | Contains a **common_bool_or_param_type** that specifies if a link should be used for collision or not. Can enable or disable it. | 0 or more
+  <link_visible_state> | Contains a **common_bool_or_param_type** that specifies if a link should be used for visible or not. Can enable or disable it. | 0 or more
 
 Attributes for <bind_instance_geometry>
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -415,11 +416,12 @@ Attributes for <link_collision_state>
 Details
 ~~~~~~~
 
-Convex decompositions can be defined by using one geometry per convex hull and attaching multiple geometries to the same link.
-
 <ignore_link_pair> tags help self-collision detection to help prune possibilities. The adjacency information is not just the neighboring links. It is also meant to prune any collisions between two links that *cannot* possibly happen if the robot maintains its joint limits. This information depends not only on the kinematics of the robot, but also on the geometry of every link. Also for triplets of joints j1, j2, j3 that intersect at a common axis, you would want to add (j1,j2),(j2,j3),(j1,j3).
 
 By default, all links are colliding unless turned off via **<link_collision_state>**.
+
+If **<link_collision_state>** is defined at the instance_articulated_system level, then it will do a AND operation with the **<link_collision_state>** defined at the articulated_system level to figure out the true collision of the objects.
+If **<link_visible_state>** is defined at the instance_articulated_system level, then it will do a AND operation with the **<link_visible_state>** defined at the articulated_system level to figure out the true visible of the objects.
 
 Example
 ~~~~~~~
@@ -453,6 +455,22 @@ Example
         </technique>
       </extra>
   </library_kinematics_models> 
+
+Attributes for <link_visible_state>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. csv-table::
+  :class: collada
+  :delim: |
+  :widths: 15, 15, 70
+
+  link | **xs:token** | Required. References the SID of a <link> defined in <kinematics_model>. One of the links defining the pair to be ignored.
+
+Details
+~~~~~~~
+
+By default, all links are visible unless turned off via **<link_visible_state>** or the geometry definition **<visible>** says so.
+
 
 .. _collada_geometry_info:
 

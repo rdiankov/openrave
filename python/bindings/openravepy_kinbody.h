@@ -161,11 +161,17 @@ public:
     object GetDOFVelocityLimits() const;
     object GetDOFAccelerationLimits() const;
     object GetDOFJerkLimits() const;
+    object GetDOFHardVelocityLimits() const;
+    object GetDOFHardAccelerationLimits() const;
+    object GetDOFHardJerkLimits() const;
     object GetDOFTorqueLimits() const;
     object GetDOFLimits(object oindices) const;
     object GetDOFVelocityLimits(object oindices) const;
     object GetDOFAccelerationLimits(object oindices) const;
     object GetDOFJerkLimits(object oindices) const;
+    object GetDOFHardVelocityLimits(object oindices) const;
+    object GetDOFHardAccelerationLimits(object oindices) const;
+    object GetDOFHardJerkLimits(object oindices) const;
     object GetDOFTorqueLimits(object oindices) const;
     object GetDOFMaxVel() const;
     object GetDOFMaxTorque() const;
@@ -204,6 +210,7 @@ public:
     object GetLinkAccelerations(object odofaccelerations, object oexternalaccelerations) const;
     object ComputeAABB(bool bEnabledOnlyLinks=false);
     object ComputeAABBFromTransform(object otransform, bool bEnabledOnlyLinks=false);
+    object ComputeLocalAABB(bool bEnabledOnlyLinks=false);
     object GetCenterOfMass() const;
     void Enable(bool bEnable);
     bool IsEnabled() const;
@@ -218,6 +225,9 @@ public:
     void SetDOFVelocityLimits(object o);
     void SetDOFAccelerationLimits(object o);
     void SetDOFJerkLimits(object o);
+    void SetDOFHardVelocityLimits(object o);
+    void SetDOFHardAccelerationLimits(object o);
+    void SetDOFHardJerkLimits(object o);
     void SetDOFTorqueLimits(object o);
     void SetDOFValues(object o);
     void SetTransformWithDOFValues(object otrans,object ojoints);

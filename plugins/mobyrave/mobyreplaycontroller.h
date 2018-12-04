@@ -817,12 +817,12 @@ private:
 
     inline boost::shared_ptr<MobyReplayController> shared_controller()
     {
-        return boost::dynamic_pointer_cast<MobyReplayController>(shared_from_this());
+        return boost::static_pointer_cast<MobyReplayController>(shared_from_this());
     }
 
     inline boost::shared_ptr<MobyReplayController const> shared_controller_const() const
     {
-        return boost::dynamic_pointer_cast<MobyReplayController const>(shared_from_this());
+        return boost::static_pointer_cast<MobyReplayController const>(shared_from_this());
     }
 
     inline boost::weak_ptr<MobyReplayController> weak_controller()

@@ -463,6 +463,7 @@ class AST:
         AddHalfTanValue = False
         dictequations = None
         presetcheckforzeros = None
+        checkEquationsUsed = True # if True then check equationsused at the end to make sure solution is consistent
         equationsused = None
         """Meaning of FeasibleIsZeros:
         If set to false, then solution is feasible only if all of these equations evalute to non-zero.
@@ -523,7 +524,11 @@ class AST:
         def getPresetCheckForZeros(self):
             return self.presetcheckforzeros
         def getEquationsUsed(self):
-            return self.equationsused
+            if self.checkEquationsUsed:
+                return self.equationsused
+            
+            return None
+        
         def GetZeroThreshold(self):
             return self.thresh
         
@@ -3009,6 +3014,10 @@ class IKFastSolver(AutoReloader):
         :return: Tlefttrans, NewLinks, Trighttrans
         """
         NewLinks = list(Links)
+        
+        if len(NewLinks) == 1:
+            return eye(4), NewLinks, eye(4)
+
         Trighttrans = eye(4)
         Trighttrans[0:3,3] = NewLinks[-2][0:3,0:3].transpose() * NewLinks[-2][0:3,3]
         Trot_with_trans = Trighttrans * NewLinks[-1]
@@ -3194,7 +3203,14 @@ class IKFastSolver(AutoReloader):
             AllEquations = self.buildEquationsFromRotation(T0links,Ree,rotvars,othersolvedvars)
             self.checkSolvability(AllEquations,rotvars,othersolvedvars)
             currotvars = rotvars[:]
+            
             rottree += self.SolveAllEquations(AllEquations,curvars=currotvars,othersolvedvars=othersolvedvars,solsubs=self.freevarsubs[:],endbranchtree=storesolutiontree)
+
+            if len(rotvars) < 3:
+                # since rotation variables are not enough for 3D rotation, do not check equations used
+                for ss in rottree:
+                    ss.checkEquationsUsed = False
+            
             # has to be after SolveAllEquations...?
             for i in range(3):
                 for j in range(3):
@@ -8294,7 +8310,11 @@ class IKFastSolver(AutoReloader):
                         s3 = self.trigsimp(s2,othersolvedvars)
                         s4 = self.SimplifyTransform(s3)
                         try:
-                            jointsolutions.append(2*atan(s4, evaluate=False)) # don't evalute since chances if this being a number is very low
+                            # check s4 == 0, becasue of a bug in evalf() funcion atan(0, evaluate=False).evalf() fails with NoneTypeError, https://github.com/sympy/sympy/pull/1021. Fixed in sympy version==0.7.2, currently using 0.7.1
+                            if s4 == 0:
+                                jointsolutions.append(2*atan(s4, evaluate=True))
+                            else:
+                                jointsolutions.append(2*atan(s4, evaluate=False)) # don't evalute since chances if this being a number is very low                                                          
                         except RuntimeError, e:
                             log.warn('got runtime error when taking atan: %s', e)
                     if all([self.isValidSolution(s) and s != S.Zero for s in jointsolutions]) and len(jointsolutions)>0:

@@ -468,7 +468,10 @@ protected:
         ///
         /// \see GetParentLinks
         /// \param link The link to test if it is one of the parents of this link.
-        virtual bool IsParentLink(boost::shared_ptr<Link const> plink) const;
+        bool IsParentLink(boost::shared_ptr<Link const> plink) const RAVE_DEPRECATED {
+            return IsParentLink(*plink);
+        }
+        virtual bool IsParentLink(const Link &link) const;
 
         /// \brief return center of mass offset in the link's local coordinate frame
         inline Vector GetLocalCOM() const {
@@ -602,7 +605,10 @@ protected:
         virtual bool ValidateContactNormal(const Vector& position, Vector& normal) const;
 
         /// \brief returns true if plink is rigidily attahced to this link.
-        virtual bool IsRigidlyAttached(boost::shared_ptr<Link const> plink) const;
+        bool IsRigidlyAttached(boost::shared_ptr<Link const> plink) const RAVE_DEPRECATED {
+            return IsRigidlyAttached(*plink);
+        }
+        virtual bool IsRigidlyAttached(const Link &link) const;
 
         /// \brief Gets all the rigidly attached links to linkindex, also adds the link to the list.
         ///
@@ -750,8 +756,14 @@ public:
             uint8_t axis : 2;         ///< the axis of the joint index
             bool operator <(const DOFFormat& r) const;
             bool operator ==(const DOFFormat& r) const;
-            boost::shared_ptr<Joint> GetJoint(KinBodyPtr parent) const;
-            boost::shared_ptr<Joint const> GetJoint(KinBodyConstPtr parent) const;
+            boost::shared_ptr<Joint> GetJoint(KinBodyPtr parent) const RAVE_DEPRECATED {
+                return GetJoint(*parent);
+            }
+            boost::shared_ptr<Joint const> GetJoint(KinBodyConstPtr parent) const RAVE_DEPRECATED {
+                return GetJoint(*parent);
+            }
+            boost::shared_ptr<Joint> GetJoint(KinBody &parent) const;
+            boost::shared_ptr<Joint const> GetJoint(const KinBody &parent) const;
         };
         struct DOFHierarchy
         {
@@ -791,8 +803,10 @@ public:
         boost::array<dReal,3> _vresolution;              ///< interpolation resolution
         boost::array<dReal,3> _vmaxvel;                  ///< the soft maximum velocity (rad/s) to move the joint when planning
         boost::array<dReal,3> _vhardmaxvel;              ///< the hard maximum velocity, robot cannot exceed this velocity. used for verification checking
-        boost::array<dReal,3> _vmaxaccel;                ///< the maximum acceleration (rad/s^2) of the joint
-        boost::array<dReal,3> _vmaxjerk;                 ///< the maximum jerk (rad/s^3) of the joint
+        boost::array<dReal,3> _vmaxaccel;                ///< the soft maximum acceleration (rad/s^2) of the joint
+        boost::array<dReal,3> _vhardmaxaccel;            ///< the hard maximum acceleration (rad/s^2), robot cannot exceed this acceleration. used for verification checking
+        boost::array<dReal,3> _vmaxjerk;                 ///< the soft maximum jerk (rad/s^3) of the joint
+        boost::array<dReal,3> _vhardmaxjerk;             ///< the hard maximum jerk (rad/s^3), robot cannot exceed this jerk. used for verification checking
         boost::array<dReal,3> _vmaxtorque;               ///< maximum torque (N.m, kg m^2/s^2) that should be applied to the joint. Usually this is computed from the motor nominal torque and gear ratio. Ignore if values are 0.
         boost::array<dReal,3> _vmaxinertia;             ///< maximum inertia (kg m^2) that the joint can exhibit. Usually this is set for safety reasons. Ignore if values are 0.
         boost::array<dReal,3> _vweights;                ///< the weights of the joint for computing distance metrics.
@@ -865,6 +879,16 @@ public:
         }
         inline dReal GetMaxJerk(int iaxis=0) const {
             return _info._vmaxjerk[iaxis];
+        }
+
+        inline dReal GetHardMaxVel(int iaxis=0) const {
+            return _info._vhardmaxvel[iaxis];
+        }
+        inline dReal GetHardMaxAccel(int iaxis=0) const {
+            return _info._vhardmaxaccel[iaxis];
+        }
+        inline dReal GetHardMaxJerk(int iaxis=0) const {
+            return _info._vhardmaxjerk[iaxis];
         }
 
         ///< \brief gets the max instantaneous torque of the joint
@@ -1043,6 +1067,42 @@ public:
 
         /// \brief \see GetJerkLimits
         virtual void SetJerkLimits(const std::vector<dReal>& vmax);
+
+        /** \brief Returns the hard max velocities of the joint
+
+            \param[out] the max vel
+            \param[in] bAppend if true will append to the end of the vector instead of erasing it
+         */
+        virtual void GetHardVelocityLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
+
+        virtual dReal GetHardVelocityLimit(int iaxis=0) const;
+
+        /// \brief \see GetHardVelocityLimits
+        virtual void SetHardVelocityLimits(const std::vector<dReal>& vmax);
+
+        /** \brief Returns the hard max accelerations of the joint
+
+            \param[out] the max accel
+            \param[in] bAppend if true will append to the end of the vector instead of erasing it
+         */
+        virtual void GetHardAccelerationLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
+
+        virtual dReal GetHardAccelerationLimit(int iaxis=0) const;
+
+        /// \brief \see GetHardAccelerationLimits
+        virtual void SetHardAccelerationLimits(const std::vector<dReal>& vmax);
+
+        /** \brief Returns the hard max jerks of the joint
+
+            \param[out] the max jerk
+            \param[in] bAppend if true will append to the end of the vector instead of erasing it
+         */
+        virtual void GetHardJerkLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
+
+        virtual dReal GetHardJerkLimit(int iaxis=0) const;
+
+        /// \brief \see GetHardJerkLimits
+        virtual void SetHardJerkLimits(const std::vector<dReal>& vmax);
 
         /** \brief Returns the max torques of the joint
 
@@ -1311,6 +1371,7 @@ public:
         }
         KinBodyPtr pbody; ///< pointer to the body. if using this, make sure the environment is locked.
         std::vector<Transform> vectrans; ///< \see KinBody::GetLinkTransformations
+        std::vector<uint8_t> vLinkEnableStates; ///< \see KinBody::GetLinkEnableStates
         std::vector<dReal> jointvalues; ///< \see KinBody::GetDOFValues
         std::string strname;         ///< \see KinBody::GetName
         std::string uri; ///< \see KinBody::GetURI
@@ -1556,6 +1617,21 @@ private:
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
     virtual void GetDOFJerkLimits(std::vector<dReal>& maxjerks, const std::vector<int>& dofindices = std::vector<int>()) const;
 
+    /// \brief Returns the hard max velocity for each DOF
+    ///
+    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void GetDOFHardVelocityLimits(std::vector<dReal>& maxvels, const std::vector<int>& dofindices = std::vector<int>()) const;
+
+    /// \brief Returns the hard max acceleration for each DOF
+    ///
+    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void GetDOFHardAccelerationLimits(std::vector<dReal>& maxaccels, const std::vector<int>& dofindices = std::vector<int>()) const;
+
+    /// \brief Returns the hard max jerk for each DOF
+    ///
+    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void GetDOFHardJerkLimits(std::vector<dReal>& maxjerks, const std::vector<int>& dofindices = std::vector<int>()) const;
+
     /// \brief Returns the max torque for each DOF
     virtual void GetDOFTorqueLimits(std::vector<dReal>& maxaccelerations) const;
 
@@ -1586,6 +1662,15 @@ private:
 
     /// \brief \see GetDOFJerkLimits
     virtual void SetDOFJerkLimits(const std::vector<dReal>& maxlimits);
+
+    /// \brief \see GetDOFHardVelocityLimits
+    virtual void SetDOFHardVelocityLimits(const std::vector<dReal>& maxlimits);
+
+    /// \brief \see GetDOFHardAccelerationLimits
+    virtual void SetDOFHardAccelerationLimits(const std::vector<dReal>& maxlimits);
+
+    /// \brief \see GetDOFHardJerkLimits
+    virtual void SetDOFHardJerkLimits(const std::vector<dReal>& maxlimits);
 
     /// \brief \see GetDOFTorqueLimits
     virtual void SetDOFTorqueLimits(const std::vector<dReal>& maxlimits);
@@ -1806,6 +1891,11 @@ private:
     /// \brief bEnabledOnlyLinks if true, will only count links that are enabled. By default this is false
     virtual AABB ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnlyLinks=false) const;
 
+    /// \brief returns an axis-aligned bounding box when body has identity transform
+    ///
+    /// Internally equivalent to ComputeAABBFromTransform(Transform(), ...)
+    virtual AABB ComputeLocalAABB(bool bEnabledOnlyLinks=false) const;
+    
     /// \brief Return the center of mass of entire robot in the world coordinate system.
     virtual Vector GetCenterOfMass() const;
 
@@ -2052,7 +2142,10 @@ private:
     //@}
     
     /// \return true if two bodies should be considered as one during collision (ie one is grabbing the other)
-    virtual bool IsAttached(KinBodyConstPtr body) const;
+    virtual bool IsAttached(KinBodyConstPtr body) const RAVE_DEPRECATED {
+        return IsAttached(*body);
+    }
+    virtual bool IsAttached(const KinBody &body) const;
 
     /// \brief Recursively get all attached bodies of this body, including this body.
     ///
@@ -2224,12 +2317,18 @@ private:
 
         \param body body to release
      */
-    virtual void Release(KinBodyPtr body);
+    void Release(KinBodyPtr body) RAVE_DEPRECATED {
+        Release(*body);
+    }
+    virtual void Release(KinBody &body);
 
     /// Release all grabbed bodies.
     virtual void ReleaseAllGrabbed();     ///< release all bodies
 
-    virtual void ReleaseAllGrabbedWithLink(LinkPtr pBodyLinkToGrabWith);
+    void ReleaseAllGrabbedWithLink(LinkPtr pBodyLinkToGrabWith) {
+        ReleaseAllGrabbedWithLink(*pBodyLinkToGrabWith);
+    }
+    virtual void ReleaseAllGrabbedWithLink(const KinBody::Link& bodyLinkToGrabWith);
 
     /** \brief Releases and grabs all bodies, has the effect of recalculating all the initial collision with the bodies.
 
@@ -2241,7 +2340,10 @@ private:
 
         \param[in] body the body to check
      */
-    virtual LinkPtr IsGrabbing(KinBodyConstPtr body) const;
+    LinkPtr IsGrabbing(KinBodyConstPtr body) const RAVE_DEPRECATED {
+        return IsGrabbing(*body);
+    }
+    virtual LinkPtr IsGrabbing(const KinBody &body) const;
 
     /** \brief gets all grabbed bodies of the body
 
@@ -2332,7 +2434,7 @@ protected:
     virtual void _PostprocessChangedParameters(uint32_t parameters);
 
     /// \brief Return true if two bodies should be considered as one during collision (ie one is grabbing the other)
-    virtual bool _IsAttached(KinBodyConstPtr body, std::set<KinBodyConstPtr>& setChecked) const;
+    virtual bool _IsAttached(const KinBody &body, std::set<KinBodyConstPtr>& setChecked) const;
 
     /// \brief adds an attached body
     virtual void _AttachBody(KinBodyPtr body);
@@ -2340,7 +2442,7 @@ protected:
     /// \brief removes an attached body
     ///
     /// \return true if body was successfully found and removed
-    virtual bool _RemoveAttachedBody(KinBodyPtr body);
+    virtual bool _RemoveAttachedBody(KinBody &body);
 
     virtual void _UpdateGrabbedBodies();
 

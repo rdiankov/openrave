@@ -83,9 +83,9 @@ void KinBody::Link::GetParentLinks(std::vector< boost::shared_ptr<Link> >& vPare
     }
 }
 
-bool KinBody::Link::IsParentLink(boost::shared_ptr<Link const> plink) const
+bool KinBody::Link::IsParentLink(const Link &link) const
 {
-    return find(_vParentLinks.begin(),_vParentLinks.end(),plink->GetIndex()) != _vParentLinks.end();
+    return find(_vParentLinks.begin(),_vParentLinks.end(), link.GetIndex()) != _vParentLinks.end();
 }
 
 /** _tMassFrame * PrincipalInertia * _tMassFrame.inverse()
@@ -436,22 +436,20 @@ void KinBody::Link::SetStringParameters(const std::string& key, const std::strin
     GetParent()->_PostprocessChangedParameters(Prop_LinkCustomParameters);
 }
 
-bool KinBody::Link::IsRigidlyAttached(boost::shared_ptr<Link const> plink) const
+bool KinBody::Link::IsRigidlyAttached(const Link &link) const
 {
-    return find(_vRigidlyAttachedLinks.begin(),_vRigidlyAttachedLinks.end(),plink->GetIndex()) != _vRigidlyAttachedLinks.end();
+    return find(_vRigidlyAttachedLinks.begin(),_vRigidlyAttachedLinks.end(),link.GetIndex()) != _vRigidlyAttachedLinks.end();
 }
 
 void KinBody::Link::UpdateInfo()
 {
-    if( _info._vgeometryinfos.size() != _vGeometries.size() ) {
-        // have to recompute the geometries
-        _info._vgeometryinfos.resize(_vGeometries.size());
-        for(size_t i = 0; i < _info._vgeometryinfos.size(); ++i) {
-            if( !_info._vgeometryinfos[i] ) {
-                _info._vgeometryinfos[i].reset(new KinBody::GeometryInfo());
-            }
-            *_info._vgeometryinfos[i] = _vGeometries[i]->GetInfo();
+    // always have to recompute the geometries
+    _info._vgeometryinfos.resize(_vGeometries.size());
+    for(size_t i = 0; i < _info._vgeometryinfos.size(); ++i) {
+        if( !_info._vgeometryinfos[i] ) {
+            _info._vgeometryinfos[i].reset(new KinBody::GeometryInfo());
         }
+        *_info._vgeometryinfos[i] = _vGeometries[i]->GetInfo();
     }
 }
 

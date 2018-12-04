@@ -368,7 +368,9 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
         _nDebugLevel = Level_Info;
         _nGlobalEnvironmentId = 0;
         _nDataAccessOptions = 0;
+#ifdef USE_CRLIBM
         _bcrlibmInit = false;
+#endif
         
         _mapinterfacenames[PT_Planner] = "planner";
         _mapinterfacenames[PT_Robot] = "robot";
