@@ -143,8 +143,10 @@ GraphHandlePtr QtOgreViewer::plot3(const float* ppoints, int nPoints, int stride
 
         Ogre::SceneNode* parentNode = _ogreWindow->GetMiscDrawNode(); // _ogreWindow->GetRootSceneNode();//
         Ogre::SceneNode* node = parentNode->createChildSceneNode();
-        // Do the mesh and mesh group name have to be unique?
-        Ogre::MeshPtr mesh = Ogre::MeshManager::getSingleton().createManual("plot3", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+        static uint32_t count = 0;
+        Ogre::MeshPtr mesh = Ogre::MeshManager::getSingleton().createManual(
+            "plot3" + std::to_string(count++),
+            Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
         Ogre::SubMesh* submesh = mesh->createSubMesh();
         submesh->mVao[Ogre::VpNormal].push_back(vao);
         submesh->mVao[Ogre::VpShadow].push_back(vao);
@@ -192,8 +194,10 @@ GraphHandlePtr QtOgreViewer::drawlinestrip(const float* ppoints, int nPoints, in
 
         Ogre::SceneNode* parentNode = _ogreWindow->GetMiscDrawNode();
         Ogre::SceneNode* node = parentNode->createChildSceneNode();
-        // Do the mesh and mesh group name have to be unique?
-        Ogre::MeshPtr mesh = Ogre::MeshManager::getSingleton().createManual("linelist", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+        static uint32_t count = 0;
+        Ogre::MeshPtr mesh = Ogre::MeshManager::getSingleton().createManual(
+            "drawlinestrip" + std::to_string(count++),
+            Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
         Ogre::SubMesh* submesh = mesh->createSubMesh();
         submesh->mVao[Ogre::VpNormal].push_back(vao);
         submesh->mVao[Ogre::VpShadow].push_back(vao);
@@ -260,8 +264,10 @@ GraphHandlePtr QtOgreViewer::drawlinelist(const float* ppoints, int nPoints, int
 
         Ogre::SceneNode* parentNode = _ogreWindow->GetMiscDrawNode();
         Ogre::SceneNode* node = parentNode->createChildSceneNode();
-        // Do the mesh and mesh group name have to be unique?
-        Ogre::MeshPtr mesh = Ogre::MeshManager::getSingleton().createManual("linelist", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+        static uint32_t count = 0;
+        Ogre::MeshPtr mesh = Ogre::MeshManager::getSingleton().createManual(
+            "linelist" + std::to_string(count++),
+            Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
         Ogre::SubMesh* submesh = mesh->createSubMesh();
         submesh->mVao[Ogre::VpNormal].push_back(vao);
         submesh->mVao[Ogre::VpShadow].push_back(vao);
@@ -287,7 +293,8 @@ GraphHandlePtr QtOgreViewer::drawbox(const RaveVector<float>& vpos, const RaveVe
         Ogre::HlmsManager *hlmsManager = _ogreWindow->GetRoot()->getHlmsManager();
         // assert(dynamic_cast<Ogre::HlmsPbs*>( hlmsManager->getHlms( Ogre::HLMS_PBS ) ) );
         Ogre::HlmsPbs *hlmsPbs = static_cast<Ogre::HlmsPbs*>( hlmsManager->getHlms(Ogre::HLMS_PBS) );
-        const std::string datablockName = "box" + std::to_string(std::time(nullptr));
+        static uint32_t count = 0;
+        const std::string datablockName = "box" + std::to_string(count++);
         Ogre::HlmsPbsDatablock *datablock = static_cast<Ogre::HlmsPbsDatablock*>(
             hlmsPbs->createDatablock(datablockName, datablockName,
                                      Ogre::HlmsMacroblock(),

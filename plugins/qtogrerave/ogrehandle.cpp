@@ -92,23 +92,10 @@ OgreNodeHandle::OgreNodeHandle(Ogre::Root *root, Ogre::SceneNode *parentNode, Op
                 break;
             }
             //  Geometry is defined like a Cylinder
-            case OpenRAVE::GT_Cylinder: {
-                RAVELOG_WARN("TODO: Implement cylinder");
-                #if 0
-                // make SoCylinder point towards z, not y
-                osg::Cylinder* cy = new osg::Cylinder();
-                cy->setRadius(orgeom->GetCylinderRadius());
-                cy->setHeight(orgeom->GetCylinderHeight());
-                osg::ref_ptr<osg::Geode> geode = new osg::Geode;
-                osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(cy);
-                geode->addDrawable(sd.get());
-                pgeometrydata->addChild(geode.get());
-                #endif
-                break;
-            }
-            //  Extract geometry from collision Mesh
+            case OpenRAVE::GT_Cylinder:
             case OpenRAVE::GT_Container:
             case OpenRAVE::GT_TriMesh: {
+                pGeom->InitCollisionMesh();
                 const OpenRAVE::TriMesh& oremesh = pGeom->GetCollisionMesh();
                 Ogre::RenderSystem *renderSystem = root->getRenderSystem();
                 Ogre::VaoManager *vaoManager = renderSystem->getVaoManager();

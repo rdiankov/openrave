@@ -25,7 +25,7 @@ static float* FormatPoints(const float* ppoints, int numPoints, int stride, Ogre
         4 * numPoints *  sizeof(float), Ogre::MEMCATEGORY_GEOMETRY));
     max[0] = max[1] = max[2] = std::numeric_limits<float>::min();
     min[0] = min[1] = min[2] = std::numeric_limits<float>::max();
-    for (size_t i = 0; i < 4 * numPoints; i += 4) {
+    for (int i = 0; i < 4 * numPoints; i += 4) {
         vpoints[i] = ppoints[0];
         vpoints[i + 1] = ppoints[1];
         vpoints[i + 2] = ppoints[2];

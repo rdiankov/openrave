@@ -396,8 +396,9 @@ void QtOgreWindow::mouseMoveEvent( QMouseEvent* e )
             //const Ogre::Vector3 intersection = transf.inverseAffine() * mouseRay.getPoint(result.distance);
             const Ogre::Vector3 intersection = mouseRay.getPoint(result.distance);
 
-            printf("%s (%f %f %f)\n", vResult[ui].movable->getParentSceneNode()->getName().c_str(),
-                   intersection[0], intersection[1], intersection[2]);
+            RAVELOG_INFO_FORMAT("%s (%f %f %f)\n",
+                vResult[ui].movable->getParentSceneNode()->getName().c_str() %
+               intersection[0] % intersection[1]% intersection[2]);
         }
     }
     // for (size_t ui = 0; ui < vResult.size(); ui++)
