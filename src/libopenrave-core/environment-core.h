@@ -251,7 +251,7 @@ public:
 
         // lock the environment
         {
-            EnvironmentMutex::scoped_lock lockenv(GetMutex());
+            EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
             _bEnableSimulation = false;
             if( !!_pPhysicsEngine ) {
                 _pPhysicsEngine->DestroyEnvironment();
@@ -315,7 +315,7 @@ public:
             }
         }
 
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
 
         if( !!_pPhysicsEngine ) {
             _pPhysicsEngine->DestroyEnvironment();
@@ -389,21 +389,21 @@ public:
     virtual void OwnInterface(InterfaceBasePtr pinterface)
     {
         CHECK_INTERFACE(pinterface);
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         _listOwnedInterfaces.push_back(pinterface);
     }
     virtual void DisownInterface(InterfaceBasePtr pinterface)
     {
         CHECK_INTERFACE(pinterface);
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         _listOwnedInterfaces.remove(pinterface);
     }
 
     virtual EnvironmentBasePtr CloneSelf(int options)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         boost::shared_ptr<Environment> penv(new Environment());
         penv->_Clone(boost::static_pointer_cast<Environment const>(shared_from_this()),options,false);
         return penv;
@@ -411,7 +411,7 @@ public:
 
     virtual void Clone(EnvironmentBaseConstPtr preference, int cloningoptions)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         _Clone(boost::static_pointer_cast<Environment const>(preference),cloningoptions,true);
     }
 
@@ -423,7 +423,7 @@ public:
             RAVELOG_WARN_FORMAT("Error %d with executing module %s", ret%module->GetXMLId());
         }
         else {
-            EnvironmentMutex::scoped_lock lockenv(GetMutex());
+            EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             _listModules.push_back(make_pair(module, cmdargs));
         }
@@ -459,7 +459,7 @@ public:
 
     virtual bool Load(const std::string& filename, const AttributesList& atts)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         OpenRAVEXMLParser::GetXMLErrorCount() = 0;
         if( _IsColladaURI(filename) ) {
             if( RaveParseColladaURI(shared_from_this(), filename, atts) ) {
@@ -504,7 +504,7 @@ public:
 
     virtual bool LoadData(const std::string& data, const AttributesList& atts)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         if( _IsColladaData(data) ) {
             return RaveParseColladaData(shared_from_this(), data, atts);
         }
@@ -513,7 +513,7 @@ public:
 
     virtual void Save(const std::string& filename, SelectionOptions options, const AttributesList& atts)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         std::list<KinBodyPtr> listbodies;
         switch(options) {
         case SO_Everything:
@@ -577,7 +577,7 @@ public:
             throw OPENRAVE_EXCEPTION_FORMAT("got invalid filetype %s, only support collada", filetype, ORE_InvalidArguments);
         }
 
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         std::list<KinBodyPtr> listbodies;
         switch(options) {
         case SO_Everything:
@@ -655,7 +655,7 @@ public:
 
     virtual void _AddKinBody(KinBodyPtr pbody, bool bAnonymous)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         CHECK_INTERFACE(pbody);
         if( !utils::IsValidName(pbody->GetName()) ) {
             throw openrave_exception(str(boost::format(_("kinbody name: \"%s\" is not valid"))%pbody->GetName()));
@@ -687,7 +687,7 @@ public:
 
     virtual void _AddRobot(RobotBasePtr robot, bool bAnonymous)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         CHECK_INTERFACE(robot);
         if( !robot->IsRobot() ) {
             throw openrave_exception(str(boost::format(_("kinbody \"%s\" is not a robot"))%robot->GetName()));
@@ -723,7 +723,7 @@ public:
 
     virtual void _AddSensor(SensorBasePtr psensor, bool bAnonymous)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         CHECK_INTERFACE(psensor);
         if( !utils::IsValidName(psensor->GetName()) ) {
             throw openrave_exception(str(boost::format(_("sensor name: \"%s\" is not valid"))%psensor->GetName()));
@@ -748,7 +748,7 @@ public:
 
     virtual bool Remove(InterfaceBasePtr pinterface)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         CHECK_INTERFACE(pinterface);
         switch(pinterface->GetInterfaceType()) {
         case PT_KinBody:
@@ -806,7 +806,7 @@ public:
 
     virtual bool RemoveKinBodyByName(const std::string& name)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         KinBodyPtr pbody;
         {
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
@@ -879,7 +879,7 @@ public:
 
     virtual bool SetPhysicsEngine(PhysicsEngineBasePtr pengine)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         if( !!_pPhysicsEngine ) {
             _pPhysicsEngine->DestroyEnvironment();
         }
@@ -925,7 +925,7 @@ public:
 
     virtual bool SetCollisionChecker(CollisionCheckerBasePtr pchecker)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         if( _pCurrentChecker == pchecker ) {
             return true;
         }
@@ -952,14 +952,14 @@ public:
 
     virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody1);
         return _pCurrentChecker->CheckCollision(pbody1,report);
     }
 
     virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody1);
         CHECK_COLLISION_BODY(pbody2);
         return _pCurrentChecker->CheckCollision(pbody1,pbody2,report);
@@ -967,14 +967,14 @@ public:
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report )
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
         return _pCurrentChecker->CheckCollision(plink,report);
     }
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink1->GetParent());
         CHECK_COLLISION_BODY(plink2->GetParent());
         return _pCurrentChecker->CheckCollision(plink1,plink2,report);
@@ -982,7 +982,7 @@ public:
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
         CHECK_COLLISION_BODY(pbody);
         return _pCurrentChecker->CheckCollision(plink,pbody,report);
@@ -990,27 +990,27 @@ public:
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
         return _pCurrentChecker->CheckCollision(plink,vbodyexcluded,vlinkexcluded,report);
     }
 
     virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
         return _pCurrentChecker->CheckCollision(pbody,vbodyexcluded,vlinkexcluded,report);
     }
 
     virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
         return _pCurrentChecker->CheckCollision(ray,plink,report);
     }
     virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
         return _pCurrentChecker->CheckCollision(ray,pbody,report);
     }
@@ -1021,21 +1021,21 @@ public:
 
     virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
         return _pCurrentChecker->CheckCollision(trimesh,pbody,report);
     }
 
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
         return _pCurrentChecker->CheckStandaloneSelfCollision(pbody,report);
     }
 
     virtual void StepSimulation(dReal fTimeStep)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
 
         uint64_t step = (uint64_t)ceil(1000000.0 * (double)fTimeStep);
         fTimeStep = (dReal)((double)step * 0.000001);
@@ -1143,7 +1143,7 @@ public:
 
     virtual void Triangulate(TriMesh& trimesh, KinBodyConstPtr pbody)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());     // reading collision data, so don't want anyone modifying it
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());     // reading collision data, so don't want anyone modifying it
         FOREACHC(it, pbody->GetLinks()) {
             trimesh.Append((*it)->GetCollisionData(), (*it)->GetTransform());
         }
@@ -1151,7 +1151,7 @@ public:
 
     virtual void TriangulateScene(TriMesh& trimesh, SelectionOptions options,const std::string& selectname)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         FOREACH(itbody, _vecbodies) {
             RobotBasePtr robot;
             if( (*itbody)->IsRobot() ) {
@@ -1197,7 +1197,7 @@ public:
 
     virtual RobotBasePtr ReadRobotURI(RobotBasePtr robot, const std::string& filename, const AttributesList& atts)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
 
         if( !!robot ) {
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
@@ -1283,7 +1283,7 @@ public:
 
     virtual RobotBasePtr ReadRobotData(RobotBasePtr robot, const std::string& data, const AttributesList& atts)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
 
         if( !!robot ) {
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
@@ -1340,7 +1340,7 @@ public:
 
     virtual KinBodyPtr ReadKinBodyURI(KinBodyPtr body, const std::string& filename, const AttributesList& atts)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
 
         if( !!body ) {
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
@@ -1424,7 +1424,7 @@ public:
 
     virtual KinBodyPtr ReadKinBodyData(KinBodyPtr body, const std::string& data, const AttributesList& atts)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
 
         if( !!body ) {
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
@@ -1481,7 +1481,7 @@ public:
     virtual InterfaceBasePtr ReadInterfaceURI(const std::string& filename, const AttributesList& atts)
     {
         try {
-            EnvironmentMutex::scoped_lock lockenv(GetMutex());
+            EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
             BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(),atts,false);
             if( !preader ) {
                 return InterfaceBasePtr();
@@ -1503,7 +1503,7 @@ public:
 
     virtual InterfaceBasePtr ReadInterfaceURI(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const AttributesList& atts)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         bool bIsColladaURI=false, bIsColladaFile=false, bIsXFile = false;
         if( _IsColladaURI(filename) ) {
             bIsColladaURI = true;
@@ -1584,7 +1584,7 @@ public:
 
     virtual InterfaceBasePtr ReadInterfaceData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
 
         // check for collada?
         BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), type, pinterface, RaveGetInterfaceName(type), atts);
@@ -1608,7 +1608,7 @@ public:
 
     virtual boost::shared_ptr<TriMesh> _ReadTrimeshURI(boost::shared_ptr<TriMesh> ptrimesh, const std::string& filename, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, const AttributesList& atts)
     {
-        //EnvironmentMutex::scoped_lock lockenv(GetMutex()); // don't lock!
+        //EnvironmentMutex::scoped_try_lock lockenv(GetMutex()); // don't lock!
         string filedata = RaveFindLocalFile(filename);
         if( filedata.size() == 0 ) {
             return boost::shared_ptr<TriMesh>();
@@ -1670,7 +1670,7 @@ public:
     /// \param[in] listGeometries geometry list to be filled
     virtual std::string _ReadGeometriesFile(std::list<KinBody::GeometryInfo>& listGeometries, const std::string& filename, const AttributesList& atts)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         string filedata = RaveFindLocalFile(filename);
         if( filedata.size() == 0 ) {
             return std::string();
@@ -1695,7 +1695,7 @@ public:
     virtual void _AddViewer(ViewerBasePtr pnewviewer)
     {
         CHECK_INTERFACE(pnewviewer);
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         BOOST_ASSERT(find(_listViewers.begin(),_listViewers.end(),pnewviewer) == _listViewers.end() );
         _CheckUniqueName(ViewerBaseConstPtr(pnewviewer),true);
@@ -1869,7 +1869,7 @@ public:
     virtual void StartSimulation(dReal fDeltaTime, bool bRealTime)
     {
         {
-            EnvironmentMutex::scoped_lock lockenv(GetMutex());
+            EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
             _bEnableSimulation = true;
             _fDeltaSimTime = fDeltaTime;
             _bRealTime = bRealTime;
@@ -1886,7 +1886,7 @@ public:
     virtual void StopSimulation(int shutdownthread=1)
     {
         {
-            EnvironmentMutex::scoped_lock lockenv(GetMutex());
+            EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
             _bEnableSimulation = false;
             _fDeltaSimTime = 1.0f;
         }
@@ -2009,7 +2009,7 @@ public:
 
     virtual void UpdatePublishedBodies(uint64_t timeout=0)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         if( timeout == 0 ) {
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             _UpdatePublishedBodies();
@@ -2119,13 +2119,13 @@ protected:
 
     virtual bool _ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         return OpenRAVEXMLParser::ParseXMLFile(preader, filename);
     }
 
     virtual bool _ParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        EnvironmentMutex::scoped_try_lock lockenv(GetMutex());
         return OpenRAVEXMLParser::ParseXMLData(preader, pdata);
     }
 
@@ -2204,7 +2204,7 @@ protected:
             listModules.clear();
         }
 
-        EnvironmentMutex::scoped_lock lock(GetMutex());
+        EnvironmentMutex::scoped_try_lock lock(GetMutex());
         //boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds); // why is this here? if locked, then KinBody::_ComputeInternalInformation freezes on GetBodyFromEnvironmentId call
 
         bool bCollisionCheckerChanged = false;
