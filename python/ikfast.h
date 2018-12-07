@@ -30,7 +30,6 @@
    - IKFAST_NAMESPACE - Enclose all functions and classes in this namespace, the ``main`` function is excluded.
 
  */
-#include <cassert>
 #include <algorithm>
 #include <vector>
 #include <list>
@@ -39,12 +38,19 @@
 #include <iostream>
 #include <iomanip>
 
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
+#include <cassert>
+
 #ifndef IKFAST_HEADER_COMMON
 #define IKFAST_HEADER_COMMON
 
 /// should be the same as ikfast.__version__
 /// if 0x10000000 bit is set, then the iksolver assumes 6D transforms are done without the manipulator offset taken into account (allows to reuse IK when manipulator offset changes)
 #define IKFAST_VERSION 0x1000004b
+
+#define IKSINGLEDOFSOLUTIONBASE_INDICES_SIZE 5
 
 namespace ikfast {
 
@@ -54,25 +60,24 @@ class IkSingleDOFSolutionBase
 {
 public:
     IkSingleDOFSolutionBase() {
-        indices[0] = indices[1] = indices[2] = indices[3] = indices[4] = (unsigned char) -1;
+      std::fill(indices, indices + IKSINGLEDOFSOLUTIONBASE_INDICES_SIZE, (unsigned char) -1);
     }
   
     T fmul = 0.0, foffset = 0.0; ///< joint value is fmul*sol[freeind]+foffset
     signed char freeind = -1; ///< if >= 0, mimics another joint
     unsigned char jointtype = 0x01; ///< joint type, 0x01 is revolute, 0x11 is slider
     unsigned char maxsolutions = 0; ///< max possible indices, 0 if controlled by free index or a free joint itself
-    unsigned char indices[5]; ///< unique index of the solution used to keep track on what part it came from. sometimes a solution can be repeated for different indices. store at least another repeated root
+    unsigned char indices[IKSINGLEDOFSOLUTIONBASE_INDICES_SIZE]; ///< unique index of the solution used to keep track on what part it came from. sometimes a solution can be repeated for different indices. store at least another repeated root
   
-    T GetOffset() const { return foffset; }
 virtual void Print() const {
       std::cout << "(" << ((jointtype == 0x01) ? "R" : "P") << ", "
                 << (int)freeind << "), (" << foffset << ", "
                 << fmul << "), " << (unsigned int) maxsolutions << " (";
-      for(unsigned int i = 0; i < 5; i++) {
+      for(unsigned int i = 0; i < IKSINGLEDOFSOLUTIONBASE_INDICES_SIZE; i++) {
           std::cout << (unsigned int) indices[i] << ", ";
       }
       std::cout << ") " << std::endl;
-    }  
+    }
 };
 
 /// \brief The discrete solutions are returned in this structure.
@@ -129,6 +134,7 @@ public:
 
     /// \brief clears all current solutions, note that any memory addresses returned from \ref GetSolution will be invalidated.
     virtual void Clear() = 0;
+    virtual void Print() const = 0;
 };
 
 /// \brief holds function pointers for all the exported functions of ikfast
@@ -388,7 +394,7 @@ namespace IKFAST {
       freejointsoln.indices[0] = (unsigned char) -1;
 
       mimicjointsoln.fmul = bxpy ? (-1.0) : (1.0);
-      mimicjointsoln.foffset = v[freejoint] - v[mimicjoint] * mimicjointsoln.fmul;
+      mimicjointsoln.foffset = v[mimicjoint] - v[freejoint] * mimicjointsoln.fmul;
       mimicjointsoln.freeind = 0;
       mimicjointsoln.maxsolutions = 0;
       mimicjointsoln.indices[0] = (unsigned char) -1;
@@ -409,75 +415,72 @@ namespace IKFAST {
   }
 
   template <typename T>
-  void DeriveSolutionIndices(std::vector<ikfast::IkSolution<T>>& vecsols, const std::vector<uint32_t>& order) {
+  void DeriveSolutionIndices(std::vector<ikfast::IkSolution<T>>& vecsols, const std::vector<uint32_t>& jointorder) {
     if( vecsols.empty() ) {
       return;
     }
-    const uint32_t nallvars = vecsols[0].GetDOF(), nvars = order.size();
+    const uint32_t nallvars = vecsols[0].GetDOF(), nvars = jointorder.size(), numsolns = vecsols.size();
     assert(nvars <= nallvars);
-    
-    std::sort(vecsols.begin(), vecsols.end(),
-      [&order](const ikfast::IkSolution<T>& a, const ikfast::IkSolution<T>& b) {
-        for(std::vector<uint32_t>::const_reverse_iterator it = order.rbegin();
-          it != order.rend();
-          ++it) {
-          uint32_t i = *it;
-          const T x = a.get(i).foffset;
-          const T y = b.get(i).foffset;
-          if (x != y) {
-            return x < y;
-          }
-        }
-        return true;
-      });
+    for(auto& vecsol : vecsols) {
+      assert(vecsol.GetDOF() == nallvars);
+    }
 
+    std::sort(vecsols.begin(), vecsols.end(),
+              [&jointorder](const ikfast::IkSolution<T>& a, const ikfast::IkSolution<T>& b) {
+                for(std::vector<uint32_t>::const_iterator it = jointorder.begin(); it != jointorder.end(); ++it) {
+                  uint32_t i = *it;
+                  const T x = a.get(i).foffset, y = b.get(i).foffset;
+                  if (x != y) { return x < y; }
+                }
+                return false;
+              });
+    
     // initialize
     for (uint32_t i = 0; i < nvars; i++) {
-      vecsols[0][order[i]].indices[0] = (unsigned char) 0;
+      vecsols[0][jointorder[i]].indices[0] = (unsigned char) 0;
     }
     std::vector<uint32_t> count(nvars, 0);
 
     // derive solution indices for each joint and maxsolutions
-    for(uint32_t si = 1; si < vecsols.size(); si++){
+    for(uint32_t si = 1; si < numsolns; si++){
       bool index_determined = false;
       const ikfast::IkSolution<T> &prevsol = vecsols[si-1];
       ikfast::IkSolution<T> &cursol = vecsols[si];
-      for (uint32_t oi = 0; oi < nvars; oi++) {
-        uint32_t index = order[oi];
-        if(index_determined) {
-          cursol[index].indices[0] = (unsigned char) 0;
-          uint32_t oldsi = count[oi];
-          count[oi] = si;
-          uint32_t maxsolni = prevsol.get(index).indices[0] + 1;
+      
+      for (uint32_t varindex = 0; varindex < nvars; varindex++) {
+        const uint32_t jointindex = jointorder[varindex];
+        const uint32_t lastindex = prevsol.get(jointindex).indices[0];
+        
+        if( index_determined ) {
+          const uint32_t oldsi = count[varindex], maxsolni = lastindex + 1;
+          count[varindex] = si;
+          cursol[jointindex].indices[0] = (unsigned char) 0;
           for(uint32_t sii = oldsi; sii < si; sii++) {
-            vecsols[sii][index].maxsolutions = (unsigned char) maxsolni;
+            vecsols[sii][jointindex].maxsolutions = (unsigned char) maxsolni;
           }
         }
+        else if ( cursol[jointindex].foffset > prevsol.get(jointindex).foffset ) {
+          cursol[jointindex].indices[0] = (unsigned char) (lastindex + 1);
+          index_determined = true;
+        }
         else {
-          if(cursol[index].foffset > prevsol.get(index).foffset) {
-            cursol[index].indices[0] = (unsigned char) (prevsol.get(index).indices[0] + 1);
-            index_determined = true;
-          }
-          else {
-            cursol[index].indices[0] = (unsigned char) prevsol.get(index).indices[0];
-          }
+          cursol[jointindex].indices[0] = (unsigned char) lastindex;
         }
       }
     }
 
     // last round of deriving maxsolutions
-    uint32_t numsolns = vecsols.size();
     const ikfast::IkSolution<T> &cursol = vecsols[numsolns-1];    
-    for (uint32_t oi = 0; oi < order.size(); oi++) {
-      uint32_t index = order[oi],
-        oldsi = count[oi],
-        maxsolni = cursol.get(index).indices[0] + 1;
+    for (uint32_t varindex = 0; varindex < nvars; varindex++) {
+      const uint32_t jointindex = jointorder[varindex],
+        oldsi = count[varindex],
+        maxsolni = cursol.get(jointindex).indices[0] + 1;
       for(uint32_t sii = oldsi; sii < numsolns; sii++) {
-        vecsols[sii][index].maxsolutions = (unsigned char) maxsolni;
+        vecsols[sii][jointindex].maxsolutions = (unsigned char) maxsolni;
       }
     }
 
-    // 
+    // set free & mimic joints to have 0 maxsolutions and index -1
     for(auto& vecsol : vecsols) {
       if(!vecsol._vfree.empty()) {
         for(uint32_t i = 0; i < nallvars; i++) {
