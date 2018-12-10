@@ -97,6 +97,9 @@ KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _
         _pbody->GetDOFVelocityLimits(_vMaxVelocities);
         _pbody->GetDOFAccelerationLimits(_vMaxAccelerations);
         _pbody->GetDOFJerkLimits(_vMaxJerks);
+        _pbody->GetDOFHardVelocityLimits(_vMaxHardVelocities);
+        _pbody->GetDOFHardAccelerationLimits(_vMaxHardAccelerations);
+        _pbody->GetDOFHardJerkLimits(_vMaxHardJerks);
     }
     if( _options & Save_JointWeights ) {
         _pbody->GetDOFWeights(_vDOFWeights);
@@ -214,6 +217,9 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
         pbody->SetDOFVelocityLimits(_vMaxVelocities);
         pbody->SetDOFAccelerationLimits(_vMaxAccelerations);
         pbody->SetDOFJerkLimits(_vMaxJerks);
+        pbody->SetDOFHardVelocityLimits(_vMaxHardVelocities);
+        pbody->SetDOFHardAccelerationLimits(_vMaxHardAccelerations);
+        pbody->SetDOFHardJerkLimits(_vMaxHardJerks);
     }
     if( _options & Save_LinkVelocities ) {
         pbody->SetLinkVelocities(_vLinkVelocities);
