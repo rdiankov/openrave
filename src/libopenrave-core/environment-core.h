@@ -1080,6 +1080,7 @@ public:
     }
 
     virtual EnvironmentMutex& GetMutex() const {
+        EnvironmentMutex::scoped_lock locknext(_mutexEnvironmentNext);
         return _mutexEnvironment;
     }
 
@@ -2570,9 +2571,11 @@ protected:
         RAVELOG_VERBOSE_FORMAT("starting simulation thread envid=%d", environmentid);
         while( _bInit && !_bShutdownSimulation ) {
             bool bNeedSleep = true;
+            boost::shared_ptr<EnvironmentMutex::scoped_lock> locklow;
             boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv;
             if( _bEnableSimulation ) {
                 bNeedSleep = false;
+                locklow.reset(new EnvironmentMutex::scoped_lock(_mutexEnvironmentLow));
                 lockenv = _LockEnvironmentWithTimeout(100000);
                 if( !!lockenv ) {
                     //Get deltasimtime in microseconds
@@ -2590,6 +2593,7 @@ protected:
                     if( _bRealTime ) {
                         if(( sleeptime > deltasimtime/tol) &&( sleeptime > 1000) ) {
                             lockenv.reset();
+                            locklow.reset();
                             // sleep for less time since sleep isn't accurate at all and we have a 7ms buffer
                             int actual_sleep=max((int)sleeptime*6/8,1000);
                             boost::this_thread::sleep (boost::posix_time::microseconds(actual_sleep));
@@ -2614,6 +2618,7 @@ protected:
 
             if( utils::GetMicroTime()-nLastSleptTime > 20000 ) {     // 100000 freezes the environment
                 lockenv.reset();
+                locklow.reset();
                 boost::this_thread::sleep(boost::posix_time::milliseconds(1));
                 bNeedSleep = false;
                 nLastSleptTime = utils::GetMicroTime();
@@ -2621,6 +2626,7 @@ protected:
 
             if( utils::GetMicroTime()-nLastUpdateTime > 10000 ) {
                 if( !lockenv ) {
+                    locklow.reset(new EnvironmentMutex::scoped_lock(_mutexEnvironmentLow));
                     lockenv = _LockEnvironmentWithTimeout(100000);
                 }
                 if( !!lockenv ) {
@@ -2637,6 +2643,7 @@ protected:
 
             //TODO: Verify if this always has to happen even if thread slept in RT if statement above
             lockenv.reset(); // always release at the end of loop to give other threads time
+            locklow.reset();
             if( bNeedSleep ) {
                 boost::this_thread::sleep(boost::posix_time::milliseconds(1));
             }
@@ -2788,6 +2795,7 @@ protected:
     boost::shared_ptr<boost::thread> _threadSimulation;                      ///< main loop for environment simulation
 
     mutable EnvironmentMutex _mutexEnvironment;          ///< protects internal data from multithreading issues
+    mutable EnvironmentMutex _mutexEnvironmentNext, _mutexEnvironmentLow;
     mutable boost::mutex _mutexEnvironmentIds;      ///< protects _vecbodies/_vecrobots from multithreading issues
     mutable boost::timed_mutex _mutexInterfaces;     ///< lock when managing interfaces like _listOwnedInterfaces, _listModules, _mapBodies
     mutable boost::mutex _mutexInit;     ///< lock for destroying the environment
