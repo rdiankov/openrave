@@ -1080,6 +1080,7 @@ public:
     }
 
     virtual EnvironmentMutex& GetMutex() const {
+        EnvironmentMutex::scoped_lock locknext(_mutexEnvironmentNext);
         return _mutexEnvironment;
     }
 
@@ -2570,11 +2571,13 @@ protected:
         RAVELOG_VERBOSE_FORMAT("starting simulation thread envid=%d", environmentid);
         while( _bInit && !_bShutdownSimulation ) {
             bool bNeedSleep = true;
-            boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv;
+            boost::shared_ptr<EnvironmentMutex::scoped_lock> locklow;
+            boost::shared_ptr<EnvironmentMutex::scoped_lock> lockenv;
             if( _bEnableSimulation ) {
                 bNeedSleep = false;
-                lockenv = _LockEnvironmentWithTimeout(100000);
-                if( !!lockenv ) {
+                locklow.reset(new EnvironmentMutex::scoped_lock(_mutexEnvironmentLow));
+                lockenv.reset(new EnvironmentMutex::scoped_lock(GetMutex()));
+                if( 1 ) {
                     //Get deltasimtime in microseconds
                     int64_t deltasimtime = (int64_t)(_fDeltaSimTime*1000000.0f);
                     try {
@@ -2589,6 +2592,7 @@ protected:
                     const int tol=2;
                     if( _bRealTime ) {
                         if(( sleeptime > deltasimtime/tol) &&( sleeptime > 1000) ) {
+                            locklow.reset();
                             lockenv.reset();
                             // sleep for less time since sleep isn't accurate at all and we have a 7ms buffer
                             int actual_sleep=max((int)sleeptime*6/8,1000);
@@ -2613,6 +2617,7 @@ protected:
             }
 
             if( utils::GetMicroTime()-nLastSleptTime > 20000 ) {     // 100000 freezes the environment
+                locklow.reset();
                 lockenv.reset();
                 boost::this_thread::sleep(boost::posix_time::milliseconds(1));
                 bNeedSleep = false;
@@ -2621,9 +2626,10 @@ protected:
 
             if( utils::GetMicroTime()-nLastUpdateTime > 10000 ) {
                 if( !lockenv ) {
-                    lockenv = _LockEnvironmentWithTimeout(100000);
+                    locklow.reset(new EnvironmentMutex::scoped_lock(_mutexEnvironmentLow));
+                    lockenv.reset(new EnvironmentMutex::scoped_lock(GetMutex()));
                 }
-                if( !!lockenv ) {
+                if( 1 ) {
                     nLastUpdateTime = utils::GetMicroTime();
                     // environment might be getting destroyed during this call, so to avoid a potential deadlock, add a timeout
                     try {
@@ -2636,6 +2642,7 @@ protected:
             }
 
             //TODO: Verify if this always has to happen even if thread slept in RT if statement above
+            locklow.reset();
             lockenv.reset(); // always release at the end of loop to give other threads time
             if( bNeedSleep ) {
                 boost::this_thread::sleep(boost::posix_time::milliseconds(1));
@@ -2657,28 +2664,6 @@ protected:
                 pdata->_callback(pbody, action);
             }
         }
-    }
-
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> _LockEnvironmentWithTimeout(uint64_t timeout)
-    {
-        // try to acquire the lock
-#if BOOST_VERSION >= 103500
-        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetMutex(),boost::defer_lock_t()));
-#else
-        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetMutex(),false));
-#endif
-        uint64_t basetime = utils::GetMicroTime();
-        while(utils::GetMicroTime()-basetime<timeout ) {
-            lockenv->try_lock();
-            if( !!*lockenv ) {
-                break;
-            }
-        }
-
-        if( !*lockenv ) {
-            lockenv.reset();
-        }
-        return lockenv;
     }
 
     static bool _IsColladaURI(const std::string& uri)
@@ -2788,6 +2773,7 @@ protected:
     boost::shared_ptr<boost::thread> _threadSimulation;                      ///< main loop for environment simulation
 
     mutable EnvironmentMutex _mutexEnvironment;          ///< protects internal data from multithreading issues
+    mutable EnvironmentMutex _mutexEnvironmentNext, _mutexEnvironmentLow;
     mutable boost::mutex _mutexEnvironmentIds;      ///< protects _vecbodies/_vecrobots from multithreading issues
     mutable boost::timed_mutex _mutexInterfaces;     ///< lock when managing interfaces like _listOwnedInterfaces, _listModules, _mapBodies
     mutable boost::mutex _mutexInit;     ///< lock for destroying the environment
