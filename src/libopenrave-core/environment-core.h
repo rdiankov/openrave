@@ -2592,8 +2592,8 @@ protected:
                     const int tol=2;
                     if( _bRealTime ) {
                         if(( sleeptime > deltasimtime/tol) &&( sleeptime > 1000) ) {
-                            locklow.reset();
                             lockenv.reset();
+                            locklow.reset();
                             // sleep for less time since sleep isn't accurate at all and we have a 7ms buffer
                             int actual_sleep=max((int)sleeptime*6/8,1000);
                             boost::this_thread::sleep (boost::posix_time::microseconds(actual_sleep));
@@ -2617,8 +2617,8 @@ protected:
             }
 
             if( utils::GetMicroTime()-nLastSleptTime > 20000 ) {     // 100000 freezes the environment
-                locklow.reset();
                 lockenv.reset();
+                locklow.reset();
                 boost::this_thread::sleep(boost::posix_time::milliseconds(1));
                 bNeedSleep = false;
                 nLastSleptTime = utils::GetMicroTime();
@@ -2642,8 +2642,8 @@ protected:
             }
 
             //TODO: Verify if this always has to happen even if thread slept in RT if statement above
-            locklow.reset();
             lockenv.reset(); // always release at the end of loop to give other threads time
+            locklow.reset();
             if( bNeedSleep ) {
                 boost::this_thread::sleep(boost::posix_time::milliseconds(1));
             }
