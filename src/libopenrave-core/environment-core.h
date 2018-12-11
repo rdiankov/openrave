@@ -2571,12 +2571,14 @@ protected:
         RAVELOG_VERBOSE_FORMAT("starting simulation thread envid=%d", environmentid);
         while( _bInit && !_bShutdownSimulation ) {
             bool bNeedSleep = true;
-            boost::shared_ptr<EnvironmentMutex::scoped_lock> locklow;
+            boost::shared_ptr<EnvironmentMutex::scoped_try_lock> locklow;
             boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv;
             if( _bEnableSimulation ) {
                 bNeedSleep = false;
-                locklow.reset(new EnvironmentMutex::scoped_lock(_mutexEnvironmentLow));
-                lockenv = _LockEnvironmentWithTimeout(100000);
+                locklow = _LockEnvironmentWithTimeout(100000,true);
+                if( !!locklow ) {
+                    lockenv = _LockEnvironmentWithTimeout(100000);
+                }
                 if( !!lockenv ) {
                     //Get deltasimtime in microseconds
                     int64_t deltasimtime = (int64_t)(_fDeltaSimTime*1000000.0f);
@@ -2626,8 +2628,10 @@ protected:
 
             if( utils::GetMicroTime()-nLastUpdateTime > 10000 ) {
                 if( !lockenv ) {
-                    locklow.reset(new EnvironmentMutex::scoped_lock(_mutexEnvironmentLow));
-                    lockenv = _LockEnvironmentWithTimeout(100000);
+                    locklow = _LockEnvironmentWithTimeout(100000,true);
+                    if( !!locklow ) {
+                        lockenv = _LockEnvironmentWithTimeout(100000);
+                    }
                 }
                 if( !!lockenv ) {
                     nLastUpdateTime = utils::GetMicroTime();
@@ -2666,13 +2670,14 @@ protected:
         }
     }
 
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> _LockEnvironmentWithTimeout(uint64_t timeout)
+    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> _LockEnvironmentWithTimeout(uint64_t timeout, bool locklow=false)
     {
+        EnvironmentMutex &mutex = locklow ? _mutexEnvironmentLow : GetMutex();
         // try to acquire the lock
 #if BOOST_VERSION >= 103500
-        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetMutex(),boost::defer_lock_t()));
+        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(mutex,boost::defer_lock_t()));
 #else
-        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetMutex(),false));
+        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(mutex,false));
 #endif
         uint64_t basetime = utils::GetMicroTime();
         while(utils::GetMicroTime()-basetime<timeout ) {
