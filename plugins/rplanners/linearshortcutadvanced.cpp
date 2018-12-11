@@ -335,7 +335,9 @@ protected:
         PlannerParametersConstPtr parameters = GetParameters();
         PlannerProgress progress;
         int ndof = parameters->GetDOF();
+        int itercount = 0;
         int nrejected = 0;
+        int numiters = parameters->_nMaxIterations;
         std::list< std::pair< std::vector<dReal>, dReal > >::iterator itstartnode, itendnode, itnode;
 
         std::list< std::pair< std::vector<dReal>, dReal > > listshortcutpath; // for keeping shortcut path
@@ -349,7 +351,8 @@ protected:
         ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
 #endif
 
-        for( int iiter = 0; iiter < parameters->_nMaxIterations; ++iiter ) {
+        for( int iiter = 0; iiter < numiters; ++iiter ) {
+            ++itercount;
             if( listpath.size() <= 2 ) {
                 return;
             }
@@ -366,7 +369,7 @@ protected:
                 continue;
             }
 #ifdef PROGRESS_DEBUG
-            RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, start shortcutting idof=%d with i0=%d; i1=%d", GetEnv()->GetId()%iiter%parameters->_nMaxIterations%idof%startIndex%endIndex);
+            RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, start shortcutting idof=%d with i0=%d; i1=%d", GetEnv()->GetId()%iiter%numiters%idof%startIndex%endIndex);
 #endif
 
             itstartnode = listpath.begin();
@@ -388,7 +391,7 @@ protected:
             if( RaveFabs(fExpectedDOFDistance) > fTotalDOFDistance - 0.1*parameters->_vConfigResolution.at(idof) ) {
                 // Even after a successful shortcut, the resulting path wouldn't be that much shorter. So skipping.
 #ifdef PROGRESS_DEBUG
-                RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, rejecting since it may not make significant improvement. originalDOFDistance=%.15e, expectedDOFDistance=%.15e, diff=%.15e, dofresolution=%.15e", GetEnv()->GetId()%iiter%parameters->_nMaxIterations%fTotalDOFDistance%fExpectedDOFDistance%(fTotalDOFDistance - fExpectedDOFDistance)%parameters->_vConfigResolution.at(idof));
+                RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, rejecting since it may not make significant improvement. originalDOFDistance=%.15e, expectedDOFDistance=%.15e, diff=%.15e, dofresolution=%.15e", GetEnv()->GetId()%iiter%numiters%fTotalDOFDistance%fExpectedDOFDistance%(fTotalDOFDistance - fExpectedDOFDistance)%parameters->_vConfigResolution.at(idof));
 #endif
                 continue;
             }

@@ -1340,13 +1340,20 @@ protected:
                         dist += fError*fError;
                     }
                     if( dist > distThresh ) {
-                        RAVELOG_DEBUG_FORMAT("env=%d, Adding extra midpoint between waypoints %d and %d, dist = %.15e", GetEnv()->GetId()%(iwaypoint - 1)%iwaypoint%dist);
+                        RAVELOG_DEBUG_FORMAT("env=%d, Adding extra midpoint between waypoints %d and %d, dist = %.15e", GetEnv()->GetId()%iwaypoint%(iwaypoint + 1)%dist);
                         vNewWaypoints.insert(vNewWaypoints.begin() + iwaypoint + 1, xmid);
                         vForceInitialChecking[iwaypoint + 1] = 1;
                         vForceInitialChecking.insert(vForceInitialChecking.begin() + iwaypoint + 1, 1);
                         nConsecutiveExpansions += 2;
                         if( nConsecutiveExpansions > nConsecutiveExpansionsAllowed ) {
-                            RAVELOG_WARN_FORMAT("env=%d, Too many consecutive expansions, waypoint %d/%d is bad", GetEnv()->GetId()%iwaypoint%vNewWaypoints.size());
+                            std::stringstream ss;
+                            ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+                            ss << "env=" << GetEnv()->GetId() << ", Too many consecutive expansions. Segment conecting waypoints " << iwaypoint << " and " << (iwaypoint + 1) << " is bad. waypoint0=[";
+                            SerializeValues(ss, vNewWaypoints[iwaypoint]);
+                            ss << "]; waypoint1=[";
+                            SerializeValues(ss, vNewWaypoints[iwaypoint + 1]);
+                            ss << "];";
+                            RAVELOG_WARN(ss.str());
                             return false;
                         }
                         continue;
@@ -1377,7 +1384,14 @@ protected:
                     _nCallsCheckPathAllConstraints_SegmentFeasible2 = 0;
                     _totalTimeCheckPathAllConstraints_SegmentFeasible2 = 0;
 #endif
-                    RAVELOG_WARN_FORMAT("env=%d, Failed to time-parameterize path connecting waypoints %d and %d", GetEnv()->GetId()%(iwaypoint - 1)%iwaypoint);
+                    std::stringstream ss;
+                    ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+                    ss << "env=" << GetEnv()->GetId() << ", Failed to time-parameterize the path connecting waypoints " << (iwaypoint - 1) << " and " << iwaypoint << ". waypoint0=[";
+                    SerializeValues(ss, vNewWaypoints[iwaypoint - 1]);
+                    ss << "]; waypoint1=[";
+                    SerializeValues(ss, vNewWaypoints[iwaypoint]);
+                    ss << "];";
+                    RAVELOG_WARN(ss.str());
                     return false;
                 }
 #ifdef SMOOTHER_TIMING_DEBUG
