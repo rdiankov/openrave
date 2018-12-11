@@ -404,7 +404,7 @@ protected:
             // Main shortcut procedure
             listshortcutpath.clear();
             bool bSuccess = true;
-            dReal fDelta = fExpectedDOFDistance / fTotalDOFDistance;
+            dReal fDelta = fExpectedDOFDistance / fTotalDistance;
             dReal fCurDist = 0;
             dReal fStartDOFValue = itstartnode->first.at(idof);
             itnode = itstartnode;
