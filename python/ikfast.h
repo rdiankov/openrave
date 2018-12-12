@@ -342,7 +342,10 @@ public:
 
   void SetSolutions(std::vector<IkSolution<T>> &vecsols) {
     _listsolutions.clear();
-    std::move( vecsols.begin(), vecsols.end(), std::back_inserter(_listsolutions) );
+    std::move( std::make_move_iterator(vecsols.begin()),
+               std::make_move_iterator(vecsols.end()),
+               std::back_inserter(_listsolutions)
+      );
   }
 
     virtual void Print() const {
