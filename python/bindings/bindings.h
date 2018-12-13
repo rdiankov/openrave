@@ -24,6 +24,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/format.hpp>
 #include <boost/python.hpp>
+#include <boost/python/numpy.hpp>
 #include <boost/assert.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/version.hpp>
@@ -401,126 +402,89 @@ void init_python_bindings();
 
 #ifdef OPENRAVE_BININGS_PYARRAY
 
-inline numeric::array toPyArrayN(const float* pvalues, size_t N)
+inline numpy::ndarray toPyArrayN(const float* pvalues, size_t N)
 {
     if( N == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f4"));
+        return numpy::array(boost::python::list());
     }
-    npy_intp dims[] = {npy_intp(N)};
-    PyObject *pyvalues = PyArray_SimpleNew(1,dims, PyArray_FLOAT);
-    if( pvalues != NULL ) {
-        memcpy(PyArray_DATA(pyvalues),pvalues,N*sizeof(float));
-    }
-    return static_cast<numeric::array>(handle<>(pyvalues));
+    numpy::dtype dt = numpy::dtype::get_builtin<float>();
+    tuple shape = make_tuple(N);
+    tuple stride = make_tuple(sizeof(float));
+    return numpy::from_data(static_cast<void const*>(pvalues), dt, shape, stride, object());
 }
 
-inline numeric::array toPyArrayN(const float* pvalues, std::vector<npy_intp>& dims)
+inline numpy::ndarray toPyArrayN(const float* pvalues, tuple& dims)
 {
-    if( dims.size() == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f4"));
+    if( len(dims) == 0 ) {
+        return numpy::array(boost::python::list());
     }
-    size_t totalsize = 1;
-    FOREACH(it,dims) {
-        totalsize *= *it;
-    }
-    if( totalsize == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f4"));
-    }
-    PyObject *pyvalues = PyArray_SimpleNew(dims.size(),&dims[0], PyArray_FLOAT);
-    if( pvalues != NULL ) {
-        memcpy(PyArray_DATA(pyvalues),pvalues,totalsize*sizeof(float));
-    }
-    return static_cast<numeric::array>(handle<>(pyvalues));
+    numpy::dtype dt = numpy::dtype::get_builtin<float>();
+    tuple stride = make_tuple(sizeof(float));
+    return numpy::from_data(static_cast<void const*>(pvalues), dt, dims, stride, object());
 }
 
-inline numeric::array toPyArrayN(const double* pvalues, size_t N)
+inline numpy::ndarray toPyArrayN(const double* pvalues, size_t N)
 {
     if( N == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f8"));
+        return numpy::array(boost::python::list());
     }
-    npy_intp dims[] = {npy_intp(N)};
-    PyObject *pyvalues = PyArray_SimpleNew(1,dims, PyArray_DOUBLE);
-    if( pvalues != NULL ) {
-        memcpy(PyArray_DATA(pyvalues),pvalues,N*sizeof(double));
-    }
-    return static_cast<numeric::array>(handle<>(pyvalues));
+    numpy::dtype dt = numpy::dtype::get_builtin<double>();
+    tuple shape = make_tuple(N);
+    tuple stride = make_tuple(sizeof(double));
+    return numpy::from_data(pvalues, dt, shape, stride, object());
 }
 
-inline numeric::array toPyArrayN(const double* pvalues, std::vector<npy_intp>& dims)
+inline numpy::ndarray toPyArrayN(const double* pvalues, tuple& dims)
 {
-    if( dims.size() == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f8"));
+    if( len(dims) == 0 ) {
+        return numpy::array(boost::python::list());
     }
-    size_t totalsize = 1;
-    FOREACH(it,dims) {
-        totalsize *= *it;
-    }
-    if( totalsize == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f8"));
-    }
-    PyObject *pyvalues = PyArray_SimpleNew(dims.size(),&dims[0], PyArray_DOUBLE);
-    if( pvalues != NULL ) {
-        memcpy(PyArray_DATA(pyvalues),pvalues,totalsize*sizeof(double));
-    }
-    return static_cast<numeric::array>(handle<>(pyvalues));
+    numpy::dtype dt = numpy::dtype::get_builtin<double>();
+    tuple stride = make_tuple(sizeof(double));
+    return numpy::from_data(pvalues, dt, dims, stride, object());
 }
 
-inline numeric::array toPyArrayN(const uint8_t* pvalues, std::vector<npy_intp>& dims)
+inline numpy::ndarray toPyArrayN(const uint8_t* pvalues, tuple& dims)
 {
-    if( dims.size() == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("u1"));
+    if( len(dims) == 0 ) {
+        return numpy::array(boost::python::list());
     }
-    size_t totalsize = 1;
-    for(size_t i = 0; i < dims.size(); ++i) {
-        totalsize *= dims[i];
-    }
-    if( totalsize == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("u1"));
-    }
-    PyObject *pyvalues = PyArray_SimpleNew(dims.size(),&dims[0], PyArray_UINT8);
-    if( pvalues != NULL ) {
-        memcpy(PyArray_DATA(pyvalues),pvalues,totalsize*sizeof(uint8_t));
-    }
-    return static_cast<numeric::array>(handle<>(pyvalues));
+    numpy::dtype dt = numpy::dtype::get_builtin<uint8_t>();
+    tuple stride = make_tuple(sizeof(uint8_t));
+    return numpy::from_data(pvalues, dt, dims, stride, object());
 }
 
-inline numeric::array toPyArrayN(const uint8_t* pvalues, size_t N)
+inline numpy::ndarray toPyArrayN(const uint8_t* pvalues, size_t N)
 {
     if( N == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("u1"));
+        return numpy::array(boost::python::list());
     }
-    npy_intp dims[] = {npy_intp(N)};
-    PyObject *pyvalues = PyArray_SimpleNew(1,&dims[0], PyArray_UINT8);
-    if( pvalues != NULL ) {
-        memcpy(PyArray_DATA(pyvalues),pvalues,N*sizeof(uint8_t));
-    }
-    return static_cast<numeric::array>(handle<>(pyvalues));
+    numpy::dtype dt = numpy::dtype::get_builtin<uint8_t>();
+    tuple shape = make_tuple(N);
+    tuple stride = make_tuple(sizeof(uint8_t));
+    return numpy::from_data(pvalues, dt, shape, stride, object());
 }
 
-inline numeric::array toPyArrayN(const int* pvalues, size_t N)
+inline numpy::ndarray toPyArrayN(const int* pvalues, size_t N)
 {
     if( N == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("i4"));
+        return numpy::array(boost::python::list());
     }
-    npy_intp dims[] = {npy_intp(N)};
-    PyObject *pyvalues = PyArray_SimpleNew(1,&dims[0], PyArray_INT32);
-    if( pvalues != NULL ) {
-        memcpy(PyArray_DATA(pyvalues),pvalues,N*sizeof(int));
-    }
-    return static_cast<numeric::array>(handle<>(pyvalues));
+    numpy::dtype dt = numpy::dtype::get_builtin<int>();
+    tuple shape = make_tuple(N);
+    tuple stride = make_tuple(sizeof(int));
+    return numpy::from_data(pvalues, dt, shape, stride, object());
 }
 
-inline numeric::array toPyArrayN(const uint32_t* pvalues, size_t N)
+inline numpy::ndarray toPyArrayN(const uint32_t* pvalues, size_t N)
 {
     if( N == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("u4"));
+        return numpy::array(boost::python::list());
     }
-    npy_intp dims[] = {npy_intp(N)};
-    PyObject *pyvalues = PyArray_SimpleNew(1,&dims[0], PyArray_UINT32);
-    if( pvalues != NULL ) {
-        memcpy(PyArray_DATA(pyvalues),pvalues,N*sizeof(uint32_t));
-    }
-    return static_cast<numeric::array>(handle<>(pyvalues));
+    numpy::dtype dt = numpy::dtype::get_builtin<uint32_t>();
+    tuple shape = make_tuple(N);
+    tuple stride = make_tuple(sizeof(uint32_t));
+    return numpy::from_data(pvalues, dt, shape, stride, object());
 }
 
 template <typename T>
@@ -534,7 +498,7 @@ inline object toPyList(const std::vector<T>& v)
 }
 
 template <typename T>
-inline numeric::array toPyArray(const std::vector<T>& v)
+inline numpy::ndarray toPyArray(const std::vector<T>& v)
 {
     if( v.size() == 0 ) {
         return toPyArrayN((T*)NULL,0);
@@ -543,7 +507,7 @@ inline numeric::array toPyArray(const std::vector<T>& v)
 }
 
 template <typename T>
-inline numeric::array toPyArray(const std::vector<T>& v, std::vector<npy_intp>& dims)
+inline numpy::ndarray toPyArray(const std::vector<T>& v, std::vector<size_t>& dims)
 {
     if( v.size() == 0 ) {
         return toPyArrayN((T*)NULL,dims);
@@ -556,7 +520,7 @@ inline numeric::array toPyArray(const std::vector<T>& v, std::vector<npy_intp>& 
 }
 
 template <typename T, int N>
-inline numeric::array toPyArray(const boost::array<T,N>& v)
+inline numpy::ndarray toPyArray(const boost::array<T,N>& v)
 {
     if( v.size() == 0 ) {
         return toPyArrayN((T*)NULL,0);
