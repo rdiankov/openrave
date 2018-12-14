@@ -191,145 +191,95 @@ public:
     }
 };
 
-class AutoPyArrayObjectDereferencer
-{
-public:
-    AutoPyArrayObjectDereferencer(PyArrayObject* pyarrobj) : _pyarrobj(pyarrobj) {
-    }
-    ~AutoPyArrayObjectDereferencer() {
-        Py_DECREF(_pyarrobj);
-    }
-
-private:
-    PyArrayObject* _pyarrobj;
-};
-
 class PyTriMesh
 {
 public:
-    PyTriMesh() {
+    PyTriMesh() : vertices(numpy::array(boost::python::list())), indices(numpy::array(boost::python::list())) {
     }
-    PyTriMesh(object vertices, object indices) : vertices(vertices), indices(indices) {
-    }
-    PyTriMesh(const TriMesh& mesh) {
-        npy_intp dims[] = { npy_intp(mesh.vertices.size()), npy_intp(3)};
-        PyObject *pyvertices = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-        dReal* pvdata = (dReal*)PyArray_DATA(pyvertices);
+    //PyTriMesh(object vertices, object indices) : vertices(vertices), indices(indices) {
+    //}
+    PyTriMesh(const TriMesh& mesh)
+    : vertices(numpy::empty(boost::python::make_tuple(mesh.vertices.size(), 3), numpy::dtype::get_builtin<dReal>())),
+      indices(numpy::empty(boost::python::make_tuple(mesh.indices.size()/3, 3), numpy::dtype::get_builtin<int32_t>()))
+    {
+        dReal* pvdata = (dReal*) vertices.get_data();
         FOREACHC(itv, mesh.vertices) {
             *pvdata++ = itv->x;
             *pvdata++ = itv->y;
             *pvdata++ = itv->z;
         }
-        vertices = static_cast<numeric::array>(handle<>(pyvertices));
 
-        dims[0] = mesh.indices.size()/3;
-        dims[1] = 3;
-        PyObject *pyindices = PyArray_SimpleNew(2,dims, PyArray_INT32);
-        int32_t* pidata = reinterpret_cast<int32_t*>PyArray_DATA(pyindices);
-        std::memcpy(pidata, mesh.indices.data(), mesh.indices.size() * sizeof(int32_t));
-        indices = static_cast<numeric::array>(handle<>(pyindices));
+        boost::python::tuple indices_shape = boost::python::make_tuple(mesh.indices.size()/3, 3);
+        boost::python::tuple stride = boost::python::make_tuple(sizeof(int32_t));
+        indices = numpy::from_data(static_cast<const void *>(mesh.indices.data()), numpy::dtype::get_builtin<int32_t>(), indices_shape, stride, object());
     }
 
     void GetTriMesh(TriMesh& mesh) {
         int numverts = len(vertices);
         mesh.vertices.resize(numverts);
 
-        PyObject *pPyVertices = vertices.ptr();
-        if (PyArray_Check(pPyVertices)) {
-            if (PyArray_NDIM(pPyVertices) != 2) {
-                throw openrave_exception(_("vertices must be a 2D array"), ORE_InvalidArguments);
+        //PyObject *pPyVertices = vertices.ptr();
+        if (vertices.get_nd() != 2) {
+            throw openrave_exception(_("vertices must be a 2D array"), ORE_InvalidArguments);
+        }
+        if (vertices.get_dtype() != numpy::dtype::get_builtin<float>()) {
+            throw openrave_exception(_("vertices must be in float"), ORE_InvalidArguments);
+        }
+        const size_t n = vertices.get_shape()[0];
+        const size_t nElems = vertices.get_shape()[1];
+        if (vertices.get_dtype() == numpy::dtype::get_builtin<float>()) {
+            const float *vdata = reinterpret_cast<float *>(vertices.get_data());
+            for (size_t i = 0, j = 0; i < n; ++i, j += nElems) {
+                mesh.vertices[i].x = static_cast<dReal>(vdata[j + 0]);
+                mesh.vertices[i].y = static_cast<dReal>(vdata[j + 1]);
+                mesh.vertices[i].z = static_cast<dReal>(vdata[j + 2]);
             }
-            if (!PyArray_ISFLOAT(pPyVertices)) {
-                throw openrave_exception(_("vertices must be in float"), ORE_InvalidArguments);
+        } else if (vertices.get_dtype() == numpy::dtype::get_builtin<double>()) {
+            const double *vdata = reinterpret_cast<double *>(vertices.get_data());
+            for (size_t i = 0, j = 0; i < n; ++i, j += nElems) {
+                mesh.vertices[i].x = static_cast<dReal>(vdata[j + 0]);
+                mesh.vertices[i].y = static_cast<dReal>(vdata[j + 1]);
+                mesh.vertices[i].z = static_cast<dReal>(vdata[j + 2]);
             }
-            PyArrayObject* pPyVerticesContiguous = PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(pPyVertices));
-            AutoPyArrayObjectDereferencer pydecref(pPyVerticesContiguous);
-
-            const size_t typeSize = PyArray_ITEMSIZE(pPyVerticesContiguous);
-            const size_t n = PyArray_DIM(pPyVerticesContiguous, 0);
-            const size_t nElems = PyArray_DIM(pPyVerticesContiguous, 1);
-
-            if (typeSize == sizeof(float)) {
-                const float *vdata = reinterpret_cast<float*>(PyArray_DATA(pPyVerticesContiguous));
-
-                for (size_t i = 0, j = 0; i < n; ++i, j += nElems) {
-                    mesh.vertices[i].x = static_cast<dReal>(vdata[j + 0]);
-                    mesh.vertices[i].y = static_cast<dReal>(vdata[j + 1]);
-                    mesh.vertices[i].z = static_cast<dReal>(vdata[j + 2]);
-                }
-            } else if (typeSize == sizeof(double)) {
-                const double *vdata = reinterpret_cast<double*>(PyArray_DATA(pPyVerticesContiguous));
-
-                for (size_t i = 0, j = 0; i < n; ++i, j += nElems) {
-                    mesh.vertices[i].x = static_cast<dReal>(vdata[j + 0]);
-                    mesh.vertices[i].y = static_cast<dReal>(vdata[j + 1]);
-                    mesh.vertices[i].z = static_cast<dReal>(vdata[j + 2]);
-                }
-            } else {
-                throw openrave_exception(_("Unsupported vertices type"), ORE_InvalidArguments);
-            }
-
         } else {
-            for(int i = 0; i < numverts; ++i) {
-                object ov = vertices[i];
-                mesh.vertices[i].x = extract<dReal>(ov[0]);
-                mesh.vertices[i].y = extract<dReal>(ov[1]);
-                mesh.vertices[i].z = extract<dReal>(ov[2]);
-            }
+            throw openrave_exception(_("Unsupported vertices type"), ORE_InvalidArguments);
         }
 
         const size_t numtris = len(indices);
         mesh.indices.resize(3*numtris);
-        PyObject *pPyIndices = indices.ptr();
-        if (PyArray_Check(pPyIndices)) {
-            if (PyArray_NDIM(pPyIndices) != 2 || PyArray_DIM(pPyIndices, 1) != 3 || !PyArray_ISINTEGER(pPyIndices)) {
-                throw openrave_exception(_("indices must be a Nx3 int array"), ORE_InvalidArguments);
-            }
-            PyArrayObject* pPyIndiciesContiguous = PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(pPyIndices));
-            AutoPyArrayObjectDereferencer pydecref(pPyIndiciesContiguous);
-
-            const size_t typeSize = PyArray_ITEMSIZE(pPyIndiciesContiguous);
-            const bool signedInt = PyArray_ISSIGNED(pPyIndiciesContiguous);
-
-            if (typeSize == sizeof(int32_t)) {
-                if (signedInt) {
-                    const int32_t *idata = reinterpret_cast<int32_t*>(PyArray_DATA(pPyIndiciesContiguous));
-                    std::memcpy(mesh.indices.data(), idata, numtris * 3 * sizeof(int32_t));
-                } else {
-                    const uint32_t *idata = reinterpret_cast<uint32_t*>(PyArray_DATA(pPyIndiciesContiguous));
-                    for (size_t i = 0; i < 3 * numtris; ++i) {
-                        mesh.indices[i] = static_cast<int32_t>(idata[i]);
-                    }
-                }
-            } else if (typeSize == sizeof(int64_t)) {
-                if (signedInt) {
-                    const int64_t *idata = reinterpret_cast<int64_t*>(PyArray_DATA(pPyIndiciesContiguous));
-                    for (size_t i = 0; i < 3 * numtris; ++i) {
-                        mesh.indices[i] = static_cast<int32_t>(idata[i]);
-                    }
-                } else {
-                    const uint64_t *idata = reinterpret_cast<uint64_t*>(PyArray_DATA(pPyIndiciesContiguous));
-                    for (size_t i = 0; i < 3 * numtris; ++i) {
-                        mesh.indices[i] = static_cast<int32_t>(idata[i]);
-                    }
-                }
-            } else if (typeSize == sizeof(uint16_t) && !signedInt) {
-                const uint16_t *idata = reinterpret_cast<uint16_t*>(PyArray_DATA(pPyIndiciesContiguous));
-                for (size_t i = 0; i < 3 * numtris; ++i) {
-                    mesh.indices[i] = static_cast<int32_t>(idata[i]);
-                }
-            } else {
-                throw openrave_exception(_("Unsupported indices type"), ORE_InvalidArguments);
-            }
-
-        } else {
-            for(size_t i = 0; i < numtris; ++i) {
-                object oi = indices[i];
-                mesh.indices[3*i+0] = extract<int32_t>(oi[0]);
-                mesh.indices[3*i+1] = extract<int32_t>(oi[1]);
-                mesh.indices[3*i+2] = extract<int32_t>(oi[2]);
-            }
+        if (indices.get_nd() != 2 || indices.get_shape()[1] != 3) {
+            throw openrave_exception(_("indices must be a Nx3 int array"), ORE_InvalidArguments);
         }
+        numpy::dtype idtype = indices.get_dtype();
+        if (idtype == numpy::dtype::get_builtin<uint16_t>()) {
+            const uint16_t *idata = reinterpret_cast<uint16_t*>(indices.get_data());
+            for (size_t i = 0; i < 3 * numtris; ++i) {
+                mesh.indices[i] = static_cast<int16_t>(idata[i]);
+            }
+        } else if (idtype == numpy::dtype::get_builtin<uint32_t>()) {
+            const uint32_t *idata = reinterpret_cast<uint32_t*>(indices.get_data());
+            for (size_t i = 0; i < 3 * numtris; ++i) {
+                mesh.indices[i] = static_cast<int32_t>(idata[i]);
+            }
+        } else if (idtype == numpy::dtype::get_builtin<uint64_t>()) {
+            const uint64_t *idata = reinterpret_cast<uint64_t*>(indices.get_data());
+            for (size_t i = 0; i < 3 * numtris; ++i) {
+                mesh.indices[i] = static_cast<int64_t>(idata[i]);
+            }
+        } else if (idtype == numpy::dtype::get_builtin<int16_t>()) {
+            const int16_t *idata = reinterpret_cast<int16_t*>(indices.get_data());
+            std::memcpy(mesh.indices.data(), idata, numtris * 3 * idtype.get_itemsize());
+        } else if (idtype == numpy::dtype::get_builtin<int32_t>()) {
+            const int32_t *idata = reinterpret_cast<int32_t*>(indices.get_data());
+            std::memcpy(mesh.indices.data(), idata, numtris * 3 * idtype.get_itemsize());
+        } else if (idtype == numpy::dtype::get_builtin<int64_t>()) {
+            const int64_t *idata = reinterpret_cast<int64_t*>(indices.get_data());
+            std::memcpy(mesh.indices.data(), idata, numtris * 3 * idtype.get_itemsize());
+        } else {
+            throw openrave_exception(_("Unsupported indices type"), ORE_InvalidArguments);
+        }
+
+
     }
 
     string __str__() {
@@ -339,7 +289,7 @@ public:
         return ConvertStringToUnicode(__str__());
     }
 
-    object vertices,indices;
+    numpy::ndarray vertices, indices;
 };
 
 bool ExtractTriMesh(object o, TriMesh& mesh)
@@ -1229,7 +1179,6 @@ void init_openravepy_global()
     .def_pickle(AABB_pickle_suite())
     ;
     class_<PyTriMesh, boost::shared_ptr<PyTriMesh> >("TriMesh", DOXY_CLASS(TriMesh))
-    .def(init<object,object>(args("vertices","indices")))
     .def_readwrite("vertices",&PyTriMesh::vertices)
     .def_readwrite("indices",&PyTriMesh::indices)
     .def("__str__",&PyTriMesh::__str__)
