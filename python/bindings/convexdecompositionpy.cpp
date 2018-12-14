@@ -19,8 +19,8 @@
 #include <boost/python.hpp>
 #include <boost/python/exception_translator.hpp>
 #include <boost/python/stl_iterator.hpp>
+#include <boost/python/numpy.hpp>
 #include <pyconfig.h>
-#include <numpy/arrayobject.h>
 
 #include <exception>
 #include <boost/shared_ptr.hpp>
@@ -94,16 +94,16 @@ object computeConvexDecomposition(const boost::multi_array<float, 2>& vertices, 
     for(NxU32 i = 0; i < hullCount; ++i) {
         ic->getConvexHullResult(i,result);
 
-        npy_intp dims[] = { result.mVcount,3};
-        PyObject *pyvertices = PyArray_SimpleNew(2,dims, sizeof(result.mVertices[0])==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-        std::copy(&result.mVertices[0],&result.mVertices[3*result.mVcount],(NxF32*)PyArray_DATA(pyvertices));
+        boost::python::tuple shape = boost::python::make_tuple(2, result.mVcount, 3);
+        numpy::dtype dt = numpy::dtype::get_builtin<NxF32>();
+        boost::python::tuple stride = boost::python::make_tuple(sizeof(NxF32));
+        //numpy::ndarray pyvertices = numpy::empty(shape, dt);
+        numpy::ndarray pyvertices = numpy::from_data(static_cast<void *>(result.mVertices), dt, shape, stride, object());
 
-        dims[0] = result.mTcount;
-        dims[1] = 3;
-        PyObject *pyindices = PyArray_SimpleNew(2,dims, PyArray_INT);
-        std::copy(&result.mIndices[0],&result.mIndices[3*result.mTcount],(int*)PyArray_DATA(pyindices));
+        boost::python::tuple indices_shape = boost::python::make_tuple(2, result.mTcount, 3);
+        numpy::ndarray pyindices = numpy::from_data(static_cast<void *>(result.mIndices), numpy::dtype::get_builtin<int>(), indices_shape, boost::python::make_tuple(sizeof(int)), object());
 
-        hulls.append(boost::python::make_tuple(static_cast<numeric::array>(handle<>(pyvertices)), static_cast<numeric::array>(handle<>(pyindices))));
+        hulls.append(boost::python::make_tuple(pyvertices, pyindices));
     }
 
     return hulls;
@@ -113,8 +113,8 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(computeConvexDecomposition_overloads, computeCon
 
 BOOST_PYTHON_MODULE(convexdecompositionpy)
 {
-    import_array();
-    numeric::array::set_module_and_type("numpy", "ndarray");
+    Py_Initialize();
+    numpy::initialize();
     int_from_int();
     T_from_number<float>();
     T_from_number<double>();
