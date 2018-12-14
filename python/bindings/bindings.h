@@ -509,14 +509,15 @@ inline numpy::ndarray toPyArray(const std::vector<T>& v)
 template <typename T>
 inline numpy::ndarray toPyArray(const std::vector<T>& v, std::vector<size_t>& dims)
 {
+    tuple dims_tuple(dims);
     if( v.size() == 0 ) {
-        return toPyArrayN((T*)NULL,dims);
+        return toPyArrayN((T*)NULL,dims_tuple);
     }
     size_t totalsize = 1;
     FOREACH(it,dims)
     totalsize *= *it;
     BOOST_ASSERT(totalsize == v.size());
-    return toPyArrayN(&v[0],dims);
+    return toPyArrayN(&v[0],dims_tuple);
 }
 
 template <typename T, int N>
