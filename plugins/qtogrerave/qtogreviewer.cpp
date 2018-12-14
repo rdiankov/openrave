@@ -39,12 +39,13 @@ int QtOgreViewer::main(bool bShow)
     _ogreWindow = boost::make_shared<QtOgreWindow>([this](){_EnvironmentUpdate();});
     // _ogreWindow->show();
     _ogreWindow->showMaximized();
-    QGuiApplication::instance()->exec();
+    // QGuiApplication::instance()->exec();
 }
 
 bool QtOgreViewer::startmainloop(std::ostream& sout, std::istream& sinput)
 {
-    QGuiApplication::instance()->exec();
+    main(true);
+    // QGuiApplication::instance()->exec();
 }
 
 void QtOgreViewer::quitmainloop()
@@ -128,8 +129,9 @@ GraphHandlePtr QtOgreViewer::plot3(const float* ppoints, int nPoints, int stride
     std::mutex cv_m;
     std::condition_variable cv;
     OgreGraphHandlePtr handle = boost::make_shared<OgreGraphHandle>();
+    bool done = false;
 
-    _ogreWindow->QueueRenderingUpdate([this, &cv_m, &cv, &handle, vpoints, nPoints, stride, fPointSize, color, drawstyle, &min, &max]() {
+    _ogreWindow->QueueRenderingUpdate([this, &cv_m, &cv, &done, &handle, vpoints, nPoints, stride, fPointSize, color, drawstyle, &min, &max]() {
         std::lock_guard<std::mutex> lk(cv_m);
         Ogre::RenderSystem *renderSystem = _ogreWindow->GetRoot()->getRenderSystem();
         Ogre::VaoManager *vaoManager = renderSystem->getVaoManager();
@@ -160,13 +162,16 @@ GraphHandlePtr QtOgreViewer::plot3(const float* ppoints, int nPoints, int stride
         node->attachObject(item);
         node->setPosition(0.0f, 0.0f, 0.0f);
         handle->_node = node;
-
+        {
+            std::unique_lock<std::mutex> lk(cv_m);
+            done = true;
+        }
         cv.notify_all();
     });
 
     {
         std::unique_lock<std::mutex> lk(cv_m);
-        cv.wait(lk);
+        cv.wait(lk, [&done]{ return done; });
     }
 
     return handle;
@@ -180,8 +185,9 @@ GraphHandlePtr QtOgreViewer::drawlinestrip(const float* ppoints, int nPoints, in
     std::mutex cv_m;
     std::condition_variable cv;
     OgreGraphHandlePtr handle = boost::make_shared<OgreGraphHandle>();
+    bool done = false;
 
-    _ogreWindow->QueueRenderingUpdate([this, &cv_m, &cv, &handle, vpoints, nPoints, stride, fwidth, color]() {
+    _ogreWindow->QueueRenderingUpdate([this, &cv_m, &cv, &done, &handle, vpoints, nPoints, stride, fwidth, color]() {
         Ogre::RenderSystem *renderSystem = _ogreWindow->GetRoot()->getRenderSystem();
         Ogre::VaoManager *vaoManager = renderSystem->getVaoManager();
 
@@ -208,12 +214,16 @@ GraphHandlePtr QtOgreViewer::drawlinestrip(const float* ppoints, int nPoints, in
         Ogre::Item *item = sceneManager->createItem(mesh);
         node->attachObject(item);
         handle->_node = node;
+        {
+            std::unique_lock<std::mutex> lk(cv_m);
+            done = true;
+        }
         cv.notify_all();
     });
 
     {
         std::unique_lock<std::mutex> lk(cv_m);
-        cv.wait(lk);
+        cv.wait(lk, [&done]{ return done; });
     }
 
     return handle;
@@ -232,7 +242,12 @@ GraphHandlePtr QtOgreViewer::drawlinelist(const float* ppoints, int nPoints, int
         ppoints = (float*)((char*)ppoints + stride);
     }
 
-    _ogreWindow->QueueRenderingUpdate([this, vpoints, nPoints, stride, fwidth, color]() {
+    std::mutex cv_m;
+    std::condition_variable cv;
+    OgreGraphHandlePtr handle = boost::make_shared<OgreGraphHandle>();
+    bool done = false;
+
+    _ogreWindow->QueueRenderingUpdate([this, &cv_m, &cv, &done, &handle, vpoints, nPoints, stride, fwidth, color]() {
         Ogre::RenderSystem *renderSystem = _ogreWindow->GetRoot()->getRenderSystem();
         Ogre::VaoManager *vaoManager = renderSystem->getVaoManager();
 
@@ -277,8 +292,21 @@ GraphHandlePtr QtOgreViewer::drawlinelist(const float* ppoints, int nPoints, int
         Ogre::SceneManager *sceneManager = node->getCreator();
         Ogre::Item *item = sceneManager->createItem(mesh);
         node->attachObject(item);
-        // *handle = OgreGraphHandle(node); // fix later
+        handle->_node = node;
+
+        {
+            std::unique_lock<std::mutex> lk(cv_m);
+            done = true;
+        }
+        cv.notify_all();
     });
+
+    {
+        std::unique_lock<std::mutex> lk(cv_m);
+        cv.wait(lk, [&done]{ return done; });
+    }
+
+    return handle;
 }
 
 
@@ -288,8 +316,9 @@ GraphHandlePtr QtOgreViewer::drawbox(const RaveVector<float>& vpos, const RaveVe
     std::mutex cv_m;
     std::condition_variable cv;
     OgreGraphHandlePtr handle = boost::make_shared<OgreGraphHandle>();
+    bool done = false;
 
-    _ogreWindow->QueueRenderingUpdate([this, &cv_m, &cv, &handle, &vpos, &vextents]() {
+    _ogreWindow->QueueRenderingUpdate([this, &cv_m, &cv, &handle, &done, &vpos, &vextents]() {
         Ogre::HlmsManager *hlmsManager = _ogreWindow->GetRoot()->getHlmsManager();
         // assert(dynamic_cast<Ogre::HlmsPbs*>( hlmsManager->getHlms( Ogre::HLMS_PBS ) ) );
         Ogre::HlmsPbs *hlmsPbs = static_cast<Ogre::HlmsPbs*>( hlmsManager->getHlms(Ogre::HLMS_PBS) );
@@ -312,12 +341,16 @@ GraphHandlePtr QtOgreViewer::drawbox(const RaveVector<float>& vpos, const RaveVe
         node->setScale(Ogre::Vector3(vextents.x, vextents.y, vextents.z)); // <--------- is this extents?
         handle->_node = node;
 
+            {
+        std::unique_lock<std::mutex> lk(cv_m);
+            done = true;
+        }
         cv.notify_all();
     });
 
     {
         std::unique_lock<std::mutex> lk(cv_m);
-        cv.wait(lk);
+        cv.wait(lk, [&done]{ return done; });
     }
 
     return handle;
