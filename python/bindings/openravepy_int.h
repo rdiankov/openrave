@@ -45,8 +45,8 @@
 #include <boost/python.hpp>
 #include <boost/python/exception_translator.hpp>
 #include <boost/python/docstring_options.hpp>
+#include <boost/python/numpy.hpp>
 #include <pyconfig.h>
-#include <numpy/arrayobject.h>
 
 #define OPENRAVE_BININGS_PYARRAY
 #include "bindings.h"
@@ -291,58 +291,58 @@ inline RaveTransformMatrix<T> ExtractTransformMatrixType(const object& o)
 
 inline object toPyArrayRotation(const TransformMatrix& t)
 {
-    npy_intp dims[] = {3,3};
-    PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-    dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
+    boost::python::tuple shape = boost::python::make_tuple(2, 3, 3);
+    numpy::ndarray pyvalues = numpy::empty(shape, numpy::dtype::get_builtin<dReal>());
+    dReal* pdata = (dReal*) pyvalues.get_data();
     pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2];
     pdata[3] = t.m[4]; pdata[4] = t.m[5]; pdata[5] = t.m[6];
     pdata[6] = t.m[8]; pdata[7] = t.m[9]; pdata[8] = t.m[10];
-    return static_cast<numeric::array>(handle<>(pyvalues));
+    return std::move(pyvalues);
 }
 
 inline object toPyArray3(const std::vector<RaveVector<float> >& v)
 {
-    npy_intp dims[] = { npy_intp(v.size()), npy_intp(3) };
-    PyObject *pyvalues = PyArray_SimpleNew(2,dims, PyArray_FLOAT);
+    boost::python::tuple shape = boost::python::make_tuple(2, v.size(), 3);
+    numpy::ndarray pyvalues = numpy::empty(shape, numpy::dtype::get_builtin<float>());
     if( v.size() > 0 ) {
-        float* pf = (float*)PyArray_DATA(pyvalues);
+        float* pf = (float*) pyvalues.get_data();
         FOREACHC(it,v) {
             *pf++ = it->x;
             *pf++ = it->y;
             *pf++ = it->z;
         }
     }
-    return static_cast<numeric::array>(handle<>(pyvalues));
+    return std::move(pyvalues);
 }
 
 inline object toPyArray3(const std::vector<RaveVector<double> >& v)
 {
-    npy_intp dims[] = { npy_intp(v.size()), npy_intp(3) };
-    PyObject *pyvalues = PyArray_SimpleNew(2,dims, PyArray_DOUBLE);
+    boost::python::tuple shape = boost::python::make_tuple(2, v.size(), 3);
+    numpy::ndarray pyvalues = numpy::empty(shape, numpy::dtype::get_builtin<double>());
     if( v.size() > 0 ) {
-        double* pf = (double*)PyArray_DATA(pyvalues);
+        double* pf = (double*) pyvalues.get_data();
         FOREACHC(it,v) {
             *pf++ = it->x;
             *pf++ = it->y;
             *pf++ = it->z;
         }
     }
-    return static_cast<numeric::array>(handle<>(pyvalues));
+    return std::move(pyvalues);
 }
 
 inline object toPyVector2(Vector v)
 {
-    return numeric::array(boost::python::make_tuple(v.x,v.y));
+    return numpy::array(boost::python::make_tuple(v.x,v.y));
 }
 
 inline object toPyVector3(Vector v)
 {
-    return numeric::array(boost::python::make_tuple(v.x,v.y,v.z));
+    return numpy::array(boost::python::make_tuple(v.x,v.y,v.z));
 }
 
 inline object toPyVector4(Vector v)
 {
-    return numeric::array(boost::python::make_tuple(v.x,v.y,v.z,v.w));
+    return numpy::array(boost::python::make_tuple(v.x,v.y,v.z,v.w));
 }
 
 /// \brief converts dictionary of keyvalue pairs
