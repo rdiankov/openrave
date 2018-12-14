@@ -33,7 +33,7 @@ public:
 public:
         PyManipulatorInfo() {
             _tLocalTool = ReturnTransform(Transform());
-            _vChuckingDirection = numeric::array(boost::python::list());
+            _vChuckingDirection = numpy::array(boost::python::list());
             _vdirection = toPyVector3(Vector(0,0,1));
             _vGripperJointNames = boost::python::list();
         }
@@ -171,7 +171,7 @@ public:
         object GetArmDOFValues()
         {
             if( _pmanip->GetArmDOF() == 0 ) {
-                return numeric::array(boost::python::list());
+                return numpy::array(boost::python::list());
             }
             vector<dReal> values;
             _pmanip->GetArmDOFValues(values);
@@ -180,7 +180,7 @@ public:
         object GetGripperDOFValues()
         {
             if( _pmanip->GetGripperDOF() == 0 ) {
-                return numeric::array(boost::python::list());
+                return numpy::array(boost::python::list());
             }
             vector<dReal> values;
             _pmanip->GetGripperDOFValues(values);
@@ -221,7 +221,7 @@ public:
         object GetFreeParameters() const {
             RAVELOG_WARN("Manipulator::GetFreeParameters() is deprecated\n");
             if( _pmanip->GetIkSolver()->GetNumFreeParameters() == 0 ) {
-                return numeric::array(boost::python::list());
+                return numpy::array(boost::python::list());
             }
             vector<dReal> values;
             _pmanip->GetIkSolver()->GetFreeParameters(values);
@@ -392,23 +392,24 @@ public:
                 std::vector<std::vector<dReal> > vsolutions;
                 if( ExtractIkParameterization(oparam,ikparam) ) {
                     if( !_FindIKSolutions(ikparam,vsolutions,filteroptions,releasegil) ) {
-                        return numeric::array(boost::python::list());
+                        return numpy::array(boost::python::list());
                     }
                 }
                 // assume transformation matrix
                 else if( !_FindIKSolutions(ExtractTransform(oparam),vsolutions,filteroptions,releasegil) ) {
-                    return numeric::array(boost::python::list());
+                    return numpy::array(boost::python::list());
                 }
 
-                npy_intp dims[] = { npy_intp(vsolutions.size()), npy_intp(_pmanip->GetArmIndices().size()) };
-                PyObject *pysolutions = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-                dReal* ppos = (dReal*)PyArray_DATA(pysolutions);
+                size_t arm_indices_size = _pmanip->GetArmIndices().size();
+                boost::python::tuple shape = boost::python::make_tuple(2, vsolutions.size(), arm_indices_size);
+                numpy::ndarray pysolutions = numpy::empty(shape, numpy::dtype::get_builtin<dReal>());
+                dReal* ppos = (dReal*) pysolutions.get_data();
                 FOREACH(itsol,vsolutions) {
-                    BOOST_ASSERT(itsol->size()==size_t(dims[1]));
+                    BOOST_ASSERT(itsol->size()==arm_indices_size);
                     std::copy(itsol->begin(),itsol->end(),ppos);
                     ppos += itsol->size();
                 }
-                return static_cast<numeric::array>(handle<>(pysolutions));
+                return std::move(pysolutions);
             }
         }
 
@@ -439,23 +440,24 @@ public:
                 std::vector<std::vector<dReal> > vsolutions;
                 if( ExtractIkParameterization(oparam,ikparam) ) {
                     if( !_FindIKSolutions(ikparam,vfreeparams,vsolutions,filteroptions,releasegil) ) {
-                        return numeric::array(boost::python::list());
+                        return numpy::array(boost::python::list());
                     }
                 }
                 // assume transformation matrix
                 else if( !_FindIKSolutions(ExtractTransform(oparam),vfreeparams, vsolutions,filteroptions,releasegil) ) {
-                    return numeric::array(boost::python::list());
+                    return numpy::array(boost::python::list());
                 }
 
-                npy_intp dims[] = { npy_intp(vsolutions.size()), npy_intp(_pmanip->GetArmIndices().size()) };
-                PyObject *pysolutions = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-                dReal* ppos = (dReal*)PyArray_DATA(pysolutions);
+                size_t arm_indices_size = _pmanip->GetArmIndices().size();
+                boost::python::tuple shape = boost::python::make_tuple(2, vsolutions.size(), arm_indices_size);
+                numpy::ndarray pysolutions = numpy::empty(shape, numpy::dtype::get_builtin<dReal>());
+                dReal* ppos = (dReal*) pysolutions.get_data();
                 FOREACH(itsol,vsolutions) {
-                    BOOST_ASSERT(itsol->size()==size_t(dims[1]));
+                    BOOST_ASSERT(itsol->size()==arm_indices_size);
                     std::copy(itsol->begin(),itsol->end(),ppos);
                     ppos += itsol->size();
                 }
-                return static_cast<numeric::array>(handle<>(pysolutions));
+                return pysolutions;
             }
         }
 
@@ -585,7 +587,7 @@ public:
         {
             std::vector<dReal> vjacobian;
             _pmanip->CalculateJacobian(vjacobian);
-            std::vector<npy_intp> dims(2); dims[0] = 3; dims[1] = _pmanip->GetArmIndices().size();
+            std::vector<size_t> dims(2); dims[0] = 3; dims[1] = _pmanip->GetArmIndices().size();
             return toPyArray(vjacobian,dims);
         }
 
@@ -593,7 +595,7 @@ public:
         {
             std::vector<dReal> vjacobian;
             _pmanip->CalculateRotationJacobian(vjacobian);
-            std::vector<npy_intp> dims(2); dims[0] = 4; dims[1] = _pmanip->GetArmIndices().size();
+            std::vector<size_t> dims(2); dims[0] = 4; dims[1] = _pmanip->GetArmIndices().size();
             return toPyArray(vjacobian,dims);
         }
 
@@ -601,7 +603,7 @@ public:
         {
             std::vector<dReal> vjacobian;
             _pmanip->CalculateAngularVelocityJacobian(vjacobian);
-            std::vector<npy_intp> dims(2); dims[0] = 3; dims[1] = _pmanip->GetArmIndices().size();
+            std::vector<size_t> dims(2); dims[0] = 3; dims[1] = _pmanip->GetArmIndices().size();
             return toPyArray(vjacobian,dims);
         }
 
@@ -1139,7 +1141,7 @@ public:
     object GetActiveDOFValues() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return numeric::array(boost::python::list());
+            return numpy::array(boost::python::list());
         }
         vector<dReal> values;
         _probot->GetActiveDOFValues(values);
@@ -1149,7 +1151,7 @@ public:
     object GetActiveDOFWeights() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return numeric::array(boost::python::list());
+            return numpy::array(boost::python::list());
         }
         vector<dReal> weights;
         _probot->GetActiveDOFWeights(weights);
@@ -1163,7 +1165,7 @@ public:
     object GetActiveDOFVelocities() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return numeric::array(boost::python::list());
+            return numpy::array(boost::python::list());
         }
         vector<dReal> values;
         _probot->GetActiveDOFVelocities(values);
@@ -1173,7 +1175,7 @@ public:
     object GetActiveDOFLimits() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return boost::python::make_tuple(numeric::array(boost::python::list()), numeric::array(boost::python::list())); // always need 2 since users can do lower, upper = GetDOFLimits()
+            return boost::python::make_tuple(numpy::array(boost::python::list()), numpy::array(boost::python::list())); // always need 2 since users can do lower, upper = GetDOFLimits()
         }
         vector<dReal> lower, upper;
         _probot->GetActiveDOFLimits(lower,upper);
@@ -1183,7 +1185,7 @@ public:
     object GetActiveDOFMaxVel() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return numeric::array(boost::python::list());
+            return numpy::array(boost::python::list());
         }
         vector<dReal> values;
         _probot->GetActiveDOFMaxVel(values);
@@ -1193,7 +1195,7 @@ public:
     object GetActiveDOFMaxAccel() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return numeric::array(boost::python::list());
+            return numpy::array(boost::python::list());
         }
         vector<dReal> values;
         _probot->GetActiveDOFMaxAccel(values);
@@ -1203,7 +1205,7 @@ public:
     object GetActiveDOFResolutions() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return numeric::array(boost::python::list());
+            return numpy::array(boost::python::list());
         }
         vector<dReal> values;
         _probot->GetActiveDOFResolutions(values);
@@ -1235,7 +1237,7 @@ public:
     {
         std::vector<dReal> vjacobian;
         _probot->CalculateActiveJacobian(index,ExtractVector3(offset),vjacobian);
-        std::vector<npy_intp> dims(2); dims[0] = 3; dims[1] = _probot->GetActiveDOF();
+        std::vector<size_t> dims(2); dims[0] = 3; dims[1] = _probot->GetActiveDOF();
         return toPyArray(vjacobian,dims);
     }
 
@@ -1243,7 +1245,7 @@ public:
     {
         std::vector<dReal> vjacobian;
         _probot->CalculateActiveRotationJacobian(index,ExtractVector4(q),vjacobian);
-        std::vector<npy_intp> dims(2); dims[0] = 4; dims[1] = _probot->GetActiveDOF();
+        std::vector<size_t> dims(2); dims[0] = 4; dims[1] = _probot->GetActiveDOF();
         return toPyArray(vjacobian,dims);
     }
 
@@ -1251,7 +1253,7 @@ public:
     {
         std::vector<dReal> vjacobian;
         _probot->CalculateActiveAngularVelocityJacobian(index,vjacobian);
-        std::vector<npy_intp> dims(2); dims[0] = 3; dims[1] = _probot->GetActiveDOF();
+        std::vector<size_t> dims(2); dims[0] = 3; dims[1] = _probot->GetActiveDOF();
         return toPyArray(vjacobian,dims);
     }
 
