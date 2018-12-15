@@ -286,7 +286,7 @@ public:
         if( !_pviewer->GetCameraImage(memory, width,height,RaveTransform<float>(ExtractTransform(extrinsic)), KK) ) {
             throw openrave_exception(_("failed to get camera image"));
         }
-        std::vector<npy_intp> dims(3); dims[0] = height; dims[1] = width; dims[2] = 3;
+        std::vector<size_t> dims(3); dims[0] = height; dims[1] = width; dims[2] = 3;
         return toPyArray(memory,dims);
     }
 
