@@ -90,12 +90,11 @@ public:
         _ptrajectory->SamplePoints(values,vtimes);
 
         int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
-        npy_intp dims[] = { npy_intp(values.size()/numdof), npy_intp(numdof) };
-        PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+        numpy::ndarray pypos = numpy::empty(boost::python::make_tuple(int(values.size()/numdof), numdof), numpy::dtype::get_builtin<dReal>());
         if( values.size() > 0 ) {
-            memcpy(PyArray_DATA(pypos), &values[0], values.size()*sizeof(values[0]));
+            memcpy(pypos.get_data(), &values[0], values.size()*sizeof(values[0]));
         }
-        return static_cast<numeric::array>(handle<>(pypos));
+        return std::move(pypos);
     }
 
     object SamplePoints2D(object otimes, PyConfigurationSpecificationPtr pyspec) const
@@ -105,12 +104,11 @@ public:
         std::vector<dReal> vtimes = ExtractArray<dReal>(otimes);
         _ptrajectory->SamplePoints(values, vtimes, spec);
 
-        npy_intp dims[] = { npy_intp(values.size()/spec.GetDOF()), npy_intp(spec.GetDOF()) };
-        PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+        numpy::ndarray pypos = numpy::empty(boost::python::make_tuple(int(values.size()/spec.GetDOF()), int(spec.GetDOF())), numpy::dtype::get_builtin<dReal>());
         if( values.size() > 0 ) {
-            memcpy(PyArray_DATA(pypos), &values[0], values.size()*sizeof(values[0]));
+            memcpy(pypos.get_data(), &values[0], values.size()*sizeof(values[0]));
         }
-        return static_cast<numeric::array>(handle<>(pypos));
+        return std::move(pypos);
     }
 
     object GetConfigurationSpecification() const {
@@ -141,12 +139,11 @@ public:
         vector<dReal> values;
         _ptrajectory->GetWaypoints(startindex,endindex,values);
         int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
-        npy_intp dims[] = { npy_intp(values.size()/numdof), npy_intp(numdof) };
-        PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+        numpy::ndarray pypos = numpy::empty(boost::python::make_tuple( int(values.size()/numdof), int(numdof) ), numpy::dtype::get_builtin<dReal>());
         if( values.size() > 0 ) {
-            memcpy(PyArray_DATA(pypos), &values[0], values.size()*sizeof(values[0]));
+            memcpy(pypos.get_data(), &values[0], values.size()*sizeof(values[0]));
         }
-        return static_cast<numeric::array>(handle<>(pypos));
+        return std::move(pypos);
     }
 
     object GetAllWaypoints2D() const
@@ -159,12 +156,11 @@ public:
         vector<dReal> values;
         ConfigurationSpecification spec = openravepy::GetConfigurationSpecification(pyspec);
         _ptrajectory->GetWaypoints(startindex,endindex,values,spec);
-        npy_intp dims[] = { npy_intp(values.size()/spec.GetDOF()), npy_intp(spec.GetDOF()) };
-        PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+        numpy::ndarray pypos = numpy::empty(boost::python::make_tuple( int(values.size()/spec.GetDOF()), int(spec.GetDOF()) ), numpy::dtype::get_builtin<dReal>());
         if( values.size() > 0 ) {
-            memcpy(PyArray_DATA(pypos), &values[0], values.size()*sizeof(values[0]));
+            memcpy(pypos.get_data(), &values[0], values.size()*sizeof(values[0]));
         }
-        return static_cast<numeric::array>(handle<>(pypos));
+        return std::move(pypos);
     }
 
     object GetAllWaypoints2D(PyConfigurationSpecificationPtr pyspec) const
