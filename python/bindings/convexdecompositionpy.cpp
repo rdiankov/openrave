@@ -94,13 +94,13 @@ object computeConvexDecomposition(const boost::multi_array<float, 2>& vertices, 
     for(NxU32 i = 0; i < hullCount; ++i) {
         ic->getConvexHullResult(i,result);
 
-        boost::python::tuple shape = boost::python::make_tuple(2, result.mVcount, 3);
+        boost::python::tuple shape = boost::python::make_tuple(result.mVcount, 3);
         numpy::dtype dt = numpy::dtype::get_builtin<NxF32>();
         boost::python::tuple stride = boost::python::make_tuple(sizeof(NxF32));
         //numpy::ndarray pyvertices = numpy::empty(shape, dt);
         numpy::ndarray pyvertices = numpy::from_data(static_cast<void *>(result.mVertices), dt, shape, stride, object());
 
-        boost::python::tuple indices_shape = boost::python::make_tuple(2, result.mTcount, 3);
+        boost::python::tuple indices_shape = boost::python::make_tuple(result.mTcount, 3);
         numpy::ndarray pyindices = numpy::from_data(static_cast<void *>(result.mIndices), numpy::dtype::get_builtin<int>(), indices_shape, boost::python::make_tuple(sizeof(int)), object());
 
         hulls.append(boost::python::make_tuple(pyvertices, pyindices));
