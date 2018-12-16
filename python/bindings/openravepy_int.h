@@ -291,7 +291,7 @@ inline RaveTransformMatrix<T> ExtractTransformMatrixType(const object& o)
 
 inline object toPyArrayRotation(const TransformMatrix& t)
 {
-    boost::python::tuple shape = boost::python::make_tuple(2, 3, 3);
+    boost::python::tuple shape = boost::python::make_tuple(3, 3);
     numpy::ndarray pyvalues = numpy::empty(shape, numpy::dtype::get_builtin<dReal>());
     dReal* pdata = (dReal*) pyvalues.get_data();
     pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2];
@@ -302,7 +302,7 @@ inline object toPyArrayRotation(const TransformMatrix& t)
 
 inline object toPyArray3(const std::vector<RaveVector<float> >& v)
 {
-    boost::python::tuple shape = boost::python::make_tuple(2, v.size(), 3);
+    boost::python::tuple shape = boost::python::make_tuple(v.size(), 3);
     numpy::ndarray pyvalues = numpy::empty(shape, numpy::dtype::get_builtin<float>());
     if( v.size() > 0 ) {
         float* pf = (float*) pyvalues.get_data();
@@ -317,7 +317,7 @@ inline object toPyArray3(const std::vector<RaveVector<float> >& v)
 
 inline object toPyArray3(const std::vector<RaveVector<double> >& v)
 {
-    boost::python::tuple shape = boost::python::make_tuple(2, v.size(), 3);
+    boost::python::tuple shape = boost::python::make_tuple(v.size(), 3);
     numpy::ndarray pyvalues = numpy::empty(shape, numpy::dtype::get_builtin<double>());
     if( v.size() > 0 ) {
         double* pf = (double*) pyvalues.get_data();
