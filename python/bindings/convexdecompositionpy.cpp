@@ -96,17 +96,17 @@ object computeConvexDecomposition(const boost::multi_array<float, 2>& vertices, 
 
         boost::python::tuple shape = boost::python::make_tuple(result.mVcount, 3);
         numpy::dtype dt = numpy::dtype::get_builtin<NxF32>();
-        boost::python::tuple stride = boost::python::make_tuple(sizeof(NxF32));
-        //numpy::ndarray pyvertices = numpy::empty(shape, dt);
-        numpy::ndarray pyvertices = numpy::from_data(static_cast<void *>(result.mVertices), dt, shape, stride, object());
+        numpy::ndarray pyvertices = numpy::empty(shape, dt);
+        std::memcpy(pyvertices.get_data(), &result.mVertices[0], result.mVcount * 3 * sizeof(NxF32));
 
         boost::python::tuple indices_shape = boost::python::make_tuple(result.mTcount, 3);
-        numpy::ndarray pyindices = numpy::from_data(static_cast<void *>(result.mIndices), numpy::dtype::get_builtin<int>(), indices_shape, boost::python::make_tuple(sizeof(int)), object());
+        numpy::ndarray pyindices = numpy::empty(indices_shape, numpy::dtype::get_builtin<int>());
+        std::memcpy(pyindices.get_data(), &result.mIndices[0], result.mTcount * 3 * sizeof(int));
 
         hulls.append(boost::python::make_tuple(pyvertices, pyindices));
     }
 
-    return hulls;
+    return std::move(hulls);
 }
 
 BOOST_PYTHON_FUNCTION_OVERLOADS(computeConvexDecomposition_overloads, computeConvexDecomposition, 2, 10)
