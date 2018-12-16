@@ -18,8 +18,8 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
     #include <boost/shared_ptr.hpp>
     #define PY_ARRAY_UNIQUE_SYMBOL PyArrayHandle
     #include <boost/python.hpp>
+    #include <boost/python/numpy.hpp>
     #include <pyconfig.h>
-    #include <numpy/arrayobject.h>
     int main()
     {
       return 0;
@@ -45,7 +45,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
       ## openrave bindings
       add_library(openravepy_int SHARED openravepy_kinbody.cpp openravepy_int.cpp openravepy_robot.cpp openravepy_int.h openravepy_global.cpp openravepy_collisionchecker.cpp openravepy_controller.cpp openravepy_ikparameterization.cpp openravepy_iksolver.cpp openravepy_module.cpp openravepy_physicsengine.cpp openravepy_planner.cpp openravepy_planningutils.cpp openravepy_sensor.cpp openravepy_sensorsystem.cpp openravepy_spacesampler.cpp openravepy_trajectory.cpp openravepy_viewer.cpp bindings.cpp bindings.h docstrings.cpp docstrings.h)
       # stdc++ has to be included before opengl libraries due to some ATI bug (http://wiki.fifengine.de/Segfault_in_cxa_allocate_exception#Workaround)
-      target_link_libraries(openravepy_int ${STDC_LIBRARY} libopenrave libopenrave-core ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY} ${extralibs})
+      target_link_libraries(openravepy_int ${STDC_LIBRARY} libopenrave libopenrave-core ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_NUMPY_LIBRARY} ${Boost_THREAD_LIBRARY} ${extralibs})
       add_dependencies(openravepy_int libopenrave libopenrave-core)
       set_target_properties(openravepy_int PROPERTIES PREFIX "" COMPILE_FLAGS "${OPENRAVEPY_COMPILE_FLAGS}")
       if( WIN32 )
@@ -61,7 +61,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
         add_library(pyANN_int SHARED pyann.cpp bindings.cpp bindings.h)
         include_directories(${ANN_INCLUDE_DIR})
         # stdc++ has to be included before opengl libraries due to some ATI bug (http://wiki.fifengine.de/  Segfault_in_cxa_allocate_exception#Workaround)
-        target_link_libraries(pyANN_int ${STDC_LIBRARY} ANN ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY} ${extralibs})
+        target_link_libraries(pyANN_int ${STDC_LIBRARY} ANN ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_NUMPY_LIBRARY} ${Boost_THREAD_LIBRARY} ${extralibs})
         set_target_properties(pyANN_int PROPERTIES PREFIX "" COMPILE_FLAGS "${ANN_CFLAGS}" )
         add_dependencies(pyANN_int ANN)
         if( WIN32 )
@@ -83,7 +83,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
         add_library(convexdecompositionpy SHARED convexdecompositionpy.cpp bindings.cpp bindings.h)
         include_directories(${CONVEXDECOMPOSITION_INCLUDE_DIR})
         # stdc++ has to be included before opengl libraries due to some ATI bug (http://wiki.fifengine.de/  Segfault_in_cxa_allocate_exception#Workaround)
-        target_link_libraries(convexdecompositionpy ${STDC_LIBRARY} convexdecomposition ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY} ${extralibs})
+        target_link_libraries(convexdecompositionpy ${STDC_LIBRARY} convexdecomposition ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_NUMPY_LIBRARY} ${Boost_THREAD_LIBRARY} ${extralibs})
         set_target_properties(convexdecompositionpy PROPERTIES PREFIX "" COMPILE_FLAGS "${CONVEXDECOMPOSITION_CFLAGS}" )
         add_dependencies(convexdecompositionpy convexdecomposition)
         if( WIN32 )
