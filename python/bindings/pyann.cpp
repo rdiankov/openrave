@@ -117,7 +117,7 @@ object search(ANNkd_tree& kdtree, object q, int k, double eps, bool priority = f
     for (int c = 0; c < kdtree.theDim(); ++c)
         annq.pt[c] = extract<ANNcoord>(q[c]);
 
-    boost::python::tuple shape = boost::python::make_tuple(1, k);
+    boost::python::tuple shape = boost::python::make_tuple(k);
     numpy::ndarray pydists = numpy::empty(shape, numpy::dtype::get_builtin<ANNdist>());
     BOOST_ASSERT(!!pydists);
     numpy::ndarray pyidx = numpy::empty(shape, numpy::dtype::get_builtin<int>());
@@ -144,7 +144,7 @@ object search_array(ANNkd_tree& kdtree, object qarray, int k, double eps, bool p
 
     BOOST_ASSERT(len(qarray[0])==kdtree.theDim());
     ANNpointManaged annq(kdtree.theDim());
-    boost::python::tuple shape = boost::python::make_tuple(2, N, k);
+    boost::python::tuple shape = boost::python::make_tuple(N, k);
     numpy::ndarray pydists = numpy::empty(shape, numpy::dtype::get_builtin<ANNdist>());
     BOOST_ASSERT(!!pydists);
     numpy::ndarray pyidx = numpy::empty(shape, numpy::dtype::get_builtin<int>());
@@ -188,7 +188,7 @@ object k_fixed_radius_search(ANNkd_tree& kdtree, object q, double sqRad, int k, 
     if( kball <= 0 )
         return boost::python::make_tuple(numpy::array(boost::python::list()), numpy::array(boost::python::list()), kball);
 
-    boost::python::tuple shape = boost::python::make_tuple(1, min(k, kball));
+    boost::python::tuple shape = boost::python::make_tuple(min(k, kball));
     numpy::ndarray pydists = numpy::empty(shape, numpy::dtype::get_builtin<ANNdist>());
     BOOST_ASSERT(!!pydists);
     numpy::ndarray pyidx = numpy::empty(shape, numpy::dtype::get_builtin<int>());
@@ -217,7 +217,7 @@ object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqR
 
     BOOST_ASSERT(len(qarray[0])==kdtree.theDim());
     ANNpointManaged annq(kdtree.theDim());
-    boost::python::tuple shape_ball = boost::python::make_tuple(1, N);
+    boost::python::tuple shape_ball = boost::python::make_tuple(N);
     numpy::ndarray pykball = numpy::empty(shape_ball, numpy::dtype::get_builtin<int>());
     BOOST_ASSERT(!!pykball);
     int* pkball = (int*) pykball.get_data();
@@ -232,7 +232,7 @@ object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqR
         return boost::python::make_tuple(numpy::array(boost::python::list()), numpy::array(boost::python::list()), pykball);
     }
 
-    boost::python::tuple shape = boost::python::make_tuple(2, N, k);
+    boost::python::tuple shape = boost::python::make_tuple(N, k);
 
     numpy::ndarray pydists = numpy::empty(shape, numpy::dtype::get_builtin<ANNdist>());
     BOOST_ASSERT(!!pydists);
