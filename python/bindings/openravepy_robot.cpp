@@ -401,7 +401,7 @@ public:
                 }
 
                 size_t arm_indices_size = _pmanip->GetArmIndices().size();
-                boost::python::tuple shape = boost::python::make_tuple(2, vsolutions.size(), arm_indices_size);
+                boost::python::tuple shape = boost::python::make_tuple(vsolutions.size(), arm_indices_size);
                 numpy::ndarray pysolutions = numpy::empty(shape, numpy::dtype::get_builtin<dReal>());
                 dReal* ppos = (dReal*) pysolutions.get_data();
                 FOREACH(itsol,vsolutions) {
@@ -449,7 +449,7 @@ public:
                 }
 
                 size_t arm_indices_size = _pmanip->GetArmIndices().size();
-                boost::python::tuple shape = boost::python::make_tuple(2, vsolutions.size(), arm_indices_size);
+                boost::python::tuple shape = boost::python::make_tuple(vsolutions.size(), arm_indices_size);
                 numpy::ndarray pysolutions = numpy::empty(shape, numpy::dtype::get_builtin<dReal>());
                 dReal* ppos = (dReal*) pysolutions.get_data();
                 FOREACH(itsol,vsolutions) {
