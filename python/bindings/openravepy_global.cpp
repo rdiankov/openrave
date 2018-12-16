@@ -210,8 +210,8 @@ public:
         }
 
         boost::python::tuple indices_shape = boost::python::make_tuple(mesh.indices.size()/3, 3);
-        boost::python::tuple stride = boost::python::make_tuple(sizeof(int32_t));
-        indices = numpy::from_data(static_cast<const void *>(mesh.indices.data()), numpy::dtype::get_builtin<int32_t>(), indices_shape, stride, object());
+        numpy::ndarray indices = numpy::empty(indices_shape, numpy::dtype::get_builtin<int32_t>());
+        std::memcpy(indices.get_data(), mesh.indices.data(), mesh.indices.size() * sizeof(int32_t));
     }
 
     void GetTriMesh(TriMesh& mesh) {
