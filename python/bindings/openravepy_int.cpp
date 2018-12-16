@@ -44,7 +44,7 @@ TransformMatrix ExtractTransformMatrix(const object& oraw)
 
 object toPyArray(const TransformMatrix& t)
 {
-    boost::python::tuple shape = boost::python::make_tuple(2, 4, 4);
+    boost::python::tuple shape = boost::python::make_tuple(4, 4);
     numpy::ndarray pyvalues = numpy::empty(shape, numpy::dtype::get_builtin<dReal>());
     dReal* pdata = (dReal*) pyvalues.get_data();
     pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2]; pdata[3] = t.trans.x;
@@ -57,7 +57,7 @@ object toPyArray(const TransformMatrix& t)
 
 object toPyArray(const Transform& t)
 {
-    boost::python::tuple shape = boost::python::make_tuple(1, 7);
+    boost::python::tuple shape = boost::python::make_tuple(7);
     numpy::ndarray pyvalues = numpy::empty(shape, numpy::dtype::get_builtin<dReal>());
     dReal* pdata = (dReal*) pyvalues.get_data();
     pdata[0] = t.rot.x; pdata[1] = t.rot.y; pdata[2] = t.rot.z; pdata[3] = t.rot.w;
@@ -947,10 +947,10 @@ public:
         CollisionReportPtr preport(&report,null_deleter());
 
         RAY r;
-        boost::python::tuple pypos_shape = boost::python::make_tuple(2, num, 6);
+        boost::python::tuple pypos_shape = boost::python::make_tuple(num, 6);
         numpy::ndarray pypos = numpy::empty(pypos_shape, numpy::dtype::get_builtin<dReal>());
         dReal* ppos = (dReal*) pypos.get_data();
-        numpy::ndarray pycollision = numpy::empty(boost::python::make_tuple(1,num), numpy::dtype::get_builtin<bool>());
+        numpy::ndarray pycollision = numpy::empty(boost::python::make_tuple(num), numpy::dtype::get_builtin<bool>());
         bool* pcollision = (bool*) pycollision.get_data();
         for(int i = 0; i < num; ++i, ppos += 6) {
             vector<dReal> ray = ExtractArray<dReal>(rays[i]);
