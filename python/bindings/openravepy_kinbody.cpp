@@ -768,7 +768,7 @@ public:
 
     object GetLocalInertia() const {
         TransformMatrix t = _plink->GetLocalInertia();
-        boost::python::tuple shape = boost::python::make_tuple(2, 3, 3);
+        boost::python::tuple shape = boost::python::make_tuple(3, 3);
         numpy::ndarray pyvalues = numpy::empty(shape, numpy::dtype::get_builtin<dReal>());
         dReal* pdata = (dReal*) pyvalues.get_data();
         pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2];
@@ -778,7 +778,7 @@ public:
     }
     object GetGlobalInertia() const {
         TransformMatrix t = _plink->GetGlobalInertia();
-        boost::python::tuple shape = boost::python::make_tuple(2, 3, 3);
+        boost::python::tuple shape = boost::python::make_tuple(3, 3);
         numpy::ndarray pyvalues = numpy::empty(shape, numpy::dtype::get_builtin<dReal>());
         dReal* pdata = (dReal*) pyvalues.get_data();
         pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2];
@@ -2001,7 +2001,7 @@ object PyKinBody::GetLinkVelocities() const
     std::vector<std::pair<Vector,Vector> > velocities;
     _pbody->GetLinkVelocities(velocities);
 
-    boost::python::tuple shape = boost::python::make_tuple(2, velocities.size(), 6);
+    boost::python::tuple shape = boost::python::make_tuple(velocities.size(), 6);
     numpy::ndarray pyvel = numpy::empty(shape, numpy::dtype::get_builtin<dReal>());
     dReal* pfvel = (dReal*) pyvel.get_data();
     for(size_t i = 0; i < velocities.size(); ++i) {
@@ -2038,7 +2038,7 @@ object PyKinBody::GetLinkAccelerations(object odofaccelerations, object oexterna
     std::vector<std::pair<Vector,Vector> > vLinkAccelerations;
     _pbody->GetLinkAccelerations(vDOFAccelerations, vLinkAccelerations, pmapExternalAccelerations);
 
-    boost::python::tuple shape = boost::python::make_tuple(2, vLinkAccelerations.size(), 6);
+    boost::python::tuple shape = boost::python::make_tuple(vLinkAccelerations.size(), 6);
     numpy::ndarray pyaccel = numpy::empty(shape, numpy::dtype::get_builtin<dReal>());
     dReal* pf = (dReal*) pyaccel.get_data();
     for(size_t i = 0; i < vLinkAccelerations.size(); ++i) {
