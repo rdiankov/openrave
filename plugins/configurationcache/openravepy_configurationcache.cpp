@@ -97,18 +97,24 @@ inline numpy::ndarray toPyArrayN(const float* pvalues, size_t N)
     }
     numpy::dtype dt = numpy::dtype::get_builtin<float>();
     boost::python::tuple shape = boost::python::make_tuple(N);
-    boost::python::tuple stride = boost::python::make_tuple(sizeof(float));
-    return numpy::from_data(static_cast<void const*>(pvalues), dt, shape, stride, object());
+    numpy::ndarray pyarray = numpy::empty(shape, dt);
+    std::memcpy(pyarray.get_data(), &pvalues[0], N * sizeof(float));
+    return pyarray;
 }
 
-inline numpy::ndarray toPyArrayN(const float* pvalues, boost::python::tuple& dims)
+inline numpy::ndarray toPyArrayN(const float* pvalues, const std::vector<size_t>& shape)
 {
-    if( len(dims) == 0 ) {
+    if( shape.empty() ) {
         return numpy::array(boost::python::list());
     }
+    size_t size = sizeof(float);
+    for (auto && dim : shape) {
+      size *= dim;
+    }
     numpy::dtype dt = numpy::dtype::get_builtin<float>();
-    boost::python::tuple stride = boost::python::tuple(sizeof(float));
-    return numpy::from_data(static_cast<void const*>(pvalues), dt, dims, stride, object());
+    numpy::ndarray pyarray = numpy::empty(boost::python::tuple(shape), dt);
+    std::memcpy(pyarray.get_data(), &pvalues[0], size);
+    return pyarray;
 }
 
 inline numpy::ndarray toPyArrayN(const double* pvalues, size_t N)
@@ -118,28 +124,39 @@ inline numpy::ndarray toPyArrayN(const double* pvalues, size_t N)
     }
     numpy::dtype dt = numpy::dtype::get_builtin<double>();
     boost::python::tuple shape = boost::python::tuple(N);
-    boost::python::tuple stride = boost::python::tuple(sizeof(double));
-    return numpy::from_data(pvalues, dt, shape, stride, object());
+    numpy::ndarray pyarray = numpy::empty(shape, dt);
+    std::memcpy(pyarray.get_data(), &pvalues[0], N * sizeof(double));
+    return pyarray;
 }
 
-inline numpy::ndarray toPyArrayN(const double* pvalues, boost::python::tuple& dims)
+inline numpy::ndarray toPyArrayN(const double* pvalues, const std::vector<size_t>& shape)
 {
-    if( len(dims) == 0 ) {
+    if( shape.empty() ) {
         return numpy::array(boost::python::list());
+    }
+    size_t size = sizeof(double);
+    for (auto && dim : shape) {
+      size *= dim;
     }
     numpy::dtype dt = numpy::dtype::get_builtin<double>();
-    boost::python::tuple stride = boost::python::tuple(sizeof(double));
-    return numpy::from_data(pvalues, dt, dims, stride, object());
+    numpy::ndarray pyarray = numpy::empty(boost::python::tuple(shape), dt);
+    std::memcpy(pyarray.get_data(), &pvalues[0], size);
+    return pyarray;
 }
 
-inline numpy::ndarray toPyArrayN(const uint8_t* pvalues, boost::python::tuple& dims)
+inline numpy::ndarray toPyArrayN(const uint8_t* pvalues, const std::vector<size_t>& shape)
 {
-    if( len(dims) == 0 ) {
+    if( shape.empty() ) {
         return numpy::array(boost::python::list());
     }
+    size_t size = sizeof(uint8_t);
+    for (auto && dim : shape) {
+      size *= dim;
+    }
     numpy::dtype dt = numpy::dtype::get_builtin<uint8_t>();
-    boost::python::tuple stride = boost::python::tuple(sizeof(uint8_t));
-    return numpy::from_data(pvalues, dt, dims, stride, object());
+    numpy::ndarray pyarray = numpy::empty(boost::python::tuple(shape), dt);
+    std::memcpy(pyarray.get_data(), &pvalues[0], size);
+    return pyarray;
 }
 
 inline numpy::ndarray toPyArrayN(const uint8_t* pvalues, size_t N)
@@ -149,8 +166,9 @@ inline numpy::ndarray toPyArrayN(const uint8_t* pvalues, size_t N)
     }
     numpy::dtype dt = numpy::dtype::get_builtin<uint8_t>();
     boost::python::tuple shape = boost::python::tuple(N);
-    boost::python::tuple stride = boost::python::tuple(sizeof(uint8_t));
-    return numpy::from_data(pvalues, dt, shape, stride, object());
+    numpy::ndarray pyarray = numpy::empty(shape, dt);
+    std::memcpy(pyarray.get_data(), &pvalues[0], N * sizeof(uint8_t));
+    return pyarray;
 }
 
 inline numpy::ndarray toPyArrayN(const int* pvalues, size_t N)
@@ -160,8 +178,9 @@ inline numpy::ndarray toPyArrayN(const int* pvalues, size_t N)
     }
     numpy::dtype dt = numpy::dtype::get_builtin<int>();
     boost::python::tuple shape = boost::python::tuple(N);
-    boost::python::tuple stride = boost::python::tuple(sizeof(int));
-    return numpy::from_data(pvalues, dt, shape, stride, object());
+    numpy::ndarray pyarray = numpy::empty(shape, dt);
+    std::memcpy(pyarray.get_data(), &pvalues[0], N * sizeof(int));
+    return pyarray;
 }
 
 inline numpy::ndarray toPyArrayN(const uint32_t* pvalues, size_t N)
@@ -171,8 +190,9 @@ inline numpy::ndarray toPyArrayN(const uint32_t* pvalues, size_t N)
     }
     numpy::dtype dt = numpy::dtype::get_builtin<uint32_t>();
     boost::python::tuple shape = boost::python::tuple(N);
-    boost::python::tuple stride = boost::python::tuple(sizeof(uint32_t));
-    return numpy::from_data(pvalues, dt, shape, stride, object());
+    numpy::ndarray pyarray = numpy::empty(shape, dt);
+    std::memcpy(pyarray.get_data(), &pvalues[0], N * sizeof(uint32_t));
+    return pyarray;
 }
 
 template <typename T>
@@ -182,7 +202,7 @@ inline object toPyList(const std::vector<T>& v)
     FOREACHC(it,v) {
         lvalues.append(object(*it));
     }
-    return lvalues;
+    return std::move(lvalues);
 }
 
 template <typename T>
