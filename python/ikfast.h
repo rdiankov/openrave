@@ -417,13 +417,14 @@ namespace IKFAST {
     }
   }
 
-  template <typename T>
-  void DeriveSolutionIndices(std::vector<ikfast::IkSolution<T>>& vecsols, const std::vector<uint32_t>& jointorder) {
+  template <typename T, long unsigned int N>
+  void DeriveSolutionIndices(std::vector<ikfast::IkSolution<T>>& vecsols,
+                             const std::array<uint32_t, N>& jointorder) {
     if( vecsols.empty() ) {
       return;
     }
-    const uint32_t nallvars = vecsols[0].GetDOF(), nvars = jointorder.size(), numsolns = vecsols.size();
-    // assert(nvars <= nallvars);
+    const uint32_t nallvars = vecsols[0].GetDOF(), numsolns = vecsols.size();
+    // assert(N <= nallvars);
     // for(auto& vecsol : vecsols) {
     //   assert(vecsol.GetDOF() == nallvars);
     // }
@@ -434,19 +435,19 @@ namespace IKFAST {
     std::sort(vindices.begin(), vindices.end(),
               [&jointorder, &vecsols](uint32_t inda, uint32_t indb) {
                 const ikfast::IkSolution<T> &sola = vecsols[inda], &solb = vecsols[indb];
-                for(std::vector<uint32_t>::const_iterator it = jointorder.begin(); it != jointorder.end(); ++it) {
-                  uint32_t i = *it;
-                  const T x = sola.get(i).foffset, y = solb.get(i).foffset;
+                for (unsigned int jointindex : jointorder) {
+                  const T x = sola.get(jointindex).foffset, y = solb.get(jointindex).foffset;
                   if (x != y) { return x < y; }
                 }
                 return false;
               });
     
     // initialize
-    for (uint32_t i = 0; i < nvars; i++) {
+    for (uint32_t i = 0; i < N; i++) {
       vecsols[vindices[0]][jointorder[i]].indices[0] = (unsigned char) 0;
     }
-    std::vector<uint32_t> count(nvars, 0);
+    std::array<uint32_t, N> count;
+    count.fill(0);
 
     // derive solution indices for each joint and maxsolutions
     for(uint32_t si = 1; si < numsolns; si++){
@@ -454,7 +455,7 @@ namespace IKFAST {
       const ikfast::IkSolution<T> &prevsol = vecsols[vindices[si-1]];
       ikfast::IkSolution<T> &cursol = vecsols[vindices[si]];
       
-      for (uint32_t varindex = 0; varindex < nvars; varindex++) {
+      for (uint32_t varindex = 0; varindex < N; varindex++) {
         const uint32_t jointindex = jointorder[varindex];
         const uint32_t lastindex = prevsol.get(jointindex).indices[0];
         
@@ -478,7 +479,7 @@ namespace IKFAST {
 
     // last round of deriving maxsolutions
     const ikfast::IkSolution<T> &cursol = vecsols[vindices[numsolns-1]];
-    for (uint32_t varindex = 0; varindex < nvars; varindex++) {
+    for (uint32_t varindex = 0; varindex < N; varindex++) {
       const uint32_t jointindex = jointorder[varindex],
         oldsi = count[varindex],
         maxsolni = cursol.get(jointindex).indices[0] + 1;

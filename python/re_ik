@@ -12,10 +12,10 @@
 #openrave.py --database inversekinematics --robot=$MUJIN_JHBUILD_CHECKOUT_DIR/openrave/python/robotfiles/mitsubishi-rv-7fll_newgripper.mujin.dae --usecached
 
 #openrave.py --database inversekinematics --robot=$MUJIN_JHBUILD_CHECKOUT_DIR/openrave/python/robotfiles/Sumitomo_Riko_PW1_20180925-Shimizu.mujin.dae \
-#            --numiktests=1000 --iktype=translationdirection5d
+#            --numiktests=1000 --iktype=translationdirection5d --freeindices=0
 
 openrave.py --database inversekinematics --robot=$MUJIN_JHBUILD_CHECKOUT_DIR/openrave/python/robotfiles/Sumitomo_Riko_PW1_20180925-Mehul.mujin.dae \
-            --numiktests=1000 --iktype=translationdirection5d
+            --numiktests=1000 --iktype=translationdirection5d --freeindices=0
 
 #openrave.py --database inversekinematics --robot=$MUJIN_JHBUILD_CHECKOUT_DIR/openrave/src/robots/kawada-hironx.zae --iktests=10000 --usecached
 
