@@ -375,7 +375,8 @@ private:
     }
 
     /// \param docname the top level document?
-    virtual void Init(const string& docname, const std::string& keywords=std::string())
+    virtual void Init(const string& docname, const std::string& keywords=std::string(),
+            const std::string& subject=std::string())
     {
         daeInt error = _dae->getDatabase()->insertDocument(docname.c_str(), &_doc );     // also creates a collada root
         BOOST_ASSERT( error == DAE_OK && !!_doc );
@@ -412,6 +413,9 @@ private:
 
             domAsset::domKeywordsRef domkeywords = daeSafeCast<domAsset::domKeywords>( asset->add( COLLADA_ELEMENT_KEYWORDS ) );
             domkeywords->setValue(keywords.c_str());
+
+            domAsset::domSubjectRef domsubject = daeSafeCast<domAsset::domSubject>( asset->add( COLLADA_ELEMENT_SUBJECT ) );
+            domsubject->setValue(subject.c_str());
         }
 
         _globalscene = _dom->getScene();
@@ -2497,7 +2501,7 @@ void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const
 {
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaWriter writer(penv, atts);
-    std::string scenename, keywords;
+    std::string scenename, keywords, subject;
     FOREACHC(itatt,atts) {
         if( itatt->first == "scenename" ) {
             scenename = itatt->second;
@@ -2505,9 +2509,12 @@ void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const
         else if( itatt->first == "keywords" ) {
             keywords = itatt->second;
         }
+        else if( itatt->first == "subject" ) {
+            subject = itatt->second;
+        }
     }
 
-    writer.Init("openrave_snapshot", keywords);
+    writer.Init("openrave_snapshot", keywords, subject);
 
     if( scenename.size() == 0 ) {
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
@@ -2536,14 +2543,17 @@ void RaveWriteColladaFile(KinBodyPtr pbody, const string& filename, const Attrib
 {
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaWriter writer(pbody->GetEnv(),atts);
-    std::string keywords;
+    std::string keywords, subject;
     FOREACHC(itatt,atts) {
         if( itatt->first == "keywords" ) {
             keywords = itatt->second;
         }
+        else if( itatt->first == "subject" ) {
+            subject = itatt->second;
+        }
     }
 
-    writer.Init("openrave_snapshot", keywords);
+    writer.Init("openrave_snapshot", keywords, subject);
     if( !writer.Write(pbody) ) {
         throw openrave_exception(_("ColladaWriter::Write(KinBodyPtr) failed"));
     }
@@ -2555,7 +2565,7 @@ void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::st
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     if( listbodies.size() > 0 ) {
         ColladaWriter writer(listbodies.front()->GetEnv(),atts);
-        std::string scenename, keywords;
+        std::string scenename, keywords, subject;
         FOREACHC(itatt,atts) {
             if( itatt->first == "scenename" ) {
                 scenename = itatt->second;
@@ -2564,8 +2574,11 @@ void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::st
             else if( itatt->first == "keywords" ) {
                 keywords = itatt->second;
             }
+            else if( itatt->first == "subject" ) {
+                subject = itatt->second;
+            }
         }
-        writer.Init("openrave_snapshot", keywords);
+        writer.Init("openrave_snapshot", keywords, subject);
 
         if( scenename.size() == 0 ) {
     #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
@@ -2595,7 +2608,7 @@ void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output, 
 {
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaWriter writer(penv, atts);
-    std::string scenename, keywords;
+    std::string scenename, keywords, subject;
     FOREACHC(itatt,atts) {
         if( itatt->first == "scenename" ) {
             scenename = itatt->second;
@@ -2603,9 +2616,12 @@ void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output, 
         else if( itatt->first == "keywords" ) {
             keywords = itatt->second;
         }
+        else if( itatt->first == "subject" ) {
+            subject = itatt->second;
+        }
     }
 
-    writer.Init("openrave_snapshot", keywords);
+    writer.Init("openrave_snapshot", keywords, subject);
 
     if( scenename.size() == 0 ) {
         scenename = "scene";
@@ -2621,14 +2637,17 @@ void RaveWriteColladaMemory(KinBodyPtr pbody, std::vector<char>& output, const A
 {
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaWriter writer(pbody->GetEnv(),atts);
-    std::string keywords;
+    std::string keywords, subject;
     FOREACHC(itatt,atts) {
         if( itatt->first == "keywords" ) {
             keywords = itatt->second;
         }
+        else if( itatt->first == "subject" ) {
+            subject = itatt->second;
+        }
     }
 
-    writer.Init("openrave_snapshot", keywords);
+    writer.Init("openrave_snapshot", keywords, subject);
     if( !writer.Write(pbody) ) {
         throw openrave_exception(_("ColladaWriter::Write(KinBodyPtr) failed"));
     }
@@ -2641,7 +2660,7 @@ void RaveWriteColladaMemory(const std::list<KinBodyPtr>& listbodies, std::vector
     output.clear();
     if( listbodies.size() > 0 ) {
         ColladaWriter writer(listbodies.front()->GetEnv(),atts);
-        std::string scenename, keywords;
+        std::string scenename, keywords, subject;
         FOREACHC(itatt,atts) {
             if( itatt->first == "scenename" ) {
                 scenename = itatt->second;
@@ -2650,8 +2669,11 @@ void RaveWriteColladaMemory(const std::list<KinBodyPtr>& listbodies, std::vector
             else if( itatt->first == "keywords" ) {
                 keywords = itatt->second;
             }
+            else if( itatt->first == "subject" ) {
+                subject = itatt->second;
+            }
         }
-        writer.Init("openrave_snapshot", keywords);
+        writer.Init("openrave_snapshot", keywords, subject);
 
         if( scenename.size() == 0 ) {
             scenename = "scene";
