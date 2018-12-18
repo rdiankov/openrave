@@ -667,9 +667,9 @@ void RobotBase::Manipulator::GetChildLinks(std::vector<LinkPtr>& vlinks) const
     }
 }
 
-bool RobotBase::Manipulator::IsChildLink(LinkConstPtr plink) const
+bool RobotBase::Manipulator::IsChildLink(const KinBody::Link &link) const
 {
-    if( __pEffector->IsRigidlyAttached(plink) ) {
+    if( __pEffector->IsRigidlyAttached(link) ) {
         return true;
     }
 
@@ -1308,10 +1308,10 @@ bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report
     return false;
 }
 
-bool RobotBase::Manipulator::IsGrabbing(KinBodyConstPtr pbody) const
+bool RobotBase::Manipulator::IsGrabbing(const KinBody &body) const
 {
     RobotBasePtr probot(__probot);
-    KinBody::LinkPtr plink = probot->IsGrabbing(pbody);
+    KinBody::LinkPtr plink = probot->IsGrabbing(body);
     if( !!plink ) {
         if( plink == __pEffector || plink == __pBase ) {
             return true;

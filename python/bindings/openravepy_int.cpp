@@ -1906,7 +1906,7 @@ public:
     {
         CHECK_POINTER(pbody);
         TriMesh mesh;
-        _penv->Triangulate(mesh,openravepy::GetKinBody(pbody));
+        _penv->Triangulate(mesh, *openravepy::GetKinBody(pbody));
         return toPyTriMesh(mesh);
     }
 

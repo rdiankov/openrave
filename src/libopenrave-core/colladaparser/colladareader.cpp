@@ -260,6 +260,7 @@ public:
         daeErrorHandler::setErrorHandler(this);
         _bOpeningZAE = false;
         _bSkipGeometry = false;
+        _bReadGeometryGroups = false;
         _fGlobalScale = 1.0/penv->GetUnit().second;
         _bBackCompatValuesInRadians = false;
         if( sizeof(daeFloat) == 4 ) {
@@ -343,6 +344,7 @@ public:
         RAVELOG_VERBOSE(str(boost::format("init COLLADA reader version: %s, namespace: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE));
         _dae = GetGlobalDAE();
         _bSkipGeometry = false;
+        _bReadGeometryGroups = false;
         _vOpenRAVESchemeAliases.resize(0);
         FOREACHC(itatt,atts) {
             if( itatt->first == "skipgeometry" ) {
@@ -369,6 +371,12 @@ public:
                 }
             }
             else if( itatt->first == "scalegeometry" ) {
+                
+            }
+            else if( itatt->first == "readoptions" ) {
+                stringstream ss(itatt->second);
+                std::list<string> newelts((istream_iterator<string>(ss)), istream_iterator<string>());
+                _bReadGeometryGroups = find(newelts.begin(), newelts.end(), "bind_instance_geometry") != newelts.end();
             }
             else {
                 //RAVELOG_WARN(str(boost::format("collada reader unprocessed attribute pair: %s:%s")%itatt->first%itatt->second));
@@ -4261,48 +4269,49 @@ private:
                         else if( pelt->getElementName() == string("bind_instance_geometry") ) {
 
                             // for now don't load since we don't have good way of updating the geometry throughout the system yet.
+                            if( _bReadGeometryGroups ) {
+                                const std::string groupname = pelt->getAttribute("type");
+                                if( groupname == "" ) {
+                                    RAVELOG_WARN("encountered an empty group name");
+                                }
 
-//                            const std::string groupname = pelt->getAttribute("type");
-//                            if( groupname == "" ) {
-//                                RAVELOG_WARN("encountered an empty group name");
-//                            }
-//
-//                            domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link"), referenceElt).resolve().elt);
-//                            KinBody::LinkPtr plink;
-//                            if( !!pdomlink ) {
-//                                plink = pbody->GetLink(_ExtractLinkName(pdomlink));
-//                            }
-//                            else {
-//                                plink = _ResolveLinkBinding(listInstanceLinkBindings, pelt->getAttribute("link"), pbody);
-//                            }
-//                            if( !plink ) {
-//                                RAVELOG_WARN(str(boost::format("failed to resolve link %s\n")%pelt->getAttribute("link")));
-//                                continue;
-//                            }
-//                            BOOST_ASSERT(plink->GetParent()==pbody);
-//
-//                            domGeometryRef domgeom = daeSafeCast<domGeometry>(daeURI(*referenceElt, pelt->getAttribute("url")).getElement());
-//                            if( !domgeom ) {
-//                                RAVELOG_WARN_FORMAT("failed to retrieve geometry %s\n", pelt->getAttribute("url"));
-//                                continue;
-//                            }
-//
-//                            domMaterialRef dommat = daeSafeCast<domMaterial>(daeURI(*referenceElt, pelt->getAttribute("material")).getElement());
-//                            if( !dommat ) {
-//                              RAVELOG_WARN_FORMAT("failed to retrieve material for geometry %s\n", pelt->getAttribute("material"));
-//                            } else {
-//                              mapmaterials["mat0"] = dommat;
-//                            }
-//
-//
-//                            // TODO : There seems to be scaling factors and transforms that might be forgotten here (c.f.: ExtractGeometries)
-//                            if( !ExtractGeometry(domgeom, mapmaterials, mapGeometryGroups[plink][groupname]) ) {
-//                                RAVELOG_WARN_FORMAT("failed to add geometry to geometry group %s, link %s\n", groupname%plink->GetName());
-//                                continue;
-//                            }
-//                            FOREACH(itgeominfo, mapGeometryGroups[plink][groupname]) {
-//                                itgeominfo->InitCollisionMesh();
-//                            }
+                                domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link"), referenceElt).resolve().elt);
+                                KinBody::LinkPtr plink;
+                                if( !!pdomlink ) {
+                                    plink = pbody->GetLink(_ExtractLinkName(pdomlink));
+                                }
+                                else {
+                                    plink = _ResolveLinkBinding(listInstanceLinkBindings, pelt->getAttribute("link"), pbody);
+                                }
+                                if( !plink ) {
+                                    RAVELOG_WARN(str(boost::format("failed to resolve link %s\n")%pelt->getAttribute("link")));
+                                    continue;
+                                }
+                                BOOST_ASSERT(plink->GetParent()==pbody);
+
+                                domGeometryRef domgeom = daeSafeCast<domGeometry>(daeURI(*referenceElt, pelt->getAttribute("url")).getElement());
+                                if( !domgeom ) {
+                                    RAVELOG_WARN_FORMAT("failed to retrieve geometry %s\n", pelt->getAttribute("url"));
+                                    continue;
+                                }
+
+                                domMaterialRef dommat = daeSafeCast<domMaterial>(daeURI(*referenceElt, pelt->getAttribute("material")).getElement());
+                                if( !dommat ) {
+                                  RAVELOG_WARN_FORMAT("failed to retrieve material for geometry %s\n", pelt->getAttribute("material"));
+                                } else {
+                                  mapmaterials["mat0"] = dommat;
+                                }
+
+
+                                // TODO : There seems to be scaling factors and transforms that might be forgotten here (c.f.: ExtractGeometries)
+                                if( !ExtractGeometry(domgeom, mapmaterials, mapGeometryGroups[plink][groupname]) ) {
+                                    RAVELOG_WARN_FORMAT("failed to add geometry to geometry group %s, link %s\n", groupname%plink->GetName());
+                                    continue;
+                                }
+                                FOREACH(itgeominfo, mapGeometryGroups[plink][groupname]) {
+                                    itgeominfo->InitCollisionMesh();
+                                }
+                            }
                         }
                         else if( pelt->getElementName() == string("link_collision_state") ) {
                             domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link"), referenceElt).resolve().elt);
@@ -5167,6 +5176,7 @@ private:
 
     bool _bOpeningZAE; ///< true if currently opening a zae
     bool _bSkipGeometry;
+    bool _bReadGeometryGroups; ///< if true, then read the bind_instance_geometry tag to initialize all the geometry groups
     bool _bBackCompatValuesInRadians; ///< if true, will assume the speed, acceleration, and dofvalues are in radians instead of degrees (for back compat)
 };
 
