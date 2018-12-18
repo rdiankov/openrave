@@ -2362,6 +2362,7 @@ protected:
 
             if( vVisitedDiscretization.size() == 0 ) {
                 nEndTimeDiscretization = (int)(tTotal*fiMinDiscretization) + 1;
+                // Limit the size of vVisitedDiscretization. If too large, then don't use it.
                 if( nEndTimeDiscretization <= 0x8000 ) {
                     vVisitedDiscretization.resize(nEndTimeDiscretization*nEndTimeDiscretization, 0);
                 }
@@ -2419,7 +2420,7 @@ protected:
 #endif
                 continue;
             }
-            {
+            if( vVisitedDiscretization.size() > 0 ) {
                 // Keep track of time slots that have already been previously checked (and failed)
                 int t0Index = t0*fiMinDiscretization;
                 int t1Index = t1*fiMinDiscretization;
@@ -2441,13 +2442,17 @@ protected:
                         for( int t1TestIndex = t1Index - 1; t1TestIndex < t1Index + 2; ++t1TestIndex ) {
                             if( t0TestIndex >=0 && t1TestIndex >= 0 && t0TestIndex < nEndTimeDiscretization && t1TestIndex < nEndTimeDiscretization ) {
                                 testPairIndex = t0TestIndex*nEndTimeDiscretization + t1TestIndex;
-                                vVisitedDiscretization[testPairIndex] = 1;
+                                if( testPairIndex < vVisitedDiscretization.size() ) {
+                                    vVisitedDiscretization[testPairIndex] = 1;
+                                }
                             }
                         }
                     }
                 }
                 else {
-                    vVisitedDiscretization[testPairIndex] = 1;
+                    if( testPairIndex < vVisitedDiscretization.size() ) {
+                        vVisitedDiscretization[testPairIndex] = 1;
+                    }
                 }
             }
 
