@@ -3177,7 +3177,13 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             if( numPostNeighSteps > 1 ) {
                 bHasRampDeviatedFromInterpolation = true;
                 // should never happen, but just in case _neighstatefn is some non-linear constraint projection
-                RAVELOG_WARN_FORMAT("have to divide the arc in %d steps even after original interpolation is done, interval=%d", numPostNeighSteps%interval);
+                if( _listCheckBodies.size() > 0 ) {
+                    RAVELOG_WARN_FORMAT("env=%d, have to divide the arc in %d steps even after original interpolation is done, interval=%d", _listCheckBodies.front()->GetEnv()->GetId()%numPostNeighSteps%interval);
+                }
+                else {
+                    RAVELOG_WARN_FORMAT("have to divide the arc in %d steps even after original interpolation is done, interval=%d", numPostNeighSteps%interval);
+                }
+
                 // this case should be rare, so can create a vector here. don't look at constraints since we would never converge...
                 // note that circular constraints would break here
                 std::vector<dReal> vpostdq(_vtempconfig.size()), vpostddq(dq1.size());
