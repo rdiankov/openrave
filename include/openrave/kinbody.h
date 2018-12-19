@@ -569,8 +569,9 @@ protected:
         ///
         /// This gives a user control for dynamically changing the object geometry. Note that the kinbody/robot hash could change.
         /// \param geometries a list of geometry infos to be initialized into new geometry objects, note that the geometry info data is copied
-        virtual void InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& geometries);
-        virtual void InitGeometries(std::list<KinBody::GeometryInfo>& geometries);
+        /// \param bForceRecomputeMeshCollision if true, then recompute mesh collision for all non-tri meshes
+        virtual void InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& geometries, bool bForceRecomputeMeshCollision=true);
+        virtual void InitGeometries(std::list<KinBody::GeometryInfo>& geometries, bool bForceRecomputeMeshCollision=true);
 
         /// \brief initializes the link with geometries from the extra geomeries in LinkInfo
         ///
