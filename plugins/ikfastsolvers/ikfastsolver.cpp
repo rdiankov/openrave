@@ -84,10 +84,10 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
     }
 
     inline boost::shared_ptr<IkFastSolver<IkReal> > shared_solver() {
-        return boost::dynamic_pointer_cast<IkFastSolver<IkReal> >(shared_from_this());
+        return boost::static_pointer_cast<IkFastSolver<IkReal> >(shared_from_this());
     }
     inline boost::shared_ptr<IkFastSolver<IkReal> const> shared_solver_const() const {
-        return boost::dynamic_pointer_cast<IkFastSolver<IkReal> const>(shared_from_this());
+        return boost::static_pointer_cast<IkFastSolver<IkReal> const>(shared_from_this());
     }
     inline boost::weak_ptr<IkFastSolver<IkReal> > weak_solver() {
         return shared_solver();
@@ -505,7 +505,7 @@ protected:
             std::vector<KinBodyPtr> vgrabbedbodies;
             _probot->GetGrabbed(vgrabbedbodies);
             FOREACH(itbody,vgrabbedbodies) {
-                if( find(_vchildlinks.begin(),_vchildlinks.end(),_probot->IsGrabbing(*itbody)) != _vchildlinks.end() ) {
+                if( find(_vchildlinks.begin(),_vchildlinks.end(),_probot->IsGrabbing(**itbody)) != _vchildlinks.end() ) {
                     _listGrabbedSavedStates.push_back(KinBody::KinBodyStateSaver(*itbody, KinBody::Save_LinkEnable));
                 }
             }
@@ -1552,7 +1552,7 @@ protected:
                         if( !!potherlink && _numBacktraceLinksForSelfCollisionWithNonMoving > 0 ) {
                             for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithNonMoving; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
                                 KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
-                                if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(potherlink) ) {
+                                if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(*potherlink) ) {
 
                                     stateCheck.numImpossibleSelfCollisions++;
                                     RAVELOG_VERBOSE_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, attempts=%d", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
@@ -1581,7 +1581,7 @@ protected:
                                 //bool bRigidlyAttached = false;
                                 for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithFree; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
                                     KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
-                                    if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(potherlink) ) {
+                                    if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(*potherlink) ) {
 
                                         stateCheck.numImpossibleSelfCollisions++;
                                         RAVELOG_VERBOSE_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, attempts=%d", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
@@ -1952,15 +1952,15 @@ protected:
                 FOREACH(it,_vsolutionindices) {
                     *it += itravesol->second<<16;
                 }
-                probot->SetActiveDOFValues(vravesol,false);
-                _CheckRefineSolution(param, *pmanip, vravesol);
+                probot->SetActiveDOFValues(itravesol->first,false);
+                _CheckRefineSolution(param, *pmanip, itravesol->first);
 
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false);
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
                 IkReturnPtr localret(new IkReturn(IKRA_Success));
                 localret->_mapdata["solutionindices"] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
-                localret->_vsolution.swap(vravesol);
+                localret->_vsolution.swap(itravesol->first);
                 listlocalikreturns.push_back(std::make_pair(localret, paramnew));
             }
         }
@@ -1988,7 +1988,7 @@ protected:
                         if( !!potherlink && _numBacktraceLinksForSelfCollisionWithNonMoving > 0 ) {
                             for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithNonMoving; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
                                 KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
-                                if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(potherlink) ) {
+                                if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(*potherlink) ) {
 
                                     stateCheck.numImpossibleSelfCollisions++;
                                     RAVELOG_VERBOSE_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, attempts=%d", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
@@ -2017,7 +2017,7 @@ protected:
                                 //bool bRigidlyAttached = false;
                                 for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithFree; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
                                     KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
-                                    if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(potherlink) ) {
+                                    if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(*potherlink) ) {
 
                                         stateCheck.numImpossibleSelfCollisions++;
                                         RAVELOG_VERBOSE_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, attempts=%d", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);

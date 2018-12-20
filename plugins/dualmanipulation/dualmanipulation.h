@@ -94,10 +94,10 @@ public:
 protected:
 
     inline boost::shared_ptr<DualManipulation> shared_problem() {
-        return boost::dynamic_pointer_cast<DualManipulation>(shared_from_this());
+        return boost::static_pointer_cast<DualManipulation>(shared_from_this());
     }
     inline boost::shared_ptr<DualManipulation const> shared_problem_const() const {
-        return boost::dynamic_pointer_cast<DualManipulation const>(shared_from_this());
+        return boost::static_pointer_cast<DualManipulation const>(shared_from_this());
     }
 
     bool SetActiveManip(ostream& sout, istream& sinput)

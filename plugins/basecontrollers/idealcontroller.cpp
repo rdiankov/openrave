@@ -288,12 +288,12 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                         continue;
                     }
                     if( bodyid < 0 ) {
-                        if( !!probot->IsGrabbing(pbody) ) {
+                        if( !!probot->IsGrabbing(*pbody) ) {
                             listrelease.push_back(pbody);
                         }
                     }
                     else {
-                        KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(pbody);
+                        KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*pbody);
                         if( !!pgrabbinglink ) {
                             if( pgrabbinglink->GetIndex() != itgrabinfo->second ) {
                                 listrelease.push_back(pbody);
@@ -309,12 +309,12 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             FOREACH(itgrabinfo,_vgrabbodylinks) {
                 int dograb = int(std::floor(sampledata.at(itgrabinfo->offset)+0.5));
                 if( dograb <= 0 ) {
-                    if( !!probot->IsGrabbing(itgrabinfo->pbody) ) {
+                    if( !!probot->IsGrabbing(*itgrabinfo->pbody) ) {
                         listrelease.push_back(itgrabinfo->pbody);
                     }
                 }
                 else {
-                    KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(itgrabinfo->pbody);
+                    KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*itgrabinfo->pbody);
                     if( !!pgrabbinglink ) {
                         listrelease.push_back(itgrabinfo->pbody);
                     }
@@ -344,7 +344,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
 
             // always release after setting dof values
             FOREACH(itbody,listrelease) {
-                probot->Release(*itbody);
+                probot->Release(**itbody);
             }
             FOREACH(itindex,listgrabindices) {
                 const GrabBody& grabinfo = _vgrabbodylinks.at(*itindex);
@@ -414,10 +414,10 @@ private:
     }
 
     inline boost::shared_ptr<IdealController> shared_controller() {
-        return boost::dynamic_pointer_cast<IdealController>(shared_from_this());
+        return boost::static_pointer_cast<IdealController>(shared_from_this());
     }
     inline boost::shared_ptr<IdealController const> shared_controller_const() const {
-        return boost::dynamic_pointer_cast<IdealController const>(shared_from_this());
+        return boost::static_pointer_cast<IdealController const>(shared_from_this());
     }
     inline boost::weak_ptr<IdealController> weak_controller() {
         return shared_controller();
