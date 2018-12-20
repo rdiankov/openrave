@@ -140,13 +140,15 @@ public:
                 dReal lower = _parameters->_vConfigLowerLimit.at(j), upper = _parameters->_vConfigUpperLimit.at(j);
                 if( _vdiffdata.at(i+j) < lower ) {
                     if( _vdiffdata.at(i+j) < lower-g_fEpsilonJointLimit ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT(_("lower limit for traj point %d dof %d is not followed (%.15e < %.15e)"),(i/_parameters->GetDOF())%j%_vdiffdata.at(i+j)%lower,ORE_InconsistentConstraints);
+                        RAVELOG_WARN(str(boost::format("lower limit for traj point %d dof %d is not followed (%.15e < %.15e)")%(i/_parameters->GetDOF())%j%_vdiffdata.at(i+j)%lower));
+                        return PS_Failed;
                     }
                     _vdiffdata.at(i+j) = lower;
                 }
                 else if( _vdiffdata.at(i+j) > upper ) {
                     if( _vdiffdata.at(i+j) > upper+g_fEpsilonJointLimit ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT(_("upper limit for traj point %d dof %d is not followed (%.15e > %.15e)"),(i/_parameters->GetDOF())%j%_vdiffdata.at(i+j)%upper,ORE_InconsistentConstraints);
+                        RAVELOG_WARN(str(boost::format("upper limit for traj point %d dof %d is not followed (%.15e > %.15e)")%(i/_parameters->GetDOF())%j%_vdiffdata.at(i+j)%upper));
+                        return PS_Failed;
                     }
                     _vdiffdata.at(i+j) = upper;
                 }

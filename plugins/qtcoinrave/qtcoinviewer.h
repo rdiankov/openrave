@@ -276,13 +276,13 @@ public:
     };
 
     inline QtCoinViewerPtr shared_viewer() {
-        return boost::dynamic_pointer_cast<QtCoinViewer>(shared_from_this());
+        return boost::static_pointer_cast<QtCoinViewer>(shared_from_this());
     }
     inline QtCoinViewerWeakPtr weak_viewer() {
         return QtCoinViewerWeakPtr(shared_viewer());
     }
     inline QtCoinViewerConstPtr shared_viewer_const() const {
-        return boost::dynamic_pointer_cast<QtCoinViewer const>(shared_from_this());
+        return boost::static_pointer_cast<QtCoinViewer const>(shared_from_this());
     }
 
     static void mousemove_cb(void * userdata, SoEventCallback * node);

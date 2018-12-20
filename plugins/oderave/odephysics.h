@@ -59,10 +59,10 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
     }
 
     inline boost::shared_ptr<ODEPhysicsEngine> shared_physics() {
-        return boost::dynamic_pointer_cast<ODEPhysicsEngine>(shared_from_this());
+        return boost::static_pointer_cast<ODEPhysicsEngine>(shared_from_this());
     }
     inline boost::shared_ptr<ODEPhysicsEngine const> shared_physics_const() const {
-        return boost::dynamic_pointer_cast<ODEPhysicsEngine const>(shared_from_this());
+        return boost::static_pointer_cast<ODEPhysicsEngine const>(shared_from_this());
     }
 
     class PhysicsPropertiesXMLReader : public BaseXMLReader
