@@ -1751,7 +1751,7 @@ void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
         size_t startindex = traj->GetFirstWaypointIndexAfterTime(starttime);
         if( startindex >= traj->GetNumWaypoints() )
             startindex = traj->GetNumWaypoints()-1;
-        
+
         if( startindex > 0 ) {
             ConfigurationSpecification deltatimespec;
             deltatimespec.AddDeltaTimeGroup();
@@ -3230,9 +3230,17 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 
     if( !!filterreturn ) {
         filterreturn->_bHasRampDeviatedFromInterpolation = bHasRampDeviatedFromInterpolation;
-        if (options & CFO_FillCheckedConfiguration) {
-            filterreturn->_configurations.insert(filterreturn->_configurations.end(), q1.begin(), q1.end());
-            filterreturn->_configurationtimes.push_back(timeelapsed);
+        if( options & CFO_FillCheckedConfiguration ) {
+            if( bCheckEnd ) {
+                // Insert the last configuration only when we have checked it.
+                filterreturn->_configurations.insert(filterreturn->_configurations.end(), q1.begin(), q1.end());
+                if( timeelapsed > 0 ) {
+                    filterreturn->_configurationtimes.push_back(timeelapsed);
+                }
+                else {
+                    filterreturn->_configurationtimes.push_back(1.0);
+                }
+            }
         }
     }
 
