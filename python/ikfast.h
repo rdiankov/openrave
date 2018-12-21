@@ -61,7 +61,7 @@ class IkSingleDOFSolutionBase
 {
 public:
     IkSingleDOFSolutionBase() {
-      std::fill(indices.begin(), indices.end(), (unsigned char) -1);
+      indices.fill(0xFF);
     }
   
     T fmul = 0.0, foffset = 0.0; ///< joint value is fmul*sol[freeind]+foffset
