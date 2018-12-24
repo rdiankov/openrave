@@ -118,6 +118,9 @@ public:
     /// \see CollisionCheckerBase::CheckCollision(const RAY&,CollisionReportPtr)
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
+    /// \see CollisionCheckerBase::CheckCollision(const TriMesh&,KinBodyConstPtr, CollisionReportPtr)
+    virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
+
     /// \see CollisionCheckerBase::CheckSelfCollision
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
@@ -170,7 +173,7 @@ public:
     /// \brief Stops the internal physics loop, stops calling SimulateStep for all modules. <b>[multi-thread safe]</b>
     ///
     /// See \ref arch_simulation for more about the simulation thread.
-    /// \param shutdownthread 
+    /// \param shutdownthread
     virtual void StopSimulation(int shutdownthread=1) = 0;
 
     /// \brief Return true if inner simulation loop is executing. <b>[multi-thread safe]</b>
@@ -266,7 +269,7 @@ public:
         \throw openrave_exception Throw if failed to save anything
      */
     virtual void WriteToMemory(const std::string& filetype, std::vector<char>& output, SelectionOptions options=SO_Everything, const AttributesList& atts = AttributesList()) = 0;
-    
+
     /** \brief Initializes a robot from a resource file. The robot is not added to the environment when calling this function. <b>[multi-thread safe]</b>
 
         \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
@@ -290,7 +293,7 @@ public:
 
         The robot should not be added the environment when calling this function.
         \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
-        \param atts The attribute/value pair specifying loading options. If contains "uri", then will set the new body's uri string to it. If the file is COLLADA, can also specify articulatdSystemId for the then atts can have articulatdSystemId.  More info in \ref arch_robot. 
+        \param atts The attribute/value pair specifying loading options. If contains "uri", then will set the new body's uri string to it. If the file is COLLADA, can also specify articulatdSystemId for the then atts can have articulatdSystemId.  More info in \ref arch_robot.
      */
     virtual RobotBasePtr ReadRobotData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
     virtual RobotBasePtr ReadRobotXMLData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList()) {
@@ -410,7 +413,7 @@ public:
     ///
     /// \param body KinBodyPtr
     /// \param action if 0 body has been removed from the environment (environment id is already reset), if 1 body was just added to environment
-    typedef boost::function<void(KinBodyPtr, int)> BodyCallbackFn;
+    typedef boost::function<void (KinBodyPtr, int)> BodyCallbackFn;
     virtual UserDataPtr RegisterBodyCallback(const BodyCallbackFn& callback) = 0;
 
     /// \brief Fill an array with all sensors loaded in the environment. <b>[multi-thread safe]</b>
@@ -462,7 +465,7 @@ public:
     /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
     /// \throw openrave_exception with ORE_Timeout error code
     virtual void GetRobots(std::vector<RobotBasePtr>& robots, uint64_t timeout=0) const = 0;
-    
+
     /// \brief Retrieve published bodies, completes even if environment is locked. <b>[multi-thread safe]</b>
     ///
     /// A separate **interface mutex** is locked for reading the modules.
@@ -479,7 +482,7 @@ public:
     /// \throw openrave_exception with ORE_Timeout error code
     /// \return true if name matches to a published body
     virtual bool GetPublishedBody(const std::string& name, KinBody::BodyState& bodystate, uint64_t timeout=0) = 0;
-    
+
     /// \brief Retrieve joint values of published body of specified name, completes even if environment is locked. <b>[multi-thread safe]</b>
     ///
     /// A separate **interface mutex** is locked for reading the modules.
@@ -515,7 +518,10 @@ public:
     /// \param[out] trimesh - The output triangle mesh
     /// \param[in] body body the triangulate
     /// \throw openrave_exception Throw if failed to add anything
-    virtual void Triangulate(TriMesh& trimesh, KinBodyConstPtr pbody) = 0;
+    void Triangulate(TriMesh& trimesh, KinBodyConstPtr pbody) RAVE_DEPRECATED {
+        return Triangulate(trimesh, *pbody);
+    }
+    virtual void Triangulate(TriMesh& trimesh, const KinBody &body) = 0;
 
     /// \brief General triangulation of the whole scene. <b>[multi-thread safe]</b>
     ///
@@ -689,7 +695,7 @@ public:
     inline int GetId() const {
         return __nUniqueId;
     }
-    
+
 protected:
     virtual const char* GetHash() const {
         return OPENRAVE_ENVIRONMENT_HASH;

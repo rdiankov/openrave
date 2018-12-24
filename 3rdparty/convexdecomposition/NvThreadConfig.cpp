@@ -83,6 +83,7 @@ NvThreadConfig.cpp : A simple wrapper class to define threading and mutex locks.
     #include <sys/timeb.h>    // ftime(), struct timeb
     #include <sys/time.h>
 	#include <unistd.h>
+    #include <sched.h>
 #endif
 
 
@@ -123,8 +124,8 @@ void   tc_sleep(NxU32 ms)
 
 void tc_spinloop()
 {
-#ifndef _MSC_VER
-      asm ( "pause" );
+   #ifndef _MSC_VER
+      sched_yield();
    #else
       __asm { pause };
    #endif

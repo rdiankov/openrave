@@ -131,10 +131,10 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
 protected:
 
     inline boost::shared_ptr<BaseManipulation> shared_problem() {
-        return boost::dynamic_pointer_cast<BaseManipulation>(shared_from_this());
+        return boost::static_pointer_cast<BaseManipulation>(shared_from_this());
     }
     inline boost::shared_ptr<BaseManipulation const> shared_problem_const() const {
-        return boost::dynamic_pointer_cast<BaseManipulation const>(shared_from_this());
+        return boost::static_pointer_cast<BaseManipulation const>(shared_from_this());
     }
 
     bool Traj(ostream& sout, istream& sinput)
@@ -777,7 +777,7 @@ protected:
             params->_sPostProcessingPlanner = "shortcut_linear";
             params->_sPostProcessingParameters ="<_nmaxiterations>100</_nmaxiterations><_postprocessing planner=\"lineartrajectoryretimer\"></_postprocessing>";
             vector<dReal> vdelta(params->vinitialconfig.size(),0);
-            if( !params->_neighstatefn(params->vinitialconfig,vdelta,0)) {
+            if( params->_neighstatefn(params->vinitialconfig,vdelta,0) == NSS_Failed ) {
                 throw OPENRAVE_EXCEPTION_FORMAT0("initial configuration does not follow constraints",ORE_InconsistentConstraints);
             }
         }

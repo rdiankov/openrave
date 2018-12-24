@@ -754,6 +754,22 @@ ConfigurationSpecification& ConfigurationSpecification::operator+= (const Config
                         listaddgroups.push_back(itrgroup);
                     }
                 }
+                else if( targettokens.at(0).size() >= 13 && targettokens.at(0).substr(0,13) == "outputSignals") {
+                    vector<std::string> vUsedSignals;
+                    vUsedSignals.resize(itcompatgroup->dof);
+                    for(size_t i = 0; i < vUsedSignals.size(); ++i) {
+                        vUsedSignals[i] = targettokens.at(i+1);
+                    }
+                    for(int i = 0; i < itrgroup->dof; ++i) {
+                        std::string newSignal = sourcetokens.at(i+1);
+                        if( find(vUsedSignals.begin(),vUsedSignals.end(),newSignal) == vUsedSignals.end() ) {
+                            itcompatgroup->name += string(" ");
+                            itcompatgroup->name += newSignal;
+                            itcompatgroup->dof += 1;
+                            vUsedSignals.push_back(newSignal);
+                        }
+                    }
+                }
                 else if( targettokens.at(0).size() >= 7 && targettokens.at(0).substr(0,7) == "affine_") {
                     if( targettokens.size() >= 2 && sourcetokens.size() >= 2 && targettokens.at(1) == sourcetokens.at(1) ) {
                         int targetmask = boost::lexical_cast<int>(targettokens.at(2));
@@ -1435,6 +1451,41 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
                 }
             }
         }
+        else if( targettokens.at(0).size() >= 13 && targettokens.at(0).substr(0,13) == "outputSignals") {
+            std::vector<std::string> vSourceSignalNames(gsource.dof), vTargetSignalNames(gtarget.dof);
+            if( (int)sourcetokens.size() < gsource.dof+1 ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("source tokens '%s' do not have %d dof indices, guessing....", gsource.name%gsource.dof, ORE_InvalidArguments);
+            }
+            else {
+                for(int i = 0; i < gsource.dof; ++i) {
+                    vSourceSignalNames[i] = sourcetokens.at(i+1);
+                }
+            }
+            if( (int)targettokens.size() < gtarget.dof+1 ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("target tokens '%s' do not match dof '%d', guessing....", gtarget.name%gtarget.dof, ORE_InvalidArguments);
+            }
+            else {
+                for(int i = 0; i < gtarget.dof; ++i) {
+                    vTargetSignalNames[i] = targettokens.at(i+1);
+                }
+            }
+
+            bool bUninitializedData=false;
+            FOREACH(itTargetSignalName,vTargetSignalNames) {
+                std::vector<std::string>::iterator itSourceSignalName = find(vSourceSignalNames.begin(),vSourceSignalNames.end(),*itTargetSignalName);
+                if( itSourceSignalName == vSourceSignalNames.end() ) {
+                    bUninitializedData = true;
+                    vtransferindices.push_back(-1); // nothing mapped
+                }
+                else {
+                    vtransferindices.push_back(static_cast<int>(itSourceSignalName-vSourceSignalNames.begin()));
+                }
+            }
+
+            if( bUninitializedData && filluninitialized ) {
+                vdefaultvalues.resize(vTargetSignalNames.size(),-1);
+            }
+        }
         else if( targettokens.at(0).size() >= 7 && targettokens.at(0).substr(0,7) == "affine_") {
             int affinesource = 0, affinetarget = 0;
             Vector sourceaxis(0,0,1), targetaxis(0,0,1);
@@ -1684,6 +1735,9 @@ void ConfigurationSpecification::ConvertData(std::vector<dReal>::iterator ittarg
                     BOOST_ASSERT((int)vdefaultvalues.size() == RaveGetAffineDOF(affinedofs));
                     RaveGetAffineDOFValuesFromTransform(vdefaultvalues.begin(),tdefault,affinedofs);
                 }
+            }
+            else if( name.size() >= 13 && name.substr(0,13) == "outputSignals") {
+                std::fill(vdefaultvalues.begin(), vdefaultvalues.end(), -1);
             }
             else if( name != "deltatime" ) {
                 // messages are too frequent

@@ -744,10 +744,10 @@ private:
     };
 
     inline boost::shared_ptr<TaskCaging> shared_problem() {
-        return boost::dynamic_pointer_cast<TaskCaging>(shared_from_this());
+        return boost::static_pointer_cast<TaskCaging>(shared_from_this());
     }
     inline boost::shared_ptr<TaskCaging const> shared_problem_const() const {
-        return boost::dynamic_pointer_cast<TaskCaging const>(shared_from_this());
+        return boost::static_pointer_cast<TaskCaging const>(shared_from_this());
     }
 
 public:

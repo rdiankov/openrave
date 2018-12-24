@@ -153,6 +153,11 @@ public:
         _pCollisionChecker->SetGeometryGroup(groupname);
     }
 
+    void SetBodyGeometryGroup(PyKinBodyPtr pybody, const std::string& groupname)
+    {
+        _pCollisionChecker->SetBodyGeometryGroup(openravepy::GetKinBody(pybody), groupname);
+    }
+
     object GetGeometryGroup()
     {
         return ConvertStringToUnicode(_pCollisionChecker->GetGeometryGroup());
@@ -565,6 +570,38 @@ public:
         return bCollision;
     }
 
+    bool CheckCollisionTriMesh(object otrimesh, PyKinBodyPtr pybody, PyCollisionReportPtr pReport)
+    {
+        TriMesh trimesh;
+        if( !ExtractTriMesh(otrimesh,trimesh) ) {
+            throw openrave_exception(_("bad trimesh"));
+        }
+        KinBodyConstPtr pbody(openravepy::GetKinBody(pybody));
+        bool bCollision = _pCollisionChecker->CheckCollision(trimesh, pbody, openravepy::GetCollisionReport(pReport));
+        openravepy::UpdateCollisionReport(pReport,_pyenv);
+        return bCollision;
+    }
+
+    bool CheckCollisionTriMesh(object otrimesh, PyCollisionReportPtr pReport)
+    {
+        TriMesh trimesh;
+        if( !ExtractTriMesh(otrimesh,trimesh) ) {
+            throw openrave_exception(_("bad trimesh"));
+        }
+        bool bCollision = _pCollisionChecker->CheckCollision(trimesh, openravepy::GetCollisionReport(pReport));
+        openravepy::UpdateCollisionReport(pReport,_pyenv);
+        return bCollision;
+    }
+
+    bool CheckCollisionOBB(object oaabb, object otransform, PyCollisionReportPtr pReport)
+    {
+        AABB aabb = ExtractAABB(oaabb);
+        Transform t = ExtractTransform(otransform);
+        bool bCollision = _pCollisionChecker->CheckCollision(aabb, t, openravepy::GetCollisionReport(pReport));
+        openravepy::UpdateCollisionReport(pReport,_pyenv);
+        return bCollision;
+    }
+
     virtual bool CheckSelfCollision(object o1, PyCollisionReportPtr pReport)
     {
         KinBody::LinkConstPtr plink1 = openravepy::GetKinBodyLinkConst(o1);
@@ -701,6 +738,9 @@ void init_openravepy_collisionchecker()
     bool (PyCollisionCheckerBase::*pcolybr)(boost::shared_ptr<PyRay>, PyKinBodyPtr, PyCollisionReportPtr) = &PyCollisionCheckerBase::CheckCollision;
     bool (PyCollisionCheckerBase::*pcoly)(boost::shared_ptr<PyRay>) = &PyCollisionCheckerBase::CheckCollision;
     bool (PyCollisionCheckerBase::*pcolyr)(boost::shared_ptr<PyRay>, PyCollisionReportPtr) = &PyCollisionCheckerBase::CheckCollision;
+    bool (PyCollisionCheckerBase::*pcoltbr)(object, PyKinBodyPtr, PyCollisionReportPtr) = &PyCollisionCheckerBase::CheckCollisionTriMesh;
+    bool (PyCollisionCheckerBase::*pcolter)(object, PyCollisionReportPtr) = &PyCollisionCheckerBase::CheckCollisionTriMesh;
+    bool (PyCollisionCheckerBase::*pcolobb)(object, object, PyCollisionReportPtr) = &PyCollisionCheckerBase::CheckCollisionOBB;
 
     class_<PyCollisionCheckerBase, boost::shared_ptr<PyCollisionCheckerBase>, bases<PyInterfaceBase> >("CollisionChecker", DOXY_CLASS(CollisionCheckerBase), no_init)
     .def("InitEnvironment", &PyCollisionCheckerBase::InitEnvironment, DOXY_FN(CollisionCheckerBase, InitEnvironment))
@@ -708,6 +748,7 @@ void init_openravepy_collisionchecker()
     .def("InitKinBody", &PyCollisionCheckerBase::InitKinBody, DOXY_FN(CollisionCheckerBase, InitKinBody))
     .def("RemoveKinBody", &PyCollisionCheckerBase::RemoveKinBody, DOXY_FN(CollisionCheckerBase, RemoveKinBody))
     .def("SetGeometryGroup", &PyCollisionCheckerBase::SetGeometryGroup, DOXY_FN(CollisionCheckerBase, SetGeometryGroup))
+    .def("SetBodyGeometryGroup", &PyCollisionCheckerBase::SetBodyGeometryGroup, args("body", "groupname"), DOXY_FN(CollisionCheckerBase, SetBodyGeometryGroup))
     .def("GetGeometryGroup", &PyCollisionCheckerBase::GetGeometryGroup, DOXY_FN(CollisionCheckerBase, GetGeometryGroup))
     .def("SetCollisionOptions",&PyCollisionCheckerBase::SetCollisionOptions, DOXY_FN(CollisionCheckerBase,SetCollisionOptions "int"))
     .def("GetCollisionOptions",&PyCollisionCheckerBase::GetCollisionOptions, DOXY_FN(CollisionCheckerBase,GetCollisionOptions))
@@ -729,6 +770,9 @@ void init_openravepy_collisionchecker()
     .def("CheckCollision",pcolybr,args("ray","body","report"), DOXY_FN(CollisionCheckerBase,CheckCollision "const RAY; KinBodyConstPtr; CollisionReportPtr"))
     .def("CheckCollision",pcoly,args("ray"), DOXY_FN(CollisionCheckerBase,CheckCollision "const RAY; CollisionReportPtr"))
     .def("CheckCollision",pcolyr,args("ray", "report"), DOXY_FN(CollisionCheckerBase,CheckCollision "const RAY; CollisionReportPtr"))
+    .def("CheckCollisionTriMesh",pcolter,args("trimesh", "report"), DOXY_FN(CollisionCheckerBase,CheckCollision "const TriMesh; CollisionReportPtr"))
+    .def("CheckCollisionTriMesh",pcoltbr,args("trimesh", "body", "report"), DOXY_FN(CollisionCheckerBase,CheckCollision "const TriMesh; KinBodyConstPtr; CollisionReportPtr"))
+    .def("CheckCollisionOBB", pcolobb, args("aabb", "pose", "report"), DOXY_FN(CollisionCheckerBase,CheckCollision "const AABB; const Transform; CollisionReport"))
     .def("CheckSelfCollision",&PyCollisionCheckerBase::CheckSelfCollision,args("linkbody", "report"), DOXY_FN(CollisionCheckerBase,CheckSelfCollision "KinBodyConstPtr, CollisionReportPtr"))
     .def("CheckCollisionRays",&PyCollisionCheckerBase::CheckCollisionRays,
          CheckCollisionRays_overloads(args("rays","body","front_facing_only"),

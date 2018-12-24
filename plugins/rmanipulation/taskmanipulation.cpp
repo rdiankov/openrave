@@ -525,7 +525,7 @@ protected:
             return false;
         }
 
-        if( pmanip->IsGrabbing(ptarget) ) {
+        if( pmanip->IsGrabbing(*ptarget) ) {
             throw OPENRAVE_EXCEPTION_FORMAT("manipulator %s is already grasping %s", pmanip->GetName()%ptarget->GetName(),ORE_InvalidArguments);
         }
         RobotBase::RobotStateSaver saver(_robot);
@@ -1361,7 +1361,7 @@ protected:
         }
 
         if( !!ptarget ) {
-            _robot->Release(ptarget);
+            _robot->Release(*ptarget);
             ptraj->GetWaypoint(-1,q,_robot->GetActiveConfigurationSpecification());
             _robot->SetActiveDOFValues(q);
             if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot),KinBodyConstPtr(ptarget)) ) {
@@ -1512,10 +1512,10 @@ protected:
 
 protected:
     inline boost::shared_ptr<TaskManipulation> shared_problem() {
-        return boost::dynamic_pointer_cast<TaskManipulation>(shared_from_this());
+        return boost::static_pointer_cast<TaskManipulation>(shared_from_this());
     }
     inline boost::shared_ptr<TaskManipulation const> shared_problem_const() const {
-        return boost::dynamic_pointer_cast<TaskManipulation const>(shared_from_this());
+        return boost::static_pointer_cast<TaskManipulation const>(shared_from_this());
     }
 
     /// \brief grasps using the list of grasp goals. Removes all the goals that the planner planned with
@@ -1763,7 +1763,7 @@ protected:
 
     IkReturn _FilterIkForGrasping(std::vector<dReal>& vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization &ikparam, KinBodyPtr ptarget)
     {
-        if( _robot->IsGrabbing(ptarget) ) {
+        if( _robot->IsGrabbing(*ptarget) ) {
             return IKRA_Success;
         }
         if( ikparam.GetType() != IKP_Transform6D ) {

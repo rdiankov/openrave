@@ -1146,7 +1146,7 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates
 
         _penv->GetBodies(_vnewenvbodies);
         FOREACHC(itbody, _vnewenvbodies) {
-            if( *itbody != pstaterobot && !pstaterobot->IsGrabbing(*itbody) ) {
+            if( *itbody != pstaterobot && !pstaterobot->IsGrabbing(**itbody) ) {
                 KinBodyCachedDataPtr pinfo(new KinBodyCachedData());
                 pinfo->_changehandle = (*itbody)->RegisterChangeCallback(KinBody::Prop_LinkGeometry|KinBody::Prop_LinkEnable|KinBody::Prop_LinkTransforms, boost::bind(&ConfigurationCache::_UpdateUntrackedBody, this, *itbody));
                 (*itbody)->SetUserData(_userdatakey, pinfo);

@@ -145,7 +145,7 @@ public:
                     std::vector<KinBodyPtr> grabbedbodies;
                     probot->GetGrabbed(grabbedbodies);
                     FOREACH(itbody,grabbedbodies) {
-                        if(pmanip->IsGrabbing(*itbody)) {
+                        if(pmanip->IsGrabbing(**itbody)) {
                             FOREACH(itlink,(*itbody)->GetLinks()) {
                                 globallinklist.push_back(*itlink);
                             }
@@ -423,7 +423,7 @@ public:
                                 RAVELOG_WARN_FORMAT("manip accel is too great %.15e", manipaccel);
                             }
                             RAVELOG_VERBOSE_FORMAT("ramp %d/%d: maxmanipaccel = %.15e; manipaccel = %.15e", (itramp - outramps.begin())%outramps.size()%_maxmanipaccel%manipaccel);
-                            return ParabolicRampInternal::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_maxmanipaccel/manipaccel, 0, manipaccel);
+                            return ParabolicRampInternal::CheckReturn(CFO_CheckTimeBasedConstraints, RaveSqrt(0.9*_maxmanipaccel/manipaccel), 0, manipaccel);
                         }
                     }
                 }
@@ -571,7 +571,7 @@ public:
             retcode = CFO_CheckTimeBasedConstraints;
             // If the actual max value is very close to the bound (i.e., almost not violating
             // the bound), the multiplier will be too large (too close to 1) to be useful.
-            reductionFactor = min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult);
+            reductionFactor = RaveSqrt(min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult));
         }
         RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxactualmanipspeed%maxactualmanipaccel);
         // RAVELOG_WARN_FORMAT("maxviolatedindex = %d", maxviolatedindex);

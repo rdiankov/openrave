@@ -20,10 +20,6 @@
 #ifndef OPENRAVE_H
 #define OPENRAVE_H
 
-#ifndef OPENRAVE_DISABLE_ASSERT_HANDLER
-#define BOOST_ENABLE_ASSERT_HANDLER
-#endif
-
 #include <cstdio>
 #include <stdarg.h>
 #include <cstring>
@@ -2584,25 +2580,6 @@ const std::string& IkParameterization::GetName() const
 }
 
 } // end namespace OpenRAVE
-
-#if !defined(OPENRAVE_DISABLE_ASSERT_HANDLER) && (defined(BOOST_ENABLE_ASSERT_HANDLER))
-/// Modifications controlling %boost library behavior.
-namespace boost
-{
-inline void assertion_failed(char const * expr, char const * function, char const * file, long line)
-{
-    throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] -> %s, expr: %s")%file%line%function%expr),OpenRAVE::ORE_Assert);
-}
-
-#if BOOST_VERSION>104600
-inline void assertion_failed_msg(char const * expr, char const * msg, char const * function, char const * file, long line)
-{
-    throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] -> %s, expr: %s, msg: %s")%file%line%function%expr%msg),OpenRAVE::ORE_Assert);
-}
-#endif
-
-}
-#endif
 
 BOOST_STATIC_ASSERT(OPENRAVE_VERSION_MAJOR>=0&&OPENRAVE_VERSION_MAJOR<=255);
 BOOST_STATIC_ASSERT(OPENRAVE_VERSION_MINOR>=0&&OPENRAVE_VERSION_MINOR<=255);

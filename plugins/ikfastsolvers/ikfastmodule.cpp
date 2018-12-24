@@ -70,6 +70,10 @@
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/lu.hpp>
 
+#if OPENRAVE_RAPIDJSON
+#include <rapidjson/error/en.h>
+#endif
+
 #include "next_combination.h"
 
 #define LOAD_IKFUNCTION0(fnname) { \
@@ -223,7 +227,7 @@ public:
         const vector<string>& GetIkNames() const {
             return _viknames;
         }
-        
+
         /// \brief adds ikname entry in lower case since all interface types are case insensitive
         void AddIkName(const string& ikname) {
             size_t index = _viknames.size();
@@ -231,11 +235,11 @@ public:
             _viknames.back().resize(ikname.size());
             std::transform(ikname.begin(), ikname.end(), _viknames.back().begin(), ::tolower);
         }
-        
+
         const string& GetLibraryName() const {
             return _libraryname;
         }
-        
+
         int GetIKType() {
 #ifdef OPENRAVE_IKFAST_FLOAT32
             if( !!_ikfloat ) {
@@ -304,10 +308,10 @@ private:
     };
 
     inline boost::shared_ptr<IkFastModule> shared_problem() {
-        return boost::dynamic_pointer_cast<IkFastModule>(shared_from_this());
+        return boost::static_pointer_cast<IkFastModule>(shared_from_this());
     }
     inline boost::shared_ptr<IkFastModule const> shared_problem_const() const {
-        return boost::dynamic_pointer_cast<IkFastModule const>(shared_from_this());
+        return boost::static_pointer_cast<IkFastModule const>(shared_from_this());
     }
 
 public:
@@ -319,6 +323,11 @@ public:
                         "Usage::\n\n  AddIkLibrary iksolvername iklibrarypath\n\n"
                         "return the type of inverse kinematics solver (IkParamterization::Type)");
 #ifdef Boost_IOSTREAMS_FOUND
+
+#if OPENRAVE_RAPIDJSON
+        RegisterJSONCommand("LoadIKFastFromXMLId",boost::bind(&IkFastModule::_LoadIKFastFromXMLIdCommand, this, _1, _2, _3), "Loads ikfast module from xmlid");
+#endif
+
         RegisterCommand("LoadIKFastSolver",boost::bind(&IkFastModule::LoadIKFastSolver,this,_1,_2),
                         "Dynamically calls the inversekinematics.py script to generate an ik solver for a robot, or to load an existing one\n"
                         "Usage::\n\n  LoadIKFastSolver robotname iktype_id [free increment]\n\n"
@@ -344,6 +353,23 @@ public:
 
     int main(const string& cmd)
     {
+        if( cmd.size() > 0 ) {
+#if OPENRAVE_RAPIDJSON
+            rapidjson::Document document;  ///< contains entire rapid json document to parse parameters.
+            if (document.Parse(cmd.c_str(), cmd.size()).HasParseError()) {
+                throw OPENRAVE_EXCEPTION_FORMAT("Failed to parse cmd (offset %u): %s, data=%s", ((unsigned)document.GetErrorOffset())%(GetParseError_En(document.GetParseError()))%cmd, ORE_InvalidState);
+            }
+            rapidjson::Value root(document, document.GetAllocator());
+            if( root.IsObject() ) {
+                if( root.HasMember("ikfastversion") ) {
+                    _ikfastversion = root["ikfastversion"].GetString();
+                }
+                if( root.HasMember("platform") ) {
+                    _platform = root["platform"].GetString();
+                }
+            }
+#endif
+        }
         return 0;
     }
 
@@ -378,11 +404,11 @@ public:
 
     boost::shared_ptr<IkLibrary> _AddIkLibrary(const string& ikname, const string& _libraryname)
     {
-#ifdef HAVE_BOOST_FILESYSTEM
-        string libraryname = boost::filesystem::system_complete(boost::filesystem::path(_libraryname, boost::filesystem::native)).string();
-#else
+//#ifdef HAVE_BOOST_FILESYSTEM
+//        string libraryname = boost::filesystem::system_complete(boost::filesystem::path(_libraryname)).string();
+//#else
         string libraryname=_libraryname;
-#endif
+//#endif
 
         // before adding a new library, check for existing
         boost::mutex::scoped_lock lock(GetLibraryMutex());
@@ -404,7 +430,97 @@ public:
         return lib;
     }
 
+    void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    {
+        InterfaceBase::Clone(preference,cloningoptions);
+        boost::shared_ptr<IkFastModule const> r = RaveInterfaceConstCast<IkFastModule>(preference);
+        _ikfastversion = r->_ikfastversion;
+        _platform = r->_platform;
+    }
+
 #ifdef Boost_IOSTREAMS_FOUND
+
+#if OPENRAVE_RAPIDJSON
+    bool _LoadIKFastFromXMLIdCommand(const rapidjson::Value& input, rapidjson::Value& output, rapidjson::Document::AllocatorType& allocator)
+    {
+        if( !input.HasMember("xmlid") ) {
+            return false;
+        }
+
+        std::string xmlid = input["xmlid"].GetString();
+        // xmlid should be in format "ikfast ikfast.09e74dc1d2c33a495e0c82e69d49e14e.Transform6D.suction0"
+        std::vector<std::string> vtokens;
+        utils::TokenizeString(xmlid, " ", vtokens);
+        if( vtokens.size() < 2 ) {
+            RAVELOG_WARN_FORMAT("not enough tokens for: %s", xmlid);
+            return false;
+        }
+
+        std::vector<std::string> vikfasttokens;
+        utils::TokenizeString(vtokens[1], ".", vikfasttokens);
+        if( vikfasttokens.size() != 4 || vikfasttokens[0] != "ikfast" ) {
+            RAVELOG_WARN_FORMAT("not enough tokens for: %s", xmlid);
+            return false;
+        }
+
+        std::string kinematicshash = vikfasttokens[1];
+        std::string striktype = vikfasttokens[2];
+        std::string manipname = vikfasttokens[3];
+
+        _EnsureIkFastVersion();
+        std::string kinematicsfilename = str(boost::format("kinematics.%s")%kinematicshash);
+        std::string kinematicsfullpath = RaveFindDatabaseFile(kinematicsfilename);
+        if( kinematicsfullpath.size() == 0 ) {
+            RAVELOG_WARN_FORMAT("cannot find kinematics file %s", kinematicsfilename);
+            return false;
+        }
+
+        // search for all files in kinematicsfullpath that match ikfilenameprefix and PLUGIN_EXT
+        std::string ikfilenameprefix = str(boost::format("ikfast%s.%s.%s.")%_ikfastversion%striktype%_platform);
+        std::string pluginext = PLUGIN_EXT;
+        std::string ikfilenamefound; /// set to non-empty when ikfile was found
+
+        for (boost::filesystem::directory_iterator itr(kinematicsfullpath); itr!=boost::filesystem::directory_iterator(); ++itr) {
+            std::string ikfilename = itr->path().filename().string();
+            if( ikfilename.size() >= ikfilenameprefix.size() && ikfilename.substr(0, ikfilenameprefix.size()) == ikfilenameprefix ) {
+                if( ikfilename.size() >= pluginext.size() && ikfilename.compare(ikfilename.size() - pluginext.size(), pluginext.size(), pluginext) == 0 ) {
+                    ikfilenamefound = itr->path().string();
+                    break;
+                }
+            }
+        }
+
+        if( ikfilenamefound.size() == 0 ) {
+            RAVELOG_WARN_FORMAT("could not find any %s in %s", pluginext%kinematicsfullpath);
+            return false;
+        }
+
+        string ikfastname = str(boost::format("ikfast.%s.%s.%s")%kinematicshash%striktype%manipname);
+        boost::shared_ptr<IkLibrary> lib = _AddIkLibrary(ikfastname,ikfilenamefound);
+        bool bsuccess = true;
+        if( !lib ) {
+            bsuccess = false;
+        }
+        else {
+//            if( lib->GetIKType() != (int)iktype ) {
+//                bsuccess = false;
+//            }
+//            else {
+            IkSolverBasePtr iksolver = RaveCreateIkSolver(GetEnv(),string("ikfast ")+ikfastname);
+            if( !iksolver ) {
+                RAVELOG_WARN(str(boost::format("failed to create ik solver %s!")%ikfastname));
+                bsuccess = false;
+            }
+//            else {
+//                bsuccess = pmanip->SetIkSolver(iksolver);
+//            }
+        }
+        // if not forcing the ik, then return true as long as a valid ik solver is set
+        return bsuccess;
+    }
+
+#endif
+
     bool LoadIKFastSolver(ostream& sout, istream& sinput)
     {
         EnvironmentMutex::scoped_lock envlock(GetEnv()->GetMutex());
@@ -444,33 +560,7 @@ public:
             }
         }
 
-        // get ikfast version
-        if( _ikfastversion.size() == 0 || _platform.size() == 0 ) {
-            string output;
-            FILE* pipe = MYPOPEN(OPENRAVE_PYTHON_EXECUTABLE " -c \"import openravepy.ikfast; import platform; print(openravepy.ikfast.__version__+' '+platform.machine())\"", "r");
-            if (pipe == NULL) {
-                RAVELOG_WARN("Failed to open pipe\n");
-                return false;
-            }
-            {
-                boost::iostreams::stream_buffer<boost::iostreams::file_descriptor_source> fpstream(fileno(pipe),FILE_DESCRIPTOR_FLAG);
-                std::istream in(&fpstream);
-                std::getline(in, output);
-            }
-            int generateexit = MYPCLOSE(pipe);
-            if( generateexit != 0 ) {
-                usleep(100000);
-                RAVELOG_VERBOSE("failed to close pipe\n"); // not sure how critical this error is
-            }
-            boost::trim(output);
-            size_t index = output.find_first_of(' ');
-            if( index == std::string::npos ) {
-                RAVELOG_WARN(str(boost::format("failed to parse string: %s")%output));
-                return false;
-            }
-            _ikfastversion = output.substr(0,index);
-            _platform = output.substr(index+1);
-        }
+        _EnsureIkFastVersion();
 
         string ikfilename;
         for(int iter = 0; iter < 2; ++iter) {
@@ -581,6 +671,40 @@ public:
         }
 
         return false;
+    }
+
+    /// \brief makes sure ikfast version is already retrieved
+    void _EnsureIkFastVersion()
+    {
+        // get ikfast version
+        if( _ikfastversion.size() == 0 || _platform.size() == 0 ) {
+            RAVELOG_INFO("Getting ikfast version from existing python.\n");
+            string output;
+            FILE* pipe = MYPOPEN(OPENRAVE_PYTHON_EXECUTABLE " -c \"import openravepy.ikfast; import platform; print(openravepy.ikfast.__version__+' '+platform.machine())\"", "r");
+            if (pipe == NULL) {
+                RAVELOG_WARN("Failed to open pipe\n");
+                return;
+            }
+            {
+                boost::iostreams::stream_buffer<boost::iostreams::file_descriptor_source> fpstream(fileno(pipe),FILE_DESCRIPTOR_FLAG);
+                std::istream in(&fpstream);
+                std::getline(in, output);
+            }
+            int generateexit = MYPCLOSE(pipe);
+            if( generateexit != 0 ) {
+                usleep(100000);
+                RAVELOG_VERBOSE("failed to close pipe\n"); // not sure how critical this error is
+            }
+            boost::trim(output);
+            size_t index = output.find_first_of(' ');
+            if( index == std::string::npos ) {
+                RAVELOG_WARN_FORMAT("failed to parse string: %s", output);
+            }
+            else {
+                _ikfastversion = output.substr(0,index);
+                _platform = output.substr(index+1);
+            }
+        }
     }
 
 #endif
@@ -1102,10 +1226,11 @@ public:
 
                 // test all possible solutions
                 robot->SetActiveDOFValues(vrand, false);
-                pmanip->FindIKSolutions(twrist, viksolutions, filteroptions);
+                pmanip->FindIKSolutions(twrist, viksolutions, filteroptions); // Returning all the IK solutions with all the free variables searched for.
                 if( vfreeparameters_real.size() > 0 ) {
+                    // has specific free variables, use them to get all the IK solutions with free variables fixed to the real reference solution
                     pmanip->FindIKSolutions(twrist, vfreeparameters_real, viksolutions2, filteroptions);
-                    viksolutions.insert(viksolutions.end(),viksolutions2.begin(),viksolutions2.end());
+                    viksolutions.insert(viksolutions.end(),viksolutions2.begin(),viksolutions2.end()); // append to viksolutions
                 }
                 if( viksolutions.size() == 0 ) {
                     FOREACH(itfree,vfreeparameters_out) {

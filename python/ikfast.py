@@ -463,6 +463,7 @@ class AST:
         AddHalfTanValue = False
         dictequations = None
         presetcheckforzeros = None
+        checkEquationsUsed = True # if True then check equationsused at the end to make sure solution is consistent
         equationsused = None
         """Meaning of FeasibleIsZeros:
         If set to false, then solution is feasible only if all of these equations evalute to non-zero.
@@ -523,7 +524,11 @@ class AST:
         def getPresetCheckForZeros(self):
             return self.presetcheckforzeros
         def getEquationsUsed(self):
-            return self.equationsused
+            if self.checkEquationsUsed:
+                return self.equationsused
+            
+            return None
+        
         def GetZeroThreshold(self):
             return self.thresh
         
@@ -1626,7 +1631,7 @@ class IKFastSolver(AutoReloader):
                             # get the mimic equation
                             var = joint.GetMimicEquation(iaxis)
                             for itestjoint, testjoint in enumerate(chainjoints):
-                                var = var.replace(testjoint.GetName(), 'j%d'%itestjoint)
+                                var = var.replace(testjoint.GetName(), 'j%d'%testjoint.GetDOFIndex())
                             # this needs to be reduced!
                             cosvar = cos(var)
                             sinvar = sin(var)
@@ -2903,8 +2908,8 @@ class IKFastSolver(AutoReloader):
         self.testconsistentvalues = self.ComputeConsistentValues(jointvars,self.Tfinal,numsolutions=4)
         endbranchtree = [AST.SolverStoreSolution (jointvars,isHinge=[self.IsHinge(var.name) for var in jointvars])]
         solvejointvars = [jointvars[i] for i in isolvejointvars]
-        if len(solvejointvars) != 6:
-            raise self.CannotSolveError('need 6 joints')
+        if len(solvejointvars) > 6 or len(solvejointvars) < 4:
+            raise self.CannotSolveError('need at most 6 joints')
         
         log.info('ikfast 6d: %s',solvejointvars)        
         tree = self.TestIntersectingAxes(solvejointvars,Links, LinksInv,endbranchtree)
@@ -3009,6 +3014,10 @@ class IKFastSolver(AutoReloader):
         :return: Tlefttrans, NewLinks, Trighttrans
         """
         NewLinks = list(Links)
+        
+        if len(NewLinks) == 1:
+            return eye(4), NewLinks, eye(4)
+
         Trighttrans = eye(4)
         Trighttrans[0:3,3] = NewLinks[-2][0:3,0:3].transpose() * NewLinks[-2][0:3,3]
         Trot_with_trans = Trighttrans * NewLinks[-1]
@@ -3038,14 +3047,18 @@ class IKFastSolver(AutoReloader):
         polysymbols = []
         for solvejointvar in solvejointvars:
             polysymbols += [s[0] for s in self.Variable(solvejointvar).subs]
-        for i in range(len(ilinks)-2):
+        
+        numExpectedRotation = min(3, len(solvejointvars)-3) # the left over are rotation
+        
+        # start backwards since most likely rotation variables are at the end of the chain
+        for i in range(len(ilinks)-(numExpectedRotation-1)-1, -1, -1):
             startindex = ilinks[i]
-            endindex = ilinks[i+2]+1
+            endindex = ilinks[i+numExpectedRotation-1]+1
             Tlefttrans, T0links, Trighttrans = self._ExtractTranslationsOutsideOfMatrixMultiplication(TestLinks[startindex:endindex], solvejointvars)
             T0 = self.multiplyMatrix(T0links)
             # count number of variables in T0[0:3,0:3]
             numVariablesInRotation = sum([self.has(T0[0:3,0:3],solvejointvar) for solvejointvar in solvejointvars])
-            if numVariablesInRotation < 3:
+            if numVariablesInRotation < numExpectedRotation:
                 continue
             solveRotationFirst = None
             # sometimes the intersecting condition can be there, but is masked by small epsilon errors
@@ -3083,7 +3096,7 @@ class IKFastSolver(AutoReloader):
                         rotvars.append(svar)
                     else:
                         transvars.append(svar)
-                if len(rotvars) == 3 and len(transvars) == 3:
+                if len(rotvars) == numExpectedRotation and len(transvars) == 3:
                     log.info('found 3 consecutive intersecting axes links[%d:%d], rotvars=%s, translationvars=%s',startindex, endindex, rotvars,transvars)
                     yield T0links,T1links,transvars,rotvars,solveRotationFirst
 
@@ -3150,7 +3163,7 @@ class IKFastSolver(AutoReloader):
         """Solve 6D equations using fact that 3 axes are intersecting. The 3 intersecting axes are all part of T0links and will be used to compute the rotation of the robot. The other 3 axes are part of T1links and will be used to first compute the position.
         """
         self._iktype = 'transform6d'
-        assert(len(transvars)==3 and len(rotvars) == 3)
+        assert(len(transvars)==3) # and len(rotvars) == 3)  # ok if rotation is 2
         T0 = self.multiplyMatrix(T0links)
         T0posoffset = eye(4)
         T0posoffset[0:3,3] = -T0[0:3,3]
@@ -3190,7 +3203,14 @@ class IKFastSolver(AutoReloader):
             AllEquations = self.buildEquationsFromRotation(T0links,Ree,rotvars,othersolvedvars)
             self.checkSolvability(AllEquations,rotvars,othersolvedvars)
             currotvars = rotvars[:]
+            
             rottree += self.SolveAllEquations(AllEquations,curvars=currotvars,othersolvedvars=othersolvedvars,solsubs=self.freevarsubs[:],endbranchtree=storesolutiontree)
+
+            if len(rotvars) < 3:
+                # since rotation variables are not enough for 3D rotation, do not check equations used
+                for ss in rottree:
+                    ss.checkEquationsUsed = False
+            
             # has to be after SolveAllEquations...?
             for i in range(3):
                 for j in range(3):
@@ -6197,6 +6217,10 @@ class IKFastSolver(AutoReloader):
         allmonoms.sort()
         origmonoms = list(origmonoms)
         origmonoms.sort()
+
+        if len(origmonoms) == 0 or len(allmonoms) == 0:
+            raise self.CannotSolveError('solveDialytically has no equations')
+        
         if len(allmonoms)<2*len(dialyticeqs):
             log.warn('solveDialytically equations %d > %d, should be equal...', 2*len(dialyticeqs),len(allmonoms))
             # TODO not sure how to select the equations
@@ -6228,6 +6252,10 @@ class IKFastSolver(AutoReloader):
                         mlist = list(m)
                         mlist[igen] += 1
                         degree=mlist.pop(ileftvar)
+
+                        if tuple(mlist) not in origmonoms:
+                            raise self.CannotSolveError('equations too simple, monom %r is not in %r'%(mlist, origmonoms))
+                        
                         exportindex = degree*len(origmonoms)*len(dialyticeqs) + len(origmonoms)*ipeq+origmonoms.index(tuple(mlist))
                         assert(exportcoeffeqs[exportindex] == S.Zero)
                         exportcoeffeqs[exportindex] = c
@@ -8282,7 +8310,11 @@ class IKFastSolver(AutoReloader):
                         s3 = self.trigsimp(s2,othersolvedvars)
                         s4 = self.SimplifyTransform(s3)
                         try:
-                            jointsolutions.append(2*atan(s4, evaluate=False)) # don't evalute since chances if this being a number is very low
+                            # check s4 == 0, becasue of a bug in evalf() funcion atan(0, evaluate=False).evalf() fails with NoneTypeError, https://github.com/sympy/sympy/pull/1021. Fixed in sympy version==0.7.2, currently using 0.7.1
+                            if s4 == 0:
+                                jointsolutions.append(2*atan(s4, evaluate=True))
+                            else:
+                                jointsolutions.append(2*atan(s4, evaluate=False)) # don't evalute since chances if this being a number is very low                                                          
                         except RuntimeError, e:
                             log.warn('got runtime error when taking atan: %s', e)
                     if all([self.isValidSolution(s) and s != S.Zero for s in jointsolutions]) and len(jointsolutions)>0:

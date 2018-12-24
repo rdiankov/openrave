@@ -381,8 +381,8 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
 
     // Intervals 1 and 2 are derived from constraints on a1 (the acceleration of the first ramp)
     // I) sum1 <= B/tswitch1
-    if (sum1 == 0) {
-        if (B == 0) {
+    if (FuzzyZero(sum1, EpsilonA)) {
+        if (FuzzyZero(B, EpsilonV)) {
             // tswitch1 can be anything
         }
         else {
@@ -400,8 +400,8 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
     }
 
     // II) B/tswitch1 <= sum2
-    if (sum2 == 0) {
-        if (B == 0) {
+    if (FuzzyZero(sum2, EpsilonA)) {
+        if (FuzzyZero(B, EpsilonV)) {
             // tswitch1 can be anything
         }
         else {
@@ -431,8 +431,8 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
 
     // Intervals 3 and 3 are derived from constraints on a2 (the acceleration of the second (last) ramp)
     // III) sum1 <= B/(tswitch1 - t)
-    if (sum1 == 0) {
-        if (B == 0) {
+    if (FuzzyZero(sum1, EpsilonA)) {
+        if (FuzzyZero(B, EpsilonV)) {
             // tswitch1 can be anything
         }
         else {
@@ -449,8 +449,8 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
     }
 
     // IV)
-    if (sum2 == 0) {
-        if (B == 0) {
+    if (FuzzyZero(sum2, EpsilonA)) {
+        if (FuzzyZero(B, EpsilonV)) {
             // tswitch1 can be anything
         }
         else {
@@ -728,7 +728,7 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
         // RAVELOG_DEBUG_FORMAT("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0%x1%dx0%dx1%vmax%amax%endTime);
 
         // Final check on the accelerations
-        if ((Abs(a1) > amax) || (Abs(a2) > amax)) {
+        if ((Abs(a1) > amax+EpsilonA) || (Abs(a2) > amax+EpsilonA)) { // need to test with EpsilonA here since error can accrue
             PARABOLIC_RAMP_PLOG("Cannot fix accelration bounds violation");
             PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
             return false;
@@ -773,7 +773,7 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
 
             if (tswitch1 + tLastRamp > endTime) {
                 // Final fix
-                if (A == 0) {
+                if (FuzzyZero(A, EpsilonA)) {
                     PARABOLIC_RAMP_PLOG("(final fix) A = 0. Don't know how to deal with this case");
                     PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
                     return false;

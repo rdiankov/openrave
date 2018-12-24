@@ -17,6 +17,7 @@
 #include "colladacommon.h"
 #include <boost/algorithm/string.hpp>
 #include <openrave/xmlreaders.h>
+#include <libxml/xmlversion.h>
 
 namespace OpenRAVE
 {
@@ -259,6 +260,7 @@ public:
         daeErrorHandler::setErrorHandler(this);
         _bOpeningZAE = false;
         _bSkipGeometry = false;
+        _bReadGeometryGroups = false;
         _fGlobalScale = 1.0/penv->GetUnit().second;
         _bBackCompatValuesInRadians = false;
         if( sizeof(daeFloat) == 4 ) {
@@ -266,6 +268,16 @@ public:
         }
     }
     virtual ~ColladaReader() {
+        // If GlobalDAE is not resetted, there will be memory leak inside the
+        // Collada library because static daeStringTable in daeStringRef.cpp
+        // will only be cleaned by daeStringRef::releaseStringTable when
+        // the number of DAE instances alive becomes 0.
+        //
+        // There is no simple workaround for libxml2 before 2.9.0. Read
+        // the comments of GetGlobalDAE() in OpenRAVE for more details
+#if LIBXML_VERSION >= 20900
+        SetGlobalDAE(boost::shared_ptr<DAE>());
+#endif
     }
 
     bool InitFromURI(const string& uristr, const AttributesList& atts)
@@ -332,6 +344,7 @@ public:
         RAVELOG_VERBOSE(str(boost::format("init COLLADA reader version: %s, namespace: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE));
         _dae = GetGlobalDAE();
         _bSkipGeometry = false;
+        _bReadGeometryGroups = false;
         _vOpenRAVESchemeAliases.resize(0);
         FOREACHC(itatt,atts) {
             if( itatt->first == "skipgeometry" ) {
@@ -358,6 +371,12 @@ public:
                 }
             }
             else if( itatt->first == "scalegeometry" ) {
+                
+            }
+            else if( itatt->first == "readoptions" ) {
+                stringstream ss(itatt->second);
+                std::list<string> newelts((istream_iterator<string>(ss)), istream_iterator<string>());
+                _bReadGeometryGroups = find(newelts.begin(), newelts.end(), "bind_instance_geometry") != newelts.end();
             }
             else {
                 //RAVELOG_WARN(str(boost::format("collada reader unprocessed attribute pair: %s:%s")%itatt->first%itatt->second));
@@ -1252,9 +1271,11 @@ public:
             ExtractRobotAttachedActuators(probot, articulated_system, bindings);
         }
         _ExtractCollisionData(pbody,articulated_system,articulated_system->getExtra_array(),bindings.listInstanceLinkBindings);
+        _ExtractVisibleData(pbody,articulated_system,articulated_system->getExtra_array(),bindings.listInstanceLinkBindings);
         _ExtractExtraData(pbody,articulated_system->getExtra_array());
         // also collision data state can be dynamic, so process instance_articulated_system too
-        _ExtractCollisionData(pbody,ias,ias->getExtra_array(),bindings.listInstanceLinkBindings);
+        _ExtractCollisionData(pbody,ias,ias->getExtra_array(),bindings.listInstanceLinkBindings, true);
+        _ExtractVisibleData(pbody,ias,ias->getExtra_array(),bindings.listInstanceLinkBindings, true);
         return true;
     }
 
@@ -1940,12 +1961,36 @@ public:
                         RAVELOG_WARN(str(boost::format("No motion axis info for joint %s\n")%pjoint->GetName()));
                     }
 
-                    //  Sets the Speed and the Acceleration of the joint
+                    //  Sets the Speed, the Acceleration, and the Jerk of the joint
                     if (!!motion_axis_info) {
+                        // Read hard limits. Hard limits are defined as <newparam> tag.
+                        RAVELOG_VERBOSE("... Newparam array size for motion_axis_info : %d", motion_axis_info->getNewparam_array().getCount());
+                        for(size_t iparam = 0; iparam < motion_axis_info->getNewparam_array().getCount(); ++iparam) {
+                            domKinematics_newparamRef param = motion_axis_info->getNewparam_array()[iparam];
+                            if ( !!param->getSid() ) {
+                                if ( std::string(param->getSid()) == "hardMaxVel" ) {
+                                    pjoint->_info._vhardmaxvel[ic] = fjointmult * param->getFloat()->getValue();
+                                    RAVELOG_VERBOSE_FORMAT("... %s: %f...", param->getSid() % pjoint->_info._vhardmaxvel[ic]);
+                                } else if ( std::string(param->getSid()) == "hardMaxAccel" ) {
+                                    pjoint->_info._vhardmaxaccel[ic] = fjointmult * param->getFloat()->getValue();
+                                    RAVELOG_VERBOSE_FORMAT("... %s: %f...", param->getSid() % pjoint->_info._vhardmaxaccel[ic]);
+                                } else if ( std::string(param->getSid()) == "hardMaxJerk" ) {
+                                    pjoint->_info._vhardmaxjerk[ic] = fjointmult * param->getFloat()->getValue();
+                                    RAVELOG_VERBOSE_FORMAT("... %s: %f...", param->getSid() % pjoint->_info._vhardmaxjerk[ic]);
+                                }
+                            }
+                        }
+
+                        // Read soft limits. Soft limits are defined as <speed>, <acceleration>, <jerk> tag.
+                        // In below, we check the consistency between hard limit (_vhadmaxXXX) and soft limit (_vmaxXXX). If soft limit is larger than soft limit, it is invalid and overwrite soft limit by hard limit.
                         if (!!motion_axis_info->getSpeed()) {
                             pjoint->_info._vmaxvel[ic] = resolveFloat(motion_axis_info->getSpeed(),motion_axis_info);
                             if( !_bBackCompatValuesInRadians ) {
                                 pjoint->_info._vmaxvel[ic] *= fjointmult;
+                            }
+                            if ( pjoint->_info._vhardmaxvel[ic] < pjoint->_info._vmaxvel[ic] ) {
+                                RAVELOG_VERBOSE_FORMAT("... Joint Speed : Tried to set soft limit as %f but it exceeds hard limit. Therefore, reset to hard limit %f for consistency...\n", pjoint->_info._vmaxvel[ic] % pjoint->_info._vhardmaxvel[ic]);
+                                pjoint->_info._vmaxvel[ic] = pjoint->_info._vhardmaxvel[ic];
                             }
                             RAVELOG_VERBOSE("... Joint Speed: %f...\n",pjoint->GetMaxVel());
                         }
@@ -1954,7 +1999,22 @@ public:
                             if( !_bBackCompatValuesInRadians ) {
                                 pjoint->_info._vmaxaccel[ic] *= fjointmult;
                             }
+                            if ( pjoint->_info._vhardmaxaccel[ic] < pjoint->_info._vmaxaccel[ic] ) {
+                                RAVELOG_VERBOSE_FORMAT("... Joint Acceleration : Tried to set soft limit as %f but it exceeds hard limit. Therefore, reset to hard limit %f for consistency...\n", pjoint->_info._vmaxaccel[ic] % pjoint->_info._vhardmaxaccel[ic]);
+                                pjoint->_info._vmaxaccel[ic] = pjoint->_info._vhardmaxaccel[ic];
+                            }
                             RAVELOG_VERBOSE("... Joint Acceleration: %f...\n",pjoint->GetMaxAccel());
+                        }
+                        if (!!motion_axis_info->getJerk()) {
+                            pjoint->_info._vmaxjerk[ic] = resolveFloat(motion_axis_info->getJerk(),motion_axis_info);
+                            if( !_bBackCompatValuesInRadians ) {
+                                pjoint->_info._vmaxjerk[ic] *= fjointmult;
+                            }
+                            if ( pjoint->_info._vhardmaxjerk[ic] < pjoint->_info._vmaxjerk[ic] ) {
+                                RAVELOG_VERBOSE_FORMAT("... Joint Jerk : Tried to set soft limit as %f but it exceeds hard limit. Therefore, reset to hard limit %f for consistency...\n", pjoint->_info._vmaxjerk[ic] % pjoint->_info._vhardmaxjerk[ic]);
+                                pjoint->_info._vmaxjerk[ic] = pjoint->_info._vhardmaxjerk[ic];
+                            }
+                            RAVELOG_VERBOSE("... Joint Jerk: %f...\n",pjoint->GetMaxJerk());
                         }
                     }
 
@@ -4167,7 +4227,9 @@ private:
     }
 
     /// \brief extracts collision-specific data infoe
-    InterfaceTypePtr _ExtractCollisionData(KinBodyPtr pbody, daeElementRef referenceElt, const domExtra_Array& arr, const std::list<InstanceLinkBinding>& listInstanceLinkBindings) {
+    ///
+    /// \param bAndWithPrevious if true, then AND collision and visible state with previous values
+    InterfaceTypePtr _ExtractCollisionData(KinBodyPtr pbody, daeElementRef referenceElt, const domExtra_Array& arr, const std::list<InstanceLinkBinding>& listInstanceLinkBindings, bool bAndWithPrevious=false) {
         for(size_t i = 0; i < arr.getCount(); ++i) {
             if( strcmp(arr[i]->getType(),"collision") == 0 ) {
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(arr[i]->getTechnique_array());
@@ -4207,48 +4269,49 @@ private:
                         else if( pelt->getElementName() == string("bind_instance_geometry") ) {
 
                             // for now don't load since we don't have good way of updating the geometry throughout the system yet.
+                            if( _bReadGeometryGroups ) {
+                                const std::string groupname = pelt->getAttribute("type");
+                                if( groupname == "" ) {
+                                    RAVELOG_WARN("encountered an empty group name");
+                                }
 
-//                            const std::string groupname = pelt->getAttribute("type");
-//                            if( groupname == "" ) {
-//                                RAVELOG_WARN("encountered an empty group name");
-//                            }
-//
-//                            domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link"), referenceElt).resolve().elt);
-//                            KinBody::LinkPtr plink;
-//                            if( !!pdomlink ) {
-//                                plink = pbody->GetLink(_ExtractLinkName(pdomlink));
-//                            }
-//                            else {
-//                                plink = _ResolveLinkBinding(listInstanceLinkBindings, pelt->getAttribute("link"), pbody);
-//                            }
-//                            if( !plink ) {
-//                                RAVELOG_WARN(str(boost::format("failed to resolve link %s\n")%pelt->getAttribute("link")));
-//                                continue;
-//                            }
-//                            BOOST_ASSERT(plink->GetParent()==pbody);
-//
-//                            domGeometryRef domgeom = daeSafeCast<domGeometry>(daeURI(*referenceElt, pelt->getAttribute("url")).getElement());
-//                            if( !domgeom ) {
-//                                RAVELOG_WARN_FORMAT("failed to retrieve geometry %s\n", pelt->getAttribute("url"));
-//                                continue;
-//                            }
-//
-//                            domMaterialRef dommat = daeSafeCast<domMaterial>(daeURI(*referenceElt, pelt->getAttribute("material")).getElement());
-//                            if( !dommat ) {
-//                              RAVELOG_WARN_FORMAT("failed to retrieve material for geometry %s\n", pelt->getAttribute("material"));
-//                            } else {
-//                              mapmaterials["mat0"] = dommat;
-//                            }
-//
-//
-//                            // TODO : There seems to be scaling factors and transforms that might be forgotten here (c.f.: ExtractGeometries)
-//                            if( !ExtractGeometry(domgeom, mapmaterials, mapGeometryGroups[plink][groupname]) ) {
-//                                RAVELOG_WARN_FORMAT("failed to add geometry to geometry group %s, link %s\n", groupname%plink->GetName());
-//                                continue;
-//                            }
-//                            FOREACH(itgeominfo, mapGeometryGroups[plink][groupname]) {
-//                                itgeominfo->InitCollisionMesh();
-//                            }
+                                domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link"), referenceElt).resolve().elt);
+                                KinBody::LinkPtr plink;
+                                if( !!pdomlink ) {
+                                    plink = pbody->GetLink(_ExtractLinkName(pdomlink));
+                                }
+                                else {
+                                    plink = _ResolveLinkBinding(listInstanceLinkBindings, pelt->getAttribute("link"), pbody);
+                                }
+                                if( !plink ) {
+                                    RAVELOG_WARN(str(boost::format("failed to resolve link %s\n")%pelt->getAttribute("link")));
+                                    continue;
+                                }
+                                BOOST_ASSERT(plink->GetParent()==pbody);
+
+                                domGeometryRef domgeom = daeSafeCast<domGeometry>(daeURI(*referenceElt, pelt->getAttribute("url")).getElement());
+                                if( !domgeom ) {
+                                    RAVELOG_WARN_FORMAT("failed to retrieve geometry %s\n", pelt->getAttribute("url"));
+                                    continue;
+                                }
+
+                                domMaterialRef dommat = daeSafeCast<domMaterial>(daeURI(*referenceElt, pelt->getAttribute("material")).getElement());
+                                if( !dommat ) {
+                                  RAVELOG_WARN_FORMAT("failed to retrieve material for geometry %s\n", pelt->getAttribute("material"));
+                                } else {
+                                  mapmaterials["mat0"] = dommat;
+                                }
+
+
+                                // TODO : There seems to be scaling factors and transforms that might be forgotten here (c.f.: ExtractGeometries)
+                                if( !ExtractGeometry(domgeom, mapmaterials, mapGeometryGroups[plink][groupname]) ) {
+                                    RAVELOG_WARN_FORMAT("failed to add geometry to geometry group %s, link %s\n", groupname%plink->GetName());
+                                    continue;
+                                }
+                                FOREACH(itgeominfo, mapGeometryGroups[plink][groupname]) {
+                                    itgeominfo->InitCollisionMesh();
+                                }
+                            }
                         }
                         else if( pelt->getElementName() == string("link_collision_state") ) {
                             domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link"), referenceElt).resolve().elt);
@@ -4264,7 +4327,15 @@ private:
                                 continue;
                             }
                             BOOST_ASSERT(plink->GetParent()==pbody);
-                            resolveCommon_bool_or_param(pelt, referenceElt, plink->_info._bIsEnabled);
+                            bool bIsEnabled=true;
+                            if( resolveCommon_bool_or_param(pelt, referenceElt, bIsEnabled) ) {
+                                if( bAndWithPrevious ) {
+                                    plink->_info._bIsEnabled &= bIsEnabled;
+                                }
+                                else {
+                                    plink->_info._bIsEnabled = bIsEnabled;
+                                }
+                            }
                         }
                     }
                     FOREACH(itlinkgeomgroups, mapGeometryGroups) {
@@ -4275,6 +4346,51 @@ private:
                                 vgeometries.push_back(boost::make_shared<KinBody::GeometryInfo>(*itgeominfo));
                             }
                             itlinkgeomgroups->first->SetGroupGeometries(itgeomgroup->first, vgeometries);
+                        }
+                    }
+                }
+            }
+        }
+        return InterfaceTypePtr();
+    }
+
+    /// \brief extracts visible-specific data infoe
+    ///
+    /// \param bAndWithPrevious if true, then AND collision and visible state with previous values
+    InterfaceTypePtr _ExtractVisibleData(KinBodyPtr pbody, daeElementRef referenceElt, const domExtra_Array& arr, const std::list<InstanceLinkBinding>& listInstanceLinkBindings, bool bAndWithPrevious=false) {
+        for(size_t i = 0; i < arr.getCount(); ++i) {
+            if( strcmp(arr[i]->getType(),"visible") == 0 ) {
+                domTechniqueRef tec = _ExtractOpenRAVEProfile(arr[i]->getTechnique_array());
+                if( !!tec ) {
+                    std::map< KinBody::LinkPtr, std::map< std::string, std::list< KinBody::GeometryInfo > > > mapGeometryGroups;
+                    std::map<string,domMaterialRef> mapmaterials;
+                    for(size_t ic = 0; ic < tec->getContents().getCount(); ++ic) {
+                        daeElementRef pelt = tec->getContents()[ic];
+                        if( pelt->getElementName() == string("link_visible_state") ) {
+                            domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link"), referenceElt).resolve().elt);
+                            KinBody::LinkPtr plink;
+                            if( !!pdomlink ) {
+                                plink = pbody->GetLink(_ExtractLinkName(pdomlink));
+                            }
+                            else {
+                                plink = _ResolveLinkBinding(listInstanceLinkBindings, pelt->getAttribute("link"), pbody);
+                            }
+                            if( !plink ) {
+                                RAVELOG_WARN(str(boost::format("failed to resolve link %s\n")%pelt->getAttribute("link")));
+                                continue;
+                            }
+                            BOOST_ASSERT(plink->GetParent()==pbody);
+                            bool bVisible = true;
+                            if( resolveCommon_bool_or_param(pelt, referenceElt, bVisible) ) {
+                                FOREACH(itgeometry, plink->_vGeometries) {
+                                    if( bAndWithPrevious ) {
+                                        (*itgeometry)->_info._bVisible &= bVisible;
+                                    }
+                                    else {
+                                        (*itgeometry)->_info._bVisible = bVisible;
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -5060,6 +5176,7 @@ private:
 
     bool _bOpeningZAE; ///< true if currently opening a zae
     bool _bSkipGeometry;
+    bool _bReadGeometryGroups; ///< if true, then read the bind_instance_geometry tag to initialize all the geometry groups
     bool _bBackCompatValuesInRadians; ///< if true, will assume the speed, acceleration, and dofvalues are in radians instead of degrees (for back compat)
 };
 

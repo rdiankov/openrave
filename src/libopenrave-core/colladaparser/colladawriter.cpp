@@ -375,7 +375,8 @@ private:
     }
 
     /// \param docname the top level document?
-    virtual void Init(const string& docname, const std::string& keywords=std::string())
+    virtual void Init(const string& docname, const std::string& keywords=std::string(),
+            const std::string& subject=std::string())
     {
         daeInt error = _dae->getDatabase()->insertDocument(docname.c_str(), &_doc );     // also creates a collada root
         BOOST_ASSERT( error == DAE_OK && !!_doc );
@@ -412,6 +413,9 @@ private:
 
             domAsset::domKeywordsRef domkeywords = daeSafeCast<domAsset::domKeywords>( asset->add( COLLADA_ELEMENT_KEYWORDS ) );
             domkeywords->setValue(keywords.c_str());
+
+            domAsset::domSubjectRef domsubject = daeSafeCast<domAsset::domSubject>( asset->add( COLLADA_ELEMENT_SUBJECT ) );
+            domsubject->setValue(subject.c_str());
         }
 
         _globalscene = _dom->getScene();
@@ -970,6 +974,23 @@ private:
             daeSafeCast<domKinematics_newparam::domFloat>(param_acceleration->add(COLLADA_ELEMENT_FLOAT))->setValue(pjoint->GetMaxAccel(iaxis)*valuemult);
             domCommon_float_or_paramRef acceleration = daeSafeCast<domCommon_float_or_param>(mai->add(COLLADA_ELEMENT_ACCELERATION));
             daeSafeCast<domCommon_param>(acceleration->add(COLLADA_ELEMENT_PARAM))->setValue("acceleration");
+
+            domKinematics_newparamRef param_jerk = daeSafeCast<domKinematics_newparam>(mai->add(COLLADA_ELEMENT_NEWPARAM));
+            param_jerk->setSid("jerk");
+            daeSafeCast<domKinematics_newparam::domFloat>(param_jerk->add(COLLADA_ELEMENT_FLOAT))->setValue(pjoint->GetMaxJerk(iaxis)*valuemult);
+            domCommon_float_or_paramRef jerk = daeSafeCast<domCommon_float_or_param>(mai->add(COLLADA_ELEMENT_JERK));
+            daeSafeCast<domCommon_param>(jerk->add(COLLADA_ELEMENT_PARAM))->setValue("jerk");
+
+            // Write hard limits. Hard limits are defined as <newparam> tag.
+            domKinematics_newparamRef param_hardvel = daeSafeCast<domKinematics_newparam>(mai->add(COLLADA_ELEMENT_NEWPARAM));
+            param_hardvel->setSid("hardMaxVel");
+            daeSafeCast<domKinematics_newparam::domFloat>(param_hardvel->add(COLLADA_ELEMENT_FLOAT))->setValue(pjoint->GetHardMaxVel(iaxis)*valuemult);
+            domKinematics_newparamRef param_hardaccel = daeSafeCast<domKinematics_newparam>(mai->add(COLLADA_ELEMENT_NEWPARAM));
+            param_hardaccel->setSid("hardMaxAccel");
+            daeSafeCast<domKinematics_newparam::domFloat>(param_hardaccel->add(COLLADA_ELEMENT_FLOAT))->setValue(pjoint->GetHardMaxAccel(iaxis)*valuemult);
+            domKinematics_newparamRef param_hardjerk = daeSafeCast<domKinematics_newparam>(mai->add(COLLADA_ELEMENT_NEWPARAM));
+            param_hardjerk->setSid("hardMaxJerk");
+            daeSafeCast<domKinematics_newparam::domFloat>(param_hardjerk->add(COLLADA_ELEMENT_FLOAT))->setValue(pjoint->GetHardMaxJerk(iaxis)*valuemult);
         }
 
         // write the bindings
@@ -2062,7 +2083,7 @@ private:
                     continue;
                 }
 
-                KinBody::LinkPtr pgrabbinglink = pbody->IsGrabbing(*itgrabbed);
+                KinBody::LinkPtr pgrabbinglink = pbody->IsGrabbing(**itgrabbed);
                 if( !ptec ) {
                     domExtraRef pextra = daeSafeCast<domExtra>(piscene->add(COLLADA_ELEMENT_EXTRA));
                     pextra->setType("dynamic_rigid_constraints");
@@ -2480,7 +2501,7 @@ void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const
 {
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaWriter writer(penv, atts);
-    std::string scenename, keywords;
+    std::string scenename, keywords, subject;
     FOREACHC(itatt,atts) {
         if( itatt->first == "scenename" ) {
             scenename = itatt->second;
@@ -2488,9 +2509,12 @@ void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const
         else if( itatt->first == "keywords" ) {
             keywords = itatt->second;
         }
+        else if( itatt->first == "subject" ) {
+            subject = itatt->second;
+        }
     }
 
-    writer.Init("openrave_snapshot", keywords);
+    writer.Init("openrave_snapshot", keywords, subject);
 
     if( scenename.size() == 0 ) {
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
@@ -2519,14 +2543,17 @@ void RaveWriteColladaFile(KinBodyPtr pbody, const string& filename, const Attrib
 {
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaWriter writer(pbody->GetEnv(),atts);
-    std::string keywords;
+    std::string keywords, subject;
     FOREACHC(itatt,atts) {
         if( itatt->first == "keywords" ) {
             keywords = itatt->second;
         }
+        else if( itatt->first == "subject" ) {
+            subject = itatt->second;
+        }
     }
 
-    writer.Init("openrave_snapshot", keywords);
+    writer.Init("openrave_snapshot", keywords, subject);
     if( !writer.Write(pbody) ) {
         throw openrave_exception(_("ColladaWriter::Write(KinBodyPtr) failed"));
     }
@@ -2538,7 +2565,7 @@ void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::st
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     if( listbodies.size() > 0 ) {
         ColladaWriter writer(listbodies.front()->GetEnv(),atts);
-        std::string scenename, keywords;
+        std::string scenename, keywords, subject;
         FOREACHC(itatt,atts) {
             if( itatt->first == "scenename" ) {
                 scenename = itatt->second;
@@ -2547,8 +2574,11 @@ void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::st
             else if( itatt->first == "keywords" ) {
                 keywords = itatt->second;
             }
+            else if( itatt->first == "subject" ) {
+                subject = itatt->second;
+            }
         }
-        writer.Init("openrave_snapshot", keywords);
+        writer.Init("openrave_snapshot", keywords, subject);
 
         if( scenename.size() == 0 ) {
     #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
@@ -2578,7 +2608,7 @@ void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output, 
 {
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaWriter writer(penv, atts);
-    std::string scenename, keywords;
+    std::string scenename, keywords, subject;
     FOREACHC(itatt,atts) {
         if( itatt->first == "scenename" ) {
             scenename = itatt->second;
@@ -2586,9 +2616,12 @@ void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output, 
         else if( itatt->first == "keywords" ) {
             keywords = itatt->second;
         }
+        else if( itatt->first == "subject" ) {
+            subject = itatt->second;
+        }
     }
 
-    writer.Init("openrave_snapshot", keywords);
+    writer.Init("openrave_snapshot", keywords, subject);
 
     if( scenename.size() == 0 ) {
         scenename = "scene";
@@ -2604,14 +2637,17 @@ void RaveWriteColladaMemory(KinBodyPtr pbody, std::vector<char>& output, const A
 {
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaWriter writer(pbody->GetEnv(),atts);
-    std::string keywords;
+    std::string keywords, subject;
     FOREACHC(itatt,atts) {
         if( itatt->first == "keywords" ) {
             keywords = itatt->second;
         }
+        else if( itatt->first == "subject" ) {
+            subject = itatt->second;
+        }
     }
 
-    writer.Init("openrave_snapshot", keywords);
+    writer.Init("openrave_snapshot", keywords, subject);
     if( !writer.Write(pbody) ) {
         throw openrave_exception(_("ColladaWriter::Write(KinBodyPtr) failed"));
     }
@@ -2624,7 +2660,7 @@ void RaveWriteColladaMemory(const std::list<KinBodyPtr>& listbodies, std::vector
     output.clear();
     if( listbodies.size() > 0 ) {
         ColladaWriter writer(listbodies.front()->GetEnv(),atts);
-        std::string scenename, keywords;
+        std::string scenename, keywords, subject;
         FOREACHC(itatt,atts) {
             if( itatt->first == "scenename" ) {
                 scenename = itatt->second;
@@ -2633,8 +2669,11 @@ void RaveWriteColladaMemory(const std::list<KinBodyPtr>& listbodies, std::vector
             else if( itatt->first == "keywords" ) {
                 keywords = itatt->second;
             }
+            else if( itatt->first == "subject" ) {
+                subject = itatt->second;
+            }
         }
-        writer.Init("openrave_snapshot", keywords);
+        writer.Init("openrave_snapshot", keywords, subject);
 
         if( scenename.size() == 0 ) {
             scenename = "scene";

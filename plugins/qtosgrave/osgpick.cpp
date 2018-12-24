@@ -64,7 +64,7 @@ bool OSGPickHandler::handle(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAda
             _dragfn();
         }
         return false;
-        
+
     default:
         return false;
     }
@@ -75,7 +75,7 @@ void OSGPickHandler::_Pick(osg::ref_ptr<osgViewer::View> view, const osgGA::GUIE
     if( !_handleRayPickFn ) {
         return;
     }
-    
+
     try {
         float x = ea.getX();
         float y = ea.getY();
@@ -94,7 +94,7 @@ void OSGPickHandler::_Pick(osg::ref_ptr<osgViewer::View> view, const osgGA::GUIE
                         }
                     }
                 }
-            }            
+            }
         }
         // if still here, then no intersection
         _handleRayPickFn(osgUtil::LineSegmentIntersector::Intersection(), buttonPressed, ea.getModKeyMask());

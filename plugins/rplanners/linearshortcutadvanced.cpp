@@ -15,6 +15,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "openraveplugindefs.h"
 
+// #define SHORTCUT_ONEDOF_DEBUG
+// #define PROGRESS_DEBUG
+
 class ShortcutLinearPlanner : public PlannerBase
 {
 public:
@@ -84,7 +87,7 @@ public:
 
         uint32_t basetime = utils::GetMilliTime();
         PlannerParametersConstPtr parameters = GetParameters();
-        
+
 //        if( IS_DEBUGLEVEL(Level_Verbose) ) {
 //            // store the trajectory
 //            uint32_t randnum;
@@ -101,7 +104,7 @@ public:
 //            RAVELOG_VERBOSE_FORMAT("saved linear parameters to %s", filename);
 //            _DumpTrajectory(ptraj, Level_Verbose, 0);
 //        }
-        
+
         // subsample trajectory and add to list
         list< std::pair< vector<dReal>, dReal> > listpath;
 
@@ -115,7 +118,7 @@ public:
         ptraj0->Clone(ptraj, 0);
         _DumpTrajectory(ptraj, Level_Verbose, 0);
 #endif
-        
+
         _SubsampleTrajectory(ptraj,listpath);
 
 #ifdef LINEAR_SMOOTHER_DEBUG
@@ -126,20 +129,20 @@ public:
         ptraj1->Clone(ptraj, 0);
         _DumpTrajectory(ptraj, Level_Verbose, 1);
 #endif
-        
+
         _OptimizePath(listpath);
-        
+
         ptraj->Init(parameters->_configurationspecification);
         FOREACH(it, listpath) {
             ptraj->Insert(ptraj->GetNumWaypoints(),it->first);
         }
-        
-#ifdef LINEAR_SMOOTHER_DEBUG        
-        ptraj2->Clone(ptraj, 0);        
+
+#ifdef LINEAR_SMOOTHER_DEBUG
+        ptraj2->Clone(ptraj, 0);
         _DumpTrajectory(ptraj, Level_Verbose, 2);
 #endif
-        
-        RAVELOG_DEBUG(str(boost::format("path optimizing - computation time=%fs\n")%(0.001f*(float)(utils::GetMilliTime()-basetime))));
+
+        RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time=%fs\n", GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
         if( parameters->_sPostProcessingPlanner.size() == 0 ) {
             // no other planner so at least retime
             PlannerStatus status = _linearretimer->PlanPath(ptraj);
@@ -269,7 +272,7 @@ protected:
 
         for(size_t ipoint = 1; ipoint < ptraj->GetNumWaypoints(); ++ipoint) {
             std::copy(vtrajdata.begin()+(ipoint)*parameters->GetDOF(),vtrajdata.begin()+(ipoint+1)*parameters->GetDOF(),q1.begin());
-            dq = q1;            
+            dq = q1;
             parameters->_diffstatefn(dq,q0);
             int i, numSteps = 1;
             vector<dReal>::const_iterator itres = parameters->_vConfigResolution.begin();
@@ -291,18 +294,23 @@ protected:
             }
             int mult = 1;
             for (int f = 1; f < numSteps; f++) {
-                bool bsuccess = false;
+                int neighstatus = NSS_Failed;
                 if( mult > 1 ) {
                     dq2 = dq;
                     FOREACHC(it, dq2) {
                         *it *= mult;
                     }
-                    bsuccess = parameters->_neighstatefn(qcur,dq2,NSO_OnlyHardConstraints);
+                    neighstatus = parameters->_neighstatefn(qcur,dq2,NSO_OnlyHardConstraints);
                 }
                 else {
-                    bsuccess = parameters->_neighstatefn(qcur,dq,NSO_OnlyHardConstraints);
+                    neighstatus = parameters->_neighstatefn(qcur,dq,NSO_OnlyHardConstraints);
                 }
-                if( !bsuccess ) {
+                if( neighstatus == NSS_SuccessfulWithDeviation ) {
+                    RAVELOG_WARN_FORMAT("env=%d, neighstatefn returned different configuration than qcur, stop subsampling segment (%d, %d) at step %d/%d, numwaypoints=%d", GetEnv()->GetId()%(ipoint-1)%ipoint%f%numSteps%ptraj->GetNumWaypoints());
+                    qcur = listpath.back().first; // restore qcur
+                    break;
+                }
+                else if( neighstatus == NSS_Failed ) {
                     RAVELOG_DEBUG_FORMAT("env=%d, neighstatefn failed mult=%d, perhaps non-linear constraints are used?", GetEnv()->GetId()%mult);
                     mult++;
                     continue;

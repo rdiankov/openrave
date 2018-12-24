@@ -181,6 +181,7 @@ public:
         BOOST_ASSERT(_timeoffset>=0);
         BOOST_ASSERT(time >= 0);
         _ComputeInternal();
+        OPENRAVE_ASSERT_OP_FORMAT0((int)_vtrajdata.size(),>=,_spec.GetDOF(), "trajectory needs at least one point to sample from", ORE_InvalidArguments);
         if( IS_DEBUGLEVEL(Level_Verbose) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
             _VerifySampling();
         }
@@ -386,6 +387,9 @@ protected:
                         BOOST_ASSERT((int)vdefaultvalues.size()==RaveGetAffineDOF(affinedofs));
                         RaveGetAffineDOFValuesFromTransform(vdefaultvalues.begin(),Transform(),affinedofs);
                     }
+                }
+                else if( groupname.size() >= 13 && groupname.substr(0,13) == "outputSignals") {
+                    std::fill(vdefaultvalues.begin(), vdefaultvalues.end(), -1);
                 }
                 int offset = _spec._vgroups[igroup].offset;
                 for(size_t ielement = 0; ielement < numelements; ++ielement, offset += _spec.GetDOF()) {

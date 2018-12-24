@@ -256,10 +256,10 @@ protected:
     std::vector< NodeBase* > _vecInitialNodes;
 
     inline boost::shared_ptr<RrtPlanner> shared_planner() {
-        return boost::dynamic_pointer_cast<RrtPlanner>(shared_from_this());
+        return boost::static_pointer_cast<RrtPlanner>(shared_from_this());
     }
     inline boost::shared_ptr<RrtPlanner const> shared_planner_const() const {
-        return boost::dynamic_pointer_cast<RrtPlanner const>(shared_from_this());
+        return boost::static_pointer_cast<RrtPlanner const>(shared_from_this());
     }
 };
 
@@ -323,12 +323,13 @@ Some python code to display data::\n\
         _nValidGoals = 0;
         for(size_t igoal = 0; igoal < _parameters->vgoalconfig.size(); igoal += _parameters->GetDOF()) {
             std::copy(_parameters->vgoalconfig.begin()+igoal,_parameters->vgoalconfig.begin()+igoal+_parameters->GetDOF(),vgoal.begin());
-            if( _parameters->CheckPathAllConstraints(vgoal,vgoal,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) == 0 ) {
+            int ret = _parameters->CheckPathAllConstraints(vgoal,vgoal,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart);
+            if( ret == 0 ) {
                 _vecGoalNodes.push_back(_treeBackward.InsertNode(NULL, vgoal, _vecGoalNodes.size()));
                 _nValidGoals++;
             }
             else {
-                RAVELOG_WARN(str(boost::format("goal %d fails constraints\n")%igoal));
+                RAVELOG_WARN_FORMAT("goal %d fails constraints with 0x%x", igoal%ret);
                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
                     int ret = _parameters->CheckPathAllConstraints(vgoal,vgoal,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart);
                 }
@@ -350,7 +351,7 @@ Some python code to display data::\n\
         if( _vgoalpaths.capacity() < _parameters->_minimumgoalpaths ) {
             _vgoalpaths.reserve(_parameters->_minimumgoalpaths);
         }
-        RAVELOG_DEBUG_FORMAT("env=%d BiRRT Planner Initialized, initial=%d, goal=%d", GetEnv()->GetId()%_vecInitialNodes.size()%_treeBackward.GetNumNodes());
+        RAVELOG_DEBUG_FORMAT("env=%d BiRRT Planner Initialized, initial=%d, goal=%d, step=%f", GetEnv()->GetId()%_vecInitialNodes.size()%_treeBackward.GetNumNodes()%_parameters->_fStepLength);
         return true;
     }
 
@@ -396,7 +397,7 @@ Some python code to display data::\n\
             if( _parameters->_nMaxPlanningTime > 0 ) {
                 uint32_t elapsedtime = utils::GetMilliTime()-basetime;
                 if( elapsedtime >= _parameters->_nMaxPlanningTime ) {
-                    RAVELOG_VERBOSE_FORMAT("time exceeded (%dms) so breaking", elapsedtime);
+                    RAVELOG_DEBUG_FORMAT("time exceeded (%dms) so breaking. iter=%d < %d", elapsedtime%(iter/3)%_parameters->_nMaxIterations);
                     break;
                 }
             }
@@ -494,7 +495,7 @@ Some python code to display data::\n\
             swap(TreeA, TreeB);
             iter += 3;
             if( iter > 3*_parameters->_nMaxIterations ) {
-                RAVELOG_WARN("iterations exceeded\n");
+                RAVELOG_WARN_FORMAT("iterations exceeded %d", _parameters->_nMaxIterations);
                 break;
             }
 
@@ -502,7 +503,7 @@ Some python code to display data::\n\
         }
 
         if( _vgoalpaths.size() == 0 ) {
-            RAVELOG_WARN("plan failed, %fs\n",0.001f*(float)(utils::GetMilliTime()-basetime));
+            RAVELOG_WARN_FORMAT("Plan failed in %fs, iter=%d, nMaxIterations=%d",(0.001f*(float)(utils::GetMilliTime()-basetime))%(iter/3)%_parameters->_nMaxIterations);
             return PS_Failed;
         }
 

@@ -20,29 +20,32 @@
 #include "osgskybox.h"
 
 #include <QtCore/QTimer>
-#include <QtGui/QApplication>
+#include <QtWidgets/QApplication>
+#include <QtWidgets/QLayout>
+#include <QtWidgets/QOpenGLWidget>
 #include <osgViewer/CompositeViewer>
 #include <osgViewer/ViewerEventHandlers>
 #include <osg/PositionAttitudeTransform>
 #include <osgManipulator/Dragger>
 #include <iostream>
 
-#include <osgQt/GraphicsWindowQt>
-
 namespace qtosgrave {
 
 using namespace OpenRAVE;
-using namespace osgQt;
 
 class OpenRAVETrackball;
-    
+
 /// \brief  Class of the openscene graph 3d viewer
-class ViewerWidget : public QWidget, public osgViewer::CompositeViewer
+class QOSGViewerWidget : public QOpenGLWidget
 {
 public:
-    ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey, const boost::function<bool(int)>& onKeyDown=boost::function<bool(int)>(), double metersinunit=1);
-    virtual ~ViewerWidget();
-    
+
+    QOSGViewerWidget(EnvironmentBasePtr penv, const std::string &userdatakey,
+                     const boost::function<bool(int)> &onKeyDown = boost::function<bool(int)>(),
+                     double metersinunit = 1, QWidget *parent = 0);
+
+    virtual ~QOSGViewerWidget();
+
     /// \brief Draws bounding box around actual kinbody
     void DrawBoundingBox(bool pressed);
 
@@ -50,12 +53,12 @@ public:
     void ActivateSelection(bool active);
 
     /// \brief possible names include TrackballDragger, TranslateAxisDragger
-    void SetDraggerMode(const std::string& draggerName);
+    void SetDraggerMode(const std::string &draggerName);
 
     /// \brief sets up a dragger selection for a robot or kinbody item
-    void SelectItem(KinBodyItemPtr item, KinBody::JointPtr joint=KinBody::JointPtr());
+    void SelectItem(KinBodyItemPtr item, KinBody::JointPtr joint = KinBody::JointPtr());
 
-    void SelectItemFromName(const std::string& name);
+    void SelectItemFromName(const std::string &name);
 
     /// \brief  Sets scene data node in all viewers
     void SetSceneData();
@@ -81,22 +84,26 @@ public:
     /// \brief sets the near plane for the camera
     void SetNearPlane(double nearplane);
 
+    /// \brief sets the zoom factor. only affects orthogonal view
+    /// \param factor > 1.0 = Zoom in. < 1.0 = Zoom out
+    void Zoom(float factor);
+
     /// \brief set the cubemap for skybox
-    void SetTextureCubeMap(const std::string& posx,
-            const std::string& negx,
-            const std::string& posy,
-            const std::string& negy,
-            const std::string& posz,
-            const std::string& negz);
+    void SetTextureCubeMap(const std::string &posx,
+                           const std::string &negx,
+                           const std::string &posy,
+                           const std::string &negy,
+                           const std::string &posz,
+                           const std::string &negz);
 
     /// \brief returns the near plane set on the camera
     double GetCameraNearPlane();
-    
+
     /// \brief called when the qt window size changes
     void SetViewport(int width, int height, double metersinunit);
 
     /// \brief sets user-controlled hud text
-    void SetUserHUDText(const std::string& text);
+    void SetUserHUDText(const std::string &text);
 
     /// \brief Set wire view to a node
     void SetWire(OSGNodePtr node);
@@ -111,13 +118,15 @@ public:
 
     /// \brief called when the mouse is over a specified point
     ///
-    void HandleRayPick(const osgUtil::LineSegmentIntersector::Intersection& intersection, int buttonPressed, int modkeymask=0);
+    void HandleRayPick(const osgUtil::LineSegmentIntersector::Intersection &intersection, int buttonPressed, int modkeymask = 0);
 
     /// \brief handle case when link is selected
     void SelectOSGLink(OSGNodePtr node, int modkeymask);
-    
+
     osg::Camera *GetCamera();
+
     osg::ref_ptr<osgGA::CameraManipulator> GetCameraManipulator();
+
     OSGMatrixTransformPtr GetCameraHUD();
 
     /// \brief Updates any changes in OSG to to OpenRAVE core.
@@ -128,25 +137,43 @@ public:
 
     /// \brief restores cursor to what it was originally set to
     void RestoreCursor();
-    
+
+    /// \brief Get osg composite viewer
+    osg::ref_ptr<osgViewer::CompositeViewer> GetViewer();
+
+    /// \brief
+    void SetKeyboardModifiers(QInputEvent* event);
+
+    /// \brief Get osg viewer camera control mode for single finger gesture
+    const char* GetCameraMoveMode() {
+        return _bSwitchMouseLeftMiddleButton ? "Pan" : "Rot";
+    }
+
+    /// \brief Toggle camera move mode between pan and rotate
+    void ToggleCameraMoveMode() {
+        _bSwitchMouseLeftMiddleButton = !_bSwitchMouseLeftMiddleButton;
+    }
+
 protected:
     /// \brief handles a key press and looks at the modifier keys
-    bool HandleOSGKeyDown(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa);
+    bool HandleOSGKeyDown(const osgGA::GUIEventAdapter &ea, osgGA::GUIActionAdapter &aa);
 
     /// \brief Clear dragger from the viewer
     void _ClearDragger();
 
     /// \brief gather all the necessary text and updates it on the HUD control
     void _UpdateHUDText();
-    
-    /// \brief Create a viewer widget
-    QWidget* _AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view, osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview );
+
+    /// \brief Set up cameras
+    void _SetupCamera(osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view,
+                      osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview);
 
     /// \brief Create Open GL Context
-    osg::ref_ptr<osg::Camera> _CreateCamera( int x, int y, int w, int h, double metersinunit );
-    osg::ref_ptr<osg::Camera> _CreateHUDCamera(int x, int y, int w, int h, double metersinunit );
+    osg::ref_ptr<osg::Camera> _CreateCamera(int x, int y, int w, int h, double metersinunit);
 
-    KinBodyItemPtr _GetItemFromName(const std::string& name);
+    osg::ref_ptr<osg::Camera> _CreateHUDCamera(int x, int y, int w, int h, double metersinunit);
+
+    KinBodyItemPtr _GetItemFromName(const std::string &name);
 
     /// \brief Find joint into OpenRAVE core
     KinBody::JointPtr _FindJoint(KinBodyItemPtr pitem, KinBody::LinkPtr link);
@@ -166,14 +193,33 @@ protected:
     void _LoadMatrixTransform();
 
     /// \brief Create a dragger with a name given
-    std::vector<osg::ref_ptr<osgManipulator::Dragger> > _CreateDragger(const std::string& name);
+    std::vector<osg::ref_ptr<osgManipulator::Dragger> > _CreateDragger(const std::string &name);
 
     /// \brief Create a manipulator over a render item
     ///
     /// \param draggerName the type of dragger to create
     /// \param joint if not empty, the joint to create the dragger over (ie for moving the joint value)
-    OSGNodePtr _AddDraggerToObject(const std::string& draggerName, KinBodyItemPtr item, KinBody::JointPtr joint);
-    virtual void paintEvent( QPaintEvent* event );
+    OSGNodePtr _AddDraggerToObject(const std::string &draggerName, KinBodyItemPtr item, KinBody::JointPtr joint);
+
+    virtual void paintGL();
+
+    virtual void resizeGL(int width, int height);
+
+    virtual void mouseMoveEvent(QMouseEvent *event);
+
+    virtual void mousePressEvent(QMouseEvent *event);
+
+    virtual void mouseReleaseEvent(QMouseEvent *event);
+
+    virtual void mouseDoubleClickEvent(QMouseEvent *event);
+
+    virtual void wheelEvent(QWheelEvent *event);
+
+    virtual void keyPressEvent(QKeyEvent *event);
+
+    virtual void keyReleaseEvent(QKeyEvent *event);
+
+    virtual bool event(QEvent *event);
 
     OSGGroupPtr _osgSceneRoot; ///< root scene node
     OSGGroupPtr _osgFigureRoot; ///< the node that all the figures are drawn into
@@ -197,6 +243,8 @@ protected:
 
     std::vector<osg::ref_ptr<osg::PositionAttitudeTransform> > _vLightTransform;
     osg::ref_ptr<osg::StateSet> _lightStateSet;
+    osg::ref_ptr<osgViewer::CompositeViewer> _osgviewer;
+    osgViewer::GraphicsWindowEmbedded* _osgGraphicWindow;
     osg::ref_ptr<osgViewer::View> _osgview;
     osg::ref_ptr<osgViewer::View> _osghudview;
     osg::ref_ptr<OpenRAVETrackball> _osgCameraManipulator;
@@ -210,11 +258,81 @@ protected:
     EnvironmentBasePtr _penv;
 
     boost::function<bool(int)> _onKeyDown; ///< call whenever key press is detected
-
+    bool _bSwitchMouseLeftMiddleButton;  ///< whether to switch mouse left button and middle button (camera control mode)
     bool _bLightOn; ///< whether lights are on or not
     bool _bIsSelectiveActive; ///< if true, then can select a new
+    double _zNear; ///< In OSG, znear and zfar are updated by CullVisitor, which
+                   ///  causing getProjectionMatrixAsXXX to return negative
+                   ///  values. Therefore, we manage zNear ourselves
+
+    void GetSwitchedButtonValue(unsigned int &button);
 };
 
+class QtOSGKeyEventTranslator
+{
+public:
+    QtOSGKeyEventTranslator()
+    {
+        keyMap[Qt::Key_Escape    ] = osgGA::GUIEventAdapter::KEY_Escape;
+        keyMap[Qt::Key_Delete    ] = osgGA::GUIEventAdapter::KEY_Delete;
+        keyMap[Qt::Key_Home      ] = osgGA::GUIEventAdapter::KEY_Home;
+        keyMap[Qt::Key_Enter     ] = osgGA::GUIEventAdapter::KEY_KP_Enter;
+        keyMap[Qt::Key_End       ] = osgGA::GUIEventAdapter::KEY_End;
+        keyMap[Qt::Key_Return    ] = osgGA::GUIEventAdapter::KEY_Return;
+        keyMap[Qt::Key_PageUp    ] = osgGA::GUIEventAdapter::KEY_Page_Up;
+        keyMap[Qt::Key_PageDown  ] = osgGA::GUIEventAdapter::KEY_Page_Down;
+        keyMap[Qt::Key_Left      ] = osgGA::GUIEventAdapter::KEY_Left;
+        keyMap[Qt::Key_Right     ] = osgGA::GUIEventAdapter::KEY_Right;
+        keyMap[Qt::Key_Up        ] = osgGA::GUIEventAdapter::KEY_Up;
+        keyMap[Qt::Key_Down      ] = osgGA::GUIEventAdapter::KEY_Down;
+        keyMap[Qt::Key_Backspace ] = osgGA::GUIEventAdapter::KEY_BackSpace;
+        keyMap[Qt::Key_Tab       ] = osgGA::GUIEventAdapter::KEY_Tab;
+        keyMap[Qt::Key_Space     ] = osgGA::GUIEventAdapter::KEY_Space;
+        keyMap[Qt::Key_Delete    ] = osgGA::GUIEventAdapter::KEY_Delete;
+        keyMap[Qt::Key_Alt       ] = osgGA::GUIEventAdapter::KEY_Alt_L;
+        keyMap[Qt::Key_Shift     ] = osgGA::GUIEventAdapter::KEY_Shift_L;
+        keyMap[Qt::Key_Control   ] = osgGA::GUIEventAdapter::KEY_Control_L;
+        keyMap[Qt::Key_Meta      ] = osgGA::GUIEventAdapter::KEY_Meta_L;
+    }
+
+    ~QtOSGKeyEventTranslator() {
+    };
+
+    int GetOSGKeyValue(QKeyEvent* event)
+    {
+        std::map<int, unsigned int>::const_iterator itmap = keyMap.find(event->key());
+
+        if (itmap == keyMap.end()) {
+            return int(*(event->text().toLatin1().data()));
+        } else {
+            return itmap->second;
+        }
+    }
+
+    unsigned int GetOSGButtonValue(QMouseEvent* event)
+    {
+        unsigned int button = 0;
+        switch (event->button()) {
+        case Qt::LeftButton:
+            button = 1;
+            break;
+        case Qt::MiddleButton:
+            button = 2;
+            break;
+        case Qt::RightButton:
+            button = 3;
+            break;
+        default:
+            break;
+        }
+        return button;
+    }
+
+private:
+    std::map<int, unsigned int> keyMap;
+};
+
+static QtOSGKeyEventTranslator qtOSGKeyEventTranslator;
 }
 
 #endif

@@ -83,9 +83,9 @@ void KinBody::Link::GetParentLinks(std::vector< boost::shared_ptr<Link> >& vPare
     }
 }
 
-bool KinBody::Link::IsParentLink(boost::shared_ptr<Link const> plink) const
+bool KinBody::Link::IsParentLink(const Link &link) const
 {
-    return find(_vParentLinks.begin(),_vParentLinks.end(),plink->GetIndex()) != _vParentLinks.end();
+    return find(_vParentLinks.begin(),_vParentLinks.end(), link.GetIndex()) != _vParentLinks.end();
 }
 
 /** _tMassFrame * PrincipalInertia * _tMassFrame.inverse()
@@ -147,70 +147,25 @@ void KinBody::Link::SetMass(dReal mass)
 
 AABB KinBody::Link::ComputeLocalAABB() const
 {
-    if( _vGeometries.size() == 1) {
-        return _vGeometries.front()->ComputeAABB(Transform());
-    }
-    else if( _vGeometries.size() > 1 ) {
-        Vector vmin, vmax;
-        bool binitialized=false;
-        AABB ab;
-        FOREACHC(itgeom,_vGeometries) {
-            ab = (*itgeom)->ComputeAABB(Transform());
-            if( ab.extents.x <= 0 || ab.extents.y <= 0 || ab.extents.z <= 0 ) {
-                continue;
-            }
-            Vector vnmin = ab.pos - ab.extents;
-            Vector vnmax = ab.pos + ab.extents;
-            if( !binitialized ) {
-                vmin = vnmin;
-                vmax = vnmax;
-                binitialized = true;
-            }
-            else {
-                if( vmin.x > vnmin.x ) {
-                    vmin.x = vnmin.x;
-                }
-                if( vmin.y > vnmin.y ) {
-                    vmin.y = vnmin.y;
-                }
-                if( vmin.z > vnmin.z ) {
-                    vmin.z = vnmin.z;
-                }
-                if( vmax.x < vnmax.x ) {
-                    vmax.x = vnmax.x;
-                }
-                if( vmax.y < vnmax.y ) {
-                    vmax.y = vnmax.y;
-                }
-                if( vmax.z < vnmax.z ) {
-                    vmax.z = vnmax.z;
-                }
-            }
-        }
-        if( !binitialized ) {
-            ab.pos = _info._t.trans;
-            ab.extents = Vector(0,0,0);
-        }
-        else {
-            ab.pos = (dReal)0.5 * (vmin + vmax);
-            ab.extents = vmax - ab.pos;
-        }
-        return ab;
-    }
-    return AABB();
+    return ComputeAABBFromTransform(Transform());
 }
 
 AABB KinBody::Link::ComputeAABB() const
 {
+    return ComputeAABBFromTransform(_info._t);
+}
+
+AABB KinBody::Link::ComputeAABBFromTransform(const Transform& tLink) const
+{
     if( _vGeometries.size() == 1) {
-        return _vGeometries.front()->ComputeAABB(_info._t);
+        return _vGeometries.front()->ComputeAABB(tLink);
     }
     else if( _vGeometries.size() > 1 ) {
         Vector vmin, vmax;
         bool binitialized=false;
         AABB ab;
         FOREACHC(itgeom,_vGeometries) {
-            ab = (*itgeom)->ComputeAABB(_info._t);
+            ab = (*itgeom)->ComputeAABB(tLink);
             if( ab.extents.x <= 0 || ab.extents.y <= 0 || ab.extents.z <= 0 ) {
                 continue;
             }
@@ -243,7 +198,7 @@ AABB KinBody::Link::ComputeAABB() const
             }
         }
         if( !binitialized ) {
-            ab.pos = _info._t.trans;
+            ab.pos = tLink.trans;
             ab.extents = Vector(0,0,0);
         }
         else {
@@ -253,7 +208,7 @@ AABB KinBody::Link::ComputeAABB() const
         return ab;
     }
     // have to at least return the correct position!
-    return AABB(_info._t.trans,Vector(0,0,0));
+    return AABB(tLink.trans,Vector(0,0,0));
 }
 
 void KinBody::Link::serialize(std::ostream& o, int options) const
@@ -319,13 +274,15 @@ KinBody::Link::GeometryPtr KinBody::Link::GetGeometry(int index)
     return _vGeometries.at(index);
 }
 
-void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& geometries)
+void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& geometries, bool bForceRecomputeMeshCollision)
 {
     _vGeometries.resize(geometries.size());
     for(size_t i = 0; i < geometries.size(); ++i) {
         _vGeometries[i].reset(new Geometry(shared_from_this(),*geometries[i]));
-        if( _vGeometries[i]->GetCollisionMesh().vertices.size() == 0 ) {
-            RAVELOG_VERBOSE("geometry has empty collision mesh\n");
+        if( bForceRecomputeMeshCollision || _vGeometries[i]->GetCollisionMesh().vertices.size() == 0 ) {
+            if( !bForceRecomputeMeshCollision ) {
+                RAVELOG_VERBOSE("geometry has empty collision mesh\n");
+            }
             _vGeometries[i]->InitCollisionMesh(); // have to initialize the mesh since some plugins might not understand all geometry types
         }
     }
@@ -341,7 +298,7 @@ void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& g
     _Update();
 }
 
-void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries)
+void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries, bool bForceRecomputeMeshCollision)
 {
     _vGeometries.resize(geometries.size());
     size_t i = 0;
@@ -481,22 +438,20 @@ void KinBody::Link::SetStringParameters(const std::string& key, const std::strin
     GetParent()->_PostprocessChangedParameters(Prop_LinkCustomParameters);
 }
 
-bool KinBody::Link::IsRigidlyAttached(boost::shared_ptr<Link const> plink) const
+bool KinBody::Link::IsRigidlyAttached(const Link &link) const
 {
-    return find(_vRigidlyAttachedLinks.begin(),_vRigidlyAttachedLinks.end(),plink->GetIndex()) != _vRigidlyAttachedLinks.end();
+    return find(_vRigidlyAttachedLinks.begin(),_vRigidlyAttachedLinks.end(),link.GetIndex()) != _vRigidlyAttachedLinks.end();
 }
 
 void KinBody::Link::UpdateInfo()
 {
-    if( _info._vgeometryinfos.size() != _vGeometries.size() ) {
-        // have to recompute the geometries
-        _info._vgeometryinfos.resize(_vGeometries.size());
-        for(size_t i = 0; i < _info._vgeometryinfos.size(); ++i) {
-            if( !_info._vgeometryinfos[i] ) {
-                _info._vgeometryinfos[i].reset(new KinBody::GeometryInfo());
-            }
-            *_info._vgeometryinfos[i] = _vGeometries[i]->GetInfo();
+    // always have to recompute the geometries
+    _info._vgeometryinfos.resize(_vGeometries.size());
+    for(size_t i = 0; i < _info._vgeometryinfos.size(); ++i) {
+        if( !_info._vgeometryinfos[i] ) {
+            _info._vgeometryinfos[i].reset(new KinBody::GeometryInfo());
         }
+        *_info._vgeometryinfos[i] = _vGeometries[i]->GetInfo();
     }
 }
 

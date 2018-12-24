@@ -225,7 +225,7 @@ public:
         if(!!report ) {
             report->Reset(_options);
         }
-        if( pbody->IsAttached(plink->GetParent()) ) {
+        if( pbody->IsAttached(*plink->GetParent()) ) {
             return false;
         }
         _pactiverobot.reset();
@@ -264,7 +264,7 @@ public:
             }
             KinBodyPtr pbody2 = *itbody;
 
-            if(plink->GetParent()->IsAttached(KinBodyConstPtr(pbody2)) ) {
+            if(plink->GetParent()->IsAttached(*pbody2)) {
                 continue;
             }
             if( find(vbodyexcluded.begin(),vbodyexcluded.end(),pbody2) != vbodyexcluded.end() ) {
@@ -353,6 +353,12 @@ public:
         }
         _pactiverobot.reset();
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
+    }
+
+    virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
+    {
+        RAVELOG_WARN("pqp does not support trimesh/body check\n");
+        return false;
     }
 
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
@@ -445,7 +451,7 @@ private:
             }
             KinBodyPtr pbody2 = *itbody;
 
-            if(pbody1->IsAttached(KinBodyConstPtr(pbody2)) ) {
+            if(pbody1->IsAttached(*pbody2)) {
                 continue;
             }
             if( find(vbodyexcluded.begin(),vbodyexcluded.end(),pbody2) != vbodyexcluded.end() ) {

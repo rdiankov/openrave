@@ -23,6 +23,128 @@
 namespace openravepy
 {
 
+#if OPENRAVE_RAPIDJSON
+
+// convert from rapidjson to python object
+object toPyObject(const rapidjson::Value& value)
+{
+    switch (value.GetType()) {
+    case rapidjson::kObjectType:
+        {
+            boost::python::dict d;
+            for (rapidjson::Value::ConstMemberIterator it = value.MemberBegin(); it != value.MemberEnd(); ++it) {
+                d[it->name.GetString()] = toPyObject(it->value);
+            }
+            return d;
+        }
+    case rapidjson::kArrayType:
+        {
+            boost::python::list l;
+            for (rapidjson::Value::ConstValueIterator it = value.Begin(); it != value.End(); ++it) {
+                l.append(toPyObject(*it));
+            }
+            return l;
+        }
+    case rapidjson::kTrueType:
+        return boost::python::object(boost::python::handle<>(PyBool_FromLong(1)));
+    case rapidjson::kFalseType:
+        return boost::python::object(boost::python::handle<>(PyBool_FromLong(0)));
+    case rapidjson::kStringType:
+        return ConvertStringToUnicode(value.GetString());
+    case rapidjson::kNumberType:
+        if (value.IsDouble()) {
+            return boost::python::object(boost::python::handle<>(PyFloat_FromDouble(value.GetDouble())));
+        }
+        else {
+            return boost::python::object(boost::python::handle<>(PyInt_FromLong(value.GetInt64())));
+        }
+    case rapidjson::kNullType:
+        return object();
+    default:
+        PyErr_SetString(PyExc_RuntimeError, "unsupported type");
+        return object();
+    }
+}
+
+// convert from python object to rapidjson
+void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator)
+{
+    if (obj.ptr() == Py_None)
+    {
+        value.SetNull();
+    }
+    else if (PyBool_Check(obj.ptr()))
+    {
+        value.SetBool(obj.ptr() == Py_True);
+    }
+    else if (PyFloat_Check(obj.ptr()))
+    {
+        value.SetDouble(PyFloat_AsDouble(obj.ptr()));
+    }
+    else if (PyInt_Check(obj.ptr()))
+    {
+        value.SetInt64(PyLong_AsLong(obj.ptr()));
+    }
+    else if (PyString_Check(obj.ptr()))
+    {
+        value.SetString(PyString_AsString(obj.ptr()), PyString_GET_SIZE(obj.ptr()));
+    }
+    else if (PyUnicode_Check(obj.ptr()))
+    {
+        value.SetString(PyBytes_AsString(obj.ptr()), PyBytes_GET_SIZE(obj.ptr()));
+    }
+    else if (PyTuple_Check(obj.ptr()))
+    {
+        boost::python::tuple t = boost::python::extract<boost::python::tuple>(obj);
+        value.SetArray();
+        for (int i = 0; i < len(t); i++)
+        {
+            boost::python::object o = boost::python::extract<boost::python::object>(t[i]);
+            rapidjson::Value elementValue;
+            toRapidJSONValue(o, elementValue, allocator);
+            value.PushBack(elementValue, allocator);
+        }
+    }
+    else if (PyList_Check(obj.ptr()))
+    {
+        boost::python::list l = boost::python::extract<boost::python::list>(obj);
+        value.SetArray();
+        for (int i = 0; i < len(l); i++)
+        {
+            boost::python::object o = boost::python::extract<boost::python::object>(l[i]);
+            rapidjson::Value elementValue;
+            toRapidJSONValue(o, elementValue, allocator);
+            value.PushBack(elementValue, allocator);
+        }
+    }
+    else if (PyDict_Check(obj.ptr()))
+    {
+        boost::python::dict d = boost::python::extract<boost::python::dict>(obj);
+        boost::python::object iterator = d.iteritems();
+        value.SetObject();
+        for (int i = 0; i < len(d); i++)
+        {
+            rapidjson::Value keyValue, valueValue;
+            boost::python::tuple kv = boost::python::extract<boost::python::tuple>(iterator.attr("next")());
+            {
+                boost::python::object k = boost::python::extract<object>(kv[0]);
+                toRapidJSONValue(k, keyValue, allocator);
+            }
+            {
+                boost::python::object v = boost::python::extract<object>(kv[1]);
+                toRapidJSONValue(v, valueValue, allocator);
+            }
+            value.AddMember(keyValue, valueValue, allocator);
+        }
+    }
+    else
+    {
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("unsupported python type"), ORE_InvalidArguments);
+    }
+}
+
+#endif // OPENRAVE_RAPIDJSON
+    
 /// if set, will return all transforms are 1x7 vectors where first 4 compoonents are quaternion
 static bool s_bReturnTransformQuaternions = false;
 bool GetReturnTransformQuaternions() {
@@ -408,6 +530,13 @@ bool PyInterfaceBase::SupportsCommand(const string& cmd)
     return _pbase->SupportsCommand(cmd);
 }
 
+#if OPENRAVE_RAPIDJSON
+bool PyInterfaceBase::SupportsJSONCommand(const string& cmd)
+{
+    return _pbase->SupportsJSONCommand(cmd);
+}
+#endif // OPENRAVE_RAPIDJSON
+
 object PyInterfaceBase::SendCommand(const string& in, bool releasegil, bool lockenv)
 {
     stringstream sin(in), sout;
@@ -434,6 +563,38 @@ object PyInterfaceBase::SendCommand(const string& in, bool releasegil, bool lock
     }
     return object(sout.str());
 }
+
+#if OPENRAVE_RAPIDJSON
+
+object PyInterfaceBase::SendJSONCommand(const string& cmd, object input, bool releasegil, bool lockenv)
+{
+    rapidjson::Document in, out;
+    toRapidJSONValue(input, in, in.GetAllocator());
+
+    {
+        openravepy::PythonThreadSaverPtr statesaver;
+        openravepy::PyEnvironmentLockSaverPtr envsaver;
+        if( releasegil ) {
+            statesaver.reset(new openravepy::PythonThreadSaver());
+            if( lockenv ) {
+                // GIL is already released, so use a regular environment lock
+                envsaver.reset(new openravepy::PyEnvironmentLockSaver(_pyenv, true));
+            }
+        }
+        else {
+            if( lockenv ) {
+                // try to safely lock the environment first
+                envsaver.reset(new openravepy::PyEnvironmentLockSaver(_pyenv, false));
+            }
+        }
+
+        _pbase->SendJSONCommand(cmd, in, out);
+    }
+
+    return toPyObject(out);
+}
+
+#endif // OPENRAVE_RAPIDJSON
 
 object PyInterfaceBase::GetReadableInterfaces()
 {
@@ -933,11 +1094,11 @@ public:
         return bCollision;
     }
 
-    object CheckCollisionRays(object rays, PyKinBodyPtr pbody,bool bFrontFacingOnly=false)
+    object CheckCollisionRays(boost::python::numeric::array rays, PyKinBodyPtr pbody,bool bFrontFacingOnly=false)
     {
         object shape = rays.attr("shape");
-        int num = extract<int>(shape[0]);
-        if( num == 0 ) {
+        int nRays = extract<int>(shape[0]);
+        if( nRays == 0 ) {
             return boost::python::make_tuple(numeric::array(boost::python::list()).astype("i4"),numeric::array(boost::python::list()));
         }
         if( extract<int>(shape[1]) != 6 ) {
@@ -946,38 +1107,66 @@ public:
         CollisionReport report;
         CollisionReportPtr preport(&report,null_deleter());
 
+        PyArrayObject *pPyRays = PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(rays.ptr()));
+        AutoPyArrayObjectDereferencer pyderef(pPyRays);
+
+        if( !PyArray_ISFLOAT(pPyRays) ) {
+            throw openrave_exception(_("rays has to be a float array\n"));
+        }
+
+        bool isFloat = PyArray_ITEMSIZE(pPyRays) == sizeof(float); // or double
+        const float *pRaysFloat = isFloat ? reinterpret_cast<const float*>(PyArray_DATA(pPyRays)) : NULL;
+        const double *pRaysDouble = isFloat ? NULL : reinterpret_cast<const double*>(PyArray_DATA(pPyRays));
+
         RAY r;
-        npy_intp dims[] = { num,6};
-        PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+        npy_intp dims[] = { nRays,6};
+        PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal) == sizeof(double) ? PyArray_DOUBLE : PyArray_FLOAT);
         dReal* ppos = (dReal*)PyArray_DATA(pypos);
+        std::memset(ppos, 0, nRays * sizeof(dReal));
         PyObject* pycollision = PyArray_SimpleNew(1,&dims[0], PyArray_BOOL);
-        bool* pcollision = (bool*)PyArray_DATA(pycollision);
-        for(int i = 0; i < num; ++i, ppos += 6) {
-            vector<dReal> ray = ExtractArray<dReal>(rays[i]);
-            r.pos.x = ray[0];
-            r.pos.y = ray[1];
-            r.pos.z = ray[2];
-            r.dir.x = ray[3];
-            r.dir.y = ray[4];
-            r.dir.z = ray[5];
-            bool bCollision;
-            if( !pbody ) {
-                bCollision = _penv->CheckCollision(r, preport);
-            }
-            else {
-                bCollision = _penv->CheckCollision(r, KinBodyConstPtr(openravepy::GetKinBody(pbody)), preport);
-            }
-            pcollision[i] = false;
-            ppos[0] = 0; ppos[1] = 0; ppos[2] = 0; ppos[3] = 0; ppos[4] = 0; ppos[5] = 0;
-            if( bCollision &&( report.contacts.size() > 0) ) {
-                if( !bFrontFacingOnly ||( report.contacts[0].norm.dot3(r.dir)<0) ) {
-                    pcollision[i] = true;
-                    ppos[0] = report.contacts[0].pos.x;
-                    ppos[1] = report.contacts[0].pos.y;
-                    ppos[2] = report.contacts[0].pos.z;
-                    ppos[3] = report.contacts[0].norm.x;
-                    ppos[4] = report.contacts[0].norm.y;
-                    ppos[5] = report.contacts[0].norm.z;
+        // numpy bool = uint8_t
+        uint8_t* pcollision = (uint8_t*)PyArray_DATA(pycollision);
+        std::memset(pcollision, 0, nRays * sizeof(uint8_t));
+        {
+            openravepy::PythonThreadSaver threadsaver;
+
+            for(int i = 0; i < nRays; ++i, ppos += 6) {
+                if (isFloat) {
+                    r.pos.x = pRaysFloat[0];
+                    r.pos.y = pRaysFloat[1];
+                    r.pos.z = pRaysFloat[2];
+                    r.dir.x = pRaysFloat[3];
+                    r.dir.y = pRaysFloat[4];
+                    r.dir.z = pRaysFloat[5];
+                    pRaysFloat += 6;
+                } else {
+                    r.pos.x = pRaysDouble[0];
+                    r.pos.y = pRaysDouble[1];
+                    r.pos.z = pRaysDouble[2];
+                    r.dir.x = pRaysDouble[3];
+                    r.dir.y = pRaysDouble[4];
+                    r.dir.z = pRaysDouble[5];
+                    pRaysDouble += 6;
+                }
+
+                bool bCollision;
+                if( !pbody ) {
+                    bCollision = _penv->CheckCollision(r, preport);
+                }
+                else {
+                    bCollision = _penv->CheckCollision(r, KinBodyConstPtr(openravepy::GetKinBody(pbody)), preport);
+                }
+
+                if( bCollision &&( report.contacts.size() > 0) ) {
+                    if( !bFrontFacingOnly ||( report.contacts[0].norm.dot3(r.dir)<0) ) {
+                        pcollision[i] = true;
+                        ppos[0] = report.contacts[0].pos.x;
+                        ppos[1] = report.contacts[0].pos.y;
+                        ppos[2] = report.contacts[0].pos.z;
+                        ppos[3] = report.contacts[0].norm.x;
+                        ppos[4] = report.contacts[0].norm.y;
+                        ppos[5] = report.contacts[0].norm.z;
+                    }
                 }
             }
         }
@@ -1655,6 +1844,7 @@ public:
             }
             ostate["linktransforms"] = olinktransforms;
             ostate["jointvalues"] = toPyArray(itstate->jointvalues);
+            ostate["linkEnableStates"] = toPyArray(itstate->vLinkEnableStates);
             ostate["name"] = ConvertStringToUnicode(itstate->strname);
             ostate["uri"] = ConvertStringToUnicode(itstate->uri);
             ostate["updatestamp"] = itstate->updatestamp;
@@ -1681,6 +1871,7 @@ public:
         }
         ostate["linktransforms"] = olinktransforms;
         ostate["jointvalues"] = toPyArray(bodystate.jointvalues);
+        ostate["linkEnableStates"] = toPyArray(bodystate.vLinkEnableStates);
         ostate["name"] = ConvertStringToUnicode(bodystate.strname);
         ostate["uri"] = ConvertStringToUnicode(bodystate.uri);
         ostate["updatestamp"] = bodystate.updatestamp;
@@ -1715,7 +1906,7 @@ public:
     {
         CHECK_POINTER(pbody);
         TriMesh mesh;
-        _penv->Triangulate(mesh,openravepy::GetKinBody(pbody));
+        _penv->Triangulate(mesh, *openravepy::GetKinBody(pbody));
         return toPyTriMesh(mesh);
     }
 
@@ -1904,6 +2095,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawarrow_overloads, drawarrow, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawbox_overloads, drawbox, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawtrimesh_overloads, drawtrimesh, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SendCommand_overloads, SendCommand, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SendJSONCommand_overloads, SendJSONCommand, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Add_overloads, Add, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Save_overloads, Save, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(WriteToMemory_overloads, WriteToMemory, 1, 3)
@@ -1948,10 +2140,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
 #endif
     import_array();
     numeric::array::set_module_and_type("numpy", "ndarray");
-    int_from_int();
-    uint8_from_int();
-    T_from_number<float>();
-    T_from_number<double>();
+    int_from_number<int>();
+    int_from_number<uint8_t>();
+    float_from_number<float>();
+    float_from_number<double>();
     init_python_bindings();
 
     typedef return_value_policy< copy_const_reference > return_copy_const_ref;
@@ -2007,6 +2199,10 @@ Because race conditions can pop up when trying to lock the openrave environment 
         .def("GetUserData",&PyInterfaceBase::GetUserData, GetUserData_overloads(args("key"), DOXY_FN(InterfaceBase,GetUserData)))
         .def("SupportsCommand",&PyInterfaceBase::SupportsCommand, args("cmd"), DOXY_FN(InterfaceBase,SupportsCommand))
         .def("SendCommand",&PyInterfaceBase::SendCommand, SendCommand_overloads(args("cmd","releasegil","lockenv"), sSendCommandDoc.c_str()))
+#if OPENRAVE_RAPIDJSON
+        .def("SupportsJSONCommand",&PyInterfaceBase::SupportsJSONCommand, args("cmd"), DOXY_FN(InterfaceBase,SupportsJSONCommand))
+        .def("SendJSONCommand",&PyInterfaceBase::SendJSONCommand, SendJSONCommand_overloads(args("cmd","input","releasegil","lockenv"), DOXY_FN(InterfaceBase,SendJSONCommand)))
+#endif // OPENRAVE_RAPIDJSON
         .def("GetReadableInterfaces",&PyInterfaceBase::GetReadableInterfaces,DOXY_FN(InterfaceBase,GetReadableInterfaces))
         .def("GetReadableInterface",&PyInterfaceBase::GetReadableInterface,DOXY_FN(InterfaceBase,GetReadableInterface))
         .def("SetReadableInterface",&PyInterfaceBase::SetReadableInterface,args("xmltag","xmlreadable"), DOXY_FN(InterfaceBase,SetReadableInterface))

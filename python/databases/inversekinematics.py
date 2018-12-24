@@ -292,7 +292,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         return clone
     
     def has(self):
-        return self.iksolver is not None and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype)
+        return self.iksolver is not None and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype) and self.iksolver.GetXMLId() == self.manip.GetIkSolver().GetXMLId()
     
     def save(self):
         statsfilename=self.getstatsfilename(False)
@@ -849,7 +849,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             else:
                 self.solveindices,self.freeindices = self.GetDefaultIndices(avoidPrismaticAsFree=avoidPrismaticAsFree)
         self.solveindices = [i for i in self.manip.GetArmIndices() if not i in self.freeindices]
-        if len(self.solveindices) != dofexpected:
+        if len(self.solveindices) > dofexpected: # allow for 5DOF to solve for Transform6D
             raise InverseKinematicsError(u'Manipulator %(manip)s (indices=%(manipindices)r) joint indices to solve for (%(solveindices)r) is not equal to number of expected joints (%(dofexpected)d) for IK type %(iktype)s. Perhaps the manipulator base link %(baselink)s or end link %(endlink)s are not correct.'%{'manip':self.manip.GetName(),'manipindices':list(self.manip.GetArmIndices()), 'solveindices':list(self.solveindices), 'dofexpected':dofexpected, 'iktype':self.iktype.name, 'baselink':self.manip.GetBase().GetName(), 'endlink':self.manip.GetEndEffector().GetName()})
         
         if freeinc is not None:

@@ -29,8 +29,11 @@ KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsAc
     }
     std::fill(_vresolution.begin(), _vresolution.end(), 0.02);
     std::fill(_vmaxvel.begin(), _vmaxvel.end(), 10);
-    std::fill(_vhardmaxvel.begin(), _vhardmaxvel.end(), 10);
+    std::fill(_vhardmaxvel.begin(), _vhardmaxvel.end(), 100); // Hard limis is 10 times larger than default soft limit.
     std::fill(_vmaxaccel.begin(), _vmaxaccel.end(), 50);
+    std::fill(_vhardmaxaccel.begin(), _vhardmaxaccel.end(), 1000); // Hard limit is more than 10 times larger than soft limit for acceleration.
+    std::fill(_vmaxjerk.begin(), _vmaxjerk.end(), 2e6); // Set negligibly large jerk by default which can change acceleration between min and max within a typical time step. We compute 2e6=(1000-(-1000))/0.001, by assuming max/min accelerations are 1000 and -1000.
+    std::fill(_vhardmaxjerk.begin(), _vhardmaxjerk.end(), 2e7); // Hard limit is 10 times larger than soft limit for jerk.
     std::fill(_vmaxtorque.begin(), _vmaxtorque.end(), 0); // set max torque to 0 to notify the system that dynamics parameters might not be valid.
     std::fill(_vmaxinertia.begin(), _vmaxinertia.end(), 0);
     std::fill(_vweights.begin(), _vweights.end(), 1);
@@ -569,6 +572,7 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
     for(int i = 0; i < GetDOF(); ++i) {
         OPENRAVE_ASSERT_OP_FORMAT(_info._vmaxvel[i], >=, 0, "joint %s[%d] max velocity is invalid",_info._name%i, ORE_InvalidArguments);
         OPENRAVE_ASSERT_OP_FORMAT(_info._vmaxaccel[i], >=, 0, "joint %s[%d] max acceleration is invalid",_info._name%i, ORE_InvalidArguments);
+        OPENRAVE_ASSERT_OP_FORMAT(_info._vmaxjerk[i], >=, 0, "joint %s[%d] max jerk is invalid",_info._name%i, ORE_InvalidArguments);
         OPENRAVE_ASSERT_OP_FORMAT(_info._vmaxtorque[i], >=, 0, "joint %s[%d] max torque is invalid",_info._name%i, ORE_InvalidArguments);
         OPENRAVE_ASSERT_OP_FORMAT(_info._vmaxinertia[i], >=, 0, "joint %s[%d] max inertia is invalid",_info._name%i, ORE_InvalidArguments);
     }
@@ -871,6 +875,98 @@ void KinBody::Joint::SetAccelerationLimits(const std::vector<dReal>& vmax)
     GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
 }
 
+void KinBody::Joint::GetJerkLimits(std::vector<dReal>& vmax, bool bAppend) const
+{
+    if( !bAppend ) {
+        vmax.resize(0);
+    }
+    for(int i = 0; i < GetDOF(); ++i) {
+        vmax.push_back(_info._vmaxjerk[i]);
+    }
+}
+
+dReal KinBody::Joint::GetJerkLimit(int iaxis) const
+{
+    return _info._vmaxjerk.at(iaxis);
+}
+
+void KinBody::Joint::SetJerkLimits(const std::vector<dReal>& vmax)
+{
+    for(int i = 0; i < GetDOF(); ++i) {
+        _info._vmaxjerk[i] = vmax.at(i);
+    }
+    GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+}
+
+void KinBody::Joint::GetHardVelocityLimits(std::vector<dReal>& vmax, bool bAppend) const
+{
+    if( !bAppend ) {
+        vmax.resize(0);
+    }
+    for(int i = 0; i < GetDOF(); ++i) {
+        vmax.push_back(_info._vhardmaxvel[i]);
+    }
+}
+
+dReal KinBody::Joint::GetHardVelocityLimit(int iaxis) const
+{
+    return _info._vhardmaxvel.at(iaxis);
+}
+
+void KinBody::Joint::SetHardVelocityLimits(const std::vector<dReal>& vmax)
+{
+    for(int i = 0; i < GetDOF(); ++i) {
+        _info._vhardmaxvel[i] = vmax.at(i);
+    }
+    GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+}
+
+void KinBody::Joint::GetHardAccelerationLimits(std::vector<dReal>& vmax, bool bAppend) const
+{
+    if( !bAppend ) {
+        vmax.resize(0);
+    }
+    for(int i = 0; i < GetDOF(); ++i) {
+        vmax.push_back(_info._vhardmaxaccel[i]);
+    }
+}
+
+dReal KinBody::Joint::GetHardAccelerationLimit(int iaxis) const
+{
+    return _info._vhardmaxaccel.at(iaxis);
+}
+
+void KinBody::Joint::SetHardAccelerationLimits(const std::vector<dReal>& vmax)
+{
+    for(int i = 0; i < GetDOF(); ++i) {
+        _info._vhardmaxaccel[i] = vmax.at(i);
+    }
+    GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+}
+
+void KinBody::Joint::GetHardJerkLimits(std::vector<dReal>& vmax, bool bAppend) const
+{
+    if( !bAppend ) {
+        vmax.resize(0);
+    }
+    for(int i = 0; i < GetDOF(); ++i) {
+        vmax.push_back(_info._vhardmaxjerk[i]);
+    }
+}
+
+dReal KinBody::Joint::GetHardJerkLimit(int iaxis) const
+{
+    return _info._vhardmaxjerk.at(iaxis);
+}
+
+void KinBody::Joint::SetHardJerkLimits(const std::vector<dReal>& vmax)
+{
+    for(int i = 0; i < GetDOF(); ++i) {
+        _info._vhardmaxjerk[i] = vmax.at(i);
+    }
+    GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+}
+
 void KinBody::Joint::GetTorqueLimits(std::vector<dReal>& vmax, bool bAppend) const
 {
     if( !bAppend ) {
@@ -1096,7 +1192,10 @@ std::pair<dReal, dReal> KinBody::Joint::GetInstantaneousTorqueLimits(int iaxis) 
                     }
 
                     // due to back emf, the deceleration magnitude is less than acceleration?
-                    if( rawvelocity > 0 ) {
+                    if (abs(rawvelocity) < 1.0/360) {
+                        return std::make_pair(-finterpolatedtorque, finterpolatedtorque);
+                    }
+                    else if( rawvelocity > 0 ) {
                         return std::make_pair(-0.9*finterpolatedtorque, finterpolatedtorque);
                     }
                     else {
@@ -1108,7 +1207,10 @@ std::pair<dReal, dReal> KinBody::Joint::GetInstantaneousTorqueLimits(int iaxis) 
             // due to back emf, the deceleration magnitude is less than acceleration?
             // revolutionsPerSecond is huge, return the last point
             dReal f = _info._infoElectricMotor->max_speed_torque_points.back().second*_info._infoElectricMotor->gear_ratio;
-            if( rawvelocity > 0 ) {
+            if (abs(rawvelocity) < 1.0/360) {
+                return std::make_pair(-f, f);
+            }
+            else if( rawvelocity > 0 ) {
                 return std::make_pair(-0.9*f, f);
             }
             else {
@@ -1163,7 +1265,10 @@ std::pair<dReal, dReal> KinBody::Joint::GetNominalTorqueLimits(int iaxis) const
                     }
 
                     // due to back emf, the deceleration magnitude is less than acceleration?
-                    if( rawvelocity > 0 ) {
+                    if (abs(rawvelocity) < 1.0/360) {
+                        return std::make_pair(-finterpolatedtorque, finterpolatedtorque);
+                    }
+                    else if( rawvelocity > 0 ) {
                         return std::make_pair(-0.9*finterpolatedtorque, finterpolatedtorque);
                     }
                     else {
@@ -1175,7 +1280,10 @@ std::pair<dReal, dReal> KinBody::Joint::GetNominalTorqueLimits(int iaxis) const
             // due to back emf, the deceleration magnitude is less than acceleration?
             // revolutionsPerSecond is huge, return the last point
             dReal f = _info._infoElectricMotor->nominal_speed_torque_points.back().second*_info._infoElectricMotor->gear_ratio;
-            if( rawvelocity > 0 ) {
+            if (abs(rawvelocity) < 1.0/360) {
+                return std::make_pair(-f, f);
+            }
+            else if( rawvelocity > 0 ) {
                 return std::make_pair(-0.9*f, f);
             }
             else {
@@ -1233,7 +1341,7 @@ std::string KinBody::Joint::GetMimicEquation(int iaxis, int itype, const std::st
         std::string sout;
         KinBodyConstPtr parent(_parent);
         FOREACHC(itdofformat, _vmimic.at(iaxis)->_vdofformat) {
-            JointConstPtr pjoint = itdofformat->GetJoint(parent);
+            JointConstPtr pjoint = itdofformat->GetJoint(*parent);
             if( pjoint->GetDOF() > 1 ) {
                 Vars.push_back(str(boost::format("<csymbol>%s_%d</csymbol>")%pjoint->GetName()%(int)itdofformat->axis));
             }
@@ -1342,7 +1450,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
             dofformat.axis = 0;
         }
         dofformat.dofindex = -1;
-        JointPtr pjoint = dofformat.GetJoint(parent);
+        JointPtr pjoint = dofformat.GetJoint(*parent);
         if((pjoint->GetDOFIndex() >= 0)&& !pjoint->IsMimic(dofformat.axis) ) {
             dofformat.dofindex = pjoint->GetDOFIndex()+dofformat.axis;
             MIMIC::DOFHierarchy h;
@@ -1450,13 +1558,13 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> 
             // not in the cache so compute using the chain rule
             if( vtempvalues.empty() ) {
                 FOREACHC(itdofformat, _vmimic[iaxis]->_vdofformat) {
-                    vtempvalues.push_back(itdofformat->GetJoint(parent)->GetValue(itdofformat->axis));
+                    vtempvalues.push_back(itdofformat->GetJoint(*parent)->GetValue(itdofformat->axis));
                 }
             }
             dReal fvel = _vmimic[iaxis]->_velfns.at(itmimicdof->dofformatindex)->Eval(vtempvalues.empty() ? NULL : &vtempvalues[0]);
             const MIMIC::DOFFormat& dofformat = _vmimic[iaxis]->_vdofformat.at(itmimicdof->dofformatindex);
-            if( dofformat.GetJoint(parent)->IsMimic(dofformat.axis) ) {
-                dofformat.GetJoint(parent)->_ComputePartialVelocities(vtemppartials,dofformat.axis,mapcachedpartials);
+            if( dofformat.GetJoint(*parent)->IsMimic(dofformat.axis) ) {
+                dofformat.GetJoint(*parent)->_ComputePartialVelocities(vtemppartials,dofformat.axis,mapcachedpartials);
                 dReal fpartial = 0;
                 FOREACHC(itpartial,vtemppartials) {
                     if( itpartial->first == itmimicdof->dofindex ) {
@@ -1535,16 +1643,16 @@ bool KinBody::Joint::MIMIC::DOFFormat::operator ==(const KinBody::Joint::MIMIC::
     return jointindex == r.jointindex && dofindex == r.dofindex && axis == r.axis;
 }
 
-KinBody::JointPtr KinBody::Joint::MIMIC::DOFFormat::GetJoint(KinBodyPtr parent) const
+KinBody::JointPtr KinBody::Joint::MIMIC::DOFFormat::GetJoint(KinBody &parent) const
 {
-    int numjoints = (int)parent->GetJoints().size();
-    return jointindex < numjoints ? parent->GetJoints().at(jointindex) : parent->GetPassiveJoints().at(jointindex-numjoints);
+    int numjoints = (int)parent.GetJoints().size();
+    return jointindex < numjoints ? parent.GetJoints().at(jointindex) : parent.GetPassiveJoints().at(jointindex-numjoints);
 }
 
-KinBody::JointConstPtr KinBody::Joint::MIMIC::DOFFormat::GetJoint(KinBodyConstPtr parent) const
+KinBody::JointConstPtr KinBody::Joint::MIMIC::DOFFormat::GetJoint(const KinBody &parent) const
 {
-    int numjoints = (int)parent->GetJoints().size();
-    return jointindex < numjoints ? parent->GetJoints().at(jointindex) : parent->GetPassiveJoints().at(jointindex-numjoints);
+    int numjoints = (int)parent.GetJoints().size();
+    return jointindex < numjoints ? parent.GetJoints().at(jointindex) : parent.GetPassiveJoints().at(jointindex-numjoints);
 }
 
 void KinBody::Joint::SetFloatParameters(const std::string& key, const std::vector<dReal>& parameters)
@@ -1606,6 +1714,7 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
         for(int i = 0; i < GetDOF(); ++i) {
             SerializeRound(o,_info._vmaxvel[i]);
             SerializeRound(o,_info._vmaxaccel[i]);
+            SerializeRound(o,_info._vmaxjerk[i]);
             SerializeRound(o,_info._vmaxtorque[i]);
             SerializeRound(o,_info._vmaxinertia[i]);
             SerializeRound(o,_info._vlowerlimit[i]);

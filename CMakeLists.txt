@@ -4,7 +4,7 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
-set (OPENRAVE_VERSION_MINOR 9)
+set (OPENRAVE_VERSION_MINOR 15)
 set (OPENRAVE_VERSION_PATCH 0)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
@@ -188,7 +188,7 @@ set(REQUIRED_INCLUDES "" CACHE STRING "Includes to always force  when compiling"
 include_directories(${REQUIRED_INCLUDES})
 
 set(COMPILER_IS_CLANG FALSE)
-if( CMAKE_CXX_COMPILER MATCHES "clang[\\+]*" )
+if( CMAKE_CXX_COMPILER_ID MATCHES "Clang" )
   set(COMPILER_IS_CLANG TRUE)
 endif()
 
@@ -455,7 +455,7 @@ endif()
 find_package(MPFI)
 
 
-if( OPT_ACCURATEMATH AND NOT MSVC )
+if( OPT_ACCURATEMATH AND NOT MSVC AND NOT ${CMAKE_SYSTEM_PROCESSOR} MATCHES aarch64 )
   check_library_exists(crlibm crlibm_init "" CRLIBM_FOUND_LIB)
   check_include_file(crlibm.h HAVE_CRLIBM_H)
   if(NOT CRLIBM_FOUND_LIB OR NOT HAVE_CRLIBM_H)
@@ -528,6 +528,14 @@ if( CLOCK_GETTIME_FOUND )
   add_definitions(-DCLOCK_GETTIME_FOUND)
 endif()
 
+find_package(RapidJSON)
+if( RAPIDJSON_FOUND )
+  set(OPENRAVE_RAPIDJSON 1)
+else()
+  set(OPENRAVE_RAPIDJSON 0)
+  message(WARNING "rapidjson library not found")
+endif()
+
 find_package(LibXml2)
 
 if( LIBXML2_FOUND )
@@ -559,9 +567,9 @@ if( WIN32 )
   endif()
 endif()
 
-find_package(Qt4 COMPONENTS QtCore QtGui QtDeclarative)
-if (NOT QT_FOUND)
-  message(STATUS "WARNING: Qt4 not found, is your QTDIR enviornment variable set?")
+find_package(Qt5 COMPONENTS Core Gui Qml Widgets OpenGL)
+if (NOT (Qt5Gui_FOUND AND Qt5Core_FOUND AND Qt5Qml_FOUND AND Qt5Widgets_FOUND AND Qt5OpenGL_FOUND))
+  message(STATUS "WARNING: Qt5 not found, is your QTDIR enviornment variable set?")
   find_package(Qt5Core)
   find_package(Qt5Gui)
   if( Qt5Core_FOUND AND Qt5Gui_FOUND )
@@ -656,17 +664,26 @@ set(IVCON_LIBRARY ivcon)
 set(IVCON_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/ivcon")
 
 ## check qhull library
-check_library_exists(qhull qh_new_qhull "" QHULL_FOUND_LIB)
-check_include_file(qhull/qhull_a.h HAVE_QHULL_H)
-if( QHULL_FOUND_LIB AND HAVE_QHULL_H )
-  set(QHULL_FOUND 1)
-  set(QHULL_INCLUDE_DIR)
+check_library_exists(qhull_r qh_new_qhull "" QHULL_REENTRANT_FOUND_LIB)
+check_include_file(libqhull_r/libqhull_r.h HAVE_QHULL_REENTRANT_H)
+if( QHULL_REENTRANT_FOUND_LIB AND HAVE_QHULL_REENTRANT_H )
+    set(QHULL_FOUND 1)
+    set(QHULL_USE_REENTRANT 1)
+    set(QHULL_INCLUDE_DIR)
+    message(STATUS "Use reentrant qhull")
 else()
-  # have to compile from sources
-  message(STATUS "compiling local qhull library")
-  add_subdirectory(3rdparty/qhull)
-  set(QHULL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty")
-  set(QHULL_FOUND 1)
+  check_library_exists(qhull qh_new_qhull "" QHULL_FOUND_LIB)
+  check_include_file(qhull/qhull_a.h HAVE_QHULL_H)
+  if( QHULL_FOUND_LIB AND HAVE_QHULL_H )
+    set(QHULL_FOUND 1)
+    set(QHULL_INCLUDE_DIR)
+  else()
+    # have to compile from sources
+    message(STATUS "compiling local qhull library")
+    add_subdirectory(3rdparty/qhull)
+    set(QHULL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty")
+    set(QHULL_FOUND 1)
+  endif()
 endif()
 
 ## check ANN library
@@ -770,6 +787,10 @@ else()
   set(CONVEXDECOMPOSITION_CFLAGS "")
 endif()
 set(CONVEXDECOMPOSITION_FOUND 1)
+
+if( Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
+  add_definitions(-DHAVE_BOOST_FILESYSTEM)
+endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h IMMEDIATE @ONLY)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
@@ -940,7 +961,7 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   # add once infinite precision computations are enabled:
   # libmpfr-dev libgmp3-dev libmpfi-dev libgmpxx4ldbl python-gmpy
   # plugins:
-  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU ${CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU} libboost-iostreams-dev libboost-regex-dev libqt4-dev qt4-dev-tools libqhull-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libsoqt4-dev "assimp-dev|libassimp-dev" libbullet-dev)# libopenscenegraph-dev)
+  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU ${CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU} libboost-iostreams-dev libboost-regex-dev qtbase5-dev qtbase5-dev-tools libqhull-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libsoqt4-dev "assimp-dev|libassimp-dev" libbullet-dev)# libopenscenegraph-dev)
 
   # debian
   set(CPACK_DEBIAN_PACKAGE_PRIORITY optional)

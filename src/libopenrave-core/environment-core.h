@@ -273,11 +273,11 @@ public:
                 _nBodiesModifiedStamp++;
                 _listModules.clear();
                 _listViewers.clear();
-                _listOwnedInterfaces.clear();            
+                _listOwnedInterfaces.clear();
             }
 
             // destroy the dangling pointers outside of _mutexInterfaces
-            
+
             // release all grabbed
             FOREACH(itrobot,vecrobots) {
                 (*itrobot)->ReleaseAllGrabbed();
@@ -290,7 +290,7 @@ public:
                 (*itrobot)->Destroy();
             }
             vecrobots.clear();
-            
+
             FOREACH(itsensor,listSensors) {
                 (*itsensor)->Configure(SensorBase::CC_PowerOff);
                 (*itsensor)->Configure(SensorBase::CC_RenderGeometryOff);
@@ -576,7 +576,7 @@ public:
         if( filetype != "collada" ) {
             throw OPENRAVE_EXCEPTION_FORMAT("got invalid filetype %s, only support collada", filetype, ORE_InvalidArguments);
         }
-        
+
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         std::list<KinBodyPtr> listbodies;
         switch(options) {
@@ -634,7 +634,7 @@ public:
             RaveWriteColladaMemory(listbodies,output,atts);
         }
     }
-    
+
     virtual void Add(InterfaceBasePtr pinterface, bool bAnonymous, const std::string& cmdargs)
     {
         CHECK_INTERFACE(pinterface);
@@ -831,7 +831,7 @@ public:
     virtual UserDataPtr RegisterBodyCallback(const BodyCallbackFn& callback)
     {
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-        BodyCallbackDataPtr pdata(new BodyCallbackData(callback,boost::dynamic_pointer_cast<Environment>(shared_from_this())));
+        BodyCallbackDataPtr pdata(new BodyCallbackData(callback,boost::static_pointer_cast<Environment>(shared_from_this())));
         pdata->_iterator = _listRegisteredBodyCallbacks.insert(_listRegisteredBodyCallbacks.end(),pdata);
         return pdata;
     }
@@ -903,7 +903,7 @@ public:
     virtual UserDataPtr RegisterCollisionCallback(const CollisionCallbackFn& callback)
     {
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-        CollisionCallbackDataPtr pdata(new CollisionCallbackData(callback,boost::dynamic_pointer_cast<Environment>(shared_from_this())));
+        CollisionCallbackDataPtr pdata(new CollisionCallbackData(callback,boost::static_pointer_cast<Environment>(shared_from_this())));
         pdata->_iterator = _listRegisteredCollisionCallbacks.insert(_listRegisteredCollisionCallbacks.end(),pdata);
         return pdata;
     }
@@ -1017,6 +1017,13 @@ public:
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report)
     {
         return _pCurrentChecker->CheckCollision(ray,report);
+    }
+
+    virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report)
+    {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        CHECK_COLLISION_BODY(pbody);
+        return _pCurrentChecker->CheckCollision(trimesh,pbody,report);
     }
 
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
@@ -1134,10 +1141,10 @@ public:
         }
     }
 
-    virtual void Triangulate(TriMesh& trimesh, KinBodyConstPtr pbody)
+    virtual void Triangulate(TriMesh& trimesh, const KinBody &body)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());     // reading collision data, so don't want anyone modifying it
-        FOREACHC(it, pbody->GetLinks()) {
+        FOREACHC(it, body.GetLinks()) {
             trimesh.Append((*it)->GetCollisionData(), (*it)->GetTransform());
         }
     }
@@ -1153,26 +1160,26 @@ public:
             switch(options) {
             case SO_NoRobots:
                 if( !robot ) {
-                    Triangulate(trimesh, *itbody);
+                    Triangulate(trimesh, **itbody);
                 }
                 break;
 
             case SO_Robots:
                 if( !!robot ) {
-                    Triangulate(trimesh, *itbody);
+                    Triangulate(trimesh, **itbody);
                 }
                 break;
             case SO_Everything:
-                Triangulate(trimesh, *itbody);
+                Triangulate(trimesh, **itbody);
                 break;
             case SO_Body:
                 if( (*itbody)->GetName() == selectname ) {
-                    Triangulate(trimesh, *itbody);
+                    Triangulate(trimesh, **itbody);
                 }
                 break;
             case SO_AllExceptBody:
                 if( (*itbody)->GetName() != selectname ) {
-                    Triangulate(trimesh, *itbody);
+                    Triangulate(trimesh, **itbody);
                 }
                 break;
 //            case SO_BodyList:
@@ -2036,6 +2043,7 @@ public:
             KinBody::BodyState& state = _vPublishedBodies.back();
             state.pbody = *itbody;
             (*itbody)->GetLinkTransformations(state.vectrans, vdoflastsetvalues);
+            (*itbody)->GetLinkEnableStates(state.vLinkEnableStates);
             (*itbody)->GetDOFValues(state.jointvalues);
             state.strname =(*itbody)->GetName();
             state.uri = (*itbody)->GetURI();
@@ -2075,9 +2083,10 @@ protected:
     {
         // before deleting, make sure no robots are grabbing it!!
         FOREACH(itrobot, _vecrobots) {
-            if( (*itrobot)->IsGrabbing(*it) ) {
-                RAVELOG_WARN("destroy %s already grabbed by robot %s!\n", (*it)->GetName().c_str(), (*itrobot)->GetName().c_str());
-                (*itrobot)->Release(*it);
+            KinBody &body = **it;
+            if( (*itrobot)->IsGrabbing(body) ) {
+                RAVELOG_WARN("destroy %s already grabbed by robot %s!\n", body.GetName().c_str(), (*itrobot)->GetName().c_str());
+                (*itrobot)->Release(body);
             }
         }
 

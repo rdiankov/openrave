@@ -16,14 +16,21 @@
 
 #include "qtosg.h"
 #include "osgrenderitem.h"
-
+#include <QLayout>
+#include <QComboBox>
+#include <QPushButton>
+#include <QAbstractButton>
+#include <QFileDialog>
 #include <QMainWindow>
-
+#include <QMessageBox>
+#include <QToolButton>
+#include <QDockWidget>
+#include <QToolBar>
 #include "qtreemodel.h"
 
 namespace qtosgrave {
 
-class ViewerWidget;
+class QOSGViewerWidget;
 class QtOSGViewer;
 typedef boost::shared_ptr<QtOSGViewer> QtOSGViewerPtr;
 typedef boost::weak_ptr<QtOSGViewer> QtOSGViewerWeakPtr;
@@ -94,6 +101,10 @@ public:
 
     virtual void SetSize(int w, int h);
     virtual void Move(int x, int y);
+
+    /// \brief sets the zoom factor. only affects orthogonal view
+    /// \param factor > 1.0 = Zoom in. < 1.0 = Zoom out
+    virtual void Zoom(float factor);
 
     /// \brief Set title of the viewer window
     virtual void SetName(const string& name);
@@ -216,7 +227,7 @@ public:
 
         inline void Call() {
             // have to set finished at the end
-            boost::shared_ptr<void> finishfn((void*)0, boost::bind(&GUIThreadFunction::SetFinished, this));
+            boost::shared_ptr<void> finishfn((void*) 0, boost::bind(&GUIThreadFunction::SetFinished, this));
             BOOST_ASSERT(!_bcalled);
             _bcalled = true;
             _fn();
@@ -316,7 +327,7 @@ public:
     virtual void _SetTriangleMesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, osg::ref_ptr<osg::Vec3Array> osgvertices, osg::ref_ptr<osg::DrawElementsUInt> osgindices);
     virtual void _DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vpos, const RaveVector<float>& vextents, bool bUsingTransparency);
     virtual void _DrawPlane(OSGSwitchPtr handle, const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture);
-    
+
     virtual void _SetCamera(RaveTransform<float> trans, float focalDistance);
     virtual void _SetCameraDistanceToFocus(float focalDistance);
 
@@ -324,6 +335,7 @@ public:
     virtual void _SetBkgndColor(const RaveVector<float>& color);
 
     virtual void _SetName(const std::string& name);
+    virtual void _Zoom(float factor);
 
     /// \brief posts a function to be executed in the GUI thread
     ///
@@ -352,6 +364,9 @@ public:
     /// \brief Create and set main options of object tree
     QTreeWidget* _CreateObjectTree();
 
+    /// \brief Create viewer control button
+    void _CreateControlButtons();
+
     /// \brief Fills object tree with robot info
     void _FillObjectTree(QTreeWidget *tw);
 
@@ -367,6 +382,7 @@ public:
     bool _SetTrackingAngleToUpCommand(ostream& sout, istream& sinput);
     bool _StartViewerLoopCommand(ostream& sout, istream& sinput);
     bool _SetProjectionModeCommand(ostream& sout, istream& sinput);
+    bool _ZoomCommand(ostream& sout, istream& sinput);
 
     //@{ Message Queue
     list<GUIThreadFunctionPtr> _listGUIFunctions; ///< list of GUI functions that should be called in the viewer update thread. protected by _mutexGUIFunctions
@@ -407,7 +423,7 @@ public:
 
     QGridLayout* _qCentralLayout;
     QWidget* _qCentralWidget;
-    ViewerWidget* _posgWidget; // cannot be shared_ptr since QMainWindow takes ownership of it internally
+    QOSGViewerWidget* _posgWidget; // cannot be shared_ptr since QMainWindow takes ownership of it internally
 
     QMenu* fileMenu;
     QMenu* viewMenu;
