@@ -329,7 +329,7 @@ Some python code to display data::\n\
                 _nValidGoals++;
             }
             else {
-                RAVELOG_WARN_FORMAT("goal %d fails constraints with 0x%x", igoal%ret);
+                RAVELOG_WARN_FORMAT("env=%d, goal %d fails constraints with 0x%x", GetEnv()->GetId()%igoal%ret);
                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
                     int ret = _parameters->CheckPathAllConstraints(vgoal,vgoal,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart);
                 }
@@ -351,7 +351,7 @@ Some python code to display data::\n\
         if( _vgoalpaths.capacity() < _parameters->_minimumgoalpaths ) {
             _vgoalpaths.reserve(_parameters->_minimumgoalpaths);
         }
-        RAVELOG_DEBUG_FORMAT("env=%d BiRRT Planner Initialized, initial=%d, goal=%d, step=%f", GetEnv()->GetId()%_vecInitialNodes.size()%_treeBackward.GetNumNodes()%_parameters->_fStepLength);
+        RAVELOG_DEBUG_FORMAT("env=%d, BiRRT Planner Initialized, initial=%d, goal=%d, step=%f", GetEnv()->GetId()%_vecInitialNodes.size()%_treeBackward.GetNumNodes()%_parameters->_fStepLength);
         return true;
     }
 
@@ -397,16 +397,16 @@ Some python code to display data::\n\
             if( _parameters->_nMaxPlanningTime > 0 ) {
                 uint32_t elapsedtime = utils::GetMilliTime()-basetime;
                 if( elapsedtime >= _parameters->_nMaxPlanningTime ) {
-                    RAVELOG_DEBUG_FORMAT("time exceeded (%dms) so breaking. iter=%d < %d", elapsedtime%(iter/3)%_parameters->_nMaxIterations);
+                    RAVELOG_DEBUG_FORMAT("env=%d, time exceeded (%dms) so breaking. iter=%d < %d", GetEnv()->GetId()%elapsedtime%(iter/3)%_parameters->_nMaxIterations);
                     break;
                 }
             }
 
-            
+
             if( !!_parameters->_samplegoalfn ) {
                 vector<dReal> vgoal;
                 if( _parameters->_samplegoalfn(vgoal) ) {
-                    RAVELOG_VERBOSE(str(boost::format("inserting new goal index %d")%_vecGoalNodes.size()));
+                    RAVELOG_VERBOSE(str(boost::format("env=%d, inserting new goal index %d")%GetEnv()->GetId()%_vecGoalNodes.size()));
                     _vecGoalNodes.push_back(_treeBackward.InsertNode(NULL, vgoal, _vecGoalNodes.size()));
                     _nValidGoals++;
                 }
@@ -414,7 +414,7 @@ Some python code to display data::\n\
             if( !!_parameters->_sampleinitialfn ) {
                 vector<dReal> vinitial;
                 if( _parameters->_sampleinitialfn(vinitial) ) {
-                    RAVELOG_VERBOSE(str(boost::format("inserting new initial %d")%_vecInitialNodes.size()));
+                    RAVELOG_VERBOSE(str(boost::format("env=%d, inserting new initial %d")%GetEnv()->GetId()%_vecInitialNodes.size()));
                     _vecInitialNodes.push_back(_treeForward.InsertNode(NULL,vinitial, _vecInitialNodes.size()));
                 }
             }
@@ -477,11 +477,15 @@ Some python code to display data::\n\
                 int startindex = _vgoalpaths.back().startindex;
                 if( IS_DEBUGLEVEL(Level_Debug) ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                    ss << "env=" << GetEnv()->GetId() << ", found a goal, start index=" << startindex << " goal index=" << goalindex << ", path length=" << _vgoalpaths.back().length << ", values=[";
+                    ss << "env=" << GetEnv()->GetId() << ", found a goal, start index=" << startindex << " goal index=" << goalindex << ", path length=" << _vgoalpaths.back().length << ", startvalues=[";
+                    for(int i = 0; i < _parameters->GetDOF(); ++i) {
+                        ss << _vgoalpaths.back().qall.at(i) << ", ";
+                    }
+                    ss << "]; goalvalues=[";
                     for(int i = 0; i < _parameters->GetDOF(); ++i) {
                         ss << _vgoalpaths.back().qall.at(_vgoalpaths.back().qall.size()-_parameters->GetDOF()+i) << ", ";
                     }
-                    ss << "]";
+                    ss << "];";
                     RAVELOG_DEBUG(ss.str());
                 }
                 if( _vgoalpaths.size() >= _parameters->_minimumgoalpaths || _vgoalpaths.size() >= _nValidGoals ) {
@@ -495,7 +499,7 @@ Some python code to display data::\n\
             swap(TreeA, TreeB);
             iter += 3;
             if( iter > 3*_parameters->_nMaxIterations ) {
-                RAVELOG_WARN_FORMAT("iterations exceeded %d", _parameters->_nMaxIterations);
+                RAVELOG_WARN_FORMAT("env=%d, iterations exceeded %d", GetEnv()->GetId()%_parameters->_nMaxIterations);
                 break;
             }
 
@@ -503,7 +507,7 @@ Some python code to display data::\n\
         }
 
         if( _vgoalpaths.size() == 0 ) {
-            RAVELOG_WARN_FORMAT("Plan failed in %fs, iter=%d, nMaxIterations=%d",(0.001f*(float)(utils::GetMilliTime()-basetime))%(iter/3)%_parameters->_nMaxIterations);
+            RAVELOG_WARN_FORMAT("env=%d, plan failed in %fs, iter=%d, nMaxIterations=%d",GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime))%(iter/3)%_parameters->_nMaxIterations);
             return PS_Failed;
         }
 
@@ -741,7 +745,7 @@ public:
         _startindex = -1;
 
         int numfoundgoals = 0;
-        
+
         while(iter < _parameters->_nMaxIterations) {
             iter++;
             if( !!bestGoalNode && iter >= _parameters->_nMinIterations ) {
