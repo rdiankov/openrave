@@ -19,6 +19,7 @@ namespace bs = boost::spirit;
 namespace bs = boost::spirit::classic;
 #endif
 
+#include <stdint.h> // uint64_t
 #include <vector>
 #include <iostream>
 
