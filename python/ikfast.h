@@ -364,7 +364,7 @@ protected:
 
 }
 
-namespace IKFAST {
+namespace ikfast {
 
 struct AlignedSolution {
     uint32_t freejoint = 0;     // jy
@@ -503,7 +503,7 @@ void DeriveSolutionIndices(std::vector<ikfast::IkSolution<T> >& vecsols,
         }
     }
 }
-} // namespace IKFAST
+} // namespace ikfast
 
 #endif // OPENRAVE_IKFAST_HEADER
 
