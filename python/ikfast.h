@@ -39,11 +39,6 @@
 #include <iostream>
 #include <iomanip>
 
-#ifdef NDEBUG
-#undef NDEBUG
-#endif
-#include <cassert>
-
 #ifndef IKFAST_HEADER_COMMON
 #define IKFAST_HEADER_COMMON
 
@@ -267,12 +262,12 @@ public:
     }
 
     IkSingleDOFSolutionBase<T>& operator[](size_t i) {
-        assert(i < _vbasesol.size());
+        // assert(i < _vbasesol.size());
         return _vbasesol[i];
     }
 
     const IkSingleDOFSolutionBase<T>& get(size_t i) const {
-        assert(i < _vbasesol.size());
+        // assert(i < _vbasesol.size());
         return _vbasesol[i];
     }
 
@@ -285,21 +280,22 @@ public:
     }
 
     void ResetFreeIndices() {
-        for(auto& v : _vbasesol) { v.freeind = v.indices[4] = -1; }
+        for (size_t i = 0; i < _vbasesol.size(); ++i) {
+            _vbasesol[i].freeind = _vbasesol[i].indices[4] = -1;
+        }
     }
 
     virtual void Print() const {
         std::cout << std::setprecision(16);
-        unsigned int i = 0;
-        for (const auto& s : _vbasesol) {
-            std::cout << i++ << ": ";
-            s.Print();
+        for (size_t i = 0; i < _vbasesol.size(); ++i) {
+            std::cout << i << ": ";
+            _vbasesol[i].Print();
         }
         if(!_vfree.empty())
         {
             std::cout << "vfree = ";
-            for (auto& i : _vfree) {
-                std::cout << i << ", ";
+            for (size_t i = 0; i < _vfree.size(); ++i) {
+                std::cout << _vfree[i] << ", ";
             }
             std::cout << std::endl;
         }
@@ -340,7 +336,7 @@ public:
     }
 
     IkSolution<T>& operator[](size_t i) {
-        assert(i < _listsolutions.size());
+        // assert(i < _listsolutions.size());
         return _listsolutions[i];
     }
 
@@ -354,10 +350,11 @@ public:
 
     virtual void Print() const {
         unsigned int i = 0;
-        for (const auto& solution : _listsolutions) {
+        for (typename std::list<IkSolution<T> >::const_iterator it=_listsolutions.cbegin();
+             it != _listsolutions.cend(); ++it) {
             std::cout << "Solution " << i++ << ":" << std::endl;
             std::cout << "===========" << std::endl;
-            solution.Print();
+            it->Print();
         }
     }
 
@@ -389,7 +386,7 @@ struct AlignedSolution {
     template <typename T>
     void SetIkSolution(ikfast::IkSolution<T>& solnobj, const T v[]) {
         const uint32_t dof = solnobj.GetDOF();
-        assert(freejoint < dof && mimicjoint < dof);
+        // assert(freejoint < dof && mimicjoint < dof);
         ikfast::IkSingleDOFSolutionBase<T>& freejointsoln = solnobj[freejoint],
         &mimicjointsoln = solnobj[mimicjoint];
 
@@ -429,7 +426,7 @@ void DeriveSolutionIndices(std::vector<ikfast::IkSolution<T> >& vecsols,
     }
     const uint32_t nallvars = vecsols[0].GetDOF(), numsolns = vecsols.size();
     // assert(N <= nallvars);
-    // for(auto& vecsol : vecsols) {
+    // for(ikfast::IkSolution<T>& vecsol : vecsols) {
     //   assert(vecsol.GetDOF() == nallvars);
     // }
 
@@ -439,8 +436,9 @@ void DeriveSolutionIndices(std::vector<ikfast::IkSolution<T> >& vecsols,
     std::sort(vindices.begin(), vindices.end(),
               [&jointorder, &vecsols](uint32_t inda, uint32_t indb) {
             const ikfast::IkSolution<T> &sola = vecsols[inda], &solb = vecsols[indb];
-            for (unsigned int jointindex : jointorder) {
-                const T x = sola.get(jointindex).foffset, y = solb.get(jointindex).foffset;
+            for (size_t i = 0; i < jointorder.size(); ++i) {
+                const T x = sola.get(jointorder[i]).foffset,
+                        y = solb.get(jointorder[i]).foffset;
                 if (x != y) { return x < y; }
             }
             return false;
@@ -493,7 +491,8 @@ void DeriveSolutionIndices(std::vector<ikfast::IkSolution<T> >& vecsols,
     }
 
     // set free & mimic joints to have 0 maxsolutions and index -1
-    for(auto& vecsol : vecsols) {
+    for (size_t a = 0; a < vecsols.size(); ++a) {
+        ikfast::IkSolution<T>& vecsol = vecsols[a];
         if(!vecsol._vfree.empty()) {
             for(uint32_t i = 0; i < nallvars; i++) {
                 if(vecsol[i].freeind != (signed char) -1) {
