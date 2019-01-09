@@ -419,6 +419,31 @@ inline void ikfastfmodtwopi(double& c) {
 }
 
 template <typename T, long unsigned int N>
+struct IndicesCompare
+{
+    IndicesCompare(
+        const std::vector<ikfast::IkSolution<T> >& vecsols,
+        const std::array<uint32_t, N>& jointorder)
+    : _vecsols(vecsols),
+      _jointorder(jointorder) {}
+
+    bool operator ()(uint32_t inda, uint32_t indb)
+    {
+        const ikfast::IkSolution<T> &sola = _vecsols[inda],
+                                    &solb = _vecsols[indb];
+        for (size_t i = 0; i < _jointorder.size(); ++i) {
+            const T x = sola.get(_jointorder[i]).foffset,
+                    y = solb.get(_jointorder[i]).foffset;
+            if (x != y) { return x < y; }
+        }
+        return false;
+    }
+
+    const std::vector<ikfast::IkSolution<T> >& _vecsols;
+    const std::array<uint32_t, N>& _jointorder;
+};
+
+template <typename T, long unsigned int N>
 void DeriveSolutionIndices(std::vector<ikfast::IkSolution<T> >& vecsols,
                            const std::array<uint32_t, N>& jointorder) {
     if( vecsols.empty() ) {
@@ -431,18 +456,11 @@ void DeriveSolutionIndices(std::vector<ikfast::IkSolution<T> >& vecsols,
     // }
 
     std::vector<uint32_t> vindices(numsolns);
-    for(uint32_t i = 0; i < numsolns; i++) { vindices[i] = i; }
+    for (uint32_t i = 0; i < numsolns; i++) {
+        vindices[i] = i;
+    }
 
-    std::sort(vindices.begin(), vindices.end(),
-              [&jointorder, &vecsols](uint32_t inda, uint32_t indb) {
-            const ikfast::IkSolution<T> &sola = vecsols[inda], &solb = vecsols[indb];
-            for (size_t i = 0; i < jointorder.size(); ++i) {
-                const T x = sola.get(jointorder[i]).foffset,
-                        y = solb.get(jointorder[i]).foffset;
-                if (x != y) { return x < y; }
-            }
-            return false;
-        });
+    std::sort(vindices.begin(), vindices.end(), IndicesCompare<T, N>(jointorder, vecsols));
 
     // initialize
     for (uint32_t i = 0; i < N; i++) {
