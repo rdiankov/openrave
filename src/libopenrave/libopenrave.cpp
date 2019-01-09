@@ -172,20 +172,20 @@ dReal RaveLog10(dReal f) {
 #endif
 #ifdef LIBM_ACOS_ACCURATE
 dReal RaveAcos(dReal f) {
-    return acos(utils::ClampOnRange(f,-1.0,1.0));
+    return acos(f);
 }
 #else
 dReal RaveAcos(dReal f) {
-    return acos_rn(utils::ClampOnRange(f,-1.0,1.0));
+    return acos_rn(f);
 }
 #endif
 #ifdef LIBM_ASIN_ACCURATE
 dReal RaveAsin(dReal f) {
-    return asin(utils::ClampOnRange(f,-1.0,1.0));
+    return asin(f);
 }
 #else
 dReal RaveAsin(dReal f) {
-    return asin_rn(utils::ClampOnRange(f,-1.0,1.0));
+    return asin_rn(f);
 }
 #endif
 #ifdef LIBM_ATAN2_ACCURATE
@@ -278,10 +278,10 @@ dReal RaveLog10(dReal f) {
     return log10f(f);
 }
 dReal RaveAcos(dReal f) {
-    return acosf(utils::ClampOnRange(f,-1.0,1.0));
+    return acosf(f);
 }
 dReal RaveAsin(dReal f) {
-    return asinf(utils::ClampOnRange(f,-1.0,1.0));
+    return asinf(f);
 }
 dReal RaveAtan2(dReal fy, dReal fx) {
     return atan2f(fy,fx);
@@ -327,10 +327,10 @@ dReal RaveLog10(dReal f) {
     return log10(f);
 }
 dReal RaveAcos(dReal f) {
-    return acos(utils::ClampOnRange(f,-1.0,1.0));
+    return acos(f);
 }
 dReal RaveAsin(dReal f) {
-    return asin(utils::ClampOnRange(f,-1.0,1.0));
+    return asin(f);
 }
 dReal RaveAtan2(dReal fy, dReal fx) {
     return atan2(fy,fx);
