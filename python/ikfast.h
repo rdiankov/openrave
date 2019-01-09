@@ -460,7 +460,7 @@ void DeriveSolutionIndices(std::vector<ikfast::IkSolution<T> >& vecsols,
         vindices[i] = i;
     }
 
-    std::sort(vindices.begin(), vindices.end(), IndicesCompare<T, N>(jointorder, vecsols));
+    std::sort(vindices.begin(), vindices.end(), IndicesCompare<T, N>(vecsols, jointorder));
 
     // initialize
     for (uint32_t i = 0; i < N; i++) {
