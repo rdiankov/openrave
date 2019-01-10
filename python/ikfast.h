@@ -164,6 +164,17 @@ public:
     GetKinematicsHashFn _GetKinematicsHash;
 };
 
+template <typename T>
+inline void ikfastfmodtwopi(T& c) {
+    // put back to (-PI, PI]
+    while (c > 3.1415926535897932384626) {
+        c -= 6.2831853071795864769252;
+    }
+    while (c <= -3.1415926535897932384626) {
+        c += 6.2831853071795864769252;
+    }
+}
+
 // Implementations of the abstract classes, user doesn't need to use them
 
 /// \brief Default implementation of \ref IkSolutionBase
@@ -197,12 +208,7 @@ public:
                 solution[i] = _vbasesol[i].foffset;
             else {
                 solution[i] = freevalues[_vbasesol[i].freeind]*_vbasesol[i].fmul + _vbasesol[i].foffset;
-                if( solution[i] > T(3.14159265358979) ) {
-                    solution[i] -= T(6.28318530717959);
-                }
-                else if( solution[i] < T(-3.14159265358979) ) {
-                    solution[i] += T(6.28318530717959);
-                }
+                ikfastfmodtwopi(solution[i]);
             }
         }
     }
@@ -362,9 +368,18 @@ protected:
     std::list< IkSolution<T> > _listsolutions;
 };
 
-}
-
-namespace ikfast {
+/// \brief Contains information of a solution where two axes align.
+///
+/// \param freejoint  Index of the  free joint jy in SolutionArray = std::array<T, N>.
+/// \param mimicjoint Index of the mimic joint jx in SolutionArray.
+/// \param solutionindex Index of the IK solution in std::vector<SolutionArray>.
+///        This is NOT the solution index associated with each joint in one IK solution.
+/// \param bxpy If true, then jx + jy is the constant jxpy; otherwise jx - jy is the constant jxmy.
+///        We store this constant in the foffset field of jx, and store 0 in that of jy.
+///
+/// In an aligned case, jy = c = 0.0 + 1.0*c, and
+/// jx = jxpy - c = jxpy + (-1.0) * c (when bxpy is true), or
+/// jx = jxmy + c = jxmy +   1.0  * c (when bxpy is false).
 
 struct AlignedSolution {
     uint32_t freejoint = 0;     // jy
@@ -408,15 +423,30 @@ struct AlignedSolution {
     }
 };
 
-inline void ikfastfmodtwopi(double& c) {
-    // put back to (-PI, PI]
-    while (c > 3.1415926535897932384626) {
-        c -= 6.2831853071795864769252;
+template <typename T, long unsigned int N>
+struct IndicesCompare
+{
+    IndicesCompare(
+        const std::vector<ikfast::IkSolution<T> >& vecsols,
+        const std::array<uint32_t, N>& jointorder)
+    : _vecsols(vecsols),
+      _jointorder(jointorder) {}
+
+    bool operator ()(uint32_t inda, uint32_t indb)
+    {
+        const ikfast::IkSolution<T> &sola = _vecsols[inda],
+                                    &solb = _vecsols[indb];
+        for (size_t i = 0; i < _jointorder.size(); ++i) {
+            const T x = sola.get(_jointorder[i]).foffset,
+                    y = solb.get(_jointorder[i]).foffset;
+            if (x != y) { return x < y; }
+        }
+        return false;
     }
-    while (c <= -3.1415926535897932384626) {
-        c += 6.2831853071795864769252;
-    }
-}
+
+    const std::vector<ikfast::IkSolution<T> >& _vecsols;
+    const std::array<uint32_t, N>& _jointorder;
+};
 
 template <typename T, long unsigned int N>
 void DeriveSolutionIndices(std::vector<ikfast::IkSolution<T> >& vecsols,
@@ -431,18 +461,11 @@ void DeriveSolutionIndices(std::vector<ikfast::IkSolution<T> >& vecsols,
     // }
 
     std::vector<uint32_t> vindices(numsolns);
-    for(uint32_t i = 0; i < numsolns; i++) { vindices[i] = i; }
+    for (uint32_t i = 0; i < numsolns; i++) {
+        vindices[i] = i;
+    }
 
-    std::sort(vindices.begin(), vindices.end(),
-              [&jointorder, &vecsols](uint32_t inda, uint32_t indb) {
-            const ikfast::IkSolution<T> &sola = vecsols[inda], &solb = vecsols[indb];
-            for (size_t i = 0; i < jointorder.size(); ++i) {
-                const T x = sola.get(jointorder[i]).foffset,
-                        y = solb.get(jointorder[i]).foffset;
-                if (x != y) { return x < y; }
-            }
-            return false;
-        });
+    std::sort(vindices.begin(), vindices.end(), IndicesCompare<T, N>(vecsols, jointorder));
 
     // initialize
     for (uint32_t i = 0; i < N; i++) {
