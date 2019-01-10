@@ -362,10 +362,6 @@ protected:
     std::list< IkSolution<T> > _listsolutions;
 };
 
-}
-
-namespace ikfast {
-
 struct AlignedSolution {
     uint32_t freejoint = 0;     // jy
     uint32_t mimicjoint = 0;    // jx
