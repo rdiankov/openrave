@@ -362,6 +362,19 @@ protected:
     std::list< IkSolution<T> > _listsolutions;
 };
 
+/// \brief Contains information of a solution where two axes align.
+///
+/// \param freejoint  Index of the  free joint jy in SolutionArray = std::array<T, N>.
+/// \param mimicjoint Index of the mimic joint jx in SolutionArray.
+/// \param solutionindex Index of the IK solution in std::vector<SolutionArray>.
+///        This is NOT the solution index associated with each joint in one IK solution.
+/// \param bxpy If true, then jx + jy is the constant jxpy; otherwise jx - jy is the constant jxmy.
+///        We store this constant in the foffset field of jx, and store 0 in that of jy.
+///
+/// In an aligned case, jy = c = 0.0 + 1.0*c, and
+/// jx = jxpy - c = jxpy + (-1.0) * c (when bxpy is true), or
+/// jx = jxmy + c = jxmy +   1.0  * c (when bxpy is false).
+
 struct AlignedSolution {
     uint32_t freejoint = 0;     // jy
     uint32_t mimicjoint = 0;    // jx
