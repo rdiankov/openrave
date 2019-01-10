@@ -164,6 +164,17 @@ public:
     GetKinematicsHashFn _GetKinematicsHash;
 };
 
+template <typename T>
+inline void ikfastfmodtwopi(T& c) {
+    // put back to (-PI, PI]
+    while (c > 3.1415926535897932384626) {
+        c -= 6.2831853071795864769252;
+    }
+    while (c <= -3.1415926535897932384626) {
+        c += 6.2831853071795864769252;
+    }
+}
+
 // Implementations of the abstract classes, user doesn't need to use them
 
 /// \brief Default implementation of \ref IkSolutionBase
@@ -197,12 +208,7 @@ public:
                 solution[i] = _vbasesol[i].foffset;
             else {
                 solution[i] = freevalues[_vbasesol[i].freeind]*_vbasesol[i].fmul + _vbasesol[i].foffset;
-                if( solution[i] > T(3.14159265358979) ) {
-                    solution[i] -= T(6.28318530717959);
-                }
-                else if( solution[i] < T(-3.14159265358979) ) {
-                    solution[i] += T(6.28318530717959);
-                }
+                ikfastfmodtwopi(solution[i]);
             }
         }
     }
@@ -416,16 +422,6 @@ struct AlignedSolution {
         solnobj.SetFree({(int) freejoint});
     }
 };
-
-inline void ikfastfmodtwopi(double& c) {
-    // put back to (-PI, PI]
-    while (c > 3.1415926535897932384626) {
-        c -= 6.2831853071795864769252;
-    }
-    while (c <= -3.1415926535897932384626) {
-        c += 6.2831853071795864769252;
-    }
-}
 
 template <typename T, long unsigned int N>
 struct IndicesCompare
