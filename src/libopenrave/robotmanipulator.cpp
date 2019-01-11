@@ -322,11 +322,11 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
         if (inworld) {
             Transform localt = GetBase()->GetTransform().inverse()*t;
             const Vector vlocaldirection = localt.rotate(_info._vdirection);
-            ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(vlocaldirection.x));
+            ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.x,-1.0,1.0)));
         }
         else {
             const Vector vlocaldirection = t.rotate(_info._vdirection);
-            ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(vlocaldirection.x));
+            ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.x,-1.0,1.0)));
         }
         break;
     }
@@ -334,11 +334,11 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
         if (inworld) {
             Transform localt = GetBase()->GetTransform().inverse()*t;
             const Vector vlocaldirection = localt.rotate(_info._vdirection);
-            ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(vlocaldirection.y));
+            ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.y,-1.0,1.0)));
         }
         else {
             const Vector vlocaldirection = t.rotate(_info._vdirection);
-            ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(vlocaldirection.y));
+            ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.y,-1.0,1.0)));
         }
         break;
     }
@@ -346,11 +346,11 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
         if (inworld) {
             Transform localt = GetBase()->GetTransform().inverse()*t;
             const Vector vlocaldirection = localt.rotate(_info._vdirection);
-            ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(vlocaldirection.z));
+            ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.z,-1.0,1.0)));
         }
         else {
             const Vector vlocaldirection = t.rotate(_info._vdirection);
-            ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(vlocaldirection.z));
+            ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.z,-1.0,1.0)));
         }
         break;
     }
@@ -464,15 +464,15 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
         ikp.SetTranslationLocalGlobal6D(localtrans,t * localtrans);
         break;
     }
-     case IKP_TranslationXAxisAngle4D: {
+    case IKP_TranslationXAxisAngle4D: {
         if (inworld) {
             Transform localt = GetBase()->GetTransform().inverse()*t;
             const Vector vlocaldirection = localt.rotate(_info._vdirection);
-            ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(vlocaldirection.x));
+            ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.x,-1.0,1.0)));
         }
         else {
             const Vector vlocaldirection = t.rotate(_info._vdirection);
-            ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(vlocaldirection.x));
+            ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.x,-1.0,1.0)));
         }
         break;
     }
@@ -480,11 +480,11 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
         if (inworld) {
             Transform localt = GetBase()->GetTransform().inverse()*t;
             const Vector vlocaldirection = localt.rotate(_info._vdirection);
-            ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(vlocaldirection.y));
+            ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.y,-1.0,1.0)));
         }
         else {
             const Vector vlocaldirection = t.rotate(_info._vdirection);
-            ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(vlocaldirection.y));
+            ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.y,-1.0,1.0)));
         }
         break;
     }
@@ -492,11 +492,11 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
         if (inworld) {
             Transform localt = GetBase()->GetTransform().inverse()*t;
             const Vector vlocaldirection = localt.rotate(_info._vdirection);
-            ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(vlocaldirection.z));
+            ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.z,-1.0,1.0)));
         }
         else {
             const Vector vlocaldirection = t.rotate(_info._vdirection);
-            ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(vlocaldirection.z));
+            ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.z,-1.0,1.0)));
         }
         break;
     }
