@@ -225,7 +225,7 @@ public:
         if(!!report ) {
             report->Reset(_options);
         }
-        if( pbody->IsAttached(plink->GetParent()) ) {
+        if( pbody->IsAttached(*plink->GetParent()) ) {
             return false;
         }
         _pactiverobot.reset();
@@ -264,7 +264,7 @@ public:
             }
             KinBodyPtr pbody2 = *itbody;
 
-            if(plink->GetParent()->IsAttached(KinBodyConstPtr(pbody2)) ) {
+            if(plink->GetParent()->IsAttached(*pbody2)) {
                 continue;
             }
             if( find(vbodyexcluded.begin(),vbodyexcluded.end(),pbody2) != vbodyexcluded.end() ) {
@@ -451,7 +451,7 @@ private:
             }
             KinBodyPtr pbody2 = *itbody;
 
-            if(pbody1->IsAttached(KinBodyConstPtr(pbody2)) ) {
+            if(pbody1->IsAttached(*pbody2)) {
                 continue;
             }
             if( find(vbodyexcluded.begin(),vbodyexcluded.end(),pbody2) != vbodyexcluded.end() ) {

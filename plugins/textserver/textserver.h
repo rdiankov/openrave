@@ -472,10 +472,10 @@ public:
 private:
 
     inline boost::shared_ptr<SimpleTextServer> shared_server() {
-        return boost::dynamic_pointer_cast<SimpleTextServer>(shared_from_this());
+        return boost::static_pointer_cast<SimpleTextServer>(shared_from_this());
     }
     inline boost::shared_ptr<SimpleTextServer const> shared_server_const() const {
-        return boost::dynamic_pointer_cast<SimpleTextServer const>(shared_from_this());
+        return boost::static_pointer_cast<SimpleTextServer const>(shared_from_this());
     }
 
     // called from threads other than the main worker to wait until
@@ -2190,7 +2190,7 @@ protected:
             if( (find(vobjids.begin(),vobjids.end(),(*itbody)->GetEnvironmentId()) == vobjids.end()) ^ !inclusive ) {
                 continue;
             }
-            GetEnv()->Triangulate(trimesh, *itbody);
+            GetEnv()->Triangulate(trimesh, **itbody);
         }
 
         BOOST_ASSERT( (trimesh.indices.size()%3) == 0 );

@@ -308,10 +308,10 @@ private:
     };
 
     inline boost::shared_ptr<IkFastModule> shared_problem() {
-        return boost::dynamic_pointer_cast<IkFastModule>(shared_from_this());
+        return boost::static_pointer_cast<IkFastModule>(shared_from_this());
     }
     inline boost::shared_ptr<IkFastModule const> shared_problem_const() const {
-        return boost::dynamic_pointer_cast<IkFastModule const>(shared_from_this());
+        return boost::static_pointer_cast<IkFastModule const>(shared_from_this());
     }
 
 public:
@@ -1226,10 +1226,11 @@ public:
 
                 // test all possible solutions
                 robot->SetActiveDOFValues(vrand, false);
-                pmanip->FindIKSolutions(twrist, viksolutions, filteroptions);
+                pmanip->FindIKSolutions(twrist, viksolutions, filteroptions); // Returning all the IK solutions with all the free variables searched for.
                 if( vfreeparameters_real.size() > 0 ) {
+                    // has specific free variables, use them to get all the IK solutions with free variables fixed to the real reference solution
                     pmanip->FindIKSolutions(twrist, vfreeparameters_real, viksolutions2, filteroptions);
-                    viksolutions.insert(viksolutions.end(),viksolutions2.begin(),viksolutions2.end());
+                    viksolutions.insert(viksolutions.end(),viksolutions2.begin(),viksolutions2.end()); // append to viksolutions
                 }
                 if( viksolutions.size() == 0 ) {
                     FOREACH(itfree,vfreeparameters_out) {

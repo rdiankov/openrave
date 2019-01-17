@@ -204,7 +204,7 @@ public:
 
     const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const
     {
-        return _fclspace->GetBodyGeometryGroup(pbody);
+        return _fclspace->GetBodyGeometryGroup(*pbody);
     }
 
     virtual bool SetCollisionOptions(int collision_options)
@@ -344,7 +344,7 @@ public:
     virtual bool InitKinBody(OpenRAVE::KinBodyPtr pbody)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        FCLSpace::KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
+        FCLSpace::KinBodyInfoPtr pinfo = _fclspace->GetInfo(*pbody);
         if( !pinfo || pinfo->GetBody() != pbody ) {
             pinfo = _fclspace->InitKinBody(pbody);
         }
@@ -357,7 +357,7 @@ public:
         _bodymanagers.erase(std::make_pair(pbody.get(), (int)0));
         _bodymanagers.erase(std::make_pair(pbody.get(), (int)1));
         FOREACH(itmanager, _envmanagers) {
-            itmanager->second->RemoveBody(pbody);
+            itmanager->second->RemoveBody(*pbody);
         }
         _fclspace->RemoveUserData(pbody);
     }
@@ -376,20 +376,20 @@ public:
             report->Reset(_options);
         }
 
-        if( pbody1->GetLinks().size() == 0 || !pbody1->IsEnabled() ) {
+        if( pbody1->GetLinks().size() == 0 || !_IsEnabled(*pbody1) ) {
             return false;
         }
 
-        if( pbody2->GetLinks().size() == 0 || !pbody2->IsEnabled() ) {
+        if( pbody2->GetLinks().size() == 0 || !_IsEnabled(*pbody2) ) {
             return false;
         }
 
-        if( pbody1->IsAttached(pbody2) ) {
+        if( pbody1->IsAttached(*pbody2) ) {
             return false;
         }
 
-        _fclspace->SynchronizeWithAttached(pbody1);
-        _fclspace->SynchronizeWithAttached(pbody2);
+        _fclspace->SynchronizeWithAttached(*pbody1);
+        _fclspace->SynchronizeWithAttached(*pbody2);
 
         // Do we really want to synchronize everything ?
         // We could put the synchronization directly inside GetBodyManager
@@ -439,12 +439,12 @@ public:
             throw OPENRAVE_EXCEPTION_FORMAT("Failed to get link %s parent", plink2parent->GetName(), OpenRAVE::ORE_InvalidArguments);
         }
 
-        _fclspace->SynchronizeWithAttached(plink1parent);
+        _fclspace->SynchronizeWithAttached(*plink1parent);
         if( plink1parent != plink2parent ) {
-            _fclspace->SynchronizeWithAttached(plink2parent);
+            _fclspace->SynchronizeWithAttached(*plink2parent);
         }
 
-        CollisionObjectPtr pcollLink1 = _fclspace->GetLinkBV(plink1), pcollLink2 = _fclspace->GetLinkBV(plink2);
+        CollisionObjectPtr pcollLink1 = _fclspace->GetLinkBV(*plink1), pcollLink2 = _fclspace->GetLinkBV(*plink2);
 
         if( !pcollLink1 || !pcollLink2 ) {
             return false;
@@ -479,25 +479,25 @@ public:
             return false;
         }
 
-        if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled() ) {
+        if( pbody->GetLinks().size() == 0 || !_IsEnabled(*pbody) ) {
             return false;
         }
 
-        if( pbody->IsAttached(plink->GetParent()) ) {
+        if( pbody->IsAttached(*plink->GetParent()) ) {
             return false;
         }
 
-        _fclspace->SynchronizeWithAttached(plink->GetParent());
+        _fclspace->SynchronizeWithAttached(*plink->GetParent());
 
         std::set<KinBodyConstPtr> attachedBodies;
         pbody->GetAttached(attachedBodies);
         FOREACH(itbody, attachedBodies) {
             if( (*itbody)->GetEnvironmentId() ) { // for now GetAttached can hold bodies that are not initialized
-                _fclspace->SynchronizeWithAttached(*itbody);
+                _fclspace->SynchronizeWithAttached(**itbody);
             }
         }
 
-        CollisionObjectPtr pcollLink = _fclspace->GetLinkBV(plink);
+        CollisionObjectPtr pcollLink = _fclspace->GetLinkBV(*plink);
 
         if( !pcollLink ) {
             return false;
@@ -532,7 +532,7 @@ public:
         }
 
         _fclspace->Synchronize();
-        CollisionObjectPtr pcollLink = _fclspace->GetLinkBV(plink);
+        CollisionObjectPtr pcollLink = _fclspace->GetLinkBV(*plink);
 
         if( !pcollLink ) {
             return false;
@@ -562,7 +562,7 @@ public:
             report->Reset(_options);
         }
 
-        if( (pbody->GetLinks().size() == 0) || !pbody->IsEnabled() ) {
+        if( (pbody->GetLinks().size() == 0) || !_IsEnabled(*pbody) ) {
             return false;
         }
 
@@ -617,17 +617,17 @@ public:
         return false; //TODO
     }
 
-    virtual bool CheckCollision(const OpenRAVE::TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(const OpenRAVE::TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) override
     {
         if( !!report ) {
             report->Reset(_options);
         }
 
-        if( (pbody->GetLinks().size() == 0) || !pbody->IsEnabled() ) {
+        if( (pbody->GetLinks().size() == 0) || !_IsEnabled(*pbody) ) {
             return false;
         }
 
-        _fclspace->SynchronizeWithAttached(pbody);
+        _fclspace->SynchronizeWithAttached(*pbody);
         FCLCollisionManagerInstance& bodyManager = _GetBodyManager(pbody, !!(_options & OpenRAVE::CO_ActiveDOFs));
 
         const std::vector<KinBodyConstPtr> vbodyexcluded;
@@ -664,7 +664,7 @@ public:
         return query._bCollision;
     }
 
-    virtual bool CheckCollision(const OpenRAVE::TriMesh& trimesh, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(const OpenRAVE::TriMesh& trimesh, CollisionReportPtr report = CollisionReportPtr()) override
     {
         if( !!report ) {
             report->Reset(_options);
@@ -708,7 +708,7 @@ public:
         return query._bCollision;
     }
     
-    virtual bool CheckCollision(const OpenRAVE::AABB& ab, const OpenRAVE::Transform& aabbPose, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(const OpenRAVE::AABB& ab, const OpenRAVE::Transform& aabbPose, CollisionReportPtr report = CollisionReportPtr()) override
     {
         if( !!report ) {
             report->Reset(_options);
@@ -718,6 +718,44 @@ public:
         std::set<KinBodyConstPtr> attachedBodies;
         FCLCollisionManagerInstance& envManager = _GetEnvManager(attachedBodies);
         
+        const std::vector<KinBodyConstPtr> vbodyexcluded;
+        const std::vector<LinkConstPtr> vlinkexcluded;
+        CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
+        ADD_TIMING(_statistics);
+
+        FCLSpace::KinBodyInfo::LinkInfo objUserData;
+
+        CollisionGeometryPtr cboxgeom = make_shared<fcl::Box>(ab.extents.x*2,ab.extents.y*2,ab.extents.z*2);
+        fcl::CollisionObject cboxobj(cboxgeom);
+
+        fcl::Vec3f newPosition = ConvertVectorToFCL(aabbPose * ab.pos);
+        fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(aabbPose.rot);
+        cboxobj.setTranslation(newPosition);
+        cboxobj.setQuatRotation(newOrientation);
+        cboxobj.computeAABB(); // probably necessary since translation changed
+        cboxobj.setUserData(&objUserData);
+#ifdef FCLRAVE_CHECKPARENTLESS
+        //boost::shared_ptr<void> onexit((void*) 0, boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceB, this, boost::ref(*pbody), boost::ref(envManager)));
+#endif
+        envManager.GetManager()->collide(&cboxobj, &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
+        return query._bCollision;
+    }
+
+    virtual bool CheckCollision(const OpenRAVE::AABB& ab, const OpenRAVE::Transform& aabbPose, const std::vector<OpenRAVE::KinBodyConstPtr>& vIncludedBodies, OpenRAVE::CollisionReportPtr report) override
+    {
+        if( !!report ) {
+            report->Reset(_options);
+        }
+
+        _fclspace->Synchronize();
+        std::set<KinBodyConstPtr> excludedBodies;
+        FOREACH(itbody, _fclspace->GetEnvBodies()) {
+            if( find(vIncludedBodies.begin(), vIncludedBodies.end(), *itbody) == vIncludedBodies.end() ) {
+                excludedBodies.insert(*itbody);
+            }
+        }
+        FCLCollisionManagerInstance& envManager = _GetEnvManager(excludedBodies);
+
         const std::vector<KinBodyConstPtr> vbodyexcluded;
         const std::vector<LinkConstPtr> vlinkexcluded;
         CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
@@ -760,7 +798,7 @@ public:
 
         const std::vector<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody even if it is const
-        _fclspace->SynchronizeWithAttached(pbody);
+        _fclspace->SynchronizeWithAttached(*pbody);
 
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
@@ -774,7 +812,7 @@ public:
 #ifdef FCLRAVE_CHECKPARENTLESS
             boost::shared_ptr<void> onexit((void*) 0, boost::bind(&FCLCollisionChecker::_PrintCollisionManagerInstanceSelf, this, boost::ref(*pbody)));
 #endif            
-            KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
+            KinBodyInfoPtr pinfo = _fclspace->GetInfo(*pbody);
             FOREACH(itset, nonadjacent) {
                 size_t index1 = *itset&0xffff, index2 = *itset>>16;
                 // We don't need to check if the links are enabled since we got adjacency information with AO_Enabled
@@ -812,7 +850,7 @@ public:
 
         const std::vector<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody evn if it is const
-        _fclspace->SynchronizeWithAttached(pbody);
+        _fclspace->SynchronizeWithAttached(*pbody);
 
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
@@ -823,7 +861,7 @@ public:
             CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
             ADD_TIMING(_statistics);
             query.bselfCollision = true;
-            KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
+            KinBodyInfoPtr pinfo = _fclspace->GetInfo(*pbody);
             FOREACH(itset, nonadjacent) {
                 int index1 = *itset&0xffff, index2 = *itset>>16;
                 if( plink->GetIndex() == index1 || plink->GetIndex() == index2 ) {
@@ -845,7 +883,7 @@ public:
 
 private:
     inline boost::shared_ptr<FCLCollisionChecker> shared_checker() {
-        return boost::dynamic_pointer_cast<FCLCollisionChecker>(shared_from_this());
+        return boost::static_pointer_cast<FCLCollisionChecker>(shared_from_this());
     }
 
     static bool CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, void *data) {
@@ -908,11 +946,11 @@ private:
         }
 
         if( !!plink1 && !!plink2 ) {
-            if( !pcb->bselfCollision && plink1->GetParent()->IsAttached(KinBodyConstPtr(plink2->GetParent())) ) {
+            if( !pcb->bselfCollision && plink1->GetParent()->IsAttached(*plink2->GetParent())) {
                 return false;
             }
 
-            LinkInfoPtr pLINK1 = _fclspace->GetLinkInfo(plink1), pLINK2 = _fclspace->GetLinkInfo(plink2);
+            LinkInfoPtr pLINK1 = _fclspace->GetLinkInfo(*plink1), pLINK2 = _fclspace->GetLinkInfo(*plink2);
 
             //RAVELOG_VERBOSE_FORMAT("env=%d, link %s:%s with %s:%s", GetEnv()->GetId()%plink1->GetParent()->GetName()%plink1->GetName()%plink2->GetParent()->GetName()%plink2->GetName());
             FOREACH(itgeompair1, pLINK1->vgeoms) {
@@ -927,7 +965,7 @@ private:
             }
         }
         else if( !!plink1 ) {
-            LinkInfoPtr pLINK1 = _fclspace->GetLinkInfo(plink1);
+            LinkInfoPtr pLINK1 = _fclspace->GetLinkInfo(*plink1);
             FOREACH(itgeompair1, pLINK1->vgeoms) {
                 if( itgeompair1->second->getAABB().overlap(o2->getAABB()) ) {
                     CheckNarrowPhaseGeomCollision(itgeompair1->second.get(), o2, pcb);
@@ -938,7 +976,7 @@ private:
             }
         }
         else if( !!plink2 ) {
-            LinkInfoPtr pLINK2 = _fclspace->GetLinkInfo(plink2);
+            LinkInfoPtr pLINK2 = _fclspace->GetLinkInfo(*plink2);
             FOREACH(itgeompair2, pLINK2->vgeoms) {
                 if( itgeompair2->second->getAABB().overlap(o1->getAABB()) ) {
                     CheckNarrowPhaseGeomCollision(o1, itgeompair2->second.get(), pcb);
@@ -1001,7 +1039,7 @@ private:
                 //BOOST_ASSERT( plink1 && plink2 );
                 //BOOST_ASSERT( plink1->IsEnabled() && plink2->IsEnabled() );
                 if( !!plink1 && !!plink2 ) {
-                    BOOST_ASSERT( pcb->bselfCollision || !plink1->GetParent()->IsAttached(KinBodyConstPtr(plink2->GetParent())) );
+                    BOOST_ASSERT( pcb->bselfCollision || !plink1->GetParent()->IsAttached(*plink2->GetParent()));
                 }
 
                 _reportcache.Reset(_options);
@@ -1212,6 +1250,23 @@ private:
         }
     }
 
+    inline bool _IsEnabled(const KinBody& body)
+    {
+        if( body.IsEnabled() ) {
+            return true;
+        }
+
+        // check if body has any enabled bodies
+        body.GetGrabbed(_vCachedGrabbedBodies);
+        FOREACH(itbody, _vCachedGrabbedBodies) {
+            if( (*itbody)->IsEnabled() ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+    
     int _options;
     boost::shared_ptr<FCLSpace> _fclspace;
     int _numMaxContacts;
@@ -1241,6 +1296,7 @@ private:
     CollisionReport _reportcache;
     std::vector<fcl::Vec3f> _fclPointsCache;
     std::vector<fcl::Triangle> _fclTrianglesCache;
+    std::vector<KinBodyPtr> _vCachedGrabbedBodies;
 
     bool _bIsSelfCollisionChecker; // Currently not used
     bool _bParentlessCollisionObject; ///< if set to true, the last collision command ran into colliding with an unknown object

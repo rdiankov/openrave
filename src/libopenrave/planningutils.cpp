@@ -1751,7 +1751,7 @@ void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
         size_t startindex = traj->GetFirstWaypointIndexAfterTime(starttime);
         if( startindex >= traj->GetNumWaypoints() )
             startindex = traj->GetNumWaypoints()-1;
-        
+
         if( startindex > 0 ) {
             ConfigurationSpecification deltatimespec;
             deltatimespec.AddDeltaTimeGroup();
@@ -3166,7 +3166,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             for(size_t i = 0; i < _vtempconfig.size(); ++i) {
                 dReal f = RaveFabs(q1[i] - _vtempconfig[i]);
                 if( f > vConfigResolution[i]*1.01 ) {
-                    RAVELOG_DEBUG_FORMAT("scale ratio=%f", (f/vConfigResolution[i]));
+                    // RAVELOG_DEBUG_FORMAT("scale ratio=%f", (f/vConfigResolution[i]));
                     int poststeps = int(f/vConfigResolution[i] + 0.9999);
                     if( poststeps > numPostNeighSteps ) {
                         numPostNeighSteps = poststeps;
@@ -3177,7 +3177,13 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             if( numPostNeighSteps > 1 ) {
                 bHasRampDeviatedFromInterpolation = true;
                 // should never happen, but just in case _neighstatefn is some non-linear constraint projection
-                RAVELOG_WARN_FORMAT("have to divide the arc in %d steps even after original interpolation is done, interval=%d", numPostNeighSteps%interval);
+                if( _listCheckBodies.size() > 0 ) {
+                    RAVELOG_WARN_FORMAT("env=%d, have to divide the arc in %d steps even after original interpolation is done, interval=%d", _listCheckBodies.front()->GetEnv()->GetId()%numPostNeighSteps%interval);
+                }
+                else {
+                    RAVELOG_WARN_FORMAT("have to divide the arc in %d steps even after original interpolation is done, interval=%d", numPostNeighSteps%interval);
+                }
+
                 // this case should be rare, so can create a vector here. don't look at constraints since we would never converge...
                 // note that circular constraints would break here
                 std::vector<dReal> vpostdq(_vtempconfig.size()), vpostddq(dq1.size());
@@ -3224,9 +3230,17 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 
     if( !!filterreturn ) {
         filterreturn->_bHasRampDeviatedFromInterpolation = bHasRampDeviatedFromInterpolation;
-        if (options & CFO_FillCheckedConfiguration) {
-            filterreturn->_configurations.insert(filterreturn->_configurations.end(), q1.begin(), q1.end());
-            filterreturn->_configurationtimes.push_back(timeelapsed);
+        if( options & CFO_FillCheckedConfiguration ) {
+            if( bCheckEnd ) {
+                // Insert the last configuration only when we have checked it.
+                filterreturn->_configurations.insert(filterreturn->_configurations.end(), q1.begin(), q1.end());
+                if( timeelapsed > 0 ) {
+                    filterreturn->_configurationtimes.push_back(timeelapsed);
+                }
+                else {
+                    filterreturn->_configurationtimes.push_back(1.0);
+                }
+            }
         }
     }
 
