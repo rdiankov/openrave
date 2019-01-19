@@ -2429,7 +2429,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             int n = 1;
             for(int j = i+1; j < %(deg)d; ++j) {
                 // care about error in real much more than imaginary
-                if( abs(real(roots[i])-real(roots[j])) < tolsqrt && (abs(imag(roots[i])-imag(roots[j])) < 0.002 || abs(imag(roots[i])+imag(roots[j])) < 0.002) && abs(imag(roots[i])) < 0.002 ) {
+                if( abs(real(roots[i])-real(roots[j])) < tolsqrt && (abs(imag(roots[i])-imag(roots[j])) < 0.002 || abs(imag(roots[i])+imag(roots[j])) < 0.002) ) {
                     newroot += roots[j];
                     n += 1;
                     visited[j] = true;
