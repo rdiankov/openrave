@@ -520,20 +520,6 @@ inline CheckValue<T> IKPowWithIntegerCheck(T f, int n)
     return ret;
 }
 
-template <typename T> struct ComplexLess
-{
-    bool operator()(const complex<T>& lhs, const complex<T>& rhs) const
-    {
-        if (real(lhs) < real(rhs)) {
-            return true;
-        }
-        if (real(lhs) > real(rhs)) {
-            return false;
-        }
-        return imag(lhs) < imag(rhs);
-    }
-};
-
 """%(self.version,str(datetime.datetime.now()),self.iktypestr,self.version)
         code += solvertree.generate(self)
         code += solvertree.end(self)
@@ -2415,9 +2401,6 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             break;
         }
     }
-
-    // sort roots hoping that it solution indices become more robust to slight change in coeffs
-    std::sort(roots, roots+%(deg)d, ComplexLess<IkReal>());
 
     numroots = 0;
     bool visited[%(deg)d] = {false};
