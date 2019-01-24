@@ -80,7 +80,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             return CreateLinearSmoother(penv,sinput);
         }
         else if( interfacename == "parabolicsmoother" ) {
-            return rplanners::CreateParabolicSmoother2(penv,sinput);
+            return rplanners::CreateParabolicSmoother(penv,sinput);
         }
         else if( interfacename == "parabolicsmoother2" ) {
             return rplanners::CreateParabolicSmoother2(penv,sinput);
