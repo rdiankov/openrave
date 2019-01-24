@@ -1448,12 +1448,29 @@ protected:
         vellimits = _parameters->_vConfigVelocityLimit;
         accellimits = _parameters->_vConfigAccelerationLimit;
 
+        dReal fCurVelMult = 1.0;
+        dReal fVelMultCutOff = 0.05; // stop trying if the ratio between the current vellimits and the original vellimits is less than this value
+        int itry = 0;
+        int numTries = 1000; // number of times allowed to scale down vellimits and accellimits
         RampOptimizer::CheckReturn retseg(0);
         std::vector<dReal> _temp(0);
-        size_t numTries = 1000; // number of times allowed to scale down vellimits and accellimits
-        for (size_t itry = 0; itry < numTries; ++itry) {
+        for (; itry < numTries; ++itry) {
             bool res = _interpolator.ComputeZeroVelNDTrajectory(x0VectIn, x1VectIn, vellimits, accellimits, rampndVectOut);
-            BOOST_ASSERT(res);
+            if( !res ) {
+                retseg.retcode = 0xffff;
+                std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                ss << "x0=[";
+                SerializeValues(ss, x0VectIn);
+                ss << "]; x1=[";
+                SerializeValues(ss, x1VectIn);
+                ss << "]; curvellimits=[";
+                SerializeValues(ss, vellimits);
+                ss << "]; curaccellimits=[";
+                SerializeValues(ss, accellimits);
+                ss << "]";
+                RAVELOG_WARN_FORMAT("env=%d, segment (%d, %d); numWaypoints=%d; ComputeZeroVelNDTrajectory failed. fCurVelMult=%f; itry=%d; %s", GetEnv()->GetId()%(iwaypoint - 1)%iwaypoint%numWaypoints%fCurVelMult%itry%ss.str());
+                return false;
+            }
 
             size_t irampnd = 0;
             rampndVectOut[0].GetX0Vect(x0Vect);
@@ -1495,6 +1512,11 @@ protected:
             }
             else if( retseg.retcode == CFO_CheckTimeBasedConstraints ) {
                 RAVELOG_VERBOSE_FORMAT("env=%d, segment (%d, %d); numWaypoints=%d; scaling vellimits and accellimits by %.15e, itry=%d", GetEnv()->GetId()%(iwaypoint - 1)%iwaypoint%numWaypoints%retseg.fTimeBasedSurpassMult%itry);
+                fCurVelMult *= retseg.fTimeBasedSurpassMult;
+                if( fCurVelMult < fVelMultCutOff ) {
+                    // The velocity multiplier falls below the cut off, so stop.
+                    break;
+                }
                 RampOptimizer::ScaleVector(vellimits, retseg.fTimeBasedSurpassMult);
                 RampOptimizer::ScaleVector(accellimits, retseg.fTimeBasedSurpassMult*retseg.fTimeBasedSurpassMult);
             }
@@ -1509,12 +1531,28 @@ protected:
                 SerializeValues(ss, v0Vect);
                 ss << "]; v1 = [";
                 SerializeValues(ss, v1Vect);
+                ss << "]; curvellimits=[";
+                SerializeValues(ss, vellimits);
+                ss << "]; curaccellimits=[";
+                SerializeValues(ss, accellimits);
                 ss << "]; deltatime=" << (rampndVectOut[irampnd].GetDuration());
                 RAVELOG_WARN_FORMAT("env=%d, segment (%d, %d); numWaypoints=%d; SegmentFeasibile2 returned error 0x%x; %s, giving up....", GetEnv()->GetId()%(iwaypoint - 1)%iwaypoint%numWaypoints%retseg.retcode%ss.str());
                 return false;
             }
         }
         if( retseg.retcode != 0 ) {
+            std::stringstream ss;
+            ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+            ss << "x0 = [";
+            SerializeValues(ss, x0VectIn);
+            ss << "]; x1 = [";
+            SerializeValues(ss, x1VectIn);
+            ss << "]; curvellimits=[";
+            SerializeValues(ss, vellimits);
+            ss << "]; curaccellimits=[";
+            SerializeValues(ss, accellimits);
+            ss << "]";
+            RAVELOG_WARN_FORMAT("env=%d, segment (%d, %d); numWaypoints=%d; ramp initialization failed. fCurVelMult=%f; itry=%d; retcode=0x%x; %s", GetEnv()->GetId()%(iwaypoint - 1)%iwaypoint%numWaypoints%fCurVelMult%itry%retseg.retcode%ss.str());
             return false;
         }
         return true;
