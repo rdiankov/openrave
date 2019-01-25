@@ -1449,7 +1449,9 @@ protected:
         accellimits = _parameters->_vConfigAccelerationLimit;
 
         dReal fCurVelMult = 1.0;
-        dReal fVelMultCutOff = 0.05; // stop trying if the ratio between the current vellimits and the original vellimits is less than this value
+        // Now setting fVelMultCutOff to 0 since when manip speed/accel limits are very low, we might get very small velmult
+        // from SegmentFeasible2. It might not be a good idea to have a universal cutoff value for this multiplier.
+        dReal fVelMultCutOff = 0; // stop trying if the ratio between the current vellimits and the original vellimits is less than this value
         int itry = 0;
         int numTries = 1000; // number of times allowed to scale down vellimits and accellimits
         RampOptimizer::CheckReturn retseg(0);
