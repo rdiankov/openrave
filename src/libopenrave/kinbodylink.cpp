@@ -83,9 +83,9 @@ void KinBody::Link::GetParentLinks(std::vector< boost::shared_ptr<Link> >& vPare
     }
 }
 
-bool KinBody::Link::IsParentLink(boost::shared_ptr<Link const> plink) const
+bool KinBody::Link::IsParentLink(const Link &link) const
 {
-    return find(_vParentLinks.begin(),_vParentLinks.end(),plink->GetIndex()) != _vParentLinks.end();
+    return find(_vParentLinks.begin(),_vParentLinks.end(), link.GetIndex()) != _vParentLinks.end();
 }
 
 /** _tMassFrame * PrincipalInertia * _tMassFrame.inverse()
@@ -274,13 +274,15 @@ KinBody::Link::GeometryPtr KinBody::Link::GetGeometry(int index)
     return _vGeometries.at(index);
 }
 
-void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& geometries)
+void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& geometries, bool bForceRecomputeMeshCollision)
 {
     _vGeometries.resize(geometries.size());
     for(size_t i = 0; i < geometries.size(); ++i) {
         _vGeometries[i].reset(new Geometry(shared_from_this(),*geometries[i]));
-        if( _vGeometries[i]->GetCollisionMesh().vertices.size() == 0 ) {
-            RAVELOG_VERBOSE("geometry has empty collision mesh\n");
+        if( bForceRecomputeMeshCollision || _vGeometries[i]->GetCollisionMesh().vertices.size() == 0 ) {
+            if( !bForceRecomputeMeshCollision ) {
+                RAVELOG_VERBOSE("geometry has empty collision mesh\n");
+            }
             _vGeometries[i]->InitCollisionMesh(); // have to initialize the mesh since some plugins might not understand all geometry types
         }
     }
@@ -296,7 +298,7 @@ void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& g
     _Update();
 }
 
-void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries)
+void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries, bool bForceRecomputeMeshCollision)
 {
     _vGeometries.resize(geometries.size());
     size_t i = 0;
@@ -436,9 +438,9 @@ void KinBody::Link::SetStringParameters(const std::string& key, const std::strin
     GetParent()->_PostprocessChangedParameters(Prop_LinkCustomParameters);
 }
 
-bool KinBody::Link::IsRigidlyAttached(boost::shared_ptr<Link const> plink) const
+bool KinBody::Link::IsRigidlyAttached(const Link &link) const
 {
-    return find(_vRigidlyAttachedLinks.begin(),_vRigidlyAttachedLinks.end(),plink->GetIndex()) != _vRigidlyAttachedLinks.end();
+    return find(_vRigidlyAttachedLinks.begin(),_vRigidlyAttachedLinks.end(),link.GetIndex()) != _vRigidlyAttachedLinks.end();
 }
 
 void KinBody::Link::UpdateInfo()

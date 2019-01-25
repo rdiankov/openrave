@@ -291,7 +291,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
                             log.info(u'computing hull for link %d/%d geom %d/%d: vertices=%d, indices=%d',il,len(links), ig, len(geometries), len(trimesh.vertices), len(trimesh.indices))
                             orghulls = [self.ComputePaddedConvexHullFromTriMesh(trimesh,padding)]
                         else:
-                            log.info(u'computing decomposition for link %d/%d geom %d/%d',il,len(links), ig, len(geometries))
+                            log.info(u'computing decomposition for link %d/%d geom %d/%d type %s',il,len(links), ig, len(geometries), geom.GetType())
                             orghulls = self.ComputePaddedConvexDecompositionFromTriMesh(trimesh,padding)
                         cdhulls = []
                         for hull in orghulls:

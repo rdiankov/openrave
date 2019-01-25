@@ -121,7 +121,7 @@ public:
         /// \brief Release all bodies grabbed by the end effector of this manipualtor
         virtual void ReleaseAllGrabbed() {
             RobotBasePtr probot(__probot);
-            probot->ReleaseAllGrabbedWithLink(__pEffector);
+            probot->ReleaseAllGrabbedWithLink(*__pEffector);
         }
 
         /// \brief Return transform with respect to end effector defining the grasp coordinate system
@@ -265,7 +265,10 @@ public:
         /// \brief returns true if a link is part of the child links of the manipulator.
         ///
         /// The child links do not include the arm links.
-        virtual bool IsChildLink(LinkConstPtr plink) const;
+        bool IsChildLink(LinkConstPtr plink) const RAVE_DEPRECATED {
+            return IsChildLink(*plink);
+        }
+        virtual bool IsChildLink(const KinBody::Link& link) const;
 
         /// \brief Get all child links of the manipulator starting at pEndEffector link.
         ///
@@ -349,7 +352,10 @@ public:
         //virtual bool CheckIndependentCollision(KinBodyConstPtr body, CollisionReportPtr report = CollisionReportPtr()) const;
 
         /// \brief return true if the body is being grabbed by any link on this manipulator
-        virtual bool IsGrabbing(KinBodyConstPtr body) const;
+        bool IsGrabbing(KinBodyConstPtr body) const RAVE_DEPRECATED {
+            return IsGrabbing(*body);
+        }
+        virtual bool IsGrabbing(const KinBody &body) const;
 
         /// \brief computes the jacobian of the manipulator arm indices of the current manipulator frame world position.
         ///
@@ -826,7 +832,10 @@ private:
     /// \brief tries to remove the attached sensor. If successful, returns true.
     ///
     /// Will change the robot structure hash..
-    virtual bool RemoveAttachedSensor(AttachedSensorPtr attsensor);
+    bool RemoveAttachedSensor(AttachedSensorPtr attsensor) RAVE_DEPRECATED {
+        return RemoveAttachedSensor(*attsensor);
+    }
+    virtual bool RemoveAttachedSensor(RobotBase::AttachedSensor &attsensor);
     
     /// \deprecated (11/10/04) send directly through controller
     virtual bool SetMotion(TrajectoryBaseConstPtr ptraj) RAVE_DEPRECATED;

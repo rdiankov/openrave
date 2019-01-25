@@ -1714,10 +1714,10 @@ RobotBase::AttachedSensorPtr RobotBase::GetAttachedSensor(const std::string& nam
     return RobotBase::AttachedSensorPtr();
 }
 
-bool RobotBase::RemoveAttachedSensor(AttachedSensorPtr attsensor)
+bool RobotBase::RemoveAttachedSensor(RobotBase::AttachedSensor &attsensor)
 {
     FOREACH(itattsensor,_vecSensors) {
-        if( *itattsensor == attsensor ) {
+        if( itattsensor->get() == &attsensor ) {
             _vecSensors.erase(itattsensor);
             __hashrobotstructure.resize(0);
             return true;

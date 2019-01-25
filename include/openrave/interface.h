@@ -131,8 +131,12 @@ public:
     /// \brief return true if the command is supported
     virtual bool SupportsCommand(const std::string& cmd);
 
+#if OPENRAVE_RAPIDJSON
+
     /// \brief return true if the command is supported
     virtual bool SupportsJSONCommand(const std::string& cmd);
+
+#endif // OPENRAVE_RAPIDJSON
 
     /** \brief Used to send special commands to the interface and receive output.
 

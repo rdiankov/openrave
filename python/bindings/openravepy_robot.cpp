@@ -213,7 +213,7 @@ public:
             return toPyVector3(_pmanip->GetLocalToolDirection());
         }
         bool IsGrabbing(PyKinBodyPtr pbody) {
-            return _pmanip->IsGrabbing(pbody->GetBody());
+            return _pmanip->IsGrabbing(*pbody->GetBody());
         }
 
         int GetNumFreeParameters() const {
@@ -504,7 +504,7 @@ public:
         bool IsChildLink(object pylink)
         {
             CHECK_POINTER(pylink);
-            return _pmanip->IsChildLink(GetKinBodyLink(pylink));
+            return _pmanip->IsChildLink(*GetKinBodyLink(pylink));
         }
 
         object GetIndependentLinks() {
@@ -904,7 +904,7 @@ public:
         return _GetAttachedSensor(_probot->AddAttachedSensor(*pattsensorinfo->GetAttachedSensorInfo(), removeduplicate));
     }
     bool RemoveAttachedSensor(PyAttachedSensorPtr pyattsensor) {
-        return _probot->RemoveAttachedSensor(pyattsensor->GetAttachedSensor());
+        return _probot->RemoveAttachedSensor(*pyattsensor->GetAttachedSensor());
     }
 
     object GetSensors()

@@ -43,8 +43,8 @@ public:
 
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
-        _interpolator.Initialize(_parameters->GetDOF());
-        _translationinterpolator.Initialize(3);
+        _interpolator.Initialize(_parameters->GetDOF(), GetEnv()->GetId());
+        _translationinterpolator.Initialize(3, GetEnv()->GetId());
         _trajxmlid = ptraj->GetXMLId();
         return TrajectoryRetimer2::PlanPath(ptraj);
     }
@@ -456,7 +456,7 @@ protected:
                 RAVELOG_WARN("Failed solving Interpolate1D for angles\n");
                 return -1;
             }
-            
+
             mintime = _curve.GetDuration();
             trans1 = ikparam.GetTranslationYAxisAngleXNorm4D().first;
             trans0 = ikparamprev.GetTranslationYAxisAngleXNorm4D().first;
@@ -634,7 +634,7 @@ protected:
 
             switch(iktype) {
             case IKP_Transform6D: {
-                _ikinterpolator.Initialize(4);
+                _ikinterpolator.Initialize(4, GetEnv()->GetId());
                 _v0pos.resize(4); _v0vel.resize(4); _v1pos.resize(4); _v1vel.resize(4); vmaxvel.resize(4); vmaxaccel.resize(4);
                 axisangle = axisAngleFromQuat(quatMultiply(quatInverse(ikparamprev.GetTransform6D().rot), ikparam.GetTransform6D().rot));
                 if( axisangle.lengthsqr3() > g_fEpsilon ) {
@@ -655,7 +655,7 @@ protected:
                 break;
             }
             case IKP_Rotation3D: {
-                _ikinterpolator.Initialize(1);
+                _ikinterpolator.Initialize(1, GetEnv()->GetId());
                 _v0pos.resize(1); _v0vel.resize(1); _v1pos.resize(1); _v1vel.resize(1); vmaxvel.resize(1); vmaxaccel.resize(1);
                 axisangle = axisAngleFromQuat(quatMultiply(quatInverse(ikparamprev.GetRotation3D()), ikparam.GetRotation3D()));
                 if( axisangle.lengthsqr3() > g_fEpsilon ) {
@@ -672,7 +672,7 @@ protected:
                 break;
             }
             case IKP_Translation3D:
-                _ikinterpolator.Initialize(3);
+                _ikinterpolator.Initialize(3, GetEnv()->GetId());
                 _v0pos.resize(3); _v0vel.resize(3); _v1pos.resize(3); _v1vel.resize(3); vmaxvel.resize(3); vmaxaccel.resize(3);
                 trans1 = ikparam.GetTranslation3D();
                 trans0 = ikparamprev.GetTranslation3D();
@@ -680,7 +680,7 @@ protected:
                 transindex = 0;
                 break;
             case IKP_TranslationDirection5D: {
-                _ikinterpolator.Initialize(4);
+                _ikinterpolator.Initialize(4, GetEnv()->GetId());
                 _v0pos.resize(4); _v0vel.resize(4); _v1pos.resize(4); _v1vel.resize(4); vmaxvel.resize(4); vmaxaccel.resize(4);
                 axisangle = ikparamprev.GetTranslationDirection5D().dir.cross(ikparam.GetTranslationDirection5D().dir);
                 if( axisangle.lengthsqr3() > g_fEpsilon ) {
@@ -704,7 +704,7 @@ protected:
                 break;
             }
             case IKP_TranslationXAxisAngleZNorm4D: {
-                _ikinterpolator.Initialize(4);
+                _ikinterpolator.Initialize(4, GetEnv()->GetId());
                 _v0pos.resize(4); _v0vel.resize(4); _v1pos.resize(4); _v1vel.resize(4); vmaxvel.resize(4); vmaxaccel.resize(4);
                 _v0pos[0] = 0;
                 _v1pos[0] = utils::SubtractCircularAngle(ikparam.GetTranslationXAxisAngleZNorm4D().second,ikparamprev.GetTranslationXAxisAngleZNorm4D().second);
@@ -719,7 +719,7 @@ protected:
                 break;
             }
             case IKP_TranslationYAxisAngleXNorm4D: {
-                _ikinterpolator.Initialize(4);
+                _ikinterpolator.Initialize(4, GetEnv()->GetId());
                 _v0pos.resize(4); _v0vel.resize(4); _v1pos.resize(4); _v1vel.resize(4); vmaxvel.resize(4); vmaxaccel.resize(4);
                 _v0pos[0] = 0;
                 _v1pos[0] = utils::SubtractCircularAngle(ikparam.GetTranslationYAxisAngleXNorm4D().second,ikparamprev.GetTranslationYAxisAngleXNorm4D().second);
@@ -734,7 +734,7 @@ protected:
                 break;
             }
             case IKP_TranslationZAxisAngleYNorm4D: {
-                _ikinterpolator.Initialize(4);
+                _ikinterpolator.Initialize(4, GetEnv()->GetId());
                 _v0pos.resize(4); _v0vel.resize(4); _v1pos.resize(4); _v1vel.resize(4); vmaxvel.resize(4); vmaxaccel.resize(4);
                 _v0pos[0] = 0;
                 _v1pos[0] = utils::SubtractCircularAngle(ikparam.GetTranslationZAxisAngleYNorm4D().second,ikparamprev.GetTranslationZAxisAngleYNorm4D().second);
