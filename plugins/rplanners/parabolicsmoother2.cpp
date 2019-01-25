@@ -1160,17 +1160,17 @@ protected:
             bool res = _interpolator.ComputeZeroVelNDTrajectory(x0VectIn, x1VectIn, vellimits, accellimits, rampndVectOut);
             if( !res ) {
                 retseg.retcode = 0xffff;
-                std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                ss << "x0=[";
-                SerializeValues(ss, x0VectIn);
-                ss << "]; x1=[";
-                SerializeValues(ss, x1VectIn);
-                ss << "]; curvellimits=[";
-                SerializeValues(ss, vellimits);
-                ss << "]; curaccellimits=[";
-                SerializeValues(ss, accellimits);
-                ss << "]";
-                RAVELOG_WARN_FORMAT("env=%d, segment (%d, %d); numWaypoints=%d; ComputeZeroVelNDTrajectory failed. fCurVelMult=%f; itry=%d; %s", GetEnv()->GetId()%(iwaypoint - 1)%iwaypoint%numWaypoints%fCurVelMult%itry%ss.str());
+                // std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                // ss << "x0=[";
+                // SerializeValues(ss, x0VectIn);
+                // ss << "]; x1=[";
+                // SerializeValues(ss, x1VectIn);
+                // ss << "]; curvellimits=[";
+                // SerializeValues(ss, vellimits);
+                // ss << "]; curaccellimits=[";
+                // SerializeValues(ss, accellimits);
+                // ss << "]";
+                // RAVELOG_WARN_FORMAT("env=%d, segment (%d, %d); numWaypoints=%d; ComputeZeroVelNDTrajectory failed. fCurVelMult=%f; itry=%d; %s", GetEnv()->GetId()%(iwaypoint - 1)%iwaypoint%numWaypoints%fCurVelMult%itry%ss.str());
                 return false;
             }
 
@@ -1243,19 +1243,19 @@ protected:
             }
         }
         if( retseg.retcode != 0 ) {
-            std::stringstream ss;
-            ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
-            ss << "x0 = [";
-            SerializeValues(ss, x0VectIn);
-            ss << "]; x1 = [";
-            SerializeValues(ss, x1VectIn);
-            ss << "]; curvellimits=[";
-            SerializeValues(ss, vellimits);
-            ss << "]; curaccellimits=[";
-            SerializeValues(ss, accellimits);
-            ss << "]";
-            RAVELOG_WARN_FORMAT("env=%d, segment (%d, %d); numWaypoints=%d; ramp initialization failed. fCurVelMult=%f; itry=%d; retcode=0x%x; %s", GetEnv()->GetId()%(iwaypoint - 1)%iwaypoint%numWaypoints%fCurVelMult%itry%retseg.retcode%ss.str());
-            return false;
+            // std::stringstream ss;
+            // ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+            // ss << "x0 = [";
+            // SerializeValues(ss, x0VectIn);
+            // ss << "]; x1 = [";
+            // SerializeValues(ss, x1VectIn);
+            // ss << "]; curvellimits=[";
+            // SerializeValues(ss, vellimits);
+            // ss << "]; curaccellimits=[";
+            // SerializeValues(ss, accellimits);
+            // ss << "]";
+            // RAVELOG_WARN_FORMAT("env=%d, segment (%d, %d); numWaypoints=%d; ramp initialization failed. fCurVelMult=%f; itry=%d; retcode=0x%x; %s", GetEnv()->GetId()%(iwaypoint - 1)%iwaypoint%numWaypoints%fCurVelMult%itry%retseg.retcode%ss.str());
+            // return false;
         }
         return true;
     }
