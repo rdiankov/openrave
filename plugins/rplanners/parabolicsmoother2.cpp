@@ -21,7 +21,7 @@
 #include "manipconstraints2.h"
 
 // #define SMOOTHER_TIMING_DEBUG // uncomment this to get more information on time spent for collision checking, manip constraint checking, etc.
-#define SMOOTHER_PROGRESS_DEBUG // uncomment his to get more information on progress during each shortcut iteration
+//#define SMOOTHER_PROGRESS_DEBUG // uncomment his to get more information on progress during each shortcut iteration
 
 namespace rplanners {
 
@@ -440,7 +440,7 @@ public:
             ofstream f(filename.c_str());
             f << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
             f << *_parameters;
-            RAVELOG_DEBUG_FORMAT("env=%d, planner parameters saved to %s", GetEnv()->GetId()%filename);
+            RavePrintfA(str(boost::format("env=%d, planner parameters saved to %s")%GetEnv()->GetId()%filename), _dumplevel);
         }
         _DumpTrajectory(ptraj, _dumplevel);
 
@@ -3196,8 +3196,7 @@ protected:
     {
         if( IS_DEBUGLEVEL(level) ) {
             std::string filename = _DumpTrajectory(ptraj);
-            // RavePrintfA(str(boost::format("env=%d, Wrote trajectory to %s")%GetEnv()->GetId()%filename), level);
-            RAVELOG_DEBUG_FORMAT("env=%d, trajectory saved to %s", GetEnv()->GetId()%filename);
+            RavePrintfA(str(boost::format("env=%d, Wrote trajectory to %s")%GetEnv()->GetId()%filename), level);
             return filename;
         }
         else {
