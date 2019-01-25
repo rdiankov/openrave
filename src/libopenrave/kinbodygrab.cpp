@@ -256,18 +256,24 @@ void KinBody::GetGrabbed(std::vector<KinBodyPtr>& vbodies) const
 
 void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vgrabbedinfo) const
 {
-    vgrabbedinfo.resize(_vGrabbedBodies.size());
-    for(size_t i = 0; i < vgrabbedinfo.size(); ++i) {
+    vgrabbedinfo.reserve(_vGrabbedBodies.size());
+    vgrabbedinfo.clear();
+    for(size_t i = 0; i < _vGrabbedBodies.size(); ++i) {
         GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(_vGrabbedBodies[i]);
-        vgrabbedinfo[i].reset(new GrabbedInfo());
-        vgrabbedinfo[i]->_grabbedname = pgrabbed->_pgrabbedbody.lock()->GetName();
-        vgrabbedinfo[i]->_robotlinkname = pgrabbed->_plinkrobot->GetName();
-        vgrabbedinfo[i]->_trelative = pgrabbed->_troot;
-        vgrabbedinfo[i]->_setRobotLinksToIgnore = pgrabbed->_setRobotLinksToIgnore;
-        FOREACHC(itlink, _veclinks) {
-            if( find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), *itlink) == pgrabbed->_listNonCollidingLinks.end() ) {
-                vgrabbedinfo[i]->_setRobotLinksToIgnore.insert((*itlink)->GetIndex());
+        KinBodyPtr pgrabbedbody = pgrabbed->_pgrabbedbody.lock();
+        // sometimes bodies can be removed before they are Released, this is ok and can happen during exceptions and stack unwinding
+        if( !!pgrabbedbody ) {
+            KinBody::GrabbedInfoPtr poutputinfo(new GrabbedInfo());
+            poutputinfo->_grabbedname = pgrabbedbody->GetName();
+            poutputinfo->_robotlinkname = pgrabbed->_plinkrobot->GetName();
+            poutputinfo->_trelative = pgrabbed->_troot;
+            poutputinfo->_setRobotLinksToIgnore = pgrabbed->_setRobotLinksToIgnore;
+            FOREACHC(itlink, _veclinks) {
+                if( find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), *itlink) == pgrabbed->_listNonCollidingLinks.end() ) {
+                    poutputinfo->_setRobotLinksToIgnore.insert((*itlink)->GetIndex());
+                }
             }
+            vgrabbedinfo.push_back(poutputinfo);
         }
     }
 }
