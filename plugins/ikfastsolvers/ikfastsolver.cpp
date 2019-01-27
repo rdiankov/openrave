@@ -1368,6 +1368,13 @@ protected:
                     RAVELOG_WARN_FORMAT("failed to refine solution lasterror=%f, %s", RaveSqrt(_jacobinvsolver._lasterror2)%ss.str());
                 }
             }
+            else if( param.GetType() == IKP_TranslationZAxisAngle4D ) {
+                // represent goal ikparam as transform, then we can use jacobian solver
+                // jacobian consisting of position + angle
+                
+                jacobian = r_[manip.CalculateJacobian(), angleJacobian]; // need to convert from this python syntax
+
+            }
             else {
                 RAVELOG_WARN_FORMAT("solution refinement not supported for ik type %s even though error (%3.2e) exceeeds threshold (%3.2e)", param.GetName()%ikworkspacedist%allowedErrorSqr);
             }
