@@ -909,6 +909,12 @@ public:
         /// \return min and max of torque limits
         std::pair<dReal, dReal> GetNominalTorqueLimits(int iaxis=0) const;
 
+        ///< \brief gets the nominal torque limits of the joint
+        std::pair<dReal, dReal> GetJointNominalTorqueLimits(int iaxis=0) const;
+
+        ///< \brief gets the nominal torque limits of the motor
+        std::pair<dReal, dReal> GetMotorNominalTorqueLimits(int iaxis=0) const;
+
         inline dReal GetMaxInertia(int iaxis=0) const {
             return _info._vmaxinertia[iaxis];
         }
@@ -2057,6 +2063,10 @@ private:
 
     /// \brief link index and the linear forces and torques. Value.first is linear force acting on the link's COM and Value.second is torque
     typedef std::map<int, std::pair<Vector,Vector> > ForceTorqueMap;
+
+    /** Return motor friction torques
+     */
+    virtual void GetMotorFrictionTorques(std::vector<dReal>& doftorques) const;
 
     /** \brief Computes the inverse dynamics (torques) from the current robot position, velocity, and acceleration.
 

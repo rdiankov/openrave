@@ -1054,6 +1054,14 @@ public:
         std::pair<dReal, dReal> values = _pjoint->GetNominalTorqueLimits(iaxis);
         return boost::python::make_tuple(values.first, values.second);
     }
+    object GetJointNominalTorqueLimits(int iaxis=0) const {
+        std::pair<dReal, dReal> values = _pjoint->GetJointNominalTorqueLimits(iaxis);
+        return boost::python::make_tuple(values.first, values.second);
+    }
+    object GetMotorNominalTorqueLimits(int iaxis=0) const {
+        std::pair<dReal, dReal> values = _pjoint->GetMotorNominalTorqueLimits(iaxis);
+        return boost::python::make_tuple(values.first, values.second);
+    }
 
     dReal GetMaxInertia(int iaxis=0) const {
         return _pjoint->GetMaxInertia(iaxis);
@@ -2565,6 +2573,13 @@ object PyKinBody::ComputeHessianAxisAngle(int index, object oindices)
     return toPyArray(vhessian,dims);
 }
 
+object PyKinBody::GetMotorFrictionTorques()
+{
+    vector<dReal> vDOFTorques;
+    _pbody->GetMotorFrictionTorques(vDOFTorques);
+    return toPyArray(vDOFTorques);
+}
+
 object PyKinBody::ComputeInverseDynamics(object odofaccelerations, object oexternalforcetorque, bool returncomponents)
 {
     vector<dReal> vDOFAccelerations;
@@ -3181,6 +3196,8 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxJerk_overloads, GetMaxJerk, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxTorque_overloads, GetMaxTorque, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetInstantaneousTorqueLimits_overloads, GetInstantaneousTorqueLimits, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetNominalTorqueLimits_overloads, GetNominalTorqueLimits, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetJointNominalTorqueLimits_overloads, GetJointNominalTorqueLimits, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMotorNominalTorqueLimits_overloads, GetMotorNominalTorqueLimits, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxInertia_overloads, GetMaxInertia, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetLinkTransformations_overloads, GetLinkTransformations, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetLinkTransformations_overloads, SetLinkTransformations, 1, 2)
@@ -3505,6 +3522,7 @@ void init_openravepy_kinbody()
                         .def("ResetGrabbed",&PyKinBody::ResetGrabbed, args("grabbedinfos"), DOXY_FN(KinBody,ResetGrabbed))
                         .def("ComputeHessianTranslation",&PyKinBody::ComputeHessianTranslation,ComputeHessianTranslation_overloads(args("linkindex","position","indices"), DOXY_FN(KinBody,ComputeHessianTranslation)))
                         .def("ComputeHessianAxisAngle",&PyKinBody::ComputeHessianAxisAngle,ComputeHessianAxisAngle_overloads(args("linkindex","indices"), DOXY_FN(KinBody,ComputeHessianAxisAngle)))
+                        .def("GetMotorFrictionTorques",&PyKinBody::GetMotorFrictionTorques, DOXY_FN(KinBody,GetMotorFrictionTorques))
                         .def("ComputeInverseDynamics",&PyKinBody::ComputeInverseDynamics, ComputeInverseDynamics_overloads(args("dofaccelerations","externalforcetorque","returncomponents"), sComputeInverseDynamicsDoc.c_str()))
                         .def("SetSelfCollisionChecker",&PyKinBody::SetSelfCollisionChecker,args("collisionchecker"), DOXY_FN(KinBody,SetSelfCollisionChecker))
                         .def("GetSelfCollisionChecker",&PyKinBody::GetSelfCollisionChecker,args("collisionchecker"), DOXY_FN(KinBody,GetSelfCollisionChecker))
@@ -3690,6 +3708,8 @@ void init_openravepy_kinbody()
                           .def("GetMaxTorque", &PyJoint::GetMaxTorque, GetMaxTorque_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetMaxTorque)))
                           .def("GetInstantaneousTorqueLimits", &PyJoint::GetInstantaneousTorqueLimits, GetInstantaneousTorqueLimits_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetInstantaneousTorqueLimits)))
                           .def("GetNominalTorqueLimits", &PyJoint::GetNominalTorqueLimits, GetNominalTorqueLimits_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetNominalTorqueLimits)))
+                          .def("GetJointNominalTorqueLimits", &PyJoint::GetJointNominalTorqueLimits, GetJointNominalTorqueLimits_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetJointNominalTorqueLimits)))
+                          .def("GetMotorNominalTorqueLimits", &PyJoint::GetMotorNominalTorqueLimits, GetMotorNominalTorqueLimits_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetMotorNominalTorqueLimits)))
                           .def("GetMaxInertia", &PyJoint::GetMaxInertia, GetMaxInertia_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetMaxInertia)))
                           .def("GetDOFIndex", &PyJoint::GetDOFIndex, DOXY_FN(KinBody::Joint,GetDOFIndex))
                           .def("GetJointIndex", &PyJoint::GetJointIndex, DOXY_FN(KinBody::Joint,GetJointIndex))

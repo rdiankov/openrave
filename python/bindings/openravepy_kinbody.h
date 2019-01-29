@@ -242,6 +242,7 @@ public:
     object CalculateAngularVelocityJacobian(int index) const;
     object ComputeHessianTranslation(int index, object oposition, object oindices=object());
     object ComputeHessianAxisAngle(int index, object oindices=object());
+    object GetMotorFrictionTorques();
     object ComputeInverseDynamics(object odofaccelerations, object oexternalforcetorque=object(), bool returncomponents=false);
     void SetSelfCollisionChecker(PyCollisionCheckerBasePtr pycollisionchecker);
     PyInterfaceBasePtr GetSelfCollisionChecker();
