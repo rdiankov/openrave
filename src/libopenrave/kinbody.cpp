@@ -4825,7 +4825,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     FOREACHC(itgrabbedref, r->_vGrabbedBodies) {
         GrabbedConstPtr pgrabbedref = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbedref);
 
-        KinBodyPtr pbodyref(pgrabbedref->_pgrabbedbody);
+        KinBodyPtr pbodyref = pgrabbedref->_pgrabbedbody.lock();
         KinBodyPtr pgrabbedbody;
         if( !!pbodyref ) {
             pgrabbedbody = GetEnv()->GetBodyFromEnvironmentId(pbodyref->GetEnvironmentId());
