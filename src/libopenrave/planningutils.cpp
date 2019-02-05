@@ -2303,6 +2303,21 @@ inline std::ostream& RaveSerializeValues(std::ostream& O, const std::vector<dRea
 int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeelapsed, IntervalType interval, int options, ConstraintFilterReturnPtr filterreturn)
 {
     int maskoptions = options&_filtermask;
+    int maskinterval = interval & IT_IntervalMask;
+    int maskinterpolation = interval & IT_InterpolationMask;
+    // Current flow:
+    // if( maskinterpolation == IT_Default && velocity conditions valid ) {
+    //     quadratic interpolation
+    // }
+    // else {
+    //     if( maskinterpolation == IT_Default ) {
+    //         normal linear interpolation
+    //     }
+    //     else {
+    //         all-linear interpolation
+    //     }
+    // }
+
     // bHasRampDeviatedFromInterpolation indicates if all the checked configurations deviate from the expected interpolation connecting q0 and q1.
     //
     // In case the input segment includes terminal velocity dq0 and dq1, and timeelapsed > 0,
@@ -2326,7 +2341,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     BOOST_ASSERT(_listCheckBodies.size()>0);
     int start=0;
     bool bCheckEnd=false;
-    switch (interval) {
+    switch (maskinterval) {
     case IT_Open:
         start = 1;  bCheckEnd = false;
         break;
@@ -2346,10 +2361,10 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     // first make sure the end is free
     _vtempconfig.resize(params->GetDOF());
     _vtempvelconfig.resize(dq0.size());
-    // if velocity is valid, compute the acceleration for every DOF
-    if( timeelapsed > 0 && dq0.size() == _vtempconfig.size() && dq1.size() == _vtempconfig.size() ) {
-        // do quadratic interpolation, so make sure the positions, velocities, and timeelapsed are consistent
-        // v0 + timeelapsed*0.5*(dq0+dq1) - v1 = 0
+
+    if( maskinterpolation == IT_Default && (timeelapsed > 0 && dq0.size() == _vtempconfig.size() && dq1.size() == _vtempconfig.size()) ) {
+        // Quadratic interpolation. Need to make sure the positions, velocities, and timeelapsed are consistent
+        //     v0 + timeelapsed*0.5*(dq0 + dq1) - v1 = 0
         _vtempaccelconfig.resize(dq0.size());
         dReal itimeelapsed = 1.0/timeelapsed;
         for(size_t i = 0; i < _vtempaccelconfig.size(); ++i) {
@@ -2363,6 +2378,8 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         }
     }
     else {
+        OPENRAVE_ASSERT_OP_FORMAT(maskinterpolation == IT_Default, |, maskinterpolation == IT_AllLinear, "invalid interpolationtype=0x%x", maskinterpolation, ORE_InvalidArguments);
+        // Do linear interpolation.
         // make sure size is set to DOF
         _vtempaccelconfig.resize(params->GetDOF());
         FOREACH(it, _vtempaccelconfig) {
@@ -2387,7 +2404,8 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         }
     }
 
-    // compute  the discretization
+    // Compute the discretization.
+    // dQ = q1 - q0 and _vtempveldelta = dq1 - dq0.
     dQ = q1;
     params->_diffstatefn(dQ,q0);
     _vtempveldelta = dq1;
@@ -2402,7 +2420,8 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     std::vector<dReal>::const_iterator itres = vConfigResolution.begin();
     BOOST_ASSERT((int)vConfigResolution.size()==params->GetDOF());
     int totalsteps = 0;
-    if( timeelapsed > 0 && dq0.size() == _vtempconfig.size() && dq1.size() == _vtempconfig.size() ) {
+    // Find out which DOF takes the most steps according to their respective DOF resolutions.
+    if( maskinterpolation == IT_Default && (timeelapsed > 0 && dq0.size() == _vtempconfig.size() && dq1.size() == _vtempconfig.size()) ) {
         // quadratic equation, so total travelled distance for each joint is not as simple as taking the difference between the two endpoints.
         for (i = 0; i < params->GetDOF(); i++,itres++) {
             int steps = 0;
@@ -2519,7 +2538,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         _vtempvelconfig = dq0;
     }
 
-    if( timeelapsed > 0 && dq0.size() == _vtempconfig.size() && dq1.size() == _vtempconfig.size() ) {
+    if( maskinterpolation == IT_Default && (timeelapsed > 0 && dq0.size() == _vtempconfig.size() && dq1.size() == _vtempconfig.size()) ) {
         // just in case, have to set the current values to _vtempconfig since neightstatefn expects the state to be set.
         if( params->SetStateValues(_vtempconfig, 0) != 0 ) {
             if( !!filterreturn ) {
