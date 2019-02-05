@@ -448,7 +448,7 @@ public:
                 _DumpTrajectory(ptraj, _dumplevel);
                 return PS_Failed;
             }
-            RAVELOG_DEBUG_FORMAT("env=%d, finish initializing the trajectory (via _SetMilestones)", GetEnv()->GetId());
+            RAVELOG_DEBUG_FORMAT("env=%d, finish initializing the trajectory (via _SetMilestones). #waypoints: %d -> %d", GetEnv()->GetId()%ptraj->GetNumWaypoints()%(dynamicpath.ramps.size() + 1));
         }
 
         // if ramp is not perfectly modeled, then have to verify!
