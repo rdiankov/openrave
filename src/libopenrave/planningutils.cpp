@@ -479,7 +479,7 @@ public:
                 std::merge(vabstimes.begin(), vabstimes.begin()+trajectory->GetNumWaypoints(), vabstimes.begin()+trajectory->GetNumWaypoints(), vabstimes.end(), vsampletimes.begin());
 
                 // Check if the trajectory has all-linear interpolation
-                const ConfigurationSpecification& trajspec = _parameters->_configurationspecification;
+                ConfigurationSpecification trajspec = trajectory->GetConfigurationSpecification();
                 vector<ConfigurationSpecification::Group>::const_iterator itvaluesgroup = trajspec.FindCompatibleGroup("joint_values", false);
                 vector<ConfigurationSpecification::Group>::const_iterator itvelocitiesgroup = trajspec.FindCompatibleGroup("joint_velocities", false);
                 vector<ConfigurationSpecification::Group>::const_iterator itaccelerationsgroup = trajspec.FindCompatibleGroup("joint_accelerations", false);
