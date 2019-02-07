@@ -68,12 +68,32 @@ public:
         _vCollisionScale = toPyVector3(Vector(1,1,1));
         _bVisible = true;
         _bModifiable = true;
+        _pickableVolumeExtents = toPyVector4(Vector());
+        _containerBaseHeight = 0.0f;
+        _sidewallTransforms = boost::python::list();
+        _sidewallExtents = boost::python::list();
+        for (size_t i = 0; i < 4; ++i) {
+            _sidewallTransforms.append(ReturnTransform(Transform()));
+            _sidewallExtents.append(toPyVector4(Vector()));
+        }
+        _sidewallExists = 0;
     }
     PyGeometryInfo(const KinBody::GeometryInfo& info) {
         _t = ReturnTransform(info._t);
         _vGeomData = toPyVector4(info._vGeomData);
         _vGeomData2 = toPyVector4(info._vGeomData2);
         _vGeomData3 = toPyVector4(info._vGeomData3);
+
+        _pickableVolumeExtents = toPyVector4(info._pickableVolumeExtents);
+        _containerBaseHeight = info._containerBaseHeight;
+        _sidewallTransforms = boost::python::list();
+        _sidewallExtents = boost::python::list();
+        for (size_t i = 0; i < 4; ++i) {
+            _sidewallTransforms.append(ReturnTransform(info._sidewallTransforms[i]));
+            _sidewallExtents.append(toPyVector4(info._sidewallExtents[i]));
+        }
+        _sidewallExists = info._sidewallExists;
+
         _vDiffuseColor = toPyVector3(info._vDiffuseColor);
         _vAmbientColor = toPyVector3(info._vAmbientColor);
         _meshcollision = toPyTriMesh(info._meshcollision);
@@ -97,6 +117,15 @@ public:
         info._vGeomData = ExtractVector<dReal>(_vGeomData);
         info._vGeomData2 = ExtractVector<dReal>(_vGeomData2);
         info._vGeomData3 = ExtractVector<dReal>(_vGeomData3);
+
+        info._pickableVolumeExtents = ExtractVector<dReal>(_pickableVolumeExtents);
+        info._containerBaseHeight = _containerBaseHeight;
+        for (size_t i = 0; i < 4; ++i) {
+            info._sidewallTransforms[i] = ExtractTransform(_sidewallTransforms[i]);
+            info._sidewallExtents[i] = ExtractVector<dReal>(_sidewallExtents[i]);
+        }
+        info._sidewallExists = _sidewallExists;
+
         info._vDiffuseColor = ExtractVector34<dReal>(_vDiffuseColor,0);
         info._vAmbientColor = ExtractVector34<dReal>(_vAmbientColor,0);
         if( !IS_PYTHONOBJECT_NONE(_meshcollision) ) {
@@ -122,7 +151,12 @@ public:
         return pinfo;
     }
 
-    object _t, _vGeomData, _vGeomData2, _vGeomData3, _vDiffuseColor, _vAmbientColor, _meshcollision;
+    object _t, _vGeomData, _vGeomData2, _vGeomData3,
+           _pickableVolumeExtents,
+           _vDiffuseColor, _vAmbientColor, _meshcollision;
+    boost::python::list _sidewallTransforms, _sidewallExtents;
+    float _containerBaseHeight;
+    uint8_t _sidewallExists;
     GeometryType _type;
     object _name;
     object _filenamerender, _filenamecollision;
