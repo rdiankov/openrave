@@ -3228,6 +3228,7 @@ void init_openravepy_kinbody()
                           .value("Cylinder",GT_Cylinder)
                           .value("Trimesh",GT_TriMesh)
                           .value("Container",GT_Container)
+                          .value("Cage",GT_Cage)
     ;
     object electricmotoractuatorinfo = class_<PyElectricMotorActuatorInfo, boost::shared_ptr<PyElectricMotorActuatorInfo> >("ElectricMotorActuatorInfo", DOXY_CLASS(KinBody::ElectricMotorActuatorInfo))
                                        .def_readwrite("model_type",&PyElectricMotorActuatorInfo::model_type)

@@ -435,6 +435,7 @@ void KinBodyItem::Load()
                     break;
                 }
                 //  Extract geometry from collision Mesh
+                case GT_Cage:
                 case GT_Container:
                 case GT_TriMesh: {
                     // make triangleMesh
