@@ -477,6 +477,20 @@ public:
                 }
                 vsampletimes.resize(vabstimes.size());
                 std::merge(vabstimes.begin(), vabstimes.begin()+trajectory->GetNumWaypoints(), vabstimes.begin()+trajectory->GetNumWaypoints(), vabstimes.end(), vsampletimes.begin());
+
+                // Check if the trajectory has all-linear interpolation
+                ConfigurationSpecification trajspec = trajectory->GetConfigurationSpecification();
+                vector<ConfigurationSpecification::Group>::const_iterator itvaluesgroup = trajspec.FindCompatibleGroup("joint_values", false);
+                vector<ConfigurationSpecification::Group>::const_iterator itvelocitiesgroup = trajspec.FindCompatibleGroup("joint_velocities", false);
+                vector<ConfigurationSpecification::Group>::const_iterator itaccelerationsgroup = trajspec.FindCompatibleGroup("joint_accelerations", false);
+                bool bHasAllLinearInterpolation = false;
+                if( (itvaluesgroup == trajspec._vgroups.end() || itvaluesgroup->interpolation == "linear") &&
+                    (itvelocitiesgroup == trajspec._vgroups.end() || itvelocitiesgroup->interpolation == "linear") &&
+                    (itaccelerationsgroup == trajspec._vgroups.end() || itaccelerationsgroup->interpolation == "linear") ) {
+                    bHasAllLinearInterpolation = true;
+                }
+                IntervalType interval = bHasAllLinearInterpolation ? (IntervalType)(IT_Closed | IT_AllLinear) : IT_Closed;
+
                 std::vector<dReal> vprevdata, vprevdatavel;
                 ConstraintFilterReturnPtr filterreturn(new ConstraintFilterReturn());
                 trajectory->Sample(vprevdata,0,_parameters->_configurationspecification);
@@ -496,9 +510,9 @@ public:
                         dReal velthresh = _parameters->_vConfigVelocityLimit.at(i)*deltatime+fthresh;
                         OPENRAVE_ASSERT_OP_FORMAT(RaveFabs(vdiff.at(i)), <=, velthresh, "time %fs-%fs, dof %d traveled %f, but maxvelocity only allows %f, wrote trajectory to %s",*itprevtime%*itsampletime%i%RaveFabs(vdiff.at(i))%velthresh%DumpTrajectory(trajectory),ORE_InconsistentConstraints);
                     }
-                    if( _parameters->CheckPathAllConstraints(vprevdata,vdata,vprevdatavel, vdatavel, deltatime, IT_Closed, 0xffff|CFO_FillCheckedConfiguration, filterreturn) != 0 ) {
+                    if( _parameters->CheckPathAllConstraints(vprevdata,vdata,vprevdatavel, vdatavel, deltatime, interval, 0xffff|CFO_FillCheckedConfiguration, filterreturn) != 0 ) {
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                            _parameters->CheckPathAllConstraints(vprevdata,vdata,vprevdatavel, vdatavel, deltatime, IT_Closed, 0xffff|CFO_FillCheckedConfiguration, filterreturn);
+                            _parameters->CheckPathAllConstraints(vprevdata,vdata,vprevdatavel, vdatavel, deltatime, interval, 0xffff|CFO_FillCheckedConfiguration, filterreturn);
                         }
                         throw OPENRAVE_EXCEPTION_FORMAT(_("time %fs-%fs, CheckPathAllConstraints failed, wrote trajectory to %s"),*itprevtime%*itsampletime%DumpTrajectory(trajectory),ORE_InconsistentConstraints);
                     }
@@ -2303,6 +2317,21 @@ inline std::ostream& RaveSerializeValues(std::ostream& O, const std::vector<dRea
 int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeelapsed, IntervalType interval, int options, ConstraintFilterReturnPtr filterreturn)
 {
     int maskoptions = options&_filtermask;
+    int maskinterval = interval & IT_IntervalMask;
+    int maskinterpolation = interval & IT_InterpolationMask;
+    // Current flow:
+    // if( maskinterpolation == IT_Default && velocity conditions valid ) {
+    //     quadratic interpolation
+    // }
+    // else {
+    //     if( maskinterpolation == IT_Default ) {
+    //         normal linear interpolation
+    //     }
+    //     else {
+    //         all-linear interpolation
+    //     }
+    // }
+
     // bHasRampDeviatedFromInterpolation indicates if all the checked configurations deviate from the expected interpolation connecting q0 and q1.
     //
     // In case the input segment includes terminal velocity dq0 and dq1, and timeelapsed > 0,
@@ -2326,7 +2355,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     BOOST_ASSERT(_listCheckBodies.size()>0);
     int start=0;
     bool bCheckEnd=false;
-    switch (interval) {
+    switch (maskinterval) {
     case IT_Open:
         start = 1;  bCheckEnd = false;
         break;
@@ -2346,23 +2375,35 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     // first make sure the end is free
     _vtempconfig.resize(params->GetDOF());
     _vtempvelconfig.resize(dq0.size());
-    // if velocity is valid, compute the acceleration for every DOF
+
     if( timeelapsed > 0 && dq0.size() == _vtempconfig.size() && dq1.size() == _vtempconfig.size() ) {
-        // do quadratic interpolation, so make sure the positions, velocities, and timeelapsed are consistent
-        // v0 + timeelapsed*0.5*(dq0+dq1) - v1 = 0
+        // When valid velocities and timeelapsed are given, fill in accelerations.
         _vtempaccelconfig.resize(dq0.size());
         dReal itimeelapsed = 1.0/timeelapsed;
-        for(size_t i = 0; i < _vtempaccelconfig.size(); ++i) {
-            _vtempaccelconfig[i] = (dq1.at(i)-dq0.at(i))*itimeelapsed;
-            if( IS_DEBUGLEVEL(Level_Verbose) || IS_DEBUGLEVEL(Level_VerifyPlans) ) {
-                dReal consistencyerror = RaveFabs(q0.at(i) + timeelapsed*0.5*(dq0.at(i)+dq1.at(i)) - q1.at(i));
-                if( RaveFabs(consistencyerror-2*PI) > g_fEpsilonQuadratic ) { // TODO, officially track circular joints
-                    OPENRAVE_ASSERT_OP_FORMAT(consistencyerror,<=,g_fEpsilonQuadratic*100, "dof %d is not consistent with time elapsed", i, ORE_InvalidArguments);
+
+        if( maskinterpolation == IT_Default ) {
+            // Quadratic interpolation. Need to make sure the positions, velocities, and timeelapsed are consistent
+            //     v0 + timeelapsed*0.5*(dq0 + dq1) - v1 = 0
+            for(size_t i = 0; i < _vtempaccelconfig.size(); ++i) {
+                _vtempaccelconfig[i] = (dq1.at(i)-dq0.at(i))*itimeelapsed;
+                if( IS_DEBUGLEVEL(Level_Verbose) || IS_DEBUGLEVEL(Level_VerifyPlans) ) {
+                    dReal consistencyerror = RaveFabs(q0.at(i) + timeelapsed*0.5*(dq0.at(i)+dq1.at(i)) - q1.at(i));
+                    if( RaveFabs(consistencyerror-2*PI) > g_fEpsilonQuadratic ) { // TODO, officially track circular joints
+                        OPENRAVE_ASSERT_OP_FORMAT(consistencyerror,<=,g_fEpsilonQuadratic*100, "dof %d is not consistent with time elapsed", i, ORE_InvalidArguments);
+                    }
                 }
+            }
+        }
+        else {
+            // All-linear interpolation. Do not check consistency with the quadratic equation.
+            OPENRAVE_ASSERT_OP_FORMAT(maskinterpolation, ==, IT_AllLinear, "invalid interpolationtype=0x%x", maskinterpolation, ORE_InvalidArguments);
+            for(size_t i = 0; i < _vtempaccelconfig.size(); ++i) {
+                _vtempaccelconfig[i] = (dq1.at(i)-dq0.at(i))*itimeelapsed;
             }
         }
     }
     else {
+        // Do linear interpolation.
         // make sure size is set to DOF
         _vtempaccelconfig.resize(params->GetDOF());
         FOREACH(it, _vtempaccelconfig) {
@@ -2387,7 +2428,8 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         }
     }
 
-    // compute  the discretization
+    // Compute the discretization.
+    // dQ = q1 - q0 and _vtempveldelta = dq1 - dq0.
     dQ = q1;
     params->_diffstatefn(dQ,q0);
     _vtempveldelta = dq1;
@@ -2402,7 +2444,8 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     std::vector<dReal>::const_iterator itres = vConfigResolution.begin();
     BOOST_ASSERT((int)vConfigResolution.size()==params->GetDOF());
     int totalsteps = 0;
-    if( timeelapsed > 0 && dq0.size() == _vtempconfig.size() && dq1.size() == _vtempconfig.size() ) {
+    // Find out which DOF takes the most steps according to their respective DOF resolutions.
+    if( maskinterpolation == IT_Default && (timeelapsed > 0 && dq0.size() == _vtempconfig.size() && dq1.size() == _vtempconfig.size()) ) {
         // quadratic equation, so total travelled distance for each joint is not as simple as taking the difference between the two endpoints.
         for (i = 0; i < params->GetDOF(); i++,itres++) {
             int steps = 0;
@@ -2519,7 +2562,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         _vtempvelconfig = dq0;
     }
 
-    if( timeelapsed > 0 && dq0.size() == _vtempconfig.size() && dq1.size() == _vtempconfig.size() ) {
+    if( maskinterpolation == IT_Default && (timeelapsed > 0 && dq0.size() == _vtempconfig.size() && dq1.size() == _vtempconfig.size()) ) {
         // just in case, have to set the current values to _vtempconfig since neightstatefn expects the state to be set.
         if( params->SetStateValues(_vtempconfig, 0) != 0 ) {
             if( !!filterreturn ) {
