@@ -16,7 +16,7 @@
 #ifndef OPENRAVE_JACOBIANINVERSE_H
 #define OPENRAVE_JACOBIANINVERSE_H
 
-//#define OPENRAVE_DISPLAY_CONVERGENCESTATS
+#define OPENRAVE_DISPLAY_CONVERGENCESTATS
 
 #include "plugindefs.h"
 
@@ -106,6 +106,7 @@ public:
 
         RobotBasePtr probot = manip.GetRobot();
         const int ikdof = ikgoal.GetDOF();
+        BOOST_ASSERT(6 >= ikdof && ikdof > 0);
         _J.resize(ikdof,probot->GetActiveDOF());
         _invJJt.resize(ikdof, ikdof);
         _error.resize(ikdof,1);
@@ -120,7 +121,7 @@ public:
         Transform trobot = probot->GetTransform();
         probot->SetTransform(tbase.inverse()*trobot); // transform so that the manip's base is at the identity and matches tgoal
 
-        const IkParameterization ikpprev = manip.GetTransform();
+        const IkParameterization ikpprev = manip.GetIkParameterization(ikgoal);
         T totalerror2 = _ComputeConstraintError(ikpprev, _error, _nMaxIterations);
         if( totalerror2 <= _errorthresh2 ) {
             return -1;
@@ -140,7 +141,7 @@ public:
         // setup a class so its destructor saves the last iter used in _lastiter
         ValueSaver valuesaver(&iter, &_lastiter);
         for(iter = 0; iter < _nMaxIterations; ++iter) {
-            const IkParameterization ikpmanip = manip.GetTransform();
+            const IkParameterization ikpmanip = manip.GetIkParameterization(ikgoal);
             T totalerror2 = _ComputeConstraintError(ikpmanip, _error, _nMaxIterations-iter);
             //dReal ratio = totalerror2/_lasterror2;
             //RAVELOG_VERBOSE_FORMAT("%s:%s iter=%d, totalerror %.15e (%f)", probot->GetName()%manip.GetName()%iter%RaveSqrt(totalerror2)%RaveSqrt(totalerror2/_lasterror2));
@@ -535,7 +536,24 @@ public:
                 }
                 break;
             }
+        case IKP_TranslationZAxisAngle4D:
+            {
+                const std::pair<Vector,dReal> cur = ikpcur.GetTranslationZAxisAngle4D();
+                const std::pair<Vector,dReal> goal = _goalIkp.GetTranslationZAxisAngle4D();
+                if( bAddRotation ) {
+                    error(0,0) = goal.second - cur.second;
+                    totalerror2 += error(0,0)*error(0,0);
+                    transoffset = 1;
+                }
+
+                for(int i = 0; i < 3; ++i) {
+                    error(i+transoffset,0) = (goal.first[i]-cur.first[i]);
+                    totalerror2 += error(i+transoffset,0)*error(i+transoffset,0);
+                }
+                break;
+            }
         default:
+            throw OPENRAVE_EXCEPTION_FORMAT(_("unsupported ikparam %s."),ikpcur.GetName(),ORE_InvalidArguments);
             break;
         };
         return totalerror2;
@@ -576,7 +594,7 @@ public:
                 // dh/dq is cross product b/w joint axis and manipulator direction
                 const double rzzSq = maniprot.rot(2, 2)*maniprot.rot(2, 2);
                 
-                if (rzzSq - 1.0 > 1.0e-9) { // non-singular
+                if (1.0 - rzzSq > 1.0e-9) { // non-singular
                     const double dfdh = -1.0 / sqrt(1.0 - rzzSq);
                     for(size_t j = 0; j < _viweights.size(); ++j) {
                         int dof = manip.GetArmIndices().at(j);
