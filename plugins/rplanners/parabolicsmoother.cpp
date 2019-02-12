@@ -252,7 +252,7 @@ public:
         BOOST_ASSERT(!!_parameters && !!ptraj);
 
         if( ptraj->GetNumWaypoints() < 2 ) {
-            return PS_Failed;
+            return PlannerStatus(PS_Failed);
         }
 
         // should always set the seed since smoother can be called with different trajectories even though InitPlan was only called once
@@ -385,9 +385,10 @@ public:
                     else {
                         // only check time based constraints since most of the collision checks here will change due to a different path. however it's important to have the ramp start with reasonable velocities/accelerations.
                         if( !_ValidateRamp(dynamicpath.ramps[iramp], CFO_CheckTimeBasedConstraints, iramp, dynamicpath.ramps.size()) ) {
-                            RAVELOG_WARN("failed to initialize from cubic ramps\n");
+                            std::string description = "failed to initialize from cubic ramps\n";
+                            RAVELOG_WARN(description);
                             _DumpTrajectory(ptraj, _dumplevel);
-                            return PS_Failed;
+                            return PlannerStatus(description, PS_Failed);
 
                         }
                     }
@@ -444,9 +445,10 @@ public:
             }
             //dynamicpath.SetMilestones(path);   //now the trajectory starts and stops at every milestone
             if( !_SetMilestones(dynamicpath.ramps, path) ) {
-                RAVELOG_WARN("failed to initialize ramps\n");
+                std::string description =  "failed to initialize ramps\n";
+                RAVELOG_WARN(description);
                 _DumpTrajectory(ptraj, _dumplevel);
-                return PS_Failed;
+                return PlannerStatus(description, PS_Failed);
             }
             RAVELOG_DEBUG_FORMAT("env=%d, finish initializing the trajectory (via _SetMilestones)", GetEnv()->GetId());
         }
@@ -469,7 +471,7 @@ public:
 
             _progress._iteration = 0;
             if( _CallCallbacks(_progress) == PA_Interrupt ) {
-                return PS_Interrupted;
+                return PlannerStatus(PS_Interrupted);
             }
 
             int numshortcuts=0;
@@ -487,7 +489,7 @@ public:
                     numshortcuts = _Shortcut2(dynamicpath, parameters->_nMaxIterations,this, parameters->_fStepLength*0.99);
                 }
                 if( numshortcuts < 0 ) {
-                    return PS_Interrupted;
+                    return PlannerStatus(PS_Interrupted);
                 }
             }
             FOREACH(itramp, dynamicpath.ramps) {
@@ -501,7 +503,7 @@ public:
 
             ++_progress._iteration;
             if( _CallCallbacks(_progress) == PA_Interrupt ) {
-                return PS_Interrupted;
+                return PlannerStatus(PS_Interrupted);
             }
 
             ConfigurationSpecification newspec = posspec;
@@ -647,6 +649,7 @@ public:
                                 }
                             }
                             if( !bSuccess ) {
+                                std::string description;
                                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
                                     std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                                     ss << "x0=[";
@@ -683,20 +686,21 @@ public:
                                         ss << *itvalue << ",";
                                     }
                                     ss << "];";
-                                    RAVELOG_WARN_FORMAT("env=%d, original ramp %d/%d does not satisfy contraints. check retcode=0x%x! %s", GetEnv()->GetId()%irampindex%dynamicpath.ramps.size()%checkret.retcode%ss.str());
+                                    description = str(boost::format("env=%d, original ramp %d/%d does not satisfy contraints. check retcode=0x%x! %s")% GetEnv()->GetId()%irampindex%dynamicpath.ramps.size()%checkret.retcode%ss.str());
                                 }
                                 else {
-                                    RAVELOG_WARN_FORMAT("env=%d, original ramp %d/%d does not satisfy contraints. check retcode=0x%x!", GetEnv()->GetId()%irampindex%dynamicpath.ramps.size()%checkret.retcode);
+                                    description = str(boost::format("env=%d, original ramp %d/%d does not satisfy contraints. check retcode=0x%x!")% GetEnv()->GetId()%irampindex%dynamicpath.ramps.size()%checkret.retcode);
                                 }
+                                RAVELOG_WARN(description);
                                 _DumpTrajectory(ptraj, _dumplevel);
-                                return PS_Failed;
+                                return PlannerStatus(description, PS_Failed);
                             }
                         }
                     }
                     _bUsePerturbation = true; // re-enable
                     ++_progress._iteration;
                     if( _CallCallbacks(_progress) == PA_Interrupt ) {
-                        return PS_Interrupted;
+                        return PlannerStatus(PS_Interrupted);
                     }
                 }
 
@@ -756,8 +760,9 @@ public:
         }
         catch (const std::exception& ex) {
             _DumpTrajectory(ptraj, _dumplevel);
-            RAVELOG_WARN_FORMAT("env=%d, parabolic planner failed, iter=%d: %s", GetEnv()->GetId()%_progress._iteration%ex.what());
-            return PS_Failed;
+            std::string description = str(boost::format("env=%d, parabolic planner failed, iter=%d: %s")% GetEnv()->GetId()%_progress._iteration%ex.what());
+            RAVELOG_WARN(description);
+            return PlannerStatus(description, PS_Failed);
         }
         RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time=%fs", GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
         //====================================================================================================

@@ -726,8 +726,9 @@ public:
     PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
         if(!_parameters) {
-            RAVELOG_WARN("RrtPlanner::PlanPath - Error, planner not initialized\n");
-            return PS_Failed;
+            std::string description = "RrtPlanner::PlanPath - Error, planner not initialized\n";
+            RAVELOG_WARN(description);
+            return PlannerStatus(description, PS_Failed);
         }
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -862,7 +863,7 @@ public:
             progress._iteration = iter;
             callbackaction = _CallCallbacks(progress);
             if( callbackaction ==  PA_Interrupt ) {
-                return PS_Interrupted;
+                return PlannerStatus(PS_Interrupted);
             }
             else if( callbackaction == PA_ReturnWithAnySolution ) {
                 if( !!bestGoalNode ) {
@@ -872,8 +873,9 @@ public:
         }
 
         if( !bestGoalNode ) {
-            RAVELOG_DEBUG_FORMAT("plan failed, %fs",(0.001f*(float)(utils::GetMilliTime()-basetime)));
-            return PS_Failed;
+            std::string description = str(boost::format("plan failed, %fs")%(0.001f*(float)(utils::GetMilliTime()-basetime)));
+            RAVELOG_DEBUG(description);
+            return PlannerStatus(description, PS_Failed);
         }
 
         const int dof = _parameters->GetDOF();
