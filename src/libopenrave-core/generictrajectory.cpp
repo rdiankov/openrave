@@ -890,7 +890,7 @@ protected:
                     dReal dd1 = _vtrajdata[_spec.GetDOF()+offset+ddoffset+i];
                     dReal c5 = (-0.5*dd0 + dd1*0.5)*ideltatime3 - (3*deriv0 + 3*deriv1)*ideltatime4 + px*6*ideltatime5;
                     dReal c4 = (1.5*dd0 - dd1)*ideltatime2 + (8*deriv0 + 7*deriv1)*ideltatime3 - px*15*ideltatime4;
-                    dReal c3 = (-1.5*dd0 + dd1*0.5)*ideltatime + (- 6*deriv0 - 4*deriv1)*ideltatime2 + px*10*ideltatime3;
+                    dReal c3 = (-1.5*dd0 + dd1*0.5)*ideltatime + (-6*deriv0 - 4*deriv1)*ideltatime2 + px*10*ideltatime3;
                     data[g.offset+i] = p0 + deltatime*(deriv0 + deltatime*(0.5*dd0 + deltatime*(c3 + deltatime*(c4 + deltatime*c5))));
                 }
             }
@@ -958,9 +958,9 @@ protected:
                     //dReal c6 = A[0]*b[0] + A[1]*b[1] + A[2]*b[2];
                     //dReal c5 = A[3]*b[0] + A[4]*b[1] + A[5]*b[2];
                     //dReal c4 = A[6]*b[0] + A[7]*b[1] + A[8]*b[2];
-                    dReal c6 = (-dd0 - dd1)*0.5*ideltatime4 + (- ddd0 + ddd1)/12.0*ideltatime3 + (-deriv0 + deriv1)*ideltatime5;
+                    dReal c6 = (-dd0 - dd1)*0.5*ideltatime4 + (-ddd0 + ddd1)/12.0*ideltatime3 + (-deriv0 + deriv1)*ideltatime5;
                     dReal c5 = (1.6*dd0 + 1.4*dd1)*ideltatime3 + (0.3*ddd0 - ddd1*0.2)*ideltatime2 + (3*deriv0 - 3*deriv1)*ideltatime4;
-                    dReal c4 = (-1.5*dd0 - dd1)*ideltatime2 + (- 0.375*ddd0 + ddd1*0.125)*ideltatime + (-2.5*deriv0 + 2.5*deriv1)*ideltatime3;
+                    dReal c4 = (-1.5*dd0 - dd1)*ideltatime2 + (-0.375*ddd0 + ddd1*0.125)*ideltatime + (-2.5*deriv0 + 2.5*deriv1)*ideltatime3;
                     data[g.offset+i] = p0 + deltatime*(deriv0 + deltatime*(0.5*dd0 + deltatime*(ddd0/6.0 + deltatime*(c4 + deltatime*(c5 + deltatime*c6)))));
                 }
             }
@@ -977,6 +977,27 @@ protected:
 
     void _ValidateLinear(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime)
     {
+        // If both g and the derivative of g has linear interpolation, then skip _ValidateLinear
+        const string& groupname = g.name;
+        if( groupname.size() >= 12 && groupname.substr(0, 12) == "joint_values" ) {
+            std::vector<ConfigurationSpecification::Group>::const_iterator itcompatgroup = _spec.FindCompatibleGroup("joint_velocities");
+            if( itcompatgroup != _spec._vgroups.end() ) {
+                if( itcompatgroup->interpolation == "linear" ) {
+                    // Skip validation
+                    return;
+                }
+            }
+        }
+        else if( groupname.size() >= 16 && groupname.substr(0, 16) == "joint_velocities" ) {
+            std::vector<ConfigurationSpecification::Group>::const_iterator itcompatgroup = _spec.FindCompatibleGroup("joint_accelerations");
+            if( itcompatgroup != _spec._vgroups.end() ) {
+                if( itcompatgroup->interpolation == "linear" ) {
+                    // Skip validation
+                    return;
+                }
+            }
+        }
+
         size_t offset = ipoint*_spec.GetDOF();
         int derivoffset = _vderivoffsets[g.offset];
         if( derivoffset >= 0 ) {
