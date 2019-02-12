@@ -101,11 +101,11 @@ public:
         return fmaxtime;
     }
 
-    virtual PlannerStatusCode PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
         BOOST_ASSERT(!!_parameters && !!ptraj );
         if( ptraj->GetNumWaypoints() < 2 ) {
-            return PS_Failed;
+            return PlannerStatus(PS_Failed);
         }
 
         RobotBase::RobotStateSaverPtr statesaver;
@@ -151,7 +151,7 @@ public:
                 dReal totalshiftdist = _ComputePathDurationOnVelocity(listsimplepath);
                 dReal newdist1 = _OptimizePathSingleGroupShift(listsimplepath, totalshiftdist, parameters->_nMaxIterations*10);
                 if( newdist1 < 0 ) {
-                    return PS_Interrupted;
+                    return PlannerStatus(PS_Interrupted);
                 }
                 RAVELOG_DEBUG_FORMAT("env=%d, path optimizing shift smoothing - dist %f->%f computation time=%fs", GetEnv()->GetId()%totalshiftdist%newdist1%(0.001f*(float)(utils::GetMilliTime()-basetime1)));
 
@@ -199,13 +199,13 @@ public:
                 if( _nUseSingleDOFSmoothing == 1 ) {
                     dReal newdist1 = _OptimizePath(listpath, totaldist, parameters->_nMaxIterations*8/10);
                     if( newdist1 < 0 ) {
-                        return PS_Interrupted;
+                        return PlannerStatus(PS_Interrupted);
                     }
                     RAVELOG_DEBUG_FORMAT("env=%d, path optimizing first stage - dist %f->%f, computation time=%fs, num=%d", GetEnv()->GetId()%totaldist%newdist1%(0.001f*(float)(utils::GetMilliTime()-basetime))%listpath.size());
                     uint32_t basetime2 = utils::GetMilliTime();
                     dReal newdist2 = _OptimizePathSingleDOF(listpath, newdist1, parameters->_nMaxIterations*2/10);
                     if( newdist2 < 0 ) {
-                        return PS_Interrupted;
+                        return PlannerStatus(PS_Interrupted);
                     }
                     RAVELOG_DEBUG_FORMAT("env=%d, path optimizing second stage - dist %f->%f computation time=%fs, num=%d", GetEnv()->GetId()%newdist1%newdist2%(0.001f*(float)(utils::GetMilliTime()-basetime2))%listpath.size());
                 }
@@ -216,11 +216,11 @@ public:
                     while(nCurIterations < parameters->_nMaxIterations) {
                         dReal newdist1 = _OptimizePathSingleGroup(listpath, totaldist, nIterationGroup);
                         if( newdist1 < 0 ) {
-                            return PS_Interrupted;
+                            return PlannerStatus(PS_Interrupted);
                         }
                         dReal newdist2 = _OptimizePath(listpath,  newdist1, nIterationGroup);
                         if( newdist2 < 0 ) {
-                            return PS_Interrupted;
+                            return PlannerStatus(PS_Interrupted);
                         }
                         RAVELOG_DEBUG_FORMAT("env=%d, path optimizing second stage - dist %f->%f computation time=%fs", GetEnv()->GetId()%totaldist%newdist2%(0.001f*(float)(utils::GetMilliTime()-basetime1)));
                         totaldist = newdist2;
@@ -250,11 +250,11 @@ public:
 
         if( parameters->_sPostProcessingPlanner.size() == 0 ) {
             // no other planner so at least retime
-            PlannerStatusCode status = _linearretimer->PlanPath(ptraj);
-            if( status != PS_HasSolution ) {
+            PlannerStatus status = _linearretimer->PlanPath(ptraj);
+            if( status.GetStatusCode() != PS_HasSolution ) {
                 return status;
             }
-            return PS_HasSolution;
+            return PlannerStatus(PS_HasSolution);
         }
 
         // leave to post processing to set timing (like parabolicsmoother)

@@ -208,7 +208,7 @@ public:
         return _pplanner->InitPlan(openravepy::GetRobot(pbase),ss);
     }
 
-    PlannerStatusCode PlanPath(PyTrajectoryBasePtr pytraj,bool releasegil=true)
+    PlannerStatus PlanPath(PyTrajectoryBasePtr pytraj,bool releasegil=true)
     {
         openravepy::PythonThreadSaverPtr statesaver;
         TrajectoryBasePtr ptraj = openravepy::GetTrajectory(pytraj);

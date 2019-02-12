@@ -48,7 +48,7 @@ public:
         __description = ":Interface Author: Rosen Diankov\n\nSingle cubic trajectory re-timing while passing through the waypoints, waypoints will not be modified. Computing fastest time is slow";
     }
 
-    virtual PlannerStatusCode PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
         _trajxmlid = ptraj->GetXMLId();
         return TrajectoryRetimer::PlanPath(ptraj);

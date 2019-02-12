@@ -64,10 +64,10 @@ public:
         return true;
     }
 
-    PlannerStatusCode PlanPath(TrajectoryBasePtr ptraj)
+    PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
         if(!_parameters) {
-            return PS_Failed;
+            return PlannerStatus(PS_Failed);
         }
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBase::RobotStateSaver saver(_robot);
@@ -83,7 +83,7 @@ public:
             else {
                 spec = _robot->GetActiveConfigurationSpecification();
                 if( spec.GetDOF() == 0 ) {
-                    return PS_Failed;
+                    return PlannerStatus(PS_Failed);
                 }
                 ptraj->Init(spec);
             }
@@ -269,8 +269,9 @@ public:
         if( _robot->GetAffineDOF() ) {
             int ct = _MoveStraight(ptraj, vapproachdir, dofvals, CT_RegularCollision);
             if( ct & CT_NothingHit ) {
-                RAVELOG_DEBUG("robot did not hit anything, planner failing...\n");
-                return PS_Failed;
+                std::string description = "robot did not hit anything, planner failing...\n";
+                RAVELOG_DEBUG(description);
+                return PlannerStatus(description, PS_Failed);
             }
 
             dReal* pX = NULL, *pY = NULL, *pZ = NULL;
@@ -380,8 +381,9 @@ public:
             // check that anything that should be avoided is not hit
             if( ct&CT_AvoidLinkHit ) {
                 string targetname = !_parameters->targetbody ? string() : _parameters->targetbody->GetName();
-                RAVELOG_VERBOSE(str(boost::format("hit link that needed to be avoided: %s, target=%s\n")%_report->__str__()%targetname));
-                return PS_Failed;
+                std::string description = str(boost::format("hit link that needed to be avoided: %s, target=%s\n")%_report->__str__()%targetname);
+                RAVELOG_VERBOSE(description);
+                return PlannerStatus(description, PS_Failed);
             }
         }
 
@@ -435,8 +437,9 @@ public:
                 RAVELOG_DEBUG(str(boost::format("gripper initially in collision: %s\n")%_report->__str__()));
                 if( _parameters->bavoidcontact ) {
                     string targetname = !_parameters->targetbody ? string() : _parameters->targetbody->GetName();
-                    RAVELOG_WARN(str(boost::format("gripper in collision without moving and bavoidcontact==True. target=%s, contact=%s\n")%targetname%_report->__str__()));
-                    return PS_Failed;
+                    std::string description = str(boost::format("gripper in collision without moving and bavoidcontact==True. target=%s, contact=%s\n")%targetname%_report->__str__());
+                    RAVELOG_WARN(description);
+                    return PlannerStatus(description, PS_Failed);
                 }
                 continue;
             }
@@ -463,8 +466,9 @@ public:
                     }
                     else {
                         if( ct & CT_AvoidLinkHit ) {
-                            RAVELOG_VERBOSE(str(boost::format("hit link that needed to be avoided: %s\n")%_report->__str__()));
-                            return PS_Failed;
+                            std::string description = str(boost::format("hit link that needed to be avoided: %s\n")%_report->__str__());
+                            RAVELOG_VERBOSE(description);
+                            return PlannerStatus(description, PS_Failed);
                         }
 
                         int linkindex = (ct&CT_LinkMask)>>CT_LinkMaskShift;
@@ -503,8 +507,9 @@ public:
         for(int q = 0; q < (int)_vlinks.size(); q++) {
             int ct = _CheckCollision(KinBody::LinkConstPtr(_vlinks[q]), KinBodyPtr());
             if( ct & CT_AvoidLinkHit ) {
-                RAVELOG_VERBOSE("grasp planner hit link that needed to be avoided\n");
-                return PS_Failed;
+                std::string description = "grasp planner hit link that needed to be avoided\n";
+                RAVELOG_VERBOSE(description);
+                return PlannerStatus(description, PS_Failed);
             }
             if( ct & CT_SelfCollision ) {
                 RAVELOG_VERBOSE("grasp planner ignoring last point\n");
@@ -519,7 +524,7 @@ public:
         }
 
         RAVELOG_VERBOSE("grasp planner finishing\n");
-        return ptraj->GetNumWaypoints() > 0 ? PS_HasSolution : PS_Failed;     // only return true if there is at least one valid pose!
+        return ptraj->GetNumWaypoints() > 0 ? PlannerStatus(PS_HasSolution) : PlannerStatus(PS_Failed);     // only return true if there is at least one valid pose!
     }
 
     virtual int _CheckCollision(KinBody::JointConstPtr pjoint, KinBodyPtr targetbody)

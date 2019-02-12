@@ -42,7 +42,7 @@ public:
         __description = ":Interface Author: Rosen Diankov\n\nSimple parabolic trajectory re-timing while passing through all the waypoints, waypoints will not be modified. This assumes all waypoints have velocity 0 (unless the start and final points are forced). Overwrites the velocities and timestamps of input trajectory.";
     }
 
-    virtual PlannerStatusCode PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
         _trajxmlid = ptraj->GetXMLId();
         return TrajectoryRetimer::PlanPath(ptraj);

@@ -328,7 +328,7 @@ protected:
         }
 
         TrajectoryBasePtr poutputtraj = RaveCreateTrajectory(GetEnv(),"");
-        if( !planner->PlanPath(poutputtraj) ) {
+        if( !planner->PlanPath(poutputtraj).GetStatusCode() ) {
             return false;
         }
         if( params->ignorefirstcollision == 0 && (RaveGetDebugLevel() & Level_VerifyPlans) ) {
@@ -527,7 +527,7 @@ protected:
                 return false;
             }
 
-            if( !rrtplanner->PlanPath(ptraj) ) {
+            if( !rrtplanner->PlanPath(ptraj).GetStatusCode() ) {
                 RAVELOG_WARN("PlanPath failed\n");
             }
             else {
@@ -858,7 +858,7 @@ protected:
                 return false;
             }
 
-            if( rrtplanner->PlanPath(ptraj) ) {
+            if( rrtplanner->PlanPath(ptraj).GetStatusCode() ) {
                 bSuccess = true;
                 RAVELOG_DEBUG("finished planning\n");
                 break;

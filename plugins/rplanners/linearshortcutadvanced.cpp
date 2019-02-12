@@ -75,11 +75,11 @@ public:
         return _parameters;
     }
 
-    virtual PlannerStatusCode PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
         BOOST_ASSERT(!!_parameters && !!ptraj );
         if( ptraj->GetNumWaypoints() < 2 ) {
-            return PS_Failed;
+            return PlannerStatus(PS_Failed);
         }
 
         RobotBase::RobotStateSaverPtr statesaver;
@@ -167,11 +167,11 @@ public:
         RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time=%fs\n", GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
         if( parameters->_sPostProcessingPlanner.size() == 0 ) {
             // no other planner so at least retime
-            PlannerStatusCode status = _linearretimer->PlanPath(ptraj);
-            if( status != PS_HasSolution ) {
+            PlannerStatus status = _linearretimer->PlanPath(ptraj);
+            if( status.GetStatusCode() != PS_HasSolution ) {
                 return status;
             }
-            return PS_HasSolution;
+            return PlannerStatus(PS_HasSolution);
         }
         return _ProcessPostPlanners(RobotBasePtr(),ptraj);
     }

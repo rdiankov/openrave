@@ -582,7 +582,7 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
     v.VerifyTrajectory(trajectory,samplingstep);
 }
 
-PlannerStatusCode _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, bool bsmooth, const std::string& plannerparameters)
+PlannerStatus _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, bool bsmooth, const std::string& plannerparameters)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need velocities, but should at least add a time group
@@ -592,7 +592,7 @@ PlannerStatusCode _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr 
         traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
         traj->Init(spec);
         traj->Insert(0,data);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     EnvironmentBasePtr env = traj->GetEnv();
@@ -618,17 +618,18 @@ PlannerStatusCode _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr 
     params->_hastimestamps = hastimestamps;
     params->_sExtraParameters += plannerparameters;
     if( !planner->InitPlan(probot,params) ) {
-        return PS_Failed;
+        return PlannerStatus("InitPlan failed", PS_Failed);
     }
-    if( planner->PlanPath(traj) != PS_HasSolution ) {
-        return PS_Failed;
+    PlannerStatus plannerStatus = planner->PlanPath(traj);
+    if( plannerStatus.GetStatusCode() != PS_HasSolution ) {
+        return plannerStatus;
     }
 
     if( bsmooth && (RaveGetDebugLevel() & Level_VerifyPlans) ) {
         RobotBase::RobotStateSaver saver(probot);
         planningutils::VerifyTrajectory(params,traj);
     }
-    return PS_HasSolution;
+    return PlannerStatus(PS_HasSolution);
 }
 
 ActiveDOFTrajectorySmoother::ActiveDOFTrajectorySmoother(RobotBasePtr robot, const std::string& _plannername, const std::string& plannerparameters)
@@ -652,7 +653,7 @@ ActiveDOFTrajectorySmoother::ActiveDOFTrajectorySmoother(RobotBasePtr robot, con
     _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, boost::bind(&ActiveDOFTrajectorySmoother::_UpdateParameters, this));
 }
 
-PlannerStatusCode ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj)
+PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need velocities, but should at least add a time group
@@ -662,13 +663,13 @@ PlannerStatusCode ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj)
         traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
         traj->Init(spec);
         traj->Insert(0,data);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     EnvironmentBasePtr env = traj->GetEnv();
     CollisionOptionsStateSaver optionstate(env->GetCollisionChecker(),env->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
-    PlannerStatusCode status = _planner->PlanPath(traj);
-    if( status & PS_HasSolution ) {
+    PlannerStatus status = _planner->PlanPath(traj);
+    if( status.GetStatusCode() & PS_HasSolution ) {
         if( RaveGetDebugLevel() & Level_VerifyPlans ) {
             RobotBase::RobotStateSaver saver(_robot);
             planningutils::VerifyTrajectory(_planner->GetParameters(),traj);
@@ -717,7 +718,7 @@ ActiveDOFTrajectoryRetimer::ActiveDOFTrajectoryRetimer(RobotBasePtr robot, const
     _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, boost::bind(&ActiveDOFTrajectoryRetimer::_UpdateParameters, this));
 }
 
-PlannerStatusCode ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool hastimestamps)
+PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool hastimestamps)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need velocities, but should at least add a time group
@@ -727,7 +728,7 @@ PlannerStatusCode ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, b
         traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
         traj->Init(spec);
         traj->Insert(0,data);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     TrajectoryTimingParametersPtr parameters = boost::dynamic_pointer_cast<TrajectoryTimingParameters>(_parameters);
@@ -760,7 +761,7 @@ void ActiveDOFTrajectoryRetimer::_UpdateParameters()
     _parameters=params; // necessary because SetRobotActiveJoints builds functions that hold weak_ptr to the parameters
 }
 
-PlannerStatusCode _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, bool bsmooth, const std::string& plannerparameters)
+PlannerStatus _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, bool bsmooth, const std::string& plannerparameters)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need velocities, but should at least add a time group
@@ -770,7 +771,7 @@ PlannerStatusCode _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dR
         traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
         traj->Init(spec);
         traj->Insert(0,data);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     EnvironmentMutex::scoped_lock lockenv(traj->GetEnv()->GetMutex());
@@ -794,17 +795,18 @@ PlannerStatusCode _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dR
     params->_hastimestamps = hastimestamps;
     params->_sExtraParameters += plannerparameters;
     if( !planner->InitPlan(RobotBasePtr(),params) ) {
-        return PS_Failed;
+        return PlannerStatus("InitPlan failed", PS_Failed);
     }
-    if( planner->PlanPath(traj) != PS_HasSolution ) {
-        return PS_Failed;
+    PlannerStatus plannerStatus = planner->PlanPath(traj);
+    if( plannerStatus.GetStatusCode() != PS_HasSolution ) {
+        return plannerStatus;
     }
 
     if( bsmooth && (RaveGetDebugLevel() & Level_VerifyPlans) ) {
         PlannerBase::PlannerParameters::StateSaver saver(params);
         planningutils::VerifyTrajectory(params,traj);
     }
-    return PS_HasSolution;
+    return PlannerStatus(PS_HasSolution);
 }
 
 static void diffstatefn(std::vector<dReal>& q1, const std::vector<dReal>& q2, const std::vector<int> vrotaxes)
@@ -888,7 +890,7 @@ private:
 };
 
 // this function is very messed up...?
-static PlannerStatusCode _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername, bool bsmooth, const std::string& plannerparameters)
+static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername, bool bsmooth, const std::string& plannerparameters)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need retiming, but should at least add a time group
@@ -898,7 +900,7 @@ static PlannerStatusCode _PlanAffineTrajectory(TrajectoryBasePtr traj, const std
         traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
         traj->Init(spec);
         traj->Insert(0,data);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     EnvironmentMutex::scoped_lock lockenv(traj->GetEnv()->GetMutex());
@@ -992,13 +994,15 @@ static PlannerStatusCode _PlanAffineTrajectory(TrajectoryBasePtr traj, const std
 
     params->_hastimestamps = hastimestamps;
     params->_sExtraParameters = plannerparameters;
+
     if( !planner->InitPlan(RobotBasePtr(),params) ) {
-        return PS_Failed;
+        return PlannerStatus("InitPlan failed", PS_Failed);
     }
-    if( planner->PlanPath(traj) != PS_HasSolution ) {
-        return PS_Failed;
+    PlannerStatus plannerStatus = planner->PlanPath(traj);
+    if( plannerStatus.GetStatusCode() != PS_HasSolution ) {
+        return plannerStatus;
     }
-    return PS_HasSolution;
+    return PlannerStatus(PS_HasSolution);
 }
 
 AffineTrajectoryRetimer::AffineTrajectoryRetimer(const std::string& plannername, const std::string& plannerparameters)
@@ -1038,7 +1042,7 @@ void AffineTrajectoryRetimer::SetPlanner(const std::string& plannername, const s
     }
 }
 
-PlannerStatusCode AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps)
+PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need retiming, but should at least add a time group
@@ -1048,7 +1052,7 @@ PlannerStatusCode AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, cons
         traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
         traj->Init(spec);
         traj->Insert(0,data);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     EnvironmentBasePtr env = traj->GetEnv();
@@ -1156,17 +1160,17 @@ PlannerStatusCode AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, cons
     return _planner->PlanPath(traj);
 }
 
-PlannerStatusCode SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
+PlannerStatus SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
 {
     return _PlanActiveDOFTrajectory(traj,robot,false,fmaxvelmult,fmaxaccelmult,plannername.size() > 0 ? plannername : "parabolicsmoother", true,plannerparameters);
 }
 
-PlannerStatusCode SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, const std::string& plannername, const std::string& plannerparameters)
+PlannerStatus SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, const std::string& plannername, const std::string& plannerparameters)
 {
     return _PlanAffineTrajectory(traj, maxvelocities, maxaccelerations, false, plannername.size() > 0 ? plannername : "parabolicsmoother", true, plannerparameters);
 }
 
-PlannerStatusCode SmoothTrajectory(TrajectoryBasePtr traj, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
+PlannerStatus SmoothTrajectory(TrajectoryBasePtr traj, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
 {
     return _PlanTrajectory(traj,false,fmaxvelmult,fmaxaccelmult,plannername.size() > 0 ? plannername : "parabolicsmoother", true,plannerparameters);
 }
@@ -1202,17 +1206,17 @@ static std::string GetPlannerFromInterpolation(TrajectoryBasePtr traj, const std
     }
 }
 
-PlannerStatusCode RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
+PlannerStatus RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
 {
     return _PlanActiveDOFTrajectory(traj,robot,hastimestamps,fmaxvelmult,fmaxaccelmult,GetPlannerFromInterpolation(traj,plannername), false,plannerparameters);
 }
 
-PlannerStatusCode RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername, const std::string& plannerparameters)
+PlannerStatus RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername, const std::string& plannerparameters)
 {
     return _PlanAffineTrajectory(traj, maxvelocities, maxaccelerations, hastimestamps, GetPlannerFromInterpolation(traj,plannername), false,plannerparameters);
 }
 
-PlannerStatusCode RetimeTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
+PlannerStatus RetimeTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
 {
     return _PlanTrajectory(traj,hastimestamps,fmaxvelmult,fmaxaccelmult,GetPlannerFromInterpolation(traj,plannername), false,plannerparameters);
 }
@@ -1334,7 +1338,7 @@ size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<
     // This ensures that the beginning and final velocities will be preserved
     //RAVELOG_VERBOSE_FORMAT("env=%d, inserting point into %d with planner %s and parameters %s", robot->GetEnv()->GetId()%waypointindex%newplannername%plannerparameters);
     // make sure velocities are set
-    if( !(RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername,plannerparameters+std::string("<hasvelocities>1</hasvelocities>")) & PS_HasSolution) ) {
+    if( !(RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername,plannerparameters+std::string("<hasvelocities>1</hasvelocities>")).GetStatusCode() & PS_HasSolution) ) {
         throw OPENRAVE_EXCEPTION_FORMAT("env=%d failed to retime init traj", robot->GetEnv()->GetId(), ORE_Assert);
     }
 
@@ -1425,7 +1429,7 @@ size_t InsertWaypointWithRetiming(int waypointindex, const std::vector<dReal>& d
     trajinitial->Init(newspec);
     trajinitial->Insert(0,vwaypointstart);
     trajinitial->Insert(1,vwaypointend);
-    if( !(planner->PlanPath(trajinitial) & PS_HasSolution) ) {
+    if( !(planner->PlanPath(trajinitial).GetStatusCode() & PS_HasSolution) ) {
         throw OPENRAVE_EXCEPTION_FORMAT0(_("failed to plan path"), ORE_Assert);
     }
 
@@ -1535,7 +1539,7 @@ size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalue
         ptesttraj->Insert(0,vwaypoint);
         ptesttraj->Insert(1,vstartdata,spectotal);
 
-        if( planner->PlanPath(ptesttraj) & PS_HasSolution ) {
+        if( planner->PlanPath(ptesttraj).GetStatusCode() & PS_HasSolution ) {
             // before checking, make sure it is better than we currently have
             dReal fNewDuration = fRemainingDuration+ptesttraj->GetDuration();
             if( fNewDuration < fBestDuration ) {

@@ -112,6 +112,29 @@ public:
 
 typedef boost::shared_ptr<ConstraintFilterReturn> ConstraintFilterReturnPtr;
 
+/// \brief Planner error information
+class OPENRAVE_API PlannerStatus
+{
+public:
+    CollisionReportPtr _report;       // Optional,  collision report at the time of the error. Ideally should contents contacts information.
+    std::string _sDescription;        // Optional, the description of how/why the error happended. Displayed to the user by the UI.
+    std::string _sErrorOrigin;        // Mandatory, a string representing the code path of the error. Automatically filled on construction. 
+    std::vector<dReal> _vJointValues; // Optional,  the robot's joint values in rad or m
+    IkParameterization _ikparam;      // Optional,  the ik parameter that failed to find a solution.
+    PlannerStatusCode _statusCode;    // Mandatory?
+
+    PlannerStatus();
+    PlannerStatus(const PlannerStatusCode statusCode);
+    PlannerStatus(const std::string& description, const PlannerStatusCode statusCode);
+    PlannerStatus(const std::string& description, CollisionReportPtr report);
+    PlannerStatus(const std::string& description, CollisionReportPtr report, IkParameterization ikapram);
+    PlannerStatus(const std::string& description, CollisionReportPtr report, std::vector<dReal> jointValues);
+    virtual ~PlannerStatus();
+
+    bool serializeToJson(rapidjson::Document& output) const;
+    PlannerStatusCode GetStatusCode();
+};
+
 /** \brief <b>[interface]</b> Planner interface that generates trajectories for target objects to follow through the environment. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_planner.
     \ingroup interfaces
  */
@@ -498,29 +521,10 @@ public:
         PlannerProgress();
         int _iteration;
     };
-
-    /// \brief Planner error information
-    class OPENRAVE_API PlannerStatus
-    {
-    public:
-        CollisionReportPtr _report;       // Optional,  collision report at the time of the error. Ideally should contents contacts information.
-        std::string _sDescription;        // Mandatory, the description of how/why the error happended. Displayed to the user by the UI.
-        std::string _sErrorOrigin;        // Mandatory, a string representing the code path of the error. Automatically filled on construction. 
-        std::vector<dReal> _vJointValues; // Optional,  the robot's joint values in rad or m
-        IkParameterization _ikparam;      // Optional,  the ik parameter that failed to find a solution.
-
-        PlannerStatus();
-        PlannerStatus(const std::string& description);
-        PlannerStatus(const std::string& description, CollisionReportPtr report);
-        PlannerStatus(const std::string& description, CollisionReportPtr report, IkParameterization ikapram);
-        PlannerStatus(const std::string& description, CollisionReportPtr report, std::vector<dReal> jointValues);
-        virtual ~PlannerStatus();
-
-        bool serializeToJson(rapidjson::Document& output) const;
-    };
     
     PlannerBase(EnvironmentBasePtr penv);
     virtual ~PlannerBase() {
+
     }
 
     /// \return the static interface type this class points to (used for safe casting)
@@ -550,10 +554,10 @@ public:
         \param traj The output trajectory the robot has to follow in order to successfully complete the plan. If this planner is a path optimizer, the trajectory can be used as an input for generating a smoother path. The trajectory is for the configuration degrees of freedom defined by the planner parameters.
         \return the status that the planner returned in.
      */
-    virtual PlannerStatusCode PlanPath(TrajectoryBasePtr traj) = 0;
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj) = 0;
 
     /// \deprecated (11/10/03)
-    virtual PlannerStatusCode PlanPath(TrajectoryBasePtr traj, boost::shared_ptr<std::ostream> pOutStream) RAVE_DEPRECATED {
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, boost::shared_ptr<std::ostream> pOutStream) RAVE_DEPRECATED {
         if( !!pOutStream ) {
             RAVELOG_WARN("planner does not support pOutputStream anymore, please find another method to return information like using SendCommand or writing the data into the returned trajectory\n");
         }
@@ -574,10 +578,6 @@ public:
         Allows the calling process to control the behavior of the planner from a high-level perspective
      */
     virtual UserDataPtr RegisterPlanCallback(const PlanCallbackFn& callbackfn);
-
-    virtual PlannerStatus GetPlannerStatus();
-
-    virtual void SetPlannerStatus(PlannerStatus plannerStatus);
     
 protected:
     inline PlannerBasePtr shared_planner() {
@@ -595,18 +595,16 @@ protected:
         \param probot the robot this trajectory is meant for, also uses the robot for checking collisions.
         \param traj Initial trajectory to be smoothed is inputted. If optimization path succeeds, final trajectory output is set in this variable. The trajectory is for the configuration degrees of freedom defined by the planner parameters.
      */
-    virtual PlannerStatusCode _ProcessPostPlanners(RobotBasePtr probot, TrajectoryBasePtr traj);
+    virtual PlannerStatus _ProcessPostPlanners(RobotBasePtr probot, TrajectoryBasePtr traj);
 
     virtual bool _OptimizePath(RobotBasePtr probot, TrajectoryBasePtr traj) RAVE_DEPRECATED {
-        return !!(_ProcessPostPlanners(probot,traj) & PS_HasSolution);
+        return !!(_ProcessPostPlanners(probot,traj).GetStatusCode() & PS_HasSolution);
     }
 
     /// \brief Calls the registered callbacks in order and returns immediately when an action other than PA_None is returned.
     ///
     /// \param progress planner progress information
     virtual PlannerAction _CallCallbacks(const PlannerProgress& progress);
-
-    PlannerStatus _plannerStatus;
 
 private:
     virtual const char* GetHash() const {

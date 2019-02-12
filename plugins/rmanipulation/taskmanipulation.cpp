@@ -730,7 +730,7 @@ protected:
                     continue;
                 }
                 
-                if( !_pGrasperPlanner->PlanPath(_phandtraj) ) {
+                if( !_pGrasperPlanner->PlanPath(_phandtraj).GetStatusCode() ) {
                     RAVELOG_DEBUG("grasper planner failed: %d\n", igrasp);
                     continue;
                 }
@@ -1197,7 +1197,7 @@ protected:
             return false;
         }
 
-        if( !graspplanner->PlanPath(ptraj) ) {
+        if( !graspplanner->PlanPath(ptraj).GetStatusCode() ) {
             RAVELOG_WARN("PlanPath failed\n");
             return false;
         }
@@ -1329,7 +1329,7 @@ protected:
             return false;
         }
 
-        if( !graspplanner->PlanPath(ptraj) ) {
+        if( !graspplanner->PlanPath(ptraj).GetStatusCode() ) {
             RAVELOG_WARN("PlanPath failed\n");
             return false;
         }
@@ -1475,7 +1475,7 @@ protected:
             return false;
         }
 
-        if( !graspplanner->PlanPath(ptraj) ) {
+        if( !graspplanner->PlanPath(ptraj).GetStatusCode() ) {
             RAVELOG_WARN("PlanPath failed\n");
             return false;
         }
@@ -1731,7 +1731,7 @@ protected:
                 return ptraj;
             }
 
-            if( _pRRTPlanner->PlanPath(ptraj) ) {
+            if( _pRRTPlanner->PlanPath(ptraj).GetStatusCode() ) {
                 stringstream sinput; sinput << "GetGoalIndex";
                 _pRRTPlanner->SendCommand(ss,sinput);
                 ss >> nGoalIndex;     // extract the goal index
@@ -1809,7 +1809,7 @@ protected:
                 return IKRA_Reject;
             }
 
-            if( !_pGrasperPlanner->PlanPath(_phandtraj) ) {
+            if( !_pGrasperPlanner->PlanPath(_phandtraj).GetStatusCode() ) {
                 RAVELOG_DEBUG("grasper planner PlanPath failed\n");
                 return IKRA_Reject;
             }

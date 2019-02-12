@@ -84,21 +84,54 @@ int AddStatesWithLimitCheck(std::vector<dReal>& q, const std::vector<dReal>& qde
     return status;
 }
 
-PlannerBase::PlannerStatus::PlannerStatus():
+PlannerStatus::PlannerStatus():
     _sErrorOrigin(""),
     _sDescription(""),
     _report(NULL)
 {
 }
 
-PlannerBase::PlannerStatus::PlannerStatus(const std::string& description):
+PlannerStatus::PlannerStatus(const PlannerStatusCode statusCode):
+    _report(NULL),
+    _statusCode(statusCode)
+{
+    std::string description;
+    if(statusCode == PS_Failed)
+        description = "planner failed wit generic error";
+    else if(statusCode == PS_HasSolution)
+        description = "planner succeeded";
+    else if(statusCode == PS_Interrupted)
+        description = "planning was interrupted, but can be resumed by calling PlanPath again";
+    else if(statusCode == PS_InterruptedWithSolution)
+        description = "planning was interrupted, but a valid path/solution was returned. Can call PlanPath again to refine results";
+    else if(statusCode == PS_FailedDueToCollision)
+        description = "planner failed due to collision constraints";
+    else if(statusCode == PS_FailedDueToInitial)
+        description = "failed due to initial configurations";
+    else if(statusCode == PS_FailedDueToGoal)
+        description = "failed due to goal configurations";
+    else if(statusCode == PS_FailedDueToKinematics)
+        description = "failed due to kinematics constraints";
+    else if(statusCode == PS_FailedDueToIK)
+        description = "failed due to inverse kinematics (could be due to collisions or velocity constraints, but don't know)";
+    else if(statusCode == PS_FailedDueToVelocityConstraints)
+        description = "failed due to velocity constraints";
+    else
+        throw OPENRAVE_EXCEPTION_FORMAT(_("planner status code (%i) is not supported by planner status default constructor"), statusCode, ORE_InvalidArguments);
+        
+    _sDescription = description;
+    _sErrorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
+}
+    
+PlannerStatus::PlannerStatus(const std::string& description, const PlannerStatusCode statusCode):
     _sDescription(description),
-    _report(NULL)
+    _report(NULL),
+    _statusCode(statusCode)
 {
     _sErrorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
 }
     
-PlannerBase::PlannerStatus::PlannerStatus(const std::string& description, CollisionReportPtr report, IkParameterization ikparam):
+PlannerStatus::PlannerStatus(const std::string& description, CollisionReportPtr report, IkParameterization ikparam):
     _sDescription(description),
     _report(report),
     _ikparam(ikparam)
@@ -106,7 +139,7 @@ PlannerBase::PlannerStatus::PlannerStatus(const std::string& description, Collis
     _sErrorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
 }
     
-PlannerBase::PlannerStatus::PlannerStatus(const std::string& description, CollisionReportPtr report, std::vector<dReal> jointValues):
+PlannerStatus::PlannerStatus(const std::string& description, CollisionReportPtr report, std::vector<dReal> jointValues):
     _sDescription(description),
     _report(report),
     _vJointValues(jointValues)
@@ -114,9 +147,9 @@ PlannerBase::PlannerStatus::PlannerStatus(const std::string& description, Collis
     _sErrorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
 }
 
-PlannerBase::PlannerStatus::~PlannerStatus() {}
+PlannerStatus::~PlannerStatus() {}
 
-bool PlannerBase::PlannerStatus::serializeToJson(rapidjson::Document& output) const
+bool PlannerStatus::serializeToJson(rapidjson::Document& output) const
 {
     openravejson::SetJsonValueByKey(output, "errorOrigin", _sErrorOrigin);
     openravejson::SetJsonValueByKey(output, "description", _sDescription);
@@ -158,6 +191,11 @@ bool PlannerBase::PlannerStatus::serializeToJson(rapidjson::Document& output) co
     
     //return DumpJson(extraoptionsjson);
     return true;
+}
+
+PlannerStatusCode PlannerStatus::GetStatusCode()
+{
+    return _statusCode;
 }
     
 PlannerBase::PlannerParameters::StateSaver::StateSaver(PlannerParametersPtr params) : _params(params)
@@ -975,28 +1013,18 @@ UserDataPtr PlannerBase::RegisterPlanCallback(const PlanCallbackFn& callbackfn)
     return pdata;
 }
 
-PlannerBase::PlannerStatus PlannerBase::GetPlannerStatus()
-{
-    return _plannerStatus;
-}
-
-void PlannerBase::SetPlannerStatus(PlannerStatus plannerStatus)
-{
-    _plannerStatus = plannerStatus;
-}
-
-PlannerStatusCode PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryBasePtr ptraj)
+PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryBasePtr ptraj)
 {
     if( GetParameters()->_sPostProcessingPlanner.size() == 0 ) {
         __cachePostProcessPlanner.reset();
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
     if( !__cachePostProcessPlanner || __cachePostProcessPlanner->GetXMLId() != GetParameters()->_sPostProcessingPlanner ) {
         __cachePostProcessPlanner = RaveCreatePlanner(GetEnv(), GetParameters()->_sPostProcessingPlanner);
         if( !__cachePostProcessPlanner ) {
             __cachePostProcessPlanner = RaveCreatePlanner(GetEnv(), s_linearsmoother);
             if( !__cachePostProcessPlanner ) {
-                return PS_Failed;
+                return PlannerStatus(PS_Failed);
             }
         }
     }
@@ -1022,7 +1050,7 @@ PlannerStatusCode PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, Traject
     }
 
     // do not fall back to a default linear smoother like in the past! that makes behavior unpredictable
-    return PS_Failed;
+    return PlannerStatus(PS_Failed);
 }
 
 PlannerAction PlannerBase::_CallCallbacks(const PlannerProgress& progress)
