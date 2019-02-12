@@ -208,7 +208,7 @@ public:
         return _pplanner->InitPlan(openravepy::GetRobot(pbase),ss);
     }
 
-    PlannerStatus PlanPath(PyTrajectoryBasePtr pytraj,bool releasegil=true)
+    PlannerStatusCode PlanPath(PyTrajectoryBasePtr pytraj,bool releasegil=true)
     {
         openravepy::PythonThreadSaverPtr statesaver;
         TrajectoryBasePtr ptraj = openravepy::GetTrajectory(pytraj);
@@ -326,7 +326,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckPathAllConstraints_overloads, CheckP
 
 void init_openravepy_planner()
 {
-    object plannerstatus = enum_<PlannerStatus>("PlannerStatus" DOXY_ENUM(PlannerStatus))
+    object plannerstatus = enum_<PlannerStatusCode>("PlannerStatusCode" DOXY_ENUM(PlannerStatusCode))
                            .value("Failed",PS_Failed)
                            .value("HasSolution",PS_HasSolution)
                            .value("Interrupted",PS_Interrupted)

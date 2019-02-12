@@ -226,7 +226,7 @@ public:
         return _parameters;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatusCode PlanPath(TrajectoryBasePtr ptraj)
     {
         BOOST_ASSERT(!!_parameters && !!ptraj);
         if( ptraj->GetNumWaypoints() < 2 ) {
@@ -316,10 +316,10 @@ public:
                 }
                 if(!res) {
                     std::string filename = _DumpTrajectory(ptraj, Level_Verbose);
-                    //At the very least, get the errorOrigin and description up by sating in _plannerError and getting it ikplanningmodule
+                    //At the very least, get the errorOrigin and description up by sating in _plannerStatus and getting it ikplanningmodule
                     std::string description = _("Could not obtain a feasible trajectory from initial quadratic trajectory\n");
                     RAVELOG_WARN(description);
-                    _plannerError = PlannerBase::PlannerError(description);
+                    _plannerStatus = PlannerBase::PlannerStatus(description);
                     return PS_Failed;
                 }
                 RAVELOG_DEBUG("Cool: obtained a feasible trajectory from initial quadratic trajectory\n");
@@ -391,7 +391,7 @@ public:
                         _DumpTrajectory(ptraj, Level_Verbose);
                         std::string description = str(boost::format(_("Ramp %d/%d of original traj invalid"))%iramp%ramps.size());
                         RAVELOG_WARN(description);
-                        _plannerError = PlannerBase::PlannerError(description);
+                        _plannerStatus = PlannerBase::PlannerStatus(description);
                         return PS_Failed;
                     }
                     ++iramp;
@@ -473,7 +473,7 @@ public:
             }
 
 
-            PlannerStatus status = ConvertRampsToOpenRAVETrajectory(ramps, &checker, ptraj->GetXMLId());
+            PlannerStatusCode status = ConvertRampsToOpenRAVETrajectory(ramps, &checker, ptraj->GetXMLId());
             if( status == PS_Interrupted ) {
                 return PS_Interrupted;
             }
@@ -498,7 +498,7 @@ public:
             _DumpTrajectory(ptraj, Level_Verbose);
             std::string description = str(boost::format(_("parabolic planner failed: %s"))% ex.what());
             RAVELOG_WARN(description);
-            _plannerError = PlannerBase::PlannerError(description);
+            _plannerStatus = PlannerBase::PlannerStatus(description);
             return PS_Failed;
         }
 
@@ -526,7 +526,7 @@ public:
     }
 
     /// \brief converts ramps to an openrave trajectory structure. If return is PS_HasSolution, _dummytraj has the converted result
-    PlannerStatus ConvertRampsToOpenRAVETrajectory(const std::list<ParabolicRamp::ParabolicRampND>& ramps, ParabolicRamp::RampFeasibilityChecker* pchecker, const std::string& sTrajectoryXMLId=std::string())
+    PlannerStatusCode ConvertRampsToOpenRAVETrajectory(const std::list<ParabolicRamp::ParabolicRampND>& ramps, ParabolicRamp::RampFeasibilityChecker* pchecker, const std::string& sTrajectoryXMLId=std::string())
     {
         const ConfigurationSpecification& posspec = _parameters->_configurationspecification;
         ConfigurationSpecification velspec = posspec.ConvertToVelocitySpecification();

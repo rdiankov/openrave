@@ -130,7 +130,7 @@ Planner Parameters\n\
         return true;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr poutputtraj)
+    virtual PlannerStatusCode PlanPath(TrajectoryBasePtr poutputtraj)
     {
         if(!_parameters) {
             RAVELOG_ERROR("WorkspaceTrajectoryTracker::PlanPath - Error, planner not initialized\n");

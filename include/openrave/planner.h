@@ -43,7 +43,7 @@ enum ConstraintFilterOptions
 };
 
 /// \brief the status of the PlanPath method. Used when PlanPath can be called multiple times to resume planning.
-enum PlannerStatus
+enum PlannerStatusCode
 {
     PS_Failed = 0, ///< planner failed
     PS_HasSolution = 1, ///< planner succeeded
@@ -500,22 +500,21 @@ public:
     };
 
     /// \brief Planner error information
-    class OPENRAVE_API PlannerError
+    class OPENRAVE_API PlannerStatus
     {
-        CollisionReportPtr _report;
-        std::string _sDescription;
-        std::string _sErrorOrigin;
-        std::vector<dReal> _vJointValues;
-        IkParameterization _ikparam;
-        //? Other object position value? -> Should not be necessary since we'll sync planner to viewer to show errors
-
     public:
-        PlannerError();
-        PlannerError(const std::string& description);
-        PlannerError(const std::string& description, CollisionReportPtr report);
-        PlannerError(const std::string& description, CollisionReportPtr report, IkParameterization ikapram);
-        PlannerError(const std::string& description, CollisionReportPtr report, std::vector<dReal> jointValues);
-        virtual ~PlannerError();
+        CollisionReportPtr _report;       // Optional,  collision report at the time of the error. Ideally should contents contacts information.
+        std::string _sDescription;        // Mandatory, the description of how/why the error happended. Displayed to the user by the UI.
+        std::string _sErrorOrigin;        // Mandatory, a string representing the code path of the error. Automatically filled on construction. 
+        std::vector<dReal> _vJointValues; // Optional,  the robot's joint values in rad or m
+        IkParameterization _ikparam;      // Optional,  the ik parameter that failed to find a solution.
+
+        PlannerStatus();
+        PlannerStatus(const std::string& description);
+        PlannerStatus(const std::string& description, CollisionReportPtr report);
+        PlannerStatus(const std::string& description, CollisionReportPtr report, IkParameterization ikapram);
+        PlannerStatus(const std::string& description, CollisionReportPtr report, std::vector<dReal> jointValues);
+        virtual ~PlannerStatus();
 
         bool serializeToJson(rapidjson::Document& output) const;
     };
@@ -551,10 +550,10 @@ public:
         \param traj The output trajectory the robot has to follow in order to successfully complete the plan. If this planner is a path optimizer, the trajectory can be used as an input for generating a smoother path. The trajectory is for the configuration degrees of freedom defined by the planner parameters.
         \return the status that the planner returned in.
      */
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj) = 0;
+    virtual PlannerStatusCode PlanPath(TrajectoryBasePtr traj) = 0;
 
     /// \deprecated (11/10/03)
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, boost::shared_ptr<std::ostream> pOutStream) RAVE_DEPRECATED {
+    virtual PlannerStatusCode PlanPath(TrajectoryBasePtr traj, boost::shared_ptr<std::ostream> pOutStream) RAVE_DEPRECATED {
         if( !!pOutStream ) {
             RAVELOG_WARN("planner does not support pOutputStream anymore, please find another method to return information like using SendCommand or writing the data into the returned trajectory\n");
         }
@@ -576,9 +575,9 @@ public:
      */
     virtual UserDataPtr RegisterPlanCallback(const PlanCallbackFn& callbackfn);
 
-    virtual PlannerError GetPlannerError();
+    virtual PlannerStatus GetPlannerStatus();
 
-    virtual void SetPlannerError(PlannerError plannerError);
+    virtual void SetPlannerStatus(PlannerStatus plannerStatus);
     
 protected:
     inline PlannerBasePtr shared_planner() {
@@ -596,7 +595,7 @@ protected:
         \param probot the robot this trajectory is meant for, also uses the robot for checking collisions.
         \param traj Initial trajectory to be smoothed is inputted. If optimization path succeeds, final trajectory output is set in this variable. The trajectory is for the configuration degrees of freedom defined by the planner parameters.
      */
-    virtual PlannerStatus _ProcessPostPlanners(RobotBasePtr probot, TrajectoryBasePtr traj);
+    virtual PlannerStatusCode _ProcessPostPlanners(RobotBasePtr probot, TrajectoryBasePtr traj);
 
     virtual bool _OptimizePath(RobotBasePtr probot, TrajectoryBasePtr traj) RAVE_DEPRECATED {
         return !!(_ProcessPostPlanners(probot,traj) & PS_HasSolution);
@@ -607,7 +606,7 @@ protected:
     /// \param progress planner progress information
     virtual PlannerAction _CallCallbacks(const PlannerProgress& progress);
 
-    PlannerError _plannerError;
+    PlannerStatus _plannerStatus;
 
 private:
     virtual const char* GetHash() const {

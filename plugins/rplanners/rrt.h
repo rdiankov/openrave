@@ -355,7 +355,7 @@ Some python code to display data::\n\
         return true;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatusCode PlanPath(TrajectoryBasePtr ptraj)
     {
         _goalindex = -1;
         _startindex = -1;
@@ -507,9 +507,9 @@ Some python code to display data::\n\
         }
 
         if( _vgoalpaths.size() == 0 ) {
-            std::string description = str(boost::format(_("env=%d, plan failed in %fs, iter=%d, nMaxIterations=%d",GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime))%(iter/3)%_parameters->_nMaxIterations);
+            std::string description = str(boost::format(_("env=%d, plan failed in %fs, iter=%d, nMaxIterations=%d"))%GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime))%(iter/3)%_parameters->_nMaxIterations);
             RAVELOG_WARN(description);
-            _plannerError = PlannerBase::PlannerError(description);
+            _plannerStatus = PlannerBase::PlannerStatus(description);
             return PS_Failed;
         }
 
@@ -721,7 +721,7 @@ public:
         return true;
     }
 
-    PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    PlannerStatusCode PlanPath(TrajectoryBasePtr ptraj)
     {
         if(!_parameters) {
             RAVELOG_WARN("RrtPlanner::PlanPath - Error, planner not initialized\n");
@@ -894,7 +894,7 @@ public:
         std::vector<dReal> vinsertvalues(_cachedpath.begin(), _cachedpath.end());
         ptraj->Insert(ptraj->GetNumWaypoints(), vinsertvalues, _parameters->_configurationspecification);
 
-        PlannerStatus status = _ProcessPostPlanners(_robot,ptraj);
+        PlannerStatusCode status = _ProcessPostPlanners(_robot,ptraj);
         RAVELOG_DEBUG_FORMAT("env=%d, plan success, path=%d points computation time=%fs, maxPlanningTime=%f", GetEnv()->GetId()%ptraj->GetNumWaypoints()%((0.001f*(float)(utils::GetMilliTime()-basetime)))%(0.001*_parameters->_nMaxPlanningTime));
         return status;
     }
@@ -943,7 +943,7 @@ public:
         return true;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatusCode PlanPath(TrajectoryBasePtr ptraj)
     {
         _goalindex = -1;
         _startindex = -1;

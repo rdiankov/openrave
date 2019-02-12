@@ -64,7 +64,7 @@ public:
         return true;
     }
 
-    PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    PlannerStatusCode PlanPath(TrajectoryBasePtr ptraj)
     {
         if(!_parameters) {
             return PS_Failed;

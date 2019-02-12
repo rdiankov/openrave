@@ -107,7 +107,7 @@ public:
     }
 
     /// \param pOutStream returns which goal was chosen
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatusCode PlanPath(TrajectoryBasePtr ptraj)
     {
         if(!_parameters) {
             RAVELOG_ERROR("GraspGradientPlanner::PlanPath - Error, planner not initialized\n");

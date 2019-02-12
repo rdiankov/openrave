@@ -75,7 +75,7 @@ public:
         return _parameters;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatusCode PlanPath(TrajectoryBasePtr ptraj)
     {
         BOOST_ASSERT(!!_parameters && !!ptraj );
         if( ptraj->GetNumWaypoints() < 2 ) {
@@ -167,7 +167,7 @@ public:
         RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time=%fs\n", GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
         if( parameters->_sPostProcessingPlanner.size() == 0 ) {
             // no other planner so at least retime
-            PlannerStatus status = _linearretimer->PlanPath(ptraj);
+            PlannerStatusCode status = _linearretimer->PlanPath(ptraj);
             if( status != PS_HasSolution ) {
                 return status;
             }

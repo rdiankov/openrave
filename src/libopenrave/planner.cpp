@@ -84,41 +84,39 @@ int AddStatesWithLimitCheck(std::vector<dReal>& q, const std::vector<dReal>& qde
     return status;
 }
 
-PlannerBase::PlannerError::PlannerError():
+PlannerBase::PlannerStatus::PlannerStatus():
     _sErrorOrigin(""),
     _sDescription(""),
     _report(NULL)
 {
 }
 
-PlannerBase::PlannerError::PlannerError(const std::string& description):
+PlannerBase::PlannerStatus::PlannerStatus(const std::string& description):
     _sDescription(description),
     _report(NULL)
 {
     _sErrorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
 }
     
-PlannerBase::PlannerError::PlannerError(const std::string& description, CollisionReportPtr report, IkParameterization ikparam):
+PlannerBase::PlannerStatus::PlannerStatus(const std::string& description, CollisionReportPtr report, IkParameterization ikparam):
     _sDescription(description),
     _report(report),
     _ikparam(ikparam)
-    //PlannerError(origin, description, report)
 {
     _sErrorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
 }
     
-PlannerBase::PlannerError::PlannerError(const std::string& description, CollisionReportPtr report, std::vector<dReal> jointValues):
+PlannerBase::PlannerStatus::PlannerStatus(const std::string& description, CollisionReportPtr report, std::vector<dReal> jointValues):
     _sDescription(description),
     _report(report),
     _vJointValues(jointValues)
-    //PlannerError(origin, description, report)
 {
     _sErrorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
 }
 
-PlannerBase::PlannerError::~PlannerError() {}
+PlannerBase::PlannerStatus::~PlannerStatus() {}
 
-bool PlannerBase::PlannerError::serializeToJson(rapidjson::Document& output) const
+bool PlannerBase::PlannerStatus::serializeToJson(rapidjson::Document& output) const
 {
     openravejson::SetJsonValueByKey(output, "errorOrigin", _sErrorOrigin);
     openravejson::SetJsonValueByKey(output, "description", _sDescription);
@@ -977,17 +975,17 @@ UserDataPtr PlannerBase::RegisterPlanCallback(const PlanCallbackFn& callbackfn)
     return pdata;
 }
 
-PlannerBase::PlannerError PlannerBase::GetPlannerError()
+PlannerBase::PlannerStatus PlannerBase::GetPlannerStatus()
 {
-    return _plannerError;
+    return _plannerStatus;
 }
 
-void PlannerBase::SetPlannerError(PlannerError plannerError)
+void PlannerBase::SetPlannerStatus(PlannerStatus plannerStatus)
 {
-    _plannerError = plannerError;
+    _plannerStatus = plannerStatus;
 }
 
-PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryBasePtr ptraj)
+PlannerStatusCode PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryBasePtr ptraj)
 {
     if( GetParameters()->_sPostProcessingPlanner.size() == 0 ) {
         __cachePostProcessPlanner.reset();

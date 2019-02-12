@@ -419,7 +419,7 @@ public:
         return _parameters;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatusCode PlanPath(TrajectoryBasePtr ptraj)
     {
         BOOST_ASSERT(!!_parameters && !!ptraj);
 

@@ -344,7 +344,7 @@ Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf
         return true;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatusCode PlanPath(TrajectoryBasePtr ptraj)
     {
         if( !_parameters ) {
             return PS_Failed;

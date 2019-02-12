@@ -41,7 +41,7 @@ public:
         __description = ":Interface Author: Rosen Diankov\n\nSimple parabolic trajectory re-timing while passing through all the waypoints, waypoints will not be modified. This assumes all waypoints have velocity 0 (unless the start and final points are forced). Overwrites the velocities and timestamps of input trajectory.";
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatusCode PlanPath(TrajectoryBasePtr ptraj)
     {
         _interpolator.Initialize(_parameters->GetDOF(), GetEnv()->GetId());
         _translationinterpolator.Initialize(3, GetEnv()->GetId());

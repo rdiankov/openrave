@@ -582,7 +582,7 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
     v.VerifyTrajectory(trajectory,samplingstep);
 }
 
-PlannerStatus _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, bool bsmooth, const std::string& plannerparameters)
+PlannerStatusCode _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, bool bsmooth, const std::string& plannerparameters)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need velocities, but should at least add a time group
@@ -652,7 +652,7 @@ ActiveDOFTrajectorySmoother::ActiveDOFTrajectorySmoother(RobotBasePtr robot, con
     _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, boost::bind(&ActiveDOFTrajectorySmoother::_UpdateParameters, this));
 }
 
-PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj)
+PlannerStatusCode ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need velocities, but should at least add a time group
@@ -667,7 +667,7 @@ PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj)
 
     EnvironmentBasePtr env = traj->GetEnv();
     CollisionOptionsStateSaver optionstate(env->GetCollisionChecker(),env->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
-    PlannerStatus status = _planner->PlanPath(traj);
+    PlannerStatusCode status = _planner->PlanPath(traj);
     if( status & PS_HasSolution ) {
         if( RaveGetDebugLevel() & Level_VerifyPlans ) {
             RobotBase::RobotStateSaver saver(_robot);
@@ -717,7 +717,7 @@ ActiveDOFTrajectoryRetimer::ActiveDOFTrajectoryRetimer(RobotBasePtr robot, const
     _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, boost::bind(&ActiveDOFTrajectoryRetimer::_UpdateParameters, this));
 }
 
-PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool hastimestamps)
+PlannerStatusCode ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool hastimestamps)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need velocities, but should at least add a time group
@@ -760,7 +760,7 @@ void ActiveDOFTrajectoryRetimer::_UpdateParameters()
     _parameters=params; // necessary because SetRobotActiveJoints builds functions that hold weak_ptr to the parameters
 }
 
-PlannerStatus _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, bool bsmooth, const std::string& plannerparameters)
+PlannerStatusCode _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, bool bsmooth, const std::string& plannerparameters)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need velocities, but should at least add a time group
@@ -888,7 +888,7 @@ private:
 };
 
 // this function is very messed up...?
-static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername, bool bsmooth, const std::string& plannerparameters)
+static PlannerStatusCode _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername, bool bsmooth, const std::string& plannerparameters)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need retiming, but should at least add a time group
@@ -1038,7 +1038,7 @@ void AffineTrajectoryRetimer::SetPlanner(const std::string& plannername, const s
     }
 }
 
-PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps)
+PlannerStatusCode AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need retiming, but should at least add a time group
@@ -1156,17 +1156,17 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
     return _planner->PlanPath(traj);
 }
 
-PlannerStatus SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
+PlannerStatusCode SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
 {
     return _PlanActiveDOFTrajectory(traj,robot,false,fmaxvelmult,fmaxaccelmult,plannername.size() > 0 ? plannername : "parabolicsmoother", true,plannerparameters);
 }
 
-PlannerStatus SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, const std::string& plannername, const std::string& plannerparameters)
+PlannerStatusCode SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, const std::string& plannername, const std::string& plannerparameters)
 {
     return _PlanAffineTrajectory(traj, maxvelocities, maxaccelerations, false, plannername.size() > 0 ? plannername : "parabolicsmoother", true, plannerparameters);
 }
 
-PlannerStatus SmoothTrajectory(TrajectoryBasePtr traj, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
+PlannerStatusCode SmoothTrajectory(TrajectoryBasePtr traj, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
 {
     return _PlanTrajectory(traj,false,fmaxvelmult,fmaxaccelmult,plannername.size() > 0 ? plannername : "parabolicsmoother", true,plannerparameters);
 }
@@ -1202,17 +1202,17 @@ static std::string GetPlannerFromInterpolation(TrajectoryBasePtr traj, const std
     }
 }
 
-PlannerStatus RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
+PlannerStatusCode RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
 {
     return _PlanActiveDOFTrajectory(traj,robot,hastimestamps,fmaxvelmult,fmaxaccelmult,GetPlannerFromInterpolation(traj,plannername), false,plannerparameters);
 }
 
-PlannerStatus RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername, const std::string& plannerparameters)
+PlannerStatusCode RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername, const std::string& plannerparameters)
 {
     return _PlanAffineTrajectory(traj, maxvelocities, maxaccelerations, hastimestamps, GetPlannerFromInterpolation(traj,plannername), false,plannerparameters);
 }
 
-PlannerStatus RetimeTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
+PlannerStatusCode RetimeTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
 {
     return _PlanTrajectory(traj,hastimestamps,fmaxvelmult,fmaxaccelmult,GetPlannerFromInterpolation(traj,plannername), false,plannerparameters);
 }

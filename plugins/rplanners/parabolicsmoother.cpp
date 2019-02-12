@@ -244,7 +244,7 @@ public:
         return _parameters;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatusCode PlanPath(TrajectoryBasePtr ptraj)
     {
 #ifdef OPENRAVE_TIMING_DEBUGGING
         ncheckmanipconstraints = 0;

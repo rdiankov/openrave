@@ -81,10 +81,10 @@ OPENRAVE_API size_t ExtendActiveDOFWaypoint(int index, const std::vector<dReal>&
     \param robot use the robot's active dofs to initialize the trajectory space
     \param plannername the name of the planner to use to smooth. If empty, will use the default trajectory re-timer.
     \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
-    \return PlannerStatus of the status of the smoothing planner
+    \return PlannerStatusCode of the status of the smoothing planner
  */
 
-OPENRAVE_API PlannerStatus SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
+OPENRAVE_API PlannerStatusCode SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
 
 
 /** \brief Smooth the trajectory points consisting of affine transformation values while avoiding collisions. <b>[multi-thread safe]</b>
@@ -95,9 +95,9 @@ OPENRAVE_API PlannerStatus SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, Rob
     \param maxaccelerations the max acceleration of each dof
     \param plannername the name of the planner to use to smooth. If empty, will use the default trajectory re-timer.
     \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
-    \return PlannerStatus of the status of the smoothing planner
+    \return PlannerStatusCode of the status of the smoothing planner
  */
-OPENRAVE_API PlannerStatus SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>&maxaccelerations, const std::string& plannername="", const std::string& plannerparameters="");
+OPENRAVE_API PlannerStatusCode SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>&maxaccelerations, const std::string& plannername="", const std::string& plannerparameters="");
 
 /** \brief Smooth the trajectory points to avoiding collisions by extracting and using the positional data from the trajectory. <b>[multi-thread safe]</b>
 
@@ -107,9 +107,9 @@ OPENRAVE_API PlannerStatus SmoothAffineTrajectory(TrajectoryBasePtr traj, const 
     \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     \param plannername the name of the planner to use to smooth. If empty, will use the default trajectory re-timer.
     \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
-    \return PlannerStatus of the status of the smoothing planner
+    \return PlannerStatusCode of the status of the smoothing planner
  */
-OPENRAVE_API PlannerStatus SmoothTrajectory(TrajectoryBasePtr traj, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
+OPENRAVE_API PlannerStatusCode SmoothTrajectory(TrajectoryBasePtr traj, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
 
 /** \brief Retime the trajectory points by extracting and using the currently set active dofs of the robot. <b>[multi-thread safe]</b>
 
@@ -121,9 +121,9 @@ OPENRAVE_API PlannerStatus SmoothTrajectory(TrajectoryBasePtr traj, dReal fmaxve
     \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
     \param hastimestamps if true, use the already initialized timestamps of the trajectory
     \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
-    \return PlannerStatus of the status of the retiming planner
+    \return PlannerStatusCode of the status of the retiming planner
  */
-OPENRAVE_API PlannerStatus RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps=false, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
+OPENRAVE_API PlannerStatusCode RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps=false, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
 
 /** \brief Smoother planner for the trajectory points to avoiding collisions by extracting and using the currently set active dofs of the robot.
 
@@ -147,8 +147,8 @@ public:
     /// \brief Executes smoothing. <b>[multi-thread safe]</b>
     ///
     /// \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
-    /// \return PlannerStatus of the status of the smoothing planner
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj);
+    /// \return PlannerStatusCode of the status of the smoothing planner
+    virtual PlannerStatusCode PlanPath(TrajectoryBasePtr traj);
 
 protected:
     void _UpdateParameters();
@@ -187,8 +187,8 @@ public:
     /// \brief Executes smoothing. <b>[multi-thread safe]</b>
     ///
     /// \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
-    /// \return PlannerStatus of the status of the smoothing planner
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, bool hastimestamps=false);
+    /// \return PlannerStatusCode of the status of the smoothing planner
+    virtual PlannerStatusCode PlanPath(TrajectoryBasePtr traj, bool hastimestamps=false);
 
 protected:
     void _UpdateParameters();
@@ -214,9 +214,9 @@ typedef boost::shared_ptr<ActiveDOFTrajectoryRetimer> ActiveDOFTrajectoryRetimer
     \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
     \param hastimestamps if true, use the already initialized timestamps of the trajectory
     \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
-    \return PlannerStatus of the status of the retiming planner
+    \return PlannerStatusCode of the status of the retiming planner
  */
-OPENRAVE_API PlannerStatus RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>&maxvelocities, const std::vector<dReal>&maxaccelerations, bool hastimestamps=false, const std::string& plannername="", const std::string& plannerparameters="");
+OPENRAVE_API PlannerStatusCode RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>&maxvelocities, const std::vector<dReal>&maxaccelerations, bool hastimestamps=false, const std::string& plannername="", const std::string& plannerparameters="");
 
 /** \brief Retimer planner the trajectory points consisting of affine transformation values while avoiding collisions. <b>[multi-thread safe]</b>
 
@@ -245,8 +245,8 @@ public:
     /// \brief Executes smoothing. <b>[multi-thread safe]</b>
     ///
     /// \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
-    /// \return PlannerStatus of the status of the smoothing planner
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false);
+    /// \return PlannerStatusCode of the status of the smoothing planner
+    virtual PlannerStatusCode PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false);
 
 protected:
     std::string _plannername, _extraparameters;
@@ -265,9 +265,9 @@ typedef boost::shared_ptr<AffineTrajectoryRetimer> AffineTrajectoryRetimerPtr;
     \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
     \param hastimestamps if true, use the already initialized timestamps of the trajectory
     \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
-    \return PlannerStatus of the status of the retiming planner
+    \return PlannerStatusCode of the status of the retiming planner
  */
-OPENRAVE_API PlannerStatus RetimeTrajectory(TrajectoryBasePtr traj, bool hastimestamps=false, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
+OPENRAVE_API PlannerStatusCode RetimeTrajectory(TrajectoryBasePtr traj, bool hastimestamps=false, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
 
 /** \brief Inserts a waypoint into a trajectory at the index specified, and retimes the segment before and after the trajectory. This will \b not change the previous trajectory. <b>[multi-thread safe]</b>
 
