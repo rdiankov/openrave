@@ -274,13 +274,15 @@ KinBody::Link::GeometryPtr KinBody::Link::GetGeometry(int index)
     return _vGeometries.at(index);
 }
 
-void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& geometries)
+void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& geometries, bool bForceRecomputeMeshCollision)
 {
     _vGeometries.resize(geometries.size());
     for(size_t i = 0; i < geometries.size(); ++i) {
         _vGeometries[i].reset(new Geometry(shared_from_this(),*geometries[i]));
-        if( _vGeometries[i]->GetCollisionMesh().vertices.size() == 0 ) {
-            RAVELOG_VERBOSE("geometry has empty collision mesh\n");
+        if( bForceRecomputeMeshCollision || _vGeometries[i]->GetCollisionMesh().vertices.size() == 0 ) {
+            if( !bForceRecomputeMeshCollision ) {
+                RAVELOG_VERBOSE("geometry has empty collision mesh\n");
+            }
             _vGeometries[i]->InitCollisionMesh(); // have to initialize the mesh since some plugins might not understand all geometry types
         }
     }
@@ -296,7 +298,7 @@ void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& g
     _Update();
 }
 
-void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries)
+void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries, bool bForceRecomputeMeshCollision)
 {
     _vGeometries.resize(geometries.size());
     size_t i = 0;

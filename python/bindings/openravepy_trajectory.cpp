@@ -17,6 +17,8 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 
+#include <boost/python/slice.hpp> // slice objects
+
 namespace openravepy {
 
 class PyTrajectoryBase : public PyInterfaceBase

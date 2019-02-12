@@ -932,6 +932,7 @@ void QOSGViewerWidget::_SetupCamera(osg::ref_ptr<osg::Camera> camera, osg::ref_p
 
     _osgCameraManipulator = new OpenRAVETrackball(this);//osgGA::TrackballManipulator();//NodeTrackerManipulator();
     _osgCameraManipulator->setWheelZoomFactor(0.2);
+    _osgCameraManipulator->setAllowThrow(false);
     view->setCameraManipulator( _osgCameraManipulator.get() );
 
     _osgCameraHUD = new osg::MatrixTransform();
