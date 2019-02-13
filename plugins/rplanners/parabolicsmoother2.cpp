@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2016-2018 Puttichai Lertkultanon & Rosen DianKov
+// Copyright (C) 2016-2019 Puttichai Lertkultanon & Rosen DianKov
 //
 // This program is free software: you can redistribute it and/or modify it under the terms of the
 // GNU Lesser General Public License as published by the Free Software Foundation, either version 3
@@ -1003,7 +1003,10 @@ public:
             _constraintreturn->Clear();
         }
 
-        if( _bmanipconstraints && (options & CFO_CheckTimeBasedConstraints) ) {
+        // Since the actual path connceting q0 and q1 (returned from CheckPathAllConstraints) may not simply be a
+        // straight line due to other tool constraints, checking tool speed/accel constraints on this straight line and
+        // rejecting the segment based on that is not meaningful.
+        if( 0 ) {//( _bmanipconstraints && (options & CFO_CheckTimeBasedConstraints) ) {
             // Check manip constraints for early rejection
             _cacheRampNDSeg.Initialize(q0, q1, dq0, dq1, std::vector<dReal>(), timeElapsed);
             rampndVectOut.push_back(_cacheRampNDSeg);
