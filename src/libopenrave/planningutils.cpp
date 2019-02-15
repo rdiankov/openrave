@@ -477,6 +477,20 @@ public:
                 }
                 vsampletimes.resize(vabstimes.size());
                 std::merge(vabstimes.begin(), vabstimes.begin()+trajectory->GetNumWaypoints(), vabstimes.begin()+trajectory->GetNumWaypoints(), vabstimes.end(), vsampletimes.begin());
+
+                // Check if the trajectory has all-linear interpolation
+                ConfigurationSpecification trajspec = trajectory->GetConfigurationSpecification();
+                vector<ConfigurationSpecification::Group>::const_iterator itvaluesgroup = trajspec.FindCompatibleGroup("joint_values", false);
+                vector<ConfigurationSpecification::Group>::const_iterator itvelocitiesgroup = trajspec.FindCompatibleGroup("joint_velocities", false);
+                vector<ConfigurationSpecification::Group>::const_iterator itaccelerationsgroup = trajspec.FindCompatibleGroup("joint_accelerations", false);
+                bool bHasAllLinearInterpolation = false;
+                if( (itvaluesgroup == trajspec._vgroups.end() || itvaluesgroup->interpolation == "linear") &&
+                    (itvelocitiesgroup == trajspec._vgroups.end() || itvelocitiesgroup->interpolation == "linear") &&
+                    (itaccelerationsgroup == trajspec._vgroups.end() || itaccelerationsgroup->interpolation == "linear") ) {
+                    bHasAllLinearInterpolation = true;
+                }
+                IntervalType interval = bHasAllLinearInterpolation ? (IntervalType)(IT_Closed | IT_AllLinear) : IT_Closed;
+
                 std::vector<dReal> vprevdata, vprevdatavel;
                 ConstraintFilterReturnPtr filterreturn(new ConstraintFilterReturn());
                 trajectory->Sample(vprevdata,0,_parameters->_configurationspecification);
@@ -496,9 +510,9 @@ public:
                         dReal velthresh = _parameters->_vConfigVelocityLimit.at(i)*deltatime+fthresh;
                         OPENRAVE_ASSERT_OP_FORMAT(RaveFabs(vdiff.at(i)), <=, velthresh, "time %fs-%fs, dof %d traveled %f, but maxvelocity only allows %f, wrote trajectory to %s",*itprevtime%*itsampletime%i%RaveFabs(vdiff.at(i))%velthresh%DumpTrajectory(trajectory),ORE_InconsistentConstraints);
                     }
-                    if( _parameters->CheckPathAllConstraints(vprevdata,vdata,vprevdatavel, vdatavel, deltatime, IT_Closed, 0xffff|CFO_FillCheckedConfiguration, filterreturn) != 0 ) {
+                    if( _parameters->CheckPathAllConstraints(vprevdata,vdata,vprevdatavel, vdatavel, deltatime, interval, 0xffff|CFO_FillCheckedConfiguration, filterreturn) != 0 ) {
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                            _parameters->CheckPathAllConstraints(vprevdata,vdata,vprevdatavel, vdatavel, deltatime, IT_Closed, 0xffff|CFO_FillCheckedConfiguration, filterreturn);
+                            _parameters->CheckPathAllConstraints(vprevdata,vdata,vprevdatavel, vdatavel, deltatime, interval, 0xffff|CFO_FillCheckedConfiguration, filterreturn);
                         }
                         throw OPENRAVE_EXCEPTION_FORMAT(_("time %fs-%fs, CheckPathAllConstraints failed, wrote trajectory to %s"),*itprevtime%*itsampletime%DumpTrajectory(trajectory),ORE_InconsistentConstraints);
                     }
@@ -2362,23 +2376,33 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     _vtempconfig.resize(params->GetDOF());
     _vtempvelconfig.resize(dq0.size());
 
-    if( maskinterpolation == IT_Default && (timeelapsed > 0 && dq0.size() == _vtempconfig.size() && dq1.size() == _vtempconfig.size()) ) {
-        // Quadratic interpolation. Need to make sure the positions, velocities, and timeelapsed are consistent
-        //     v0 + timeelapsed*0.5*(dq0 + dq1) - v1 = 0
+    if( timeelapsed > 0 && dq0.size() == _vtempconfig.size() && dq1.size() == _vtempconfig.size() ) {
+        // When valid velocities and timeelapsed are given, fill in accelerations.
         _vtempaccelconfig.resize(dq0.size());
         dReal itimeelapsed = 1.0/timeelapsed;
-        for(size_t i = 0; i < _vtempaccelconfig.size(); ++i) {
-            _vtempaccelconfig[i] = (dq1.at(i)-dq0.at(i))*itimeelapsed;
-            if( IS_DEBUGLEVEL(Level_Verbose) || IS_DEBUGLEVEL(Level_VerifyPlans) ) {
-                dReal consistencyerror = RaveFabs(q0.at(i) + timeelapsed*0.5*(dq0.at(i)+dq1.at(i)) - q1.at(i));
-                if( RaveFabs(consistencyerror-2*PI) > g_fEpsilonQuadratic ) { // TODO, officially track circular joints
-                    OPENRAVE_ASSERT_OP_FORMAT(consistencyerror,<=,g_fEpsilonQuadratic*100, "dof %d is not consistent with time elapsed", i, ORE_InvalidArguments);
+
+        if( maskinterpolation == IT_Default ) {
+            // Quadratic interpolation. Need to make sure the positions, velocities, and timeelapsed are consistent
+            //     v0 + timeelapsed*0.5*(dq0 + dq1) - v1 = 0
+            for(size_t i = 0; i < _vtempaccelconfig.size(); ++i) {
+                _vtempaccelconfig[i] = (dq1.at(i)-dq0.at(i))*itimeelapsed;
+                if( IS_DEBUGLEVEL(Level_Verbose) || IS_DEBUGLEVEL(Level_VerifyPlans) ) {
+                    dReal consistencyerror = RaveFabs(q0.at(i) + timeelapsed*0.5*(dq0.at(i)+dq1.at(i)) - q1.at(i));
+                    if( RaveFabs(consistencyerror-2*PI) > g_fEpsilonQuadratic ) { // TODO, officially track circular joints
+                        OPENRAVE_ASSERT_OP_FORMAT(consistencyerror,<=,g_fEpsilonQuadratic*100, "dof %d is not consistent with time elapsed", i, ORE_InvalidArguments);
+                    }
                 }
+            }
+        }
+        else {
+            // All-linear interpolation. Do not check consistency with the quadratic equation.
+            OPENRAVE_ASSERT_OP_FORMAT(maskinterpolation, ==, IT_AllLinear, "invalid interpolationtype=0x%x", maskinterpolation, ORE_InvalidArguments);
+            for(size_t i = 0; i < _vtempaccelconfig.size(); ++i) {
+                _vtempaccelconfig[i] = (dq1.at(i)-dq0.at(i))*itimeelapsed;
             }
         }
     }
     else {
-        OPENRAVE_ASSERT_OP_FORMAT(maskinterpolation == IT_Default, |, maskinterpolation == IT_AllLinear, "invalid interpolationtype=0x%x", maskinterpolation, ORE_InvalidArguments);
         // Do linear interpolation.
         // make sure size is set to DOF
         _vtempaccelconfig.resize(params->GetDOF());
@@ -3317,7 +3341,7 @@ bool SimpleNeighborhoodSampler::Sample(std::vector<dReal>& samples)
     return samples.size()>0;
 }
 
-ManipulatorIKGoalSampler::ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPtr pmanip, const std::list<IkParameterization>& listparameterizations, int nummaxsamples, int nummaxtries, dReal fsampleprob, bool searchfreeparameters, int ikfilteroptions) : _pmanip(pmanip), _nummaxsamples(nummaxsamples), _nummaxtries(nummaxtries), _fsampleprob(fsampleprob), _ikfilteroptions(ikfilteroptions), _searchfreeparameters(searchfreeparameters)
+ManipulatorIKGoalSampler::ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPtr pmanip, const std::list<IkParameterization>& listparameterizations, int nummaxsamples, int nummaxtries, dReal fsampleprob, bool searchfreeparameters, int ikfilteroptions, const std::vector<dReal>& freevalues) : _pmanip(pmanip), _nummaxsamples(nummaxsamples), _nummaxtries(nummaxtries), _fsampleprob(fsampleprob), _ikfilteroptions(ikfilteroptions), _searchfreeparameters(searchfreeparameters), _vfreegoalvalues(freevalues)
 {
     _tempikindex = -1;
     _fjittermaxdist = 0;
@@ -3569,9 +3593,12 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
 //                }
 #endif
             }
+            else if (!_vfreegoalvalues.empty()) {
+                vfree = _vfreegoalvalues;
+            }
             else {
                 _pmanip->GetIkSolver()->GetFreeParameters(vfree);
-            }
+            } 
         }
         if( IS_DEBUGLEVEL(Level_Verbose) ) {
             std::stringstream ss; ss << "free=[";
