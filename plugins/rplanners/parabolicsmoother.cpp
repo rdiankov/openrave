@@ -1113,10 +1113,31 @@ protected:
         vellimits = _parameters->_vConfigVelocityLimit;
         accellimits = _parameters->_vConfigAccelerationLimit;
         std::vector<ParabolicRamp::ParabolicRampND> &outramps=_cacheoutramps;
-        //dReal fmult = 0.9;
+
+        dReal fCurVelMult = 1.0;
+        // Now setting fVelMultCutOff to 0 since when manip speed/accel limits are very low, we might get very small velmult
+        // from SegmentFeasible2. It might not be a good idea to have a universal cutoff value for this multiplier.
+        dReal fVelMultCutOff = 0; // stop trying if the ratio between the current vellimits and the original vellimits is less than this value
+        int itry = 0;
+        int iMaxRetries = 1000;      // stop if having been trying this many times
         ParabolicRamp::CheckReturn retseg(0);
-        for(size_t itry = 0; itry < 1000; ++itry) {
+        for(; itry < iMaxRetries; ++itry) {
             bool res=ramp.SolveMinTimeLinear(accellimits, vellimits);
+            if( !res ) {
+                retseg.retcode = 0xffff;
+                std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                ss << "x0=[";
+                SerializeValues(ss, ramp.x0);
+                ss << "]; x1=[";
+                SerializeValues(ss, ramp.x1);
+                ss << "]; curvellimits=[";
+                SerializeValues(ss, vellimits);
+                ss << "]; curaccellimits=[";
+                SerializeValues(ss, accellimits);
+                ss << "]";
+                RAVELOG_WARN_FORMAT("env=%d, ramp %d/%d SolveMinTimeLinear failed. fCurVelMult=%f; itry=%d; %s", GetEnv()->GetId()%iramp%numramps%fCurVelMult%itry%ss.str());
+                return false;
+            }
             _ExtractSwitchTimes(ramp, vswitchtimes);
             ramp.Evaluate(0, x0);
             ramp.Derivative(0, dx0);
@@ -1126,21 +1147,21 @@ protected:
                 ramp.Evaluate(vswitchtimes.at(iswitch), x1);
                 ramp.Derivative(vswitchtimes.at(iswitch), dx1);
                 retseg = SegmentFeasible2(x0, x1, dx0, dx1, vswitchtimes.at(iswitch) - fprevtime, options, outramps);
-//                        if( retseg.retcode == CFO_StateSettingError ) {
-//                            // there's a bug with the checker function. given that this ramp has been validated to be ok and we're just checking time based constraints, can pass it
-//                            std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-//                            ss << "x0=[";
-//                            SerializeValues(ss, x0);
-//                            ss << "]; x1=[";
-//                            SerializeValues(ss, x1);
-//                            ss << "]; dx0=[";
-//                            SerializeValues(ss, dx0);
-//                            ss << "]; dx1=[";
-//                            SerializeValues(ss, dx1);
-//                            ss << "]; deltatime=" << (vswitchtimes.at(iswitch) - fprevtime);
-//                            RAVELOG_WARN_FORMAT("env=%d, initial ramp starting at %d/%d, switchtime=%f (%d/%d), returned a state error 0x%x; %s ignoring since we only care about time based constraints....", GetEnv()->GetId()%i%vnewpath.size()%vswitchtimes.at(iswitch)%iswitch%vswitchtimes.size()%retseg.retcode%ss.str());
-//                            //retseg.retcode = 0;
-//                        }
+                // if( retseg.retcode == CFO_StateSettingError ) {
+                //     // there's a bug with the checker function. given that this ramp has been validated to be ok and we're just checking time based constraints, can pass it
+                //     std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                //     ss << "x0=[";
+                //     SerializeValues(ss, x0);
+                //     ss << "]; x1=[";
+                //     SerializeValues(ss, x1);
+                //     ss << "]; dx0=[";
+                //     SerializeValues(ss, dx0);
+                //     ss << "]; dx1=[";
+                //     SerializeValues(ss, dx1);
+                //     ss << "]; deltatime=" << (vswitchtimes.at(iswitch) - fprevtime);
+                //     RAVELOG_WARN_FORMAT("env=%d, initial ramp starting at %d/%d, switchtime=%f (%d/%d), returned a state error 0x%x; %s ignoring since we only care about time based constraints....", GetEnv()->GetId()%i%vnewpath.size()%vswitchtimes.at(iswitch)%iswitch%vswitchtimes.size()%retseg.retcode%ss.str());
+                //     //retseg.retcode = 0;
+                // }
                 if( retseg.retcode != 0 ) {
                     break;
                 }
@@ -1154,6 +1175,11 @@ protected:
             else if( retseg.retcode == CFO_CheckTimeBasedConstraints ) {
                 // slow the ramp down and try again
                 RAVELOG_VERBOSE_FORMAT("env=%d, slowing down ramp %d/%d by %.15e since too fast, try %d", GetEnv()->GetId()%iramp%numramps%retseg.fTimeBasedSurpassMult%itry);
+                fCurVelMult *= retseg.fTimeBasedSurpassMult;
+                if( fCurVelMult < fVelMultCutOff ) {
+                    // The velocity multiplier falls below the cut off, so stop.
+                    break;
+                }
                 for(size_t j = 0; j < vellimits.size(); ++j) {
                     vellimits.at(j) *= retseg.fTimeBasedSurpassMult;
                     accellimits.at(j) *= retseg.fTimeBasedSurpassMult*retseg.fTimeBasedSurpassMult;
@@ -1170,12 +1196,22 @@ protected:
                 ss << "]; dx1=[";
                 SerializeValues(ss, dx1);
                 ss << "]; deltatime=" << (vswitchtimes.at(iswitch) - fprevtime);
-                RAVELOG_WARN_FORMAT("initial ramp starting at %d/%d, switchtime=%f (%d/%d), returned error 0x%x; %s giving up....", iramp%numramps%vswitchtimes.at(iswitch)%iswitch%vswitchtimes.size()%retseg.retcode%ss.str());
+                RAVELOG_WARN_FORMAT("env=%d, initial ramp starting at %d/%d, switchtime=%f (%d/%d), returned error 0x%x; %s giving up....", GetEnv()->GetId()%iramp%numramps%vswitchtimes.at(iswitch)%iswitch%vswitchtimes.size()%retseg.retcode%ss.str());
                 return false;
             }
         }
         if( retseg.retcode != 0 ) {
-            // couldn't find anything...
+            std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+            ss << "x0=[";
+            SerializeValues(ss, ramp.x0);
+            ss << "]; x1=[";
+            SerializeValues(ss, ramp.x1);
+            ss << "]; curvellimits=[";
+            SerializeValues(ss, vellimits);
+            ss << "]; curaccellimits=[";
+            SerializeValues(ss, accellimits);
+            ss << "]";
+            RAVELOG_WARN_FORMAT("env=%d, ramp %d/%d initialization failed. fCurVelMult=%f; itry=%d; retcode=0x%x; %s", GetEnv()->GetId()%iramp%numramps%fCurVelMult%itry%retseg.retcode%ss.str());
             return false;
         }
         return true;

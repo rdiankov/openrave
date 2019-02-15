@@ -2987,19 +2987,27 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
             }
 
             dReal fFriction = 0; // torque due to friction
+            dReal fRotorAccelerationTorque = 0; // torque due to accelerating motor rotor (and gear)
             // see if any friction needs to be added. Only add if the velocity is non-zero since with zero velocity do not know the exact torque on the joint...
             if( !!pjoint->_info._infoElectricMotor ) {
+                const ElectricMotorActuatorInfoPtr pActuatorInfo = pjoint->_info._infoElectricMotor;
                 if( pjoint->GetDOFIndex() < (int)vDOFVelocities.size() ) {
                     if( vDOFVelocities.at(pjoint->GetDOFIndex()) > g_fEpsilonLinear ) {
-                        fFriction += pjoint->_info._infoElectricMotor->coloumb_friction;
+                        fFriction += pActuatorInfo->coloumb_friction;
                     }
                     else if( vDOFVelocities.at(pjoint->GetDOFIndex()) < -g_fEpsilonLinear ) {
-                        fFriction -= pjoint->_info._infoElectricMotor->coloumb_friction;
+                        fFriction -= pActuatorInfo->coloumb_friction;
                     }
-                    fFriction += vDOFVelocities.at(pjoint->GetDOFIndex())*pjoint->_info._infoElectricMotor->viscous_friction;
+                    fFriction += vDOFVelocities.at(pjoint->GetDOFIndex())*pActuatorInfo->viscous_friction;
+
+                    if (pActuatorInfo->rotor_inertia > 0.0) {
+                        // converting inertia on motor side to load side requires multiplying by gear ratio squared because inertia unit is mass * distance^2
+                        const dReal fInertiaOnLoadSide = pActuatorInfo->rotor_inertia * pActuatorInfo->gear_ratio * pActuatorInfo->gear_ratio;
+                        fRotorAccelerationTorque += vDOFAccelerations.at(pjoint->GetDOFIndex()) * fInertiaOnLoadSide;
+                    }
                 }
 
-                doftorques.at(pjoint->GetDOFIndex()) += fFriction;
+                doftorques.at(pjoint->GetDOFIndex()) += fFriction + fRotorAccelerationTorque;
             }
         }
         else if( pjoint->IsMimic(0) ) {
@@ -4825,7 +4833,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     FOREACHC(itgrabbedref, r->_vGrabbedBodies) {
         GrabbedConstPtr pgrabbedref = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbedref);
 
-        KinBodyPtr pbodyref(pgrabbedref->_pgrabbedbody);
+        KinBodyPtr pbodyref = pgrabbedref->_pgrabbedbody.lock();
         KinBodyPtr pgrabbedbody;
         if( !!pbodyref ) {
             pgrabbedbody = GetEnv()->GetBodyFromEnvironmentId(pbodyref->GetEnvironmentId());
