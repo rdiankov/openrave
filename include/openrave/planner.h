@@ -117,22 +117,21 @@ class OPENRAVE_API PlannerStatus
 {
 public:
     CollisionReportPtr _report;       // Optional,  collision report at the time of the error. Ideally should contents contacts information.
-    std::string _sDescription;        // Optional, the description of how/why the error happended. Displayed to the user by the UI.
-    std::string _sErrorOrigin;        // Mandatory, a string representing the code path of the error. Automatically filled on construction. 
+    std::string _sDescription;        // Optional, the description of how/why the error happended. Displayed to the user by the UI. It will automatically be filled with a generic message corresponding to statusCode if not provided.
+    std::string _sErrorOrigin;        // Auto, a string representing the code path of the error. Automatically filled on construction. 
     std::vector<dReal> _vJointValues; // Optional,  the robot's joint values in rad or m
     IkParameterization _ikparam;      // Optional,  the ik parameter that failed to find a solution.
-    PlannerStatusCode _statusCode;    // Mandatory?
+    int _statusCode;                  // Mandatory?
 
     PlannerStatus();
-    PlannerStatus(const PlannerStatusCode statusCode);
-    PlannerStatus(const std::string& description, const PlannerStatusCode statusCode);
-    PlannerStatus(const std::string& description, CollisionReportPtr report);
-    PlannerStatus(const std::string& description, CollisionReportPtr report, IkParameterization ikapram);
-    PlannerStatus(const std::string& description, CollisionReportPtr report, std::vector<dReal> jointValues);
+    PlannerStatus(const int statusCode);
+    PlannerStatus(const std::string& description, const int statusCode, CollisionReportPtr report=NULL);
+    PlannerStatus(const std::string& description, const int statusCode, IkParameterization ikparam, CollisionReportPtr report=NULL);
+    PlannerStatus(const std::string& description, const int statusCode, std::vector<dReal> jointValues, CollisionReportPtr report=NULL);
     virtual ~PlannerStatus();
 
     bool serializeToJson(rapidjson::Document& output) const;
-    PlannerStatusCode GetStatusCode();
+    int GetStatusCode();
 };
 
 /** \brief <b>[interface]</b> Planner interface that generates trajectories for target objects to follow through the environment. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_planner.

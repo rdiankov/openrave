@@ -84,67 +84,53 @@ int AddStatesWithLimitCheck(std::vector<dReal>& q, const std::vector<dReal>& qde
     return status;
 }
 
-PlannerStatus::PlannerStatus():
-    _sErrorOrigin(""),
-    _sDescription(""),
-    _report(NULL)
+PlannerStatus::PlannerStatus(const int statusCode)
 {
-}
-
-PlannerStatus::PlannerStatus(const PlannerStatusCode statusCode):
-    _report(NULL),
-    _statusCode(statusCode)
-{
-    std::string description;
-    if(statusCode == PS_Failed)
-        description = "planner failed wit generic error";
-    else if(statusCode == PS_HasSolution)
-        description = "planner succeeded";
-    else if(statusCode == PS_Interrupted)
-        description = "planning was interrupted, but can be resumed by calling PlanPath again";
-    else if(statusCode == PS_InterruptedWithSolution)
-        description = "planning was interrupted, but a valid path/solution was returned. Can call PlanPath again to refine results";
-    else if(statusCode == PS_FailedDueToCollision)
-        description = "planner failed due to collision constraints";
-    else if(statusCode == PS_FailedDueToInitial)
-        description = "failed due to initial configurations";
-    else if(statusCode == PS_FailedDueToGoal)
-        description = "failed due to goal configurations";
-    else if(statusCode == PS_FailedDueToKinematics)
-        description = "failed due to kinematics constraints";
-    else if(statusCode == PS_FailedDueToIK)
-        description = "failed due to inverse kinematics (could be due to collisions or velocity constraints, but don't know)";
-    else if(statusCode == PS_FailedDueToVelocityConstraints)
-        description = "failed due to velocity constraints";
-    else
+    std::string description("");
+    if(statusCode & PS_Failed)
+        description += "planner failed with generic error. ";
+    if(statusCode & PS_HasSolution)
+        description += "planner succeeded. ";
+    if(statusCode & PS_Interrupted)
+        description += "planning was interrupted, but can be resumed by calling PlanPath again. ";
+    if(statusCode & PS_InterruptedWithSolution)
+        description += "planning was interrupted, but a valid path/solution was returned. Can call PlanPath again to refine results. ";
+    if(statusCode & PS_FailedDueToCollision)
+        description += "planner failed due to collision constraints. ";
+    if(statusCode & PS_FailedDueToInitial)
+        description += "failed due to initial configurations. ";
+    if(statusCode & PS_FailedDueToGoal)
+        description += "failed due to goal configurations. ";
+    if(statusCode & PS_FailedDueToKinematics)
+        description += "failed due to kinematics constraints. ";
+    if(statusCode & PS_FailedDueToIK)
+        description += "failed due to inverse kinematics (could be due to collisions or velocity constraints, but don't know). ";
+    if(statusCode & PS_FailedDueToVelocityConstraints)
+        description += "failed due to velocity constraints. ";
+    if(description.empty())
         throw OPENRAVE_EXCEPTION_FORMAT(_("planner status code (%i) is not supported by planner status default constructor"), statusCode, ORE_InvalidArguments);
-        
-    _sDescription = description;
-    _sErrorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
+
+    PlannerStatus(description, statusCode);
 }
     
-PlannerStatus::PlannerStatus(const std::string& description, const PlannerStatusCode statusCode):
+PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, CollisionReportPtr report):
     _sDescription(description),
-    _report(NULL),
-    _statusCode(statusCode)
+    _statusCode(statusCode),
+    _report(report)
 {
     _sErrorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
 }
     
-PlannerStatus::PlannerStatus(const std::string& description, CollisionReportPtr report, IkParameterization ikparam):
-    _sDescription(description),
-    _report(report),
+PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, IkParameterization ikparam, CollisionReportPtr report):
     _ikparam(ikparam)
 {
-    _sErrorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
+    PlannerStatus(description, statusCode, report);
 }
     
-PlannerStatus::PlannerStatus(const std::string& description, CollisionReportPtr report, std::vector<dReal> jointValues):
-    _sDescription(description),
-    _report(report),
+PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, std::vector<dReal> jointValues, CollisionReportPtr report):
     _vJointValues(jointValues)
 {
-    _sErrorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
+    PlannerStatus(description, statusCode, report);
 }
 
 PlannerStatus::~PlannerStatus() {}
@@ -193,7 +179,7 @@ bool PlannerStatus::serializeToJson(rapidjson::Document& output) const
     return true;
 }
 
-PlannerStatusCode PlannerStatus::GetStatusCode()
+int PlannerStatus::GetStatusCode()
 {
     return _statusCode;
 }
