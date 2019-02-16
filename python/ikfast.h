@@ -47,8 +47,20 @@
 #define IKFAST_VERSION 0x1000004b
 
 #define IKSINGLEDOFSOLUTIONBASE_INDICES_SIZE 5
+#define IKSINGLEDOFSOLUTIONBASE_FREEIND_SIZE 3
 
 namespace ikfast {
+
+template <typename T>
+inline void ikfastfmodtwopi(T& c) {
+    // put back to (-PI, PI]
+    while (c > 3.1415926535897932384626) {
+        c -= 6.2831853071795864769252;
+    }
+    while (c <= -3.1415926535897932384626) {
+        c += 6.2831853071795864769252;
+    }
+}
 
 /// \brief holds the solution for a single dof
 template <typename T>
@@ -59,17 +71,27 @@ public:
         indices.fill(0xFF);
     }
 
-    T fmul = 0.0, foffset = 0.0; ///< joint value is fmul*sol[freeind]+foffset
+    T foffset = 0.0; ///< jointvalue = foffset + sum( fmuls[i] * sol[freeinds[i]] ) ... i = 0..nfreeinds-1
+    std::array<signed char, IKSINGLEDOFSOLUTIONBASE_FREEIND_SIZE> freeinds;
+    std::array<T, IKSINGLEDOFSOLUTIONBASE_FREEIND_SIZE> fmuls;
+    unsigned char nfreeinds = 0; // length of active freeinds, fmuls
+
     signed char freeind = -1; ///< if >= 0, mimics another joint
     unsigned char jointtype = 0x01; ///< joint type, 0x01 is revolute, 0x11 is slider
     unsigned char maxsolutions = 0; ///< max possible indices, 0 if controlled by free index or a free joint itself
     std::array<unsigned char, IKSINGLEDOFSOLUTIONBASE_INDICES_SIZE> indices; ///< unique index of the solution used to keep track on what part it came from. sometimes a solution can be repeated for different indices. store at least another repeated root
 
     virtual void Print() const {
-        std::cout << "(" << ((jointtype == 0x01) ? "R" : "P") << ", "
-                  << (int)freeind << "), (" << foffset << ", "
-                  << fmul << "), " << (unsigned int) maxsolutions << " (";
-        for(unsigned int i = 0; i < indices.size(); i++) {
+        std::cout << "(" << ((jointtype == 0x01) ? "R" : "P") << ", ";
+        for(uint32_t i = 0; i < nfreeinds; i++) {
+            std::cout << (unsigned int) freeinds[i] << ", ";
+        }
+        std::cout << "), " << foffset << ", (";
+        for(uint32_t i = 0; i < nfreeinds; i++) {
+            std::cout << fmuls[i] << ", ";
+        }
+        std::cout << "), " << (unsigned int) maxsolutions << " (";
+        for(unsigned int i = 0; i < IKSINGLEDOFSOLUTIONBASE_INDICES_SIZE; i++) {
             std::cout << (unsigned int) indices[i] << ", ";
         }
         std::cout << ") " << std::endl;
@@ -164,17 +186,6 @@ public:
     GetKinematicsHashFn _GetKinematicsHash;
 };
 
-template <typename T>
-inline void ikfastfmodtwopi(T& c) {
-    // put back to (-PI, PI]
-    while (c > 3.1415926535897932384626) {
-        c -= 6.2831853071795864769252;
-    }
-    while (c <= -3.1415926535897932384626) {
-        c += 6.2831853071795864769252;
-    }
-}
-
 // Implementations of the abstract classes, user doesn't need to use them
 
 /// \brief Default implementation of \ref IkSolutionBase
@@ -204,11 +215,12 @@ public:
 
     virtual void GetSolution(T* solution, const T* freevalues) const {
         for(std::size_t i = 0; i < _vbasesol.size(); ++i) {
-            if( _vbasesol[i].freeind < 0 )
-                solution[i] = _vbasesol[i].foffset;
-            else {
-                solution[i] = freevalues[_vbasesol[i].freeind]*_vbasesol[i].fmul + _vbasesol[i].foffset;
-                ikfastfmodtwopi(solution[i]);
+            const IkSingleDOFSolutionBase<T>& jsol = _vbasesol[i];
+            T& soli = solution[i];
+            soli = jsol.foffset;
+            for(unsigned int i = 0; i < jsol.nfreeinds; i++) {
+                soli += freevalues[jsol.freeinds[i]] * jsol.fmuls[i];
+                ikfastfmodtwopi(soli);
             }
         }
     }
@@ -366,61 +378,6 @@ public:
 
 protected:
     std::list< IkSolution<T> > _listsolutions;
-};
-
-/// \brief Contains information of a solution where two axes align.
-///
-/// \param freejoint  Index of the  free joint jy in SolutionArray = std::array<T, N>.
-/// \param mimicjoint Index of the mimic joint jx in SolutionArray.
-/// \param solutionindex Index of the IK solution in std::vector<SolutionArray>.
-///        This is NOT the solution index associated with each joint in one IK solution.
-/// \param bxpy If true, then jx + jy is the constant jxpy; otherwise jx - jy is the constant jxmy.
-///        We store this constant in the foffset field of jx, and store 0 in that of jy.
-///
-/// In an aligned case, jy = c = 0.0 + 1.0*c, and
-/// jx = jxpy - c = jxpy + (-1.0) * c (when bxpy is true), or
-/// jx = jxmy + c = jxmy +   1.0  * c (when bxpy is false).
-
-struct AlignedSolution {
-    uint32_t freejoint = 0;     // jy
-    uint32_t mimicjoint = 0;    // jx
-    uint32_t solutionindex = 0;
-    bool bxpy = true;           // jxpy = jx + jy
-    // false means                 jxmy = jx - jy
-
-    AlignedSolution(uint32_t freejoint_in,
-                    uint32_t mimicjoint_in,
-                    uint32_t solutionindex_in,
-                    bool bxpy_in) {
-        freejoint     = freejoint_in;
-        mimicjoint    = mimicjoint_in;
-        solutionindex = solutionindex_in;
-        bxpy          = bxpy_in;
-    }
-
-    template <typename T>
-    void SetIkSolution(ikfast::IkSolution<T>& solnobj, const T v[]) {
-        const uint32_t dof = solnobj.GetDOF();
-        // assert(freejoint < dof && mimicjoint < dof);
-        ikfast::IkSingleDOFSolutionBase<T>& freejointsoln = solnobj[freejoint],
-        &mimicjointsoln = solnobj[mimicjoint];
-
-        // update _vbasesol
-        freejointsoln.fmul = 1.0;
-        freejointsoln.foffset = 0.0;
-        freejointsoln.freeind = 0;
-        freejointsoln.maxsolutions = 0;
-        freejointsoln.indices[0] = (unsigned char) -1;
-
-        mimicjointsoln.fmul = bxpy ? (-1.0) : (1.0);
-        mimicjointsoln.foffset = v[mimicjoint] - v[freejoint] * mimicjointsoln.fmul;
-        mimicjointsoln.freeind = 0;
-        mimicjointsoln.maxsolutions = 0;
-        mimicjointsoln.indices[0] = (unsigned char) -1;
-
-        // update _vfree
-        solnobj.SetFree({(int) freejoint});
-    }
 };
 
 template <typename T, long unsigned int N>
