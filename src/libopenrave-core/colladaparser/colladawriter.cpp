@@ -1790,6 +1790,7 @@ private:
                 ss.clear(); ss.str("");
 
                 uint8_t b = info._sidewallExists;
+                ss << b;
                 pcage->add("sidewallExists")->setCharData(ss.str());
 
                 break;
