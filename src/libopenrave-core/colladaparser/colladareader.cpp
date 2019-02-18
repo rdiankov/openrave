@@ -2852,7 +2852,7 @@ public:
                             daeElementRef pSidewallExists = children[i]->getChild("sidewallExists");
                             if( !!pSidewallExists ) {
                                 stringstream ss(pSidewallExists->getCharData());
-                                uint8_t b;
+                                uint32_t b;
                                 ss >> b;
                                 if( ss.eof() || !!ss ) {
                                     geominfo._type = GT_Cage;
