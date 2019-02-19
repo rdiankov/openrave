@@ -404,7 +404,7 @@ public:
         _totalTimeCheckPathAllConstraintsInVain = 0;
 #endif
 
-        _bUseNewHeuristic = true; // dof-depending velocity/acceleration scaling factors
+        _bUseNewHeuristic = false; // dof-depending velocity/acceleration scaling factors
 
         // Caching stuff
         _cacheCurPos.resize(_parameters->GetDOF());
