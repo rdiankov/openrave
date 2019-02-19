@@ -383,7 +383,7 @@ public:
                 string targetname = !_parameters->targetbody ? string() : _parameters->targetbody->GetName();
                 std::string description = str(boost::format("hit link that needed to be avoided: %s, target=%s\n")%_report->__str__()%targetname);
                 RAVELOG_VERBOSE(description);
-                return PlannerStatus(description, PS_Failed);
+                return PlannerStatus(description, PS_Failed, _report);
             }
         }
 
@@ -439,7 +439,7 @@ public:
                     string targetname = !_parameters->targetbody ? string() : _parameters->targetbody->GetName();
                     std::string description = str(boost::format("gripper in collision without moving and bavoidcontact==True. target=%s, contact=%s\n")%targetname%_report->__str__());
                     RAVELOG_WARN(description);
-                    return PlannerStatus(description, PS_Failed);
+                    return PlannerStatus(description, PS_Failed, _report);
                 }
                 continue;
             }
@@ -468,7 +468,7 @@ public:
                         if( ct & CT_AvoidLinkHit ) {
                             std::string description = str(boost::format("hit link that needed to be avoided: %s\n")%_report->__str__());
                             RAVELOG_VERBOSE(description);
-                            return PlannerStatus(description, PS_Failed);
+                            return PlannerStatus(description, PS_Failed, _report);
                         }
 
                         int linkindex = (ct&CT_LinkMask)>>CT_LinkMaskShift;
