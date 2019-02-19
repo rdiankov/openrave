@@ -718,7 +718,8 @@ ViewerBasePtr GetViewer(PyViewerBasePtr);
 PyInterfaceBasePtr toPyViewer(ViewerBasePtr, PyEnvironmentBasePtr);
 
 int pyGetIntFromPy(object olevel, int defaultvalue);
-
+object toPyPlannerStatus(const PlannerStatus&);
+    
 PyConfigurationSpecificationPtr toPyConfigurationSpecification(const ConfigurationSpecification&);
 const ConfigurationSpecification& GetConfigurationSpecification(PyConfigurationSpecificationPtr);
 

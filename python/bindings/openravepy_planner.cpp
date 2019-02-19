@@ -34,6 +34,52 @@ public:
     int _iteration;
 };
 
+
+class PyPlannerStatus
+    {
+public:
+    PyPlannerStatus(){
+        _sDescription = "";
+        _sErrorOrigin = "";
+        _statusCode = 0;
+        _vJointValues = numeric::array(boost::python::list());
+        _report = object();
+        _ikparam = object();
+    }
+
+    PyPlannerStatus(const PlannerStatus& status) {
+        // Just serializeToJason?
+        _sDescription = status._sDescription; //ConvertStringToUnicode??
+        _sErrorOrigin = status._sErrorOrigin;
+        _statusCode = status._statusCode;
+        _vJointValues = toPyArray(status._vJointValues);
+
+        if( !status._report ) {
+            //_report = "";
+            _report = object();
+        }
+        else {
+            //_report = status._report->__str__();
+            _report = object(openravepy::toPyCollisionReport(status._report, NULL));
+        }
+
+        _ikparam = toPyIkParameterization(status._ikparam);
+    }
+
+    object _report;
+    //std::string _report;
+    std::string _sDescription;
+    std::string _sErrorOrigin;
+    object _vJointValues;
+    object _ikparam;
+    int _statusCode;
+};
+
+object toPyPlannerStatus(const PlannerStatus& status)
+{
+    return object(boost::shared_ptr<PyPlannerStatus>(new PyPlannerStatus(status)));
+}
+
 class PyPlannerBase : public PyInterfaceBase
 {
 protected:
@@ -326,7 +372,8 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckPathAllConstraints_overloads, CheckP
 
 void init_openravepy_planner()
 {
-    object plannerstatus = enum_<PlannerStatusCode>("PlannerStatusCode" DOXY_ENUM(PlannerStatusCode))
+
+    object plannerstatuscode = enum_<PlannerStatusCode>("PlannerStatusCode" DOXY_ENUM(PlannerStatusCode))
                            .value("Failed",PS_Failed)
                            .value("HasSolution",PS_HasSolution)
                            .value("Interrupted",PS_Interrupted)
@@ -338,6 +385,16 @@ void init_openravepy_planner()
                            .value("Interrupt",PA_Interrupt)
                            .value("ReturnWithAnySolution",PA_ReturnWithAnySolution)
     ;
+
+    class_<PyPlannerStatus, boost::shared_ptr<PyPlannerStatus> >("PlannerStatus", DOXY_CLASS(PlannerStatus))
+        .def_readwrite("report",&PyPlannerStatus::_report)
+        .def_readwrite("description",&PyPlannerStatus::_sDescription)
+        .def_readwrite("errorOrigin",&PyPlannerStatus::_sErrorOrigin)
+        .def_readwrite("jointValues",&PyPlannerStatus::_vJointValues)
+        .def_readwrite("ikparam",&PyPlannerStatus::_ikparam)
+        .def_readwrite("statusCode",&PyPlannerStatus::_statusCode)
+    ;
+
     class_<PyPlannerProgress, boost::shared_ptr<PyPlannerProgress> >("PlannerProgress", DOXY_CLASS(PlannerBase::PlannerProgress))
     .def_readwrite("_iteration",&PyPlannerProgress::_iteration)
     ;
