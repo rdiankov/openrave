@@ -911,7 +911,7 @@ void RobotItem::Load()
                 //Set the screen alignment - always face the screen
                 text->setAxisAlignment(osgText::Text::SCREEN);
                 text->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
-                text->setCharacterSize(25.0);
+                text->setCharacterSize(50.0);
 
                 text->setColor(osg::Vec4(0,0,0,1));
                 text->setEnableDepthWrites(false);
@@ -965,7 +965,7 @@ void RobotItem::Load()
                 //Set the screen alignment - always face the screen
                 text->setAxisAlignment(osgText::Text::SCREEN);
                 text->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
-                text->setCharacterSize(25.0);
+                text->setCharacterSize(50.0);
 
                 text->setColor(osg::Vec4(0,0,0,1));
                 text->setEnableDepthWrites(false);
