@@ -254,14 +254,14 @@ public:
         return _pplanner->InitPlan(openravepy::GetRobot(pbase),ss);
     }
 
-    PlannerStatus PlanPath(PyTrajectoryBasePtr pytraj,bool releasegil=true)
+    object PlanPath(PyTrajectoryBasePtr pytraj,bool releasegil=true)
     {
         openravepy::PythonThreadSaverPtr statesaver;
         TrajectoryBasePtr ptraj = openravepy::GetTrajectory(pytraj);
         if( releasegil ) {
             statesaver.reset(new openravepy::PythonThreadSaver());
         }
-        return _pplanner->PlanPath(ptraj);
+        return openravepy::toPyPlannerStatus(_pplanner->PlanPath(ptraj));
     }
 
     PyPlannerParametersPtr GetParameters() const
