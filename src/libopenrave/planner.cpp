@@ -84,7 +84,16 @@ int AddStatesWithLimitCheck(std::vector<dReal>& q, const std::vector<dReal>& qde
     return status;
 }
 
-PlannerStatus::PlannerStatus(const int statusCode)
+PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, CollisionReportPtr report):
+    _sDescription(description),
+    _statusCode(statusCode),
+    _report(report)
+{
+    _sErrorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
+}
+
+PlannerStatus::PlannerStatus(const int statusCode):
+    PlannerStatus("", statusCode)
 {
     std::string description("");
     if(statusCode & PS_Failed)
@@ -110,27 +119,19 @@ PlannerStatus::PlannerStatus(const int statusCode)
     if(description.empty())
         throw OPENRAVE_EXCEPTION_FORMAT(_("planner status code (%i) is not supported by planner status default constructor"), statusCode, ORE_InvalidArguments);
 
-    PlannerStatus(description, statusCode);
+    _sDescription = description;
 }
-    
-PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, CollisionReportPtr report):
-    _sDescription(description),
-    _statusCode(statusCode),
-    _report(report)
-{
-    _sErrorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
-}
-    
+        
 PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, IkParameterization ikparam, CollisionReportPtr report):
-    _ikparam(ikparam)
+    PlannerStatus(description, statusCode, report)
 {
-    PlannerStatus(description, statusCode, report);
+    _ikparam = ikparam;
 }
     
 PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, std::vector<dReal> jointValues, CollisionReportPtr report):
-    _vJointValues(jointValues)
+    PlannerStatus(description, statusCode, report)
 {
-    PlannerStatus(description, statusCode, report);
+    _vJointValues = jointValues;
 }
 
 PlannerStatus::~PlannerStatus() {}
@@ -139,6 +140,7 @@ bool PlannerStatus::serializeToJson(rapidjson::Document& output) const
 {
     openravejson::SetJsonValueByKey(output, "errorOrigin", _sErrorOrigin);
     openravejson::SetJsonValueByKey(output, "description", _sDescription);
+    openravejson::SetJsonValueByKey(output, "statusCode", _statusCode);
     if(_vJointValues.size() > 0){
         openravejson::SetJsonValueByKey(output, "jointValues", _vJointValues);
     }
