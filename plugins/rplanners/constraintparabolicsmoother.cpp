@@ -186,7 +186,7 @@ public:
                         std::vector<KinBodyPtr> grabbedbodies;
                         probot->GetGrabbed(grabbedbodies);
                         FOREACH(itbody,grabbedbodies){
-                            if((*itmanip)->IsGrabbing(*itbody)) {
+                            if((*itmanip)->IsGrabbing(**itbody)) {
                                 FOREACH(itlink,(*itbody)->GetLinks()){
                                     globallinklist.push_back(*itlink);
                                 }

@@ -793,12 +793,12 @@ private:
 
     inline boost::shared_ptr<MobyController> shared_controller()
     {
-        return boost::dynamic_pointer_cast<MobyController>(shared_from_this());
+        return boost::static_pointer_cast<MobyController>(shared_from_this());
     }
 
     inline boost::shared_ptr<MobyController const> shared_controller_const() const
     {
-        return boost::dynamic_pointer_cast<MobyController const>(shared_from_this());
+        return boost::static_pointer_cast<MobyController const>(shared_from_this());
     }
 
     inline boost::weak_ptr<MobyController> weak_controller()

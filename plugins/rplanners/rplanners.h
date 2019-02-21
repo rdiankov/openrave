@@ -372,41 +372,61 @@ public:
                 }
             }
 
-//            if( IS_DEBUGLEVEL(Level_Verbose) ) {
-//                std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-//                ss << "successfully connected _vCurConfig=[";
-//                for(size_t itempdof = 0; itempdof < _vCurConfig.size(); ++itempdof ) {
-//                    if( itempdof > 0 ) {
-//                        ss << ", ";
-//                    }
-//                    ss << _vCurConfig[itempdof];
-//                }
-//                ss << "]; _vNewConfig=[";
-//                for(size_t itempdof = 0; itempdof < _vNewConfig.size(); ++itempdof ) {
-//                    if( itempdof > 0 ) {
-//                        ss << ", ";
-//                    }
-//                    ss << _vNewConfig[itempdof];
-//                }
-//                ss << "]";
-//                RAVELOG_VERBOSE(ss.str());
-//            }
-
+            // if( IS_DEBUGLEVEL(Level_Verbose) ) {
+            //     std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+            //     ss << "successfully connected _vCurConfig=[";
+            //     for(size_t itempdof = 0; itempdof < _vCurConfig.size(); ++itempdof ) {
+            //         if( itempdof > 0 ) {
+            //             ss << ", ";
+            //         }
+            //         ss << _vCurConfig[itempdof];
+            //     }
+            //     ss << "]; _vNewConfig=[";
+            //     for(size_t itempdof = 0; itempdof < _vNewConfig.size(); ++itempdof ) {
+            //         if( itempdof > 0 ) {
+            //             ss << ", ";
+            //         }
+            //         ss << _vNewConfig[itempdof];
+            //     }
+            //     ss << "]";
+            //     RAVELOG_VERBOSE(ss.str());
+            // }
             // dReal currentDistance =  _ComputeDistance(&_vCurConfig[0], _vNewConfig);
-            // RAVELOG_DEBUG_FORMAT("got %d configurations", ((int)pfilter->_configurations.size()/_dof));
 
+            int iAdded = 0;
             if( _constraintreturn->_bHasRampDeviatedFromInterpolation ) {
                 // Since the path checked by CheckPathAllConstraints can be different from a straight line segment connecting _vNewConfig and _vCurConfig, we add all checked configurations along the checked segment to the tree.
-                for(int iconfig = 0; iconfig+_dof-1 < (int)_constraintreturn->_configurations.size(); iconfig += _dof) {
-                    std::copy(_constraintreturn->_configurations.begin() + iconfig, _constraintreturn->_configurations.begin() + iconfig + _dof, _vNewConfig.begin());
-                    NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0); ///< set userdata to 0
-                    if( !!pnewnode ) {
-                        bHasAdded = true;
-                        pnode = pnewnode;
-                        lastnode = pnode;
+                if( _fromgoal ) {
+                    // Need to add nodes to the tree starting from the one closest to the nearest neighbor. Since _fromgoal is true, the closest one is the last config in _constraintreturn->_configurations
+                    for(int iconfig = ((int)_constraintreturn->_configurations.size()) - _dof; iconfig >= 0; iconfig -= _dof) {
+                        std::copy(_constraintreturn->_configurations.begin() + iconfig, _constraintreturn->_configurations.begin() + iconfig + _dof, _vNewConfig.begin());
+                        NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0); ///< set userdata to 0
+                        if( !!pnewnode ) {
+                            bHasAdded = true;
+                            pnode = pnewnode;
+                            lastnode = pnode;
+                            ++iAdded;
+                        }
+                        else {
+                            // RAVELOG_DEBUG_FORMAT("_constraintreturn has %d configurations, numadded=%d, _fromgoal=%d", (_constraintreturn->_configurations.size()/_dof)%iAdded%_fromgoal);
+                            break;
+                        }
                     }
-                    else {
-                        break;
+                }
+                else {
+                    for(int iconfig = 0; iconfig+_dof-1 < (int)_constraintreturn->_configurations.size(); iconfig += _dof) {
+                        std::copy(_constraintreturn->_configurations.begin() + iconfig, _constraintreturn->_configurations.begin() + iconfig + _dof, _vNewConfig.begin());
+                        NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0); ///< set userdata to 0
+                        if( !!pnewnode ) {
+                            bHasAdded = true;
+                            pnode = pnewnode;
+                            lastnode = pnode;
+                            ++iAdded;
+                        }
+                        else {
+                            // RAVELOG_DEBUG_FORMAT("_constraintreturn has %d configurations, numadded=%d, _fromgoal=%d", (_constraintreturn->_configurations.size()/_dof)%iAdded%_fromgoal);
+                            break;
+                        }
                     }
                 }
             }

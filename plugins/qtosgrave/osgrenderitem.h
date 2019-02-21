@@ -236,7 +236,7 @@ public:
 
     RobotItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, RobotBasePtr robot, ViewGeometry viewmode);
     virtual ~RobotItem();
-    
+
     virtual void Load();
 
     virtual bool UpdateFromOSG();

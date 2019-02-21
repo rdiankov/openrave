@@ -345,7 +345,7 @@ boost::python::list pyGetDHParameters(PyKinBodyPtr pybody)
 class PyManipulatorIKGoalSampler
 {
 public:
-    PyManipulatorIKGoalSampler(object pymanip, object oparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal jitter=0, bool searchfreeparameters=true, uint32_t ikfilteroptions = IKFO_CheckEnvCollisions) {
+    PyManipulatorIKGoalSampler(object pymanip, object oparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal jitter=0, bool searchfreeparameters=true, uint32_t ikfilteroptions = IKFO_CheckEnvCollisions, object freevalues = object()) {
         std::list<IkParameterization> listparameterizationsPtr;
         size_t num = len(oparameterizations);
         for(size_t i = 0; i < num; ++i) {
@@ -358,7 +358,8 @@ public:
             }
         }
         dReal fsampleprob=1;
-        _sampler.reset(new OpenRAVE::planningutils::ManipulatorIKGoalSampler(GetRobotManipulator(pymanip), listparameterizationsPtr, nummaxsamples, nummaxtries, fsampleprob, searchfreeparameters, ikfilteroptions));
+        vector<dReal> vfreevalues = ExtractArray<dReal>(freevalues);
+        _sampler.reset(new OpenRAVE::planningutils::ManipulatorIKGoalSampler(GetRobotManipulator(pymanip), listparameterizationsPtr, nummaxsamples, nummaxtries, fsampleprob, searchfreeparameters, ikfilteroptions, vfreevalues));
         _sampler->SetJitter(jitter);
     }
     virtual ~PyManipulatorIKGoalSampler() {
@@ -494,7 +495,7 @@ void InitPlanningUtils()
 
 
         class_<planningutils::PyManipulatorIKGoalSampler, planningutils::PyManipulatorIKGoalSamplerPtr >("ManipulatorIKGoalSampler", DOXY_CLASS(planningutils::ManipulatorIKGoalSampler), no_init)
-        .def(init<object, object, optional<int, int, dReal, bool, int> >(args("manip", "parameterizations", "nummaxsamples", "nummaxtries", "jitter","searchfreeparameters","ikfilteroptions")))
+        .def(init<object, object, optional<int, int, dReal, bool, int, object> >(args("manip", "parameterizations", "nummaxsamples", "nummaxtries", "jitter","searchfreeparameters","ikfilteroptions","freevalues")))
         .def("Sample",&planningutils::PyManipulatorIKGoalSampler::Sample, Sample_overloads(args("ikreturn","releasegil"),DOXY_FN(planningutils::ManipulatorIKGoalSampler, Sample)))
         .def("SampleAll",&planningutils::PyManipulatorIKGoalSampler::SampleAll, SampleAll_overloads(args("maxsamples", "maxchecksamples", "releasegil"),DOXY_FN(planningutils::ManipulatorIKGoalSampler, SampleAll)))
         .def("GetIkParameterizationIndex", &planningutils::PyManipulatorIKGoalSampler::GetIkParameterizationIndex, args("index"), DOXY_FN(planningutils::ManipulatorIKGoalSampler, GetIkParameterizationIndex))

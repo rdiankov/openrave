@@ -121,7 +121,7 @@ public:
         /// \brief Release all bodies grabbed by the end effector of this manipualtor
         virtual void ReleaseAllGrabbed() {
             RobotBasePtr probot(__probot);
-            probot->ReleaseAllGrabbedWithLink(__pEffector);
+            probot->ReleaseAllGrabbedWithLink(*__pEffector);
         }
 
         /// \brief Return transform with respect to end effector defining the grasp coordinate system
@@ -265,7 +265,10 @@ public:
         /// \brief returns true if a link is part of the child links of the manipulator.
         ///
         /// The child links do not include the arm links.
-        virtual bool IsChildLink(LinkConstPtr plink) const;
+        bool IsChildLink(LinkConstPtr plink) const RAVE_DEPRECATED {
+            return IsChildLink(*plink);
+        }
+        virtual bool IsChildLink(const KinBody::Link& link) const;
 
         /// \brief Get all child links of the manipulator starting at pEndEffector link.
         ///
@@ -349,7 +352,10 @@ public:
         //virtual bool CheckIndependentCollision(KinBodyConstPtr body, CollisionReportPtr report = CollisionReportPtr()) const;
 
         /// \brief return true if the body is being grabbed by any link on this manipulator
-        virtual bool IsGrabbing(KinBodyConstPtr body) const;
+        bool IsGrabbing(KinBodyConstPtr body) const RAVE_DEPRECATED {
+            return IsGrabbing(*body);
+        }
+        virtual bool IsGrabbing(const KinBody &body) const;
 
         /// \brief computes the jacobian of the manipulator arm indices of the current manipulator frame world position.
         ///
@@ -760,6 +766,9 @@ private:
     virtual void GetActiveDOFVelocityLimits(std::vector<dReal>& v) const;
     virtual void GetActiveDOFAccelerationLimits(std::vector<dReal>& v) const;
     virtual void GetActiveDOFJerkLimits(std::vector<dReal>& v) const;
+    virtual void GetActiveDOFHardVelocityLimits(std::vector<dReal>& v) const;
+    virtual void GetActiveDOFHardAccelerationLimits(std::vector<dReal>& v) const;
+    virtual void GetActiveDOFHardJerkLimits(std::vector<dReal>& v) const;
     virtual void GetActiveDOFMaxVel(std::vector<dReal>& v) const {
         return GetActiveDOFVelocityLimits(v);
     }
@@ -768,6 +777,15 @@ private:
     }
     virtual void GetActiveDOFMaxJerk(std::vector<dReal>& v) const {
         return GetActiveDOFJerkLimits(v);
+    }
+    virtual void GetActiveDOFHardMaxVel(std::vector<dReal>& v) const {
+        return GetActiveDOFHardVelocityLimits(v);
+    }
+    virtual void GetActiveDOFHardMaxAccel(std::vector<dReal>& v) const {
+        return GetActiveDOFHardAccelerationLimits(v);
+    }
+    virtual void GetActiveDOFHardMaxJerk(std::vector<dReal>& v) const {
+        return GetActiveDOFHardJerkLimits(v);
     }
 
     /// computes the configuration difference q1-q2 and stores it in q1. Takes into account joint limits and circular joints
@@ -814,7 +832,10 @@ private:
     /// \brief tries to remove the attached sensor. If successful, returns true.
     ///
     /// Will change the robot structure hash..
-    virtual bool RemoveAttachedSensor(AttachedSensorPtr attsensor);
+    bool RemoveAttachedSensor(AttachedSensorPtr attsensor) RAVE_DEPRECATED {
+        return RemoveAttachedSensor(*attsensor);
+    }
+    virtual bool RemoveAttachedSensor(RobotBase::AttachedSensor &attsensor);
     
     /// \deprecated (11/10/04) send directly through controller
     virtual bool SetMotion(TrajectoryBaseConstPtr ptraj) RAVE_DEPRECATED;

@@ -84,10 +84,10 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
     }
 
     inline boost::shared_ptr<IkFastSolver<IkReal> > shared_solver() {
-        return boost::dynamic_pointer_cast<IkFastSolver<IkReal> >(shared_from_this());
+        return boost::static_pointer_cast<IkFastSolver<IkReal> >(shared_from_this());
     }
     inline boost::shared_ptr<IkFastSolver<IkReal> const> shared_solver_const() const {
-        return boost::dynamic_pointer_cast<IkFastSolver<IkReal> const>(shared_from_this());
+        return boost::static_pointer_cast<IkFastSolver<IkReal> const>(shared_from_this());
     }
     inline boost::weak_ptr<IkFastSolver<IkReal> > weak_solver() {
         return shared_solver();
@@ -505,7 +505,7 @@ protected:
             std::vector<KinBodyPtr> vgrabbedbodies;
             _probot->GetGrabbed(vgrabbedbodies);
             FOREACH(itbody,vgrabbedbodies) {
-                if( find(_vchildlinks.begin(),_vchildlinks.end(),_probot->IsGrabbing(*itbody)) != _vchildlinks.end() ) {
+                if( find(_vchildlinks.begin(),_vchildlinks.end(),_probot->IsGrabbing(**itbody)) != _vchildlinks.end() ) {
                     _listGrabbedSavedStates.push_back(KinBody::KinBodyStateSaver(*itbody, KinBody::Save_LinkEnable));
                 }
             }
@@ -925,8 +925,8 @@ protected:
                 if( _bEmptyTransform6D ) {
                     t = t * tLocalTool.inverse();
                 }
-                IkReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
-                IkReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
+                IkReal eetrans[3] = {(IkReal)t.trans.x, (IkReal)t.trans.y, (IkReal)t.trans.z};
+                IkReal eerot[9] = {(IkReal)t.m[0],(IkReal)t.m[1],(IkReal)t.m[2],(IkReal)t.m[4],(IkReal)t.m[5],(IkReal)t.m[6],(IkReal)t.m[8],(IkReal)t.m[9],(IkReal)t.m[10]};
 //                stringstream ss; ss << "./ik " << std::setprecision(16);
 //                ss << eerot[0]  << " " << eerot[1]  << " " << eerot[2]  << " " << eetrans[0]  << " " << eerot[3]  << " " << eerot[4]  << " " << eerot[5]  << " " << eetrans[1]  << " " << eerot[6]  << " " << eerot[7]  << " " << eerot[8]  << " " << eetrans[2] << " ";
 //                FOREACH(itfree,vfree) {
@@ -938,12 +938,12 @@ protected:
             }
             case IKP_Rotation3D: {
                 TransformMatrix t(Transform(param.GetRotation3D(),Vector()));
-                IkReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
+                IkReal eerot[9] = {(IkReal)t.m[0],(IkReal)t.m[1],(IkReal)t.m[2],(IkReal)t.m[4],(IkReal)t.m[5],(IkReal)t.m[6],(IkReal)t.m[8],(IkReal)t.m[9],(IkReal)t.m[10]};
                 return _ikfunctions->_ComputeIk(NULL, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions);
             }
             case IKP_Translation3D: {
                 Vector v = param.GetTranslation3D();
-                IkReal eetrans[3] = {v.x, v.y, v.z};
+                IkReal eetrans[3] = {(IkReal)v.x, (IkReal)v.y, (IkReal)v.z};
                 //                stringstream ss; ss << "./ik " << std::setprecision(16);
                 //                ss << eetrans[0]  << " " << eetrans[1]  << " " << eetrans[2] << " ";
                 //                FOREACH(itfree,vfree) {
@@ -955,13 +955,13 @@ protected:
             }
             case IKP_Direction3D: {
                 Vector v = param.GetDirection3D();
-                IkReal eerot[9] = {v.x, v.y, v.z,0,0,0,0,0,0};
+                IkReal eerot[9] = {(IkReal)v.x, (IkReal)v.y, (IkReal)v.z, 0,0,0,0,0,0};
                 return _ikfunctions->_ComputeIk(NULL, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions);
             }
             case IKP_Ray4D: {
                 RAY r = param.GetRay4D();
-                IkReal eetrans[3] = {r.pos.x,r.pos.y,r.pos.z};
-                IkReal eerot[9] = {r.dir.x, r.dir.y, r.dir.z,0,0,0,0,0,0};
+                IkReal eetrans[3] = {(IkReal)r.pos.x, (IkReal)r.pos.y, (IkReal)r.pos.z};
+                IkReal eerot[9] = {(IkReal)r.dir.x, (IkReal)r.dir.y, (IkReal)r.dir.z, 0,0,0,0,0,0};
                 //RAVELOG_INFO("ray: %f %f %f %f %f %f\n",eerot[0],eerot[1],eerot[2],eetrans[0],eetrans[1],eetrans[2]);
                 if( !_ikfunctions->_ComputeIk(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions) ) {
                     return false;
@@ -970,13 +970,13 @@ protected:
             }
             case IKP_Lookat3D: {
                 Vector v = param.GetLookat3D();
-                IkReal eetrans[3] = {v.x, v.y, v.z};
+                IkReal eetrans[3] = {(IkReal)v.x, (IkReal)v.y, (IkReal)v.z};
                 return _ikfunctions->_ComputeIk(eetrans, NULL, vfree.size()>0 ? &vfree[0] : NULL, solutions);
             }
             case IKP_TranslationDirection5D: {
                 RAY r = param.GetTranslationDirection5D();
-                IkReal eetrans[3] = {r.pos.x,r.pos.y,r.pos.z};
-                IkReal eerot[9] = {r.dir.x, r.dir.y, r.dir.z,0,0,0,0,0,0};
+                IkReal eetrans[3] = {(IkReal)r.pos.x, (IkReal)r.pos.y, (IkReal)r.pos.z};
+                IkReal eerot[9] = {(IkReal)r.dir.x, (IkReal)r.dir.y, (IkReal)r.dir.z, 0,0,0,0,0,0};
                 if( !_ikfunctions->_ComputeIk(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions) ) {
                     return false;
                 }
@@ -984,7 +984,7 @@ protected:
             }
             case IKP_TranslationXY2D: {
                 Vector v = param.GetTranslationXY2D();
-                IkReal eetrans[3] = {v.x, v.y,0};
+                IkReal eetrans[3] = {(IkReal)v.x, (IkReal)v.y, 0};
                 return _ikfunctions->_ComputeIk(eetrans, NULL, vfree.size()>0 ? &vfree[0] : NULL, solutions);
             }
             case IKP_TranslationXYOrientation3D: {
@@ -993,50 +993,50 @@ protected:
 //                return _ikfunctions->_ComputeIk(eetrans, NULL, vfree.size()>0 ? &vfree[0] : NULL, solutions);
                 //std::pair<Vector,dReal> p = param.GetTranslationXAxisAngleZNorm4D();
                 Vector v = param.GetTranslationXYOrientation3D();
-                IkReal eetrans[3] = {v.x, v.y,0};
-                IkReal eerot[9] = {v.z, 0, 0, 0, 0, 0, 0, 0, 0};
+                IkReal eetrans[3] = {(IkReal)v.x, (IkReal)v.y, 0};
+                IkReal eerot[9] = {(IkReal)v.z, 0, 0, 0, 0, 0, 0, 0, 0};
                 return _ikfunctions->_ComputeIk(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions);
             }
             case IKP_TranslationLocalGlobal6D: {
                 std::pair<Vector,Vector> p = param.GetTranslationLocalGlobal6D();
-                IkReal eetrans[3] = {p.second.x, p.second.y, p.second.z};
-                IkReal eerot[9] = {p.first.x, 0, 0, 0, p.first.y, 0, 0, 0, p.first.z};
+                IkReal eetrans[3] = {(IkReal)p.second.x, (IkReal)p.second.y, (IkReal)p.second.z};
+                IkReal eerot[9] = {(IkReal)p.first.x, 0, 0, 0, (IkReal)p.first.y, 0, 0, 0, (IkReal)p.first.z};
                 return _ikfunctions->_ComputeIk(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions);
             }
             case IKP_TranslationXAxisAngle4D: {
                 std::pair<Vector,dReal> p = param.GetTranslationXAxisAngle4D();
-                IkReal eetrans[3] = {p.first.x, p.first.y,p.first.z};
-                IkReal eerot[9] = {p.second, 0, 0, 0, 0, 0, 0, 0, 0};
+                IkReal eetrans[3] = {(IkReal)p.first.x, (IkReal)p.first.y, (IkReal)p.first.z};
+                IkReal eerot[9] = {(IkReal)p.second, 0, 0, 0, 0, 0, 0, 0, 0};
                 return _ikfunctions->_ComputeIk(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions);
             }
             case IKP_TranslationYAxisAngle4D: {
                 std::pair<Vector,dReal> p = param.GetTranslationYAxisAngle4D();
-                IkReal eetrans[3] = {p.first.x, p.first.y,p.first.z};
-                IkReal eerot[9] = {p.second, 0, 0, 0, 0, 0, 0, 0, 0};
+                IkReal eetrans[3] = {(IkReal)p.first.x, (IkReal)p.first.y, (IkReal)p.first.z};
+                IkReal eerot[9] = {(IkReal)p.second, 0, 0, 0, 0, 0, 0, 0, 0};
                 return _ikfunctions->_ComputeIk(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions);
             }
             case IKP_TranslationZAxisAngle4D: {
                 std::pair<Vector,dReal> p = param.GetTranslationZAxisAngle4D();
-                IkReal eetrans[3] = {p.first.x, p.first.y,p.first.z};
-                IkReal eerot[9] = {p.second, 0, 0, 0, 0, 0, 0, 0, 0};
+                IkReal eetrans[3] = {(IkReal)p.first.x, (IkReal)p.first.y, (IkReal)p.first.z};
+                IkReal eerot[9] = {(IkReal)p.second, 0, 0, 0, 0, 0, 0, 0, 0};
                 return _ikfunctions->_ComputeIk(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions);
             }
             case IKP_TranslationXAxisAngleZNorm4D: {
                 std::pair<Vector,dReal> p = param.GetTranslationXAxisAngleZNorm4D();
-                IkReal eetrans[3] = {p.first.x, p.first.y,p.first.z};
-                IkReal eerot[9] = {p.second, 0, 0, 0, 0, 0, 0, 0, 0};
+                IkReal eetrans[3] = {(IkReal)p.first.x, (IkReal)p.first.y, (IkReal)p.first.z};
+                IkReal eerot[9] = {(IkReal)p.second, 0, 0, 0, 0, 0, 0, 0, 0};
                 return _ikfunctions->_ComputeIk(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions);
             }
             case IKP_TranslationYAxisAngleXNorm4D: {
                 std::pair<Vector,dReal> p = param.GetTranslationYAxisAngleXNorm4D();
-                IkReal eetrans[3] = {p.first.x, p.first.y,p.first.z};
-                IkReal eerot[9] = {p.second, 0, 0, 0, 0, 0, 0, 0, 0};
+                IkReal eetrans[3] = {(IkReal)p.first.x, (IkReal)p.first.y, (IkReal)p.first.z};
+                IkReal eerot[9] = {(IkReal)p.second, 0, 0, 0, 0, 0, 0, 0, 0};
                 return _ikfunctions->_ComputeIk(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions);
             }
             case IKP_TranslationZAxisAngleYNorm4D: {
                 std::pair<Vector,dReal> p = param.GetTranslationZAxisAngleYNorm4D();
-                IkReal eetrans[3] = {p.first.x, p.first.y,p.first.z};
-                IkReal eerot[9] = {p.second, 0, 0, 0, 0, 0, 0, 0, 0};
+                IkReal eetrans[3] = {(IkReal)p.first.x, (IkReal)p.first.y, (IkReal)p.first.z};
+                IkReal eerot[9] = {(IkReal)p.second, 0, 0, 0, 0, 0, 0, 0, 0};
                 //TODO Code review! using &vfree[0] fails 100% of the time for hashimoto, NULL works normally. I don't know why!
                 return _ikfunctions->_ComputeIk(eetrans, eerot, NULL, solutions);
             }
@@ -1063,8 +1063,8 @@ protected:
                 if( _bEmptyTransform6D ) {
                     t = t * tLocalTool.inverse();
                 }
-                IkReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
-                IkReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
+                IkReal eetrans[3] = {(IkReal)t.trans.x, (IkReal)t.trans.y, (IkReal)t.trans.z};
+                IkReal eerot[9] = {(IkReal)t.m[0],(IkReal)t.m[1],(IkReal)t.m[2],(IkReal)t.m[4],(IkReal)t.m[5],(IkReal)t.m[6],(IkReal)t.m[8],(IkReal)t.m[9],(IkReal)t.m[10]};
 //                RobotBase::ManipulatorPtr pmanip(_pmanip);
 //                stringstream ss; ss << pmanip->GetRobot()->GetName() << ":" << pmanip->GetName() << " ./ik " << std::setprecision(17);
 //                ss << eerot[0]  << " " << eerot[1]  << " " << eerot[2]  << " " << eetrans[0]  << " " << eerot[3]  << " " << eerot[4]  << " " << eerot[5]  << " " << eetrans[1]  << " " << eerot[6]  << " " << eerot[7]  << " " << eerot[8]  << " " << eetrans[2] << " ";
@@ -1097,12 +1097,12 @@ protected:
             }
             case IKP_Rotation3D: {
                 TransformMatrix t(Transform(param.GetRotation3D(),Vector()));
-                IkReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
+                IkReal eerot[9] = {(IkReal)t.m[0],(IkReal)t.m[1],(IkReal)t.m[2],(IkReal)t.m[4],(IkReal)t.m[5],(IkReal)t.m[6],(IkReal)t.m[8],(IkReal)t.m[9],(IkReal)t.m[10]};
                 return _ikfunctions->_ComputeIk2(NULL, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
             }
             case IKP_Translation3D: {
                 Vector v = param.GetTranslation3D();
-                IkReal eetrans[3] = {v.x, v.y, v.z};
+                IkReal eetrans[3] = {(IkReal)v.x, (IkReal)v.y, (IkReal)v.z};
                 //                stringstream ss; ss << "./ik " << std::setprecision(16);
                 //                ss << eetrans[0]  << " " << eetrans[1]  << " " << eetrans[2] << " ";
                 //                FOREACH(itfree,vfree) {
@@ -1114,13 +1114,13 @@ protected:
             }
             case IKP_Direction3D: {
                 Vector v = param.GetDirection3D();
-                IkReal eerot[9] = {v.x, v.y, v.z,0,0,0,0,0,0};
+                IkReal eerot[9] = {(IkReal)v.x, (IkReal)v.y, (IkReal)v.z, 0,0,0,0,0,0};
                 return _ikfunctions->_ComputeIk2(NULL, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
             }
             case IKP_Ray4D: {
                 RAY r = param.GetRay4D();
-                IkReal eetrans[3] = {r.pos.x,r.pos.y,r.pos.z};
-                IkReal eerot[9] = {r.dir.x, r.dir.y, r.dir.z,0,0,0,0,0,0};
+                IkReal eetrans[3] = {(IkReal)r.pos.x, (IkReal)r.pos.y, (IkReal)r.pos.z};
+                IkReal eerot[9] = {(IkReal)r.dir.x, (IkReal)r.dir.y, (IkReal)r.dir.z, 0,0,0,0,0,0};
                 //RAVELOG_INFO("ray: %f %f %f %f %f %f\n",eerot[0],eerot[1],eerot[2],eetrans[0],eetrans[1],eetrans[2]);
                 if( !_ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip) ) {
                     return false;
@@ -1129,35 +1129,55 @@ protected:
             }
             case IKP_Lookat3D: {
                 Vector v = param.GetLookat3D();
-                IkReal eetrans[3] = {v.x, v.y, v.z};
+                IkReal eetrans[3] = {(IkReal)v.x, (IkReal)v.y, (IkReal)v.z};
                 return _ikfunctions->_ComputeIk2(eetrans, NULL, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
             }
             case IKP_TranslationDirection5D: {
                 RAY r = param.GetTranslationDirection5D();
-                IkReal eetrans[3] = {r.pos.x,r.pos.y,r.pos.z};
-                IkReal eerot[9] = {r.dir.x, r.dir.y, r.dir.z,0,0,0,0,0,0};
+                IkReal eetrans[3] = {(IkReal)r.pos.x, (IkReal)r.pos.y, (IkReal)r.pos.z};
+                IkReal eerot[9] = {(IkReal)r.dir.x, (IkReal)r.dir.y, (IkReal)r.dir.z, 0,0,0,0,0,0};
                 bool bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
                 if( !bret ) {
 #ifdef OPENRAVE_HAS_LAPACK
                     if( _fRefineWithJacobianInverseAllowedError > 0 ) {
                         // since will be refining, can add a little error to see if IK gets recomputed
-                        eerot[0] = r.dir.x+0.001;
-                        eerot[1] = r.dir.y+0.001;
-                        eerot[2] = r.dir.z+0.001;
+                        eerot[0] = r.dir.x+0.01;
+                        eerot[1] = r.dir.y+0.01;
+                        eerot[2] = r.dir.z+0.01;
                         dReal fnorm = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
                         eerot[0] /= fnorm;
                         eerot[1] /= fnorm;
                         eerot[2] /= fnorm;
                         bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
                         if( !bret ) {
-                            eerot[0] = r.dir.x-0.001;
-                            eerot[1] = r.dir.y-0.001;
-                            eerot[2] = r.dir.z-0.001;
+                            eerot[0] = r.dir.x-0.01;
+                            eerot[1] = r.dir.y-0.01;
+                            eerot[2] = r.dir.z-0.01;
                             dReal fnorm = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
                             eerot[0] /= fnorm;
                             eerot[1] /= fnorm;
                             eerot[2] /= fnorm;
                             bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
+                            if( !bret ) {
+                                eerot[0] = r.dir.x-0.02;
+                                eerot[1] = r.dir.y-0.02;
+                                eerot[2] = r.dir.z;
+                                dReal fnorm = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
+                                eerot[0] /= fnorm;
+                                eerot[1] /= fnorm;
+                                eerot[2] /= fnorm;
+                                bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
+                                if( !bret ) {
+                                    eerot[0] = r.dir.x+0.02;
+                                    eerot[1] = r.dir.y+0.02;
+                                    eerot[2] = r.dir.z;
+                                    dReal fnorm = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
+                                    eerot[0] /= fnorm;
+                                    eerot[1] /= fnorm;
+                                    eerot[2] /= fnorm;
+                                    bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
+                                }
+                            }
                         }
                         RAVELOG_VERBOSE("ik failed, trying with slight jitter, ret=%d", (int)bret);
                     }
@@ -1168,7 +1188,7 @@ protected:
             }
             case IKP_TranslationXY2D: {
                 Vector v = param.GetTranslationXY2D();
-                IkReal eetrans[3] = {v.x, v.y,0};
+                IkReal eetrans[3] = {(IkReal)v.x, (IkReal)v.y, 0};
                 return _ikfunctions->_ComputeIk2(eetrans, NULL, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
             }
             case IKP_TranslationXYOrientation3D: {
@@ -1177,32 +1197,32 @@ protected:
 //                return _ikfunctions->_ComputeIk2(eetrans, NULL, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
                 //std::pair<Vector,dReal> p = param.GetTranslationXAxisAngleZNorm4D();
                 Vector v = param.GetTranslationXYOrientation3D();
-                IkReal eetrans[3] = {v.x, v.y,0};
-                IkReal eerot[9] = {v.z, 0, 0, 0, 0, 0, 0, 0, 0};
+                IkReal eetrans[3] = {(IkReal)v.x, (IkReal)v.y, 0};
+                IkReal eerot[9] = {(IkReal)v.z, 0, 0, 0, 0, 0, 0, 0, 0};
                 return _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
             }
             case IKP_TranslationLocalGlobal6D: {
                 std::pair<Vector,Vector> p = param.GetTranslationLocalGlobal6D();
-                IkReal eetrans[3] = {p.second.x, p.second.y, p.second.z};
-                IkReal eerot[9] = {p.first.x, 0, 0, 0, p.first.y, 0, 0, 0, p.first.z};
+                IkReal eetrans[3] = {(IkReal)p.second.x, (IkReal)p.second.y, (IkReal)p.second.z};
+                IkReal eerot[9] = {(IkReal)p.first.x, 0, 0, 0, (IkReal)p.first.y, 0, 0, 0, (IkReal)p.first.z};
                 return _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
             }
             case IKP_TranslationXAxisAngle4D: {
                 std::pair<Vector,dReal> p = param.GetTranslationXAxisAngle4D();
-                IkReal eetrans[3] = {p.first.x, p.first.y,p.first.z};
-                IkReal eerot[9] = {p.second, 0, 0, 0, 0, 0, 0, 0, 0};
+                IkReal eetrans[3] = {(IkReal)p.first.x, (IkReal)p.first.y, (IkReal)p.first.z};
+                IkReal eerot[9] = {(IkReal)p.second, 0, 0, 0, 0, 0, 0, 0, 0};
                 return _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
             }
             case IKP_TranslationYAxisAngle4D: {
                 std::pair<Vector,dReal> p = param.GetTranslationYAxisAngle4D();
-                IkReal eetrans[3] = {p.first.x, p.first.y,p.first.z};
-                IkReal eerot[9] = {p.second, 0, 0, 0, 0, 0, 0, 0, 0};
+                IkReal eetrans[3] = {(IkReal)p.first.x, (IkReal)p.first.y, (IkReal)p.first.z};
+                IkReal eerot[9] = {(IkReal)p.second, 0, 0, 0, 0, 0, 0, 0, 0};
                 return _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
             }
             case IKP_TranslationZAxisAngle4D: {
                 std::pair<Vector,dReal> p = param.GetTranslationZAxisAngle4D();
-                IkReal eetrans[3] = {p.first.x, p.first.y,p.first.z};
-                IkReal eerot[9] = {p.second, 0, 0, 0, 0, 0, 0, 0, 0};
+                IkReal eetrans[3] = {(IkReal)p.first.x, (IkReal)p.first.y, (IkReal)p.first.z};
+                IkReal eerot[9] = {(IkReal)p.second, 0, 0, 0, 0, 0, 0, 0, 0};
                 bool bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
                 if( !bret ) {
 #ifdef OPENRAVE_HAS_LAPACK
@@ -1228,20 +1248,20 @@ protected:
             }
             case IKP_TranslationXAxisAngleZNorm4D: {
                 std::pair<Vector,dReal> p = param.GetTranslationXAxisAngleZNorm4D();
-                IkReal eetrans[3] = {p.first.x, p.first.y,p.first.z};
-                IkReal eerot[9] = {p.second, 0, 0, 0, 0, 0, 0, 0, 0};
+                IkReal eetrans[3] = {(IkReal)p.first.x, (IkReal)p.first.y, (IkReal)p.first.z};
+                IkReal eerot[9] = {(IkReal)p.second, 0, 0, 0, 0, 0, 0, 0, 0};
                 return _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
             }
             case IKP_TranslationYAxisAngleXNorm4D: {
                 std::pair<Vector,dReal> p = param.GetTranslationYAxisAngleXNorm4D();
-                IkReal eetrans[3] = {p.first.x, p.first.y,p.first.z};
-                IkReal eerot[9] = {p.second, 0, 0, 0, 0, 0, 0, 0, 0};
+                IkReal eetrans[3] = {(IkReal)p.first.x, (IkReal)p.first.y, (IkReal)p.first.z};
+                IkReal eerot[9] = {(IkReal)p.second, 0, 0, 0, 0, 0, 0, 0, 0};
                 return _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
             }
             case IKP_TranslationZAxisAngleYNorm4D: {
                 std::pair<Vector,dReal> p = param.GetTranslationZAxisAngleYNorm4D();
-                IkReal eetrans[3] = {p.first.x, p.first.y,p.first.z};
-                IkReal eerot[9] = {p.second, 0, 0, 0, 0, 0, 0, 0, 0};
+                IkReal eetrans[3] = {(IkReal)p.first.x, (IkReal)p.first.y, (IkReal)p.first.z};
+                IkReal eerot[9] = {(IkReal)p.second, 0, 0, 0, 0, 0, 0, 0, 0};
                 //TODO Code review! using NULL fails crash the slave for hashimoto, &vfree[0] works normally. I don't know why!
                 return _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
             }
@@ -1370,6 +1390,32 @@ protected:
             }
             else if( param.GetType() == IKP_TranslationZAxisAngle4D ) {
                 int ret = _jacobinvsolver.ComputeSolution(param, manip, vsolution);
+                if( ret == 0 ) {
+                    stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                    ss << "IkParameterization('" << param << "'); sol=[";
+                    FOREACH(it, vsolution) {
+                        ss << *it << ",";
+                    }
+                    ss << "]";
+                    RAVELOG_WARN_FORMAT("failed to refine solution lasterror=%f, %s", RaveSqrt(_jacobinvsolver._lasterror2)%ss.str());
+                }
+            }
+            else if( param.GetType() == IKP_TranslationDirection5D ) { // only 6d supported for now
+                // have to project the current manip into the direction constraints so that direction aligns perfectly
+                Transform tgoal;
+                Transform tnewmanip = manip.GetTransform();
+                tgoal.rot = quatRotateDirection(manip.GetLocalToolDirection(), param.GetTranslationDirection5D().dir);
+
+                dReal frotangle0 = normalizeAxisRotation(param.GetTranslationDirection5D().dir, tnewmanip.rot).first;
+                dReal frotanglegoal = normalizeAxisRotation(param.GetTranslationDirection5D().dir, tgoal.rot).first;
+                tgoal.rot = quatMultiply(quatFromAxisAngle(param.GetTranslationDirection5D().dir, frotanglegoal - frotangle0), tgoal.rot);
+
+                tgoal.trans = param.GetTranslationDirection5D().pos;
+                int ret = _jacobinvsolver.ComputeSolution(tgoal, manip, vsolution);
+                if( ret == 2 ) {
+                    RAVELOG_VERBOSE("did not converge, try to prioritize translation at least\n");
+                    ret = _jacobinvsolver.ComputeSolutionTranslation(param.GetTransform6D(), manip, vsolution);
+                }
                 if( ret == 0 ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                     ss << "IkParameterization('" << param << "'); sol=[";
@@ -1537,7 +1583,7 @@ protected:
                         if( !!potherlink && _numBacktraceLinksForSelfCollisionWithNonMoving > 0 ) {
                             for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithNonMoving; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
                                 KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
-                                if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(potherlink) ) {
+                                if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(*potherlink) ) {
 
                                     stateCheck.numImpossibleSelfCollisions++;
                                     RAVELOG_VERBOSE_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, attempts=%d", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
@@ -1566,7 +1612,7 @@ protected:
                                 //bool bRigidlyAttached = false;
                                 for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithFree; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
                                     KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
-                                    if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(potherlink) ) {
+                                    if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(*potherlink) ) {
 
                                         stateCheck.numImpossibleSelfCollisions++;
                                         RAVELOG_VERBOSE_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, attempts=%d", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
@@ -1937,8 +1983,8 @@ protected:
                 FOREACH(it,_vsolutionindices) {
                     *it += itravesol->second<<16;
                 }
-                probot->SetActiveDOFValues(vravesol,false);
-                _CheckRefineSolution(param, *pmanip, vravesol);
+                probot->SetActiveDOFValues(itravesol->first,false);
+                _CheckRefineSolution(param, *pmanip, itravesol->first);
 
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false);
@@ -1973,7 +2019,7 @@ protected:
                         if( !!potherlink && _numBacktraceLinksForSelfCollisionWithNonMoving > 0 ) {
                             for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithNonMoving; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
                                 KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
-                                if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(potherlink) ) {
+                                if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(*potherlink) ) {
 
                                     stateCheck.numImpossibleSelfCollisions++;
                                     RAVELOG_VERBOSE_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, attempts=%d", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
@@ -2002,7 +2048,7 @@ protected:
                                 //bool bRigidlyAttached = false;
                                 for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithFree; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
                                     KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
-                                    if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(potherlink) ) {
+                                    if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(*potherlink) ) {
 
                                         stateCheck.numImpossibleSelfCollisions++;
                                         RAVELOG_VERBOSE_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, attempts=%d", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);

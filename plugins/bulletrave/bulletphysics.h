@@ -69,10 +69,10 @@ public:
     };
 
     inline boost::shared_ptr<BulletPhysicsEngine> shared_physics() {
-        return boost::dynamic_pointer_cast<BulletPhysicsEngine>(shared_from_this());
+        return boost::static_pointer_cast<BulletPhysicsEngine>(shared_from_this());
     }
     inline boost::shared_ptr<BulletPhysicsEngine const> shared_physics_const() const {
-        return boost::dynamic_pointer_cast<BulletPhysicsEngine const>(shared_from_this());
+        return boost::static_pointer_cast<BulletPhysicsEngine const>(shared_from_this());
     }
 
 class PhysicsPropertiesXMLReader : public BaseXMLReader

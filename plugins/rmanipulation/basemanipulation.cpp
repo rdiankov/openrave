@@ -131,10 +131,10 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
 protected:
 
     inline boost::shared_ptr<BaseManipulation> shared_problem() {
-        return boost::dynamic_pointer_cast<BaseManipulation>(shared_from_this());
+        return boost::static_pointer_cast<BaseManipulation>(shared_from_this());
     }
     inline boost::shared_ptr<BaseManipulation const> shared_problem_const() const {
-        return boost::dynamic_pointer_cast<BaseManipulation const>(shared_from_this());
+        return boost::static_pointer_cast<BaseManipulation const>(shared_from_this());
     }
 
     bool Traj(ostream& sout, istream& sinput)
@@ -600,6 +600,7 @@ protected:
         dReal goalsampleprob = 0.1;
         int nGoalMaxTries=10;
         std::vector<dReal> vinitialconfig;
+        std::vector<dReal> vfreevalues;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput ) {
@@ -743,6 +744,14 @@ protected:
                     sinput >> *itvalue;
                 }
             }
+            else if (cmd == "freevalues") {
+                size_t num=0;
+                sinput >> num;
+                vfreevalues.resize(num);
+                FOREACH(itvalue, vfreevalues) {
+                    sinput >> *itvalue;
+                }
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -785,7 +794,8 @@ protected:
         robot->SetActiveDOFs(pmanip->GetArmIndices(), 0);
 
         vector<dReal> vgoal;
-        planningutils::ManipulatorIKGoalSampler goalsampler(pmanip, listgoals,goalsamples,nGoalMaxTries);
+        const bool searchfreeparameters = vfreevalues.empty();
+        planningutils::ManipulatorIKGoalSampler goalsampler(pmanip, listgoals,goalsamples,nGoalMaxTries, 1, searchfreeparameters, IKFO_CheckEnvCollisions, vfreevalues);
         goalsampler.SetJitter(jitterikparam);
         params->vgoalconfig.reserve(nSeedIkSolutions*robot->GetActiveDOF());
         while(nSeedIkSolutions > 0) {

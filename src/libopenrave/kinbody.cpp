@@ -763,6 +763,66 @@ void KinBody::GetDOFJerkLimits(std::vector<dReal>& v, const std::vector<int>& do
     }
 }
 
+void KinBody::GetDOFHardVelocityLimits(std::vector<dReal>& v, const std::vector<int>& dofindices) const
+{
+    if( dofindices.size() == 0 ) {
+        v.resize(0);
+        if( (int)v.capacity() < GetDOF() ) {
+            v.reserve(GetDOF());
+        }
+        FOREACHC(it, _vDOFOrderedJoints) {
+            (*it)->GetHardVelocityLimits(v,true);
+        }
+    }
+    else {
+        v.resize(dofindices.size());
+        for(size_t i = 0; i < dofindices.size(); ++i) {
+            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
+            v[i] = pjoint->GetHardVelocityLimit(dofindices[i]-pjoint->GetDOFIndex());
+        }
+    }
+}
+
+void KinBody::GetDOFHardAccelerationLimits(std::vector<dReal>& v, const std::vector<int>& dofindices) const
+{
+    if( dofindices.size() == 0 ) {
+        v.resize(0);
+        if( (int)v.capacity() < GetDOF() ) {
+            v.reserve(GetDOF());
+        }
+        FOREACHC(it, _vDOFOrderedJoints) {
+            (*it)->GetHardAccelerationLimits(v,true);
+        }
+    }
+    else {
+        v.resize(dofindices.size());
+        for(size_t i = 0; i < dofindices.size(); ++i) {
+            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
+            v[i] = pjoint->GetHardAccelerationLimit(dofindices[i]-pjoint->GetDOFIndex());
+        }
+    }
+}
+
+void KinBody::GetDOFHardJerkLimits(std::vector<dReal>& v, const std::vector<int>& dofindices) const
+{
+    if( dofindices.size() == 0 ) {
+        v.resize(0);
+        if( (int)v.capacity() < GetDOF() ) {
+            v.reserve(GetDOF());
+        }
+        FOREACHC(it, _vDOFOrderedJoints) {
+            (*it)->GetHardJerkLimits(v,true);
+        }
+    }
+    else {
+        v.resize(dofindices.size());
+        for(size_t i = 0; i < dofindices.size(); ++i) {
+            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
+            v[i] = pjoint->GetHardJerkLimit(dofindices[i]-pjoint->GetDOFIndex());
+        }
+    }
+}
+
 void KinBody::GetDOFTorqueLimits(std::vector<dReal>& v) const
 {
     v.resize(0);
@@ -953,6 +1013,36 @@ void KinBody::SetDOFJerkLimits(const std::vector<dReal>& v)
     std::vector<dReal>::const_iterator itv = v.begin();
     FOREACHC(it, _vDOFOrderedJoints) {
         std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info._vmaxjerk.begin());
+        itv += (*it)->GetDOF();
+    }
+    _PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+}
+
+void KinBody::SetDOFHardVelocityLimits(const std::vector<dReal>& v)
+{
+    std::vector<dReal>::const_iterator itv = v.begin();
+    FOREACHC(it, _vDOFOrderedJoints) {
+        std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info._vhardmaxvel.begin());
+        itv += (*it)->GetDOF();
+    }
+    _PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+}
+
+void KinBody::SetDOFHardAccelerationLimits(const std::vector<dReal>& v)
+{
+    std::vector<dReal>::const_iterator itv = v.begin();
+    FOREACHC(it, _vDOFOrderedJoints) {
+        std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info._vhardmaxaccel.begin());
+        itv += (*it)->GetDOF();
+    }
+    _PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+}
+
+void KinBody::SetDOFHardJerkLimits(const std::vector<dReal>& v)
+{
+    std::vector<dReal>::const_iterator itv = v.begin();
+    FOREACHC(it, _vDOFOrderedJoints) {
+        std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info._vhardmaxjerk.begin());
         itv += (*it)->GetDOF();
     }
     _PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
@@ -3561,7 +3651,7 @@ void KinBody::_ComputeInternalInformation()
                     if( !!(*itjoint)->_vmimic[idof] ) {
                         // only add if depends on mimic joints
                         FOREACH(itdofformat,(*itjoint)->_vmimic[idof]->_vdofformat) {
-                            JointPtr pjoint = itdofformat->GetJoint(shared_kinbody());
+                            JointPtr pjoint = itdofformat->GetJoint(*this);
                             if( pjoint->IsMimic(itdofformat->axis) ) {
                                 mapmimic[dofformat] = (*itjoint)->_vmimic[idof];
                                 break;
@@ -3586,8 +3676,8 @@ void KinBody::_ComputeInternalInformation()
                     boost::shared_ptr<Mimic> mimicparent = mapmimic[*itdofformat];
                     FOREACH(itmimicdof, mimicparent->_vmimicdofs) {
                         if( mimicparent->_vdofformat[itmimicdof->dofformatindex] == itmimic->first ) {
-                            JointPtr pjoint = itmimic->first.GetJoint(shared_kinbody());
-                            JointPtr pjointparent = itdofformat->GetJoint(shared_kinbody());
+                            JointPtr pjoint = itmimic->first.GetJoint(*this);
+                            JointPtr pjointparent = itdofformat->GetJoint(*this);
                             throw OPENRAVE_EXCEPTION_FORMAT(_("joint index %s uses a mimic joint %s that also depends on %s! this is not allowed"), pjoint->GetName()%pjointparent->GetName()%pjoint->GetName(), ORE_Failed);
                         }
                         h.dofindex = itmimicdof->dofindex;
@@ -4336,13 +4426,13 @@ void KinBody::_ComputeInternalInformation()
     RAVELOG_VERBOSE_FORMAT("initialized %s in %fs", GetName()%(1e-6*(utils::GetMicroTime()-starttime)));
 }
 
-bool KinBody::IsAttached(KinBodyConstPtr pbody) const
+bool KinBody::IsAttached(const KinBody &body) const
 {
-    if( shared_kinbody_const() == pbody ) {
+    if(this == &body ) {
         return true;
     }
     std::set<KinBodyConstPtr> dummy;
-    return _IsAttached(pbody,dummy);
+    return _IsAttached(body, dummy);
 }
 
 void KinBody::GetAttached(std::set<KinBodyPtr>&setAttached) const
@@ -4372,14 +4462,14 @@ bool KinBody::HasAttached() const
     return _listAttachedBodies.size() > 0;
 }
 
-bool KinBody::_IsAttached(KinBodyConstPtr pbody, std::set<KinBodyConstPtr>&setChecked) const
+bool KinBody::_IsAttached(const KinBody &body, std::set<KinBodyConstPtr>&setChecked) const
 {
     if( !setChecked.insert(shared_kinbody_const()).second ) {
         return false;
     }
     FOREACHC(itbody,_listAttachedBodies) {
         KinBodyConstPtr pattached = itbody->lock();
-        if( !!pattached && ((pattached == pbody)|| pattached->_IsAttached(pbody,setChecked)) ) {
+        if( !!pattached && ((pattached.get() == &body)|| pattached->_IsAttached(body,setChecked)) ) {
             return true;
         }
     }
@@ -4393,20 +4483,20 @@ void KinBody::_AttachBody(KinBodyPtr pbody)
     _PostprocessChangedParameters(Prop_BodyAttached);
 }
 
-bool KinBody::_RemoveAttachedBody(KinBodyPtr pbody)
+bool KinBody::_RemoveAttachedBody(KinBody &body)
 {
     int numremoved = 0;
     FOREACH(it,_listAttachedBodies) {
-        if( it->lock() == pbody ) {
+        if( it->lock().get() == &body ) {
             _listAttachedBodies.erase(it);
             numremoved++;
             break;
         }
     }
 
-    FOREACH(it,pbody->_listAttachedBodies) {
+    FOREACH(it, body._listAttachedBodies) {
         if( it->lock().get() == this ) { // need to compare lock pointer since cannot rely on shared_kinbody() since in a destructor this will crash
-            pbody->_listAttachedBodies.erase(it);
+            body._listAttachedBodies.erase(it);
             numremoved++;
             break;
         }
@@ -4743,7 +4833,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     FOREACHC(itgrabbedref, r->_vGrabbedBodies) {
         GrabbedConstPtr pgrabbedref = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbedref);
 
-        KinBodyPtr pbodyref(pgrabbedref->_pgrabbedbody);
+        KinBodyPtr pbodyref = pgrabbedref->_pgrabbedbody.lock();
         KinBodyPtr pgrabbedbody;
         if( !!pbodyref ) {
             pgrabbedbody = GetEnv()->GetBodyFromEnvironmentId(pbodyref->GetEnvironmentId());
