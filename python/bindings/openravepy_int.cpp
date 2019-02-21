@@ -1311,44 +1311,70 @@ public:
     }
 
     void Add(PyInterfaceBasePtr pinterface, bool bAnonymous=false, const std::string& cmdargs="") {
+        Py_BEGIN_ALLOW_THREADS
         _penv->Add(pinterface->GetInterfaceBase(), bAnonymous, cmdargs);
+        Py_END_ALLOW_THREADS
     }
 
     void AddKinBody(PyKinBodyPtr pbody) {
-        CHECK_POINTER(pbody); _penv->Add(openravepy::GetKinBody(pbody));
+        CHECK_POINTER(pbody);
+        Py_BEGIN_ALLOW_THREADS
+        _penv->Add(openravepy::GetKinBody(pbody));
+        Py_END_ALLOW_THREADS
     }
     void AddKinBody(PyKinBodyPtr pbody, bool bAnonymous) {
-        CHECK_POINTER(pbody); _penv->Add(openravepy::GetKinBody(pbody),bAnonymous);
+        CHECK_POINTER(pbody);
+        Py_BEGIN_ALLOW_THREADS
+        _penv->Add(openravepy::GetKinBody(pbody),bAnonymous);
+        Py_END_ALLOW_THREADS
     }
     void AddRobot(PyRobotBasePtr robot) {
         CHECK_POINTER(robot);
+        Py_BEGIN_ALLOW_THREADS
         _penv->Add(openravepy::GetRobot(robot));
+        Py_END_ALLOW_THREADS
     }
     void AddRobot(PyRobotBasePtr robot, bool bAnonymous) {
         CHECK_POINTER(robot);
+        Py_BEGIN_ALLOW_THREADS
         _penv->Add(openravepy::GetRobot(robot),bAnonymous);
+        Py_END_ALLOW_THREADS
     }
     void AddSensor(PySensorBasePtr sensor) {
         CHECK_POINTER(sensor);
+        Py_BEGIN_ALLOW_THREADS
         _penv->Add(openravepy::GetSensor(sensor));
+        Py_END_ALLOW_THREADS
     }
     void AddSensor(PySensorBasePtr sensor, bool bAnonymous) {
         CHECK_POINTER(sensor);
+        Py_BEGIN_ALLOW_THREADS
         _penv->Add(openravepy::GetSensor(sensor),bAnonymous);
+        Py_END_ALLOW_THREADS
     }
     void AddViewer(PyViewerBasePtr viewer) {
         CHECK_POINTER(viewer);
+        Py_BEGIN_ALLOW_THREADS
         _penv->Add(openravepy::GetViewer(viewer));
+        Py_END_ALLOW_THREADS
     }
 
     bool RemoveKinBody(PyKinBodyPtr pbody) {
         CHECK_POINTER(pbody);
         RAVELOG_WARN("openravepy RemoveKinBody deprecated, use Remove\n");
-        return _penv->Remove(openravepy::GetKinBody(pbody));
+        bool ret;
+        Py_BEGIN_ALLOW_THREADS
+        ret = _penv->Remove(openravepy::GetKinBody(pbody));
+        Py_END_ALLOW_THREADS
+        return ret;
     }
 
     bool RemoveKinBodyByName(const std::string& name) {
-        return _penv->RemoveKinBodyByName(name);
+        bool ret;
+        Py_BEGIN_ALLOW_THREADS
+        ret = _penv->RemoveKinBodyByName(name);
+        Py_END_ALLOW_THREADS
+        return ret;
     }
 
     object GetKinBody(const string &name)
@@ -1380,22 +1406,34 @@ public:
 
     int AddModule(PyModuleBasePtr prob, const string &args) {
         CHECK_POINTER(prob);
-        return _penv->AddModule(openravepy::GetModule(prob),args);
+        int ret;
+        Py_BEGIN_ALLOW_THREADS
+        ret = _penv->AddModule(openravepy::GetModule(prob),args);
+        Py_END_ALLOW_THREADS
+        return ret;
     }
     bool RemoveProblem(PyModuleBasePtr prob) {
         CHECK_POINTER(prob);
         RAVELOG_WARN("openravepy RemoveProblem deprecated, use Remove\n");
-        return _penv->Remove(openravepy::GetModule(prob));
+        bool ret;
+        Py_BEGIN_ALLOW_THREADS
+        ret = _penv->Remove(openravepy::GetModule(prob));
+        Py_END_ALLOW_THREADS
+        return ret;
     }
     bool Remove(PyInterfaceBasePtr obj) {
         CHECK_POINTER(obj);
 
         // have to check if viewer in order to notify viewer manager
         ViewerBasePtr pviewer = RaveInterfaceCast<ViewerBase>(obj->GetInterfaceBase());
+        bool ret;
+        Py_BEGIN_ALLOW_THREADS
         if( !!pviewer ) {
             ViewerManager::GetInstance().RemoveViewer(pviewer);
         }
-        return _penv->Remove(obj->GetInterfaceBase());
+        ret = _penv->Remove(obj->GetInterfaceBase());
+        Py_END_ALLOW_THREADS
+        return ret;
     }
 
     object GetModules()
