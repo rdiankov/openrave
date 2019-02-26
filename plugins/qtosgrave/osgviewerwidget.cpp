@@ -894,7 +894,7 @@ void QOSGViewerWidget::SetViewport(int width, int height, double metersinunit)
     m.setTrans(width*scale/2 - 40, -height*scale/2 + 40, -50);
     _osgWorldAxis->setMatrix(m);
 
-    double textheight = (40.0/480.0)*height;
+    double textheight = 12*scale;
     _osgHudText->setPosition(osg::Vec3(-width*scale/2+10, height*scale/2-textheight, -50));
     _osgHudText->setCharacterSize(textheight);
 }
