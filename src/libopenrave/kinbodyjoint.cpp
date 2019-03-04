@@ -1710,7 +1710,8 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
         }
         o << (!_attachedbodies[0] ? -1 : _attachedbodies[0]->GetIndex()) << " " << (_attachedbodies[1]->GetIndex()) << " ";
     }
-    if( options & SO_Dynamics ) {
+    // in the past was including saving limits as part of SO_Dynamics, but given that limits change a lot when planning, should *not* include them as part of dynamics.
+    if( options & SO_JointLimits ) {
         for(int i = 0; i < GetDOF(); ++i) {
             SerializeRound(o,_info._vmaxvel[i]);
             SerializeRound(o,_info._vmaxaccel[i]);
