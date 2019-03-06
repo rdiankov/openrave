@@ -681,7 +681,9 @@ protected:
         if (dp != NULL) {
             while ( (ep = readdir (dp)) != NULL ) {
                 // check for a .so in every file
-                if( strstr(ep->d_name, PLUGIN_EXT) != NULL ) {
+                // check that filename ends with .so
+                if( strlen(ep->d_name) >= strlen(PLUGIN_EXT) &&
+                    strcmp(ep->d_name + strlen(ep->d_name) - strlen(PLUGIN_EXT), PLUGIN_EXT) == 0 ) {
                     string strplugin = pdir;
                     strplugin += "/";
                     strplugin += ep->d_name;

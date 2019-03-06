@@ -4984,7 +4984,8 @@ const std::string& KinBody::GetKinematicsGeometryHash() const
     if( __hashkinematics.size() == 0 ) {
         ostringstream ss;
         ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
-        serialize(ss,SO_Kinematics|SO_Geometry);
+        // should add dynamics since that affects a lot how part is treated.
+        serialize(ss,SO_Kinematics|SO_Geometry|SO_Dynamics);
         __hashkinematics = utils::GetMD5HashString(ss.str());
     }
     return __hashkinematics;
