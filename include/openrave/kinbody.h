@@ -154,7 +154,8 @@ public:
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
         Vector _vGeomData; ///< for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
         Vector _vGeomData2; ///< For containers, the first 3 values are the full inner extents.
-        Vector _vGeomData3; ///< For containers, the first 3 values is the bottom cross XY full extents and Z height from bottom face.
+        Vector _vGeomData3; ///< For containers, the first 3 values are the bottom cross XY full extents and Z height from bottom face.
+        Vector _vGeomData4; ///< For containers, the first 3 values are the full extents of the
 
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height
@@ -171,7 +172,7 @@ public:
         GeometryType _type; ///< the type of geometry primitive
 
         std::string _name; ///< the name of the geometry
-        
+
         /// \brief filename for render model (optional)
         ///
         /// Should be transformed by _t before rendering.
@@ -315,6 +316,9 @@ public:
             inline const Vector& GetContainerBottomCross() const {
                 return _info._vGeomData3;
             }
+            inline const Vector& GetContainerBottom() const {
+                return _info._vGeomData4;
+            }
             inline const RaveVector<float>& GetDiffuseColor() const {
                 return _info._vDiffuseColor;
             }
@@ -369,7 +373,7 @@ public:
 
             /// \brief sets the name of the geometry
             virtual void SetName(const std::string& name);
-            
+
 protected:
             boost::weak_ptr<Link> _parent;
             KinBody::GeometryInfo _info; ///< geometry info
@@ -451,7 +455,7 @@ protected:
         /// AABB equivalent to setting link transform to tLink and calling ComptueAABB()
         /// \brief tLink the world transform to put this link in when computing the AABB
         virtual AABB ComputeAABBFromTransform(const Transform& tLink) const;
-        
+
         /// \brief Return the current transformation of the link in the world coordinate system.
         inline Transform GetTransform() const {
             return _info._t;
@@ -1222,7 +1226,7 @@ public:
 
             The velocity and acceleration equations are specified in terms of partial derivatives, which means one expression needs to be specified per degree of freedom of used. In order to separate the expressions use "|name ...". The name should immediately follow  '|'.  For example:
 
-           |universaljoint_0 10 |universaljoint_1 10*cos(universaljoint_1)
+         |universaljoint_0 10 |universaljoint_1 10*cos(universaljoint_1)
 
             If there is only one variable used in the position equation, then the equation can be specified directly without using "{}".
 
@@ -1896,7 +1900,7 @@ private:
     ///
     /// Internally equivalent to ComputeAABBFromTransform(Transform(), ...)
     virtual AABB ComputeLocalAABB(bool bEnabledOnlyLinks=false) const;
-    
+
     /// \brief Return the center of mass of entire robot in the world coordinate system.
     virtual Vector GetCenterOfMass() const;
 
@@ -2110,11 +2114,11 @@ private:
      */
     virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr(), CollisionCheckerBasePtr collisionchecker=CollisionCheckerBasePtr()) const;
 
-        /** \brief checks collision of a robot link with the surrounding environment using a new transform. Attached/Grabbed bodies to this link are also checked for collision.
+    /** \brief checks collision of a robot link with the surrounding environment using a new transform. Attached/Grabbed bodies to this link are also checked for collision.
 
-        \param[in] ilinkindex the index of the link to check
-        \param[in] tlinktrans The transform of the link to check
-        \param[out] report [optional] collision report
+       \param[in] ilinkindex the index of the link to check
+       \param[in] tlinktrans The transform of the link to check
+       \param[out] report [optional] collision report
      */
     virtual bool CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report = CollisionReportPtr());
 
@@ -2131,7 +2135,7 @@ private:
         \param[out] report [optional] collision report
      */
     virtual bool CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report = CollisionReportPtr());
-    
+
     /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision.
 
         \param[in] ilinkindex the index of the link to check
@@ -2139,9 +2143,9 @@ private:
         \param[out] report [optional] collision report
      */
     virtual bool CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report = CollisionReportPtr());
-    
+
     //@}
-    
+
     /// \return true if two bodies should be considered as one during collision (ie one is grabbing the other)
     virtual bool IsAttached(KinBodyConstPtr body) const RAVE_DEPRECATED {
         return IsAttached(*body);
@@ -2295,7 +2299,7 @@ private:
         @name Grabbing Bodies
         @{
      */
-    
+
     /** \brief Grab the body with the specified link.
 
         \param[in] body the body to be grabbed

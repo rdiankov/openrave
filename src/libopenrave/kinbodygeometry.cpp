@@ -253,25 +253,40 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
         const Vector& outerextents = _vGeomData;
         const Vector& innerextents = _vGeomData2;
         const Vector& bottomcross = _vGeomData3;
+        const Vector& bottom = _vGeomData4;
+        dReal zoffset = 0;
+        if( bottom[2] > 0 ) {
+            if( bottom[0] > 0 && bottom[1] > 0 ) {
+                zoffset = bottom[2];
+            }
+        }
         // +x wall
-        AppendBoxTriangulation(Vector((outerextents[0]+innerextents[0])/4.,0,outerextents[2]/2.), Vector((outerextents[0]-innerextents[0])/4., outerextents[1]/2., outerextents[2]/2.), _meshcollision);
+        AppendBoxTriangulation(Vector((outerextents[0]+innerextents[0])/4.,0,outerextents[2]/2.+zoffset), Vector((outerextents[0]-innerextents[0])/4., outerextents[1]/2., outerextents[2]/2.), _meshcollision);
         // -x wall
-        AppendBoxTriangulation(Vector(-(outerextents[0]+innerextents[0])/4.,0,outerextents[2]/2.), Vector((outerextents[0]-innerextents[0])/4., outerextents[1]/2., outerextents[2]/2.), _meshcollision);
+        AppendBoxTriangulation(Vector(-(outerextents[0]+innerextents[0])/4.,0,outerextents[2]/2.+zoffset), Vector((outerextents[0]-innerextents[0])/4., outerextents[1]/2., outerextents[2]/2.), _meshcollision);
         // +y wall
-        AppendBoxTriangulation(Vector(0,(outerextents[1]+innerextents[1])/4.,outerextents[2]/2.), Vector(outerextents[0]/2., (outerextents[1]-innerextents[1])/4., outerextents[2]/2.), _meshcollision);
+        AppendBoxTriangulation(Vector(0,(outerextents[1]+innerextents[1])/4.,outerextents[2]/2.+zoffset), Vector(outerextents[0]/2., (outerextents[1]-innerextents[1])/4., outerextents[2]/2.), _meshcollision);
         // -y wall
-        AppendBoxTriangulation(Vector(0,-(outerextents[1]+innerextents[1])/4.,outerextents[2]/2.), Vector(outerextents[0]/2., (outerextents[1]-innerextents[1])/4., outerextents[2]/2.), _meshcollision);
+        AppendBoxTriangulation(Vector(0,-(outerextents[1]+innerextents[1])/4.,outerextents[2]/2.+zoffset), Vector(outerextents[0]/2., (outerextents[1]-innerextents[1])/4., outerextents[2]/2.), _meshcollision);
         // bottom
         if( outerextents[2] - innerextents[2] >= 1e-6 ) { // small epsilon error can make thin triangles appear, so test with a reasonable threshold
-            AppendBoxTriangulation(Vector(0,0,(outerextents[2]-innerextents[2])/2.), Vector(outerextents[0]/2., outerextents[1]/2., (outerextents[2]-innerextents[2])/2), _meshcollision);
+            AppendBoxTriangulation(Vector(0,0,(outerextents[2]-innerextents[2])/2.+zoffset), Vector(outerextents[0]/2., outerextents[1]/2., (outerextents[2]-innerextents[2])/2), _meshcollision);
         }
         // cross
         if( bottomcross[2] > 0 ) {
             if( bottomcross[0] > 0 ) {
-                AppendBoxTriangulation(Vector(0, 0, bottomcross[2]/2+outerextents[2]-innerextents[2]), Vector(bottomcross[0]/2, innerextents[1]/2, bottomcross[2]/2), _meshcollision);
+                AppendBoxTriangulation(Vector(0, 0, bottomcross[2]/2+outerextents[2]-innerextents[2]+zoffset), Vector(bottomcross[0]/2, innerextents[1]/2, bottomcross[2]/2), _meshcollision);
             }
             if( bottomcross[1] > 0 ) {
-                AppendBoxTriangulation(Vector(0, 0, bottomcross[2]/2+outerextents[2]-innerextents[2]), Vector(innerextents[0]/2, bottomcross[1]/2, bottomcross[2]/2), _meshcollision);
+                AppendBoxTriangulation(Vector(0, 0, bottomcross[2]/2+outerextents[2]-innerextents[2]+zoffset), Vector(innerextents[0]/2, bottomcross[1]/2, bottomcross[2]/2), _meshcollision);
+            }
+        }
+        // bottom
+        if( bottom[2] > 0 ) {
+            if( bottom[0] > 0 && bottom[1] > 0 ) {
+                dReal bottomx = bottom[0] > outerextents[0] ? outerextents[0] : bottom[0];
+                dReal bottomy = bottom[1] > outerextents[1] ? outerextents[1] : bottom[1];
+                AppendBoxTriangulation(Vector(0, 0, bottom[2]/2), Vector(bottomx/2., bottomy/2., bottom[2]/2.), _meshcollision);
             }
         }
         break;
@@ -314,6 +329,42 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
         ab.extents.y = 0.5*(RaveFabs(tglobal.m[4])*_info._vGeomData.x + RaveFabs(tglobal.m[5])*_info._vGeomData.y + RaveFabs(tglobal.m[6])*_info._vGeomData.z);
         ab.extents.z = 0.5*(RaveFabs(tglobal.m[8])*_info._vGeomData.x + RaveFabs(tglobal.m[9])*_info._vGeomData.y + RaveFabs(tglobal.m[10])*_info._vGeomData.z);
         ab.pos = tglobal.trans + Vector(tglobal.m[2], tglobal.m[6], tglobal.m[10])*(0.5*_info._vGeomData.z);
+
+        if( _info._vGeomData4.x > 0 && _info._vGeomData4.y > 0 && _info._vGeomData4.z > 0 ) {
+            // Container with bottom
+            Vector vcontainerdir = Vector(tglobal.m[2], tglobal.m[6], tglobal.m[10]);
+            ab.pos += vcontainerdir*_info._vGeomData4.z; // take into account the bottom of the container
+
+            Vector vbottompos = tglobal.trans + vcontainerdir*(0.5*_info._vGeomData4.z);
+            Vector vbottomextents;
+            vbottomextents.x = 0.5*(RaveFabs(tglobal.m[0])*_info._vGeomData4.x + RaveFabs(tglobal.m[1])*_info._vGeomData4.y + RaveFabs(tglobal.m[2])*_info._vGeomData4.z);
+            vbottomextents.y = 0.5*(RaveFabs(tglobal.m[4])*_info._vGeomData4.x + RaveFabs(tglobal.m[5])*_info._vGeomData4.y + RaveFabs(tglobal.m[6])*_info._vGeomData4.z);
+            vbottomextents.z = 0.5*(RaveFabs(tglobal.m[8])*_info._vGeomData4.x + RaveFabs(tglobal.m[9])*_info._vGeomData4.y + RaveFabs(tglobal.m[10])*_info._vGeomData4.z);
+            Vector vmin = ab.pos - ab.extents;
+            Vector vmax = ab.pos + ab.extents;
+            Vector vbottommin = vbottompos - vbottomextents;
+            Vector vbottommax = vbottompos + vbottomextents;
+            if( vmin.x > vbottommin.x ) {
+                vmin.x = vbottommin.x;
+            }
+            if( vmin.y > vbottommin.y ) {
+                vmin.y = vbottommin.y;
+            }
+            if( vmin.z > vbottommin.z ) {
+                vmin.z = vbottommin.z;
+            }
+            if( vmax.x < vbottommax.x ) {
+                vmax.x = vbottommax.x;
+            }
+            if( vmax.y < vbottommax.y ) {
+                vmax.y = vbottommax.y;
+            }
+            if( vmax.z < vbottommax.z ) {
+                vmax.z = vbottommax.z;
+            }
+            ab.pos = 0.5 * (vmin + vmax);
+            ab.extents = vmax - ab.pos;
+        }
         break;
     case GT_Sphere:
         ab.extents.x = ab.extents.y = ab.extents.z = _info._vGeomData[0];
@@ -538,5 +589,5 @@ void KinBody::Link::Geometry::SetName(const std::string& name)
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkGeometry);
 
 }
-    
+
 }

@@ -371,7 +371,7 @@ public:
                 }
             }
             else if( itatt->first == "scalegeometry" ) {
-                
+
             }
             else if( itatt->first == "readoptions" ) {
                 stringstream ss(itatt->second);
@@ -2235,6 +2235,7 @@ public:
                 itgeominfo->_vGeomData *= vscale;
                 itgeominfo->_vGeomData2 *= vscale;
                 itgeominfo->_vGeomData3 *= vscale;
+                itgeominfo->_vGeomData4 *= vscale;
                 break;
             case GT_Sphere:
                 itgeominfo->_vGeomData *= max(vscale.z, max(vscale.x, vscale.y));
@@ -2826,6 +2827,18 @@ public:
                                 if( ss.eof() || !!ss ) {
                                     geominfo._type = GT_Container;
                                     geominfo._vGeomData3 = vextents;
+                                    geominfo._t = tlocalgeom;
+                                    bfoundgeom = true;
+                                }
+                            }
+                            daeElementRef pbottom = children[i]->getChild("bottom");
+                            if( !!pbottom ) {
+                                stringstream ss(pbottom->getCharData());
+                                Vector vextents;
+                                ss >> vextents.x >> vextents.y >> vextents.z;
+                                if( ss.eof() || !!ss ) {
+                                    geominfo._type = GT_Container;
+                                    geominfo._vGeomData4 = vextents;
                                     geominfo._t = tlocalgeom;
                                     bfoundgeom = true;
                                 }
@@ -4297,9 +4310,9 @@ private:
 
                                 domMaterialRef dommat = daeSafeCast<domMaterial>(daeURI(*referenceElt, pelt->getAttribute("material")).getElement());
                                 if( !dommat ) {
-                                  RAVELOG_WARN_FORMAT("failed to retrieve material for geometry %s\n", pelt->getAttribute("material"));
+                                    RAVELOG_WARN_FORMAT("failed to retrieve material for geometry %s\n", pelt->getAttribute("material"));
                                 } else {
-                                  mapmaterials["mat0"] = dommat;
+                                    mapmaterials["mat0"] = dommat;
                                 }
 
 

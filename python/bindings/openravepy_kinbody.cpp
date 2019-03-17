@@ -60,6 +60,7 @@ public:
         _vGeomData = toPyVector4(Vector());
         _vGeomData2 = toPyVector4(Vector());
         _vGeomData3 = toPyVector4(Vector());
+        _vGeomData4 = toPyVector4(Vector());
         _vDiffuseColor = toPyVector3(Vector(1,1,1));
         _vAmbientColor = toPyVector3(Vector(0,0,0));
         _type = GT_None;
@@ -74,6 +75,7 @@ public:
         _vGeomData = toPyVector4(info._vGeomData);
         _vGeomData2 = toPyVector4(info._vGeomData2);
         _vGeomData3 = toPyVector4(info._vGeomData3);
+        _vGeomData4 = toPyVector4(info._vGeomData4);
         _vDiffuseColor = toPyVector3(info._vDiffuseColor);
         _vAmbientColor = toPyVector3(info._vAmbientColor);
         _meshcollision = toPyTriMesh(info._meshcollision);
@@ -97,6 +99,7 @@ public:
         info._vGeomData = ExtractVector<dReal>(_vGeomData);
         info._vGeomData2 = ExtractVector<dReal>(_vGeomData2);
         info._vGeomData3 = ExtractVector<dReal>(_vGeomData3);
+        info._vGeomData4 = ExtractVector<dReal>(_vGeomData4);
         info._vDiffuseColor = ExtractVector34<dReal>(_vDiffuseColor,0);
         info._vAmbientColor = ExtractVector34<dReal>(_vAmbientColor,0);
         if( !IS_PYTHONOBJECT_NONE(_meshcollision) ) {
@@ -122,7 +125,7 @@ public:
         return pinfo;
     }
 
-    object _t, _vGeomData, _vGeomData2, _vGeomData3, _vDiffuseColor, _vAmbientColor, _meshcollision;
+    object _t, _vGeomData, _vGeomData2, _vGeomData3, _vGeomData4, _vDiffuseColor, _vAmbientColor, _meshcollision;
     GeometryType _type;
     object _name;
     object _filenamerender, _filenamecollision;
@@ -673,6 +676,9 @@ public:
         }
         object GetContainerBottomCross() const {
             return toPyVector3(_pgeometry->GetContainerBottomCross());
+        }
+        object GetContainerBottom() const {
+            return toPyVector3(_pgeometry->GetContainerBottom());
         }
         object GetRenderScale() const {
             return toPyVector3(_pgeometry->GetRenderScale());
@@ -3004,7 +3010,7 @@ class GeometryInfo_pickle_suite : public pickle_suite
 public:
     static boost::python::tuple getstate(const PyGeometryInfo& r)
     {
-        return boost::python::make_tuple(r._t, boost::python::make_tuple(r._vGeomData, r._vGeomData2, r._vGeomData3), r._vDiffuseColor, r._vAmbientColor, r._meshcollision, (int)r._type, boost::python::make_tuple(r._name, r._filenamerender, r._filenamecollision), r._vRenderScale, r._vCollisionScale, r._fTransparency, r._bVisible, r._bModifiable, r._mapExtraGeometries);
+        return boost::python::make_tuple(r._t, boost::python::make_tuple(r._vGeomData, r._vGeomData2, r._vGeomData3, r._vGeomData4), r._vDiffuseColor, r._vAmbientColor, r._meshcollision, (int)r._type, boost::python::make_tuple(r._name, r._filenamerender, r._filenamecollision), r._vRenderScale, r._vCollisionScale, r._fTransparency, r._bVisible, r._bModifiable, r._mapExtraGeometries);
     }
     static void setstate(PyGeometryInfo& r, boost::python::tuple state) {
         //int num = len(state);
@@ -3012,6 +3018,7 @@ public:
         r._vGeomData = state[1][0];
         r._vGeomData2 = state[1][1];
         r._vGeomData3 = state[1][2];
+        r._vGeomData4 = state[1][3];
         r._vDiffuseColor = state[2];
         r._vAmbientColor = state[3];
         r._meshcollision = state[4];
@@ -3272,6 +3279,7 @@ void init_openravepy_kinbody()
                           .def_readwrite("_vGeomData",&PyGeometryInfo::_vGeomData)
                           .def_readwrite("_vGeomData2",&PyGeometryInfo::_vGeomData2)
                           .def_readwrite("_vGeomData3",&PyGeometryInfo::_vGeomData3)
+                          .def_readwrite("_vGeomData4",&PyGeometryInfo::_vGeomData4)
                           .def_readwrite("_vDiffuseColor",&PyGeometryInfo::_vDiffuseColor)
                           .def_readwrite("_vAmbientColor",&PyGeometryInfo::_vAmbientColor)
                           .def_readwrite("_meshcollision",&PyGeometryInfo::_meshcollision)
@@ -3660,6 +3668,7 @@ void init_openravepy_kinbody()
                                  .def("GetContainerOuterExtents",&PyLink::PyGeometry::GetContainerOuterExtents, DOXY_FN(KinBody::Link::Geometry,GetContainerOuterExtents))
                                  .def("GetContainerInnerExtents",&PyLink::PyGeometry::GetContainerInnerExtents, DOXY_FN(KinBody::Link::Geometry,GetContainerInnerExtents))
                                  .def("GetContainerBottomCross",&PyLink::PyGeometry::GetContainerBottomCross, DOXY_FN(KinBody::Link::Geometry,GetContainerBottomCross))
+                                 .def("GetContainerBottom",&PyLink::PyGeometry::GetContainerBottom, DOXY_FN(KinBody::Link::Geometry,GetContainerBottom))
                                  .def("GetRenderScale",&PyLink::PyGeometry::GetRenderScale, DOXY_FN(KinBody::Link::Geometry,GetRenderScale))
                                  .def("GetRenderFilename",&PyLink::PyGeometry::GetRenderFilename, DOXY_FN(KinBody::Link::Geometry,GetRenderFilename))
                                  .def("GetName",&PyLink::PyGeometry::GetName, DOXY_FN(KinBody::Link::Geometry,GetName))
