@@ -1369,26 +1369,26 @@ public:
         }
         // Create missing joint between end effector link and gripper root link
 
-        auto dummyJointInfo = KinBody::JointInfo();
-        jointInfos.push_back(boost::make_shared<KinBody::JointInfo>(dummyJointInfo));
+        auto dummyJointInfo = boost::make_shared<KinBody::JointInfo>();
+        jointInfos.push_back(dummyJointInfo);
 
-        dummyJointInfo._name = "aiasDummyJoint";
-        dummyJointInfo._bIsActive = false;
-        dummyJointInfo._type = KinBody::JointType::JointPrismatic;
-        dummyJointInfo._vmaxaccel[0] = 0.0;
-        dummyJointInfo._vmaxvel[0] = 0.0;
-        dummyJointInfo._vupperlimit[0] = 0;
+        dummyJointInfo->_name = "aiasDummyJoint";
+        dummyJointInfo->_bIsActive = false;
+        dummyJointInfo->_type = KinBody::JointType::JointPrismatic;
+        dummyJointInfo->_vmaxaccel[0] = 0.0;
+        dummyJointInfo->_vmaxvel[0] = 0.0;
+        dummyJointInfo->_vupperlimit[0] = 0;
 
-        dummyJointInfo._linkname0 = "L6"; // read from dae
+        dummyJointInfo->_linkname0 = "L6"; // read from dae
 
         // root link of gripper
         for (const auto &link : pGripper->GetLinks()) {
             if (link->_vParentLinks.empty()) {
-                dummyJointInfo._linkname1 = link->GetName();
+                dummyJointInfo->_linkname1 = link->GetName();
                 break;
             }
         }
-        RAVELOG_WARN_FORMAT("dummy joint for links %s %s", dummyJointInfo._linkname0%dummyJointInfo._linkname1);
+
         probot->Init(linkInfos, jointInfos, manipInfos, attachedSensorInfos, probot->GetURI());
         return true;
     }
