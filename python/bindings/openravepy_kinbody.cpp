@@ -69,6 +69,15 @@ public:
         _vCollisionScale = toPyVector3(Vector(1,1,1));
         _bVisible = true;
         _bModifiable = true;
+        _pickableVolumeExtents = toPyVector4(Vector());
+        _containerBaseHeight = 0.0f;
+        _sidewallTransforms = boost::python::list();
+        _sidewallExtents = boost::python::list();
+        for(size_t i = 0; i < 4; ++i) {
+            _sidewallTransforms.append(ReturnTransform(Transform()));
+            _sidewallExtents.append(toPyVector4(Vector()));
+        }
+        _sidewallExists = 0;
     }
     PyGeometryInfo(const KinBody::GeometryInfo& info) {
         _t = ReturnTransform(info._t);
@@ -88,6 +97,15 @@ public:
         _fTransparency = info._fTransparency;
         _bVisible = info._bVisible;
         _bModifiable = info._bModifiable;
+        _pickableVolumeExtents = toPyVector4(info._pickableVolumeExtents);
+        _containerBaseHeight = info._containerBaseHeight;
+        _sidewallTransforms = boost::python::list();
+        _sidewallExtents = boost::python::list();
+        for(size_t i = 0; i < 4; ++i) {
+            _sidewallTransforms.append(ReturnTransform(info._sidewallTransforms[i]));
+            _sidewallExtents.append(toPyVector4(info._sidewallExtents[i]));
+        }
+        _sidewallExists = info._sidewallExists;
         //TODO
         //_mapExtraGeometries = info. _mapExtraGeometries;
     }
@@ -120,12 +138,19 @@ public:
         info._fTransparency = _fTransparency;
         info._bVisible = _bVisible;
         info._bModifiable = _bModifiable;
+        info._pickableVolumeExtents = ExtractVector<dReal>(_pickableVolumeExtents);
+        info._containerBaseHeight = _containerBaseHeight;
+        for(size_t i = 0; i < 4; ++i) {
+            info._sidewallTransforms[i] = ExtractTransform(_sidewallTransforms[i]);
+            info._sidewallExtents[i] = ExtractVector<dReal>(_sidewallExtents[i]);
+        }
+        info._sidewallExists = _sidewallExists;
         //TODO
         //info._mapExtraGeometries =  _mapExtraGeometries;
         return pinfo;
     }
 
-    object _t, _vGeomData, _vGeomData2, _vGeomData3, _vGeomData4, _vDiffuseColor, _vAmbientColor, _meshcollision;
+    object _t, _vGeomData, _vGeomData2, _vGeomData3, _vGeomData4, _vDiffuseColor, _vAmbientColor, _meshcollision, _pickableVolumeExtents;
     GeometryType _type;
     object _name;
     object _filenamerender, _filenamecollision;
@@ -133,6 +158,9 @@ public:
     boost::python::dict _mapExtraGeometries;
     float _fTransparency;
     bool _bVisible, _bModifiable;
+    boost::python::list _sidewallTransforms, _sidewallExtents;
+    float _containerBaseHeight;
+    uint8_t _sidewallExists;
 };
 typedef boost::shared_ptr<PyGeometryInfo> PyGeometryInfoPtr;
 
@@ -3235,6 +3263,7 @@ void init_openravepy_kinbody()
                           .value("Cylinder",GT_Cylinder)
                           .value("Trimesh",GT_TriMesh)
                           .value("Container",GT_Container)
+                          .value("Cage",GT_Cage)
     ;
     object electricmotoractuatorinfo = class_<PyElectricMotorActuatorInfo, boost::shared_ptr<PyElectricMotorActuatorInfo> >("ElectricMotorActuatorInfo", DOXY_CLASS(KinBody::ElectricMotorActuatorInfo))
                                        .def_readwrite("model_type",&PyElectricMotorActuatorInfo::model_type)
@@ -3293,8 +3322,14 @@ void init_openravepy_kinbody()
                           .def_readwrite("_bVisible",&PyGeometryInfo::_bVisible)
                           .def_readwrite("_bModifiable",&PyGeometryInfo::_bModifiable)
                           .def_readwrite("_mapExtraGeometries",&PyGeometryInfo::_mapExtraGeometries)
+                          .def_readwrite("_pickableVolumeExtents", &PyGeometryInfo::_pickableVolumeExtents)
+                          .def_readwrite("_containerBaseHeight", &PyGeometryInfo::_containerBaseHeight)
+                          .def_readwrite("_sidewallTransforms", &PyGeometryInfo::_sidewallTransforms)
+                          .def_readwrite("_sidewallExtents", &PyGeometryInfo::_sidewallExtents)
+                          .def_readwrite("_sidewallExists", &PyGeometryInfo::_sidewallExists)
                           .def_pickle(GeometryInfo_pickle_suite())
     ;
+
     object linkinfo = class_<PyLinkInfo, boost::shared_ptr<PyLinkInfo> >("LinkInfo", DOXY_CLASS(KinBody::LinkInfo))
                       .def_readwrite("_vgeometryinfos",&PyLinkInfo::_vgeometryinfos)
                       .def_readwrite("_name",&PyLinkInfo::_name)

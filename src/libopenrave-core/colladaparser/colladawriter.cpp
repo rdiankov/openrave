@@ -1766,6 +1766,38 @@ private:
                 pcontainer->add("bottom")->setCharData(ss.str());
                 break;
             }
+            case GT_Cage: {
+                daeElementRef pcage = ptec->add("cage");
+
+                const KinBody::GeometryInfo& info = geom->GetInfo();
+                ss << info._pickableVolumeExtents;
+                pcage->add("pickableVolumeExtents")->setCharData(ss.str());
+                ss.clear(); ss.str("");
+
+                ss << info._containerBaseHeight;
+                pcage->add("containerBaseHeight")->setCharData(ss.str());
+                ss.clear(); ss.str("");
+
+                ss << info._sidewallTransforms[0] <<
+                      info._sidewallTransforms[1] <<
+                      info._sidewallTransforms[2] <<
+                      info._sidewallTransforms[3];
+                pcage->add("sidewallTransforms")->setCharData(ss.str());
+                ss.clear(); ss.str("");
+
+                ss << info._sidewallExtents[0] <<
+                      info._sidewallExtents[1] <<
+                      info._sidewallExtents[2] <<
+                      info._sidewallExtents[3];
+                pcage->add("sidewallExtents")->setCharData(ss.str());
+                ss.clear(); ss.str("");
+
+                uint32_t b = info._sidewallExists;
+                ss << b;
+                pcage->add("sidewallExists")->setCharData(ss.str());
+
+                break;
+            }
             case GT_Sphere:
                 ptec->add("sphere")->add("radius")->setCharData(ss.str());
                 break;

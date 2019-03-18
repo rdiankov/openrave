@@ -2231,6 +2231,13 @@ public:
             case GT_Box:
                 itgeominfo->_vGeomData *= vscale;
                 break;
+            case GT_Cage:
+                itgeominfo->_pickableVolumeExtents *= vscale;
+                itgeominfo->_containerBaseHeight *= vscale[2];
+                for (size_t i = 0; i < 4; ++i) {
+                    itgeominfo->_sidewallTransforms[i].trans *= vscale;
+                    itgeominfo->_sidewallExtents[i] *= vscale;
+                }
             case GT_Container:
                 itgeominfo->_vGeomData *= vscale;
                 itgeominfo->_vGeomData2 *= vscale;
@@ -2789,6 +2796,68 @@ public:
                                 if( (ss.eof() || !!ss) && (ss2.eof() || !!ss2) ) {
                                     geominfo._type = GT_Cylinder;
                                     geominfo._vGeomData = vGeomData;
+                                    geominfo._t = tlocalgeom;
+                                    bfoundgeom = true;
+                                }
+                            }
+                        }
+                        else if( name == "cage" ) {
+                            daeElementRef pPickableVolumeExtents = children[i]->getChild("pickableVolumeExtents");
+                            if( !!pPickableVolumeExtents ) {
+                                stringstream ss(pPickableVolumeExtents->getCharData());
+                                Vector vextents;
+                                ss >> vextents.x >> vextents.y >> vextents.z;
+                                if( ss.eof() || !!ss ) {
+                                    geominfo._type = GT_Cage;
+                                    geominfo._pickableVolumeExtents = vextents;
+                                    geominfo._t = tlocalgeom;
+                                    bfoundgeom = true;
+                                }
+                            }
+                            daeElementRef pContainerBaseHeight = children[i]->getChild("containerBaseHeight");
+                            if( !!pContainerBaseHeight ) {
+                                stringstream ss(pContainerBaseHeight->getCharData());
+                                float h;
+                                ss >> h;
+                                if( ss.eof() || !!ss ) {
+                                    geominfo._type = GT_Cage;
+                                    geominfo._containerBaseHeight = h;
+                                    geominfo._t = tlocalgeom;
+                                    bfoundgeom = true;
+                                }
+                            }
+                            daeElementRef pSidewallTransforms = children[i]->getChild("sidewallTransforms");
+                            if( !!pSidewallTransforms ) {
+                                stringstream ss(pSidewallTransforms->getCharData());
+                                Transform transf[4];
+                                ss >> transf[0] >> transf[1] >> transf[2] >> transf[3];
+                                if( ss.eof() || !!ss ) {
+                                    geominfo._type = GT_Cage;
+                                    memcpy(&geominfo._sidewallTransforms[0], &transf, 4 * sizeof(Transform));
+                                    geominfo._t = tlocalgeom;
+                                    bfoundgeom = true;
+                                }
+                            }
+                            daeElementRef pSidewallExtents = children[i]->getChild("sidewallExtents");
+                            if( !!pSidewallExtents ) {
+                                stringstream ss(pSidewallExtents->getCharData());
+                                Vector e[4];
+                                ss >> e[0] >> e[1] >> e[2] >> e[3];
+                                if( ss.eof() || !!ss ) {
+                                    geominfo._type = GT_Cage;
+                                    memcpy(&geominfo._sidewallExtents[0], &e, 4 * sizeof(Vector));
+                                    geominfo._t = tlocalgeom;
+                                    bfoundgeom = true;
+                                }
+                            }
+                            daeElementRef pSidewallExists = children[i]->getChild("sidewallExists");
+                            if( !!pSidewallExists ) {
+                                stringstream ss(pSidewallExists->getCharData());
+                                uint32_t b;
+                                ss >> b;
+                                if( ss.eof() || !!ss ) {
+                                    geominfo._type = GT_Cage;
+                                    geominfo._sidewallExists = b;
                                     geominfo._t = tlocalgeom;
                                     bfoundgeom = true;
                                 }

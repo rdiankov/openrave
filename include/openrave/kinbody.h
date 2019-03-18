@@ -35,6 +35,7 @@ enum GeometryType {
     GT_Cylinder = 3, ///< oriented towards z-axis
     GT_TriMesh = 4,
     GT_Container=5, ///< a container shaped geometry that has inner and outer extents. container opens on +Z.
+    GT_Cage=6, ///< a container shaped geometry with removable side walls
 };
 
 /// \brief holds parameters for an electric motor
@@ -156,6 +157,13 @@ public:
         Vector _vGeomData2; ///< For containers, the first 3 values are the full inner extents.
         Vector _vGeomData3; ///< For containers, the first 3 values are the bottom cross XY full extents and Z height from bottom face.
         Vector _vGeomData4; ///< For containers, the first 3 values are the full extents of the
+
+        // For GT_Cage
+        Vector _pickableVolumeExtents;
+        float _containerBaseHeight;
+        Transform _sidewallTransforms[4]; // Transformation of each side wall in the geometry space
+        Vector _sidewallExtents[4]; // Each side wall is a rectangular volume.
+        uint8_t _sidewallExists : 4; // bit 0-3 corresponds to (nx, px, ny, py)
 
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height

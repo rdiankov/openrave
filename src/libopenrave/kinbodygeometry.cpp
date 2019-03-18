@@ -249,6 +249,22 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
         }
         break;
     }
+    case GT_Cage: {
+        for (size_t i = 0; i < 4; ++ i) {
+            if ((_sidewallExists >> i) & 1) {
+                const size_t vBase = _meshcollision.vertices.size();
+                AppendBoxTriangulation(Vector(0, 0, 0), _sidewallExtents[i], _meshcollision);
+
+                for (size_t j = 0; j < 8; ++j) {
+                    _meshcollision.vertices[vBase + j] = _sidewallTransforms[i] * _meshcollision.vertices[vBase + j];
+                }
+            }
+        }
+        AppendBoxTriangulation(Vector(0, 0, - _pickableVolumeExtents[2] - 0.5f * _containerBaseHeight),
+                               Vector(_pickableVolumeExtents[0], _pickableVolumeExtents[1], 0.5f * _containerBaseHeight), _meshcollision);
+
+        break;
+    }
     case GT_Container: {
         const Vector& outerextents = _vGeomData;
         const Vector& innerextents = _vGeomData2;
@@ -376,7 +392,9 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
         ab.extents.z = (dReal)0.5*RaveFabs(tglobal.m[10])*_info._vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[10]*tglobal.m[10]))*_info._vGeomData.x;
         ab.pos = tglobal.trans; //+(dReal)0.5*_info._vGeomData.y*Vector(tglobal.m[2],tglobal.m[6],tglobal.m[10]);
         break;
-    case GT_TriMesh:
+    case GT_Cage:
+    case GT_TriMesh: {
+        // Cage: init collision mesh?
         // just use _info._meshcollision
         if( _info._meshcollision.vertices.size() > 0) {
             Vector vmin, vmax; vmin = vmax = tglobal*_info._meshcollision.vertices.at(0);
@@ -408,6 +426,7 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
             ab.pos = tglobal.trans;
         }
         break;
+    }
     default:
         throw OPENRAVE_EXCEPTION_FORMAT(_("unknown geometry type %d"), _info._type, ORE_InvalidArguments);
     }
