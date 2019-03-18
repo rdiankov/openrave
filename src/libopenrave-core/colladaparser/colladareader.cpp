@@ -1139,7 +1139,7 @@ public:
                                     string kmodeluri = _MakeFullURI(ikmodel->getUrl(), ikmodel);
                                     FOREACH(itmodel,pcolladainfo->_bindingModelURIs) {
                                         if( itmodel->kmodel == kmodeluri ) {
-                                            if( itmodel->ikmodelsidref.size() == 0 ) { // if opening an external reference, this will already have been initialized with the external reference's ikmodelsidref, so need to preserve it!
+                                            if( itmodel->ikmodelsidref.empty() ) { // if opening an external reference, this will already have been initialized with the external reference's ikmodelsidref, so need to preserve it!
                                                 itmodel->ikmodelsidref = param->getSIDREF()->getValue();
                                             }
                                         }
@@ -1269,6 +1269,7 @@ public:
             ExtractRobotManipulators(probot, ias->getExtra_array(), articulated_system, bindings); // have to also read from the instance_articulated_system!
             ExtractRobotAttachedSensors(probot, articulated_system, bindings);
             ExtractRobotAttachedActuators(probot, articulated_system, bindings);
+            ExtractRobotAttachedArticulatedSystem(probot, articulated_system->getExtra_array());
         }
         _ExtractCollisionData(pbody,articulated_system,articulated_system->getExtra_array(),bindings.listInstanceLinkBindings);
         _ExtractVisibleData(pbody,articulated_system,articulated_system->getExtra_array(),bindings.listInstanceLinkBindings);
@@ -1276,6 +1277,119 @@ public:
         // also collision data state can be dynamic, so process instance_articulated_system too
         _ExtractCollisionData(pbody,ias,ias->getExtra_array(),bindings.listInstanceLinkBindings, true);
         _ExtractVisibleData(pbody,ias,ias->getExtra_array(),bindings.listInstanceLinkBindings, true);
+        return true;
+    }
+
+    /* example of attach articulated system
+     *<extra name="newgripper0" type="attach_articulated_system">
+        <technique profile="OpenRAVE">
+          <instance_articulated_system id="new_articularted_system0" url="openrave:/hand.mujin.dae#body0_motion">
+          </instance_articulated_system>
+          <bind_links link_parent="kmodel0/link6" link_child="new_articularted_system0/link0">
+            <!-- relative transform of link0 in link6's coordinate system -->
+            <translate>0 0 0</translate>
+            <rotate>1 0 0 0</rotate>
+          </bind_links>
+        </technique>
+      </extra>
+     */
+
+    bool ExtractRobotAttachedArticulatedSystem(RobotBasePtr& probot,
+                                               const domExtra_Array& arr) {
+        for(size_t i = 0; i < arr.getCount(); ++i) {
+            if (strcmp(arr[i]->getType(), "attach_articulated_system") != 0) { continue; }
+
+            domTechniqueRef tec = _ExtractOpenRAVEProfile(arr[i]->getTechnique_array());
+
+            if (!tec) { continue; }
+
+            for(size_t ic = 0; ic < tec->getContents().getCount(); ++ic) {
+                daeElementRef pelt = tec->getContents()[ic];
+
+                if( pelt->getElementName() == string("instance_articulated_system") ) {
+                    // Extract articulated system
+                    KinBodyPtr pGripper;
+                    std::list<daeElementRef> listInstanceScope;
+                    auto bindings = KinematicsSceneBindings();
+
+                    domInstance_articulated_systemRef ias = daeSafeCast<domInstance_articulated_system>(pelt);
+                    if (!ias) {return false;}
+
+                    ExtractArticulatedSystem(pGripper, ias, bindings, listInstanceScope);
+                    if (!! pGripper) {
+                        _AttachArticulatedSystems(probot, pGripper);
+                        return true;
+                    }
+                }
+
+            }
+        }
+        return true;
+    }
+
+    bool _AttachArticulatedSystems(RobotBasePtr& probot, KinBodyPtr& pGripper) {
+        if(!probot || !pGripper) {
+            return false;
+        }
+
+        // Get link infos
+        std::vector<KinBody::LinkInfoConstPtr> linkInfos;
+
+        for (const auto &link : probot->_veclinks) {
+
+            linkInfos.push_back(boost::make_shared<KinBody::LinkInfo>(link->UpdateAndGetInfo()));
+        }
+
+        for (const auto &link : pGripper->_veclinks) {
+            linkInfos.push_back(boost::make_shared<KinBody::LinkInfo>(link->UpdateAndGetInfo()));
+        }
+
+        // Get manipulator infos
+
+        std::vector<RobotBase::ManipulatorInfoConstPtr> manipInfos;
+        for (const auto &manip : probot->GetManipulators()) {
+            manipInfos.push_back(boost::make_shared<RobotBase::ManipulatorInfo>(manip->GetInfo()));
+        }
+
+        std::vector<RobotBase::AttachedSensorInfoConstPtr> attachedSensorInfos;
+        for (const auto &sensor : probot->GetAttachedSensors()) {
+            attachedSensorInfos.push_back(boost::make_shared<RobotBase::AttachedSensorInfo>(sensor->UpdateAndGetInfo()));
+        }
+
+        // Get joint infos
+        std::vector<KinBody::JointInfoConstPtr> jointInfos;
+
+
+        for (const auto &joint : probot->_vecjoints) {
+            jointInfos.push_back(boost::make_shared<KinBody::JointInfo>(joint->UpdateAndGetInfo()));
+        }
+
+        for (const auto &joint : pGripper->_vecjoints) {
+            jointInfos.push_back(boost::make_shared<KinBody::JointInfo>(joint->UpdateAndGetInfo()));
+        }
+        // Create missing joint between end effector link and gripper root link
+
+        auto dummyJointInfo = KinBody::JointInfo();
+        jointInfos.push_back(boost::make_shared<KinBody::JointInfo>(dummyJointInfo));
+
+        dummyJointInfo._name = "aiasDummyJoint";
+        dummyJointInfo._bIsActive = false;
+        dummyJointInfo._type = KinBody::JointType::JointPrismatic;
+        dummyJointInfo._vmaxaccel[0] = 0.0;
+        dummyJointInfo._vmaxvel[0] = 0.0;
+        dummyJointInfo._vupperlimit[0] = 0;
+
+        dummyJointInfo._linkname0 = "L6"; // read from dae
+
+        // root link of gripper
+        for (const auto &link : pGripper->GetLinks()) {
+            if (link->_vParentLinks.empty()) {
+                dummyJointInfo._linkname1 = link->GetName();
+                break;
+            }
+        }
+        RAVELOG_WARN_FORMAT("dummy joint for links %s %s", dummyJointInfo._linkname0%dummyJointInfo._linkname1);
+        probot->Init(linkInfos, jointInfos, manipInfos, attachedSensorInfos, probot->GetURI());
         return true;
     }
 
