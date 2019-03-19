@@ -1269,7 +1269,8 @@ public:
             ExtractRobotManipulators(probot, ias->getExtra_array(), articulated_system, bindings); // have to also read from the instance_articulated_system!
             ExtractRobotAttachedSensors(probot, articulated_system, bindings);
             ExtractRobotAttachedActuators(probot, articulated_system, bindings);
-            ExtractRobotAttachedArticulatedSystem(probot, articulated_system->getExtra_array());
+            // ExtractRobotAttachedArticulatedSystem(probot, articulated_system->getExtra_array());
+            ExtractRobotAttachedKinBody(probot, articulated_system, bindings);
         }
         _ExtractCollisionData(pbody,articulated_system,articulated_system->getExtra_array(),bindings.listInstanceLinkBindings);
         _ExtractVisibleData(pbody,articulated_system,articulated_system->getExtra_array(),bindings.listInstanceLinkBindings);
@@ -1279,20 +1280,6 @@ public:
         _ExtractVisibleData(pbody,ias,ias->getExtra_array(),bindings.listInstanceLinkBindings, true);
         return true;
     }
-
-    /* example of attach articulated system
-     *<extra name="newgripper0" type="attach_articulated_system">
-        <technique profile="OpenRAVE">
-          <instance_articulated_system id="new_articularted_system0" url="openrave:/hand.mujin.dae#body0_motion">
-          </instance_articulated_system>
-          <bind_links link_parent="kmodel0/link6" link_child="new_articularted_system0/link0">
-            <!-- relative transform of link0 in link6's coordinate system -->
-            <translate>0 0 0</translate>
-            <rotate>1 0 0 0</rotate>
-          </bind_links>
-        </technique>
-      </extra>
-     */
 
     bool ExtractRobotAttachedArticulatedSystem(RobotBasePtr& probot,
                                                const domExtra_Array& arr) {
@@ -3404,6 +3391,61 @@ public:
             (*itjoint)->jointindex = jointindex++;
             (*itjoint)->dofindex = dofindex;
             dofindex += (*itjoint)->GetDOF();
+        }
+    }
+
+    void ExtractRobotAttachedKinBody(const RobotBasePtr probot, const domArticulated_systemRef &as,
+                                     const KinematicsSceneBindings &bindings) {
+
+        for (size_t ie = 0; ie < as->getExtra_array().getCount(); ie++) {
+            domExtraRef pextra = as->getExtra_array()[ie];
+
+            if (!pextra->getType()) {
+                continue;
+            }
+            if (strcmp(pextra->getType(), "attach_kinbody") != 0) {
+                continue;
+            }
+
+            string name = pextra->getAttribute("name");
+            domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
+
+            if (!!tec) {
+
+                RobotBase::AttachedKinBodyPtr pattachedBody(new RobotBase::AttachedKinBody(probot));
+                pattachedBody->_info._name = _ConvertToOpenRAVEName(name);
+                daeElementRef pframe_origin = tec->getChild("frame_origin");
+                if (!!pframe_origin) {
+                    domLinkRef pdomlink = daeSafeCast<domLink>(
+                            daeSidRef(pframe_origin->getAttribute("link"), as).resolve().elt);
+                    if (!!pdomlink) {
+                        pattachedBody->pattachedlink = probot->GetLink(_ExtractLinkName(pdomlink));
+                    }
+                    if (!pattachedBody->pattachedlink.lock()) {
+                                RAVELOG_WARN(
+                                str(boost::format("failed to find manipulator %s frame origin %s\n") % name %
+                                    pframe_origin->getAttribute("link")));
+                        continue;
+                    }
+                    pattachedBody->_info._trelative = _ExtractFullTransformFromChildren(pframe_origin);
+                }
+                daeElementRef instance_body = tec->getChild("instance_body");
+                if (!!instance_body && instance_body->hasAttribute("url")) {
+
+                    EnvironmentBasePtr tempenv = RaveCreateEnvironment(); // create the main environment for parsing body
+                    tempenv->ReadRobotURI(pattachedBody->_pbody, instance_body->getAttribute("url"));
+                    // pattachedBody->_pbody
+                    if (!!pattachedBody->_pbody) {
+                        pattachedBody->_pbody->SetName(str(boost::format("%s:%s") % probot->GetName() % name));
+                        std::string instance_url = instance_body->getAttribute("url");
+                    }
+                }
+
+                probot->GetAttachedBodies().push_back(pattachedBody);
+            } else {
+                RAVELOG_WARN(str(boost::format("cannot create robot %s attached sensor %s\n") % probot->GetName() %
+                            name));
+            }
         }
     }
 
