@@ -572,8 +572,8 @@ private:
     {
     public:
         AttachedKinBody(RobotBasePtr probot);
-        AttachedKinBody(RobotBasePtr probot, const AttachedKinBody &attachedKinBody, int cloningoptions);
-        AttachedKinBody(RobotBasePtr probot, const AttachedKinBodyInfo& info);
+        // AttachedKinBody(RobotBasePtr probot, const AttachedKinBody &attachedKinBody, int cloningoptions);
+        // AttachedKinBody(RobotBasePtr probot, const AttachedKinBodyInfo& info);
         virtual ~AttachedKinBody();
 
         virtual LinkPtr GetAttachingLink() const {
@@ -601,12 +601,14 @@ private:
             return _info._name;
         }
 
-        virtual void SetRelativeTransform(const Transform& t);
+        virtual void SetRelativeTransform(const Transform& t) {
+            _info._trelative = t;
+        }
 
-        virtual void serialize(std::ostream& o, int options) const;
+        // virtual void serialize(std::ostream& o, int options) const;
 
         /// \brief return hash of the attached kinbody definition
-        virtual const std::string& GetStructureHash() const;
+        // virtual const std::string& GetStructureHash() const;
 
         /// \brief returns the attached kinbody info
         inline const AttachedKinBodyInfo& GetInfo() const {
@@ -615,6 +617,7 @@ private:
 
     private:
         AttachedKinBodyInfo _info; ///< user specified data
+        RobotBasePtr _pbody; ///< actual attached body
         RobotBaseWeakPtr _probot;
         LinkWeakPtr pattachedlink;         ///< the robot link that the body is attached to
         mutable std::string __hashstructure;

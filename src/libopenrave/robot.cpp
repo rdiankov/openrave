@@ -152,6 +152,11 @@ const std::string& RobotBase::AttachedSensor::GetStructureHash() const
     return __hashstructure;
 }
 
+
+RobotBase::AttachedKinBody::AttachedKinBody(OpenRAVE::RobotBasePtr probot): _probot(probot) {}
+
+RobotBase::AttachedKinBody::~AttachedKinBody() {}
+
 RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : KinBodyStateSaver(probot, options), _probot(probot)
 {
     if( _options & Save_ActiveDOF ) {
