@@ -548,7 +548,85 @@ private:
     typedef boost::shared_ptr<RobotBase::AttachedSensor> AttachedSensorPtr;
     typedef boost::shared_ptr<RobotBase::AttachedSensor const> AttachedSensorConstPtr;
     typedef boost::weak_ptr<RobotBase::AttachedSensor> AttachedSensorWeakPtr;
-    
+
+    /// \brief holds all user-set attached kinbody information used to initialize the AttachedKinBody class.
+    ///
+    /// This is serializable and independent of environment.
+    class OPENRAVE_API AttachedKinBodyInfo
+    {
+    public:
+        AttachedKinBodyInfo() {
+        }
+        virtual ~AttachedKinBodyInfo() {
+        }
+
+        std::string _name;
+        std::string _linkname; ///< the robot link that the body is attached to
+        Transform _trelative;         ///< relative transform of the body with respect to the attached link
+    };
+    typedef boost::shared_ptr<AttachedKinBodyInfo> AttachedKinBodyInfoPtr;
+    typedef boost::shared_ptr<AttachedKinBodyInfo const> AttachedKinBodyInfoConstPtr;
+
+    /// \brief Attaches a kinbody to a link on the robot.
+    class OPENRAVE_API AttachedKinBody : public boost::enable_shared_from_this<AttachedKinBody>
+    {
+    public:
+        AttachedKinBody(RobotBasePtr probot);
+        AttachedKinBody(RobotBasePtr probot, const AttachedKinBody &attachedKinBody, int cloningoptions);
+        AttachedKinBody(RobotBasePtr probot, const AttachedKinBodyInfo& info);
+        virtual ~AttachedKinBody();
+
+        virtual LinkPtr GetAttachingLink() const {
+            return LinkPtr(pattachedlink);
+        }
+        virtual Transform GetRelativeTransform() const {
+            return _info._trelative;
+        }
+        virtual Transform GetTransform() const {
+            return LinkPtr(pattachedlink)->GetTransform()*_info._trelative;
+        }
+
+        /// \brief get robot that manipulator belongs to.
+        ///
+        /// \param trylock if true then will try to get the parent pointer and return empty pointer if parent was already destroyed. Otherwise throws an exception if parent is already destroyed. By default this should be
+        inline RobotBasePtr GetRobot(bool trylock=false) const {
+            if( trylock ) {
+                return _probot.lock();
+            }
+            else {
+                return RobotBasePtr(_probot);
+            }
+        }
+        virtual const std::string& GetName() const {
+            return _info._name;
+        }
+
+        virtual void SetRelativeTransform(const Transform& t);
+
+        virtual void serialize(std::ostream& o, int options) const;
+
+        /// \brief return hash of the attached kinbody definition
+        virtual const std::string& GetStructureHash() const;
+
+        /// \brief returns the attached kinbody info
+        inline const AttachedKinBodyInfo& GetInfo() const {
+            return _info;
+        }
+
+    private:
+        AttachedKinBodyInfo _info; ///< user specified data
+        RobotBaseWeakPtr _probot;
+        LinkWeakPtr pattachedlink;         ///< the robot link that the body is attached to
+        mutable std::string __hashstructure;
+
+        friend class ColladaReader;
+        friend class RobotBase;
+    };
+
+    typedef boost::shared_ptr<RobotBase::AttachedKinBody> AttachedKinBodyPtr;
+    typedef boost::shared_ptr<RobotBase::AttachedKinBody const> AttachedKinBodyConstPtr;
+    typedef boost::weak_ptr<RobotBase::AttachedKinBody> AttachedKinBodyWeakPtr;
+
     /// \brief Helper class derived from KinBodyStateSaver to additionaly save robot information.
     class OPENRAVE_API RobotStateSaver : public KinBodyStateSaver
     {
@@ -610,6 +688,10 @@ private:
 
     virtual std::vector<AttachedSensorPtr>& GetAttachedSensors() {
         return _vecSensors;
+    }
+
+    virtual std::vector<AttachedKinBodyPtr>& GetAttachedBodies() {
+        return _vecAttachedBodies;
     }
 
     virtual void SetName(const std::string& name);
@@ -976,7 +1058,7 @@ protected:
     ManipulatorPtr _pManipActive;
 
     std::vector<AttachedSensorPtr> _vecSensors; ///< \see GetAttachedSensors
-
+    std::vector<AttachedKinBodyPtr> _vecAttachedBodies;  ///< \see GetAttachedBodies
     std::vector<int> _vActiveDOFIndices, _vAllDOFIndices;
     Vector vActvAffineRotationAxis;
     int _nActiveDOF; ///< Active degrees of freedom; if -1, use robot dofs
