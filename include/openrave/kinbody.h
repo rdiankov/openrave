@@ -907,7 +907,7 @@ public:
         ///
         /// If _infoElectricMotor is filled, the will compute the nominal torque limits depending on the current speed of the joint.
         /// \return min and max of torque limits
-        std::pair<dReal, dReal> GetNominalTorqueLimits(int iaxis=0) const;
+        std::pair<dReal, dReal> GetNominalTorqueLimits(int iaxis=0, int torquelimitmode=1) const;
 
         inline dReal GetMaxInertia(int iaxis=0) const {
             return _info._vmaxinertia[iaxis];
