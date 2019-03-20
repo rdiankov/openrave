@@ -1314,8 +1314,9 @@ public:
         return true;
     }
 
-    bool _AttachArticulatedSystems(RobotBasePtr& probot, KinBodyPtr& pGripper) {
-        if(!probot || !pGripper) {
+    bool _AttachArticulatedSystems(const RobotBasePtr &probot, RobotBasePtr &pGripper)
+    {
+        if (!probot || !pGripper) {
             return false;
         }
 
@@ -1340,20 +1341,21 @@ public:
 
         std::vector<RobotBase::AttachedSensorInfoConstPtr> attachedSensorInfos;
         for (const auto &sensor : probot->GetAttachedSensors()) {
-            attachedSensorInfos.push_back(boost::make_shared<RobotBase::AttachedSensorInfo>(sensor->UpdateAndGetInfo()));
+            attachedSensorInfos.push_back(
+                    boost::make_shared<RobotBase::AttachedSensorInfo>(sensor->UpdateAndGetInfo()));
         }
 
         // Get joint infos
         std::vector<KinBody::JointInfoConstPtr> jointInfos;
 
-
-        for (const auto &joint : probot->_vecjoints) {
-            jointInfos.push_back(boost::make_shared<KinBody::JointInfo>(joint->UpdateAndGetInfo()));
+        std::vector<std::vector<KinBody::JointPtr> > vvJoints{probot->_vecjoints, probot->_vPassiveJoints,
+                                                              pGripper->_vecjoints, pGripper->_vPassiveJoints};
+        for (const auto &vJoints : vvJoints) {
+            for (const auto &joint : vJoints) {
+                jointInfos.push_back(boost::make_shared<KinBody::JointInfo>(joint->UpdateAndGetInfo()));
+            }
         }
 
-        for (const auto &joint : pGripper->_vecjoints) {
-            jointInfos.push_back(boost::make_shared<KinBody::JointInfo>(joint->UpdateAndGetInfo()));
-        }
         // Create missing joint between end effector link and gripper root link
 
         auto dummyJointInfo = boost::make_shared<KinBody::JointInfo>();
@@ -1366,7 +1368,7 @@ public:
         dummyJointInfo->_vmaxvel[0] = 0.0;
         dummyJointInfo->_vupperlimit[0] = 0;
 
-        dummyJointInfo->_linkname0 = "L6"; // read from dae
+        dummyJointInfo->_linkname0 = "L6"; //TODO read from dae
 
         // root link of gripper
         for (const auto &link : pGripper->GetLinks()) {
@@ -1375,7 +1377,7 @@ public:
                 break;
             }
         }
-
+        RAVELOG_DEBUG_FORMAT("Dummy joint connects %s and %s", dummyJointInfo->_linkname0 % dummyJointInfo->_linkname1);
         probot->Init(linkInfos, jointInfos, manipInfos, attachedSensorInfos, probot->GetURI());
         return true;
     }
