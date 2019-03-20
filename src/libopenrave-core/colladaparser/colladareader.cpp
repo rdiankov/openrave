@@ -1314,8 +1314,9 @@ public:
         return true;
     }
 
-    bool _AttachArticulatedSystems(const RobotBasePtr &probot, RobotBasePtr &pGripper)
+    bool _AttachArticulatedSystems(const RobotBasePtr &probot, RobotBase::AttachedKinBodyPtr &pattachedKinBody)
     {
+        RobotBasePtr pGripper(pattachedKinBody->_pbody);
         if (!probot || !pGripper) {
             return false;
         }
@@ -1368,7 +1369,7 @@ public:
         dummyJointInfo->_vmaxvel[0] = 0.0;
         dummyJointInfo->_vupperlimit[0] = 0;
 
-        dummyJointInfo->_linkname0 = "L6"; //TODO read from dae
+        dummyJointInfo->_linkname0 = pattachedKinBody->_info._linkname;
 
         // root link of gripper
         for (const auto &link : pGripper->GetLinks()) {
