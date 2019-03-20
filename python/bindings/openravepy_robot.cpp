@@ -761,6 +761,45 @@ public:
         return !pattachedsensor ? PyAttachedSensorPtr() : PyAttachedSensorPtr(new PyAttachedSensor(pattachedsensor, _pyenv));
     }
 
+    class PyAttachedKinBody {
+        RobotBase::AttachedKinBodyPtr _pattached;
+        PyEnvironmentBasePtr _pyenv;
+public:
+        PyAttachedKinBody(RobotBase::AttachedKinBodyPtr pattached, PyEnvironmentBasePtr pyenv) : _pattached(pattached),
+                                                                                                 _pyenv(pyenv) {
+        }
+
+        virtual ~PyAttachedKinBody() {
+        }
+
+        string __repr__() {
+            return boost::str(boost::format("RaveGetEnvironment(%d).GetRobot('%s').GetAttachedBodies('%s')") %
+                              RaveGetEnvironmentId(_pattached->GetRobot()->GetEnv()) %
+                              _pattached->GetRobot()->GetName() % _pattached->GetName());
+        }
+
+        string __str__() {
+            return boost::str(boost::format("<attachedbody:%s, parent=%s>") % _pattached->GetName() %
+                              _pattached->GetRobot()->GetName());
+        }
+
+        object __unicode__() {
+            return ConvertStringToUnicode(__str__());
+        }
+
+        bool __eq__(boost::shared_ptr<PyAttachedKinBody> p) {
+            return !!p && _pattached == p->_pattached;
+        }
+
+        bool __ne__(boost::shared_ptr<PyAttachedKinBody> p) {
+            return !p || _pattached != p->_pattached;
+        }
+
+        long __hash__() {
+            return static_cast<long>(uintptr_t(_pattached.get()));
+        }
+    };
+
 
     class PyRobotStateSaver
     {
@@ -930,6 +969,15 @@ public:
     boost::shared_ptr<PyAttachedSensor> GetAttachedSensor(const string& sensorname)
     {
         return _GetAttachedSensor(_probot->GetAttachedSensor(sensorname));
+    }
+
+    object GetAttachedBodies()
+    {
+        boost::python::list bodies;
+        FOREACH(itbody, _probot->GetAttachedBodies()) {
+            bodies.append(boost::shared_ptr<PyAttachedKinBody>(new PyAttachedKinBody(*itbody, _pyenv)));
+        }
+        return bodies;
     }
 
     object GetController() const {
@@ -1505,6 +1553,7 @@ void init_openravepy_robot()
                       .def("GetAttachedSensor",&PyRobotBase::GetAttachedSensor,args("sensorname"), "Return the attached sensor whose name matches")
                       .def("GetSensors",&PyRobotBase::GetSensors)
                       .def("GetSensor",&PyRobotBase::GetSensor,args("sensorname"))
+                      .def("GetAttachedBodies",&PyRobotBase::GetAttachedBodies, DOXY_FN(RobotBase,GetAttachedBodies))
                       .def("GetController",&PyRobotBase::GetController, DOXY_FN(RobotBase,GetController))
                       .def("SetController",setcontroller1,DOXY_FN(RobotBase,SetController))
                       .def("SetController",setcontroller2,args("robot","dofindices","controltransform"), DOXY_FN(RobotBase,SetController))
@@ -1686,6 +1735,14 @@ void init_openravepy_robot()
         .def("__ne__",&PyRobotBase::PyAttachedSensor::__ne__)
         .def("__hash__",&PyRobotBase::PyAttachedSensor::__hash__)
         ;
+
+        class_<PyRobotBase::PyAttachedKinBody, boost::shared_ptr<PyRobotBase::PyAttachedKinBody> >("AttachedKinBody", DOXY_CLASS(RobotBase::AttachedKinBody), no_init)
+        .def("__str__",&PyRobotBase::PyAttachedKinBody::__str__)
+        .def("__repr__",&PyRobotBase::PyAttachedKinBody::__repr__)
+        .def("__unicode__",&PyRobotBase::PyAttachedKinBody::__unicode__)
+        .def("__eq__",&PyRobotBase::PyAttachedKinBody::__eq__)
+        .def("__ne__",&PyRobotBase::PyAttachedKinBody::__ne__)
+        .def("__hash__",&PyRobotBase::PyAttachedKinBody::__hash__);
 
         class_<PyRobotBase::PyRobotStateSaver, boost::shared_ptr<PyRobotBase::PyRobotStateSaver> >("RobotStateSaver", DOXY_CLASS(Robot::RobotStateSaver), no_init)
         .def(init<PyRobotBasePtr>(args("robot")))
