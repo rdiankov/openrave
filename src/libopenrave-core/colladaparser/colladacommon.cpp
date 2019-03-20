@@ -22,7 +22,7 @@
 namespace OpenRAVE
 {
 static boost::shared_ptr<DAE> s_dae;
-static boost::mutex s_daemutex;
+static boost::recursive_mutex s_daemutex;
 boost::shared_ptr<DAE> GetGlobalDAE(bool resetdefaults)
 {
     if( !s_dae ) {
@@ -48,7 +48,7 @@ void SetGlobalDAE(boost::shared_ptr<DAE> newdae)
     s_dae = newdae;
 }
 
-boost::mutex& GetGlobalDAEMutex()
+boost::recursive_mutex& GetGlobalDAEMutex()
 {
     return s_daemutex;
 }

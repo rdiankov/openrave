@@ -5394,7 +5394,7 @@ private:
 
 bool RaveParseColladaURI(EnvironmentBasePtr penv, const std::string& uri,const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    boost::unique_lock<boost::recursive_mutex> lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
     if( !reader.InitFromURI(uri,atts) ) {
         return false;
@@ -5404,7 +5404,7 @@ bool RaveParseColladaURI(EnvironmentBasePtr penv, const std::string& uri,const A
 
 bool RaveParseColladaURI(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& uri, const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    boost::unique_lock<boost::recursive_mutex> lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
     if (!reader.InitFromURI(uri,atts)) {
         return false;
@@ -5417,7 +5417,7 @@ bool RaveParseColladaURI(EnvironmentBasePtr penv, KinBodyPtr& pbody, const strin
 
 bool RaveParseColladaURI(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& uri, const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    boost::unique_lock<boost::recursive_mutex> lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
     if (!reader.InitFromURI(uri,atts)) {
         return false;
@@ -5430,7 +5430,7 @@ bool RaveParseColladaURI(EnvironmentBasePtr penv, RobotBasePtr& probot, const st
 
 bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename, const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    boost::unique_lock<boost::recursive_mutex> lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
     string filedata = RaveFindLocalFile(filename);
     if (filedata.size() == 0 || !reader.InitFromFile(filedata,atts)) {
@@ -5441,7 +5441,7 @@ bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename, const
 
 bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& filename,const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    boost::unique_lock<boost::recursive_mutex> lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
     string filedata = RaveFindLocalFile(filename);
     if (filedata.size() == 0 || !reader.InitFromFile(filedata,atts)) {
@@ -5452,7 +5452,7 @@ bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& pbody, const stri
 
 bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& filename,const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    boost::unique_lock<boost::recursive_mutex> lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
     string filedata = RaveFindLocalFile(filename);
     if (filedata.size() == 0 || !reader.InitFromFile(filedata,atts)) {
@@ -5463,7 +5463,7 @@ bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& probot, const s
 
 bool RaveParseColladaData(EnvironmentBasePtr penv, const string& pdata,const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    boost::unique_lock<boost::recursive_mutex> lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
     if (!reader.InitFromData(pdata,atts)) {
         return false;
@@ -5473,7 +5473,7 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, const string& pdata,const Att
 
 bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& pdata,const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    boost::unique_lock<boost::recursive_mutex> lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
     if (!reader.InitFromData(pdata,atts)) {
         return false;
@@ -5491,7 +5491,7 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& pbody, const stri
 
 bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& pdata,const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    boost::unique_lock<boost::recursive_mutex> lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
     if (!reader.InitFromData(pdata,atts)) {
         return false;
