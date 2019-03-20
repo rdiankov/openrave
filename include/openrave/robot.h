@@ -615,6 +615,9 @@ private:
             return _info;
         }
 
+        /// \brief Updates several fields in \ref _info depending on the current state of the attached body
+        virtual void UpdateInfo();
+
     private:
         AttachedKinBodyInfo _info; ///< user specified data
         RobotBasePtr _pbody; ///< actual attached body

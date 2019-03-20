@@ -157,6 +157,14 @@ RobotBase::AttachedKinBody::AttachedKinBody(OpenRAVE::RobotBasePtr probot): _pro
 
 RobotBase::AttachedKinBody::~AttachedKinBody() {}
 
+void RobotBase::AttachedKinBody::UpdateInfo()
+{
+    LinkPtr prealattachedlink = pattachedlink.lock();
+    if (!!prealattachedlink) {
+        _info._linkname = prealattachedlink->GetName();
+    }
+}
+
 RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : KinBodyStateSaver(probot, options), _probot(probot)
 {
     if( _options & Save_ActiveDOF ) {
