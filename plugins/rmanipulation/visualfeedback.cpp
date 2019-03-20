@@ -33,6 +33,7 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
     //    Vector vpoints3d[8];
     //    for(int j = 0; j < 8; ++j) vpoints3d[j] = tcamera*vpoints[j];
 
+    // Project OBB points onto the plane z = 1 (image plane).
     for(int i =0; i < 8; ++i) {
         dReal fz = 1.0f/vpoints[i].z;
         vpoints[i].x *= fz;
@@ -95,7 +96,6 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
             int numsteps = (int)(ftotalen/delta);
             Vector vdelta = (vcur2-vcur1)*(1.0f/numsteps), vcur = vcur1;
             for(int k = 0; k <= numsteps; ++k, vcur += vdelta) {
-
                 if( !testfn(vcur) ) {
                     if( nallowableoutliers-- <= 0 )
                         return false;
@@ -185,7 +185,7 @@ public:
             if( !_vf->_targetlink->IsVisible() ) {
                 throw OPENRAVE_EXCEPTION_FORMAT("no geometries target link %s is visible so cannot use it for visibility checking", _vf->_targetlink->GetName(), ORE_InvalidArguments);
             }
-            
+
             // We assume only one geometry named exactly _vf->_targetGeomName exists on
             // the targetlink. This geometry name is hard-coded in
             // handeyecalibrationtask.py in planning common. Here the
@@ -197,7 +197,7 @@ public:
                     break;
                 }
             }
-            
+
             if (_vTargetLocalOBBs.size() == 0 ) {
                 std::stringstream ss;
                 for(size_t igeom = 0; igeom < _vf->_targetlink->GetGeometries().size(); ++igeom) {
@@ -264,12 +264,12 @@ public:
         virtual bool IsVisible(bool bcheckocclusion, bool bOutputError, std::string& errormsg)
         {
             Transform ttarget = _vf->_targetlink->GetTransform();
-            TransformMatrix tcamera = ttarget.inverse()*_vf->_psensor->GetTransform();
-            if( !InConvexHull(tcamera) ) {
+            TransformMatrix tcameraintarget = ttarget.inverse()*_vf->_psensor->GetTransform();
+            if( !InConvexHull(tcameraintarget) ) {
                 RAVELOG_WARN("box not in camera vision hull (shouldn't happen due to preprocessing\n");
                 return false;
             }
-            if( bcheckocclusion && IsOccluded(tcamera, bOutputError, errormsg) ) {
+            if( bcheckocclusion && IsOccluded(tcameraintarget, bOutputError, errormsg) ) {
                 return false;
             }
             return true;
@@ -866,8 +866,16 @@ Visibility computation checks occlusion with other objects using ray sampling in
         return true;
     }
 
+    /// \brief Suppose vdir is a direction from the center of a sphere to the surface of the sphere and fdist is its
+    ///        radius. This function returns a transformation such that its origin is on the sphere's surface and its
+    ///        local Z-axis is pointing radially inwards.
+    ///
+    /// \brief vdir is a unit vector describing the direction.
+    /// \brief fdist is the translation along vdir
+    /// \brief froll is the angle for which the local x-and y- axes are rotated.
     TransformMatrix ComputeCameraMatrix(const Vector& vdir,dReal fdist,dReal froll)
     {
+        // Compute orthogonal axes from vdir
         Vector vright, vup = Vector(0,1,0) - vdir * vdir.y;
         dReal uplen = vup.lengthsqr3();
         if( uplen < 0.001 ) {
@@ -877,9 +885,12 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
         vup *= (dReal)1.0/RaveSqrt(uplen);
         vright = vup.cross(vdir);
+
+        // Construct a transformation matrix
         TransformMatrix tcamera;
         tcamera.m[2] = vdir.x; tcamera.m[6] = vdir.y; tcamera.m[10] = vdir.z;
 
+        // Rotate the local x-and y-axis (right & up axes) around the local z (dir) according to the given froll.
         dReal fcosroll = RaveCos(froll), fsinroll = RaveSin(froll);
         tcamera.m[0] = vright.x*fcosroll+vup.x*fsinroll; tcamera.m[1] = -vright.x*fsinroll+vup.x*fcosroll;
         tcamera.m[4] = vright.y*fcosroll+vup.y*fsinroll; tcamera.m[5] = -vright.y*fsinroll+vup.y*fcosroll;
@@ -914,6 +925,8 @@ Visibility computation checks occlusion with other objects using ray sampling in
             else if( cmd == "numrolls" )
                 sinput >> numrolls;
             else if( cmd == "extents" ) {
+                // Each extent is a 3D vector describing the direction from the pattern to the camera. Its norm is the
+                // distance. Note that numrolls has to be defined *before* extents.
                 int numtrans=0;
                 sinput >> numtrans;
                 dReal deltaroll = PI*2.0f/(dReal)numrolls;
@@ -1026,6 +1039,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 // frame, taking into account vconedirangles.
                 FOREACH(itcone, vconedirangles) {
                     if( pluszvector.dot3(vCameraToPatternPos) >= itcone->w*flen ) {
+                        // quatRotationDirection uses only the first three values of the vectors
                         Vector vConeQuat = geometry::quatRotateDirection(pluszvector, *itcone);
                         Transform vPatternToGeometry = geometry::matrixFromQuat(vConeQuat);
                         Transform vCameraToTargetLink = tGeometryToTargetLink * vPatternToGeometry * *itt;
@@ -1042,9 +1056,10 @@ Visibility computation checks occlusion with other objects using ray sampling in
         }
 
         KinBody::KinBodyStateSaver saver(_targetlink->GetParent(),KinBody::Save_LinkTransformation);
-        _targetlink->SetTransform(Transform());
+        _targetlink->SetTransform(Transform()); // not sure why _targetlink has to be set to identity here
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
-
+        saver.Restore(); // need to restore _targetlink so that the preceeding CheckEndEffectorCollision works correctly
+		
         // get all the camera positions and test them
         FOREACHC(itcamera, vCamerasInTargetLinkCoord) {
             Transform tCameraInTarget = *itcamera;

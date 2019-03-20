@@ -231,6 +231,9 @@ public:
     template <typename U> inline T dot3(const RaveVector<U> &v) const {
         return x*v.x + y*v.y + z*v.z;
     }
+    template <typename U> inline T dot2(const RaveVector<U> &v) const {
+        return x*v.x + y*v.y;
+    }
     inline RaveVector<T>& normalize() {
         return normalize4();
     }
