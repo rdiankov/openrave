@@ -925,6 +925,11 @@ private:
         return RemoveAttachedSensor(*attsensor);
     }
     virtual bool RemoveAttachedSensor(RobotBase::AttachedSensor &attsensor);
+
+    virtual AttachedKinBodyPtr SetActiveAttachedBody(const std::string& bodyname);
+    virtual void SetActiveAttachBody(AttachedKinBodyPtr pattachedBody);
+    virtual AttachedKinBodyPtr GetActiveAttachedBody();
+    virtual AttachedKinBodyConstPtr GetActiveAttachedBody() const;
     
     /// \deprecated (11/10/04) send directly through controller
     virtual bool SetMotion(TrajectoryBaseConstPtr ptraj) RAVE_DEPRECATED;
@@ -1065,7 +1070,10 @@ protected:
     ManipulatorPtr _pManipActive;
 
     std::vector<AttachedSensorPtr> _vecSensors; ///< \see GetAttachedSensors
+
     std::vector<AttachedKinBodyPtr> _vecAttachedBodies;  ///< \see GetAttachedBodies
+    AttachedKinBodyPtr _pAttachedBodyActive;
+
     std::vector<int> _vActiveDOFIndices, _vAllDOFIndices;
     Vector vActvAffineRotationAxis;
     int _nActiveDOF; ///< Active degrees of freedom; if -1, use robot dofs

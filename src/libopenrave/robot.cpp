@@ -1739,6 +1739,55 @@ bool RobotBase::RemoveAttachedSensor(RobotBase::AttachedSensor &attsensor)
     return false;
 }
 
+RobotBase::AttachedKinBodyPtr RobotBase::SetActiveAttachedBody(const std::string& bodyname)
+{
+    if (bodyname.size() > 0) {
+        FOREACH(itattachedBody, _vecAttachedBodies) {
+            if ((*itattachedBody)->GetName() == bodyname) {
+                _pAttachedBodyActive = *itattachedBody;
+                return _pAttachedBodyActive;
+            }
+        }
+        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to find attach body with name: %s"), bodyname, ORE_InvalidArguments);
+    }
+    _pAttachedBodyActive.reset();
+    return _pAttachedBodyActive;
+}
+
+void RobotBase::SetActiveAttachBody(RobotBase::AttachedKinBodyPtr pattachedBody) {
+    if (!pattachedBody) {
+        _pAttachedBodyActive.reset();
+    } else {
+        FOREACH(itattachedBody, _vecAttachedBodies) {
+            if (*itattachedBody == pattachedBody) {
+                _pAttachedBodyActive = *itattachedBody;
+                return;
+            }
+        }
+        // body might have been recoreded, search for the same name
+        FOREACH(itattachedBody, _vecAttachedBodies) {
+            if ((*itattachedBody)->GetName() == pattachedBody->GetName()) {
+                _pAttachedBodyActive = *itattachedBody;
+                return;
+            }
+        }
+
+        _pAttachedBodyActive.reset();
+        RAVELOG_WARN_FORMAT("failed to find attach body with name %s, most likely removed", pattachedBody->GetName());
+    }
+}
+
+RobotBase::AttachedKinBodyPtr RobotBase::GetActiveAttachedBody()
+{
+    return _pAttachedBodyActive;
+}
+
+RobotBase::AttachedKinBodyConstPtr RobotBase::GetActiveAttachedBody() const
+{
+    return _pAttachedBodyActive;
+}
+
+
 void RobotBase::SimulationStep(dReal fElapsedTime)
 {
     KinBody::SimulationStep(fElapsedTime);
@@ -1801,6 +1850,13 @@ void RobotBase::_ComputeInternalInformation()
     }
     else {
         _pManipActive.reset();
+    }
+
+    if( !_vecAttachedBodies.empty() ) {
+        _pAttachedBodyActive = _vecAttachedBodies.front();
+    }
+    else {
+        _pAttachedBodyActive.reset();
     }
 
     int sensorindex=0;
