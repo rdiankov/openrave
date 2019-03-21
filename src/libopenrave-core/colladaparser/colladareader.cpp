@@ -3439,9 +3439,19 @@ public:
             daeElementRef instance_body = tec->getChild("instance_body");
             if (!!instance_body && instance_body->hasAttribute("url")) {
 
-                EnvironmentBasePtr tempenv = RaveCreateEnvironment(); // create the main environment for parsing body
-                pattachedBody->_pbody = tempenv->ReadRobotURI(instance_body->getAttribute("url"));
-                // pattachedBody->_pbody
+                EnvironmentBasePtr tempenv = RaveCreateEnvironment(); // use an temporary environment for parsing body
+                ColladaReader reader(tempenv);
+                if( reader.InitFromURI(instance_body->getAttribute("url"), AttributesList()) ) {
+                    reader.Extract();
+                    std::vector<RobotBasePtr> robots;
+                    tempenv->GetRobots(robots);
+                    if (robots.size() == 1) {
+                        pattachedBody->_pbody = robots.front();
+                    } else {
+                        //  more than one body, not sure what to do
+                    }
+                }
+
                 if (!!pattachedBody->_pbody) {
                     RAVELOG_DEBUG_FORMAT("Loaded body from %s", instance_body->getAttribute("url"));
                     pattachedBody->_pbody->SetName(str(boost::format("%s:%s") % probot->GetName() % name));
