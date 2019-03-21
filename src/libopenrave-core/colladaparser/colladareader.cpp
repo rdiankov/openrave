@@ -1272,7 +1272,6 @@ public:
             ExtractRobotManipulators(probot, ias->getExtra_array(), articulated_system, bindings); // have to also read from the instance_articulated_system!
             ExtractRobotAttachedSensors(probot, articulated_system, bindings);
             ExtractRobotAttachedActuators(probot, articulated_system, bindings);
-            // ExtractRobotAttachedArticulatedSystem(probot, articulated_system->getExtra_array());
             ExtractRobotAttachedKinBody(probot, articulated_system);
         }
         _ExtractCollisionData(pbody,articulated_system,articulated_system->getExtra_array(),bindings.listInstanceLinkBindings);
@@ -1284,38 +1283,6 @@ public:
         return true;
     }
 
-    bool ExtractRobotAttachedArticulatedSystem(RobotBasePtr& probot,
-                                               const domExtra_Array& arr) {
-        for(size_t i = 0; i < arr.getCount(); ++i) {
-            if (strcmp(arr[i]->getType(), "attach_articulated_system") != 0) { continue; }
-
-            domTechniqueRef tec = _ExtractOpenRAVEProfile(arr[i]->getTechnique_array());
-
-            if (!tec) { continue; }
-
-            for(size_t ic = 0; ic < tec->getContents().getCount(); ++ic) {
-                daeElementRef pelt = tec->getContents()[ic];
-
-                if( pelt->getElementName() == string("instance_articulated_system") ) {
-                    // Extract articulated system
-                    KinBodyPtr pGripper;
-                    std::list<daeElementRef> listInstanceScope;
-                    auto bindings = KinematicsSceneBindings();
-
-                    domInstance_articulated_systemRef ias = daeSafeCast<domInstance_articulated_system>(pelt);
-                    if (!ias) {return false;}
-
-                    ExtractArticulatedSystem(pGripper, ias, bindings, listInstanceScope);
-                    if (!! pGripper) {
-                        _AttachArticulatedSystems(probot, pGripper);
-                        return true;
-                    }
-                }
-
-            }
-        }
-        return true;
-    }
 
     bool _AttachArticulatedSystems(const RobotBasePtr &probot, RobotBase::AttachedKinBodyPtr &pattachedKinBody)
     {
