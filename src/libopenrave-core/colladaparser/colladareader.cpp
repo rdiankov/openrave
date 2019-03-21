@@ -3428,6 +3428,7 @@ public:
             if (!!pframe_origin) {
                 domLinkRef pdomlink = daeSafeCast<domLink>(
                         daeSidRef(pframe_origin->getAttribute("link"), as).resolve().elt);
+
                 if (!!pdomlink) {
                     pattachedBody->pattachedlink = probot->GetLink(_ExtractLinkName(pdomlink));
                 }
@@ -3443,8 +3444,9 @@ public:
             if (!!instance_body && instance_body->hasAttribute("url")) {
 
                 EnvironmentBasePtr tempenv = RaveCreateEnvironment(); // use an temporary environment for parsing body
-                ColladaReader reader(tempenv);
-                if( reader.InitFromURI(instance_body->getAttribute("url"), AttributesList()) ) {
+                ColladaReader reader(tempenv, false);
+                std::string url = instance_body->getAttribute("url");
+                if( reader.InitFromURI(url, AttributesList()) ) {
                     reader.Extract();
                     std::vector<RobotBasePtr> robots;
                     tempenv->GetRobots(robots);
@@ -3452,13 +3454,14 @@ public:
                         pattachedBody->_pbody = robots.front();
                     } else {
                         //  more than one body, not sure what to do
+                        RAVELOG_DEBUG_FORMAT("Do not support multiple bodies in one url %s", url);
                     }
                 }
 
                 if (!!pattachedBody->_pbody) {
-                    RAVELOG_DEBUG_FORMAT("Loaded body from %s", instance_body->getAttribute("url"));
+                    RAVELOG_DEBUG_FORMAT("Loaded body from %s", url);
                     pattachedBody->_pbody->SetName(str(boost::format("%s:%s") % probot->GetName() % name));
-                    std::string instance_url = instance_body->getAttribute("url");
+                    pattachedBody->_info._url = url;
                     probot->GetAttachedBodies().push_back(pattachedBody);
                 }
             }
