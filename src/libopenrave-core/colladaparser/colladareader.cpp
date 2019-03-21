@@ -255,7 +255,8 @@ public:
     };
 
 public:
-    ColladaReader(EnvironmentBasePtr penv) : _dom(NULL), _penv(penv), _nGlobalSensorId(0), _nGlobalManipulatorId(0), _nGlobalIndex(0)
+    ColladaReader(EnvironmentBasePtr penv, bool bResetGlobalDae=true) : _dom(NULL), _penv(penv), _nGlobalSensorId(0), _nGlobalManipulatorId(0), _nGlobalIndex(0),
+    _bResetGlobalDae(bResetGlobalDae)
     {
         daeErrorHandler::setErrorHandler(this);
         _bOpeningZAE = false;
@@ -276,7 +277,9 @@ public:
         // There is no simple workaround for libxml2 before 2.9.0. Read
         // the comments of GetGlobalDAE() in OpenRAVE for more details
 #if LIBXML_VERSION >= 20900
-        SetGlobalDAE(boost::shared_ptr<DAE>());
+        if (_bResetGlobalDae) {
+            SetGlobalDAE(boost::shared_ptr<DAE>());
+        }
 #endif
     }
 
@@ -342,7 +345,7 @@ public:
     {
         _mapInstantiatedNodes.clear();
         RAVELOG_VERBOSE(str(boost::format("init COLLADA reader version: %s, namespace: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE));
-        _dae = GetGlobalDAE();
+        _dae = GetGlobalDAE(false);
         _bSkipGeometry = false;
         _bReadGeometryGroups = false;
         _vOpenRAVESchemeAliases.resize(0);
@@ -5394,6 +5397,7 @@ private:
     std::map<std::string,KinBody::JointPtr> _mapJointSids;
     string _prefix;
     int _nGlobalSensorId, _nGlobalManipulatorId, _nGlobalIndex;
+    bool _bResetGlobalDae;  ///< Global Dae will be reset in destructor if true. have to manually reset if set to false
     std::string _filename;
     std::set<KinBody::LinkPtr> _setInitialLinks;
     std::set<KinBody::JointPtr> _setInitialJoints;
