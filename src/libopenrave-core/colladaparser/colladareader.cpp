@@ -1270,7 +1270,7 @@ public:
             ExtractRobotAttachedSensors(probot, articulated_system, bindings);
             ExtractRobotAttachedActuators(probot, articulated_system, bindings);
             // ExtractRobotAttachedArticulatedSystem(probot, articulated_system->getExtra_array());
-            ExtractRobotAttachedKinBody(probot, articulated_system, bindings);
+            ExtractRobotAttachedKinBody(probot, articulated_system);
         }
         _ExtractCollisionData(pbody,articulated_system,articulated_system->getExtra_array(),bindings.listInstanceLinkBindings);
         _ExtractVisibleData(pbody,articulated_system,articulated_system->getExtra_array(),bindings.listInstanceLinkBindings);
@@ -1328,6 +1328,8 @@ public:
 
             linkInfos.push_back(boost::make_shared<KinBody::LinkInfo>(link->UpdateAndGetInfo()));
         }
+
+        pattachedKinBody->_pbody->SetTransform(pattachedKinBody->GetTransform());
 
         for (const auto &link : pGripper->_veclinks) {
             linkInfos.push_back(boost::make_shared<KinBody::LinkInfo>(link->UpdateAndGetInfo()));
@@ -3397,8 +3399,7 @@ public:
         }
     }
 
-    void ExtractRobotAttachedKinBody(const RobotBasePtr probot, const domArticulated_systemRef &as,
-                                     const KinematicsSceneBindings &bindings) {
+    void ExtractRobotAttachedKinBody(const RobotBasePtr probot, const domArticulated_systemRef &as) {
 
         for (size_t ie = 0; ie < as->getExtra_array().getCount(); ie++) {
             domExtraRef pextra = as->getExtra_array()[ie];
@@ -3413,42 +3414,45 @@ public:
             string name = pextra->getAttribute("name");
             domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
 
-            if (!!tec) {
-
-                RobotBase::AttachedKinBodyPtr pattachedBody(new RobotBase::AttachedKinBody(probot));
-                pattachedBody->_info._name = _ConvertToOpenRAVEName(name);
-                daeElementRef pframe_origin = tec->getChild("frame_origin");
-                if (!!pframe_origin) {
-                    domLinkRef pdomlink = daeSafeCast<domLink>(
-                            daeSidRef(pframe_origin->getAttribute("link"), as).resolve().elt);
-                    if (!!pdomlink) {
-                        pattachedBody->pattachedlink = probot->GetLink(_ExtractLinkName(pdomlink));
-                    }
-                    if (!pattachedBody->pattachedlink.lock()) {
-                                RAVELOG_WARN(
-                                str(boost::format("failed to find manipulator %s frame origin %s\n") % name %
-                                    pframe_origin->getAttribute("link")));
-                        continue;
-                    }
-                    pattachedBody->_info._trelative = _ExtractFullTransformFromChildren(pframe_origin);
-                }
-                daeElementRef instance_body = tec->getChild("instance_body");
-                if (!!instance_body && instance_body->hasAttribute("url")) {
-
-                    EnvironmentBasePtr tempenv = RaveCreateEnvironment(); // create the main environment for parsing body
-                    tempenv->ReadRobotURI(pattachedBody->_pbody, instance_body->getAttribute("url"));
-                    // pattachedBody->_pbody
-                    if (!!pattachedBody->_pbody) {
-                        pattachedBody->_pbody->SetName(str(boost::format("%s:%s") % probot->GetName() % name));
-                        std::string instance_url = instance_body->getAttribute("url");
-                    }
-                }
-
-                probot->GetAttachedBodies().push_back(pattachedBody);
-            } else {
-                RAVELOG_WARN(str(boost::format("cannot create robot %s attached sensor %s\n") % probot->GetName() %
-                            name));
+            if (!tec) {
+                RAVELOG_WARN(str(boost::format("cannot create robot %s attached body %s\n") % probot->GetName() % name));
+                continue;
             }
+
+            RobotBase::AttachedKinBodyPtr pattachedBody(new RobotBase::AttachedKinBody(probot));
+            pattachedBody->_info._name = _ConvertToOpenRAVEName(name);
+            daeElementRef pframe_origin = tec->getChild("frame_origin");
+            if (!!pframe_origin) {
+                domLinkRef pdomlink = daeSafeCast<domLink>(
+                        daeSidRef(pframe_origin->getAttribute("link"), as).resolve().elt);
+                if (!!pdomlink) {
+                    pattachedBody->pattachedlink = probot->GetLink(_ExtractLinkName(pdomlink));
+                }
+                if (!pattachedBody->pattachedlink.lock()) {
+                    RAVELOG_WARN(str(boost::format("failed to find body %s frame origin %s\n") % name %
+                                pframe_origin->getAttribute("link")));
+                    continue;
+                }
+                pattachedBody->_info._trelative = _ExtractFullTransformFromChildren(pframe_origin);
+                pattachedBody->UpdateInfo();
+            }
+            daeElementRef instance_body = tec->getChild("instance_body");
+            if (!!instance_body && instance_body->hasAttribute("url")) {
+
+                EnvironmentBasePtr tempenv = RaveCreateEnvironment(); // create the main environment for parsing body
+                pattachedBody->_pbody = tempenv->ReadRobotURI(instance_body->getAttribute("url"));
+                // pattachedBody->_pbody
+                if (!!pattachedBody->_pbody) {
+                    RAVELOG_DEBUG_FORMAT("Loaded body from %s", instance_body->getAttribute("url"));
+                    pattachedBody->_pbody->SetName(str(boost::format("%s:%s") % probot->GetName() % name));
+                    std::string instance_url = instance_body->getAttribute("url");
+                    probot->GetAttachedBodies().push_back(pattachedBody);
+                }
+            }
+        }
+
+        if (!probot->GetAttachedBodies().empty()) {
+            _AttachArticulatedSystems(probot, probot->GetAttachedBodies().back());
         }
     }
 
