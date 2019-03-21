@@ -562,7 +562,8 @@ private:
 
         std::string _name;
         std::string _linkname; ///< the robot link that the body is attached to
-        Transform _trelative;         ///< relative transform of the body with respect to the attached link
+        std::string _url;  //< the url of attach kinbody
+        Transform _trelative;  ///< relative transform of the body with respect to the attached link
     };
     typedef boost::shared_ptr<AttachedKinBodyInfo> AttachedKinBodyInfoPtr;
     typedef boost::shared_ptr<AttachedKinBodyInfo const> AttachedKinBodyInfoConstPtr;
