@@ -113,7 +113,7 @@ typedef boost::shared_ptr<ColladaXMLReadable> ColladaXMLReadablePtr;
 boost::shared_ptr<DAE> GetGlobalDAE(bool resetdefaults=true);
 /// \brief reset the global DAE
 void SetGlobalDAE(boost::shared_ptr<DAE>);
-boost::recursive_mutex& GetGlobalDAEMutex();
+boost::mutex& GetGlobalDAEMutex();
 
 
 // register for typeof (MSVC only)
