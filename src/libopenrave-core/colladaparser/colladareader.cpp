@@ -1272,7 +1272,7 @@ public:
             ExtractRobotManipulators(probot, ias->getExtra_array(), articulated_system, bindings); // have to also read from the instance_articulated_system!
             ExtractRobotAttachedSensors(probot, articulated_system, bindings);
             ExtractRobotAttachedActuators(probot, articulated_system, bindings);
-            ExtractRobotAttachedKinBody(probot, articulated_system);
+            ExtractRobotConnectedBodies(probot, articulated_system);
         }
         _ExtractCollisionData(pbody,articulated_system,articulated_system->getExtra_array(),bindings.listInstanceLinkBindings);
         _ExtractVisibleData(pbody,articulated_system,articulated_system->getExtra_array(),bindings.listInstanceLinkBindings);
@@ -3369,8 +3369,8 @@ public:
         }
     }
 
-    void ExtractRobotAttachedKinBody(const RobotBasePtr probot, const domArticulated_systemRef &as) {
-
+    void ExtractRobotConnectedBodies(const RobotBasePtr probot, const domArticulated_systemRef &as) {
+        // extract connect_body from /COLLADA/library_articulated_systems/articulated_system/extra
         for (size_t ie = 0; ie < as->getExtra_array().getCount(); ie++) {
             domExtraRef pextra = as->getExtra_array()[ie];
 
@@ -3385,17 +3385,19 @@ public:
             domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
 
             if (!tec) {
-                RAVELOG_WARN(str(boost::format("cannot create robot %s attached body %s\n") % probot->GetName() % name));
+                RAVELOG_WARN(str(boost::format("cannot create robot %s connect body %s\n") % probot->GetName() % name));
                 continue;
             }
 
             RobotBase::ConnectedBodyPtr pattachedBody(new RobotBase::ConnectedBody(probot));
+
             pattachedBody->_info._name = _ConvertToOpenRAVEName(name);
+
             daeElementRef pframe_origin = tec->getChild("frame_origin");
             if (!!pframe_origin) {
-                domLinkRef pdomlink = daeSafeCast<domLink>(
-                        daeSidRef(pframe_origin->getAttribute("link"), as).resolve().elt);
+                pattachedBody->_info._trelative = _ExtractFullTransformFromChildren(pframe_origin);
 
+                domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pframe_origin->getAttribute("link"), as).resolve().elt);
                 if (!!pdomlink) {
                     pattachedBody->pattachedlink = probot->GetLink(_ExtractLinkName(pdomlink));
                 }
@@ -3404,9 +3406,8 @@ public:
                                 pframe_origin->getAttribute("link")));
                     continue;
                 }
-                pattachedBody->_info._trelative = _ExtractFullTransformFromChildren(pframe_origin);
-                pattachedBody->UpdateInfo();
             }
+
             daeElementRef instance_body = tec->getChild("instance_body");
             if (!!instance_body && instance_body->hasAttribute("url")) {
 
@@ -3420,8 +3421,7 @@ public:
                     if (robots.size() == 1) {
                         pattachedBody->_pbody = robots.front();
                     } else {
-                        //  more than one body, not sure what to do
-                        RAVELOG_DEBUG_FORMAT("Do not support multiple bodies in one url %s", url);
+                        RAVELOG_DEBUG_FORMAT("Found $d robots, Do not support this case for url %s", robots.size() % url);
                     }
                 }
 
@@ -3429,6 +3429,8 @@ public:
                     RAVELOG_DEBUG_FORMAT("Loaded body from %s", url);
                     pattachedBody->_pbody->SetName(str(boost::format("%s:%s") % probot->GetName() % name));
                     pattachedBody->_info._url = url;
+
+                    pattachedBody->UpdateInfo();
                     probot->GetConnectedBodies().push_back(pattachedBody);
                 }
             }
