@@ -555,15 +555,21 @@ private:
     class OPENRAVE_API ConnectedBodyInfo
     {
     public:
-        ConnectedBodyInfo() {
+        ConnectedBodyInfo(): _bIsActive(false) {
         }
-        virtual ~ConnectedBodyInfo() {
-        }
+        virtual ~ConnectedBodyInfo() = default;
 
+        bool _bIsActive;
         std::string _name;
         std::string _linkname; ///< the robot link that the body is attached to
-        std::string _url;  //< the url of attach kinbody
+        std::string _manipBaseLinkName;
+        std::string _url;  //< the url of connect body
         Transform _trelative;  ///< relative transform of the body with respect to the attached link
+        std::vector<KinBody::LinkInfoConstPtr> _vLinkInfos;
+        std::vector<KinBody::JointInfoConstPtr> _vJointInfos;
+        std::vector<KinBody::JointInfoConstPtr> _vPassiveJointInfos;
+        std::vector<RobotBase::ManipulatorInfoConstPtr> _vManipInfos;
+        std::vector<RobotBase::AttachedSensorInfoConstPtr> _vSensorInfos;
     };
     typedef boost::shared_ptr<ConnectedBodyInfo> ConnectedBodyInfoPtr;
     typedef boost::shared_ptr<ConnectedBodyInfo const> ConnectedBodyInfoConstPtr;
@@ -574,7 +580,7 @@ private:
     public:
         ConnectedBody(RobotBasePtr probot);
         // ConnectedBody(RobotBasePtr probot, const ConnectedBody &attachedKinBody, int cloningoptions);
-        // ConnectedBody(RobotBasePtr probot, const ConnectedBodyInfo& info);
+        ConnectedBody(RobotBasePtr probot, const ConnectedBodyInfo& info);
         virtual ~ConnectedBody();
 
         virtual LinkPtr GetAttachingLink() const {

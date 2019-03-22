@@ -14,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#include <boost/make_shared.hpp>
 #include "libopenrave.h"
 
 #define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "robot %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetName()%_nHierarchyComputed, ORE_NotInitialized);
@@ -155,6 +156,14 @@ const std::string& RobotBase::AttachedSensor::GetStructureHash() const
 
 RobotBase::ConnectedBody::ConnectedBody(OpenRAVE::RobotBasePtr probot): _probot(probot) {}
 
+RobotBase::ConnectedBody::ConnectedBody(OpenRAVE::RobotBasePtr probot, const OpenRAVE::RobotBase::ConnectedBodyInfo &info)
+        : _info(info), _probot(probot)
+{
+    if (!!probot) {
+        pattachedlink = probot->GetLink(_info._linkname);
+    }
+}
+
 RobotBase::ConnectedBody::~ConnectedBody() {}
 
 void RobotBase::ConnectedBody::UpdateInfo()
@@ -163,6 +172,27 @@ void RobotBase::ConnectedBody::UpdateInfo()
     if (!!prealattachedlink) {
         _info._linkname = prealattachedlink->GetName();
     }
+
+    for (const auto &link : _pbody->_veclinks) {
+        _info._vLinkInfos.push_back(boost::make_shared<KinBody::LinkInfo>(link->UpdateAndGetInfo()));
+    }
+
+    for (const auto &joint : _pbody->_vecjoints) {
+        _info._vJointInfos.push_back(boost::make_shared<KinBody::JointInfo>(joint->UpdateAndGetInfo()));
+    }
+
+    for (const auto &joint : _pbody->_vPassiveJoints) {
+        _info._vPassiveJointInfos.push_back(boost::make_shared<KinBody::JointInfo>(joint->UpdateAndGetInfo()));
+    }
+
+    for (const auto &manip : _pbody->GetManipulators()) {
+        _info._vManipInfos.push_back(boost::make_shared<RobotBase::ManipulatorInfo>(manip->GetInfo()));
+    }
+
+    for (const auto &sensor : _pbody->GetAttachedSensors()) {
+        _info._vSensorInfos.push_back(boost::make_shared<RobotBase::AttachedSensorInfo>(sensor->UpdateAndGetInfo()));
+    }
+
 }
 
 RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : KinBodyStateSaver(probot, options), _probot(probot)
