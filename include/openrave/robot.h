@@ -552,12 +552,12 @@ private:
     /// \brief holds all user-set attached kinbody information used to initialize the AttachedKinBody class.
     ///
     /// This is serializable and independent of environment.
-    class OPENRAVE_API AttachedKinBodyInfo
+    class OPENRAVE_API ConnectedBodyInfo
     {
     public:
-        AttachedKinBodyInfo() {
+        ConnectedBodyInfo() {
         }
-        virtual ~AttachedKinBodyInfo() {
+        virtual ~ConnectedBodyInfo() {
         }
 
         std::string _name;
@@ -565,17 +565,17 @@ private:
         std::string _url;  //< the url of attach kinbody
         Transform _trelative;  ///< relative transform of the body with respect to the attached link
     };
-    typedef boost::shared_ptr<AttachedKinBodyInfo> AttachedKinBodyInfoPtr;
-    typedef boost::shared_ptr<AttachedKinBodyInfo const> AttachedKinBodyInfoConstPtr;
+    typedef boost::shared_ptr<ConnectedBodyInfo> ConnectedBodyInfoPtr;
+    typedef boost::shared_ptr<ConnectedBodyInfo const> ConnectedBodyInfoConstPtr;
 
     /// \brief Attaches a kinbody to a link on the robot.
-    class OPENRAVE_API AttachedKinBody : public boost::enable_shared_from_this<AttachedKinBody>
+    class OPENRAVE_API ConnectedBody : public boost::enable_shared_from_this<ConnectedBody>
     {
     public:
-        AttachedKinBody(RobotBasePtr probot);
-        // AttachedKinBody(RobotBasePtr probot, const AttachedKinBody &attachedKinBody, int cloningoptions);
-        // AttachedKinBody(RobotBasePtr probot, const AttachedKinBodyInfo& info);
-        virtual ~AttachedKinBody();
+        ConnectedBody(RobotBasePtr probot);
+        // ConnectedBody(RobotBasePtr probot, const ConnectedBody &attachedKinBody, int cloningoptions);
+        // ConnectedBody(RobotBasePtr probot, const ConnectedBodyInfo& info);
+        virtual ~ConnectedBody();
 
         virtual LinkPtr GetAttachingLink() const {
             return LinkPtr(pattachedlink);
@@ -612,7 +612,7 @@ private:
         // virtual const std::string& GetStructureHash() const;
 
         /// \brief returns the attached kinbody info
-        inline const AttachedKinBodyInfo& GetInfo() const {
+        inline const ConnectedBodyInfo& GetInfo() const {
             return _info;
         }
 
@@ -620,7 +620,7 @@ private:
         virtual void UpdateInfo();
 
     private:
-        AttachedKinBodyInfo _info; ///< user specified data
+        ConnectedBodyInfo _info; ///< user specified data
         RobotBasePtr _pbody; ///< actual attached body
         RobotBaseWeakPtr _probot;
         LinkWeakPtr pattachedlink;         ///< the robot link that the body is attached to
@@ -630,9 +630,9 @@ private:
         friend class RobotBase;
     };
 
-    typedef boost::shared_ptr<RobotBase::AttachedKinBody> AttachedKinBodyPtr;
-    typedef boost::shared_ptr<RobotBase::AttachedKinBody const> AttachedKinBodyConstPtr;
-    typedef boost::weak_ptr<RobotBase::AttachedKinBody> AttachedKinBodyWeakPtr;
+    typedef boost::shared_ptr<RobotBase::ConnectedBody> ConnectedBodyPtr;
+    typedef boost::shared_ptr<RobotBase::ConnectedBody const> ConnectedBodyConstPtr;
+    typedef boost::weak_ptr<RobotBase::ConnectedBody> ConnectedBodyWeakPtr;
 
     /// \brief Helper class derived from KinBodyStateSaver to additionaly save robot information.
     class OPENRAVE_API RobotStateSaver : public KinBodyStateSaver
@@ -697,8 +697,8 @@ private:
         return _vecSensors;
     }
 
-    virtual std::vector<AttachedKinBodyPtr>& GetAttachedBodies() {
-        return _vecAttachedBodies;
+    virtual std::vector<ConnectedBodyPtr>& GetConnectedBodies() {
+        return _vecConnectedBodies;
     }
 
     virtual void SetName(const std::string& name);
@@ -926,10 +926,10 @@ private:
     }
     virtual bool RemoveAttachedSensor(RobotBase::AttachedSensor &attsensor);
 
-    virtual AttachedKinBodyPtr SetActiveAttachedBody(const std::string& bodyname);
-    virtual void SetActiveAttachBody(AttachedKinBodyPtr pattachedBody);
-    virtual AttachedKinBodyPtr GetActiveAttachedBody();
-    virtual AttachedKinBodyConstPtr GetActiveAttachedBody() const;
+    virtual ConnectedBodyPtr SetActiveAttachedBody(const std::string& bodyname);
+    virtual void SetActiveAttachBody(ConnectedBodyPtr pattachedBody);
+    virtual ConnectedBodyPtr GetActiveAttachedBody();
+    virtual ConnectedBodyConstPtr GetActiveAttachedBody() const;
     
     /// \deprecated (11/10/04) send directly through controller
     virtual bool SetMotion(TrajectoryBaseConstPtr ptraj) RAVE_DEPRECATED;
@@ -1071,8 +1071,8 @@ protected:
 
     std::vector<AttachedSensorPtr> _vecSensors; ///< \see GetAttachedSensors
 
-    std::vector<AttachedKinBodyPtr> _vecAttachedBodies;  ///< \see GetAttachedBodies
-    AttachedKinBodyPtr _pAttachedBodyActive;
+    std::vector<ConnectedBodyPtr> _vecConnectedBodies;  ///< \see GetConnectedBodies
+    ConnectedBodyPtr _pAttachedBodyActive;
 
     std::vector<int> _vActiveDOFIndices, _vAllDOFIndices;
     Vector vActvAffineRotationAxis;

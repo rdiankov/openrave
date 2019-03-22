@@ -1284,9 +1284,9 @@ public:
     }
 
 
-    bool _AttachArticulatedSystems(const RobotBasePtr &probot, RobotBase::AttachedKinBodyPtr &pattachedKinBody)
+    bool _AttachArticulatedSystems(const RobotBasePtr &probot, RobotBase::ConnectedBodyPtr &pconnectedbody)
     {
-        RobotBasePtr pGripper(pattachedKinBody->_pbody);
+        RobotBasePtr pGripper(pconnectedbody->_pbody);
         if (!probot || !pGripper) {
             return false;
         }
@@ -1299,7 +1299,7 @@ public:
             linkInfos.push_back(boost::make_shared<KinBody::LinkInfo>(link->UpdateAndGetInfo()));
         }
 
-        pattachedKinBody->_pbody->SetTransform(pattachedKinBody->GetTransform());
+        pconnectedbody->_pbody->SetTransform(pconnectedbody->GetTransform());
 
         for (const auto &link : pGripper->_veclinks) {
             linkInfos.push_back(boost::make_shared<KinBody::LinkInfo>(link->UpdateAndGetInfo()));
@@ -1341,7 +1341,7 @@ public:
         dummyJointInfo->_vmaxvel[0] = 0.0;
         dummyJointInfo->_vupperlimit[0] = 0;
 
-        dummyJointInfo->_linkname0 = pattachedKinBody->_info._linkname;
+        dummyJointInfo->_linkname0 = pconnectedbody->_info._linkname;
 
         // root link of gripper
         for (const auto &link : pGripper->GetLinks()) {
@@ -3377,7 +3377,7 @@ public:
             if (!pextra->getType()) {
                 continue;
             }
-            if (strcmp(pextra->getType(), "attach_kinbody") != 0) {
+            if (strcmp(pextra->getType(), "connect_body") != 0) {
                 continue;
             }
 
@@ -3389,7 +3389,7 @@ public:
                 continue;
             }
 
-            RobotBase::AttachedKinBodyPtr pattachedBody(new RobotBase::AttachedKinBody(probot));
+            RobotBase::ConnectedBodyPtr pattachedBody(new RobotBase::ConnectedBody(probot));
             pattachedBody->_info._name = _ConvertToOpenRAVEName(name);
             daeElementRef pframe_origin = tec->getChild("frame_origin");
             if (!!pframe_origin) {
@@ -3429,13 +3429,13 @@ public:
                     RAVELOG_DEBUG_FORMAT("Loaded body from %s", url);
                     pattachedBody->_pbody->SetName(str(boost::format("%s:%s") % probot->GetName() % name));
                     pattachedBody->_info._url = url;
-                    probot->GetAttachedBodies().push_back(pattachedBody);
+                    probot->GetConnectedBodies().push_back(pattachedBody);
                 }
             }
         }
 
-        if (!probot->GetAttachedBodies().empty()) {
-            _AttachArticulatedSystems(probot, probot->GetAttachedBodies().back());
+        if (!probot->GetConnectedBodies().empty()) {
+            _AttachArticulatedSystems(probot, probot->GetConnectedBodies().back());
         }
     }
 

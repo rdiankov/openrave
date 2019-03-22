@@ -153,11 +153,11 @@ const std::string& RobotBase::AttachedSensor::GetStructureHash() const
 }
 
 
-RobotBase::AttachedKinBody::AttachedKinBody(OpenRAVE::RobotBasePtr probot): _probot(probot) {}
+RobotBase::ConnectedBody::ConnectedBody(OpenRAVE::RobotBasePtr probot): _probot(probot) {}
 
-RobotBase::AttachedKinBody::~AttachedKinBody() {}
+RobotBase::ConnectedBody::~ConnectedBody() {}
 
-void RobotBase::AttachedKinBody::UpdateInfo()
+void RobotBase::ConnectedBody::UpdateInfo()
 {
     LinkPtr prealattachedlink = pattachedlink.lock();
     if (!!prealattachedlink) {
@@ -1739,10 +1739,10 @@ bool RobotBase::RemoveAttachedSensor(RobotBase::AttachedSensor &attsensor)
     return false;
 }
 
-RobotBase::AttachedKinBodyPtr RobotBase::SetActiveAttachedBody(const std::string& bodyname)
+RobotBase::ConnectedBodyPtr RobotBase::SetActiveAttachedBody(const std::string& bodyname)
 {
     if (bodyname.size() > 0) {
-        FOREACH(itattachedBody, _vecAttachedBodies) {
+        FOREACH(itattachedBody, _vecConnectedBodies) {
             if ((*itattachedBody)->GetName() == bodyname) {
                 _pAttachedBodyActive = *itattachedBody;
                 return _pAttachedBodyActive;
@@ -1754,18 +1754,18 @@ RobotBase::AttachedKinBodyPtr RobotBase::SetActiveAttachedBody(const std::string
     return _pAttachedBodyActive;
 }
 
-void RobotBase::SetActiveAttachBody(RobotBase::AttachedKinBodyPtr pattachedBody) {
+void RobotBase::SetActiveAttachBody(RobotBase::ConnectedBodyPtr pattachedBody) {
     if (!pattachedBody) {
         _pAttachedBodyActive.reset();
     } else {
-        FOREACH(itattachedBody, _vecAttachedBodies) {
+        FOREACH(itattachedBody, _vecConnectedBodies) {
             if (*itattachedBody == pattachedBody) {
                 _pAttachedBodyActive = *itattachedBody;
                 return;
             }
         }
         // body might have been recoreded, search for the same name
-        FOREACH(itattachedBody, _vecAttachedBodies) {
+        FOREACH(itattachedBody, _vecConnectedBodies) {
             if ((*itattachedBody)->GetName() == pattachedBody->GetName()) {
                 _pAttachedBodyActive = *itattachedBody;
                 return;
@@ -1777,12 +1777,12 @@ void RobotBase::SetActiveAttachBody(RobotBase::AttachedKinBodyPtr pattachedBody)
     }
 }
 
-RobotBase::AttachedKinBodyPtr RobotBase::GetActiveAttachedBody()
+RobotBase::ConnectedBodyPtr RobotBase::GetActiveAttachedBody()
 {
     return _pAttachedBodyActive;
 }
 
-RobotBase::AttachedKinBodyConstPtr RobotBase::GetActiveAttachedBody() const
+RobotBase::ConnectedBodyConstPtr RobotBase::GetActiveAttachedBody() const
 {
     return _pAttachedBodyActive;
 }
@@ -1852,8 +1852,8 @@ void RobotBase::_ComputeInternalInformation()
         _pManipActive.reset();
     }
 
-    if( !_vecAttachedBodies.empty() ) {
-        _pAttachedBodyActive = _vecAttachedBodies.front();
+    if( !_vecConnectedBodies.empty() ) {
+        _pAttachedBodyActive = _vecConnectedBodies.front();
     }
     else {
         _pAttachedBodyActive.reset();
