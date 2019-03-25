@@ -565,11 +565,11 @@ private:
         std::string _manipBaseLinkName;
         std::string _url;  //< the url of connect body
         Transform _trelative;  ///< relative transform of the body with respect to the attached link
-        std::vector<KinBody::LinkInfoConstPtr> _vLinkInfos;
-        std::vector<KinBody::JointInfoConstPtr> _vJointInfos;
-        std::vector<KinBody::JointInfoConstPtr> _vPassiveJointInfos;
-        std::vector<RobotBase::ManipulatorInfoConstPtr> _vManipInfos;
-        std::vector<RobotBase::AttachedSensorInfoConstPtr> _vSensorInfos;
+        std::vector<KinBody::LinkInfoPtr> _vLinkInfos;
+        std::vector<KinBody::JointInfoPtr> _vJointInfos;
+        std::vector<KinBody::JointInfoPtr> _vPassiveJointInfos;
+        std::vector<RobotBase::ManipulatorInfoPtr> _vManipInfos;
+        std::vector<RobotBase::AttachedSensorInfoPtr> _vSensorInfos;
     };
     typedef boost::shared_ptr<ConnectedBodyInfo> ConnectedBodyInfoPtr;
     typedef boost::shared_ptr<ConnectedBodyInfo const> ConnectedBodyInfoConstPtr;
@@ -1065,7 +1065,10 @@ protected:
 
     /// \brief Proprocess the manipulators and sensors and build the specific robot hashes.
     virtual void _ComputeInternalInformation();
-
+    virtual void _ComputeConnectedBodiesInformation();
+    static void _ResolveDuplicateInfoNames(std::map<std::string, KinBody::LinkInfoConstPtr> &mLinkInfos,
+                                           std::map<std::string, KinBody::JointInfoConstPtr> &mJointInfos,
+                                           const RobotBase::ConnectedBodyInfo &connectedBodyInfo);
     /// \brief Called to notify the body that certain groups of parameters have been changed.
     ///
     /// This function in calls every registers calledback that is tracking the changes.
