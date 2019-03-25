@@ -761,6 +761,33 @@ public:
         return !pattachedsensor ? PyAttachedSensorPtr() : PyAttachedSensorPtr(new PyAttachedSensor(pattachedsensor, _pyenv));
     }
 
+    class PyConnectedBodyInfo
+    {
+public:
+        PyConnectedBodyInfo() {
+        }
+        PyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& info) {
+            _name = ConvertStringToUnicode(info._name);
+            _linkname = ConvertStringToUnicode(info._linkname);
+            _trelative = ReturnTransform(info._trelative);
+        }
+
+        RobotBase::ConnectedBodyInfoPtr GetConnectedBodyInfo() const
+        {
+            RobotBase::ConnectedBodyInfoPtr pinfo(new RobotBase::ConnectedBodyInfo());
+            pinfo->_name = boost::python::extract<std::string>(_name);
+            pinfo->_linkname = boost::python::extract<std::string>(_linkname);
+            pinfo->_trelative = ExtractTransform(_trelative);
+            return pinfo;
+        }
+
+        object _name;
+        object _linkname;
+        object _trelative;
+
+    };
+    typedef boost::shared_ptr<PyConnectedBodyInfo> PyConnectedBodyInfoPtr;
+
     class PyConnectedBody {
         RobotBase::ConnectedBodyPtr _pconnected;
         PyEnvironmentBasePtr _pyenv;
@@ -770,6 +797,10 @@ public:
         }
 
         virtual ~PyConnectedBody() {
+        }
+
+        object GetInfo() {
+            return object(PyConnectedBodyInfoPtr(new PyConnectedBodyInfo(_pconnected->GetInfo())));
         }
 
         string __repr__() {
@@ -1517,6 +1548,12 @@ void init_openravepy_robot()
                                 .def_readwrite("_sensorgeometry", &PyRobotBase::PyAttachedSensorInfo::_sensorgeometry)
     ;
 
+    object connectedbodyinfo = class_<PyRobotBase::PyConnectedBodyInfo, boost::shared_ptr<PyRobotBase::PyConnectedBodyInfo> >("ConnectedBodyInfo", DOXY_CLASS(RobotBase::ConnectedBodyInfo))
+                                .def_readwrite("_name", &PyRobotBase::PyConnectedBodyInfo::_name)
+                                .def_readwrite("_linkname", &PyRobotBase::PyConnectedBodyInfo::_linkname)
+                                .def_readwrite("_trelative", &PyRobotBase::PyConnectedBodyInfo::_trelative)
+    ;
+
     {
         void (PyRobotBase::*psetactivedofs1)(const object&) = &PyRobotBase::SetActiveDOFs;
         void (PyRobotBase::*psetactivedofs2)(const object&, int) = &PyRobotBase::SetActiveDOFs;
@@ -1737,6 +1774,7 @@ void init_openravepy_robot()
         ;
 
         class_<PyRobotBase::PyConnectedBody, boost::shared_ptr<PyRobotBase::PyConnectedBody> >("ConnectedBody", DOXY_CLASS(RobotBase::ConnectedBody), no_init)
+        .def("GetInfo",&PyRobotBase::PyConnectedBody::GetInfo, DOXY_FN(RobotBase::ConnectedBody,GetInfo))
         .def("__str__",&PyRobotBase::PyConnectedBody::__str__)
         .def("__repr__",&PyRobotBase::PyConnectedBody::__repr__)
         .def("__unicode__",&PyRobotBase::PyConnectedBody::__unicode__)
