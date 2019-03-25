@@ -3389,19 +3389,19 @@ public:
                 continue;
             }
 
-            RobotBase::ConnectedBodyPtr pattachedBody(new RobotBase::ConnectedBody(probot));
+            RobotBase::ConnectedBodyPtr pconnectedBody(new RobotBase::ConnectedBody(probot));
 
-            pattachedBody->_info._name = _ConvertToOpenRAVEName(name);
+            pconnectedBody->_info._name = _ConvertToOpenRAVEName(name);
 
             daeElementRef pframe_origin = tec->getChild("frame_origin");
             if (!!pframe_origin) {
-                pattachedBody->_info._trelative = _ExtractFullTransformFromChildren(pframe_origin);
+                pconnectedBody->_info._trelative = _ExtractFullTransformFromChildren(pframe_origin);
 
                 domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pframe_origin->getAttribute("link"), as).resolve().elt);
                 if (!!pdomlink) {
-                    pattachedBody->pattachedlink = probot->GetLink(_ExtractLinkName(pdomlink));
+                    pconnectedBody->pattachedlink = probot->GetLink(_ExtractLinkName(pdomlink));
                 }
-                if (!pattachedBody->pattachedlink.lock()) {
+                if (!pconnectedBody->pattachedlink.lock()) {
                     RAVELOG_WARN(str(boost::format("failed to find body %s frame origin %s\n") % name %
                                 pframe_origin->getAttribute("link")));
                     continue;
@@ -3419,25 +3419,22 @@ public:
                     std::vector<RobotBasePtr> robots;
                     tempenv->GetRobots(robots);
                     if (robots.size() == 1) {
-                        pattachedBody->_pbody = robots.front();
+                        pconnectedBody->_pbody = robots.front();
                     } else {
                         RAVELOG_DEBUG_FORMAT("Found $d robots, Do not support this case for url %s", robots.size() % url);
                     }
                 }
 
-                if (!!pattachedBody->_pbody) {
+                if (!!pconnectedBody->_pbody) {
                     RAVELOG_DEBUG_FORMAT("Loaded body from %s", url);
-                    pattachedBody->_pbody->SetName(str(boost::format("%s:%s") % probot->GetName() % name));
-                    pattachedBody->_info._url = url;
+                    pconnectedBody->_pbody->SetName(str(boost::format("%s:%s") % probot->GetName() % name));
+                    pconnectedBody->_pbody->SetTransform(pconnectedBody->GetTransform());
+                    pconnectedBody->_info._url = url;
 
-                    pattachedBody->UpdateInfo();
-                    probot->GetConnectedBodies().push_back(pattachedBody);
+                    pconnectedBody->UpdateInfo();
+                    probot->GetConnectedBodies().push_back(pconnectedBody);
                 }
             }
-        }
-
-        if (!probot->GetConnectedBodies().empty()) {
-            _AttachArticulatedSystems(probot, probot->GetConnectedBodies().back());
         }
     }
 
