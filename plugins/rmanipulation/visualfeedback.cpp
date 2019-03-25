@@ -18,7 +18,7 @@
 
 /// samples rays from the projected OBB and returns true if the test function returns true
 /// for all the rays. Otherwise, returns false
-/// allowableoutliers - specifies the % of allowable outliying rays
+/// allowableoutliers - specifies the % of allowable outlying rays
 bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::function<bool(const Vector&)>& testfn,dReal allowableocclusion=0)
 {
     dReal fscalefactor = 0.95f; // have to make box smaller or else rays might miss
@@ -376,6 +376,7 @@ public:
 
         /// check if just the rigidly attached links of the gripper are in the way
         /// this function is not meant to be called during planning (only database generation)
+        /// \param tcamera transformation of the camera in the targetlink frame
         bool IsOccludedByRigid(const TransformMatrix& tcamera)
         {
             KinBody::KinBodyStateSaver saver1(_ptargetbox), saver2(_vf->_targetlink->GetParent());
@@ -383,6 +384,7 @@ public:
             _vf->_psensor->GetAttachingLink()->GetRigidlyAttachedLinks(vattachedlinks);
             RobotBase::RobotStateSaver robotsaver(_vf->_robot,RobotBase::Save_LinkTransformation|RobotBase::Save_LinkEnable);
             Transform tsensorinv = _vf->_psensor->GetTransform().inverse();
+            // Disable all robot links that are not attached to the camera
             FOREACHC(itlink,_vf->_robot->GetLinks()) {
                 bool battached = find(vattachedlinks.begin(),vattachedlinks.end(),*itlink)!=vattachedlinks.end();
                 (*itlink)->Enable(battached);
@@ -899,6 +901,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         return tcamera;
     }
 
+    /// \brief return a list of transforms of the camera in the target link frame.
     bool ProcessVisibilityExtents(ostream& sout, istream& sinput)
     {
         string cmd;
@@ -1191,7 +1194,8 @@ Visibility computation checks occlusion with other objects using ray sampling in
     bool ComputeVisibleConfiguration(ostream& sout, istream& sinput)
     {
         string cmd;
-        Transform t;  // In world coordinate system
+        Transform t;  // transform of targetlink in world coordinate system
+        // Therefore t * _tToManip = tmanipinworld.
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput ) {
