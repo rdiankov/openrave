@@ -1934,6 +1934,127 @@ void RobotBase::_ComputeInternalInformation()
     }
 }
 
+void RobotBase::_ComputeConnectedBodiesInformation()
+{
+    // resolve duplicate names for links and joints in connected body info
+    // reinitialize robot with combined infos
+    if (_vecConnectedBodies.empty()) {
+        return;
+    }
+
+    std::map<std::string, KinBody::LinkInfoConstPtr> mLinkInfos;
+    std::map<std::string, KinBody::JointInfoConstPtr> mJointInfos;
+    std::map<std::string, RobotBase::ManipulatorInfoConstPtr> mManipInfos;
+    std::map<std::string, RobotBase::AttachedSensorInfoConstPtr> mAttachedSensorInfos;
+
+    for (const auto &link: _veclinks) {
+        mLinkInfos[link->GetName()] = boost::make_shared<KinBody::LinkInfo>(link->UpdateAndGetInfo());
+    }
+    for (const auto&joint: _vecjoints) {
+        mJointInfos[joint->GetName()] = boost::make_shared<KinBody::JointInfo>(joint->UpdateAndGetInfo());
+    }
+
+
+    vector<RobotBase::ManipulatorInfoConstPtr> manipInfos;
+    for (const auto& manip: _vecManipulators) {
+        manipInfos.push_back(boost::make_shared<RobotBase::ManipulatorInfo>(manip->GetInfo()));
+    }
+
+    vector<RobotBase::AttachedSensorInfoConstPtr> sensorInfos;
+    for (const auto& sensor: _vecSensors) {
+        sensorInfos.push_back(boost::make_shared<RobotBase::AttachedSensorInfo>(sensor->GetInfo()));
+    }
+
+    for (const auto& connectedBody : _vecConnectedBodies) {
+        auto dummyJointInfo = boost::make_shared<KinBody::JointInfo>();
+        connectedBody->_info._vPassiveJointInfos.push_back(dummyJointInfo);
+
+        dummyJointInfo->_name = "connectBodyDummy";
+        dummyJointInfo->_bIsActive = false;
+        dummyJointInfo->_type = KinBody::JointType::JointPrismatic;
+        dummyJointInfo->_vmaxaccel[0] = 0.0;
+        dummyJointInfo->_vmaxvel[0] = 0.0;
+        dummyJointInfo->_vupperlimit[0] = 0;
+
+        dummyJointInfo->_linkname0 = connectedBody->_info._linkname;
+
+        // root link of gripper
+        connectedBody->_pbody->SetTransform(connectedBody->GetTransform());
+        for (const auto &link : connectedBody->_pbody->GetLinks()) {
+            if (link->_vParentLinks.empty()) {
+                dummyJointInfo->_linkname1 = link->GetName();
+                break;
+            }
+        }
+
+        RobotBase::_ResolveDuplicateInfoNames(mLinkInfos, mJointInfos, connectedBody->GetInfo());
+    }
+
+    vector<KinBody::LinkInfoConstPtr> linkInfos;
+    for (const auto& pariLinkInfo: mLinkInfos) {
+        linkInfos.push_back(pariLinkInfo.second);
+    }
+
+    vector<KinBody::JointInfoConstPtr> jointInfos;
+    for (const auto& pJointInfo: mJointInfos) {
+        jointInfos.push_back(pJointInfo.second);
+    }
+
+    Init(linkInfos, jointInfos, manipInfos, sensorInfos, GetURI());
+}
+
+void RobotBase::_ResolveDuplicateInfoNames(std::map<std::string, KinBody::LinkInfoConstPtr> &mLinkInfos,
+                                           std::map<std::string, KinBody::JointInfoConstPtr> &mJointInfos,
+                                           const RobotBase::ConnectedBodyInfo &connectedBodyInfo)
+{
+    std::map<std::string, std::string> changedLinkNameMap;
+    for (const auto &linkInfo: connectedBodyInfo._vLinkInfos) {
+
+        if (mLinkInfos.find(linkInfo->_name) != mLinkInfos.end()) {
+            int i = 0;
+            std::string newName = linkInfo->_name + "_" + std::to_string(i);
+            while (mLinkInfos.find(newName) != mLinkInfos.end()) {
+                i++;
+                newName = linkInfo->_name + "_" + std::to_string(i);
+            }
+            changedLinkNameMap[linkInfo->_name] = newName;
+            linkInfo->_name = newName;
+            mLinkInfos[newName] = linkInfo;
+
+        } else {
+            mLinkInfos[linkInfo->_name] = linkInfo;
+        }
+    }
+    std::vector<std::vector<KinBody::JointInfoPtr> > vvJointInfos{connectedBodyInfo._vJointInfos,
+                                                                  connectedBodyInfo._vPassiveJointInfos};
+    for (const auto &vJointInfos: vvJointInfos) {
+        for (const auto &jointInfo: vJointInfos) {
+            if (mJointInfos.find(jointInfo->_name) != mJointInfos.end()) {
+                int i = 0;
+                std::string newName = jointInfo->_name + "_" + std::to_string(i);
+                while (mJointInfos.find(newName) != mJointInfos.end()) {
+                    i++;
+                    newName = jointInfo->_name + "_" + std::to_string(i);
+                }
+                jointInfo->_name = newName;
+                mJointInfos[newName] = jointInfo;
+
+            } else {
+                mJointInfos[jointInfo->_name] = jointInfo;
+            }
+
+            if (changedLinkNameMap.find(jointInfo->_linkname0) != changedLinkNameMap.end()) {
+                jointInfo->_linkname0 = changedLinkNameMap[jointInfo->_linkname0];
+            }
+
+            if (changedLinkNameMap.find(jointInfo->_linkname1) != changedLinkNameMap.end()) {
+                jointInfo->_linkname1 = changedLinkNameMap[jointInfo->_linkname1];
+            }
+        }
+    }
+}
+
+
 void RobotBase::_PostprocessChangedParameters(uint32_t parameters)
 {
     if( parameters & (Prop_Sensors|Prop_SensorPlacement) ) {

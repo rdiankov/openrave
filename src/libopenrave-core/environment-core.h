@@ -706,6 +706,7 @@ public:
                 }
             }
         }
+        robot->_ComputeConnectedBodiesInformation();
         {
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             _vecbodies.push_back(robot);
