@@ -332,17 +332,17 @@ public:
         }
 
         /// \brief checks if the target geometries of the target link are inside the camera visiblity convex hull (
-        /// \param tCameraInTarget in target coordinate system
+        /// \param tCameraInTargetLink in target link coordinate system
         /// \param mindist Minimum distance to keep from the plane (should be non-negative)
-        bool InConvexHull(const TransformMatrix& tCameraInTarget, dReal mindist=0)
+        bool InConvexHull(const TransformMatrix& tCameraInTargetLink, dReal mindist=0)
         {
             _vconvexplanes3d.resize(_vf->_vconvexplanes.size());
             for(size_t i = 0; i < _vf->_vconvexplanes.size(); ++i) {
-                _vconvexplanes3d[i] = tCameraInTarget.rotate(_vf->_vconvexplanes[i]);
-                _vconvexplanes3d[i].w = -tCameraInTarget.trans.dot3(_vconvexplanes3d[i]) - mindist;
+                _vconvexplanes3d[i] = tCameraInTargetLink.rotate(_vf->_vconvexplanes[i]);
+                _vconvexplanes3d[i].w = -tCameraInTargetLink.trans.dot3(_vconvexplanes3d[i]) - mindist;
             }
-            FOREACH(itobb,_vTargetLocalOBBs) {
-                if( !geometry::IsOBBinConvexHull(*itobb,_vconvexplanes3d) ) {
+            FOREACH(itobb, _vTargetLocalOBBs) {
+                if( !geometry::IsOBBinConvexHull(*itobb, _vconvexplanes3d) ) {
                     return false;
                 }
             }
@@ -366,6 +366,25 @@ public:
                 OBB cameraobb = geometry::TransformOBB(tCameraInTargetinv,*itobb);
                 // SampleProjectedOBBWithTest usually quits when first occlusion is found, so just passing occludingbodyandlinkname to _TestRay should return the initial occluding part.
                 if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::_TestRay, this, _1, boost::ref(tworldcamera), boost::ref(occludingbodyandlinkname)),_vf->_fAllowableOcclusion) ) {
+                    RAVELOG_VERBOSE("box is occluded\n");
+                    errormsg = str(boost::format("{\"type\":\"pattern_occluded\", \"bodylinkname\":\"%s\"}")%occludingbodyandlinkname);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        bool IsPatternOccluded(const TransformMatrix& tTargetInCamera, const TransformMatrix& tGeometryInTargetLink, const TransformMatrix& tCameraInWorld, bool bOutputError, std::string& errormsg)
+        {
+            KinBody::KinBodyStateSaver saver1(_ptargetbox), saver2(_vf->_targetlink->GetParent(),KinBody::Save_LinkEnable);
+            _ptargetbox->SetTransform(tCameraInWorld * tTargetInCamera * tGeometryInTargetLink.inverse());
+            _ptargetbox->Enable(true);
+            SampleRaysScope srs(*this);
+            std::string occludingbodyandlinkname = "";
+            FOREACH(itobb,_vTargetLocalOBBs) {  // itobb is in targetlink coordinates
+                OBB cameraobb = geometry::TransformOBB(tTargetInCamera * tGeometryInTargetLink.inverse(), *itobb);
+                // SampleProjectedOBBWithTest usually quits when first occlusion is found, so just passing occludingbodyandlinkname to _TestRay should return the initial occluding part.
+                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::_TestRay, this, _1, boost::ref(tCameraInWorld), boost::ref(occludingbodyandlinkname)),_vf->_fAllowableOcclusion) ) {
                     RAVELOG_VERBOSE("box is occluded\n");
                     errormsg = str(boost::format("{\"type\":\"pattern_occluded\", \"bodylinkname\":\"%s\"}")%occludingbodyandlinkname);
                     return true;
@@ -416,7 +435,7 @@ private:
             dReal filen = 1/RaveSqrt(v.lengthsqr3());
             r.dir = tcamera.rotate((2.0f*filen)*v);
             r.pos = tcamera.trans + 0.5f*_vf->_fRayMinDist*r.dir;         // move the rays a little forward
-            if( !_vf->_robot->GetEnv()->CheckCollision(r,_report) ) {
+            if( !_vf->_robot->GetEnv()->CheckCollision(r, _report) ) {
                 return true;         // not supposed to happen, but it is OK
             }
 
@@ -582,7 +601,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         _bIgnoreSensorCollision = false;
         _bCameraOnManip = false;
         _fSampleRayDensity = 0.001;
-        _fAllowableOcclusion = 0.1;
+        _fAllowableOcclusion = 0.0;
         _fRayMinDist = 0.02f;
 
         RegisterCommand("SetCameraAndTarget",boost::bind(&VisualFeedback::SetCameraAndTarget,this,_1,_2),
@@ -868,35 +887,43 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
     /// \brief Suppose vdir is a direction from the center of a sphere to the surface of the sphere and fdist is its
     ///        radius. This function returns a transformation such that its origin is on the sphere's surface and its
-    ///        local Z-axis is pointing radially inwards.
+    ///        local Z-axis is pointing radially inwards. In particular, if the camera is at the center of the sphere,
+    ///        this function returns transforms for the calibration board such that its +z face (pattern face) faces
+    ///        the camera and the board lies tangential to the sphere's surface.
     ///
     /// \brief vdir is a unit vector describing the direction.
-    /// \brief fdist is the translation along vdir
-    /// \brief froll is the angle for which the local x-and y- axes are rotated.
-    TransformMatrix ComputeCameraMatrix(const Vector& vdir,dReal fdist,dReal froll)
+    /// \brief fdist is the translation along vdir (the distance between the camera center and pattern center)
+    /// \brief froll is the angle for which the local x-and y- axes are rotated (the in-plane rotation of the pattern)
+    TransformMatrix ComputePatternInCameraTransform(const Vector& vdir, const dReal fdist, const dReal froll)
     {
         // Compute orthogonal axes from vdir
-        Vector vright, vup = Vector(0,1,0) - vdir * vdir.y;
+        Vector vup = Vector(0, 1, 0) - vdir * vdir.y;
         dReal uplen = vup.lengthsqr3();
         if( uplen < 0.001 ) {
-            vup = Vector(0,0,1) - vdir * vdir.z;
+            vup = Vector(0, 0, 1) - vdir * vdir.z;
             uplen = vup.lengthsqr3();
         }
 
-        vup *= (dReal)1.0/RaveSqrt(uplen);
-        vright = vup.cross(vdir);
+        vup *= (dReal)1.0 / RaveSqrt(uplen);
+        Vector vright = vup.cross(vdir);
 
         // Construct a transformation matrix
-        TransformMatrix tcamera;
-        tcamera.m[2] = vdir.x; tcamera.m[6] = vdir.y; tcamera.m[10] = vdir.z;
+        TransformMatrix tPatternInCamera;
+        tPatternInCamera.m[2] = vdir.x;
+        tPatternInCamera.m[6] = vdir.y;
+        tPatternInCamera.m[10] = vdir.z;
 
         // Rotate the local x-and y-axis (right & up axes) around the local z (dir) according to the given froll.
-        dReal fcosroll = RaveCos(froll), fsinroll = RaveSin(froll);
-        tcamera.m[0] = vright.x*fcosroll+vup.x*fsinroll; tcamera.m[1] = -vright.x*fsinroll+vup.x*fcosroll;
-        tcamera.m[4] = vright.y*fcosroll+vup.y*fsinroll; tcamera.m[5] = -vright.y*fsinroll+vup.y*fcosroll;
-        tcamera.m[8] = vright.z*fcosroll+vup.z*fsinroll; tcamera.m[9] = -vright.z*fsinroll+vup.z*fcosroll;
-        tcamera.trans = -fdist * tcamera.rotate(_vcenterconvex);
-        return tcamera;
+        dReal fcosroll = RaveCos(froll);
+        dReal fsinroll = RaveSin(froll);
+        tPatternInCamera.m[0] = vright.x * fcosroll + vup.x * fsinroll;
+        tPatternInCamera.m[1] = -vright.x * fsinroll + vup.x * fcosroll;
+        tPatternInCamera.m[4] = vright.y * fcosroll + vup.y * fsinroll;
+        tPatternInCamera.m[5] = -vright.y * fsinroll + vup.y * fcosroll;
+        tPatternInCamera.m[8] = vright.z * fcosroll + vup.z * fsinroll;
+        tPatternInCamera.m[9] = -vright.z * fsinroll + vup.z * fcosroll;
+        tPatternInCamera.trans = -fdist * tPatternInCamera.rotate(_vcenterconvex);
+        return tPatternInCamera;
     }
 
     bool ProcessVisibilityExtents(ostream& sout, istream& sinput)
@@ -904,10 +931,11 @@ Visibility computation checks occlusion with other objects using ray sampling in
         string cmd;
         int numrolls=8;
         vector<Vector> vconedirangles;
-        //vector<Transform> vtransforms; // the camera transforms with respect to the target link
-        std::vector<Transform> vCamerasInPatternCoord; // cameras with respect to the pattern coordinate system (usually the pattern face is in +z)
-        std::vector<Transform> vCamerasInTargetLinkCoord; // cameras with respect to the target link coordinate system. A pattern can be anywhere in the link and depends on geometry transform and cone dir angle.
-        while(!sinput.eof()) {
+        std::vector<Transform> vPatternsInCamera;  // calibration patterns with respect to the camera coordinate system (usually the pattern face is in +z)
+        std::vector<Transform> vTargetLinksInCamera; // calibration (target) links with respect to the camera coordinate system (usually the calibration link's parent link is the flange)
+        // NOTE: The calibration pattern can be anywhere in the calibration link. It depends on the pattern's geometry transform and cone dir angle.
+
+        while( !sinput.eof() ) {
             sinput >> cmd;
             if( !sinput ) {
                 break;
@@ -915,66 +943,61 @@ Visibility computation checks occlusion with other objects using ray sampling in
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "transforms" ) {
-                int numtrans=0;
+                int numtrans = 0;
                 sinput >> numtrans;
-                vCamerasInPatternCoord.resize(numtrans);
-                FOREACH(it,vCamerasInPatternCoord) {
+                vPatternsInCamera.resize(numtrans);
+                FOREACH(it, vPatternsInCamera) {
                     sinput >> *it;
                 }
             }
             else if( cmd == "numrolls" )
                 sinput >> numrolls;
             else if( cmd == "extents" ) {
-                // Each extent is a 3D vector describing the direction from the pattern to the camera. Its norm is the
+                // Each extent is a 3D vector describing the direction from the camera to the pattern. Its norm is the
                 // distance. Note that numrolls has to be defined *before* extents.
-                int numtrans=0;
+                int numtrans = 0;
                 sinput >> numtrans;
-                dReal deltaroll = PI*2.0f/(dReal)numrolls;
-                vCamerasInPatternCoord.resize(0); vCamerasInPatternCoord.reserve(numtrans*numrolls);
+                dReal deltaroll = PI * 2.0f / (dReal)numrolls;
+                vPatternsInCamera.resize(0);
+                vPatternsInCamera.reserve(numtrans * numrolls);
                 for(int i = 0; i < numtrans; ++i) {
                     Vector v;
                     sinput >> v.x >> v.y >> v.z;
                     dReal fdist = RaveSqrt(v.lengthsqr3());
-                    v *= 1/fdist;
+                    v *= 1 / fdist;
                     dReal froll = 0;
                     for(int iroll = 0; iroll < numrolls; ++iroll, froll += deltaroll) {
-                        Transform t = ComputeCameraMatrix(v,fdist,froll);
-                        vCamerasInPatternCoord.push_back(t);
+                        Transform t = ComputePatternInCameraTransform(v, fdist, froll);
+                        vPatternsInCamera.push_back(t);
                     }
                 }
             }
             else if( cmd == "sphere" ) {
-                // In the current system we always have the pattern on the
-                // robot, so we always use invertsphere. The sphere is first
-                // generated in the pattern frame (the calibboard geometry and
-                // the cone direction). Camera poses surround the pattern.
-                // Invertsphere produces pattern poses around the camera. After
-                // inversion, only pattern poses that are in a cone around the
-                // (0,0,1) axis of the camera (i.e., in front of the lens) will
-                // pass the InConvexHull() check. After filtering out these
-                // valid poses, we express them in the targetlink frame and
-                // pass them to the IK solver.
+                // For now assume the calibration pattern is on the robot and the
+                // camera is stationary in the environment. The sphere of pose
+                // candidates is first generated in the camera frame (camera at
+                // center of sphere, pattern transforms generated at discrete 
+                // points uniformly distributed along the surface of the sphere).
+                // We later check which poses lie inside the visibility pyramid
+                // of the camera, pass the end effector collision check, etc.
                 TriMesh spheremesh;
-                int spherelevel = 3, numdists = 0;
+                int spherelevel = 3;
+                int numdists = 0;
                 sinput >> spherelevel >> numdists;
-                CM::GenerateSphereTriangulation(spheremesh,spherelevel);
+                CM::GenerateSphereTriangulation(spheremesh, spherelevel);
                 vector<dReal> vdists(numdists);
-                FOREACH(it,vdists) {
+                FOREACH(it, vdists) {
                     sinput >> *it;
                 }
-                bool bInvert = _sensorrobot != _robot; // if True, then invert sampled transforms of the sphere.
-                dReal deltaroll = PI*2.0f/(dReal)numrolls;
-                vCamerasInPatternCoord.resize(spheremesh.vertices.size()*numdists*numrolls);
-                vector<Transform>::iterator itcamera = vCamerasInPatternCoord.begin();
+                dReal deltaroll = PI * 2.0f / (dReal)numrolls;
+                vPatternsInCamera.resize(spheremesh.vertices.size() * numdists * numrolls);
+                vector<Transform>::iterator itcamera = vPatternsInCamera.begin();
                 for(size_t j = 0; j < spheremesh.vertices.size(); ++j) {
                     Vector v = spheremesh.vertices[j];
                     for(int i = 0; i < numdists; ++i) {
                         dReal froll = 0;
                         for(int iroll = 0; iroll < numrolls; ++iroll, froll += deltaroll) {
-                            *itcamera = ComputeCameraMatrix(spheremesh.vertices[j],vdists[i],froll);
-                            if( bInvert ) {
-                                *itcamera = itcamera->inverse();
-                            }
+                            *itcamera = ComputePatternInCameraTransform(spheremesh.vertices[j], vdists[i], froll);
                             ++itcamera;
                         }
                     }
@@ -984,9 +1007,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 // conedirangle includes both cone direction and angle info. The
                 // magnitude of conedirangle encodes the angle (i.e., radius) of the
                 // cone.
-                Vector vconedir; dReal fangle;
+                Vector vconedir;
                 sinput >> vconedir.x >> vconedir.y >> vconedir.z;
-                fangle = RaveSqrt(vconedir.lengthsqr3());
+                dReal fangle = RaveSqrt(vconedir.lengthsqr3());
                 if( fangle == 0 ) {
                     return false;
                 }
@@ -1006,83 +1029,93 @@ Visibility computation checks occlusion with other objects using ray sampling in
             }
         }
 
-        if( vconedirangles.size() > 0 ) {
-            vCamerasInTargetLinkCoord.reserve(vCamerasInPatternCoord.size());
-            Transform tGeometryToTargetLink;
-            for(size_t igeom = 0; igeom < _targetlink->GetGeometries().size(); ++igeom) {
-                if( _targetGeomName.size() == 0 || _targetlink->GetGeometries().at(igeom)->GetName() == _targetGeomName ) {
-                    tGeometryToTargetLink = _targetlink->GetGeometries().at(igeom)->GetTransform();
-                    break;
-                }
+        // Geometry is the calibration pattern (box geometry), target link is the calibration link
+        Transform tGeometryInTargetLink;
+        for(size_t igeom = 0; igeom < _targetlink->GetGeometries().size(); ++igeom) {
+            if( _targetGeomName.size() == 0 || _targetlink->GetGeometries().at(igeom)->GetName() == _targetGeomName ) {
+                // if targetGeomName is the empty string, select the first geometry as the calibration pattern
+                tGeometryInTargetLink = _targetlink->GetGeometries().at(igeom)->GetTransform();
+                break;
+            }
+        }
+
+        vTargetLinksInCamera.reserve(vPatternsInCamera.size());
+
+        dReal fCameraCosFOV = 0; // cos of the half angle of the camera FOV, in this case cos(pi/2)
+
+        Vector pluszvector;
+        pluszvector.x = 0;
+        pluszvector.y = 0;
+        pluszvector.z = 1;
+
+        FOREACH(ittPatternInCamera, vPatternsInCamera) {
+            Vector vPatternDirInCamera = ExtractAxisFromQuat(ittPatternInCamera->rot, 2); // camera is always +z
+            Vector vPatternInCameraPos = ittPatternInCamera->trans;
+            dReal flen = RaveSqrt(vPatternInCameraPos.lengthsqr3());
+            //if( -vPatternInCameraPos.dot3(vPatternDirInCamera) < fCameraCosFOV * flen ) {
+            if( vPatternInCameraPos.z < 0 ) {
+                // discard this pose because it lies in the half-sphere behind the camera's z plane
+                continue;
             }
 
-            dReal fCameraCosFOV = 0; // cos of the half angle of the camera FOV, in this case cos(pi/2)
-
-            Vector pluszvector;
-            pluszvector.x = 0;
-            pluszvector.y = 0;
-            pluszvector.z = 1;
-            FOREACH(itt,vCamerasInPatternCoord) {
-                Vector vCameraDirInPattern = ExtractAxisFromQuat(itt->rot, 2); // camera is always +z
-                Vector vCameraToPatternPos = itt->trans;
-                dReal flen = RaveSqrt(vCameraToPatternPos.lengthsqr3());
-                if( -vCameraToPatternPos.dot3(vCameraDirInPattern) < fCameraCosFOV * flen ) {
-                    // outside of camera FOV
-                    continue;
-                }
-
-                bool bInCone = false;
-
-                // We hard-code the cone direction (0,0,1) for initial visibility checking
-                // because only patterns in front of the camera lens will pass InConvexHull().
-                // We then appropriately express these pattern poses in the targetlink
-                // frame, taking into account vconedirangles.
+            // Usually we have just one cone aligned with the pattern's +z axis,
+            // but we can have one or more cones whose apices lie at the pattern center
+            // (geometry origin) and whose +z axis is defined by cone dir angle.
+            // For each cone defined by each cone dir angle, we move the pattern such that
+            // that cone +z axis points directly at the camera (i.e., the pose candidates
+            // correspond to the cone, and the pattern is transformed accordingly).
+            // By considering the pose candidates to correspond to the cones now,
+            // we compute the corresponding target link poses. Note that the "pattern"
+            // here is defined as the plane tangent to the cone's apex.
+            //
+            // TODO: Define the pattern/cone origin as the center of the +z face of the geometry
+            // instead of the geometry origin (center of box)
+            if( vconedirangles.size() > 0 ) {
                 FOREACH(itcone, vconedirangles) {
-                    if( pluszvector.dot3(vCameraToPatternPos) >= itcone->w*flen ) {
+                    if( vPatternInCameraPos.z >= itcone->w * flen ) {
                         // quatRotationDirection uses only the first three values of the vectors
                         Vector vConeQuat = geometry::quatRotateDirection(pluszvector, *itcone);
-                        Transform vPatternToGeometry = geometry::matrixFromQuat(vConeQuat);
-                        Transform vCameraToTargetLink = tGeometryToTargetLink * vPatternToGeometry * *itt;
-                        vCamerasInTargetLinkCoord.push_back(vCameraToTargetLink);
+                        Transform tPatternInGeometry = geometry::matrixFromQuat(vConeQuat);
+                        Transform tTargetLinkInCamera = *ittPatternInCamera * tPatternInGeometry.inverse() * tGeometryInTargetLink.inverse();
+                        vTargetLinksInCamera.push_back(tTargetLinkInCamera);
                     }
                 }
-            }
-        }
-        else {
-            vCamerasInTargetLinkCoord.resize(vCamerasInPatternCoord.size());
-            for(size_t i = 0; i < vCamerasInTargetLinkCoord.size(); ++i) {
-                vCamerasInTargetLinkCoord[i] = vCamerasInPatternCoord[i];
-            }
-        }
-
-        KinBody::KinBodyStateSaver saver(_targetlink->GetParent(),KinBody::Save_LinkTransformation);
-        _targetlink->SetTransform(Transform()); // not sure why _targetlink has to be set to identity here
-        boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
-        saver.Restore(); // need to restore _targetlink so that the preceeding CheckEndEffectorCollision works correctly
-		
-        // get all the camera positions and test them
-        FOREACHC(itcamera, vCamerasInTargetLinkCoord) {
-            Transform tCameraInTarget = *itcamera;
-            Transform tTargetInWorld;
-            if( _sensorrobot == _robot ) {
-                tTargetInWorld = _sensorrobot->GetTransform() * tCameraInTarget.inverse();
             }
             else {
-                tTargetInWorld = _sensorrobot->GetTransform() * tCameraInTarget.inverse();
+                // Assume the pattern lies on the +z face of the geometry (i.e., tPatternInGeometry from the "if" block above is the identity matrix),
+                // i.e., we have one cone dir angle where the cone is pointing along the +z axis of the geometry, and assume the cone angle is 45 degrees
+                Transform tTargetLinkInCamera = *ittPatternInCamera * tGeometryInTargetLink.inverse();
+                vTargetLinksInCamera.push_back(tTargetLinkInCamera);
             }
+        }
 
-            if( pconstraintfn->InConvexHull(*itcamera) ) {
-                if( !_pmanip->CheckEndEffectorCollision(tTargetInWorld*_tToManip, _preport) ) {
-                    if( !pconstraintfn->IsOccludedByRigid(*itcamera) ) {
-                        sout << *itcamera << " ";
-                    }
-                    else {
-                        RAVELOG_VERBOSE("in convex hull and effector is free, but not occluded by rigid\n");
-                    }
-                }
-                else {
-                    RAVELOG_VERBOSE_FORMAT("in convex hull, but end effector collision: %s", _preport->__str__());
-                }
+        KinBody::KinBodyStateSaver saver(_targetlink->GetParent(), KinBody::Save_LinkTransformation);
+        //_targetlink->SetTransform(Transform()); // not sure why _targetlink has to be set to identity here
+        boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
+        saver.Restore(); // need to restore _targetlink so that the preceeding CheckEndEffectorCollision works correctly
+
+        // get all the camera positions and test them
+        FOREACHC(ittTargetLinkInCamera, vTargetLinksInCamera) {
+            Transform tTargetLinkInCamera = *ittTargetLinkInCamera;
+            Transform tTargetLinkInWorld =  _sensorrobot->GetTransform() * tTargetLinkInCamera;
+
+            if( pconstraintfn->InConvexHull(tTargetLinkInCamera.inverse()) ) {
+                sout << tTargetLinkInWorld << " ";
+//                if( !_pmanip->CheckEndEffectorCollision(tTargetLinkInWorld * _tToManip, _preport) ) {
+//                    bool bOutputError = false;
+//                    std::string errormsg;
+//                    //if( !pconstraintfn->IsOccludedByRigid(tCameraInTarget) ) {
+//                    if( !pconstraintfn->IsPatternOccluded(tCameraInTarget.inverse(), tGeometryInTargetLink, _sensorrobot->GetTransform(), bOutputError, errormsg) ) {
+//                        RAVELOG_VERBOSE("in convex hull and effector is free, and pattern is not occluded\n");
+//                        sout << tCameraInTarget << " ";
+//                    }
+//                    else {
+//                        RAVELOG_VERBOSE("in convex hull and effector is free, but is occluded by rigid: %s", errormsg);
+//                    }
+//                }
+//                else {
+//                    RAVELOG_VERBOSE_FORMAT("in convex hull, but end effector collision: %s", _preport->__str__());
+//                }
             }
         }
 
