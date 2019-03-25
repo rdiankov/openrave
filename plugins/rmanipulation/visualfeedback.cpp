@@ -16,6 +16,8 @@
 #include "commonmanipulation.h"
 #include <boost/algorithm/string/replace.hpp>
 
+#define CALIBRATION_TIMING_DEBUG // uncomment this to get more information about time spent for each stage
+
 void SerializeTransform(std::stringstream& ss, const Transform& t) {
     ss << t.rot.x << ", " << t.rot.y << ", " << t.rot.z << ", " << t.rot.w << ", " << t.trans.x << ", " << t.trans.y << ", " << t.trans.z;
 }
@@ -974,7 +976,28 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 TriMesh spheremesh;
                 int spherelevel = 3, numdists = 0;
                 sinput >> spherelevel >> numdists;
+#ifdef CALIBRATION_TIMING_DEBUG
+                uint64_t starttime_spheremesh = utils::GetMicroTime();
+#endif
                 CM::GenerateSphereTriangulation(spheremesh,spherelevel);
+#ifdef CALIBRATION_TIMING_DEBUG
+                uint64_t endtime_spheremesh = utils::GetMicroTime();
+                float fElapsed_spheremesh = (endtime_spheremesh - starttime_spheremesh)*1e-6f;
+                RAVELOG_DEBUG_FORMAT("sphere mesh generation: %f s.", fElapsed_spheremesh);
+#endif
+                if( 0 ) {
+                    std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                    ss << "vertices=[";
+                    FOREACHC(itvertex, spheremesh.vertices) {
+                        ss << "[" << itvertex->x << "," << itvertex->y << "," << itvertex->z << "],";
+                    }
+                    ss << "]; indices=[";
+                    FOREACHC(itindex, spheremesh.indices) {
+                        ss << *itindex << ",";
+                    }
+                    ss << "];";
+                    RAVELOG_DEBUG_FORMAT("%s", ss.str());
+                }
                 vector<dReal> vdists(numdists);
                 FOREACH(it,vdists) {
                     sinput >> *it;
@@ -983,6 +1006,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 dReal deltaroll = PI*2.0f/(dReal)numrolls;
                 vCamerasInPatternCoord.resize(spheremesh.vertices.size()*numdists*numrolls);
                 vector<Transform>::iterator itcamera = vCamerasInPatternCoord.begin();
+#ifdef CALIBRATION_TIMING_DEBUG
+                uint64_t starttime_computetransform = utils::GetMicroTime();
+#endif
                 for(size_t j = 0; j < spheremesh.vertices.size(); ++j) {
                     Vector v = spheremesh.vertices[j];
                     for(int i = 0; i < numdists; ++i) {
@@ -996,6 +1022,11 @@ Visibility computation checks occlusion with other objects using ray sampling in
                         }
                     }
                 }
+#ifdef CALIBRATION_TIMING_DEBUG
+                uint64_t endtime_computetransform = utils::GetMicroTime();
+                float fElapsed_computetransform = (endtime_computetransform - starttime_computetransform)*1e-6f;
+                RAVELOG_DEBUG_FORMAT("transform generation: %f s.", fElapsed_computetransform);
+#endif
             }
             else if( cmd == "conedirangle" ) {
                 // conedirangle includes both cone direction and angle info. The
@@ -1035,6 +1066,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
             dReal fCameraCosFOV = 0; // cos of the half angle of the camera FOV, in this case cos(pi/2)
 
+#ifdef CALIBRATION_TIMING_DEBUG
+            uint64_t starttime_filtertransforms = utils::GetMicroTime();
+#endif
             Vector pluszvector;
             pluszvector.x = 0;
             pluszvector.y = 0;
@@ -1064,6 +1098,11 @@ Visibility computation checks occlusion with other objects using ray sampling in
                     }
                 }
             }
+#ifdef CALIBRATION_TIMING_DEBUG
+            uint64_t endtime_filtertransforms = utils::GetMicroTime();
+            float fElapsed_filtertransforms = (endtime_filtertransforms - starttime_filtertransforms)*1e-6f;
+            RAVELOG_DEBUG_FORMAT("transform filtering by cone dirangles: %f s.", fElapsed_filtertransforms);
+#endif
         }
         else {
             vCamerasInTargetLinkCoord.resize(vCamerasInPatternCoord.size());
@@ -1076,7 +1115,16 @@ Visibility computation checks occlusion with other objects using ray sampling in
         _targetlink->SetTransform(Transform()); // not sure why _targetlink has to be set to identity here
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
         saver.Restore(); // need to restore _targetlink so that the preceeding CheckEndEffectorCollision works correctly
-		
+
+        RAVELOG_DEBUG_FORMAT("targetlink.IsEnabled()=%d", _targetlink->IsEnabled());
+#ifdef CALIBRATION_TIMING_DEBUG
+        float fElapsed_convexhull = 0;
+        uint64_t starttime_convexhull, endtime_convexhull;
+        float fElapsed_eecollision = 0;
+        uint64_t starttime_eecollision, endtime_eecollision;
+        float fElapsed_eeocclusion = 0;
+        uint64_t starttime_eeocclusion, endtime_eeocclusion;
+#endif
         // get all the camera positions and test them
         FOREACHC(itcamera, vCamerasInTargetLinkCoord) {
             Transform tCameraInTarget = *itcamera;
@@ -1088,20 +1136,62 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 tTargetInWorld = _sensorrobot->GetTransform() * tCameraInTarget.inverse();
             }
 
+#ifdef CALIBRATION_TIMING_DEBUG
+            starttime_convexhull = utils::GetMicroTime();
+#endif
             if( pconstraintfn->InConvexHull(*itcamera) ) {
+#ifdef CALIBRATION_TIMING_DEBUG
+                endtime_convexhull = utils::GetMicroTime();
+                fElapsed_convexhull += (endtime_convexhull - starttime_convexhull)*1e-6f;
+                starttime_eecollision = utils::GetMicroTime();
+#endif
                 if( !_pmanip->CheckEndEffectorCollision(tTargetInWorld*_tToManip, _preport) ) {
+#ifdef CALIBRATION_TIMING_DEBUG
+                    endtime_eecollision = utils::GetMicroTime();
+                    fElapsed_eecollision += (endtime_eecollision - starttime_eecollision)*1e-6f;
+                    starttime_eeocclusion = utils::GetMicroTime();
+#endif
                     if( !pconstraintfn->IsOccludedByRigid(*itcamera) ) {
+#ifdef CALIBRATION_TIMING_DEBUG
+                        endtime_eeocclusion = utils::GetMicroTime();
+                        fElapsed_eeocclusion += (endtime_eeocclusion - starttime_eeocclusion)*1e-6f;
+#endif
                         sout << *itcamera << " ";
+                        std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                        Transform tManip = tTargetInWorld*_tToManip;
+                        ss << "manippose=[" << tManip.rot.x << "," << tManip.rot.y << "," << tManip.rot.z << "," << tManip.rot.w << "," << tManip.trans.x << "," << tManip.trans.y << "," << tManip.trans.z << "];";
+                        RAVELOG_VERBOSE_FORMAT("passed all tests: %s", ss.str());
                     }
                     else {
+#ifdef CALIBRATION_TIMING_DEBUG
+                        endtime_eeocclusion = utils::GetMicroTime();
+                        fElapsed_eeocclusion += (endtime_eeocclusion - starttime_eeocclusion)*1e-6f;
+#endif
                         RAVELOG_VERBOSE("in convex hull and effector is free, but not occluded by rigid\n");
                     }
                 }
                 else {
-                    RAVELOG_VERBOSE_FORMAT("in convex hull, but end effector collision: %s", _preport->__str__());
+#ifdef CALIBRATION_TIMING_DEBUG
+                    endtime_eecollision = utils::GetMicroTime();
+                    fElapsed_eecollision += (endtime_eecollision - starttime_eecollision)*1e-6f;
+#endif
+                    std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                    Transform tManip = tTargetInWorld*_tToManip;
+                    ss << "manippose=[" << tManip.rot.x << "," << tManip.rot.y << "," << tManip.rot.z << "," << tManip.rot.w << "," << tManip.trans.x << "," << tManip.trans.y << "," << tManip.trans.z << "];";
+                    RAVELOG_VERBOSE_FORMAT("in convex hull, but end effector collision: %s; %s", _preport->__str__()%ss.str());
                 }
             }
+            else {
+#ifdef CALIBRATION_TIMING_DEBUG
+                endtime_convexhull = utils::GetMicroTime();
+                fElapsed_convexhull += (endtime_convexhull - starttime_convexhull)*1e-6f;
+#endif
+            }
         }
+
+#ifdef CALIBRATION_TIMING_DEBUG
+        RAVELOG_DEBUG_FORMAT("Timing results (total transforms checked=%d):\n    convex hull checking: %f s.\n    ee collision checking: %f s.\n    ee occlusion checking: %f s.", vCamerasInTargetLinkCoord.size()%fElapsed_convexhull%fElapsed_eecollision%fElapsed_eeocclusion);
+#endif
 
         return true;
     }
