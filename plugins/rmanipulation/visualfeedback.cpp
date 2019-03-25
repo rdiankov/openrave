@@ -16,56 +16,70 @@
 #include "commonmanipulation.h"
 #include <boost/algorithm/string/replace.hpp>
 
+void SerializeTransform(std::stringstream& ss, const Transform& t) {
+    ss << t.rot.x << ", " << t.rot.y << ", " << t.rot.z << ", " << t.rot.w << ", " << t.trans.x << ", " << t.trans.y << ", " << t.trans.z;
+}
+
+void SerializeVector3(std::stringstream& ss, const Vector& v) {
+    ss << v.x << ", " << v.y << ", " << v.z;
+}
+
+void SerializeVector4(std::stringstream& ss, const Vector& v) {
+    ss << v.x << ", " << v.y << ", " << v.z << ", " << v.w;
+}
+
 /// samples rays from the projected OBB and returns true if the test function returns true
 /// for all the rays. Otherwise, returns false
 /// allowableoutliers - specifies the % of allowable outlying rays
-bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::function<bool(const Vector&)>& testfn,dReal allowableocclusion=0)
+bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::function<bool(const Vector&)>& testfn, Transform& tcamera, dReal allowableocclusion=0)
 {
     dReal fscalefactor = 0.95f; // have to make box smaller or else rays might miss
-    Vector vpoints[8] = { obb.pos + fscalefactor*(obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z),
-                          obb.pos + fscalefactor*(obb.right*obb.extents.x + obb.up*obb.extents.y - obb.dir*obb.extents.z),
-                          obb.pos + fscalefactor*(obb.right*obb.extents.x - obb.up*obb.extents.y + obb.dir*obb.extents.z),
-                          obb.pos + fscalefactor*(obb.right*obb.extents.x - obb.up*obb.extents.y - obb.dir*obb.extents.z),
-                          obb.pos + fscalefactor*(-obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z),
-                          obb.pos + fscalefactor*(-obb.right*obb.extents.x + obb.up*obb.extents.y - obb.dir*obb.extents.z),
-                          obb.pos + fscalefactor*(-obb.right*obb.extents.x - obb.up*obb.extents.y + obb.dir*obb.extents.z),
-                          obb.pos + fscalefactor*(-obb.right*obb.extents.x - obb.up*obb.extents.y - obb.dir*obb.extents.z)};
-    //    Vector vpoints3d[8];
-    //    for(int j = 0; j < 8; ++j) vpoints3d[j] = tcamera*vpoints[j];
+    int numpoints = 4;
+    int numfaces = 1;
 
-    // Project OBB points onto the plane z = 1 (image plane).
-    for(int i =0; i < 8; ++i) {
+    // vpoints contains points on the top surface (the plane that intersects vdir) of the obb.
+    Vector vpoints[4] = {
+        obb.pos + fscalefactor*(  obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z ),
+        obb.pos + fscalefactor*(  obb.right*obb.extents.x - obb.up*obb.extents.y + obb.dir*obb.extents.z ),
+        obb.pos + fscalefactor*( -obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z ),
+        obb.pos + fscalefactor*( -obb.right*obb.extents.x - obb.up*obb.extents.y + obb.dir*obb.extents.z )
+    };
+    // Project OBB points onto the plane z = 1 (arbitrary image plane).
+    for( int i = 0; i < 4; ++i ) {
         dReal fz = 1.0f/vpoints[i].z;
         vpoints[i].x *= fz;
         vpoints[i].y *= fz;
         vpoints[i].z = 1;
     }
 
-    int faceindices[3][4];
-    if( obb.right.z >= 0 ) {
-        faceindices[0][0] = 4; faceindices[0][1] = 5; faceindices[0][2] = 6; faceindices[0][3] = 7;
-    }
-    else {
-        faceindices[0][0] = 0; faceindices[0][1] = 1; faceindices[0][2] = 2; faceindices[0][3] = 3;
-    }
-    if( obb.up.z >= 0 ) {
-        faceindices[1][0] = 2; faceindices[1][1] = 3; faceindices[1][2] = 6; faceindices[1][3] = 7;
-    }
-    else {
-        faceindices[1][0] = 0; faceindices[1][1] = 1; faceindices[1][2] = 4; faceindices[1][3] = 5;
-    }
-    if( obb.dir.z >= 0 ) {
-        faceindices[2][0] = 1; faceindices[2][1] = 3; faceindices[2][2] = 5; faceindices[2][3] = 7;
-    }
-    else {
-        faceindices[2][0] = 0; faceindices[2][1] = 2; faceindices[2][2] = 4; faceindices[2][3] = 6;
+    int faceindices[1][4];
+    faceindices[0][0] = 0; faceindices[0][1] = 1; faceindices[0][2] = 2; faceindices[0][3] = 3;
+
+    if( 0 ) { // for debugging
+        Vector vpoints3d[numpoints];
+        for(int j = 0; j < numpoints; ++j) vpoints3d[j] = tcamera*vpoints[j];
+        {
+            std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+            ss << "camerapose=array([";
+            SerializeTransform(ss, tcamera);
+            ss << "]); vpoints=array([";
+            std::string delim = "";
+            for( int j = 0; j < numpoints; ++j ) {
+                ss << delim << "[";
+                SerializeVector3(ss, vpoints3d[j]);
+                ss << "]";
+                delim = ",";
+            }
+            ss << "]);";
+            RAVELOG_DEBUG_FORMAT("%s", ss.str());
+        }
     }
 
     int nallowableoutliers=0;
     if( allowableocclusion > 0 ) {
         // have to compute the area of all the faces!
         dReal farea=0;
-        for(int i = 0; i < 3; ++i) {
+        for(int i = 0; i < numfaces; ++i) {
             Vector v0 = vpoints[faceindices[i][0]];
             Vector v1 = vpoints[faceindices[i][1]]-v0;
             Vector v2 = vpoints[faceindices[i][2]]-v0;
@@ -75,7 +89,7 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
         nallowableoutliers = (int)(allowableocclusion*farea*0.5/(delta*delta));
     }
 
-    for(int i = 0; i < 3; ++i) {
+    for(int i = 0; i < numfaces; ++i) {
         Vector v0 = vpoints[faceindices[i][0]];
         Vector v1 = vpoints[faceindices[i][1]]-v0;
         Vector v2 = vpoints[faceindices[i][2]]-v0;
@@ -103,9 +117,9 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
             }
         }
 
-        //        Vector vtripoints[6] = {vpoints3d[faceindices[i][0]], vpoints3d[faceindices[i][3]], vpoints3d[faceindices[i][1]],
-        //                                vpoints3d[faceindices[i][0]], vpoints3d[faceindices[i][1]], vpoints3d[faceindices[i][3]]};
-        //        penv->drawtrimesh(vtripoints[0], 16, NULL, 2);
+        // Vector vtripoints[6] = {vpoints3d[faceindices[i][0]], vpoints3d[faceindices[i][3]], vpoints3d[faceindices[i][1]],
+        //                         vpoints3d[faceindices[i][0]], vpoints3d[faceindices[i][1]], vpoints3d[faceindices[i][3]]};
+        // penv->drawtrimesh(vtripoints[0], 16, NULL, 2);
 
         int n2 = (int)(f2proj/delta);
         if( n2 == 0 )
@@ -365,7 +379,7 @@ public:
             FOREACH(itobb,_vTargetLocalOBBs) {  // itobb is in targetlink coordinates
                 OBB cameraobb = geometry::TransformOBB(tCameraInTargetinv,*itobb);
                 // SampleProjectedOBBWithTest usually quits when first occlusion is found, so just passing occludingbodyandlinkname to _TestRay should return the initial occluding part.
-                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::_TestRay, this, _1, boost::ref(tworldcamera), boost::ref(occludingbodyandlinkname)),_vf->_fAllowableOcclusion) ) {
+                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::_TestRay, this, _1, boost::ref(tworldcamera), boost::ref(occludingbodyandlinkname)), tworldcamera, _vf->_fAllowableOcclusion) ) {
                     RAVELOG_VERBOSE("box is occluded\n");
                     errormsg = str(boost::format("{\"type\":\"pattern_occluded\", \"bodylinkname\":\"%s\"}")%occludingbodyandlinkname);
                     return true;
@@ -400,7 +414,7 @@ public:
             SampleRaysScope srs(*this);
             FOREACH(itobb,_vTargetLocalOBBs) {
                 OBB cameraobb = geometry::TransformOBB(tcamerainv,*itobb);
-                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::_TestRayRigid, this, _1, boost::ref(tworldcamera),boost::ref(vattachedlinks)), 0.0f) ) {
+                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::_TestRayRigid, this, _1, boost::ref(tworldcamera),boost::ref(vattachedlinks)), tworldcamera, 0.0f) ) {
                     return true;
                 }
             }
