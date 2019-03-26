@@ -51,10 +51,10 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
         vpoints.resize(numpoints);
         faceindices.resize(numfaces*numpoints);
 
-        vpoints[0] = obb.pos + fscalefactor*(  obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z );
-        vpoints[1] = obb.pos + fscalefactor*(  obb.right*obb.extents.x - obb.up*obb.extents.y + obb.dir*obb.extents.z );
-        vpoints[2] = obb.pos + fscalefactor*( -obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z );
-        vpoints[3] = obb.pos + fscalefactor*( -obb.right*obb.extents.x - obb.up*obb.extents.y + obb.dir*obb.extents.z );
+        vpoints[0] = obb.pos + fscalefactor*(  obb.right*obb.extents.x + obb.up*obb.extents.y - obb.dir*obb.extents.z );
+        vpoints[1] = obb.pos + fscalefactor*(  obb.right*obb.extents.x - obb.up*obb.extents.y - obb.dir*obb.extents.z );
+        vpoints[2] = obb.pos + fscalefactor*( -obb.right*obb.extents.x + obb.up*obb.extents.y - obb.dir*obb.extents.z );
+        vpoints[3] = obb.pos + fscalefactor*( -obb.right*obb.extents.x - obb.up*obb.extents.y - obb.dir*obb.extents.z );
 
         faceindices[0] = 0; faceindices[1] = 1; faceindices[2] = 2; faceindices[3] = 3;
     }
