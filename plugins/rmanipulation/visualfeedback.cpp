@@ -30,32 +30,79 @@ void SerializeVector4(std::stringstream& ss, const Vector& v) {
     ss << v.x << ", " << v.y << ", " << v.z << ", " << v.w;
 }
 
-/// samples rays from the projected OBB and returns true if the test function returns true
-/// for all the rays. Otherwise, returns false
-/// allowableoutliers - specifies the % of allowable outlying rays
-bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::function<bool(const Vector&)>& testfn, Transform& tcamera, dReal allowableocclusion=0)
+/// \brief Sample rays from the projected OBB on an image plane and returns true if the test function returns true for
+///        all the rays. Otherwise, return false
+/// \param obb The OBB of targetlink whose transform is set to Ttargetlinkincamera
+/// \param delta The discretization step size when sampling rays
+/// \param testfn A function for testing occlusion for rays
+/// \param tcamera Tcamerainworld
+/// \param allowableocclusion Allowable percentage of occluded rays
+/// \param bUseOnlyTopFace If true, will consider only the projection of the top face of the OBB. Otherwise, will consider three faces.
+bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::function<bool(const Vector&)>& testfn, Transform& tcamera, dReal allowableocclusion=0, bool bUseOnlyTopFace=false)
 {
     dReal fscalefactor = 0.95f; // have to make box smaller or else rays might miss
-    int numpoints = 4;
-    int numfaces = 1;
+    int numpoints, numfaces;
+    std::vector<Vector> vpoints;
+    std::vector<int> faceindices;
+    if( bUseOnlyTopFace ) {
+        // Project only one face of the OBB
+        numpoints = 4;
+        numfaces  = 1;
+        vpoints.resize(numpoints);
+        faceindices.resize(numfaces*numpoints);
 
-    // vpoints contains points on the top surface (the plane that intersects vdir) of the obb.
-    Vector vpoints[4] = {
-        obb.pos + fscalefactor*(  obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z ),
-        obb.pos + fscalefactor*(  obb.right*obb.extents.x - obb.up*obb.extents.y + obb.dir*obb.extents.z ),
-        obb.pos + fscalefactor*( -obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z ),
-        obb.pos + fscalefactor*( -obb.right*obb.extents.x - obb.up*obb.extents.y + obb.dir*obb.extents.z )
-    };
-    // Project OBB points onto the plane z = 1 (arbitrary image plane).
-    for( int i = 0; i < 4; ++i ) {
-        dReal fz = 1.0f/vpoints[i].z;
-        vpoints[i].x *= fz;
-        vpoints[i].y *= fz;
-        vpoints[i].z = 1;
+        vpoints[0] = obb.pos + fscalefactor*(  obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z );
+        vpoints[1] = obb.pos + fscalefactor*(  obb.right*obb.extents.x - obb.up*obb.extents.y + obb.dir*obb.extents.z );
+        vpoints[2] = obb.pos + fscalefactor*( -obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z );
+        vpoints[3] = obb.pos + fscalefactor*( -obb.right*obb.extents.x - obb.up*obb.extents.y + obb.dir*obb.extents.z );
+
+        faceindices[0] = 0; faceindices[1] = 1; faceindices[2] = 2; faceindices[3] = 3;
+    }
+    else {
+        // Project 3 faces of the OBB
+        numpoints = 8;
+        numfaces  = 3;
+        vpoints.resize(numpoints);
+        faceindices.resize(numfaces*numpoints);
+
+        vpoints[0] = obb.pos + fscalefactor*(  obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z );
+        vpoints[1] = obb.pos + fscalefactor*(  obb.right*obb.extents.x + obb.up*obb.extents.y - obb.dir*obb.extents.z );
+        vpoints[2] = obb.pos + fscalefactor*(  obb.right*obb.extents.x - obb.up*obb.extents.y + obb.dir*obb.extents.z );
+        vpoints[3] = obb.pos + fscalefactor*(  obb.right*obb.extents.x - obb.up*obb.extents.y - obb.dir*obb.extents.z );
+        vpoints[4] = obb.pos + fscalefactor*( -obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z );
+        vpoints[5] = obb.pos + fscalefactor*( -obb.right*obb.extents.x + obb.up*obb.extents.y - obb.dir*obb.extents.z );
+        vpoints[6] = obb.pos + fscalefactor*( -obb.right*obb.extents.x - obb.up*obb.extents.y + obb.dir*obb.extents.z );
+        vpoints[7] = obb.pos + fscalefactor*( -obb.right*obb.extents.x - obb.up*obb.extents.y - obb.dir*obb.extents.z );
+
+        if( obb.right.z >= 0 ) {
+            faceindices[0] = 4; faceindices[1] = 5; faceindices[2] = 6; faceindices[3] = 7;
+        }
+        else {
+            faceindices[0] = 0; faceindices[1] = 1; faceindices[2] = 2; faceindices[3] = 3;
+        }
+
+        if( obb.up.z >= 0 ) {
+            faceindices[4] = 2; faceindices[5] = 3; faceindices[6] = 6; faceindices[7] = 7;
+        }
+        else {
+            faceindices[4] = 0; faceindices[5] = 1; faceindices[6] = 4; faceindices[7] = 5;
+        }
+
+        if( obb.dir.z >= 0 ) {
+            faceindices[8] = 1; faceindices[9] = 3; faceindices[10] = 5; faceindices[11] = 7;
+        }
+        else {
+            faceindices[8] = 0; faceindices[9] = 2; faceindices[10] = 4; faceindices[11] = 6;
+        }
     }
 
-    int faceindices[1][4];
-    faceindices[0][0] = 0; faceindices[0][1] = 1; faceindices[0][2] = 2; faceindices[0][3] = 3;
+    // Project OBB points onto the plane z = 1 (arbitrary image plane).
+    for( int ipoint = 0; ipoint < numpoints; ++ipoint ) {
+        dReal fz = 1.0f/vpoints[ipoint].z;
+        vpoints[ipoint].x *= fz;
+        vpoints[ipoint].y *= fz;
+        vpoints[ipoint].z = 1;
+    }
 
     if( 0 ) { // for debugging
         Vector vpoints3d[numpoints];
@@ -80,11 +127,11 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
     int nallowableoutliers=0;
     if( allowableocclusion > 0 ) {
         // have to compute the area of all the faces!
-        dReal farea=0;
+        dReal farea = 0;
         for(int i = 0; i < numfaces; ++i) {
-            Vector v0 = vpoints[faceindices[i][0]];
-            Vector v1 = vpoints[faceindices[i][1]]-v0;
-            Vector v2 = vpoints[faceindices[i][2]]-v0;
+            Vector v0 = vpoints[faceindices[i*numfaces + 0]];
+            Vector v1 = vpoints[faceindices[i*numfaces + 1]] - v0;
+            Vector v2 = vpoints[faceindices[i*numfaces + 2]] - v0;
             Vector v = v1.cross(v2);
             farea += v.lengthsqr3();
         }
@@ -92,10 +139,10 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
     }
 
     for(int i = 0; i < numfaces; ++i) {
-        Vector v0 = vpoints[faceindices[i][0]];
-        Vector v1 = vpoints[faceindices[i][1]]-v0;
-        Vector v2 = vpoints[faceindices[i][2]]-v0;
-        Vector v3 = vpoints[faceindices[i][3]]-v0;
+        Vector v0 = vpoints[faceindices[i*numfaces + 0]];
+        Vector v1 = vpoints[faceindices[i*numfaces + 1]] - v0;
+        Vector v2 = vpoints[faceindices[i*numfaces + 2]] - v0;
+        Vector v3 = vpoints[faceindices[i*numfaces + 3]] - v0;
         dReal f3length = RaveSqrt(v3.lengthsqr2());
         Vector v3norm = v3 * (1.0f/f3length);
         Vector v3perp(-v3norm.y,v3norm.x,0,0);
@@ -119,8 +166,8 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
             }
         }
 
-        // Vector vtripoints[6] = {vpoints3d[faceindices[i][0]], vpoints3d[faceindices[i][3]], vpoints3d[faceindices[i][1]],
-        //                         vpoints3d[faceindices[i][0]], vpoints3d[faceindices[i][1]], vpoints3d[faceindices[i][3]]};
+        // Vector vtripoints[6] = {vpoints3d[faceindices[i*numfaces + 0]], vpoints3d[faceindices[i*numfaces + 3]], vpoints3d[faceindices[i*numfaces + 1]],
+        //                         vpoints3d[faceindices[i*numfaces + 0]], vpoints3d[faceindices[i*numfaces + 1]], vpoints3d[faceindices[i*numfaces + 3]]};
         // penv->drawtrimesh(vtripoints[0], 16, NULL, 2);
 
         int n2 = (int)(f2proj/delta);
@@ -891,7 +938,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
     /// \brief vdir is a unit vector describing the direction.
     /// \brief fdist is the translation along vdir
     /// \brief froll is the angle for which the local x-and y- axes are rotated.
-    TransformMatrix ComputeCameraMatrix(const Vector& vdir,dReal fdist,dReal froll)
+    TransformMatrix ComputeCameraMatrix(const Vector& vdir,dReal fdist, dReal froll, dReal fpitch=0)
     {
         // Compute orthogonal axes from vdir
         Vector vright, vup = Vector(0,1,0) - vdir * vdir.y;
@@ -906,14 +953,21 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
         // Construct a transformation matrix
         TransformMatrix tcamera;
-        tcamera.m[2] = vdir.x; tcamera.m[6] = vdir.y; tcamera.m[10] = vdir.z;
-
-        // Rotate the local x-and y-axis (right & up axes) around the local z (dir) according to the given froll.
         dReal fcosroll = RaveCos(froll), fsinroll = RaveSin(froll);
+        dReal fcospitch = RaveCos(fpitch), fsinpitch = RaveSin(fpitch);
+        // Rotate around its local Z-axis
+        tcamera.m[2] = vdir.x; tcamera.m[6] = vdir.y; tcamera.m[10] = vdir.z;
         tcamera.m[0] = vright.x*fcosroll+vup.x*fsinroll; tcamera.m[1] = -vright.x*fsinroll+vup.x*fcosroll;
         tcamera.m[4] = vright.y*fcosroll+vup.y*fsinroll; tcamera.m[5] = -vright.y*fsinroll+vup.y*fcosroll;
         tcamera.m[8] = vright.z*fcosroll+vup.z*fsinroll; tcamera.m[9] = -vright.z*fsinroll+vup.z*fcosroll;
-        tcamera.trans = -fdist * tcamera.rotate(_vcenterconvex);
+        tcamera.trans = -fdist * tcamera.rotate(_vcenterconvex); // translation component has to be computed before rotating around the local X
+
+        // Rotate around its local X-axis
+        dReal t1 = tcamera.m[1], t5 = tcamera.m[5], t9 = tcamera.m[9];
+        dReal t2 = tcamera.m[2], t6 = tcamera.m[6], t10 = tcamera.m[10];
+        tcamera.m[1] = fcospitch*t1 + fsinpitch*t2;  tcamera.m[2]  = -fsinpitch*t1 + fcospitch*t2;
+        tcamera.m[5] = fcospitch*t5 + fsinpitch*t6;  tcamera.m[6]  = -fsinpitch*t5 + fcospitch*t6;
+        tcamera.m[9] = fcospitch*t9 + fsinpitch*t10; tcamera.m[10] = -fsinpitch*t9 + fcospitch*t10;
         return tcamera;
     }
 
