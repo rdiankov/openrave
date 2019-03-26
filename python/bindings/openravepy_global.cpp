@@ -1163,6 +1163,8 @@ void init_openravepy_global()
     .value("RobotManipulators",SO_RobotManipulators)
     .value("RobotSensors",SO_RobotSensors)
     .value("Geometry",SO_Geometry)
+    .value("InverseKinematics",SO_InverseKinematics)
+    .value("JointLimits",SO_JointLimits)
     ;
     enum_<InterfaceType>("InterfaceType" DOXY_ENUM(InterfaceType))
     .value(RaveGetInterfaceName(PT_Planner).c_str(),PT_Planner)
