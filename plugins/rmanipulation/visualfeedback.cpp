@@ -473,8 +473,8 @@ public:
 private:
         /// \brief return true if not occluded by any other target (ray hits the intended target box)
         ///
-        /// \brief v is in camera coordinate system
-        /// \brief tcamera is the camera in the world coordinate system
+        /// \param v is in camera coordinate system
+        /// \param tcamera is the camera in the world coordinate system
         bool _TestRay(const Vector& v, const TransformMatrix& tcamera, std::string& errormsg)
         {
             RAY r;
@@ -935,10 +935,12 @@ Visibility computation checks occlusion with other objects using ray sampling in
     ///        radius. This function returns a transformation such that its origin is on the sphere's surface and its
     ///        local Z-axis is pointing radially inwards.
     ///
-    /// \brief vdir is a unit vector describing the direction.
-    /// \brief fdist is the translation along vdir
-    /// \brief froll is the angle for which the local x-and y- axes are rotated.
-    TransformMatrix ComputeCameraMatrix(const Vector& vdir,dReal fdist, dReal froll, dReal fpitch=0)
+    /// \param vdir is a unit vector describing the direction.
+    /// \param fdist is the translation along vdir
+    /// \param froll is the angle for which the local x-and y- axes are rotated.
+    /// \param ftilt is the angle to rotate about the axis specified by iaxis
+    /// \param iaxis if 0, the transform is rotated about its local X axis. if 1, the transform is rotated about its local Y axis
+    TransformMatrix ComputeCameraMatrix(const Vector& vdir,dReal fdist, dReal froll, dReal ftilt=0, int iaxis=0)
     {
         // Compute orthogonal axes from vdir
         Vector vright, vup = Vector(0,1,0) - vdir * vdir.y;
@@ -954,7 +956,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         // Construct a transformation matrix
         TransformMatrix tcamera;
         dReal fcosroll = RaveCos(froll), fsinroll = RaveSin(froll);
-        dReal fcospitch = RaveCos(fpitch), fsinpitch = RaveSin(fpitch);
+        dReal fcos = RaveCos(ftilt), fsin = RaveSin(ftilt);
         // Rotate around its local Z-axis
         tcamera.m[2] = vdir.x; tcamera.m[6] = vdir.y; tcamera.m[10] = vdir.z;
         tcamera.m[0] = vright.x*fcosroll+vup.x*fsinroll; tcamera.m[1] = -vright.x*fsinroll+vup.x*fcosroll;
@@ -962,12 +964,22 @@ Visibility computation checks occlusion with other objects using ray sampling in
         tcamera.m[8] = vright.z*fcosroll+vup.z*fsinroll; tcamera.m[9] = -vright.z*fsinroll+vup.z*fcosroll;
         tcamera.trans = -fdist * tcamera.rotate(_vcenterconvex); // translation component has to be computed before rotating around the local X
 
-        // Rotate around its local X-axis
-        dReal t1 = tcamera.m[1], t5 = tcamera.m[5], t9 = tcamera.m[9];
-        dReal t2 = tcamera.m[2], t6 = tcamera.m[6], t10 = tcamera.m[10];
-        tcamera.m[1] = fcospitch*t1 + fsinpitch*t2;  tcamera.m[2]  = -fsinpitch*t1 + fcospitch*t2;
-        tcamera.m[5] = fcospitch*t5 + fsinpitch*t6;  tcamera.m[6]  = -fsinpitch*t5 + fcospitch*t6;
-        tcamera.m[9] = fcospitch*t9 + fsinpitch*t10; tcamera.m[10] = -fsinpitch*t9 + fcospitch*t10;
+        if( iaxis == 0 ) {
+            // Rotate around its local X-axis
+            dReal t1 = tcamera.m[1], t5 = tcamera.m[5], t9 = tcamera.m[9];
+            dReal t2 = tcamera.m[2], t6 = tcamera.m[6], t10 = tcamera.m[10];
+            tcamera.m[1] = fcos*t1 + fsin*t2;  tcamera.m[2]  = -fsin*t1 + fcos*t2;
+            tcamera.m[5] = fcos*t5 + fsin*t6;  tcamera.m[6]  = -fsin*t5 + fcos*t6;
+            tcamera.m[9] = fcos*t9 + fsin*t10; tcamera.m[10] = -fsin*t9 + fcos*t10;
+        }
+        else if( iaxis == 1 ) {
+            // Rotate around its local Y-axis
+            dReal t0 = tcamera.m[0], t4 = tcamera.m[4], t8 = tcamera.m[8];
+            dReal t2 = tcamera.m[2], t6 = tcamera.m[6], t10 = tcamera.m[10];
+            tcamera.m[0] = fcos*t0 - fsin*t2;  tcamera.m[2]  = fsin*t0 + fcos*t2;
+            tcamera.m[4] = fcos*t4 - fsin*t6;  tcamera.m[6]  = fsin*t4 + fcos*t6;
+            tcamera.m[8] = fcos*t8 - fsin*t10; tcamera.m[10] = fsin*t8 + fcos*t10;
+        }
         return tcamera;
     }
 
@@ -976,6 +988,8 @@ Visibility computation checks occlusion with other objects using ray sampling in
     {
         string cmd;
         int numrolls=8;
+        int iStartTiltAngle=10, iEndTiltAngle=20, iStepTiltAngle=10; // in degrees
+        dReal fToRadian = PI/(dReal) 180;
         vector<Vector> vconedirangles;
         //vector<Transform> vtransforms; // the camera transforms with respect to the target link
         std::vector<Transform> vCamerasInPatternCoord; // cameras with respect to the pattern coordinate system (usually the pattern face is in +z)
@@ -997,6 +1011,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
             }
             else if( cmd == "numrolls" )
                 sinput >> numrolls;
+            else if( cmd == "tiltangles" ) {
+                sinput >> iStartTiltAngle >> iEndTiltAngle >> iStepTiltAngle;
+            }
             else if( cmd == "extents" ) {
                 // Each extent is a 3D vector describing the direction from the pattern to the camera. Its norm is the
                 // distance. Note that numrolls has to be defined *before* extents.
@@ -1058,7 +1075,10 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 }
                 bool bInvert = _sensorrobot != _robot; // if True, then invert sampled transforms of the sphere.
                 dReal deltaroll = PI*2.0f/(dReal)numrolls;
-                vCamerasInPatternCoord.resize(spheremesh.vertices.size()*numdists*numrolls);
+                dReal deltatilt = iStepTiltAngle * fToRadian;
+                int numtilts = ((iEndTiltAngle - iStartTiltAngle)/iStepTiltAngle) + 1;
+                int numaxes = 2;
+                vCamerasInPatternCoord.resize(spheremesh.vertices.size()*numdists*numrolls*numtilts*numaxes*2);
                 vector<Transform>::iterator itcamera = vCamerasInPatternCoord.begin();
 #ifdef CALIBRATION_TIMING_DEBUG
                 uint64_t starttime_computetransform = utils::GetMicroTime();
@@ -1068,18 +1088,32 @@ Visibility computation checks occlusion with other objects using ray sampling in
                     for(int i = 0; i < numdists; ++i) {
                         dReal froll = 0;
                         for(int iroll = 0; iroll < numrolls; ++iroll, froll += deltaroll) {
-                            *itcamera = ComputeCameraMatrix(spheremesh.vertices[j],vdists[i],froll);
-                            if( bInvert ) {
-                                *itcamera = itcamera->inverse();
+                            for(int iaxis = 0; iaxis < numaxes; ++iaxis) {
+                                // Consider both local X and Y rotation
+                                dReal ftilt = iStartTiltAngle * fToRadian;
+                                for(int itilt = 0; itilt < numtilts; ++itilt, ftilt += deltatilt) {
+                                    // Consider positive tilting angle
+                                    *itcamera = ComputeCameraMatrix(spheremesh.vertices[j], vdists[i], froll, ftilt, iaxis);
+                                    if( bInvert ) {
+                                        *itcamera = itcamera->inverse();
+                                    }
+                                    ++itcamera;
+
+                                    // Consider negative tilting angle
+                                    *itcamera = ComputeCameraMatrix(spheremesh.vertices[j], vdists[i], froll, -ftilt, iaxis);
+                                    if( bInvert ) {
+                                        *itcamera = itcamera->inverse();
+                                    }
+                                    ++itcamera;
+                                }
                             }
-                            ++itcamera;
                         }
                     }
                 }
 #ifdef CALIBRATION_TIMING_DEBUG
                 uint64_t endtime_computetransform = utils::GetMicroTime();
                 float fElapsed_computetransform = (endtime_computetransform - starttime_computetransform)*1e-6f;
-                RAVELOG_DEBUG_FORMAT("transform generation: %f s.", fElapsed_computetransform);
+                RAVELOG_DEBUG_FORMAT("transform generation (total=%d): %f s.", vCamerasInPatternCoord.size()%fElapsed_computetransform);
 #endif
             }
             else if( cmd == "conedirangle" ) {
@@ -1155,7 +1189,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
 #ifdef CALIBRATION_TIMING_DEBUG
             uint64_t endtime_filtertransforms = utils::GetMicroTime();
             float fElapsed_filtertransforms = (endtime_filtertransforms - starttime_filtertransforms)*1e-6f;
-            RAVELOG_DEBUG_FORMAT("transform filtering by cone dirangles: %f s.", fElapsed_filtertransforms);
+            RAVELOG_DEBUG_FORMAT("transform filtering by cone dirangles (remaining=%d): %f s.", vCamerasInTargetLinkCoord.size()%fElapsed_filtertransforms);
 #endif
         }
         else {

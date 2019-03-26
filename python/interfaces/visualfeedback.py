@@ -81,12 +81,14 @@ class VisualFeedback:
         if res is None:
             raise PlanningError()
         return res
-    def ProcessVisibilityExtents(self,numrolls=None,transforms=None,extents=None,sphere=None,conedirangles=None):
+    def ProcessVisibilityExtents(self,numrolls=None,tiltangles=None,transforms=None,extents=None,sphere=None,conedirangles=None):
         """See :ref:`module-visualfeedback-processvisibilityextents`
         """
         cmd = 'ProcessVisibilityExtents '
         if numrolls is not None:
             cmd += 'numrolls %d '%numrolls
+        if tiltangles is not None:
+            cmd += 'tiltangles %d %d %d '%(tiltangles[0], tiltangles[1], tiltangles[2])
         if transforms is not None:
             cmd += 'transforms %d '%len(transforms)
             for f in numpy.reshape(transforms,len(transforms)*7):
