@@ -798,7 +798,7 @@ PlannerStatus _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal 
         return PlannerStatus("InitPlan failed", PS_Failed);
     }
     PlannerStatus plannerStatus = planner->PlanPath(traj);
-    if( plannerStatus.GetStatusCode() != PS_HasSolution ) {
+    if( !(plannerStatus.statusCode & PS_HasSolution) ) {
         return plannerStatus;
     }
 
@@ -1826,7 +1826,7 @@ TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal startt
 
     if( endtime < traj->GetDuration() ) {
         endindex = traj->GetFirstWaypointIndexAfterTime(endtime);
-        if( endindex >= traj->GetNumWaypoints() ) {
+        if( endindex >= (int)traj->GetNumWaypoints() ) {
             endindex = traj->GetNumWaypoints()-1;
         }
     }

@@ -116,22 +116,26 @@ typedef boost::shared_ptr<ConstraintFilterReturn> ConstraintFilterReturnPtr;
 class OPENRAVE_API PlannerStatus
 {
 public:
-    CollisionReportPtr _report;       // Optional,  collision report at the time of the error. Ideally should contents contacts information.
-    std::string _sDescription;        // Optional, the description of how/why the error happended. Displayed to the user by the UI. It will automatically be filled with a generic message corresponding to statusCode if not provided.
-    std::string _sErrorOrigin;        // Auto, a string representing the code path of the error. Automatically filled on construction. 
-    std::vector<dReal> _vJointValues; // Optional,  the robot's joint values in rad or m
-    IkParameterization _ikparam;      // Optional,  the ik parameter that failed to find a solution.
-    int _statusCode;                  // Mandatory?
-
     PlannerStatus();
     PlannerStatus(const int statusCode);
-    PlannerStatus(const std::string& description, const int statusCode, CollisionReportPtr report=NULL);
-    PlannerStatus(const std::string& description, const int statusCode, IkParameterization ikparam, CollisionReportPtr report=NULL);
-    PlannerStatus(const std::string& description, const int statusCode, std::vector<dReal> jointValues, CollisionReportPtr report=NULL);
+    PlannerStatus(const std::string& description, const int statusCode, CollisionReportPtr report=CollisionReportPtr());
+    PlannerStatus(const std::string& description, const int statusCode, const IkParameterization& ikparam, CollisionReportPtr report=CollisionReportPtr());
+    PlannerStatus(const std::string& description, const int statusCode, const std::vector<dReal>& jointValues, CollisionReportPtr report=CollisionReportPtr());
     virtual ~PlannerStatus();
 
-    bool serializeToJson(rapidjson::Document& output) const;
-    int GetStatusCode();
+    void SerializeToJson(rapidjson::Document& output) const;
+
+    inline uint32_t GetStatusCode() const {
+        return statusCode;
+    }
+    
+    std::string description;        ///< Optional, the description of how/why the error happended. Displayed to the user by the UI. It will automatically be filled with a generic message corresponding to statusCode if not provided.
+    uint32_t statusCode;                  // combination of PS_X fields
+    IkParameterization ikparam;      // Optional,  the ik parameter that failed to find a solution.
+    std::vector<dReal> jointValues; // Optional,  the robot's joint values in rad or m    
+    CollisionReportPtr report;       ///< Optional,  collision report at the time of the error. Ideally should contents contacts information.
+
+    std::string errorOrigin;        // Auto, a string representing the code path of the error. Automatically filled on construction. 
 };
 
 /** \brief <b>[interface]</b> Planner interface that generates trajectories for target objects to follow through the environment. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_planner.
@@ -597,7 +601,7 @@ protected:
     virtual PlannerStatus _ProcessPostPlanners(RobotBasePtr probot, TrajectoryBasePtr traj);
 
     virtual bool _OptimizePath(RobotBasePtr probot, TrajectoryBasePtr traj) RAVE_DEPRECATED {
-        return !!(_ProcessPostPlanners(probot,traj).GetStatusCode() & PS_HasSolution);
+        return !!(_ProcessPostPlanners(probot,traj).statusCode & PS_HasSolution);
     }
 
     /// \brief Calls the registered callbacks in order and returns immediately when an action other than PA_None is returned.

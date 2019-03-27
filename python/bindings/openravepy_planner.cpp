@@ -36,43 +36,39 @@ public:
 
 
 class PyPlannerStatus
-    {
+{
 public:
-    PyPlannerStatus(){
-        _sDescription = "";
-        _sErrorOrigin = "";
-        _statusCode = 0;
-        _vJointValues = numeric::array(boost::python::list());
-        _report = object();
-        _ikparam = object();
+    PyPlannerStatus() {
+        statusCode = 0;
+        jointValues = numeric::array(boost::python::list());
     }
 
     PyPlannerStatus(const PlannerStatus& status) {
         // Just serializeToJason?
-        _sDescription = status._sDescription; //ConvertStringToUnicode??
-        _sErrorOrigin = status._sErrorOrigin;
-        _statusCode = status._statusCode;
-        _vJointValues = toPyArray(status._vJointValues);
+        description = ConvertStringToUnicode(status.description);
+        errorOrigin = ConvertStringToUnicode(status.errorOrigin);
+        statusCode = status.statusCode;
+        jointValues = toPyArray(status.jointValues);
 
-        if( !status._report ) {
+        if( !status.report ) {
             //_report = "";
-            _report = object();
+            report = object();
         }
         else {
             //_report = status._report->__str__();
-            _report = object(openravepy::toPyCollisionReport(status._report, NULL));
+            report = object(openravepy::toPyCollisionReport(status.report, NULL));
         }
 
-        _ikparam = toPyIkParameterization(status._ikparam);
+        ikparam = toPyIkParameterization(status.ikparam);
     }
 
-    object _report;
+    object report;
     //std::string _report;
-    std::string _sDescription;
-    std::string _sErrorOrigin;
-    object _vJointValues;
-    object _ikparam;
-    int _statusCode;
+    object description;
+    object errorOrigin;
+    object jointValues;
+    object ikparam;
+    uint32_t statusCode;
 };
 
 object toPyPlannerStatus(const PlannerStatus& status)
@@ -179,7 +175,7 @@ public:
         {
             _paramswrite->_nMaxIterations = nMaxIterations;
         }
-        
+
         object CheckPathAllConstraints(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval, uint32_t options=0xffff, bool filterreturn=false)
         {
             const std::vector<dReal> q0, q1, dq0, dq1;
@@ -374,10 +370,10 @@ void init_openravepy_planner()
 {
 
     object plannerstatuscode = enum_<PlannerStatusCode>("PlannerStatusCode" DOXY_ENUM(PlannerStatusCode))
-                           .value("Failed",PS_Failed)
-                           .value("HasSolution",PS_HasSolution)
-                           .value("Interrupted",PS_Interrupted)
-                           .value("InterruptedWithSolution",PS_InterruptedWithSolution)
+                               .value("Failed",PS_Failed)
+                               .value("HasSolution",PS_HasSolution)
+                               .value("Interrupted",PS_Interrupted)
+                               .value("InterruptedWithSolution",PS_InterruptedWithSolution)
     ;
 
     object planneraction = enum_<PlannerAction>("PlannerAction" DOXY_ENUM(PlannerAction))
@@ -387,12 +383,12 @@ void init_openravepy_planner()
     ;
 
     class_<PyPlannerStatus, boost::shared_ptr<PyPlannerStatus> >("PlannerStatus", DOXY_CLASS(PlannerStatus))
-        .def_readwrite("report",&PyPlannerStatus::_report)
-        .def_readwrite("description",&PyPlannerStatus::_sDescription)
-        .def_readwrite("errorOrigin",&PyPlannerStatus::_sErrorOrigin)
-        .def_readwrite("jointValues",&PyPlannerStatus::_vJointValues)
-        .def_readwrite("ikparam",&PyPlannerStatus::_ikparam)
-        .def_readwrite("statusCode",&PyPlannerStatus::_statusCode)
+    .def_readwrite("report",&PyPlannerStatus::report)
+    .def_readwrite("description",&PyPlannerStatus::description)
+    .def_readwrite("errorOrigin",&PyPlannerStatus::errorOrigin)
+    .def_readwrite("jointValues",&PyPlannerStatus::jointValues)
+    .def_readwrite("ikparam",&PyPlannerStatus::ikparam)
+    .def_readwrite("statusCode",&PyPlannerStatus::statusCode)
     ;
 
     class_<PyPlannerProgress, boost::shared_ptr<PyPlannerProgress> >("PlannerProgress", DOXY_CLASS(PlannerBase::PlannerProgress))

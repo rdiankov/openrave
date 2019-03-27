@@ -527,7 +527,7 @@ Some python code to display data::\n\
         RAVELOG_DEBUG(description);
         PlannerStatus status = _ProcessPostPlanners(_robot,ptraj);
         //TODO should use accessor to change description
-        status._sDescription = description;
+        status.description = description;
         return status;
     }
 
@@ -839,7 +839,7 @@ public:
                 if( bfound ) {
                     if( iter >= _parameters->_nMinIterations ) {
                         // check how many times we've got a goal?
-                        if( numfoundgoals >= _parameters->_minimumgoalpaths ) {
+                        if( numfoundgoals >= (int)_parameters->_minimumgoalpaths ) {
                             break;
                         }
                     }

@@ -84,81 +84,92 @@ int AddStatesWithLimitCheck(std::vector<dReal>& q, const std::vector<dReal>& qde
     return status;
 }
 
-PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, CollisionReportPtr report):
-    _sDescription(description),
-    _statusCode(statusCode),
-    _report(report)
+PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, CollisionReportPtr report) :
+    description(description),
+    statusCode(statusCode),
+    report(report)
 {
-    _sErrorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
+    // not sure if this works...
+    errorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
 }
 
-PlannerStatus::PlannerStatus(const int statusCode):
+PlannerStatus::PlannerStatus(const int statusCode) :
     PlannerStatus("", statusCode)
 {
-    std::string description("");
-    if(statusCode & PS_Failed)
+    description.clear();
+    if(statusCode & PS_Failed) {
         description += "planner failed with generic error. ";
-    if(statusCode & PS_HasSolution)
+    }
+    if(statusCode & PS_HasSolution) {
         description += "planner succeeded. ";
-    if(statusCode & PS_Interrupted)
+    }
+    if(statusCode & PS_Interrupted) {
         description += "planning was interrupted, but can be resumed by calling PlanPath again. ";
-    if(statusCode & PS_InterruptedWithSolution)
+    }
+    if(statusCode & PS_InterruptedWithSolution) {
         description += "planning was interrupted, but a valid path/solution was returned. Can call PlanPath again to refine results. ";
-    if(statusCode & PS_FailedDueToCollision)
+    }
+    if(statusCode & PS_FailedDueToCollision) {
         description += "planner failed due to collision constraints. ";
-    if(statusCode & PS_FailedDueToInitial)
+    }
+    if(statusCode & PS_FailedDueToInitial) {
         description += "failed due to initial configurations. ";
-    if(statusCode & PS_FailedDueToGoal)
+    }
+    if(statusCode & PS_FailedDueToGoal) {
         description += "failed due to goal configurations. ";
-    if(statusCode & PS_FailedDueToKinematics)
+    }
+    if(statusCode & PS_FailedDueToKinematics) {
         description += "failed due to kinematics constraints. ";
-    if(statusCode & PS_FailedDueToIK)
+    }
+    if(statusCode & PS_FailedDueToIK) {
         description += "failed due to inverse kinematics (could be due to collisions or velocity constraints, but don't know). ";
-    if(statusCode & PS_FailedDueToVelocityConstraints)
+    }
+    if(statusCode & PS_FailedDueToVelocityConstraints) {
         description += "failed due to velocity constraints. ";
-    if(description.empty())
-        throw OPENRAVE_EXCEPTION_FORMAT(_("planner status code (%i) is not supported by planner status default constructor"), statusCode, ORE_InvalidArguments);
-
-    _sDescription = description;
+    }
+    if(description.empty()) {
+        RAVELOG_WARN_FORMAT(_("planner status code (0x%x) is not supported by planner status default constructor"), statusCode);
+    }
 }
-        
-PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, IkParameterization ikparam, CollisionReportPtr report):
+
+PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, const IkParameterization& ikparam, CollisionReportPtr report) :
     PlannerStatus(description, statusCode, report)
 {
-    _ikparam = ikparam;
+    this->ikparam = ikparam;
 }
-    
-PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, std::vector<dReal> jointValues, CollisionReportPtr report):
+
+PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, const std::vector<dReal>& jointValues, CollisionReportPtr report) :
     PlannerStatus(description, statusCode, report)
 {
-    _vJointValues = jointValues;
+    this->jointValues = jointValues;
 }
 
-PlannerStatus::~PlannerStatus() {}
+PlannerStatus::~PlannerStatus() {
+}
 
-bool PlannerStatus::serializeToJson(rapidjson::Document& output) const
+void PlannerStatus::SerializeToJson(rapidjson::Document& output) const
 {
-    openravejson::SetJsonValueByKey(output, "errorOrigin", _sErrorOrigin);
-    openravejson::SetJsonValueByKey(output, "description", _sDescription);
-    openravejson::SetJsonValueByKey(output, "statusCode", _statusCode);
-    if(_vJointValues.size() > 0){
-        openravejson::SetJsonValueByKey(output, "jointValues", _vJointValues);
+    openravejson::SetJsonValueByKey(output, "errorOrigin", errorOrigin);
+    openravejson::SetJsonValueByKey(output, "description", description);
+    openravejson::SetJsonValueByKey(output, "statusCode", statusCode);
+    if(jointValues.size() > 0) {
+        openravejson::SetJsonValueByKey(output, "jointValues", jointValues);
     }
 
-    if(_report != NULL){
+    if(report != NULL) {
         rapidjson::Document reportjson(rapidjson::kObjectType);
-        if(_report->plink1){
-            openravejson::SetJsonValueByKey(reportjson, "plink1", _report->plink1->GetName());
+        if(report->plink1) {
+            openravejson::SetJsonValueByKey(reportjson, "plink1", report->plink1->GetName());
         }
-        if(_report->plink2){
-            openravejson::SetJsonValueByKey(reportjson, "plink2", _report->plink2->GetName());
+        if(report->plink2) {
+            openravejson::SetJsonValueByKey(reportjson, "plink2", report->plink2->GetName());
         }
         rapidjson::Document reportContactsjson(rapidjson::kObjectType);
-        for (size_t i=0; i<_report->contacts.size(); ++i) {
+        for (size_t i=0; i<report->contacts.size(); ++i) {
             rapidjson::Document reportContactsPosjson(rapidjson::kObjectType);
-            openravejson::SetJsonValueByKey(reportContactsPosjson, "x", _report->contacts[i].pos.x);
-            openravejson::SetJsonValueByKey(reportContactsPosjson, "y", _report->contacts[i].pos.y);
-            openravejson::SetJsonValueByKey(reportContactsPosjson, "z", _report->contacts[i].pos.z);
+            openravejson::SetJsonValueByKey(reportContactsPosjson, "x", report->contacts[i].pos.x);
+            openravejson::SetJsonValueByKey(reportContactsPosjson, "y", report->contacts[i].pos.y);
+            openravejson::SetJsonValueByKey(reportContactsPosjson, "z", report->contacts[i].pos.z);
             openravejson::SetJsonValueByKey(reportContactsjson, std::to_string(i), reportContactsPosjson);
         }
         openravejson::SetJsonValueByKey(reportjson, "contacts", reportContactsjson);
@@ -167,25 +178,14 @@ bool PlannerStatus::serializeToJson(rapidjson::Document& output) const
     }
 
     //Eventually, serialization could be in openravejson.h ?
-    try{
+    if( ikparam.GetType() != IKP_None ) {
         std::stringstream ss;
         ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
-        ss << _ikparam;
-        openravejson::SetJsonValueByKey(output, "IkParameterization", ss.str());
+        ss << ikparam;
+        openravejson::SetJsonValueByKey(output, "ikparam", ss.str());
     }
-    catch(const openrave_exception& ex){
-       //Ignore empty _ikparam
-    }
-    
-    //return DumpJson(extraoptionsjson);
-    return true;
 }
 
-int PlannerStatus::GetStatusCode()
-{
-    return _statusCode;
-}
-    
 PlannerBase::PlannerParameters::StateSaver::StateSaver(PlannerParametersPtr params) : _params(params)
 {
     _params->_getstatefn(_values);
@@ -561,7 +561,7 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
         _setstatevaluesfn = boost::bind(SetActiveDOFValuesParameters,robot, _1, _2);
         _diffstatefn = boost::bind(&RobotBase::SubtractActiveDOFValues,robot,_1,_2);
     }
-    
+
     SpaceSamplerBasePtr pconfigsampler = RaveCreateSpaceSampler(robot->GetEnv(),str(boost::format("robotconfiguration %s")%robot->GetName()));
     _listInternalSamplers.clear();
     _listInternalSamplers.push_back(pconfigsampler);
