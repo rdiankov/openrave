@@ -123,20 +123,31 @@ public:
     PlannerStatus(const std::string& description, const int statusCode, const std::vector<dReal>& jointValues, CollisionReportPtr report=CollisionReportPtr());
     virtual ~PlannerStatus();
 
+    PlannerStatus& SetErrorOrigin(const std::string& errorOrigin);
+    PlannerStatus& SetPlannerParameters(PlannerParametersConstPtr parameters);
+
     void SerializeToJson(rapidjson::Document& output) const;
 
     inline uint32_t GetStatusCode() const {
         return statusCode;
     }
-    
+
+    /// \brief return true if planner gave a solution
+    inline bool HasSolution() const {
+        return statusCode&PS_HasSolution;
+    }
+
+    PlannerParametersConstPtr parameters; ///< parameters used in the planner
     std::string description;        ///< Optional, the description of how/why the error happended. Displayed to the user by the UI. It will automatically be filled with a generic message corresponding to statusCode if not provided.
-    uint32_t statusCode;                  // combination of PS_X fields
+    uint32_t statusCode; // combination of PS_X fields (PlannerStatusCode)
     IkParameterization ikparam;      // Optional,  the ik parameter that failed to find a solution.
-    std::vector<dReal> jointValues; // Optional,  the robot's joint values in rad or m    
+    std::vector<dReal> jointValues; // Optional,  the robot's joint values in rad or m
     CollisionReportPtr report;       ///< Optional,  collision report at the time of the error. Ideally should contents contacts information.
 
-    std::string errorOrigin;        // Auto, a string representing the code path of the error. Automatically filled on construction. 
+    std::string errorOrigin;        // Auto, a string representing the code path of the error. Automatically filled on construction.
 };
+
+#define OPENRAVE_PLANNER_STATUS(...) PlannerStatus(__VA_ARGS__).SetErrorOrigin(str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__)).SetPlannerParameters(_parameters);
 
 /** \brief <b>[interface]</b> Planner interface that generates trajectories for target objects to follow through the environment. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_planner.
     \ingroup interfaces
@@ -371,13 +382,13 @@ private:
 
         /** \brief Adds a delta state to a curent state, acting like a next-nearest-neighbor function along a given direction.
 
-	    status = _neighstatefn(q, qdelta, option) -> q = Filter(q + qdelta)
+           status = _neighstatefn(q, qdelta, option) -> q = Filter(q + qdelta)
 
-	    \param q the current state. In order to save computation, assumes this state is the currently set configuration.
-	    \param qdelta the incremental configuration to be added to q
-	    \param options a set of flags from NeighborStateOptions
-	    \return one of NSS_X (NeighborStateStatus)
-	    
+           \param q the current state. In order to save computation, assumes this state is the currently set configuration.
+           \param qdelta the incremental configuration to be added to q
+           \param options a set of flags from NeighborStateOptions
+           \return one of NSS_X (NeighborStateStatus)
+
             In RRTs this is used for the extension operation. The new state is stored in the first parameter q.
             Note that the function can also add a filter to the final destination (like projecting onto a constraint manifold).
          */
@@ -388,7 +399,7 @@ private:
         /// size always has to be a multiple of GetDOF()
         /// note: not all planners support multiple goals
         std::vector<dReal> vinitialconfig, vgoalconfig;
-        
+
         /// \brief the initial velocities (at vinitialconfig) of the robot when starting to plan. If empty, then set to zero.
         std::vector<dReal> _vInitialConfigVelocities, _vGoalConfigVelocities;
 
@@ -417,7 +428,7 @@ private:
 
         /// \brief max planning time in ms. If 0, then there is no time limit
         uint32_t _nMaxPlanningTime;
-        
+
         /// \brief Specifies the planner that will perform the post-processing path smoothing before returning.
         ///
         /// If empty, will not path smooth the returned trajectories (used to measure algorithm time)
@@ -524,7 +535,7 @@ public:
         PlannerProgress();
         int _iteration;
     };
-    
+
     PlannerBase(EnvironmentBasePtr penv);
     virtual ~PlannerBase() {
 
@@ -581,7 +592,7 @@ public:
         Allows the calling process to control the behavior of the planner from a high-level perspective
      */
     virtual UserDataPtr RegisterPlanCallback(const PlanCallbackFn& callbackfn);
-    
+
 protected:
     inline PlannerBasePtr shared_planner() {
         return boost::static_pointer_cast<PlannerBase>(shared_from_this());

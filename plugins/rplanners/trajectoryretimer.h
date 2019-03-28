@@ -110,13 +110,13 @@ public:
         if( _parameters->_hastimestamps && itoldgrouptime == ptraj->GetConfigurationSpecification()._vgroups.end() ) {
             std::string description = "trajectory does not have timestamps, even though parameters say timestamps are needed\n";
             RAVELOG_WARN(description);
-            return PlannerStatus(description, PS_Failed);
+            return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
         }
         size_t numpoints = ptraj->GetNumWaypoints();
         if( numpoints == 0 ) {
             // there's nothing to retime...
             std::string description = "there's nothing to retime";
-            return PlannerStatus(description, PS_Failed);
+            return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
         }
         ConfigurationSpecification velspec = _parameters->_configurationspecification.ConvertToVelocitySpecification();
         if( _parameters->_hasvelocities ) {

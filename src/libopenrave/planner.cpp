@@ -147,6 +147,18 @@ PlannerStatus::PlannerStatus(const std::string& description, const int statusCod
 PlannerStatus::~PlannerStatus() {
 }
 
+PlannerStatus& PlannerStatus::SetErrorOrigin(const std::string& errorOrigin)
+{
+    this->errorOrigin = errorOrigin;
+    return *this;
+}
+
+PlannerStatus& PlannerStatus::SetPlannerParameters(PlannerParametersConstPtr parameters)
+{
+    this->parameters = parameters;
+    return *this;
+}
+
 void PlannerStatus::SerializeToJson(rapidjson::Document& output) const
 {
     openravejson::SetJsonValueByKey(output, "errorOrigin", errorOrigin);
