@@ -526,7 +526,7 @@ public:
                             deltaq.at(i) = vcurconfig.at(i) - vprevconfig.at(i);
                         }
                         if( _parameters->SetStateValues(vprevconfig, 0) != 0 ) {
-                            throw OPENRAVE_EXCEPTION_FORMAT0(_("time %fs-%fs, failed to set state values"), ORE_InconsistentConstraints);
+                            throw OPENRAVE_EXCEPTION_FORMAT(_("time %fs-%fs, failed to set state values"), *itprevtime%*itsampletime, ORE_InconsistentConstraints);
                         }
                         vector<dReal> vtemp = vprevconfig;
                         if( _parameters->_neighstatefn(vtemp,deltaq,NSO_OnlyHardConstraints) == NSS_Failed ) {
