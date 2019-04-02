@@ -18,123 +18,7 @@
 
 /// samples rays from the projected OBB and returns true if the test function returns true
 /// for all the rays. Otherwise, returns false
-/// allowableoutliers - specifies the % of allowable outliying rays
-bool SampleProjectedOBBWithTestOld(const OBB& obb, dReal delta, const boost::function<bool(const Vector&)>& testfn,dReal allowableocclusion=0)
-{
-    dReal fscalefactor = 0.95f; // have to make box smaller or else rays might miss
-    Vector vpoints[8] = { obb.pos + fscalefactor*(obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z),
-                          obb.pos + fscalefactor*(obb.right*obb.extents.x + obb.up*obb.extents.y - obb.dir*obb.extents.z),
-                          obb.pos + fscalefactor*(obb.right*obb.extents.x - obb.up*obb.extents.y + obb.dir*obb.extents.z),
-                          obb.pos + fscalefactor*(obb.right*obb.extents.x - obb.up*obb.extents.y - obb.dir*obb.extents.z),
-                          obb.pos + fscalefactor*(-obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z),
-                          obb.pos + fscalefactor*(-obb.right*obb.extents.x + obb.up*obb.extents.y - obb.dir*obb.extents.z),
-                          obb.pos + fscalefactor*(-obb.right*obb.extents.x - obb.up*obb.extents.y + obb.dir*obb.extents.z),
-                          obb.pos + fscalefactor*(-obb.right*obb.extents.x - obb.up*obb.extents.y - obb.dir*obb.extents.z)};
-    //    Vector vpoints3d[8];
-    //    for(int j = 0; j < 8; ++j) vpoints3d[j] = tcamera*vpoints[j];
-
-    // Project OBB points onto the plane z = 1 (image plane).
-    for(int i =0; i < 8; ++i) {
-        dReal fz = 1.0f/vpoints[i].z;
-        vpoints[i].x *= fz;
-        vpoints[i].y *= fz;
-        vpoints[i].z = 1;
-    }
-
-    int faceindices[3][4];
-    if( obb.right.z >= 0 ) {
-        faceindices[0][0] = 4; faceindices[0][1] = 5; faceindices[0][2] = 6; faceindices[0][3] = 7;
-    }
-    else {
-        faceindices[0][0] = 0; faceindices[0][1] = 1; faceindices[0][2] = 2; faceindices[0][3] = 3;
-    }
-    if( obb.up.z >= 0 ) {
-        faceindices[1][0] = 2; faceindices[1][1] = 3; faceindices[1][2] = 6; faceindices[1][3] = 7;
-    }
-    else {
-        faceindices[1][0] = 0; faceindices[1][1] = 1; faceindices[1][2] = 4; faceindices[1][3] = 5;
-    }
-    if( obb.dir.z >= 0 ) {
-        faceindices[2][0] = 1; faceindices[2][1] = 3; faceindices[2][2] = 5; faceindices[2][3] = 7;
-    }
-    else {
-        faceindices[2][0] = 0; faceindices[2][1] = 2; faceindices[2][2] = 4; faceindices[2][3] = 6;
-    }
-
-    int nallowableoutliers=0;
-    if( allowableocclusion > 0 ) {
-        // have to compute the area of all the faces!
-        dReal farea=0;
-        for(int i = 0; i < 3; ++i) {
-            Vector v0 = vpoints[faceindices[i][0]];
-            Vector v1 = vpoints[faceindices[i][1]]-v0;
-            Vector v2 = vpoints[faceindices[i][2]]-v0;
-            Vector v = v1.cross(v2);
-            farea += v.lengthsqr3();
-        }
-        nallowableoutliers = (int)(allowableocclusion*farea*0.5/(delta*delta));
-    }
-
-    for(int i = 0; i < 3; ++i) {
-        Vector v0 = vpoints[faceindices[i][0]];
-        Vector v1 = vpoints[faceindices[i][1]]-v0;
-        Vector v2 = vpoints[faceindices[i][2]]-v0;
-        Vector v3 = vpoints[faceindices[i][3]]-v0;
-        dReal f3length = RaveSqrt(v3.lengthsqr2());
-        Vector v3norm = v3 * (1.0f/f3length);
-        Vector v3perp(-v3norm.y,v3norm.x,0,0);
-        dReal f1proj = RaveFabs(v3perp.x*v1.x+v3perp.y*v1.y), f2proj = RaveFabs(v3perp.x*v2.x+v3perp.y*v2.y);
-
-        int n1 = (int)(f1proj/delta);
-        dReal n1scale = 1.0f/n1;
-        Vector vdelta1 = v1*n1scale;
-        Vector vdelta2 = (v1-v3)*n1scale;
-        dReal fdeltalen = (RaveFabs(v3norm.x*v1.x+v3norm.y*v1.y) + RaveFabs(v3norm.x*(v1.x-v3.x)+v3norm.y*(v1.y-v3.y)))*n1scale;
-        dReal ftotalen = f3length;
-        Vector vcur1 = v0, vcur2 = v0+v3;
-        for(int j = 0; j <= n1; ++j, vcur1 += vdelta1, vcur2 += vdelta2, ftotalen -= fdeltalen ) {
-            int numsteps = (int)(ftotalen/delta);
-            Vector vdelta = (vcur2-vcur1)*(1.0f/numsteps), vcur = vcur1;
-            for(int k = 0; k <= numsteps; ++k, vcur += vdelta) {
-                RAVELOG_INFO_FORMAT("vcur[2]=%f", vcur[2]);
-                if( !testfn(vcur) ) {
-                    if( nallowableoutliers-- <= 0 )
-                        return false;
-                }
-            }
-        }
-
-        //        Vector vtripoints[6] = {vpoints3d[faceindices[i][0]], vpoints3d[faceindices[i][3]], vpoints3d[faceindices[i][1]],
-        //                                vpoints3d[faceindices[i][0]], vpoints3d[faceindices[i][1]], vpoints3d[faceindices[i][3]]};
-        //        penv->drawtrimesh(vtripoints[0], 16, NULL, 2);
-
-        int n2 = (int)(f2proj/delta);
-        if( n2 == 0 )
-            continue;
-
-        dReal n2scale = 1.0f/n2;
-        vdelta1 = v2*n2scale;
-        vdelta2 = (v2-v3)*n2scale;
-        fdeltalen = (RaveFabs(v3norm.x*v2.x+v3norm.y*v2.y) + RaveFabs(v3norm.x*(v2.x-v3.x)+v3norm.y*(v2.y-v3.y)))*n2scale;
-        ftotalen = f3length;
-        vcur1 = v0; vcur2 = v0+v3;
-        vcur1 += vdelta1; vcur2 += vdelta2; ftotalen -= fdeltalen; // do one step
-        for(int j = 0; j < n2; ++j, vcur1 += vdelta1, vcur2 += vdelta2, ftotalen -= fdeltalen ) {
-            int numsteps = (int)(ftotalen/delta);
-            Vector vdelta = (vcur2-vcur1)*(1.0f/numsteps), vcur = vcur1;
-            for(int k = 0; k <= numsteps; ++k, vcur += vdelta) {
-                if( !testfn(vcur) ) {
-                    if( nallowableoutliers-- <= 0 )
-                        return false;
-                }
-            }
-        }
-    }
-
-    return true;
-}
-
-bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::function<bool(const Vector&)>& testfn, dReal allowableocclusion = 0)
+bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::function<bool(const Vector&)>& testfn)
 {
     dReal fscalefactor = 0.95f; // have to make box smaller or else rays might miss
     // vpoints contain the four corners of the top face (+z face) of the calibration board OBB
@@ -322,20 +206,16 @@ public:
 
         virtual bool IsVisible(bool bcheckocclusion, bool bOutputError, std::string& errormsg)
         {
-            Transform ttarget = _vf->_targetlink->GetTransform();
-            TransformMatrix tcameraintarget = ttarget.inverse()*_vf->_psensor->GetTransform();
-            return !IsPatternOccluded(tcameraintarget.inverse(), _vf->_psensor->GetTransform(), bOutputError, errormsg);
-            if( !InConvexHull(tcameraintarget) ) {
-                RAVELOG_WARN("box not in camera vision hull (shouldn't happen due to preprocessing\n");
+            Transform tTargetLinkInCamera = _vf->_psensor->GetTransform().inverse() * _vf->_targetlink->GetTransform();
+            Transform tCameraInTargetLink = tTargetLinkInCamera.inverse();
+            if( !InConvexHull(tCameraInTargetLink) ) {
+                RAVELOG_WARN("Box not in camera vision hull (shouldn't happen due to preprocessing\n");
                 return false;
             }
-            if( bcheckocclusion && IsPatternOccluded(tcameraintarget, _vf->_psensor->GetTransform(), bOutputError, errormsg) ) {
-                RAVELOG_DEBUG("Pattern is occluded");
+            if( bcheckocclusion && IsPatternOccluded(tTargetLinkInCamera, _vf->_psensor->GetTransform(), bOutputError, errormsg) ) {
+                RAVELOG_DEBUG("Pattern is occluded\n");
                 return false;
             }
-            //if( bcheckocclusion && IsOccluded(tcameraintarget, bOutputError, errormsg) ) {
-            //    return false;
-            //}
             return true;
         }
 
@@ -413,34 +293,11 @@ public:
             return true;
         }
 
-        /// check if any part of the environment or robot is in front of the camera blocking the object
-        /// sample object's surface and shoot rays
-        /// \param tCameraInTarget in target coordinate system
-        bool IsOccluded(const TransformMatrix& tCameraInTarget, bool bOutputError, std::string& errormsg)
-        {
-            KinBody::KinBodyStateSaver saver1(_ptargetbox), saver2(_vf->_targetlink->GetParent(),KinBody::Save_LinkEnable);
-            TransformMatrix tCameraInTargetinv = tCameraInTarget.inverse();
-            Transform ttarget = _vf->_targetlink->GetTransform();
-            _ptargetbox->SetTransform(ttarget); // world
-            Transform tworldcamera = ttarget*tCameraInTarget;  // tCameraInTarget is in targetLink coordinates
-            _ptargetbox->Enable(true);
-            SampleRaysScope srs(*this);
-            std::string occludingbodyandlinkname = "";
-            FOREACH(itobb,_vTargetLocalOBBs) {  // itobb is in targetlink coordinates
-                OBB cameraobb = geometry::TransformOBB(tCameraInTargetinv,*itobb);
-                // SampleProjectedOBBWithTest usually quits when first occlusion is found, so just passing occludingbodyandlinkname to _TestRay should return the initial occluding part.
-                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::_TestRay, this, _1, boost::ref(tworldcamera), boost::ref(occludingbodyandlinkname)),_vf->_fAllowableOcclusion) ) {
-                    RAVELOG_VERBOSE("box is occluded\n");
-                    errormsg = str(boost::format("{\"type\":\"pattern_occluded\", \"bodylinkname\":\"%s\"}")%occludingbodyandlinkname);
-                    return true;
-                }
-            }
-            return false;
-        }
-
+        /// Check if any part of the environment or robot is in front of the camera blocking the calibration board
+        /// Project the board's top surface onto the image plane and shoot rays
         bool IsPatternOccluded(const TransformMatrix& tTargetLinkInCamera, const TransformMatrix& tCameraInWorld, bool bOutputError, std::string& errormsg)
         {
-            KinBody::KinBodyStateSaver saver1(_ptargetbox), saver2(_vf->_targetlink->GetParent(),KinBody::Save_LinkEnable);
+            KinBody::KinBodyStateSaver saver1(_ptargetbox);
             _ptargetbox->SetTransform(tCameraInWorld * tTargetLinkInCamera); // _ptargetbox is box geometry relative to targetlink
             _ptargetbox->Enable(true);
             SampleRaysScope srs(*this);
@@ -448,41 +305,9 @@ public:
             FOREACH(itobb, _vTargetLocalOBBs) {  // itobb is in targetlink coordinates
                 OBB cameraobb = geometry::TransformOBB(tTargetLinkInCamera, *itobb);
                 // SampleProjectedOBBWithTest usually quits when first occlusion is found, so just passing occludingbodyandlinkname to _TestRay should return the initial occluding part.
-                //RAVELOG_INFO_FORMAT("cameraobb.pos=array([%f, %f, %f])", cameraobb.pos[0] % cameraobb.pos[1] % cameraobb.pos[2]);
-                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::_TestRay, this, _1, boost::ref(tCameraInWorld), boost::ref(occludingbodyandlinkname)), _vf->_fAllowableOcclusion) ) {
+                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::_TestRay, this, _1, boost::ref(tCameraInWorld), boost::ref(occludingbodyandlinkname))) ) {
                     RAVELOG_VERBOSE("box is occluded\n");
                     errormsg = str(boost::format("{\"type\":\"pattern_occluded\", \"bodylinkname\":\"%s\"}")%occludingbodyandlinkname);
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        /// check if just the rigidly attached links of the gripper are in the way
-        /// this function is not meant to be called during planning (only database generation)
-        bool IsOccludedByRigid(const TransformMatrix& tcamera)
-        {
-            KinBody::KinBodyStateSaver saver1(_ptargetbox), saver2(_vf->_targetlink->GetParent());
-            vector<KinBody::LinkPtr> vattachedlinks;
-            _vf->_psensor->GetAttachingLink()->GetRigidlyAttachedLinks(vattachedlinks);
-            RobotBase::RobotStateSaver robotsaver(_vf->_robot,RobotBase::Save_LinkTransformation|RobotBase::Save_LinkEnable);
-            Transform tsensorinv = _vf->_psensor->GetTransform().inverse();
-            FOREACHC(itlink,_vf->_robot->GetLinks()) {
-                bool battached = find(vattachedlinks.begin(),vattachedlinks.end(),*itlink)!=vattachedlinks.end();
-                (*itlink)->Enable(battached);
-                if( battached ) {
-                    (*itlink)->SetTransform(tsensorinv*(*itlink)->GetTransform());
-                }
-            }
-            TransformMatrix tcamerainv = tcamera.inverse();
-            Transform ttarget = _vf->_targetlink->GetTransform();
-            _ptargetbox->SetTransform(ttarget);
-            Transform tworldcamera = ttarget*tcamera;
-            _ptargetbox->Enable(true);
-            SampleRaysScope srs(*this);
-            FOREACH(itobb,_vTargetLocalOBBs) {
-                OBB cameraobb = geometry::TransformOBB(tcamerainv,*itobb);
-                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::_TestRayRigid, this, _1, boost::ref(tworldcamera),boost::ref(vattachedlinks)), 0.0f) ) {
                     return true;
                 }
             }
@@ -1166,9 +991,10 @@ Visibility computation checks occlusion with other objects using ray sampling in
             }
         }
 
-        KinBody::KinBodyStateSaver saver(_targetlink->GetParent(), KinBody::Save_LinkTransformation);
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
-        saver.Restore(); // need to restore _targetlink so that the preceeding CheckEndEffectorCollision works correctly
+
+        RobotBase::RobotStateSaver saver(_robot, KinBody::Save_LinkVisible);
+        _robot->SetVisible(false);  // we haven't computed IKs yet, so we just check the visibility of the pattern pose without the robot
 
         // get all the camera positions and test them
         FOREACHC(ittTargetLinkInCamera, vTargetLinksInCamera) {
@@ -1184,7 +1010,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                         sout << tTargetLinkInWorld << " ";
                     }
                     else {
-                        RAVELOG_VERBOSE("in convex hull and effector is free, but is occluded by rigid: %s", errormsg);
+                        RAVELOG_VERBOSE("in convex hull and effector is free, but is occluded: %s", errormsg);
                     }
                 }
                 else {
