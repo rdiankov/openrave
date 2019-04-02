@@ -253,14 +253,14 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
         for (size_t i = 0; i < 4; ++ i) {
             if ((_sidewallExists >> i) & 1) {
                 const size_t vBase = _meshcollision.vertices.size();
-                AppendBoxTriangulation(Vector(0, 0, 0), _sidewallExtents[i], _meshcollision);
+                AppendBoxTriangulation(Vector(0, 0, _containerBaseHeight + _sidewallExtents[i][2]), _sidewallExtents[i], _meshcollision);
 
                 for (size_t j = 0; j < 8; ++j) {
                     _meshcollision.vertices[vBase + j] = _sidewallTransforms[i] * _meshcollision.vertices[vBase + j];
                 }
             }
         }
-        AppendBoxTriangulation(Vector(0, 0, - _pickableVolumeExtents[2] - 0.5f * _containerBaseHeight),
+        AppendBoxTriangulation(Vector(0, 0, 0.5f * _containerBaseHeight),
                                Vector(_pickableVolumeExtents[0], _pickableVolumeExtents[1], 0.5f * _containerBaseHeight), _meshcollision);
 
         break;
