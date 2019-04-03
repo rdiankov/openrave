@@ -391,8 +391,8 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
 
             break;
         case GT_Cage:
-            if( xmlname == "pickableVolumeExtents" ) {
-                _ss >> _pgeom->_pickableVolumeExtents;
+            if( xmlname == "innerVolumeExtents" ) {
+                _ss >> _pgeom->_innerVolumeExtents;
             }
             if( xmlname == "containerBaseHeight" ) {
                 _ss >> _pgeom->_containerBaseHeight;

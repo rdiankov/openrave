@@ -158,7 +158,7 @@ public:
         Vector _vGeomData3; ///< For containers, the first 3 values is the bottom cross XY full extents and Z height from bottom face.
 
         // For GT_Cage
-        Vector _pickableVolumeExtents;
+        Vector _innerVolumeExtents;
         float _containerBaseHeight;
         Transform _sidewallTransforms[4]; // Transformation of each side wall in the geometry space
         Vector _sidewallExtents[4]; // Each side wall is a rectangular volume.

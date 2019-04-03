@@ -1767,8 +1767,8 @@ private:
                 daeElementRef pcage = ptec->add("cage");
 
                 const KinBody::GeometryInfo& info = geom->GetInfo();
-                ss << info._pickableVolumeExtents;
-                pcage->add("pickableVolumeExtents")->setCharData(ss.str());
+                ss << info._innerVolumeExtents;
+                pcage->add("innerVolumeExtents")->setCharData(ss.str());
                 ss.clear(); ss.str("");
 
                 ss << info._containerBaseHeight;
