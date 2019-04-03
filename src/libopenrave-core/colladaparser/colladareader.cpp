@@ -4972,7 +4972,7 @@ private:
             eq = "3.14159265358979323846";
         }
         else {
-            RAVELOG_WARN(str(boost::format("mathml unprocessed tag: %s")));
+            RAVELOG_WARN(str(boost::format("mathml unprocessed tag: %s")%name));
         }
         return eq;
     }
