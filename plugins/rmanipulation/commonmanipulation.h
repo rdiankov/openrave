@@ -597,6 +597,24 @@ public:
     dReal _thresh;
 };
 
+inline std::ostream& SerializeTransform(std::ostream& O, const Transform& t, char delim=',')
+{
+    O << t.rot.x << delim << t.rot.y << delim << t.rot.z << delim << t.rot.w << delim << t.trans.x << delim << t.trans.y << delim << t.trans.z;
+    return O;
+}
+
+inline std::ostream& SerializeVector3(std::ostream& O, const Vector& v, char delim=',')
+{
+    O << v.x << delim << v.y << delim << v.z;
+    return O;
+}
+
+inline std::ostream& SerializeVector4(std::ostream& O, const Vector& v, char delim=',')
+{
+    O << v.x << delim << v.y << delim << v.z << delim << v.w;
+    return O;
+}
+
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
 BOOST_TYPEOF_REGISTER_TYPE(RandomPermutationExecutor)

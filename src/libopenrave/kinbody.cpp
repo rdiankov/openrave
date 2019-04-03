@@ -90,6 +90,12 @@ KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _
             _vEnabledLinks[i] = _pbody->GetLinks().at(i)->IsEnabled();
         }
     }
+    if( _options & Save_LinkVisible ) {
+        _vVisibleLinks.resize(_pbody->GetLinks().size());
+        for(size_t i = 0; i < _vVisibleLinks.size(); ++i) {
+            _vVisibleLinks[i] = _pbody->GetLinks().at(i)->IsVisible();
+        }
+    }
     if( _options & Save_LinkVelocities ) {
         _pbody->GetLinkVelocities(_vLinkVelocities);
     }
@@ -208,6 +214,11 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
         if( bchanged ) {
             pbody->_nNonAdjacentLinkCache &= ~AO_Enabled;
             pbody->_PostprocessChangedParameters(Prop_LinkEnable);
+        }
+    }
+    if( _options & Save_LinkVisible ) {
+        for(size_t i = 0; i < _vVisibleLinks.size(); ++i) {
+            pbody->GetLinks().at(i)->SetVisible(!!_vVisibleLinks[i]);
         }
     }
     if( _options & Save_JointMaxVelocityAndAcceleration ) {

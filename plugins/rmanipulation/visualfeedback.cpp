@@ -18,34 +18,24 @@
 
 #define CALIBRATION_TIMING_DEBUG // uncomment this to get more information about time spent for each stage
 
-void SerializeTransform(std::stringstream& ss, const Transform& t) {
-    ss << t.rot.x << ", " << t.rot.y << ", " << t.rot.z << ", " << t.rot.w << ", " << t.trans.x << ", " << t.trans.y << ", " << t.trans.z;
-}
-
-void SerializeVector3(std::stringstream& ss, const Vector& v) {
-    ss << v.x << ", " << v.y << ", " << v.z;
-}
-
-void SerializeVector4(std::stringstream& ss, const Vector& v) {
-    ss << v.x << ", " << v.y << ", " << v.z << ", " << v.w;
-}
-
 /// \brief Sample rays from the projected OBB on an image plane and returns true if the test function returns true for
 ///        all the rays. Otherwise, return false
-/// \param obb The OBB of targetlink whose transform is set to Ttargetlinkincamera
+/// \param obb The OBB of targetlink whose transform is set to tTargetLinkInCamera
 /// \param delta The discretization step size when sampling rays
 /// \param testfn A function for testing occlusion for rays
 /// \param tcamera Tcamerainworld
 /// \param allowableocclusion Allowable percentage of occluded rays
 /// \param bUseOnlyTopFace If true, will consider only the projection of the top face of the OBB. Otherwise, will consider three faces.
-bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::function<bool(const Vector&)>& testfn, Transform& tcamera, dReal allowableocclusion=0, bool bUseOnlyTopFace=false)
+bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::function<bool(const Vector&)>& testfn, const Transform& tCamera, bool bUseOnlyTopFace=false)
 {
+    // TODO: remove tCamera later when confirmed that the code is correct.
     dReal fscalefactor = 0.95f; // have to make box smaller or else rays might miss
     int numpoints, numfaces;
     std::vector<Vector> vpoints;
     std::vector<int> faceindices;
     if( bUseOnlyTopFace ) {
-        // Project only one face of the OBB
+        // Project only one face of the OBB.
+        // vpoints contain the four corners of the top face (+z face) of the calibration board OBB.
         numpoints = 4;
         numfaces  = 1;
         vpoints.resize(numpoints);
@@ -57,9 +47,9 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
         vpoints[3] = obb.pos + fscalefactor*( -obb.right*obb.extents.x - obb.up*obb.extents.y - obb.dir*obb.extents.z );
 
         faceindices[0] = 0; faceindices[1] = 1; faceindices[2] = 2; faceindices[3] = 3;
+
     }
     else {
-        // Project 3 faces of the OBB
         numpoints = 8;
         numfaces  = 3;
         vpoints.resize(numpoints);
@@ -96,21 +86,28 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
         }
     }
 
-    // Project OBB points onto the plane z = 1 (arbitrary image plane).
-    for( int ipoint = 0; ipoint < numpoints; ++ipoint ) {
-        dReal fz = 1.0f/vpoints[ipoint].z;
-        vpoints[ipoint].x *= fz;
-        vpoints[ipoint].y *= fz;
-        vpoints[ipoint].z = 1;
+    // Project OBB points onto the plane z = 1 (image plane).
+    dReal fmaxcornerdist = 0;
+    for(int i = 0; i < numpoints; ++i) {
+        dReal fcornerdist = RaveSqrt(vpoints[i].lengthsqr3());
+        if( fcornerdist > fmaxcornerdist ) {
+            fmaxcornerdist = fcornerdist;
+        }
+        dReal fz = 1.0f / vpoints[i].z; // what if vpoints[i].z == 0 ?
+        vpoints[i].x *= fz;
+        vpoints[i].y *= fz;
+        vpoints[i].z = 1;
     }
 
     if( 0 ) { // for debugging
         Vector vpoints3d[numpoints];
-        for(int j = 0; j < numpoints; ++j) vpoints3d[j] = tcamera*vpoints[j];
+        for(int j = 0; j < numpoints; ++j) {
+            vpoints3d[j] = tCamera*vpoints[j];
+        }
         {
             std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
             ss << "camerapose=array([";
-            SerializeTransform(ss, tcamera);
+            SerializeTransform(ss, tCamera);
             ss << "]); vpoints=array([";
             std::string delim = "";
             for( int j = 0; j < numpoints; ++j ) {
@@ -124,75 +121,41 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
         }
     }
 
-    int nallowableoutliers=0;
-    if( allowableocclusion > 0 ) {
-        // have to compute the area of all the faces!
-        dReal farea = 0;
-        for(int i = 0; i < numfaces; ++i) {
-            Vector v0 = vpoints[faceindices[i*numfaces + 0]];
-            Vector v1 = vpoints[faceindices[i*numfaces + 1]] - v0;
-            Vector v2 = vpoints[faceindices[i*numfaces + 2]] - v0;
-            Vector v = v1.cross(v2);
-            farea += v.lengthsqr3();
-        }
-        nallowableoutliers = (int)(allowableocclusion*farea*0.5/(delta*delta));
-    }
+    for(int iface = 0; iface < numfaces; ++iface) {
+        Vector v0 = vpoints[faceindices[iface*numfaces + 0]];
+        Vector v1 = vpoints[faceindices[iface*numfaces + 1]];
+        Vector v2 = vpoints[faceindices[iface*numfaces + 2]];
+        Vector v3 = vpoints[faceindices[iface*numfaces + 3]];
 
-    for(int i = 0; i < numfaces; ++i) {
-        Vector v0 = vpoints[faceindices[i*numfaces + 0]];
-        Vector v1 = vpoints[faceindices[i*numfaces + 1]] - v0;
-        Vector v2 = vpoints[faceindices[i*numfaces + 2]] - v0;
-        Vector v3 = vpoints[faceindices[i*numfaces + 3]] - v0;
-        dReal f3length = RaveSqrt(v3.lengthsqr2());
-        Vector v3norm = v3 * (1.0f/f3length);
-        Vector v3perp(-v3norm.y,v3norm.x,0,0);
-        dReal f1proj = RaveFabs(v3perp.x*v1.x+v3perp.y*v1.y), f2proj = RaveFabs(v3perp.x*v2.x+v3perp.y*v2.y);
+        // Although the OBB is a rectangle, after projecting it to the image plane, it may be an arbitrary quadrilateral.
+        // We sample the OBB's image with steps no larger than delta (the sampling may not be uniform).
+        Vector vbegin = v0;
+        Vector vend = v1;
+        int vbeginiter = (int)(RaveSqrt((v2 - v0).lengthsqr3()) / delta);
+        int venditer = (int)(RaveSqrt((v3 - v1).lengthsqr3()) / delta);
+        int numlines = max(vbeginiter, venditer);  // we need the same number of iterations along vbegin and vend
+        Vector vbeginstep = 1.0f / numlines * (v2 - v0);
+        Vector vendstep = 1.0f / numlines * (v3 - v1);
 
-        int n1 = (int)(f1proj/delta);
-        dReal n1scale = 1.0f/n1;
-        Vector vdelta1 = v1*n1scale;
-        Vector vdelta2 = (v1-v3)*n1scale;
-        dReal fdeltalen = (RaveFabs(v3norm.x*v1.x+v3norm.y*v1.y) + RaveFabs(v3norm.x*(v1.x-v3.x)+v3norm.y*(v1.y-v3.y)))*n1scale;
-        dReal ftotalen = f3length;
-        Vector vcur1 = v0, vcur2 = v0+v3;
-        for(int j = 0; j <= n1; ++j, vcur1 += vdelta1, vcur2 += vdelta2, ftotalen -= fdeltalen ) {
-            int numsteps = (int)(ftotalen/delta);
-            Vector vdelta = (vcur2-vcur1)*(1.0f/numsteps), vcur = vcur1;
-            for(int k = 0; k <= numsteps; ++k, vcur += vdelta) {
-                if( !testfn(vcur) ) {
-                    if( nallowableoutliers-- <= 0 )
-                        return false;
-                }
-            }
-        }
-
-        // Vector vtripoints[6] = {vpoints3d[faceindices[i*numfaces + 0]], vpoints3d[faceindices[i*numfaces + 3]], vpoints3d[faceindices[i*numfaces + 1]],
-        //                         vpoints3d[faceindices[i*numfaces + 0]], vpoints3d[faceindices[i*numfaces + 1]], vpoints3d[faceindices[i*numfaces + 3]]};
-        // penv->drawtrimesh(vtripoints[0], 16, NULL, 2);
-
-        int n2 = (int)(f2proj/delta);
-        if( n2 == 0 )
-            continue;
-
-        dReal n2scale = 1.0f/n2;
-        vdelta1 = v2*n2scale;
-        vdelta2 = (v2-v3)*n2scale;
-        fdeltalen = (RaveFabs(v3norm.x*v2.x+v3norm.y*v2.y) + RaveFabs(v3norm.x*(v2.x-v3.x)+v3norm.y*(v2.y-v3.y)))*n2scale;
-        ftotalen = f3length;
-        vcur1 = v0; vcur2 = v0+v3;
-        vcur1 += vdelta1; vcur2 += vdelta2; ftotalen -= fdeltalen; // do one step
-        for(int j = 0; j < n2; ++j, vcur1 += vdelta1, vcur2 += vdelta2, ftotalen -= fdeltalen ) {
-            int numsteps = (int)(ftotalen/delta);
-            Vector vdelta = (vcur2-vcur1)*(1.0f/numsteps), vcur = vcur1;
-            for(int k = 0; k <= numsteps; ++k, vcur += vdelta) {
-                if( !testfn(vcur) ) {
-                    if( nallowableoutliers-- <= 0 )
-                        return false;
+        // vcur is the test ray.
+        // Define a line from vbegin = v0 to vend = v1. We move vcur by delta from vbegin to vend and call testfn(vcur) each time.
+        // We then move vbegin toward v2 by delta, and move vend toward v3 by delta. We again move vcur from vbegin to vend and test each time.
+        // We continue moving vbegin and vend until they reach v2 and v3 respectively.
+        for(int i = 0; i <= numlines; ++i, vbegin += vbeginstep, vend += vendstep) {
+            int numsteps = RaveSqrt((vend - vbegin).lengthsqr3()) / delta;
+            Vector vlinestep = 1.0f / numsteps * (vend - vbegin);
+            Vector vcur = vbegin;
+            for(int j = 0; j <= numsteps; ++j, vcur += vlinestep) {
+                dReal fvcurlength = RaveSqrt(vcur.lengthsqr3());
+                if( !testfn(fmaxcornerdist / fvcurlength * vcur) ) {  // extend vcur length so it hits the target OBB in 3D
+                    // ray did not collide with calibration board
+                    return false;
                 }
             }
         }
     }
 
+    // all rays collided with the calibation board, so the board is visible
     return true;
 }
 
@@ -326,13 +289,14 @@ public:
 
         virtual bool IsVisible(bool bcheckocclusion, bool bOutputError, std::string& errormsg)
         {
-            Transform ttarget = _vf->_targetlink->GetTransform();
-            TransformMatrix tcameraintarget = ttarget.inverse()*_vf->_psensor->GetTransform();
-            if( !InConvexHull(tcameraintarget) ) {
-                RAVELOG_WARN("box not in camera vision hull (shouldn't happen due to preprocessing\n");
+            Transform tTargetLinkInCamera = _vf->_psensor->GetTransform().inverse() * _vf->_targetlink->GetTransform();
+            Transform tCameraInTargetLink = tTargetLinkInCamera.inverse();
+            if( !InConvexHull(tCameraInTargetLink) ) {
+                RAVELOG_WARN("Box not in camera vision hull (shouldn't happen due to preprocessing\n");
                 return false;
             }
-            if( bcheckocclusion && IsOccluded(tcameraintarget, bOutputError, errormsg) ) {
+            if( bcheckocclusion && IsPatternOccluded(tTargetLinkInCamera, _vf->_psensor->GetTransform(), bOutputError, errormsg) ) {
+                RAVELOG_DEBUG("Pattern is occluded\n");
                 return false;
             }
             return true;
@@ -349,19 +313,20 @@ public:
 
         /// samples the ik
         /// If camera is attached to robot, assume target is not movable and t is the camera position.
-        /// If camera is not attached to robot, assume target is movable and t is the target position.
+        /// If camera is not attached to robot, assume calibration pattern is movable and t is the calibration pattern position.
         bool SampleWithCamera(const TransformMatrix& t, vector<dReal>& pNewSample, bool bOutputError, std::string& errormsg)
         {
-            Transform tCameraInTarget, ttarget;
+            Transform tCameraInTargetLink, tTargetLinkInWorld;
             if( _vf->_robot != _vf->_sensorrobot ) {
-                ttarget = t;
-                tCameraInTarget = ttarget.inverse()*_vf->_psensor->GetTransform();
+                tTargetLinkInWorld = t;
+                tCameraInTargetLink = tTargetLinkInWorld.inverse() * _vf->_psensor->GetTransform();
             }
             else {
-                ttarget = _vf->_targetlink->GetTransform();
-                tCameraInTarget = ttarget.inverse()*t;
+                //FIXME
+                tTargetLinkInWorld = _vf->_targetlink->GetTransform();
+                tCameraInTargetLink = tTargetLinkInWorld.inverse() * t;
             }
-            if( !InConvexHull(tCameraInTarget) ) {
+            if( !InConvexHull(tCameraInTargetLink) ) {
                 RAVELOG_DEBUG("box not in camera vision hull\n");
                 if( bOutputError ) {
                     errormsg = str(boost::format("{\"type\":\"outofcamera\"}"));
@@ -371,8 +336,7 @@ public:
             }
 
             // object is inside, find an ik solution
-            Transform tmanipgoal = t*_vf->_tToManip;
-            if( !_vf->_pmanip->FindIKSolution(tmanipgoal,IKFO_CheckEnvCollisions, _ikreturn) ) {
+            if( !_vf->_pmanip->FindIKSolution(tTargetLinkInWorld, IKFO_CheckEnvCollisions, _ikreturn) ) {
                 if( bOutputError ) {
                     errormsg = str(boost::format("{\"type\":\"ikfailed\", \"action\":\"0x%x\"}")%_ikreturn->_action);
                 }
@@ -391,79 +355,42 @@ public:
             }
             _vf->_robot->SetActiveDOFValues(pNewSample);
 
-            return !IsOccluded(tCameraInTarget, bOutputError, errormsg);
+            return !IsPatternOccluded(tCameraInTargetLink.inverse(), _vf->_psensor->GetTransform(), bOutputError, errormsg);
         }
 
         /// \brief checks if the target geometries of the target link are inside the camera visiblity convex hull (
-        /// \param tCameraInTarget in target coordinate system
+        /// \param tCameraInTargetLink in target link coordinate system
         /// \param mindist Minimum distance to keep from the plane (should be non-negative)
-        bool InConvexHull(const TransformMatrix& tCameraInTarget, dReal mindist=0)
+        bool InConvexHull(const TransformMatrix& tCameraInTargetLink, dReal mindist=0)
         {
             _vconvexplanes3d.resize(_vf->_vconvexplanes.size());
             for(size_t i = 0; i < _vf->_vconvexplanes.size(); ++i) {
-                _vconvexplanes3d[i] = tCameraInTarget.rotate(_vf->_vconvexplanes[i]);
-                _vconvexplanes3d[i].w = -tCameraInTarget.trans.dot3(_vconvexplanes3d[i]) - mindist;
+                _vconvexplanes3d[i] = tCameraInTargetLink.rotate(_vf->_vconvexplanes[i]);
+                _vconvexplanes3d[i].w = -tCameraInTargetLink.trans.dot3(_vconvexplanes3d[i]) - mindist;
             }
-            FOREACH(itobb,_vTargetLocalOBBs) {
-                if( !geometry::IsOBBinConvexHull(*itobb,_vconvexplanes3d) ) {
+            FOREACH(itobb, _vTargetLocalOBBs) {
+                if( !geometry::IsOBBinConvexHull(*itobb, _vconvexplanes3d) ) {
                     return false;
                 }
             }
             return true;
         }
 
-        /// check if any part of the environment or robot is in front of the camera blocking the object
-        /// sample object's surface and shoot rays
-        /// \param tCameraInTarget in target coordinate system
-        bool IsOccluded(const TransformMatrix& tCameraInTarget, bool bOutputError, std::string& errormsg)
+        /// Check if any part of the environment or robot is in front of the camera blocking the calibration board
+        /// Project the board's top surface onto the image plane and shoot rays
+        bool IsPatternOccluded(const TransformMatrix& tTargetLinkInCamera, const TransformMatrix& tCameraInWorld, bool bOutputError, std::string& errormsg)
         {
-            KinBody::KinBodyStateSaver saver1(_ptargetbox), saver2(_vf->_targetlink->GetParent(),KinBody::Save_LinkEnable);
-            TransformMatrix tCameraInTargetinv = tCameraInTarget.inverse();
-            Transform ttarget = _vf->_targetlink->GetTransform();
-            _ptargetbox->SetTransform(ttarget); // world
-            Transform tworldcamera = ttarget*tCameraInTarget;  // tCameraInTarget is in targetLink coordinates
+            KinBody::KinBodyStateSaver saver1(_ptargetbox);
+            _ptargetbox->SetTransform(tCameraInWorld * tTargetLinkInCamera); // _ptargetbox is box geometry relative to targetlink
             _ptargetbox->Enable(true);
             SampleRaysScope srs(*this);
             std::string occludingbodyandlinkname = "";
-            FOREACH(itobb,_vTargetLocalOBBs) {  // itobb is in targetlink coordinates
-                OBB cameraobb = geometry::TransformOBB(tCameraInTargetinv,*itobb);
+            FOREACH(itobb, _vTargetLocalOBBs) {  // itobb is in targetlink coordinates
+                OBB cameraobb = geometry::TransformOBB(tTargetLinkInCamera, *itobb);
                 // SampleProjectedOBBWithTest usually quits when first occlusion is found, so just passing occludingbodyandlinkname to _TestRay should return the initial occluding part.
-                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::_TestRay, this, _1, boost::ref(tworldcamera), boost::ref(occludingbodyandlinkname)), tworldcamera, _vf->_fAllowableOcclusion) ) {
+                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::_TestRay, this, _1, boost::ref(tCameraInWorld), boost::ref(occludingbodyandlinkname)), tCameraInWorld) ) {
                     RAVELOG_VERBOSE("box is occluded\n");
                     errormsg = str(boost::format("{\"type\":\"pattern_occluded\", \"bodylinkname\":\"%s\"}")%occludingbodyandlinkname);
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        /// check if just the rigidly attached links of the gripper are in the way
-        /// this function is not meant to be called during planning (only database generation)
-        /// \param tcamera transformation of the camera in the targetlink frame
-        bool IsOccludedByRigid(const TransformMatrix& tcamera)
-        {
-            KinBody::KinBodyStateSaver saver1(_ptargetbox), saver2(_vf->_targetlink->GetParent());
-            vector<KinBody::LinkPtr> vattachedlinks;
-            _vf->_psensor->GetAttachingLink()->GetRigidlyAttachedLinks(vattachedlinks);
-            RobotBase::RobotStateSaver robotsaver(_vf->_robot,RobotBase::Save_LinkTransformation|RobotBase::Save_LinkEnable);
-            Transform tsensorinv = _vf->_psensor->GetTransform().inverse();
-            // Disable all robot links that are not attached to the camera
-            FOREACHC(itlink,_vf->_robot->GetLinks()) {
-                bool battached = find(vattachedlinks.begin(),vattachedlinks.end(),*itlink)!=vattachedlinks.end();
-                (*itlink)->Enable(battached);
-                if( battached ) {
-                    (*itlink)->SetTransform(tsensorinv*(*itlink)->GetTransform());
-                }
-            }
-            TransformMatrix tcamerainv = tcamera.inverse();
-            Transform ttarget = _vf->_targetlink->GetTransform();
-            _ptargetbox->SetTransform(ttarget);
-            Transform tworldcamera = ttarget*tcamera;
-            _ptargetbox->Enable(true);
-            SampleRaysScope srs(*this);
-            FOREACH(itobb,_vTargetLocalOBBs) {
-                OBB cameraobb = geometry::TransformOBB(tcamerainv,*itobb);
-                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::_TestRayRigid, this, _1, boost::ref(tworldcamera),boost::ref(vattachedlinks)), tworldcamera, 0.0f) ) {
                     return true;
                 }
             }
@@ -477,11 +404,14 @@ private:
         /// \param tcamera is the camera in the world coordinate system
         bool _TestRay(const Vector& v, const TransformMatrix& tcamera, std::string& errormsg)
         {
+            //RAVELOG_INFO_FORMAT("vector=array([%f, %f, %f])", v[0]%v[1]%v[2]);
             RAY r;
             dReal filen = 1/RaveSqrt(v.lengthsqr3());
-            r.dir = tcamera.rotate((2.0f*filen)*v);
+            r.dir = tcamera.rotate((200.0f*filen)*v);
             r.pos = tcamera.trans + 0.5f*_vf->_fRayMinDist*r.dir;         // move the rays a little forward
-            if( !_vf->_robot->GetEnv()->CheckCollision(r,_report) ) {
+            //RAVELOG_INFO_FORMAT("ray=array([%f, %f, %f, %f, %f, %f])", r.pos[0]%r.pos[1]%r.pos[2]%r.dir[0]%r.dir[1]%r.dir[2]);
+            if( !_vf->_robot->GetEnv()->CheckCollision(r, _report) ) {
+                //RAVELOG_DEBUG("CheckCollision call returned False.");
                 return true;         // not supposed to happen, but it is OK
             }
 
@@ -501,10 +431,18 @@ private:
             if( !!_report->plink1 ) {
                 if( _report->plink1->GetParent() == _ptargetbox ) {
                     // colliding with intended target box, so not being occluded
+                    std::string linkname = _report->plink1->GetName();
+                    std::string bodyname = _report->plink1->GetParent()->GetName();
+                    errormsg = bodyname + "/" + linkname;
+                    //RAVELOG_DEBUG_FORMAT("Ray hit a target box: %s, success.", errormsg);
                     return true;
                 }
                 else if( _report->plink1 == _vf->_targetlink ) {
                     // the original link is returned, have to check if the collision point is within _ptargetbox since we could be targeting one specific geometry rather than others.
+                    std::string linkname = _report->plink1->GetName();
+                    std::string bodyname = _report->plink1->GetParent()->GetName();
+                    errormsg = bodyname + "/" + linkname;
+                    //RAVELOG_DEBUG_FORMAT("Ray hit target body and link named %s, success.", errormsg);
                     if( _report->contacts.size() > 0 ) {
                         // transform the contact point into the target link coordinate system
                         Transform ttarget = _vf->_targetlink->GetTransform();
@@ -647,7 +585,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         _bIgnoreSensorCollision = false;
         _bCameraOnManip = false;
         _fSampleRayDensity = 0.001;
-        _fAllowableOcclusion = 0.1;
+        _fAllowableOcclusion = 0.0;
         _fRayMinDist = 0.02f;
 
         RegisterCommand("SetCameraAndTarget",boost::bind(&VisualFeedback::SetCameraAndTarget,this,_1,_2),
@@ -783,7 +721,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             else if( cmd == "manipname" ) {
                 string manipname;
                 sinput >> manipname;
-                FOREACH(itmanip,_robot->GetManipulators()) {
+                FOREACH(itmanip, _robot->GetManipulators()) {
                     if( (*itmanip)->GetName() == manipname ) {
                         pmanip = *itmanip;
                         break;
@@ -898,7 +836,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 }
             }
 
-            _tToManip = psensor->GetTransform().inverse()*pmanip->GetTransform();
+            //_tManipInPattern = psensor->GetTransform().inverse()*pmanip->GetTransform();
         }
         else {
             if( !pmanip ) {
@@ -906,9 +844,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 RAVELOG_INFO_FORMAT("using default manip %s", pmanip->GetName());
             }
 
-            if( !!_targetlink ) {
-                _tToManip = _targetlink->GetTransform().inverse() * pmanip->GetTransform();
-            }
+            //if( !!_targetlink ) {
+            //    _tManipInPattern = tPatternInTargetLink.inverse();
+            //}
         }
 
         _pcamerageom = boost::static_pointer_cast<SensorBase::CameraGeomData const>(psensor->GetSensor()->GetSensorGeometry());
@@ -925,6 +863,20 @@ Visibility computation checks occlusion with other objects using ray sampling in
             _vcenterconvex = Vector(0,0,1);
         }
 
+        {
+            std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+            ss << "vconvexplanes=[";
+            std::string delim = "";
+            FOREACHC(itnormal, _vconvexplanes) {
+                ss << delim << "[";
+                SerializeVector3(ss, *itnormal);
+                ss << "]";
+                delim = ",";
+            }
+            ss << "];";
+            RAVELOG_DEBUG_FORMAT("%s", ss.str());
+        }
+
         _pmanip = pmanip;
         _psensor = psensor;
         sout << _pmanip->GetName();
@@ -933,68 +885,74 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
     /// \brief Suppose vdir is a direction from the center of a sphere to the surface of the sphere and fdist is its
     ///        radius. This function returns a transformation such that its origin is on the sphere's surface and its
-    ///        local Z-axis is pointing radially inwards.
+    ///        local Z-axis is pointing radially inwards. In particular, if the camera is at the center of the sphere,
+    ///        this function returns transforms for the calibration board such that its +z face (pattern face) faces
+    ///        the camera and the board lies tangential to the sphere's surface.
     ///
     /// \param vdir is a unit vector describing the direction.
     /// \param fdist is the translation along vdir
     /// \param froll is the angle for which the local x-and y- axes are rotated.
     /// \param ftilt is the angle to rotate about the axis specified by iaxis
     /// \param iaxis if 0, the transform is rotated about its local X axis. if 1, the transform is rotated about its local Y axis
-    TransformMatrix ComputeCameraMatrix(const Vector& vdir,dReal fdist, dReal froll, dReal ftilt=0, int iaxis=0)
+    TransformMatrix ComputePatternInCameraTransform(const Vector& vdir,dReal fdist, dReal froll, dReal ftilt=0, int iaxis=0)
     {
         // Compute orthogonal axes from vdir
-        Vector vright, vup = Vector(0,1,0) - vdir * vdir.y;
+        Vector vup = Vector(0, 1, 0) - vdir * vdir.y;
         dReal uplen = vup.lengthsqr3();
         if( uplen < 0.001 ) {
-            vup = Vector(0,0,1) - vdir * vdir.z;
+            vup = Vector(0, 0, 1) - vdir * vdir.z;
             uplen = vup.lengthsqr3();
         }
 
-        vup *= (dReal)1.0/RaveSqrt(uplen);
-        vright = vup.cross(vdir);
+        vup *= (dReal)1.0 / RaveSqrt(uplen);
+        Vector vright = vup.cross(vdir);
 
         // Construct a transformation matrix
-        TransformMatrix tcamera;
+        TransformMatrix tPatternInCamera;
         dReal fcosroll = RaveCos(froll), fsinroll = RaveSin(froll);
-        dReal fcos = RaveCos(ftilt), fsin = RaveSin(ftilt);
+        dReal fcostilt = RaveCos(ftilt), fsintilt = RaveSin(ftilt);
         // Rotate around its local Z-axis
-        tcamera.m[2] = vdir.x; tcamera.m[6] = vdir.y; tcamera.m[10] = vdir.z;
-        tcamera.m[0] = vright.x*fcosroll+vup.x*fsinroll; tcamera.m[1] = -vright.x*fsinroll+vup.x*fcosroll;
-        tcamera.m[4] = vright.y*fcosroll+vup.y*fsinroll; tcamera.m[5] = -vright.y*fsinroll+vup.y*fcosroll;
-        tcamera.m[8] = vright.z*fcosroll+vup.z*fsinroll; tcamera.m[9] = -vright.z*fsinroll+vup.z*fcosroll;
-        tcamera.trans = -fdist * tcamera.rotate(_vcenterconvex); // translation component has to be computed before rotating around the local X
+        tPatternInCamera.m[2]  = vdir.x;
+        tPatternInCamera.m[6]  = vdir.y;
+        tPatternInCamera.m[10] = vdir.z;
+
+        tPatternInCamera.m[0] = vright.x*fcosroll + vup.x*fsinroll; tPatternInCamera.m[1] = -vright.x*fsinroll + vup.x*fcosroll;
+        tPatternInCamera.m[4] = vright.y*fcosroll + vup.y*fsinroll; tPatternInCamera.m[5] = -vright.y*fsinroll + vup.y*fcosroll;
+        tPatternInCamera.m[8] = vright.z*fcosroll + vup.z*fsinroll; tPatternInCamera.m[9] = -vright.z*fsinroll + vup.z*fcosroll;
+        tPatternInCamera.trans = -fdist * tPatternInCamera.rotate(_vcenterconvex); // translation component has to be computed before rotating around the local X
 
         if( iaxis == 0 ) {
             // Rotate around its local X-axis
-            dReal t1 = tcamera.m[1], t5 = tcamera.m[5], t9 = tcamera.m[9];
-            dReal t2 = tcamera.m[2], t6 = tcamera.m[6], t10 = tcamera.m[10];
-            tcamera.m[1] = fcos*t1 + fsin*t2;  tcamera.m[2]  = -fsin*t1 + fcos*t2;
-            tcamera.m[5] = fcos*t5 + fsin*t6;  tcamera.m[6]  = -fsin*t5 + fcos*t6;
-            tcamera.m[9] = fcos*t9 + fsin*t10; tcamera.m[10] = -fsin*t9 + fcos*t10;
+            dReal t1 = tPatternInCamera.m[1], t5 = tPatternInCamera.m[5], t9  = tPatternInCamera.m[9];
+            dReal t2 = tPatternInCamera.m[2], t6 = tPatternInCamera.m[6], t10 = tPatternInCamera.m[10];
+            tPatternInCamera.m[1] = fcostilt*t1 + fsintilt*t2;  tPatternInCamera.m[2]  = -fsintilt*t1 + fcostilt*t2;
+            tPatternInCamera.m[5] = fcostilt*t5 + fsintilt*t6;  tPatternInCamera.m[6]  = -fsintilt*t5 + fcostilt*t6;
+            tPatternInCamera.m[9] = fcostilt*t9 + fsintilt*t10; tPatternInCamera.m[10] = -fsintilt*t9 + fcostilt*t10;
         }
         else if( iaxis == 1 ) {
             // Rotate around its local Y-axis
-            dReal t0 = tcamera.m[0], t4 = tcamera.m[4], t8 = tcamera.m[8];
-            dReal t2 = tcamera.m[2], t6 = tcamera.m[6], t10 = tcamera.m[10];
-            tcamera.m[0] = fcos*t0 - fsin*t2;  tcamera.m[2]  = fsin*t0 + fcos*t2;
-            tcamera.m[4] = fcos*t4 - fsin*t6;  tcamera.m[6]  = fsin*t4 + fcos*t6;
-            tcamera.m[8] = fcos*t8 - fsin*t10; tcamera.m[10] = fsin*t8 + fcos*t10;
+            dReal t0 = tPatternInCamera.m[0], t4 = tPatternInCamera.m[4], t8 = tPatternInCamera.m[8];
+            dReal t2 = tPatternInCamera.m[2], t6 = tPatternInCamera.m[6], t10 = tPatternInCamera.m[10];
+            tPatternInCamera.m[0] = fcostilt*t0 - fsintilt*t2;  tPatternInCamera.m[2]  = fsintilt*t0 + fcostilt*t2;
+            tPatternInCamera.m[4] = fcostilt*t4 - fsintilt*t6;  tPatternInCamera.m[6]  = fsintilt*t4 + fcostilt*t6;
+            tPatternInCamera.m[8] = fcostilt*t8 - fsintilt*t10; tPatternInCamera.m[10] = fsintilt*t8 + fcostilt*t10;
         }
-        return tcamera;
+        return tPatternInCamera;
     }
 
     /// \brief return a list of transforms of the camera in the target link frame.
     bool ProcessVisibilityExtents(ostream& sout, istream& sinput)
     {
         string cmd;
-        int numrolls=8;
-        int iStartTiltAngle=10, iEndTiltAngle=20, iStepTiltAngle=10; // in degrees
-        dReal fToRadian = PI/(dReal) 180;
+        int numrolls = 8;
+        int iStartTiltAngle = 10, iEndTiltAngle = 20, iStepTiltAngle = 10; // in degrees
+        dReal fToRadian = PI/((dReal) 180);
         vector<Vector> vconedirangles;
-        //vector<Transform> vtransforms; // the camera transforms with respect to the target link
-        std::vector<Transform> vCamerasInPatternCoord; // cameras with respect to the pattern coordinate system (usually the pattern face is in +z)
-        std::vector<Transform> vCamerasInTargetLinkCoord; // cameras with respect to the target link coordinate system. A pattern can be anywhere in the link and depends on geometry transform and cone dir angle.
-        while(!sinput.eof()) {
+        std::vector<Transform> vPatternsInCamera;  // calibration patterns with respect to the camera coordinate system (usually the pattern face is in +z)
+        std::vector<Transform> vTargetLinksInCamera; // calibration (target) links with respect to the camera coordinate system (usually the calibration link's parent link is the flange)
+        // NOTE: The calibration pattern can be anywhere in the calibration link. It depends on the pattern's geometry transform and cone dir angle.
+
+        while( !sinput.eof() ) {
             sinput >> cmd;
             if( !sinput ) {
                 break;
@@ -1002,10 +960,10 @@ Visibility computation checks occlusion with other objects using ray sampling in
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "transforms" ) {
-                int numtrans=0;
+                int numtrans = 0;
                 sinput >> numtrans;
-                vCamerasInPatternCoord.resize(numtrans);
-                FOREACH(it,vCamerasInPatternCoord) {
+                vPatternsInCamera.resize(numtrans);
+                FOREACH(it, vPatternsInCamera) {
                     sinput >> *it;
                 }
             }
@@ -1015,42 +973,41 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 sinput >> iStartTiltAngle >> iEndTiltAngle >> iStepTiltAngle;
             }
             else if( cmd == "extents" ) {
-                // Each extent is a 3D vector describing the direction from the pattern to the camera. Its norm is the
+                // Each extent is a 3D vector describing the direction from the camera to the pattern. Its norm is the
                 // distance. Note that numrolls has to be defined *before* extents.
-                int numtrans=0;
+                int numtrans = 0;
                 sinput >> numtrans;
-                dReal deltaroll = PI*2.0f/(dReal)numrolls;
-                vCamerasInPatternCoord.resize(0); vCamerasInPatternCoord.reserve(numtrans*numrolls);
+                dReal deltaroll = PI * 2.0f / (dReal)numrolls;
+                vPatternsInCamera.resize(0);
+                vPatternsInCamera.reserve(numtrans * numrolls);
                 for(int i = 0; i < numtrans; ++i) {
                     Vector v;
                     sinput >> v.x >> v.y >> v.z;
                     dReal fdist = RaveSqrt(v.lengthsqr3());
-                    v *= 1/fdist;
+                    v *= 1 / fdist;
                     dReal froll = 0;
                     for(int iroll = 0; iroll < numrolls; ++iroll, froll += deltaroll) {
-                        Transform t = ComputeCameraMatrix(v,fdist,froll);
-                        vCamerasInPatternCoord.push_back(t);
+                        Transform t = ComputePatternInCameraTransform(v, fdist, froll);
+                        vPatternsInCamera.push_back(t);
                     }
                 }
             }
             else if( cmd == "sphere" ) {
-                // In the current system we always have the pattern on the
-                // robot, so we always use invertsphere. The sphere is first
-                // generated in the pattern frame (the calibboard geometry and
-                // the cone direction). Camera poses surround the pattern.
-                // Invertsphere produces pattern poses around the camera. After
-                // inversion, only pattern poses that are in a cone around the
-                // (0,0,1) axis of the camera (i.e., in front of the lens) will
-                // pass the InConvexHull() check. After filtering out these
-                // valid poses, we express them in the targetlink frame and
-                // pass them to the IK solver.
+                // For now assume the calibration pattern is on the robot and the
+                // camera is stationary in the environment. The sphere of pose
+                // candidates is first generated in the camera frame (camera at
+                // center of sphere, pattern transforms generated at discrete
+                // points uniformly distributed along the surface of the sphere).
+                // We later check which poses lie inside the visibility pyramid
+                // of the camera, pass the end effector collision check, etc.
                 TriMesh spheremesh;
-                int spherelevel = 3, numdists = 0;
+                int spherelevel = 3;
+                int numdists = 0;
                 sinput >> spherelevel >> numdists;
 #ifdef CALIBRATION_TIMING_DEBUG
                 uint64_t starttime_spheremesh = utils::GetMicroTime();
 #endif
-                CM::GenerateSphereTriangulation(spheremesh,spherelevel);
+                CM::GenerateSphereTriangulation(spheremesh, spherelevel);
 #ifdef CALIBRATION_TIMING_DEBUG
                 uint64_t endtime_spheremesh = utils::GetMicroTime();
                 float fElapsed_spheremesh = (endtime_spheremesh - starttime_spheremesh)*1e-6f;
@@ -1069,17 +1026,16 @@ Visibility computation checks occlusion with other objects using ray sampling in
                     ss << "];";
                     RAVELOG_DEBUG_FORMAT("%s", ss.str());
                 }
-                vector<dReal> vdists(numdists);
-                FOREACH(it,vdists) {
+                std::vector<dReal> vdists(numdists);
+                FOREACH(it, vdists) {
                     sinput >> *it;
                 }
-                bool bInvert = _sensorrobot != _robot; // if True, then invert sampled transforms of the sphere.
-                dReal deltaroll = PI*2.0f/(dReal)numrolls;
+                dReal deltaroll = PI*2.0f/((dReal) numrolls);
                 dReal deltatilt = iStepTiltAngle * fToRadian;
-                int numtilts = ((iEndTiltAngle - iStartTiltAngle)/iStepTiltAngle) + 1;
-                int numaxes = 2;
-                vCamerasInPatternCoord.resize(spheremesh.vertices.size()*numdists*numrolls*numtilts*numaxes*2);
-                vector<Transform>::iterator itcamera = vCamerasInPatternCoord.begin();
+                int numtilts = ((iEndTiltAngle - iStartTiltAngle)/iStepTiltAngle) + 1; // the number of steps to tilt the pattern
+                int numaxes = 2; // tilting the pattern around both x-and y-axes.
+                vPatternsInCamera.resize(spheremesh.vertices.size() * numdists * numrolls * numtilts * numaxes * 2); // 2 means tilting with both positive and negative angles
+                std::vector<Transform>::iterator itcamera = vPatternsInCamera.begin();
 #ifdef CALIBRATION_TIMING_DEBUG
                 uint64_t starttime_computetransform = utils::GetMicroTime();
 #endif
@@ -1093,17 +1049,11 @@ Visibility computation checks occlusion with other objects using ray sampling in
                                 dReal ftilt = iStartTiltAngle * fToRadian;
                                 for(int itilt = 0; itilt < numtilts; ++itilt, ftilt += deltatilt) {
                                     // Consider positive tilting angle
-                                    *itcamera = ComputeCameraMatrix(spheremesh.vertices[j], vdists[i], froll, ftilt, iaxis);
-                                    if( bInvert ) {
-                                        *itcamera = itcamera->inverse();
-                                    }
+                                    *itcamera = ComputePatternInCameraTransform(spheremesh.vertices[j], vdists[i], froll, ftilt, iaxis);
                                     ++itcamera;
 
                                     // Consider negative tilting angle
-                                    *itcamera = ComputeCameraMatrix(spheremesh.vertices[j], vdists[i], froll, -ftilt, iaxis);
-                                    if( bInvert ) {
-                                        *itcamera = itcamera->inverse();
-                                    }
+                                    *itcamera = ComputePatternInCameraTransform(spheremesh.vertices[j], vdists[i], froll, -ftilt, iaxis);
                                     ++itcamera;
                                 }
                             }
@@ -1113,16 +1063,16 @@ Visibility computation checks occlusion with other objects using ray sampling in
 #ifdef CALIBRATION_TIMING_DEBUG
                 uint64_t endtime_computetransform = utils::GetMicroTime();
                 float fElapsed_computetransform = (endtime_computetransform - starttime_computetransform)*1e-6f;
-                RAVELOG_DEBUG_FORMAT("transform generation (total=%d): %f s.", vCamerasInPatternCoord.size()%fElapsed_computetransform);
+                RAVELOG_DEBUG_FORMAT("transform generation (total=%d): %f s.", vPatternsInCamera.size()%fElapsed_computetransform);
 #endif
             }
             else if( cmd == "conedirangle" ) {
                 // conedirangle includes both cone direction and angle info. The
                 // magnitude of conedirangle encodes the angle (i.e., radius) of the
                 // cone.
-                Vector vconedir; dReal fangle;
+                Vector vconedir;
                 sinput >> vconedir.x >> vconedir.y >> vconedir.z;
-                fangle = RaveSqrt(vconedir.lengthsqr3());
+                dReal fangle = RaveSqrt(vconedir.lengthsqr3());
                 if( fangle == 0 ) {
                     return false;
                 }
@@ -1142,69 +1092,81 @@ Visibility computation checks occlusion with other objects using ray sampling in
             }
         }
 
-        if( vconedirangles.size() > 0 ) {
-            vCamerasInTargetLinkCoord.reserve(vCamerasInPatternCoord.size());
-            Transform tGeometryToTargetLink;
-            for(size_t igeom = 0; igeom < _targetlink->GetGeometries().size(); ++igeom) {
-                if( _targetGeomName.size() == 0 || _targetlink->GetGeometries().at(igeom)->GetName() == _targetGeomName ) {
-                    tGeometryToTargetLink = _targetlink->GetGeometries().at(igeom)->GetTransform();
-                    break;
-                }
+        // Geometry is the calibration pattern (box geometry), target link is the calibration link
+        Transform tPatternInTargetLink;
+        for(size_t igeom = 0; igeom < _targetlink->GetGeometries().size(); ++igeom) {
+            if( _targetGeomName.size() == 0 || _targetlink->GetGeometries().at(igeom)->GetName() == _targetGeomName ) {
+                // if targetGeomName is the empty string, select the first geometry as the calibration pattern
+                tPatternInTargetLink = _targetlink->GetGeometries().at(igeom)->GetTransform();
+                _tManipInPattern = tPatternInTargetLink.inverse();
+                break;
             }
+        }
 
-            dReal fCameraCosFOV = 0; // cos of the half angle of the camera FOV, in this case cos(pi/2)
+        vTargetLinksInCamera.reserve(vPatternsInCamera.size());
+
+        dReal fCameraCosFOV = 0; // cos of the half angle of the camera FOV, in this case cos(pi/2)
 
 #ifdef CALIBRATION_TIMING_DEBUG
-            uint64_t starttime_filtertransforms = utils::GetMicroTime();
+        uint64_t starttime_filtertransforms = utils::GetMicroTime();
 #endif
-            Vector pluszvector;
-            pluszvector.x = 0;
-            pluszvector.y = 0;
-            pluszvector.z = 1;
-            FOREACH(itt,vCamerasInPatternCoord) {
-                Vector vCameraDirInPattern = ExtractAxisFromQuat(itt->rot, 2); // camera is always +z
-                Vector vCameraToPatternPos = itt->trans;
-                dReal flen = RaveSqrt(vCameraToPatternPos.lengthsqr3());
-                if( -vCameraToPatternPos.dot3(vCameraDirInPattern) < fCameraCosFOV * flen ) {
-                    // outside of camera FOV
-                    continue;
-                }
 
-                bool bInCone = false;
+        Vector pluszvector;
+        pluszvector.x = 0;
+        pluszvector.y = 0;
+        pluszvector.z = 1;
 
-                // We hard-code the cone direction (0,0,1) for initial visibility checking
-                // because only patterns in front of the camera lens will pass InConvexHull().
-                // We then appropriately express these pattern poses in the targetlink
-                // frame, taking into account vconedirangles.
+        FOREACH(ittPatternInCamera, vPatternsInCamera) {
+            Vector vPatternDirInCamera = ExtractAxisFromQuat(ittPatternInCamera->rot, 2); // camera is always +z
+            Vector vPatternInCameraPos = ittPatternInCamera->trans;
+            dReal flen = RaveSqrt(vPatternInCameraPos.lengthsqr3());
+            //if( -vPatternInCameraPos.dot3(vPatternDirInCamera) < fCameraCosFOV * flen ) {
+            if( vPatternInCameraPos.z < 0 ) {
+                // discard this pose because it lies in the half-sphere behind the camera's z plane
+                continue;
+            }
+
+            // Usually we have just one cone aligned with the pattern's +z axis,
+            // but we can have one or more cones whose apices lie at the pattern center
+            // (geometry origin) and whose +z axis is defined by cone dir angle.
+            // For each cone defined by each cone dir angle, we move the pattern such that
+            // that cone +z axis points directly at the camera (i.e., the pose candidates
+            // correspond to the cone, and the pattern is transformed accordingly).
+            // By considering the pose candidates to correspond to the cones now,
+            // we compute the corresponding target link poses. Note that the "pattern"
+            // here is defined as the plane tangent to the cone's apex.
+            //
+            // TODO: Define the pattern/cone origin as the center of the +z face of the geometry
+            // instead of the geometry origin (center of box)
+            if( vconedirangles.size() > 0 ) {
                 FOREACH(itcone, vconedirangles) {
-                    if( pluszvector.dot3(vCameraToPatternPos) >= itcone->w*flen ) {
+                    if( vPatternInCameraPos.z >= itcone->w * flen ) {
                         // quatRotationDirection uses only the first three values of the vectors
                         Vector vConeQuat = geometry::quatRotateDirection(pluszvector, *itcone);
-                        Transform vPatternToGeometry = geometry::matrixFromQuat(vConeQuat);
-                        Transform vCameraToTargetLink = tGeometryToTargetLink * vPatternToGeometry * *itt;
-                        vCamerasInTargetLinkCoord.push_back(vCameraToTargetLink);
+                        Transform tConeInPattern = geometry::matrixFromQuat(vConeQuat);
+                        Transform tTargetLinkInCamera = *ittPatternInCamera * tConeInPattern.inverse() * tPatternInTargetLink.inverse();
+                        vTargetLinksInCamera.push_back(tTargetLinkInCamera);
                     }
                 }
             }
-#ifdef CALIBRATION_TIMING_DEBUG
-            uint64_t endtime_filtertransforms = utils::GetMicroTime();
-            float fElapsed_filtertransforms = (endtime_filtertransforms - starttime_filtertransforms)*1e-6f;
-            RAVELOG_DEBUG_FORMAT("transform filtering by cone dirangles (remaining=%d): %f s.", vCamerasInTargetLinkCoord.size()%fElapsed_filtertransforms);
-#endif
-        }
-        else {
-            vCamerasInTargetLinkCoord.resize(vCamerasInPatternCoord.size());
-            for(size_t i = 0; i < vCamerasInTargetLinkCoord.size(); ++i) {
-                vCamerasInTargetLinkCoord[i] = vCamerasInPatternCoord[i];
+            else {
+                // Assume the pattern lies on the +z face of the geometry (i.e., tConeInPattern from the "if" block above is the identity matrix),
+                // i.e., we have one cone dir angle where the cone is pointing along the +z axis of the geometry, and assume the cone angle is 45 degrees
+                Transform tTargetLinkInCamera = *ittPatternInCamera * tPatternInTargetLink.inverse();
+                vTargetLinksInCamera.push_back(tTargetLinkInCamera);
             }
         }
+#ifdef CALIBRATION_TIMING_DEBUG
+        uint64_t endtime_filtertransforms = utils::GetMicroTime();
+        float fElapsed_filtertransforms = (endtime_filtertransforms - starttime_filtertransforms)*1e-6f;
+        RAVELOG_DEBUG_FORMAT("transform filtering by cone dirangles (remaining=%d): %f s.", vTargetLinksInCamera.size()%fElapsed_filtertransforms);
+#endif
 
-        KinBody::KinBodyStateSaver saver(_targetlink->GetParent(),KinBody::Save_LinkTransformation);
-        _targetlink->SetTransform(Transform()); // not sure why _targetlink has to be set to identity here
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
-        saver.Restore(); // need to restore _targetlink so that the preceeding CheckEndEffectorCollision works correctly
 
-        RAVELOG_DEBUG_FORMAT("targetlink.IsEnabled()=%d", _targetlink->IsEnabled());
+        RobotBase::RobotStateSaver saver(_robot, KinBody::Save_LinkVisible);
+        _robot->SetVisible(false);  // we haven't computed IKs yet, so we just check the visibility of the pattern pose without the robot
+
 #ifdef CALIBRATION_TIMING_DEBUG
         float fElapsed_convexhull = 0;
         uint64_t starttime_convexhull, endtime_convexhull;
@@ -1213,60 +1175,49 @@ Visibility computation checks occlusion with other objects using ray sampling in
         float fElapsed_eeocclusion = 0;
         uint64_t starttime_eeocclusion, endtime_eeocclusion;
 #endif
+        std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
         // get all the camera positions and test them
-        FOREACHC(itcamera, vCamerasInTargetLinkCoord) {
-            Transform tCameraInTarget = *itcamera;
-            Transform tTargetInWorld;
-            if( _sensorrobot == _robot ) {
-                tTargetInWorld = _sensorrobot->GetTransform() * tCameraInTarget.inverse();
-            }
-            else {
-                tTargetInWorld = _sensorrobot->GetTransform() * tCameraInTarget.inverse();
-            }
+        FOREACHC(ittTargetLinkInCamera, vTargetLinksInCamera) {
+            Transform tTargetLinkInCamera = *ittTargetLinkInCamera;
+            Transform tTargetLinkInWorld =  _psensor->GetTransform() * tTargetLinkInCamera;
 
+            ss.str(""); ss.clear();
+            SerializeTransform(ss, tTargetLinkInCamera);
 #ifdef CALIBRATION_TIMING_DEBUG
             starttime_convexhull = utils::GetMicroTime();
 #endif
-            if( pconstraintfn->InConvexHull(*itcamera) ) {
+            if( pconstraintfn->InConvexHull(tTargetLinkInCamera.inverse()) ) {
 #ifdef CALIBRATION_TIMING_DEBUG
                 endtime_convexhull = utils::GetMicroTime();
                 fElapsed_convexhull += (endtime_convexhull - starttime_convexhull)*1e-6f;
                 starttime_eecollision = utils::GetMicroTime();
 #endif
-                if( !_pmanip->CheckEndEffectorCollision(tTargetInWorld*_tToManip, _preport) ) {
+                if( !_pmanip->CheckEndEffectorCollision(tTargetLinkInWorld, _preport) ) {
 #ifdef CALIBRATION_TIMING_DEBUG
                     endtime_eecollision = utils::GetMicroTime();
                     fElapsed_eecollision += (endtime_eecollision - starttime_eecollision)*1e-6f;
                     starttime_eeocclusion = utils::GetMicroTime();
 #endif
-                    if( !pconstraintfn->IsOccludedByRigid(*itcamera) ) {
-#ifdef CALIBRATION_TIMING_DEBUG
-                        endtime_eeocclusion = utils::GetMicroTime();
-                        fElapsed_eeocclusion += (endtime_eeocclusion - starttime_eeocclusion)*1e-6f;
-#endif
-                        sout << *itcamera << " ";
-                        std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                        Transform tManip = tTargetInWorld*_tToManip;
-                        ss << "manippose=[" << tManip.rot.x << "," << tManip.rot.y << "," << tManip.rot.z << "," << tManip.rot.w << "," << tManip.trans.x << "," << tManip.trans.y << "," << tManip.trans.z << "];";
-                        RAVELOG_VERBOSE_FORMAT("passed all tests: %s", ss.str());
+                    bool bOutputError = false;
+                    std::string errormsg;
+                    if( !pconstraintfn->IsPatternOccluded(tTargetLinkInCamera, _psensor->GetTransform(), bOutputError, errormsg) ) {
+                        RAVELOG_VERBOSE("entirely in convex hull and effector is free, and pattern is not occluded\n");
+                        sout << tTargetLinkInWorld << " ";
                     }
                     else {
-#ifdef CALIBRATION_TIMING_DEBUG
-                        endtime_eeocclusion = utils::GetMicroTime();
-                        fElapsed_eeocclusion += (endtime_eeocclusion - starttime_eeocclusion)*1e-6f;
-#endif
-                        RAVELOG_VERBOSE("in convex hull and effector is free, but not occluded by rigid\n");
+                        RAVELOG_VERBOSE_FORMAT("entirely in convex hull and effector is free, but is occluded: %s. tTargetLinkInCamera=array([%s])", errormsg%ss.str());
                     }
+#ifdef CALIBRATION_TIMING_DEBUG
+                    endtime_eeocclusion = utils::GetMicroTime();
+                    fElapsed_eeocclusion += (endtime_eeocclusion - starttime_eeocclusion)*1e-6f;
+#endif
                 }
                 else {
 #ifdef CALIBRATION_TIMING_DEBUG
                     endtime_eecollision = utils::GetMicroTime();
                     fElapsed_eecollision += (endtime_eecollision - starttime_eecollision)*1e-6f;
 #endif
-                    std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                    Transform tManip = tTargetInWorld*_tToManip;
-                    ss << "manippose=[" << tManip.rot.x << "," << tManip.rot.y << "," << tManip.rot.z << "," << tManip.rot.w << "," << tManip.trans.x << "," << tManip.trans.y << "," << tManip.trans.z << "];";
-                    RAVELOG_VERBOSE_FORMAT("in convex hull, but end effector collision: %s; %s", _preport->__str__()%ss.str());
+                    RAVELOG_VERBOSE_FORMAT("end-effector in collision. tTargetLinkInCamera=array([%s])", ss.str());
                 }
             }
             else {
@@ -1274,11 +1225,12 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 endtime_convexhull = utils::GetMicroTime();
                 fElapsed_convexhull += (endtime_convexhull - starttime_convexhull)*1e-6f;
 #endif
+                RAVELOG_VERBOSE_FORMAT("end-effector not entirely in convex hull. tTargetLinkInCamera=array([%s])", ss.str());
             }
         }
 
 #ifdef CALIBRATION_TIMING_DEBUG
-        RAVELOG_DEBUG_FORMAT("Timing results (total transforms checked=%d):\n    convex hull checking: %f s.\n    ee collision checking: %f s.\n    ee occlusion checking: %f s.", vCamerasInTargetLinkCoord.size()%fElapsed_convexhull%fElapsed_eecollision%fElapsed_eeocclusion);
+        RAVELOG_DEBUG_FORMAT("Timing results (total transforms checked=%d):\n    convex hull checking: %f s.\n    ee collision checking: %f s.\n    ee occlusion checking: %f s.", vTargetLinksInCamera.size()%fElapsed_convexhull%fElapsed_eecollision%fElapsed_eeocclusion);
 #endif
 
         return true;
@@ -1386,8 +1338,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
     bool ComputeVisibleConfiguration(ostream& sout, istream& sinput)
     {
         string cmd;
-        Transform t;  // transform of targetlink in world coordinate system
-        // Therefore t * _tToManip = tmanipinworld.
+        Transform t;  // Transform of manip (targetlink) in world coordinate system
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput ) {
@@ -1415,7 +1366,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         _robot->SetActiveDOFs(_pmanip->GetArmIndices());
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
 
-        if( _pmanip->CheckEndEffectorCollision(t*_tToManip, _preport) ) {
+        if( _pmanip->CheckEndEffectorCollision(t, _preport) ) {
             RAVELOG_VERBOSE_FORMAT("endeffector is in collision, %s\n",_preport->__str__());
             std::string errormsg = _preport->__str__();
             boost::replace_all(errormsg, "\"", "\\\"");
@@ -1423,7 +1374,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             return true;
         }
         std::string errormsg;
-        if( !pconstraintfn->SampleWithCamera(t,vsample, true, errormsg) ) {
+        if( !pconstraintfn->SampleWithCamera(t, vsample, true, errormsg) ) {
             // TODO have better error message on why this failed!
             //boost::replace_all(errormsg, "\"", "\\\"");   // error message
             //already has escape characters at this point
@@ -1747,7 +1698,7 @@ protected:
     RobotBase::ManipulatorPtr _pmanip;
     bool _bCameraOnManip;     ///< true if camera is attached to manipulator
     SensorBase::CameraGeomDataConstPtr _pcamerageom;
-    Transform _tToManip;     ///< transforms a coord system from the link to the gripper coordsystem. tLinkInWorld * _tToManip = tManipInWorld
+    Transform _tManipInPattern;     ///< manipulator transform in calibration pattern coordinate system
     vector<Transform> _visibilitytransforms; ///< the transform with respect to the targetlink and camera (or vice-versa)
     dReal _fRayMinDist, _fAllowableOcclusion, _fSampleRayDensity;
 
