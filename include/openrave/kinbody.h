@@ -1488,7 +1488,7 @@ protected:
         std::vector<uint8_t> _vEnabledLinks;
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<dReal> _vdoflastsetvalues;
-        std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2];
+        std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vMaxHardVelocities, _vMaxHardAccelerations, _vMaxHardJerks;
         KinBodyPtr _pbody;
         std::vector<UserDataPtr> _vGrabbedBodies;
         bool _bRestoreOnDestructor;
