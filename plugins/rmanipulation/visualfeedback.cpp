@@ -17,6 +17,7 @@
 #include <boost/algorithm/string/replace.hpp>
 
 #define CALIBRATION_TIMING_DEBUG // uncomment this to get more information about time spent for each stage
+// #define CALIBRATION_PROJECTION_DEBUG
 
 /// \brief Sample rays from the projected OBB on an image plane and returns true if the test function returns true for
 ///        all the rays. Otherwise, return false
@@ -26,9 +27,9 @@
 /// \param tcamera Tcamerainworld
 /// \param allowableocclusion Allowable percentage of occluded rays
 /// \param bUseOnlyTopFace If true, will consider only the projection of the top face of the OBB. Otherwise, will consider three faces.
-bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::function<bool(const Vector&)>& testfn, const Transform& tCamera, bool bUseOnlyTopFace=false)
+bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::function<bool(const Vector&)>& testfn, const Transform& tCamera, bool bUseOnlyTopFace=true)
 {
-    // TODO: remove tCamera later when confirmed that the code is correct.
+    // TODO: remove tCamera from the input argument list since currently tCamera is used only for debugging.
     dReal fscalefactor = 0.95f; // have to make box smaller or else rays might miss
     int numpoints, numfaces;
     std::vector<Vector> vpoints;
@@ -86,6 +87,24 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
         }
     }
 
+#ifdef CALIBRATION_PROJECTION_DEBUG
+    Vector vpoints3d[numpoints];
+    for(int j = 0; j < numpoints; ++j) {
+        vpoints3d[j] = tCamera*vpoints[j];
+    }
+    std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+    ss << "vpoints=array([";
+    std::string delim = "";
+    for( int j = 0; j < numpoints; ++j ) {
+        ss << delim << "[";
+        SerializeVector3(ss, vpoints3d[j]);
+        ss << "]";
+        delim = ",";
+    }
+    ss << "]);";
+    RAVELOG_DEBUG_FORMAT("%s", ss.str());
+#endif
+
     // Project OBB points onto the plane z = 1 (image plane).
     dReal fmaxcornerdist = 0;
     for(int i = 0; i < numpoints; ++i) {
@@ -97,28 +116,6 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
         vpoints[i].x *= fz;
         vpoints[i].y *= fz;
         vpoints[i].z = 1;
-    }
-
-    if( 0 ) { // for debugging
-        Vector vpoints3d[numpoints];
-        for(int j = 0; j < numpoints; ++j) {
-            vpoints3d[j] = tCamera*vpoints[j];
-        }
-        {
-            std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-            ss << "camerapose=array([";
-            SerializeTransform(ss, tCamera);
-            ss << "]); vpoints=array([";
-            std::string delim = "";
-            for( int j = 0; j < numpoints; ++j ) {
-                ss << delim << "[";
-                SerializeVector3(ss, vpoints3d[j]);
-                ss << "]";
-                delim = ",";
-            }
-            ss << "]);";
-            RAVELOG_DEBUG_FORMAT("%s", ss.str());
-        }
     }
 
     for(int iface = 0; iface < numfaces; ++iface) {
@@ -219,7 +216,7 @@ public:
             for(size_t igeom = 0; igeom < _vf->_targetlink->GetGeometries().size(); ++igeom) {
                 KinBody::Link::GeometryPtr pgeom = _vf->_targetlink->GetGeometries().at(igeom);
                 if( pgeom->IsVisible() && (_vf->_targetGeomName.size() == 0 || pgeom->GetName() == _vf->_targetGeomName) ) {
-                    _vTargetLocalOBBs.push_back(geometry::OBBFromAABB(pgeom->ComputeAABB(Transform()), Transform()));
+                    _vTargetLocalOBBs.push_back(geometry::OBBFromAABB(pgeom->ComputeAABB(pgeom->GetTransform()), pgeom->GetTransform().inverse()));
                     break;
                 }
             }
