@@ -598,6 +598,8 @@ Visibility computation checks occlusion with other objects using ray sampling in
                         "Computes the visibility of the current robot configuration");
         RegisterCommand("ComputeVisibleConfiguration",boost::bind(&VisualFeedback::ComputeVisibleConfiguration,this,_1,_2),
                         "Gives a camera transformation, computes the visibility of the object and returns the robot configuration that takes the camera to its specified position, otherwise returns false");
+        RegisterCommand("ComputeVisibleConfigurationNearPose",boost::bind(&VisualFeedback::ComputeVisibleConfigurationNearPose, this, _1, _2),
+                        "Gives a manip/targetlink transformation, computes the visibility of the object and returns the robot configuration that takes the calibration board to its specified position or somewhere within a range specified by the input, otherwise returns false");
         RegisterCommand("SampleVisibilityGoal",boost::bind(&VisualFeedback::SampleVisibilityGoal,this,_1,_2),
                         "Samples a goal with the current manipulator maintaining camera visibility constraints");
         RegisterCommand("MoveToObserveTarget",boost::bind(&VisualFeedback::MoveToObserveTarget,this,_1,_2),
@@ -1389,6 +1391,140 @@ Visibility computation checks occlusion with other objects using ray sampling in
         }
         sout << "]}";
         return true;
+    }
+
+    bool ComputeVisibleConfigurationNearPose(ostream& sout, istream& sinput)
+    {
+        string cmd;
+        Transform tManipInWorld;  // Transform of manip (targetlink) in world coordinate system
+        dReal rangeTranslateX, rangeTranslateY, rangeTranslateZ, rangeRotX, rangeRotY, rangeRotZ;
+        size_t numRetries = 0;  // default zero retries (only check the original input pose)
+        while(!sinput.eof()) {
+            sinput >> cmd;
+            if( !sinput ) {
+                break;
+            }
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+
+            if( cmd == "pose" ) {
+                sinput >> tManipInWorld;
+            }
+            else if( cmd == "rangetranslatex" ) {
+                sinput >> rangeTranslateX;
+            }
+            else if( cmd == "rangetranslatey" ) {
+                sinput >> rangeTranslateY;
+            }
+            else if( cmd == "rangetranslatez" ) {
+                sinput >> rangeTranslateZ;
+            }
+            else if( cmd == "rangerotx" ) {
+                sinput >> rangeRotX;
+            }
+            else if( cmd == "rangeroty" ) {
+                sinput >> rangeRotY;
+            }
+            else if( cmd == "rangerotz" ) {
+                sinput >> rangeRotZ;
+            }
+            else if( cmd == "numretries" ) {
+                sinput >> numRetries;
+            }
+            else {
+                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
+                break;
+            }
+
+            if( !sinput ) {
+                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
+                return false;
+            }
+        }
+
+        vector<dReal> vsample;
+        std::string errormsg;
+        RobotBase::RobotStateSaver saver(_robot);
+        _robot->SetActiveManipulator(_pmanip);
+        _robot->SetActiveDOFs(_pmanip->GetArmIndices());
+        boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
+
+        // try the original pose first
+        if( !_pmanip->CheckEndEffectorCollision(tManipInWorld, _preport) ) {
+            RAVELOG_VERBOSE("endeffector is not in collision in input pose\n");
+            if( pconstraintfn->SampleWithCamera(tManipInWorld, vsample, true, errormsg) ) {
+                RAVELOG_DEBUG("Found valid IK for input pose\n");
+                sout << "{\"solution\":[";
+                for(size_t j = 0; j < vsample.size(); ++j) {
+                    if( j > 0 ) {
+                        sout << ",";
+                    }
+                    sout << vsample[j];
+                }
+                sout << "]}";
+                return true;
+            }
+            else {
+                RAVELOG_VERBOSE_FORMAT("Could not find valid IK for input pose: %s\n", errormsg);
+            }
+        }
+        else {
+            RAVELOG_VERBOSE_FORMAT("endeffector is in collision in input pose, %s\n", _preport->__str__());
+        }
+
+        dReal offsetTranslateX, offsetTranslateY, offsetTranslateZ, offsetRotX, offsetRotY, offsetRotZ;
+        Transform tOffsetRotX, tOffsetRotY, tOffsetRotZ, tOffset, tNewManipInWorld;
+
+        for(size_t i = 0; i < numRetries; ++i) {
+            // Construct random pose within ranges
+            // Note that RaveRandomFloat() returns float between 0 and 1 inclusive
+            offsetTranslateX = rangeTranslateX * (RaveRandomFloat() - 0.5f);  // goes from -0.5 * rangeTranslateX to 0.5 * rangeTranslateX
+            offsetTranslateY = rangeTranslateY * (RaveRandomFloat() - 0.5f);
+            offsetTranslateZ = rangeTranslateZ * (RaveRandomFloat() - 0.5f);
+            offsetRotX = rangeRotX * (RaveRandomFloat() - 0.5f);  // goes from -0.5 * rangeRotX to 0.5 * rangeRotX
+            offsetRotY = rangeRotY * (RaveRandomFloat() - 0.5f);
+            offsetRotZ = rangeRotZ * (RaveRandomFloat() - 0.5f);
+
+            tOffsetRotX = matrixFromAxisAngle(Vector(offsetRotX, 0, 0));
+            tOffsetRotY = matrixFromAxisAngle(Vector(offsetRotY, 0, 0));
+            tOffsetRotZ = matrixFromAxisAngle(Vector(offsetRotZ, 0, 0));
+            tOffset = tOffsetRotX * tOffsetRotY * tOffsetRotZ;  // composition order is arbitrary because we are just generating a random transform
+            tOffset.trans.x = offsetTranslateX;
+            tOffset.trans.y = offsetTranslateY;
+            tOffset.trans.z = offsetTranslateZ;
+
+            // Apply the offset transform to the calibration board, not to the targetlink pose directly
+            // Denote tNewManipInWorld as the new pose of the manip/targetlink such that the calibration board has pose tManipInWorld * tPatternInManip * tOffset
+            // We have:   tNewManipInWorld * tPatternInManip = tManipInWorld * tPatternInManip * tOffset
+            //             ==>              tNewManipInWorld = tManipInWorld * tPatternInManip * tOffset * tManipInPattern
+            tNewManipInWorld = tManipInWorld * _tManipInPattern.inverse() * tOffset * _tManipInPattern;
+
+            if( !_pmanip->CheckEndEffectorCollision(tNewManipInWorld, _preport) ) {
+                RAVELOG_VERBOSE("endeffector is not in collision in random offset pose\n");
+                if( pconstraintfn->SampleWithCamera(tNewManipInWorld, vsample, true, errormsg) ) {
+                    RAVELOG_DEBUG("Found valid IK for random offset pose\n");
+                    // output valid solution and return success
+                    sout << "{\"solution\":[";
+                    for(size_t j = 0; j < vsample.size(); ++j) {
+                        if( j > 0 ) {
+                            sout << ",";
+                        }
+                        sout << vsample[j];
+                    }
+                    sout << "]}";
+                    return true;
+                }
+                else {
+                    RAVELOG_VERBOSE_FORMAT("Could not find valid IK for random offset pose: %s\n", errormsg);
+                }
+            }
+            else {
+                RAVELOG_VERBOSE_FORMAT("endeffector is in collision in random offset pose, %s\n", _preport->__str__());
+            }
+        }
+
+        // no valid solutions, return failure
+        sout << "{\"error\":" << errormsg << "}";
+        return false;
     }
 
     bool SampleVisibilityGoal(ostream& sout, istream& sinput)

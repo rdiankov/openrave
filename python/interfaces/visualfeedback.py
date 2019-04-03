@@ -144,6 +144,33 @@ class VisualFeedback:
             raise PlanningError()
         return res
 
+    def ComputeVisibleConfigurationNearPose(self, pose, rangetranslatex=0, rangetranslatey=0, rangetranslatez=0, rangerotx=0, rangeroty=0, rangerotz=0, numretries=0):
+        """See :ref:`module-visualfeedback-computevisibleconfigurationnearpose`
+        """
+        cmd = 'ComputeVisibleConfigurationNearPose '
+        cmd += 'pose '
+        for i in range(7):
+            cmd += str(pose[i]) + ' '
+        cmd += 'rangetranslatex '
+        cmd += str(rangetranslatex)
+        cmd += 'rangetranslatey '
+        cmd += str(rangetranslatey)
+        cmd += 'rangetranslatez '
+        cmd += str(rangetranslatez)
+        cmd += 'rangerotx '
+        cmd += str(rangerotx)
+        cmd += 'rangeroty '
+        cmd += str(rangeroty)
+        cmd += 'rangerotz '
+        cmd += str(rangerotz)
+        cmd += 'numretries '
+        cmd += str(numretries)
+        res = self.prob.SendCommand(cmd)
+        log.info('result of compute visible conf near pose: %s' % res)
+        if res is None:
+            raise PlanningError()
+        return res
+
     def SampleVisibilityGoal(self,numsamples=None):
         """See :ref:`module-visualfeedback-samplevisibilitygoal`
         """
