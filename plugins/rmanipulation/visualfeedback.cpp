@@ -401,21 +401,13 @@ private:
         /// \param tcamera is the camera in the world coordinate system
         bool _TestRay(const Vector& v, const TransformMatrix& tcamera, std::string& errormsg)
         {
-            //RAVELOG_INFO_FORMAT("vector=array([%f, %f, %f])", v[0]%v[1]%v[2]);
             RAY r;
-            dReal filen = 1/RaveSqrt(v.lengthsqr3());
-            r.dir = tcamera.rotate((200.0f*filen)*v);
+            r.dir = tcamera.rotate(v);
             r.pos = tcamera.trans + 0.5f*_vf->_fRayMinDist*r.dir;         // move the rays a little forward
-            //RAVELOG_INFO_FORMAT("ray=array([%f, %f, %f, %f, %f, %f])", r.pos[0]%r.pos[1]%r.pos[2]%r.dir[0]%r.dir[1]%r.dir[2]);
             if( !_vf->_robot->GetEnv()->CheckCollision(r, _report) ) {
-                //RAVELOG_DEBUG("CheckCollision call returned False.");
-                return true;         // not supposed to happen, but it is OK
+                RAVELOG_VERBOSE("CheckCollision returned false\n");
+                return false;
             }
-
-            //            RaveVector<float> vpoints[2];
-            //            vpoints[0] = r.pos;
-            //            vpoints[1] = _report.contacts[0].pos;
-            //            _vf->_robot->GetEnv()->drawlinestrip(vpoints[0],2,16,1.0f,Vector(0,0,1));
             if( !(!!_report->plink1 &&( _report->plink1->GetParent() == _ptargetbox) ) ) {
                 if( _report->contacts.size() > 0 ) {
                     Vector v = _report->contacts.at(0).pos;
@@ -431,7 +423,7 @@ private:
                     std::string linkname = _report->plink1->GetName();
                     std::string bodyname = _report->plink1->GetParent()->GetName();
                     errormsg = bodyname + "/" + linkname;
-                    //RAVELOG_DEBUG_FORMAT("Ray hit a target box: %s, success.", errormsg);
+                    RAVELOG_VERBOSE_FORMAT("Ray hit a target box: %s, success.", errormsg);
                     return true;
                 }
                 else if( _report->plink1 == _vf->_targetlink ) {
@@ -439,7 +431,7 @@ private:
                     std::string linkname = _report->plink1->GetName();
                     std::string bodyname = _report->plink1->GetParent()->GetName();
                     errormsg = bodyname + "/" + linkname;
-                    //RAVELOG_DEBUG_FORMAT("Ray hit target body and link named %s, success.", errormsg);
+                    RAVELOG_VERBOSE_FORMAT("Ray hit target body and link named %s, success.", errormsg);
                     if( _report->contacts.size() > 0 ) {
                         // transform the contact point into the target link coordinate system
                         Transform ttarget = _vf->_targetlink->GetTransform();
