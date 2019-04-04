@@ -375,13 +375,40 @@ public:
 
         /// Check if any part of the environment or robot is in front of the camera blocking the calibration board
         /// Project the board's top surface onto the image plane and shoot rays
-        bool IsPatternOccluded(const TransformMatrix& tTargetLinkInCamera, const TransformMatrix& tCameraInWorld, bool bOutputError, std::string& errormsg)
+        bool IsPatternOccluded(const TransformMatrix& tTargetLinkInCamera, const TransformMatrix& tCameraInWorld, bool bOutputError, std::string& errormsg, bool bRobotIsSetToIK=true)
         {
             KinBody::KinBodyStateSaver saver1(_ptargetbox);
             _ptargetbox->SetTransform(tCameraInWorld * tTargetLinkInCamera); // _ptargetbox is box geometry relative to targetlink
             _ptargetbox->Enable(true);
             SampleRaysScope srs(*this);
             std::string occludingbodyandlinkname = "";
+#ifdef CALIBRATION_PROJECTION_DEBUG
+            std::stringstream ss;  ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+            ss << "tCamera=array([";
+            SerializeTransform(ss, tCameraInWorld);
+            ss << "]); tTargetLinkInCamera=array([";
+            SerializeTransform(ss, tTargetLinkInCamera);
+            ss << "]); tTargetLink=array([";
+            SerializeTransform(ss, tCameraInWorld*tTargetLinkInCamera);
+            ss << "]);";
+            RAVELOG_VERBOSE_FORMAT("%s", ss.str());
+#endif CALIBRATION_PROJECTION_DEBUG
+
+            // Disable any robot links that are not attached to the sensor if bRobotIsSetToIK is false, i.e., the robot is not set to an IK solution corresponding to this tTargetLinkInCamera yet.
+            RobotBase::RobotStateSaver robotsaver(_vf->_robot, RobotBase::Save_LinkTransformation|RobotBase::Save_LinkEnable);
+            if( !bRobotIsSetToIK ) {
+                Transform tsensorinv = _vf->_psensor->GetTransform().inverse();
+                vector<KinBody::LinkPtr> vattachedlinks;
+                _vf->_psensor->GetAttachingLink()->GetRigidlyAttachedLinks(vattachedlinks);
+                FOREACHC(itlink, _vf->_robot->GetLinks()) {
+                    bool battached = find(vattachedlinks.begin(), vattachedlinks.end(), *itlink) != vattachedlinks.end();
+                    (*itlink)->Enable(battached);
+                    if( battached ) {
+                        (*itlink)->SetTransform(tsensorinv*(*itlink)->GetTransform());
+                    }
+                }
+            }
+
             FOREACH(itobb, _vTargetLocalOBBs) {  // itobb is in targetlink coordinates
                 OBB cameraobb = geometry::TransformOBB(tTargetLinkInCamera, *itobb);
                 // SampleProjectedOBBWithTest usually quits when first occlusion is found, so just passing occludingbodyandlinkname to _TestRay should return the initial occluding part.
@@ -573,7 +600,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         _fMaxVelMult=1;
         _bIgnoreSensorCollision = false;
         _bCameraOnManip = false;
-        _fSampleRayDensity = 0.001;
+        _fSampleRayDensity = 0.01;
         _fAllowableOcclusion = 0.0;
         _fRayMinDist = 0.02f;
 
@@ -931,7 +958,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         return tPatternInCamera;
     }
 
-    /// \brief return a list of transforms of the camera in the target link frame.
+    /// \brief return a list of transforms tTargetLinkInWorld.
     bool ProcessVisibilityExtents(ostream& sout, istream& sinput)
     {
         string cmd;
@@ -1191,7 +1218,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
 #endif
                     bool bOutputError = false;
                     std::string errormsg;
-                    if( !pconstraintfn->IsPatternOccluded(tTargetLinkInCamera, _psensor->GetTransform(), bOutputError, errormsg) ) {
+                    if( !pconstraintfn->IsPatternOccluded(tTargetLinkInCamera, _psensor->GetTransform(), bOutputError, errormsg, false) ) {
                         RAVELOG_VERBOSE("entirely in convex hull and effector is free, and pattern is not occluded\n");
                         sout << tTargetLinkInWorld << " ";
                     }
