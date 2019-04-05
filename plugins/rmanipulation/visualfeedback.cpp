@@ -42,10 +42,10 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
         vpoints.resize(numpoints);
         faceindices.resize(numfaces*numpoints);
 
-        vpoints[0] = obb.pos + fscalefactor*(  obb.right*obb.extents.x + obb.up*obb.extents.y - obb.dir*obb.extents.z );
-        vpoints[1] = obb.pos + fscalefactor*(  obb.right*obb.extents.x - obb.up*obb.extents.y - obb.dir*obb.extents.z );
-        vpoints[2] = obb.pos + fscalefactor*( -obb.right*obb.extents.x + obb.up*obb.extents.y - obb.dir*obb.extents.z );
-        vpoints[3] = obb.pos + fscalefactor*( -obb.right*obb.extents.x - obb.up*obb.extents.y - obb.dir*obb.extents.z );
+        vpoints[0] = obb.pos + fscalefactor*(  obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z );
+        vpoints[1] = obb.pos + fscalefactor*(  obb.right*obb.extents.x - obb.up*obb.extents.y + obb.dir*obb.extents.z );
+        vpoints[2] = obb.pos + fscalefactor*( -obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z );
+        vpoints[3] = obb.pos + fscalefactor*( -obb.right*obb.extents.x - obb.up*obb.extents.y + obb.dir*obb.extents.z );
 
         faceindices[0] = 0; faceindices[1] = 1; faceindices[2] = 2; faceindices[3] = 3;
 
@@ -56,14 +56,14 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
         vpoints.resize(numpoints);
         faceindices.resize(numfaces*numpoints);
 
-        vpoints[0] = obb.pos + fscalefactor*(  obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z );
-        vpoints[1] = obb.pos + fscalefactor*(  obb.right*obb.extents.x + obb.up*obb.extents.y - obb.dir*obb.extents.z );
-        vpoints[2] = obb.pos + fscalefactor*(  obb.right*obb.extents.x - obb.up*obb.extents.y + obb.dir*obb.extents.z );
-        vpoints[3] = obb.pos + fscalefactor*(  obb.right*obb.extents.x - obb.up*obb.extents.y - obb.dir*obb.extents.z );
-        vpoints[4] = obb.pos + fscalefactor*( -obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z );
-        vpoints[5] = obb.pos + fscalefactor*( -obb.right*obb.extents.x + obb.up*obb.extents.y - obb.dir*obb.extents.z );
-        vpoints[6] = obb.pos + fscalefactor*( -obb.right*obb.extents.x - obb.up*obb.extents.y + obb.dir*obb.extents.z );
-        vpoints[7] = obb.pos + fscalefactor*( -obb.right*obb.extents.x - obb.up*obb.extents.y - obb.dir*obb.extents.z );
+        vpoints[0] = obb.pos + fscalefactor*(  obb.right*obb.extents.x + obb.up*obb.extents.y - obb.dir*obb.extents.z );
+        vpoints[1] = obb.pos + fscalefactor*(  obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z );
+        vpoints[2] = obb.pos + fscalefactor*(  obb.right*obb.extents.x - obb.up*obb.extents.y - obb.dir*obb.extents.z );
+        vpoints[3] = obb.pos + fscalefactor*(  obb.right*obb.extents.x - obb.up*obb.extents.y + obb.dir*obb.extents.z );
+        vpoints[4] = obb.pos + fscalefactor*( -obb.right*obb.extents.x + obb.up*obb.extents.y - obb.dir*obb.extents.z );
+        vpoints[5] = obb.pos + fscalefactor*( -obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z );
+        vpoints[6] = obb.pos + fscalefactor*( -obb.right*obb.extents.x - obb.up*obb.extents.y - obb.dir*obb.extents.z );
+        vpoints[7] = obb.pos + fscalefactor*( -obb.right*obb.extents.x - obb.up*obb.extents.y + obb.dir*obb.extents.z );
 
         if( obb.right.z >= 0 ) {
             faceindices[0] = 4; faceindices[1] = 5; faceindices[2] = 6; faceindices[3] = 7;
@@ -216,7 +216,8 @@ public:
             for(size_t igeom = 0; igeom < _vf->_targetlink->GetGeometries().size(); ++igeom) {
                 KinBody::Link::GeometryPtr pgeom = _vf->_targetlink->GetGeometries().at(igeom);
                 if( pgeom->IsVisible() && (_vf->_targetGeomName.size() == 0 || pgeom->GetName() == _vf->_targetGeomName) ) {
-                    _vTargetLocalOBBs.push_back(geometry::OBBFromAABB(pgeom->ComputeAABB(pgeom->GetTransform()), pgeom->GetTransform().inverse()));
+                    // Need to obtain AABB of only the geometry so transforming pgeom to identity.
+                    _vTargetLocalOBBs.push_back(geometry::OBBFromAABB(pgeom->ComputeAABB(pgeom->GetTransform().inverse()), pgeom->GetTransform()));
                     break;
                 }
             }
