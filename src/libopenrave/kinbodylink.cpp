@@ -372,6 +372,94 @@ int KinBody::Link::GetGroupNumGeometries(const std::string& groupname) const
     return it->second.size();
 }
 
+void KinBody::Link::AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroups)
+{
+    if( !pginfo ) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("tried to add improper geometry to link %s"), GetName(), ORE_InvalidArguments);
+    }
+    
+    const KinBody::GeometryInfo& ginfo = *pginfo;
+    if( ginfo._name.size() > 0 ) {
+        // check if similar name exists and throw if it does
+        FOREACH(itgeometry, _vGeometries) {
+            if( (*itgeometry)->GetName() == ginfo._name ) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("new added geometry %s has conflicting name for link %s"), ginfo._name%GetName(), ORE_InvalidArguments);
+            }
+        }
+        
+        FOREACH(itgeometryinfo, _info._vgeometryinfos) {
+            if( (*itgeometryinfo)->_name == ginfo._name ) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("new added geometry %s has conflicting name for link %s"), ginfo._name%GetName(), ORE_InvalidArguments);
+            }
+        }
+        if( addToGroups ) {
+            FOREACH(itgeometrygroup, _info._mapExtraGeometries) {
+                FOREACH(itgeometryinfo, itgeometrygroup->second) {
+                    if( (*itgeometryinfo)->_name == ginfo._name ) {
+                        throw OPENRAVE_EXCEPTION_FORMAT(_("new added geometry %s for group %s has conflicting name for link %s"), ginfo._name%itgeometrygroup->first%GetName(), ORE_InvalidArguments);
+                    }
+                }
+            }
+        }
+    }
+    
+    _vGeometries.push_back(GeometryPtr(new Geometry(shared_from_this(),*pginfo)));
+    _vGeometries.back()->InitCollisionMesh();
+    _info._vgeometryinfos.push_back(pginfo);
+    if( addToGroups ) {
+        FOREACH(itgeometrygroup, _info._mapExtraGeometries) {
+            itgeometrygroup->second.push_back(pginfo);
+        }
+    }
+    _Update(true, Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
+}
+
+void KinBody::Link::RemoveGeometryByName(const std::string& geometryname, bool removeFromAllGroups)
+{
+    OPENRAVE_ASSERT_OP(geometryname.size(),>,0);
+    bool bChanged = false;
+    
+    std::vector<GeometryPtr>::iterator itgeometry = _vGeometries.begin();
+    while(itgeometry != _vGeometries.end()) {
+        if( (*itgeometry)->GetName() == geometryname ) {
+            itgeometry = _vGeometries.erase(itgeometry);
+            bChanged = true;
+        }
+        else {
+            ++itgeometry;
+        }
+    }
+    std::vector<KinBody::GeometryInfoPtr>::iterator itgeometryinfo = _info._vgeometryinfos.begin();
+    while(itgeometryinfo != _info._vgeometryinfos.end()) {
+        if( (*itgeometryinfo)->_name == geometryname ) {
+            itgeometryinfo = _info._vgeometryinfos.erase(itgeometryinfo);
+            bChanged = true;
+        }
+        else {
+            ++itgeometryinfo;
+        }
+    }
+
+    if( removeFromAllGroups ) {
+        FOREACH(itgeometrygroup, _info._mapExtraGeometries) {
+            std::vector<KinBody::GeometryInfoPtr>::iterator itgeometryinfo2 = itgeometrygroup->second.begin();
+            while(itgeometryinfo2 != itgeometrygroup->second.end()) {
+                if( (*itgeometryinfo2)->_name == geometryname ) {
+                    itgeometryinfo2 = itgeometrygroup->second.erase(itgeometryinfo2);
+                    bChanged = true;
+                }
+                else {
+                    ++itgeometryinfo2;
+                }
+            }
+        }
+    }
+    
+    if( bChanged ) {
+        _Update(true, Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
+    }
+}
+
 void KinBody::Link::SwapGeometries(boost::shared_ptr<Link>& link)
 {
     _vGeometries.swap(link->_vGeometries);
@@ -455,7 +543,7 @@ void KinBody::Link::UpdateInfo()
     }
 }
 
-void KinBody::Link::_Update(bool parameterschanged)
+void KinBody::Link::_Update(bool parameterschanged, uint32_t extraParametersChanged)
 {
     // if there's only one trimesh geometry and it has identity offset, then copy it directly
     if( _vGeometries.size() == 1 && _vGeometries.at(0)->GetType() == GT_TriMesh && TransformDistanceFast(Transform(), _vGeometries.at(0)->GetTransform()) <= g_fEpsilonLinear ) {
@@ -468,8 +556,8 @@ void KinBody::Link::_Update(bool parameterschanged)
             _collision.Append((*itgeom)->GetCollisionMesh(),(*itgeom)->GetTransform());
         }
     }
-    if( parameterschanged ) {
-        GetParent()->_PostprocessChangedParameters(Prop_LinkGeometry);
+    if( parameterschanged || extraParametersChanged ) {
+        GetParent()->_PostprocessChangedParameters(Prop_LinkGeometry|extraParametersChanged);
     }
 }
 
