@@ -189,6 +189,22 @@ public:
 private:
             VisibilityConstraintFunction& _vcf;
         };
+
+        class OcclusionBodyScope
+        {
+public:
+            OcclusionBodyScope(VisibilityConstraintFunction& vcf) : _vcf(vcf) {
+                // TODO: Currently using the existing parameter _bSamplingRays. Will need to rename this variable later.
+                _vcf._bSamplingRays = true; // tell the collision checker to ignore sensorrobot
+            }
+            ~OcclusionBodyScope() {
+                _vcf._bSamplingRays = false;
+                _vcf._RemoveOcclusionBody(); // remove occlusion body after use
+            }
+private:
+            VisibilityConstraintFunction& _vcf;
+        };
+
 public:
         static void GetAABBFromOBB(const OBB& obb, Vector& vMin, Vector& vMax)
         {
@@ -379,9 +395,11 @@ public:
         bool IsPatternOccluded(const TransformMatrix& tTargetLinkInCamera, const TransformMatrix& tCameraInWorld, bool bOutputError, std::string& errormsg, bool bRobotIsSetToIK=true)
         {
             KinBody::KinBodyStateSaver saver1(_ptargetbox);
-            _ptargetbox->SetTransform(tCameraInWorld * tTargetLinkInCamera); // _ptargetbox is box geometry relative to targetlink
+            Transform tTargetLinkInWorld = tCameraInWorld * tTargetLinkInCamera;
+            _ptargetbox->SetTransform(tTargetLinkInWorld); // _ptargetbox is box geometry relative to targetlink
             _ptargetbox->Enable(true);
             SampleRaysScope srs(*this);
+            OcclusionBodyScope obs(*this); // will remove _pvisibilitypyramid from the env after going out of scope
             std::string occludingbodyandlinkname = "";
 #ifdef CALIBRATION_PROJECTION_DEBUG
             std::stringstream ss;  ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
@@ -411,11 +429,12 @@ public:
             }
 
             FOREACH(itobb, _vTargetLocalOBBs) {  // itobb is in targetlink coordinates
-                OBB cameraobb = geometry::TransformOBB(tTargetLinkInCamera, *itobb);
-                // SampleProjectedOBBWithTest usually quits when first occlusion is found, so just passing occludingbodyandlinkname to _TestRay should return the initial occluding part.
-                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::_TestRay, this, _1, boost::ref(tCameraInWorld), boost::ref(occludingbodyandlinkname)), tCameraInWorld) ) {
-                    RAVELOG_VERBOSE("box is occluded\n");
-                    errormsg = str(boost::format("{\"type\":\"pattern_occluded\", \"bodylinkname\":\"%s\"}")%occludingbodyandlinkname);
+                OBB targetworldobb = geometry::TransformOBB(tTargetLinkInWorld, *itobb);
+                _EnsureOcclusionBody(targetworldobb, tCameraInWorld);
+                if( _vf->_env->CheckCollision(_pvisibilitypyramid, _report) ) {
+                    // visibility pyramid is in collision so the pattern is occluded.
+                    _vf->_env->UpdatePublishedBodies();
+                    RAVELOG_VERBOSE_FORMAT("env=%d, pyramid in collision: %s", _vf->_env->GetId()%_report->__str__());
                     return true;
                 }
             }
@@ -423,6 +442,67 @@ public:
         }
 
 private:
+        /// \brief Construct a visibility pyramid for occlusion checking.
+        ///
+        /// \param targetworldobb obb of the target described in the world frame
+        void _EnsureOcclusionBody(const OBB& targetworldobb, const Transform& tCameraInWorld)
+        {
+            dReal fscalefactor = 1.0; // determines how large the pyramid base should be
+            dReal fzoffset = 0.005;   // an offset to add so that the pyramid base is not colliding with the board
+            TriMesh trimesh;
+            trimesh.vertices.resize(5);
+            trimesh.vertices[0] = targetworldobb.pos + fscalefactor*(  targetworldobb.right*targetworldobb.extents.x + targetworldobb.up*targetworldobb.extents.y + targetworldobb.dir*(targetworldobb.extents.z + fzoffset) );
+            trimesh.vertices[1] = targetworldobb.pos + fscalefactor*(  targetworldobb.right*targetworldobb.extents.x - targetworldobb.up*targetworldobb.extents.y + targetworldobb.dir*(targetworldobb.extents.z + fzoffset) );
+            trimesh.vertices[2] = targetworldobb.pos + fscalefactor*( -targetworldobb.right*targetworldobb.extents.x + targetworldobb.up*targetworldobb.extents.y + targetworldobb.dir*(targetworldobb.extents.z + fzoffset) );
+            trimesh.vertices[3] = targetworldobb.pos + fscalefactor*( -targetworldobb.right*targetworldobb.extents.x - targetworldobb.up*targetworldobb.extents.y + targetworldobb.dir*(targetworldobb.extents.z + fzoffset) );
+            trimesh.vertices[4] = tCameraInWorld.trans;
+
+            int numfaces = 6; // pyramid has 6 triangles (4 sides + 2 for the base)
+            static const int _indices[6][3] = {
+                {0, 4, 1}, {1, 4, 3}, {3, 4, 2}, {2, 4, 0}, {1, 3, 0}, {0, 3, 2}
+
+            }; // facing outside
+            trimesh.indices.resize(3*numfaces);
+            for (int iface = 0; iface < numfaces; ++iface) {
+                for (int j = 0; j < 3; ++j) {
+                    trimesh.indices[3*iface + j] = _indices[iface][j];
+                }
+            }
+
+#ifdef CALIBRATION_PROJECTION_DEBUG
+            std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+            ss << "visibilitypyramid: vertices=array([";
+            FOREACHC(itvertex, trimesh.vertices) {
+                ss << "[";
+                SerializeVector3(ss, *itvertex);
+                ss << "], ";
+            }
+            ss << "]); indices=array([";
+            FOREACHC(itvalue, trimesh.indices) {
+                ss << *itvalue << ",";
+            }
+            ss << "]).reshape((" << numfaces << ", 3)); trimesh=TriMesh(vertices, indices); pyramid=RaveCreateKinBody(env, ''); pyramid.InitFromTrimesh(trimesh); pyramid.SetName('visibilitypyramid'); env.Add(pyramid, True)";
+            RAVELOG_VERBOSE_FORMAT("%s", ss.str());
+#endif
+
+            if( !!_pvisibilitypyramid ) {
+                _vf->_env->Remove(_pvisibilitypyramid);
+            }
+            else {
+                _pvisibilitypyramid = RaveCreateKinBody(_vf->_env, "");
+                _pvisibilitypyramid->SetName("__visibilitypyramid__");
+            }
+            _pvisibilitypyramid->InitFromTrimesh(trimesh, true);
+            _vf->_env->Add(_pvisibilitypyramid, true);
+        }
+
+        void _RemoveOcclusionBody()
+        {
+            if( !!_pvisibilitypyramid ) {
+                _vf->_env->Remove(_pvisibilitypyramid);
+            }
+        }
+
         /// \brief return true if not occluded by any other target (ray hits the intended target box)
         ///
         /// \param v is in camera coordinate system
@@ -527,6 +607,7 @@ private:
         bool _bSamplingRays;
         boost::shared_ptr<VisualFeedback> _vf;
         KinBodyPtr _ptargetbox;         ///< box to represent the target for simulating ray collisions
+        KinBodyPtr _pvisibilitypyramid; ///< a pyramid used for occlusion checking.
         UserDataPtr _collisionfn;
 
         vector<OBB> _vTargetLocalOBBs;         ///< target geometry bounding boxes in the target link coordinate system
@@ -636,6 +717,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
     void Destroy()
     {
         _robot.reset();
+        _env.reset();
         _sensorrobot.reset();
         _targetlink.reset();
         _targetGeomName.clear();
@@ -671,6 +753,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             }
         }
         _robot = GetEnv()->GetRobot(robotname);
+        _env = GetEnv();
         return 0;
     }
 
@@ -1843,6 +1926,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
 protected:
     RobotBasePtr _robot, _sensorrobot;
+    EnvironmentBasePtr _env;
     bool _bIgnoreSensorCollision; ///< if true will ignore any collisions with vf->_sensorrobot
     KinBody::LinkPtr _targetlink; ///< the link where the verification pattern is attached
     std::string _targetGeomName; ///< if not empty, then use only a specific geometry of the link rather than all geometries
