@@ -167,7 +167,7 @@ public:
         };
 
         Vector _innerVolumeExtents;
-        float _containerBaseHeight;
+        float _containerBaseHeight; // Distance between the inner bottom plane and the bottom plane of the container
         Transform _sidewallTransforms[4]; // Transformation of each side wall in the geometry space
         Vector _sidewallExtents[4]; // Each side wall is a rectangular volume.
         uint8_t _sidewallExists : 4; // Each bit in 0-3 corresponds to 1 sidewall. Refer to SideWallType.
