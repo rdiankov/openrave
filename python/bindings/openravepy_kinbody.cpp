@@ -3264,6 +3264,12 @@ void init_openravepy_kinbody()
                           .value("Container",GT_Container)
                           .value("Cage",GT_Cage)
     ;
+    object sidewalltype = enum_<KinBody::GeometryInfo::SideWallType>("SideWallType" DOXY_ENUM(KinBody::GeometryInfo::SideWallType))
+                          .value("SWT_NX",KinBody::GeometryInfo::SideWallType::SWT_NX)
+                          .value("SWT_PX",KinBody::GeometryInfo::SideWallType::SWT_PX)
+                          .value("SWT_NY",KinBody::GeometryInfo::SideWallType::SWT_NY)
+                          .value("SWT_PY",KinBody::GeometryInfo::SideWallType::SWT_PY)
+    ;
     object electricmotoractuatorinfo = class_<PyElectricMotorActuatorInfo, boost::shared_ptr<PyElectricMotorActuatorInfo> >("ElectricMotorActuatorInfo", DOXY_CLASS(KinBody::ElectricMotorActuatorInfo))
                                        .def_readwrite("model_type",&PyElectricMotorActuatorInfo::model_type)
                                        .def_readwrite("assigned_power_rating",&PyElectricMotorActuatorInfo::assigned_power_rating)

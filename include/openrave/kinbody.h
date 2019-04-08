@@ -158,11 +158,19 @@ public:
         Vector _vGeomData3; ///< For containers, the first 3 values is the bottom cross XY full extents and Z height from bottom face.
 
         // For GT_Cage
+        enum SideWallType
+        {
+            SWT_NX=0,
+            SWT_PX=1,
+            SWT_NY=2,
+            SWT_PY=3,
+        };
+
         Vector _innerVolumeExtents;
         float _containerBaseHeight;
         Transform _sidewallTransforms[4]; // Transformation of each side wall in the geometry space
         Vector _sidewallExtents[4]; // Each side wall is a rectangular volume.
-        uint8_t _sidewallExists : 4; // bit 0-3 corresponds to (nx, px, ny, py)
+        uint8_t _sidewallExists : 4; // Each bit in 0-3 corresponds to 1 sidewall. Refer to SideWallType.
 
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height
