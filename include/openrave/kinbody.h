@@ -166,7 +166,7 @@ public:
             SWT_PY=3,
         };
 
-        Vector _innerVolumeExtents; // Inner extents of the container, the volume that can be used to pick/place objectss
+        Vector _innerExtents; // Inner extents of the container, the volume that can be used to pick/place objectss
         float _containerBaseHeight; // Distance between the inner bottom plane and the bottom plane of the container
         Transform _sidewallTransforms[4]; // Transformation of each side wall in the geometry space
         Vector _sidewallExtents[4]; // Each side wall is a rectangular volume.

@@ -2232,7 +2232,7 @@ public:
                 itgeominfo->_vGeomData *= vscale;
                 break;
             case GT_Cage:
-                itgeominfo->_innerVolumeExtents *= vscale;
+                itgeominfo->_innerExtents *= vscale;
                 itgeominfo->_containerBaseHeight *= vscale[2];
                 for (size_t i = 0; i < 4; ++i) {
                     itgeominfo->_sidewallTransforms[i].trans *= vscale;
@@ -2801,14 +2801,14 @@ public:
                             }
                         }
                         else if( name == "cage" ) {
-                            daeElementRef pPickableVolumeExtents = children[i]->getChild("innerVolumeExtents");
+                            daeElementRef pPickableVolumeExtents = children[i]->getChild("innerExtents");
                             if( !!pPickableVolumeExtents ) {
                                 stringstream ss(pPickableVolumeExtents->getCharData());
                                 Vector vextents;
                                 ss >> vextents.x >> vextents.y >> vextents.z;
                                 if( ss.eof() || !!ss ) {
                                     geominfo._type = GT_Cage;
-                                    geominfo._innerVolumeExtents = vextents;
+                                    geominfo._innerExtents = vextents;
                                     geominfo._t = tlocalgeom;
                                     bfoundgeom = true;
                                 }

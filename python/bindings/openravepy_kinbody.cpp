@@ -68,7 +68,7 @@ public:
         _vCollisionScale = toPyVector3(Vector(1,1,1));
         _bVisible = true;
         _bModifiable = true;
-        _innerVolumeExtents = toPyVector4(Vector());
+        _innerExtents = toPyVector4(Vector());
         _containerBaseHeight = 0.0f;
         _sidewallTransforms = boost::python::list();
         _sidewallExtents = boost::python::list();
@@ -84,7 +84,7 @@ public:
         _vGeomData2 = toPyVector4(info._vGeomData2);
         _vGeomData3 = toPyVector4(info._vGeomData3);
 
-        _innerVolumeExtents = toPyVector4(info._innerVolumeExtents);
+        _innerExtents = toPyVector4(info._innerExtents);
         _containerBaseHeight = info._containerBaseHeight;
         _sidewallTransforms = boost::python::list();
         _sidewallExtents = boost::python::list();
@@ -118,7 +118,7 @@ public:
         info._vGeomData2 = ExtractVector<dReal>(_vGeomData2);
         info._vGeomData3 = ExtractVector<dReal>(_vGeomData3);
 
-        info._innerVolumeExtents = ExtractVector<dReal>(_innerVolumeExtents);
+        info._innerExtents = ExtractVector<dReal>(_innerExtents);
         info._containerBaseHeight = _containerBaseHeight;
         for (size_t i = 0; i < 4; ++i) {
             info._sidewallTransforms[i] = ExtractTransform(_sidewallTransforms[i]);
@@ -152,7 +152,7 @@ public:
     }
 
     object _t, _vGeomData, _vGeomData2, _vGeomData3,
-           _innerVolumeExtents,
+           _innerExtents,
            _vDiffuseColor, _vAmbientColor, _meshcollision;
     boost::python::list _sidewallTransforms, _sidewallExtents;
     float _containerBaseHeight;
@@ -3326,7 +3326,7 @@ void init_openravepy_kinbody()
                           .def_readwrite("_bVisible",&PyGeometryInfo::_bVisible)
                           .def_readwrite("_bModifiable",&PyGeometryInfo::_bModifiable)
                           .def_readwrite("_mapExtraGeometries",&PyGeometryInfo::_mapExtraGeometries)
-                          .def_readwrite("_innerVolumeExtents", &PyGeometryInfo::_innerVolumeExtents)
+                          .def_readwrite("_innerExtents", &PyGeometryInfo::_innerExtents)
                           .def_readwrite("_containerBaseHeight", &PyGeometryInfo::_containerBaseHeight)
                           .def_readwrite("_sidewallTransforms", &PyGeometryInfo::_sidewallTransforms)
                           .def_readwrite("_sidewallExtents", &PyGeometryInfo::_sidewallExtents)
