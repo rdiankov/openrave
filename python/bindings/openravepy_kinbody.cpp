@@ -58,7 +58,7 @@ public:
     PySideWall() {
         transf = ReturnTransform(Transform());
         vExtents = toPyVector3(Vector());
-        type = static_cast<KinBody::GeometryInfo::SideWallType>(0);
+        type = 0;
     }
     PySideWall(const KinBody::GeometryInfo::SideWall& sidewall) {
         transf = ReturnTransform(sidewall.transf);
@@ -68,11 +68,11 @@ public:
     void Get(KinBody::GeometryInfo::SideWall& sidewall) {
         sidewall.transf = ExtractTransform(transf);
         sidewall.vExtents = ExtractVector<dReal>(vExtents);
-        sidewall.type = type;
+        sidewall.type = static_cast<KinBody::GeometryInfo::SideWallType>(type);
     }
 
     boost::python::object transf, vExtents;
-    KinBody::GeometryInfo::SideWallType type;
+    int type;
 };
 
 class PyGeometryInfo
