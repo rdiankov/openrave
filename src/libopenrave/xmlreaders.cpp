@@ -399,16 +399,18 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
             }
 
             if( xmlname == "sidewall" ) {
-                _vSideWalls.push_back({});
+                _pgeom->_vSideWalls.push_back({});
             }
-            if( xmlname == "sidewallTransform" ) {
-                _ss >> _pgeom->_vSideWalls.back().tSideWall;
+            if( xmlname == "transf" ) {
+                _ss >> _pgeom->_vSideWalls.back().transf;
             }
-            if( xmlname == "sidewallExtents" ) {
-                _ss >> _pgeom->_vSideWalls.back().vSideWallExtents;
+            if( xmlname == "vExtents" ) {
+                _ss >> _pgeom->_vSideWalls.back().vExtents;
             }
-            if( xmlname == "sidewallType" ) {
-                _ss >> _pgeom->_vSideWalls.back().vSideWallType;
+            if( xmlname == "type" ) {
+                int32_t type;
+                _ss >> type;
+                _pgeom->_vSideWalls.back().type = static_cast<KinBody::GeometryInfo::SideWallType>(type);
             }
 
             break;

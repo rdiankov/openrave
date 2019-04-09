@@ -2235,8 +2235,8 @@ public:
                 itgeominfo->_innerExtents *= vscale;
                 itgeominfo->_containerBaseHeight *= vscale[2];
                 for (size_t i = 0; i < itgeominfo->_vSideWalls.size(); ++i) {
-                    itgeominfo->_vSideWalls[i].tSideWall.trans *= vscale;
-                    itgeominfo->_vSideWalls[i].vSideWallExtents *= vscale;
+                    itgeominfo->_vSideWalls[i].transf.trans *= vscale;
+                    itgeominfo->_vSideWalls[i].vExtents *= vscale;
                 }
             case GT_Container:
                 itgeominfo->_vGeomData *= vscale;
@@ -2829,7 +2829,7 @@ public:
                             daeElementRef pSidewalls = children[i]->getChild("sidewalls");
                             if ( !!pSidewalls ) {
                                 daeTArray<daeElementRef> sidewallChildren;
-                                sidewalls->getChildren(sidewallChildren);
+                                pSidewalls->getChildren(sidewallChildren);
                                 BOOST_ASSERT(sidewallChildren.getCount() <= 4);
                                 geominfo._type = GT_Cage;
                                 geominfo._vSideWalls.resize(sidewallChildren.getCount());
@@ -2847,7 +2847,7 @@ public:
                                     }
 
                                     daeElementRef pVExtents = sidewallChildren[j]->getChild("vExtents");
-                                    if( !!pSidewallExtents ) {
+                                    if( !!pVExtents ) {
                                         stringstream ss(pVExtents->getCharData());
                                         Vector e;
                                         ss >> e;
@@ -2860,10 +2860,10 @@ public:
                                     daeElementRef pType = sidewallChildren[j]->getChild("type");
                                     if( !!pType ) {
                                         stringstream ss(pType->getCharData());
-                                        SideWallType type;
+                                        int32_t type;
                                         ss >> type;
                                         if( ss.eof() || !!ss ) {
-                                            memcpy(&geominfo._vSideWalls[j].type, &type, sizeof(SideWallType));
+                                            geominfo._vSideWalls[j].type = static_cast<KinBody::GeometryInfo::SideWallType>(type);
                                             bfoundgeom = true;
                                         }
                                     }

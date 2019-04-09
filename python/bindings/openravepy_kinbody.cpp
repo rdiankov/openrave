@@ -58,18 +58,22 @@ public:
     PySideWall() {
         transf = ReturnTransform(Transform());
         vExtents = toPyVector3(Vector());
-        type = 0;
+        type = static_cast<KinBody::GeometryInfo::SideWallType>(0);
     }
     PySideWall(const KinBody::GeometryInfo::SideWall& sidewall) {
         transf = ReturnTransform(sidewall.transf);
         vExtents = toPyVector3(sidewall.vExtents);
         type = sidewall.type;
     }
-private:
+    void Get(KinBody::GeometryInfo::SideWall& sidewall) {
+        sidewall.transf = ExtractTransform(transf);
+        sidewall.vExtents = ExtractVector<dReal>(vExtents);
+        sidewall.type = type;
+    }
+
     boost::python::object transf, vExtents;
-    SideWallType type;
-}
-typedef boost::shared_ptr<PySideWall> PySideWall;
+    KinBody::GeometryInfo::SideWallType type;
+};
 
 class PyGeometryInfo
 {
@@ -101,7 +105,7 @@ public:
         _containerBaseHeight = info._containerBaseHeight;
         _vSideWalls = boost::python::list();
         for (size_t i = 0; i < info._vSideWalls.size(); ++i) {
-            _vSideWalls.push_back(PySideWall(info._vSideWalls[i]));
+            _vSideWalls.append(PySideWall(info._vSideWalls[i]));
         }
 
         _vDiffuseColor = toPyVector3(info._vDiffuseColor);
@@ -130,11 +134,12 @@ public:
 
         info._innerExtents = ExtractVector<dReal>(_innerExtents);
         info._containerBaseHeight = _containerBaseHeight;
-        for (size_t i = 0; i < 4; ++i) {
-            info._sidewallTransforms[i] = ExtractTransform(_sidewallTransforms[i]);
-            info._sidewallExtents[i] = ExtractVector<dReal>(_sidewallExtents[i]);
+        info._vSideWalls.clear();
+        for (size_t i = 0; i < len(_vSideWalls); ++i) {
+            info._vSideWalls.push_back({});
+            boost::shared_ptr<PySideWall> pysidewall = boost::python::extract<boost::shared_ptr<PySideWall>>(_vSideWalls[i]);
+            pysidewall->Get(info._vSideWalls[i]);
         }
-        info._sidewallExists = _sidewallExists;
 
         info._vDiffuseColor = ExtractVector34<dReal>(_vDiffuseColor,0);
         info._vAmbientColor = ExtractVector34<dReal>(_vAmbientColor,0);
@@ -3334,9 +3339,7 @@ void init_openravepy_kinbody()
                           .def_readwrite("_mapExtraGeometries",&PyGeometryInfo::_mapExtraGeometries)
                           .def_readwrite("_innerExtents", &PyGeometryInfo::_innerExtents)
                           .def_readwrite("_containerBaseHeight", &PyGeometryInfo::_containerBaseHeight)
-                          .def_readwrite("_sidewallTransforms", &PyGeometryInfo::_sidewallTransforms)
-                          .def_readwrite("_sidewallExtents", &PyGeometryInfo::_sidewallExtents)
-                          .def_readwrite("_sidewallExists", &PyGeometryInfo::_sidewallExists)
+                          .def_readwrite("_vSideWalls", &PyGeometryInfo::_vSideWalls)
                           .def_pickle(GeometryInfo_pickle_suite())
     ;
 

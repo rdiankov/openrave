@@ -1785,7 +1785,7 @@ private:
                     ss.clear(); ss.str("");
 
                     ss << info._vSideWalls[i].vExtents;
-                    psidewalls->add("extents")->setCharData(ss.str());
+                    psidewalls->add("vExtents")->setCharData(ss.str());
                     ss.clear(); ss.str("");
 
                     ss << info._vSideWalls[i].type;

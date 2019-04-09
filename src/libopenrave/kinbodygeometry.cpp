@@ -250,14 +250,13 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
         break;
     }
     case GT_Cage: {
-        for (size_t i = 0; i < _vSideWall.size(); ++ i) {
-            const SideWall &s = _vSideWall[i];
-                const size_t vBase = _meshcollision.vertices.size();
-                AppendBoxTriangulation(Vector(0, 0, _containerBaseHeight + s.vExtents[2]), s.vExtents, _meshcollision);
+        for (size_t i = 0; i < _vSideWalls.size(); ++ i) {
+            const SideWall &s = _vSideWalls[i];
+            const size_t vBase = _meshcollision.vertices.size();
+            AppendBoxTriangulation(Vector(0, 0, _containerBaseHeight + s.vExtents[2]), s.vExtents, _meshcollision);
 
-                for (size_t j = 0; j < 8; ++j) {
-                    _meshcollision.vertices[vBase + j] = s.transf * _meshcollision.vertices[vBase + j];
-                }
+            for (size_t j = 0; j < 8; ++j) {
+                _meshcollision.vertices[vBase + j] = s.transf * _meshcollision.vertices[vBase + j];
             }
         }
         AppendBoxTriangulation(Vector(0, 0, 0.5f * _containerBaseHeight),
