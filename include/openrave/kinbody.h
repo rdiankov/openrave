@@ -604,6 +604,17 @@ protected:
         virtual void InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& geometries, bool bForceRecomputeMeshCollision=true);
         virtual void InitGeometries(std::list<KinBody::GeometryInfo>& geometries, bool bForceRecomputeMeshCollision=true);
 
+        /// \brief adds geometry info to all the current geometries and possibly stored extra group geometries
+        ///
+        /// Will store the geometry pointer to use for later, so do not modify after this.
+        /// \param addToGroups if true, will add the same ginfo to all groups
+        virtual void AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroups);
+        
+        /// \brief removes geometry that matches a name from the current geometries and possibly stored extra group geometries
+        ///
+        /// \param removeFromAllGroups if true, will check and remove the geometry from all stored groups
+        virtual void RemoveGeometryByName(const std::string& geometryname, bool removeFromAllGroups);
+        
         /// \brief initializes the link with geometries from the extra geomeries in LinkInfo
         ///
         /// \param name The name of the geometry group. If name is empty, will initialize the default geometries.
@@ -700,7 +711,7 @@ protected:
         /// \brief Updates the cached information due to changes in the collision data.
         ///
         /// \param parameterschanged if true, will
-        virtual void _Update(bool parameterschanged=true);
+        virtual void _Update(bool parameterschanged=true, uint32_t extraParametersChanged=0);
 
         std::vector<GeometryPtr> _vGeometries;         ///< \see GetGeometries
 
