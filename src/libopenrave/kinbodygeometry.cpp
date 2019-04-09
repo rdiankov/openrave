@@ -261,7 +261,7 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
             }
         }
         AppendBoxTriangulation(Vector(0, 0, 0.5f * _containerBaseHeight),
-                               Vector(_innerVolumeExtents[0], _innerVolumeExtents[1], 0.5f * _containerBaseHeight), _meshcollision);
+                               Vector(_innerExtents[0], _innerExtents[1], 0.5f * _containerBaseHeight), _meshcollision);
 
         break;
     }

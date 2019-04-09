@@ -391,28 +391,24 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
 
             break;
         case GT_Cage:
-            if( xmlname == "innerVolumeExtents" ) {
-                _ss >> _pgeom->_innerVolumeExtents;
+            if( xmlname == "innerExtents" ) {
+                _ss >> _pgeom->_innerExtents;
             }
             if( xmlname == "containerBaseHeight" ) {
                 _ss >> _pgeom->_containerBaseHeight;
             }
-            if( xmlname == "sidewallTransforms" ) {
-                _ss >> _pgeom->_sidewallTransforms[0] >>
-                       _pgeom->_sidewallTransforms[1] >>
-                       _pgeom->_sidewallTransforms[2] >>
-                       _pgeom->_sidewallTransforms[3];
+
+            if( xmlname == "sidewall" ) {
+                _vSideWalls.push_back({});
+            }
+            if( xmlname == "sidewallTransform" ) {
+                _ss >> _pgeom->_vSideWalls.back().tSideWall;
             }
             if( xmlname == "sidewallExtents" ) {
-                _ss >> _pgeom->_sidewallExtents[0] >>
-                       _pgeom->_sidewallExtents[1] >>
-                       _pgeom->_sidewallExtents[2] >>
-                       _pgeom->_sidewallExtents[3];
+                _ss >> _pgeom->_vSideWalls.back().vSideWallExtents;
             }
-            if( xmlname == "sidewallExists" ) {
-                uint8_t b;
-                _ss >> b;
-                _pgeom->_sidewallExists = b;
+            if( xmlname == "sidewallType" ) {
+                _ss >> _pgeom->_vSideWalls.back().vSideWallType;
             }
 
             break;

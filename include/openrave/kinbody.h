@@ -161,7 +161,7 @@ public:
         Vector _vGeomData3; ///< For containers, the first 3 values is the bottom cross XY full extents and Z height from bottom face.
 
         // For GT_Cage
-        //Vector _innerVolumeExtents;
+        //Vector _innerExtents;
         enum SideWallType
         {
             SWT_NX=0,
@@ -172,11 +172,13 @@ public:
 
         struct SideWall
         {
-            Transform tSideWall;
-            Vector vSideWallExtents;
-            SideWallType wallType;
+            Transform transf;
+            Vector vExtents;
+            SideWallType type;
         };
-        std::vector<SideWall> vSideWalls; ///< used by GT_Cage
+        std::vector<SideWall> _vSideWalls; ///< used by GT_Cage
+        Vector _innerExtents; // Inner extents of the container, the volume that can be used to pick/place objectss
+        float _containerBaseHeight; // Distance between the inner bottom plane and the bottom plane of the container
 
         //Transform _sidewallTransforms[4]; // Transformation of each side wall in the geometry space
         //Vector _sidewallExtents[4]; // Each side wall is a rectangular volume.

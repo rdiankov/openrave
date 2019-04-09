@@ -52,6 +52,25 @@ boost::python::object GetCustomParameters(const std::map<std::string, std::vecto
     return boost::python::object();
 }
 
+class PySideWall
+{
+public:
+    PySideWall() {
+        transf = ReturnTransform(Transform());
+        vExtents = toPyVector3(Vector());
+        type = 0;
+    }
+    PySideWall(const KinBody::GeometryInfo::SideWall& sidewall) {
+        transf = ReturnTransform(sidewall.transf);
+        vExtents = toPyVector3(sidewall.vExtents);
+        type = sidewall.type;
+    }
+private:
+    boost::python::object transf, vExtents;
+    SideWallType type;
+}
+typedef boost::shared_ptr<PySideWall> PySideWall;
+
 class PyGeometryInfo
 {
 public:
@@ -68,15 +87,9 @@ public:
         _vCollisionScale = toPyVector3(Vector(1,1,1));
         _bVisible = true;
         _bModifiable = true;
-        _innerVolumeExtents = toPyVector4(Vector());
+        _innerExtents = toPyVector4(Vector());
         _containerBaseHeight = 0.0f;
-        _sidewallTransforms = boost::python::list();
-        _sidewallExtents = boost::python::list();
-        for (size_t i = 0; i < 4; ++i) {
-            _sidewallTransforms.append(ReturnTransform(Transform()));
-            _sidewallExtents.append(toPyVector4(Vector()));
-        }
-        _sidewallExists = 0;
+        _vSideWalls = boost::python::list();
     }
     PyGeometryInfo(const KinBody::GeometryInfo& info) {
         _t = ReturnTransform(info._t);
@@ -84,15 +97,12 @@ public:
         _vGeomData2 = toPyVector4(info._vGeomData2);
         _vGeomData3 = toPyVector4(info._vGeomData3);
 
-        _innerVolumeExtents = toPyVector4(info._innerVolumeExtents);
+        _innerExtents = toPyVector4(info._innerExtents);
         _containerBaseHeight = info._containerBaseHeight;
-        _sidewallTransforms = boost::python::list();
-        _sidewallExtents = boost::python::list();
-        for (size_t i = 0; i < 4; ++i) {
-            _sidewallTransforms.append(ReturnTransform(info._sidewallTransforms[i]));
-            _sidewallExtents.append(toPyVector4(info._sidewallExtents[i]));
+        _vSideWalls = boost::python::list();
+        for (size_t i = 0; i < info._vSideWalls.size(); ++i) {
+            _vSideWalls.push_back(PySideWall(info._vSideWalls[i]));
         }
-        _sidewallExists = info._sidewallExists;
 
         _vDiffuseColor = toPyVector3(info._vDiffuseColor);
         _vAmbientColor = toPyVector3(info._vAmbientColor);
@@ -118,7 +128,7 @@ public:
         info._vGeomData2 = ExtractVector<dReal>(_vGeomData2);
         info._vGeomData3 = ExtractVector<dReal>(_vGeomData3);
 
-        info._innerVolumeExtents = ExtractVector<dReal>(_innerVolumeExtents);
+        info._innerExtents = ExtractVector<dReal>(_innerExtents);
         info._containerBaseHeight = _containerBaseHeight;
         for (size_t i = 0; i < 4; ++i) {
             info._sidewallTransforms[i] = ExtractTransform(_sidewallTransforms[i]);
@@ -152,11 +162,10 @@ public:
     }
 
     object _t, _vGeomData, _vGeomData2, _vGeomData3,
-           _innerVolumeExtents,
+           _innerExtents,
            _vDiffuseColor, _vAmbientColor, _meshcollision;
-    boost::python::list _sidewallTransforms, _sidewallExtents;
+    boost::python::list _vSideWalls;
     float _containerBaseHeight;
-    uint8_t _sidewallExists;
     GeometryType _type;
     object _name;
     object _filenamerender, _filenamecollision;
@@ -3320,12 +3329,18 @@ void init_openravepy_kinbody()
                           .def_readwrite("_bVisible",&PyGeometryInfo::_bVisible)
                           .def_readwrite("_bModifiable",&PyGeometryInfo::_bModifiable)
                           .def_readwrite("_mapExtraGeometries",&PyGeometryInfo::_mapExtraGeometries)
-                          .def_readwrite("_innerVolumeExtents", &PyGeometryInfo::_innerVolumeExtents)
+                          .def_readwrite("_innerExtents", &PyGeometryInfo::_innerExtents)
                           .def_readwrite("_containerBaseHeight", &PyGeometryInfo::_containerBaseHeight)
                           .def_readwrite("_sidewallTransforms", &PyGeometryInfo::_sidewallTransforms)
                           .def_readwrite("_sidewallExtents", &PyGeometryInfo::_sidewallExtents)
                           .def_readwrite("_sidewallExists", &PyGeometryInfo::_sidewallExists)
                           .def_pickle(GeometryInfo_pickle_suite())
+    ;
+
+    object sidewall = class_<PySideWall, boost::shared_ptr<PySideWall> >("SideWall", DOXY_CLASS(KinBody::GeometryInfo::SideWall))
+                          .def_readwrite("transf",&PySideWall::transf)
+                          .def_readwrite("vExtents",&PySideWall::vExtents)
+                          .def_readwrite("type",&PySideWall::type)
     ;
 
     object linkinfo = class_<PyLinkInfo, boost::shared_ptr<PyLinkInfo> >("LinkInfo", DOXY_CLASS(KinBody::LinkInfo))
