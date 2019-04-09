@@ -367,9 +367,7 @@ public:
             /// \brief returns an axis aligned bounding box given that the geometry is transformed by trans
             virtual AABB ComputeAABB(const Transform& trans) const;
 
-            virtual uint32_t GetSideWallExists() const;
-
-            virtual void ComputeInnerEmptyRegion(OBB& obbInnerRegion) const;
+            virtual uint8_t GetSideWallExists() const;
 
             virtual void serialize(std::ostream& o, int options) const;
 

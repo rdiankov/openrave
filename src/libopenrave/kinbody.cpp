@@ -5065,4 +5065,13 @@ UserDataPtr KinBody::RegisterChangeCallback(uint32_t properties, const boost::fu
     return pdata;
 }
 
+uint8_t KinBody::Link::Geometry::GetSideWallExists() const
+{
+    uint8_t mask = 0;
+    for (size_t i = 0; i < _info._vSideWalls.size(); ++i) {
+        mask |= 1 << _info._vSideWalls[i].type;
+    }
+    return mask;
+}
+
 } // end namespace OpenRAVE

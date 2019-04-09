@@ -649,6 +649,9 @@ public:
         bool InitCollisionMesh(float fTessellation=1) {
             return _pgeometry->InitCollisionMesh(fTessellation);
         }
+        uint8_t GetSideWallExists() const {
+            return _pgeometry->GetSideWallExists();
+        }
 
         object GetCollisionMesh() {
             return toPyTriMesh(_pgeometry->GetCollisionMesh());
@@ -3696,6 +3699,7 @@ void init_openravepy_kinbody()
                                  .def("GetCollisionMesh",&PyLink::PyGeometry::GetCollisionMesh, DOXY_FN(KinBody::Link::Geometry,GetCollisionMesh))
                                  .def("InitCollisionMesh",&PyLink::PyGeometry::InitCollisionMesh, InitCollisionMesh_overloads(args("tesselation"), DOXY_FN(KinBody::Link::Geometry,GetCollisionMesh)))
                                  .def("ComputeAABB",&PyLink::PyGeometry::ComputeAABB, args("transform"), DOXY_FN(KinBody::Link::Geometry,ComputeAABB))
+                                 .def("GetSideWallExists",&PyLink::PyGeometry::GetSideWallExists, DOXY_FN(KinBody::Link::Geometry,GetSideWallExists))
                                  .def("SetDraw",&PyLink::PyGeometry::SetDraw,args("draw"), DOXY_FN(KinBody::Link::Geometry,SetDraw))
                                  .def("SetTransparency",&PyLink::PyGeometry::SetTransparency,args("transparency"), DOXY_FN(KinBody::Link::Geometry,SetTransparency))
                                  .def("SetDiffuseColor",&PyLink::PyGeometry::SetDiffuseColor,args("color"), DOXY_FN(KinBody::Link::Geometry,SetDiffuseColor))
