@@ -1781,15 +1781,15 @@ private:
                     daeElementRef psidewall = psidewalls->add("sidewall");
 
                     ss << info._vSideWalls[i].transf;
-                    psidewalls->add("transf")->setCharData(ss.str());
+                    psidewall->add("transf")->setCharData(ss.str());
                     ss.clear(); ss.str("");
 
                     ss << info._vSideWalls[i].vExtents;
-                    psidewalls->add("vExtents")->setCharData(ss.str());
+                    psidewall->add("vExtents")->setCharData(ss.str());
                     ss.clear(); ss.str("");
 
                     ss << info._vSideWalls[i].type;
-                    psidewalls->add("type")->setCharData(ss.str());
+                    psidewall->add("type")->setCharData(ss.str());
                     ss.clear(); ss.str("");
                 }
                 break;
