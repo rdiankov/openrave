@@ -2234,9 +2234,9 @@ public:
             case GT_Cage:
                 itgeominfo->_innerExtents *= vscale;
                 itgeominfo->_containerBaseHeight *= vscale[2];
-                for (size_t i = 0; i < 4; ++i) {
-                    itgeominfo->_sidewallTransforms[i].trans *= vscale;
-                    itgeominfo->_sidewallExtents[i] *= vscale;
+                for (size_t i = 0; i < itgeominfo->_vSideWalls.size(); ++i) {
+                    itgeominfo->_vSideWalls[i].transf.trans *= vscale;
+                    itgeominfo->_vSideWalls[i].vExtents *= vscale;
                 }
             case GT_Container:
                 itgeominfo->_vGeomData *= vscale;
@@ -2825,40 +2825,48 @@ public:
                                     bfoundgeom = true;
                                 }
                             }
-                            daeElementRef pSidewallTransforms = children[i]->getChild("sidewallTransforms");
-                            if( !!pSidewallTransforms ) {
-                                stringstream ss(pSidewallTransforms->getCharData());
-                                Transform transf[4];
-                                ss >> transf[0] >> transf[1] >> transf[2] >> transf[3];
-                                if( ss.eof() || !!ss ) {
-                                    geominfo._type = GT_Cage;
-                                    memcpy(&geominfo._sidewallTransforms[0], &transf, 4 * sizeof(Transform));
-                                    geominfo._t = tlocalgeom;
-                                    bfoundgeom = true;
-                                }
-                            }
-                            daeElementRef pSidewallExtents = children[i]->getChild("sidewallExtents");
-                            if( !!pSidewallExtents ) {
-                                stringstream ss(pSidewallExtents->getCharData());
-                                Vector e[4];
-                                ss >> e[0] >> e[1] >> e[2] >> e[3];
-                                if( ss.eof() || !!ss ) {
-                                    geominfo._type = GT_Cage;
-                                    memcpy(&geominfo._sidewallExtents[0], &e, 4 * sizeof(Vector));
-                                    geominfo._t = tlocalgeom;
-                                    bfoundgeom = true;
-                                }
-                            }
-                            daeElementRef pSidewallExists = children[i]->getChild("sidewallExists");
-                            if( !!pSidewallExists ) {
-                                stringstream ss(pSidewallExists->getCharData());
-                                uint32_t b;
-                                ss >> b;
-                                if( ss.eof() || !!ss ) {
-                                    geominfo._type = GT_Cage;
-                                    geominfo._sidewallExists = b;
-                                    geominfo._t = tlocalgeom;
-                                    bfoundgeom = true;
+
+                            daeElementRef pSidewalls = children[i]->getChild("sidewalls");
+                            if ( !!pSidewalls ) {
+                                daeTArray<daeElementRef> sidewallChildren;
+                                pSidewalls->getChildren(sidewallChildren);
+                                BOOST_ASSERT(sidewallChildren.getCount() <= 4);
+                                geominfo._type = GT_Cage;
+                                geominfo._vSideWalls.resize(sidewallChildren.getCount());
+                                geominfo._t = tlocalgeom;
+                                for(size_t j = 0; j < sidewallChildren.getCount(); ++j) {
+                                    daeElementRef pTransf = sidewallChildren[j]->getChild("transf");
+                                    if( !!pTransf ) {
+                                        stringstream ss(pTransf->getCharData());
+                                        Transform transf;
+                                        ss >> transf;
+                                        if( ss.eof() || !!ss ) {
+                                            memcpy(&geominfo._vSideWalls[j].transf, &transf, sizeof(Transform));
+                                            bfoundgeom = true;
+                                        }
+                                    }
+
+                                    daeElementRef pVExtents = sidewallChildren[j]->getChild("vExtents");
+                                    if( !!pVExtents ) {
+                                        stringstream ss(pVExtents->getCharData());
+                                        Vector e;
+                                        ss >> e;
+                                        if( ss.eof() || !!ss ) {
+                                            memcpy(&geominfo._vSideWalls[j].vExtents, &e, sizeof(Vector));
+                                            bfoundgeom = true;
+                                        }
+                                    }
+
+                                    daeElementRef pType = sidewallChildren[j]->getChild("type");
+                                    if( !!pType ) {
+                                        stringstream ss(pType->getCharData());
+                                        int32_t type;
+                                        ss >> type;
+                                        if( ss.eof() || !!ss ) {
+                                            geominfo._vSideWalls[j].type = static_cast<KinBody::GeometryInfo::SideWallType>(type);
+                                            bfoundgeom = true;
+                                        }
+                                    }
                                 }
                             }
                         }

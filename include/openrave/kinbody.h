@@ -153,7 +153,10 @@ public:
         }
 
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
-        Vector _vGeomData; ///< for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
+
+        /// for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
+        /// For GT_Cage, this is the base box extents with the origin being at the -Z center.
+        Vector _vGeomData;
         Vector _vGeomData2; ///< For containers, the first 3 values are the full inner extents.
         Vector _vGeomData3; ///< For containers, the first 3 values is the bottom cross XY full extents and Z height from bottom face.
 
@@ -166,11 +169,15 @@ public:
             SWT_PY=3,
         };
 
+        struct SideWall
+        {
+            Transform transf;
+            Vector vExtents;
+            SideWallType type;
+        };
+        std::vector<SideWall> _vSideWalls; ///< used by GT_Cage
         Vector _innerExtents; // Inner extents of the container, the volume that can be used to pick/place objectss
         float _containerBaseHeight; // Distance between the inner bottom plane and the bottom plane of the container
-        Transform _sidewallTransforms[4]; // Transformation of each side wall in the geometry space
-        Vector _sidewallExtents[4]; // Each side wall is a rectangular volume.
-        uint8_t _sidewallExists : 4; // Each bit in 0-3 corresponds to 1 sidewall. Refer to SideWallType.
 
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height
@@ -354,6 +361,9 @@ public:
 
             /// \brief returns an axis aligned bounding box given that the geometry is transformed by trans
             virtual AABB ComputeAABB(const Transform& trans) const;
+
+            virtual uint8_t GetSideWallExists() const;
+
             virtual void serialize(std::ostream& o, int options) const;
 
             /// \brief sets a new collision mesh and notifies every registered callback about it
@@ -589,6 +599,17 @@ protected:
         virtual void InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& geometries, bool bForceRecomputeMeshCollision=true);
         virtual void InitGeometries(std::list<KinBody::GeometryInfo>& geometries, bool bForceRecomputeMeshCollision=true);
 
+        /// \brief adds geometry info to all the current geometries and possibly stored extra group geometries
+        ///
+        /// Will store the geometry pointer to use for later, so do not modify after this.
+        /// \param addToGroups if true, will add the same ginfo to all groups
+        virtual void AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroups);
+        
+        /// \brief removes geometry that matches a name from the current geometries and possibly stored extra group geometries
+        ///
+        /// \param removeFromAllGroups if true, will check and remove the geometry from all stored groups
+        virtual void RemoveGeometryByName(const std::string& geometryname, bool removeFromAllGroups);
+        
         /// \brief initializes the link with geometries from the extra geomeries in LinkInfo
         ///
         /// \param name The name of the geometry group. If name is empty, will initialize the default geometries.
@@ -685,7 +706,7 @@ protected:
         /// \brief Updates the cached information due to changes in the collision data.
         ///
         /// \param parameterschanged if true, will
-        virtual void _Update(bool parameterschanged=true);
+        virtual void _Update(bool parameterschanged=true, uint32_t extraParametersChanged=0);
 
         std::vector<GeometryPtr> _vGeometries;         ///< \see GetGeometries
 

@@ -1775,24 +1775,23 @@ private:
                 pcage->add("containerBaseHeight")->setCharData(ss.str());
                 ss.clear(); ss.str("");
 
-                ss << info._sidewallTransforms[0] <<
-                      info._sidewallTransforms[1] <<
-                      info._sidewallTransforms[2] <<
-                      info._sidewallTransforms[3];
-                pcage->add("sidewallTransforms")->setCharData(ss.str());
-                ss.clear(); ss.str("");
+                daeElementRef psidewalls = pcage->add("sidewalls");
+                BOOST_ASSERT(info._vSideWalls.size() <= 4);
+                for (size_t i = 0; i < info._vSideWalls.size(); ++i) {
+                    daeElementRef psidewall = psidewalls->add("sidewall");
 
-                ss << info._sidewallExtents[0] <<
-                      info._sidewallExtents[1] <<
-                      info._sidewallExtents[2] <<
-                      info._sidewallExtents[3];
-                pcage->add("sidewallExtents")->setCharData(ss.str());
-                ss.clear(); ss.str("");
+                    ss << info._vSideWalls[i].transf;
+                    psidewall->add("transf")->setCharData(ss.str());
+                    ss.clear(); ss.str("");
 
-                uint32_t b = info._sidewallExists;
-                ss << b;
-                pcage->add("sidewallExists")->setCharData(ss.str());
+                    ss << info._vSideWalls[i].vExtents;
+                    psidewall->add("vExtents")->setCharData(ss.str());
+                    ss.clear(); ss.str("");
 
+                    ss << info._vSideWalls[i].type;
+                    psidewall->add("type")->setCharData(ss.str());
+                    ss.clear(); ss.str("");
+                }
                 break;
             }
             case GT_Sphere:

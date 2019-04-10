@@ -397,22 +397,20 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
             if( xmlname == "containerBaseHeight" ) {
                 _ss >> _pgeom->_containerBaseHeight;
             }
-            if( xmlname == "sidewallTransforms" ) {
-                _ss >> _pgeom->_sidewallTransforms[0] >>
-                       _pgeom->_sidewallTransforms[1] >>
-                       _pgeom->_sidewallTransforms[2] >>
-                       _pgeom->_sidewallTransforms[3];
+
+            if( xmlname == "sidewall" ) {
+                _pgeom->_vSideWalls.push_back({});
             }
-            if( xmlname == "sidewallExtents" ) {
-                _ss >> _pgeom->_sidewallExtents[0] >>
-                       _pgeom->_sidewallExtents[1] >>
-                       _pgeom->_sidewallExtents[2] >>
-                       _pgeom->_sidewallExtents[3];
+            if( xmlname == "transf" ) {
+                _ss >> _pgeom->_vSideWalls.back().transf;
             }
-            if( xmlname == "sidewallExists" ) {
-                uint8_t b;
-                _ss >> b;
-                _pgeom->_sidewallExists = b;
+            if( xmlname == "vExtents" ) {
+                _ss >> _pgeom->_vSideWalls.back().vExtents;
+            }
+            if( xmlname == "type" ) {
+                int32_t type;
+                _ss >> type;
+                _pgeom->_vSideWalls.back().type = static_cast<KinBody::GeometryInfo::SideWallType>(type);
             }
 
             break;
