@@ -3352,7 +3352,7 @@ void init_openravepy_kinbody()
     object sidewall = class_<PySideWall, boost::shared_ptr<PySideWall> >("SideWall", DOXY_CLASS(KinBody::GeometryInfo::SideWall))
                           .def_readwrite("transf",&PySideWall::transf)
                           .def_readwrite("vExtents",&PySideWall::vExtents)
-                          .def_readwrite("type",&PySideWall::type)
+                          .def_readwrite("wallType",&PySideWall::type)
     ;
 
     object linkinfo = class_<PyLinkInfo, boost::shared_ptr<PyLinkInfo> >("LinkInfo", DOXY_CLASS(KinBody::LinkInfo))
