@@ -236,7 +236,7 @@ public:
             _uniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
         }
         _uniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
-        _dumplevel = Level_Verbose;
+        _dumplevel = Level_Debug;
         return !!_uniformsampler;
     }
 

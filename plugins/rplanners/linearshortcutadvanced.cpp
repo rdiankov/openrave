@@ -605,13 +605,117 @@ protected:
         else if (option == 2) {
             filename = str(boost::format("%s/linearshortcutadvanced%d.aftershortcut.xml")%RaveGetHomeDirectory()%(_fileindex));
         }
-        else {
+        else if (option == 3) {
             filename = str(boost::format("%s/linearshortcutadvanced%d.traj.xml")%RaveGetHomeDirectory()%(_fileindex));
+        }
+        else {
+            filename = str(boost::format("%s/finaltraj%d.traj.xml")%RaveGetHomeDirectory()%(_fileindex));
         }
         ofstream f(filename.c_str());
         f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
         traj->serialize(f);
         return filename;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Experimental
+    //
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    PlannerStatus _ProcessPostPlanners(RobotBasePtr probot, TrajectoryBasePtr ptraj)
+    {
+        PlannerStatus ps1 = PS_Failed, ps2 = PS_Failed;
+        TrajectoryBasePtr ptraj1 = RaveCreateTrajectory(GetEnv(), "");
+        TrajectoryBasePtr ptraj2 = RaveCreateTrajectory(GetEnv(), "");
+
+        // parabolicsmoother
+        {
+            RAVELOG_DEBUG_FORMAT("env=%d, calling parabolicsmoother", GetEnv()->GetId());
+            PlannerBasePtr postprocessplanner = RaveCreatePlanner(GetEnv(), "parabolicsmoother"); // cannot use __cachePostProcessPlanner
+            if( !postprocessplanner ) {
+                return PS_Failed;
+            }
+
+            PlannerParametersPtr params(new PlannerParameters());
+            params->copy(GetParameters());
+            params->_sExtraParameters += GetParameters()->_sPostProcessingParameters;
+            params->_sPostProcessingPlanner = "";
+            params->_sPostProcessingParameters = "";
+            params->_nMaxIterations = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters
+            //params->_nMaxPlanningTime = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters??
+
+            ptraj1->Init(params->_configurationspecification);
+            ptraj1->Clone(ptraj, 0);
+
+            if( postprocessplanner->InitPlan(probot, params) ) {
+                ps1 = postprocessplanner->PlanPath(ptraj1);
+            }
+        }
+
+        // parabolicsmoother2
+        {
+            RAVELOG_DEBUG_FORMAT("env=%d, calling parabolicsmoother2", GetEnv()->GetId());
+            PlannerBasePtr postprocessplanner = RaveCreatePlanner(GetEnv(), "parabolicsmoother2");
+            if( !postprocessplanner ) {
+                return PS_Failed;
+            }
+
+            PlannerParametersPtr params(new PlannerParameters());
+            params->copy(GetParameters());
+            params->_sExtraParameters += GetParameters()->_sPostProcessingParameters;
+            params->_sPostProcessingPlanner = "";
+            params->_sPostProcessingParameters = "";
+            params->_nMaxIterations = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters
+            //params->_nMaxPlanningTime = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters??
+
+            ptraj2->Init(params->_configurationspecification);
+            ptraj2->Clone(ptraj, 0);
+
+            if( postprocessplanner->InitPlan(probot, params) ) {
+                ps2 = postprocessplanner->PlanPath(ptraj2);
+            }
+        }
+
+        RAVELOG_DEBUG_FORMAT("env=%d, results from the two smoothers: parabolicsmoother: %f s.; parabolicsmoother2: %f s.", GetEnv()->GetId()%ptraj1->GetDuration()%ptraj2->GetDuration());
+        if( (ps1&PS_HasSolution) == PS_HasSolution || (ps2&PS_HasSolution) == PS_HasSolution ) {
+            ptraj->Clone(ptraj2, 0);
+            // Write trajectory durations to the final traj to expose the information
+            ConfigurationSpecification newspec;
+
+            // ParabolicSmoother
+            newspec = ptraj->GetConfigurationSpecification();
+            ConfigurationSpecification::Group gsmoother1duration;
+            gsmoother1duration.name = std::string("smoother1duration");
+            gsmoother1duration.dof = 1;
+            gsmoother1duration.interpolation = std::string("previous");
+            newspec.AddGroup(gsmoother1duration);
+            ConfigurationSpecification smoother1durationspec;
+            smoother1durationspec.AddGroup(gsmoother1duration);
+            planningutils::ConvertTrajectorySpecification(ptraj, newspec);
+            std::vector<dReal> smoother1data(ptraj->GetNumWaypoints(), 0);
+            smoother1data[0] = ptraj1->GetDuration();
+            ptraj->Insert(0, smoother1data, smoother1durationspec, true);
+
+            // ParabolicSmoother2
+            newspec = ptraj->GetConfigurationSpecification();
+            ConfigurationSpecification::Group gsmoother2duration;
+            gsmoother2duration.name = std::string("smoother2duration");
+            gsmoother2duration.dof = 1;
+            gsmoother2duration.interpolation = std::string("previous");
+            newspec.AddGroup(gsmoother2duration);
+            ConfigurationSpecification smoother2durationspec;
+            smoother2durationspec.AddGroup(gsmoother2duration);
+            planningutils::ConvertTrajectorySpecification(ptraj, newspec);
+            std::vector<dReal> smoother2data(ptraj->GetNumWaypoints(), 0);
+            smoother2data[0] = ptraj2->GetDuration();
+            ptraj->Insert(0, smoother2data, smoother2durationspec, true);
+
+            _DumpTrajectory(ptraj, Level_Debug, 4);
+            return PS_HasSolution;
+        }
+        else {
+            return PS_Failed;
+        }
     }
 
     TrajectoryTimingParametersPtr _parameters;
