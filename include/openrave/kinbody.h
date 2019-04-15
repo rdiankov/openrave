@@ -153,16 +153,31 @@ public:
         }
 
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
-        Vector _vGeomData; ///< for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
+
+        /// for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
+        /// For GT_Cage, this is the base box extents with the origin being at the -Z center.
+        Vector _vGeomData;
         Vector _vGeomData2; ///< For containers, the first 3 values are the full inner extents.
         Vector _vGeomData3; ///< For containers, the first 3 values is the bottom cross XY full extents and Z height from bottom face.
 
         // For GT_Cage
-        Vector _innerVolumeExtents;
-        float _containerBaseHeight;
-        Transform _sidewallTransforms[4]; // Transformation of each side wall in the geometry space
-        Vector _sidewallExtents[4]; // Each side wall is a rectangular volume.
-        uint8_t _sidewallExists : 4; // bit 0-3 corresponds to (nx, px, ny, py)
+        enum SideWallType
+        {
+            SWT_NX=0,
+            SWT_PX=1,
+            SWT_NY=2,
+            SWT_PY=3,
+        };
+
+        struct SideWall
+        {
+            Transform transf;
+            Vector vExtents;
+            SideWallType type;
+        };
+        std::vector<SideWall> _vSideWalls; ///< used by GT_Cage
+        Vector _innerExtents; // Inner extents of the container, the volume that can be used to pick/place objectss
+        float _containerBaseHeight; // Distance between the inner bottom plane and the bottom plane of the container
 
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height
@@ -346,6 +361,9 @@ public:
 
             /// \brief returns an axis aligned bounding box given that the geometry is transformed by trans
             virtual AABB ComputeAABB(const Transform& trans) const;
+
+            virtual uint8_t GetSideWallExists() const;
+
             virtual void serialize(std::ostream& o, int options) const;
 
             /// \brief sets a new collision mesh and notifies every registered callback about it
