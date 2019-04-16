@@ -2800,54 +2800,52 @@ public:
                             }
                         }
                         else if( name == "cage" ) {
+                            geominfo._type = GT_Cage;
+                            geominfo._t = tlocalgeom;
+                            
                             daeElementRef phalf_extents = children[i]->getChild("half_extents");
                             if( !!phalf_extents ) {
                                 stringstream ss(phalf_extents->getCharData());
                                 Vector vextents;
                                 ss >> vextents.x >> vextents.y >> vextents.z;
                                 if( ss.eof() || !!ss ) {
-                                    geominfo._type = GT_Box;
                                     geominfo._vGeomData = vextents;
-                                    geominfo._t = tlocalgeom;
                                     bfoundgeom = true;
                                 }
                             }
-                            
-                            daeElementRef pSidewalls = children[i]->getChild("sidewalls");
-                            if ( !!pSidewalls ) {
-                                daeTArray<daeElementRef> sidewallChildren;
-                                pSidewalls->getChildren(sidewallChildren);
-                                BOOST_ASSERT(sidewallChildren.getCount() <= 4);
-                                geominfo._type = GT_Cage;
-                                geominfo._vSideWalls.resize(sidewallChildren.getCount());
-                                geominfo._t = tlocalgeom;
-                                for(size_t j = 0; j < sidewallChildren.getCount(); ++j) {
-                                    if( !!sidewallChildren[j] ) {
-                                        geominfo._vSideWalls[j].transf = _ExtractFullTransformFromChildren(sidewallChildren[j]);
-                                        bfoundgeom = true;
-                                    }
 
-                                    daeElementRef pVExtents = sidewallChildren[j]->getChild("half_extents");
+                            geominfo._vSideWalls.clear();
+                            daeTArray<daeElementRef> cagechildren;
+                            children[i]->getChildren(cagechildren);
+                            for(size_t icagechild = 0; icagechild < cagechildren.getCount(); ++icagechild) {
+                                if( _getElementName(cagechildren[icagechild]) == "sidewall" ) {
+                                    KinBody::GeometryInfo::SideWall sidewall;
+                                    sidewall.transf = _ExtractFullTransformFromChildren(cagechildren[icagechild]);
+                                    
+                                    daeElementRef pVExtents = cagechildren[icagechild]->getChild("half_extents");
                                     if( !!pVExtents ) {
                                         stringstream ss(pVExtents->getCharData());
                                         Vector e;
                                         ss >> e;
                                         if( ss.eof() || !!ss ) {
-                                            geominfo._vSideWalls[j].vExtents = e;
+                                            sidewall.vExtents = e;
                                             bfoundgeom = true;
                                         }
                                     }
 
-                                    daeElementRef pType = sidewallChildren[j]->getChild("type");
+                                    daeElementRef pType = cagechildren[icagechild]->getChild("type");
                                     if( !!pType ) {
                                         stringstream ss(pType->getCharData());
                                         int32_t type;
                                         ss >> type;
                                         if( ss.eof() || !!ss ) {
-                                            geominfo._vSideWalls[j].type = static_cast<KinBody::GeometryInfo::SideWallType>(type);
+                                            sidewall.type = static_cast<KinBody::GeometryInfo::SideWallType>(type);
                                             bfoundgeom = true;
                                         }
                                     }
+
+                                    geominfo._vSideWalls.push_back(sidewall);
+                                    bfoundgeom = true;
                                 }
                             }
                         }

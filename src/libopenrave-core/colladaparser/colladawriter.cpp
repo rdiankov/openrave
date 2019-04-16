@@ -1771,9 +1771,8 @@ private:
                 pcage->add("half_extents")->setCharData(ss.str());
                 
                 const KinBody::GeometryInfo& info = geom->GetInfo();
-                daeElementRef psidewalls = pcage->add("sidewalls");
                 for (size_t i = 0; i < info._vSideWalls.size(); ++i) {
-                    daeElementRef psidewall = psidewalls->add("sidewall");
+                    daeElementRef psidewall = pcage->add("sidewall");
 
                     _WriteTransformation(psidewall, info._vSideWalls[i].transf);
 
