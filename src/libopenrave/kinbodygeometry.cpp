@@ -332,8 +332,9 @@ bool KinBody::Link::Geometry::ComputeCageInnerEmptyVolume(Transform& tInnerEmpty
                 vprojectedextents[idim] = RaveFabs(vxaxis[idim])*itwall->vExtents.x + RaveFabs(vyaxis[idim])*itwall->vExtents.y + RaveFabs(vzaxis[idim])*itwall->vExtents.z;
             }
 
-            if( vmax.z < itwall->transf.trans.z + vprojectedextents.z ) {
-                vmax.z = itwall->transf.trans.z + vprojectedextents.z;
+            // the origin of the side wall is the bottom center
+            if( vmax.z < itwall->transf.trans.z + 2*vprojectedextents.z ) {
+                vmax.z = itwall->transf.trans.z + 2*vprojectedextents.z;
             }
 
             switch(itwall->type) {

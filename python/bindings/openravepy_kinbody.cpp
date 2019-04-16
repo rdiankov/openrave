@@ -743,7 +743,7 @@ public:
             Transform tInnerEmptyVolume;
             Vector abInnerEmptyExtents;
             if( _pgeometry->ComputeCageInnerEmptyVolume(tInnerEmptyVolume, abInnerEmptyExtents) ) {
-                boost::python::make_tuple(ReturnTransform(tInnerEmptyVolume), toPyVector3(abInnerEmptyExtents));
+                return boost::python::make_tuple(ReturnTransform(tInnerEmptyVolume), toPyVector3(abInnerEmptyExtents));
             }
             return boost::python::make_tuple(object(), object());
         }
