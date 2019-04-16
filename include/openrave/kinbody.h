@@ -152,6 +152,11 @@ public:
             return _vGeomData;
         }
 
+        /// \brief compute the inner empty volume in the geometry coordinate system
+        ///
+        /// \return bool true if the geometry has a concept of empty volume nad tInnerEmptyVolume/abInnerEmptyVolume are filled
+        bool ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const;
+
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
 
         /// for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
@@ -192,7 +197,7 @@ public:
         GeometryType _type; ///< the type of geometry primitive
 
         std::string _name; ///< the name of the geometry
-        
+
         /// \brief filename for render model (optional)
         ///
         /// Should be transformed by _t before rendering.
@@ -366,7 +371,7 @@ public:
             /// \return bool true if the geometry has a concept of empty volume nad tInnerEmptyVolume/abInnerEmptyVolume are filled
             virtual bool ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const;
             //@}
-            
+
             virtual bool InitCollisionMesh(float fTessellation=1);
 
             /// \brief returns an axis aligned bounding box given that the geometry is transformed by trans
@@ -405,7 +410,7 @@ public:
 
             /// \brief sets the name of the geometry
             virtual void SetName(const std::string& name);
-            
+
 protected:
             boost::weak_ptr<Link> _parent;
             KinBody::GeometryInfo _info; ///< geometry info
@@ -487,7 +492,7 @@ protected:
         /// AABB equivalent to setting link transform to tLink and calling ComptueAABB()
         /// \brief tLink the world transform to put this link in when computing the AABB
         virtual AABB ComputeAABBFromTransform(const Transform& tLink) const;
-        
+
         /// \brief Return the current transformation of the link in the world coordinate system.
         inline Transform GetTransform() const {
             return _info._t;
@@ -614,12 +619,12 @@ protected:
         /// Will store the geometry pointer to use for later, so do not modify after this.
         /// \param addToGroups if true, will add the same ginfo to all groups
         virtual void AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroups);
-        
+
         /// \brief removes geometry that matches a name from the current geometries and possibly stored extra group geometries
         ///
         /// \param removeFromAllGroups if true, will check and remove the geometry from all stored groups
         virtual void RemoveGeometryByName(const std::string& geometryname, bool removeFromAllGroups);
-        
+
         /// \brief initializes the link with geometries from the extra geomeries in LinkInfo
         ///
         /// \param name The name of the geometry group. If name is empty, will initialize the default geometries.
@@ -1269,7 +1274,7 @@ public:
 
             The velocity and acceleration equations are specified in terms of partial derivatives, which means one expression needs to be specified per degree of freedom of used. In order to separate the expressions use "|name ...". The name should immediately follow  '|'.  For example:
 
-           |universaljoint_0 10 |universaljoint_1 10*cos(universaljoint_1)
+         |universaljoint_0 10 |universaljoint_1 10*cos(universaljoint_1)
 
             If there is only one variable used in the position equation, then the equation can be specified directly without using "{}".
 
@@ -1943,7 +1948,7 @@ private:
     ///
     /// Internally equivalent to ComputeAABBFromTransform(Transform(), ...)
     virtual AABB ComputeLocalAABB(bool bEnabledOnlyLinks=false) const;
-    
+
     /// \brief Return the center of mass of entire robot in the world coordinate system.
     virtual Vector GetCenterOfMass() const;
 
@@ -2157,11 +2162,11 @@ private:
      */
     virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr(), CollisionCheckerBasePtr collisionchecker=CollisionCheckerBasePtr()) const;
 
-        /** \brief checks collision of a robot link with the surrounding environment using a new transform. Attached/Grabbed bodies to this link are also checked for collision.
+    /** \brief checks collision of a robot link with the surrounding environment using a new transform. Attached/Grabbed bodies to this link are also checked for collision.
 
-        \param[in] ilinkindex the index of the link to check
-        \param[in] tlinktrans The transform of the link to check
-        \param[out] report [optional] collision report
+       \param[in] ilinkindex the index of the link to check
+       \param[in] tlinktrans The transform of the link to check
+       \param[out] report [optional] collision report
      */
     virtual bool CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report = CollisionReportPtr());
 
@@ -2178,7 +2183,7 @@ private:
         \param[out] report [optional] collision report
      */
     virtual bool CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report = CollisionReportPtr());
-    
+
     /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision.
 
         \param[in] ilinkindex the index of the link to check
@@ -2186,9 +2191,9 @@ private:
         \param[out] report [optional] collision report
      */
     virtual bool CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report = CollisionReportPtr());
-    
+
     //@}
-    
+
     /// \return true if two bodies should be considered as one during collision (ie one is grabbing the other)
     virtual bool IsAttached(KinBodyConstPtr body) const RAVE_DEPRECATED {
         return IsAttached(*body);
@@ -2342,7 +2347,7 @@ private:
         @name Grabbing Bodies
         @{
      */
-    
+
     /** \brief Grab the body with the specified link.
 
         \param[in] body the body to be grabbed

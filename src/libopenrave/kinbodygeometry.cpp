@@ -299,29 +299,20 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
     return true;
 }
 
-KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
+bool KinBody::GeometryInfo::ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const
 {
-}
-
-bool KinBody::Link::Geometry::InitCollisionMesh(float fTessellation)
-{
-    return _info.InitCollisionMesh(fTessellation);
-}
-
-bool KinBody::Link::Geometry::ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const
-{
-    switch(_info._type) {
+    switch(_type) {
     case GT_Cage: {
         Vector vmin, vmax;
-        vmax.z = vmin.z = _info._vGeomData.z*2;
+        vmax.z = vmin.z = _vGeomData.z*2;
 
         // initialize to the base extents if there is no wall
-        vmin.x = -_info._vGeomData.y;
-        vmin.y = -_info._vGeomData.y;
-        vmin.x = _info._vGeomData.x;
-        vmin.y = _info._vGeomData.y;
+        vmin.x = -_vGeomData.y;
+        vmin.y = -_vGeomData.y;
+        vmin.x = _vGeomData.x;
+        vmin.y = _vGeomData.y;
 
-        FOREACH(itwall, _info._vSideWalls) {
+        FOREACH(itwall, _vSideWalls) {
             // compute the XYZ extents of the wall
             Vector vxaxis = geometry::ExtractAxisFromQuat(itwall->transf.rot, 0);
             Vector vyaxis = geometry::ExtractAxisFromQuat(itwall->transf.rot, 1);
@@ -354,20 +345,34 @@ bool KinBody::Link::Geometry::ComputeInnerEmptyVolume(Transform& tInnerEmptyVolu
         }
 
         abInnerEmptyExtents = 0.5*(vmax - vmin);
-        tInnerEmptyVolume = _info._t;
+        tInnerEmptyVolume = _t;
         tInnerEmptyVolume.trans += tInnerEmptyVolume.rotate(0.5*(vmax + vmin));
         return true;
     }
     case GT_Container: {
         Transform tempty;
-        tempty.trans.z = _info._vGeomData.z*2 + _info._vGeomData2.z;
-        tInnerEmptyVolume = _info._t*tempty;
-        abInnerEmptyExtents = _info._vGeomData2;
+        tempty.trans.z = _vGeomData.z*2 + _vGeomData2.z;
+        tInnerEmptyVolume = _t*tempty;
+        abInnerEmptyExtents = _vGeomData2;
         return true;
     }
     default:
         return false;
-    }
+    }    
+}
+
+KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
+{
+}
+
+bool KinBody::Link::Geometry::InitCollisionMesh(float fTessellation)
+{
+    return _info.InitCollisionMesh(fTessellation);
+}
+
+bool KinBody::Link::Geometry::ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const
+{
+    return _info.ComputeInnerEmptyVolume(tInnerEmptyVolume, abInnerEmptyExtents);
 }
 
 AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const

@@ -120,6 +120,17 @@ public:
         //_mapExtraGeometries = info. _mapExtraGeometries;
     }
 
+    object ComputeInnerEmptyVolume() const
+    {
+        Transform tInnerEmptyVolume;
+        Vector abInnerEmptyExtents;
+        KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
+        if( pgeominfo->ComputeInnerEmptyVolume(tInnerEmptyVolume, abInnerEmptyExtents) ) {
+            return boost::python::make_tuple(ReturnTransform(tInnerEmptyVolume), toPyVector3(abInnerEmptyExtents));
+        }
+        return boost::python::make_tuple(object(), object());
+    }
+
     KinBody::GeometryInfoPtr GetGeometryInfo() {
         KinBody::GeometryInfoPtr pinfo(new KinBody::GeometryInfo());
         KinBody::GeometryInfo& info = *pinfo;
@@ -3345,6 +3356,7 @@ void init_openravepy_kinbody()
                           .def_readwrite("_bModifiable",&PyGeometryInfo::_bModifiable)
                           .def_readwrite("_mapExtraGeometries",&PyGeometryInfo::_mapExtraGeometries)
                           .def_readwrite("_vSideWalls", &PyGeometryInfo::_vSideWalls)
+                          .def("ComputeInnerEmptyVolume",&PyGeometryInfo::ComputeInnerEmptyVolume, DOXY_FN(GeomeryInfo,ComputeInnerEmptyVolume))
                           .def_pickle(GeometryInfo_pickle_suite())
     ;
 
