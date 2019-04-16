@@ -34,8 +34,8 @@ enum GeometryType {
     GT_Sphere = 2,
     GT_Cylinder = 3, ///< oriented towards z-axis
     GT_TriMesh = 4,
-    GT_Container=5, ///< a container shaped geometry that has inner and outer extents. container opens on +Z.
-    GT_Cage=6, ///< a container shaped geometry with removable side walls
+    GT_Container=5, ///< a container shaped geometry that has inner and outer extents. container opens on +Z. The origin is at the bottom of the base.
+    GT_Cage=6, ///< a container shaped geometry with removable side walls. The side walls can be on any of the four sides. The origin is at the bottom of the base. The inner volume of the cage is measured from the base to the highest wall.
 };
 
 /// \brief holds parameters for an electric motor
@@ -176,8 +176,6 @@ public:
             SideWallType type;
         };
         std::vector<SideWall> _vSideWalls; ///< used by GT_Cage
-        Vector _innerExtents; // Inner extents of the container, the volume that can be used to pick/place objectss
-        float _containerBaseHeight; // Distance between the inner bottom plane and the bottom plane of the container
 
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height
@@ -357,6 +355,18 @@ public:
                 return _info;
             }
 
+            /// cage
+            //@{
+            inline const Vector& GetCageBaseExtents() const {
+                return _info._vGeomData;
+            }
+
+            /// \brief compute the inner empty volume in the geometry coordinate system
+            ///
+            /// \return bool true if the geometry has a concept of empty volume nad tInnerEmptyVolume/abInnerEmptyVolume are filled
+            virtual bool ComputeCageInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const;
+            //@}
+            
             virtual bool InitCollisionMesh(float fTessellation=1);
 
             /// \brief returns an axis aligned bounding box given that the geometry is transformed by trans

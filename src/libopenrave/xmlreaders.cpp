@@ -391,13 +391,6 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
 
             break;
         case GT_Cage:
-            if( xmlname == "innerExtents" ) {
-                _ss >> _pgeom->_innerExtents;
-            }
-            if( xmlname == "containerBaseHeight" ) {
-                _ss >> _pgeom->_containerBaseHeight;
-            }
-
             if( xmlname == "sidewall" ) {
                 _pgeom->_vSideWalls.push_back({});
             }

@@ -2232,8 +2232,7 @@ public:
                 itgeominfo->_vGeomData *= vscale;
                 break;
             case GT_Cage:
-                itgeominfo->_innerExtents *= vscale;
-                itgeominfo->_containerBaseHeight *= vscale[2];
+                itgeominfo->_vGeomData *= vscale;
                 for (size_t i = 0; i < itgeominfo->_vSideWalls.size(); ++i) {
                     itgeominfo->_vSideWalls[i].transf.trans *= vscale;
                     itgeominfo->_vSideWalls[i].vExtents *= vscale;
@@ -2801,31 +2800,19 @@ public:
                             }
                         }
                         else if( name == "cage" ) {
-                            daeElementRef pPickableVolumeExtents = children[i]->getChild("innerExtents");
-                            if( !!pPickableVolumeExtents ) {
-                                stringstream ss(pPickableVolumeExtents->getCharData());
+                            daeElementRef phalf_extents = children[i]->getChild("half_extents");
+                            if( !!phalf_extents ) {
+                                stringstream ss(phalf_extents->getCharData());
                                 Vector vextents;
                                 ss >> vextents.x >> vextents.y >> vextents.z;
                                 if( ss.eof() || !!ss ) {
-                                    geominfo._type = GT_Cage;
-                                    geominfo._innerExtents = vextents;
+                                    geominfo._type = GT_Box;
+                                    geominfo._vGeomData = vextents;
                                     geominfo._t = tlocalgeom;
                                     bfoundgeom = true;
                                 }
                             }
-                            daeElementRef pContainerBaseHeight = children[i]->getChild("containerBaseHeight");
-                            if( !!pContainerBaseHeight ) {
-                                stringstream ss(pContainerBaseHeight->getCharData());
-                                float h;
-                                ss >> h;
-                                if( ss.eof() || !!ss ) {
-                                    geominfo._type = GT_Cage;
-                                    geominfo._containerBaseHeight = h;
-                                    geominfo._t = tlocalgeom;
-                                    bfoundgeom = true;
-                                }
-                            }
-
+                            
                             daeElementRef pSidewalls = children[i]->getChild("sidewalls");
                             if ( !!pSidewalls ) {
                                 daeTArray<daeElementRef> sidewallChildren;
@@ -2835,24 +2822,18 @@ public:
                                 geominfo._vSideWalls.resize(sidewallChildren.getCount());
                                 geominfo._t = tlocalgeom;
                                 for(size_t j = 0; j < sidewallChildren.getCount(); ++j) {
-                                    daeElementRef pTransf = sidewallChildren[j]->getChild("transf");
-                                    if( !!pTransf ) {
-                                        stringstream ss(pTransf->getCharData());
-                                        Transform transf;
-                                        ss >> transf;
-                                        if( ss.eof() || !!ss ) {
-                                            memcpy(&geominfo._vSideWalls[j].transf, &transf, sizeof(Transform));
-                                            bfoundgeom = true;
-                                        }
+                                    if( !!sidewallChildren[j] ) {
+                                        geominfo._vSideWalls[j].transf = _ExtractFullTransformFromChildren(sidewallChildren[j]);
+                                        bfoundgeom = true;
                                     }
 
-                                    daeElementRef pVExtents = sidewallChildren[j]->getChild("vExtents");
+                                    daeElementRef pVExtents = sidewallChildren[j]->getChild("half_extents");
                                     if( !!pVExtents ) {
                                         stringstream ss(pVExtents->getCharData());
                                         Vector e;
                                         ss >> e;
                                         if( ss.eof() || !!ss ) {
-                                            memcpy(&geominfo._vSideWalls[j].vExtents, &e, sizeof(Vector));
+                                            geominfo._vSideWalls[j].vExtents = e;
                                             bfoundgeom = true;
                                         }
                                     }

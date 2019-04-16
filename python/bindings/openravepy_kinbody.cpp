@@ -91,8 +91,6 @@ public:
         _vCollisionScale = toPyVector3(Vector(1,1,1));
         _bVisible = true;
         _bModifiable = true;
-        _innerExtents = toPyVector4(Vector());
-        _containerBaseHeight = 0.0f;
         _vSideWalls = boost::python::list();
     }
     PyGeometryInfo(const KinBody::GeometryInfo& info) {
@@ -101,8 +99,6 @@ public:
         _vGeomData2 = toPyVector4(info._vGeomData2);
         _vGeomData3 = toPyVector4(info._vGeomData3);
 
-        _innerExtents = toPyVector4(info._innerExtents);
-        _containerBaseHeight = info._containerBaseHeight;
         _vSideWalls = boost::python::list();
         for (size_t i = 0; i < info._vSideWalls.size(); ++i) {
             _vSideWalls.append(PySideWall(info._vSideWalls[i]));
@@ -132,12 +128,10 @@ public:
         info._vGeomData2 = ExtractVector<dReal>(_vGeomData2);
         info._vGeomData3 = ExtractVector<dReal>(_vGeomData3);
 
-        info._innerExtents = ExtractVector<dReal>(_innerExtents);
-        info._containerBaseHeight = _containerBaseHeight;
         info._vSideWalls.clear();
         for (size_t i = 0; i < len(_vSideWalls); ++i) {
             info._vSideWalls.push_back({});
-            boost::shared_ptr<PySideWall> pysidewall = boost::python::extract<boost::shared_ptr<PySideWall>>(_vSideWalls[i]);
+            boost::shared_ptr<PySideWall> pysidewall = boost::python::extract<boost::shared_ptr<PySideWall> >(_vSideWalls[i]);
             pysidewall->Get(info._vSideWalls[i]);
         }
 
@@ -166,9 +160,7 @@ public:
         return pinfo;
     }
 
-    object _t, _vGeomData, _vGeomData2, _vGeomData3,
-           _innerExtents,
-           _vDiffuseColor, _vAmbientColor, _meshcollision;
+    object _t, _vGeomData, _vGeomData2, _vGeomData3, _vDiffuseColor, _vAmbientColor, _meshcollision;
     boost::python::list _vSideWalls;
     float _containerBaseHeight;
     GeometryType _type;
@@ -745,6 +737,15 @@ public:
         }
         object GetInfo() {
             return object(PyGeometryInfoPtr(new PyGeometryInfo(_pgeometry->GetInfo())));
+        }
+        object ComputeCageInnerEmptyVolume() const
+        {
+            Transform tInnerEmptyVolume;
+            Vector abInnerEmptyExtents;
+            if( _pgeometry->ComputeCageInnerEmptyVolume(tInnerEmptyVolume, abInnerEmptyExtents) ) {
+                boost::python::make_tuple(ReturnTransform(tInnerEmptyVolume), toPyVector3(abInnerEmptyExtents));
+            }
+            return boost::python::make_tuple(object(), object());
         }
         bool __eq__(boost::shared_ptr<PyGeometry> p) {
             return !!p && _pgeometry == p->_pgeometry;
@@ -3343,16 +3344,14 @@ void init_openravepy_kinbody()
                           .def_readwrite("_bVisible",&PyGeometryInfo::_bVisible)
                           .def_readwrite("_bModifiable",&PyGeometryInfo::_bModifiable)
                           .def_readwrite("_mapExtraGeometries",&PyGeometryInfo::_mapExtraGeometries)
-                          .def_readwrite("_innerExtents", &PyGeometryInfo::_innerExtents)
-                          .def_readwrite("_containerBaseHeight", &PyGeometryInfo::_containerBaseHeight)
                           .def_readwrite("_vSideWalls", &PyGeometryInfo::_vSideWalls)
                           .def_pickle(GeometryInfo_pickle_suite())
     ;
 
     object sidewall = class_<PySideWall, boost::shared_ptr<PySideWall> >("SideWall", DOXY_CLASS(KinBody::GeometryInfo::SideWall))
-                          .def_readwrite("transf",&PySideWall::transf)
-                          .def_readwrite("vExtents",&PySideWall::vExtents)
-                          .def_readwrite("type",&PySideWall::type)
+                      .def_readwrite("transf",&PySideWall::transf)
+                      .def_readwrite("vExtents",&PySideWall::vExtents)
+                      .def_readwrite("type",&PySideWall::type)
     ;
 
     object linkinfo = class_<PyLinkInfo, boost::shared_ptr<PyLinkInfo> >("LinkInfo", DOXY_CLASS(KinBody::LinkInfo))
@@ -3735,6 +3734,7 @@ void init_openravepy_kinbody()
                                  .def("GetTransparency",&PyLink::PyGeometry::GetTransparency,DOXY_FN(KinBody::Link::Geometry,GetTransparency))
                                  .def("GetDiffuseColor",&PyLink::PyGeometry::GetDiffuseColor,DOXY_FN(KinBody::Link::Geometry,GetDiffuseColor))
                                  .def("GetAmbientColor",&PyLink::PyGeometry::GetAmbientColor,DOXY_FN(KinBody::Link::Geometry,GetAmbientColor))
+                                 .def("ComputeCageInnerEmptyVolume",&PyLink::PyGeometry::ComputeCageInnerEmptyVolume,DOXY_FN(KinBody::Link::Geometry,ComputeCageInnerEmptyVolume))
                                  .def("GetInfo",&PyLink::PyGeometry::GetInfo,DOXY_FN(KinBody::Link::Geometry,GetInfo))
                                  .def("__eq__",&PyLink::PyGeometry::__eq__)
                                  .def("__ne__",&PyLink::PyGeometry::__ne__)

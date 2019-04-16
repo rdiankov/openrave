@@ -250,18 +250,19 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
         break;
     }
     case GT_Cage: {
-        for (size_t i = 0; i < _vSideWalls.size(); ++ i) {
+        const Vector& vCageBaseExtents = _vGeomData;
+        dReal containerBaseHeight = vCageBaseExtents.z*2;
+        for (size_t i = 0; i < _vSideWalls.size(); ++i) {
             const SideWall &s = _vSideWalls[i];
             const size_t vBase = _meshcollision.vertices.size();
-            AppendBoxTriangulation(Vector(0, 0, _containerBaseHeight + s.vExtents[2]), s.vExtents, _meshcollision);
+            AppendBoxTriangulation(Vector(0, 0, s.vExtents[2]), s.vExtents, _meshcollision);
 
             for (size_t j = 0; j < 8; ++j) {
                 _meshcollision.vertices[vBase + j] = s.transf * _meshcollision.vertices[vBase + j];
             }
         }
-        AppendBoxTriangulation(Vector(0, 0, 0.5f * _containerBaseHeight),
-                               Vector(_innerExtents[0], _innerExtents[1], 0.5f * _containerBaseHeight), _meshcollision);
-
+        // finally add the base
+        AppendBoxTriangulation(Vector(0, 0, vCageBaseExtents.z),vCageBaseExtents, _meshcollision);
         break;
     }
     case GT_Container: {
@@ -305,6 +306,67 @@ KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::Geomet
 bool KinBody::Link::Geometry::InitCollisionMesh(float fTessellation)
 {
     return _info.InitCollisionMesh(fTessellation);
+}
+
+bool KinBody::Link::Geometry::ComputeCageInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const
+{
+    switch(_info._type) {
+    case GT_Cage: {
+        Vector vmin, vmax;
+        vmax.z = vmin.z = _info._vGeomData.z*2;
+
+        // initialize to the base extents if there is no wall
+        vmin.x = -_info._vGeomData.y;
+        vmin.y = -_info._vGeomData.y;
+        vmin.x = _info._vGeomData.x;
+        vmin.y = _info._vGeomData.y;
+
+        FOREACH(itwall, _info._vSideWalls) {
+            // compute the XYZ extents of the wall
+            Vector vxaxis = geometry::ExtractAxisFromQuat(itwall->transf.rot, 0);
+            Vector vyaxis = geometry::ExtractAxisFromQuat(itwall->transf.rot, 1);
+            Vector vzaxis = geometry::ExtractAxisFromQuat(itwall->transf.rot, 2);
+
+            Vector vprojectedextents;
+            for(int idim = 0; idim < 3; ++idim) {
+                vprojectedextents[idim] = RaveFabs(vxaxis[idim])*itwall->vExtents.x + RaveFabs(vyaxis[idim])*itwall->vExtents.y + RaveFabs(vzaxis[idim])*itwall->vExtents.z;
+            }
+
+            if( vmax.z < itwall->transf.trans.z + vprojectedextents.z ) {
+                vmax.z = itwall->transf.trans.z + vprojectedextents.z;
+            }
+
+            switch(itwall->type) {
+            case GeometryInfo::SWT_NX:
+                vmin.x = itwall->transf.trans.x + vprojectedextents.x;
+                break;
+            case GeometryInfo::SWT_NY:
+                vmin.y = itwall->transf.trans.y + vprojectedextents.y;
+                break;
+            case GeometryInfo::SWT_PX:
+                vmax.x = itwall->transf.trans.x - vprojectedextents.x;
+                break;
+            case GeometryInfo::SWT_PY:
+                vmax.y = itwall->transf.trans.y - vprojectedextents.y;
+                break;
+            }
+        }
+
+        abInnerEmptyExtents = 0.5*(vmax - vmin);
+        tInnerEmptyVolume = _info._t;
+        tInnerEmptyVolume.trans += tInnerEmptyVolume.rotate(0.5*(vmax + vmin));
+        return true;
+    }
+    case GT_Container: {
+        Transform tempty;
+        tempty.trans.z = _info._vGeomData.z*2 + _info._vGeomData2.z;
+        tInnerEmptyVolume = _info._t*tempty;
+        abInnerEmptyExtents = _info._vGeomData2;
+        return true;
+    }
+    default:
+        return false;
+    }
 }
 
 AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
@@ -556,5 +618,5 @@ void KinBody::Link::Geometry::SetName(const std::string& name)
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkGeometry);
 
 }
-    
+
 }
