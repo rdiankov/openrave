@@ -308,7 +308,7 @@ bool KinBody::Link::Geometry::InitCollisionMesh(float fTessellation)
     return _info.InitCollisionMesh(fTessellation);
 }
 
-bool KinBody::Link::Geometry::ComputeCageInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const
+bool KinBody::Link::Geometry::ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const
 {
     switch(_info._type) {
     case GT_Cage: {

@@ -738,11 +738,11 @@ public:
         object GetInfo() {
             return object(PyGeometryInfoPtr(new PyGeometryInfo(_pgeometry->GetInfo())));
         }
-        object ComputeCageInnerEmptyVolume() const
+        object ComputeInnerEmptyVolume() const
         {
             Transform tInnerEmptyVolume;
             Vector abInnerEmptyExtents;
-            if( _pgeometry->ComputeCageInnerEmptyVolume(tInnerEmptyVolume, abInnerEmptyExtents) ) {
+            if( _pgeometry->ComputeInnerEmptyVolume(tInnerEmptyVolume, abInnerEmptyExtents) ) {
                 return boost::python::make_tuple(ReturnTransform(tInnerEmptyVolume), toPyVector3(abInnerEmptyExtents));
             }
             return boost::python::make_tuple(object(), object());
@@ -3734,7 +3734,7 @@ void init_openravepy_kinbody()
                                  .def("GetTransparency",&PyLink::PyGeometry::GetTransparency,DOXY_FN(KinBody::Link::Geometry,GetTransparency))
                                  .def("GetDiffuseColor",&PyLink::PyGeometry::GetDiffuseColor,DOXY_FN(KinBody::Link::Geometry,GetDiffuseColor))
                                  .def("GetAmbientColor",&PyLink::PyGeometry::GetAmbientColor,DOXY_FN(KinBody::Link::Geometry,GetAmbientColor))
-                                 .def("ComputeCageInnerEmptyVolume",&PyLink::PyGeometry::ComputeCageInnerEmptyVolume,DOXY_FN(KinBody::Link::Geometry,ComputeCageInnerEmptyVolume))
+                                 .def("ComputeInnerEmptyVolume",&PyLink::PyGeometry::ComputeInnerEmptyVolume,DOXY_FN(KinBody::Link::Geometry,ComputeInnerEmptyVolume))
                                  .def("GetInfo",&PyLink::PyGeometry::GetInfo,DOXY_FN(KinBody::Link::Geometry,GetInfo))
                                  .def("__eq__",&PyLink::PyGeometry::__eq__)
                                  .def("__ne__",&PyLink::PyGeometry::__ne__)
