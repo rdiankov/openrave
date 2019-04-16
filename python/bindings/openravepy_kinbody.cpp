@@ -94,6 +94,11 @@ public:
         _vSideWalls = boost::python::list();
     }
     PyGeometryInfo(const KinBody::GeometryInfo& info) {
+        Init(info);
+    }
+
+
+    void Init(const KinBody::GeometryInfo& info) {
         _t = ReturnTransform(info._t);
         _vGeomData = toPyVector4(info._vGeomData);
         _vGeomData2 = toPyVector4(info._vGeomData2);
@@ -129,6 +134,23 @@ public:
             return boost::python::make_tuple(ReturnTransform(tInnerEmptyVolume), toPyVector3(abInnerEmptyExtents));
         }
         return boost::python::make_tuple(object(), object());
+    }
+
+    void DeserializeJSON(object obj, const dReal fUnitScale)
+    {
+        rapidjson::Document doc;
+        toRapidJSONValue(obj, doc, doc.GetAllocator());
+        KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
+        pgeominfo->DeserializeJSON(doc, fUnitScale);
+        Init(*pgeominfo);
+    }
+
+    object SerializeJSON(object ooptions=object())
+    {
+        rapidjson::Document doc;
+        KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
+        pgeominfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(ooptions,0));
+        return toPyObject(doc);
     }
 
     KinBody::GeometryInfoPtr GetGeometryInfo() {
@@ -3268,6 +3290,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromSpheres_overloads, InitFromSphere
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromTrimesh_overloads, InitFromTrimesh, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromGeometries_overloads, InitFromGeometries, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Init_overloads, Init, 2, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SerializeJSON_overloads, SerializeJSON, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABB_overloads, ComputeAABB, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABBFromTransform_overloads, ComputeAABBFromTransform, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeLocalAABB_overloads, ComputeLocalAABB, 0, 1)
@@ -3357,6 +3380,8 @@ void init_openravepy_kinbody()
                           .def_readwrite("_mapExtraGeometries",&PyGeometryInfo::_mapExtraGeometries)
                           .def_readwrite("_vSideWalls", &PyGeometryInfo::_vSideWalls)
                           .def("ComputeInnerEmptyVolume",&PyGeometryInfo::ComputeInnerEmptyVolume, DOXY_FN(GeomeryInfo,ComputeInnerEmptyVolume))
+                          .def("DeserializeJSON", &PyGeometryInfo::DeserializeJSON, args("obj", "unitScale"), DOXY_FN(GeometryInfo, DeserializeJSON))
+                          .def("SerializeJSON", &PyGeometryInfo::SerializeJSON,SerializeJSON_overloads(args("options"), DOXY_FN(GeometryInfo,SerializeJSON)))
                           .def_pickle(GeometryInfo_pickle_suite())
     ;
 

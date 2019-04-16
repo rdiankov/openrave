@@ -157,6 +157,12 @@ public:
         /// \return bool true if the geometry has a concept of empty volume nad tInnerEmptyVolume/abInnerEmptyVolume are filled
         bool ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const;
 
+#if OPENRAVE_RAPIDJSON
+        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
+
+        virtual void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale = 1);
+#endif
+
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
 
         /// for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
