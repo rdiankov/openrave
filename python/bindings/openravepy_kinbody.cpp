@@ -120,7 +120,7 @@ public:
         //_mapExtraGeometries = info. _mapExtraGeometries;
     }
 
-    object ComputeInnerEmptyVolume() const
+    object ComputeInnerEmptyVolume()
     {
         Transform tInnerEmptyVolume;
         Vector abInnerEmptyExtents;
