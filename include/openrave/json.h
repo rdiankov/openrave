@@ -116,7 +116,7 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
 /// \brief serialize a std::string as json, these functions are overloaded to allow for templates
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const std::string& v)
 {
-    value = rapidjson::Value().SetString(v, allocator);
+    value = rapidjson::Value().SetString(v.c_str(), allocator);
 }
 
 /// \brief serialize a std::pair as json

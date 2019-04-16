@@ -96,7 +96,6 @@ namespace OpenRAVE {
 }
 
 #if OPENRAVE_RAPIDJSON
-#define RAPIDJSON_HAS_STDSTRING 1
 #include <rapidjson/document.h>
 #endif
 
