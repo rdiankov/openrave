@@ -1766,6 +1766,7 @@ private:
             case GT_Cage: {
                 daeElementRef pcage = ptec->add("cage");
 
+                ss.str(""); ss.clear();
                 ss << geom->GetCageBaseExtents().x << " " << geom->GetCageBaseExtents().y << " " << geom->GetCageBaseExtents().z;
                 pcage->add("half_extents")->setCharData(ss.str());
                 
@@ -1777,10 +1778,10 @@ private:
                     _WriteTransformation(psidewall, info._vSideWalls[i].transf);
 
                     ss.str(""); ss.clear();
-                    ss << info._vSideWalls[i].vExtents;
+                    ss << info._vSideWalls[i].vExtents.x << " " << info._vSideWalls[i].vExtents.y << " " << info._vSideWalls[i].vExtents.z;
                     psidewall->add("half_extents")->setCharData(ss.str());
+                    
                     ss.clear(); ss.str("");
-
                     ss << info._vSideWalls[i].type;
                     psidewall->add("type")->setCharData(ss.str());
                     ss.clear(); ss.str("");
