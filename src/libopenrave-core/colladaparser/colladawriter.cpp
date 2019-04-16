@@ -1776,6 +1776,7 @@ private:
 
                     _WriteTransformation(psidewall, info._vSideWalls[i].transf);
 
+                    ss.str(""); ss.clear();
                     ss << info._vSideWalls[i].vExtents;
                     psidewall->add("half_extents")->setCharData(ss.str());
                     ss.clear(); ss.str("");
