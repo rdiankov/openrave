@@ -372,7 +372,7 @@ public:
                 return _info._vGeomData;
             }
 
-            /// \brief compute the inner empty volume in the geometry coordinate system
+            /// \brief compute the inner empty volume in the parent link coordinate system
             ///
             /// \return bool true if the geometry has a concept of empty volume nad tInnerEmptyVolume/abInnerEmptyVolume are filled
             virtual bool ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const;
