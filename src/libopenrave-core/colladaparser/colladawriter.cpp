@@ -1662,7 +1662,7 @@ private:
     virtual domGeometryRef WriteGeometry(KinBody::Link::GeometryConstPtr geom, const string& parentid)
     {
         const TriMesh& mesh = geom->GetCollisionMesh();
-        Transform t = geom->GetTransform();
+        Transform tgeom = geom->GetTransform();
 
         string effid = parentid+string("_eff");
         string matid = parentid+string("_mat");
@@ -1692,7 +1692,7 @@ private:
                     parray->getValue().setCount(3*mesh.vertices.size());
 
                     for(size_t ind = 0; ind < mesh.vertices.size(); ++ind) {
-                        Vector v = t*mesh.vertices[ind];
+                        Vector v = tgeom*mesh.vertices[ind];
                         parray->getValue()[3*ind+0] = v.x;
                         parray->getValue()[3*ind+1] = v.y;
                         parray->getValue()[3*ind+2] = v.z;
@@ -1761,6 +1761,30 @@ private:
                 ss.clear(); ss.str("");
                 ss << geom->GetContainerBottomCross().x << " " << geom->GetContainerBottomCross().y << " " << geom->GetContainerBottomCross().z;
                 pcontainer->add("bottom_cross")->setCharData(ss.str());
+                break;
+            }
+            case GT_Cage: {
+                daeElementRef pcage = ptec->add("cage");
+
+                ss.str(""); ss.clear();
+                ss << geom->GetCageBaseExtents().x << " " << geom->GetCageBaseExtents().y << " " << geom->GetCageBaseExtents().z;
+                pcage->add("half_extents")->setCharData(ss.str());
+                
+                const KinBody::GeometryInfo& info = geom->GetInfo();
+                for (size_t i = 0; i < info._vSideWalls.size(); ++i) {
+                    daeElementRef psidewall = pcage->add("sidewall");
+
+                    _WriteTransformation(psidewall, info._vSideWalls[i].transf);
+
+                    ss.str(""); ss.clear();
+                    ss << info._vSideWalls[i].vExtents.x << " " << info._vSideWalls[i].vExtents.y << " " << info._vSideWalls[i].vExtents.z;
+                    psidewall->add("half_extents")->setCharData(ss.str());
+                    
+                    ss.clear(); ss.str("");
+                    ss << info._vSideWalls[i].type;
+                    psidewall->add("type")->setCharData(ss.str());
+                    ss.clear(); ss.str("");
+                }
                 break;
             }
             case GT_Sphere:
