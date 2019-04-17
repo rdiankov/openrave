@@ -306,10 +306,10 @@ bool KinBody::GeometryInfo::ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume
         vmax.z = vmin.z = _vGeomData.z*2;
 
         // initialize to the base extents if there is no wall
-        vmin.x = -_vGeomData.y;
+        vmin.x = -_vGeomData.x;
         vmin.y = -_vGeomData.y;
-        vmin.x = _vGeomData.x;
-        vmin.y = _vGeomData.y;
+        vmax.x = _vGeomData.x;
+        vmax.y = _vGeomData.y;
 
         FOREACH(itwall, _vSideWalls) {
             // compute the XYZ extents of the wall
