@@ -158,8 +158,10 @@ public:
         bool ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const;
 
 #if OPENRAVE_RAPIDJSON
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
+        ///< \param multiply all translational values by fUnitScale
+        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale=1.0, int options=0);
 
+        ///< \param multiply all translational values by fUnitScale
         virtual void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale = 1);
 #endif
 

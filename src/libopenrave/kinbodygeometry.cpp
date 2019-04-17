@@ -379,42 +379,51 @@ void RaveDeserializeJSON(const rapidjson::Value &value, KinBody::GeometryInfo::S
     sidewall.type = (KinBody::GeometryInfo::SideWallType)type;
 }
 
-void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
+void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options)
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
 
     //RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "sid", sid);
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", _name);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", _t);
+
+    Transform tscaled=_t;
+    tscaled.trans *= fUnitScale;
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", tscaled);
 
     switch(_type) {
     case GT_Box:
         RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "box");
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "halfExtents", _vGeomData);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "halfExtents", _vGeomData*fUnitScale);
         break;
 
     case GT_Container:
         RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "container");
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "outerExtents", _vGeomData);
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "innerExtents", _vGeomData2);
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "bottomCross", _vGeomData3);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "outerExtents", _vGeomData*fUnitScale);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "innerExtents", _vGeomData2*fUnitScale);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "bottomCross", _vGeomData3*fUnitScale);
         break;
 
     case GT_Cage: {
         RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "cage");
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "baseExtents", _vGeomData);
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "sideWalls", _vSideWalls);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "baseExtents", _vGeomData*fUnitScale);
+
+        std::vector<SideWall> vScaledSideWalls = _vSideWalls;
+        FOREACH(itwall, vScaledSideWalls) {
+            itwall->transf.trans *= fUnitScale;
+            itwall->vExtents *= fUnitScale;
+        }
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "sideWalls", vScaledSideWalls);
         break;
     }
     case GT_Sphere:
         RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "sphere");
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "radius", _vGeomData.x);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "radius", _vGeomData.x*fUnitScale);
         break;
 
     case GT_Cylinder:
         RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "cylinder");
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "radius", _vGeomData.x);
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "height", _vGeomData.y);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "radius", _vGeomData.x*fUnitScale);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "height", _vGeomData.y*fUnitScale);
         break;
 
     case GT_TriMesh:
@@ -468,6 +477,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         RAVE_DESERIALIZEJSON_REQUIRED(value, "sideWalls", _vSideWalls);
         FOREACH(itsidewall, _vSideWalls) {
             itsidewall->transf.trans *= fUnitScale;
+            itsidewall->vExtents *= fUnitScale;
         }
     }
     else if (typestr == "sphere") {
