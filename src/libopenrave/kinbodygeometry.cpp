@@ -350,7 +350,8 @@ bool KinBody::GeometryInfo::ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume
     }
     case GT_Container: {
         Transform tempty;
-        tempty.trans.z = _vGeomData.z*2 + _vGeomData2.z;
+        // full outer extents - full inner extents + inner extents = _vGeomData.z - 0.5*_vGeomData2.z
+        tempty.trans.z = _vGeomData.z - 0.5 * _vGeomData2.z;
         tInnerEmptyVolume = _t*tempty;
         abInnerEmptyExtents = _vGeomData2;
         return true;
