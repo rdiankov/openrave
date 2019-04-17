@@ -353,7 +353,7 @@ bool KinBody::GeometryInfo::ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume
         // full outer extents - full inner extents + inner extents = _vGeomData.z - 0.5*_vGeomData2.z
         tempty.trans.z = _vGeomData.z - 0.5 * _vGeomData2.z;
         tInnerEmptyVolume = _t*tempty;
-        abInnerEmptyExtents = _vGeomData2;
+        abInnerEmptyExtents = 0.5*_vGeomData2;
         return true;
     }
     default:
