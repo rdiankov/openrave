@@ -149,7 +149,7 @@ public:
     {
         rapidjson::Document doc;
         KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
-        pgeominfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(ooptions,0));
+        pgeominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(ooptions,0));
         return toPyObject(doc);
     }
 
