@@ -304,7 +304,7 @@ bool KinBody::GeometryInfo::ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume
     case GT_Cage: {
         Vector vmin, vmax;
         vmax.z = vmin.z = _vGeomData.z*2;
-
+        
         // initialize to the base extents if there is no wall
         vmin.x = -_vGeomData.x;
         vmin.y = -_vGeomData.y;
@@ -341,6 +341,30 @@ bool KinBody::GeometryInfo::ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume
                 vmax.y = itwall->transf.trans.y - vprojectedextents.y;
                 break;
             }
+        }
+
+        // force inner region
+        // if there are walls, respect the walls first
+        if( _vGeomData2.x > 0 ) {
+            if( vmin.x < -0.5*_vGeomData2.x ) {
+                vmin.x = -0.5*_vGeomData2.x;
+            }
+            if( vmax.x > 0.5*_vGeomData2.x ) {
+                vmax.x = 0.5*_vGeomData2.x;
+            }
+        }
+        if( _vGeomData2.y > 0 ) {
+            if( vmin.y < -0.5*_vGeomData2.y ) {
+                vmin.y = -0.5*_vGeomData2.y;
+            }
+            if( vmax.y > 0.5*_vGeomData2.y ) {
+                vmax.y = 0.5*_vGeomData2.y;
+            }
+        }
+
+        // the top has no constraints, so use the max of walls and force inner region
+        if( vmax.z < _vGeomData.z*2 + _vGeomData2.z ) {
+            vmax.z = _vGeomData.z*2 + _vGeomData2.z;
         }
 
         abInnerEmptyExtents = 0.5*(vmax - vmin);
@@ -412,6 +436,15 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Do
             itwall->transf.trans *= fUnitScale;
             itwall->vExtents *= fUnitScale;
         }
+        if( _vGeomData2.x > g_fEpsilon ) {
+            RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "innerSizeX", _vGeomData2.x*fUnitScale);
+        }
+        if( _vGeomData2.y > g_fEpsilon ) {
+            RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "innerSizeY", _vGeomData2.y*fUnitScale);
+        }
+        if( _vGeomData2.z > g_fEpsilon ) {
+            RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "innerSizeZ", _vGeomData2.z*fUnitScale);
+        }
         RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "sideWalls", vScaledSideWalls);
         break;
     }
@@ -474,6 +507,13 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         _type = GT_Cage;
         RAVE_DESERIALIZEJSON_REQUIRED(value, "baseExtents", _vGeomData);
         _vGeomData *= fUnitScale;
+
+        _vGeomData2 = Vector();
+        RAVE_DESERIALIZEJSON_OPTIONAL(value, "innerSizeX", _vGeomData2.x);
+        RAVE_DESERIALIZEJSON_OPTIONAL(value, "innerSizeY", _vGeomData2.y);
+        RAVE_DESERIALIZEJSON_OPTIONAL(value, "innerSizeZ", _vGeomData2.z);
+        _vGeomData2 *= fUnitScale;
+
         RAVE_DESERIALIZEJSON_REQUIRED(value, "sideWalls", _vSideWalls);
         FOREACH(itsidewall, _vSideWalls) {
             itsidewall->transf.trans *= fUnitScale;

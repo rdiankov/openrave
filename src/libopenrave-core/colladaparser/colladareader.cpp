@@ -2233,6 +2233,7 @@ public:
                 break;
             case GT_Cage:
                 itgeominfo->_vGeomData *= vscale;
+                itgeominfo->_vGeomData2 *= vscale;
                 for (size_t i = 0; i < itgeominfo->_vSideWalls.size(); ++i) {
                     itgeominfo->_vSideWalls[i].transf.trans *= vscale;
                     itgeominfo->_vSideWalls[i].vExtents *= vscale;
@@ -2814,6 +2815,38 @@ public:
                                 }
                             }
 
+                            geominfo._vGeomData2 = Vector();
+                            daeElementRef pInnerSizeX = children[i]->getChild("inner_size_x");
+                            if( !!pInnerSizeX ) {
+                                stringstream ss(pInnerSizeX->getCharData());
+                                dReal fInnerSizeX=0;
+                                ss >> fInnerSizeX;
+                                if( ss.eof() || !!ss ) {
+                                    geominfo._vGeomData2.x = fInnerSizeX;
+                                    bfoundgeom = true;
+                                }
+                            }
+                            daeElementRef pInnerSizeY = children[i]->getChild("inner_size_y");
+                            if( !!pInnerSizeY ) {
+                                stringstream ss(pInnerSizeY->getCharData());
+                                dReal fInnerSizeY=0;
+                                ss >> fInnerSizeY;
+                                if( ss.eof() || !!ss ) {
+                                    geominfo._vGeomData2.y = fInnerSizeY;
+                                    bfoundgeom = true;
+                                }
+                            }
+                            daeElementRef pInnerSizeZ = children[i]->getChild("inner_size_z");
+                            if( !!pInnerSizeZ ) {
+                                stringstream ss(pInnerSizeZ->getCharData());
+                                dReal fInnerSizeZ=0;
+                                ss >> fInnerSizeZ;
+                                if( ss.eof() || !!ss ) {
+                                    geominfo._vGeomData2.z = fInnerSizeZ;
+                                    bfoundgeom = true;
+                                }
+                            }
+                            
                             geominfo._vSideWalls.clear();
                             daeTArray<daeElementRef> cagechildren;
                             children[i]->getChildren(cagechildren);

@@ -376,7 +376,7 @@ private:
 
     /// \param docname the top level document?
     virtual void Init(const string& docname, const std::string& keywords=std::string(),
-            const std::string& subject=std::string())
+                      const std::string& subject=std::string())
     {
         daeInt error = _dae->getDatabase()->insertDocument(docname.c_str(), &_doc );     // also creates a collada root
         BOOST_ASSERT( error == DAE_OK && !!_doc );
@@ -470,7 +470,7 @@ private:
             throw openrave_exception(str(boost::format(_("failed to save collada file to %s"))%filename));
         }
     }
-    
+
     virtual void Save(std::vector<char>& output)
     {
 #ifdef OPENRAVE_COLLADA_SUPPORT_WRITE_MEMORY
@@ -481,7 +481,7 @@ private:
         throw OPENRAVE_EXCEPTION_FORMAT0("collada-dom does not support writeToMemory, make sure at least version 2.5.0 is installed", ORE_Assert);
 #endif
     }
-    
+
     /// \brief Write down environment
     virtual bool Write(const std::string& scenename=std::string())
     {
@@ -1769,8 +1769,25 @@ private:
                 ss.str(""); ss.clear();
                 ss << geom->GetCageBaseExtents().x << " " << geom->GetCageBaseExtents().y << " " << geom->GetCageBaseExtents().z;
                 pcage->add("half_extents")->setCharData(ss.str());
-                
+
                 const KinBody::GeometryInfo& info = geom->GetInfo();
+
+                if( info._vGeomData2.x > g_fEpsilon ) {
+                    ss.str(""); ss.clear();
+                    ss << info._vGeomData2.x;
+                    pcage->add("inner_size_x")->setCharData(ss.str());
+                }
+                if( info._vGeomData2.y > g_fEpsilon ) {
+                    ss.str(""); ss.clear();
+                    ss << info._vGeomData2.y;
+                    pcage->add("inner_size_y")->setCharData(ss.str());
+                }
+                if( info._vGeomData2.z > g_fEpsilon ) {
+                    ss.str(""); ss.clear();
+                    ss << info._vGeomData2.z;
+                    pcage->add("inner_size_z")->setCharData(ss.str());
+                }
+
                 for (size_t i = 0; i < info._vSideWalls.size(); ++i) {
                     daeElementRef psidewall = pcage->add("sidewall");
 
@@ -1779,7 +1796,7 @@ private:
                     ss.str(""); ss.clear();
                     ss << info._vSideWalls[i].vExtents.x << " " << info._vSideWalls[i].vExtents.y << " " << info._vSideWalls[i].vExtents.z;
                     psidewall->add("half_extents")->setCharData(ss.str());
-                    
+
                     ss.clear(); ss.str("");
                     ss << info._vSideWalls[i].type;
                     psidewall->add("type")->setCharData(ss.str());
@@ -2650,7 +2667,7 @@ void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output, 
     if( scenename.size() == 0 ) {
         scenename = "scene";
     }
-    
+
     if( !writer.Write(scenename) ) {
         throw openrave_exception(_("ColladaWriter::Write(EnvironmentBasePtr) failed"));
     }
