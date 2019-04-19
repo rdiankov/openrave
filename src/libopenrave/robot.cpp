@@ -2007,6 +2007,7 @@ void RobotBase::_ResolveDuplicateInfoNames(std::map<std::string, KinBody::LinkIn
                                            std::map<std::string, KinBody::JointInfoConstPtr> &mJointInfos,
                                            const RobotBase::ConnectedBodyInfo &connectedBodyInfo)
 {
+    // Resolve duplicated link names
     std::map<std::string, std::string> changedLinkNameMap;
     for (const auto &linkInfo: connectedBodyInfo._vLinkInfos) {
 
@@ -2025,6 +2026,9 @@ void RobotBase::_ResolveDuplicateInfoNames(std::map<std::string, KinBody::LinkIn
             mLinkInfos[linkInfo->_name] = linkInfo;
         }
     }
+
+    // Resolve duplicated joint names
+    std::map<std::string, std::string> changedJointNameMap;
     std::vector<std::vector<KinBody::JointInfoPtr> > vvJointInfos{connectedBodyInfo._vJointInfos,
                                                                   connectedBodyInfo._vPassiveJointInfos};
     for (const auto &vJointInfos: vvJointInfos) {
@@ -2036,6 +2040,7 @@ void RobotBase::_ResolveDuplicateInfoNames(std::map<std::string, KinBody::LinkIn
                     i++;
                     newName = jointInfo->_name + "_" + std::to_string(i);
                 }
+                changedJointNameMap[jointInfo->_name] = newName;
                 jointInfo->_name = newName;
                 mJointInfos[newName] = jointInfo;
 
@@ -2050,6 +2055,28 @@ void RobotBase::_ResolveDuplicateInfoNames(std::map<std::string, KinBody::LinkIn
             if (changedLinkNameMap.find(jointInfo->_linkname1) != changedLinkNameMap.end()) {
                 jointInfo->_linkname1 = changedLinkNameMap[jointInfo->_linkname1];
             }
+        }
+    }
+    // Change mimic equations as active joint name might have changed
+
+    std::vector< std::pair<std::string, std::string> > jointNamePairs;
+    jointNamePairs.reserve(changedJointNameMap.size());
+    for (const auto &namePair: changedJointNameMap) {
+        jointNamePairs.push_back(std::make_pair(namePair.first, namePair.second));
+    }
+
+    for (const auto &jointInfo: connectedBodyInfo._vPassiveJointInfos) {
+        for (const auto &mimic: jointInfo->_vmimic) {
+            boost::array< std::string, 3> newEquations;
+            if (!mimic) {
+                continue;
+            }
+            for(std::size_t i = 0; i < mimic->_equations.size(); ++i) {
+                std::string eq;
+                utils::SearchAndReplace(eq, mimic->_equations[i], jointNamePairs);
+                newEquations[i] = eq;
+            }
+            mimic->_equations = newEquations;
         }
     }
 }
