@@ -1991,8 +1991,8 @@ void RobotBase::_ComputeConnectedBodiesInformation()
     }
 
     vector<KinBody::LinkInfoConstPtr> linkInfos;
-    for (const auto& pariLinkInfo: mLinkInfos) {
-        linkInfos.push_back(pariLinkInfo.second);
+    for (const auto& pairLinkInfo: mLinkInfos) {
+        linkInfos.push_back(pairLinkInfo.second);
     }
 
     vector<KinBody::JointInfoConstPtr> jointInfos;
