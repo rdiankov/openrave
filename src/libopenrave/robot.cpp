@@ -1792,52 +1792,38 @@ bool RobotBase::RemoveAttachedSensor(RobotBase::AttachedSensor &attsensor)
     return false;
 }
 
-RobotBase::ConnectedBodyPtr RobotBase::SetActiveAttachedBody(const std::string& bodyname)
+void RobotBase::SetActiveConnectedBody(const std::string &bodyname)
 {
     if (bodyname.size() > 0) {
-        FOREACH(itattachedBody, _vecConnectedBodies) {
-            if ((*itattachedBody)->GetName() == bodyname) {
-                _pAttachedBodyActive = *itattachedBody;
-                return _pAttachedBodyActive;
+        FOREACH(itconnectedBody, _vecConnectedBodies) {
+            if ((*itconnectedBody)->GetName() == bodyname) {
+                (*itconnectedBody)->SetActive(true);
+                return;
             }
         }
         throw OPENRAVE_EXCEPTION_FORMAT(_("failed to find attach body with name: %s"), bodyname, ORE_InvalidArguments);
     }
-    _pAttachedBodyActive.reset();
-    return _pAttachedBodyActive;
 }
 
-void RobotBase::SetActiveAttachBody(RobotBase::ConnectedBodyPtr pattachedBody) {
-    if (!pattachedBody) {
-        _pAttachedBodyActive.reset();
-    } else {
-        FOREACH(itattachedBody, _vecConnectedBodies) {
-            if (*itattachedBody == pattachedBody) {
-                _pAttachedBodyActive = *itattachedBody;
-                return;
-            }
-        }
-        // body might have been recoreded, search for the same name
-        FOREACH(itattachedBody, _vecConnectedBodies) {
-            if ((*itattachedBody)->GetName() == pattachedBody->GetName()) {
-                _pAttachedBodyActive = *itattachedBody;
-                return;
-            }
-        }
-
-        _pAttachedBodyActive.reset();
-        RAVELOG_WARN_FORMAT("failed to find attach body with name %s, most likely removed", pattachedBody->GetName());
+void RobotBase::SetActiveConnectedBody(RobotBase::ConnectedBodyPtr pconnectedBody) {
+    if (!pconnectedBody) {
+        return;
     }
-}
+    FOREACH(itconnectedBody, _vecConnectedBodies) {
+        if (*itconnectedBody == pconnectedBody) {
+            (*itconnectedBody)->SetActive(true);
+            return;
+        }
+    }
+    // body might have been recoreded, search for the same name
+    FOREACH(itconnectedBody, _vecConnectedBodies) {
+        if ((*itconnectedBody)->GetName() == pconnectedBody->GetName()) {
+            (*itconnectedBody)->SetActive(true);
+            return;
+        }
+    }
 
-RobotBase::ConnectedBodyPtr RobotBase::GetActiveAttachedBody()
-{
-    return _pAttachedBodyActive;
-}
-
-RobotBase::ConnectedBodyConstPtr RobotBase::GetActiveAttachedBody() const
-{
-    return _pAttachedBodyActive;
+    RAVELOG_WARN_FORMAT("failed to find connected body with name %s, most likely removed", pconnectedBody->GetName());
 }
 
 
@@ -1905,12 +1891,11 @@ void RobotBase::_ComputeInternalInformation()
         _pManipActive.reset();
     }
 
-    if( !_vecConnectedBodies.empty() ) {
-        _pAttachedBodyActive = _vecConnectedBodies.front();
+    // sync active state of connected bodies
+    FOREACH(itconnectedBody, _vecConnectedBodies) {
+        (*itconnectedBody)->SetActive((*itconnectedBody)->IsActive());
     }
-    else {
-        _pAttachedBodyActive.reset();
-    }
+    _vecConnectedBodies.front()->SetActive(true);
 
     int sensorindex=0;
     FOREACH(itsensor,_vecSensors) {

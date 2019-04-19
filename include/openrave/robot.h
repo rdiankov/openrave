@@ -936,11 +936,9 @@ private:
     }
     virtual bool RemoveAttachedSensor(RobotBase::AttachedSensor &attsensor);
 
-    virtual ConnectedBodyPtr SetActiveAttachedBody(const std::string& bodyname);
-    virtual void SetActiveAttachBody(ConnectedBodyPtr pattachedBody);
-    virtual ConnectedBodyPtr GetActiveAttachedBody();
-    virtual ConnectedBodyConstPtr GetActiveAttachedBody() const;
-    
+    virtual void SetActiveConnectedBody(const std::string &bodyname);
+    virtual void SetActiveConnectedBody(ConnectedBodyPtr pconnectedBody);
+
     /// \deprecated (11/10/04) send directly through controller
     virtual bool SetMotion(TrajectoryBaseConstPtr ptraj) RAVE_DEPRECATED;
 
@@ -1085,7 +1083,6 @@ protected:
     std::vector<AttachedSensorPtr> _vecSensors; ///< \see GetAttachedSensors
 
     std::vector<ConnectedBodyPtr> _vecConnectedBodies;  ///< \see GetConnectedBodies
-    ConnectedBodyPtr _pAttachedBodyActive;
 
     std::vector<int> _vActiveDOFIndices, _vAllDOFIndices;
     Vector vActvAffineRotationAxis;
