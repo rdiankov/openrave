@@ -166,6 +166,29 @@ RobotBase::ConnectedBody::ConnectedBody(OpenRAVE::RobotBasePtr probot, const Ope
 
 RobotBase::ConnectedBody::~ConnectedBody() {}
 
+bool RobotBase::ConnectedBody::SetActive(bool active)
+{
+    if (_info._bIsActive == active) {
+        return false;
+    }
+
+    for( const auto &linkInfo : _info._vLinkInfos ) {
+        KinBody::LinkPtr pLink = GetRobot()->GetLink(linkInfo->_name);
+        if (!pLink) {
+            continue;
+        }
+        pLink->SetVisible(active);
+        pLink->Enable(active);
+    }
+
+    _info._bIsActive = active;
+}
+
+bool RobotBase::ConnectedBody::IsActive()
+{
+    return _info._bIsActive;
+}
+
 void RobotBase::ConnectedBody::UpdateInfo()
 {
     LinkPtr prealattachedlink = pattachedlink.lock();

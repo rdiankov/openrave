@@ -583,6 +583,10 @@ private:
         ConnectedBody(RobotBasePtr probot, const ConnectedBodyInfo& info);
         virtual ~ConnectedBody();
 
+        virtual bool SetActive(bool active);
+
+        virtual bool IsActive();
+
         virtual LinkPtr GetAttachingLink() const {
             return LinkPtr(pattachedlink);
         }
