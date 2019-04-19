@@ -803,6 +803,14 @@ public:
             return object(PyConnectedBodyInfoPtr(new PyConnectedBodyInfo(_pconnected->GetInfo())));
         }
 
+        bool SetActive(bool active) {
+            return _pconnected->SetActive(active);
+        }
+
+        bool IsActive() {
+            return _pconnected->IsActive();
+        }
+
         string __repr__() {
             return boost::str(boost::format("RaveGetEnvironment(%d).GetRobot('%s').GetConnectedBodies('%s')") %
                               RaveGetEnvironmentId(_pconnected->GetRobot()->GetEnv()) %
@@ -1775,6 +1783,8 @@ void init_openravepy_robot()
 
         class_<PyRobotBase::PyConnectedBody, boost::shared_ptr<PyRobotBase::PyConnectedBody> >("ConnectedBody", DOXY_CLASS(RobotBase::ConnectedBody), no_init)
         .def("GetInfo",&PyRobotBase::PyConnectedBody::GetInfo, DOXY_FN(RobotBase::ConnectedBody,GetInfo))
+        .def("SetActive", &PyRobotBase::PyConnectedBody::SetActive, DOXY_FN(RobotBase::ConnectedBody,SetActive))
+        .def("IsActive", &PyRobotBase::PyConnectedBody::IsActive, DOXY_FN(RobotBase::ConnectedBody,IsActive))
         .def("__str__",&PyRobotBase::PyConnectedBody::__str__)
         .def("__repr__",&PyRobotBase::PyConnectedBody::__repr__)
         .def("__unicode__",&PyRobotBase::PyConnectedBody::__unicode__)
