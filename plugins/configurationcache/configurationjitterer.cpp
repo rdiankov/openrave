@@ -794,10 +794,18 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                     _deltadof2[j] = *itperturbation;
                 }
                 if( bConstraint ) {
-                    _newdof2 = vnewdof;
+                    // first argument of _neighstatefn should always satisfy the constraints, so start at _curdof always
+                    _newdof2 = _curdof;
                     _probot->SetActiveDOFValues(_newdof2);
-                    int neighstateret = _neighstatefn(_newdof2, _deltadof2, 0);
+                    // add to _deltadof2 the difference from vnewdof and _curdof
+                    for(size_t idof = 0; idof < _deltadof2.size(); ++idof) {
+                        _deltadof2[idof] += vnewdof[idof] - _curdof[idof];
+                    }
+		    int neighstateret = _neighstatefn(_newdof2, _deltadof2, 0);
                     if( (neighstateret & NSS_Reached) != NSS_Reached ) {
+                        if( *itperturbation != 0 ) {
+                            RAVELOG_DEBUG(str(boost::format("constraint function failed, pert=%e\n")%*itperturbation));
+                        }
                         nNeighStateFailure++;
                         bConstraintFailed = true;
                         break;
