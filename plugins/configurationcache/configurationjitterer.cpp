@@ -701,13 +701,16 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             //int ret = cache.InsertNode(vnewdof, CollisionReportPtr(), _neighdistthresh);
             //BOOST_ASSERT(ret==1);
 
-            // Project the sampled configuration onto the constraint manifold.
+            // Compute a neighbor of _curdof that satisfies constraints. If _neighstatefn is not initialized, then the neighbor is vnewdof itself.
             if( bConstraint ) {
-                for(size_t j = 0; j < vnewdof.size(); ++j) {
-                    _deltadof2[j] = 0;
+                // Obtain the delta dof values computed from the jittering above.
+                for(size_t idof = 0; idof < _deltadof.size(); ++idof) {
+                    _deltadof[idof] = vnewdof[idof] - _curdof[idof];
                 }
-                if( _neighstatefn(vnewdof, _deltadof2, 0) == NSS_Failed ) {
-                    // Projection fails so continue.
+                vnewdof = _curdof;
+                _probot->SetActiveDOFValues(vnewdof); // need to set robot configuration before calling _neighstatefn
+                if( _neighstatefn(vnewdof, _deltadof, 0) == NSS_Failed) {
+                    nNeighStateFailure++;
                     continue;
                 }
             }
@@ -794,22 +797,9 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                     _deltadof2[j] = *itperturbation;
                 }
                 if( bConstraint ) {
-                    // first argument of _neighstatefn should always satisfy the constraints, so start at _curdof always
-                    _newdof2 = _curdof;
+                    _newdof2 = vnewdof;
                     _probot->SetActiveDOFValues(_newdof2);
-                    // add to _deltadof2 the difference from vnewdof and _curdof
-                    for(size_t idof = 0; idof < _deltadof2.size(); ++idof) {
-                        _deltadof2[idof] += vnewdof[idof] - _curdof[idof];
-                    }
-		    int neighstateret = _neighstatefn(_newdof2, _deltadof2, 0);
-                    if( (neighstateret & NSS_Reached) != NSS_Reached ) {
-                        if( *itperturbation != 0 ) {
-                            RAVELOG_DEBUG(str(boost::format("constraint function failed, pert=%e\n")%*itperturbation));
-                        }
-                        nNeighStateFailure++;
-                        bConstraintFailed = true;
-                        break;
-                    }
+                    int neighstateret = _neighstatefn(_newdof2, _deltadof2, 0);
                     // Unperturbed configuration needs to satisfy the constraints
                     if( (*itperturbation == 0) && (neighstateret != NSS_Reached) ) {
                         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
@@ -824,6 +814,11 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                         }
                         ss << "]";
                         RAVELOG_DEBUG_FORMAT("unperturbed projected sampled configuration fails to satisfy constraints: %s", ss.str());
+                    }
+                    if( (neighstateret & NSS_Reached) != NSS_Reached ) {
+                        nNeighStateFailure++;
+                        bConstraintFailed = true;
+                        break;
                     }
                 }
                 else {
@@ -936,13 +931,13 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                     robotsaver.Release();
                 }
 
-                RAVELOG_DEBUG_FORMAT("succeed iterations=%d, computation=%fs, neighstate=%d, constraintToolDir=%d, constraintToolPos=%d, envCollision=%d, selfCollision=%d",iter%(1e-9*(utils::GetNanoPerformanceTime() - starttime))%nNeighStateFailure%nConstraintToolDirFailure%nConstraintToolPositionFailure%nEnvCollisionFailure%nSelfCollisionFailure);
+                RAVELOG_DEBUG_FORMAT("succeed iterations=%d, computation=%fs, bConstraint=%d, neighstate=%d, constraintToolDir=%d, constraintToolPos=%d, envCollision=%d, selfCollision=%d",iter%(1e-9*(utils::GetNanoPerformanceTime() - starttime))%bConstraint%nNeighStateFailure%nConstraintToolDirFailure%nConstraintToolPositionFailure%nEnvCollisionFailure%nSelfCollisionFailure);
                 //RAVELOG_VERBOSE_FORMAT("succeed iterations=%d, cachehits=%d, cache size=%d, originaldist=%f, computation=%fs\n",iter%_cachehit%cache.GetNumNodes()%cache.ComputeDistance(_curdof, vnewdof)%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
                 return 1;
             }
         }
 
-        RAVELOG_INFO_FORMAT("failed iterations=%d, computation=%fs, neighstate=%d, constraintToolDir=%d, constraintToolPos=%d, envCollision=%d, selfCollision=%d",_maxiterations%(1e-9*(utils::GetNanoPerformanceTime() - starttime))%nNeighStateFailure%nConstraintToolDirFailure%nConstraintToolPositionFailure%nEnvCollisionFailure%nSelfCollisionFailure);
+        RAVELOG_INFO_FORMAT("failed iterations=%d, computation=%fs, bConstraint=%d, neighstate=%d, constraintToolDir=%d, constraintToolPos=%d, envCollision=%d, selfCollision=%d",_maxiterations%(1e-9*(utils::GetNanoPerformanceTime() - starttime))%bConstraint%nNeighStateFailure%nConstraintToolDirFailure%nConstraintToolPositionFailure%nEnvCollisionFailure%nSelfCollisionFailure);
         //RAVELOG_WARN_FORMAT("failed iterations=%d, cachehits=%d, cache size=%d, jitter time=%fs", _maxiterations%_cachehit%cache.GetNumNodes()%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
         return 0;
     }
