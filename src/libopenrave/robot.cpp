@@ -195,23 +195,29 @@ void RobotBase::ConnectedBody::UpdateInfo()
     if (!!prealattachedlink) {
         _info._linkname = prealattachedlink->GetName();
     }
-
+    _info._vLinkInfos.clear();
     for (const auto &link : _pbody->_veclinks) {
+        link->Enable(_info._bIsActive);
+        link->SetVisible(_info._bIsActive);
         _info._vLinkInfos.push_back(boost::make_shared<KinBody::LinkInfo>(link->UpdateAndGetInfo()));
     }
 
+    _info._vJointInfos.clear();
     for (const auto &joint : _pbody->_vecjoints) {
         _info._vJointInfos.push_back(boost::make_shared<KinBody::JointInfo>(joint->UpdateAndGetInfo()));
     }
 
+    _info._vPassiveJointInfos.clear();
     for (const auto &joint : _pbody->_vPassiveJoints) {
         _info._vPassiveJointInfos.push_back(boost::make_shared<KinBody::JointInfo>(joint->UpdateAndGetInfo()));
     }
 
+    _info._vManipInfos.clear();
     for (const auto &manip : _pbody->GetManipulators()) {
         _info._vManipInfos.push_back(boost::make_shared<RobotBase::ManipulatorInfo>(manip->GetInfo()));
     }
 
+    _info._vSensorInfos.clear();
     for (const auto &sensor : _pbody->GetAttachedSensors()) {
         _info._vSensorInfos.push_back(boost::make_shared<RobotBase::AttachedSensorInfo>(sensor->UpdateAndGetInfo()));
     }
@@ -1891,11 +1897,9 @@ void RobotBase::_ComputeInternalInformation()
         _pManipActive.reset();
     }
 
-    // sync active state of connected bodies
-    FOREACH(itconnectedBody, _vecConnectedBodies) {
-        (*itconnectedBody)->SetActive((*itconnectedBody)->IsActive());
+    if (!_vecConnectedBodies.empty()) {
+        _vecConnectedBodies.front()->SetActive(true);
     }
-    _vecConnectedBodies.front()->SetActive(true);
 
     int sensorindex=0;
     FOREACH(itsensor,_vecSensors) {
