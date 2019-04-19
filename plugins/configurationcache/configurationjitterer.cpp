@@ -438,6 +438,11 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 #endif
     }
 
+    void SetNeighStateFn(const boost::function<int (std::vector<dReal>&,const std::vector<dReal>&, int)>& neighstatefn)
+    {
+        _neighstatefn = neighstatefn;
+    }
+
     /// \brief jitters the current configuration and sets a new configuration on the environment
     ///
     int Sample(std::vector<dReal>& vnewdof, IntervalType interval=IT_Closed)
@@ -696,6 +701,16 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             //int ret = cache.InsertNode(vnewdof, CollisionReportPtr(), _neighdistthresh);
             //BOOST_ASSERT(ret==1);
 
+            // Project the sampled configuration onto the constraint manifold.
+            if( bConstraint ) {
+                for(size_t j = 0; j < vnewdof.size(); ++j) {
+                    _deltadof2[j] = 0;
+                }
+                if( _neighstatefn(vnewdof, _deltadof2, 0) == NSS_Failed ) {
+                    // Projection fails so continue.
+                    continue;
+                }
+            }
             _probot->SetActiveDOFValues(vnewdof);
 #ifdef _DEBUG
             dReal fmaxtransdist = 0;
@@ -781,13 +796,26 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( bConstraint ) {
                     _newdof2 = vnewdof;
                     _probot->SetActiveDOFValues(_newdof2);
-                    if( _neighstatefn(_newdof2,_deltadof2,0) == NSS_Failed ) {
-                        if( *itperturbation != 0 ) {
-                            RAVELOG_DEBUG(str(boost::format("constraint function failed, pert=%e\n")%*itperturbation));
-                        }
+                    int neighstateret = _neighstatefn(_newdof2, _deltadof2, 0);
+                    if( (neighstateret & NSS_Reached) != NSS_Reached ) {
                         nNeighStateFailure++;
                         bConstraintFailed = true;
                         break;
+                    }
+                    // Unperturbed configuration needs to satisfy the constraints
+                    if( (*itperturbation == 0) && (neighstateret != NSS_Reached) ) {
+                        stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                        ss << "values=[";
+                        for(size_t i = 0; i < vnewdof.size(); ++i ) {
+                            if( i > 0 ) {
+                                ss << "," << vnewdof[i];
+                            }
+                            else {
+                                ss << vnewdof[i];
+                            }
+                        }
+                        ss << "]";
+                        RAVELOG_DEBUG_FORMAT("unperturbed projected sampled configuration fails to satisfy constraints: %s", ss.str());
                     }
                 }
                 else {
