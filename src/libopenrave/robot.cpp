@@ -171,9 +171,8 @@ bool RobotBase::ConnectedBody::SetActive(bool active)
     if (_info._bIsActive == active) {
         return false;
     }
-
-    for( const auto &linkInfo : _info._vLinkInfos ) {
-        KinBody::LinkPtr pLink = GetRobot()->GetLink(linkInfo->_name);
+    FOREACH(linkInfo, _info._vLinkInfos) {
+        KinBody::LinkPtr pLink = GetRobot()->GetLink((*linkInfo)->_name);
         if (!pLink) {
             continue;
         }
@@ -196,30 +195,30 @@ void RobotBase::ConnectedBody::UpdateInfo()
         _info._linkname = prealattachedlink->GetName();
     }
     _info._vLinkInfos.clear();
-    for (const auto &link : _pbody->_veclinks) {
-        link->Enable(_info._bIsActive);
-        link->SetVisible(_info._bIsActive);
-        _info._vLinkInfos.push_back(boost::make_shared<KinBody::LinkInfo>(link->UpdateAndGetInfo()));
+    FOREACH(link, _pbody->_veclinks) {
+        (*link)->Enable(_info._bIsActive);
+        (*link)->SetVisible(_info._bIsActive);
+        _info._vLinkInfos.push_back(boost::make_shared<KinBody::LinkInfo>((*link)->UpdateAndGetInfo()));
     }
 
     _info._vJointInfos.clear();
-    for (const auto &joint : _pbody->_vecjoints) {
-        _info._vJointInfos.push_back(boost::make_shared<KinBody::JointInfo>(joint->UpdateAndGetInfo()));
+    FOREACH(joint, _pbody->_vecjoints) {
+        _info._vJointInfos.push_back(boost::make_shared<KinBody::JointInfo>((*joint)->UpdateAndGetInfo()));
     }
 
     _info._vPassiveJointInfos.clear();
-    for (const auto &joint : _pbody->_vPassiveJoints) {
-        _info._vPassiveJointInfos.push_back(boost::make_shared<KinBody::JointInfo>(joint->UpdateAndGetInfo()));
+    FOREACH(joint, _pbody->_vPassiveJoints) {
+        _info._vPassiveJointInfos.push_back(boost::make_shared<KinBody::JointInfo>((*joint)->UpdateAndGetInfo()));
     }
 
     _info._vManipInfos.clear();
-    for (const auto &manip : _pbody->GetManipulators()) {
-        _info._vManipInfos.push_back(boost::make_shared<RobotBase::ManipulatorInfo>(manip->GetInfo()));
+    FOREACH(manip, _pbody->GetManipulators()) {
+        _info._vManipInfos.push_back(boost::make_shared<RobotBase::ManipulatorInfo>((*manip)->GetInfo()));
     }
 
     _info._vSensorInfos.clear();
-    for (const auto &sensor : _pbody->GetAttachedSensors()) {
-        _info._vSensorInfos.push_back(boost::make_shared<RobotBase::AttachedSensorInfo>(sensor->UpdateAndGetInfo()));
+    FOREACH(sensor, _pbody->GetAttachedSensors()) {
+        _info._vSensorInfos.push_back(boost::make_shared<RobotBase::AttachedSensorInfo>((*sensor)->UpdateAndGetInfo()));
     }
 
 }
@@ -1959,27 +1958,27 @@ void RobotBase::_ComputeConnectedBodiesInformation()
     std::map<std::string, RobotBase::ManipulatorInfoConstPtr> mManipInfos;
     std::map<std::string, RobotBase::AttachedSensorInfoConstPtr> mAttachedSensorInfos;
 
-    for (const auto &link: _veclinks) {
-        mLinkInfos[link->GetName()] = boost::make_shared<KinBody::LinkInfo>(link->UpdateAndGetInfo());
+    FOREACH(link, _veclinks) {
+        mLinkInfos[(*link)->GetName()] = boost::make_shared<KinBody::LinkInfo>((*link)->UpdateAndGetInfo());
     }
-    for (const auto&joint: _vecjoints) {
-        mJointInfos[joint->GetName()] = boost::make_shared<KinBody::JointInfo>(joint->UpdateAndGetInfo());
+    FOREACH(joint, _vecjoints) {
+        mJointInfos[(*joint)->GetName()] = boost::make_shared<KinBody::JointInfo>((*joint)->UpdateAndGetInfo());
     }
 
 
     vector<RobotBase::ManipulatorInfoConstPtr> manipInfos;
-    for (const auto& manip: _vecManipulators) {
-        manipInfos.push_back(boost::make_shared<RobotBase::ManipulatorInfo>(manip->GetInfo()));
+    FOREACH(manip, _vecManipulators) {
+        manipInfos.push_back(boost::make_shared<RobotBase::ManipulatorInfo>((*manip)->GetInfo()));
     }
 
     vector<RobotBase::AttachedSensorInfoConstPtr> sensorInfos;
-    for (const auto& sensor: _vecSensors) {
-        sensorInfos.push_back(boost::make_shared<RobotBase::AttachedSensorInfo>(sensor->GetInfo()));
+    FOREACH(sensor, _vecSensors) {
+        sensorInfos.push_back(boost::make_shared<RobotBase::AttachedSensorInfo>((*sensor)->GetInfo()));
     }
 
-    for (const auto& connectedBody : _vecConnectedBodies) {
+    FOREACH(connectedBody, _vecConnectedBodies) {
         auto dummyJointInfo = boost::make_shared<KinBody::JointInfo>();
-        connectedBody->_info._vPassiveJointInfos.push_back(dummyJointInfo);
+        (*connectedBody)->_info._vPassiveJointInfos.push_back(dummyJointInfo);
 
         dummyJointInfo->_name = "connectBodyDummy";
         dummyJointInfo->_bIsActive = false;
@@ -1988,28 +1987,28 @@ void RobotBase::_ComputeConnectedBodiesInformation()
         dummyJointInfo->_vmaxvel[0] = 0.0;
         dummyJointInfo->_vupperlimit[0] = 0;
 
-        dummyJointInfo->_linkname0 = connectedBody->_info._linkname;
+        dummyJointInfo->_linkname0 = (*connectedBody)->_info._linkname;
 
         // root link of gripper
-        connectedBody->_pbody->SetTransform(connectedBody->GetTransform());
-        for (const auto &link : connectedBody->_pbody->GetLinks()) {
-            if (link->_vParentLinks.empty()) {
-                dummyJointInfo->_linkname1 = link->GetName();
+        (*connectedBody)->_pbody->SetTransform((*connectedBody)->GetTransform());
+        FOREACH(link, (*connectedBody)->_pbody->GetLinks()) {
+            if ((*link)->_vParentLinks.empty()) {
+                dummyJointInfo->_linkname1 = (*link)->GetName();
                 break;
             }
         }
 
-        RobotBase::_ResolveDuplicateInfoNames(mLinkInfos, mJointInfos, connectedBody->GetInfo());
+        RobotBase::_ResolveDuplicateInfoNames(mLinkInfos, mJointInfos, (*connectedBody)->GetInfo());
     }
 
     vector<KinBody::LinkInfoConstPtr> linkInfos;
-    for (const auto& pairLinkInfo: mLinkInfos) {
-        linkInfos.push_back(pairLinkInfo.second);
+    FOREACH(pairLinkInfo, mLinkInfos) {
+        linkInfos.push_back((*pairLinkInfo).second);
     }
 
     vector<KinBody::JointInfoConstPtr> jointInfos;
-    for (const auto& pJointInfo: mJointInfos) {
-        jointInfos.push_back(pJointInfo.second);
+    FOREACH(pJointInfo, mJointInfos) {
+        jointInfos.push_back((*pJointInfo).second);
     }
 
     Init(linkInfos, jointInfos, manipInfos, sensorInfos, GetURI());
@@ -2021,21 +2020,21 @@ void RobotBase::_ResolveDuplicateInfoNames(std::map<std::string, KinBody::LinkIn
 {
     // Resolve duplicated link names
     std::map<std::string, std::string> changedLinkNameMap;
-    for (const auto &linkInfo: connectedBodyInfo._vLinkInfos) {
+    FOREACH(linkInfo, connectedBodyInfo._vLinkInfos) {
 
-        if (mLinkInfos.find(linkInfo->_name) != mLinkInfos.end()) {
+        if (mLinkInfos.find((*linkInfo)->_name) != mLinkInfos.end()) {
             int i = 0;
-            std::string newName = linkInfo->_name + "_" + std::to_string(i);
+            std::string newName = (*linkInfo)->_name + "_" + std::to_string(i);
             while (mLinkInfos.find(newName) != mLinkInfos.end()) {
                 i++;
-                newName = linkInfo->_name + "_" + std::to_string(i);
+                newName = (*linkInfo)->_name + "_" + std::to_string(i);
             }
-            changedLinkNameMap[linkInfo->_name] = newName;
-            linkInfo->_name = newName;
-            mLinkInfos[newName] = linkInfo;
+            changedLinkNameMap[(*linkInfo)->_name] = newName;
+            (*linkInfo)->_name = newName;
+            mLinkInfos[newName] = (*linkInfo);
 
         } else {
-            mLinkInfos[linkInfo->_name] = linkInfo;
+            mLinkInfos[(*linkInfo)->_name] = (*linkInfo);
         }
     }
 
@@ -2043,52 +2042,52 @@ void RobotBase::_ResolveDuplicateInfoNames(std::map<std::string, KinBody::LinkIn
     std::map<std::string, std::string> changedJointNameMap;
     std::vector<std::vector<KinBody::JointInfoPtr> > vvJointInfos{connectedBodyInfo._vJointInfos,
                                                                   connectedBodyInfo._vPassiveJointInfos};
-    for (const auto &vJointInfos: vvJointInfos) {
-        for (const auto &jointInfo: vJointInfos) {
-            if (mJointInfos.find(jointInfo->_name) != mJointInfos.end()) {
+    FOREACH(vJointInfos, vvJointInfos) {
+        FOREACH(jointInfo, (*vJointInfos)) {
+            if (mJointInfos.find((*jointInfo)->_name) != mJointInfos.end()) {
                 int i = 0;
-                std::string newName = jointInfo->_name + "_" + std::to_string(i);
+                std::string newName = (*jointInfo)->_name + "_" + std::to_string(i);
                 while (mJointInfos.find(newName) != mJointInfos.end()) {
                     i++;
-                    newName = jointInfo->_name + "_" + std::to_string(i);
+                    newName = (*jointInfo)->_name + "_" + std::to_string(i);
                 }
-                changedJointNameMap[jointInfo->_name] = newName;
-                jointInfo->_name = newName;
-                mJointInfos[newName] = jointInfo;
+                changedJointNameMap[(*jointInfo)->_name] = newName;
+                (*jointInfo)->_name = newName;
+                mJointInfos[newName] = (*jointInfo);
 
             } else {
-                mJointInfos[jointInfo->_name] = jointInfo;
+                mJointInfos[(*jointInfo)->_name] = (*jointInfo);
             }
 
-            if (changedLinkNameMap.find(jointInfo->_linkname0) != changedLinkNameMap.end()) {
-                jointInfo->_linkname0 = changedLinkNameMap[jointInfo->_linkname0];
+            if (changedLinkNameMap.find((*jointInfo)->_linkname0) != changedLinkNameMap.end()) {
+                (*jointInfo)->_linkname0 = changedLinkNameMap[(*jointInfo)->_linkname0];
             }
 
-            if (changedLinkNameMap.find(jointInfo->_linkname1) != changedLinkNameMap.end()) {
-                jointInfo->_linkname1 = changedLinkNameMap[jointInfo->_linkname1];
+            if (changedLinkNameMap.find((*jointInfo)->_linkname1) != changedLinkNameMap.end()) {
+                (*jointInfo)->_linkname1 = changedLinkNameMap[(*jointInfo)->_linkname1];
             }
         }
     }
     // Change mimic equations as active joint name might have changed
 
-    std::vector< std::pair<std::string, std::string> > jointNamePairs;
+    std::vector<std::pair<std::string, std::string> > jointNamePairs;
     jointNamePairs.reserve(changedJointNameMap.size());
-    for (const auto &namePair: changedJointNameMap) {
-        jointNamePairs.push_back(std::make_pair(namePair.first, namePair.second));
+    FOREACH(namePair, changedJointNameMap) {
+        jointNamePairs.push_back(std::make_pair((*namePair).first, (*namePair).second));
     }
 
-    for (const auto &jointInfo: connectedBodyInfo._vPassiveJointInfos) {
-        for (const auto &mimic: jointInfo->_vmimic) {
-            boost::array< std::string, 3> newEquations;
-            if (!mimic) {
+    FOREACH(jointInfo, connectedBodyInfo._vPassiveJointInfos) {
+        FOREACH(mimic, (*jointInfo)->_vmimic) {
+            boost::array<std::string, 3> newEquations;
+            if (!(*mimic)) {
                 continue;
             }
-            for(std::size_t i = 0; i < mimic->_equations.size(); ++i) {
+            for (std::size_t i = 0; i < (*mimic)->_equations.size(); ++i) {
                 std::string eq;
-                utils::SearchAndReplace(eq, mimic->_equations[i], jointNamePairs);
+                utils::SearchAndReplace(eq, (*mimic)->_equations[i], jointNamePairs);
                 newEquations[i] = eq;
             }
-            mimic->_equations = newEquations;
+            (*mimic)->_equations = newEquations;
         }
     }
 }
