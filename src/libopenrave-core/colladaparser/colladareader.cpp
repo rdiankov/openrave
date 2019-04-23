@@ -1988,7 +1988,7 @@ public:
                             if( !_bBackCompatValuesInRadians ) {
                                 pjoint->_info._vmaxvel[ic] *= fjointmult;
                             }
-                            if ( pjoint->_info._vhardmaxvel[ic] < pjoint->_info._vmaxvel[ic] ) {
+                            if ( pjoint->_info._vhardmaxvel[ic] != 0.0 && pjoint->_info._vhardmaxvel[ic] < pjoint->_info._vmaxvel[ic] ) {
                                 RAVELOG_VERBOSE_FORMAT("... Joint Speed : Tried to set soft limit as %f but it exceeds hard limit. Therefore, reset to hard limit %f for consistency...\n", pjoint->_info._vmaxvel[ic] % pjoint->_info._vhardmaxvel[ic]);
                                 pjoint->_info._vmaxvel[ic] = pjoint->_info._vhardmaxvel[ic];
                             }
@@ -1999,7 +1999,7 @@ public:
                             if( !_bBackCompatValuesInRadians ) {
                                 pjoint->_info._vmaxaccel[ic] *= fjointmult;
                             }
-                            if ( pjoint->_info._vhardmaxaccel[ic] < pjoint->_info._vmaxaccel[ic] ) {
+                            if ( pjoint->_info._vhardmaxaccel[ic] != 0.0 && pjoint->_info._vhardmaxaccel[ic] < pjoint->_info._vmaxaccel[ic] ) {
                                 RAVELOG_VERBOSE_FORMAT("... Joint Acceleration : Tried to set soft limit as %f but it exceeds hard limit. Therefore, reset to hard limit %f for consistency...\n", pjoint->_info._vmaxaccel[ic] % pjoint->_info._vhardmaxaccel[ic]);
                                 pjoint->_info._vmaxaccel[ic] = pjoint->_info._vhardmaxaccel[ic];
                             }
@@ -2010,7 +2010,7 @@ public:
                             if( !_bBackCompatValuesInRadians ) {
                                 pjoint->_info._vmaxjerk[ic] *= fjointmult;
                             }
-                            if ( pjoint->_info._vhardmaxjerk[ic] < pjoint->_info._vmaxjerk[ic] ) {
+                            if ( pjoint->_info._vhardmaxjerk[ic] != 0.0 && pjoint->_info._vhardmaxjerk[ic] < pjoint->_info._vmaxjerk[ic] ) {
                                 RAVELOG_VERBOSE_FORMAT("... Joint Jerk : Tried to set soft limit as %f but it exceeds hard limit. Therefore, reset to hard limit %f for consistency...\n", pjoint->_info._vmaxjerk[ic] % pjoint->_info._vhardmaxjerk[ic]);
                                 pjoint->_info._vmaxjerk[ic] = pjoint->_info._vhardmaxjerk[ic];
                             }

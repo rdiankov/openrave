@@ -982,15 +982,24 @@ private:
             daeSafeCast<domCommon_param>(jerk->add(COLLADA_ELEMENT_PARAM))->setValue("jerk");
 
             // Write hard limits. Hard limits are defined as <newparam> tag.
-            domKinematics_newparamRef param_hardvel = daeSafeCast<domKinematics_newparam>(mai->add(COLLADA_ELEMENT_NEWPARAM));
-            param_hardvel->setSid("hardMaxVel");
-            daeSafeCast<domKinematics_newparam::domFloat>(param_hardvel->add(COLLADA_ELEMENT_FLOAT))->setValue(pjoint->GetHardMaxVel(iaxis)*valuemult);
-            domKinematics_newparamRef param_hardaccel = daeSafeCast<domKinematics_newparam>(mai->add(COLLADA_ELEMENT_NEWPARAM));
-            param_hardaccel->setSid("hardMaxAccel");
-            daeSafeCast<domKinematics_newparam::domFloat>(param_hardaccel->add(COLLADA_ELEMENT_FLOAT))->setValue(pjoint->GetHardMaxAccel(iaxis)*valuemult);
-            domKinematics_newparamRef param_hardjerk = daeSafeCast<domKinematics_newparam>(mai->add(COLLADA_ELEMENT_NEWPARAM));
-            param_hardjerk->setSid("hardMaxJerk");
-            daeSafeCast<domKinematics_newparam::domFloat>(param_hardjerk->add(COLLADA_ELEMENT_FLOAT))->setValue(pjoint->GetHardMaxJerk(iaxis)*valuemult);
+            if ( pjoint->GetHardMaxVel(iaxis) != 0 ) {
+                domKinematics_newparamRef param_hardvel = daeSafeCast<domKinematics_newparam>(mai->add(COLLADA_ELEMENT_NEWPARAM));
+                param_hardvel->setSid("hardMaxVel");
+                daeSafeCast<domKinematics_newparam::domFloat>(param_hardvel->add(COLLADA_ELEMENT_FLOAT))->setValue(pjoint->GetHardMaxVel(iaxis)*valuemult);
+                RAVELOG_VERBOSE_FORMAT("... %s is defined. writing %f...", param_hardvel->getSid() % pjoint->GetHardMaxVel(iaxis));
+            }
+            if ( pjoint->GetHardMaxAccel(iaxis) != 0 ) {
+                domKinematics_newparamRef param_hardaccel = daeSafeCast<domKinematics_newparam>(mai->add(COLLADA_ELEMENT_NEWPARAM));
+                param_hardaccel->setSid("hardMaxAccel");
+                daeSafeCast<domKinematics_newparam::domFloat>(param_hardaccel->add(COLLADA_ELEMENT_FLOAT))->setValue(pjoint->GetHardMaxAccel(iaxis)*valuemult);
+                RAVELOG_VERBOSE_FORMAT("... %s is defined. writing %f...", param_hardaccel->getSid() % pjoint->GetHardMaxAccel(iaxis));
+            }
+            if ( pjoint->GetHardMaxJerk(iaxis) != 0) {
+                domKinematics_newparamRef param_hardjerk = daeSafeCast<domKinematics_newparam>(mai->add(COLLADA_ELEMENT_NEWPARAM));
+                param_hardjerk->setSid("hardMaxJerk");
+                daeSafeCast<domKinematics_newparam::domFloat>(param_hardjerk->add(COLLADA_ELEMENT_FLOAT))->setValue(pjoint->GetHardMaxJerk(iaxis)*valuemult);
+                RAVELOG_VERBOSE_FORMAT("... %s is defined. writing %f...", param_hardjerk->getSid() % pjoint->GetHardMaxJerk(iaxis));
+            }
         }
 
         // write the bindings
