@@ -191,7 +191,7 @@ protected:
         int nrejected = 0;
         int iiter = parameters->_nMaxIterations;
         int itercount = 0;
-        int numiters = parameters->_nMaxIterations;
+        int numiters = (int)parameters->_nMaxIterations;
         std::vector<dReal> vnewconfig0(dof), vnewconfig1(dof);
 
         int numshortcuts = 0; // keep track of the number of successful shortcuts
