@@ -583,6 +583,7 @@ private:
         ConnectedBody(RobotBasePtr probot, const ConnectedBodyInfo& info);
         virtual ~ConnectedBody();
 
+        /// \brief set links in this connected body enabled for collision check and visibility of geometries
         virtual bool SetActive(bool active);
 
         virtual bool IsActive();
@@ -936,6 +937,7 @@ private:
     }
     virtual bool RemoveAttachedSensor(RobotBase::AttachedSensor &attsensor);
 
+    /// \brief set connected body with given name active.
     virtual void SetActiveConnectedBody(const std::string &bodyname);
     virtual void SetActiveConnectedBody(ConnectedBodyPtr pconnectedBody);
 
@@ -1067,7 +1069,9 @@ protected:
 
     /// \brief Proprocess the manipulators and sensors and build the specific robot hashes.
     virtual void _ComputeInternalInformation();
+    /// \brief Proprocess connected bodies and reinitialize robot.
     virtual void _ComputeConnectedBodiesInformation();
+    /// \brief Find out duplicate link/joint names, and resolve them. Also rename joint names in mimic equation.
     static void _ResolveDuplicateInfoNames(std::map<std::string, KinBody::LinkInfoConstPtr> &mLinkInfos,
                                            std::map<std::string, KinBody::JointInfoConstPtr> &mJointInfos,
                                            const RobotBase::ConnectedBodyInfo &connectedBodyInfo);
