@@ -283,35 +283,46 @@ public:
 #endif
     }
 
+    std::string ResolveURI(const string& uristr, const std::string& fragment=std::string())
+    {
+        daeURI urioriginal(*_dae, uristr);
+        urioriginal.fragment(fragment);
+        std::string uriresolved;
+
+        if (find(_vOpenRAVESchemeAliases.begin(), _vOpenRAVESchemeAliases.end(), urioriginal.scheme()) !=
+            _vOpenRAVESchemeAliases.end()) {
+            if (urioriginal.path().empty()) {
+                return nullptr;
+            }
+            // remove first slash because we need relative file
+            uriresolved = "file:";
+            if (urioriginal.path().at(0) == '/') {
+                uriresolved += RaveFindLocalFile(urioriginal.path().substr(1), "/");
+            } else {
+                uriresolved += RaveFindLocalFile(urioriginal.path(), "/");
+            }
+        }
+
+        return uriresolved;
+    }
+
     bool InitFromURI(const string& uristr, const AttributesList& atts)
     {
         _InitPreOpen(atts);
         _bOpeningZAE = uristr.find(".zae") == uristr.size()-4;
         daeURI urioriginal(*_dae, uristr);
         urioriginal.fragment(std::string()); // have to set the fragment to empty!
-        std::string uriresolved;
+        std::string uriresolved = ResolveURI(uristr);
 
-        if( find(_vOpenRAVESchemeAliases.begin(),_vOpenRAVESchemeAliases.end(),urioriginal.scheme()) != _vOpenRAVESchemeAliases.end() ) {
-            if( urioriginal.path().size() == 0 ) {
-                return NULL;
-            }
-            // remove first slash because we need relative file
-            uriresolved="file:";
-            if( urioriginal.path().at(0) == '/' ) {
-                uriresolved += RaveFindLocalFile(urioriginal.path().substr(1), "/");
-            }
-            else {
-                uriresolved += RaveFindLocalFile(urioriginal.path(), "/");
-            }
-            if( uriresolved.size() == 5 ) {
-                return false;
-            }
+        if( uriresolved.size() == 5 ) {
+            return false;
         }
-        _dom = daeSafeCast<domCOLLADA>(_dae->open(uriresolved.size() > 0 ? uriresolved : urioriginal.str()));
+
+        _dom = daeSafeCast<domCOLLADA>(_dae->open(!uriresolved.empty() ? uriresolved : urioriginal.str()));
         if( !_dom ) {
             return false;
         }
-        if( uriresolved.size() > 0 ) {
+        if( !uriresolved.empty() ) {
             _mapInverseResolvedURIList.insert(make_pair(uriresolved, daeURI(*_dae,urioriginal.str())));
         }
 
@@ -3342,6 +3353,14 @@ public:
                 EnvironmentBasePtr tempenv = RaveCreateEnvironment(); // use an temporary environment for parsing body
                 ColladaReader reader(tempenv, false);
                 std::string url = instance_body->getAttribute("url");
+                // circular reference catching connected body pointing to self
+                // but still have problem in case of url1 -> url2 -> url1
+                std::string robotUri = probot->GetURI();
+                std::string resolvedUri = ResolveURI(url);
+                if (robotUri.substr(0, robotUri.find('#')) == resolvedUri) {
+                    RAVELOG_WARN_FORMAT("connected body has same uri %s as robot %s", url % probot->GetURI());
+                    continue;
+                }
                 if( reader.InitFromURI(url, AttributesList()) ) {
                     reader.Extract();
                     std::vector<RobotBasePtr> robots;
