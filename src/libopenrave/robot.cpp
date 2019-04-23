@@ -188,36 +188,49 @@ bool RobotBase::ConnectedBody::IsActive()
     return _info._bIsActive;
 }
 
-void RobotBase::ConnectedBody::UpdateInfo()
+void RobotBase::ConnectedBody::UpdateInfo(const RobotBasePtr& pbody)
 {
+    if (!pbody) {
+        return;
+    }
+    // Set pbody to transform where it should be connected
+    pbody->SetTransform(GetTransform());
+
+    FOREACH(link, pbody->GetLinks()) {
+        if ((*link)->_vParentLinks.empty()) {
+            _info._manipBaseLinkName = (*link)->GetName();
+            break;
+        }
+    }
+
     LinkPtr prealattachedlink = pattachedlink.lock();
     if (!!prealattachedlink) {
         _info._linkname = prealattachedlink->GetName();
     }
     _info._vLinkInfos.clear();
-    FOREACH(link, _pbody->_veclinks) {
+    FOREACH(link, pbody->_veclinks) {
         (*link)->Enable(_info._bIsActive);
         (*link)->SetVisible(_info._bIsActive);
         _info._vLinkInfos.push_back(boost::make_shared<KinBody::LinkInfo>((*link)->UpdateAndGetInfo()));
     }
 
     _info._vJointInfos.clear();
-    FOREACH(joint, _pbody->_vecjoints) {
+    FOREACH(joint, pbody->_vecjoints) {
         _info._vJointInfos.push_back(boost::make_shared<KinBody::JointInfo>((*joint)->UpdateAndGetInfo()));
     }
 
     _info._vPassiveJointInfos.clear();
-    FOREACH(joint, _pbody->_vPassiveJoints) {
+    FOREACH(joint, pbody->_vPassiveJoints) {
         _info._vPassiveJointInfos.push_back(boost::make_shared<KinBody::JointInfo>((*joint)->UpdateAndGetInfo()));
     }
 
     _info._vManipInfos.clear();
-    FOREACH(manip, _pbody->GetManipulators()) {
+    FOREACH(manip, pbody->GetManipulators()) {
         _info._vManipInfos.push_back(boost::make_shared<RobotBase::ManipulatorInfo>((*manip)->GetInfo()));
     }
 
     _info._vSensorInfos.clear();
-    FOREACH(sensor, _pbody->GetAttachedSensors()) {
+    FOREACH(sensor, pbody->GetAttachedSensors()) {
         _info._vSensorInfos.push_back(boost::make_shared<RobotBase::AttachedSensorInfo>((*sensor)->UpdateAndGetInfo()));
     }
 
@@ -1988,15 +2001,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
         dummyJointInfo->_vupperlimit[0] = 0;
 
         dummyJointInfo->_linkname0 = (*connectedBody)->_info._linkname;
-
-        // root link of gripper
-        (*connectedBody)->_pbody->SetTransform((*connectedBody)->GetTransform());
-        FOREACH(link, (*connectedBody)->_pbody->GetLinks()) {
-            if ((*link)->_vParentLinks.empty()) {
-                dummyJointInfo->_linkname1 = (*link)->GetName();
-                break;
-            }
-        }
+        dummyJointInfo->_linkname1 = (*connectedBody)->_info._manipBaseLinkName;
 
         RobotBase::_ResolveDuplicateInfoNames(mLinkInfos, mJointInfos, (*connectedBody)->GetInfo());
     }

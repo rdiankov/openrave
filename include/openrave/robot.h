@@ -562,7 +562,7 @@ private:
         bool _bIsActive;
         std::string _name;
         std::string _linkname; ///< the robot link that the body is attached to
-        std::string _manipBaseLinkName;
+        std::string _manipBaseLinkName;  ///< root link name of this body
         std::string _url;  //< the url of connect body
         Transform _trelative;  ///< relative transform of the body with respect to the attached link
         std::vector<KinBody::LinkInfoPtr> _vLinkInfos;
@@ -628,7 +628,7 @@ private:
         }
 
         /// \brief Updates several fields in \ref _info depending on the current state of the attached body
-        virtual void UpdateInfo();
+        virtual void UpdateInfo(const RobotBasePtr& pbody);
 
     private:
         ConnectedBodyInfo _info; ///< user specified data
