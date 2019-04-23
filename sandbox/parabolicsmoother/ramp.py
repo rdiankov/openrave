@@ -943,7 +943,7 @@ class ParabolicCurvesND(object):
 
     # Visualization
     def PlotPos(self, fignum='Displacement Profiles', includingSW=False, dt=0.005, **kwargs):
-        plt.figure(fignum)
+        fig = plt.figure(fignum)
 
         tVect = arange(0, self.duration, dt)
         if tVect[-1] < self.duration:
@@ -959,10 +959,11 @@ class ParabolicCurvesND(object):
             for s in self.switchpointsList:
                 plt.plot([s, s], [ax[2], ax[3]], 'r', linewidth=1)
         plt.show(False)
+        return fig
         
 
     def PlotVel(self, fignum='Velocity Profile', includingSW=False, **kwargs):
-        plt.figure(fignum)
+        fig = plt.figure(fignum)
         plt.hold(True)
 
         lines = []
@@ -977,10 +978,11 @@ class ParabolicCurvesND(object):
             for s in self.switchpointsList:
                 plt.plot([s, s], [ax[2], ax[3]], 'r', linewidth=1)
         plt.show(False)
+        return fig
         
 
     def PlotAcc(self, fignum='Acceleration Profiles', **kwargs):
-        plt.figure(fignum)
+        fig = plt.figure(fignum)
         plt.hold(True)
 
         lines = []
@@ -990,6 +992,7 @@ class ParabolicCurvesND(object):
         handles = ['joint {0}'.format(i + 1) for i in xrange(self.ndof)]
         plt.legend(lines, handles)
         plt.show(False)
+        return fig
 # end class ParabolicCurvesND
 
     
