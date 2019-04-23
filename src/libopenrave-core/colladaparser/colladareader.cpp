@@ -3368,7 +3368,6 @@ public:
                     std::vector<RobotBasePtr> robots;
                     tempenv->GetRobots(robots);
                     if (robots.size() == 1) {
-                        pconnectedBody->_pbody = robots.front();
                         pbody = robots.front();
                     } else {
                         RAVELOG_DEBUG_FORMAT("Found $d robots, Do not support this case for url %s", robots.size() % url);

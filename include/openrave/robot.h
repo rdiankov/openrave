@@ -627,12 +627,11 @@ private:
             return _info;
         }
 
-        /// \brief Updates several fields in \ref _info depending on the current state of the attached body
+        /// \brief Updates several fields in \ref _info depending on the current state of the connected body
         virtual void UpdateInfo(const RobotBasePtr& pbody);
 
     private:
         ConnectedBodyInfo _info; ///< user specified data
-        RobotBasePtr _pbody; ///< actual attached body
         RobotBaseWeakPtr _probot;
         LinkWeakPtr pattachedlink;         ///< the robot link that the body is attached to
         mutable std::string __hashstructure;
