@@ -18,7 +18,7 @@
 #include "rampoptimizer/ramp.h"
 #include "rampoptimizer/feasibilitychecker.h"
 
-// #define PROGRESS_DEBUG
+#define PROGRESS_DEBUG
 
 namespace rplanners {
 
@@ -634,9 +634,11 @@ public:
                     retcode = CFO_CheckTimeBasedConstraints;
                     // If the actual max value is very close to the bound (i.e., almost not violating
                     // the bound), the multiplier will be too large (too close to 1) to be useful.
-                    reductionFactor = min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult);
+                    reductionFactor = RaveSqrt(min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult));
                 }
-                // RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxactualmanipspeed%maxactualmanipaccel);
+#ifdef PROGRESS_DEBUG
+                RAVELOG_VERBOSE_FORMAT("maxmanipspeed=%.15e; maxactualmanipspeed=%.15e; maxmanipaccel=%.15e; maxactualmanipaccel=%.15e; reductionFactor=%1.5e", _maxmanipspeed%maxactualmanipspeed%_maxmanipaccel%maxactualmanipaccel%reductionFactor);
+#endif
                 return RampOptimizerInternal::CheckReturn(retcode, reductionFactor, maxactualmanipspeed, maxactualmanipaccel);
             }
 
@@ -900,7 +902,9 @@ public:
                 // the bound), the multiplier will be too large (too close to 1) to be useful.
                 reductionFactor = RaveSqrt(min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult));
             }
-            // RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxactualmanipspeed%maxactualmanipaccel);
+#ifdef PROGRESS_DEBUG
+            RAVELOG_VERBOSE_FORMAT("maxmanipspeed=%.15e; maxactualmanipspeed=%.15e; maxmanipaccel=%.15e; maxactualmanipaccel=%.15e; reductionFactor=%1.5e", _maxmanipspeed%maxactualmanipspeed%_maxmanipaccel%maxactualmanipaccel%reductionFactor);
+#endif
             return RampOptimizerInternal::CheckReturn(retcode, reductionFactor, maxactualmanipspeed, maxactualmanipaccel);
         }
     }
