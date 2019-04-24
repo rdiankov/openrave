@@ -621,8 +621,9 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
             vsegeom.y = RaveFabs(sidewallmat.m[4])*vselocal.x + RaveFabs(sidewallmat.m[5])*vselocal.y + RaveFabs(sidewallmat.m[6])*vselocal.z;
             vsegeom.z = RaveFabs(sidewallmat.m[8])*vselocal.x + RaveFabs(sidewallmat.m[9])*vselocal.y + RaveFabs(sidewallmat.m[10])*vselocal.z;
 
-            Vector vsidemin = s.transf.trans - vsegeom;
-            Vector vsidemax = s.transf.trans + vsegeom;
+            Vector vcenterpos = s.transf.trans + Vector(sidewallmat.m[2], sidewallmat.m[6], sidewallmat.m[10])*(vselocal.z);
+            Vector vsidemin = vcenterpos - vsegeom;
+            Vector vsidemax = vcenterpos + vsegeom;
             
             if( vmin.x > vsidemin.x ) {
                 vmin.x = vsidemin.x;
