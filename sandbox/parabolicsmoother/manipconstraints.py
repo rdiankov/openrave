@@ -1,4 +1,4 @@
-from numpy import arange ,array, cross, linalg
+from numpy import arange ,array, cross, hstack, linalg, sqrt
 from openravepy import AABB
 import os
 import sys
@@ -26,7 +26,9 @@ class ManipConstraintChecker2(object):
         self._maxmanipaccel = 0.0
 
 
-    def Init(self, manipname, spec, maxmanipspeed, maxmanipaccel):
+    def Init(self, robotname, manipname, spec, maxmanipspeed, maxmanipaccel):
+        self.robot = self.env.GetRobot(robotname)
+        assert(self.robot is not None)
         self._manipname = manipname
         self._maxmanipspeed = maxmanipspeed
         self._maxmanipaccel = maxmanipaccel
@@ -37,7 +39,7 @@ class ManipConstraintChecker2(object):
             if not body.IsRobot():
                 continue
 
-            manip = robot.GetManipulator(manipname)
+            manip = self.robot.GetManipulator(manipname)
             if manip is None:
                 continue
 
@@ -47,10 +49,10 @@ class ManipConstraintChecker2(object):
             # links. Otherwise, globallinklist will contain the manip's children links. These links
             # will be used for computing AABB to obtain checkpoints.
             globallinklist = []
-            grabbedbodies = robot.GetGrabbed()
+            grabbedbodies = self.robot.GetGrabbed()
             if len(grabbedbodies) > 0:
                 for gbody in grabbedbodies:
-                    if robot.IsGrabbing(gbody) is not None:
+                    if self.robot.IsGrabbing(gbody) is not None:
                         globallinklist += gbody.GetLinks()
             else:
                 globallinklist = manip.GetChildLinks()
@@ -59,7 +61,7 @@ class ManipConstraintChecker2(object):
             # vertices of the AABB for manip constraint checking.
             enclosingaabb = self.ComputeEnclosingAABB(globallinklist, endeffector.GetTransform())
             manipinfo = ManipConstraintInfo2()
-            manipinfo.vuseddofindices, manipinfo.vconfigindices = spec.ExtractUsedIndices(manip.GetRobot())
+            manipinfo.vuseddofindices, manipinfo.vconfigindices = spec.ExtractUsedIndices(self.robot)
             manipinfo.pmanip = manip
             manipinfo.plink = endeffector
             manipinfo.checkpoints = self.ConvertAABBtoCheckPoints(enclosingaabb)
@@ -124,14 +126,13 @@ class ManipConstraintChecker2(object):
     def _ComputeManipMaxSpeedAccel(self, q, qd, qdd):
         speedaccels = [] # list of lists of the form (speed, accel) for manipulators
         for manipinfo in self._listCheckManips:
-            robot = manipinfo.pmanip.GetRobot()
-            with robot:
+            with self.robot:
                 endeffindex = manipinfo.plink.GetIndex()
 
-                robot.SetDOFValues(q, manipinfo.vuseddofindices)
-                robot.SetDOFVelocities(qd)
-                linkvels = robot.GetLinkVelocities()
-                linkaccels = robot.GetLinkAccelerations(qdd)
+                self.robot.SetDOFValues(q, manipinfo.vuseddofindices)
+                self.robot.SetDOFVelocities(qd)
+                linkvels = self.robot.GetLinkVelocities()
+                linkaccels = self.robot.GetLinkAccelerations(qdd)
                 endeffvellin = linkvels[endeffindex][:3]
                 endeffvelang = linkvels[endeffindex][3:]
                 endeffacclin = linkaccels[endeffindex][:3]
@@ -163,23 +164,22 @@ class ManipConstraintChecker2(object):
         """
         curvesnd = ramp.ConvertOpenRAVETrajectoryToParabolicCurvesND(traj)
         manipinfo = self._listCheckManips[imanip]
-        robot = manipinfo.pmanip.GetRobot()
         
         point = manipinfo.checkpoints[ipoint]
         T = arange(0, traj.GetDuration(), timestep)
         speeds, accels = [], []
 
-        with robot:
+        with self.robot:
             endeffindex = manipinfo.plink.GetIndex()
             for t in T:
                 q = curvesnd.EvalPos(t)
                 qd = curvesnd.EvalVel(t)
                 qdd = curvesnd.EvalAcc(t)
 
-                robot.SetDOFValues(q, manipinfo.vuseddofindices)
-                robot.SetDOFVelocities(qd)
-                linkvels = robot.GetLinkVelocities()
-                linkaccels = robot.GetLinkAccelerations(qdd)
+                self.robot.SetDOFValues(q, manipinfo.vuseddofindices)
+                self.robot.SetDOFVelocities(qd)
+                linkvels = self.robot.GetLinkVelocities()
+                linkaccels = self.robot.GetLinkAccelerations(qdd)
                 endeffvellin = linkvels[endeffindex][:3]
                 endeffvelang = linkvels[endeffindex][3:]
                 endeffacclin = linkaccels[endeffindex][:3]
@@ -199,3 +199,10 @@ class ManipConstraintChecker2(object):
 
         return T, speeds, accels
 
+
+    def ComputeGlobalPoint(self, ipoint, imanip=0, q=None):
+        if q is not None:
+            self.robot.SetDOFValues(q)
+        manipinfo = self._listCheckManips[imanip]
+        Teff = manipinfo.plink.GetTransform()
+        return Teff[0:3, 0:3].dot(manipinfo.checkpoints[ipoint]) + Teff[0:3, 3]
