@@ -104,7 +104,7 @@ void PlannerBase::PlannerParameters::StateSaver::_Restore()
     BOOST_ASSERT(ret==0);
 }
 
-PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _nMaxPlanningTime(0), _sPostProcessingPlanner(s_linearsmoother), _nRandomGeneratorSeed(0)
+PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _nMaxPlanningTime(0), _sPostProcessingPlanner(s_linearsmoother), _nRandomGeneratorSeed(0), _nSmootherRandomGeneratorSeed(0)
 {
     _diffstatefn = SubtractStates;
     _neighstatefn = AddStates;
@@ -130,6 +130,7 @@ PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparame
     _vXMLParameters.push_back("_fsteplength");
     _vXMLParameters.push_back("_postprocessing");
     _vXMLParameters.push_back("_nrandomgeneratorseed");
+    _vXMLParameters.push_back("_nsmootherrandomgeneratorseed");
 }
 
 PlannerBase::PlannerParameters::~PlannerParameters()
@@ -177,6 +178,7 @@ PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const 
     _nMaxPlanningTime = 0;
     _fStepLength = 0.04f;
     _nRandomGeneratorSeed = 0;
+    _nSmootherRandomGeneratorSeed = 0;
     _plannerparametersdepth = 0;
 
     // transfer data
@@ -258,6 +260,7 @@ bool PlannerBase::PlannerParameters::serialize(std::ostream& O, int options) con
     O << "<_nmaxplanningtime>" << _nMaxPlanningTime << "</_nmaxplanningtime>" << endl;
     O << "<_fsteplength>" << _fStepLength << "</_fsteplength>" << endl;
     O << "<_nrandomgeneratorseed>" << _nRandomGeneratorSeed << "</_nrandomgeneratorseed>" << endl;
+    O << "<_nsmootherrandomgeneratorseed>" << _nSmootherRandomGeneratorSeed << "</_nsmootherrandomgeneratorseed>" << endl;
     O << "<_postprocessing planner=\"" << _sPostProcessingPlanner << "\">" << _sPostProcessingParameters << "</_postprocessing>" << endl;
     if( !(options & 1) ) {
         O << _sExtraParameters << endl;
@@ -312,7 +315,7 @@ BaseXMLReader::ProcessElement PlannerBase::PlannerParameters::startElement(const
         return PE_Support;
     }
 
-    static const boost::array<std::string,14> names = {{"_vinitialconfig","_vgoalconfig","_vconfiglowerlimit","_vconfigupperlimit","_vconfigvelocitylimit","_vconfigaccelerationlimit","_vconfigresolution","_nmaxiterations","_nmaxplanningtime","_fsteplength","_postprocessing", "_nrandomgeneratorseed", "_vinitialconfigvelocities", "_vgoalconfigvelocities"}};
+    static const boost::array<std::string,15> names = {{"_vinitialconfig","_vgoalconfig","_vconfiglowerlimit","_vconfigupperlimit","_vconfigvelocitylimit","_vconfigaccelerationlimit","_vconfigresolution","_nmaxiterations","_nmaxplanningtime","_fsteplength","_postprocessing", "_nrandomgeneratorseed", "_nsmootherrandomgeneratorseed", "_vinitialconfigvelocities", "_vgoalconfigvelocities"}};
     if( find(names.begin(),names.end(),name) != names.end() ) {
         __processingtag = name;
         return PE_Support;
@@ -381,6 +384,9 @@ bool PlannerBase::PlannerParameters::endElement(const std::string& name)
         }
         else if( name == "_nrandomgeneratorseed") {
             _ss >> _nRandomGeneratorSeed;
+        }
+        else if( name == "_nsmootherrandomgeneratorseed") {
+            _ss >> _nSmootherRandomGeneratorSeed;
         }
         if( name !=__processingtag ) {
             RAVELOG_WARN(str(boost::format("invalid tag %s!=%s\n")%name%__processingtag));
@@ -457,7 +463,7 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
         _setstatevaluesfn = boost::bind(SetActiveDOFValuesParameters,robot, _1, _2);
         _diffstatefn = boost::bind(&RobotBase::SubtractActiveDOFValues,robot,_1,_2);
     }
-    
+
     SpaceSamplerBasePtr pconfigsampler = RaveCreateSpaceSampler(robot->GetEnv(),str(boost::format("robotconfiguration %s")%robot->GetName()));
     _listInternalSamplers.clear();
     _listInternalSamplers.push_back(pconfigsampler);

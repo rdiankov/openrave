@@ -94,6 +94,10 @@ public:
             _paramswrite->_nRandomGeneratorSeed = seed;
         }
 
+        void SetSmootherRandomGeneratorSeed(uint32_t seed) {
+            _paramswrite->_nSmootherRandomGeneratorSeed = seed;
+        }
+
         void SetGoalConfig(object o)
         {
             _paramswrite->vgoalconfig = ExtractArray<dReal>(o);
@@ -133,7 +137,7 @@ public:
         {
             _paramswrite->_nMaxIterations = nMaxIterations;
         }
-        
+
         object CheckPathAllConstraints(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval, uint32_t options=0xffff, bool filterreturn=false)
         {
             const std::vector<dReal> q0, q1, dq0, dq1;
@@ -361,6 +365,7 @@ void init_openravepy_planner()
         .def("GetConfigurationSpecification",&PyPlannerBase::PyPlannerParameters::GetConfigurationSpecification, DOXY_FN(PlannerBase::PlannerParameters, GetConfigurationSpecification))
         .def("SetExtraParameters",&PyPlannerBase::PyPlannerParameters::SetExtraParameters, args("extra"), DOXY_FN(PlannerBase::PlannerParameters, SetExtraParameters))
         .def("SetRandomGeneratorSeed",&PyPlannerBase::PyPlannerParameters::SetRandomGeneratorSeed, args("seed"), DOXY_FN(PlannerBase::PlannerParameters, SetRandomGeneratorSeed))
+        .def("SetSmootherRandomGeneratorSeed",&PyPlannerBase::PyPlannerParameters::SetSmootherRandomGeneratorSeed, args("seed"), DOXY_FN(PlannerBase::PlannerParameters, SetSmootherRandomGeneratorSeed))
         .def("SetGoalConfig",&PyPlannerBase::PyPlannerParameters::SetGoalConfig,args("values"),"sets PlannerParameters::vgoalconfig")
         .def("SetInitialConfig",&PyPlannerBase::PyPlannerParameters::SetInitialConfig,args("values"),"sets PlannerParameters::vinitialconfig")
         .def("SetInitialConfigVelocities",&PyPlannerBase::PyPlannerParameters::SetInitialConfigVelocities,args("velocities"),"sets PlannerParameters::_vInitialConfigVelocities")

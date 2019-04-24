@@ -345,13 +345,13 @@ private:
 
         /** \brief Adds a delta state to a curent state, acting like a next-nearest-neighbor function along a given direction.
 
-	    status = _neighstatefn(q, qdelta, option) -> q = Filter(q + qdelta)
+           status = _neighstatefn(q, qdelta, option) -> q = Filter(q + qdelta)
 
-	    \param q the current state. In order to save computation, assumes this state is the currently set configuration.
-	    \param qdelta the incremental configuration to be added to q
-	    \param options a set of flags from NeighborStateOptions
-	    \return one of NSS_X (NeighborStateStatus)
-	    
+           \param q the current state. In order to save computation, assumes this state is the currently set configuration.
+           \param qdelta the incremental configuration to be added to q
+           \param options a set of flags from NeighborStateOptions
+           \return one of NSS_X (NeighborStateStatus)
+
             In RRTs this is used for the extension operation. The new state is stored in the first parameter q.
             Note that the function can also add a filter to the final destination (like projecting onto a constraint manifold).
          */
@@ -362,7 +362,7 @@ private:
         /// size always has to be a multiple of GetDOF()
         /// note: not all planners support multiple goals
         std::vector<dReal> vinitialconfig, vgoalconfig;
-        
+
         /// \brief the initial velocities (at vinitialconfig) of the robot when starting to plan. If empty, then set to zero.
         std::vector<dReal> _vInitialConfigVelocities, _vGoalConfigVelocities;
 
@@ -391,7 +391,7 @@ private:
 
         /// \brief max planning time in ms. If 0, then there is no time limit
         uint32_t _nMaxPlanningTime;
-        
+
         /// \brief Specifies the planner that will perform the post-processing path smoothing before returning.
         ///
         /// If empty, will not path smooth the returned trajectories (used to measure algorithm time)
@@ -409,6 +409,9 @@ private:
         ///
         /// The same seed should produce the smae results!
         uint32_t _nRandomGeneratorSeed;
+
+        /// \brief Random generator seed for parabolic smoothers.
+        uint32_t _nSmootherRandomGeneratorSeed;
 
         /// \brief Return the degrees of freedom of the planning configuration space
         virtual int GetDOF() const {

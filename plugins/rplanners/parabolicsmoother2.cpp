@@ -381,7 +381,8 @@ public:
         if( !_uniformsampler ) {
             _uniformsampler = RaveCreateSpaceSampler(GetEnv(), "mt19937");
         }
-        _uniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
+        // _uniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
+        _uniformsampler->SetSeed(_parameters->_nSmootherRandomGeneratorSeed);
 
         _fileIndexMod = 10000; // for trajectory saving
 #ifdef SMOOTHER_PROGRESS_DEBUG
@@ -425,6 +426,12 @@ public:
 
         if( ptraj->GetNumWaypoints() < 2 ) {
             return PS_Failed;
+        }
+
+        // should always set the seed since smoother can be called with different trajectories even though InitPlan was only called once
+        if( !!_uniformsampler ) {
+            // _uniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
+            _uniformsampler->SetSeed(_parameters->_nSmootherRandomGeneratorSeed);
         }
 
         if( IS_DEBUGLEVEL(_dumplevel) ) {
