@@ -464,8 +464,14 @@ void ParabolicCurve::SetSegment(dReal x0, dReal x1, dReal v0, dReal v1, dReal t)
 
          >>>> sp.solve(sp.diff(C, a), a)
      */
-    dReal tSqr = t*t;
-    dReal a = -(v0*tSqr + t*(x0 - x1) + 2*(v0 - v1))/(t*(0.5*tSqr + 2));
+    dReal a;
+    if( FuzzyZero(t, g_fRampEpsilon) ) {
+        a = 0;
+    }
+    else {
+        dReal tSqr = t*t;
+        a = -(v0*tSqr + t*(x0 - x1) + 2*(v0 - v1))/(t*(0.5*tSqr + 2));
+    }
 
     if( _ramps.size() != 1) {
         _ramps.resize(1);
