@@ -681,6 +681,7 @@ protected:
             ptraj->Clone(ptraj2, 0);
             // Write trajectory durations to the final traj to expose the information
             ConfigurationSpecification newspec;
+            std::vector<dReal> firstwaypoint;
 
             // ParabolicSmoother
             newspec = ptraj->GetConfigurationSpecification();
@@ -694,6 +695,12 @@ protected:
             planningutils::ConvertTrajectorySpecification(ptraj, newspec);
             std::vector<dReal> smoother1data(ptraj->GetNumWaypoints(), 0);
             smoother1data[0] = ptraj1->GetDuration();
+
+            ConfigurationSpecification::Group goriginalduration1 = ptraj1->GetConfigurationSpecification().GetGroupFromName("originalduration");
+            firstwaypoint.resize(0);
+            ptraj1->GetWaypoint(0, firstwaypoint, ptraj1->GetConfigurationSpecification());
+            smoother1data[1] = firstwaypoint[goriginalduration1.offset];
+
             ptraj->Insert(0, smoother1data, smoother1durationspec, true);
 
             // ParabolicSmoother2
@@ -708,6 +715,12 @@ protected:
             planningutils::ConvertTrajectorySpecification(ptraj, newspec);
             std::vector<dReal> smoother2data(ptraj->GetNumWaypoints(), 0);
             smoother2data[0] = ptraj2->GetDuration();
+
+            ConfigurationSpecification::Group goriginalduration2 = ptraj2->GetConfigurationSpecification().GetGroupFromName("originalduration");
+            firstwaypoint.resize(0);
+            ptraj2->GetWaypoint(0, firstwaypoint, ptraj2->GetConfigurationSpecification());
+            smoother2data[1] = firstwaypoint[goriginalduration2.offset];
+
             ptraj->Insert(0, smoother2data, smoother2durationspec, true);
 
             _DumpTrajectory(ptraj, Level_Debug, 4);

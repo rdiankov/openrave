@@ -659,6 +659,7 @@ public:
                 return PS_Interrupted;
             }
 
+            const dReal tOriginal = parabolicpath.GetDuration(); // the original trajectory duration before shortcutting
             int numShortcuts = 0;
             int nummerges = 0;
             if( !!parameters->_setstatevaluesfn || !!parameters->_setstatefn ) {
@@ -906,6 +907,20 @@ public:
                 }
             }
             OPENRAVE_ASSERT_OP(RaveFabs(fExpextedDuration - _pdummytraj->GetDuration()), <=, durationDiscrepancyThresh);
+
+            // Write the original duration to the final traj to expose the information
+            ConfigurationSpecification::Group goriginalduration;
+            goriginalduration.name = std::string("originalduration");
+            goriginalduration.dof = 1;
+            goriginalduration.interpolation = std::string("previous");
+            newSpec.AddGroup(goriginalduration);
+            ConfigurationSpecification originaldurationspec;
+            originaldurationspec.AddGroup(goriginalduration);
+            planningutils::ConvertTrajectorySpecification(_pdummytraj, newSpec);
+            std::vector<dReal> originaldurationdata(_pdummytraj->GetNumWaypoints(), 0);
+            originaldurationdata[0] = tOriginal;
+            _pdummytraj->Insert(0, originaldurationdata, originaldurationspec, true);
+
             ptraj->Swap(_pdummytraj);
         }
         catch (const std::exception& ex) {

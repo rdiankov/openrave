@@ -23,7 +23,7 @@
 #include "trajectoryretimer.h" // _(msgid)
 
 //#define OPENRAVE_TIMING_DEBUGGING
-//#define SMOOTHER_PROGRESS_DEBUG
+#define SMOOTHER_PROGRESS_DEBUG
 
 namespace rplanners {
 
@@ -479,6 +479,7 @@ public:
             FOREACH(itramp, dynamicpath.ramps) {
                 dummyDur1 += itramp->endTime;
             }
+            const dReal tOriginal = dummyDur1; // the original trajectory duration before shortcutting
             if( !!parameters->_setstatevaluesfn || !!parameters->_setstatefn ) {
                 // no idea what a good mintimestep is... _parameters->_fStepLength*0.5?
                 //numshortcuts = dynamicpath.Shortcut(parameters->_nMaxIterations,_feasibilitychecker,this, parameters->_fStepLength*0.99);
@@ -753,6 +754,20 @@ public:
 
             // dynamic path dynamicpath.GetTotalTime() could change if timing constraints get in the way, so use fExpectedDuration
             OPENRAVE_ASSERT_OP(RaveFabs(fExpectedDuration-_dummytraj->GetDuration()),<,0.01); // maybe because of trimming, will be a little different
+
+            // Write the original duration to the final traj to expose the information
+            ConfigurationSpecification::Group goriginalduration;
+            goriginalduration.name = std::string("originalduration");
+            goriginalduration.dof = 1;
+            goriginalduration.interpolation = std::string("previous");
+            newspec.AddGroup(goriginalduration);
+            ConfigurationSpecification originaldurationspec;
+            originaldurationspec.AddGroup(goriginalduration);
+            planningutils::ConvertTrajectorySpecification(_dummytraj, newspec);
+            std::vector<dReal> originaldurationdata(_dummytraj->GetNumWaypoints(), 0);
+            originaldurationdata[0] = tOriginal;
+            _dummytraj->Insert(0, originaldurationdata, originaldurationspec, true);
+
             RAVELOG_DEBUG_FORMAT("env=%d, after shortcutting %d times: path waypoints=%d, traj waypoints=%d, traj time=%fs", GetEnv()->GetId()%numshortcuts%dynamicpath.ramps.size()%_dummytraj->GetNumWaypoints()%_dummytraj->GetDuration());
             ptraj->Swap(_dummytraj);
         }
