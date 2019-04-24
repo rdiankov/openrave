@@ -136,21 +136,27 @@ public:
                     KinBody::LinkPtr endeffector = pmanip->GetEndEffector();
                     // Insert all child links of endeffector
                     std::list<KinBody::LinkPtr> globallinklist;
-                    std::vector<KinBody::LinkPtr> vchildlinks;
-                    pmanip->GetChildLinks(vchildlinks);
-                    FOREACH(itlink,vchildlinks) {
-                        globallinklist.push_back(*itlink);
-                    }
-                    // Insert all links of all bodies that the endeffector is grabbing
+
                     std::vector<KinBodyPtr> grabbedbodies;
                     probot->GetGrabbed(grabbedbodies);
-                    FOREACH(itbody,grabbedbodies) {
-                        if(pmanip->IsGrabbing(**itbody)) {
-                            FOREACH(itlink,(*itbody)->GetLinks()) {
-                                globallinklist.push_back(*itlink);
+
+                    if( grabbedbodies.size() > 0 ) {
+                        FOREACH(itbody, grabbedbodies) {
+                            if( pmanip->IsGrabbing(**itbody) ) {
+                                FOREACH(itlink, (*itbody)->GetLinks()) {
+                                    globallinklist.push_back(*itlink);
+                                }
                             }
                         }
                     }
+                    else {
+                        std::vector<KinBody::LinkPtr> vchildlinks;
+                        pmanip->GetChildLinks(vchildlinks);
+                        FOREACH(itlink, vchildlinks) {
+                            globallinklist.push_back(*itlink);
+                        }
+                    }
+
                     // Compute the enclosing AABB and add its vertices to the checkpoints
                     AABB enclosingaabb = ComputeEnclosingAABB(globallinklist, endeffector->GetTransform());
                     _listCheckManips.push_back(ManipConstraintInfo());
