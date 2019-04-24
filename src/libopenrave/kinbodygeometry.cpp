@@ -672,7 +672,7 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
         ab.extents.x = RaveFabs(tglobal.m[0])*vgeomextents.x + RaveFabs(tglobal.m[1])*vgeomextents.y + RaveFabs(tglobal.m[2])*vgeomextents.z;
         ab.extents.y = RaveFabs(tglobal.m[4])*vgeomextents.x + RaveFabs(tglobal.m[5])*vgeomextents.y + RaveFabs(tglobal.m[6])*vgeomextents.z;
         ab.extents.z = RaveFabs(tglobal.m[8])*vgeomextents.x + RaveFabs(tglobal.m[9])*vgeomextents.y + RaveFabs(tglobal.m[10])*vgeomextents.z;
-        ab.pos = 0.5*(vmin+vmax);
+        ab.pos = tglobal*(0.5*(vmin+vmax));
         break;
 
     }
