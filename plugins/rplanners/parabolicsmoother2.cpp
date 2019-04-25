@@ -3144,6 +3144,7 @@ protected:
                         _vZeroVelPointInfos[writeIndex].point -= diff;
                         _vZeroVelPointInfos[writeIndex].leftneighbor -= diff;
                         _vZeroVelPointInfos[writeIndex].rightneighbor -= diff;
+                        writeIndex += 1;
                     }
                 }
                 _vZeroVelPointInfos.resize(writeIndex);
