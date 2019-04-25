@@ -1988,7 +1988,7 @@ public:
                             if( !_bBackCompatValuesInRadians ) {
                                 pjoint->_info._vmaxvel[ic] *= fjointmult;
                             }
-                            if ( pjoint->_info._vhardmaxvel[ic] < pjoint->_info._vmaxvel[ic] ) {
+                            if ( pjoint->_info._vhardmaxvel[ic] != 0.0 && pjoint->_info._vhardmaxvel[ic] < pjoint->_info._vmaxvel[ic] ) {
                                 RAVELOG_VERBOSE_FORMAT("... Joint Speed : Tried to set soft limit as %f but it exceeds hard limit. Therefore, reset to hard limit %f for consistency...\n", pjoint->_info._vmaxvel[ic] % pjoint->_info._vhardmaxvel[ic]);
                                 pjoint->_info._vmaxvel[ic] = pjoint->_info._vhardmaxvel[ic];
                             }
@@ -1999,7 +1999,7 @@ public:
                             if( !_bBackCompatValuesInRadians ) {
                                 pjoint->_info._vmaxaccel[ic] *= fjointmult;
                             }
-                            if ( pjoint->_info._vhardmaxaccel[ic] < pjoint->_info._vmaxaccel[ic] ) {
+                            if ( pjoint->_info._vhardmaxaccel[ic] != 0.0 && pjoint->_info._vhardmaxaccel[ic] < pjoint->_info._vmaxaccel[ic] ) {
                                 RAVELOG_VERBOSE_FORMAT("... Joint Acceleration : Tried to set soft limit as %f but it exceeds hard limit. Therefore, reset to hard limit %f for consistency...\n", pjoint->_info._vmaxaccel[ic] % pjoint->_info._vhardmaxaccel[ic]);
                                 pjoint->_info._vmaxaccel[ic] = pjoint->_info._vhardmaxaccel[ic];
                             }
@@ -2010,7 +2010,7 @@ public:
                             if( !_bBackCompatValuesInRadians ) {
                                 pjoint->_info._vmaxjerk[ic] *= fjointmult;
                             }
-                            if ( pjoint->_info._vhardmaxjerk[ic] < pjoint->_info._vmaxjerk[ic] ) {
+                            if ( pjoint->_info._vhardmaxjerk[ic] != 0.0 && pjoint->_info._vhardmaxjerk[ic] < pjoint->_info._vmaxjerk[ic] ) {
                                 RAVELOG_VERBOSE_FORMAT("... Joint Jerk : Tried to set soft limit as %f but it exceeds hard limit. Therefore, reset to hard limit %f for consistency...\n", pjoint->_info._vmaxjerk[ic] % pjoint->_info._vhardmaxjerk[ic]);
                                 pjoint->_info._vmaxjerk[ic] = pjoint->_info._vhardmaxjerk[ic];
                             }
@@ -2231,6 +2231,13 @@ public:
             case GT_Box:
                 itgeominfo->_vGeomData *= vscale;
                 break;
+            case GT_Cage:
+                itgeominfo->_vGeomData *= vscale;
+                itgeominfo->_vGeomData2 *= vscale;
+                for (size_t i = 0; i < itgeominfo->_vSideWalls.size(); ++i) {
+                    itgeominfo->_vSideWalls[i].transf.trans *= vscale;
+                    itgeominfo->_vSideWalls[i].vExtents *= vscale;
+                }
             case GT_Container:
                 itgeominfo->_vGeomData *= vscale;
                 itgeominfo->_vGeomData2 *= vscale;
@@ -2789,6 +2796,88 @@ public:
                                     geominfo._type = GT_Cylinder;
                                     geominfo._vGeomData = vGeomData;
                                     geominfo._t = tlocalgeom;
+                                    bfoundgeom = true;
+                                }
+                            }
+                        }
+                        else if( name == "cage" ) {
+                            geominfo._type = GT_Cage;
+                            geominfo._t = tlocalgeom;
+                            
+                            daeElementRef phalf_extents = children[i]->getChild("half_extents");
+                            if( !!phalf_extents ) {
+                                stringstream ss(phalf_extents->getCharData());
+                                Vector vextents;
+                                ss >> vextents.x >> vextents.y >> vextents.z;
+                                if( ss.eof() || !!ss ) {
+                                    geominfo._vGeomData = vextents;
+                                    bfoundgeom = true;
+                                }
+                            }
+
+                            geominfo._vGeomData2 = Vector();
+                            daeElementRef pInnerSizeX = children[i]->getChild("inner_size_x");
+                            if( !!pInnerSizeX ) {
+                                stringstream ss(pInnerSizeX->getCharData());
+                                dReal fInnerSizeX=0;
+                                ss >> fInnerSizeX;
+                                if( ss.eof() || !!ss ) {
+                                    geominfo._vGeomData2.x = fInnerSizeX;
+                                    bfoundgeom = true;
+                                }
+                            }
+                            daeElementRef pInnerSizeY = children[i]->getChild("inner_size_y");
+                            if( !!pInnerSizeY ) {
+                                stringstream ss(pInnerSizeY->getCharData());
+                                dReal fInnerSizeY=0;
+                                ss >> fInnerSizeY;
+                                if( ss.eof() || !!ss ) {
+                                    geominfo._vGeomData2.y = fInnerSizeY;
+                                    bfoundgeom = true;
+                                }
+                            }
+                            daeElementRef pInnerSizeZ = children[i]->getChild("inner_size_z");
+                            if( !!pInnerSizeZ ) {
+                                stringstream ss(pInnerSizeZ->getCharData());
+                                dReal fInnerSizeZ=0;
+                                ss >> fInnerSizeZ;
+                                if( ss.eof() || !!ss ) {
+                                    geominfo._vGeomData2.z = fInnerSizeZ;
+                                    bfoundgeom = true;
+                                }
+                            }
+                            
+                            geominfo._vSideWalls.clear();
+                            daeTArray<daeElementRef> cagechildren;
+                            children[i]->getChildren(cagechildren);
+                            for(size_t icagechild = 0; icagechild < cagechildren.getCount(); ++icagechild) {
+                                if( _getElementName(cagechildren[icagechild]) == "sidewall" ) {
+                                    KinBody::GeometryInfo::SideWall sidewall;
+                                    sidewall.transf = _ExtractFullTransformFromChildren(cagechildren[icagechild]);
+                                    
+                                    daeElementRef pVExtents = cagechildren[icagechild]->getChild("half_extents");
+                                    if( !!pVExtents ) {
+                                        stringstream ss(pVExtents->getCharData());
+                                        Vector e;
+                                        ss >> e;
+                                        if( ss.eof() || !!ss ) {
+                                            sidewall.vExtents = e;
+                                            bfoundgeom = true;
+                                        }
+                                    }
+
+                                    daeElementRef pType = cagechildren[icagechild]->getChild("type");
+                                    if( !!pType ) {
+                                        stringstream ss(pType->getCharData());
+                                        int32_t type;
+                                        ss >> type;
+                                        if( ss.eof() || !!ss ) {
+                                            sidewall.type = static_cast<KinBody::GeometryInfo::SideWallType>(type);
+                                            bfoundgeom = true;
+                                        }
+                                    }
+
+                                    geominfo._vSideWalls.push_back(sidewall);
                                     bfoundgeom = true;
                                 }
                             }

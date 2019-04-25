@@ -95,6 +95,10 @@ namespace OpenRAVE {
 
 }
 
+#if OPENRAVE_RAPIDJSON
+#include <rapidjson/document.h>
+#endif
+
 #include <openrave/logging.h>
 
 namespace OpenRAVE {
@@ -2741,6 +2745,10 @@ const std::string& IkParameterization::GetName() const
 }
 
 } // end namespace OpenRAVE
+
+#if OPENRAVE_RAPIDJSON
+#include <openrave/json.h>
+#endif
 
 BOOST_STATIC_ASSERT(OPENRAVE_VERSION_MAJOR>=0&&OPENRAVE_VERSION_MAJOR<=255);
 BOOST_STATIC_ASSERT(OPENRAVE_VERSION_MINOR>=0&&OPENRAVE_VERSION_MINOR<=255);

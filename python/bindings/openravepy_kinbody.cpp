@@ -52,6 +52,29 @@ boost::python::object GetCustomParameters(const std::map<std::string, std::vecto
     return boost::python::object();
 }
 
+class PySideWall
+{
+public:
+    PySideWall() {
+        transf = ReturnTransform(Transform());
+        vExtents = toPyVector3(Vector());
+        type = 0;
+    }
+    PySideWall(const KinBody::GeometryInfo::SideWall& sidewall) {
+        transf = ReturnTransform(sidewall.transf);
+        vExtents = toPyVector3(sidewall.vExtents);
+        type = sidewall.type;
+    }
+    void Get(KinBody::GeometryInfo::SideWall& sidewall) {
+        sidewall.transf = ExtractTransform(transf);
+        sidewall.vExtents = ExtractVector<dReal>(vExtents);
+        sidewall.type = static_cast<KinBody::GeometryInfo::SideWallType>(type);
+    }
+
+    boost::python::object transf, vExtents;
+    int type;
+};
+
 class PyGeometryInfo
 {
 public:
@@ -68,12 +91,24 @@ public:
         _vCollisionScale = toPyVector3(Vector(1,1,1));
         _bVisible = true;
         _bModifiable = true;
+        _vSideWalls = boost::python::list();
     }
     PyGeometryInfo(const KinBody::GeometryInfo& info) {
+        Init(info);
+    }
+
+
+    void Init(const KinBody::GeometryInfo& info) {
         _t = ReturnTransform(info._t);
         _vGeomData = toPyVector4(info._vGeomData);
         _vGeomData2 = toPyVector4(info._vGeomData2);
         _vGeomData3 = toPyVector4(info._vGeomData3);
+
+        _vSideWalls = boost::python::list();
+        for (size_t i = 0; i < info._vSideWalls.size(); ++i) {
+            _vSideWalls.append(PySideWall(info._vSideWalls[i]));
+        }
+
         _vDiffuseColor = toPyVector3(info._vDiffuseColor);
         _vAmbientColor = toPyVector3(info._vAmbientColor);
         _meshcollision = toPyTriMesh(info._meshcollision);
@@ -90,6 +125,34 @@ public:
         //_mapExtraGeometries = info. _mapExtraGeometries;
     }
 
+    object ComputeInnerEmptyVolume()
+    {
+        Transform tInnerEmptyVolume;
+        Vector abInnerEmptyExtents;
+        KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
+        if( pgeominfo->ComputeInnerEmptyVolume(tInnerEmptyVolume, abInnerEmptyExtents) ) {
+            return boost::python::make_tuple(ReturnTransform(tInnerEmptyVolume), toPyVector3(abInnerEmptyExtents));
+        }
+        return boost::python::make_tuple(object(), object());
+    }
+
+    void DeserializeJSON(object obj, const dReal fUnitScale=1.0)
+    {
+        rapidjson::Document doc;
+        toRapidJSONValue(obj, doc, doc.GetAllocator());
+        KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
+        pgeominfo->DeserializeJSON(doc, fUnitScale);
+        Init(*pgeominfo);
+    }
+
+    object SerializeJSON(const dReal fUnitScale=1.0, object ooptions=object())
+    {
+        rapidjson::Document doc;
+        KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
+        pgeominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(ooptions,0));
+        return toPyObject(doc);
+    }
+
     KinBody::GeometryInfoPtr GetGeometryInfo() {
         KinBody::GeometryInfoPtr pinfo(new KinBody::GeometryInfo());
         KinBody::GeometryInfo& info = *pinfo;
@@ -97,6 +160,14 @@ public:
         info._vGeomData = ExtractVector<dReal>(_vGeomData);
         info._vGeomData2 = ExtractVector<dReal>(_vGeomData2);
         info._vGeomData3 = ExtractVector<dReal>(_vGeomData3);
+
+        info._vSideWalls.clear();
+        for (size_t i = 0; i < len(_vSideWalls); ++i) {
+            info._vSideWalls.push_back({});
+            boost::shared_ptr<PySideWall> pysidewall = boost::python::extract<boost::shared_ptr<PySideWall> >(_vSideWalls[i]);
+            pysidewall->Get(info._vSideWalls[i]);
+        }
+
         info._vDiffuseColor = ExtractVector34<dReal>(_vDiffuseColor,0);
         info._vAmbientColor = ExtractVector34<dReal>(_vAmbientColor,0);
         if( !IS_PYTHONOBJECT_NONE(_meshcollision) ) {
@@ -123,6 +194,8 @@ public:
     }
 
     object _t, _vGeomData, _vGeomData2, _vGeomData3, _vDiffuseColor, _vAmbientColor, _meshcollision;
+    boost::python::list _vSideWalls;
+    float _containerBaseHeight;
     GeometryType _type;
     object _name;
     object _filenamerender, _filenamecollision;
@@ -338,11 +411,11 @@ public:
         _vresolution = toPyVector3(Vector(0.02,0.02,0.02));
         // As for initial values for vel, accel, and jerk, please see kinbodyjoint.cpp's definition.
         _vmaxvel = toPyVector3(Vector(10,10,10));
-        _vhardmaxvel = toPyVector3(Vector(100,100,100));
+        _vhardmaxvel = toPyVector3(Vector(0,0,0));
         _vmaxaccel = toPyVector3(Vector(50,50,50));
-        _vhardmaxaccel = toPyVector3(Vector(1000,1000,1000));
+        _vhardmaxaccel = toPyVector3(Vector(0,0,0));
         _vmaxjerk = toPyVector3(Vector(2e6,2e6,2e6));
-        _vhardmaxjerk = toPyVector3(Vector(2e7, 2e7, 2e7));
+        _vhardmaxjerk = toPyVector3(Vector(0, 0, 0));
         _vmaxtorque = toPyVector3(Vector(1e5,1e5,1e5));
         _vmaxinertia = toPyVector3(Vector(1e5,1e5,1e5));
         _vweights = toPyVector3(Vector(1,1,1));
@@ -606,6 +679,9 @@ public:
         bool InitCollisionMesh(float fTessellation=1) {
             return _pgeometry->InitCollisionMesh(fTessellation);
         }
+        uint8_t GetSideWallExists() const {
+            return _pgeometry->GetSideWallExists();
+        }
 
         object GetCollisionMesh() {
             return toPyTriMesh(_pgeometry->GetCollisionMesh());
@@ -694,6 +770,15 @@ public:
         }
         object GetInfo() {
             return object(PyGeometryInfoPtr(new PyGeometryInfo(_pgeometry->GetInfo())));
+        }
+        object ComputeInnerEmptyVolume() const
+        {
+            Transform tInnerEmptyVolume;
+            Vector abInnerEmptyExtents;
+            if( _pgeometry->ComputeInnerEmptyVolume(tInnerEmptyVolume, abInnerEmptyExtents) ) {
+                return boost::python::make_tuple(ReturnTransform(tInnerEmptyVolume), toPyVector3(abInnerEmptyExtents));
+            }
+            return boost::python::make_tuple(object(), object());
         }
         bool __eq__(boost::shared_ptr<PyGeometry> p) {
             return !!p && _pgeometry == p->_pgeometry;
@@ -3205,6 +3290,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromSpheres_overloads, InitFromSphere
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromTrimesh_overloads, InitFromTrimesh, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromGeometries_overloads, InitFromGeometries, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Init_overloads, Init, 2, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SerializeJSON_overloads, SerializeJSON, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABB_overloads, ComputeAABB, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABBFromTransform_overloads, ComputeAABBFromTransform, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeLocalAABB_overloads, ComputeLocalAABB, 0, 1)
@@ -3228,6 +3314,13 @@ void init_openravepy_kinbody()
                           .value("Cylinder",GT_Cylinder)
                           .value("Trimesh",GT_TriMesh)
                           .value("Container",GT_Container)
+                          .value("Cage",GT_Cage)
+    ;
+    object sidewalltype = enum_<KinBody::GeometryInfo::SideWallType>("SideWallType" DOXY_ENUM(KinBody::GeometryInfo::SideWallType))
+                          .value("SWT_NX",KinBody::GeometryInfo::SideWallType::SWT_NX)
+                          .value("SWT_PX",KinBody::GeometryInfo::SideWallType::SWT_PX)
+                          .value("SWT_NY",KinBody::GeometryInfo::SideWallType::SWT_NY)
+                          .value("SWT_PY",KinBody::GeometryInfo::SideWallType::SWT_PY)
     ;
     object electricmotoractuatorinfo = class_<PyElectricMotorActuatorInfo, boost::shared_ptr<PyElectricMotorActuatorInfo> >("ElectricMotorActuatorInfo", DOXY_CLASS(KinBody::ElectricMotorActuatorInfo))
                                        .def_readwrite("model_type",&PyElectricMotorActuatorInfo::model_type)
@@ -3285,8 +3378,19 @@ void init_openravepy_kinbody()
                           .def_readwrite("_bVisible",&PyGeometryInfo::_bVisible)
                           .def_readwrite("_bModifiable",&PyGeometryInfo::_bModifiable)
                           .def_readwrite("_mapExtraGeometries",&PyGeometryInfo::_mapExtraGeometries)
+                          .def_readwrite("_vSideWalls", &PyGeometryInfo::_vSideWalls)
+                          .def("ComputeInnerEmptyVolume",&PyGeometryInfo::ComputeInnerEmptyVolume, DOXY_FN(GeomeryInfo,ComputeInnerEmptyVolume))
+                          .def("DeserializeJSON", &PyGeometryInfo::DeserializeJSON, args("obj", "unitScale"), DOXY_FN(GeometryInfo, DeserializeJSON))
+                          .def("SerializeJSON", &PyGeometryInfo::SerializeJSON,SerializeJSON_overloads(args("unitScale", "options"), DOXY_FN(GeometryInfo,SerializeJSON)))
                           .def_pickle(GeometryInfo_pickle_suite())
     ;
+
+    object sidewall = class_<PySideWall, boost::shared_ptr<PySideWall> >("SideWall", DOXY_CLASS(KinBody::GeometryInfo::SideWall))
+                      .def_readwrite("transf",&PySideWall::transf)
+                      .def_readwrite("vExtents",&PySideWall::vExtents)
+                      .def_readwrite("type",&PySideWall::type)
+    ;
+
     object linkinfo = class_<PyLinkInfo, boost::shared_ptr<PyLinkInfo> >("LinkInfo", DOXY_CLASS(KinBody::LinkInfo))
                       .def_readwrite("_vgeometryinfos",&PyLinkInfo::_vgeometryinfos)
                       .def_readwrite("_name",&PyLinkInfo::_name)
@@ -3640,6 +3744,7 @@ void init_openravepy_kinbody()
                                  .def("GetCollisionMesh",&PyLink::PyGeometry::GetCollisionMesh, DOXY_FN(KinBody::Link::Geometry,GetCollisionMesh))
                                  .def("InitCollisionMesh",&PyLink::PyGeometry::InitCollisionMesh, InitCollisionMesh_overloads(args("tesselation"), DOXY_FN(KinBody::Link::Geometry,GetCollisionMesh)))
                                  .def("ComputeAABB",&PyLink::PyGeometry::ComputeAABB, args("transform"), DOXY_FN(KinBody::Link::Geometry,ComputeAABB))
+                                 .def("GetSideWallExists",&PyLink::PyGeometry::GetSideWallExists, DOXY_FN(KinBody::Link::Geometry,GetSideWallExists))
                                  .def("SetDraw",&PyLink::PyGeometry::SetDraw,args("draw"), DOXY_FN(KinBody::Link::Geometry,SetDraw))
                                  .def("SetTransparency",&PyLink::PyGeometry::SetTransparency,args("transparency"), DOXY_FN(KinBody::Link::Geometry,SetTransparency))
                                  .def("SetDiffuseColor",&PyLink::PyGeometry::SetDiffuseColor,args("color"), DOXY_FN(KinBody::Link::Geometry,SetDiffuseColor))
@@ -3666,6 +3771,7 @@ void init_openravepy_kinbody()
                                  .def("GetTransparency",&PyLink::PyGeometry::GetTransparency,DOXY_FN(KinBody::Link::Geometry,GetTransparency))
                                  .def("GetDiffuseColor",&PyLink::PyGeometry::GetDiffuseColor,DOXY_FN(KinBody::Link::Geometry,GetDiffuseColor))
                                  .def("GetAmbientColor",&PyLink::PyGeometry::GetAmbientColor,DOXY_FN(KinBody::Link::Geometry,GetAmbientColor))
+                                 .def("ComputeInnerEmptyVolume",&PyLink::PyGeometry::ComputeInnerEmptyVolume,DOXY_FN(KinBody::Link::Geometry,ComputeInnerEmptyVolume))
                                  .def("GetInfo",&PyLink::PyGeometry::GetInfo,DOXY_FN(KinBody::Link::Geometry,GetInfo))
                                  .def("__eq__",&PyLink::PyGeometry::__eq__)
                                  .def("__ne__",&PyLink::PyGeometry::__ne__)

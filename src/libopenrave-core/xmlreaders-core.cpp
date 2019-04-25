@@ -1154,6 +1154,9 @@ public:
                     case GT_Box:
                         mass = MASS::GetBoxMassD((*itgeom)->GetBoxExtents(), Vector(), _fMassDensity);
                         break;
+                    case GT_Cage:
+                        mass = MASS::GetBoxMassD(0.5*(*itgeom)->GetContainerOuterExtents(), Vector(), _fMassDensity);
+                        break;
                     case GT_Container:
                         mass = MASS::GetBoxMassD(0.5*(*itgeom)->GetContainerOuterExtents(), Vector(), _fMassDensity);
                         break;
