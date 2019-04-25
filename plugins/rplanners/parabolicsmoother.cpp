@@ -1925,6 +1925,7 @@ protected:
 
             if( vVisitedDiscretization.size() == 0 ) {
                 // if nEndTimeDiscretization is too big, then just ignore vVisitedDiscretization
+                nEndTimeDiscretization = (int)(endTime*fiMinDiscretization) + 1;
                 if( nEndTimeDiscretization <= 0x8000 ) {
                     vVisitedDiscretization.resize(nEndTimeDiscretization*nEndTimeDiscretization,0);
                 }
