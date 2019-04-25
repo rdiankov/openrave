@@ -160,11 +160,11 @@ public:
             //bool bDifferentPosition = false;
             bool bDifferentVelocity = false;
             for(size_t idof = 0; idof < q0.size(); ++idof) {
-                if( RaveFabs(q0[idof]-rampnd.x1[idof]) > ParabolicRamp::EpsilonX ) {
+                if( RaveFabs(rampnd.x1[idof] - outramps.back().x1[idof]) > ParabolicRamp::EpsilonX ) {
                     RAVELOG_DEBUG_FORMAT("env=%d, ramp end point does not finish at desired position values %f, so rejecting", _envid%(q0[idof]-rampnd.x1[idof]));
                     return ParabolicRamp::CheckReturn(CFO_FinalValuesNotReached);
                 }
-                if( RaveFabs(dq0[idof]-rampnd.dx1[idof]) > ParabolicRamp::EpsilonV ) {
+                if( RaveFabs(rampnd.dx1[idof] - outramps.back().dx1[idof]) > ParabolicRamp::EpsilonV ) {
                     RAVELOG_VERBOSE_FORMAT("env=%d, ramp end point does not finish at desired velocity values %e, so reforming ramp", _envid%(dq0[idof]-rampnd.dx1[idof]));
                     bDifferentVelocity = true;
                 }
