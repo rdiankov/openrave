@@ -2075,7 +2075,7 @@ protected:
                                             break;
                                         }
                                         {
-                                            fVelMult = RaveSqrt(fAccelMult); // larger scaling factor, less reduction. Use a square root here since the velocity has the factor t while the acceleration has t^2
+                                            fVelMult = retcheck.fTimeBasedSurpassMult; // larger scaling factor, less reduction. Use a square root here since the velocity has the factor t while the acceleration has t^2
                                             fCurVelMult *= fVelMult;
                                             if( fCurVelMult < 0.01 ) {
 #ifdef SMOOTHER_PROGRESS_DEBUG
@@ -2923,7 +2923,7 @@ protected:
                                             break;
                                         }
                                         {
-                                            fVelMult = RaveSqrt(fAccelMult); // larger scaling factor, less reduction. Use a square root here since the velocity has the factor t while the acceleration has t^2
+                                            fVelMult = retcheck.fTimeBasedSurpassMult; // larger scaling factor, less reduction. Use a square root here since the velocity has the factor t while the acceleration has t^2
                                             fCurVelMult *= fVelMult;
                                             if( fCurVelMult < 0.01 ) {
 #ifdef SMOOTHER_PROGRESS_DEBUG
