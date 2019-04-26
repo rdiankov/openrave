@@ -2569,11 +2569,8 @@ protected:
                 else {
                     for (size_t j = 0; j < _parameters->_vConfigVelocityLimit.size(); ++j) {
                         // Adjust vellimits and accellimits
-                        dReal fminvel = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
-                        if( vellimits[j] < fminvel ) {
-                            vellimits[j] = fminvel;
-                        }
-                        else {
+                        dReal fminvel = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j])); // the scaled vellimits must be at least this value
+                        {
                             dReal f = max(fminvel, fStartTimeVelMult * _parameters->_vConfigVelocityLimit[j]);
                             if( vellimits[j] > f ) {
                                 vellimits[j] = f;
