@@ -116,10 +116,13 @@ public:
             dReal elapsedTime, expectedElapsedTime, newElapsedTime, iElapsedTime, totalWeight;
 
             // Do lazy collision checking by postponing collision checking until absolutely necessary
-            bool doCheckEnvCollisions = (options & CFO_CheckEnvCollisions) == CFO_CheckEnvCollisions;
-            bool doCheckSelfCollisions = (options & CFO_CheckSelfCollisions) == CFO_CheckSelfCollisions;
-            options = options & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
-            options |= CFO_FillCheckedConfiguration; // always do this if we use lazy collision checking
+            bool doLazyCollisionChecking = false;
+            bool doCheckEnvCollisionsLater = doLazyCollisionChecking ? (options & CFO_CheckEnvCollisions) == CFO_CheckEnvCollisions : false;
+            bool doCheckSelfCollisionsLater = doLazyCollisionChecking ? (options & CFO_CheckSelfCollisions) == CFO_CheckSelfCollisions : false;
+            if( doLazyCollisionChecking ) {
+                options = options & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
+                options |= CFO_FillCheckedConfiguration; // always do this if we use lazy collision checking
+            }
             for (size_t iswitch = 1; iswitch < _vswitchtimes.size(); ++iswitch) {
                 rampndVect[iswitch - 1].GetX1Vect(q1); // configuration at _vswitchtimes[iswitch]
                 elapsedTime = _vswitchtimes[iswitch] - _vswitchtimes[iswitch - 1]; // current elapsed time of this ramp
@@ -188,11 +191,11 @@ public:
             }
 
             // Collision checking here!
-            if( doCheckEnvCollisions || doCheckSelfCollisions ) {
-                if( doCheckEnvCollisions && doCheckSelfCollisions ) {
+            if( doCheckEnvCollisionsLater || doCheckSelfCollisionsLater ) {
+                if( doCheckEnvCollisionsLater && doCheckSelfCollisionsLater ) {
                     options = CFO_CheckEnvCollisions | CFO_CheckSelfCollisions;
                 }
-                else if( doCheckEnvCollisions ) {
+                else if( doCheckEnvCollisionsLater ) {
                     options = CFO_CheckEnvCollisions;
                 }
                 else {
