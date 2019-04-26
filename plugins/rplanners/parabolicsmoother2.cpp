@@ -2525,7 +2525,7 @@ protected:
             // Perform shortcut
             try {
 #ifdef SMOOTHER_PROGRESS_DEBUG
-                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, start shortcutting with t0=%.15e; t1=%.15e", GetEnv()->GetId()%iters%numIters%t0%t1);
+                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, start shortcutting with t0=%.15e; t1=%.15e; fStartTimeVelMult=%.15e; fStartTimeAccelMult=%.15e", GetEnv()->GetId()%iters%numIters%t0%t1%fStartTimeVelMult%fStartTimeAccelMult);
 #endif
                 int i0, i1;
                 dReal u0, u1;

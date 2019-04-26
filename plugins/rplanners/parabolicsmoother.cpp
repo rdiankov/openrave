@@ -1962,7 +1962,7 @@ protected:
                 ParabolicRamp::Swap(t1, t2);
             }
 #ifdef SMOOTHER_PROGRESS_DEBUG
-            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter = %d/%d, shortcutting from t1 = %.15e to t2 = %.15e", GetEnv()->GetId()%iters%numIters%t1%t2);
+            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter = %d/%d, shortcutting from t1 = %.15e to t2 = %.15e; fstarttimevelmult=%.15e; fstarttimeaccelmult=%.15e", GetEnv()->GetId()%iters%numIters%t1%t2%fstarttimevelmult%fstarttimeaccelmult);
 #endif
             if (t2 - t1 < mintimestep) {
 #ifdef SMOOTHER_PROGRESS_DEBUG
