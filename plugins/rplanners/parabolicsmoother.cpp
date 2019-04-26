@@ -159,12 +159,21 @@ public:
             // have to make sure that the last ramp's ending velocity is equal to db
             //bool bDifferentPosition = false;
             bool bDifferentVelocity = false;
+            if( outramps.size() > 0 ) {
+                q1 = outramps.back().x1;
+                dq1 = outramps.back().dx1;
+            }
+            else {
+                // In case CFO_FillCheckedConfiguration is not enabled, outramps will be empty. Need to obtain the last joint values/velocities from the original ramp.
+                rampnd.Evaluate(rampnd.endTime, q1);
+                rampnd.Derivative(rampnd.endTime, dq1);
+            }
             for(size_t idof = 0; idof < q0.size(); ++idof) {
-                if( RaveFabs(rampnd.x1[idof] - outramps.back().x1[idof]) > ParabolicRamp::EpsilonX ) {
+                if( RaveFabs(rampnd.x1[idof] - q1[idof]) > ParabolicRamp::EpsilonX ) {
                     RAVELOG_DEBUG_FORMAT("env=%d, ramp end point does not finish at desired position values %f, so rejecting", _envid%(q0[idof]-rampnd.x1[idof]));
                     return ParabolicRamp::CheckReturn(CFO_FinalValuesNotReached);
                 }
-                if( RaveFabs(rampnd.dx1[idof] - outramps.back().dx1[idof]) > ParabolicRamp::EpsilonV ) {
+                if( RaveFabs(rampnd.dx1[idof] - dq1[idof]) > ParabolicRamp::EpsilonV ) {
                     RAVELOG_VERBOSE_FORMAT("env=%d, ramp end point does not finish at desired velocity values %e, so reforming ramp", _envid%(dq0[idof]-rampnd.dx1[idof]));
                     bDifferentVelocity = true;
                 }
