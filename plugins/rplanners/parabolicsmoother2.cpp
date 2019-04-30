@@ -395,6 +395,7 @@ public:
         _maxInitialRampTime = 0;
 #ifdef SMOOTHER_TIMING_DEBUG
         // Statistics
+        _numShortcutIters = 0;
         _nCallsCheckManip = 0;
         _totalTimeCheckManip = 0;
         _nCallsInterpolator = 0;
@@ -649,6 +650,8 @@ public:
         }
 
         // Main planning loop
+        int numShortcuts = 0;
+        int nummerges = 0;
         try {
             _bUsePerturbation = true;
             _feasibilitychecker.tol = parameters->_vConfigResolution;
@@ -662,12 +665,16 @@ public:
             }
 
             const dReal tOriginal = parabolicpath.GetDuration(); // the original trajectory duration before shortcutting
-            int numShortcuts = 0;
-            int nummerges = 0;
             if( !!parameters->_setstatevaluesfn || !!parameters->_setstatefn ) {
                 // TODO: add a check here so that we do merging only when the initial path is linear (i.e. comes directly from a linear smoother or RRT)
+#ifdef SMOOTHER_TIMING_DEBUG
+                _tShortcutStart = utils::GetMicroTime();
+#endif
                 nummerges = _MergeConsecutiveSegments(parabolicpath, parameters->_fStepLength*0.99);
                 numShortcuts = _Shortcut(parabolicpath, parameters->_nMaxIterations, this, parameters->_fStepLength*0.99);
+#ifdef SMOOTHER_TIMING_DEBUG
+                _tShortcutEnd = utils::GetMicroTime();
+#endif
                 if( numShortcuts < 0 ) {
                     return PS_Interrupted;
                 }
@@ -947,10 +954,12 @@ public:
         _DumpTrajectory(ptraj, _dumplevel);
 
 #ifdef SMOOTHER_TIMING_DEBUG
-        RAVELOG_DEBUG_FORMAT("env=%d, measured %d interpolations; total exectime=%.15e; time/iter=%.15e", GetEnv()->GetId()%_nCallsInterpolator%_totalTimeInterpolator%(_totalTimeInterpolator/_nCallsInterpolator));
-        RAVELOG_DEBUG_FORMAT("env=%d, measured %d checkmanips; total exectime=%.15e; time/iter=%.15e", GetEnv()->GetId()%_nCallsCheckManip%_totalTimeCheckManip%(_nCallsCheckManip == 0 ? 0 : _totalTimeCheckManip/_nCallsCheckManip));
-        RAVELOG_DEBUG_FORMAT("env=%d, measured %d checkpathallconstraints; total exectime=%.15e; time/iter=%.15e", GetEnv()->GetId()%_nCallsCheckPathAllConstraints%_totalTimeCheckPathAllConstraints%(_nCallsCheckPathAllConstraints == 0 ? 0 : _totalTimeCheckPathAllConstraints/_nCallsCheckPathAllConstraints));
-        RAVELOG_DEBUG_FORMAT("env=%d, measured %d checkpathallconstraints (in vain); total exectime=%.15e", GetEnv()->GetId()%_nCallsCheckPathAllConstraintsInVain%_totalTimeCheckPathAllConstraintsInVain);
+        dReal tTotalShortcutTime = 0.000001f*(float)(_tShortcutEnd - _tShortcutStart);
+        RAVELOG_INFO_FORMAT("env=%d, shortcutting time=%.15e; iter=%d; time/iter=%.15e", GetEnv()->GetId()%tTotalShortcutTime%numShortcuts%(tTotalShortcutTime/numShortcuts));
+        RAVELOG_INFO_FORMAT("env=%d, measured %d interpolations; total exectime=%.15e; time/iter=%.15e", GetEnv()->GetId()%_nCallsInterpolator%_totalTimeInterpolator%(_totalTimeInterpolator/_nCallsInterpolator));
+        RAVELOG_INFO_FORMAT("env=%d, measured %d checkmanips; total exectime=%.15e; time/iter=%.15e", GetEnv()->GetId()%_nCallsCheckManip%_totalTimeCheckManip%(_nCallsCheckManip == 0 ? 0 : _totalTimeCheckManip/_nCallsCheckManip));
+        RAVELOG_INFO_FORMAT("env=%d, measured %d checkpathallconstraints; total exectime=%.15e; time/iter=%.15e", GetEnv()->GetId()%_nCallsCheckPathAllConstraints%_totalTimeCheckPathAllConstraints%(_nCallsCheckPathAllConstraints == 0 ? 0 : _totalTimeCheckPathAllConstraints/_nCallsCheckPathAllConstraints));
+        RAVELOG_INFO_FORMAT("env=%d, measured %d checkpathallconstraints (in vain); total exectime=%.15e", GetEnv()->GetId()%_nCallsCheckPathAllConstraintsInVain%_totalTimeCheckPathAllConstraintsInVain);
 #endif
         return _ProcessPostPlanners(RobotBasePtr(), ptraj);
     }
@@ -3214,6 +3223,9 @@ protected:
             RAVELOG_DEBUG_FORMAT("env=%d, shortcutprogress saved to %s", GetEnv()->GetId()%shortcutprogressfilename);
         }
 #endif
+#ifdef SMOOTHER_TIMING_DEBUG
+        _numShortcutIters = iters;
+#endif
 
         return numShortcuts;
     }
@@ -3337,6 +3349,9 @@ protected:
 
 #ifdef SMOOTHER_TIMING_DEBUG
     // Statistics
+    uint32_t _tShortcutStart, _tShortcutEnd;
+    int _numShortcutIters;
+
     size_t _nCallsCheckManip;
     dReal _totalTimeCheckManip;
     uint32_t _tStartCheckManip, _tEndCheckManip;
