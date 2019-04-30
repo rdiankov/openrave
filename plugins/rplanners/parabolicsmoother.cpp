@@ -159,12 +159,21 @@ public:
             // have to make sure that the last ramp's ending velocity is equal to db
             //bool bDifferentPosition = false;
             bool bDifferentVelocity = false;
+            if( outramps.size() > 0 ) {
+                q1 = outramps.back().x1;
+                dq1 = outramps.back().dx1;
+            }
+            else {
+                // In case CFO_FillCheckedConfiguration is not enabled, outramps will be empty. Need to obtain the last joint values/velocities from the original ramp.
+                rampnd.Evaluate(rampnd.endTime, q1);
+                rampnd.Derivative(rampnd.endTime, dq1);
+            }
             for(size_t idof = 0; idof < q0.size(); ++idof) {
-                if( RaveFabs(q0[idof]-rampnd.x1[idof]) > ParabolicRamp::EpsilonX ) {
+                if( RaveFabs(rampnd.x1[idof] - q1[idof]) > ParabolicRamp::EpsilonX ) {
                     RAVELOG_DEBUG_FORMAT("env=%d, ramp end point does not finish at desired position values %f, so rejecting", _envid%(q0[idof]-rampnd.x1[idof]));
                     return ParabolicRamp::CheckReturn(CFO_FinalValuesNotReached);
                 }
-                if( RaveFabs(dq0[idof]-rampnd.dx1[idof]) > ParabolicRamp::EpsilonV ) {
+                if( RaveFabs(rampnd.dx1[idof] - dq1[idof]) > ParabolicRamp::EpsilonV ) {
                     RAVELOG_VERBOSE_FORMAT("env=%d, ramp end point does not finish at desired velocity values %e, so reforming ramp", _envid%(dq0[idof]-rampnd.dx1[idof]));
                     bDifferentVelocity = true;
                 }
@@ -1908,6 +1917,7 @@ protected:
 
             if( vVisitedDiscretization.size() == 0 ) {
                 // if nEndTimeDiscretization is too big, then just ignore vVisitedDiscretization
+                nEndTimeDiscretization = (int)(endTime*fiMinDiscretization) + 1;
                 if( nEndTimeDiscretization <= 0x8000 ) {
                     vVisitedDiscretization.resize(nEndTimeDiscretization*nEndTimeDiscretization,0);
                 }
@@ -1935,7 +1945,7 @@ protected:
                 ParabolicRamp::Swap(t1, t2);
             }
 #ifdef SMOOTHER_PROGRESS_DEBUG
-            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter = %d/%d, shortcutting from t1 = %.15e to t2 = %.15e", GetEnv()->GetId()%iters%numIters%t1%t2);
+            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter = %d/%d, shortcutting from t1 = %.15e to t2 = %.15e; fstarttimevelmult=%.15e; fstarttimeaccelmult=%.15e", GetEnv()->GetId()%iters%numIters%t1%t2%fstarttimevelmult%fstarttimeaccelmult);
 #endif
             if (t2 - t1 < mintimestep) {
 #ifdef SMOOTHER_PROGRESS_DEBUG
@@ -2348,7 +2358,8 @@ protected:
                             }
                         }
 
-                        dReal expectedRampTimeAfterSlowDown = newramptime/fOverallTimeMult;
+                        // dReal expectedRampTimeAfterSlowDown = newramptime/fOverallTimeMult; // 2019/04/26: do not use this estimation since it does not really reflect the actual duration of the next iteration and the interpolation itself does not take much time anyway.
+                        dReal expectedRampTimeAfterSlowDown = newramptime;
                         if (expectedRampTimeAfterSlowDown + mintimestep > t2 - t1) {
                             // Reject this shortcut since it did not (and will not) make any significant improvement.
 #ifdef SMOOTHER_PROGRESS_DEBUG

@@ -116,10 +116,13 @@ public:
             dReal elapsedTime, expectedElapsedTime, newElapsedTime, iElapsedTime, totalWeight;
 
             // Do lazy collision checking by postponing collision checking until absolutely necessary
-            bool doCheckEnvCollisions = (options & CFO_CheckEnvCollisions) == CFO_CheckEnvCollisions;
-            bool doCheckSelfCollisions = (options & CFO_CheckSelfCollisions) == CFO_CheckSelfCollisions;
-            options = options & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
-            options |= CFO_FillCheckedConfiguration; // always do this if we use lazy collision checking
+            bool doLazyCollisionChecking = false;
+            bool doCheckEnvCollisionsLater = doLazyCollisionChecking ? (options & CFO_CheckEnvCollisions) == CFO_CheckEnvCollisions : false;
+            bool doCheckSelfCollisionsLater = doLazyCollisionChecking ? (options & CFO_CheckSelfCollisions) == CFO_CheckSelfCollisions : false;
+            if( doLazyCollisionChecking ) {
+                options = options & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
+                options |= CFO_FillCheckedConfiguration; // always do this if we use lazy collision checking
+            }
             for (size_t iswitch = 1; iswitch < _vswitchtimes.size(); ++iswitch) {
                 rampndVect[iswitch - 1].GetX1Vect(q1); // configuration at _vswitchtimes[iswitch]
                 elapsedTime = _vswitchtimes[iswitch] - _vswitchtimes[iswitch - 1]; // current elapsed time of this ramp
@@ -188,11 +191,11 @@ public:
             }
 
             // Collision checking here!
-            if( doCheckEnvCollisions || doCheckSelfCollisions ) {
-                if( doCheckEnvCollisions && doCheckSelfCollisions ) {
+            if( doCheckEnvCollisionsLater || doCheckSelfCollisionsLater ) {
+                if( doCheckEnvCollisionsLater && doCheckSelfCollisionsLater ) {
                     options = CFO_CheckEnvCollisions | CFO_CheckSelfCollisions;
                 }
-                else if( doCheckEnvCollisions ) {
+                else if( doCheckEnvCollisionsLater ) {
                     options = CFO_CheckEnvCollisions;
                 }
                 else {
@@ -297,14 +300,13 @@ public:
 #endif
             }
 
-            // Note that now q0 and dq0 are actually the final joint position and velocity
             bool bDifferentVelocity = false;
             for (size_t idof = 0; idof < q0.size(); ++idof) {
-                if( RaveFabs(rampndVect.back().GetX1At(idof) - q0[idof]) > RampOptimizer::g_fRampEpsilon ) {
+                if( RaveFabs(rampndVect.back().GetX1At(idof) - rampndVectOut.back().GetX1At(idof)) > RampOptimizer::g_fRampEpsilon ) {
                     RAVELOG_VERBOSE_FORMAT("rampndVectOut idof=%d: end point does not finish at the desired position, diff=%.15e. Rejecting...", idof%RaveFabs(rampndVect.back().GetX1At(idof) - q0[idof]));
                     return RampOptimizer::CheckReturn(CFO_FinalValuesNotReached);
                 }
-                if( RaveFabs(rampndVect.back().GetV1At(idof) - dq0[idof]) > RampOptimizer::g_fRampEpsilon ) {
+                if( RaveFabs(rampndVect.back().GetV1At(idof) - rampndVectOut.back().GetV1At(idof)) > RampOptimizer::g_fRampEpsilon ) {
                     RAVELOG_VERBOSE_FORMAT("rampndVectOut idof=%d: end point does not finish at the desired velocity, diff=%.15e", idof%RaveFabs(rampndVect.back().GetV1At(idof) - dq0[idof]));
                     bDifferentVelocity = true;
                 }
@@ -1214,7 +1216,7 @@ public:
                 _nCallsCheckManip += 1;
                 _tStartCheckManip = utils::GetMicroTime();
 #endif
-                RampOptimizer::CheckReturn retmanip = _manipconstraintchecker->CheckManipConstraints2(rampndVectOut, IT_OpenStart, _bUseNewHeuristic);
+                RampOptimizer::CheckReturn retmanip = _manipconstraintchecker->CheckManipConstraints2(rampndVectOut, IT_Closed, _bUseNewHeuristic);
 #ifdef SMOOTHER_TIMING_DEBUG
                 _tEndCheckManip = utils::GetMicroTime();
                 _totalTimeCheckManip += 0.000001f*(float)(_tEndCheckManip - _tStartCheckManip);
@@ -1751,7 +1753,7 @@ protected:
                     _nCallsInterpolator += 1;
                     _tStartInterpolator = utils::GetMicroTime();
 #endif
-                    bool res = _interpolator.ComputeArbitraryVelNDTrajectory(x0Vect, x1Vect, v0Vect, v1Vect, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, vellimits, accellimits, shortcutRampNDVect, false);
+                    bool res = _interpolator.ComputeArbitraryVelNDTrajectory(x0Vect, x1Vect, v0Vect, v1Vect, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, vellimits, accellimits, shortcutRampNDVect, true);
 #ifdef SMOOTHER_TIMING_DEBUG
                     _tEndInterpolator = utils::GetMicroTime();
                     _totalTimeInterpolator += 0.000001f*(float)(_tEndInterpolator - _tStartInterpolator);
@@ -2054,7 +2056,7 @@ protected:
                                             break;
                                         }
                                         {
-                                            fVelMult = RaveSqrt(fAccelMult); // larger scaling factor, less reduction. Use a square root here since the velocity has the factor t while the acceleration has t^2
+                                            fVelMult = retcheck.fTimeBasedSurpassMult; // larger scaling factor, less reduction. Use a square root here since the velocity has the factor t while the acceleration has t^2
                                             fCurVelMult *= fVelMult;
                                             if( fCurVelMult < 0.01 ) {
 #ifdef SMOOTHER_PROGRESS_DEBUG
@@ -2377,7 +2379,7 @@ protected:
         dReal specialShortcutCutoffTime = 0.75; // when doind special shortcut, we sample one of the remaining zero-velocity waypoints. Then we try to
                                                 // shortcut in the range twaypoint +/- specialShortcutCutoffTime
 
-        dReal fiMinDiscretization = 1.0/(minTimeStep); // mindiscretization is basically the step length to discretize the current trajectory so as to record if
+        dReal fiMinDiscretization = 4.0/(minTimeStep); // mindiscretization is basically the step length to discretize the current trajectory so as to record if
                                                        // the two sampled time instances fall into the same two bins. If so, skip the rest of computation.
         std::vector<uint8_t>& vVisitedDiscretization = _vVisitedDiscretizationCache;
         vVisitedDiscretization.clear();
@@ -2445,9 +2447,10 @@ protected:
                 if( t0 > t1 ) {
                     RampOptimizer::Swap(t0, t1);
                 }
-                if( t1 - t0 > 2*_maxInitialRampTime ) {
-                    t1 = t0 + 2*_maxInitialRampTime;
-                }
+                // 2019/04/26: Might be too constrained to only allow time instants that are not further apart than the largest ramp time. _maxInitialRampTime could be small due to various reasons. In such cases, shortcut performance will be poor.
+                // if( t1 - t0 > 2*_maxInitialRampTime ) {
+                //     t1 = t0 + 2*_maxInitialRampTime;
+                // }
             }
 
 #ifdef SMOOTHER_PROGRESS_DEBUG
@@ -2504,7 +2507,7 @@ protected:
             // Perform shortcut
             try {
 #ifdef SMOOTHER_PROGRESS_DEBUG
-                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, start shortcutting with t0=%.15e; t1=%.15e", GetEnv()->GetId()%iters%numIters%t0%t1);
+                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, start shortcutting with t0=%.15e; t1=%.15e; fStartTimeVelMult=%.15e; fStartTimeAccelMult=%.15e", GetEnv()->GetId()%iters%numIters%t0%t1%fStartTimeVelMult%fStartTimeAccelMult);
 #endif
                 int i0, i1;
                 dReal u0, u1;
@@ -2548,11 +2551,8 @@ protected:
                 else {
                     for (size_t j = 0; j < _parameters->_vConfigVelocityLimit.size(); ++j) {
                         // Adjust vellimits and accellimits
-                        dReal fminvel = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
-                        if( vellimits[j] < fminvel ) {
-                            vellimits[j] = fminvel;
-                        }
-                        else {
+                        dReal fminvel = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j])); // the scaled vellimits must be at least this value
+                        {
                             dReal f = max(fminvel, fStartTimeVelMult * _parameters->_vConfigVelocityLimit[j]);
                             if( vellimits[j] > f ) {
                                 vellimits[j] = f;
@@ -2582,7 +2582,7 @@ protected:
                     _nCallsInterpolator += 1;
                     _tStartInterpolator = utils::GetMicroTime();
 #endif
-                    bool res = _interpolator.ComputeArbitraryVelNDTrajectory(x0Vect, x1Vect, v0Vect, v1Vect, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, vellimits, accellimits, shortcutRampNDVect, false);
+                    bool res = _interpolator.ComputeArbitraryVelNDTrajectory(x0Vect, x1Vect, v0Vect, v1Vect, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, vellimits, accellimits, shortcutRampNDVect, true);
 #ifdef SMOOTHER_TIMING_DEBUG
                     _tEndInterpolator = utils::GetMicroTime();
                     _totalTimeInterpolator += 0.000001f*(float)(_tEndInterpolator - _tStartInterpolator);
@@ -2902,7 +2902,7 @@ protected:
                                             break;
                                         }
                                         {
-                                            fVelMult = RaveSqrt(fAccelMult); // larger scaling factor, less reduction. Use a square root here since the velocity has the factor t while the acceleration has t^2
+                                            fVelMult = retcheck.fTimeBasedSurpassMult; // larger scaling factor, less reduction. Use a square root here since the velocity has the factor t while the acceleration has t^2
                                             fCurVelMult *= fVelMult;
                                             if( fCurVelMult < 0.01 ) {
 #ifdef SMOOTHER_PROGRESS_DEBUG
@@ -3122,6 +3122,7 @@ protected:
                         _vZeroVelPointInfos[writeIndex].point -= diff;
                         _vZeroVelPointInfos[writeIndex].leftneighbor -= diff;
                         _vZeroVelPointInfos[writeIndex].rightneighbor -= diff;
+                        writeIndex += 1;
                     }
                 }
                 _vZeroVelPointInfos.resize(writeIndex);

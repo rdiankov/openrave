@@ -381,6 +381,9 @@ public:
         bool bBoundExceeded = false;
 
         std::vector<dReal>& vDOFValuesAtViolation = _vdofvalues, &vDOFVelAtViolation = _vdofvelocities, &vDOFAccelAtViolation = _vdofaccelerations;
+        vDOFValuesAtViolation.resize(0);
+        vDOFVelAtViolation.resize(0);
+        vDOFAccelAtViolation.resize(0);
 
         if( !(interval == IT_OpenStart) ) {
             FOREACHC(itmanipinfo, _listCheckManips) {

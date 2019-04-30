@@ -462,6 +462,9 @@ public:
         bool bBoundExceeded = false;
 
         std::vector<dReal>& vDOFValuesAtViolation = _vdofvalues, &vDOFVelAtViolation = _vdofvelocities, &vDOFAccelAtViolation = _vdofaccelerations;
+        vDOFValuesAtViolation.resize(0);
+        vDOFVelAtViolation.resize(0);
+        vDOFAccelAtViolation.resize(0);
 
         std::vector<ParabolicRampInternal::ParabolicRampND>::const_iterator itramp1 = outramps.begin();
         if (itramp1 != outramps.end()) {
