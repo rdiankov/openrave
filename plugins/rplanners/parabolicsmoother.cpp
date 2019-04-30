@@ -2375,7 +2375,8 @@ protected:
                             }
                         }
 
-                        dReal expectedRampTimeAfterSlowDown = newramptime/fOverallTimeMult;
+                        // dReal expectedRampTimeAfterSlowDown = newramptime/fOverallTimeMult; // 2019/04/26: do not use this estimation since it does not really reflect the actual duration of the next iteration and the interpolation itself does not take much time anyway.
+                        dReal expectedRampTimeAfterSlowDown = newramptime;
                         if (expectedRampTimeAfterSlowDown + mintimestep > t2 - t1) {
                             // Reject this shortcut since it did not (and will not) make any significant improvement.
 #ifdef SMOOTHER_PROGRESS_DEBUG
