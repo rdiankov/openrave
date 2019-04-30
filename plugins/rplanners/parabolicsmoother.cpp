@@ -371,7 +371,7 @@ public:
                     for(size_t j = 0; j < x0.size(); ++j) {
                         dReal coeff = (-2.0*ideltatime*(x1[j] - x0[j]) + (dx1[j]+dx0[j]))*ideltatime2;
                         if( RaveFabs(coeff) > 1e-5 ) {
-                            RAVELOG_VERBOSE_FORMAT("env=%d, ramp %d/%d dof %d cubic coeff=%15e is non-zero", GetEnv()->GetId()%iramp%dynamicpath.ramps.size()%j%coeff);
+                            RAVELOG_VERBOSE_FORMAT("env=%d, ramp %d/%d dof %d cubic coeff=%.15e is non-zero", GetEnv()->GetId()%iramp%dynamicpath.ramps.size()%j%coeff);
                             bIsParabolic = false;
                         }
                     }
@@ -883,28 +883,28 @@ public:
                         // due to epsilon inaccuracies, have to clamp the max accel depending on _vConfigAccelerationLimit
                         for(size_t idof = 0; idof < outramp.ramps.size(); ++idof) {
                             if( outramp.ramps[idof].a1 < -_parameters->_vConfigAccelerationLimit[idof] ) {
-                                RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d, a1 changed: %15e -> %.15e, diff = %.15e", GetEnv()->GetId()%idof%outramp.ramps[idof].a1%(-_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a1 + _parameters->_vConfigAccelerationLimit[idof]));
+                                RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d, a1 changed: %.15e -> %.15e, diff = %.15e", GetEnv()->GetId()%idof%outramp.ramps[idof].a1%(-_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a1 + _parameters->_vConfigAccelerationLimit[idof]));
                                 outramp.ramps[idof].a1 = -_parameters->_vConfigAccelerationLimit[idof];
                                 bAccelChanged = true;
                             }
                             else if( outramp.ramps[idof].a1 > _parameters->_vConfigAccelerationLimit[idof] ) {
-                                RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d, a1 changed: %15e -> %.15e, diff = %.15e", GetEnv()->GetId()%idof%outramp.ramps[idof].a1%(_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a1 - _parameters->_vConfigAccelerationLimit[idof]));
+                                RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d, a1 changed: %.15e -> %.15e, diff = %.15e", GetEnv()->GetId()%idof%outramp.ramps[idof].a1%(_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a1 - _parameters->_vConfigAccelerationLimit[idof]));
                                 outramp.ramps[idof].a1 = _parameters->_vConfigAccelerationLimit[idof];
                                 bAccelChanged = true;
                             }
                             if( outramp.ramps[idof].a2 < -_parameters->_vConfigAccelerationLimit[idof] ) {
-                                RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d, a2 changed: %15e -> %.15e, diff = %.15e", GetEnv()->GetId()%idof%outramp.ramps[idof].a2%(-_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a2 + _parameters->_vConfigAccelerationLimit[idof]));
+                                RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d, a2 changed: %.15e -> %.15e, diff = %.15e", GetEnv()->GetId()%idof%outramp.ramps[idof].a2%(-_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a2 + _parameters->_vConfigAccelerationLimit[idof]));
                                 outramp.ramps[idof].a2 = -_parameters->_vConfigAccelerationLimit[idof];
                                 bAccelChanged = true;
                             }
                             else if( outramp.ramps[idof].a2 > _parameters->_vConfigAccelerationLimit[idof] ) {
-                                RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d, a2 changed: %15e -> %.15e, diff = %.15e", GetEnv()->GetId()%idof%outramp.ramps[idof].a2%(_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a2 - _parameters->_vConfigAccelerationLimit[idof]));
+                                RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d, a2 changed: %.15e -> %.15e, diff = %.15e", GetEnv()->GetId()%idof%outramp.ramps[idof].a2%(_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a2 - _parameters->_vConfigAccelerationLimit[idof]));
                                 outramp.ramps[idof].a2 = _parameters->_vConfigAccelerationLimit[idof];
                                 bAccelChanged = true;
                             }
                         }
                         if( bAccelChanged ) {
-                            RAVELOG_VERBOSE_FORMAT("env=%d, deltatime = %.15e", GetEnv()->GetId()%deltatime);
+                            RAVELOG_VERBOSE_FORMAT("env=%d, deltatime=%.15e", GetEnv()->GetId()%deltatime);
                             if( !outramp.IsValid() ) {
                                 RAVELOG_WARN_FORMAT("env=%d, ramp becomes invalid after changing acceleration limits", GetEnv()->GetId());
                                 return ParabolicRamp::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9); //?

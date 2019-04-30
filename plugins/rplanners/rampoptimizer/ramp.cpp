@@ -460,7 +460,7 @@ void ParabolicCurve::SetSegment(dReal x0, dReal x1, dReal v0, dReal v1, dReal t)
          We can see that C(a) is a *convex* parabola, i.e., the coefficient of a^2 is strictly
          positive (given that t > 0). Therefore, it always has a minimum and the minimum is at
 
-                 a* = -(2*v0 + t*(x0 - x1) + 2*(v0 - v1)*t^2)/(0.5*t^3 + 2*t).
+                 a* = -(v0*t^2 + t*(x0 - x1) + 2*(v0 - v1))/(0.5*t^3 + 2*t).
 
          >>>> sp.solve(sp.diff(C, a), a)
      */
