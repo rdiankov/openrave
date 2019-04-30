@@ -170,7 +170,10 @@ public:
         /// for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
         /// For GT_Cage, this is the base box extents with the origin being at the -Z center.
         Vector _vGeomData;
-        Vector _vGeomData2; ///< For containers, the first 3 values are the full inner extents.
+
+        ///< For GT_Container, the first 3 values are the full inner extents.
+        ///< For GT_Cage, if any are non-zero, then force the full inner extents (bottom center) to be this much, starting at the base center top
+        Vector _vGeomData2;
         Vector _vGeomData3; ///< For containers, the first 3 values is the bottom cross XY full extents and Z height from bottom face.
 
         // For GT_Cage
