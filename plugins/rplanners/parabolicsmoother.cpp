@@ -1851,6 +1851,14 @@ protected:
         }
         dReal originalEndTime = endTime;
         int nEndTimeDiscretization = (int)(endTime*fiMinDiscretization)+1;
+        if( nEndTimeDiscretization > 0x8000 ) {
+            // Cap the size of vVisitedDiscretization. This means if the trajectory is very long
+            // that the number of bins is too large, we just consider only the initial portion of
+            // the trajectory.
+            nEndTimeDiscretization = 0x8000;
+        }
+        vVisitedDiscretization.resize(nEndTimeDiscretization*nEndTimeDiscretization, 0);
+
         dReal dummyEndTime;
 
         /*
@@ -1930,14 +1938,6 @@ protected:
             if (nItersFromPrevSuccessful + nNumTimeBasedConstraintsFailed > nCutoffIters) { // the same time based constraints can fail all the time meaning that the trajectory is already pretty optimal. This check makes smoother easier to stop when there's no improvement
                 // No progess for already nCutoffIters. Stop right away
                 break;
-            }
-
-            if( vVisitedDiscretization.size() == 0 ) {
-                // if nEndTimeDiscretization is too big, then just ignore vVisitedDiscretization
-                nEndTimeDiscretization = (int)(endTime*fiMinDiscretization) + 1;
-                if( nEndTimeDiscretization <= 0x8000 ) {
-                    vVisitedDiscretization.resize(nEndTimeDiscretization*nEndTimeDiscretization,0);
-                }
             }
 
             dReal t1, t2;
@@ -2479,7 +2479,8 @@ protected:
                     endTime += ramps[i].endTime;
                 }
                 dReal diff = dummyEndTime - endTime;
-                vVisitedDiscretization.clear(); // have to clear so that can recreate the visited nodes
+
+                std::fill(vVisitedDiscretization.begin(), vVisitedDiscretization.end(), 0); // have to clear so that can recreate the visited nodes
 #ifdef SMOOTHER_PROGRESS_DEBUG
                 RAVELOG_DEBUG_FORMAT("env=%d: shortcut iter=%d/%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%numIters%numslowdowns%dummyEndTime%endTime%diff);
 #endif

@@ -2414,7 +2414,14 @@ protected:
                                                        // the two sampled time instances fall into the same two bins. If so, skip the rest of computation.
         std::vector<uint8_t>& vVisitedDiscretization = _vVisitedDiscretizationCache;
         vVisitedDiscretization.clear();
-        int nEndTimeDiscretization;
+        int nEndTimeDiscretization = (int)(tTotal*fiMinDiscretization) + 1;
+        if( nEndTimeDiscretization > 0x8000 ) {
+            // Cap the size of vVisitedDiscretization. This means if the trajectory is very long
+            // that the number of bins is too large, we just consider only the initial portion of
+            // the trajectory.
+            nEndTimeDiscretization = 0x8000;
+        }
+        vVisitedDiscretization.resize(nEndTimeDiscretization*nEndTimeDiscretization, 0);
 
 #ifdef SMOOTHER_PROGRESS_DEBUG
         uint32_t latestSuccessfulShortcutTimestamp = utils::GetMicroTime(), curtime;
@@ -2435,14 +2442,6 @@ protected:
                 break;
             }
             nItersFromPrevSuccessful += 1;
-
-            if( vVisitedDiscretization.size() == 0 ) {
-                nEndTimeDiscretization = (int)(tTotal*fiMinDiscretization) + 1;
-                // Limit the size of vVisitedDiscretization. If too large, then don't use it.
-                if( nEndTimeDiscretization <= 0x8000 ) {
-                    vVisitedDiscretization.resize(nEndTimeDiscretization*nEndTimeDiscretization, 0);
-                }
-            }
 
             // Sample t0 and t1. We could possibly add some heuristics here to get higher quality
             // shortcuts
@@ -2497,7 +2496,7 @@ protected:
 #endif
                 continue;
             }
-            if( vVisitedDiscretization.size() > 0 ) {
+            {
                 // Keep track of time slots that have already been previously checked (and failed)
                 int t0Index = t0*fiMinDiscretization;
                 int t1Index = t1*fiMinDiscretization;
@@ -3130,7 +3129,7 @@ protected:
 #endif
 
                 nTimeBasedConstraintsFailed = 0; // reset
-                vVisitedDiscretization.clear();
+                std::fill(vVisitedDiscretization.begin(), vVisitedDiscretization.end(), 0);
 
                 // Keep track of zero-velocity waypoints
                 dReal segmentTime = 0;
