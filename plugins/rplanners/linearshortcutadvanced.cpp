@@ -628,6 +628,10 @@ protected:
         TrajectoryBasePtr ptraj1 = RaveCreateTrajectory(GetEnv(), "");
         TrajectoryBasePtr ptraj2 = RaveCreateTrajectory(GetEnv(), "");
 
+        uint32_t tStart1, tEnd1, tStart2, tEnd2;
+        dReal shortcutTime1 = 0;
+        dReal shortcutTime2 = 0;
+
         // parabolicsmoother
         {
             RAVELOG_DEBUG_FORMAT("env=%d, calling parabolicsmoother", GetEnv()->GetId());
@@ -648,7 +652,10 @@ protected:
             ptraj1->Clone(ptraj, 0);
 
             if( postprocessplanner->InitPlan(probot, params) ) {
+                tStart1 = utils::GetMicroTime();
                 ps1 = postprocessplanner->PlanPath(ptraj1);
+                tEnd1 = utils::GetMicroTime();
+                shortcutTime1 = 0.000001f*(dReal)(tEnd1 - tStart1);
             }
         }
 
@@ -672,7 +679,10 @@ protected:
             ptraj2->Clone(ptraj, 0);
 
             if( postprocessplanner->InitPlan(probot, params) ) {
+                tStart2 = utils::GetMicroTime();
                 ps2 = postprocessplanner->PlanPath(ptraj2);
+                tEnd2 = utils::GetMicroTime();
+                shortcutTime2 = 0.000001f*(dReal)(tEnd2 - tStart2);
             }
         }
 
@@ -683,6 +693,10 @@ protected:
             ConfigurationSpecification newspec;
             std::vector<dReal> firstwaypoint;
 
+            // Information is written to smootherXduration group, which has 1 DOF.
+            // - The first waypoint contains the final trajectory duration after having been shortcut by the smoother.
+            // - The second waypoint contains the original trajectory duration before shortcutting (after retimed)
+            // - The third waypoint contains the computation time of the smoother
             // ParabolicSmoother
             newspec = ptraj->GetConfigurationSpecification();
             ConfigurationSpecification::Group gsmoother1duration;
@@ -700,6 +714,8 @@ protected:
             firstwaypoint.resize(0);
             ptraj1->GetWaypoint(0, firstwaypoint, ptraj1->GetConfigurationSpecification());
             smoother1data[1] = firstwaypoint[goriginalduration1.offset];
+
+            smoother1data[2] = shortcutTime1;
 
             ptraj->Insert(0, smoother1data, smoother1durationspec, true);
 
@@ -720,6 +736,8 @@ protected:
             firstwaypoint.resize(0);
             ptraj2->GetWaypoint(0, firstwaypoint, ptraj2->GetConfigurationSpecification());
             smoother2data[1] = firstwaypoint[goriginalduration2.offset];
+
+            smoother2data[2] = shortcutTime2;
 
             ptraj->Insert(0, smoother2data, smoother2durationspec, true);
 
