@@ -23,6 +23,10 @@
 // #define SMOOTHER_TIMING_DEBUG // uncomment this to get more information on time spent for collision checking, manip constraint checking, etc.
 #define SMOOTHER_PROGRESS_DEBUG // uncomment his to get more information on progress during each shortcut iteration
 
+// #define ENABLE_LAZYCOLLISIONCHECKING
+// #define DISABLE_VVISITEDDISCRETIZATION
+// #define ENABLE_MERGING
+
 namespace rplanners {
 
 namespace RampOptimizer = RampOptimizerInternal;
@@ -116,7 +120,11 @@ public:
             dReal elapsedTime, expectedElapsedTime, newElapsedTime, iElapsedTime, totalWeight;
 
             // Do lazy collision checking by postponing collision checking until absolutely necessary
+#ifdef ENABLE_LAZYCOLLISIONCHECKING
+            bool doLazyCollisionChecking = true;
+#else
             bool doLazyCollisionChecking = false;
+#endif
             bool doCheckEnvCollisionsLater = doLazyCollisionChecking ? (options & CFO_CheckEnvCollisions) == CFO_CheckEnvCollisions : false;
             bool doCheckSelfCollisionsLater = doLazyCollisionChecking ? (options & CFO_CheckSelfCollisions) == CFO_CheckSelfCollisions : false;
             if( doLazyCollisionChecking ) {
@@ -670,7 +678,9 @@ public:
 #ifdef SMOOTHER_TIMING_DEBUG
                 _tShortcutStart = utils::GetMicroTime();
 #endif
+#ifdef ENABLE_MERGING
                 nummerges = _MergeConsecutiveSegments(parabolicpath, parameters->_fStepLength*0.99);
+#endif
                 numShortcuts = _Shortcut(parabolicpath, parameters->_nMaxIterations, this, parameters->_fStepLength*0.99);
 #ifdef SMOOTHER_TIMING_DEBUG
                 _tShortcutEnd = utils::GetMicroTime();
@@ -2496,6 +2506,8 @@ protected:
 #endif
                 continue;
             }
+#ifdef DISABLE_VVISITEDDISCRETIZATION
+#else
             {
                 // Keep track of time slots that have already been previously checked (and failed)
                 int t0Index = t0*fiMinDiscretization;
@@ -2512,7 +2524,7 @@ protected:
                     }
                 }
 
-                if( _bmanipconstraints && _manipconstraintchecker ) {
+                if( 0 ) {//( _bmanipconstraints && _manipconstraintchecker ) {
                     // In case there are manipconstraints, we also mark neighbor pairs of timeindices as checked
                     for( int t0TestIndex = t0Index - 1; t0TestIndex < t0Index + 2; ++t0TestIndex ) {
                         for( int t1TestIndex = t1Index - 1; t1TestIndex < t1Index + 2; ++t1TestIndex ) {
@@ -2531,6 +2543,7 @@ protected:
                     }
                 }
             }
+#endif
 
             uint32_t iIterProgress = 0; // used for debugging purposes
 
