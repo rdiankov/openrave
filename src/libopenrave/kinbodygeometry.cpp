@@ -601,7 +601,82 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
         ab.extents.z = (dReal)0.5*RaveFabs(tglobal.m[10])*_info._vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[10]*tglobal.m[10]))*_info._vGeomData.x;
         ab.pos = tglobal.trans; //+(dReal)0.5*_info._vGeomData.y*Vector(tglobal.m[2],tglobal.m[6],tglobal.m[10]);
         break;
-    case GT_Cage:
+    case GT_Cage: {
+        // have to return the entire volume, even the inner region since a lot of code use the bounding box to compute cropping and other functions
+        const Vector& vCageBaseExtents = _info._vGeomData;
+        const Vector& vCageForceInnerFull = _info._vGeomData2;
+
+        Vector vmin, vmax;
+        vmin.x = -vCageBaseExtents.x;
+        vmin.y = -vCageBaseExtents.y;
+        vmax.x = vCageBaseExtents.x;
+        vmax.y = vCageBaseExtents.y;
+        vmax.z = vCageBaseExtents.z*2;
+        for (size_t i = 0; i < _info._vSideWalls.size(); ++i) {
+            const GeometryInfo::SideWall &s = _info._vSideWalls[i];
+            TransformMatrix sidewallmat = s.transf;
+            Vector vselocal = s.vExtents;
+            Vector vsegeom;
+            vsegeom.x = RaveFabs(sidewallmat.m[0])*vselocal.x + RaveFabs(sidewallmat.m[1])*vselocal.y + RaveFabs(sidewallmat.m[2])*vselocal.z;
+            vsegeom.y = RaveFabs(sidewallmat.m[4])*vselocal.x + RaveFabs(sidewallmat.m[5])*vselocal.y + RaveFabs(sidewallmat.m[6])*vselocal.z;
+            vsegeom.z = RaveFabs(sidewallmat.m[8])*vselocal.x + RaveFabs(sidewallmat.m[9])*vselocal.y + RaveFabs(sidewallmat.m[10])*vselocal.z;
+
+            Vector vcenterpos = s.transf.trans + Vector(sidewallmat.m[2], sidewallmat.m[6], sidewallmat.m[10])*(vselocal.z);
+            Vector vsidemin = vcenterpos - vsegeom;
+            Vector vsidemax = vcenterpos + vsegeom;
+            
+            if( vmin.x > vsidemin.x ) {
+                vmin.x = vsidemin.x;
+            }
+            if( vmin.y > vsidemin.y ) {
+                vmin.y = vsidemin.y;
+            }
+            if( vmin.z > vsidemin.z ) {
+                vmin.z = vsidemin.z;
+            }
+            if( vmax.x < vsidemax.x ) {
+                vmax.x = vsidemax.x;
+            }
+            if( vmax.y < vsidemax.y ) {
+                vmax.y = vsidemax.y;
+            }
+            if( vmax.z < vsidemax.z ) {
+                vmax.z = vsidemax.z;
+            }
+        }
+
+        if( vCageForceInnerFull.x > 0 ) {
+            if( vmin.x > -0.5*vCageForceInnerFull.x ) {
+                vmin.x = -0.5*vCageForceInnerFull.x;
+            }
+            if( vmax.x < 0.5*vCageForceInnerFull.x ) {
+                vmax.x = 0.5*vCageForceInnerFull.x;
+            }
+        }
+        if( vCageForceInnerFull.y > 0 ) {
+            if( vmin.y > -0.5*vCageForceInnerFull.y ) {
+                vmin.y = -0.5*vCageForceInnerFull.y;
+            }
+            if( vmax.y < 0.5*vCageForceInnerFull.y ) {
+                vmax.y = 0.5*vCageForceInnerFull.y;
+            }
+        }
+        if( vCageForceInnerFull.z > 0 ) {
+            if( vmax.z < vCageBaseExtents.z*2+vCageForceInnerFull.z ) {
+                vmax.z = vCageBaseExtents.z*2+vCageForceInnerFull.z;
+            }
+        }
+
+        // now that vmin and vmax are in geom space, transform them
+        Vector vgeomextents = 0.5*(vmax-vmin);
+        
+        ab.extents.x = RaveFabs(tglobal.m[0])*vgeomextents.x + RaveFabs(tglobal.m[1])*vgeomextents.y + RaveFabs(tglobal.m[2])*vgeomextents.z;
+        ab.extents.y = RaveFabs(tglobal.m[4])*vgeomextents.x + RaveFabs(tglobal.m[5])*vgeomextents.y + RaveFabs(tglobal.m[6])*vgeomextents.z;
+        ab.extents.z = RaveFabs(tglobal.m[8])*vgeomextents.x + RaveFabs(tglobal.m[9])*vgeomextents.y + RaveFabs(tglobal.m[10])*vgeomextents.z;
+        ab.pos = tglobal*(0.5*(vmin+vmax));
+        break;
+
+    }
     case GT_TriMesh: {
         // Cage: init collision mesh?
         // just use _info._meshcollision
