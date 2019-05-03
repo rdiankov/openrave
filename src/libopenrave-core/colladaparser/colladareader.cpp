@@ -3394,24 +3394,23 @@ public:
                     RAVELOG_WARN_FORMAT("connected body has same uri %s as robot %s", url % probot->GetURI());
                     continue;
                 }
+
+                RobotBasePtr pbody;
                 if( reader.InitFromURI(url, AttributesList()) ) {
                     reader.Extract();
                     std::vector<RobotBasePtr> robots;
                     tempenv->GetRobots(robots);
                     if (robots.size() == 1) {
-                        pconnectedBody->_pbody = robots.front();
+                        pbody = robots.front();
                     } else {
                         RAVELOG_DEBUG_FORMAT("Found $d robots, Do not support this case for url %s", robots.size() % url);
                     }
                 }
 
-                if (!!pconnectedBody->_pbody) {
+                if (!!pbody) {
                     RAVELOG_DEBUG_FORMAT("Loaded body from %s", url);
-                    pconnectedBody->_pbody->SetName(str(boost::format("%s:%s") % probot->GetName() % name));
-                    pconnectedBody->_pbody->SetTransform(pconnectedBody->GetTransform());
                     pconnectedBody->_info._url = url;
-
-                    pconnectedBody->UpdateInfo();
+                    pconnectedBody->UpdateInfo(pbody);
                     probot->GetConnectedBodies().push_back(pconnectedBody);
                 }
             }
