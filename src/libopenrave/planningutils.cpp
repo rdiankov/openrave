@@ -1822,7 +1822,7 @@ TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal startt
 
     if( endtime < traj->GetDuration() ) {
         endindex = traj->GetFirstWaypointIndexAfterTime(endtime);
-        if( endindex >= traj->GetNumWaypoints() ) {
+        if( endindex >= (int)traj->GetNumWaypoints() ) {
             endindex = traj->GetNumWaypoints()-1;
         }
     }
