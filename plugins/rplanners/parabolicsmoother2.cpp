@@ -420,10 +420,39 @@ public:
         _bUseNewHeuristic = false; // dof-depending velocity/acceleration scaling factors
 
         // Caching stuff
-        _cacheCurPos.resize(_parameters->GetDOF());
-        _cacheNewPos.resize(_parameters->GetDOF());
-        _cacheCurVel.resize(_parameters->GetDOF());
-        _cacheNewVel.resize(_parameters->GetDOF());
+        size_t ndof = _parameters->GetDOF();
+        if( _cacheCurPos.capacity() < ndof ) {
+            _cacheCurPos.reserve(ndof);
+        }
+        if( _cacheCurVel.capacity() < ndof ) {
+            _cacheCurVel.reserve(ndof);
+        }
+        _cacheNewPos.resize(ndof);
+        _cacheNewVel.resize(ndof);
+        if( _cacheX0Vect.capacity() < ndof ) {
+            _cacheX0Vect.reserve(ndof);
+        }
+        if( _cacheX1Vect.capacity() < ndof ) {
+            _cacheX1Vect.reserve(ndof);
+        }
+        if( _cacheV0Vect.capacity() < ndof ) {
+            _cacheV0Vect.reserve(ndof);
+        }
+        if( _cacheV1Vect.capacity() < ndof ) {
+            _cacheV1Vect.reserve(ndof);
+        }
+        if( _cacheX0Vect1.capacity() < ndof ) {
+            _cacheX0Vect1.reserve(ndof);
+        }
+        if( _cacheX1Vect1.capacity() < ndof ) {
+            _cacheX1Vect1.reserve(ndof);
+        }
+        if( _cacheVellimits.capacity() < ndof ) {
+            _cacheVellimits.reserve(ndof);
+        }
+        if( _cacheAccelLimits.capacity() < ndof ) {
+            _cacheAccelLimits.reserve(ndof);
+        }
         return !!_uniformsampler;
     }
 
