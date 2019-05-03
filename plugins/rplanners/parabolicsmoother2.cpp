@@ -23,6 +23,10 @@
 // #define SMOOTHER_TIMING_DEBUG // uncomment this to get more information on time spent for collision checking, manip constraint checking, etc.
 #define SMOOTHER_PROGRESS_DEBUG // uncomment his to get more information on progress during each shortcut iteration
 
+// #define ENABLE_LAZYCOLLISIONCHECKING
+// #define DISABLE_VVISITEDDISCRETIZATION
+// #define ENABLE_MERGING
+
 namespace rplanners {
 
 namespace RampOptimizer = RampOptimizerInternal;
@@ -116,7 +120,11 @@ public:
             dReal elapsedTime, expectedElapsedTime, newElapsedTime, iElapsedTime, totalWeight;
 
             // Do lazy collision checking by postponing collision checking until absolutely necessary
+#ifdef ENABLE_LAZYCOLLISIONCHECKING
+            bool doLazyCollisionChecking = true;
+#else
             bool doLazyCollisionChecking = false;
+#endif
             bool doCheckEnvCollisionsLater = doLazyCollisionChecking ? (options & CFO_CheckEnvCollisions) == CFO_CheckEnvCollisions : false;
             bool doCheckSelfCollisionsLater = doLazyCollisionChecking ? (options & CFO_CheckSelfCollisions) == CFO_CheckSelfCollisions : false;
             if( doLazyCollisionChecking ) {
@@ -394,6 +402,7 @@ public:
         _maxInitialRampTime = 0;
 #ifdef SMOOTHER_TIMING_DEBUG
         // Statistics
+        _numShortcutIters = 0;
         _nCallsCheckManip = 0;
         _totalTimeCheckManip = 0;
         _nCallsInterpolator = 0;
@@ -642,6 +651,8 @@ public:
         }
 
         // Main planning loop
+        int numShortcuts = 0;
+        int nummerges = 0;
         try {
             _bUsePerturbation = true;
             _feasibilitychecker.tol = parameters->_vConfigResolution;
@@ -658,8 +669,16 @@ public:
             int nummerges = 0;
             if( !!parameters->_setstatevaluesfn || !!parameters->_setstatefn ) {
                 // TODO: add a check here so that we do merging only when the initial path is linear (i.e. comes directly from a linear smoother or RRT)
+#ifdef SMOOTHER_TIMING_DEBUG
+                _tShortcutStart = utils::GetMicroTime();
+#endif
+#ifdef ENABLE_MERGING
                 nummerges = _MergeConsecutiveSegments(parabolicpath, parameters->_fStepLength*0.99);
+#endif
                 numShortcuts = _Shortcut(parabolicpath, parameters->_nMaxIterations, this, parameters->_fStepLength*0.99);
+#ifdef SMOOTHER_TIMING_DEBUG
+                _tShortcutEnd = utils::GetMicroTime();
+#endif
                 if( numShortcuts < 0 ) {
                     return PS_Interrupted;
                 }
@@ -925,10 +944,12 @@ public:
         _DumpTrajectory(ptraj, _dumplevel);
 
 #ifdef SMOOTHER_TIMING_DEBUG
-        RAVELOG_DEBUG_FORMAT("env=%d, measured %d interpolations; total exectime=%.15e; time/iter=%.15e", GetEnv()->GetId()%_nCallsInterpolator%_totalTimeInterpolator%(_totalTimeInterpolator/_nCallsInterpolator));
-        RAVELOG_DEBUG_FORMAT("env=%d, measured %d checkmanips; total exectime=%.15e; time/iter=%.15e", GetEnv()->GetId()%_nCallsCheckManip%_totalTimeCheckManip%(_nCallsCheckManip == 0 ? 0 : _totalTimeCheckManip/_nCallsCheckManip));
-        RAVELOG_DEBUG_FORMAT("env=%d, measured %d checkpathallconstraints; total exectime=%.15e; time/iter=%.15e", GetEnv()->GetId()%_nCallsCheckPathAllConstraints%_totalTimeCheckPathAllConstraints%(_nCallsCheckPathAllConstraints == 0 ? 0 : _totalTimeCheckPathAllConstraints/_nCallsCheckPathAllConstraints));
-        RAVELOG_DEBUG_FORMAT("env=%d, measured %d checkpathallconstraints (in vain); total exectime=%.15e", GetEnv()->GetId()%_nCallsCheckPathAllConstraintsInVain%_totalTimeCheckPathAllConstraintsInVain);
+        dReal tTotalShortcutTime = 0.000001f*(float)(_tShortcutEnd - _tShortcutStart);
+        RAVELOG_INFO_FORMAT("env=%d, shortcutting time=%.15e; iter=%d; time/iter=%.15e", GetEnv()->GetId()%tTotalShortcutTime%numShortcuts%(tTotalShortcutTime/numShortcuts));
+        RAVELOG_INFO_FORMAT("env=%d, measured %d interpolations; total exectime=%.15e; time/iter=%.15e", GetEnv()->GetId()%_nCallsInterpolator%_totalTimeInterpolator%(_totalTimeInterpolator/_nCallsInterpolator));
+        RAVELOG_INFO_FORMAT("env=%d, measured %d checkmanips; total exectime=%.15e; time/iter=%.15e", GetEnv()->GetId()%_nCallsCheckManip%_totalTimeCheckManip%(_nCallsCheckManip == 0 ? 0 : _totalTimeCheckManip/_nCallsCheckManip));
+        RAVELOG_INFO_FORMAT("env=%d, measured %d checkpathallconstraints; total exectime=%.15e; time/iter=%.15e", GetEnv()->GetId()%_nCallsCheckPathAllConstraints%_totalTimeCheckPathAllConstraints%(_nCallsCheckPathAllConstraints == 0 ? 0 : _totalTimeCheckPathAllConstraints/_nCallsCheckPathAllConstraints));
+        RAVELOG_INFO_FORMAT("env=%d, measured %d checkpathallconstraints (in vain); total exectime=%.15e", GetEnv()->GetId()%_nCallsCheckPathAllConstraintsInVain%_totalTimeCheckPathAllConstraintsInVain);
 #endif
         return _ProcessPostPlanners(RobotBasePtr(), ptraj);
     }
@@ -2383,7 +2404,14 @@ protected:
                                                        // the two sampled time instances fall into the same two bins. If so, skip the rest of computation.
         std::vector<uint8_t>& vVisitedDiscretization = _vVisitedDiscretizationCache;
         vVisitedDiscretization.clear();
-        int nEndTimeDiscretization;
+        int nEndTimeDiscretization = (int)(tTotal*fiMinDiscretization) + 1;
+        if( nEndTimeDiscretization > 0x8000 ) {
+            // Cap the size of vVisitedDiscretization. This means if the trajectory is very long
+            // that the number of bins is too large, we just consider only the initial portion of
+            // the trajectory.
+            nEndTimeDiscretization = 0x8000;
+        }
+        vVisitedDiscretization.resize(nEndTimeDiscretization*nEndTimeDiscretization, 0);
 
 #ifdef SMOOTHER_PROGRESS_DEBUG
         uint32_t latestSuccessfulShortcutTimestamp = utils::GetMicroTime(), curtime;
@@ -2404,14 +2432,6 @@ protected:
                 break;
             }
             nItersFromPrevSuccessful += 1;
-
-            if( vVisitedDiscretization.size() == 0 ) {
-                nEndTimeDiscretization = (int)(tTotal*fiMinDiscretization) + 1;
-                // Limit the size of vVisitedDiscretization. If too large, then don't use it.
-                if( nEndTimeDiscretization <= 0x8000 ) {
-                    vVisitedDiscretization.resize(nEndTimeDiscretization*nEndTimeDiscretization, 0);
-                }
-            }
 
             // Sample t0 and t1. We could possibly add some heuristics here to get higher quality
             // shortcuts
@@ -2466,7 +2486,9 @@ protected:
 #endif
                 continue;
             }
-            if( vVisitedDiscretization.size() > 0 ) {
+#ifdef DISABLE_VVISITEDDISCRETIZATION
+#else
+            {
                 // Keep track of time slots that have already been previously checked (and failed)
                 int t0Index = t0*fiMinDiscretization;
                 int t1Index = t1*fiMinDiscretization;
@@ -2482,7 +2504,7 @@ protected:
                     }
                 }
 
-                if( _bmanipconstraints && _manipconstraintchecker ) {
+                if( 0 ) {//( _bmanipconstraints && _manipconstraintchecker ) {
                     // In case there are manipconstraints, we also mark neighbor pairs of timeindices as checked
                     for( int t0TestIndex = t0Index - 1; t0TestIndex < t0Index + 2; ++t0TestIndex ) {
                         for( int t1TestIndex = t1Index - 1; t1TestIndex < t1Index + 2; ++t1TestIndex ) {
@@ -2501,6 +2523,7 @@ protected:
                     }
                 }
             }
+#endif
 
             uint32_t iIterProgress = 0; // used for debugging purposes
 
@@ -3099,7 +3122,7 @@ protected:
 #endif
 
                 nTimeBasedConstraintsFailed = 0; // reset
-                vVisitedDiscretization.clear();
+                std::fill(vVisitedDiscretization.begin(), vVisitedDiscretization.end(), 0);
 
                 // Keep track of zero-velocity waypoints
                 dReal segmentTime = 0;
@@ -3191,6 +3214,9 @@ protected:
             f << shortcutprogress.str();
             RAVELOG_DEBUG_FORMAT("env=%d, shortcutprogress saved to %s", GetEnv()->GetId()%shortcutprogressfilename);
         }
+#endif
+#ifdef SMOOTHER_TIMING_DEBUG
+        _numShortcutIters = iters;
 #endif
 
         return numShortcuts;
@@ -3315,6 +3341,9 @@ protected:
 
 #ifdef SMOOTHER_TIMING_DEBUG
     // Statistics
+    uint32_t _tShortcutStart, _tShortcutEnd;
+    int _numShortcutIters;
+
     size_t _nCallsCheckManip;
     dReal _totalTimeCheckManip;
     uint32_t _tStartCheckManip, _tEndCheckManip;

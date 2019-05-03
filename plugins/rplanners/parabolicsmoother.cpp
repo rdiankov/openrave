@@ -505,7 +505,7 @@ public:
             RAVELOG_DEBUG_FORMAT("env=%d, after shortcutting: duration %.15e -> %.15e, diff = %.15e", GetEnv()->GetId()%dummyDur1%dummyDur2%(dummyDur1 - dummyDur2));
 
 #ifdef OPENRAVE_TIMING_DEBUGGING
-            RAVELOG_VERBOSE_FORMAT("calling checkmanipconstraints %d times, using %.15e sec. = %.15e sec./call", ncheckmanipconstraints%checkmaniptime%(checkmaniptime/ncheckmanipconstraints));
+            RAVELOG_INFO_FORMAT("env=%d, calling checkmanipconstraints %d times, using %.15e sec. = %.15e sec./call", GetEnv()->GetId()%ncheckmanipconstraints%checkmaniptime%(ncheckmanipconstraints == 0 ? 0 : checkmaniptime/ncheckmanipconstraints));
 #endif
 
             ++_progress._iteration;
@@ -1775,15 +1775,19 @@ protected:
         dReal tshortcuttotal = 0.000001f*(float)(tshortcutend - tshortcutstart);
 
         if (iters == numIters) {
-            RAVELOG_DEBUG_FORMAT("finished at shortcut iter=%d (normal exit), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",iters%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
+            RAVELOG_INFO_FORMAT("env=%d, finished at shortcut iter=%d (normal exit), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
         }
         else if (score/currentBestScore < cutoffRatio) {
-            RAVELOG_DEBUG_FORMAT("finished at shortcut iter=%d (current score falls below %.15e), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",iters%cutoffRatio%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
+            RAVELOG_INFO_FORMAT("env=%d, finished at shortcut iter=%d (current score falls below %.15e), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%cutoffRatio%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
         }
         else if (nItersFromPrevSuccessful > nCutoffIters) {
-            RAVELOG_DEBUG_FORMAT("finished at shortcut iter=%d (did not make progress in the last %d iterations), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",iters%nCutoffIters%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
+            RAVELOG_INFO_FORMAT("env=%d, finished at shortcut iter=%d (did not make progress in the last %d iterations), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%nCutoffIters%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
         }
-        RAVELOG_DEBUG_FORMAT("shortcutting time = %.15e s.; avg. time per iteration = %.15e s.", tshortcuttotal%(tshortcuttotal/numIters));
+        RAVELOG_INFO_FORMAT("env=%d, shortcutting time = %.15e s.; numiters = %d; avg. time per iteration = %.15e s.", GetEnv()->GetId()%tshortcuttotal%iters%(tshortcuttotal/iters));
+        RAVELOG_INFO_FORMAT("env=%d, measured %d slow-down loops, %.15e sec. = %.15e sec./loop", GetEnv()->GetId()%nslowdownloops%slowdownlooptime%(slowdownlooptime/nslowdownloops));
+        RAVELOG_INFO_FORMAT("env=%d, measured %d interpolations, %.15e sec. = %.15e sec./interpolation", GetEnv()->GetId()%ninterpolations%interpolationtime%(interpolationtime/ninterpolations));
+        RAVELOG_INFO_FORMAT("env=%d, measured %d checkings, %.15e sec. = %.15e sec./check", GetEnv()->GetId()%nchecks%checktime%(checktime/nchecks));
+#endif
         _DumpDynamicPath(dynamicpath, Level_Verbose, fileindex, 1);
 
         if (IS_DEBUGLEVEL(Level_Verbose)) {
@@ -1793,10 +1797,6 @@ protected:
             RAVELOG_DEBUG_FORMAT("shortcut progress is written to %s", shortcutprogressfilename);
         }
 
-        RAVELOG_DEBUG_FORMAT("measured %d slow-down loops, %.15e sec. = %.15e sec./loop", nslowdownloops%slowdownlooptime%(slowdownlooptime/nslowdownloops));
-        RAVELOG_DEBUG_FORMAT("measured %d interpolations, %.15e sec. = %.15e sec./interpolation", ninterpolations%interpolationtime%(interpolationtime/ninterpolations));
-        RAVELOG_DEBUG_FORMAT("measured %d checkings, %.15e sec. = %.15e sec./check", nchecks%checktime%(checktime/nchecks));
-#endif
         return shortcuts;
     }
 
@@ -1834,6 +1834,14 @@ protected:
         }
         dReal originalEndTime = endTime;
         int nEndTimeDiscretization = (int)(endTime*fiMinDiscretization)+1;
+        if( nEndTimeDiscretization > 0x8000 ) {
+            // Cap the size of vVisitedDiscretization. This means if the trajectory is very long
+            // that the number of bins is too large, we just consider only the initial portion of
+            // the trajectory.
+            nEndTimeDiscretization = 0x8000;
+        }
+        vVisitedDiscretization.resize(nEndTimeDiscretization*nEndTimeDiscretization, 0);
+
         dReal dummyEndTime;
 
         /*
@@ -1913,14 +1921,6 @@ protected:
             if (nItersFromPrevSuccessful + nNumTimeBasedConstraintsFailed > nCutoffIters) { // the same time based constraints can fail all the time meaning that the trajectory is already pretty optimal. This check makes smoother easier to stop when there's no improvement
                 // No progess for already nCutoffIters. Stop right away
                 break;
-            }
-
-            if( vVisitedDiscretization.size() == 0 ) {
-                // if nEndTimeDiscretization is too big, then just ignore vVisitedDiscretization
-                nEndTimeDiscretization = (int)(endTime*fiMinDiscretization) + 1;
-                if( nEndTimeDiscretization <= 0x8000 ) {
-                    vVisitedDiscretization.resize(nEndTimeDiscretization*nEndTimeDiscretization,0);
-                }
             }
 
             dReal t1, t2;
@@ -2462,7 +2462,8 @@ protected:
                     endTime += ramps[i].endTime;
                 }
                 dReal diff = dummyEndTime - endTime;
-                vVisitedDiscretization.clear(); // have to clear so that can recreate the visited nodes
+
+                std::fill(vVisitedDiscretization.begin(), vVisitedDiscretization.end(), 0); // have to clear so that can recreate the visited nodes
 #ifdef SMOOTHER_PROGRESS_DEBUG
                 RAVELOG_DEBUG_FORMAT("env=%d: shortcut iter=%d/%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%numIters%numslowdowns%dummyEndTime%endTime%diff);
 #endif
@@ -2544,22 +2545,20 @@ protected:
             RAVELOG_DEBUG_FORMAT("env=%d, finished at shortcut iter=%d (did not make progress in the last %d iterations), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%nCutoffIters%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
         }
 #ifdef OPENRAVE_TIMING_DEBUGGING
-        RAVELOG_DEBUG_FORMAT("shortcutting time = %.15e s.; avg. time per iteration = %.15e s.", tshortcuttotal%(tshortcuttotal/numIters));
-        _DumpDynamicPath(dynamicpath, Level_Verbose, fileindex, 1);
-
+        RAVELOG_INFO_FORMAT("env=%d, shortcutting time = %.15e s.; numiters = %d; avg. time per iteration = %.15e s.", GetEnv()->GetId()%tshortcuttotal%iters%(tshortcuttotal/iters));
+        RAVELOG_INFO_FORMAT("env=%d, measured %d slow-down loops, %.15e sec. = %.15e sec./loop", GetEnv()->GetId()%nslowdownloops%slowdownlooptime%(slowdownlooptime/nslowdownloops));
+        RAVELOG_INFO_FORMAT("env=%d, measured %d interpolations, %.15e sec. = %.15e sec./interpolation", GetEnv()->GetId()%ninterpolations%interpolationtime%(interpolationtime/ninterpolations));
+        RAVELOG_INFO_FORMAT("env=%d, measured %d checkings, %.15e sec. = %.15e sec./check", GetEnv()->GetId()%nchecks%checktime%(checktime/nchecks));
+#endif
+        _DumpDynamicPath(dynamicpath, _dumplevel, fileindex, 1);
         // Record the progress if in Verbose level
         if (IS_DEBUGLEVEL(Level_Verbose)) {
             std::string shortcutprogressfilename = str(boost::format("%s/shortcutprogress%d.xml")%RaveGetHomeDirectory()%fileindex);
             std::ofstream f(shortcutprogressfilename.c_str());
             f << shortcutprogress.str();
-            RAVELOG_DEBUG_FORMAT("shortcut progress is written to %s", shortcutprogressfilename);
+            RAVELOG_VERBOSE_FORMAT("shortcut progress is written to %s", shortcutprogressfilename);
         }
 
-        RAVELOG_DEBUG_FORMAT("env=%d, measured %d slow-down loops, %.15e sec. = %.15e sec./loop", GetEnv()->GetId()%nslowdownloops%slowdownlooptime%(slowdownlooptime/nslowdownloops));
-        RAVELOG_DEBUG_FORMAT("env=%d, measured %d interpolations, %.15e sec. = %.15e sec./interpolation", GetEnv()->GetId()%ninterpolations%interpolationtime%(interpolationtime/ninterpolations));
-        RAVELOG_DEBUG_FORMAT("env=%d, measured %d checkings, %.15e sec. = %.15e sec./check", GetEnv()->GetId()%nchecks%checktime%(checktime/nchecks));
-#endif
-        _DumpDynamicPath(dynamicpath, _dumplevel, fileindex, 1);
         return shortcuts;
     }
 

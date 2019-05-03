@@ -285,8 +285,28 @@ bool ParabolicInterpolator::ComputeArbitraryVelNDTrajectory(const std::vector<dR
 bool ParabolicInterpolator::_RecomputeNDTrajectoryFixedDuration(std::vector<ParabolicCurve>& curvesVect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, size_t maxIndex, bool tryHarder)
 {
     dReal newDuration = curvesVect[maxIndex].GetDuration();
-    bool isPrevDurationSafe = true;
-    if( tryHarder ) {
+    bool bSuccess = true;
+    size_t iFailingDOF;
+    for (size_t idof = 0; idof < _ndof; ++idof) {
+        if( idof == maxIndex ) {
+            //RAVELOG_VERBOSE_FORMAT("joint %d is already the slowest DOF, continue to the next DOF (if any)", idof);
+            continue;
+        }
+        if( !Compute1DTrajectoryFixedDuration(curvesVect[idof].GetX0(), curvesVect[idof].GetX1(), curvesVect[idof].GetV0(), curvesVect[idof].GetV1(), vmVect[idof], amVect[idof], newDuration, _cacheCurve) ) {
+            bSuccess = false;
+            iFailingDOF = idof;
+            break;
+        }
+        // Store the result back in the input curvesVect
+        curvesVect[idof] = _cacheCurve;
+    }
+
+    if( !bSuccess ) {
+        if( !tryHarder ) {
+            RAVELOG_VERBOSE_FORMAT("env=%d, Failed for joint %d. Info: x0=%.15e; x1=%.15e; v0=%.15e; v1=%.15e; duration=%.15e; vm=%.15e; am=%.15e", _envid%iFailingDOF%curvesVect[iFailingDOF].GetX0()%curvesVect[iFailingDOF].GetX1()%curvesVect[iFailingDOF].GetV0()%curvesVect[iFailingDOF].GetV1()%newDuration%vmVect[iFailingDOF]%amVect[iFailingDOF]);
+            return bSuccess;
+        }
+
         for (size_t idof = 0; idof < _ndof; ++idof) {
             dReal tBound;
             if( !_CalculateLeastUpperBoundInoperavtiveTimeInterval(curvesVect[idof].GetX0(), curvesVect[idof].GetX1(), curvesVect[idof].GetV0(), curvesVect[idof].GetV1(), vmVect[idof], amVect[idof], tBound) ) {
@@ -294,28 +314,24 @@ bool ParabolicInterpolator::_RecomputeNDTrajectoryFixedDuration(std::vector<Para
             }
             if( tBound > newDuration ) {
                 newDuration = tBound;
-                isPrevDurationSafe = false;
             }
         }
-    }
-
-    if( !isPrevDurationSafe ) {
         RAVELOG_VERBOSE_FORMAT("env=%d, Desired trajectory duration changed: %.15e --> %.15e; diff = %.15e", _envid%curvesVect[maxIndex].GetDuration()%newDuration%(newDuration - curvesVect[maxIndex].GetDuration()));
-    }
-
-    for (size_t idof = 0; idof < _ndof; ++idof) {
-        if( isPrevDurationSafe && idof == maxIndex ) {
-            //RAVELOG_VERBOSE_FORMAT("joint %d is already the slowest DOF, continue to the next DOF (if any)", idof);
-            continue;
+        bSuccess = true;
+        for (size_t idof = 0; idof < _ndof; ++idof) {
+            if( !Compute1DTrajectoryFixedDuration(curvesVect[idof].GetX0(), curvesVect[idof].GetX1(), curvesVect[idof].GetV0(), curvesVect[idof].GetV1(), vmVect[idof], amVect[idof], newDuration, _cacheCurve) ) {
+                bSuccess = false;
+                iFailingDOF = idof;
+                break;
+            }
+            // Store the result back in the input curvesVect
+            curvesVect[idof] = _cacheCurve;
         }
-        if( !Compute1DTrajectoryFixedDuration(curvesVect[idof].GetX0(), curvesVect[idof].GetX1(), curvesVect[idof].GetV0(), curvesVect[idof].GetV1(), vmVect[idof], amVect[idof], newDuration, _cacheCurve) ) {
-            return false;
+        if( !bSuccess ) {
+            RAVELOG_VERBOSE_FORMAT("env=%d, Failed for joint %d. Info: x0=%.15e; x1=%.15e; v0=%.15e; v1=%.15e; duration=%.15e; vm=%.15e; am=%.15e", _envid%iFailingDOF%curvesVect[iFailingDOF].GetX0()%curvesVect[iFailingDOF].GetX1()%curvesVect[iFailingDOF].GetV0()%curvesVect[iFailingDOF].GetV1()%newDuration%vmVect[iFailingDOF]%amVect[iFailingDOF]);
         }
-        // Store the result back in the input curvesVect
-        curvesVect[idof] = _cacheCurve;
     }
-
-    return true;
+    return bSuccess;
 }
 
 bool ParabolicInterpolator::ComputeNDTrajectoryFixedDuration(const std::vector<dReal>&x0Vect, const std::vector<dReal>&x1Vect, const std::vector<dReal>&v0Vect, const std::vector<dReal>&v1Vect, dReal duration, const std::vector<dReal>&xminVect, const std::vector<dReal>&xmaxVect, const std::vector<dReal>&vmVect, const std::vector<dReal>&amVect, std::vector<RampND>&rampndVectOut)
