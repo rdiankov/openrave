@@ -36,6 +36,13 @@ ParabolicInterpolator::ParabolicInterpolator(size_t ndof, int envid)
     _cacheAVect.resize(_ndof);
     _cacheCurvesVect.resize(_ndof);
     _envid = envid;
+
+    if( _cacheRampsVect.capacity() < 5 ) {
+        _cacheRampsVect.reserve(5);
+    }
+    if( _cacheRampsVect2.capacity() < 3 ) {
+        _cacheRampsVect2.reserve(3);
+    }
 }
 
 void ParabolicInterpolator::Initialize(size_t ndof, int envid)
@@ -599,7 +606,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
         ba1 = SolveBrakeAccel(x1, -v1, xmin);
     }
 
-    _cacheRampsVect.resize(0);
+    bool bSuccess = false;
 
     if( (bt0 < duration) && (Abs(ba0) <= am + g_fRampEpsilon) ) {
         RAVELOG_VERBOSE("Case IIA: checking...");
@@ -608,6 +615,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
                 _cacheCurve.GetPeaks(bmin, bmax);
                 if( (bmin >= xmin - g_fRampEpsilon) && (bmax <= xmax + g_fRampEpsilon) ) {
                     RAVELOG_VERBOSE("Case IIA: passed");
+                    bSuccess = true;
                     _cacheRampsVect.resize(1 + _cacheCurve.GetRamps().size());
                     _cacheRampsVect[0].Initialize(v0, ba0, bt0, x0);
                     for (size_t iramp = 0; iramp < _cacheCurve.GetRamps().size(); ++iramp) {
@@ -625,6 +633,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
                 _cacheCurve.GetPeaks(bmin, bmax);
                 if( (bmin >= xmin - g_fRampEpsilon) && (bmax <= xmax + g_fRampEpsilon) ) {
                     RAVELOG_VERBOSE("Case IIB: passed");
+                    bSuccess = true;
                     _cacheRampsVect.resize(1 + _cacheCurve.GetRamps().size());
                     for (size_t iramp = 0; iramp < _cacheCurve.GetRamps().size(); ++iramp) {
                         _cacheRampsVect[iramp] = _cacheCurve.GetRamp(iramp);
@@ -638,6 +647,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
     if( bx0 == bx1 ) {
         if( (bt0 + bt1 < duration) && (Max(Abs(ba0), Abs(ba1)) <= am + g_fRampEpsilon) ) {
             RAVELOG_VERBOSE("Case III");
+            bSuccess = true;
             _cacheRampsVect.resize(3);
             _cacheRampsVect[0].Initialize(v0, ba0, bt0, x0);
             _cacheRampsVect[1].Initialize(0, 0, duration - (bt0 + bt1));
@@ -652,6 +662,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
                     _cacheCurve.GetPeaks(bmin, bmax);
                     if( (bmin >= xmin - g_fRampEpsilon) && (bmax <= xmax + g_fRampEpsilon) ) {
                         RAVELOG_VERBOSE("Case IV: passed");
+                        bSuccess = true;
                         _cacheRampsVect.resize(2 + _cacheCurve.GetRamps().size());
                         _cacheRampsVect[0].Initialize(v0, ba0, bt0, x0);
                         for (size_t iramp = 0; iramp < _cacheCurve.GetRamps().size(); ++iramp) {
@@ -664,7 +675,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
         }
     }
 
-    if( _cacheRampsVect.empty() ) {
+    if( !bSuccess ) {
         RAVELOG_VERBOSE_FORMAT("env=%d, Cannot solve for a bounded trajectory. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", _envid%x0%x1%v0%v1%duration%xmin%xmax%vm%am);
         return false;
     }
