@@ -97,7 +97,7 @@ public:
                 _vswitchtimes[index] = switchtime;
             }
 
-            // Check boundary configurations
+            // Check configurations at switch times first
             rampndVect[0].GetX0Vect(q0);
             rampndVect[0].GetV0Vect(dq0);
             RampOptimizer::CheckReturn ret0 = feas->ConfigFeasible2(q0, dq0, options);
@@ -105,11 +105,22 @@ public:
                 return ret0;
             }
 
-            rampndVect.back().GetX1Vect(q1);
-            rampndVect.back().GetV1Vect(dq1);
-            RampOptimizer::CheckReturn ret1 = feas->ConfigFeasible2(q1, dq1, options);
-            if( ret1.retcode != 0 ) {
-                return ret1;
+            _vsearchsegments.resize(rampndVect.size(), 0);
+            for (size_t isegment = 0; isegment < rampndVect.size(); ++isegment) {
+                _vsearchsegments[isegment] = isegment;
+            }
+            // Just in case, check the middle config first.
+            int midindex = _vsearchsegments.size() / 2; // midindex
+            std::swap(_vsearchsegments[0], _vsearchsegments[midindex]);
+            for (size_t j = 0; j < _vsearchsegments.size(); ++j) {
+                rampndVect[_vsearchsegments[j]].GetX1Vect(q1);
+                if( feas->NeedDerivativeForFeasibility() ) {
+                    rampndVect[_vsearchsegments[j]].GetV1Vect(dq1);
+                }
+                RampOptimizer::CheckReturn ret1 = feas->ConfigFeasible2(q1, dq1, options);
+                if( ret1.retcode != 0 ) {
+                    return ret1;
+                }
             }
 
             rampndVectOut.resize(0);
