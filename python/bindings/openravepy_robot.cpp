@@ -19,6 +19,153 @@
 
 namespace openravepy {
 
+class PyManipulatorInfo
+{
+public:
+    PyManipulatorInfo() {
+        _tLocalTool = ReturnTransform(Transform());
+        _vChuckingDirection = numeric::array(boost::python::list());
+        _vdirection = toPyVector3(Vector(0,0,1));
+        _vGripperJointNames = boost::python::list();
+    }
+    PyManipulatorInfo(const RobotBase::ManipulatorInfo& info) {
+        _name = ConvertStringToUnicode(info._name);
+        _sBaseLinkName = ConvertStringToUnicode(info._sBaseLinkName);
+        _sEffectorLinkName = ConvertStringToUnicode(info._sEffectorLinkName);
+        _tLocalTool = ReturnTransform(info._tLocalTool);
+        _vChuckingDirection = toPyArray(info._vChuckingDirection);
+        _vdirection = toPyVector3(info._vdirection);
+        _sIkSolverXMLId = info._sIkSolverXMLId;
+        boost::python::list vGripperJointNames;
+        FOREACHC(itname, info._vGripperJointNames) {
+            vGripperJointNames.append(ConvertStringToUnicode(*itname));
+        }
+        _vGripperJointNames = vGripperJointNames;
+    }
+
+    RobotBase::ManipulatorInfoPtr GetManipulatorInfo() const
+    {
+        RobotBase::ManipulatorInfoPtr pinfo(new RobotBase::ManipulatorInfo());
+        pinfo->_name = boost::python::extract<std::string>(_name);
+        pinfo->_sBaseLinkName = boost::python::extract<std::string>(_sBaseLinkName);
+        pinfo->_sEffectorLinkName = boost::python::extract<std::string>(_sEffectorLinkName);
+        pinfo->_tLocalTool = ExtractTransform(_tLocalTool);
+        pinfo->_vChuckingDirection = ExtractArray<dReal>(_vChuckingDirection);
+        pinfo->_vdirection = ExtractVector3(_vdirection);
+        pinfo->_sIkSolverXMLId = _sIkSolverXMLId;
+        pinfo->_vGripperJointNames = ExtractArray<std::string>(_vGripperJointNames);
+        return pinfo;
+    }
+
+    object _name, _sBaseLinkName, _sEffectorLinkName;
+    object _tLocalTool;
+    object _vChuckingDirection;
+    object _vdirection;
+    std::string _sIkSolverXMLId;
+    object _vGripperJointNames;
+};
+
+PyManipulatorInfoPtr toPyManipulatorInfo(const RobotBase::ManipulatorInfo& manipulatorinfo)
+{
+    return PyManipulatorInfoPtr(new PyManipulatorInfo(manipulatorinfo));
+}
+
+class PyAttachedSensorInfo
+{
+public:
+    PyAttachedSensorInfo() {
+    }
+    PyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& info) {
+        _name = ConvertStringToUnicode(info._name);
+        _linkname = ConvertStringToUnicode(info._linkname);
+        _trelative = ReturnTransform(info._trelative);
+        _sensorname = ConvertStringToUnicode(info._sensorname);
+        _sensorgeometry = toPySensorGeometry(info._sensorgeometry);
+    }
+
+    RobotBase::AttachedSensorInfoPtr GetAttachedSensorInfo() const
+    {
+        RobotBase::AttachedSensorInfoPtr pinfo(new RobotBase::AttachedSensorInfo());
+        pinfo->_name = boost::python::extract<std::string>(_name);
+        pinfo->_linkname = boost::python::extract<std::string>(_linkname);
+        pinfo->_trelative = ExtractTransform(_trelative);
+        pinfo->_sensorname = boost::python::extract<std::string>(_sensorname);
+        pinfo->_sensorgeometry = _sensorgeometry->GetGeometry();
+        return pinfo;
+    }
+
+    object _name, _linkname;
+    object _trelative;
+    object _sensorname;
+    PySensorGeometryPtr _sensorgeometry;
+};
+
+PyAttachedSensorInfoPtr toPyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& attachedSensorinfo)
+{
+    return PyAttachedSensorInfoPtr(new PyAttachedSensorInfo(attachedSensorinfo));
+}
+
+class PyConnectedBodyInfo
+{
+public:
+    PyConnectedBodyInfo() {
+    }
+    PyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& info, PyEnvironmentBasePtr pyenv)
+    {
+        _name = ConvertStringToUnicode(info._name);
+        _linkname = ConvertStringToUnicode(info._linkname);
+        _trelative = ReturnTransform(info._trelative);
+        _url = ConvertStringToUnicode(info._url);
+
+        boost::python::list linkInfos;
+        FOREACH(itlinkinfo, info._vLinkInfos) {
+            linkInfos.append(toPyLinkInfo(**itlinkinfo));
+        }
+        _linkInfos = linkInfos;
+
+        boost::python::list jointInfos;
+        FOREACH(itjointinfo, info._vJointInfos) {
+            jointInfos.append(toPyJointInfo(**itjointinfo, pyenv));
+        }
+        _jointInfos = jointInfos;
+
+        boost::python::list manipulatorInfos;
+        FOREACH(itmanipulatorinfo, info._vManipulatorInfos) {
+            manipulatorInfos.append(toPyManipulatorInfo(**itmanipulatorinfo));
+        }
+        _manipulatorInfos = manipulatorInfos;
+
+        boost::python::list attachedSensorInfos;
+        FOREACH(itattachedSensorinfo, info._vAttachedSensorInfos) {
+            attachedSensorInfos.append(toPyAttachedSensorInfo(**itattachedSensorinfo));
+        }
+        _attachedSensorInfos = attachedSensorInfos;
+    }
+
+    RobotBase::ConnectedBodyInfoPtr GetConnectedBodyInfo() const
+    {
+        RobotBase::ConnectedBodyInfoPtr pinfo(new RobotBase::ConnectedBodyInfo());
+        pinfo->_name = boost::python::extract<std::string>(_name);
+        pinfo->_linkname = boost::python::extract<std::string>(_linkname);
+        pinfo->_trelative = ExtractTransform(_trelative);
+        pinfo->_url = boost::python::extract<std::string>(_url);
+        // extract all the infos
+        return pinfo;
+    }
+
+    object _name;
+    object _linkname;
+    object _trelative;
+    object _url;
+    object _linkInfos;
+    object _jointInfos;
+    object _manipulatorInfos;
+    object _attachedSensorInfos;
+
+};
+typedef boost::shared_ptr<PyConnectedBodyInfo> PyConnectedBodyInfoPtr;
+
+
 class PyRobotBase : public PyKinBody
 {
 protected:
@@ -27,53 +174,6 @@ public:
     RobotBasePtr GetRobot() {
         return _probot;
     }
-
-    class PyManipulatorInfo
-    {
-public:
-        PyManipulatorInfo() {
-            _tLocalTool = ReturnTransform(Transform());
-            _vChuckingDirection = numeric::array(boost::python::list());
-            _vdirection = toPyVector3(Vector(0,0,1));
-            _vGripperJointNames = boost::python::list();
-        }
-        PyManipulatorInfo(const RobotBase::ManipulatorInfo& info) {
-            _name = ConvertStringToUnicode(info._name);
-            _sBaseLinkName = ConvertStringToUnicode(info._sBaseLinkName);
-            _sEffectorLinkName = ConvertStringToUnicode(info._sEffectorLinkName);
-            _tLocalTool = ReturnTransform(info._tLocalTool);
-            _vChuckingDirection = toPyArray(info._vChuckingDirection);
-            _vdirection = toPyVector3(info._vdirection);
-            _sIkSolverXMLId = info._sIkSolverXMLId;
-            boost::python::list vGripperJointNames;
-            FOREACHC(itname, info._vGripperJointNames) {
-                vGripperJointNames.append(ConvertStringToUnicode(*itname));
-            }
-            _vGripperJointNames = vGripperJointNames;
-        }
-
-        RobotBase::ManipulatorInfoPtr GetManipulatorInfo() const
-        {
-            RobotBase::ManipulatorInfoPtr pinfo(new RobotBase::ManipulatorInfo());
-            pinfo->_name = boost::python::extract<std::string>(_name);
-            pinfo->_sBaseLinkName = boost::python::extract<std::string>(_sBaseLinkName);
-            pinfo->_sEffectorLinkName = boost::python::extract<std::string>(_sEffectorLinkName);
-            pinfo->_tLocalTool = ExtractTransform(_tLocalTool);
-            pinfo->_vChuckingDirection = ExtractArray<dReal>(_vChuckingDirection);
-            pinfo->_vdirection = ExtractVector3(_vdirection);
-            pinfo->_sIkSolverXMLId = _sIkSolverXMLId;
-            pinfo->_vGripperJointNames = ExtractArray<std::string>(_vGripperJointNames);
-            return pinfo;
-        }
-
-        object _name, _sBaseLinkName, _sEffectorLinkName;
-        object _tLocalTool;
-        object _vChuckingDirection;
-        object _vdirection;
-        std::string _sIkSolverXMLId;
-        object _vGripperJointNames;
-    };
-    typedef boost::shared_ptr<PyManipulatorInfo> PyManipulatorInfoPtr;
 
     class PyManipulator
     {
@@ -645,37 +745,6 @@ public:
         return !pmanip ? PyManipulatorPtr() : PyManipulatorPtr(new PyManipulator(pmanip,_pyenv));
     }
 
-    class PyAttachedSensorInfo
-    {
-public:
-        PyAttachedSensorInfo() {
-        }
-        PyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& info) {
-            _name = ConvertStringToUnicode(info._name);
-            _linkname = ConvertStringToUnicode(info._linkname);
-            _trelative = ReturnTransform(info._trelative);
-            _sensorname = ConvertStringToUnicode(info._sensorname);
-            _sensorgeometry = toPySensorGeometry(info._sensorgeometry);
-        }
-
-        RobotBase::AttachedSensorInfoPtr GetAttachedSensorInfo() const
-        {
-            RobotBase::AttachedSensorInfoPtr pinfo(new RobotBase::AttachedSensorInfo());
-            pinfo->_name = boost::python::extract<std::string>(_name);
-            pinfo->_linkname = boost::python::extract<std::string>(_linkname);
-            pinfo->_trelative = ExtractTransform(_trelative);
-            pinfo->_sensorname = boost::python::extract<std::string>(_sensorname);
-            pinfo->_sensorgeometry = _sensorgeometry->GetGeometry();
-            return pinfo;
-        }
-
-        object _name, _linkname;
-        object _trelative;
-        object _sensorname;
-        PySensorGeometryPtr _sensorgeometry;
-    };
-    typedef boost::shared_ptr<PyAttachedSensorInfo> PyAttachedSensorInfoPtr;
-
     class PyAttachedSensor
     {
         RobotBase::AttachedSensorPtr _pattached;
@@ -761,46 +830,19 @@ public:
         return !pattachedsensor ? PyAttachedSensorPtr() : PyAttachedSensorPtr(new PyAttachedSensor(pattachedsensor, _pyenv));
     }
 
-    class PyConnectedBodyInfo
-    {
-public:
-        PyConnectedBodyInfo() {
-        }
-        PyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& info) {
-            _name = ConvertStringToUnicode(info._name);
-            _linkname = ConvertStringToUnicode(info._linkname);
-            _trelative = ReturnTransform(info._trelative);
-        }
-
-        RobotBase::ConnectedBodyInfoPtr GetConnectedBodyInfo() const
-        {
-            RobotBase::ConnectedBodyInfoPtr pinfo(new RobotBase::ConnectedBodyInfo());
-            pinfo->_name = boost::python::extract<std::string>(_name);
-            pinfo->_linkname = boost::python::extract<std::string>(_linkname);
-            pinfo->_trelative = ExtractTransform(_trelative);
-            return pinfo;
-        }
-
-        object _name;
-        object _linkname;
-        object _trelative;
-
-    };
-    typedef boost::shared_ptr<PyConnectedBodyInfo> PyConnectedBodyInfoPtr;
-
     class PyConnectedBody {
         RobotBase::ConnectedBodyPtr _pconnected;
         PyEnvironmentBasePtr _pyenv;
 public:
         PyConnectedBody(RobotBase::ConnectedBodyPtr pconnected, PyEnvironmentBasePtr pyenv) : _pconnected(pconnected),
-                                                                                                 _pyenv(pyenv) {
+            _pyenv(pyenv) {
         }
 
         virtual ~PyConnectedBody() {
         }
 
         object GetInfo() {
-            return object(PyConnectedBodyInfoPtr(new PyConnectedBodyInfo(_pconnected->GetInfo())));
+            return object(PyConnectedBodyInfoPtr(new PyConnectedBodyInfo(_pconnected->GetInfo(), _pyenv)));
         }
 
         bool SetActive(bool active) {
@@ -809,6 +851,49 @@ public:
 
         bool IsActive() {
             return _pconnected->IsActive();
+        }
+        object GetTransform() const {
+            return ReturnTransform(_pconnected->GetTransform());
+        }
+        object GetTransformPose() const {
+            return toPyArray(_pconnected->GetTransform());
+        }
+
+        object GetRelativeTransform() const {
+            return ReturnTransform(_pconnected->GetRelativeTransform());
+        }
+        object GetRelativeTransformPose() const {
+            return toPyArray(_pconnected->GetRelativeTransform());
+        }
+
+        void SetLinkEnable(bool enable) {
+            _pconnected->SetLinkEnable(enable);
+        }
+
+        void SetLinkVisible(bool visible) {
+            _pconnected->SetLinkVisible(visible);
+        }
+
+        object GetResolvedLinks()
+        {
+            boost::python::list olinks;
+            std::vector<KinBody::LinkPtr> vlinks;
+            _pconnected->GetResolvedLinks(vlinks);
+            FOREACH(itlink, vlinks) {
+                olinks.append(toPyLink(*itlink,_pyenv));
+            }
+            return olinks;
+        }
+
+        object GetResolvedJoints()
+        {
+            boost::python::list ojoints;
+            std::vector<KinBody::JointPtr> vjoints;
+            _pconnected->GetResolvedJoints(vjoints);
+            FOREACH(itjoint, vjoints) {
+                ojoints.append(toPyJoint(*itjoint, _pyenv));
+            }
+            return ojoints;
         }
 
         string __repr__() {
@@ -951,11 +1036,6 @@ public:
         return PyManipulatorPtr();
     }
 
-    PyManipulatorPtr SetActiveManipulator(int index) {
-        RAVELOG_WARN("SetActiveManipulator(int) is deprecated\n");
-        _probot->SetActiveManipulator(index);
-        return GetActiveManipulator();
-    }
     PyManipulatorPtr SetActiveManipulator(const std::string& manipname) {
         _probot->SetActiveManipulator(manipname);
         return GetActiveManipulator();
@@ -967,10 +1047,7 @@ public:
     PyManipulatorPtr GetActiveManipulator() {
         return _GetManipulator(_probot->GetActiveManipulator());
     }
-    int GetActiveManipulatorIndex() const {
-        RAVELOG_WARN("GetActiveManipulatorIndex is deprecated\n");
-        return _probot->GetActiveManipulatorIndex();
-    }
+
     PyManipulatorPtr AddManipulator(PyManipulatorInfoPtr pmanipinfo, bool removeduplicate=false) {
         return _GetManipulator(_probot->AddManipulator(*pmanipinfo->GetManipulatorInfo(), removeduplicate));
     }
@@ -1441,11 +1518,11 @@ public:
 class ManipulatorInfo_pickle_suite : public pickle_suite
 {
 public:
-    static boost::python::tuple getstate(const PyRobotBase::PyManipulatorInfo& r)
+    static boost::python::tuple getstate(const PyManipulatorInfo& r)
     {
         return boost::python::make_tuple(r._name, r._sBaseLinkName, r._sEffectorLinkName, r._tLocalTool, r._vChuckingDirection, r._vdirection, r._sIkSolverXMLId, r._vGripperJointNames);
     }
-    static void setstate(PyRobotBase::PyManipulatorInfo& r, boost::python::tuple state) {
+    static void setstate(PyManipulatorInfo& r, boost::python::tuple state) {
         r._name = state[0];
         r._sBaseLinkName = state[1];
         r._sEffectorLinkName = state[2];
@@ -1535,31 +1612,36 @@ void init_openravepy_robot()
     ;
 
 
-    object manipulatorinfo = class_<PyRobotBase::PyManipulatorInfo, boost::shared_ptr<PyRobotBase::PyManipulatorInfo> >("ManipulatorInfo", DOXY_CLASS(RobotBase::ManipulatorInfo))
-                             .def_readwrite("_name",&PyRobotBase::PyManipulatorInfo::_name)
-                             .def_readwrite("_sBaseLinkName",&PyRobotBase::PyManipulatorInfo::_sBaseLinkName)
-                             .def_readwrite("_sEffectorLinkName",&PyRobotBase::PyManipulatorInfo::_sEffectorLinkName)
-                             .def_readwrite("_tLocalTool",&PyRobotBase::PyManipulatorInfo::_tLocalTool)
-                             .def_readwrite("_vChuckingDirection",&PyRobotBase::PyManipulatorInfo::_vChuckingDirection)
-                             .def_readwrite("_vClosingDirection",&PyRobotBase::PyManipulatorInfo::_vChuckingDirection) // back compat
-                             .def_readwrite("_vdirection",&PyRobotBase::PyManipulatorInfo::_vdirection)
-                             .def_readwrite("_sIkSolverXMLId",&PyRobotBase::PyManipulatorInfo::_sIkSolverXMLId)
-                             .def_readwrite("_vGripperJointNames",&PyRobotBase::PyManipulatorInfo::_vGripperJointNames)
+    object manipulatorinfo = class_<PyManipulatorInfo, boost::shared_ptr<PyManipulatorInfo> >("ManipulatorInfo", DOXY_CLASS(RobotBase::ManipulatorInfo))
+                             .def_readwrite("_name",&PyManipulatorInfo::_name)
+                             .def_readwrite("_sBaseLinkName",&PyManipulatorInfo::_sBaseLinkName)
+                             .def_readwrite("_sEffectorLinkName",&PyManipulatorInfo::_sEffectorLinkName)
+                             .def_readwrite("_tLocalTool",&PyManipulatorInfo::_tLocalTool)
+                             .def_readwrite("_vChuckingDirection",&PyManipulatorInfo::_vChuckingDirection)
+                             .def_readwrite("_vClosingDirection",&PyManipulatorInfo::_vChuckingDirection) // back compat
+                             .def_readwrite("_vdirection",&PyManipulatorInfo::_vdirection)
+                             .def_readwrite("_sIkSolverXMLId",&PyManipulatorInfo::_sIkSolverXMLId)
+                             .def_readwrite("_vGripperJointNames",&PyManipulatorInfo::_vGripperJointNames)
                              .def_pickle(ManipulatorInfo_pickle_suite())
     ;
 
-    object attachedsensorinfo = class_<PyRobotBase::PyAttachedSensorInfo, boost::shared_ptr<PyRobotBase::PyAttachedSensorInfo> >("AttachedSensorInfo", DOXY_CLASS(RobotBase::AttachedSensorInfo))
-                                .def_readwrite("_name", &PyRobotBase::PyAttachedSensorInfo::_name)
-                                .def_readwrite("_linkname", &PyRobotBase::PyAttachedSensorInfo::_linkname)
-                                .def_readwrite("_trelative", &PyRobotBase::PyAttachedSensorInfo::_trelative)
-                                .def_readwrite("_sensorname", &PyRobotBase::PyAttachedSensorInfo::_sensorname)
-                                .def_readwrite("_sensorgeometry", &PyRobotBase::PyAttachedSensorInfo::_sensorgeometry)
+    object attachedsensorinfo = class_<PyAttachedSensorInfo, boost::shared_ptr<PyAttachedSensorInfo> >("AttachedSensorInfo", DOXY_CLASS(RobotBase::AttachedSensorInfo))
+                                .def_readwrite("_name", &PyAttachedSensorInfo::_name)
+                                .def_readwrite("_linkname", &PyAttachedSensorInfo::_linkname)
+                                .def_readwrite("_trelative", &PyAttachedSensorInfo::_trelative)
+                                .def_readwrite("_sensorname", &PyAttachedSensorInfo::_sensorname)
+                                .def_readwrite("_sensorgeometry", &PyAttachedSensorInfo::_sensorgeometry)
     ;
 
-    object connectedbodyinfo = class_<PyRobotBase::PyConnectedBodyInfo, boost::shared_ptr<PyRobotBase::PyConnectedBodyInfo> >("ConnectedBodyInfo", DOXY_CLASS(RobotBase::ConnectedBodyInfo))
-                                .def_readwrite("_name", &PyRobotBase::PyConnectedBodyInfo::_name)
-                                .def_readwrite("_linkname", &PyRobotBase::PyConnectedBodyInfo::_linkname)
-                                .def_readwrite("_trelative", &PyRobotBase::PyConnectedBodyInfo::_trelative)
+    object connectedbodyinfo = class_<PyConnectedBodyInfo, boost::shared_ptr<PyConnectedBodyInfo> >("ConnectedBodyInfo", DOXY_CLASS(RobotBase::ConnectedBodyInfo))
+                               .def_readwrite("_name", &PyConnectedBodyInfo::_name)
+                               .def_readwrite("_linkname", &PyConnectedBodyInfo::_linkname)
+                               .def_readwrite("_trelative", &PyConnectedBodyInfo::_trelative)
+                               .def_readwrite("_url", &PyConnectedBodyInfo::_url)
+                               .def_readwrite("_linkInfos", &PyConnectedBodyInfo::_linkInfos)
+                               .def_readwrite("_jointInfos", &PyConnectedBodyInfo::_jointInfos)
+                               .def_readwrite("_manipulatorInfos", &PyConnectedBodyInfo::_manipulatorInfos)
+                               .def_readwrite("_attachedSensorInfos", &PyConnectedBodyInfo::_attachedSensorInfos)
     ;
 
     {
@@ -1570,7 +1652,6 @@ void init_openravepy_robot()
         bool (PyRobotBase::*pgrab1)(PyKinBodyPtr) = &PyRobotBase::Grab;
         bool (PyRobotBase::*pgrab2)(PyKinBodyPtr,object) = &PyRobotBase::Grab;
 
-        PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator1)(int) = &PyRobotBase::SetActiveManipulator;
         PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator2)(const std::string&) = &PyRobotBase::SetActiveManipulator;
         PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator3)(PyRobotBase::PyManipulatorPtr) = &PyRobotBase::SetActiveManipulator;
 
@@ -1585,7 +1666,6 @@ void init_openravepy_robot()
                       .def("GetManipulators",GetManipulators1, DOXY_FN(RobotBase,GetManipulators))
                       .def("GetManipulators",GetManipulators2,args("manipname"), DOXY_FN(RobotBase,GetManipulators))
                       .def("GetManipulator",&PyRobotBase::GetManipulator,args("manipname"), "Return the manipulator whose name matches")
-                      .def("SetActiveManipulator",setactivemanipulator1,args("manipindex"), DOXY_FN(RobotBase,SetActiveManipulator "int"))
                       .def("SetActiveManipulator",setactivemanipulator2,args("manipname"), DOXY_FN(RobotBase,SetActiveManipulator "const std::string"))
                       .def("SetActiveManipulator",setactivemanipulator3,args("manip"), "Set the active manipulator given a pointer")
                       .def("GetActiveManipulator",&PyRobotBase::GetActiveManipulator, DOXY_FN(RobotBase,GetActiveManipulator))
@@ -1593,7 +1673,6 @@ void init_openravepy_robot()
                       .def("AddAttachedSensor",&PyRobotBase::AddAttachedSensor, AddAttachedSensor_overloads(args("attachedsensorinfo", "removeduplicate"), DOXY_FN(RobotBase,AddAttachedSensor)))
                       .def("RemoveAttachedSensor",&PyRobotBase::RemoveAttachedSensor, args("attsensor"), DOXY_FN(RobotBase,RemoveAttachedSensor))
                       .def("RemoveManipulator",&PyRobotBase::RemoveManipulator, args("manip"), DOXY_FN(RobotBase,RemoveManipulator))
-                      .def("GetActiveManipulatorIndex",&PyRobotBase::GetActiveManipulatorIndex, DOXY_FN(RobotBase,GetActiveManipulatorIndex))
                       .def("GetAttachedSensors",&PyRobotBase::GetAttachedSensors, DOXY_FN(RobotBase,GetAttachedSensors))
                       .def("GetAttachedSensor",&PyRobotBase::GetAttachedSensor,args("sensorname"), "Return the attached sensor whose name matches")
                       .def("GetSensors",&PyRobotBase::GetSensors)
@@ -1785,6 +1864,14 @@ void init_openravepy_robot()
         .def("GetInfo",&PyRobotBase::PyConnectedBody::GetInfo, DOXY_FN(RobotBase::ConnectedBody,GetInfo))
         .def("SetActive", &PyRobotBase::PyConnectedBody::SetActive, DOXY_FN(RobotBase::ConnectedBody,SetActive))
         .def("IsActive", &PyRobotBase::PyConnectedBody::IsActive, DOXY_FN(RobotBase::ConnectedBody,IsActive))
+        .def("SetLinkEnable", &PyRobotBase::PyConnectedBody::SetLinkEnable, DOXY_FN(RobotBase::ConnectedBody,SetLinkEnable))
+        .def("SetLinkVisible", &PyRobotBase::PyConnectedBody::SetLinkVisible, DOXY_FN(RobotBase::ConnectedBody,SetLinkVisible))
+        .def("GetTransform",&PyRobotBase::PyConnectedBody::GetTransform, DOXY_FN(RobotBase::ConnectedBody,GetTransform))
+        .def("GetTransformPose",&PyRobotBase::PyConnectedBody::GetTransformPose, DOXY_FN(RobotBase::ConnectedBody,GetTransformPose))
+        .def("GetRelativeTransform",&PyRobotBase::PyConnectedBody::GetRelativeTransform, DOXY_FN(RobotBase::ConnectedBody,GetRelativeTransform))
+        .def("GetRelativeTransformPose",&PyRobotBase::PyConnectedBody::GetRelativeTransformPose, DOXY_FN(RobotBase::ConnectedBody,GetRelativeTransformPose))
+        .def("GetResolvedLinks",&PyRobotBase::PyConnectedBody::GetResolvedLinks, DOXY_FN(RobotBase::ConnectedBody,GetResolvedLinks))
+        .def("GetResolvedJoints",&PyRobotBase::PyConnectedBody::GetResolvedJoints, DOXY_FN(RobotBase::ConnectedBody,GetResolvedJoints))
         .def("__str__",&PyRobotBase::PyConnectedBody::__str__)
         .def("__repr__",&PyRobotBase::PyConnectedBody::__repr__)
         .def("__unicode__",&PyRobotBase::PyConnectedBody::__unicode__)

@@ -789,7 +789,7 @@ public:
             FOREACH(itmanip,probot->_vecManipulators) {
                 _setInitialManipulators.insert(*itmanip);
             }
-            FOREACH(itsensor,probot->_vecSensors) {
+            FOREACH(itsensor,probot->_vecAttachedSensors) {
                 _setInitialSensors.insert(*itsensor);
             }
         }
@@ -858,7 +858,7 @@ public:
                         }
                     }
                 }
-                FOREACH(itsensor, probot->_vecSensors) {
+                FOREACH(itsensor, probot->_vecAttachedSensors) {
                     if( _setInitialSensors.find(*itsensor) == _setInitialSensors.end() ) {
                         (*itsensor)->_info._name = _prefix + (*itsensor)->_info._name;
                     }
@@ -3172,7 +3172,7 @@ public:
 
                     // check if a previous manipulator exists with the same name
                     RobotBase::ManipulatorPtr pnewmanip(new RobotBase::Manipulator(probot,manipinfo));
-                    FOREACH(itmanip,probot->GetManipulators()) {
+                    FOREACH(itmanip,probot->_vecManipulators) {
                         if( (*itmanip)->GetName() == manipinfo._name ) {
                             *itmanip = pnewmanip;
                             pnewmanip.reset();
@@ -3181,7 +3181,7 @@ public:
                     }
                     if( !!pnewmanip ) {
                         // not found so append
-                        probot->GetManipulators().push_back(pnewmanip);
+                        probot->_vecManipulators.push_back(pnewmanip);
                     }
                 }
                 else {
@@ -3235,7 +3235,7 @@ public:
                         listSensorsToExtract.push_back(std::make_pair(pattachedsensor,result.second));
                     }
 
-                    probot->GetAttachedSensors().push_back(pattachedsensor);
+                    probot->_vecAttachedSensors.push_back(pattachedsensor);
                 }
                 else {
                     RAVELOG_WARN(str(boost::format("cannot create robot %s attached sensor %s\n")%probot->GetName()%name));
@@ -3361,22 +3361,22 @@ public:
                 continue;
             }
 
-            RobotBase::ConnectedBodyPtr pconnectedBody(new RobotBase::ConnectedBody(probot));
-
-            pconnectedBody->_info._name = _ConvertToOpenRAVEName(name);
-
+            RobotBase::ConnectedBodyInfo connectedBodyInfo;
+            connectedBodyInfo._bIsActive = true;
+            daeElementRef pactive = tec->getChild("active");
+            if( !!pactive ) {
+                resolveCommon_bool_or_param(pactive,tec,connectedBodyInfo._bIsActive);
+            }
+                                        
+            connectedBodyInfo._name = _ConvertToOpenRAVEName(name);
+            
             daeElementRef pframe_origin = tec->getChild("frame_origin");
             if (!!pframe_origin) {
-                pconnectedBody->_info._trelative = _ExtractFullTransformFromChildren(pframe_origin);
+                connectedBodyInfo._trelative = _ExtractFullTransformFromChildren(pframe_origin);
 
                 domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pframe_origin->getAttribute("link"), as).resolve().elt);
                 if (!!pdomlink) {
-                    pconnectedBody->pattachedlink = probot->GetLink(_ExtractLinkName(pdomlink));
-                }
-                if (!pconnectedBody->pattachedlink.lock()) {
-                    RAVELOG_WARN(str(boost::format("failed to find body %s frame origin %s\n") % name %
-                                pframe_origin->getAttribute("link")));
-                    continue;
+                    connectedBodyInfo._linkname = _ExtractLinkName(pdomlink);
                 }
             }
 
@@ -3406,12 +3406,16 @@ public:
                         RAVELOG_DEBUG_FORMAT("Found $d robots, Do not support this case for url %s", robots.size() % url);
                     }
                 }
-
+                else {
+                    RAVELOG_WARN_FORMAT("Could not load url %s for connected body %s", url%connectedBodyInfo._name);
+                }
+                
                 if (!!pbody) {
                     RAVELOG_DEBUG_FORMAT("Loaded body from %s", url);
-                    pconnectedBody->_info._url = url;
-                    pconnectedBody->UpdateInfo(pbody);
-                    probot->GetConnectedBodies().push_back(pconnectedBody);
+                    connectedBodyInfo._url = url;
+                    connectedBodyInfo.InitInfoFromBody(*pbody);
+                    RobotBase::ConnectedBodyPtr pConnectedBody(new RobotBase::ConnectedBody(probot, connectedBodyInfo));
+                    probot->_vecConnectedBodies.push_back(pConnectedBody);
                 }
             }
         }

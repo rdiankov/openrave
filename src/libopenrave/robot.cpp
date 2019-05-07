@@ -14,7 +14,6 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#include <boost/make_shared.hpp>
 #include "libopenrave.h"
 
 #define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "robot %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetName()%_nHierarchyComputed, ORE_NotInitialized);
@@ -153,89 +152,6 @@ const std::string& RobotBase::AttachedSensor::GetStructureHash() const
     return __hashstructure;
 }
 
-
-RobotBase::ConnectedBody::ConnectedBody(OpenRAVE::RobotBasePtr probot): _probot(probot) {}
-
-RobotBase::ConnectedBody::ConnectedBody(OpenRAVE::RobotBasePtr probot, const OpenRAVE::RobotBase::ConnectedBodyInfo &info)
-        : _info(info), _probot(probot)
-{
-    if (!!probot) {
-        pattachedlink = probot->GetLink(_info._linkname);
-    }
-}
-
-RobotBase::ConnectedBody::~ConnectedBody() {}
-
-bool RobotBase::ConnectedBody::SetActive(bool active)
-{
-    if (_info._bIsActive == active) {
-        return false;
-    }
-    FOREACH(linkInfo, _info._vLinkInfos) {
-        KinBody::LinkPtr pLink = GetRobot()->GetLink((*linkInfo)->_name);
-        if (!pLink) {
-            continue;
-        }
-        pLink->SetVisible(active);
-        pLink->Enable(active);
-    }
-
-    _info._bIsActive = active;
-}
-
-bool RobotBase::ConnectedBody::IsActive()
-{
-    return _info._bIsActive;
-}
-
-void RobotBase::ConnectedBody::UpdateInfo(const RobotBasePtr& pbody)
-{
-    if (!pbody) {
-        return;
-    }
-    // Set pbody to transform where it should be connected
-    pbody->SetTransform(GetTransform());
-
-    FOREACH(link, pbody->GetLinks()) {
-        if ((*link)->_vParentLinks.empty()) {
-            _info._manipBaseLinkName = (*link)->GetName();
-            break;
-        }
-    }
-
-    LinkPtr prealattachedlink = pattachedlink.lock();
-    if (!!prealattachedlink) {
-        _info._linkname = prealattachedlink->GetName();
-    }
-    _info._vLinkInfos.clear();
-    FOREACH(link, pbody->_veclinks) {
-        (*link)->Enable(_info._bIsActive);
-        (*link)->SetVisible(_info._bIsActive);
-        _info._vLinkInfos.push_back(boost::make_shared<KinBody::LinkInfo>((*link)->UpdateAndGetInfo()));
-    }
-
-    _info._vJointInfos.clear();
-    FOREACH(joint, pbody->_vecjoints) {
-        _info._vJointInfos.push_back(boost::make_shared<KinBody::JointInfo>((*joint)->UpdateAndGetInfo()));
-    }
-
-    _info._vPassiveJointInfos.clear();
-    FOREACH(joint, pbody->_vPassiveJoints) {
-        _info._vPassiveJointInfos.push_back(boost::make_shared<KinBody::JointInfo>((*joint)->UpdateAndGetInfo()));
-    }
-
-    _info._vManipInfos.clear();
-    FOREACH(manip, pbody->GetManipulators()) {
-        _info._vManipInfos.push_back(boost::make_shared<RobotBase::ManipulatorInfo>((*manip)->GetInfo()));
-    }
-
-    _info._vSensorInfos.clear();
-    FOREACH(sensor, pbody->GetAttachedSensors()) {
-        _info._vSensorInfos.push_back(boost::make_shared<RobotBase::AttachedSensorInfo>((*sensor)->UpdateAndGetInfo()));
-    }
-
-}
-
 RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : KinBodyStateSaver(probot, options), _probot(probot)
 {
     if( _options & Save_ActiveDOF ) {
@@ -259,9 +175,9 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
         _vtManipsLocalTool.resize(vmanips.size());
         _vvManipsLocalDirection.resize(vmanips.size());
         _vpManipsIkSolver.resize(vmanips.size());
-        for(int imanip = 0; imanip < vmanips.size(); ++imanip){
+        for(int imanip = 0; imanip < vmanips.size(); ++imanip) {
             RobotBase::ManipulatorPtr pmanip = vmanips[imanip];
-            if( !!pmanip ){
+            if( !!pmanip ) {
                 _vtManipsLocalTool[imanip] = pmanip->GetLocalToolTransform();
                 _vvManipsLocalDirection[imanip] = pmanip->GetLocalToolDirection();
                 _vpManipsIkSolver[imanip] = pmanip->GetIkSolver();
@@ -348,9 +264,9 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
         if( probot == _probot ) {
             std::vector<RobotBase::ManipulatorPtr> vmanips = probot->GetManipulators();
             if(vmanips.size() == _vtManipsLocalTool.size()) {
-                for(int imanip = 0; imanip < vmanips.size(); ++imanip) {
+                for(int imanip = 0; imanip < (int)vmanips.size(); ++imanip) {
                     RobotBase::ManipulatorPtr pmanip = vmanips[imanip];
-                    if( !!pmanip ){
+                    if( !!pmanip ) {
                         pmanip->SetLocalToolTransform(_vtManipsLocalTool.at(imanip));
                         pmanip->SetLocalToolDirection(_vvManipsLocalDirection.at(imanip));
                         pmanip->SetIkSolver(_vpManipsIkSolver.at(imanip));
@@ -407,7 +323,8 @@ void RobotBase::Destroy()
 {
     _pManipActive.reset();
     _vecManipulators.clear();
-    _vecSensors.clear();
+    _vecAttachedSensors.clear();
+    _vecConnectedBodies.clear();
     _nActiveDOF = 0;
     _vActiveDOFIndices.resize(0);
     _vAllDOFIndices.resize(0);
@@ -427,10 +344,10 @@ bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, co
         _vecManipulators.push_back(newmanip);
         __hashrobotstructure.resize(0);
     }
-    _vecSensors.resize(0);
+    _vecAttachedSensors.clear();
     FOREACHC(itattachedsensorinfo, attachedsensorinfos) {
         AttachedSensorPtr newattachedsensor(new AttachedSensor(shared_robot(),**itattachedsensorinfo));
-        _vecSensors.push_back(newattachedsensor);
+        _vecAttachedSensors.push_back(newattachedsensor);
         newattachedsensor->UpdateInfo(); // just in case
         __hashrobotstructure.resize(0);
     }
@@ -457,7 +374,7 @@ void RobotBase::SetName(const std::string& newname)
         }
 
         // have to rename any attached sensors with robotname:attachedname!!
-        FOREACH(itattached, _vecSensors) {
+        FOREACH(itattached, _vecAttachedSensors) {
             AttachedSensorPtr pattached = *itattached;
             if( !!pattached->_psensor ) {
                 pattached->_psensor->SetName(str(boost::format("%s:%s")%newname%pattached->_info._name)); // need a unique targettable name
@@ -527,9 +444,10 @@ void RobotBase::SetDOFVelocities(const std::vector<dReal>& dofvelocities, uint32
 
 void RobotBase::_UpdateAttachedSensors()
 {
-    FOREACH(itsensor, _vecSensors) {
-        if( !!(*itsensor)->GetSensor() && !(*itsensor)->pattachedlink.expired() )
+    FOREACH(itsensor, _vecAttachedSensors) {
+        if( !!(*itsensor)->GetSensor() && !(*itsensor)->pattachedlink.expired() ) {
             (*itsensor)->GetSensor()->SetTransform(LinkPtr((*itsensor)->pattachedlink)->GetTransform()*(*itsensor)->GetRelativeTransform());
+        }
     }
 }
 
@@ -1761,8 +1679,8 @@ RobotBase::AttachedSensorPtr RobotBase::AddAttachedSensor(const RobotBase::Attac
 {
     OPENRAVE_ASSERT_OP(attachedsensorinfo._name.size(),>,0);
     int iremoveindex = -1;
-    for(int iasensor = 0; iasensor < (int)_vecSensors.size(); ++iasensor) {
-        if( _vecSensors[iasensor]->GetName() == attachedsensorinfo._name ) {
+    for(int iasensor = 0; iasensor < (int)_vecAttachedSensors.size(); ++iasensor) {
+        if( _vecAttachedSensors[iasensor]->GetName() == attachedsensorinfo._name ) {
             if( removeduplicate ) {
                 iremoveindex = iasensor;
                 break;
@@ -1778,10 +1696,10 @@ RobotBase::AttachedSensorPtr RobotBase::AddAttachedSensor(const RobotBase::Attac
 //    }
     if( iremoveindex >= 0 ) {
         // replace the old one
-        _vecSensors[iremoveindex] = newattachedsensor;
+        _vecAttachedSensors[iremoveindex] = newattachedsensor;
     }
     else {
-        _vecSensors.push_back(newattachedsensor);
+        _vecAttachedSensors.push_back(newattachedsensor);
     }
     newattachedsensor->UpdateInfo(); // just in case
     __hashrobotstructure.resize(0);
@@ -1790,7 +1708,7 @@ RobotBase::AttachedSensorPtr RobotBase::AddAttachedSensor(const RobotBase::Attac
 
 RobotBase::AttachedSensorPtr RobotBase::GetAttachedSensor(const std::string& name) const
 {
-    FOREACHC(itsensor, _vecSensors) {
+    FOREACHC(itsensor, _vecAttachedSensors) {
         if( (*itsensor)->GetName() == name ) {
             return *itsensor;
         }
@@ -1800,50 +1718,15 @@ RobotBase::AttachedSensorPtr RobotBase::GetAttachedSensor(const std::string& nam
 
 bool RobotBase::RemoveAttachedSensor(RobotBase::AttachedSensor &attsensor)
 {
-    FOREACH(itattsensor,_vecSensors) {
+    FOREACH(itattsensor,_vecAttachedSensors) {
         if( itattsensor->get() == &attsensor ) {
-            _vecSensors.erase(itattsensor);
+            _vecAttachedSensors.erase(itattsensor);
             __hashrobotstructure.resize(0);
             return true;
         }
     }
     return false;
 }
-
-void RobotBase::SetActiveConnectedBody(const std::string &bodyname)
-{
-    if (bodyname.size() > 0) {
-        FOREACH(itconnectedBody, _vecConnectedBodies) {
-            if ((*itconnectedBody)->GetName() == bodyname) {
-                (*itconnectedBody)->SetActive(true);
-                return;
-            }
-        }
-        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to find attach body with name: %s"), bodyname, ORE_InvalidArguments);
-    }
-}
-
-void RobotBase::SetActiveConnectedBody(RobotBase::ConnectedBodyPtr pconnectedBody) {
-    if (!pconnectedBody) {
-        return;
-    }
-    FOREACH(itconnectedBody, _vecConnectedBodies) {
-        if (*itconnectedBody == pconnectedBody) {
-            (*itconnectedBody)->SetActive(true);
-            return;
-        }
-    }
-    // body might have been recoreded, search for the same name
-    FOREACH(itconnectedBody, _vecConnectedBodies) {
-        if ((*itconnectedBody)->GetName() == pconnectedBody->GetName()) {
-            (*itconnectedBody)->SetActive(true);
-            return;
-        }
-    }
-
-    RAVELOG_WARN_FORMAT("failed to find connected body with name %s, most likely removed", pconnectedBody->GetName());
-}
-
 
 void RobotBase::SimulationStep(dReal fElapsedTime)
 {
@@ -1853,6 +1736,8 @@ void RobotBase::SimulationStep(dReal fElapsedTime)
 
 void RobotBase::_ComputeInternalInformation()
 {
+    _ComputeConnectedBodiesInformation(); // should process the connected bodies in order to get the real resolved links, joints, etc
+
     KinBody::_ComputeInternalInformation();
     _vAllDOFIndices.resize(GetDOF());
     for(int i = 0; i < GetDOF(); ++i) {
@@ -1909,12 +1794,8 @@ void RobotBase::_ComputeInternalInformation()
         _pManipActive.reset();
     }
 
-    if (!_vecConnectedBodies.empty()) {
-        _vecConnectedBodies.front()->SetActive(true);
-    }
-
     int sensorindex=0;
-    FOREACH(itsensor,_vecSensors) {
+    FOREACH(itsensor,_vecAttachedSensors) {
         if( (*itsensor)->GetName().size() == 0 ) {
             stringstream ss;
             ss << "sensor" << sensorindex;
@@ -1930,7 +1811,7 @@ void RobotBase::_ComputeInternalInformation()
 
     {
         __hashrobotstructure.resize(0);
-        FOREACH(itsensor,_vecSensors) {
+        FOREACH(itsensor,_vecAttachedSensors) {
             (*itsensor)->__hashstructure.resize(0);
         }
     }
@@ -1949,7 +1830,7 @@ void RobotBase::_ComputeInternalInformation()
     }
 
     // reset the power on the sensors
-    FOREACH(itsensor,_vecSensors) {
+    FOREACH(itsensor,_vecAttachedSensors) {
         SensorBasePtr psensor = (*itsensor)->GetSensor();
         if( !!psensor ) {
             int ispower = psensor->Configure(SensorBase::CC_PowerCheck);
@@ -1958,150 +1839,16 @@ void RobotBase::_ComputeInternalInformation()
     }
 }
 
-void RobotBase::_ComputeConnectedBodiesInformation()
+void RobotBase::_DeinitializeInternalInformation()
 {
-    // resolve duplicate names for links and joints in connected body info
-    // reinitialize robot with combined infos
-    if (_vecConnectedBodies.empty()) {
-        return;
-    }
-
-    std::map<std::string, KinBody::LinkInfoConstPtr> mLinkInfos;
-    std::map<std::string, KinBody::JointInfoConstPtr> mJointInfos;
-    std::map<std::string, RobotBase::ManipulatorInfoConstPtr> mManipInfos;
-    std::map<std::string, RobotBase::AttachedSensorInfoConstPtr> mAttachedSensorInfos;
-
-    FOREACH(link, _veclinks) {
-        mLinkInfos[(*link)->GetName()] = boost::make_shared<KinBody::LinkInfo>((*link)->UpdateAndGetInfo());
-    }
-    FOREACH(joint, _vecjoints) {
-        mJointInfos[(*joint)->GetName()] = boost::make_shared<KinBody::JointInfo>((*joint)->UpdateAndGetInfo());
-    }
-
-
-    vector<RobotBase::ManipulatorInfoConstPtr> manipInfos;
-    FOREACH(manip, _vecManipulators) {
-        manipInfos.push_back(boost::make_shared<RobotBase::ManipulatorInfo>((*manip)->GetInfo()));
-    }
-
-    vector<RobotBase::AttachedSensorInfoConstPtr> sensorInfos;
-    FOREACH(sensor, _vecSensors) {
-        sensorInfos.push_back(boost::make_shared<RobotBase::AttachedSensorInfo>((*sensor)->GetInfo()));
-    }
-
-    FOREACH(connectedBody, _vecConnectedBodies) {
-        auto dummyJointInfo = boost::make_shared<KinBody::JointInfo>();
-        (*connectedBody)->_info._vPassiveJointInfos.push_back(dummyJointInfo);
-
-        dummyJointInfo->_name = "connectBodyDummy";
-        dummyJointInfo->_bIsActive = false;
-        dummyJointInfo->_type = KinBody::JointType::JointPrismatic;
-        dummyJointInfo->_vmaxaccel[0] = 0.0;
-        dummyJointInfo->_vmaxvel[0] = 0.0;
-        dummyJointInfo->_vupperlimit[0] = 0;
-
-        dummyJointInfo->_linkname0 = (*connectedBody)->_info._linkname;
-        dummyJointInfo->_linkname1 = (*connectedBody)->_info._manipBaseLinkName;
-
-        RobotBase::_ResolveDuplicateInfoNames(mLinkInfos, mJointInfos, (*connectedBody)->GetInfo());
-    }
-
-    vector<KinBody::LinkInfoConstPtr> linkInfos;
-    FOREACH(pairLinkInfo, mLinkInfos) {
-        linkInfos.push_back((*pairLinkInfo).second);
-    }
-
-    vector<KinBody::JointInfoConstPtr> jointInfos;
-    FOREACH(pJointInfo, mJointInfos) {
-        jointInfos.push_back((*pJointInfo).second);
-    }
-
-    Init(linkInfos, jointInfos, manipInfos, sensorInfos, GetURI());
+    KinBody::_DeinitializeInternalInformation();
+    _DeinitializeConnectedBodiesInformation();
 }
-
-void RobotBase::_ResolveDuplicateInfoNames(std::map<std::string, KinBody::LinkInfoConstPtr> &mLinkInfos,
-                                           std::map<std::string, KinBody::JointInfoConstPtr> &mJointInfos,
-                                           const RobotBase::ConnectedBodyInfo &connectedBodyInfo)
-{
-    // Resolve duplicated link names
-    std::map<std::string, std::string> changedLinkNameMap;
-    FOREACH(linkInfo, connectedBodyInfo._vLinkInfos) {
-
-        if (mLinkInfos.find((*linkInfo)->_name) != mLinkInfos.end()) {
-            int i = 0;
-            std::string newName = (*linkInfo)->_name + "_" + std::to_string(i);
-            while (mLinkInfos.find(newName) != mLinkInfos.end()) {
-                i++;
-                newName = (*linkInfo)->_name + "_" + std::to_string(i);
-            }
-            changedLinkNameMap[(*linkInfo)->_name] = newName;
-            (*linkInfo)->_name = newName;
-            mLinkInfos[newName] = (*linkInfo);
-
-        } else {
-            mLinkInfos[(*linkInfo)->_name] = (*linkInfo);
-        }
-    }
-
-    // Resolve duplicated joint names
-    std::map<std::string, std::string> changedJointNameMap;
-    std::vector<std::vector<KinBody::JointInfoPtr> > vvJointInfos{connectedBodyInfo._vJointInfos,
-                                                                  connectedBodyInfo._vPassiveJointInfos};
-    FOREACH(vJointInfos, vvJointInfos) {
-        FOREACH(jointInfo, (*vJointInfos)) {
-            if (mJointInfos.find((*jointInfo)->_name) != mJointInfos.end()) {
-                int i = 0;
-                std::string newName = (*jointInfo)->_name + "_" + std::to_string(i);
-                while (mJointInfos.find(newName) != mJointInfos.end()) {
-                    i++;
-                    newName = (*jointInfo)->_name + "_" + std::to_string(i);
-                }
-                changedJointNameMap[(*jointInfo)->_name] = newName;
-                (*jointInfo)->_name = newName;
-                mJointInfos[newName] = (*jointInfo);
-
-            } else {
-                mJointInfos[(*jointInfo)->_name] = (*jointInfo);
-            }
-
-            if (changedLinkNameMap.find((*jointInfo)->_linkname0) != changedLinkNameMap.end()) {
-                (*jointInfo)->_linkname0 = changedLinkNameMap[(*jointInfo)->_linkname0];
-            }
-
-            if (changedLinkNameMap.find((*jointInfo)->_linkname1) != changedLinkNameMap.end()) {
-                (*jointInfo)->_linkname1 = changedLinkNameMap[(*jointInfo)->_linkname1];
-            }
-        }
-    }
-    // Change mimic equations as active joint name might have changed
-
-    std::vector<std::pair<std::string, std::string> > jointNamePairs;
-    jointNamePairs.reserve(changedJointNameMap.size());
-    FOREACH(namePair, changedJointNameMap) {
-        jointNamePairs.push_back(std::make_pair((*namePair).first, (*namePair).second));
-    }
-
-    FOREACH(jointInfo, connectedBodyInfo._vPassiveJointInfos) {
-        FOREACH(mimic, (*jointInfo)->_vmimic) {
-            boost::array<std::string, 3> newEquations;
-            if (!(*mimic)) {
-                continue;
-            }
-            for (std::size_t i = 0; i < (*mimic)->_equations.size(); ++i) {
-                std::string eq;
-                utils::SearchAndReplace(eq, (*mimic)->_equations[i], jointNamePairs);
-                newEquations[i] = eq;
-            }
-            (*mimic)->_equations = newEquations;
-        }
-    }
-}
-
 
 void RobotBase::_PostprocessChangedParameters(uint32_t parameters)
 {
     if( parameters & (Prop_Sensors|Prop_SensorPlacement) ) {
-        FOREACH(itsensor,_vecSensors) {
+        FOREACH(itsensor,_vecAttachedSensors) {
             (*itsensor)->__hashstructure.resize(0);
         }
     }
@@ -2114,7 +1861,7 @@ void RobotBase::_PostprocessChangedParameters(uint32_t parameters)
     KinBody::_PostprocessChangedParameters(parameters);
 }
 
-std::vector<RobotBase::ManipulatorPtr>& RobotBase::GetManipulators()
+const std::vector<RobotBase::ManipulatorPtr>& RobotBase::GetManipulators() const
 {
     return _vecManipulators;
 }
@@ -2148,9 +1895,9 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         }
     }
 
-    _vecSensors.clear();
-    FOREACHC(itsensor, r->_vecSensors) {
-        _vecSensors.push_back(AttachedSensorPtr(new AttachedSensor(shared_robot(),**itsensor,cloningoptions)));
+    _vecAttachedSensors.clear();
+    FOREACHC(itsensor, r->_vecAttachedSensors) {
+        _vecAttachedSensors.push_back(AttachedSensorPtr(new AttachedSensor(shared_robot(),**itsensor,cloningoptions)));
     }
     _UpdateAttachedSensors();
 
@@ -2206,7 +1953,7 @@ void RobotBase::serialize(std::ostream& o, int options) const
         }
     }
     if( options & SO_RobotSensors ) {
-        FOREACHC(itsensor,_vecSensors) {
+        FOREACHC(itsensor,_vecAttachedSensors) {
             (*itsensor)->serialize(o,options);
         }
     }
