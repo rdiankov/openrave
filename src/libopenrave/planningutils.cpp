@@ -1883,7 +1883,7 @@ TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal startt
     if( endtime < traj->GetDuration() ) {
         // have to change the last endpoint, should sample from outtraj instead since both start and end can be within same waypoint range
         outtraj->Sample(values, endtime-starttime);
-        outtraj->Insert(endindex-startindex,values,true);
+        outtraj->Insert(outtraj->GetNumWaypoints()-1,values,true); // assume last end point
     }
 
     // for debugging purposes
