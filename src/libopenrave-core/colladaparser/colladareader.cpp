@@ -255,13 +255,14 @@ public:
     };
 
 public:
-    ColladaReader(EnvironmentBasePtr penv, bool bResetGlobalDae=true) : _dom(NULL), _penv(penv), _nGlobalSensorId(0), _nGlobalManipulatorId(0), _nGlobalIndex(0),
-    _bResetGlobalDae(bResetGlobalDae)
+    ColladaReader(EnvironmentBasePtr penv, bool bResetGlobalDae=true, bool bExtractConnectedBodies=true) : _dom(NULL), _penv(penv), _nGlobalSensorId(0), _nGlobalManipulatorId(0), _nGlobalIndex(0),
+        _bResetGlobalDae(bResetGlobalDae)
     {
         daeErrorHandler::setErrorHandler(this);
         _bOpeningZAE = false;
         _bSkipGeometry = false;
         _bReadGeometryGroups = false;
+        _bExtractConnectedBodies = bExtractConnectedBodies;
         _fGlobalScale = 1.0/penv->GetUnit().second;
         _bBackCompatValuesInRadians = false;
         if( sizeof(daeFloat) == 4 ) {
@@ -385,7 +386,7 @@ public:
                 }
             }
             else if( itatt->first == "scalegeometry" ) {
-                
+
             }
             else if( itatt->first == "readoptions" ) {
                 stringstream ss(itatt->second);
@@ -1283,7 +1284,9 @@ public:
             ExtractRobotManipulators(probot, ias->getExtra_array(), articulated_system, bindings); // have to also read from the instance_articulated_system!
             ExtractRobotAttachedSensors(probot, articulated_system, bindings);
             ExtractRobotAttachedActuators(probot, articulated_system, bindings);
-            ExtractRobotConnectedBodies(probot, articulated_system);
+            if( _bExtractConnectedBodies ) {
+                ExtractRobotConnectedBodies(probot, articulated_system);
+            }
         }
         _ExtractCollisionData(pbody,articulated_system,articulated_system->getExtra_array(),bindings.listInstanceLinkBindings);
         _ExtractVisibleData(pbody,articulated_system,articulated_system->getExtra_array(),bindings.listInstanceLinkBindings);
@@ -2818,7 +2821,7 @@ public:
                         else if( name == "cage" ) {
                             geominfo._type = GT_Cage;
                             geominfo._t = tlocalgeom;
-                            
+
                             daeElementRef phalf_extents = children[i]->getChild("half_extents");
                             if( !!phalf_extents ) {
                                 stringstream ss(phalf_extents->getCharData());
@@ -2861,7 +2864,7 @@ public:
                                     bfoundgeom = true;
                                 }
                             }
-                            
+
                             geominfo._vSideWalls.clear();
                             daeTArray<daeElementRef> cagechildren;
                             children[i]->getChildren(cagechildren);
@@ -2869,7 +2872,7 @@ public:
                                 if( _getElementName(cagechildren[icagechild]) == "sidewall" ) {
                                     KinBody::GeometryInfo::SideWall sidewall;
                                     sidewall.transf = _ExtractFullTransformFromChildren(cagechildren[icagechild]);
-                                    
+
                                     daeElementRef pVExtents = cagechildren[icagechild]->getChild("half_extents");
                                     if( !!pVExtents ) {
                                         stringstream ss(pVExtents->getCharData());
@@ -3367,9 +3370,9 @@ public:
             if( !!pactive ) {
                 resolveCommon_bool_or_param(pactive,tec,connectedBodyInfo._bIsActive);
             }
-                                        
+
             connectedBodyInfo._name = _ConvertToOpenRAVEName(name);
-            
+
             daeElementRef pframe_origin = tec->getChild("frame_origin");
             if (!!pframe_origin) {
                 connectedBodyInfo._trelative = _ExtractFullTransformFromChildren(pframe_origin);
@@ -3384,7 +3387,8 @@ public:
             if (!!instance_body && instance_body->hasAttribute("url")) {
 
                 EnvironmentBasePtr tempenv = RaveCreateEnvironment(); // use an temporary environment for parsing body
-                ColladaReader reader(tempenv, false);
+                bool bExtractConnectedBodies = false;
+                ColladaReader reader(tempenv, false, bExtractConnectedBodies); // to prevent recursion of extracting connected bodies
                 std::string url = instance_body->getAttribute("url");
                 // circular reference catching connected body pointing to self
                 // but still have problem in case of url1 -> url2 -> url1
@@ -3409,7 +3413,7 @@ public:
                 else {
                     RAVELOG_WARN_FORMAT("Could not load url %s for connected body %s", url%connectedBodyInfo._name);
                 }
-                
+
                 if (!!pbody) {
                     RAVELOG_DEBUG_FORMAT("Loaded body from %s", url);
                     connectedBodyInfo._url = url;
@@ -4481,9 +4485,9 @@ private:
 
                                 domMaterialRef dommat = daeSafeCast<domMaterial>(daeURI(*referenceElt, pelt->getAttribute("material")).getElement());
                                 if( !dommat ) {
-                                  RAVELOG_WARN_FORMAT("failed to retrieve material for geometry %s\n", pelt->getAttribute("material"));
+                                    RAVELOG_WARN_FORMAT("failed to retrieve material for geometry %s\n", pelt->getAttribute("material"));
                                 } else {
-                                  mapmaterials["mat0"] = dommat;
+                                    mapmaterials["mat0"] = dommat;
                                 }
 
 
@@ -5363,6 +5367,7 @@ private:
     bool _bSkipGeometry;
     bool _bReadGeometryGroups; ///< if true, then read the bind_instance_geometry tag to initialize all the geometry groups
     bool _bBackCompatValuesInRadians; ///< if true, will assume the speed, acceleration, and dofvalues are in radians instead of degrees (for back compat)
+    bool _bExtractConnectedBodies; ///< if true, calls ExtractRobotConnectedBodies and initializes the connected bodies.
 };
 
 bool RaveParseColladaURI(EnvironmentBasePtr penv, const std::string& uri,const AttributesList& atts)
