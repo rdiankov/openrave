@@ -280,7 +280,8 @@ void RobotBase::_ComputeConnectedBodiesInformation()
         connectedBody._vResolvedJointNames.clear();
         connectedBody._vResolvedManipulatorNames.clear();
         connectedBody._vResolvedAttachedSensorNames.clear();
-        
+	connectedBody._dummyPassiveJointName.clear();
+
         if( !connectedBody.IsActive() ) {
             // skip
             continue;
@@ -324,11 +325,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             KinBody::JointPtr pjoint(new KinBody::Joint(shared_kinbody()));
             pjoint->_info = **itjointinfo; // copy
             pjoint->_info._name = connectedBody._nameprefix + pjoint->_info._name;
-            pjoint->_info._vanchor = tBaseLinkInWorld * pjoint->_info._vanchor;
-            FOREACH(itaxis, pjoint->_info._vaxes) {
-                *itaxis = tBaseLinkInWorld.rotate(*itaxis);
-            }
-
+            
             // search for the correct resolved _linkname0 and _linkname1
             bool bfoundlink0 = false, bfoundlink1 = false;
             for(size_t ilink = 0; ilink < connectedBodyInfo._vLinkInfos.size(); ++ilink) {
