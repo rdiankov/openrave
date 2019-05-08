@@ -1873,6 +1873,7 @@ TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal startt
         else {
             // time between first and second point is non-existent, so remove first point
             outtraj->Remove(0, 1);
+            startindex++; // later on, we use startindex. but, if we 'Remove' the first point, corresponding 'startindex' should be incremented.
             outtraj->GetWaypoint(0, values);
             spec.InsertDeltaTime(values.begin(), 0);
             outtraj->Insert(0,values, true);
@@ -1882,7 +1883,7 @@ TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal startt
     if( endtime < traj->GetDuration() ) {
         // have to change the last endpoint, should sample from outtraj instead since both start and end can be within same waypoint range
         outtraj->Sample(values, endtime-starttime);
-        outtraj->Insert(endindex-startindex,values,true);
+        outtraj->Insert(outtraj->GetNumWaypoints()-1,values,true); // assume last end point
     }
 
     // for debugging purposes
