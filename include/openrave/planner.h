@@ -355,7 +355,7 @@ private:
             In RRTs this is used for the extension operation. The new state is stored in the first parameter q.
             Note that the function can also add a filter to the final destination (like projecting onto a constraint manifold).
          */
-        typedef boost::function<int (std::vector<dReal>&,const std::vector<dReal>&, int)> NeighStateFn;
+        typedef OpenRAVE::NeighStateFn NeighStateFn;
         NeighStateFn _neighstatefn;
 
         /// to specify multiple initial or goal configurations, put them into the vector in series

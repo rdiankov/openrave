@@ -438,7 +438,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 #endif
     }
 
-    void SetNeighStateFn(const boost::function<int (std::vector<dReal>&,const std::vector<dReal>&, int)>& neighstatefn)
+    void SetNeighStateFn(const OpenRAVE::NeighStateFn& neighstatefn)
     {
         _neighstatefn = neighstatefn;
     }
@@ -594,7 +594,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             }
 
             _nNumIterations++;
-            if( busebiasing && iter+(_nNumIterations-2) < (int)rayincs.size() ) {
+            if( busebiasing && iter+((int)_nNumIterations-2) < (int)rayincs.size() ) {
                 int iray = iter+(_nNumIterations-2);
                 // start by checking samples directly above the current configuration
                 for (size_t j = 0; j < vnewdof.size(); ++j) {
@@ -1057,7 +1057,7 @@ protected:
     std::vector<Transform> _vOriginalTransforms, _vOriginalInvTransforms; ///< indexed according to _vLinks
     CollisionReportPtr _report;
 
-    boost::function<int (std::vector<dReal>&,const std::vector<dReal>&, int)> _neighstatefn; ///< if initialized, then use this function to get nearest neighbor
+    OpenRAVE::NeighStateFn _neighstatefn; ///< if initialized, then use this function to get nearest neighbor
     ///< Advantage of using neightstatefn is that user constraints can be met like maintaining a certain orientation of the gripper.
 
     UserDataPtr _limitscallback, _grabbedcallback; ///< limits,grabbed change handles

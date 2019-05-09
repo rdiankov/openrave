@@ -19,13 +19,6 @@
 
 namespace openravepy {
 
-class PyLink;
-typedef boost::shared_ptr<PyLink> PyLinkPtr;
-typedef boost::shared_ptr<PyLink const> PyLinkConstPtr;
-class PyJoint;
-typedef boost::shared_ptr<PyJoint> PyJointPtr;
-typedef boost::shared_ptr<PyJoint const> PyJointConstPtr;
-
 template <typename T>
 boost::python::object GetCustomParameters(const std::map<std::string, std::vector<T> >& parameters, boost::python::object oname=boost::python::object(), int index=-1)
 {
@@ -300,7 +293,11 @@ public:
     bool _bStatic;
     bool _bIsEnabled;
 };
-typedef boost::shared_ptr<PyLinkInfo> PyLinkInfoPtr;
+
+PyLinkInfoPtr toPyLinkInfo(const KinBody::LinkInfo& linkinfo)
+{
+    return PyLinkInfoPtr(new PyLinkInfo(linkinfo));
+}
 
 class PyElectricMotorActuatorInfo
 {
@@ -652,7 +649,11 @@ public:
     object _bIsCircular;
     bool _bIsActive;
 };
-typedef boost::shared_ptr<PyJointInfo> PyJointInfoPtr;
+
+PyJointInfoPtr toPyJointInfo(const KinBody::JointInfo& jointinfo, PyEnvironmentBasePtr pyenv)
+{
+    return PyJointInfoPtr(new PyJointInfo(jointinfo, pyenv));
+}
 
 class PyLink
 {
@@ -1087,6 +1088,11 @@ public:
     }
 };
 
+PyLinkPtr toPyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv)
+{
+    return PyLinkPtr(new PyLink(plink, pyenv));
+}
+
 class PyJoint
 {
     KinBody::JointPtr _pjoint;
@@ -1438,6 +1444,16 @@ public:
         return static_cast<int>(uintptr_t(_pjoint.get()));
     }
 };
+
+PyJointPtr toPyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv)
+{
+    if( !!pjoint ) {
+        return PyJointPtr(new PyJoint(pjoint, pyenv));
+    }
+    else {
+        return PyJointPtr();
+    }
+}
 
 class PyKinBodyStateSaver
 {

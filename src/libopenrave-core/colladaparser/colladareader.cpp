@@ -255,7 +255,8 @@ public:
     };
 
 public:
-    ColladaReader(EnvironmentBasePtr penv) : _dom(NULL), _penv(penv), _nGlobalSensorId(0), _nGlobalManipulatorId(0), _nGlobalIndex(0)
+    ColladaReader(EnvironmentBasePtr penv, bool bResetGlobalDae=true) : _dom(NULL), _penv(penv), _nGlobalSensorId(0), _nGlobalManipulatorId(0), _nGlobalIndex(0),
+    _bResetGlobalDae(bResetGlobalDae)
     {
         daeErrorHandler::setErrorHandler(this);
         _bOpeningZAE = false;
@@ -276,8 +277,33 @@ public:
         // There is no simple workaround for libxml2 before 2.9.0. Read
         // the comments of GetGlobalDAE() in OpenRAVE for more details
 #if LIBXML_VERSION >= 20900
-        SetGlobalDAE(boost::shared_ptr<DAE>());
+        if (_bResetGlobalDae) {
+            SetGlobalDAE(boost::shared_ptr<DAE>());
+        }
 #endif
+    }
+
+    std::string ResolveURI(const string& uristr, const std::string& fragment=std::string())
+    {
+        daeURI urioriginal(*_dae, uristr);
+        urioriginal.fragment(fragment);
+        std::string uriresolved;
+
+        if (find(_vOpenRAVESchemeAliases.begin(), _vOpenRAVESchemeAliases.end(), urioriginal.scheme()) !=
+            _vOpenRAVESchemeAliases.end()) {
+            if (urioriginal.path().empty()) {
+                return nullptr;
+            }
+            // remove first slash because we need relative file
+            uriresolved = "file:";
+            if (urioriginal.path().at(0) == '/') {
+                uriresolved += RaveFindLocalFile(urioriginal.path().substr(1), "/");
+            } else {
+                uriresolved += RaveFindLocalFile(urioriginal.path(), "/");
+            }
+        }
+
+        return uriresolved;
     }
 
     bool InitFromURI(const string& uristr, const AttributesList& atts)
@@ -286,29 +312,17 @@ public:
         _bOpeningZAE = uristr.find(".zae") == uristr.size()-4;
         daeURI urioriginal(*_dae, uristr);
         urioriginal.fragment(std::string()); // have to set the fragment to empty!
-        std::string uriresolved;
+        std::string uriresolved = ResolveURI(uristr);
 
-        if( find(_vOpenRAVESchemeAliases.begin(),_vOpenRAVESchemeAliases.end(),urioriginal.scheme()) != _vOpenRAVESchemeAliases.end() ) {
-            if( urioriginal.path().size() == 0 ) {
-                return NULL;
-            }
-            // remove first slash because we need relative file
-            uriresolved="file:";
-            if( urioriginal.path().at(0) == '/' ) {
-                uriresolved += RaveFindLocalFile(urioriginal.path().substr(1), "/");
-            }
-            else {
-                uriresolved += RaveFindLocalFile(urioriginal.path(), "/");
-            }
-            if( uriresolved.size() == 5 ) {
-                return false;
-            }
+        if( uriresolved.size() == 5 ) {
+            return false;
         }
-        _dom = daeSafeCast<domCOLLADA>(_dae->open(uriresolved.size() > 0 ? uriresolved : urioriginal.str()));
+
+        _dom = daeSafeCast<domCOLLADA>(_dae->open(!uriresolved.empty() ? uriresolved : urioriginal.str()));
         if( !_dom ) {
             return false;
         }
-        if( uriresolved.size() > 0 ) {
+        if( !uriresolved.empty() ) {
             _mapInverseResolvedURIList.insert(make_pair(uriresolved, daeURI(*_dae,urioriginal.str())));
         }
 
@@ -342,7 +356,7 @@ public:
     {
         _mapInstantiatedNodes.clear();
         RAVELOG_VERBOSE(str(boost::format("init COLLADA reader version: %s, namespace: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE));
-        _dae = GetGlobalDAE();
+        _dae = GetGlobalDAE(false);
         _bSkipGeometry = false;
         _bReadGeometryGroups = false;
         _vOpenRAVESchemeAliases.resize(0);
@@ -775,7 +789,7 @@ public:
             FOREACH(itmanip,probot->_vecManipulators) {
                 _setInitialManipulators.insert(*itmanip);
             }
-            FOREACH(itsensor,probot->_vecSensors) {
+            FOREACH(itsensor,probot->_vecAttachedSensors) {
                 _setInitialSensors.insert(*itsensor);
             }
         }
@@ -844,7 +858,7 @@ public:
                         }
                     }
                 }
-                FOREACH(itsensor, probot->_vecSensors) {
+                FOREACH(itsensor, probot->_vecAttachedSensors) {
                     if( _setInitialSensors.find(*itsensor) == _setInitialSensors.end() ) {
                         (*itsensor)->_info._name = _prefix + (*itsensor)->_info._name;
                     }
@@ -1139,7 +1153,7 @@ public:
                                     string kmodeluri = _MakeFullURI(ikmodel->getUrl(), ikmodel);
                                     FOREACH(itmodel,pcolladainfo->_bindingModelURIs) {
                                         if( itmodel->kmodel == kmodeluri ) {
-                                            if( itmodel->ikmodelsidref.size() == 0 ) { // if opening an external reference, this will already have been initialized with the external reference's ikmodelsidref, so need to preserve it!
+                                            if( itmodel->ikmodelsidref.empty() ) { // if opening an external reference, this will already have been initialized with the external reference's ikmodelsidref, so need to preserve it!
                                                 itmodel->ikmodelsidref = param->getSIDREF()->getValue();
                                             }
                                         }
@@ -1269,6 +1283,7 @@ public:
             ExtractRobotManipulators(probot, ias->getExtra_array(), articulated_system, bindings); // have to also read from the instance_articulated_system!
             ExtractRobotAttachedSensors(probot, articulated_system, bindings);
             ExtractRobotAttachedActuators(probot, articulated_system, bindings);
+            ExtractRobotConnectedBodies(probot, articulated_system);
         }
         _ExtractCollisionData(pbody,articulated_system,articulated_system->getExtra_array(),bindings.listInstanceLinkBindings);
         _ExtractVisibleData(pbody,articulated_system,articulated_system->getExtra_array(),bindings.listInstanceLinkBindings);
@@ -3157,7 +3172,7 @@ public:
 
                     // check if a previous manipulator exists with the same name
                     RobotBase::ManipulatorPtr pnewmanip(new RobotBase::Manipulator(probot,manipinfo));
-                    FOREACH(itmanip,probot->GetManipulators()) {
+                    FOREACH(itmanip,probot->_vecManipulators) {
                         if( (*itmanip)->GetName() == manipinfo._name ) {
                             *itmanip = pnewmanip;
                             pnewmanip.reset();
@@ -3166,7 +3181,7 @@ public:
                     }
                     if( !!pnewmanip ) {
                         // not found so append
-                        probot->GetManipulators().push_back(pnewmanip);
+                        probot->_vecManipulators.push_back(pnewmanip);
                     }
                 }
                 else {
@@ -3220,7 +3235,7 @@ public:
                         listSensorsToExtract.push_back(std::make_pair(pattachedsensor,result.second));
                     }
 
-                    probot->GetAttachedSensors().push_back(pattachedsensor);
+                    probot->_vecAttachedSensors.push_back(pattachedsensor);
                 }
                 else {
                     RAVELOG_WARN(str(boost::format("cannot create robot %s attached sensor %s\n")%probot->GetName()%name));
@@ -3323,6 +3338,86 @@ public:
             (*itjoint)->jointindex = jointindex++;
             (*itjoint)->dofindex = dofindex;
             dofindex += (*itjoint)->GetDOF();
+        }
+    }
+
+    void ExtractRobotConnectedBodies(const RobotBasePtr probot, const domArticulated_systemRef &as) {
+        // extract connect_body from /COLLADA/library_articulated_systems/articulated_system/extra
+        for (size_t ie = 0; ie < as->getExtra_array().getCount(); ie++) {
+            domExtraRef pextra = as->getExtra_array()[ie];
+
+            if (!pextra->getType()) {
+                continue;
+            }
+            if (strcmp(pextra->getType(), "connect_body") != 0) {
+                continue;
+            }
+
+            string name = pextra->getAttribute("name");
+            domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
+
+            if (!tec) {
+                RAVELOG_WARN(str(boost::format("cannot create robot %s connect body %s\n") % probot->GetName() % name));
+                continue;
+            }
+
+            RobotBase::ConnectedBodyInfo connectedBodyInfo;
+            connectedBodyInfo._bIsActive = true;
+            daeElementRef pactive = tec->getChild("active");
+            if( !!pactive ) {
+                resolveCommon_bool_or_param(pactive,tec,connectedBodyInfo._bIsActive);
+            }
+                                        
+            connectedBodyInfo._name = _ConvertToOpenRAVEName(name);
+            
+            daeElementRef pframe_origin = tec->getChild("frame_origin");
+            if (!!pframe_origin) {
+                connectedBodyInfo._trelative = _ExtractFullTransformFromChildren(pframe_origin);
+
+                domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pframe_origin->getAttribute("link"), as).resolve().elt);
+                if (!!pdomlink) {
+                    connectedBodyInfo._linkname = _ExtractLinkName(pdomlink);
+                }
+            }
+
+            daeElementRef instance_body = tec->getChild("instance_body");
+            if (!!instance_body && instance_body->hasAttribute("url")) {
+
+                EnvironmentBasePtr tempenv = RaveCreateEnvironment(); // use an temporary environment for parsing body
+                ColladaReader reader(tempenv, false);
+                std::string url = instance_body->getAttribute("url");
+                // circular reference catching connected body pointing to self
+                // but still have problem in case of url1 -> url2 -> url1
+                std::string robotUri = probot->GetURI();
+                std::string resolvedUri = ResolveURI(url);
+                if (robotUri.substr(0, robotUri.find('#')) == resolvedUri) {
+                    RAVELOG_WARN_FORMAT("connected body has same uri %s as robot %s", url % probot->GetURI());
+                    continue;
+                }
+
+                RobotBasePtr pbody;
+                if( reader.InitFromURI(url, AttributesList()) ) {
+                    reader.Extract();
+                    std::vector<RobotBasePtr> robots;
+                    tempenv->GetRobots(robots);
+                    if (robots.size() == 1) {
+                        pbody = robots.front();
+                    } else {
+                        RAVELOG_DEBUG_FORMAT("Found $d robots, Do not support this case for url %s", robots.size() % url);
+                    }
+                }
+                else {
+                    RAVELOG_WARN_FORMAT("Could not load url %s for connected body %s", url%connectedBodyInfo._name);
+                }
+                
+                if (!!pbody) {
+                    RAVELOG_DEBUG_FORMAT("Loaded body from %s", url);
+                    connectedBodyInfo._url = url;
+                    connectedBodyInfo.InitInfoFromBody(*pbody);
+                    RobotBase::ConnectedBodyPtr pConnectedBody(new RobotBase::ConnectedBody(probot, connectedBodyInfo));
+                    probot->_vecConnectedBodies.push_back(pConnectedBody);
+                }
+            }
         }
     }
 
@@ -5254,6 +5349,7 @@ private:
     std::map<std::string,KinBody::JointPtr> _mapJointSids;
     string _prefix;
     int _nGlobalSensorId, _nGlobalManipulatorId, _nGlobalIndex;
+    bool _bResetGlobalDae;  ///< Global Dae will be reset in destructor if true. have to manually reset if set to false
     std::string _filename;
     std::set<KinBody::LinkPtr> _setInitialLinks;
     std::set<KinBody::JointPtr> _setInitialJoints;

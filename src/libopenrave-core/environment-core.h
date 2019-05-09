@@ -2544,6 +2544,7 @@ protected:
         boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
         _mapBodies.erase(pbody->_environmentid);
         pbody->_environmentid = 0;
+        pbody->_DeinitializeInternalInformation();
     }
 
     void _StartSimulationThread()
