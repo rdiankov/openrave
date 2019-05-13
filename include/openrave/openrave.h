@@ -95,6 +95,10 @@ namespace OpenRAVE {
 
 }
 
+#if OPENRAVE_RAPIDJSON
+#include <rapidjson/document.h>
+#endif
+
 #include <openrave/logging.h>
 
 namespace OpenRAVE {
@@ -2576,10 +2580,14 @@ const std::string& IkParameterization::GetName() const
     if( it != RaveGetIkParameterizationMap().end() ) {
         return it->second;
     }
-    throw openrave_exception(str(boost::format("IkParameterization iktype 0x%x not supported")));
+    throw openrave_exception(str(boost::format("IkParameterization iktype 0x%x not supported")%_type));
 }
 
 } // end namespace OpenRAVE
+
+#if OPENRAVE_RAPIDJSON
+#include <openrave/json.h>
+#endif
 
 BOOST_STATIC_ASSERT(OPENRAVE_VERSION_MAJOR>=0&&OPENRAVE_VERSION_MAJOR<=255);
 BOOST_STATIC_ASSERT(OPENRAVE_VERSION_MINOR>=0&&OPENRAVE_VERSION_MINOR<=255);

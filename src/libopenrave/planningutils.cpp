@@ -526,7 +526,7 @@ public:
                             deltaq.at(i) = vcurconfig.at(i) - vprevconfig.at(i);
                         }
                         if( _parameters->SetStateValues(vprevconfig, 0) != 0 ) {
-                            throw OPENRAVE_EXCEPTION_FORMAT0(_("time %fs-%fs, failed to set state values"), ORE_InconsistentConstraints);
+                            throw OPENRAVE_EXCEPTION_FORMAT(_("time %fs-%fs, failed to set state values"), *itprevtime%*itsampletime, ORE_InconsistentConstraints);
                         }
                         vector<dReal> vtemp = vprevconfig;
                         if( _parameters->_neighstatefn(vtemp,deltaq,NSO_OnlyHardConstraints) == NSS_Failed ) {
@@ -1822,7 +1822,7 @@ TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal startt
 
     if( endtime < traj->GetDuration() ) {
         endindex = traj->GetFirstWaypointIndexAfterTime(endtime);
-        if( endindex >= traj->GetNumWaypoints() ) {
+        if( endindex >= (int)traj->GetNumWaypoints() ) {
             endindex = traj->GetNumWaypoints()-1;
         }
     }
@@ -1873,6 +1873,7 @@ TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal startt
         else {
             // time between first and second point is non-existent, so remove first point
             outtraj->Remove(0, 1);
+            startindex++; // later on, we use startindex. but, if we 'Remove' the first point, corresponding 'startindex' should be incremented.
             outtraj->GetWaypoint(0, values);
             spec.InsertDeltaTime(values.begin(), 0);
             outtraj->Insert(0,values, true);
@@ -1882,7 +1883,7 @@ TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal startt
     if( endtime < traj->GetDuration() ) {
         // have to change the last endpoint, should sample from outtraj instead since both start and end can be within same waypoint range
         outtraj->Sample(values, endtime-starttime);
-        outtraj->Insert(endindex-startindex,values,true);
+        outtraj->Insert(outtraj->GetNumWaypoints()-1,values,true); // assume last end point
     }
 
     // for debugging purposes
@@ -2607,6 +2608,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         int numRepeating = 0;
         dReal fBestNewStep=0;
         bool bComputeNewStep = true; // if true, then compute fBestNewStep from fStep. Otherwise use the previous computed one
+        bool bHasNewTempConfigToAdd = false;
         while(istep < numSteps && prevtimestep < timeelapsed) {
             int nstateret = 0;
             if( istep >= start ) {
@@ -2618,6 +2620,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
                     filterreturn->_configurationtimes.push_back(timestep);
                 }
+                bHasNewTempConfigToAdd = false;
             }
             if( nstateret != 0 ) {
                 if( !!filterreturn ) {
@@ -2847,6 +2850,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             if( neighstatus == NSS_SuccessfulWithDeviation ) {
                 bHasRampDeviatedFromInterpolation = true;
             }
+            bHasNewTempConfigToAdd = true;
 
             bool bHasMoved = false;
             {
@@ -2973,6 +2977,36 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                             filterreturn->_returncode = nstateret;
                         }
                         return nstateret;
+                    }
+                }
+            }
+        }
+
+        if( bCheckEnd && bHasNewTempConfigToAdd && bHasRampDeviatedFromInterpolation ) {
+            dReal dist = params->_distmetricfn(_vtempconfig, q1);
+            if( dist > 1e-7 ) {
+                RAVELOG_DEBUG_FORMAT("env=%d, ramp has deviated, so most likely q1 is not following constraints and there's a difference dist=%f", _listCheckBodies.front()->GetEnv()->GetId()%dist);
+                bCheckEnd = false; // to prevent adding the last point
+                
+                if( !!filterreturn ) {
+                    if( options & CFO_FillCheckedConfiguration ) {
+                        int nstateret = 0;
+                        if( istep >= start ) {
+                            nstateret = _SetAndCheckState(params, _vtempconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
+                            if( !!params->_getstatefn ) {
+                                params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits
+                            }
+                            if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+                                filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
+                                filterreturn->_configurationtimes.push_back(timestep);
+                            }
+                        }
+                        if( nstateret != 0 ) {
+                            if( !!filterreturn ) {
+                                filterreturn->_returncode = nstateret;
+                            }
+                            return nstateret;
+                        }
                     }
                 }
             }

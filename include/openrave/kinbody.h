@@ -34,7 +34,8 @@ enum GeometryType {
     GT_Sphere = 2,
     GT_Cylinder = 3, ///< oriented towards z-axis
     GT_TriMesh = 4,
-    GT_Container=5, ///< a container shaped geometry that has inner and outer extents. container opens on +Z.
+    GT_Container=5, ///< a container shaped geometry that has inner and outer extents. container opens on +Z. The origin is at the bottom of the base.
+    GT_Cage=6, ///< a container shaped geometry with removable side walls. The side walls can be on any of the four sides. The origin is at the bottom of the base. The inner volume of the cage is measured from the base to the highest wall.
 };
 
 /// \brief holds parameters for an electric motor
@@ -151,11 +152,47 @@ public:
             return _vGeomData;
         }
 
+        /// \brief compute the inner empty volume in the geometry coordinate system
+        ///
+        /// \return bool true if the geometry has a concept of empty volume nad tInnerEmptyVolume/abInnerEmptyVolume are filled
+        bool ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const;
+
+#if OPENRAVE_RAPIDJSON
+        ///< \param multiply all translational values by fUnitScale
+        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale=1.0, int options=0);
+
+        ///< \param multiply all translational values by fUnitScale
+        virtual void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale = 1);
+#endif
+
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
-        Vector _vGeomData; ///< for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
-        Vector _vGeomData2; ///< For containers, the first 3 values are the full inner extents.
-        Vector _vGeomData3; ///< For containers, the first 3 values are the bottom cross XY full extents and Z height from bottom face.
-        Vector _vGeomData4; ///< For containers, the first 3 values are the full extents of the
+
+        /// for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
+        /// For GT_Cage, this is the base box extents with the origin being at the -Z center.
+        Vector _vGeomData;
+
+        ///< For GT_Container, the first 3 values are the full inner extents.
+        ///< For GT_Cage, if any are non-zero, then force the full inner extents (bottom center) to be this much, starting at the base center top
+        Vector _vGeomData2;
+        Vector _vGeomData3; ///< For containers, the first 3 values is the bottom cross XY full extents and Z height from bottom face.
+		Vector _vGeomData4; ///< For containers, the first 3 values are the full extents of the bottom pad (a box attached to the container beneath the container bottom).
+
+        // For GT_Cage
+        enum SideWallType
+        {
+            SWT_NX=0,
+            SWT_PX=1,
+            SWT_NY=2,
+            SWT_PY=3,
+        };
+
+        struct SideWall
+        {
+            Transform transf;
+            Vector vExtents;
+            SideWallType type;
+        };
+        std::vector<SideWall> _vSideWalls; ///< used by GT_Cage
 
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height
@@ -338,10 +375,25 @@ public:
                 return _info;
             }
 
+            /// cage
+            //@{
+            inline const Vector& GetCageBaseExtents() const {
+                return _info._vGeomData;
+            }
+
+            /// \brief compute the inner empty volume in the parent link coordinate system
+            ///
+            /// \return bool true if the geometry has a concept of empty volume nad tInnerEmptyVolume/abInnerEmptyVolume are filled
+            virtual bool ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const;
+            //@}
+
             virtual bool InitCollisionMesh(float fTessellation=1);
 
             /// \brief returns an axis aligned bounding box given that the geometry is transformed by trans
             virtual AABB ComputeAABB(const Transform& trans) const;
+
+            virtual uint8_t GetSideWallExists() const;
+
             virtual void serialize(std::ostream& o, int options) const;
 
             /// \brief sets a new collision mesh and notifies every registered callback about it
@@ -350,6 +402,7 @@ public:
             ///
             /// \return true if changed
             virtual bool SetVisible(bool visible);
+            
             /// \deprecated (12/1/12)
             inline void SetDraw(bool bDraw) RAVE_DEPRECATED {
                 SetVisible(bDraw);
@@ -577,6 +630,17 @@ protected:
         virtual void InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& geometries, bool bForceRecomputeMeshCollision=true);
         virtual void InitGeometries(std::list<KinBody::GeometryInfo>& geometries, bool bForceRecomputeMeshCollision=true);
 
+        /// \brief adds geometry info to all the current geometries and possibly stored extra group geometries
+        ///
+        /// Will store the geometry pointer to use for later, so do not modify after this.
+        /// \param addToGroups if true, will add the same ginfo to all groups
+        virtual void AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroups);
+
+        /// \brief removes geometry that matches a name from the current geometries and possibly stored extra group geometries
+        ///
+        /// \param removeFromAllGroups if true, will check and remove the geometry from all stored groups
+        virtual void RemoveGeometryByName(const std::string& geometryname, bool removeFromAllGroups);
+
         /// \brief initializes the link with geometries from the extra geomeries in LinkInfo
         ///
         /// \param name The name of the geometry group. If name is empty, will initialize the default geometries.
@@ -673,7 +737,7 @@ protected:
         /// \brief Updates the cached information due to changes in the collision data.
         ///
         /// \param parameterschanged if true, will
-        virtual void _Update(bool parameterschanged=true);
+        virtual void _Update(bool parameterschanged=true, uint32_t extraParametersChanged=0);
 
         std::vector<GeometryPtr> _vGeometries;         ///< \see GetGeometries
 
@@ -1361,6 +1425,7 @@ private:
         friend class ColladaReader;
         friend class ColladaWriter;
         friend class KinBody;
+        friend class RobotBase;
     };
     typedef boost::shared_ptr<KinBody::Joint> JointPtr;
     typedef boost::shared_ptr<KinBody::Joint const> JointConstPtr;
@@ -1487,13 +1552,13 @@ public:
         /// \brief sets whether the state saver will restore the state on destruction. by default this is true.
         virtual void SetRestoreOnDestructor(bool restore);
 protected:
+        KinBodyPtr _pbody;
         int _options;         ///< saved options
         std::vector<Transform> _vLinkTransforms;
         std::vector<uint8_t> _vEnabledLinks;
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<dReal> _vdoflastsetvalues;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2];
-        KinBodyPtr _pbody;
         std::vector<UserDataPtr> _vGrabbedBodies;
         bool _bRestoreOnDestructor;
 private:
@@ -1502,6 +1567,53 @@ private:
 
     typedef boost::shared_ptr<KinBodyStateSaver> KinBodyStateSaverPtr;
 
+    /// \brief Helper class to save and restore the entire kinbody state, using only kinbody references.
+    ///
+    /// Since using only reference, have to be careful of the scope of the kinbody
+    /// Options can be passed to the constructor in order to choose which parameters to save (see \ref SaveParameters)
+    class OPENRAVE_API KinBodyStateSaverRef
+    {
+public:
+        KinBodyStateSaverRef(KinBody& body, int options = Save_LinkTransformation|Save_LinkEnable);
+        virtual ~KinBodyStateSaverRef();
+        inline KinBody& GetBody() const {
+            return _body;
+        }
+
+        /// \brief restore the state
+        ///
+        /// \throw openrave_exception if the passed in body is not compatible with the saved state, will throw
+        virtual void Restore();
+
+        /// \param body if set, will attempt to restore the stored state to the passed in body, otherwise will restore it for the original body.
+        /// \throw openrave_exception if the passed in body is not compatible with the saved state, will throw
+        virtual void Restore(KinBody& newbody);
+
+        /// \brief release the body state. _pbody will not get restored on destruction
+        ///
+        /// After this call, it will still be possible to use \ref Restore.
+        virtual void Release();
+
+        /// \brief sets whether the state saver will restore the state on destruction. by default this is true.
+        virtual void SetRestoreOnDestructor(bool restore);
+protected:
+        KinBody& _body;
+
+        int _options;         ///< saved options
+        std::vector<Transform> _vLinkTransforms;
+        std::vector<uint8_t> _vEnabledLinks;
+        std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
+        std::vector<dReal> _vdoflastsetvalues;
+        std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2];
+        std::vector<UserDataPtr> _vGrabbedBodies;
+        bool _bRestoreOnDestructor;
+        bool _bReleased; ///< if true, then body should not be restored
+private:
+        virtual void _RestoreKinBody(KinBody& body);
+    };
+
+    typedef boost::shared_ptr<KinBodyStateSaverRef> KinBodyStateSaverRefPtr;
+    
     virtual ~KinBody();
 
     /// return the static interface type this class points to (used for safe casting)
@@ -2419,6 +2531,9 @@ protected:
      */
     virtual void _ComputeInternalInformation();
 
+    /// \brief de-initializes any internal information computed
+    virtual void _DeinitializeInternalInformation();
+        
     /// \brief returns the dof velocities and link velocities
     ///
     /// \param[in] usebaselinkvelocity if true, will compute all velocities using the base link velocity. otherwise will assume it is 0
@@ -2454,6 +2569,18 @@ protected:
     /// \brief resets cached information dependent on the collision checker (usually called when the collision checker is switched or some big mode is set.
     virtual void _ResetInternalCollisionCache();
 
+    /// \brief initializes and adds a link to internal hierarchy.
+    ///
+    /// Assumes plink has _info initialized correctly, so will be initializing the other data depending on it.
+    /// Can only be called before internal robot hierarchy is initialized.
+    virtual void _InitAndAddLink(LinkPtr plink);
+
+    /// \brief initializes and adds a link to internal hierarchy.
+    ///
+    /// Assumes plink has _info initialized correctly, so will be initializing the other data depending on it.
+    /// Can only be called before internal robot hierarchy is initialized
+    virtual void _InitAndAddJoint(JointPtr pjoint);
+    
     std::string _name; ///< name of body
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints
     std::vector<JointPtr> _vTopologicallySortedJoints; ///< \see GetDependencyOrderedJoints
@@ -2488,7 +2615,7 @@ protected:
     mutable int _nUpdateStampId; ///< \see GetUpdateStamp
     uint32_t _nParametersChanged; ///< set of parameters that changed and need callbacks
     ManageDataPtr _pManageData;
-    uint32_t _nHierarchyComputed; ///< true if the joint heirarchy and other cached information is computed
+    uint32_t _nHierarchyComputed; ///< 2 if the joint heirarchy and other cached information is computed. 1 if the hierarchy information is computing
     bool _bMakeJoinedLinksAdjacent; ///< if true, then automatically add adjacent links to the adjacency list so that their self-collisions are ignored.
     bool _bAreAllJoints1DOFAndNonCircular; ///< if true, then all controllable joints  of the robot are guaranteed to be either revolute or prismatic and non-circular. This allows certain functions that do operations on the joint values (like SubtractActiveDOFValues) to be optimized without calling Joint functions.
 private:

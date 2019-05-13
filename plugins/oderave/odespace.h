@@ -641,6 +641,7 @@ private:
             odegeom = dCreateCylinder(0,info._vGeomData.x,info._vGeomData.y);
             break;
         case OpenRAVE::GT_Container:
+        case OpenRAVE::GT_Cage:
         case OpenRAVE::GT_TriMesh:
             if( info._meshcollision.indices.size() > 0 ) {
                 dTriIndex* pindices = new dTriIndex[info._meshcollision.indices.size()];

@@ -55,7 +55,7 @@ public:
         FOREACH(itavoid,_parameters->vavoidlinkgeometry) {
             KinBody::LinkPtr plink = _robot->GetLink(*itavoid);
             if( !plink ) {
-                RAVELOG_WARN(str(boost::format("failed to find avoiding link\n")%*itavoid));
+                RAVELOG_WARN(str(boost::format("failed to find avoiding link %s")%*itavoid));
                 continue;
             }
             _vAvoidLinkGeometry.push_back(plink);
