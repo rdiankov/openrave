@@ -2702,7 +2702,7 @@ public:
 
             if( !_psensor ) {
                 _psensor.reset(new RobotBase::AttachedSensor(probot));
-                probot->_vecSensors.push_back(_psensor);
+                probot->_vecAttachedSensors.push_back(_psensor);
             }
         }
 
@@ -2990,7 +2990,7 @@ public:
                         vtemp.push_back(*itsensor);
                     }
                 }
-                _probot->GetAttachedSensors().swap(vtemp);
+                _probot->_vecAttachedSensors.swap(vtemp);
             }
             if( _setInitialManipulators.size() > 0 ) {
                 std::vector<RobotBase::ManipulatorPtr> vtemp; vtemp.reserve(_probot->GetManipulators().size());
@@ -3002,7 +3002,7 @@ public:
                         vtemp.push_back(*itmanip);
                     }
                 }
-                _probot->GetManipulators().swap(vtemp);
+                _probot->_vecManipulators.swap(vtemp);
             }
 
             // add prefix

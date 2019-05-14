@@ -129,7 +129,7 @@ public:
                     }
                 }
 
-                // have to recompute a new
+                // have to recompute a new, q1 can violate tool constraints, but most important thing is that the added ramps do not.
                 ParabolicRamp::CheckReturn retseg = feas->SegmentFeasible2(q0,q1, dq0, dq1, elapsedtime, options, segmentoutramps);
                 if( retseg.retcode != 0 ) {
                     return retseg;

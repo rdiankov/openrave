@@ -607,7 +607,7 @@ void ParabolicCurve::TrimBack(dReal t)
         _ramps.resize(index);
     }
     else {
-        if( _ramps.size() > index + 1 ) {
+        if( (int)_ramps.size() > index + 1 ) {
             _ramps.resize(index + 1);
         }
         _ramps.back().TrimBack(remainder);
