@@ -163,8 +163,11 @@ public:
     object _attachedSensorInfos;
 
 };
-typedef boost::shared_ptr<PyConnectedBodyInfo> PyConnectedBodyInfoPtr;
 
+PyConnectedBodyInfoPtr toPyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& connectedBodyInfo, PyEnvironmentBasePtr pyenv)
+{
+    return PyConnectedBodyInfoPtr(new PyConnectedBodyInfo(connectedBodyInfo, pyenv));
+}
 
 class PyRobotBase : public PyKinBody
 {
@@ -841,6 +844,10 @@ public:
         virtual ~PyConnectedBody() {
         }
 
+        RobotBase::ConnectedBodyPtr GetConnectedBody() const {
+            return _pconnected;
+        }
+
         object GetInfo() {
             return object(PyConnectedBodyInfoPtr(new PyConnectedBodyInfo(_pconnected->GetInfo(), _pyenv)));
         }
@@ -924,6 +931,11 @@ public:
         }
     };
 
+    typedef boost::shared_ptr<PyConnectedBody> PyConnectedBodyPtr;
+    boost::shared_ptr<PyConnectedBody> _GetConnectedBody(RobotBase::ConnectedBodyPtr pConnectedBody)
+    {
+        return !pConnectedBody ? PyConnectedBodyPtr() : PyConnectedBodyPtr(new PyConnectedBody(pConnectedBody, _pyenv));
+    }
 
     class PyRobotStateSaver
     {
@@ -1085,6 +1097,13 @@ public:
     boost::shared_ptr<PyAttachedSensor> GetAttachedSensor(const string& sensorname)
     {
         return _GetAttachedSensor(_probot->GetAttachedSensor(sensorname));
+    }
+
+    PyConnectedBodyPtr AddConnectedBody(PyConnectedBodyInfoPtr pConnectedBodyInfo, bool removeduplicate=false) {
+        return _GetConnectedBody(_probot->AddConnectedBody(*pConnectedBodyInfo->GetConnectedBodyInfo(), removeduplicate));
+    }
+    bool RemoveConnectedBody(PyConnectedBodyPtr pConnectedBody) {
+        return _probot->RemoveConnectedBody(*pConnectedBody->GetConnectedBody());
     }
 
     object GetConnectedBodies()
@@ -1590,6 +1609,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetActiveDOFValues_overloads, SetActiveDO
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetActiveDOFVelocities_overloads, SetActiveDOFVelocities, 1,2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(AddManipulator_overloads, AddManipulator, 1,2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(AddAttachedSensor_overloads, AddAttachedSensor, 1,2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(AddConnectedBody_overloads, AddConnectedBody, 1,2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetActiveConfigurationSpecification_overloads, GetActiveConfigurationSpecification, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Restore_overloads, Restore, 0,1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Init_overloads, Init, 4,5)
@@ -1677,6 +1697,8 @@ void init_openravepy_robot()
                       .def("GetAttachedSensor",&PyRobotBase::GetAttachedSensor,args("sensorname"), "Return the attached sensor whose name matches")
                       .def("GetSensors",&PyRobotBase::GetSensors)
                       .def("GetSensor",&PyRobotBase::GetSensor,args("sensorname"))
+                      .def("AddConnectedBody",&PyRobotBase::AddConnectedBody, AddConnectedBody_overloads(args("connectedbodyinfo", "removeduplicate"), DOXY_FN(RobotBase,AddConnectedBody)))
+                      .def("RemoveConnectedBody",&PyRobotBase::RemoveConnectedBody, args("connectedbody"), DOXY_FN(RobotBase,RemoveConnectedBody))
                       .def("GetConnectedBodies",&PyRobotBase::GetConnectedBodies, DOXY_FN(RobotBase,GetConnectedBodies))
                       .def("GetController",&PyRobotBase::GetController, DOXY_FN(RobotBase,GetController))
                       .def("SetController",setcontroller1,DOXY_FN(RobotBase,SetController))
