@@ -316,7 +316,7 @@ bool ParabolicInterpolator::_RecomputeNDTrajectoryFixedDuration(std::vector<Para
 
         for (size_t idof = 0; idof < _ndof; ++idof) {
             dReal tBound;
-            if( !_CalculateLeastUpperBoundInoperavtiveTimeInterval(curvesVect[idof].GetX0(), curvesVect[idof].GetX1(), curvesVect[idof].GetV0(), curvesVect[idof].GetV1(), vmVect[idof], amVect[idof], tBound) ) {
+            if( !_CalculateLeastUpperBoundInoperativeTimeInterval(curvesVect[idof].GetX0(), curvesVect[idof].GetX1(), curvesVect[idof].GetV0(), curvesVect[idof].GetV1(), vmVect[idof], amVect[idof], tBound) ) {
                 return false;
             }
             if( tBound > newDuration ) {
@@ -1352,7 +1352,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Utilities
-bool ParabolicInterpolator::_CalculateLeastUpperBoundInoperavtiveTimeInterval(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm, dReal am, dReal& t)
+bool ParabolicInterpolator::_CalculateLeastUpperBoundInoperativeTimeInterval(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm, dReal am, dReal& t)
 {
     /*
        Let t be the total duration of the velocity profile, a0 and a1 be the accelerations of both
