@@ -16,6 +16,7 @@
 
 #include <vector>
 #include <openrave/openrave.h>
+#include "polynomialcommon.h"
 
 namespace OpenRAVE {
 
@@ -39,6 +40,9 @@ public:
     /// \brief (Re)Initialize this polynomial with the given coefficients.
     void Initialize(const std::vector<dReal>& c);
 
+    /// \brief Append zeros to the coefficient vectors.
+    void PadCoefficients(size_t newdegree);
+    
     /// \brief Update the weakest term coefficient.
     void UpdateInitialValue(dReal c0);
 
@@ -69,6 +73,8 @@ public:
         return vpextrema;
     }
 
+    void Serialize(std::ostream& O) const;
+
     /// \brief Find all local extremas of this polynomial (or some n-th order derivative of this
     ///        polynomial).
     void _FindAllLocalExtrema();
@@ -76,7 +82,7 @@ public:
     //
     // Members
     //
-    size_t idegree; ///< the degree of this polynomial
+    size_t degree; ///< the degree of this polynomial
     std::vector<dReal> vcoeffs; ///< vector of coefficients of this polynomial (weakest term first)
     std::vector<dReal> vcoeffsd; ///< vector of coefficients of the first derivative of this polynomial
     std::vector<dReal> vcoeffsdd; ///< vector of coefficients of the second derivative of this polynomial
@@ -86,6 +92,102 @@ public:
     mutable std::vector<dReal> _vcurcoeffs;
 }; // end class Polynomial
 
+class Chunk {
+public:
+    /*
+       Chunk is a vertical stack of polynomials. Each polynomial is parameterized by t \in [0, duration].
+
+       \params duration the duration of this chunk
+       \params vpolynomials vector of polynomials
+     */
+    Chunk(const dReal duration, const std::vector<Polynomial> vpolynomials);
+    ~Chunk()
+    {
+    }
+
+    //
+    // Functions
+    //
+    /// \brief
+    void UpdateInitialValues(std::vector<dReal>& vinitialvalues);
+
+    /// \brief Evaluate all polynomials at time t.
+    void Eval(dReal t, std::vector<dReal>& res) const;
+
+    /// \brief Evaluate the first derivatives of all polynomials at time t.
+    void Evald1(dReal t, std::vector<dReal>& res) const;
+
+    /// \brief Evaluate the second derivatives of all polynomials at time t.
+    void Evald2(dReal t, std::vector<dReal>& res) const;
+
+    /// \brief Evaluate the third derivatives of all polynomials at time t.
+    void Evald3(dReal t, std::vector<dReal>& res) const;
+
+    /// \brief Evaluate the n-th derivatives of all polynomials at time t.
+    void Evaldn(dReal t, size_t n, std::vector<dReal>& res) const;
+
+    /// \brief
+    void Serialize(std::ostream& O) const;
+
+    //
+    // Members
+    //
+    size_t degree;
+    size_t dof;
+    dReal duration;
+    std::vector<Polynomial> vpolynomials;
+
+}; // end class Chunk
+
+class PiecewisePolynomialTrajectory {
+public:
+    /*
+      PiecewisePolynomialTrajectory is a horizontal stack of chunks.
+
+      \params vchunks vector of chunks
+     */
+    PiecewisePolynomialTrajectory(const std::vector<Chunk>& vchunks);
+    ~PiecewisePolynomialTrajectory()
+    {
+    }
+
+    //
+    // Functions
+    //
+    /// \brief Evaluate this trajectory at time t.
+    void Eval(dReal t, std::vector<dReal>& res) const;
+
+    /// \brief Evaluate the first derivative of this trajectory at time t.
+    void Evald1(dReal t, std::vector<dReal>& res) const;
+
+    /// \brief Evaluate the second derivative of this trajectory at time t.
+    void Evald2(dReal t, std::vector<dReal>& res) const;
+
+    /// \brief Evaluate the third derivative of this trajectory at time t.
+    void Evald3(dReal t, std::vector<dReal>& res) const;
+
+    /// \brief Evaluate the n-th derivative of this trajectory at time t.
+    void Evaldn(dReal t, size_t n, std::vector<dReal>& res) const;
+
+    /// \brief Find the index of the chunk in which the given time t falls into. Also compute the remainder of that chunk.
+    void FindChunkIndex(dReal t, size_t& index, dReal& remainder) const;
+    
+    /// \brief
+    void _UpdateChunksVector();
+
+    /// \brief
+    void Serialize(std::ostream& O) const;
+
+    //
+    // Members
+    //
+    size_t degree;
+    size_t dof;
+    dReal duration;
+    std::vector<dReal> vswitchtimes; ///< vector of time instants where at least one dof changes its control value. The control value is p^(degree)(t)/degree!. For example, in case degree = 2, the control value is p''(t)/2, which is the acceleration.
+    std::vector<Chunk> vchunks;
+    
+}; // end class PiecewisePolynomialTrajectory
 
 } // end namespace PiecewisePolynomialsInternal
 
