@@ -197,32 +197,32 @@ void Polynomial::_FindAllLocalExtrema()
     for( int iroot = 0; iroot < numroots; ++iroot ) {
         Coordinate c(rawroots[iroot], Eval(rawroots[iroot]));
         std::vector<Coordinate>::const_iterator it = std::lower_bound(vcextrema.begin(), vcextrema.end(), c);
-        if( !FuzzyEquals(it->first, c.first) ) {
+        if( !FuzzyEquals(it->point, c.point, g_fPolynomialEpsilon) ) {
             // Insert this point only if not already in the list
             vcextrema.insert(it, c);
         }
     }
 
     // Determine if a critical point is a local extrema or not.
-    dReal prevpoint = vcextrema[0].first - 1;
+    dReal prevpoint = vcextrema[0].point - 1;
     int writeindex = 0;
     for( int readindex = 0; readindex < numroots; ++readindex ) {
         dReal leftpoint, rightpoint; // points at which to evaluate the polynomial values
         dReal leftvalue, rightvalue; // polynomial values evaluated at leftpoint and rightpoint, respectively
 
-        leftpoint = 0.5*(prevpoint + vcextrema[readindex]);
+        leftpoint = 0.5*(prevpoint + vcextrema[readindex].point);
         if( readindex == numroots - 1 ) {
-            rightpoint = vcextrema[readindex] + 1;
+            rightpoint = vcextrema[readindex].point + 1;
         }
         else {
-            rightpoint = 0.5*(vcextrema[readindex] + vcextrema[readindex + 1])
+            rightpoint = 0.5*(vcextrema[readindex].point + vcextrema[readindex + 1].point);
         }
         leftvalue = Eval(leftpoint);
         rightvalue = Eval(rightpoint);
 
-        prevpoint = vcextrema[readindex]; // update prevpoint first
+        prevpoint = vcextrema[readindex].point; // update prevpoint first
 
-        if( (vcextrema[ipoint].value - leftvalue) * (rightvalue - vcextrema[ipoint].value) < 0 ) {
+        if( (vcextrema[readindex].value - leftvalue) * (rightvalue - vcextrema[readindex].value) < 0 ) {
             // This point is a local extrema so keep it.
             if( readindex > writeindex ) {
                 vcextrema[writeindex] = vcextrema[readindex];
