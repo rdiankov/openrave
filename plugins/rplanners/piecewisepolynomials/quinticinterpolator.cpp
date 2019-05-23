@@ -40,12 +40,12 @@ void QuinticInterpolator::Compute1DTrajectoryZeroTimeDerivativesOptimizeDuration
     /*
        Describing a quintic polynomial as
 
-              p(t) = a5*t^5 + a4*t^4 + a3*t^3 + a2*t^2 + a1*t + a0,
+          p(t) = a5*t^5 + a4*t^4 + a3*t^3 + a2*t^2 + a1*t + a0,
 
        with t \in [0, T], when the terminal velocities and accelerations are all zero, the
        coefficients are as follows
 
-              a5 =   6(x1 - x0)/T^5,
+          a5 =   6(x1 - x0)/T^5,
           a4 = -15(x1 - x0)/T^4,
           a3 =  10(x1 - x0)/T^3,
           a2 = 0,
@@ -58,21 +58,21 @@ void QuinticInterpolator::Compute1DTrajectoryZeroTimeDerivativesOptimizeDuration
        Consider d^2/dt^2 p(t, T). By solving for t from the equation d^2/dt^2 p(t, T) = 0, we have the time
        instant t_vpeak, at which the velocity is maximum (or minimum). Therefore,
 
-              v_peak = d/dt p(t_vpeak, T) = (15/8)*(x1 - x0)/T.
+          v_peak = d/dt p(t_vpeak, T) = (15/8)*(x1 - x0)/T.
 
        The total duration T such that the peak velocity is exactly vm is then
 
-              Tv = (15/8)*abs(x1 - x0)/vm.
+          Tv = (15/8)*abs(x1 - x0)/vm.
 
        Using the same procedure as above, we can compute the total duration such that the peak
        acceleration and the peak jerk are at their limits as
 
-              Ta = sqrt( (10/sqrt(3)) * abs(x1 - x0)/am ) and
+          Ta = sqrt( (10/sqrt(3)) * abs(x1 - x0)/am ) and
           Tj = cbrt( 30 * abs(x1 - x0)/jm ).
 
        Finally, the duration T that we choose such that all limits are respected is determined by
 
-              T = max(Tv, Ta, Tj).
+          T = max(Tv, Ta, Tj).
      */
     dReal absd = Abs(x1 - x0);
     dReal Tv = _fifteenOverEight * absd/vm;

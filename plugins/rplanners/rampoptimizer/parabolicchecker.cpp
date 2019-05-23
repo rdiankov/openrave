@@ -116,7 +116,7 @@ ParabolicCheckReturn CheckRamps(const std::vector<Ramp>& ramps, dReal xmin, dRea
         RAVELOG_WARN("ramps[0] does not pass CheckRamp");
         return ret;
     }
-    
+
     for (size_t iramp = 1; iramp < ramps.size(); ++iramp) {
         if( !FuzzyEquals(ramps[iramp - 1].x1, ramps[iramp].x0, g_fRampEpsilon) ) {
             RAVELOG_WARN_FORMAT("PCR_XDiscrepancy: ramps[%d].x1 != ramps[%d].x0; %.15e != %.15e; diff = %.15e", (iramp - 1)%iramp%ramps[iramp - 1].x1%ramps[iramp].x0%(ramps[iramp - 1].x1 - ramps[iramp].x0));
