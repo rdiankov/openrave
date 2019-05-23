@@ -125,7 +125,7 @@ dReal Polynomial::Evald3(dReal t) const
     if( degree < 3 ) {
         return 0;
     }
-    dReal val = vcoeffsdd.back();
+    dReal val = vcoeffsddd.back();
     for( int i = (int)degree - 4; i >= 0; --i ) {
         val = val*t + vcoeffsddd[i];
     }
