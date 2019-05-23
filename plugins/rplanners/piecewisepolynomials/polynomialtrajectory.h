@@ -22,6 +22,25 @@ namespace OpenRAVE {
 
 namespace PiecewisePolynomialsInternal {
 
+class Coordinate {
+public:
+    Coordinate()
+    {
+    };
+    Coordinate(dReal p, dReal v) : point(p), value(v)
+    {
+    };
+    ~Coordinate()
+    {
+    }
+    bool operator<(const Coordinate& rhs) const
+    {
+        return point < rhs.point;
+    }
+    dReal point;
+    dReal value;
+}; // end class Coordinate
+
 class Polynomial {
 public:
     /*
@@ -29,6 +48,9 @@ public:
                this polynomial p is described by p(t) = c[0] + c[1]*t + c[2]*t**2 + ... + c[n]*t**n,
                where n is the degree of this polynomial
      */
+    Polynomial()
+    {
+    };
     Polynomial(const std::vector<dReal>& c);
     ~Polynomial()
     {
@@ -42,7 +64,7 @@ public:
 
     /// \brief Append zeros to the coefficient vectors.
     void PadCoefficients(size_t newdegree);
-    
+
     /// \brief Update the weakest term coefficient.
     void UpdateInitialValue(dReal c0);
 
@@ -68,9 +90,9 @@ public:
     // Polynomial Integrate();
 
     /// \brief Return
-    inline const std::vector<std::pair<dReal, dReal> >& GetExtrema() const
+    inline const std::vector<Coordinate>& GetExtrema() const
     {
-        return vpextrema;
+        return vcextrema;
     }
 
     void Serialize(std::ostream& O) const;
@@ -87,7 +109,7 @@ public:
     std::vector<dReal> vcoeffsd; ///< vector of coefficients of the first derivative of this polynomial
     std::vector<dReal> vcoeffsdd; ///< vector of coefficients of the second derivative of this polynomial
     std::vector<dReal> vcoeffsddd; ///< vector of coefficients of the third derivative of this polynomial
-    std::vector<std::pair<dReal, dReal> > vpextrema; ///< vector of pairs (t, p(t)) where each t is such that p(t) is a local extrema
+    std::vector<Coordinate> vcextrema; ///< vector of pairs (t, p(t)) where each t is such that p(t) is a local extrema
 
     mutable std::vector<dReal> _vcurcoeffs;
 }; // end class Polynomial
@@ -142,9 +164,9 @@ public:
 class PiecewisePolynomialTrajectory {
 public:
     /*
-      PiecewisePolynomialTrajectory is a horizontal stack of chunks.
+       PiecewisePolynomialTrajectory is a horizontal stack of chunks.
 
-      \params vchunks vector of chunks
+       \params vchunks vector of chunks
      */
     PiecewisePolynomialTrajectory(const std::vector<Chunk>& vchunks);
     ~PiecewisePolynomialTrajectory()
@@ -171,7 +193,7 @@ public:
 
     /// \brief Find the index of the chunk in which the given time t falls into. Also compute the remainder of that chunk.
     void FindChunkIndex(dReal t, size_t& index, dReal& remainder) const;
-    
+
     /// \brief
     void _UpdateChunksVector();
 
@@ -186,7 +208,7 @@ public:
     dReal duration;
     std::vector<dReal> vswitchtimes; ///< vector of time instants where at least one dof changes its control value. The control value is p^(degree)(t)/degree!. For example, in case degree = 2, the control value is p''(t)/2, which is the acceleration.
     std::vector<Chunk> vchunks;
-    
+
 }; // end class PiecewisePolynomialTrajectory
 
 } // end namespace PiecewisePolynomialsInternal

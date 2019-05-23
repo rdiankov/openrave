@@ -79,6 +79,7 @@ void Polynomial::PadCoefficients(size_t newdegree)
     if( vcoeffsddd.size() > 0 ) {
         vcoeffsddd.assign(newdegree - 3, 0);
     }
+    degree = newdegree;
 }
 
 void Polynomial::UpdateInitialValue(dReal c0)
@@ -89,7 +90,7 @@ void Polynomial::UpdateInitialValue(dReal c0)
 dReal Polynomial::Eval(dReal t) const
 {
     dReal val = vcoeffs.back();
-    for( size_t i = degree - 1; i >= 0; --i ) {
+    for( int i = (int)degree - 1; i >= 0; --i ) {
         val = val*t + vcoeffs[i];
     }
     return val;
@@ -101,7 +102,7 @@ dReal Polynomial::Evald1(dReal t) const
         return 0;
     }
     dReal val = vcoeffsd.back();
-    for( size_t i = degree - 2; i >= 0; --i ) {
+    for( int i = (int)degree - 2; i >= 0; --i ) {
         val = val*t + vcoeffsd[i];
     }
     return val;
@@ -113,7 +114,7 @@ dReal Polynomial::Evald2(dReal t) const
         return 0;
     }
     dReal val = vcoeffsdd.back();
-    for( size_t i = degree - 3; i >= 0; --i ) {
+    for( int i = (int)degree - 3; i >= 0; --i ) {
         val = val*t + vcoeffsdd[i];
     }
     return val;
@@ -125,7 +126,7 @@ dReal Polynomial::Evald3(dReal t) const
         return 0;
     }
     dReal val = vcoeffsdd.back();
-    for( size_t i = degree - 4; i >= 0; --i ) {
+    for( int i = (int)degree - 4; i >= 0; --i ) {
         val = val*t + vcoeffsddd[i];
     }
     return val;
@@ -161,7 +162,7 @@ dReal Polynomial::Evaldn(dReal t, size_t n) const
     }
 
     dReal val = _vcurcoeffs.back();
-    for( size_t i = numcoeffs - 2; i >= 0; --i ) {
+    for( int i = (int)numcoeffs - 2; i >= 0; --i ) {
         val = val*t + _vcurcoeffs[i];
     }
     return val;
@@ -169,6 +170,68 @@ dReal Polynomial::Evaldn(dReal t, size_t n) const
 
 void Polynomial::_FindAllLocalExtrema()
 {
+    if( vcoeffsd.size() == 0 ) {
+        // No extrema since the function is constant
+        return;
+    }
+
+    // Solve for the roots of the polynomial described by vcoeffsd to determine the points at which
+    // the first derivative vanishes.
+
+    // rawcoeffs for polyroots: strongest term first
+    std::vector<dReal> rawcoeffs(degree), rawroots(degree - 1);
+    for( size_t icoeff = 0; icoeff < degree; ++icoeff ) {
+        rawcoeffs[icoeff] = vcoeffsd[degree - 1 - icoeff];
+    }
+    int numroots = 0;
+    polyroots((int)degree, &rawcoeffs[0], &rawroots[0], numroots);
+    rawroots.resize(numroots);
+    vcextrema.resize(0);
+
+    if( numroots == 0 ) {
+        return;
+    }
+
+    // Collect all *critical* points in vcextrema.
+    vcextrema.reserve(numroots);
+    for( int iroot = 0; iroot < numroots; ++iroot ) {
+        Coordinate c(rawroots[iroot], Eval(rawroots[iroot]));
+        std::vector<Coordinate>::const_iterator it = std::lower_bound(vcextrema.begin(), vcextrema.end(), c);
+        if( !FuzzyEquals(it->first, c.first) ) {
+            // Insert this point only if not already in the list
+            vcextrema.insert(it, c);
+        }
+    }
+
+    // Determine if a critical point is a local extrema or not.
+    dReal prevpoint = vcextrema[0].first - 1;
+    int writeindex = 0;
+    for( int readindex = 0; readindex < numroots; ++readindex ) {
+        dReal leftpoint, rightpoint; // points at which to evaluate the polynomial values
+        dReal leftvalue, rightvalue; // polynomial values evaluated at leftpoint and rightpoint, respectively
+
+        leftpoint = 0.5*(prevpoint + vcextrema[readindex]);
+        if( readindex == numroots - 1 ) {
+            rightpoint = vcextrema[readindex] + 1;
+        }
+        else {
+            rightpoint = 0.5*(vcextrema[readindex] + vcextrema[readindex + 1])
+        }
+        leftvalue = Eval(leftpoint);
+        rightvalue = Eval(rightpoint);
+
+        prevpoint = vcextrema[readindex]; // update prevpoint first
+
+        if( (vcextrema[ipoint].value - leftvalue) * (rightvalue - vcextrema[ipoint].value) < 0 ) {
+            // This point is a local extrema so keep it.
+            if( readindex > writeindex ) {
+                vcextrema[writeindex] = vcextrema[readindex];
+            }
+            ++writeindex;
+        }
+    }
+    vcextrema.resize(writeindex);
+    return;
 }
 
 void Polynomial::Serialize(std::ostream& O) const

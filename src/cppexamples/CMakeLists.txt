@@ -51,6 +51,7 @@ build_openrave_executable(orplanning_door)
 build_openrave_executable(orplanning_ik)
 build_openrave_executable(orshowsensors)
 build_openrave_executable(ortrajectory)
+build_openrave_executable(polynomialtrajectory)
 
 # include python bindings sample
 if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
