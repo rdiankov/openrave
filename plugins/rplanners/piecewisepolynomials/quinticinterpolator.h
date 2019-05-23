@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2016 Puttichai Lertkultanon & Rosen Diankov
+// Copyright (C) 2019 Puttichai Lertkultanon
 //
 // This program is free software: you can redistribute it and/or modify it under the terms of the
 // GNU Lesser General Public License as published by the Free Software Foundation, either version 3
@@ -51,7 +51,7 @@ public:
        \params am acceleration limit
        \params jm jerk limit
      */
-    bool Compute1DTrajectoryZeroTimeDerivativesOptimizeDuration(dReal x0, dReal x1, dReal vm, dReal am, dReal jm);
+    void Compute1DTrajectoryZeroTimeDerivativesOptimizeDuration(dReal x0, dReal x1, dReal vm, dReal am, dReal jm, Polynomial& p, dReal& T);
 
     /*
        \brief Compute a 1d quintic polynomial that interpolates (x0, v0, a0) and (x1, v1, a1) and
@@ -64,9 +64,9 @@ public:
        \params v1 final velocity
        \params a0 initial acceleration
        \params a1 final acceleration
-       \params duration
+       \params T the duration
      */
-    bool Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal a0, dReal a1, dReal duration);
+    void Compute1DTrajectoryArbitraryTimeDerivativesFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal a0, dReal a1, dReal T, Polynomial& p);
 
     /*
        \brief Compute an nd quintic polynomial that interpolates x0Vect and x1Vect. The problem is
@@ -81,24 +81,16 @@ public:
           function are then
 
                   vVect(s) = sd(x1Vect - x0Vect),
-              aVect(s) = sdd(x1Vect - x0Vect),
-              jVect(s) = sddd(x1Vect - x0Vect).
+          aVect(s) = sdd(x1Vect - x0Vect),
+          jVect(s) = sddd(x1Vect - x0Vect).
 
           One can see that, for example, the velocity bound sd_max is determined by
 
                   sd_max = min_{i=1,...,dof} abs(vmVect[i]/dVect[i]),
 
           where dVect = x1Vect - x0Vect.
-
-       \params x0 initial position
-       \params x1 final position
-       \params v0 initial velocity
-       \params v1 final velocity
-       \params a0 initial acceleration
-       \params a1 final acceleration
-       \params duration
      */
-    bool ComputeNDTrajectoryZeroTimeDerivativesOptimizeDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect);
+    void ComputeNDTrajectoryZeroTimeDerivativesOptimizeDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect, Chunk& chunk);
 
     /*
        \brief Compute an nd quintic polynomial that interpolates (x0Vect, v0Vect, a0Vect) and
@@ -111,16 +103,16 @@ public:
        \params v1Vect final velocity
        \params a0Vect initial acceleration
        \params a1Vect final acceleration
-       \params duration
+       \params T
      */
-    bool ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& a0Vect, const std::vector<dReal>& a1Vect, dReal duration);
+    void ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& a0Vect, const std::vector<dReal>& a1Vect, dReal T, Chunk& chunk);
 
     /*
        \brief First compute an nd quintic polynomial that satisfies the given boundary conditions
              with the least duration while satisfying all constraints.
 
          pseudocode:
-         curDuration = duration
+         curDuration = T
          traj = ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(..., curDuration)
          if traj is feasible:
              stepSize = curDuration/2
@@ -145,10 +137,24 @@ public:
        \params vmVect velocity limits
        \params amVect acceleration limits
        \params jmVect jerk limits
-       \params duration
+       \params T the initial value of the duration
      */
-    bool ComputeNDTrajectoryArbitraryTimeDerivativesOptimizeDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& a0Vect, const std::vector<dReal>& a1Vect, const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect, dReal duration);
-}
+    bool ComputeNDTrajectoryArbitraryTimeDerivativesOptimizeDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& a0Vect, const std::vector<dReal>& a1Vect, const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect, dReal T, Chunk& chunk);
+
+    //
+    // Members
+    //
+    size_t ndof;
+    int envid;
+
+    static const dReal _fifteenOverEight;
+    static const dReal _tenOverSqrtThree;
+
+    std::vector<dReal> _cache1DCoeffs;
+    std::vector<dReal> _cacheDVect;
+    std::vector<Polynomial> _cachePolynomialsVect;
+    Polynomial _cachePolynomial;
+};
 
 } // end namespace PiecewisePolynomialsInternal
 

@@ -15,6 +15,7 @@
 #define PIECEWISE_POLY_POLY_COMMON_H
 
 #include <openrave/openrave.h>
+#include <openrave/mathextra.h>
 
 #include <boost/numeric/ublas/vector.hpp>
 #include <boost/numeric/ublas/vector_proxy.hpp>
@@ -56,6 +57,13 @@ inline dReal Sqr(dReal x)
 inline dReal Sqrt(dReal x)
 {
     return OpenRAVE::RaveSqrt(x);
+}
+
+inline dReal Cbrt(dReal x)
+{
+    dReal r0, r1, r2;
+    int numroots = mathextra::CubicRoots(x, 0, 0, &r0, &r1, &r2);
+    return r0;
 }
 
 inline dReal Abs(dReal x)
