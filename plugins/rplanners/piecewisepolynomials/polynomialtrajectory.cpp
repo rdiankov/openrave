@@ -234,6 +234,111 @@ void Polynomial::_FindAllLocalExtrema()
     return;
 }
 
+void Polynomial::FindAllLocalExtrema(size_t ideriv, std::vector<Coordinate>& vcoords) const
+{
+    vcoords.resize(0);
+    if( ideriv >= degree - 1 ) {
+        // No local extrema.
+        return;
+    }
+
+    // The number of coefficients after taking (ideriv + 1)-th derivative is (degree + 1) - (ideriv + 1)
+    size_t numcoeffs = degree - ideriv;
+    _vcurcoeffs.resize(numcoeffs); // storing strongest coeff first
+    if( ideriv == 0 ) {
+        for( size_t icoeff = 0; icoeff < numcoeffs; ++icoeff ) {
+            _vcurcoeffs[icoeff] = vcoeffsd[degree - 1 - icoeff];
+        }
+    }
+    else if( ideriv == 1 ) {
+        for( size_t icoeff = 0; icoeff < numcoeffs; ++icoeff ) {
+            _vcurcoeffs[icoeff] = vcoeffsdd[degree - 2 - icoeff];
+        }
+    }
+    else if( ideriv == 2 ) {
+        for( size_t icoeff = 0; icoeff < numcoeffs; ++icoeff ) {
+            _vcurcoeffs[icoeff] = vcoeffsddd[degree - 3 - icoeff];
+        }
+    }
+    else {
+        // The remaining number of times we need to take derivatives considering that we start with
+        // the coeffcients of the third derivative, which we already computed.
+        size_t inewderiv = ideriv - 2;
+
+        for( size_t icoeff = 0; icoeff < numcoeffs; ++icoeff ) {
+            _vcurcoeffs[icoeff] = vcoeffsddd[degree - 3 - icoeff];
+            for( size_t jmult = 1; jmult < inewderiv + 1; ++jmult ) {
+                _vcurcoeffs[numcoeffs - 1 - icoeff] *= (jmult + icoeff);
+            }
+        }
+    }
+
+    {
+        std::cout << "ideriv=" << ideriv << "; (strongest term first) vcoeffs=[" << _vcurcoeffs[0];
+        for( size_t icoeff = 1; icoeff < numcoeffs; ++icoeff ) {
+            std::cout << ", " << _vcurcoeffs[icoeff];
+        }
+        std::cout << "]\n";
+    }
+
+    int numroots = 0;
+    std::vector<dReal> rawroots(numcoeffs - 1);
+    polyroots((int)(numcoeffs - 1), &_vcurcoeffs[0], &rawroots[0], numroots);
+    rawroots.resize(numroots);
+    if( numroots == 0 ) {
+        return;
+    }
+
+    // Collect all *critical* points in vcoords.
+    vcoords.reserve(numroots);
+    for( int iroot = 0; iroot < numroots; ++iroot ) {
+        Coordinate c(rawroots[iroot], Evaldn(rawroots[iroot], ideriv));
+        std::cout << "    examining (" << c.point << ", " << c.value << ")\n";
+        if( vcoords.size() == 0 ) {
+            vcoords.push_back(c);
+        }
+        else {
+            std::vector<Coordinate>::const_iterator it = std::lower_bound(vcoords.begin(), vcoords.end(), c);
+            if( it != vcoords.end() ) {
+                if( !FuzzyEquals(it->point, c.point, g_fPolynomialEpsilon) ) {
+                    // Insert this point only if not already in the list
+                    vcoords.insert(it, c);
+                }
+            }
+        }
+    }
+
+    // Determine if a critical point is a local extrema or not.
+    dReal prevpoint = vcoords[0].point - 1;
+    int writeindex = 0;
+    for( int readindex = 0; readindex < (int)vcoords.size(); ++readindex ) {
+        dReal leftpoint, rightpoint; // points at which to evaluate the polynomial values
+        dReal leftvalue, rightvalue; // polynomial values evaluated at leftpoint and rightpoint, respectively
+
+        leftpoint = 0.5*(prevpoint + vcoords[readindex].point);
+        if( readindex == numroots - 1 ) {
+            rightpoint = vcoords[readindex].point + 1;
+        }
+        else {
+            rightpoint = 0.5*(vcoords[readindex].point + vcoords[readindex + 1].point);
+        }
+        leftvalue = Evaldn(leftpoint, ideriv);
+        rightvalue = Evaldn(rightpoint, ideriv);
+
+        prevpoint = vcoords[readindex].point; // update prevpoint first
+
+        if( (vcoords[readindex].value - leftvalue) * (rightvalue - vcoords[readindex].value) < 0 ) {
+            // This point is a local extrema so keep it.
+            if( readindex > writeindex ) {
+                vcoords[writeindex] = vcoords[readindex];
+            }
+            ++writeindex;
+        }
+    }
+    vcoords.resize(writeindex);
+    return;
+}
+
 void Polynomial::Serialize(std::ostream& O) const
 {
     O << vcoeffs[0];
@@ -246,6 +351,19 @@ void Polynomial::Serialize(std::ostream& O) const
 // Chunk
 //
 Chunk::Chunk(const dReal duration, const std::vector<Polynomial> vpolynomials)
+{
+    Initialize(duration, vpolynomials);
+}
+
+void Chunk::UpdateInitialValues(std::vector<dReal>&vinitialvalues)
+{
+    OPENRAVE_ASSERT_OP(vinitialvalues.size(), ==, dof);
+    for( size_t idof = 0; idof < dof; ++idof ) {
+        vpolynomials[idof].UpdateInitialValue(vinitialvalues[idof]);
+    }
+}
+
+void Chunk::Initialize(const dReal duration, const std::vector<Polynomial> vpolynomials)
 {
     this->duration = duration;
     this->vpolynomials = vpolynomials;
@@ -260,14 +378,6 @@ Chunk::Chunk(const dReal duration, const std::vector<Polynomial> vpolynomials)
         if( this->vpolynomials[i].degree < this->degree ) {
             this->vpolynomials[i].PadCoefficients(this->degree);
         }
-    }
-}
-
-void Chunk::UpdateInitialValues(std::vector<dReal>&vinitialvalues)
-{
-    OPENRAVE_ASSERT_OP(vinitialvalues.size(), ==, dof);
-    for( size_t idof = 0; idof < dof; ++idof ) {
-        vpolynomials[idof].UpdateInitialValue(vinitialvalues[idof]);
     }
 }
 
@@ -319,6 +429,20 @@ void Chunk::Serialize(std::ostream& O) const
     for( size_t ipoly = 0; ipoly < vpolynomials.size(); ++ipoly ) {
         O << "\n";
         vpolynomials[ipoly].Serialize(O);
+    }
+}
+
+void Chunk::SetConstant(const std::vector<dReal>& x0Vect, const dReal duration, const size_t degree)
+{
+    this->dof = x0Vect.size();
+    this->degree = degree;
+    this->duration = duration;
+    vpolynomials.resize(this->dof);
+    std::vector<dReal> vcoeffs(this->degree + 1, 0);
+    for( size_t idof = 0; idof < this->dof; ++idof ) {
+        // All other coefficients are zero.
+        vcoeffs[0] = x0Vect[idof];
+        vpolynomials[idof].Initialize(vcoeffs);
     }
 }
 

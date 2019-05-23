@@ -97,9 +97,13 @@ public:
 
     void Serialize(std::ostream& O) const;
 
-    /// \brief Find all local extremas of this polynomial (or some n-th order derivative of this
-    ///        polynomial).
+    /// \brief Find all local extrema of this polynomial. Keep the results in vcextrema in ascending
+    /// order.
     void _FindAllLocalExtrema();
+
+    /// \brief Find all local extrema of the ideriv-th derivative of this polynomial. Keep the
+    /// results in vcoord in ascending order.
+    void FindAllLocalExtrema(size_t ideriv, std::vector<Coordinate>& vcoord) const;
 
     //
     // Members
@@ -133,6 +137,9 @@ public:
     /// \brief
     void UpdateInitialValues(std::vector<dReal>& vinitialvalues);
 
+    /// \brief
+    void Initialize(const dReal duration, const std::vector<Polynomial> vpolynomials);
+
     /// \brief Evaluate all polynomials at time t.
     void Eval(dReal t, std::vector<dReal>& res) const;
 
@@ -150,6 +157,9 @@ public:
 
     /// \brief
     void Serialize(std::ostream& O) const;
+
+    /// \brief Initialize this chunk with constant polynomials.
+    void SetConstant(const std::vector<dReal>& x0Vect, const dReal duration, const size_t degree);
 
     //
     // Members

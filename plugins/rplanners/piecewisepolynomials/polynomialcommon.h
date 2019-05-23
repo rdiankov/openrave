@@ -98,6 +98,18 @@ inline void Swap(dReal& x,dReal& y)
     dReal temp = x; x = y; y = temp;
 }
 
+/// \brief Compute res = v1 - v2
+inline void SubtractVector(const std::vector<dReal>& v1, const std::vector<dReal>& v2, std::vector<dReal>& res)
+{
+    // Users need to make sure all input vector dimensions are compatible
+    if( res.size() != v1.size() ) {
+        res.resize(v1.size());
+    }
+    for( size_t i = 0; i < v1.size(); ++i ) {
+        res[i] = v1[i] - v2[i];
+    }
+}
+
 // void polyrealroots(const std::vector<dReal>& vcoeffs, std::vector<dReal>& vroots) {
 //     // initialization
 //     const uint32_t len = vcoeffs.size();
