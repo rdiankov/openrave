@@ -25,6 +25,15 @@ PolynomialChecker::PolynomialChecker(size_t ndof, int envid)
     _cacheCoordsVect.reserve(4); // quintic polynomial has at most 4 extrema
 }
 
+void PolynomialChecker::Initialize(size_t ndof, int envid)
+{
+    this->ndof = ndof;
+    this->envid = envid;
+    if( _cacheCoordsVect.capacity() < 4 ) {
+        _cacheCoordsVect.reserve(4); // quintic polynomial has at most 4 extrema
+    }
+}
+
 PolynomialCheckReturn PolynomialChecker::CheckPolynomial(const Polynomial& p, const dReal T, const dReal xmin, const dReal xmax, const dReal vm, const dReal am, const dReal jm)
 {
     std::vector<Coordinate>& vcoords = _cacheCoordsVect;

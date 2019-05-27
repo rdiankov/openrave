@@ -15,6 +15,7 @@
 #define PIECEWISE_POLY_QUINTIC_INTERPOLATOR_H
 
 #include "polynomialtrajectory.h"
+#include "polynomialchecker.h"
 
 namespace OpenRAVE {
 
@@ -146,6 +147,7 @@ public:
     //
     size_t ndof;
     int envid;
+    PolynomialChecker checker;
 
     static const dReal _fifteenOverEight;
     static const dReal _tenOverSqrtThree;

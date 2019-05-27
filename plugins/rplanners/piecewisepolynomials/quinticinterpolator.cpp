@@ -25,6 +25,7 @@ QuinticInterpolator::QuinticInterpolator(size_t ndof, int envid)
     OPENRAVE_ASSERT_OP(ndof, >, 0);
     this->ndof = ndof;
     this->envid = envid;
+    checker.Initialize(ndof, envid);
 
     _cache1DCoeffs.resize(6);
 
@@ -194,6 +195,11 @@ bool QuinticInterpolator::ComputeNDTrajectoryArbitraryTimeDerivativesOptimizeDur
     OPENRAVE_ASSERT_OP(amVect.size(), ==, ndof);
     OPENRAVE_ASSERT_OP(jmVect.size(), ==, ndof);
 
+    ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, T, chunk);
+    PolynomialCheckReturn ret = checker.CheckChunk(chunk, xminVect, xmaxVect, vmVect, amVect, jmVect);
+    if( ret != PCR_Normal ) {
+	return false;
+    }
     return true;
 }
 

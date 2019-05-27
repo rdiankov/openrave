@@ -41,6 +41,8 @@ public:
     {
     };
 
+    void Initialize(size_t ndof, int envid);
+
     /// \brief
     PolynomialCheckReturn CheckPolynomial(const Polynomial& p, const dReal T, const dReal xmin, const dReal xmax, const dReal vm=0, const dReal am=0, const dReal jm=0);
 
