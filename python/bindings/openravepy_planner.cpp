@@ -133,7 +133,7 @@ public:
         {
             _paramswrite->_nMaxIterations = nMaxIterations;
         }
-        
+
         object CheckPathAllConstraints(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval, uint32_t options=0xffff, bool filterreturn=false)
         {
             const std::vector<dReal> q0, q1, dq0, dq1;
@@ -160,6 +160,35 @@ public:
         {
             _paramswrite->_sPostProcessingPlanner = plannername;
             _paramswrite->_sPostProcessingParameters = plannerparameters;
+        }
+
+        object NeighStateFn(object oq, object odq, int options)
+        {
+            std::vector<dReal> q0 = ExtractArray<dReal>(oq);
+            std::vector<dReal> dq = ExtractArray<dReal>(odq);
+            int ret = _paramsread->_neighstatefn(q0, dq, options);
+
+            boost::python::dict oneighstateret;
+            oneighstateret["configuration"] = toPyArray(q0);
+            oneighstateret["returncode"] = ret;
+            return oneighstateret;
+        }
+
+        dReal DistMetricFn(object oq0, object oq1)
+        {
+            return _paramsread->_distmetricfn(ExtractArray<dReal>(oq0), ExtractArray<dReal>(oq1));
+        }
+
+        dReal SetStateValues(object oq, int options)
+        {
+            return _paramsread->SetStateValues(ExtractArray<dReal>(oq), options);
+        }
+
+        object GetStateFn()
+        {
+            std::vector<dReal> q;
+            _paramsread->_getstatefn(q);
+            return toPyArray(q);
         }
 
         string __repr__() {
@@ -371,6 +400,10 @@ void init_openravepy_planner()
         .def("SetMaxIterations",&PyPlannerBase::PyPlannerParameters::SetMaxIterations,args("maxiterations"),"sets PlannerParameters::_nMaxIterations")
         .def("CheckPathAllConstraints",&PyPlannerBase::PyPlannerParameters::CheckPathAllConstraints,CheckPathAllConstraints_overloads(args("q0","q1","dq0","dq1","timeelapsed","interval","options", "filterreturn"),DOXY_FN(PlannerBase::PlannerParameters, CheckPathAllConstraints)))
         .def("SetPostProcessing", &PyPlannerBase::PyPlannerParameters::SetPostProcessing, args("plannername", "plannerparameters"), "sets the post processing parameters")
+        .def("NeighStateFn", &PyPlannerBase::PyPlannerParameters::NeighStateFn, args("q", "dq", "options"), "calls params' _neighstatefn")
+        .def("DistMetricFn", &PyPlannerBase::PyPlannerParameters::NeighStateFn, args("q0", "q1"), "returns the distance between q0 and q1 according to the specified metric")
+        .def("SetStateValues", &PyPlannerBase::PyPlannerParameters::NeighStateFn, args("q", "options"), "sets the current state to the given values")
+        .def("GetStateFn", &PyPlannerBase::PyPlannerParameters::NeighStateFn, "gets the current state")
         .def("__str__",&PyPlannerBase::PyPlannerParameters::__str__)
         .def("__unicode__",&PyPlannerBase::PyPlannerParameters::__unicode__)
         .def("__repr__",&PyPlannerBase::PyPlannerParameters::__repr__)
