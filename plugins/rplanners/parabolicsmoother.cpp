@@ -1812,7 +1812,7 @@ protected:
         _DumpDynamicPath(dynamicpath, _dumplevel, fileindex, 0); // save the dynamicpath before shortcutting
 
         dReal fiMinDiscretization = 4.0/(mintimestep);
-        std::vector<uint8_t>& vVisitedDiscretization = _vVisitedDiscretizationCache;
+        std::vector<bool>& vVisitedDiscretization = _vVisitedDiscretizationCache;
         vVisitedDiscretization.clear();
 
         std::vector<ParabolicRamp::ParabolicRampND>& ramps = dynamicpath.ramps;
@@ -1908,7 +1908,7 @@ protected:
 
             if( vVisitedDiscretization.size() == 0 ) {
                 // if nEndTimeDiscretization is too big, then just ignore vVisitedDiscretization
-                if( nEndTimeDiscretization <= 0x8000 ) {
+                if( nEndTimeDiscretization <= 0x2000 ) {
                     vVisitedDiscretization.resize(nEndTimeDiscretization*nEndTimeDiscretization,0);
                 }
             }
@@ -2667,7 +2667,7 @@ protected:
     vector<ParabolicRamp::Vector> _cachepath;
     std::vector<dReal> _cachevellimits, _cacheaccellimits, _cachevellimits2, _cacheaccellimits2;
     std::vector<dReal> _x0cache, _dx0cache, _x1cache, _dx1cache;
-    std::vector<uint8_t> _vVisitedDiscretizationCache;
+    std::vector<bool> _vVisitedDiscretizationCache; ///< use bool to be memory efficient
     //@}
 
     TrajectoryBasePtr _dummytraj;
