@@ -124,6 +124,7 @@ PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparame
     _vXMLParameters.push_back("_vconfigupperlimit");
     _vXMLParameters.push_back("_vconfigvelocitylimit");
     _vXMLParameters.push_back("_vconfigaccelerationlimit");
+    _vXMLParameters.push_back("_vconfigjerklimit");
     _vXMLParameters.push_back("_vconfigresolution");
     _vXMLParameters.push_back("_nmaxiterations");
     _vXMLParameters.push_back("_nmaxplanningtime");
@@ -170,6 +171,7 @@ PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const 
     _vConfigResolution.resize(0);
     _vConfigVelocityLimit.resize(0);
     _vConfigAccelerationLimit.resize(0);
+    _vConfigJerkLimit.resize(0);
     _sPostProcessingPlanner = "";
     _sPostProcessingParameters.resize(0);
     _sExtraParameters.resize(0);
@@ -248,6 +250,11 @@ bool PlannerBase::PlannerParameters::serialize(std::ostream& O, int options) con
         O << *it << " ";
     }
     O << "</_vconfigaccelerationlimit>" << endl;
+    O << "<_vconfigjerklimit>";
+    FOREACHC(it, _vConfigJerkLimit) {
+        O << *it << " ";
+    }
+    O << "</_vconfigjerklimit>" << endl;
     O << "<_vconfigresolution>";
     FOREACHC(it, _vConfigResolution) {
         O << *it << " ";
@@ -312,7 +319,7 @@ BaseXMLReader::ProcessElement PlannerBase::PlannerParameters::startElement(const
         return PE_Support;
     }
 
-    static const boost::array<std::string,14> names = {{"_vinitialconfig","_vgoalconfig","_vconfiglowerlimit","_vconfigupperlimit","_vconfigvelocitylimit","_vconfigaccelerationlimit","_vconfigresolution","_nmaxiterations","_nmaxplanningtime","_fsteplength","_postprocessing", "_nrandomgeneratorseed", "_vinitialconfigvelocities", "_vgoalconfigvelocities"}};
+    static const boost::array<std::string,15> names = {{"_vinitialconfig","_vgoalconfig","_vconfiglowerlimit","_vconfigupperlimit","_vconfigvelocitylimit","_vconfigaccelerationlimit","_vconfigjerklimit","_vconfigresolution","_nmaxiterations","_nmaxplanningtime","_fsteplength","_postprocessing", "_nrandomgeneratorseed", "_vinitialconfigvelocities", "_vgoalconfigvelocities"}};
     if( find(names.begin(),names.end(),name) != names.end() ) {
         __processingtag = name;
         return PE_Support;
@@ -369,6 +376,9 @@ bool PlannerBase::PlannerParameters::endElement(const std::string& name)
         }
         else if( name == "_vconfigaccelerationlimit") {
             _vConfigAccelerationLimit = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
+        }
+        else if( name == "_vconfigjerklimit") {
+            _vConfigJerkLimit = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
         }
         else if( name == "_nmaxiterations") {
             _ss >> _nMaxIterations;
@@ -469,6 +479,7 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
     robot->GetActiveDOFLimits(_vConfigLowerLimit,_vConfigUpperLimit);
     robot->GetActiveDOFVelocityLimits(_vConfigVelocityLimit);
     robot->GetActiveDOFAccelerationLimits(_vConfigAccelerationLimit);
+    robot->GetActiveDOFJerkLimits(_vConfigJerkLimit);
     robot->GetActiveDOFResolutions(_vConfigResolution);
     robot->GetActiveDOFValues(vinitialconfig);
     robot->GetActiveDOFVelocities(_vInitialConfigVelocities); // necessary?
@@ -678,7 +689,7 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
     std::vector< std::pair<SetStateValuesFn, int> > setstatevaluesfns(spec._vgroups.size());
     std::vector< std::pair<GetStateFn, int> > getstatefns(spec._vgroups.size());
     std::vector< std::pair<NeighStateFn, int> > neighstatefns(spec._vgroups.size());
-    std::vector<dReal> vConfigLowerLimit(spec.GetDOF()), vConfigUpperLimit(spec.GetDOF()), vConfigVelocityLimit(spec.GetDOF()), vConfigAccelerationLimit(spec.GetDOF()), vConfigResolution(spec.GetDOF()), v0, v1;
+    std::vector<dReal> vConfigLowerLimit(spec.GetDOF()), vConfigUpperLimit(spec.GetDOF()), vConfigVelocityLimit(spec.GetDOF()), vConfigAccelerationLimit(spec.GetDOF()), vConfigJerkLimit(spec.GetDOF()), vConfigResolution(spec.GetDOF()), v0, v1;
     std::list<KinBodyPtr> listCheckCollisions;
     string bodyname;
     stringstream ss, ssout;
@@ -746,6 +757,8 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
             std::copy(v0.begin(),v0.end(), vConfigVelocityLimit.begin()+g.offset);
             pbody->GetDOFAccelerationLimits(v0,dofindices);
             std::copy(v0.begin(),v0.end(), vConfigAccelerationLimit.begin()+g.offset);
+            pbody->GetDOFJerkLimits(v0,dofindices);
+            std::copy(v0.begin(),v0.end(), vConfigJerkLimit.begin()+g.offset);
             pbody->GetDOFResolutions(v0,dofindices);
             std::copy(v0.begin(),v0.end(),vConfigResolution.begin()+g.offset);
             if( find(listCheckCollisions.begin(),listCheckCollisions.end(),pbody) == listCheckCollisions.end() ) {
@@ -775,6 +788,7 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
     _vConfigUpperLimit.swap(vConfigUpperLimit);
     _vConfigVelocityLimit.swap(vConfigVelocityLimit);
     _vConfigAccelerationLimit.swap(vConfigAccelerationLimit);
+    _vConfigJerkLimit.swap(vConfigJerkLimit);
     _vConfigResolution.swap(vConfigResolution);
     _configurationspecification = spec;
     _getstatefn(vinitialconfig);
@@ -797,6 +811,9 @@ void PlannerBase::PlannerParameters::Validate() const
     }
     if( _vConfigAccelerationLimit.size() > 0 ) {
         OPENRAVE_ASSERT_OP(_vConfigAccelerationLimit.size(),==,(size_t)GetDOF());
+    }
+    if( _vConfigJerkLimit.size() > 0 ) {
+        OPENRAVE_ASSERT_OP(_vConfigJerkLimit.size(),==,(size_t)GetDOF());
     }
     OPENRAVE_ASSERT_OP(_vConfigResolution.size(),==,(size_t)GetDOF());
     OPENRAVE_ASSERT_OP(_fStepLength,>=,0); // == 0 is valid for auto-steps

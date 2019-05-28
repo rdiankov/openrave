@@ -162,11 +162,36 @@ public:
             _paramswrite->_sPostProcessingParameters = plannerparameters;
         }
 
+        object GetConfigVelocityLimit()
+        {
+            return toPyArray(_paramswrite->_vConfigVelocityLimit);
+        }
+
+        object GetConfigAccelerationLimit()
+        {
+            return toPyArray(_paramswrite->_vConfigAccelerationLimit);
+        }
+
+        object GetConfigJerkLimit()
+        {
+            return toPyArray(_paramswrite->_vConfigJerkLimit);
+        }
+
+        object GetConfigResolution()
+        {
+            return toPyArray(_paramswrite->_vConfigResolution);
+        }
+
+        bool HasNeighStateFn()
+        {
+            return !!_paramsread->_neighstatefn;
+        }
+
         object NeighStateFn(object oq, object odq, int options)
         {
             std::vector<dReal> q0 = ExtractArray<dReal>(oq);
             std::vector<dReal> dq = ExtractArray<dReal>(odq);
-            int ret = _paramsread->_neighstatefn(q0, dq, options);
+            int ret = _paramswrite->_neighstatefn(q0, dq, options);
 
             boost::python::dict oneighstateret;
             oneighstateret["configuration"] = toPyArray(q0);
@@ -176,18 +201,18 @@ public:
 
         dReal DistMetricFn(object oq0, object oq1)
         {
-            return _paramsread->_distmetricfn(ExtractArray<dReal>(oq0), ExtractArray<dReal>(oq1));
+            return _paramswrite->_distmetricfn(ExtractArray<dReal>(oq0), ExtractArray<dReal>(oq1));
         }
 
-        dReal SetStateValues(object oq, int options)
+        int SetStateValues(object oq, int options=0)
         {
-            return _paramsread->SetStateValues(ExtractArray<dReal>(oq), options);
+            return _paramswrite->SetStateValues(ExtractArray<dReal>(oq), options);
         }
 
         object GetStateFn()
         {
             std::vector<dReal> q;
-            _paramsread->_getstatefn(q);
+            _paramswrite->_getstatefn(q);
             return toPyArray(q);
         }
 
@@ -352,6 +377,7 @@ PyPlannerBasePtr RaveCreatePlanner(PyEnvironmentBasePtr pyenv, const std::string
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitPlan_overloads, InitPlan, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads, PlanPath, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckPathAllConstraints_overloads, CheckPathAllConstraints, 6, 8)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetStateValues_overloads, SetStateValues, 1, 2)
 
 void init_openravepy_planner()
 {
@@ -400,9 +426,14 @@ void init_openravepy_planner()
         .def("SetMaxIterations",&PyPlannerBase::PyPlannerParameters::SetMaxIterations,args("maxiterations"),"sets PlannerParameters::_nMaxIterations")
         .def("CheckPathAllConstraints",&PyPlannerBase::PyPlannerParameters::CheckPathAllConstraints,CheckPathAllConstraints_overloads(args("q0","q1","dq0","dq1","timeelapsed","interval","options", "filterreturn"),DOXY_FN(PlannerBase::PlannerParameters, CheckPathAllConstraints)))
         .def("SetPostProcessing", &PyPlannerBase::PyPlannerParameters::SetPostProcessing, args("plannername", "plannerparameters"), "sets the post processing parameters")
+        .def("GetConfigVelocityLimit",&PyPlannerBase::PyPlannerParameters::GetConfigVelocityLimit, "gets PlannerParameters::_vConfigVelocityLimit")
+        .def("GetConfigAccelerationLimit",&PyPlannerBase::PyPlannerParameters::GetConfigAccelerationLimit, "gets PlannerParameters::_vConfigAccelerationLimit")
+        .def("GetConfigJerkLimit",&PyPlannerBase::PyPlannerParameters::GetConfigJerkLimit, "gets PlannerParameters::_vConfigJerkLimit")
+        .def("GetConfigResolution",&PyPlannerBase::PyPlannerParameters::GetConfigResolution, "gets PlannerParameters::_vConfigResolution")
+        .def("HasNeighStateFn", &PyPlannerBase::PyPlannerParameters::HasNeighStateFn, "returns True if params' _neighstatefn exists")
         .def("NeighStateFn", &PyPlannerBase::PyPlannerParameters::NeighStateFn, args("q", "dq", "options"), "calls params' _neighstatefn")
-        .def("DistMetricFn", &PyPlannerBase::PyPlannerParameters::NeighStateFn, args("q0", "q1"), "returns the distance between q0 and q1 according to the specified metric")
-        .def("SetStateValues", &PyPlannerBase::PyPlannerParameters::NeighStateFn, args("q", "options"), "sets the current state to the given values")
+        .def("DistMetricFn", &PyPlannerBase::PyPlannerParameters::DistMetricFn, args("q0", "q1"), "returns the distance between q0 and q1 according to the specified metric")
+        .def("SetStateValues", &PyPlannerBase::PyPlannerParameters::SetStateValues, SetStateValues_overloads(args("q", "options"), "sets the current state to the given values"))
         .def("GetStateFn", &PyPlannerBase::PyPlannerParameters::NeighStateFn, "gets the current state")
         .def("__str__",&PyPlannerBase::PyPlannerParameters::__str__)
         .def("__unicode__",&PyPlannerBase::PyPlannerParameters::__unicode__)

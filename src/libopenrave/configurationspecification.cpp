@@ -856,6 +856,8 @@ bool ConfigurationSpecification::ExtractTransform(Transform& t, std::vector<dRea
     case 0: searchname = "affine_transform"; break;
     case 1: searchname = "affine_velocities"; break;
     case 2: searchname = "affine_accelerations"; break;
+    case 3: searchname = "affine_jerks"; break;
+    case 4: searchname = "affine_snaps"; break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT(_("bad time derivative %d"),timederivative,ORE_InvalidArguments);
     }
@@ -1012,6 +1014,7 @@ bool ConfigurationSpecification::ExtractJointValues(std::vector<dReal>::iterator
     case 1: searchname = "joint_velocities"; break;
     case 2: searchname = "joint_accelerations"; break;
     case 3: searchname = "joint_jerks"; break;
+    case 4: searchname = "joint_snaps"; break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT0(_("bad time derivative"),ORE_InvalidArguments);
     };
@@ -1061,6 +1064,7 @@ bool ConfigurationSpecification::InsertJointValues(std::vector<dReal>::iterator 
     case 1: searchname = "joint_velocities"; break;
     case 2: searchname = "joint_accelerations"; break;
     case 3: searchname = "joint_jerks"; break;
+    case 4: searchname = "joint_snaps"; break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT0(_("bad time derivative"),ORE_InvalidArguments);
     };

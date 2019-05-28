@@ -94,6 +94,7 @@ public:
         _configurationtimes.resize(0);
         _invalidvalues.resize(0);
         _invalidvelocities.resize(0);
+        _invalidaccelerations.resize(0);
         _returncode = 0;
         _fTimeWhenInvalid = 0;
         _bHasRampDeviatedFromInterpolation = false;
@@ -103,7 +104,7 @@ public:
     std::vector<dReal> _configurations; ///< N*dof vector of the configurations used to check constraints. If the constraints were invalid, they stop at the first invalid constraint
     std::vector<dReal> _configurationtimes; ///< N vector of the times where each configuration was sampled at. If timeelapsed is set in the check path constraints function, then this is scaled by this time. Otherwise it is a value in [0,1] that describes the interpolation coefficient: 0 is the initial configuration, 1 is the final configuration.
 
-    std::vector<dReal> _invalidvalues, _invalidvelocities; ///< if the constraint returned with an error, contains invalid configuration where it failed
+    std::vector<dReal> _invalidvalues, _invalidvelocities, _invalidaccelerations; ///< if the constraint returned with an error, contains invalid configuration where it failed
     dReal _fTimeWhenInvalid; ///< if the constraint has an elapsed time, will contain the time when invalidated
     int _returncode; ///< if == 0, the constraint is good. If != 0 means constraint was violated and bitmasks in ConstraintFilterOptions can be used to find what constraint was violated.
     CollisionReport _report; ///< if in collision (_returncode&(CFO_CheckEnvCollisions|CFO_CheckSelfCollisions)), then stores the collision report
@@ -190,6 +191,7 @@ private:
             - _vConfigUpperLimit
             - _vConfigVelocityLimit
             - _vConfigAccelerationLimit
+            - _vConfigJerkLimit
             - _vConfigResolution
             - vinitialconfig
             - _vInitialConfigVelocities - the initial velocities (at vinitialconfig) of the robot when starting to plan
@@ -345,13 +347,13 @@ private:
 
         /** \brief Adds a delta state to a curent state, acting like a next-nearest-neighbor function along a given direction.
 
-	    status = _neighstatefn(q, qdelta, option) -> q = Filter(q + qdelta)
+           status = _neighstatefn(q, qdelta, option) -> q = Filter(q + qdelta)
 
-	    \param q the current state. In order to save computation, assumes this state is the currently set configuration.
-	    \param qdelta the incremental configuration to be added to q
-	    \param options a set of flags from NeighborStateOptions
-	    \return one of NSS_X (NeighborStateStatus)
-	    
+           \param q the current state. In order to save computation, assumes this state is the currently set configuration.
+           \param qdelta the incremental configuration to be added to q
+           \param options a set of flags from NeighborStateOptions
+           \return one of NSS_X (NeighborStateStatus)
+
             In RRTs this is used for the extension operation. The new state is stored in the first parameter q.
             Note that the function can also add a filter to the final destination (like projecting onto a constraint manifold).
          */
@@ -362,7 +364,7 @@ private:
         /// size always has to be a multiple of GetDOF()
         /// note: not all planners support multiple goals
         std::vector<dReal> vinitialconfig, vgoalconfig;
-        
+
         /// \brief the initial velocities (at vinitialconfig) of the robot when starting to plan. If empty, then set to zero.
         std::vector<dReal> _vInitialConfigVelocities, _vGoalConfigVelocities;
 
@@ -375,6 +377,9 @@ private:
         /// \brief the absolute acceleration limits of each DOF of the configuration space.
         std::vector<dReal> _vConfigAccelerationLimit;
 
+        /// \brief the absolute jerk limits of each DOF of the configuration space.
+        std::vector<dReal> _vConfigJerkLimit;
+	
         /// \brief the discretization resolution of each dimension of the configuration space
         std::vector<dReal> _vConfigResolution;
 
@@ -391,7 +396,7 @@ private:
 
         /// \brief max planning time in ms. If 0, then there is no time limit
         uint32_t _nMaxPlanningTime;
-        
+
         /// \brief Specifies the planner that will perform the post-processing path smoothing before returning.
         ///
         /// If empty, will not path smooth the returned trajectories (used to measure algorithm time)
