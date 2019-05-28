@@ -195,6 +195,7 @@ public:
             _logginguniformsampler->SetSeed(utils::GetMicroTime());
         }
         _usingNewHeuristics = 1;
+        _vVisitedDiscretizationCache.resize(0x1000*0x1000,0); // pre-allocate in order to keep memory growth predictable
         _feasibilitychecker.SetEnvID(GetEnv()->GetId()); // set envid for logging purpose
     }
 
@@ -1908,7 +1909,7 @@ protected:
 
             if( vVisitedDiscretization.size() == 0 ) {
                 // if nEndTimeDiscretization is too big, then just ignore vVisitedDiscretization
-                if( nEndTimeDiscretization <= 0x2000 ) {
+                if( nEndTimeDiscretization <= 0x1000 ) {
                     vVisitedDiscretization.resize(nEndTimeDiscretization*nEndTimeDiscretization,0);
                 }
             }
