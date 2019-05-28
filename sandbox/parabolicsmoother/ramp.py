@@ -219,7 +219,7 @@ class Ramp(object):
             self.Initialize(self.v0, 0, 0, self.x0)
             return remRamp
         elif (t >= self.duration):
-            renRamp = Ramp(self.v1, 0, 0, self.x1)
+            remRamp = Ramp(self.v1, 0, 0, self.x1)
             return remRamp
 
         remRampDuration = Sub(self.duration, t)
