@@ -481,7 +481,10 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         int nConstraintToolPositionFailure = 0;
         int nEnvCollisionFailure = 0;
         int nSelfCollisionFailure = 0;
-
+        int nSampleSamples = 0;
+        int nCacheHitSamples = 0;
+        int nLinkDistThreshRejections = 0;
+        
         if( _nNumIterations == 0 ) {
             FOREACH(itperturbation,perturbations) {
                 // Perturbation is added to a config to make sure that the config is not too close to collision and tool
@@ -644,6 +647,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 }
 
                 if (!samplebiasdir && !samplenull && !deltasuccess) {
+                    nSampleSamples++;
                     continue;
                 }
                 // (lambda * biasdir) + (Nx) + delta + _curdofs
@@ -695,6 +699,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             if( !!_cache ) {
                 if( !!_cache->FindNearestNode(vnewdof, _neighdistthresh).first ) {
                     _cachehit++;
+                    nCacheHitSamples++;
                     continue;
                 }
             }
@@ -773,6 +778,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 }
 
                 if (!bSuccess) {
+                    nLinkDistThreshRejections++;
                     continue;
                 }
             }
@@ -898,7 +904,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             }
         }
 
-        RAVELOG_INFO_FORMAT("failed iterations=%d, computation=%fs, bConstraint=%d, neighstate=%d, constraintToolDir=%d, constraintToolPos=%d, envCollision=%d, selfCollision=%d",_maxiterations%(1e-9*(utils::GetNanoPerformanceTime() - starttime))%bConstraint%nNeighStateFailure%nConstraintToolDirFailure%nConstraintToolPositionFailure%nEnvCollisionFailure%nSelfCollisionFailure);
+        RAVELOG_INFO_FORMAT("failed iterations=%d (max=%d), computation=%fs, bConstraint=%d, neighstate=%d, constraintToolDir=%d, constraintToolPos=%d, envCollision=%d, selfCollision=%d, cachehit=%d, samesamples=%d, nLinkDistThreshRejections=%d",_nNumIterations%_maxiterations%(1e-9*(utils::GetNanoPerformanceTime() - starttime))%bConstraint%nNeighStateFailure%nConstraintToolDirFailure%nConstraintToolPositionFailure%nEnvCollisionFailure%nSelfCollisionFailure%nCacheHitSamples%nSampleSamples%nLinkDistThreshRejections);
         //RAVELOG_WARN_FORMAT("failed iterations=%d, cachehits=%d, cache size=%d, jitter time=%fs", _maxiterations%_cachehit%cache.GetNumNodes()%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
         return 0;
     }
