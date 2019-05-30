@@ -1763,8 +1763,9 @@ void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
     // TODO there might be a problem here if the first traj point has deltatime > 0
     if( starttime > 0 ) {
         size_t startindex = traj->GetFirstWaypointIndexAfterTime(starttime);
-        if( startindex >= traj->GetNumWaypoints() )
+        if( startindex >= traj->GetNumWaypoints() ) {
             startindex = traj->GetNumWaypoints()-1;
+        }
 
         ConfigurationSpecification deltatimespec;
         deltatimespec.AddDeltaTimeGroup();
@@ -1781,10 +1782,17 @@ void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
             vdeltatime[0] -= fSampleDeltaTime;
             traj->Insert(startindex, vdeltatime, deltatimespec, true);
             endremoveindex -= 1;
+            // have to reset the delta time of the first point
+            vdeltatime[0] = 0;
+        }
+        else {
+            // take care of the case where the first trajectory point has > 0 deltatime
+            vdeltatime[0] -= fSampleDeltaTime;
+            if (vdeltatime[0] < 0.0) {
+                vdeltatime[0] = 0;
+            }
         }
         traj->Remove(0, endremoveindex);
-        // have to reset the delta time of the first point
-        vdeltatime[0] = std::max((endtime-starttime) - (traj->GetDuration() - vdeltatime.at(0)), 0.0);
         traj->Insert(0, vdeltatime, deltatimespec, true);
     }
 

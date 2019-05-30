@@ -194,6 +194,7 @@ public:
             std::vector<dReal>::iterator it = std::lower_bound(_vaccumtime.begin(),_vaccumtime.end(),time);
             if( it == _vaccumtime.begin() ) {
                 std::copy(_vtrajdata.begin(),_vtrajdata.begin()+_spec.GetDOF(),data.begin());
+                data.at(_timeoffset) = time;
             }
             else {
                 size_t index = it-_vaccumtime.begin();
