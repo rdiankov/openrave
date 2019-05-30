@@ -297,6 +297,26 @@ inline int solvequad(T a, T b, T c, T& r1, T& r2)
     return 2;
 }
 
+// given boundary conditions (x0, dx0, ddx0), (x1, dx1, ddx1), and duration t, compute the
+// corresponding quintic coefficients a, b, c, d, e, f:
+// p(x) = ax^5 + bx^4 + cx^3 + dx^2 + ex + f.
+template <typename T>
+inline void computequinticcoeffs(T x0, T x1, T dx0, T dx1, T ddx0, T ddx1, T t, T* coeffs)
+{
+    T t2 = t*t;
+    T t3 = t2*t;
+    T t4 = t3*t;
+    T t5 = t4*t;
+
+    coeffs[0] = (t2*(ddx1 - ddx0) - 6.0*t*(dx1 + dx0) + 12.0*(x1 - x0))/(2*t5);
+    coeffs[1] = (t2*(3.0*ddx0 - 2.0*ddx1) + t*(16.0*dx0 + 14.0*dx1) + 30.0*(x0 - x1))/(2*t4);
+    coeffs[2] = (t2*(ddx1 - 3.0*ddx0) - t*(12.0*dx0 + 8.0*dx1) + 20.0*(x1 - x0))/(2*t3);
+    coeffs[3] = 0.5*ddx0;
+    coeffs[4] = dx0;
+    coeffs[5] = x0;
+    return;
+}
+
 #define MULT3(stride) { \
         pfres2[0*stride+0] = pf1[0*stride+0]*pf2[0*stride+0]+pf1[0*stride+1]*pf2[1*stride+0]+pf1[0*stride+2]*pf2[2*stride+0]; \
         pfres2[0*stride+1] = pf1[0*stride+0]*pf2[0*stride+1]+pf1[0*stride+1]*pf2[1*stride+1]+pf1[0*stride+2]*pf2[2*stride+1]; \
@@ -1247,7 +1267,7 @@ int Max(T* pts, int stride, int numPts)
 
     return best;
 }
-    
+
 /// \brief Durand-Kerner polynomial root finding method
 template <typename IKReal, int D>
 inline void polyroots(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
