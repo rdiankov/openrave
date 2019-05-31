@@ -23,7 +23,9 @@
 #include <boost/numeric/bindings/traits/ublas_matrix.hpp>
 #include <boost/numeric/bindings/lapack/gesdd.hpp>
 
+#ifdef PIECEWISE_POLY_POLY_COMMON_H_USE_EIGEN
 #include <Eigen/Eigenvalues>
+#endif
 
 namespace OpenRAVE {
 
@@ -33,11 +35,12 @@ const static dReal g_fPolynomialEpsilon = 1e-10; // tolerance for polynomial int
 const static int g_nPrec = 12;         // precision when writing trajectories to files
 const static dReal g_fPolynomialInf = 1e300;     // threshold for deciding if a number is infinite
 
+#ifdef PIECEWISE_POLY_POLY_COMMON_H_USE_EIGEN
 template <typename T>
 using VectorXT = Eigen::Matrix<T, Eigen::Dynamic, 1>;
-
 template <typename T>
 using MatrixXT = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
+#endif
 
 inline int IsInf(dReal x)
 {
@@ -126,40 +129,42 @@ inline void SubtractVector(const std::vector<dReal>& v1, const std::vector<dReal
     }
 }
 
-// Weakest coeff first. Will need to fix either this function or polyroots later so that the conventions are the same
-void polyrealroots(const int degree, const dReal* vcoeffs, dReal* vroots, int& numroots) {
+#ifdef PIECEWISE_POLY_POLY_COMMON_H_USE_EIGEN
+// Weakest coeff first. This eigenvalue-method, however, is prone to numerical errors in some cases,
+// for example, when there are repeating roots. According to my test, solving x^3 - 3x^2 + 3x - 1 =
+// 0 gives x = 0.999994. So it seems like using an iterative method is better.
+inline void polyrealroots(const int degree, const dReal* vcoeffs, dReal* vroots, int& numroots) {
     // initialization
     numroots = 0;
     if( degree == 0 ) {
-	return;
+        return;
     }
 
-    // construct the companion matrix
-    using namespace boost::numeric::ublas;
-    boost::numeric::ublas::matrix<dReal, column_major> C(degree, degree); // companion matrix
+    // Construct the companion matrix
+    MatrixXT<dReal> companion = MatrixXT<dReal>::Zero(degree, degree);
     BOOST_ASSERT(vcoeffs[degree] != 0);
-    const dReal fileadcoeff = 1.0/vcoeffs[degree];
-    for( size_t i = 0; i < (size_t)degree - 1; ++i ) {
-        C(i + 1, i) = 1;
-        C(i, degree - 1) = -vcoeffs[i] * fileadcoeff;
+    const dReal& ilead_coeff = 1/vcoeffs[degree];
+    for( int i = 0; i < degree - 1; ++i ) {
+        companion(i + 1, i) = 1.0;
+        companion(i, degree - 1) = -vcoeffs[i] * ilead_coeff;
     }
-    C(degree - 1, degree - 1) = -vcoeffs[degree - 1] * fileadcoeff;
+    companion(degree - 1, degree - 1) = -vcoeffs[degree - 1] * ilead_coeff;
 
-    boost::numeric::ublas::vector<dReal> S(degree);
-    boost::numeric::ublas::matrix<dReal, column_major> U(degree, degree), V(degree, degree);
-    int ret = boost::numeric::bindings::lapack::gesdd('O', 'A', C, S, U, V);
+    // Compute eigenvalues of the companion matrix
+    Eigen::EigenSolver<MatrixXT<dReal> > ges(companion);
+    MatrixXT<std::complex<dReal> > eigvals = ges.eigenvalues();
 
-    // assign to output
-    for (uint32_t i = 0; i < (size_t)degree; ++i) {
-        std::complex<dReal> r = S(i);
-        if( FuzzyZero(r.imag(), g_fPolynomialEpsilon) ) {
-            vroots[numroots++] = r.real();
+    // Eigenvalues are the roots
+    for( int i = 0; i < degree; ++i ) {
+        if( FuzzyZero(eigvals(i).imag(), g_fPolynomialEpsilon) ) {
+            vroots[numroots++] = eigvals(i).real();
         }
     }
     return;
 }
-
-// Modified from mathextra.h
+#else
+// Strongest coefficient first (openrave convention). Modified from mathextra.h. Using Durand-Kerner
+// method for finding polynomial roots.
 inline void polyroots(const int degree, const dReal* rawcoeffs, dReal* rawroots, int& numroots)
 {
     using std::complex;
@@ -169,7 +174,7 @@ inline void polyroots(const int degree, const dReal* rawcoeffs, dReal* rawroots,
     complex<dReal> coeffs[degree];
     const int maxsteps = 110;
     for(int i = 0; i < degree; ++i) {
-        coeffs[i] = complex<dReal>(rawcoeffs[i+1]/rawcoeffs[0]);
+        coeffs[i] = complex<dReal>(rawcoeffs[i + 1]/rawcoeffs[0]);
     }
     complex<dReal> roots[degree];
     dReal err[degree];
@@ -178,7 +183,7 @@ inline void polyroots(const int degree, const dReal* rawcoeffs, dReal* rawroots,
     err[0] = 1.0;
     err[1] = 1.0;
     for(int i = 2; i < degree; ++i) {
-        roots[i] = roots[i-1]*roots[1];
+        roots[i] = roots[i - 1]*roots[1];
         err[i] = 1.0;
     }
     for(int step = 0; step < maxsteps; ++step) {
@@ -216,7 +221,7 @@ inline void polyroots(const int degree, const dReal* rawcoeffs, dReal* rawroots,
             complex<dReal> newroot=roots[i];
             int n = 1;
             for(int j = i+1; j < degree; ++j) {
-                if( abs(roots[i]-roots[j]) < 8*tolsqrt ) {
+                if( abs(roots[i] - roots[j]) < 8*tolsqrt ) {
                     newroot += roots[j];
                     n += 1;
                     visited[j] = true;
@@ -225,14 +230,16 @@ inline void polyroots(const int degree, const dReal* rawcoeffs, dReal* rawroots,
             if( n > 1 ) {
                 newroot /= n;
             }
-            // there are still cases where even the mean is not accurate enough, until a better multi-root algorithm is used, need to use the sqrt
-	    // std::cout << "root " << i << ": val=" << real(newroot) << " + " << imag(newroot) << "j\n";
+            // there are still cases where even the mean is not accurate enough, until a better
+            // multi-root algorithm is used, need to use the sqrt
+            // std::cout << "root " << i << ": val=" << real(newroot) << " + " << imag(newroot) << "j\n";
             if( RaveFabs(imag(newroot)) < tolsqrt ) {
                 rawroots[numroots++] = real(newroot);
             }
         }
     }
 }
+#endif
 
 } // end namespace PiecewisePolynomialsInternal
 
