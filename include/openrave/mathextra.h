@@ -1345,6 +1345,13 @@ inline void computequinticcoeffs(T x0, T x1, T dx0, T dx1, T ddx0, T ddx1, T t, 
     return;
 }
 
+// Evaluate the given quintic at the given point. Strongest coefficient first.
+template <typename T>
+inline void evaluatequintic(const T* coeffs, const T t, T& val)
+{
+    val = coeffs[5] + t*(coeffs[4] + t*(coeffs[3] + t*(coeffs[2] + t*(coeffs[1] + t*coeffs[0]))));
+}
+
 // Given a set of quintic coefficients, find all critical points (points at which the first
 // derivative vanishes).
 template <typename T>
@@ -1354,15 +1361,15 @@ inline void computequinticcriticalpoints(const T* coeffs, T* criticalpoints, int
     polyroots<T, 4>(quarticcoeffs, criticalpoints, numpoints);
 }
 
-// Given a set of coefficients of a quintic p(t), find smallest tnext > tcur such that p(tnext) =
-// p(tcur) + step. (step can be negative.)  *** Assume that if there exists a critical point tc to
-// the right of tcur, |p(tc) - p(tcur)| >= |step|. This is to guarantee that tnext always exists.
+// Given a set of coefficients of a quintic p(t) (strongest coefficient first), find smallest tdelta
+// > 0 such that p(t + tdelta) = p(tcur) + step. (step can be negative.)  *** Assume that if there
+// exists a critical point tc to the right of tcur, |p(tc) - p(tcur)| >= |step|. This is to
+// guarantee that tnext always exists.
 template <typename T>
 inline bool computequinticnextdiscretizedstep(const T* coeffs, const T step, const T tcur, T& tdelta)
 {
     // Evaluate the 0th, 1st, 2nd, ..., 5th derivatives of p
-    T p = coeffs[5] + tcur*(coeffs[4] + tcur*(coeffs[3] + tcur*(coeffs[2] + tcur*(coeffs[1] + tcur*coeffs[0]))));
-
+    // T p = coeffs[5] + tcur*(coeffs[4] + tcur*(coeffs[3] + tcur*(coeffs[2] + tcur*(coeffs[1] + tcur*coeffs[0]))));
     T tempcoeffs[] = {5*coeffs[0], 4*coeffs[1], 3*coeffs[2], 2*coeffs[3], coeffs[4], 0};
     T d1p = tempcoeffs[4] + tcur*(tempcoeffs[3] + tcur*(tempcoeffs[2] + tcur*(tempcoeffs[1] + tcur*tempcoeffs[0])));
 
