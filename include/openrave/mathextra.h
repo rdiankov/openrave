@@ -297,26 +297,6 @@ inline int solvequad(T a, T b, T c, T& r1, T& r2)
     return 2;
 }
 
-// given boundary conditions (x0, dx0, ddx0), (x1, dx1, ddx1), and duration t, compute the
-// corresponding quintic coefficients a, b, c, d, e, f:
-// p(x) = ax^5 + bx^4 + cx^3 + dx^2 + ex + f.
-template <typename T>
-inline void computequinticcoeffs(T x0, T x1, T dx0, T dx1, T ddx0, T ddx1, T t, T* coeffs)
-{
-    T t2 = t*t;
-    T t3 = t2*t;
-    T t4 = t3*t;
-    T t5 = t4*t;
-
-    coeffs[0] = (t2*(ddx1 - ddx0) - 6.0*t*(dx1 + dx0) + 12.0*(x1 - x0))/(2*t5);
-    coeffs[1] = (t2*(3.0*ddx0 - 2.0*ddx1) + t*(16.0*dx0 + 14.0*dx1) + 30.0*(x0 - x1))/(2*t4);
-    coeffs[2] = (t2*(ddx1 - 3.0*ddx0) - t*(12.0*dx0 + 8.0*dx1) + 20.0*(x1 - x0))/(2*t3);
-    coeffs[3] = 0.5*ddx0;
-    coeffs[4] = dx0;
-    coeffs[5] = x0;
-    return;
-}
-
 #define MULT3(stride) { \
         pfres2[0*stride+0] = pf1[0*stride+0]*pf2[0*stride+0]+pf1[0*stride+1]*pf2[1*stride+0]+pf1[0*stride+2]*pf2[2*stride+0]; \
         pfres2[0*stride+1] = pf1[0*stride+0]*pf2[0*stride+1]+pf1[0*stride+1]*pf2[1*stride+1]+pf1[0*stride+2]*pf2[2*stride+1]; \
@@ -1341,6 +1321,82 @@ inline void polyroots(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
             }
         }
     }
+}
+
+// Polynomial utilities
+
+// Given boundary conditions (x0, dx0, ddx0), (x1, dx1, ddx1), and duration t, compute the
+// corresponding quintic coefficients a, b, c, d, e, f:
+// p(x) = ax^5 + bx^4 + cx^3 + dx^2 + ex + f.
+template <typename T>
+inline void computequinticcoeffs(T x0, T x1, T dx0, T dx1, T ddx0, T ddx1, T t, T* coeffs)
+{
+    T t2 = t*t;
+    T t3 = t2*t;
+    T t4 = t3*t;
+    T t5 = t4*t;
+
+    coeffs[0] = (t2*(ddx1 - ddx0) - 6.0*t*(dx1 + dx0) + 12.0*(x1 - x0))/(2*t5);
+    coeffs[1] = (t2*(3.0*ddx0 - 2.0*ddx1) + t*(16.0*dx0 + 14.0*dx1) + 30.0*(x0 - x1))/(2*t4);
+    coeffs[2] = (t2*(ddx1 - 3.0*ddx0) - t*(12.0*dx0 + 8.0*dx1) + 20.0*(x1 - x0))/(2*t3);
+    coeffs[3] = 0.5*ddx0;
+    coeffs[4] = dx0;
+    coeffs[5] = x0;
+    return;
+}
+
+// Given a set of quintic coefficients, find all critical points (points at which the first
+// derivative vanishes).
+template <typename T>
+inline void computequinticcriticalpoints(const T* coeffs, T* criticalpoints, int& numpoints)
+{
+    const T quarticcoeffs[] = {5*coeffs[0], 4*coeffs[1], 3*coeffs[2], 2*coeffs[3], coeffs[4]};
+    polyroots<T, 4>(quarticcoeffs, criticalpoints, numpoints);
+}
+
+// Given a set of coefficients of a quintic p(t), find smallest tnext > tcur such that p(tnext) =
+// p(tcur) + step. (step can be negative.)  *** Assume that if there exists a critical point tc to
+// the right of tcur, |p(tc) - p(tcur)| >= |step|. This is to guarantee that tnext always exists.
+template <typename T>
+inline bool computequinticnextdiscretizedstep(const T* coeffs, const T step, const T tcur, T& tdelta)
+{
+    // Evaluate the 0th, 1st, 2nd, ..., 5th derivatives of p
+    T p = coeffs[5] + tcur*(coeffs[4] + tcur*(coeffs[3] + tcur*(coeffs[2] + tcur*(coeffs[1] + tcur*coeffs[0]))));
+
+    T tempcoeffs[] = {5*coeffs[0], 4*coeffs[1], 3*coeffs[2], 2*coeffs[3], coeffs[4], 0};
+    T d1p = tempcoeffs[4] + tcur*(tempcoeffs[3] + tcur*(tempcoeffs[2] + tcur*(tempcoeffs[1] + tcur*tempcoeffs[0])));
+
+    tempcoeffs[0] *= 4; tempcoeffs[1] *= 3; tempcoeffs[2] *= 2;
+    T d2p = tempcoeffs[3] + tcur*(tempcoeffs[2] + tcur*(tempcoeffs[1] + tcur*tempcoeffs[0]));
+
+    tempcoeffs[0] *= 3; tempcoeffs[1] *= 2;
+    T d3p = tempcoeffs[2] + tcur*(tempcoeffs[1] + tcur*tempcoeffs[0]);
+
+    tempcoeffs[0] *= 2;
+    T d4p = tempcoeffs[1] + tcur*tempcoeffs[0];
+
+    T d5p = tempcoeffs[0];
+
+    // Reuse tempcoeffs to store coefficients of the quartic
+    tempcoeffs[0] = d5p/120;
+    tempcoeffs[1] = d4p/24;
+    tempcoeffs[2] = d3p/6;
+    tempcoeffs[3] = d2p/2;
+    tempcoeffs[4] = d1p;
+    tempcoeffs[5] = -step;
+
+    int numroots = 0;
+    T rawroots[5];
+    polyroots<T, 5>(tempcoeffs, rawroots, numroots);
+    MATH_ASSERT(numroots > 0);
+    bool bFound = false;
+    for( int i = 0; i < numroots; ++i ) {
+        if( !bFound || (rawroots[i] > 0 && rawroots[i] < tdelta) ) {
+            bFound = true;
+            tdelta = rawroots[i];
+        }
+    }
+    return bFound;
 }
 
 } // end namespace mathextra
