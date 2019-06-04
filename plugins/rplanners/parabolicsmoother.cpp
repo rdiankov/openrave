@@ -1992,7 +1992,7 @@ protected:
         size_t nItersFromPrevSuccessful = 0;
         size_t nCutoffIters = std::max(_parameters->nshortcutcycles, min(100, numIters/2));
         size_t nNumTimeBasedConstraintsFailed = 0;
-        dReal cutoffRatio = _parameters->durationImprovemetnCutoffRatio;
+        dReal cutoffRatio = _parameters->durationImprovementCutoffRatio;
         dReal score = 1;
         dReal currentBestScore = 1.0;
 #ifdef OPENRAVE_TIMING_DEBUGGING

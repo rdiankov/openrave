@@ -2424,14 +2424,14 @@ protected:
 
         // Parameters & variables for early shortcut termination
         size_t nItersFromPrevSuccessful = 0;        // keeps track of the most recent successful shortcut iteration
-        size_t nCutoffIters = min(100, numIters/2); // we stop shortcutting if no progress has been made in the past nCutoffIters iterations
+        size_t nCutoffIters = std::max(_parameters->nshortcutcycles, min(100, numIters/2)); // we stop shortcutting if no progress has been made in the past nCutoffIters iterations
         size_t nTimeBasedConstraintsFailed = 0;     // the number of times that time-based constraints fail between two consecutive successful shortcuts (reset
         // every time a shortcut attempt is successful)
 
         dReal score = 1.0;                 // if the current iteration is successful, we calculate a score
         dReal currentBestScore = 1.0;      // keeps track of the best shortcut score so far
         dReal iCurrentBestScore = 1.0;
-        dReal cutoffRatio = 1e-3;          // we stop shortcutting if the progress made is considered too little (score/currentBestScore < cutoffRatio)
+        dReal cutoffRatio = _parameters->durationImprovementCutoffRatio; // we stop shortcutting if the progress made is considered too little (score/currentBestScore < cutoffRatio)
 
         dReal specialShortcutWeight = 0.1; // if the sampled number is less than this weight, we sample t0 and t1 around a zerovelpoint
                                            // (instead of randomly sample in the whole range) to try to shortcut and remove it.
