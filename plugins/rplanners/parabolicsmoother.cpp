@@ -204,6 +204,7 @@ public:
             _logginguniformsampler->SetSeed(utils::GetMicroTime());
         }
         _usingNewHeuristics = 1;
+        _vVisitedDiscretizationCache.resize(0x1000*0x1000,0); // pre-allocate in order to keep memory growth predictable
         _feasibilitychecker.SetEnvID(GetEnv()->GetId()); // set envid for logging purpose
     }
 
@@ -837,7 +838,7 @@ public:
         RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time=%fs", GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
         //====================================================================================================
         if (IS_DEBUGLEVEL(Level_Debug)) {
-            RAVELOG_DEBUG("start sampling the trajectory (verification purpose) after shortcutting");
+            RAVELOG_DEBUG_FORMAT("env=%d, start sampling the trajectory (verification purpose) after shortcutting", GetEnv()->GetId());
             // Actually _VerifySampling() gets called every time we sample a trajectory. The function
             // already checks _Validate* at every traj point. Therefore, in order to just verify, we
             // need to call ptraj->Sample just once.
@@ -845,7 +846,7 @@ public:
             std::vector<dReal> dummy;
             try {
                 ptraj->Sample(dummy, 0);
-                RAVELOG_DEBUG("sampling for verification successful");
+                RAVELOG_DEBUG_FORMAT("env=%d, sampling for verification successful", GetEnv()->GetId());
             }
             catch (const std::exception& ex) {
                 RAVELOG_WARN_FORMAT("sampling for verification failed: %s", ex.what());
@@ -1906,7 +1907,7 @@ protected:
         _DumpDynamicPath(dynamicpath, _dumplevel, fileindex, 0); // save the dynamicpath before shortcutting
 
         dReal fiMinDiscretization = 4.0/(mintimestep);
-        std::vector<uint8_t>& vVisitedDiscretization = _vVisitedDiscretizationCache;
+        std::vector<bool>& vVisitedDiscretization = _vVisitedDiscretizationCache;
         vVisitedDiscretization.clear();
 
         std::vector<ParabolicRamp::ParabolicRampND>& ramps = dynamicpath.ramps;
@@ -1989,9 +1990,9 @@ protected:
         int numslowdowns = 0;
         bool bExpectModifiedConfigurations = _parameters->fCosManipAngleThresh > -1 + g_fEpsilonLinear; // gripper constraints enabled
         size_t nItersFromPrevSuccessful = 0;
-        size_t nCutoffIters = min(100, numIters/2);
+        size_t nCutoffIters = std::max(_parameters->nshortcutcycles, min(100, numIters/2));
         size_t nNumTimeBasedConstraintsFailed = 0;
-        dReal cutoffRatio = 1e-3;
+        dReal cutoffRatio = _parameters->durationImprovemetnCutoffRatio;
         dReal score = 1;
         dReal currentBestScore = 1.0;
 #ifdef OPENRAVE_TIMING_DEBUGGING
@@ -2005,6 +2006,7 @@ protected:
             nItersFromPrevSuccessful += 1;
             if (nItersFromPrevSuccessful + nNumTimeBasedConstraintsFailed > nCutoffIters) { // the same time based constraints can fail all the time meaning that the trajectory is already pretty optimal. This check makes smoother easier to stop when there's no improvement
                 // No progess for already nCutoffIters. Stop right away
+                RAVELOG_DEBUG_FORMAT("env=%d, no progress for shortcutting, so break %d + %d > %d", GetEnv()->GetId()%nItersFromPrevSuccessful%nNumTimeBasedConstraintsFailed%nCutoffIters);
                 break;
             }
 
@@ -2626,14 +2628,15 @@ protected:
         dReal tshortcuttotal = 0.000001f*(float)(tshortcutend - tshortcutstart);
 #endif
         if (iters == numIters) {
-            RAVELOG_DEBUG_FORMAT("env=%d, finished at shortcut iter=%d (normal exit), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
+            RAVELOG_DEBUG_FORMAT("env=%d, finished at shortcut iter=%d (normal exit), successful=%d, slowdowns=%d, nCutoffIters=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%shortcuts%numslowdowns%originalEndTime%nCutoffIters%endTime%(originalEndTime - endTime));
         }
         else if (score/currentBestScore < cutoffRatio) {
-            RAVELOG_DEBUG_FORMAT("env=%d, finished at shortcut iter=%d (current score falls below %.15e), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%cutoffRatio%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
+            RAVELOG_DEBUG_FORMAT("env=%d, finished at shortcut iter=%d (current score %.15e falls below %.15e), successful=%d, slowdowns=%d, nCutoffIters=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%(score/currentBestScore)%cutoffRatio%shortcuts%numslowdowns%nCutoffIters%originalEndTime%endTime%(originalEndTime - endTime));
         }
         else if (nItersFromPrevSuccessful > nCutoffIters) {
-            RAVELOG_DEBUG_FORMAT("env=%d, finished at shortcut iter=%d (did not make progress in the last %d iterations), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%nCutoffIters%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
+            RAVELOG_DEBUG_FORMAT("env=%d, finished at shortcut iter=%d (did not make progress in the last %d iterations), successful=%d, slowdowns=%d, nCutoffIters=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%nCutoffIters%shortcuts%numslowdowns%nCutoffIters%originalEndTime%endTime%(originalEndTime - endTime));
         }
+
 #ifdef OPENRAVE_TIMING_DEBUGGING
         RAVELOG_INFO_FORMAT("env=%d, shortcutting time = %.15e s.; numiters = %d; avg. time per iteration = %.15e s.", GetEnv()->GetId()%tshortcuttotal%iters%(tshortcuttotal/iters));
         RAVELOG_INFO_FORMAT("env=%d, measured %d slow-down loops, %.15e sec. = %.15e sec./loop", GetEnv()->GetId()%nslowdownloops%slowdownlooptime%(slowdownlooptime/nslowdownloops));
@@ -2771,7 +2774,7 @@ protected:
     vector<ParabolicRamp::Vector> _cachepath;
     std::vector<dReal> _cachevellimits, _cacheaccellimits, _cachevellimits2, _cacheaccellimits2;
     std::vector<dReal> _x0cache, _dx0cache, _x1cache, _dx1cache;
-    std::vector<uint8_t> _vVisitedDiscretizationCache;
+    std::vector<bool> _vVisitedDiscretizationCache; ///< use bool to be memory efficient
     //@}
 
     TrajectoryBasePtr _dummytraj;

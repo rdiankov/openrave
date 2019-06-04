@@ -805,7 +805,7 @@ protected:
             }
         }
 
-        RAVELOG_WARN(str(boost::format("could not find file %s\n")%filename));
+        RAVELOG_INFO_FORMAT("could not find file %s", filename);
         return std::string();
 #endif
     }

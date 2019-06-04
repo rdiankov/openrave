@@ -1763,32 +1763,37 @@ void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
     // TODO there might be a problem here if the first traj point has deltatime > 0
     if( starttime > 0 ) {
         size_t startindex = traj->GetFirstWaypointIndexAfterTime(starttime);
-        if( startindex >= traj->GetNumWaypoints() )
+        if( startindex >= traj->GetNumWaypoints() ) {
             startindex = traj->GetNumWaypoints()-1;
+        }
 
-        if( startindex > 0 ) {
-            ConfigurationSpecification deltatimespec;
-            deltatimespec.AddDeltaTimeGroup();
-            std::vector<dReal> vdeltatime;
-            traj->GetWaypoint(startindex,vdeltatime,deltatimespec);
-            traj->Sample(values, starttime);
-            dReal fSampleDeltaTime=0;
-            traj->GetConfigurationSpecification().ExtractDeltaTime(fSampleDeltaTime, values.begin());
-            // check if the sampletime can be very close to an existing waypoint, in which case can ignore inserting a new point
-            int endremoveindex = startindex;
-            if( RaveFabs(fSampleDeltaTime-vdeltatime.at(0)) > g_fEpsilonLinear ) {
-                traj->Insert(startindex-1, values, true);
-                // have to write the new delta time
-                vdeltatime[0] -= fSampleDeltaTime;
-                traj->Insert(startindex, vdeltatime, deltatimespec, true);
-                endremoveindex -= 1;
-            }
-            traj->Remove(0, endremoveindex);
+        ConfigurationSpecification deltatimespec;
+        deltatimespec.AddDeltaTimeGroup();
+        std::vector<dReal> vdeltatime;
+        traj->GetWaypoint(startindex,vdeltatime,deltatimespec);
+        traj->Sample(values, starttime);
+        dReal fSampleDeltaTime=0;
+        traj->GetConfigurationSpecification().ExtractDeltaTime(fSampleDeltaTime, values.begin());
+        // check if the sampletime can be very close to an existing waypoint, in which case can ignore inserting a new point
+        int endremoveindex = startindex;
+        if( startindex > 0 && RaveFabs(fSampleDeltaTime-vdeltatime.at(0)) > g_fEpsilonLinear ) {
+            traj->Insert(startindex-1, values, true);
+            // have to write the new delta time
+            vdeltatime[0] -= fSampleDeltaTime;
+            traj->Insert(startindex, vdeltatime, deltatimespec, true);
+            endremoveindex -= 1;
             // have to reset the delta time of the first point
             vdeltatime[0] = 0;
-            traj->Insert(0, vdeltatime, deltatimespec, true);
-
         }
+        else {
+            // take care of the case where the first trajectory point has > 0 deltatime
+            vdeltatime[0] -= fSampleDeltaTime;
+            if (vdeltatime[0] < 0.0) {
+                vdeltatime[0] = 0;
+            }
+        }
+        traj->Remove(0, endremoveindex);
+        traj->Insert(0, vdeltatime, deltatimespec, true);
     }
 
     // for debugging purposes
