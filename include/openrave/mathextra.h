@@ -1352,6 +1352,20 @@ inline void evaluatequintic(const T* coeffs, const T t, T& val)
     val = coeffs[5] + t*(coeffs[4] + t*(coeffs[3] + t*(coeffs[2] + t*(coeffs[1] + t*coeffs[0]))));
 }
 
+// Evaluate the first derivative of the given quintic at the given point. Strongest coefficient first.
+template <typename T>
+inline void evaluatequinticderiv1(const T* coeffs, const T t, T& val)
+{
+    val = coeffs[4] + t*(2*coeffs[3] + t*(3*coeffs[2] + t*(4*coeffs[1] + t*5*coeffs[0])));
+}
+
+// Evaluate the second derivative of the given quintic at the given point. Strongest coefficient first.
+template <typename T>
+inline void evaluatequinticderiv2(const T* coeffs, const T t, T& val)
+{
+    val = 2*coeffs[3] + t*(6*coeffs[2] + t*(12*coeffs[1] + t*20*coeffs[0]));
+}
+
 // Given a set of quintic coefficients, find all critical points (points at which the first
 // derivative vanishes).
 template <typename T>
@@ -1398,9 +1412,11 @@ inline bool computequinticnextdiscretizedstep(const T* coeffs, const T step, con
     MATH_ASSERT(numroots > 0);
     bool bFound = false;
     for( int i = 0; i < numroots; ++i ) {
-        if( !bFound || (rawroots[i] > 0 && rawroots[i] < tdelta) ) {
-            bFound = true;
-            tdelta = rawroots[i];
+        if( rawroots[i] > 0 ) {
+            if( !bFound || (rawroots[i] < tdelta) ) {
+                bFound = true;
+                tdelta = rawroots[i];
+            }
         }
     }
     return bFound;
