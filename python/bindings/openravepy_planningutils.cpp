@@ -198,6 +198,32 @@ public:
         }
     }
 
+    object Check(object oq0, object oq1, object odq0, object odq1, object oddq0, object oddq1, dReal timeelapsed, IntervalType interval=IT_Closed, uint32_t options=0xffff, bool filterreturn=false)
+    {
+        std::vector<dReal> q0 = ExtractArray<dReal>(oq0);
+        std::vector<dReal> q1 = ExtractArray<dReal>(oq1);
+        std::vector<dReal> dq0 = ExtractArray<dReal>(odq0);
+        std::vector<dReal> dq1 = ExtractArray<dReal>(odq1);
+        std::vector<dReal> ddq0 = ExtractArray<dReal>(oddq0);
+        std::vector<dReal> ddq1 = ExtractArray<dReal>(oddq1);
+        if( filterreturn ) {
+            ConstraintFilterReturnPtr pfilterreturn(new ConstraintFilterReturn());
+            _pconstraints->Check(q0, q1, dq0, dq1, ddq0, ddq1, timeelapsed, interval, options, pfilterreturn);
+            boost::python::dict ofilterreturn;
+            ofilterreturn["configurations"] = toPyArray(pfilterreturn->_configurations);
+            ofilterreturn["configurationtimes"] = toPyArray(pfilterreturn->_configurationtimes);
+            ofilterreturn["invalidvalues"] = toPyArray(pfilterreturn->_invalidvalues);
+            ofilterreturn["invalidvelocities"] = toPyArray(pfilterreturn->_invalidvelocities);
+            ofilterreturn["fTimeWhenInvalid"] = pfilterreturn->_fTimeWhenInvalid;
+            ofilterreturn["returncode"] = pfilterreturn->_returncode;
+            ofilterreturn["reportstr"] = pfilterreturn->_report.__str__();
+            return ofilterreturn;
+        }
+        else {
+            return object(_pconstraints->Check(q0, q1, dq0, dq1, ddq0, ddq1, timeelapsed, interval, options));
+        }
+    }
+
     object GetReport() const {
         if( !_pconstraints->GetReport() ) {
             return object();
@@ -427,6 +453,7 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(InsertActiveDOFWaypointWithRetiming_overloads, p
 BOOST_PYTHON_FUNCTION_OVERLOADS(InsertWaypointWithSmoothing_overloads, planningutils::pyInsertWaypointWithSmoothing, 4, 7)
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Check_overloads, Check, 5, 8)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Check_overloads2, Check, 7, 10)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads, PlanPath, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads2, PlanPath, 3, 5)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads3, PlanPath, 1, 3)
@@ -516,9 +543,13 @@ void InitPlanningUtils()
         .def("PlanPath",&planningutils::PyAffineTrajectoryRetimer::PlanPath,PlanPath_overloads2(args("traj","maxvelocities", "maxaccelerations", "hastimestamps", "releasegil"), DOXY_FN(planningutils::AffineTrajectoryRetimer,PlanPath)))
         ;
 
+        object (planningutils::PyDynamicsCollisionConstraint::*pcheck)(object, object, object, object, dReal, IntervalType, uint32_t, bool) = &planningutils::PyDynamicsCollisionConstraint::Check;
+        object (planningutils::PyDynamicsCollisionConstraint::*pcheckquintic)(object, object, object, object, object, object, dReal, IntervalType, uint32_t, bool) = &planningutils::PyDynamicsCollisionConstraint::Check;
+
         class_<planningutils::PyDynamicsCollisionConstraint, planningutils::PyDynamicsCollisionConstraintPtr >("DynamicsCollisionConstraint", DOXY_CLASS(planningutils::DynamicsCollisionConstraint), no_init)
         .def(init<object, object, uint32_t>(args("plannerparameters", "checkbodies", "filtermask")))
-        .def("Check",&planningutils::PyDynamicsCollisionConstraint::Check,Check_overloads(args("q0","q1", "dq0", "dq1", "timeelapsed", "interval", "options", "filterreturn"), DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)))
+        .def("Check", pcheck, Check_overloads(args("q0","q1", "dq0", "dq1", "timeelapsed", "interval", "options", "filterreturn"), DOXY_FN(planningutils::DynamicsCollisionConstraint,Check "")))
+        .def("Check", pcheckquintic, Check_overloads2(args("q0","q1", "dq0", "dq1", "ddq0", "ddq1", "timeelapsed", "interval", "options", "filterreturn"), DOXY_FN(planningutils::DynamicsCollisionConstraint,Check "")))
         .def("GetReport", &planningutils::PyDynamicsCollisionConstraint::GetReport, DOXY_FN(planningutils::DynamicsCollisionConstraint,GetReport))
         .def("SetPlannerParameters", &planningutils::PyDynamicsCollisionConstraint::SetPlannerParameters, args("parameters"), DOXY_FN(planningutils::DynamicsCollisionConstraint,SetPlannerParameters))
         .def("SetFilterMask", &planningutils::PyDynamicsCollisionConstraint::SetFilterMask, args("filtermask"), DOXY_FN(planningutils::DynamicsCollisionConstraint,SetFilterMask))

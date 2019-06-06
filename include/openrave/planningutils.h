@@ -152,7 +152,7 @@ public:
 
 protected:
     void _UpdateParameters();
-    
+
     RobotBasePtr _robot;
     PlannerBasePtr _planner;
     PlannerBase::PlannerParametersPtr _parameters;
@@ -192,7 +192,7 @@ public:
 
 protected:
     void _UpdateParameters();
-    
+
     RobotBasePtr _robot;
     PlannerBasePtr _planner;
     PlannerBase::PlannerParametersPtr _parameters;
@@ -427,7 +427,7 @@ public:
     ///
     /// \param torquelimitmode 1 if should use instantaneous max torque, 0 if should use nominal torque
     virtual void SetTorqueLimitMode(int torquelimitmode);
-    
+
     /// \brief set user check fucntions
     ///
     /// Two functions can be set, one to be called before check collision and one after.
@@ -436,6 +436,9 @@ public:
 
     /// \brief checks line collision. Uses the constructor's self-collisions
     virtual int Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeelapsed, IntervalType interval, int options = 0xffff, ConstraintFilterReturnPtr filterreturn = ConstraintFilterReturnPtr());
+
+    /// \brief checks collisions and constraints along a quintic polynomial trajectory connecting (q0, dq0, ddq0) and (q1, dq1, ddq1).
+    virtual int Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, const std::vector<dReal>& ddq0, const std::vector<dReal>& ddq1, dReal timeelapsed, IntervalType interval, int options=0xffff, ConstraintFilterReturnPtr filterreturn=ConstraintFilterReturnPtr());
 
     CollisionReportPtr GetReport() const {
         return _report;
@@ -456,7 +459,7 @@ protected:
     virtual void _PrintOnFailure(const std::string& prefix);
 
     PlannerBase::PlannerParametersWeakConstPtr _parameters;
-    std::vector<dReal> _vtempconfig, _vtempvelconfig, dQ, _vtempveldelta, _vtempaccelconfig, _vtempjerkconfig, _vperturbedvalues, _vcoeff2, _vcoeff1, _vprevtempconfig, _vprevtempvelconfig, _vtempconfig2, _vdiffconfig, _vdiffvelconfig, _vstepconfig; ///< in configuration space
+    std::vector<dReal> _vtempconfig, _vtempvelconfig, dQ, _vtempveldelta, _vtempaccelconfig, _vtempjerkconfig, _vperturbedvalues, _vcoeff2, _vcoeff1, _vprevtempconfig, _vprevtempvelconfig, _vprevtempaccelconfig, _vtempconfig2, _vdiffconfig, _vdiffvelconfig, _vstepconfig; ///< in configuration space
     CollisionReportPtr _report;
     std::list<KinBodyPtr> _listCheckBodies;
     int _filtermask;

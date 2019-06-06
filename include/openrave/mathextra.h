@@ -1398,7 +1398,6 @@ inline bool computequinticnextdiscretizedstep(const T* coeffs, const T step, con
 
     T d5p = tempcoeffs[0];
 
-    // Reuse tempcoeffs to store coefficients of the quartic
     tempcoeffs[0] = d5p/120;
     tempcoeffs[1] = d4p/24;
     tempcoeffs[2] = d3p/6;
