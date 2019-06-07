@@ -1778,6 +1778,22 @@ std::string ConfigurationSpecification::GetInterpolationDerivative(const std::st
     return "";
 }
 
+std::string ConfigurationSpecification::GetInterpolationIntegral(const std::string& interpolation, int integ)
+{
+    const static boost::array<std::string,7> s_InterpolationOrder = {{"next","linear","quadratic","cubic","quartic","quintic","sextic"}};
+    for(int i = 0; i < (int)s_InterpolationOrder.size(); ++i) {
+        if( interpolation == s_InterpolationOrder[i] ) {
+            if( i + integ > (int)s_InterpolationOrder.size() ) {
+                return s_InterpolationOrder.at(s_InterpolationOrder.size() - 1);
+            }
+            else {
+                return s_InterpolationOrder.at(i+integ);
+            }
+        }
+    }
+    return "";
+}
+
 ConfigurationSpecification::Reader::Reader(ConfigurationSpecification& spec) : _spec(spec)
 {
     _spec = ConfigurationSpecification(); // reset

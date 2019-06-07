@@ -29,9 +29,9 @@
 
 #ifdef _MSC_VER
 
-#pragma warning(disable:4251) // needs to have dll-interface to be used by clients of class
-#pragma warning(disable:4190) // C-linkage specified, but returns UDT 'boost::shared_ptr<T>' which is incompatible with C
-#pragma warning(disable:4819) //The file contains a character that cannot be represented in the current code page (932). Save the file in Unicode format to prevent data loss using native typeof
+#pragma warning(disable:4251)// needs to have dll-interface to be used by clients of class
+#pragma warning(disable:4190)// C-linkage specified, but returns UDT 'boost::shared_ptr<T>' which is incompatible with C
+#pragma warning(disable:4819)//The file contains a character that cannot be represented in the current code page (932). Save the file in Unicode format to prevent data loss using native typeof
 
 // needed to get typeof working
 //#include <boost/typeof/std/string.hpp>
@@ -828,7 +828,7 @@ protected:
     virtual ConfigurationSpecification ConvertToVelocitySpecification() const;
 
     /** \brief converts all the groups to the corresponding derivative group and returns the specification
-        
+
         The new derivative configuration space will have a one-to-one correspondence with the original configuration.
         The interpolation of each of the groups will correspondingly represent the derivative as returned by \ref GetInterpolationDerivative(deriv).
         Only position specifications will be converted, any other groups will be left untouched.
@@ -1017,6 +1017,13 @@ protected:
     /// \param interpolation the interpolation to start at
     /// \param deriv the number of derivatives to take, should be > 0
     static std::string GetInterpolationDerivative(const std::string& interpolation, int deriv=1);
+
+    /// \brief gets the name of the interpolation that represents the integral of the passed in interpolation.
+    ///
+    /// For example GetInterpolationIntegral("linear") -> "quadratic"
+    /// \param interpolation the interpolation to start at
+    /// \param integ the number of integral to take, should be > 0
+    static std::string GetInterpolationIntegral(const std::string& interpolation, int integ=1);
 
     std::vector<Group> _vgroups;
 };
@@ -2499,7 +2506,7 @@ OPENRAVE_API int RaveGetDataAccess();
 
 /// \brief Gets the default viewer type name
 OPENRAVE_API std::string RaveGetDefaultViewerType();
-    
+
 /** \brief Returns the gettext translated string of the given message id
 
     \param domainname translation domain name
@@ -2566,7 +2573,7 @@ typedef void (*PluginExportFn_OnRaveInitialized)();
 /// \brief Called when OpenRAVE global runtime is about to be destroyed. See \ref OnRavePreDestroy.
 /// \ingroup plugin_exports
 typedef void (*PluginExportFn_OnRavePreDestroy)();
-    
+
 /// \deprecated (12/01/01)
 typedef InterfaceBasePtr (*PluginExportFn_CreateInterface)(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr env) RAVE_DEPRECATED;
 
