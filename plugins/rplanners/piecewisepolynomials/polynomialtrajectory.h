@@ -26,10 +26,10 @@ class Coordinate {
 public:
     Coordinate()
     {
-    };
+    }
     Coordinate(dReal p, dReal v) : point(p), value(v)
     {
-    };
+    }
     ~Coordinate()
     {
     }
@@ -126,6 +126,9 @@ public:
        \params duration the duration of this chunk
        \params vpolynomials vector of polynomials
      */
+    Chunk() : duration(0), constraintChecked(false)
+    {
+    }
     Chunk(const dReal duration, const std::vector<Polynomial> vpolynomials);
     ~Chunk()
     {
@@ -169,6 +172,8 @@ public:
     dReal duration;
     std::vector<Polynomial> vpolynomials;
 
+    mutable bool constraintChecked; ///< TODO: write a description for this parameter (similar to that of RampND)
+
 }; // end class Chunk
 
 class PiecewisePolynomialTrajectory {
@@ -178,6 +183,9 @@ public:
 
        \params vchunks vector of chunks
      */
+    PiecewisePolynomialTrajectory()
+    {
+    }
     PiecewisePolynomialTrajectory(const std::vector<Chunk>& vchunks);
     ~PiecewisePolynomialTrajectory()
     {
@@ -209,6 +217,16 @@ public:
 
     /// \brief
     void Serialize(std::ostream& O) const;
+
+    /// \brief
+    inline void Reset()
+    {
+        degree = 0;
+        dof = 0;
+        duration = 0;
+        vswitchtimes.resize(0);
+        vchunks.resize(0);
+    }
 
     //
     // Members
