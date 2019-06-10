@@ -20,7 +20,7 @@
 #include "openraveplugindefs.h"
 #include "ParabolicPathSmooth/DynamicPath.h"
 
-#define PROGRESS_DEBUG
+//#define PROGRESS_DEBUG
 
 namespace rplanners {
 
@@ -143,6 +143,7 @@ public:
                     probot->GetGrabbed(grabbedbodies);
 
                     if( grabbedbodies.size() > 0 ) {
+                        // look at only the grabbed body rather than the links
                         FOREACH(itbody, grabbedbodies) {
                             if( pmanip->IsGrabbing(**itbody) ) {
                                 FOREACH(itlink, (*itbody)->GetLinks()) {
@@ -152,6 +153,7 @@ public:
                         }
                     }
                     else {
+                        // nothing grabbed, so use the end effector links
                         std::vector<KinBody::LinkPtr> vchildlinks;
                         pmanip->GetChildLinks(vchildlinks);
                         FOREACH(itlink, vchildlinks) {

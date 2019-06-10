@@ -37,12 +37,8 @@ ParabolicInterpolator::ParabolicInterpolator(size_t ndof, int envid)
     _cacheCurvesVect.resize(_ndof);
     _envid = envid;
 
-    if( _cacheRampsVect.capacity() < 5 ) {
-        _cacheRampsVect.reserve(5);
-    }
-    if( _cacheRampsVect2.capacity() < 3 ) {
-        _cacheRampsVect2.reserve(3);
-    }
+    _cacheRampsVect.reserve(5);
+    _cacheRampsVect2.reserve(3);
 }
 
 void ParabolicInterpolator::Initialize(size_t ndof, int envid)

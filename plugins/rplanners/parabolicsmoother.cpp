@@ -159,21 +159,12 @@ public:
             // have to make sure that the last ramp's ending velocity is equal to db
             //bool bDifferentPosition = false;
             bool bDifferentVelocity = false;
-            if( outramps.size() > 0 ) {
-                q1 = outramps.back().x1;
-                dq1 = outramps.back().dx1;
-            }
-            else {
-                // In case CFO_FillCheckedConfiguration is not enabled, outramps will be empty. Need to obtain the last joint values/velocities from the original ramp.
-                rampnd.Evaluate(rampnd.endTime, q1);
-                rampnd.Derivative(rampnd.endTime, dq1);
-            }
             for(size_t idof = 0; idof < q0.size(); ++idof) {
-                if( RaveFabs(rampnd.x1[idof] - q1[idof]) > ParabolicRamp::EpsilonX ) {
+                if( RaveFabs(q0[idof]-rampnd.x1[idof]) > ParabolicRamp::EpsilonX ) {
                     RAVELOG_DEBUG_FORMAT("env=%d, ramp end point does not finish at desired position values %f, so rejecting", _envid%(q0[idof]-rampnd.x1[idof]));
                     return ParabolicRamp::CheckReturn(CFO_FinalValuesNotReached);
                 }
-                if( RaveFabs(rampnd.dx1[idof] - dq1[idof]) > ParabolicRamp::EpsilonV ) {
+                if( RaveFabs(dq0[idof]-rampnd.dx1[idof]) > ParabolicRamp::EpsilonV ) {
                     RAVELOG_VERBOSE_FORMAT("env=%d, ramp end point does not finish at desired velocity values %e, so reforming ramp", _envid%(dq0[idof]-rampnd.dx1[idof]));
                     bDifferentVelocity = true;
                 }
@@ -1919,15 +1910,6 @@ protected:
             endTime += ramps[i].endTime;
         }
         dReal originalEndTime = endTime;
-        int nEndTimeDiscretization = (int)(endTime*fiMinDiscretization)+1;
-        if( nEndTimeDiscretization > 0x8000 ) {
-            // Cap the size of vVisitedDiscretization. This means if the trajectory is very long
-            // that the number of bins is too large, we just consider only the initial portion of
-            // the trajectory.
-            nEndTimeDiscretization = 0x8000;
-        }
-        vVisitedDiscretization.resize(nEndTimeDiscretization*nEndTimeDiscretization, 0);
-
         dReal dummyEndTime;
 
         /*
@@ -1987,6 +1969,7 @@ protected:
 
         dReal fiSearchVelAccelMult = 1.0/_parameters->fSearchVelAccelMult;
 
+        int nEndTimeDiscretization = 0;
         int numslowdowns = 0;
         bool bExpectModifiedConfigurations = _parameters->fCosManipAngleThresh > -1 + g_fEpsilonLinear; // gripper constraints enabled
         size_t nItersFromPrevSuccessful = 0;
@@ -2008,6 +1991,15 @@ protected:
                 // No progess for already nCutoffIters. Stop right away
                 RAVELOG_DEBUG_FORMAT("env=%d, no progress for shortcutting, so break %d + %d > %d", GetEnv()->GetId()%nItersFromPrevSuccessful%nNumTimeBasedConstraintsFailed%nCutoffIters);
                 break;
+            }
+
+            if( vVisitedDiscretization.size() == 0 ) {
+                nEndTimeDiscretization = (int)(endTime*fiMinDiscretization)+1;
+
+                // if nEndTimeDiscretization is too big, then just ignore vVisitedDiscretization
+                if( nEndTimeDiscretization <= 0x1000 ) {
+                    vVisitedDiscretization.resize(nEndTimeDiscretization*nEndTimeDiscretization,0);
+                }
             }
 
             dReal t1, t2;
@@ -2554,9 +2546,8 @@ protected:
                     endTime += ramps[i].endTime;
                 }
                 dReal diff = dummyEndTime - endTime;
-
-                std::fill(vVisitedDiscretization.begin(), vVisitedDiscretization.end(), 0); // have to clear so that can recreate the visited nodes
-#ifdef SMOOTHER1_PROGRESS_DEBUG
+                vVisitedDiscretization.clear(); // have to clear so that can recreate the visited nodes
+#ifdef SMOOTHER_PROGRESS_DEBUG
                 RAVELOG_DEBUG_FORMAT("env=%d: shortcut iter=%d/%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%numIters%numslowdowns%dummyEndTime%endTime%diff);
 #endif
 

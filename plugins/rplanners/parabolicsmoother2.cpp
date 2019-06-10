@@ -320,14 +320,16 @@ public:
             }
 
             bool bDifferentVelocity = false;
-            for (size_t idof = 0; idof < q0.size(); ++idof) {
-                if( RaveFabs(rampndVect.back().GetX1At(idof) - rampndVectOut.back().GetX1At(idof)) > RampOptimizer::g_fRampEpsilon ) {
-                    RAVELOG_VERBOSE_FORMAT("rampndVectOut idof=%d: end point does not finish at the desired position, diff=%.15e. Rejecting...", idof%RaveFabs(rampndVect.back().GetX1At(idof) - q0[idof]));
-                    return RampOptimizer::CheckReturn(CFO_FinalValuesNotReached);
-                }
-                if( RaveFabs(rampndVect.back().GetV1At(idof) - rampndVectOut.back().GetV1At(idof)) > RampOptimizer::g_fRampEpsilon ) {
-                    RAVELOG_VERBOSE_FORMAT("rampndVectOut idof=%d: end point does not finish at the desired velocity, diff=%.15e", idof%RaveFabs(rampndVect.back().GetV1At(idof) - dq0[idof]));
-                    bDifferentVelocity = true;
+            if( rampndVectOut.size() > 0 ) {
+                for (size_t idof = 0; idof < q0.size(); ++idof) {
+                    if( RaveFabs(rampndVect.back().GetX1At(idof) - rampndVectOut.back().GetX1At(idof)) > RampOptimizer::g_fRampEpsilon ) {
+                        RAVELOG_VERBOSE_FORMAT("rampndVectOut idof=%d: end point does not finish at the desired position, diff=%.15e. Rejecting...", idof%RaveFabs(rampndVect.back().GetX1At(idof) - q0[idof]));
+                        return RampOptimizer::CheckReturn(CFO_FinalValuesNotReached);
+                    }
+                    if( RaveFabs(rampndVect.back().GetV1At(idof) - rampndVectOut.back().GetV1At(idof)) > RampOptimizer::g_fRampEpsilon ) {
+                        RAVELOG_VERBOSE_FORMAT("rampndVectOut idof=%d: end point does not finish at the desired velocity, diff=%.15e", idof%RaveFabs(rampndVect.back().GetV1At(idof) - dq0[idof]));
+                        bDifferentVelocity = true;
+                    }
                 }
             }
             RampOptimizer::CheckReturn finalret(0);
@@ -360,6 +362,7 @@ public:
             _logginguniformsampler->SetSeed(utils::GetMicroTime());
         }
         _environmentid = GetEnv()->GetId();
+        _vVisitedDiscretizationCache.resize(0x1000*0x1000,0); // pre-allocate in order to keep memory growth predictable
         _feasibilitychecker.SetEnvID(_environmentid); // set envid for logging purpose
     }
 
@@ -758,7 +761,7 @@ public:
                 OPENRAVE_ASSERT_OP((int) itrampnd->GetDOF(), ==, _parameters->GetDOF());
             }
 
-            RAVELOG_DEBUG("env=%d, start inserting the first waypoint to dummytraj", _environmentid);
+            RAVELOG_DEBUG_FORMAT("env=%d, start inserting the first waypoint to dummytraj", _environmentid);
             waypoints.resize(newSpec.GetDOF()); // reuse _cacheWaypoints
 
             ConfigurationSpecification::ConvertData(waypoints.begin(), newSpec, parabolicpath.GetRampNDVect().front().GetX0Vect(), posSpec, 1, GetEnv(), true);
@@ -2442,14 +2445,7 @@ protected:
                                                        // the two sampled time instances fall into the same two bins. If so, skip the rest of computation.
         std::vector<uint8_t>& vVisitedDiscretization = _vVisitedDiscretizationCache;
         vVisitedDiscretization.clear();
-        int nEndTimeDiscretization = (int)(tTotal*fiMinDiscretization) + 1;
-        if( nEndTimeDiscretization > 0x8000 ) {
-            // Cap the size of vVisitedDiscretization. This means if the trajectory is very long
-            // that the number of bins is too large, we just consider only the initial portion of
-            // the trajectory.
-            nEndTimeDiscretization = 0x8000;
-        }
-        vVisitedDiscretization.resize(nEndTimeDiscretization*nEndTimeDiscretization, 0);
+        int nEndTimeDiscretization = 0;
 
 #ifdef SMOOTHER2_PROGRESS_DEBUG
         uint32_t latestSuccessfulShortcutTimestamp = utils::GetMicroTime(), curtime;
@@ -2527,6 +2523,15 @@ protected:
 #ifdef SMOOTHER2_DISABLE_VVISITEDDISCRETIZATION
 #else
             {
+                if( vVisitedDiscretization.size() == 0 ) {
+                    nEndTimeDiscretization = (int)(tTotal*fiMinDiscretization)+1;
+
+                    // if nEndTimeDiscretization is too big, then just ignore vVisitedDiscretization
+                    if( nEndTimeDiscretization <= 0x1000 ) {
+                        vVisitedDiscretization.resize(nEndTimeDiscretization*nEndTimeDiscretization,0);
+                    }
+                }
+
                 // Keep track of time slots that have already been previously checked (and failed)
                 int t0Index = t0*fiMinDiscretization;
                 int t1Index = t1*fiMinDiscretization;
@@ -3160,7 +3165,7 @@ protected:
 #endif
 
                 nTimeBasedConstraintsFailed = 0; // reset
-                std::fill(vVisitedDiscretization.begin(), vVisitedDiscretization.end(), 0);
+                vVisitedDiscretization.clear(); // have to clear so that can recreate the visited nodes
 
                 // Keep track of zero-velocity waypoints
                 dReal segmentTime = 0;

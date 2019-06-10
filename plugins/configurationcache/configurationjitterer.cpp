@@ -707,16 +707,6 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             //int ret = cache.InsertNode(vnewdof, CollisionReportPtr(), _neighdistthresh);
             //BOOST_ASSERT(ret==1);
 
-            // Project the sampled configuration onto the constraint manifold.
-            if( bConstraint ) {
-                for(size_t j = 0; j < vnewdof.size(); ++j) {
-                    _deltadof2[j] = 0;
-                }
-                if( _neighstatefn(vnewdof, _deltadof2, 0) == NSS_Failed ) {
-                    // Projection fails so continue.
-                    continue;
-                }
-            }
             _probot->SetActiveDOFValues(vnewdof);
 #ifdef _DEBUG
             dReal fmaxtransdist = 0;

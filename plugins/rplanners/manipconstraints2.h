@@ -18,7 +18,7 @@
 #include "rampoptimizer/ramp.h"
 #include "rampoptimizer/feasibilitychecker.h"
 
-#define PROGRESS_DEBUG
+//#define PROGRESS_DEBUG
 
 namespace rplanners {
 
