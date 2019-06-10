@@ -150,6 +150,7 @@ PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const 
     _distmetricfn = r._distmetricfn;
     _checkpathconstraintsfn = r._checkpathconstraintsfn;
     _checkpathvelocityconstraintsfn = r._checkpathvelocityconstraintsfn;
+    _checkpathvelocityaccelerationconstraintsfn = r._checkpathvelocityaccelerationconstraintsfn;
     _samplefn = r._samplefn;
     _sampleneighfn = r._sampleneighfn;
     _samplegoalfn = r._samplegoalfn;
@@ -467,7 +468,7 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
         _setstatevaluesfn = boost::bind(SetActiveDOFValuesParameters,robot, _1, _2);
         _diffstatefn = boost::bind(&RobotBase::SubtractActiveDOFValues,robot,_1,_2);
     }
-    
+
     SpaceSamplerBasePtr pconfigsampler = RaveCreateSpaceSampler(robot->GetEnv(),str(boost::format("robotconfiguration %s")%robot->GetName()));
     _listInternalSamplers.clear();
     _listInternalSamplers.push_back(pconfigsampler);
@@ -492,6 +493,8 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
     boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(shared_parameters(), listCheckCollisions,0xffffffff&~CFO_CheckTimeBasedConstraints));
     _checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
 
+    int (DynamicsCollisionConstraint::*CheckQuintic)(const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, dReal, IntervalType, int, ConstraintFilterReturnPtr) = &DynamicsCollisionConstraint::Check;
+    _checkpathvelocityaccelerationconstraintsfn = std::bind(CheckQuintic, pcollision, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9, std::placeholders::_10);
 }
 
 void _CallDiffStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::DiffStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v0, const std::vector<dReal>& v1)
@@ -795,6 +798,9 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
     // have to do this last, disable timed constraints for default
     boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(shared_parameters(), listCheckCollisions,0xffffffff&~CFO_CheckTimeBasedConstraints));
     _checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
+
+    int (DynamicsCollisionConstraint::*CheckQuintic)(const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, dReal, IntervalType, int, ConstraintFilterReturnPtr) = &DynamicsCollisionConstraint::Check;
+    _checkpathvelocityaccelerationconstraintsfn = std::bind(CheckQuintic, pcollision, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9, std::placeholders::_10);
 }
 
 void PlannerBase::PlannerParameters::Validate() const

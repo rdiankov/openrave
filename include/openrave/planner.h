@@ -273,6 +273,39 @@ private:
             return _checkpathvelocityconstraintsfn(q0, q1, dq0, dq1, elapsedtime, interval, options, filterreturn);
         }
 
+        /** \brief Checks that all the constraints are satisfied at each discretized point between the two states (configuration, the first, and the second time derivatives).
+
+            The two states are interpolated using a quintic polynomial
+
+            errorcode = _checkpathvelocityaccelerationconstraintsfn(q0, q1, dq0, dq1, ddq0, ddq1, timeelapsed, interval, options, configurations)
+
+            When called, q0 and dq0 is guaranteed to be set on the robot.
+            The function returns true if the path to q1 satisfies all the constraints of the planner.
+
+            \param q0 is the configuration the robot is coming from (shouldn't assume that it is currently set).
+            \param q1 is the configuration the robot should move to.
+            \param dq0 is the first time derivative (or velocity) of each DOF at q0.
+            \param dq1 is the first time derivative (or velocity) of each DOF at q1.
+            \param ddq0 is the second time derivative (or acceleration) of each DOF at q0.
+            \param ddq1 is the second time derivative (or acceleration) of each DOF at q1.
+            \param timeelapsed is the estimated time to go from q0 to q1 with the current constraints. Set to 0 if non-applicable.
+            \param interval Specifies whether to check the end points of the interval for constraints
+            \param options a mask of ConstraintFilterOptions
+            \param filterreturn Optional argument that will hold the output information of the filter.
+            \return \ref ConstraintFilterReturn::_returncode, which a combination of ConstraintFilterOptions
+         */
+        typedef boost::function<int (const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, dReal, IntervalType, int, ConstraintFilterReturnPtr)> CheckPathVelocityAccelerationConstraintFn;
+        CheckPathVelocityAccelerationConstraintFn _checkpathvelocityaccelerationconstraintsfn;
+
+        /// \brief wrapper function calling _checkpathvelocityaccelerationconstraintsfn with some default args. Returns true if function doesn't exist.
+        inline int CheckPathAllConstraints(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, const std::vector<dReal>& ddq0, const std::vector<dReal>& ddq1, dReal elapsedtime, IntervalType interval, int options=0xffff, ConstraintFilterReturnPtr filterreturn=ConstraintFilterReturnPtr()) const
+        {
+            if( !_checkpathvelocityaccelerationconstraintsfn ) {
+                return true;
+            }
+            return _checkpathvelocityaccelerationconstraintsfn(q0, q1, dq0, dq1, ddq0, ddq1, elapsedtime, interval, options, filterreturn);
+        }
+
         /** \brief Samples a random configuration (mandatory)
 
             The dimension of the returned sample is the dimension of the configuration space.
@@ -379,7 +412,7 @@ private:
 
         /// \brief the absolute jerk limits of each DOF of the configuration space.
         std::vector<dReal> _vConfigJerkLimit;
-	
+
         /// \brief the discretization resolution of each dimension of the configuration space
         std::vector<dReal> _vConfigResolution;
 
