@@ -423,7 +423,7 @@ public:
                             trimmedChunk.Evald2(0, a0Vect);
                             trimmedChunk.Evald2(trimmedChunk.duration, a1Vect);
                             for( size_t iDilation = 0; iDilation < maxTries; ++iDilation ) {
-                                _quinticInterpolator.ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, newChunkDuration, tempChunk);
+                                _quinticInterpolator.ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, newChunkDuration, trimmedChunk);
 
                                 // TODO
                                 PiecewisePolynomials::CheckReturn newcheckret = CheckChunkAllConstraints(tempChunk, 0xffff, vChunksOut);
@@ -467,9 +467,9 @@ public:
                 } // end if( !itChunk->constraintChecked )
 
                 FOREACH(itNewChunk, vChunksOut) {
-                    itNewChunk->Eval(0, x1Vect);
-                    itNewChunk->Evald1(0, v1Vect);
-                    itNewChunk->Evald2(0, a1Vect);
+                    itNewChunk->Eval(itNewChunk->duration, x1Vect);
+                    itNewChunk->Evald1(itNewChunk->duration, v1Vect);
+                    itNewChunk->Evald2(itNewChunk->duration, a1Vect);
                     ConfigurationSpecification::ConvertData(waypoint.begin(), newSpec, x1Vect.begin(), posSpec, 1, GetEnv(), true);
                     ConfigurationSpecification::ConvertData(waypoint.begin(), newSpec, v1Vect.begin(), velSpec, 1, GetEnv(), false);
                     ConfigurationSpecification::ConvertData(waypoint.begin(), newSpec, a1Vect.begin(), accelSpec, 1, GetEnv(), false);
