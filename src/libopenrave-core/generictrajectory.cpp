@@ -886,7 +886,7 @@ protected:
                 dReal ideltatime5 = ideltatime4*ideltatime;
                 for(int i = 0; i < g.dof; ++i) {
                     dReal integ0 = _vtrajdata[offset + integoffset + i];
-                    dReal idiff = _vtrajdata[_spec.GetDOF() + offset + integoffset + i]; // i1 - i0
+                    dReal idiff = _vtrajdata[_spec.GetDOF() + offset + integoffset + i] - integ0; // i1 - i0
                     dReal temp = _vtrajdata[_spec.GetDOF() + offset + iioffset + i] - _vtrajdata[offset + iioffset + i] - integ0*deltatime; // ii1 - ii0 - i0*dt
                     dReal c3 =    10*(_vtrajdata.at(_spec.GetDOF() + offset + g.offset + i) - _vtrajdata[offset + g.offset + i])*ideltatime3 - 60*idiff*ideltatime4 + 120*temp*ideltatime5;
                     dReal c2 = (18*_vtrajdata[offset + g.offset + i] - 12*_vtrajdata.at(_spec.GetDOF() + offset + g.offset + i))*ideltatime2 + 84*idiff*ideltatime3 - 180*temp*ideltatime4;
