@@ -35,11 +35,13 @@ enum PolynomialCheckReturn {
 
 class PolynomialChecker {
 public:
-    PolynomialChecker();
+    PolynomialChecker()
+    {
+    }
     PolynomialChecker(size_t ndof, int envid);
     ~PolynomialChecker()
     {
-    };
+    }
 
     void Initialize(size_t ndof, int envid);
 

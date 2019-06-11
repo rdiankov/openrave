@@ -381,6 +381,25 @@ void Chunk::Initialize(const dReal duration, const std::vector<Polynomial> vpoly
     }
 }
 
+void Chunk::Cut(dReal t, Chunk& remChunk)
+{
+    // TODO: Need to find a better way to not have to create these vectors every time this function is called.
+    std::vector<Polynomial> vpoly(this->dof);
+    std::vector<dReal> vcoeffs(this->degree);
+    dReal fMult;
+    for( size_t idof = 0; idof < this->dof; ++idof ) {
+	fMult = 1.0;
+	for( size_t icoeff = 0; icoeff < this->degree; ++icoeff ) {
+	    vcoeffs[icoeff] = this->vpolynomials[idof].Evaldn(t, icoeff)/fMult;
+	    fMult *= (icoeff + 1);
+	}
+	vpoly[idof].Initialize(vcoeffs);
+    }
+    remChunk.Initialize(this->duration - t, vpoly);
+
+    this->duration = t;
+}
+
 void Chunk::Eval(dReal t, std::vector<dReal>& res) const
 {
     res.resize(dof);
@@ -451,7 +470,16 @@ void Chunk::SetConstant(const std::vector<dReal>& x0Vect, const dReal duration, 
 //
 PiecewisePolynomialTrajectory::PiecewisePolynomialTrajectory(const std::vector<Chunk>& vchunks)
 {
+    Initialize(vchunks);
+}
+
+void PiecewisePolynomialTrajectory::Initialize(const std::vector<Chunk>& vchunks)
+{
     this->vchunks = vchunks;
+}
+
+void PiecewisePolynomialTrajectory::Initialize()
+{
     _UpdateChunksVector();
 
     this->degree = this->vchunks.front().degree;

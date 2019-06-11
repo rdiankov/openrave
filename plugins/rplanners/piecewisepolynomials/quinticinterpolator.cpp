@@ -22,6 +22,11 @@ const dReal QuinticInterpolator::_tenOverSqrtThree = 10/Sqrt(3);
 
 QuinticInterpolator::QuinticInterpolator(size_t ndof, int envid)
 {
+    this->Initialize(ndof, envid);
+}
+
+void QuinticInterpolator::Initialize(size_t ndof, int envid)
+{
     OPENRAVE_ASSERT_OP(ndof, >, 0);
     this->ndof = ndof;
     this->envid = envid;
@@ -159,6 +164,7 @@ void QuinticInterpolator::ComputeNDTrajectoryZeroTimeDerivativesOptimizeDuration
         for( std::vector<dReal>::const_iterator it = p.vcoeffs.begin(); it != p.vcoeffs.end(); ++it, ++icoeff ) {
             vcoeffs[icoeff] = dVect[idof] * (*it);
         }
+        vcoeffs[0] += x0Vect[idof];
         vpolynomials[idof].Initialize(vcoeffs);
     }
     chunk.Initialize(T, vpolynomials);
@@ -198,7 +204,7 @@ bool QuinticInterpolator::ComputeNDTrajectoryArbitraryTimeDerivativesOptimizeDur
     ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, T, chunk);
     PolynomialCheckReturn ret = checker.CheckChunk(chunk, xminVect, xmaxVect, vmVect, amVect, jmVect);
     if( ret != PCR_Normal ) {
-	return false;
+        return false;
     }
     return true;
 }

@@ -15,8 +15,8 @@
 #include <fstream>
 #include <openrave/planningutils.h>
 
-#include "piecewisepolynomials/polynomialtrajectory.h"
 #include "piecewisepolynomials/quinticinterpolator.h"
+#include "piecewisepolynomials/polynomialchecker.h"
 #include "piecewisepolynomials/feasibilitychecker.h"
 #include "manipconstraints2.h"
 
@@ -76,6 +76,7 @@ public:
 #else
         _dumpLevel = Level_Verbose;
 #endif
+        _errorDumpLevel = Level_Info;
 
         // Initialize manip constraints checker
         _bManipConstraints = (_parameters->manipname.size() > 0) && (_parameters->maxmanipspeed > 0 || _parameters->maxmanipaccel > 0);
@@ -88,6 +89,20 @@ public:
 
         _quinticInterpolator.Initialize(_ndof, _envId);
         _limitsChecker.Initialize(_ndof, _envId);
+
+        // Caching stuff
+        _cacheX0Vect.reserve(_ndof);
+        _cacheX1Vect.reserve(_ndof);
+        _cacheV0Vect.reserve(_ndof);
+        _cacheV1Vect.reserve(_ndof);
+        _cacheA0Vect.reserve(_ndof);
+        _cacheA1Vect.reserve(_ndof);
+        _cacheX0Vect2.reserve(_ndof);
+        _cacheX1Vect2.reserve(_ndof);
+        _cacheV0Vect2.reserve(_ndof);
+        _cacheV1Vect2.reserve(_ndof);
+        _cacheA0Vect2.reserve(_ndof);
+        _cacheA1Vect2.reserve(_ndof);
 
         return !!_uniformSampler;
     }
@@ -140,10 +155,6 @@ public:
             vstatesavers.push_back(statesaver);
         }
 
-        //
-        // TODO
-        //
-        // Prepare configuration specifications for the final trajectory
         ConfigurationSpecification posSpec = _parameters->_configurationspecification;
         ConfigurationSpecification velSpec = posSpec.ConvertToVelocitySpecification();
         ConfigurationSpecification accelSpec = posSpec.ConvertToDerivativeSpecification(2);
@@ -155,23 +166,350 @@ public:
         std::vector<ConfigurationSpecification::Group>::const_iterator itcompatposgroup = ptraj->GetConfigurationSpecification().FindCompatibleGroup(posSpec._vgroups.at(0), bExactMatch);
         OPENRAVE_ASSERT_FORMAT(itcompatposgroup != ptraj->GetConfigurationSpecification()._vgroups.end(), "env=%d, Failed to find group %s in the passed-in trajectory", _envId%posSpec._vgroups.at(0).name, ORE_InvalidArguments);
 
+        // Caching stuff
         PiecewisePolynomials::PiecewisePolynomialTrajectory& pwptraj = _cacheTraj;
-	pwptraj.Reset();
+        pwptraj.Reset();
+        std::vector<dReal> &x0Vect = _cacheX0Vect, &x1Vect = _cacheX1Vect, &v0Vect = _cacheV0Vect, &v1Vect = _cacheV1Vect, &a0Vect = _cacheA0Vect, &a1Vect = _cacheA1Vect, &tVect = _cacheTVect;
+        std::vector<dReal> vAllWaypoints = _cacheAllWaypoints;
+
         bool bPathIsPerfectlyModeled = false; // will be true if the initial interpolation is linear or quintic
         RAVELOG_VERBOSE_FORMAT("env=%d, Initial trajectory joint values interpolation is %s", _envId%itcompatposgroup->interpolation);
         if( _parameters->_hastimestamps && itcompatposgroup->interpolation == "quintic" ) {
             bPathIsPerfectlyModeled = true;
 
-	    // Convert the OpenRAVE trajectory to a PiecewisePolynomialTrajectory
-	    
+            // Convert the OpenRAVE trajectory to a PiecewisePolynomialTrajectory
+            PiecewisePolynomials::Chunk& tempChunk = _cacheChunk;
+            std::vector<PiecewisePolynomials::Chunk>& vChunks = _cacheVChunksOut;
+            vChunks.resize(0);
+            if( vChunks.capacity() < ptraj->GetNumWaypoints() - 1 ) {
+                vChunks.reserve(ptraj->GetNumWaypoints() - 1);
+            }
+            ptraj->GetWaypoint(0, x0Vect, posSpec);
+            ptraj->GetWaypoint(0, v0Vect, velSpec);
+            ptraj->GetWaypoint(0, a0Vect, accelSpec);
+            for( size_t iWaypoint = 1; iWaypoint < ptraj->GetNumWaypoints(); ++iWaypoint ) {
+                ptraj->GetWaypoint(iWaypoint, tVect, timeSpec);
+                if( tVect.at(0) > g_fEpsilonLinear ) {
+                    ptraj->GetWaypoint(iWaypoint, x1Vect, posSpec);
+                    ptraj->GetWaypoint(iWaypoint, v1Vect, velSpec);
+                    ptraj->GetWaypoint(iWaypoint, a1Vect, accelSpec);
+                    _quinticInterpolator.ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, tVect[0], tempChunk);
+                    vChunks.push_back(tempChunk);
+                    x0Vect.swap(x1Vect);
+                    v0Vect.swap(v1Vect);
+                    a0Vect.swap(a1Vect);
+                }
+            }
+            pwptraj.Initialize(vChunks);
+
+            if( !_parameters->verifyinitialpath ) {
+                // Since the path is perfectly modeled, we can skip checking at the end.
+                FOREACH(itchunk, pwptraj.vchunks) {
+                    itchunk->constraintChecked = true;
+                }
+            }
         }
+        // TODO: Maybe we need to handle other cases of interpolation as well
         else {
             if( itcompatposgroup->interpolation.size() == 0 || itcompatposgroup->interpolation == "linear" ) {
                 bPathIsPerfectlyModeled = true;
             }
             // If there is timing information, simply ignore it.
+            std::vector<std::vector<dReal> >& vWaypoints = _cacheWaypoints;
+            vWaypoints.resize(0);
+            if( vWaypoints.capacity() < ptraj->GetNumWaypoints() ) {
+                vWaypoints.reserve(ptraj->GetNumWaypoints());
+            }
+
+            // Remove collinear waypoints. In the next stage, we are computing time-parameterization
+            // such that the trajectory stops at every waypoint. Having too many waypoints will
+            // simply slow down the overall trajectory.
+            dReal collinearThresh = 1e-14;
+
+            ptraj->GetWaypoints(0, ptraj->GetNumWaypoints(), vAllWaypoints, posSpec);
+            for( size_t iWaypoint = 0; iWaypoint < ptraj->GetNumWaypoints(); ++iWaypoint ) {
+                // Copy vAllWaypoints[iWaypoint] into x0Vect and check if x0Vect and the previous
+                // two waypoints that just have been added to vWaypoints are collinear
+                x0Vect.resize(_ndof);
+                std::copy(vAllWaypoints.begin() + iWaypoint*_ndof, vAllWaypoints.begin() + (iWaypoint + 1)*_ndof, x0Vect.begin());
+
+                // Check collinearity
+                if( vWaypoints.size() > 1 ) {
+                    const std::vector<dReal>& xPrev1 = vWaypoints[vWaypoints.size() - 1];
+                    const std::vector<dReal>& xPrev2 = vWaypoints[vWaypoints.size() - 2];
+                    dReal dotProduct = 0;
+                    dReal xPrev1Length2 = 0;
+                    dReal xPrev2Length2 = 0;
+                    for( size_t idof = 0; idof < _ndof; ++idof ) {
+                        dReal dx0 = xPrev1[idof] - x0Vect[idof];
+                        dReal dx1 = xPrev2[idof] - x0Vect[idof];
+                        dotProduct += dx0*dx1;
+                        xPrev1Length2 += dx0*dx0;
+                        xPrev2Length2 += dx1*dx1;
+                    }
+                    if( RaveFabs(dotProduct*dotProduct - xPrev1Length2*xPrev2Length2) <= collinearThresh ) {
+                        // Waypoints are collinear. Update the last waypoint in vNewWaypoints and continue.
+                        vWaypoints.back() = x0Vect;
+                        continue;
+                    }
+                }
+
+                // Check if the new waypoint is the same as the previous one.
+                if( vWaypoints.size() > 0 ) {
+                    dReal dist = 0;
+                    for( size_t idof = 0; idof < _ndof; ++idof ) {
+                        dist += RaveFabs(x0Vect[idof] - vWaypoints.back()[idof]);
+                    }
+                    if( dist <= x0Vect.size()*std::numeric_limits<dReal>::epsilon() ) {
+                        // This waypoint is redundant so continue.
+                        continue;
+                    }
+                }
+
+                // The new waypoint is good. Add it to vNewWaypoints.
+                vWaypoints.push_back(x0Vect);
+            }
+
+            // Time-parameterize the initial path
+            if( !_ComputeInitialTiming(vWaypoints, pwptraj) ) {
+                RAVELOG_WARN_FORMAT("env=%d, Failed to time-parameterize the initial piecewise linear path", _envId);
+                _DumpOpenRAVETrajectory(ptraj, _errorDumpLevel);
+                return PS_Failed;
+            }
+            RAVELOG_DEBUG_FORMAT("env=%d, Finished time-parameterizating the initial piecewise linear path. numWaypoints: %d -> %d", _envId%ptraj->GetNumWaypoints()%vWaypoints.size());
+        }
+        // Finish initializing PiecewisePolynomialTrajectory
+
+        //
+        // Main planning loop
+        //
+        try {
+            _progress._iteration = 0;
+            if( _CallCallbacks(_progress) == PA_Interrupt ) {
+                return PS_Interrupted;
+            }
+
+            int numShortcuts = 0;
+            dReal originalDuration = pwptraj.duration;
+            if( !!_parameters->_setstatevaluesfn || !!_parameters->_setstatefn ) {
+                // TODO: _parameters->_fStepLength*0.99 is chosen arbitrarily here. Maybe we can do better.
+                numShortcuts = _Shortcut(pwptraj, _parameters->_nMaxIterations, _parameters->_fStepLength*0.99);
+                if( numShortcuts < 0 ) {
+                    return PS_Interrupted;
+                }
+            }
+            RAVELOG_DEBUG_FORMAT("env=%d, After shortcutting: duration %.15e -> %.15e, diff=%.15e", _envId%originalDuration%pwptraj.duration%(pwptraj.duration - originalDuration));
+
+            ++_progress._iteration;
+            if( _CallCallbacks(_progress) == PA_Interrupt ) {
+                return PS_Interrupted;
+            }
+
+            // Finish shortcutting. Now converting PiecewisePolynomialTrajectory to OpenRAVE trajectory
+            // Prepare configuration specification
+            ConfigurationSpecification newSpec = posSpec;
+            bool bAddDeltaTime = true;
+            newSpec.AddDerivativeGroups(1, bAddDeltaTime);
+            newSpec.AddDerivativeGroups(2, bAddDeltaTime);
+            int iIsWaypointOffset = newSpec.AddGroup("iswaypoint", 1, "next");
+            int iTimeOffset = -1;
+            FOREACH(itgroup, newSpec._vgroups) {
+                if( itgroup->name == "deltatime" ) {
+                    iTimeOffset = itgroup->offset;
+                }
+                else if( posSpec.FindCompatibleGroup(*itgroup) != posSpec._vgroups.end() ) {
+                    itgroup->interpolation = "quintic";
+                }
+                else if( velSpec.FindCompatibleGroup(*itgroup) != velSpec._vgroups.end() ) {
+                    itgroup->interpolation = "quartic";
+                }
+                else if( accelSpec.FindCompatibleGroup(*itgroup) != accelSpec._vgroups.end() ) {
+                    itgroup->interpolation = "cubic";
+                }
+            }
+            if( !_pDummyTraj || _pDummyTraj->GetXMLId() != ptraj->GetXMLId() ) {
+                _pDummyTraj = RaveCreateTrajectory(GetEnv(), ptraj->GetXMLId());
+            }
+            _pDummyTraj->Init(newSpec);
+
+            // Check consistency
+            FOREACHC(itchunk, pwptraj.vchunks) {
+                OPENRAVE_ASSERT_OP(itchunk->dof, ==, _ndof);
+            }
+
+            std::vector<dReal>& waypoint = _cacheAllWaypoints; // reuse _cacheAllWaypoints
+            waypoint.resize(newSpec.GetDOF());
+            pwptraj.vchunks.at(0).Eval(0, x0Vect);
+            pwptraj.vchunks.at(0).Evald1(0, v0Vect);
+            pwptraj.vchunks.at(0).Evald2(0, a0Vect);
+            ConfigurationSpecification::ConvertData(waypoint.begin(), newSpec, x0Vect.begin(), posSpec, 1, GetEnv(), true);
+            ConfigurationSpecification::ConvertData(waypoint.begin(), newSpec, v0Vect.begin(), velSpec, 1, GetEnv(), false);
+            ConfigurationSpecification::ConvertData(waypoint.begin(), newSpec, a0Vect.begin(), accelSpec, 1, GetEnv(), false);
+            waypoint[iIsWaypointOffset] = 1;
+            waypoint.at(iTimeOffset) = 0;
+            _pDummyTraj->Insert(_pDummyTraj->GetNumWaypoints(), waypoint);
+
+            // For consistency checking
+            dReal fExpectedDuration = 0;
+            dReal fDurationDiscrepancyThresh = 1e-2;
+            dReal fTrimEdgesTime = _parameters->_fStepLength*2; // we ignore constraints during [0, fTrimEdgesTime] and [duration - fTrimEdgesTime, duration]
+            PiecewisePolynomials::Chunk& tempChunk = _cacheChunk; // for storing interpolation results
+            std::vector<PiecewisePolynomials::Chunk>& vChunksOut = _cacheVChunksOut; // for storing chunks before putting them into the final trajcetory and for storing CheckChunkAllConstraints results
+            PiecewisePolynomials::Chunk &trimmedChunk = _cacheTrimmedChunk, &remChunk = _cacheRemChunk;
+
+            for( std::vector<PiecewisePolynomials::Chunk>::const_iterator itChunk = pwptraj.vchunks.begin(); itChunk != pwptraj.vchunks.end(); ++itChunk ) {
+                ++_progress._iteration;
+                if( _CallCallbacks(_progress) == PA_Interrupt ) {
+                    return PS_Interrupted;
+                }
+
+                trimmedChunk = *itChunk;
+                vChunksOut.resize(1);
+                vChunksOut[0] = trimmedChunk;
+                ++_progress._iteration;
+
+                // Check constraints if not yet checked
+                if( !itChunk->constraintChecked ) {
+                    // Check joint limits + velocity/acceleration/jerk limits
+                    int limitsret = _limitsChecker.CheckChunk(trimmedChunk, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, _parameters->_vConfigVelocityLimit, _parameters->_vConfigAccelerationLimit, _parameters->_vConfigJerkLimit);
+                    if( limitsret != PiecewisePolynomials::PCR_Normal ) {
+                        RAVELOG_WARN_FORMAT("env=%d, Detected limits violation after shortcutting; iChunk=%d; limitsret=0x%x", _envId%(itChunk - pwptraj.vchunks.begin())%limitsret);
+                        return PS_Failed;
+                    }
+
+                    // Check other remaining constraints. Ignore the first and the last bits of the trajectory.
+                    bool bTrimmedFront = false;
+                    bool bTrimmedBack = false;
+                    bool bCheck = true;
+                    if( itChunk - pwptraj.vchunks.begin() == 0 ) {
+                        if( itChunk->duration <= fTrimEdgesTime + g_fEpsilonLinear ) {
+                            // This chunk is too short. Skip checking
+                            bCheck = false;
+                        }
+                        else {
+                            remChunk = trimmedChunk;
+                            remChunk.Cut(fTrimEdgesTime, trimmedChunk);
+                            bTrimmedFront = true;
+                        }
+                    }
+                    else if( itChunk + 1 == pwptraj.vchunks.end() ) {
+                        if( itChunk->duration <= fTrimEdgesTime + g_fEpsilonLinear ) {
+                            // This chunk is too short. Skip checking
+                            bCheck = false;
+                        }
+                        else {
+                            trimmedChunk.Cut(trimmedChunk.duration - fTrimEdgesTime, remChunk);
+                            bTrimmedBack = true;
+                        }
+                    }
+
+                    _bUsePerturbation = false; // turn checking with perturbation off here.
+                    if( bCheck ) {
+                        PiecewisePolynomials::CheckReturn checkret = CheckChunkAllConstraints(trimmedChunk, 0xffff, vChunksOut);
+                        if( checkret.retcode != 0 ) {
+                            // Try to stretch the duration of the segment in hopes of fixing constraints violation.
+                            bool bDilationSuccessful = false;
+                            dReal newChunkDuration = trimmedChunk.duration;
+                            dReal timeIncrement = 0.05*newChunkDuration;
+                            size_t maxTries = 4;
+
+                            // In the first try, just increasing the duration a tiny bit.
+                            newChunkDuration += 5*PiecewisePolynomials::g_fPolynomialEpsilon;
+
+                            trimmedChunk.Eval(0, x0Vect);
+                            trimmedChunk.Eval(trimmedChunk.duration, x1Vect);
+                            trimmedChunk.Evald1(0, v0Vect);
+                            trimmedChunk.Evald1(trimmedChunk.duration, v1Vect);
+                            trimmedChunk.Evald2(0, a0Vect);
+                            trimmedChunk.Evald2(trimmedChunk.duration, a1Vect);
+                            for( size_t iDilation = 0; iDilation < maxTries; ++iDilation ) {
+                                _quinticInterpolator.ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, newChunkDuration, tempChunk);
+
+                                // TODO
+                                PiecewisePolynomials::CheckReturn newcheckret = CheckChunkAllConstraints(tempChunk, 0xffff, vChunksOut);
+                                if( newcheckret.retcode == 0 ) {
+                                    // The new chunk passes constraints checking. Need to
+                                    // re-populate vChunksOut with the result.
+                                    vChunksOut.resize(0);
+                                    if( vChunksOut.capacity() < 2 ) {
+                                        vChunksOut.reserve(2);
+                                    }
+                                    if( bTrimmedFront ) {
+                                        vChunksOut.push_back(remChunk);
+                                    }
+                                    vChunksOut.push_back(tempChunk);
+                                    if( bTrimmedBack ) {
+                                        vChunksOut.push_back(remChunk);
+                                    }
+                                    bDilationSuccessful = true;
+                                    break;
+                                }
+
+                                if( iDilation > 1 ) {
+                                    iDilation += timeIncrement;
+                                }
+                                else {
+                                    // Increase the duration a tiny bit first
+                                    iDilation += 5*PiecewisePolynomials::g_fPolynomialEpsilon;
+                                }
+                            }
+                            if( !bDilationSuccessful ) {
+                                _DumpOpenRAVETrajectory(ptraj, _errorDumpLevel);
+                                return PS_Failed;
+                            }
+                        }
+                    }
+
+                    ++_progress._iteration;
+                    if( _CallCallbacks(_progress) == PA_Interrupt ) {
+                        return PS_Interrupted;
+                    }
+                } // end if( !itChunk->constraintChecked )
+
+                FOREACH(itNewChunk, vChunksOut) {
+                    itNewChunk->Eval(0, x1Vect);
+                    itNewChunk->Evald1(0, v1Vect);
+                    itNewChunk->Evald2(0, a1Vect);
+                    ConfigurationSpecification::ConvertData(waypoint.begin(), newSpec, x1Vect.begin(), posSpec, 1, GetEnv(), true);
+                    ConfigurationSpecification::ConvertData(waypoint.begin(), newSpec, v1Vect.begin(), velSpec, 1, GetEnv(), false);
+                    ConfigurationSpecification::ConvertData(waypoint.begin(), newSpec, a1Vect.begin(), accelSpec, 1, GetEnv(), false);
+                    waypoint[iIsWaypointOffset] = 1;
+                    waypoint.at(iTimeOffset) = itNewChunk->duration;
+                    _pDummyTraj->Insert(_pDummyTraj->GetNumWaypoints(), waypoint);
+                    fExpectedDuration += itNewChunk->duration;
+                    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                        OPENRAVE_ASSERT_OP(RaveFabs(fExpectedDuration - _pDummyTraj->GetDuration()), <=, 0.1*fDurationDiscrepancyThresh);
+                    }
+                }
+            } // end iterating throuh pwptraj.vchunks
+
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                OPENRAVE_ASSERT_OP(RaveFabs(fExpectedDuration - _pDummyTraj->GetDuration()), <=, fDurationDiscrepancyThresh);
+            }
+
+            ptraj->Swap(_pDummyTraj);
+        }
+        catch( const std::exception& ex ) {
+            _DumpOpenRAVETrajectory(ptraj, _errorDumpLevel);
+            RAVELOG_WARN_FORMAT("env=%d, Main planning loop threw an expection: %s", _envId%ex.what());
+            return PS_Failed;
+        }
+        RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time=%f", _envId%(0.001f*(dReal)(utils::GetMilliTime() - startTime)));
+
+        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+            try {
+                ptraj->Sample(x0Vect, 0.5*ptraj->GetDuration()); // reuse x0Vect
+                RAVELOG_VERBOSE_FORMAT("env=%d, Sampling for verification successful.", _envId);
+            }
+            catch( const std::exception& ex ) {
+                RAVELOG_WARN_FORMAT("env=%d, Traj sampling for verification failed: %s", _envId%ex.what());
+                _DumpOpenRAVETrajectory(ptraj, _errorDumpLevel);
+                return PS_Failed;
+            }
         }
 
+        // Save the final trajectory
+        _DumpOpenRAVETrajectory(ptraj, _dumpLevel);
 
         return _ProcessPostPlanners(RobotBasePtr(), ptraj);
     }
@@ -180,7 +518,7 @@ public:
     /// acceleration, and jerk limits, which are assumed to already be satisfied).
     virtual PiecewisePolynomials::CheckReturn CheckChunkAllConstraints(const PiecewisePolynomials::Chunk& chunkIn, int options, std::vector<PiecewisePolynomials::Chunk>& vChunksOut)
     {
-        std::vector<dReal> &x0Vect = _cacheX0Vect, &x1Vect = _cacheX1Vect, &v0Vect = _cacheV0Vect, &v1Vect = _cacheV1Vect, &a0Vect = _cacheA0Vect, &a1Vect = _cacheA1Vect;
+        std::vector<dReal> &x0Vect = _cacheX0Vect2, &x1Vect = _cacheX1Vect2, &v0Vect = _cacheV0Vect2, &v1Vect = _cacheV1Vect2, &a0Vect = _cacheA0Vect2, &a1Vect = _cacheA1Vect2;
         chunkIn.Eval(0, x0Vect);
 
         if( chunkIn.duration <= g_fEpsilon ) {
@@ -227,10 +565,7 @@ public:
         if( _bExpectedModifiedConfigurations && _constraintReturn->_configurationtimes.size() > 0 ) {
             OPENRAVE_ASSERT_OP(_constraintReturn->_configurations.size(), ==, _constraintReturn->_configurationtimes.size()*_ndof);
 
-            std::vector<dReal> &curPos = _cacheCurPos, &newPos = _cacheNewPos, &curVel = _cacheCurVel, &newVel = _cacheNewVel, &curAccel = _cacheCurAccel, &newAccel = _cacheNewAccel;
-            curPos = x0Vect;
-            curVel = v0Vect;
-            curAccel = a0Vect;
+            PiecewisePolynomials::Chunk& tempChunk = _cacheChunk2;
             dReal curTime = 0;
             std::vector<dReal>::const_iterator it = _constraintReturn->_configurations.begin();
             if( vChunksOut.capacity() < _constraintReturn->_configurationtimes.size() ) {
@@ -239,31 +574,32 @@ public:
             for( size_t itime = 0; itime < _constraintReturn->_configurationtimes.size(); ++itime, it += _ndof ) {
                 // Retrieve the next config from _constraintReturn. Velocity and acceleration are
                 // evaluated from the original chunk.
-                std::copy(it, it + _ndof, newPos.begin());
-                chunkIn.Evald1(_constraintReturn->_configurations[itime], newVel);
-                chunkIn.Evald2(_constraintReturn->_configurations[itime], newAccel);
+                std::copy(it, it + _ndof, x1Vect.begin());
+                chunkIn.Evald1(_constraintReturn->_configurations[itime], v1Vect);
+                chunkIn.Evald2(_constraintReturn->_configurations[itime], a1Vect);
 
                 dReal deltaTime = _constraintReturn->_configurationtimes[itime] - curTime;
-                _quinticInterpolator.ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(curPos, newPos, curVel, newVel, curAccel, newAccel, deltaTime, _cacheChunk);
+                _quinticInterpolator.ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, deltaTime, tempChunk);
 
-                int limitsret = _limitsChecker.CheckChunk(_cacheChunk, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, _parameters->_vConfigVelocityLimit, _parameters->_vConfigAccelerationLimit, _parameters->_vConfigJerkLimit);
-                if( limitsret != 0 ) {
+                int limitsret = _limitsChecker.CheckChunk(tempChunk, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, _parameters->_vConfigVelocityLimit, _parameters->_vConfigAccelerationLimit, _parameters->_vConfigJerkLimit);
+                if( limitsret != PiecewisePolynomials::PCR_Normal ) {
                     RAVELOG_WARN_FORMAT("env=%d, the output chunk is invalid: t=%f/%f; limitsret=%d", _envId%curTime%chunkIn.duration%limitsret);
                     return PiecewisePolynomials::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9);
                 }
 
-                vChunksOut.push_back(_cacheChunk);
+                vChunksOut.push_back(tempChunk);
                 vChunksOut.back().constraintChecked = true;
                 curTime = _constraintReturn->_configurationtimes[itime];
-                curPos.swap(newPos);
-                curVel.swap(newVel);
-                curAccel.swap(newAccel);
+                x0Vect.swap(x1Vect);
+                v0Vect.swap(v1Vect);
+                a0Vect.swap(a1Vect);
             }
 
             // Make sure that the last configuration is the desired value
+            chunkIn.Eval(chunkIn.duration, x1Vect);
             for( size_t idof = 0; idof <= _ndof; ++idof ) {
-                if( RaveFabs(curPos[idof] - x1Vect[idof]) > PiecewisePolynomials::g_fPolynomialEpsilon ) {
-                    RAVELOG_WARN_FORMAT("env=%d, Detected discrepancy at the last configuration: idof=%d; (%f != %f)", _envId%idof%curPos[idof]%x1Vect[idof]);
+                if( RaveFabs(x0Vect[idof] - x1Vect[idof]) > PiecewisePolynomials::g_fPolynomialEpsilon ) {
+                    RAVELOG_WARN_FORMAT("env=%d, Detected discrepancy at the last configuration: idof=%d; (%f != %f)", _envId%idof%x0Vect[idof]%x1Vect[idof]);
                     return PiecewisePolynomials::CheckReturn(CFO_FinalValuesNotReached);
                 }
             }
@@ -311,7 +647,7 @@ protected:
     /// \param[out] pwptraj a PiecewisePolynomialTrajectory
     ///
     /// \return true if successful.
-    bool _ComputeInitialTiming(const std::vector<std::vector<dReal> >& vWaypoints, PiecewisePolynomials::PiecewisePolynomialTrajectory& pwptraj)
+    bool _ComputeInitialTiming(const std::vector<std::vector<dReal> >&vWaypoints, PiecewisePolynomials::PiecewisePolynomialTrajectory& pwptraj)
     {
         if( vWaypoints.size() == 1) {
             pwptraj.vchunks.resize(1);
@@ -404,12 +740,13 @@ protected:
         }
 
         // Time-parameterize each pair of waypoints.
+        pwptraj.vchunks.reserve(vNewWaypoints.size() - 1);
         OPENRAVE_ASSERT_OP(vNewWaypoints[0].size(), ==, _ndof);
         std::vector<PiecewisePolynomials::Chunk>& vChunksOut = _cacheVChunksOut;
         size_t numWaypoints = vNewWaypoints.size();
         for( size_t iWaypoint = 1; iWaypoint < numWaypoints; ++iWaypoint ) {
             OPENRAVE_ASSERT_OP(vNewWaypoints[iWaypoint].size(), ==, _ndof);
-            if( _ComputeSegmentWithZeroVelAccelEndpoints(vNewWaypoints[iWaypoint - 1], vNewWaypoints[iWaypoint], options, vChunksOut, iWaypoint, numWaypoints) ) {
+            if( !_ComputeSegmentWithZeroVelAccelEndpoints(vNewWaypoints[iWaypoint - 1], vNewWaypoints[iWaypoint], options, vChunksOut, iWaypoint, numWaypoints) ) {
                 RAVELOG_WARN_FORMAT("env=%d, Failed to time-parameterize the path connecting iWaypoint %d and %d", _envId%(iWaypoint - 1)%iWaypoint);
                 return false;
             }
@@ -420,8 +757,13 @@ protected:
                 }
             }
 
+            FOREACHC(itChunk, vChunksOut) {
+                pwptraj.vchunks.push_back(*itChunk);
+            }
+
             // TODO: Maybe keeping track of zero velocity points as well.
         }
+        pwptraj.Initialize();
         return true;
     }
 
@@ -435,9 +777,13 @@ protected:
     /// \param[in]  x1VectIn
     /// \param[in]  options
     /// \param[out] chunk a chunk that contains all the polynomials
-    bool _ComputeSegmentWithZeroVelAccelEndpoints(const std::vector<dReal>& x0VectIn, const std::vector<dReal>& x1VectIn, int options, std::vector<PiecewisePolynomials::Chunk>& vChunksOut, size_t iWaypoint=0, size_t numWaypoints=0)
+    bool _ComputeSegmentWithZeroVelAccelEndpoints(const std::vector<dReal>&x0VectIn, const std::vector<dReal>&x1VectIn, int options, std::vector<PiecewisePolynomials::Chunk>&vChunksOut, size_t iWaypoint=0, size_t numWaypoints=0)
     {
         std::vector<dReal> &velLimits = _cacheVellimits, &accelLimits = _cacheAccelLimits, &jerkLimits = _cacheJerkLimits;
+        velLimits = _parameters->_vConfigVelocityLimit;
+        accelLimits = _parameters->_vConfigAccelerationLimit;
+        jerkLimits = _parameters->_vConfigJerkLimit;
+
         dReal fCurVelMult = 1.0; ///< multiplier for the velocity limits.
         int numTries = 1000; // number of times to try scaling down velLimits and accelLimits before giving up
         int itry = 0;
@@ -539,6 +885,7 @@ protected:
     bool _bExpectedModifiedConfigurations; ///<
     bool _bManipConstraints; ///< if true, then there are manip vel/accel constraints
     boost::shared_ptr<ManipConstraintChecker2> _manipConstraintChecker;
+    PlannerProgress _progress;
 
     // for logging
     int _envId;
@@ -546,20 +893,25 @@ protected:
     uint32_t _fileIndex;    ///< index of all the files saved within the current planning session
     uint32_t _fileIndexMod; ///< maximum number of trajectory index allowed when saving.
     DebugLevel _dumpLevel;  ///< minimum debug level that triggers trajectory saving.
+    DebugLevel _errorDumpLevel; ///< minimum debug level that triggers trajectory saving when an unexpected error occurs.
 
     // cache
     ConstraintFilterReturnPtr _constraintReturn;
     TrajectoryBasePtr _pDummyTraj; ///< TODO: write a description for this
     PiecewisePolynomials::PiecewisePolynomialTrajectory _cacheTraj;
+    std::vector<dReal> _cacheTrajPoint; ///< stores a waypoint when converting PiecewisePolynomialTrajectory to OpenRAVE trajectory
 
-    std::vector<std::vector<dReal> > _cacheNewWaypoints;
+    std::vector<dReal> _cacheX0Vect, _cacheX1Vect, _cacheV0Vect, _cacheV1Vect, _cacheA0Vect, _cacheA1Vect, _cacheTVect;
+    std::vector<dReal> _cacheAllWaypoints; ///< stores the concatenation of all waypoints from the initial trajectory
+    std::vector<std::vector<dReal> > _cacheWaypoints, _cacheNewWaypoints;
     std::vector<dReal> _cacheVellimits, _cacheAccelLimits, _cacheJerkLimits;
+    PiecewisePolynomials::Chunk _cacheChunk;
+    PiecewisePolynomials::Chunk _cacheTrimmedChunk, _cacheRemChunk; ///< for constraints checking at the very end
     std::vector<PiecewisePolynomials::Chunk> _cacheVChunksOut;
 
     // for use in CheckChunkAllConstraints. TODO: write descriptions for these variables
-    std::vector<dReal> _cacheX0Vect, _cacheX1Vect, _cacheV0Vect, _cacheV1Vect, _cacheA0Vect, _cacheA1Vect;
-    std::vector<dReal> _cacheCurPos, _cacheNewPos, _cacheCurVel, _cacheNewVel, _cacheCurAccel, _cacheNewAccel;
-    PiecewisePolynomials::Chunk _cacheChunk;
+    std::vector<dReal> _cacheX0Vect2, _cacheX1Vect2, _cacheV0Vect2, _cacheV1Vect2, _cacheA0Vect2, _cacheA1Vect2;
+    PiecewisePolynomials::Chunk _cacheChunk2;
 }; // end class QuinticSmoother
 
 PlannerBasePtr CreateQuinticSmoother(EnvironmentBasePtr penv, std::istream& sinput)
@@ -571,6 +923,7 @@ PlannerBasePtr CreateQuinticSmoother(EnvironmentBasePtr penv, std::istream& sinp
 
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
+BOOST_TYPEOF_REGISTER_TYPE(PiecewisePolynomials::Polynomial)
 BOOST_TYPEOF_REGISTER_TYPE(PiecewisePolynomials::Chunk)
 BOOST_TYPEOF_REGISTER_TYPE(PiecewisePolynomials::PiecewisePolynomialTrajectory)
 #endif

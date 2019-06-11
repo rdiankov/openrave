@@ -143,6 +143,10 @@ public:
     /// \brief
     void Initialize(const dReal duration, const std::vector<Polynomial> vpolynomials);
 
+    /// \brief Cut this chunk into two halves. The left half (from t = 0 to t = t) is stored in
+    /// this. The righr half is returned via remChunk.
+    void Cut(dReal t, Chunk& remChunk);
+    
     /// \brief Evaluate all polynomials at time t.
     void Eval(dReal t, std::vector<dReal>& res) const;
 
@@ -211,6 +215,12 @@ public:
 
     /// \brief Find the index of the chunk in which the given time t falls into. Also compute the remainder of that chunk.
     void FindChunkIndex(dReal t, size_t& index, dReal& remainder) const;
+
+    /// \brief
+    void Initialize(const std::vector<Chunk>& vchunks);
+
+    /// \brief Initiale the trajectory with existing chunks
+    void Initialize();
 
     /// \brief
     void _UpdateChunksVector();
