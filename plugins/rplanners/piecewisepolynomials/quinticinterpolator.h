@@ -156,6 +156,7 @@ public:
     std::vector<dReal> _cacheDVect;
     std::vector<Polynomial> _cachePolynomialsVect;
     Polynomial _cachePolynomial;
+    Chunk _cacheChunk;
 };
 
 } // end namespace PiecewisePolynomialsInternal

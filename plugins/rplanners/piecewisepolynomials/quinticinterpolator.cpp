@@ -206,6 +206,21 @@ bool QuinticInterpolator::ComputeNDTrajectoryArbitraryTimeDerivativesOptimizeDur
     if( ret != PCR_Normal ) {
         return false;
     }
+
+    dReal fStepSize = 0.5*T;
+    dReal fCutoff = 1e-6;
+    dReal Tcur = T;
+    Chunk& tempChunk = _cacheChunk;
+    while( fStepSize >= fCutoff ) {
+        dReal fTestDuration = Tcur - fStepSize;
+        ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, fTestDuration, tempChunk);
+        ret = checker.CheckChunk(chunk, xminVect, xmaxVect, vmVect, amVect, jmVect);
+        if( ret == PCR_Normal ) {
+            Tcur = fTestDuration;
+            chunk = tempChunk;
+        }
+        fStepSize = 0.5*fStepSize;
+    }
     return true;
 }
 
