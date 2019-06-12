@@ -1375,6 +1375,34 @@ inline void computequinticcriticalpoints(const T* coeffs, T* criticalpoints, int
     polyroots<T, 4>(quarticcoeffs, criticalpoints, numpoints);
 }
 
+// Given a set of quartic coefficients, find all critical points (points at which the first
+// derivative vanishes).
+template <typename T>
+inline void computequarticcriticalpoints(const T* coeffs, T* criticalpoints, int& numpoints)
+{
+    const T cubiccoeffs[] = {4*coeffs[0], 3*coeffs[1], 2*coeffs[2], coeffs[3]};
+    polyroots<T, 3>(cubiccoeffs, criticalpoints, numpoints);
+}
+
+// Given a set of cubic coefficients, find all critical points (points at which the first
+// derivative vanishes).
+template <typename T>
+inline void computecubiccriticalpoints(const T* coeffs, T* criticalpoints, int& numpoints)
+{
+    const T quadraticcoeffs[] = {3*coeffs[0], 2*coeffs[1], coeffs[2]};
+    polyroots<T, 2>(quadraticcoeffs, criticalpoints, numpoints);
+}
+
+// Given a set of quadratic coefficients, find all critical points (points at which the first
+// derivative vanishes).
+template <typename T>
+inline void computequadraticcriticalpoints(const T* coeffs, T* criticalpoints, int& numpoints)
+{
+    // TODO: there is a closed-form formula
+    const T linearcoeffs[] = {2*coeffs[0], coeffs[1]};
+    polyroots<T, 1>(linearcoeffs, criticalpoints, numpoints);
+}
+
 // Given a set of coefficients of a quintic p(t) (strongest coefficient first), find smallest tdelta
 // > 0 such that p(t + tdelta) = p(tcur) + step. (step can be negative.)  *** Assume that if there
 // exists a critical point tc to the right of tcur, |p(tc) - p(tcur)| >= |step|. This is to

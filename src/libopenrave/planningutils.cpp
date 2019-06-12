@@ -3423,7 +3423,19 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         valldofscriticalpoints[i].resize(6); // there could be no more than 4 inflection points for a quintic polynomial
         valldofscriticalvalues[i].resize(6); // there could be no more than 4 inflection points for a quintic polynomial
         int numcriticalpoints = 0;
-        mathextra::computequinticcriticalpoints(&valldofscoeffs[i][0], &valldofscriticalpoints[i][0], numcriticalpoints);
+        // TODO: maybe need a better way to handle zero leading coeff
+        if( valldofscoeffs[i][0] != 0 ) {
+            mathextra::computequinticcriticalpoints(&valldofscoeffs[i][0], &valldofscriticalpoints[i][0], numcriticalpoints);
+        }
+        else if( valldofscoeffs[i][1] != 0 ) {
+            mathextra::computequarticcriticalpoints(&valldofscoeffs[i][1], &valldofscriticalpoints[i][0], numcriticalpoints);
+        }
+        else if( valldofscoeffs[i][2] != 0 ) {
+            mathextra::computecubiccriticalpoints(&valldofscoeffs[i][2], &valldofscriticalpoints[i][0], numcriticalpoints);
+        }
+        else if( valldofscoeffs[i][3] != 0 ) {
+            mathextra::computequadraticcriticalpoints(&valldofscoeffs[i][3], &valldofscriticalpoints[i][0], numcriticalpoints);
+        }
 
         if( numcriticalpoints == 0 ) {
             // This dof moves monotonically from q0[i] to q1[i]
@@ -3696,9 +3708,21 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
                 std::vector<dReal> vrawroots(5); // TODO: cache this
                 std::vector<dReal> vrawcoeffs = valldofscoeffs[idof]; // TODO: cache this
-                vrawcoeffs[0] -= fExpectedValue;
+                vrawcoeffs[4] -= fExpectedValue;
                 int numroots = 0;
-                mathextra::polyroots<dReal, 5>(&vrawcoeffs[0], &vrawroots[0], numroots);
+                // TODO: maybe need a better way to handle zero leading coeff
+                if( vrawcoeffs[0] != 0 ) {
+                    mathextra::polyroots<dReal, 5>(&vrawcoeffs[0], &vrawroots[0], numroots);
+                }
+                else if( vrawcoeffs[1] != 0 ) {
+                    mathextra::polyroots<dReal, 4>(&vrawcoeffs[1], &vrawroots[0], numroots);
+                }
+                else if( vrawcoeffs[2] != 0 ) {
+                    mathextra::polyroots<dReal, 3>(&vrawcoeffs[2], &vrawroots[0], numroots);
+                }
+                else if( vrawcoeffs[3] != 0 ) {
+                    mathextra::polyroots<dReal, 2>(&vrawcoeffs[3], &vrawroots[0], numroots);
+                }
                 bool bFoundTimeInstant = false;
                 dReal root;
                 if( numroots > 0 ) {
