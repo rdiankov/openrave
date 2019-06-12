@@ -146,7 +146,7 @@ public:
     /// \brief Cut this chunk into two halves. The left half (from t = 0 to t = t) is stored in
     /// this. The righr half is returned via remChunk.
     void Cut(dReal t, Chunk& remChunk);
-    
+
     /// \brief Evaluate all polynomials at time t.
     void Eval(dReal t, std::vector<dReal>& res) const;
 
@@ -227,6 +227,9 @@ public:
 
     /// \brief
     void Serialize(std::ostream& O) const;
+
+    /// \brief
+    void ReplaceSegment(dReal t0, dReal t1, std::vector<Chunk>& vchunks);
 
     /// \brief
     inline void Reset()

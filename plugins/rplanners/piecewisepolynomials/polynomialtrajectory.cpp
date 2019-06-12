@@ -184,7 +184,7 @@ void Polynomial::_FindAllLocalExtrema()
         rawcoeffs[icoeff] = vcoeffsd[degree - 1 - icoeff];
     }
     int numroots = 0;
-    polyroots((int)degree, &rawcoeffs[0], &rawroots[0], numroots);
+    polyroots((int)degree - 1, &rawcoeffs[0], &rawroots[0], numroots);
     rawroots.resize(numroots);
     vcextrema.resize(0);
 
@@ -570,6 +570,30 @@ void PiecewisePolynomialTrajectory::Serialize(std::ostream& O) const
         O << "\n";
         vchunks[ichunk].Serialize(O);
     }
+}
+
+void PiecewisePolynomialTrajectory::ReplaceSegment(dReal t0, dReal t1, std::vector<Chunk>& vchunks)
+{
+    OPENRAVE_ASSERT_OP(t0, <=, t1);
+    size_t index0, index1;
+    dReal rem0, rem1;
+    this->FindChunkIndex(t0, index0, rem0);
+    this->FindChunkIndex(t1, index1, rem1);
+    if( index0 == index1 ) {
+        Chunk tempChunk;
+        this->vchunks[index0].Cut(rem0, tempChunk);
+        this->vchunks[index0].Cut(rem1 - rem0, tempChunk);
+        this->vchunks.insert(this->vchunks.begin() + index0 + 1, tempChunk);
+        this->vchunks.insert(this->vchunks.begin() + index0 + 1, vchunks.begin(), vchunks.end());
+    }
+    else {
+        Chunk tempChunk;
+        this->vchunks[index1].Cut(rem1, tempChunk);
+        this->vchunks[index1] = tempChunk; // replace
+        this->vchunks.insert(this->vchunks.begin() + index1, vchunks.begin(), vchunks.end());
+        this->vchunks.erase(this->vchunks.begin() + index0 + 1, this->vchunks.begin() + index1);
+    }
+    this->Initialize();
 }
 
 } // end namespace PiecewisePolynomialsInternal
