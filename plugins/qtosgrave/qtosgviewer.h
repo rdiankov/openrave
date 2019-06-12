@@ -170,6 +170,8 @@ public slots:
     /// \brief show an about dialog
     void _ProcessAboutDialog();
 
+    void _SetDebugLevelInfo();
+
     void _SetDebugLevelDebug();
 
     void _SetDebugLevelVerbose();
@@ -442,6 +444,7 @@ public:
     QAction* viewCamAct;
     QAction* viewColAct;
     QAction* pubilshAct;
+    QAction* debugLevelInfoAct;
     QAction* debugLevelDebugAct;
     QAction* debugLevelVerboseAct;
     QAction* showAct;

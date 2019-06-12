@@ -36,6 +36,9 @@ ParabolicInterpolator::ParabolicInterpolator(size_t ndof, int envid)
     _cacheAVect.resize(_ndof);
     _cacheCurvesVect.resize(_ndof);
     _envid = envid;
+
+    _cacheRampsVect.reserve(5);
+    _cacheRampsVect2.reserve(3);
 }
 
 void ParabolicInterpolator::Initialize(size_t ndof, int envid)
@@ -285,37 +288,53 @@ bool ParabolicInterpolator::ComputeArbitraryVelNDTrajectory(const std::vector<dR
 bool ParabolicInterpolator::_RecomputeNDTrajectoryFixedDuration(std::vector<ParabolicCurve>& curvesVect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, size_t maxIndex, bool tryHarder)
 {
     dReal newDuration = curvesVect[maxIndex].GetDuration();
-    bool isPrevDurationSafe = true;
-    if( tryHarder ) {
-        for (size_t idof = 0; idof < _ndof; ++idof) {
-            dReal tBound;
-            if( !_CalculateLeastUpperBoundInoperavtiveTimeInterval(curvesVect[idof].GetX0(), curvesVect[idof].GetX1(), curvesVect[idof].GetV0(), curvesVect[idof].GetV1(), vmVect[idof], amVect[idof], tBound) ) {
-                return false;
-            }
-            if( tBound > newDuration ) {
-                newDuration = tBound;
-                isPrevDurationSafe = false;
-            }
-        }
-    }
-
-    if( !isPrevDurationSafe ) {
-        RAVELOG_VERBOSE_FORMAT("env=%d, Desired trajectory duration changed: %.15e --> %.15e; diff = %.15e", _envid%curvesVect[maxIndex].GetDuration()%newDuration%(newDuration - curvesVect[maxIndex].GetDuration()));
-    }
-
+    bool bSuccess = true;
+    size_t iFailingDOF;
     for (size_t idof = 0; idof < _ndof; ++idof) {
-        if( isPrevDurationSafe && idof == maxIndex ) {
+        if( idof == maxIndex ) {
             //RAVELOG_VERBOSE_FORMAT("joint %d is already the slowest DOF, continue to the next DOF (if any)", idof);
             continue;
         }
         if( !Compute1DTrajectoryFixedDuration(curvesVect[idof].GetX0(), curvesVect[idof].GetX1(), curvesVect[idof].GetV0(), curvesVect[idof].GetV1(), vmVect[idof], amVect[idof], newDuration, _cacheCurve) ) {
-            return false;
+            bSuccess = false;
+            iFailingDOF = idof;
+            break;
         }
         // Store the result back in the input curvesVect
         curvesVect[idof] = _cacheCurve;
     }
 
-    return true;
+    if( !bSuccess ) {
+        if( !tryHarder ) {
+            RAVELOG_VERBOSE_FORMAT("env=%d, Failed for joint %d. Info: x0=%.15e; x1=%.15e; v0=%.15e; v1=%.15e; duration=%.15e; vm=%.15e; am=%.15e", _envid%iFailingDOF%curvesVect[iFailingDOF].GetX0()%curvesVect[iFailingDOF].GetX1()%curvesVect[iFailingDOF].GetV0()%curvesVect[iFailingDOF].GetV1()%newDuration%vmVect[iFailingDOF]%amVect[iFailingDOF]);
+            return bSuccess;
+        }
+
+        for (size_t idof = 0; idof < _ndof; ++idof) {
+            dReal tBound;
+            if( !_CalculateLeastUpperBoundInoperativeTimeInterval(curvesVect[idof].GetX0(), curvesVect[idof].GetX1(), curvesVect[idof].GetV0(), curvesVect[idof].GetV1(), vmVect[idof], amVect[idof], tBound) ) {
+                return false;
+            }
+            if( tBound > newDuration ) {
+                newDuration = tBound;
+            }
+        }
+        RAVELOG_VERBOSE_FORMAT("env=%d, Desired trajectory duration changed: %.15e --> %.15e; diff = %.15e", _envid%curvesVect[maxIndex].GetDuration()%newDuration%(newDuration - curvesVect[maxIndex].GetDuration()));
+        bSuccess = true;
+        for (size_t idof = 0; idof < _ndof; ++idof) {
+            if( !Compute1DTrajectoryFixedDuration(curvesVect[idof].GetX0(), curvesVect[idof].GetX1(), curvesVect[idof].GetV0(), curvesVect[idof].GetV1(), vmVect[idof], amVect[idof], newDuration, _cacheCurve) ) {
+                bSuccess = false;
+                iFailingDOF = idof;
+                break;
+            }
+            // Store the result back in the input curvesVect
+            curvesVect[idof] = _cacheCurve;
+        }
+        if( !bSuccess ) {
+            RAVELOG_VERBOSE_FORMAT("env=%d, Failed for joint %d. Info: x0=%.15e; x1=%.15e; v0=%.15e; v1=%.15e; duration=%.15e; vm=%.15e; am=%.15e", _envid%iFailingDOF%curvesVect[iFailingDOF].GetX0()%curvesVect[iFailingDOF].GetX1()%curvesVect[iFailingDOF].GetV0()%curvesVect[iFailingDOF].GetV1()%newDuration%vmVect[iFailingDOF]%amVect[iFailingDOF]);
+        }
+    }
+    return bSuccess;
 }
 
 bool ParabolicInterpolator::ComputeNDTrajectoryFixedDuration(const std::vector<dReal>&x0Vect, const std::vector<dReal>&x1Vect, const std::vector<dReal>&v0Vect, const std::vector<dReal>&v1Vect, dReal duration, const std::vector<dReal>&xminVect, const std::vector<dReal>&xmaxVect, const std::vector<dReal>&vmVect, const std::vector<dReal>&amVect, std::vector<RampND>&rampndVectOut)
@@ -583,7 +602,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
         ba1 = SolveBrakeAccel(x1, -v1, xmin);
     }
 
-    _cacheRampsVect.resize(0);
+    bool bSuccess = false;
 
     if( (bt0 < duration) && (Abs(ba0) <= am + g_fRampEpsilon) ) {
         RAVELOG_VERBOSE("Case IIA: checking...");
@@ -592,6 +611,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
                 _cacheCurve.GetPeaks(bmin, bmax);
                 if( (bmin >= xmin - g_fRampEpsilon) && (bmax <= xmax + g_fRampEpsilon) ) {
                     RAVELOG_VERBOSE("Case IIA: passed");
+                    bSuccess = true;
                     _cacheRampsVect.resize(1 + _cacheCurve.GetRamps().size());
                     _cacheRampsVect[0].Initialize(v0, ba0, bt0, x0);
                     for (size_t iramp = 0; iramp < _cacheCurve.GetRamps().size(); ++iramp) {
@@ -609,6 +629,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
                 _cacheCurve.GetPeaks(bmin, bmax);
                 if( (bmin >= xmin - g_fRampEpsilon) && (bmax <= xmax + g_fRampEpsilon) ) {
                     RAVELOG_VERBOSE("Case IIB: passed");
+                    bSuccess = true;
                     _cacheRampsVect.resize(1 + _cacheCurve.GetRamps().size());
                     for (size_t iramp = 0; iramp < _cacheCurve.GetRamps().size(); ++iramp) {
                         _cacheRampsVect[iramp] = _cacheCurve.GetRamp(iramp);
@@ -622,6 +643,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
     if( bx0 == bx1 ) {
         if( (bt0 + bt1 < duration) && (Max(Abs(ba0), Abs(ba1)) <= am + g_fRampEpsilon) ) {
             RAVELOG_VERBOSE("Case III");
+            bSuccess = true;
             _cacheRampsVect.resize(3);
             _cacheRampsVect[0].Initialize(v0, ba0, bt0, x0);
             _cacheRampsVect[1].Initialize(0, 0, duration - (bt0 + bt1));
@@ -636,6 +658,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
                     _cacheCurve.GetPeaks(bmin, bmax);
                     if( (bmin >= xmin - g_fRampEpsilon) && (bmax <= xmax + g_fRampEpsilon) ) {
                         RAVELOG_VERBOSE("Case IV: passed");
+                        bSuccess = true;
                         _cacheRampsVect.resize(2 + _cacheCurve.GetRamps().size());
                         _cacheRampsVect[0].Initialize(v0, ba0, bt0, x0);
                         for (size_t iramp = 0; iramp < _cacheCurve.GetRamps().size(); ++iramp) {
@@ -648,7 +671,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
         }
     }
 
-    if( _cacheRampsVect.empty() ) {
+    if( !bSuccess ) {
         RAVELOG_VERBOSE_FORMAT("env=%d, Cannot solve for a bounded trajectory. Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", _envid%x0%x1%v0%v1%duration%xmin%xmax%vm%am);
         return false;
     }
@@ -1325,7 +1348,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Utilities
-bool ParabolicInterpolator::_CalculateLeastUpperBoundInoperavtiveTimeInterval(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm, dReal am, dReal& t)
+bool ParabolicInterpolator::_CalculateLeastUpperBoundInoperativeTimeInterval(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm, dReal am, dReal& t)
 {
     /*
        Let t be the total duration of the velocity profile, a0 and a1 be the accelerations of both

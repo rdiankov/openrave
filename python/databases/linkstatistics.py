@@ -160,11 +160,16 @@ class LinkStatisticsModel(DatabaseGenerator):
                         weights[dofindex] = jointspheres[ijoint][1]
                         totalweight += jointspheres[ijoint][1]
                         numweights += 1
-                for ijoint in range(len(self.robot.GetJoints())):
-                    if ijoint in jointspheres:
-                        dofindex = self.robot.GetJoints()[ijoint].GetDOFIndex()
-                        weights[dofindex] *= weightmult*numweights/totalweight
-                
+
+                # avoid division by zero, and let small weights be handled below
+                if totalweight > 1e-7:
+                    for ijoint in range(len(self.robot.GetJoints())):
+                        if ijoint in jointspheres:
+                            dofindex = self.robot.GetJoints()[ijoint].GetDOFIndex()
+                            weights[dofindex] *= weightmult*numweights/totalweight
+                else:
+                    log.debug('total weight (%s) for robot %s is too small, so do not normalize', totalweight, self.robot.GetName())
+                    
                 # shouldn't have small weights...
                 for idof in range(self.robot.GetDOF()):
                     if weights[idof] <= 1e-7:

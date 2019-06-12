@@ -943,7 +943,7 @@ class ParabolicCurvesND(object):
 
     # Visualization
     def PlotPos(self, fignum='Displacement Profiles', includingSW=False, dt=0.005, **kwargs):
-        plt.figure(fignum)
+        fig = plt.figure(fignum)
 
         tVect = arange(0, self.duration, dt)
         if tVect[-1] < self.duration:
@@ -959,10 +959,11 @@ class ParabolicCurvesND(object):
             for s in self.switchpointsList:
                 plt.plot([s, s], [ax[2], ax[3]], 'r', linewidth=1)
         plt.show(False)
+        return fig
         
 
     def PlotVel(self, fignum='Velocity Profile', includingSW=False, **kwargs):
-        plt.figure(fignum)
+        fig = plt.figure(fignum)
         plt.hold(True)
 
         lines = []
@@ -977,10 +978,11 @@ class ParabolicCurvesND(object):
             for s in self.switchpointsList:
                 plt.plot([s, s], [ax[2], ax[3]], 'r', linewidth=1)
         plt.show(False)
+        return fig
         
 
     def PlotAcc(self, fignum='Acceleration Profiles', **kwargs):
-        plt.figure(fignum)
+        fig = plt.figure(fignum)
         plt.hold(True)
 
         lines = []
@@ -990,6 +992,7 @@ class ParabolicCurvesND(object):
         handles = ['joint {0}'.format(i + 1) for i in xrange(self.ndof)]
         plt.legend(lines, handles)
         plt.show(False)
+        return fig
 # end class ParabolicCurvesND
 
     
@@ -1385,4 +1388,41 @@ def ConvertNewParabolicPathStringToOpenRAVETrajectory(env, robot, parabolicpaths
         t = data[offset]
         waypoint = np.hstack([x1, v1, t])
         traj.Insert(traj.GetNumWaypoints(), waypoint)
+    return traj
+
+
+def ConvertParabolicCurvesNDToOpenRAVETrajectory(env, robot, curvesnd):
+    from openravepy import RaveCreateTrajectory, ConfigurationSpecification
+    nrampnds = len(curvesnd.switchpointsList) - 1
+
+    ndof = curvesnd.ndof
+    assert(curvesnd.ndof == robot.GetActiveDOF())
+
+    traj = RaveCreateTrajectory(env, '')
+    newspec = robot.GetActiveConfigurationSpecification('quadratic')
+    newspec += newspec.ConvertToDerivativeSpecification(1)
+    deltatimeoffset = newspec.AddDeltaTimeGroup()
+    traj.Init(newspec)
+
+    gvalues = newspec.GetGroupFromName('joint_values')
+    gvelocities = newspec.GetGroupFromName('joint_velocities')
+
+    vtrajpoint = np.zeros(2*ndof + 1)
+    newspec.InsertJointValues(vtrajpoint, curvesnd.x0Vect, robot, robot.GetActiveDOFIndices(), 0)
+    newspec.InsertJointValues(vtrajpoint, curvesnd.v0Vect, robot, robot.GetActiveDOFIndices(), 1)
+    newspec.InsertDeltaTime(vtrajpoint, 0)
+    traj.Insert(traj.GetNumWaypoints(), vtrajpoint)
+    tprev = 0
+
+    for iswitchpoint in xrange(1, len(curvesnd.switchpointsList)):
+        t = curvesnd.switchpointsList[iswitchpoint]
+        deltatime = t - tprev
+        q = curvesnd.EvalPos(t)
+        qd = curvesnd.EvalVel(t)
+        newspec.InsertJointValues(vtrajpoint, q, robot, robot.GetActiveDOFIndices(), 0)
+        newspec.InsertJointValues(vtrajpoint, qd, robot, robot.GetActiveDOFIndices(), 1)
+        newspec.InsertDeltaTime(vtrajpoint, deltatime)
+        traj.Insert(traj.GetNumWaypoints(), vtrajpoint)
+        tprev = t
+
     return traj
