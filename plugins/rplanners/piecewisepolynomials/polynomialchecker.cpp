@@ -86,6 +86,8 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomial(const Polynomial& p, co
             }
         }
     }
+
+    return PCR_Normal;
 }
 
 PolynomialCheckReturn PolynomialChecker::CheckChunk(const Chunk& c, const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect)
@@ -93,9 +95,10 @@ PolynomialCheckReturn PolynomialChecker::CheckChunk(const Chunk& c, const std::v
     dReal vm = 0;
     dReal am = 0;
     dReal jm = 0;
-    bool bHasVelocityLimits = vmVect.size() > 0;
-    bool bHasAccelerationLimits = amVect.size() > 0;
-    bool bHasJerkLimits = jmVect.size() > 0;
+    bool bHasVelocityLimits = vmVect.size() == ndof;
+    bool bHasAccelerationLimits = amVect.size() == ndof;
+    bool bHasJerkLimits = jmVect.size() == ndof;
+    PolynomialCheckReturn ret;
     for( size_t idof = 0; idof < ndof; ++idof ) {
         if( bHasVelocityLimits ) {
             vm = vmVect[idof];
@@ -106,11 +109,12 @@ PolynomialCheckReturn PolynomialChecker::CheckChunk(const Chunk& c, const std::v
         if( bHasJerkLimits ) {
             jm = jmVect[idof];
         }
-        PolynomialCheckReturn ret = CheckPolynomial(c.vpolynomials[idof], c.duration, xminVect[idof], xmaxVect[idof], vm, am, jm);
+        ret = CheckPolynomial(c.vpolynomials[idof], c.duration, xminVect[idof], xmaxVect[idof], vm, am, jm);
         if( ret != PCR_Normal ) {
-            return ret;
+            break;
         }
     }
+    return ret;
 }
 
 PolynomialCheckReturn PolynomialChecker::CheckPiecewisePolynomialTrajectory(const PiecewisePolynomialTrajectory& traj, const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect)
@@ -118,9 +122,10 @@ PolynomialCheckReturn PolynomialChecker::CheckPiecewisePolynomialTrajectory(cons
     dReal vm = 0;
     dReal am = 0;
     dReal jm = 0;
-    bool bHasVelocityLimits = vmVect.size() > 0;
-    bool bHasAccelerationLimits = amVect.size() > 0;
-    bool bHasJerkLimits = jmVect.size() > 0;
+    bool bHasVelocityLimits = vmVect.size() == ndof;
+    bool bHasAccelerationLimits = amVect.size() == ndof;
+    bool bHasJerkLimits = jmVect.size() == ndof;
+    PolynomialCheckReturn ret;
     for( std::vector<Chunk>::const_iterator itchunk = traj.vchunks.begin(); itchunk != traj.vchunks.end(); ++itchunk ) {
         for( size_t idof = 0; idof < ndof; ++idof ) {
             if( bHasVelocityLimits ) {
@@ -132,12 +137,13 @@ PolynomialCheckReturn PolynomialChecker::CheckPiecewisePolynomialTrajectory(cons
             if( bHasJerkLimits ) {
                 jm = jmVect[idof];
             }
-            PolynomialCheckReturn ret = CheckPolynomial(itchunk->vpolynomials[idof], itchunk->duration, xminVect[idof], xmaxVect[idof], vm, am, jm);
+            ret = CheckPolynomial(itchunk->vpolynomials[idof], itchunk->duration, xminVect[idof], xmaxVect[idof], vm, am, jm);
             if( ret != PCR_Normal ) {
-                return ret;
+                break;
             }
         }
     }
+    return ret;
 }
 
 } // end namespace PiecewisePolynomialsInternal

@@ -18,7 +18,7 @@
 #include "piecewisepolynomials/quinticinterpolator.h"
 #include "piecewisepolynomials/polynomialchecker.h"
 #include "piecewisepolynomials/feasibilitychecker.h"
-#include "manipconstraints2.h"
+#include "manipconstraints3.h"
 
 // #define QUINTIC_SMOOTHER_PROGRESS_DEBUG
 
@@ -79,10 +79,11 @@ public:
         _errorDumpLevel = Level_Info;
 
         // Initialize manip constraints checker
+        RAVELOG_DEBUG_FORMAT("env=%d, manipname=%s; maxmanipspeed=%f; maxmanipaccel=%f", _envId%_parameters->manipname%_parameters->maxmanipspeed%_parameters->maxmanipaccel);
         _bManipConstraints = (_parameters->manipname.size() > 0) && (_parameters->maxmanipspeed > 0 || _parameters->maxmanipaccel > 0);
         if( _bManipConstraints ) {
             if( !_manipConstraintChecker ) {
-                _manipConstraintChecker.reset(new ManipConstraintChecker2(GetEnv()));
+                _manipConstraintChecker.reset(new ManipConstraintChecker3(GetEnv()));
             }
             _manipConstraintChecker->Init(_parameters->manipname, _parameters->_configurationspecification, _parameters->maxmanipspeed, _parameters->maxmanipaccel);
         }
@@ -575,24 +576,26 @@ public:
                 // Retrieve the next config from _constraintReturn. Velocity and acceleration are
                 // evaluated from the original chunk.
                 std::copy(it, it + _ndof, x1Vect.begin());
-                chunkIn.Evald1(_constraintReturn->_configurations[itime], v1Vect);
-                chunkIn.Evald2(_constraintReturn->_configurations[itime], a1Vect);
+                chunkIn.Evald1(_constraintReturn->_configurationtimes[itime], v1Vect);
+                chunkIn.Evald2(_constraintReturn->_configurationtimes[itime], a1Vect);
 
                 dReal deltaTime = _constraintReturn->_configurationtimes[itime] - curTime;
-                _quinticInterpolator.ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, deltaTime, tempChunk);
+                if( deltaTime > PiecewisePolynomials::g_fPolynomialEpsilon ) {
+                    _quinticInterpolator.ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, deltaTime, tempChunk);
 
-                int limitsret = _limitsChecker.CheckChunk(tempChunk, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, _parameters->_vConfigVelocityLimit, _parameters->_vConfigAccelerationLimit, _parameters->_vConfigJerkLimit);
-                if( limitsret != PiecewisePolynomials::PCR_Normal ) {
-                    RAVELOG_WARN_FORMAT("env=%d, the output chunk is invalid: t=%f/%f; limitsret=%d", _envId%curTime%chunkIn.duration%limitsret);
-                    return PiecewisePolynomials::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9);
+                    int limitsret = _limitsChecker.CheckChunk(tempChunk, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, _parameters->_vConfigVelocityLimit, _parameters->_vConfigAccelerationLimit, _parameters->_vConfigJerkLimit);
+                    if( limitsret != PiecewisePolynomials::PCR_Normal ) {
+                        RAVELOG_WARN_FORMAT("env=%d, the output chunk is invalid: t=%f/%f; limitsret=%d", _envId%curTime%chunkIn.duration%limitsret);
+                        return PiecewisePolynomials::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9);
+                    }
+
+                    vChunksOut.push_back(tempChunk);
+                    vChunksOut.back().constraintChecked = true;
+                    curTime = _constraintReturn->_configurationtimes[itime];
+                    x0Vect.swap(x1Vect);
+                    v0Vect.swap(v1Vect);
+                    a0Vect.swap(a1Vect);
                 }
-
-                vChunksOut.push_back(tempChunk);
-                vChunksOut.back().constraintChecked = true;
-                curTime = _constraintReturn->_configurationtimes[itime];
-                x0Vect.swap(x1Vect);
-                v0Vect.swap(v1Vect);
-                a0Vect.swap(a1Vect);
             }
 
             // Make sure that the last configuration is the desired value
@@ -610,18 +613,22 @@ public:
             vChunksOut[0].constraintChecked = true;
         }
 
+        RAVELOG_DEBUG_FORMAT("env=%d, _bExpectedModifiedConfigurations=%d, _bManipConstraints=%d; options=0x%x; num chunks=%d", _envId%_bExpectedModifiedConfigurations%_bManipConstraints%options%vChunksOut.size());
         // Check manip speed/accel constraints
         if( _bManipConstraints && (options & CFO_CheckTimeBasedConstraints) ) {
-            // try {
-            //     PiecewisePolynomials::CheckReturn manipret = _manipConstraintChecker->CheckChunkManipConstraints();
-            //     if( manipret.retcode != 0 ) {
-            //         return manipret;
-            //     }
-            // }
-            // catch( const std::exception& ex ) {
-            //     RAVELOG_WARN_FORMAT("env=%d, CheckChunkManipConstraints threw an exception: %s", _envId%ex.what());
-            //     return PiecewisePolynomials::CheckReturn(0xffff);
-            // }
+            try {
+                PiecewisePolynomials::CheckReturn manipret;
+                FOREACHC(itChunk, vChunksOut) {
+                    manipret = _manipConstraintChecker->CheckChunkManipConstraints(*itChunk);
+                    if( manipret.retcode != 0 ) {
+                        return manipret;
+                    }
+                }
+            }
+            catch( const std::exception& ex ) {
+                RAVELOG_WARN_FORMAT("env=%d, CheckChunkManipConstraints threw an exception: %s", _envId%ex.what());
+                return PiecewisePolynomials::CheckReturn(0xffff);
+            }
         }
 
         return PiecewisePolynomials::CheckReturn(0);
@@ -796,6 +803,7 @@ protected:
             }
             else if( checkret.retcode == CFO_CheckTimeBasedConstraints ) {
                 // Time-based constraints are violated so scale the velocity and acceleration limits down and try again.
+                RAVELOG_DEBUG_FORMAT("env=%d, Segment (%d, %d)/%d violated time-based constraints; fActualManipSpeed=%f; fActualManipAccel=%f; fTimeBasedSurpassMult=%f", _envId%(iWaypoint - 1)%iWaypoint%numWaypoints%checkret.fMaxManipSpeed%checkret.fMaxManipAccel%checkret.fTimeBasedSurpassMult);
                 fCurVelMult *= checkret.fTimeBasedSurpassMult;
                 dReal fMult2 = checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult;
                 for( size_t idof = 0; idof < _ndof; ++idof ) {
@@ -818,7 +826,7 @@ protected:
                 ss << "]; jerkLimits=[";
                 SerializeValues(ss, jerkLimits);
                 ss << "]";
-                RAVELOG_WARN_FORMAT("env=%d, Segment (%d, %d); numWaypoints=%d; CheckChunkAllConstraints failed with ret=0x%x; %s; giving up.", _envId%(iWaypoint - 1)%iWaypoint%numWaypoints%checkret.retcode%ss.str());
+                RAVELOG_WARN_FORMAT("env=%d, Segment (%d, %d)/%d; CheckChunkAllConstraints failed with ret=0x%x; %s; giving up.", _envId%(iWaypoint - 1)%iWaypoint%numWaypoints%checkret.retcode%ss.str());
                 return false;
             }
         }
@@ -884,7 +892,7 @@ protected:
     bool _bUsePerturbation;
     bool _bExpectedModifiedConfigurations; ///<
     bool _bManipConstraints; ///< if true, then there are manip vel/accel constraints
-    boost::shared_ptr<ManipConstraintChecker2> _manipConstraintChecker;
+    boost::shared_ptr<ManipConstraintChecker3> _manipConstraintChecker;
     PlannerProgress _progress;
 
     // for logging

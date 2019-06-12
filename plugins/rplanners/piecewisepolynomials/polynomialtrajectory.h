@@ -129,7 +129,7 @@ public:
     Chunk() : duration(0), constraintChecked(false)
     {
     }
-    Chunk(const dReal duration, const std::vector<Polynomial> vpolynomials);
+    Chunk(const dReal duration, const std::vector<Polynomial>& vpolynomials);
     ~Chunk()
     {
     }
@@ -141,7 +141,7 @@ public:
     void UpdateInitialValues(std::vector<dReal>& vinitialvalues);
 
     /// \brief
-    void Initialize(const dReal duration, const std::vector<Polynomial> vpolynomials);
+    void Initialize(const dReal duration, const std::vector<Polynomial>& vpolynomials);
 
     /// \brief Cut this chunk into two halves. The left half (from t = 0 to t = t) is stored in
     /// this. The righr half is returned via remChunk.

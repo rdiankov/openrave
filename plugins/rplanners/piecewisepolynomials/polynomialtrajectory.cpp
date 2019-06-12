@@ -273,7 +273,7 @@ void Polynomial::FindAllLocalExtrema(size_t ideriv, std::vector<Coordinate>& vco
         }
     }
 
-    {
+    if( 0 ) {
         std::cout << "ideriv=" << ideriv << "; (strongest term first) vcoeffs=[" << _vcurcoeffs[0];
         for( size_t icoeff = 1; icoeff < numcoeffs; ++icoeff ) {
             std::cout << ", " << _vcurcoeffs[icoeff];
@@ -293,7 +293,7 @@ void Polynomial::FindAllLocalExtrema(size_t ideriv, std::vector<Coordinate>& vco
     vcoords.reserve(numroots);
     for( int iroot = 0; iroot < numroots; ++iroot ) {
         Coordinate c(rawroots[iroot], Evaldn(rawroots[iroot], ideriv));
-        std::cout << "    examining (" << c.point << ", " << c.value << ")\n";
+        // std::cout << "    examining (" << c.point << ", " << c.value << ")\n";
         if( vcoords.size() == 0 ) {
             vcoords.push_back(c);
         }
@@ -350,7 +350,7 @@ void Polynomial::Serialize(std::ostream& O) const
 //
 // Chunk
 //
-Chunk::Chunk(const dReal duration, const std::vector<Polynomial> vpolynomials)
+Chunk::Chunk(const dReal duration, const std::vector<Polynomial>& vpolynomials)
 {
     Initialize(duration, vpolynomials);
 }
@@ -363,7 +363,7 @@ void Chunk::UpdateInitialValues(std::vector<dReal>&vinitialvalues)
     }
 }
 
-void Chunk::Initialize(const dReal duration, const std::vector<Polynomial> vpolynomials)
+void Chunk::Initialize(const dReal duration, const std::vector<Polynomial>& vpolynomials)
 {
     this->duration = duration;
     this->vpolynomials = vpolynomials;
@@ -388,12 +388,12 @@ void Chunk::Cut(dReal t, Chunk& remChunk)
     std::vector<dReal> vcoeffs(this->degree);
     dReal fMult;
     for( size_t idof = 0; idof < this->dof; ++idof ) {
-	fMult = 1.0;
-	for( size_t icoeff = 0; icoeff < this->degree; ++icoeff ) {
-	    vcoeffs[icoeff] = this->vpolynomials[idof].Evaldn(t, icoeff)/fMult;
-	    fMult *= (icoeff + 1);
-	}
-	vpoly[idof].Initialize(vcoeffs);
+        fMult = 1.0;
+        for( size_t icoeff = 0; icoeff < this->degree; ++icoeff ) {
+            vcoeffs[icoeff] = this->vpolynomials[idof].Evaldn(t, icoeff)/fMult;
+            fMult *= (icoeff + 1);
+        }
+        vpoly[idof].Initialize(vcoeffs);
     }
     remChunk.Initialize(this->duration - t, vpoly);
 
