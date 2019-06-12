@@ -302,7 +302,7 @@ public:
                     return PS_Interrupted;
                 }
             }
-            RAVELOG_DEBUG_FORMAT("env=%d, After shortcutting: duration %.15e -> %.15e, diff=%.15e", _envId%originalDuration%pwptraj.duration%(pwptraj.duration - originalDuration));
+            RAVELOG_DEBUG_FORMAT("env=%d, After shortcutting: duration %.15e -> %.15e, diff=%.15e", _envId%originalDuration%pwptraj.duration%(originalDuration - pwptraj.duration));
 
             ++_progress._iteration;
             if( _CallCallbacks(_progress) == PA_Interrupt ) {
@@ -616,7 +616,7 @@ public:
             vChunksOut[0].constraintChecked = true;
         }
 
-        RAVELOG_DEBUG_FORMAT("env=%d, _bExpectedModifiedConfigurations=%d, _bManipConstraints=%d; options=0x%x; num chunks=%d", _envId%_bExpectedModifiedConfigurations%_bManipConstraints%options%vChunksOut.size());
+        // RAVELOG_DEBUG_FORMAT("env=%d, _bExpectedModifiedConfigurations=%d, _bManipConstraints=%d; options=0x%x; num chunks=%d", _envId%_bExpectedModifiedConfigurations%_bManipConstraints%options%vChunksOut.size());
         // Check manip speed/accel constraints
         if( _bManipConstraints && (options & CFO_CheckTimeBasedConstraints) ) {
             try {
@@ -964,10 +964,11 @@ protected:
 
             uint32_t iIterProgress = 0; // for debugging purposes
             try {
-                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, shortcutting with t0=%.15e; t1=%.15e; fStartTimeVelMult=%.15f; fStartTimeAccelMult=%.15e", _envId%iter%numIters%t0%t1%fStartTimeVelMult%fStartTimeAccelMult);
+                // RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, shortcutting with t0=%.15e; t1=%.15e; fStartTimeVelMult=%.15f; fStartTimeAccelMult=%.15e", _envId%iter%numIters%t0%t1%fStartTimeVelMult%fStartTimeAccelMult);
 
                 pwptraj.Eval(t0, x0Vect);
                 if( _parameters->SetStateValues(x0Vect) != 0 ) {
+                    RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; state setting at x0 failed", _envId%iter%numIters%t0%t1);
                     continue;
                 }
                 iIterProgress += 0x10000000;
@@ -976,6 +977,7 @@ protected:
 
                 pwptraj.Eval(t1, x1Vect);
                 if( _parameters->SetStateValues(x1Vect) != 0 ) {
+                    RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; state setting at x1 failed", _envId%iter%numIters%t0%t1);
                     continue;
                 }
                 iIterProgress += 0x10000000;
@@ -1013,19 +1015,20 @@ protected:
                 // These parameters keep track of multiplier for the current shortcut iteration.
                 dReal fCurVelMult = fStartTimeVelMult;
                 dReal fCurAccelMult = fStartTimeAccelMult;
+                dReal fCurJerkMult = 1.0; // experimental
 
                 bool bSuccess = false;
                 for( size_t iSlowDown = 0; iSlowDown < maxSlowDownTries; ++iSlowDown ) {
                     // TODO:
                     bool isOk = _quinticInterpolator.ComputeNDTrajectoryArbitraryTimeDerivativesOptimizeDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, velLimits, accelLimits, jerkLimits, t1 - t0, tempChunk);
                     if( !isOk ) {
-                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, initial interpolation failed.", _envId%iter%numIters);
+                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; initial interpolation failed.", _envId%iter%numIters%t0%t1);
                         break; // must not slow down any further.
                     }
 
                     if( tempChunk.duration + minTimeStep > t1 - t0 ) {
                         // Segment does not make significant improvement.
-                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, shortcut does not make significant improvement; prevduration=%.15e; newduration=%.15e; diff=%.15e; minTimeStep=%.15e", _envId%iter%numIters%(t1 - t0)%tempChunk.duration%(t1 - t0 - tempChunk.duration)%minTimeStep);
+                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; shortcut does not make significant improvement. prevduration=%.15e; newduration=%.15e; diff=%.15e; minTimeStep=%.15e", _envId%iter%numIters%t0%t1%(t1 - t0)%tempChunk.duration%(t1 - t0 - tempChunk.duration)%minTimeStep);
                         break; // must not slow down any further.
                     }
 
@@ -1037,11 +1040,11 @@ protected:
                     // Start checking constraints
                     PiecewisePolynomials::CheckReturn checkret(0);
                     do {
-			checkret = CheckChunkAllConstraints(tempChunk, 0xffff, vChunksOut);
-			if( checkret.retcode != 0 ) {
-			    RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, iSlowDown=%d, shortcut does not pass checking, ret=0x%x", _envId%iter%numIters%iSlowDown%checkret.retcode);
-			    break;
-			}
+                        checkret = CheckChunkAllConstraints(tempChunk, 0xffff, vChunksOut);
+                        if( checkret.retcode != 0 ) {
+                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; iSlowDown=%d, new segment duration=%.15e, shortcut does not pass checking, ret=0x%x", _envId%iter%numIters%t0%t1%iSlowDown%tempChunk.duration%checkret.retcode);
+                            break;
+                        }
                     } while( 0 ); // Finish checking constraints
                     iIterProgress += 0x1000;
 
@@ -1058,12 +1061,13 @@ protected:
                             // No manip constraints. Scale down both velLimits and accelLimits
                             fCurVelMult *= checkret.fTimeBasedSurpassMult;
                             fCurAccelMult *= checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult;
+                            fCurJerkMult *= checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult;
                             if( fCurVelMult < fVelMultCutoff ) {
-                                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, fCurVelMult goes below threshold (%.15e < %.15e).", _envId%fCurVelMult%fVelMultCutoff);
+                                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; fCurVelMult goes below threshold (%.15e < %.15e).", _envId%iter%numIters%t0%t1%fCurVelMult%fVelMultCutoff);
                                 break;
                             }
                             if( fCurAccelMult < fAccelMultCutoff ) {
-                                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, fCurAccelMult goes below threshold (%.15e < %.15e).", _envId%fCurAccelMult%fAccelMultCutoff);
+                                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; fCurAccelMult goes below threshold (%.15e < %.15e).", _envId%iter%numIters%t0%t1%fCurAccelMult%fAccelMultCutoff);
                                 break;
                             }
 
@@ -1073,11 +1077,13 @@ protected:
                                 dReal fAccelLowerBound = std::max(RaveFabs(a0Vect[idof]), RaveFabs(a1Vect[idof]));
                                 velLimits[idof] = std::max(fVelLowerBound, checkret.fTimeBasedSurpassMult*velLimits[idof]);
                                 accelLimits[idof] = std::max(fAccelLowerBound, checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult*velLimits[idof]);
+                                // Scaling down jerk limits likely leads to significantly slower final traj.
+                                // jerkLimits[idof] *= (checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult);
                             }
                         }
                     }
                     else {
-                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, rejecting shortcut due to ret=0x%x", _envId%iter%numIters%checkret.retcode);
+                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; rejecting shortcut due to ret=0x%x", _envId%iter%numIters%t0%t1%checkret.retcode);
                         break; // do not slow down any further.
                     }
                     iIterProgress += 0x1000;
@@ -1090,7 +1096,7 @@ protected:
                 }
 
                 if( vChunksOut.size() == 0 ) {
-                    RAVELOG_WARN_FORMAT("env=%d, shortcut iter=%d/%d, shortcut chunks vector is empty", _envId);
+                    RAVELOG_WARN_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; shortcut chunks vector is empty", _envId%iter%numIters%t0%t1);
                     continue;
                 }
 
@@ -1112,7 +1118,7 @@ protected:
 
                 // Replace the original portion with the shortcut segment.
                 pwptraj.ReplaceSegment(t0, t1, vChunksOut);
-		RAVELOG_DEBUG_FORMAT("env=%d, fSegmentTime=%f; fDiff=%f; prevduration=%f; newduration=%f", _envId%fSegmentTime%fDiff%tTotal%pwptraj.duration);
+                // RAVELOG_DEBUG_FORMAT("env=%d, fSegmentTime=%f; fDiff=%f; prevduration=%f; newduration=%f", _envId%fSegmentTime%fDiff%tTotal%pwptraj.duration);
                 tTotal = pwptraj.duration;
                 fScore = fDiff/nItersFromPrevSuccessful;
                 if( fScore > fCurrentBestScore ) {
@@ -1127,10 +1133,10 @@ protected:
                     break;
                 }
 
-                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, successful. numSlowDowns=%d, tTotal=%.15e", _envId%iter%numIters%numSlowDowns%pwptraj.duration);
+                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; successful. numSlowDowns=%d, tTotal=%.15e", _envId%iter%numIters%t0%t1%numSlowDowns%pwptraj.duration);
             }
             catch( const std::exception& ex ) {
-                RAVELOG_WARN_FORMAT("env=%d, An exception occured during shortcut iter=%d/%d; iIterProgress=0x%x: %s", _envId%iter%numIters%iIterProgress%ex.what());
+                RAVELOG_WARN_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; an exception occured. iIterProgress=0x%x: %s", _envId%iter%numIters%t0%t1%iIterProgress%ex.what());
             }
         } // end shortcut iterations
 
@@ -1147,7 +1153,7 @@ protected:
         else {
             ss << "normal exit";
         }
-        RAVELOG_DEBUG_FORMAT("env=%d, Finished at shortcut iter=%d/%d (%s), successful=%d; numSlowDowns=%d; duration: %.15e -> %.15e; diff=%.15e", _envId%iter%numShortcuts%numShortcuts%ss.str()%numSlowDowns%tOriginal%tTotal%(tOriginal - tTotal));
+        RAVELOG_DEBUG_FORMAT("env=%d, Finished at shortcut iter=%d/%d (%s), successful=%d; numSlowDowns=%d; duration: %.15e -> %.15e; diff=%.15e", _envId%iter%numIters%ss.str()%numShortcuts%numSlowDowns%tOriginal%tTotal%(tOriginal - tTotal));
         _DumpPiecewisePolynomialTrajectory(pwptraj, _dumpLevel);
 
         return numShortcuts;

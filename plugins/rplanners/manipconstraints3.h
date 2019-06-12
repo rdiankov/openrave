@@ -450,7 +450,7 @@ public:
             fReductionFactor = min(multiplier*_maxmanipaccel/maxActualManipAccel, fMaxAllowedMult);
         }
 
-        {
+        if( 0 ) {
             std::stringstream ss;
             ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
             ss << "criticalpoints=[";
