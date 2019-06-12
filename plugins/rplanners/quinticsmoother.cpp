@@ -38,6 +38,9 @@ public:
             _loggingUniformSampler->SetSeed(utils::GetMicroTime());
         }
         _envId = GetEnv()->GetId();
+        // Pre-allocate in order to keep memory growth predictable.
+        _nMaxDiscretizationSize = 0x1000;
+        _cacheVVisitedDiscretization.resize(_nMaxDiscretizationSize*_nMaxDiscretizationSize, 0);
     }
 
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
@@ -679,7 +682,6 @@ protected:
             // We add more waypoints between the original pair of waypoints x0 and x1 if the
             // constraint-satisfying middle point (computed using _neighstatefn) is far from the
             // expected middle point 0.5*(x0 + x1).
-            dReal distThresh = 1e-5;
             // If we need to add too many waypoints in between the original pair, something might be wrong.
             int nConsecutiveExpansionsAllowed = 10;
             int nConsecutiveExpansions = 0;
@@ -854,6 +856,300 @@ protected:
     int _Shortcut(PiecewisePolynomials::PiecewisePolynomialTrajectory& pwptraj, int numIters, dReal minTimeStep)
     {
         int numShortcuts = 0;
+
+        //
+        // Parameters
+        //
+        int numSlowDowns = 0; // counts how many times we scale down the velocity/acceleration limits.
+        size_t maxSlowDownTries = 100; // the limit of the number of slowdowns in one shortcut iteration.
+        dReal fiSearchVelAccelMult = 1.0/_parameters->fSearchVelAccelMult; // magic constant
+
+        // fStartTimeVelMult (resp. fStartTimeAccelMult) tracks the multiplier used in th most recent successful
+        // shortcut iteration. In the beginning of each shortcut iteration, velocity/acceleration limits will be set to
+        // the original limits multiplied by this value. The reason is that if the most recent successful multiplier is
+        // low, say 0.1, it is unlikely that using the original velocity/acceleration limits will lead to a successful
+        // shortcut.
+        dReal fStartTimeVelMult = 1.0;
+        dReal fStartTimeAccelMult = 1.0;
+        dReal fVelMultCutoff = 0.01; // stop slowing down when the current velocity multiplier goes below this value
+        dReal fAccelMultCutoff = fVelMultCutoff*fVelMultCutoff;
+
+        // We stop shortcutting if no progress has been made in the past nCutoffIters iterations.
+        size_t nCutoffIters = std::max(_parameters->nshortcutcycles, min(100, numIters/2));
+        size_t nItersFromPrevSuccessful = 0; // counts how many iterations have passed since the most recent successful iteration
+        size_t nTimeBasedConstraintsFailed = 0; // counts how many times time-based constraints failed since the most
+        // recent successful iteration.
+
+        // We stop shortcutting if the latest successful shortcut made too little progress (i.e. if
+        // fScore/fCurrentBestScore < fCutoffRatio)
+        dReal fCutoffRatio = _parameters->durationImprovementCutoffRatio;
+        dReal fScore = 1.0;
+        dReal fCurrentBestScore = 1.0; // keeps track of the best score so far
+
+        // TODO: write descriptions
+        dReal fiMinDiscretization = 4.0/minTimeStep;
+        std::vector<uint8_t>& vVisitedDiscretization = _cacheVVisitedDiscretization;
+        vVisitedDiscretization.clear();
+        int nEndTimeDiscretization = 0; // counts how many bins we discretize the trajectory given the current duration.
+
+        //
+        // Caching stuff
+        //
+        std::vector<dReal> &x0Vect = _cacheX0Vect, &x1Vect = _cacheX1Vect, &v0Vect = _cacheV0Vect, &v1Vect = _cacheV1Vect, &a0Vect = _cacheA0Vect, &a1Vect = _cacheA1Vect;
+        std::vector<dReal> &velLimits = _cacheVellimits, &accelLimits = _cacheAccelLimits, &jerkLimits = _cacheJerkLimits;
+        PiecewisePolynomials::Chunk& tempChunk = _cacheChunk;
+        std::vector<PiecewisePolynomials::Chunk>& vChunksOut = _cacheVChunksOut; // for storing chunks from CheckChunkAllConstraints results
+
+        //
+        // Main shortcut loop
+        //
+        const dReal tOriginal = pwptraj.duration;
+        dReal tTotal = tOriginal;
+        int iter = 0;
+        for(; iter < numIters; ++iter ) {
+            if( tTotal < minTimeStep ) {
+                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, tTotal=%.15e is too shortcut to continue (minTimeStep=%.15e)", _envId%iter%numIters%minTimeStep);
+                break;
+            }
+
+            if( nItersFromPrevSuccessful + nTimeBasedConstraintsFailed > nCutoffIters ) {
+                break;
+            }
+            ++nItersFromPrevSuccessful;
+
+            // Sample two time instants.
+            dReal t0, t1;
+            if( iter == 0 ) {
+                t0 = 0;
+                t1 = tTotal;
+            }
+            // TODO: handle zero velocity points
+            else {
+                t0 = Rand()*tTotal;
+                t1 = Rand()*tTotal;
+                if( t0 > t1 ) {
+                    PiecewisePolynomials::Swap(t0, t1);
+                }
+            }
+
+            if( t1 - t0 < minTimeStep ) {
+                // Time instants are too close.
+                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e and t1=%.15e are too close (minTimeStep=%.15e)", _envId%iter%numIters%t0%t1%minTimeStep);
+                continue;
+            }
+
+            // vVisitedDiscretization logic goes here
+            {
+                // Resize vVisitedDiscretization appropriately.
+                if( vVisitedDiscretization.size() == 0 ) {
+                    nEndTimeDiscretization = (int)(tTotal*fiMinDiscretization) + 1;
+                    if( nEndTimeDiscretization <= (int)_nMaxDiscretizationSize ) {
+                        vVisitedDiscretization.resize(nEndTimeDiscretization*nEndTimeDiscretization);
+                    }
+                }
+
+                // Check redundancy of the sampled time instants
+                int t0Index = t0*fiMinDiscretization;
+                int t1Index = t1*fiMinDiscretization;
+                size_t testPairIndex = t0Index*nEndTimeDiscretization + t1Index;
+                if( testPairIndex < vVisitedDiscretization.size() ) {
+                    if( vVisitedDiscretization[testPairIndex] ) {
+                        // This bin has already been visited.
+                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; testPairIndex=%d has been visited", _envId%iter%numIters%t0%t1%testPairIndex);
+                        continue;
+                    }
+                    vVisitedDiscretization[testPairIndex] = 1;
+                }
+            }
+
+            uint32_t iIterProgress = 0; // for debugging purposes
+            try {
+                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, shortcutting with t0=%.15e; t1=%.15e; fStartTimeVelMult=%.15f; fStartTimeAccelMult=%.15e", _envId%iter%numIters%t0%t1%fStartTimeVelMult%fStartTimeAccelMult);
+
+                pwptraj.Eval(t0, x0Vect);
+                if( _parameters->SetStateValues(x0Vect) != 0 ) {
+                    continue;
+                }
+                iIterProgress += 0x10000000;
+                _parameters->_getstatefn(x0Vect);
+                iIterProgress += 0x10000000;
+
+                pwptraj.Eval(t1, x1Vect);
+                if( _parameters->SetStateValues(x1Vect) != 0 ) {
+                    continue;
+                }
+                iIterProgress += 0x10000000;
+                _parameters->_getstatefn(x1Vect);
+                iIterProgress += 0x10000000;
+
+                pwptraj.Evald1(t0, v0Vect);
+                pwptraj.Evald2(t0, a0Vect);
+                pwptraj.Evald1(t1, v1Vect);
+                pwptraj.Evald2(t1, a1Vect);
+                ++_progress._iteration;
+
+                // Set the limits for this iterations
+                velLimits = _parameters->_vConfigVelocityLimit;
+                accelLimits = _parameters->_vConfigAccelerationLimit;
+                jerkLimits = _parameters->_vConfigJerkLimit;
+                {
+                    dReal fVelLowerBound, fAccelLowerBound;
+                    dReal fVel, fAccel;
+                    for( size_t idof = 0; idof < _ndof; ++idof ) {
+                        // The scaled velocity/acceleration must not be less than these values
+                        fVelLowerBound = std::max(RaveFabs(v0Vect[idof]), RaveFabs(v1Vect[idof]));
+                        fVel = std::max(fVelLowerBound, fStartTimeVelMult*_parameters->_vConfigVelocityLimit[idof]);
+                        if( velLimits[idof] > fVel ) {
+                            velLimits[idof] = fVel;
+                        }
+
+                        fAccelLowerBound = std::max(RaveFabs(a0Vect[idof]), RaveFabs(a1Vect[idof]));
+                        fAccel = std::max(fAccelLowerBound, fStartTimeAccelMult*_parameters->_vConfigAccelerationLimit[idof]);
+                        if( accelLimits[idof] > fAccel ) {
+                            accelLimits[idof] = fAccel;
+                        }
+                    }
+                }
+                // These parameters keep track of multiplier for the current shortcut iteration.
+                dReal fCurVelMult = fStartTimeVelMult;
+                dReal fCurAccelMult = fStartTimeAccelMult;
+
+                bool bSuccess = false;
+                for( size_t iSlowDown = 0; iSlowDown < maxSlowDownTries; ++iSlowDown ) {
+                    // TODO:
+                    bool isOk = _quinticInterpolator.ComputeNDTrajectoryArbitraryTimeDerivativesOptimizeDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, velLimits, accelLimits, jerkLimits, t1 - t0, tempChunk);
+                    if( !isOk ) {
+                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, initial interpolation failed.", _envId%iter%numIters);
+                        break; // must not slow down any further.
+                    }
+
+                    if( tempChunk.duration + minTimeStep > t1 - t0 ) {
+                        // Segment does not make significant improvement.
+                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, shortcut does not make significant improvement; prevduration=%.15e; newduration=%.15e; diff=%.15e; minTimeStep=%.15e", _envId%iter%numIters%(t1 - t0)%tempChunk.duration%(t1 - t0 - tempChunk.duration)%minTimeStep);
+                        break; // must not slow down any further.
+                    }
+
+                    if( _CallCallbacks(_progress) == PA_Interrupt ) {
+                        return -1;
+                    }
+                    iIterProgress += 0x1000;
+
+                    // Start checking constraints
+                    PiecewisePolynomials::CheckReturn checkret(0);
+                    do {
+			checkret = CheckChunkAllConstraints(tempChunk, 0xffff, vChunksOut);
+			if( checkret.retcode != 0 ) {
+			    RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, iSlowDown=%d, shortcut does not pass checking, ret=0x%x", _envId%iter%numIters%iSlowDown%checkret.retcode);
+			    break;
+			}
+                    } while( 0 ); // Finish checking constraints
+                    iIterProgress += 0x1000;
+
+                    if( checkret.retcode == 0 ) {
+                        bSuccess = true;
+                        break; // break out of slowdown loop.
+                    }
+                    else if( checkret.retcode == CFO_CheckTimeBasedConstraints ) {
+                        ++nTimeBasedConstraintsFailed;
+                        if( 0 ) {//( _bManipConstraints && !!_manipConstraintChecker ) {
+                            // Scale down accelLimits and/or velLimits based on what constraints are violated.
+                        }
+                        else {
+                            // No manip constraints. Scale down both velLimits and accelLimits
+                            fCurVelMult *= checkret.fTimeBasedSurpassMult;
+                            fCurAccelMult *= checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult;
+                            if( fCurVelMult < fVelMultCutoff ) {
+                                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, fCurVelMult goes below threshold (%.15e < %.15e).", _envId%fCurVelMult%fVelMultCutoff);
+                                break;
+                            }
+                            if( fCurAccelMult < fAccelMultCutoff ) {
+                                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, fCurAccelMult goes below threshold (%.15e < %.15e).", _envId%fCurAccelMult%fAccelMultCutoff);
+                                break;
+                            }
+
+                            ++numSlowDowns;
+                            for( size_t idof = 0; idof < _ndof; ++idof ) {
+                                dReal fVelLowerBound = std::max(RaveFabs(v0Vect[idof]), RaveFabs(v1Vect[idof]));
+                                dReal fAccelLowerBound = std::max(RaveFabs(a0Vect[idof]), RaveFabs(a1Vect[idof]));
+                                velLimits[idof] = std::max(fVelLowerBound, checkret.fTimeBasedSurpassMult*velLimits[idof]);
+                                accelLimits[idof] = std::max(fAccelLowerBound, checkret.fTimeBasedSurpassMult*checkret.fTimeBasedSurpassMult*velLimits[idof]);
+                            }
+                        }
+                    }
+                    else {
+                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, rejecting shortcut due to ret=0x%x", _envId%iter%numIters%checkret.retcode);
+                        break; // do not slow down any further.
+                    }
+                    iIterProgress += 0x1000;
+                } // end slowdown iterations
+
+
+                if( !bSuccess ) {
+                    // Shortcut failed. Continue to the next iteration.
+                    continue;
+                }
+
+                if( vChunksOut.size() == 0 ) {
+                    RAVELOG_WARN_FORMAT("env=%d, shortcut iter=%d/%d, shortcut chunks vector is empty", _envId);
+                    continue;
+                }
+
+                // Now this shortcut iteration is really successful.
+                ++numShortcuts;
+
+                // Keep track of multipliers
+                fStartTimeVelMult = min(1.0, fCurVelMult*fiSearchVelAccelMult);
+                fStartTimeAccelMult = min(1.0, fCurAccelMult*fiSearchVelAccelMult);
+
+                // Update parameters
+                nTimeBasedConstraintsFailed = 0;
+                vVisitedDiscretization.clear();
+                dReal fSegmentTime = 0;
+                FOREACHC(itChunk, vChunksOut) {
+                    fSegmentTime += itChunk->duration;
+                }
+                dReal fDiff = (t1 - t0) - fSegmentTime;
+
+                // Replace the original portion with the shortcut segment.
+                pwptraj.ReplaceSegment(t0, t1, vChunksOut);
+		RAVELOG_DEBUG_FORMAT("env=%d, fSegmentTime=%f; fDiff=%f; prevduration=%f; newduration=%f", _envId%fSegmentTime%fDiff%tTotal%pwptraj.duration);
+                tTotal = pwptraj.duration;
+                fScore = fDiff/nItersFromPrevSuccessful;
+                if( fScore > fCurrentBestScore ) {
+                    fCurrentBestScore = fScore;
+                }
+                nItersFromPrevSuccessful = 0;
+
+                if( (fScore/fCurrentBestScore < fCutoffRatio) && (numShortcuts > 5) ) {
+                    // We have already shortcut for a bit (numShortcuts > 5). The progress made in this iteration is
+                    // below the curoff ratio. If we continue, it is unlikely that we will make much more progress. So
+                    // stop here.
+                    break;
+                }
+
+                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, successful. numSlowDowns=%d, tTotal=%.15e", _envId%iter%numIters%numSlowDowns%pwptraj.duration);
+            }
+            catch( const std::exception& ex ) {
+                RAVELOG_WARN_FORMAT("env=%d, An exception occured during shortcut iter=%d/%d; iIterProgress=0x%x: %s", _envId%iter%numIters%iIterProgress%ex.what());
+            }
+        } // end shortcut iterations
+
+        // Report statistics
+        std::stringstream ss;
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+        if( fScore/fCurrentBestScore < fCutoffRatio ) {
+            ss << "current score falls below threshold (" << fScore/fCurrentBestScore << " < " << fCutoffRatio << ")";
+        }
+        else if( nItersFromPrevSuccessful + nTimeBasedConstraintsFailed > nCutoffIters ) {
+            ss << "did not make progress in the past " << nItersFromPrevSuccessful << " iterations and";
+            ss << " time-based constraints failed " << nTimeBasedConstraintsFailed << " times";
+        }
+        else {
+            ss << "normal exit";
+        }
+        RAVELOG_DEBUG_FORMAT("env=%d, Finished at shortcut iter=%d/%d (%s), successful=%d; numSlowDowns=%d; duration: %.15e -> %.15e; diff=%.15e", _envId%iter%numShortcuts%numShortcuts%ss.str()%numSlowDowns%tOriginal%tTotal%(tOriginal - tTotal));
+        _DumpPiecewisePolynomialTrajectory(pwptraj, _dumpLevel);
+
         return numShortcuts;
     }
 
@@ -904,6 +1200,7 @@ protected:
     DebugLevel _errorDumpLevel; ///< minimum debug level that triggers trajectory saving when an unexpected error occurs.
 
     // cache
+    size_t _nMaxDiscretizationSize;
     ConstraintFilterReturnPtr _constraintReturn;
     TrajectoryBasePtr _pDummyTraj; ///< TODO: write a description for this
     PiecewisePolynomials::PiecewisePolynomialTrajectory _cacheTraj;
@@ -920,6 +1217,8 @@ protected:
     // for use in CheckChunkAllConstraints. TODO: write descriptions for these variables
     std::vector<dReal> _cacheX0Vect2, _cacheX1Vect2, _cacheV0Vect2, _cacheV1Vect2, _cacheA0Vect2, _cacheA1Vect2;
     PiecewisePolynomials::Chunk _cacheChunk2;
+
+    std::vector<uint8_t> _cacheVVisitedDiscretization;
 }; // end class QuinticSmoother
 
 PlannerBasePtr CreateQuinticSmoother(EnvironmentBasePtr penv, std::istream& sinput)
