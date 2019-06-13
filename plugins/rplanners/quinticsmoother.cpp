@@ -603,7 +603,7 @@ public:
 
             // Make sure that the last configuration is the desired value
             chunkIn.Eval(chunkIn.duration, x1Vect);
-            for( size_t idof = 0; idof <= _ndof; ++idof ) {
+            for( size_t idof = 0; idof < _ndof; ++idof ) {
                 if( RaveFabs(x0Vect[idof] - x1Vect[idof]) > PiecewisePolynomials::g_fPolynomialEpsilon ) {
                     RAVELOG_WARN_FORMAT("env=%d, Detected discrepancy at the last configuration: idof=%d; (%f != %f)", _envId%idof%x0Vect[idof]%x1Vect[idof]);
                     return PiecewisePolynomials::CheckReturn(CFO_FinalValuesNotReached);
