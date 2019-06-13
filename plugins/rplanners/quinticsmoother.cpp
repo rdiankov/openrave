@@ -1016,13 +1016,13 @@ protected:
                 dReal fCurVelMult = fStartTimeVelMult;
                 dReal fCurAccelMult = fStartTimeAccelMult;
                 dReal fCurJerkMult = 1.0; // experimental
+                RAVELOG_DEBUG_FORMAT("env=%d, fCurVelMult=%f; fCurAccelMult=%f;", _envId%fCurVelMult%fCurAccelMult);
 
                 bool bSuccess = false;
                 for( size_t iSlowDown = 0; iSlowDown < maxSlowDownTries; ++iSlowDown ) {
-                    // TODO:
-                    bool isOk = _quinticInterpolator.ComputeNDTrajectoryArbitraryTimeDerivativesOptimizeDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, velLimits, accelLimits, jerkLimits, t1 - t0, tempChunk);
-                    if( !isOk ) {
-                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; initial interpolation failed.", _envId%iter%numIters%t0%t1);
+                    PiecewisePolynomials::PolynomialCheckReturn polycheckret = _quinticInterpolator.ComputeNDTrajectoryArbitraryTimeDerivativesOptimizeDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, velLimits, accelLimits, jerkLimits, t1 - t0, tempChunk);
+                    if( polycheckret != PiecewisePolynomials::PCR_Normal ) {
+                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; initial interpolation failed. polycheckret=0x%x", _envId%iter%numIters%t0%t1%polycheckret);
                         break; // must not slow down any further.
                     }
 

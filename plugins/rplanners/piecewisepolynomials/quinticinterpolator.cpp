@@ -187,7 +187,7 @@ void QuinticInterpolator::ComputeNDTrajectoryArbitraryTimeDerivativesFixedDurati
     chunk.Initialize(T, vpolynomials);
 }
 
-bool QuinticInterpolator::ComputeNDTrajectoryArbitraryTimeDerivativesOptimizeDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& a0Vect, const std::vector<dReal>& a1Vect, const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect, dReal T, Chunk& chunk)
+PolynomialCheckReturn QuinticInterpolator::ComputeNDTrajectoryArbitraryTimeDerivativesOptimizeDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& a0Vect, const std::vector<dReal>& a1Vect, const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& jmVect, dReal T, Chunk& chunk)
 {
     OPENRAVE_ASSERT_OP(x0Vect.size(), ==, ndof);
     OPENRAVE_ASSERT_OP(x1Vect.size(), ==, ndof);
@@ -204,7 +204,7 @@ bool QuinticInterpolator::ComputeNDTrajectoryArbitraryTimeDerivativesOptimizeDur
     ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, T, chunk);
     PolynomialCheckReturn ret = checker.CheckChunk(chunk, xminVect, xmaxVect, vmVect, amVect, jmVect);
     if( ret != PCR_Normal ) {
-        return false;
+        return ret;
     }
 
     dReal fStepSize = 0.5*T;
@@ -221,7 +221,7 @@ bool QuinticInterpolator::ComputeNDTrajectoryArbitraryTimeDerivativesOptimizeDur
         }
         fStepSize = 0.5*fStepSize;
     }
-    return true;
+    return PCR_Normal;
 }
 
 } // end namespace PiecewisePolynomialsInternal
