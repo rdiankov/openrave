@@ -3391,14 +3391,14 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     }
 
     // Compute coefficients for all dofs. **Strongest term first**
-    std::vector<std::vector<dReal> > valldofscoeffs(params->GetDOF()); // TODO: cache this
+    _valldofscoeffs.resize(params->GetDOF()); // TODO: cache this
     for( size_t idof = 0; idof < ndof; ++idof ) {
-        valldofscoeffs[idof].resize(6);
-        mathextra::computequinticcoeffs(q0.at(idof), q1.at(idof), dq0.at(idof), dq1.at(idof), ddq0.at(idof), ddq1.at(idof), timeelapsed, &valldofscoeffs[idof][0]);
+        _valldofscoeffs[idof].resize(6);
+        mathextra::computequinticcoeffs(q0.at(idof), q1.at(idof), dq0.at(idof), dq1.at(idof), ddq0.at(idof), ddq1.at(idof), timeelapsed, &_valldofscoeffs[idof][0]);
     }
 
-    std::vector<std::vector<dReal> > valldofscriticalpoints(params->GetDOF()); // TODO: cache this
-    std::vector<std::vector<dReal> > valldofscriticalvalues(params->GetDOF()); // TODO: cache this
+    _valldofscriticalpoints.resize(params->GetDOF());
+    _valldofscriticalvalues.resize(params->GetDOF());
 
     // Some intermediate variables
     // dQ = diff(q1, q0)
@@ -3420,79 +3420,79 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     for( i = 0; i < (int)ndof; ++i, ++itres ) {
         dReal fabsdist = 0; // the total distance this DOF travels along this path
         int steps = 0;      // the number of steps this dof needs to travel along the path
-        valldofscriticalpoints[i].resize(6); // there could be no more than 4 inflection points for a quintic polynomial
-        valldofscriticalvalues[i].resize(6); // there could be no more than 4 inflection points for a quintic polynomial
+        _valldofscriticalpoints[i].resize(6); // there could be no more than 4 inflection points for a quintic polynomial
+        _valldofscriticalvalues[i].resize(6); // there could be no more than 4 inflection points for a quintic polynomial
         int numcriticalpoints = 0;
         // TODO: maybe need a better way to handle zero leading coeff
-        if( valldofscoeffs[i][0] != 0 ) {
-            mathextra::computequinticcriticalpoints(&valldofscoeffs[i][0], &valldofscriticalpoints[i][0], numcriticalpoints);
+        if( _valldofscoeffs[i][0] != 0 ) {
+            mathextra::computequinticcriticalpoints(&_valldofscoeffs[i][0], &_valldofscriticalpoints[i][0], numcriticalpoints);
         }
-        else if( valldofscoeffs[i][1] != 0 ) {
-            mathextra::computequarticcriticalpoints(&valldofscoeffs[i][1], &valldofscriticalpoints[i][0], numcriticalpoints);
+        else if( _valldofscoeffs[i][1] != 0 ) {
+            mathextra::computequarticcriticalpoints(&_valldofscoeffs[i][1], &_valldofscriticalpoints[i][0], numcriticalpoints);
         }
-        else if( valldofscoeffs[i][2] != 0 ) {
-            mathextra::computecubiccriticalpoints(&valldofscoeffs[i][2], &valldofscriticalpoints[i][0], numcriticalpoints);
+        else if( _valldofscoeffs[i][2] != 0 ) {
+            mathextra::computecubiccriticalpoints(&_valldofscoeffs[i][2], &_valldofscriticalpoints[i][0], numcriticalpoints);
         }
-        else if( valldofscoeffs[i][3] != 0 ) {
-            mathextra::computequadraticcriticalpoints(&valldofscoeffs[i][3], &valldofscriticalpoints[i][0], numcriticalpoints);
+        else if( _valldofscoeffs[i][3] != 0 ) {
+            mathextra::computequadraticcriticalpoints(&_valldofscoeffs[i][3], &_valldofscriticalpoints[i][0], numcriticalpoints);
         }
 
         if( numcriticalpoints == 0 ) {
             // This dof moves monotonically from q0[i] to q1[i]
             fabsdist = RaveFabs(dQ[i]);
 
-            valldofscriticalpoints[i].resize(2);
-            valldofscriticalpoints[i][0] = 0;
-            valldofscriticalpoints[i][1] = timeelapsed;
+            _valldofscriticalpoints[i].resize(2);
+            _valldofscriticalpoints[i][0] = 0;
+            _valldofscriticalpoints[i][1] = timeelapsed;
 
-            valldofscriticalvalues[i].resize(2);
-            valldofscriticalvalues[i][0] = q0[i];
-            valldofscriticalvalues[i][1] = q1[i];
+            _valldofscriticalvalues[i].resize(2);
+            _valldofscriticalvalues[i][0] = q0[i];
+            _valldofscriticalvalues[i][1] = q1[i];
         }
         else {
             // Sort the values and filter out the values that are not in the range [0, timeelapsed].
-            std::sort(valldofscriticalpoints[i].begin(), valldofscriticalpoints[i].begin() + numcriticalpoints);
+            std::sort(_valldofscriticalpoints[i].begin(), _valldofscriticalpoints[i].begin() + numcriticalpoints);
             size_t writeIndex = 0;
             for( size_t readIndex = 0; readIndex < numcriticalpoints; ++readIndex ) {
-                if( valldofscriticalpoints[i][readIndex] >= 0 && valldofscriticalpoints[i][readIndex] <= timeelapsed ) {
+                if( _valldofscriticalpoints[i][readIndex] >= 0 && _valldofscriticalpoints[i][readIndex] <= timeelapsed ) {
                     if( readIndex > writeIndex ) {
-                        valldofscriticalpoints[i][writeIndex] = valldofscriticalpoints[i][readIndex];
+                        _valldofscriticalpoints[i][writeIndex] = _valldofscriticalpoints[i][readIndex];
                     }
-                    mathextra::evaluatequintic(&valldofscoeffs[i][0], valldofscriticalpoints[i][writeIndex], valldofscriticalvalues[i][writeIndex]);
+                    mathextra::evaluatequintic(&_valldofscoeffs[i][0], _valldofscriticalpoints[i][writeIndex], _valldofscriticalvalues[i][writeIndex]);
                     ++writeIndex;
                 }
             }
             if( writeIndex == 0 ) {
                 // No inflection point in [0, timeelapsed]. Just add t = 0 and t = timeelapsed to the list.
-                valldofscriticalpoints[i].resize(2);
-                valldofscriticalpoints[i][0] = 0;
-                valldofscriticalpoints[i][1] = timeelapsed;
+                _valldofscriticalpoints[i].resize(2);
+                _valldofscriticalpoints[i][0] = 0;
+                _valldofscriticalpoints[i][1] = timeelapsed;
 
-                valldofscriticalvalues[i].resize(2);
-                valldofscriticalvalues[i][0] = q0[i];
-                valldofscriticalvalues[i][1] = q1[i];
+                _valldofscriticalvalues[i].resize(2);
+                _valldofscriticalvalues[i][0] = q0[i];
+                _valldofscriticalvalues[i][1] = q1[i];
             }
             else {
                 // Need to check if t = 0 and t = timeelapsed have already been added to the list
-                if( RaveFabs(valldofscriticalpoints[i].front()) > g_fEpsilonQuintic ) {
-                    valldofscriticalpoints[i].insert(valldofscriticalpoints[i].begin(), 0);
-                    valldofscriticalvalues[i].insert(valldofscriticalvalues[i].begin(), q0[i]);
+                if( RaveFabs(_valldofscriticalpoints[i].front()) > g_fEpsilonQuintic ) {
+                    _valldofscriticalpoints[i].insert(_valldofscriticalpoints[i].begin(), 0);
+                    _valldofscriticalvalues[i].insert(_valldofscriticalvalues[i].begin(), q0[i]);
                     writeIndex++;
                 }
-                if( RaveFabs(valldofscriticalpoints[i].back() - timeelapsed) > g_fEpsilonQuintic ) {
-                    valldofscriticalpoints[i][writeIndex] = timeelapsed;
-                    valldofscriticalvalues[i][writeIndex] = q1[i];
+                if( RaveFabs(_valldofscriticalpoints[i].back() - timeelapsed) > g_fEpsilonQuintic ) {
+                    _valldofscriticalpoints[i][writeIndex] = timeelapsed;
+                    _valldofscriticalvalues[i][writeIndex] = q1[i];
                     writeIndex++;
                 }
-                valldofscriticalpoints[i].resize(writeIndex);
-                valldofscriticalvalues[i].resize(writeIndex);
+                _valldofscriticalpoints[i].resize(writeIndex);
+                _valldofscriticalvalues[i].resize(writeIndex);
             }
 
             // Compute accumulated distance
             dReal fprevvalue = q0[i];
-            for( size_t ipoint = 1; ipoint < valldofscriticalpoints[i].size(); ++ipoint ) {
-                fabsdist += RaveFabs(valldofscriticalvalues[i][ipoint] - fprevvalue);
-                fprevvalue = valldofscriticalvalues[i][ipoint];
+            for( size_t ipoint = 1; ipoint < _valldofscriticalpoints[i].size(); ++ipoint ) {
+                fabsdist += RaveFabs(_valldofscriticalvalues[i][ipoint] - fprevvalue);
+                fprevvalue = _valldofscriticalvalues[i][ipoint];
             }
         }
         if( *itres != 0 ) {
@@ -3508,7 +3508,8 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             numSteps = steps;
         }
     } // end for loop iterating through each dof to find discretization steps.
-    RAVELOG_VERBOSE_FORMAT("env=%d, nLargestStepIndex=%d; numSteps=%d; totalSteps=%d", _environmentid%nLargestStepIndex%numSteps%totalSteps);
+
+    // RAVELOG_VERBOSE_FORMAT("env=%d, nLargestStepIndex=%d; numSteps=%d; totalSteps=%d", _environmentid%nLargestStepIndex%numSteps%totalSteps);
 
     // If nothing moves, just return.
     if( totalSteps == 0 && start > 0 ) {
@@ -3619,9 +3620,9 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             dReal tdeltaonedof;
             for( size_t idof = 0; idof < ndof; ++idof ) {
                 dReal fcurvalue;
-                mathextra::evaluatequintic(&valldofscoeffs[idof][0], tcur, fcurvalue);
+                mathextra::evaluatequintic(&_valldofscoeffs[idof][0], tcur, fcurvalue);
                 size_t criticalpointindex = vnextcriticalpointindices[idof];
-                dReal fcriticalvalue = valldofscriticalvalues[idof][criticalpointindex];
+                dReal fcriticalvalue = _valldofscriticalvalues[idof][criticalpointindex];
 
                 // fdiff is how far between the current joint value and the value at the next critical point.
                 dReal fdiffvalue = fcriticalvalue - fcurvalue;
@@ -3641,17 +3642,17 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 
                     // Update fdistanceallowance
                     fdistanceallowance = fdistanceallowance - RaveFabs(fdiffvalue);
-                    fnextvalue = valldofscriticalvalues[idof][criticalpointindex];
+                    fnextvalue = _valldofscriticalvalues[idof][criticalpointindex];
 
                     criticalpointindex++;
                     vnextcriticalpointindices[idof]++;
-                    if( criticalpointindex == valldofscriticalpoints[idof].size() ) {
+                    if( criticalpointindex == _valldofscriticalpoints[idof].size() ) {
                         // The end of the segment is reached before having moved for the dof resolution.
                         bFound = false;
                         break;
                     }
 
-                    fcriticalvalue = valldofscriticalvalues[idof][criticalpointindex];
+                    fcriticalvalue = _valldofscriticalvalues[idof][criticalpointindex];
                     fdiffvalue = fcriticalvalue - fnextvalue;
                     frem = fdistanceallowance - RaveFabs(fdiffvalue);
                 }
@@ -3665,7 +3666,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 else {
                     fnextvalue += fdistanceallowance;
                 }
-                bFound = mathextra::computequinticnextdiscretizedstep(&valldofscoeffs[idof][0], fnextvalue - fcurvalue, tcur, tdeltaonedof);
+                bFound = mathextra::computequinticnextdiscretizedstep(&_valldofscoeffs[idof][0], fnextvalue - fcurvalue, tcur, tdeltaonedof);
 
                 if( !bFound ) {
                     continue;
@@ -3677,7 +3678,8 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
             } // end iterating through all dofs
         } // end if( bComputeNewTimeStep )
-        RAVELOG_VERBOSE_FORMAT("env=%d, checking t=%f/%f; bComputeNewTimeStep=%d, earliestindex=%d; tprev=%f; tnext=%f; fMinNextTimeStep=%f;", _environmentid%tcur%timeelapsed%bComputeNewTimeStep%earliestindex%tprev%tnext%fMinNextTimeStep);
+
+        // RAVELOG_VERBOSE_FORMAT("env=%d, checking t=%f/%f; bComputeNewTimeStep=%d, earliestindex=%d; tprev=%f; tnext=%f; fMinNextTimeStep=%f;", _environmentid%tcur%timeelapsed%bComputeNewTimeStep%earliestindex%tprev%tnext%fMinNextTimeStep);
 
         _vprevtempconfig = _vtempconfig;
         _vprevtempvelconfig = _vtempvelconfig;
@@ -3686,12 +3688,13 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         // Compute dQ for use in _neighstatefn. Now we are going to move for dQ within time tnext - tprev.
         dReal fnextvalue;
         for( size_t idof = 0; idof < ndof; ++idof ) {
-            mathextra::evaluatequintic(&valldofscoeffs[idof][0], tnext, fnextvalue);
+            mathextra::evaluatequintic(&_valldofscoeffs[idof][0], tnext, fnextvalue);
             dQ[idof] = fnextvalue - _vtempconfig[idof];
         }
 
         dReal dqscale = 1.0;  // TODO: write a correct description for this variable later
         int iScaleIndex = -1; // TODO: write a correct description for this variable later
+        dReal fitdiff = 1/(tnext - tprev);
         for( size_t idof = 0; idof < ndof; ++idof ) {
             if( RaveFabs(dQ[idof]) > vConfigResolution[idof] * 1.01 ) {
                 // The computed dQ[idof] exceeds the joint resolution. Find the earliest timestep t
@@ -3706,31 +3709,34 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 else {
                     fExpectedValue = _vtempconfig[idof] - vConfigResolution[idof];
                 }
-                std::vector<dReal> vrawroots(5); // TODO: cache this
-                std::vector<dReal> vrawcoeffs = valldofscoeffs[idof]; // TODO: cache this
-                vrawcoeffs[4] -= fExpectedValue;
+                // std::vector<dReal> vrawroots(5); // TODO: cache this
+                // std::vector<dReal> vrawcoeffs = _valldofscoeffs[idof]; // TODO: cache this
+                _vrawroots.resize(5); // there are at most 5 roots
+                _vrawcoeffs = _valldofscoeffs[idof];
+
+                _vrawcoeffs[4] -= fExpectedValue;
                 int numroots = 0;
                 // TODO: maybe need a better way to handle zero leading coeff
-                if( vrawcoeffs[0] != 0 ) {
-                    mathextra::polyroots<dReal, 5>(&vrawcoeffs[0], &vrawroots[0], numroots);
+                if( _vrawcoeffs[0] != 0 ) {
+                    mathextra::polyroots<dReal, 5>(&_vrawcoeffs[0], &_vrawroots[0], numroots);
                 }
-                else if( vrawcoeffs[1] != 0 ) {
-                    mathextra::polyroots<dReal, 4>(&vrawcoeffs[1], &vrawroots[0], numroots);
+                else if( _vrawcoeffs[1] != 0 ) {
+                    mathextra::polyroots<dReal, 4>(&_vrawcoeffs[1], &_vrawroots[0], numroots);
                 }
-                else if( vrawcoeffs[2] != 0 ) {
-                    mathextra::polyroots<dReal, 3>(&vrawcoeffs[2], &vrawroots[0], numroots);
+                else if( _vrawcoeffs[2] != 0 ) {
+                    mathextra::polyroots<dReal, 3>(&_vrawcoeffs[2], &_vrawroots[0], numroots);
                 }
-                else if( vrawcoeffs[3] != 0 ) {
-                    mathextra::polyroots<dReal, 2>(&vrawcoeffs[3], &vrawroots[0], numroots);
+                else if( _vrawcoeffs[3] != 0 ) {
+                    mathextra::polyroots<dReal, 2>(&_vrawcoeffs[3], &_vrawroots[0], numroots);
                 }
                 bool bFoundTimeInstant = false;
                 dReal root;
                 if( numroots > 0 ) {
-                    std::sort(vrawroots.begin(), vrawroots.begin() + numroots);
+                    std::sort(_vrawroots.begin(), _vrawroots.begin() + numroots);
                     for( int iroot = 0; iroot < numroots; ++iroot ) {
-                        if( vrawroots.at(iroot) > fMinNextTimeStep ) {
-                            if( !bFoundTimeInstant || vrawroots[iroot] < root ) {
-                                root = vrawroots[iroot];
+                        if( _vrawroots.at(iroot) > fMinNextTimeStep ) {
+                            if( !bFoundTimeInstant || _vrawroots[iroot] < root ) {
+                                root = _vrawroots[iroot];
                                 bFoundTimeInstant = true;
                             }
                         }
@@ -3739,7 +3745,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 
                 dReal s;
                 if( bFoundTimeInstant ) {
-                    s = (root - tprev)/(tnext - tprev);
+                    s = (root - tprev)*fitdiff;
                 }
                 else {
                     s = RaveFabs(vConfigResolution[idof]/dQ[idof]);
@@ -3754,7 +3760,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 // own resolution.
             }
         }
-        RAVELOG_VERBOSE_FORMAT("env=%d, dqscale=%f", _environmentid%dqscale);
+        // RAVELOG_VERBOSE_FORMAT("env=%d, dqscale=%f", _environmentid%dqscale);
 
         if( dqscale < 1 ) {
             numRepeating++;
@@ -3766,7 +3772,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             // Recompute dQ based on the newly computed time instant
             dReal fnextvalue;
             for( size_t idof = 0; idof < ndof; ++idof ) {
-                mathextra::evaluatequintic(&valldofscoeffs[idof][0], tcur, fnextvalue);
+                mathextra::evaluatequintic(&_valldofscoeffs[idof][0], tcur, fnextvalue);
                 dQ[idof] = fnextvalue - _vtempconfig[idof];
             }
         }
@@ -3803,8 +3809,8 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 
         // Fill in _vtempvelconfig and _vtempaccelconfig
         for( size_t idof = 0; idof < ndof; ++idof ) {
-            mathextra::evaluatequinticderiv1(&valldofscoeffs[idof][0], tcur, _vtempvelconfig[idof]);
-            mathextra::evaluatequinticderiv2(&valldofscoeffs[idof][0], tcur, _vtempaccelconfig[idof]);
+            mathextra::evaluatequinticderiv1(&_valldofscoeffs[idof][0], tcur, _vtempvelconfig[idof]);
+            mathextra::evaluatequinticderiv2(&_valldofscoeffs[idof][0], tcur, _vtempaccelconfig[idof]);
         }
 
         // Check the config returned from _neighstatefn if it is far from the one we start with
