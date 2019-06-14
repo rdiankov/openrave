@@ -3086,8 +3086,8 @@ protected:
                                         }
                                     }
                                     else {
-                                        fVelMult = retcheck.fTimeBasedSurpassMult;
-                                        fCurVelMult *= fVelMult;
+                                        fCurVelMult *= retcheck.fTimeBasedSurpassMult;
+                                        fCurAccelMult *= retcheck.fTimeBasedSurpassMult*retcheck.fTimeBasedSurpassMult;
                                         if( fCurVelMult < 0.01 ) {
 #ifdef SMOOTHER2_PROGRESS_DEBUG
                                             RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d: modified ramps exceed vellimits but fCurVelMult is too small (%.15e). continue to the next iteration", _environmentid%iters%numIters%fCurVelMult);
@@ -3096,9 +3096,18 @@ protected:
 #endif
                                             break;
                                         }
+                                        if( fCurAccelMult < 0.0001 ) {
+#ifdef SMOOTHER2_PROGRESS_DEBUG
+                                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d: fCurAccelMult is too small (%.15e). continue to the next iteration", _environmentid%iters%numIters%fCurAccelMult);
+                                            ++vShortcutStats[SS_SlowDownFailed];
+                                            shortcutprogress << SS_SlowDownFailed << "\n";
+#endif
+                                            break;
+                                        }
                                         for (size_t j = 0; j < vellimits.size(); ++j) {
                                             dReal fMinVel = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
-                                            vellimits[j] = max(fMinVel, fVelMult * vellimits[j]);
+                                            vellimits[j] = max(fMinVel, retcheck.fTimeBasedSurpassMult * vellimits[j]);
+                                            accellimits[j] *= retcheck.fTimeBasedSurpassMult*retcheck.fTimeBasedSurpassMult;
                                         }
                                     }
                                 }
