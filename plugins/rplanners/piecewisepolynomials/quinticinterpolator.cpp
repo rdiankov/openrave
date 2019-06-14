@@ -201,27 +201,36 @@ PolynomialCheckReturn QuinticInterpolator::ComputeNDTrajectoryArbitraryTimeDeriv
     OPENRAVE_ASSERT_OP(amVect.size(), ==, ndof);
     OPENRAVE_ASSERT_OP(jmVect.size(), ==, ndof);
 
+    bool bFound = false; // true if any of the interpolated trajectories is good.
+    Chunk& tempChunk = _cacheChunk;
+
+    // Try a greedy approach. Continue the interpolation with less duration even though the initial interpolation fails.
     ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, T, chunk);
     PolynomialCheckReturn ret = checker.CheckChunk(chunk, xminVect, xmaxVect, vmVect, amVect, jmVect);
-    if( ret != PCR_Normal ) {
-        return ret;
+    if( ret == PCR_Normal ) {
+        bFound = true;
     }
 
     dReal fStepSize = 0.5*T;
     dReal fCutoff = 1e-6;
     dReal Tcur = T;
-    Chunk& tempChunk = _cacheChunk;
     while( fStepSize >= fCutoff ) {
         dReal fTestDuration = Tcur - fStepSize;
         ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, fTestDuration, tempChunk);
-        ret = checker.CheckChunk(chunk, xminVect, xmaxVect, vmVect, amVect, jmVect);
-        if( ret == PCR_Normal ) {
+        PolynomialCheckReturn ret2 = checker.CheckChunk(chunk, xminVect, xmaxVect, vmVect, amVect, jmVect);
+        if( ret2 == PCR_Normal ) {
             Tcur = fTestDuration;
             chunk = tempChunk;
+            bFound = true;
         }
         fStepSize = 0.5*fStepSize;
     }
-    return PCR_Normal;
+    if( bFound ) {
+        return PCR_Normal;
+    }
+    else {
+        return ret; // return the first error
+    }
 }
 
 } // end namespace PiecewisePolynomialsInternal
