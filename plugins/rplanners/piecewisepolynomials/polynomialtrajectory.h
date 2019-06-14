@@ -229,7 +229,7 @@ public:
     void Serialize(std::ostream& O) const;
 
     /// \brief
-    void ReplaceSegment(dReal t0, dReal t1, std::vector<Chunk>& vchunks);
+    void ReplaceSegment(dReal t0, dReal t1, const std::vector<Chunk>& vchunks);
 
     /// \brief
     inline void Reset()

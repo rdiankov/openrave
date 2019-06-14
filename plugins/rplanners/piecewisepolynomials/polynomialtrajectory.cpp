@@ -180,11 +180,19 @@ void Polynomial::_FindAllLocalExtrema()
 
     // rawcoeffs for polyroots: strongest term first
     std::vector<dReal> rawcoeffs(degree), rawroots(degree - 1);
+    int iNonZeroLeadCoeff = -1;
     for( size_t icoeff = 0; icoeff < degree; ++icoeff ) {
         rawcoeffs[icoeff] = vcoeffsd[degree - 1 - icoeff];
+        if( iNonZeroLeadCoeff < 0 && rawcoeffs[icoeff] != 0 ) {
+            iNonZeroLeadCoeff = icoeff;
+        }
+    }
+    if( iNonZeroLeadCoeff < 0 || iNonZeroLeadCoeff == (int)degree - 1 ) {
+        // No extrema in this case.
+        return;
     }
     int numroots = 0;
-    polyroots((int)degree - 1, &rawcoeffs[0], &rawroots[0], numroots);
+    polyroots((int)degree - 1 - iNonZeroLeadCoeff, &rawcoeffs[iNonZeroLeadCoeff], &rawroots[0], numroots);
     rawroots.resize(numroots);
     vcextrema.resize(0);
 
@@ -282,8 +290,19 @@ void Polynomial::FindAllLocalExtrema(size_t ideriv, std::vector<Coordinate>& vco
     }
 
     int numroots = 0;
+    int iNonZeroLeadCoeff = 0;
+    for( size_t icoeff = 0; icoeff < numcoeffs; ++icoeff ) {
+        if( _vcurcoeffs[icoeff] != 0 ) {
+            iNonZeroLeadCoeff = icoeff;
+            break;
+        }
+    }
+    if( iNonZeroLeadCoeff < 0 || iNonZeroLeadCoeff == (int)numcoeffs - 1 ) {
+        // No extrema in this case.
+        return;
+    }
     std::vector<dReal> rawroots(numcoeffs - 1);
-    polyroots((int)(numcoeffs - 1), &_vcurcoeffs[0], &rawroots[0], numroots);
+    polyroots((int)numcoeffs - 1 - iNonZeroLeadCoeff, &_vcurcoeffs[iNonZeroLeadCoeff], &rawroots[0], numroots);
     rawroots.resize(numroots);
     if( numroots == 0 ) {
         return;
@@ -572,7 +591,7 @@ void PiecewisePolynomialTrajectory::Serialize(std::ostream& O) const
     }
 }
 
-void PiecewisePolynomialTrajectory::ReplaceSegment(dReal t0, dReal t1, std::vector<Chunk>& vchunks)
+void PiecewisePolynomialTrajectory::ReplaceSegment(dReal t0, dReal t1, const std::vector<Chunk>& vchunks)
 {
     OPENRAVE_ASSERT_OP(t0, <=, t1);
     size_t index0, index1;
