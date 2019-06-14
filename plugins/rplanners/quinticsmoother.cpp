@@ -341,6 +341,7 @@ public:
                 OPENRAVE_ASSERT_OP(itchunk->dof, ==, _ndof);
             }
 
+            RAVELOG_VERBOSE_FORMAT("env=%d, start inserting waypoints into ptraj", _envId);
             std::vector<dReal>& waypoint = _cacheAllWaypoints; // reuse _cacheAllWaypoints
             waypoint.resize(newSpec.GetDOF());
             pwptraj.vchunks.at(0).Eval(0, x0Vect);
@@ -411,6 +412,7 @@ public:
                     if( bCheck ) {
                         PiecewisePolynomials::CheckReturn checkret = CheckChunkAllConstraints(trimmedChunk, 0xffff, vChunksOut);
                         if( checkret.retcode != 0 ) {
+                            RAVELOG_DEBUG_FORMAT("env=%d, Final CheckChunkAllConstraints failed iChunk=%d/%d with ret=0x%x. bTrimmedFront=%d; bTrimmedBack=%d", _envId%(itChunk - pwptraj.vchunks.begin())%pwptraj.vchunks.size()%checkret.retcode%bTrimmedBack%bTrimmedBack);
                             // Try to stretch the duration of the segment in hopes of fixing constraints violation.
                             bool bDilationSuccessful = false;
                             dReal newChunkDuration = trimmedChunk.duration;
@@ -458,6 +460,7 @@ public:
                                 }
                             }
                             if( !bDilationSuccessful ) {
+                                RAVELOG_WARN_FORMAT("env=%d, Failed checking constraints of iChunk=%d/%d", _envId%(itChunk - pwptraj.vchunks.begin())%pwptraj.vchunks.size());
                                 _DumpOpenRAVETrajectory(ptraj, _errorDumpLevel);
                                 return PS_Failed;
                             }
@@ -1019,11 +1022,27 @@ protected:
                 RAVELOG_DEBUG_FORMAT("env=%d, fCurVelMult=%f; fCurAccelMult=%f;", _envId%fCurVelMult%fCurAccelMult);
 
                 bool bSuccess = false;
+                dReal fTryDuration = t1 - t0;
+                dReal fDurationMult = 1.1; // how much to increase the duration each time time-based constraints failed.
+                dReal fCurDurationMult = 1.0; // greater than or equal to 1.0
                 for( size_t iSlowDown = 0; iSlowDown < maxSlowDownTries; ++iSlowDown ) {
-                    PiecewisePolynomials::PolynomialCheckReturn polycheckret = _quinticInterpolator.ComputeNDTrajectoryArbitraryTimeDerivativesOptimizeDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, velLimits, accelLimits, jerkLimits, t1 - t0, tempChunk);
-                    if( polycheckret != PiecewisePolynomials::PCR_Normal ) {
-                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; initial interpolation failed. polycheckret=0x%x", _envId%iter%numIters%t0%t1%polycheckret);
-                        break; // must not slow down any further.
+                    if( iSlowDown == 0 ) {
+                        PiecewisePolynomials::PolynomialCheckReturn polycheckret = _quinticInterpolator.ComputeNDTrajectoryArbitraryTimeDerivativesOptimizeDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, velLimits, accelLimits, jerkLimits, fTryDuration, tempChunk);
+                        if( polycheckret != PiecewisePolynomials::PCR_Normal ) {
+                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; initial interpolation failed. polycheckret=0x%x", _envId%iter%numIters%t0%t1%polycheckret);
+                            break; // must not slow down any further.
+                        }
+                        // If this slow down iteration fails due to time-based constraints, we will try to generate a slightly longer trajectory segment in the next iteration.
+                        fTryDuration = tempChunk.duration;
+                    }
+                    else {
+                        _quinticInterpolator.ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, fTryDuration*fCurDurationMult, tempChunk);
+                        PiecewisePolynomials::PolynomialCheckReturn polycheckret = _limitsChecker.CheckChunk(tempChunk, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, velLimits, accelLimits, jerkLimits);
+                        if( polycheckret != PiecewisePolynomials::PCR_Normal ) {
+                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; iSlowDown=%d; current duration=%.15e; interpolation failed with polycheckret=0x%x", _envId%iter%numIters%t0%t1%iSlowDown%(fTryDuration*fCurDurationMult)%polycheckret);
+                            fCurDurationMult *= fDurationMult;
+                            continue; // maybe incrasing the duration might affect the peaks of vel/accel positively
+                        }
                     }
 
                     if( tempChunk.duration + minTimeStep > t1 - t0 ) {
@@ -1056,6 +1075,11 @@ protected:
                         ++nTimeBasedConstraintsFailed;
                         if( 0 ) {//( _bManipConstraints && !!_manipConstraintChecker ) {
                             // Scale down accelLimits and/or velLimits based on what constraints are violated.
+                        }
+                        else if( 1 ) {
+                            // Experimental: try scaling the duration instead of vel/accel limits
+                            fCurDurationMult *= fDurationMult;
+                            continue;
                         }
                         else {
                             // No manip constraints. Scale down both velLimits and accelLimits
