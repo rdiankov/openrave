@@ -346,11 +346,19 @@ public:
             // TODO: only add a new coord to vAllCriticalCoords if it's not cloes to any existing coords.
             itPolynomial->FindAllLocalExtrema(1, vCoords); // get velocity extrema
             if( vCoords.size() > 2 ) {
-                vAllCriticalCoords.insert(vAllCriticalCoords.end(), vCoords.begin() + 1, vCoords.end() - 1);
+                for( std::vector<PiecewisePolynomialsInternal::Coordinate>::const_iterator itCoord = vCoords.begin() + 1; itCoord + 1 != vCoords.end(); ++itCoord ) {
+                    if( itCoord->point > 0 && itCoord->point < chunkIn.duration ) {
+                        vAllCriticalCoords.push_back(*itCoord);
+                    }
+                }
             }
             itPolynomial->FindAllLocalExtrema(2, vCoords); // get acceleration extrema
             if( vCoords.size() > 2 ) {
-                vAllCriticalCoords.insert(vAllCriticalCoords.end(), vCoords.begin() + 1, vCoords.end() - 1);
+                for( std::vector<PiecewisePolynomialsInternal::Coordinate>::const_iterator itCoord = vCoords.begin() + 1; itCoord + 1 != vCoords.end(); ++itCoord ) {
+                    if( itCoord->point > 0 && itCoord->point < chunkIn.duration ) {
+                        vAllCriticalCoords.push_back(*itCoord);
+                    }
+                }
             }
         }
         std::sort(vAllCriticalCoords.begin(), vAllCriticalCoords.end());
