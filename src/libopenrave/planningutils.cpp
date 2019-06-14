@@ -2877,20 +2877,21 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 
                 if( numPostNeighSteps > 1 ) {
                     RAVELOG_VERBOSE_FORMAT("have to divide the arc in %d steps post neigh, timestep=%f", numPostNeighSteps%timestep);
-                    // this case should be rare, so can create a vector here. don't look at constraints since we would never converge...
+                    // this case should be rare. don't look at constraints since we would never converge...
                     // note that circular constraints would break here
-                    std::vector<dReal> vpostdq(_vtempconfig.size()), vpostddq(_vtempconfig.size());
+                    _vpostdq.resize(_vtempconfig.size());
+                    _vpostddq.resize(_vtempconfig.size());
                     dReal fiNumPostNeighSteps = 1/(dReal)numPostNeighSteps;
                     for(size_t i = 0; i < _vtempconfig.size(); ++i) {
-                        vpostdq[i] = (_vtempconfig[i] - _vprevtempconfig[i]) * fiNumPostNeighSteps;
-                        vpostddq[i] = (_vtempvelconfig[i] - _vprevtempvelconfig[i]) * fiNumPostNeighSteps;
+                        _vpostdq[i] = (_vtempconfig[i] - _vprevtempconfig[i]) * fiNumPostNeighSteps;
+                        _vpostddq[i] = (_vtempvelconfig[i] - _vprevtempvelconfig[i]) * fiNumPostNeighSteps;
                     }
 
                     // do only numPostNeighSteps-1 since the last step should be checked by _vtempconfig
                     for(int ipoststep = 0; ipoststep+1 < numPostNeighSteps; ++ipoststep) {
                         for(size_t i = 0; i < _vtempconfig.size(); ++i) {
-                            _vprevtempconfig[i] += vpostdq[i];
-                            _vprevtempvelconfig[i] += vpostddq[i]; // probably not right with the way interpolation works out, but it is a reasonable approximation
+                            _vprevtempconfig[i] += _vpostdq[i];
+                            _vprevtempvelconfig[i] += _vpostddq[i]; // probably not right with the way interpolation works out, but it is a reasonable approximation
                         }
 
                         int nstateret = _SetAndCheckState(params, _vprevtempconfig, _vprevtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
@@ -2950,13 +2951,14 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             if( numPostNeighSteps > 1 ) {
                 // should never happen, but just in case _neighstatefn is some non-linear constraint projection
                 RAVELOG_WARN_FORMAT("have to divide the arc in %d steps even after original interpolation is done, timestep=%f", numPostNeighSteps%timestep);
-                // this case should be rare, so can create a vector here. don't look at constraints since we would never converge...
+                // this case should be rare. don't look at constraints since we would never converge...
                 // note that circular constraints would break here
-                std::vector<dReal> vpostdq(_vtempconfig.size()), vpostddq(_vtempconfig.size());
+                _vpostdq.resize(_vtempconfig.size());
+                _vpostddq.resize(_vtempconfig.size());
                 dReal fiNumPostNeighSteps = 1/(dReal)numPostNeighSteps;
                 for(size_t i = 0; i < _vtempconfig.size(); ++i) {
-                    vpostdq[i] = (q1[i] - _vtempconfig[i]) * fiNumPostNeighSteps;
-                    vpostddq[i] = (dq1[i] - _vtempvelconfig[i]) * fiNumPostNeighSteps;
+                    _vpostdq[i] = (q1[i] - _vtempconfig[i]) * fiNumPostNeighSteps;
+                    _vpostddq[i] = (dq1[i] - _vtempvelconfig[i]) * fiNumPostNeighSteps;
                 }
 
                 _vprevtempconfig = _vtempconfig;
@@ -2964,8 +2966,8 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 // do only numPostNeighSteps-1 since the last step should be checked by _vtempconfig
                 for(int ipoststep = 0; ipoststep+1 < numPostNeighSteps; ++ipoststep) {
                     for(size_t i = 0; i < _vtempconfig.size(); ++i) {
-                        _vprevtempconfig[i] += vpostdq[i];
-                        _vprevtempvelconfig[i] += vpostddq[i]; // probably not right with the way interpolation works out, but it is a reasonable approximation
+                        _vprevtempconfig[i] += _vpostdq[i];
+                        _vprevtempvelconfig[i] += _vpostddq[i]; // probably not right with the way interpolation works out, but it is a reasonable approximation
                     }
 
                     int nstateret = _SetAndCheckState(params, _vprevtempconfig, _vprevtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
@@ -2992,7 +2994,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             if( dist > 1e-7 ) {
                 RAVELOG_DEBUG_FORMAT("env=%d, ramp has deviated, so most likely q1 is not following constraints and there's a difference dist=%f", _listCheckBodies.front()->GetEnv()->GetId()%dist);
                 bCheckEnd = false; // to prevent adding the last point
-                
+
                 if( !!filterreturn ) {
                     if( options & CFO_FillCheckedConfiguration ) {
                         int nstateret = 0;
@@ -3266,14 +3268,15 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     RAVELOG_WARN_FORMAT("have to divide the arc in %d steps even after original interpolation is done, interval=%d", numPostNeighSteps%interval);
                 }
 
-                // this case should be rare, so can create a vector here. don't look at constraints since we would never converge...
+                // this case should be rare. don't look at constraints since we would never converge...
                 // note that circular constraints would break here
-                std::vector<dReal> vpostdq(_vtempconfig.size()), vpostddq(dq1.size());
+                _vpostdq.resize(_vtempconfig.size());
+                _vpostddq.resize(dq1.size());
                 dReal fiNumPostNeighSteps = 1/(dReal)numPostNeighSteps;
                 for(size_t i = 0; i < _vtempconfig.size(); ++i) {
-                    vpostdq[i] = (q1[i] - _vtempconfig[i]) * fiNumPostNeighSteps;
+                    _vpostdq[i] = (q1[i] - _vtempconfig[i]) * fiNumPostNeighSteps;
                     if( dq1.size() == _vtempconfig.size() && _vtempvelconfig.size() == _vtempconfig.size() ) {
-                        vpostddq[i] = (dq1[i] - _vtempvelconfig[i]) * fiNumPostNeighSteps;
+                        _vpostddq[i] = (dq1[i] - _vtempvelconfig[i]) * fiNumPostNeighSteps;
                     }
                 }
 
@@ -3282,11 +3285,11 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 // do only numPostNeighSteps-1 since the last step should be checked by _vtempconfig
                 for(int ipoststep = 0; ipoststep+1 < numPostNeighSteps; ++ipoststep) {
                     for(size_t i = 0; i < _vtempconfig.size(); ++i) {
-                        _vprevtempconfig[i] += vpostdq[i];
+                        _vprevtempconfig[i] += _vpostdq[i];
                     }
-                    if( _vprevtempconfig.size() == _vtempconfig.size() && vpostddq.size() == _vtempconfig.size() ) {
+                    if( _vprevtempconfig.size() == _vtempconfig.size() && _vpostddq.size() == _vtempconfig.size() ) {
                         for(size_t i = 0; i < _vtempconfig.size(); ++i) {
-                            _vprevtempvelconfig[i] += vpostddq[i]; // probably not right with the way interpolation works out, but it is a reasonable approximation
+                            _vprevtempvelconfig[i] += _vpostddq[i]; // probably not right with the way interpolation works out, but it is a reasonable approximation
                         }
                     }
 
@@ -3637,7 +3640,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
             }
             else {
                 _pmanip->GetIkSolver()->GetFreeParameters(vfree);
-            } 
+            }
         }
         if( IS_DEBUGLEVEL(Level_Verbose) ) {
             std::stringstream ss; ss << "free=[";

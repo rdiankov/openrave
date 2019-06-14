@@ -152,7 +152,7 @@ public:
 
 protected:
     void _UpdateParameters();
-    
+
     RobotBasePtr _robot;
     PlannerBasePtr _planner;
     PlannerBase::PlannerParametersPtr _parameters;
@@ -192,7 +192,7 @@ public:
 
 protected:
     void _UpdateParameters();
-    
+
     RobotBasePtr _robot;
     PlannerBasePtr _planner;
     PlannerBase::PlannerParametersPtr _parameters;
@@ -427,7 +427,7 @@ public:
     ///
     /// \param torquelimitmode 1 if should use instantaneous max torque, 0 if should use nominal torque
     virtual void SetTorqueLimitMode(int torquelimitmode);
-    
+
     /// \brief set user check fucntions
     ///
     /// Two functions can be set, one to be called before check collision and one after.
@@ -457,6 +457,7 @@ protected:
 
     PlannerBase::PlannerParametersWeakConstPtr _parameters;
     std::vector<dReal> _vtempconfig, _vtempvelconfig, dQ, _vtempveldelta, _vtempaccelconfig, _vperturbedvalues, _vcoeff2, _vcoeff1, _vprevtempconfig, _vprevtempvelconfig, _vtempconfig2, _vdiffconfig, _vdiffvelconfig, _vstepconfig; ///< in configuration space
+    std::vector<dReal> _vpostdq, _vpostddq; ///< for extra checking when numPostNeighSteps > 1
     CollisionReportPtr _report;
     std::list<KinBodyPtr> _listCheckBodies;
     int _filtermask;
