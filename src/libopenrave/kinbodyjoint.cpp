@@ -29,11 +29,11 @@ KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsAc
     }
     std::fill(_vresolution.begin(), _vresolution.end(), 0.02);
     std::fill(_vmaxvel.begin(), _vmaxvel.end(), 10);
-    std::fill(_vhardmaxvel.begin(), _vhardmaxvel.end(), 100); // Hard limis is 10 times larger than default soft limit.
+    std::fill(_vhardmaxvel.begin(), _vhardmaxvel.end(), 0); // Default hard limits is 0. if 0, the user should not use the hard limit value.
     std::fill(_vmaxaccel.begin(), _vmaxaccel.end(), 50);
-    std::fill(_vhardmaxaccel.begin(), _vhardmaxaccel.end(), 1000); // Hard limit is more than 10 times larger than soft limit for acceleration.
-    std::fill(_vmaxjerk.begin(), _vmaxjerk.end(), 2e6); // Set negligibly large jerk by default which can change acceleration between min and max within a typical time step. We compute 2e6=(1000-(-1000))/0.001, by assuming max/min accelerations are 1000 and -1000.
-    std::fill(_vhardmaxjerk.begin(), _vhardmaxjerk.end(), 2e7); // Hard limit is 10 times larger than soft limit for jerk.
+    std::fill(_vhardmaxaccel.begin(), _vhardmaxaccel.end(), 0); // Default hard limits is 0. if 0, the user should not use the hard limit value.
+    std::fill(_vmaxjerk.begin(), _vmaxjerk.end(), 50*1000); // Set negligibly large jerk by default which can change acceleration between min and max within a typical time step.
+    std::fill(_vhardmaxjerk.begin(), _vhardmaxjerk.end(), 0); // Default hard limits is 0. if 0, the user should not use the hard limit value.
     std::fill(_vmaxtorque.begin(), _vmaxtorque.end(), 0); // set max torque to 0 to notify the system that dynamics parameters might not be valid.
     std::fill(_vmaxinertia.begin(), _vmaxinertia.end(), 0);
     std::fill(_vweights.begin(), _vweights.end(), 1);
@@ -1710,7 +1710,8 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
         }
         o << (!_attachedbodies[0] ? -1 : _attachedbodies[0]->GetIndex()) << " " << (_attachedbodies[1]->GetIndex()) << " ";
     }
-    if( options & SO_Dynamics ) {
+    // in the past was including saving limits as part of SO_Dynamics, but given that limits change a lot when planning, should *not* include them as part of dynamics.
+    if( options & SO_JointLimits ) {
         for(int i = 0; i < GetDOF(); ++i) {
             SerializeRound(o,_info._vmaxvel[i]);
             SerializeRound(o,_info._vmaxaccel[i]);

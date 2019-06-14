@@ -171,7 +171,7 @@ public:
         inline void SetClosingDirection(const std::vector<dReal>& closingdirection) {
             SetChuckingDirection(closingdirection);
         }
-        
+
         virtual const std::vector<dReal>& GetChuckingDirection() const {
             return _info._vChuckingDirection;
         }
@@ -282,12 +282,12 @@ public:
         virtual void GetIndependentLinks(std::vector<LinkPtr>& vlinks) const;
 
         /** \brief Checks collision with only the gripper and the rest of the environment with the current link transforms. Ignores disabled links.
-            
+
             \param[out] report [optional] collision report
             \return true if a collision occurred
          */
         virtual bool CheckEndEffectorCollision(CollisionReportPtr report = CollisionReportPtr()) const;
-        
+
         /** \brief Checks collision with only the gripper and the rest of the environment given a new end-effector transform. Ignores disabled links.
 
             \param tEE the end effector transform
@@ -303,7 +303,7 @@ public:
             \return true if a collision occurred
          */
         virtual bool CheckEndEffectorSelfCollision(CollisionReportPtr report = CollisionReportPtr(), bool bIgnoreManipulatorLinks=false) const;
-        
+
         /** \brief Checks self-collision with only the gripper given its end-effector transform with the rest of the robot. Ignores disabled links.
 
             \param tEE the end effector transform
@@ -386,7 +386,7 @@ public:
         ///
         /// Note that the return type is by-value, so should not be used in iteration
         virtual ConfigurationSpecification GetIkConfigurationSpecification(IkParameterizationType iktype, const std::string& interpolation="") const;
-        
+
         /// \brief returns the serialization of the manipulator. If options & SO_InverseKinematics, then use iktype
         virtual void serialize(std::ostream& o, int options, IkParameterizationType iktype=IKP_None) const;
 
@@ -514,8 +514,8 @@ public:
             UpdateInfo(type);
             return _info;
         }
-        
-        /// \brief returns the attached sensor info 
+
+        /// \brief returns the attached sensor info
         inline const AttachedSensorInfo& GetInfo() const {
             return _info;
         }
@@ -523,9 +523,9 @@ public:
 private:
         /// \brief compute internal information from user-set info
         //virtual void _ComputeInternalInformation();
-        
+
         AttachedSensorInfo _info; ///< user specified data
-        
+
         RobotBaseWeakPtr _probot;
         SensorBasePtr _psensor; ///< initialized by _ComputeInternalInformation when added to the environment
         LinkWeakPtr pattachedlink;         ///< the robot link that the sensor is attached to
@@ -548,7 +548,134 @@ private:
     typedef boost::shared_ptr<RobotBase::AttachedSensor> AttachedSensorPtr;
     typedef boost::shared_ptr<RobotBase::AttachedSensor const> AttachedSensorConstPtr;
     typedef boost::weak_ptr<RobotBase::AttachedSensor> AttachedSensorWeakPtr;
-    
+
+    /// \brief holds all user-set attached kinbody information used to initialize the AttachedKinBody class.
+    ///
+    /// This is serializable and independent of environment.
+    class OPENRAVE_API ConnectedBodyInfo
+    {
+public:
+        ConnectedBodyInfo();
+        virtual ~ConnectedBodyInfo() {
+        }
+        
+        /// \brief Updates the infos depending on the robot at the identity and zero position.
+        virtual void InitInfoFromBody(RobotBase& robot);
+
+        std::string _name; ///< the name of the connected body info
+        std::string _linkname; ///< the robot link that the body is attached to
+        std::string _url;  //< the url where the connected body came from. this is used when writing back to the filename.
+        Transform _trelative;  ///< relative transform of the body with respect to the attached link. The link transforms are multiplied by the transform of _linkname and _trelative to put them on the real robot.
+        std::vector<KinBody::LinkInfoPtr> _vLinkInfos; ///< extracted link infos representing the connected body. The names are the original "desired" names. Should not consider _linkname and _trelative.
+        std::vector<KinBody::JointInfoPtr> _vJointInfos; ///< extracted joint infos (inluding passive) representing the connected body. The names are the original "desired" names.
+        std::vector<RobotBase::ManipulatorInfoPtr> _vManipulatorInfos; ///< extracted manip infos representing the connected body. The names are the original "desired" names.
+        std::vector<RobotBase::AttachedSensorInfoPtr> _vAttachedSensorInfos; ///< extracted sensor infos representing the connected body. The names are the original "desired" names.
+        bool _bIsActive; ///< if true, then add the connected body. Otherwise do not add it.
+    };
+    typedef boost::shared_ptr<ConnectedBodyInfo> ConnectedBodyInfoPtr;
+    typedef boost::shared_ptr<ConnectedBodyInfo const> ConnectedBodyInfoConstPtr;
+
+    /// \brief Attaches a kinbody to a link on the robot.
+    class OPENRAVE_API ConnectedBody : public boost::enable_shared_from_this<ConnectedBody>
+    {
+public:
+        ConnectedBody(RobotBasePtr probot);
+        // ConnectedBody(RobotBasePtr probot, const ConnectedBody &attachedKinBody, int cloningoptions);
+        ConnectedBody(RobotBasePtr probot, const ConnectedBodyInfo& info);
+        virtual ~ConnectedBody();
+
+        /// \brief have the connected body to be added to the robot kinematics. The active level has nothing to do with visibility or enabling of the links.
+        virtual bool SetActive(bool active);
+
+        /// \brief return true
+        virtual bool IsActive();
+
+        /// \brief if the connected body is activated and added to the robot, this is a helper functions to enable/disable all the links
+        virtual void SetLinkEnable(bool benable);
+
+        /// \brief if the connected body is activated and added to the robot, this is a helper functions to enable/disable all the links
+        virtual void SetLinkVisible(bool bvisible);
+
+        /// \brief gets the resolved links added to the robot.
+        ///
+        /// Has one-to-one correspondence with _info._vLinkInfos
+        virtual void GetResolvedLinks(std::vector<KinBody::LinkPtr>& links);
+
+        /// \brief gets the resolved links added to the robot.
+        ///
+        /// Has one-to-one correspondence with _info._vJointInfos
+        virtual void GetResolvedJoints(std::vector<KinBody::JointPtr>& joints);
+
+        /// \brief gets the resolved links added to the robot.
+        ///
+        /// Has one-to-one correspondence with _info._vManipulatorInfos
+        virtual void GetResolvedManipulators(std::vector<RobotBase::ManipulatorPtr>& manipulators);
+
+        /// \brief gets the resolved links added to the robot.
+        ///
+        /// Has one-to-one correspondence with _info._vAttachedSensorInfos
+        virtual void GetResolvedAttachedSensors(std::vector<RobotBase::AttachedSensorPtr>& attachedsensors);
+
+        virtual LinkPtr GetAttachingLink() const {
+            return LinkPtr(_pattachedlink);
+        }
+        virtual Transform GetRelativeTransform() const {
+            return _info._trelative;
+        }
+
+        /// \brief return the transform of the base link of the connecting body
+        virtual Transform GetTransform() const {
+            return LinkPtr(_pattachedlink)->GetTransform()*_info._trelative;
+        }
+
+        /// \brief get robot that manipulator belongs to.
+        ///
+        /// \param trylock if true then will try to get the parent pointer and return empty pointer if parent was already destroyed. Otherwise throws an exception if parent is already destroyed. By default this should be
+        inline RobotBasePtr GetRobot(bool trylock=false) const {
+            if( trylock ) {
+                return _pattachedrobot.lock();
+            }
+            else {
+                return RobotBasePtr(_pattachedrobot);
+            }
+        }
+
+        inline const std::string& GetName() const {
+            return _info._name;
+        }
+
+        // virtual void serialize(std::ostream& o, int options) const;
+
+        /// \brief return hash of the attached kinbody definition
+        // virtual const std::string& GetStructureHash() const;
+
+        /// \brief returns the attached kinbody info
+        inline const ConnectedBodyInfo& GetInfo() const {
+            return _info;
+        }
+
+private:
+        ConnectedBodyInfo _info; ///< user specified data (to be serialized and saved), should not contain dynamically generated parameters.
+
+        std::string _nameprefix; ///< the name prefix to use for all the resolved link names.
+        std::string _dummyPassiveJointName; ///< the joint that is used to attach the connected body to the robot link
+        std::vector<std::string> _vResolvedLinkNames; ///< for every entry in _info._vLinkInfos, the resolved link names added to the robot
+        std::vector<std::string> _vResolvedJointNames; ///< for every entry in _info._vJointInfos, the resolved link names
+        std::vector<std::string> _vResolvedManipulatorNames; ///< for every entry in _info._vManipInfos
+        std::vector<std::string> _vResolvedAttachedSensorNames; ///< for every entry in _info._vAttachedSensorResolvedNames
+
+        RobotBaseWeakPtr _pattachedrobot; ///< the robot that the body is attached to
+        LinkWeakPtr _pattachedlink;         ///< the robot link that the body is attached to
+        mutable std::string __hashstructure;
+
+        friend class ColladaReader;
+        friend class RobotBase;
+    };
+
+    typedef boost::shared_ptr<RobotBase::ConnectedBody> ConnectedBodyPtr;
+    typedef boost::shared_ptr<RobotBase::ConnectedBody const> ConnectedBodyConstPtr;
+    typedef boost::weak_ptr<RobotBase::ConnectedBody> ConnectedBodyWeakPtr;
+
     /// \brief Helper class derived from KinBodyStateSaver to additionaly save robot information.
     class OPENRAVE_API RobotStateSaver : public KinBodyStateSaver
     {
@@ -603,13 +730,17 @@ private:
 
 
     /// \brief Returns the manipulators of the robot
-    virtual std::vector<ManipulatorPtr>& GetManipulators();
+    virtual const std::vector<ManipulatorPtr>& GetManipulators() const;
 
     /// \brief Returns a manipulator from its name. If no manipulator with that name is present, returns empty pointer.
     virtual ManipulatorPtr GetManipulator(const std::string& name) const;
 
-    virtual std::vector<AttachedSensorPtr>& GetAttachedSensors() {
-        return _vecSensors;
+    virtual const std::vector<AttachedSensorPtr>& GetAttachedSensors() const {
+        return _vecAttachedSensors;
+    }
+
+    virtual const std::vector<ConnectedBodyPtr>& GetConnectedBodies() const {
+        return _vecConnectedBodies;
     }
 
     virtual void SetName(const std::string& name);
@@ -829,14 +960,30 @@ private:
     /// \brief Returns an attached sensor from its name. If no sensor is with that name is present, returns empty pointer.
     virtual AttachedSensorPtr GetAttachedSensor(const std::string& name) const;
 
-    /// \brief tries to remove the attached sensor. If successful, returns true.
-    ///
-    /// Will change the robot structure hash..
     bool RemoveAttachedSensor(AttachedSensorPtr attsensor) RAVE_DEPRECATED {
         return RemoveAttachedSensor(*attsensor);
     }
+
+    /// \brief tries to remove the attached sensor. If successful, returns true.
+    ///
+    /// Will change the robot structure hash..
     virtual bool RemoveAttachedSensor(RobotBase::AttachedSensor &attsensor);
+
+    /// \brief adds a connected body to the list
+    ///
+    /// Will change the robot structure hash.
+    /// \return the new connected body
+    /// \throw openrave_exception If removeduplicate is false and there exists a manipulator with the same name, will throw an exception
+    virtual ConnectedBodyPtr AddConnectedBody(const ConnectedBodyInfo& connectedBodyInfo, bool removeduplicate=false);
     
+    /// \brief get connected body with given name active.
+    virtual ConnectedBodyPtr GetConnectedBody(const std::string& name) const;
+
+    /// \brief tries to remove the connected body. If successful, returns true.
+    ///
+    /// Will change the robot structure hash..
+    virtual bool RemoveConnectedBody(RobotBase::ConnectedBody &connectedBody);
+
     /// \deprecated (11/10/04) send directly through controller
     virtual bool SetMotion(TrajectoryBaseConstPtr ptraj) RAVE_DEPRECATED;
 
@@ -966,6 +1113,13 @@ protected:
     /// \brief Proprocess the manipulators and sensors and build the specific robot hashes.
     virtual void _ComputeInternalInformation();
 
+    virtual void _DeinitializeInternalInformation();
+        
+    /// \brief Proprocess with _vecConnectedBodies and reinitialize robot.
+    virtual void _ComputeConnectedBodiesInformation();
+
+    virtual void _DeinitializeConnectedBodiesInformation();
+    
     /// \brief Called to notify the body that certain groups of parameters have been changed.
     ///
     /// This function in calls every registers calledback that is tracking the changes.
@@ -975,7 +1129,9 @@ protected:
     std::vector<ManipulatorPtr> _vecManipulators; ///< \see GetManipulators
     ManipulatorPtr _pManipActive;
 
-    std::vector<AttachedSensorPtr> _vecSensors; ///< \see GetAttachedSensors
+    std::vector<AttachedSensorPtr> _vecAttachedSensors; ///< \see GetAttachedSensors
+
+    std::vector<ConnectedBodyPtr> _vecConnectedBodies;  ///< \see GetConnectedBodies
 
     std::vector<int> _vActiveDOFIndices, _vAllDOFIndices;
     Vector vActvAffineRotationAxis;

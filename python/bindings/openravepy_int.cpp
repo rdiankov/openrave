@@ -1187,19 +1187,27 @@ public:
     }
 
     bool Load(const string &filename) {
+        openravepy::PythonThreadSaver threadsaver;
         return _penv->Load(filename);
     }
     bool Load(const string &filename, object odictatts) {
-        return _penv->Load(filename, toAttributesList(odictatts));
+        AttributesList dictatts = toAttributesList(odictatts);
+        openravepy::PythonThreadSaver threadsaver;
+        return _penv->Load(filename, dictatts);
     }
     bool LoadURI(const string &filename, object odictatts=object()) {
-        return _penv->LoadURI(filename, toAttributesList(odictatts));
+        AttributesList dictatts = toAttributesList(odictatts);
+        openravepy::PythonThreadSaver threadsaver;
+        return _penv->LoadURI(filename, dictatts);
     }
     bool LoadData(const string &data) {
+        openravepy::PythonThreadSaver threadsaver;
         return _penv->LoadData(data);
     }
     bool LoadData(const string &data, object odictatts) {
-        return _penv->LoadData(data, toAttributesList(odictatts));
+        AttributesList dictatts = toAttributesList(odictatts);
+        openravepy::PythonThreadSaver threadsaver;
+        return _penv->LoadData(data, dictatts);
     }
 
     void Save(const string &filename, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=object()) {
@@ -1208,10 +1216,13 @@ public:
             // old versions
             AttributesList atts;
             atts.push_back(std::make_pair(std::string("target"),(std::string)otarget));
+            openravepy::PythonThreadSaver threadsaver;
             _penv->Save(filename,options,atts);
         }
         else {
-            _penv->Save(filename,options,toAttributesList(odictatts));
+            AttributesList dictatts = toAttributesList(odictatts);
+            openravepy::PythonThreadSaver threadsaver;
+            _penv->Save(filename,options,dictatts);
         }
     }
 

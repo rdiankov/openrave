@@ -376,7 +376,7 @@ private:
 
     /// \param docname the top level document?
     virtual void Init(const string& docname, const std::string& keywords=std::string(),
-            const std::string& subject=std::string())
+                      const std::string& subject=std::string())
     {
         daeInt error = _dae->getDatabase()->insertDocument(docname.c_str(), &_doc );     // also creates a collada root
         BOOST_ASSERT( error == DAE_OK && !!_doc );
@@ -470,7 +470,7 @@ private:
             throw openrave_exception(str(boost::format(_("failed to save collada file to %s"))%filename));
         }
     }
-    
+
     virtual void Save(std::vector<char>& output)
     {
 #ifdef OPENRAVE_COLLADA_SUPPORT_WRITE_MEMORY
@@ -481,7 +481,7 @@ private:
         throw OPENRAVE_EXCEPTION_FORMAT0("collada-dom does not support writeToMemory, make sure at least version 2.5.0 is installed", ORE_Assert);
 #endif
     }
-    
+
     /// \brief Write down environment
     virtual bool Write(const std::string& scenename=std::string())
     {
@@ -982,15 +982,24 @@ private:
             daeSafeCast<domCommon_param>(jerk->add(COLLADA_ELEMENT_PARAM))->setValue("jerk");
 
             // Write hard limits. Hard limits are defined as <newparam> tag.
-            domKinematics_newparamRef param_hardvel = daeSafeCast<domKinematics_newparam>(mai->add(COLLADA_ELEMENT_NEWPARAM));
-            param_hardvel->setSid("hardMaxVel");
-            daeSafeCast<domKinematics_newparam::domFloat>(param_hardvel->add(COLLADA_ELEMENT_FLOAT))->setValue(pjoint->GetHardMaxVel(iaxis)*valuemult);
-            domKinematics_newparamRef param_hardaccel = daeSafeCast<domKinematics_newparam>(mai->add(COLLADA_ELEMENT_NEWPARAM));
-            param_hardaccel->setSid("hardMaxAccel");
-            daeSafeCast<domKinematics_newparam::domFloat>(param_hardaccel->add(COLLADA_ELEMENT_FLOAT))->setValue(pjoint->GetHardMaxAccel(iaxis)*valuemult);
-            domKinematics_newparamRef param_hardjerk = daeSafeCast<domKinematics_newparam>(mai->add(COLLADA_ELEMENT_NEWPARAM));
-            param_hardjerk->setSid("hardMaxJerk");
-            daeSafeCast<domKinematics_newparam::domFloat>(param_hardjerk->add(COLLADA_ELEMENT_FLOAT))->setValue(pjoint->GetHardMaxJerk(iaxis)*valuemult);
+            if ( pjoint->GetHardMaxVel(iaxis) != 0 ) {
+                domKinematics_newparamRef param_hardvel = daeSafeCast<domKinematics_newparam>(mai->add(COLLADA_ELEMENT_NEWPARAM));
+                param_hardvel->setSid("hardMaxVel");
+                daeSafeCast<domKinematics_newparam::domFloat>(param_hardvel->add(COLLADA_ELEMENT_FLOAT))->setValue(pjoint->GetHardMaxVel(iaxis)*valuemult);
+                RAVELOG_VERBOSE_FORMAT("... %s is defined. writing %f...", param_hardvel->getSid() % pjoint->GetHardMaxVel(iaxis));
+            }
+            if ( pjoint->GetHardMaxAccel(iaxis) != 0 ) {
+                domKinematics_newparamRef param_hardaccel = daeSafeCast<domKinematics_newparam>(mai->add(COLLADA_ELEMENT_NEWPARAM));
+                param_hardaccel->setSid("hardMaxAccel");
+                daeSafeCast<domKinematics_newparam::domFloat>(param_hardaccel->add(COLLADA_ELEMENT_FLOAT))->setValue(pjoint->GetHardMaxAccel(iaxis)*valuemult);
+                RAVELOG_VERBOSE_FORMAT("... %s is defined. writing %f...", param_hardaccel->getSid() % pjoint->GetHardMaxAccel(iaxis));
+            }
+            if ( pjoint->GetHardMaxJerk(iaxis) != 0) {
+                domKinematics_newparamRef param_hardjerk = daeSafeCast<domKinematics_newparam>(mai->add(COLLADA_ELEMENT_NEWPARAM));
+                param_hardjerk->setSid("hardMaxJerk");
+                daeSafeCast<domKinematics_newparam::domFloat>(param_hardjerk->add(COLLADA_ELEMENT_FLOAT))->setValue(pjoint->GetHardMaxJerk(iaxis)*valuemult);
+                RAVELOG_VERBOSE_FORMAT("... %s is defined. writing %f...", param_hardjerk->getSid() % pjoint->GetHardMaxJerk(iaxis));
+            }
         }
 
         // write the bindings
@@ -1662,7 +1671,7 @@ private:
     virtual domGeometryRef WriteGeometry(KinBody::Link::GeometryConstPtr geom, const string& parentid)
     {
         const TriMesh& mesh = geom->GetCollisionMesh();
-        Transform t = geom->GetTransform();
+        Transform tgeom = geom->GetTransform();
 
         string effid = parentid+string("_eff");
         string matid = parentid+string("_mat");
@@ -1692,7 +1701,7 @@ private:
                     parray->getValue().setCount(3*mesh.vertices.size());
 
                     for(size_t ind = 0; ind < mesh.vertices.size(); ++ind) {
-                        Vector v = t*mesh.vertices[ind];
+                        Vector v = tgeom*mesh.vertices[ind];
                         parray->getValue()[3*ind+0] = v.x;
                         parray->getValue()[3*ind+1] = v.y;
                         parray->getValue()[3*ind+2] = v.z;
@@ -1761,6 +1770,47 @@ private:
                 ss.clear(); ss.str("");
                 ss << geom->GetContainerBottomCross().x << " " << geom->GetContainerBottomCross().y << " " << geom->GetContainerBottomCross().z;
                 pcontainer->add("bottom_cross")->setCharData(ss.str());
+                break;
+            }
+            case GT_Cage: {
+                daeElementRef pcage = ptec->add("cage");
+
+                ss.str(""); ss.clear();
+                ss << geom->GetCageBaseExtents().x << " " << geom->GetCageBaseExtents().y << " " << geom->GetCageBaseExtents().z;
+                pcage->add("half_extents")->setCharData(ss.str());
+
+                const KinBody::GeometryInfo& info = geom->GetInfo();
+
+                if( info._vGeomData2.x > g_fEpsilon ) {
+                    ss.str(""); ss.clear();
+                    ss << info._vGeomData2.x;
+                    pcage->add("inner_size_x")->setCharData(ss.str());
+                }
+                if( info._vGeomData2.y > g_fEpsilon ) {
+                    ss.str(""); ss.clear();
+                    ss << info._vGeomData2.y;
+                    pcage->add("inner_size_y")->setCharData(ss.str());
+                }
+                if( info._vGeomData2.z > g_fEpsilon ) {
+                    ss.str(""); ss.clear();
+                    ss << info._vGeomData2.z;
+                    pcage->add("inner_size_z")->setCharData(ss.str());
+                }
+
+                for (size_t i = 0; i < info._vSideWalls.size(); ++i) {
+                    daeElementRef psidewall = pcage->add("sidewall");
+
+                    _WriteTransformation(psidewall, info._vSideWalls[i].transf);
+
+                    ss.str(""); ss.clear();
+                    ss << info._vSideWalls[i].vExtents.x << " " << info._vSideWalls[i].vExtents.y << " " << info._vSideWalls[i].vExtents.z;
+                    psidewall->add("half_extents")->setCharData(ss.str());
+
+                    ss.clear(); ss.str("");
+                    ss << info._vSideWalls[i].type;
+                    psidewall->add("type")->setCharData(ss.str());
+                    ss.clear(); ss.str("");
+                }
                 break;
             }
             case GT_Sphere:
@@ -2626,7 +2676,7 @@ void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output, 
     if( scenename.size() == 0 ) {
         scenename = "scene";
     }
-    
+
     if( !writer.Write(scenename) ) {
         throw openrave_exception(_("ColladaWriter::Write(EnvironmentBasePtr) failed"));
     }

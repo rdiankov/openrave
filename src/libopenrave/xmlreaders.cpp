@@ -226,6 +226,9 @@ GeometryInfoReader::GeometryInfoReader(KinBody::GeometryInfoPtr pgeom, const Att
     else if( _stricmp(type.c_str(), "container") == 0 ) {
         _pgeom->_type = GT_Container;
     }
+    else if( _stricmp(type.c_str(), "cage") == 0 ) {
+        _pgeom->_type = GT_Cage;
+    }
     else {
         RAVELOG_WARN(str(boost::format("type %s not supported\n")%type));
     }
@@ -384,6 +387,23 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
             }
             if( xmlname == "bottom_cross" ) {
                 _ss >> _pgeom->_vGeomData3.x >> _pgeom->_vGeomData3.y >> _pgeom->_vGeomData3.z;
+            }
+
+            break;
+        case GT_Cage:
+            if( xmlname == "sidewall" ) {
+                _pgeom->_vSideWalls.push_back({});
+            }
+            if( xmlname == "transf" ) {
+                _ss >> _pgeom->_vSideWalls.back().transf;
+            }
+            if( xmlname == "vExtents" ) {
+                _ss >> _pgeom->_vSideWalls.back().vExtents;
+            }
+            if( xmlname == "type" ) {
+                int32_t type;
+                _ss >> type;
+                _pgeom->_vSideWalls.back().type = static_cast<KinBody::GeometryInfo::SideWallType>(type);
             }
 
             break;

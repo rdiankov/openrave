@@ -168,7 +168,7 @@ class BaseManipulation:
             return RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(res)
         return res
 
-    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None,ikparam=None,ikparams=None,jitter=None,minimumgoalpaths=None,outputtrajobj=None,postprocessing=None,jittergoal=None, constrainttaskmatrix=None, constrainttaskpose=None,goalsampleprob=None,goalmaxsamples=None,goalmaxtries=None,releasegil=False,initialconfigs=None):
+    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None,ikparam=None,ikparams=None,jitter=None,minimumgoalpaths=None,outputtrajobj=None,postprocessing=None,jittergoal=None, constrainttaskmatrix=None, constrainttaskpose=None,goalsampleprob=None,goalmaxsamples=None,goalmaxtries=None,releasegil=False,initialconfigs=None,freevalues=None):
         """See :ref:`module-basemanipulation-movetohandposition`
 
         postprocessing is two parameters: (plannername,parmaeters)
@@ -227,6 +227,10 @@ class BaseManipulation:
             cmd += 'goalsampleprob %.15e '%goalsampleprob
         if goalmaxtries is not None:
             cmd += 'goalmaxtries %d '%goalmaxtries
+        if freevalues is not None:
+            cmd += 'freevalues %d '%len(freevalues)
+            for fv in freevalues:
+                cmd += '%f ' % fv
         res = self.prob.SendCommand(cmd, releasegil=releasegil)
         if res is None:
             raise PlanningError('MoveToHandPosition')
