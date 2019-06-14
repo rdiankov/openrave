@@ -315,14 +315,15 @@ bool KinBody::GeometryInfo::ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume
 {
     switch(_type) {
     case GT_Cage: {
-        Vector vmin, vmax;
-        vmax.z = vmin.z = _vGeomData.z*2;
+        Vector vwallmin, vwallmax;
+        vwallmax.z = vwallmin.z = _vGeomData.z*2;
 
         // initialize to the base extents if there is no wall
-        vmin.x = -_vGeomData.x;
-        vmin.y = -_vGeomData.y;
-        vmax.x = _vGeomData.x;
-        vmax.y = _vGeomData.y;
+        vwallmin.x = -_vGeomData.x;
+        vwallmin.y = -_vGeomData.y;
+        vwallmax.x = _vGeomData.x;
+        vwallmax.y = _vGeomData.y;
+        int sideWallExtents = 0;
 
         FOREACH(itwall, _vSideWalls) {
             // compute the XYZ extents of the wall
@@ -336,53 +337,81 @@ bool KinBody::GeometryInfo::ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume
             }
 
             // the origin of the side wall is the bottom center
-            if( vmax.z < itwall->transf.trans.z + 2*vprojectedextents.z ) {
-                vmax.z = itwall->transf.trans.z + 2*vprojectedextents.z;
+            if( vwallmax.z < itwall->transf.trans.z + 2*vprojectedextents.z ) {
+                vwallmax.z = itwall->transf.trans.z + 2*vprojectedextents.z;
             }
+
+            sideWallExtents |= (int)(1<<itwall->type);
 
             switch(itwall->type) {
             case GeometryInfo::SWT_NX:
-                vmin.x = itwall->transf.trans.x + vprojectedextents.x;
+                vwallmin.x = itwall->transf.trans.x + vprojectedextents.x;
                 break;
             case GeometryInfo::SWT_NY:
-                vmin.y = itwall->transf.trans.y + vprojectedextents.y;
+                vwallmin.y = itwall->transf.trans.y + vprojectedextents.y;
                 break;
             case GeometryInfo::SWT_PX:
-                vmax.x = itwall->transf.trans.x - vprojectedextents.x;
+                vwallmax.x = itwall->transf.trans.x - vprojectedextents.x;
                 break;
             case GeometryInfo::SWT_PY:
-                vmax.y = itwall->transf.trans.y - vprojectedextents.y;
+                vwallmax.y = itwall->transf.trans.y - vprojectedextents.y;
                 break;
             }
         }
 
-        // force inner region
-        // if there are walls, respect the walls first
+        // if _vGeomData2 is greater than 0, force inner region wherever possible.
+        // The only thing that will prevent _vGeomData2's inner region is a wall present.
+        // Should not use base to restrict _vGeomData2
         if( _vGeomData2.x > 0 ) {
-            if( vmin.x < -0.5*_vGeomData2.x ) {
-                vmin.x = -0.5*_vGeomData2.x;
+            if( sideWallExtents & (1<<GeometryInfo::SWT_NX) ) {
+                if( vwallmin.x < -0.5*_vGeomData2.x ) {
+                    vwallmin.x = -0.5*_vGeomData2.x;
+                }
             }
-            if( vmax.x > 0.5*_vGeomData2.x ) {
-                vmax.x = 0.5*_vGeomData2.x;
+            else {
+                // no wall defined on NX
+                vwallmin.x = -0.5*_vGeomData2.x;
+            }
+
+            if( sideWallExtents & (1<<GeometryInfo::SWT_PX) ) {
+                if( vwallmax.x > 0.5*_vGeomData2.x ) {
+                    vwallmax.x = 0.5*_vGeomData2.x;
+                }
+            }
+            else {
+                // no wall defined on NX
+                vwallmax.x = 0.5*_vGeomData2.x;
             }
         }
+
         if( _vGeomData2.y > 0 ) {
-            if( vmin.y < -0.5*_vGeomData2.y ) {
-                vmin.y = -0.5*_vGeomData2.y;
+            if( sideWallExtents & (1<<GeometryInfo::SWT_NY) ) {
+                if( vwallmin.y < -0.5*_vGeomData2.y ) {
+                    vwallmin.y = -0.5*_vGeomData2.y;
+                }
             }
-            if( vmax.y > 0.5*_vGeomData2.y ) {
-                vmax.y = 0.5*_vGeomData2.y;
+            else {
+                vwallmin.y = -0.5*_vGeomData2.y;
+            }
+
+            if( sideWallExtents & (1<<GeometryInfo::SWT_PY) ) {
+                if( vwallmax.y > 0.5*_vGeomData2.y ) {
+                    vwallmax.y = 0.5*_vGeomData2.y;
+                }
+            }
+            else {
+                vwallmax.y = 0.5*_vGeomData2.y;
             }
         }
 
         // the top has no constraints, so use the max of walls and force inner region
-        if( vmax.z < _vGeomData.z*2 + _vGeomData2.z ) {
-            vmax.z = _vGeomData.z*2 + _vGeomData2.z;
+        if( vwallmax.z < _vGeomData.z*2 + _vGeomData2.z ) {
+            vwallmax.z = _vGeomData.z*2 + _vGeomData2.z;
         }
 
-        abInnerEmptyExtents = 0.5*(vmax - vmin);
+        abInnerEmptyExtents = 0.5*(vwallmax - vwallmin);
         tInnerEmptyVolume = _t;
-        tInnerEmptyVolume.trans += tInnerEmptyVolume.rotate(0.5*(vmax + vmin));
+        tInnerEmptyVolume.trans += tInnerEmptyVolume.rotate(0.5*(vwallmax + vwallmin));
         return true;
     }
     case GT_Container: {

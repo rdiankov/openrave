@@ -18,7 +18,7 @@
 #include "rampoptimizer/ramp.h"
 #include "rampoptimizer/feasibilitychecker.h"
 
-// #define PROGRESS_DEBUG
+//#define PROGRESS_DEBUG
 
 namespace rplanners {
 
@@ -381,6 +381,9 @@ public:
         bool bBoundExceeded = false;
 
         std::vector<dReal>& vDOFValuesAtViolation = _vdofvalues, &vDOFVelAtViolation = _vdofvelocities, &vDOFAccelAtViolation = _vdofaccelerations;
+        vDOFValuesAtViolation.resize(0);
+        vDOFVelAtViolation.resize(0);
+        vDOFAccelAtViolation.resize(0);
 
         if( !(interval == IT_OpenStart) ) {
             FOREACHC(itmanipinfo, _listCheckManips) {
@@ -624,26 +627,43 @@ public:
                 return retcheck;
             }
             else {
+                bBoundExceeded = false;
                 if( _maxmanipspeed > 0 && maxactualmanipspeed > _maxmanipspeed ) {
+                    bBoundExceeded = true;
                     retcode = CFO_CheckTimeBasedConstraints;
                     // If the actual max value is very close to the bound (i.e., almost not violating
                     // the bound), the multiplier will be too large (too close to 1) to be useful.
                     reductionFactor = min(multiplier*_maxmanipspeed/maxactualmanipspeed, maxallowedmult);
                 }
                 if( _maxmanipaccel > 0 && maxactualmanipaccel > _maxmanipaccel ) {
+                    bBoundExceeded = true;
                     retcode = CFO_CheckTimeBasedConstraints;
                     // If the actual max value is very close to the bound (i.e., almost not violating
                     // the bound), the multiplier will be too large (too close to 1) to be useful.
-                    reductionFactor = min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult);
+                    reductionFactor = RaveSqrt(min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult));
                 }
-                // RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxactualmanipspeed%maxactualmanipaccel);
-                return RampOptimizerInternal::CheckReturn(retcode, reductionFactor, maxactualmanipspeed, maxactualmanipaccel);
             }
 
             // The ramp passes all the check and it's very short so return now.
             if( (itrampnd == rampndVect.end() - 1) && (itrampnd->GetDuration() <= g_fEpsilonLinear) ) {
                 // No further checking is needed since the segment contains only one very small ramp.
-                return RampOptimizerInternal::CheckReturn(0);
+                if( bBoundExceeded ) {
+#ifdef PROGRESS_DEBUG
+                    std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                    ss << "q=[";
+                    SerializeValues(ss, vDOFValuesAtViolation);
+                    ss << "]; qd=[";
+                    SerializeValues(ss, vDOFVelAtViolation);
+                    ss << "]; qdd=[";
+                    SerializeValues(ss, vDOFAccelAtViolation);
+                    ss << "];";
+                    RAVELOG_VERBOSE_FORMAT("env=%d, maxmanipspeed=%.15e; maxactualmanipspeed=%.15e; maxmanipaccel=%.15e; maxactualmanipaccel=%.15e; reductionFactor=%.15e; %s", _penv->GetId()%_maxmanipspeed%maxactualmanipspeed%_maxmanipaccel%maxactualmanipaccel%reductionFactor%ss.str());
+#endif
+                    return RampOptimizerInternal::CheckReturn(retcode, reductionFactor, maxactualmanipspeed, maxactualmanipaccel);
+                }
+                else {
+                    return RampOptimizerInternal::CheckReturn(0);
+                }
             }
         }
 
@@ -900,7 +920,17 @@ public:
                 // the bound), the multiplier will be too large (too close to 1) to be useful.
                 reductionFactor = RaveSqrt(min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult));
             }
-            // RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxactualmanipspeed%maxactualmanipaccel);
+#ifdef PROGRESS_DEBUG
+            std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+            ss << "q=[";
+            SerializeValues(ss, vDOFValuesAtViolation);
+            ss << "]; qd=[";
+            SerializeValues(ss, vDOFVelAtViolation);
+            ss << "]; qdd=[";
+            SerializeValues(ss, vDOFAccelAtViolation);
+            ss << "];";
+            RAVELOG_VERBOSE_FORMAT("env=%d, maxmanipspeed=%.15e; maxactualmanipspeed=%.15e; maxmanipaccel=%.15e; maxactualmanipaccel=%.15e; reductionFactor=%.15e; %s", _penv->GetId()%_maxmanipspeed%maxactualmanipspeed%_maxmanipaccel%maxactualmanipaccel%reductionFactor%ss.str());
+#endif
             return RampOptimizerInternal::CheckReturn(retcode, reductionFactor, maxactualmanipspeed, maxactualmanipaccel);
         }
     }
@@ -912,7 +942,7 @@ private:
     std::set<KinBody::LinkPtr> setCheckedManips;
     dReal _maxmanipspeed, _maxmanipaccel;
 
-    //@{ cache
+//@{ cache
     std::list< ManipConstraintInfo2 > _listCheckManips; ///< the manipulators and the points on their end efffectors to check for velocity and acceleration constraints
     std::vector<dReal> ac, qfillactive, _vfillactive; // the active DOF
     std::vector<dReal> _afill; // full robot DOF
@@ -920,7 +950,7 @@ private:
     std::vector<dReal> _vtransjacobian, _vangularjacobian, _vbestvels2, _vbestaccels2;
     std::vector<dReal> _vdotproducts, _vscalingfactors, _vdofvalues, _vdofvelocities, _vdofaccelerations;
     std::vector<int> _vindices;
-    //@}
+//@}
 
 };
 
