@@ -299,9 +299,7 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
         // bottom
         if( bottom[2] > 0 ) {
             if( bottom[0] > 0 && bottom[1] > 0 ) {
-                dReal bottomx = bottom[0] > outerextents[0] ? outerextents[0] : bottom[0];
-                dReal bottomy = bottom[1] > outerextents[1] ? outerextents[1] : bottom[1];
-                AppendBoxTriangulation(Vector(0, 0, bottom[2]/2), Vector(bottomx/2., bottomy/2., bottom[2]/2.), _meshcollision);
+                AppendBoxTriangulation(Vector(0, 0, bottom[2]/2), Vector(bottom[0]/2., bottom[1]/2., bottom[2]/2.), _meshcollision);
             }
         }
         break;
@@ -391,6 +389,10 @@ bool KinBody::GeometryInfo::ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume
         Transform tempty;
         // full outer extents - full inner extents + inner extents = _vGeomData.z - 0.5*_vGeomData2.z
         tempty.trans.z = _vGeomData.z - 0.5 * _vGeomData2.z;
+        if( _vGeomData4.x > 0 && _vGeomData4.y > 0 && _vGeomData4.z > 0 ) {
+            // if _vGeomData4 is valid, need to shift the empty region up.
+            tempty.trans.z += _vGeomData4.z;
+        }
         tInnerEmptyVolume = _t*tempty;
         abInnerEmptyExtents = 0.5*_vGeomData2;
         return true;
