@@ -17,8 +17,9 @@
 #include "openraveplugindefs.h"
 
 // #define SHORTCUT_ONEDOF_DEBUG
-// #define PROGRESS_DEBUG
-// #define LINEAR_SMOOTHER_DEBUG
+// #define PROGRESS_DEBUG // uncomment this to get shortcut progress-related logs
+// #define LINEAR_SMOOTHER_DEBUG // uncomment this to save trajectory at each stage of shortcutting
+// #define TIMING_DEBUG // uncomment this to get timing information
 
 class ShortcutLinearPlanner : public PlannerBase
 {
@@ -233,7 +234,14 @@ protected:
 
             // check if the nodes can be connected by a straight line
             _filterreturn->Clear();
+#ifdef TIMING_DEBUG
+            _tStartCheckPathAllConstraints = utils::GetMicroTime();
+#endif
             int ret = parameters->CheckPathAllConstraints(itstartnode->first, itendnode->first, std::vector<dReal>(), std::vector<dReal>(), 0, IT_Open, 0xffff|CFO_FillCheckedConfiguration, _filterreturn);
+#ifdef TIMING_DEBUG
+            _tEndCheckPathAllConstraints = utils::GetMicroTime();
+            RAVELOG_DEBUG_FORMAT("env=%d, time spent calling CheckPathAllConstraints=%f s (ret=0x%x; num returned configs=%d)", GetEnv()->GetId()%(0.000001f*(float)(_tEndCheckPathAllConstraints - _tStartCheckPathAllConstraints))%ret%_filterreturn->_configurationtimes.size());
+#endif
             if ( ret != 0 ) {
 #ifdef PROGRESS_DEBUG
                 ss.str(""); ss.clear();
@@ -261,6 +269,9 @@ protected:
             }
             OPENRAVE_ASSERT_OP(_filterreturn->_configurations.size()%dof, ==, 0);
             // check how long the new path is
+#ifdef TIMING_DEBUG
+            _tStartMeasurePathLength = utils::GetMicroTime();
+#endif
             _vtempdists.resize(_filterreturn->_configurations.size()/dof+1);
             std::vector<dReal>::iterator itdist = _vtempdists.begin();
             std::vector<dReal>::iterator itnewconfig = _filterreturn->_configurations.begin();
@@ -280,10 +291,13 @@ protected:
             newtotaldistance += *itdist;
             ++itdist;
             BOOST_ASSERT(itdist==_vtempdists.end());
+#ifdef TIMING_DEBUG
+            _tEndMeasurePathLength = utils::GetMicroTime();
+            RAVELOG_DEBUG_FORMAT("env=%d, time spent for measuring length=%f s", GetEnv()->GetId()%(0.000001f*(float)(_tEndMeasurePathLength - _tStartMeasurePathLength)));
+#endif
 
             if( newtotaldistance > totaldistance-0.1*parameters->_fStepLength ) {
                 // new path is not that good, so reject
-                nrejected++;
 #ifdef PROGRESS_DEBUG
                 RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, rejecting since it does not make significant improvement. originalSegmentDistance=%.15e, newSegmentDistance=%.15e, diff=%.15e, fStepLength=%.15e", GetEnv()->GetId()%itercount%numiters%totaldistance%newtotaldistance%(totaldistance - newtotaldistance)%parameters->_fStepLength);
 #endif
@@ -291,6 +305,9 @@ protected:
             }
 
             // finally add
+#ifdef TIMING_DEBUG
+            _tStartInsertion = utils::GetMicroTime();
+#endif
             itdist = _vtempdists.begin();
             ++itstartnode;
             itnewconfig = _filterreturn->_configurations.begin();
@@ -306,6 +323,10 @@ protected:
             // splice out in-between nodes in path
             listpath.erase(itstartnode, itendnode);
             nrejected = 0;
+#ifdef TIMING_DEBUG
+            _tEndInsertion = utils::GetMicroTime();
+            RAVELOG_DEBUG_FORMAT("env=%d, time spent for adding segments=%f s", GetEnv()->GetId()%(0.000001f*(float)(_tEndInsertion - _tStartInsertion)));
+#endif
 
             ++numshortcuts;
 #ifdef PROGRESS_DEBUG
@@ -457,7 +478,7 @@ protected:
                         }
                     }
                 }
-                
+
                 _filterreturn->Clear();
                 int ret = parameters->CheckPathAllConstraints(vcurconfig, vnextconfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, 0xffff|CFO_FillCheckedConfiguration, _filterreturn);
                 if ( ret != 0 ) {
@@ -525,7 +546,7 @@ protected:
 
             // should check if the last point in listshortcutpath is close to itendnode
             //dReal fenddist = parameters->_distmetricfn(itendnode->first, listshortcutpath.back().first);
-            
+
             // Shortcut is successful. Replace the original segments with the content in listshortcutpath.
             ++numshortcuts;
             std::advance(itstartnode, 1);
@@ -662,6 +683,12 @@ protected:
     PlannerBasePtr _linearretimer;
     ConstraintFilterReturnPtr _filterreturn;
     std::vector<dReal> _vtempdists;
+
+#ifdef TIMING_DEBUG
+    uint32_t _tStartCheckPathAllConstraints, _tEndCheckPathAllConstraints;
+    uint32_t _tStartMeasurePathLength, _tEndMeasurePathLength;
+    uint32_t _tStartInsertion, _tEndInsertion;
+#endif
 };
 
 PlannerBasePtr CreateShortcutLinearPlanner(EnvironmentBasePtr penv, std::istream& sinput) {
