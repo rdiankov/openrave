@@ -600,16 +600,24 @@ void PiecewisePolynomialTrajectory::ReplaceSegment(dReal t0, dReal t1, const std
     this->FindChunkIndex(t1, index1, rem1);
     if( index0 == index1 ) {
         Chunk tempChunk;
-        this->vchunks[index0].Cut(rem0, tempChunk);
-        this->vchunks[index0].Cut(rem1 - rem0, tempChunk);
-        this->vchunks.insert(this->vchunks.begin() + index0 + 1, tempChunk);
-        this->vchunks.insert(this->vchunks.begin() + index0 + 1, vchunks.begin(), vchunks.end());
+        this->vchunks[index0].Cut(rem1, tempChunk); // now tempChunk stores the portion from rem1 to duration
+        this->vchunks.insert(this->vchunks.begin() + index0 + 1, tempChunk); // tempChunk is copied into the traj
+        this->vchunks[index0].Cut(rem0, tempChunk); // now chunk index0 stores the portion from 0 to rem0
+        this->vchunks.insert(this->vchunks.begin() + index0 + 1, vchunks.begin(), vchunks.end()); // insert vchunks after index0
     }
     else {
         Chunk tempChunk;
+        // Manage chunk index1
         this->vchunks[index1].Cut(rem1, tempChunk);
-        this->vchunks[index1] = tempChunk; // replace
+        this->vchunks[index1] = tempChunk; // replace chunk index1 by the portion from rem1 to duratoin
+
+        // Manager chunk index0
+        this->vchunks[index0].Cut(rem0, tempChunk); // TODO: maybe define TrimBack function is better
+
+        // Insert the input chunks before index1
         this->vchunks.insert(this->vchunks.begin() + index1, vchunks.begin(), vchunks.end());
+
+        // Remove the previous segment from index0 to index1
         this->vchunks.erase(this->vchunks.begin() + index0 + 1, this->vchunks.begin() + index1);
     }
     this->Initialize();
