@@ -1435,8 +1435,21 @@ inline bool computequinticnextdiscretizedstep(const T* coeffs, const T step, con
 
     int numroots = 0;
     T rawroots[5];
-    polyroots<T, 5>(tempcoeffs, rawroots, numroots);
-    MATH_ASSERT(numroots > 0);
+    if( tempcoeffs[0] != 0 ) {
+        polyroots<T, 5>(tempcoeffs, rawroots, numroots);
+    }
+    else if( tempcoeffs[1] != 0 ) {
+        polyroots<T, 4>(&tempcoeffs[1], rawroots, numroots);
+    }
+    else if( tempcoeffs[2] != 0 ) {
+        polyroots<T, 3>(&tempcoeffs[2], rawroots, numroots);
+    }
+    else if( tempcoeffs[3] != 0 ) {
+        polyroots<T, 2>(&tempcoeffs[3], rawroots, numroots);
+    }
+    else if( tempcoeffs[4] != 0 ) {
+        polyroots<T, 1>(&tempcoeffs[4], rawroots, numroots);
+    }
     bool bFound = false;
     for( int i = 0; i < numroots; ++i ) {
         if( rawroots[i] > 0 ) {
