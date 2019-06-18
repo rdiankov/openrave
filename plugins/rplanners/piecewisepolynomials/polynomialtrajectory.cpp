@@ -404,11 +404,11 @@ void Chunk::Cut(dReal t, Chunk& remChunk)
 {
     // TODO: Need to find a better way to not have to create these vectors every time this function is called.
     std::vector<Polynomial> vpoly(this->dof);
-    std::vector<dReal> vcoeffs(this->degree);
+    std::vector<dReal> vcoeffs(this->degree + 1);
     dReal fMult;
     for( size_t idof = 0; idof < this->dof; ++idof ) {
         fMult = 1.0;
-        for( size_t icoeff = 0; icoeff < this->degree; ++icoeff ) {
+        for( size_t icoeff = 0; icoeff < this->degree + 1; ++icoeff ) {
             vcoeffs[icoeff] = this->vpolynomials[idof].Evaldn(t, icoeff)/fMult;
             fMult *= (icoeff + 1);
         }
@@ -417,6 +417,7 @@ void Chunk::Cut(dReal t, Chunk& remChunk)
     remChunk.Initialize(this->duration - t, vpoly);
 
     this->duration = t;
+    remChunk.constraintChecked = this->constraintChecked;
 }
 
 void Chunk::Eval(dReal t, std::vector<dReal>& res) const
@@ -495,6 +496,7 @@ PiecewisePolynomialTrajectory::PiecewisePolynomialTrajectory(const std::vector<C
 void PiecewisePolynomialTrajectory::Initialize(const std::vector<Chunk>& vchunks)
 {
     this->vchunks = vchunks;
+    Initialize();
 }
 
 void PiecewisePolynomialTrajectory::Initialize()
@@ -537,6 +539,7 @@ void PiecewisePolynomialTrajectory::FindChunkIndex(dReal t, size_t& index, dReal
         return;
     }
     std::vector<dReal>::const_iterator it = std::lower_bound(vswitchtimes.begin(), vswitchtimes.end(), t) - 1;
+    // TODO: probably make it consider epsilon
     index = it - vswitchtimes.begin();
     remainder = t - vswitchtimes[index];
     return;
@@ -609,7 +612,7 @@ void PiecewisePolynomialTrajectory::ReplaceSegment(dReal t0, dReal t1, const std
         Chunk tempChunk;
         // Manage chunk index1
         this->vchunks[index1].Cut(rem1, tempChunk);
-        this->vchunks[index1] = tempChunk; // replace chunk index1 by the portion from rem1 to duratoin
+        this->vchunks[index1] = tempChunk; // replace chunk index1 by the portion from rem1 to duration
 
         // Manager chunk index0
         this->vchunks[index0].Cut(rem0, tempChunk); // TODO: maybe define TrimBack function is better
