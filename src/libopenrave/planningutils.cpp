@@ -3436,6 +3436,9 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         else if( _valldofscoeffs[i][3] != 0 ) {
             mathextra::computequadraticcriticalpoints(&_valldofscoeffs[i][3], &_valldofscriticalpoints[i][0], numcriticalpoints);
         }
+        else if( _valldofscoeffs[i][4] != 0 ) {
+            mathextra::computequadraticcriticalpoints(&_valldofscoeffs[i][4], &_valldofscriticalpoints[i][0], numcriticalpoints);
+        }
 
         if( numcriticalpoints == 0 ) {
             // This dof moves monotonically from q0[i] to q1[i]

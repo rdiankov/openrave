@@ -341,7 +341,7 @@ public:
                 OPENRAVE_ASSERT_OP(itchunk->dof, ==, _ndof);
             }
 
-            RAVELOG_VERBOSE_FORMAT("env=%d, start inserting waypoints into ptraj", _envId);
+            RAVELOG_VERBOSE_FORMAT("env=%d, start inserting waypoints into ptraj; expecting total=%d waypoints", _envId%(pwptraj.vchunks.size() + 1));
             std::vector<dReal>& waypoint = _cacheAllWaypoints; // reuse _cacheAllWaypoints
             waypoint.resize(newSpec.GetDOF());
             pwptraj.vchunks.at(0).Eval(0, x0Vect);
@@ -429,24 +429,14 @@ public:
                             trimmedChunk.Evald2(0, a0Vect);
                             trimmedChunk.Evald2(trimmedChunk.duration, a1Vect);
                             for( size_t iDilation = 0; iDilation < maxTries; ++iDilation ) {
-                                _quinticInterpolator.ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, newChunkDuration, trimmedChunk);
+                                _quinticInterpolator.ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(x0Vect, x1Vect, v0Vect, v1Vect, a0Vect, a1Vect, newChunkDuration, tempChunk);
 
                                 // TODO
                                 PiecewisePolynomials::CheckReturn newcheckret = CheckChunkAllConstraints(tempChunk, 0xffff, vChunksOut);
                                 if( newcheckret.retcode == 0 ) {
                                     // The new chunk passes constraints checking. Need to
                                     // re-populate vChunksOut with the result.
-                                    vChunksOut.resize(0);
-                                    if( vChunksOut.capacity() < 2 ) {
-                                        vChunksOut.reserve(2);
-                                    }
-                                    if( bTrimmedFront ) {
-                                        vChunksOut.push_back(remChunk);
-                                    }
-                                    vChunksOut.push_back(tempChunk);
-                                    if( bTrimmedBack ) {
-                                        vChunksOut.push_back(remChunk);
-                                    }
+                                    trimmedChunk = tempChunk; // copy the result to trimmedChunk
                                     bDilationSuccessful = true;
                                     break;
                                 }
@@ -465,6 +455,18 @@ public:
                                 return PS_Failed;
                             }
                         }
+                    }
+
+                    vChunksOut.resize(0);
+                    if( vChunksOut.capacity() < 2 ) {
+                        vChunksOut.reserve(2);
+                    }
+                    if( bTrimmedFront ) {
+                        vChunksOut.push_back(remChunk);
+                    }
+                    vChunksOut.push_back(trimmedChunk);
+                    if( bTrimmedBack ) {
+                        vChunksOut.push_back(remChunk);
                     }
 
                     ++_progress._iteration;
@@ -752,7 +754,8 @@ protected:
         }
 
         // Time-parameterize each pair of waypoints.
-        pwptraj.vchunks.reserve(vNewWaypoints.size() - 1);
+        pwptraj.vchunks.resize(0);
+        pwptraj.vchunks.reserve(1000); // not sure what a good value is
         OPENRAVE_ASSERT_OP(vNewWaypoints[0].size(), ==, _ndof);
         std::vector<PiecewisePolynomials::Chunk>& vChunksOut = _cacheVChunksOut;
         size_t numWaypoints = vNewWaypoints.size();
@@ -993,33 +996,39 @@ protected:
                 pwptraj.Evald2(t1, a1Vect);
                 ++_progress._iteration;
 
+                // The following variables are for debugging purposes
+                size_t ichunk0, ichunk1;
+                dReal rem0, rem1;
+                pwptraj.FindChunkIndex(t0, ichunk0, rem0);
+                pwptraj.FindChunkIndex(t1, ichunk1, rem1);
+
                 // Set the limits for this iterations
                 velLimits = _parameters->_vConfigVelocityLimit;
                 accelLimits = _parameters->_vConfigAccelerationLimit;
                 jerkLimits = _parameters->_vConfigJerkLimit;
-                {
-                    dReal fVelLowerBound, fAccelLowerBound;
-                    dReal fVel, fAccel;
-                    for( size_t idof = 0; idof < _ndof; ++idof ) {
-                        // The scaled velocity/acceleration must not be less than these values
-                        fVelLowerBound = std::max(RaveFabs(v0Vect[idof]), RaveFabs(v1Vect[idof]));
-                        fVel = std::max(fVelLowerBound, fStartTimeVelMult*_parameters->_vConfigVelocityLimit[idof]);
-                        if( velLimits[idof] > fVel ) {
-                            velLimits[idof] = fVel;
-                        }
+                // {
+                //     dReal fVelLowerBound, fAccelLowerBound;
+                //     dReal fVel, fAccel;
+                //     for( size_t idof = 0; idof < _ndof; ++idof ) {
+                //         // The scaled velocity/acceleration must not be less than these values
+                //         fVelLowerBound = std::max(RaveFabs(v0Vect[idof]), RaveFabs(v1Vect[idof]));
+                //         fVel = std::max(fVelLowerBound, fStartTimeVelMult*_parameters->_vConfigVelocityLimit[idof]);
+                //         if( velLimits[idof] > fVel ) {
+                //             velLimits[idof] = fVel;
+                //         }
 
-                        fAccelLowerBound = std::max(RaveFabs(a0Vect[idof]), RaveFabs(a1Vect[idof]));
-                        fAccel = std::max(fAccelLowerBound, fStartTimeAccelMult*_parameters->_vConfigAccelerationLimit[idof]);
-                        if( accelLimits[idof] > fAccel ) {
-                            accelLimits[idof] = fAccel;
-                        }
-                    }
-                }
+                //         fAccelLowerBound = std::max(RaveFabs(a0Vect[idof]), RaveFabs(a1Vect[idof]));
+                //         fAccel = std::max(fAccelLowerBound, fStartTimeAccelMult*_parameters->_vConfigAccelerationLimit[idof]);
+                //         if( accelLimits[idof] > fAccel ) {
+                //             accelLimits[idof] = fAccel;
+                //         }
+                //     }
+                // }
                 // These parameters keep track of multiplier for the current shortcut iteration.
                 dReal fCurVelMult = fStartTimeVelMult;
                 dReal fCurAccelMult = fStartTimeAccelMult;
                 dReal fCurJerkMult = 1.0; // experimental
-                RAVELOG_DEBUG_FORMAT("env=%d, fCurVelMult=%f; fCurAccelMult=%f;", _envId%fCurVelMult%fCurAccelMult);
+                // RAVELOG_DEBUG_FORMAT("env=%d, fCurVelMult=%f; fCurAccelMult=%f;", _envId%fCurVelMult%fCurAccelMult);
 
                 bool bSuccess = false;
                 dReal fTryDuration = t1 - t0;
@@ -1057,14 +1066,7 @@ protected:
                     iIterProgress += 0x1000;
 
                     // Start checking constraints
-                    PiecewisePolynomials::CheckReturn checkret(0);
-                    do {
-                        checkret = CheckChunkAllConstraints(tempChunk, 0xffff, vChunksOut);
-                        if( checkret.retcode != 0 ) {
-                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; iSlowDown=%d, new segment duration=%.15e, shortcut does not pass checking, ret=0x%x", _envId%iter%numIters%t0%t1%iSlowDown%tempChunk.duration%checkret.retcode);
-                            break;
-                        }
-                    } while( 0 ); // Finish checking constraints
+                    PiecewisePolynomials::CheckReturn checkret = CheckChunkAllConstraints(tempChunk, 0xffff, vChunksOut);
                     iIterProgress += 0x1000;
 
                     if( checkret.retcode == 0 ) {
