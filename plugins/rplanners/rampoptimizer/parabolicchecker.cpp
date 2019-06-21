@@ -219,7 +219,7 @@ ParabolicCheckReturn CheckRampNDs(const std::vector<RampND>& rampnds, const std:
                 return PCR_XDiscrepancy;
             }
             if( !FuzzyEquals(rampnds[irampnd - 1].GetV1At(idof), rampnds[irampnd].GetV0At(idof), g_fRampEpsilon) ) {
-                RAVELOG_WARN_FORMAT("PCR_VDiscrepancy: rampnds[%d].GetV1At(%d) = %.15e; rampnds[%d].GetV0At(idof) = %.15e; diff = %.15e", (irampnd - 1)%idof%rampnds[irampnd - 1].GetV1At(idof)%irampnd%idof%rampnds[irampnd].GetV0At(idof)%(rampnds[irampnd - 1].GetV1At(idof) - rampnds[irampnd].GetV0At(idof)));
+                RAVELOG_WARN_FORMAT("PCR_VDiscrepancy: rampnds[%d].GetV1At(%d) = %.15e; rampnds[%d].GetV0At(%d) = %.15e; diff = %.15e", (irampnd - 1)%idof%rampnds[irampnd - 1].GetV1At(idof)%irampnd%idof%rampnds[irampnd].GetV0At(idof)%(rampnds[irampnd - 1].GetV1At(idof) - rampnds[irampnd].GetV0At(idof)));
                 return PCR_VDiscrepancy;
             }
         }

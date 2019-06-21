@@ -769,21 +769,21 @@ protected:
     {
         SampleInfo() : fabsnodedist(0), fdeltadist(0), inode(0) {
         }
-        SampleInfo(std::list< vector<dReal> >::const_iterator itnode, const vector<dReal>& vsample, dReal fabsnodedist, dReal fdeltadist, int inode) : itnode(itnode), vsample(vsample), fabsnodedist(fabsnodedist), fdeltadist(fdeltadist), inode(inode) {
+        SampleInfo(std::list< vector<dReal> >::iterator itnode, const vector<dReal>& vsample, dReal fabsnodedist, dReal fdeltadist, int inode) : itnode(itnode), vsample(vsample), fabsnodedist(fabsnodedist), fdeltadist(fdeltadist), inode(inode) {
         }
-        std::list< vector<dReal> >::const_iterator itnode;
+        std::list< vector<dReal> >::iterator itnode;
         vector<dReal> vsample; /// the interpolated data
         dReal fabsnodedist; // absolute distance of itnode
         dReal fdeltadist; // the delta distance between itnode and itnode+1
         int inode; /// index of the node from listpath.begin()
     };
 
-    SampleInfo _SampleBasedOnVelocity(const list< vector<dReal> >& listpath, dReal fsearchdist)
+    SampleInfo _SampleBasedOnVelocity(list< vector<dReal> >& listpath, dReal fsearchdist)
     {
         int inode = 0;
         dReal fcurdist = 0;
-        list< vector<dReal> >::const_iterator itprev = listpath.begin();
-        list< vector<dReal> >::const_iterator it = itprev; ++it;
+        list< vector<dReal> >::iterator itprev = listpath.begin();
+        list< vector<dReal> >::iterator it = itprev; ++it;
         while(it != listpath.end() ) {
             dReal fdeltadist = _ComputeExpectedVelocity(*itprev, *it);
             if( fsearchdist >= fcurdist && fsearchdist < fcurdist+fdeltadist ) {

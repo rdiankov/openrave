@@ -175,9 +175,9 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
         _vtManipsLocalTool.resize(vmanips.size());
         _vvManipsLocalDirection.resize(vmanips.size());
         _vpManipsIkSolver.resize(vmanips.size());
-        for(int imanip = 0; imanip < vmanips.size(); ++imanip){
+        for(int imanip = 0; imanip < vmanips.size(); ++imanip) {
             RobotBase::ManipulatorPtr pmanip = vmanips[imanip];
-            if( !!pmanip ){
+            if( !!pmanip ) {
                 _vtManipsLocalTool[imanip] = pmanip->GetLocalToolTransform();
                 _vvManipsLocalDirection[imanip] = pmanip->GetLocalToolDirection();
                 _vpManipsIkSolver[imanip] = pmanip->GetIkSolver();
@@ -264,9 +264,9 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
         if( probot == _probot ) {
             std::vector<RobotBase::ManipulatorPtr> vmanips = probot->GetManipulators();
             if(vmanips.size() == _vtManipsLocalTool.size()) {
-                for(int imanip = 0; imanip < vmanips.size(); ++imanip) {
+                for(int imanip = 0; imanip < (int)vmanips.size(); ++imanip) {
                     RobotBase::ManipulatorPtr pmanip = vmanips[imanip];
-                    if( !!pmanip ){
+                    if( !!pmanip ) {
                         pmanip->SetLocalToolTransform(_vtManipsLocalTool.at(imanip));
                         pmanip->SetLocalToolDirection(_vvManipsLocalDirection.at(imanip));
                         pmanip->SetIkSolver(_vpManipsIkSolver.at(imanip));
@@ -323,7 +323,8 @@ void RobotBase::Destroy()
 {
     _pManipActive.reset();
     _vecManipulators.clear();
-    _vecSensors.clear();
+    _vecAttachedSensors.clear();
+    _vecConnectedBodies.clear();
     _nActiveDOF = 0;
     _vActiveDOFIndices.resize(0);
     _vAllDOFIndices.resize(0);
@@ -343,10 +344,10 @@ bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, co
         _vecManipulators.push_back(newmanip);
         __hashrobotstructure.resize(0);
     }
-    _vecSensors.resize(0);
+    _vecAttachedSensors.clear();
     FOREACHC(itattachedsensorinfo, attachedsensorinfos) {
         AttachedSensorPtr newattachedsensor(new AttachedSensor(shared_robot(),**itattachedsensorinfo));
-        _vecSensors.push_back(newattachedsensor);
+        _vecAttachedSensors.push_back(newattachedsensor);
         newattachedsensor->UpdateInfo(); // just in case
         __hashrobotstructure.resize(0);
     }
@@ -373,7 +374,7 @@ void RobotBase::SetName(const std::string& newname)
         }
 
         // have to rename any attached sensors with robotname:attachedname!!
-        FOREACH(itattached, _vecSensors) {
+        FOREACH(itattached, _vecAttachedSensors) {
             AttachedSensorPtr pattached = *itattached;
             if( !!pattached->_psensor ) {
                 pattached->_psensor->SetName(str(boost::format("%s:%s")%newname%pattached->_info._name)); // need a unique targettable name
@@ -443,9 +444,10 @@ void RobotBase::SetDOFVelocities(const std::vector<dReal>& dofvelocities, uint32
 
 void RobotBase::_UpdateAttachedSensors()
 {
-    FOREACH(itsensor, _vecSensors) {
-        if( !!(*itsensor)->GetSensor() && !(*itsensor)->pattachedlink.expired() )
+    FOREACH(itsensor, _vecAttachedSensors) {
+        if( !!(*itsensor)->GetSensor() && !(*itsensor)->pattachedlink.expired() ) {
             (*itsensor)->GetSensor()->SetTransform(LinkPtr((*itsensor)->pattachedlink)->GetTransform()*(*itsensor)->GetRelativeTransform());
+        }
     }
 }
 
@@ -1677,8 +1679,8 @@ RobotBase::AttachedSensorPtr RobotBase::AddAttachedSensor(const RobotBase::Attac
 {
     OPENRAVE_ASSERT_OP(attachedsensorinfo._name.size(),>,0);
     int iremoveindex = -1;
-    for(int iasensor = 0; iasensor < (int)_vecSensors.size(); ++iasensor) {
-        if( _vecSensors[iasensor]->GetName() == attachedsensorinfo._name ) {
+    for(int iasensor = 0; iasensor < (int)_vecAttachedSensors.size(); ++iasensor) {
+        if( _vecAttachedSensors[iasensor]->GetName() == attachedsensorinfo._name ) {
             if( removeduplicate ) {
                 iremoveindex = iasensor;
                 break;
@@ -1694,10 +1696,10 @@ RobotBase::AttachedSensorPtr RobotBase::AddAttachedSensor(const RobotBase::Attac
 //    }
     if( iremoveindex >= 0 ) {
         // replace the old one
-        _vecSensors[iremoveindex] = newattachedsensor;
+        _vecAttachedSensors[iremoveindex] = newattachedsensor;
     }
     else {
-        _vecSensors.push_back(newattachedsensor);
+        _vecAttachedSensors.push_back(newattachedsensor);
     }
     newattachedsensor->UpdateInfo(); // just in case
     __hashrobotstructure.resize(0);
@@ -1706,7 +1708,7 @@ RobotBase::AttachedSensorPtr RobotBase::AddAttachedSensor(const RobotBase::Attac
 
 RobotBase::AttachedSensorPtr RobotBase::GetAttachedSensor(const std::string& name) const
 {
-    FOREACHC(itsensor, _vecSensors) {
+    FOREACHC(itsensor, _vecAttachedSensors) {
         if( (*itsensor)->GetName() == name ) {
             return *itsensor;
         }
@@ -1716,9 +1718,9 @@ RobotBase::AttachedSensorPtr RobotBase::GetAttachedSensor(const std::string& nam
 
 bool RobotBase::RemoveAttachedSensor(RobotBase::AttachedSensor &attsensor)
 {
-    FOREACH(itattsensor,_vecSensors) {
+    FOREACH(itattsensor,_vecAttachedSensors) {
         if( itattsensor->get() == &attsensor ) {
-            _vecSensors.erase(itattsensor);
+            _vecAttachedSensors.erase(itattsensor);
             __hashrobotstructure.resize(0);
             return true;
         }
@@ -1734,6 +1736,8 @@ void RobotBase::SimulationStep(dReal fElapsedTime)
 
 void RobotBase::_ComputeInternalInformation()
 {
+    _ComputeConnectedBodiesInformation(); // should process the connected bodies in order to get the real resolved links, joints, etc
+
     KinBody::_ComputeInternalInformation();
     _vAllDOFIndices.resize(GetDOF());
     for(int i = 0; i < GetDOF(); ++i) {
@@ -1791,7 +1795,7 @@ void RobotBase::_ComputeInternalInformation()
     }
 
     int sensorindex=0;
-    FOREACH(itsensor,_vecSensors) {
+    FOREACH(itsensor,_vecAttachedSensors) {
         if( (*itsensor)->GetName().size() == 0 ) {
             stringstream ss;
             ss << "sensor" << sensorindex;
@@ -1807,7 +1811,7 @@ void RobotBase::_ComputeInternalInformation()
 
     {
         __hashrobotstructure.resize(0);
-        FOREACH(itsensor,_vecSensors) {
+        FOREACH(itsensor,_vecAttachedSensors) {
             (*itsensor)->__hashstructure.resize(0);
         }
     }
@@ -1826,7 +1830,7 @@ void RobotBase::_ComputeInternalInformation()
     }
 
     // reset the power on the sensors
-    FOREACH(itsensor,_vecSensors) {
+    FOREACH(itsensor,_vecAttachedSensors) {
         SensorBasePtr psensor = (*itsensor)->GetSensor();
         if( !!psensor ) {
             int ispower = psensor->Configure(SensorBase::CC_PowerCheck);
@@ -1835,10 +1839,16 @@ void RobotBase::_ComputeInternalInformation()
     }
 }
 
+void RobotBase::_DeinitializeInternalInformation()
+{
+    KinBody::_DeinitializeInternalInformation();
+    _DeinitializeConnectedBodiesInformation();
+}
+
 void RobotBase::_PostprocessChangedParameters(uint32_t parameters)
 {
     if( parameters & (Prop_Sensors|Prop_SensorPlacement) ) {
-        FOREACH(itsensor,_vecSensors) {
+        FOREACH(itsensor,_vecAttachedSensors) {
             (*itsensor)->__hashstructure.resize(0);
         }
     }
@@ -1851,7 +1861,7 @@ void RobotBase::_PostprocessChangedParameters(uint32_t parameters)
     KinBody::_PostprocessChangedParameters(parameters);
 }
 
-std::vector<RobotBase::ManipulatorPtr>& RobotBase::GetManipulators()
+const std::vector<RobotBase::ManipulatorPtr>& RobotBase::GetManipulators() const
 {
     return _vecManipulators;
 }
@@ -1885,9 +1895,9 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         }
     }
 
-    _vecSensors.clear();
-    FOREACHC(itsensor, r->_vecSensors) {
-        _vecSensors.push_back(AttachedSensorPtr(new AttachedSensor(shared_robot(),**itsensor,cloningoptions)));
+    _vecAttachedSensors.clear();
+    FOREACHC(itsensor, r->_vecAttachedSensors) {
+        _vecAttachedSensors.push_back(AttachedSensorPtr(new AttachedSensor(shared_robot(),**itsensor,cloningoptions)));
     }
     _UpdateAttachedSensors();
 
@@ -1943,7 +1953,7 @@ void RobotBase::serialize(std::ostream& o, int options) const
         }
     }
     if( options & SO_RobotSensors ) {
-        FOREACHC(itsensor,_vecSensors) {
+        FOREACHC(itsensor,_vecAttachedSensors) {
             (*itsensor)->serialize(o,options);
         }
     }

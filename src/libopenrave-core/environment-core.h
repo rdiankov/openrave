@@ -2085,7 +2085,7 @@ protected:
         FOREACH(itrobot, _vecrobots) {
             KinBody &body = **it;
             if( (*itrobot)->IsGrabbing(body) ) {
-                RAVELOG_WARN("destroy %s already grabbed by robot %s!\n", body.GetName().c_str(), (*itrobot)->GetName().c_str());
+                RAVELOG_WARN_FORMAT("env=%d, destroy %s already grabbed by robot %s!", GetId()%body.GetName()%(*itrobot)->GetName());
                 (*itrobot)->Release(body);
             }
         }
@@ -2544,6 +2544,7 @@ protected:
         boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
         _mapBodies.erase(pbody->_environmentid);
         pbody->_environmentid = 0;
+        pbody->_DeinitializeInternalInformation();
     }
 
     void _StartSimulationThread()
