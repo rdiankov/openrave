@@ -17,7 +17,7 @@ namespace OpenRAVE {
 
 namespace PiecewisePolynomialsInternal {
 
-const dReal QuinticInterpolator::_fifteenOverEight = 15/8;
+const dReal QuinticInterpolator::_fifteenOverEight = 1.875;
 const dReal QuinticInterpolator::_tenOverSqrtThree = 10/Sqrt(3);
 
 QuinticInterpolator::QuinticInterpolator(size_t ndof, int envid)
