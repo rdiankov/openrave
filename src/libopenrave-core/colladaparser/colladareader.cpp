@@ -2260,6 +2260,7 @@ public:
                 itgeominfo->_vGeomData *= vscale;
                 itgeominfo->_vGeomData2 *= vscale;
                 itgeominfo->_vGeomData3 *= vscale;
+                itgeominfo->_vGeomData4 *= vscale;
                 break;
             case GT_Sphere:
                 itgeominfo->_vGeomData *= max(vscale.z, max(vscale.x, vscale.y));
@@ -2933,6 +2934,18 @@ public:
                                 if( ss.eof() || !!ss ) {
                                     geominfo._type = GT_Container;
                                     geominfo._vGeomData3 = vextents;
+                                    geominfo._t = tlocalgeom;
+                                    bfoundgeom = true;
+                                }
+                            }
+                            daeElementRef pbottom = children[i]->getChild("bottom");
+                            if( !!pbottom ) {
+                                stringstream ss(pbottom->getCharData());
+                                Vector vextents;
+                                ss >> vextents.x >> vextents.y >> vextents.z;
+                                if( ss.eof() || !!ss ) {
+                                    geominfo._type = GT_Container;
+                                    geominfo._vGeomData4 = vextents;
                                     geominfo._t = tlocalgeom;
                                     bfoundgeom = true;
                                 }
