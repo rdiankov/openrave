@@ -17,8 +17,8 @@
 /** \file json.h
     \brief Defines json serialization and deserailization related utilities. This file is automatically included by openrave.h.
  */
-#ifndef OPENRAVE_JSON_H
-#define OPENRAVE_JSON_H
+#ifndef OPENRAVE_SERIALIZE_JSON_H
+#define OPENRAVE_SERIALIZE_JSON_H
 
 namespace OpenRAVE {
 
@@ -461,4 +461,4 @@ inline void RaveDeserializeJSON(const rapidjson::Value &value, SensorBase::Camer
 
 }
 
-#endif
+#endif // OPENRAVE_SERIALIZE_JSON_H

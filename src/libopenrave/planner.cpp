@@ -24,7 +24,7 @@ namespace OpenRAVE {
 
 static std::string s_linearsmoother = "linearsmoother"; //"shortcut_linear";
 
-std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameters& pp)
+std::istream& operator>>(std::istream& I, PlannerParameters& pp)
 {
     if( !!I) {
         stringbuf buf;
@@ -198,29 +198,29 @@ void PlannerStatus::SerializeToJson(rapidjson::Document& output) const
     }
 }
 
-PlannerBase::PlannerParameters::StateSaver::StateSaver(PlannerParametersPtr params) : _params(params)
+PlannerParameters::StateSaver::StateSaver(PlannerParametersPtr params) : _params(params)
 {
     _params->_getstatefn(_values);
     OPENRAVE_ASSERT_OP((int)_values.size(),==,_params->GetDOF());
 }
 
-PlannerBase::PlannerParameters::StateSaver::~StateSaver()
+PlannerParameters::StateSaver::~StateSaver()
 {
     _Restore();
 }
 
-void PlannerBase::PlannerParameters::StateSaver::Restore()
+void PlannerParameters::StateSaver::Restore()
 {
     _Restore();
 }
 
-void PlannerBase::PlannerParameters::StateSaver::_Restore()
+void PlannerParameters::StateSaver::_Restore()
 {
     int ret = _params->SetStateValues(_values, 0);
     BOOST_ASSERT(ret==0);
 }
 
-PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _nMaxPlanningTime(0), _sPostProcessingPlanner(s_linearsmoother), _nRandomGeneratorSeed(0)
+PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _nMaxPlanningTime(0), _sPostProcessingPlanner(s_linearsmoother), _nRandomGeneratorSeed(0)
 {
     _diffstatefn = SubtractStates;
     _neighstatefn = AddStates;
@@ -248,16 +248,16 @@ PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparame
     _vXMLParameters.push_back("_nrandomgeneratorseed");
 }
 
-PlannerBase::PlannerParameters::~PlannerParameters()
+PlannerParameters::~PlannerParameters()
 {
 }
 
-PlannerBase::PlannerParameters::PlannerParameters(const PlannerParameters &r) : XMLReadable("")
+PlannerParameters::PlannerParameters(const PlannerParameters &r) : XMLReadable("")
 {
     BOOST_ASSERT(0);
 }
 
-PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const PlannerBase::PlannerParameters& r)
+PlannerParameters& PlannerParameters::operator=(const PlannerParameters& r)
 {
     // reset
     _costfn = r._costfn;
@@ -303,12 +303,12 @@ PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const 
     return *this;
 }
 
-void PlannerBase::PlannerParameters::copy(boost::shared_ptr<PlannerParameters const> r)
+void PlannerParameters::copy(boost::shared_ptr<PlannerParameters const> r)
 {
     *this = *r;
 }
 
-int PlannerBase::PlannerParameters::SetStateValues(const std::vector<dReal>& values, int options) const
+int PlannerParameters::SetStateValues(const std::vector<dReal>& values, int options) const
 {
     if( !!_setstatevaluesfn ) {
         return _setstatevaluesfn(values, options);
@@ -321,7 +321,7 @@ int PlannerBase::PlannerParameters::SetStateValues(const std::vector<dReal>& val
     throw openrave_exception(_("need to set PlannerParameters::_setstatevaluesfn"));
 }
 
-bool PlannerBase::PlannerParameters::serialize(std::ostream& O, int options) const
+bool PlannerParameters::serialize(std::ostream& O, int options) const
 {
     O << _configurationspecification << endl;
     O << "<_vinitialconfig>";
@@ -381,7 +381,7 @@ bool PlannerBase::PlannerParameters::serialize(std::ostream& O, int options) con
     return !!O;
 }
 
-BaseXMLReader::ProcessElement PlannerBase::PlannerParameters::startElement(const std::string& name, const AttributesList& atts)
+BaseXMLReader::ProcessElement PlannerParameters::startElement(const std::string& name, const AttributesList& atts)
 {
     _ss.str(""); // have to clear the string
     if( !!__pcurreader ) {
@@ -436,7 +436,7 @@ BaseXMLReader::ProcessElement PlannerBase::PlannerParameters::startElement(const
     return PE_Pass;
 }
 
-bool PlannerBase::PlannerParameters::endElement(const std::string& name)
+bool PlannerParameters::endElement(const std::string& name)
 {
     if( !!__pcurreader ) {
         if( __pcurreader->endElement(name) ) {
@@ -508,7 +508,7 @@ bool PlannerBase::PlannerParameters::endElement(const std::string& name)
     return false;
 }
 
-void PlannerBase::PlannerParameters::characters(const std::string& ch)
+void PlannerParameters::characters(const std::string& ch)
 {
     if( !!__pcurreader ) {
         __pcurreader->characters(ch);
@@ -519,7 +519,7 @@ void PlannerBase::PlannerParameters::characters(const std::string& ch)
     }
 }
 
-std::ostream& operator<<(std::ostream& O, const PlannerBase::PlannerParameters& v)
+std::ostream& operator<<(std::ostream& O, const PlannerParameters& v)
 {
     O << "<" << v.GetXMLId() << ">" << endl;
     v.serialize(O);
@@ -548,7 +548,7 @@ int SetDOFVelocitiesIndicesParameters(KinBodyPtr pbody, const std::vector<dReal>
     return 0;
 }
 
-void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
+void PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
 {
     // check if any of the links affected by the dofs beside the base link are static
     FOREACHC(itlink, robot->GetLinks()) {
@@ -599,7 +599,7 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
 
 }
 
-void _CallDiffStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::DiffStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v0, const std::vector<dReal>& v1)
+void _CallDiffStateFns(const std::vector< std::pair<PlannerParameters::DiffStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v0, const std::vector<dReal>& v1)
 {
     if( vfunctions.size() == 1 ) {
         vfunctions.at(0).first(v0,v1);
@@ -626,7 +626,7 @@ void _CallDiffStateFns(const std::vector< std::pair<PlannerBase::PlannerParamete
 
 /// \brief returns square root of joint distance * weights
 /// \param vweights2 squared weights
-dReal _EvalJointDOFDistanceMetric(const PlannerBase::PlannerParameters::DiffStateFn& difffn, const std::vector<dReal>&c0, const std::vector<dReal>&c1, const std::vector<dReal>& vweights2)
+dReal _EvalJointDOFDistanceMetric(const PlannerParameters::DiffStateFn& difffn, const std::vector<dReal>&c0, const std::vector<dReal>&c1, const std::vector<dReal>& vweights2)
 {
     std::vector<dReal> c = c0;
     difffn(c,c1);
@@ -637,7 +637,7 @@ dReal _EvalJointDOFDistanceMetric(const PlannerBase::PlannerParameters::DiffStat
     return RaveSqrt(dist);
 }
 
-dReal _CallDistMetricFns(const std::vector< std::pair<PlannerBase::PlannerParameters::DistMetricFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, const std::vector<dReal>& v0, const std::vector<dReal>& v1)
+dReal _CallDistMetricFns(const std::vector< std::pair<PlannerParameters::DistMetricFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, const std::vector<dReal>& v0, const std::vector<dReal>& v1)
 {
     if( vfunctions.size() == 1 ) {
         return vfunctions.at(0).first(v0, v1);
@@ -661,7 +661,7 @@ dReal _CallDistMetricFns(const std::vector< std::pair<PlannerBase::PlannerParame
     }
 }
 
-bool _CallSampleFns(const std::vector< std::pair<PlannerBase::PlannerParameters::SampleFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v)
+bool _CallSampleFns(const std::vector< std::pair<PlannerParameters::SampleFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v)
 {
     if( vfunctions.size() == 1 ) {
         return vfunctions.at(0).first(v);
@@ -681,7 +681,7 @@ bool _CallSampleFns(const std::vector< std::pair<PlannerBase::PlannerParameters:
     }
 }
 
-bool _CallSampleNeighFns(const std::vector< std::pair<PlannerBase::PlannerParameters::SampleNeighFn, int> >& vfunctions, const std::vector< std::pair<PlannerBase::PlannerParameters::DistMetricFn, int> >& vdistfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v, const std::vector<dReal>& vCurSample, dReal fRadius)
+bool _CallSampleNeighFns(const std::vector< std::pair<PlannerParameters::SampleNeighFn, int> >& vfunctions, const std::vector< std::pair<PlannerParameters::DistMetricFn, int> >& vdistfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v, const std::vector<dReal>& vCurSample, dReal fRadius)
 {
     if( vfunctions.size() == 1 ) {
         return vfunctions.at(0).first(v,vCurSample,fRadius);
@@ -714,7 +714,7 @@ bool _CallSampleNeighFns(const std::vector< std::pair<PlannerBase::PlannerParame
     }
 }
 
-int CallSetStateValuesFns(const std::vector< std::pair<PlannerBase::PlannerParameters::SetStateValuesFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, const std::vector<dReal>& v, int options)
+int CallSetStateValuesFns(const std::vector< std::pair<PlannerParameters::SetStateValuesFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, const std::vector<dReal>& v, int options)
 {
     if( vfunctions.size() == 1 ) {
         return vfunctions.at(0).first(v, options);
@@ -736,7 +736,7 @@ int CallSetStateValuesFns(const std::vector< std::pair<PlannerBase::PlannerParam
     return 0;
 }
 
-void CallGetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::GetStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v)
+void CallGetStateFns(const std::vector< std::pair<PlannerParameters::GetStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v)
 {
     if( vfunctions.size() == 1 ) {
         vfunctions.at(0).first(v);
@@ -753,7 +753,7 @@ void CallGetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters
     }
 }
 
-int _CallNeighStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::NeighStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v, const std::vector<dReal>& vdelta, int fromgoal)
+int _CallNeighStateFns(const std::vector< std::pair<PlannerParameters::NeighStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v, const std::vector<dReal>& vdelta, int fromgoal)
 {
     if( vfunctions.size() == 1 ) {
         return vfunctions.at(0).first(v,vdelta,fromgoal);
@@ -783,7 +783,7 @@ int _CallNeighStateFns(const std::vector< std::pair<PlannerBase::PlannerParamete
     }
 }
 
-void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBasePtr penv, const ConfigurationSpecification& spec)
+void PlannerParameters::SetConfigurationSpecification(EnvironmentBasePtr penv, const ConfigurationSpecification& spec)
 {
     using namespace planningutils;
     spec.Validate();
@@ -899,7 +899,7 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
     _checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
 }
 
-void PlannerBase::PlannerParameters::Validate() const
+void PlannerParameters::Validate() const
 {
     OPENRAVE_ASSERT_OP(_configurationspecification.GetDOF(),==,GetDOF());
     OPENRAVE_ASSERT_OP(vinitialconfig.size()%GetDOF(),==,0);
