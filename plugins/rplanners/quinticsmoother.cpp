@@ -802,7 +802,7 @@ protected:
         dReal fCurVelMult = 1.0; ///< multiplier for the velocity limits.
         int numTries = 1000; // number of times to try scaling down velLimits and accelLimits before giving up
         int itry = 0;
-        PiecewisePolynomials::CheckReturn checkret(0);
+        PiecewisePolynomials::CheckReturn checkret(0xffff);
         for(; itry < numTries; ++itry ) {
             _quinticInterpolator.ComputeNDTrajectoryZeroTimeDerivativesOptimizeDuration(x0VectIn, x1VectIn, velLimits, accelLimits, jerkLimits, _cacheChunk);
             checkret = CheckChunkAllConstraints(_cacheChunk, options, vChunksOut);
@@ -1163,6 +1163,7 @@ protected:
             }
             catch( const std::exception& ex ) {
                 RAVELOG_WARN_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; an exception occured. iIterProgress=0x%x: %s", _envId%iter%numIters%t0%t1%iIterProgress%ex.what());
+                break;
             }
         } // end shortcut iterations
 
