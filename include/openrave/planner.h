@@ -57,6 +57,11 @@ enum PlannerStatusCode
     PS_FailedDueToVelocityConstraints = 0x00400000, ///< failed due to velocity constraints
 };
 
+enum PlanningOptions
+{
+    PO_NoStatusDetail = 1, ///< if set, then do not output any PlannerStatus details, just the finish code. This allows system to be faster.
+};
+
 /// \brief action to send to the planner while it is planning. This is usually done by the user-specified planner callback function
 enum PlannerAction
 {
@@ -127,7 +132,7 @@ class OPENRAVE_API PlannerParameters : public BaseXMLReader, public XMLReadable
 public:
     typedef std::list< std::vector<dReal> > ConfigurationList;
     typedef boost::shared_ptr< ConfigurationList > ConfigurationListPtr;
-    
+
     PlannerParameters();
     virtual ~PlannerParameters();
 
@@ -497,7 +502,7 @@ public:
     PlannerStatus& SetErrorOrigin(const std::string& errorOrigin);
     PlannerStatus& SetPlannerParameters(PlannerParametersConstPtr parameters);
 
-    void SerializeToJson(rapidjson::Document& output) const;
+    void SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Document::AllocatorType& alloc) const;
 
     inline uint32_t GetStatusCode() const {
         return statusCode;
@@ -576,17 +581,10 @@ public:
 
         Fill traj with the trajectory of the planned path that the robot needs to execute
         \param traj The output trajectory the robot has to follow in order to successfully complete the plan. If this planner is a path optimizer, the trajectory can be used as an input for generating a smoother path. The trajectory is for the configuration degrees of freedom defined by the planner parameters.
+        \param planningoptions A set of PO_X options controlling planning and stauts
         \return the status that the planner returned in.
      */
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj) = 0;
-
-    /// \deprecated (11/10/03)
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, boost::shared_ptr<std::ostream> pOutStream) RAVE_DEPRECATED {
-        if( !!pOutStream ) {
-            RAVELOG_WARN("planner does not support pOutputStream anymore, please find another method to return information like using SendCommand or writing the data into the returned trajectory\n");
-        }
-        return PlanPath(traj);
-    }
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, int planningoptions=0) = 0;
 
     /// \brief return the internal parameters of the planner
     virtual PlannerParametersConstPtr GetParameters() const = 0;

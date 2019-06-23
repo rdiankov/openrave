@@ -355,7 +355,7 @@ Some python code to display data::\n\
         return true;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         _goalindex = -1;
         _startindex = -1;
@@ -723,7 +723,7 @@ public:
         return true;
     }
 
-    PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         if(!_parameters) {
             std::string description = "RrtPlanner::PlanPath - Error, planner not initialized\n";
@@ -947,7 +947,7 @@ public:
         return true;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         _goalindex = -1;
         _startindex = -1;

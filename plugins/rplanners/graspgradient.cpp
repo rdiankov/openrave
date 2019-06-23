@@ -107,7 +107,7 @@ public:
     }
 
     /// \param pOutStream returns which goal was chosen
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         if(!_parameters) {
             std::string description = "GraspGradientPlanner::PlanPath - Error, planner not initialized\n";

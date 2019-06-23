@@ -64,7 +64,7 @@ public:
         return true;
     }
 
-    PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         if(!_parameters) {
             return PlannerStatus(PS_Failed);

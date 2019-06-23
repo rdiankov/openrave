@@ -130,7 +130,7 @@ Planner Parameters\n\
         return true;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr poutputtraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr poutputtraj, int planningoptions) override
     {
         if(!_parameters) {
             std::string description = "WorkspaceTrajectoryTracker::PlanPath - Error, planner not initialized\n";

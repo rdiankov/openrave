@@ -99,7 +99,7 @@ public:
         return _parameters;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         // TODO there's a lot of info that is being recomputed which could be cached depending on the configurationspace of the incoming trajectory
         BOOST_ASSERT(!!_parameters && !!ptraj && ptraj->GetEnv()==GetEnv());

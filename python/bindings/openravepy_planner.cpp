@@ -257,7 +257,9 @@ public:
         if( releasegil ) {
             statesaver.reset(new openravepy::PythonThreadSaver());
         }
-        return openravepy::toPyPlannerStatus(_pplanner->PlanPath(ptraj));
+        PlannerStatus status = _pplanner->PlanPath(ptraj);
+        statesaver.reset(); // unlock
+        return openravepy::toPyPlannerStatus(status);
     }
 
     PyPlannerParametersPtr GetParameters() const
