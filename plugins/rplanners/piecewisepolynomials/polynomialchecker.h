@@ -16,6 +16,8 @@
 
 #include "polynomialtrajectory.h"
 
+#define QUINTIC_SMOOTHER_POLY_CHECKING_DEBUG
+
 namespace OpenRAVE {
 
 namespace PiecewisePolynomialsInternal {
@@ -59,8 +61,13 @@ public:
     //
     size_t ndof;
     int envid;
-    
+
     std::vector<Coordinate> _cacheCoordsVect;
+
+#ifdef QUINTIC_SMOOTHER_POLY_CHECKING_DEBUG
+    dReal _failedPoint;
+    dReal _failedValue;
+#endif
 
 }; // end class PolynomialChecker
 

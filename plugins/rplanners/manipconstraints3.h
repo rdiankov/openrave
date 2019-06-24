@@ -466,7 +466,7 @@ public:
                 ss << itCoord->point << ",";
             }
             ss << "]";
-            RAVELOG_DEBUG_FORMAT("chunk.duration=%f; %s; fTimeWhenInvalid=%f", chunkIn.duration%ss.str()%fTimeWhenInvalid);
+            RAVELOG_DEBUG_FORMAT("chunk.duration=%.15e; %s; fTimeWhenInvalid=%.15e; maxActualManipSpeed=%.15e; maxActualManipAccel=%.15e", chunkIn.duration%ss.str()%fTimeWhenInvalid%maxActualManipSpeed%maxActualManipAccel);
         }
 
         return PiecewisePolynomialsInternal::CheckReturn(retcode, fReductionFactor, maxActualManipSpeed, maxActualManipAccel);

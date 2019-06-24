@@ -41,16 +41,28 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomial(const Polynomial& p, co
     // Check position limits
     val = p.Eval(0);
     if( val > xmax + g_fPolynomialEpsilon || val < xmin - g_fPolynomialEpsilon ) {
+#ifdef QUINTIC_SMOOTHER_POLY_CHECKING_DEBUG
+        _failedPoint = 0;
+        _failedValue = val;
+#endif
         return PCR_PositionLimitsViolation;
     }
     val = p.Eval(T);
     if( val > xmax + g_fPolynomialEpsilon || val < xmin - g_fPolynomialEpsilon ) {
+#ifdef QUINTIC_SMOOTHER_POLY_CHECKING_DEBUG
+        _failedPoint = T;
+        _failedValue = val;
+#endif
         return PCR_PositionLimitsViolation;
     }
     for( std::vector<Coordinate>::const_iterator it = p.vcextrema.begin(); it != p.vcextrema.end(); ++it ) {
         if( it->point >= -g_fPolynomialEpsilon && it->point <= T + g_fPolynomialEpsilon ) {
             // This extremum occurs in the range
             if( it->value > xmax + g_fPolynomialEpsilon || it->value < xmin - g_fPolynomialEpsilon ) {
+#ifdef QUINTIC_SMOOTHER_POLY_CHECKING_DEBUG
+                _failedPoint = it->point;
+                _failedValue = it->value;
+#endif
                 return PCR_PositionLimitsViolation;
             }
         }
@@ -60,10 +72,18 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomial(const Polynomial& p, co
     if( p.degree > 0 && vm > g_fPolynomialEpsilon ) {
         val = p.Evald1(0);
         if( val > vm + g_fPolynomialEpsilon || val < -vm - g_fPolynomialEpsilon ) {
+#ifdef QUINTIC_SMOOTHER_POLY_CHECKING_DEBUG
+            _failedPoint = 0;
+            _failedValue = val;
+#endif
             return PCR_VelocityLimitsViolation;
         }
         val = p.Evald1(T);
         if( val > vm + g_fPolynomialEpsilon || val < -vm - g_fPolynomialEpsilon ) {
+#ifdef QUINTIC_SMOOTHER_POLY_CHECKING_DEBUG
+            _failedPoint = T;
+            _failedValue = val;
+#endif
             return PCR_VelocityLimitsViolation;
         }
         p.FindAllLocalExtrema(1, vcoords);
@@ -71,6 +91,10 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomial(const Polynomial& p, co
             if( it->point >= -g_fPolynomialEpsilon && it->point <= T + g_fPolynomialEpsilon ) {
                 // This extremum occurs in the range
                 if( it->value > vm + g_fPolynomialEpsilon || it->value < -vm - g_fPolynomialEpsilon ) {
+#ifdef QUINTIC_SMOOTHER_POLY_CHECKING_DEBUG
+                    _failedPoint = it->point;
+                    _failedValue = it->value;
+#endif
                     return PCR_VelocityLimitsViolation;
                 }
             }
@@ -81,10 +105,18 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomial(const Polynomial& p, co
     if( p.degree > 1 && am > g_fPolynomialEpsilon ) {
         val = p.Evald2(0);
         if( val > am + g_fPolynomialEpsilon || val < -am - g_fPolynomialEpsilon ) {
+#ifdef QUINTIC_SMOOTHER_POLY_CHECKING_DEBUG
+            _failedPoint = 0;
+            _failedValue = val;
+#endif
             return PCR_AccelerationLimitsViolation;
         }
         val = p.Evald2(T);
         if( val > am + g_fPolynomialEpsilon || val < -am - g_fPolynomialEpsilon ) {
+#ifdef QUINTIC_SMOOTHER_POLY_CHECKING_DEBUG
+            _failedPoint = T;
+            _failedValue = val;
+#endif
             return PCR_AccelerationLimitsViolation;
         }
         p.FindAllLocalExtrema(2, vcoords);
@@ -92,6 +124,10 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomial(const Polynomial& p, co
             if( it->point >= -g_fPolynomialEpsilon && it->point <= T + g_fPolynomialEpsilon ) {
                 // This extremum occurs in the range
                 if( it->value > am + g_fPolynomialEpsilon || it->value < -am - g_fPolynomialEpsilon ) {
+#ifdef QUINTIC_SMOOTHER_POLY_CHECKING_DEBUG
+                    _failedPoint = it->point;
+                    _failedValue = it->value;
+#endif
                     return PCR_AccelerationLimitsViolation;
                 }
             }
@@ -102,10 +138,18 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomial(const Polynomial& p, co
     if( p.degree > 2 && jm > g_fPolynomialEpsilon ) {
         val = p.Evald3(0);
         if( val > jm + g_fPolynomialEpsilon || val < -jm - g_fPolynomialEpsilon ) {
+#ifdef QUINTIC_SMOOTHER_POLY_CHECKING_DEBUG
+            _failedPoint = 0;
+            _failedValue = val;
+#endif
             return PCR_JerkLimitsViolation;
         }
         val = p.Evald3(T);
         if( val > jm + g_fPolynomialEpsilon || val < -jm - g_fPolynomialEpsilon ) {
+#ifdef QUINTIC_SMOOTHER_POLY_CHECKING_DEBUG
+            _failedPoint = T;
+            _failedValue = val;
+#endif
             return PCR_JerkLimitsViolation;
         }
         p.FindAllLocalExtrema(3, vcoords);
@@ -113,6 +157,10 @@ PolynomialCheckReturn PolynomialChecker::CheckPolynomial(const Polynomial& p, co
             if( it->point >= -g_fPolynomialEpsilon && it->point <= T + g_fPolynomialEpsilon ) {
                 // This extremum occurs in the range
                 if( it->value > jm + g_fPolynomialEpsilon || it->value < -jm - g_fPolynomialEpsilon ) {
+#ifdef QUINTIC_SMOOTHER_POLY_CHECKING_DEBUG
+                    _failedPoint = it->point;
+                    _failedValue = it->value;
+#endif
                     return PCR_JerkLimitsViolation;
                 }
             }
@@ -171,6 +219,9 @@ PolynomialCheckReturn PolynomialChecker::CheckPiecewisePolynomialTrajectory(cons
             }
             ret = CheckPolynomial(itchunk->vpolynomials[idof], itchunk->duration, xminVect[idof], xmaxVect[idof], vm, am, jm);
             if( ret != PCR_Normal ) {
+#ifdef QUINTIC_SMOOTHER_POLY_CHECKING_DEBUG
+                RAVELOG_VERBOSE_FORMAT("env=%d, checking traj failed ret=%x at ichunk=%d; idof=%d; t=%f; val=%f", envid%(itchunk - traj.vchunks.begin())%idof%ret%_failedPoint%_failedValue);
+#endif
                 break;
             }
         }
