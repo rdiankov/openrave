@@ -163,6 +163,7 @@ PlannerStatus& PlannerStatus::SetPlannerParameters(PlannerParametersConstPtr par
 
 void PlannerStatus::SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Document::AllocatorType& alloc) const
 {
+    rPlannerStatus.SetObject();
     openravejson::SetJsonValueByKey(rPlannerStatus, "errorOrigin", errorOrigin, alloc);
     openravejson::SetJsonValueByKey(rPlannerStatus, "description", description, alloc);
     openravejson::SetJsonValueByKey(rPlannerStatus, "statusCode", statusCode, alloc);
