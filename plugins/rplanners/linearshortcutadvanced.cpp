@@ -20,6 +20,7 @@
 // #define PROGRESS_DEBUG // uncomment this to get shortcut progress-related logs
 // #define LINEAR_SMOOTHER_DEBUG // uncomment this to save trajectory at each stage of shortcutting
 // #define TIMING_DEBUG // uncomment this to get timing information
+#define LINEAR_SMOOTHER_ENABLE_LAZYCOLLISIONCHECKING
 
 class ShortcutLinearPlanner : public PlannerBase
 {
@@ -237,7 +238,11 @@ protected:
 #ifdef TIMING_DEBUG
             _tStartCheckPathAllConstraints = utils::GetMicroTime();
 #endif
-            int ret = parameters->CheckPathAllConstraints(itstartnode->first, itendnode->first, std::vector<dReal>(), std::vector<dReal>(), 0, IT_Open, 0xffff|CFO_FillCheckedConfiguration, _filterreturn);
+            int options = 0xffff|CFO_FillCheckedConfiguration;
+#ifdef LINEAR_SMOOTHER_ENABLE_LAZYCOLLISIONCHECKING
+            options = options & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions); // postpone all collision checking until the later stage
+#endif
+            int ret = parameters->CheckPathAllConstraints(itstartnode->first, itendnode->first, std::vector<dReal>(), std::vector<dReal>(), 0, IT_Open, options, _filterreturn);
 #ifdef TIMING_DEBUG
             _tEndCheckPathAllConstraints = utils::GetMicroTime();
             RAVELOG_DEBUG_FORMAT("env=%d, time spent calling CheckPathAllConstraints=%f s (ret=0x%x; num returned configs=%d)", GetEnv()->GetId()%(0.000001f*(float)(_tEndCheckPathAllConstraints - _tStartCheckPathAllConstraints))%ret%_filterreturn->_configurationtimes.size());
@@ -303,6 +308,25 @@ protected:
 #endif
                 continue;
             }
+
+#ifdef LINEAR_SMOOTHER_ENABLE_LAZYCOLLISIONCHECKING
+            bool bInCollision = false;
+            itnewconfig = _filterreturn->_configurations.begin();
+            while( itnewconfig != _filterreturn->_configurations.end() ) {
+                std::copy(itnewconfig, itnewconfig + dof, vnewconfig0.begin());
+                if( parameters->CheckPathAllConstraints(vnewconfig0, vnewconfig0, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, CFO_CheckEnvCollisions|CFO_CheckSelfCollisions) != 0 ) {
+                    bInCollision = true;
+                    break;
+                }
+                itnewconfig += dof;
+            }
+            if( bInCollision ) {
+#ifdef PROGRESS_DEBUG
+                RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, rejecting due to collisions", GetEnv()->GetId()%itercount%numiters);
+#endif
+                continue;
+            }
+#endif
 
             // finally add
 #ifdef TIMING_DEBUG
