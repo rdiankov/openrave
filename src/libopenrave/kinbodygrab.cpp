@@ -159,7 +159,7 @@ void KinBody::Release(KinBody &body)
         }
     }
 
-    RAVELOG_DEBUG(str(boost::format("Body %s: body %s not grabbed\n")%GetName()%body.GetName()));
+    RAVELOG_DEBUG_FORMAT("env=%d, body %s is not grabbing body %s", GetEnv()->GetId()%GetName()%body.GetName());
 }
 
 void KinBody::ReleaseAllGrabbed()
