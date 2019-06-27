@@ -44,7 +44,7 @@ namespace OpenRAVE {
 }
 #define RAVE_DESERIALIZEJSON_REQUIRED(value, key, destination) { \
     if (!(value).HasMember(key)) { \
-        throw OPENRAVE_EXCEPTION_FORMAT("failed deserialize json due to misisng key \"%s\"", key, ORE_InvalidArguments); \
+        throw OPENRAVE_EXCEPTION_FORMAT("failed deserialize json due to missing key \"%s\"", key, ORE_InvalidArguments); \
     } \
     RaveDeserializeJSON((value)[key], destination); \
 }

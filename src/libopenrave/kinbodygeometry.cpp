@@ -544,8 +544,12 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         _type = GT_Container;
         RAVE_DESERIALIZEJSON_REQUIRED(value, "outerExtents", _vGeomData);
         RAVE_DESERIALIZEJSON_REQUIRED(value, "innerExtents", _vGeomData2);
-        RAVE_DESERIALIZEJSON_REQUIRED(value, "bottomCross", _vGeomData3);
-        RAVE_DESERIALIZEJSON_REQUIRED(value, "bottom", _vGeomData4);
+
+        _vGeomData3 = Vector();
+        RAVE_DESERIALIZEJSON_OPTIONAL(value, "bottomCross", _vGeomData3);
+
+        _vGeomData4 = Vector();
+        RAVE_DESERIALIZEJSON_OPTIONAL(value, "bottom", _vGeomData4);
 
         _vGeomData *= fUnitScale;
         _vGeomData2 *= fUnitScale;
