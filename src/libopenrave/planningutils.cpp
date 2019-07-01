@@ -526,7 +526,7 @@ public:
                             deltaq.at(i) = vcurconfig.at(i) - vprevconfig.at(i);
                         }
                         if( _parameters->SetStateValues(vprevconfig, 0) != 0 ) {
-                            throw OPENRAVE_EXCEPTION_FORMAT0(_("time %fs-%fs, failed to set state values"), ORE_InconsistentConstraints);
+                            throw OPENRAVE_EXCEPTION_FORMAT(_("time %fs-%fs, failed to set state values"), *itprevtime%*itsampletime, ORE_InconsistentConstraints);
                         }
                         vector<dReal> vtemp = vprevconfig;
                         if( _parameters->_neighstatefn(vtemp,deltaq,NSO_OnlyHardConstraints) == NSS_Failed ) {
@@ -592,7 +592,7 @@ PlannerStatus _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr prob
         traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
         traj->Init(spec);
         traj->Insert(0,data);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     EnvironmentBasePtr env = traj->GetEnv();
@@ -618,17 +618,18 @@ PlannerStatus _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr prob
     params->_hastimestamps = hastimestamps;
     params->_sExtraParameters += plannerparameters;
     if( !planner->InitPlan(probot,params) ) {
-        return PS_Failed;
+        return PlannerStatus("InitPlan failed", PS_Failed);
     }
-    if( planner->PlanPath(traj) != PS_HasSolution ) {
-        return PS_Failed;
+    PlannerStatus plannerStatus = planner->PlanPath(traj);
+    if( plannerStatus.GetStatusCode() != PS_HasSolution ) {
+        return plannerStatus;
     }
 
     if( bsmooth && (RaveGetDebugLevel() & Level_VerifyPlans) ) {
         RobotBase::RobotStateSaver saver(probot);
         planningutils::VerifyTrajectory(params,traj);
     }
-    return PS_HasSolution;
+    return PlannerStatus(PS_HasSolution);
 }
 
 ActiveDOFTrajectorySmoother::ActiveDOFTrajectorySmoother(RobotBasePtr robot, const std::string& _plannername, const std::string& plannerparameters)
@@ -652,7 +653,7 @@ ActiveDOFTrajectorySmoother::ActiveDOFTrajectorySmoother(RobotBasePtr robot, con
     _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, boost::bind(&ActiveDOFTrajectorySmoother::_UpdateParameters, this));
 }
 
-PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj)
+PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj, int planningoptions)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need velocities, but should at least add a time group
@@ -662,13 +663,13 @@ PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj)
         traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
         traj->Init(spec);
         traj->Insert(0,data);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     EnvironmentBasePtr env = traj->GetEnv();
     CollisionOptionsStateSaver optionstate(env->GetCollisionChecker(),env->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
-    PlannerStatus status = _planner->PlanPath(traj);
-    if( status & PS_HasSolution ) {
+    PlannerStatus status = _planner->PlanPath(traj, planningoptions);
+    if( status.GetStatusCode() & PS_HasSolution ) {
         if( RaveGetDebugLevel() & Level_VerifyPlans ) {
             RobotBase::RobotStateSaver saver(_robot);
             planningutils::VerifyTrajectory(_planner->GetParameters(),traj);
@@ -717,7 +718,7 @@ ActiveDOFTrajectoryRetimer::ActiveDOFTrajectoryRetimer(RobotBasePtr robot, const
     _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, boost::bind(&ActiveDOFTrajectoryRetimer::_UpdateParameters, this));
 }
 
-PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool hastimestamps)
+PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool hastimestamps, int planningoptions)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need velocities, but should at least add a time group
@@ -727,7 +728,7 @@ PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool 
         traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
         traj->Init(spec);
         traj->Insert(0,data);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     TrajectoryTimingParametersPtr parameters = boost::dynamic_pointer_cast<TrajectoryTimingParameters>(_parameters);
@@ -738,7 +739,7 @@ PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool 
         }
     }
 
-    return _planner->PlanPath(traj);
+    return _planner->PlanPath(traj, planningoptions);
 }
 
 void ActiveDOFTrajectoryRetimer::_UpdateParameters()
@@ -770,7 +771,7 @@ PlannerStatus _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal 
         traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
         traj->Init(spec);
         traj->Insert(0,data);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     EnvironmentMutex::scoped_lock lockenv(traj->GetEnv()->GetMutex());
@@ -794,17 +795,18 @@ PlannerStatus _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal 
     params->_hastimestamps = hastimestamps;
     params->_sExtraParameters += plannerparameters;
     if( !planner->InitPlan(RobotBasePtr(),params) ) {
-        return PS_Failed;
+        return PlannerStatus("InitPlan failed", PS_Failed);
     }
-    if( planner->PlanPath(traj) != PS_HasSolution ) {
-        return PS_Failed;
+    PlannerStatus plannerStatus = planner->PlanPath(traj);
+    if( !(plannerStatus.statusCode & PS_HasSolution) ) {
+        return plannerStatus;
     }
 
     if( bsmooth && (RaveGetDebugLevel() & Level_VerifyPlans) ) {
         PlannerBase::PlannerParameters::StateSaver saver(params);
         planningutils::VerifyTrajectory(params,traj);
     }
-    return PS_HasSolution;
+    return PlannerStatus(PS_HasSolution);
 }
 
 static void diffstatefn(std::vector<dReal>& q1, const std::vector<dReal>& q2, const std::vector<int> vrotaxes)
@@ -898,7 +900,7 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
         traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
         traj->Init(spec);
         traj->Insert(0,data);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     EnvironmentMutex::scoped_lock lockenv(traj->GetEnv()->GetMutex());
@@ -992,13 +994,15 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
 
     params->_hastimestamps = hastimestamps;
     params->_sExtraParameters = plannerparameters;
+
     if( !planner->InitPlan(RobotBasePtr(),params) ) {
-        return PS_Failed;
+        return PlannerStatus("InitPlan failed", PS_Failed);
     }
-    if( planner->PlanPath(traj) != PS_HasSolution ) {
-        return PS_Failed;
+    PlannerStatus plannerStatus = planner->PlanPath(traj);
+    if( plannerStatus.GetStatusCode() != PS_HasSolution ) {
+        return plannerStatus;
     }
-    return PS_HasSolution;
+    return PlannerStatus(PS_HasSolution);
 }
 
 AffineTrajectoryRetimer::AffineTrajectoryRetimer(const std::string& plannername, const std::string& plannerparameters)
@@ -1038,7 +1042,7 @@ void AffineTrajectoryRetimer::SetPlanner(const std::string& plannername, const s
     }
 }
 
-PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps)
+PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, int planningoptions)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need retiming, but should at least add a time group
@@ -1048,7 +1052,7 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
         traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
         traj->Init(spec);
         traj->Insert(0,data);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     EnvironmentBasePtr env = traj->GetEnv();
@@ -1153,7 +1157,7 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
         }
     }
 
-    return _planner->PlanPath(traj);
+    return _planner->PlanPath(traj, planningoptions);
 }
 
 PlannerStatus SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
@@ -1334,7 +1338,7 @@ size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<
     // This ensures that the beginning and final velocities will be preserved
     //RAVELOG_VERBOSE_FORMAT("env=%d, inserting point into %d with planner %s and parameters %s", robot->GetEnv()->GetId()%waypointindex%newplannername%plannerparameters);
     // make sure velocities are set
-    if( !(RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername,plannerparameters+std::string("<hasvelocities>1</hasvelocities>")) & PS_HasSolution) ) {
+    if( !(RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername,plannerparameters+std::string("<hasvelocities>1</hasvelocities>")).GetStatusCode() & PS_HasSolution) ) {
         throw OPENRAVE_EXCEPTION_FORMAT("env=%d failed to retime init traj", robot->GetEnv()->GetId(), ORE_Assert);
     }
 
@@ -1425,7 +1429,7 @@ size_t InsertWaypointWithRetiming(int waypointindex, const std::vector<dReal>& d
     trajinitial->Init(newspec);
     trajinitial->Insert(0,vwaypointstart);
     trajinitial->Insert(1,vwaypointend);
-    if( !(planner->PlanPath(trajinitial) & PS_HasSolution) ) {
+    if( !(planner->PlanPath(trajinitial).GetStatusCode() & PS_HasSolution) ) {
         throw OPENRAVE_EXCEPTION_FORMAT0(_("failed to plan path"), ORE_Assert);
     }
 
@@ -1535,7 +1539,7 @@ size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalue
         ptesttraj->Insert(0,vwaypoint);
         ptesttraj->Insert(1,vstartdata,spectotal);
 
-        if( planner->PlanPath(ptesttraj) & PS_HasSolution ) {
+        if( planner->PlanPath(ptesttraj).GetStatusCode() & PS_HasSolution ) {
             // before checking, make sure it is better than we currently have
             dReal fNewDuration = fRemainingDuration+ptesttraj->GetDuration();
             if( fNewDuration < fBestDuration ) {
@@ -1827,7 +1831,7 @@ TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal startt
 
     if( endtime < traj->GetDuration() ) {
         endindex = traj->GetFirstWaypointIndexAfterTime(endtime);
-        if( endindex >= traj->GetNumWaypoints() ) {
+        if( endindex >= (int)traj->GetNumWaypoints() ) {
             endindex = traj->GetNumWaypoints()-1;
         }
     }
@@ -2613,6 +2617,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         int numRepeating = 0;
         dReal fBestNewStep=0;
         bool bComputeNewStep = true; // if true, then compute fBestNewStep from fStep. Otherwise use the previous computed one
+        bool bHasNewTempConfigToAdd = false;
         while(istep < numSteps && prevtimestep < timeelapsed) {
             int nstateret = 0;
             if( istep >= start ) {
@@ -2624,6 +2629,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
                     filterreturn->_configurationtimes.push_back(timestep);
                 }
+                bHasNewTempConfigToAdd = false;
             }
             if( nstateret != 0 ) {
                 if( !!filterreturn ) {
@@ -2853,6 +2859,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             if( neighstatus == NSS_SuccessfulWithDeviation ) {
                 bHasRampDeviatedFromInterpolation = true;
             }
+            bHasNewTempConfigToAdd = true;
 
             bool bHasMoved = false;
             {
@@ -2979,6 +2986,36 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                             filterreturn->_returncode = nstateret;
                         }
                         return nstateret;
+                    }
+                }
+            }
+        }
+
+        if( bCheckEnd && bHasNewTempConfigToAdd && bHasRampDeviatedFromInterpolation ) {
+            dReal dist = params->_distmetricfn(_vtempconfig, q1);
+            if( dist > 1e-7 ) {
+                RAVELOG_DEBUG_FORMAT("env=%d, ramp has deviated, so most likely q1 is not following constraints and there's a difference dist=%f", _listCheckBodies.front()->GetEnv()->GetId()%dist);
+                bCheckEnd = false; // to prevent adding the last point
+                
+                if( !!filterreturn ) {
+                    if( options & CFO_FillCheckedConfiguration ) {
+                        int nstateret = 0;
+                        if( istep >= start ) {
+                            nstateret = _SetAndCheckState(params, _vtempconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
+                            if( !!params->_getstatefn ) {
+                                params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits
+                            }
+                            if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+                                filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
+                                filterreturn->_configurationtimes.push_back(timestep);
+                            }
+                        }
+                        if( nstateret != 0 ) {
+                            if( !!filterreturn ) {
+                                filterreturn->_returncode = nstateret;
+                            }
+                            return nstateret;
+                        }
                     }
                 }
             }

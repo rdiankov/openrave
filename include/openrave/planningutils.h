@@ -148,7 +148,7 @@ public:
     ///
     /// \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     /// \return PlannerStatus of the status of the smoothing planner
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj);
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, int planningoptions=0);
 
 protected:
     void _UpdateParameters();
@@ -188,7 +188,7 @@ public:
     ///
     /// \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     /// \return PlannerStatus of the status of the smoothing planner
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, bool hastimestamps=false);
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, bool hastimestamps=false, int planningoptions=0);
 
 protected:
     void _UpdateParameters();
@@ -246,7 +246,7 @@ public:
     ///
     /// \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     /// \return PlannerStatus of the status of the smoothing planner
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false);
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false, int planningoptions=0);
 
 protected:
     std::string _plannername, _extraparameters;

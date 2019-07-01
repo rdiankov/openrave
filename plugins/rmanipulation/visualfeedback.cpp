@@ -1383,7 +1383,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 RAVELOG_ERROR("InitPlan failed\n");
                 return false;
             }
-            if( planner->PlanPath(ptraj) ) {
+            if( planner->PlanPath(ptraj).GetStatusCode() ) {
                 bSuccess = true;
                 RAVELOG_INFOA("finished planning\n");
                 break;
@@ -1502,7 +1502,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             return false;
         }
 
-        if( planner->PlanPath(ptraj) ) {
+        if( planner->PlanPath(ptraj).GetStatusCode() ) {
             bSuccess = true;
         }
         else {

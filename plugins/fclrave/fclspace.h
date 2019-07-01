@@ -573,6 +573,7 @@ private:
 
         case OpenRAVE::GT_Container:
         case OpenRAVE::GT_TriMesh:
+        case OpenRAVE::GT_Cage:
         {
             const OpenRAVE::TriMesh& mesh = info._meshcollision;
             if (mesh.vertices.empty() || mesh.indices.empty()) {

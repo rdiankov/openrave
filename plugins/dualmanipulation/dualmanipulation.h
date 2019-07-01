@@ -302,7 +302,7 @@ protected:
                 return false;
             }
 
-            if(rrtplanner->PlanPath(ptraj) ) {
+            if(rrtplanner->PlanPath(ptraj).GetStatusCode() ) {
                 bSuccess = true;
                 RAVELOG_INFOA("finished planning\n");
                 break;

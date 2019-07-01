@@ -226,6 +226,9 @@ GeometryInfoReader::GeometryInfoReader(KinBody::GeometryInfoPtr pgeom, const Att
     else if( _stricmp(type.c_str(), "container") == 0 ) {
         _pgeom->_type = GT_Container;
     }
+    else if( _stricmp(type.c_str(), "cage") == 0 ) {
+        _pgeom->_type = GT_Cage;
+    }
     else {
         RAVELOG_WARN(str(boost::format("type %s not supported\n")%type));
     }
@@ -385,6 +388,26 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
             if( xmlname == "bottom_cross" ) {
                 _ss >> _pgeom->_vGeomData3.x >> _pgeom->_vGeomData3.y >> _pgeom->_vGeomData3.z;
             }
+            if( xmlname == "bottom" ) {
+                _ss >> _pgeom->_vGeomData4.x >> _pgeom->_vGeomData4.y >> _pgeom->_vGeomData4.z;
+            }
+
+            break;
+        case GT_Cage:
+            if( xmlname == "sidewall" ) {
+                _pgeom->_vSideWalls.push_back({});
+            }
+            if( xmlname == "transf" ) {
+                _ss >> _pgeom->_vSideWalls.back().transf;
+            }
+            if( xmlname == "vExtents" ) {
+                _ss >> _pgeom->_vSideWalls.back().vExtents;
+            }
+            if( xmlname == "type" ) {
+                int32_t type;
+                _ss >> type;
+                _pgeom->_vSideWalls.back().type = static_cast<KinBody::GeometryInfo::SideWallType>(type);
+            }
 
             break;
         case GT_Cylinder:
@@ -459,11 +482,11 @@ ElectricMotorActuatorInfoReader::ElectricMotorActuatorInfoReader(ElectricMotorAc
         RAVELOG_INFOA("no actuator type, defaulting to electric_motor\n");
         type = "electric_motor";
     }
-    
+
     if( type != "electric_motor" ) {
         throw OPENRAVE_EXCEPTION_FORMAT(_("does not support actuator '%s' type"), type, ORE_InvalidArguments);
     }
-    
+
     _pinfo.reset(new ElectricMotorActuatorInfo());
 }
 
@@ -481,7 +504,7 @@ BaseXMLReader::ProcessElement ElectricMotorActuatorInfoReader::startElement(cons
         _pcurreader.reset(new ElectricMotorActuatorInfoReader(_pinfo, atts));
         return PE_Support;
     }
-    
+
     static boost::array<string, 18> tags = { { "gear_ratio", "assigned_power_rating", "max_speed", "no_load_speed", "stall_torque", "nominal_speed_torque_point", "max_speed_torque_point", "nominal_torque", "rotor_inertia", "torque_constant", "nominal_voltage", "speed_constant", "starting_current", "terminal_resistance", "coloumb_friction", "viscous_friction", "model_type", "max_instantaneous_torque", } };
     if( find(tags.begin(),tags.end(),xmlname) != tags.end() ) {
         return PE_Support;

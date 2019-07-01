@@ -226,11 +226,11 @@ public:
         return _parameters;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         BOOST_ASSERT(!!_parameters && !!ptraj);
         if( ptraj->GetNumWaypoints() < 2 ) {
-            return PS_Failed;
+            return PlannerStatus(PS_Failed);
         }
 
         //Writing the incoming traj
@@ -316,11 +316,9 @@ public:
                 }
                 if(!res) {
                     std::string filename = _DumpTrajectory(ptraj, Level_Verbose);
-                    //At the very least, get the errorOrigin and description up by sating in _plannerError and getting it ikplanningmodule
                     std::string description = _("Could not obtain a feasible trajectory from initial quadratic trajectory\n");
                     RAVELOG_WARN(description);
-                    _plannerError = PlannerBase::PlannerError(description);
-                    return PS_Failed;
+                    return PlannerStatus(description, PS_Failed);
                 }
                 RAVELOG_DEBUG("Cool: obtained a feasible trajectory from initial quadratic trajectory\n");
                 ramps.swap(ramps2);
@@ -373,7 +371,7 @@ public:
                 // and if dynamics is always satisfied at zero velocity
                 if( !SetMilestones(ramps, path,checker) ) {
                     _DumpTrajectory(ptraj, Level_Verbose);
-                    return PS_Failed;
+                    return PlannerStatus(PS_Failed);
                 }
             }
 
@@ -391,8 +389,7 @@ public:
                         _DumpTrajectory(ptraj, Level_Verbose);
                         std::string description = str(boost::format(_("Ramp %d/%d of original traj invalid"))%iramp%ramps.size());
                         RAVELOG_WARN(description);
-                        _plannerError = PlannerBase::PlannerError(description);
-                        return PS_Failed;
+                        return PlannerStatus(description, PS_Failed);
                     }
                     ++iramp;
                 }
@@ -433,7 +430,7 @@ public:
                 RAVELOG_DEBUG("End shortcutting\n");
                 if( numshortcuts < 0 ) {
                     // interrupted
-                    return PS_Interrupted;
+                    return PlannerStatus(PS_Interrupted);
                 }
 
 
@@ -474,10 +471,10 @@ public:
 
 
             PlannerStatus status = ConvertRampsToOpenRAVETrajectory(ramps, &checker, ptraj->GetXMLId());
-            if( status == PS_Interrupted ) {
-                return PS_Interrupted;
+            if( status.GetStatusCode() == PS_Interrupted ) {
+                return status;
             }
-            else if( !(status & PS_HasSolution) ) {
+            else if( !(status.GetStatusCode() & PS_HasSolution) ) {
                 _DumpTrajectory(ptraj, Level_Verbose);
                 return status;
             }
@@ -489,7 +486,7 @@ public:
                 ptraj->GetWaypoint(0,vtrajpoints,posspec);
                 _dummytraj->Insert(0, vtrajpoints, posspec);
             }
-            OPENRAVE_ASSERT_OP(status, ==, PS_HasSolution);
+            OPENRAVE_ASSERT_OP(status.GetStatusCode(), ==, PS_HasSolution);
             OPENRAVE_ASSERT_OP(RaveFabs(totaltime-_dummytraj->GetDuration()),<,0.001);
             RAVELOG_DEBUG_FORMAT("after shortcutting %d times: path waypoints=%d, traj waypoints=%d, traj time=%fs", numshortcuts%ramps.size()%_dummytraj->GetNumWaypoints()%totaltime);
             ptraj->Swap(_dummytraj);
@@ -498,12 +495,12 @@ public:
             _DumpTrajectory(ptraj, Level_Verbose);
             std::string description = str(boost::format(_("parabolic planner failed: %s"))% ex.what());
             RAVELOG_WARN(description);
-            _plannerError = PlannerBase::PlannerError(description);
-            return PS_Failed;
+            return PlannerStatus(description, PS_Failed);
+
         }
 
         RAVELOG_DEBUG(str(boost::format("path optimizing - computation time=%fs\n")%(0.001f*(float)(utils::GetMilliTime()-basetime))));
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     std::string _DumpTrajectory(TrajectoryBasePtr traj, DebugLevel level)
@@ -554,7 +551,7 @@ public:
         _dummytraj->Init(newspec);
 
         if( ramps.size() == 0 ) {
-            return PS_HasSolution;
+            return PlannerStatus(PS_HasSolution);
         }
 
         // separate all the acceleration switches into individual points
@@ -574,22 +571,26 @@ public:
                 int options = 0xffff; // no perturbation
                 if( pchecker->Check(*itrampnd,options) != 0) {
                     // unfortunately happens sometimes when the robot is close to corners.. not sure if returning is failing is the right solution here..
-                    RAVELOG_WARN("original ramp does not satisfy constraints!\n");
-                    return PS_Failed;
+
+                    std::string description = "original ramp does not satisfy constraints!\n";
+                    RAVELOG_WARN(description);
+                    return PlannerStatus(description, PS_Failed);
                 }
                 _progress._iteration+=1;
                 if( _CallCallbacks(_progress) == PA_Interrupt ) {
-                    return PS_Interrupted;
+                    return PlannerStatus(PS_Interrupted);
                 }
             }
 
             if( itrampnd->ramps.at(0).tswitch1 > 0 && itrampnd->ramps.at(0).tswitch1 < itrampnd->endTime-ParabolicRamp::EpsilonT ) {
-                RAVELOG_WARN("ramp is not unitary\n");
-                return PS_Failed;
+                std::string description = "ramp is not unitary\n";
+                RAVELOG_WARN(description);
+                return PlannerStatus(description, PS_Failed);
             }
             if( itrampnd->ramps.at(0).tswitch2 > 0 && itrampnd->ramps.at(0).tswitch2 < itrampnd->endTime-ParabolicRamp::EpsilonT ) {
-                RAVELOG_WARN("ramp is not unitary\n");
-                return PS_Failed;
+                std::string description = "ramp is not unitary\n";
+                RAVELOG_WARN(description);
+                return PlannerStatus(description, PS_Failed);
             }
 
             _vtrajpointscache.resize(newspec.GetDOF());
@@ -602,7 +603,7 @@ public:
             _dummytraj->Insert(_dummytraj->GetNumWaypoints(),_vtrajpointscache);
         }
 
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     bool SetMilestones(std::list<ParabolicRamp::ParabolicRampND>& ramps, const vector<ParabolicRamp::Vector>& x, ParabolicRamp::RampFeasibilityChecker& check){

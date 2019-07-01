@@ -24,7 +24,7 @@ namespace OpenRAVE {
 
 static std::string s_linearsmoother = "linearsmoother"; //"shortcut_linear";
 
-std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameters& pp)
+std::istream& operator>>(std::istream& I, PlannerParameters& pp)
 {
     if( !!I) {
         stringbuf buf;
@@ -84,107 +84,149 @@ int AddStatesWithLimitCheck(std::vector<dReal>& q, const std::vector<dReal>& qde
     return status;
 }
 
-PlannerBase::PlannerError::PlannerError():
-    _sErrorOrigin(""),
-    _sDescription(""),
-    _report(NULL)
+PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, CollisionReportPtr report) :
+    description(description),
+    statusCode(statusCode),
+    report(report)
 {
+    // not sure if this works...
+    errorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
 }
 
-PlannerBase::PlannerError::PlannerError(const std::string& description):
-    _sDescription(description),
-    _report(NULL)
+PlannerStatus::PlannerStatus(const int statusCode) :
+    PlannerStatus("", statusCode)
 {
-    _sErrorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
-}
-    
-PlannerBase::PlannerError::PlannerError(const std::string& description, CollisionReportPtr report, IkParameterization ikparam):
-    _sDescription(description),
-    _report(report),
-    _ikparam(ikparam)
-    //PlannerError(origin, description, report)
-{
-    _sErrorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
-}
-    
-PlannerBase::PlannerError::PlannerError(const std::string& description, CollisionReportPtr report, std::vector<dReal> jointValues):
-    _sDescription(description),
-    _report(report),
-    _vJointValues(jointValues)
-    //PlannerError(origin, description, report)
-{
-    _sErrorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
-}
-
-PlannerBase::PlannerError::~PlannerError() {}
-
-bool PlannerBase::PlannerError::serializeToJson(rapidjson::Document& output) const
-{
-    openravejson::SetJsonValueByKey(output, "errorOrigin", _sErrorOrigin);
-    openravejson::SetJsonValueByKey(output, "description", _sDescription);
-    if(_vJointValues.size() > 0){
-        openravejson::SetJsonValueByKey(output, "jointValues", _vJointValues);
+    description.clear();
+    if(statusCode & PS_HasSolution) {
+        description += "planner succeeded. ";
+    }
+    else {
+        description += "planner failed with generic error. ";
     }
 
-    if(_report != NULL){
-        rapidjson::Document reportjson(rapidjson::kObjectType);
-        if(_report->plink1){
-            openravejson::SetJsonValueByKey(reportjson, "plink1", _report->plink1->GetName());
+    if(statusCode & PS_Interrupted) {
+        description += "planning was interrupted, but can be resumed by calling PlanPath again. ";
+    }
+    if(statusCode & PS_InterruptedWithSolution) {
+        description += "planning was interrupted, but a valid path/solution was returned. Can call PlanPath again to refine results. ";
+    }
+    if(statusCode & PS_FailedDueToCollision) {
+        description += "planner failed due to collision constraints. ";
+    }
+    if(statusCode & PS_FailedDueToInitial) {
+        description += "failed due to initial configurations. ";
+    }
+    if(statusCode & PS_FailedDueToGoal) {
+        description += "failed due to goal configurations. ";
+    }
+    if(statusCode & PS_FailedDueToKinematics) {
+        description += "failed due to kinematics constraints. ";
+    }
+    if(statusCode & PS_FailedDueToIK) {
+        description += "failed due to inverse kinematics (could be due to collisions or velocity constraints, but don't know). ";
+    }
+    if(statusCode & PS_FailedDueToVelocityConstraints) {
+        description += "failed due to velocity constraints. ";
+    }
+
+    if(description.empty()) {
+        RAVELOG_WARN_FORMAT(_("planner status code (0x%x) is not supported by planner status default constructor"), statusCode);
+    }
+}
+
+PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, const IkParameterization& ikparam, CollisionReportPtr report) :
+    PlannerStatus(description, statusCode, report)
+{
+    this->ikparam = ikparam;
+}
+
+PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, const std::vector<dReal>& jointValues, CollisionReportPtr report) :
+    PlannerStatus(description, statusCode, report)
+{
+    this->jointValues = jointValues;
+}
+
+PlannerStatus::~PlannerStatus() {
+}
+
+PlannerStatus& PlannerStatus::SetErrorOrigin(const std::string& errorOrigin)
+{
+    this->errorOrigin = errorOrigin;
+    return *this;
+}
+
+PlannerStatus& PlannerStatus::SetPlannerParameters(PlannerParametersConstPtr parameters)
+{
+    this->parameters = parameters;
+    return *this;
+}
+
+void PlannerStatus::SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Document::AllocatorType& alloc) const
+{
+    rPlannerStatus.SetObject();
+    openravejson::SetJsonValueByKey(rPlannerStatus, "errorOrigin", errorOrigin, alloc);
+    openravejson::SetJsonValueByKey(rPlannerStatus, "description", description, alloc);
+    openravejson::SetJsonValueByKey(rPlannerStatus, "statusCode", statusCode, alloc);
+    if(jointValues.size() > 0) {
+        openravejson::SetJsonValueByKey(rPlannerStatus, "jointValues", jointValues, alloc);
+    }
+
+    if(report != NULL) {
+        rapidjson::Value reportjson(rapidjson::kObjectType);
+        if(!!report->plink1) {
+            openravejson::SetJsonValueByKey(reportjson, "plink1", report->plink1->GetName(), alloc);
         }
-        if(_report->plink2){
-            openravejson::SetJsonValueByKey(reportjson, "plink2", _report->plink2->GetName());
+        if(!!report->plink2) {
+            openravejson::SetJsonValueByKey(reportjson, "plink2", report->plink2->GetName(), alloc);
         }
-        rapidjson::Document reportContactsjson(rapidjson::kObjectType);
-        for (size_t i=0; i<_report->contacts.size(); ++i) {
-            rapidjson::Document reportContactsPosjson(rapidjson::kObjectType);
-            openravejson::SetJsonValueByKey(reportContactsPosjson, "x", _report->contacts[i].pos.x);
-            openravejson::SetJsonValueByKey(reportContactsPosjson, "y", _report->contacts[i].pos.y);
-            openravejson::SetJsonValueByKey(reportContactsPosjson, "z", _report->contacts[i].pos.z);
-            openravejson::SetJsonValueByKey(reportContactsjson, std::to_string(i), reportContactsPosjson);
+        rapidjson::Value reportContactsjson(rapidjson::kObjectType);
+        for (size_t i=0; i<report->contacts.size(); ++i) {
+            rapidjson::Value reportContactsPosjson(rapidjson::kObjectType);
+            openravejson::SetJsonValueByKey(reportContactsPosjson, "x", report->contacts[i].pos.x, alloc);
+            openravejson::SetJsonValueByKey(reportContactsPosjson, "y", report->contacts[i].pos.y, alloc);
+            openravejson::SetJsonValueByKey(reportContactsPosjson, "z", report->contacts[i].pos.z, alloc);
+
+            rapidjson::Value rname;
+            openravejson::SaveJsonValue(rname, std::to_string(i), alloc);
+            reportContactsjson.AddMember(rname, reportContactsPosjson, alloc);
         }
-        openravejson::SetJsonValueByKey(reportjson, "contacts", reportContactsjson);
+        openravejson::SetJsonValueByKey(reportjson, "contacts", reportContactsjson, alloc);
         //Eventually, serialization could be in openravejson.h
-        openravejson::SetJsonValueByKey(output, "collisionReport", reportjson);
+        openravejson::SetJsonValueByKey(rPlannerStatus, "collisionReport", reportjson, alloc);
     }
 
     //Eventually, serialization could be in openravejson.h ?
-    try{
+    if( ikparam.GetType() != IKP_None ) {
         std::stringstream ss;
         ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
-        ss << _ikparam;
-        openravejson::SetJsonValueByKey(output, "IkParameterization", ss.str());
+        ss << ikparam;
+        openravejson::SetJsonValueByKey(rPlannerStatus, "ikparam", ss.str(), alloc);
     }
-    catch(const openrave_exception& ex){
-       //Ignore empty _ikparam
-    }
-    
-    //return DumpJson(extraoptionsjson);
-    return true;
 }
-    
-PlannerBase::PlannerParameters::StateSaver::StateSaver(PlannerParametersPtr params) : _params(params)
+
+PlannerParameters::StateSaver::StateSaver(PlannerParametersPtr params) : _params(params)
 {
     _params->_getstatefn(_values);
     OPENRAVE_ASSERT_OP((int)_values.size(),==,_params->GetDOF());
 }
 
-PlannerBase::PlannerParameters::StateSaver::~StateSaver()
+PlannerParameters::StateSaver::~StateSaver()
 {
     _Restore();
 }
 
-void PlannerBase::PlannerParameters::StateSaver::Restore()
+void PlannerParameters::StateSaver::Restore()
 {
     _Restore();
 }
 
-void PlannerBase::PlannerParameters::StateSaver::_Restore()
+void PlannerParameters::StateSaver::_Restore()
 {
     int ret = _params->SetStateValues(_values, 0);
     BOOST_ASSERT(ret==0);
 }
 
-PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _nMaxPlanningTime(0), _sPostProcessingPlanner(s_linearsmoother), _nRandomGeneratorSeed(0)
+PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _nMaxPlanningTime(0), _sPostProcessingPlanner(s_linearsmoother), _nRandomGeneratorSeed(0)
 {
     _diffstatefn = SubtractStates;
     _neighstatefn = AddStates;
@@ -212,16 +254,16 @@ PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparame
     _vXMLParameters.push_back("_nrandomgeneratorseed");
 }
 
-PlannerBase::PlannerParameters::~PlannerParameters()
+PlannerParameters::~PlannerParameters()
 {
 }
 
-PlannerBase::PlannerParameters::PlannerParameters(const PlannerParameters &r) : XMLReadable("")
+PlannerParameters::PlannerParameters(const PlannerParameters &r) : XMLReadable("")
 {
     BOOST_ASSERT(0);
 }
 
-PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const PlannerBase::PlannerParameters& r)
+PlannerParameters& PlannerParameters::operator=(const PlannerParameters& r)
 {
     // reset
     _costfn = r._costfn;
@@ -267,12 +309,12 @@ PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const 
     return *this;
 }
 
-void PlannerBase::PlannerParameters::copy(boost::shared_ptr<PlannerParameters const> r)
+void PlannerParameters::copy(boost::shared_ptr<PlannerParameters const> r)
 {
     *this = *r;
 }
 
-int PlannerBase::PlannerParameters::SetStateValues(const std::vector<dReal>& values, int options) const
+int PlannerParameters::SetStateValues(const std::vector<dReal>& values, int options) const
 {
     if( !!_setstatevaluesfn ) {
         return _setstatevaluesfn(values, options);
@@ -285,7 +327,7 @@ int PlannerBase::PlannerParameters::SetStateValues(const std::vector<dReal>& val
     throw openrave_exception(_("need to set PlannerParameters::_setstatevaluesfn"));
 }
 
-bool PlannerBase::PlannerParameters::serialize(std::ostream& O, int options) const
+bool PlannerParameters::serialize(std::ostream& O, int options) const
 {
     O << _configurationspecification << endl;
     O << "<_vinitialconfig>";
@@ -345,7 +387,7 @@ bool PlannerBase::PlannerParameters::serialize(std::ostream& O, int options) con
     return !!O;
 }
 
-BaseXMLReader::ProcessElement PlannerBase::PlannerParameters::startElement(const std::string& name, const AttributesList& atts)
+BaseXMLReader::ProcessElement PlannerParameters::startElement(const std::string& name, const AttributesList& atts)
 {
     _ss.str(""); // have to clear the string
     if( !!__pcurreader ) {
@@ -400,7 +442,7 @@ BaseXMLReader::ProcessElement PlannerBase::PlannerParameters::startElement(const
     return PE_Pass;
 }
 
-bool PlannerBase::PlannerParameters::endElement(const std::string& name)
+bool PlannerParameters::endElement(const std::string& name)
 {
     if( !!__pcurreader ) {
         if( __pcurreader->endElement(name) ) {
@@ -472,7 +514,7 @@ bool PlannerBase::PlannerParameters::endElement(const std::string& name)
     return false;
 }
 
-void PlannerBase::PlannerParameters::characters(const std::string& ch)
+void PlannerParameters::characters(const std::string& ch)
 {
     if( !!__pcurreader ) {
         __pcurreader->characters(ch);
@@ -483,7 +525,7 @@ void PlannerBase::PlannerParameters::characters(const std::string& ch)
     }
 }
 
-std::ostream& operator<<(std::ostream& O, const PlannerBase::PlannerParameters& v)
+std::ostream& operator<<(std::ostream& O, const PlannerParameters& v)
 {
     O << "<" << v.GetXMLId() << ">" << endl;
     v.serialize(O);
@@ -512,7 +554,7 @@ int SetDOFVelocitiesIndicesParameters(KinBodyPtr pbody, const std::vector<dReal>
     return 0;
 }
 
-void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
+void PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
 {
     // check if any of the links affected by the dofs beside the base link are static
     FOREACHC(itlink, robot->GetLinks()) {
@@ -537,7 +579,7 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
         _setstatevaluesfn = boost::bind(SetActiveDOFValuesParameters,robot, _1, _2);
         _diffstatefn = boost::bind(&RobotBase::SubtractActiveDOFValues,robot,_1,_2);
     }
-    
+
     SpaceSamplerBasePtr pconfigsampler = RaveCreateSpaceSampler(robot->GetEnv(),str(boost::format("robotconfiguration %s")%robot->GetName()));
     _listInternalSamplers.clear();
     _listInternalSamplers.push_back(pconfigsampler);
@@ -563,7 +605,7 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
 
 }
 
-void _CallDiffStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::DiffStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v0, const std::vector<dReal>& v1)
+void _CallDiffStateFns(const std::vector< std::pair<PlannerParameters::DiffStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v0, const std::vector<dReal>& v1)
 {
     if( vfunctions.size() == 1 ) {
         vfunctions.at(0).first(v0,v1);
@@ -590,7 +632,7 @@ void _CallDiffStateFns(const std::vector< std::pair<PlannerBase::PlannerParamete
 
 /// \brief returns square root of joint distance * weights
 /// \param vweights2 squared weights
-dReal _EvalJointDOFDistanceMetric(const PlannerBase::PlannerParameters::DiffStateFn& difffn, const std::vector<dReal>&c0, const std::vector<dReal>&c1, const std::vector<dReal>& vweights2)
+dReal _EvalJointDOFDistanceMetric(const PlannerParameters::DiffStateFn& difffn, const std::vector<dReal>&c0, const std::vector<dReal>&c1, const std::vector<dReal>& vweights2)
 {
     std::vector<dReal> c = c0;
     difffn(c,c1);
@@ -601,7 +643,7 @@ dReal _EvalJointDOFDistanceMetric(const PlannerBase::PlannerParameters::DiffStat
     return RaveSqrt(dist);
 }
 
-dReal _CallDistMetricFns(const std::vector< std::pair<PlannerBase::PlannerParameters::DistMetricFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, const std::vector<dReal>& v0, const std::vector<dReal>& v1)
+dReal _CallDistMetricFns(const std::vector< std::pair<PlannerParameters::DistMetricFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, const std::vector<dReal>& v0, const std::vector<dReal>& v1)
 {
     if( vfunctions.size() == 1 ) {
         return vfunctions.at(0).first(v0, v1);
@@ -625,7 +667,7 @@ dReal _CallDistMetricFns(const std::vector< std::pair<PlannerBase::PlannerParame
     }
 }
 
-bool _CallSampleFns(const std::vector< std::pair<PlannerBase::PlannerParameters::SampleFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v)
+bool _CallSampleFns(const std::vector< std::pair<PlannerParameters::SampleFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v)
 {
     if( vfunctions.size() == 1 ) {
         return vfunctions.at(0).first(v);
@@ -645,7 +687,7 @@ bool _CallSampleFns(const std::vector< std::pair<PlannerBase::PlannerParameters:
     }
 }
 
-bool _CallSampleNeighFns(const std::vector< std::pair<PlannerBase::PlannerParameters::SampleNeighFn, int> >& vfunctions, const std::vector< std::pair<PlannerBase::PlannerParameters::DistMetricFn, int> >& vdistfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v, const std::vector<dReal>& vCurSample, dReal fRadius)
+bool _CallSampleNeighFns(const std::vector< std::pair<PlannerParameters::SampleNeighFn, int> >& vfunctions, const std::vector< std::pair<PlannerParameters::DistMetricFn, int> >& vdistfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v, const std::vector<dReal>& vCurSample, dReal fRadius)
 {
     if( vfunctions.size() == 1 ) {
         return vfunctions.at(0).first(v,vCurSample,fRadius);
@@ -678,7 +720,7 @@ bool _CallSampleNeighFns(const std::vector< std::pair<PlannerBase::PlannerParame
     }
 }
 
-int CallSetStateValuesFns(const std::vector< std::pair<PlannerBase::PlannerParameters::SetStateValuesFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, const std::vector<dReal>& v, int options)
+int CallSetStateValuesFns(const std::vector< std::pair<PlannerParameters::SetStateValuesFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, const std::vector<dReal>& v, int options)
 {
     if( vfunctions.size() == 1 ) {
         return vfunctions.at(0).first(v, options);
@@ -700,7 +742,7 @@ int CallSetStateValuesFns(const std::vector< std::pair<PlannerBase::PlannerParam
     return 0;
 }
 
-void CallGetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::GetStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v)
+void CallGetStateFns(const std::vector< std::pair<PlannerParameters::GetStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v)
 {
     if( vfunctions.size() == 1 ) {
         vfunctions.at(0).first(v);
@@ -717,7 +759,7 @@ void CallGetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters
     }
 }
 
-int _CallNeighStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::NeighStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v, const std::vector<dReal>& vdelta, int fromgoal)
+int _CallNeighStateFns(const std::vector< std::pair<PlannerParameters::NeighStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v, const std::vector<dReal>& vdelta, int fromgoal)
 {
     if( vfunctions.size() == 1 ) {
         return vfunctions.at(0).first(v,vdelta,fromgoal);
@@ -747,7 +789,7 @@ int _CallNeighStateFns(const std::vector< std::pair<PlannerBase::PlannerParamete
     }
 }
 
-void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBasePtr penv, const ConfigurationSpecification& spec)
+void PlannerParameters::SetConfigurationSpecification(EnvironmentBasePtr penv, const ConfigurationSpecification& spec)
 {
     using namespace planningutils;
     spec.Validate();
@@ -863,7 +905,7 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
     _checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
 }
 
-void PlannerBase::PlannerParameters::Validate() const
+void PlannerParameters::Validate() const
 {
     OPENRAVE_ASSERT_OP(_configurationspecification.GetDOF(),==,GetDOF());
     OPENRAVE_ASSERT_OP(vinitialconfig.size()%GetDOF(),==,0);
@@ -977,28 +1019,18 @@ UserDataPtr PlannerBase::RegisterPlanCallback(const PlanCallbackFn& callbackfn)
     return pdata;
 }
 
-PlannerBase::PlannerError PlannerBase::GetPlannerError()
-{
-    return _plannerError;
-}
-
-void PlannerBase::SetPlannerError(PlannerError plannerError)
-{
-    _plannerError = plannerError;
-}
-
 PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryBasePtr ptraj)
 {
     if( GetParameters()->_sPostProcessingPlanner.size() == 0 ) {
         __cachePostProcessPlanner.reset();
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
     if( !__cachePostProcessPlanner || __cachePostProcessPlanner->GetXMLId() != GetParameters()->_sPostProcessingPlanner ) {
         __cachePostProcessPlanner = RaveCreatePlanner(GetEnv(), GetParameters()->_sPostProcessingPlanner);
         if( !__cachePostProcessPlanner ) {
             __cachePostProcessPlanner = RaveCreatePlanner(GetEnv(), s_linearsmoother);
             if( !__cachePostProcessPlanner ) {
-                return PS_Failed;
+                return PlannerStatus(PS_Failed);
             }
         }
     }
@@ -1024,7 +1056,7 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
     }
 
     // do not fall back to a default linear smoother like in the past! that makes behavior unpredictable
-    return PS_Failed;
+    return PlannerStatus(PS_Failed);
 }
 
 PlannerAction PlannerBase::_CallCallbacks(const PlannerProgress& progress)

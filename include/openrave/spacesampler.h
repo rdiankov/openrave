@@ -44,6 +44,8 @@ enum SampleDataType {
     SDT_Uint32=2,
 };
 
+typedef boost::function<int (std::vector<dReal>&,const std::vector<dReal>&, int)> NeighStateFn;
+        
 /** \brief <b>[interface]</b> Contains space samplers commonly used in planners. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_spacesampler.
     \ingroup interfaces
  */
@@ -145,6 +147,9 @@ public:
 
     /// \brief Sets a distance metric for measuring samples. Used when computing neighborhood sampling
     //virtual void SetDistanceMetric(const boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)>& distmetricfn) OPENRAVE_DUMMY_IMPLEMENTATION;
+
+    /// \brief Sets a function for computing a neighboring state of a given sample that satisfies constraints.
+    virtual void SetNeighStateFn(const NeighStateFn& neighstatefn) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /** \brief Callback function during sampling
 

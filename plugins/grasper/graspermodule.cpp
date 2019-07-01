@@ -320,7 +320,7 @@ public:
         }
 
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
-        if( !_planner->PlanPath(ptraj) || ptraj->GetNumWaypoints() == 0 ) {
+        if( !_planner->PlanPath(ptraj).GetStatusCode() || ptraj->GetNumWaypoints() == 0 ) {
             return false;
         }
 
@@ -976,7 +976,7 @@ public:
                     RAVELOG_DEBUG(str(boost::format("grasp %d: grasper planner failed")%grasp_params->id));
                     continue;
                 }
-                if( !planner->PlanPath(ptraj) ) {
+                if( !planner->PlanPath(ptraj).GetStatusCode() ) {
                     RAVELOG_DEBUG(str(boost::format("grasp %d: grasper planner failed")%grasp_params->id));
                     continue;
                 }
@@ -1060,7 +1060,7 @@ public:
                             RAVELOG_VERBOSE(str(boost::format("grasp %d: grasping noise planner failed")%grasp_params->id));
                             break;
                         }
-                        if( !planner->PlanPath(ptraj) ) {
+                        if( !planner->PlanPath(ptraj).GetStatusCode() ) {
                             RAVELOG_VERBOSE(str(boost::format("grasp %d: grasping noise planner failed")%grasp_params->id));
                             break;
                         }
