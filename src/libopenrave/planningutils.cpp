@@ -2674,7 +2674,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
                 if( !bfound ) {
                     for(int i = 0; i < numroots; ++i) {
-                        if( timesteproots[i] > fMinNextTimeStep && (!bfound || timestep > timesteproots[i]) ) {
+                        if( timesteproots[i] > fMinNextTimeStep && (!bfound || timestep > timesteproots[i]) && timestep < timeelapsed+1e-7) {
                             timestep = timesteproots[i];
                             bfound = true;
                         }
@@ -2685,7 +2685,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                         fNewStep = fStep; //-fLargestStepDelta;
                         numroots = mathextra::solvequad(fLargestStepAccel*0.5, fLargestStepInitialVelocity, -fNewStep, timesteproots[0], timesteproots[1]);
                         for(int i = 0; i < numroots; ++i) {
-                            if( timesteproots[i] > fMinNextTimeStep && (!bfound || timestep > timesteproots[i]) ) {
+                            if( timesteproots[i] > fMinNextTimeStep && (!bfound || timestep > timesteproots[i]) && timestep < timeelapsed+1e-7 ) {
                                 // going backwards!
                                 timestep = timesteproots[i];
                                 fBestNewStep = fNewStep;
@@ -2836,7 +2836,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                         ss << "]; dx1=[";
                         RaveSerializeValues(ss, dq1);
                         ss << "]; deltatime=" << timeelapsed;
-                        RAVELOG_WARN_FORMAT("timestep %.15e > total time of ramp %.15e, step %d/%d %s", timestep%timeelapsed%istep%numSteps%ss.str());
+                        RAVELOG_WARN_FORMAT("timestep %.15e > total time of ramp %.15e, step %d/%d, fMinNextTimeStep=%.15e, fBestNewStep=%.15e, fLargestStepAccel=%.15e, %s", timestep%timeelapsed%istep%numSteps%fMinNextTimeStep%fBestNewStep%fLargestStepAccel%ss.str());
                     }
 
                     if( !!filterreturn ) {
