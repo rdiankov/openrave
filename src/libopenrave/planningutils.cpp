@@ -2674,8 +2674,8 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
                 if( !bfound ) {
                     for(int i = 0; i < numroots; ++i) {
-                        if( timesteproots[i] > fMinNextTimeStep && (!bfound || timestep > timesteproots[i]) && timesteproots[i] < timeelapsed+1e-7) {
-                            timestep = timesteproots[i];
+                        if( timesteproots[i] > fMinNextTimeStep && (!bfound || timestep > timesteproots[i]) ) {
+                            timestep = std::min(timesteproots[i], timeelapsed);
                             bfound = true;
                         }
                     }
@@ -2685,9 +2685,9 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                         fNewStep = fStep; //-fLargestStepDelta;
                         numroots = mathextra::solvequad(fLargestStepAccel*0.5, fLargestStepInitialVelocity, -fNewStep, timesteproots[0], timesteproots[1]);
                         for(int i = 0; i < numroots; ++i) {
-                            if( timesteproots[i] > fMinNextTimeStep && (!bfound || timestep > timesteproots[i]) && timesteproots[i] < timeelapsed+1e-7 ) {
+                            if( timesteproots[i] > fMinNextTimeStep && (!bfound || timestep > timesteproots[i]) ) {
                                 // going backwards!
-                                timestep = timesteproots[i];
+                                timestep = std::min(timesteproots[i], timeelapsed);
                                 fBestNewStep = fNewStep;
                                 bfound = true;
                             }
