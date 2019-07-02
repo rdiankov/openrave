@@ -22,7 +22,7 @@ namespace OpenRAVE {
 KinBody::LinkInfo::LinkInfo() : XMLReadable("link"), _mass(0), _bStatic(false), _bIsEnabled(true) {
 }
 
-KinBody::LinkInfo::LinkInfo(const LinkInfo& other) : XMLReadable("link"), _mass(0), _bStatic(false), _bIsEnabled(true)
+KinBody::LinkInfo::LinkInfo(const LinkInfo& other) : XMLReadable("link")
 {
     *this = other;
 }
@@ -31,17 +31,22 @@ KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& other)
 {
     _vgeometryinfos.resize(other._vgeometryinfos.size());
     for( size_t i = 0; i < _vgeometryinfos.size(); ++i ) {
-        _vgeometryinfos[i].reset(new GeometryInfo(*(other._vgeometryinfos[i])));
+        if( !other._vgeometryinfos[i] ) {
+            _vgeometryinfos[i].reset();
+        }
+        else {
+            _vgeometryinfos[i].reset(new GeometryInfo(*(other._vgeometryinfos[i])));
+        }
     }
 
     _mapExtraGeometries.clear();
-    for( std::map< std::string, std::vector<GeometryInfoPtr> >::const_iterator it = other._mapExtraGeometries.begin();
-         it != other._mapExtraGeometries.end();
-         ++it ) {
+    for( std::map< std::string, std::vector<GeometryInfoPtr> >::const_iterator it = other._mapExtraGeometries.begin(); it != other._mapExtraGeometries.end(); ++it ) {
         _mapExtraGeometries[it->first] = std::vector<GeometryInfoPtr>(it->second.size());
         std::vector<GeometryInfoPtr>& extraGeometries = _mapExtraGeometries[it->first];
         for( size_t i = 0; i < extraGeometries.size(); ++i ) {
-            extraGeometries[i].reset(new GeometryInfo(*(it->second[i])));
+            if( !!(it->second[i]) ) {
+                extraGeometries[i].reset(new GeometryInfo(*(it->second[i])));
+            }
         }
     }
 
@@ -56,6 +61,8 @@ KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& other)
     _vForcedAdjacentLinks = other._vForcedAdjacentLinks;
     _bStatic = other._bStatic;
     _bIsEnabled = other._bIsEnabled;
+
+    return *this;
 }
 
 KinBody::Link::Link(KinBodyPtr parent)

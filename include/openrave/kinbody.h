@@ -870,6 +870,9 @@ public:
         virtual ~JointInfo() {
         }
 
+        JointInfo(const JointInfo& other);
+        JointInfo& operator=(const JointInfo& other);
+
         JointType _type; /// The joint type
         std::string _name;         ///< the unique joint name
         std::string _linkname0, _linkname1; ///< attaching links, all axes and anchors are defined in the link pointed to by _linkname0 coordinate system. _linkname0 is usually the parent link.
