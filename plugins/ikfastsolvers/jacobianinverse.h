@@ -269,6 +269,9 @@ public:
             }
 
             probot->SetActiveDOFValues(vnew, checklimits);
+            if( checklimits == OpenRAVE::KinBody::CLA_CheckLimitsSilent ) {
+                probot->GetActiveDOFValues(vnew);
+            }
         }
 
         int retcode = 0;
@@ -457,6 +460,9 @@ public:
             }
 
             probot->SetActiveDOFValues(vnew, checklimits);
+            if( checklimits == OpenRAVE::KinBody::CLA_CheckLimitsSilent ) {
+                probot->GetActiveDOFValues(vnew);
+            }
         }
 
         int retcode = 0;
