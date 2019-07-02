@@ -22,6 +22,42 @@ namespace OpenRAVE {
 KinBody::LinkInfo::LinkInfo() : XMLReadable("link"), _mass(0), _bStatic(false), _bIsEnabled(true) {
 }
 
+KinBody::LinkInfo::LinkInfo(const LinkInfo& other) : XMLReadable("link"), _mass(0), _bStatic(false), _bIsEnabled(true)
+{
+    *this = other;
+}
+
+KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& other)
+{
+    _vgeometryinfos.resize(other._vgeometryinfos.size());
+    for( size_t i = 0; i < _vgeometryinfos.size(); ++i ) {
+        _vgeometryinfos[i].reset(new GeometryInfo(*(other._vgeometryinfos[i])));
+    }
+
+    _mapExtraGeometries.clear();
+    for( std::map< std::string, std::vector<GeometryInfoPtr> >::const_iterator it = other._mapExtraGeometries.begin();
+         it != other._mapExtraGeometries.end();
+         ++it ) {
+        _mapExtraGeometries[it->first] = std::vector<GeometryInfoPtr>(it->second.size());
+        std::vector<GeometryInfoPtr>& extraGeometries = _mapExtraGeometries[it->first];
+        for( size_t i = 0; i < extraGeometries.size(); ++i ) {
+            extraGeometries[i].reset(new GeometryInfo(*(it->second[i])));
+        }
+    }
+
+    _name = other._name;
+    _t = other._t;
+    _tMassFrame = other._tMassFrame;
+    _mass = other._mass;
+    _vinertiamoments = other._vinertiamoments;
+    _mapFloatParameters = other._mapFloatParameters;
+    _mapIntParameters = other._mapIntParameters;
+    _mapStringParameters = other._mapStringParameters;
+    _vForcedAdjacentLinks = other._vForcedAdjacentLinks;
+    _bStatic = other._bStatic;
+    _bIsEnabled = other._bIsEnabled;
+}
+
 KinBody::Link::Link(KinBodyPtr parent)
 {
     _parent = parent;
@@ -31,7 +67,6 @@ KinBody::Link::Link(KinBodyPtr parent)
 KinBody::Link::~Link()
 {
 }
-
 
 void KinBody::Link::Enable(bool bEnable)
 {
