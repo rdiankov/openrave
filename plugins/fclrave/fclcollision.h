@@ -197,9 +197,9 @@ public:
         return _fclspace->GetGeometryGroup();
     }
 
-    void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname)
+    bool SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname)
     {
-        _fclspace->SetBodyGeometryGroup(pbody, groupname);
+        return _fclspace->SetBodyGeometryGroup(pbody, groupname);
     }
 
     const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const

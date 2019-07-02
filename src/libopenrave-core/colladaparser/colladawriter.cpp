@@ -1770,6 +1770,9 @@ private:
                 ss.clear(); ss.str("");
                 ss << geom->GetContainerBottomCross().x << " " << geom->GetContainerBottomCross().y << " " << geom->GetContainerBottomCross().z;
                 pcontainer->add("bottom_cross")->setCharData(ss.str());
+                ss.clear(); ss.str("");
+                ss << geom->GetContainerBottom().x << " " << geom->GetContainerBottom().y << " " << geom->GetContainerBottom().z;
+                pcontainer->add("bottom")->setCharData(ss.str());
                 break;
             }
             case GT_Cage: {

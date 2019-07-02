@@ -176,6 +176,11 @@ public:
         Vector _vGeomData2;
         Vector _vGeomData3; ///< For containers, the first 3 values is the bottom cross XY full extents and Z height from bottom face.
 
+        ///< For containers, the first 3 values are the full extents of the bottom pad (a box attached to the container
+        ///  beneath the container bottom). This geometry only valid if the first 3 values are all positive. The origin
+        ///  of the container will still be at the outer bottom of the container.
+        Vector _vGeomData4;
+
         // For GT_Cage
         enum SideWallType
         {
@@ -352,6 +357,9 @@ public:
             inline const Vector& GetContainerBottomCross() const {
                 return _info._vGeomData3;
             }
+            inline const Vector& GetContainerBottom() const {
+                return _info._vGeomData4;
+            }
             inline const RaveVector<float>& GetDiffuseColor() const {
                 return _info._vDiffuseColor;
             }
@@ -398,7 +406,7 @@ public:
             ///
             /// \return true if changed
             virtual bool SetVisible(bool visible);
-            
+
             /// \deprecated (12/1/12)
             inline void SetDraw(bool bDraw) RAVE_DEPRECATED {
                 SetVisible(bDraw);
@@ -1609,7 +1617,7 @@ private:
     };
 
     typedef boost::shared_ptr<KinBodyStateSaverRef> KinBodyStateSaverRefPtr;
-    
+
     virtual ~KinBody();
 
     /// return the static interface type this class points to (used for safe casting)
@@ -2529,7 +2537,7 @@ protected:
 
     /// \brief de-initializes any internal information computed
     virtual void _DeinitializeInternalInformation();
-        
+
     /// \brief returns the dof velocities and link velocities
     ///
     /// \param[in] usebaselinkvelocity if true, will compute all velocities using the base link velocity. otherwise will assume it is 0
@@ -2576,7 +2584,7 @@ protected:
     /// Assumes plink has _info initialized correctly, so will be initializing the other data depending on it.
     /// Can only be called before internal robot hierarchy is initialized
     virtual void _InitAndAddJoint(JointPtr pjoint);
-    
+
     std::string _name; ///< name of body
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints
     std::vector<JointPtr> _vTopologicallySortedJoints; ///< \see GetDependencyOrderedJoints

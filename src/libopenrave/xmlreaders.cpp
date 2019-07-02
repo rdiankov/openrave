@@ -388,6 +388,9 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
             if( xmlname == "bottom_cross" ) {
                 _ss >> _pgeom->_vGeomData3.x >> _pgeom->_vGeomData3.y >> _pgeom->_vGeomData3.z;
             }
+            if( xmlname == "bottom" ) {
+                _ss >> _pgeom->_vGeomData4.x >> _pgeom->_vGeomData4.y >> _pgeom->_vGeomData4.z;
+            }
 
             break;
         case GT_Cage:
@@ -479,11 +482,11 @@ ElectricMotorActuatorInfoReader::ElectricMotorActuatorInfoReader(ElectricMotorAc
         RAVELOG_INFOA("no actuator type, defaulting to electric_motor\n");
         type = "electric_motor";
     }
-    
+
     if( type != "electric_motor" ) {
         throw OPENRAVE_EXCEPTION_FORMAT(_("does not support actuator '%s' type"), type, ORE_InvalidArguments);
     }
-    
+
     _pinfo.reset(new ElectricMotorActuatorInfo());
 }
 
@@ -501,7 +504,7 @@ BaseXMLReader::ProcessElement ElectricMotorActuatorInfoReader::startElement(cons
         _pcurreader.reset(new ElectricMotorActuatorInfoReader(_pinfo, atts));
         return PE_Support;
     }
-    
+
     static boost::array<string, 18> tags = { { "gear_ratio", "assigned_power_rating", "max_speed", "no_load_speed", "stall_torque", "nominal_speed_torque_point", "max_speed_torque_point", "nominal_torque", "rotor_inertia", "torque_constant", "nominal_voltage", "speed_constant", "starting_current", "terminal_resistance", "coloumb_friction", "viscous_friction", "model_type", "max_instantaneous_torque", } };
     if( find(tags.begin(),tags.end(),xmlname) != tags.end() ) {
         return PE_Support;

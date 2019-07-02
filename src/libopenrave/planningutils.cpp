@@ -592,7 +592,7 @@ PlannerStatus _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr prob
         traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
         traj->Init(spec);
         traj->Insert(0,data);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     EnvironmentBasePtr env = traj->GetEnv();
@@ -618,17 +618,18 @@ PlannerStatus _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr prob
     params->_hastimestamps = hastimestamps;
     params->_sExtraParameters += plannerparameters;
     if( !planner->InitPlan(probot,params) ) {
-        return PS_Failed;
+        return PlannerStatus("InitPlan failed", PS_Failed);
     }
-    if( planner->PlanPath(traj) != PS_HasSolution ) {
-        return PS_Failed;
+    PlannerStatus plannerStatus = planner->PlanPath(traj);
+    if( plannerStatus.GetStatusCode() != PS_HasSolution ) {
+        return plannerStatus;
     }
 
     if( bsmooth && (RaveGetDebugLevel() & Level_VerifyPlans) ) {
         RobotBase::RobotStateSaver saver(probot);
         planningutils::VerifyTrajectory(params,traj);
     }
-    return PS_HasSolution;
+    return PlannerStatus(PS_HasSolution);
 }
 
 ActiveDOFTrajectorySmoother::ActiveDOFTrajectorySmoother(RobotBasePtr robot, const std::string& _plannername, const std::string& plannerparameters)
@@ -652,7 +653,7 @@ ActiveDOFTrajectorySmoother::ActiveDOFTrajectorySmoother(RobotBasePtr robot, con
     _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, boost::bind(&ActiveDOFTrajectorySmoother::_UpdateParameters, this));
 }
 
-PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj)
+PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj, int planningoptions)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need velocities, but should at least add a time group
@@ -662,13 +663,13 @@ PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj)
         traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
         traj->Init(spec);
         traj->Insert(0,data);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     EnvironmentBasePtr env = traj->GetEnv();
     CollisionOptionsStateSaver optionstate(env->GetCollisionChecker(),env->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
-    PlannerStatus status = _planner->PlanPath(traj);
-    if( status & PS_HasSolution ) {
+    PlannerStatus status = _planner->PlanPath(traj, planningoptions);
+    if( status.GetStatusCode() & PS_HasSolution ) {
         if( RaveGetDebugLevel() & Level_VerifyPlans ) {
             RobotBase::RobotStateSaver saver(_robot);
             planningutils::VerifyTrajectory(_planner->GetParameters(),traj);
@@ -717,7 +718,7 @@ ActiveDOFTrajectoryRetimer::ActiveDOFTrajectoryRetimer(RobotBasePtr robot, const
     _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, boost::bind(&ActiveDOFTrajectoryRetimer::_UpdateParameters, this));
 }
 
-PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool hastimestamps)
+PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool hastimestamps, int planningoptions)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need velocities, but should at least add a time group
@@ -727,7 +728,7 @@ PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool 
         traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
         traj->Init(spec);
         traj->Insert(0,data);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     TrajectoryTimingParametersPtr parameters = boost::dynamic_pointer_cast<TrajectoryTimingParameters>(_parameters);
@@ -738,7 +739,7 @@ PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool 
         }
     }
 
-    return _planner->PlanPath(traj);
+    return _planner->PlanPath(traj, planningoptions);
 }
 
 void ActiveDOFTrajectoryRetimer::_UpdateParameters()
@@ -770,7 +771,7 @@ PlannerStatus _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal 
         traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
         traj->Init(spec);
         traj->Insert(0,data);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     EnvironmentMutex::scoped_lock lockenv(traj->GetEnv()->GetMutex());
@@ -794,17 +795,18 @@ PlannerStatus _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal 
     params->_hastimestamps = hastimestamps;
     params->_sExtraParameters += plannerparameters;
     if( !planner->InitPlan(RobotBasePtr(),params) ) {
-        return PS_Failed;
+        return PlannerStatus("InitPlan failed", PS_Failed);
     }
-    if( planner->PlanPath(traj) != PS_HasSolution ) {
-        return PS_Failed;
+    PlannerStatus plannerStatus = planner->PlanPath(traj);
+    if( !(plannerStatus.statusCode & PS_HasSolution) ) {
+        return plannerStatus;
     }
 
     if( bsmooth && (RaveGetDebugLevel() & Level_VerifyPlans) ) {
         PlannerBase::PlannerParameters::StateSaver saver(params);
         planningutils::VerifyTrajectory(params,traj);
     }
-    return PS_HasSolution;
+    return PlannerStatus(PS_HasSolution);
 }
 
 static void diffstatefn(std::vector<dReal>& q1, const std::vector<dReal>& q2, const std::vector<int> vrotaxes)
@@ -898,7 +900,7 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
         traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
         traj->Init(spec);
         traj->Insert(0,data);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     EnvironmentMutex::scoped_lock lockenv(traj->GetEnv()->GetMutex());
@@ -992,13 +994,15 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
 
     params->_hastimestamps = hastimestamps;
     params->_sExtraParameters = plannerparameters;
+
     if( !planner->InitPlan(RobotBasePtr(),params) ) {
-        return PS_Failed;
+        return PlannerStatus("InitPlan failed", PS_Failed);
     }
-    if( planner->PlanPath(traj) != PS_HasSolution ) {
-        return PS_Failed;
+    PlannerStatus plannerStatus = planner->PlanPath(traj);
+    if( plannerStatus.GetStatusCode() != PS_HasSolution ) {
+        return plannerStatus;
     }
-    return PS_HasSolution;
+    return PlannerStatus(PS_HasSolution);
 }
 
 AffineTrajectoryRetimer::AffineTrajectoryRetimer(const std::string& plannername, const std::string& plannerparameters)
@@ -1038,7 +1042,7 @@ void AffineTrajectoryRetimer::SetPlanner(const std::string& plannername, const s
     }
 }
 
-PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps)
+PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, int planningoptions)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need retiming, but should at least add a time group
@@ -1048,7 +1052,7 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
         traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
         traj->Init(spec);
         traj->Insert(0,data);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     EnvironmentBasePtr env = traj->GetEnv();
@@ -1153,7 +1157,7 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
         }
     }
 
-    return _planner->PlanPath(traj);
+    return _planner->PlanPath(traj, planningoptions);
 }
 
 PlannerStatus SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
@@ -1334,7 +1338,7 @@ size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<
     // This ensures that the beginning and final velocities will be preserved
     //RAVELOG_VERBOSE_FORMAT("env=%d, inserting point into %d with planner %s and parameters %s", robot->GetEnv()->GetId()%waypointindex%newplannername%plannerparameters);
     // make sure velocities are set
-    if( !(RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername,plannerparameters+std::string("<hasvelocities>1</hasvelocities>")) & PS_HasSolution) ) {
+    if( !(RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername,plannerparameters+std::string("<hasvelocities>1</hasvelocities>")).GetStatusCode() & PS_HasSolution) ) {
         throw OPENRAVE_EXCEPTION_FORMAT("env=%d failed to retime init traj", robot->GetEnv()->GetId(), ORE_Assert);
     }
 
@@ -1425,7 +1429,7 @@ size_t InsertWaypointWithRetiming(int waypointindex, const std::vector<dReal>& d
     trajinitial->Init(newspec);
     trajinitial->Insert(0,vwaypointstart);
     trajinitial->Insert(1,vwaypointend);
-    if( !(planner->PlanPath(trajinitial) & PS_HasSolution) ) {
+    if( !(planner->PlanPath(trajinitial).GetStatusCode() & PS_HasSolution) ) {
         throw OPENRAVE_EXCEPTION_FORMAT0(_("failed to plan path"), ORE_Assert);
     }
 
@@ -1535,7 +1539,7 @@ size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalue
         ptesttraj->Insert(0,vwaypoint);
         ptesttraj->Insert(1,vstartdata,spectotal);
 
-        if( planner->PlanPath(ptesttraj) & PS_HasSolution ) {
+        if( planner->PlanPath(ptesttraj).GetStatusCode() & PS_HasSolution ) {
             // before checking, make sure it is better than we currently have
             dReal fNewDuration = fRemainingDuration+ptesttraj->GetDuration();
             if( fNewDuration < fBestDuration ) {
@@ -1763,32 +1767,37 @@ void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
     // TODO there might be a problem here if the first traj point has deltatime > 0
     if( starttime > 0 ) {
         size_t startindex = traj->GetFirstWaypointIndexAfterTime(starttime);
-        if( startindex >= traj->GetNumWaypoints() )
+        if( startindex >= traj->GetNumWaypoints() ) {
             startindex = traj->GetNumWaypoints()-1;
+        }
 
-        if( startindex > 0 ) {
-            ConfigurationSpecification deltatimespec;
-            deltatimespec.AddDeltaTimeGroup();
-            std::vector<dReal> vdeltatime;
-            traj->GetWaypoint(startindex,vdeltatime,deltatimespec);
-            traj->Sample(values, starttime);
-            dReal fSampleDeltaTime=0;
-            traj->GetConfigurationSpecification().ExtractDeltaTime(fSampleDeltaTime, values.begin());
-            // check if the sampletime can be very close to an existing waypoint, in which case can ignore inserting a new point
-            int endremoveindex = startindex;
-            if( RaveFabs(fSampleDeltaTime-vdeltatime.at(0)) > g_fEpsilonLinear ) {
-                traj->Insert(startindex-1, values, true);
-                // have to write the new delta time
-                vdeltatime[0] -= fSampleDeltaTime;
-                traj->Insert(startindex, vdeltatime, deltatimespec, true);
-                endremoveindex -= 1;
-            }
-            traj->Remove(0, endremoveindex);
+        ConfigurationSpecification deltatimespec;
+        deltatimespec.AddDeltaTimeGroup();
+        std::vector<dReal> vdeltatime;
+        traj->GetWaypoint(startindex,vdeltatime,deltatimespec);
+        traj->Sample(values, starttime);
+        dReal fSampleDeltaTime=0;
+        traj->GetConfigurationSpecification().ExtractDeltaTime(fSampleDeltaTime, values.begin());
+        // check if the sampletime can be very close to an existing waypoint, in which case can ignore inserting a new point
+        int endremoveindex = startindex;
+        if( startindex > 0 && RaveFabs(fSampleDeltaTime-vdeltatime.at(0)) > g_fEpsilonLinear ) {
+            traj->Insert(startindex-1, values, true);
+            // have to write the new delta time
+            vdeltatime[0] -= fSampleDeltaTime;
+            traj->Insert(startindex, vdeltatime, deltatimespec, true);
+            endremoveindex -= 1;
             // have to reset the delta time of the first point
             vdeltatime[0] = 0;
-            traj->Insert(0, vdeltatime, deltatimespec, true);
-
         }
+        else {
+            // take care of the case where the first trajectory point has > 0 deltatime
+            vdeltatime[0] -= fSampleDeltaTime;
+            if (vdeltatime[0] < 0.0) {
+                vdeltatime[0] = 0;
+            }
+        }
+        traj->Remove(0, endremoveindex);
+        traj->Insert(0, vdeltatime, deltatimespec, true);
     }
 
     // for debugging purposes
