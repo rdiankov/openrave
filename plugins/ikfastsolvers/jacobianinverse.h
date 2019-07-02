@@ -84,7 +84,7 @@ public:
     {
         _errorthresh2 = errorthresh*errorthresh;
     }
-    
+
     void SetMaxIterations(int nMaxIterations)
     {
         _nMaxIterations = nMaxIterations;
@@ -97,13 +97,14 @@ public:
     /// \param tgoal the goal in the manipulator's base frame
     /// \param vsolution output if successful
     /// \return -1 if not changed, 0 if failed, 1 if changed and new succeeded in getting new position
-    int ComputeSolution(const Transform& tgoal, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution)
+    int ComputeSolution(const Transform& tgoal, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution, bool bIgnoreJointLimits=false)
     {
         _vGoalQuat = tgoal.rot;
         _vGoalAxisAngle = axisAngleFromQuat(tgoal.rot);
         _vGoalPosition = tgoal.trans;
-        
+
         RobotBasePtr probot = manip.GetRobot();
+        uint32_t checklimits = bIgnoreJointLimits ? OpenRAVE::KinBody::CLA_Nothing : OpenRAVE::KinBody::CLA_CheckLimitsSilent; // if not ignoring limits, silently clamp the values to their limits.
 
         KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation);
         Transform tbase = manip.GetBase()->GetTransform();
@@ -115,7 +116,7 @@ public:
         if( totalerror2 <= _errorthresh2 ) {
             return -1;
         }
-        
+
         const T lambda2 = 1e-12;         // normalization constant, changes the rate of convergence, but also improves convergence stability
         using namespace boost::numeric::ublas;
 
@@ -177,7 +178,7 @@ public:
             for(int i = 0; i < 6; ++i) {
                 _invJJt(i,i) += lambda2;
             }
-            
+
 #ifdef OPENRAVE_DISPLAY_CONVERGENCESTATS
             stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+2);
             ss << std::endl << "J=array([" << std::endl;
@@ -239,7 +240,7 @@ public:
 
             RAVELOG_VERBOSE(ss.str());
 #endif
-            
+
             dReal fmindeltascale = 1; // depending on
             bool baddelta = false;
             for(size_t i = 0; i < vnew.size(); ++i) {
@@ -255,7 +256,7 @@ public:
             if( baddelta ) {
                 break;
             }
-            
+
             if( fmindeltascale < 1 ) {
                 for(size_t i = 0; i < vnew.size(); ++i) {
                     vnew.at(i) += _qdelta(i,0)*fmindeltascale;
@@ -267,13 +268,13 @@ public:
                 }
             }
 
-            probot->SetActiveDOFValues(vnew,0);
+            probot->SetActiveDOFValues(vnew, checklimits);
         }
 
         int retcode = 0;
         if( bSuccess || besterror2 < firsterror2 ) {
             // revert to real values
-            probot->SetActiveDOFValues(vbest,0);
+            probot->SetActiveDOFValues(vbest, checklimits);
             probot->GetActiveDOFValues(vsolution); // have to re-get the joint values since joint limits are involved
             probot->SetTransform(trobot);
             saver.Release(); // finished successfully, so use the new state
@@ -290,14 +291,15 @@ public:
         }
         return retcode;
     }
-    
-    int ComputeSolutionTranslation(const Transform& tgoal, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution)
+
+    int ComputeSolutionTranslation(const Transform& tgoal, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution, bool bIgnoreJointLimits=false)
     {
         _vGoalQuat = tgoal.rot;
         _vGoalAxisAngle = axisAngleFromQuat(tgoal.rot);
         _vGoalPosition = tgoal.trans;
-        
+
         RobotBasePtr probot = manip.GetRobot();
+        uint32_t checklimits = bIgnoreJointLimits ? OpenRAVE::KinBody::CLA_Nothing : OpenRAVE::KinBody::CLA_CheckLimitsSilent; // if not ignoring limits, silently clamp the values to their limits.
 
         KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation);
         Transform tbase = manip.GetBase()->GetTransform();
@@ -309,7 +311,7 @@ public:
         if( totalerror2 <= _errorthresh2 ) {
             return -1;
         }
-        
+
         const T lambda2 = 1e-12;         // normalization constant, changes the rate of convergence, but also improves convergence stability
         using namespace boost::numeric::ublas;
 
@@ -364,7 +366,7 @@ public:
             for(int i = 0; i < 3; ++i) {
                 _invJJt3d(i,i) += lambda2;
             }
-            
+
 #ifdef OPENRAVE_DISPLAY_CONVERGENCESTATS
             stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+2);
             ss << std::endl << "J=array([" << std::endl;
@@ -426,7 +428,7 @@ public:
 
             RAVELOG_VERBOSE(ss.str());
 #endif
-            
+
             dReal fmindeltascale = 1; // depending on
             bool baddelta = false;
             for(size_t i = 0; i < vnew.size(); ++i) {
@@ -442,7 +444,7 @@ public:
             if( baddelta ) {
                 break;
             }
-            
+
             if( fmindeltascale < 1 ) {
                 for(size_t i = 0; i < vnew.size(); ++i) {
                     vnew.at(i) += _qdelta(i,0)*fmindeltascale;
@@ -454,13 +456,13 @@ public:
                 }
             }
 
-            probot->SetActiveDOFValues(vnew,0);
+            probot->SetActiveDOFValues(vnew, checklimits);
         }
 
         int retcode = 0;
         if( bSuccess || besterror2 < firsterror2 ) {
             // revert to real values
-            probot->SetActiveDOFValues(vbest,0);
+            probot->SetActiveDOFValues(vbest, checklimits);
             probot->GetActiveDOFValues(vsolution); // have to re-get the joint values since joint limits are involved
             probot->SetTransform(trobot);
             saver.Release(); // finished successfully, so use the new state
@@ -477,7 +479,7 @@ public:
         }
         return retcode;
     }
-    
+
     virtual T _ComputeConstraintError(const Transform& tcur, boost::numeric::ublas::matrix<T>& error, int nMaxIterations, bool bAddRotation=true)
     {
         T totalerror2=0;
@@ -495,7 +497,7 @@ public:
             error(i+transoffset,0) = (_vGoalPosition[i]-tcur.trans[i]);
             totalerror2 += error(i+transoffset,0)*error(i+transoffset,0);
         }
-        
+
         dReal fallowableerror2 = 0.03; // arbitrary... since solutions are close, is this step necessary?
         if( totalerror2 > _errorthresh2 && totalerror2 > fallowableerror2+1e-7 ) {
             // have to reduce the error or else the jacobian will not converge to the correct place and diverge too much from the current solution
@@ -557,7 +559,7 @@ protected:
     boost::numeric::ublas::matrix<T> _J, _Jt, _invJJt, _invJ, _error, _qdelta;
 
     boost::numeric::ublas::matrix<T> _J3d, _Jt3d, _invJJt3d, _invJ3d, _error3d; // for translation
-    
+
     std::vector<dReal> _cachevnew, _cachevbest; ///< cache
     dReal _fTighterCosAngleThresh; ///< if _pdirthresh is used, then this is a smaller angle than the one used in _pdirthresh->fCosAngleThresh
 };
