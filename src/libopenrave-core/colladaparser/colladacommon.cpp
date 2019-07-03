@@ -23,11 +23,15 @@ namespace OpenRAVE
 {
 static boost::shared_ptr<DAE> s_dae;
 static boost::mutex s_daemutex;
+static bool s_daedestroycallback; // true if we already registered with RaveAddCallbackForDestroy
 boost::shared_ptr<DAE> GetGlobalDAE(bool resetdefaults)
 {
+    if( !s_daedestroycallback ) {
+        RaveAddCallbackForDestroy(boost::bind(SetGlobalDAE,boost::shared_ptr<DAE>()));
+        s_daedestroycallback = true;
+    }
     if( !s_dae ) {
         s_dae.reset(new DAE());
-        RaveAddCallbackForDestroy(boost::bind(SetGlobalDAE,boost::shared_ptr<DAE>()));
     }
     if( resetdefaults ) {
         // load the normal resolvers
