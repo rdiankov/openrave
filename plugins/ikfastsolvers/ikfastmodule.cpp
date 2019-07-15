@@ -191,7 +191,7 @@ public:
             LOAD_IKFUNCTION0(ComputeIk2);
             LOAD_IKFUNCTION(ComputeFk);
             LOAD_IKFUNCTION(GetNumFreeParameters);
-            LOAD_IKFUNCTION(GetFreeParameters);
+            LOAD_IKFUNCTION(GetFreeIndices);
             LOAD_IKFUNCTION(GetNumJoints);
             LOAD_IKFUNCTION(GetIkRealSize);
             LOAD_IKFUNCTION(GetIkFastVersion);
@@ -783,7 +783,7 @@ public:
                 vjoints[j] = RaveRandomDouble()*2*PI;
             }
             for(size_t j = 0; j < vfree.size(); ++j) {
-                vfree[j] = vjoints[ikfunctions->_GetFreeParameters()[j]];
+                vfree[j] = vjoints[ikfunctions->_GetFreeIndices()[j]];
             }
             ikfunctions->_ComputeFk(&vjoints[0],eetrans,eerot);
             solutions.Clear();
