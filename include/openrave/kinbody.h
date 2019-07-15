@@ -242,6 +242,10 @@ public:
         LinkInfo();
         virtual ~LinkInfo() {
         }
+
+        LinkInfo(const LinkInfo& other);
+        LinkInfo& operator=(const LinkInfo& other);
+
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like
         /// self -  self-collision specific geometry. By default, this type of geometry will be always set
@@ -865,6 +869,9 @@ public:
         JointInfo();
         virtual ~JointInfo() {
         }
+
+        JointInfo(const JointInfo& other);
+        JointInfo& operator=(const JointInfo& other);
 
         JointType _type; /// The joint type
         std::string _name;         ///< the unique joint name
