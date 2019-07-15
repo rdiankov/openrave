@@ -160,8 +160,9 @@ public:
     virtual void SetTolerance(OpenRAVE::dReal tolerance) {
     }
 
-    virtual void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname)
+    virtual bool SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname)
     {
+        return false;
     }
 
     const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const

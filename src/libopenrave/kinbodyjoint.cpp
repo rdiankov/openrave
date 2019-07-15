@@ -43,6 +43,67 @@ KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsAc
     std::fill(_bIsCircular.begin(), _bIsCircular.end(), 0);
 }
 
+KinBody::JointInfo::JointInfo(const JointInfo& other) : XMLReadable("joint")
+{
+    *this = other;
+}
+
+KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& other)
+{
+    _type = other._type;
+    _name = other._name;
+    _linkname0 = other._linkname0;
+    _linkname1 = other._linkname1;
+    _vanchor = other._vanchor;
+    _vaxes = other._vaxes;
+    _vcurrentvalues = other._vcurrentvalues;
+    _vresolution = other._vresolution;
+    _vmaxvel = other._vmaxvel;
+    _vhardmaxvel = other._vhardmaxvel;
+    _vmaxaccel = other._vmaxaccel;
+    _vhardmaxaccel = other._vhardmaxaccel;
+    _vmaxjerk = other._vmaxjerk;
+    _vhardmaxjerk = other._vhardmaxjerk;
+    _vmaxtorque = other._vmaxtorque;
+    _vmaxinertia = other._vmaxinertia;
+    _vweights = other._vweights;
+    _voffsets = other._voffsets;
+    _vlowerlimit = other._vlowerlimit;
+    _vupperlimit = other._vupperlimit;
+
+    if( !other._trajfollow ) {
+        _trajfollow.reset();
+    }
+    else {
+        _trajfollow = RaveClone<TrajectoryBase>(other._trajfollow, Clone_All);
+    }
+
+    for( size_t i = 0; i < _vmimic.size(); ++i ) {
+        if( !other._vmimic[i] ) {
+            _vmimic[i].reset();
+        }
+        else {
+            _vmimic[i].reset(new MimicInfo(*(other._vmimic[i])));
+        }
+    }
+
+    _mapFloatParameters = other._mapFloatParameters;
+    _mapIntParameters = other._mapIntParameters;
+    _mapStringParameters = other._mapStringParameters;
+
+    if( !other._infoElectricMotor ) {
+        _infoElectricMotor.reset();
+    }
+    else {
+        _infoElectricMotor.reset(new ElectricMotorActuatorInfo(*other._infoElectricMotor));
+    }
+
+    _bIsCircular = other._bIsCircular;
+    _bIsActive = other._bIsActive;
+
+    return *this;
+}
+
 static void fparser_polyroots2(vector<dReal>& rawroots, const vector<dReal>& rawcoeffs)
 {
     BOOST_ASSERT(rawcoeffs.size()==3);

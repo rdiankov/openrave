@@ -474,12 +474,12 @@ public:
         return _parameters;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         BOOST_ASSERT(!!_parameters && !!ptraj);
 
         if( ptraj->GetNumWaypoints() < 2 ) {
-            return PS_Failed;
+            return PlannerStatus(PS_Failed);
         }
 
         if( IS_DEBUGLEVEL(_dumplevel) ) {
@@ -600,9 +600,9 @@ public:
                             _nCallsCheckPathAllConstraints_SegmentFeasible2 = 0;
                             _totalTimeCheckPathAllConstraints_SegmentFeasible2 = 0;
 #endif
-                            RAVELOG_WARN_FORMAT("env=%d, Failed to initialize from cubic waypoints", _environmentid);
+                            std::string description = str(boost::format("env=%d, Failed to initialize from cubic waypoints")%_environmentid);
                             _DumpTrajectory(ptraj, _dumplevel);
-                            return PS_Failed;
+                            return PlannerStatus(description, PS_Failed);
                         }
 #ifdef SMOOTHER2_TIMING_DEBUG
                         // We don't use this stats
@@ -680,9 +680,10 @@ public:
 
             // Time-parameterize the initial path
             if( !_SetMileStones(vWaypoints, parabolicpath) ) {
-                RAVELOG_WARN_FORMAT("env=%d, Failed to initialize from piecewise linear waypoints", _environmentid);
+                std::string description = str(boost::format("env=%d, Failed to initialize from piecewise linear waypoints")%_environmentid);
+                RAVELOG_WARN(description);
                 _DumpTrajectory(ptraj, _dumplevel);
-                return PS_Failed;
+                return PlannerStatus(description, PS_Failed);
             }
             RAVELOG_DEBUG_FORMAT("env=%d, Finished initializing linear waypoints via _SetMileStones. #waypoint: %d -> %d", _environmentid%ptraj->GetNumWaypoints()%vWaypoints.size());
         }
@@ -706,7 +707,7 @@ public:
 
             _progress._iteration = 0;
             if( _CallCallbacks(_progress) == PA_Interrupt ) {
-                return PS_Interrupted;
+                return PlannerStatus(PS_Interrupted);
             }
 
             int numShortcuts = 0;
@@ -724,13 +725,13 @@ public:
                 _tShortcutEnd = utils::GetMicroTime();
 #endif
                 if( numShortcuts < 0 ) {
-                    return PS_Interrupted;
+                    return PlannerStatus(PS_Interrupted);
                 }
             }
 
             ++_progress._iteration;
             if( _CallCallbacks(_progress) == PA_Interrupt ) {
-                return PS_Interrupted;
+                return PlannerStatus(PS_Interrupted);
             }
 
             // Now start converting parabolicpath to OpenRAVE trajectory
@@ -915,6 +916,7 @@ public:
                             // Finished stretching.
 
                             if( !bSuccess ) {
+                                std::string description = "";
                                 if (IS_DEBUGLEVEL(Level_Verbose)) {
                                     std::stringstream ss;
                                     ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
@@ -927,13 +929,14 @@ public:
                                     ss << "]; v1 = [";
                                     SerializeValues(ss, v1Vect);
                                     ss << "]; deltatime = " << rampndTrimmed.GetDuration();
-                                    RAVELOG_WARN_FORMAT("env=%d, original RampND %d/%d does not satisfy constraints. retcode=0x%x. %s", _environmentid%irampnd%parabolicpath.GetRampNDVect().size()%checkret.retcode%ss.str());
+                                    description = str(boost::format("env=%d, original RampND %d/%d does not satisfy constraints. retcode=0x%x. %s")%_environmentid%irampnd%parabolicpath.GetRampNDVect().size()%checkret.retcode%ss.str());
                                 }
                                 else {
-                                    RAVELOG_WARN_FORMAT("env=%d, original RampND %d/%d does not satisfy constraints. retcode=0x%x", _environmentid%irampnd%parabolicpath.GetRampNDVect().size()%checkret.retcode);
+                                    description = str(boost::format("env=%d, original RampND %d/%d does not satisfy constraints. retcode=0x%x")%_environmentid%irampnd%parabolicpath.GetRampNDVect().size()%checkret.retcode);
                                 }
+                                RAVELOG_WARN(description);
                                 _DumpTrajectory(ptraj, _dumplevel);
-                                return PS_Failed;
+                                return PlannerStatus(description, PS_Failed);
                             }
                         }
                     }
@@ -941,7 +944,7 @@ public:
                     ++_progress._iteration;
 
                     if( _CallCallbacks(_progress) == PA_Interrupt ) {
-                        return PS_Interrupted;
+                        return PlannerStatus(PS_Interrupted);
                     }
                 }// Finished checking constraints
 
@@ -968,8 +971,9 @@ public:
         }
         catch (const std::exception& ex) {
             _DumpTrajectory(ptraj, _dumplevel);
-            RAVELOG_WARN_FORMAT("env=%d, Main planning loop threw exception %s", _environmentid%ex.what());
-            return PS_Failed;
+            std::string description = str(boost::format("env=%d, Main planning loop threw exception %s")%_environmentid%ex.what());
+            RAVELOG_WARN(description);
+            return PlannerStatus(description, PS_Failed);
         }
         RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time = %f s.", _environmentid%(0.001f*(float)(utils::GetMilliTime() - baseTime)));
 
@@ -980,9 +984,10 @@ public:
                 RAVELOG_DEBUG_FORMAT("env=%d, Sampling for verification successful", _environmentid);
             }
             catch (const std::exception& ex) {
-                RAVELOG_WARN_FORMAT("env=%d, Sampling for verification failed: %s", _environmentid%ex.what());
+                std::string description = str(boost::format("env=%d, Sampling for verification failed: %s")%_environmentid%ex.what());
+                RAVELOG_WARN(description);
                 _DumpTrajectory(ptraj, _dumplevel);
-                return PS_Failed;
+                return PlannerStatus(description, PS_Failed);
             }
         }
         _DumpTrajectory(ptraj, _dumplevel);

@@ -321,35 +321,39 @@ public:
     }
 
 
-    void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) {
-        if( HasNamedGeometry(*pbody, groupname) ) {
-            // Save the already existing KinBodyInfoPtr for the old geometry group
-            KinBodyInfoPtr poldinfo = GetInfo(*pbody);
-            if( poldinfo->_geometrygroup == groupname ) {
-                return;
-            }
-
-            poldinfo->nGeometryUpdateStamp += 1;
-            _cachedpinfo[(pbody)->GetEnvironmentId()][poldinfo->_geometrygroup] = poldinfo;
-
-            BOOST_ASSERT(pbody->GetEnvironmentId() != 0);
-
-            KinBodyInfoPtr pinfo = _cachedpinfo[pbody->GetEnvironmentId()][groupname];
-            if(!pinfo) {
-                RAVELOG_VERBOSE_FORMAT("FCLSpace : creating geometry %s for kinbody %s (id = %d) (env = %d)", groupname%pbody->GetName()%pbody->GetEnvironmentId()%_penv->GetId());
-                pinfo.reset(new KinBodyInfo);
-                pinfo->_geometrygroup = groupname;
-                InitKinBody(pbody, pinfo);
-            }
-            else {
-                RAVELOG_VERBOSE_FORMAT("env=%d, switching to geometry %s for kinbody %s (id = %d)", _penv->GetId()%groupname%pbody->GetName()%pbody->GetEnvironmentId());
-                // Set the current info to use the KinBodyInfoPtr associated to groupname
-                _currentpinfo[pbody->GetEnvironmentId()] = pinfo;
-
-                // Revoke the information inside the cache so that a potentially outdated object does not survive
-                _cachedpinfo[(pbody)->GetEnvironmentId()].erase(groupname);
-            }
+    bool SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) {
+        if (!HasNamedGeometry(*pbody, groupname)) {
+            return false;
         }
+
+        // Save the already existing KinBodyInfoPtr for the old geometry group
+        KinBodyInfoPtr poldinfo = GetInfo(*pbody);
+        if( poldinfo->_geometrygroup == groupname ) {
+            return true;
+        }
+
+        poldinfo->nGeometryUpdateStamp += 1;
+        _cachedpinfo[(pbody)->GetEnvironmentId()][poldinfo->_geometrygroup] = poldinfo;
+
+        BOOST_ASSERT(pbody->GetEnvironmentId() != 0);
+
+        KinBodyInfoPtr pinfo = _cachedpinfo[pbody->GetEnvironmentId()][groupname];
+        if(!pinfo) {
+            RAVELOG_VERBOSE_FORMAT("FCLSpace : creating geometry %s for kinbody %s (id = %d) (env = %d)", groupname%pbody->GetName()%pbody->GetEnvironmentId()%_penv->GetId());
+            pinfo.reset(new KinBodyInfo);
+            pinfo->_geometrygroup = groupname;
+            InitKinBody(pbody, pinfo);
+        }
+        else {
+            RAVELOG_VERBOSE_FORMAT("env=%d, switching to geometry %s for kinbody %s (id = %d)", _penv->GetId()%groupname%pbody->GetName()%pbody->GetEnvironmentId());
+            // Set the current info to use the KinBodyInfoPtr associated to groupname
+            _currentpinfo[pbody->GetEnvironmentId()] = pinfo;
+
+            // Revoke the information inside the cache so that a potentially outdated object does not survive
+            _cachedpinfo[(pbody)->GetEnvironmentId()].erase(groupname);
+        }
+
+        return true;
     }
 
     const std::string& GetBodyGeometryGroup(const KinBody &body) const {
