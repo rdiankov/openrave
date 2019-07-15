@@ -191,7 +191,10 @@ public:
             LOAD_IKFUNCTION0(ComputeIk2);
             LOAD_IKFUNCTION(ComputeFk);
             LOAD_IKFUNCTION(GetNumFreeParameters);
-            LOAD_IKFUNCTION(GetFreeIndices);
+            LOAD_IKFUNCTION0(GetFreeIndices);
+            if( !ikfunctions->_GetFreeIndices ) {
+                ikfunctions->_GetFreeIndices = (typename ikfast::IkFastFunctions<T>::GetFreeIndicesFn)SysLoadSym(plib, "GetFreeParameters"); \
+            }
             LOAD_IKFUNCTION(GetNumJoints);
             LOAD_IKFUNCTION(GetIkRealSize);
             LOAD_IKFUNCTION(GetIkFastVersion);
