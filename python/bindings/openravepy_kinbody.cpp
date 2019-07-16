@@ -3119,7 +3119,9 @@ public:
         r._vGeomData = state[1][0];
         r._vGeomData2 = state[1][1];
         r._vGeomData3 = state[1][2];
-        r._vGeomData4 = state[1][3];
+        if( boost::python::len(state[1]) >= 4 ) { // for backward compatibility
+            r._vGeomData4 = state[1][3];
+        }
         r._vDiffuseColor = state[2];
         r._vAmbientColor = state[3];
         r._meshcollision = state[4];

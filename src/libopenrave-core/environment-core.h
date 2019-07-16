@@ -228,7 +228,7 @@ public:
 
         // destroy the modules (their destructors could attempt to lock environment, so have to do it before global lock)
         // however, do not clear the _listModules yet
-        RAVELOG_DEBUG("destroy module\n");
+        RAVELOG_DEBUG_FORMAT("env=%d destroy module", GetId());
         list< pair<ModuleBasePtr, std::string> > listModules;
         list<ViewerBasePtr> listViewers = _listViewers;
         {
