@@ -1408,7 +1408,7 @@ protected:
                 int ret = _jacobinvsolver.ComputeSolution(tgoal, manip, vsolution, bIgnoreJointLimits);
                 if( ret == 2 ) {
                     RAVELOG_VERBOSE("did not converge, try to prioritize translation at least\n");
-                    ret = _jacobinvsolver.ComputeSolutionTranslation(tgoal, manip, vsolution, bIgnoreJointLimits);
+                    ret = _jacobinvsolver.ComputeSolutionTranslation(param.GetTransform6D(), manip, vsolution);
                 }
                 if( ret == 0 ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
@@ -1542,7 +1542,6 @@ protected:
                 }
                 probot->SetActiveDOFValues(itravesol->first,false);
                 _CheckRefineSolution(param, *pmanip, itravesol->first, !!(filteroptions&IKFO_IgnoreJointLimits));
-
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false);
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
