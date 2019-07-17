@@ -271,6 +271,8 @@ class InverseKinematicsModel(DatabaseGenerator):
         self.statistics = dict()
         self._checkpreemptfn=checkpreemptfn
         
+        self._cachedKinematicsHash = self.manip.GetInverseKinematicsStructureHash(self.iktype)
+        
     def  __del__(self):
         if self.ikfastproblem is not None:
             # need to lock the environment since Remove locks it
@@ -963,8 +965,6 @@ class InverseKinematicsModel(DatabaseGenerator):
                             pass
             else:
                 log.warn('cannot continue further if outputlang %s is not cpp',outputlang)
-                
-        self._cachedKinematicsHash = self.manip.GetInverseKinematicsStructureHash(self.iktype)
         
     def perftiming(self,num):
         with self.env:
