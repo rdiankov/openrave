@@ -561,7 +561,9 @@ return solver.ComputeIk(eetrans,eerot,pfree,solutions);
 IKFAST_API bool ComputeIk2(const IkReal* eetrans, const IkReal* eerot, const IkReal* pfree, IkSolutionListBase<IkReal>& solutions, void* pOpenRAVEManip) {
 _IKFAST_DISPLAY(std::cout << "Inside IKFAST's ComputeIk2";);
 IKSolver solver;
-return solver.ComputeIk(eetrans,eerot,pfree,solutions);
+bool breturn = solver.ComputeIk(eetrans,eerot,pfree,solutions);
+_IKFAST_DISPLAY(std::cout << __FILE__ << " ComputeIk2 returns " << solutions.GetNumSolutions() << " solutions";);
+return breturn;
 }
 
 IKFAST_API const char* GetKinematicsHash() { return "%s"; }
