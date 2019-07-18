@@ -262,6 +262,17 @@ IKFAST_COMPILE_ASSERT(IKFAST_VERSION==%s);
 #include <sstream>
 #include <iostream>
 
+#define _IKFAST_DISPLAY(RUNCODE)                                               \\
+{                                                                              \\
+    printf(                                                                    \\
+        "\\n%%s:%%d, [ %%s "                                                    \\
+        "]\\n-----------------------------------------------------------------" \\
+        "--------------\\n",                                                    \\
+        __FILE__, __LINE__, __func__ /*__PRETTY_FUNCTION__*/);                 \\
+    RUNCODE;                                                                   \\
+    printf("\\n");                                                              \\
+}
+
 #ifdef _MSC_VER
 #ifndef __PRETTY_FUNCTION__
 #define __PRETTY_FUNCTION__ __FUNCDNAME__
@@ -548,6 +559,7 @@ return solver.ComputeIk(eetrans,eerot,pfree,solutions);
 }
 
 IKFAST_API bool ComputeIk2(const IkReal* eetrans, const IkReal* eerot, const IkReal* pfree, IkSolutionListBase<IkReal>& solutions, void* pOpenRAVEManip) {
+_IKFAST_DISPLAY(std::cout << "Inside IKFAST's ComputeIk2";);
 IKSolver solver;
 return solver.ComputeIk(eetrans,eerot,pfree,solutions);
 }
