@@ -55,6 +55,7 @@ enum PlannerStatusCode
     PS_FailedDueToKinematics = 0x00100000, ///< failed due to kinematics constraints
     PS_FailedDueToIK = 0x00200000, ///< failed due to inverse kinematics (could be due to collisions or velocity constraints, but don't know)
     PS_FailedDueToVelocityConstraints = 0x00400000, ///< failed due to velocity constraints
+    PS_FailedDueToCustomFilter = 0x00800000, ///< failed due to custom filter
 };
 
 enum PlanningOptions
