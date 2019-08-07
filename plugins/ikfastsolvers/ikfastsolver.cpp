@@ -1224,23 +1224,35 @@ protected:
                 IkReal eetrans[3] = {(IkReal)p.first.x, (IkReal)p.first.y, (IkReal)p.first.z};
                 IkReal eerot[9] = {(IkReal)p.second, 0, 0, 0, 0, 0, 0, 0, 0};
                 bool bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
-                if( !bret ) {
+                if( !bret || (vfree.empty() && solutions.GetNumSolutions() < 8) ) {
 #ifdef OPENRAVE_HAS_LAPACK
                     if( _fRefineWithJacobianInverseAllowedError > 0 ) {
+                        ikfast::IkSolutionList<IkReal> solutionsWithJitter;
                         // since will be refining, can add a little error to see if IK gets recomputed
                         eetrans[0] += 0.0001;
                         eetrans[1] += 0.0001;
                         eetrans[2] += 0.0001;
                         eerot[0] += 0.0001;
-                        bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
-                        if( !bret ) {
+                        bool bretJitterPositive(false);
+                        bool bretJitterNegative(false);
+                        bretJitterPositive = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutionsWithJitter, &pmanip);
+                        if (bretJitterPositive) {
+                            solutions.AddSolutions(solutionsWithJitter);
+                            RAVELOG_VERBOSE_FORMAT("%d solutions are added from +jittered ikparam, now %d solutions in total", solutionsWithJitter.GetNumSolutions()%solutions.GetNumSolutions());
+                        }
+                        if( !bretJitterPositive || (vfree.empty() && solutionsWithJitter.GetNumSolutions() < 8) ) {
                             eetrans[0] -= 0.0002;
                             eetrans[1] -= 0.0002;
                             eetrans[2] -= 0.0002;
                             eerot[0] -= 0.0002;
-                            bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
+                            bretJitterNegative = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutionsWithJitter, &pmanip);
+                            if (bretJitterNegative) {
+                                solutions.AddSolutions(solutionsWithJitter);
+                                RAVELOG_VERBOSE_FORMAT("%d solutions are added from -jittered ikparam, now %d solutions in total", solutionsWithJitter.GetNumSolutions()%solutions.GetNumSolutions());
+                            }
                         }
-                        RAVELOG_VERBOSE("ik failed, trying with slight jitter, ret=%d", (int)bret);
+                        RAVELOG_VERBOSE_FORMAT("ik failed, trying with slight jitter, ret=%d", (int)(bretJitterNegative || bretJitterPositive));
+                        bret |= bretJitterNegative || bretJitterPositive;
                     }
 #endif
                 }
