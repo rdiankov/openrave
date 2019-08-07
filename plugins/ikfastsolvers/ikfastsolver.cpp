@@ -1400,6 +1400,18 @@ protected:
                     RAVELOG_WARN_FORMAT("failed to refine solution lasterror=%f, %s", RaveSqrt(_jacobinvsolver._lasterror2)%ss.str());
                 }
             }
+            else if( param.GetType() == IKP_TranslationZAxisAngle4D ) {
+                int ret = _jacobinvsolver.ComputeSolution(param, manip, vsolution);
+                if( ret == 0 ) {
+                    stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                    ss << "IkParameterization('" << param << "'); sol=[";
+                    FOREACH(it, vsolution) {
+                        ss << *it << ",";
+                    }
+                    ss << "]";
+                    RAVELOG_WARN_FORMAT("failed to refine solution lasterror=%f, %s", RaveSqrt(_jacobinvsolver._lasterror2)%ss.str());
+                }
+            }
             else if( param.GetType() == IKP_TranslationDirection5D ) { // only 6d supported for now
                 // have to project the current manip into the direction constraints so that direction aligns perfectly
                 Transform tgoal;
