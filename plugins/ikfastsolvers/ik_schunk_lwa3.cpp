@@ -13255,6 +13255,8 @@ IKFAST_API const char* GetKinematicsHash() { return "f1b4ece80cdeeec66467d9998ec
 
 IKFAST_API const char* GetIkFastVersion() { return "0x10000048"; }
 
+IKFAST_API int GetMaxNumRegularSolutions() { return 16; }
+
 #ifdef IKFAST_NAMESPACE
 } // end namespace
 #endif
@@ -13319,6 +13321,7 @@ IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, std::istream& sinput, co
     ikfunctions->_GetIkFastVersion = IKFAST_NAMESPACE::GetIkFastVersion;
     ikfunctions->_GetIkType = IKFAST_NAMESPACE::GetIkType;
     ikfunctions->_GetKinematicsHash = IKFAST_NAMESPACE::GetKinematicsHash;
+    ikfunctions->_GetMaxNumRegularSolutions = IKFAST_NAMESPACE::GetMaxNumRegularSolutions;
     return CreateIkFastSolver(penv,sinput,ikfunctions,vfreeinc);
 }
 } // end namespace

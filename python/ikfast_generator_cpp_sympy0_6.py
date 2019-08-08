@@ -463,6 +463,7 @@ int main(int argc, char** argv)
         code += "IKFAST_API int GetNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
         code += "IKFAST_API int GetIkRealSize() { return sizeof(IkReal); }\n\n"
         code += 'IKFAST_API int GetIkType() { return 0x%x; }\n\n'%iktype
+        code += "IKFAST_API int GetMaxNumRegularSolutions() { return %d; }\n\n"%(16 if iktype==IkType.Transform6D else 8)
         code += "class IKSolver {\npublic:\n"
         
         usedvars = []

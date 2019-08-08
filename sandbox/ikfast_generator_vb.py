@@ -429,6 +429,7 @@ End Class
             code += "}; return freeindices; }\n"
         code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
         code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
+        code += "IKFAST_API int GetMaxNumRegularSolutions() { return %d; }\n\n"%(16 if iktype==IkType.Transform6D else 8)
         code += 'IKFAST_API int getIKType() { return %d; }\n\n'%IkType.Rotation3D
         code += """
 Public Class Matrix3x3
@@ -513,6 +514,7 @@ End Class
             code += "}; return freeindices; }\n"
         code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
         code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
+        code += "IKFAST_API int GetMaxNumRegularSolutions() { return %d; }\n\n"%(16 if iktype==IkType.Transform6D else 8)
         code += 'IKFAST_API int getIKType() { return %d; }\n\n'%IkType.Translation3D
         code += """
 Public Class Vector3
@@ -585,6 +587,7 @@ End Class
             code += "}; return freeindices; }\n"
         code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
         code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
+        code += "IKFAST_API int GetMaxNumRegularSolutions() { return %d; }\n\n"%(16 if iktype==IkType.Transform6D else 8)
         code += 'IKFAST_API int getIKType() { return %d; }\n\n'%IkType.Direction3D
         code += """
 Public Class Vector3

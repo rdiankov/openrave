@@ -138,7 +138,7 @@ template <typename T>
 class IkFastFunctions
 {
 public:
-    IkFastFunctions() : _ComputeIk(NULL), _ComputeIk2(NULL), _ComputeFk(NULL), _GetNumFreeParameters(NULL), _GetFreeIndices(NULL), _GetNumJoints(NULL), _GetIkRealSize(NULL), _GetIkFastVersion(NULL), _GetIkType(NULL), _GetKinematicsHash(NULL) {
+    IkFastFunctions() : _ComputeIk(NULL), _ComputeIk2(NULL), _ComputeFk(NULL), _GetNumFreeParameters(NULL), _GetFreeIndices(NULL), _GetNumJoints(NULL), _GetIkRealSize(NULL), _GetIkFastVersion(NULL), _GetIkType(NULL), _GetKinematicsHash(NULL), _GetMaxNumRegularSolutions(NULL) {
     }
     virtual ~IkFastFunctions() {
     }
@@ -162,6 +162,8 @@ public:
     GetIkTypeFn _GetIkType;
     typedef const char* (*GetKinematicsHashFn)();
     GetKinematicsHashFn _GetKinematicsHash;
+    typedef int (*GetMaxNumRegularSolutionsFn)();
+    GetMaxNumRegularSolutionsFn _GetMaxNumRegularSolutions;
 };
 
 template <typename T>
@@ -592,6 +594,9 @@ IKFAST_API int GetIkType();
 
 /// \brief a hash of all the chain values used for double checking that the correct IK is used.
 IKFAST_API const char* GetKinematicsHash();
+
+/// \brief the maximum number of regular (non-degenerate) solutions
+IKFAST_API int GetMaxNumRegularSolutions();
 
 #ifdef IKFAST_NAMESPACE
 }
