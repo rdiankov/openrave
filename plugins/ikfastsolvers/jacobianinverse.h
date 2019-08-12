@@ -585,27 +585,37 @@ public:
         case IKP_TranslationZAxisAngle4D:
             {
                 const RobotBasePtr probot = manip.GetRobot();
+                const TransformMatrix robotrot = matrixFromQuat(probot->GetTransform().rot);
+                const Vector robotZDir(robotrot.rot(0, 2), robotrot.rot(1, 2), robotrot.rot(2, 2));
+
+                manip.CalculateRotationJacobian(_vjacobian);
+
                 const TransformMatrix maniprot = matrixFromQuat(manip.GetTransform().rot);
                 const Vector manipZDir(maniprot.rot(0, 2), maniprot.rot(1, 2), maniprot.rot(2, 2));
+                const double rzzSq = maniprot.rot(2, 2)*maniprot.rot(2, 2);
                 // angle part, definition is arccos(Rzz(q)) where Rzz is the z-z component of manip's 3x3 rotation matrix
                 // a = f(h(q)) where q is the joint angle, h is the forward kinematics for Rzz and f is the arccos
                 // using chain rule, da/dq = df/dh times dh/dq
                 // df/dh is -1 / sqrt(1-h^2) and
                 // dh/dq is cross product b/w joint axis and manipulator direction
-                const double rzzSq = maniprot.rot(2, 2)*maniprot.rot(2, 2);
-                
-                if (1.0 - rzzSq > 1.0e-9) { // non-singular
-                    const double dfdh = -1.0 / sqrt(1.0 - rzzSq);
-                    for(size_t j = 0; j < _viweights.size(); ++j) {
-                        int dof = manip.GetArmIndices().at(j);
-                        const Vector jointAxis = probot->GetJointFromDOFIndex(dof)->GetAxis();
+
+                for(size_t j = 0; j < _viweights.size(); ++j) {
+                    // better to get joint axis from angular jacobian than, directly getting it from joint->getaxis to handle prismatic joint properly
+                    //const Vector jointAxis = Vector(_vjacobian[j],_vjacobian[armdof+j],_vjacobian[2*armdof+j]);
+                    int dof = manip.GetArmIndices().at(j);
+                    const Vector jointAxis = probot->GetJointFromDOFIndex(dof)->GetAxis();
+                    // positive value means error increases if joint is rotated positively
+                    const double jacobianZDot = (robotZDir.cross(manipZDir)).dot(jointAxis);
+                    const double jacobianSign = jacobianZDot > 0 ? 1 : -1;
+
+                    if (1.0 - rzzSq > 1.0e-9) { // non-singular
+                        const double dfdh = -1.0 / sqrt(1.0 - rzzSq);
                         const double dhdq = jointAxis.cross(manipZDir)[2];
-                        _J(0,j) = dfdh * dhdq *_viweights[j];
+                        _J(0,j) = jacobianSign * dfdh * dhdq * _viweights[j];
                     }
-                }
-                else { // singular
-                    for(size_t j = 0; j < _viweights.size(); ++j) {
-                        _J(0,j) = 0;
+                    else { // singular, base z axis and manip z axis are almost parallel
+                        const double jacobianZAngle = (jointAxis.cross(manipZDir)).lengthsqr2();
+                        _J(0,j) = jacobianSign * jacobianZAngle *_viweights[j];
                     }
                 }
             
