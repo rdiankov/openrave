@@ -80,8 +80,9 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
     // check all grabbed bodies with (TODO: support CO_ActiveDOFs option)
     FOREACH(itgrabbed, _vGrabbedBodies) {
         GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
-        KinBodyPtr pbody(pgrabbed->_pgrabbedbody);
+        KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
         if( !pbody ) {
+            RAVELOG_WARN(str(boost::format("grabbed body on %s has already been released. ignoring.\n")%pbody->GetName()));
             continue;
         }
         FOREACH(itrobotlink,pgrabbed->_listNonCollidingLinks) {
@@ -131,7 +132,11 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
         if( _vGrabbedBodies.size() > 1 ) {
             FOREACHC(itgrabbed2, _vGrabbedBodies) {
                 GrabbedConstPtr pgrabbed2 = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed2);
-                KinBodyPtr pbody2(pgrabbed2->_pgrabbedbody);
+                KinBodyPtr pbody2 = pgrabbed2->_pgrabbedbody.lock();
+                if( !pbody2 ) {
+                    RAVELOG_WARN(str(boost::format("grabbed body on %s has already been released. ignoring.\n")%pbody->GetName()));
+                    continue;
+                }
                 if( pbody == pbody2 ) {
                     continue;
                 }
