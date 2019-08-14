@@ -2122,7 +2122,11 @@ void Grabbed::ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
         FOREACHC(itgrabbed, pbody->_vGrabbedBodies) {
             boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
             bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkrobot) != _vattachedlinks.end();
-            KinBodyPtr pothergrabbedbody(pgrabbed->_pgrabbedbody);
+            KinBodyPtr pothergrabbedbody = pgrabbed->_pgrabbedbody.lock();
+            if( !pothergrabbedbody ) {
+                RAVELOG_WARN(str(boost::format("grabbed body on %s has already been released. ignoring.\n")%pbody->GetName()));
+                continue;
+            }
             if( bsamelink ) {
                 pothergrabbedbody->GetLinks().at(0)->GetRigidlyAttachedLinks(vbodyattachedlinks);
             }
@@ -2200,8 +2204,12 @@ void Grabbed::UpdateCollidingLinks()
     FOREACHC(itgrabbed, pbody->_vGrabbedBodies) {
         boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
         bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkrobot) != _vattachedlinks.end();
-        KinBodyPtr pothergrabbedbody(pgrabbed->_pgrabbedbody);
-        if( !!pothergrabbedbody && pothergrabbedbody != pgrabbedbody && pothergrabbedbody->GetLinks().size() > 0 ) {
+        KinBodyPtr pothergrabbedbody = pgrabbed->_pgrabbedbody.lock();
+        if( !pothergrabbedbody ) {
+            RAVELOG_WARN(str(boost::format("grabbed body on %s has already been released. ignoring.\n")%pbody->GetName()));
+            continue;
+        }
+        if( pothergrabbedbody != pgrabbedbody && pothergrabbedbody->GetLinks().size() > 0 ) {
             if( bsamelink ) {
                 pothergrabbedbody->GetLinks().at(0)->GetRigidlyAttachedLinks(vbodyattachedlinks);
             }
@@ -2232,7 +2240,7 @@ void Grabbed::UpdateCollidingLinks()
     std::set<KinBodyConstPtr> _setgrabbed;
     FOREACHC(itgrabbed, pbody->_vGrabbedBodies) {
         boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
-        KinBodyConstPtr pothergrabbedbody(pgrabbed->_pgrabbedbody);
+        KinBodyConstPtr pothergrabbedbody = pgrabbed->_pgrabbedbody.lock();
         if( !!pothergrabbedbody ) {
             _setgrabbed.insert(pothergrabbedbody);
         }
