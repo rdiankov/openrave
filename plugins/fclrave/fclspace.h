@@ -192,7 +192,7 @@ public:
         _setInitializedBodies.clear();
     }
 
-    KinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr())
+    KinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), bool bSetToCurrentPInfo=true)
     {
         if( !pinfo ) {
             pinfo.reset(new KinBodyInfo());
@@ -282,7 +282,9 @@ public:
         pinfo->_bodyremovedcallback = pbody->RegisterChangeCallback(KinBody::Prop_BodyRemoved, boost::bind(&FCLSpace::RemoveUserData, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::bind(&OpenRAVE::utils::sptr_from<const KinBody>, boost::weak_ptr<const KinBody>(pbody))));
 
         BOOST_ASSERT(pbody->GetEnvironmentId() != 0);
-        _currentpinfo[pbody->GetEnvironmentId()] = pinfo;
+        if( bSetToCurrentPInfo ) {
+            _currentpinfo[pbody->GetEnvironmentId()] = pinfo;
+        }
         //_cachedpinfo[pbody->GetEnvironmentId()] what to do with the cache?
         _setInitializedBodies.insert(pbody);
 
@@ -679,32 +681,38 @@ private:
     {
         KinBodyInfoPtr pinfo = _pinfo.lock();
         KinBodyPtr pbody = pinfo->GetBody();
-        if( !!pinfo && pinfo->_geometrygroup.size() == 0 ) {
+        KinBodyInfoPtr pcurrentinfo = _currentpinfo[pbody->GetEnvironmentId()];
+
+        if( !!pinfo && pinfo == pcurrentinfo ) {//pinfo->_geometrygroup.size() == 0 ) {
+            // pinfo is current set to the current one, so should InitKinBody into _currentpinfo
             //RAVELOG_VERBOSE_FORMAT("env=%d, resetting current geometry for kinbody %s nGeometryUpdateStamp=%d, (key %s, self=%d)", _penv->GetId()%pbody->GetName()%pinfo->nGeometryUpdateStamp%_userdatakey%_bIsSelfCollisionChecker);
             pinfo->nGeometryUpdateStamp++;
             KinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect
-            InitKinBody(pbody, pinfo);
+            InitKinBody(pbody, pinfo, false);
             remover.ResetRemove(); // succeeded
         }
-        _cachedpinfo[pbody->GetEnvironmentId()].erase(std::string());
+        //_cachedpinfo[pbody->GetEnvironmentId()].erase(std::string());
     }
 
     void _ResetGeometryGroupsCallback(boost::weak_ptr<KinBodyInfo> _pinfo)
     {
         KinBodyInfoPtr pinfo = _pinfo.lock();
         KinBodyPtr pbody = pinfo->GetBody();
-        if( !!pinfo && pinfo->_geometrygroup.size() > 0 ) {
+
+        //KinBodyInfoPtr pcurrentinfo = _currentpinfo[pbody->GetEnvironmentId()];
+
+        if( !!pinfo ) {// && pinfo->_geometrygroup.size() > 0 ) {
             //RAVELOG_VERBOSE_FORMAT("env=%d, resetting geometry groups for kinbody %s, nGeometryUpdateStamp=%d (key %s, self=%d)", _penv->GetId()%pbody->GetName()%pinfo->nGeometryUpdateStamp%_userdatakey%_bIsSelfCollisionChecker);
             pinfo->nGeometryUpdateStamp++;
             KinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect
-            InitKinBody(pbody, pinfo);
+            InitKinBody(pbody, pinfo, false);
             remover.ResetRemove(); // succeeded
         }
-        KinBodyInfoPtr pinfoCurrentGeometry = _cachedpinfo[pbody->GetEnvironmentId()][std::string()];
-        _cachedpinfo.erase(pbody->GetEnvironmentId());
-        if( !!pinfoCurrentGeometry ) {
-            _cachedpinfo[pbody->GetEnvironmentId()][std::string()] = pinfoCurrentGeometry;
-        }
+//        KinBodyInfoPtr pinfoCurrentGeometry = _cachedpinfo[pbody->GetEnvironmentId()][std::string()];
+//        _cachedpinfo.erase(pbody->GetEnvironmentId());
+//        if( !!pinfoCurrentGeometry ) {
+//            _cachedpinfo[pbody->GetEnvironmentId()][std::string()] = pinfoCurrentGeometry;
+//        }
     }
 
     void _ResetLinkEnableCallback(boost::weak_ptr<KinBodyInfo> _pinfo) {
@@ -739,7 +747,7 @@ private:
 
     std::set<KinBodyConstPtr> _setInitializedBodies; ///< Set of the kinbody initialized in this space
     std::map< int, std::map< std::string, KinBodyInfoPtr > > _cachedpinfo; ///< Associates to each body id and geometry group name the corresponding kinbody info if already initialized and not currently set as user data
-    std::map< int, KinBodyInfoPtr> _currentpinfo; ///< maps kinbody environment id to the kinbodyinfo struct constaining fcl objects. The key being environment id makes it easier to compare objects without getting a handle to their pointers.
+    std::map< int, KinBodyInfoPtr> _currentpinfo; ///< maps kinbody environment id to the kinbodyinfo struct constaining fcl objects. The key being environment id makes it easier to compare objects without getting a handle to their pointers. Whenever a KinBodyInfoPtr goes into this map, it is removed from _cachedpinfo
 
     bool _bIsSelfCollisionChecker; // Currently not used
 };
