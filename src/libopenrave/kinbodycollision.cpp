@@ -82,7 +82,7 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
         GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
         KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
         if( !pbody ) {
-            RAVELOG_WARN(str(boost::format("grabbed body on %s has already been released. ignoring.\n")%pbody->GetName()));
+            RAVELOG_WARN_FORMAT("grabbed body on %s has already been destroyed, ignoring.", GetName());
             continue;
         }
         FOREACH(itrobotlink,pgrabbed->_listNonCollidingLinks) {
@@ -134,7 +134,7 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
                 GrabbedConstPtr pgrabbed2 = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed2);
                 KinBodyPtr pbody2 = pgrabbed2->_pgrabbedbody.lock();
                 if( !pbody2 ) {
-                    RAVELOG_WARN(str(boost::format("grabbed body on %s has already been released. ignoring.\n")%pbody->GetName()));
+                    RAVELOG_WARN_FORMAT("grabbed body on %s has already been destroyed, so ignoring.", GetName());
                     continue;
                 }
                 if( pbody == pbody2 ) {
