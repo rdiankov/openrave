@@ -965,6 +965,20 @@ public:
         return _plink->InitGeometries(geometries);
     }
 
+    void AddGeometry(object ogeometryinfo, bool addToGroups)
+    {
+        PyGeometryInfoPtr pygeom = boost::python::extract<PyGeometryInfoPtr>(ogeometryinfo);
+        if( !pygeom ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.GeometryInfo"),ORE_InvalidArguments);
+        }
+        _plink->AddGeometry(pygeom->GetGeometryInfo(), addToGroups);
+    }
+
+    void RemoveGeometryByName(const std::string& geometryname, bool removeFromAllGroups)
+    {
+        _plink->RemoveGeometryByName(geometryname, removeFromAllGroups);
+    }
+
     void SetGeometriesFromGroup(const std::string& name)
     {
         _plink->SetGeometriesFromGroup(name);
@@ -3736,6 +3750,8 @@ void init_openravepy_kinbody()
                          .def("SetTorque",&PyLink::SetTorque,args("torque","add"), DOXY_FN(KinBody::Link,SetTorque))
                          .def("GetGeometries",&PyLink::GetGeometries, DOXY_FN(KinBody::Link,GetGeometries))
                          .def("InitGeometries",&PyLink::InitGeometries, args("geometries"), DOXY_FN(KinBody::Link,InitGeometries))
+                         .def("AddGeometry", &PyLink::AddGeometry, args("geometryinfo", "addToGroups"), DOXY_FN(KinBody::Link,AddGeometry))
+                         .def("RemoveGeometryByName", &PyLink::RemoveGeometryByName, args("geometryname", "removeFromAllGroups"), DOXY_FN(KinBody::Link,RemoveGeometryByName))
                          .def("SetGeometriesFromGroup",&PyLink::SetGeometriesFromGroup, args("name"), DOXY_FN(KinBody::Link,SetGeometriesFromGroup))
                          .def("GetGeometriesFromGroup",&PyLink::GetGeometriesFromGroup, args("name"), DOXY_FN(KinBody::Link,GetGeometriesFromGroup))
                          .def("SetGroupGeometries",&PyLink::SetGroupGeometries, args("geometries"), DOXY_FN(KinBody::Link,SetGroupGeometries))
