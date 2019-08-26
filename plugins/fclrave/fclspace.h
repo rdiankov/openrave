@@ -289,7 +289,7 @@ public:
         _setInitializedBodies.insert(pbody);
 
         //Do I really need to synchronize anything at that point ?
-        _Synchronize(pinfo);
+        _Synchronize(*pinfo, *pbody);
 
         return pinfo;
     }
@@ -434,15 +434,20 @@ public:
             return;
         }
         BOOST_ASSERT( pinfo->GetBody().get() == &body);
-        _Synchronize(pinfo);
+        _Synchronize(*pinfo, body);
     }
 
     void SynchronizeWithAttached(const KinBody &body)
     {
-        std::set<KinBodyPtr> setAttachedpBodyTemp;
-        body.GetAttached(setAttachedpBodyTemp);
-        FOREACH(itbody, setAttachedpBodyTemp) {
-            Synchronize(**itbody);
+        if( body.HasAttached() ) {
+            std::set<KinBodyPtr> setAttachedpBodyTemp;
+            body.GetAttached(setAttachedpBodyTemp);
+            FOREACH(itbody, setAttachedpBodyTemp) {
+                Synchronize(**itbody);
+            }
+        }
+        else {
+            Synchronize(body);
         }
     }
 
@@ -607,21 +612,22 @@ private:
         }
     }
 
-    void _Synchronize(KinBodyInfoPtr pinfo)
+    /// \brief pass in info.GetBody() as a reference to avoid dereferencing the weak pointer in KinBodyInfo
+    void _Synchronize(KinBodyInfo& info, const KinBody& body)
     {
-        KinBodyPtr pbody = pinfo->GetBody();
-        if( pinfo->nLastStamp != pbody->GetUpdateStamp()) {
+        //KinBodyPtr pbody = info.GetBody();
+        if( info.nLastStamp != body.GetUpdateStamp()) {
             vector<Transform> vtrans;
-            pbody->GetLinkTransformations(vtrans);
-            pinfo->nLastStamp = pbody->GetUpdateStamp();
-            BOOST_ASSERT( pbody->GetLinks().size() == pinfo->vlinks.size() );
-            BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
+            body.GetLinkTransformations(vtrans);
+            info.nLastStamp = body.GetUpdateStamp();
+            BOOST_ASSERT( body.GetLinks().size() == info.vlinks.size() );
+            BOOST_ASSERT( vtrans.size() == info.vlinks.size() );
             for(size_t i = 0; i < vtrans.size(); ++i) {
-                CollisionObjectPtr pcoll = pinfo->vlinks[i]->linkBV.second;
+                CollisionObjectPtr pcoll = info.vlinks[i]->linkBV.second;
                 if( !pcoll ) {
                     continue;
                 }
-                Transform pose = vtrans[i] * pinfo->vlinks[i]->linkBV.first;
+                Transform pose = vtrans[i] * info.vlinks[i]->linkBV.first;
                 fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
                 fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
 
@@ -630,8 +636,8 @@ private:
                 // Do not forget to recompute the AABB otherwise getAABB won't give an up to date AABB
                 pcoll->computeAABB();
 
-                //pinfo->vlinks[i]->nLastStamp = pinfo->nLastStamp;
-                FOREACHC(itgeomcoll, pinfo->vlinks[i]->vgeoms) {
+                //info.vlinks[i]->nLastStamp = info.nLastStamp;
+                FOREACHC(itgeomcoll, info.vlinks[i]->vgeoms) {
                     CollisionObjectPtr pcoll = (*itgeomcoll).second;
                     Transform pose = vtrans[i] * (*itgeomcoll).first;
                     fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
@@ -645,9 +651,9 @@ private:
             }
 
             // Does this have any use ?
-            if( !!_synccallback ) {
-                _synccallback(pinfo);
-            }
+            // if( !!_synccallback ) {
+            //     _synccallback(pinfo);
+            // }
         }
     }
 
@@ -735,7 +741,7 @@ private:
     EnvironmentBasePtr _penv;
     std::string _userdatakey;
     std::string _geometrygroup;
-    SynchronizeCallbackFn _synccallback;
+    //SynchronizeCallbackFn _synccallback;
 
     std::string _bvhRepresentation;
     MeshFactory _meshFactory;
