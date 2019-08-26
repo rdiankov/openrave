@@ -2124,7 +2124,7 @@ void Grabbed::ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
             bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkrobot) != _vattachedlinks.end();
             KinBodyPtr pothergrabbedbody = pgrabbed->_pgrabbedbody.lock();
             if( !pothergrabbedbody ) {
-                RAVELOG_WARN(str(boost::format("grabbed body on %s has already been released. ignoring.\n")%pbody->GetName()));
+                RAVELOG_WARN_FORMAT("grabbed body on %s has already been released. ignoring.", pbody->GetName());
                 continue;
             }
             if( bsamelink ) {
@@ -2206,7 +2206,7 @@ void Grabbed::UpdateCollidingLinks()
         bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkrobot) != _vattachedlinks.end();
         KinBodyPtr pothergrabbedbody = pgrabbed->_pgrabbedbody.lock();
         if( !pothergrabbedbody ) {
-            RAVELOG_WARN(str(boost::format("grabbed body on %s has already been released. ignoring.\n")%pbody->GetName()));
+            RAVELOG_WARN_FORMAT("grabbed body on %s has already been destroyed, ignoring.", pbody->GetName());
             continue;
         }
         if( pothergrabbedbody != pgrabbedbody && pothergrabbedbody->GetLinks().size() > 0 ) {
@@ -2243,6 +2243,9 @@ void Grabbed::UpdateCollidingLinks()
         KinBodyConstPtr pothergrabbedbody = pgrabbed->_pgrabbedbody.lock();
         if( !!pothergrabbedbody ) {
             _setgrabbed.insert(pothergrabbedbody);
+        }
+        else {
+            RAVELOG_WARN_FORMAT("grabbed body on %s has already been destroyed, ignoring.", pbody->GetName());
         }
     }
 
