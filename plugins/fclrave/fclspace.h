@@ -612,6 +612,7 @@ private:
         }
     }
 
+    /// \brief pass in info.GetBody() as a reference to avoid dereferencing the weak pointer in KinBodyInfo
     void _Synchronize(KinBodyInfo& info, const KinBody& body)
     {
         //KinBodyPtr pbody = info.GetBody();

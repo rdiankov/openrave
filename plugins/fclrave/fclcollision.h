@@ -816,12 +816,13 @@ public:
             FOREACH(itset, nonadjacent) {
                 size_t index1 = *itset&0xffff, index2 = *itset>>16;
                 // We don't need to check if the links are enabled since we got adjacency information with AO_Enabled
-                LinkInfoPtr pLINK1 = pinfo->vlinks[index1], pLINK2 = pinfo->vlinks[index2];
-                if( !pLINK1->linkBV.second->getAABB().overlap(pLINK2->linkBV.second->getAABB()) ) {
+                const FCLSpace::KinBodyInfo::LinkInfo& pLINK1 = *pinfo->vlinks.at(index1);
+                const FCLSpace::KinBodyInfo::LinkInfo& pLINK2 = *pinfo->vlinks.at(index2);
+                if( !pLINK1.linkBV.second->getAABB().overlap(pLINK2.linkBV.second->getAABB()) ) {
                     continue;
                 }
-                FOREACH(itgeom1, pLINK1->vgeoms) {
-                    FOREACH(itgeom2, pLINK2->vgeoms) {
+                FOREACH(itgeom1, pLINK1.vgeoms) {
+                    FOREACH(itgeom2, pLINK2.vgeoms) {
                         if( !(*itgeom1).second->getAABB().overlap((*itgeom2).second->getAABB()) ) {
                             continue;
                         }
@@ -871,12 +872,13 @@ public:
             FOREACH(itset, nonadjacent) {
                 int index1 = *itset&0xffff, index2 = *itset>>16;
                 if( plink->GetIndex() == index1 || plink->GetIndex() == index2 ) {
-                    LinkInfoPtr pLINK1 = pinfo->vlinks[index1], pLINK2 = pinfo->vlinks[index2];
-                    if( !pLINK1->linkBV.second->getAABB().overlap(pLINK2->linkBV.second->getAABB()) ) {
+                    const FCLSpace::KinBodyInfo::LinkInfo& pLINK1 = *pinfo->vlinks.at(index1);
+                    const FCLSpace::KinBodyInfo::LinkInfo& pLINK2 = *pinfo->vlinks.at(index2);
+                    if( !pLINK1.linkBV.second->getAABB().overlap(pLINK2.linkBV.second->getAABB()) ) {
                         continue;
                     }
-                    FOREACH(itgeom1, pLINK1->vgeoms) {
-                        FOREACH(itgeom2, pLINK2->vgeoms) {
+                    FOREACH(itgeom1, pLINK1.vgeoms) {
+                        FOREACH(itgeom2, pLINK2.vgeoms) {
                             if( !(*itgeom1).second->getAABB().overlap((*itgeom2).second->getAABB()) ) {
                                 continue;
                             }
