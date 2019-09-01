@@ -1229,10 +1229,10 @@ protected:
                     if( _fRefineWithJacobianInverseAllowedError > 0 ) {
                         ikfast::IkSolutionList<IkReal> solutionsWithJitter;
                         // since will be refining, can add a little error to see if IK gets recomputed
-                        eetrans[0] += 0.0001;
-                        eetrans[1] += 0.0001;
-                        eetrans[2] += 0.0001;
-                        eerot[0] += 0.0001;
+                        eetrans[0] += 0.001;
+                        eetrans[1] += 0.001;
+                        eetrans[2] += 0.001;
+                        eerot[0] += 0.001;
                         bool bretJitterPositive(false);
                         bool bretJitterNegative(false);
                         bretJitterPositive = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutionsWithJitter, &pmanip);
@@ -1241,10 +1241,10 @@ protected:
                             RAVELOG_VERBOSE_FORMAT("%d solutions are added from +jittered ikparam, now %d solutions in total", solutionsWithJitter.GetNumSolutions()%solutions.GetNumSolutions());
                         }
                         if( !bretJitterPositive || (vfree.empty() && solutionsWithJitter.GetNumSolutions() < 8) ) {
-                            eetrans[0] -= 0.0002;
-                            eetrans[1] -= 0.0002;
-                            eetrans[2] -= 0.0002;
-                            eerot[0] -= 0.0002;
+                            eetrans[0] -= 0.002;
+                            eetrans[1] -= 0.002;
+                            eetrans[2] -= 0.002;
+                            eerot[0] -= 0.002;
                             bretJitterNegative = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutionsWithJitter, &pmanip);
                             if (bretJitterNegative) {
                                 solutions.AddSolutions(solutionsWithJitter);
