@@ -559,7 +559,14 @@ return solver.ComputeIk(eetrans,eerot,pfree,solutions);
 }
 
 IKFAST_API bool ComputeIk2(const IkReal* eetrans, const IkReal* eerot, const IkReal* pfree, IkSolutionListBase<IkReal>& solutions, void* pOpenRAVEManip) {
-_IKFAST_DISPLAY(std::cout << "Inside IKFAST's ComputeIk2";);
+_IKFAST_DISPLAY(
+std::cout << std::setprecision(16);
+std::cout << "eetrans = " << eetrans[0] << ", " << eetrans[1] << ", " << eetrans[2] << '\\n';
+std::cout << "  eerot = " << eerot[0] << ", " << eerot[1] << ", " << eerot[2] << "; ";
+if(GetIkType() == 0x67000001) {
+  std::cout << eerot[3] << ", " << eerot[4] << ", " << eerot[5] << "; " << eerot[6] << ", " << eerot[7] << ", " << eerot[8];
+}
+std::cout << "\\n\\n";);
 IKSolver solver;
 bool breturn = solver.ComputeIk(eetrans,eerot,pfree,solutions);
 _IKFAST_DISPLAY(std::cout << __FILE__ << " ComputeIk2 returns " << solutions.GetNumSolutions() << " solutions";);
