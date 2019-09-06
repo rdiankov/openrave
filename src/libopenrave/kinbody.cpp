@@ -4082,17 +4082,22 @@ void KinBody::_ComputeInternalInformation()
                 // have to swap order
                 Transform tswap = (*itjoint)->GetInternalHierarchyRightTransform().inverse();
                 std::vector<Vector> vaxes((*itjoint)->GetDOF());
-                std::vector<dReal> vcurrentvalues;
-                (*itjoint)->GetValues(vcurrentvalues);
                 for(size_t i = 0; i < vaxes.size(); ++i) {
                     vaxes[i] = -tswap.rotate((*itjoint)->GetInternalHierarchyAxis(i));
                 }
+                std::vector<dReal> vcurrentvalues;
+                (*itjoint)->GetValues(vcurrentvalues);
                 // have to reset the link transformations temporarily in order to avoid setting a joint offset
                 TransformSaver<LinkPtr> linksaver0((*itjoint)->GetFirstAttached());
                 TransformSaver<LinkPtr> linksaver1((*itjoint)->GetSecondAttached());
+                // assume joint values are set to 0
                 (*itjoint)->GetFirstAttached()->SetTransform(Transform());
                 (*itjoint)->GetSecondAttached()->SetTransform((*itjoint)->GetInternalHierarchyLeftTransform()*(*itjoint)->GetInternalHierarchyRightTransform());
-                (*itjoint)->_ComputeInternalInformation((*itjoint)->GetSecondAttached(),(*itjoint)->GetFirstAttached(),tswap.trans,vaxes,vcurrentvalues);
+                // pass in empty joint values
+                std::vector<dReal> vdummyzerovalues;
+                (*itjoint)->_ComputeInternalInformation((*itjoint)->GetSecondAttached(),(*itjoint)->GetFirstAttached(),tswap.trans,vaxes,vdummyzerovalues);
+                // initialize joint values to the correct value
+                (*itjoint)->_info._vcurrentvalues = vcurrentvalues;
             }
         }
         // find out what links are affected by what joints.
