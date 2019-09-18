@@ -679,6 +679,10 @@ public:
         }
         pbody->_ComputeInternalInformation();
         _pCurrentChecker->InitKinBody(pbody);
+        if( !!pbody->GetSelfCollisionChecker() && pbody->GetSelfCollisionChecker() != _pCurrentChecker ) {
+            // also initialize external collision checker if specified for this body
+            pbody->GetSelfCollisionChecker()->InitKinBody(pbody);
+        }
         _pPhysicsEngine->InitKinBody(pbody);
         // send all the changed callbacks of the body since anything could have changed
         pbody->_PostprocessChangedParameters(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic&~KinBody::Prop_BodyRemoved);
@@ -715,6 +719,10 @@ public:
         }
         robot->_ComputeInternalInformation(); // have to do this after _vecrobots is added since SensorBase::SetName can call EnvironmentBase::GetSensor to initialize itself
         _pCurrentChecker->InitKinBody(robot);
+        if( !!robot->GetSelfCollisionChecker() && robot->GetSelfCollisionChecker() != _pCurrentChecker ) {
+            // also initialize external collision checker if specified for this body
+            robot->GetSelfCollisionChecker()->InitKinBody(robot);
+        }
         _pPhysicsEngine->InitKinBody(robot);
         // send all the changed callbacks of the body since anything could have changed
         robot->_PostprocessChangedParameters(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic&~KinBody::Prop_BodyRemoved);
