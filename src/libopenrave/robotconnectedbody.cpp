@@ -64,7 +64,14 @@ RobotBase::ConnectedBody::ConnectedBody(OpenRAVE::RobotBasePtr probot, const Ope
     : _info(info), _pattachedrobot(probot)
 {
     if (!!probot) {
-        _pattachedlink = probot->GetLink(_info._linkname);
+        LinkPtr attachedLink = probot->GetLink(_info._linkname);
+        if( !attachedLink ) {
+            throw OPENRAVE_EXCEPTION_FORMAT("Link \"%s\" to which ConnectedBody %s is attached does not exist in robot %s", info._linkname%GetName()%probot->GetName(), ORE_InvalidArguments);
+        }
+        _pattachedlink = attachedLink;
+    }
+    else {
+        throw OPENRAVE_EXCEPTION_FORMAT("Valid robot is not given for ConnectedBody %s", GetName(), ORE_InvalidArguments);
     }
 }
 
@@ -262,6 +269,10 @@ void RobotBase::_ComputeConnectedBodiesInformation()
     FOREACH(itconnectedBody, _vecConnectedBodies) {
         ConnectedBody& connectedBody = **itconnectedBody;
         const ConnectedBodyInfo& connectedBodyInfo = connectedBody._info;
+
+        if( !connectedBody.GetAttachingLink() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT("ConnectedBody %s for robot %s does not have a valid pointer to link %s", connectedBody.GetName()%GetName()%connectedBodyInfo._linkname, ORE_InvalidArguments);
+        }
 
         Transform tBaseLinkInWorld = connectedBody.GetTransform(); // transform all links and joints by this
 

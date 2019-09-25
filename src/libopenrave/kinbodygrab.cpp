@@ -38,7 +38,7 @@ bool KinBody::Grab(KinBodyPtr pbody, LinkPtr plink)
 
     // double check since collision checkers might not support this case
     if( pbody->HasAttached() ) {
-        RAVELOG_WARN_FORMAT("body %s trying to grab body %s with %d attached bodies", GetName()%pbody->GetName()%pbody->HasAttached());
+        RAVELOG_WARN_FORMAT("env=%d, body %s trying to grab body %s with %d attached bodies", GetEnv()->GetId()%GetName()%pbody->GetName()%pbody->HasAttached());
     }
 
     Transform t = plink->GetTransform();

@@ -91,6 +91,7 @@ class PyLinkInfo;
 class PyJointInfo;
 class PyManipulatorInfo;
 class PyAttachedSensorInfo;
+class PyConnectedBodyInfo;
 class PyLink;
 class PyJoint;
 
@@ -137,6 +138,7 @@ typedef boost::shared_ptr<PyLinkInfo> PyLinkInfoPtr;
 typedef boost::shared_ptr<PyJointInfo> PyJointInfoPtr;
 typedef boost::shared_ptr<PyManipulatorInfo> PyManipulatorInfoPtr;
 typedef boost::shared_ptr<PyAttachedSensorInfo> PyAttachedSensorInfoPtr;
+typedef boost::shared_ptr<PyConnectedBodyInfo> PyConnectedBodyInfoPtr;
 typedef boost::shared_ptr<PyLink> PyLinkPtr;
 typedef boost::shared_ptr<PyLink const> PyLinkConstPtr;
 typedef boost::shared_ptr<PyJoint> PyJointPtr;
@@ -746,6 +748,7 @@ PyLinkInfoPtr toPyLinkInfo(const KinBody::LinkInfo& linkinfo);
 PyJointInfoPtr toPyJointInfo(const KinBody::JointInfo& jointinfo, PyEnvironmentBasePtr pyenv);
 PyManipulatorInfoPtr toPyManipulatorInfo(const RobotBase::ManipulatorInfo& manipulatorinfo);
 PyAttachedSensorInfoPtr toPyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& attachedSensorinfo);
+PyConnectedBodyInfoPtr toPyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& connectedBodyInfo, PyEnvironmentBasePtr pyenv);
 
 PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType type, const std::string& name);
 void init_openravepy_global();

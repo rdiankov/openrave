@@ -1286,6 +1286,8 @@ public:
             ExtractRobotAttachedActuators(probot, articulated_system, bindings);
             if( _bExtractConnectedBodies ) {
                 ExtractRobotConnectedBodies(probot, articulated_system);
+                // activation states of connected bodies are dynamic, so process instance_articulated_system too
+                _ExtractRobotConnectedBodyActivationData(probot, ias->getExtra_array());
             }
         }
         _ExtractCollisionData(pbody,articulated_system,articulated_system->getExtra_array(),bindings.listInstanceLinkBindings);
@@ -3378,7 +3380,7 @@ public:
             }
 
             RobotBase::ConnectedBodyInfo connectedBodyInfo;
-            connectedBodyInfo._bIsActive = true;
+            connectedBodyInfo._bIsActive = false;  // defaults to non-active
             daeElementRef pactive = tec->getChild("active");
             if( !!pactive ) {
                 resolveCommon_bool_or_param(pactive,tec,connectedBodyInfo._bIsActive);
@@ -3434,6 +3436,39 @@ public:
                     RobotBase::ConnectedBodyPtr pConnectedBody(new RobotBase::ConnectedBody(probot, connectedBodyInfo));
                     probot->_vecConnectedBodies.push_back(pConnectedBody);
                 }
+            }
+        }
+    }
+
+    /// \brief Extract activation states of connected bodies
+    void _ExtractRobotConnectedBodyActivationData(const RobotBasePtr probot, const domExtra_Array& arr)
+    {
+        for( size_t i = 0; i < arr.getCount(); ++i ) {
+            domExtraRef pextra = arr[i];
+
+            if( !pextra->getType() ) {
+                continue;
+            }
+            if( strcmp(pextra->getType(), "connect_body" ) != 0) {
+                continue;
+            }
+
+            string name = pextra->getAttribute("name");
+            domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
+
+            if( !tec ) {
+                RAVELOG_WARN(str(boost::format("failed to read technique element for robot %s connected body %s\n") % probot->GetName() % name));
+                continue;
+            }
+
+            RobotBase::ConnectedBodyPtr connectedBody = probot->GetConnectedBody(name);
+            if( !connectedBody ) {
+                RAVELOG_WARN(str(boost::format("failed to find connected body %s in robot %s\n") % name % probot->GetName()));
+                continue;
+            }
+            daeElementRef pactive = tec->getChild("active");
+            if( !!pactive ) {
+                resolveCommon_bool_or_param(pactive, tec, connectedBody->_info._bIsActive);
             }
         }
     }
