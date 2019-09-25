@@ -388,22 +388,23 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 }
             }
 
-            // search for the correct resolved _sBaseLinkName and _sEffectorLinkName
-            bool bFoundBaseLink = false, bFoundEffectorLink = false;
-            for(size_t ilink = 0; ilink < connectedBodyInfo._vLinkInfos.size(); ++ilink) {
-                if( pnewmanipulator->_info._sBaseLinkName == connectedBodyInfo._vLinkInfos[ilink]->_name ) {
-                    pnewmanipulator->_info._sBaseLinkName = connectedBody._vResolvedLinkNames.at(ilink);
-                    bFoundBaseLink = true;
+            {
+                LinkPtr pArmBaseLink = !GetLinks().empty() ? GetLinks()[0] : LinkPtr();
+                if( !pArmBaseLink ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for manipulator %s, could not find a base link of the robot.", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name, ORE_InvalidArguments);
                 }
+                pnewmanipulator->_info._sBaseLinkName = pArmBaseLink->_info._name;
+            }
+
+            // search for the correct resolved _sEffectorLinkName
+            bool bFoundEffectorLink = false;
+            for(size_t ilink = 0; ilink < connectedBodyInfo._vLinkInfos.size(); ++ilink) {
                 if( pnewmanipulator->_info._sEffectorLinkName == connectedBodyInfo._vLinkInfos[ilink]->_name ) {
                     pnewmanipulator->_info._sEffectorLinkName = connectedBody._vResolvedLinkNames.at(ilink);
                     bFoundEffectorLink = true;
                 }
             }
 
-            if( !bFoundBaseLink ) {
-                throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for manipulator %s, could not find linkname0 %s in connected body link infos!", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name%pnewmanipulator->_info._sBaseLinkName, ORE_InvalidArguments);
-            }
             if( !bFoundEffectorLink ) {
                 throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for manipulator %s, could not find linkname1 %s in connected body link infos!", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name%pnewmanipulator->_info._sEffectorLinkName, ORE_InvalidArguments);
             }
