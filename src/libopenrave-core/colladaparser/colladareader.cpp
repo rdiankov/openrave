@@ -3250,7 +3250,7 @@ public:
                             std::string instance_url = instance_sensor->getAttribute("url");
                             mapSensorURLsToNames[instance_url] = pattachedsensor->_psensor->GetName();
                         }
-                        listSensorsToExtract.push_back(std::make_pair(pattachedsensor,result.second));
+                        listSensorsToExtract.emplace_back(pattachedsensor, result.second);
                     }
 
                     probot->_vecAttachedSensors.push_back(pattachedsensor);
