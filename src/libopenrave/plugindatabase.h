@@ -786,7 +786,7 @@ protected:
         FOREACHC(itplugin, _listplugins) {
             PLUGININFO info;
             if( (*itplugin)->GetInfo(info) ) {
-                plugins.push_back(pair<string,PLUGININFO>((*itplugin)->GetName(),info));
+                plugins.emplace_back((*itplugin)->GetName(),info);
             }
         }
         if( !_listRegisteredInterfaces.empty() ) {
