@@ -1015,7 +1015,7 @@ private:
             domKinematics_newparamRef ab = daeSafeCast<domKinematics_newparam>(ias->add(COLLADA_ELEMENT_NEWPARAM));
             ab->setSid(assym.c_str());
             daeSafeCast<domKinematics_newparam::domSIDREF>(ab->add(COLLADA_ELEMENT_SIDREF))->setValue(str(boost::format("%s/%s")%asmid%asmsym).c_str());
-            iasout->vkinematicsbindings.emplace_back(string(ab->getSid()),  it->second);
+            iasout->vkinematicsbindings.emplace_back(ab->getSid(),  it->second);
         }
         for(size_t iaxissid = 0; iaxissid < ikmout->vaxissids.size(); ++iaxissid) {
             const axis_sids& kas = ikmout->vaxissids.at(iaxissid);
@@ -1156,7 +1156,7 @@ private:
             kbind->setSid((symscope+ikmsid).c_str());
             daeSafeCast<domKinematics_newparam::domSIDREF>(kbind->add(COLLADA_ELEMENT_SIDREF))->setValue((refscope+ikmsid).c_str());
             // needs to be node0 instead of _GetNodeId(pbody) since the kinematics hierarchy origin does not have the current body's transform
-            ikmout->vkinematicsbindings.emplace_back(string(kbind->getSid()),  str(boost::format("%s/node0")%_GetNodeId(pbody)));
+            ikmout->vkinematicsbindings.emplace_back(kbind->getSid(),  str(boost::format("%s/node0")%_GetNodeId(pbody)));
         }
 
         ikmout->vaxissids.reserve(kmout->vaxissids.size());

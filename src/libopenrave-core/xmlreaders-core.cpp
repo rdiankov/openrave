@@ -502,7 +502,7 @@ static void DefaultStartElementSAXFunc(void *ctx, const xmlChar *name, const xml
     AttributesList listatts;
     if( atts != NULL ) {
         for (int i = 0; (atts[i] != NULL); i+=2) {
-            listatts.emplace_back(string((const char*)atts[i]), string((const char*)atts[i+1]));
+            listatts.emplace_back((const char*)atts[i], (const char*)atts[i+1]);
             std::transform(listatts.back().first.begin(), listatts.back().first.end(), listatts.back().first.begin(), ::tolower);
         }
     }

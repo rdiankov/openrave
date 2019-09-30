@@ -1296,7 +1296,7 @@ public:
         if( otarget.check() ) {
             // old versions
             AttributesList atts;
-            atts.emplace_back(std::string("target"), (std::string)otarget);
+            atts.emplace_back("target", (std::string)otarget);
             openravepy::PythonThreadSaver threadsaver;
             _penv->Save(filename,options,atts);
         }
@@ -1313,7 +1313,7 @@ public:
         if( otarget.check() ) {
             // old versions
             AttributesList atts;
-            atts.emplace_back(std::string("target"), (std::string)otarget);
+            atts.emplace_back("target", (std::string)otarget);
             _penv->WriteToMemory(filetype,output,options,atts);
         }
         else {
