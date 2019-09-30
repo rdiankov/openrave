@@ -425,7 +425,7 @@ public:
         else {
             EnvironmentMutex::scoped_lock lockenv(GetMutex());
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-            _listModules.push_back(make_pair(module, cmdargs));
+            _listModules.emplace_back(module,  cmdargs);
         }
 
         return ret;

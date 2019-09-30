@@ -790,7 +790,7 @@ protected:
             }
         }
         if( !_listRegisteredInterfaces.empty() ) {
-            plugins.push_back(make_pair(string("__internal__"),PLUGININFO()));
+            plugins.emplace_back(string("__internal__"), PLUGININFO());
             plugins.back().second.version = OPENRAVE_VERSION;
             FOREACHC(it,_listRegisteredInterfaces) {
                 RegisteredInterfacePtr registration = it->lock();

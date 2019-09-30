@@ -2216,7 +2216,7 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
                     }
 
                     if( torquelimits.first < torquelimits.second ) {
-                        _vtorquevalues.push_back(make_pair((*itjoint)->GetDOFIndex()+idof,torquelimits));
+                        _vtorquevalues.emplace_back((*itjoint)->GetDOFIndex()+idof, torquelimits);
                     }
                 }
             }

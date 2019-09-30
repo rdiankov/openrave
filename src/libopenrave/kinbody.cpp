@@ -3942,8 +3942,8 @@ void KinBody::_ComputeInternalInformation()
             _vClosedLoops.back().reserve(itclosedloop->size());
             // fill the links
             FOREACH(itlinkindex,*itclosedloop) {
-                _vClosedLoopIndices.back().push_back(make_pair(*itlinkindex,0));
-                _vClosedLoops.back().push_back(make_pair(_veclinks.at(*itlinkindex),JointPtr()));
+                _vClosedLoopIndices.back().emplace_back(*itlinkindex, 0);
+                _vClosedLoops.back().emplace_back(_veclinks.at(*itlinkindex), JointPtr());
             }
             // fill the joints
             for(size_t i = 0; i < _vClosedLoopIndices.back().size(); ++i) {
@@ -4597,7 +4597,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     FOREACHC(itloop,_vClosedLoops) {
         _vClosedLoops.push_back(std::vector< std::pair<LinkPtr,JointPtr> >());
         FOREACHC(it,*itloop) {
-            _vClosedLoops.back().push_back(make_pair(_veclinks.at(it->first->GetIndex()),JointPtr()));
+            _vClosedLoops.back().emplace_back(_veclinks.at(it->first->GetIndex()), JointPtr());
             // the joint might be in _vPassiveJoints
             std::vector<JointPtr>::const_iterator itjoint = find(r->_vecjoints.begin(),r->_vecjoints.end(),it->second);
             if( itjoint != r->_vecjoints.end() ) {
@@ -4865,7 +4865,7 @@ UserDataPtr KinBody::RegisterChangeCallback(uint32_t properties, const boost::fu
                 }
                 _vlistRegisteredCallbacks.swap(vlistRegisteredCallbacks);
             }
-            pdata->_iterators.push_back(make_pair(index, _vlistRegisteredCallbacks.at(index).insert(_vlistRegisteredCallbacks.at(index).end(),pdata)));
+            pdata->_iterators.emplace_back(index, _vlistRegisteredCallbacks.at(index).insert(_vlistRegisteredCallbacks.at(index).end(), pdata));
         }
         properties >>= 1;
         index += 1;

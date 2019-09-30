@@ -1298,7 +1298,7 @@ protected:
                 for(int i = 0; i < iksol.GetDOF(); ++i) {
                     vravesol.at(i) = (dReal)sol[i];
                 }
-                vdists.push_back(make_pair(vdists.size(),_ComputeGeometricConfigDistSqr(probot,vravesol,q0,true)));
+                vdists.emplace_back(vdists.size(),_ComputeGeometricConfigDistSqr(probot,vravesol,q0, true));
             }
 
             std::stable_sort(vdists.begin(),vdists.end(),SortSolutionDistances);
@@ -1454,7 +1454,7 @@ protected:
                     return IKRA_Reject;
                 }
             }
-            vravesols.push_back(make_pair(vravesol,0));
+            vravesols.emplace_back(vravesol, 0);
         }
 
         IkParameterization paramnew;
@@ -1876,7 +1876,7 @@ protected:
             }
         }
         else {
-            vravesols.push_back(make_pair(vravesol,0));
+            vravesols.emplace_back(vravesol, 0);
         }
 
         std::vector<unsigned int> vsolutionindices;
@@ -2236,7 +2236,7 @@ protected:
         if( !_CheckJointAngles(vravesol) ) {
             return;
         }
-        vravesols.push_back(make_pair(vravesol,0));
+        vravesols.emplace_back(vravesol, 0);
         if( _qbigrangeindices.size() > 0 ) {
             std::vector< std::list<dReal> > vextravalues(_qbigrangeindices.size());
             std::vector< std::list<dReal> >::iterator itextra = vextravalues.begin();
