@@ -1525,6 +1525,10 @@ public:
         return new PyStateRestoreContext<PyRobotStateSaverPtr, PyRobotBasePtr>(saver);
     }
 
+    PyStateRestoreContextBase* CreateKinBodyStateSaver(object options=object()) {
+        return CreateRobotStateSaver(options);
+    }
+
     virtual string __repr__() {
         return boost::str(boost::format("RaveGetEnvironment(%d).GetRobot('%s')")%RaveGetEnvironmentId(_probot->GetEnv())%_probot->GetName());
     }
