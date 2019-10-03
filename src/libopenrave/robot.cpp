@@ -1895,6 +1895,12 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         }
     }
 
+    _vecConnectedBodies.clear();
+    FOREACHC(itConnectedBody, r->_vecConnectedBodies) {
+        ConnectedBodyPtr pConnectedBody(new ConnectedBody(shared_robot(),**itConnectedBody,cloningoptions));
+        _vecConnectedBodies.push_back(pConnectedBody);
+    }
+
     _vecAttachedSensors.clear();
     FOREACHC(itsensor, r->_vecAttachedSensors) {
         _vecAttachedSensors.push_back(AttachedSensorPtr(new AttachedSensor(shared_robot(),**itsensor,cloningoptions)));

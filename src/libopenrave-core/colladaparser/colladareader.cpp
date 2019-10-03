@@ -3422,7 +3422,7 @@ public:
                     if (robots.size() == 1) {
                         pbody = robots.front();
                     } else {
-                        RAVELOG_DEBUG_FORMAT("Found $d robots, Do not support this case for url %s", robots.size() % url);
+                        RAVELOG_DEBUG_FORMAT("Found %d robots, Do not support this case for url %s", robots.size() % url);
                     }
                 }
                 else {

@@ -580,7 +580,7 @@ public:
     {
 public:
         ConnectedBody(RobotBasePtr probot);
-        // ConnectedBody(RobotBasePtr probot, const ConnectedBody &attachedKinBody, int cloningoptions);
+        ConnectedBody(RobotBasePtr probot, const ConnectedBody &connectedBody, int cloningoptions);
         ConnectedBody(RobotBasePtr probot, const ConnectedBodyInfo& info);
         virtual ~ConnectedBody();
 

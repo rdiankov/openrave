@@ -75,6 +75,14 @@ RobotBase::ConnectedBody::ConnectedBody(OpenRAVE::RobotBasePtr probot, const Ope
     }
 }
 
+
+RobotBase::ConnectedBody::ConnectedBody(OpenRAVE::RobotBasePtr probot, const ConnectedBody &connectedBody, int cloningoptions)
+{
+    *this = connectedBody;
+    _pattachedrobot = probot;
+    _pattachedlink = probot->GetLink(LinkPtr(connectedBody._pattachedlink)->GetName());
+}
+
 RobotBase::ConnectedBody::~ConnectedBody()
 {
 }
@@ -266,6 +274,12 @@ void RobotBase::_ComputeConnectedBodiesInformation()
         return;
     }
 
+    // should have already done adding the necessary link etc
+    // during cloning, we should not add links and joints again
+    if (_nHierarchyComputed != 0) {
+        return;
+    }
+
     FOREACH(itconnectedBody, _vecConnectedBodies) {
         ConnectedBody& connectedBody = **itconnectedBody;
         const ConnectedBodyInfo& connectedBodyInfo = connectedBody._info;
@@ -291,7 +305,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
         connectedBody._vResolvedJointNames.clear();
         connectedBody._vResolvedManipulatorNames.clear();
         connectedBody._vResolvedAttachedSensorNames.clear();
-	connectedBody._dummyPassiveJointName.clear();
+        connectedBody._dummyPassiveJointName.clear();
 
         if( !connectedBody.IsActive() ) {
             // skip
