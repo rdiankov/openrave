@@ -744,6 +744,9 @@ private:
         return _vecConnectedBodies;
     }
 
+    // \brief gets the active states of all connected bodies
+    virtual void GetConnectedBodyActiveStates(std::vector<uint8_t>& activestates) const;
+
     virtual void SetName(const std::string& name);
 
     virtual void SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t checklimits = 1, const std::vector<int>& dofindices = std::vector<int>());

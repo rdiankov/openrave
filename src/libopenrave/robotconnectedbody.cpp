@@ -560,4 +560,12 @@ void RobotBase::_DeinitializeConnectedBodiesInformation()
     _vPassiveJoints.resize(iwritepassiveJoint);
 }
 
+void RobotBase::GetConnectedBodyActiveStates(std::vector<uint8_t>& activestates) const
+{
+    activestates.resize(_vecConnectedBodies.size());
+    for(size_t iconnectedbody = 0; iconnectedbody < _vecConnectedBodies.size(); ++iconnectedbody) {
+        activestates[iconnectedbody] = _vecConnectedBodies[iconnectedbody]->IsActive();
+    }
+}
+
 } // end namespace OpenRAVE
