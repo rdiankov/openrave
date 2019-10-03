@@ -706,6 +706,7 @@ protected:
         std::vector<Transform> _vtManipsLocalTool;
         std::vector<Vector> _vvManipsLocalDirection;
         std::vector<IkSolverBasePtr> _vpManipsIkSolver;
+        std::vector<bool> _vActiveConnectedBodies;
 private:
         virtual void _RestoreRobot(boost::shared_ptr<RobotBase> robot);
     };

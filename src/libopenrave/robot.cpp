@@ -184,6 +184,11 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
             }
         }
     }
+
+    _vActiveConnectedBodies.resize(_probot->GetConnectedBodies().size());
+    for(size_t i = 0; i < _vActiveConnectedBodies.size(); ++i) {
+        _vActiveConnectedBodies[i] = _probot->GetConnectedBodies().at(i)->IsActive();
+    }
 }
 
 RobotBase::RobotStateSaver::~RobotStateSaver()
@@ -211,9 +216,31 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
         return;
     }
     if( probot->GetEnvironmentId() == 0 ) {
-        RAVELOG_WARN(str(boost::format("robot %s not added to environment, skipping restore")%_pbody->GetName()));
+        RAVELOG_WARN(str(boost::format("robot %s not added to environment, skipping restore")%probot->GetName()));
         return;
     }
+
+    // need to restore active connected bodies
+    // but first check whether anything changed
+    if (!_vActiveConnectedBodies.empty()) {
+        bool bActiveConnectedBodiesChanged = false;
+        for (size_t i = 0; i < _vActiveConnectedBodies.size(); ++i) {
+            if (probot->GetConnectedBodies().at(i)->IsActive() != _vActiveConnectedBodies.at(i)) {
+                bActiveConnectedBodiesChanged = true;
+                RAVELOG_WARN(str(boost::format("robot %s active connected bodies changed")%probot->GetName()));
+                break;
+            }
+        }
+        if (bActiveConnectedBodiesChanged) {
+            EnvironmentBasePtr penv = probot->GetEnv();
+            penv->Remove(probot);
+            for (size_t i = 0; i < _vActiveConnectedBodies.size(); ++i) {
+                probot->GetConnectedBodies().at(i)->SetActive(_vActiveConnectedBodies.at(i));
+            }
+            penv->Add(probot);
+        }
+    }
+
     if( _options & Save_ActiveDOF ) {
         probot->SetActiveDOFs(vactivedofs, affinedofs, rotationaxis);
     }
