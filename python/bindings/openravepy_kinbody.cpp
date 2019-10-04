@@ -2951,6 +2951,11 @@ string PyKinBody::GetKinematicsGeometryHash() const
 
 PyStateRestoreContextBase* PyKinBody::CreateKinBodyStateSaver(object options)
 {
+    return CreateStateSaver(options);
+}
+
+PyStateRestoreContextBase* PyKinBody::CreateStateSaver(object options)
+{
     PyKinBodyStateSaverPtr saver;
     if( IS_PYTHONOBJECT_NONE(options) ) {
         saver.reset(new PyKinBodyStateSaver(_pbody,_pyenv));

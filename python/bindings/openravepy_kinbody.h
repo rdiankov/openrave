@@ -281,6 +281,7 @@ public:
     string serialize(int options) const;
     string GetKinematicsGeometryHash() const;
     PyStateRestoreContextBase* CreateKinBodyStateSaver(object options=object());
+    virtual PyStateRestoreContextBase* CreateStateSaver(object options);
     virtual string __repr__();
     virtual string __str__();
     virtual object __unicode__();

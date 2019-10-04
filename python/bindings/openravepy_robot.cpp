@@ -1532,7 +1532,7 @@ public:
         return _probot->GetRobotStructureHash();
     }
 
-    PyStateRestoreContextBase* CreateRobotStateSaver(object options=object()) {
+    virtual PyStateRestoreContextBase* CreateStateSaver(object options) {
         PyRobotStateSaverPtr saver;
         if( IS_PYTHONOBJECT_NONE(options) ) {
             saver.reset(new PyRobotStateSaver(_probot,_pyenv));
@@ -1543,8 +1543,8 @@ public:
         return new PyStateRestoreContext<PyRobotStateSaverPtr, PyRobotBasePtr>(saver);
     }
 
-    PyStateRestoreContextBase* CreateKinBodyStateSaver(object options=object()) {
-        return CreateRobotStateSaver(options);
+    PyStateRestoreContextBase* CreateRobotStateSaver(object options=object()) {
+        return CreateStateSaver(options);
     }
 
     virtual string __repr__() {
