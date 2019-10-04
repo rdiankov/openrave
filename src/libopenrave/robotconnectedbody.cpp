@@ -568,4 +568,49 @@ void RobotBase::GetConnectedBodyActiveStates(std::vector<uint8_t>& activestates)
     }
 }
 
+///\brief removes the robot from the environment temporarily while in scope
+class EnvironmentRobotRemover
+{
+public:
+
+    EnvironmentRobotRemover(RobotBasePtr pRobot) : _bRemoved(false), _pRobot(pRobot), _pEnv(pRobot->GetEnv()) {
+        _pEnv->Remove(_pRobot);
+        _bRemoved = true;
+    }
+
+    ~EnvironmentRobotRemover() {
+        if (_bRemoved) {
+            _pEnv->Add(_pRobot, false);
+            _bRemoved = false;
+        }
+    }
+
+private:
+
+    bool _bRemoved;
+    RobotBasePtr _pRobot;
+    EnvironmentBasePtr _pEnv;
+};
+
+void RobotBase::SetConnectedBodyActiveStates(const std::vector<uint8_t>& activestates)
+{
+    OPENRAVE_ASSERT_OP(activestates.size(),==,_vecConnectedBodies.size());
+
+    bool bchanged = false;
+    for(size_t iconnectedbody = 0; iconnectedbody < _vecConnectedBodies.size(); ++iconnectedbody) {
+        if (_vecConnectedBodies[iconnectedbody]->IsActive() != !!activestates[iconnectedbody]) {
+            bchanged = true;
+            break;
+        }
+    }
+    if (!bchanged) {
+        return;
+    }
+
+    EnvironmentRobotRemover robotremover(shared_robot());
+    for(size_t iconnectedbody = 0; iconnectedbody < _vecConnectedBodies.size(); ++iconnectedbody) {
+        _vecConnectedBodies[iconnectedbody]->SetActive(!!activestates[iconnectedbody]);
+    }
+}
+
 } // end namespace OpenRAVE

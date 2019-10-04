@@ -706,7 +706,7 @@ protected:
         std::vector<Transform> _vtManipsLocalTool;
         std::vector<Vector> _vvManipsLocalDirection;
         std::vector<IkSolverBasePtr> _vpManipsIkSolver;
-        std::vector<bool> _vActiveConnectedBodies;
+        std::vector<uint8_t> _vActiveConnectedBodies;
 private:
         virtual void _RestoreRobot(boost::shared_ptr<RobotBase> robot);
     };
@@ -746,6 +746,9 @@ private:
 
     // \brief gets the active states of all connected bodies
     virtual void GetConnectedBodyActiveStates(std::vector<uint8_t>& activestates) const;
+
+    /// \brief sets the active states for connected bodies
+    virtual void SetConnectedBodyActiveStates(const std::vector<uint8_t>& activestates);
 
     virtual void SetName(const std::string& name);
 

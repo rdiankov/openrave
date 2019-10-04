@@ -848,6 +848,10 @@ public:
             return _pconnected;
         }
 
+        object GetName() {
+            return ConvertStringToUnicode(_pconnected->GetName());
+        }
+
         object GetInfo() {
             return object(PyConnectedBodyInfoPtr(new PyConnectedBodyInfo(_pconnected->GetInfo(), _pyenv)));
         }
@@ -1102,6 +1106,7 @@ public:
     PyConnectedBodyPtr AddConnectedBody(PyConnectedBodyInfoPtr pConnectedBodyInfo, bool removeduplicate=false) {
         return _GetConnectedBody(_probot->AddConnectedBody(*pConnectedBodyInfo->GetConnectedBodyInfo(), removeduplicate));
     }
+
     bool RemoveConnectedBody(PyConnectedBodyPtr pConnectedBody) {
         return _probot->RemoveConnectedBody(*pConnectedBody->GetConnectedBody());
     }
@@ -1123,6 +1128,19 @@ public:
             }
         }
         return PyConnectedBodyPtr();
+    }
+
+    object GetConnectedBodyActiveStates() const
+    {
+        std::vector<uint8_t> activestates;
+        _probot->GetConnectedBodyActiveStates(activestates);
+        return toPyArray(activestates);
+    }
+
+    void SetConnectedBodyActiveStates(object oactivestates)
+    {
+        std::vector<uint8_t> activestates = ExtractArray<uint8_t>(oactivestates);
+        _probot->SetConnectedBodyActiveStates(activestates);
     }
 
     object GetController() const {
@@ -1715,6 +1733,8 @@ void init_openravepy_robot()
                       .def("RemoveConnectedBody",&PyRobotBase::RemoveConnectedBody, args("connectedbody"), DOXY_FN(RobotBase,RemoveConnectedBody))
                       .def("GetConnectedBodies",&PyRobotBase::GetConnectedBodies, DOXY_FN(RobotBase,GetConnectedBodies))
                       .def("GetConnectedBody",&PyRobotBase::GetConnectedBody, args("bodyname"), DOXY_FN(RobotBase,GetConnectedBody))
+                      .def("GetConnectedBodyActiveStates",&PyRobotBase::GetConnectedBodyActiveStates, DOXY_FN(RobotBase,GetConnectedBodyActiveStates))
+                      .def("SetConnectedBodyActiveStates",&PyRobotBase::SetConnectedBodyActiveStates, DOXY_FN(RobotBase,SetConnectedBodyActiveStates))
                       .def("GetController",&PyRobotBase::GetController, DOXY_FN(RobotBase,GetController))
                       .def("SetController",setcontroller1,DOXY_FN(RobotBase,SetController))
                       .def("SetController",setcontroller2,args("robot","dofindices","controltransform"), DOXY_FN(RobotBase,SetController))
@@ -1898,6 +1918,7 @@ void init_openravepy_robot()
         ;
 
         class_<PyRobotBase::PyConnectedBody, boost::shared_ptr<PyRobotBase::PyConnectedBody> >("ConnectedBody", DOXY_CLASS(RobotBase::ConnectedBody), no_init)
+        .def("GetName",&PyRobotBase::PyConnectedBody::GetName, DOXY_FN(RobotBase::ConnectedBody,GetName))
         .def("GetInfo",&PyRobotBase::PyConnectedBody::GetInfo, DOXY_FN(RobotBase::ConnectedBody,GetInfo))
         .def("SetActive", &PyRobotBase::PyConnectedBody::SetActive, DOXY_FN(RobotBase::ConnectedBody,SetActive))
         .def("IsActive", &PyRobotBase::PyConnectedBody::IsActive, DOXY_FN(RobotBase::ConnectedBody,IsActive))
