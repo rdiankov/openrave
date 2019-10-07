@@ -1010,7 +1010,7 @@ protected:
     {
         vector<KinBodyPtr> vgrabbedbodies;
         _probot->GetGrabbed(vgrabbedbodies);
-        _vLinks.resize(_probot->GetLinks().size());
+        _vLinks = _probot->GetLinks();
         FOREACHC(itgrabbed, vgrabbedbodies) {
             FOREACHC(itlink2, (*itgrabbed)->GetLinks()) {
                 _vLinks.push_back(*itlink2);
@@ -1019,7 +1019,7 @@ protected:
 
         // update all the grabbed links
         _vLinkAABBs.resize(_vLinks.size());
-        for(size_t i = _probot->GetLinks().size(); i < _vLinks.size(); ++i) {
+        for(size_t i = 0; i < _vLinks.size(); ++i) {
             _vLinkAABBs[i] = _vLinks[i]->ComputeLocalAABB();
         }
 
