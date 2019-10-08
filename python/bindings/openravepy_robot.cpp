@@ -907,6 +907,17 @@ public:
             return ojoints;
         }
 
+        object GetResolvedManipulators()
+        {
+            boost::python::list omanips;
+            std::vector<RobotBase::ManipulatorPtr> vmanips;
+            _pconnected->GetResolvedManipulators(vmanips);
+            FOREACH(itmanip, vmanips) {
+                omanips.append(toPyRobotManipulator(*itmanip, _pyenv));
+            }
+            return omanips;
+        }
+
         string __repr__() {
             return boost::str(boost::format("RaveGetEnvironment(%d).GetRobot('%s').GetConnectedBody('%s')") %
                               RaveGetEnvironmentId(_pconnected->GetRobot()->GetEnv()) %
@@ -1930,6 +1941,7 @@ void init_openravepy_robot()
         .def("GetRelativeTransformPose",&PyRobotBase::PyConnectedBody::GetRelativeTransformPose, DOXY_FN(RobotBase::ConnectedBody,GetRelativeTransformPose))
         .def("GetResolvedLinks",&PyRobotBase::PyConnectedBody::GetResolvedLinks, DOXY_FN(RobotBase::ConnectedBody,GetResolvedLinks))
         .def("GetResolvedJoints",&PyRobotBase::PyConnectedBody::GetResolvedJoints, DOXY_FN(RobotBase::ConnectedBody,GetResolvedJoints))
+        .def("GetResolvedManipulators",&PyRobotBase::PyConnectedBody::GetResolvedManipulators, DOXY_FN(RobotBase::ConnectedBody,GetResolvedManipulators))
         .def("__str__",&PyRobotBase::PyConnectedBody::__str__)
         .def("__repr__",&PyRobotBase::PyConnectedBody::__repr__)
         .def("__unicode__",&PyRobotBase::PyConnectedBody::__unicode__)
