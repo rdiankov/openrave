@@ -1795,7 +1795,22 @@ void RobotBase::_ComputeInternalInformation()
     }
     // set active manipulator to first manipulator
     if( _vecManipulators.size() > 0 ) {
-        _pManipActive = _vecManipulators.at(0);
+        // preserve active manip when robot is removed and added back to the env
+        if (!!_pManipActive) {
+            bool bmanipfound = false;
+            FOREACHC(itmanip, _vecManipulators) {
+                if (*itmanip == _pManipActive) {
+                    bmanipfound = true;
+                    break;
+                }
+            }
+            if (!bmanipfound) {
+                _pManipActive.reset();
+            }
+        }
+        if (!_pManipActive) {
+            _pManipActive = _vecManipulators.at(0);
+        }
     }
     else {
         _pManipActive.reset();
