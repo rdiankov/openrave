@@ -160,7 +160,7 @@ public:
         params->bonlycontacttarget = true;
         params->btightgrasp = false;
         params->vtargetdirection = Vector(0,0,1);
-        params->vmanipulatordirection =  _robot->GetActiveManipulator()->GetDirection();
+        params->vmanipulatordirection =  _robot->GetActiveManipulator()->GetLocalToolDirection();
 
         std::vector<dReal> vchuckingdir = _robot->GetActiveManipulator()->GetChuckingDirection();
         boost::shared_ptr<CollisionCheckerMngr> pcheckermngr;

@@ -18,7 +18,7 @@
 #include <algorithm>
 
 // used for functions that are also used internally
-#define CHECK_NO_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 0, "body %s cannot be added to environment when doing this operation.", GetName()%_nHierarchyComputed, ORE_InvalidState);
+#define CHECK_NO_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 0, "body %s cannot be added to environment when doing this operation, current value is %d", GetName()%_nHierarchyComputed, ORE_InvalidState);
 #define CHECK_INTERNAL_COMPUTATION0 OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed != 0, "body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetName()%_nHierarchyComputed, ORE_NotInitialized);
 #define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetName()%_nHierarchyComputed, ORE_NotInitialized);
 
@@ -1235,21 +1235,6 @@ void KinBody::GetLinkTransformations(std::vector<Transform>& transforms, std::ve
         }
         for(int i = 0; i < (*it)->GetDOF(); ++i) {
             doflastsetvalues.push_back((*it)->_doflastsetvalues[i]);
-        }
-    }
-}
-
-void KinBody::GetLinkTransformations(vector<Transform>& vtrans, std::vector<int>& dofbranches) const
-{
-    std::vector<dReal> vdoflastsetvalues;
-    GetLinkTransformations(vtrans, vdoflastsetvalues);
-    dofbranches.resize(vdoflastsetvalues.size());
-    for(size_t idof = 0; idof < vdoflastsetvalues.size(); ++idof) {
-        if( IsDOFRevolute(idof) ) {
-            dofbranches[idof] = CountCircularBranches(vdoflastsetvalues[idof]-GetJointFromDOFIndex(idof)->GetWrapOffset(0));
-        }
-        else {
-            dofbranches[idof] = 0;
         }
     }
 }
@@ -4395,7 +4380,7 @@ int8_t KinBody::DoesDOFAffectLink(int dofindex, int linkindex ) const
 void KinBody::SetNonCollidingConfiguration()
 {
     _ResetInternalCollisionCache();
-    vector<int> vdoflastsetvalues;
+    vector<dReal> vdoflastsetvalues;
     GetLinkTransformations(_vInitialLinkTransformations, vdoflastsetvalues);
 }
 

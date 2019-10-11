@@ -558,12 +558,6 @@ protected:
         // \brief return inertia around the link's COM in the global coordinate frame.
         virtual TransformMatrix GetGlobalInertia() const;
 
-        /// \deprecated (12/1/20)
-        inline TransformMatrix GetInertia() const RAVE_DEPRECATED {
-            RAVELOG_WARN("KinBody::Link::GetInertia is deprecated, use KinBody::Link::GetLocalInertia\n");
-            return GetLocalInertia();
-        }
-
         /// \brief sets a new mass frame with respect to the link coordinate system
         virtual void SetLocalMassFrame(const Transform& massframe);
 
@@ -833,12 +827,6 @@ public:
             uint8_t axis : 2;         ///< the axis of the joint index
             bool operator <(const DOFFormat& r) const;
             bool operator ==(const DOFFormat& r) const;
-            boost::shared_ptr<Joint> GetJoint(KinBodyPtr parent) const RAVE_DEPRECATED {
-                return GetJoint(*parent);
-            }
-            boost::shared_ptr<Joint const> GetJoint(KinBodyConstPtr parent) const RAVE_DEPRECATED {
-                return GetJoint(*parent);
-            }
             boost::shared_ptr<Joint> GetJoint(KinBody &parent) const;
             boost::shared_ptr<Joint const> GetJoint(const KinBody &parent) const;
         };
@@ -1453,6 +1441,7 @@ public:
         KinBodyPtr pbody; ///< pointer to the body. if using this, make sure the environment is locked.
         std::vector<Transform> vectrans; ///< \see KinBody::GetLinkTransformations
         std::vector<uint8_t> vLinkEnableStates; ///< \see KinBody::GetLinkEnableStates
+        std::vector<uint8_t> vConnectedBodyActiveStates; ///< IsActive state of ConnectedBody \see RobotBase::GetConnectedBodyActiveStates
         std::vector<dReal> jointvalues; ///< \see KinBody::GetDOFValues
         std::string strname;         ///< \see KinBody::GetName
         std::string uri; ///< \see KinBody::GetURI
@@ -1929,14 +1918,6 @@ private:
     /// Knowing the dof branches allows the robot to recover the full state of the joints with SetLinkTransformations
     virtual void GetLinkTransformations(std::vector<Transform>& transforms, std::vector<dReal>& doflastsetvalues) const;
 
-    /// \deprecated (14/05/26)
-    virtual void GetLinkTransformations(std::vector<Transform>& transforms, std::vector<int>& dofbranches) const RAVE_DEPRECATED;
-
-    /// \deprecated (11/05/26)
-    virtual void GetBodyTransformations(std::vector<Transform>& transforms) const RAVE_DEPRECATED {
-        GetLinkTransformations(transforms);
-    }
-
     /// \brief gets the enable states of all links
     virtual void GetLinkEnableStates(std::vector<uint8_t>& enablestates) const;
 
@@ -2071,21 +2052,6 @@ private:
     ///
     /// Using dof branches allows the full joint state to be recovered
     virtual void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<dReal>& doflastsetvalues);
-
-    /// \deprecated (14/01/15)
-    virtual void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<int>& dofbranches) RAVE_DEPRECATED
-    {
-        std::vector<dReal> doflastsetvalues(dofbranches.size());
-        for(size_t i = 0; i < dofbranches.size(); ++i) {
-            doflastsetvalues[i] = dofbranches[i]*2*PI;
-        }
-        SetLinkTransformations(transforms, doflastsetvalues);
-    }
-
-    /// \deprecated (11/05/26)
-    virtual void SetBodyTransformations(const std::vector<Transform>& transforms) RAVE_DEPRECATED {
-        SetLinkTransformations(transforms);
-    }
 
     /// \brief sets the link velocities
     virtual void SetLinkVelocities(const std::vector<std::pair<Vector,Vector> >& velocities);
@@ -2315,11 +2281,6 @@ private:
      */
     virtual int8_t DoesDOFAffectLink(int dofindex, int linkindex) const;
 
-    /// \deprecated (12/12/11)
-    virtual UserDataPtr GetViewerData() const RAVE_DEPRECATED {
-        return GetUserData("_viewer_");
-    }
-
     /// \brief specifies the type of adjacent link information to receive
     enum AdjacentOptions
     {
@@ -2337,14 +2298,6 @@ private:
     /// \brief adds the pair of links to the adjacency list. This is
     virtual void SetAdjacentLinks(int linkindex0, int linkindex1);
 
-    /// \deprecated (12/12/11)
-    virtual UserDataPtr GetPhysicsData() const RAVE_DEPRECATED {
-        return GetUserData("_physics_");
-    }
-    /// \deprecated (12/12/11)
-    virtual UserDataPtr GetCollisionData() const RAVE_DEPRECATED {
-        return GetUserData("_collision_");
-    }
     virtual ManageDataPtr GetManageData() const {
         return _pManageData;
     }
@@ -2517,19 +2470,6 @@ protected:
     /// \brief **internal use only** Releases and grabs the body inside the grabbed structure from _vGrabbedBodies.
     virtual void _Regrab(UserDataPtr pgrabbed);
 
-    /// \deprecated (12/12/11)
-    virtual void SetPhysicsData(UserDataPtr pdata) RAVE_DEPRECATED {
-        SetUserData("_physics_", pdata);
-    }
-    /// \deprecated (12/12/11)
-    virtual void SetCollisionData(UserDataPtr pdata) RAVE_DEPRECATED {
-        SetUserData("_collision_", pdata);
-    }
-
-    /// \deprecated (12/12/11)
-    virtual void SetViewerData(UserDataPtr pdata) RAVE_DEPRECATED {
-        SetUserData("_viewer_",pdata);
-    }
     virtual void SetManageData(ManageDataPtr pdata) {
         _pManageData = pdata;
     }

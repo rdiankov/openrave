@@ -712,7 +712,7 @@ public:
 
             int numShortcuts = 0;
             int nummerges = 0;
-            if( !!parameters->_setstatevaluesfn || !!parameters->_setstatefn ) {
+            if( !!parameters->_setstatevaluesfn ) {
                 // TODO: add a check here so that we do merging only when the initial path is linear (i.e. comes directly from a linear smoother or RRT)
 #ifdef SMOOTHER2_TIMING_DEBUG
                 _tShortcutStart = utils::GetMicroTime();

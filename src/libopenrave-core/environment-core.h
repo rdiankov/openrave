@@ -2065,6 +2065,7 @@ public:
                         state.activeManipulatorName = pmanip->GetName();
                         state.activeManipulatorTransform = pmanip->GetTransform();
                     }
+                    probot->GetConnectedBodyActiveStates(state.vConnectedBodyActiveStates);
                 }
             }
             _vPublishedBodies.push_back(state);
