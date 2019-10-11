@@ -556,7 +556,7 @@ protected:
         ptraj->GetWaypoints(0, ptraj->GetNumWaypoints(), vtrajdata, parameters->_configurationspecification);
 
         std::copy(vtrajdata.begin(), vtrajdata.begin() + parameters->GetDOF(), q0.begin());
-        listpath.push_back(make_pair(q0, dReal(0)));
+        listpath.emplace_back(q0,  dReal(0));
         qcur = q0;
 
         for(size_t ipoint = 1; ipoint < ptraj->GetNumWaypoints(); ++ipoint) {
@@ -608,19 +608,19 @@ protected:
                     continue;
                 }
                 dReal dist = parameters->_distmetricfn(listpath.back().first, qcur);
-                listpath.push_back(make_pair(qcur, dist));
+                listpath.emplace_back(qcur,  dist);
                 mult = 1;
             }
             // always add the last point
             dReal dist = parameters->_distmetricfn(listpath.back().first, q1);
-            listpath.push_back(make_pair(q1, dist));
+            listpath.emplace_back(q1,  dist);
             qcur = q1;
             q0.swap(q1);
         }
 
         std::copy(vtrajdata.end() - parameters->GetDOF(), vtrajdata.end(), q1.begin());
         dReal dist = parameters->_distmetricfn(listpath.back().first, q1);
-        listpath.push_back(make_pair(q1, dist));
+        listpath.emplace_back(q1,  dist);
     }
 
     std::string _DumpTrajectory(TrajectoryBasePtr traj, DebugLevel level, int option)

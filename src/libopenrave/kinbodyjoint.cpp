@@ -1475,14 +1475,14 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     FOREACHC(itjoint,parent->GetJoints()) {
         if( (*itjoint)->GetName().size() > 0 ) {
             std::string newname = str(boost::format("joint%d")%(*itjoint)->GetJointIndex());
-            jointnamepairs.push_back(make_pair((*itjoint)->GetName(),newname));
+            jointnamepairs.emplace_back((*itjoint)->GetName(), newname);
         }
     }
     size_t index = parent->GetJoints().size();
     FOREACHC(itjoint,parent->GetPassiveJoints()) {
         if( (*itjoint)->GetName().size() > 0 ) {
             std::string newname = str(boost::format("joint%d")%index);
-            jointnamepairs.push_back(make_pair((*itjoint)->GetName(),newname));
+            jointnamepairs.emplace_back((*itjoint)->GetName(), newname);
         }
         ++index;
     }
@@ -1597,7 +1597,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> 
 {
     vpartials.resize(0);
     if( dofindex >= 0 ) {
-        vpartials.push_back(make_pair(dofindex+iaxis,1.0));
+        vpartials.emplace_back(dofindex+iaxis, 1.0);
         return;
     }
     OPENRAVE_ASSERT_FORMAT(!!_vmimic.at(iaxis), "cannot compute partial velocities of joint %s", _info._name, ORE_Failed);
@@ -1644,7 +1644,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> 
                 }
             }
             if( badd ) {
-                vpartials.push_back(make_pair(itmimicdof->dofindex, fvel));
+                vpartials.emplace_back(itmimicdof->dofindex,  fvel);
             }
         }
         else {
@@ -1656,7 +1656,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> 
                 }
             }
             if( badd ) {
-                vpartials.push_back(make_pair(itmimicdof->dofindex, it->second));
+                vpartials.emplace_back(itmimicdof->dofindex,  it->second);
             }
         }
     }

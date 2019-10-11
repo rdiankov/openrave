@@ -278,7 +278,7 @@ AttributesList toAttributesList(boost::python::dict odict)
             // Because we know they're strings, we can do this
             std::string key = boost::python::extract<std::string>(iterkeys[i]);
             std::string value = boost::python::extract<std::string>(odict[iterkeys[i]]);
-            atts.push_back(make_pair(key,value));
+            atts.emplace_back(key, value);
         }
     }
     return atts;
@@ -293,7 +293,7 @@ AttributesList toAttributesList(boost::python::list oattributes)
             // Because we know they're strings, we can do this
             std::string key = boost::python::extract<std::string>(oattributes[i][0]);
             std::string value = boost::python::extract<std::string>(oattributes[i][1]);
-            atts.push_back(make_pair(key,value));
+            atts.emplace_back(key, value);
         }
     }
     return atts;
@@ -1296,7 +1296,7 @@ public:
         if( otarget.check() ) {
             // old versions
             AttributesList atts;
-            atts.push_back(std::make_pair(std::string("target"),(std::string)otarget));
+            atts.emplace_back("target", (std::string)otarget);
             openravepy::PythonThreadSaver threadsaver;
             _penv->Save(filename,options,atts);
         }
@@ -1313,7 +1313,7 @@ public:
         if( otarget.check() ) {
             // old versions
             AttributesList atts;
-            atts.push_back(std::make_pair(std::string("target"),(std::string)otarget));
+            atts.emplace_back("target", (std::string)otarget);
             _penv->WriteToMemory(filetype,output,options,atts);
         }
         else {

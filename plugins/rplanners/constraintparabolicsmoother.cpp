@@ -755,7 +755,7 @@ public:
 //                            _dummytraj->serialize(f);
 //                        }
 //                    }
-                    attemptedlist.push_back(std::make_pair(t1,t2));
+                    attemptedlist.emplace_back(t1, t2);
                 }
             }
             int i1 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t1)-rampStartTime.begin()-1;

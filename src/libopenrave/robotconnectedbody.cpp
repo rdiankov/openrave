@@ -356,7 +356,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             if( !bfoundlink1 ) {
                 throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for joint %s, could not find linkname1 %s in connected body link infos!", connectedBody.GetName()%GetName()%pjoint->_info._name%pjoint->_info._linkname1, ORE_InvalidArguments);
             }
-            jointNamePairs.push_back(std::make_pair((*itjointinfo)->_name, pjoint->_info._name));
+            jointNamePairs.emplace_back((*itjointinfo)->_name,  pjoint->_info._name);
             vNewJointsToAdd.push_back(pjoint);
         }
 
