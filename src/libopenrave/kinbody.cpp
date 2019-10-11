@@ -1239,21 +1239,6 @@ void KinBody::GetLinkTransformations(std::vector<Transform>& transforms, std::ve
     }
 }
 
-void KinBody::GetLinkTransformations(vector<Transform>& vtrans, std::vector<int>& dofbranches) const
-{
-    std::vector<dReal> vdoflastsetvalues;
-    GetLinkTransformations(vtrans, vdoflastsetvalues);
-    dofbranches.resize(vdoflastsetvalues.size());
-    for(size_t idof = 0; idof < vdoflastsetvalues.size(); ++idof) {
-        if( IsDOFRevolute(idof) ) {
-            dofbranches[idof] = CountCircularBranches(vdoflastsetvalues[idof]-GetJointFromDOFIndex(idof)->GetWrapOffset(0));
-        }
-        else {
-            dofbranches[idof] = 0;
-        }
-    }
-}
-
 void KinBody::GetLinkEnableStates(std::vector<uint8_t>& enablestates) const
 {
     enablestates.resize(_veclinks.size());
@@ -4395,7 +4380,7 @@ int8_t KinBody::DoesDOFAffectLink(int dofindex, int linkindex ) const
 void KinBody::SetNonCollidingConfiguration()
 {
     _ResetInternalCollisionCache();
-    vector<int> vdoflastsetvalues;
+    vector<dReal> vdoflastsetvalues;
     GetLinkTransformations(_vInitialLinkTransformations, vdoflastsetvalues);
 }
 

@@ -117,7 +117,7 @@ void RobotBase::ConnectedBody::SetLinkEnable(bool benable)
         bool bchanged = false;
 
         FOREACH(itlinkname, _vResolvedLinkNames) {
-            KinBody::LinkPtr plink = pattachedrobot->GetLink(*itlinkname);
+            KinBody::LinkPtr plink = pattachedrobot->GetLink(itlinkname->first);
             if( !!plink ) {
                 if( enablestates.at(plink->GetIndex()) != benable ) {
                     enablestates.at(plink->GetIndex()) = benable;
@@ -137,7 +137,7 @@ void RobotBase::ConnectedBody::SetLinkVisible(bool bvisible)
     RobotBasePtr pattachedrobot = _pattachedrobot.lock();
     if( !!pattachedrobot ) {
         FOREACH(itlinkname, _vResolvedLinkNames) {
-            KinBody::LinkPtr plink = pattachedrobot->GetLink(*itlinkname);
+            KinBody::LinkPtr plink = pattachedrobot->GetLink(itlinkname->first);
             if( !!plink ) {
                 plink->SetVisible(bvisible);
             }
@@ -151,7 +151,7 @@ void RobotBase::ConnectedBody::GetResolvedLinks(std::vector<KinBody::LinkPtr>& l
     RobotBasePtr pattachedrobot = _pattachedrobot.lock();
     if( !!pattachedrobot ) {
         for(size_t ilink = 0; ilink < _vResolvedLinkNames.size(); ++ilink) {
-            links[ilink] = pattachedrobot->GetLink(_vResolvedLinkNames[ilink]);
+            links[ilink] = pattachedrobot->GetLink(_vResolvedLinkNames[ilink].first);
         }
     }
     else {
@@ -167,7 +167,7 @@ void RobotBase::ConnectedBody::GetResolvedJoints(std::vector<KinBody::JointPtr>&
     RobotBasePtr pattachedrobot = _pattachedrobot.lock();
     if( !!pattachedrobot ) {
         for(size_t ijoint = 0; ijoint < _vResolvedJointNames.size(); ++ijoint) {
-            joints[ijoint] = pattachedrobot->GetJoint(_vResolvedJointNames[ijoint]);
+            joints[ijoint] = pattachedrobot->GetJoint(_vResolvedJointNames[ijoint].first);
         }
     }
     else {
@@ -183,7 +183,7 @@ void RobotBase::ConnectedBody::GetResolvedManipulators(std::vector<RobotBase::Ma
     RobotBasePtr pattachedrobot = _pattachedrobot.lock();
     if( !!pattachedrobot ) {
         for(size_t imanipulator = 0; imanipulator < _vResolvedManipulatorNames.size(); ++imanipulator) {
-            manipulators[imanipulator] = pattachedrobot->GetManipulator(_vResolvedManipulatorNames[imanipulator]);
+            manipulators[imanipulator] = pattachedrobot->GetManipulator(_vResolvedManipulatorNames[imanipulator].first);
         }
     }
     else {
@@ -199,7 +199,7 @@ void RobotBase::ConnectedBody::GetResolvedAttachedSensors(std::vector<RobotBase:
     RobotBasePtr pattachedrobot = _pattachedrobot.lock();
     if( !!pattachedrobot ) {
         for(size_t iattachedSensor = 0; iattachedSensor < _vResolvedAttachedSensorNames.size(); ++iattachedSensor) {
-            attachedSensors[iattachedSensor] = pattachedrobot->GetAttachedSensor(_vResolvedAttachedSensorNames[iattachedSensor]);
+            attachedSensors[iattachedSensor] = pattachedrobot->GetAttachedSensor(_vResolvedAttachedSensorNames[iattachedSensor].first);
         }
     }
     else {
@@ -301,12 +301,6 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             }
         }
 
-        connectedBody._vResolvedLinkNames.clear();
-        connectedBody._vResolvedJointNames.clear();
-        connectedBody._vResolvedManipulatorNames.clear();
-        connectedBody._vResolvedAttachedSensorNames.clear();
-        connectedBody._dummyPassiveJointName.clear();
-
         if( !connectedBody.IsActive() ) {
             // skip
             continue;
@@ -332,34 +326,40 @@ void RobotBase::_ComputeConnectedBodiesInformation()
         connectedBody._nameprefix = connectedBody.GetName() + "_";
 
         // Links
-        connectedBody._vResolvedLinkNames.clear();
-        FOREACH(itlinkinfo, connectedBodyInfo._vLinkInfos) {
-            KinBody::LinkPtr plink(new KinBody::Link(shared_kinbody()));
-            plink->_info = **itlinkinfo; // copy
+        connectedBody._vResolvedLinkNames.resize(connectedBodyInfo._vLinkInfos.size());
+        for(int ilink = 0; ilink < (int)connectedBodyInfo._vLinkInfos.size(); ++ilink) {
+            KinBody::LinkPtr& plink = connectedBody._vResolvedLinkNames[ilink].second;
+            if( !plink ) {
+                plink.reset(new KinBody::Link(shared_kinbody()));
+            }
+            plink->_info = *connectedBodyInfo._vLinkInfos[ilink]; // copy
             plink->_info._name = connectedBody._nameprefix + plink->_info._name;
             plink->_info._t = tBaseLinkInWorld * plink->_info._t;
             _InitAndAddLink(plink);
-            connectedBody._vResolvedLinkNames.push_back(plink->_info._name);
+            connectedBody._vResolvedLinkNames[ilink].first = plink->_info._name;
         }
 
         // Joints
         std::vector<KinBody::JointPtr> vNewJointsToAdd;
         std::vector<std::pair<std::string, std::string> > jointNamePairs;
-        connectedBody._vResolvedJointNames.clear();
-        FOREACH(itjointinfo, connectedBodyInfo._vJointInfos) {
-            KinBody::JointPtr pjoint(new KinBody::Joint(shared_kinbody()));
-            pjoint->_info = **itjointinfo; // copy
+        connectedBody._vResolvedJointNames.resize(connectedBodyInfo._vJointInfos.size());
+        for(int ijoint = 0; ijoint < (int)connectedBodyInfo._vJointInfos.size(); ++ijoint) {
+            KinBody::JointPtr& pjoint = connectedBody._vResolvedJointNames[ijoint].second;
+            if( !pjoint ) {
+                pjoint.reset(new KinBody::Joint(shared_kinbody()));
+            }
+            pjoint->_info = *connectedBodyInfo._vJointInfos[ijoint]; // copy
             pjoint->_info._name = connectedBody._nameprefix + pjoint->_info._name;
-            
+
             // search for the correct resolved _linkname0 and _linkname1
             bool bfoundlink0 = false, bfoundlink1 = false;
             for(size_t ilink = 0; ilink < connectedBodyInfo._vLinkInfos.size(); ++ilink) {
                 if( pjoint->_info._linkname0 == connectedBodyInfo._vLinkInfos[ilink]->_name ) {
-                    pjoint->_info._linkname0 = connectedBody._vResolvedLinkNames.at(ilink);
+                    pjoint->_info._linkname0 = connectedBody._vResolvedLinkNames.at(ilink).first;
                     bfoundlink0 = true;
                 }
                 if( pjoint->_info._linkname1 == connectedBodyInfo._vLinkInfos[ilink]->_name ) {
-                    pjoint->_info._linkname1 = connectedBody._vResolvedLinkNames.at(ilink);
+                    pjoint->_info._linkname1 = connectedBody._vResolvedLinkNames.at(ilink).first;
                     bfoundlink1 = true;
                 }
             }
@@ -370,8 +370,9 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             if( !bfoundlink1 ) {
                 throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for joint %s, could not find linkname1 %s in connected body link infos!", connectedBody.GetName()%GetName()%pjoint->_info._name%pjoint->_info._linkname1, ORE_InvalidArguments);
             }
-            jointNamePairs.emplace_back((*itjointinfo)->_name,  pjoint->_info._name);
+            jointNamePairs.emplace_back(connectedBodyInfo._vJointInfos[ijoint]->_name,  pjoint->_info._name);
             vNewJointsToAdd.push_back(pjoint);
+            connectedBody._vResolvedJointNames[ijoint].first = pjoint->_info._name;
         }
 
         FOREACH(itnewjoint, vNewJointsToAdd) {
@@ -388,12 +389,18 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             }
 
             _InitAndAddJoint(*itnewjoint);
-            connectedBody._vResolvedJointNames.push_back((*itnewjoint)->_info._name);
         }
 
         // Manipulators
-        FOREACH(itmanipulatorinfo, connectedBodyInfo._vManipulatorInfos) {
-            RobotBase::ManipulatorPtr pnewmanipulator(new RobotBase::Manipulator(shared_robot(), **itmanipulatorinfo));
+        connectedBody._vResolvedManipulatorNames.resize(connectedBodyInfo._vManipulatorInfos.size());
+        for(int imanipulator = 0; imanipulator < (int)connectedBodyInfo._vManipulatorInfos.size(); ++imanipulator) {
+            RobotBase::ManipulatorPtr& pnewmanipulator = connectedBody._vResolvedManipulatorNames[imanipulator].second;
+            if( !pnewmanipulator ) {
+                pnewmanipulator.reset(new RobotBase::Manipulator(shared_robot(), *connectedBodyInfo._vManipulatorInfos[imanipulator]));
+            }
+            else {
+                pnewmanipulator->_info = *connectedBodyInfo._vManipulatorInfos[imanipulator];
+            }
             pnewmanipulator->_info._name = connectedBody._nameprefix + pnewmanipulator->_info._name;
 
             FOREACH(ittestmanipulator, _vecManipulators) {
@@ -414,7 +421,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             bool bFoundEffectorLink = false;
             for(size_t ilink = 0; ilink < connectedBodyInfo._vLinkInfos.size(); ++ilink) {
                 if( pnewmanipulator->_info._sEffectorLinkName == connectedBodyInfo._vLinkInfos[ilink]->_name ) {
-                    pnewmanipulator->_info._sEffectorLinkName = connectedBody._vResolvedLinkNames.at(ilink);
+                    pnewmanipulator->_info._sEffectorLinkName = connectedBody._vResolvedLinkNames.at(ilink).first;
                     bFoundEffectorLink = true;
                 }
             }
@@ -424,12 +431,19 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             }
 
             _vecManipulators.push_back(pnewmanipulator);
-            connectedBody._vResolvedManipulatorNames.push_back(pnewmanipulator->_info._name);
+            connectedBody._vResolvedManipulatorNames[imanipulator].first = pnewmanipulator->_info._name;
         }
 
         // AttachedSensors
-        FOREACH(itattachedSensorinfo, connectedBodyInfo._vAttachedSensorInfos) {
-            RobotBase::AttachedSensorPtr pnewattachedSensor(new RobotBase::AttachedSensor(shared_robot(), **itattachedSensorinfo));
+        connectedBody._vResolvedAttachedSensorNames.resize(connectedBodyInfo._vAttachedSensorInfos.size());
+        for(int iattachedsensor = 0; iattachedsensor < (int)connectedBodyInfo._vAttachedSensorInfos.size(); ++iattachedsensor) {
+            RobotBase::AttachedSensorPtr& pnewattachedSensor = connectedBody._vResolvedAttachedSensorNames[iattachedsensor].second;
+            if( !pnewattachedSensor ) {
+                pnewattachedSensor.reset(new RobotBase::AttachedSensor(shared_robot(), *connectedBodyInfo._vAttachedSensorInfos[iattachedsensor]));
+            }
+            else {
+                pnewattachedSensor->_info = *connectedBodyInfo._vAttachedSensorInfos[iattachedsensor];
+            }
             pnewattachedSensor->_info._name = connectedBody._nameprefix + pnewattachedSensor->_info._name;
 
             FOREACH(ittestattachedSensor, _vecAttachedSensors) {
@@ -442,7 +456,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             bool bFoundLink = false;
             for(size_t ilink = 0; ilink < connectedBodyInfo._vLinkInfos.size(); ++ilink) {
                 if( pnewattachedSensor->_info._linkname == connectedBodyInfo._vLinkInfos[ilink]->_name ) {
-                    pnewattachedSensor->_info._linkname = connectedBody._vResolvedLinkNames.at(ilink);
+                    pnewattachedSensor->_info._linkname = connectedBody._vResolvedLinkNames.at(ilink).first;
                     bFoundLink = true;
                 }
             }
@@ -452,13 +466,15 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             }
 
             _vecAttachedSensors.push_back(pnewattachedSensor);
-            connectedBody._vResolvedAttachedSensorNames.push_back(pnewattachedSensor->_info._name);
+            connectedBody._vResolvedAttachedSensorNames[iattachedsensor].first = pnewattachedSensor->_info._name;
         }
 
         connectedBody._dummyPassiveJointName = connectedBody._nameprefix + "_dummyconnectedbody__";
 
-        KinBody::JointPtr dummyJoint(new KinBody::Joint(shared_kinbody()));
-        KinBody::JointInfo& dummyJointInfo = dummyJoint->_info;
+        if( !connectedBody._pDummyJointCache ) {
+            connectedBody._pDummyJointCache.reset(new KinBody::Joint(shared_kinbody()));
+        }
+        KinBody::JointInfo& dummyJointInfo = connectedBody._pDummyJointCache->_info;
         dummyJointInfo._name = connectedBody._dummyPassiveJointName;
         dummyJointInfo._bIsActive = false;
         dummyJointInfo._type = KinBody::JointType::JointPrismatic;
@@ -467,8 +483,8 @@ void RobotBase::_ComputeConnectedBodiesInformation()
         dummyJointInfo._vupperlimit[0] = 0;
 
         dummyJointInfo._linkname0 = connectedBodyInfo._linkname;
-        dummyJointInfo._linkname1 = connectedBody._vResolvedLinkNames.at(0);
-        _InitAndAddJoint(dummyJoint);
+        dummyJointInfo._linkname1 = connectedBody._vResolvedLinkNames.at(0).first;
+        _InitAndAddJoint(connectedBody._pDummyJointCache);
     }
 }
 
@@ -488,42 +504,42 @@ void RobotBase::_DeinitializeConnectedBodiesInformation()
 
         // unfortunately cannot save info as easily since have to restore origin and names
         for(int iresolvedlink = 0; iresolvedlink < (int)connectedBody._vResolvedLinkNames.size(); ++iresolvedlink) {
-            LinkPtr presolvedlink = GetLink(connectedBody._vResolvedLinkNames[iresolvedlink]);
+            LinkPtr presolvedlink = GetLink(connectedBody._vResolvedLinkNames[iresolvedlink].first);
             if( !!presolvedlink ) {
                 vConnectedLinks.at(presolvedlink->GetIndex()) = 1;
             }
+            connectedBody._vResolvedLinkNames[iresolvedlink].first.clear();
         }
-        connectedBody._vResolvedLinkNames.clear();
 
         for(int iresolvedjoint = 0; iresolvedjoint < (int)connectedBody._vResolvedJointNames.size(); ++iresolvedjoint) {
             for(int ijointindex = 0; ijointindex < (int)_vecjoints.size(); ++ijointindex) {
-                if( _vecjoints[ijointindex]->GetName() == connectedBody._vResolvedJointNames[iresolvedjoint] ) {
+                if( _vecjoints[ijointindex]->GetName() == connectedBody._vResolvedJointNames[iresolvedjoint].first ) {
                     vConnectedJoints[ijointindex] = 1;
                 }
             }
             for(int ijointindex = 0; ijointindex < (int)_vPassiveJoints.size(); ++ijointindex) {
-                if( _vPassiveJoints[ijointindex]->GetName() == connectedBody._vResolvedJointNames[iresolvedjoint] ) {
+                if( _vPassiveJoints[ijointindex]->GetName() == connectedBody._vResolvedJointNames[iresolvedjoint].first ) {
                     vConnectedPassiveJoints[ijointindex] = 1;
                 }
             }
+            connectedBody._vResolvedJointNames[iresolvedjoint].first.clear();
         }
-        connectedBody._vResolvedJointNames.clear();
 
         for(int iresolvedmanipulator = 0; iresolvedmanipulator < (int)connectedBody._vResolvedManipulatorNames.size(); ++iresolvedmanipulator) {
-            ManipulatorPtr presolvedmanipulator = GetManipulator(connectedBody._vResolvedManipulatorNames[iresolvedmanipulator]);
+            ManipulatorPtr presolvedmanipulator = GetManipulator(connectedBody._vResolvedManipulatorNames[iresolvedmanipulator].first);
             if( !!presolvedmanipulator ) {
                 RemoveManipulator(presolvedmanipulator);
             }
+            connectedBody._vResolvedManipulatorNames[iresolvedmanipulator].first.clear();
         }
-        connectedBody._vResolvedManipulatorNames.clear();
 
         for(int iresolvedattachedSensor = 0; iresolvedattachedSensor < (int)connectedBody._vResolvedAttachedSensorNames.size(); ++iresolvedattachedSensor) {
-            AttachedSensorPtr presolvedattachedSensor = GetAttachedSensor(connectedBody._vResolvedAttachedSensorNames[iresolvedattachedSensor]);
+            AttachedSensorPtr presolvedattachedSensor = GetAttachedSensor(connectedBody._vResolvedAttachedSensorNames[iresolvedattachedSensor].first);
             if( !!presolvedattachedSensor ) {
                 RemoveAttachedSensor(*presolvedattachedSensor);
             }
+            connectedBody._vResolvedAttachedSensorNames[iresolvedattachedSensor].first.clear();
         }
-        connectedBody._vResolvedAttachedSensorNames.clear();
 
         for(int ijointindex = 0; ijointindex < (int)_vPassiveJoints.size(); ++ijointindex) {
             if( _vPassiveJoints[ijointindex]->GetName() == connectedBody._dummyPassiveJointName ) {
@@ -568,46 +584,9 @@ void RobotBase::GetConnectedBodyActiveStates(std::vector<uint8_t>& activestates)
     }
 }
 
-///\brief removes the robot from the environment temporarily while in scope
-class EnvironmentRobotRemover
-{
-public:
-
-    EnvironmentRobotRemover(RobotBasePtr pRobot) : _bRemoved(false), _pRobot(pRobot), _pEnv(pRobot->GetEnv()) {
-        _pEnv->Remove(_pRobot);
-        _bRemoved = true;
-    }
-
-    ~EnvironmentRobotRemover() {
-        if (_bRemoved) {
-            _pEnv->Add(_pRobot, false);
-            _bRemoved = false;
-        }
-    }
-
-private:
-
-    bool _bRemoved;
-    RobotBasePtr _pRobot;
-    EnvironmentBasePtr _pEnv;
-};
-
 void RobotBase::SetConnectedBodyActiveStates(const std::vector<uint8_t>& activestates)
 {
     OPENRAVE_ASSERT_OP(activestates.size(),==,_vecConnectedBodies.size());
-
-    bool bchanged = false;
-    for(size_t iconnectedbody = 0; iconnectedbody < _vecConnectedBodies.size(); ++iconnectedbody) {
-        if (_vecConnectedBodies[iconnectedbody]->IsActive() != !!activestates[iconnectedbody]) {
-            bchanged = true;
-            break;
-        }
-    }
-    if (!bchanged) {
-        return;
-    }
-
-    EnvironmentRobotRemover robotremover(shared_robot());
     for(size_t iconnectedbody = 0; iconnectedbody < _vecConnectedBodies.size(); ++iconnectedbody) {
         _vecConnectedBodies[iconnectedbody]->SetActive(!!activestates[iconnectedbody]);
     }

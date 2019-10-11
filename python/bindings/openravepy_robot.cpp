@@ -305,10 +305,6 @@ public:
         object GetChuckingDirection() {
             return toPyArray(_pmanip->GetChuckingDirection());
         }
-        object GetPalmDirection() {
-            RAVELOG_INFO("GetPalmDirection deprecated to GetDirection\n");
-            return toPyVector3(_pmanip->GetDirection());
-        }
         object GetDirection() {
             return toPyVector3(_pmanip->GetLocalToolDirection());
         }
@@ -1874,7 +1870,6 @@ void init_openravepy_robot()
         .def("GetGripperDOF",&PyRobotBase::PyManipulator::GetGripperDOF, DOXY_FN(RobotBase::Manipulator,GetGripperDOF))
         .def("GetClosingDirection",&PyRobotBase::PyManipulator::GetClosingDirection, DOXY_FN(RobotBase::Manipulator,GetClosingDirection))
         .def("GetChuckingDirection",&PyRobotBase::PyManipulator::GetChuckingDirection, DOXY_FN(RobotBase::Manipulator,GetChuckingDirection))
-        .def("GetPalmDirection",&PyRobotBase::PyManipulator::GetPalmDirection, DOXY_FN(RobotBase::Manipulator,GetLocalToolDirection))
         .def("GetDirection",&PyRobotBase::PyManipulator::GetDirection, DOXY_FN(RobotBase::Manipulator,GetLocalToolDirection))
         .def("GetLocalToolDirection",&PyRobotBase::PyManipulator::GetLocalToolDirection, DOXY_FN(RobotBase::Manipulator,GetLocalToolDirection))
         .def("IsGrabbing",&PyRobotBase::PyManipulator::IsGrabbing,args("body"), DOXY_FN(RobotBase::Manipulator,IsGrabbing))

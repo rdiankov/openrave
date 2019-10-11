@@ -549,7 +549,7 @@ void RobotItem::Load()
     FOREACHC(itmanip, _probot->GetManipulators()) {
         if( !!(*itmanip)->GetEndEffector() ) {
             _vEndEffectors[index]._index = index;
-            Vector vdirection = (*itmanip)->GetDirection();
+            Vector vdirection = (*itmanip)->GetLocalToolDirection();
             CreateAxis(_vEndEffectors[index],(*itmanip)->GetName(),&vdirection);
         }
         ++index;

@@ -175,7 +175,7 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
         _vtManipsLocalTool.resize(vmanips.size());
         _vvManipsLocalDirection.resize(vmanips.size());
         _vpManipsIkSolver.resize(vmanips.size());
-        for(int imanip = 0; imanip < vmanips.size(); ++imanip) {
+        for(int imanip = 0; imanip < (int)vmanips.size(); ++imanip) {
             RobotBase::ManipulatorPtr pmanip = vmanips[imanip];
             if( !!pmanip ) {
                 _vtManipsLocalTool[imanip] = pmanip->GetLocalToolTransform();
@@ -185,7 +185,7 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
         }
     }
 
-    _probot->GetConnectedBodyActiveStates(_vActiveConnectedBodies);
+    _probot->GetConnectedBodyActiveStates(_vConnectedBodyActiveStates);
 }
 
 RobotBase::RobotStateSaver::~RobotStateSaver()
@@ -207,6 +207,30 @@ void RobotBase::RobotStateSaver::Release()
     KinBodyStateSaver::Release();
 }
 
+///\brief removes the robot from the environment temporarily while in scope
+class EnvironmentRobotRemover
+{
+public:
+
+    EnvironmentRobotRemover(RobotBasePtr pRobot) : _bRemoved(false), _pRobot(pRobot), _pEnv(pRobot->GetEnv()) {
+        _pEnv->Remove(_pRobot);
+        _bRemoved = true;
+    }
+
+    ~EnvironmentRobotRemover() {
+        if (_bRemoved) {
+            _pEnv->Add(_pRobot, false);
+            _bRemoved = false;
+        }
+    }
+
+private:
+
+    bool _bRemoved;
+    RobotBasePtr _pRobot;
+    EnvironmentBasePtr _pEnv;
+};
+
 void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> probot)
 {
     if( !probot ) {
@@ -217,9 +241,22 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
         return;
     }
 
-    // need to restore active connected bodies
-    // but first check whether anything changed
-    probot->SetConnectedBodyActiveStates(_vActiveConnectedBodies);
+    if( _vConnectedBodyActiveStates.size() == probot->_vecConnectedBodies.size() ) {
+        bool bchanged = false;
+        for(size_t iconnectedbody = 0; iconnectedbody < probot->_vecConnectedBodies.size(); ++iconnectedbody) {
+            if( probot->_vecConnectedBodies[iconnectedbody]->IsActive() != (!!_vConnectedBodyActiveStates[iconnectedbody]) ) {
+                bchanged = true;
+                break;
+            }
+        }
+
+        if( bchanged ) {
+            EnvironmentRobotRemover robotremover(probot);
+            // need to restore active connected bodies
+            // but first check whether anything changed
+            probot->SetConnectedBodyActiveStates(_vConnectedBodyActiveStates);
+        }
+    }
 
     if( _options & Save_ActiveDOF ) {
         probot->SetActiveDOFs(vactivedofs, affinedofs, rotationaxis);
@@ -415,12 +452,6 @@ void RobotBase::SetLinkTransformations(const std::vector<Transform>& transforms)
 void RobotBase::SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<dReal>& doflastsetvalues)
 {
     KinBody::SetLinkTransformations(transforms,doflastsetvalues);
-    _UpdateAttachedSensors();
-}
-
-void RobotBase::SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<int>& dofbranches)
-{
-    KinBody::SetLinkTransformations(transforms,dofbranches);
     _UpdateAttachedSensors();
 }
 
@@ -1574,11 +1605,6 @@ bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::s
     return KinBody::Grab(body, pRobotLinkToGrabWith, setRobotLinksToIgnore);
 }
 
-void RobotBase::SetActiveManipulator(int index)
-{
-    _pManipActive = _vecManipulators.at(index);
-}
-
 void RobotBase::SetActiveManipulator(ManipulatorConstPtr pmanip)
 {
     if( !pmanip ) {
@@ -1627,16 +1653,6 @@ RobotBase::ManipulatorPtr RobotBase::GetActiveManipulator()
 RobotBase::ManipulatorConstPtr RobotBase::GetActiveManipulator() const
 {
     return _pManipActive;
-}
-
-int RobotBase::GetActiveManipulatorIndex() const
-{
-    for(size_t i = 0; i < _vecManipulators.size(); ++i) {
-        if( _pManipActive == _vecManipulators[i] ) {
-            return (int)i;
-        }
-    }
-    return -1;
 }
 
 RobotBase::ManipulatorPtr RobotBase::AddManipulator(const RobotBase::ManipulatorInfo& manipinfo, bool removeduplicate)
@@ -1997,59 +2013,6 @@ const std::string& RobotBase::GetRobotStructureHash() const
         __hashrobotstructure = utils::GetMD5HashString(ss.str());
     }
     return __hashrobotstructure;
-}
-
-bool RobotBase::SetMotion(TrajectoryBaseConstPtr ptraj)
-{
-    if( !!GetController() ) {
-        return GetController()->SetPath(ptraj);
-    }
-    return false;
-}
-
-bool RobotBase::SetActiveMotion(TrajectoryBaseConstPtr ptraj)
-{
-    if( !!GetController() ) {
-        return GetController()->SetPath(ptraj);
-    }
-    return false;
-}
-
-bool RobotBase::SetActiveMotion(TrajectoryBaseConstPtr ptraj, dReal)
-{
-    if( !!GetController() ) {
-        return GetController()->SetPath(ptraj);
-    }
-    return false;
-}
-
-void RobotBase::GetFullTrajectoryFromActive(TrajectoryBasePtr pfulltraj, TrajectoryBaseConstPtr pActiveTraj, bool bOverwriteTransforms)
-{
-    ConfigurationSpecification spec;
-    spec._vgroups.resize(2);
-    spec._vgroups[0].offset = 0;
-    spec._vgroups[0].dof = GetDOF();
-    stringstream ss;
-    ss << "joint_values " << GetName();
-    for(int i = 0; i < GetDOF(); ++i) {
-        ss << " " << i;
-    }
-    spec._vgroups[0].name = ss.str();
-    spec._vgroups[0].interpolation = "linear";
-    spec._vgroups[1].offset = GetDOF();
-    spec._vgroups[1].dof = 1;
-    spec._vgroups[1].name = "deltatime";
-    if( !bOverwriteTransforms ) {
-        spec._vgroups.resize(3);
-        spec._vgroups[2].offset = GetDOF()+1;
-        spec._vgroups[2].dof = RaveGetAffineDOF(DOF_Transform);
-        spec._vgroups[2].name = str(boost::format("affine_transform %s %d")%GetName()%DOF_Transform);
-        spec._vgroups[2].interpolation = "linear";
-    }
-    pfulltraj->Init(spec);
-    std::vector<dReal> vdata;
-    pActiveTraj->GetWaypoints(0,pActiveTraj->GetNumWaypoints(),vdata);
-    pfulltraj->Insert(0,vdata,pActiveTraj->GetConfigurationSpecification());
 }
 
 } // end namespace OpenRAVE
