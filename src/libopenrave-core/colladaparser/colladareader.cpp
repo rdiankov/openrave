@@ -825,7 +825,7 @@ public:
                 break;
             }
             for(size_t ikmodel = 0; ikmodel < kscene->getInstance_kinematics_model_array().getCount(); ++ikmodel) {
-                listPossibleBodies.push_back(make_pair(kscene->getInstance_kinematics_model_array()[ikmodel], bindings));
+                listPossibleBodies.emplace_back(kscene->getInstance_kinematics_model_array()[ikmodel],  bindings);
             }
         }
 
@@ -920,7 +920,7 @@ public:
                 break;
             }
             for(size_t ikmodel = 0; ikmodel < kscene->getInstance_kinematics_model_array().getCount(); ++ikmodel) {
-                listPossibleBodies.push_back(make_pair(kscene->getInstance_kinematics_model_array()[ikmodel], bindings));
+                listPossibleBodies.emplace_back(kscene->getInstance_kinematics_model_array()[ikmodel],  bindings);
             }
         }
         FOREACH(it, listPossibleBodies) {
@@ -971,14 +971,14 @@ public:
         std::vector< std::pair<std::string, std::string> > jointnamepairs; jointnamepairs.reserve(listprocessjoints.size());
         FOREACH(itjoint,pbody->_vecjoints) {
             if( _setInitialJoints.find(*itjoint) == _setInitialJoints.end()) {
-                jointnamepairs.push_back(make_pair((*itjoint)->_info._name, prefix +(*itjoint)->_info._name));
+                jointnamepairs.emplace_back((*itjoint)->_info._name,  prefix +(*itjoint)->_info._name);
                 (*itjoint)->_info._name = prefix + (*itjoint)->_info._name;
                 listprocessjoints.push_back(*itjoint);
             }
         }
         FOREACH(itjoint,pbody->_vPassiveJoints) {
             if( _setInitialJoints.find(*itjoint) == _setInitialJoints.end()) {
-                jointnamepairs.push_back(make_pair((*itjoint)->_info._name, prefix +(*itjoint)->_info._name));
+                jointnamepairs.emplace_back((*itjoint)->_info._name,  prefix +(*itjoint)->_info._name);
                 (*itjoint)->_info._name = prefix + (*itjoint)->_info._name;
                 listprocessjoints.push_back(*itjoint);
             }
@@ -3250,7 +3250,7 @@ public:
                             std::string instance_url = instance_sensor->getAttribute("url");
                             mapSensorURLsToNames[instance_url] = pattachedsensor->_psensor->GetName();
                         }
-                        listSensorsToExtract.push_back(std::make_pair(pattachedsensor,result.second));
+                        listSensorsToExtract.emplace_back(pattachedsensor, result.second);
                     }
 
                     probot->_vecAttachedSensors.push_back(pattachedsensor);
@@ -3656,15 +3656,15 @@ public:
                 if( std::string(domatts[j].name) == "url" ) {
                     std::map<std::string, std::string>::const_iterator itname = mapURLsToNames.find(domatts[j].value);
                     if( itname != mapURLsToNames.end() ) {
-                        atts.push_back(make_pair(domatts[j].name,itname->second));
+                        atts.emplace_back(domatts[j].name, itname->second);
                     }
                     else {
                         // push back the fully resolved name
-                        atts.push_back(make_pair(domatts[j].name, _MakeFullURI(xsAnyURI(*_dae, domatts[j].value), elt)));
+                        atts.emplace_back(domatts[j].name, _MakeFullURI(xsAnyURI(*_dae, domatts[j].value),  elt));
                     }
                 }
                 else {
-                    atts.push_back(make_pair(domatts[j].name,domatts[j].value));
+                    atts.emplace_back(domatts[j].name, domatts[j].value);
                 }
             }
             BaseXMLReader::ProcessElement action = preader->startElement(xmltag,atts);
@@ -4410,7 +4410,7 @@ private:
             daeMetaAttribute* pmeta = elt->getAttributeObject(i);
             buffer.str("");  buffer.clear();
             pmeta->memoryToString(elt, buffer);
-            atts.push_back(make_pair(string(pmeta->getName()), buffer.str()));
+            atts.emplace_back(pmeta->getName(),  buffer.str());
         }
     }
 
@@ -4500,7 +4500,7 @@ private:
                                 RAVELOG_WARN(str(boost::format("failed to resolve link1 %s\n")%pelt->getAttribute("link1")));
                                 continue;
                             }
-                            pbody->_vForcedAdjacentLinks.push_back(make_pair(plink0->GetName(),plink1->GetName()));
+                            pbody->_vForcedAdjacentLinks.emplace_back(plink0->GetName(), plink1->GetName());
                         }
                         else if( pelt->getElementName() == string("bind_instance_geometry") ) {
 

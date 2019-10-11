@@ -684,7 +684,7 @@ private:
                     if( !bestnode.first || (curdist < bestnode.second && bestnode.first->_usenn)) {
                         bestnode = make_pair(*itchild, curdist);
                     }
-                    _vNextLevelNodes.push_back(make_pair(*itchild, curdist));
+                    _vNextLevelNodes.emplace_back(*itchild,  curdist);
                     if( minchilddist > curdist ) {
                         minchilddist = curdist;
                     }
@@ -785,7 +785,7 @@ private:
                     FOREACHC(itchild, itcurrentnode->first->_vchildren) {
                         dReal curdist = _ComputeDistance(nodein, *itchild);
                         if( curdist <= fLevelBound*_fBaseChildMult ) {
-                            _vNextLevelNodes.push_back(make_pair(*itchild, curdist));
+                            _vNextLevelNodes.emplace_back(*itchild,  curdist);
                         }
                     }
                 }

@@ -352,7 +352,7 @@ public:
                             itcontact->norm = -itcontact->norm;
                             itcontact->depth = -itcontact->depth;
                         }
-                        contacts.push_back(make_pair(*itcontact,(*itlink)->GetIndex()));
+                        contacts.emplace_back(*itcontact, (*itlink)->GetIndex());
                     }
                 }
             }
@@ -996,7 +996,7 @@ public:
                                 itcontact->norm = -itcontact->norm;
                                 itcontact->depth = -itcontact->depth;
                             }
-                            grasp_params->contacts.push_back(make_pair(*itcontact,(*itlink)->GetIndex()));
+                            grasp_params->contacts.emplace_back(*itcontact, (*itlink)->GetIndex());
                         }
                     }
                 }
@@ -1537,7 +1537,7 @@ protected:
                     dReal fcos = itcontact->norm.dot3(deltaxyz);
                     bool bstable = fcos > 0 && fsin2 <= fcos*fcos*mu*mu;
                     if(bstable) {
-                        contacts.push_back(make_pair(*itcontact,(*itlink)->GetIndex()));
+                        contacts.emplace_back(*itcontact, (*itlink)->GetIndex());
                     }
                 }
             }

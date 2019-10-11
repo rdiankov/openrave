@@ -171,24 +171,24 @@ public:
                     if( listpath.size() > 0 ) {
                         dist = parameters->_distmetricfn(listpath.back().first, *itvalues);
                         if( dist > 0 ) {
-                            listpath.push_back(make_pair(*itvalues,dist));
+                            listpath.emplace_back(*itvalues, dist);
                             totaldist += dist;
                         }
                     }
                     else {
                         vtrajdata = *itvalues;
-                        listpath.push_back(make_pair(*itvalues,0));
+                        listpath.emplace_back(*itvalues, 0);
                     }
                 }
             }
             else {
-                listpath.push_back(make_pair(vtrajdata,0));
+                listpath.emplace_back(vtrajdata, 0);
                 for(size_t i = 1; i < ptraj->GetNumWaypoints(); ++i) {
                     ptraj->GetWaypoint(i,vtrajdata,parameters->_configurationspecification);
                     dReal dist;
                     dist = parameters->_distmetricfn(listpath.back().first, vtrajdata);
                     if( dist > 0 ) {
-                        listpath.push_back(make_pair(vtrajdata,dist));
+                        listpath.emplace_back(vtrajdata, dist);
                         totaldist += dist;
                     }
                 }
@@ -234,7 +234,7 @@ public:
 
                 if( listpath.size() <= 1 ) {
                     // trajectory contains similar points, so at least add another point and send to the next post-processing stage
-                    listpath.push_back(make_pair(vtrajdata,0));
+                    listpath.emplace_back(vtrajdata, 0);
                 }
                 ptraj->Init(parameters->_configurationspecification);
                 FOREACH(it, listpath) {
