@@ -62,6 +62,8 @@ public:
                         "sets the ik threshold for validating returned ik solutions");
         RegisterCommand("SetJacobianRefine",boost::bind(&IkFastSolver<IkReal>::_SetJacobianRefineCommand,this,_1,_2),
                         "sets the allowed workspace error, if ik solver returns above that, then use jacobian inverse to refine.");
+        RegisterCommand("GetJacobianRefine",boost::bind(&IkFastSolver<IkReal>::_GetJacobianRefineCommand,this,_1,_2),
+                        "returns the jaocbian refinement error threshold and max iterations.");
         RegisterCommand("SetDefaultIncrements",boost::bind(&IkFastSolver<IkReal>::_SetDefaultIncrementsCommand,this,_1,_2),
                         "Specify four values (2 pairs). Each pair is the free increment for revolute joint and second is the number of segment to divide free prismatic joints. The first pair is for structural free joints, the second pair is for solutions where axes align");
         RegisterCommand("GetFreeIndices",boost::bind(&IkFastSolver<IkReal>::_GetFreeIndicesCommand,this,_1,_2),
@@ -165,6 +167,16 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
             sout << *it << " ";
         }
         return true;
+    }
+
+    bool _GetJacobianRefineCommand(ostream& sout, istream& sinput)
+    {
+#ifdef OPENRAVE_HAS_LAPACK
+        sout << _jacobinvsolver.GetErrorThresh() << " " << _jacobinvsolver.GetMaxIterations();
+        return true;
+#else
+        return false;
+#endif
     }
 
     bool _GetSolutionIndicesCommand(ostream& sout, istream& sinput)

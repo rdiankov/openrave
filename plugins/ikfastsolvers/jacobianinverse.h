@@ -90,6 +90,16 @@ public:
         _nMaxIterations = nMaxIterations;
     }
 
+    T GetErrorThresh() const
+    {
+        return RaveSqrt(_errorthresh2);
+    }
+
+    int GetMaxIterations() const
+    {
+        return _nMaxIterations;
+    }
+
     /// \brief computes the jacobian inverse solution.
     ///
     /// robot is at the starting solution and solution should already be very close to the goal.
