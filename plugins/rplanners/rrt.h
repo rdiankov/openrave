@@ -873,7 +873,7 @@ public:
         }
 
         if( !bestGoalNode ) {
-            std::string description = str(boost::format("plan failed, %fs")%(0.001f*(float)(utils::GetMilliTime()-basetime)));
+            std::string description = str(boost::format("env=%d, plan failed, %fs")%GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
             RAVELOG_DEBUG(description);
             return PlannerStatus(description, PS_Failed);
         }

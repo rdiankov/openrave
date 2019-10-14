@@ -4871,6 +4871,9 @@ void KinBody::_InitAndAddLink(LinkPtr plink)
     }
 
     plink->_index = static_cast<int>(_veclinks.size());
+    plink->_vGeometries.clear();
+    plink->_collision.vertices.clear();
+    plink->_collision.indices.clear();
     FOREACHC(itgeominfo,info._vgeometryinfos) {
         Link::GeometryPtr geom(new Link::Geometry(plink,**itgeominfo));
         if( geom->_info._meshcollision.vertices.size() == 0 ) { // try to avoid recomputing

@@ -79,6 +79,18 @@ RobotBase::ConnectedBody::ConnectedBody(OpenRAVE::RobotBasePtr probot, const Ope
 RobotBase::ConnectedBody::ConnectedBody(OpenRAVE::RobotBasePtr probot, const ConnectedBody &connectedBody, int cloningoptions)
 {
     *this = connectedBody;
+    FOREACH(itinfo, _vResolvedLinkNames) {
+        itinfo->second = probot->GetLink(itinfo->first);
+    }
+    FOREACH(itinfo, _vResolvedJointNames) {
+        itinfo->second = probot->GetJoint(itinfo->first);
+    }
+    FOREACH(itinfo, _vResolvedManipulatorNames) {
+        itinfo->second = probot->GetManipulator(itinfo->first);
+    }
+    FOREACH(itinfo, _vResolvedAttachedSensorNames) {
+        itinfo->second = probot->GetAttachedSensor(itinfo->first);
+    }
     _pattachedrobot = probot;
     _pattachedlink = probot->GetLink(LinkPtr(connectedBody._pattachedlink)->GetName());
 }
