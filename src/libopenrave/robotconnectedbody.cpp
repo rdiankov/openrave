@@ -79,6 +79,7 @@ RobotBase::ConnectedBody::ConnectedBody(OpenRAVE::RobotBasePtr probot, const Ope
 RobotBase::ConnectedBody::ConnectedBody(OpenRAVE::RobotBasePtr probot, const ConnectedBody &connectedBody, int cloningoptions)
 {
     *this = connectedBody;
+    _pDummyJointCache = probot->GetJoint(_dummyPassiveJointName);
     FOREACH(itinfo, _vResolvedLinkNames) {
         itinfo->second = probot->GetLink(itinfo->first);
     }
@@ -558,6 +559,7 @@ void RobotBase::_DeinitializeConnectedBodiesInformation()
                 vConnectedPassiveJoints[ijointindex] = 1;
             }
         }
+        connectedBody._dummyPassiveJointName.clear();
     }
 
     int iwritelink = 0;
