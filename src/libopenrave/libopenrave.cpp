@@ -805,7 +805,7 @@ protected:
             }
         }
 
-        RAVELOG_WARN(str(boost::format("could not find file %s\n")%filename));
+        RAVELOG_INFO_FORMAT("could not find file %s", filename);
         return std::string();
 #endif
     }
@@ -2122,7 +2122,11 @@ void Grabbed::ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
         FOREACHC(itgrabbed, pbody->_vGrabbedBodies) {
             boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
             bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkrobot) != _vattachedlinks.end();
-            KinBodyPtr pothergrabbedbody(pgrabbed->_pgrabbedbody);
+            KinBodyPtr pothergrabbedbody = pgrabbed->_pgrabbedbody.lock();
+            if( !pothergrabbedbody ) {
+                RAVELOG_WARN_FORMAT("grabbed body on %s has already been released. ignoring.", pbody->GetName());
+                continue;
+            }
             if( bsamelink ) {
                 pothergrabbedbody->GetLinks().at(0)->GetRigidlyAttachedLinks(vbodyattachedlinks);
             }
@@ -2200,8 +2204,12 @@ void Grabbed::UpdateCollidingLinks()
     FOREACHC(itgrabbed, pbody->_vGrabbedBodies) {
         boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
         bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkrobot) != _vattachedlinks.end();
-        KinBodyPtr pothergrabbedbody(pgrabbed->_pgrabbedbody);
-        if( !!pothergrabbedbody && pothergrabbedbody != pgrabbedbody && pothergrabbedbody->GetLinks().size() > 0 ) {
+        KinBodyPtr pothergrabbedbody = pgrabbed->_pgrabbedbody.lock();
+        if( !pothergrabbedbody ) {
+            RAVELOG_WARN_FORMAT("grabbed body on %s has already been destroyed, ignoring.", pbody->GetName());
+            continue;
+        }
+        if( pothergrabbedbody != pgrabbedbody && pothergrabbedbody->GetLinks().size() > 0 ) {
             if( bsamelink ) {
                 pothergrabbedbody->GetLinks().at(0)->GetRigidlyAttachedLinks(vbodyattachedlinks);
             }
@@ -2232,9 +2240,12 @@ void Grabbed::UpdateCollidingLinks()
     std::set<KinBodyConstPtr> _setgrabbed;
     FOREACHC(itgrabbed, pbody->_vGrabbedBodies) {
         boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
-        KinBodyConstPtr pothergrabbedbody(pgrabbed->_pgrabbedbody);
+        KinBodyConstPtr pothergrabbedbody = pgrabbed->_pgrabbedbody.lock();
         if( !!pothergrabbedbody ) {
             _setgrabbed.insert(pothergrabbedbody);
+        }
+        else {
+            RAVELOG_WARN_FORMAT("grabbed body on %s has already been destroyed, ignoring.", pbody->GetName());
         }
     }
 
@@ -2421,12 +2432,12 @@ void SensorBase::CameraGeomData::Serialize(BaseXMLWriterPtr writer, int options)
     writer->AddChild("gain",atts)->SetCharData(boost::lexical_cast<std::string>(gain));
     //writer->AddChild("format",atts)->SetCharData(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
     if( sensor_reference.size() > 0 ) {
-        atts.push_back(std::make_pair("url", sensor_reference));
+        atts.emplace_back("url",  sensor_reference);
         writer->AddChild("sensor_reference",atts);
         atts.clear();
     }
     if( target_region.size() > 0 ) {
-        atts.push_back(std::make_pair("url", target_region));
+        atts.emplace_back("url",  target_region);
         writer->AddChild("target_region",atts);
         atts.clear();
     }
@@ -2543,7 +2554,7 @@ void DefaultStartElementSAXFunc(void *ctx, const xmlChar *name, const xmlChar **
     AttributesList listatts;
     if( atts != NULL ) {
         for (int i = 0; (atts[i] != NULL); i+=2) {
-            listatts.push_back(make_pair(string((const char*)atts[i]),string((const char*)atts[i+1])));
+            listatts.emplace_back((const char*)atts[i], (const char*)atts[i+1]);
             std::transform(listatts.back().first.begin(), listatts.back().first.end(), listatts.back().first.begin(), ::tolower);
         }
     }

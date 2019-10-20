@@ -681,7 +681,9 @@ protected:
         if (dp != NULL) {
             while ( (ep = readdir (dp)) != NULL ) {
                 // check for a .so in every file
-                if( strstr(ep->d_name, PLUGIN_EXT) != NULL ) {
+                // check that filename ends with .so
+                if( strlen(ep->d_name) >= strlen(PLUGIN_EXT) &&
+                    strcmp(ep->d_name + strlen(ep->d_name) - strlen(PLUGIN_EXT), PLUGIN_EXT) == 0 ) {
                     string strplugin = pdir;
                     strplugin += "/";
                     strplugin += ep->d_name;
@@ -784,11 +786,11 @@ protected:
         FOREACHC(itplugin, _listplugins) {
             PLUGININFO info;
             if( (*itplugin)->GetInfo(info) ) {
-                plugins.push_back(pair<string,PLUGININFO>((*itplugin)->GetName(),info));
+                plugins.emplace_back((*itplugin)->GetName(),info);
             }
         }
         if( !_listRegisteredInterfaces.empty() ) {
-            plugins.push_back(make_pair(string("__internal__"),PLUGININFO()));
+            plugins.emplace_back("__internal__", PLUGININFO());
             plugins.back().second.version = OPENRAVE_VERSION;
             FOREACHC(it,_listRegisteredInterfaces) {
                 RegisteredInterfacePtr registration = it->lock();

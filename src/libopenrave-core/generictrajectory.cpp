@@ -194,6 +194,7 @@ public:
             std::vector<dReal>::iterator it = std::lower_bound(_vaccumtime.begin(),_vaccumtime.end(),time);
             if( it == _vaccumtime.begin() ) {
                 std::copy(_vtrajdata.begin(),_vtrajdata.begin()+_spec.GetDOF(),data.begin());
+                data.at(_timeoffset) = time;
             }
             else {
                 size_t index = it-_vaccumtime.begin();
@@ -552,6 +553,16 @@ protected:
 
             if( nNeedNeighboringInfo ) {
                 std::vector<ConfigurationSpecification::Group>::const_iterator itderiv = _spec.FindTimeDerivativeGroup(_spec._vgroups[i]);
+
+                // only correct derivative if interpolation is the expected one compared to _spec._vgroups[i].interpolation
+                // this is necessary in order to prevent using wrong information. For example, sometimes position and velocity can both be linear, which means they are decoupled from their interpolation
+                if( itderiv != _spec._vgroups.end() ) {
+                    if( itderiv->interpolation.size() == 0 || itderiv->interpolation != ConfigurationSpecification::GetInterpolationDerivative(_spec._vgroups[i].interpolation) ) {
+                        // not correct interpolation, so remove from being a real derivative
+                        itderiv = _spec._vgroups.end();
+                    }
+                }
+
                 if( itderiv == _spec._vgroups.end() ) {
                     // don't throw an error here since it is unknown if the trajectory will be sampled
                     for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
@@ -563,6 +574,13 @@ protected:
                         _vderivoffsets[_spec._vgroups[i].offset+j] = itderiv->offset+j;
                     }
                     std::vector<ConfigurationSpecification::Group>::const_iterator itdd = _spec.FindTimeDerivativeGroup(*itderiv);
+                    if( itdd != _spec._vgroups.end() ) {
+                        if( itdd->interpolation.size() == 0 || itdd->interpolation != ConfigurationSpecification::GetInterpolationDerivative(itderiv->interpolation) ) {
+                            // not correct interpolation, so remove from being a real derivative
+                            itdd = _spec._vgroups.end();
+                        }
+                    }
+
                     if( itdd == _spec._vgroups.end() ) {
                         // don't throw an error here since it is unknown if the trajectory will be sampled
                         for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
@@ -574,6 +592,13 @@ protected:
                             _vddoffsets[_spec._vgroups[i].offset+j] = itdd->offset+j;
                         }
                         std::vector<ConfigurationSpecification::Group>::const_iterator itddd = _spec.FindTimeDerivativeGroup(*itdd);
+                        if( itddd != _spec._vgroups.end() ) {
+                            if( itddd->interpolation.size() == 0 || itddd->interpolation != ConfigurationSpecification::GetInterpolationDerivative(itdd->interpolation) ) {
+                                // not correct interpolation, so remove from being a real derivative
+                                itddd = _spec._vgroups.end();
+                            }
+                        }
+
                         if( itddd == _spec._vgroups.end() ) {
                             // don't throw an error here since it is unknown if the trajectory will be sampled
                             for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
@@ -588,6 +613,7 @@ protected:
                     }
                 }
                 std::vector<ConfigurationSpecification::Group>::const_iterator itintegral = _spec.FindTimeIntegralGroup(_spec._vgroups[i]);
+                // TODO check interpolation param for consistency
                 if( itintegral == _spec._vgroups.end() ) {
                     // don't throw an error here since it is unknown if the trajectory will be sampled
                     for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
@@ -890,7 +916,7 @@ protected:
                     dReal dd1 = _vtrajdata[_spec.GetDOF()+offset+ddoffset+i];
                     dReal c5 = (-0.5*dd0 + dd1*0.5)*ideltatime3 - (3*deriv0 + 3*deriv1)*ideltatime4 + px*6*ideltatime5;
                     dReal c4 = (1.5*dd0 - dd1)*ideltatime2 + (8*deriv0 + 7*deriv1)*ideltatime3 - px*15*ideltatime4;
-                    dReal c3 = (-1.5*dd0 + dd1*0.5)*ideltatime + (- 6*deriv0 - 4*deriv1)*ideltatime2 + px*10*ideltatime3;
+                    dReal c3 = (-1.5*dd0 + dd1*0.5)*ideltatime + (-6*deriv0 - 4*deriv1)*ideltatime2 + px*10*ideltatime3;
                     data[g.offset+i] = p0 + deltatime*(deriv0 + deltatime*(0.5*dd0 + deltatime*(c3 + deltatime*(c4 + deltatime*c5))));
                 }
             }
@@ -958,9 +984,9 @@ protected:
                     //dReal c6 = A[0]*b[0] + A[1]*b[1] + A[2]*b[2];
                     //dReal c5 = A[3]*b[0] + A[4]*b[1] + A[5]*b[2];
                     //dReal c4 = A[6]*b[0] + A[7]*b[1] + A[8]*b[2];
-                    dReal c6 = (-dd0 - dd1)*0.5*ideltatime4 + (- ddd0 + ddd1)/12.0*ideltatime3 + (-deriv0 + deriv1)*ideltatime5;
+                    dReal c6 = (-dd0 - dd1)*0.5*ideltatime4 + (-ddd0 + ddd1)/12.0*ideltatime3 + (-deriv0 + deriv1)*ideltatime5;
                     dReal c5 = (1.6*dd0 + 1.4*dd1)*ideltatime3 + (0.3*ddd0 - ddd1*0.2)*ideltatime2 + (3*deriv0 - 3*deriv1)*ideltatime4;
-                    dReal c4 = (-1.5*dd0 - dd1)*ideltatime2 + (- 0.375*ddd0 + ddd1*0.125)*ideltatime + (-2.5*deriv0 + 2.5*deriv1)*ideltatime3;
+                    dReal c4 = (-1.5*dd0 - dd1)*ideltatime2 + (-0.375*ddd0 + ddd1*0.125)*ideltatime + (-2.5*deriv0 + 2.5*deriv1)*ideltatime3;
                     data[g.offset+i] = p0 + deltatime*(deriv0 + deltatime*(0.5*dd0 + deltatime*(ddd0/6.0 + deltatime*(c4 + deltatime*(c5 + deltatime*c6)))));
                 }
             }
