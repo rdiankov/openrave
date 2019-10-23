@@ -18,7 +18,7 @@ if( OPT_BULLET )
       target_link_libraries(bulletrave libopenrave ${bullet_LIBRARIES})
       target_link_libraries(bulletrave PRIVATE boost_assertion_failed)
 
-      # for some reason the flags come out as a list, so convert to a string
+      # PkgConfig could send the flags as a list, so convert to a string
       set(openrave_bullet_CFLAGS_OTHER)
       foreach(arg ${bullet_CFLAGS_OTHER})
         set(openrave_bullet_CFLAGS_OTHER "${openrave_bullet_CFLAGS_OTHER} ${arg}")
