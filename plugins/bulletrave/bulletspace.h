@@ -33,17 +33,6 @@
 #define ENABLED_GROUP 1 // mask ENABLED_GROUP
 #define DISABLED_GROUP 256 // mask 0
 
-inline int CountCircularBranches(dReal angle)
-{
-    if( angle > PI ) {
-        return static_cast<int>((angle+PI)/(2*PI));
-    }
-    else if( angle < -PI ) {
-        return static_cast<int>((angle-PI)/(2*PI));
-    }
-    return 0;
-}
-
 // manages a space of bullet objects
 class BulletSpace : public boost::enable_shared_from_this<BulletSpace>
 {
@@ -451,21 +440,7 @@ private:
     void _Synchronize(KinBodyInfoPtr pinfo)
     {
         vector<Transform> vtrans;
-        std::vector<int> dofbranches;
-        //pinfo->pbody->GetLinkTransformations(vtrans,dofbranches);
-        {
-            std::vector<dReal> vdoflastsetvalues;
-            pinfo->pbody->GetLinkTransformations(vtrans, vdoflastsetvalues);
-            dofbranches.resize(vdoflastsetvalues.size());
-            for(size_t idof = 0; idof < vdoflastsetvalues.size(); ++idof) {
-                if( pinfo->pbody->IsDOFRevolute(idof) ) {
-                    dofbranches[idof] = CountCircularBranches(vdoflastsetvalues[idof]-pinfo->pbody->GetJointFromDOFIndex(idof)->GetWrapOffset(0));
-                }
-                else {
-                    dofbranches[idof] = 0;
-                }
-            }
-        }
+        pinfo->pbody->GetLinkTransformations(vtrans);
         pinfo->nLastStamp = pinfo->pbody->GetUpdateStamp();
         BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
         for(size_t i = 0; i < vtrans.size(); ++i) {
