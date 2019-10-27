@@ -607,53 +607,39 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
     RAVE_DESERIALIZEJSON_REQUIRED(value, "modifiable", _bModifiable);
 }
 
-KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
-{
-}
-
-bool KinBody::Link::Geometry::InitCollisionMesh(float fTessellation)
-{
-    return _info.InitCollisionMesh(fTessellation);
-}
-
-bool KinBody::Link::Geometry::ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const
-{
-    return _info.ComputeInnerEmptyVolume(tInnerEmptyVolume, abInnerEmptyExtents);
-}
-
-AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
+AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const
 {
     AABB ab;
-    TransformMatrix tglobal = t * _info._t;
+    TransformMatrix tglobal = tGeometryWorld * _t;
 
-    switch(_info._type) {
+    switch(_type) {
     case GT_None:
         ab.extents.x = 0;
         ab.extents.y = 0;
         ab.extents.z = 0;
         break;
     case GT_Box: // origin of box is at the center
-        ab.extents.x = RaveFabs(tglobal.m[0])*_info._vGeomData.x + RaveFabs(tglobal.m[1])*_info._vGeomData.y + RaveFabs(tglobal.m[2])*_info._vGeomData.z;
-        ab.extents.y = RaveFabs(tglobal.m[4])*_info._vGeomData.x + RaveFabs(tglobal.m[5])*_info._vGeomData.y + RaveFabs(tglobal.m[6])*_info._vGeomData.z;
-        ab.extents.z = RaveFabs(tglobal.m[8])*_info._vGeomData.x + RaveFabs(tglobal.m[9])*_info._vGeomData.y + RaveFabs(tglobal.m[10])*_info._vGeomData.z;
+        ab.extents.x = RaveFabs(tglobal.m[0])*_vGeomData.x + RaveFabs(tglobal.m[1])*_vGeomData.y + RaveFabs(tglobal.m[2])*_vGeomData.z;
+        ab.extents.y = RaveFabs(tglobal.m[4])*_vGeomData.x + RaveFabs(tglobal.m[5])*_vGeomData.y + RaveFabs(tglobal.m[6])*_vGeomData.z;
+        ab.extents.z = RaveFabs(tglobal.m[8])*_vGeomData.x + RaveFabs(tglobal.m[9])*_vGeomData.y + RaveFabs(tglobal.m[10])*_vGeomData.z;
         ab.pos = tglobal.trans;
         break;
     case GT_Container: // origin of container is at the bottom
-        ab.extents.x = 0.5*(RaveFabs(tglobal.m[0])*_info._vGeomData.x + RaveFabs(tglobal.m[1])*_info._vGeomData.y + RaveFabs(tglobal.m[2])*_info._vGeomData.z);
-        ab.extents.y = 0.5*(RaveFabs(tglobal.m[4])*_info._vGeomData.x + RaveFabs(tglobal.m[5])*_info._vGeomData.y + RaveFabs(tglobal.m[6])*_info._vGeomData.z);
-        ab.extents.z = 0.5*(RaveFabs(tglobal.m[8])*_info._vGeomData.x + RaveFabs(tglobal.m[9])*_info._vGeomData.y + RaveFabs(tglobal.m[10])*_info._vGeomData.z);
-        ab.pos = tglobal.trans + Vector(tglobal.m[2], tglobal.m[6], tglobal.m[10])*(0.5*_info._vGeomData.z);
+        ab.extents.x = 0.5*(RaveFabs(tglobal.m[0])*_vGeomData.x + RaveFabs(tglobal.m[1])*_vGeomData.y + RaveFabs(tglobal.m[2])*_vGeomData.z);
+        ab.extents.y = 0.5*(RaveFabs(tglobal.m[4])*_vGeomData.x + RaveFabs(tglobal.m[5])*_vGeomData.y + RaveFabs(tglobal.m[6])*_vGeomData.z);
+        ab.extents.z = 0.5*(RaveFabs(tglobal.m[8])*_vGeomData.x + RaveFabs(tglobal.m[9])*_vGeomData.y + RaveFabs(tglobal.m[10])*_vGeomData.z);
+        ab.pos = tglobal.trans + Vector(tglobal.m[2], tglobal.m[6], tglobal.m[10])*(0.5*_vGeomData.z);
 
-        if( _info._vGeomData4.x > 0 && _info._vGeomData4.y > 0 && _info._vGeomData4.z > 0 ) {
+        if( _vGeomData4.x > 0 && _vGeomData4.y > 0 && _vGeomData4.z > 0 ) {
             // Container with bottom
             Vector vcontainerdir = Vector(tglobal.m[2], tglobal.m[6], tglobal.m[10]);
-            ab.pos += vcontainerdir*_info._vGeomData4.z; // take into account the bottom of the container
+            ab.pos += vcontainerdir*_vGeomData4.z; // take into account the bottom of the container
 
-            Vector vbottompos = tglobal.trans + vcontainerdir*(0.5*_info._vGeomData4.z);
+            Vector vbottompos = tglobal.trans + vcontainerdir*(0.5*_vGeomData4.z);
             Vector vbottomextents;
-            vbottomextents.x = 0.5*(RaveFabs(tglobal.m[0])*_info._vGeomData4.x + RaveFabs(tglobal.m[1])*_info._vGeomData4.y + RaveFabs(tglobal.m[2])*_info._vGeomData4.z);
-            vbottomextents.y = 0.5*(RaveFabs(tglobal.m[4])*_info._vGeomData4.x + RaveFabs(tglobal.m[5])*_info._vGeomData4.y + RaveFabs(tglobal.m[6])*_info._vGeomData4.z);
-            vbottomextents.z = 0.5*(RaveFabs(tglobal.m[8])*_info._vGeomData4.x + RaveFabs(tglobal.m[9])*_info._vGeomData4.y + RaveFabs(tglobal.m[10])*_info._vGeomData4.z);
+            vbottomextents.x = 0.5*(RaveFabs(tglobal.m[0])*_vGeomData4.x + RaveFabs(tglobal.m[1])*_vGeomData4.y + RaveFabs(tglobal.m[2])*_vGeomData4.z);
+            vbottomextents.y = 0.5*(RaveFabs(tglobal.m[4])*_vGeomData4.x + RaveFabs(tglobal.m[5])*_vGeomData4.y + RaveFabs(tglobal.m[6])*_vGeomData4.z);
+            vbottomextents.z = 0.5*(RaveFabs(tglobal.m[8])*_vGeomData4.x + RaveFabs(tglobal.m[9])*_vGeomData4.y + RaveFabs(tglobal.m[10])*_vGeomData4.z);
             Vector vmin = ab.pos - ab.extents;
             Vector vmax = ab.pos + ab.extents;
             Vector vbottommin = vbottompos - vbottomextents;
@@ -681,19 +667,19 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
         }
         break;
     case GT_Sphere:
-        ab.extents.x = ab.extents.y = ab.extents.z = _info._vGeomData[0];
+        ab.extents.x = ab.extents.y = ab.extents.z = _vGeomData[0];
         ab.pos = tglobal.trans;
         break;
     case GT_Cylinder:
-        ab.extents.x = (dReal)0.5*RaveFabs(tglobal.m[2])*_info._vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[2]*tglobal.m[2]))*_info._vGeomData.x;
-        ab.extents.y = (dReal)0.5*RaveFabs(tglobal.m[6])*_info._vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[6]*tglobal.m[6]))*_info._vGeomData.x;
-        ab.extents.z = (dReal)0.5*RaveFabs(tglobal.m[10])*_info._vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[10]*tglobal.m[10]))*_info._vGeomData.x;
-        ab.pos = tglobal.trans; //+(dReal)0.5*_info._vGeomData.y*Vector(tglobal.m[2],tglobal.m[6],tglobal.m[10]);
+        ab.extents.x = (dReal)0.5*RaveFabs(tglobal.m[2])*_vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[2]*tglobal.m[2]))*_vGeomData.x;
+        ab.extents.y = (dReal)0.5*RaveFabs(tglobal.m[6])*_vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[6]*tglobal.m[6]))*_vGeomData.x;
+        ab.extents.z = (dReal)0.5*RaveFabs(tglobal.m[10])*_vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[10]*tglobal.m[10]))*_vGeomData.x;
+        ab.pos = tglobal.trans; //+(dReal)0.5*_vGeomData.y*Vector(tglobal.m[2],tglobal.m[6],tglobal.m[10]);
         break;
     case GT_Cage: {
         // have to return the entire volume, even the inner region since a lot of code use the bounding box to compute cropping and other functions
-        const Vector& vCageBaseExtents = _info._vGeomData;
-        const Vector& vCageForceInnerFull = _info._vGeomData2;
+        const Vector& vCageBaseExtents = _vGeomData;
+        const Vector& vCageForceInnerFull = _vGeomData2;
 
         Vector vmin, vmax;
         vmin.x = -vCageBaseExtents.x;
@@ -701,8 +687,8 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
         vmax.x = vCageBaseExtents.x;
         vmax.y = vCageBaseExtents.y;
         vmax.z = vCageBaseExtents.z*2;
-        for (size_t i = 0; i < _info._vSideWalls.size(); ++i) {
-            const GeometryInfo::SideWall &s = _info._vSideWalls[i];
+        for (size_t i = 0; i < _vSideWalls.size(); ++i) {
+            const GeometryInfo::SideWall &s = _vSideWalls[i];
             TransformMatrix sidewallmat = s.transf;
             Vector vselocal = s.vExtents;
             Vector vsegeom;
@@ -768,10 +754,10 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
     }
     case GT_TriMesh: {
         // Cage: init collision mesh?
-        // just use _info._meshcollision
-        if( _info._meshcollision.vertices.size() > 0) {
-            Vector vmin, vmax; vmin = vmax = tglobal*_info._meshcollision.vertices.at(0);
-            FOREACHC(itv, _info._meshcollision.vertices) {
+        // just use _meshcollision
+        if( _meshcollision.vertices.size() > 0) {
+            Vector vmin, vmax; vmin = vmax = tglobal*_meshcollision.vertices.at(0);
+            FOREACHC(itv, _meshcollision.vertices) {
                 Vector v = tglobal * *itv;
                 if( vmin.x > v.x ) {
                     vmin.x = v.x;
@@ -801,10 +787,30 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
         break;
     }
     default:
-        throw OPENRAVE_EXCEPTION_FORMAT(_("unknown geometry type %d"), _info._type, ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("unknown geometry type %d"), _type, ORE_InvalidArguments);
     }
 
     return ab;
+}
+
+
+KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
+{
+}
+
+bool KinBody::Link::Geometry::InitCollisionMesh(float fTessellation)
+{
+    return _info.InitCollisionMesh(fTessellation);
+}
+
+bool KinBody::Link::Geometry::ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const
+{
+    return _info.ComputeInnerEmptyVolume(tInnerEmptyVolume, abInnerEmptyExtents);
+}
+
+AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
+{
+    return _info.ComputeAABB(t);
 }
 
 void KinBody::Link::Geometry::serialize(std::ostream& o, int options) const
