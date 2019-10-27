@@ -131,6 +131,11 @@ public:
         return boost::python::make_tuple(object(), object());
     }
 
+    object ComputeAABB(object otransform) {
+        KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
+        return toPyAABB(pgeominfo->ComputeAABB(ExtractTransform(otransform)));
+    }
+
     void DeserializeJSON(object obj, const dReal fUnitScale=1.0)
     {
         rapidjson::Document doc;
@@ -3412,6 +3417,7 @@ void init_openravepy_kinbody()
                           .def_readwrite("_mapExtraGeometries",&PyGeometryInfo::_mapExtraGeometries)
                           .def_readwrite("_vSideWalls", &PyGeometryInfo::_vSideWalls)
                           .def("ComputeInnerEmptyVolume",&PyGeometryInfo::ComputeInnerEmptyVolume, DOXY_FN(GeomeryInfo,ComputeInnerEmptyVolume))
+                          .def("ComputeAABB",&PyGeometryInfo::ComputeAABB, args("transform"), DOXY_FN(GeomeryInfo,ComputeAABB))
                           .def("DeserializeJSON", &PyGeometryInfo::DeserializeJSON, args("obj", "unitScale"), DOXY_FN(GeometryInfo, DeserializeJSON))
                           .def("SerializeJSON", &PyGeometryInfo::SerializeJSON,SerializeJSON_overloads(args("unitScale", "options"), DOXY_FN(GeometryInfo,SerializeJSON)))
                           .def_pickle(GeometryInfo_pickle_suite())
