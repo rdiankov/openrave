@@ -4410,7 +4410,7 @@ private:
             daeMetaAttribute* pmeta = elt->getAttributeObject(i);
             buffer.str("");  buffer.clear();
             pmeta->memoryToString(elt, buffer);
-            atts.emplace_back(pmeta->getName(),  buffer.str());
+            atts.emplace_back(string(pmeta->getName()),  buffer.str());
         }
     }
 
