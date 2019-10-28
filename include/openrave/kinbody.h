@@ -924,7 +924,7 @@ public:
         /// _moveToLowerLimitIOName). To move the joint towards the upper limit, _moveToLowerLimitIOName: 0 and
         /// _moveToUpperLimitIOName: 1. To move the joint towards the lower limit, _moveToUpperLimitIOName: 0 and
         /// _moveToLowerLimitIOName: 1. When both signals are off, the joint stays where it currently is.
-        bool _bSingleActing; /// if true, action type is single-acting. otherwise, double-acting.
+        bool _bIsSingleActing; /// if true, action type is single-acting. otherwise, double-acting.
         std::string _moveToUpperLimitIOName; ///< io name for moving towards the upper limit.
         std::string _upperLimitIOName;       ///< io name for detecting if the joint is at its upper limit
         bool _upperLimitSensorIsOn;   ///< if true, the upper limit sensor reads 1 when the joint is at its upper limit. otherwise, the upper limit sensor reads 0 when the joint is at its upper limit
@@ -1371,10 +1371,10 @@ public:
         /// \param parameters if empty, then removes the parameter
         virtual void SetStringParameters(const std::string& key, const std::string& value);
 
-        // /// \brief return controlMode for this joint
-        // inline std::string GetControlMode() const {
-        //     return _controlMode;
-        // }
+        /// \brief return controlMode for this joint
+        inline JointControlMode GetControlMode() const {
+            return _info._controlMode;
+        }
 
         // /// \brief set control mode
         // ///

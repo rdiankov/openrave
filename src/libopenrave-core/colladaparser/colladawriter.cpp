@@ -1505,7 +1505,7 @@ private:
             // write the float/int parameters for all joints
             FOREACH(itjoint, vjoints) {
                 KinBody::JointConstPtr pjoint = itjoint->second;
-                if( pjoint->GetFloatParameters().size() == 0 && pjoint->GetIntParameters().size() == 0 && pjoint->GetStringParameters().size() == 0 ) {
+                if( pjoint->GetFloatParameters().size() == 0 && pjoint->GetIntParameters().size() == 0 && pjoint->GetStringParameters().size() == 0 && pjoint->GetControlMode() == KinBody::JCM_None ) {
                     continue;
                 }
                 string jointsid = str(boost::format("joint%d")%itjoint->first);
@@ -1540,6 +1540,49 @@ private:
                     daeElementRef string_value = ptec->add("string_value");
                     string_value->setAttribute("name",itparam->first.c_str());
                     string_value->setCharData(itparam->second);
+                }
+                if( pjoint->GetControlMode() != KinBody::JCM_None ) {
+                    daeElementRef param_controlMode = ptec->add("controlMode");
+                    param_controlMode->setCharData(boost::lexical_cast<std::string>(pjoint->_info._controlMode).c_str());
+                    switch( pjoint->_info._controlMode ) {
+                    case KinBody::JCM_RobotController: {
+                        daeElementRef param_robotControllerDOFIndex = ptec->add("robotControllerDOFIndex");
+                        param_robotControllerDOFIndex->setCharData(boost::lexical_cast<std::string>(pjoint->_info._robotControllerDOFIndex).c_str());
+                        break;
+                    }
+                    case KinBody::JCM_IO: {
+                        daeElementRef param_bIsSingleActing = ptec->add("bIsSingleActing");
+                        param_bIsSingleActing->setCharData(boost::lexical_cast<std::string>(pjoint->_info._bIsSingleActing).c_str());
+                        if( pjoint->_info._moveToUpperLimitIOName.size() > 0 ) {
+                            daeElementRef param_moveToUpperLimitIOName = ptec->add("moveToUpperLimitIOName");
+                            param_moveToUpperLimitIOName->setCharData(pjoint->_info._moveToUpperLimitIOName.c_str());
+                        }
+                        if( pjoint->_info._upperLimitIOName.size() > 0 ) {
+                            daeElementRef param_upperLimitIOName = ptec->add("upperLimitIOName");
+                            param_upperLimitIOName->setCharData(pjoint->_info._upperLimitIOName.c_str());
+                            daeElementRef param_upperLimitSensorIsOn = ptec->add("upperLimitSensorIsOn");
+                            param_upperLimitSensorIsOn->setCharData(boost::lexical_cast<std::string>(pjoint->_info._upperLimitSensorIsOn).c_str());
+                        }
+                        if( pjoint->_info._moveToLowerLimitIOName.size() > 0 ) {
+                            daeElementRef param_moveToLowerLimitIOName = ptec->add("moveToLowerLimitIOName");
+                            param_moveToLowerLimitIOName->setCharData(pjoint->_info._moveToLowerLimitIOName.c_str());
+                        }
+                        if( pjoint->_info._lowerLimitIOName.size() > 0 ) {
+                            daeElementRef param_lowerLimitIOName = ptec->add("lowerLimitIOName");
+                            param_lowerLimitIOName->setCharData(pjoint->_info._lowerLimitIOName.c_str());
+                            daeElementRef param_lowerLimitSensorIsOn = ptec->add("lowerLimitSensorIsOn");
+                            param_lowerLimitSensorIsOn->setCharData(boost::lexical_cast<std::string>(pjoint->_info._lowerLimitSensorIsOn).c_str());
+                        }
+                        break;
+                    }
+                    case KinBody::JCM_ExternalDevice: {
+                        if( pjoint->_info._externalDeviceAddress.size() > 0 ) {
+                            daeElementRef param_externalDeviceAddress = ptec->add("externalDeviceAddress");
+                            param_externalDeviceAddress->setCharData(pjoint->_info._externalDeviceAddress.c_str());
+                        }
+                        break;
+                    }
+                    }
                 }
             }
         }
