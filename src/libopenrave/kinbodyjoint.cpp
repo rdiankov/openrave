@@ -181,6 +181,8 @@ KinBody::Joint::Joint(KinBodyPtr parent, KinBody::JointType type)
     dofindex = -1; // invalid index
     _bInitialized = false;
     _info._type = type;
+    _info._controlMode = JCM_None;
+    _info._robotControllerDOFIndex = -1;
 }
 
 KinBody::Joint::~Joint()

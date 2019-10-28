@@ -159,7 +159,7 @@ public:
 
         /// \brief computes the bounding box in the world. tGeometryWorld is for the world transform.
         AABB ComputeAABB(const Transform& tGeometryWorld) const;
-            
+
 #if OPENRAVE_RAPIDJSON
         ///< \param multiply all translational values by fUnitScale
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale=1.0, int options=0);
@@ -805,6 +805,13 @@ private:
         JointTrajectory = 0x80000004, ///< there is no axis defined, instead the relative transformation is directly output from the trajectory affine_transform structure
     };
 
+    enum JointControlMode {
+        JCM_None = 0, // unspecified
+        JCM_RobotController = 1,
+        JCM_IO = 2,
+        JCM_ExternalDevice = 3,
+    };
+
     class Joint;
 
     /// \brief Holds mimic information about position, velocity, and acceleration of one axis of the joint.
@@ -898,6 +905,35 @@ public:
         std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model
 
         ElectricMotorActuatorInfoPtr _infoElectricMotor;
+
+        // TODO
+        /// \brief _controlMode specifies how this joint is controlled. possible control modes are as follows
+        ///        1. "robotController": robot internal joint controlled by the robot controller.
+        ///        2. "io": a joint controlled by turning on/off a combination of IO signals.
+        ///        3. "externalDevice": a joint controlled by an external device
+        JointControlMode _controlMode;
+
+        /// _controlMode == "robotController"
+        int _robotControllerDOFIndex; ///< this indicates which DOF in the robot controller controls this joint. -1 if not valid.
+
+        /// _controlMode == "io"
+        /// Single-acting: Joint is controlled by one io signal (_moveToUpperLimitIOName). When the signal is on (1),
+        /// the joint moves towards the upper limit. When the signal is off (0), the joint moves towards the lower
+        /// limit.
+        /// Double-acting: joint is controlled by two io signals (_moveToUpperLimitIOName and
+        /// _moveToLowerLimitIOName). To move the joint towards the upper limit, _moveToLowerLimitIOName: 0 and
+        /// _moveToUpperLimitIOName: 1. To move the joint towards the lower limit, _moveToUpperLimitIOName: 0 and
+        /// _moveToLowerLimitIOName: 1. When both signals are off, the joint stays where it currently is.
+        bool _bSingleActing; /// if true, action type is single-acting. otherwise, double-acting.
+        std::string _moveToUpperLimitIOName; ///< io name for moving towards the upper limit.
+        std::string _upperLimitIOName;       ///< io name for detecting if the joint is at its upper limit
+        bool _upperLimitSensorIsOn;   ///< if true, the upper limit sensor reads 1 when the joint is at its upper limit. otherwise, the upper limit sensor reads 0 when the joint is at its upper limit
+        std::string _moveToLowerLimitIOName; ///< io name for moving towards the lower limit.
+        std::string _lowerLimitIOName;       ///< io name for detecting if the joint is at its lower limit
+        bool _lowerLimitSensorIsOn;   ///< if true, the lower limit sensor reads 1 when the joint is at its lower limit. otherwise, the lower limit sensor reads 0 when the joint is at its lower limit
+
+        /// _controlMode == "externalDevice"
+        std::string _externalDeviceAddress;  ///< IP address for the external device controlling this joint
 
         /// true if joint axis has an identification at some of its lower and upper limits.
         ///
@@ -1334,6 +1370,21 @@ public:
         ///
         /// \param parameters if empty, then removes the parameter
         virtual void SetStringParameters(const std::string& key, const std::string& value);
+
+        // /// \brief return controlMode for this joint
+        // inline std::string GetControlMode() const {
+        //     return _controlMode;
+        // }
+
+        // /// \brief set control mode
+        // ///
+        // /// \param controlMode
+        // virtual void SetControlMode(const std::string& controlMode);
+
+        // /// \brief return robotControllerDOFIndex for this joint.
+        // inline int GetRobotControllerDOFIndex() const {
+        //     return _robotControllerDOFIndex;
+        // }
 
         /// \brief Updates several fields in \ref _info depending on the current state of the joint.
         virtual void UpdateInfo();
