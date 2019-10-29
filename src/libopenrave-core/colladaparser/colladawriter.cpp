@@ -1549,7 +1549,7 @@ private:
                         daeElementRef param_robotControllerDOFIndex = ptec->add("robotControllerDOFIndex");
                         param_robotControllerDOFIndex->setCharData(boost::lexical_cast<std::string>(pjoint->_info._robotControllerDOFIndex).c_str());
                         break;
-                    }
+                    } // end case KinBody::JCM_RobotController
                     case KinBody::JCM_IO: {
                         daeElementRef param_bIsSingleActing = ptec->add("bIsSingleActing");
                         param_bIsSingleActing->setCharData(boost::lexical_cast<std::string>(pjoint->_info._bIsSingleActing).c_str());
@@ -1560,8 +1560,8 @@ private:
                         if( pjoint->_info._upperLimitIOName.size() > 0 ) {
                             daeElementRef param_upperLimitIOName = ptec->add("upperLimitIOName");
                             param_upperLimitIOName->setCharData(pjoint->_info._upperLimitIOName.c_str());
-                            daeElementRef param_upperLimitSensorIsOn = ptec->add("upperLimitSensorIsOn");
-                            param_upperLimitSensorIsOn->setCharData(boost::lexical_cast<std::string>(pjoint->_info._upperLimitSensorIsOn).c_str());
+                            daeElementRef param_bUpperLimitSensorIsOn = ptec->add("bUpperLimitSensorIsOn");
+                            param_bUpperLimitSensorIsOn->setCharData(boost::lexical_cast<std::string>(pjoint->_info._bUpperLimitSensorIsOn).c_str());
                         }
                         if( pjoint->_info._moveToLowerLimitIOName.size() > 0 ) {
                             daeElementRef param_moveToLowerLimitIOName = ptec->add("moveToLowerLimitIOName");
@@ -1570,19 +1570,19 @@ private:
                         if( pjoint->_info._lowerLimitIOName.size() > 0 ) {
                             daeElementRef param_lowerLimitIOName = ptec->add("lowerLimitIOName");
                             param_lowerLimitIOName->setCharData(pjoint->_info._lowerLimitIOName.c_str());
-                            daeElementRef param_lowerLimitSensorIsOn = ptec->add("lowerLimitSensorIsOn");
-                            param_lowerLimitSensorIsOn->setCharData(boost::lexical_cast<std::string>(pjoint->_info._lowerLimitSensorIsOn).c_str());
+                            daeElementRef param_bLowerLimitSensorIsOn = ptec->add("bLowerLimitSensorIsOn");
+                            param_bLowerLimitSensorIsOn->setCharData(boost::lexical_cast<std::string>(pjoint->_info._bLowerLimitSensorIsOn).c_str());
                         }
                         break;
-                    }
+                    } // end case KinBody::JCM_IO
                     case KinBody::JCM_ExternalDevice: {
                         if( pjoint->_info._externalDeviceAddress.size() > 0 ) {
                             daeElementRef param_externalDeviceAddress = ptec->add("externalDeviceAddress");
                             param_externalDeviceAddress->setCharData(pjoint->_info._externalDeviceAddress.c_str());
                         }
                         break;
-                    }
-                    }
+                    } // end case KinBody::JCM_ExternalDevice
+                    } // end switch
                 }
             }
         }

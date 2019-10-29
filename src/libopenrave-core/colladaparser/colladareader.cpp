@@ -1644,6 +1644,56 @@ public:
                                         pjoint->_info._mapStringParameters[name] = pelt->getCharData();
                                     }
                                 }
+                                bool bControlMode = pelt->getElementName() == std::string("controlMode");
+                                if( bControlMode ) {
+                                    pjoint->_info._controlMode = (KinBody::JointControlMode)boost::lexical_cast<int>(pelt->getCharData());
+                                    continue;
+                                }
+                                bool bRobotControllerDOFIndex = pelt->getElementName() == std::string("robotControllerDOFIndex");
+                                if( bRobotControllerDOFIndex ) {
+                                    pjoint->_info._robotControllerDOFIndex = boost::lexical_cast<int>(pelt->getCharData());
+                                    continue;
+                                }
+                                bool bIsSingleActing = pelt->getElementName() == std::string("bIsSingleActing");
+                                if( bIsSingleActing ) {
+                                    pjoint->_info._bIsSingleActing = boost::lexical_cast<bool>(pelt->getCharData());
+                                    continue;
+                                }
+                                bool bMoveToUpperLimitIOName = pelt->getElementName() == std::string("moveToUpperLimitIOName");
+                                if( bMoveToUpperLimitIOName ) {
+                                    pjoint->_info._moveToUpperLimitIOName = pelt->getCharData();
+                                    continue;
+                                }
+                                bool bUpperLimitIOName = pelt->getElementName() == std::string("upperLimitIOName");
+                                if( bUpperLimitIOName ) {
+                                    pjoint->_info._upperLimitIOName = pelt->getCharData();
+                                    continue;
+                                }
+                                bool bUpperLimitSensorIsOn = pelt->getElementName() == std::string("bUpperLimitSensorIsOn");
+                                if( bUpperLimitSensorIsOn ) {
+                                    pjoint->_info._bUpperLimitSensorIsOn = boost::lexical_cast<bool>(pelt->getCharData());
+                                    continue;
+                                }
+                                bool bMoveToLowerLimitIOName = pelt->getElementName() == std::string("moveToLowerLimitIOName");
+                                if( bMoveToLowerLimitIOName ) {
+                                    pjoint->_info._moveToLowerLimitIOName = pelt->getCharData();
+                                    continue;
+                                }
+                                bool bLowerLimitIOName = pelt->getElementName() == std::string("lowerLimitIOName");
+                                if( bLowerLimitIOName ) {
+                                    pjoint->_info._lowerLimitIOName = pelt->getCharData();
+                                    continue;
+                                }
+                                bool bLowerLimitSensorIsOn = pelt->getElementName() == std::string("bLowerLimitSensorIsOn");
+                                if( bLowerLimitSensorIsOn ) {
+                                    pjoint->_info._bLowerLimitSensorIsOn = boost::lexical_cast<bool>(pelt->getCharData());
+                                    continue;
+                                }
+                                bool bExternalDeviceAddress = pelt->getElementName() == std::string("externalDeviceAddress");
+                                if( bExternalDeviceAddress ) {
+                                    pjoint->_info._externalDeviceAddress = pelt->getCharData();
+                                    continue;
+                                }
                             }
                         }
                     }

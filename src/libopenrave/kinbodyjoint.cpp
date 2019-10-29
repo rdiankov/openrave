@@ -23,7 +23,7 @@
 
 namespace OpenRAVE {
 
-KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsActive(true), _controlMode(JCM_None), _robotControllerDOFIndex(-1), _bIsSingleActing(true), _upperLimitSensorIsOn(true), _lowerLimitSensorIsOn(true) {
+KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsActive(true), _controlMode(JCM_None), _robotControllerDOFIndex(-1), _bIsSingleActing(true), _bUpperLimitSensorIsOn(true), _bLowerLimitSensorIsOn(true) {
     for(size_t i = 0; i < _vaxes.size(); ++i) {
         _vaxes[i] = Vector(0,0,1);
     }
@@ -106,10 +106,10 @@ KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& othe
     _bIsSingleActing = other._bIsSingleActing;
     _moveToUpperLimitIOName = other._moveToUpperLimitIOName;
     _upperLimitIOName = other._upperLimitIOName;
-    _upperLimitSensorIsOn = other._upperLimitSensorIsOn;
+    _bUpperLimitSensorIsOn = other._bUpperLimitSensorIsOn;
     _moveToLowerLimitIOName = other._moveToLowerLimitIOName;
     _lowerLimitIOName = other._lowerLimitIOName;
-    _lowerLimitSensorIsOn = other._lowerLimitSensorIsOn;
+    _bLowerLimitSensorIsOn = other._bLowerLimitSensorIsOn;
     _externalDeviceAddress = other._externalDeviceAddress;
     return *this;
 }

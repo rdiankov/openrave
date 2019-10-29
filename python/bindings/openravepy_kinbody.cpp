@@ -433,8 +433,8 @@ public:
         _controlMode = KinBody::JCM_None;
         _robotControllerDOFIndex = -1;
         _bIsSingleActing = true;
-        _upperLimitSensorIsOn = true;
-        _lowerLimitSensorIsOn = true;
+        _bUpperLimitSensorIsOn = true;
+        _bLowerLimitSensorIsOn = true;
     }
 
     PyJointInfo(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv) {
@@ -501,10 +501,10 @@ public:
         if( _controlMode == KinBody::JCM_IO ) {
             _moveToUpperLimitIOName = ConvertStringToUnicode(info._moveToUpperLimitIOName);
             _upperLimitIOName = ConvertStringToUnicode(info._upperLimitIOName);
-            _upperLimitSensorIsOn = info._upperLimitSensorIsOn;
+            _bUpperLimitSensorIsOn = info._bUpperLimitSensorIsOn;
             _moveToLowerLimitIOName = ConvertStringToUnicode(info._moveToLowerLimitIOName);
             _lowerLimitIOName = ConvertStringToUnicode(info._lowerLimitIOName);
-            _lowerLimitSensorIsOn = info._lowerLimitSensorIsOn;
+            _bLowerLimitSensorIsOn = info._bLowerLimitSensorIsOn;
         }
         else if( _controlMode == KinBody::JCM_ExternalDevice ) {
             _externalDeviceAddress = ConvertStringToUnicode(info._externalDeviceAddress);
@@ -678,14 +678,14 @@ public:
             if( !IS_PYTHONOBJECT_NONE(_upperLimitIOName) ) {
                 info._upperLimitIOName = boost::python::extract<std::string>(_upperLimitIOName);
             }
-            info._upperLimitSensorIsOn = _upperLimitSensorIsOn;
+            info._bUpperLimitSensorIsOn = _bUpperLimitSensorIsOn;
             if( !IS_PYTHONOBJECT_NONE(_moveToLowerLimitIOName) ) {
                 info._moveToLowerLimitIOName = boost::python::extract<std::string>(_moveToLowerLimitIOName);
             }
             if( !IS_PYTHONOBJECT_NONE(_lowerLimitIOName) ) {
                 info._lowerLimitIOName = boost::python::extract<std::string>(_lowerLimitIOName);
             }
-            info._lowerLimitSensorIsOn = _lowerLimitSensorIsOn;
+            info._bLowerLimitSensorIsOn = _bLowerLimitSensorIsOn;
         }
         else if( _controlMode == KinBody::JCM_ExternalDevice ) {
             if( !IS_PYTHONOBJECT_NONE(_externalDeviceAddress) ) {
@@ -711,10 +711,10 @@ public:
     bool _bIsSingleActing;
     object _moveToUpperLimitIOName;
     object _upperLimitIOName;
-    bool _upperLimitSensorIsOn;
+    bool _bUpperLimitSensorIsOn;
     object _moveToLowerLimitIOName;
     object _lowerLimitIOName;
-    bool _lowerLimitSensorIsOn;
+    bool _bLowerLimitSensorIsOn;
     object _externalDeviceAddress;
 };
 
@@ -3289,7 +3289,7 @@ class JointInfo_pickle_suite : public pickle_suite
 public:
     static boost::python::tuple getstate(const PyJointInfo& r)
     {
-        return boost::python::make_tuple(boost::python::make_tuple((int)r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), boost::python::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), boost::python::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular, r._bIsActive, r._mapStringParameters, r._infoElectricMotor, r._vmaxinertia, r._vmaxjerk, r._vhardmaxaccel, r._vhardmaxjerk), boost::python::make_tuple(r._controlMode, r._robotControllerDOFIndex, r._bIsSingleActing, r._moveToUpperLimitIOName, r._upperLimitIOName, r._upperLimitSensorIsOn, r._moveToLowerLimitIOName, r._lowerLimitIOName, r._lowerLimitSensorIsOn, r._externalDeviceAddress));
+        return boost::python::make_tuple(boost::python::make_tuple((int)r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), boost::python::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), boost::python::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular, r._bIsActive, r._mapStringParameters, r._infoElectricMotor, r._vmaxinertia, r._vmaxjerk, r._vhardmaxaccel, r._vhardmaxjerk), boost::python::make_tuple(r._controlMode, r._robotControllerDOFIndex, r._bIsSingleActing, r._moveToUpperLimitIOName, r._upperLimitIOName, r._bUpperLimitSensorIsOn, r._moveToLowerLimitIOName, r._lowerLimitIOName, r._bLowerLimitSensorIsOn, r._externalDeviceAddress));
     }
     static void setstate(PyJointInfo& r, boost::python::tuple state) {
         r._type = (KinBody::JointType)(int)boost::python::extract<int>(state[0][0]);
@@ -3339,10 +3339,10 @@ public:
             r._bIsSingleActing = boost::python::extract<bool>(state[3][2]);
             r._moveToUpperLimitIOName = state[3][3];
             r._upperLimitIOName = state[3][4];
-            r._upperLimitSensorIsOn = boost::python::extract<bool>(state[3][5]);
+            r._bUpperLimitSensorIsOn = boost::python::extract<bool>(state[3][5]);
             r._moveToLowerLimitIOName = state[3][6];
             r._lowerLimitIOName = state[3][7];
-            r._lowerLimitSensorIsOn = boost::python::extract<bool>(state[3][8]);
+            r._bLowerLimitSensorIsOn = boost::python::extract<bool>(state[3][8]);
             r._externalDeviceAddress = state[3][9];
         }
     }
@@ -3561,10 +3561,10 @@ void init_openravepy_kinbody()
                        .def_readwrite("_bIsSingleActing", &PyJointInfo::_bIsSingleActing)
                        .def_readwrite("_moveToUpperLimitIOName", &PyJointInfo::_moveToUpperLimitIOName)
                        .def_readwrite("_upperLimitIOName", &PyJointInfo::_upperLimitIOName)
-                       .def_readwrite("_upperLimitSensorIsOn", &PyJointInfo::_upperLimitSensorIsOn)
+                       .def_readwrite("_bUpperLimitSensorIsOn", &PyJointInfo::_bUpperLimitSensorIsOn)
                        .def_readwrite("_moveToLowerLimitIOName", &PyJointInfo::_moveToLowerLimitIOName)
                        .def_readwrite("_lowerLimitIOName", &PyJointInfo::_lowerLimitIOName)
-                       .def_readwrite("_lowerLimitSensorIsOn", &PyJointInfo::_lowerLimitSensorIsOn)
+                       .def_readwrite("_bLowerLimitSensorIsOn", &PyJointInfo::_bLowerLimitSensorIsOn)
                        .def_readwrite("_externalDeviceAddress", &PyJointInfo::_externalDeviceAddress)
                        .def_pickle(JointInfo_pickle_suite())
     ;
