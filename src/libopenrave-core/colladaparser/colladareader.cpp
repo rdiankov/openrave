@@ -1650,44 +1650,43 @@ public:
                                     continue;
                                 }
                                 bool bRobotControllerDOFIndex = pelt->getElementName() == std::string("robotControllerDOFIndex");
-                                if( bRobotControllerDOFIndex ) {
-                                    pjoint->_info._robotControllerDOFIndex = boost::lexical_cast<int>(pelt->getCharData());
-                                    continue;
-                                }
                                 bool bIsSingleActing = pelt->getElementName() == std::string("bIsSingleActing");
-                                if( bIsSingleActing ) {
-                                    pjoint->_info._bIsSingleActing = boost::lexical_cast<bool>(pelt->getCharData());
-                                    continue;
-                                }
                                 bool bMoveToUpperLimitIOName = pelt->getElementName() == std::string("moveToUpperLimitIOName");
-                                if( bMoveToUpperLimitIOName ) {
-                                    pjoint->_info._moveToUpperLimitIOName = pelt->getCharData();
-                                    continue;
-                                }
-                                bool bUpperLimitIOName = pelt->getElementName() == std::string("upperLimitIOName");
-                                if( bUpperLimitIOName ) {
-                                    pjoint->_info._upperLimitIOName = pelt->getCharData();
-                                    continue;
-                                }
-                                bool bUpperLimitSensorIsOn = pelt->getElementName() == std::string("bUpperLimitSensorIsOn");
-                                if( bUpperLimitSensorIsOn ) {
-                                    pjoint->_info._bUpperLimitSensorIsOn = boost::lexical_cast<bool>(pelt->getCharData());
-                                    continue;
-                                }
+                                bool bUpperLimitIONames = pelt->getElementName() == std::string("vUpperLimitIONames");
+                                bool bUpperLimitSensorIsOn = pelt->getElementName() == std::string("vUpperLimitSensorIsOn");
                                 bool bMoveToLowerLimitIOName = pelt->getElementName() == std::string("moveToLowerLimitIOName");
-                                if( bMoveToLowerLimitIOName ) {
-                                    pjoint->_info._moveToLowerLimitIOName = pelt->getCharData();
-                                    continue;
-                                }
-                                bool bLowerLimitIOName = pelt->getElementName() == std::string("lowerLimitIOName");
-                                if( bLowerLimitIOName ) {
-                                    pjoint->_info._lowerLimitIOName = pelt->getCharData();
-                                    continue;
-                                }
-                                bool bLowerLimitSensorIsOn = pelt->getElementName() == std::string("bLowerLimitSensorIsOn");
-                                if( bLowerLimitSensorIsOn ) {
-                                    pjoint->_info._bLowerLimitSensorIsOn = boost::lexical_cast<bool>(pelt->getCharData());
-                                    continue;
+                                bool bLowerLimitIONames = pelt->getElementName() == std::string("vLowerLimitIONames");
+                                bool bLowerLimitSensorIsOn = pelt->getElementName() == std::string("vLowerLimitSensorIsOn");
+                                if( bRobotControllerDOFIndex || bIsSingleActing || bMoveToUpperLimitIOName || bUpperLimitIONames || bUpperLimitSensorIsOn || bMoveToLowerLimitIOName || bLowerLimitIONames || bLowerLimitSensorIsOn ) {
+                                    int iaxis = boost::lexical_cast<int>(pelt->getAttribute("axis"));
+                                    if( bRobotControllerDOFIndex ) {
+                                        pjoint->_info._robotControllerDOFIndex.at(iaxis) = boost::lexical_cast<int>(pelt->getCharData());
+                                    }
+                                    else if( bIsSingleActing ) {
+                                        pjoint->_info._bIsSingleActing.at(iaxis) = boost::lexical_cast<bool>(pelt->getCharData());
+                                    }
+                                    else if( bMoveToUpperLimitIOName ) {
+                                        pjoint->_info._moveToUpperLimitIOName.at(iaxis) = pelt->getCharData();
+                                    }
+                                    else if( bUpperLimitIONames ) {
+                                        ss.clear(); ss.str(pelt->getCharData());
+                                        pjoint->_info._vUpperLimitIONames.at(iaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
+                                    }
+                                    else if( bUpperLimitSensorIsOn ) {
+                                        ss.clear(); ss.str(pelt->getCharData());
+                                        pjoint->_info._vUpperLimitSensorIsOn.at(iaxis) = std::vector<uint8_t>((istream_iterator<int>(ss)), istream_iterator<int>());
+                                    }
+                                    else if( bMoveToLowerLimitIOName ) {
+                                        pjoint->_info._moveToLowerLimitIOName.at(iaxis) = pelt->getCharData();
+                                    }
+                                    else if( bLowerLimitIONames ) {
+                                        ss.clear(); ss.str(pelt->getCharData());
+                                        pjoint->_info._vLowerLimitIONames.at(iaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
+                                    }
+                                    else if( bLowerLimitSensorIsOn ) {
+                                        ss.clear(); ss.str(pelt->getCharData());
+                                        pjoint->_info._vLowerLimitSensorIsOn.at(iaxis) = std::vector<uint8_t>((istream_iterator<int>(ss)), istream_iterator<int>());
+                                    }
                                 }
                                 bool bExternalDeviceAddress = pelt->getElementName() == std::string("externalDeviceAddress");
                                 if( bExternalDeviceAddress ) {

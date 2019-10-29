@@ -23,7 +23,7 @@
 
 namespace OpenRAVE {
 
-KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsActive(true), _controlMode(JCM_None), _robotControllerDOFIndex(-1), _bIsSingleActing(true), _bUpperLimitSensorIsOn(true), _bLowerLimitSensorIsOn(true) {
+KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsActive(true), _controlMode(JCM_None) {
     for(size_t i = 0; i < _vaxes.size(); ++i) {
         _vaxes[i] = Vector(0,0,1);
     }
@@ -41,6 +41,9 @@ KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsAc
     std::fill(_vlowerlimit.begin(), _vlowerlimit.end(), 0);
     std::fill(_vupperlimit.begin(), _vupperlimit.end(), 0);
     std::fill(_bIsCircular.begin(), _bIsCircular.end(), 0);
+    // joint control
+    std::fill(_robotControllerDOFIndex.begin(), _robotControllerDOFIndex.end(), -1);
+    std::fill(_bIsSingleActing.begin(), _bIsSingleActing.end(), 1);
 }
 
 KinBody::JointInfo::JointInfo(const JointInfo& other) : XMLReadable("joint")
@@ -105,11 +108,11 @@ KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& othe
     _robotControllerDOFIndex = other._robotControllerDOFIndex;
     _bIsSingleActing = other._bIsSingleActing;
     _moveToUpperLimitIOName = other._moveToUpperLimitIOName;
-    _upperLimitIOName = other._upperLimitIOName;
-    _bUpperLimitSensorIsOn = other._bUpperLimitSensorIsOn;
+    _vUpperLimitIONames = other._vUpperLimitIONames;
+    _vUpperLimitSensorIsOn = other._vUpperLimitSensorIsOn;
     _moveToLowerLimitIOName = other._moveToLowerLimitIOName;
-    _lowerLimitIOName = other._lowerLimitIOName;
-    _bLowerLimitSensorIsOn = other._bLowerLimitSensorIsOn;
+    _vLowerLimitIONames = other._vLowerLimitIONames;
+    _vLowerLimitSensorIsOn = other._vLowerLimitSensorIsOn;
     _externalDeviceAddress = other._externalDeviceAddress;
     return *this;
 }
@@ -192,7 +195,6 @@ KinBody::Joint::Joint(KinBodyPtr parent, KinBody::JointType type)
     _bInitialized = false;
     _info._type = type;
     _info._controlMode = JCM_None;
-    _info._robotControllerDOFIndex = -1;
 }
 
 KinBody::Joint::~Joint()

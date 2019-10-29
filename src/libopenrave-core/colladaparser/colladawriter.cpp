@@ -1546,32 +1546,77 @@ private:
                     param_controlMode->setCharData(boost::lexical_cast<std::string>(pjoint->_info._controlMode).c_str());
                     switch( pjoint->_info._controlMode ) {
                     case KinBody::JCM_RobotController: {
-                        daeElementRef param_robotControllerDOFIndex = ptec->add("robotControllerDOFIndex");
-                        param_robotControllerDOFIndex->setCharData(boost::lexical_cast<std::string>(pjoint->_info._robotControllerDOFIndex).c_str());
+                        for(int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis) {
+                            if( pjoint->_info._robotControllerDOFIndex.at(iaxis) >= 0 ) {
+                                daeElementRef param_robotControllerDOFIndex = ptec->add("robotControllerDOFIndex");
+                                param_robotControllerDOFIndex->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                                param_robotControllerDOFIndex->setCharData(boost::lexical_cast<std::string>(pjoint->_info._robotControllerDOFIndex[iaxis]).c_str());
+                            }
+                        }
                         break;
                     } // end case KinBody::JCM_RobotController
                     case KinBody::JCM_IO: {
-                        daeElementRef param_bIsSingleActing = ptec->add("bIsSingleActing");
-                        param_bIsSingleActing->setCharData(boost::lexical_cast<std::string>(pjoint->_info._bIsSingleActing).c_str());
-                        if( pjoint->_info._moveToUpperLimitIOName.size() > 0 ) {
-                            daeElementRef param_moveToUpperLimitIOName = ptec->add("moveToUpperLimitIOName");
-                            param_moveToUpperLimitIOName->setCharData(pjoint->_info._moveToUpperLimitIOName.c_str());
-                        }
-                        if( pjoint->_info._upperLimitIOName.size() > 0 ) {
-                            daeElementRef param_upperLimitIOName = ptec->add("upperLimitIOName");
-                            param_upperLimitIOName->setCharData(pjoint->_info._upperLimitIOName.c_str());
-                            daeElementRef param_bUpperLimitSensorIsOn = ptec->add("bUpperLimitSensorIsOn");
-                            param_bUpperLimitSensorIsOn->setCharData(boost::lexical_cast<std::string>(pjoint->_info._bUpperLimitSensorIsOn).c_str());
-                        }
-                        if( pjoint->_info._moveToLowerLimitIOName.size() > 0 ) {
-                            daeElementRef param_moveToLowerLimitIOName = ptec->add("moveToLowerLimitIOName");
-                            param_moveToLowerLimitIOName->setCharData(pjoint->_info._moveToLowerLimitIOName.c_str());
-                        }
-                        if( pjoint->_info._lowerLimitIOName.size() > 0 ) {
-                            daeElementRef param_lowerLimitIOName = ptec->add("lowerLimitIOName");
-                            param_lowerLimitIOName->setCharData(pjoint->_info._lowerLimitIOName.c_str());
-                            daeElementRef param_bLowerLimitSensorIsOn = ptec->add("bLowerLimitSensorIsOn");
-                            param_bLowerLimitSensorIsOn->setCharData(boost::lexical_cast<std::string>(pjoint->_info._bLowerLimitSensorIsOn).c_str());
+
+                        for(int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis) {
+                            if( pjoint->_info._moveToUpperLimitIOName.at(iaxis).size() > 0 ) {
+                                daeElementRef param_moveToUpperLimitIOName = ptec->add("moveToUpperLimitIOName");
+                                param_moveToUpperLimitIOName->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                                param_moveToUpperLimitIOName->setCharData(pjoint->_info._moveToUpperLimitIOName[iaxis].c_str());
+                            }
+
+                            if( pjoint->_info._vUpperLimitIONames[iaxis].size() != pjoint->_info._vUpperLimitSensorIsOn.at(iaxis).size() ) {
+                                RAVELOG_WARN_FORMAT("joint %s _vUpperLimitIONames and _vUpperLimitSensorIsOn have different sizes (%d!=%d)", pjoint->_info._name%pjoint->_info._vUpperLimitIONames[iaxis].size()%pjoint->_info._vUpperLimitSensorIsOn[iaxis].size());
+                            }
+                            if( pjoint->_info._vUpperLimitIONames.at(iaxis).size() > 0 ) {
+                                daeElementRef param_vUpperLimitIONames = ptec->add("vUpperLimitIONames");
+                                param_vUpperLimitIONames->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                                param_vUpperLimitIONames->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._vUpperLimitIONames[iaxis].size()).c_str());
+                                ss.str(""); ss.clear();
+                                FOREACHC(itioname, pjoint->_info._vUpperLimitIONames[iaxis]) {
+                                    ss << *itioname << " ";
+                                }
+                                param_vUpperLimitIONames->setCharData(ss.str());
+                            }
+                            if( pjoint->_info._vUpperLimitSensorIsOn.at(iaxis).size() > 0 ) {
+                                daeElementRef param_vUpperLimitSensorIsOn = ptec->add("vUpperLimitSensorIsOn");
+                                param_vUpperLimitSensorIsOn->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                                param_vUpperLimitSensorIsOn->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._vUpperLimitSensorIsOn[iaxis].size()).c_str());
+                                ss.str(""); ss.clear();
+                                FOREACHC(itvalue, pjoint->_info._vUpperLimitSensorIsOn[iaxis]) {
+                                    ss << (int)*itvalue << " ";
+                                }
+                                param_vUpperLimitSensorIsOn->setCharData(ss.str());
+                            }
+
+                            if( pjoint->_info._moveToLowerLimitIOName.at(iaxis).size() > 0 ) {
+                                daeElementRef param_moveToLowerLimitIOName = ptec->add("moveToLowerLimitIOName");
+                                param_moveToLowerLimitIOName->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                                param_moveToLowerLimitIOName->setCharData(pjoint->_info._moveToLowerLimitIOName[iaxis].c_str());
+                            }
+
+                            if( pjoint->_info._vLowerLimitIONames.at(iaxis).size() != pjoint->_info._vLowerLimitSensorIsOn.at(iaxis).size() ) {
+                                RAVELOG_WARN_FORMAT("joint %s _vLowerLimitIONames and _vLowerLimitSensorIsOn have different sizes (%d!=%d)", pjoint->_info._name%pjoint->_info._vLowerLimitIONames[iaxis].size()%pjoint->_info._vLowerLimitSensorIsOn[iaxis].size());
+                            }
+                            if( pjoint->_info._vLowerLimitIONames[iaxis].size() > 0 ) {
+                                daeElementRef param_vLowerLimitIONames = ptec->add("vLowerLimitIONames");
+                                param_vLowerLimitIONames->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                                param_vLowerLimitIONames->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._vLowerLimitIONames[iaxis].size()).c_str());
+                                ss.str(""); ss.clear();
+                                FOREACHC(itioname, pjoint->_info._vLowerLimitIONames[iaxis]) {
+                                    ss << *itioname << " ";
+                                }
+                                param_vLowerLimitIONames->setCharData(ss.str());
+                            }
+                            if( pjoint->_info._vLowerLimitSensorIsOn[iaxis].size() > 0 ) {
+                                daeElementRef param_vLowerLimitSensorIsOn = ptec->add("vLowerLimitSensorIsOn");
+                                param_vLowerLimitSensorIsOn->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                                param_vLowerLimitSensorIsOn->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._vLowerLimitSensorIsOn[iaxis].size()).c_str());
+                                ss.str(""); ss.clear();
+                                FOREACHC(itvalue, pjoint->_info._vLowerLimitSensorIsOn[iaxis]) {
+                                    ss << (int)*itvalue << " ";
+                                }
+                                param_vLowerLimitSensorIsOn->setCharData(ss.str());
+                            }
                         }
                         break;
                     } // end case KinBody::JCM_IO
@@ -1989,11 +2034,11 @@ private:
 
     /** \brief Write link of a kinematic body
 
-        \param link Link to write
-        \param pkinparent Kinbody parent
-        \param pnodeparent Node parent
-        \param strModelUri
-        \param vjoints Vector of joints
+       \param link Link to write
+       \param pkinparent Kinbody parent
+       \param pnodeparent Node parent
+       \param strModelUri
+       \param vjoints Vector of joints
      */
     virtual LINKOUTPUT _WriteLink(KinBody::LinkConstPtr plink, daeElementRef pkinparent, daeElementRef pnodeparent, const string& strModelUri, const vector<pair<int, KinBody::JointConstPtr> >& vjoints)
     {

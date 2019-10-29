@@ -806,10 +806,10 @@ private:
     };
 
     enum JointControlMode {
-        JCM_None = 0, // unspecified
-        JCM_RobotController = 1,
-        JCM_IO = 2,
-        JCM_ExternalDevice = 3,
+        JCM_None = 0, ///< unspecified
+        JCM_RobotController = 1, ///< joint controlled by the robot controller
+        JCM_IO = 2,              ///< joint controlled by I/O signals
+        JCM_ExternalDevice = 3,  ///< joint controlled by an external device
     };
 
     class Joint;
@@ -910,7 +910,7 @@ public:
         JointControlMode _controlMode;
 
         /// JCM_RobotController
-        int _robotControllerDOFIndex; ///< this indicates which DOF in the robot controller controls this joint. -1 if not valid.
+        boost::array<int, 3> _robotControllerDOFIndex; // this indicates which DOF in the robot controller controls which joint axis. -1 if unspecified/not valid.
 
         /// JCM_IO
         /// Single-acting: Joint is controlled by one io signal (_moveToUpperLimitIOName). When the signal is on (1),
@@ -920,13 +920,13 @@ public:
         /// _moveToLowerLimitIOName). To move the joint towards the upper limit, _moveToLowerLimitIOName: 0 and
         /// _moveToUpperLimitIOName: 1. To move the joint towards the lower limit, _moveToUpperLimitIOName: 0 and
         /// _moveToLowerLimitIOName: 1. When both signals are off, the joint stays where it currently is.
-        bool _bIsSingleActing; /// if true, action type is single-acting. otherwise, double-acting.
-        std::string _moveToUpperLimitIOName; ///< io name for moving towards the upper limit.
-        std::string _upperLimitIOName;       ///< io name for detecting if the joint is at its upper limit
-        bool _bUpperLimitSensorIsOn;   ///< if true, the upper limit sensor reads 1 when the joint is at its upper limit. otherwise, the upper limit sensor reads 0 when the joint is at its upper limit
-        std::string _moveToLowerLimitIOName; ///< io name for moving towards the lower limit.
-        std::string _lowerLimitIOName;       ///< io name for detecting if the joint is at its lower limit
-        bool _bLowerLimitSensorIsOn;   ///< if true, the lower limit sensor reads 1 when the joint is at its lower limit. otherwise, the lower limit sensor reads 0 when the joint is at its lower limit
+        boost::array<uint8_t, 3> _bIsSingleActing; ///< if true, action type is single-acting. otherwise, double-acting.
+        boost::array<std::string, 3> _moveToUpperLimitIOName;          ///< io name for moving towards the upper limit.
+        boost::array<std::vector<std::string>, 3> _vUpperLimitIONames; ///< io names for detecting if the joint is at its upper limit
+        boost::array<std::vector<uint8_t>, 3> _vUpperLimitSensorIsOn;  ///< if true, the corresponding upper limit sensor reads 1 when the joint is at its upper limit. otherwise, the upper limit sensor reads 0 when the joint is at its upper limit
+        boost::array<std::string, 3> _moveToLowerLimitIOName;          ///< io name for moving towards the lower limit.
+        boost::array<std::vector<std::string>, 3> _vLowerLimitIONames; ///< io names for detecting if the joint is at its lower limit
+        boost::array<std::vector<uint8_t>, 3> _vLowerLimitSensorIsOn;  ///< if true, the corresponding lower limit sensor reads 1 when the joint is at its lower limit. otherwise, the lower limit sensor reads 0 when the joint is at its lower limit
 
         /// JCM_ExternalDevice
         std::string _externalDeviceAddress;  ///< IP address for the external device controlling this joint
@@ -1371,16 +1371,6 @@ public:
         inline JointControlMode GetControlMode() const {
             return _info._controlMode;
         }
-
-        // /// \brief set control mode
-        // ///
-        // /// \param controlMode
-        // virtual void SetControlMode(const std::string& controlMode);
-
-        // /// \brief return robotControllerDOFIndex for this joint.
-        // inline int GetRobotControllerDOFIndex() const {
-        //     return _robotControllerDOFIndex;
-        // }
 
         /// \brief Updates several fields in \ref _info depending on the current state of the joint.
         virtual void UpdateInfo();
