@@ -3431,7 +3431,7 @@ class JointInfo_pickle_suite : public pickle_suite
 public:
     static boost::python::tuple getstate(const PyJointInfo& r)
     {
-        return boost::python::make_tuple(boost::python::make_tuple((int)r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), boost::python::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), boost::python::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular, r._bIsActive, r._mapStringParameters, r._infoElectricMotor, r._vmaxinertia, r._vmaxjerk, r._vhardmaxaccel, r._vhardmaxjerk), boost::python::make_tuple(r._controlMode, r._robotControllerDOFIndex, r._bIsSingleActing, r._moveToUpperLimitIOName, r._vUpperLimitIONames, r._vUpperLimitSensorIsOn, r._moveToLowerLimitIOName, r._vLowerLimitIONames, r._vLowerLimitSensorIsOn, r._externalDeviceAddress));
+        return boost::python::make_tuple(boost::python::make_tuple((int)r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), boost::python::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), boost::python::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular, r._bIsActive, r._mapStringParameters, r._infoElectricMotor, r._vmaxinertia, r._vmaxjerk, r._vhardmaxaccel, r._vhardmaxjerk), boost::python::make_tuple((int)r._controlMode, r._robotControllerDOFIndex, r._bIsSingleActing, r._moveToUpperLimitIOName, r._vUpperLimitIONames, r._vUpperLimitSensorIsOn, r._moveToLowerLimitIOName, r._vLowerLimitIONames, r._vLowerLimitSensorIsOn, r._externalDeviceAddress));
     }
     static void setstate(PyJointInfo& r, boost::python::tuple state) {
         r._type = (KinBody::JointType)(int)boost::python::extract<int>(state[0][0]);
@@ -3476,21 +3476,16 @@ public:
             }
         }
         if( len(state) > 3 ) {
-            // TODO
-            // r._controlMode = (KinBody::JointControlMode)(int)boost::python::extract<int>(state[3][0]);
-            // r._robotControllerDOFIndex = boost::python::extract<int>(state[3][1]);
-            // r._bIsSingleActing = boost::python::extract<bool>(state[3][2]);
-            // r._moveToUpperLimitIOName = state[3][3];
-            // // r._upperLimitIOName = state[3][4];
-            // // r._bUpperLimitSensorIsOn = boost::python::extract<bool>(state[3][5]);
-            // r._vUpperLimitIONames = state[3][4];
-            // r._vUpperLimitSensorIsOn = state[3][5];
-            // r._moveToLowerLimitIOName = state[3][6];
-            // // r._lowerLimitIOName = state[3][7];
-            // // r._bLowerLimitSensorIsOn = boost::python::extract<bool>(state[3][8]);
-            // r._vLowerLimitIONames = state[3][7];
-            // r._vLowerLimitSensorIsOn = state[3][8];
-            // r._externalDeviceAddress = state[3][9];
+            r._controlMode = (KinBody::JointControlMode)(int)boost::python::extract<int>(state[3][0]);
+            r._robotControllerDOFIndex = state[3][1];
+            r._bIsSingleActing         = state[3][2];
+            r._moveToUpperLimitIOName  = state[3][3];
+            r._vUpperLimitIONames      = state[3][4];
+            r._vUpperLimitSensorIsOn   = state[3][5];
+            r._moveToLowerLimitIOName  = state[3][6];
+            r._vLowerLimitIONames      = state[3][7];
+            r._vLowerLimitSensorIsOn   = state[3][8];
+            r._externalDeviceAddress   = state[3][9];
         }
     }
 };
