@@ -525,7 +525,7 @@ public:
             _moveToUpperLimitIOName = moveToUpperLimitIOName;
             boost::python::list vUpperLimitIONames;
             FOREACHC(itionamelist, info._vUpperLimitIONames) {
-                if( !itionamelist ) {
+                if( itionamelist->size() == 0 ) {
                     vUpperLimitIONames.append(boost::python::list());
                 }
                 else {
@@ -539,7 +539,7 @@ public:
             _vUpperLimitIONames = vUpperLimitIONames;
             boost::python::list vUpperLimitSensorIsOn;
             FOREACHC(itiovaluelist, info._vUpperLimitSensorIsOn) {
-                if( !itiovaluelist ) {
+                if( itiovaluelist->size() == 0 ) {
                     vUpperLimitSensorIsOn.append(boost::python::list());
                 }
                 else {
@@ -563,7 +563,7 @@ public:
             _moveToLowerLimitIOName = moveToLowerLimitIOName;
             boost::python::list vLowerLimitIONames;
             FOREACHC(itionamelist, info._vLowerLimitIONames) {
-                if( !itionamelist ) {
+                if( itionamelist->size() == 0 ) {
                     vLowerLimitIONames.append(boost::python::list());
                 }
                 else {
@@ -577,7 +577,7 @@ public:
             _vLowerLimitIONames = vLowerLimitIONames;
             boost::python::list vLowerLimitSensorIsOn;
             FOREACHC(itiovaluelist, info._vLowerLimitSensorIsOn) {
-                if( !itiovaluelist ) {
+                if( itiovaluelist->size() == 0 ) {
                     vLowerLimitSensorIsOn.append(boost::python::list());
                 }
                 else {

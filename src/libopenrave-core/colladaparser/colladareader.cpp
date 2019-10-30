@@ -1658,40 +1658,54 @@ public:
                                 bool bLowerLimitIONames = pelt->getElementName() == std::string("vLowerLimitIONames");
                                 bool bLowerLimitSensorIsOn = pelt->getElementName() == std::string("vLowerLimitSensorIsOn");
                                 if( bRobotControllerDOFIndex || bIsSingleActing || bMoveToUpperLimitIOName || bUpperLimitIONames || bUpperLimitSensorIsOn || bMoveToLowerLimitIOName || bLowerLimitIONames || bLowerLimitSensorIsOn ) {
-                                    int iaxis = boost::lexical_cast<int>(pelt->getAttribute("axis"));
+                                    int ijointaxis = boost::lexical_cast<int>(pelt->getAttribute("axis"));
+                                    if( ijointaxis > pjoint->GetDOF() - 1 ) {
+                                        continue;
+                                    }
                                     if( bRobotControllerDOFIndex ) {
-                                        pjoint->_info._robotControllerDOFIndex.at(iaxis) = boost::lexical_cast<int>(pelt->getCharData());
+                                        pjoint->_info._robotControllerDOFIndex.at(ijointaxis) = boost::lexical_cast<int>(pelt->getCharData());
                                     }
                                     else if( bIsSingleActing ) {
-                                        pjoint->_info._bIsSingleActing.at(iaxis) = boost::lexical_cast<bool>(pelt->getCharData());
+                                        pjoint->_info._bIsSingleActing.at(ijointaxis) = boost::lexical_cast<bool>(pelt->getCharData());
                                     }
                                     else if( bMoveToUpperLimitIOName ) {
-                                        pjoint->_info._moveToUpperLimitIOName.at(iaxis) = pelt->getCharData();
+                                        pjoint->_info._moveToUpperLimitIOName.at(ijointaxis) = pelt->getCharData();
                                     }
                                     else if( bUpperLimitIONames ) {
                                         ss.clear(); ss.str(pelt->getCharData());
-                                        pjoint->_info._vUpperLimitIONames.at(iaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
+                                        pjoint->_info._vUpperLimitIONames.at(ijointaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
                                     }
                                     else if( bUpperLimitSensorIsOn ) {
                                         ss.clear(); ss.str(pelt->getCharData());
-                                        pjoint->_info._vUpperLimitSensorIsOn.at(iaxis) = std::vector<uint8_t>((istream_iterator<int>(ss)), istream_iterator<int>());
+                                        pjoint->_info._vUpperLimitSensorIsOn.at(ijointaxis) = std::vector<uint8_t>((istream_iterator<int>(ss)), istream_iterator<int>());
                                     }
                                     else if( bMoveToLowerLimitIOName ) {
-                                        pjoint->_info._moveToLowerLimitIOName.at(iaxis) = pelt->getCharData();
+                                        pjoint->_info._moveToLowerLimitIOName.at(ijointaxis) = pelt->getCharData();
                                     }
                                     else if( bLowerLimitIONames ) {
                                         ss.clear(); ss.str(pelt->getCharData());
-                                        pjoint->_info._vLowerLimitIONames.at(iaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
+                                        pjoint->_info._vLowerLimitIONames.at(ijointaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
                                     }
                                     else if( bLowerLimitSensorIsOn ) {
                                         ss.clear(); ss.str(pelt->getCharData());
-                                        pjoint->_info._vLowerLimitSensorIsOn.at(iaxis) = std::vector<uint8_t>((istream_iterator<int>(ss)), istream_iterator<int>());
+                                        pjoint->_info._vLowerLimitSensorIsOn.at(ijointaxis) = std::vector<uint8_t>((istream_iterator<int>(ss)), istream_iterator<int>());
                                     }
                                 }
                                 bool bExternalDeviceAddress = pelt->getElementName() == std::string("externalDeviceAddress");
                                 if( bExternalDeviceAddress ) {
                                     pjoint->_info._externalDeviceAddress = pelt->getCharData();
                                     continue;
+                                }
+                            }
+                            // vUpper/LowerLimitSensorIsOn would be meaningless without vUpper/LowerLimitIONames. If the
+                            // sizes of the two are not equal, resize vUpperLimitSensorIsOn to have the same size as
+                            // vUpperLimitIONames and fill in the default value (1) if necessary.
+                            for( int ijointaxis = 0; ijointaxis < pjoint->GetDOF(); ++ijointaxis ) {
+                                if( pjoint->_info._vUpperLimitIONames.at(ijointaxis).size() != pjoint->_info._vUpperLimitSensorIsOn.at(ijointaxis).size() ) {
+                                    pjoint->_info._vUpperLimitSensorIsOn[ijointaxis].resize(pjoint->_info._vUpperLimitIONames.at(ijointaxis).size(), 1);
+                                }
+                                if( pjoint->_info._vLowerLimitIONames.at(ijointaxis).size() != pjoint->_info._vLowerLimitSensorIsOn.at(ijointaxis).size() ) {
+                                    pjoint->_info._vLowerLimitSensorIsOn[ijointaxis].resize(pjoint->_info._vLowerLimitIONames.at(ijointaxis).size(), 1);
                                 }
                             }
                         }
