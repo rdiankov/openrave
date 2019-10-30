@@ -923,10 +923,10 @@ public:
         boost::array<uint8_t, 3> _bIsSingleActing; ///< if true, action type is single-acting. otherwise, double-acting.
         boost::array<std::string, 3> _moveToUpperLimitIOName;          ///< io name for moving towards the upper limit.
         boost::array<std::vector<std::string>, 3> _vUpperLimitIONames; ///< io names for detecting if the joint is at its upper limit
-        boost::array<std::vector<uint8_t>, 3> _vUpperLimitSensorIsOn;  ///< if true, the corresponding upper limit sensor reads 1 when the joint is at its upper limit. otherwise, the upper limit sensor reads 0 when the joint is at its upper limit
+        boost::array<std::vector<uint8_t>, 3> _vUpperLimitSensorIsOn;  ///< if true, the corresponding upper limit sensor reads 1 when the joint is at its upper limit. otherwise, the upper limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
         boost::array<std::string, 3> _moveToLowerLimitIOName;          ///< io name for moving towards the lower limit.
         boost::array<std::vector<std::string>, 3> _vLowerLimitIONames; ///< io names for detecting if the joint is at its lower limit
-        boost::array<std::vector<uint8_t>, 3> _vLowerLimitSensorIsOn;  ///< if true, the corresponding lower limit sensor reads 1 when the joint is at its lower limit. otherwise, the lower limit sensor reads 0 when the joint is at its lower limit
+        boost::array<std::vector<uint8_t>, 3> _vLowerLimitSensorIsOn;  ///< if true, the corresponding lower limit sensor reads 1 when the joint is at its lower limit. otherwise, the lower limit sensor reads 0 when the joint is at its lower limit. the default value is 1.
 
         /// JCM_ExternalDevice
         std::string _externalDeviceAddress;  ///< IP address for the external device controlling this joint
