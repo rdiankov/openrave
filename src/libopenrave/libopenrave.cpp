@@ -1905,11 +1905,25 @@ std::string CollisionReport::__str__() const
         FOREACH(itlinkpair, vLinkColliding) {
             s << ", [" << index << "](";
             if( !!itlinkpair->first ) {
-                s << itlinkpair->first->GetParent()->GetName() << ":" << itlinkpair->first->GetName();
+                KinBodyPtr parent = itlinkpair->first->GetParent(true);
+                if( !!parent ) {
+                    s << parent->GetName() << ":" << itlinkpair->first->GetName();
+                }
+                else {
+                    RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", itlinkpair->first->GetName());
+                    s << "[deleted]:" << itlinkpair->first->GetName();
+                }
             }
             s << ")x(";
             if( !!itlinkpair->second ) {
-                s << itlinkpair->second->GetParent()->GetName() << ":" << itlinkpair->second->GetName();
+                KinBodyPtr parent = itlinkpair->second->GetParent(true);
+                if( !!parent ) {
+                    s << parent->GetName() << ":" << itlinkpair->second->GetName();
+                }
+                else {
+                    RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", itlinkpair->second->GetName());
+                    s << "[deleted]:" << itlinkpair->second->GetName();
+                }
             }
             s << ") ";
             ++index;
