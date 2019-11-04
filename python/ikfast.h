@@ -30,10 +30,14 @@
    - IKFAST_NAMESPACE - Enclose all functions and classes in this namespace, the ``main`` function is excluded.
 
  */
+#include <algorithm>
+#include <array>
 #include <vector>
 #include <list>
 #include <stdexcept>
 #include <cmath>
+#include <iostream>
+#include <iomanip>
 
 #ifndef IKFAST_HEADER_COMMON
 #define IKFAST_HEADER_COMMON
@@ -42,6 +46,8 @@
 /// if 0x10000000 bit is set, then the iksolver assumes 6D transforms are done without the manipulator offset taken into account (allows to reuse IK when manipulator offset changes)
 #define IKFAST_VERSION 0x1000004b
 
+#define IKSINGLEDOFSOLUTIONBASE_INDICES_SIZE 5
+
 namespace ikfast {
 
 /// \brief holds the solution for a single dof
@@ -49,14 +55,25 @@ template <typename T>
 class IkSingleDOFSolutionBase
 {
 public:
-    IkSingleDOFSolutionBase() : fmul(0), foffset(0), freeind(-1), maxsolutions(1) {
-        indices[0] = indices[1] = indices[2] = indices[3] = indices[4] = -1;
+    IkSingleDOFSolutionBase() {
+        indices.fill(0xFF);
     }
-    T fmul, foffset; ///< joint value is fmul*sol[freeind]+foffset
-    signed char freeind; ///< if >= 0, mimics another joint
-    unsigned char jointtype; ///< joint type, 0x01 is revolute, 0x11 is slider
-    unsigned char maxsolutions; ///< max possible indices, 0 if controlled by free index or a free joint itself
-    unsigned char indices[5]; ///< unique index of the solution used to keep track on what part it came from. sometimes a solution can be repeated for different indices. store at least another repeated root
+
+    T fmul = 0.0, foffset = 0.0; ///< joint value is fmul*sol[freeind]+foffset
+    signed char freeind = -1; ///< if >= 0, mimics another joint
+    unsigned char jointtype = 0x01; ///< joint type, 0x01 is revolute, 0x11 is slider
+    unsigned char maxsolutions = 0; ///< max possible indices, 0 if controlled by free index or a free joint itself
+    std::array<unsigned char, IKSINGLEDOFSOLUTIONBASE_INDICES_SIZE> indices; ///< unique index of the solution used to keep track on what part it came from. sometimes a solution can be repeated for different indices. store at least another repeated root
+
+    virtual void Print() const {
+        std::cout << "(" << ((jointtype == 0x01) ? "R" : "P") << ", "
+                  << (int)freeind << "), (" << foffset << ", "
+                  << fmul << "), " << (unsigned int) maxsolutions << " (";
+        for(unsigned int i = 0; i < indices.size(); i++) {
+            std::cout << (unsigned int) indices[i] << ", ";
+        }
+        std::cout << ") " << std::endl;
+    }
 };
 
 /// \brief The discrete solutions are returned in this structure.
@@ -113,6 +130,7 @@ public:
 
     /// \brief clears all current solutions, note that any memory addresses returned from \ref GetSolution will be invalidated.
     virtual void Clear() = 0;
+    virtual void Print() const = 0;
 };
 
 /// \brief holds function pointers for all the exported functions of ikfast
@@ -146,6 +164,17 @@ public:
     GetKinematicsHashFn _GetKinematicsHash;
 };
 
+template <typename T>
+inline void ikfastfmodtwopi(T& c) {
+    // put back to (-PI, PI]
+    while (c > 3.1415926535897932384626) {
+        c -= 6.2831853071795864769252;
+    }
+    while (c <= -3.1415926535897932384626) {
+        c += 6.2831853071795864769252;
+    }
+}
+
 // Implementations of the abstract classes, user doesn't need to use them
 
 /// \brief Default implementation of \ref IkSolutionBase
@@ -158,18 +187,28 @@ public:
         _vfree = vfree;
     }
 
+    IkSolution() {
+    }
+
+    // IkSolution(const std::vector<T>& v, uint32_t nvars) {
+    //   this->SetSolution(v, nvars);
+    // }
+
+    void SetSolution(const T v[], uint32_t nvars) {
+        _vbasesol.clear();
+        _vbasesol.resize(nvars);
+        for(uint32_t i = 0; i < nvars; i++) {
+            _vbasesol[i].foffset = v[i];
+        }
+    }
+
     virtual void GetSolution(T* solution, const T* freevalues) const {
         for(std::size_t i = 0; i < _vbasesol.size(); ++i) {
             if( _vbasesol[i].freeind < 0 )
                 solution[i] = _vbasesol[i].foffset;
             else {
                 solution[i] = freevalues[_vbasesol[i].freeind]*_vbasesol[i].fmul + _vbasesol[i].foffset;
-                if( solution[i] > T(3.14159265358979) ) {
-                    solution[i] -= T(6.28318530717959);
-                }
-                else if( solution[i] < T(-3.14159265358979) ) {
-                    solution[i] += T(6.28318530717959);
-                }
+                ikfastfmodtwopi(solution[i]);
             }
         }
     }
@@ -189,18 +228,18 @@ public:
     virtual void Validate() const {
         for(size_t i = 0; i < _vbasesol.size(); ++i) {
             if( _vbasesol[i].maxsolutions == (unsigned char)-1) {
-                throw std::runtime_error("max solutions for joint not initialized");
+                throw std::runtime_error("max solutions for joint " + std::to_string(i) + "not initialized");
             }
             if( _vbasesol[i].maxsolutions > 0 ) {
                 if( _vbasesol[i].indices[0] >= _vbasesol[i].maxsolutions ) {
-                    throw std::runtime_error("index >= max solutions for joint");
+                    throw std::runtime_error("index >= max solutions for joint " + std::to_string(i));
                 }
                 if( _vbasesol[i].indices[1] != (unsigned char)-1 && _vbasesol[i].indices[1] >= _vbasesol[i].maxsolutions ) {
-                    throw std::runtime_error("2nd index >= max solutions for joint");
+                    throw std::runtime_error("2nd index >= max solutions for joint " + std::to_string(i));
                 }
             }
             if( !std::isfinite(_vbasesol[i].foffset) ) {
-                throw std::runtime_error("foffset was not finite");
+                throw std::runtime_error("foffset for joint " + std::to_string(i) + " was not finite");
             }
         }
     }
@@ -225,6 +264,46 @@ public:
                     }
                 }
             }
+        }
+    }
+
+    IkSingleDOFSolutionBase<T>& operator[](size_t i) {
+        // assert(i < _vbasesol.size());
+        return _vbasesol[i];
+    }
+
+    const IkSingleDOFSolutionBase<T>& get(size_t i) const {
+        // assert(i < _vbasesol.size());
+        return _vbasesol[i];
+    }
+
+    void SetFree(std::vector<int> vfree) {
+        _vfree = std::move(vfree);
+    }
+
+    bool HasFreeIndices() const {
+        return !_vfree.empty();
+    }
+
+    void ResetFreeIndices() {
+        for (size_t i = 0; i < _vbasesol.size(); ++i) {
+            _vbasesol[i].freeind = _vbasesol[i].indices[4] = -1;
+        }
+    }
+
+    virtual void Print() const {
+        std::cout << std::setprecision(16);
+        for (size_t i = 0; i < _vbasesol.size(); ++i) {
+            std::cout << i << ": ";
+            _vbasesol[i].Print();
+        }
+        if(!_vfree.empty())
+        {
+            std::cout << "vfree = ";
+            for (size_t i = 0; i < _vfree.size(); ++i) {
+                std::cout << _vfree[i] << ", ";
+            }
+            std::cout << std::endl;
         }
     }
 
@@ -267,11 +346,33 @@ public:
         _listsolutions.clear();
     }
 
+    IkSolution<T>& operator[](size_t i) {
+        // assert(i < _listsolutions.size());
+        return _listsolutions[i];
+    }
+
+    void SetSolutions(std::vector<IkSolution<T> > &vecsols) {
+        _listsolutions.clear();
+        std::move( std::make_move_iterator(vecsols.begin()),
+                   std::make_move_iterator(vecsols.end()),
+                   std::back_inserter(_listsolutions)
+                   );
+    }
+
+    virtual void Print() const {
+        unsigned int i = 0;
+        for (typename std::list<IkSolution<T> >::const_iterator it=_listsolutions.cbegin();
+             it != _listsolutions.cend(); ++it) {
+            std::cout << "Solution " << i++ << ":" << std::endl;
+            std::cout << "===========" << std::endl;
+            it->Print();
+        }
+    }
+
 protected:
     std::list< IkSolution<T> > _listsolutions;
 };
-
-}
+} // namespace ikfast
 
 #endif // OPENRAVE_IKFAST_HEADER
 

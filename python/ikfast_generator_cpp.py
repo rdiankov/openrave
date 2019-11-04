@@ -256,11 +256,23 @@ IKFAST_COMPILE_ASSERT(IKFAST_VERSION==%s);
 #include <limits>
 #include <algorithm>
 #include <complex>
+#include <iomanip>
 
 #ifndef IKFAST_ASSERT
 #include <stdexcept>
 #include <sstream>
 #include <iostream>
+
+#define _IKFAST_DISPLAY(RUNCODE)                                               \\
+{                                                                              \\
+    printf(                                                                    \\
+        "\\n%%s:%%d, [ %%s "                                                    \\
+        "]\\n-----------------------------------------------------------------" \\
+        "--------------\\n",                                                    \\
+        __FILE__, __LINE__, __func__ /*__PRETTY_FUNCTION__*/);                 \\
+    RUNCODE;                                                                   \\
+    printf("\\n");                                                              \\
+}
 
 #ifdef _MSC_VER
 #ifndef __PRETTY_FUNCTION__
@@ -534,8 +546,20 @@ return solver.ComputeIk(eetrans,eerot,pfree,solutions);
 }
 
 IKFAST_API bool ComputeIk2(const IkReal* eetrans, const IkReal* eerot, const IkReal* pfree, IkSolutionListBase<IkReal>& solutions, void* pOpenRAVEManip) {
+_IKFAST_DISPLAY(
+std::cout << std::setprecision(16);
+std::cout << "eetrans = " << eetrans[0] << ", " << eetrans[1] << ", " << eetrans[2] << '\\n';
+std::cout << "  eerot = " << eerot[0] << ", " << eerot[1] << ", " << eerot[2] << "; ";
+if(GetIkType() == 0x67000001) {
+  std::cout << eerot[3] << ", " << eerot[4] << ", " << eerot[5] << "; " << eerot[6] << ", " << eerot[7] << ", " << eerot[8];
+}
+std::cout << "\\n\\n";);
 IKSolver solver;
-return solver.ComputeIk(eetrans,eerot,pfree,solutions);
+bool breturn = solver.ComputeIk(eetrans,eerot,pfree,solutions);
+_IKFAST_DISPLAY(std::cout << __FILE__ << " ComputeIk2 returns " << solutions.GetNumSolutions() << " solutions" << std::endl;
+solutions.Print();
+);
+return breturn;
 }
 
 IKFAST_API const char* GetKinematicsHash() { return "%s"; }
