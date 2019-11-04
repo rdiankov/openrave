@@ -940,7 +940,7 @@ private:
                 _report.plink1 = pkb1;
                 _report.plink2 = pkb2;
                 if( !!pkb1 && !!pkb2 ) {
-                    _report.vLinkColliding.push_back(std::make_pair(pkb1, pkb2));
+                    _report.vLinkColliding.emplace_back(pkb1,  pkb2);
                 }
                 if( !pkb1 || !pkb2 ) {
                     RAVELOG_WARN("one of the links is not specified\n");
@@ -1057,7 +1057,7 @@ private:
                 _report.plink1 = pkb1;
                 _report.plink2 = pkb2;
                 if( !!pkb1 && !!pkb2 ) {
-                    _report.vLinkColliding.push_back(std::make_pair(pkb1, pkb2));
+                    _report.vLinkColliding.emplace_back(pkb1,  pkb2);
                 }
 
                 if( _options & OpenRAVE::CO_Contacts ) {
@@ -1191,7 +1191,7 @@ private:
                     _report.plink1 = pcb->_plink;
                     _report.plink2 = pkb1 != pcb->_plink ? pkb1 : pkb2;
                     if( !!_report.plink1 && !!_report.plink2 ) {
-                        _report.vLinkColliding.push_back(std::make_pair(_report.plink1, _report.plink2));
+                        _report.vLinkColliding.emplace_back(_report.plink1,  _report.plink2);
                     }
                     dGeomID checkgeom1 = pkb1 == pcb->_plink ? o1 : o2;
                     checkgeom1 = dGeomGetClass(checkgeom1) == dGeomTransformClass ? dGeomTransformGetGeom(checkgeom1) : checkgeom1;

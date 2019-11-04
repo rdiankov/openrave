@@ -230,8 +230,6 @@ PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fSte
 {
     _diffstatefn = SubtractStates;
     _neighstatefn = AddStates;
-    // have to add the default router
-    _checkpathconstraintsfn = boost::bind(&PlannerParameters::_CheckPathConstraintsOld, this, _1, _2, _3, _4);
 
     //_sPostProcessingParameters ="<_nmaxiterations>100</_nmaxiterations><_postprocessing planner=\"lineartrajectoryretimer\"></_postprocessing>";
     // should not verify initial path since coming from RRT. actually the linear smoother sometimes introduces small collisions due to the discrete nature of the collision checking, so also want to ignore those
@@ -269,13 +267,11 @@ PlannerParameters& PlannerParameters::operator=(const PlannerParameters& r)
     _costfn = r._costfn;
     _goalfn = r._goalfn;
     _distmetricfn = r._distmetricfn;
-    _checkpathconstraintsfn = r._checkpathconstraintsfn;
     _checkpathvelocityconstraintsfn = r._checkpathvelocityconstraintsfn;
     _samplefn = r._samplefn;
     _sampleneighfn = r._sampleneighfn;
     _samplegoalfn = r._samplegoalfn;
     _sampleinitialfn = r._sampleinitialfn;
-    _setstatefn = r._setstatefn;
     _setstatevaluesfn = r._setstatevaluesfn;
     _getstatefn = r._getstatefn;
     _diffstatefn = r._diffstatefn;
@@ -318,11 +314,6 @@ int PlannerParameters::SetStateValues(const std::vector<dReal>& values, int opti
 {
     if( !!_setstatevaluesfn ) {
         return _setstatevaluesfn(values, options);
-    }
-    if( !!_setstatefn ) {
-        RAVELOG_VERBOSE("Using deprecated PlannerParameters::_setstatefn, please set _setstatevaluesfn instead");
-        _setstatefn(values);
-        return 0;
     }
     throw openrave_exception(_("need to set PlannerParameters::_setstatevaluesfn"));
 }

@@ -18,7 +18,7 @@
 #include <algorithm>
 
 // used for functions that are also used internally
-#define CHECK_NO_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 0, "body %s cannot be added to environment when doing this operation.", GetName()%_nHierarchyComputed, ORE_InvalidState);
+#define CHECK_NO_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 0, "body %s cannot be added to environment when doing this operation, current value is %d", GetName()%_nHierarchyComputed, ORE_InvalidState);
 #define CHECK_INTERNAL_COMPUTATION0 OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed != 0, "body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetName()%_nHierarchyComputed, ORE_NotInitialized);
 #define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetName()%_nHierarchyComputed, ORE_NotInitialized);
 
@@ -1235,21 +1235,6 @@ void KinBody::GetLinkTransformations(std::vector<Transform>& transforms, std::ve
         }
         for(int i = 0; i < (*it)->GetDOF(); ++i) {
             doflastsetvalues.push_back((*it)->_doflastsetvalues[i]);
-        }
-    }
-}
-
-void KinBody::GetLinkTransformations(vector<Transform>& vtrans, std::vector<int>& dofbranches) const
-{
-    std::vector<dReal> vdoflastsetvalues;
-    GetLinkTransformations(vtrans, vdoflastsetvalues);
-    dofbranches.resize(vdoflastsetvalues.size());
-    for(size_t idof = 0; idof < vdoflastsetvalues.size(); ++idof) {
-        if( IsDOFRevolute(idof) ) {
-            dofbranches[idof] = CountCircularBranches(vdoflastsetvalues[idof]-GetJointFromDOFIndex(idof)->GetWrapOffset(0));
-        }
-        else {
-            dofbranches[idof] = 0;
         }
     }
 }
@@ -3942,8 +3927,8 @@ void KinBody::_ComputeInternalInformation()
             _vClosedLoops.back().reserve(itclosedloop->size());
             // fill the links
             FOREACH(itlinkindex,*itclosedloop) {
-                _vClosedLoopIndices.back().push_back(make_pair(*itlinkindex,0));
-                _vClosedLoops.back().push_back(make_pair(_veclinks.at(*itlinkindex),JointPtr()));
+                _vClosedLoopIndices.back().emplace_back(*itlinkindex, 0);
+                _vClosedLoops.back().emplace_back(_veclinks.at(*itlinkindex), JointPtr());
             }
             // fill the joints
             for(size_t i = 0; i < _vClosedLoopIndices.back().size(); ++i) {
@@ -4395,7 +4380,7 @@ int8_t KinBody::DoesDOFAffectLink(int dofindex, int linkindex ) const
 void KinBody::SetNonCollidingConfiguration()
 {
     _ResetInternalCollisionCache();
-    vector<int> vdoflastsetvalues;
+    vector<dReal> vdoflastsetvalues;
     GetLinkTransformations(_vInitialLinkTransformations, vdoflastsetvalues);
 }
 
@@ -4597,7 +4582,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     FOREACHC(itloop,_vClosedLoops) {
         _vClosedLoops.push_back(std::vector< std::pair<LinkPtr,JointPtr> >());
         FOREACHC(it,*itloop) {
-            _vClosedLoops.back().push_back(make_pair(_veclinks.at(it->first->GetIndex()),JointPtr()));
+            _vClosedLoops.back().emplace_back(_veclinks.at(it->first->GetIndex()), JointPtr());
             // the joint might be in _vPassiveJoints
             std::vector<JointPtr>::const_iterator itjoint = find(r->_vecjoints.begin(),r->_vecjoints.end(),it->second);
             if( itjoint != r->_vecjoints.end() ) {
@@ -4865,7 +4850,7 @@ UserDataPtr KinBody::RegisterChangeCallback(uint32_t properties, const boost::fu
                 }
                 _vlistRegisteredCallbacks.swap(vlistRegisteredCallbacks);
             }
-            pdata->_iterators.push_back(make_pair(index, _vlistRegisteredCallbacks.at(index).insert(_vlistRegisteredCallbacks.at(index).end(),pdata)));
+            pdata->_iterators.emplace_back(index, _vlistRegisteredCallbacks.at(index).insert(_vlistRegisteredCallbacks.at(index).end(), pdata));
         }
         properties >>= 1;
         index += 1;
@@ -4886,6 +4871,9 @@ void KinBody::_InitAndAddLink(LinkPtr plink)
     }
 
     plink->_index = static_cast<int>(_veclinks.size());
+    plink->_vGeometries.clear();
+    plink->_collision.vertices.clear();
+    plink->_collision.indices.clear();
     FOREACHC(itgeominfo,info._vgeometryinfos) {
         Link::GeometryPtr geom(new Link::Geometry(plink,**itgeominfo));
         if( geom->_info._meshcollision.vertices.size() == 0 ) { // try to avoid recomputing

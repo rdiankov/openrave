@@ -609,8 +609,6 @@ PlannerStatus _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr prob
     }
     if( !bsmooth ) {
         params->_setstatevaluesfn.clear();
-        params->_setstatefn.clear();
-        params->_checkpathconstraintsfn.clear();
         params->_checkpathvelocityconstraintsfn.clear();
     }
 
@@ -707,8 +705,6 @@ ActiveDOFTrajectoryRetimer::ActiveDOFTrajectoryRetimer(RobotBasePtr robot, const
     params->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
     params->_hastimestamps = false;
     params->_setstatevaluesfn.clear();
-    params->_setstatefn.clear();
-    params->_checkpathconstraintsfn.clear();
     params->_checkpathvelocityconstraintsfn.clear();
     params->_sExtraParameters = plannerparameters;
     if( !_planner->InitPlan(_robot,params) ) {
@@ -751,8 +747,6 @@ void ActiveDOFTrajectoryRetimer::_UpdateParameters()
     params->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
     params->_hastimestamps = false;
     params->_setstatevaluesfn.clear();
-    params->_setstatefn.clear();
-    params->_checkpathconstraintsfn.clear();
     params->_checkpathvelocityconstraintsfn.clear();
     params->_sExtraParameters = _parameters->_sExtraParameters;
     if( !_planner->InitPlan(_robot,params) ) {
@@ -786,8 +780,6 @@ PlannerStatus _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal 
     }
     if( !bsmooth ) {
         params->_setstatevaluesfn.clear();
-        params->_setstatefn.clear();
-        params->_checkpathconstraintsfn.clear();
         params->_checkpathvelocityconstraintsfn.clear();
     }
 
@@ -984,9 +976,7 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
     }
     else {
         params->_setstatevaluesfn.clear();
-        params->_setstatefn.clear();
         params->_getstatefn.clear();
-        params->_checkpathconstraintsfn.clear();
         params->_checkpathvelocityconstraintsfn.clear();
     }
 
@@ -1067,9 +1057,7 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
         parameters.reset(new TrajectoryTimingParameters());
         parameters->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
         parameters->_setstatevaluesfn.clear();
-        parameters->_setstatefn.clear();
         parameters->_getstatefn.clear();
-        parameters->_checkpathconstraintsfn.clear();
         parameters->_checkpathvelocityconstraintsfn.clear();
         parameters->_sExtraParameters += _extraparameters;
         _parameters = parameters;
@@ -2216,7 +2204,7 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
                     }
 
                     if( torquelimits.first < torquelimits.second ) {
-                        _vtorquevalues.push_back(make_pair((*itjoint)->GetDOFIndex()+idof,torquelimits));
+                        _vtorquevalues.emplace_back((*itjoint)->GetDOFIndex()+idof, torquelimits);
                     }
                 }
             }

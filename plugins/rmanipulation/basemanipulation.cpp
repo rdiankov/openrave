@@ -453,7 +453,6 @@ protected:
 
         if( usedynamicsconstraints ) {
             // use dynamics constraints, so remove the old path constraint function
-            params->_checkpathconstraintsfn.clear();
             std::list<KinBodyPtr> listCheckBodies;
             listCheckBodies.push_back(robot);
             planningutils::DynamicsCollisionConstraintPtr dynamics(new planningutils::DynamicsCollisionConstraint(params, listCheckBodies, 0xffffffff));

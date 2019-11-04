@@ -505,7 +505,7 @@ public:
             FOREACH(itramp, dynamicpath.ramps) {
                 dummyDur1 += itramp->endTime;
             }
-            if( !!parameters->_setstatevaluesfn || !!parameters->_setstatefn ) {
+            if( !!parameters->_setstatevaluesfn ) {
                 // no idea what a good mintimestep is... _parameters->_fStepLength*0.5?
                 //numshortcuts = dynamicpath.Shortcut(parameters->_nMaxIterations,_feasibilitychecker,this, parameters->_fStepLength*0.99);
 #ifdef SMOOTHER1_TIMING_DEBUG

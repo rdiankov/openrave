@@ -131,6 +131,11 @@ public:
         return boost::python::make_tuple(object(), object());
     }
 
+    object ComputeAABB(object otransform) {
+        KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
+        return toPyAABB(pgeominfo->ComputeAABB(ExtractTransform(otransform)));
+    }
+
     void DeserializeJSON(object obj, const dReal fUnitScale=1.0)
     {
         rapidjson::Document doc;
@@ -360,13 +365,13 @@ public:
         if( !IS_PYTHONOBJECT_NONE(nominal_speed_torque_points) ) {
             size_t num = len(nominal_speed_torque_points);
             for(size_t i = 0; i < num; ++i) {
-                info.nominal_speed_torque_points.push_back(std::make_pair((dReal) boost::python::extract<dReal>(nominal_speed_torque_points[i][0]), (dReal) boost::python::extract<dReal>(nominal_speed_torque_points[i][1])));
+                info.nominal_speed_torque_points.emplace_back((dReal) boost::python::extract<dReal>(nominal_speed_torque_points[i][0]),  (dReal) boost::python::extract<dReal>(nominal_speed_torque_points[i][1]));
             }
         }
         if( !IS_PYTHONOBJECT_NONE(max_speed_torque_points) ) {
             size_t num = len(max_speed_torque_points);
             for(size_t i = 0; i < num; ++i) {
-                info.max_speed_torque_points.push_back(std::make_pair((dReal) boost::python::extract<dReal>(max_speed_torque_points[i][0]), (dReal) boost::python::extract<dReal>(max_speed_torque_points[i][1])));
+                info.max_speed_torque_points.emplace_back((dReal) boost::python::extract<dReal>(max_speed_torque_points[i][0]),  (dReal) boost::python::extract<dReal>(max_speed_torque_points[i][1]));
             }
         }
         info.nominal_torque = nominal_torque;
@@ -2876,11 +2881,6 @@ int PyKinBody::DoesDOFAffectLink(int dofindex, int linkindex ) const
     return _pbody->DoesDOFAffectLink(dofindex,linkindex);
 }
 
-object PyKinBody::GetViewerData() const
-{
-    return toPyUserData(_pbody->GetViewerData());
-}
-
 object PyKinBody::GetURI() const
 {
     return ConvertStringToUnicode(_pbody->GetURI());
@@ -2918,14 +2918,6 @@ object PyKinBody::GetAdjacentLinks() const
     return adjacent;
 }
 
-object PyKinBody::GetPhysicsData() const
-{
-    return toPyUserData(_pbody->GetPhysicsData());
-}
-object PyKinBody::GetCollisionData() const
-{
-    return toPyUserData(_pbody->GetCollisionData());
-}
 object PyKinBody::GetManageData() const
 {
     KinBody::ManageDataPtr pdata = _pbody->GetManageData();
@@ -2950,6 +2942,11 @@ string PyKinBody::GetKinematicsGeometryHash() const
 }
 
 PyStateRestoreContextBase* PyKinBody::CreateKinBodyStateSaver(object options)
+{
+    return CreateStateSaver(options);
+}
+
+PyStateRestoreContextBase* PyKinBody::CreateStateSaver(object options)
 {
     PyKinBodyStateSaverPtr saver;
     if( IS_PYTHONOBJECT_NONE(options) ) {
@@ -3420,6 +3417,7 @@ void init_openravepy_kinbody()
                           .def_readwrite("_mapExtraGeometries",&PyGeometryInfo::_mapExtraGeometries)
                           .def_readwrite("_vSideWalls", &PyGeometryInfo::_vSideWalls)
                           .def("ComputeInnerEmptyVolume",&PyGeometryInfo::ComputeInnerEmptyVolume, DOXY_FN(GeomeryInfo,ComputeInnerEmptyVolume))
+                          .def("ComputeAABB",&PyGeometryInfo::ComputeAABB, args("transform"), DOXY_FN(GeomeryInfo,ComputeAABB))
                           .def("DeserializeJSON", &PyGeometryInfo::DeserializeJSON, args("obj", "unitScale"), DOXY_FN(GeometryInfo, DeserializeJSON))
                           .def("SerializeJSON", &PyGeometryInfo::SerializeJSON,SerializeJSON_overloads(args("unitScale", "options"), DOXY_FN(GeometryInfo,SerializeJSON)))
                           .def_pickle(GeometryInfo_pickle_suite())
@@ -3665,16 +3663,12 @@ void init_openravepy_kinbody()
                         .def("GetEnvironmentId",&PyKinBody::GetEnvironmentId, DOXY_FN(KinBody,GetEnvironmentId))
                         .def("DoesAffect",&PyKinBody::DoesAffect,args("jointindex","linkindex"), DOXY_FN(KinBody,DoesAffect))
                         .def("DoesDOFAffectLink",&PyKinBody::DoesDOFAffectLink,args("dofindex","linkindex"), DOXY_FN(KinBody,DoesDOFAffectLink))
-                        .def("GetViewerData",&PyKinBody::GetViewerData, DOXY_FN(KinBody,GetViewerData))
-                        .def("GetGuiData",&PyKinBody::GetViewerData, DOXY_FN(KinBody,GetViewerData))
                         .def("GetURI",&PyKinBody::GetURI, DOXY_FN(InterfaceBase,GetURI))
                         .def("GetXMLFilename",&PyKinBody::GetURI, DOXY_FN(InterfaceBase,GetURI))
                         .def("GetNonAdjacentLinks",GetNonAdjacentLinks1, DOXY_FN(KinBody,GetNonAdjacentLinks))
                         .def("GetNonAdjacentLinks",GetNonAdjacentLinks2, args("adjacentoptions"), DOXY_FN(KinBody,GetNonAdjacentLinks))
                         .def("SetAdjacentLinks",&PyKinBody::SetAdjacentLinks, args("linkindex0", "linkindex1"), DOXY_FN(KinBody,SetAdjacentLinks))
                         .def("GetAdjacentLinks",&PyKinBody::GetAdjacentLinks, DOXY_FN(KinBody,GetAdjacentLinks))
-                        .def("GetPhysicsData",&PyKinBody::GetPhysicsData, DOXY_FN(KinBody,GetPhysicsData))
-                        .def("GetCollisionData",&PyKinBody::GetCollisionData, DOXY_FN(KinBody,GetCollisionData))
                         .def("GetManageData",&PyKinBody::GetManageData, DOXY_FN(KinBody,GetManageData))
                         .def("GetUpdateStamp",&PyKinBody::GetUpdateStamp, DOXY_FN(KinBody,GetUpdateStamp))
                         .def("serialize",&PyKinBody::serialize,args("options"), DOXY_FN(KinBody,serialize))

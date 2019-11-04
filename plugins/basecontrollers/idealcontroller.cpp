@@ -221,7 +221,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                         _samplespec._vgroups.push_back(*itgroup);
                         _samplespec._vgroups.back().offset = dof;
                         for(int idof = 0; idof < _samplespec._vgroups.back().dof; ++idof) {
-                            _vgrablinks.push_back(make_pair(dof+idof,boost::lexical_cast<int>(tokens.at(2+idof))));
+                            _vgrablinks.emplace_back(dof+idof, boost::lexical_cast<int>(tokens.at(2+idof)));
                         }
                         dof += _samplespec._vgroups.back().dof;
                     }
@@ -297,11 +297,11 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                         if( !!pgrabbinglink ) {
                             if( pgrabbinglink->GetIndex() != itgrabinfo->second ) {
                                 listrelease.push_back(pbody);
-                                listgrab.push_back(make_pair(pbody,probot->GetLinks().at(itgrabinfo->second)));
+                                listgrab.emplace_back(pbody, probot->GetLinks().at(itgrabinfo->second));
                             }
                         }
                         else {
-                            listgrab.push_back(make_pair(pbody,probot->GetLinks().at(itgrabinfo->second)));
+                            listgrab.emplace_back(pbody, probot->GetLinks().at(itgrabinfo->second));
                         }
                     }
                 }

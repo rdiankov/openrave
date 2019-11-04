@@ -1905,11 +1905,25 @@ std::string CollisionReport::__str__() const
         FOREACH(itlinkpair, vLinkColliding) {
             s << ", [" << index << "](";
             if( !!itlinkpair->first ) {
-                s << itlinkpair->first->GetParent()->GetName() << ":" << itlinkpair->first->GetName();
+                KinBodyPtr parent = itlinkpair->first->GetParent(true);
+                if( !!parent ) {
+                    s << parent->GetName() << ":" << itlinkpair->first->GetName();
+                }
+                else {
+                    RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", itlinkpair->first->GetName());
+                    s << "[deleted]:" << itlinkpair->first->GetName();
+                }
             }
             s << ")x(";
             if( !!itlinkpair->second ) {
-                s << itlinkpair->second->GetParent()->GetName() << ":" << itlinkpair->second->GetName();
+                KinBodyPtr parent = itlinkpair->second->GetParent(true);
+                if( !!parent ) {
+                    s << parent->GetName() << ":" << itlinkpair->second->GetName();
+                }
+                else {
+                    RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", itlinkpair->second->GetName());
+                    s << "[deleted]:" << itlinkpair->second->GetName();
+                }
             }
             s << ") ";
             ++index;
@@ -2432,12 +2446,12 @@ void SensorBase::CameraGeomData::Serialize(BaseXMLWriterPtr writer, int options)
     writer->AddChild("gain",atts)->SetCharData(boost::lexical_cast<std::string>(gain));
     //writer->AddChild("format",atts)->SetCharData(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
     if( sensor_reference.size() > 0 ) {
-        atts.push_back(std::make_pair("url", sensor_reference));
+        atts.emplace_back("url",  sensor_reference);
         writer->AddChild("sensor_reference",atts);
         atts.clear();
     }
     if( target_region.size() > 0 ) {
-        atts.push_back(std::make_pair("url", target_region));
+        atts.emplace_back("url",  target_region);
         writer->AddChild("target_region",atts);
         atts.clear();
     }
@@ -2554,7 +2568,7 @@ void DefaultStartElementSAXFunc(void *ctx, const xmlChar *name, const xmlChar **
     AttributesList listatts;
     if( atts != NULL ) {
         for (int i = 0; (atts[i] != NULL); i+=2) {
-            listatts.push_back(make_pair(string((const char*)atts[i]),string((const char*)atts[i+1])));
+            listatts.emplace_back((const char*)atts[i], (const char*)atts[i+1]);
             std::transform(listatts.back().first.begin(), listatts.back().first.end(), listatts.back().first.begin(), ::tolower);
         }
     }

@@ -704,7 +704,7 @@ protected:
                     graspparams->vmanipulatordirection = Vector(pgrasp[imanipulatordirection], pgrasp[imanipulatordirection+1], pgrasp[imanipulatordirection+2]);
                 }
                 else {
-                    graspparams->vmanipulatordirection = pmanip->GetDirection();
+                    graspparams->vmanipulatordirection = pmanip->GetLocalToolDirection();
                 }
                 if( iGraspTranslationOffset >= 0 ) {
                     RAVELOG_WARN("igrasptranslationoffset not supported yet\n");
@@ -745,7 +745,7 @@ protected:
                     vglobalpalmdir = transTarg.rotate(Vector(pgrasp[iGraspDir], pgrasp[iGraspDir+1], pgrasp[iGraspDir+2]));
                 }
                 else {
-                    vglobalpalmdir = pmanip->GetTransform().rotate(pmanip->GetDirection());
+                    vglobalpalmdir = pmanip->GetTransform().rotate(pmanip->GetLocalToolDirection());
                 }
 
                 // move back a little if robot/target in collision
@@ -805,7 +805,7 @@ protected:
 
                 if( pmanip->GetIkSolver()->Supports(IKP_TranslationDirection5D) ) {
                     // get a valid transformation
-                    tGoalEndEffector.SetTranslationDirection5D(RAY(tgoal.trans,tgoal.rotate(pmanip->GetDirection())));
+                    tGoalEndEffector.SetTranslationDirection5D(RAY(tgoal.trans,tgoal.rotate(pmanip->GetLocalToolDirection())));
                     if( !pmanip->FindIKSolution(tGoalEndEffector,IKFO_CheckEnvCollisions, ikreturn) ) {
                         RAVELOG_DEBUG(str(boost::format("grasp %d: ik 5d failed reason 0x%x")%igrasp%ikreturn->_action));
                         continue; // failed
@@ -845,7 +845,7 @@ protected:
                 }
                 else {
                     if( tApproachEndEffector.GetType() == IKP_Transform6D ) {
-                        vglobalpalmdir = tApproachEndEffector.GetTransform6D().rotate(pmanip->GetDirection());
+                        vglobalpalmdir = tApproachEndEffector.GetTransform6D().rotate(pmanip->GetLocalToolDirection());
                     }
                     else {
                         vglobalpalmdir = tApproachEndEffector.GetTranslationDirection5D().dir;

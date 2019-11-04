@@ -30,11 +30,11 @@ void StringXMLReadable::Serialize(BaseXMLWriterPtr writer, int options) const
 {
     if( writer->GetFormat() == "collada" ) {
         AttributesList atts;
-        atts.push_back(make_pair(string("type"),"stringxmlreadable"));
-        atts.push_back(make_pair(string("name"), GetXMLId()));
+        atts.emplace_back("type", "stringxmlreadable");
+        atts.emplace_back("name", GetXMLId());
         BaseXMLWriterPtr child = writer->AddChild("extra",atts);
         atts.clear();
-        atts.push_back(make_pair(string("profile"), string("OpenRAVE")));
+        atts.emplace_back("profile", "OpenRAVE");
         writer = child->AddChild("technique",atts)->AddChild("data");
     }
 

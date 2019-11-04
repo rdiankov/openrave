@@ -1719,7 +1719,7 @@ protected:
             FOREACHC(it, (*itmanip)->GetChuckingDirection()) {
                 os << *it << " ";
             }
-            os << (*itmanip)->GetDirection().x << " " << (*itmanip)->GetDirection().y << " " << (*itmanip)->GetDirection().z << " ";
+            os << (*itmanip)->GetLocalToolDirection().x << " " << (*itmanip)->GetLocalToolDirection().y << " " << (*itmanip)->GetLocalToolDirection().z << " ";
             os << (*itmanip)->GetName().size() << " " << (*itmanip)->GetName() << " ";
             if( !!(*itmanip)->GetIkSolver() ) {
                 string name = (*itmanip)->GetIkSolver()->GetXMLId();
