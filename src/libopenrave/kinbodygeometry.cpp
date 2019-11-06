@@ -823,6 +823,14 @@ void KinBody::Link::Geometry::serialize(std::ostream& o, int options) const
     }
     else {
         SerializeRound3(o,_info._vGeomData);
+        if( _info._type == GT_Cage ) {
+            SerializeRound3(o,_info._vGeomData2);
+        }
+        else if( _info._type == GT_Container ) {
+            SerializeRound3(o,_info._vGeomData2);
+            SerializeRound3(o,_info._vGeomData3);
+            SerializeRound3(o,_info._vGeomData4);
+        }
     }
 }
 
