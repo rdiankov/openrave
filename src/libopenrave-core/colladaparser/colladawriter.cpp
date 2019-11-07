@@ -791,7 +791,7 @@ private:
                         smodelref = str(boost::format("ikmodel%d_%d")%_mapBodyIds[pbody->GetEnvironmentId()]%imodel);
                         param2->setSid(smodelref.c_str());
                     }
-                    iasout->vkinematicsbindings.push_back(make_pair(smodelref, sidref));
+                    iasout->vkinematicsbindings.emplace_back(smodelref,  sidref);
                 }
             }
 
@@ -1015,7 +1015,7 @@ private:
             domKinematics_newparamRef ab = daeSafeCast<domKinematics_newparam>(ias->add(COLLADA_ELEMENT_NEWPARAM));
             ab->setSid(assym.c_str());
             daeSafeCast<domKinematics_newparam::domSIDREF>(ab->add(COLLADA_ELEMENT_SIDREF))->setValue(str(boost::format("%s/%s")%asmid%asmsym).c_str());
-            iasout->vkinematicsbindings.push_back(make_pair(string(ab->getSid()), it->second));
+            iasout->vkinematicsbindings.emplace_back(ab->getSid(),  it->second);
         }
         for(size_t iaxissid = 0; iaxissid < ikmout->vaxissids.size(); ++iaxissid) {
             const axis_sids& kas = ikmout->vaxissids.at(iaxissid);
@@ -1156,7 +1156,7 @@ private:
             kbind->setSid((symscope+ikmsid).c_str());
             daeSafeCast<domKinematics_newparam::domSIDREF>(kbind->add(COLLADA_ELEMENT_SIDREF))->setValue((refscope+ikmsid).c_str());
             // needs to be node0 instead of _GetNodeId(pbody) since the kinematics hierarchy origin does not have the current body's transform
-            ikmout->vkinematicsbindings.push_back(make_pair(string(kbind->getSid()), str(boost::format("%s/node0")%_GetNodeId(pbody))));
+            ikmout->vkinematicsbindings.emplace_back(kbind->getSid(),  str(boost::format("%s/node0")%_GetNodeId(pbody)));
         }
 
         ikmout->vaxissids.reserve(kmout->vaxissids.size());
@@ -1331,11 +1331,11 @@ private:
         vector< pair<int,KinBody::JointConstPtr> > vjoints;
         vjoints.reserve(pbody->GetJoints().size()+pbody->GetPassiveJoints().size());
         FOREACHC(itj, pbody->GetJoints() ) {
-            vjoints.push_back(make_pair((*itj)->GetJointIndex(),*itj));
+            vjoints.emplace_back((*itj)->GetJointIndex(), *itj);
         }
         int index=pbody->GetJoints().size();
         FOREACHC(itj, pbody->GetPassiveJoints()) {
-            vjoints.push_back(make_pair(index++,*itj));
+            vjoints.emplace_back(index++, *itj);
         }
         vector<dReal> lmin, lmax;
         vector<domJointRef> vdomjoints(vjoints.size());
@@ -2049,7 +2049,7 @@ private:
             }
         }
 
-        out.listusedlinks.push_back(make_pair(plink->GetIndex(),linksid));
+        out.listusedlinks.emplace_back(plink->GetIndex(), linksid);
         out.plink = pdomlink;
         out.pnode = pnode;
         return out;

@@ -621,8 +621,8 @@ public:
 
                 // create a temporary file and store COLLADA kinematics representation
                 AttributesList atts;
-                atts.push_back(make_pair(string("skipwrite"), string("visual readable sensors physics")));
-                atts.push_back(make_pair(string("target"), probot->GetName()));
+                atts.emplace_back("skipwrite", "visual readable sensors physics");
+                atts.emplace_back("target",  probot->GetName());
                 string tempfilename = RaveGetHomeDirectory() + str(boost::format("/testikfastrobot%d.dae")%(RaveRandomInt()%1000));
                 // file not found, so create
                 RAVELOG_INFO(str(boost::format("Generating inverse kinematics %s for manip %s:%s, hash=%s, saving intermediate data to %s, will take several minutes...\n")%striktype%probot->GetName()%pmanip->GetName()%pmanip->GetInverseKinematicsStructureHash(iktype)%tempfilename));
@@ -1176,7 +1176,7 @@ public:
                 bool bnoiksolution = false;
                 if( !pmanip->FindIKSolution(twrist, viksolution, filteroptions) ) {
                     if( !bnoiksolution ) {
-                        vnosolutions.push_back(make_pair(twrist,vfreeparameters));
+                        vnosolutions.emplace_back(twrist, vfreeparameters);
                         bnoiksolution = true;
                     }
                     bsuccess = false;
@@ -1201,7 +1201,7 @@ public:
                         RAVELOG_WARN("failed to get freeparameters");
                     }
                     if( twrist.ComputeDistanceSqr(twrist_out) > fthreshold) {
-                        vwrongsolutions.push_back(make_pair(twrist,vfreeparameters_out));
+                        vwrongsolutions.emplace_back(twrist, vfreeparameters_out);
                         bsuccess = false;
                         s.str("");
                         s << "FindIKSolution: Incorrect IK, i = " << i <<" error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
@@ -1240,7 +1240,7 @@ public:
                         *itfree = -1;
                     }
                     if( !bnoiksolution ) {
-                        vnosolutions.push_back(make_pair(twrist,vfreeparameters_out));
+                        vnosolutions.emplace_back(twrist, vfreeparameters_out);
                         bnoiksolution = true;
                     }
                     bsuccess = false;
@@ -1262,7 +1262,7 @@ public:
                             RAVELOG_WARN("failed to get freeparameters");
                         }
                         if(twrist.ComputeDistanceSqr(twrist_out) > fthreshold ) {
-                            vwrongsolutions.push_back(make_pair(twrist,vfreeparameters_out));
+                            vwrongsolutions.emplace_back(twrist, vfreeparameters_out);
                             s.str("");
                             s << "FindIKSolutions: Incorrect IK, i = " << i << " error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
                               << "originalJointValues=[";
@@ -1307,7 +1307,7 @@ public:
                         }
                         s << "]" << std::endl;
                         RAVELOG_VERBOSE(s.str());
-                        vnofullsolutions.push_back(make_pair(twrist,vfreeparameters_real));
+                        vnofullsolutions.emplace_back(twrist, vfreeparameters_real);
                     }
                 }
 
@@ -1321,7 +1321,7 @@ public:
                         robot->SetActiveDOFValues(viksolution, false);
                         twrist_out = pmanip->GetIkParameterization(twrist);
                         if(twrist.ComputeDistanceSqr(twrist_out) > fthreshold ) {
-                            vwrongsolutions.push_back(make_pair(twrist,vfreeparameters));
+                            vwrongsolutions.emplace_back(twrist, vfreeparameters);
                             bsuccess = false;
                             s.str("");
                             s << "FindIKSolution (freeparams): Incorrect IK, i = " << i << " error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
@@ -1351,7 +1351,7 @@ public:
                         for(int j = 0; j < pmanip->GetIkSolver()->GetNumFreeParameters(); ++j) {
                             if( fabsf(vfreeparameters.at(j)-vfreeparameters_out.at(j)) > 0.0001f ) {
                                 RAVELOG_WARN(str(boost::format("free params %d not equal: %f!=%f\n")%j%vfreeparameters[j]%vfreeparameters_out[j]));
-                                vnofullsolutions.push_back(make_pair(twrist,vfreeparameters));
+                                vnofullsolutions.emplace_back(twrist, vfreeparameters);
                                 bsuccess = false;
                                 break;
                             }
@@ -1371,7 +1371,7 @@ public:
                         robot->SetActiveDOFValues(*itsol, false);
                         twrist_out = pmanip->GetIkParameterization(twrist);
                         if(twrist.ComputeDistanceSqr(twrist_out) > fthreshold ) {
-                            vwrongsolutions.push_back(make_pair(twrist,vfreeparameters_out));
+                            vwrongsolutions.emplace_back(twrist, vfreeparameters_out);
                             s.str("");
                             s << "FindIKSolutions (freeparams): Incorrect IK, i = " << i <<" error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
                               << "originalJointValues=[";

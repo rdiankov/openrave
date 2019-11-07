@@ -373,7 +373,7 @@ public:
                         _samplespec._vgroups.push_back(*itgroup);
                         _samplespec._vgroups.back().offset = dof;
                         for(int idof = 0; idof < _samplespec._vgroups.back().dof; ++idof) {
-                            _vgrablinks.push_back(make_pair(dof+idof,boost::lexical_cast<int>(tokens.at(2+idof))));
+                            _vgrablinks.emplace_back(dof+idof, boost::lexical_cast<int>(tokens.at(2+idof)));
                         }
                         dof += _samplespec._vgroups.back().dof;
                     }
@@ -451,11 +451,11 @@ public:
                         if( !!pgrabbinglink ) {
                             if( pgrabbinglink->GetIndex() != itgrabinfo->second ) {
                                 listrelease.push_back(pbody);
-                                listgrab.push_back(make_pair(pbody,_probot->GetLinks().at(itgrabinfo->second)));
+                                listgrab.emplace_back(pbody, _probot->GetLinks().at(itgrabinfo->second));
                             }
                         }
                         else {
-                            listgrab.push_back(make_pair(pbody,_probot->GetLinks().at(itgrabinfo->second)));
+                            listgrab.emplace_back(pbody, _probot->GetLinks().at(itgrabinfo->second));
                         }
                     }
                 }

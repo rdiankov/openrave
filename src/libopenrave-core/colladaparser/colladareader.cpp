@@ -66,10 +66,10 @@ public:
                     // remove first slash because we need relative file
                     std::string docurifull="file:";
                     if( uriNativePath.at(0) == '/' ) {
-                        docurifull += cdom::nativePathToUri(RaveFindLocalFile(uriNativePath.substr(1), "/"));
+                        docurifull += cdom::nativePathToUri(RaveFindLocalFile(uriNativePath.substr(1), ""));
                     }
                     else {
-                        docurifull += cdom::nativePathToUri(RaveFindLocalFile(uriNativePath, "/"));
+                        docurifull += cdom::nativePathToUri(RaveFindLocalFile(uriNativePath, ""));
                     }
                     if( docurifull.size() == 5 ) {
                         RAVELOG_WARN(str(boost::format("daeOpenRAVEURIResolver::resolveElement() - Failed to resolve %s ")%uri.str()));
@@ -825,7 +825,7 @@ public:
                 break;
             }
             for(size_t ikmodel = 0; ikmodel < kscene->getInstance_kinematics_model_array().getCount(); ++ikmodel) {
-                listPossibleBodies.push_back(make_pair(kscene->getInstance_kinematics_model_array()[ikmodel], bindings));
+                listPossibleBodies.emplace_back(kscene->getInstance_kinematics_model_array()[ikmodel],  bindings);
             }
         }
 
@@ -920,7 +920,7 @@ public:
                 break;
             }
             for(size_t ikmodel = 0; ikmodel < kscene->getInstance_kinematics_model_array().getCount(); ++ikmodel) {
-                listPossibleBodies.push_back(make_pair(kscene->getInstance_kinematics_model_array()[ikmodel], bindings));
+                listPossibleBodies.emplace_back(kscene->getInstance_kinematics_model_array()[ikmodel],  bindings);
             }
         }
         FOREACH(it, listPossibleBodies) {
@@ -971,14 +971,14 @@ public:
         std::vector< std::pair<std::string, std::string> > jointnamepairs; jointnamepairs.reserve(listprocessjoints.size());
         FOREACH(itjoint,pbody->_vecjoints) {
             if( _setInitialJoints.find(*itjoint) == _setInitialJoints.end()) {
-                jointnamepairs.push_back(make_pair((*itjoint)->_info._name, prefix +(*itjoint)->_info._name));
+                jointnamepairs.emplace_back((*itjoint)->_info._name,  prefix +(*itjoint)->_info._name);
                 (*itjoint)->_info._name = prefix + (*itjoint)->_info._name;
                 listprocessjoints.push_back(*itjoint);
             }
         }
         FOREACH(itjoint,pbody->_vPassiveJoints) {
             if( _setInitialJoints.find(*itjoint) == _setInitialJoints.end()) {
-                jointnamepairs.push_back(make_pair((*itjoint)->_info._name, prefix +(*itjoint)->_info._name));
+                jointnamepairs.emplace_back((*itjoint)->_info._name,  prefix +(*itjoint)->_info._name);
                 (*itjoint)->_info._name = prefix + (*itjoint)->_info._name;
                 listprocessjoints.push_back(*itjoint);
             }
@@ -1286,6 +1286,8 @@ public:
             ExtractRobotAttachedActuators(probot, articulated_system, bindings);
             if( _bExtractConnectedBodies ) {
                 ExtractRobotConnectedBodies(probot, articulated_system);
+                // activation states of connected bodies are dynamic, so process instance_articulated_system too
+                _ExtractRobotConnectedBodyActivationData(probot, ias->getExtra_array());
             }
         }
         _ExtractCollisionData(pbody,articulated_system,articulated_system->getExtra_array(),bindings.listInstanceLinkBindings);
@@ -3248,7 +3250,7 @@ public:
                             std::string instance_url = instance_sensor->getAttribute("url");
                             mapSensorURLsToNames[instance_url] = pattachedsensor->_psensor->GetName();
                         }
-                        listSensorsToExtract.push_back(std::make_pair(pattachedsensor,result.second));
+                        listSensorsToExtract.emplace_back(pattachedsensor, result.second);
                     }
 
                     probot->_vecAttachedSensors.push_back(pattachedsensor);
@@ -3378,7 +3380,7 @@ public:
             }
 
             RobotBase::ConnectedBodyInfo connectedBodyInfo;
-            connectedBodyInfo._bIsActive = true;
+            connectedBodyInfo._bIsActive = false;  // defaults to non-active
             daeElementRef pactive = tec->getChild("active");
             if( !!pactive ) {
                 resolveCommon_bool_or_param(pactive,tec,connectedBodyInfo._bIsActive);
@@ -3420,7 +3422,7 @@ public:
                     if (robots.size() == 1) {
                         pbody = robots.front();
                     } else {
-                        RAVELOG_DEBUG_FORMAT("Found $d robots, Do not support this case for url %s", robots.size() % url);
+                        RAVELOG_DEBUG_FORMAT("Found %d robots, Do not support this case for url %s", robots.size() % url);
                     }
                 }
                 else {
@@ -3434,6 +3436,39 @@ public:
                     RobotBase::ConnectedBodyPtr pConnectedBody(new RobotBase::ConnectedBody(probot, connectedBodyInfo));
                     probot->_vecConnectedBodies.push_back(pConnectedBody);
                 }
+            }
+        }
+    }
+
+    /// \brief Extract activation states of connected bodies
+    void _ExtractRobotConnectedBodyActivationData(const RobotBasePtr probot, const domExtra_Array& arr)
+    {
+        for( size_t i = 0; i < arr.getCount(); ++i ) {
+            domExtraRef pextra = arr[i];
+
+            if( !pextra->getType() ) {
+                continue;
+            }
+            if( strcmp(pextra->getType(), "connect_body" ) != 0) {
+                continue;
+            }
+
+            string name = pextra->getAttribute("name");
+            domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
+
+            if( !tec ) {
+                RAVELOG_WARN(str(boost::format("failed to read technique element for robot %s connected body %s\n") % probot->GetName() % name));
+                continue;
+            }
+
+            RobotBase::ConnectedBodyPtr connectedBody = probot->GetConnectedBody(name);
+            if( !connectedBody ) {
+                RAVELOG_WARN(str(boost::format("failed to find connected body %s in robot %s\n") % name % probot->GetName()));
+                continue;
+            }
+            daeElementRef pactive = tec->getChild("active");
+            if( !!pactive ) {
+                resolveCommon_bool_or_param(pactive, tec, connectedBody->_info._bIsActive);
             }
         }
     }
@@ -3621,15 +3656,15 @@ public:
                 if( std::string(domatts[j].name) == "url" ) {
                     std::map<std::string, std::string>::const_iterator itname = mapURLsToNames.find(domatts[j].value);
                     if( itname != mapURLsToNames.end() ) {
-                        atts.push_back(make_pair(domatts[j].name,itname->second));
+                        atts.emplace_back(domatts[j].name, itname->second);
                     }
                     else {
                         // push back the fully resolved name
-                        atts.push_back(make_pair(domatts[j].name, _MakeFullURI(xsAnyURI(*_dae, domatts[j].value), elt)));
+                        atts.emplace_back(domatts[j].name, _MakeFullURI(xsAnyURI(*_dae, domatts[j].value),  elt));
                     }
                 }
                 else {
-                    atts.push_back(make_pair(domatts[j].name,domatts[j].value));
+                    atts.emplace_back(domatts[j].name, domatts[j].value);
                 }
             }
             BaseXMLReader::ProcessElement action = preader->startElement(xmltag,atts);
@@ -4375,7 +4410,7 @@ private:
             daeMetaAttribute* pmeta = elt->getAttributeObject(i);
             buffer.str("");  buffer.clear();
             pmeta->memoryToString(elt, buffer);
-            atts.push_back(make_pair(string(pmeta->getName()), buffer.str()));
+            atts.emplace_back(string(pmeta->getName()),  buffer.str());
         }
     }
 
@@ -4465,7 +4500,7 @@ private:
                                 RAVELOG_WARN(str(boost::format("failed to resolve link1 %s\n")%pelt->getAttribute("link1")));
                                 continue;
                             }
-                            pbody->_vForcedAdjacentLinks.push_back(make_pair(plink0->GetName(),plink1->GetName()));
+                            pbody->_vForcedAdjacentLinks.emplace_back(plink0->GetName(), plink1->GetName());
                         }
                         else if( pelt->getElementName() == string("bind_instance_geometry") ) {
 

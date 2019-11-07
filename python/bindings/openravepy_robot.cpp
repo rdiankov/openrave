@@ -163,8 +163,11 @@ public:
     object _attachedSensorInfos;
 
 };
-typedef boost::shared_ptr<PyConnectedBodyInfo> PyConnectedBodyInfoPtr;
 
+PyConnectedBodyInfoPtr toPyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& connectedBodyInfo, PyEnvironmentBasePtr pyenv)
+{
+    return PyConnectedBodyInfoPtr(new PyConnectedBodyInfo(connectedBodyInfo, pyenv));
+}
 
 class PyRobotBase : public PyKinBody
 {
@@ -301,10 +304,6 @@ public:
         }
         object GetChuckingDirection() {
             return toPyArray(_pmanip->GetChuckingDirection());
-        }
-        object GetPalmDirection() {
-            RAVELOG_INFO("GetPalmDirection deprecated to GetDirection\n");
-            return toPyVector3(_pmanip->GetDirection());
         }
         object GetDirection() {
             return toPyVector3(_pmanip->GetLocalToolDirection());
@@ -841,6 +840,14 @@ public:
         virtual ~PyConnectedBody() {
         }
 
+        RobotBase::ConnectedBodyPtr GetConnectedBody() const {
+            return _pconnected;
+        }
+
+        object GetName() {
+            return ConvertStringToUnicode(_pconnected->GetName());
+        }
+
         object GetInfo() {
             return object(PyConnectedBodyInfoPtr(new PyConnectedBodyInfo(_pconnected->GetInfo(), _pyenv)));
         }
@@ -896,8 +903,19 @@ public:
             return ojoints;
         }
 
+        object GetResolvedManipulators()
+        {
+            boost::python::list omanips;
+            std::vector<RobotBase::ManipulatorPtr> vmanips;
+            _pconnected->GetResolvedManipulators(vmanips);
+            FOREACH(itmanip, vmanips) {
+                omanips.append(toPyRobotManipulator(*itmanip, _pyenv));
+            }
+            return omanips;
+        }
+
         string __repr__() {
-            return boost::str(boost::format("RaveGetEnvironment(%d).GetRobot('%s').GetConnectedBodies('%s')") %
+            return boost::str(boost::format("RaveGetEnvironment(%d).GetRobot('%s').GetConnectedBody('%s')") %
                               RaveGetEnvironmentId(_pconnected->GetRobot()->GetEnv()) %
                               _pconnected->GetRobot()->GetName() % _pconnected->GetName());
         }
@@ -924,6 +942,11 @@ public:
         }
     };
 
+    typedef boost::shared_ptr<PyConnectedBody> PyConnectedBodyPtr;
+    boost::shared_ptr<PyConnectedBody> _GetConnectedBody(RobotBase::ConnectedBodyPtr pConnectedBody)
+    {
+        return !pConnectedBody ? PyConnectedBodyPtr() : PyConnectedBodyPtr(new PyConnectedBody(pConnectedBody, _pyenv));
+    }
 
     class PyRobotStateSaver
     {
@@ -1087,6 +1110,14 @@ public:
         return _GetAttachedSensor(_probot->GetAttachedSensor(sensorname));
     }
 
+    PyConnectedBodyPtr AddConnectedBody(PyConnectedBodyInfoPtr pConnectedBodyInfo, bool removeduplicate=false) {
+        return _GetConnectedBody(_probot->AddConnectedBody(*pConnectedBodyInfo->GetConnectedBodyInfo(), removeduplicate));
+    }
+
+    bool RemoveConnectedBody(PyConnectedBodyPtr pConnectedBody) {
+        return _probot->RemoveConnectedBody(*pConnectedBody->GetConnectedBody());
+    }
+
     object GetConnectedBodies()
     {
         boost::python::list bodies;
@@ -1094,6 +1125,29 @@ public:
             bodies.append(boost::shared_ptr<PyConnectedBody>(new PyConnectedBody(*itbody, _pyenv)));
         }
         return bodies;
+    }
+
+    PyConnectedBodyPtr GetConnectedBody(const string& bodyname)
+    {
+        FOREACH(itbody, _probot->GetConnectedBodies()) {
+            if( (*itbody)->GetName() == bodyname ) {
+                return _GetConnectedBody(*itbody);
+            }
+        }
+        return PyConnectedBodyPtr();
+    }
+
+    object GetConnectedBodyActiveStates() const
+    {
+        std::vector<uint8_t> activestates;
+        _probot->GetConnectedBodyActiveStates(activestates);
+        return toPyArray(activestates);
+    }
+
+    void SetConnectedBodyActiveStates(object oactivestates)
+    {
+        std::vector<uint8_t> activestates = ExtractArray<uint8_t>(oactivestates);
+        _probot->SetConnectedBodyActiveStates(activestates);
     }
 
     object GetController() const {
@@ -1485,7 +1539,7 @@ public:
         return _probot->GetRobotStructureHash();
     }
 
-    PyStateRestoreContextBase* CreateRobotStateSaver(object options=object()) {
+    virtual PyStateRestoreContextBase* CreateStateSaver(object options) {
         PyRobotStateSaverPtr saver;
         if( IS_PYTHONOBJECT_NONE(options) ) {
             saver.reset(new PyRobotStateSaver(_probot,_pyenv));
@@ -1494,6 +1548,10 @@ public:
             saver.reset(new PyRobotStateSaver(_probot,_pyenv,options));
         }
         return new PyStateRestoreContext<PyRobotStateSaverPtr, PyRobotBasePtr>(saver);
+    }
+
+    PyStateRestoreContextBase* CreateRobotStateSaver(object options=object()) {
+        return CreateStateSaver(options);
     }
 
     virtual string __repr__() {
@@ -1590,6 +1648,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetActiveDOFValues_overloads, SetActiveDO
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetActiveDOFVelocities_overloads, SetActiveDOFVelocities, 1,2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(AddManipulator_overloads, AddManipulator, 1,2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(AddAttachedSensor_overloads, AddAttachedSensor, 1,2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(AddConnectedBody_overloads, AddConnectedBody, 1,2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetActiveConfigurationSpecification_overloads, GetActiveConfigurationSpecification, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Restore_overloads, Restore, 0,1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Init_overloads, Init, 4,5)
@@ -1677,7 +1736,12 @@ void init_openravepy_robot()
                       .def("GetAttachedSensor",&PyRobotBase::GetAttachedSensor,args("sensorname"), "Return the attached sensor whose name matches")
                       .def("GetSensors",&PyRobotBase::GetSensors)
                       .def("GetSensor",&PyRobotBase::GetSensor,args("sensorname"))
+                      .def("AddConnectedBody",&PyRobotBase::AddConnectedBody, AddConnectedBody_overloads(args("connectedbodyinfo", "removeduplicate"), DOXY_FN(RobotBase,AddConnectedBody)))
+                      .def("RemoveConnectedBody",&PyRobotBase::RemoveConnectedBody, args("connectedbody"), DOXY_FN(RobotBase,RemoveConnectedBody))
                       .def("GetConnectedBodies",&PyRobotBase::GetConnectedBodies, DOXY_FN(RobotBase,GetConnectedBodies))
+                      .def("GetConnectedBody",&PyRobotBase::GetConnectedBody, args("bodyname"), DOXY_FN(RobotBase,GetConnectedBody))
+                      .def("GetConnectedBodyActiveStates",&PyRobotBase::GetConnectedBodyActiveStates, DOXY_FN(RobotBase,GetConnectedBodyActiveStates))
+                      .def("SetConnectedBodyActiveStates",&PyRobotBase::SetConnectedBodyActiveStates, DOXY_FN(RobotBase,SetConnectedBodyActiveStates))
                       .def("GetController",&PyRobotBase::GetController, DOXY_FN(RobotBase,GetController))
                       .def("SetController",setcontroller1,DOXY_FN(RobotBase,SetController))
                       .def("SetController",setcontroller2,args("robot","dofindices","controltransform"), DOXY_FN(RobotBase,SetController))
@@ -1806,7 +1870,6 @@ void init_openravepy_robot()
         .def("GetGripperDOF",&PyRobotBase::PyManipulator::GetGripperDOF, DOXY_FN(RobotBase::Manipulator,GetGripperDOF))
         .def("GetClosingDirection",&PyRobotBase::PyManipulator::GetClosingDirection, DOXY_FN(RobotBase::Manipulator,GetClosingDirection))
         .def("GetChuckingDirection",&PyRobotBase::PyManipulator::GetChuckingDirection, DOXY_FN(RobotBase::Manipulator,GetChuckingDirection))
-        .def("GetPalmDirection",&PyRobotBase::PyManipulator::GetPalmDirection, DOXY_FN(RobotBase::Manipulator,GetLocalToolDirection))
         .def("GetDirection",&PyRobotBase::PyManipulator::GetDirection, DOXY_FN(RobotBase::Manipulator,GetLocalToolDirection))
         .def("GetLocalToolDirection",&PyRobotBase::PyManipulator::GetLocalToolDirection, DOXY_FN(RobotBase::Manipulator,GetLocalToolDirection))
         .def("IsGrabbing",&PyRobotBase::PyManipulator::IsGrabbing,args("body"), DOXY_FN(RobotBase::Manipulator,IsGrabbing))
@@ -1861,6 +1924,7 @@ void init_openravepy_robot()
         ;
 
         class_<PyRobotBase::PyConnectedBody, boost::shared_ptr<PyRobotBase::PyConnectedBody> >("ConnectedBody", DOXY_CLASS(RobotBase::ConnectedBody), no_init)
+        .def("GetName",&PyRobotBase::PyConnectedBody::GetName, DOXY_FN(RobotBase::ConnectedBody,GetName))
         .def("GetInfo",&PyRobotBase::PyConnectedBody::GetInfo, DOXY_FN(RobotBase::ConnectedBody,GetInfo))
         .def("SetActive", &PyRobotBase::PyConnectedBody::SetActive, DOXY_FN(RobotBase::ConnectedBody,SetActive))
         .def("IsActive", &PyRobotBase::PyConnectedBody::IsActive, DOXY_FN(RobotBase::ConnectedBody,IsActive))
@@ -1872,6 +1936,7 @@ void init_openravepy_robot()
         .def("GetRelativeTransformPose",&PyRobotBase::PyConnectedBody::GetRelativeTransformPose, DOXY_FN(RobotBase::ConnectedBody,GetRelativeTransformPose))
         .def("GetResolvedLinks",&PyRobotBase::PyConnectedBody::GetResolvedLinks, DOXY_FN(RobotBase::ConnectedBody,GetResolvedLinks))
         .def("GetResolvedJoints",&PyRobotBase::PyConnectedBody::GetResolvedJoints, DOXY_FN(RobotBase::ConnectedBody,GetResolvedJoints))
+        .def("GetResolvedManipulators",&PyRobotBase::PyConnectedBody::GetResolvedManipulators, DOXY_FN(RobotBase::ConnectedBody,GetResolvedManipulators))
         .def("__str__",&PyRobotBase::PyConnectedBody::__str__)
         .def("__repr__",&PyRobotBase::PyConnectedBody::__repr__)
         .def("__unicode__",&PyRobotBase::PyConnectedBody::__unicode__)

@@ -603,7 +603,7 @@ public:
                                 if( !!itcache->second.vcolobjs.at(ilink) ) {
                                     //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), body %s unregister cached obj %x ", pbody->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecke()%pbody->GetName()%itcache->second.vcolobjs.at(ilink).get());
                                     fcl::CollisionObject* ptestobj = itcache->second.vcolobjs.at(ilink).get();
-                                    +pmanager->unregisterObject(itcache->second.vcolobjs.at(ilink).get());
+                                    pmanager->unregisterObject(itcache->second.vcolobjs.at(ilink).get());
                                 }
 #ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
                                 SaveCollisionObjectDebugInfos(pcolobj.get());

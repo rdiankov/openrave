@@ -233,10 +233,6 @@ private:
     typedef boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> DistMetricFn;
     DistMetricFn _distmetricfn;
 
-    /// \deprecated (13/05/29)
-    typedef boost::function<bool (const std::vector<dReal>&, const std::vector<dReal>&, IntervalType, ConfigurationListPtr)> CheckPathConstraintFn;
-    CheckPathConstraintFn _checkpathconstraintsfn RAVE_DEPRECATED;
-
     /** \brief Checks that all the constraints are satisfied between two configurations and passes in the velocity at each point.
 
         The simplest and most fundamental constraint is linearly interpolating the positions and velocities and checking constraints at each discrete point.
@@ -309,10 +305,6 @@ private:
      */
     typedef boost::function<bool (std::vector<dReal>&, const std::vector<dReal>&, dReal)> SampleNeighFn;
     SampleNeighFn _sampleneighfn;
-
-    /// \deprecated (13/10/06)
-    typedef boost::function<void (const std::vector<dReal>&)> SetStateFn;
-    SetStateFn _setstatefn RAVE_DEPRECATED;
 
     /** \brief Sets the state values of the robot. Default is active robot joints (mandatory).
 
