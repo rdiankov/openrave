@@ -1241,11 +1241,11 @@ public:
         /// \brief Return the child link whose transformation is computed by this joint's values (either GetFirstAttached() or GetSecondAttached())
         virtual LinkPtr GetHierarchyChildLink() const;
         /// \brief The axis of the joint in local coordinates.
-        virtual Vector GetInternalHierarchyAxis(int axis = 0) const;
+        virtual const Vector& GetInternalHierarchyAxis(int axis = 0) const;
         /// \brief Left multiply transform given the base body.
-        virtual Transform GetInternalHierarchyLeftTransform() const;
+        virtual const Transform& GetInternalHierarchyLeftTransform() const;
         /// \brief Right multiply transform given the base body.
-        virtual Transform GetInternalHierarchyRightTransform() const;
+        virtual const Transform& GetInternalHierarchyRightTransform() const;
         //@}
 
         /// A mimic joint's angles are automatically determined from other joints based on a general purpose formula.

@@ -484,7 +484,7 @@ The possible properties that can be set are: ";
         }
     }
 
-    virtual Vector GetGravity()
+    virtual const Vector& GetGravity()
     {
         return _gravity;
     }
