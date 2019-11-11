@@ -167,7 +167,7 @@ using namespace boost::python;
 
 inline boost::python::object ConvertStringToUnicode(const std::string& s)
 {
-    return boost::python::object(boost::python::handle<>(PyUnicode_Decode(s.c_str(),s.size(), "utf-8", NULL)));
+    return boost::python::object(boost::python::handle<>(PyUnicode_Decode(s.c_str(),s.size(), "utf-8", nullptr)));
 }
 
 class PyVoidHandle
@@ -262,7 +262,7 @@ inline std::set<T> ExtractSet(const object& o)
 //     // Add the exception to the module scope
 //     std::strstream exName;
 //     exName << moduleName << "." << name << '\0';
-//     pyException = PyErr_NewException(exName.str(), NULL, NULL);
+//     pyException = PyErr_NewException(exName.str(), nullptr, nullptr);
 //     handle<> instanceException(pyException);
 //     scope.attr(name) = object(instanceException);
 //
@@ -373,7 +373,7 @@ struct float_from_number
 
     static void* convertible( PyObject* obj)
     {
-        return PyNumber_Check(obj) ? obj : NULL;
+        return PyNumber_Check(obj) ? obj : nullptr;
     }
 
     static void construct(PyObject* _obj, converter::rvalue_from_python_stage1_data* data)
@@ -396,7 +396,7 @@ struct int_from_number
 
     static void* convertible( PyObject* obj)
     {
-        return PyNumber_Check(obj) ? obj : NULL;
+        return PyNumber_Check(obj) ? obj : nullptr;
     }
 
     static void construct(PyObject* _obj, converter::rvalue_from_python_stage1_data* data)
@@ -415,9 +415,9 @@ inline std::string GetPyErrorString()
     PyErr_Fetch(&error, &value, &traceback);
     PyErr_NormalizeException(&error, &value, &traceback);
     std::string s;
-    if(error != NULL) {
+    if(error != nullptr) {
         string = PyObject_Str(value);
-        if(string != NULL) {
+        if(string != nullptr) {
             s.assign(PyString_AsString(string));
             Py_DECREF(string);
         }
@@ -443,7 +443,7 @@ inline numeric::array toPyArrayN(const T* pvalues, const size_t N)
     }
     npy_intp dims[] = { npy_intp(N) };
     PyObject *pyvalues = PyArray_SimpleNew(1, dims, select_npy_type<T>::type);
-    if( pvalues != NULL ) {
+    if( pvalues != nullptr ) {
         memcpy(PyArray_DATA(pyvalues), pvalues, N * sizeof(T));
     }
     return static_cast<numeric::array>(handle<>(pyvalues));
@@ -463,7 +463,7 @@ inline numeric::array toPyArrayN(const T* pvalues, std::vector<npy_intp>& dims)
         return static_cast<numeric::array>(numeric::array(boost::python::list()).astype(select_dtype<T>::type));
     }
     PyObject *pyvalues = PyArray_SimpleNew(dims.size(), dims.data(), select_npy_type<T>::type);
-    if( pvalues != NULL ) {
+    if( pvalues != nullptr ) {
         memcpy(PyArray_DATA(pyvalues), pvalues, numel * sizeof(T));
     }
     return static_cast<numeric::array>(handle<>(pyvalues));
@@ -476,38 +476,39 @@ inline object toPyList(const std::vector<T>& v)
     FOREACHC(it,v) {
         lvalues.append(object(*it));
     }
-    return lvalues;
+    return std::move(lvalues);
 }
 
 template <typename T>
 inline numeric::array toPyArray(const std::vector<T>& v)
 {
-    if( v.size() == 0 ) {
-        return toPyArrayN((T*)NULL,0);
+    if( v.empty() ) {
+        return toPyArrayN((T*)nullptr, 0);
     }
-    return toPyArrayN(&v[0],v.size());
+    return toPyArrayN(v.data(), v.size());
 }
 
 template <typename T>
 inline numeric::array toPyArray(const std::vector<T>& v, std::vector<npy_intp>& dims)
 {
-    if( v.size() == 0 ) {
-        return toPyArrayN((T*)NULL,dims);
+    if( v.empty() ) {
+        return toPyArrayN((T*)nullptr, dims);
     }
-    size_t totalsize = 1;
-    FOREACH(it,dims)
-    totalsize *= *it;
-    BOOST_ASSERT(totalsize == v.size());
-    return toPyArrayN(&v[0],dims);
+    size_t numel = 1;
+    for(npy_intp dim : dims) {
+        numel *= dim;
+    }
+    BOOST_ASSERT(numel == v.size());
+    return toPyArrayN(v.data(), dims);
 }
 
 template <typename T, int N>
 inline numeric::array toPyArray(const boost::array<T,N>& v)
 {
-    if( v.size() == 0 ) {
-        return toPyArrayN((T*)NULL,0);
+    if( v.empty() ) {
+        return toPyArrayN((T*)nullptr, 0);
     }
-    return toPyArrayN(&v[0],v.size());
+    return toPyArrayN(v.data(), v.size());
 }
 
 #endif
