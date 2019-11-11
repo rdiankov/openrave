@@ -34,17 +34,17 @@ constexpr char select_dtype<uint8_t>::type[];
 constexpr char select_dtype<uint16_t>::type[];
 constexpr char select_dtype<uint32_t>::type[];
 
-using boost::python::object;
-using boost::python::list;
-using boost::python::tuple;
-using boost::python::type_id;
-using boost::python::handle;
-using boost::python::borrowed;
-using boost::python::to_python_converter;
-using boost::python::extract;
-using boost::python::incref;
-using boost::python::class_;
-using boost::python::allow_null;
+using bp::object;
+using bp::list;
+using bp::tuple;
+using bp::type_id;
+using bp::handle;
+using bp::borrowed;
+using bp::to_python_converter;
+using bp::extract;
+using bp::incref;
+using bp::class_;
+using bp::allow_null;
 
 // namespace impl
 template< typename MultiArrayType >
@@ -66,7 +66,7 @@ struct numpy_multi_array_converter
 
     static void register_from_python()
     {
-        boost::python::converter::registry::push_back(&convertible,&construct,type_id<multi_array_t>());
+        bp::converter::registry::push_back(&convertible,&construct,type_id<multi_array_t>());
     }
 
     static void* convertible( PyObject * obj )
@@ -93,10 +93,10 @@ struct numpy_multi_array_converter
         (c.*pm) = a;
     }
 
-    static void construct(PyObject* obj, boost::python::converter::rvalue_from_python_stage1_data* data )
+    static void construct(PyObject* obj, bp::converter::rvalue_from_python_stage1_data* data )
     {
         //get the storage
-        typedef boost::python::converter::rvalue_from_python_storage< multi_array_t > storage_t;
+        typedef bp::converter::rvalue_from_python_storage< multi_array_t > storage_t;
         storage_t * the_storage = reinterpret_cast< storage_t * >( data );
         void * memory_chunk = the_storage->storage.bytes;
         //new (memory_chunk) multi_array_t(obj);
@@ -185,7 +185,7 @@ struct stdstring_from_python_str
 {
     stdstring_from_python_str()
     {
-        boost::python::converter::registry::push_back(&convertible, &construct, type_id<std::string>());
+        bp::converter::registry::push_back(&convertible, &construct, type_id<std::string>());
     }
 
     static void* convertible(PyObject* obj)
@@ -193,19 +193,19 @@ struct stdstring_from_python_str
         return (PyString_Check(obj) || PyUnicode_Check(obj)) ? obj : 0;
     }
 
-    static void construct(PyObject* obj, boost::python::converter::rvalue_from_python_stage1_data* data)
+    static void construct(PyObject* obj, bp::converter::rvalue_from_python_stage1_data* data)
     {
         if(PyString_Check(obj)) {
             const char* value = PyString_AsString(obj);
             //MY_CHECK(value,translate("Received null string pointer from Python"));
-            void* storage = ((boost::python::converter::rvalue_from_python_storage<std::string>*)data)->storage.bytes;
+            void* storage = ((bp::converter::rvalue_from_python_storage<std::string>*)data)->storage.bytes;
             new (storage) std::string(value);
             data->convertible = storage;
         }
         else if(PyUnicode_Check(obj)) {
             handle<> utf8(allow_null(PyUnicode_AsUTF8String(obj)));
             //MY_CHECK(utf8,translate("Could not convert Python unicode object to UTF8 string"));
-            void* storage = ((boost::python::converter::rvalue_from_python_storage<std::string>*)data)->storage.bytes;
+            void* storage = ((bp::converter::rvalue_from_python_storage<std::string>*)data)->storage.bytes;
             const char* utf8v = PyString_AsString(utf8.get());
             //MY_CHECK(utf8v,translate("Received null string from utf8 string"));
             new (storage) std::string(utf8v);
