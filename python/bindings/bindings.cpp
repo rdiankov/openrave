@@ -37,6 +37,13 @@ DECLARE_DTYPE_FOR( uint64_t, "uint64" )
 
 namespace openravepy {
 
+constexpr char select_dtype<double>::type[];
+constexpr char select_dtype<float>::type[];
+constexpr char select_dtype<int>::type[];
+constexpr char select_dtype<uint8_t>::type[];
+constexpr char select_dtype<uint16_t>::type[];
+constexpr char select_dtype<uint32_t>::type[];
+
 // namespace impl
 template< typename MultiArrayType >
 struct numpy_multi_array_converter

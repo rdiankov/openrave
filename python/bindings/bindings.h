@@ -82,6 +82,87 @@
 
 namespace openravepy {
 
+// https://stackoverflow.com/questions/35041268/how-to-convert-a-vector-to-numpy-array-with-templates-and-boost
+template <typename T>
+struct select_dtype
+{};
+
+template <>
+struct select_dtype<double>
+{
+    static constexpr char type[] = "f8";
+};
+
+template <>
+struct select_dtype<float>
+{
+    static constexpr char type[] = "f4";
+};
+
+template <>
+struct select_dtype<int>
+{
+    static constexpr char type[] = "i4";
+};
+
+template <>
+struct select_dtype<uint8_t>
+{
+    static constexpr char type[] = "u1";
+};
+
+template <>
+struct select_dtype<uint16_t>
+{
+    static constexpr char type[] = "u2";
+};
+
+template <>
+struct select_dtype<uint32_t>
+{
+    static constexpr char type[] = "u4";
+};
+
+template <typename T>
+struct select_npy_type
+{};
+
+template <>
+struct select_npy_type<double>
+{
+    static constexpr NPY_TYPES type = NPY_DOUBLE;
+};
+
+template <>
+struct select_npy_type<float>
+{
+    static constexpr NPY_TYPES type = NPY_FLOAT;
+};
+
+template <>
+struct select_npy_type<int>
+{
+    static constexpr NPY_TYPES type = NPY_INT;
+};
+
+template <>
+struct select_npy_type<uint8_t>
+{
+    static constexpr NPY_TYPES type = NPY_UINT8;
+};
+
+template <>
+struct select_npy_type<uint16_t>
+{
+    static constexpr NPY_TYPES type = NPY_UINT16;
+};
+
+template <>
+struct select_npy_type<uint32_t>
+{
+    static constexpr NPY_TYPES type = NPY_UINT32;
+};
+
 using namespace boost::python;
 
 inline boost::python::object ConvertStringToUnicode(const std::string& s)
@@ -354,124 +435,36 @@ void init_python_bindings();
 
 #ifdef OPENRAVE_BININGS_PYARRAY
 
-inline numeric::array toPyArrayN(const float* pvalues, size_t N)
+template <typename T>
+inline numeric::array toPyArrayN(const T* pvalues, const size_t N)
 {
     if( N == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f4"));
+        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype(select_dtype<T>::type));
     }
-    npy_intp dims[] = {npy_intp(N)};
-    PyObject *pyvalues = PyArray_SimpleNew(1,dims, PyArray_FLOAT);
+    npy_intp dims[] = { npy_intp(N) };
+    PyObject *pyvalues = PyArray_SimpleNew(1, dims, select_npy_type<T>::type);
     if( pvalues != NULL ) {
-        memcpy(PyArray_DATA(pyvalues),pvalues,N*sizeof(float));
+        memcpy(PyArray_DATA(pyvalues), pvalues, N * sizeof(T));
     }
     return static_cast<numeric::array>(handle<>(pyvalues));
 }
 
-inline numeric::array toPyArrayN(const float* pvalues, std::vector<npy_intp>& dims)
+template <typename T>
+inline numeric::array toPyArrayN(const T* pvalues, std::vector<npy_intp>& dims)
 {
-    if( dims.size() == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f4"));
+    if( dims.empty() ) {
+        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype(select_dtype<T>::type));
     }
-    size_t totalsize = 1;
-    FOREACH(it,dims) {
-        totalsize *= *it;
+    size_t numel = 1;
+    for(npy_intp dim : dims) {
+        numel *= dim;
     }
-    if( totalsize == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f4"));
+    if( numel == 0 ) {
+        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype(select_dtype<T>::type));
     }
-    PyObject *pyvalues = PyArray_SimpleNew(dims.size(),&dims[0], PyArray_FLOAT);
+    PyObject *pyvalues = PyArray_SimpleNew(dims.size(), dims.data(), select_npy_type<T>::type);
     if( pvalues != NULL ) {
-        memcpy(PyArray_DATA(pyvalues),pvalues,totalsize*sizeof(float));
-    }
-    return static_cast<numeric::array>(handle<>(pyvalues));
-}
-
-inline numeric::array toPyArrayN(const double* pvalues, size_t N)
-{
-    if( N == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f8"));
-    }
-    npy_intp dims[] = {npy_intp(N)};
-    PyObject *pyvalues = PyArray_SimpleNew(1,dims, PyArray_DOUBLE);
-    if( pvalues != NULL ) {
-        memcpy(PyArray_DATA(pyvalues),pvalues,N*sizeof(double));
-    }
-    return static_cast<numeric::array>(handle<>(pyvalues));
-}
-
-inline numeric::array toPyArrayN(const double* pvalues, std::vector<npy_intp>& dims)
-{
-    if( dims.size() == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f8"));
-    }
-    size_t totalsize = 1;
-    FOREACH(it,dims) {
-        totalsize *= *it;
-    }
-    if( totalsize == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f8"));
-    }
-    PyObject *pyvalues = PyArray_SimpleNew(dims.size(),&dims[0], PyArray_DOUBLE);
-    if( pvalues != NULL ) {
-        memcpy(PyArray_DATA(pyvalues),pvalues,totalsize*sizeof(double));
-    }
-    return static_cast<numeric::array>(handle<>(pyvalues));
-}
-
-inline numeric::array toPyArrayN(const uint8_t* pvalues, std::vector<npy_intp>& dims)
-{
-    if( dims.size() == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("u1"));
-    }
-    size_t totalsize = 1;
-    for(size_t i = 0; i < dims.size(); ++i) {
-        totalsize *= dims[i];
-    }
-    if( totalsize == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("u1"));
-    }
-    PyObject *pyvalues = PyArray_SimpleNew(dims.size(),&dims[0], PyArray_UINT8);
-    if( pvalues != NULL ) {
-        memcpy(PyArray_DATA(pyvalues),pvalues,totalsize*sizeof(uint8_t));
-    }
-    return static_cast<numeric::array>(handle<>(pyvalues));
-}
-
-inline numeric::array toPyArrayN(const uint8_t* pvalues, size_t N)
-{
-    if( N == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("u1"));
-    }
-    npy_intp dims[] = {npy_intp(N)};
-    PyObject *pyvalues = PyArray_SimpleNew(1,&dims[0], PyArray_UINT8);
-    if( pvalues != NULL ) {
-        memcpy(PyArray_DATA(pyvalues),pvalues,N*sizeof(uint8_t));
-    }
-    return static_cast<numeric::array>(handle<>(pyvalues));
-}
-
-inline numeric::array toPyArrayN(const int* pvalues, size_t N)
-{
-    if( N == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("i4"));
-    }
-    npy_intp dims[] = {npy_intp(N)};
-    PyObject *pyvalues = PyArray_SimpleNew(1,&dims[0], PyArray_INT32);
-    if( pvalues != NULL ) {
-        memcpy(PyArray_DATA(pyvalues),pvalues,N*sizeof(int));
-    }
-    return static_cast<numeric::array>(handle<>(pyvalues));
-}
-
-inline numeric::array toPyArrayN(const uint32_t* pvalues, size_t N)
-{
-    if( N == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("u4"));
-    }
-    npy_intp dims[] = {npy_intp(N)};
-    PyObject *pyvalues = PyArray_SimpleNew(1,&dims[0], PyArray_UINT32);
-    if( pvalues != NULL ) {
-        memcpy(PyArray_DATA(pyvalues),pvalues,N*sizeof(uint32_t));
+        memcpy(PyArray_DATA(pyvalues), pvalues, numel * sizeof(T));
     }
     return static_cast<numeric::array>(handle<>(pyvalues));
 }
