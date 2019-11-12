@@ -19,6 +19,24 @@
 
 namespace openravepy {
 
+using py::object;
+using py::extract;
+using py::handle;
+using py::dict;
+using py::enum_;
+using py::class_;
+using py::no_init;
+using py::bases;
+using py::init;
+using py::scope;
+using py::args;
+using py::return_value_policy;
+using py::copy_const_reference;
+using py::docstring_options;
+using py::def;
+using py::pickle_suite;
+namespace numeric = py::numeric;
+
 class PySpaceSamplerBase : public PyInterfaceBase
 {
 protected:
@@ -55,12 +73,12 @@ public:
         if( type == SDT_Real ) {
             vector<dReal> vlower, vupper;
             _pspacesampler->GetLimits(vlower,vupper);
-            return boost::python::make_tuple(toPyArray(vlower),toPyArray(vupper));
+            return py::make_tuple(toPyArray(vlower),toPyArray(vupper));
         }
         else if( type == SDT_Uint32 ) {
             vector<uint32_t> vlower, vupper;
             _pspacesampler->GetLimits(vlower,vupper);
-            return boost::python::make_tuple(toPyArray(vlower),toPyArray(vupper));
+            return py::make_tuple(toPyArray(vlower),toPyArray(vupper));
         }
         throw OPENRAVE_EXCEPTION_FORMAT(_("%d sampling type not supported"),type,ORE_InvalidArguments);
     }
@@ -138,7 +156,7 @@ protected:
     object _ReturnSamples2D(const std::vector<dReal>&samples)
     {
         if( samples.size() == 0 ) {
-            return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f8"));
+            return static_cast<numeric::array>(numeric::array(py::list()).astype("f8"));
         }
         int dim = _pspacesampler->GetNumberOfValues();
         npy_intp dims[] = { npy_intp(samples.size()/dim), npy_intp(dim) };
@@ -150,7 +168,7 @@ protected:
     object _ReturnSamples2D(const std::vector<uint32_t>&samples)
     {
         if( samples.size() == 0 ) {
-            return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("u4"));
+            return static_cast<numeric::array>(numeric::array(py::list()).astype("u4"));
         }
         int dim = _pspacesampler->GetNumberOfValues();
         npy_intp dims[] = { npy_intp(samples.size()/dim), npy_intp(dim) };

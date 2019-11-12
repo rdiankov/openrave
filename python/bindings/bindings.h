@@ -158,11 +158,11 @@ struct select_npy_type<uint32_t>
     static constexpr NPY_TYPES type = NPY_UINT32;
 };
 
-namespace bp = boost::python;
+namespace py = boost::python;
 
-inline bp::object ConvertStringToUnicode(const std::string& s)
+inline py::object ConvertStringToUnicode(const std::string& s)
 {
-    return bp::object(bp::handle<>(PyUnicode_Decode(s.c_str(),s.size(), "utf-8", nullptr)));
+    return py::object(py::handle<>(PyUnicode_Decode(s.c_str(),s.size(), "utf-8", nullptr)));
 }
 
 class PyVoidHandle
@@ -192,25 +192,25 @@ public:
 };
 
 template <typename T>
-inline std::vector<T> ExtractArray(const bp::object& o)
+inline std::vector<T> ExtractArray(const py::object& o)
 {
     if( IS_PYTHONOBJECT_NONE(o) ) {
         return std::vector<T>();
     }
     std::vector<T> v(len(o));
     for(size_t i = 0; i < v.size(); ++i) {
-        v[i] = bp::extract<T>(o[i]);
+        v[i] = py::extract<T>(o[i]);
     }
     return v;
 }
 
 template <typename T>
-inline std::set<T> ExtractSet(const bp::object& o)
+inline std::set<T> ExtractSet(const py::object& o)
 {
     std::set<T> v;
     size_t nlen = len(o);
     for(size_t i = 0; i < nlen; ++i) {
-        v.insert(bp::extract<T>(o[i]));
+        v.insert(py::extract<T>(o[i]));
     }
     return v;
 }
@@ -297,20 +297,20 @@ template <typename T>
 struct exception_translator
 {
     exception_translator() {
-        bp::register_exception_translator<T>(&exception_translator::translate);
+        py::register_exception_translator<T>(&exception_translator::translate);
 
         //Register custom r-value converter
         //There are situations, where we have to pass the exception back to
         //C++ library. This will do the trick
-        bp::converter::registry::push_back( &exception_translator::convertible, &exception_translator::construct, bp::type_id<T>() );
+        py::converter::registry::push_back( &exception_translator::convertible, &exception_translator::construct, py::type_id<T>() );
     }
 
     static void translate( const T& err )
     {
-        bp::object pimpl_err( err );
-        bp::object pyerr_class = pimpl_err.attr( "py_err_class" );
-        bp::object pyerr = pyerr_class( pimpl_err );
-        PyErr_SetObject( pyerr_class.ptr(), bp::incref( pyerr.ptr() ) );
+        py::object pimpl_err( err );
+        py::object pyerr_class = pimpl_err.attr( "py_err_class" );
+        py::object pyerr = pyerr_class( pimpl_err );
+        PyErr_SetObject( pyerr_class.ptr(), py::incref( pyerr.ptr() ) );
     }
 
     //Sometimes, exceptions should be passed back to the library.
@@ -323,25 +323,25 @@ struct exception_translator
             return 0;
         }
 
-        bp::object pyerr( bp::handle<>( bp::borrowed( py_obj ) ) );
-        bp::object pimpl = getattr( pyerr, "_pimpl" );
-        bp::extract<T> type_checker( pimpl );
+        py::object pyerr( py::handle<>( py::borrowed( py_obj ) ) );
+        py::object pimpl = getattr( pyerr, "_pimpl" );
+        py::extract<T> type_checker( pimpl );
         if( !type_checker.check() ) {
             return 0;
         }
         return py_obj;
     }
 
-    static void construct( PyObject* py_obj, bp::converter::rvalue_from_python_stage1_data* data)
+    static void construct( PyObject* py_obj, py::converter::rvalue_from_python_stage1_data* data)
     {
-        typedef bp::converter::rvalue_from_python_storage<T> storage_t;
+        typedef py::converter::rvalue_from_python_storage<T> storage_t;
 
-        bp::object pyerr( bp::handle<>( bp::borrowed( py_obj ) ) );
-        bp::object pimpl = getattr( pyerr, "_pimpl" );
+        py::object pyerr( py::handle<>( py::borrowed( py_obj ) ) );
+        py::object pimpl = getattr( pyerr, "_pimpl" );
 
         storage_t* the_storage = reinterpret_cast<storage_t*>( data );
         void* memory_chunk = the_storage->storage.bytes;
-        new (memory_chunk) T( bp::extract<T>(pimpl) );
+        new (memory_chunk) T( py::extract<T>(pimpl) );
         data->convertible = memory_chunk;
     }
 };
@@ -356,14 +356,14 @@ struct exception_translator
 //     typedef T type;
 //};
 //
-//bp::register_ptr_to_python< boost::shared_ptr<const my_class> >();
+//py::register_ptr_to_python< boost::shared_ptr<const my_class> >();
 
 template<typename T>
 struct float_from_number
 {
     float_from_number()
     {
-        bp::converter::registry::push_back(&convertible, &construct, bp::type_id<T>());
+        py::converter::registry::push_back(&convertible, &construct, py::type_id<T>());
     }
 
     static void* convertible( PyObject* obj)
@@ -371,11 +371,11 @@ struct float_from_number
         return PyNumber_Check(obj) ? obj : nullptr;
     }
 
-    static void construct(PyObject* _obj, bp::converter::rvalue_from_python_stage1_data* data)
+    static void construct(PyObject* _obj, py::converter::rvalue_from_python_stage1_data* data)
     {
         PyObject* tmp = PyNumber_Float(_obj);
-        T* storage = (T*)((bp::converter::rvalue_from_python_storage<T>*)data)->storage.bytes;
-        *storage = bp::extract<T>(tmp);
+        T* storage = (T*)((py::converter::rvalue_from_python_storage<T>*)data)->storage.bytes;
+        *storage = py::extract<T>(tmp);
         Py_DECREF(tmp);
         data->convertible = storage;
     }
@@ -386,7 +386,7 @@ struct int_from_number
 {
     int_from_number()
     {
-        bp::converter::registry::push_back(&convertible, &construct, bp::type_id<T>());
+        py::converter::registry::push_back(&convertible, &construct, py::type_id<T>());
     }
 
     static void* convertible( PyObject* obj)
@@ -394,11 +394,11 @@ struct int_from_number
         return PyNumber_Check(obj) ? obj : nullptr;
     }
 
-    static void construct(PyObject* _obj, bp::converter::rvalue_from_python_stage1_data* data)
+    static void construct(PyObject* _obj, py::converter::rvalue_from_python_stage1_data* data)
     {
         PyObject* tmp = PyNumber_Long(_obj);
-        T* storage = (T*)((bp::converter::rvalue_from_python_storage<T>*)data)->storage.bytes;
-        *storage = bp::extract<T>(tmp);
+        T* storage = (T*)((py::converter::rvalue_from_python_storage<T>*)data)->storage.bytes;
+        *storage = py::extract<T>(tmp);
         Py_DECREF(tmp);
         data->convertible = storage;
     }
@@ -431,43 +431,43 @@ void init_python_bindings();
 #ifdef OPENRAVE_BININGS_PYARRAY
 
 template <typename T>
-inline bp::numeric::array toPyArrayN(const T* pvalues, const size_t N)
+inline py::numeric::array toPyArrayN(const T* pvalues, const size_t N)
 {
     if( N == 0 ) {
-        return static_cast<bp::numeric::array>(bp::numeric::array(bp::list()).astype(select_dtype<T>::type));
+        return static_cast<py::numeric::array>(py::numeric::array(py::list()).astype(select_dtype<T>::type));
     }
     npy_intp dims[] = { npy_intp(N) };
     PyObject *pyvalues = PyArray_SimpleNew(1, dims, select_npy_type<T>::type);
     if( pvalues != nullptr ) {
         memcpy(PyArray_DATA(pyvalues), pvalues, N * sizeof(T));
     }
-    return static_cast<bp::numeric::array>(bp::handle<>(pyvalues));
+    return static_cast<py::numeric::array>(py::handle<>(pyvalues));
 }
 
 template <typename T>
-inline bp::numeric::array toPyArrayN(const T* pvalues, std::vector<npy_intp>& dims)
+inline py::numeric::array toPyArrayN(const T* pvalues, std::vector<npy_intp>& dims)
 {
     if( dims.empty() ) {
-        return static_cast<bp::numeric::array>(bp::numeric::array(bp::list()).astype(select_dtype<T>::type));
+        return static_cast<py::numeric::array>(py::numeric::array(py::list()).astype(select_dtype<T>::type));
     }
     size_t numel = 1;
     for(npy_intp dim : dims) {
         numel *= dim;
     }
     if( numel == 0 ) {
-        return static_cast<bp::numeric::array>(bp::numeric::array(bp::list()).astype(select_dtype<T>::type));
+        return static_cast<py::numeric::array>(py::numeric::array(py::list()).astype(select_dtype<T>::type));
     }
     PyObject *pyvalues = PyArray_SimpleNew(dims.size(), dims.data(), select_npy_type<T>::type);
     if( pvalues != nullptr ) {
         memcpy(PyArray_DATA(pyvalues), pvalues, numel * sizeof(T));
     }
-    return static_cast<bp::numeric::array>(bp::handle<>(pyvalues));
+    return static_cast<py::numeric::array>(py::handle<>(pyvalues));
 }
 
 template <typename T>
-inline bp::object toPyList(const std::vector<T>& v)
+inline py::object toPyList(const std::vector<T>& v)
 {
-    bp::list lvalues;
+    py::list lvalues;
     FOREACHC(it,v) {
         lvalues.append(object(*it));
     }
@@ -475,7 +475,7 @@ inline bp::object toPyList(const std::vector<T>& v)
 }
 
 template <typename T>
-inline bp::numeric::array toPyArray(const std::vector<T>& v)
+inline py::numeric::array toPyArray(const std::vector<T>& v)
 {
     if( v.empty() ) {
         return toPyArrayN((T*)nullptr, 0);
@@ -484,7 +484,7 @@ inline bp::numeric::array toPyArray(const std::vector<T>& v)
 }
 
 template <typename T>
-inline bp::numeric::array toPyArray(const std::vector<T>& v, std::vector<npy_intp>& dims)
+inline py::numeric::array toPyArray(const std::vector<T>& v, std::vector<npy_intp>& dims)
 {
     if( v.empty() ) {
         return toPyArrayN((T*)nullptr, dims);
@@ -498,7 +498,7 @@ inline bp::numeric::array toPyArray(const std::vector<T>& v, std::vector<npy_int
 }
 
 template <typename T, int N>
-inline bp::numeric::array toPyArray(const boost::array<T,N>& v)
+inline py::numeric::array toPyArray(const boost::array<T,N>& v)
 {
     if( v.empty() ) {
         return toPyArrayN((T*)nullptr, 0);
