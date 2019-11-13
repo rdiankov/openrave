@@ -24,10 +24,6 @@
 
 using namespace OpenRAVE;
 namespace py = boost::python;
-
-// declared from openravepy_int
-namespace openravepy {
-
 using py::object;
 using py::extract;
 using py::handle;
@@ -47,6 +43,8 @@ using py::manage_new_object;
 using py::def;
 namespace numeric = py::numeric;
 
+// declared from openravepy_int
+namespace openravepy {
 Transform ExtractTransform(const object& oraw);
 TransformMatrix ExtractTransformMatrix(const object& oraw);
 object toPyArray(const TransformMatrix& t);
@@ -74,28 +72,9 @@ PlannerBase::PlannerParametersConstPtr GetPlannerParametersConst(object);
 CollisionReportPtr GetCollisionReport(object);
 
 EnvironmentBasePtr GetEnvironment(object o);
-}
+} // namespace openravepy
 
 namespace configurationcachepy {
-
-using py::object;
-using py::extract;
-using py::handle;
-using py::dict;
-using py::enum_;
-using py::class_;
-using py::no_init;
-using py::bases;
-using py::init;
-using py::scope;
-using py::args;
-using py::return_value_policy;
-using py::copy_const_reference;
-using py::docstring_options;
-using py::pickle_suite;
-using py::manage_new_object;
-using py::def;
-namespace numeric = py::numeric;
 
 inline std::string _ExtractStringSafe(py::object ostring)
 {
