@@ -30,8 +30,27 @@
 
 #include "NvConvexDecomposition.h"
 
-using namespace std;
-using namespace openravepy;
+namespace py = openravepy::py;
+namespace numeric = py::numeric;
+using py::object;
+using py::extract;
+using py::handle;
+using py::dict;
+using py::enum_;
+using py::class_;
+using py::no_init;
+using py::bases;
+using py::init;
+using py::scope;
+using py::args;
+using py::return_value_policy;
+using py::copy_const_reference;
+using py::docstring_options;
+using py::optional;
+using py::def;
+using openravepy::int_from_number;
+using openravepy::float_from_number;
+using openravepy::exception_translator;
 
 struct OPENRAVE_API cdpy_exception : std::exception
 {
