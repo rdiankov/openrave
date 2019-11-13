@@ -294,15 +294,21 @@ class InverseKinematicsModel(DatabaseGenerator):
     def has(self):
         return self.iksolver is not None and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype) and self.iksolver.GetXMLId() == self.manip.GetIkSolver().GetXMLId()
     
-    def save(self):
+    def save(self, PERM):
+        # PERM == 0o777
         statsfilename=self.getstatsfilename(False)
         try:
-            os.makedirs(os.path.split(statsfilename)[0])
-        except OSError:
-            pass
-        with open(statsfilename, 'w') as f:
-            pickle.dump((self.getversion(),self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc), f)
-        log.info('inversekinematics generation is done, compiled shared object: %s',self.getfilename(False))
+            defaultMask = os.umask(0)
+            try:
+                os.makedirs(os.path.split(statsfilename)[0], PERM)
+            except OSError:
+                pass
+            
+            with os.fdopen(os.open(statsfilename, os.O_CREAT | os.O_RDWR, PERM), 'w') as f:
+                pickle.dump((self.getversion(),self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc), f)
+            log.info('inversekinematics generation is done, compiled shared object: %s',self.getfilename(False))
+        finally:
+            os.umask(defaultMask)
         
     def load(self,freeinc=None,checkforloaded=True,*args,**kwargs):
         try:
