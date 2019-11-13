@@ -30,9 +30,9 @@
 
 #include <ANN/ANN.h>
 
-using namespace boost::python;
 using namespace std;
 using namespace openravepy;
+using py::object;
 
 struct OPENRAVE_API pyann_exception : std::exception
 {

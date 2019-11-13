@@ -30,7 +30,6 @@
 
 #include "NvConvexDecomposition.h"
 
-using namespace boost::python;
 using namespace std;
 using namespace openravepy;
 

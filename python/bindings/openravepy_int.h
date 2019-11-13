@@ -60,7 +60,6 @@
 
 using namespace std;
 using namespace OpenRAVE;
-namespace bp = boost::python;
 
 namespace openravepy {
 
