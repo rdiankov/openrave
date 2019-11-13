@@ -30,9 +30,27 @@
 
 #include <ANN/ANN.h>
 
-using namespace boost::python;
-using namespace std;
-using namespace openravepy;
+namespace py = boost::python;
+namespace numeric = py::numeric;
+using py::object;
+using py::extract;
+using py::handle;
+using py::dict;
+using py::enum_;
+using py::class_;
+using py::no_init;
+using py::bases;
+using py::init;
+using py::scope;
+using py::args;
+using py::return_value_policy;
+using py::copy_const_reference;
+using py::docstring_options;
+using py::optional;
+using py::def;
+using openravepy::int_from_number;
+using openravepy::float_from_number;
+using openravepy::exception_translator;
 
 struct OPENRAVE_API pyann_exception : std::exception
 {
@@ -191,7 +209,7 @@ object k_fixed_radius_search(ANNkd_tree& kdtree, object q, double sqRad, int k, 
     if( kball <= 0 )
         return py::make_tuple(numeric::array(py::list()).astype("i4"),numeric::array(py::list()),kball);
 
-    npy_intp dims[] = { min(k,kball)};
+    npy_intp dims[] = {std::min(k, kball)};
     PyObject *pydists = PyArray_SimpleNew(1,dims, sizeof(ANNdist)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     BOOST_ASSERT(!!pydists);
     PyObject *pyidx = PyArray_SimpleNew(1,dims, PyArray_INT);
