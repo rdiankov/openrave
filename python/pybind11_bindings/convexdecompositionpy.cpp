@@ -125,7 +125,7 @@ object computeConvexDecomposition(const boost::multi_array<float, 2>& vertices, 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         hulls.append(py::make_tuple(py::cast(pyvertices), py::cast(pyindices)));
 #else
-        hulls.append(py::make_tuple(static_cast<numeric::array>(handle<>(pyvertices)), static_cast<numeric::array>(handle<>(pyindices))));
+        hulls.append(py::make_tuple(py::to_array(pyvertices), py::to_array(pyindices)));
 #endif // USE_PYBIND11_PYTHON_BINDINGS
     }
 

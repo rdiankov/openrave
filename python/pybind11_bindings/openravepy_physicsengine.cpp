@@ -122,7 +122,7 @@ public:
             pfvel[6*i+4] = velocities[i].second.y;
             pfvel[6*i+5] = velocities[i].second.z;
         }
-        return static_cast<numeric::array>(handle<>(pyvel));
+        return py::to_array(pyvel);
     }
 
     bool SetBodyForce(object pylink, object force, object position, bool bAdd)

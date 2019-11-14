@@ -153,7 +153,7 @@ object search(ANNkd_tree& kdtree, object q, int k, double eps, bool priority = f
         kdtree.annkPriSearch(annq.pt, k, pidx, pdists, eps);
     else
         kdtree.annkSearch(annq.pt, k, pidx, pdists, eps);
-    return py::make_tuple(static_cast<numeric::array>(handle<>(pyidx)), static_cast<numeric::array>(handle<>(pydists)));
+    return py::make_tuple(py::to_array(pyidx), py::to_array(pydists));
 }
 
 object search_array(ANNkd_tree& kdtree, object qarray, int k, double eps, bool priority = false)
@@ -191,7 +191,7 @@ object search_array(ANNkd_tree& kdtree, object qarray, int k, double eps, bool p
         std::copy(dists.begin(),dists.end(),pdists); pdists += k;
     }
 
-    return py::make_tuple(static_cast<numeric::array>(handle<>(pyidx)), static_cast<numeric::array>(handle<>(pydists)));
+    return py::make_tuple(py::to_array(pyidx), py::to_array(pydists));
 }
 
 object k_fixed_radius_search(ANNkd_tree& kdtree, object q, double sqRad, int k, double eps)
@@ -231,7 +231,7 @@ object k_fixed_radius_search(ANNkd_tree& kdtree, object q, double sqRad, int k, 
     }
 
     BOOST_ASSERT(kball > k || addindex==kball);
-    return py::make_tuple(static_cast<numeric::array>(handle<>(pyidx)), static_cast<numeric::array>(handle<>(pydists)),kball);
+    return py::make_tuple(py::to_array(pyidx), py::to_array(pydists),kball);
 }
 
 object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqRad, int k, double eps)
@@ -255,7 +255,7 @@ object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqR
                 annq.pt[c] = extract<ANNcoord>(q[c]);
             pkball[i] = kdtree.annkFRSearch(annq.pt, sqRad, k, NULL, NULL, eps);
         }
-        return py::make_tuple(numeric::array(py::list()).astype("i4"),numeric::array(py::list()),static_cast<numeric::array>(handle<>(pykball)));
+        return py::make_tuple(numeric::array(py::list()).astype("i4"),numeric::array(py::list()),py::to_array(pykball));
     }
 
     npy_intp dims[] = { N,k};
@@ -284,7 +284,7 @@ object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqR
         std::copy(dists.begin(),dists.end(),pdists); pdists += k;
     }
 
-    return py::make_tuple(static_cast<numeric::array>(handle<>(pyidx)), static_cast<numeric::array>(handle<>(pydists)),static_cast<numeric::array>(handle<>(pykball)));
+    return py::make_tuple(py::to_array(pyidx), py::to_array(pydists),py::to_array(pykball));
 }
 
 object ksearch(ANNkd_tree& kdtree, object q, int k, double eps)

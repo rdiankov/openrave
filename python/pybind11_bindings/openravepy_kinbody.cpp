@@ -923,7 +923,7 @@ public:
         pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2];
         pdata[3] = t.m[4]; pdata[4] = t.m[5]; pdata[5] = t.m[6];
         pdata[6] = t.m[8]; pdata[7] = t.m[9]; pdata[8] = t.m[10];
-        return static_cast<numeric::array>(handle<>(pyvalues));
+        return py::to_array(pyvalues);
     }
     object GetGlobalInertia() const {
         TransformMatrix t = _plink->GetGlobalInertia();
@@ -933,7 +933,7 @@ public:
         pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2];
         pdata[3] = t.m[4]; pdata[4] = t.m[5]; pdata[5] = t.m[6];
         pdata[6] = t.m[8]; pdata[7] = t.m[9]; pdata[8] = t.m[10];
-        return static_cast<numeric::array>(handle<>(pyvalues));
+        return py::to_array(pyvalues);
     }
     dReal GetMass() const {
         return _plink->GetMass();
@@ -2345,7 +2345,7 @@ object PyKinBody::GetLinkVelocities() const
         pfvel[6*i+4] = velocities[i].second.y;
         pfvel[6*i+5] = velocities[i].second.z;
     }
-    return static_cast<numeric::array>(handle<>(pyvel));
+    return py::to_array(pyvel);
 }
 
 object PyKinBody::GetLinkAccelerations(object odofaccelerations, object oexternalaccelerations=object()) const
@@ -2382,7 +2382,7 @@ object PyKinBody::GetLinkAccelerations(object odofaccelerations, object oexterna
         pf[6*i+4] = vLinkAccelerations[i].second.y;
         pf[6*i+5] = vLinkAccelerations[i].second.z;
     }
-    return static_cast<numeric::array>(handle<>(pyaccel));
+    return py::to_array(pyaccel);
 }
 
 object PyKinBody::ComputeAABB(bool bEnabledOnlyLinks)

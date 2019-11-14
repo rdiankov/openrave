@@ -299,7 +299,7 @@ object toPyArray(const TransformMatrix& t)
     pdata[4] = t.m[4]; pdata[5] = t.m[5]; pdata[6] = t.m[6]; pdata[7] = t.trans.y;
     pdata[8] = t.m[8]; pdata[9] = t.m[9]; pdata[10] = t.m[10]; pdata[11] = t.trans.z;
     pdata[12] = 0; pdata[13] = 0; pdata[14] = 0; pdata[15] = 1;
-    return static_cast<numeric::array>(handle<>(pyvalues));
+    return py::to_array(pyvalues);
 }
 
 
@@ -310,7 +310,7 @@ object toPyArray(const Transform& t)
     dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
     pdata[0] = t.rot.x; pdata[1] = t.rot.y; pdata[2] = t.rot.z; pdata[3] = t.rot.w;
     pdata[4] = t.trans.x; pdata[5] = t.trans.y; pdata[6] = t.trans.z;
-    return static_cast<numeric::array>(handle<>(pyvalues));
+    return py::to_array(pyvalues);
 }
 
 AttributesList toAttributesList(py::dict odict)
@@ -1297,7 +1297,7 @@ public:
             }
         }
 
-        return py::make_tuple(static_cast<numeric::array>(handle<>(pycollision)),static_cast<numeric::array>(handle<>(pypos)));
+        return py::make_tuple(py::to_array(pycollision),py::to_array(pypos));
     }
 
     bool CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray)

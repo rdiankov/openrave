@@ -75,6 +75,10 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 namespace pybind11 {
+namespace numeric {
+// so py::numeric::array = py::array_t<double>
+using array = ::pybind11::array_t<double>;
+} // namespace pybind11::numeric
 template <typename T>
 inline T extract(object o) {
     return o.cast<T>();
@@ -84,7 +88,11 @@ inline object to_object(const T& t) {
     return ::pybind11::cast(t);
 }
 inline object to_array(PyObject* pyo) {
+    // do we need to implement the conversion?
     return cast(pyo);
+}
+inline object empty_array() {
+    return numeric::array({1, 0}, nullptr);
 }
 template <typename T>
 struct extract_ {
@@ -99,10 +107,6 @@ struct extract_ {
     operator T() && { return std::move(_data); }
     T _data;
 };
-namespace numeric {
-// so py::numeric::array = py::array_t<double>
-using array = ::pybind11::array_t<double>;
-} // namespace pybind11::numeric
 } // namespace pybind11
 #define OPENRAVE_PYTHON_MODULE(X) PYBIND11_MODULE(X, m)
 #else // USE_PYBIND11_PYTHON_BINDINGS
@@ -115,6 +119,9 @@ inline object to_object(const T& t) {
 }
 inline boost::python::numeric::array to_array(PyObject* pyo) {
     return static_cast<boost::python::numeric::array>(boost::python::handle<>(pyo));
+}
+inline boost::python::numeric::array empty_array() {
+    return static_cast<boost::python::numeric::array>(boost::python::handle<>());
 }
 template <typename T>
 using extract_ = extract<T>;

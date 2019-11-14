@@ -393,7 +393,7 @@ public:
                 if( pdata->vimagedata.size() > 0 ) {
                     memcpy(PyArray_DATA(pyvalues),&pdata->vimagedata[0],pdata->vimagedata.size());
                 }
-                imagedata = static_cast<numeric::array>(handle<>(pyvalues));
+                imagedata = py::to_array(pyvalues);
             }
         }
         PyCameraSensorData(OPENRAVE_SHARED_PTR<SensorBase::CameraGeomData const> pgeom) : PySensorData(SensorBase::ST_Camera), intrinsics(pgeom->intrinsics)
@@ -402,7 +402,7 @@ public:
                 npy_intp dims[] = { pgeom->height,pgeom->width,3};
                 PyObject *pyvalues = PyArray_SimpleNew(3,dims, PyArray_UINT8);
                 memset(PyArray_DATA(pyvalues),0,pgeom->height*pgeom->width*3);
-                imagedata = static_cast<numeric::array>(handle<>(pyvalues));
+                imagedata = py::to_array(pyvalues);
             }
             {
                 numeric::array arr(py::make_tuple(pgeom->intrinsics.fx,0,pgeom->intrinsics.cx,0,pgeom->intrinsics.fy,pgeom->intrinsics.cy,0,0,1));

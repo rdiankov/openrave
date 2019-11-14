@@ -579,7 +579,7 @@ public:
                     std::copy(itsol->begin(),itsol->end(),ppos);
                     ppos += itsol->size();
                 }
-                return static_cast<numeric::array>(handle<>(pysolutions));
+                return py::to_array(pysolutions);
             }
         }
 

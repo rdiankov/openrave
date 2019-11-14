@@ -573,7 +573,7 @@ public:
             }
         }
 
-        return py::make_tuple(static_cast<numeric::array>(handle<>(pycollision)),static_cast<numeric::array>(handle<>(pypos)));
+        return py::make_tuple(py::to_array(pycollision),py::to_array(pypos));
     }
 
     bool CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray)
