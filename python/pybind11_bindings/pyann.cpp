@@ -320,27 +320,38 @@ object k_priority_search_array(ANNkd_tree& kdtree, object q, int k, double eps)
 OPENRAVE_PYTHON_MODULE(pyANN_int)
 {
     import_array();
-    numeric::array::set_module_and_type("numpy", "ndarray");
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
+    numeric::array::set_module_and_type("numpy", "ndarray");
     int_from_number<int>();
     float_from_number<float>();
     float_from_number<double>();
-#endif // USE_PYBIND11_PYTHON_BINDINGS
-
     typedef return_value_policy< copy_const_reference > return_copy_const_ref;
     class_< pyann_exception >( "_pyann_exception_" )
+#else
+    class_< pyann_exception >(m, "_pyann_exception_" )
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+    
     .def( init<const std::string&>() )
     .def( init<const pyann_exception&>() )
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def( "message", &pyann_exception::message )
+    .def( "__str__", &pyann_exception::message )
+#else
     .def( "message", &pyann_exception::message, return_copy_const_ref() )
     .def( "__str__", &pyann_exception::message, return_copy_const_ref() )
+#endif
     ;
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
     exception_translator<pyann_exception>();
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
-
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<ANNkd_tree, OPENRAVE_SHARED_PTR<ANNkd_tree> >(m, "KDTree")
+    .def( init<>(), &init_from_list)
+#else
     class_<ANNkd_tree, OPENRAVE_SHARED_PTR<ANNkd_tree> >("KDTree")
     .def("__init__", make_constructor(&init_from_list))
+#endif
     .def("__del__", &destroy_points)
 
     .def("kSearch", &ksearch,args("q","k","eps"))
