@@ -135,7 +135,7 @@ public:
     }
 
     object GetConfigurationSpecification() const {
-        return object(openravepy::toPyConfigurationSpecification(_ptrajectory->GetConfigurationSpecification()));
+        return py::to_object(openravepy::toPyConfigurationSpecification(_ptrajectory->GetConfigurationSpecification()));
     }
 
     size_t GetNumWaypoints() const {
@@ -260,7 +260,7 @@ public:
         std::stringstream ss;
         ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
         _ptrajectory->serialize(ss,pyGetIntFromPy(ooptions,0));
-        return object(ss.str());
+        return py::to_object(ss.str());
     }
 
     bool Read(const string& s, object probot) {
@@ -302,9 +302,9 @@ object toPyTrajectory(TrajectoryBasePtr ptraj, object opyenv)
 {
     extract<PyEnvironmentBasePtr> pyenv(opyenv);
     if( pyenv.check() ) {
-        return object(toPyTrajectory(ptraj,(PyEnvironmentBasePtr)pyenv));
+        return py::to_object(toPyTrajectory(ptraj,(PyEnvironmentBasePtr)pyenv));
     }
-    return object();
+    return py::object();
 }
 
 PyEnvironmentBasePtr toPyEnvironment(PyTrajectoryBasePtr pytraj)

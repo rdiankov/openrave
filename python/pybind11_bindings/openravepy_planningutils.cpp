@@ -70,12 +70,12 @@ void pyComputeTrajectoryDerivatives(PyTrajectoryBasePtr pytraj, int maxderiv)
 
 object pyReverseTrajectory(PyTrajectoryBasePtr pytraj)
 {
-    return object(openravepy::toPyTrajectory(OpenRAVE::planningutils::ReverseTrajectory(openravepy::GetTrajectory(pytraj)),openravepy::toPyEnvironment(pytraj)));
+    return py::to_object(openravepy::toPyTrajectory(OpenRAVE::planningutils::ReverseTrajectory(openravepy::GetTrajectory(pytraj)),openravepy::toPyEnvironment(pytraj)));
 }
 
 object pyGetReverseTrajectory(PyTrajectoryBasePtr pytraj)
 {
-    return object(openravepy::toPyTrajectory(OpenRAVE::planningutils::GetReverseTrajectory(openravepy::GetTrajectory(pytraj)),openravepy::toPyEnvironment(pytraj)));
+    return py::to_object(openravepy::toPyTrajectory(OpenRAVE::planningutils::GetReverseTrajectory(openravepy::GetTrajectory(pytraj)),openravepy::toPyEnvironment(pytraj)));
 }
 
 void pyVerifyTrajectory(object pyparameters, PyTrajectoryBasePtr pytraj, dReal samplingstep)
@@ -213,15 +213,15 @@ public:
             return ofilterreturn;
         }
         else {
-            return object(_pconstraints->Check(q0, q1, dq0, dq1, timeelapsed, interval, options));
+            return py::to_object(_pconstraints->Check(q0, q1, dq0, dq1, timeelapsed, interval, options));
         }
     }
 
     object GetReport() const {
         if( !_pconstraints->GetReport() ) {
-            return object();
+            return py::object();
         }
-        return object(openravepy::toPyCollisionReport(_pconstraints->GetReport(), _pyenv));
+        return py::to_object(openravepy::toPyCollisionReport(_pconstraints->GetReport(), _pyenv));
     }
 
     void SetPlannerParameters(object oparameters)
@@ -286,7 +286,7 @@ void pySegmentTrajectory(PyTrajectoryBasePtr pytraj, dReal starttime, dReal endt
 object pyGetTrajectorySegment(PyTrajectoryBasePtr pytraj, dReal starttime, dReal endtime)
 {
     PyEnvironmentBasePtr pyenv = openravepy::toPyEnvironment(pytraj);
-    return object(openravepy::toPyTrajectory(OpenRAVE::planningutils::GetTrajectorySegment(openravepy::GetTrajectory(pytraj), starttime, endtime), pyenv));
+    return py::to_object(openravepy::toPyTrajectory(OpenRAVE::planningutils::GetTrajectorySegment(openravepy::GetTrajectory(pytraj), starttime, endtime), pyenv));
 }
 
 object pyMergeTrajectories(object pytrajectories)
@@ -304,7 +304,7 @@ object pyMergeTrajectories(object pytrajectories)
         }
         listtrajectories.push_back(openravepy::GetTrajectory(pytrajectory));
     }
-    return object(openravepy::toPyTrajectory(OpenRAVE::planningutils::MergeTrajectories(listtrajectories),pyenv));
+    return py::to_object(openravepy::toPyTrajectory(OpenRAVE::planningutils::MergeTrajectories(listtrajectories),pyenv));
 }
 
 class PyDHParameter
@@ -337,7 +337,7 @@ public:
 
 object toPyDHParameter(const OpenRAVE::planningutils::DHParameter& p, PyEnvironmentBasePtr pyenv)
 {
-    return object(OPENRAVE_SHARED_PTR<PyDHParameter>(new PyDHParameter(p,pyenv)));
+    return py::to_object(OPENRAVE_SHARED_PTR<PyDHParameter>(new PyDHParameter(p,pyenv)));
 }
 
 class DHParameter_pickle_suite : public pickle_suite
@@ -398,7 +398,7 @@ public:
                 return toPyArray(vgoal);
             }
         }
-        return object();
+        return py::object();
     }
 
     object SampleAll(int maxsamples=0, int maxchecksamples=0, bool releasegil = false)

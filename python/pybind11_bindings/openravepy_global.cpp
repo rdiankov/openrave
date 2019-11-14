@@ -104,9 +104,9 @@ XMLReadablePtr ExtractXMLReadable(object o) {
 
 object toPyXMLReadable(XMLReadablePtr p) {
     if( !p ) {
-        return object();
+        return py::object();
     }
-    return object(PyXMLReadablePtr(new PyXMLReadable(p)));
+    return py::to_object(PyXMLReadablePtr(new PyXMLReadable(p)));
 }
 
 namespace xmlreaders
@@ -127,22 +127,22 @@ PyXMLReadablePtr pyCreateStringXMLReadable(const std::string& xmlid, const std::
 object toPyGraphHandle(const GraphHandlePtr p)
 {
     if( !p ) {
-        return object();
+        return py::object();
     }
-    return object(PyGraphHandle(p));
+    return py::to_object(PyGraphHandle(p));
 }
 
 object toPyUserData(UserDataPtr p)
 {
     if( !p ) {
-        return object();
+        return py::object();
     }
-    return object(PyUserData(p));
+    return py::to_object(PyUserData(p));
 }
 
 object toPyRay(const RAY& r)
 {
-    return object(OPENRAVE_SHARED_PTR<PyRay>(new PyRay(r)));
+    return py::to_object(OPENRAVE_SHARED_PTR<PyRay>(new PyRay(r)));
 }
 
 RAY ExtractRay(object o)
@@ -217,7 +217,7 @@ AABB ExtractAABB(object o)
 
 object toPyAABB(const AABB& ab)
 {
-    return object(OPENRAVE_SHARED_PTR<PyAABB>(new PyAABB(ab)));
+    return py::to_object(OPENRAVE_SHARED_PTR<PyAABB>(new PyAABB(ab)));
 }
 
 class AABB_pickle_suite : public pickle_suite
@@ -379,7 +379,7 @@ bool ExtractTriMesh(object o, TriMesh& mesh)
 
 object toPyTriMesh(const TriMesh& mesh)
 {
-    return object(OPENRAVE_SHARED_PTR<PyTriMesh>(new PyTriMesh(mesh)));
+    return py::to_object(OPENRAVE_SHARED_PTR<PyTriMesh>(new PyTriMesh(mesh)));
 }
 
 class TriMesh_pickle_suite : public pickle_suite
@@ -428,18 +428,18 @@ public:
     {
         std::vector<ConfigurationSpecification::Group>::const_iterator it  = _spec.FindCompatibleGroup(name,exactmatch);
         if( it == _spec._vgroups.end() ) {
-            return object();
+            return py::object();
         }
-        return object(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group>(new ConfigurationSpecification::Group(*it)));
+        return py::to_object(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group>(new ConfigurationSpecification::Group(*it)));
     }
 
     object FindTimeDerivativeGroup(const std::string& name, bool exactmatch) const
     {
         std::vector<ConfigurationSpecification::Group>::const_iterator it  = _spec.FindTimeDerivativeGroup(name,exactmatch);
         if( it == _spec._vgroups.end() ) {
-            return object();
+            return py::object();
         }
-        return object(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group>(new ConfigurationSpecification::Group(*it)));
+        return py::to_object(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group>(new ConfigurationSpecification::Group(*it)));
     }
 
 //    ConfigurationSpecification GetTimeDerivativeSpecification(int timederivative) const;
@@ -504,7 +504,7 @@ public:
         if( _spec.ExtractTransform(t,vdata.begin(),openravepy::GetKinBody(pybody)) ) {
             return openravepy::ReturnTransform(t);
         }
-        return object();
+        return py::object();
     }
 
     object ExtractIkParameterization(object odata, int timederivative=0, const std::string& robotname="", const std::string& manipulatorname="") const
@@ -516,7 +516,7 @@ public:
             return toPyIkParameterization(ikparam);
         }
         else {
-            return object();
+            return py::object();
         }
     }
 
@@ -529,7 +529,7 @@ public:
             return toPyArray(values);
         }
         else {
-            return object();
+            return py::object();
         }
     }
 
@@ -543,7 +543,7 @@ public:
             return toPyArray(values);
         }
         else {
-            return object();
+            return py::object();
         }
     }
 
@@ -553,10 +553,10 @@ public:
         dReal deltatime=0;
         bool bfound = _spec.ExtractDeltaTime(deltatime,vdata.begin());
         if( bfound ) {
-            return object(deltatime);
+            return py::to_object(deltatime);
         }
         else {
-            return object();
+            return py::object();
         }
     }
 
@@ -838,7 +838,7 @@ object pyRaveInvertFileLookup(const std::string& filename)
     if( OpenRAVE::RaveInvertFileLookup(newfilename, filename) ) {
         return ConvertStringToUnicode(newfilename);
     }
-    return object();
+    return py::object();
 }
 
 object RaveGetPluginInfo()

@@ -95,7 +95,7 @@ public:
         CHECK_POINTER(pylink);
         Vector linearvel, angularvel;
         if( !_pPhysicsEngine->GetLinkVelocity(openravepy::GetKinBodyLink(pylink),linearvel,angularvel) ) {
-            return object();
+            return py::object();
         }
         return py::make_tuple(toPyVector3(linearvel),toPyVector3(angularvel));
     }
@@ -109,7 +109,7 @@ public:
         }
         std::vector<std::pair<Vector,Vector> > velocities;
         if( !_pPhysicsEngine->GetLinkVelocities(pbody,velocities) ) {
-            return object();
+            return py::object();
         }
         npy_intp dims[] = { npy_intp(velocities.size()), 6};
         PyObject *pyvel = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
@@ -148,7 +148,7 @@ public:
         CHECK_POINTER(pylink);
         Vector force, torque;
         if( !_pPhysicsEngine->GetLinkForceTorque(openravepy::GetKinBodyLink(pylink),force,torque) ) {
-            return object();
+            return py::object();
         }
         return py::make_tuple(toPyVector3(force),toPyVector3(torque));
     }
@@ -158,7 +158,7 @@ public:
         CHECK_POINTER(pyjoint);
         Vector force, torque;
         if( !_pPhysicsEngine->GetJointForceTorque(openravepy::GetKinBodyJoint(pyjoint),force,torque) ) {
-            return object();
+            return py::object();
         }
         return py::make_tuple(toPyVector3(force),toPyVector3(torque));
     }

@@ -711,9 +711,9 @@ PyInterfaceBasePtr toPySensor(SensorBasePtr psensor, PyEnvironmentBasePtr pyenv)
 object toPySensorData(SensorBasePtr psensor, PyEnvironmentBasePtr pyenv)
 {
     if( !psensor ) {
-        return object();
+        return py::object();
     }
-    return object(PySensorBase(psensor,pyenv).GetSensorData());
+    return py::to_object(PySensorBase(psensor,pyenv).GetSensorData());
 }
 
 PySensorBasePtr RaveCreateSensor(PyEnvironmentBasePtr pyenv, const std::string& name)

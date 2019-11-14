@@ -115,28 +115,28 @@ public:
     }
 
     object GetConfigurationSpecification() {
-        return object(openravepy::toPyConfigurationSpecification(_param.GetConfigurationSpecification()));
+        return py::to_object(openravepy::toPyConfigurationSpecification(_param.GetConfigurationSpecification()));
     }
 
     object GetConfigurationSpecification(object ointerpolation, const std::string& robotname="", const std::string& manipname="") {
         extract<PyIkParameterization*> pyik(ointerpolation);
         if( pyik.check() ) {
-            return object(openravepy::toPyConfigurationSpecification(((PyIkParameterization*)pyik)->_param.GetConfigurationSpecification(std::string(), robotname, manipname)));
+            return py::to_object(openravepy::toPyConfigurationSpecification(((PyIkParameterization*)pyik)->_param.GetConfigurationSpecification(std::string(), robotname, manipname)));
         }
         extract<OPENRAVE_SHARED_PTR<PyIkParameterization> > pyikptr(ointerpolation);
         if( pyikptr.check() ) {
-            return object(openravepy::toPyConfigurationSpecification(((OPENRAVE_SHARED_PTR<PyIkParameterization>)pyikptr)->_param.GetConfigurationSpecification(std::string(), robotname, manipname)));
+            return py::to_object(openravepy::toPyConfigurationSpecification(((OPENRAVE_SHARED_PTR<PyIkParameterization>)pyikptr)->_param.GetConfigurationSpecification(std::string(), robotname, manipname)));
         }
         extract<IkParameterizationType> pyiktype(ointerpolation);
         if( pyiktype.check() ) {
-            return object(openravepy::toPyConfigurationSpecification(IkParameterization::GetConfigurationSpecification((IkParameterizationType)pyiktype, std::string(), robotname, manipname)));
+            return py::to_object(openravepy::toPyConfigurationSpecification(IkParameterization::GetConfigurationSpecification((IkParameterizationType)pyiktype, std::string(), robotname, manipname)));
         }
-        return object(openravepy::toPyConfigurationSpecification(_param.GetConfigurationSpecification((std::string)extract<std::string>(ointerpolation), robotname, manipname)));
+        return py::to_object(openravepy::toPyConfigurationSpecification(_param.GetConfigurationSpecification((std::string)extract<std::string>(ointerpolation), robotname, manipname)));
     }
 
     static object GetConfigurationSpecificationFromType(IkParameterizationType iktype, const std::string& interpolation="", const std::string& robotname="", const std::string& manipname="")
     {
-        return object(openravepy::toPyConfigurationSpecification(IkParameterization::GetConfigurationSpecification(iktype,interpolation, robotname, manipname)));
+        return py::to_object(openravepy::toPyConfigurationSpecification(IkParameterization::GetConfigurationSpecification(iktype,interpolation, robotname, manipname)));
     }
 
     void SetTransform6D(object o) {
@@ -271,7 +271,7 @@ public:
         if( _param.GetCustomValues(name,values) ) {
             return toPyArray(values);
         }
-        return object();
+        return py::object();
     }
 
     object GetCustomDataMap()
@@ -352,12 +352,12 @@ bool ExtractIkParameterization(object o, IkParameterization& ikparam) {
 
 object toPyIkParameterization(const IkParameterization &ikparam)
 {
-    return object(PyIkParameterizationPtr(new PyIkParameterization(ikparam)));
+    return py::to_object(PyIkParameterizationPtr(new PyIkParameterization(ikparam)));
 }
 
 object toPyIkParameterization(const std::string& serializeddata)
 {
-    return object(PyIkParameterizationPtr(new PyIkParameterization(serializeddata)));
+    return py::to_object(PyIkParameterizationPtr(new PyIkParameterization(serializeddata)));
 }
 
 class IkParameterization_pickle_suite : public pickle_suite

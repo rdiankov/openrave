@@ -242,7 +242,7 @@ public:
             return _pmanip->SetIkSolver(openravepy::GetIkSolver(iksolver));
         }
         object GetIkSolver() {
-            return object(openravepy::toPyIkSolver(_pmanip->GetIkSolver(),_pyenv));
+            return py::to_object(openravepy::toPyIkSolver(_pmanip->GetIkSolver(),_pyenv));
         }
 
         object GetBase() {
@@ -429,7 +429,7 @@ public:
                 else {
                     vector<dReal> solution;
                     if( !_FindIKSolution(ikparam,solution,filteroptions,releasegil) ) {
-                        return object();
+                        return py::object();
                     }
                     return toPyArray(solution);
                 }
@@ -444,7 +444,7 @@ public:
                 else {
                     vector<dReal> solution;
                     if( !_FindIKSolution(ExtractTransform(oparam),solution,filteroptions,releasegil) ) {
-                        return object();
+                        return py::object();
                     }
                     return toPyArray(solution);
                 }
@@ -465,7 +465,7 @@ public:
                 else {
                     vector<dReal> solution;
                     if( !_FindIKSolution(ikparam,vfreeparams,solution,filteroptions,releasegil) ) {
-                        return object();
+                        return py::object();
                     }
                     return toPyArray(solution);
                 }
@@ -480,7 +480,7 @@ public:
                 else {
                     vector<dReal> solution;
                     if( !_FindIKSolution(ExtractTransform(oparam),vfreeparams, solution,filteroptions,releasegil) ) {
-                        return object();
+                        return py::object();
                     }
                     return toPyArray(solution);
                 }
@@ -636,11 +636,11 @@ public:
         }
 
         object GetArmConfigurationSpecification(const std::string& interpolation="") const {
-            return object(openravepy::toPyConfigurationSpecification(_pmanip->GetArmConfigurationSpecification(interpolation)));
+            return py::to_object(openravepy::toPyConfigurationSpecification(_pmanip->GetArmConfigurationSpecification(interpolation)));
         }
 
         object GetIkConfigurationSpecification(IkParameterizationType iktype, const std::string& interpolation="") const {
-            return object(openravepy::toPyConfigurationSpecification(_pmanip->GetIkConfigurationSpecification(iktype, interpolation)));
+            return py::to_object(openravepy::toPyConfigurationSpecification(_pmanip->GetIkConfigurationSpecification(iktype, interpolation)));
         }
 
         bool CheckEndEffectorCollision(PyCollisionReportPtr pyreport) const
@@ -726,7 +726,7 @@ public:
         }
 
         object GetInfo() {
-            return object(PyManipulatorInfoPtr(new PyManipulatorInfo(_pmanip->GetInfo())));
+            return py::to_object(PyManipulatorInfoPtr(new PyManipulatorInfo(_pmanip->GetInfo())));
         }
 
         string GetStructureHash() const {
@@ -777,7 +777,7 @@ public:
             return _pattached;
         }
         object GetSensor() {
-            return object(openravepy::toPySensor(_pattached->GetSensor(),_pyenv));
+            return py::to_object(openravepy::toPySensor(_pattached->GetSensor(),_pyenv));
         }
         object GetAttachingLink() const {
             return toPyKinBodyLink(_pattached->GetAttachingLink(), _pyenv);
@@ -815,11 +815,11 @@ public:
         }
 
         object UpdateAndGetInfo(SensorBase::SensorType type=SensorBase::ST_Invalid) {
-            return object(PyAttachedSensorInfoPtr(new PyAttachedSensorInfo(_pattached->UpdateAndGetInfo(type))));
+            return py::to_object(PyAttachedSensorInfoPtr(new PyAttachedSensorInfo(_pattached->UpdateAndGetInfo(type))));
         }
 
         object GetInfo() {
-            return object(PyAttachedSensorInfoPtr(new PyAttachedSensorInfo(_pattached->GetInfo())));
+            return py::to_object(PyAttachedSensorInfoPtr(new PyAttachedSensorInfo(_pattached->GetInfo())));
         }
 
         string __repr__() {
@@ -868,7 +868,7 @@ public:
         }
 
         object GetInfo() {
-            return object(PyConnectedBodyInfoPtr(new PyConnectedBodyInfo(_pconnected->GetInfo(), _pyenv)));
+            return py::to_object(PyConnectedBodyInfoPtr(new PyConnectedBodyInfo(_pconnected->GetInfo(), _pyenv)));
         }
 
         bool SetActive(bool active) {
@@ -993,7 +993,7 @@ public:
         }
 
         object GetBody() const {
-            return object(toPyRobot(RaveInterfaceCast<RobotBase>(_state.GetBody()),_pyenv));
+            return py::to_object(toPyRobot(RaveInterfaceCast<RobotBase>(_state.GetBody()),_pyenv));
         }
 
         void Restore(PyRobotBasePtr pyrobot=PyRobotBasePtr()) {
@@ -1171,7 +1171,7 @@ public:
 
     object GetController() const {
         CHECK_POINTER(_probot);
-        return object(openravepy::toPyController(_probot->GetController(),_pyenv));
+        return py::to_object(openravepy::toPyController(_probot->GetController(),_pyenv));
     }
 
     bool SetController(PyControllerBasePtr pController, const string& args) {
@@ -1454,7 +1454,7 @@ public:
     }
 
     object GetActiveConfigurationSpecification(const std::string& interpolation="") const {
-        return object(openravepy::toPyConfigurationSpecification(_probot->GetActiveConfigurationSpecification(interpolation)));
+        return py::to_object(openravepy::toPyConfigurationSpecification(_probot->GetActiveConfigurationSpecification(interpolation)));
     }
 
     object GetActiveJointIndices() {

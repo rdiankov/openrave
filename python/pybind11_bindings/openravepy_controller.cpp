@@ -78,7 +78,7 @@ public:
     }
     object GetRobot()
     {
-        return object(openravepy::toPyRobot(_pcontroller->GetRobot(),_pyenv));
+        return py::to_object(openravepy::toPyRobot(_pcontroller->GetRobot(),_pyenv));
     }
 
     void Reset(int options=0) {
@@ -159,7 +159,7 @@ public:
     object GetController(int dof) {
         CHECK_POINTER(_pmulticontroller);
         ControllerBasePtr pcontroller = _pmulticontroller->GetController(dof);
-        return object(openravepy::toPyController(pcontroller, _pyenv));
+        return py::to_object(openravepy::toPyController(pcontroller, _pyenv));
     }
 };
 

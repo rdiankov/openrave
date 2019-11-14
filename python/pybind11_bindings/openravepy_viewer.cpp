@@ -310,7 +310,7 @@ public:
     }
 
     object GetCameraIntrinsics() {
-        return object(toPyCameraIntrinsics(_pviewer->GetCameraIntrinsics()));
+        return py::to_object(toPyCameraIntrinsics(_pviewer->GetCameraIntrinsics()));
     }
 };
 

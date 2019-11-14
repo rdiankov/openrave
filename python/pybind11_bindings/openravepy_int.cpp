@@ -62,23 +62,23 @@ object toPyObject(const rapidjson::Value& value)
             return l;
         }
     case rapidjson::kTrueType:
-        return object(py::handle<>(PyBool_FromLong(1)));
+        return py::to_object(py::handle<>(PyBool_FromLong(1)));
     case rapidjson::kFalseType:
-        return object(py::handle<>(PyBool_FromLong(0)));
+        return py::to_object(py::handle<>(PyBool_FromLong(0)));
     case rapidjson::kStringType:
         return ConvertStringToUnicode(value.GetString());
     case rapidjson::kNumberType:
         if (value.IsDouble()) {
-            return object(py::handle<>(PyFloat_FromDouble(value.GetDouble())));
+            return py::to_object(py::handle<>(PyFloat_FromDouble(value.GetDouble())));
         }
         else {
-            return object(py::handle<>(PyInt_FromLong(value.GetInt64())));
+            return py::to_object(py::handle<>(PyInt_FromLong(value.GetInt64())));
         }
     case rapidjson::kNullType:
-        return object();
+        return py::object();
     default:
         PyErr_SetString(PyExc_RuntimeError, "unsupported type");
-        return object();
+        return py::object();
     }
 }
 
@@ -655,10 +655,10 @@ object PyInterfaceBase::SendCommand(const string& in, bool releasegil, bool lock
         }
         sout << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
         if( !_pbase->SendCommand(sout,sin) ) {
-            return object();
+            return py::object();
         }
     }
-    return object(sout.str());
+    return py::to_object(sout.str());
 }
 
 #if OPENRAVE_RAPIDJSON
@@ -851,7 +851,7 @@ public:
     }
     object GetCollisionChecker()
     {
-        return object(openravepy::toPyCollisionChecker(_penv->GetCollisionChecker(), shared_from_this()));
+        return py::to_object(openravepy::toPyCollisionChecker(_penv->GetCollisionChecker(), shared_from_this()));
     }
     bool CheckCollision(PyKinBodyPtr pbody1)
     {
@@ -1337,44 +1337,44 @@ public:
         }
 
         if( output.size() == 0 ) {
-            return object();
+            return py::object();
         }
         else {
-            return object(py::handle<>(PyString_FromStringAndSize(&output[0], output.size())));
+            return py::to_object(py::handle<>(PyString_FromStringAndSize(&output[0], output.size())));
         }
     }
 
     object ReadRobotURI(const string &filename)
     {
-        return object(openravepy::toPyRobot(_penv->ReadRobotURI(filename),shared_from_this()));
+        return py::to_object(openravepy::toPyRobot(_penv->ReadRobotURI(filename),shared_from_this()));
     }
     object ReadRobotURI(const string &filename, object odictatts)
     {
-        return object(openravepy::toPyRobot(_penv->ReadRobotURI(RobotBasePtr(), filename,toAttributesList(odictatts)),shared_from_this()));
+        return py::to_object(openravepy::toPyRobot(_penv->ReadRobotURI(RobotBasePtr(), filename,toAttributesList(odictatts)),shared_from_this()));
     }
     object ReadRobotData(const string &data)
     {
-        return object(openravepy::toPyRobot(_penv->ReadRobotData(RobotBasePtr(), data, AttributesList()), shared_from_this()));
+        return py::to_object(openravepy::toPyRobot(_penv->ReadRobotData(RobotBasePtr(), data, AttributesList()), shared_from_this()));
     }
     object ReadRobotData(const string &data, object odictatts)
     {
-        return object(openravepy::toPyRobot(_penv->ReadRobotData(RobotBasePtr(), data, toAttributesList(odictatts)),shared_from_this()));
+        return py::to_object(openravepy::toPyRobot(_penv->ReadRobotData(RobotBasePtr(), data, toAttributesList(odictatts)),shared_from_this()));
     }
     object ReadKinBodyURI(const string &filename)
     {
-        return object(openravepy::toPyKinBody(_penv->ReadKinBodyURI(filename), shared_from_this()));
+        return py::to_object(openravepy::toPyKinBody(_penv->ReadKinBodyURI(filename), shared_from_this()));
     }
     object ReadKinBodyURI(const string &filename, object odictatts)
     {
-        return object(openravepy::toPyKinBody(_penv->ReadKinBodyURI(KinBodyPtr(), filename, toAttributesList(odictatts)),shared_from_this()));
+        return py::to_object(openravepy::toPyKinBody(_penv->ReadKinBodyURI(KinBodyPtr(), filename, toAttributesList(odictatts)),shared_from_this()));
     }
     object ReadKinBodyData(const string &data)
     {
-        return object(openravepy::toPyKinBody(_penv->ReadKinBodyData(KinBodyPtr(), data, AttributesList()),shared_from_this()));
+        return py::to_object(openravepy::toPyKinBody(_penv->ReadKinBodyData(KinBodyPtr(), data, AttributesList()),shared_from_this()));
     }
     object ReadKinBodyData(const string &data, object odictatts)
     {
-        return object(openravepy::toPyKinBody(_penv->ReadKinBodyData(KinBodyPtr(), data, toAttributesList(odictatts)),shared_from_this()));
+        return py::to_object(openravepy::toPyKinBody(_penv->ReadKinBodyData(KinBodyPtr(), data, toAttributesList(odictatts)),shared_from_this()));
     }
     PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename)
     {
@@ -1388,7 +1388,7 @@ public:
     {
         OPENRAVE_SHARED_PTR<TriMesh> ptrimesh = _penv->ReadTrimeshURI(OPENRAVE_SHARED_PTR<TriMesh>(),filename);
         if( !ptrimesh ) {
-            return object();
+            return py::object();
         }
         return toPyTriMesh(*ptrimesh);
     }
@@ -1396,7 +1396,7 @@ public:
     {
         OPENRAVE_SHARED_PTR<TriMesh> ptrimesh = _penv->ReadTrimeshURI(OPENRAVE_SHARED_PTR<TriMesh>(),filename,toAttributesList(odictatts));
         if( !ptrimesh ) {
-            return object();
+            return py::object();
         }
         return toPyTriMesh(*ptrimesh);
     }
@@ -1405,7 +1405,7 @@ public:
     {
         OPENRAVE_SHARED_PTR<TriMesh> ptrimesh = _penv->ReadTrimeshData(OPENRAVE_SHARED_PTR<TriMesh>(),data,formathint);
         if( !ptrimesh ) {
-            return object();
+            return py::object();
         }
         return toPyTriMesh(*ptrimesh);
     }
@@ -1413,7 +1413,7 @@ public:
     {
         OPENRAVE_SHARED_PTR<TriMesh> ptrimesh = _penv->ReadTrimeshData(OPENRAVE_SHARED_PTR<TriMesh>(),data,formathint,toAttributesList(odictatts));
         if( !ptrimesh ) {
-            return object();
+            return py::object();
         }
         return toPyTriMesh(*ptrimesh);
     }
@@ -1463,27 +1463,27 @@ public:
     {
         KinBodyPtr pbody = _penv->GetKinBody(name);
         if( !pbody ) {
-            return object();
+            return py::object();
         }
         if( pbody->IsRobot() ) {
-            return object(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(pbody),shared_from_this()));
+            return py::to_object(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(pbody),shared_from_this()));
         }
         else {
-            return object(openravepy::toPyKinBody(pbody,shared_from_this()));
+            return py::to_object(openravepy::toPyKinBody(pbody,shared_from_this()));
         }
     }
     object GetRobot(const string &name)
     {
-        return object(openravepy::toPyRobot(_penv->GetRobot(name), shared_from_this()));
+        return py::to_object(openravepy::toPyRobot(_penv->GetRobot(name), shared_from_this()));
     }
     object GetSensor(const string &name)
     {
-        return object(openravepy::toPySensor(_penv->GetSensor(name),shared_from_this()));
+        return py::to_object(openravepy::toPySensor(_penv->GetSensor(name),shared_from_this()));
     }
 
     object GetBodyFromEnvironmentId(int id)
     {
-        return object(openravepy::toPyKinBody(_penv->GetBodyFromEnvironmentId(id),shared_from_this()));
+        return py::to_object(openravepy::toPyKinBody(_penv->GetBodyFromEnvironmentId(id),shared_from_this()));
     }
 
     int AddModule(PyModuleBasePtr prob, const string &args) {
@@ -1522,7 +1522,7 @@ public:
         return _penv->SetPhysicsEngine(openravepy::GetPhysicsEngine(pengine));
     }
     object GetPhysicsEngine() {
-        return object(openravepy::toPyPhysicsEngine(_penv->GetPhysicsEngine(),shared_from_this()));
+        return py::to_object(openravepy::toPyPhysicsEngine(_penv->GetPhysicsEngine(),shared_from_this()));
     }
 
     object RegisterBodyCallback(object fncallback)
@@ -1701,7 +1701,7 @@ public:
 
     object GetViewer()
     {
-        return object(openravepy::toPyViewer(_penv->GetViewer(),shared_from_this()));
+        return py::to_object(openravepy::toPyViewer(_penv->GetViewer(),shared_from_this()));
     }
 
     /// returns the number of points
@@ -1969,7 +1969,7 @@ public:
     {
         KinBody::BodyState bodystate;
         if( !_penv->GetPublishedBody(name, bodystate, timeout) ) {
-            return object();
+            return py::object();
         }
 
         py::dict ostate;
@@ -1995,7 +1995,7 @@ public:
     {
         std::vector<dReal> jointValues;
         if( !_penv->GetPublishedBodyJointValues(name, jointValues, timeout) ) {
-            return object();
+            return py::object();
         }
         return toPyArray(jointValues);
     }
@@ -2098,13 +2098,13 @@ object GetUserData(UserDataPtr pdata)
     else {
         SerializableDataPtr pserializable = OPENRAVE_DYNAMIC_POINTER_CAST<SerializableData>(pdata);
         if( !!pserializable ) {
-            return object(PySerializableData(pserializable));
+            return py::to_object(PySerializableData(pserializable));
         }
         else if( !!pdata ) {
-            return object(PyUserData(pdata));
+            return py::to_object(PyUserData(pdata));
         }
         else {
-            return object();
+            return py::object();
         }
     }
 }
@@ -2129,9 +2129,9 @@ object toPyEnvironment(object o)
 {
     extract<PyInterfaceBasePtr> pyinterface(o);
     if( pyinterface.check() ) {
-        return object(((PyInterfaceBasePtr)pyinterface)->GetEnv());
+        return py::to_object(((PyInterfaceBasePtr)pyinterface)->GetEnv());
     }
-    return object();
+    return py::object();
 }
 
 void LockEnvironment(PyEnvironmentBasePtr pyenv)

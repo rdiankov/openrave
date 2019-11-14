@@ -91,7 +91,7 @@ public:
 
 object toPyPlannerStatus(const PlannerStatus& status)
 {
-    return object(OPENRAVE_SHARED_PTR<PyPlannerStatus>(new PyPlannerStatus(status)));
+    return py::to_object(OPENRAVE_SHARED_PTR<PyPlannerStatus>(new PyPlannerStatus(status)));
 }
 
 class PyPlannerBase : public PyInterfaceBase
@@ -143,7 +143,7 @@ public:
         }
 
         object GetConfigurationSpecification() const {
-            return object(openravepy::toPyConfigurationSpecification(_paramswrite->_configurationspecification));
+            return py::to_object(openravepy::toPyConfigurationSpecification(_paramswrite->_configurationspecification));
         }
 
         void SetExtraParameters(const std::string& s) {
@@ -213,7 +213,7 @@ public:
                 ofilterreturn["reportstr"] = pfilterreturn->_report.__str__();
                 return ofilterreturn;
             }
-            return object(ret);
+            return py::to_object(ret);
         }
 
         void SetPostProcessing(const std::string& plannername, const std::string& plannerparameters)
@@ -368,9 +368,9 @@ PlannerBase::PlannerParametersConstPtr GetPlannerParametersConst(object o)
 object toPyPlannerParameters(PlannerBase::PlannerParametersPtr params)
 {
     if( !params ) {
-        return object();
+        return py::object();
     }
-    return object(PyPlannerBase::PyPlannerParametersPtr(new PyPlannerBase::PyPlannerParameters(params)));
+    return py::to_object(PyPlannerBase::PyPlannerParametersPtr(new PyPlannerBase::PyPlannerParameters(params)));
 }
 
 PyPlannerBasePtr RaveCreatePlanner(PyEnvironmentBasePtr pyenv, const std::string& name)
