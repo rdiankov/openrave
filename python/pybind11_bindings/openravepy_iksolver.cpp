@@ -141,7 +141,7 @@ public:
     }
     object GetFreeParameters() const {
         if( _pIkSolver->GetNumFreeParameters() == 0 ) {
-            return numeric::array(py::list());
+            return py::empty_array();
         }
         vector<dReal> values;
         _pIkSolver->GetFreeParameters(values);

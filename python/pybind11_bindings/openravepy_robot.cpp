@@ -299,7 +299,7 @@ public:
         object GetArmDOFValues()
         {
             if( _pmanip->GetArmDOF() == 0 ) {
-                return numeric::array(py::list());
+                return py::empty_array();
             }
             vector<dReal> values;
             _pmanip->GetArmDOFValues(values);
@@ -308,7 +308,7 @@ public:
         object GetGripperDOFValues()
         {
             if( _pmanip->GetGripperDOF() == 0 ) {
-                return numeric::array(py::list());
+                return py::empty_array();
             }
             vector<dReal> values;
             _pmanip->GetGripperDOFValues(values);
@@ -345,7 +345,7 @@ public:
         object GetFreeParameters() const {
             RAVELOG_WARN("Manipulator::GetFreeParameters() is deprecated\n");
             if( _pmanip->GetIkSolver()->GetNumFreeParameters() == 0 ) {
-                return numeric::array(py::list());
+                return py::empty_array();
             }
             vector<dReal> values;
             _pmanip->GetIkSolver()->GetFreeParameters(values);
@@ -516,12 +516,12 @@ public:
                 std::vector<std::vector<dReal> > vsolutions;
                 if( ExtractIkParameterization(oparam,ikparam) ) {
                     if( !_FindIKSolutions(ikparam,vsolutions,filteroptions,releasegil) ) {
-                        return numeric::array(py::list());
+                        return py::empty_array();
                     }
                 }
                 // assume transformation matrix
                 else if( !_FindIKSolutions(ExtractTransform(oparam),vsolutions,filteroptions,releasegil) ) {
-                    return numeric::array(py::list());
+                    return py::empty_array();
                 }
 
                 npy_intp dims[] = { npy_intp(vsolutions.size()), npy_intp(_pmanip->GetArmIndices().size()) };
@@ -563,12 +563,12 @@ public:
                 std::vector<std::vector<dReal> > vsolutions;
                 if( ExtractIkParameterization(oparam,ikparam) ) {
                     if( !_FindIKSolutions(ikparam,vfreeparams,vsolutions,filteroptions,releasegil) ) {
-                        return numeric::array(py::list());
+                        return py::empty_array();
                     }
                 }
                 // assume transformation matrix
                 else if( !_FindIKSolutions(ExtractTransform(oparam),vfreeparams, vsolutions,filteroptions,releasegil) ) {
-                    return numeric::array(py::list());
+                    return py::empty_array();
                 }
 
                 npy_intp dims[] = { npy_intp(vsolutions.size()), npy_intp(_pmanip->GetArmIndices().size()) };
@@ -1345,7 +1345,7 @@ public:
     object GetActiveDOFValues() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return numeric::array(py::list());
+            return py::empty_array();
         }
         vector<dReal> values;
         _probot->GetActiveDOFValues(values);
@@ -1355,7 +1355,7 @@ public:
     object GetActiveDOFWeights() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return numeric::array(py::list());
+            return py::empty_array();
         }
         vector<dReal> weights;
         _probot->GetActiveDOFWeights(weights);
@@ -1369,7 +1369,7 @@ public:
     object GetActiveDOFVelocities() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return numeric::array(py::list());
+            return py::empty_array();
         }
         vector<dReal> values;
         _probot->GetActiveDOFVelocities(values);
@@ -1389,7 +1389,7 @@ public:
     object GetActiveDOFMaxVel() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return numeric::array(py::list());
+            return py::empty_array();
         }
         vector<dReal> values;
         _probot->GetActiveDOFMaxVel(values);
@@ -1399,7 +1399,7 @@ public:
     object GetActiveDOFMaxAccel() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return numeric::array(py::list());
+            return py::empty_array();
         }
         vector<dReal> values;
         _probot->GetActiveDOFMaxAccel(values);
@@ -1409,7 +1409,7 @@ public:
     object GetActiveDOFMaxJerk() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return numeric::array(py::list());
+            return py::empty_array();
         }
         vector<dReal> values;
         _probot->GetActiveDOFMaxJerk(values);
@@ -1419,7 +1419,7 @@ public:
     object GetActiveDOFHardMaxVel() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return numeric::array(py::list());
+            return py::empty_array();
         }
         vector<dReal> values;
         _probot->GetActiveDOFHardMaxVel(values);
@@ -1429,7 +1429,7 @@ public:
     object GetActiveDOFHardMaxAccel() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return numeric::array(py::list());
+            return py::empty_array();
         }
         vector<dReal> values;
         _probot->GetActiveDOFHardMaxAccel(values);
@@ -1439,7 +1439,7 @@ public:
     object GetActiveDOFHardMaxJerk() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return numeric::array(py::list());
+            return py::empty_array();
         }
         vector<dReal> values;
         _probot->GetActiveDOFHardMaxJerk(values);
@@ -1449,7 +1449,7 @@ public:
     object GetActiveDOFResolutions() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return numeric::array(py::list());
+            return py::empty_array();
         }
         vector<dReal> values;
         _probot->GetActiveDOFResolutions(values);

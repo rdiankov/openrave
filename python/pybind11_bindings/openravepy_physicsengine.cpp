@@ -105,7 +105,7 @@ public:
         CHECK_POINTER(pykinbody);
         KinBodyPtr pbody = openravepy::GetKinBody(pykinbody);
         if( pbody->GetLinks().size() == 0 ) {
-            return numeric::array(py::list());
+            return py::empty_array();
         }
         std::vector<std::pair<Vector,Vector> > velocities;
         if( !_pPhysicsEngine->GetLinkVelocities(pbody,velocities) ) {

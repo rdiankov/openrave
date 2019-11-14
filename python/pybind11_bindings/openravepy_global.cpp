@@ -1033,7 +1033,7 @@ object InvertPoses(object o)
 {
     int N = len(o);
     if( N == 0 ) {
-        return numeric::array(py::list());
+        return py::empty_array();
     }
     npy_intp dims[] = { N,7};
     PyObject *pytrans = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
