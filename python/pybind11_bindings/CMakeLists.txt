@@ -47,64 +47,64 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
         endif()
       endif()
       ## openrave bindings
-      add_library(openravepy_pybind11_int SHARED openravepy_kinbody.cpp openravepy_int.cpp openravepy_robot.cpp openravepy_int.h openravepy_global.cpp openravepy_collisionchecker.cpp openravepy_controller.cpp openravepy_ikparameterization.cpp openravepy_iksolver.cpp openravepy_module.cpp openravepy_physicsengine.cpp openravepy_planner.cpp openravepy_planningutils.cpp openravepy_sensor.cpp openravepy_sensorsystem.cpp openravepy_spacesampler.cpp openravepy_trajectory.cpp openravepy_viewer.cpp bindings.cpp bindings.h docstrings.cpp docstrings.h)
+      add_library(openravepy_int SHARED openravepy_kinbody.cpp openravepy_int.cpp openravepy_robot.cpp openravepy_int.h openravepy_global.cpp openravepy_collisionchecker.cpp openravepy_controller.cpp openravepy_ikparameterization.cpp openravepy_iksolver.cpp openravepy_module.cpp openravepy_physicsengine.cpp openravepy_planner.cpp openravepy_planningutils.cpp openravepy_sensor.cpp openravepy_sensorsystem.cpp openravepy_spacesampler.cpp openravepy_trajectory.cpp openravepy_viewer.cpp bindings.cpp bindings.h docstrings.cpp docstrings.h)
       # stdc++ has to be included before opengl libraries due to some ATI bug (http://wiki.fifengine.de/Segfault_in_cxa_allocate_exception#Workaround)
-      target_link_libraries(openravepy_pybind11_int PUBLIC ${STDC_LIBRARY} libopenrave libopenrave-core ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY} ${extralibs}
+      target_link_libraries(openravepy_int PUBLIC ${STDC_LIBRARY} libopenrave libopenrave-core ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY} ${extralibs}
                                            PRIVATE boost_assertion_failed)
-      add_dependencies(openravepy_pybind11_int libopenrave libopenrave-core)
+      add_dependencies(openravepy_int libopenrave libopenrave-core)
       set_target_properties(openravepy_int PROPERTIES PREFIX "" COMPILE_FLAGS "${OPENRAVEPY_COMPILE_FLAGS}")
       if( WIN32 )
-        set_target_properties(openravepy_pybind11_int PROPERTIES SUFFIX ".pyd")
+        set_target_properties(openravepy_int PROPERTIES SUFFIX ".pyd")
       elseif( APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
         # on mac osx, python cannot import libraries with .dylib extension
-        set_target_properties(openravepy_pybind11_int PROPERTIES SUFFIX ".so")
+        set_target_properties(openravepy_int PROPERTIES SUFFIX ".so")
       endif()
-      install(TARGETS openravepy_pybind11_int DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
+      install(TARGETS openravepy_int DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
 
       ## ann bindings
       if( ANN_FOUND )
-        add_library(pyANN_pybind11_int SHARED pyann.cpp bindings.cpp bindings.h)
+        add_library(pyANN_int SHARED pyann.cpp bindings.cpp bindings.h)
         include_directories(${ANN_INCLUDE_DIR})
         # stdc++ has to be included before opengl libraries due to some ATI bug (http://wiki.fifengine.de/  Segfault_in_cxa_allocate_exception#Workaround)
-        target_link_libraries(pyANN_pybind11_int PUBLIC ${STDC_LIBRARY} ANN ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY} ${extralibs}
+        target_link_libraries(pyANN_int PUBLIC ${STDC_LIBRARY} ANN ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY} ${extralibs}
                                         PRIVATE boost_assertion_failed)
-        set_target_properties(pyANN_pybind11_int PROPERTIES PREFIX "" COMPILE_FLAGS "${ANN_CFLAGS}" )
-        add_dependencies(pyANN_pybind11_int ANN)
+        set_target_properties(pyANN_int PROPERTIES PREFIX "" COMPILE_FLAGS "${ANN_CFLAGS}" )
+        add_dependencies(pyANN_int ANN)
         if( WIN32 )
-          set_target_properties(pyANN_pybind11_int PROPERTIES SUFFIX ".pyd")
+          set_target_properties(pyANN_int PROPERTIES SUFFIX ".pyd")
           if( MSVC )
             # set "link library dependencies" for visual studio in order to include symbols for other statically linked libs
             # this is such an unbelievable hack, that it's disgusting
-            set_target_properties(pyANN_pybind11_int PROPERTIES STATIC_LIBRARY_FLAGS "\" LinkLibraryDependencies=\"true")
+            set_target_properties(pyANN_int PROPERTIES STATIC_LIBRARY_FLAGS "\" LinkLibraryDependencies=\"true")
           endif()
         elseif( APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
           # on mac osx, python cannot import libraries with .dylib extension
-          set_target_properties(pyANN_pybind11_int PROPERTIES SUFFIX ".so")
+          set_target_properties(pyANN_int PROPERTIES SUFFIX ".so")
         endif()
-        install(TARGETS pyANN_pybind11_int DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
+        install(TARGETS pyANN_int DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
       endif()
 
       ## convexdecomposition bindings
       if( CONVEXDECOMPOSITION_FOUND )
-        add_library(convexdecompositionpy_pybind11 SHARED convexdecompositionpy.cpp bindings.cpp bindings.h)
+        add_library(convexdecompositionpy SHARED convexdecompositionpy.cpp bindings.cpp bindings.h)
         include_directories(${CONVEXDECOMPOSITION_INCLUDE_DIR})
         # stdc++ has to be included before opengl libraries due to some ATI bug (http://wiki.fifengine.de/  Segfault_in_cxa_allocate_exception#Workaround)
-        target_link_libraries(convexdecompositionpy_pybind11 PUBLIC ${STDC_LIBRARY} convexdecomposition ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY} ${extralibs}
+        target_link_libraries(convexdecompositionpy PUBLIC ${STDC_LIBRARY} convexdecomposition ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY} ${extralibs}
                                                     PRIVATE boost_assertion_failed)
-        set_target_properties(convexdecompositionpy_pybind11 PROPERTIES PREFIX "" COMPILE_FLAGS "${CONVEXDECOMPOSITION_CFLAGS}" )
-        add_dependencies(convexdecompositionpy_pybind11 convexdecomposition)
+        set_target_properties(convexdecompositionpy PROPERTIES PREFIX "" COMPILE_FLAGS "${CONVEXDECOMPOSITION_CFLAGS}" )
+        add_dependencies(convexdecompositionpy convexdecomposition)
         if( WIN32 )
-          set_target_properties(convexdecompositionpy_pybind11 PROPERTIES SUFFIX ".pyd")
+          set_target_properties(convexdecompositionpy PROPERTIES SUFFIX ".pyd")
           if( MSVC )
             # set "link library dependencies" for visual studio in order to include symbols for other statically linked libs
             # this is such an unbelievable hack, that it's disgusting
-            set_target_properties(convexdecompositionpy_pybind11 PROPERTIES STATIC_LIBRARY_FLAGS "\" LinkLibraryDependencies=\"true")
+            set_target_properties(convexdecompositionpy PROPERTIES STATIC_LIBRARY_FLAGS "\" LinkLibraryDependencies=\"true")
           endif()
         elseif( APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
           # on mac osx, python cannot import libraries with .dylib extension
-          set_target_properties(convexdecompositionpy_pybind11 PROPERTIES SUFFIX ".so")
+          set_target_properties(convexdecompositionpy PROPERTIES SUFFIX ".so")
         endif()
-        install(TARGETS convexdecompositionpy_pybind11 DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
+        install(TARGETS convexdecompositionpy DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
       endif()
     else()
       message(STATUS "failed to use boost python libraries, check if python-numpy is installed.")
