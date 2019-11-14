@@ -24,6 +24,7 @@ namespace openravepy {
 
 using py::object;
 using py::extract;
+using py::extract_;
 using py::handle;
 using py::dict;
 using py::enum_;
@@ -96,7 +97,7 @@ protected:
 
 XMLReadablePtr ExtractXMLReadable(object o) {
     if( !IS_PYTHONOBJECT_NONE(o) ) {
-        extract<PyXMLReadablePtr> pyreadable(o);
+        extract_<PyXMLReadablePtr> pyreadable(o);
         return ((PyXMLReadablePtr)pyreadable)->GetXMLReadable();
     }
     return XMLReadablePtr();

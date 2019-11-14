@@ -83,6 +83,19 @@ template <typename T>
 object to_object(const T& t) {
     return ::pybind11::cast<t>();
 }
+template <typename T>
+struct extract_ {
+    explicit extract_(const T& o) {
+        try {
+            _data = extract<T>(o);
+        }
+        catch(...) {
+            throw std::runtime_error("Cannot cast " + std::string(typeid(T).name()));
+        }
+    }
+    T&& GetData() && { return std::move(_data); }
+    T _data;
+};
 namespace numeric {
 // so py::numeric::array = py::array_t<double>
 using array = ::pybind11::array_t<double>;
@@ -97,6 +110,8 @@ template <typename T>
 object to_object(const T& t) {
     return object(t);
 }
+template <typename T>
+using extract_ = extract<T>;
 } // namespace boost::python
 } // namespace boost
 #endif // USE_PYBIND11_PYTHON_BINDINGS
