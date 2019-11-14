@@ -61,10 +61,10 @@ void DeleteItemCallbackSafe(QtCoinViewerWeakPtr wpt, Item* pItem)
 class ItemSelectionCallbackData : public UserData
 {
 public:
-    ItemSelectionCallbackData(const ViewerBase::ItemSelectionCallbackFn& callback, boost::shared_ptr<QtCoinViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
+    ItemSelectionCallbackData(const ViewerBase::ItemSelectionCallbackFn& callback, OPENRAVE_SHARED_PTR<QtCoinViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
     }
     virtual ~ItemSelectionCallbackData() {
-        boost::shared_ptr<QtCoinViewer> pviewer = _pweakviewer.lock();
+        OPENRAVE_SHARED_PTR<QtCoinViewer> pviewer = _pweakviewer.lock();
         if( !!pviewer ) {
             boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
             pviewer->_listRegisteredItemSelectionCallbacks.erase(_iterator);
@@ -74,17 +74,17 @@ public:
     list<UserDataWeakPtr>::iterator _iterator;
     ViewerBase::ItemSelectionCallbackFn _callback;
 protected:
-    boost::weak_ptr<QtCoinViewer> _pweakviewer;
+    OPENRAVE_WEAK_PTR<QtCoinViewer> _pweakviewer;
 };
-typedef boost::shared_ptr<ItemSelectionCallbackData> ItemSelectionCallbackDataPtr;
+typedef OPENRAVE_SHARED_PTR<ItemSelectionCallbackData> ItemSelectionCallbackDataPtr;
 
 class ViewerImageCallbackData : public UserData
 {
 public:
-    ViewerImageCallbackData(const ViewerBase::ViewerImageCallbackFn& callback, boost::shared_ptr<QtCoinViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
+    ViewerImageCallbackData(const ViewerBase::ViewerImageCallbackFn& callback, OPENRAVE_SHARED_PTR<QtCoinViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
     }
     virtual ~ViewerImageCallbackData() {
-        boost::shared_ptr<QtCoinViewer> pviewer = _pweakviewer.lock();
+        OPENRAVE_SHARED_PTR<QtCoinViewer> pviewer = _pweakviewer.lock();
         if( !!pviewer ) {
             boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
             pviewer->_listRegisteredViewerImageCallbacks.erase(_iterator);
@@ -94,17 +94,17 @@ public:
     list<UserDataWeakPtr>::iterator _iterator;
     ViewerBase::ViewerImageCallbackFn _callback;
 protected:
-    boost::weak_ptr<QtCoinViewer> _pweakviewer;
+    OPENRAVE_WEAK_PTR<QtCoinViewer> _pweakviewer;
 };
-typedef boost::shared_ptr<ViewerImageCallbackData> ViewerImageCallbackDataPtr;
+typedef OPENRAVE_SHARED_PTR<ViewerImageCallbackData> ViewerImageCallbackDataPtr;
 
 class ViewerThreadCallbackData : public UserData
 {
 public:
-    ViewerThreadCallbackData(const ViewerBase::ViewerThreadCallbackFn& callback, boost::shared_ptr<QtCoinViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
+    ViewerThreadCallbackData(const ViewerBase::ViewerThreadCallbackFn& callback, OPENRAVE_SHARED_PTR<QtCoinViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
     }
     virtual ~ViewerThreadCallbackData() {
-        boost::shared_ptr<QtCoinViewer> pviewer = _pweakviewer.lock();
+        OPENRAVE_SHARED_PTR<QtCoinViewer> pviewer = _pweakviewer.lock();
         if( !!pviewer ) {
             boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
             pviewer->_listRegisteredViewerThreadCallbacks.erase(_iterator);
@@ -114,9 +114,9 @@ public:
     list<UserDataWeakPtr>::iterator _iterator;
     ViewerBase::ViewerThreadCallbackFn _callback;
 protected:
-    boost::weak_ptr<QtCoinViewer> _pweakviewer;
+    OPENRAVE_WEAK_PTR<QtCoinViewer> _pweakviewer;
 };
-typedef boost::shared_ptr<ViewerThreadCallbackData> ViewerThreadCallbackDataPtr;
+typedef OPENRAVE_SHARED_PTR<ViewerThreadCallbackData> ViewerThreadCallbackDataPtr;
 
 static SoErrorCB* s_DefaultHandlerCB=NULL;
 void CustomCoinHandlerCB(const class SoError * error, void * data)
@@ -457,7 +457,7 @@ void QtCoinViewer::_mousemove_cb(SoEventCallback * node)
         if (!!pItem) {
             boost::mutex::scoped_lock lock(_mutexMessages);
 
-            KinBodyItemPtr pKinBody = boost::dynamic_pointer_cast<KinBodyItem>(pItem);
+            KinBodyItemPtr pKinBody = OPENRAVE_DYNAMIC_POINTER_CAST<KinBodyItem>(pItem);
             KinBody::LinkPtr pSelectedLink;
             if( !!pKinBody ) {
                 pSelectedLink = pKinBody->GetLinkFromIv(node);
@@ -1247,9 +1247,9 @@ void QtCoinViewer::Reset()
     }
 }
 
-boost::shared_ptr<void> QtCoinViewer::LockGUI()
+OPENRAVE_SHARED_PTR<void> QtCoinViewer::LockGUI()
 {
-    boost::shared_ptr<boost::mutex::scoped_lock> lock(new boost::mutex::scoped_lock(_mutexGUI));
+    OPENRAVE_SHARED_PTR<boost::mutex::scoped_lock> lock(new boost::mutex::scoped_lock(_mutexGUI));
     while(!_bInIdleThread) {
         boost::this_thread::sleep(boost::posix_time::milliseconds(1));
     }
@@ -2517,7 +2517,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
         return false;
     }
 
-    KinBodyItemPtr pKinBody = boost::dynamic_pointer_cast<KinBodyItem>(pItem);
+    KinBodyItemPtr pKinBody = OPENRAVE_DYNAMIC_POINTER_CAST<KinBodyItem>(pItem);
     KinBody::LinkPtr pSelectedLink;
     if( !!pKinBody ) {
         pSelectedLink = pKinBody->GetLinkFromIv(node);
@@ -2535,7 +2535,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
                 bSame = !_pMouseOverLink.expired() && KinBody::LinkPtr(_pMouseOverLink) == pSelectedLink;
             }
             if( bSame ) {
-                ItemSelectionCallbackDataPtr pdata = boost::dynamic_pointer_cast<ItemSelectionCallbackData>(it->lock());
+                ItemSelectionCallbackDataPtr pdata = OPENRAVE_DYNAMIC_POINTER_CAST<ItemSelectionCallbackData>(it->lock());
                 if( !!pdata ) {
                     if( pdata->_callback(pSelectedLink,_vMouseSurfacePosition,_vMouseRayDirection) ) {
                         bProceedSelection = false;
@@ -2550,7 +2550,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
         return false;
     }
 
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironment(100000);
+    OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironment(100000);
     if( !lockenv ) {
         _ivRoot->deselectAll();
         RAVELOG_WARN("failed to grab environment lock\n");
@@ -2673,13 +2673,13 @@ void QtCoinViewer::_deselect()
     }
 }
 
-boost::shared_ptr<EnvironmentMutex::scoped_try_lock> QtCoinViewer::LockEnvironment(uint64_t timeout,bool bUpdateEnvironment)
+OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> QtCoinViewer::LockEnvironment(uint64_t timeout,bool bUpdateEnvironment)
 {
     // try to acquire the lock
 #if BOOST_VERSION >= 103500
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),boost::defer_lock_t()));
+    OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),boost::defer_lock_t()));
 #else
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
+    OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
 #endif
     uint64_t basetime = utils::GetMicroTime();
     while(utils::GetMicroTime()-basetime<timeout ) {
@@ -2833,7 +2833,7 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
             listRegisteredViewerThreadCallbacks = _listRegisteredViewerThreadCallbacks;
         }
         FOREACH(it,listRegisteredViewerThreadCallbacks) {
-            ViewerThreadCallbackDataPtr pdata = boost::dynamic_pointer_cast<ViewerThreadCallbackData>(it->lock());
+            ViewerThreadCallbackDataPtr pdata = OPENRAVE_DYNAMIC_POINTER_CAST<ViewerThreadCallbackData>(it->lock());
             if( !!pdata ) {
                 try {
                     pdata->_callback();
@@ -2921,7 +2921,7 @@ void QtCoinViewer::_VideoFrame()
         return;
     }
     FOREACH(it,listRegisteredViewerImageCallbacks) {
-        ViewerImageCallbackDataPtr pdata = boost::dynamic_pointer_cast<ViewerImageCallbackData>(it->lock());
+        ViewerImageCallbackDataPtr pdata = OPENRAVE_DYNAMIC_POINTER_CAST<ViewerImageCallbackData>(it->lock());
         if( !!pdata ) {
             try {
                 pdata->_callback(memory,_nRenderWidth,_nRenderHeight,3);
@@ -2978,7 +2978,7 @@ void QtCoinViewer::UpdateFromModel()
     FOREACH(itbody, vecbodies) {
         BOOST_ASSERT( !!itbody->pbody );
         KinBodyPtr pbody = itbody->pbody; // try to use only as an id, don't call any methods!
-        KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData("qtcoinviewer"));
+        KinBodyItemPtr pitem = OPENRAVE_DYNAMIC_POINTER_CAST<KinBodyItem>(pbody->GetUserData("qtcoinviewer"));
 
         if( !!pitem ) {
             if( !pitem->GetBody() ) {
@@ -3011,10 +3011,10 @@ void QtCoinViewer::UpdateFromModel()
                     }
 
                     if( pbody->IsRobot() ) {
-                        pitem = boost::shared_ptr<RobotItem>(new RobotItem(shared_viewer(), RaveInterfaceCast<RobotBase>(pbody), _viewGeometryMode),ITEM_DELETER);
+                        pitem = OPENRAVE_SHARED_PTR<RobotItem>(new RobotItem(shared_viewer(), RaveInterfaceCast<RobotBase>(pbody), _viewGeometryMode),ITEM_DELETER);
                     }
                     else {
-                        pitem = boost::shared_ptr<KinBodyItem>(new KinBodyItem(shared_viewer(), pbody, _viewGeometryMode),ITEM_DELETER);
+                        pitem = OPENRAVE_SHARED_PTR<KinBodyItem>(new KinBodyItem(shared_viewer(), pbody, _viewGeometryMode),ITEM_DELETER);
                     }
 
                     if( !!_pdragger && _pdragger->GetSelectedItem() == pitem ) {
@@ -3025,7 +3025,7 @@ void QtCoinViewer::UpdateFromModel()
                     _mapbodies[pbody] = pitem;
                 }
                 else {
-                    pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData("qtcoinviewer"));
+                    pitem = OPENRAVE_DYNAMIC_POINTER_CAST<KinBodyItem>(pbody->GetUserData("qtcoinviewer"));
                     BOOST_ASSERT( _mapbodies.find(pbody) != _mapbodies.end() && _mapbodies[pbody] == pitem );
                 }
             }
@@ -3325,7 +3325,7 @@ void QtCoinViewer::RecordRealtimeVideo(bool on)
 
 void QtCoinViewer::ToggleSimulation(bool on)
 {
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironment(200000);
+    OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironment(200000);
     if( !!lockenv ) {
         if( on ) {
             GetEnv()->StartSimulation(0.01f);
@@ -3874,7 +3874,7 @@ void QtCoinViewer::_SetNearPlane(dReal nearplane)
     RaveGetEnvironments(listenvironments);
     if( listenvironments.size() > 0 ) {
         _penv = listenvironments.front();
-        _openraveviewer = boost::dynamic_pointer_cast<QtCoinViewer>(_penv->GetViewer());
+        _openraveviewer = OPENRAVE_DYNAMIC_POINTER_CAST<QtCoinViewer>(_penv->GetViewer());
         if( !!_openraveviewer ) {
             QTimer *timer = new QTimer(this);
             connect(timer, SIGNAL(timeout()), this, SLOT(Animate()));

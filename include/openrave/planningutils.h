@@ -162,7 +162,7 @@ protected:
     UserDataPtr _changehandler; ///< tracks changes for the robot and re-initializes parameters
 };
 
-typedef boost::shared_ptr<ActiveDOFTrajectorySmoother> ActiveDOFTrajectorySmootherPtr;
+typedef OPENRAVE_SHARED_PTR<ActiveDOFTrajectorySmoother> ActiveDOFTrajectorySmootherPtr;
 
 /** \brief Retimer planner the trajectory points by extracting and using the currently set active dofs of the robot. <b>[multi-thread safe]</b>
 
@@ -202,7 +202,7 @@ protected:
     UserDataPtr _changehandler; ///< tracks changes for the robot and re-initializes parameters
 };
 
-typedef boost::shared_ptr<ActiveDOFTrajectoryRetimer> ActiveDOFTrajectoryRetimerPtr;
+typedef OPENRAVE_SHARED_PTR<ActiveDOFTrajectoryRetimer> ActiveDOFTrajectoryRetimerPtr;
 
 /** \brief Retime the trajectory points consisting of affine transformation values while avoiding collisions. <b>[multi-thread safe]</b>
 
@@ -254,7 +254,7 @@ protected:
     PlannerBasePtr _planner; ///< the planner is setup once in the constructor
 };
 
-typedef boost::shared_ptr<AffineTrajectoryRetimer> AffineTrajectoryRetimerPtr;
+typedef OPENRAVE_SHARED_PTR<AffineTrajectoryRetimer> AffineTrajectoryRetimerPtr;
 
 /** \brief Retime the trajectory points using all the positional data from the trajectory. <b>[multi-thread safe]</b>
 
@@ -432,7 +432,7 @@ public:
     ///
     /// Two functions can be set, one to be called before check collision and one after.
     /// \param bCallAfterCheckCollision if set, function will be called after check collision functions.
-    virtual void SetUserCheckFunction(const boost::function<bool() >& usercheckfn, bool bCallAfterCheckCollision=false);
+    virtual void SetUserCheckFunction(const OPENRAVE_FUNCTION<bool() >& usercheckfn, bool bCallAfterCheckCollision=false);
 
     /// \brief checks line collision. Uses the constructor's self-collisions
     virtual int Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeelapsed, IntervalType interval, int options = 0xffff, ConstraintFilterReturnPtr filterreturn = ConstraintFilterReturnPtr());
@@ -462,17 +462,17 @@ protected:
     int _filtermask;
     int _torquelimitmode; ///< 1 if should use instantaneous max torque, 0 if should use nominal torque
     dReal _perturbation;
-    boost::array< boost::function<bool() >, 2> _usercheckfns;
+    boost::array< OPENRAVE_FUNCTION<bool() >, 2> _usercheckfns;
 
     // for dynamics
     ConfigurationSpecification _specvel;
     std::vector< std::pair<int, std::pair<dReal, dReal> > > _vtorquevalues; ///< cache for dof indices and the torque limits that the current torque should be in
     std::vector< int > _vdofindices;
     std::vector<dReal> _doftorques, _dofaccelerations; ///< in body DOF space
-    boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> _setvelstatefn;
+    OPENRAVE_SHARED_PTR<ConfigurationSpecification::SetConfigurationStateFn> _setvelstatefn;
 };
 
-typedef boost::shared_ptr<DynamicsCollisionConstraint> DynamicsCollisionConstraintPtr;
+typedef OPENRAVE_SHARED_PTR<DynamicsCollisionConstraint> DynamicsCollisionConstraintPtr;
 
 /// \deprecated (13/05/29)
 class OPENRAVE_API LineCollisionConstraint
@@ -493,7 +493,7 @@ public:
         }
     }
 
-    inline void SetUserCheckFunction(const boost::function<bool() >& usercheckfn, bool bCallAfterCheckCollision=false) RAVE_DEPRECATED
+    inline void SetUserCheckFunction(const OPENRAVE_FUNCTION<bool() >& usercheckfn, bool bCallAfterCheckCollision=false) RAVE_DEPRECATED
     {
         _constraint.SetUserCheckFunction(usercheckfn, bCallAfterCheckCollision);
     }
@@ -626,7 +626,7 @@ protected:
     std::vector<dReal> _vfreegoalvalues;
 };
 
-typedef boost::shared_ptr<ManipulatorIKGoalSampler> ManipulatorIKGoalSamplerPtr;
+typedef OPENRAVE_SHARED_PTR<ManipulatorIKGoalSampler> ManipulatorIKGoalSamplerPtr;
 
 } // planningutils
 } // OpenRAVE

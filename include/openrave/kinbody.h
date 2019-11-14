@@ -25,7 +25,7 @@
 namespace OpenRAVE {
 
 class OpenRAVEFunctionParserReal;
-typedef boost::shared_ptr< OpenRAVEFunctionParserReal > OpenRAVEFunctionParserRealPtr;
+typedef OPENRAVE_SHARED_PTR< OpenRAVEFunctionParserReal > OpenRAVEFunctionParserRealPtr;
 
 /// \brief The type of geometry primitive.
 enum GeometryType {
@@ -71,7 +71,7 @@ public:
     //@}
 };
 
-typedef boost::shared_ptr<ElectricMotorActuatorInfo> ElectricMotorActuatorInfoPtr;
+typedef OPENRAVE_SHARED_PTR<ElectricMotorActuatorInfo> ElectricMotorActuatorInfoPtr;
 
 /** \brief <b>[interface]</b> A kinematic body of links and joints. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_kinbody.
     \ingroup interfaces
@@ -235,8 +235,8 @@ public:
         bool _bVisible; ///< if true, geometry is visible as part of the 3d model (default is true)
         bool _bModifiable; ///< if true, object geometry can be dynamically modified (default is true)
     };
-    typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
-    typedef boost::shared_ptr<GeometryInfo const> GeometryInfoConstPtr;
+    typedef OPENRAVE_SHARED_PTR<GeometryInfo> GeometryInfoPtr;
+    typedef OPENRAVE_SHARED_PTR<GeometryInfo const> GeometryInfoConstPtr;
 
     /// \brief Describes the properties of a link used to initialize it
     class OPENRAVE_API LinkInfo : public XMLReadable
@@ -279,11 +279,11 @@ public:
         bool _bIsEnabled;
         bool __padding0, __padding1; // for 4-byte alignment
     };
-    typedef boost::shared_ptr<LinkInfo> LinkInfoPtr;
-    typedef boost::shared_ptr<LinkInfo const> LinkInfoConstPtr;
+    typedef OPENRAVE_SHARED_PTR<LinkInfo> LinkInfoPtr;
+    typedef OPENRAVE_SHARED_PTR<LinkInfo const> LinkInfoConstPtr;
 
     /// \brief A rigid body holding all its collision and rendering data.
-    class OPENRAVE_API Link : public boost::enable_shared_from_this<Link>
+    class OPENRAVE_API Link : public OPENRAVE_ENABLE_SHARED_FROM_THIS<Link>
     {
 public:
         Link(KinBodyPtr parent);         ///< pass in a ODE world
@@ -291,7 +291,7 @@ public:
 
         /// \deprecated (12/10/18)
         typedef KinBody::GeometryInfo GeometryInfo RAVE_DEPRECATED;
-        typedef boost::shared_ptr<KinBody::GeometryInfo> GeometryInfoPtr RAVE_DEPRECATED;
+        typedef OPENRAVE_SHARED_PTR<KinBody::GeometryInfo> GeometryInfoPtr RAVE_DEPRECATED;
         typedef TriMesh TRIMESH RAVE_DEPRECATED;
         typedef GeometryType GeomType RAVE_DEPRECATED;
         static const GeometryType GeomNone RAVE_DEPRECATED = OpenRAVE::GT_None;
@@ -311,7 +311,7 @@ public:
             static const GeometryType GeomCylinder RAVE_DEPRECATED = OpenRAVE::GT_Cylinder;
             static const GeometryType GeomTrimesh RAVE_DEPRECATED = OpenRAVE::GT_TriMesh;
 
-            Geometry(boost::shared_ptr<Link> parent, const KinBody::GeometryInfo& info);
+            Geometry(OPENRAVE_SHARED_PTR<Link> parent, const KinBody::GeometryInfo& info);
             virtual ~Geometry() {
             }
 
@@ -439,7 +439,7 @@ public:
             virtual void SetName(const std::string& name);
 
 protected:
-            boost::weak_ptr<Link> _parent;
+            OPENRAVE_WEAK_PTR<Link> _parent;
             KinBody::GeometryInfo _info; ///< geometry info
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
@@ -458,8 +458,8 @@ protected:
             friend class KinBody::Link;
         };
 
-        typedef boost::shared_ptr<Geometry> GeometryPtr;
-        typedef boost::shared_ptr<Geometry const> GeometryConstPtr;
+        typedef OPENRAVE_SHARED_PTR<Geometry> GeometryPtr;
+        typedef OPENRAVE_SHARED_PTR<Geometry const> GeometryConstPtr;
         typedef Geometry GEOMPROPERTIES RAVE_DEPRECATED;
 
         inline const std::string& GetName() const {
@@ -530,13 +530,13 @@ protected:
         /// A parent link is is immediately connected to this link by a joint and has a path to the root joint so that it is possible
         /// to compute this link's transformation from its parent.
         /// \param[out] filled with the parent links
-        virtual void GetParentLinks(std::vector< boost::shared_ptr<Link> >& vParentLinks) const;
+        virtual void GetParentLinks(std::vector< OPENRAVE_SHARED_PTR<Link> >& vParentLinks) const;
 
         /// \brief Tests if a link is a direct parent.
         ///
         /// \see GetParentLinks
         /// \param link The link to test if it is one of the parents of this link.
-        bool IsParentLink(boost::shared_ptr<Link const> plink) const RAVE_DEPRECATED {
+        bool IsParentLink(OPENRAVE_SHARED_PTR<Link const> plink) const RAVE_DEPRECATED {
             return IsParentLink(*plink);
         }
         virtual bool IsParentLink(const Link &link) const;
@@ -670,7 +670,7 @@ protected:
         virtual int GetGroupNumGeometries(const std::string& name) const;
 
         /// \brief swaps the geometries with the link
-        virtual void SwapGeometries(boost::shared_ptr<Link>& link);
+        virtual void SwapGeometries(OPENRAVE_SHARED_PTR<Link>& link);
 
         /// validates the contact normal on link and makes sure the normal faces "outside" of the geometry shape it lies on. An exception can be thrown if position is not on a geometry surface
         /// \param position the position of the contact point specified in the link's coordinate system, assumes it is on a particular geometry
@@ -679,7 +679,7 @@ protected:
         virtual bool ValidateContactNormal(const Vector& position, Vector& normal) const;
 
         /// \brief returns true if plink is rigidily attahced to this link.
-        bool IsRigidlyAttached(boost::shared_ptr<Link const> plink) const RAVE_DEPRECATED {
+        bool IsRigidlyAttached(OPENRAVE_SHARED_PTR<Link const> plink) const RAVE_DEPRECATED {
             return IsRigidlyAttached(*plink);
         }
         virtual bool IsRigidlyAttached(const Link &link) const;
@@ -687,7 +687,7 @@ protected:
         /// \brief Gets all the rigidly attached links to linkindex, also adds the link to the list.
         ///
         /// \param vattachedlinks the array to insert all links attached to linkindex with the link itself.
-        virtual void GetRigidlyAttachedLinks(std::vector<boost::shared_ptr<Link> >& vattachedlinks) const;
+        virtual void GetRigidlyAttachedLinks(std::vector<OPENRAVE_SHARED_PTR<Link> >& vattachedlinks) const;
 
         virtual void serialize(std::ostream& o, int options) const;
 
@@ -776,9 +776,9 @@ private:
         friend class KinBody;
         friend class RobotBase;
     };
-    typedef boost::shared_ptr<KinBody::Link> LinkPtr;
-    typedef boost::shared_ptr<KinBody::Link const> LinkConstPtr;
-    typedef boost::weak_ptr<KinBody::Link> LinkWeakPtr;
+    typedef OPENRAVE_SHARED_PTR<KinBody::Link> LinkPtr;
+    typedef OPENRAVE_SHARED_PTR<KinBody::Link const> LinkConstPtr;
+    typedef OPENRAVE_WEAK_PTR<KinBody::Link> LinkWeakPtr;
 
     /** \brief The type of joint movement.
 
@@ -815,8 +815,8 @@ private:
 public:
         boost::array< std::string, 3>  _equations;         ///< the original equations
     };
-    typedef boost::shared_ptr<MimicInfo> MimicInfoPtr;
-    typedef boost::shared_ptr<MimicInfo const> MimicInfoConstPtr;
+    typedef OPENRAVE_SHARED_PTR<MimicInfo> MimicInfoPtr;
+    typedef OPENRAVE_SHARED_PTR<MimicInfo const> MimicInfoConstPtr;
 
     class OPENRAVE_API Mimic
     {
@@ -830,8 +830,8 @@ public:
             uint8_t axis : 2;         ///< the axis of the joint index
             bool operator <(const DOFFormat& r) const;
             bool operator ==(const DOFFormat& r) const;
-            boost::shared_ptr<Joint> GetJoint(KinBody &parent) const;
-            boost::shared_ptr<Joint const> GetJoint(const KinBody &parent) const;
+            OPENRAVE_SHARED_PTR<Joint> GetJoint(KinBody &parent) const;
+            OPENRAVE_SHARED_PTR<Joint const> GetJoint(const KinBody &parent) const;
         };
         struct DOFHierarchy
         {
@@ -850,8 +850,8 @@ public:
         std::vector<OpenRAVEFunctionParserRealPtr > _velfns, _accelfns;         ///< the velocity and acceleration partial derivatives with respect to each of the values in _vdofformat
         //@}
     };
-    typedef boost::shared_ptr<Mimic> MimicPtr;
-    typedef boost::shared_ptr<Mimic const> MimicConstPtr;
+    typedef OPENRAVE_SHARED_PTR<Mimic> MimicPtr;
+    typedef OPENRAVE_SHARED_PTR<Mimic const> MimicConstPtr;
 
     /// \brief Describes the properties of a joint used to initialize it
     class OPENRAVE_API JointInfo : public XMLReadable
@@ -909,11 +909,11 @@ public:
 
         bool _bIsActive;                 ///< if true, should belong to the DOF of the body, unless it is a mimic joint (_ComputeInternalInformation decides this)
     };
-    typedef boost::shared_ptr<JointInfo> JointInfoPtr;
-    typedef boost::shared_ptr<JointInfo const> JointInfoConstPtr;
+    typedef OPENRAVE_SHARED_PTR<JointInfo> JointInfoPtr;
+    typedef OPENRAVE_SHARED_PTR<JointInfo const> JointInfoConstPtr;
 
     /// \brief Information about a joint that controls the relationship between two links.
-    class OPENRAVE_API Joint : public boost::enable_shared_from_this<Joint>
+    class OPENRAVE_API Joint : public OPENRAVE_ENABLE_SHARED_FROM_THIS<Joint>
     {
 public:
         /// \deprecated 12/10/19
@@ -1429,9 +1429,9 @@ private:
         friend class KinBody;
         friend class RobotBase;
     };
-    typedef boost::shared_ptr<KinBody::Joint> JointPtr;
-    typedef boost::shared_ptr<KinBody::Joint const> JointConstPtr;
-    typedef boost::weak_ptr<KinBody::Joint> JointWeakPtr;
+    typedef OPENRAVE_SHARED_PTR<KinBody::Joint> JointPtr;
+    typedef OPENRAVE_SHARED_PTR<KinBody::Joint const> JointConstPtr;
+    typedef OPENRAVE_WEAK_PTR<KinBody::Joint> JointWeakPtr;
 
     /// \brief Stores the state of the current body that is published in a thread safe way from the environment without requiring locking the environment.
     class BodyState
@@ -1453,11 +1453,11 @@ public:
         std::string activeManipulatorName; ///< the currently active manpiulator set for the body
         Transform activeManipulatorTransform; ///< the active manipulator's transform
     };
-    typedef boost::shared_ptr<KinBody::BodyState> BodyStatePtr;
-    typedef boost::shared_ptr<KinBody::BodyState const> BodyStateConstPtr;
+    typedef OPENRAVE_SHARED_PTR<KinBody::BodyState> BodyStatePtr;
+    typedef OPENRAVE_SHARED_PTR<KinBody::BodyState const> BodyStateConstPtr;
 
     /// \brief Access point of the sensor system that manages the body.
-    class OPENRAVE_API ManageData : public boost::enable_shared_from_this<ManageData>
+    class OPENRAVE_API ManageData : public OPENRAVE_ENABLE_SHARED_FROM_THIS<ManageData>
     {
 public:
         ManageData(SensorSystemBasePtr psensorsystem) : _psensorsystem(psensorsystem) {
@@ -1496,8 +1496,8 @@ private:
         SensorSystemBaseWeakPtr _psensorsystem;
     };
 
-    typedef boost::shared_ptr<KinBody::ManageData> ManageDataPtr;
-    typedef boost::shared_ptr<KinBody::ManageData const> ManageDataConstPtr;
+    typedef OPENRAVE_SHARED_PTR<KinBody::ManageData> ManageDataPtr;
+    typedef OPENRAVE_SHARED_PTR<KinBody::ManageData const> ManageDataConstPtr;
 
     /// \brief Parameters passed into the state savers to control what information gets saved.
     enum SaveParameters
@@ -1526,8 +1526,8 @@ public:
         Transform _trelative; ///< transform of first link of body relative to _robotlinkname's transform. In other words, grabbed->GetTransform() == bodylink->GetTransform()*trelative
         std::set<int> _setRobotLinksToIgnore; ///< links of the body to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the body and the relative position of the grabbed body.
     };
-    typedef boost::shared_ptr<GrabbedInfo> GrabbedInfoPtr;
-    typedef boost::shared_ptr<GrabbedInfo const> GrabbedInfoConstPtr;
+    typedef OPENRAVE_SHARED_PTR<GrabbedInfo> GrabbedInfoPtr;
+    typedef OPENRAVE_SHARED_PTR<GrabbedInfo const> GrabbedInfoConstPtr;
 
     /// \brief Helper class to save and restore the entire kinbody state.
     ///
@@ -1545,7 +1545,7 @@ public:
         ///
         /// \param body if set, will attempt to restore the stored state to the passed in body, otherwise will restore it for the original body.
         /// \throw openrave_exception if the passed in body is not compatible with the saved state, will throw
-        virtual void Restore(boost::shared_ptr<KinBody> body=boost::shared_ptr<KinBody>());
+        virtual void Restore(OPENRAVE_SHARED_PTR<KinBody> body=OPENRAVE_SHARED_PTR<KinBody>());
 
         /// \brief release the body state. _pbody will not get restored on destruction
         ///
@@ -1565,10 +1565,10 @@ protected:
         std::vector<UserDataPtr> _vGrabbedBodies;
         bool _bRestoreOnDestructor;
 private:
-        virtual void _RestoreKinBody(boost::shared_ptr<KinBody> body);
+        virtual void _RestoreKinBody(OPENRAVE_SHARED_PTR<KinBody> body);
     };
 
-    typedef boost::shared_ptr<KinBodyStateSaver> KinBodyStateSaverPtr;
+    typedef OPENRAVE_SHARED_PTR<KinBodyStateSaver> KinBodyStateSaverPtr;
 
     /// \brief Helper class to save and restore the entire kinbody state, using only kinbody references.
     ///
@@ -1615,7 +1615,7 @@ private:
         virtual void _RestoreKinBody(KinBody& body);
     };
 
-    typedef boost::shared_ptr<KinBodyStateSaverRef> KinBodyStateSaverRefPtr;
+    typedef OPENRAVE_SHARED_PTR<KinBodyStateSaverRef> KinBodyStateSaverRefPtr;
 
     virtual ~KinBody();
 
@@ -1964,8 +1964,8 @@ private:
 
     /// \brief link index and the linear and angular accelerations of the link. First is linear acceleration of the link's coordinate system, and second is the angular acceleration of this coordinate system.
     typedef std::map<int, std::pair<Vector,Vector> > AccelerationMap;
-    typedef boost::shared_ptr<AccelerationMap> AccelerationMapPtr;
-    typedef boost::shared_ptr<AccelerationMap const> AccelerationMapConstPtr;
+    typedef OPENRAVE_SHARED_PTR<AccelerationMap> AccelerationMapPtr;
+    typedef OPENRAVE_SHARED_PTR<AccelerationMap const> AccelerationMapConstPtr;
 
     /** \brief Returns the linear and angular accelerations for each link given the dof accelerations
 
@@ -2323,7 +2323,7 @@ private:
     /// block the thread that made the parameter change.
     /// \param callback
     /// \param properties a mask of the \ref KinBodyProperty values that the callback should be called for when they change
-    virtual UserDataPtr RegisterChangeCallback(uint32_t properties, const boost::function<void()>& callback) const;
+    virtual UserDataPtr RegisterChangeCallback(uint32_t properties, const OPENRAVE_FUNCTION<void()>& callback) const;
 
     void Serialize(BaseXMLWriterPtr writer, int options=0) const;
 
@@ -2464,10 +2464,10 @@ protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies
     KinBody(InterfaceType type, EnvironmentBasePtr penv);
     inline KinBodyPtr shared_kinbody() {
-        return boost::static_pointer_cast<KinBody>(shared_from_this());
+        return OPENRAVE_STATIC_POINTER_CAST<KinBody>(shared_from_this());
     }
     inline KinBodyConstPtr shared_kinbody_const() const {
-        return boost::static_pointer_cast<KinBody const>(shared_from_this());
+        return OPENRAVE_STATIC_POINTER_CAST<KinBody const>(shared_from_this());
     }
 
     /// \brief **internal use only** Releases and grabs the body inside the grabbed structure from _vGrabbedBodies.

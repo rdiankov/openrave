@@ -23,7 +23,7 @@ protected:
     class BaseLaser2DXMLReader : public BaseXMLReader
     {
 public:
-        BaseLaser2DXMLReader(boost::shared_ptr<BaseLaser2DSensor> psensor) : _psensor(psensor) {
+        BaseLaser2DXMLReader(OPENRAVE_SHARED_PTR<BaseLaser2DSensor> psensor) : _psensor(psensor) {
         }
 
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts)
@@ -113,14 +113,14 @@ public:
 
 protected:
         BaseXMLReaderPtr _pcurreader;
-        boost::shared_ptr<BaseLaser2DSensor> _psensor;
+        OPENRAVE_SHARED_PTR<BaseLaser2DSensor> _psensor;
         stringstream ss;
     };
 
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-        return BaseXMLReaderPtr(new BaseLaser2DXMLReader(boost::dynamic_pointer_cast<BaseLaser2DSensor>(ptr)));
+        return BaseXMLReaderPtr(new BaseLaser2DXMLReader(OPENRAVE_DYNAMIC_POINTER_CAST<BaseLaser2DSensor>(ptr)));
     }
 
     BaseLaser2DSensor(EnvironmentBasePtr penv) : SensorBase(penv) {
@@ -308,7 +308,7 @@ public:
     {
         if( psensordata->GetType() == ST_Laser ) {
             boost::mutex::scoped_lock lock(_mutexdata);
-            *boost::dynamic_pointer_cast<LaserSensorData>(psensordata) = *_pdata;
+            *OPENRAVE_DYNAMIC_POINTER_CAST<LaserSensorData>(psensordata) = *_pdata;
             return true;
         }
         return false;
@@ -344,7 +344,7 @@ public:
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
         SensorBase::Clone(preference,cloningoptions);
-        boost::shared_ptr<BaseLaser2DSensor const> r = boost::dynamic_pointer_cast<BaseLaser2DSensor const>(preference);
+        OPENRAVE_SHARED_PTR<BaseLaser2DSensor const> r = OPENRAVE_DYNAMIC_POINTER_CAST<BaseLaser2DSensor const>(preference);
         *_pgeom = *r->_pgeom;
         _vColor = r->_vColor;
         _trans = r->_trans;
@@ -358,7 +358,7 @@ public:
     virtual void SetSensorGeometry(SensorGeometryConstPtr pgeometry)
     {
         OPENRAVE_ASSERT_OP(pgeometry->GetType(), ==, ST_Laser );
-        *_pgeom = *boost::static_pointer_cast<LaserGeomData const>(pgeometry);
+        *_pgeom = *OPENRAVE_STATIC_POINTER_CAST<LaserGeomData const>(pgeometry);
         _Reset();
     }
 
@@ -429,8 +429,8 @@ protected:
         }
     }
 
-    boost::shared_ptr<LaserGeomData> _pgeom;
-    boost::shared_ptr<LaserSensorData> _pdata;
+    OPENRAVE_SHARED_PTR<LaserGeomData> _pgeom;
+    OPENRAVE_SHARED_PTR<LaserSensorData> _pdata;
     vector<int> _databodyids;     ///< if non 0, for each point in _data, specifies the body that was hit
     CollisionReportPtr _report;
 
@@ -454,7 +454,7 @@ protected:
     class BaseSpinningLaser2DXMLReader : public BaseLaser2DXMLReader
     {
 public:
-        BaseSpinningLaser2DXMLReader(boost::shared_ptr<BaseSpinningLaser2DSensor> psensor) : BaseLaser2DXMLReader(psensor), _bProcessing(false) {
+        BaseSpinningLaser2DXMLReader(OPENRAVE_SHARED_PTR<BaseSpinningLaser2DSensor> psensor) : BaseLaser2DXMLReader(psensor), _bProcessing(false) {
         }
 
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts)
@@ -475,7 +475,7 @@ public:
         virtual bool endElement(const string& name)
         {
             if( _bProcessing ) {
-                boost::shared_ptr<BaseSpinningLaser2DSensor> psensor = boost::dynamic_pointer_cast<BaseSpinningLaser2DSensor>(_psensor);
+                OPENRAVE_SHARED_PTR<BaseSpinningLaser2DSensor> psensor = OPENRAVE_DYNAMIC_POINTER_CAST<BaseSpinningLaser2DSensor>(_psensor);
 
                 if( name == "spinaxis" ) {
                     ss >> psensor->_vGeomSpinAxis.x >> psensor->_vGeomSpinAxis.y >> psensor->_vGeomSpinAxis.z;
@@ -512,7 +512,7 @@ public:
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-        return BaseXMLReaderPtr(new BaseSpinningLaser2DXMLReader(boost::dynamic_pointer_cast<BaseSpinningLaser2DSensor>(ptr)));
+        return BaseXMLReaderPtr(new BaseSpinningLaser2DXMLReader(OPENRAVE_DYNAMIC_POINTER_CAST<BaseSpinningLaser2DSensor>(ptr)));
     }
 
     BaseSpinningLaser2DSensor(EnvironmentBasePtr penv) : BaseLaser2DSensor(penv) {
@@ -557,7 +557,7 @@ public:
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
         BaseLaser2DSensor::Clone(preference,cloningoptions);
-        boost::shared_ptr<BaseSpinningLaser2DSensor const> r = boost::dynamic_pointer_cast<BaseSpinningLaser2DSensor const>(preference);
+        OPENRAVE_SHARED_PTR<BaseSpinningLaser2DSensor const> r = OPENRAVE_DYNAMIC_POINTER_CAST<BaseSpinningLaser2DSensor const>(preference);
         _fGeomSpinSpeed = r->_fGeomSpinSpeed;
         _vGeomSpinAxis = r->_vGeomSpinAxis;
         _vGeomSpinPos = r->_vGeomSpinPos;

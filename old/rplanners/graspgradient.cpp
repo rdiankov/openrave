@@ -44,7 +44,7 @@ public:
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset();
-        boost::shared_ptr<GraspSetParameters> parameters(new GraspSetParameters(GetEnv()));
+        OPENRAVE_SHARED_PTR<GraspSetParameters> parameters(new GraspSetParameters(GetEnv()));
         parameters->copy(pparams);
         _robot = pbase;
         RobotBase::RobotStateSaver savestate(_robot);
@@ -327,7 +327,7 @@ private:
     }
 
     RobotBase::ManipulatorPtr _pmanip;
-    boost::shared_ptr<GraspSetParameters> _parameters;
+    OPENRAVE_SHARED_PTR<GraspSetParameters> _parameters;
     RobotBasePtr _robot;
     CollisionReportPtr _report;
 

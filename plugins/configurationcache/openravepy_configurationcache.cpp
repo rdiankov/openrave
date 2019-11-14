@@ -342,7 +342,7 @@ protected:
     configurationcache::ConfigurationCachePtr _cache;
 };
 
-typedef boost::shared_ptr<PyConfigurationCache> PyConfigurationCachePtr;
+typedef OPENRAVE_SHARED_PTR<PyConfigurationCache> PyConfigurationCachePtr;
 
 } // end namespace configurationcachepy
 

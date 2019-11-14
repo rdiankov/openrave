@@ -117,7 +117,7 @@ public:
     bool _bHasRampDeviatedFromInterpolation; ///< if true, then it means that the checked ramp that passed is different from the interpolation expected on the start and end points, and the new points are filled in _configurations
 };
 
-typedef boost::shared_ptr<ConstraintFilterReturn> ConstraintFilterReturnPtr;
+typedef OPENRAVE_SHARED_PTR<ConstraintFilterReturn> ConstraintFilterReturnPtr;
 
 /** \brief Describes a common and serializable interface for planning parameters.
 
@@ -133,7 +133,7 @@ class OPENRAVE_API PlannerParameters : public BaseXMLReader, public XMLReadable
 {
 public:
     typedef std::list< std::vector<dReal> > ConfigurationList;
-    typedef boost::shared_ptr< ConfigurationList > ConfigurationListPtr;
+    typedef OPENRAVE_SHARED_PTR< ConfigurationList > ConfigurationListPtr;
 
     PlannerParameters();
     virtual ~PlannerParameters();
@@ -142,20 +142,20 @@ public:
     class OPENRAVE_API StateSaver
     {
 public:
-        StateSaver(boost::shared_ptr<PlannerParameters> params);
+        StateSaver(OPENRAVE_SHARED_PTR<PlannerParameters> params);
         virtual ~StateSaver();
-        inline boost::shared_ptr<PlannerParameters> GetParameters() const {
+        inline OPENRAVE_SHARED_PTR<PlannerParameters> GetParameters() const {
             return _params;
         }
         virtual void Restore();
 protected:
-        boost::shared_ptr<PlannerParameters> _params;
+        OPENRAVE_SHARED_PTR<PlannerParameters> _params;
         std::vector<dReal> _values;
 private:
         virtual void _Restore();
     };
 
-    typedef boost::shared_ptr<StateSaver> StateSaverPtr;
+    typedef OPENRAVE_SHARED_PTR<StateSaver> StateSaverPtr;
 
     /** \brief Attemps to copy data from one set of parameters to another in the safest manner.
 
@@ -163,7 +163,7 @@ private:
         pointers to functions are copied directly
      */
     virtual PlannerParameters& operator=(const PlannerParameters& r);
-    virtual void copy(boost::shared_ptr<PlannerParameters const> r);
+    virtual void copy(OPENRAVE_SHARED_PTR<PlannerParameters const> r);
 
     /// \brief sets up the planner parameters to use the active joints of the robot
     virtual void SetRobotActiveJoints(RobotBasePtr robot);
@@ -212,7 +212,7 @@ private:
     ///
     /// cost = _costfn(config)
     /// \param cost the cost of being in the current state
-    typedef boost::function<dReal(const std::vector<dReal>&)> CostFn;
+    typedef OPENRAVE_FUNCTION<dReal(const std::vector<dReal>&)> CostFn;
     CostFn _costfn;
 
     /** \brief Goal heuristic function.(optional)
@@ -222,7 +222,7 @@ private:
         Goal is complete when returns 0
         \param distance - distance to closest goal
      */
-    typedef boost::function<dReal(const std::vector<dReal>&)> GoalFn;
+    typedef OPENRAVE_FUNCTION<dReal(const std::vector<dReal>&)> GoalFn;
     GoalFn _goalfn;
 
     /// \brief Distance metric between configuration spaces (optional)
@@ -230,7 +230,7 @@ private:
     /// distmetric(config1,config2)
     ///
     /// Two configurations are considered the same when function returns 0.
-    typedef boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> DistMetricFn;
+    typedef OPENRAVE_FUNCTION<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> DistMetricFn;
     DistMetricFn _distmetricfn;
 
     /** \brief Checks that all the constraints are satisfied between two configurations and passes in the velocity at each point.
@@ -254,7 +254,7 @@ private:
         \param filterreturn Optional argument that will hold the output information of the filter.
         \return \ref ConstraintFilterReturn::_returncode, which a combination of ConstraintFilterOptions
      */
-    typedef boost::function<int (const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, dReal, IntervalType, int, ConstraintFilterReturnPtr)> CheckPathVelocityConstraintFn;
+    typedef OPENRAVE_FUNCTION<int (const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, dReal, IntervalType, int, ConstraintFilterReturnPtr)> CheckPathVelocityConstraintFn;
     CheckPathVelocityConstraintFn _checkpathvelocityconstraintsfn;
 
     /// \brief wrapper function calling _checkpathvelocityconstraintsfn with some default args. Returns true if function doesn't exist.
@@ -271,7 +271,7 @@ private:
         The dimension of the returned sample is the dimension of the configuration space.
         success = samplefn(newsample)
      */
-    typedef boost::function<bool (std::vector<dReal>&)> SampleFn;
+    typedef OPENRAVE_FUNCTION<bool (std::vector<dReal>&)> SampleFn;
     SampleFn _samplefn;
 
     /** \brief Samples a valid goal configuration (optional).
@@ -281,7 +281,7 @@ private:
         The dimension of the returned sample is the dimension of the configuration space.
         success = samplegoalfn(newsample)
      */
-    typedef boost::function<bool (std::vector<dReal>&)> SampleGoalFn;
+    typedef OPENRAVE_FUNCTION<bool (std::vector<dReal>&)> SampleGoalFn;
     SampleGoalFn _samplegoalfn;
 
     /** \brief Samples a valid initial configuration (optional).
@@ -291,7 +291,7 @@ private:
         The dimension of the returned sample is the dimension of the configuration space.
         success = sampleinitialfn(newsample)
      */
-    typedef boost::function<bool (std::vector<dReal>&)> SampleInitialFn;
+    typedef OPENRAVE_FUNCTION<bool (std::vector<dReal>&)> SampleInitialFn;
     SampleInitialFn _sampleinitialfn;
 
     /** \brief Returns a random configuration around a neighborhood (optional).
@@ -303,7 +303,7 @@ private:
                           The distance metric can be arbitrary, but is usually PlannerParameters::pdistmetric.
         \return if sample was successfully generated return true, otherwise false
      */
-    typedef boost::function<bool (std::vector<dReal>&, const std::vector<dReal>&, dReal)> SampleNeighFn;
+    typedef OPENRAVE_FUNCTION<bool (std::vector<dReal>&, const std::vector<dReal>&, dReal)> SampleNeighFn;
     SampleNeighFn _sampleneighfn;
 
     /** \brief Sets the state values of the robot. Default is active robot joints (mandatory).
@@ -314,14 +314,14 @@ private:
         \param options user-defined options. default is 0
         \return If ret == 0, values were set with no problems. Otherwise a non-zero error code is returned.
      */
-    typedef boost::function<int (const std::vector<dReal>&, int options)> SetStateValuesFn;
+    typedef OPENRAVE_FUNCTION<int (const std::vector<dReal>&, int options)> SetStateValuesFn;
     SetStateValuesFn _setstatevaluesfn;
 
     /// \brief  calls _setstatevaluesfn. if it doesn't exist, tries calling the deprecated _setstatefn
     int SetStateValues(const std::vector<dReal>& values, int options=0) const;
 
     /// \brief Gets the state of the robot. Default is active robot joints (mandatory).
-    typedef boost::function<void (std::vector<dReal>&)> GetStateFn;
+    typedef OPENRAVE_FUNCTION<void (std::vector<dReal>&)> GetStateFn;
     GetStateFn _getstatefn;
 
     /** \brief  Computes the difference of two states.
@@ -331,7 +331,7 @@ private:
         An explicit difference function is necessary for correct interpolation when there are circular joints.
         Default is regular subtraction.
      */
-    typedef boost::function<void (std::vector<dReal>&,const std::vector<dReal>&)> DiffStateFn;
+    typedef OPENRAVE_FUNCTION<void (std::vector<dReal>&,const std::vector<dReal>&)> DiffStateFn;
     DiffStateFn _diffstatefn;
 
     /** \brief Adds a delta state to a curent state, acting like a next-nearest-neighbor function along a given direction.
@@ -442,11 +442,11 @@ protected:
         return ret == 0;
     }
 
-    inline boost::shared_ptr<PlannerParameters> shared_parameters() {
-        return boost::static_pointer_cast<PlannerParameters>(shared_from_this());
+    inline OPENRAVE_SHARED_PTR<PlannerParameters> shared_parameters() {
+        return OPENRAVE_STATIC_POINTER_CAST<PlannerParameters>(shared_from_this());
     }
-    inline boost::shared_ptr<PlannerParameters const > shared_parameters_const() const {
-        return boost::static_pointer_cast<PlannerParameters const>(shared_from_this());
+    inline OPENRAVE_SHARED_PTR<PlannerParameters const > shared_parameters_const() const {
+        return OPENRAVE_STATIC_POINTER_CAST<PlannerParameters const>(shared_from_this());
     }
 
     /// \brief output the planner parameters in a string (in XML format)
@@ -460,7 +460,7 @@ protected:
     virtual bool endElement(const std::string& name);
     virtual void characters(const std::string& ch);
     std::stringstream _ss;         ///< holds the data read by characters
-    boost::shared_ptr<std::stringstream> _sslocal;
+    OPENRAVE_SHARED_PTR<std::stringstream> _sslocal;
     /// all the top-level XML parameter tags (lower case) that are handled by this parameter structure, should be registered in the constructor
     std::vector<std::string> _vXMLParameters;
     //@}
@@ -477,10 +477,10 @@ private:
     /// expects \verbatim <PlannerParameters> \endverbatim to be the first token. Parses stream until \verbatim </PlannerParameters> \endverbatim reached
     friend OPENRAVE_API std::istream& operator>>(std::istream& I, PlannerParameters& v);
 };
-typedef boost::shared_ptr<PlannerParameters> PlannerParametersPtr;
-typedef boost::shared_ptr<PlannerParameters const> PlannerParametersConstPtr;
-typedef boost::weak_ptr<PlannerParameters> PlannerParametersWeakPtr;
-typedef boost::weak_ptr<PlannerParameters const> PlannerParametersWeakConstPtr;
+typedef OPENRAVE_SHARED_PTR<PlannerParameters> PlannerParametersPtr;
+typedef OPENRAVE_SHARED_PTR<PlannerParameters const> PlannerParametersConstPtr;
+typedef OPENRAVE_WEAK_PTR<PlannerParameters> PlannerParametersWeakPtr;
+typedef OPENRAVE_WEAK_PTR<PlannerParameters const> PlannerParametersWeakConstPtr;
 
 /// \brief Planner error information
 class OPENRAVE_API PlannerStatus
@@ -526,16 +526,16 @@ class OPENRAVE_API PlannerBase : public InterfaceBase
 {
 public:
     typedef std::list< std::vector<dReal> > ConfigurationList;
-    typedef boost::shared_ptr< PlannerBase::ConfigurationList > ConfigurationListPtr;
+    typedef OPENRAVE_SHARED_PTR< PlannerBase::ConfigurationList > ConfigurationListPtr;
     typedef std::list< std::pair< std::vector<dReal>, std::vector<dReal> > > ConfigurationVelocityList;
-    typedef boost::shared_ptr< PlannerBase::ConfigurationVelocityList > ConfigurationVelocityListPtr;
+    typedef OPENRAVE_SHARED_PTR< PlannerBase::ConfigurationVelocityList > ConfigurationVelocityListPtr;
 
     // back compat
     typedef OpenRAVE::PlannerParameters PlannerParameters;
-    typedef boost::shared_ptr<PlannerParameters> PlannerParametersPtr;
-    typedef boost::shared_ptr<PlannerParameters const> PlannerParametersConstPtr;
-    typedef boost::weak_ptr<PlannerParameters> PlannerParametersWeakPtr;
-    typedef boost::weak_ptr<PlannerParameters const> PlannerParametersWeakConstPtr;
+    typedef OPENRAVE_SHARED_PTR<PlannerParameters> PlannerParametersPtr;
+    typedef OPENRAVE_SHARED_PTR<PlannerParameters const> PlannerParametersConstPtr;
+    typedef OPENRAVE_WEAK_PTR<PlannerParameters> PlannerParametersWeakPtr;
+    typedef OPENRAVE_WEAK_PTR<PlannerParameters const> PlannerParametersWeakConstPtr;
 
     /// \brief Planner progress information passed to each callback function
     class OPENRAVE_API PlannerProgress
@@ -587,7 +587,7 @@ public:
 
         \param progress planner progress information
      */
-    typedef boost::function<PlannerAction(const PlannerProgress&)> PlanCallbackFn;
+    typedef OPENRAVE_FUNCTION<PlannerAction(const PlannerProgress&)> PlanCallbackFn;
 
     /** \brief register a function that is called periodically during the plan loop.
 
@@ -597,10 +597,10 @@ public:
 
 protected:
     inline PlannerBasePtr shared_planner() {
-        return boost::static_pointer_cast<PlannerBase>(shared_from_this());
+        return OPENRAVE_STATIC_POINTER_CAST<PlannerBase>(shared_from_this());
     }
     inline PlannerBaseConstPtr shared_planner_const() const {
-        return boost::static_pointer_cast<PlannerBase const>(shared_from_this());
+        return OPENRAVE_STATIC_POINTER_CAST<PlannerBase const>(shared_from_this());
     }
 
     /** \brief Calls a planner to optimizes the trajectory path.

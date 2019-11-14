@@ -67,6 +67,7 @@
 
 #include <complex>
 #include <algorithm>
+#include <openrave/smart_ptr.h>
 
 // is_none is not supported by older versions of python
 #if BOOST_VERSION >= 104300
@@ -74,16 +75,6 @@
 #else
 #define IS_PYTHONOBJECT_NONE(o) (!!(o))
 #endif
-
-#define OPENRAVE_UNIQUE_PTR boost::unique_ptr
-#define OPENRAVE_SHARED_PTR boost::shared_ptr
-#define OPENRAVE_WEAK_PTR boost::weak_ptr
-#define OPENRAVE_STATIC_POINTER_CAST boost::static_pointer_cast
-#define OPENRAVE_ENABLE_SHARED_FROM_THIS boost::enable_shared_from_this
-#define OPENRAVE_DYNAMIC_POINTER_CAST boost::dynamic_pointer_cast
-#define OPENRAVE_CONST_POINTER_CAST boost::const_pointer_cast
-#define OPENRAVE_MAKE_SHARED boost::make_shared
-#define OPENRAVE_FUNCTION boost::function
 
 namespace openravepy {
 

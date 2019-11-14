@@ -50,7 +50,7 @@ Planner Parameters\n\
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
 
-        boost::shared_ptr<WorkspaceTrajectoryParameters> parameters(new WorkspaceTrajectoryParameters(GetEnv()));
+        OPENRAVE_SHARED_PTR<WorkspaceTrajectoryParameters> parameters(new WorkspaceTrajectoryParameters(GetEnv()));
         parameters->copy(params);
         _robot = probot;
         _manip = _robot->GetActiveManipulator();
@@ -424,7 +424,7 @@ protected:
     RobotBasePtr _robot;
     RobotBase::ManipulatorPtr _manip;
     CollisionReportPtr _report;
-    boost::shared_ptr<WorkspaceTrajectoryParameters> _parameters;
+    OPENRAVE_SHARED_PTR<WorkspaceTrajectoryParameters> _parameters;
     dReal _fMaxCosDeviationAngle;
     int _filteroptions;
     vector<KinBody::LinkPtr> _vchildlinks;
