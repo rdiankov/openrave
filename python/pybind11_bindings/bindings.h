@@ -24,7 +24,6 @@
 #include <numpy/arrayscalars.h>
 // boost
 #include <boost/multi_array.hpp>
-#include <boost/python.hpp>
 
 #ifdef _MSC_VER
 #include <boost/typeof/std/string.hpp>
@@ -74,6 +73,7 @@
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
+#include <boost/shared_ptr.hpp>
 namespace pybind11 {
 namespace numeric {
 // so py::numeric::array = py::array_t<double>
@@ -110,6 +110,7 @@ struct extract_ {
 } // namespace pybind11
 #define OPENRAVE_PYTHON_MODULE(X) PYBIND11_MODULE(X, m)
 #else // USE_PYBIND11_PYTHON_BINDINGS
+#include <boost/python.hpp> // already has #include <boost/shared_ptr.hpp>
 #define OPENRAVE_PYTHON_MODULE(X) BOOST_PYTHON_MODULE(X)
 namespace boost {
 namespace python {
