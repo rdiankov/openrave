@@ -21,6 +21,25 @@
 
 namespace openravepy {
 
+using py::object;
+using py::extract;
+using py::handle;
+using py::dict;
+using py::enum_;
+using py::class_;
+using py::no_init;
+using py::bases;
+using py::init;
+using py::scope;
+using py::args;
+using py::return_value_policy;
+using py::copy_const_reference;
+using py::docstring_options;
+using py::def;
+using py::pickle_suite;
+using py::optional;
+namespace numeric = py::numeric;
+
 namespace planningutils
 {
 
@@ -183,7 +202,7 @@ public:
         if( filterreturn ) {
             ConstraintFilterReturnPtr pfilterreturn(new ConstraintFilterReturn());
             _pconstraints->Check(q0, q1, dq0, dq1, timeelapsed, interval, options, pfilterreturn);
-            boost::python::dict ofilterreturn;
+            py::dict ofilterreturn;
             ofilterreturn["configurations"] = toPyArray(pfilterreturn->_configurations);
             ofilterreturn["configurationtimes"] = toPyArray(pfilterreturn->_configurationtimes);
             ofilterreturn["invalidvalues"] = toPyArray(pfilterreturn->_invalidvalues);
@@ -324,15 +343,15 @@ object toPyDHParameter(const OpenRAVE::planningutils::DHParameter& p, PyEnvironm
 class DHParameter_pickle_suite : public pickle_suite
 {
 public:
-    static boost::python::tuple getinitargs(const PyDHParameter& p)
+    static py::tuple getinitargs(const PyDHParameter& p)
     {
-        return boost::python::make_tuple(object(), p.parentindex, p.transform, p.d, p.a, p.theta, p.alpha);
+        return py::make_tuple(object(), p.parentindex, p.transform, p.d, p.a, p.theta, p.alpha);
     }
 };
 
-boost::python::list pyGetDHParameters(PyKinBodyPtr pybody)
+py::list pyGetDHParameters(PyKinBodyPtr pybody)
 {
-    boost::python::list oparameters;
+    py::list oparameters;
     std::vector<OpenRAVE::planningutils::DHParameter> vparameters;
     OpenRAVE::planningutils::GetDHParameters(vparameters,openravepy::GetKinBody(pybody));
     PyEnvironmentBasePtr pyenv = toPyEnvironment(pybody);
@@ -384,7 +403,7 @@ public:
 
     object SampleAll(int maxsamples=0, int maxchecksamples=0, bool releasegil = false)
     {
-        boost::python::list oreturns;
+        py::list oreturns;
         std::list<IkReturnPtr> listreturns;
         {
             openravepy::PythonThreadSaverPtr statesaver;

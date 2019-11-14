@@ -19,12 +19,30 @@
 
 namespace openravepy {
 
+using py::object;
+using py::extract;
+using py::handle;
+using py::dict;
+using py::enum_;
+using py::class_;
+using py::no_init;
+using py::bases;
+using py::init;
+using py::scope;
+using py::args;
+using py::return_value_policy;
+using py::copy_const_reference;
+using py::docstring_options;
+using py::def;
+using py::pickle_suite;
+namespace numeric = py::numeric;
+
 class PyCameraIntrinsics
 {
 public:
     PyCameraIntrinsics(const geometry::RaveCameraIntrinsics<float>& intrinsics = geometry::RaveCameraIntrinsics<float>())
     {
-        numeric::array arr(boost::python::make_tuple(intrinsics.fx,0,intrinsics.cx,0,intrinsics.fy,intrinsics.cy,0,0,1));
+        numeric::array arr(py::make_tuple(intrinsics.fx,0,intrinsics.cx,0,intrinsics.fy,intrinsics.cy,0,0,1));
         arr.resize(3,3);
         K = arr;
         distortion_model = intrinsics.distortion_model;
@@ -33,7 +51,7 @@ public:
     }
     PyCameraIntrinsics(const geometry::RaveCameraIntrinsics<double>& intrinsics)
     {
-        numeric::array arr(boost::python::make_tuple(intrinsics.fx,0,intrinsics.cx,0,intrinsics.fy,intrinsics.cy,0,0,1));
+        numeric::array arr(py::make_tuple(intrinsics.fx,0,intrinsics.cx,0,intrinsics.fy,intrinsics.cy,0,0,1));
         arr.resize(3,3);
         K = arr;
         distortion_model = intrinsics.distortion_model;
@@ -54,10 +72,10 @@ public:
             intrinsics.cy = 0;
         }
         else {
-            intrinsics.fx = boost::python::extract<dReal>(K[0][0]);
-            intrinsics.fy = boost::python::extract<dReal>(K[1][1]);
-            intrinsics.cx = boost::python::extract<dReal>(K[0][2]);
-            intrinsics.cy = boost::python::extract<dReal>(K[1][2]);
+            intrinsics.fx = py::extract<dReal>(K[0][0]);
+            intrinsics.fy = py::extract<dReal>(K[1][1]);
+            intrinsics.cx = py::extract<dReal>(K[0][2]);
+            intrinsics.cy = py::extract<dReal>(K[1][2]);
         }
         intrinsics.distortion_model = distortion_model;
         intrinsics.distortion_coeffs = ExtractArray<dReal>(distortion_coeffs);
@@ -120,8 +138,8 @@ class PyLaserGeomData : public PySensorGeometry
 {
 public:
     PyLaserGeomData() {
-        min_angle = boost::python::make_tuple(0.0, 0.0);
-        max_angle = boost::python::make_tuple(0.0, 0.0);
+        min_angle = py::make_tuple(0.0, 0.0);
+        max_angle = py::make_tuple(0.0, 0.0);
         min_range = 0.0;
         max_range = 0.0;
         time_increment = 0.0;
@@ -129,8 +147,8 @@ public:
     }
     PyLaserGeomData(boost::shared_ptr<SensorBase::LaserGeomData const> pgeom)
     {
-        min_angle = boost::python::make_tuple(pgeom->min_angle[0], pgeom->min_angle[1]);
-        max_angle = boost::python::make_tuple(pgeom->max_angle[0], pgeom->max_angle[1]);
+        min_angle = py::make_tuple(pgeom->min_angle[0], pgeom->min_angle[1]);
+        max_angle = py::make_tuple(pgeom->max_angle[0], pgeom->max_angle[1]);
         min_range = pgeom->min_range;
         max_range = pgeom->max_range;
         time_increment = pgeom->time_increment;
@@ -143,10 +161,10 @@ public:
     }
     virtual SensorBase::SensorGeometryPtr GetGeometry() {
         boost::shared_ptr<SensorBase::LaserGeomData> geom(new SensorBase::LaserGeomData());
-        geom->min_angle[0] = (dReal)boost::python::extract<dReal>(min_angle[0]);
-        geom->min_angle[1] = (dReal)boost::python::extract<dReal>(min_angle[1]);
-        geom->max_angle[0] = (dReal)boost::python::extract<dReal>(max_angle[0]);
-        geom->max_angle[1] = (dReal)boost::python::extract<dReal>(max_angle[1]);
+        geom->min_angle[0] = (dReal)py::extract<dReal>(min_angle[0]);
+        geom->min_angle[1] = (dReal)py::extract<dReal>(min_angle[1]);
+        geom->max_angle[0] = (dReal)py::extract<dReal>(max_angle[0]);
+        geom->max_angle[1] = (dReal)py::extract<dReal>(max_angle[1]);
         geom->min_range = min_range;
         geom->max_range = max_range;
         geom->time_increment = time_increment;
@@ -154,7 +172,7 @@ public:
         return geom;
     }
 
-    boost::python::tuple min_angle, max_angle, resolution;
+    py::tuple min_angle, max_angle, resolution;
     dReal min_range, max_range, time_increment, time_scan;
 };
 
@@ -387,7 +405,7 @@ public:
                 imagedata = static_cast<numeric::array>(handle<>(pyvalues));
             }
             {
-                numeric::array arr(boost::python::make_tuple(pgeom->intrinsics.fx,0,pgeom->intrinsics.cx,0,pgeom->intrinsics.fy,pgeom->intrinsics.cy,0,0,1));
+                numeric::array arr(py::make_tuple(pgeom->intrinsics.fx,0,pgeom->intrinsics.cx,0,pgeom->intrinsics.fy,pgeom->intrinsics.cy,0,0,1));
                 arr.resize(3,3);
                 KK = arr;
             }
@@ -859,7 +877,7 @@ void init_openravepy_sensor()
     }
 
     class_<PySensorGeometry, boost::shared_ptr<PySensorGeometry>, boost::noncopyable >("SensorGeometry", DOXY_CLASS(PySensorGeometry),no_init)
-    .def("GetType",boost::python::pure_virtual(&PySensorGeometry::GetType))
+    .def("GetType",py::pure_virtual(&PySensorGeometry::GetType))
     ;
     class_<PyCameraGeomData, boost::shared_ptr<PyCameraGeomData>, bases<PySensorGeometry> >("CameraGeomData", DOXY_CLASS(SensorBase::CameraGeomData))
     .def_readwrite("intrinsics",&PyCameraGeomData::intrinsics)

@@ -19,6 +19,24 @@
 
 namespace openravepy {
 
+using py::object;
+using py::extract;
+using py::handle;
+using py::dict;
+using py::enum_;
+using py::class_;
+using py::no_init;
+using py::bases;
+using py::init;
+using py::scope;
+using py::args;
+using py::return_value_policy;
+using py::copy_const_reference;
+using py::docstring_options;
+using py::def;
+using py::pickle_suite;
+namespace numeric = py::numeric;
+
 class PyCollisionReport
 {
 public:
@@ -73,13 +91,13 @@ public:
         else {
             plink2 = object();
         }
-        boost::python::list newcontacts;
+        py::list newcontacts;
         FOREACH(itc, report->contacts) {
             newcontacts.append(PYCONTACT(*itc));
         }
         contacts = newcontacts;
 
-        boost::python::list newLinkColliding;
+        py::list newLinkColliding;
         FOREACHC(itlinks, report->vLinkColliding) {
             object pylink1, pylink2;
             if( !!itlinks->first ) {
@@ -88,7 +106,7 @@ public:
             if( !!itlinks->second ) {
                 pylink2 = openravepy::toPyKinBodyLink(boost::const_pointer_cast<KinBody::Link>(itlinks->second), pyenv);
             }
-            newLinkColliding.append(boost::python::make_tuple(pylink1, pylink2));
+            newLinkColliding.append(py::make_tuple(pylink1, pylink2));
         }
         vLinkColliding = newLinkColliding;
     }
@@ -104,10 +122,10 @@ public:
     int options;
     object plink1, plink2;
 
-    boost::python::list vLinkColliding;
+    py::list vLinkColliding;
     dReal minDistance;
     int numWithinTol;
-    boost::python::list contacts;
+    py::list contacts;
     uint32_t nKeepPrevious;
     CollisionReportPtr report;
 };
@@ -511,7 +529,7 @@ public:
         object shape = rays.attr("shape");
         int num = extract<int>(shape[0]);
         if( num == 0 ) {
-            return boost::python::make_tuple(numeric::array(boost::python::list()).astype("i4"),numeric::array(boost::python::list()));
+            return py::make_tuple(numeric::array(py::list()).astype("i4"),numeric::array(py::list()));
         }
         if( extract<int>(shape[1]) != 6 ) {
             throw openrave_exception(_("rays object needs to be a Nx6 vector\n"));
@@ -555,7 +573,7 @@ public:
             }
         }
 
-        return boost::python::make_tuple(static_cast<numeric::array>(handle<>(pycollision)),static_cast<numeric::array>(handle<>(pypos)));
+        return py::make_tuple(static_cast<numeric::array>(handle<>(pycollision)),static_cast<numeric::array>(handle<>(pypos)));
     }
 
     bool CheckCollision(boost::shared_ptr<PyRay> pyray)
