@@ -331,7 +331,11 @@ inline py::object toPyArrayRotation(const TransformMatrix& t)
     pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2];
     pdata[3] = t.m[4]; pdata[4] = t.m[5]; pdata[5] = t.m[6];
     pdata[6] = t.m[8]; pdata[7] = t.m[9]; pdata[8] = t.m[10];
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    return py::cast(pyvalues);
+#else
     return static_cast<py::numeric::array>(py::handle<>(pyvalues));
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 inline py::object toPyArray3(const std::vector<RaveVector<float> >& v)
@@ -346,7 +350,11 @@ inline py::object toPyArray3(const std::vector<RaveVector<float> >& v)
             *pf++ = it->z;
         }
     }
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    return py::cast(pyvalues);
+#else
     return static_cast<py::numeric::array>(py::handle<>(pyvalues));
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 inline py::object toPyArray3(const std::vector<RaveVector<double> >& v)
@@ -361,7 +369,11 @@ inline py::object toPyArray3(const std::vector<RaveVector<double> >& v)
             *pf++ = it->z;
         }
     }
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    return py::cast(pyvalues);
+#else
     return static_cast<py::numeric::array>(py::handle<>(pyvalues));
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 inline py::object toPyVector2(Vector v)
@@ -504,7 +516,7 @@ public:
         std::stringstream ss;
         ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
         _handle->Serialize(ss,options);
-        return py::object(ss.str());
+        return py::to_object(ss.str());
     }
     void Deserialize(const std::string& s) {
         std::stringstream ss(s);

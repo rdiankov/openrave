@@ -28,16 +28,20 @@ using py::handle;
 using py::dict;
 using py::enum_;
 using py::class_;
-using py::no_init;
-using py::bases;
 using py::init;
 using py::scope;
 using py::args;
 using py::return_value_policy;
+
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+using py::no_init;
+using py::bases;
 using py::copy_const_reference;
 using py::docstring_options;
-using py::def;
 using py::pickle_suite;
+using py::manage_new_object;
+using py::def;
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 namespace numeric = py::numeric;
 
 PyRay::PyRay(object newpos, object newdir)

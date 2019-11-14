@@ -39,13 +39,18 @@ using py::list;
 using py::tuple;
 using py::type_id;
 using py::handle;
-using py::borrowed;
-using py::to_python_converter;
 using py::extract;
-using py::incref;
 using py::class_;
-using py::allow_null;
 
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+using py::borrowed;
+using py::to_python_converter;;
+using py::incref;
+using py::allow_null;
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+
+
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
 // namespace impl
 template< typename MultiArrayType >
 struct numpy_multi_array_converter
@@ -216,9 +221,17 @@ struct stdstring_from_python_str
         }
     }
 };
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_python_bindings(py::module &m)
+#else
 void init_python_bindings()
+#endif
 {
+
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
     numpy_multi_array_converter< boost::multi_array<float,1> >::register_to_and_from_python();
     numpy_multi_array_converter< boost::multi_array<float,2> >::register_to_and_from_python();
     numpy_multi_array_converter< boost::multi_array<float,3> >::register_to_and_from_python();
@@ -229,8 +242,13 @@ void init_python_bindings()
     numpy_multi_array_converter< boost::multi_array<int,2> >::register_to_and_from_python();
 
     stdstring_from_python_str();
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyVoidHandle/*, OPENRAVE_SHARED_PTR<PyVoidHandle>*/ >(m, "VoidHandle")
+#else
     class_<PyVoidHandle, OPENRAVE_SHARED_PTR<PyVoidHandle> >("VoidHandle")
+#endif
     .def("close",&PyVoidHandle::Close,"deprecated")
     .def("Close",&PyVoidHandle::Close)
     ;

@@ -69,6 +69,38 @@
 #include <algorithm>
 #include <openrave/smart_ptr.h>
 
+// pybind11
+// #define USE_PYBIND11_PYTHON_BINDINGS
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+#include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
+namespace pybind11 {
+template <typename T>
+T extract(object o) {
+    return o.cast<T>();
+}
+template <typename T>
+object to_object(const T& t) {
+    return ::pybind11::cast<t>();
+}
+namespace numeric {
+// so py::numeric::array = py::array_t<double>
+using array = ::pybind11::array_t<double>;
+} // namespace pybind11::numeric
+} // namespace pybind11
+#define OPENRAVE_PYTHON_MODULE(X) PYBIND11_MODULE(X, m)
+#else // USE_PYBIND11_PYTHON_BINDINGS
+#define OPENRAVE_PYTHON_MODULE(X) BOOST_PYTHON_MODULE(X)
+namespace boost {
+namespace python {
+template <typename T>
+object to_object(const T& t) {
+    return object(t);
+}
+} // namespace boost::python
+} // namespace boost
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+
 // is_none is not supported by older versions of python
 #if BOOST_VERSION >= 104300
 #define IS_PYTHONOBJECT_NONE(o) (o).is_none()
@@ -159,11 +191,19 @@ struct select_npy_type<uint32_t>
     static constexpr NPY_TYPES type = NPY_UINT32;
 };
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+namespace py = pybind11;
+#else
 namespace py = boost::python;
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
 inline py::object ConvertStringToUnicode(const std::string& s)
 {
-    return py::object(py::handle<>(PyUnicode_Decode(s.c_str(),s.size(), "utf-8", nullptr)));
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    return py::cast(PyUnicode_Decode(s.c_str(), s.size(), "utf-8", nullptr));
+#else
+    return py::object(py::handle<>(PyUnicode_Decode(s.c_str(), s.size(), "utf-8", nullptr)));
+#endif
 }
 
 class PyVoidHandle
@@ -284,7 +324,7 @@ inline std::set<T> ExtractSet(const py::object& o)
 //
 //// Module
 //======================================================================
-//BOOST_PYTHON_MODULE(my_module)
+//OPENRAVE_PYTHON_MODULE(my_module)
 //{
 //
 //   scope moduleScope;
@@ -294,6 +334,7 @@ inline std::set<T> ExtractSet(const py::object& o)
 //.....
 //}
 
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
 template <typename T>
 struct exception_translator
 {
@@ -345,7 +386,7 @@ struct exception_translator
         new (memory_chunk) T( py::extract<T>(pimpl) );
         data->convertible = memory_chunk;
     }
-};
+}; // struct exception_translator
 
 // register const versions of the classes
 //template <class T> inline T* get_pointer( OPENRAVE_SHARED_PTR<const T>
@@ -404,6 +445,7 @@ struct int_from_number
         data->convertible = storage;
     }
 };
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
 inline std::string GetPyErrorString()
 {
@@ -431,6 +473,20 @@ void init_python_bindings();
 
 #ifdef OPENRAVE_BININGS_PYARRAY
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+template <typename T>
+inline py::array_t<T> toPyArrayN(const T* pvalues, const size_t N)
+{
+    std::vector<npy_intp> dims {(long int)1, (long int)N};
+    return py::array_t<T>(dims, pvalues); 
+}
+
+template <typename T>
+inline py::array_t<T> toPyArrayN(const T* pvalues, std::vector<npy_intp>& dims)
+{
+    return py::array_t<T>(dims, pvalues); 
+}
+#else // USE_PYBIND11_PYTHON_BINDINGS
 template <typename T>
 inline py::numeric::array toPyArrayN(const T* pvalues, const size_t N)
 {
@@ -464,6 +520,7 @@ inline py::numeric::array toPyArrayN(const T* pvalues, std::vector<npy_intp>& di
     }
     return static_cast<py::numeric::array>(py::handle<>(pyvalues));
 }
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
 template <typename T>
 inline py::object toPyList(const std::vector<T>& v)

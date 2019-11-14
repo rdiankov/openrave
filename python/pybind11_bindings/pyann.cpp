@@ -48,9 +48,12 @@ using py::copy_const_reference;
 using py::docstring_options;
 using py::optional;
 using py::def;
+
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
 using openravepy::int_from_number;
 using openravepy::float_from_number;
 using openravepy::exception_translator;
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
 struct OPENRAVE_API pyann_exception : std::exception
 {
@@ -304,13 +307,15 @@ object k_priority_search_array(ANNkd_tree& kdtree, object q, int k, double eps)
     return search_array(kdtree, q, k, eps, true);
 }
 
-BOOST_PYTHON_MODULE(pyANN_int)
+OPENRAVE_PYTHON_MODULE(pyANN_int)
 {
     import_array();
     numeric::array::set_module_and_type("numpy", "ndarray");
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
     int_from_number<int>();
     float_from_number<float>();
     float_from_number<double>();
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
     typedef return_value_policy< copy_const_reference > return_copy_const_ref;
     class_< pyann_exception >( "_pyann_exception_" )
@@ -319,7 +324,10 @@ BOOST_PYTHON_MODULE(pyANN_int)
     .def( "message", &pyann_exception::message, return_copy_const_ref() )
     .def( "__str__", &pyann_exception::message, return_copy_const_ref() )
     ;
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
     exception_translator<pyann_exception>();
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+
 
     class_<ANNkd_tree, OPENRAVE_SHARED_PTR<ANNkd_tree> >("KDTree")
     .def("__init__", make_constructor(&init_from_list))

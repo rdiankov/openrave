@@ -38,12 +38,14 @@ using py::handle;
 using py::dict;
 using py::enum_;
 using py::class_;
-using py::no_init;
-using py::bases;
 using py::init;
 using py::scope;
 using py::args;
 using py::return_value_policy;
+
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+using py::no_init;
+using py::bases;
 using py::copy_const_reference;
 using py::docstring_options;
 using py::optional;
@@ -51,6 +53,7 @@ using py::def;
 using openravepy::int_from_number;
 using openravepy::float_from_number;
 using openravepy::exception_translator;
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
 struct OPENRAVE_API cdpy_exception : std::exception
 {
@@ -119,7 +122,11 @@ object computeConvexDecomposition(const boost::multi_array<float, 2>& vertices, 
         PyObject *pyindices = PyArray_SimpleNew(2,dims, PyArray_INT);
         std::copy(&result.mIndices[0],&result.mIndices[3*result.mTcount],(int*)PyArray_DATA(pyindices));
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        hulls.append(py::make_tuple(py::cast(pyvertices), py::cast(pyindices)));
+#else
         hulls.append(py::make_tuple(static_cast<numeric::array>(handle<>(pyvertices)), static_cast<numeric::array>(handle<>(pyindices))));
+#endif // USE_PYBIND11_PYTHON_BINDINGS
     }
 
     return hulls;
@@ -127,26 +134,64 @@ object computeConvexDecomposition(const boost::multi_array<float, 2>& vertices, 
 
 BOOST_PYTHON_FUNCTION_OVERLOADS(computeConvexDecomposition_overloads, computeConvexDecomposition, 2, 10)
 
-BOOST_PYTHON_MODULE(convexdecompositionpy)
+OPENRAVE_PYTHON_MODULE(convexdecompositionpy)
 {
     import_array();
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
     numeric::array::set_module_and_type("numpy", "ndarray");
     int_from_number<int>();
     float_from_number<float>();
     float_from_number<double>();
-
     typedef return_value_policy< copy_const_reference > return_copy_const_ref;
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_< cdpy_exception >( m, "_cdpy_exception_" )
+#else
     class_< cdpy_exception >( "_cdpy_exception_" )
+#endif 
     .def( init<const std::string&>() )
     .def( init<const cdpy_exception&>() )
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def( "message", &cdpy_exception::message )
+    .def( "__str__", &cdpy_exception::message )
+#else
     .def( "message", &cdpy_exception::message, return_copy_const_ref() )
     .def( "__str__", &cdpy_exception::message, return_copy_const_ref() )
+#endif // USE_PYBIND11_PYTHON_BINDINGS
     ;
+
+#ifndef USE_PYBIND11_PYTHON_BINDINGS  
     exception_translator<cdpy_exception>();
+#endif
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    using namespace py::literals;
+    m.def("computeConvexDecomposition", computeConvexDecomposition,
+        "vertices"_a,
+        "indices"_a,
+        "skinWidth"_a = 0,
+        "decompositionDepth"_a = 8,
+        "maxHullVertices"_a = 64,
+        "concavityThresholdPercent"_a = 0.1,
+        "mergeThresholdPercent"_a = 30.0,
+        "volumeSplitThresholdPercent"_a = 0.1,
+        "useInitialIslandGeneration"_a = true,
+        "useIslandGeneration"_a = false,
+        "John Ratcliff's Convex Decomposition")
+#else
     def("computeConvexDecomposition", computeConvexDecomposition,
-        computeConvexDecomposition_overloads(args("vertices", "indices", "skinWidth", "decompositionDepth", "maxHullVertices", "concavityThresholdPercent", "mergeThresholdPercent", "volumeSplitThresholdPercent", "useInitialIslandGeneration", "useIslandGeneration"), "John Ratcliff's Convex Decomposition"));
+        computeConvexDecomposition_overloads(
+            args("vertices", "indices", "skinWidth", "decompositionDepth", "maxHullVertices", "concavityThresholdPercent", "mergeThresholdPercent", "volumeSplitThresholdPercent", "useInitialIslandGeneration", "useIslandGeneration"),
+            "John Ratcliff's Convex Decomposition"))
+#endif
+    ;
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.attr("__author__") = "John Ratcliff";
+    m.attr("__license__") = "MIT";
+#else
     scope().attr("__author__") = "John Ratcliff";
     scope().attr("__license__") = "MIT";
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 };
