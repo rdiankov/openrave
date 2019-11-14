@@ -138,20 +138,20 @@ object toPyUserData(UserDataPtr p)
 
 object toPyRay(const RAY& r)
 {
-    return object(boost::shared_ptr<PyRay>(new PyRay(r)));
+    return object(OPENRAVE_SHARED_PTR<PyRay>(new PyRay(r)));
 }
 
 RAY ExtractRay(object o)
 {
-    extract<boost::shared_ptr<PyRay> > pyray(o);
-    return ((boost::shared_ptr<PyRay>)pyray)->r;
+    extract<OPENRAVE_SHARED_PTR<PyRay> > pyray(o);
+    return ((OPENRAVE_SHARED_PTR<PyRay>)pyray)->r;
 }
 
 bool ExtractRay(object o, RAY& ray)
 {
-    extract<boost::shared_ptr<PyRay> > pyray(o);
+    extract<OPENRAVE_SHARED_PTR<PyRay> > pyray(o);
     if( pyray.check() ) {
-        ray = ((boost::shared_ptr<PyRay>)pyray)->r;
+        ray = ((OPENRAVE_SHARED_PTR<PyRay>)pyray)->r;
         return true;
     }
     return false;
@@ -207,13 +207,13 @@ public:
 
 AABB ExtractAABB(object o)
 {
-    extract<boost::shared_ptr<PyAABB> > pyaabb(o);
-    return ((boost::shared_ptr<PyAABB>)pyaabb)->ab;
+    extract<OPENRAVE_SHARED_PTR<PyAABB> > pyaabb(o);
+    return ((OPENRAVE_SHARED_PTR<PyAABB>)pyaabb)->ab;
 }
 
 object toPyAABB(const AABB& ab)
 {
-    return object(boost::shared_ptr<PyAABB>(new PyAABB(ab)));
+    return object(OPENRAVE_SHARED_PTR<PyAABB>(new PyAABB(ab)));
 }
 
 class AABB_pickle_suite : public pickle_suite
@@ -365,9 +365,9 @@ public:
 
 bool ExtractTriMesh(object o, TriMesh& mesh)
 {
-    extract<boost::shared_ptr<PyTriMesh> > pytrimesh(o);
+    extract<OPENRAVE_SHARED_PTR<PyTriMesh> > pytrimesh(o);
     if( pytrimesh.check() ) {
-        ((boost::shared_ptr<PyTriMesh>)pytrimesh)->GetTriMesh(mesh);
+        ((OPENRAVE_SHARED_PTR<PyTriMesh>)pytrimesh)->GetTriMesh(mesh);
         return true;
     }
     return false;
@@ -375,7 +375,7 @@ bool ExtractTriMesh(object o, TriMesh& mesh)
 
 object toPyTriMesh(const TriMesh& mesh)
 {
-    return object(boost::shared_ptr<PyTriMesh>(new PyTriMesh(mesh)));
+    return object(OPENRAVE_SHARED_PTR<PyTriMesh>(new PyTriMesh(mesh)));
 }
 
 class TriMesh_pickle_suite : public pickle_suite
@@ -387,7 +387,7 @@ public:
     }
 };
 
-class PyConfigurationSpecification : public boost::enable_shared_from_this<PyConfigurationSpecification>
+class PyConfigurationSpecification : public OPENRAVE_ENABLE_SHARED_FROM_THIS<PyConfigurationSpecification>
 {
 public:
     PyConfigurationSpecification() {
@@ -426,7 +426,7 @@ public:
         if( it == _spec._vgroups.end() ) {
             return object();
         }
-        return object(boost::shared_ptr<ConfigurationSpecification::Group>(new ConfigurationSpecification::Group(*it)));
+        return object(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group>(new ConfigurationSpecification::Group(*it)));
     }
 
     object FindTimeDerivativeGroup(const std::string& name, bool exactmatch) const
@@ -435,7 +435,7 @@ public:
         if( it == _spec._vgroups.end() ) {
             return object();
         }
-        return object(boost::shared_ptr<ConfigurationSpecification::Group>(new ConfigurationSpecification::Group(*it)));
+        return object(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group>(new ConfigurationSpecification::Group(*it)));
     }
 
 //    ConfigurationSpecification GetTimeDerivativeSpecification(int timederivative) const;
@@ -843,7 +843,7 @@ object RaveGetPluginInfo()
     std::list< std::pair<std::string, PLUGININFO> > listplugins;
     OpenRAVE::RaveGetPluginInfo(listplugins);
     FOREACH(itplugin, listplugins) {
-        plugins.append(py::make_tuple(itplugin->first,object(boost::shared_ptr<PyPluginInfo>(new PyPluginInfo(itplugin->second)))));
+        plugins.append(py::make_tuple(itplugin->first,object(OPENRAVE_SHARED_PTR<PyPluginInfo>(new PyPluginInfo(itplugin->second)))));
     }
     return plugins;
 }
@@ -1225,26 +1225,26 @@ void init_openravepy_global()
     class_<UserData, UserDataPtr >("UserData", DOXY_CLASS(UserData))
     ;
 
-    class_< boost::shared_ptr< void > >("VoidPointer", "Holds auto-managed resources, deleting it releases its shared data.");
+    class_< OPENRAVE_SHARED_PTR< void > >("VoidPointer", "Holds auto-managed resources, deleting it releases its shared data.");
 
-    class_<PyGraphHandle, boost::shared_ptr<PyGraphHandle> >("GraphHandle", DOXY_CLASS(GraphHandle), no_init)
+    class_<PyGraphHandle, OPENRAVE_SHARED_PTR<PyGraphHandle> >("GraphHandle", DOXY_CLASS(GraphHandle), no_init)
     .def("SetTransform",&PyGraphHandle::SetTransform,DOXY_FN(GraphHandle,SetTransform))
     .def("SetShow",&PyGraphHandle::SetShow,DOXY_FN(GraphHandle,SetShow))
     .def("Close",&PyGraphHandle::Close,DOXY_FN(GraphHandle,Close))
     ;
 
-    class_<PyUserData, boost::shared_ptr<PyUserData> >("UserData", DOXY_CLASS(UserData), no_init)
+    class_<PyUserData, OPENRAVE_SHARED_PTR<PyUserData> >("UserData", DOXY_CLASS(UserData), no_init)
     .def("close",&PyUserData::Close,"deprecated")
     .def("Close",&PyUserData::Close,"force releasing the user handle point.")
     ;
-    class_<PySerializableData, boost::shared_ptr<PySerializableData>, bases<PyUserData> >("SerializableData", DOXY_CLASS(SerializableData))
+    class_<PySerializableData, OPENRAVE_SHARED_PTR<PySerializableData>, bases<PyUserData> >("SerializableData", DOXY_CLASS(SerializableData))
     .def(init<std::string>(args("data")))
     .def("Close",&PySerializableData::Close,DOXY_FN(SerializableData,Close))
     .def("Serialize",&PySerializableData::Serialize,args("options"), DOXY_FN(SerializableData, Serialize))
     .def("Deserialize",&PySerializableData::Deserialize,args("data"), DOXY_FN(SerializableData, Deserialize))
     ;
 
-    class_<PyRay, boost::shared_ptr<PyRay> >("Ray", DOXY_CLASS(geometry::ray))
+    class_<PyRay, OPENRAVE_SHARED_PTR<PyRay> >("Ray", DOXY_CLASS(geometry::ray))
     .def(init<object,object>(args("pos","dir")))
     .def("dir",&PyRay::dir)
     .def("pos",&PyRay::pos)
@@ -1253,7 +1253,7 @@ void init_openravepy_global()
     .def("__repr__",&PyRay::__repr__)
     .def_pickle(Ray_pickle_suite())
     ;
-    class_<PyAABB, boost::shared_ptr<PyAABB> >("AABB", DOXY_CLASS(geometry::aabb))
+    class_<PyAABB, OPENRAVE_SHARED_PTR<PyAABB> >("AABB", DOXY_CLASS(geometry::aabb))
     .def(init<object,object>(args("pos","extents")))
     .def("extents",&PyAABB::extents)
     .def("pos",&PyAABB::pos)
@@ -1263,7 +1263,7 @@ void init_openravepy_global()
     .def("toDict", &PyAABB::toDict)
     .def_pickle(AABB_pickle_suite())
     ;
-    class_<PyTriMesh, boost::shared_ptr<PyTriMesh> >("TriMesh", DOXY_CLASS(TriMesh))
+    class_<PyTriMesh, OPENRAVE_SHARED_PTR<PyTriMesh> >("TriMesh", DOXY_CLASS(TriMesh))
     .def(init<object,object>(args("vertices","indices")))
     .def_readwrite("vertices",&PyTriMesh::vertices)
     .def_readwrite("indices",&PyTriMesh::indices)
@@ -1280,7 +1280,7 @@ void init_openravepy_global()
     .def("Serialize", &PyXMLReadable::Serialize, Serialize_overloads(args("options"), DOXY_FN(XMLReadable, Serialize)))
     ;
 
-    class_<PyPluginInfo, boost::shared_ptr<PyPluginInfo> >("PluginInfo", DOXY_CLASS(PLUGININFO),no_init)
+    class_<PyPluginInfo, OPENRAVE_SHARED_PTR<PyPluginInfo> >("PluginInfo", DOXY_CLASS(PLUGININFO),no_init)
     .def_readonly("interfacenames",&PyPluginInfo::interfacenames)
     .def_readonly("version",&PyPluginInfo::version)
     ;
@@ -1332,7 +1332,7 @@ void init_openravepy_global()
         ;
 
         {
-            scope group = class_<ConfigurationSpecification::Group, boost::shared_ptr<ConfigurationSpecification::Group> >("Group",DOXY_CLASS(ConfigurationSpecification::Group))
+            scope group = class_<ConfigurationSpecification::Group, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> >("Group",DOXY_CLASS(ConfigurationSpecification::Group))
                           .def_readwrite("name",&ConfigurationSpecification::Group::name)
                           .def_readwrite("interpolation",&ConfigurationSpecification::Group::interpolation)
                           .def_readwrite("offset",&ConfigurationSpecification::Group::offset)

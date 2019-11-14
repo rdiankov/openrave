@@ -75,6 +75,16 @@
 #define IS_PYTHONOBJECT_NONE(o) (!!(o))
 #endif
 
+#define OPENRAVE_UNIQUE_PTR boost::unique_ptr
+#define OPENRAVE_SHARED_PTR boost::shared_ptr
+#define OPENRAVE_WEAK_PTR boost::weak_ptr
+#define OPENRAVE_STATIC_POINTER_CAST boost::static_pointer_cast
+#define OPENRAVE_ENABLE_SHARED_FROM_THIS boost::enable_shared_from_this
+#define OPENRAVE_DYNAMIC_POINTER_CAST boost::dynamic_pointer_cast
+#define OPENRAVE_CONST_POINTER_CAST boost::const_pointer_cast
+#define OPENRAVE_MAKE_SHARED boost::make_shared
+#define OPENRAVE_FUNCTION boost::function
+
 namespace openravepy {
 
 // https://stackoverflow.com/questions/35041268/how-to-convert-a-vector-to-numpy-array-with-templates-and-boost
@@ -170,12 +180,12 @@ class PyVoidHandle
 public:
     PyVoidHandle() {
     }
-    PyVoidHandle(boost::shared_ptr<void> handle) : _handle(handle) {
+    PyVoidHandle(OPENRAVE_SHARED_PTR<void> handle) : _handle(handle) {
     }
     void Close() {
         _handle.reset();
     }
-    boost::shared_ptr<void> _handle;
+    OPENRAVE_SHARED_PTR<void> _handle;
 };
 
 class PyVoidHandleConst
@@ -183,12 +193,12 @@ class PyVoidHandleConst
 public:
     PyVoidHandleConst() {
     }
-    PyVoidHandleConst(boost::shared_ptr<void const> handle) : _handle(handle) {
+    PyVoidHandleConst(OPENRAVE_SHARED_PTR<void const> handle) : _handle(handle) {
     }
     void Close() {
         _handle.reset();
     }
-    boost::shared_ptr<void const> _handle;
+    OPENRAVE_SHARED_PTR<void const> _handle;
 };
 
 template <typename T>
@@ -347,16 +357,16 @@ struct exception_translator
 };
 
 // register const versions of the classes
-//template <class T> inline T* get_pointer( boost::shared_ptr<const T>
+//template <class T> inline T* get_pointer( OPENRAVE_SHARED_PTR<const T>
 //const& p){
 //     return const_cast<T*>(p.get());
 //}
 //
-//template <class T> struct pintee< boost::shared_ptr<const T> >{
+//template <class T> struct pintee< OPENRAVE_SHARED_PTR<const T> >{
 //     typedef T type;
 //};
 //
-//py::register_ptr_to_python< boost::shared_ptr<const my_class> >();
+//py::register_ptr_to_python< OPENRAVE_SHARED_PTR<const my_class> >();
 
 template<typename T>
 struct float_from_number
