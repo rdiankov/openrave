@@ -64,24 +64,50 @@ object toPyObject(const rapidjson::Value& value)
             }
             return l;
         }
-    case rapidjson::kTrueType:
+    case rapidjson::kTrueType: {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        return py::cast(PyBool_FromLong(1));
+#else
         return py::to_object(py::handle<>(PyBool_FromLong(1)));
-    case rapidjson::kFalseType:
+#endif
+    }
+    case rapidjson::kFalseType: {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        return py::cast(PyBool_FromLong(0));
+#else
         return py::to_object(py::handle<>(PyBool_FromLong(0)));
-    case rapidjson::kStringType:
+#endif
+    }
+    case rapidjson::kStringType: {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        return py::cast(value.GetString());
+#else
         return ConvertStringToUnicode(value.GetString());
-    case rapidjson::kNumberType:
+#endif
+    }
+    case rapidjson::kNumberType: {
         if (value.IsDouble()) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            return py::cast(PyFloat_FromDouble(value.GetDouble()));
+#else
             return py::to_object(py::handle<>(PyFloat_FromDouble(value.GetDouble())));
+#endif
         }
         else {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            return py::cast(PyInt_FromLong(value.GetInt64()));
+#else
             return py::to_object(py::handle<>(PyInt_FromLong(value.GetInt64())));
+#endif
         }
-    case rapidjson::kNullType:
+    }
+    case rapidjson::kNullType: {
         return py::object();
-    default:
+    }
+    default: {
         PyErr_SetString(PyExc_RuntimeError, "unsupported type");
         return py::object();
+    }
     }
 }
 

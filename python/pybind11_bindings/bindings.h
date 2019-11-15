@@ -76,12 +76,15 @@
 #include <pybind11/numpy.h>
 namespace pybind11 {
 template <typename T>
-T extract(object o) {
+inline T extract(object o) {
     return o.cast<T>();
 }
 template <typename T>
-object to_object(const T& t) {
-    return ::pybind11::cast<t>();
+inline object to_object(const T& t) {
+    return ::pybind11::cast(t);
+}
+inline object to_array(PyObject* pyo) {
+    return cast(pyo);
 }
 template <typename T>
 struct extract_ {
@@ -93,7 +96,7 @@ struct extract_ {
             throw std::runtime_error("Cannot cast " + std::string(typeid(T).name()));
         }
     }
-    T&& GetData() && { return std::move(_data); }
+    operator T() && { return std::move(_data); }
     T _data;
 };
 namespace numeric {
@@ -107,8 +110,11 @@ using array = ::pybind11::array_t<double>;
 namespace boost {
 namespace python {
 template <typename T>
-object to_object(const T& t) {
+inline object to_object(const T& t) {
     return object(t);
+}
+inline boost::python::numeric::array to_array(PyObject* pyo) {
+    return static_cast<boost::python::numeric::array>(boost::python::handle<>(pyo));
 }
 template <typename T>
 using extract_ = extract<T>;
