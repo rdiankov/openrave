@@ -35,7 +35,7 @@
 namespace py = pybind11;
 #else
 // cannot get from bindings.h, so have to redeclare them here
-#define PY_ARGS(...) py::args(__VA_ARGS__)
+#define PY_ARGS(...) py::args(__VA_ARGS__),
 namespace py = boost::python;
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 using py::object;
@@ -357,12 +357,12 @@ OPENRAVE_PYTHON_MODULE(pyANN_int)
 #endif
     .def("__del__", &destroy_points)
 
-    .def("kSearch", &ksearch,PY_ARGS("q","k","eps"))
-    .def("kSearchArray", &ksearch_array,PY_ARGS("q","k","eps"))
-    .def("kPriSearch", &k_priority_search,PY_ARGS("q","k","eps"))
-    .def("kPriSearchArray", &k_priority_search_array,PY_ARGS("q","k","eps"))
-    .def("kFRSearch", &k_fixed_radius_search,PY_ARGS("q","sqrad","k","eps"))
-    .def("kFRSearchArray", &k_fixed_radius_search_array,PY_ARGS("qarray","sqrad","k","eps"))
+    .def("kSearch", &ksearch, PY_ARGS("q", "k", "eps") "Doc of kSearch")
+    .def("kSearchArray", &ksearch_array, PY_ARGS("q", "k", "eps") "Doc of kSearchArray")
+    .def("kPriSearch", &k_priority_search, PY_ARGS("q","k","eps") "Doc of kPriSearch")
+    .def("kPriSearchArray", &k_priority_search_array, PY_ARGS("q", "k", "eps") "Doc of kPriSearchArray")
+    .def("kFRSearch", &k_fixed_radius_search, PY_ARGS("q", "sqrad", "k", "eps") "Doc of kFRSearch")
+    .def("kFRSearchArray", &k_fixed_radius_search_array, PY_ARGS("qarray", "sqrad", "k", "eps") "Doc of kFRSearchArray")
 
     .def("__len__",             &ANNkd_tree::nPoints)
     .def("dim",                 &ANNkd_tree::theDim)

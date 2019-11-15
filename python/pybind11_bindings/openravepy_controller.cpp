@@ -212,13 +212,13 @@ void init_openravepy_controller()
         bool (PyControllerBase::*setdesired2)(object,object) = &PyControllerBase::SetDesired;
         class_<PyControllerBase, OPENRAVE_SHARED_PTR<PyControllerBase>, bases<PyInterfaceBase> >("Controller", DOXY_CLASS(ControllerBase), no_init)
         .def("Init",init1, DOXY_FN(ControllerBase,Init))
-        .def("Init",init2, PY_ARGS("robot","dofindices","controltransform"), DOXY_FN(ControllerBase,Init))
+        .def("Init",init2, PY_ARGS("robot","dofindices","controltransform") DOXY_FN(ControllerBase,Init))
         .def("GetControlDOFIndices",&PyControllerBase::GetControlDOFIndices,DOXY_FN(ControllerBase,GetControlDOFIndices))
         .def("IsControlTransformation",&PyControllerBase::IsControlTransformation, DOXY_FN(ControllerBase,IsControlTransformation))
         .def("GetRobot",&PyControllerBase::GetRobot, DOXY_FN(ControllerBase,GetRobot))
-        .def("Reset",&PyControllerBase::Reset, Reset_overloads(PY_ARGS("options"), DOXY_FN(ControllerBase,Reset)))
-        .def("SetDesired",setdesired1, PY_ARGS("values"), DOXY_FN(ControllerBase,SetDesired))
-        .def("SetDesired",setdesired2, PY_ARGS("values","transform"), DOXY_FN(ControllerBase,SetDesired))
+        .def("Reset",&PyControllerBase::Reset, Reset_overloads(PY_ARGS("options") DOXY_FN(ControllerBase,Reset)))
+        .def("SetDesired",setdesired1, PY_ARGS("values") DOXY_FN(ControllerBase,SetDesired))
+        .def("SetDesired",setdesired2, PY_ARGS("values","transform") DOXY_FN(ControllerBase,SetDesired))
         .def("SetPath",&PyControllerBase::SetPath, DOXY_FN(ControllerBase,SetPath))
         .def("SimulationStep",&PyControllerBase::SimulationStep, DOXY_FN(ControllerBase,SimulationStep "dReal"))
         .def("IsDone",&PyControllerBase::IsDone, DOXY_FN(ControllerBase,IsDone))
@@ -230,14 +230,14 @@ void init_openravepy_controller()
 
     {
         class_<PyMultiControllerBase, OPENRAVE_SHARED_PTR<PyMultiControllerBase>, bases<PyControllerBase, PyInterfaceBase> >("MultiController", DOXY_CLASS(MultiControllerBase), no_init)
-        .def("AttachController",&PyMultiControllerBase::AttachController, PY_ARGS("controller","dofindices","controltransform"), DOXY_FN(MultiControllerBase,AttachController))
-        .def("RemoveController",&PyMultiControllerBase::RemoveController, PY_ARGS("controller"), DOXY_FN(MultiControllerBase,RemoveController))
-        .def("GetController",&PyMultiControllerBase::GetController, PY_ARGS("dof"), DOXY_FN(MultiControllerBase,GetController))
+        .def("AttachController",&PyMultiControllerBase::AttachController, PY_ARGS("controller","dofindices","controltransform") DOXY_FN(MultiControllerBase,AttachController))
+        .def("RemoveController",&PyMultiControllerBase::RemoveController, PY_ARGS("controller") DOXY_FN(MultiControllerBase,RemoveController))
+        .def("GetController",&PyMultiControllerBase::GetController, PY_ARGS("dof") DOXY_FN(MultiControllerBase,GetController))
         ;
     }
 
-    def("RaveCreateController",openravepy::RaveCreateController,PY_ARGS("env","name"),DOXY_FN1(RaveCreateController));
-    def("RaveCreateMultiController",openravepy::RaveCreateMultiController,PY_ARGS("env","name"),DOXY_FN1(RaveCreateMultiController));
+    def("RaveCreateController",openravepy::RaveCreateController, PY_ARGS("env","name") DOXY_FN1(RaveCreateController));
+    def("RaveCreateMultiController",openravepy::RaveCreateMultiController, PY_ARGS("env","name") DOXY_FN1(RaveCreateMultiController));
 }
 
 }

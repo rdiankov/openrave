@@ -181,9 +181,7 @@ OPENRAVE_PYTHON_MODULE(convexdecompositionpy)
         "John Ratcliff's Convex Decomposition")
 #else
     def("computeConvexDecomposition", computeConvexDecomposition,
-        computeConvexDecomposition_overloads(
-            PY_ARGS("vertices", "indices", "skinWidth", "decompositionDepth", "maxHullVertices", "concavityThresholdPercent", "mergeThresholdPercent", "volumeSplitThresholdPercent", "useInitialIslandGeneration", "useIslandGeneration"),
-            "John Ratcliff's Convex Decomposition"))
+        computeConvexDecomposition_overloads(PY_ARGS("vertices", "indices", "skinWidth", "decompositionDepth", "maxHullVertices", "concavityThresholdPercent", "mergeThresholdPercent", "volumeSplitThresholdPercent", "useInitialIslandGeneration", "useIslandGeneration") "John Ratcliff's Convex Decomposition"))
 #endif
     ;
 

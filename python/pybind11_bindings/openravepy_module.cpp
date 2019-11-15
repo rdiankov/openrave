@@ -85,9 +85,9 @@ void init_openravepy_module()
     .def("Destroy",&PyModuleBase::Destroy, DOXY_FN(ModuleBase,"Destroy"))
     ;
 
-    def("RaveCreateModule",openravepy::RaveCreateModule,PY_ARGS("env","name"),DOXY_FN1(RaveCreateModule));
-    def("RaveCreateProblem",openravepy::RaveCreateModule,PY_ARGS("env","name"),DOXY_FN1(RaveCreateModule));
-    def("RaveCreateProblemInstance",openravepy::RaveCreateModule,PY_ARGS("env","name"),DOXY_FN1(RaveCreateModule));
+    def("RaveCreateModule",openravepy::RaveCreateModule, PY_ARGS("env","name") DOXY_FN1(RaveCreateModule));
+    def("RaveCreateProblem",openravepy::RaveCreateModule, PY_ARGS("env","name") DOXY_FN1(RaveCreateModule));
+    def("RaveCreateProblemInstance",openravepy::RaveCreateModule, PY_ARGS("env","name") DOXY_FN1(RaveCreateModule));
 }
 
 }

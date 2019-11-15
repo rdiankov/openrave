@@ -343,7 +343,7 @@ void init_openravepy_viewer()
         void (PyViewerBase::*setcamera1)(object) = &PyViewerBase::SetCamera;
         void (PyViewerBase::*setcamera2)(object,float) = &PyViewerBase::SetCamera;
         scope viewer = class_<PyViewerBase, OPENRAVE_SHARED_PTR<PyViewerBase>, bases<PyInterfaceBase> >("Viewer", DOXY_CLASS(ViewerBase), no_init)
-                       .def("main",&PyViewerBase::main, main_overloads(PY_ARGS("show","sig_thread_id"), DOXY_FN(ViewerBase,main)))
+                       .def("main",&PyViewerBase::main, main_overloads(PY_ARGS("show","sig_thread_id") DOXY_FN(ViewerBase,main)))
                        .def("quitmainloop",&PyViewerBase::quitmainloop, DOXY_FN(ViewerBase,quitmainloop))
                        .def("SetSize",&PyViewerBase::SetSize, DOXY_FN(ViewerBase,SetSize))
                        .def("Move",&PyViewerBase::Move, DOXY_FN(ViewerBase,Move))
@@ -351,16 +351,16 @@ void init_openravepy_viewer()
                        .def("SetTitle",&PyViewerBase::SetName, DOXY_FN(ViewerBase,SetName))
                        .def("SetName",&PyViewerBase::SetName, DOXY_FN(ViewerBase,SetName))
                        .def("GetName",&PyViewerBase::GetName, DOXY_FN(ViewerBase,GetName))
-                       .def("RegisterCallback",&PyViewerBase::RegisterCallback, PY_ARGS("callback"), DOXY_FN(ViewerBase,RegisterItemSelectionCallback))
-                       .def("RegisterItemSelectionCallback",&PyViewerBase::RegisterItemSelectionCallback, PY_ARGS("callback"), DOXY_FN(ViewerBase,RegisterItemSelectionCallback))
+                       .def("RegisterCallback",&PyViewerBase::RegisterCallback, PY_ARGS("callback") DOXY_FN(ViewerBase,RegisterItemSelectionCallback))
+                       .def("RegisterItemSelectionCallback",&PyViewerBase::RegisterItemSelectionCallback, PY_ARGS("callback") DOXY_FN(ViewerBase,RegisterItemSelectionCallback))
                        .def("EnvironmentSync",&PyViewerBase::EnvironmentSync, DOXY_FN(ViewerBase,EnvironmentSync))
-                       .def("SetCamera",setcamera1,PY_ARGS("transform"), DOXY_FN(ViewerBase,SetCamera))
-                       .def("SetCamera",setcamera2,PY_ARGS("transform","focalDistance"), DOXY_FN(ViewerBase,SetCamera))
+                       .def("SetCamera",setcamera1, PY_ARGS("transform") DOXY_FN(ViewerBase,SetCamera))
+                       .def("SetCamera",setcamera2, PY_ARGS("transform","focalDistance") DOXY_FN(ViewerBase,SetCamera))
                        .def("SetBkgndColor",&PyViewerBase::SetBkgndColor,DOXY_FN(ViewerBase,SetBkgndColor))
                        .def("GetCameraTransform",&PyViewerBase::GetCameraTransform, DOXY_FN(ViewerBase,GetCameraTransform))
                        .def("GetCameraIntrinsics",&PyViewerBase::GetCameraIntrinsics, DOXY_FN(ViewerBase,GetCameraIntrinsics))
                        .def("GetCameraDistanceToFocus", &PyViewerBase::GetCameraDistanceToFocus, DOXY_FN(ViewerBase, GetCameraDistanceToFocus))
-                       .def("GetCameraImage",&PyViewerBase::GetCameraImage,PY_ARGS("width","height","transform","K"), DOXY_FN(ViewerBase,GetCameraImage))
+                       .def("GetCameraImage",&PyViewerBase::GetCameraImage, PY_ARGS("width","height","transform","K") DOXY_FN(ViewerBase,GetCameraImage))
         ;
 
 //        enum_<ViewerBase::ViewerEvents>("Events" DOXY_ENUM(ViewerEvents))
@@ -368,7 +368,7 @@ void init_openravepy_viewer()
 //        ;
     }
 
-    def("RaveCreateViewer",openravepy::RaveCreateViewer,PY_ARGS("env","name"),DOXY_FN1(RaveCreateViewer));
+    def("RaveCreateViewer",openravepy::RaveCreateViewer, PY_ARGS("env","name") DOXY_FN1(RaveCreateViewer));
 }
 
 }

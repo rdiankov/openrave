@@ -110,10 +110,14 @@ struct extract_ {
 };
 } // namespace pybind11
 #define OPENRAVE_PYTHON_MODULE(X) PYBIND11_MODULE(X, m)
+#include "map.h"
+#define PY_ARG_(x) py ::arg(x),
+#define PY_ARGS(...) MAP(PY_ARG_, __VA_ARGS__)
 #else // USE_PYBIND11_PYTHON_BINDINGS
 #include <boost/python.hpp> // already has #include <boost/shared_ptr.hpp>
 #define OPENRAVE_PYTHON_MODULE(X) BOOST_PYTHON_MODULE(X)
-#define PY_ARGS(...) py::args(__VA_ARGS__)
+// might need a space before "::"?
+#define PY_ARGS(...) py::args(__VA_ARGS__),
 namespace boost {
 namespace python {
 template <typename T>

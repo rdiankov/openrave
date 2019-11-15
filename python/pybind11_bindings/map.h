@@ -72,23 +72,22 @@
 /*
  * Compile with `gcc -E example.c` to see the preprocessor output.
  */
-// #include "map.h"
 
 /* Basic `MAP` usage: */
-#define STRING(x) char const *x##_string = #x;
-MAP(STRING, foo, bar, baz)
+// #define STRING(x) char const *x##_string = #x;
+// MAP(STRING, foo, bar, baz)
 
 /* Basic `MAP_LIST` usage: */
-#define PARAM(x) int x
-void function(MAP_LIST(PARAM, foo, bar, baz));
+// #define PARAM(x) int x
+// void function(MAP_LIST(PARAM, foo, bar, baz));
 
 /* Test `MAP` with parentheses in the arguments: */
-#define CALL(x) py ::arg(x),
-MAP(CALL, "a", "b", "c")
+// #define CALL(x) py ::arg(x),
+// MAP(CALL, "a", "b", "c")
 
-#define PY_ARGS(...) MAP(CALL, __VA_ARGS__)
-PY_ARGS("arg0", "arg1", "arg2")
+// #define PY_ARGS(...) MAP(CALL, __VA_ARGS__)
+// PY_ARGS("arg0", "arg1", "arg2")
 
 /* Test `MAP_LIST` with parentheses in the arguments: */
-#define CALL_LIST(x) putchar x
-MAP_LIST(CALL_LIST, ('a'), ('b'), ('c'));
+// #define CALL_LIST(x) putchar x
+// MAP_LIST(CALL_LIST, ('a'), ('b'), ('c'));
