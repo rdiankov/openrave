@@ -202,8 +202,8 @@ void init_openravepy_physicsengine()
     .def("InitEnvironment",&PyPhysicsEngineBase::InitEnvironment, DOXY_FN(PhysicsEngineBase,InitEnvironment))
     .def("DestroyEnvironment",&PyPhysicsEngineBase::DestroyEnvironment, DOXY_FN(PhysicsEngineBase,DestroyEnvironment))
     .def("InitKinBody",&PyPhysicsEngineBase::InitKinBody, DOXY_FN(PhysicsEngineBase,InitKinBody))
-    .def("SetLinkVelocity",&PyPhysicsEngineBase::SetLinkVelocity, args("link","velocity"), DOXY_FN(PhysicsEngineBase,SetLinkVelocity))
-    .def("SetLinkVelocities",&PyPhysicsEngineBase::SetLinkVelocity, args("body","velocities"), DOXY_FN(PhysicsEngineBase,SetLinkVelocities))
+    .def("SetLinkVelocity",&PyPhysicsEngineBase::SetLinkVelocity, PY_ARGS("link","velocity"), DOXY_FN(PhysicsEngineBase,SetLinkVelocity))
+    .def("SetLinkVelocities",&PyPhysicsEngineBase::SetLinkVelocity, PY_ARGS("body","velocities"), DOXY_FN(PhysicsEngineBase,SetLinkVelocities))
     .def("GetLinkVelocity",&PyPhysicsEngineBase::GetLinkVelocity, DOXY_FN(PhysicsEngineBase,GetLinkVelocity))
     .def("GetLinkVelocities",&PyPhysicsEngineBase::GetLinkVelocity, DOXY_FN(PhysicsEngineBase,GetLinkVelocities))
     .def("SetBodyForce",&PyPhysicsEngineBase::SetBodyForce, DOXY_FN(PhysicsEngineBase,SetBodyForce))
@@ -216,7 +216,7 @@ void init_openravepy_physicsengine()
     .def("SimulateStep",&PyPhysicsEngineBase::SimulateStep, DOXY_FN(PhysicsEngineBase,SimulateStep))
     ;
 
-    def("RaveCreatePhysicsEngine",openravepy::RaveCreatePhysicsEngine,args("env","name"),DOXY_FN1(RaveCreatePhysicsEngine));
+    def("RaveCreatePhysicsEngine",openravepy::RaveCreatePhysicsEngine,PY_ARGS("env","name"),DOXY_FN1(RaveCreatePhysicsEngine));
 }
 
 }

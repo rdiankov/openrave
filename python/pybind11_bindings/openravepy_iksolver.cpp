@@ -321,15 +321,15 @@ void init_openravepy_iksolver()
 
     {
         scope ikreturn = class_<PyIkReturn, PyIkReturnPtr>("IkReturn", DOXY_CLASS(IkReturn), no_init)
-                         .def(init<IkReturnAction>(args("action")))
+                         .def(init<IkReturnAction>(PY_ARGS("action")))
                          .def("GetAction",&PyIkReturn::GetAction, "Retuns IkReturn::_action")
                          .def("GetSolution",&PyIkReturn::GetSolution, "Retuns IkReturn::_vsolution")
                          .def("GetUserData",&PyIkReturn::GetUserData, "Retuns IkReturn::_userdata")
-                         .def("GetMapData",&PyIkReturn::GetMapData, args("key"), "Indexes into the map and returns an array of numbers. If key doesn't exist, returns None")
+                         .def("GetMapData",&PyIkReturn::GetMapData, PY_ARGS("key"), "Indexes into the map and returns an array of numbers. If key doesn't exist, returns None")
                          .def("GetMapDataDict",&PyIkReturn::GetMapDataDict, "Returns a dictionary copy for IkReturn::_mapdata")
-                         .def("SetUserData",&PyIkReturn::SetUserData,args("data"),"Set IKReturn::_userdata")
-                         .def("SetSolution",&PyIkReturn::SetSolution,args("solution"),"Set IKReturn::_vsolution")
-                         .def("SetMapKeyValue",&PyIkReturn::SetMapKeyValue,args("key,value"),"Adds key/value pair to IKReturn::_mapdata")
+                         .def("SetUserData",&PyIkReturn::SetUserData,PY_ARGS("data"),"Set IKReturn::_userdata")
+                         .def("SetSolution",&PyIkReturn::SetSolution,PY_ARGS("solution"),"Set IKReturn::_vsolution")
+                         .def("SetMapKeyValue",&PyIkReturn::SetMapKeyValue,PY_ARGS("key,value"),"Adds key/value pair to IKReturn::_mapdata")
         ;
     }
 
@@ -339,19 +339,19 @@ void init_openravepy_iksolver()
         object (PyIkSolverBase::*SolveAll)(object, int) = &PyIkSolverBase::SolveAll;
         object (PyIkSolverBase::*SolveAllFree)(object, object, int) = &PyIkSolverBase::SolveAll;
         class_<PyIkSolverBase, OPENRAVE_SHARED_PTR<PyIkSolverBase>, bases<PyInterfaceBase> >("IkSolver", DOXY_CLASS(IkSolverBase), no_init)
-        .def("Solve",Solve,args("ikparam","q0","filteroptions"), DOXY_FN(IkSolverBase, Solve "const IkParameterization&; const std::vector; int; IkReturnPtr"))
-        .def("Solve",SolveFree,args("ikparam","q0","freeparameters", "filteroptions"), DOXY_FN(IkSolverBase, Solve "const IkParameterization&; const std::vector; const std::vector; int; IkReturnPtr"))
-        .def("SolveAll",SolveAll,args("ikparam","filteroptions"), DOXY_FN(IkSolverBase, SolveAll "const IkParameterization&; int; std::vector<IkReturnPtr>"))
-        .def("SolveAll",SolveAllFree,args("ikparam","freeparameters","filteroptions"), DOXY_FN(IkSolverBase, SolveAll "const IkParameterization&; const std::vector; int; std::vector<IkReturnPtr>"))
+        .def("Solve",Solve,PY_ARGS("ikparam","q0","filteroptions"), DOXY_FN(IkSolverBase, Solve "const IkParameterization&; const std::vector; int; IkReturnPtr"))
+        .def("Solve",SolveFree,PY_ARGS("ikparam","q0","freeparameters", "filteroptions"), DOXY_FN(IkSolverBase, Solve "const IkParameterization&; const std::vector; const std::vector; int; IkReturnPtr"))
+        .def("SolveAll",SolveAll,PY_ARGS("ikparam","filteroptions"), DOXY_FN(IkSolverBase, SolveAll "const IkParameterization&; int; std::vector<IkReturnPtr>"))
+        .def("SolveAll",SolveAllFree,PY_ARGS("ikparam","freeparameters","filteroptions"), DOXY_FN(IkSolverBase, SolveAll "const IkParameterization&; const std::vector; int; std::vector<IkReturnPtr>"))
         .def("GetNumFreeParameters",&PyIkSolverBase::GetNumFreeParameters, DOXY_FN(IkSolverBase,GetNumFreeParameters))
         .def("GetFreeParameters",&PyIkSolverBase::GetFreeParameters, DOXY_FN(IkSolverBase,GetFreeParameters))
-        .def("Supports",&PyIkSolverBase::Supports, args("iktype"), DOXY_FN(IkSolverBase,Supports))
-        .def("CallFilters",&PyIkSolverBase::CallFilters, args("ikparam"), DOXY_FN(IkSolverBase,CallFilters))
-        .def("RegisterCustomFilter",&PyIkSolverBase::RegisterCustomFilter, args("priority","callback"), DOXY_FN(IkSolverBase,RegisterCustomFilter))
+        .def("Supports",&PyIkSolverBase::Supports, PY_ARGS("iktype"), DOXY_FN(IkSolverBase,Supports))
+        .def("CallFilters",&PyIkSolverBase::CallFilters, PY_ARGS("ikparam"), DOXY_FN(IkSolverBase,CallFilters))
+        .def("RegisterCustomFilter",&PyIkSolverBase::RegisterCustomFilter, PY_ARGS("priority","callback"), DOXY_FN(IkSolverBase,RegisterCustomFilter))
         ;
     }
 
-    def("RaveCreateIkSolver",openravepy::RaveCreateIkSolver,args("env","name"),DOXY_FN1(RaveCreateIkSolver));
+    def("RaveCreateIkSolver",openravepy::RaveCreateIkSolver,PY_ARGS("env","name"),DOXY_FN1(RaveCreateIkSolver));
 }
 
 }

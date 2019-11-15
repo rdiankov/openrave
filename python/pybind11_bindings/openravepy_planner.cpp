@@ -419,31 +419,31 @@ void init_openravepy_planner()
         bool (PyPlannerBase::*InitPlan1)(PyRobotBasePtr, PyPlannerBase::PyPlannerParametersPtr,bool) = &PyPlannerBase::InitPlan;
         bool (PyPlannerBase::*InitPlan2)(PyRobotBasePtr, const string &) = &PyPlannerBase::InitPlan;
         scope planner = class_<PyPlannerBase, OPENRAVE_SHARED_PTR<PyPlannerBase>, bases<PyInterfaceBase> >("Planner", DOXY_CLASS(PlannerBase), no_init)
-                        .def("InitPlan",InitPlan1,InitPlan_overloads(args("robot","params","releasegil"), DOXY_FN(PlannerBase,InitPlan "RobotBasePtr; PlannerParametersConstPtr")))
-                        .def("InitPlan",InitPlan2,args("robot","xmlparams"), DOXY_FN(PlannerBase,InitPlan "RobotBasePtr; std::istream"))
-                        .def("PlanPath",&PyPlannerBase::PlanPath,PlanPath_overloads(args("traj","releasegil"), DOXY_FN(PlannerBase,PlanPath)))
+                        .def("InitPlan",InitPlan1,InitPlan_overloads(PY_ARGS("robot","params","releasegil"), DOXY_FN(PlannerBase,InitPlan "RobotBasePtr; PlannerParametersConstPtr")))
+                        .def("InitPlan",InitPlan2,PY_ARGS("robot","xmlparams"), DOXY_FN(PlannerBase,InitPlan "RobotBasePtr; std::istream"))
+                        .def("PlanPath",&PyPlannerBase::PlanPath,PlanPath_overloads(PY_ARGS("traj","releasegil"), DOXY_FN(PlannerBase,PlanPath)))
                         .def("GetParameters",&PyPlannerBase::GetParameters, DOXY_FN(PlannerBase,GetParameters))
                         .def("RegisterPlanCallback",&PyPlannerBase::RegisterPlanCallback, DOXY_FN(PlannerBase,RegisterPlanCallback))
         ;
 
         class_<PyPlannerBase::PyPlannerParameters, PyPlannerBase::PyPlannerParametersPtr >("PlannerParameters", DOXY_CLASS(PlannerBase::PlannerParameters))
         .def(init<>())
-        .def(init<PyPlannerBase::PyPlannerParametersPtr>(args("parameters")))
-        .def("SetRobotActiveJoints",&PyPlannerBase::PyPlannerParameters::SetRobotActiveJoints, args("robot"), DOXY_FN(PlannerBase::PlannerParameters, SetRobotActiveJoints))
-        .def("SetConfigurationSpecification",&PyPlannerBase::PyPlannerParameters::SetConfigurationSpecification, args("env","spec"), DOXY_FN(PlannerBase::PlannerParameters, SetConfigurationSpecification))
+        .def(init<PyPlannerBase::PyPlannerParametersPtr>(PY_ARGS("parameters")))
+        .def("SetRobotActiveJoints",&PyPlannerBase::PyPlannerParameters::SetRobotActiveJoints, PY_ARGS("robot"), DOXY_FN(PlannerBase::PlannerParameters, SetRobotActiveJoints))
+        .def("SetConfigurationSpecification",&PyPlannerBase::PyPlannerParameters::SetConfigurationSpecification, PY_ARGS("env","spec"), DOXY_FN(PlannerBase::PlannerParameters, SetConfigurationSpecification))
         .def("GetConfigurationSpecification",&PyPlannerBase::PyPlannerParameters::GetConfigurationSpecification, DOXY_FN(PlannerBase::PlannerParameters, GetConfigurationSpecification))
-        .def("SetExtraParameters",&PyPlannerBase::PyPlannerParameters::SetExtraParameters, args("extra"), DOXY_FN(PlannerBase::PlannerParameters, SetExtraParameters))
-        .def("SetRandomGeneratorSeed",&PyPlannerBase::PyPlannerParameters::SetRandomGeneratorSeed, args("seed"), DOXY_FN(PlannerBase::PlannerParameters, SetRandomGeneratorSeed))
-        .def("SetGoalConfig",&PyPlannerBase::PyPlannerParameters::SetGoalConfig,args("values"),"sets PlannerParameters::vgoalconfig")
-        .def("SetInitialConfig",&PyPlannerBase::PyPlannerParameters::SetInitialConfig,args("values"),"sets PlannerParameters::vinitialconfig")
-        .def("SetInitialConfigVelocities",&PyPlannerBase::PyPlannerParameters::SetInitialConfigVelocities,args("velocities"),"sets PlannerParameters::_vInitialConfigVelocities")
-        .def("SetGoalConfigVelocities",&PyPlannerBase::PyPlannerParameters::SetGoalConfigVelocities,args("velocities"),"sets PlannerParameters::_vGoalConfigVelocities")
-        .def("SetConfigVelocityLimit",&PyPlannerBase::PyPlannerParameters::SetConfigVelocityLimit,args("velocities"),"sets PlannerParameters::_vConfigVelocityLimit")
-        .def("SetConfigAccelerationLimit",&PyPlannerBase::PyPlannerParameters::SetConfigAccelerationLimit,args("accelerations"),"sets PlannerParameters::_vConfigAccelerationLimit")
-        .def("SetConfigResolution",&PyPlannerBase::PyPlannerParameters::SetConfigResolution,args("resolutions"),"sets PlannerParameters::_vConfigResolution")
-        .def("SetMaxIterations",&PyPlannerBase::PyPlannerParameters::SetMaxIterations,args("maxiterations"),"sets PlannerParameters::_nMaxIterations")
-        .def("CheckPathAllConstraints",&PyPlannerBase::PyPlannerParameters::CheckPathAllConstraints,CheckPathAllConstraints_overloads(args("q0","q1","dq0","dq1","timeelapsed","interval","options", "filterreturn"),DOXY_FN(PlannerBase::PlannerParameters, CheckPathAllConstraints)))
-        .def("SetPostProcessing", &PyPlannerBase::PyPlannerParameters::SetPostProcessing, args("plannername", "plannerparameters"), "sets the post processing parameters")
+        .def("SetExtraParameters",&PyPlannerBase::PyPlannerParameters::SetExtraParameters, PY_ARGS("extra"), DOXY_FN(PlannerBase::PlannerParameters, SetExtraParameters))
+        .def("SetRandomGeneratorSeed",&PyPlannerBase::PyPlannerParameters::SetRandomGeneratorSeed, PY_ARGS("seed"), DOXY_FN(PlannerBase::PlannerParameters, SetRandomGeneratorSeed))
+        .def("SetGoalConfig",&PyPlannerBase::PyPlannerParameters::SetGoalConfig,PY_ARGS("values"),"sets PlannerParameters::vgoalconfig")
+        .def("SetInitialConfig",&PyPlannerBase::PyPlannerParameters::SetInitialConfig,PY_ARGS("values"),"sets PlannerParameters::vinitialconfig")
+        .def("SetInitialConfigVelocities",&PyPlannerBase::PyPlannerParameters::SetInitialConfigVelocities,PY_ARGS("velocities"),"sets PlannerParameters::_vInitialConfigVelocities")
+        .def("SetGoalConfigVelocities",&PyPlannerBase::PyPlannerParameters::SetGoalConfigVelocities,PY_ARGS("velocities"),"sets PlannerParameters::_vGoalConfigVelocities")
+        .def("SetConfigVelocityLimit",&PyPlannerBase::PyPlannerParameters::SetConfigVelocityLimit,PY_ARGS("velocities"),"sets PlannerParameters::_vConfigVelocityLimit")
+        .def("SetConfigAccelerationLimit",&PyPlannerBase::PyPlannerParameters::SetConfigAccelerationLimit,PY_ARGS("accelerations"),"sets PlannerParameters::_vConfigAccelerationLimit")
+        .def("SetConfigResolution",&PyPlannerBase::PyPlannerParameters::SetConfigResolution,PY_ARGS("resolutions"),"sets PlannerParameters::_vConfigResolution")
+        .def("SetMaxIterations",&PyPlannerBase::PyPlannerParameters::SetMaxIterations,PY_ARGS("maxiterations"),"sets PlannerParameters::_nMaxIterations")
+        .def("CheckPathAllConstraints",&PyPlannerBase::PyPlannerParameters::CheckPathAllConstraints,CheckPathAllConstraints_overloads(PY_ARGS("q0","q1","dq0","dq1","timeelapsed","interval","options", "filterreturn"),DOXY_FN(PlannerBase::PlannerParameters, CheckPathAllConstraints)))
+        .def("SetPostProcessing", &PyPlannerBase::PyPlannerParameters::SetPostProcessing, PY_ARGS("plannername", "plannerparameters"), "sets the post processing parameters")
         .def("__str__",&PyPlannerBase::PyPlannerParameters::__str__)
         .def("__unicode__",&PyPlannerBase::PyPlannerParameters::__unicode__)
         .def("__repr__",&PyPlannerBase::PyPlannerParameters::__repr__)
@@ -452,7 +452,7 @@ void init_openravepy_planner()
         ;
     }
 
-    def("RaveCreatePlanner",openravepy::RaveCreatePlanner,args("env","name"),DOXY_FN1(RaveCreatePlanner));
+    def("RaveCreatePlanner",openravepy::RaveCreatePlanner,PY_ARGS("env","name"),DOXY_FN1(RaveCreatePlanner));
 }
 
 }

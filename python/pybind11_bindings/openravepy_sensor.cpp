@@ -757,8 +757,8 @@ void init_openravepy_sensor()
         OPENRAVE_SHARED_PTR<PySensorBase::PySensorData> (PySensorBase::*GetSensorData1)() = &PySensorBase::GetSensorData;
         OPENRAVE_SHARED_PTR<PySensorBase::PySensorData> (PySensorBase::*GetSensorData2)(SensorBase::SensorType) = &PySensorBase::GetSensorData;
         scope sensor = class_<PySensorBase, OPENRAVE_SHARED_PTR<PySensorBase>, bases<PyInterfaceBase> >("Sensor", DOXY_CLASS(SensorBase), no_init)
-                       .def("Configure",&PySensorBase::Configure, Configure_overloads(args("command","blocking"), DOXY_FN(SensorBase,Configure)))
-                       .def("SimulationStep",&PySensorBase::SimulationStep, args("timeelapsed"), DOXY_FN(SensorBase,SimulationStep))
+                       .def("Configure",&PySensorBase::Configure, Configure_overloads(PY_ARGS("command","blocking"), DOXY_FN(SensorBase,Configure)))
+                       .def("SimulationStep",&PySensorBase::SimulationStep, PY_ARGS("timeelapsed"), DOXY_FN(SensorBase,SimulationStep))
                        .def("GetSensorData",GetSensorData1, DOXY_FN(SensorBase,GetSensorData))
                        .def("GetSensorData",GetSensorData2, DOXY_FN(SensorBase,GetSensorData))
                        .def("CreateSensorData",&PySensorBase::CreateSensorData, DOXY_FN(SensorBase,CreateSensorData))
@@ -930,7 +930,7 @@ void init_openravepy_sensor()
     .def_readwrite("viscousfriction",&PyActuatorGeomData::viscousfriction)
     ;
 
-    def("RaveCreateSensor",openravepy::RaveCreateSensor,args("env","name"),DOXY_FN1(RaveCreateSensor));
+    def("RaveCreateSensor",openravepy::RaveCreateSensor,PY_ARGS("env","name"),DOXY_FN1(RaveCreateSensor));
 }
 
 }

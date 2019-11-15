@@ -113,6 +113,7 @@ struct extract_ {
 #else // USE_PYBIND11_PYTHON_BINDINGS
 #include <boost/python.hpp> // already has #include <boost/shared_ptr.hpp>
 #define OPENRAVE_PYTHON_MODULE(X) BOOST_PYTHON_MODULE(X)
+#define PY_ARGS(...) py::args(__VA_ARGS__)
 namespace boost {
 namespace python {
 template <typename T>

@@ -207,22 +207,22 @@ void init_openravepy_spacesampler()
 {
     {
         scope spacesampler = class_<PySpaceSamplerBase, OPENRAVE_SHARED_PTR<PySpaceSamplerBase>, bases<PyInterfaceBase> >("SpaceSampler", DOXY_CLASS(SpaceSamplerBase), no_init)
-                             .def("SetSeed",&PySpaceSamplerBase::SetSeed, args("seed"), DOXY_FN(SpaceSamplerBase,SetSeed))
-                             .def("SetSpaceDOF",&PySpaceSamplerBase::SetSpaceDOF, args("dof"), DOXY_FN(SpaceSamplerBase,SetSpaceDOF))
+                             .def("SetSeed",&PySpaceSamplerBase::SetSeed, PY_ARGS("seed"), DOXY_FN(SpaceSamplerBase,SetSeed))
+                             .def("SetSpaceDOF",&PySpaceSamplerBase::SetSpaceDOF, PY_ARGS("dof"), DOXY_FN(SpaceSamplerBase,SetSpaceDOF))
                              .def("GetDOF",&PySpaceSamplerBase::GetDOF, DOXY_FN(SpaceSamplerBase,GetDOF))
-                             .def("GetNumberOfValues",&PySpaceSamplerBase::GetNumberOfValues, args("seed"), DOXY_FN(SpaceSamplerBase,GetNumberOfValues))
-                             .def("Supports",&PySpaceSamplerBase::Supports, args("seed"), DOXY_FN(SpaceSamplerBase,Supports))
-                             .def("GetLimits",&PySpaceSamplerBase::GetLimits, args("seed"), DOXY_FN(SpaceSamplerBase,GetLimits))
-                             .def("SampleSequence",&PySpaceSamplerBase::SampleSequence, SampleSequence_overloads(args("type", "num","interval"), DOXY_FN(SpaceSamplerBase,SampleSequence "std::vector; size_t; IntervalType")))
-                             .def("SampleSequence2D",&PySpaceSamplerBase::SampleSequence2D, SampleSequence2D_overloads(args("type", "num","interval"), DOXY_FN(SpaceSamplerBase,SampleSequence "std::vector; size_t; IntervalType")))
-                             .def("SampleSequenceOneReal", &PySpaceSamplerBase::SampleSequenceOneReal, SampleSequenceOneReal_overloads(args("interval"), DOXY_FN(SpaceSamplerBase,SampleSequenceOneReal)))
+                             .def("GetNumberOfValues",&PySpaceSamplerBase::GetNumberOfValues, PY_ARGS("seed"), DOXY_FN(SpaceSamplerBase,GetNumberOfValues))
+                             .def("Supports",&PySpaceSamplerBase::Supports, PY_ARGS("seed"), DOXY_FN(SpaceSamplerBase,Supports))
+                             .def("GetLimits",&PySpaceSamplerBase::GetLimits, PY_ARGS("seed"), DOXY_FN(SpaceSamplerBase,GetLimits))
+                             .def("SampleSequence",&PySpaceSamplerBase::SampleSequence, SampleSequence_overloads(PY_ARGS("type", "num","interval"), DOXY_FN(SpaceSamplerBase,SampleSequence "std::vector; size_t; IntervalType")))
+                             .def("SampleSequence2D",&PySpaceSamplerBase::SampleSequence2D, SampleSequence2D_overloads(PY_ARGS("type", "num","interval"), DOXY_FN(SpaceSamplerBase,SampleSequence "std::vector; size_t; IntervalType")))
+                             .def("SampleSequenceOneReal", &PySpaceSamplerBase::SampleSequenceOneReal, SampleSequenceOneReal_overloads(PY_ARGS("interval"), DOXY_FN(SpaceSamplerBase,SampleSequenceOneReal)))
                              .def("SampleSequenceOneUInt32", &PySpaceSamplerBase::SampleSequenceOneUInt32, DOXY_FN(SpaceSamplerBase,SampleSequenceOneUInt32))
-                             .def("SampleComplete",&PySpaceSamplerBase::SampleComplete, SampleComplete_overloads(args("type", "num","interval"), DOXY_FN(SpaceSamplerBase,SampleComplete "std::vector; size_t; IntervalType")))
-                             .def("SampleComplete2D",&PySpaceSamplerBase::SampleComplete2D, SampleComplete2D_overloads(args("type", "num","interval"), DOXY_FN(SpaceSamplerBase,SampleComplete "std::vector; size_t; IntervalType")))
+                             .def("SampleComplete",&PySpaceSamplerBase::SampleComplete, SampleComplete_overloads(PY_ARGS("type", "num","interval"), DOXY_FN(SpaceSamplerBase,SampleComplete "std::vector; size_t; IntervalType")))
+                             .def("SampleComplete2D",&PySpaceSamplerBase::SampleComplete2D, SampleComplete2D_overloads(PY_ARGS("type", "num","interval"), DOXY_FN(SpaceSamplerBase,SampleComplete "std::vector; size_t; IntervalType")))
         ;
     }
 
-    def("RaveCreateSpaceSampler",openravepy::RaveCreateSpaceSampler,args("env","name"),DOXY_FN1(RaveCreateSpaceSampler));
+    def("RaveCreateSpaceSampler",openravepy::RaveCreateSpaceSampler,PY_ARGS("env","name"),DOXY_FN1(RaveCreateSpaceSampler));
 }
 
 }
