@@ -1067,15 +1067,15 @@ private:
     /// \param args - the argument list to pass when initializing the controller
     virtual bool SetController(ControllerBasePtr controller, const std::vector<int>& dofindices, int nControlTransformation);
 
-protected:
-    RobotBase(EnvironmentBasePtr penv);
-
     inline RobotBasePtr shared_robot() {
         return boost::static_pointer_cast<RobotBase>(shared_from_this());
     }
     inline RobotBaseConstPtr shared_robot_const() const {
         return boost::static_pointer_cast<RobotBase const>(shared_from_this());
     }
+
+protected:
+    RobotBase(EnvironmentBasePtr penv);
 
     /// \brief Proprocess the manipulators and sensors and build the specific robot hashes.
     virtual void _ComputeInternalInformation();
