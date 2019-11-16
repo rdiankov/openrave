@@ -125,7 +125,7 @@ public:
         }
 
         /// \brief Return transform with respect to end effector defining the grasp coordinate system
-        virtual Transform GetLocalToolTransform() const {
+        virtual const Transform& GetLocalToolTransform() const {
             return _info._tLocalTool;
         }
 
@@ -170,7 +170,7 @@ public:
         virtual void SetLocalToolDirection(const Vector& direction);
 
         /// \brief direction of palm/head/manipulator used for approaching. defined inside the manipulator/grasp coordinate system
-        virtual Vector GetLocalToolDirection() const {
+        virtual const Vector& GetLocalToolDirection() const {
             return _info._vdirection;
         }
 
@@ -450,7 +450,7 @@ public:
         virtual LinkPtr GetAttachingLink() const {
             return LinkPtr(pattachedlink);
         }
-        virtual Transform GetRelativeTransform() const {
+        virtual const Transform& GetRelativeTransform() const {
             return _info._trelative;
         }
         virtual Transform GetTransform() const {
@@ -601,7 +601,7 @@ public:
         virtual LinkPtr GetAttachingLink() const {
             return LinkPtr(_pattachedlink);
         }
-        virtual Transform GetRelativeTransform() const {
+        virtual const Transform& GetRelativeTransform() const {
             return _info._trelative;
         }
 
@@ -804,7 +804,7 @@ private:
     /// \brief Return the set of active dof indices of the joints.
     virtual const std::vector<int>& GetActiveDOFIndices() const;
 
-    virtual Vector GetAffineRotationAxis() const {
+    virtual const Vector& GetAffineRotationAxis() const {
         return vActvAffineRotationAxis;
     }
     virtual void SetAffineTranslationLimits(const Vector& lower, const Vector& upper);
@@ -839,37 +839,37 @@ private:
     virtual Vector GetAffineRotationQuatLimits() const {
         return _vRotationQuatLimitStart * _fQuatLimitMaxAngle;
     }
-    virtual Vector GetAffineTranslationMaxVels() const {
+    virtual const Vector& GetAffineTranslationMaxVels() const {
         return _vTranslationMaxVels;
     }
-    virtual Vector GetAffineRotationAxisMaxVels() const {
+    virtual const Vector& GetAffineRotationAxisMaxVels() const {
         return _vRotationAxisMaxVels;
     }
-    virtual Vector GetAffineRotation3DMaxVels() const {
+    virtual const Vector& GetAffineRotation3DMaxVels() const {
         return _vRotation3DMaxVels;
     }
     virtual dReal GetAffineRotationQuatMaxVels() const {
         return _fQuatMaxAngleVelocity;
     }
-    virtual Vector GetAffineTranslationResolution() const {
+    virtual const Vector& GetAffineTranslationResolution() const {
         return _vTranslationResolutions;
     }
-    virtual Vector GetAffineRotationAxisResolution() const {
+    virtual const Vector& GetAffineRotationAxisResolution() const {
         return _vRotationAxisResolutions;
     }
-    virtual Vector GetAffineRotation3DResolution() const {
+    virtual const Vector& GetAffineRotation3DResolution() const {
         return _vRotation3DResolutions;
     }
     virtual dReal GetAffineRotationQuatResolution() const {
         return _fQuatAngleResolution;
     }
-    virtual Vector GetAffineTranslationWeights() const {
+    virtual const Vector& GetAffineTranslationWeights() const {
         return _vTranslationWeights;
     }
-    virtual Vector GetAffineRotationAxisWeights() const {
+    virtual const Vector& GetAffineRotationAxisWeights() const {
         return _vRotationAxisWeights;
     }
-    virtual Vector GetAffineRotation3DWeights() const {
+    virtual const Vector& GetAffineRotation3DWeights() const {
         return _vRotation3DWeights;
     }
     virtual dReal GetAffineRotationQuatWeights() const {
