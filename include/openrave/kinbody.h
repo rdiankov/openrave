@@ -1273,11 +1273,11 @@ public:
         /// \brief Return the child link whose transformation is computed by this joint's values (either GetFirstAttached() or GetSecondAttached())
         virtual LinkPtr GetHierarchyChildLink() const;
         /// \brief The axis of the joint in local coordinates.
-        virtual Vector GetInternalHierarchyAxis(int axis = 0) const;
+        virtual const Vector& GetInternalHierarchyAxis(int axis = 0) const;
         /// \brief Left multiply transform given the base body.
-        virtual Transform GetInternalHierarchyLeftTransform() const;
+        virtual const Transform& GetInternalHierarchyLeftTransform() const;
         /// \brief Right multiply transform given the base body.
-        virtual Transform GetInternalHierarchyRightTransform() const;
+        virtual const Transform& GetInternalHierarchyRightTransform() const;
         //@}
 
         /// A mimic joint's angles are automatically determined from other joints based on a general purpose formula.
@@ -2497,15 +2497,16 @@ private:
     /// only used for hashes...
     virtual void serialize(std::ostream& o, int options) const;
 
-protected:
-    /// \brief constructors declared protected so that user always goes through environment to create bodies
-    KinBody(InterfaceType type, EnvironmentBasePtr penv);
     inline KinBodyPtr shared_kinbody() {
         return boost::static_pointer_cast<KinBody>(shared_from_this());
     }
     inline KinBodyConstPtr shared_kinbody_const() const {
         return boost::static_pointer_cast<KinBody const>(shared_from_this());
     }
+
+protected:
+    /// \brief constructors declared protected so that user always goes through environment to create bodies
+    KinBody(InterfaceType type, EnvironmentBasePtr penv);
 
     /// \brief **internal use only** Releases and grabs the body inside the grabbed structure from _vGrabbedBodies.
     virtual void _Regrab(UserDataPtr pgrabbed);

@@ -1932,11 +1932,25 @@ std::string CollisionReport::__str__() const
     else {
         s << "(";
         if( !!plink1 ) {
-            s << plink1->GetParent()->GetName() << ":" << plink1->GetName();
+            KinBodyPtr parent = plink1->GetParent(true);
+            if( !!parent ) {
+                s << plink1->GetParent()->GetName() << ":" << plink1->GetName();
+            }
+            else {
+                RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", plink1->GetName());
+                s << "[deleted]:" << plink1->GetName();
+            }
         }
         s << ")x(";
         if( !!plink2 ) {
-            s << plink2->GetParent()->GetName() << ":" << plink2->GetName();
+            KinBodyPtr parent = plink2->GetParent(true);
+            if( !!parent ) {
+                s << plink2->GetParent()->GetName() << ":" << plink2->GetName();
+            }
+            else {
+                RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", plink2->GetName());
+                s << "[deleted]:" << plink2->GetName();
+            }
         }
         s << ")";
     }
