@@ -906,6 +906,16 @@ public:
 
         ElectricMotorActuatorInfoPtr _infoElectricMotor;
 
+        /// true if joint axis has an identification at some of its lower and upper limits.
+        ///
+        /// An identification of the lower and upper limits means that once the joint reaches its upper limits, it is also
+        /// at its lower limit. The most common identification on revolute joints at -pi and pi. 'circularity' means the
+        /// joint does not stop at limits.
+        /// Although currently not developed, it could be possible to support identification for joints that are not revolute.
+        boost::array<uint8_t,3> _bIsCircular;
+
+        bool _bIsActive;                 ///< if true, should belong to the DOF of the body, unless it is a mimic joint (_ComputeInternalInformation decides this)
+
         /// \brief _controlMode specifies how this joint is controlled. For possible control modes, see enum JointControlMode.
         JointControlMode _controlMode;
 
@@ -931,15 +941,39 @@ public:
         /// JCM_ExternalDevice
         std::string _externalDeviceAddress;  ///< IP address for the external device controlling this joint
 
-        /// true if joint axis has an identification at some of its lower and upper limits.
-        ///
-        /// An identification of the lower and upper limits means that once the joint reaches its upper limits, it is also
-        /// at its lower limit. The most common identification on revolute joints at -pi and pi. 'circularity' means the
-        /// joint does not stop at limits.
-        /// Although currently not developed, it could be possible to support identification for joints that are not revolute.
-        boost::array<uint8_t,3> _bIsCircular;
+        struct JointControlInfo_RobotController
+        {
+            JointControlInfo_RobotController() : robotId(-1) {
+            };
+            int robotId;
+            boost::array<int16_t, 3> robotControllerDOFIndex; ///< indicates which DOF in the robot controller controls which joint axis. -1 if not specified/not valid.
+        };
+        typedef boost::shared_ptr<JointControlInfo_RobotController> JointControlInfo_RobotControllerPtr;
 
-        bool _bIsActive;                 ///< if true, should belong to the DOF of the body, unless it is a mimic joint (_ComputeInternalInformation decides this)
+        struct JointControlInfo_IO
+        {
+            JointControlInfo_IO() : deviceId(-1) {
+            };
+            int deviceId;
+            boost::array< std::vector<std::string>, 3 > vMoveIONames;       ///< io names for controlling positions of this joint.
+            boost::array< std::vector<std::string>, 3 > vUpperLimitIONames; ///< io names for detecting if the joint is at its upper limit
+            boost::array< std::vector<uint8_t>, 3 > vUpperLimitSensorIsOn;  ///< if true, the corresponding upper limit sensor reads 1 when the joint is at its upper limit. otherwise, the upper limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
+            boost::array< std::vector<std::string>, 3 > vLowerLimitIONames; ///< io names for detecting if the joint is at its lower limit
+            boost::array< std::vector<uint8_t>, 3 > vLowerLimitSensorIsOn;  ///< if true, the corresponding lower limit sensor reads 1 when the joint is at its lower limit. otherwise, the lower limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
+        };
+        typedef boost::shared_ptr<JointControlInfo_IO> JointControlInfo_IOPtr;
+
+        struct JointControlInfo_ExternalDevice
+        {
+            JointControlInfo_ExternalDevice() : gripperId(-1) {
+            };
+            int gripperId;
+        };
+        typedef boost::shared_ptr<JointControlInfo_ExternalDevice> JointControlInfo_ExternalDevicePtr;
+
+        JointControlInfo_RobotControllerPtr _jci_robotcontroller;
+        JointControlInfo_IOPtr _jci_io;
+        JointControlInfo_ExternalDevicePtr _jci_externaldevice;
     };
     typedef boost::shared_ptr<JointInfo> JointInfoPtr;
     typedef boost::shared_ptr<JointInfo const> JointInfoConstPtr;

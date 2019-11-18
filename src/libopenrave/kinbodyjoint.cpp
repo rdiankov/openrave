@@ -41,9 +41,6 @@ KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsAc
     std::fill(_vlowerlimit.begin(), _vlowerlimit.end(), 0);
     std::fill(_vupperlimit.begin(), _vupperlimit.end(), 0);
     std::fill(_bIsCircular.begin(), _bIsCircular.end(), 0);
-    // joint control
-    std::fill(_robotControllerDOFIndex.begin(), _robotControllerDOFIndex.end(), -1);
-    std::fill(_bIsSingleActing.begin(), _bIsSingleActing.end(), 1);
 }
 
 KinBody::JointInfo::JointInfo(const JointInfo& other) : XMLReadable("joint")
@@ -105,15 +102,30 @@ KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& othe
     _bIsActive = other._bIsActive;
 
     _controlMode = other._controlMode;
-    _robotControllerDOFIndex = other._robotControllerDOFIndex;
-    _bIsSingleActing = other._bIsSingleActing;
-    _moveToUpperLimitIOName = other._moveToUpperLimitIOName;
-    _vUpperLimitIONames = other._vUpperLimitIONames;
-    _vUpperLimitSensorIsOn = other._vUpperLimitSensorIsOn;
-    _moveToLowerLimitIOName = other._moveToLowerLimitIOName;
-    _vLowerLimitIONames = other._vLowerLimitIONames;
-    _vLowerLimitSensorIsOn = other._vLowerLimitSensorIsOn;
-    _externalDeviceAddress = other._externalDeviceAddress;
+    if( _controlMode == KinBody::JCM_RobotController ) {
+        if( !other._jci_robotcontroller ) {
+            _jci_robotcontroller.reset();
+        }
+        else {
+            _jci_robotcontroller.reset(new JointControlInfo_RobotController(*other._jci_robotcontroller));
+        }
+    }
+    else if( _controlMode == KinBody::JCM_IO ) {
+        if( !other._jci_io ) {
+            _jci_io.reset();
+        }
+        else {
+            _jci_io.reset(new JointControlInfo_IO(*other._jci_io));
+        }
+    }
+    else if( _controlMode == KinBody::JCM_ExternalDevice ) {
+        if( !other._jci_externaldevice ) {
+            _jci_externaldevice.reset();
+        }
+        else {
+            _jci_externaldevice.reset(new JointControlInfo_ExternalDevice(*other._jci_externaldevice));
+        }
+    }
     return *this;
 }
 
