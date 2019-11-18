@@ -117,7 +117,7 @@ public:
     virtual void SetGravity(const Vector& gravity) {
         _vgravity = gravity;
     }
-    virtual Vector GetGravity() {
+    virtual const Vector& GetGravity() {
         return _vgravity;
     }
 

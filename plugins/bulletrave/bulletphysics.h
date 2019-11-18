@@ -655,7 +655,7 @@ public:
         }
     }
 
-    virtual Vector GetGravity()
+    virtual const Vector& GetGravity()
     {
         return _gravity;
     }

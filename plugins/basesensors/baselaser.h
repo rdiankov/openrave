@@ -337,7 +337,7 @@ public:
         _trans = trans;
     }
 
-    virtual Transform GetTransform() {
+    virtual const Transform& GetTransform() {
         return _trans;
     }
 
@@ -363,7 +363,6 @@ public:
     }
 
 protected:
-
     virtual Transform GetLaserPlaneTransform() {
         return _trans;
     }
