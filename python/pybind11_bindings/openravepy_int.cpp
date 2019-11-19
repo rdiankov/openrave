@@ -199,13 +199,24 @@ void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
     else if (PyDict_Check(obj.ptr()))
     {
         py::dict d = py::extract<py::dict>(obj);
-        object iterator = d.iteritems();
-        value.SetObject();
         int numitems = len(d);
+        value.SetObject();
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+        object iterator = d.iteritems();
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        for (auto item : dict) // will replace later
+#else
         for (int i = 0; i < numitems; i++)
+#endif
         {
-            rapidjson::Value keyValue, valueValue;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            py::tuple kv = py::make_tuple(item.first, item.second);
+#else
             py::tuple kv = py::extract<py::tuple>(iterator.attr("next")());
+#endif
+            rapidjson::Value keyValue, valueValue;
             {
                 object k = py::extract<object>(kv[0]);
                 toRapidJSONValue(k, keyValue, allocator);

@@ -180,8 +180,13 @@ inline object empty_array() {
     return numeric::array({}, nullptr);
 }
 template <typename T>
+inline object empty_array_astype() {
+    return array_t<T>({}, nullptr);
+}
+template <typename T>
 struct extract_ {
-    explicit extract_(const T& o) {
+    extract_() = delete;
+    explicit extract_(const object& o) {
         try {
             _data = extract<T>(o);
         }
@@ -189,7 +194,12 @@ struct extract_ {
             throw std::runtime_error("Cannot cast " + std::string(typeid(T).name()));
         }
     }
-    operator T() && { return std::move(_data); }
+    // user-defined conversion:
+    // https://en.cppreference.com/w/cpp/language/cast_operator
+    //implicit conversion
+    operator T() const { return _data; }
+    // explicit conversion
+    explicit operator T*() const { return _data; }
     T _data;
 };
 } // namespace pybind11

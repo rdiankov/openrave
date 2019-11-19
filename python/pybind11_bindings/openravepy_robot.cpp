@@ -1595,6 +1595,7 @@ public:
     }
 };
 
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
 class ManipulatorInfo_pickle_suite : public pickle_suite
 {
 public:
@@ -1613,6 +1614,7 @@ public:
         r._vGripperJointNames = state[7];
     }
 };
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
 RobotBasePtr GetRobot(object o)
 {

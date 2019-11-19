@@ -121,15 +121,16 @@ OPENRAVE_SHARED_PTR<ANNkd_tree>       init_from_list(object lst)
     BOOST_ASSERT(sizeof(ANNdist)==8 || sizeof(ANNdist)==4);
     BOOST_ASSERT(sizeof(ANNidx)==4);
 
-    int dimension   = len(lst[0]);
-    int npts        = len(lst);
-    ANNpointArray dataPts     = annAllocPts(npts, dimension);
+    const int dimension   = len(lst[0]);
+    const int npts        = len(lst);
+    ANNpointArray dataPts = annAllocPts(npts, dimension);
 
     // Convert points from Python list to ANNpointArray
-    for (int p = 0; p < len(lst); ++p) {
+    for (int p = 0; p < npts; ++p) {
         ANNpoint& pt = dataPts[p];
-        for (int c = 0; c < dimension; ++c)
+        for (int c = 0; c < dimension; ++c) {
             pt[c] = extract<ANNcoord>(lst[p][c]);
+        }
     }
 
     OPENRAVE_SHARED_PTR<ANNkd_tree>   p(new ANNkd_tree(dataPts, npts, dimension));
@@ -350,8 +351,9 @@ OPENRAVE_PYTHON_MODULE(pyANN_int)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    class_<ANNkd_tree, OPENRAVE_SHARED_PTR<ANNkd_tree> >(m, "KDTree")
-    .def( init<>(), &init_from_list)
+    class_<ANNkd_tree, OPENRAVE_SHARED_PTR<ANNkd_tree>, ANNpointSet>(m, "KDTree")
+    // https://pybind11.readthedocs.io/en/stable/advanced/classes.html#custom-constructors
+    .def( init<>(&init_from_list))
 #else
     class_<ANNkd_tree, OPENRAVE_SHARED_PTR<ANNkd_tree> >("KDTree")
     .def("__init__", make_constructor(&init_from_list))
@@ -369,5 +371,9 @@ OPENRAVE_PYTHON_MODULE(pyANN_int)
     .def("dim",                 &ANNkd_tree::theDim)
     ;
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("max_pts_visit",        &annMaxPtsVisit);
+#else
     def("max_pts_visit",        &annMaxPtsVisit);
+#endif
 }
