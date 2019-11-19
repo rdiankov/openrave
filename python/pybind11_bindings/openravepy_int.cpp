@@ -383,11 +383,19 @@ AttributesList toAttributesList(object oattributes)
     if( !IS_PYTHONOBJECT_NONE(oattributes) ) {
         py::extract_<py::dict> odictextractor(oattributes);
         if( odictextractor.check() ) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            return toAttributesList((py::dict)odictextractor);
+#else
             return toAttributesList((py::dict)odictextractor());
+#endif
         }
         // assume list
         py::extract_<py::list> olistextractor(oattributes);
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        return toAttributesList((py::list)olistextractor);
+#else
         return toAttributesList((py::list)olistextractor());
+#endif
     }
     return AttributesList();
 }
