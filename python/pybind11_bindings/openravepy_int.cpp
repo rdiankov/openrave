@@ -20,6 +20,14 @@
 #include <boost/thread/once.hpp>
 #include <boost/scoped_ptr.hpp>
 
+#include "openravepy_kinbody.h"
+#include "include/openravepy_collisioncheckerbase.h"
+#include "include/openravepy_collisionreport.h"
+#include "include/openravepy_robotbase.h"
+#include "include/openravepy_sensorbase.h"
+#include "include/openravepy_module.h"
+#include "include/openravepy_physicalenginebase.h"
+
 namespace openravepy
 {
 using py::object;

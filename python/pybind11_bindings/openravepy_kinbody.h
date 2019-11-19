@@ -292,6 +292,9 @@ protected:
     void _ParseJointInfos(py::object ojointinfos, std::vector<KinBody::JointInfoConstPtr>& vjointinfos);
 };
 
-}
+template <typename T>
+py::object GetCustomParameters(const std::map<std::string, std::vector<T> >& parameters, py::object oname = py::object(), int index = -1);
+
+} // namespace openravepy
 
 #endif

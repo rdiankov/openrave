@@ -43,7 +43,7 @@ using py::def;
 namespace numeric = py::numeric;
 
 template <typename T>
-object GetCustomParameters(const std::map<std::string, std::vector<T> >& parameters, object oname=object(), int index=-1)
+object GetCustomParameters(const std::map<std::string, std::vector<T> >& parameters, object oname, int index)
 {
     if( IS_PYTHONOBJECT_NONE(oname) ) {
         py::dict oparameters;
