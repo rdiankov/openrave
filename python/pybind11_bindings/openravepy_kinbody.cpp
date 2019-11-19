@@ -1860,11 +1860,11 @@ object PyKinBody::GetDOFTorqueLimits() const
 object PyKinBody::GetDOFLimits(object oindices) const
 {
     if( IS_PYTHONOBJECT_NONE(oindices) ) {
-        return py::make_tuple(numeric::array(py::list()), numeric::array(py::list())); // always need 2 since users can do lower, upper = GetDOFLimits()
+        return py::make_tuple(py::empty_array(), py::empty_array()); // always need 2 since users can do lower, upper = GetDOFLimits()
     }
     vector<int> vindices = ExtractArray<int>(oindices);
     if( vindices.size() == 0 ) {
-        return py::make_tuple(numeric::array(py::list()), numeric::array(py::list())); // always need 2 since users can do lower, upper = GetDOFLimits()
+        return py::make_tuple(py::empty_array(), py::empty_array()); // always need 2 since users can do lower, upper = GetDOFLimits()
     }
     vector<dReal> vlower, vupper, vtemplower, vtempupper;
     vlower.reserve(vindices.size());

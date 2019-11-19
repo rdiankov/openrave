@@ -46,7 +46,7 @@ class PyManipulatorInfo
 public:
     PyManipulatorInfo() {
         _tLocalTool = ReturnTransform(Transform());
-        _vChuckingDirection = numeric::array(py::list());
+        _vChuckingDirection = py::empty_array();
         _vdirection = toPyVector3(Vector(0,0,1));
         _vGripperJointNames = py::list();
     }
@@ -1379,7 +1379,7 @@ public:
     object GetActiveDOFLimits() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return py::make_tuple(numeric::array(py::list()), numeric::array(py::list())); // always need 2 since users can do lower, upper = GetDOFLimits()
+            return py::make_tuple(py::empty_array(), py::empty_array()); // always need 2 since users can do lower, upper = GetDOFLimits()
         }
         vector<dReal> lower, upper;
         _probot->GetActiveDOFLimits(lower,upper);

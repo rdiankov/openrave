@@ -58,7 +58,7 @@ class PyPlannerStatus
 public:
     PyPlannerStatus() {
         statusCode = 0;
-        jointValues = numeric::array(py::list());
+        jointValues = py::empty_array();
     }
 
     PyPlannerStatus(const PlannerStatus& status) {
