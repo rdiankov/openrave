@@ -2738,8 +2738,8 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("drawtrimesh", &PyEnvironmentBase::drawtrimesh,
                         "points"_a,
                         "indices"_a = object(),
-                        "colors"_a, object(),
-                        DOXY_FN(EnvironmentBase,drawtrimesh "const float; int; const int; int; const boost::multi_array")
+                        "colors"_a = object(),
+                        DOXY_FN(EnvironmentBase, drawtrimesh "const float; int; const int; int; const boost::multi_array")
                     )
 #else
                     .def("drawtrimesh",&PyEnvironmentBase::drawtrimesh,drawtrimesh_overloads(PY_ARGS("points","indices","colors") DOXY_FN(EnvironmentBase,drawtrimesh "const float; int; const int; int; const boost::multi_array")))

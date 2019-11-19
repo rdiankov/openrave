@@ -48,7 +48,7 @@ public:
     virtual ~PyStateRestoreContext() {
     }
     py::object __enter__() {
-        return py::object(_state);
+        return py::to_object(_state);
     }
     void __exit__(py::object type, py::object value, py::object traceback) {
         _state->Restore();
