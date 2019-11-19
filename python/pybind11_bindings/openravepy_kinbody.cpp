@@ -21,6 +21,7 @@ namespace openravepy {
 
 using py::object;
 using py::extract;
+using py::extract_;
 using py::handle;
 using py::dict;
 using py::enum_;
@@ -3022,7 +3023,7 @@ object toPyKinBodyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv)
 
 object toPyKinBodyLink(KinBody::LinkPtr plink, object opyenv)
 {
-    extract<PyEnvironmentBasePtr> pyenv(opyenv);
+    extract_<PyEnvironmentBasePtr> pyenv(opyenv);
     if( pyenv.check() ) {
         return py::to_object(toPyKinBodyLink(plink,(PyEnvironmentBasePtr)pyenv));
     }
@@ -3039,7 +3040,7 @@ object toPyKinBodyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv)
 
 KinBody::LinkPtr GetKinBodyLink(object o)
 {
-    extract<PyLinkPtr> pylink(o);
+    extract_<PyLinkPtr> pylink(o);
     if( pylink.check() ) {
         return ((PyLinkPtr)pylink)->GetLink();
     }
@@ -3048,7 +3049,7 @@ KinBody::LinkPtr GetKinBodyLink(object o)
 
 KinBody::LinkConstPtr GetKinBodyLinkConst(object o)
 {
-    extract<PyLinkPtr> pylink(o);
+    extract_<PyLinkPtr> pylink(o);
     if( pylink.check() ) {
         return ((PyLinkPtr)pylink)->GetLink();
     }
@@ -3057,7 +3058,7 @@ KinBody::LinkConstPtr GetKinBodyLinkConst(object o)
 
 KinBody::JointPtr GetKinBodyJoint(object o)
 {
-    extract<PyJointPtr> pyjoint(o);
+    extract_<PyJointPtr> pyjoint(o);
     if( pyjoint.check() ) {
         return ((PyJointPtr)pyjoint)->GetJoint();
     }
@@ -3066,7 +3067,7 @@ KinBody::JointPtr GetKinBodyJoint(object o)
 
 std::string reprPyKinBodyJoint(object o)
 {
-    extract<PyJointPtr> pyjoint(o);
+    extract_<PyJointPtr> pyjoint(o);
     if( pyjoint.check() ) {
         return ((PyJointPtr)pyjoint)->__repr__();
     }
@@ -3075,7 +3076,7 @@ std::string reprPyKinBodyJoint(object o)
 
 std::string strPyKinBodyJoint(object o)
 {
-    extract<PyJointPtr> pyjoint(o);
+    extract_<PyJointPtr> pyjoint(o);
     if( pyjoint.check() ) {
         return ((PyJointPtr)pyjoint)->__str__();
     }
@@ -3084,7 +3085,7 @@ std::string strPyKinBodyJoint(object o)
 
 KinBodyPtr GetKinBody(object o)
 {
-    extract<PyKinBodyPtr> pykinbody(o);
+    extract_<PyKinBodyPtr> pykinbody(o);
     if( pykinbody.check() ) {
         return ((PyKinBodyPtr)pykinbody)->GetBody();
     }
@@ -3098,7 +3099,7 @@ KinBodyPtr GetKinBody(PyKinBodyPtr pykinbody)
 
 PyEnvironmentBasePtr GetPyEnvFromPyKinBody(object o)
 {
-    extract<PyKinBodyPtr> pykinbody(o);
+    extract_<PyKinBodyPtr> pykinbody(o);
     if( pykinbody.check() ) {
         return ((PyKinBodyPtr)pykinbody)->GetEnv();
     }
@@ -3123,7 +3124,7 @@ PyInterfaceBasePtr toPyKinBody(KinBodyPtr pkinbody, PyEnvironmentBasePtr pyenv)
 
 object toPyKinBody(KinBodyPtr pkinbody, object opyenv)
 {
-    extract<PyEnvironmentBasePtr> pyenv(opyenv);
+    extract_<PyEnvironmentBasePtr> pyenv(opyenv);
     if( pyenv.check() ) {
         return py::to_object(toPyKinBody(pkinbody,(PyEnvironmentBasePtr)pyenv));
     }

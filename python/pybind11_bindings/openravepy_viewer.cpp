@@ -77,6 +77,7 @@ namespace openravepy {
 
 using py::object;
 using py::extract;
+using py::extract_;
 using py::handle;
 using py::dict;
 using py::enum_;
@@ -113,15 +114,15 @@ protected:
             PyErr_Print();
         }
         PyGILState_Release(gstate);
-        extract<bool> xb(res);
+        extract_<bool> xb(res);
         if( xb.check() ) {
             return (bool)xb;
         }
-        extract<int> xi(res);
+        extract_<int> xi(res);
         if( xi.check() ) {
             return (int)xi;
         }
-        extract<double> xd(res);
+        extract_<double> xd(res);
         if( xd.check() ) {
             return (double)xd>0;
         }

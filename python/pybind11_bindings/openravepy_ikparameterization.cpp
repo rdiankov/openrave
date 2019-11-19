@@ -23,6 +23,7 @@ namespace openravepy {
 
 using py::object;
 using py::extract;
+using py::extract_;
 using py::handle;
 using py::dict;
 using py::enum_;
@@ -87,11 +88,11 @@ public:
     }
 
     int GetDOF(object o) {
-        extract<PyIkParameterization*> pyik(o);
+        extract_<PyIkParameterization*> pyik(o);
         if( pyik.check() ) {
             return ((PyIkParameterization*)pyik)->_param.GetDOF();
         }
-        extract<OPENRAVE_SHARED_PTR<PyIkParameterization> > pyikptr(o);
+        extract_<OPENRAVE_SHARED_PTR<PyIkParameterization> > pyikptr(o);
         if( pyikptr.check() ) {
             return ((OPENRAVE_SHARED_PTR<PyIkParameterization>)pyikptr)->_param.GetDOF();
         }
@@ -103,11 +104,11 @@ public:
     }
 
     int GetNumberOfValues(object o) {
-        extract<PyIkParameterization*> pyik(o);
+        extract_<PyIkParameterization*> pyik(o);
         if( pyik.check() ) {
             return ((PyIkParameterization*)pyik)->_param.GetNumberOfValues();
         }
-        extract<OPENRAVE_SHARED_PTR<PyIkParameterization> > pyikptr(o);
+        extract_<OPENRAVE_SHARED_PTR<PyIkParameterization> > pyikptr(o);
         if( pyikptr.check() ) {
             return ((OPENRAVE_SHARED_PTR<PyIkParameterization>)pyikptr)->_param.GetNumberOfValues();
         }
@@ -119,15 +120,15 @@ public:
     }
 
     object GetConfigurationSpecification(object ointerpolation, const std::string& robotname="", const std::string& manipname="") {
-        extract<PyIkParameterization*> pyik(ointerpolation);
+        extract_<PyIkParameterization*> pyik(ointerpolation);
         if( pyik.check() ) {
             return py::to_object(openravepy::toPyConfigurationSpecification(((PyIkParameterization*)pyik)->_param.GetConfigurationSpecification(std::string(), robotname, manipname)));
         }
-        extract<OPENRAVE_SHARED_PTR<PyIkParameterization> > pyikptr(ointerpolation);
+        extract_<OPENRAVE_SHARED_PTR<PyIkParameterization> > pyikptr(ointerpolation);
         if( pyikptr.check() ) {
             return py::to_object(openravepy::toPyConfigurationSpecification(((OPENRAVE_SHARED_PTR<PyIkParameterization>)pyikptr)->_param.GetConfigurationSpecification(std::string(), robotname, manipname)));
         }
-        extract<IkParameterizationType> pyiktype(ointerpolation);
+        extract_<IkParameterizationType> pyiktype(ointerpolation);
         if( pyiktype.check() ) {
             return py::to_object(openravepy::toPyConfigurationSpecification(IkParameterization::GetConfigurationSpecification((IkParameterizationType)pyiktype, std::string(), robotname, manipname)));
         }
@@ -341,7 +342,7 @@ public:
 };
 
 bool ExtractIkParameterization(object o, IkParameterization& ikparam) {
-    extract<PyIkParameterizationPtr > pyikparam(o);
+    extract_<PyIkParameterizationPtr > pyikparam(o);
     if( pyikparam.check() ) {
         ikparam = ((PyIkParameterizationPtr)pyikparam)->_param;
         return true;

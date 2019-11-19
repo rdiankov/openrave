@@ -23,6 +23,7 @@ namespace openravepy {
 
 using py::object;
 using py::extract;
+using py::extract_;
 using py::handle;
 using py::dict;
 using py::enum_;
@@ -281,7 +282,7 @@ public:
 
 TrajectoryBasePtr GetTrajectory(object o)
 {
-    extract<PyTrajectoryBasePtr> pytrajectory(o);
+    extract_<PyTrajectoryBasePtr> pytrajectory(o);
     if( pytrajectory.check() ) {
         return GetTrajectory((PyTrajectoryBasePtr)pytrajectory);
     }
@@ -300,7 +301,7 @@ PyInterfaceBasePtr toPyTrajectory(TrajectoryBasePtr ptrajectory, PyEnvironmentBa
 
 object toPyTrajectory(TrajectoryBasePtr ptraj, object opyenv)
 {
-    extract<PyEnvironmentBasePtr> pyenv(opyenv);
+    extract_<PyEnvironmentBasePtr> pyenv(opyenv);
     if( pyenv.check() ) {
         return py::to_object(toPyTrajectory(ptraj,(PyEnvironmentBasePtr)pyenv));
     }

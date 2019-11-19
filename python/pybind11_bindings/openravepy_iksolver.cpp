@@ -22,6 +22,7 @@ namespace openravepy {
 
 using py::object;
 using py::extract;
+using py::extract_;
 using py::handle;
 using py::dict;
 using py::enum_;
@@ -109,7 +110,7 @@ protected:
         }
         else {
             if( !openravepy::ExtractIkReturn(res,ikfr) ) {
-                extract<IkReturnAction> ikfra(res);
+                extract_<IkReturnAction> ikfra(res);
                 if( ikfra.check() ) {
                     ikfr._action = (IkReturnAction)ikfra;
                 }
@@ -244,7 +245,7 @@ public:
 
 bool ExtractIkReturn(object o, IkReturn& ikfr)
 {
-    extract<PyIkReturnPtr > pyikfr(o);
+    extract_<PyIkReturnPtr > pyikfr(o);
     if( pyikfr.check() ) {
         ikfr = ((PyIkReturnPtr)pyikfr)->_ret;
         return true;
@@ -259,7 +260,7 @@ object toPyIkReturn(const IkReturn& ret)
 
 IkSolverBasePtr GetIkSolver(object oiksolver)
 {
-    extract<PyIkSolverBasePtr> pyiksolver(oiksolver);
+    extract_<PyIkSolverBasePtr> pyiksolver(oiksolver);
     if( pyiksolver.check() ) {
         return ((PyIkSolverBasePtr)pyiksolver)->GetIkSolver();
     }
@@ -278,7 +279,7 @@ PyInterfaceBasePtr toPyIkSolver(IkSolverBasePtr pIkSolver, PyEnvironmentBasePtr 
 
 object toPyIkSolver(IkSolverBasePtr pIkSolver, object opyenv)
 {
-    extract<PyEnvironmentBasePtr> pyenv(opyenv);
+    extract_<PyEnvironmentBasePtr> pyenv(opyenv);
     if( pyenv.check() ) {
         return py::to_object(toPyIkSolver(pIkSolver,(PyEnvironmentBasePtr)pyenv));
     }

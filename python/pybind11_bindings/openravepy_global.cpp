@@ -797,22 +797,22 @@ int pyGetIntFromPy(object olevel, int defaultvalue)
     if( !IS_PYTHONOBJECT_NONE(olevel) ) {
         // some version of boost python return true for extract::check, even through the actual conversion will throw an OverflowError
         // therefore check for conversion compatibility starting at the longest signed integer
-        extract<int64_t> levelint64(olevel);
+        extract_<int64_t> levelint64(olevel);
         if( levelint64.check() ) {
             level = static_cast<int>((int64_t)levelint64);
         }
         else {
-            extract<uint64_t> leveluint64(olevel);
+            extract_<uint64_t> leveluint64(olevel);
             if( leveluint64.check() ) {
                 level = static_cast<int>((uint64_t)leveluint64);
             }
             else {
-                extract<uint32_t> leveluint32(olevel);
+                extract_<uint32_t> leveluint32(olevel);
                 if( leveluint32.check() ) {
                     level = static_cast<int>((uint32_t)leveluint32);
                 }
                 else {
-                    extract<int> levelint32(olevel);
+                    extract_<int> levelint32(olevel);
                     if( levelint32.check() ) {
                         level = (int)levelint32;
                     }

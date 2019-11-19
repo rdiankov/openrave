@@ -21,6 +21,7 @@ namespace openravepy {
 
 using py::object;
 using py::extract;
+using py::extract_;
 using py::handle;
 using py::dict;
 using py::enum_;
@@ -307,7 +308,7 @@ public:
             RAVELOG_WARN("plan callback nothing returning, so executing default action\n");
         }
         else {
-            extract<PlannerAction> xb(res);
+            extract_<PlannerAction> xb(res);
             if( xb.check() ) {
                 ret = (PlannerAction)xb;
             }
@@ -349,7 +350,7 @@ PyInterfaceBasePtr toPyPlanner(PlannerBasePtr pplanner, PyEnvironmentBasePtr pye
 
 PlannerBase::PlannerParametersPtr GetPlannerParameters(object o)
 {
-    extract<PyPlannerBase::PyPlannerParametersPtr> pyparams(o);
+    extract_<PyPlannerBase::PyPlannerParametersPtr> pyparams(o);
     if( pyparams.check() ) {
         return ((PyPlannerBase::PyPlannerParametersPtr)pyparams)->GetParameters();
     }
@@ -358,7 +359,7 @@ PlannerBase::PlannerParametersPtr GetPlannerParameters(object o)
 
 PlannerBase::PlannerParametersConstPtr GetPlannerParametersConst(object o)
 {
-    extract<PyPlannerBase::PyPlannerParametersPtr> pyparams(o);
+    extract_<PyPlannerBase::PyPlannerParametersPtr> pyparams(o);
     if( pyparams.check() ) {
         return ((PyPlannerBase::PyPlannerParametersPtr)pyparams)->GetParameters();
     }

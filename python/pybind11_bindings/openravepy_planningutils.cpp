@@ -23,6 +23,7 @@ namespace openravepy {
 
 using py::object;
 using py::extract;
+using py::extract_;
 using py::handle;
 using py::dict;
 using py::enum_;
@@ -294,7 +295,7 @@ object pyMergeTrajectories(object pytrajectories)
     std::list<TrajectoryBaseConstPtr> listtrajectories;
     PyEnvironmentBasePtr pyenv;
     for(int i = 0; i < len(pytrajectories); ++i) {
-        extract<PyTrajectoryBasePtr> epytrajectory(pytrajectories[i]);
+        extract_<PyTrajectoryBasePtr> epytrajectory(pytrajectories[i]);
         PyTrajectoryBasePtr pytrajectory = (PyTrajectoryBasePtr)epytrajectory;
         if( !pyenv ) {
             pyenv = openravepy::toPyEnvironment(pytrajectory);
