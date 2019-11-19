@@ -155,20 +155,20 @@ public:
 protected:
     object _ReturnSamples2D(const std::vector<dReal>&samples)
     {
-        if( samples.size() == 0 ) {
-            return static_cast<numeric::array>(py::empty_array().astype("f8"));
+        if( samples.empty() ) {
+            return py::empty_array_astype<double>();
         }
         int dim = _pspacesampler->GetNumberOfValues();
         npy_intp dims[] = { npy_intp(samples.size()/dim), npy_intp(dim) };
-        PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+        PyObject *pyvalues = PyArray_SimpleNew(2, dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
         memcpy(PyArray_DATA(pyvalues),&samples.at(0),samples.size()*sizeof(samples[0]));
         return py::to_array(pyvalues);
     }
 
     object _ReturnSamples2D(const std::vector<uint32_t>&samples)
     {
-        if( samples.size() == 0 ) {
-            return static_cast<numeric::array>(py::empty_array().astype("u4"));
+        if( samples.empty() == 0 ) {
+            return py::empty_array_astype<uint32_t>();
         }
         int dim = _pspacesampler->GetNumberOfValues();
         npy_intp dims[] = { npy_intp(samples.size()/dim), npy_intp(dim) };

@@ -174,7 +174,7 @@ object search_array(ANNkd_tree& kdtree, object qarray, int k, double eps, bool p
     BOOST_ASSERT(k <= kdtree.nPoints());
     int N = len(qarray);
     if( N == 0 ) {
-        return py::make_tuple(py::empty_array().astype("i4"), py::empty_array());
+        return py::make_tuple(py::empty_array_astype<int>(), py::empty_array());
     }
 
     BOOST_ASSERT(len(qarray[0])==kdtree.theDim());
@@ -217,14 +217,14 @@ object k_fixed_radius_search(ANNkd_tree& kdtree, object q, double sqRad, int k, 
 
     if( k <= 0 ) {
         int kball = kdtree.annkFRSearch(annq.pt, sqRad, k, NULL, NULL, eps);
-        return py::make_tuple(py::empty_array().astype("i4"),py::empty_array(),kball);
+        return py::make_tuple(py::empty_array_astype<int>(), py::empty_array(), kball);
     }
 
     std::vector<ANNdist> dists(k);
     std::vector<ANNidx> nn_idx(k);
     int kball = kdtree.annkFRSearch(annq.pt, sqRad, k, &nn_idx[0], &dists[0], eps);
     if( kball <= 0 )
-        return py::make_tuple(py::empty_array().astype("i4"),py::empty_array(),kball);
+        return py::make_tuple(py::empty_array_astype<int>(),py::empty_array(),kball);
 
     npy_intp dims[] = {std::min(k, kball)};
     PyObject *pydists = PyArray_SimpleNew(1,dims, sizeof(ANNdist)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
@@ -253,7 +253,7 @@ object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqR
     BOOST_ASSERT(k <= kdtree.nPoints());
     int N = len(qarray);
     if( N == 0 )
-        return py::make_tuple(py::empty_array().astype("i4"),py::empty_array(),py::empty_array());
+        return py::make_tuple(py::empty_array_astype<int>(), py::empty_array(), py::empty_array());
 
     BOOST_ASSERT(len(qarray[0])==kdtree.theDim());
     ANNpointManaged annq(kdtree.theDim());
@@ -269,7 +269,7 @@ object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqR
                 annq.pt[c] = extract<ANNcoord>(q[c]);
             pkball[i] = kdtree.annkFRSearch(annq.pt, sqRad, k, NULL, NULL, eps);
         }
-        return py::make_tuple(py::empty_array().astype("i4"),py::empty_array(),py::to_array(pykball));
+        return py::make_tuple(py::empty_array_astype<int>(), py::empty_array(), py::to_array(pykball));
     }
 
     npy_intp dims[] = { N,k};

@@ -214,6 +214,10 @@ inline numeric::array to_array(PyObject* pyo) {
 inline numeric::array empty_array() {
     return numeric::array(list());
 }
+template<typename T>
+inline object empty_array_astype() {
+    return empty_array().astype(openravepy::select_dtype<T>::type);
+}
 template <typename T>
 using extract_ = extract<T>;
 } // namespace boost::python
@@ -529,7 +533,7 @@ template <typename T>
 inline py::numeric::array toPyArrayN(const T* pvalues, const size_t N)
 {
     if( N == 0 ) {
-        return static_cast<py::numeric::array>(py::empty_array().astype(select_dtype<T>::type));
+        return static_cast<py::numeric::array>(py::empty_array_astype<T>());
     }
     npy_intp dims[] = { npy_intp(N) };
     PyObject *pyvalues = PyArray_SimpleNew(1, dims, select_npy_type<T>::type);
@@ -543,14 +547,14 @@ template <typename T>
 inline py::numeric::array toPyArrayN(const T* pvalues, std::vector<npy_intp>& dims)
 {
     if( dims.empty() ) {
-        return static_cast<py::numeric::array>(py::empty_array().astype(select_dtype<T>::type));
+        return static_cast<py::numeric::array>(py::empty_array_astype<T>());
     }
     size_t numel = 1;
     for(npy_intp dim : dims) {
         numel *= dim;
     }
     if( numel == 0 ) {
-        return static_cast<py::numeric::array>(py::empty_array().astype(select_dtype<T>::type));
+        return static_cast<py::numeric::array>(py::empty_array_astype<T>());
     }
     PyObject *pyvalues = PyArray_SimpleNew(dims.size(), dims.data(), select_npy_type<T>::type);
     if( pvalues != nullptr ) {

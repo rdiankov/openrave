@@ -529,7 +529,7 @@ public:
         object shape = rays.attr("shape");
         int num = extract<int>(shape[0]);
         if( num == 0 ) {
-            return py::make_tuple(py::empty_array().astype("i4"), py::empty_array());
+            return py::make_tuple(py::empty_array_astype<int>(), py::empty_array());
         }
         if( extract<int>(shape[1]) != 6 ) {
             throw openrave_exception(_("rays object needs to be a Nx6 vector\n"));
