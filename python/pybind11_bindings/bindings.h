@@ -155,6 +155,8 @@ struct select_npy_type<uint32_t>
 // pybind11
 // #define USE_PYBIND11_PYTHON_BINDINGS
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+#include <iostream>
+// use std::cout temporarily
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <boost/shared_ptr.hpp>
@@ -169,8 +171,12 @@ inline T extract(object o) {
     return o.cast<T>();
 }
 template <typename T>
+inline T extract(handle o) {
+    return o.cast<T>();
+}
+template <typename T>
 inline object to_object(const T& t) {
-    return ::pybind11::cast(t);
+    return cast(t);
 }
 inline object to_array(PyObject* pyo) {
     // do we need to implement the conversion?
@@ -191,7 +197,9 @@ struct extract_ {
             _data = extract<T>(o);
         }
         catch(...) {
-            throw std::runtime_error("Cannot cast " + std::string(typeid(T).name()));
+            _bcheck = false;
+            std::cout << "Cannot cast " << std::string(typeid(T).name()) << std::endl;
+            // throw std::runtime_error("Cannot cast " + std::string(typeid(T).name()));
         }
     }
     // user-defined conversion:
@@ -200,6 +208,8 @@ struct extract_ {
     operator T() const { return _data; }
     // explicit conversion
     explicit operator T*() const { return _data; }
+    bool check() const { return _bcheck; }
+    bool _bcheck = true;
     T _data;
 };
 } // namespace pybind11

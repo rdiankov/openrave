@@ -148,13 +148,13 @@ object toPyRay(const RAY& r)
 
 RAY ExtractRay(object o)
 {
-    extract<OPENRAVE_SHARED_PTR<PyRay> > pyray(o);
+    extract_<OPENRAVE_SHARED_PTR<PyRay> > pyray(o);
     return ((OPENRAVE_SHARED_PTR<PyRay>)pyray)->r;
 }
 
 bool ExtractRay(object o, RAY& ray)
 {
-    extract<OPENRAVE_SHARED_PTR<PyRay> > pyray(o);
+    extract_<OPENRAVE_SHARED_PTR<PyRay> > pyray(o);
     if( pyray.check() ) {
         ray = ((OPENRAVE_SHARED_PTR<PyRay>)pyray)->r;
         return true;
@@ -162,6 +162,7 @@ bool ExtractRay(object o, RAY& ray)
     return false;
 }
 
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
 class Ray_pickle_suite : public pickle_suite
 {
 public:
@@ -170,6 +171,7 @@ public:
         return py::make_tuple(toPyVector3(r.r.pos),toPyVector3(r.r.dir));
     }
 };
+#endif
 
 class PyAABB
 {
@@ -212,7 +214,7 @@ public:
 
 AABB ExtractAABB(object o)
 {
-    extract<OPENRAVE_SHARED_PTR<PyAABB> > pyaabb(o);
+    extract_<OPENRAVE_SHARED_PTR<PyAABB> > pyaabb(o);
     return ((OPENRAVE_SHARED_PTR<PyAABB>)pyaabb)->ab;
 }
 
@@ -221,6 +223,7 @@ object toPyAABB(const AABB& ab)
     return py::to_object(OPENRAVE_SHARED_PTR<PyAABB>(new PyAABB(ab)));
 }
 
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
 class AABB_pickle_suite : public pickle_suite
 {
 public:
@@ -229,6 +232,7 @@ public:
         return py::make_tuple(toPyVector3(ab.ab.pos),toPyVector3(ab.ab.extents));
     }
 };
+#endif
 
 class PyTriMesh
 {
@@ -370,7 +374,7 @@ public:
 
 bool ExtractTriMesh(object o, TriMesh& mesh)
 {
-    extract<OPENRAVE_SHARED_PTR<PyTriMesh> > pytrimesh(o);
+    extract_<OPENRAVE_SHARED_PTR<PyTriMesh> > pytrimesh(o);
     if( pytrimesh.check() ) {
         ((OPENRAVE_SHARED_PTR<PyTriMesh>)pytrimesh)->GetTriMesh(mesh);
         return true;
@@ -383,6 +387,7 @@ object toPyTriMesh(const TriMesh& mesh)
     return py::to_object(OPENRAVE_SHARED_PTR<PyTriMesh>(new PyTriMesh(mesh)));
 }
 
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
 class TriMesh_pickle_suite : public pickle_suite
 {
 public:
@@ -391,6 +396,7 @@ public:
         return py::make_tuple(r.vertices,r.indices);
     }
 };
+#endif
 
 class PyConfigurationSpecification : public OPENRAVE_ENABLE_SHARED_FROM_THIS<PyConfigurationSpecification>
 {
@@ -584,7 +590,7 @@ public:
         // it is easier to get the time index
         FOREACHC(itgroup,_spec._vgroups) {
             if( itgroup->name == "deltatime" ) {
-                odata[itgroup->offset] = object(deltatime);
+                odata[itgroup->offset] = py::to_object(deltatime);
                 return true;
             }
         }
@@ -678,6 +684,7 @@ public:
     ConfigurationSpecification _spec;
 };
 
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
 class ConfigurationSpecification_pickle_suite : public pickle_suite
 {
 public:
@@ -688,6 +695,7 @@ public:
         return py::make_tuple(ss.str());
     }
 };
+#endif
 
 PyConfigurationSpecificationPtr toPyConfigurationSpecification(const ConfigurationSpecification &spec)
 {
@@ -699,6 +707,7 @@ const ConfigurationSpecification& GetConfigurationSpecification(PyConfigurationS
     return p->_spec;
 }
 
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
 struct spec_from_group
 {
     spec_from_group()
@@ -708,7 +717,7 @@ struct spec_from_group
 
     static void* convertible(PyObject* obj)
     {
-        return obj == Py_None ||  py::extract<ConfigurationSpecification::Group>(obj).check() ? obj : NULL;
+        return obj == Py_None ||  py::extract_<ConfigurationSpecification::Group>(obj).check() ? obj : NULL;
     }
 
     static void construct(PyObject* obj, py::converter::rvalue_from_python_stage1_data* data)
@@ -719,6 +728,7 @@ struct spec_from_group
         data->convertible = storage;
     }
 };
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
 PyConfigurationSpecificationPtr pyRaveGetAffineConfigurationSpecification(int affinedofs,PyKinBodyPtr pybody=PyKinBodyPtr(), const std::string& interpolation="")
 {
@@ -1256,7 +1266,9 @@ void init_openravepy_global()
     .def("__str__",&PyRay::__str__)
     .def("__unicode__",&PyRay::__unicode__)
     .def("__repr__",&PyRay::__repr__)
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
     .def_pickle(Ray_pickle_suite())
+#endif
     ;
     class_<PyAABB, OPENRAVE_SHARED_PTR<PyAABB> >("AABB", DOXY_CLASS(geometry::aabb))
     .def(init<object,object>(py::args("pos","extents")))
@@ -1274,7 +1286,9 @@ void init_openravepy_global()
     .def_readwrite("indices",&PyTriMesh::indices)
     .def("__str__",&PyTriMesh::__str__)
     .def("__unicode__",&PyAABB::__unicode__)
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
     .def_pickle(TriMesh_pickle_suite())
+#endif
     ;
     class_<InterfaceBase, InterfaceBasePtr, boost::noncopyable >("InterfaceBase", DOXY_CLASS(InterfaceBase), no_init)
     ;
@@ -1330,7 +1344,9 @@ void init_openravepy_global()
                                            .def("__ne__",&PyConfigurationSpecification::__ne__)
                                            .def("__add__",&PyConfigurationSpecification::__add__)
                                            .def("__iadd__",&PyConfigurationSpecification::__iadd__)
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
                                            .def_pickle(ConfigurationSpecification_pickle_suite())
+#endif
                                            .def("__str__",&PyConfigurationSpecification::__str__)
                                            .def("__unicode__",&PyConfigurationSpecification::__unicode__)
                                            .def("__repr__",&PyConfigurationSpecification::__repr__)

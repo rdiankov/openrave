@@ -24,6 +24,7 @@ namespace openravepy
 {
 using py::object;
 using py::extract;
+using py::extract_;
 using py::handle;
 using py::dict;
 using py::enum_;
@@ -206,7 +207,7 @@ void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        for (auto item : dict) // will replace later
+        for (auto item : d) // will replace later
 #else
         for (int i = 0; i < numitems; i++)
 #endif
@@ -328,12 +329,25 @@ AttributesList toAttributesList(py::dict odict)
 {
     AttributesList atts;
     if( !IS_PYTHONOBJECT_NONE(odict) ) {
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
         py::list iterkeys = (py::list)odict.iterkeys();
-        size_t num = py::len(iterkeys);
-        for (size_t i = 0; i < num; i++) {
+        const size_t num = py::len(iterkeys);
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        for (auto item : odict)
+#else
+        for (size_t i = 0; i < num; i++)
+#endif
+        {
             // Because we know they're strings, we can do this
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            std::string key = py::extract<std::string>(item.first);
+            std::string value = py::extract<std::string>(item.second);
+#else
             std::string key = py::extract<std::string>(iterkeys[i]);
             std::string value = py::extract<std::string>(odict[iterkeys[i]]);
+#endif
             atts.emplace_back(key, value);
         }
     }
@@ -358,12 +372,12 @@ AttributesList toAttributesList(py::list oattributes)
 AttributesList toAttributesList(object oattributes)
 {
     if( !IS_PYTHONOBJECT_NONE(oattributes) ) {
-        py::extract<py::dict> odictextractor(oattributes);
+        py::extract_<py::dict> odictextractor(oattributes);
         if( odictextractor.check() ) {
             return toAttributesList((py::dict)odictextractor());
         }
         // assume list
-        py::extract<py::list> olistextractor(oattributes);
+        py::extract_<py::list> olistextractor(oattributes);
         return toAttributesList((py::list)olistextractor());
     }
     return AttributesList();
@@ -815,7 +829,7 @@ protected:
             RAVELOG_WARN("collision callback nothing returning, so executing default action\n");
         }
         else {
-            extract<int> xi(res);
+            extract_<int> xi(res);
             if( xi.check() ) {
                 ret = (CollisionAction)(int) xi;
             }
@@ -1348,7 +1362,7 @@ public:
     }
 
     void Save(const string &filename, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=object()) {
-        extract<std::string> otarget(odictatts);
+        extract_<std::string> otarget(odictatts);
         if( otarget.check() ) {
             // old versions
             AttributesList atts;
@@ -1365,7 +1379,7 @@ public:
 
     object WriteToMemory(const string &filetype, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=object()) {
         std::vector<char> output;
-        extract<std::string> otarget(odictatts);
+        extract_<std::string> otarget(odictatts);
         if( otarget.check() ) {
             // old versions
             AttributesList atts;
@@ -1380,7 +1394,11 @@ public:
             return py::object();
         }
         else {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            return py::to_object(PyString_FromStringAndSize(&output[0], output.size()));
+#else
             return py::to_object(py::handle<>(PyString_FromStringAndSize(&output[0], output.size())));
+#endif
         }
     }
 
@@ -1458,8 +1476,8 @@ public:
         return toPyTriMesh(*ptrimesh);
     }
 
-    void Add(PyInterfaceBasePtr pinterface, bool bAnonymous=false, const std::string& cmdPY_ARGS="") {
-        _penv->Add(pinterface->GetInterfaceBase(), bAnonymous, cmdPY_ARGS);
+    void Add(PyInterfaceBasePtr pinterface, bool bAnonymous=false, const std::string& cmdargs="") {
+        _penv->Add(pinterface->GetInterfaceBase(), bAnonymous, cmdargs);
     }
 
     void AddKinBody(PyKinBodyPtr pbody) {
@@ -2157,7 +2175,7 @@ EnvironmentBasePtr GetEnvironment(PyEnvironmentBasePtr pyenv)
 EnvironmentBasePtr GetEnvironment(object o)
 {
     if( !IS_PYTHONOBJECT_NONE(o)) {
-        extract<PyEnvironmentBasePtr> pyenv(o);
+        extract_<PyEnvironmentBasePtr> pyenv(o);
         if( pyenv.check() ) {
             return ((PyEnvironmentBasePtr)pyenv)->GetEnv();
         }
@@ -2167,7 +2185,7 @@ EnvironmentBasePtr GetEnvironment(object o)
 
 object toPyEnvironment(object o)
 {
-    extract<PyInterfaceBasePtr> pyinterface(o);
+    extract_<PyInterfaceBasePtr> pyinterface(o);
     if( pyinterface.check() ) {
         return py::to_object(((PyInterfaceBasePtr)pyinterface)->GetEnv());
     }
@@ -2231,6 +2249,7 @@ PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType
     return PyInterfaceBasePtr(new PyInterfaceBase(p,pyenv));
 }
 
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(LoadURI_overloads, LoadURI, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetCamera_overloads, SetCamera, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StartSimulation_overloads, StartSimulation, 1, 2)
@@ -2254,6 +2273,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBody_overloads, GetPublishedB
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodies_overloads, GetPublishedBodies, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodyJointValues_overloads, GetPublishedBodyJointValues, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodyTransformsMatchingPrefix_overloads, GetPublishedBodyTransformsMatchingPrefix, 1, 2)
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
 object get_openrave_exception_unicode(openrave_exception* p)
 {
@@ -2282,32 +2302,50 @@ std::string get_std_runtime_error_repr(std::runtime_error* p)
 OPENRAVE_PYTHON_MODULE(openravepy_int)
 {
     using namespace openravepy;
+    import_array(); // not sure if this is necessary for pybind11
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
 #if BOOST_VERSION >= 103500
     docstring_options doc_options;
     doc_options.disable_cpp_signatures();
     doc_options.enable_py_signatures();
     doc_options.enable_user_defined();
 #endif
-    import_array();
     numeric::array::set_module_and_type("numpy", "ndarray");
     int_from_number<int>();
     int_from_number<uint8_t>();
     float_from_number<float>();
     float_from_number<double>();
     init_python_bindings();
-
     typedef return_value_policy< copy_const_reference > return_copy_const_ref;
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_< openrave_exception >( m, "_openrave_exception_", DOXY_CLASS(openrave_exception) )
+#else
     class_< openrave_exception >( "_openrave_exception_", DOXY_CLASS(openrave_exception) )
+#endif
     .def( init<const std::string&>() )
     .def( init<const openrave_exception&>() )
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def( "message", &openrave_exception::message )
+#else
     .def( "message", &openrave_exception::message, return_copy_const_ref() )
+#endif
     .def("GetCode", &openrave_exception::GetCode )
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def( "__str__", &openrave_exception::message )
+#else
     .def( "__str__", &openrave_exception::message, return_copy_const_ref() )
+#endif
     .def( "__unicode__", get_openrave_exception_unicode)
     .def( "__repr__", get_openrave_exception_repr)
     ;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_< std::runtime_error >( m, "_std_runtime_error_")
+#else
     exception_translator<openrave_exception>();
     class_< std::runtime_error >( "_std_runtime_error_", no_init)
+#endif
     .def( init<const std::string&>() )
     .def( init<const std::runtime_error&>() )
     .def( "message", &std::runtime_error::what)
@@ -2315,12 +2353,21 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
     .def( "__unicode__", get_std_runtime_error_unicode)
     .def( "__repr__", get_std_runtime_error_repr)
     ;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_< boost::bad_function_call, std::runtime_error>( m, "_boost_bad_function_call_");
+#else
     exception_translator<std::runtime_error>();
     //exception_translator<std::exception>();
     class_< boost::bad_function_call, bases<std::runtime_error> >( "_boost_bad_function_call_");
     exception_translator<boost::bad_function_call>();
+#endif
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    using namespace py::literals;  // "..."_a
+    class_<PyEnvironmentBase, PyEnvironmentBasePtr > classenv(m, "Environment", DOXY_CLASS(EnvironmentBase));
+#else
     class_<PyEnvironmentBase, PyEnvironmentBasePtr > classenv("Environment", DOXY_CLASS(EnvironmentBase));
+#endif
     {
         void (PyInterfaceBase::*setuserdata1)(PyUserData) = &PyInterfaceBase::SetUserData;
         void (PyInterfaceBase::*setuserdata2)(object) = &PyInterfaceBase::SetUserData;
@@ -2333,7 +2380,12 @@ In python, the syntax is::\n\n\
   success = OUT is not None\n\n\n\
 The **releasegil** parameter controls whether the python Global Interpreter Lock should be released when executing this code. For calls that take a long time and if there are many threads running called from different python threads, releasing the GIL could speed up things a lot. Please keep in mind that releasing and re-acquiring the GIL also takes computation time.\n\
 Because race conditions can pop up when trying to lock the openrave environment without releasing the GIL, if lockenv=True is specified, the system can try to safely lock the openrave environment without causing a deadlock with the python GIL and other threads.\n");
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        class_<PyInterfaceBase, OPENRAVE_SHARED_PTR<PyInterfaceBase> >(m, "Interface", DOXY_CLASS(InterfaceBase))
+#else
         class_<PyInterfaceBase, OPENRAVE_SHARED_PTR<PyInterfaceBase> >("Interface", DOXY_CLASS(InterfaceBase), no_init)
+#endif
         .def("GetInterfaceType",&PyInterfaceBase::GetInterfaceType, DOXY_FN(InterfaceBase,GetInterfaceType))
         .def("GetXMLId",&PyInterfaceBase::GetXMLId, DOXY_FN(InterfaceBase,GetXMLId))
         .def("GetPluginName",&PyInterfaceBase::GetPluginName, DOXY_FN(InterfaceBase,GetPluginName))
@@ -2346,15 +2398,41 @@ Because race conditions can pop up when trying to lock the openrave environment 
         .def("SetUserData",setuserdata3, PY_ARGS("key","data") DOXY_FN(InterfaceBase,SetUserData))
         .def("SetUserData",setuserdata4, PY_ARGS("key", "data") DOXY_FN(InterfaceBase,SetUserData))
         .def("RemoveUserData", &PyInterfaceBase::RemoveUserData, DOXY_FN(InterfaceBase, RemoveUserData))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        .def("GetUserData",&PyInterfaceBase::GetUserData,
+            "key"_a, "",
+            DOXY_FN(InterfaceBase,GetUserData)
+        )
+#else
         .def("GetUserData",&PyInterfaceBase::GetUserData, GetUserData_overloads(PY_ARGS("key") DOXY_FN(InterfaceBase,GetUserData)))
+#endif
         .def("SupportsCommand",&PyInterfaceBase::SupportsCommand, PY_ARGS("cmd") DOXY_FN(InterfaceBase,SupportsCommand))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        .def("SendCommand",&PyInterfaceBase::SendCommand,
+            "cmd"_a,
+            "releasegil"_a = false,
+            "lockenv"_a = false,
+            sSendCommandDoc.c_str()
+        )
+#else
         .def("SendCommand",&PyInterfaceBase::SendCommand, SendCommand_overloads(PY_ARGS("cmd","releasegil","lockenv") sSendCommandDoc.c_str()))
+#endif
 #if OPENRAVE_RAPIDJSON
         .def("SupportsJSONCommand",&PyInterfaceBase::SupportsJSONCommand, PY_ARGS("cmd") DOXY_FN(InterfaceBase,SupportsJSONCommand))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        .def("SendJSONCommand",&PyInterfaceBase::SendJSONCommand,
+            "cmd"_a,
+            "input"_a,
+            "releasegil"_a = false,
+            "lockenv"_a = false,
+            DOXY_FN(InterfaceBase,SendJSONCommand)
+        )
+#else
         .def("SendJSONCommand",&PyInterfaceBase::SendJSONCommand, SendJSONCommand_overloads(PY_ARGS("cmd","input","releasegil","lockenv") DOXY_FN(InterfaceBase,SendJSONCommand)))
+#endif
 #endif // OPENRAVE_RAPIDJSON
-        .def("GetReadableInterfaces",&PyInterfaceBase::GetReadableInterfaces,DOXY_FN(InterfaceBase,GetReadableInterfaces))
-        .def("GetReadableInterface",&PyInterfaceBase::GetReadableInterface,DOXY_FN(InterfaceBase,GetReadableInterface))
+        .def("GetReadableInterfaces",&PyInterfaceBase::GetReadableInterfaces, DOXY_FN(InterfaceBase,GetReadableInterfaces))
+        .def("GetReadableInterface",&PyInterfaceBase::GetReadableInterface, DOXY_FN(InterfaceBase,GetReadableInterface))
         .def("SetReadableInterface",&PyInterfaceBase::SetReadableInterface, PY_ARGS("xmltag","xmlreadable") DOXY_FN(InterfaceBase,SetReadableInterface))
         .def("__repr__", &PyInterfaceBase::__repr__)
         .def("__str__", &PyInterfaceBase::__str__)
@@ -2418,7 +2496,13 @@ Because race conditions can pop up when trying to lock the openrave environment 
         object (PyEnvironmentBase::*readtrimeshdata1)(const std::string&,const std::string&) = &PyEnvironmentBase::ReadTrimeshData;
         object (PyEnvironmentBase::*readtrimeshdata2)(const std::string&,const std::string&,object) = &PyEnvironmentBase::ReadTrimeshData;
         scope env = classenv
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                    .def(init<int>(),
+                        "options"_a = ECO_StartSimulationThread
+                    )
+#else
                     .def(init<optional<int> >(py::args("options")))
+#endif
                     .def("Reset",&PyEnvironmentBase::Reset, DOXY_FN(EnvironmentBase,Reset))
                     .def("Destroy",&PyEnvironmentBase::Destroy, DOXY_FN(EnvironmentBase,Destroy))
                     .def("CloneSelf",&PyEnvironmentBase::CloneSelf, PY_ARGS("options") DOXY_FN(EnvironmentBase,CloneSelf))
@@ -2444,16 +2528,43 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("CheckCollision",pcolybr, PY_ARGS("ray","body","report") DOXY_FN(EnvironmentBase,CheckCollision "const RAY; KinBodyConstPtr; CollisionReportPtr"))
                     .def("CheckCollision",pcoly, PY_ARGS("ray") DOXY_FN(EnvironmentBase,CheckCollision "const RAY; CollisionReportPtr"))
                     .def("CheckCollision",pcolyr, PY_ARGS("ray") DOXY_FN(EnvironmentBase,CheckCollision "const RAY; CollisionReportPtr"))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                    .def("CheckCollisionRays",&PyEnvironmentBase::CheckCollisionRays,
+                         "rays"_a,
+                         "body"_a,
+                         "front_facing_only"_a = false,
+                         "Check if any rays hit the body and returns their contact points along with a vector specifying if a collision occured or not. Rays is a Nx6 array, first 3 columsn are position, last 3 are direction*range."
+                    )
+#else
                     .def("CheckCollisionRays",&PyEnvironmentBase::CheckCollisionRays,
                          CheckCollisionRays_overloads(PY_ARGS("rays","body","front_facing_only")
                                                       "Check if any rays hit the body and returns their contact points along with a vector specifying if a collision occured or not. Rays is a Nx6 array, first 3 columsn are position, last 3 are direction*range."))
+#endif
                     .def("LoadURI",&PyEnvironmentBase::LoadURI,LoadURI_overloads(PY_ARGS("filename","atts") DOXY_FN(EnvironmentBase,LoadURI)))
                     .def("Load",load1, PY_ARGS("filename") DOXY_FN(EnvironmentBase,Load))
                     .def("Load",load2, PY_ARGS("filename","atts") DOXY_FN(EnvironmentBase,Load))
                     .def("LoadData",loaddata1, PY_ARGS("data") DOXY_FN(EnvironmentBase,LoadData))
                     .def("LoadData",loaddata2, PY_ARGS("data","atts") DOXY_FN(EnvironmentBase,LoadData))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                    .def("Save",&PyEnvironmentBase::Save,
+                        "filename"_a,
+                        "options"_a,
+                        "atts"_a = object(),
+                        DOXY_FN(EnvironmentBase,Save)
+                    )
+#else
                     .def("Save",&PyEnvironmentBase::Save,Save_overloads(PY_ARGS("filename","options","atts") DOXY_FN(EnvironmentBase,Save)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS 
+                    .def("WriteToMemory",&PyEnvironmentBase::WriteToMemory,
+                        "filetype"_a,
+                        "options"_a,
+                        "atts"_a = object(),
+                        DOXY_FN(EnvironmentBase,WriteToMemory)
+                    )
+#else
                     .def("WriteToMemory",&PyEnvironmentBase::WriteToMemory,WriteToMemory_overloads(PY_ARGS("filetype","options","atts") DOXY_FN(EnvironmentBase,WriteToMemory)))
+#endif
                     .def("ReadRobotURI",readrobotxmlfile1, PY_ARGS("filename") DOXY_FN(EnvironmentBase,ReadRobotURI "const std::string"))
                     .def("ReadRobotXMLFile",readrobotxmlfile1, PY_ARGS("filename") DOXY_FN(EnvironmentBase,ReadRobotURI "const std::string"))
                     .def("ReadRobotURI",readrobotxmlfile2, PY_ARGS("filename","atts") DOXY_FN(EnvironmentBase,ReadRobotURI "RobotBasePtr; const std::string; const AttributesList"))
@@ -2480,7 +2591,16 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("ReadTrimeshFile",readtrimeshfile2, PY_ARGS("filename","atts") DOXY_FN(EnvironmentBase,ReadTrimeshURI))
                     .def("ReadTrimeshData",readtrimeshdata1, PY_ARGS("data", "formathint") DOXY_FN(EnvironmentBase,ReadTrimeshData))
                     .def("ReadTrimeshData",readtrimeshdata2, PY_ARGS("data","formathint","atts") DOXY_FN(EnvironmentBase,ReadTrimeshData))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                    .def("Add", &PyEnvironmentBase::Add,
+                        "interface"_a,
+                        "anonymous"_a = false,
+                        "cmdargs"_a = "",
+                        DOXY_FN(EnvironmentBase, Add)
+                    )
+#else
                     .def("Add", &PyEnvironmentBase::Add, Add_overloads(PY_ARGS("interface","anonymous","cmdPY_ARGS") DOXY_FN(EnvironmentBase,Add)))
+#endif
                     .def("AddKinBody",addkinbody1, PY_ARGS("body") DOXY_FN(EnvironmentBase,AddKinBody))
                     .def("AddKinBody",addkinbody2, PY_ARGS("body","anonymous") DOXY_FN(EnvironmentBase,AddKinBody))
                     .def("AddRobot",addrobot1, PY_ARGS("robot") DOXY_FN(EnvironmentBase,AddRobot))
