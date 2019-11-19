@@ -211,7 +211,8 @@ struct extract_ {
     bool check() const { return _bcheck; }
     bool _bcheck = true;
     T _data;
-};
+}; // struct extract_
+using scope_ = object;
 } // namespace pybind11
 #define OPENRAVE_PYTHON_MODULE(X) PYBIND11_MODULE(X, m)
 #include "map.h"
@@ -240,6 +241,7 @@ inline object empty_array_astype() {
 }
 template <typename T>
 using extract_ = extract<T>;
+using scope_ = scope;
 } // namespace boost::python
 } // namespace boost
 #endif // USE_PYBIND11_PYTHON_BINDINGS

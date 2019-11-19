@@ -30,7 +30,7 @@ using py::dict;
 using py::enum_;
 using py::class_;
 using py::init;
-using py::scope;
+using py::scope_; // py::object if USE_PYBIND11_PYTHON_BINDINGS
 using py::args;
 using py::return_value_policy;
 
@@ -41,6 +41,7 @@ using py::copy_const_reference;
 using py::docstring_options;
 using py::optional;
 using py::def;
+using py::scope;
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 namespace numeric = py::numeric;
 #if OPENRAVE_RAPIDJSON
@@ -2495,7 +2496,8 @@ Because race conditions can pop up when trying to lock the openrave environment 
         object (PyEnvironmentBase::*readtrimeshfile2)(const std::string&,object) = &PyEnvironmentBase::ReadTrimeshURI;
         object (PyEnvironmentBase::*readtrimeshdata1)(const std::string&,const std::string&) = &PyEnvironmentBase::ReadTrimeshData;
         object (PyEnvironmentBase::*readtrimeshdata2)(const std::string&,const std::string&,object) = &PyEnvironmentBase::ReadTrimeshData;
-        scope env = classenv
+
+        scope_ env = classenv
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                     .def(init<int>(),
                         "options"_a = ECO_StartSimulationThread
@@ -2540,7 +2542,15 @@ Because race conditions can pop up when trying to lock the openrave environment 
                          CheckCollisionRays_overloads(PY_ARGS("rays","body","front_facing_only")
                                                       "Check if any rays hit the body and returns their contact points along with a vector specifying if a collision occured or not. Rays is a Nx6 array, first 3 columsn are position, last 3 are direction*range."))
 #endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                    .def("LoadURI", &PyEnvironmentBase::LoadURI,
+                        "filename"_a,
+                        "atts"_a = object(),
+                        DOXY_FN(EnvironmentBase, LoadURI)
+                    )
+#else
                     .def("LoadURI",&PyEnvironmentBase::LoadURI,LoadURI_overloads(PY_ARGS("filename","atts") DOXY_FN(EnvironmentBase,LoadURI)))
+#endif
                     .def("Load",load1, PY_ARGS("filename") DOXY_FN(EnvironmentBase,Load))
                     .def("Load",load2, PY_ARGS("filename","atts") DOXY_FN(EnvironmentBase,Load))
                     .def("LoadData",loaddata1, PY_ARGS("data") DOXY_FN(EnvironmentBase,LoadData))
@@ -2626,8 +2636,22 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("RegisterCollisionCallback",&PyEnvironmentBase::RegisterCollisionCallback, PY_ARGS("callback") DOXY_FN(EnvironmentBase,RegisterCollisionCallback))
                     .def("HasRegisteredCollisionCallbacks",&PyEnvironmentBase::HasRegisteredCollisionCallbacks,DOXY_FN(EnvironmentBase,HasRegisteredCollisionCallbacks))
                     .def("StepSimulation",&PyEnvironmentBase::StepSimulation, PY_ARGS("timestep") DOXY_FN(EnvironmentBase,StepSimulation))
-                    .def("StartSimulation",&PyEnvironmentBase::StartSimulation,StartSimulation_overloads(PY_ARGS("timestep","realtime") DOXY_FN(EnvironmentBase,StartSimulation)))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                    .def("StartSimulation", &PyEnvironmentBase::StartSimulation,
+                        "timestep"_a,
+                        "realtime"_a = true,
+                        DOXY_FN(EnvironmentBase,StartSimulation)
+                    )
+#else
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                    .def("StopSimulation", &PyEnvironmentBase::StopSimulation,
+                        "shutdownthread"_a = 1,
+                        DOXY_FN(EnvironmentBase,StopSimulation)
+                    )
+#else
                     .def("StopSimulation",&PyEnvironmentBase::StopSimulation, StopSimulation_overloads(PY_ARGS("shutdownthread") DOXY_FN(EnvironmentBase,StopSimulation)))
+#endif
                     .def("GetSimulationTime",&PyEnvironmentBase::GetSimulationTime, DOXY_FN(EnvironmentBase,GetSimulationTime))
                     .def("IsSimulationRunning",&PyEnvironmentBase::IsSimulationRunning, DOXY_FN(EnvironmentBase,IsSimulationRunning))
                     .def("Lock",Lock1,"Locks the environment mutex.")
@@ -2636,25 +2660,129 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("TryLock",&PyEnvironmentBase::TryLock,"Tries to locks the environment mutex, returns false if it failed.")
                     .def("LockPhysics",Lock1,PY_ARGS("lock") "Locks the environment mutex.")
                     .def("LockPhysics",Lock2,PY_ARGS("lock","timeout") "Locks the environment mutex with a timeout.")
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                    .def("SetViewer", &PyEnvironmentBase::SetViewer,
+                        "viewername"_a,
+                        "showviewer"_a = true,
+                        "Attaches the viewer and starts its thread"
+                    )
+#else
                     .def("SetViewer",&PyEnvironmentBase::SetViewer,SetViewer_overloads(PY_ARGS("viewername","showviewer") "Attaches the viewer and starts its thread"))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                    .def("SetDefaultViewer", &PyEnvironmentBase::SetDefaultViewer, 
+                        "showviewer"_a = true,
+                        "Attaches the default viewer (controlled by environment variables and internal settings) and starts its thread"
+                    )
+#else
                     .def("SetDefaultViewer",&PyEnvironmentBase::SetDefaultViewer,SetDefaultViewer_overloads(PY_ARGS("showviewer") "Attaches the default viewer (controlled by environment variables and internal settings) and starts its thread"))
+#endif
                     .def("GetViewer",&PyEnvironmentBase::GetViewer, DOXY_FN(EnvironmentBase,GetViewer))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                    .def("plot3", &PyEnvironmentBase::plot3,
+                        "points"_a,
+                        "pointsize"_a,
+                        "colors"_a = object(),
+                        "drawstyle"_a = 0,
+                        DOXY_FN(EnvironmentBase,plot3 "const float; int; int; float; const float; int, bool")
+                    )
+#else
                     .def("plot3",&PyEnvironmentBase::plot3,plot3_overloads(PY_ARGS("points","pointsize","colors","drawstyle") DOXY_FN(EnvironmentBase,plot3 "const float; int; int; float; const float; int, bool")))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                    .def("drawlinestrip",&PyEnvironmentBase::drawlinestrip,
+                        "points"_a,
+                        "linewidth"_a,
+                        "colors"_a = object(),
+                        "drawstyle"_a = 0,
+                        DOXY_FN(EnvironmentBase,drawlinestrip "const float; int; int; float; const float")
+                    )
+#else
                     .def("drawlinestrip",&PyEnvironmentBase::drawlinestrip,drawlinestrip_overloads(PY_ARGS("points","linewidth","colors","drawstyle") DOXY_FN(EnvironmentBase,drawlinestrip "const float; int; int; float; const float")))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                    .def("drawlinelist", &PyEnvironmentBase::drawlinelist,
+                        "points"_a,
+                        "linewidth"_a,
+                        "colors"_a = object(),
+                        "drawstyle"_a = 0,
+                        DOXY_FN(EnvironmentBase,drawlinelist "const float; int; int; float; const float")
+                    )
+#else
                     .def("drawlinelist",&PyEnvironmentBase::drawlinelist,drawlinelist_overloads(PY_ARGS("points","linewidth","colors","drawstyle") DOXY_FN(EnvironmentBase,drawlinelist "const float; int; int; float; const float")))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                    .def("drawarrow", &PyEnvironmentBase::drawarrow,
+                        "p1"_a,
+                        "p2"_a,
+                        "linewidth"_a = 2e-3,
+                        "color"_a = object(),
+                        DOXY_FN(EnvironmentBase,drawarrow)
+                    )
+#else
                     .def("drawarrow",&PyEnvironmentBase::drawarrow,drawarrow_overloads(PY_ARGS("p1","p2","linewidth","color") DOXY_FN(EnvironmentBase,drawarrow)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                    .def("drawbox", &PyEnvironmentBase::drawbox,
+                        "pos"_a,
+                        "extents"_a,
+                        "color"_a = object(),
+                        DOXY_FN(EnvironmentBase,drawbox)
+                    )
+#else
                     .def("drawbox",&PyEnvironmentBase::drawbox,drawbox_overloads(PY_ARGS("pos","extents","color") DOXY_FN(EnvironmentBase,drawbox)))
+#endif
                     .def("drawplane",drawplane1, PY_ARGS("transform","extents","texture") DOXY_FN(EnvironmentBase,drawplane))
                     .def("drawplane",drawplane2, PY_ARGS("transform","extents","texture") DOXY_FN(EnvironmentBase,drawplane))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                    .def("drawtrimesh", &PyEnvironmentBase::drawtrimesh,
+                        "points"_a,
+                        "indices"_a = object(),
+                        "colors"_a, object(),
+                        DOXY_FN(EnvironmentBase,drawtrimesh "const float; int; const int; int; const boost::multi_array")
+                    )
+#else
                     .def("drawtrimesh",&PyEnvironmentBase::drawtrimesh,drawtrimesh_overloads(PY_ARGS("points","indices","colors") DOXY_FN(EnvironmentBase,drawtrimesh "const float; int; const int; int; const boost::multi_array")))
+#endif
                     .def("GetRobots",&PyEnvironmentBase::GetRobots, DOXY_FN(EnvironmentBase,GetRobots))
                     .def("GetBodies",&PyEnvironmentBase::GetBodies, DOXY_FN(EnvironmentBase,GetBodies))
                     .def("GetSensors",&PyEnvironmentBase::GetSensors, DOXY_FN(EnvironmentBase,GetSensors))
                     .def("UpdatePublishedBodies",&PyEnvironmentBase::UpdatePublishedBodies, DOXY_FN(EnvironmentBase,UpdatePublishedBodies))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                    .def("GetPublishedBody",&PyEnvironmentBase::GetPublishedBody,
+                        "name"_a,
+                        "timeout"_a = 0,
+                        DOXY_FN(EnvironmentBase,GetPublishedBody)
+                    )
+#else
                     .def("GetPublishedBody",&PyEnvironmentBase::GetPublishedBody, GetPublishedBody_overloads(PY_ARGS("name", "timeout") DOXY_FN(EnvironmentBase,GetPublishedBody)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                    .def("GetPublishedBodies", &PyEnvironmentBase::GetPublishedBodies,
+                        "timeout"_a = 0,
+                        DOXY_FN(EnvironmentBase,GetPublishedBodies)
+                    )
+#else
                     .def("GetPublishedBodies",&PyEnvironmentBase::GetPublishedBodies, GetPublishedBodies_overloads(PY_ARGS("timeout") DOXY_FN(EnvironmentBase,GetPublishedBodies)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                    .def("GetPublishedBodyJointValues", &PyEnvironmentBase::GetPublishedBodyJointValues,
+                        "name"_a,
+                        "timeout"_a,
+                        DOXY_FN(EnvironmentBase,GetPublishedBodyJointValues)
+                    )
+#else
                     .def("GetPublishedBodyJointValues",&PyEnvironmentBase::GetPublishedBodyJointValues, GetPublishedBodyJointValues_overloads(PY_ARGS("name", "timeout") DOXY_FN(EnvironmentBase,GetPublishedBodyJointValues)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                    .def("GetPublishedBodyTransformsMatchingPrefix", &PyEnvironmentBase::GetPublishedBodyTransformsMatchingPrefix,
+                        "prefix"_a,
+                        "timeout"_a = 0,
+                        DOXY_FN(EnvironmentBase,GetPublishedBodyTransformsMatchingPrefix)
+                    )
+#else
                     .def("GetPublishedBodyTransformsMatchingPrefix",&PyEnvironmentBase::GetPublishedBodyTransformsMatchingPrefix, GetPublishedBodyTransformsMatchingPrefix_overloads(PY_ARGS("prefix", "timeout") DOXY_FN(EnvironmentBase,GetPublishedBodyTransformsMatchingPrefix)))
+#endif
                     .def("Triangulate",&PyEnvironmentBase::Triangulate, PY_ARGS("body") DOXY_FN(EnvironmentBase,Triangulate))
                     .def("TriangulateScene",&PyEnvironmentBase::TriangulateScene, PY_ARGS("options","name") DOXY_FN(EnvironmentBase,TriangulateScene))
                     .def("SetDebugLevel",&PyEnvironmentBase::SetDebugLevel, PY_ARGS("level") DOXY_FN(EnvironmentBase,SetDebugLevel))
@@ -2674,7 +2802,11 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("__unicode__",&PyEnvironmentBase::__unicode__)
         ;
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        object selectionoptions = enum_<EnvironmentBase::SelectionOptions>(m, "SelectionOptions" DOXY_ENUM(SelectionOptions))
+#else
         object selectionoptions = enum_<EnvironmentBase::SelectionOptions>("SelectionOptions" DOXY_ENUM(SelectionOptions))
+#endif
                                   .value("NoRobots",EnvironmentBase::SO_NoRobots)
                                   .value("Robots",EnvironmentBase::SO_Robots)
                                   .value("Everything",EnvironmentBase::SO_Everything)
@@ -2685,15 +2817,27 @@ Because race conditions can pop up when trying to lock the openrave environment 
     }
 
     {
-        scope options = class_<DummyStruct>("options")
-                        .add_static_property("returnTransformQuaternion",GetReturnTransformQuaternions,SetReturnTransformQuaternions);
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        scope_ options = class_<DummyStruct>(m, "options").def_property_static
+#else
+        scope_ options = class_<DummyStruct>("options").add_static_property
+#endif
+                        ("returnTransformQuaternion",GetReturnTransformQuaternions,SetReturnTransformQuaternions);
     }
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.attr("__version__") = OPENRAVE_VERSION_STRING;
+    m.attr("__author__") = "Rosen Diankov";
+    m.attr("__copyright__") = "2009-2012 Rosen Diankov (rosen.diankov@gmail.com)";
+    m.attr("__license__") = "Lesser GPL";
+    m.attr("__docformat__") = "restructuredtext";
+#else
     scope().attr("__version__") = OPENRAVE_VERSION_STRING;
     scope().attr("__author__") = "Rosen Diankov";
     scope().attr("__copyright__") = "2009-2012 Rosen Diankov (rosen.diankov@gmail.com)";
     scope().attr("__license__") = "Lesser GPL";
     scope().attr("__docformat__") = "restructuredtext";
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
     openravepy::init_openravepy_global();
     openravepy::InitPlanningUtils();
@@ -2713,8 +2857,15 @@ Because race conditions can pop up when trying to lock the openrave environment 
     openravepy::init_openravepy_spacesampler();
     openravepy::init_openravepy_viewer();
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveGetEnvironmentId", openravepy::RaveGetEnvironmentId, DOXY_FN1(RaveGetEnvironmentId));
+    m.def("RaveGetEnvironment", openravepy::RaveGetEnvironment, DOXY_FN1(RaveGetEnvironment));
+    m.def("RaveGetEnvironments", openravepy::RaveGetEnvironments, DOXY_FN1(RaveGetEnvironments));
+    m.def("RaveCreateInterface", openravepy::RaveCreateInterface, PY_ARGS("env","type","name") DOXY_FN1(RaveCreateInterface));
+#else
     def("RaveGetEnvironmentId",openravepy::RaveGetEnvironmentId,DOXY_FN1(RaveGetEnvironmentId));
     def("RaveGetEnvironment",openravepy::RaveGetEnvironment,DOXY_FN1(RaveGetEnvironment));
     def("RaveGetEnvironments",openravepy::RaveGetEnvironments,DOXY_FN1(RaveGetEnvironments));
     def("RaveCreateInterface",openravepy::RaveCreateInterface, PY_ARGS("env","type","name") DOXY_FN1(RaveCreateInterface));
+#endif
 }
