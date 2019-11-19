@@ -2529,7 +2529,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("CheckCollision",pcolyb, PY_ARGS("ray","body") DOXY_FN(EnvironmentBase,CheckCollision "const RAY; KinBodyConstPtr; CollisionReportPtr"))
                     .def("CheckCollision",pcolybr, PY_ARGS("ray","body","report") DOXY_FN(EnvironmentBase,CheckCollision "const RAY; KinBodyConstPtr; CollisionReportPtr"))
                     .def("CheckCollision",pcoly, PY_ARGS("ray") DOXY_FN(EnvironmentBase,CheckCollision "const RAY; CollisionReportPtr"))
-                    .def("CheckCollision",pcolyr, PY_ARGS("ray") DOXY_FN(EnvironmentBase,CheckCollision "const RAY; CollisionReportPtr"))
+                    .def("CheckCollision",pcolyr, PY_ARGS("ray", "report") DOXY_FN(EnvironmentBase,CheckCollision "const RAY; CollisionReportPtr"))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                     .def("CheckCollisionRays",&PyEnvironmentBase::CheckCollisionRays,
                          "rays"_a,
@@ -2658,8 +2658,8 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("Lock",Lock2,PY_ARGS("timeout") "Locks the environment mutex with a timeout.")
                     .def("Unlock",&PyEnvironmentBase::Unlock,"Unlocks the environment mutex.")
                     .def("TryLock",&PyEnvironmentBase::TryLock,"Tries to locks the environment mutex, returns false if it failed.")
-                    .def("LockPhysics",Lock1,PY_ARGS("lock") "Locks the environment mutex.")
-                    .def("LockPhysics",Lock2,PY_ARGS("lock","timeout") "Locks the environment mutex with a timeout.")
+                    .def("LockPhysics", Lock1, "Locks the environment mutex.")
+                    .def("LockPhysics", Lock2, PY_ARGS("timeout") "Locks the environment mutex with a timeout.")
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                     .def("SetViewer", &PyEnvironmentBase::SetViewer,
                         "viewername"_a,
