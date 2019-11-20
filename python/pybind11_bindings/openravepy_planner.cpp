@@ -16,6 +16,11 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
+#include "include/openravepy_robotbase.h"
+#include "include/openravepy_configurationspecification.h"
+#include "include/openravepy_environmentbase.h"
+#include "include/openravepy_collisionreport.h"
+#include "include/openravepy_trajectorybase.h"
 
 namespace openravepy {
 
@@ -26,17 +31,22 @@ using py::handle;
 using py::dict;
 using py::enum_;
 using py::class_;
-using py::no_init;
-using py::bases;
 using py::init;
+using py::scope_; // py::object if USE_PYBIND11_PYTHON_BINDINGS
 using py::scope;
 using py::args;
 using py::return_value_policy;
+
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+using py::no_init;
+using py::bases;
 using py::copy_const_reference;
 using py::docstring_options;
-using py::def;
 using py::pickle_suite;
+using py::manage_new_object;
+using py::def;
 namespace numeric = py::numeric;
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
 class PyPlannerProgress
 {
@@ -75,7 +85,7 @@ public:
         }
         else {
             //_report = status._report->__str__();
-            report = object(openravepy::toPyCollisionReport(status.report, NULL));
+            report = py::to_object(openravepy::toPyCollisionReport(status.report, NULL));
         }
 
         ikparam = toPyIkParameterization(status.ikparam);
@@ -296,7 +306,7 @@ public:
         PyGILState_STATE gstate = PyGILState_Ensure();
         try {
             OPENRAVE_SHARED_PTR<PyPlannerProgress> pyprogress(new PyPlannerProgress(progress));
-            res = fncallback(object(pyprogress));
+            res = fncallback(py::to_object(pyprogress));
         }
         catch(...) {
             RAVELOG_ERROR("exception occured in _PlanCallback:\n");
@@ -383,27 +393,43 @@ PyPlannerBasePtr RaveCreatePlanner(PyEnvironmentBasePtr pyenv, const std::string
     return PyPlannerBasePtr(new PyPlannerBase(p,pyenv));
 }
 
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitPlan_overloads, InitPlan, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads, PlanPath, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckPathAllConstraints_overloads, CheckPathAllConstraints, 6, 8)
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_openravepy_planner(py::module& m)
+#else
 void init_openravepy_planner()
+#endif
 {
-
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    using namespace py::literals;
+    object plannerstatuscode = enum_<PlannerStatusCode>(m, "PlannerStatusCode" DOXY_ENUM(PlannerStatusCode))
+#else
     object plannerstatuscode = enum_<PlannerStatusCode>("PlannerStatusCode" DOXY_ENUM(PlannerStatusCode))
+#endif
                                .value("Failed",PS_Failed)
                                .value("HasSolution",PS_HasSolution)
                                .value("Interrupted",PS_Interrupted)
                                .value("InterruptedWithSolution",PS_InterruptedWithSolution)
     ;
-
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object planneraction = enum_<PlannerAction>(m, "PlannerAction" DOXY_ENUM(PlannerAction))
+#else
     object planneraction = enum_<PlannerAction>("PlannerAction" DOXY_ENUM(PlannerAction))
+#endif
                            .value("None",PA_None)
                            .value("Interrupt",PA_Interrupt)
                            .value("ReturnWithAnySolution",PA_ReturnWithAnySolution)
     ;
-
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyPlannerStatus, OPENRAVE_SHARED_PTR<PyPlannerStatus> >(m, "PlannerStatus", DOXY_CLASS(PlannerStatus))
+#else
     class_<PyPlannerStatus, OPENRAVE_SHARED_PTR<PyPlannerStatus> >("PlannerStatus", DOXY_CLASS(PlannerStatus))
+#endif
     .def_readwrite("report",&PyPlannerStatus::report)
     .def_readwrite("description",&PyPlannerStatus::description)
     .def_readwrite("errorOrigin",&PyPlannerStatus::errorOrigin)
@@ -412,24 +438,56 @@ void init_openravepy_planner()
     .def_readwrite("statusCode",&PyPlannerStatus::statusCode)
     ;
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyPlannerProgress, OPENRAVE_SHARED_PTR<PyPlannerProgress> >(m, "PlannerProgress", DOXY_CLASS(PlannerBase::PlannerProgress))
+#else
     class_<PyPlannerProgress, OPENRAVE_SHARED_PTR<PyPlannerProgress> >("PlannerProgress", DOXY_CLASS(PlannerBase::PlannerProgress))
+#endif
     .def_readwrite("_iteration",&PyPlannerProgress::_iteration)
     ;
 
     {
         bool (PyPlannerBase::*InitPlan1)(PyRobotBasePtr, PyPlannerBase::PyPlannerParametersPtr,bool) = &PyPlannerBase::InitPlan;
         bool (PyPlannerBase::*InitPlan2)(PyRobotBasePtr, const string &) = &PyPlannerBase::InitPlan;
-        scope planner = class_<PyPlannerBase, OPENRAVE_SHARED_PTR<PyPlannerBase>, bases<PyInterfaceBase> >("Planner", DOXY_CLASS(PlannerBase), no_init)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        scope planner_ = class_<PyPlannerBase, OPENRAVE_SHARED_PTR<PyPlannerBase>, PyInterfaceBase>(m, "Planner", DOXY_CLASS(PlannerBase))
+#else
+        scope planner_ = class_<PyPlannerBase, OPENRAVE_SHARED_PTR<PyPlannerBase>, bases<PyInterfaceBase> >("Planner", DOXY_CLASS(PlannerBase), no_init)
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                        .def("InitPlan", InitPlan1,
+                            "robot"_a,
+                            "params"_a,
+                            "releasegil"_a = false,
+                            DOXY_FN(PlannerBase, InitPlan "RobotBasePtr; PlannerParametersConstPtr")
+                        )
+#else
                         .def("InitPlan",InitPlan1,InitPlan_overloads(PY_ARGS("robot","params","releasegil") DOXY_FN(PlannerBase,InitPlan "RobotBasePtr; PlannerParametersConstPtr")))
+#endif
                         .def("InitPlan",InitPlan2, PY_ARGS("robot","xmlparams") DOXY_FN(PlannerBase,InitPlan "RobotBasePtr; std::istream"))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                        .def("PlanPath", &PyPlannerBase::PlanPath,
+                            "traj"_a,
+                            "releasegil"_a = true,
+                            DOXY_FN(PlannerBase, PlanPath)
+                        )
+#else
                         .def("PlanPath",&PyPlannerBase::PlanPath,PlanPath_overloads(PY_ARGS("traj","releasegil") DOXY_FN(PlannerBase,PlanPath)))
+#endif
                         .def("GetParameters",&PyPlannerBase::GetParameters, DOXY_FN(PlannerBase,GetParameters))
                         .def("RegisterPlanCallback",&PyPlannerBase::RegisterPlanCallback, DOXY_FN(PlannerBase,RegisterPlanCallback))
         ;
-
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        class_<PyPlannerBase::PyPlannerParameters, PyPlannerBase::PyPlannerParametersPtr >(m, "PlannerParameters", DOXY_CLASS(PlannerBase::PlannerParameters))
+#else
         class_<PyPlannerBase::PyPlannerParameters, PyPlannerBase::PyPlannerParametersPtr >("PlannerParameters", DOXY_CLASS(PlannerBase::PlannerParameters))
+#endif
         .def(init<>())
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        .def(init<PyPlannerBase::PyPlannerParametersPtr>(), "parameters"_a)
+#else
         .def(init<PyPlannerBase::PyPlannerParametersPtr>(py::args("parameters")))
+#endif
         .def("SetRobotActiveJoints",&PyPlannerBase::PyPlannerParameters::SetRobotActiveJoints, PY_ARGS("robot") DOXY_FN(PlannerBase::PlannerParameters, SetRobotActiveJoints))
         .def("SetConfigurationSpecification",&PyPlannerBase::PyPlannerParameters::SetConfigurationSpecification, PY_ARGS("env","spec") DOXY_FN(PlannerBase::PlannerParameters, SetConfigurationSpecification))
         .def("GetConfigurationSpecification",&PyPlannerBase::PyPlannerParameters::GetConfigurationSpecification, DOXY_FN(PlannerBase::PlannerParameters, GetConfigurationSpecification))
@@ -443,7 +501,21 @@ void init_openravepy_planner()
         .def("SetConfigAccelerationLimit",&PyPlannerBase::PyPlannerParameters::SetConfigAccelerationLimit, PY_ARGS("accelerations") "sets PlannerParameters::_vConfigAccelerationLimit")
         .def("SetConfigResolution",&PyPlannerBase::PyPlannerParameters::SetConfigResolution, PY_ARGS("resolutions") "sets PlannerParameters::_vConfigResolution")
         .def("SetMaxIterations",&PyPlannerBase::PyPlannerParameters::SetMaxIterations, PY_ARGS("maxiterations") "sets PlannerParameters::_nMaxIterations")
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        .def("CheckPathAllConstraints", &PyPlannerBase::PyPlannerParameters::CheckPathAllConstraints,
+            "q0"_a,
+            "q1"_a,
+            "dq0"_a,
+            "dq1"_a,
+            "timeelapsed"_a,
+            "interval"_a,
+            "options"_a = 0xffff,
+            "filterreturn"_a = false,
+            DOXY_FN(PlannerBase::PlannerParameters, CheckPathAllConstraints)
+        )
+#else
         .def("CheckPathAllConstraints",&PyPlannerBase::PyPlannerParameters::CheckPathAllConstraints,CheckPathAllConstraints_overloads(PY_ARGS("q0","q1","dq0","dq1","timeelapsed","interval","options", "filterreturn") DOXY_FN(PlannerBase::PlannerParameters, CheckPathAllConstraints)))
+#endif
         .def("SetPostProcessing", &PyPlannerBase::PyPlannerParameters::SetPostProcessing, PY_ARGS("plannername", "plannerparameters") "sets the post processing parameters")
         .def("__str__",&PyPlannerBase::PyPlannerParameters::__str__)
         .def("__unicode__",&PyPlannerBase::PyPlannerParameters::__unicode__)
@@ -453,7 +525,11 @@ void init_openravepy_planner()
         ;
     }
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveCreatePlanner", openravepy::RaveCreatePlanner, PY_ARGS("env","name") DOXY_FN1(RaveCreatePlanner));
+#else
     def("RaveCreatePlanner",openravepy::RaveCreatePlanner, PY_ARGS("env","name") DOXY_FN1(RaveCreatePlanner));
+#endif
 }
 
 }
