@@ -16,6 +16,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
+#include "include/openravepy_environmentbase.h"
 #include <openrave/utils.h>
 
 namespace openravepy {
@@ -27,17 +28,22 @@ using py::handle;
 using py::dict;
 using py::enum_;
 using py::class_;
-using py::no_init;
-using py::bases;
 using py::init;
+using py::scope_; // py::object if USE_PYBIND11_PYTHON_BINDINGS
 using py::scope;
 using py::args;
 using py::return_value_policy;
+
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+using py::no_init;
+using py::bases;
 using py::copy_const_reference;
 using py::docstring_options;
-using py::def;
 using py::pickle_suite;
+using py::manage_new_object;
+using py::def;
 namespace numeric = py::numeric;
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
 class PyIkReturn
 {
@@ -175,7 +181,7 @@ public:
         }
         _pIkSolver->SolveAll(ikparam, filteroptions, vikreturns);
         FOREACH(itikreturn,vikreturns) {
-            pyreturns.append(object(PyIkReturnPtr(new PyIkReturn(*itikreturn))));
+            pyreturns.append(py::to_object(PyIkReturnPtr(new PyIkReturn(*itikreturn))));
         }
         return pyreturns;
     }
@@ -213,7 +219,7 @@ public:
         }
         _pIkSolver->SolveAll(ikparam, vFreeParameters, filteroptions, vikreturns);
         FOREACH(itikreturn,vikreturns) {
-            pyreturns.append(object(PyIkReturnPtr(new PyIkReturn(*itikreturn))));
+            pyreturns.append(py::to_object(PyIkReturnPtr(new PyIkReturn(*itikreturn))));
         }
         return pyreturns;
     }
@@ -295,9 +301,18 @@ PyIkSolverBasePtr RaveCreateIkSolver(PyEnvironmentBasePtr pyenv, const std::stri
     return PyIkSolverBasePtr(new PyIkSolverBase(p,pyenv));
 }
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_openravepy_iksolver(py::module& m)
+#else
 void init_openravepy_iksolver()
+#endif
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    using namespace py::literals;  // "..."_a
+    enum_<IkFilterOptions>(m, "IkFilterOptions" DOXY_ENUM(IkFilterOptions))
+#else
     enum_<IkFilterOptions>("IkFilterOptions" DOXY_ENUM(IkFilterOptions))
+#endif
     .value("CheckEnvCollisions",IKFO_CheckEnvCollisions)
     .value("IgnoreSelfCollisions",IKFO_IgnoreSelfCollisions)
     .value("IgnoreJointLimits",IKFO_IgnoreJointLimits)
@@ -307,7 +322,11 @@ void init_openravepy_iksolver()
     .value("IgnoreEndEffectorSelfCollisions",IKFO_IgnoreEndEffectorSelfCollisions)
     ;
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    enum_<IkReturnAction>(m, "IkReturnAction" DOXY_ENUM(IkReturnAction))
+#else
     enum_<IkReturnAction>("IkReturnAction" DOXY_ENUM(IkReturnAction))
+#endif
     .value("Success",IKRA_Success)
     .value("Reject",IKRA_Reject)
     .value("Quit",IKRA_Quit)
@@ -321,8 +340,13 @@ void init_openravepy_iksolver()
     ;
 
     {
-        scope ikreturn = class_<PyIkReturn, PyIkReturnPtr>("IkReturn", DOXY_CLASS(IkReturn), no_init)
-                         .def(init<IkReturnAction>(py::args("action")))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        scope_ ikreturn = class_<PyIkReturn, PyIkReturnPtr>(m, "IkReturn", DOXY_CLASS(IkReturn))
+                                 .def(init<IkReturnAction>(), "action"_a)
+#else
+        scope_ ikreturn = class_<PyIkReturn, PyIkReturnPtr>("IkReturn", DOXY_CLASS(IkReturn), no_init)
+                                 .def(init<IkReturnAction>(py::args("action")))
+#endif
                          .def("GetAction",&PyIkReturn::GetAction, "Retuns IkReturn::_action")
                          .def("GetSolution",&PyIkReturn::GetSolution, "Retuns IkReturn::_vsolution")
                          .def("GetUserData",&PyIkReturn::GetUserData, "Retuns IkReturn::_userdata")
@@ -330,7 +354,7 @@ void init_openravepy_iksolver()
                          .def("GetMapDataDict",&PyIkReturn::GetMapDataDict, "Returns a dictionary copy for IkReturn::_mapdata")
                          .def("SetUserData",&PyIkReturn::SetUserData,PY_ARGS("data") "Set IKReturn::_userdata")
                          .def("SetSolution",&PyIkReturn::SetSolution,PY_ARGS("solution") "Set IKReturn::_vsolution")
-                         .def("SetMapKeyValue",&PyIkReturn::SetMapKeyValue,PY_ARGS("key, value") "Adds key/value pair to IKReturn::_mapdata")
+                         .def("SetMapKeyValue",&PyIkReturn::SetMapKeyValue,PY_ARGS("key", "value") "Adds key/value pair to IKReturn::_mapdata")
         ;
     }
 
@@ -339,7 +363,11 @@ void init_openravepy_iksolver()
         PyIkReturnPtr (PyIkSolverBase::*SolveFree)(object, object, object, int) = &PyIkSolverBase::Solve;
         object (PyIkSolverBase::*SolveAll)(object, int) = &PyIkSolverBase::SolveAll;
         object (PyIkSolverBase::*SolveAllFree)(object, object, int) = &PyIkSolverBase::SolveAll;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        class_<PyIkSolverBase, OPENRAVE_SHARED_PTR<PyIkSolverBase>, PyInterfaceBase>(m, "IkSolver", DOXY_CLASS(IkSolverBase))
+#else
         class_<PyIkSolverBase, OPENRAVE_SHARED_PTR<PyIkSolverBase>, bases<PyInterfaceBase> >("IkSolver", DOXY_CLASS(IkSolverBase), no_init)
+#endif
         .def("Solve",Solve, PY_ARGS("ikparam","q0","filteroptions") DOXY_FN(IkSolverBase, Solve "const IkParameterization&; const std::vector; int; IkReturnPtr"))
         .def("Solve",SolveFree, PY_ARGS("ikparam","q0","freeparameters", "filteroptions") DOXY_FN(IkSolverBase, Solve "const IkParameterization&; const std::vector; const std::vector; int; IkReturnPtr"))
         .def("SolveAll",SolveAll, PY_ARGS("ikparam","filteroptions") DOXY_FN(IkSolverBase, SolveAll "const IkParameterization&; int; std::vector<IkReturnPtr>"))
@@ -352,7 +380,11 @@ void init_openravepy_iksolver()
         ;
     }
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveCreateIkSolver", openravepy::RaveCreateIkSolver, PY_ARGS("env","name") DOXY_FN1(RaveCreateIkSolver));
+#else
     def("RaveCreateIkSolver",openravepy::RaveCreateIkSolver, PY_ARGS("env","name") DOXY_FN1(RaveCreateIkSolver));
+#endif
 }
 
 }
