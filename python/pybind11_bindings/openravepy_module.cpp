@@ -16,26 +16,33 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
+#include "include/openravepy_environmentbase.h"
 
 namespace openravepy {
 
 using py::object;
 using py::extract;
+using py::extract_;
 using py::handle;
 using py::dict;
 using py::enum_;
 using py::class_;
-using py::no_init;
-using py::bases;
 using py::init;
+using py::scope_; // py::object if USE_PYBIND11_PYTHON_BINDINGS
 using py::scope;
 using py::args;
 using py::return_value_policy;
+
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+using py::no_init;
+using py::bases;
 using py::copy_const_reference;
 using py::docstring_options;
-using py::def;
 using py::pickle_suite;
+using py::manage_new_object;
+using py::def;
 namespace numeric = py::numeric;
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
 class PyModuleBase : public PyInterfaceBase
 {
@@ -78,16 +85,31 @@ PyModuleBasePtr RaveCreateModule(PyEnvironmentBasePtr pyenv, const std::string& 
     return PyModuleBasePtr(new PyModuleBase(p,pyenv));
 }
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_openravepy_module(py::module& m)
+#else
 void init_openravepy_module()
+#endif
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    using namespace py::literals; // "..."_a
+    class_<PyModuleBase, OPENRAVE_SHARED_PTR<PyModuleBase>, PyInterfaceBase>(m, "Module", DOXY_CLASS(ModuleBase))
+#else
     class_<PyModuleBase, OPENRAVE_SHARED_PTR<PyModuleBase>, bases<PyInterfaceBase> >("Module", DOXY_CLASS(ModuleBase), no_init)
+#endif
     .def("SimulationStep",&PyModuleBase::SimulationStep, DOXY_FN(ModuleBase,"SimulationStep"))
     .def("Destroy",&PyModuleBase::Destroy, DOXY_FN(ModuleBase,"Destroy"))
     ;
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveCreateModule",openravepy::RaveCreateModule, PY_ARGS("env","name") DOXY_FN1(RaveCreateModule));
+    m.def("RaveCreateProblem",openravepy::RaveCreateModule, PY_ARGS("env","name") DOXY_FN1(RaveCreateModule));
+    m.def("RaveCreateProblemInstance",openravepy::RaveCreateModule, PY_ARGS("env","name") DOXY_FN1(RaveCreateModule));
+#else
     def("RaveCreateModule",openravepy::RaveCreateModule, PY_ARGS("env","name") DOXY_FN1(RaveCreateModule));
     def("RaveCreateProblem",openravepy::RaveCreateModule, PY_ARGS("env","name") DOXY_FN1(RaveCreateModule));
     def("RaveCreateProblemInstance",openravepy::RaveCreateModule, PY_ARGS("env","name") DOXY_FN1(RaveCreateModule));
+#endif
 }
 
 }
