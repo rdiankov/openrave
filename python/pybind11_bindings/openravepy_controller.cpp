@@ -16,26 +16,35 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
+#include "include/openravepy_environmentbase.h"
+#include "include/openravepy_robotbase.h"
+#include "include/openravepy_trajectorybase.h"
 
 namespace openravepy {
 
 using py::object;
 using py::extract;
+using py::extract_;
 using py::handle;
 using py::dict;
 using py::enum_;
 using py::class_;
-using py::no_init;
-using py::bases;
 using py::init;
+using py::scope_; // py::object if USE_PYBIND11_PYTHON_BINDINGS
 using py::scope;
 using py::args;
 using py::return_value_policy;
+
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+using py::no_init;
+using py::bases;
 using py::copy_const_reference;
 using py::docstring_options;
-using py::def;
 using py::pickle_suite;
+using py::manage_new_object;
+using py::def;
 namespace numeric = py::numeric;
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
 class PyControllerBase : public PyInterfaceBase
 {
@@ -201,22 +210,40 @@ PyMultiControllerBasePtr RaveCreateMultiController(PyEnvironmentBasePtr pyenv, c
     return PyMultiControllerBasePtr(new PyMultiControllerBase(pcontroller, pyenv));
 }
 
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Reset_overloads, Reset, 0, 1)
+#endif
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_openravepy_controller(py::module& m)
+#else
 void init_openravepy_controller()
+#endif
 {
     {
         bool (PyControllerBase::*init1)(PyRobotBasePtr,const string &) = &PyControllerBase::Init;
         bool (PyControllerBase::*init2)(PyRobotBasePtr,object,int) = &PyControllerBase::Init;
         bool (PyControllerBase::*setdesired1)(object) = &PyControllerBase::SetDesired;
         bool (PyControllerBase::*setdesired2)(object,object) = &PyControllerBase::SetDesired;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        using namespace py::literals;  // "..."_a
+        class_<PyControllerBase, OPENRAVE_SHARED_PTR<PyControllerBase>, PyInterfaceBase>(m, "Controller", DOXY_CLASS(ControllerBase))
+#else
         class_<PyControllerBase, OPENRAVE_SHARED_PTR<PyControllerBase>, bases<PyInterfaceBase> >("Controller", DOXY_CLASS(ControllerBase), no_init)
+#endif
         .def("Init",init1, DOXY_FN(ControllerBase,Init))
         .def("Init",init2, PY_ARGS("robot","dofindices","controltransform") DOXY_FN(ControllerBase,Init))
         .def("GetControlDOFIndices",&PyControllerBase::GetControlDOFIndices,DOXY_FN(ControllerBase,GetControlDOFIndices))
         .def("IsControlTransformation",&PyControllerBase::IsControlTransformation, DOXY_FN(ControllerBase,IsControlTransformation))
         .def("GetRobot",&PyControllerBase::GetRobot, DOXY_FN(ControllerBase,GetRobot))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        .def("Reset", &PyControllerBase::Reset,
+            "options"_a = 0,
+            DOXY_FN(ControllerBase, Reset)
+        )
+#else
         .def("Reset",&PyControllerBase::Reset, Reset_overloads(PY_ARGS("options") DOXY_FN(ControllerBase,Reset)))
+#endif
         .def("SetDesired",setdesired1, PY_ARGS("values") DOXY_FN(ControllerBase,SetDesired))
         .def("SetDesired",setdesired2, PY_ARGS("values","transform") DOXY_FN(ControllerBase,SetDesired))
         .def("SetPath",&PyControllerBase::SetPath, DOXY_FN(ControllerBase,SetPath))
@@ -229,15 +256,24 @@ void init_openravepy_controller()
     }
 
     {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        class_<PyMultiControllerBase, OPENRAVE_SHARED_PTR<PyMultiControllerBase>, PyControllerBase/*, PyInterfaceBase*/ >(m, "MultiController", DOXY_CLASS(MultiControllerBase))
+#else
         class_<PyMultiControllerBase, OPENRAVE_SHARED_PTR<PyMultiControllerBase>, bases<PyControllerBase, PyInterfaceBase> >("MultiController", DOXY_CLASS(MultiControllerBase), no_init)
+#endif
         .def("AttachController",&PyMultiControllerBase::AttachController, PY_ARGS("controller","dofindices","controltransform") DOXY_FN(MultiControllerBase,AttachController))
         .def("RemoveController",&PyMultiControllerBase::RemoveController, PY_ARGS("controller") DOXY_FN(MultiControllerBase,RemoveController))
         .def("GetController",&PyMultiControllerBase::GetController, PY_ARGS("dof") DOXY_FN(MultiControllerBase,GetController))
         ;
     }
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveCreateController",openravepy::RaveCreateController, PY_ARGS("env","name") DOXY_FN1(RaveCreateController));
+    m.def("RaveCreateMultiController",openravepy::RaveCreateMultiController, PY_ARGS("env","name") DOXY_FN1(RaveCreateMultiController));
+#else
     def("RaveCreateController",openravepy::RaveCreateController, PY_ARGS("env","name") DOXY_FN1(RaveCreateController));
     def("RaveCreateMultiController",openravepy::RaveCreateMultiController, PY_ARGS("env","name") DOXY_FN1(RaveCreateMultiController));
+#endif
 }
 
 }
