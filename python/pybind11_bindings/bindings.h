@@ -153,7 +153,6 @@ struct select_npy_type<uint32_t>
 } // namespace openravepy
 
 // pybind11
-// #define USE_PYBIND11_PYTHON_BINDINGS
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 #include <iostream>
 // use std::cout temporarily
