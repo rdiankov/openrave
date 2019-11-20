@@ -216,16 +216,23 @@ void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        for (auto item : d) // will replace later
+        for (auto item : d) // will replace auto later
+        {
+            rapidjson::Value keyValue, valueValue;
+            {
+                object k = py::extract<object>(item.first);
+                toRapidJSONValue(k, keyValue, allocator);
+            }
+            {
+                object v = py::extract<object>(item.second);
+                toRapidJSONValue(v, valueValue, allocator);
+            }
+            value.AddMember(keyValue, valueValue, allocator);
+        }
 #else
         for (int i = 0; i < numitems; i++)
-#endif
         {
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-            py::tuple kv = py::make_tuple(item.first, item.second);
-#else
             py::tuple kv = py::extract<py::tuple>(iterator.attr("next")());
-#endif
             rapidjson::Value keyValue, valueValue;
             {
                 object k = py::extract<object>(kv[0]);
@@ -237,6 +244,7 @@ void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
             }
             value.AddMember(keyValue, valueValue, allocator);
         }
+#endif // USE_PYBIND11_PYTHON_BINDINGS
     }
     else if (PyArray_Check(obj.ptr()) ) {
         PyArrayObject* pyarrayvalues = PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(obj.ptr()));

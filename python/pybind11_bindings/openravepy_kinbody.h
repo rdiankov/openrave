@@ -207,7 +207,7 @@ public:
     void SetDOFVelocities(py::object odofvelocities);
     void SetDOFVelocities(py::object odofvelocities, uint32_t checklimits=KinBody::CLA_CheckLimits, py::object oindices = py::object());
     py::object GetLinkVelocities() const;
-    py::object GetLinkAccelerations(py::object odofaccelerations, py::object oexternalaccelerations) const;
+    py::object GetLinkAccelerations(py::object odofaccelerations, py::object oexternalaccelerations=py::object()) const;
     py::object ComputeAABB(bool bEnabledOnlyLinks=false);
     py::object ComputeAABBFromTransform(py::object otransform, bool bEnabledOnlyLinks=false);
     py::object ComputeLocalAABB(bool bEnabledOnlyLinks=false);

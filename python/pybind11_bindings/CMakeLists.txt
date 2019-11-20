@@ -2,7 +2,7 @@ if(NOT OPENRAVE_DISABLE_ASSERT_HANDLER)
   add_definitions("-DBOOST_ENABLE_ASSERT_HANDLER") # turns segfault into exception
 endif()
 
-set(USE_PYBIND11_PYTHON_BINDINGS OFF CACHE BOOL "Decide to whether use pybind11 or Boost.Python")
+set(USE_PYBIND11_PYTHON_BINDINGS OFF)
 
 if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
   if( PYTHONLIBS_FOUND OR PYTHON_LIBRARIES )
@@ -45,9 +45,9 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
       if(USE_PYBIND11_PYTHON_BINDINGS)
         # pybind11 requires less visibility
         set(OPENRAVEPY_COMPILE_FLAGS "${OPENRAVEPY_COMPILE_FLAGS} -DUSE_PYBIND11_PYTHON_BINDINGS -fvisibility=hidden")
-        set(openravepy_int_cpp_files openravepy_int.cpp)
+        set(openravepy_int_cpp_files openravepy_int.cpp openravepy_kinbody.cpp)
       else()
-        set(openravepy_int_cpp_files openravepy_kinbody.cpp openravepy_int.cpp openravepy_robot.cpp openravepy_global.cpp
+        set(openravepy_int_cpp_files openravepy_int.cpp openravepy_kinbody.cpp openravepy_robot.cpp openravepy_global.cpp
           openravepy_collisionchecker.cpp openravepy_controller.cpp openravepy_ikparameterization.cpp openravepy_iksolver.cpp
           openravepy_module.cpp openravepy_physicsengine.cpp openravepy_planner.cpp openravepy_planningutils.cpp
           openravepy_sensor.cpp openravepy_sensorsystem.cpp openravepy_spacesampler.cpp openravepy_trajectory.cpp
@@ -60,7 +60,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
           set(OPENRAVEPY_COMPILE_FLAGS "${OPENRAVEPY_COMPILE_FLAGS} /bigobj")
         endif()
       endif()
-      
+
       ## openrave bindings
       add_library(openravepy_int SHARED ${openravepy_int_cpp_files})
       # stdc++ has to be included before opengl libraries due to some ATI bug (http://wiki.fifengine.de/Segfault_in_cxa_allocate_exception#Workaround)
