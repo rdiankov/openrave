@@ -16,7 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
-
+#include "openravepy_kinbody.h"
+#include "include/openravepy_environmentbase.h"
 #include <openrave/xmlreaders.h>
 #include <openrave/utils.h>
 
@@ -30,6 +31,7 @@ using py::dict;
 using py::enum_;
 using py::class_;
 using py::init;
+using py::scope_; // py::object if USE_PYBIND11_PYTHON_BINDINGS
 using py::scope;
 using py::args;
 using py::return_value_policy;
@@ -858,7 +860,7 @@ object RaveGetPluginInfo()
     std::list< std::pair<std::string, PLUGININFO> > listplugins;
     OpenRAVE::RaveGetPluginInfo(listplugins);
     FOREACH(itplugin, listplugins) {
-        plugins.append(py::make_tuple(itplugin->first,object(OPENRAVE_SHARED_PTR<PyPluginInfo>(new PyPluginInfo(itplugin->second)))));
+        plugins.append(py::make_tuple(itplugin->first, py::to_object(OPENRAVE_SHARED_PTR<PyPluginInfo>(new PyPluginInfo(itplugin->second)))));
     }
     return plugins;
 }
@@ -1147,6 +1149,7 @@ string poseSerialization(object o)
     return ss.str();
 }
 
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
 BOOST_PYTHON_FUNCTION_OVERLOADS(RaveInitialize_overloads, pyRaveInitialize, 0, 2)
 BOOST_PYTHON_FUNCTION_OVERLOADS(RaveFindLocalFile_overloads, OpenRAVE::RaveFindLocalFile, 1, 2)
 BOOST_PYTHON_FUNCTION_OVERLOADS(InterpolateQuatSlerp_overloads, openravepy::InterpolateQuatSlerp, 3, 4)
@@ -1161,10 +1164,20 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractAffineValues_overloads, PyConfigur
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractJointValues_overloads, PyConfigurationSpecification::ExtractJointValues, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(RemoveGroups_overloads, PyConfigurationSpecification::RemoveGroups, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Serialize_overloads, Serialize, 0, 1)
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_openravepy_global(py::module& m)
+#else
 void init_openravepy_global()
+#endif
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    using namespace py::literals;  // "..."_a
+    enum_<OpenRAVEErrorCode>(m, "ErrorCode" DOXY_ENUM(OpenRAVEErrorCode))
+#else
     enum_<OpenRAVEErrorCode>("ErrorCode" DOXY_ENUM(OpenRAVEErrorCode))
+#endif
     .value("Failed",ORE_Failed)
     .value("InvalidArguments",ORE_InvalidArguments)
     .value("EnvironmentNotLocked",ORE_EnvironmentNotLocked)
@@ -1178,7 +1191,11 @@ void init_openravepy_global()
     .value("InvalidState",ORE_InvalidState)
     .value("Timeout",ORE_Timeout)
     ;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    enum_<DebugLevel>(m, "DebugLevel" DOXY_ENUM(DebugLevel))
+#else
     enum_<DebugLevel>("DebugLevel" DOXY_ENUM(DebugLevel))
+#endif
     .value("Fatal",Level_Fatal)
     .value("Error",Level_Error)
     .value("Warn",Level_Warn)
@@ -1187,7 +1204,11 @@ void init_openravepy_global()
     .value("Verbose",Level_Verbose)
     .value("VerifyPlans",Level_VerifyPlans)
     ;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    enum_<SerializationOptions>(m, "SerializationOptions" DOXY_ENUM(SerializationOptions))
+#else
     enum_<SerializationOptions>("SerializationOptions" DOXY_ENUM(SerializationOptions))
+#endif
     .value("Kinematics",SO_Kinematics)
     .value("Dynamics",SO_Dynamics)
     .value("BodyState",SO_BodyState)
@@ -1198,7 +1219,11 @@ void init_openravepy_global()
     .value("InverseKinematics",SO_InverseKinematics)
     .value("JointLimits",SO_JointLimits)
     ;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    enum_<InterfaceType>(m, "InterfaceType" DOXY_ENUM(InterfaceType))
+#else
     enum_<InterfaceType>("InterfaceType" DOXY_ENUM(InterfaceType))
+#endif
     .value(RaveGetInterfaceName(PT_Planner).c_str(),PT_Planner)
     .value(RaveGetInterfaceName(PT_Robot).c_str(),PT_Robot)
     .value(RaveGetInterfaceName(PT_SensorSystem).c_str(),PT_SensorSystem)
@@ -1214,7 +1239,11 @@ void init_openravepy_global()
     .value(RaveGetInterfaceName(PT_Viewer).c_str(),PT_Viewer)
     .value(RaveGetInterfaceName(PT_SpaceSampler).c_str(),PT_SpaceSampler)
     ;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    enum_<CloningOptions>(m, "CloningOptions" DOXY_ENUM(CloningOptions))
+#else
     enum_<CloningOptions>("CloningOptions" DOXY_ENUM(CloningOptions))
+#endif
     .value("Bodies",Clone_Bodies)
     .value("Viewer",Clone_Viewer)
     .value("Simulation",Clone_Simulation)
@@ -1222,45 +1251,85 @@ void init_openravepy_global()
     .value("Sensors",Clone_Sensors)
     .value("Modules",Clone_Modules)
     ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    enum_<PhysicsEngineOptions>(m, "PhysicsEngineOptions" DOXY_ENUM(PhysicsEngineOptions))
+#else
     enum_<PhysicsEngineOptions>("PhysicsEngineOptions" DOXY_ENUM(PhysicsEngineOptions))
+#endif
     .value("SelfCollisions",PEO_SelfCollisions)
     ;
-
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    enum_<IntervalType>(m, "Interval" DOXY_ENUM(IntervalType))
+#else
     enum_<IntervalType>("Interval" DOXY_ENUM(IntervalType))
+#endif
     .value("Open",IT_Open)
     .value("OpenStart",IT_OpenStart)
     .value("OpenEnd",IT_OpenEnd)
     .value("Closed",IT_Closed)
     ;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    enum_<SampleDataType>(m, "SampleDataType" DOXY_ENUM(SampleDataType))
+#else
     enum_<SampleDataType>("SampleDataType" DOXY_ENUM(SampleDataType))
+#endif
     .value("Real",SDT_Real)
     .value("Uint32",SDT_Uint32)
     ;
-
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<UserData, UserDataPtr >(m, "UserData", DOXY_CLASS(UserData))
+#else
     class_<UserData, UserDataPtr >("UserData", DOXY_CLASS(UserData))
+#endif
     ;
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_< OPENRAVE_SHARED_PTR< void > >(m, "VoidPointer", "Holds auto-managed resources, deleting it releases its shared data.");
+#else
     class_< OPENRAVE_SHARED_PTR< void > >("VoidPointer", "Holds auto-managed resources, deleting it releases its shared data.");
+#endif
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyGraphHandle, OPENRAVE_SHARED_PTR<PyGraphHandle> >(m, "GraphHandle", DOXY_CLASS(GraphHandle))
+#else
     class_<PyGraphHandle, OPENRAVE_SHARED_PTR<PyGraphHandle> >("GraphHandle", DOXY_CLASS(GraphHandle), no_init)
+#endif
     .def("SetTransform",&PyGraphHandle::SetTransform,DOXY_FN(GraphHandle,SetTransform))
     .def("SetShow",&PyGraphHandle::SetShow,DOXY_FN(GraphHandle,SetShow))
     .def("Close",&PyGraphHandle::Close,DOXY_FN(GraphHandle,Close))
     ;
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyUserData, OPENRAVE_SHARED_PTR<PyUserData> >(m, "UserData", DOXY_CLASS(UserData))
+#else
     class_<PyUserData, OPENRAVE_SHARED_PTR<PyUserData> >("UserData", DOXY_CLASS(UserData), no_init)
+#endif
     .def("close",&PyUserData::Close,"deprecated")
     .def("Close",&PyUserData::Close,"force releasing the user handle point.")
     ;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PySerializableData, OPENRAVE_SHARED_PTR<PySerializableData>, PyUserData >(m, "SerializableData", DOXY_CLASS(SerializableData))
+#else
     class_<PySerializableData, OPENRAVE_SHARED_PTR<PySerializableData>, bases<PyUserData> >("SerializableData", DOXY_CLASS(SerializableData))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def(init<std::string>(), "data"_a)
+#else
     .def(init<std::string>(py::args("data")))
+#endif
     .def("Close",&PySerializableData::Close,DOXY_FN(SerializableData,Close))
     .def("Serialize",&PySerializableData::Serialize, PY_ARGS("options") DOXY_FN(SerializableData, Serialize))
     .def("Deserialize",&PySerializableData::Deserialize, PY_ARGS("data") DOXY_FN(SerializableData, Deserialize))
     ;
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyRay, OPENRAVE_SHARED_PTR<PyRay> >(m, "Ray", DOXY_CLASS(geometry::ray))
+    .def(init<object, object>(), "pos"_a, "dir"_a)
+#else
     class_<PyRay, OPENRAVE_SHARED_PTR<PyRay> >("Ray", DOXY_CLASS(geometry::ray))
     .def(init<object,object>(py::args("pos","dir")))
+#endif
     .def("dir",&PyRay::dir)
     .def("pos",&PyRay::pos)
     .def("__str__",&PyRay::__str__)
@@ -1270,36 +1339,66 @@ void init_openravepy_global()
     .def_pickle(Ray_pickle_suite())
 #endif
     ;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyAABB, OPENRAVE_SHARED_PTR<PyAABB> >(m, "AABB", DOXY_CLASS(geometry::aabb))
+    .def(init<object, object>(), "pos"_a, "extents"_a)
+#else
     class_<PyAABB, OPENRAVE_SHARED_PTR<PyAABB> >("AABB", DOXY_CLASS(geometry::aabb))
     .def(init<object,object>(py::args("pos","extents")))
+#endif
     .def("extents",&PyAABB::extents)
     .def("pos",&PyAABB::pos)
     .def("__str__",&PyAABB::__str__)
     .def("__unicode__",&PyAABB::__unicode__)
     .def("__repr__",&PyAABB::__repr__)
     .def("toDict", &PyAABB::toDict)
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
     .def_pickle(AABB_pickle_suite())
+#endif
     ;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyTriMesh, OPENRAVE_SHARED_PTR<PyTriMesh> >(m, "TriMesh", DOXY_CLASS(TriMesh))
+    .def(init<object, object>(), "vertices"_a, "indices"_a)
+#else
     class_<PyTriMesh, OPENRAVE_SHARED_PTR<PyTriMesh> >("TriMesh", DOXY_CLASS(TriMesh))
     .def(init<object,object>(py::args("vertices","indices")))
+#endif
     .def_readwrite("vertices",&PyTriMesh::vertices)
     .def_readwrite("indices",&PyTriMesh::indices)
     .def("__str__",&PyTriMesh::__str__)
-    .def("__unicode__",&PyAABB::__unicode__)
+    .def("__unicode__",&PyTriMesh::__unicode__)
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
     .def_pickle(TriMesh_pickle_suite())
 #endif
     ;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<InterfaceBase, InterfaceBasePtr>(m, "InterfaceBase", DOXY_CLASS(InterfaceBase))
+#else
     class_<InterfaceBase, InterfaceBasePtr, boost::noncopyable >("InterfaceBase", DOXY_CLASS(InterfaceBase), no_init)
+#endif
     ;
-
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyXMLReadable, PyXMLReadablePtr >(m, "XMLReadable", DOXY_CLASS(XMLReadable))
+    .def(init<XMLReadablePtr>(), "readableraw"_a)
+#else
     class_<PyXMLReadable, PyXMLReadablePtr >("XMLReadable", DOXY_CLASS(XMLReadable), no_init)
     .def(init<XMLReadablePtr>(py::args("readableraw")))
+#endif
     .def("GetXMLId", &PyXMLReadable::GetXMLId, DOXY_FN(XMLReadable, GetXMLId))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def("Serialize", &PyXMLReadable::Serialize,
+        "options"_a = 0,
+        DOXY_FN(XMLReadable, Serialize)
+    )
+#else
     .def("Serialize", &PyXMLReadable::Serialize, Serialize_overloads(PY_ARGS("options") DOXY_FN(XMLReadable, Serialize)))
+#endif
     ;
-
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyPluginInfo, OPENRAVE_SHARED_PTR<PyPluginInfo> >(m, "PluginInfo", DOXY_CLASS(PLUGININFO))
+#else
     class_<PyPluginInfo, OPENRAVE_SHARED_PTR<PyPluginInfo> >("PluginInfo", DOXY_CLASS(PLUGININFO),no_init)
+#endif
     .def_readonly("interfacenames",&PyPluginInfo::interfacenames)
     .def_readonly("version",&PyPluginInfo::version)
     ;
@@ -1308,11 +1407,20 @@ void init_openravepy_global()
         int (PyConfigurationSpecification::*addgroup1)(const std::string&, int, const std::string&) = &PyConfigurationSpecification::AddGroup;
         int (PyConfigurationSpecification::*addgroup2)(const ConfigurationSpecification::Group&) = &PyConfigurationSpecification::AddGroup;
 
-        scope configurationspecification = class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >("ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
+        scope_ configurationspecification =
+#ifdef USE_PYBIND11_PYTHON_BINDINGS 
+                                           class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >(m, "ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
+                                           .def(init<PyConfigurationSpecificationPtr>(), "spec"_a)
+                                           .def(init<const ConfigurationSpecification::Group&>(), "group"_a)
+                                           .def(init<const std::string&>(), "xmldata"_a)
+                                           .def("GetGroupFromName", &PyConfigurationSpecification::GetGroupFromName, DOXY_FN(ConfigurationSpecification,GetGroupFromName))
+#else
+                                           class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >("ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
                                            .def(init<PyConfigurationSpecificationPtr>(py::args("spec")) )
                                            .def(init<const ConfigurationSpecification::Group&>(py::args("group")) )
                                            .def(init<const std::string&>(py::args("xmldata")) )
                                            .def("GetGroupFromName",&PyConfigurationSpecification::GetGroupFromName, return_value_policy<copy_const_reference>(), DOXY_FN(ConfigurationSpecification,GetGroupFromName))
+#endif
                                            .def("FindCompatibleGroup",&PyConfigurationSpecification::FindCompatibleGroup, DOXY_FN(ConfigurationSpecification,FindCompatibleGroup))
                                            .def("FindTimeDerivativeGroup",&PyConfigurationSpecification::FindTimeDerivativeGroup, DOXY_FN(ConfigurationSpecification,FindTimeDerivativeGroup))
                                            .def("GetDOF",&PyConfigurationSpecification::GetDOF,DOXY_FN(ConfigurationSpecification,GetDOF))
@@ -1321,17 +1429,57 @@ void init_openravepy_global()
                                            .def("AddVelocityGroups",&PyConfigurationSpecification::AddVelocityGroups, PY_ARGS("adddeltatime") DOXY_FN(ConfigurationSpecification,AddVelocityGroups))
                                            .def("AddDerivativeGroups",&PyConfigurationSpecification::AddDerivativeGroups, PY_ARGS("deriv", "adddeltatime") DOXY_FN(ConfigurationSpecification,AddDerivativeGroups))
                                            .def("AddDeltaTimeGroup",&PyConfigurationSpecification::AddDeltaTimeGroup,DOXY_FN(ConfigurationSpecification,AddDeltaTimeGroup))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                                           .def("RemoveGroups", &PyConfigurationSpecification::RemoveGroups, 
+                                                "groupname"_a,
+                                                "exactmatch"_a = true,
+                                                DOXY_FN(ConfigurationSpecification, RemoveGroups)
+                                            )
+#else
                                            .def("RemoveGroups", &PyConfigurationSpecification::RemoveGroups, RemoveGroups_overloads(PY_ARGS("groupname","exactmatch") DOXY_FN(ConfigurationSpecification, RemoveGroups)))
+#endif
                                            .def("AddGroup",addgroup1, PY_ARGS("name","dof","interpolation") DOXY_FN(ConfigurationSpecification,AddGroup "const std::string; int; const std::string"))
                                            .def("AddGroup",addgroup2, PY_ARGS("group") DOXY_FN(ConfigurationSpecification,AddGroup "const"))
                                            .def("ConvertToVelocitySpecification",&PyConfigurationSpecification::ConvertToVelocitySpecification,DOXY_FN(ConfigurationSpecification,ConvertToVelocitySpecification))
                                            .def("ConvertToDerivativeSpecification",&PyConfigurationSpecification::ConvertToDerivativeSpecification, PY_ARGS("timederivative") DOXY_FN(ConfigurationSpecification, ConvertToDerivativeSpecification))
                                            .def("GetTimeDerivativeSpecification",&PyConfigurationSpecification::GetTimeDerivativeSpecification,DOXY_FN(ConfigurationSpecification,GetTimeDerivativeSpecification))
-
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                                           .def("ExtractTransform", &PyConfigurationSpecification::ExtractTransform,
+                                                "transform"_a,
+                                                "data"_a,
+                                                "body"_a,
+                                                "timederivative"_a = 0,
+                                                DOXY_FN(ConfigurationSpecification,ExtractTransform)
+                                            )
+#else
                                            .def("ExtractTransform",&PyConfigurationSpecification::ExtractTransform,ExtractTransform_overloads(PY_ARGS("transform","data","body","timederivative") DOXY_FN(ConfigurationSpecification,ExtractTransform)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                                           .def("ExtractAffineValues", &PyConfigurationSpecification::ExtractAffineValues,
+                                                "data"_a,
+                                                "body"_a,
+                                                "affinedofs"_a,
+                                                "timederivative"_a = 0,
+                                                DOXY_FN(ConfigurationSpecification,ExtractAffineValues)
+                                            )
+#else
                                            .def("ExtractAffineValues",&PyConfigurationSpecification::ExtractAffineValues,ExtractAffineValues_overloads(PY_ARGS("data","body","affinedofs","timederivative") DOXY_FN(ConfigurationSpecification,ExtractAffineValues)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                                           .def("ExtractIkParameterization", &PyConfigurationSpecification::ExtractIkParameterization,
+                                                "data"_a,
+                                                "timederivative"_a = 0,
+                                                "robotname"_a = "",
+                                                "manipulatorname"_a = "",
+                                                DOXY_FN(ConfigurationSpecification, ExtractIkParameterization)
+                                            )
+#else
                                            .def("ExtractIkParameterization",&PyConfigurationSpecification::ExtractIkParameterization,ExtractIkParameterization_overloads(PY_ARGS("data","timederivative","robotname","manipulatorname") DOXY_FN(ConfigurationSpecification,ExtractIkParameterization)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+#else
                                            .def("ExtractJointValues",&PyConfigurationSpecification::ExtractJointValues,ExtractJointValues_overloads(PY_ARGS("data","body","indices","timederivative") DOXY_FN(ConfigurationSpecification,ExtractJointValues)))
+#endif
                                            .def("ExtractDeltaTime",&PyConfigurationSpecification::ExtractDeltaTime, PY_ARGS("data") DOXY_FN(ConfigurationSpecification,ExtractDeltaTime))
                                            .def("InsertDeltaTime",&PyConfigurationSpecification::InsertDeltaTime, PY_ARGS("data","deltatime") DOXY_FN(ConfigurationSpecification,InsertDeltaTime))
                                            .def("InsertJointValues",&PyConfigurationSpecification::InsertJointValues, PY_ARGS("data","values","body","indices","timederivative") DOXY_FN(ConfigurationSpecification,InsertJointValues))
@@ -1339,7 +1487,7 @@ void init_openravepy_global()
                                            .def("ExtractUsedIndices", &PyConfigurationSpecification::ExtractUsedIndices, PY_ARGS("env") DOXY_FN(ConfigurationSpecification, ExtractUsedIndices))
                                            .def("ConvertData", &PyConfigurationSpecification::ConvertData, PY_ARGS("targetspec", "sourcedata", "numpoints", "env", "filluninitialized") DOXY_FN(ConfigurationSpecification, ConvertData))
                                            .def("ConvertDataFromPrevious", &PyConfigurationSpecification::ConvertDataFromPrevious, PY_ARGS("targetdata", "targetspec", "sourcedata", "numpoints", "env") DOXY_FN(ConfigurationSpecification, ConvertData))
-                                           .def("GetGroups", &PyConfigurationSpecification::GetGroups, PY_ARGS("env") "returns a list of the groups")
+                                           .def("GetGroups", &PyConfigurationSpecification::GetGroups, /*PY_ARGS("env")*/ "returns a list of the groups")
                                            .def("__eq__",&PyConfigurationSpecification::__eq__)
                                            .def("__ne__",&PyConfigurationSpecification::__ne__)
                                            .def("__add__",&PyConfigurationSpecification::__add__)
@@ -1353,7 +1501,11 @@ void init_openravepy_global()
         ;
 
         {
-            scope group = class_<ConfigurationSpecification::Group, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> >("Group",DOXY_CLASS(ConfigurationSpecification::Group))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            scope_ group = class_<ConfigurationSpecification::Group, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> >(m, "Group",DOXY_CLASS(ConfigurationSpecification::Group))
+#else
+            scope_ group = class_<ConfigurationSpecification::Group, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> >("Group",DOXY_CLASS(ConfigurationSpecification::Group))
+#endif
                           .def_readwrite("name",&ConfigurationSpecification::Group::name)
                           .def_readwrite("interpolation",&ConfigurationSpecification::Group::interpolation)
                           .def_readwrite("offset",&ConfigurationSpecification::Group::offset)
@@ -1361,100 +1513,482 @@ void init_openravepy_global()
             ;
         }
     }
-
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
     openravepy::spec_from_group();
+#endif
 
     {
-        scope scope_xmlreaders = class_<xmlreaders::PyStaticClass>("xmlreaders")
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        scope_ scope_xmlreaders = class_<xmlreaders::PyStaticClass>(m, "xmlreaders")
+#else
+        scope_ scope_xmlreaders = class_<xmlreaders::PyStaticClass>("xmlreaders")
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                                 .def_static("CreateStringXMLReadable", xmlreaders::pyCreateStringXMLReadable, PY_ARGS("xmlid", "data") DOXY_FN1(pyCreateStringXMLReadable))
+#else
+                                 // https://wiki.python.org/moin/boost.python/HowTo
                                  .def("CreateStringXMLReadable",xmlreaders::pyCreateStringXMLReadable, PY_ARGS("xmlid", "data") DOXY_FN1(pyCreateStringXMLReadable))
                                  .staticmethod("CreateStringXMLReadable")
+#endif
         ;
     }
-
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveSetDebugLevel",openravepy::pyRaveSetDebugLevel, PY_ARGS("level") DOXY_FN1(RaveSetDebugLevel));
+#else
     def("RaveSetDebugLevel",openravepy::pyRaveSetDebugLevel, PY_ARGS("level") DOXY_FN1(RaveSetDebugLevel));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveSetDebugLevel",openravepy::pyRaveSetDebugLevel, PY_ARGS("level") DOXY_FN1(RaveSetDebugLevel));
+#else
+    def("RaveSetDebugLevel",openravepy::pyRaveSetDebugLevel, PY_ARGS("level") DOXY_FN1(RaveSetDebugLevel));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveGetDebugLevel",OpenRAVE::RaveGetDebugLevel,DOXY_FN1(RaveGetDebugLevel));
+#else
     def("RaveGetDebugLevel",OpenRAVE::RaveGetDebugLevel,DOXY_FN1(RaveGetDebugLevel));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveSetDataAccess",openravepy::pyRaveSetDataAccess, PY_ARGS("accessoptions") DOXY_FN1(RaveSetDataAccess));
+#else
     def("RaveSetDataAccess",openravepy::pyRaveSetDataAccess, PY_ARGS("accessoptions") DOXY_FN1(RaveSetDataAccess));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveGetDataAccess",OpenRAVE::RaveGetDataAccess, DOXY_FN1(RaveGetDataAccess));
+#else
     def("RaveGetDataAccess",OpenRAVE::RaveGetDataAccess, DOXY_FN1(RaveGetDataAccess));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveGetDefaultViewerType", OpenRAVE::RaveGetDefaultViewerType, DOXY_FN1(RaveGetDefaultViewerType));
+#else
     def("RaveGetDefaultViewerType", OpenRAVE::RaveGetDefaultViewerType, DOXY_FN1(RaveGetDefaultViewerType));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveFindLocalFile", OpenRAVE::RaveFindLocalFile,
+        "filename"_a,
+        "curdir"_a = "",
+        DOXY_FN1(RaveFindLocalFile)
+    );
+#else
     def("RaveFindLocalFile",OpenRAVE::RaveFindLocalFile,RaveFindLocalFile_overloads(PY_ARGS("filename","curdir") DOXY_FN1(RaveFindLocalFile)));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveInvertFileLookup",openravepy::pyRaveInvertFileLookup, PY_ARGS("filename") DOXY_FN1(RaveInvertFileLookup));
+#else
     def("RaveInvertFileLookup",openravepy::pyRaveInvertFileLookup, PY_ARGS("filename") DOXY_FN1(RaveInvertFileLookup));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveGetHomeDirectory",OpenRAVE::RaveGetHomeDirectory,DOXY_FN1(RaveGetHomeDirectory));
+#else
     def("RaveGetHomeDirectory",OpenRAVE::RaveGetHomeDirectory,DOXY_FN1(RaveGetHomeDirectory));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveFindDatabaseFile",OpenRAVE::RaveFindDatabaseFile,DOXY_FN1(RaveFindDatabaseFile));
+#else
     def("RaveFindDatabaseFile",OpenRAVE::RaveFindDatabaseFile,DOXY_FN1(RaveFindDatabaseFile));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveLogFatal",openravepy::raveLogFatal,PY_ARGS("log") "Send a fatal log to the openrave system");
+#else
     def("RaveLogFatal",openravepy::raveLogFatal,PY_ARGS("log") "Send a fatal log to the openrave system");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveLogError",openravepy::raveLogError,PY_ARGS("log") "Send an error log to the openrave system");
+#else
     def("RaveLogError",openravepy::raveLogError,PY_ARGS("log") "Send an error log to the openrave system");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveLogWarn",openravepy::raveLogWarn,PY_ARGS("log") "Send a warn log to the openrave system");
+#else
     def("RaveLogWarn",openravepy::raveLogWarn,PY_ARGS("log") "Send a warn log to the openrave system");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveLogInfo",openravepy::raveLogInfo,PY_ARGS("log") "Send an info log to the openrave system");
+#else
     def("RaveLogInfo",openravepy::raveLogInfo,PY_ARGS("log") "Send an info log to the openrave system");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveLogDebug",openravepy::raveLogDebug,PY_ARGS("log") "Send a debug log to the openrave system");
+#else
     def("RaveLogDebug",openravepy::raveLogDebug,PY_ARGS("log") "Send a debug log to the openrave system");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveLogVerbose",openravepy::raveLogVerbose,PY_ARGS("log") "Send a verbose log to the openrave system");
+#else
     def("RaveLogVerbose",openravepy::raveLogVerbose,PY_ARGS("log") "Send a verbose log to the openrave system");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveLog",openravepy::raveLog,PY_ARGS("log","level") "Send a log to the openrave system with excplicit level");
+#else
     def("RaveLog",openravepy::raveLog,PY_ARGS("log","level") "Send a log to the openrave system with excplicit level");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveInitialize", openravepy::pyRaveInitialize,
+        "load_all_plugins"_a = true,
+        "level"_a = py::object(),
+        DOXY_FN1(RaveInitialize)
+    );
+#else
     def("RaveInitialize",openravepy::pyRaveInitialize,RaveInitialize_overloads(PY_ARGS("load_all_plugins","level") DOXY_FN1(RaveInitialize)));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveDestroy",RaveDestroy,DOXY_FN1(RaveDestroy));
+#else
     def("RaveDestroy",RaveDestroy,DOXY_FN1(RaveDestroy));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveGetPluginInfo",openravepy::RaveGetPluginInfo,DOXY_FN1(RaveGetPluginInfo));
+#else
     def("RaveGetPluginInfo",openravepy::RaveGetPluginInfo,DOXY_FN1(RaveGetPluginInfo));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveGetLoadedInterfaces",openravepy::RaveGetLoadedInterfaces,DOXY_FN1(RaveGetLoadedInterfaces));
+#else
     def("RaveGetLoadedInterfaces",openravepy::RaveGetLoadedInterfaces,DOXY_FN1(RaveGetLoadedInterfaces));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveReloadPlugins",OpenRAVE::RaveReloadPlugins,DOXY_FN1(RaveReloadPlugins));
+#else
     def("RaveReloadPlugins",OpenRAVE::RaveReloadPlugins,DOXY_FN1(RaveReloadPlugins));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveLoadPlugin",OpenRAVE::RaveLoadPlugin, PY_ARGS("filename") DOXY_FN1(RaveLoadPlugins));
+#else
     def("RaveLoadPlugin",OpenRAVE::RaveLoadPlugin, PY_ARGS("filename") DOXY_FN1(RaveLoadPlugins));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveHasInterface",OpenRAVE::RaveHasInterface, PY_ARGS("type","name") DOXY_FN1(RaveHasInterface));
+#else
     def("RaveHasInterface",OpenRAVE::RaveHasInterface, PY_ARGS("type","name") DOXY_FN1(RaveHasInterface));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveGlobalState",OpenRAVE::RaveGlobalState,DOXY_FN1(RaveGlobalState));
+#else
     def("RaveGlobalState",OpenRAVE::RaveGlobalState,DOXY_FN1(RaveGlobalState));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveClone", openravepy::pyRaveClone,
+        "ref"_a,
+        "cloningoptions"_a,
+        "cloneenv"_a = PyEnvironmentBasePtr(),
+        DOXY_FN1(RaveClone)
+    );
+#else
     def("RaveClone",openravepy::pyRaveClone,RaveClone_overloads(PY_ARGS("ref","cloningoptions", "cloneenv") DOXY_FN1(RaveClone)));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveGetIkTypeFromUniqueId",OpenRAVE::RaveGetIkTypeFromUniqueId, PY_ARGS("uniqueid") DOXY_FN1(RaveGetIkTypeFromUniqueId));
+#else
     def("RaveGetIkTypeFromUniqueId",OpenRAVE::RaveGetIkTypeFromUniqueId, PY_ARGS("uniqueid") DOXY_FN1(RaveGetIkTypeFromUniqueId));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveGetIndexFromAffineDOF",OpenRAVE::RaveGetIndexFromAffineDOF, PY_ARGS("affinedofs","dof") DOXY_FN1(RaveGetIndexFromAffineDOF));
+#else
     def("RaveGetIndexFromAffineDOF",OpenRAVE::RaveGetIndexFromAffineDOF, PY_ARGS("affinedofs","dof") DOXY_FN1(RaveGetIndexFromAffineDOF));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveGetAffineDOFFromIndex",OpenRAVE::RaveGetAffineDOFFromIndex, PY_ARGS("affinedofs","index") DOXY_FN1(RaveGetAffineDOFFromIndex));
+#else
     def("RaveGetAffineDOFFromIndex",OpenRAVE::RaveGetAffineDOFFromIndex, PY_ARGS("affinedofs","index") DOXY_FN1(RaveGetAffineDOFFromIndex));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveGetAffineDOF",OpenRAVE::RaveGetAffineDOF, PY_ARGS("affinedofs") DOXY_FN1(RaveGetAffineDOF));
+#else
     def("RaveGetAffineDOF",OpenRAVE::RaveGetAffineDOF, PY_ARGS("affinedofs") DOXY_FN1(RaveGetAffineDOF));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveGetAffineDOFValuesFromTransform", openravepy::pyRaveGetAffineDOFValuesFromTransform, 
+        "transform"_a,
+        "affinedofs"_a,
+        "rotationaxis"_a = py::object(),
+        DOXY_FN1(RaveGetAffineDOFValuesFromTransform)
+    );
+#else
     def("RaveGetAffineDOFValuesFromTransform",openravepy::pyRaveGetAffineDOFValuesFromTransform, pyRaveGetAffineDOFValuesFromTransform_overloads(PY_ARGS("transform","affinedofs","rotationaxis") DOXY_FN1(RaveGetAffineDOFValuesFromTransform)));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveGetAffineConfigurationSpecification", openravepy::pyRaveGetAffineConfigurationSpecification,
+        "affinedofs"_a,
+        "body"_a = PyKinBodyPtr(),
+        "interpolation"_a = "",
+        DOXY_FN1(RaveGetAffineConfigurationSpecification)
+    );
+#else
     def("RaveGetAffineConfigurationSpecification",openravepy::pyRaveGetAffineConfigurationSpecification, pyRaveGetAffineConfigurationSpecification_overloads(PY_ARGS("affinedofs","body","interpolation") DOXY_FN1(RaveGetAffineConfigurationSpecification)));
+#endif
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("raveSetDebugLevel",openravepy::pyRaveSetDebugLevel, PY_ARGS("level") DOXY_FN1(RaveSetDebugLevel));
+#else
     def("raveSetDebugLevel",openravepy::pyRaveSetDebugLevel, PY_ARGS("level") DOXY_FN1(RaveSetDebugLevel));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("raveGetDebugLevel",OpenRAVE::RaveGetDebugLevel,DOXY_FN1(RaveGetDebugLevel));
+#else
     def("raveGetDebugLevel",OpenRAVE::RaveGetDebugLevel,DOXY_FN1(RaveGetDebugLevel));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("raveLogFatal",openravepy::raveLogFatal,PY_ARGS("log") "Send a fatal log to the openrave system");
+#else
     def("raveLogFatal",openravepy::raveLogFatal,PY_ARGS("log") "Send a fatal log to the openrave system");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("raveLogError",openravepy::raveLogError,PY_ARGS("log") "Send an error log to the openrave system");
+#else
     def("raveLogError",openravepy::raveLogError,PY_ARGS("log") "Send an error log to the openrave system");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("raveLogWarn",openravepy::raveLogWarn,PY_ARGS("log") "Send a warn log to the openrave system");
+#else
     def("raveLogWarn",openravepy::raveLogWarn,PY_ARGS("log") "Send a warn log to the openrave system");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("raveLogInfo",openravepy::raveLogInfo,PY_ARGS("log") "Send an info log to the openrave system");
+#else
     def("raveLogInfo",openravepy::raveLogInfo,PY_ARGS("log") "Send an info log to the openrave system");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("raveLogDebug",openravepy::raveLogDebug,PY_ARGS("log") "Send a debug log to the openrave system");
+#else
     def("raveLogDebug",openravepy::raveLogDebug,PY_ARGS("log") "Send a debug log to the openrave system");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("raveLogVerbose",openravepy::raveLogVerbose,PY_ARGS("log") "Send a verbose log to the openrave system");
+#else
     def("raveLogVerbose",openravepy::raveLogVerbose,PY_ARGS("log") "Send a verbose log to the openrave system");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("raveLog",openravepy::raveLog,PY_ARGS("log","level") "Send a log to the openrave system with excplicit level");
+#else
     def("raveLog",openravepy::raveLog,PY_ARGS("log","level") "Send a log to the openrave system with excplicit level");
+#endif
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("quatFromAxisAngle",openravepy::quatFromAxisAngle1, PY_ARGS("axisangle") DOXY_FN1(quatFromAxisAngle "const RaveVector"));
+#else
     def("quatFromAxisAngle",openravepy::quatFromAxisAngle1, PY_ARGS("axisangle") DOXY_FN1(quatFromAxisAngle "const RaveVector"));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("quatFromAxisAngle",openravepy::quatFromAxisAngle2, PY_ARGS("axis","angle") DOXY_FN1(quatFromAxisAngle "const RaveVector; T"));
+#else
     def("quatFromAxisAngle",openravepy::quatFromAxisAngle2, PY_ARGS("axis","angle") DOXY_FN1(quatFromAxisAngle "const RaveVector; T"));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("quatFromRotationMatrix",openravepy::quatFromRotationMatrix, PY_ARGS("rotation") DOXY_FN1(quatFromMatrix "const RaveTransform"));
+#else
     def("quatFromRotationMatrix",openravepy::quatFromRotationMatrix, PY_ARGS("rotation") DOXY_FN1(quatFromMatrix "const RaveTransform"));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("InterpolateQuatSlerp", openravepy::InterpolateQuatSlerp,
+        "quat0"_a,
+        "quat1"_a,
+        "t"_a,
+        "forceshortarc"_a = true,
+        DOXY_FN1(InterpolateQuatSlerp "const RaveVector; const RaveVector; T")
+    );
+#else
     def("InterpolateQuatSlerp",openravepy::InterpolateQuatSlerp, InterpolateQuatSlerp_overloads(PY_ARGS("quat0","quat1","t","forceshortarc") DOXY_FN1(InterpolateQuatSlerp "const RaveVector; const RaveVector; T")));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("InterpolateQuatSquad",openravepy::InterpolateQuatSquad,
+        "quat0"_a,
+        "quat1"_a,
+        "quat2"_a,
+        "quat3"_a,
+        "t"_a,
+        "forceshortarc"_a = true,
+        DOXY_FN1(InterpolateQuatSquad)
+    );
+#else
     def("InterpolateQuatSquad",openravepy::InterpolateQuatSquad, InterpolateQuatSquad_overloads(PY_ARGS("quat0","quat1","quat2","quat3","t","forceshortarc") DOXY_FN1(InterpolateQuatSquad)));
-    def("quatSlerp",openravepy::InterpolateQuatSlerp, PY_ARGS("quat0","quat1","t") DOXY_FN1(quatSlerp "const RaveVector; const RaveVector; T")); // deprecated
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("quatSlerp",openravepy::InterpolateQuatSlerp,
+        "quat0"_a,
+        "quat1"_a,
+        "t"_a,
+        "forceshortarc"_a = true,
+        DOXY_FN1(quatSlerp "const RaveVector; const RaveVector; T")
+    ); // deprecated
+#else
+    def("quatSlerp",openravepy::InterpolateQuatSlerp, PY_ARGS("quat0","quat1","t", "forceshortarc") DOXY_FN1(quatSlerp "const RaveVector; const RaveVector; T")); // deprecated
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("axisAngleFromRotationMatrix",openravepy::axisAngleFromRotationMatrix, PY_ARGS("rotation") DOXY_FN1(axisAngleFromMatrix "const RaveTransformMatrix"));
+#else
     def("axisAngleFromRotationMatrix",openravepy::axisAngleFromRotationMatrix, PY_ARGS("rotation") DOXY_FN1(axisAngleFromMatrix "const RaveTransformMatrix"));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("axisAngleFromQuat",openravepy::axisAngleFromQuat, PY_ARGS("quat") DOXY_FN1(axisAngleFromQuat "const RaveVector"));
+#else
     def("axisAngleFromQuat",openravepy::axisAngleFromQuat, PY_ARGS("quat") DOXY_FN1(axisAngleFromQuat "const RaveVector"));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("rotationMatrixFromQuat",openravepy::rotationMatrixFromQuat, PY_ARGS("quat") DOXY_FN1(matrixFromQuat "const RaveVector"));
+#else
     def("rotationMatrixFromQuat",openravepy::rotationMatrixFromQuat, PY_ARGS("quat") DOXY_FN1(matrixFromQuat "const RaveVector"));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("rotationMatrixFromQArray",openravepy::rotationMatrixFromQArray,PY_ARGS("quatarray") "Converts an array of quaternions to a list of 3x3 rotation matrices.\n\n:param quatarray: nx4 array\n");
+#else
     def("rotationMatrixFromQArray",openravepy::rotationMatrixFromQArray,PY_ARGS("quatarray") "Converts an array of quaternions to a list of 3x3 rotation matrices.\n\n:param quatarray: nx4 array\n");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("matrixFromQuat",openravepy::matrixFromQuat, PY_ARGS("quat") "Converts a quaternion to a 4x4 affine matrix.\n\n:param quat: 4 values\n");
+#else
     def("matrixFromQuat",openravepy::matrixFromQuat, PY_ARGS("quat") "Converts a quaternion to a 4x4 affine matrix.\n\n:param quat: 4 values\n");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("rotationMatrixFromAxisAngle",openravepy::rotationMatrixFromAxisAngle1, PY_ARGS("axisangle") DOXY_FN1(matrixFromAxisAngle "const RaveVector"));
+#else
     def("rotationMatrixFromAxisAngle",openravepy::rotationMatrixFromAxisAngle1, PY_ARGS("axisangle") DOXY_FN1(matrixFromAxisAngle "const RaveVector"));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("rotationMatrixFromAxisAngle",openravepy::rotationMatrixFromAxisAngle2, PY_ARGS("axis","angle") DOXY_FN1(matrixFromAxisAngle "const RaveVector, T"));
+#else
     def("rotationMatrixFromAxisAngle",openravepy::rotationMatrixFromAxisAngle2, PY_ARGS("axis","angle") DOXY_FN1(matrixFromAxisAngle "const RaveVector, T"));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("matrixFromAxisAngle",openravepy::matrixFromAxisAngle1, PY_ARGS("axisangle") DOXY_FN1(matrixFromAxisAngle "const RaveVector"));
+#else
     def("matrixFromAxisAngle",openravepy::matrixFromAxisAngle1, PY_ARGS("axisangle") DOXY_FN1(matrixFromAxisAngle "const RaveVector"));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("matrixFromAxisAngle",openravepy::matrixFromAxisAngle2, PY_ARGS("axis","angle") DOXY_FN1(matrixFromAxisAngle "const RaveVector, T"));
+#else
     def("matrixFromAxisAngle",openravepy::matrixFromAxisAngle2, PY_ARGS("axis","angle") DOXY_FN1(matrixFromAxisAngle "const RaveVector, T"));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("matrixFromPose",openravepy::matrixFromPose, PY_ARGS("pose") "Converts a 7 element quaterion+translation transform to a 4x4 matrix.\n\n:param pose: 7 values\n");
+#else
     def("matrixFromPose",openravepy::matrixFromPose, PY_ARGS("pose") "Converts a 7 element quaterion+translation transform to a 4x4 matrix.\n\n:param pose: 7 values\n");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("matrixFromPoses",openravepy::matrixFromPoses, PY_ARGS("poses") "Converts a Nx7 element quaterion+translation array to a 4x4 matrices.\n\n:param poses: nx7 array\n");
+#else
     def("matrixFromPoses",openravepy::matrixFromPoses, PY_ARGS("poses") "Converts a Nx7 element quaterion+translation array to a 4x4 matrices.\n\n:param poses: nx7 array\n");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("poseFromMatrix",openravepy::poseFromMatrix, PY_ARGS("transform") "Converts a 4x4 matrix to a 7 element quaternion+translation representation.\n\n:param transform: 3x4 or 4x4 affine matrix\n");
+#else
     def("poseFromMatrix",openravepy::poseFromMatrix, PY_ARGS("transform") "Converts a 4x4 matrix to a 7 element quaternion+translation representation.\n\n:param transform: 3x4 or 4x4 affine matrix\n");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("poseFromMatrices",openravepy::poseFromMatrices, PY_ARGS("transforms") "Converts an array/list of 4x4 matrices to a Nx7 array where each row is quaternion+translation representation.\n\n:param transforms: list of 3x4 or 4x4 affine matrices\n");
+#else
     def("poseFromMatrices",openravepy::poseFromMatrices, PY_ARGS("transforms") "Converts an array/list of 4x4 matrices to a Nx7 array where each row is quaternion+translation representation.\n\n:param transforms: list of 3x4 or 4x4 affine matrices\n");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("InvertPoses",openravepy::InvertPoses,PY_ARGS("poses") "Inverts a Nx7 array of poses where first 4 columns are the quaternion and last 3 are the translation components.\n\n:param poses: nx7 array");
+#else
     def("InvertPoses",openravepy::InvertPoses,PY_ARGS("poses") "Inverts a Nx7 array of poses where first 4 columns are the quaternion and last 3 are the translation components.\n\n:param poses: nx7 array");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("InvertPose",openravepy::InvertPose,PY_ARGS("pose") "Inverts a 7-element pose where first 4 columns are the quaternion and last 3 are the translation components.\n\n:param pose: 7-element array");
+#else
     def("InvertPose",openravepy::InvertPose,PY_ARGS("pose") "Inverts a 7-element pose where first 4 columns are the quaternion and last 3 are the translation components.\n\n:param pose: 7-element array");
-    def("quatRotateDirection",openravepy::quatRotateDirection, PY_ARGS("sourcedir,targetdir") DOXY_FN1(quatRotateDirection));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("quatRotateDirection",openravepy::quatRotateDirection, PY_ARGS("sourcedir", "targetdir") DOXY_FN1(quatRotateDirection));
+#else
+    def("quatRotateDirection",openravepy::quatRotateDirection, PY_ARGS("sourcedir", "targetdir") DOXY_FN1(quatRotateDirection));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("ExtractAxisFromQuat",openravepy::ExtractAxisFromQuat, PY_ARGS("quat","iaxis") DOXY_FN1(ExtractAxisFromQuat));
+#else
     def("ExtractAxisFromQuat",openravepy::ExtractAxisFromQuat, PY_ARGS("quat","iaxis") DOXY_FN1(ExtractAxisFromQuat));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("MultiplyQuat",openravepy::MultiplyQuat, PY_ARGS("quat0","quat1") DOXY_FN1(quatMultiply));
+#else
     def("MultiplyQuat",openravepy::MultiplyQuat, PY_ARGS("quat0","quat1") DOXY_FN1(quatMultiply));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("quatMult",openravepy::MultiplyQuat, PY_ARGS("quat0","quat1") DOXY_FN1(quatMultiply));
+#else
     def("quatMult",openravepy::MultiplyQuat, PY_ARGS("quat0","quat1") DOXY_FN1(quatMultiply));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("quatMultiply",openravepy::MultiplyQuat, PY_ARGS("quat0","quat1") DOXY_FN1(quatMultiply));
+#else
     def("quatMultiply",openravepy::MultiplyQuat, PY_ARGS("quat0","quat1") DOXY_FN1(quatMultiply));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("InvertQuat",openravepy::InvertQuat, PY_ARGS("quat") DOXY_FN1(quatInverse));
+#else
     def("InvertQuat",openravepy::InvertQuat, PY_ARGS("quat") DOXY_FN1(quatInverse));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("quatInverse",openravepy::InvertQuat, PY_ARGS("quat") DOXY_FN1(quatInverse));
+#else
     def("quatInverse",openravepy::InvertQuat, PY_ARGS("quat") DOXY_FN1(quatInverse));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("MultiplyPose",openravepy::MultiplyPose,PY_ARGS("pose1","pose2") "multiplies two poses.\n\n:param pose1: 7 values\n\n:param pose2: 7 values\n");
+#else
     def("MultiplyPose",openravepy::MultiplyPose,PY_ARGS("pose1","pose2") "multiplies two poses.\n\n:param pose1: 7 values\n\n:param pose2: 7 values\n");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("poseTransformPoint",openravepy::poseTransformPoint,PY_ARGS("pose","point") "left-transforms a 3D point by a pose transformation.\n\n:param pose: 7 values\n\n:param points: 3 values");
+#else
     def("poseTransformPoint",openravepy::poseTransformPoint,PY_ARGS("pose","point") "left-transforms a 3D point by a pose transformation.\n\n:param pose: 7 values\n\n:param points: 3 values");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("poseTransformPoints",openravepy::poseTransformPoints,PY_ARGS("pose","points") "left-transforms a set of points by a pose transformation.\n\n:param pose: 7 values\n\n:param points: Nx3 values");
+#else
     def("poseTransformPoints",openravepy::poseTransformPoints,PY_ARGS("pose","points") "left-transforms a set of points by a pose transformation.\n\n:param pose: 7 values\n\n:param points: Nx3 values");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("TransformLookat",openravepy::TransformLookat,PY_ARGS("lookat","camerapos","cameraup") "Returns a camera matrix that looks along a ray with a desired up vector.\n\n:param lookat: unit axis, 3 values\n\n:param camerapos: 3 values\n\n:param cameraup: unit axis, 3 values\n");
+#else
     def("TransformLookat",openravepy::TransformLookat,PY_ARGS("lookat","camerapos","cameraup") "Returns a camera matrix that looks along a ray with a desired up vector.\n\n:param lookat: unit axis, 3 values\n\n:param camerapos: 3 values\n\n:param cameraup: unit axis, 3 values\n");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("transformLookat",openravepy::TransformLookat,PY_ARGS("lookat","camerapos","cameraup") "Returns a camera matrix that looks along a ray with a desired up vector.\n\n:param lookat: unit axis, 3 values\n\n:param camerapos: 3 values\n\n:param cameraup: unit axis, 3 values\n");
+#else
     def("transformLookat",openravepy::TransformLookat,PY_ARGS("lookat","camerapos","cameraup") "Returns a camera matrix that looks along a ray with a desired up vector.\n\n:param lookat: unit axis, 3 values\n\n:param camerapos: 3 values\n\n:param cameraup: unit axis, 3 values\n");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("matrixSerialization",openravepy::matrixSerialization,PY_ARGS("transform") "Serializes a transformation into a string representing a 3x4 matrix.\n\n:param transform: 3x4 or 4x4 array\n");
+#else
     def("matrixSerialization",openravepy::matrixSerialization,PY_ARGS("transform") "Serializes a transformation into a string representing a 3x4 matrix.\n\n:param transform: 3x4 or 4x4 array\n");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("poseSerialization",openravepy::poseSerialization, PY_ARGS("pose") "Serializes a transformation into a string representing a quaternion with translation.\n\n:param pose: 7 values\n");
+#else
     def("poseSerialization",openravepy::poseSerialization, PY_ARGS("pose") "Serializes a transformation into a string representing a quaternion with translation.\n\n:param pose: 7 values\n");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("openravepyCompilerVersion",openravepy::openravepyCompilerVersion, "Returns the compiler version that openravepy_int was compiled with");
+#else
     def("openravepyCompilerVersion",openravepy::openravepyCompilerVersion, "Returns the compiler version that openravepy_int was compiled with");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("normalizeAxisRotation",openravepy::normalizeAxisRotation, PY_ARGS("axis","quat") DOXY_FN1(normalizeAxisRotation));
+#else
     def("normalizeAxisRotation",openravepy::normalizeAxisRotation, PY_ARGS("axis","quat") DOXY_FN1(normalizeAxisRotation));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("ComputePoseDistSqr", openravepy::ComputePoseDistSqr, 
+        "pose0"_a,
+        "pose1"_a,
+        "quatweight"_a,
+        DOXY_FN1(ComputePoseDistSqr)
+    );
+#else
     def("ComputePoseDistSqr", openravepy::ComputePoseDistSqr, ComputePoseDistSqr_overloads(PY_ARGS("pose0", "pose1", "quatweight") DOXY_FN1(ComputePoseDistSqr)));
+#endif
 
     // deprecated
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("invertPoses",openravepy::InvertPoses, PY_ARGS("poses") "Inverts a Nx7 array of poses where first 4 columns are the quaternion and last 3 are the translation components.\n\n:param poses: nx7 array");
+#else
     def("invertPoses",openravepy::InvertPoses, PY_ARGS("poses") "Inverts a Nx7 array of poses where first 4 columns are the quaternion and last 3 are the translation components.\n\n:param poses: nx7 array");
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("poseMult",openravepy::MultiplyPose, PY_ARGS("pose1","pose2") "multiplies two poses.\n\n:param pose1: 7 values\n\n:param pose2: 7 values\n");
+#else
     def("poseMult",openravepy::MultiplyPose, PY_ARGS("pose1","pose2") "multiplies two poses.\n\n:param pose1: 7 values\n\n:param pose2: 7 values\n");
+#endif
 }
 
 } // end namespace openravepy
