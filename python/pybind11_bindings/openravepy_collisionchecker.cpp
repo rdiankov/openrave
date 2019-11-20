@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
+#include "openravepy_kinbody.h"
+#include "include/openravepy_environmentbase.h"
 
 namespace openravepy {
 
@@ -26,17 +28,22 @@ using py::handle;
 using py::dict;
 using py::enum_;
 using py::class_;
-using py::no_init;
-using py::bases;
 using py::init;
+using py::scope_; // py::object if USE_PYBIND11_PYTHON_BINDINGS
 using py::scope;
 using py::args;
 using py::return_value_policy;
+
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+using py::no_init;
+using py::bases;
 using py::copy_const_reference;
 using py::docstring_options;
-using py::def;
 using py::pickle_suite;
+using py::manage_new_object;
+using py::def;
 namespace numeric = py::numeric;
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
 class PyCollisionReport
 {
@@ -701,11 +708,22 @@ PyCollisionCheckerBasePtr RaveCreateCollisionChecker(PyEnvironmentBasePtr pyenv,
     return PyCollisionCheckerBasePtr(new PyCollisionCheckerBase(p,pyenv));
 }
 
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckCollisionRays_overloads, CheckCollisionRays, 2, 3)
+#endif
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_openravepy_collisionchecker(py::module& m)
+#else
 void init_openravepy_collisionchecker()
+#endif
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    using namespace py::literals;  // "..."_a
+    enum_<CollisionOptions>(m, "CollisionOptions" DOXY_ENUM(CollisionOptions))
+#else
     enum_<CollisionOptions>("CollisionOptions" DOXY_ENUM(CollisionOptions))
+#endif
     .value("Distance",CO_Distance)
     .value("UseTolerance",CO_UseTolerance)
     .value("Contacts",CO_Contacts)
@@ -714,19 +732,31 @@ void init_openravepy_collisionchecker()
     .value("AllLinkCollisions", CO_AllLinkCollisions)
     .value("AllGeometryContacts", CO_AllGeometryContacts)
     ;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    enum_<CollisionAction>(m, "CollisionAction" DOXY_ENUM(CollisionAction))
+#else
     enum_<CollisionAction>("CollisionAction" DOXY_ENUM(CollisionAction))
+#endif
     .value("DefaultAction",CA_DefaultAction)
     .value("Ignore",CA_Ignore)
     ;
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyCollisionReport::PYCONTACT, OPENRAVE_SHARED_PTR<PyCollisionReport::PYCONTACT> >(m, "Contact", DOXY_CLASS(CollisionReport::CONTACT))
+#else
     class_<PyCollisionReport::PYCONTACT, OPENRAVE_SHARED_PTR<PyCollisionReport::PYCONTACT> >("Contact", DOXY_CLASS(CollisionReport::CONTACT))
+#endif
     .def_readonly("pos",&PyCollisionReport::PYCONTACT::pos)
     .def_readonly("norm",&PyCollisionReport::PYCONTACT::norm)
     .def_readonly("depth",&PyCollisionReport::PYCONTACT::depth)
     .def("__str__",&PyCollisionReport::PYCONTACT::__str__)
     .def("__unicode__",&PyCollisionReport::PYCONTACT::__unicode__)
     ;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyCollisionReport, OPENRAVE_SHARED_PTR<PyCollisionReport> >(m, "CollisionReport", DOXY_CLASS(CollisionReport))
+#else
     class_<PyCollisionReport, OPENRAVE_SHARED_PTR<PyCollisionReport> >("CollisionReport", DOXY_CLASS(CollisionReport))
+#endif
     .def_readonly("options",&PyCollisionReport::options)
     .def_readonly("plink1",&PyCollisionReport::plink1)
     .def_readonly("plink2",&PyCollisionReport::plink2)
@@ -761,7 +791,11 @@ void init_openravepy_collisionchecker()
     bool (PyCollisionCheckerBase::*pcolter)(object, PyCollisionReportPtr) = &PyCollisionCheckerBase::CheckCollisionTriMesh;
     bool (PyCollisionCheckerBase::*pcolobb)(object, object, PyCollisionReportPtr) = &PyCollisionCheckerBase::CheckCollisionOBB;
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyCollisionCheckerBase, OPENRAVE_SHARED_PTR<PyCollisionCheckerBase>, PyInterfaceBase>(m, "CollisionChecker", DOXY_CLASS(CollisionCheckerBase))
+#else
     class_<PyCollisionCheckerBase, OPENRAVE_SHARED_PTR<PyCollisionCheckerBase>, bases<PyInterfaceBase> >("CollisionChecker", DOXY_CLASS(CollisionCheckerBase), no_init)
+#endif
     .def("InitEnvironment", &PyCollisionCheckerBase::InitEnvironment, DOXY_FN(CollisionCheckerBase, InitEnvironment))
     .def("DestroyEnvironment", &PyCollisionCheckerBase::DestroyEnvironment, DOXY_FN(CollisionCheckerBase, DestroyEnvironment))
     .def("InitKinBody", &PyCollisionCheckerBase::InitKinBody, DOXY_FN(CollisionCheckerBase, InitKinBody))
@@ -793,12 +827,25 @@ void init_openravepy_collisionchecker()
     .def("CheckCollisionTriMesh",pcoltbr, PY_ARGS("trimesh", "body", "report") DOXY_FN(CollisionCheckerBase,CheckCollision "const TriMesh; KinBodyConstPtr; CollisionReportPtr"))
     .def("CheckCollisionOBB", pcolobb, PY_ARGS("aabb", "pose", "report") DOXY_FN(CollisionCheckerBase,CheckCollision "const AABB; const Transform; CollisionReport"))
     .def("CheckSelfCollision",&PyCollisionCheckerBase::CheckSelfCollision, PY_ARGS("linkbody", "report") DOXY_FN(CollisionCheckerBase,CheckSelfCollision "KinBodyConstPtr, CollisionReportPtr"))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def("CheckCollisionRays", &PyCollisionCheckerBase::CheckCollisionRays,
+         "rays"_a,
+         "body"_a,
+         "front_facing_only"_a = false,
+         "Check if any rays hit the body and returns their contact points along with a vector specifying if a collision occured or not. Rays is a Nx6 array, first 3 columns are position, last 3 are direction*range. The return value is: (N array of hit points, Nx6 array of hit position and surface normals."
+        )
+#else
     .def("CheckCollisionRays",&PyCollisionCheckerBase::CheckCollisionRays,
          CheckCollisionRays_overloads(PY_ARGS("rays","body","front_facing_only")
                                       "Check if any rays hit the body and returns their contact points along with a vector specifying if a collision occured or not. Rays is a Nx6 array, first 3 columns are position, last 3 are direction*range. The return value is: (N array of hit points, Nx6 array of hit position and surface normals."))
+#endif
     ;
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveCreateCollisionChecker", openravepy::RaveCreateCollisionChecker, PY_ARGS("env","name") DOXY_FN1(RaveCreateCollisionChecker));
+#else
     def("RaveCreateCollisionChecker",openravepy::RaveCreateCollisionChecker, PY_ARGS("env","name") DOXY_FN1(RaveCreateCollisionChecker));
+#endif
 }
 
 }
