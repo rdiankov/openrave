@@ -16,26 +16,34 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
+#include "openravepy_kinbody.h"
+#include "include/openravepy_environmentbase.h"
 
 namespace openravepy {
 
 using py::object;
 using py::extract;
+using py::extract_;
 using py::handle;
 using py::dict;
 using py::enum_;
 using py::class_;
-using py::no_init;
-using py::bases;
 using py::init;
+using py::scope_; // py::object if USE_PYBIND11_PYTHON_BINDINGS
 using py::scope;
 using py::args;
 using py::return_value_policy;
+
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+using py::no_init;
+using py::bases;
 using py::copy_const_reference;
 using py::docstring_options;
-using py::def;
 using py::pickle_suite;
+using py::manage_new_object;
+using py::def;
 namespace numeric = py::numeric;
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
 class PyPhysicsEngineBase : public PyInterfaceBase
 {
@@ -194,16 +202,25 @@ PyPhysicsEngineBasePtr RaveCreatePhysicsEngine(PyEnvironmentBasePtr pyenv, const
     return PyPhysicsEngineBasePtr(new PyPhysicsEngineBase(p,pyenv));
 }
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_openravepy_physicsengine(py::module& m)
+#else
 void init_openravepy_physicsengine()
+#endif
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    using namespace py::literals; // "..."_a
+    class_<PyPhysicsEngineBase, OPENRAVE_SHARED_PTR<PyPhysicsEngineBase>, PyInterfaceBase>(m, "PhysicsEngine", DOXY_CLASS(PhysicsEngineBase))
+#else
     class_<PyPhysicsEngineBase, OPENRAVE_SHARED_PTR<PyPhysicsEngineBase>, bases<PyInterfaceBase> >("PhysicsEngine", DOXY_CLASS(PhysicsEngineBase), no_init)
+#endif
     .def("GetPhysicsOptions",&PyPhysicsEngineBase::GetPhysicsOptions, DOXY_FN(PhysicsEngineBase,GetPhysicsOptions))
     .def("SetPhysicsOptions",&PyPhysicsEngineBase::SetPhysicsOptions, DOXY_FN(PhysicsEngineBase,SetPhysicsOptions "int"))
     .def("InitEnvironment",&PyPhysicsEngineBase::InitEnvironment, DOXY_FN(PhysicsEngineBase,InitEnvironment))
     .def("DestroyEnvironment",&PyPhysicsEngineBase::DestroyEnvironment, DOXY_FN(PhysicsEngineBase,DestroyEnvironment))
     .def("InitKinBody",&PyPhysicsEngineBase::InitKinBody, DOXY_FN(PhysicsEngineBase,InitKinBody))
-    .def("SetLinkVelocity",&PyPhysicsEngineBase::SetLinkVelocity, PY_ARGS("link","velocity") DOXY_FN(PhysicsEngineBase,SetLinkVelocity))
-    .def("SetLinkVelocities",&PyPhysicsEngineBase::SetLinkVelocity, PY_ARGS("body","velocities") DOXY_FN(PhysicsEngineBase,SetLinkVelocities))
+    .def("SetLinkVelocity",&PyPhysicsEngineBase::SetLinkVelocity, PY_ARGS("link", "linearvel", "angularvel") DOXY_FN(PhysicsEngineBase,SetLinkVelocity))
+    .def("SetLinkVelocities",&PyPhysicsEngineBase::SetLinkVelocities, PY_ARGS("body","velocities") DOXY_FN(PhysicsEngineBase,SetLinkVelocities))
     .def("GetLinkVelocity",&PyPhysicsEngineBase::GetLinkVelocity, DOXY_FN(PhysicsEngineBase,GetLinkVelocity))
     .def("GetLinkVelocities",&PyPhysicsEngineBase::GetLinkVelocity, DOXY_FN(PhysicsEngineBase,GetLinkVelocities))
     .def("SetBodyForce",&PyPhysicsEngineBase::SetBodyForce, DOXY_FN(PhysicsEngineBase,SetBodyForce))
@@ -216,7 +233,11 @@ void init_openravepy_physicsengine()
     .def("SimulateStep",&PyPhysicsEngineBase::SimulateStep, DOXY_FN(PhysicsEngineBase,SimulateStep))
     ;
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveCreatePhysicsEngine",openravepy::RaveCreatePhysicsEngine, PY_ARGS("env","name") DOXY_FN1(RaveCreatePhysicsEngine));
+#else
     def("RaveCreatePhysicsEngine",openravepy::RaveCreatePhysicsEngine, PY_ARGS("env","name") DOXY_FN1(RaveCreatePhysicsEngine));
+#endif
 }
 
 }
