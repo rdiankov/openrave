@@ -48,6 +48,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
         set(openravepy_int_cpp_files openravepy_int.cpp openravepy_kinbody.cpp openravepy_global.cpp openravepy_robot.cpp
           openravepy_collisionchecker.cpp openravepy_controller.cpp openravepy_ikparameterization.cpp openravepy_iksolver.cpp
           openravepy_module.cpp openravepy_physicsengine.cpp openravepy_planner.cpp openravepy_planningutils.cpp
+          openravepy_sensor.cpp
           )
       else()
         set(openravepy_int_cpp_files openravepy_int.cpp openravepy_kinbody.cpp openravepy_robot.cpp openravepy_global.cpp
