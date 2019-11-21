@@ -2913,4 +2913,12 @@ Because race conditions can pop up when trying to lock the openrave environment 
     def("RaveGetEnvironments",openravepy::RaveGetEnvironments,DOXY_FN1(RaveGetEnvironments));
     def("RaveCreateInterface",openravepy::RaveCreateInterface, PY_ARGS("env","type","name") DOXY_FN1(RaveCreateInterface));
 #endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+// bind enums
+py::enum_<OpenRAVE::EnvironmentCreateOptions>(m, "EnvironmentCreateOptions")
+    .value("ECO_StartSimulationThread", OpenRAVE::EnvironmentCreateOptions::ECO_StartSimulationThread)
+    .export_values();
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+
 }

@@ -4179,6 +4179,9 @@ void init_openravepy_kinbody()
                          .def("__ne__",&PyLink::__ne__)
                          .def("__hash__",&PyLink::__hash__)
             ;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            link.attr("Geometry") = geometryinfo;
+#endif
             // \deprecated (12/10/18)
             link.attr("GeomType") = geometrytype;
             link.attr("GeometryInfo") = geometryinfo;

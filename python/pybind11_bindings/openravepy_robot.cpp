@@ -2137,7 +2137,7 @@ void init_openravepy_robot()
         .def("GetStructureHash",&PyRobotBase::PyAttachedSensor::GetStructureHash, DOXY_FN(RobotBase::AttachedSensor,GetStructureHash))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("UpdateInfo",&PyRobotBase::PyAttachedSensor::UpdateInfo,
-            "type"_a = SensorBase::ST_Invalid,
+            "type"_a = (int) SensorBase::ST_Invalid,
             DOXY_FN(RobotBase::AttachedSensor, UpdateInfo)
         )
 #else
@@ -2146,7 +2146,7 @@ void init_openravepy_robot()
         .def("GetInfo",&PyRobotBase::PyAttachedSensor::GetInfo, DOXY_FN(RobotBase::AttachedSensor,GetInfo))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("UpdateAndGetInfo", &PyRobotBase::PyAttachedSensor::UpdateAndGetInfo,
-            "type"_a = SensorBase::ST_Invalid,
+            "type"_a = (int) SensorBase::ST_Invalid,
             DOXY_FN(RobotBase::AttachedSensor, UpdateAndGetInfo)
         )
 #else
