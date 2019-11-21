@@ -16,25 +16,32 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
+#include "include/openravepy_environmentbase.h"
 
 namespace openravepy {
 
 using py::object;
 using py::extract;
+using py::extract_;
 using py::handle;
 using py::dict;
 using py::enum_;
 using py::class_;
-using py::no_init;
-using py::bases;
 using py::init;
+using py::scope_; // py::object if USE_PYBIND11_PYTHON_BINDINGS
 using py::scope;
 using py::args;
 using py::return_value_policy;
+
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+using py::no_init;
+using py::bases;
 using py::copy_const_reference;
 using py::docstring_options;
-using py::def;
 using py::pickle_suite;
+using py::manage_new_object;
+using py::def;
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 namespace numeric = py::numeric;
 
 class PySpaceSamplerBase : public PyInterfaceBase
@@ -197,32 +204,92 @@ PySpaceSamplerBasePtr RaveCreateSpaceSampler(PyEnvironmentBasePtr pyenv, const s
     return PySpaceSamplerBasePtr(new PySpaceSamplerBase(p,pyenv));
 }
 
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SampleSequenceOneReal_overloads, SampleSequenceOneReal, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SampleSequence_overloads, SampleSequence, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SampleSequence2D_overloads, SampleSequence2D, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SampleComplete_overloads, SampleComplete, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SampleComplete2D_overloads, SampleComplete2D, 2, 3)
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_openravepy_spacesampler(py::module& m)
+#else
 void init_openravepy_spacesampler()
+#endif
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    using namespace py::literals; // "..."_a
+#endif
     {
-        scope spacesampler = class_<PySpaceSamplerBase, OPENRAVE_SHARED_PTR<PySpaceSamplerBase>, bases<PyInterfaceBase> >("SpaceSampler", DOXY_CLASS(SpaceSamplerBase), no_init)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        scope_ spacesampler = class_<PySpaceSamplerBase, OPENRAVE_SHARED_PTR<PySpaceSamplerBase>, PyInterfaceBase>(m, "SpaceSampler", DOXY_CLASS(SpaceSamplerBase))
+#else
+        scope_ spacesampler = class_<PySpaceSamplerBase, OPENRAVE_SHARED_PTR<PySpaceSamplerBase>, bases<PyInterfaceBase> >("SpaceSampler", DOXY_CLASS(SpaceSamplerBase), no_init)
+#endif        
                              .def("SetSeed",&PySpaceSamplerBase::SetSeed, PY_ARGS("seed") DOXY_FN(SpaceSamplerBase,SetSeed))
                              .def("SetSpaceDOF",&PySpaceSamplerBase::SetSpaceDOF, PY_ARGS("dof") DOXY_FN(SpaceSamplerBase,SetSpaceDOF))
                              .def("GetDOF",&PySpaceSamplerBase::GetDOF, DOXY_FN(SpaceSamplerBase,GetDOF))
-                             .def("GetNumberOfValues",&PySpaceSamplerBase::GetNumberOfValues, PY_ARGS("seed") DOXY_FN(SpaceSamplerBase,GetNumberOfValues))
+                             .def("GetNumberOfValues",&PySpaceSamplerBase::GetNumberOfValues, /*PY_ARGS("seed")*/ DOXY_FN(SpaceSamplerBase,GetNumberOfValues))
                              .def("Supports",&PySpaceSamplerBase::Supports, PY_ARGS("seed") DOXY_FN(SpaceSamplerBase,Supports))
                              .def("GetLimits",&PySpaceSamplerBase::GetLimits, PY_ARGS("seed") DOXY_FN(SpaceSamplerBase,GetLimits))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                             .def("SampleSequence", &PySpaceSamplerBase::SampleSequence,
+                                "type"_a,
+                                "num"_a,
+                                "interval"_a = IT_Closed,
+                                DOXY_FN(SpaceSamplerBase, SampleSequence "std::vector; size_t; IntervalType")
+                            )
+#else
                              .def("SampleSequence",&PySpaceSamplerBase::SampleSequence, SampleSequence_overloads(PY_ARGS("type", "num","interval") DOXY_FN(SpaceSamplerBase,SampleSequence "std::vector; size_t; IntervalType")))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                             .def("SampleSequence2D", &PySpaceSamplerBase::SampleSequence2D,
+                                "type"_a,
+                                "num"_a,
+                                "interval"_a = IT_Closed,
+                                DOXY_FN(SpaceSamplerBase, SampleSequence "std::vector; size_t; IntervalType")
+                            )
+#else
                              .def("SampleSequence2D",&PySpaceSamplerBase::SampleSequence2D, SampleSequence2D_overloads(PY_ARGS("type", "num","interval") DOXY_FN(SpaceSamplerBase,SampleSequence "std::vector; size_t; IntervalType")))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                             .def("SampleSequenceOneReal", &PySpaceSamplerBase::SampleSequenceOneReal,
+                                "interval"_a = IT_Closed,
+                                DOXY_FN(SpaceSamplerBase, SampleSequenceOneReal)
+                            )
+#else
                              .def("SampleSequenceOneReal", &PySpaceSamplerBase::SampleSequenceOneReal, SampleSequenceOneReal_overloads(PY_ARGS("interval") DOXY_FN(SpaceSamplerBase,SampleSequenceOneReal)))
+#endif
                              .def("SampleSequenceOneUInt32", &PySpaceSamplerBase::SampleSequenceOneUInt32, DOXY_FN(SpaceSamplerBase,SampleSequenceOneUInt32))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                             .def("SampleComplete", &PySpaceSamplerBase::SampleComplete,
+                                "type"_a,
+                                "num"_a,
+                                "interval"_a = IT_Closed,
+                                DOXY_FN(SpaceSamplerBase, ampleComplete "std::vector; size_t; IntervalType")
+                            )
+#else
                              .def("SampleComplete",&PySpaceSamplerBase::SampleComplete, SampleComplete_overloads(PY_ARGS("type", "num","interval") DOXY_FN(SpaceSamplerBase,SampleComplete "std::vector; size_t; IntervalType")))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                             .def("SampleComplete2D", &PySpaceSamplerBase::SampleComplete2D,
+                                "type"_a,
+                                "num"_a,
+                                "interval"_a = IT_Closed,
+                                DOXY_FN(SpaceSamplerBase, SampleComplete "std::vector; size_t; IntervalType")
+                            )
+#else
                              .def("SampleComplete2D",&PySpaceSamplerBase::SampleComplete2D, SampleComplete2D_overloads(PY_ARGS("type", "num","interval") DOXY_FN(SpaceSamplerBase,SampleComplete "std::vector; size_t; IntervalType")))
+#endif
         ;
     }
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveCreateSpaceSampler", openravepy::RaveCreateSpaceSampler, PY_ARGS("env","name") DOXY_FN1(RaveCreateSpaceSampler));
+#else
     def("RaveCreateSpaceSampler",openravepy::RaveCreateSpaceSampler, PY_ARGS("env","name") DOXY_FN1(RaveCreateSpaceSampler));
+#endif
 }
 
 }
