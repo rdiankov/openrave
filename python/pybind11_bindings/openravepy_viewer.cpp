@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
+#include "include/openravepy_sensorbase.h"
+#include "include/openravepy_environmentbase.h"
 #include <csignal>
 
 #if defined(_WIN32) && !defined(sighandler_t)
@@ -82,17 +84,23 @@ using py::handle;
 using py::dict;
 using py::enum_;
 using py::class_;
-using py::no_init;
-using py::bases;
 using py::init;
+using py::scope_; // py::object if USE_PYBIND11_PYTHON_BINDINGS
 using py::scope;
 using py::args;
 using py::return_value_policy;
+using py::slice;
+
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+using py::no_init;
+using py::bases;
 using py::copy_const_reference;
 using py::docstring_options;
-using py::def;
 using py::pickle_suite;
+using py::manage_new_object;
+using py::def;
 using py::error_already_set;
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 namespace numeric = py::numeric;
 
 class PyViewerBase : public PyInterfaceBase
@@ -213,10 +221,13 @@ public:
         try {
             bSuccess = _pviewer->main(bShow);
         }
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
         catch(const error_already_set& e) {
             RAVELOG_WARN("received python error\n");
         }
+#endif
         catch(...) {
+            RAVELOG_WARN("received other error\n");
         }
         openravepy::s_listViewersToQuit.remove(_pviewer); // might not be in list anymore
 #ifndef _WIN32
@@ -334,17 +345,38 @@ PyViewerBasePtr RaveCreateViewer(PyEnvironmentBasePtr pyenv, const std::string& 
     return PyViewerBasePtr(new PyViewerBase(p,pyenv));
 }
 
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(main_overloads, main, 1, 2)
+#endif
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_openravepy_viewer(py::module& m)
+#else
 void init_openravepy_viewer()
+#endif
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    using namespace py::literals; // "..."_a
+#endif
     memset(&s_signalActionPrev,0,sizeof(s_signalActionPrev));
 
     {
         void (PyViewerBase::*setcamera1)(object) = &PyViewerBase::SetCamera;
         void (PyViewerBase::*setcamera2)(object,float) = &PyViewerBase::SetCamera;
-        scope viewer = class_<PyViewerBase, OPENRAVE_SHARED_PTR<PyViewerBase>, bases<PyInterfaceBase> >("Viewer", DOXY_CLASS(ViewerBase), no_init)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        scope_ viewer = class_<PyViewerBase, OPENRAVE_SHARED_PTR<PyViewerBase>, PyInterfaceBase>(m, "Viewer", DOXY_CLASS(ViewerBase))
+#else
+        scope_ viewer = class_<PyViewerBase, OPENRAVE_SHARED_PTR<PyViewerBase>, bases<PyInterfaceBase> >("Viewer", DOXY_CLASS(ViewerBase), no_init)
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                       .def("main", &PyViewerBase::main,
+                        "show"_a,
+                        "sig_thread_id"_a,
+                        DOXY_FN(ViewerBase,main)
+                        )
+#else
                        .def("main",&PyViewerBase::main, main_overloads(PY_ARGS("show","sig_thread_id") DOXY_FN(ViewerBase,main)))
+#endif
                        .def("quitmainloop",&PyViewerBase::quitmainloop, DOXY_FN(ViewerBase,quitmainloop))
                        .def("SetSize",&PyViewerBase::SetSize, DOXY_FN(ViewerBase,SetSize))
                        .def("Move",&PyViewerBase::Move, DOXY_FN(ViewerBase,Move))
@@ -352,7 +384,7 @@ void init_openravepy_viewer()
                        .def("SetTitle",&PyViewerBase::SetName, DOXY_FN(ViewerBase,SetName))
                        .def("SetName",&PyViewerBase::SetName, DOXY_FN(ViewerBase,SetName))
                        .def("GetName",&PyViewerBase::GetName, DOXY_FN(ViewerBase,GetName))
-                       .def("RegisterCallback",&PyViewerBase::RegisterCallback, PY_ARGS("callback") DOXY_FN(ViewerBase,RegisterItemSelectionCallback))
+                       .def("RegisterCallback",&PyViewerBase::RegisterCallback, PY_ARGS("properties", "callback") DOXY_FN(ViewerBase,RegisterItemSelectionCallback))
                        .def("RegisterItemSelectionCallback",&PyViewerBase::RegisterItemSelectionCallback, PY_ARGS("callback") DOXY_FN(ViewerBase,RegisterItemSelectionCallback))
                        .def("EnvironmentSync",&PyViewerBase::EnvironmentSync, DOXY_FN(ViewerBase,EnvironmentSync))
                        .def("SetCamera",setcamera1, PY_ARGS("transform") DOXY_FN(ViewerBase,SetCamera))
@@ -368,8 +400,11 @@ void init_openravepy_viewer()
 //        .value("ItemSelection",ViewerBase::VE_ItemSelection)
 //        ;
     }
-
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveCreateViewer",openravepy::RaveCreateViewer, PY_ARGS("env","name") DOXY_FN1(RaveCreateViewer));
+#else
     def("RaveCreateViewer",openravepy::RaveCreateViewer, PY_ARGS("env","name") DOXY_FN1(RaveCreateViewer));
+#endif
 }
 
 }

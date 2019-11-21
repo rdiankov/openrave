@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
+#include "include/openravepy_configurationspecification.h"
+#include "include/openravepy_environmentbase.h"
 
 #include <boost/python/slice.hpp> // slice objects
 
@@ -43,8 +45,8 @@ using py::docstring_options;
 using py::pickle_suite;
 using py::manage_new_object;
 using py::def;
-namespace numeric = py::numeric;
 #endif // USE_PYBIND11_PYTHON_BINDINGS
+namespace numeric = py::numeric;
 
 class PyTrajectoryBase : public PyInterfaceBase
 {
@@ -343,10 +345,19 @@ PyTrajectoryBasePtr RaveCreateTrajectory(PyEnvironmentBasePtr pyenv, const std::
     return PyTrajectoryBasePtr(new PyTrajectoryBase(p,pyenv));
 }
 
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(serialize_overloads, serialize, 0, 1)
+#endif // 
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_openravepy_trajectory(py::module& m)
+#else
 void init_openravepy_trajectory()
+#endif
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    using namespace py::literals; // "..."_a
+#endif
     void (PyTrajectoryBase::*Insert1)(size_t,object) = &PyTrajectoryBase::Insert;
     void (PyTrajectoryBase::*Insert2)(size_t,object,bool) = &PyTrajectoryBase::Insert;
     void (PyTrajectoryBase::*Insert3)(size_t,object,PyConfigurationSpecificationPtr) = &PyTrajectoryBase::Insert;
@@ -365,7 +376,12 @@ void init_openravepy_trajectory()
     object (PyTrajectoryBase::*GetWaypoint2)(int,PyConfigurationSpecificationPtr) const = &PyTrajectoryBase::GetWaypoint;
     object (PyTrajectoryBase::*__getitem__1)(int) const = &PyTrajectoryBase::__getitem__;
     object (PyTrajectoryBase::*__getitem__2)(slice) const = &PyTrajectoryBase::__getitem__;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyTrajectoryBase, OPENRAVE_SHARED_PTR<PyTrajectoryBase>, PyInterfaceBase>(m, "Trajectory", DOXY_CLASS(TrajectoryBase))
+#else
     class_<PyTrajectoryBase, OPENRAVE_SHARED_PTR<PyTrajectoryBase>, bases<PyInterfaceBase> >("Trajectory", DOXY_CLASS(TrajectoryBase), no_init)
+#endif
     .def("Init",&PyTrajectoryBase::Init, PY_ARGS("spec") DOXY_FN(TrajectoryBase,Init))
     .def("Insert",Insert1, PY_ARGS("index","data") DOXY_FN(TrajectoryBase,Insert "size_t; const std::vector; bool"))
     .def("Insert",Insert2, PY_ARGS("index","data","overwrite") DOXY_FN(TrajectoryBase,Insert "size_t; const std::vector; bool"))
@@ -389,7 +405,14 @@ void init_openravepy_trajectory()
     .def("GetWaypoint",GetWaypoint2, PY_ARGS("index","spec") DOXY_FN(TrajectoryBase, GetWaypoint "int; std::vector; const ConfigurationSpecification"))
     .def("GetFirstWaypointIndexAfterTime",&PyTrajectoryBase::GetFirstWaypointIndexAfterTime, DOXY_FN(TrajectoryBase, GetFirstWaypointIndexAfterTime))
     .def("GetDuration",&PyTrajectoryBase::GetDuration,DOXY_FN(TrajectoryBase, GetDuration))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def("serialize", &PyTrajectoryBase::serialize,
+        "options"_a = py::object(),
+        DOXY_FN(TrajectoryBase, serialize)
+    )
+#else
     .def("serialize",&PyTrajectoryBase::serialize,serialize_overloads(PY_ARGS("options") DOXY_FN(TrajectoryBase,serialize)))
+#endif
     .def("deserialize",&PyTrajectoryBase::deserialize, PY_ARGS("data") DOXY_FN(TrajectoryBase,deserialize))
     .def("Write",&PyTrajectoryBase::Write, PY_ARGS("options") DOXY_FN(TrajectoryBase,Write))
     .def("Read",&PyTrajectoryBase::Read, PY_ARGS("data","robot") DOXY_FN(TrajectoryBase,Read))
@@ -398,7 +421,11 @@ void init_openravepy_trajectory()
     .def("__getitem__",__getitem__2, PY_ARGS("indices") DOXY_FN(TrajectoryBase, __getitem__ "slice"))
     ;
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveCreateTrajectory",openravepy::RaveCreateTrajectory, PY_ARGS("env","name") DOXY_FN1(RaveCreateTrajectory));
+#else
     def("RaveCreateTrajectory",openravepy::RaveCreateTrajectory, PY_ARGS("env","name") DOXY_FN1(RaveCreateTrajectory));
+#endif
 }
 
 }
