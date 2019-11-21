@@ -19,7 +19,7 @@
 
 #include <Python.h>
 
-#include "openrave-core.h"
+#include <openrave-core.h>
 
 #ifndef _WIN32
 #include <sys/time.h>
@@ -49,8 +49,8 @@
 #include <numpy/arrayobject.h>
 
 #define OPENRAVE_BININGS_PYARRAY
-#include "bindings.h"
-#include "docstrings.h"
+#include <openravepy/bindings.h>
+#include <openravepy/docstrings.h>
 
 #define _(msgid) OpenRAVE::RaveGetLocalizedTextForDomain("openrave", msgid)
 

@@ -124,6 +124,12 @@ struct select_dtype<uint32_t>
     static constexpr char type[] = "u4";
 };
 
+template <>
+struct select_dtype<uint64_t>
+{
+    static constexpr char type[] = "u8";
+};
+
 template <typename T>
 struct select_npy_type
 {};
@@ -162,6 +168,12 @@ template <>
 struct select_npy_type<uint32_t>
 {
     static constexpr NPY_TYPES type = NPY_UINT32;
+};
+
+template <>
+struct select_npy_type<uint64_t>
+{
+    static constexpr NPY_TYPES type = NPY_UINT64;
 };
 } // namespace openravepy
 

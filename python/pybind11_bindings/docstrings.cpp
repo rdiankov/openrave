@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /// Auto-generated using build_openravepy_internal.py from ../python/bindings/*.cpp file
-#include "docstrings.h"
+#include <openravepy/docstrings.h>
 namespace openravepy {
 void InitializeComments(std::map<std::string,std::string>& m)
 {m["en function RaveCreateSensorSystem"] = "\n\nOPENRAVE_API   SensorSystemBasePtr  **RaveCreateSensorSystem**\\(EnvironmentBasePtr penv, const std::string & name)\n    \n            ";

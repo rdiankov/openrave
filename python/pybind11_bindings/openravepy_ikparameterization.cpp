@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NO_IMPORT_ARRAY
-#include "openravepy_int.h"
-#include "include/openravepy_configurationspecification.h"
+#include <openravepy/openravepy_int.h>
+#include <openravepy/openravepy_configurationspecification.h>
 
 #include <openrave/planningutils.h>
 

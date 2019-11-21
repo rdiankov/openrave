@@ -18,7 +18,7 @@
 #define OPENRAVEPY_INTERNAL_CONTROLLERBASE_H
 
 #define NO_IMPORT_ARRAY
-#include "../openravepy_int.h"
+#include <openravepy/openravepy_int.h>
 
 namespace openravepy {
 using py::object;

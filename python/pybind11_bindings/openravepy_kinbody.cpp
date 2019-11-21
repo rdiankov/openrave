@@ -15,11 +15,11 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NO_IMPORT_ARRAY
-#include "openravepy_kinbody.h"
-#include "include/openravepy_configurationspecification.h"
-#include "include/openravepy_environmentbase.h"
-#include "include/openravepy_collisioncheckerbase.h"
-#include "include/openravepy_collisionreport.h"
+#include <openravepy/openravepy_kinbody.h>
+#include <openravepy/openravepy_configurationspecification.h>
+#include <openravepy/openravepy_environmentbase.h>
+#include <openravepy/openravepy_collisioncheckerbase.h>
+#include <openravepy/openravepy_collisionreport.h>
 
 namespace openravepy {
 

@@ -17,7 +17,7 @@
 #ifndef OPENRAVEPY_INTERNAL_KINBODY_H
 #define OPENRAVEPY_INTERNAL_KINBODY_H
 
-#include "openravepy_int.h"
+#include <openravepy/openravepy_int.h>
 #include <openrave/utils.h>
 
 namespace openravepy {

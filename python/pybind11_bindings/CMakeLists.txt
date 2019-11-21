@@ -34,7 +34,8 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
     set(HAVE_ALL_PYTHON_HEADERS ${HAVE_ALL_PYTHON_HEADERS} PARENT_SCOPE)
     if( HAVE_ALL_PYTHON_HEADERS )
       message(STATUS "python and boost-python found")
-      include_directories(${PYTHON_INCLUDE_DIRS} ${OPENRAVE_INCLUDE_LOCAL_DIRS} ${OPENRAVE_CORE_INCLUDE_LOCAL_DIRS})
+      message(STATUS "CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}")
+      include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${PYTHON_INCLUDE_DIRS} ${OPENRAVE_INCLUDE_LOCAL_DIRS} ${OPENRAVE_CORE_INCLUDE_LOCAL_DIRS})
       
       set(extralibs)
       if( CLOCK_GETTIME_FOUND )
@@ -79,11 +80,12 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
         set_target_properties(openravepy_int PROPERTIES SUFFIX ".so")
       endif()
       install(TARGETS openravepy_int DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
-      install(FILES bindings.h map.h DESTINATION include/openravepy)
+      file(GLOB openravepy_headers "openravepy/*.h")
+      install(FILES ${openravepy_headers} DESTINATION include/openravepy)
 
       ## ann bindings
       if( ANN_FOUND )
-        add_library(pyANN_int SHARED pyann.cpp bindings.cpp bindings.h)
+        add_library(pyANN_int SHARED pyann.cpp bindings.cpp)
         include_directories(${ANN_INCLUDE_DIR})
         # stdc++ has to be included before opengl libraries due to some ATI bug (http://wiki.fifengine.de/  Segfault_in_cxa_allocate_exception#Workaround)
         target_link_libraries(pyANN_int PUBLIC ${STDC_LIBRARY} ANN ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY} ${extralibs}
@@ -106,7 +108,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
 
       ## convexdecomposition bindings
       if( CONVEXDECOMPOSITION_FOUND )
-        add_library(convexdecompositionpy SHARED convexdecompositionpy.cpp bindings.cpp bindings.h)
+        add_library(convexdecompositionpy SHARED convexdecompositionpy.cpp bindings.cpp)
         include_directories(${CONVEXDECOMPOSITION_INCLUDE_DIR})
         # stdc++ has to be included before opengl libraries due to some ATI bug (http://wiki.fifengine.de/  Segfault_in_cxa_allocate_exception#Workaround)
         target_link_libraries(convexdecompositionpy PUBLIC ${STDC_LIBRARY} convexdecomposition ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY} ${extralibs}

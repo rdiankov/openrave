@@ -26,7 +26,7 @@
 #include <openrave/config.h>
 
 #define OPENRAVE_BININGS_PYARRAY
-#include "bindings.h"
+#include <openravepy/bindings.h>
 
 #include <ANN/ANN.h>
 

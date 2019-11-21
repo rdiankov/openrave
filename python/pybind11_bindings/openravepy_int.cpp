@@ -14,19 +14,19 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#include "openravepy_int.h"
+#include <openravepy/openravepy_int.h>
 
 #include <openrave/utils.h>
 #include <boost/thread/once.hpp>
 #include <boost/scoped_ptr.hpp>
 
-#include "openravepy_kinbody.h"
-#include "include/openravepy_collisioncheckerbase.h"
-#include "include/openravepy_collisionreport.h"
-#include "include/openravepy_robotbase.h"
-#include "include/openravepy_sensorbase.h"
-#include "include/openravepy_module.h"
-#include "include/openravepy_physicalenginebase.h"
+#include <openravepy/openravepy_kinbody.h>
+#include <openravepy/openravepy_collisioncheckerbase.h>
+#include <openravepy/openravepy_collisionreport.h>
+#include <openravepy/openravepy_robotbase.h>
+#include <openravepy/openravepy_sensorbase.h>
+#include <openravepy/openravepy_module.h>
+#include <openravepy/openravepy_physicalenginebase.h>
 
 namespace openravepy
 {

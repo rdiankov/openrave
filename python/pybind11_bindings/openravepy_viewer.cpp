@@ -15,9 +15,9 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NO_IMPORT_ARRAY
-#include "openravepy_int.h"
-#include "include/openravepy_sensorbase.h"
-#include "include/openravepy_environmentbase.h"
+#include <openravepy/openravepy_int.h>
+#include <openravepy/openravepy_sensorbase.h>
+#include <openravepy/openravepy_environmentbase.h>
 #include <csignal>
 
 #if defined(_WIN32) && !defined(sighandler_t)
