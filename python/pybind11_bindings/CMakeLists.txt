@@ -79,6 +79,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
         set_target_properties(openravepy_int PROPERTIES SUFFIX ".so")
       endif()
       install(TARGETS openravepy_int DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
+      install(FILES bindings.h map.h DESTINATION include/openravepy)
 
       ## ann bindings
       if( ANN_FOUND )

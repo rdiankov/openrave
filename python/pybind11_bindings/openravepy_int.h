@@ -332,7 +332,7 @@ inline py::object toPyArrayRotation(const TransformMatrix& t)
     pdata[3] = t.m[4]; pdata[4] = t.m[5]; pdata[5] = t.m[6];
     pdata[6] = t.m[8]; pdata[7] = t.m[9]; pdata[8] = t.m[10];
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    return py::cast(pyvalues);
+    return py::cast<py::numeric::array>(pyvalues);
 #else
     return static_cast<py::numeric::array>(py::handle<>(pyvalues));
 #endif // USE_PYBIND11_PYTHON_BINDINGS
@@ -351,7 +351,7 @@ inline py::object toPyArray3(const std::vector<RaveVector<float> >& v)
         }
     }
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    return py::cast(pyvalues);
+    return py::cast<py::numeric::array>(pyvalues);
 #else
     return static_cast<py::numeric::array>(py::handle<>(pyvalues));
 #endif // USE_PYBIND11_PYTHON_BINDINGS
@@ -370,7 +370,7 @@ inline py::object toPyArray3(const std::vector<RaveVector<double> >& v)
         }
     }
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    return py::cast(pyvalues);
+    return py::cast<py::numeric::array>(pyvalues);
 #else
     return static_cast<py::numeric::array>(py::handle<>(pyvalues));
 #endif // USE_PYBIND11_PYTHON_BINDINGS

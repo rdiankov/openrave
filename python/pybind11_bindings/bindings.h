@@ -68,6 +68,19 @@
 #include <algorithm>
 #include <openrave/smart_ptr.h>
 
+#ifndef _RAVE_DISPLAY
+#define _RAVE_DISPLAY(RUNCODE)                                               \
+{                                                                              \
+    printf(                                                                    \
+        "\n%s:%d, [ %s "                                                       \
+        "]\n-----------------------------------------------------------------" \
+        "--------------\n",                                                    \
+        __FILE__, __LINE__, __func__ /*__PRETTY_FUNCTION__*/);                 \
+    RUNCODE;                                                                   \
+    printf("\n");                                                              \
+}
+#endif // _RAVE_DISPLAY
+
 namespace openravepy {
 
 // https://stackoverflow.com/questions/35041268/how-to-convert-a-vector-to-numpy-array-with-templates-and-boost
