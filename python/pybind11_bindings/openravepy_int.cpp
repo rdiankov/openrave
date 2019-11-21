@@ -2668,6 +2668,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                         DOXY_FN(EnvironmentBase,StartSimulation)
                     )
 #else
+                    .def("StartSimulation",&PyEnvironmentBase::StartSimulation,StartSimulation_overloads(PY_ARGS("timestep","realtime") DOXY_FN(EnvironmentBase,StartSimulation)))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                     .def("StopSimulation", &PyEnvironmentBase::StopSimulation,
