@@ -177,6 +177,12 @@ template <typename T>
 inline object to_object(const T& t) {
     return cast(t);
 }
+// https://stackoverflow.com/questions/26184190/alias-a-templated-function
+template <typename T>
+auto handle_to_object(T const& h) -> decltype(to_object<T>(h))
+{
+    return to_object<T>(h);
+}
 inline object to_array(PyObject* pyo) {
     // do we need to implement the conversion?
     return cast(pyo);
@@ -228,6 +234,9 @@ template <typename T>
 inline object to_object(const T& t) {
     return object(t);
 }
+inline object handle_to_object(PyObject* pyo) {
+    return object(handle<>(pyo));
+}
 inline numeric::array to_array(PyObject* pyo) {
     return static_cast<numeric::array>(handle<>(pyo));
 }
@@ -240,6 +249,7 @@ inline object empty_array_astype() {
 }
 template <typename T>
 using extract_ = extract<T>;
+// https://www.boost.org/doc/libs/1_62_0/libs/python/doc/html/reference/high_level_components/boost_python_scope_hpp.html
 using scope_ = scope;
 } // namespace boost::python
 } // namespace boost
@@ -262,11 +272,7 @@ namespace py = boost::python;
 
 inline py::object ConvertStringToUnicode(const std::string& s)
 {
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    return py::cast(PyUnicode_Decode(s.c_str(), s.size(), "utf-8", nullptr));
-#else
-    return py::object(py::handle<>(PyUnicode_Decode(s.c_str(), s.size(), "utf-8", nullptr)));
-#endif
+    return py::handle_to_object(PyUnicode_Decode(s.c_str(), s.size(), "utf-8", nullptr));
 }
 
 class PyVoidHandle
