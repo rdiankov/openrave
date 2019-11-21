@@ -2380,6 +2380,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_< boost::bad_function_call, std::runtime_error>( m, "_boost_bad_function_call_");
+    // py::register_exception<boost::bad_function_call>(m, "_boost_bad_function_call_");
 #else
     exception_translator<std::runtime_error>();
     //exception_translator<std::exception>();
@@ -2863,6 +2864,25 @@ Because race conditions can pop up when trying to lock the openrave environment 
     scope().attr("__docformat__") = "restructuredtext";
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    openravepy::init_openravepy_global(m);
+    openravepy::InitPlanningUtils(m);
+
+    openravepy::init_openravepy_collisionchecker(m);
+    openravepy::init_openravepy_controller(m);
+    openravepy::init_openravepy_ikparameterization(m);
+    openravepy::init_openravepy_iksolver(m);
+    openravepy::init_openravepy_kinbody(m);
+    openravepy::init_openravepy_robot(m);
+    openravepy::init_openravepy_module(m);
+    openravepy::init_openravepy_physicsengine(m);
+    openravepy::init_openravepy_planner(m);
+    openravepy::init_openravepy_trajectory(m);
+    openravepy::init_openravepy_sensor(m);
+    openravepy::init_openravepy_sensorsystem(m);
+    openravepy::init_openravepy_spacesampler(m);
+    openravepy::init_openravepy_viewer(m);
+#else
     openravepy::init_openravepy_global();
     openravepy::InitPlanningUtils();
 
@@ -2880,6 +2900,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
     openravepy::init_openravepy_sensorsystem();
     openravepy::init_openravepy_spacesampler();
     openravepy::init_openravepy_viewer();
+#endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("RaveGetEnvironmentId", openravepy::RaveGetEnvironmentId, DOXY_FN1(RaveGetEnvironmentId));

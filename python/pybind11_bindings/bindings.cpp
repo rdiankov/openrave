@@ -245,7 +245,7 @@ void init_python_bindings()
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    class_<PyVoidHandle/*, OPENRAVE_SHARED_PTR<PyVoidHandle>*/ >(m, "VoidHandle")
+    class_<PyVoidHandle, OPENRAVE_SHARED_PTR<PyVoidHandle>>(m, "VoidHandle")
 #else
     class_<PyVoidHandle, OPENRAVE_SHARED_PTR<PyVoidHandle> >("VoidHandle")
 #endif
