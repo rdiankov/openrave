@@ -3446,7 +3446,7 @@ void init_openravepy_kinbody()
     .def("GetBody",&PyStateRestoreContextBase::GetBody,DOXY_FN(KinBody::KinBodyStateSaver, GetBody))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .def("Restore",&PyStateRestoreContextBase::Restore,
-        "body"_a = py::object(),
+        "body"_a = nullptr,
         DOXY_FN(KinBody::KinBodyStateSaver, Restore)
     )
 #else
@@ -3558,7 +3558,7 @@ void init_openravepy_kinbody()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                           .def("SerializeJSON", &PyGeometryInfo::SerializeJSON,
                             "unitScale"_a,
-                            "options"_a = py::object(),
+                            "options"_a = nullptr,
                             DOXY_FN(GeometryInfo,SerializeJSON)
                           )
 #else
@@ -3789,7 +3789,7 @@ void init_openravepy_kinbody()
                         .def("SetDOFLimits", &PyKinBody::SetDOFLimits,
                             "lower"_a,
                             "upper"_a,
-                            "indices"_a = py::object(),
+                            "indices"_a = nullptr,
                             DOXY_FN(KinBody, SetDOFLimits)
                         )
 #else
@@ -3841,7 +3841,7 @@ void init_openravepy_kinbody()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                         .def("SetLinkTransformations",&PyKinBody::SetLinkTransformations,
                             "transforms"_a,
-                            "doflastsetvalues"_a = py::object(),
+                            "doflastsetvalues"_a = nullptr,
                             DOXY_FN(KinBody,SetLinkTransformations)
                         )
 #else
@@ -3858,7 +3858,7 @@ void init_openravepy_kinbody()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                         .def("GetLinkAccelerations", &PyKinBody::GetLinkAccelerations,
                             "dofaccelerations"_a,
-                            "externalaccelerations"_a = py::object(),
+                            "externalaccelerations"_a = nullptr,
                             DOXY_FN(KinBody,GetLinkAccelerations)
                         )
 #else
@@ -3908,7 +3908,7 @@ void init_openravepy_kinbody()
                         .def("SubtractDOFValues", &PyKinBody::SubtractDOFValues,
                             "values0"_a,
                             "values1"_a,
-                            "indices"_a = py::object(),
+                            "indices"_a = nullptr,
                             DOXY_FN(KinBody,SubtractDOFValues)
                         )
 #else
@@ -3922,7 +3922,7 @@ void init_openravepy_kinbody()
                         .def("ComputeJacobianTranslation", &PyKinBody::ComputeJacobianTranslation,
                             "linkindex"_a,
                             "position"_a,
-                            "indices"_a = py::object(),
+                            "indices"_a = nullptr,
                             DOXY_FN(KinBody,ComputeJacobianTranslation)
                         )
 #else
@@ -3931,7 +3931,7 @@ void init_openravepy_kinbody()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                         .def("ComputeJacobianAxisAngle", &PyKinBody::ComputeJacobianAxisAngle,
                             "linkindex"_a,
-                            "indices"_a = py::object(),
+                            "indices"_a = nullptr,
                             DOXY_FN(KinBody,ComputeJacobianAxisAngle)
                         )
 #else
@@ -3954,7 +3954,7 @@ void init_openravepy_kinbody()
                         .def("ComputeHessianTranslation", &PyKinBody::ComputeHessianTranslation,
                             "linkindex"_a,
                             "position"_a,
-                            "indices"_a = py::object(),
+                            "indices"_a = nullptr,
                             DOXY_FN(KinBody,ComputeHessianTranslation)
                         )
 #else
@@ -3963,7 +3963,7 @@ void init_openravepy_kinbody()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                         .def("ComputeHessianAxisAngle", &PyKinBody::ComputeHessianAxisAngle,
                             "linkindex"_a,
-                            "indices"_a = py::object(),
+                            "indices"_a = nullptr,
                             DOXY_FN(KinBody,ComputeHessianAxisAngle)
                         )
 #else
@@ -3972,7 +3972,7 @@ void init_openravepy_kinbody()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                         .def("ComputeInverseDynamics", &PyKinBody::ComputeInverseDynamics,
                             "dofaccelerations"_a,
-                            "externalforcetorque"_a = py::object(),
+                            "externalforcetorque"_a = nullptr,
                             "returncomponents"_a = false,
                             sComputeInverseDynamicsDoc.c_str()
                         )
@@ -3983,8 +3983,8 @@ void init_openravepy_kinbody()
                         .def("GetSelfCollisionChecker", &PyKinBody::GetSelfCollisionChecker, /*PY_ARGS("collisionchecker")*/ DOXY_FN(KinBody,GetSelfCollisionChecker))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                         .def("CheckSelfCollision", &PyKinBody::CheckSelfCollision,
-                            "report"_a = PyCollisionReportPtr(),
-                            "collisionchecker"_a = PyCollisionCheckerBasePtr(),
+                            "report"_a = nullptr, // PyCollisionReportPtr(),
+                            "collisionchecker"_a = nullptr, // PyCollisionCheckerBasePtr(),
                             DOXY_FN(KinBody,CheckSelfCollision)
                         )
 #else
@@ -4014,7 +4014,7 @@ void init_openravepy_kinbody()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                         .def("SetConfigurationValues", &PyKinBody::SetConfigurationValues,
                             "values"_a,
-                            "checklimits"_a = KinBody::CLA_CheckLimits,
+                            "checklimits"_a = (int) KinBody::CLA_CheckLimits,
                             DOXY_FN(KinBody,SetConfigurationValues)
                         )
 #else
@@ -4037,7 +4037,7 @@ void init_openravepy_kinbody()
                         .def("GetKinematicsGeometryHash",&PyKinBody::GetKinematicsGeometryHash, DOXY_FN(KinBody,GetKinematicsGeometryHash))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                         .def("CreateKinBodyStateSaver", &PyKinBody::CreateKinBodyStateSaver,
-                            "options"_a = py::object(),
+                            "options"_a = nullptr,
                             "Creates an object that can be entered using 'with' and returns a KinBodyStateSaver"
                         )
 #else
@@ -4141,7 +4141,7 @@ void init_openravepy_kinbody()
                          .def("SetVelocity",&PyLink::SetVelocity,DOXY_FN(KinBody::Link,SetVelocity))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("GetFloatParameters", &PyLink::GetFloatParameters,
-                            "name"_a = py::object(),
+                            "name"_a = nullptr,
                             "index"_a = -1,
                             DOXY_FN(KinBody::Link,GetFloatParameters)
                         )
@@ -4151,7 +4151,7 @@ void init_openravepy_kinbody()
                          .def("SetFloatParameters",&PyLink::SetFloatParameters,DOXY_FN(KinBody::Link,SetFloatParameters))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("GetIntParameters", &PyLink::GetIntParameters,
-                            "name"_a = py::object(),
+                            "name"_a = nullptr,
                             "index"_a = -1,
                             DOXY_FN(KinBody::Link,GetIntParameters)
                         )
@@ -4161,7 +4161,7 @@ void init_openravepy_kinbody()
                          .def("SetIntParameters",&PyLink::SetIntParameters,DOXY_FN(KinBody::Link,SetIntParameters))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("GetStringParameters", &PyLink::GetStringParameters,
-                            "name"_a = py::object(),
+                            "name"_a = nullptr,
                             DOXY_FN(KinBody::Link,GetStringParameters)
                         )
 #else
@@ -4404,7 +4404,7 @@ void init_openravepy_kinbody()
                           .def("AddTorque",&PyJoint::AddTorque,PY_ARGS("torques") DOXY_FN(KinBody::Joint,AddTorque))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                           .def("GetFloatParameters", &PyJoint::GetFloatParameters,
-                            "name"_a = py::object(),
+                            "name"_a = nullptr,
                             "index"_a = -1,
                             DOXY_FN(KinBody::Joint,GetFloatParameters)
                         )
@@ -4414,7 +4414,7 @@ void init_openravepy_kinbody()
                           .def("SetFloatParameters",&PyJoint::SetFloatParameters,DOXY_FN(KinBody::Joint,SetFloatParameters))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                           .def("GetIntParameters", &PyJoint::GetIntParameters,
-                            "name"_a = py::object(),
+                            "name"_a = nullptr,
                             "index"_a = -1,
                             DOXY_FN(KinBody::Joint,GetIntParameters)
                         )
@@ -4424,7 +4424,7 @@ void init_openravepy_kinbody()
                           .def("SetIntParameters",&PyJoint::SetIntParameters,DOXY_FN(KinBody::Joint,SetIntParameters))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                           .def("GetStringParameters", &PyJoint::GetStringParameters,
-                            "name"_a = py::object(),
+                            "name"_a = nullptr,
                             DOXY_FN(KinBody::Joint, GetStringParameters)
                         )
 #else

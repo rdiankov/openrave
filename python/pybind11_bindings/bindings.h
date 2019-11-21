@@ -154,6 +154,9 @@ struct select_npy_type<uint32_t>
 
 // pybind11
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+#ifdef NDEBUG
+#undef NDEBUG
+#endif // NDEBUG
 #include <iostream>
 // use std::cout temporarily
 #include <pybind11/pybind11.h>
