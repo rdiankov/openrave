@@ -633,7 +633,8 @@ void init_python_bindings();
 template <typename T>
 inline py::array_t<T> toPyArrayN(const T* pvalues, const size_t N)
 {
-    std::vector<npy_intp> dims {(long int)1, (long int)N};
+    // one-dimension numpy array
+    std::vector<npy_intp> dims {(long int)N};
     return py::array_t<T>(dims, pvalues); 
 }
 
