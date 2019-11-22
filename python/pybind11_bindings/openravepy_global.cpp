@@ -1174,7 +1174,7 @@ void init_openravepy_global()
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals;  // "..."_a
-    enum_<OpenRAVEErrorCode>(m, "ErrorCode" DOXY_ENUM(OpenRAVEErrorCode))
+    enum_<OpenRAVEErrorCode>(m, "ErrorCode", py::arithmetic() DOXY_ENUM(OpenRAVEErrorCode))
 #else
     enum_<OpenRAVEErrorCode>("ErrorCode" DOXY_ENUM(OpenRAVEErrorCode))
 #endif
@@ -1192,7 +1192,7 @@ void init_openravepy_global()
     .value("Timeout",ORE_Timeout)
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    enum_<DebugLevel>(m, "DebugLevel" DOXY_ENUM(DebugLevel))
+    enum_<DebugLevel>(m, "DebugLevel", py::arithmetic() DOXY_ENUM(DebugLevel))
 #else
     enum_<DebugLevel>("DebugLevel" DOXY_ENUM(DebugLevel))
 #endif
@@ -1205,7 +1205,7 @@ void init_openravepy_global()
     .value("VerifyPlans",Level_VerifyPlans)
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    enum_<SerializationOptions>(m, "SerializationOptions" DOXY_ENUM(SerializationOptions))
+    enum_<SerializationOptions>(m, "SerializationOptions", py::arithmetic() DOXY_ENUM(SerializationOptions))
 #else
     enum_<SerializationOptions>("SerializationOptions" DOXY_ENUM(SerializationOptions))
 #endif
@@ -1220,7 +1220,7 @@ void init_openravepy_global()
     .value("JointLimits",SO_JointLimits)
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    enum_<InterfaceType>(m, "InterfaceType" DOXY_ENUM(InterfaceType))
+    enum_<InterfaceType>(m, "InterfaceType", py::arithmetic() DOXY_ENUM(InterfaceType))
 #else
     enum_<InterfaceType>("InterfaceType" DOXY_ENUM(InterfaceType))
 #endif
@@ -1240,7 +1240,7 @@ void init_openravepy_global()
     .value(RaveGetInterfaceName(PT_SpaceSampler).c_str(),PT_SpaceSampler)
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    enum_<CloningOptions>(m, "CloningOptions" DOXY_ENUM(CloningOptions))
+    enum_<CloningOptions>(m, "CloningOptions", py::arithmetic() DOXY_ENUM(CloningOptions))
 #else
     enum_<CloningOptions>("CloningOptions" DOXY_ENUM(CloningOptions))
 #endif
@@ -1253,14 +1253,14 @@ void init_openravepy_global()
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    enum_<PhysicsEngineOptions>(m, "PhysicsEngineOptions" DOXY_ENUM(PhysicsEngineOptions))
+    enum_<PhysicsEngineOptions>(m, "PhysicsEngineOptions", py::arithmetic() DOXY_ENUM(PhysicsEngineOptions))
 #else
     enum_<PhysicsEngineOptions>("PhysicsEngineOptions" DOXY_ENUM(PhysicsEngineOptions))
 #endif
     .value("SelfCollisions",PEO_SelfCollisions)
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    enum_<IntervalType>(m, "Interval" DOXY_ENUM(IntervalType))
+    enum_<IntervalType>(m, "Interval", py::arithmetic() DOXY_ENUM(IntervalType))
 #else
     enum_<IntervalType>("Interval" DOXY_ENUM(IntervalType))
 #endif
@@ -1270,7 +1270,7 @@ void init_openravepy_global()
     .value("Closed",IT_Closed)
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    enum_<SampleDataType>(m, "SampleDataType" DOXY_ENUM(SampleDataType))
+    enum_<SampleDataType>(m, "SampleDataType", py::arithmetic() DOXY_ENUM(SampleDataType))
 #else
     enum_<SampleDataType>("SampleDataType" DOXY_ENUM(SampleDataType))
 #endif
