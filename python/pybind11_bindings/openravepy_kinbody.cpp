@@ -3651,7 +3651,31 @@ void init_openravepy_kinbody()
                          .def_readwrite("_setRobotLinksToIgnore",&PyKinBody::PyGrabbedInfo::_setRobotLinksToIgnore)
                          .def("__str__",&PyKinBody::PyGrabbedInfo::__str__)
                          .def("__unicode__",&PyKinBody::PyGrabbedInfo::__unicode__)
-#ifndef USE_PYBIND11_PYTHON_BINDINGS
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                         // https://pybind11.readthedocs.io/en/stable/advanced/classes.html#pickling-support
+                         .def(py::pickle(
+                            [](const PyKinBody::PyGrabbedInfo &r) {
+                                // __getstate__
+                                /* Return a tuple that fully encodes the state of the object */
+                                return py::make_tuple(r._grabbedname, r._robotlinkname, r._trelative, r._setRobotLinksToIgnore);
+                            },
+                            [](py::tuple state) {
+                                // __setstate__
+                                if (state.size() != 4) {
+                                    throw std::runtime_error("Invalid state!");
+                                }
+                                /* Create a new C++ instance */
+                                PyKinBody::PyGrabbedInfo r;
+                                /* Assign any additional state */
+                                /* Similar to GrabbedInfo_pickle_suite above */
+                                r._grabbedname = state[0];
+                                r._robotlinkname = state[1];
+                                r._trelative = state[2];
+                                r._setRobotLinksToIgnore = state[3];
+                                return r;
+                            }
+                         ))
+#else
                          .def_pickle(GrabbedInfo_pickle_suite())
 #endif
     ;
