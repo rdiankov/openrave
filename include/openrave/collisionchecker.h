@@ -41,6 +41,7 @@ enum CollisionOptions
     CO_ActiveDOFs = 0x10,
     CO_AllLinkCollisions = 0x20, ///< if set then all the link collisions will be returned inside CollisionReport::vLinkColliding. Collision is slower because more pairs have to be checked.
     CO_AllGeometryContacts = 0x40, ///< if set, then will return the contacts of all the colliding geometries of two links. Do not need to explore all pairs of links once the first pair is found. This option can be slow.
+    CO_ForceCheckCollision = 0x80, ///< if set, forcibly check collision inside the collision check function, regardless of Enable flag. this will not affect other Enable flag usage, such as GetNonAdjacentLinks...etc.
 };
 
 /// \brief action to perform whenever a collision is detected between objects
