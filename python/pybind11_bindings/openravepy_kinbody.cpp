@@ -3654,13 +3654,15 @@ void init_openravepy_kinbody()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          // https://pybind11.readthedocs.io/en/stable/advanced/classes.html#pickling-support
                          .def(py::pickle(
+                            // __getstate__
                             [](const PyKinBody::PyGrabbedInfo &r) {
-                                // __getstate__
+                                _RAVE_DISPLAY(std::cout << "__getstate__ of PyKinBody::PyGrabbedInfo";);
                                 /* Return a tuple that fully encodes the state of the object */
                                 return py::make_tuple(r._grabbedname, r._robotlinkname, r._trelative, r._setRobotLinksToIgnore);
                             },
+                            // __setstate__
                             [](py::tuple state) {
-                                // __setstate__
+                                _RAVE_DISPLAY(std::cout << "__setstate__ of PyKinBody::PyGrabbedInfo";);
                                 if (state.size() != 4) {
                                     throw std::runtime_error("Invalid state!");
                                 }
@@ -3668,10 +3670,10 @@ void init_openravepy_kinbody()
                                 PyKinBody::PyGrabbedInfo r;
                                 /* Assign any additional state */
                                 /* Similar to GrabbedInfo_pickle_suite above */
-                                r._grabbedname = state[0];
-                                r._robotlinkname = state[1];
+                                r._grabbedname = extract<std::string>(state[0]);
+                                r._robotlinkname = extract<std::string>(state[1]);
                                 r._trelative = state[2];
-                                r._setRobotLinksToIgnore = state[3];
+                                r._setRobotLinksToIgnore = extract<std::vector<int>>(state[3]);
                                 return r;
                             }
                          ))

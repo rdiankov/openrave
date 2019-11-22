@@ -186,6 +186,7 @@ struct select_npy_type<uint64_t>
 #include <iostream>
 // use std::cout temporarily
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 #include <boost/shared_ptr.hpp>
 PYBIND11_DECLARE_HOLDER_TYPE(T, OPENRAVE_SHARED_PTR<T>);
