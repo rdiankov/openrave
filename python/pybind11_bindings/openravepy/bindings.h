@@ -214,7 +214,7 @@ auto handle_to_object(T const& h) -> decltype(to_object<T>(h))
 }
 inline object to_array(PyObject* pyo) {
     // do we need to implement the conversion?
-    return cast(pyo);
+    return handle(pyo).cast<array_t<double>>();
 }
 inline object empty_array() {
     return numeric::array({}, nullptr);
@@ -310,7 +310,11 @@ namespace py = boost::python;
 
 inline py::object ConvertStringToUnicode(const std::string& s)
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    return py::cast(s);
+#else
     return py::handle_to_object(PyUnicode_Decode(s.c_str(), s.size(), "utf-8", nullptr));
+#endif
 }
 
 class PyVoidHandle
