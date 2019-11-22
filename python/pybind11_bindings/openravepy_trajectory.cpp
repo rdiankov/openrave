@@ -328,7 +328,7 @@ object toPyTrajectory(TrajectoryBasePtr ptraj, object opyenv)
     if( pyenv.check() ) {
         return py::to_object(toPyTrajectory(ptraj,(PyEnvironmentBasePtr)pyenv));
     }
-    return py::object();
+    return py::none_();
 }
 
 PyEnvironmentBasePtr toPyEnvironment(PyTrajectoryBasePtr pytraj)

@@ -112,11 +112,11 @@ object toPyObject(const rapidjson::Value& value)
         }
     }
     case rapidjson::kNullType: {
-        return py::object();
+        return py::none_();
     }
     default: {
         PyErr_SetString(PyExc_RuntimeError, "unsupported type");
-        return py::object();
+        return py::none_();
     }
     }
 }
@@ -734,7 +734,7 @@ object PyInterfaceBase::SendCommand(const string& in, bool releasegil, bool lock
         }
         sout << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
         if( !_pbase->SendCommand(sout,sin) ) {
-            return py::object();
+            return py::none_();
         }
     }
     return py::to_object(sout.str());
@@ -1416,7 +1416,7 @@ public:
         }
 
         if( output.size() == 0 ) {
-            return py::object();
+            return py::none_();
         }
         else {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -1471,7 +1471,7 @@ public:
     {
         OPENRAVE_SHARED_PTR<TriMesh> ptrimesh = _penv->ReadTrimeshURI(OPENRAVE_SHARED_PTR<TriMesh>(),filename);
         if( !ptrimesh ) {
-            return py::object();
+            return py::none_();
         }
         return toPyTriMesh(*ptrimesh);
     }
@@ -1479,7 +1479,7 @@ public:
     {
         OPENRAVE_SHARED_PTR<TriMesh> ptrimesh = _penv->ReadTrimeshURI(OPENRAVE_SHARED_PTR<TriMesh>(),filename,toAttributesList(odictatts));
         if( !ptrimesh ) {
-            return py::object();
+            return py::none_();
         }
         return toPyTriMesh(*ptrimesh);
     }
@@ -1488,7 +1488,7 @@ public:
     {
         OPENRAVE_SHARED_PTR<TriMesh> ptrimesh = _penv->ReadTrimeshData(OPENRAVE_SHARED_PTR<TriMesh>(),data,formathint);
         if( !ptrimesh ) {
-            return py::object();
+            return py::none_();
         }
         return toPyTriMesh(*ptrimesh);
     }
@@ -1496,7 +1496,7 @@ public:
     {
         OPENRAVE_SHARED_PTR<TriMesh> ptrimesh = _penv->ReadTrimeshData(OPENRAVE_SHARED_PTR<TriMesh>(),data,formathint,toAttributesList(odictatts));
         if( !ptrimesh ) {
-            return py::object();
+            return py::none_();
         }
         return toPyTriMesh(*ptrimesh);
     }
@@ -1546,7 +1546,7 @@ public:
     {
         KinBodyPtr pbody = _penv->GetKinBody(name);
         if( !pbody ) {
-            return py::object();
+            return py::none_();
         }
         if( pbody->IsRobot() ) {
             return py::to_object(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(pbody),shared_from_this()));
@@ -2052,7 +2052,7 @@ public:
     {
         KinBody::BodyState bodystate;
         if( !_penv->GetPublishedBody(name, bodystate, timeout) ) {
-            return py::object();
+            return py::none_();
         }
 
         py::dict ostate;
@@ -2078,7 +2078,7 @@ public:
     {
         std::vector<dReal> jointValues;
         if( !_penv->GetPublishedBodyJointValues(name, jointValues, timeout) ) {
-            return py::object();
+            return py::none_();
         }
         return toPyArray(jointValues);
     }
@@ -2187,7 +2187,7 @@ object GetUserData(UserDataPtr pdata)
             return py::to_object(PyUserData(pdata));
         }
         else {
-            return py::object();
+            return py::none_();
         }
     }
 }
@@ -2214,7 +2214,7 @@ object toPyEnvironment(object o)
     if( pyinterface.check() ) {
         return py::to_object(((PyInterfaceBasePtr)pyinterface)->GetEnv());
     }
-    return py::object();
+    return py::none_();
 }
 
 void LockEnvironment(PyEnvironmentBasePtr pyenv)

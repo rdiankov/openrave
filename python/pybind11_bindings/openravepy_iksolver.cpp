@@ -66,7 +66,7 @@ public:
     object GetMapData(const std::string& key) {
         IkReturn::CustomData::const_iterator it = _ret._mapdata.find(key);
         if( it == _ret._mapdata.end() ) {
-            return py::object();
+            return py::none_();
         }
         return toPyArray(it->second);
     }
@@ -289,7 +289,7 @@ object toPyIkSolver(IkSolverBasePtr pIkSolver, object opyenv)
     if( pyenv.check() ) {
         return py::to_object(toPyIkSolver(pIkSolver,(PyEnvironmentBasePtr)pyenv));
     }
-    return py::object();
+    return py::none_();
 }
 
 PyIkSolverBasePtr RaveCreateIkSolver(PyEnvironmentBasePtr pyenv, const std::string& name)

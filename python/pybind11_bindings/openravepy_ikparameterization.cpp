@@ -278,7 +278,7 @@ public:
         if( _param.GetCustomValues(name,values) ) {
             return toPyArray(values);
         }
-        return py::object();
+        return py::none_();
     }
 
     object GetCustomDataMap()

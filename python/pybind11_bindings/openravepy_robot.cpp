@@ -440,7 +440,7 @@ public:
                 else {
                     vector<dReal> solution;
                     if( !_FindIKSolution(ikparam,solution,filteroptions,releasegil) ) {
-                        return py::object();
+                        return py::none_();
                     }
                     return toPyArray(solution);
                 }
@@ -455,7 +455,7 @@ public:
                 else {
                     vector<dReal> solution;
                     if( !_FindIKSolution(ExtractTransform(oparam),solution,filteroptions,releasegil) ) {
-                        return py::object();
+                        return py::none_();
                     }
                     return toPyArray(solution);
                 }
@@ -476,7 +476,7 @@ public:
                 else {
                     vector<dReal> solution;
                     if( !_FindIKSolution(ikparam,vfreeparams,solution,filteroptions,releasegil) ) {
-                        return py::object();
+                        return py::none_();
                     }
                     return toPyArray(solution);
                 }
@@ -491,7 +491,7 @@ public:
                 else {
                     vector<dReal> solution;
                     if( !_FindIKSolution(ExtractTransform(oparam),vfreeparams, solution,filteroptions,releasegil) ) {
-                        return py::object();
+                        return py::none_();
                     }
                     return toPyArray(solution);
                 }

@@ -65,12 +65,12 @@ object GetCustomParameters(const std::map<std::string, std::vector<T> >& paramet
                 return py::to_object(it->second.at(index));
             }
             else {
-                return py::object();
+                return py::none_();
             }
         }
         return toPyArray(it->second);
     }
-    return py::object();
+    return py::none_();
 }
 
 class PySideWall
@@ -1150,7 +1150,7 @@ public:
         if( it != _plink->GetStringParameters().end() ) {
             return ConvertStringToUnicode(it->second);
         }
-        return py::object();
+        return py::none_();
     }
 
     void SetStringParameters(const std::string& key, object ovalue)
@@ -1508,7 +1508,7 @@ public:
         if( it != _pjoint->GetStringParameters().end() ) {
             return ConvertStringToUnicode(it->second);
         }
-        return py::object();
+        return py::none_();
     }
 
     void SetStringParameters(const std::string& key, object ovalue)
@@ -1584,7 +1584,7 @@ public:
     object GetBody() const {
         KinBodyPtr pbody = _state.GetBody();
         if( !pbody ) {
-            return py::object();
+            return py::none_();
         }
         if( pbody->IsRobot() ) {
             return py::to_object(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(pbody),_pyenv));
@@ -3088,7 +3088,7 @@ void PyKinBody::__exit__(object type, object value, object traceback)
 object toPyKinBodyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv)
 {
     if( !plink ) {
-        return py::object();
+        return py::none_();
     }
     return py::to_object(PyLinkPtr(new PyLink(plink,pyenv)));
 }
@@ -3100,13 +3100,13 @@ object toPyKinBodyLink(KinBody::LinkPtr plink, object opyenv)
         // call object toPyKinBodyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv)
         return toPyKinBodyLink(plink, (PyEnvironmentBasePtr)pyenv);
     }
-    return py::object();
+    return py::none_();
 }
 
 object toPyKinBodyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv)
 {
     if( !pjoint ) {
-        return py::object();
+        return py::none_();
     }
     return py::to_object(PyJointPtr(new PyJoint(pjoint,pyenv)));
 }
@@ -3201,7 +3201,7 @@ object toPyKinBody(KinBodyPtr pkinbody, object opyenv)
     if( pyenv.check() ) {
         return py::to_object(toPyKinBody(pkinbody,(PyEnvironmentBasePtr)pyenv));
     }
-    return py::object();
+    return py::none_();
 }
 
 PyKinBodyPtr RaveCreateKinBody(PyEnvironmentBasePtr pyenv, const std::string& name)

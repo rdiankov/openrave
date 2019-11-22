@@ -1124,7 +1124,7 @@ public:
     object GetBody() const {
         KinBodyPtr pbody = _state.GetBody();
         if( !pbody ) {
-            return py::object();
+            return py::none_();
         }
         if( pbody->IsRobot() ) {
             return py::to_object(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(pbody),_pyenv));

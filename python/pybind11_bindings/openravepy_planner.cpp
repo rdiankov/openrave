@@ -379,7 +379,7 @@ PlannerBase::PlannerParametersConstPtr GetPlannerParametersConst(object o)
 object toPyPlannerParameters(PlannerBase::PlannerParametersPtr params)
 {
     if( !params ) {
-        return py::object();
+        return py::none_();
     }
     return py::to_object(PyPlannerBase::PyPlannerParametersPtr(new PyPlannerBase::PyPlannerParameters(params)));
 }

@@ -247,6 +247,9 @@ struct extract_ {
     T _data;
 }; // struct extract_
 using scope_ = object;
+inline object none_() {
+    return none();
+}
 } // namespace pybind11
 #define OPENRAVE_PYTHON_MODULE(X) PYBIND11_MODULE(X, m)
 #include "map.h"
@@ -283,6 +286,9 @@ template <typename T>
 using extract_ = extract<T>;
 // https://www.boost.org/doc/libs/1_62_0/libs/python/doc/html/reference/high_level_components/boost_python_scope_hpp.html
 using scope_ = scope;
+inline object none_() {
+    return object();
+}
 } // namespace boost::python
 } // namespace boost
 #endif // USE_PYBIND11_PYTHON_BINDINGS

@@ -107,7 +107,7 @@ XMLReadablePtr ExtractXMLReadable(object o) {
 
 object toPyXMLReadable(XMLReadablePtr p) {
     if( !p ) {
-        return py::object();
+        return py::none_();
     }
     return py::to_object(PyXMLReadablePtr(new PyXMLReadable(p)));
 }
@@ -130,7 +130,7 @@ PyXMLReadablePtr pyCreateStringXMLReadable(const std::string& xmlid, const std::
 object toPyGraphHandle(const GraphHandlePtr p)
 {
     if( !p ) {
-        return py::object();
+        return py::none_();
     }
     return py::to_object(PyGraphHandle(p));
 }
@@ -138,7 +138,7 @@ object toPyGraphHandle(const GraphHandlePtr p)
 object toPyUserData(UserDataPtr p)
 {
     if( !p ) {
-        return py::object();
+        return py::none_();
     }
     return py::to_object(PyUserData(p));
 }
@@ -437,7 +437,7 @@ public:
     {
         std::vector<ConfigurationSpecification::Group>::const_iterator it  = _spec.FindCompatibleGroup(name,exactmatch);
         if( it == _spec._vgroups.end() ) {
-            return py::object();
+            return py::none_();
         }
         return py::to_object(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group>(new ConfigurationSpecification::Group(*it)));
     }
@@ -446,7 +446,7 @@ public:
     {
         std::vector<ConfigurationSpecification::Group>::const_iterator it  = _spec.FindTimeDerivativeGroup(name,exactmatch);
         if( it == _spec._vgroups.end() ) {
-            return py::object();
+            return py::none_();
         }
         return py::to_object(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group>(new ConfigurationSpecification::Group(*it)));
     }
@@ -513,7 +513,7 @@ public:
         if( _spec.ExtractTransform(t,vdata.begin(),openravepy::GetKinBody(pybody)) ) {
             return openravepy::ReturnTransform(t);
         }
-        return py::object();
+        return py::none_();
     }
 
     object ExtractIkParameterization(object odata, int timederivative=0, const std::string& robotname="", const std::string& manipulatorname="") const
@@ -525,7 +525,7 @@ public:
             return toPyIkParameterization(ikparam);
         }
         else {
-            return py::object();
+            return py::none_();
         }
     }
 
@@ -538,7 +538,7 @@ public:
             return toPyArray(values);
         }
         else {
-            return py::object();
+            return py::none_();
         }
     }
 
@@ -552,7 +552,7 @@ public:
             return toPyArray(values);
         }
         else {
-            return py::object();
+            return py::none_();
         }
     }
 
@@ -565,7 +565,7 @@ public:
             return py::to_object(deltatime);
         }
         else {
-            return py::object();
+            return py::none_();
         }
     }
 
@@ -851,7 +851,7 @@ object pyRaveInvertFileLookup(const std::string& filename)
     if( OpenRAVE::RaveInvertFileLookup(newfilename, filename) ) {
         return ConvertStringToUnicode(newfilename);
     }
-    return py::object();
+    return py::none_();
 }
 
 object RaveGetPluginInfo()

@@ -230,7 +230,7 @@ public:
 
     object GetReport() const {
         if( !_pconstraints->GetReport() ) {
-            return py::object();
+            return py::none_();
         }
         return py::to_object(openravepy::toPyCollisionReport(_pconstraints->GetReport(), _pyenv));
     }
@@ -411,7 +411,7 @@ public:
                 return toPyArray(vgoal);
             }
         }
-        return py::object();
+        return py::none_();
     }
 
     object SampleAll(int maxsamples=0, int maxchecksamples=0, bool releasegil = false)
