@@ -182,6 +182,7 @@ struct select_npy_type<uint64_t>
 #ifdef NDEBUG
 #undef NDEBUG
 #endif // NDEBUG
+#define OPENRAVEPY_API __attribute__ ((visibility ("default")))
 #include <iostream>
 // use std::cout temporarily
 #include <pybind11/pybind11.h>
@@ -251,7 +252,10 @@ using scope_ = object;
 #include "map.h"
 #define PY_ARG_(x) py ::arg(x),
 #define PY_ARGS(...) MAP(PY_ARG_, __VA_ARGS__)
+/* ==================== BOOST.PYTHON ==================== */
 #else // USE_PYBIND11_PYTHON_BINDINGS
+/* ==================== BOOST.PYTHON ==================== */
+#define OPENRAVEPY_API
 #include <boost/python.hpp> // already has #include <boost/shared_ptr.hpp>
 #define OPENRAVE_PYTHON_MODULE(X) BOOST_PYTHON_MODULE(X)
 // might need a space before "::"?
