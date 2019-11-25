@@ -4082,7 +4082,9 @@ void init_openravepy_kinbody()
         ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        enum_<KinBody::SaveParameters>(m, "SaveParameters" DOXY_ENUM(SaveParameters))
+        // SaveParameters belongs to KinBody, not openravepy._openravepy_.openravepy_int
+        enum_<KinBody::SaveParameters>(kinbody, "SaveParameters", py::arithmetic() DOXY_ENUM(SaveParameters))
+        .export_values()
 #else
         enum_<KinBody::SaveParameters>("SaveParameters" DOXY_ENUM(SaveParameters))
 #endif
