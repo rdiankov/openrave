@@ -77,7 +77,8 @@ public:
         object __unicode__() {
             return ConvertStringToUnicode(__str__());
         }
-        object pos, norm;
+        object pos = py::none_();
+        object norm = py::none_();
         dReal depth;
     };
 
@@ -91,13 +92,13 @@ public:
             plink1 = openravepy::toPyKinBodyLink(OPENRAVE_CONST_POINTER_CAST<KinBody::Link>(report->plink1), pyenv);
         }
         else {
-            plink1 = object();
+            plink1 = py::none_();
         }
         if( !!report->plink2 ) {
             plink2 = openravepy::toPyKinBodyLink(OPENRAVE_CONST_POINTER_CAST<KinBody::Link>(report->plink2), pyenv);
         }
         else {
-            plink2 = object();
+            plink2 = py::none_();
         }
         py::list newcontacts;
         FOREACH(itc, report->contacts) {
@@ -128,8 +129,8 @@ public:
     }
 
     int options;
-    object plink1, plink2;
-
+    object plink1 = py::none_();
+    object plink2 = py::none_();
     py::list vLinkColliding;
     dReal minDistance;
     int numWithinTol;

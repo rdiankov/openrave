@@ -32,8 +32,8 @@ public:
     virtual ~PyCameraIntrinsics();
 
     virtual SensorBase::CameraIntrinsics GetCameraIntrinsics();
-    object K;
-    string distortion_model;
+    object K = py::none_();
+    std::string distortion_model;
     object distortion_coeffs;
     dReal focal_length;
 };
@@ -77,7 +77,7 @@ public:
     virtual SensorBase::SensorType GetType();
     virtual SensorBase::SensorGeometryPtr GetGeometry();
 
-    object resolution;
+    object resolution = py::none_();
 };
 
 class PyForce6DGeomData : public PySensorGeometry
@@ -162,7 +162,7 @@ public:
 
         SensorBase::SensorType type;
         uint64_t stamp;
-        object transform;
+        object transform = py::none_();
     };
 
     class PyLaserSensorData : public PySensorData
@@ -178,7 +178,9 @@ public:
         }
         virtual ~PyLaserSensorData() {
         }
-        object positions, ranges, intensity;
+        object positions = py::none_();
+        object ranges = py::none_();
+        object intensity = py::none_();
     };
 
     class PyCameraSensorData : public PySensorData
@@ -200,7 +202,8 @@ public:
         }
         PyCameraSensorData(OPENRAVE_SHARED_PTR<SensorBase::CameraGeomData const> pgeom);
         virtual ~PyCameraSensorData();
-        object imagedata, KK;
+        object imagedata = py::none_();
+        object KK = py::none_();
         PyCameraIntrinsics intrinsics;
     };
 
@@ -219,8 +222,9 @@ public:
         }
         virtual ~PyJointEncoderSensorData() {
         }
-        object encoderValues, encoderVelocity;
-        object resolution;
+        object encoderValues = py::none_();
+        object encoderVelocity = py::none_();
+        object resolution = py::none_();
     };
 
     class PyForce6DSensorData : public PySensorData
@@ -236,7 +240,8 @@ public:
         }
         virtual ~PyForce6DSensorData() {
         }
-        object force, torque;
+        object force = py::none_();
+        object torque = py::none_();
     };
 
     class PyIMUSensorData : public PySensorData
@@ -245,7 +250,12 @@ public:
         PyIMUSensorData(OPENRAVE_SHARED_PTR<SensorBase::IMUGeomData const> pgeom, OPENRAVE_SHARED_PTR<SensorBase::IMUSensorData> pdata);
         PyIMUSensorData(OPENRAVE_SHARED_PTR<SensorBase::IMUGeomData const> pgeom);
         virtual ~PyIMUSensorData();
-        object rotation, angular_velocity, linear_acceleration, rotation_covariance, angular_velocity_covariance, linear_acceleration_covariance;
+        object rotation = py::none_();
+        object angular_velocity = py::none_();
+        object linear_acceleration = py::none_();
+        object rotation_covariance = py::none_();
+        object angular_velocity_covariance = py::none_();
+        object linear_acceleration_covariance = py::none_();
     };
 
     class PyOdometrySensorData : public PySensorData
@@ -254,7 +264,11 @@ public:
         PyOdometrySensorData(OPENRAVE_SHARED_PTR<SensorBase::OdometryGeomData const> pgeom, OPENRAVE_SHARED_PTR<SensorBase::OdometrySensorData> pdata);
         PyOdometrySensorData(OPENRAVE_SHARED_PTR<SensorBase::OdometryGeomData const> pgeom);
         virtual ~PyOdometrySensorData();
-        object pose, linear_velocity, angular_velocity, pose_covariance, velocity_covariance;
+        object pose = py::none_();
+        object linear_velocity = py::none_();
+        object angular_velocity = py::none_();
+        object pose_covariance = py::none_();
+        object velocity_covariance = py::none_();
         std::string targetid;
     };
 
@@ -264,7 +278,9 @@ public:
         PyTactileSensorData(OPENRAVE_SHARED_PTR<SensorBase::TactileGeomData const> pgeom, OPENRAVE_SHARED_PTR<SensorBase::TactileSensorData> pdata);
         PyTactileSensorData(OPENRAVE_SHARED_PTR<SensorBase::TactileGeomData const> pgeom);
         virtual ~PyTactileSensorData();
-        object forces, force_covariance, positions;
+        object forces = py::none_();
+        object force_covariance = py::none_();
+        object positions = py::none_();
         dReal thickness;
     };
 

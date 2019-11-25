@@ -321,7 +321,7 @@ object pyMergeTrajectories(object pytrajectories)
 class PyDHParameter
 {
 public:
-    PyDHParameter() : parentindex(-1), transform(ReturnTransform(Transform())), d(0), a(0), theta(0), alpha(0) {
+    PyDHParameter() {
     }
     PyDHParameter(const OpenRAVE::planningutils::DHParameter& p, PyEnvironmentBasePtr pyenv) : joint(toPyKinBodyJoint(OPENRAVE_CONST_POINTER_CAST<KinBody::Joint>(p.joint), pyenv)), parentindex(p.parentindex), transform(ReturnTransform(p.transform)), d(p.d), a(p.a), theta(p.theta), alpha(p.alpha) {
     }
@@ -340,10 +340,10 @@ public:
         return ConvertStringToUnicode(__str__());
     }
 
-    object joint;
-    int parentindex;
-    object transform;
-    dReal d, a, theta, alpha;
+    object joint = py::none_();
+    int parentindex = -1;
+    object transform = ReturnTransform(Transform());
+    dReal d = 0.0, a = 0.0, theta = 0.0, alpha = 0.0;
 };
 
 object toPyDHParameter(const OpenRAVE::planningutils::DHParameter& p, PyEnvironmentBasePtr pyenv)
@@ -357,7 +357,7 @@ class DHParameter_pickle_suite : public pickle_suite
 public:
     static py::tuple getinitargs(const PyDHParameter& p)
     {
-        return py::make_tuple(object(), p.parentindex, p.transform, p.d, p.a, p.theta, p.alpha);
+        return py::make_tuple(py::none_(), p.parentindex, p.transform, p.d, p.a, p.theta, p.alpha);
     }
 };
 #endif
@@ -377,7 +377,7 @@ py::list pyGetDHParameters(PyKinBodyPtr pybody)
 class PyManipulatorIKGoalSampler
 {
 public:
-    PyManipulatorIKGoalSampler(object pymanip, object oparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal jitter=0, bool searchfreeparameters=true, uint32_t ikfilteroptions = IKFO_CheckEnvCollisions, object freevalues = object()) {
+    PyManipulatorIKGoalSampler(object pymanip, object oparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal jitter=0, bool searchfreeparameters=true, uint32_t ikfilteroptions = IKFO_CheckEnvCollisions, object freevalues = py::none_()) {
         std::list<IkParameterization> listparameterizationsPtr;
         size_t num = len(oparameterizations);
         for(size_t i = 0; i < num; ++i) {

@@ -941,7 +941,7 @@ public:
         return new PyStateRestoreContext<PyRobotStateSaverPtr, PyRobotBasePtr>(saver);
     }
 
-    PyStateRestoreContextBase* CreateRobotStateSaver(object options=object()) {
+    PyStateRestoreContextBase* CreateRobotStateSaver(object options=py::none_()) {
         return CreateStateSaver(options);
     }
 

@@ -73,8 +73,8 @@ public:
 
         void SetPostProcessing(const std::string& plannername, const std::string& plannerparameters);
 
-        string __repr__();
-        string __str__();
+        std::string __repr__();
+        std::string __str__();
         object __unicode__();
         bool __eq__(OPENRAVE_SHARED_PTR<PyPlannerParameters> p);
         bool __ne__(OPENRAVE_SHARED_PTR<PyPlannerParameters> p);
@@ -87,7 +87,7 @@ public:
     virtual ~PyPlannerBase();
 
     bool InitPlan(PyRobotBasePtr pyrobot, PyPlannerParametersPtr pparams, bool releasegil=false);
-    bool InitPlan(PyRobotBasePtr pbase, const string& params);
+    bool InitPlan(PyRobotBasePtr pbase, const std::string& params);
 
     object PlanPath(PyTrajectoryBasePtr pytraj,bool releasegil=true);
 

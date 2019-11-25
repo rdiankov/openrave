@@ -47,8 +47,8 @@ public:
     object __unicode__();
 
     int options;
-    object plink1 = py::none_(), plink2 = py::none_();
-
+    object plink1 = py::none_();
+    object plink2 = py::none_();
     py::list vLinkColliding;
     dReal minDistance;
     int numWithinTol;

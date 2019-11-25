@@ -87,12 +87,12 @@ public:
         return pinfo;
     }
 
-    object _name, _sBaseLinkName, _sEffectorLinkName;
-    object _tLocalTool;
-    object _vChuckingDirection;
-    object _vdirection;
+    object _name = py::none_(), _sBaseLinkName = py::none_(), _sEffectorLinkName = py::none_();
+    object _tLocalTool = py::none_();
+    object _vChuckingDirection = py::none_();
+    object _vdirection = py::none_();
     std::string _sIkSolverXMLId;
-    object _vGripperJointNames;
+    object _vGripperJointNames = py::none_();
 };
 
 PyManipulatorInfoPtr toPyManipulatorInfo(const RobotBase::ManipulatorInfo& manipulatorinfo)
@@ -124,9 +124,9 @@ public:
         return pinfo;
     }
 
-    object _name, _linkname;
-    object _trelative;
-    object _sensorname;
+    object _name = py::none_(), _linkname = py::none_();
+    object _trelative = py::none_();
+    object _sensorname = py::none_();
     PySensorGeometryPtr _sensorgeometry;
 };
 
@@ -183,14 +183,14 @@ public:
         return pinfo;
     }
 
-    object _name;
-    object _linkname;
-    object _trelative;
-    object _url;
-    object _linkInfos;
-    object _jointInfos;
-    object _manipulatorInfos;
-    object _attachedSensorInfos;
+    object _name = py::none_();
+    object _linkname = py::none_();
+    object _trelative = py::none_();
+    object _url = py::none_();
+    object _linkInfos = py::none_();
+    object _jointInfos = py::none_();
+    object _manipulatorInfos = py::none_();
+    object _attachedSensorInfos = py::none_();
 
 };
 
@@ -464,7 +464,7 @@ public:
 
         object FindIKSolution(object oparam, object freeparams, int filteroptions, bool ikreturn=false, bool releasegil=false) const
         {
-            vector<dReal> vfreeparams = ExtractArray<dReal>(freeparams);
+            std::vector<dReal> vfreeparams = ExtractArray<dReal>(freeparams);
             IkParameterization ikparam;
             EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
             if( ExtractIkParameterization(oparam,ikparam) ) {
@@ -1580,7 +1580,7 @@ public:
         return new PyStateRestoreContext<PyRobotStateSaverPtr, PyRobotBasePtr>(saver);
     }
 
-    PyStateRestoreContextBase* CreateRobotStateSaver(object options=object()) {
+    PyStateRestoreContextBase* CreateRobotStateSaver(object options=py::none_()) {
         return CreateStateSaver(options);
     }
 
@@ -1654,7 +1654,7 @@ RobotBase::ManipulatorPtr GetRobotManipulator(object o)
 
 object toPyRobotManipulator(RobotBase::ManipulatorPtr pmanip, PyEnvironmentBasePtr pyenv)
 {
-    return !pmanip ? object() : py::to_object(PyRobotBase::PyManipulatorPtr(new PyRobotBase::PyManipulator(pmanip,pyenv)));
+    return !pmanip ? py::none_() : py::to_object(PyRobotBase::PyManipulatorPtr(new PyRobotBase::PyManipulator(pmanip,pyenv)));
 }
 
 PyRobotBasePtr RaveCreateRobot(PyEnvironmentBasePtr pyenv, const std::string& name)

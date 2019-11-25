@@ -51,7 +51,7 @@ namespace numeric = py::numeric;
 class PyPlannerProgress
 {
 public:
-    PyPlannerProgress() : _iteration(0) {
+    PyPlannerProgress() {
     }
     PyPlannerProgress(const PlannerBase::PlannerProgress& progress) {
         _iteration = progress._iteration;
@@ -60,7 +60,7 @@ public:
         return boost::str(boost::format("<PlannerProgress: iter=%d>")%_iteration);
     }
 
-    int _iteration;
+    int _iteration = 0;
 };
 
 
@@ -68,8 +68,6 @@ class PyPlannerStatus
 {
 public:
     PyPlannerStatus() {
-        statusCode = 0;
-        jointValues = py::empty_array();
     }
 
     PyPlannerStatus(const PlannerStatus& status) {
@@ -81,7 +79,7 @@ public:
 
         if( !status.report ) {
             //_report = "";
-            report = object();
+            report = py::none_();
         }
         else {
             //_report = status._report->__str__();
@@ -91,13 +89,13 @@ public:
         ikparam = toPyIkParameterization(status.ikparam);
     }
 
-    object report;
+    object report = py::none_();
     //std::string _report;
-    object description;
-    object errorOrigin;
-    object jointValues;
-    object ikparam;
-    uint32_t statusCode;
+    object description = py::none_();
+    object errorOrigin = py::none_();
+    object jointValues = py::empty_array();
+    object ikparam = py::none_();
+    uint32_t statusCode = 0;
 };
 
 object toPyPlannerStatus(const PlannerStatus& status)

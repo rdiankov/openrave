@@ -1371,7 +1371,7 @@ public:
         openravepy::PythonThreadSaver threadsaver;
         return _penv->Load(filename, dictatts);
     }
-    bool LoadURI(const string &filename, object odictatts=object()) {
+    bool LoadURI(const string &filename, object odictatts=py::none_()) {
         AttributesList dictatts = toAttributesList(odictatts);
         openravepy::PythonThreadSaver threadsaver;
         return _penv->LoadURI(filename, dictatts);
@@ -1386,7 +1386,7 @@ public:
         return _penv->LoadData(data, dictatts);
     }
 
-    void Save(const string &filename, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=object()) {
+    void Save(const string &filename, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=py::none_()) {
         extract_<std::string> otarget(odictatts);
         if( otarget.check() ) {
             // old versions
@@ -1402,7 +1402,7 @@ public:
         }
     }
 
-    object WriteToMemory(const string &filetype, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=object()) {
+    object WriteToMemory(const string &filetype, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=py::none_()) {
         std::vector<char> output;
         extract_<std::string> otarget(odictatts);
         if( otarget.check() ) {
@@ -1871,7 +1871,7 @@ public:
         return make_pair(numpoints,numcolors);
     }
 
-    object plot3(object opoints,float pointsize,object ocolors=object(),int drawstyle=0)
+    object plot3(object opoints,float pointsize,object ocolors=py::none_(),int drawstyle=0)
     {
         vector<float> vpoints, vcolors;
         pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
@@ -1887,7 +1887,7 @@ public:
         return toPyGraphHandle(_penv->plot3(&vpoints[0],sizes.first,sizeof(float)*3,pointsize,vcolor,drawstyle));
     }
 
-    object drawlinestrip(object opoints,float linewidth,object ocolors=object(),int drawstyle=0)
+    object drawlinestrip(object opoints,float linewidth,object ocolors=py::none_(),int drawstyle=0)
     {
         vector<float> vpoints, vcolors;
         pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
@@ -1903,7 +1903,7 @@ public:
         return toPyGraphHandle(_penv->drawlinestrip(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,vcolor));
     }
 
-    object drawlinelist(object opoints,float linewidth,object ocolors=object(),int drawstyle=0)
+    object drawlinelist(object opoints,float linewidth,object ocolors=py::none_(),int drawstyle=0)
     {
         vector<float> vpoints, vcolors;
         pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
@@ -1919,7 +1919,7 @@ public:
         return toPyGraphHandle(_penv->drawlinelist(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,vcolor));
     }
 
-    object drawarrow(object op1, object op2, float linewidth=0.002, object ocolor=object())
+    object drawarrow(object op1, object op2, float linewidth=0.002, object ocolor=py::none_())
     {
         RaveVector<float> vcolor(1,0.5,0.5,1);
         if( !IS_PYTHONOBJECT_NONE(ocolor) ) {
@@ -1928,7 +1928,7 @@ public:
         return toPyGraphHandle(_penv->drawarrow(ExtractVector3(op1),ExtractVector3(op2),linewidth,vcolor));
     }
 
-    object drawbox(object opos, object oextents, object ocolor=object())
+    object drawbox(object opos, object oextents, object ocolor=py::none_())
     {
         RaveVector<float> vcolor(1,0.5,0.5,1);
         if( !IS_PYTHONOBJECT_NONE(ocolor) ) {
@@ -1950,7 +1950,7 @@ public:
         return toPyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture));
     }
 
-    object drawtrimesh(object opoints, object oindices=object(), object ocolors=object())
+    object drawtrimesh(object opoints, object oindices=py::none_(), object ocolors=py::none_())
     {
         vector<float> vpoints;
         _getGraphPoints(opoints,vpoints);

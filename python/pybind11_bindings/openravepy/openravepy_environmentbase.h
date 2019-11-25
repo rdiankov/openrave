@@ -93,13 +93,13 @@ public:
 
     bool Load(const std::string &filename);
     bool Load(const std::string &filename, object odictatts);
-    bool LoadURI(const std::string &filename, object odictatts=object());
+    bool LoadURI(const std::string &filename, object odictatts=py::none_());
     bool LoadData(const std::string &data);
     bool LoadData(const std::string &data, object odictatts);
 
-    void Save(const std::string &filename, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=object());
+    void Save(const std::string &filename, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=py::none_());
 
-    object WriteToMemory(const std::string &filetype, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=object());
+    object WriteToMemory(const std::string &filetype, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=py::none_());
 
     object ReadRobotURI(const std::string &filename);
     object ReadRobotURI(const std::string &filename, object odictatts);
@@ -193,20 +193,20 @@ public:
 
     static std::pair<size_t,size_t> _getGraphPointsColors(object opoints, object ocolors, std::vector<float>&vpoints, std::vector<float>&vcolors);
 
-    object plot3(object opoints,float pointsize,object ocolors=object(),int drawstyle=0);
+    object plot3(object opoints,float pointsize,object ocolors=py::none_(),int drawstyle=0);
 
-    object drawlinestrip(object opoints,float linewidth,object ocolors=object(),int drawstyle=0);
+    object drawlinestrip(object opoints,float linewidth,object ocolors=py::none_(),int drawstyle=0);
 
-    object drawlinelist(object opoints,float linewidth,object ocolors=object(),int drawstyle=0);
+    object drawlinelist(object opoints,float linewidth,object ocolors=py::none_(),int drawstyle=0);
 
-    object drawarrow(object op1, object op2, float linewidth=0.002, object ocolor=object());
+    object drawarrow(object op1, object op2, float linewidth=0.002, object ocolor=py::none_());
 
-    object drawbox(object opos, object oextents, object ocolor=object());
+    object drawbox(object opos, object oextents, object ocolor=py::none_());
 
     object drawplane(object otransform, object oextents, const boost::multi_array<float,2>&_vtexture);
     object drawplane(object otransform, object oextents, const boost::multi_array<float,3>&vtexture);
 
-    object drawtrimesh(object opoints, object oindices=object(), object ocolors=object());
+    object drawtrimesh(object opoints, object oindices=py::none_(), object ocolors=py::none_());
 
     object GetBodies();
 

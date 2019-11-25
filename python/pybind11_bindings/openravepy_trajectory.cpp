@@ -279,7 +279,7 @@ public:
         return PyTrajectoryBasePtr(new PyTrajectoryBase(RaveInterfaceCast<TrajectoryBase>(p),_pyenv));
     }
 
-    object serialize(object ooptions=object())
+    object serialize(object ooptions=py::none_())
     {
         std::stringstream ss;
         ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);

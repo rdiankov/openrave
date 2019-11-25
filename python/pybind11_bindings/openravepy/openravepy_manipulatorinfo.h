@@ -31,12 +31,14 @@ public:
 
     RobotBase::ManipulatorInfoPtr GetManipulatorInfo() const;
 
-    object _name, _sBaseLinkName, _sEffectorLinkName;
-    object _tLocalTool;
-    object _vChuckingDirection;
-    object _vdirection;
+    object _name = py::none_();
+    object _sBaseLinkName = py::none_();
+    object _sEffectorLinkName = py::none_();
+    object _tLocalTool = py::none_();
+    object _vChuckingDirection = py::none_();
+    object _vdirection = py::none_();
     std::string _sIkSolverXMLId;
-    object _vGripperJointNames;
+    object _vGripperJointNames = py::none_();
 };
 
 class PyAttachedSensorInfo
@@ -47,9 +49,10 @@ public:
 
     RobotBase::AttachedSensorInfoPtr GetAttachedSensorInfo() const;
 
-    object _name, _linkname;
-    object _trelative;
-    object _sensorname;
+    object _name = py::none_();
+    object _linkname = py::none_();
+    object _trelative = py::none_();
+    object _sensorname = py::none_();
     PySensorGeometryPtr _sensorgeometry;
 };
 
@@ -61,14 +64,14 @@ public:
 
     RobotBase::ConnectedBodyInfoPtr GetConnectedBodyInfo() const;
 
-    object _name;
-    object _linkname;
-    object _trelative;
-    object _url;
-    object _linkInfos;
-    object _jointInfos;
-    object _manipulatorInfos;
-    object _attachedSensorInfos;
+    object _name = py::none_();
+    object _linkname = py::none_();
+    object _trelative = py::none_();
+    object _url = py::none_();
+    object _linkInfos = py::none_();
+    object _jointInfos = py::none_();
+    object _manipulatorInfos = py::none_();
+    object _attachedSensorInfos = py::none_();
 
 };
 

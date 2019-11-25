@@ -83,7 +83,7 @@ public:
 
     PyTrajectoryBasePtr deserialize(const string& s);
 
-    object serialize(object ooptions=object());
+    object serialize(object ooptions=py::none_());
     bool Read(const string& s, object probot);
 
     object Write(object options);

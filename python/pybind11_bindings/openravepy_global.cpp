@@ -371,7 +371,8 @@ public:
         return ConvertStringToUnicode(__str__());
     }
 
-    object vertices,indices;
+    object vertices = py::none_();
+    object indices = py::none_();
 };
 
 bool ExtractTriMesh(object o, TriMesh& mesh)
@@ -737,7 +738,7 @@ PyConfigurationSpecificationPtr pyRaveGetAffineConfigurationSpecification(int af
     return openravepy::toPyConfigurationSpecification(RaveGetAffineConfigurationSpecification(affinedofs,openravepy::GetKinBody(pybody), interpolation));
 }
 
-object pyRaveGetAffineDOFValuesFromTransform(object otransform, int affinedofs, object oActvAffineRotationAxis=object())
+object pyRaveGetAffineDOFValuesFromTransform(object otransform, int affinedofs, object oActvAffineRotationAxis=py::none_())
 {
     Vector vActvAffineRotationAxis(0,0,1);
     if( !IS_PYTHONOBJECT_NONE(oActvAffineRotationAxis) ) {
@@ -833,7 +834,7 @@ void pyRaveSetDebugLevel(object olevel)
     OpenRAVE::RaveSetDebugLevel(pyGetIntFromPy(olevel, Level_Info));
 }
 
-int pyRaveInitialize(bool bLoadAllPlugins=true, object olevel=object())
+int pyRaveInitialize(bool bLoadAllPlugins=true, object olevel=py::none_())
 {
 
     return OpenRAVE::RaveInitialize(bLoadAllPlugins,pyGetIntFromPy(olevel, Level_Info));
