@@ -226,9 +226,10 @@ public:
     py::list _vSideWalls;
     float _containerBaseHeight;
     GeometryType _type;
-    object _name;
-    object _filenamerender, _filenamecollision;
-    object _vRenderScale, _vCollisionScale;
+    // best to initialize these as None's
+    object _name = py::none_();
+    object _filenamerender = py::none_(), _filenamecollision = py::none_();
+    object _vRenderScale = py::none_(), _vCollisionScale = py::none_();
     py::dict _mapExtraGeometries;
     float _fTransparency;
     bool _bVisible, _bModifiable;
