@@ -254,6 +254,7 @@ using scope_ = object;
 inline object none_() {
     return none();
 }
+using array_int = array_t<int>; // py::array_int
 } // namespace pybind11
 #define OPENRAVE_PYTHON_MODULE(X) PYBIND11_MODULE(X, m)
 #include "map.h"
@@ -293,6 +294,7 @@ using scope_ = scope;
 inline object none_() {
     return object();
 }
+using array_int = object; // py::array_int
 } // namespace boost::python
 } // namespace boost
 #endif // USE_PYBIND11_PYTHON_BINDINGS

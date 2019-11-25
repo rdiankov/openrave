@@ -290,18 +290,18 @@ public:
         {
             _pmanip->SetChuckingDirection(ExtractArray<dReal>(ochuckingdirection));
         }
-        object GetGripperJoints() {
+        py::array_int GetGripperJoints() {
             RAVELOG_DEBUG("GetGripperJoints is deprecated, use GetGripperIndices\n");
             return toPyArray(_pmanip->GetGripperIndices());
         }
-        object GetGripperIndices() {
+        py::array_int GetGripperIndices() {
             return toPyArray(_pmanip->GetGripperIndices());
         }
-        object GetArmJoints() {
+        py::array_int GetArmJoints() {
             RAVELOG_DEBUG("GetArmJoints is deprecated, use GetArmIndices\n");
             return toPyArray(_pmanip->GetArmIndices());
         }
-        object GetArmIndices() {
+        py::array_int GetArmIndices() {
             return toPyArray(_pmanip->GetArmIndices());
         }
         object GetArmDOFValues()
