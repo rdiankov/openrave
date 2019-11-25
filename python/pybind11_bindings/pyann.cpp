@@ -326,6 +326,7 @@ OPENRAVE_PYTHON_MODULE(pyANN_int)
 {
     import_array();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+    using namespace py::literals; // "..."_a
     class_< pyann_exception >(m, "_pyann_exception_" )
 #else
     numeric::array::set_module_and_type("numpy", "ndarray");
@@ -351,6 +352,8 @@ OPENRAVE_PYTHON_MODULE(pyANN_int)
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<ANNkd_tree, OPENRAVE_SHARED_PTR<ANNkd_tree>>(m, "KDTree")
+    .def(init<int, int, int>(), "n"_a = 0, "dd"_a = 0, "bs"_a = 1)
+    .def(init<int, int, int, ANNsplitRule>(), "n"_a, "dd"_a, "bs"_a = 1, "split"_a = (int) ANN_KD_SUGGEST)
     // https://pybind11.readthedocs.io/en/stable/advanced/classes.html#custom-constructors
     .def( init<>(&init_from_list))
 #else

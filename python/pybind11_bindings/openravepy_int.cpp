@@ -2328,7 +2328,9 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
 {
     using namespace openravepy;
     import_array(); // not sure if this is necessary for pybind11
-#ifndef USE_PYBIND11_PYTHON_BINDINGS
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    using namespace py::literals; // "..."_a
+#else // USE_PYBIND11_PYTHON_BINDINGS
 #if BOOST_VERSION >= 103500
     docstring_options doc_options;
     doc_options.disable_cpp_signatures();
@@ -2342,15 +2344,18 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
     float_from_number<double>();
     init_python_bindings();
     typedef return_value_policy< copy_const_reference > return_copy_const_ref;
-#endif
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_< openrave_exception >( m, "_openrave_exception_", DOXY_CLASS(openrave_exception) )
+    .def(init<>())
+    .def(init<const std::string&, OpenRAVEErrorCode>(), "s"_a, "error"_a = (int) ORE_Failed)
 #else
     class_< openrave_exception >( "_openrave_exception_", DOXY_CLASS(openrave_exception) )
-#endif
     .def( init<const std::string&>() )
     .def( init<const openrave_exception&>() )
+#endif
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .def( "message", &openrave_exception::message )
 #else
@@ -2524,9 +2529,9 @@ Because race conditions can pop up when trying to lock the openrave environment 
 
         scope_ env = classenv
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                    .def(init<int>(),
-                        "options"_a = (int) ECO_StartSimulationThread
-                    )
+                    .def(init<int>(), "options"_a = (int) ECO_StartSimulationThread)
+                    .def(init<EnvironmentBasePtr>(), "penv"_a)
+                    .def(init<const PyEnvironmentBase&>(), "penv"_a)
 #else
                     .def(init<optional<int> >(py::args("options")))
 #endif

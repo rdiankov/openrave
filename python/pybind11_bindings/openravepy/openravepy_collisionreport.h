@@ -35,15 +35,16 @@ public:
         PYCONTACT();
         PYCONTACT(const CollisionReport::CONTACT& c);
 
-        string __str__();
+        std::string __str__();
         object __unicode__();
-        object pos, norm;
+        object pos = py::none_();
+        object norm = py::none_();
         dReal depth;
     };
 
     void init(PyEnvironmentBasePtr pyenv);
 
-    string __str__();
+    std::string __str__();
     object __unicode__();
 
     int options;

@@ -148,17 +148,9 @@ public:
     class PySensorData
     {
 public:
-        PySensorData(SensorBase::SensorType type) : type(type), stamp(0) {
-        }
-        PySensorData(SensorBase::SensorDataPtr pdata)
-        {
-            type = pdata->GetType();
-            stamp = pdata->__stamp;
-            transform = ReturnTransform(pdata->__trans);
-        }
-        virtual ~PySensorData() {
-        }
-
+        PySensorData(SensorBase::SensorType type);
+        PySensorData(SensorBase::SensorDataPtr pdata);
+        virtual ~PySensorData();
 
         SensorBase::SensorType type;
         uint64_t stamp;
@@ -168,16 +160,9 @@ public:
     class PyLaserSensorData : public PySensorData
     {
 public:
-        PyLaserSensorData(OPENRAVE_SHARED_PTR<SensorBase::LaserGeomData const> pgeom, OPENRAVE_SHARED_PTR<SensorBase::LaserSensorData> pdata) : PySensorData(pdata)
-        {
-            positions = toPyArray3(pdata->positions);
-            ranges = toPyArray3(pdata->ranges);
-            intensity = toPyArrayN(pdata->intensity.size()>0 ? &pdata->intensity[0] : NULL,pdata->intensity.size());
-        }
-        PyLaserSensorData(OPENRAVE_SHARED_PTR<SensorBase::LaserGeomData const> pgeom) : PySensorData(SensorBase::ST_Laser) {
-        }
-        virtual ~PyLaserSensorData() {
-        }
+        PyLaserSensorData(OPENRAVE_SHARED_PTR<SensorBase::LaserGeomData const> pgeom, OPENRAVE_SHARED_PTR<SensorBase::LaserSensorData> pdata);
+        PyLaserSensorData(OPENRAVE_SHARED_PTR<SensorBase::LaserGeomData const> pgeom);
+        virtual ~PyLaserSensorData();
         object positions = py::none_();
         object ranges = py::none_();
         object intensity = py::none_();
@@ -186,20 +171,7 @@ public:
     class PyCameraSensorData : public PySensorData
     {
 public:
-        PyCameraSensorData(OPENRAVE_SHARED_PTR<SensorBase::CameraGeomData const> pgeom, OPENRAVE_SHARED_PTR<SensorBase::CameraSensorData> pdata) : PySensorData(pdata), intrinsics(pgeom->intrinsics)
-        {
-            if( (int)pdata->vimagedata.size() != pgeom->height*pgeom->width*3 ) {
-                throw openrave_exception(_("bad image data"));
-            }
-            {
-                npy_intp dims[] = { pgeom->height,pgeom->width,3};
-                PyObject *pyvalues = PyArray_SimpleNew(3,dims, PyArray_UINT8);
-                if( pdata->vimagedata.size() > 0 ) {
-                    memcpy(PyArray_DATA(pyvalues),&pdata->vimagedata[0],pdata->vimagedata.size());
-                }
-                imagedata = py::to_array(pyvalues);
-            }
-        }
+        PyCameraSensorData(OPENRAVE_SHARED_PTR<SensorBase::CameraGeomData const> pgeom, OPENRAVE_SHARED_PTR<SensorBase::CameraSensorData> pdata);
         PyCameraSensorData(OPENRAVE_SHARED_PTR<SensorBase::CameraGeomData const> pgeom);
         virtual ~PyCameraSensorData();
         object imagedata = py::none_();
@@ -210,18 +182,9 @@ public:
     class PyJointEncoderSensorData : public PySensorData
     {
 public:
-        PyJointEncoderSensorData(OPENRAVE_SHARED_PTR<SensorBase::JointEncoderGeomData const> pgeom, OPENRAVE_SHARED_PTR<SensorBase::JointEncoderSensorData> pdata) : PySensorData(pdata)
-        {
-            encoderValues = toPyArray(pdata->encoderValues);
-            encoderVelocity = toPyArray(pdata->encoderVelocity);
-            resolution = toPyArray(pgeom->resolution);
-        }
-        PyJointEncoderSensorData(OPENRAVE_SHARED_PTR<SensorBase::JointEncoderGeomData const> pgeom) : PySensorData(SensorBase::ST_JointEncoder)
-        {
-            resolution = toPyArray(pgeom->resolution);
-        }
-        virtual ~PyJointEncoderSensorData() {
-        }
+        PyJointEncoderSensorData(OPENRAVE_SHARED_PTR<SensorBase::JointEncoderGeomData const> pgeom, OPENRAVE_SHARED_PTR<SensorBase::JointEncoderSensorData> pdata);
+        PyJointEncoderSensorData(OPENRAVE_SHARED_PTR<SensorBase::JointEncoderGeomData const> pgeom);
+        virtual ~PyJointEncoderSensorData();
         object encoderValues = py::none_();
         object encoderVelocity = py::none_();
         object resolution = py::none_();
@@ -230,16 +193,9 @@ public:
     class PyForce6DSensorData : public PySensorData
     {
 public:
-        PyForce6DSensorData(OPENRAVE_SHARED_PTR<SensorBase::Force6DGeomData const> pgeom, OPENRAVE_SHARED_PTR<SensorBase::Force6DSensorData> pdata) : PySensorData(pdata)
-        {
-            force = toPyVector3(pdata->force);
-            torque = toPyVector3(pdata->torque);
-        }
-        PyForce6DSensorData(OPENRAVE_SHARED_PTR<SensorBase::Force6DGeomData const> pgeom) : PySensorData(SensorBase::ST_Force6D)
-        {
-        }
-        virtual ~PyForce6DSensorData() {
-        }
+        PyForce6DSensorData(OPENRAVE_SHARED_PTR<SensorBase::Force6DGeomData const> pgeom, OPENRAVE_SHARED_PTR<SensorBase::Force6DSensorData> pdata);
+        PyForce6DSensorData(OPENRAVE_SHARED_PTR<SensorBase::Force6DGeomData const> pgeom);
+        virtual ~PyForce6DSensorData();
         object force = py::none_();
         object torque = py::none_();
     };
@@ -287,172 +243,45 @@ public:
     class PyActuatorSensorData : public PySensorData
     {
 public:
-        PyActuatorSensorData(OPENRAVE_SHARED_PTR<SensorBase::ActuatorGeomData const> pgeom, OPENRAVE_SHARED_PTR<SensorBase::ActuatorSensorData> pdata) : PySensorData(pdata)
-        {
-            state = pdata->state;
-            appliedcurrent = pdata->appliedcurrent;
-            measuredcurrent = pdata->measuredcurrent;
-            measuredtemperature = pdata->measuredtemperature;
-            maxtorque = pgeom->maxtorque;
-            maxcurrent = pgeom->maxcurrent;
-            nominalcurrent = pgeom->nominalcurrent;
-            maxvelocity = pgeom->maxvelocity;
-            maxacceleration = pgeom->maxacceleration;
-            maxjerk = pgeom->maxjerk;
-            staticfriction = pgeom->staticfriction;
-            viscousfriction = pgeom->viscousfriction;
-        }
-        PyActuatorSensorData(OPENRAVE_SHARED_PTR<SensorBase::ActuatorGeomData const> pgeom) : PySensorData(SensorBase::ST_Actuator)        {
-            maxtorque = pgeom->maxtorque;
-            maxcurrent = pgeom->maxcurrent;
-            nominalcurrent = pgeom->nominalcurrent;
-            maxvelocity = pgeom->maxvelocity;
-            maxacceleration = pgeom->maxacceleration;
-            maxjerk = pgeom->maxjerk;
-            staticfriction = pgeom->staticfriction;
-            viscousfriction = pgeom->viscousfriction;
-        }
-        virtual ~PyActuatorSensorData() {
-        }
+        PyActuatorSensorData(OPENRAVE_SHARED_PTR<SensorBase::ActuatorGeomData const> pgeom, OPENRAVE_SHARED_PTR<SensorBase::ActuatorSensorData> pdata);
+        PyActuatorSensorData(OPENRAVE_SHARED_PTR<SensorBase::ActuatorGeomData const> pgeom);
+        virtual ~PyActuatorSensorData();
         SensorBase::ActuatorSensorData::ActuatorState state;
         dReal measuredcurrent, measuredtemperature, appliedcurrent;
         dReal maxtorque, maxcurrent, nominalcurrent, maxvelocity, maxacceleration, maxjerk, staticfriction, viscousfriction;
     };
 
-    PySensorBase(SensorBasePtr psensor, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(psensor, pyenv), _psensor(psensor)
-    {
-    }
-    virtual ~PySensorBase() {
-    }
+    PySensorBase(SensorBasePtr psensor, PyEnvironmentBasePtr pyenv);
+    virtual ~PySensorBase();
 
-    SensorBasePtr GetSensor() {
-        return _psensor;
-    }
+    SensorBasePtr GetSensor();
+    int Configure(SensorBase::ConfigureCommand command, bool blocking=false);
 
-    int Configure(SensorBase::ConfigureCommand command, bool blocking=false)
-    {
-        return _psensor->Configure(command,blocking);
-    }
+    bool SimulationStep(dReal timeelapsed);
 
-    bool SimulationStep(dReal timeelapsed)
-    {
-        return _psensor->SimulationStep(timeelapsed);
-    }
+    OPENRAVE_SHARED_PTR<PySensorGeometry> GetSensorGeometry(SensorBase::SensorType type);
 
-    OPENRAVE_SHARED_PTR<PySensorGeometry> GetSensorGeometry(SensorBase::SensorType type)
-    {
-        switch(type) {
-        case SensorBase::ST_Laser:
-            return OPENRAVE_SHARED_PTR<PySensorGeometry>(new PyLaserGeomData(OPENRAVE_STATIC_POINTER_CAST<SensorBase::LaserGeomData const>(_psensor->GetSensorGeometry())));
-        case SensorBase::ST_Camera:
-            return OPENRAVE_SHARED_PTR<PySensorGeometry>(new PyCameraGeomData(OPENRAVE_STATIC_POINTER_CAST<SensorBase::CameraGeomData const>(_psensor->GetSensorGeometry())));
-        case SensorBase::ST_JointEncoder:
-            return OPENRAVE_SHARED_PTR<PySensorGeometry>(new PyJointEncoderGeomData(OPENRAVE_STATIC_POINTER_CAST<SensorBase::JointEncoderGeomData const>(_psensor->GetSensorGeometry())));
-        case SensorBase::ST_Force6D:
-            return OPENRAVE_SHARED_PTR<PySensorGeometry>(new PyForce6DGeomData(OPENRAVE_STATIC_POINTER_CAST<SensorBase::Force6DGeomData const>(_psensor->GetSensorGeometry())));
-        case SensorBase::ST_IMU:
-            return OPENRAVE_SHARED_PTR<PySensorGeometry>(new PyIMUGeomData(OPENRAVE_STATIC_POINTER_CAST<SensorBase::IMUGeomData const>(_psensor->GetSensorGeometry())));
-        case SensorBase::ST_Odometry:
-            return OPENRAVE_SHARED_PTR<PySensorGeometry>(new PyOdometryGeomData(OPENRAVE_STATIC_POINTER_CAST<SensorBase::OdometryGeomData const>(_psensor->GetSensorGeometry())));
-        case SensorBase::ST_Tactile:
-            return OPENRAVE_SHARED_PTR<PySensorGeometry>(new PyTactileGeomData(OPENRAVE_STATIC_POINTER_CAST<SensorBase::TactileGeomData const>(_psensor->GetSensorGeometry())));
-        case SensorBase::ST_Actuator:
-            return OPENRAVE_SHARED_PTR<PySensorGeometry>(new PyActuatorGeomData(OPENRAVE_STATIC_POINTER_CAST<SensorBase::ActuatorGeomData const>(_psensor->GetSensorGeometry())));
-        case SensorBase::ST_Invalid:
-            break;
-        }
-        throw openrave_exception(boost::str(boost::format(_("unknown sensor data type %d\n"))%type));
-    }
+    OPENRAVE_SHARED_PTR<PySensorData> CreateSensorData(SensorBase::SensorType type);
 
-    OPENRAVE_SHARED_PTR<PySensorData> CreateSensorData(SensorBase::SensorType type)
-    {
-        return ConvertToPySensorData(_psensor->CreateSensorData(type));
-    }
+    OPENRAVE_SHARED_PTR<PySensorData> GetSensorData();
+    OPENRAVE_SHARED_PTR<PySensorData> GetSensorData(SensorBase::SensorType type);
 
-    OPENRAVE_SHARED_PTR<PySensorData> GetSensorData()
-    {
-        return GetSensorData(SensorBase::ST_Invalid);
-    }
-    OPENRAVE_SHARED_PTR<PySensorData> GetSensorData(SensorBase::SensorType type)
-    {
-        SensorBase::SensorDataPtr psensordata;
-        if( _mapsensordata.find(type) == _mapsensordata.end() ) {
-            psensordata = _psensor->CreateSensorData(type);
-            _mapsensordata[type] = psensordata;
-        }
-        else {
-            psensordata = _mapsensordata[type];
-        }
-        if( !_psensor->GetSensorData(psensordata) ) {
-            throw openrave_exception(_("SensorData failed"));
-        }
-        return ConvertToPySensorData(psensordata);
-    }
+    OPENRAVE_SHARED_PTR<PySensorData> ConvertToPySensorData(SensorBase::SensorDataPtr psensordata);
 
-    OPENRAVE_SHARED_PTR<PySensorData> ConvertToPySensorData(SensorBase::SensorDataPtr psensordata)
-    {
-        if( !psensordata ) {
-            return OPENRAVE_SHARED_PTR<PySensorData>();
-        }
-        switch(psensordata->GetType()) {
-        case SensorBase::ST_Laser:
-            return OPENRAVE_SHARED_PTR<PySensorData>(new PyLaserSensorData(OPENRAVE_STATIC_POINTER_CAST<SensorBase::LaserGeomData const>(_psensor->GetSensorGeometry()), OPENRAVE_STATIC_POINTER_CAST<SensorBase::LaserSensorData>(psensordata)));
-        case SensorBase::ST_Camera:
-            return OPENRAVE_SHARED_PTR<PySensorData>(new PyCameraSensorData(OPENRAVE_STATIC_POINTER_CAST<SensorBase::CameraGeomData const>(_psensor->GetSensorGeometry()), OPENRAVE_STATIC_POINTER_CAST<SensorBase::CameraSensorData>(psensordata)));
-        case SensorBase::ST_JointEncoder:
-            return OPENRAVE_SHARED_PTR<PySensorData>(new PyJointEncoderSensorData(OPENRAVE_STATIC_POINTER_CAST<SensorBase::JointEncoderGeomData const>(_psensor->GetSensorGeometry()), OPENRAVE_STATIC_POINTER_CAST<SensorBase::JointEncoderSensorData>(psensordata)));
-        case SensorBase::ST_Force6D:
-            return OPENRAVE_SHARED_PTR<PySensorData>(new PyForce6DSensorData(OPENRAVE_STATIC_POINTER_CAST<SensorBase::Force6DGeomData const>(_psensor->GetSensorGeometry()), OPENRAVE_STATIC_POINTER_CAST<SensorBase::Force6DSensorData>(psensordata)));
-        case SensorBase::ST_IMU:
-            return OPENRAVE_SHARED_PTR<PySensorData>(new PyIMUSensorData(OPENRAVE_STATIC_POINTER_CAST<SensorBase::IMUGeomData const>(_psensor->GetSensorGeometry()), OPENRAVE_STATIC_POINTER_CAST<SensorBase::IMUSensorData>(psensordata)));
-        case SensorBase::ST_Odometry:
-            return OPENRAVE_SHARED_PTR<PySensorData>(new PyOdometrySensorData(OPENRAVE_STATIC_POINTER_CAST<SensorBase::OdometryGeomData const>(_psensor->GetSensorGeometry()), OPENRAVE_STATIC_POINTER_CAST<SensorBase::OdometrySensorData>(psensordata)));
-        case SensorBase::ST_Tactile:
-            return OPENRAVE_SHARED_PTR<PySensorData>(new PyTactileSensorData(OPENRAVE_STATIC_POINTER_CAST<SensorBase::TactileGeomData const>(_psensor->GetSensorGeometry()), OPENRAVE_STATIC_POINTER_CAST<SensorBase::TactileSensorData>(psensordata)));
-        case SensorBase::ST_Actuator:
-            return OPENRAVE_SHARED_PTR<PySensorData>(new PyActuatorSensorData(OPENRAVE_STATIC_POINTER_CAST<SensorBase::ActuatorGeomData const>(_psensor->GetSensorGeometry()), OPENRAVE_STATIC_POINTER_CAST<SensorBase::ActuatorSensorData>(psensordata)));
-        case SensorBase::ST_Invalid:
-            break;
-        }
-        throw openrave_exception(boost::str(boost::format(_("unknown sensor data type %d\n"))%psensordata->GetType()));
-    }
+    bool Supports(SensorBase::SensorType type);
+    void SetSensorGeometry(PySensorGeometryPtr pygeometry);
 
-    bool Supports(SensorBase::SensorType type) {
-        return _psensor->Supports(type);
-    }
+    void SetTransform(object transform);
+    object GetTransform();
+    object GetTransformPose();
 
-    void SetSensorGeometry(PySensorGeometryPtr pygeometry) {
-        _psensor->SetSensorGeometry(pygeometry->GetGeometry());
-    }
+    object GetName();
 
-    void SetTransform(object transform) {
-        _psensor->SetTransform(ExtractTransform(transform));
-    }
-    object GetTransform() {
-        return ReturnTransform(_psensor->GetTransform());
-    }
-    object GetTransformPose() {
-        return toPyArray(_psensor->GetTransform());
-    }
+    void SetName(const std::string& name);
 
-    object GetName() {
-        return ConvertStringToUnicode(_psensor->GetName());
-    }
-
-    void SetName(const std::string& name)
-    {
-        return _psensor->SetName(name);
-    }
-
-    virtual string __repr__() {
-        return boost::str(boost::format("<RaveGetEnvironment(%d).GetSensor('%s')>")%RaveGetEnvironmentId(_psensor->GetEnv())%_psensor->GetName());
-    }
-    virtual string __str__() {
-        return boost::str(boost::format("<%s:%s - %s>")%RaveGetInterfaceName(_psensor->GetInterfaceType())%_psensor->GetXMLId()%_psensor->GetName());
-    }
-    virtual object __unicode__() {
-        return ConvertStringToUnicode(__str__());
-    }
+    virtual string __repr__();
+    virtual string __str__();
+    virtual object __unicode__();
 };
 
 } // namespace openravepy

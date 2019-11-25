@@ -1293,6 +1293,8 @@ void init_openravepy_global()
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyGraphHandle, OPENRAVE_SHARED_PTR<PyGraphHandle> >(m, "GraphHandle", DOXY_CLASS(GraphHandle))
+    .def(init<>())
+    .def(init<GraphHandlePtr>(), "handle"_a)
 #else
     class_<PyGraphHandle, OPENRAVE_SHARED_PTR<PyGraphHandle> >("GraphHandle", DOXY_CLASS(GraphHandle), no_init)
 #endif
@@ -1303,6 +1305,8 @@ void init_openravepy_global()
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyUserData, OPENRAVE_SHARED_PTR<PyUserData> >(m, "UserData", DOXY_CLASS(UserData))
+    .def(init<>())
+    .def(init<UserDataPtr>(), "handle"_a)
 #else
     class_<PyUserData, OPENRAVE_SHARED_PTR<PyUserData> >("UserData", DOXY_CLASS(UserData), no_init)
 #endif
@@ -1311,13 +1315,15 @@ void init_openravepy_global()
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PySerializableData, OPENRAVE_SHARED_PTR<PySerializableData>, PyUserData >(m, "SerializableData", DOXY_CLASS(SerializableData))
+    .def(init<>())
+    .def(init<SerializableDataPtr>(), "handle"_a)
 #else
     class_<PySerializableData, OPENRAVE_SHARED_PTR<PySerializableData>, bases<PyUserData> >("SerializableData", DOXY_CLASS(SerializableData))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    .def(init<std::string>(), "data"_a)
+    .def(init<const std::string&>(), "data"_a)
 #else
-    .def(init<std::string>(py::args("data")))
+    .def(init<const std::string&>(py::args("data")))
 #endif
     .def("Close",&PySerializableData::Close,DOXY_FN(SerializableData,Close))
     .def("Serialize",&PySerializableData::Serialize, PY_ARGS("options") DOXY_FN(SerializableData, Serialize))
@@ -1326,7 +1332,9 @@ void init_openravepy_global()
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyRay, OPENRAVE_SHARED_PTR<PyRay> >(m, "Ray", DOXY_CLASS(geometry::ray))
+    .def(init<>())
     .def(init<object, object>(), "pos"_a, "dir"_a)
+    .def(init<const RAY&>(), "r"_a)
 #else
     class_<PyRay, OPENRAVE_SHARED_PTR<PyRay> >("Ray", DOXY_CLASS(geometry::ray))
     .def(init<object,object>(py::args("pos","dir")))
@@ -1342,7 +1350,9 @@ void init_openravepy_global()
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyAABB, OPENRAVE_SHARED_PTR<PyAABB> >(m, "AABB", DOXY_CLASS(geometry::aabb))
+    .def(init<>())
     .def(init<object, object>(), "pos"_a, "extents"_a)
+    .def(init<const AABB&>(), "ab"_a)
 #else
     class_<PyAABB, OPENRAVE_SHARED_PTR<PyAABB> >("AABB", DOXY_CLASS(geometry::aabb))
     .def(init<object,object>(py::args("pos","extents")))
@@ -1399,6 +1409,7 @@ void init_openravepy_global()
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyPluginInfo, OPENRAVE_SHARED_PTR<PyPluginInfo> >(m, "PluginInfo", DOXY_CLASS(PLUGININFO))
+    .def(init<const PLUGININFO&>(), "info"_a)
 #else
     class_<PyPluginInfo, OPENRAVE_SHARED_PTR<PyPluginInfo> >("PluginInfo", DOXY_CLASS(PLUGININFO),no_init)
 #endif
@@ -1507,7 +1518,9 @@ void init_openravepy_global()
 
         {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-            scope_ group = class_<ConfigurationSpecification::Group, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> >(m, "Group",DOXY_CLASS(ConfigurationSpecification::Group))
+            // Group belongs to ConfigurationSpecification
+            scope_ group = class_<ConfigurationSpecification::Group, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> >(configurationspecification, "Group",DOXY_CLASS(ConfigurationSpecification::Group))
+            .def(init<>())
 #else
             scope_ group = class_<ConfigurationSpecification::Group, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> >("Group",DOXY_CLASS(ConfigurationSpecification::Group))
 #endif
