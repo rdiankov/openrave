@@ -43,7 +43,7 @@ public:
         sidewall.type = static_cast<KinBody::GeometryInfo::SideWallType>(type);
     }
 
-    object transf, vExtents;
+    object transf = py::none_(), vExtents = py::none_();
     int type;
 };
 
@@ -173,13 +173,13 @@ public:
         return pinfo;
     }
 
-    object _t, _vGeomData, _vGeomData2, _vGeomData3, _vGeomData4, _vDiffuseColor, _vAmbientColor, _meshcollision;
+    object _t = py::none_(), _vGeomData = py::none_(), _vGeomData2 = py::none_(), _vGeomData3 = py::none_(), _vGeomData4 = py::none_(), _vDiffuseColor = py::none_(), _vAmbientColor = py::none_(), _meshcollision = py::none_();
     py::list _vSideWalls;
     float _containerBaseHeight;
     GeometryType _type;
-    object _name;
-    object _filenamerender, _filenamecollision;
-    object _vRenderScale, _vCollisionScale;
+    object _name = py::none_();
+    object _filenamerender = py::none_(), _filenamecollision = py::none_();
+    object _vRenderScale = py::none_(), _vCollisionScale = py::none_();
     py::dict _mapExtraGeometries;
     float _fTransparency;
     bool _bVisible, _bModifiable;
@@ -195,12 +195,12 @@ public:
     KinBody::LinkInfoPtr GetLinkInfo();
 
     py::list _vgeometryinfos;
-    object _name;
-    object _t, _tMassFrame;
+    object _name = py::none_();
+    object _t = py::none_(), _tMassFrame = py::none_();
     dReal _mass;
-    object _vinertiamoments;
+    object _vinertiamoments = py::none_();
     py::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters;
-    object _vForcedAdjacentLinks;
+    object _vForcedAdjacentLinks = py::none_();
     bool _bStatic;
     bool _bIsEnabled;
 };
@@ -208,23 +208,7 @@ public:
 class PyElectricMotorActuatorInfo
 {
 public:
-    PyElectricMotorActuatorInfo() {
-        gear_ratio = 0;
-        assigned_power_rating = 0;
-        max_speed = 0;
-        no_load_speed = 0;
-        stall_torque = 0;
-        max_instantaneous_torque = 0;
-        nominal_torque = 0;
-        rotor_inertia = 0;
-        torque_constant = 0;
-        nominal_voltage = 0;
-        speed_constant = 0;
-        starting_current = 0;
-        terminal_resistance = 0;
-        coloumb_friction = 0;
-        viscous_friction = 0;
-    }
+    PyElectricMotorActuatorInfo() {}
     PyElectricMotorActuatorInfo(const ElectricMotorActuatorInfo& info) {
         model_type = info.model_type;
         gear_ratio = info.gear_ratio;
@@ -285,22 +269,22 @@ public:
     }
 
     std::string model_type;
-    dReal gear_ratio;
-    dReal assigned_power_rating;
-    dReal max_speed;
-    dReal no_load_speed;
-    dReal stall_torque;
-    dReal max_instantaneous_torque;
+    dReal gear_ratio = 0;
+    dReal assigned_power_rating = 0;
+    dReal max_speed = 0;
+    dReal no_load_speed = 0;
+    dReal stall_torque = 0;
+    dReal max_instantaneous_torque = 0;
     py::list nominal_speed_torque_points, max_speed_torque_points;
-    dReal nominal_torque;
-    dReal rotor_inertia;
-    dReal torque_constant;
-    dReal nominal_voltage;
-    dReal speed_constant;
-    dReal starting_current;
-    dReal terminal_resistance;
-    dReal coloumb_friction;
-    dReal viscous_friction;
+    dReal nominal_torque = 0;
+    dReal rotor_inertia = 0;
+    dReal torque_constant = 0;
+    dReal nominal_voltage = 0;
+    dReal speed_constant = 0;
+    dReal starting_current = 0;
+    dReal terminal_resistance = 0;
+    dReal coloumb_friction = 0;
+    dReal viscous_friction = 0;
 };
 typedef OPENRAVE_SHARED_PTR<PyElectricMotorActuatorInfo> PyElectricMotorActuatorInfoPtr;
 
@@ -312,9 +296,9 @@ public:
     PyJointInfo(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv);
     KinBody::JointInfoPtr GetJointInfo();
     KinBody::JointType _type;
-    object _name;
-    object _linkname0, _linkname1;
-    object _vanchor, _vaxes, _vcurrentvalues, _vresolution, _vmaxvel, _vhardmaxvel, _vmaxaccel, _vhardmaxaccel, _vmaxjerk, _vhardmaxjerk, _vmaxtorque, _vmaxinertia, _vweights, _voffsets, _vlowerlimit, _vupperlimit;
+    object _name = py::none_();
+    object _linkname0 = py::none_(), _linkname1 = py::none_();
+    object _vanchor = py::none_(), _vaxes = py::none_(), _vcurrentvalues = py::none_(), _vresolution = py::none_(), _vmaxvel = py::none_(), _vhardmaxvel = py::none_(), _vmaxaccel = py::none_(), _vhardmaxaccel = py::none_(), _vmaxjerk = py::none_(), _vhardmaxjerk = py::none_(), _vmaxtorque = py::none_(), _vmaxinertia = py::none_(), _vweights = py::none_(), _voffsets = py::none_(), _vlowerlimit = py::none_(), _vupperlimit = py::none_();
     object _trajfollow;
     PyElectricMotorActuatorInfoPtr _infoElectricMotor;
     py::list _vmimic;

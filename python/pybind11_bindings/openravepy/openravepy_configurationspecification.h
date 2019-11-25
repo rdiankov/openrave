@@ -100,10 +100,11 @@ public:
 
     PyConfigurationSpecificationPtr __iadd__(PyConfigurationSpecificationPtr r);
 
-    string __repr__();
-    string __str__();
+    std::string __repr__();
+    std::string __str__();
     object __unicode__();
 
+    // members
     ConfigurationSpecification _spec;
 };
 

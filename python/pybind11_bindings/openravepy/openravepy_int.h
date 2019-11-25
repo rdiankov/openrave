@@ -425,7 +425,7 @@ public:
     }
 
     py::list interfacenames;
-    string version;
+    std::string version;
 };
 
 class PyGraphHandle
@@ -543,8 +543,8 @@ public:
     }
     py::object dir();
     py::object pos();
-    virtual string __repr__();
-    virtual string __str__();
+    virtual std::string __repr__();
+    virtual std::string __str__();
     virtual py::object __unicode__();
     RAY r;
 };
@@ -579,10 +579,10 @@ public:
     InterfaceType GetInterfaceType() const {
         return _pbase->GetInterfaceType();
     }
-    string GetXMLId() const {
+    std::string GetXMLId() const {
         return _pbase->GetXMLId();
     }
-    string GetPluginName() const {
+    std::string GetPluginName() const {
         return _pbase->GetPluginName();
     }
     py::object GetDescription() const {

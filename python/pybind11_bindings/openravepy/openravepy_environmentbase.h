@@ -91,24 +91,24 @@ public:
 
     bool CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, PyCollisionReportPtr pReport);
 
-    bool Load(const string &filename);
-    bool Load(const string &filename, object odictatts);
-    bool LoadURI(const string &filename, object odictatts=object());
-    bool LoadData(const string &data);
-    bool LoadData(const string &data, object odictatts);
+    bool Load(const std::string &filename);
+    bool Load(const std::string &filename, object odictatts);
+    bool LoadURI(const std::string &filename, object odictatts=object());
+    bool LoadData(const std::string &data);
+    bool LoadData(const std::string &data, object odictatts);
 
-    void Save(const string &filename, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=object());
+    void Save(const std::string &filename, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=object());
 
-    object WriteToMemory(const string &filetype, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=object());
+    object WriteToMemory(const std::string &filetype, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=object());
 
-    object ReadRobotURI(const string &filename);
-    object ReadRobotURI(const string &filename, object odictatts);
-    object ReadRobotData(const string &data);
-    object ReadRobotData(const string &data, object odictatts);
-    object ReadKinBodyURI(const string &filename);
-    object ReadKinBodyURI(const string &filename, object odictatts);
-    object ReadKinBodyData(const string &data);
-    object ReadKinBodyData(const string &data, object odictatts);
+    object ReadRobotURI(const std::string &filename);
+    object ReadRobotURI(const std::string &filename, object odictatts);
+    object ReadRobotData(const std::string &data);
+    object ReadRobotData(const std::string &data, object odictatts);
+    object ReadKinBodyURI(const std::string &filename);
+    object ReadKinBodyURI(const std::string &filename, object odictatts);
+    object ReadKinBodyData(const std::string &data);
+    object ReadKinBodyData(const std::string &data, object odictatts);
     PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename);
     PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename, object odictatts);
     object ReadTrimeshURI(const std::string& filename);
@@ -131,13 +131,13 @@ public:
 
     bool RemoveKinBodyByName(const std::string& name);
 
-    object GetKinBody(const string &name);
-    object GetRobot(const string &name);
-    object GetSensor(const string &name);
+    object GetKinBody(const std::string &name);
+    object GetRobot(const std::string &name);
+    object GetSensor(const std::string &name);
 
     object GetBodyFromEnvironmentId(int id);
 
-    int AddModule(PyModuleBasePtr prob, const string &args);
+    int AddModule(PyModuleBasePtr prob, const std::string &args);
     bool RemoveProblem(PyModuleBasePtr prob);
     bool Remove(PyInterfaceBasePtr obj);
 
@@ -178,7 +178,7 @@ public:
 
     void __exit__(object type, object value, object traceback);
 
-    bool SetViewer(const string &viewername, bool showviewer=true);
+    bool SetViewer(const std::string &viewername, bool showviewer=true);
 
     /// \brief sets the default viewer
     bool SetDefaultViewer(bool showviewer=true);
@@ -186,12 +186,12 @@ public:
     object GetViewer();
 
     /// returns the number of points
-    static size_t _getGraphPoints(object opoints, vector<float>&vpoints);
+    static size_t _getGraphPoints(object opoints, std::vector<float>&vpoints);
 
     /// returns the number of colors
-    static size_t _getGraphColors(object ocolors, vector<float>&vcolors);
+    static size_t _getGraphColors(object ocolors, std::vector<float>&vcolors);
 
-    static pair<size_t,size_t> _getGraphPointsColors(object opoints, object ocolors, vector<float>&vpoints, vector<float>&vcolors);
+    static std::pair<size_t,size_t> _getGraphPointsColors(object opoints, object ocolors, std::vector<float>&vpoints, std::vector<float>&vcolors);
 
     object plot3(object opoints,float pointsize,object ocolors=object(),int drawstyle=0);
 
@@ -218,20 +218,20 @@ public:
 
     object GetPublishedBodies(uint64_t timeout=0);
 
-    object GetPublishedBody(const string &name, uint64_t timeout = 0);
+    object GetPublishedBody(const std::string &name, uint64_t timeout = 0);
 
-    object GetPublishedBodyJointValues(const string &name, uint64_t timeout=0);
+    object GetPublishedBodyJointValues(const std::string &name, uint64_t timeout=0);
 
-    object GetPublishedBodyTransformsMatchingPrefix(const string &prefix, uint64_t timeout=0);
+    object GetPublishedBodyTransformsMatchingPrefix(const std::string &prefix, uint64_t timeout=0);
 
     object Triangulate(PyKinBodyPtr pbody);
 
-    object TriangulateScene(EnvironmentBase::SelectionOptions options, const string &name);
+    object TriangulateScene(EnvironmentBase::SelectionOptions options, const std::string &name);
 
     void SetDebugLevel(object olevel);
     int GetDebugLevel() const;
 
-    string GetHomeDirectory();
+    std::string GetHomeDirectory();
 
     void SetUserData(PyUserData pdata);
     void SetUserData(object o);
@@ -243,8 +243,8 @@ public:
 
     bool __eq__(PyEnvironmentBasePtr p);
     bool __ne__(PyEnvironmentBasePtr p);
-    string __repr__();
-    string __str__();
+    std::string __repr__();
+    std::string __str__();
     object __unicode__();
 
     EnvironmentBasePtr GetEnv() const;

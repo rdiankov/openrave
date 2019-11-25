@@ -407,7 +407,7 @@ void init_openravepy_planner()
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals;
-    object plannerstatuscode = enum_<PlannerStatusCode>(m, "PlannerStatusCode" DOXY_ENUM(PlannerStatusCode))
+    object plannerstatuscode = enum_<PlannerStatusCode>(m, "PlannerStatusCode", py::arithmetic() DOXY_ENUM(PlannerStatusCode))
 #else
     object plannerstatuscode = enum_<PlannerStatusCode>("PlannerStatusCode" DOXY_ENUM(PlannerStatusCode))
 #endif
@@ -417,7 +417,7 @@ void init_openravepy_planner()
                                .value("InterruptedWithSolution",PS_InterruptedWithSolution)
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    object planneraction = enum_<PlannerAction>(m, "PlannerAction" DOXY_ENUM(PlannerAction))
+    object planneraction = enum_<PlannerAction>(m, "PlannerAction", py::arithmetic() DOXY_ENUM(PlannerAction))
 #else
     object planneraction = enum_<PlannerAction>("PlannerAction" DOXY_ENUM(PlannerAction))
 #endif
