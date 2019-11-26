@@ -44,6 +44,7 @@ using py::def;
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 namespace numeric = py::numeric;
+
 inline void resize_3x3(numeric::array& arr) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     arr.resize({3, 3});

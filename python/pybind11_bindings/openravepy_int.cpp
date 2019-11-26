@@ -51,7 +51,9 @@ using py::optional;
 using py::def;
 using py::scope;
 #endif // USE_PYBIND11_PYTHON_BINDINGS
+
 namespace numeric = py::numeric;
+
 #if OPENRAVE_RAPIDJSON
 
 // convert from rapidjson to python object

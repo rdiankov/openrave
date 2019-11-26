@@ -47,6 +47,7 @@ using py::pickle_suite;
 using py::manage_new_object;
 using py::def;
 #endif // USE_PYBIND11_PYTHON_BINDINGS
+
 namespace numeric = py::numeric;
 
 class PyManipulatorInfo
