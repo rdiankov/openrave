@@ -164,8 +164,10 @@ bool ExtractRay(object o, RAY& ray)
     return false;
 }
 
+class Ray_pickle_suite 
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
-class Ray_pickle_suite : public pickle_suite
+: public pickle_suite
+#endif
 {
 public:
     static py::tuple getinitargs(const PyRay& r)
@@ -173,7 +175,6 @@ public:
         return py::make_tuple(toPyVector3(r.r.pos),toPyVector3(r.r.dir));
     }
 };
-#endif
 
 class PyAABB
 {
@@ -225,8 +226,10 @@ object toPyAABB(const AABB& ab)
     return py::to_object(OPENRAVE_SHARED_PTR<PyAABB>(new PyAABB(ab)));
 }
 
+class AABB_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
-class AABB_pickle_suite : public pickle_suite
+: public pickle_suite
+#endif
 {
 public:
     static py::tuple getinitargs(const PyAABB& ab)
@@ -234,7 +237,6 @@ public:
         return py::make_tuple(toPyVector3(ab.ab.pos),toPyVector3(ab.ab.extents));
     }
 };
-#endif
 
 class PyTriMesh
 {
@@ -390,8 +392,11 @@ object toPyTriMesh(const TriMesh& mesh)
     return py::to_object(OPENRAVE_SHARED_PTR<PyTriMesh>(new PyTriMesh(mesh)));
 }
 
+
+class TriMesh_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
-class TriMesh_pickle_suite : public pickle_suite
+: public pickle_suite
+#endif
 {
 public:
     static py::tuple getinitargs(const PyTriMesh& r)
@@ -399,7 +404,6 @@ public:
         return py::make_tuple(r.vertices,r.indices);
     }
 };
-#endif
 
 class PyConfigurationSpecification : public OPENRAVE_ENABLE_SHARED_FROM_THIS<PyConfigurationSpecification>
 {
@@ -687,8 +691,11 @@ public:
     ConfigurationSpecification _spec;
 };
 
+
+class OPENRAVEPY_API ConfigurationSpecification_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
-class ConfigurationSpecification_pickle_suite : public pickle_suite
+: public pickle_suite
+#endif
 {
 public:
     static py::tuple getinitargs(const PyConfigurationSpecification& pyspec)
@@ -698,7 +705,6 @@ public:
         return py::make_tuple(ss.str());
     }
 };
-#endif
 
 PyConfigurationSpecificationPtr toPyConfigurationSpecification(const ConfigurationSpecification &spec)
 {
@@ -1348,8 +1354,7 @@ void init_openravepy_global()
     .def(py::pickle(
     [](const PyRay &pyr) {
         // __getstate__
-        /* Return a tuple that fully encodes the state of the object */
-        return py::make_tuple(toPyVector3(pyr.r.pos), toPyVector3(pyr.r.dir));
+        return Ray_pickle_suite::getinitargs(pyr);
     },
     [](py::tuple state) {
         // __setstate__
@@ -1392,8 +1397,7 @@ void init_openravepy_global()
     .def(py::pickle(
     [](const PyAABB &pyab) {
         // __getstate__
-        /* Return a tuple that fully encodes the state of the object */
-        return py::make_tuple(toPyVector3(pyab.ab.pos), toPyVector3(pyab.ab.extents));
+        return AABB_pickle_suite::getinitargs(pyab);
     },
     [](py::tuple state) {
         // __setstate__
@@ -1434,8 +1438,7 @@ void init_openravepy_global()
     .def(py::pickle(
     [](const PyTriMesh &pymesh) {
         // __getstate__
-        /* Return a tuple that fully encodes the state of the object */
-        return py::make_tuple(pymesh.vertices, pymesh.indices);
+        return TriMesh_pickle_suite::getinitargs(pymesh);
     },
     [](py::tuple state) {
         // __setstate__

@@ -3181,8 +3181,10 @@ PyKinBodyPtr RaveCreateKinBody(PyEnvironmentBasePtr pyenv, const std::string& na
     return PyKinBodyPtr(new PyKinBody(p,pyenv));
 }
 
+class GeometryInfo_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
-class GeometryInfo_pickle_suite : public pickle_suite
+: public pickle_suite
+#endif
 {
 public:
     static py::tuple getstate(const PyGeometryInfo& r)
@@ -3203,7 +3205,7 @@ public:
         r._meshcollision = state[4];
         r._type = (GeometryType)(int)py::extract<int>(state[5]);
 
-        py::extract<std::string> pyoldfilenamerender(state[6]);
+        py::extract_<std::string> pyoldfilenamerender(state[6]);
         if( pyoldfilenamerender.check() ) {
             // old format
             r._filenamerender = state[6];
@@ -3231,7 +3233,10 @@ public:
     }
 };
 
-class LinkInfo_pickle_suite : public pickle_suite
+class LinkInfo_pickle_suite
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+: public pickle_suite
+#endif
 {
 public:
     static py::tuple getstate(const PyLinkInfo& r)
@@ -3257,7 +3262,10 @@ public:
     }
 };
 
-class ElectricMotorActuatorInfo_pickle_suite : public pickle_suite
+class ElectricMotorActuatorInfo_pickle_suite
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+: public pickle_suite
+#endif
 {
 public:
     static py::tuple getstate(const PyElectricMotorActuatorInfo& r)
@@ -3285,7 +3293,10 @@ public:
     }
 };
 
-class JointInfo_pickle_suite : public pickle_suite
+class JointInfo_pickle_suite
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+: public pickle_suite
+#endif
 {
 public:
     static py::tuple getstate(const PyJointInfo& r)
@@ -3310,7 +3321,11 @@ public:
         r._vlowerlimit = state[1][7];
         r._vupperlimit = state[1][8];
         r._trajfollow = state[2][0];
-        int num2 = len(state[2]);
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        const int num2 = len(extract<py::object>(state[2]));
+#else
+        const int num2 = len(state[2]);
+#endif
         r._vmimic = py::list(state[2][1]);
         r._mapFloatParameters = py::dict(state[2][2]);
         r._mapIntParameters = py::dict(state[2][3]);
@@ -3337,7 +3352,10 @@ public:
     }
 };
 
-class GrabbedInfo_pickle_suite : public pickle_suite
+class GrabbedInfo_pickle_suite
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+: public pickle_suite
+#endif
 {
 public:
     static py::tuple getstate(const PyKinBody::PyGrabbedInfo& r)
@@ -3345,13 +3363,23 @@ public:
         return py::make_tuple(r._grabbedname, r._robotlinkname, r._trelative, r._setRobotLinksToIgnore);
     }
     static void setstate(PyKinBody::PyGrabbedInfo& r, py::tuple state) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        r._grabbedname = extract<std::string>(state[0]);
+        r._robotlinkname = extract<std::string>(state[1]);
+#else
         r._grabbedname = state[0];
         r._robotlinkname = state[1];
+#endif
         r._trelative = state[2];
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        r._setRobotLinksToIgnore = extract<std::vector<int>>(state[3]);
+#else
         r._setRobotLinksToIgnore = state[3];
+#endif
     }
 };
 
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(IsMimic_overloads, IsMimic, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicEquation_overloads, GetMimicEquation, 0, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicDOFIndices_overloads, GetMimicDOFIndices, 0, 1)
@@ -3474,46 +3502,17 @@ void init_openravepy_kinbody()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                                        .def(py::pickle(
                                         [](const PyElectricMotorActuatorInfo& pyinfo) {
-                                            return py::make_tuple(pyinfo.gear_ratio,
-                                                pyinfo.assigned_power_rating,
-                                                pyinfo.max_speed,
-                                                pyinfo.no_load_speed,
-                                                py::make_tuple(pyinfo.stall_torque, pyinfo.max_instantaneous_torque),
-                                                py::make_tuple(pyinfo.nominal_speed_torque_points, pyinfo.max_speed_torque_points),
-                                                pyinfo.nominal_torque,
-                                                pyinfo.rotor_inertia,
-                                                pyinfo.torque_constant,
-                                                pyinfo.nominal_voltage,
-                                                pyinfo.speed_constant,
-                                                pyinfo.starting_current,
-                                                pyinfo.terminal_resistance,
-                                                py::make_tuple(pyinfo.coloumb_friction, pyinfo.viscous_friction));
+                                            return ElectricMotorActuatorInfo_pickle_suite::getstate(pyinfo);
                                         },
                                         [](py::tuple state) {
                                             // __setstate__
                                             if(state.size() != 14) {
-                                                throw std::runtime_error("Invalid state");
+                                                RAVELOG_WARN("Invalid state!");
                                             }
                                             // TGN: should I convert this to primitive data types?
                                             // ... the same as I did for PyKinBody::PyGrabbedInfo
                                             PyElectricMotorActuatorInfo pyinfo;
-                                            pyinfo.gear_ratio = py::extract<dReal>(state[0]);
-                                            pyinfo.assigned_power_rating = py::extract<dReal>(state[1]);
-                                            pyinfo.max_speed = py::extract<dReal>(state[2]);
-                                            pyinfo.no_load_speed = py::extract<dReal>(state[3]);
-                                            pyinfo.stall_torque = py::extract<dReal>(state[4][0]);
-                                            pyinfo.max_instantaneous_torque = py::extract<dReal>(state[4][1]);
-                                            pyinfo.nominal_speed_torque_points = py::list(state[5][0]);
-                                            pyinfo.max_speed_torque_points = py::list(state[5][1]);
-                                            pyinfo.nominal_torque = py::extract<dReal>(state[6]);
-                                            pyinfo.rotor_inertia = py::extract<dReal>(state[7]);
-                                            pyinfo.torque_constant = py::extract<dReal>(state[8]);
-                                            pyinfo.nominal_voltage = py::extract<dReal>(state[9]);
-                                            pyinfo.speed_constant = py::extract<dReal>(state[10]);
-                                            pyinfo.starting_current = py::extract<dReal>(state[11]);
-                                            pyinfo.terminal_resistance = py::extract<dReal>(state[12]);
-                                            pyinfo.coloumb_friction = py::extract<dReal>(state[13][0]);
-                                            pyinfo.viscous_friction = py::extract<dReal>(state[13][1]);
+                                            ElectricMotorActuatorInfo_pickle_suite::setstate(pyinfo, state);
                                             return pyinfo;
                                         }
                                         ))  
