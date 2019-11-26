@@ -34,8 +34,6 @@
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 namespace py = pybind11;
 #else
-// cannot get from bindings.h, so have to redeclare them here
-#define PY_ARGS(...) py::args(__VA_ARGS__),
 namespace py = boost::python;
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 using py::object;

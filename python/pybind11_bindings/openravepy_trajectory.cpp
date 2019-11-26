@@ -19,7 +19,9 @@
 #include <openravepy/openravepy_configurationspecification.h>
 #include <openravepy/openravepy_environmentbase.h>
 
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
 #include <boost/python/slice.hpp> // slice objects
+#endif
 
 namespace openravepy {
 
