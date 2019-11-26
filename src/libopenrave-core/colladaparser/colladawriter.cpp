@@ -1546,87 +1546,86 @@ private:
                     param_controlMode->setCharData(boost::lexical_cast<std::string>(pjoint->_info._controlMode).c_str());
                     switch( pjoint->_info._controlMode ) {
                     case KinBody::JCM_RobotController: {
-                        for(int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis) {
-                            if( pjoint->_info._robotControllerDOFIndex.at(iaxis) >= 0 ) {
-                                daeElementRef param_robotControllerDOFIndex = ptec->add("robotControllerDOFIndex");
-                                param_robotControllerDOFIndex->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
-                                param_robotControllerDOFIndex->setCharData(boost::lexical_cast<std::string>(pjoint->_info._robotControllerDOFIndex[iaxis]).c_str());
-                            }
+                        daeElementRef param_jointcontrolinfo_robotcontroller = ptec->add("jointcontrolinfo_robotcontroller");
+                        // robotId
+                        daeElementRef param_robotId = param_jointcontrolinfo_robotcontroller->add("robotId");
+                        param_robotId->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotId).c_str());
+                        // robotControllerDOFIndex
+                        for( int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis ) {
+                            daeElementRef param_robotControllerDOFIndex = param_jointcontrolinfo_robotcontroller->add("robotControllerDOFIndex");
+                            param_robotControllerDOFIndex->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_robotControllerDOFIndex->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotControllerDOFIndex[iaxis]).c_str());
                         }
                         break;
                     } // end case KinBody::JCM_RobotController
                     case KinBody::JCM_IO: {
+                        daeElementRef param_jointcontrolinfo_io = ptec->add("jointcontrolinfo_io");
+                        // deviceId
+                        daeElementRef param_deviceId = param_jointcontrolinfo_io->add("deviceId");
+                        param_deviceId->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_io->deviceId).c_str());
+                        for( int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis ) {
+                            // vMoveIONames
+                            daeElementRef param_vMoveIONames = param_jointcontrolinfo_io->add("vMoveIONames");
+                            param_vMoveIONames->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_vMoveIONames->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->vMoveIONames[iaxis].size()).c_str());
+                            ss.str(""); ss.clear();
+                            FOREACHC(itioname, pjoint->_info._jci_io->vMoveIONames[iaxis]) {
+                                ss << *itioname << " ";
+                            }
+                            param_vMoveIONames->setCharData(ss.str());
 
-                        for(int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis) {
-                            if( pjoint->_info._moveToUpperLimitIOName.at(iaxis).size() > 0 ) {
-                                daeElementRef param_moveToUpperLimitIOName = ptec->add("moveToUpperLimitIOName");
-                                param_moveToUpperLimitIOName->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
-                                param_moveToUpperLimitIOName->setCharData(pjoint->_info._moveToUpperLimitIOName[iaxis].c_str());
+                            // vUpperLimitIONames
+                            daeElementRef param_vUpperLimitIONames = param_jointcontrolinfo_io->add("vUpperLimitIONames");
+                            param_vUpperLimitIONames->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_vUpperLimitIONames->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->vUpperLimitIONames[iaxis].size()).c_str());
+                            ss.str(""); ss.clear();
+                            FOREACHC(itioname, pjoint->_info._jci_io->vUpperLimitIONames[iaxis]) {
+                                ss << *itioname << " ";
                             }
+                            param_vUpperLimitIONames->setCharData(ss.str());
 
-                            if( pjoint->_info._vUpperLimitIONames[iaxis].size() != pjoint->_info._vUpperLimitSensorIsOn.at(iaxis).size() ) {
-                                RAVELOG_WARN_FORMAT("joint %s _vUpperLimitIONames and _vUpperLimitSensorIsOn have different sizes (%d!=%d)", pjoint->_info._name%pjoint->_info._vUpperLimitIONames[iaxis].size()%pjoint->_info._vUpperLimitSensorIsOn[iaxis].size());
+                            // vUpperLimitSensorIsOn
+                            daeElementRef param_vUpperLimitSensorIsOn = param_jointcontrolinfo_io->add("vUpperLimitSensorIsOn");
+                            param_vUpperLimitSensorIsOn->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_vUpperLimitSensorIsOn->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->vUpperLimitSensorIsOn[iaxis].size()).c_str());
+                            ss.str(""); ss.clear();
+                            FOREACHC(itiovalue, pjoint->_info._jci_io->vUpperLimitSensorIsOn[iaxis]) {
+                                ss << (int)*itiovalue << " ";
                             }
-                            if( pjoint->_info._vUpperLimitIONames.at(iaxis).size() > 0 ) {
-                                daeElementRef param_vUpperLimitIONames = ptec->add("vUpperLimitIONames");
-                                param_vUpperLimitIONames->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
-                                param_vUpperLimitIONames->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._vUpperLimitIONames[iaxis].size()).c_str());
-                                ss.str(""); ss.clear();
-                                FOREACHC(itioname, pjoint->_info._vUpperLimitIONames[iaxis]) {
-                                    ss << *itioname << " ";
-                                }
-                                param_vUpperLimitIONames->setCharData(ss.str());
-                            }
-                            if( pjoint->_info._vUpperLimitSensorIsOn.at(iaxis).size() > 0 ) {
-                                daeElementRef param_vUpperLimitSensorIsOn = ptec->add("vUpperLimitSensorIsOn");
-                                param_vUpperLimitSensorIsOn->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
-                                param_vUpperLimitSensorIsOn->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._vUpperLimitSensorIsOn[iaxis].size()).c_str());
-                                ss.str(""); ss.clear();
-                                FOREACHC(itvalue, pjoint->_info._vUpperLimitSensorIsOn[iaxis]) {
-                                    ss << (int)*itvalue << " ";
-                                }
-                                param_vUpperLimitSensorIsOn->setCharData(ss.str());
-                            }
+                            param_vUpperLimitSensorIsOn->setCharData(ss.str());
 
-                            if( pjoint->_info._moveToLowerLimitIOName.at(iaxis).size() > 0 ) {
-                                daeElementRef param_moveToLowerLimitIOName = ptec->add("moveToLowerLimitIOName");
-                                param_moveToLowerLimitIOName->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
-                                param_moveToLowerLimitIOName->setCharData(pjoint->_info._moveToLowerLimitIOName[iaxis].c_str());
+                            // vLowerLimitIONames
+                            daeElementRef param_vLowerLimitIONames = param_jointcontrolinfo_io->add("vLowerLimitIONames");
+                            param_vLowerLimitIONames->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_vLowerLimitIONames->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->vLowerLimitIONames[iaxis].size()).c_str());
+                            ss.str(""); ss.clear();
+                            FOREACHC(itioname, pjoint->_info._jci_io->vLowerLimitIONames[iaxis]) {
+                                ss << *itioname << " ";
                             }
+                            param_vLowerLimitIONames->setCharData(ss.str());
 
-                            if( pjoint->_info._vLowerLimitIONames.at(iaxis).size() != pjoint->_info._vLowerLimitSensorIsOn.at(iaxis).size() ) {
-                                RAVELOG_WARN_FORMAT("joint %s _vLowerLimitIONames and _vLowerLimitSensorIsOn have different sizes (%d!=%d)", pjoint->_info._name%pjoint->_info._vLowerLimitIONames[iaxis].size()%pjoint->_info._vLowerLimitSensorIsOn[iaxis].size());
+                            // vLowerLimitSensorIsOn
+                            daeElementRef param_vLowerLimitSensorIsOn = param_jointcontrolinfo_io->add("vLowerLimitSensorIsOn");
+                            param_vLowerLimitSensorIsOn->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_vLowerLimitSensorIsOn->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->vLowerLimitSensorIsOn[iaxis].size()).c_str());
+                            ss.str(""); ss.clear();
+                            FOREACHC(itiovalue, pjoint->_info._jci_io->vLowerLimitSensorIsOn[iaxis]) {
+                                ss << (int)*itiovalue << " ";
                             }
-                            if( pjoint->_info._vLowerLimitIONames[iaxis].size() > 0 ) {
-                                daeElementRef param_vLowerLimitIONames = ptec->add("vLowerLimitIONames");
-                                param_vLowerLimitIONames->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
-                                param_vLowerLimitIONames->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._vLowerLimitIONames[iaxis].size()).c_str());
-                                ss.str(""); ss.clear();
-                                FOREACHC(itioname, pjoint->_info._vLowerLimitIONames[iaxis]) {
-                                    ss << *itioname << " ";
-                                }
-                                param_vLowerLimitIONames->setCharData(ss.str());
-                            }
-                            if( pjoint->_info._vLowerLimitSensorIsOn[iaxis].size() > 0 ) {
-                                daeElementRef param_vLowerLimitSensorIsOn = ptec->add("vLowerLimitSensorIsOn");
-                                param_vLowerLimitSensorIsOn->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
-                                param_vLowerLimitSensorIsOn->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._vLowerLimitSensorIsOn[iaxis].size()).c_str());
-                                ss.str(""); ss.clear();
-                                FOREACHC(itvalue, pjoint->_info._vLowerLimitSensorIsOn[iaxis]) {
-                                    ss << (int)*itvalue << " ";
-                                }
-                                param_vLowerLimitSensorIsOn->setCharData(ss.str());
-                            }
+                            param_vLowerLimitSensorIsOn->setCharData(ss.str());
                         }
                         break;
                     } // end case KinBody::JCM_IO
                     case KinBody::JCM_ExternalDevice: {
-                        if( pjoint->_info._externalDeviceAddress.size() > 0 ) {
-                            daeElementRef param_externalDeviceAddress = ptec->add("externalDeviceAddress");
-                            param_externalDeviceAddress->setCharData(pjoint->_info._externalDeviceAddress.c_str());
-                        }
+                        daeElementRef param_jointcontrolinfo_externaldevice = ptec->add("jointcontrolinfo_externaldevice");
+                        // robotId
+                        daeElementRef param_gripperId = param_jointcontrolinfo_externaldevice->add("gripperId");
+                        param_gripperId->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_externaldevice->gripperId).c_str());
                         break;
                     } // end case KinBody::JCM_ExternalDevice
+                    default: {
+                        break;
+                    } // end default
                     } // end switch
                 }
             }

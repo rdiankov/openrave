@@ -163,7 +163,7 @@ public:
         info._vGeomData4 = ExtractVector<dReal>(_vGeomData4);
 
         info._vSideWalls.clear();
-        for (size_t i = 0; i < len(_vSideWalls); ++i) {
+        for (int i = 0; i < len(_vSideWalls); ++i) {
             info._vSideWalls.push_back({});
             boost::shared_ptr<PySideWall> pysidewall = boost::python::extract<boost::shared_ptr<PySideWall> >(_vSideWalls[i]);
             pysidewall->Get(info._vSideWalls[i]);
@@ -412,6 +412,7 @@ public:
     PyJointControlInfo_RobotController()
     {
         robotId = -1;
+        robotControllerDOFIndex = toPyVector3(Vector(-1, -1, -1));
     }
     PyJointControlInfo_RobotController(const KinBody::JointInfo::JointControlInfo_RobotController& jci)
     {
@@ -449,6 +450,11 @@ public:
     PyJointControlInfo_IO()
     {
         deviceId = -1;
+        vMoveIONames = boost::python::list();
+        vUpperLimitIONames = boost::python::list();
+        vUpperLimitSensorIsOn = boost::python::list();
+        vLowerLimitIONames = boost::python::list();
+        vLowerLimitSensorIsOn = boost::python::list();
     }
     PyJointControlInfo_IO(const KinBody::JointInfo::JointControlInfo_IO& jci)
     {
@@ -529,6 +535,7 @@ public:
         }
         vLowerLimitSensorIsOn = _vLowerLimitSensorIsOn;
     }
+
     KinBody::JointInfo::JointControlInfo_IOPtr GetJointControlInfo()
     {
         KinBody::JointInfo::JointControlInfo_IOPtr pinfo(new KinBody::JointInfo::JointControlInfo_IO());
@@ -653,20 +660,7 @@ public:
         _vupperlimit = toPyVector3(Vector(0,0,0));
         _bIsCircular = boost::python::list();
         _bIsActive = true;
-        // joint control
         _controlMode = KinBody::JCM_None;
-        _robotControllerDOFIndex = boost::python::list();
-        _bIsSingleActing = boost::python::list();
-        _moveToUpperLimitIOName = boost::python::list();
-        _vUpperLimitIONames = boost::python::list();
-        _vUpperLimitSensorIsOn = boost::python::list();
-        _moveToLowerLimitIOName = boost::python::list();
-        _vLowerLimitIONames = boost::python::list();
-        _vLowerLimitSensorIsOn = boost::python::list();
-
-        // _jci_robotcontroller = PyJointControlInfo_RobotController();
-        // _jci_io = PyJointControlInfo_IO();
-        // _jci_externaldevice = PyJointControlInfo_ExternalDevice();
     }
 
     PyJointInfo(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv) {
@@ -927,15 +921,6 @@ public:
     bool _bIsActive;
 
     KinBody::JointControlMode _controlMode;
-    object _robotControllerDOFIndex;
-    object _bIsSingleActing;
-    object _moveToUpperLimitIOName;
-    object _vUpperLimitIONames;
-    object _vUpperLimitSensorIsOn;
-    object _moveToLowerLimitIOName;
-    object _vLowerLimitIONames;
-    object _vLowerLimitSensorIsOn;
-    object _externalDeviceAddress;
     PyJointControlInfo_RobotControllerPtr _jci_robotcontroller;
     PyJointControlInfo_IOPtr _jci_io;
     PyJointControlInfo_ExternalDevicePtr _jci_externaldevice;
@@ -3507,12 +3492,54 @@ public:
     }
 };
 
+class JointControlInfo_RobotController_pickle_suite : public pickle_suite
+{
+public:
+    static boost::python::tuple getstate(const PyJointControlInfo_RobotController& r)
+    {
+        return boost::python::make_tuple(r.robotId, r.robotControllerDOFIndex);
+    }
+    static void setstate(PyJointControlInfo_RobotController& r, boost::python::tuple state) {
+        r.robotId = boost::python::extract<int>(state[0]);
+        r.robotControllerDOFIndex = state[1];
+    }
+};
+
+class JointControlInfo_IO_pickle_suite : public pickle_suite
+{
+public:
+    static boost::python::tuple getstate(const PyJointControlInfo_IO& r)
+    {
+        return boost::python::make_tuple(r.deviceId, r.vMoveIONames, r.vUpperLimitIONames, r.vUpperLimitSensorIsOn, r.vLowerLimitIONames, r.vLowerLimitSensorIsOn);
+    }
+    static void setstate(PyJointControlInfo_IO& r, boost::python::tuple state) {
+        r.deviceId = boost::python::extract<int>(state[0]);
+        r.vMoveIONames = state[1];
+        r.vUpperLimitIONames = state[2];
+        r.vUpperLimitSensorIsOn = state[3];
+        r.vLowerLimitIONames = state[4];
+        r.vLowerLimitSensorIsOn = state[5];
+    }
+};
+
+class JointControlInfo_ExternalDevice_pickle_suite : public pickle_suite
+{
+public:
+    static boost::python::tuple getstate(const PyJointControlInfo_ExternalDevice& r)
+    {
+        return boost::python::make_tuple(r.gripperId);
+    }
+    static void setstate(PyJointControlInfo_ExternalDevice& r, boost::python::tuple state) {
+        r.gripperId = boost::python::extract<int>(state[0]);
+    }
+};
+
 class JointInfo_pickle_suite : public pickle_suite
 {
 public:
     static boost::python::tuple getstate(const PyJointInfo& r)
     {
-        return boost::python::make_tuple(boost::python::make_tuple((int)r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), boost::python::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), boost::python::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular, r._bIsActive, r._mapStringParameters, r._infoElectricMotor, r._vmaxinertia, r._vmaxjerk, r._vhardmaxaccel, r._vhardmaxjerk), boost::python::make_tuple((int)r._controlMode, r._robotControllerDOFIndex, r._bIsSingleActing, r._moveToUpperLimitIOName, r._vUpperLimitIONames, r._vUpperLimitSensorIsOn, r._moveToLowerLimitIOName, r._vLowerLimitIONames, r._vLowerLimitSensorIsOn, r._externalDeviceAddress));
+        return boost::python::make_tuple(boost::python::make_tuple((int)r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), boost::python::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), boost::python::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular, r._bIsActive, r._mapStringParameters, r._infoElectricMotor, r._vmaxinertia, r._vmaxjerk, r._vhardmaxaccel, r._vhardmaxjerk), boost::python::make_tuple((int)r._controlMode, r._jci_robotcontroller, r._jci_io, r._jci_externaldevice));
     }
     static void setstate(PyJointInfo& r, boost::python::tuple state) {
         r._type = (KinBody::JointType)(int)boost::python::extract<int>(state[0][0]);
@@ -3558,15 +3585,9 @@ public:
         }
         if( len(state) > 3 ) {
             r._controlMode = (KinBody::JointControlMode)(int)boost::python::extract<int>(state[3][0]);
-            r._robotControllerDOFIndex = state[3][1];
-            r._bIsSingleActing         = state[3][2];
-            r._moveToUpperLimitIOName  = state[3][3];
-            r._vUpperLimitIONames      = state[3][4];
-            r._vUpperLimitSensorIsOn   = state[3][5];
-            r._moveToLowerLimitIOName  = state[3][6];
-            r._vLowerLimitIONames      = state[3][7];
-            r._vLowerLimitSensorIsOn   = state[3][8];
-            r._externalDeviceAddress   = state[3][9];
+            r._jci_robotcontroller = boost::python::extract<PyJointControlInfo_RobotControllerPtr>(state[3][1]);
+            r._jci_io = boost::python::extract<PyJointControlInfo_IOPtr>(state[3][2]);
+            r._jci_externaldevice = boost::python::extract<PyJointControlInfo_ExternalDevicePtr>(state[3][3]);
         }
     }
 };
@@ -3752,24 +3773,27 @@ void init_openravepy_kinbody()
     ;
 
     object jointcontrolinfo_robotcontroller =
-        class_<PyJointControlInfo_RobotController, boost::shared_ptr<PyJointControlInfo_RobotController> >("JointControlInfo_RobotConroller", DOXY_CLASS(KinBody::JointInfo::JointControlInfo_RobotConroller))
+        class_<PyJointControlInfo_RobotController, boost::shared_ptr<PyJointControlInfo_RobotController> >("JointControlInfo_RobotController", DOXY_CLASS(KinBody::JointInfo::JointControlInfo_RobotController))
         .def_readwrite("robotId", &PyJointControlInfo_RobotController::robotId)
         .def_readwrite("robotControllerDOFIndex", &PyJointControlInfo_RobotController::robotControllerDOFIndex)
+        .def_pickle(JointControlInfo_RobotController_pickle_suite())
     ;
 
     object jointcontrolinfo_io =
         class_<PyJointControlInfo_IO, boost::shared_ptr<PyJointControlInfo_IO> >("JointControlInfo_IO", DOXY_CLASS(KinBody::JointInfo::JointControlInfo_IO))
         .def_readwrite("deviceId", &PyJointControlInfo_IO::deviceId)
-        .def_readwrite("vModeIONames", &PyJointControlInfo_IO::vMoveIONames)
+        .def_readwrite("vMoveIONames", &PyJointControlInfo_IO::vMoveIONames)
         .def_readwrite("vUpperLimitIONames", &PyJointControlInfo_IO::vUpperLimitIONames)
         .def_readwrite("vUpperLimitSensorIsOn", &PyJointControlInfo_IO::vUpperLimitSensorIsOn)
         .def_readwrite("vLowerLimitIONames", &PyJointControlInfo_IO::vLowerLimitIONames)
         .def_readwrite("vLowerLimitSensorIsOn", &PyJointControlInfo_IO::vLowerLimitSensorIsOn)
+        .def_pickle(JointControlInfo_IO_pickle_suite())
     ;
 
     object jointcontrolinfo_externaldevice =
         class_<PyJointControlInfo_ExternalDevice, boost::shared_ptr<PyJointControlInfo_ExternalDevice> >("JointControlInfo_ExternalDevice", DOXY_CLASS(KinBody::JointInfo::JointControlInfo_ExternalDevice))
         .def_readwrite("gripperId", &PyJointControlInfo_ExternalDevice::gripperId)
+        .def_pickle(JointControlInfo_ExternalDevice_pickle_suite())
     ;
 
     object jointinfo = class_<PyJointInfo, boost::shared_ptr<PyJointInfo> >("JointInfo", DOXY_CLASS(KinBody::JointInfo))
@@ -3802,15 +3826,6 @@ void init_openravepy_kinbody()
                        .def_readwrite("_bIsActive",&PyJointInfo::_bIsActive)
                        .def_readwrite("_infoElectricMotor", &PyJointInfo::_infoElectricMotor)
                        .def_readwrite("_controlMode", &PyJointInfo::_controlMode)
-                       .def_readwrite("_robotControllerDOFIndex", &PyJointInfo::_robotControllerDOFIndex)
-                       .def_readwrite("_bIsSingleActing", &PyJointInfo::_bIsSingleActing)
-                       .def_readwrite("_moveToUpperLimitIOName", &PyJointInfo::_moveToUpperLimitIOName)
-                       .def_readwrite("_vUpperLimitIONames", &PyJointInfo::_vUpperLimitIONames)
-                       .def_readwrite("_vUpperLimitSensorIsOn", &PyJointInfo::_vUpperLimitSensorIsOn)
-                       .def_readwrite("_moveToLowerLimitIOName", &PyJointInfo::_moveToLowerLimitIOName)
-                       .def_readwrite("_vLowerLimitIONames", &PyJointInfo::_vLowerLimitIONames)
-                       .def_readwrite("_vLowerLimitSensorIsOn", &PyJointInfo::_vLowerLimitSensorIsOn)
-                       .def_readwrite("_externalDeviceAddress", &PyJointInfo::_externalDeviceAddress)
                        .def_readwrite("_jci_robotcontroller", &PyJointInfo::_jci_robotcontroller)
                        .def_readwrite("_jci_io", &PyJointInfo::_jci_io)
                        .def_readwrite("_jci_externaldevice", &PyJointInfo::_jci_externaldevice)

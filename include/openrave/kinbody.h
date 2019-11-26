@@ -943,8 +943,6 @@ public:
 
         struct JointControlInfo_RobotController
         {
-            JointControlInfo_RobotController() : robotId(-1) {
-            };
             int robotId;
             boost::array<int16_t, 3> robotControllerDOFIndex; ///< indicates which DOF in the robot controller controls which joint axis. -1 if not specified/not valid.
         };
@@ -952,8 +950,6 @@ public:
 
         struct JointControlInfo_IO
         {
-            JointControlInfo_IO() : deviceId(-1) {
-            };
             int deviceId;
             boost::array< std::vector<std::string>, 3 > vMoveIONames;       ///< io names for controlling positions of this joint.
             boost::array< std::vector<std::string>, 3 > vUpperLimitIONames; ///< io names for detecting if the joint is at its upper limit
@@ -965,8 +961,6 @@ public:
 
         struct JointControlInfo_ExternalDevice
         {
-            JointControlInfo_ExternalDevice() : gripperId(-1) {
-            };
             int gripperId;
         };
         typedef boost::shared_ptr<JointControlInfo_ExternalDevice> JointControlInfo_ExternalDevicePtr;
