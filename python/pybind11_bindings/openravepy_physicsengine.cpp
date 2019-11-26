@@ -87,7 +87,7 @@ public:
         std::vector<std::pair<Vector,Vector> > velocities;
         velocities.resize(len(ovelocities));
         for(size_t i = 0; i < velocities.size(); ++i) {
-            vector<dReal> v = ExtractArray<dReal>(ovelocities[i]);
+            std::vector<dReal> v = ExtractArray<dReal>(ovelocities[i]);
             BOOST_ASSERT(v.size()==6);
             velocities[i].first.x = v[0];
             velocities[i].first.y = v[1];

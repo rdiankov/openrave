@@ -577,7 +577,7 @@ public:
 
     bool InsertJointValues(object odata, object ovalues, PyKinBodyPtr pybody, object oindices, int timederivative=0) const
     {
-        vector<int> vindices = ExtractArray<int>(oindices);
+        std::vector<int> vindices = ExtractArray<int>(oindices);
         std::vector<dReal> vdata = ExtractArray<dReal>(odata);
         std::vector<dReal> vvalues = ExtractArray<dReal>(ovalues);
         OPENRAVE_ASSERT_OP(vvalues.size(),==,vindices.size());

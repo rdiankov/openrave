@@ -121,12 +121,7 @@ object computeConvexDecomposition(const boost::multi_array<float, 2>& vertices, 
         dims[1] = 3;
         PyObject *pyindices = PyArray_SimpleNew(2,dims, PyArray_INT);
         std::copy(&result.mIndices[0],&result.mIndices[3*result.mTcount],(int*)PyArray_DATA(pyindices));
-
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        hulls.append(py::make_tuple(py::cast(pyvertices), py::cast(pyindices)));
-#else
         hulls.append(py::make_tuple(py::to_array(pyvertices), py::to_array(pyindices)));
-#endif // USE_PYBIND11_PYTHON_BINDINGS
     }
 
     return hulls;
@@ -166,7 +161,7 @@ OPENRAVE_PYTHON_MODULE(convexdecompositionpy)
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    using namespace py::literals;
+    using namespace py::literals; // "..."_a
     m.def("computeConvexDecomposition", computeConvexDecomposition,
         "vertices"_a,
         "indices"_a,

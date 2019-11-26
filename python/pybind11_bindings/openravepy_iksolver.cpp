@@ -151,7 +151,7 @@ public:
         if( _pIkSolver->GetNumFreeParameters() == 0 ) {
             return py::empty_array();
         }
-        vector<dReal> values;
+        std::vector<dReal> values;
         _pIkSolver->GetFreeParameters(values);
         return toPyArray(values);
     }
@@ -160,7 +160,7 @@ public:
     {
         PyIkReturnPtr pyreturn(new PyIkReturn(IKRA_Reject));
         IkReturnPtr preturn(&pyreturn->_ret, utils::null_deleter());
-        vector<dReal> q0;
+        std::vector<dReal> q0;
         if( !IS_PYTHONOBJECT_NONE(oq0) ) {
             q0 = ExtractArray<dReal>(oq0);
         }
@@ -191,7 +191,7 @@ public:
     {
         PyIkReturnPtr pyreturn(new PyIkReturn(IKRA_Reject));
         IkReturnPtr preturn(&pyreturn->_ret, utils::null_deleter());
-        vector<dReal> q0, vFreeParameters;
+        std::vector<dReal> q0, vFreeParameters;
         if( !IS_PYTHONOBJECT_NONE(oq0) ) {
             q0 = ExtractArray<dReal>(oq0);
         }
@@ -214,7 +214,7 @@ public:
         if( !ExtractIkParameterization(oparam,ikparam) ) {
             throw openrave_exception(_("first argument to IkSolver.Solve needs to be IkParameterization"),ORE_InvalidArguments);
         }
-        vector<dReal> vFreeParameters;
+        std::vector<dReal> vFreeParameters;
         if( !IS_PYTHONOBJECT_NONE(oFreeParameters) ) {
             vFreeParameters = ExtractArray<dReal>(oFreeParameters);
         }

@@ -557,7 +557,7 @@ public:
 
     bool SetController(PyControllerBasePtr pController, object odofindices, int nControlTransformation) {
         CHECK_POINTER(pController);
-        vector<int> dofindices = ExtractArray<int>(odofindices);
+        std::vector<int> dofindices = ExtractArray<int>(odofindices);
         return _probot->SetController(openravepy::GetController(pController),dofindices,nControlTransformation);
     }
 
@@ -703,7 +703,7 @@ public:
 
     void SetActiveDOFValues(object values, uint32_t checklimits=KinBody::CLA_CheckLimits) const
     {
-        vector<dReal> vvalues = ExtractArray<dReal>(values);
+        std::vector<dReal> vvalues = ExtractArray<dReal>(values);
         if( vvalues.size() > 0 ) {
             _probot->SetActiveDOFValues(vvalues,checklimits);
         }
@@ -716,7 +716,7 @@ public:
         if( _probot->GetActiveDOF() == 0 ) {
             return py::empty_array();
         }
-        vector<dReal> values;
+        std::vector<dReal> values;
         _probot->GetActiveDOFValues(values);
         return toPyArray(values);
     }
@@ -726,7 +726,7 @@ public:
         if( _probot->GetActiveDOF() == 0 ) {
             return py::empty_array();
         }
-        vector<dReal> weights;
+        std::vector<dReal> weights;
         _probot->GetActiveDOFWeights(weights);
         return toPyArray(weights);
     }
@@ -740,7 +740,7 @@ public:
         if( _probot->GetActiveDOF() == 0 ) {
             return py::empty_array();
         }
-        vector<dReal> values;
+        std::vector<dReal> values;
         _probot->GetActiveDOFVelocities(values);
         return toPyArray(values);
     }
@@ -750,7 +750,7 @@ public:
         if( _probot->GetActiveDOF() == 0 ) {
             return py::make_tuple(py::empty_array(), py::empty_array()); // always need 2 since users can do lower, upper = GetDOFLimits()
         }
-        vector<dReal> lower, upper;
+        std::vector<dReal> lower, upper;
         _probot->GetActiveDOFLimits(lower,upper);
         return py::make_tuple(toPyArray(lower),toPyArray(upper));
     }
@@ -760,7 +760,7 @@ public:
         if( _probot->GetActiveDOF() == 0 ) {
             return py::empty_array();
         }
-        vector<dReal> values;
+        std::vector<dReal> values;
         _probot->GetActiveDOFMaxVel(values);
         return toPyArray(values);
     }
@@ -770,7 +770,7 @@ public:
         if( _probot->GetActiveDOF() == 0 ) {
             return py::empty_array();
         }
-        vector<dReal> values;
+        std::vector<dReal> values;
         _probot->GetActiveDOFMaxAccel(values);
         return toPyArray(values);
     }
@@ -780,7 +780,7 @@ public:
         if( _probot->GetActiveDOF() == 0 ) {
             return py::empty_array();
         }
-        vector<dReal> values;
+        std::vector<dReal> values;
         _probot->GetActiveDOFMaxJerk(values);
         return toPyArray(values);
     }
@@ -790,7 +790,7 @@ public:
         if( _probot->GetActiveDOF() == 0 ) {
             return py::empty_array();
         }
-        vector<dReal> values;
+        std::vector<dReal> values;
         _probot->GetActiveDOFHardMaxVel(values);
         return toPyArray(values);
     }
@@ -800,7 +800,7 @@ public:
         if( _probot->GetActiveDOF() == 0 ) {
             return py::empty_array();
         }
-        vector<dReal> values;
+        std::vector<dReal> values;
         _probot->GetActiveDOFHardMaxAccel(values);
         return toPyArray(values);
     }
@@ -810,7 +810,7 @@ public:
         if( _probot->GetActiveDOF() == 0 ) {
             return py::empty_array();
         }
-        vector<dReal> values;
+        std::vector<dReal> values;
         _probot->GetActiveDOFHardMaxJerk(values);
         return toPyArray(values);
     }
@@ -820,7 +820,7 @@ public:
         if( _probot->GetActiveDOF() == 0 ) {
             return py::empty_array();
         }
-        vector<dReal> values;
+        std::vector<dReal> values;
         _probot->GetActiveDOFResolutions(values);
         return toPyArray(values);
     }
@@ -838,8 +838,8 @@ public:
 
     object SubtractActiveDOFValues(object ovalues0, object ovalues1)
     {
-        vector<dReal> values0 = ExtractArray<dReal>(ovalues0);
-        vector<dReal> values1 = ExtractArray<dReal>(ovalues1);
+        std::vector<dReal> values0 = ExtractArray<dReal>(ovalues0);
+        std::vector<dReal> values1 = ExtractArray<dReal>(ovalues1);
         BOOST_ASSERT((int)values0.size() == GetActiveDOF() );
         BOOST_ASSERT((int)values1.size() == GetActiveDOF() );
         _probot->SubtractActiveDOFValues(values0,values1);

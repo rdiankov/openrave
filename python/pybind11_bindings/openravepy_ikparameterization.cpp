@@ -298,14 +298,14 @@ public:
 
     object GetValues() const
     {
-        vector<dReal> values(_param.GetNumberOfValues());
+        std::vector<dReal> values(_param.GetNumberOfValues());
         _param.GetValues(values.begin());
         return toPyArray(values);
     }
 
     void SetValues(object ovalues, IkParameterizationType iktype)
     {
-        vector<dReal> vsetvalues = ExtractArray<dReal>(ovalues);
+        std::vector<dReal> vsetvalues = ExtractArray<dReal>(ovalues);
         _param.Set(vsetvalues.begin(),iktype);
     }
 

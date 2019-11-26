@@ -392,7 +392,7 @@ public:
             }
         }
         dReal fsampleprob=1;
-        vector<dReal> vfreevalues = ExtractArray<dReal>(freevalues);
+        std::vector<dReal> vfreevalues = ExtractArray<dReal>(freevalues);
         _sampler.reset(new OpenRAVE::planningutils::ManipulatorIKGoalSampler(GetRobotManipulator(pymanip), listparameterizationsPtr, nummaxsamples, nummaxtries, fsampleprob, searchfreeparameters, ikfilteroptions, vfreevalues));
         _sampler->SetJitter(jitter);
     }

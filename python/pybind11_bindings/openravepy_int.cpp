@@ -1790,7 +1790,7 @@ public:
     }
 
     /// returns the number of points
-    static size_t _getGraphPoints(object opoints, vector<float>&vpoints)
+    static size_t _getGraphPoints(object opoints, std::vector<float>&vpoints)
     {
         if( PyObject_HasAttrString(opoints.ptr(),"shape") ) {
             object pointshape = opoints.attr("shape");
@@ -1823,7 +1823,7 @@ public:
     }
 
     /// returns the number of colors
-    static size_t _getGraphColors(object ocolors, vector<float>&vcolors)
+    static size_t _getGraphColors(object ocolors, std::vector<float>&vcolors)
     {
         if( !IS_PYTHONOBJECT_NONE(ocolors) ) {
             if( PyObject_HasAttrString(ocolors.ptr(),"shape") ) {
@@ -1860,7 +1860,7 @@ public:
         return 1;
     }
 
-    static pair<size_t,size_t> _getGraphPointsColors(object opoints, object ocolors, vector<float>&vpoints, vector<float>&vcolors)
+    static pair<size_t,size_t> _getGraphPointsColors(object opoints, object ocolors, std::vector<float>&vpoints, std::vector<float>&vcolors)
     {
         size_t numpoints = _getGraphPoints(opoints,vpoints);
         size_t numcolors = _getGraphColors(ocolors,vcolors);
@@ -1875,7 +1875,7 @@ public:
 
     object plot3(object opoints,float pointsize,object ocolors=py::none_(),int drawstyle=0)
     {
-        vector<float> vpoints, vcolors;
+        std::vector<float> vpoints, vcolors;
         pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
         bool bhasalpha = vcolors.size() == 4*sizes.second;
         if( sizes.first == sizes.second ) {
@@ -1891,7 +1891,7 @@ public:
 
     object drawlinestrip(object opoints,float linewidth,object ocolors=py::none_(),int drawstyle=0)
     {
-        vector<float> vpoints, vcolors;
+        std::vector<float> vpoints, vcolors;
         pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
         //bool bhasalpha = vcolors.size() == 4*sizes.second;
         if( sizes.first == sizes.second ) {
@@ -1907,7 +1907,7 @@ public:
 
     object drawlinelist(object opoints,float linewidth,object ocolors=py::none_(),int drawstyle=0)
     {
-        vector<float> vpoints, vcolors;
+        std::vector<float> vpoints, vcolors;
         pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
         //bool bhasalpha = vcolors.size() == 4*sizes.second;
         if( sizes.first == sizes.second ) {
@@ -1954,9 +1954,9 @@ public:
 
     object drawtrimesh(object opoints, object oindices=py::none_(), object ocolors=py::none_())
     {
-        vector<float> vpoints;
+        std::vector<float> vpoints;
         _getGraphPoints(opoints,vpoints);
-        vector<int> vindices;
+        std::vector<int> vindices;
         int* pindices = NULL;
         int numTriangles = vpoints.size()/9;
         if( !IS_PYTHONOBJECT_NONE(oindices) ) {
@@ -2641,7 +2641,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                         DOXY_FN(EnvironmentBase, Add)
                     )
 #else
-                    .def("Add", &PyEnvironmentBase::Add, Add_overloads(PY_ARGS("interface","anonymous","cmdPY_ARGS") DOXY_FN(EnvironmentBase,Add)))
+                    .def("Add", &PyEnvironmentBase::Add, Add_overloads(PY_ARGS("interface","anonymous","cmdargs") DOXY_FN(EnvironmentBase,Add)))
 #endif
                     .def("AddKinBody",addkinbody1, PY_ARGS("body") DOXY_FN(EnvironmentBase,AddKinBody))
                     .def("AddKinBody",addkinbody2, PY_ARGS("body","anonymous") DOXY_FN(EnvironmentBase,AddKinBody))
@@ -2657,8 +2657,8 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("GetRobot",&PyEnvironmentBase::GetRobot, PY_ARGS("name") DOXY_FN(EnvironmentBase,GetRobot))
                     .def("GetSensor",&PyEnvironmentBase::GetSensor, PY_ARGS("name") DOXY_FN(EnvironmentBase,GetSensor))
                     .def("GetBodyFromEnvironmentId",&PyEnvironmentBase::GetBodyFromEnvironmentId, DOXY_FN(EnvironmentBase,GetBodyFromEnvironmentId))
-                    .def("AddModule",&PyEnvironmentBase::AddModule,PY_ARGS("module","PY_ARGS") DOXY_FN(EnvironmentBase,AddModule))
-                    .def("LoadProblem",&PyEnvironmentBase::AddModule,PY_ARGS("module","PY_ARGS") DOXY_FN(EnvironmentBase,AddModule))
+                    .def("AddModule",&PyEnvironmentBase::AddModule,PY_ARGS("module","args") DOXY_FN(EnvironmentBase,AddModule))
+                    .def("LoadProblem",&PyEnvironmentBase::AddModule,PY_ARGS("module","args") DOXY_FN(EnvironmentBase,AddModule))
                     .def("RemoveProblem",&PyEnvironmentBase::RemoveProblem, PY_ARGS("prob") DOXY_FN(EnvironmentBase,RemoveProblem))
                     .def("GetModules",&PyEnvironmentBase::GetModules, DOXY_FN(EnvironmentBase,GetModules))
                     .def("GetLoadedProblems",&PyEnvironmentBase::GetModules, DOXY_FN(EnvironmentBase,GetModules))

@@ -76,7 +76,7 @@ public:
     bool Init(PyRobotBasePtr pyrobot, object odofindices, int nControlTransformation)
     {
         CHECK_POINTER(pyrobot);
-        vector<int> dofindices = ExtractArray<int>(odofindices);
+        std::vector<int> dofindices = ExtractArray<int>(odofindices);
         return _pcontroller->Init(openravepy::GetRobot(pyrobot),dofindices,nControlTransformation);
     }
 
@@ -97,7 +97,7 @@ public:
 
     bool SetDesired(object o)
     {
-        vector<dReal> values = ExtractArray<dReal>(o);
+        std::vector<dReal> values = ExtractArray<dReal>(o);
         if( values.size() == 0 ) {
             throw openrave_exception(_("no values specified"));
         }
@@ -131,14 +131,14 @@ public:
 
     object GetVelocity()
     {
-        vector<dReal> velocity;
+        std::vector<dReal> velocity;
         _pcontroller->GetVelocity(velocity);
         return toPyArray(velocity);
     }
 
     object GetTorque()
     {
-        vector<dReal> torque;
+        std::vector<dReal> torque;
         _pcontroller->GetTorque(torque);
         return toPyArray(torque);
     }
@@ -157,7 +157,7 @@ public:
 
     bool AttachController(PyControllerBasePtr ocontroller, object odofindices, int nControlTransformation) {
         CHECK_POINTER(ocontroller);
-        vector<int> dofindices = ExtractArray<int>(odofindices);
+        std::vector<int> dofindices = ExtractArray<int>(odofindices);
         return _pmulticontroller->AttachController(ocontroller->GetOpenRAVEController(), dofindices, nControlTransformation);
     }
 

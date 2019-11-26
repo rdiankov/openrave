@@ -308,12 +308,12 @@ public:
 
     object GetCameraImage(int width, int height, object extrinsic, object oKK)
     {
-        vector<float> vKK = ExtractArray<float>(oKK);
+        std::vector<float> vKK = ExtractArray<float>(oKK);
         if( vKK.size() != 4 ) {
             throw openrave_exception(_("KK needs to be of size 4"));
         }
         SensorBase::CameraIntrinsics KK(vKK[0],vKK[1],vKK[2],vKK[3]);
-        vector<uint8_t> memory;
+        std::vector<uint8_t> memory;
         if( !_pviewer->GetCameraImage(memory, width,height,RaveTransform<float>(ExtractTransform(extrinsic)), KK) ) {
             throw openrave_exception(_("failed to get camera image"));
         }
