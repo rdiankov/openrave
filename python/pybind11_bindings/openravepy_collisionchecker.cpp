@@ -69,7 +69,7 @@ public:
         string __str__()
         {
             Vector vpos = ExtractVector3(pos), vnorm = ExtractVector3(norm);
-            stringstream ss;
+            std::stringstream ss;
             ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
             ss << "pos=["<<vpos.x<<", "<<vpos.y<<", "<<vpos.z<<"], norm=["<<vnorm.x<<", "<<vnorm.y<<", "<<vnorm.z<<"]";
             return ss.str();

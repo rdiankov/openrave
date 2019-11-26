@@ -2993,7 +2993,7 @@ int PyKinBody::GetUpdateStamp() const
 
 string PyKinBody::serialize(int options) const
 {
-    stringstream ss;
+    std::stringstream ss;
     ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
     _pbody->serialize(ss,options);
     return ss.str();
@@ -3471,9 +3471,55 @@ void init_openravepy_kinbody()
                                        .def_readwrite("gear_ratio",&PyElectricMotorActuatorInfo::gear_ratio)
                                        .def_readwrite("coloumb_friction",&PyElectricMotorActuatorInfo::coloumb_friction)
                                        .def_readwrite("viscous_friction",&PyElectricMotorActuatorInfo::viscous_friction)
-#ifndef USE_PYBIND11_PYTHON_BINDINGS
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                                       .def(py::pickle(
+                                        [](const PyElectricMotorActuatorInfo& pyinfo) {
+                                            return py::make_tuple(pyinfo.gear_ratio,
+                                                pyinfo.assigned_power_rating,
+                                                pyinfo.max_speed,
+                                                pyinfo.no_load_speed,
+                                                py::make_tuple(pyinfo.stall_torque, pyinfo.max_instantaneous_torque),
+                                                py::make_tuple(pyinfo.nominal_speed_torque_points, pyinfo.max_speed_torque_points),
+                                                pyinfo.nominal_torque,
+                                                pyinfo.rotor_inertia,
+                                                pyinfo.torque_constant,
+                                                pyinfo.nominal_voltage,
+                                                pyinfo.speed_constant,
+                                                pyinfo.starting_current,
+                                                pyinfo.terminal_resistance,
+                                                py::make_tuple(pyinfo.coloumb_friction, pyinfo.viscous_friction));
+                                        },
+                                        [](py::tuple state) {
+                                            // __setstate__
+                                            if(state.size() != 14) {
+                                                throw std::runtime_error("Invalid state");
+                                            }
+                                            // TGN: should I convert this to primitive data types?
+                                            // ... the same as I did for PyKinBody::PyGrabbedInfo
+                                            PyElectricMotorActuatorInfo pyinfo;
+                                            pyinfo.gear_ratio = py::extract<dReal>(state[0]);
+                                            pyinfo.assigned_power_rating = py::extract<dReal>(state[1]);
+                                            pyinfo.max_speed = py::extract<dReal>(state[2]);
+                                            pyinfo.no_load_speed = py::extract<dReal>(state[3]);
+                                            pyinfo.stall_torque = py::extract<dReal>(state[4][0]);
+                                            pyinfo.max_instantaneous_torque = py::extract<dReal>(state[4][1]);
+                                            pyinfo.nominal_speed_torque_points = py::list(state[5][0]);
+                                            pyinfo.max_speed_torque_points = py::list(state[5][1]);
+                                            pyinfo.nominal_torque = py::extract<dReal>(state[6]);
+                                            pyinfo.rotor_inertia = py::extract<dReal>(state[7]);
+                                            pyinfo.torque_constant = py::extract<dReal>(state[8]);
+                                            pyinfo.nominal_voltage = py::extract<dReal>(state[9]);
+                                            pyinfo.speed_constant = py::extract<dReal>(state[10]);
+                                            pyinfo.starting_current = py::extract<dReal>(state[11]);
+                                            pyinfo.terminal_resistance = py::extract<dReal>(state[12]);
+                                            pyinfo.coloumb_friction = py::extract<dReal>(state[13][0]);
+                                            pyinfo.viscous_friction = py::extract<dReal>(state[13][1]);
+                                            return pyinfo;
+                                        }
+                                        ))  
+#else
                                        .def_pickle(ElectricMotorActuatorInfo_pickle_suite())
-#endif
+#endif // USE_PYBIND11_PYTHON_BINDINGS
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -3603,7 +3649,71 @@ void init_openravepy_kinbody()
                        .def_readwrite("_bIsCircular",&PyJointInfo::_bIsCircular)
                        .def_readwrite("_bIsActive",&PyJointInfo::_bIsActive)
                        .def_readwrite("_infoElectricMotor", &PyJointInfo::_infoElectricMotor)
-#ifndef USE_PYBIND11_PYTHON_BINDINGS
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                       // TGN: can simplify in future using 
+                       .def(py::pickle(
+                        [](const PyJointInfo &pyinfo) {
+                            // __getstate__
+                            /* Return a tuple that fully encodes the state of the object */
+                            return py::make_tuple(
+                                py::make_tuple((int)pyinfo._type, pyinfo._name, pyinfo._linkname0, pyinfo._linkname1, pyinfo._vanchor, pyinfo._vaxes, pyinfo._vcurrentvalues),
+                                py::make_tuple(pyinfo._vresolution, pyinfo._vmaxvel, pyinfo._vhardmaxvel, pyinfo._vmaxaccel, pyinfo._vmaxtorque, pyinfo._vweights, pyinfo._voffsets, pyinfo._vlowerlimit, pyinfo._vupperlimit),
+                                py::make_tuple(pyinfo._trajfollow, pyinfo._vmimic, pyinfo._mapFloatParameters, pyinfo._mapIntParameters, pyinfo._bIsCircular, pyinfo._bIsActive, pyinfo._mapStringParameters, pyinfo._infoElectricMotor, pyinfo._vmaxinertia, pyinfo._vmaxjerk, pyinfo._vhardmaxaccel, pyinfo._vhardmaxjerk)
+                            );
+                        },
+                        [](py::tuple state) {
+                            // __setstate__
+                            if (state.size() != 3) {
+                                throw std::runtime_error("Invalid state!");
+                            }
+                            /* Create a new C++ instance */
+                            PyJointInfo pyinfo;
+                            /* Assign any additional state */
+                            pyinfo._type = (KinBody::JointType)(int)py::extract<int>(state[0][0]);
+                            pyinfo._name = state[0][1];
+                            pyinfo._linkname0 = state[0][2];
+                            pyinfo._linkname1 = state[0][3];
+                            pyinfo._vanchor = state[0][4];
+                            pyinfo._vaxes = state[0][5];
+                            pyinfo._vcurrentvalues = state[0][6];
+                            pyinfo._vresolution = state[1][0];
+                            pyinfo._vmaxvel = state[1][1];
+                            pyinfo._vhardmaxvel = state[1][2];
+                            pyinfo._vmaxaccel = state[1][3];
+                            pyinfo._vmaxtorque = state[1][4];
+                            pyinfo._vweights = state[1][5];
+                            pyinfo._voffsets = state[1][6];
+                            pyinfo._vlowerlimit = state[1][7];
+                            pyinfo._vupperlimit = state[1][8];
+                            pyinfo._trajfollow = state[2][0];
+                            int num2 = len(extract<py::object>(state[2])); // same as state[2].cast<py::object>()
+                            pyinfo._vmimic = py::list(state[2][1]);
+                            pyinfo._mapFloatParameters = py::dict(state[2][2]);
+                            pyinfo._mapIntParameters = py::dict(state[2][3]);
+                            pyinfo._bIsCircular = state[2][4];
+                            pyinfo._bIsActive = py::extract<bool>(state[2][5]);
+                            if( num2 > 6 ) {
+                                pyinfo._mapStringParameters = py::dict(state[2][6]);
+                                if( num2 > 7 ) {
+                                    pyinfo._infoElectricMotor = py::extract<PyElectricMotorActuatorInfoPtr>(state[2][7]);
+                                    if( num2 > 8 ) {
+                                        pyinfo._vmaxinertia = state[2][8];
+                                        if( num2 > 9 ) {
+                                            pyinfo._vmaxjerk = state[2][9];
+                                            if( num2 > 10 ) {
+                                                pyinfo._vhardmaxaccel = state[2][10];
+                                                if( num2 > 11 ) {
+                                                    pyinfo._vhardmaxjerk = state[2][11];
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            return pyinfo;
+                        }
+                        ))
+#else
                        .def_pickle(JointInfo_pickle_suite())
 #endif
     ;

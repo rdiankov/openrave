@@ -52,7 +52,7 @@ public:
     PyIkParameterization() {
     }
     PyIkParameterization(const string &s) {
-        stringstream ss(s);
+        std::stringstream ss(s);
         ss >> _param;
     }
     PyIkParameterization(object o, IkParameterizationType type)
@@ -373,7 +373,8 @@ class IkParameterization_pickle_suite : public pickle_suite
 public:
     static py::tuple getinitargs(const PyIkParameterization &r)
     {
-        std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+        std::stringstream ss;
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
         ss << r._param;
         return py::make_tuple(ss.str());
     }
@@ -553,7 +554,22 @@ void init_openravepy_ikparameterization()
                                    .def("__repr__",&PyIkParameterization::__repr__)
                                    .def("__mul__",&PyIkParameterization::__mul__)
                                    .def("__rmul__",&PyIkParameterization::__rmul__)
-#ifndef USE_PYBIND11_PYTHON_BINDINGS
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                                   .def(py::pickle(
+                                    [](const PyIkParameterization& pyikparam) {
+                                        std::stringstream ss;
+                                        ss << pyikparam._param;
+                                        return py::make_tuple(ss.str());
+                                    },
+                                    [](py::tuple state) {
+                                        // __setstate__
+                                        if(state.size() != 1) {
+                                            throw std::runtime_error("Invalid state");
+                                        }
+                                        return PyIkParameterization(state[0].cast<std::string>());
+                                    }
+                                    ))
+#else
                                    .def_pickle(IkParameterization_pickle_suite())
 #endif
         ;

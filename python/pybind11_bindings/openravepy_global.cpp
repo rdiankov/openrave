@@ -751,7 +751,7 @@ object pyRaveGetAffineDOFValuesFromTransform(object otransform, int affinedofs, 
 
 std::string openravepyCompilerVersion()
 {
-    stringstream ss;
+    std::stringstream ss;
 #if defined(_MSC_VER)
     ss << "msvc " << _MSC_VER;
 #elif defined(__GNUC__)
@@ -1136,7 +1136,7 @@ dReal ComputePoseDistSqr(object opose0, object opose1, dReal quatweight=1.0)
 
 string matrixSerialization(object o)
 {
-    stringstream ss;
+    std::stringstream ss;
     ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
     ss << ExtractTransformMatrix(o);
     return ss.str();
@@ -1144,7 +1144,7 @@ string matrixSerialization(object o)
 
 string poseSerialization(object o)
 {
-    stringstream ss;
+    std::stringstream ss;
     ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
     ss << ExtractTransform(o);
     return ss.str();

@@ -232,7 +232,7 @@ public:
         }
 
         string __repr__() {
-            stringstream ss;
+            std::stringstream ss;
             ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);         /// have to do this or otherwise precision gets lost
             ss << "Planner.PlannerParameters(\"\"\"";
             ss << *_paramsread << "\"\"\")" << endl;
@@ -273,7 +273,7 @@ public:
 
     bool InitPlan(PyRobotBasePtr pbase, const string& params)
     {
-        stringstream ss(params);
+        std::stringstream ss(params);
         return _pplanner->InitPlan(openravepy::GetRobot(pbase),ss);
     }
 
