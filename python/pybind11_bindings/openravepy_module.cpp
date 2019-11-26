@@ -44,7 +44,7 @@ using py::def;
 namespace numeric = py::numeric;
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
-class PyModuleBase : public PyInterfaceBase
+class OPENRAVEPY_API PyModuleBase : public PyInterfaceBase
 {
 protected:
     ModuleBasePtr _pmodule;

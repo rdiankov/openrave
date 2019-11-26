@@ -182,9 +182,6 @@ struct select_npy_type<uint64_t>
 
 // pybind11
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-#ifdef NDEBUG
-#undef NDEBUG
-#endif // NDEBUG
 #define OPENRAVEPY_API __attribute__ ((visibility ("default")))
 #include <iostream>
 // use std::cout temporarily

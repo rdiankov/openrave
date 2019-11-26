@@ -52,7 +52,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
           set(OPENRAVEPY_COMPILE_FLAGS "${OPENRAVEPY_COMPILE_FLAGS} -g0 -O3")
         endif()          
         # pybind11 requires less visibility
-        # set(OPENRAVEPY_COMPILE_FLAGS "${OPENRAVEPY_COMPILE_FLAGS} -fvisibility=hidden")
+        set(OPENRAVEPY_COMPILE_FLAGS "${OPENRAVEPY_COMPILE_FLAGS} -fvisibility=hidden")
       endif()
       set(openravepy_int_cpp_files openravepy_int.cpp openravepy_kinbody.cpp openravepy_robot.cpp openravepy_global.cpp
           openravepy_collisionchecker.cpp openravepy_controller.cpp openravepy_ikparameterization.cpp openravepy_iksolver.cpp
