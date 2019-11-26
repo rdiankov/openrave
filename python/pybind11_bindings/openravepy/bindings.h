@@ -200,8 +200,8 @@ inline T extract(object o) {
     return o.cast<T>();
 }
 template <typename T>
-inline T extract(handle o) {
-    return o.cast<T>();
+inline T extract(handle h) {
+    return h.cast<T>();
 }
 template <typename T>
 inline object to_object(const T& t) {
@@ -314,6 +314,13 @@ namespace py = boost::python;
 inline py::object ConvertStringToUnicode(const std::string& s)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+    /*
+    TGN: Is the following an alternative?
+    ```
+    PyObject *pyo = PyUnicode_Decode(s.c_str(), s.size(), "utf-8", nullptr);
+    return py::handle(pyo).cast<py::array_t<double>>();
+    ```
+    */
     return py::cast(s);
 #else
     return py::handle_to_object(PyUnicode_Decode(s.c_str(), s.size(), "utf-8", nullptr));
@@ -359,7 +366,7 @@ inline std::vector<T> ExtractArray(const py::object& o)
         // https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html
         // https://qiita.com/lucidfrontier45/items/183526df954c1d6580ba
         const py::buffer_info info = arr.request();
-        const auto &shape = info.shape;
+        const std::vector<ssize_t> &shape = info.shape;
         switch(info.ndim) {
             case 0: {
                 return {};
@@ -640,9 +647,12 @@ inline py::array_t<T> toPyArrayN(const T* pvalues, const size_t N)
 template <typename T>
 inline py::array_t<T> toPyArrayN(const T* pvalues, std::vector<npy_intp>& dims)
 {
+    // n-dimension numpy array
     return py::array_t<T>(dims, pvalues); 
 }
+// ========================================
 #else // USE_PYBIND11_PYTHON_BINDINGS
+// ========================================
 template <typename T>
 inline py::numeric::array toPyArrayN(const T* pvalues, const size_t N)
 {
@@ -679,21 +689,8 @@ inline py::numeric::array toPyArrayN(const T* pvalues, std::vector<npy_intp>& di
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 template <typename T>
-inline py::object toPyList(const std::vector<T>& v)
-{
-    py::list lvalues;
-    FOREACHC(it,v) {
-        lvalues.append(object(*it));
-    }
-    return std::move(lvalues);
-}
-
-template <typename T>
 inline py::numeric::array toPyArray(const std::vector<T>& v)
 {
-    if( v.empty() ) {
-        return toPyArrayN((T*)nullptr, 0);
-    }
     return toPyArrayN(v.data(), v.size());
 }
 
@@ -712,12 +709,9 @@ inline py::numeric::array toPyArray(const std::vector<T>& v, std::vector<npy_int
 }
 
 template <typename T, int N>
-inline py::numeric::array toPyArray(const boost::array<T,N>& v)
+inline py::numeric::array toPyArray(const boost::array<T, N>& v)
 {
-    if( v.empty() ) {
-        return toPyArrayN((T*)nullptr, 0);
-    }
-    return toPyArrayN(v.data(), v.size());
+    return toPyArrayN(v.data(), N);
 }
 
 #endif // OPENRAVE_BINDINGS_PYARRAY
