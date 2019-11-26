@@ -3579,7 +3579,21 @@ void init_openravepy_kinbody()
 #else
                           .def("SerializeJSON", &PyGeometryInfo::SerializeJSON,SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(GeometryInfo,SerializeJSON)))
 #endif
-#ifndef USE_PYBIND11_PYTHON_BINDINGS
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                          .def(py::pickle(
+                            [](const PyGeometryInfo &pygeom) {
+                                // __getstate__
+                                return GeometryInfo_pickle_suite::getstate(pygeom);
+                            },
+                            [](py::tuple state) {
+                                // __setstate__
+                                /* Create a new C++ instance */
+                                PyGeometryInfo pygeom;
+                                GeometryInfo_pickle_suite::setstate(pygeom, state);
+                                return pygeom;
+                            }
+                            ))
+#else
                           .def_pickle(GeometryInfo_pickle_suite())
 #endif
     ;
@@ -3611,7 +3625,21 @@ void init_openravepy_kinbody()
                       .def_readwrite("_vForcedAdjacentLinks",&PyLinkInfo::_vForcedAdjacentLinks)
                       .def_readwrite("_bStatic",&PyLinkInfo::_bStatic)
                       .def_readwrite("_bIsEnabled",&PyLinkInfo::_bIsEnabled)
-#ifndef USE_PYBIND11_PYTHON_BINDINGS
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                      .def(py::pickle(
+                        [](const PyLinkInfo &pyinfo) {
+                            // __getstate__
+                            return LinkInfo_pickle_suite::getstate(pyinfo);
+                        },
+                        [](py::tuple state) {
+                            // __setstate__
+                            /* Create a new C++ instance */
+                            PyLinkInfo pyinfo;
+                            LinkInfo_pickle_suite::setstate(pyinfo, state);
+                            return pyinfo;
+                        }
+                        ))
+#else
                       .def_pickle(LinkInfo_pickle_suite())
 #endif
     ;
@@ -3653,62 +3681,15 @@ void init_openravepy_kinbody()
                        .def(py::pickle(
                         [](const PyJointInfo &pyinfo) {
                             // __getstate__
-                            /* Return a tuple that fully encodes the state of the object */
-                            return py::make_tuple(
-                                py::make_tuple((int)pyinfo._type, pyinfo._name, pyinfo._linkname0, pyinfo._linkname1, pyinfo._vanchor, pyinfo._vaxes, pyinfo._vcurrentvalues),
-                                py::make_tuple(pyinfo._vresolution, pyinfo._vmaxvel, pyinfo._vhardmaxvel, pyinfo._vmaxaccel, pyinfo._vmaxtorque, pyinfo._vweights, pyinfo._voffsets, pyinfo._vlowerlimit, pyinfo._vupperlimit),
-                                py::make_tuple(pyinfo._trajfollow, pyinfo._vmimic, pyinfo._mapFloatParameters, pyinfo._mapIntParameters, pyinfo._bIsCircular, pyinfo._bIsActive, pyinfo._mapStringParameters, pyinfo._infoElectricMotor, pyinfo._vmaxinertia, pyinfo._vmaxjerk, pyinfo._vhardmaxaccel, pyinfo._vhardmaxjerk)
-                            );
+                            return JointInfo_pickle_suite::getstate(pyinfo);
                         },
                         [](py::tuple state) {
                             // __setstate__
                             if (state.size() != 3) {
-                                throw std::runtime_error("Invalid state!");
+                                RAVELOG_WARN("Invalid state!");
                             }
-                            /* Create a new C++ instance */
                             PyJointInfo pyinfo;
-                            /* Assign any additional state */
-                            pyinfo._type = (KinBody::JointType)(int)py::extract<int>(state[0][0]);
-                            pyinfo._name = state[0][1];
-                            pyinfo._linkname0 = state[0][2];
-                            pyinfo._linkname1 = state[0][3];
-                            pyinfo._vanchor = state[0][4];
-                            pyinfo._vaxes = state[0][5];
-                            pyinfo._vcurrentvalues = state[0][6];
-                            pyinfo._vresolution = state[1][0];
-                            pyinfo._vmaxvel = state[1][1];
-                            pyinfo._vhardmaxvel = state[1][2];
-                            pyinfo._vmaxaccel = state[1][3];
-                            pyinfo._vmaxtorque = state[1][4];
-                            pyinfo._vweights = state[1][5];
-                            pyinfo._voffsets = state[1][6];
-                            pyinfo._vlowerlimit = state[1][7];
-                            pyinfo._vupperlimit = state[1][8];
-                            pyinfo._trajfollow = state[2][0];
-                            int num2 = len(extract<py::object>(state[2])); // same as state[2].cast<py::object>()
-                            pyinfo._vmimic = py::list(state[2][1]);
-                            pyinfo._mapFloatParameters = py::dict(state[2][2]);
-                            pyinfo._mapIntParameters = py::dict(state[2][3]);
-                            pyinfo._bIsCircular = state[2][4];
-                            pyinfo._bIsActive = py::extract<bool>(state[2][5]);
-                            if( num2 > 6 ) {
-                                pyinfo._mapStringParameters = py::dict(state[2][6]);
-                                if( num2 > 7 ) {
-                                    pyinfo._infoElectricMotor = py::extract<PyElectricMotorActuatorInfoPtr>(state[2][7]);
-                                    if( num2 > 8 ) {
-                                        pyinfo._vmaxinertia = state[2][8];
-                                        if( num2 > 9 ) {
-                                            pyinfo._vmaxjerk = state[2][9];
-                                            if( num2 > 10 ) {
-                                                pyinfo._vhardmaxaccel = state[2][10];
-                                                if( num2 > 11 ) {
-                                                    pyinfo._vhardmaxjerk = state[2][11];
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            JointInfo_pickle_suite::setstate(pyinfo, state);
                             return pyinfo;
                         }
                         ))
@@ -3734,26 +3715,18 @@ void init_openravepy_kinbody()
                          // https://pybind11.readthedocs.io/en/stable/advanced/classes.html#pickling-support
                          .def(py::pickle(
                             // __getstate__
-                            [](const PyKinBody::PyGrabbedInfo &r) {
-                                _RAVE_DISPLAY(std::cout << "__getstate__ of PyKinBody::PyGrabbedInfo";);
-                                /* Return a tuple that fully encodes the state of the object */
-                                return py::make_tuple(r._grabbedname, r._robotlinkname, r._trelative, r._setRobotLinksToIgnore);
+                            [](const PyKinBody::PyGrabbedInfo &pyinfo) {
+                                return GrabbedInfo_pickle_suite::getstate(pyinfo);
                             },
                             // __setstate__
                             [](py::tuple state) {
-                                _RAVE_DISPLAY(std::cout << "__setstate__ of PyKinBody::PyGrabbedInfo";);
                                 if (state.size() != 4) {
-                                    throw std::runtime_error("Invalid state!");
+                                    RAVELOG_WARN("Invalid state!");
                                 }
                                 /* Create a new C++ instance */
-                                PyKinBody::PyGrabbedInfo r;
-                                /* Assign any additional state */
-                                /* Similar to GrabbedInfo_pickle_suite above */
-                                r._grabbedname = extract<std::string>(state[0]);
-                                r._robotlinkname = extract<std::string>(state[1]);
-                                r._trelative = state[2];
-                                r._setRobotLinksToIgnore = extract<std::vector<int>>(state[3]);
-                                return r;
+                                PyKinBody::PyGrabbedInfo pyinfo;
+                                GrabbedInfo_pickle_suite::setstate(pyinfo, state);
+                                return pyinfo;
                             }
                          ))
 #else

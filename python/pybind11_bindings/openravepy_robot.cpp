@@ -1603,8 +1603,10 @@ public:
     }
 };
 
+class ManipulatorInfo_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
-class ManipulatorInfo_pickle_suite : public pickle_suite
+ : public pickle_suite
+#endif 
 {
 public:
     static py::tuple getstate(const PyManipulatorInfo& r)
@@ -1622,7 +1624,6 @@ public:
         r._vGripperJointNames = state[7];
     }
 };
-#endif // USE_PYBIND11_PYTHON_BINDINGS
 
 RobotBasePtr GetRobot(object o)
 {
@@ -1727,7 +1728,21 @@ void init_openravepy_robot()
                              .def_readwrite("_vdirection",&PyManipulatorInfo::_vdirection)
                              .def_readwrite("_sIkSolverXMLId",&PyManipulatorInfo::_sIkSolverXMLId)
                              .def_readwrite("_vGripperJointNames",&PyManipulatorInfo::_vGripperJointNames)
-#ifndef USE_PYBIND11_PYTHON_BINDINGS
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                             .def(py::pickle(
+                             [](const PyManipulatorInfo &pyinfo) {
+                                 // __getstate__
+                                 return ManipulatorInfo_pickle_suite::getstate(pyinfo);
+                             },
+                             [](py::tuple state) {
+                                 // __setstate__
+                                 /* Create a new C++ instance */
+                                 PyManipulatorInfo pyinfo;
+                                 ManipulatorInfo_pickle_suite::setstate(pyinfo, state);
+                                 return pyinfo;
+                             }
+                             ))
+#else                           
                              .def_pickle(ManipulatorInfo_pickle_suite())
 #endif
     ;

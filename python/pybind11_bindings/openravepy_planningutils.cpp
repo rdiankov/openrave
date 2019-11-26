@@ -351,8 +351,10 @@ object toPyDHParameter(const OpenRAVE::planningutils::DHParameter& p, PyEnvironm
     return py::to_object(OPENRAVE_SHARED_PTR<PyDHParameter>(new PyDHParameter(p,pyenv)));
 }
 
+class DHParameter_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
-class DHParameter_pickle_suite : public pickle_suite
+ : public pickle_suite
+#endif
 {
 public:
     static py::tuple getinitargs(const PyDHParameter& p)
@@ -360,7 +362,6 @@ public:
         return py::make_tuple(py::none_(), p.parentindex, p.transform, p.d, p.a, p.theta, p.alpha);
     }
 };
-#endif
 
 py::list pyGetDHParameters(PyKinBodyPtr pybody)
 {
@@ -710,7 +711,30 @@ void InitPlanningUtils()
         .def("__str__",&planningutils::PyDHParameter::__str__)
         .def("__unicode__",&planningutils::PyDHParameter::__unicode__)
         .def("__repr__",&planningutils::PyDHParameter::__repr__)
-#ifndef USE_PYBIND11_PYTHON_BINDINGS
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        .def(py::pickle(
+        [](const planningutils::PyDHParameter &pyparams) {
+            // __getstate__
+            return planningutils::DHParameter_pickle_suite::getinitargs(pyparams);
+        },
+        [](py::tuple state) {
+            // __setstate__
+            /* Create a new C++ instance */
+            if(state.size() != 7) {
+                RAVELOG_WARN("Invalid state!");
+            }
+            planningutils::PyDHParameter pyparams;
+            pyparams.joint = extract<object>(state[0]); // py::none_()?
+            pyparams.parentindex = extract<int>(state[1]);
+            pyparams.transform = extract<object>(state[2]);
+            pyparams.d = extract<dReal>(state[3]);
+            pyparams.a = extract<dReal>(state[4]);
+            pyparams.theta = extract<dReal>(state[5]);
+            pyparams.alpha = extract<dReal>(state[6]);
+            return pyparams;
+        } 
+        ))
+#else
         .def_pickle(planningutils::DHParameter_pickle_suite())
 #endif
         ;
