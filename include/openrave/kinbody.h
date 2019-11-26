@@ -919,28 +919,6 @@ public:
         /// \brief _controlMode specifies how this joint is controlled. For possible control modes, see enum JointControlMode.
         JointControlMode _controlMode;
 
-        /// JCM_RobotController
-        boost::array<int, 3> _robotControllerDOFIndex; // this indicates which DOF in the robot controller controls which joint axis. -1 if unspecified/not valid.
-
-        /// JCM_IO
-        /// Single-acting: Joint is controlled by one io signal (_moveToUpperLimitIOName). When the signal is on (1),
-        /// the joint moves towards the upper limit. When the signal is off (0), the joint moves towards the lower
-        /// limit.
-        /// Double-acting: joint is controlled by two io signals (_moveToUpperLimitIOName and
-        /// _moveToLowerLimitIOName). To move the joint towards the upper limit, _moveToLowerLimitIOName: 0 and
-        /// _moveToUpperLimitIOName: 1. To move the joint towards the lower limit, _moveToUpperLimitIOName: 0 and
-        /// _moveToLowerLimitIOName: 1. When both signals are off, the joint stays where it currently is.
-        boost::array<uint8_t, 3> _bIsSingleActing; ///< if true, action type is single-acting. otherwise, double-acting.
-        boost::array<std::string, 3> _moveToUpperLimitIOName;          ///< io name for moving towards the upper limit.
-        boost::array<std::vector<std::string>, 3> _vUpperLimitIONames; ///< io names for detecting if the joint is at its upper limit
-        boost::array<std::vector<uint8_t>, 3> _vUpperLimitSensorIsOn;  ///< if true, the corresponding upper limit sensor reads 1 when the joint is at its upper limit. otherwise, the upper limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
-        boost::array<std::string, 3> _moveToLowerLimitIOName;          ///< io name for moving towards the lower limit.
-        boost::array<std::vector<std::string>, 3> _vLowerLimitIONames; ///< io names for detecting if the joint is at its lower limit
-        boost::array<std::vector<uint8_t>, 3> _vLowerLimitSensorIsOn;  ///< if true, the corresponding lower limit sensor reads 1 when the joint is at its lower limit. otherwise, the lower limit sensor reads 0 when the joint is at its lower limit. the default value is 1.
-
-        /// JCM_ExternalDevice
-        std::string _externalDeviceAddress;  ///< IP address for the external device controlling this joint
-
         struct JointControlInfo_RobotController
         {
             JointControlInfo_RobotController() : robotId(-1) {
