@@ -1344,7 +1344,32 @@ void init_openravepy_global()
     .def("__str__",&PyRay::__str__)
     .def("__unicode__",&PyRay::__unicode__)
     .def("__repr__",&PyRay::__repr__)
-#ifndef USE_PYBIND11_PYTHON_BINDINGS
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def(py::pickle(
+    [](const PyRay &pyr) {
+        // __getstate__
+        /* Return a tuple that fully encodes the state of the object */
+        return py::make_tuple(toPyVector3(pyr.r.pos), toPyVector3(pyr.r.dir));
+    },
+    [](py::tuple state) {
+        // __setstate__
+        if (state.size() != 2) {
+            throw std::runtime_error("Invalid state!");
+        }
+        /* Create a new C++ instance */
+        PyRay pyr;
+        /* Assign any additional state */
+        py::array_t<dReal> pos = state[0].cast<py::array_t<dReal>>();
+        py::array_t<dReal> dir = state[1].cast<py::array_t<dReal>>();
+        for(size_t i = 0; i < 3; ++i) {
+            pyr.r.pos[i] = *pos.data(i);
+            pyr.r.dir[i] = *dir.data(i);
+        }
+        pyr.r.pos[3] = pyr.r.dir[3] = 0;
+        return pyr;
+    }
+    ))
+#else
     .def_pickle(Ray_pickle_suite())
 #endif
     ;
@@ -1363,9 +1388,34 @@ void init_openravepy_global()
     .def("__unicode__",&PyAABB::__unicode__)
     .def("__repr__",&PyAABB::__repr__)
     .def("toDict", &PyAABB::toDict)
-#ifndef USE_PYBIND11_PYTHON_BINDINGS
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def(py::pickle(
+    [](const PyAABB &pyab) {
+        // __getstate__
+        /* Return a tuple that fully encodes the state of the object */
+        return py::make_tuple(toPyVector3(pyab.ab.pos), toPyVector3(pyab.ab.extents));
+    },
+    [](py::tuple state) {
+        // __setstate__
+        if (state.size() != 2) {
+            throw std::runtime_error("Invalid state!");
+        }
+        /* Create a new C++ instance */
+        PyAABB pyab;
+        /* Assign any additional state */
+        py::array_t<dReal> pos = state[0].cast<py::array_t<dReal>>();
+        py::array_t<dReal> extents = state[1].cast<py::array_t<dReal>>();
+        for(size_t i = 0; i < 3; ++i) {
+            pyab.ab.pos[i] = *pos.data(i);
+            pyab.ab.extents[i] = *extents.data(i);
+        }
+        pyab.ab.pos[3] = pyab.ab.extents[3] = 0;
+        return pyab;
+    }
+    ))
+#else
     .def_pickle(AABB_pickle_suite())
-#endif
+#endif // USE_PYBIND11_PYTHON_BINDINGS
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyTriMesh, OPENRAVE_SHARED_PTR<PyTriMesh> >(m, "TriMesh", DOXY_CLASS(TriMesh))
@@ -1380,7 +1430,27 @@ void init_openravepy_global()
     .def_readwrite("indices",&PyTriMesh::indices)
     .def("__str__",&PyTriMesh::__str__)
     .def("__unicode__",&PyTriMesh::__unicode__)
-#ifndef USE_PYBIND11_PYTHON_BINDINGS
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def(py::pickle(
+    [](const PyTriMesh &pymesh) {
+        // __getstate__
+        /* Return a tuple that fully encodes the state of the object */
+        return py::make_tuple(pymesh.vertices, pymesh.indices);
+    },
+    [](py::tuple state) {
+        // __setstate__
+        if (state.size() != 2) {
+            throw std::runtime_error("Invalid state!");
+        }
+        /* Create a new C++ instance */
+        PyTriMesh pymesh;
+        /* Assign any additional state */
+        pymesh.vertices = state[0];
+        pymesh.indices = state[1];
+        return pymesh;
+    }
+    ))
+#else
     .def_pickle(TriMesh_pickle_suite())
 #endif
     ;
@@ -1508,7 +1578,22 @@ void init_openravepy_global()
                                            .def("__ne__",&PyConfigurationSpecification::__ne__)
                                            .def("__add__",&PyConfigurationSpecification::__add__)
                                            .def("__iadd__",&PyConfigurationSpecification::__iadd__)
-#ifndef USE_PYBIND11_PYTHON_BINDINGS
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                                           .def(py::pickle(
+                                            [](const PyConfigurationSpecification& pyspec) {
+                                                std::stringstream ss;
+                                                ss << pyspec._spec;
+                                                return py::make_tuple(ss.str());
+                                            },
+                                            [](py::tuple state) {
+                                                // __setstate__
+                                                if(state.size() != 1) {
+                                                    throw std::runtime_error("Invalid state");
+                                                }
+                                                return PyConfigurationSpecification(state[0].cast<std::string>());
+                                            }
+                                            ))
+#else
                                            .def_pickle(ConfigurationSpecification_pickle_suite())
 #endif
                                            .def("__str__",&PyConfigurationSpecification::__str__)
