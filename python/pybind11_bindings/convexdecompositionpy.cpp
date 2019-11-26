@@ -25,7 +25,7 @@
 #include <boost/assert.hpp>
 #include <openrave/config.h>
 
-#define OPENRAVE_BININGS_PYARRAY
+#define OPENRAVE_BINDINGS_PYARRAY
 #include <openravepy/bindings.h>
 
 #include "NvConvexDecomposition.h"

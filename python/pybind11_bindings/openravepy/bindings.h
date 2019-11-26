@@ -626,7 +626,7 @@ inline std::string GetPyErrorString()
 /// should call in the beginning of all BOOST_PYTHON_MODULE
 void init_python_bindings();
 
-#ifdef OPENRAVE_BININGS_PYARRAY
+#ifdef OPENRAVE_BINDINGS_PYARRAY
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 template <typename T>
@@ -720,7 +720,7 @@ inline py::numeric::array toPyArray(const boost::array<T,N>& v)
     return toPyArrayN(v.data(), v.size());
 }
 
-#endif // OPENRAVE_BININGS_PYARRAY
+#endif // OPENRAVE_BINDINGS_PYARRAY
 
 } // namespace openravepy
 

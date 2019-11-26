@@ -50,7 +50,7 @@
 #include <pyconfig.h>
 #include <numpy/arrayobject.h>
 
-#define OPENRAVE_BININGS_PYARRAY
+#define OPENRAVE_BINDINGS_PYARRAY
 #include <openravepy/bindings.h>
 #include <openravepy/docstrings.h>
 
