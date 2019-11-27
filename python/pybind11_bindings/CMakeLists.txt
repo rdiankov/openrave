@@ -5,10 +5,6 @@ endif()
 set(USE_PYBIND11_PYTHON_BINDINGS OFF)
 set(PYBIND11_PYTHON_BINDINGS_DEBUG OFF)
 
-if(USE_PYBIND11_PYTHON_BINDINGS)
-  find_package(pybind11 REQUIRED)
-endif()
-
 if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
   if( PYTHONLIBS_FOUND OR PYTHON_LIBRARIES )
     add_definitions(${Boost_CFLAGS})
@@ -49,6 +45,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
 
       set(OPENRAVEPY_COMPILE_FLAGS "-DOPENRAVE_CORE_DLL")
       if(USE_PYBIND11_PYTHON_BINDINGS)
+        find_package(pybind11 REQUIRED)
         set(OPENRAVEPY_COMPILE_FLAGS "${OPENRAVEPY_COMPILE_FLAGS} -DUSE_PYBIND11_PYTHON_BINDINGS")
         if(PYBIND11_PYTHON_BINDINGS_DEBUG)
           set(OPENRAVEPY_COMPILE_FLAGS "${OPENRAVEPY_COMPILE_FLAGS} -g -O0")
@@ -86,7 +83,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
       endif()
       install(TARGETS openravepy_int DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
       file(GLOB openravepy_headers "openravepy/*.h")
-      install(FILES ${openravepy_headers} DESTINATION include/openravepy)
+      install(FILES ${openravepy_headers} DESTINATION share/openravepy COMPONENT ${COMPONENT_PREFIX}python)
 
       ## ann bindings
       if( ANN_FOUND )
