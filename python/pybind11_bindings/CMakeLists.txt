@@ -86,7 +86,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
       endif()
       install(TARGETS openravepy_int DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
       file(GLOB openravepy_headers "openravepy/*.h")
-      install(FILES ${openravepy_headers} DESTINATION share/openravepy)
+      install(FILES ${openravepy_headers} DESTINATION share/openravepy COMPONENT ${COMPONENT_PREFIX}python)
 
       ## ann bindings
       if( ANN_FOUND )
