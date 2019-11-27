@@ -2094,7 +2094,7 @@ protected:
         FOREACH(itrobot, _vecrobots) {
             KinBody &body = **it;
             if( (*itrobot)->IsGrabbing(body) ) {
-                RAVELOG_WARN_FORMAT("env=%d, destroy %s already grabbed by robot %s!", GetId()%body.GetName()%(*itrobot)->GetName());
+                RAVELOG_WARN_FORMAT("env=%d, remove %s already grabbed by robot %s!", GetId()%body.GetName()%(*itrobot)->GetName());
                 (*itrobot)->Release(body);
             }
         }
