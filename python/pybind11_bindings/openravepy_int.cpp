@@ -55,7 +55,6 @@ using py::scope;
 namespace numeric = py::numeric;
 
 #if OPENRAVE_RAPIDJSON
-
 // convert from rapidjson to python object
 object toPyObject(const rapidjson::Value& value)
 {
@@ -78,21 +77,21 @@ object toPyObject(const rapidjson::Value& value)
         }
     case rapidjson::kTrueType: {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        return py::cast(PyBool_FromLong(1));
+        return py::bool_(true);
 #else
         return py::to_object(py::handle<>(PyBool_FromLong(1)));
 #endif
     }
     case rapidjson::kFalseType: {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        return py::cast(PyBool_FromLong(0));
+        return py::bool_(false);
 #else
         return py::to_object(py::handle<>(PyBool_FromLong(0)));
 #endif
     }
     case rapidjson::kStringType: {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        return py::cast(value.GetString());
+        return py::str(value.GetString());
 #else
         return ConvertStringToUnicode(value.GetString());
 #endif
@@ -100,14 +99,14 @@ object toPyObject(const rapidjson::Value& value)
     case rapidjson::kNumberType: {
         if (value.IsDouble()) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-            return py::cast(PyFloat_FromDouble(value.GetDouble()));
+            return py::float_(value.GetDouble());
 #else
             return py::to_object(py::handle<>(PyFloat_FromDouble(value.GetDouble())));
 #endif
         }
         else {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-            return py::cast(PyInt_FromLong(value.GetInt64()));
+            return py::int_(value.GetInt64());
 #else
             return py::to_object(py::handle<>(PyInt_FromLong(value.GetInt64())));
 #endif
