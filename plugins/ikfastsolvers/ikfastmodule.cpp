@@ -461,8 +461,12 @@ public:
 
         std::vector<std::string> vikfasttokens;
         utils::TokenizeString(vtokens[1], ".", vikfasttokens);
-        if( vikfasttokens.size() != 4 || vikfasttokens[0] != "ikfast" ) {
+        if( vikfasttokens.size() != 4 ) {
             RAVELOG_WARN_FORMAT("not enough tokens for: %s", xmlid);
+            return false;
+        }
+        if( vikfasttokens[0] != "ikfast" ) {
+            RAVELOG_WARN_FORMAT("not enough an ikfast solver: %s", xmlid);
             return false;
         }
 

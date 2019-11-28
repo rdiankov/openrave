@@ -38,7 +38,14 @@ bool KinBody::Grab(KinBodyPtr pbody, LinkPtr plink)
 
     // double check since collision checkers might not support this case
     if( pbody->HasAttached() ) {
-        RAVELOG_WARN_FORMAT("env=%d, body %s trying to grab body %s with %d attached bodies", GetEnv()->GetId()%GetName()%pbody->GetName()%pbody->HasAttached());
+        if( !!pPreviousGrabbed ) {
+            RAVELOG_INFO_FORMAT("env=%d, body %s is previously grabbed by %s, so", GetEnv()->GetId()%pbody->GetName()%GetName());
+        }
+        else {
+            std::set<KinBodyPtr> setAttached;
+            pbody->GetAttached(setAttached);
+            RAVELOG_WARN_FORMAT("env=%d, body %s trying to grab body %s with %d attached bodies", GetEnv()->GetId()%GetName()%pbody->GetName()%setAttached.size());
+        }
     }
 
     Transform t = plink->GetTransform();
