@@ -362,7 +362,7 @@ inline std::vector<T> ExtractArray(const py::object& o)
     std::vector<T> v;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     try {
-        py::array_t<T> arr = static_cast<py::array_t<T>>(o);
+        py::array_t<T> arr = o.cast<py::array_t<T>>();
         // https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html
         // https://qiita.com/lucidfrontier45/items/183526df954c1d6580ba
         const py::buffer_info info = arr.request();
