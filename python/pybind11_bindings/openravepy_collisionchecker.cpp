@@ -553,7 +553,7 @@ public:
         PyObject* pycollision = PyArray_SimpleNew(1,&dims[0], PyArray_BOOL);
         bool* pcollision = (bool*)PyArray_DATA(pycollision);
         for(int i = 0; i < num; ++i, ppos += 6) {
-            vector<dReal> ray = ExtractArray<dReal>(rays[i]);
+            std::vector<dReal> ray = ExtractArray<dReal>(rays[i]);
             r.pos.x = ray[0];
             r.pos.y = ray[1];
             r.pos.z = ray[2];

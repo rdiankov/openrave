@@ -831,7 +831,7 @@ public:
         return _pjoint->GetDOF();
     }
     object GetValues() const {
-        vector<dReal> values;
+        std::vector<dReal> values;
         _pjoint->GetValues(values);
         return toPyArray(values);
     }
@@ -839,7 +839,7 @@ public:
         return _pjoint->GetValue(iaxis);
     }
     object GetVelocities() const {
-        vector<dReal> values;
+        std::vector<dReal> values;
         _pjoint->GetVelocities(values);
         return toPyArray(values);
     }
@@ -920,57 +920,57 @@ public:
         _pjoint->SetWrapOffset(offset,iaxis);
     }
     void SetLimits(object olower, object oupper) {
-        vector<dReal> vlower = ExtractArray<dReal>(olower);
-        vector<dReal> vupper = ExtractArray<dReal>(oupper);
+        std::vector<dReal> vlower = ExtractArray<dReal>(olower);
+        std::vector<dReal> vupper = ExtractArray<dReal>(oupper);
         if(( vlower.size() != vupper.size()) ||( (int)vlower.size() != _pjoint->GetDOF()) ) {
             throw openrave_exception(_("limits are wrong dimensions"));
         }
         _pjoint->SetLimits(vlower,vupper);
     }
     void SetVelocityLimits(object omaxlimits) {
-        vector<dReal> vmaxlimits = ExtractArray<dReal>(omaxlimits);
+        std::vector<dReal> vmaxlimits = ExtractArray<dReal>(omaxlimits);
         if( (int)vmaxlimits.size() != _pjoint->GetDOF() ) {
             throw openrave_exception(_("limits are wrong dimensions"));
         }
         _pjoint->SetVelocityLimits(vmaxlimits);
     }
     void SetAccelerationLimits(object omaxlimits) {
-        vector<dReal> vmaxlimits = ExtractArray<dReal>(omaxlimits);
+        std::vector<dReal> vmaxlimits = ExtractArray<dReal>(omaxlimits);
         if( (int)vmaxlimits.size() != _pjoint->GetDOF() ) {
             throw openrave_exception(_("limits are wrong dimensions"));
         }
         _pjoint->SetAccelerationLimits(vmaxlimits);
     }
     void SetJerkLimits(object omaxlimits) {
-        vector<dReal> vmaxlimits = ExtractArray<dReal>(omaxlimits);
+        std::vector<dReal> vmaxlimits = ExtractArray<dReal>(omaxlimits);
         if( (int)vmaxlimits.size() != _pjoint->GetDOF() ) {
             throw openrave_exception(_("limits are wrong dimensions"));
         }
         _pjoint->SetJerkLimits(vmaxlimits);
     }
     void SetHardVelocityLimits(object omaxlimits) {
-        vector<dReal> vmaxlimits = ExtractArray<dReal>(omaxlimits);
+        std::vector<dReal> vmaxlimits = ExtractArray<dReal>(omaxlimits);
         if( (int)vmaxlimits.size() != _pjoint->GetDOF() ) {
             throw openrave_exception(_("limits are wrong dimensions"));
         }
         _pjoint->SetHardVelocityLimits(vmaxlimits);
     }
     void SetHardAccelerationLimits(object omaxlimits) {
-        vector<dReal> vmaxlimits = ExtractArray<dReal>(omaxlimits);
+        std::vector<dReal> vmaxlimits = ExtractArray<dReal>(omaxlimits);
         if( (int)vmaxlimits.size() != _pjoint->GetDOF() ) {
             throw openrave_exception(_("limits are wrong dimensions"));
         }
         _pjoint->SetHardAccelerationLimits(vmaxlimits);
     }
     void SetHardJerkLimits(object omaxlimits) {
-        vector<dReal> vmaxlimits = ExtractArray<dReal>(omaxlimits);
+        std::vector<dReal> vmaxlimits = ExtractArray<dReal>(omaxlimits);
         if( (int)vmaxlimits.size() != _pjoint->GetDOF() ) {
             throw openrave_exception(_("limits are wrong dimensions"));
         }
         _pjoint->SetHardJerkLimits(vmaxlimits);
     }
     void SetTorqueLimits(object omaxlimits) {
-        vector<dReal> vmaxlimits = ExtractArray<dReal>(omaxlimits);
+        std::vector<dReal> vmaxlimits = ExtractArray<dReal>(omaxlimits);
         if( (int)vmaxlimits.size() != _pjoint->GetDOF() ) {
             throw openrave_exception(_("limits are wrong dimensions"));
         }
@@ -978,7 +978,7 @@ public:
     }
 
     object GetResolutions() const {
-        vector<dReal> resolutions;
+        std::vector<dReal> resolutions;
         _pjoint->GetResolutions(resolutions);
         return toPyArray(resolutions);
     }
@@ -990,7 +990,7 @@ public:
     }
 
     object GetWeights() const {
-        vector<dReal> weights;
+        std::vector<dReal> weights;
         _pjoint->GetWeights(weights);
         return toPyArray(weights);
     }
@@ -1002,8 +1002,8 @@ public:
     }
 
     object SubtractValues(object ovalues0, object ovalues1) {
-        vector<dReal> values0 = ExtractArray<dReal>(ovalues0);
-        vector<dReal> values1 = ExtractArray<dReal>(ovalues1);
+        std::vector<dReal> values0 = ExtractArray<dReal>(ovalues0);
+        std::vector<dReal> values1 = ExtractArray<dReal>(ovalues1);
         BOOST_ASSERT((int)values0.size() == GetDOF() );
         BOOST_ASSERT((int)values1.size() == GetDOF() );
         _pjoint->SubtractValues(values0,values1);
@@ -1015,7 +1015,7 @@ public:
     }
 
     void AddTorque(object otorques) {
-        vector<dReal> vtorques = ExtractArray<dReal>(otorques);
+        std::vector<dReal> vtorques = ExtractArray<dReal>(otorques);
         return _pjoint->AddTorque(vtorques);
     }
 

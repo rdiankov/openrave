@@ -1789,7 +1789,7 @@ public:
     }
 
     /// returns the number of points
-    static size_t _getGraphPoints(object opoints, vector<float>&vpoints)
+    static size_t _getGraphPoints(object opoints, std::vector<float>&vpoints)
     {
         if( PyObject_HasAttrString(opoints.ptr(),"shape") ) {
             object pointshape = opoints.attr("shape");
@@ -1822,7 +1822,7 @@ public:
     }
 
     /// returns the number of colors
-    static size_t _getGraphColors(object ocolors, vector<float>&vcolors)
+    static size_t _getGraphColors(object ocolors, std::vector<float>&vcolors)
     {
         if( !IS_PYTHONOBJECT_NONE(ocolors) ) {
             if( PyObject_HasAttrString(ocolors.ptr(),"shape") ) {
@@ -1859,7 +1859,7 @@ public:
         return 1;
     }
 
-    static pair<size_t,size_t> _getGraphPointsColors(object opoints, object ocolors, vector<float>&vpoints, vector<float>&vcolors)
+    static pair<size_t,size_t> _getGraphPointsColors(object opoints, object ocolors, std::vector<float>&vpoints, std::vector<float>&vcolors)
     {
         size_t numpoints = _getGraphPoints(opoints,vpoints);
         size_t numcolors = _getGraphColors(ocolors,vcolors);
@@ -1874,7 +1874,7 @@ public:
 
     object plot3(object opoints,float pointsize,object ocolors=py::none_(),int drawstyle=0)
     {
-        vector<float> vpoints, vcolors;
+        std::vector<float> vpoints, vcolors;
         pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
         bool bhasalpha = vcolors.size() == 4*sizes.second;
         if( sizes.first == sizes.second ) {
@@ -1890,7 +1890,7 @@ public:
 
     object drawlinestrip(object opoints,float linewidth,object ocolors=py::none_(),int drawstyle=0)
     {
-        vector<float> vpoints, vcolors;
+        std::vector<float> vpoints, vcolors;
         pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
         //bool bhasalpha = vcolors.size() == 4*sizes.second;
         if( sizes.first == sizes.second ) {
@@ -1906,7 +1906,7 @@ public:
 
     object drawlinelist(object opoints,float linewidth,object ocolors=py::none_(),int drawstyle=0)
     {
-        vector<float> vpoints, vcolors;
+        std::vector<float> vpoints, vcolors;
         pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
         //bool bhasalpha = vcolors.size() == 4*sizes.second;
         if( sizes.first == sizes.second ) {
@@ -1953,9 +1953,9 @@ public:
 
     object drawtrimesh(object opoints, object oindices=py::none_(), object ocolors=py::none_())
     {
-        vector<float> vpoints;
+        std::vector<float> vpoints;
         _getGraphPoints(opoints,vpoints);
-        vector<int> vindices;
+        std::vector<int> vindices;
         int* pindices = NULL;
         int numTriangles = vpoints.size()/9;
         if( !IS_PYTHONOBJECT_NONE(oindices) ) {

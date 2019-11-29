@@ -79,12 +79,12 @@ public:
     object GetLimits(SampleDataType type)
     {
         if( type == SDT_Real ) {
-            vector<dReal> vlower, vupper;
+            std::vector<dReal> vlower, vupper;
             _pspacesampler->GetLimits(vlower,vupper);
             return py::make_tuple(toPyArray(vlower),toPyArray(vupper));
         }
         else if( type == SDT_Uint32 ) {
-            vector<uint32_t> vlower, vupper;
+            std::vector<uint32_t> vlower, vupper;
             _pspacesampler->GetLimits(vlower,vupper);
             return py::make_tuple(toPyArray(vlower),toPyArray(vupper));
         }

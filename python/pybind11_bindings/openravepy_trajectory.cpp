@@ -96,28 +96,28 @@ public:
 
     object Sample(dReal time) const
     {
-        vector<dReal> values;
+        std::vector<dReal> values;
         _ptrajectory->Sample(values,time);
         return toPyArray(values);
     }
 
     object Sample(dReal time, PyConfigurationSpecificationPtr pyspec) const
     {
-        vector<dReal> values;
+        std::vector<dReal> values;
         _ptrajectory->Sample(values,time,openravepy::GetConfigurationSpecification(pyspec), true);
         return toPyArray(values);
     }
 
     object SampleFromPrevious(object odata, dReal time, PyConfigurationSpecificationPtr pyspec) const
     {
-        vector<dReal> vdata = ExtractArray<dReal>(odata);
+        std::vector<dReal> vdata = ExtractArray<dReal>(odata);
         _ptrajectory->Sample(vdata,time,openravepy::GetConfigurationSpecification(pyspec), false);
         return toPyArray(vdata);
     }
 
     object SamplePoints2D(object otimes) const
     {
-        vector<dReal> values;
+        std::vector<dReal> values;
         std::vector<dReal> vtimes = ExtractArray<dReal>(otimes);
         _ptrajectory->SamplePoints(values,vtimes);
 
@@ -132,7 +132,7 @@ public:
 
     object SamplePoints2D(object otimes, PyConfigurationSpecificationPtr pyspec) const
     {
-        vector<dReal> values;
+        std::vector<dReal> values;
         ConfigurationSpecification spec = openravepy::GetConfigurationSpecification(pyspec);
         std::vector<dReal> vtimes = ExtractArray<dReal>(otimes);
         _ptrajectory->SamplePoints(values, vtimes, spec);
@@ -155,14 +155,14 @@ public:
 
     object GetWaypoints(size_t startindex, size_t endindex) const
     {
-        vector<dReal> values;
+        std::vector<dReal> values;
         _ptrajectory->GetWaypoints(startindex,endindex,values);
         return toPyArray(values);
     }
 
     object GetWaypoints(size_t startindex, size_t endindex, PyConfigurationSpecificationPtr pyspec) const
     {
-        vector<dReal> values;
+        std::vector<dReal> values;
         _ptrajectory->GetWaypoints(startindex,endindex,values,openravepy::GetConfigurationSpecification(pyspec));
         return toPyArray(values);
     }
@@ -170,7 +170,7 @@ public:
     // similar to GetWaypoints except returns a 2D array, one row for every waypoint
     object GetWaypoints2D(size_t startindex, size_t endindex) const
     {
-        vector<dReal> values;
+        std::vector<dReal> values;
         _ptrajectory->GetWaypoints(startindex,endindex,values);
         int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
         npy_intp dims[] = { npy_intp(values.size()/numdof), npy_intp(numdof) };
@@ -188,7 +188,7 @@ public:
 
     object __getitem__(py::slice indices) const
     {
-        vector<int>vindices;
+        std::vector<int>vindices;
         int len = _ptrajectory->GetNumWaypoints();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         // https://github.com/pybind/pybind11/issues/1095
@@ -216,7 +216,7 @@ public:
             vindices.push_back(i);
         }
 
-        vector<dReal> values;
+        std::vector<dReal> values;
         _ptrajectory->GetWaypoint(0,values);
         int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
         npy_intp dims[] = { npy_intp(vindices.size()), npy_intp(numdof) };
@@ -236,7 +236,7 @@ public:
 
     object GetWaypoints2D(size_t startindex, size_t endindex, PyConfigurationSpecificationPtr pyspec) const
     {
-        vector<dReal> values;
+        std::vector<dReal> values;
         ConfigurationSpecification spec = openravepy::GetConfigurationSpecification(pyspec);
         _ptrajectory->GetWaypoints(startindex,endindex,values,spec);
         npy_intp dims[] = { npy_intp(values.size()/spec.GetDOF()), npy_intp(spec.GetDOF()) };
@@ -254,14 +254,14 @@ public:
 
     object GetWaypoint(int index) const
     {
-        vector<dReal> values;
+        std::vector<dReal> values;
         _ptrajectory->GetWaypoint(index,values);
         return toPyArray(values);
     }
 
     object GetWaypoint(int index, PyConfigurationSpecificationPtr pyspec) const
     {
-        vector<dReal> values;
+        std::vector<dReal> values;
         _ptrajectory->GetWaypoint(index,values,openravepy::GetConfigurationSpecification(pyspec));
         return toPyArray(values);
     }
