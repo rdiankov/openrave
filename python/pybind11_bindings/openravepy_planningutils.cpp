@@ -753,7 +753,7 @@ void InitPlanningUtils()
             // In openravepy_iksolver.cpp binds IkFilterOptions::IKFO_CheckEnvCollisions
             // How to use it here?
             "ikfilteroptions"_a = (int) IKFO_CheckEnvCollisions,
-            "freevalues"_a = nullptr
+            "freevalues"_a = py::none_()
         )
 #else
         class_<planningutils::PyManipulatorIKGoalSampler, planningutils::PyManipulatorIKGoalSamplerPtr >("ManipulatorIKGoalSampler", DOXY_CLASS(planningutils::ManipulatorIKGoalSampler), no_init)

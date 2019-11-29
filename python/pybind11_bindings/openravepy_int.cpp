@@ -1387,7 +1387,7 @@ public:
         return _penv->LoadData(data, dictatts);
     }
 
-    void Save(const string &filename, const int options=EnvironmentBase::SO_Everything, object odictatts=py::none_()) {
+    void Save(const std::string &filename, const int options = EnvironmentBase::SelectionOptions::SO_Everything, object odictatts = py::none_()) {
         extract_<std::string> otarget(odictatts);
         if( otarget.check() ) {
             // old versions
@@ -1403,20 +1403,20 @@ public:
         }
     }
 
-    object WriteToMemory(const string &filetype, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=py::none_()) {
+    object WriteToMemory(const std::string &filetype, const int options = EnvironmentBase::SelectionOptions::SO_Everything, object odictatts = py::none_()) {
         std::vector<char> output;
         extract_<std::string> otarget(odictatts);
         if( otarget.check() ) {
             // old versions
             AttributesList atts;
             atts.emplace_back("target", (std::string)otarget);
-            _penv->WriteToMemory(filetype,output,options,atts);
+            _penv->WriteToMemory(filetype, output, (EnvironmentBase::SelectionOptions) options, atts);
         }
         else {
-            _penv->WriteToMemory(filetype,output,options,toAttributesList(odictatts));
+            _penv->WriteToMemory(filetype, output, (EnvironmentBase::SelectionOptions) options, toAttributesList(odictatts));
         }
 
-        if( output.size() == 0 ) {
+        if( output.empty() ) {
             return py::none_();
         }
         else {
@@ -2104,10 +2104,10 @@ public:
         return toPyTriMesh(mesh);
     }
 
-    object TriangulateScene(EnvironmentBase::SelectionOptions options, const string &name)
+    object TriangulateScene(const int options, const std::string &name)
     {
         TriMesh mesh;
-        _penv->TriangulateScene(mesh,options,name);
+        _penv->TriangulateScene(mesh, (EnvironmentBase::SelectionOptions) options, name);
         return toPyTriMesh(mesh);
     }
 
@@ -2576,7 +2576,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                     .def("LoadURI", &PyEnvironmentBase::LoadURI,
                         "filename"_a,
-                        "atts"_a = nullptr,
+                        "atts"_a = py::none_(),
                         DOXY_FN(EnvironmentBase, LoadURI)
                     )
 #else
@@ -2589,8 +2589,8 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                     .def("Save",&PyEnvironmentBase::Save,
                         "filename"_a,
-                        "options"_a = (int) EnvironmentBase::SO_Everything,
-                        "atts"_a = nullptr,
+                        "options"_a = (int) EnvironmentBase::SelectionOptions::SO_Everything,
+                        "atts"_a = py::none_(),
                         DOXY_FN(EnvironmentBase,Save)
                     )
 #else
@@ -2599,8 +2599,8 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS 
                     .def("WriteToMemory",&PyEnvironmentBase::WriteToMemory,
                         "filetype"_a,
-                        "options"_a,
-                        "atts"_a = nullptr,
+                        "options"_a = (int) EnvironmentBase::SelectionOptions::SO_Everything,
+                        "atts"_a = py::none_(),
                         DOXY_FN(EnvironmentBase,WriteToMemory)
                     )
 #else
@@ -2714,7 +2714,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("plot3", &PyEnvironmentBase::plot3,
                         "points"_a,
                         "pointsize"_a,
-                        "colors"_a = nullptr,
+                        "colors"_a = py::none_(),
                         "drawstyle"_a = 0,
                         DOXY_FN(EnvironmentBase,plot3 "const float; int; int; float; const float; int, bool")
                     )
@@ -2725,7 +2725,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("drawlinestrip",&PyEnvironmentBase::drawlinestrip,
                         "points"_a,
                         "linewidth"_a,
-                        "colors"_a = nullptr,
+                        "colors"_a = py::none_(),
                         "drawstyle"_a = 0,
                         DOXY_FN(EnvironmentBase,drawlinestrip "const float; int; int; float; const float")
                     )
@@ -2736,7 +2736,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("drawlinelist", &PyEnvironmentBase::drawlinelist,
                         "points"_a,
                         "linewidth"_a,
-                        "colors"_a = nullptr,
+                        "colors"_a = py::none_(),
                         "drawstyle"_a = 0,
                         DOXY_FN(EnvironmentBase,drawlinelist "const float; int; int; float; const float")
                     )
@@ -2748,7 +2748,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                         "p1"_a,
                         "p2"_a,
                         "linewidth"_a = 2e-3,
-                        "color"_a = nullptr,
+                        "color"_a = py::none_(),
                         DOXY_FN(EnvironmentBase,drawarrow)
                     )
 #else
@@ -2758,7 +2758,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("drawbox", &PyEnvironmentBase::drawbox,
                         "pos"_a,
                         "extents"_a,
-                        "color"_a = nullptr,
+                        "color"_a = py::none_(),
                         DOXY_FN(EnvironmentBase,drawbox)
                     )
 #else
@@ -2769,8 +2769,8 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                     .def("drawtrimesh", &PyEnvironmentBase::drawtrimesh,
                         "points"_a,
-                        "indices"_a = nullptr,
-                        "colors"_a = nullptr,
+                        "indices"_a = py::none_(),
+                        "colors"_a = py::none_(),
                         DOXY_FN(EnvironmentBase, drawtrimesh "const float; int; const int; int; const boost::multi_array")
                     )
 #else
@@ -2839,11 +2839,11 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #else
         object selectionoptions = enum_<EnvironmentBase::SelectionOptions>("SelectionOptions" DOXY_ENUM(SelectionOptions))
 #endif
-                                  .value("NoRobots",EnvironmentBase::SO_NoRobots)
-                                  .value("Robots",EnvironmentBase::SO_Robots)
-                                  .value("Everything",EnvironmentBase::SO_Everything)
-                                  .value("Body",EnvironmentBase::SO_Body)
-                                  .value("AllExceptBody",EnvironmentBase::SO_AllExceptBody)
+                                  .value("NoRobots",EnvironmentBase::SelectionOptions::SO_NoRobots)
+                                  .value("Robots",EnvironmentBase::SelectionOptions::SO_Robots)
+                                  .value("Everything",EnvironmentBase::SelectionOptions::SO_Everything)
+                                  .value("Body",EnvironmentBase::SelectionOptions::SO_Body)
+                                  .value("AllExceptBody",EnvironmentBase::SelectionOptions::SO_AllExceptBody)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                                   .export_values()
 #endif

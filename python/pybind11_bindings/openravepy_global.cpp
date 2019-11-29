@@ -1731,7 +1731,7 @@ void init_openravepy_global()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("RaveInitialize", openravepy::pyRaveInitialize,
         "load_all_plugins"_a = true,
-        "level"_a = nullptr,
+        "level"_a = py::none_(),
         DOXY_FN1(RaveInitialize)
     );
 #else
@@ -1776,7 +1776,7 @@ void init_openravepy_global()
     m.def("RaveClone", openravepy::pyRaveClone,
         "ref"_a,
         "cloningoptions"_a,
-        "cloneenv"_a = nullptr, // PyEnvironmentBasePtr(),
+        "cloneenv"_a = py::none_(), // PyEnvironmentBasePtr(),
         DOXY_FN1(RaveClone)
     );
 #else
@@ -1806,7 +1806,7 @@ void init_openravepy_global()
     m.def("RaveGetAffineDOFValuesFromTransform", openravepy::pyRaveGetAffineDOFValuesFromTransform, 
         "transform"_a,
         "affinedofs"_a,
-        "rotationaxis"_a = nullptr,
+        "rotationaxis"_a = py::none_(),
         DOXY_FN1(RaveGetAffineDOFValuesFromTransform)
     );
 #else
@@ -1815,7 +1815,7 @@ void init_openravepy_global()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("RaveGetAffineConfigurationSpecification", openravepy::pyRaveGetAffineConfigurationSpecification,
         "affinedofs"_a,
-        "body"_a = nullptr, // PyKinBodyPtr(),
+        "body"_a = py::none_(), // PyKinBodyPtr(),
         "interpolation"_a = "",
         DOXY_FN1(RaveGetAffineConfigurationSpecification)
     );

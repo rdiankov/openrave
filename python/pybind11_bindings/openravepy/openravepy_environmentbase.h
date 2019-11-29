@@ -97,9 +97,9 @@ public:
     bool LoadData(const std::string &data);
     bool LoadData(const std::string &data, object odictatts);
 
-    void Save(const std::string &filename, const int options = EnvironmentBase::SO_Everything, object odictatts = py::none_());
+    void Save(const std::string &filename, const int options = EnvironmentBase::SelectionOptions::SO_Everything, object odictatts = py::none_());
 
-    object WriteToMemory(const std::string &filetype, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=py::none_());
+    object WriteToMemory(const std::string &filetype, const int options = EnvironmentBase::SelectionOptions::SO_Everything, object odictatts = py::none_());
 
     object ReadRobotURI(const std::string &filename);
     object ReadRobotURI(const std::string &filename, object odictatts);
@@ -226,7 +226,7 @@ public:
 
     object Triangulate(PyKinBodyPtr pbody);
 
-    object TriangulateScene(EnvironmentBase::SelectionOptions options, const std::string &name);
+    object TriangulateScene(const int options, const std::string &name);
 
     void SetDebugLevel(object olevel);
     int GetDebugLevel() const;

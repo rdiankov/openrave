@@ -84,7 +84,7 @@ public:
         pinfo->_vChuckingDirection = ExtractArray<dReal>(_vChuckingDirection);
         pinfo->_vdirection = ExtractVector3(_vdirection);
         pinfo->_sIkSolverXMLId = _sIkSolverXMLId;
-        pinfo->_vGripperJointNames = ExtractArray<std::string>(_vGripperJointNames);
+        pinfo->_vGripperJointNames = ExtractList<std::string>(_vGripperJointNames);
         return pinfo;
     }
 
@@ -1942,7 +1942,7 @@ void init_openravepy_robot()
                       .def("CheckLinkSelfCollision", &PyRobotBase::CheckLinkSelfCollision,
                         "linkindex"_a,
                         "linktrans"_a,
-                        "report"_a = nullptr, // PyCollisionReportPtr(),
+                        "report"_a = py::none_(), // PyCollisionReportPtr(),
                         DOXY_FN(RobotBase,CheckLinkSelfCollision)
                         )
 #else
@@ -1952,7 +1952,7 @@ void init_openravepy_robot()
                       .def("GetRobotStructureHash",&PyRobotBase::GetRobotStructureHash, DOXY_FN(RobotBase,GetRobotStructureHash))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                       .def("CreateRobotStateSaver",&PyRobotBase::CreateRobotStateSaver,
-                        "options"_a = nullptr,
+                        "options"_a = py::none_(),
                         "Creates an object that can be entered using 'with' and returns a RobotStateSaver"
                         )
 #else
@@ -2099,7 +2099,7 @@ void init_openravepy_robot()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("CheckEndEffectorCollision", pCheckEndEffectorCollision1,
             "transform"_a,
-            "report"_a = nullptr, // PyCollisionReportPtr(),
+            "report"_a = py::none_(), // PyCollisionReportPtr(),
             "numredundantsamples"_a = 0,
             DOXY_FN(RobotBase::Manipulator, CheckEndEffectorCollision)
         )
@@ -2111,7 +2111,7 @@ void init_openravepy_robot()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("CheckEndEffectorSelfCollision", pCheckEndEffectorSelfCollision1,
             "transform"_a,
-            "report"_a = nullptr, // PyCollisionReportPtr(),
+            "report"_a = py::none_(), // PyCollisionReportPtr(),
             "numredundantsamples"_a = 0,
             "ignoreManipulatorLinks"_a = false,
             DOXY_FN(RobotBase::Manipulator,CheckEndEffectorSelfCollision)
@@ -2213,7 +2213,7 @@ void init_openravepy_robot()
         .def("GetBody",&PyRobotBase::PyRobotStateSaver::GetBody,DOXY_FN(Robot::RobotStateSaver, GetBody))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("Restore", &PyRobotBase::PyRobotStateSaver::Restore,
-            "body"_a = nullptr, // PyRobotBasePtr(),
+            "body"_a = py::none_(), // PyRobotBasePtr(),
             DOXY_FN(Robot::RobotStateSaver, Restore)
         )
 #else
