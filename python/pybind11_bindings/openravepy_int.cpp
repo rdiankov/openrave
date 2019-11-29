@@ -2576,7 +2576,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                     .def("LoadURI", &PyEnvironmentBase::LoadURI,
                         "filename"_a,
-                        "atts"_a = nullptr,
+                        "atts"_a = py::none_(),
                         DOXY_FN(EnvironmentBase, LoadURI)
                     )
 #else
@@ -2589,8 +2589,8 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                     .def("Save",&PyEnvironmentBase::Save,
                         "filename"_a,
-                        "options"_a = (int) EnvironmentBase::SO_Everything,
-                        "atts"_a = nullptr,
+                        "options"_a = (int) EnvironmentBase::SelectionOptions::SO_Everything,
+                        "atts"_a = py::none_(),
                         DOXY_FN(EnvironmentBase,Save)
                     )
 #else
@@ -2599,8 +2599,8 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS 
                     .def("WriteToMemory",&PyEnvironmentBase::WriteToMemory,
                         "filetype"_a,
-                        "options"_a,
-                        "atts"_a = nullptr,
+                        "options"_a = (int) EnvironmentBase::SelectionOptions::SO_Everything,
+                        "atts"_a = py::none_(),
                         DOXY_FN(EnvironmentBase,WriteToMemory)
                     )
 #else
@@ -2714,7 +2714,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("plot3", &PyEnvironmentBase::plot3,
                         "points"_a,
                         "pointsize"_a,
-                        "colors"_a = nullptr,
+                        "colors"_a = py::none_(),
                         "drawstyle"_a = 0,
                         DOXY_FN(EnvironmentBase,plot3 "const float; int; int; float; const float; int, bool")
                     )
@@ -2725,7 +2725,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("drawlinestrip",&PyEnvironmentBase::drawlinestrip,
                         "points"_a,
                         "linewidth"_a,
-                        "colors"_a = nullptr,
+                        "colors"_a = py::none_(),
                         "drawstyle"_a = 0,
                         DOXY_FN(EnvironmentBase,drawlinestrip "const float; int; int; float; const float")
                     )
@@ -2736,7 +2736,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("drawlinelist", &PyEnvironmentBase::drawlinelist,
                         "points"_a,
                         "linewidth"_a,
-                        "colors"_a = nullptr,
+                        "colors"_a = py::none_(),
                         "drawstyle"_a = 0,
                         DOXY_FN(EnvironmentBase,drawlinelist "const float; int; int; float; const float")
                     )
@@ -2748,7 +2748,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                         "p1"_a,
                         "p2"_a,
                         "linewidth"_a = 2e-3,
-                        "color"_a = nullptr,
+                        "color"_a = py::none_(),
                         DOXY_FN(EnvironmentBase,drawarrow)
                     )
 #else
@@ -2758,7 +2758,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("drawbox", &PyEnvironmentBase::drawbox,
                         "pos"_a,
                         "extents"_a,
-                        "color"_a = nullptr,
+                        "color"_a = py::none_(),
                         DOXY_FN(EnvironmentBase,drawbox)
                     )
 #else
@@ -2769,8 +2769,8 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                     .def("drawtrimesh", &PyEnvironmentBase::drawtrimesh,
                         "points"_a,
-                        "indices"_a = nullptr,
-                        "colors"_a = nullptr,
+                        "indices"_a = py::none_(),
+                        "colors"_a = py::none_(),
                         DOXY_FN(EnvironmentBase, drawtrimesh "const float; int; const int; int; const boost::multi_array")
                     )
 #else

@@ -410,7 +410,7 @@ void init_openravepy_trajectory()
     .def("GetDuration",&PyTrajectoryBase::GetDuration,DOXY_FN(TrajectoryBase, GetDuration))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .def("serialize", &PyTrajectoryBase::serialize,
-        "options"_a = nullptr,
+        "options"_a = py::none_(),
         DOXY_FN(TrajectoryBase, serialize)
     )
 #else
