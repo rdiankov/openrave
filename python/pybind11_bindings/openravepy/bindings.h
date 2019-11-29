@@ -226,20 +226,19 @@ inline object empty_array_astype() {
 }
 template <typename T>
 struct extract_ {
-    extract_() = delete;
+    extract_() = delete; // disable default constructor
     explicit extract_(const object& o) {
         try {
             _data = extract<T>(o);
         }
         catch(...) {
             _bcheck = false;
-            std::cout << "Cannot cast " << std::string(typeid(T).name()) << std::endl;
-            // throw std::runtime_error("Cannot cast " + std::string(typeid(T).name()));
+            RAVELOG_WARN("Cannot extract type " + std::string(typeid(T).name()) + "from a pybind11::object");
         }
     }
     // user-defined conversion:
     // https://en.cppreference.com/w/cpp/language/cast_operator
-    //implicit conversion
+    // implicit conversion
     operator T() const { return _data; }
     // explicit conversion
     explicit operator T*() const { return _data; }
@@ -362,7 +361,7 @@ inline std::vector<T> ExtractArray(const py::object& o)
     std::vector<T> v;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     try {
-        py::array_t<T> arr = static_cast<py::array_t<T>>(o);
+        py::array_t<T> arr = o.cast<py::array_t<T>>();
         // https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html
         // https://qiita.com/lucidfrontier45/items/183526df954c1d6580ba
         const py::buffer_info info = arr.request();

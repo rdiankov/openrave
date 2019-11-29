@@ -1387,19 +1387,19 @@ public:
         return _penv->LoadData(data, dictatts);
     }
 
-    void Save(const string &filename, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=py::none_()) {
+    void Save(const string &filename, const int options=EnvironmentBase::SO_Everything, object odictatts=py::none_()) {
         extract_<std::string> otarget(odictatts);
         if( otarget.check() ) {
             // old versions
             AttributesList atts;
             atts.emplace_back("target", (std::string)otarget);
             openravepy::PythonThreadSaver threadsaver;
-            _penv->Save(filename,options,atts);
+            _penv->Save(filename, (EnvironmentBase::SelectionOptions) options, atts);
         }
         else {
             AttributesList dictatts = toAttributesList(odictatts);
             openravepy::PythonThreadSaver threadsaver;
-            _penv->Save(filename,options,dictatts);
+            _penv->Save(filename, (EnvironmentBase::SelectionOptions) options, dictatts);
         }
     }
 
@@ -2589,7 +2589,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                     .def("Save",&PyEnvironmentBase::Save,
                         "filename"_a,
-                        "options"_a,
+                        "options"_a = (int) EnvironmentBase::SO_Everything,
                         "atts"_a = nullptr,
                         DOXY_FN(EnvironmentBase,Save)
                     )
@@ -2835,7 +2835,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
         ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        object selectionoptions = enum_<EnvironmentBase::SelectionOptions>(m, "SelectionOptions" DOXY_ENUM(SelectionOptions))
+        object selectionoptions = enum_<EnvironmentBase::SelectionOptions>(env, "SelectionOptions" DOXY_ENUM(SelectionOptions))
 #else
         object selectionoptions = enum_<EnvironmentBase::SelectionOptions>("SelectionOptions" DOXY_ENUM(SelectionOptions))
 #endif
@@ -2844,6 +2844,9 @@ Because race conditions can pop up when trying to lock the openrave environment 
                                   .value("Everything",EnvironmentBase::SO_Everything)
                                   .value("Body",EnvironmentBase::SO_Body)
                                   .value("AllExceptBody",EnvironmentBase::SO_AllExceptBody)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                                  .export_values()
+#endif
         ;
         env.attr("TriangulateOptions") = selectionoptions;
     }

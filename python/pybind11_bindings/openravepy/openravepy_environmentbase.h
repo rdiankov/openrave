@@ -97,7 +97,7 @@ public:
     bool LoadData(const std::string &data);
     bool LoadData(const std::string &data, object odictatts);
 
-    void Save(const std::string &filename, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=py::none_());
+    void Save(const std::string &filename, const int options = EnvironmentBase::SO_Everything, object odictatts = py::none_());
 
     object WriteToMemory(const std::string &filetype, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=py::none_());
 
