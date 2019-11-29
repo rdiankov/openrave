@@ -2589,7 +2589,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                     .def("Save",&PyEnvironmentBase::Save,
                         "filename"_a,
-                        "options"_a,
+                        "options"_a = (int) EnvironmentBase::SO_Everything,
                         "atts"_a = nullptr,
                         DOXY_FN(EnvironmentBase,Save)
                     )
