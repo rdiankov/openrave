@@ -438,6 +438,9 @@ void init_openravepy_ikparameterization()
                     // other
                     .value("UniqueIdMask",IKP_UniqueIdMask)
                     .value("CustomDataBit",IKP_CustomDataBit)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                    .export_values()
+#endif
     ;
 
     {
@@ -451,9 +454,11 @@ void init_openravepy_ikparameterization()
         object (PyIkParameterization::*GetConfigurationSpecification2)(object, const std::string&, const std::string&) = &PyIkParameterization::GetConfigurationSpecification;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         scope_ ikparameterization = class_<PyIkParameterization, PyIkParameterizationPtr >(m, "IkParameterization", DOXY_CLASS(IkParameterization))
+                                   .def(init<>())
+                                   .def(init<std::string>(), "str"_a)
                                    .def(init<object, IkParameterizationType>(), "primitive"_a, "type"_a)
-                                   .def(init<string>(), "str"_a)
                                    .def(init<OPENRAVE_SHARED_PTR<PyIkParameterization>>(), "ikparam"_a)
+                                   .def(init<IkParameterization>(), "ikparam"_a)
 #else
         scope_ ikparameterization = class_<PyIkParameterization, PyIkParameterizationPtr >("IkParameterization", DOXY_CLASS(IkParameterization))
                                    .def(init<object,IkParameterizationType>(py::args("primitive","type")))

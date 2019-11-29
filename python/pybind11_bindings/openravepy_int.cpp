@@ -1387,7 +1387,7 @@ public:
         return _penv->LoadData(data, dictatts);
     }
 
-    void Save(const string &filename, const int options=EnvironmentBase::SO_Everything, object odictatts=py::none_()) {
+    void Save(const std::string &filename, const int options = EnvironmentBase::SelectionOptions::SO_Everything, object odictatts = py::none_()) {
         extract_<std::string> otarget(odictatts);
         if( otarget.check() ) {
             // old versions
@@ -1403,20 +1403,20 @@ public:
         }
     }
 
-    object WriteToMemory(const string &filetype, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=py::none_()) {
+    object WriteToMemory(const std::string &filetype, const int options = EnvironmentBase::SelectionOptions::SO_Everything, object odictatts = py::none_()) {
         std::vector<char> output;
         extract_<std::string> otarget(odictatts);
         if( otarget.check() ) {
             // old versions
             AttributesList atts;
             atts.emplace_back("target", (std::string)otarget);
-            _penv->WriteToMemory(filetype,output,options,atts);
+            _penv->WriteToMemory(filetype, output, (EnvironmentBase::SelectionOptions) options, atts);
         }
         else {
-            _penv->WriteToMemory(filetype,output,options,toAttributesList(odictatts));
+            _penv->WriteToMemory(filetype, output, (EnvironmentBase::SelectionOptions) options, toAttributesList(odictatts));
         }
 
-        if( output.size() == 0 ) {
+        if( output.empty() ) {
             return py::none_();
         }
         else {
@@ -2104,10 +2104,10 @@ public:
         return toPyTriMesh(mesh);
     }
 
-    object TriangulateScene(EnvironmentBase::SelectionOptions options, const string &name)
+    object TriangulateScene(const int options, const std::string &name)
     {
         TriMesh mesh;
-        _penv->TriangulateScene(mesh,options,name);
+        _penv->TriangulateScene(mesh, (EnvironmentBase::SelectionOptions) options, name);
         return toPyTriMesh(mesh);
     }
 
@@ -2839,11 +2839,11 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #else
         object selectionoptions = enum_<EnvironmentBase::SelectionOptions>("SelectionOptions" DOXY_ENUM(SelectionOptions))
 #endif
-                                  .value("NoRobots",EnvironmentBase::SO_NoRobots)
-                                  .value("Robots",EnvironmentBase::SO_Robots)
-                                  .value("Everything",EnvironmentBase::SO_Everything)
-                                  .value("Body",EnvironmentBase::SO_Body)
-                                  .value("AllExceptBody",EnvironmentBase::SO_AllExceptBody)
+                                  .value("NoRobots",EnvironmentBase::SelectionOptions::SO_NoRobots)
+                                  .value("Robots",EnvironmentBase::SelectionOptions::SO_Robots)
+                                  .value("Everything",EnvironmentBase::SelectionOptions::SO_Everything)
+                                  .value("Body",EnvironmentBase::SelectionOptions::SO_Body)
+                                  .value("AllExceptBody",EnvironmentBase::SelectionOptions::SO_AllExceptBody)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                                   .export_values()
 #endif

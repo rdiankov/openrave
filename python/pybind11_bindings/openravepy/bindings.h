@@ -407,6 +407,17 @@ inline std::vector<T> ExtractArray(const py::object& o)
 }
 
 template <typename T>
+inline std::vector<T> ExtractList(const py::object& o)
+{
+    std::vector<T> v;
+    v.resize(len(o));
+    for(size_t i = 0; i < v.size(); ++i) {
+        v[i] = py::extract<T>(o[i]);
+    }
+    return v;
+}
+
+template <typename T>
 inline std::set<T> ExtractSet(const py::object& o)
 {
     std::set<T> v;
