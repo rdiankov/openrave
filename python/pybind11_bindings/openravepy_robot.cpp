@@ -84,7 +84,7 @@ public:
         pinfo->_vChuckingDirection = ExtractArray<dReal>(_vChuckingDirection);
         pinfo->_vdirection = ExtractVector3(_vdirection);
         pinfo->_sIkSolverXMLId = _sIkSolverXMLId;
-        pinfo->_vGripperJointNames = ExtractList<std::string>(_vGripperJointNames);
+        pinfo->_vGripperJointNames = ExtractArray<std::string>(_vGripperJointNames);
         return pinfo;
     }
 

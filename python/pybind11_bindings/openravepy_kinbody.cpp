@@ -323,7 +323,7 @@ public:
         }
 #endif
 
-        info._vForcedAdjacentLinks = ExtractList<std::string>(_vForcedAdjacentLinks);
+        info._vForcedAdjacentLinks = ExtractArray<std::string>(_vForcedAdjacentLinks);
         info._bStatic = _bStatic;
         info._bIsEnabled = _bIsEnabled;
         return pinfo;

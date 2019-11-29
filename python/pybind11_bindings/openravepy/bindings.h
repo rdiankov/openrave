@@ -359,60 +359,15 @@ inline std::vector<T> ExtractArray(const py::object& o)
         return {};
     }
     std::vector<T> v;
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
     try {
-        py::array_t<T> arr = o.cast<py::array_t<T>>();
-        // https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html
-        // https://qiita.com/lucidfrontier45/items/183526df954c1d6580ba
-        const py::buffer_info info = arr.request();
-        const std::vector<ssize_t> &shape = info.shape;
-        switch(info.ndim) {
-            case 0: {
-                return {};
-            }
-            case 1: {
-                const uint32_t m = shape[0];
-                v.resize(m);
-                for(uint32_t i = 0; i < m; ++i) {
-                    v[i] = *arr.data(i);
-                }
-                break;
-            }
-            case 2: {
-                const uint32_t m = shape[0], n = shape[1];
-                v.resize(m*n);
-                // row-major
-                for(uint32_t i = 0, ij = 0; i < m; ++i) {
-                    for(uint32_t j = 0; j < n; ++j, ++ij) {
-                        v[ij] = *arr.data(i, j);
-                    }
-                }
-                break;
-            }
-            default: {
-                RAVELOG_WARN("Cannot convert array of dimension > 2\n");
-            }
+        const size_t n = len(o);
+        v.resize(n);
+        for(size_t i = 0; i < n; ++i) {
+            v[i] = py::extract<T>(o[i]);
         }
     }
     catch(...) {
-        RAVELOG_WARN("Cannot cast py::object to py::array_t<T>\n");
-    }
-#else // USE_PYBIND11_PYTHON_BINDINGS
-    v.resize(len(o));
-    for(size_t i = 0; i < v.size(); ++i) {
-        v[i] = py::extract<T>(o[i]);
-    }
-#endif // USE_PYBIND11_PYTHON_BINDINGS
-    return v;
-}
-
-template <typename T>
-inline std::vector<T> ExtractList(const py::object& o)
-{
-    std::vector<T> v;
-    v.resize(len(o));
-    for(size_t i = 0; i < v.size(); ++i) {
-        v[i] = py::extract<T>(o[i]);
+        RAVELOG_WARN("Cannot do ExtractArray for " + std::string(typeid(T).name()));
     }
     return v;
 }
