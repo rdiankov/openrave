@@ -171,8 +171,13 @@ public:
     virtual ~PyKinBody();
     void Destroy();
     KinBodyPtr GetBody();
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    bool InitFromBoxes(const std::vector<std::vector<dReal> >& vboxes, const bool bDraw = true, const std::string& uri = "");
+    bool InitFromSpheres(const std::vector<std::vector<dReal> >& vspheres, const bool bDraw = true, const std::string& uri = "");
+#else
     bool InitFromBoxes(const boost::multi_array<dReal,2>& vboxes, bool bDraw=true, const std::string& uri=std::string());
     bool InitFromSpheres(const boost::multi_array<dReal,2>& vspheres, bool bDraw=true, const std::string& uri=std::string());
+#endif
     bool InitFromTrimesh(py::object pytrimesh, bool bDraw=true, const std::string& uri=std::string());
     bool InitFromGeometries(py::object ogeometries, const std::string& uri=std::string());
     bool Init(py::object olinkinfos, py::object ojointinfos, const std::string& uri=std::string());

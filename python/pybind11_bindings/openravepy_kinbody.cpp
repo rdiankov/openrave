@@ -323,7 +323,7 @@ public:
         }
 #endif
 
-        info._vForcedAdjacentLinks = ExtractList<std::string>(_vForcedAdjacentLinks);
+        info._vForcedAdjacentLinks = ExtractArray<std::string>(_vForcedAdjacentLinks);
         info._bStatic = _bStatic;
         info._bIsEnabled = _bIsEnabled;
         return pinfo;
@@ -1667,24 +1667,51 @@ void PyKinBody::Destroy()
     _pbody->Destroy();
 }
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+bool PyKinBody::InitFromBoxes(const std::vector<std::vector<dReal> >& vboxes, const bool bDraw, const std::string& uri)
+#else
 bool PyKinBody::InitFromBoxes(const boost::multi_array<dReal,2>& vboxes, bool bDraw, const std::string& uri)
+#endif
 {
-    if( vboxes.shape()[1] != 6 ) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    if( vboxes.empty() || vboxes[0].size() != 6 )
+#else
+    if( vboxes.shape()[1] != 6 )
+#endif
+    {
         throw openrave_exception(_("boxes needs to be a Nx6 vector\n"));
     }
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    std::vector<AABB> vaabbs(vboxes.size());
+#else
     std::vector<AABB> vaabbs(vboxes.shape()[0]);
+#endif
     for(size_t i = 0; i < vaabbs.size(); ++i) {
         vaabbs[i].pos = Vector(vboxes[i][0],vboxes[i][1],vboxes[i][2]);
         vaabbs[i].extents = Vector(vboxes[i][3],vboxes[i][4],vboxes[i][5]);
     }
     return _pbody->InitFromBoxes(vaabbs,bDraw,uri);
 }
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+bool PyKinBody::InitFromSpheres(const std::vector<std::vector<dReal> >& vspheres, const bool bDraw, const std::string& uri)
+#else
 bool PyKinBody::InitFromSpheres(const boost::multi_array<dReal,2>& vspheres, bool bDraw, const std::string& uri)
+#endif
 {
-    if( vspheres.shape()[1] != 4 ) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    if( vspheres.empty() || vspheres[0].size() != 4 )
+#else
+    if( vspheres.shape()[1] != 4 )
+#endif
+    {
         throw openrave_exception(_("spheres needs to be a Nx4 vector\n"));
     }
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    std::vector<Vector> vvspheres(vspheres.size());
+#else
     std::vector<Vector> vvspheres(vspheres.shape()[0]);
+#endif
     for(size_t i = 0; i < vvspheres.size(); ++i) {
         vvspheres[i] = Vector(vspheres[i][0],vspheres[i][1],vspheres[i][2],vspheres[i][3]);
     }
@@ -4150,7 +4177,8 @@ void init_openravepy_kinbody()
         .value("ActiveManipulatorToolTransform",KinBody::Save_ActiveManipulatorToolTransform)
         ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        enum_<KinBody::CheckLimitsAction>(m, "CheckLimitsAction" DOXY_ENUM(CheckLimitsAction))
+        // CheckLimitsAction belongs to KinBody, not openravepy._openravepy_.openravepy_int
+        enum_<KinBody::CheckLimitsAction>(kinbody, "CheckLimitsAction" DOXY_ENUM(CheckLimitsAction))
 #else
         enum_<KinBody::CheckLimitsAction>("CheckLimitsAction" DOXY_ENUM(CheckLimitsAction))
 #endif
@@ -4160,7 +4188,8 @@ void init_openravepy_kinbody()
         .value("CheckLimitsThrow",KinBody::CLA_CheckLimitsThrow)
         ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        enum_<KinBody::AdjacentOptions>(m, "AdjacentOptions" DOXY_ENUM(AdjacentOptions))
+        // AdjacentOptions belongs to KinBody, not openravepy._openravepy_.openravepy_int
+        enum_<KinBody::AdjacentOptions>(kinbody, "AdjacentOptions" DOXY_ENUM(AdjacentOptions))
 #else
         enum_<KinBody::AdjacentOptions>("AdjacentOptions" DOXY_ENUM(AdjacentOptions))
 #endif
@@ -4174,7 +4203,8 @@ void init_openravepy_kinbody()
         kinbody.attr("GrabbedInfo") = grabbedinfo;
         {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-            scope_ link = class_<PyLink, OPENRAVE_SHARED_PTR<PyLink> >(m, "Link", DOXY_CLASS(KinBody::Link))
+            // link belongs to kinbody
+            scope_ link = class_<PyLink, OPENRAVE_SHARED_PTR<PyLink> >(kinbody, "Link", DOXY_CLASS(KinBody::Link))
 #else
             scope_ link = class_<PyLink, OPENRAVE_SHARED_PTR<PyLink> >("Link", DOXY_CLASS(KinBody::Link), no_init)
 #endif
@@ -4262,15 +4292,13 @@ void init_openravepy_kinbody()
                          .def("__ne__",&PyLink::__ne__)
                          .def("__hash__",&PyLink::__hash__)
             ;
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-            link.attr("Geometry") = geometryinfo;
-#endif
             // \deprecated (12/10/18)
             link.attr("GeomType") = geometrytype;
             link.attr("GeometryInfo") = geometryinfo;
             {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                scope_ geometry = class_<PyLink::PyGeometry, OPENRAVE_SHARED_PTR<PyLink::PyGeometry> >(m, "Geometry", DOXY_CLASS(KinBody::Link::Geometry))
+                // PyGeometry belongs to PyLink, not openravepy._openravepy_.openravepy_int
+                scope_ geometry = class_<PyLink::PyGeometry, OPENRAVE_SHARED_PTR<PyLink::PyGeometry> >(link, "Geometry", DOXY_CLASS(KinBody::Link::Geometry))
 #else
                 scope_ geometry = class_<PyLink::PyGeometry, OPENRAVE_SHARED_PTR<PyLink::PyGeometry> >("Geometry", DOXY_CLASS(KinBody::Link::Geometry),no_init)
 #endif
@@ -4327,7 +4355,7 @@ void init_openravepy_kinbody()
         }
         {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-            scope_ joint = class_<PyJoint, OPENRAVE_SHARED_PTR<PyJoint> >(m, "Joint", DOXY_CLASS(KinBody::Joint))
+            scope_ joint = class_<PyJoint, OPENRAVE_SHARED_PTR<PyJoint> >(kinbody, "Joint", DOXY_CLASS(KinBody::Joint))
 #else
             scope_ joint = class_<PyJoint, OPENRAVE_SHARED_PTR<PyJoint> >("Joint", DOXY_CLASS(KinBody::Joint),no_init)
 #endif

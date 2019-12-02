@@ -153,8 +153,9 @@ object search(ANNkd_tree& kdtree, object q, int k, double eps, bool priority = f
     PyObject *pydists = PyArray_SimpleNew(1,dims, sizeof(ANNdist)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     BOOST_ASSERT(!!pydists);
     PyObject *pyidx = PyArray_SimpleNew(1,dims, PyArray_INT);
-    if( !pyidx )
+    if( !pyidx ) {
         Py_DECREF(pydists);
+    }
     BOOST_ASSERT(!!pyidx);
     ANNdist* pdists = (ANNdist*)PyArray_DATA(pydists);
     ANNidx* pidx = (ANNidx*)PyArray_DATA(pyidx);
@@ -223,15 +224,17 @@ object k_fixed_radius_search(ANNkd_tree& kdtree, object q, double sqRad, int k, 
     std::vector<ANNdist> dists(k);
     std::vector<ANNidx> nn_idx(k);
     int kball = kdtree.annkFRSearch(annq.pt, sqRad, k, &nn_idx[0], &dists[0], eps);
-    if( kball <= 0 )
+    if( kball <= 0 ) {
         return py::make_tuple(py::empty_array_astype<int>(),py::empty_array(),kball);
+    }
 
     npy_intp dims[] = {std::min(k, kball)};
     PyObject *pydists = PyArray_SimpleNew(1,dims, sizeof(ANNdist)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     BOOST_ASSERT(!!pydists);
     PyObject *pyidx = PyArray_SimpleNew(1,dims, PyArray_INT);
-    if( !pyidx )
+    if( !pyidx ) {
         Py_DECREF(pydists);
+    }
     BOOST_ASSERT(!!pyidx);
     ANNdist* pdists = (ANNdist*)PyArray_DATA(pydists);
     ANNidx* pidx = (ANNidx*)PyArray_DATA(pyidx);
@@ -274,8 +277,9 @@ object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqR
 
     npy_intp dims[] = { N,k};
     PyObject *pydists = PyArray_SimpleNew(2,dims, sizeof(ANNdist)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-    if( !pydists )
+    if( !pydists ) {
         Py_DECREF(pykball);
+    }
     BOOST_ASSERT(!!pydists);
     PyObject *pyidx = PyArray_SimpleNew(2,dims, PyArray_INT);
     if( !pyidx ) {
@@ -290,8 +294,9 @@ object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqR
     std::vector<ANNidx> nn_idx(k);
     for(int i = 0; i < N; ++i) {
         object q = qarray[i];
-        for (int c = 0; c < kdtree.theDim(); ++c)
+        for (int c = 0; c < kdtree.theDim(); ++c) {
             annq.pt[c] = extract<ANNcoord>(q[c]);
+        }
         pkball[i] = kdtree.annkFRSearch(annq.pt, sqRad, k, &nn_idx[0], &dists[0], eps);
 
         std::copy(nn_idx.begin(),nn_idx.end(),pidx); pidx += k;

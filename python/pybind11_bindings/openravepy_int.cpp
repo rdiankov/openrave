@@ -2432,7 +2432,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
         .def("RemoveUserData", &PyInterfaceBase::RemoveUserData, DOXY_FN(InterfaceBase, RemoveUserData))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("GetUserData",&PyInterfaceBase::GetUserData,
-            "key"_a, "",
+            "key"_a = "",
             DOXY_FN(InterfaceBase,GetUserData)
         )
 #else
