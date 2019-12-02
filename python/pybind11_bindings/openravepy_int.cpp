@@ -157,9 +157,13 @@ object toPyObject(const rapidjson::Value& value)
 }
 
 // convert from python object to rapidjson
-void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator)
+void toRapidJSONValue(const object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator)
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    if (obj.is_none())
+#else
     if (obj.ptr() == Py_None)
+#endif
     {
         value.SetNull();
     }
@@ -173,8 +177,18 @@ void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
     }
     else if (PyInt_Check(obj.ptr()))
     {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        value.SetInt64(PyInt_AsLong(obj.ptr()));
+#else
+        value.SetInt64(PyLong_AsLong(obj.ptr()));
+#endif
+    }
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    else if (PyLong_Check(obj.ptr()))
+    {
         value.SetInt64(PyLong_AsLong(obj.ptr()));
     }
+#endif
     else if (PyString_Check(obj.ptr()))
     {
         value.SetString(PyString_AsString(obj.ptr()), PyString_GET_SIZE(obj.ptr()));
@@ -189,48 +203,51 @@ void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
         value.SetArray();
         for (int i = 0; i < len(t); i++)
         {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            rapidjson::Value elementValue;
+            toRapidJSONValue(t[i], elementValue, allocator);
+            value.PushBack(elementValue, allocator);
+#else
             object o = py::extract<object>(t[i]);
             rapidjson::Value elementValue;
             toRapidJSONValue(o, elementValue, allocator);
             value.PushBack(elementValue, allocator);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
         }
     }
     else if (PyList_Check(obj.ptr()))
     {
         py::list l = py::extract<py::list>(obj);
         value.SetArray();
-        int numitems = len(l);
+        const int numitems = len(l);
         for (int i = 0; i < numitems; i++) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            rapidjson::Value elementValue;
+            toRapidJSONValue(l[i], elementValue, allocator);
+            value.PushBack(elementValue, allocator);
+#else
             object o = py::extract<object>(l[i]);
             rapidjson::Value elementValue;
             toRapidJSONValue(o, elementValue, allocator);
             value.PushBack(elementValue, allocator);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
         }
     }
     else if (PyDict_Check(obj.ptr()))
     {
         py::dict d = py::extract<py::dict>(obj);
-        int numitems = len(d);
+        const int numitems = len(d);
         value.SetObject();
-#ifndef USE_PYBIND11_PYTHON_BINDINGS
-        object iterator = d.iteritems();
-#endif
-
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        for (auto item : d) // will replace auto later
-        {
-            rapidjson::Value keyValue, valueValue;
-            {
-                object k = py::extract<object>(item.first);
-                toRapidJSONValue(k, keyValue, allocator);
-            }
-            {
-                object v = py::extract<object>(item.second);
-                toRapidJSONValue(v, valueValue, allocator);
-            }
-            value.AddMember(keyValue, valueValue, allocator);
+        for (pybind11::detail::dict_iterator it = d.begin(); it != d.end(); ++it) {
+            std::pair<py::handle, py::handle> ref = *it;
+            rapidjson::Value k, v;
+            toRapidJSONValue(py::reinterpret_borrow<py::object>(ref.first), k, allocator);
+            toRapidJSONValue(py::reinterpret_borrow<py::object>(ref.second), v, allocator);
+            value.AddMember(k, v, allocator);
         }
 #else
+        object iterator = d.iteritems();
         for (int i = 0; i < numitems; i++)
         {
             py::tuple kv = py::extract<py::tuple>(iterator.attr("next")());
@@ -329,7 +346,7 @@ object toPyArray(const TransformMatrix& t)
     pdata[4] = t.m[4]; pdata[5] = t.m[5]; pdata[6] = t.m[6]; pdata[7] = t.trans.y;
     pdata[8] = t.m[8]; pdata[9] = t.m[9]; pdata[10] = t.m[10]; pdata[11] = t.trans.z;
     pdata[12] = 0; pdata[13] = 0; pdata[14] = 0; pdata[15] = 1;
-    return py::to_array(pyvalues);
+    return py::to_array_astype<dReal>(pyvalues);
 }
 
 
@@ -340,7 +357,7 @@ object toPyArray(const Transform& t)
     dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
     pdata[0] = t.rot.x; pdata[1] = t.rot.y; pdata[2] = t.rot.z; pdata[3] = t.rot.w;
     pdata[4] = t.trans.x; pdata[5] = t.trans.y; pdata[6] = t.trans.z;
-    return py::to_array(pyvalues);
+    return py::to_array_astype<dReal>(pyvalues);
 }
 
 AttributesList toAttributesList(py::dict odict)
@@ -1276,7 +1293,7 @@ public:
         object shape = rays.attr("shape");
         int nRays = extract<int>(shape[0]);
         if( nRays == 0 ) {
-            return py::make_tuple(py::empty_array_astype<int>(), py::empty_array());
+            return py::make_tuple(py::empty_array_astype<int>(), py::empty_array_astype<dReal>());
         }
         if( extract<int>(shape[1]) != 6 ) {
             throw openrave_exception(_("rays object needs to be a Nx6 vector\n"));
@@ -1348,7 +1365,7 @@ public:
             }
         }
 
-        return py::make_tuple(py::to_array(pycollision),py::to_array(pypos));
+        return py::make_tuple(py::to_array_astype<bool>(pycollision), py::to_array_astype<dReal>(pypos));
     }
 
     bool CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray)

@@ -162,7 +162,7 @@ inline uint64_t GetMicroTime()
 #if OPENRAVE_RAPIDJSON
 /// conversion between rapidjson value and py::object
 OPENRAVEPY_API py::object toPyObject(const rapidjson::Value& value);
-OPENRAVEPY_API void toRapidJSONValue(py::object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator);
+OPENRAVEPY_API void toRapidJSONValue(const py::object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator);
 #endif // OPENRAVE_RAPIDJSON
 
 /// used externally, don't change definitions
@@ -333,49 +333,23 @@ inline py::object toPyArrayRotation(const TransformMatrix& t)
     pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2];
     pdata[3] = t.m[4]; pdata[4] = t.m[5]; pdata[5] = t.m[6];
     pdata[6] = t.m[8]; pdata[7] = t.m[9]; pdata[8] = t.m[10];
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    return py::cast<py::numeric::array>(pyvalues);
-#else
-    return static_cast<py::numeric::array>(py::handle<>(pyvalues));
-#endif // USE_PYBIND11_PYTHON_BINDINGS
+    return py::to_array_astype<dReal>(pyvalues);
 }
 
-inline py::object toPyArray3(const std::vector<RaveVector<float> >& v)
+template <typename T>
+inline py::object toPyArray3(const std::vector<RaveVector<T> >& v)
 {
     npy_intp dims[] = { npy_intp(v.size()), npy_intp(3) };
-    PyObject *pyvalues = PyArray_SimpleNew(2,dims, PyArray_FLOAT);
+    PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(T)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     if( v.size() > 0 ) {
-        float* pf = (float*)PyArray_DATA(pyvalues);
+        T* pf = (T*)PyArray_DATA(pyvalues);
         FOREACHC(it,v) {
             *pf++ = it->x;
             *pf++ = it->y;
             *pf++ = it->z;
         }
     }
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    return py::cast<py::numeric::array>(pyvalues);
-#else
-    return static_cast<py::numeric::array>(py::handle<>(pyvalues));
-#endif // USE_PYBIND11_PYTHON_BINDINGS
-}
-
-inline py::object toPyArray3(const std::vector<RaveVector<double> >& v)
-{
-    npy_intp dims[] = { npy_intp(v.size()), npy_intp(3) };
-    PyObject *pyvalues = PyArray_SimpleNew(2,dims, PyArray_DOUBLE);
-    if( v.size() > 0 ) {
-        double* pf = (double*)PyArray_DATA(pyvalues);
-        FOREACHC(it,v) {
-            *pf++ = it->x;
-            *pf++ = it->y;
-            *pf++ = it->z;
-        }
-    }
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    return py::cast<py::numeric::array>(pyvalues);
-#else
-    return static_cast<py::numeric::array>(py::handle<>(pyvalues));
-#endif // USE_PYBIND11_PYTHON_BINDINGS
+    return py::to_array_astype<T>(pyvalues);
 }
 
 inline py::object toPyVector2(Vector v)

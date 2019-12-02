@@ -114,7 +114,7 @@ public:
         CHECK_POINTER(pykinbody);
         KinBodyPtr pbody = openravepy::GetKinBody(pykinbody);
         if( pbody->GetLinks().size() == 0 ) {
-            return py::empty_array();
+            return py::empty_array_astype<dReal>();
         }
         std::vector<std::pair<Vector,Vector> > velocities;
         if( !_pPhysicsEngine->GetLinkVelocities(pbody,velocities) ) {
@@ -131,7 +131,7 @@ public:
             pfvel[6*i+4] = velocities[i].second.y;
             pfvel[6*i+5] = velocities[i].second.z;
         }
-        return py::to_array(pyvel);
+        return py::to_array_astype<dReal>(pyvel);
     }
 
     bool SetBodyForce(object pylink, object force, object position, bool bAdd)
