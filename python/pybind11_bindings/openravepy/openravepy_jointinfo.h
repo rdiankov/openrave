@@ -539,7 +539,7 @@ public:
         pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2];
         pdata[3] = t.m[4]; pdata[4] = t.m[5]; pdata[5] = t.m[6];
         pdata[6] = t.m[8]; pdata[7] = t.m[9]; pdata[8] = t.m[10];
-        return py::to_array(pyvalues);
+        return py::to_array_astype<dReal>(pyvalues);
     }
     object GetGlobalInertia() const {
         TransformMatrix t = _plink->GetGlobalInertia();
@@ -549,7 +549,7 @@ public:
         pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2];
         pdata[3] = t.m[4]; pdata[4] = t.m[5]; pdata[5] = t.m[6];
         pdata[6] = t.m[8]; pdata[7] = t.m[9]; pdata[8] = t.m[10];
-        return py::to_array(pyvalues);
+        return py::to_array_astype<dReal>(pyvalues);
     }
     dReal GetMass() const {
         return _plink->GetMass();

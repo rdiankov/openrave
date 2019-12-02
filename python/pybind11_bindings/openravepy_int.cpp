@@ -329,7 +329,7 @@ object toPyArray(const TransformMatrix& t)
     pdata[4] = t.m[4]; pdata[5] = t.m[5]; pdata[6] = t.m[6]; pdata[7] = t.trans.y;
     pdata[8] = t.m[8]; pdata[9] = t.m[9]; pdata[10] = t.m[10]; pdata[11] = t.trans.z;
     pdata[12] = 0; pdata[13] = 0; pdata[14] = 0; pdata[15] = 1;
-    return py::to_array(pyvalues);
+    return py::to_array_astype<dReal>(pyvalues);
 }
 
 
@@ -340,7 +340,7 @@ object toPyArray(const Transform& t)
     dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
     pdata[0] = t.rot.x; pdata[1] = t.rot.y; pdata[2] = t.rot.z; pdata[3] = t.rot.w;
     pdata[4] = t.trans.x; pdata[5] = t.trans.y; pdata[6] = t.trans.z;
-    return py::to_array(pyvalues);
+    return py::to_array_astype<dReal>(pyvalues);
 }
 
 AttributesList toAttributesList(py::dict odict)
@@ -1276,7 +1276,7 @@ public:
         object shape = rays.attr("shape");
         int nRays = extract<int>(shape[0]);
         if( nRays == 0 ) {
-            return py::make_tuple(py::empty_array_astype<int>(), py::empty_array());
+            return py::make_tuple(py::empty_array_astype<int>(), py::empty_array_astype<dReal>());
         }
         if( extract<int>(shape[1]) != 6 ) {
             throw openrave_exception(_("rays object needs to be a Nx6 vector\n"));
@@ -1348,7 +1348,7 @@ public:
             }
         }
 
-        return py::make_tuple(py::to_array(pycollision),py::to_array(pypos));
+        return py::make_tuple(py::to_array_astype<bool>(pycollision), py::to_array_astype<dReal>(pypos));
     }
 
     bool CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray)

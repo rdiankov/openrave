@@ -389,7 +389,7 @@ public:
                 if( pdata->vimagedata.size() > 0 ) {
                     memcpy(PyArray_DATA(pyvalues),&pdata->vimagedata[0],pdata->vimagedata.size());
                 }
-                imagedata = py::to_array(pyvalues);
+                imagedata = py::to_array_astype<uint8_t>(pyvalues);
             }
         }
         PyCameraSensorData(OPENRAVE_SHARED_PTR<SensorBase::CameraGeomData const> pgeom) : PySensorData(SensorBase::ST_Camera), intrinsics(pgeom->intrinsics)
@@ -398,7 +398,7 @@ public:
                 npy_intp dims[] = { pgeom->height,pgeom->width,3};
                 PyObject *pyvalues = PyArray_SimpleNew(3,dims, PyArray_UINT8);
                 memset(PyArray_DATA(pyvalues),0,pgeom->height*pgeom->width*3);
-                imagedata = py::to_array(pyvalues);
+                imagedata = py::to_array_astype<uint8_t>(pyvalues);
             }
             {
                 numeric::array arr(py::make_tuple(pgeom->intrinsics.fx,0,pgeom->intrinsics.cx,0,pgeom->intrinsics.fy,pgeom->intrinsics.cy,0,0,1));
@@ -916,6 +916,7 @@ void init_openravepy_sensor()
 
         {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+            scope_ actuatorsensordata = 
             // ActuatorSensorData is inside SensorBase
             class_<PySensorBase::PyActuatorSensorData, OPENRAVE_SHARED_PTR<PySensorBase::PyActuatorSensorData>, PySensorBase::PySensorData>(sensor, "ActuatorSensorData", DOXY_CLASS(SensorBase::ActuatorSensorData))
             .def(init<OPENRAVE_SHARED_PTR<SensorBase::ActuatorGeomData const>, OPENRAVE_SHARED_PTR<SensorBase::ActuatorSensorData>>(), "pgeom"_a, "pdata"_a)
@@ -938,7 +939,8 @@ void init_openravepy_sensor()
             ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-            enum_<SensorBase::ActuatorSensorData::ActuatorState>(m, "ActuatorState", py::arithmetic() DOXY_ENUM(ActuatorState))
+            // ActuatorState belongs to ActuatorSensorData
+            enum_<SensorBase::ActuatorSensorData::ActuatorState>(actuatorsensordata, "ActuatorState", py::arithmetic() DOXY_ENUM(ActuatorState))
 #else
             enum_<SensorBase::ActuatorSensorData::ActuatorState>("ActuatorState" DOXY_ENUM(ActuatorState))
 #endif
@@ -947,11 +949,15 @@ void init_openravepy_sensor()
             .value("Moving",SensorBase::ActuatorSensorData::AS_Moving)
             .value("Stalled",SensorBase::ActuatorSensorData::AS_Stalled)
             .value("Braked",SensorBase::ActuatorSensorData::AS_Braked)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            .export_values()
+#endif
             ;
         }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        enum_<SensorBase::SensorType>(m, "Type", py::arithmetic() DOXY_ENUM(SensorType))
+        // SensorType belongs to Sensor
+        enum_<SensorBase::SensorType>(sensor, "Type", py::arithmetic() DOXY_ENUM(SensorType))
 #else
         enum_<SensorBase::SensorType>("Type" DOXY_ENUM(SensorType))
 #endif
@@ -964,10 +970,13 @@ void init_openravepy_sensor()
         .value("Odometry",SensorBase::ST_Odometry)
         .value("Tactile",SensorBase::ST_Tactile)
         .value("Actuator",SensorBase::ST_Actuator)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        .export_values()
+#endif
         ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        enum_<SensorBase::ConfigureCommand>(m, "ConfigureCommand", py::arithmetic() DOXY_ENUM(ConfigureCommand))
+        enum_<SensorBase::ConfigureCommand>(sensor, "ConfigureCommand", py::arithmetic() DOXY_ENUM(ConfigureCommand))
 #else
         enum_<SensorBase::ConfigureCommand>("ConfigureCommand" DOXY_ENUM(ConfigureCommand))
 #endif
@@ -980,6 +989,9 @@ void init_openravepy_sensor()
         .value("RenderGeometryOn",SensorBase::CC_RenderGeometryOn)
         .value("RenderGeometryOff",SensorBase::CC_RenderGeometryOff)
         .value("RenderGeometryCheck",SensorBase::CC_RenderGeometryCheck)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        .export_values()
+#endif
         ;
     }
 

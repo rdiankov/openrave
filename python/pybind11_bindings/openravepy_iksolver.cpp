@@ -149,7 +149,7 @@ public:
     }
     object GetFreeParameters() const {
         if( _pIkSolver->GetNumFreeParameters() == 0 ) {
-            return py::empty_array();
+            return py::empty_array_astype<dReal>();
         }
         std::vector<dReal> values;
         _pIkSolver->GetFreeParameters(values);

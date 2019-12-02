@@ -714,7 +714,7 @@ public:
     object GetActiveDOFValues() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return py::empty_array();
+            return py::empty_array_astype<dReal>();
         }
         std::vector<dReal> values;
         _probot->GetActiveDOFValues(values);
@@ -724,7 +724,7 @@ public:
     object GetActiveDOFWeights() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return py::empty_array();
+            return py::empty_array_astype<dReal>();
         }
         std::vector<dReal> weights;
         _probot->GetActiveDOFWeights(weights);
@@ -738,7 +738,7 @@ public:
     object GetActiveDOFVelocities() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return py::empty_array();
+            return py::empty_array_astype<dReal>();
         }
         std::vector<dReal> values;
         _probot->GetActiveDOFVelocities(values);
@@ -748,7 +748,7 @@ public:
     object GetActiveDOFLimits() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return py::make_tuple(py::empty_array(), py::empty_array()); // always need 2 since users can do lower, upper = GetDOFLimits()
+            return py::make_tuple(py::empty_array_astype<dReal>(), py::empty_array_astype<dReal>()); // always need 2 since users can do lower, upper = GetDOFLimits()
         }
         std::vector<dReal> lower, upper;
         _probot->GetActiveDOFLimits(lower,upper);
@@ -758,7 +758,7 @@ public:
     object GetActiveDOFMaxVel() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return py::empty_array();
+            return py::empty_array_astype<dReal>();
         }
         std::vector<dReal> values;
         _probot->GetActiveDOFMaxVel(values);
@@ -768,7 +768,7 @@ public:
     object GetActiveDOFMaxAccel() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return py::empty_array();
+            return py::empty_array_astype<dReal>();
         }
         std::vector<dReal> values;
         _probot->GetActiveDOFMaxAccel(values);
@@ -778,7 +778,7 @@ public:
     object GetActiveDOFMaxJerk() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return py::empty_array();
+            return py::empty_array_astype<dReal>();
         }
         std::vector<dReal> values;
         _probot->GetActiveDOFMaxJerk(values);
@@ -788,7 +788,7 @@ public:
     object GetActiveDOFHardMaxVel() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return py::empty_array();
+            return py::empty_array_astype<dReal>();
         }
         std::vector<dReal> values;
         _probot->GetActiveDOFHardMaxVel(values);
@@ -798,7 +798,7 @@ public:
     object GetActiveDOFHardMaxAccel() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return py::empty_array();
+            return py::empty_array_astype<dReal>();
         }
         std::vector<dReal> values;
         _probot->GetActiveDOFHardMaxAccel(values);
@@ -808,7 +808,7 @@ public:
     object GetActiveDOFHardMaxJerk() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return py::empty_array();
+            return py::empty_array_astype<dReal>();
         }
         std::vector<dReal> values;
         _probot->GetActiveDOFHardMaxJerk(values);
@@ -818,7 +818,7 @@ public:
     object GetActiveDOFResolutions() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return py::empty_array();
+            return py::empty_array_astype<dReal>();
         }
         std::vector<dReal> values;
         _probot->GetActiveDOFResolutions(values);

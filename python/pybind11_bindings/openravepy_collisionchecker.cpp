@@ -538,7 +538,7 @@ public:
         object shape = rays.attr("shape");
         int num = extract<int>(shape[0]);
         if( num == 0 ) {
-            return py::make_tuple(py::empty_array_astype<int>(), py::empty_array());
+            return py::make_tuple(py::empty_array_astype<int>(), py::empty_array_astype<dReal>());
         }
         if( extract<int>(shape[1]) != 6 ) {
             throw openrave_exception(_("rays object needs to be a Nx6 vector\n"));
@@ -582,7 +582,7 @@ public:
             }
         }
 
-        return py::make_tuple(py::to_array(pycollision),py::to_array(pypos));
+        return py::make_tuple(py::to_array_astype<bool>(pycollision), py::to_array_astype<dReal>(pypos));
     }
 
     bool CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray)
