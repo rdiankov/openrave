@@ -4150,7 +4150,8 @@ void init_openravepy_kinbody()
         .value("ActiveManipulatorToolTransform",KinBody::Save_ActiveManipulatorToolTransform)
         ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        enum_<KinBody::CheckLimitsAction>(m, "CheckLimitsAction" DOXY_ENUM(CheckLimitsAction))
+        // CheckLimitsAction belongs to KinBody, not openravepy._openravepy_.openravepy_int
+        enum_<KinBody::CheckLimitsAction>(kinbody, "CheckLimitsAction" DOXY_ENUM(CheckLimitsAction))
 #else
         enum_<KinBody::CheckLimitsAction>("CheckLimitsAction" DOXY_ENUM(CheckLimitsAction))
 #endif
@@ -4160,7 +4161,8 @@ void init_openravepy_kinbody()
         .value("CheckLimitsThrow",KinBody::CLA_CheckLimitsThrow)
         ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        enum_<KinBody::AdjacentOptions>(m, "AdjacentOptions" DOXY_ENUM(AdjacentOptions))
+        // AdjacentOptions belongs to KinBody, not openravepy._openravepy_.openravepy_int
+        enum_<KinBody::AdjacentOptions>(kinbody, "AdjacentOptions" DOXY_ENUM(AdjacentOptions))
 #else
         enum_<KinBody::AdjacentOptions>("AdjacentOptions" DOXY_ENUM(AdjacentOptions))
 #endif
@@ -4262,15 +4264,13 @@ void init_openravepy_kinbody()
                          .def("__ne__",&PyLink::__ne__)
                          .def("__hash__",&PyLink::__hash__)
             ;
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-            link.attr("Geometry") = geometryinfo;
-#endif
             // \deprecated (12/10/18)
             link.attr("GeomType") = geometrytype;
             link.attr("GeometryInfo") = geometryinfo;
             {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                scope_ geometry = class_<PyLink::PyGeometry, OPENRAVE_SHARED_PTR<PyLink::PyGeometry> >(m, "Geometry", DOXY_CLASS(KinBody::Link::Geometry))
+                // PyGeometry belongs to PyLink, not openravepy._openravepy_.openravepy_int
+                scope_ geometry = class_<PyLink::PyGeometry, OPENRAVE_SHARED_PTR<PyLink::PyGeometry> >(link, "Geometry", DOXY_CLASS(KinBody::Link::Geometry))
 #else
                 scope_ geometry = class_<PyLink::PyGeometry, OPENRAVE_SHARED_PTR<PyLink::PyGeometry> >("Geometry", DOXY_CLASS(KinBody::Link::Geometry),no_init)
 #endif

@@ -2078,7 +2078,7 @@ void init_openravepy_global()
     m.def("ComputePoseDistSqr", openravepy::ComputePoseDistSqr, 
         "pose0"_a,
         "pose1"_a,
-        "quatweight"_a,
+        "quatweight"_a = 1.0,
         DOXY_FN1(ComputePoseDistSqr)
     );
 #else
