@@ -4176,7 +4176,8 @@ void init_openravepy_kinbody()
         kinbody.attr("GrabbedInfo") = grabbedinfo;
         {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-            scope_ link = class_<PyLink, OPENRAVE_SHARED_PTR<PyLink> >(m, "Link", DOXY_CLASS(KinBody::Link))
+            // link belongs to kinbody
+            scope_ link = class_<PyLink, OPENRAVE_SHARED_PTR<PyLink> >(kinbody, "Link", DOXY_CLASS(KinBody::Link))
 #else
             scope_ link = class_<PyLink, OPENRAVE_SHARED_PTR<PyLink> >("Link", DOXY_CLASS(KinBody::Link), no_init)
 #endif
@@ -4327,7 +4328,7 @@ void init_openravepy_kinbody()
         }
         {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-            scope_ joint = class_<PyJoint, OPENRAVE_SHARED_PTR<PyJoint> >(m, "Joint", DOXY_CLASS(KinBody::Joint))
+            scope_ joint = class_<PyJoint, OPENRAVE_SHARED_PTR<PyJoint> >(kinbody, "Joint", DOXY_CLASS(KinBody::Joint))
 #else
             scope_ joint = class_<PyJoint, OPENRAVE_SHARED_PTR<PyJoint> >("Joint", DOXY_CLASS(KinBody::Joint),no_init)
 #endif
