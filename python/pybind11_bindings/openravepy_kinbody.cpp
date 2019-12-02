@@ -1667,24 +1667,51 @@ void PyKinBody::Destroy()
     _pbody->Destroy();
 }
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+bool PyKinBody::InitFromBoxes(const std::vector<std::vector<dReal> >& vboxes, const bool bDraw, const std::string& uri)
+#else
 bool PyKinBody::InitFromBoxes(const boost::multi_array<dReal,2>& vboxes, bool bDraw, const std::string& uri)
+#endif
 {
-    if( vboxes.shape()[1] != 6 ) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    if( vboxes.empty() || vboxes[0].size() != 6 )
+#else
+    if( vboxes.shape()[1] != 6 )
+#endif
+    {
         throw openrave_exception(_("boxes needs to be a Nx6 vector\n"));
     }
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    std::vector<AABB> vaabbs(vboxes.size());
+#else
     std::vector<AABB> vaabbs(vboxes.shape()[0]);
+#endif
     for(size_t i = 0; i < vaabbs.size(); ++i) {
         vaabbs[i].pos = Vector(vboxes[i][0],vboxes[i][1],vboxes[i][2]);
         vaabbs[i].extents = Vector(vboxes[i][3],vboxes[i][4],vboxes[i][5]);
     }
     return _pbody->InitFromBoxes(vaabbs,bDraw,uri);
 }
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+bool PyKinBody::InitFromSpheres(const std::vector<std::vector<dReal> >& vspheres, const bool bDraw, const std::string& uri)
+#else
 bool PyKinBody::InitFromSpheres(const boost::multi_array<dReal,2>& vspheres, bool bDraw, const std::string& uri)
+#endif
 {
-    if( vspheres.shape()[1] != 4 ) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    if( vspheres.empty() || vspheres[0].size() != 4 )
+#else
+    if( vspheres.shape()[1] != 4 )
+#endif
+    {
         throw openrave_exception(_("spheres needs to be a Nx4 vector\n"));
     }
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    std::vector<Vector> vvspheres(vspheres.size());
+#else
     std::vector<Vector> vvspheres(vspheres.shape()[0]);
+#endif
     for(size_t i = 0; i < vvspheres.size(); ++i) {
         vvspheres[i] = Vector(vspheres[i][0],vspheres[i][1],vspheres[i][2],vspheres[i][3]);
     }
