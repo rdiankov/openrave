@@ -262,7 +262,7 @@ public:
         PyObject *pyindices = PyArray_SimpleNew(2,dims, PyArray_INT32);
         int32_t* pidata = reinterpret_cast<int32_t*>PyArray_DATA(pyindices);
         std::memcpy(pidata, mesh.indices.data(), mesh.indices.size() * sizeof(int32_t));
-        indices = py::to_array_astype<dReal>(pyindices);
+        indices = py::to_array_astype<int>(pyindices);
     }
 
     void GetTriMesh(TriMesh& mesh) {

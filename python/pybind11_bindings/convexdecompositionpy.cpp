@@ -163,7 +163,7 @@ object computeConvexDecomposition(const boost::multi_array<float, 2>& vertices, 
         PyObject *pyindices = PyArray_SimpleNew(2,dims, PyArray_INT);
         std::copy(&result.mIndices[0],&result.mIndices[3*result.mTcount],(int*)PyArray_DATA(pyindices));
 
-        hulls.append(py::make_tuple(py::to_array_astype<float>(pyvertices), py::to_array_astype<int>(pyindices)));
+        hulls.append(py::make_tuple(py::to_array_astype<NxF32>(pyvertices), py::to_array_astype<int>(pyindices)));
     }
 
     return hulls;
