@@ -721,7 +721,7 @@ void init_openravepy_collisionchecker()
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals;  // "..."_a
-    enum_<CollisionOptions>(m, "CollisionOptions" DOXY_ENUM(CollisionOptions))
+    enum_<CollisionOptions>(m, "CollisionOptions", py::arithmetic() DOXY_ENUM(CollisionOptions))
 #else
     enum_<CollisionOptions>("CollisionOptions" DOXY_ENUM(CollisionOptions))
 #endif
@@ -732,14 +732,20 @@ void init_openravepy_collisionchecker()
     .value("ActiveDOFs",CO_ActiveDOFs)
     .value("AllLinkCollisions", CO_AllLinkCollisions)
     .value("AllGeometryContacts", CO_AllGeometryContacts)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .export_values()
+#endif
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    enum_<CollisionAction>(m, "CollisionAction" DOXY_ENUM(CollisionAction))
+    enum_<CollisionAction>(m, "CollisionAction", py::arithmetic() DOXY_ENUM(CollisionAction))
 #else
     enum_<CollisionAction>("CollisionAction" DOXY_ENUM(CollisionAction))
 #endif
     .value("DefaultAction",CA_DefaultAction)
     .value("Ignore",CA_Ignore)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .export_values()
+#endif
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

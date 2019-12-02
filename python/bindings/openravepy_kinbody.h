@@ -275,12 +275,12 @@ public:
     object GetAdjacentLinks() const;
     object GetManageData() const;
     int GetUpdateStamp() const;
-    string serialize(int options) const;
-    string GetKinematicsGeometryHash() const;
+    std::string serialize(int options) const;
+    std::string GetKinematicsGeometryHash() const;
     PyStateRestoreContextBase* CreateKinBodyStateSaver(object options=object());
     virtual PyStateRestoreContextBase* CreateStateSaver(object options);
-    virtual string __repr__();
-    virtual string __str__();
+    virtual std::string __repr__();
+    virtual std::string __str__();
     virtual object __unicode__();
     virtual void __enter__();
     virtual void __exit__(object type, object value, object traceback);

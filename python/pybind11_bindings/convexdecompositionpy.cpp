@@ -132,7 +132,9 @@ object computeConvexDecomposition(const boost::multi_array<float, 2>& vertices, 
     return hulls;
 }
 
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
 BOOST_PYTHON_FUNCTION_OVERLOADS(computeConvexDecomposition_overloads, computeConvexDecomposition, 2, 10)
+#endif
 
 OPENRAVE_PYTHON_MODULE(convexdecompositionpy)
 {
