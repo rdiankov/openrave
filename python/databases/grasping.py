@@ -167,7 +167,7 @@ else:
     from numpy import inf, array
 
 import numpy
-from ..openravepy_ext import openrave_exception, planning_error, transformPoints
+from ..openravepy_ext import planning_error, transformPoints
 from ..openravepy_int import RaveCreateModule, RaveCreateTrajectory, IkParameterization, IkParameterizationType, IkFilterOptions, RaveFindDatabaseFile, RaveDestroy, Environment, Robot, KinBody, DOFAffine, CollisionReport, RaveCreateCollisionChecker, quatRotateDirection, rotationMatrixFromQuat, Ray, poseFromMatrix
 from . import DatabaseGenerator
 from ..misc import SpaceSamplerExtra
