@@ -119,7 +119,7 @@ object computeConvexDecomposition(const boost::multi_array<float, 2>& vertices, 
 
     if( indices.size() > 0 ) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        for(size_t iindex = 0; iindex < 3 * nvertices; iindex += 3) {
+        for(size_t iindex = 0; iindex < 3 * nindices; iindex += 3) {
             ic->addTriangle(p_vertices + 3*(*(p_indices+iindex+0)),
                             p_vertices + 3*(*(p_indices+iindex+1)),
                             p_vertices + 3*(*(p_indices+iindex+2))
@@ -133,18 +133,15 @@ object computeConvexDecomposition(const boost::multi_array<float, 2>& vertices, 
     }
     else {
         BOOST_ASSERT((vertices.size()%3)==0);
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
         for(size_t i = 0; i < vertices.size(); i += 3) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
             ic->addTriangle(p_vertices + 3*(i+0),
                             p_vertices + 3*(i+1),
-                            p_vertices + 3*(i+2)
-            );
-        }
+                            p_vertices + 3*(i+2));
 #else
-        for(size_t i = 0; i < vertices.size(); i += 3) {
             ic->addTriangle(&vertices[i][0], &vertices[i+1][0], &vertices[i+2][0]);
-        }
 #endif
+        }
     }
 
     ic->computeConvexDecomposition(skinWidth, decompositionDepth, maxHullVertices, concavityThresholdPercent, mergeThresholdPercent, volumeSplitThresholdPercent, useInitialIslandGeneration, useIslandGeneration, false);
