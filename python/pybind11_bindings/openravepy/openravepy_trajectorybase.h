@@ -46,6 +46,8 @@ public:
 
     object Sample(dReal time, PyConfigurationSpecificationPtr pyspec) const;
 
+    object Sample(dReal time, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pgroup) const;
+
     object SampleFromPrevious(object odata, dReal time, PyConfigurationSpecificationPtr pyspec) const;
 
     object SamplePoints2D(object otimes) const;
