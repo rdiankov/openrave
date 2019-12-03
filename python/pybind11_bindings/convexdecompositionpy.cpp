@@ -91,19 +91,60 @@ inline void assertion_failed_msg(char const * expr, char const * msg, char const
 }
 #endif
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+object computeConvexDecomposition(py::array_t<float>& vertices, py::array_t<int>& indices,
+#else
 object computeConvexDecomposition(const boost::multi_array<float, 2>& vertices, const boost::multi_array<int, 2>& indices,
+#endif
                                   NxF32 skinWidth=0, NxU32 decompositionDepth=8, NxU32 maxHullVertices=64, NxF32 concavityThresholdPercent=0.1f, NxF32 mergeThresholdPercent=30.0f, NxF32 volumeSplitThresholdPercent=0.1f, bool useInitialIslandGeneration=true, bool useIslandGeneration=false)
 {
     OPENRAVE_SHARED_PTR<CONVEX_DECOMPOSITION::iConvexDecomposition> ic(CONVEX_DECOMPOSITION::createConvexDecomposition(),CONVEX_DECOMPOSITION::releaseConvexDecomposition);
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    // https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html#direct-access
+    // https://stackoverflow.com/questions/49582252/pybind-numpy-access-2d-nd-arrays
+    const py::buffer_info& vertices_info = vertices.request();
+    const std::vector<ssize_t> &vertices_shape = vertices_info.shape;
+    BOOST_ASSERT(vertices_shape.size() == 2);
+    const size_t nvertices = vertices_shape[0];
+    BOOST_ASSERT(vertices_shape[1] == 3);
+    float const* const p_vertices = (float *) vertices_info.ptr;
+
+    const py::buffer_info& indices_info = indices.request();
+    const std::vector<ssize_t> &indices_shape = indices_info.shape;
+    BOOST_ASSERT(indices_shape.size() == 2);
+    const size_t nindices = indices_shape[0];
+    BOOST_ASSERT(indices_shape[1] == 3);
+    int const* const p_indices = (int *) indices_info.ptr;
+#endif
 
     if( indices.size() > 0 ) {
-        FOREACHC(it,indices)
-        ic->addTriangle(&vertices[(*it)[0]][0], &vertices[(*it)[1]][0], &vertices[(*it)[2]][0]);
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        for(size_t iindex = 0; iindex < 3 * nvertices; iindex += 3) {
+            ic->addTriangle(p_vertices + 3*(*(p_indices+iindex+0)),
+                            p_vertices + 3*(*(p_indices+iindex+1)),
+                            p_vertices + 3*(*(p_indices+iindex+2))
+            );
+        }
+#else
+        FOREACHC(it,indices) {
+            ic->addTriangle(&vertices[(*it)[0]][0], &vertices[(*it)[1]][0], &vertices[(*it)[2]][0]);
+        }
+#endif // USE_PYBIND11_PYTHON_BINDINGS
     }
     else {
         BOOST_ASSERT((vertices.size()%3)==0);
-        for(size_t i = 0; i < vertices.size(); i += 3)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        for(size_t i = 0; i < vertices.size(); i += 3) {
+            ic->addTriangle(p_vertices + 3*(i+0),
+                            p_vertices + 3*(i+1),
+                            p_vertices + 3*(i+2)
+            );
+        }
+#else
+        for(size_t i = 0; i < vertices.size(); i += 3) {
             ic->addTriangle(&vertices[i][0], &vertices[i+1][0], &vertices[i+2][0]);
+        }
+#endif
     }
 
     ic->computeConvexDecomposition(skinWidth, decompositionDepth, maxHullVertices, concavityThresholdPercent, mergeThresholdPercent, volumeSplitThresholdPercent, useInitialIslandGeneration, useIslandGeneration, false);
@@ -121,7 +162,8 @@ object computeConvexDecomposition(const boost::multi_array<float, 2>& vertices, 
         dims[1] = 3;
         PyObject *pyindices = PyArray_SimpleNew(2,dims, PyArray_INT);
         std::copy(&result.mIndices[0],&result.mIndices[3*result.mTcount],(int*)PyArray_DATA(pyindices));
-        hulls.append(py::make_tuple(py::to_array(pyvertices), py::to_array(pyindices)));
+
+        hulls.append(py::make_tuple(py::to_array_astype<NxF32>(pyvertices), py::to_array_astype<int>(pyindices)));
     }
 
     return hulls;

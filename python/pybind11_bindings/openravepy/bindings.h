@@ -133,6 +133,12 @@ struct select_dtype<uint64_t>
     static constexpr char type[] = "u8";
 };
 
+template <>
+struct select_dtype<bool>
+{
+    static constexpr char type[] = "?";
+};
+
 template <typename T>
 struct select_npy_type
 {};
@@ -178,6 +184,12 @@ struct select_npy_type<uint64_t>
 {
     static constexpr NPY_TYPES type = NPY_UINT64;
 };
+
+template <>
+struct select_npy_type<bool>
+{
+    static constexpr NPY_TYPES type = NPY_BOOL;
+};
 } // namespace openravepy
 
 // pybind11
@@ -213,13 +225,18 @@ auto handle_to_object(T const& h) -> decltype(to_object<T>(h))
 {
     return to_object<T>(h);
 }
-inline object to_array(PyObject* pyo) {
+// inline object to_array(PyObject* pyo) {
+//     // do we need to implement the conversion?
+//     return handle(pyo).cast<array_t<double>>();
+// }
+template <typename T>
+inline object to_array_astype(PyObject* pyo) {
     // do we need to implement the conversion?
-    return handle(pyo).cast<array_t<double>>();
+    return handle(pyo).cast<array_t<T>>();
 }
-inline object empty_array() {
-    return numeric::array({}, nullptr);
-}
+// inline object empty_array() {
+//     return numeric::array({}, nullptr);
+// }
 template <typename T>
 inline object empty_array_astype() {
     return array_t<T>({}, nullptr);
@@ -273,15 +290,19 @@ inline object to_object(const T& t) {
 inline object handle_to_object(PyObject* pyo) {
     return object(handle<>(pyo));
 }
-inline numeric::array to_array(PyObject* pyo) {
-    return static_cast<numeric::array>(handle<>(pyo));
+// inline numeric::array to_array(PyObject* pyo) {
+//     return static_cast<numeric::array>(handle<>(pyo));
+// }
+template<typename T>
+inline numeric::array to_array_astype(PyObject* pyo) {
+    return static_cast<numeric::array>(static_cast<numeric::array>(handle<>(pyo)).astype(openravepy::select_dtype<T>::type));
 }
-inline numeric::array empty_array() {
-    return numeric::array(list());
-}
+// inline numeric::array empty_array() {
+//     return numeric::array(list());
+// }
 template<typename T>
 inline object empty_array_astype() {
-    return empty_array().astype(openravepy::select_dtype<T>::type);
+    return numeric::array(list()).astype(openravepy::select_dtype<T>::type);
 }
 template <typename T>
 using extract_ = extract<T>;

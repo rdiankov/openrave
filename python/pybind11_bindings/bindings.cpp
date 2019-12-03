@@ -33,6 +33,7 @@ constexpr char select_dtype<int>::type[];
 constexpr char select_dtype<uint8_t>::type[];
 constexpr char select_dtype<uint16_t>::type[];
 constexpr char select_dtype<uint32_t>::type[];
+constexpr char select_dtype<bool>::type[];
 
 using py::object;
 using py::list;
