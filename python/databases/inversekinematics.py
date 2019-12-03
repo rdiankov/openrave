@@ -295,19 +295,28 @@ class InverseKinematicsModel(DatabaseGenerator):
     def has(self):
         return self.iksolver is not None and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype) and self.iksolver.GetXMLId() == self.manip.GetIkSolver().GetXMLId()
     
-    def save(self, PERM):
-        # PERM == 0o777
+    def save(self, savepermissions):
         statsfilename=self.getstatsfilename(False)
         try:
             defaultMask = os.umask(0)
+            basepath = os.path.split(statsfilename)[0]
             try:
-                os.makedirs(os.path.split(statsfilename)[0], PERM)
-            except OSError:
-                pass
+                os.makedirs(basepath, savepermissions)
+            except OSError as e:
+                if e.errno == 17: # File exists
+                    try:
+                        os.chmod(basepath, savepermissions)
+                        for root, dirs, files in os.walk(basepath):
+                            for d in dirs:
+                                os.chmod(os.path.join(root, d), savepermissions)
+                            for f in files:
+                                os.chmod(os.path.join(root, f), savepermissions)
+                    except OSError:
+                        pass
             
-            with os.fdopen(os.open(statsfilename, os.O_CREAT | os.O_RDWR, PERM), 'w') as f:
+            with os.fdopen(os.open(statsfilename, os.O_CREAT | os.O_RDWR, savepermissions), 'w') as f:
                 pickle.dump((self.getversion(),self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc), f)
-            log.info('inversekinematics generation is done, compiled shared object: %s',self.getfilename(False))
+            log.info('inversekinematics generation is done, compiled shared object: %s and permissions %s',self.getfilename(False), savepermissions)
         finally:
             os.umask(defaultMask)
         
@@ -634,6 +643,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             if options.freeinc is not None:
                 freeinc = [float64(s) for s in options.freeinc]
             ikfastmaxcasedepth = options.maxcasedepth
+            savepermissions = options.savepermissions
         if self.manip.GetKinematicsStructureHash() == 'f17f58ee53cc9d185c2634e721af7cd3': # wam 4dof
             if iktype is None:
                 iktype=IkParameterizationType.Translation3D
@@ -663,7 +673,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             if iktype==None:
                 iktype == IkParameterizationType.TranslationDirection5D
         self.generate(iktype=iktype,freejoints=freejoints,precision=precision,forceikbuild=forceikbuild,outputlang=outputlang,ipython=ipython,ikfastmaxcasedepth=ikfastmaxcasedepth)
-        self.save()
+        self.save(savepermissions)
 
     def getIndicesFromJointNames(self,freejoints):
         freeindices = []
@@ -1090,6 +1100,8 @@ class InverseKinematicsModel(DatabaseGenerator):
                           help='if true will drop into the ipython interpreter right before ikfast is called')
         parser.add_option('--iktype', action='store',type='string',dest='iktype',default=None,
                           help='The ik type to build the solver current types are: %s'%(', '.join(iktype.name for iktype in IkParameterizationType.values.values() if not int(iktype) & IkParameterizationType.VelocityDataBit )))
+        parser.add_option('--savepermissions', action='store',type='int',dest='savepermissions',default=493, # Default 0o755
+                          help='The desired permissions for saving the iksolver files and directories')
         return parser
     
     @staticmethod
