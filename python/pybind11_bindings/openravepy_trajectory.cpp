@@ -108,6 +108,14 @@ public:
         return toPyArray(values);
     }
 
+    object Sample(dReal time, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pgroup) const
+    {
+        // pybind11 does not like implicit conversion, so fails to convert this function into
+        // object Sample(dReal time, PyConfigurationSpecificationPtr pyspec) const;
+        PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pgroup));
+        return Sample(time, pyspec);
+    }
+
     object SampleFromPrevious(object odata, dReal time, PyConfigurationSpecificationPtr pyspec) const
     {
         std::vector<dReal> vdata = ExtractArray<dReal>(odata);
@@ -367,6 +375,7 @@ void init_openravepy_trajectory()
     void (PyTrajectoryBase::*Insert4)(size_t,object,PyConfigurationSpecificationPtr,bool) = &PyTrajectoryBase::Insert;
     object (PyTrajectoryBase::*Sample1)(dReal) const = &PyTrajectoryBase::Sample;
     object (PyTrajectoryBase::*Sample2)(dReal, PyConfigurationSpecificationPtr) const = &PyTrajectoryBase::Sample;
+    object (PyTrajectoryBase::*Sample3)(dReal, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group>) const = &PyTrajectoryBase::Sample;
     object (PyTrajectoryBase::*SamplePoints2D1)(object) const = &PyTrajectoryBase::SamplePoints2D;
     object (PyTrajectoryBase::*SamplePoints2D2)(object, PyConfigurationSpecificationPtr) const = &PyTrajectoryBase::SamplePoints2D;
     object (PyTrajectoryBase::*GetWaypoints1)(size_t,size_t) const = &PyTrajectoryBase::GetWaypoints;
@@ -393,6 +402,7 @@ void init_openravepy_trajectory()
     .def("Remove",&PyTrajectoryBase::Remove, PY_ARGS("startindex","endindex") DOXY_FN(TrajectoryBase,Remove))
     .def("Sample",Sample1, PY_ARGS("time") DOXY_FN(TrajectoryBase,Sample "std::vector; dReal"))
     .def("Sample",Sample2, PY_ARGS("time","spec") DOXY_FN(TrajectoryBase,Sample "std::vector; dReal; const ConfigurationSpecification"))
+    .def("Sample",Sample3, PY_ARGS("time","group") DOXY_FN(TrajectoryBase,Sample "std::vector; dReal; const ConfigurationSpecification::Group"))
     .def("SampleFromPrevious",&PyTrajectoryBase::SampleFromPrevious, PY_ARGS("data","time","spec") DOXY_FN(TrajectoryBase,Sample "std::vector; dReal; const ConfigurationSpecification"))
     .def("SamplePoints2D",SamplePoints2D1, PY_ARGS("times") DOXY_FN(TrajectoryBase,SamplePoints2D "std::vector; std::vector"))
     .def("SamplePoints2D",SamplePoints2D2, PY_ARGS("times","spec") DOXY_FN(TrajectoryBase,SamplePoints2D "std::vector; std::vector; const ConfigurationSpecification"))
