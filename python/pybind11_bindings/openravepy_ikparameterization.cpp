@@ -460,7 +460,7 @@ void init_openravepy_ikparameterization()
                                    .def(init<OPENRAVE_SHARED_PTR<PyIkParameterization>>(), "ikparam"_a)
                                    .def(init<IkParameterization>(), "ikparam"_a)
                                    .def("__copy__", [](const PyIkParameterization& self){ return self; })
-                                   .def("__deepcopy__", [](const PyIkParameterization& self) {
+                                   .def("__deepcopy__", [](const PyIkParameterization& self, const py::dict& memo) {
                                         PyIkParameterizationPtr pyikparam(new PyIkParameterization(self._param));
                                         return py::to_object(pyikparam);
                                     })

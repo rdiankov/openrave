@@ -1384,7 +1384,7 @@ void init_openravepy_global()
     .def(init<object, object>(), "pos"_a, "extents"_a)
     .def(init<const AABB&>(), "ab"_a)
     .def("__copy__", [](const PyAABB& self){ return self; })
-    .def("__deepcopy__", [](const PyAABB& self) {
+    .def("__deepcopy__", [](const PyAABB& self, const py::dict& memo) {
         OPENRAVE_SHARED_PTR<PyAABB> pyaabb(new PyAABB(self.ab));
         return py::to_object(pyaabb);
     })
