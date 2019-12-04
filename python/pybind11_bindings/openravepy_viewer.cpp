@@ -243,19 +243,19 @@ public:
         return _pviewer->quitmainloop();
     }
 
-    void SetSize(int w, int h) {
-        _pviewer->SetSize(w,h);
+    void SetSize(const double w, const double h) {
+        _pviewer->SetSize((int) w, (int) h);
     }
-    void Move(int x, int y) {
-        _pviewer->Move(x,y);
+    void Move(const double x, const double y) {
+        _pviewer->Move((int) x, (int) y);
     }
     void Show(int showtype) {
         _pviewer->Show(showtype);
     }
-    void SetName(const string &title) {
+    void SetName(const std::string &title) {
         _pviewer->SetName(title);
     }
-    string GetName() {
+    std::string GetName() {
         return _pviewer->GetName();
     }
 
@@ -378,11 +378,11 @@ void init_openravepy_viewer()
                        .def("main",&PyViewerBase::main, main_overloads(PY_ARGS("show","sig_thread_id") DOXY_FN(ViewerBase,main)))
 #endif
                        .def("quitmainloop",&PyViewerBase::quitmainloop, DOXY_FN(ViewerBase,quitmainloop))
-                       .def("SetSize",&PyViewerBase::SetSize, DOXY_FN(ViewerBase,SetSize))
-                       .def("Move",&PyViewerBase::Move, DOXY_FN(ViewerBase,Move))
-                       .def("Show",&PyViewerBase::Show, DOXY_FN(ViewerBase,Show))
-                       .def("SetTitle",&PyViewerBase::SetName, DOXY_FN(ViewerBase,SetName))
-                       .def("SetName",&PyViewerBase::SetName, DOXY_FN(ViewerBase,SetName))
+                       .def("SetSize",&PyViewerBase::SetSize, PY_ARGS("width", "height") DOXY_FN(ViewerBase,SetSize))
+                       .def("Move",&PyViewerBase::Move, PY_ARGS("x", "y") DOXY_FN(ViewerBase,Move))
+                       .def("Show",&PyViewerBase::Show, PY_ARGS("showtype") DOXY_FN(ViewerBase,Show))
+                       .def("SetTitle",&PyViewerBase::SetName, PY_ARGS("title") DOXY_FN(ViewerBase,SetName))
+                       .def("SetName",&PyViewerBase::SetName, PY_ARGS("title") DOXY_FN(ViewerBase,SetName))
                        .def("GetName",&PyViewerBase::GetName, DOXY_FN(ViewerBase,GetName))
                        .def("RegisterCallback",&PyViewerBase::RegisterCallback, PY_ARGS("properties", "callback") DOXY_FN(ViewerBase,RegisterItemSelectionCallback))
                        .def("RegisterItemSelectionCallback",&PyViewerBase::RegisterItemSelectionCallback, PY_ARGS("callback") DOXY_FN(ViewerBase,RegisterItemSelectionCallback))
