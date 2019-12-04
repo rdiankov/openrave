@@ -1383,6 +1383,11 @@ void init_openravepy_global()
     .def(init<>())
     .def(init<object, object>(), "pos"_a, "extents"_a)
     .def(init<const AABB&>(), "ab"_a)
+    .def("__copy__", [](const PyAABB& self){ return self; })
+    .def("__deepcopy__", [](const PyAABB& self) {
+        OPENRAVE_SHARED_PTR<PyAABB> pyaabb(new PyAABB(self.ab));
+        return py::to_object(pyaabb);
+    })
 #else
     class_<PyAABB, OPENRAVE_SHARED_PTR<PyAABB> >("AABB", DOXY_CLASS(geometry::aabb))
     .def(init<object,object>(py::args("pos","extents")))
