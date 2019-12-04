@@ -2366,6 +2366,31 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     py::register_exception<openrave_exception>(m, "openrave_exception");
+
+    m.
+    def("GetOpenRAVEExceptionCode", [](const object& e) {
+        // e is openravepy._openravepy_0_XXX.openravepy_int.openrave_exception
+        const std::string message = e.attr("message").cast<std::string>();
+        const std::size_t left_par = message.find_first_of("(");
+        const std::size_t right_par = message.find_first_of(")");
+        const std::string errorcodestring = message.substr(left_par+1, right_par-left_par-1);
+        const int errorcode = OpenRAVE::GetErrorCodeFromErrorString(errorcodestring);
+        // _RAVE_DISPLAY(std::cout << errorcodestring << ", " << errorcode;);
+        return errorcode;
+    })
+    .def("GetOpenRAVEExceptionMessage", [](const object& e) {
+        // e is openravepy._openravepy_0_XXX.openravepy_int.openrave_exception
+        const std::string message = e.attr("message").cast<std::string>();
+        const std::size_t right_par = message.find_first_of(")");
+        const std::string errorstring = message.substr(right_par+3);
+        // _RAVE_DISPLAY(std::cout << errorstring;);
+        return errorstring;
+    })
+    ;
+
+    m.def("MyThrow", [] {
+        throw openrave_exception("points cannot be empty", ORE_InvalidArguments);
+    });
     // class_< openrave_exception >( m, "_openrave_exception_", DOXY_CLASS(openrave_exception) )
     // .def(init<>())
     // .def(init<const std::string&, OpenRAVEErrorCode>(), "s"_a, "error"_a = (int) ORE_Failed)
