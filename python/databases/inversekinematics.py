@@ -294,7 +294,7 @@ class InverseKinematicsModel(DatabaseGenerator):
     def has(self):
         return self.iksolver is not None and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype) and self.iksolver.GetXMLId() == self.manip.GetIkSolver().GetXMLId()
     
-    def save(self, savepermissions):
+    def save(self, filepermissions = None):
         statsfilename=self.getstatsfilename(False)
         try:
             defaultMask = os.umask(0)
@@ -303,19 +303,22 @@ class InverseKinematicsModel(DatabaseGenerator):
                 os.makedirs(basepath)
             except OSError as e:
                 pass
-            try:
-                os.chmod(basepath, savepermissions)
-                for root, dirs, files in os.walk(basepath):
-                    for d in dirs:
-                        os.chmod(os.path.join(root, d), savepermissions)
-                    for f in files:
-                        os.chmod(os.path.join(root, f), savepermissions)
-            except OSError:
-                pass
 
-            with os.fdopen(os.open(statsfilename, os.O_CREAT | os.O_RDWR, savepermissions), 'w') as f:
+            with open(statsfilename, 'w') as f:
                 pickle.dump((self.getversion(),self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc), f)
-            log.info('inversekinematics generation is done, compiled shared object: %s and permissions %s',self.getfilename(False), savepermissions)
+            log.info('inversekinematics generation is done, compiled shared object: %s',self.getfilename(False))
+
+            if filepermissions is not None and filepermissions >= 0:
+                log.info('changing filepermissions of path %s to \'%s\' recursively.', basepath, filepermissions)
+                try:
+                    os.chmod(basepath, filepermissions)
+                    for root, dirs, files in os.walk(basepath):
+                        for d in dirs:
+                            os.chmod(os.path.join(root, d), filepermissions)
+                        for f in files:
+                            os.chmod(os.path.join(root, f), filepermissions)
+                except OSError:
+                    pass
         finally:
             os.umask(defaultMask)
         
@@ -642,7 +645,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             if options.freeinc is not None:
                 freeinc = [float64(s) for s in options.freeinc]
             ikfastmaxcasedepth = options.maxcasedepth
-            savepermissions = options.savepermissions
+            filepermissions = options.filepermissions
         if self.manip.GetKinematicsStructureHash() == 'f17f58ee53cc9d185c2634e721af7cd3': # wam 4dof
             if iktype is None:
                 iktype=IkParameterizationType.Translation3D
@@ -672,7 +675,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             if iktype==None:
                 iktype == IkParameterizationType.TranslationDirection5D
         self.generate(iktype=iktype,freejoints=freejoints,precision=precision,forceikbuild=forceikbuild,outputlang=outputlang,ipython=ipython,ikfastmaxcasedepth=ikfastmaxcasedepth)
-        self.save(savepermissions)
+        self.save(filepermissions)
 
     def getIndicesFromJointNames(self,freejoints):
         freeindices = []
@@ -1099,7 +1102,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                           help='if true will drop into the ipython interpreter right before ikfast is called')
         parser.add_option('--iktype', action='store',type='string',dest='iktype',default=None,
                           help='The ik type to build the solver current types are: %s'%(', '.join(iktype.name for iktype in IkParameterizationType.values.values() if not int(iktype) & IkParameterizationType.VelocityDataBit )))
-        parser.add_option('--savepermissions', action='store',type='int',dest='savepermissions',default=493, # Default 0o755
+        parser.add_option('--filepermissions', action='store',type='int',dest='filepermissions',default=-1,
                           help='The desired permissions for saving the iksolver files and directories')
         return parser
     
