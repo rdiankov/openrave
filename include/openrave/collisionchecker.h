@@ -68,9 +68,9 @@ public:
         dReal depth; ///< the penetration depth, positive means the surfaces are penetrating, negative means the surfaces are not colliding (used for distance queries)
     };
 
-    CollisionReport() {
+    CollisionReport(int coloptions = 0) {
         nKeepPrevious = 0;
-        Reset();
+        Reset(coloptions);
     }
 
     /// \brief resets the report structure for the next collision call
