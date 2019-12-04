@@ -159,7 +159,11 @@ object toPyObject(const rapidjson::Value& value)
 // convert from python object to rapidjson
 void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator)
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    if (obj.is_none())
+#else
     if (obj.ptr() == Py_None)
+#endif
     {
         value.SetNull();
     }
@@ -173,8 +177,18 @@ void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
     }
     else if (PyInt_Check(obj.ptr()))
     {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        value.SetInt64(PyInt_AsLong(obj.ptr()));
+#else
+        value.SetInt64(PyLong_AsLong(obj.ptr()));
+#endif
+    }
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    else if (PyLong_Check(obj.ptr()))
+    {
         value.SetInt64(PyLong_AsLong(obj.ptr()));
     }
+#endif
     else if (PyString_Check(obj.ptr()))
     {
         value.SetString(PyString_AsString(obj.ptr()), PyString_GET_SIZE(obj.ptr()));
@@ -189,10 +203,16 @@ void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
         value.SetArray();
         for (int i = 0; i < len(t); i++)
         {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            rapidjson::Value elementValue;
+            toRapidJSONValue(t[i], elementValue, allocator);
+            value.PushBack(elementValue, allocator);
+#else
             object o = py::extract<object>(t[i]);
             rapidjson::Value elementValue;
             toRapidJSONValue(o, elementValue, allocator);
             value.PushBack(elementValue, allocator);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
         }
     }
     else if (PyList_Check(obj.ptr()))
@@ -201,10 +221,16 @@ void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
         value.SetArray();
         int numitems = len(l);
         for (int i = 0; i < numitems; i++) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            rapidjson::Value elementValue;
+            toRapidJSONValue(l[i], elementValue, allocator);
+            value.PushBack(elementValue, allocator);
+#else
             object o = py::extract<object>(l[i]);
             rapidjson::Value elementValue;
             toRapidJSONValue(o, elementValue, allocator);
             value.PushBack(elementValue, allocator);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
         }
     }
     else if (PyDict_Check(obj.ptr()))
@@ -212,25 +238,16 @@ void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
         py::dict d = py::extract<py::dict>(obj);
         int numitems = len(d);
         value.SetObject();
-#ifndef USE_PYBIND11_PYTHON_BINDINGS
-        object iterator = d.iteritems();
-#endif
-
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        for (auto item : d) // will replace auto later
-        {
-            rapidjson::Value keyValue, valueValue;
-            {
-                object k = py::extract<object>(item.first);
-                toRapidJSONValue(k, keyValue, allocator);
-            }
-            {
-                object v = py::extract<object>(item.second);
-                toRapidJSONValue(v, valueValue, allocator);
-            }
-            value.AddMember(keyValue, valueValue, allocator);
+        for (pybind11::detail::dict_iterator it = d.begin(); it != d.end(); ++it) {
+            std::pair<py::handle, py::handle> ref = *it;
+            rapidjson::Value k, v;
+            toRapidJSONValue(py::reinterpret_borrow<py::object>(ref.first), k, allocator);
+            toRapidJSONValue(py::reinterpret_borrow<py::object>(ref.second), v, allocator);
+            value.AddMember(k, v, allocator);
         }
 #else
+        object iterator = d.iteritems();
         for (int i = 0; i < numitems; i++)
         {
             py::tuple kv = py::extract<py::tuple>(iterator.attr("next")());
