@@ -451,6 +451,14 @@ public:
     /// \return first Robot that matches the name
     virtual RobotBasePtr GetRobot(const std::string& name) const =0;
 
+    /// \brief Copy a body using name.
+    /// \return copied KinBody (or Robot)
+    virtual KinBodyPtr CopyKinBody(const std::string& name, const std::string& newname) =0;
+
+    /// \brief Copy a robot using name.
+    /// \return copied Robot
+    virtual RobotBasePtr CopyRobot(const std::string& name, const std::string& newname) =0;
+
     /// \brief Get all bodies loaded in the environment (including robots). <b>[multi-thread safe]</b>
     ///
     /// A separate **interface mutex** is locked for reading the bodies.

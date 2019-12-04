@@ -1465,6 +1465,24 @@ public:
         return object(openravepy::toPySensor(_penv->GetSensor(name),shared_from_this()));
     }
 
+    object CopyKinBody(const string &name, const string &newname)
+    {
+        KinBodyPtr pbody = _penv->CopyKinBody(name, newname);
+        if( !pbody ) {
+            return object();
+        }
+        if( pbody->IsRobot() ) {
+            return object(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(pbody),shared_from_this()));
+        }
+        else {
+            return object(openravepy::toPyKinBody(pbody,shared_from_this()));
+        }
+    }
+    object CopyRobot(const string &name, const string &newname)
+    {
+        return object(openravepy::toPyRobot(_penv->CopyRobot(name, newname), shared_from_this()));
+    }
+
     object GetBodyFromEnvironmentId(int id)
     {
         return object(openravepy::toPyKinBody(_penv->GetBodyFromEnvironmentId(id),shared_from_this()));
@@ -2438,6 +2456,8 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("GetKinBody",&PyEnvironmentBase::GetKinBody,args("name"), DOXY_FN(EnvironmentBase,GetKinBody))
                     .def("GetRobot",&PyEnvironmentBase::GetRobot,args("name"), DOXY_FN(EnvironmentBase,GetRobot))
                     .def("GetSensor",&PyEnvironmentBase::GetSensor,args("name"), DOXY_FN(EnvironmentBase,GetSensor))
+                    .def("CopyKinBody",&PyEnvironmentBase::CopyKinBody,args("name","newname"), DOXY_FN(EnvironmentBase,CopyKinBody))
+                    .def("CopyRobot",&PyEnvironmentBase::CopyRobot,args("name","newname"), DOXY_FN(EnvironmentBase,CopyRobot))
                     .def("GetBodyFromEnvironmentId",&PyEnvironmentBase::GetBodyFromEnvironmentId, DOXY_FN(EnvironmentBase,GetBodyFromEnvironmentId))
                     .def("AddModule",&PyEnvironmentBase::AddModule,args("module","args"), DOXY_FN(EnvironmentBase,AddModule))
                     .def("LoadProblem",&PyEnvironmentBase::AddModule,args("module","args"), DOXY_FN(EnvironmentBase,AddModule))
