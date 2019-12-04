@@ -187,6 +187,47 @@ inline const char* GetErrorCodeString(OpenRAVEErrorCode error)
     return "";
 }
 
+inline int GetErrorCodeFromErrorString(const std::string& errorstring)
+{
+    if(errorstring == "Failes") {
+        return ORE_Failed;
+    }
+    else if(errorstring == "InvalidArguments") {
+        return ORE_InvalidArguments;
+    }
+    else if(errorstring == "EnvironmentNotLocked") {
+        return ORE_EnvironmentNotLocked;
+    }
+    else if(errorstring == "CommandNotSupported") {
+        return ORE_CommandNotSupported;
+    }
+    else if(errorstring == "Assert") {
+        return ORE_Assert;
+    }
+    else if(errorstring == "InvalidPlugin") {
+        return ORE_InvalidPlugin;  
+    }
+    else if(errorstring == "InvalidInterfaceHash") {
+        return ORE_InvalidInterfaceHash;
+    }
+    else if(errorstring == "NotImplemented") {
+        return ORE_NotImplemented;
+    }
+    else if(errorstring == "InconsistentConstraints") {
+        return ORE_InconsistentConstraints;
+    }
+    else if(errorstring == "NotInitialized") {
+        return ORE_NotInitialized;
+    }
+    else if(errorstring == "InvalidState") {
+        return ORE_InvalidState;
+    }
+    else if(errorstring == "Timeout") {
+        return ORE_Timeout;
+    }
+    return -1;
+}
+
 /// \brief Exception that all OpenRAVE internal methods throw; the error codes are held in \ref OpenRAVEErrorCode.
 class OPENRAVE_API openrave_exception : public std::exception
 {
