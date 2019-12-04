@@ -300,19 +300,19 @@ class InverseKinematicsModel(DatabaseGenerator):
             defaultMask = os.umask(0)
             basepath = os.path.split(statsfilename)[0]
             try:
-                os.makedirs(basepath, savepermissions)
+                os.makedirs(basepath)
             except OSError as e:
-                if e.errno == 17: # File exists
-                    try:
-                        os.chmod(basepath, savepermissions)
-                        for root, dirs, files in os.walk(basepath):
-                            for d in dirs:
-                                os.chmod(os.path.join(root, d), savepermissions)
-                            for f in files:
-                                os.chmod(os.path.join(root, f), savepermissions)
-                    except OSError:
-                        pass
-            
+                pass
+            try:
+                os.chmod(basepath, savepermissions)
+                for root, dirs, files in os.walk(basepath):
+                    for d in dirs:
+                        os.chmod(os.path.join(root, d), savepermissions)
+                    for f in files:
+                        os.chmod(os.path.join(root, f), savepermissions)
+            except OSError:
+                pass
+
             with os.fdopen(os.open(statsfilename, os.O_CREAT | os.O_RDWR, savepermissions), 'w') as f:
                 pickle.dump((self.getversion(),self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc), f)
             log.info('inversekinematics generation is done, compiled shared object: %s and permissions %s',self.getfilename(False), savepermissions)
