@@ -1218,6 +1218,7 @@ std::pair<dReal, dReal> KinBody::Joint::GetInstantaneousTorqueLimits(int iaxis) 
         return std::make_pair(-_info._vmaxtorque.at(iaxis), _info._vmaxtorque.at(iaxis));
     }
     else {
+        dReal rawvelocity = GetVelocity(iaxis);
         if( _info._infoElectricMotor->max_speed_torque_points.size() > 0 ) {
             dReal fMaxTorqueAtZeroSpeed = _info._infoElectricMotor->max_speed_torque_points.at(0).second*_info._infoElectricMotor->gear_ratio;
             if( _info._infoElectricMotor->max_speed_torque_points.size() == 1 ) {
@@ -1225,7 +1226,6 @@ std::pair<dReal, dReal> KinBody::Joint::GetInstantaneousTorqueLimits(int iaxis) 
                 return std::make_pair(-fMaxTorqueAtZeroSpeed, fMaxTorqueAtZeroSpeed);
             }
 
-            dReal rawvelocity = GetVelocity(iaxis);
             dReal velocity = RaveFabs(rawvelocity);
             dReal revolutionsPerSecond = _info._infoElectricMotor->gear_ratio * velocity;
             if( IsRevolute(iaxis) ) {
@@ -1280,7 +1280,15 @@ std::pair<dReal, dReal> KinBody::Joint::GetInstantaneousTorqueLimits(int iaxis) 
         }
         else {
             dReal f = _info._infoElectricMotor->max_instantaneous_torque*_info._infoElectricMotor->gear_ratio;
-            return std::make_pair(-f, f);
+            if (abs(rawvelocity) < 1.0/360) {
+                return std::make_pair(-f, f);
+            }
+            else if( rawvelocity > 0 ) {
+                return std::make_pair(-0.9*f, f);
+            }
+            else {
+                return std::make_pair(-f, 0.9*f);
+            }
         }
     }
 }
@@ -1291,6 +1299,7 @@ std::pair<dReal, dReal> KinBody::Joint::GetNominalTorqueLimits(int iaxis) const
         return std::make_pair(-_info._vmaxtorque.at(iaxis), _info._vmaxtorque.at(iaxis));
     }
     else {
+        dReal rawvelocity = GetVelocity(iaxis);
         if( _info._infoElectricMotor->nominal_speed_torque_points.size() > 0 ) {
             dReal fMaxTorqueAtZeroSpeed = _info._infoElectricMotor->nominal_speed_torque_points.at(0).second*_info._infoElectricMotor->gear_ratio;
             if( _info._infoElectricMotor->nominal_speed_torque_points.size() == 1 ) {
@@ -1298,7 +1307,6 @@ std::pair<dReal, dReal> KinBody::Joint::GetNominalTorqueLimits(int iaxis) const
                 return std::make_pair(-fMaxTorqueAtZeroSpeed, fMaxTorqueAtZeroSpeed);
             }
 
-            dReal rawvelocity = GetVelocity(iaxis);
             dReal velocity = RaveFabs(rawvelocity);
             dReal revolutionsPerSecond = _info._infoElectricMotor->gear_ratio * velocity;
             if( IsRevolute(iaxis) ) {
@@ -1353,7 +1361,15 @@ std::pair<dReal, dReal> KinBody::Joint::GetNominalTorqueLimits(int iaxis) const
         }
         else {
             dReal f = _info._infoElectricMotor->nominal_torque*_info._infoElectricMotor->gear_ratio;
-            return std::make_pair(-f, f);
+            if (abs(rawvelocity) < 1.0/360) {
+                return std::make_pair(-f, f);
+            }
+            else if( rawvelocity > 0 ) {
+                return std::make_pair(-0.9*f, f);
+            }
+            else {
+                return std::make_pair(-f, 0.9*f);
+            }
         }
     }
 }
