@@ -46,8 +46,6 @@ public:
 
     object Sample(dReal time, PyConfigurationSpecificationPtr pyspec) const;
 
-    object Sample(dReal time, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pgroup) const;
-
     object SampleFromPrevious(object odata, dReal time, PyConfigurationSpecificationPtr pyspec) const;
 
     object SamplePoints2D(object otimes) const;
@@ -91,6 +89,18 @@ public:
     object Write(object options);
 
     TrajectoryBasePtr GetTrajectory();
+
+    // functions that explictly initialize ConfigurationSpecification with ConfigurationSpecification::Group
+    void Init(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup);
+    void Insert(size_t index, object odata, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup);
+    void Insert(size_t index, object odata, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup, bool bOverwrite);
+    object Sample(dReal time, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
+    object SampleFromPrevious(object odata, dReal time, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
+    object SamplePoints2D(object otimes, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
+    object GetWaypoints(size_t startindex, size_t endindex, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
+    object GetWaypoints2D(size_t startindex, size_t endindex, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
+    object GetAllWaypoints2D(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
+    object GetWaypoint(int index, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
 };
 
 } // namespace openravepy
