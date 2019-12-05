@@ -44,7 +44,13 @@ bool KinBody::Grab(KinBodyPtr pbody, LinkPtr plink)
         else {
             std::set<KinBodyPtr> setAttached;
             pbody->GetAttached(setAttached);
-            RAVELOG_WARN_FORMAT("env=%d, body %s trying to grab body %s with %d attached bodies", GetEnv()->GetId()%GetName()%pbody->GetName()%setAttached.size());
+            std::stringstream ss;
+            if( setAttached.size() > 1 ) {
+                FOREACH(itbody, setAttached) {
+                    ss << (*itbody)->GetName() << ", ";
+                }
+            }
+            RAVELOG_WARN_FORMAT("env=%d, body %s trying to grab body %s with %d attached bodies [%s]", GetEnv()->GetId()%GetName()%pbody->GetName()%setAttached.size()%ss.str());
         }
     }
 
