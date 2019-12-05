@@ -635,6 +635,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         ipython = None
         freeinc = None
         ikfastmaxcasedepth = 3
+        filepermissions = None
         if options is not None:
             forceikbuild=options.force
             precision=options.precision
