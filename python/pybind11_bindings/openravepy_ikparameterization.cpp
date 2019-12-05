@@ -397,7 +397,7 @@ void init_openravepy_ikparameterization()
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals;  // "..."_a
-    object iktype = enum_<IkParameterizationType>(m, "IkParameterizationType" DOXY_ENUM(IkParameterizationType))
+    object iktype = enum_<IkParameterizationType>(m, "IkParameterizationType", py::arithmetic() DOXY_ENUM(IkParameterizationType))
 #else
     object iktype = enum_<IkParameterizationType>("IkParameterizationType" DOXY_ENUM(IkParameterizationType))
 #endif
