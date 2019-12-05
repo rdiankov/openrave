@@ -2365,29 +2365,28 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    class_< openrave_exception >( m, "_openrave_exception_", DOXY_CLASS(openrave_exception) )
-    .def(init<>())
-    .def(init<const std::string&, OpenRAVEErrorCode>(), "s"_a, "error"_a = (int) ORE_Failed)
+    py::register_exception<openrave_exception>(m, "openrave_exception");
+    // class_< openrave_exception >( m, "_openrave_exception_", DOXY_CLASS(openrave_exception) )
+    // .def(init<>())
+    // .def(init<const std::string&, OpenRAVEErrorCode>(), "s"_a, "error"_a = (int) ORE_Failed)
+    // .def( "message", &openrave_exception::message )
+    // .def("GetCode", &openrave_exception::GetCode )
+    // .def( "__str__", &openrave_exception::message )
+    // .def( "__unicode__", get_openrave_exception_unicode)
+    // .def( "__repr__", get_openrave_exception_repr)
+    // ;
 #else
     class_< openrave_exception >( "_openrave_exception_", DOXY_CLASS(openrave_exception) )
     .def( init<const std::string&>() )
     .def( init<const openrave_exception&>() )
-#endif
-
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    .def( "message", &openrave_exception::message )
-#else
     .def( "message", &openrave_exception::message, return_copy_const_ref() )
-#endif
     .def("GetCode", &openrave_exception::GetCode )
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    .def( "__str__", &openrave_exception::message )
-#else
     .def( "__str__", &openrave_exception::message, return_copy_const_ref() )
-#endif
     .def( "__unicode__", get_openrave_exception_unicode)
     .def( "__repr__", get_openrave_exception_repr)
     ;
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_< std::runtime_error >( m, "_std_runtime_error_")
 #else
