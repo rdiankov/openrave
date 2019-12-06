@@ -318,8 +318,8 @@ class InverseKinematicsModel(DatabaseGenerator):
                             os.chmod(os.path.join(root, d), filepermissions)
                         for f in files:
                             os.chmod(os.path.join(root, f), filepermissions)
-                except OSError:
-                    pass
+                except OSError as e:
+                    log.warn('failed to changed permissions of path %s to \'%s\': %s', basepath, filepermissions, e)
         finally:
             os.umask(defaultMask)
         
