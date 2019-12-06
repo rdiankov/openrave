@@ -479,9 +479,9 @@ void InitPlanningUtils()
 #endif
     {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        scope_ x = class_<planningutils::PyStaticClass>(m, "planningutils")
+        scope_ planningutils = class_<planningutils::PyStaticClass>(m, "planningutils")
 #else
-        scope_ x = class_<planningutils::PyStaticClass>("planningutils")
+        scope_ planningutils = class_<planningutils::PyStaticClass>("planningutils")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                   .def_static("JitterTransform", planningutils::pyJitterTransform,
@@ -694,7 +694,7 @@ void InitPlanningUtils()
         ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        class_<planningutils::PyDHParameter, OPENRAVE_SHARED_PTR<planningutils::PyDHParameter> >(m, "DHParameter", DOXY_CLASS(planningutils::DHParameter))
+        class_<planningutils::PyDHParameter, OPENRAVE_SHARED_PTR<planningutils::PyDHParameter> >(planningutils, "DHParameter", DOXY_CLASS(planningutils::DHParameter))
         .def(init<>())
         .def(init<object, int, object, dReal, dReal, dReal, dReal>(), "joint"_a, "parentindex"_a, "transform"_a, "d"_a, "a"_a, "theta"_a, "alpha"_a)
 #else
@@ -742,7 +742,7 @@ void InitPlanningUtils()
 
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        class_<planningutils::PyManipulatorIKGoalSampler, planningutils::PyManipulatorIKGoalSamplerPtr >(m, "ManipulatorIKGoalSampler", DOXY_CLASS(planningutils::ManipulatorIKGoalSampler))
+        class_<planningutils::PyManipulatorIKGoalSampler, planningutils::PyManipulatorIKGoalSamplerPtr >(planningutils, "ManipulatorIKGoalSampler", DOXY_CLASS(planningutils::ManipulatorIKGoalSampler))
         .def(init<object, object, int, int, dReal, bool, int, object>(),
             "manip"_a,
             "parameterizations"_a,
@@ -783,7 +783,7 @@ void InitPlanningUtils()
         ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        class_<planningutils::PyActiveDOFTrajectorySmoother, planningutils::PyActiveDOFTrajectorySmootherPtr >(m, "ActiveDOFTrajectorySmoother", DOXY_CLASS(planningutils::ActiveDOFTrajectorySmoother))
+        class_<planningutils::PyActiveDOFTrajectorySmoother, planningutils::PyActiveDOFTrajectorySmootherPtr >(planningutils, "ActiveDOFTrajectorySmoother", DOXY_CLASS(planningutils::ActiveDOFTrajectorySmoother))
         .def(init<PyRobotBasePtr, const std::string&, const std::string&>(), "robot"_a, "plannername"_a, "plannerparameters"_a)
 #else
         class_<planningutils::PyActiveDOFTrajectorySmoother, planningutils::PyActiveDOFTrajectorySmootherPtr >("ActiveDOFTrajectorySmoother", DOXY_CLASS(planningutils::ActiveDOFTrajectorySmoother), no_init)
@@ -800,7 +800,7 @@ void InitPlanningUtils()
 #endif
         ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        class_<planningutils::PyActiveDOFTrajectoryRetimer, planningutils::PyActiveDOFTrajectoryRetimerPtr >(m, "ActiveDOFTrajectoryRetimer", DOXY_CLASS(planningutils::ActiveDOFTrajectoryRetimer))
+        class_<planningutils::PyActiveDOFTrajectoryRetimer, planningutils::PyActiveDOFTrajectoryRetimerPtr >(planningutils, "ActiveDOFTrajectoryRetimer", DOXY_CLASS(planningutils::ActiveDOFTrajectoryRetimer))
         .def(init<PyRobotBasePtr, const std::string&, const std::string&>(), "robot"_a, "plannername"_a, "plannerparameters"_a)
 #else
         class_<planningutils::PyActiveDOFTrajectoryRetimer, planningutils::PyActiveDOFTrajectoryRetimerPtr >("ActiveDOFTrajectoryRetimer", DOXY_CLASS(planningutils::ActiveDOFTrajectoryRetimer), no_init)
@@ -819,7 +819,7 @@ void InitPlanningUtils()
         ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        class_<planningutils::PyAffineTrajectoryRetimer, planningutils::PyAffineTrajectoryRetimerPtr >(m, "AffineTrajectoryRetimer", DOXY_CLASS(planningutils::AffineTrajectoryRetimer))
+        class_<planningutils::PyAffineTrajectoryRetimer, planningutils::PyAffineTrajectoryRetimerPtr >(planningutils, "AffineTrajectoryRetimer", DOXY_CLASS(planningutils::AffineTrajectoryRetimer))
         .def(init<const std::string&, const std::string&>(), "plannername"_a, "plannerparameters"_a)
 #else
         class_<planningutils::PyAffineTrajectoryRetimer, planningutils::PyAffineTrajectoryRetimerPtr >("AffineTrajectoryRetimer", DOXY_CLASS(planningutils::AffineTrajectoryRetimer), no_init)
@@ -840,7 +840,7 @@ void InitPlanningUtils()
         ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        class_<planningutils::PyDynamicsCollisionConstraint, planningutils::PyDynamicsCollisionConstraintPtr >(m, "DynamicsCollisionConstraint", DOXY_CLASS(planningutils::DynamicsCollisionConstraint))
+        class_<planningutils::PyDynamicsCollisionConstraint, planningutils::PyDynamicsCollisionConstraintPtr >(planningutils, "DynamicsCollisionConstraint", DOXY_CLASS(planningutils::DynamicsCollisionConstraint))
         .def(init<object, object, uint32_t>(), "plannerparameters"_a, "checkbodies"_a, "filtermask"_a)
 #else
         class_<planningutils::PyDynamicsCollisionConstraint, planningutils::PyDynamicsCollisionConstraintPtr >("DynamicsCollisionConstraint", DOXY_CLASS(planningutils::DynamicsCollisionConstraint), no_init)

@@ -1283,6 +1283,9 @@ void init_openravepy_global()
 #endif
     .value("Real",SDT_Real)
     .value("Uint32",SDT_Uint32)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .export_values()
+#endif
     ;
 // #ifdef USE_PYBIND11_PYTHON_BINDINGS
 //     class_<UserData, UserDataPtr >(m, "UserData", DOXY_CLASS(UserData))

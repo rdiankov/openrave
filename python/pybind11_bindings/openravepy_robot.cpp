@@ -1690,7 +1690,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Init_overloads, Init, 4,5)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(UpdateInfo_overloads, UpdateInfo, 0,1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(UpdateAndGetInfo_overloads, UpdateAndGetInfo, 0,1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckLinkSelfCollision_overloads, CheckLinkSelfCollision, 2, 3)
-#endif
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 void init_openravepy_robot(py::module& m)
@@ -1700,7 +1700,7 @@ void init_openravepy_robot()
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals;  // "..."_a
-    object dofaffine = enum_<DOFAffine>(m, "DOFAffine" DOXY_ENUM(DOFAffine))
+    object dofaffine = enum_<DOFAffine>(m, "DOFAffine", py::arithmetic() DOXY_ENUM(DOFAffine))
 #else
     object dofaffine = enum_<DOFAffine>("DOFAffine" DOXY_ENUM(DOFAffine))
 #endif
