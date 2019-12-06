@@ -3506,6 +3506,7 @@ void init_openravepy_kinbody()
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object electricmotoractuatorinfo = class_<PyElectricMotorActuatorInfo, OPENRAVE_SHARED_PTR<PyElectricMotorActuatorInfo> >(m, "ElectricMotorActuatorInfo", DOXY_CLASS(KinBody::ElectricMotorActuatorInfo))
+                                       .def(init<>())
 #else
     object electricmotoractuatorinfo = class_<PyElectricMotorActuatorInfo, OPENRAVE_SHARED_PTR<PyElectricMotorActuatorInfo> >("ElectricMotorActuatorInfo", DOXY_CLASS(KinBody::ElectricMotorActuatorInfo))
 #endif
@@ -3628,6 +3629,7 @@ void init_openravepy_kinbody()
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object sidewall = class_<PySideWall, OPENRAVE_SHARED_PTR<PySideWall> >(m, "SideWall", DOXY_CLASS(KinBody::GeometryInfo::SideWall))
+                      .def(init<>())
 #else
     object sidewall = class_<PySideWall, OPENRAVE_SHARED_PTR<PySideWall> >("SideWall", DOXY_CLASS(KinBody::GeometryInfo::SideWall))
 #endif
@@ -3638,6 +3640,7 @@ void init_openravepy_kinbody()
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object linkinfo = class_<PyLinkInfo, OPENRAVE_SHARED_PTR<PyLinkInfo> >(m, "LinkInfo", DOXY_CLASS(KinBody::LinkInfo))
+                      .def(init<>())
 #else
     object linkinfo = class_<PyLinkInfo, OPENRAVE_SHARED_PTR<PyLinkInfo> >("LinkInfo", DOXY_CLASS(KinBody::LinkInfo))
 #endif
@@ -3673,6 +3676,7 @@ void init_openravepy_kinbody()
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object jointinfo = class_<PyJointInfo, OPENRAVE_SHARED_PTR<PyJointInfo> >(m, "JointInfo", DOXY_CLASS(KinBody::JointInfo))
+                       .def(init<>())
 #else
     object jointinfo = class_<PyJointInfo, OPENRAVE_SHARED_PTR<PyJointInfo> >("JointInfo", DOXY_CLASS(KinBody::JointInfo))
 #endif
