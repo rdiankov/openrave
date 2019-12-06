@@ -409,7 +409,7 @@ public:
         _trans = trans;
     }
 
-    virtual Transform GetTransform() {
+    virtual const Transform& GetTransform() {
         return _trans;
     }
 

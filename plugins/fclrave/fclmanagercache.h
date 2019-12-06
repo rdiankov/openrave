@@ -58,7 +58,7 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
     ///< cache data of body that is managed
     struct KinBodyCache
     {
-        KinBodyCache() : nLastStamp(0), nLinkUpdateStamp(0), nGeometryUpdateStamp(0), nAttachedBodiesUpdateStamp(0), nActiveDOFUpdateStamp(0), linkmask(0) {
+        KinBodyCache() : nLastStamp(0), nLinkUpdateStamp(0), nGeometryUpdateStamp(0), nAttachedBodiesUpdateStamp(0), nActiveDOFUpdateStamp(0) {
         }
         KinBodyCache(KinBodyConstPtr pbody, FCLSpace::KinBodyInfoPtr pinfo) {
             pwbody = pbody;
@@ -69,7 +69,7 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
             geometrygroup = pinfo->_geometrygroup;
             nAttachedBodiesUpdateStamp = pinfo->nAttachedBodiesUpdateStamp;
             nActiveDOFUpdateStamp = pinfo->nActiveDOFUpdateStamp;
-            linkmask = pbody->GetLinkEnableStatesMask();
+            pbody->GetLinkEnableStates(linkEnableStates);
         }
         ~KinBodyCache() {
             if( vcolobjs.size() > 0 ) { // should never happen
@@ -89,7 +89,7 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
         int nGeometryUpdateStamp; ///< copied from FCLSpace::KinBodyInfo when geometry was last updated
         int nAttachedBodiesUpdateStamp; /// copied from FCLSpace::KinBodyInfo when attached bodies was last updated
         int nActiveDOFUpdateStamp; ///< update stamp when the active dof changed
-        uint64_t linkmask; ///< links that are currently inside the manager
+        std::vector<uint8_t> linkEnableStates; ///< links that are currently inside the manager
         std::vector<CollisionObjectPtr> vcolobjs; ///< collision objects used for each link (use link index). have to hold pointers so that KinBodyInfo does not remove them!
         std::string geometrygroup; ///< cached geometry group
     };
@@ -139,7 +139,7 @@ public:
         std::vector<CollisionObjectPtr> vcolobjs;
         mapCachedBodies.clear();
         FOREACH(itbody, attachedBodies) {
-            FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(*itbody);
+            FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(**itbody);
             if( !pinfo ) {
                 // don't init something that isn't initialized in this checker.
                 RAVELOG_VERBOSE_FORMAT("body %s has attached body %s which is not initialized in this checker, ignoring for now", pbody->GetName()%(*itbody)->GetName());
@@ -147,12 +147,13 @@ public:
             }
 
             bool bsetUpdateStamp = false;
-            uint64_t linkmask = 0;
+            _linkEnableStates.resize((*itbody)->GetLinks().size()); ///< links that are currently inside the manager
+            std::fill(_linkEnableStates.begin(), _linkEnableStates.end(), 0);
             vcolobjs.clear(); // reset any existing collision objects
             vcolobjs.resize((*itbody)->GetLinks().size(),CollisionObjectPtr());
             FOREACH(itlink, (*itbody)->GetLinks()) {
                 if( (*itlink)->IsEnabled() && (*itbody != pbody || !_bTrackActiveDOF || _vTrackingActiveLinks.at((*itlink)->GetIndex())) ) {
-                    CollisionObjectPtr pcol = _fclspace.GetLinkBV(pinfo, (*itlink)->GetIndex());
+                    CollisionObjectPtr pcol = _fclspace.GetLinkBV(*pinfo, (*itlink)->GetIndex());
                     vcolobjs[(*itlink)->GetIndex()] = pcol;
                     if( !!pcol ) {
                         if( find(_tmpbuffer.begin(), _tmpbuffer.end(), pcol.get()) == _tmpbuffer.end() ) {
@@ -163,15 +164,15 @@ public:
                         }
                     }
                     bsetUpdateStamp = true;
-                    linkmask |= ((uint64_t)1 << (uint64_t)(*itlink)->GetIndex());
+                    _linkEnableStates.at((*itlink)->GetIndex()) = 1;
                 }
             }
 
             // regardless if the linkmask, have to always add to cache in order to track!
             if( 1 ) {//bsetUpdateStamp ) {
-                //RAVELOG_VERBOSE_FORMAT("env=%d, %x adding body %s (%d) linkmask=0x%x, _tmpbuffer.size()=%d", (*itbody)->GetEnv()->GetId()%this%(*itbody)->GetName()%pbody->GetEnvironmentId()%linkmask%_tmpbuffer.size());
+                //RAVELOG_VERBOSE_FORMAT("env=%d, %x adding body %s (%d) linkmask=0x%x, _tmpbuffer.size()=%d", (*itbody)->GetEnv()->GetId()%this%(*itbody)->GetName()%pbody->GetEnvironmentId()%_GetLinkMask(_linkEnableStates)%_tmpbuffer.size());
                 mapCachedBodies[(*itbody)->GetEnvironmentId()] = KinBodyCache(*itbody, pinfo);
-                mapCachedBodies[(*itbody)->GetEnvironmentId()].linkmask = linkmask;
+                mapCachedBodies[(*itbody)->GetEnvironmentId()].linkEnableStates = _linkEnableStates;
                 mapCachedBodies[(*itbody)->GetEnvironmentId()].vcolobjs.swap(vcolobjs);
             }
             else {
@@ -220,12 +221,13 @@ public:
             if( _setExcludeBodyIds.count(bodyid) == 0 ) {
                 std::map<int, KinBodyCache>::iterator it = mapCachedBodies.find(bodyid);
                 if( it == mapCachedBodies.end() ) {
-                    FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(*itbody);
-                    uint64_t linkmask=0;
-                    if( _AddBody(*itbody, pinfo, vcolobjs, linkmask, false) ) { // new collision objects are already added to _tmpbuffer
+                    FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(**itbody);
+                    _linkEnableStates.resize((*itbody)->GetLinks().size()); ///< links that are currently inside the manager
+                    std::fill(_linkEnableStates.begin(), _linkEnableStates.end(), 0);
+                    if( _AddBody(*itbody, pinfo, vcolobjs, _linkEnableStates, false) ) { // new collision objects are already added to _tmpbuffer
                         mapCachedBodies[bodyid] = KinBodyCache(*itbody, pinfo);
                         mapCachedBodies[bodyid].vcolobjs.swap(vcolobjs);
-                        mapCachedBodies[bodyid].linkmask = linkmask;
+                        mapCachedBodies[bodyid].linkEnableStates = _linkEnableStates;
                     }
                 }
             }
@@ -263,12 +265,11 @@ public:
 //    }
 
     /// \brief remove tracking of the body, return true if body was removed
-    bool RemoveBody(KinBodyConstPtr pbody)
+    bool RemoveBody(const KinBody &body)
     {
-        if( !!pbody ) {
-            RAVELOG_VERBOSE_FORMAT("%u removing body %s", _lastSyncTimeStamp%pbody->GetName());
-        }
-        std::map<int, KinBodyCache>::iterator it = mapCachedBodies.find(pbody->GetEnvironmentId());
+        RAVELOG_VERBOSE_FORMAT("%u removing body %s", _lastSyncTimeStamp% body.GetName());
+
+        std::map<int, KinBodyCache>::iterator it = mapCachedBodies.find(body.GetEnvironmentId());
         if( it != mapCachedBodies.end() ) {
             FOREACH(itcol, it->second.vcolobjs) {
                 if( !!itcol->get() ) {
@@ -281,6 +282,17 @@ public:
         }
 
         return false;
+    }
+
+    uint64_t _GetLinkMask(const std::vector<uint8_t>& linkEnableStates)
+    {
+        uint64_t linkmask=0;
+        for(size_t ilink = 0; ilink < linkEnableStates.size(); ++ilink) {
+            if( linkEnableStates[ilink] ) {
+                linkmask |= 1 << ilink;
+            }
+        }
+        return linkmask;
     }
 
     /// \brief Synchronizes the element of the manager instance whose update stamps are outdated
@@ -298,17 +310,17 @@ public:
                 FOREACH(itcache, mapCachedBodies) {
                     KinBodyConstPtr pbody = itcache->second.pwbody.lock(); ///< weak pointer to body
                     if( !!pbody ) {
-                        ssinfo += str(boost::format("(id=%d, linkmask=0x%x, numcols=%d, name=%s), ")%itcache->first%itcache->second.linkmask%itcache->second.vcolobjs.size()%pbody->GetName());
+                        ssinfo += str(boost::format("(id=%d, linkmask=0x%x, numcols=%d, name=%s), ")%itcache->first%_GetLinkMask(itcache->second.linkEnableStates)%itcache->second.vcolobjs.size()%pbody->GetName());
                     }
                     else {
-                        ssinfo += str(boost::format("id=%d, linkmask=0x%x, numcols=%d")%itcache->first%itcache->second.linkmask%itcache->second.vcolobjs.size());
+                        ssinfo += str(boost::format("id=%d, linkmask=0x%x, numcols=%d")%itcache->first%_GetLinkMask(itcache->second.linkEnableStates)%itcache->second.vcolobjs.size());
                     }
                 }
                 RAVELOG_WARN_FORMAT("%x tracking body not in current cached bodies (tracking body %s (id=%d)) (env %d). Current cache is: %s", this%ptrackingbody->GetName()%ptrackingbody->GetEnvironmentId()%ptrackingbody->GetEnv()->GetId()%ssinfo);
             }
             else {
                 FCLSpace::KinBodyInfoPtr pinfo = ittracking->second.pwinfo.lock();
-                FCLSpace::KinBodyInfoPtr pnewinfo = _fclspace.GetInfo(ptrackingbody); // necessary in case pinfos were swapped!
+                FCLSpace::KinBodyInfoPtr pnewinfo = _fclspace.GetInfo(*ptrackingbody); // necessary in case pinfos were swapped!
                 if( ittracking->second.nActiveDOFUpdateStamp != pnewinfo->nActiveDOFUpdateStamp ) {
                     if( ptrackingbody->IsRobot() ) {
                         RobotBaseConstPtr probot = OpenRAVE::RaveInterfaceConstCast<RobotBase>(ptrackingbody);
@@ -321,7 +333,8 @@ public:
                                 // check for any tracking link changes
                                 _vTrackingActiveLinks.resize(probot->GetLinks().size(), 0);
                                 // the active links might have changed
-                                uint64_t linkmask = 0;
+                                _linkEnableStates.resize(probot->GetLinks().size()); ///< links that are currently inside the manager
+                                std::fill(_linkEnableStates.begin(), _linkEnableStates.end(), 0);
                                 for(size_t ilink = 0; ilink < probot->GetLinks().size(); ++ilink) {
                                     int isLinkActive = 0;
                                     FOREACH(itindex, probot->GetActiveDOFIndices()) {
@@ -334,11 +347,11 @@ public:
                                     bool bIsActiveLinkEnabled = probot->GetLinks()[ilink]->IsEnabled() && isLinkActive;
 
                                     if( bIsActiveLinkEnabled ) {
-                                        linkmask |= (uint64_t)1 << (uint64_t)ilink;
+                                        _linkEnableStates.at(ilink) = 1;
                                     }
                                     if( _vTrackingActiveLinks[ilink] != isLinkActive ) {
                                         _vTrackingActiveLinks[ilink] = isLinkActive;
-                                        CollisionObjectPtr pcolobj = _fclspace.GetLinkBV(pnewinfo, probot->GetLinks()[ilink]->GetIndex());
+                                        CollisionObjectPtr pcolobj = _fclspace.GetLinkBV(*pnewinfo, probot->GetLinks()[ilink]->GetIndex());
                                         if( bIsActiveLinkEnabled && !!pcolobj ) {
     #ifdef FCLRAVE_USE_REPLACEOBJECT
     #ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
@@ -379,7 +392,7 @@ public:
                                 }
 
                                 ittracking->second.nActiveDOFUpdateStamp = pnewinfo->nActiveDOFUpdateStamp;
-                                ittracking->second.linkmask = linkmask;
+                                ittracking->second.linkEnableStates = _linkEnableStates;
                             }
                         }
                     }
@@ -405,7 +418,7 @@ public:
                 continue;
             }
 
-            FCLSpace::KinBodyInfoPtr pnewinfo = _fclspace.GetInfo(pbody); // necessary in case pinfos were swapped!
+            FCLSpace::KinBodyInfoPtr pnewinfo = _fclspace.GetInfo(*pbody); // necessary in case pinfos were swapped!
             if( pinfo != pnewinfo ) {
                 // everything changed!
                 RAVELOG_VERBOSE_FORMAT("%u body %s entire KinBodyInfo changed", _lastSyncTimeStamp%pbody->GetName());
@@ -415,7 +428,7 @@ public:
                     }
                 }
                 itcache->second.vcolobjs.resize(0);
-                _AddBody(pbody, pnewinfo, itcache->second.vcolobjs, itcache->second.linkmask, _bTrackActiveDOF&&pbody==ptrackingbody);
+                _AddBody(pbody, pnewinfo, itcache->second.vcolobjs, itcache->second.linkEnableStates, _bTrackActiveDOF&&pbody==ptrackingbody);
                 itcache->second.pwinfo = pnewinfo;
                 //itcache->second.ResetStamps();
                 // need to update the stamps here so that we do not try to unregisterObject below and get into an error
@@ -437,74 +450,74 @@ public:
 
             if( pinfo->nLinkUpdateStamp != itcache->second.nLinkUpdateStamp ) {
                 // links changed
-                uint64_t newlinkmask = pbody->GetLinkEnableStatesMask();
+                std::vector<uint8_t> newLinkEnableStates;
+                pbody->GetLinkEnableStates(newLinkEnableStates);
                 if( _bTrackActiveDOF && ptrackingbody == pbody ) {
                     for(size_t itestlink = 0; itestlink < _vTrackingActiveLinks.size(); ++itestlink) {
                         if( !_vTrackingActiveLinks[itestlink] ) {
-                            newlinkmask &= ~((uint64_t)1 << (uint64_t)itestlink);
+                            newLinkEnableStates.at(itestlink) = 0;
                         }
                     }
                 }
 
-                uint64_t changed = itcache->second.linkmask ^ newlinkmask;
-                //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), lastsync=%u body %s (%d) for cache changed link %d != %d, linkmask=0x%x & 0x%x", pbody->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%pbody->GetName()%pbody->GetEnvironmentId()%pinfo->nLinkUpdateStamp%itcache->second.nLinkUpdateStamp%newlinkmask%changed);
-                if( changed ) {
-                    for(uint64_t ilink = 0; ilink < pinfo->vlinks.size(); ++ilink) {
-                        if( changed & ((uint64_t)1<<ilink) ) {
-                            if( newlinkmask & ((uint64_t)1<<ilink) ) {
-                                CollisionObjectPtr pcolobj = _fclspace.GetLinkBV(pinfo, ilink);
-                                if( !!pcolobj ) {
+                //uint64_t changed = itcache->second.linkmask ^ newlinkmask;
+                //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), lastsync=%u body %s (%d) for cache changed link %d != %d, linkmask=0x%x", pbody->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%pbody->GetName()%pbody->GetEnvironmentId()%pinfo->nLinkUpdateStamp%itcache->second.nLinkUpdateStamp%_GetLinkMask(newLinkEnableStates));
+                for(uint64_t ilink = 0; ilink < pinfo->vlinks.size(); ++ilink) {
+                    uint8_t changed = itcache->second.linkEnableStates.at(ilink) != newLinkEnableStates.at(ilink);
+                    if( changed ) {
+                        if( newLinkEnableStates.at(ilink) ) {
+                            CollisionObjectPtr pcolobj = _fclspace.GetLinkBV(*pinfo, ilink);
+                            if( !!pcolobj ) {
 #ifdef FCLRAVE_USE_REPLACEOBJECT
 #ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
-                                    SaveCollisionObjectDebugInfos(pcolobj.get());
+                                SaveCollisionObjectDebugInfos(pcolobj.get());
 #endif
-                                    if( !!itcache->second.vcolobjs.at(ilink) ) {
-                                        pmanager->replaceObject(itcache->second.vcolobjs.at(ilink).get(), pcolobj.get(), false);
-                                    }
-                                    else {
-                                        pmanager->registerObject(pcolobj.get());
-                                    }
-#else
-
-                                    // no replace
-                                    if( !!itcache->second.vcolobjs.at(ilink) ) {
-                                        pmanager->unregisterObject(itcache->second.vcolobjs.at(ilink).get());
-                                    }
-#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
-                                    SaveCollisionObjectDebugInfos(pcolobj.get());
-#endif
-                                    pmanager->registerObject(pcolobj.get());
-#endif
-                                    bcallsetup = true;
+                                if( !!itcache->second.vcolobjs.at(ilink) ) {
+                                    pmanager->replaceObject(itcache->second.vcolobjs.at(ilink).get(), pcolobj.get(), false);
                                 }
                                 else {
-                                    if( !!itcache->second.vcolobjs.at(ilink) ) {
-                                        pmanager->unregisterObject(itcache->second.vcolobjs.at(ilink).get());
-                                    }
+                                    pmanager->registerObject(pcolobj.get());
                                 }
-                                itcache->second.vcolobjs.at(ilink) = pcolobj;
+#else
+
+                                // no replace
+                                if( !!itcache->second.vcolobjs.at(ilink) ) {
+                                    pmanager->unregisterObject(itcache->second.vcolobjs.at(ilink).get());
+                                }
+#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
+                                SaveCollisionObjectDebugInfos(pcolobj.get());
+#endif
+                                pmanager->registerObject(pcolobj.get());
+#endif
+                                bcallsetup = true;
                             }
                             else {
                                 if( !!itcache->second.vcolobjs.at(ilink) ) {
                                     pmanager->unregisterObject(itcache->second.vcolobjs.at(ilink).get());
-                                    itcache->second.vcolobjs.at(ilink).reset();
                                 }
+                            }
+                            itcache->second.vcolobjs.at(ilink) = pcolobj;
+                        }
+                        else {
+                            if( !!itcache->second.vcolobjs.at(ilink) ) {
+                                pmanager->unregisterObject(itcache->second.vcolobjs.at(ilink).get());
+                                itcache->second.vcolobjs.at(ilink).reset();
                             }
                         }
                     }
                 }
 
-                itcache->second.linkmask = newlinkmask;
+                itcache->second.linkEnableStates = newLinkEnableStates;
                 itcache->second.nLinkUpdateStamp = pinfo->nLinkUpdateStamp;
             }
             if( pinfo->nGeometryUpdateStamp != itcache->second.nGeometryUpdateStamp ) {
 
                 if( itcache->second.geometrygroup.size() == 0 || itcache->second.geometrygroup != pinfo->_geometrygroup ) {
-                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), lastsync=%u body %s (%d) for cache changed geometry %d != %d, linkmask=0x%x", pbody->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%pbody->GetName()%pbody->GetEnvironmentId()%pinfo->nGeometryUpdateStamp%itcache->second.nGeometryUpdateStamp%itcache->second.linkmask);
+                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), lastsync=%u body %s (%d) for cache changed geometry %d != %d, linkmask=0x%x", pbody->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%pbody->GetName()%pbody->GetEnvironmentId()%pinfo->nGeometryUpdateStamp%itcache->second.nGeometryUpdateStamp%_GetLinkMask(itcache->second.linkEnableStates));
                     // vcolobjs most likely changed
                     for(uint64_t ilink = 0; ilink < pinfo->vlinks.size(); ++ilink) {
-                        if( itcache->second.linkmask & ((uint64_t)1<<ilink) ) {
-                            CollisionObjectPtr pcolobj = _fclspace.GetLinkBV(pinfo, ilink);
+                        if( itcache->second.linkEnableStates.at(ilink) ) {
+                            CollisionObjectPtr pcolobj = _fclspace.GetLinkBV(*pinfo, ilink);
                             if( !!pcolobj ) {
                                 //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), body %s adding obj %x from link %d", pbody->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%pbody->GetName()%pcolobj.get()%ilink);
 #ifdef FCLRAVE_USE_REPLACEOBJECT
@@ -536,7 +549,7 @@ public:
                             }
                             else {
                                 if( !!itcache->second.vcolobjs.at(ilink) ) {
-                                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x, body %s removing old obj from link %d", pbody->GetEnv()->GetId()%this%ilink);
+                                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x, body %s removing old obj from link %d", pbody->GetEnv()->GetId()%this%pbody->GetName()%ilink);
                                     pmanager->unregisterObject(itcache->second.vcolobjs.at(ilink).get());
                                     itcache->second.vcolobjs.at(ilink).reset();
                                 }
@@ -553,12 +566,12 @@ public:
             if( pinfo->nLastStamp != itcache->second.nLastStamp ) {
                 if( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
                     //Transform tpose = pbody->GetTransform();
-                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d) %u body %s (%d) for cache changed transform %d != %d, num=%d, mask=0x%x, trans=(%.3f, %.3f, %.3f)", pbody->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%pbody->GetName()%pbody->GetEnvironmentId()%pinfo->nLastStamp%itcache->second.nLastStamp%pinfo->vlinks.size()%itcache->second.linkmask%tpose.trans.x%tpose.trans.y%tpose.trans.z);
+                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d) %u body %s (%d) for cache changed transform %d != %d, num=%d, mask=0x%x, trans=(%.3f, %.3f, %.3f)", pbody->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%pbody->GetName()%pbody->GetEnvironmentId()%pinfo->nLastStamp%itcache->second.nLastStamp%pinfo->vlinks.size()%_GetLinkMask(itcache->second.linkEnableStates)%tpose.trans.x%tpose.trans.y%tpose.trans.z);
                 }
                 // transform changed
                 for(uint64_t ilink = 0; ilink < pinfo->vlinks.size(); ++ilink) {
-                    if( itcache->second.linkmask & ((uint64_t)1<<ilink) ) {
-                        CollisionObjectPtr pcolobj = _fclspace.GetLinkBV(pinfo, ilink);
+                    if( itcache->second.linkEnableStates.at(ilink) ) {
+                        CollisionObjectPtr pcolobj = _fclspace.GetLinkBV(*pinfo, ilink);
                         if( !!pcolobj ) {
                             //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), body %s adding obj %x from link %d", pbody->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%pbody->GetName()%pcolobj.get()%ilink);
                             if( itcache->second.vcolobjs.at(ilink) == pcolobj ) {
@@ -578,7 +591,7 @@ public:
 
                                 // different object, have to replace
                                 if( !!itcache->second.vcolobjs.at(ilink) ) {
-                                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), body %s replacing cached obj %x with %x ", pbody->GetEnv()->GetId()%this%_fclspace.IsSelfCollisioChecker()%pbody->GetName()%itcache->second.vcolobjs.at(ilink).get()%pcolobj.get());
+                                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), body %s replacing cached obj %x with %x ", pbody->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%pbody->GetName()%itcache->second.vcolobjs.at(ilink).get()%pcolobj.get());
                                     pmanager->replaceObject(itcache->second.vcolobjs.at(ilink).get(), pcolobj.get(), false);
                                 }
                                 else {
@@ -590,7 +603,7 @@ public:
                                 if( !!itcache->second.vcolobjs.at(ilink) ) {
                                     //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), body %s unregister cached obj %x ", pbody->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecke()%pbody->GetName()%itcache->second.vcolobjs.at(ilink).get());
                                     fcl::CollisionObject* ptestobj = itcache->second.vcolobjs.at(ilink).get();
-                                    +pmanager->unregisterObject(itcache->second.vcolobjs.at(ilink).get());
+                                    pmanager->unregisterObject(itcache->second.vcolobjs.at(ilink).get());
                                 }
 #ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
                                 SaveCollisionObjectDebugInfos(pcolobj.get());
@@ -604,7 +617,7 @@ public:
                         }
                         else {
                             if( !!itcache->second.vcolobjs.at(ilink) ) {
-                                //RAVELOG_VERBOSE_FORMAT("env=%d, %x, body %s removing old obj from link %d", pbody->GetEnv()->GetId()%this%ilink);
+                                //RAVELOG_VERBOSE_FORMAT("env=%d, %x, body %s removing old obj from link %d", pbody->GetEnv()->GetId()%this%pbody->GetName()%ilink);
                                 pmanager->unregisterObject(itcache->second.vcolobjs.at(ilink).get());
                                 itcache->second.vcolobjs.at(ilink).reset();
                             }
@@ -636,16 +649,17 @@ public:
             // add any new bodies
             FOREACH(itbody, attachedBodies) {
                 if( mapCachedBodies.find((*itbody)->GetEnvironmentId()) == mapCachedBodies.end() ) {
-                    FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(*itbody);
-                    uint64_t linkmask = 0;
+                    FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(**itbody);
+                    _linkEnableStates.resize((*itbody)->GetLinks().size()); ///< links that are currently inside the manager
+                    std::fill(_linkEnableStates.begin(), _linkEnableStates.end(), 0);
                     vcolobjs.resize(0);
-                    if( _AddBody(*itbody, pinfo, vcolobjs, linkmask, _bTrackActiveDOF&&(*itbody == ptrackingbody)) ) {
+                    if( _AddBody(*itbody, pinfo, vcolobjs, _linkEnableStates, _bTrackActiveDOF&&(*itbody == ptrackingbody)) ) {
                         bcallsetup = true;
                     }
                     //RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d) %u adding body %s (%d)", (*itbody)->GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%_lastSyncTimeStamp%(*itbody)->GetName()%(*itbody)->GetEnvironmentId());
                     mapCachedBodies[(*itbody)->GetEnvironmentId()] = KinBodyCache(*itbody, pinfo);
                     mapCachedBodies[(*itbody)->GetEnvironmentId()].vcolobjs.swap(vcolobjs);
-                    mapCachedBodies[(*itbody)->GetEnvironmentId()].linkmask = linkmask;
+                    mapCachedBodies[(*itbody)->GetEnvironmentId()].linkEnableStates = _linkEnableStates;
 //                    else {
 //                        RAVELOG_VERBOSE_FORMAT("env=%d %x could not add attached body %s for tracking body %s", ptrackingbody->GetEnv()->GetId()%this%(*itbody)->GetName()%ptrackingbody->GetName());
 //                    }
@@ -658,7 +672,7 @@ public:
                 KinBodyConstPtr pbody = itcache->second.pwbody.lock();
                 // could be the case that the same pointer was re-added to the environment so have to check the environment id
                 if( !pbody || attachedBodies.count(pbody) == 0 || pbody->GetEnvironmentId() != itcache->first ) {
-                    //RAVELOG_VERBOSE_FORMAT("env=%d, %x, %u removing old cache %d", pbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%itcache->first);
+                    RAVELOG_VERBOSE_FORMAT("env=%d, %x, %u removing old cache %d", pbody->GetEnv()->GetId()%this%_lastSyncTimeStamp%itcache->first);
                     // not in attached bodies so should remove
                     FOREACH(itcol, itcache->second.vcolobjs) {
                         if( !!itcol->get() ) {
@@ -716,16 +730,17 @@ private:
     /// \brief adds a body to the manager, returns true if something was added
     ///
     /// should not add anything to mapCachedBodies! append to _tmpbuffer
-    bool _AddBody(KinBodyConstPtr pbody, FCLSpace::KinBodyInfoPtr pinfo, std::vector<CollisionObjectPtr>& vcolobjs, uint64_t& linkmask, bool bTrackActiveDOF)
+    bool _AddBody(KinBodyConstPtr pbody, FCLSpace::KinBodyInfoPtr pinfo, std::vector<CollisionObjectPtr>& vcolobjs, std::vector<uint8_t>& linkEnableStates, bool bTrackActiveDOF)
     {
         vcolobjs.resize(0); // reset so that existing collision objects can go away
         vcolobjs.resize(pbody->GetLinks().size(), CollisionObjectPtr());
         bool bsetUpdateStamp = false;
-        linkmask = 0;
+        linkEnableStates.resize(pbody->GetLinks().size()); ///< links that are currently inside the manager
+        std::fill(linkEnableStates.begin(), linkEnableStates.end(), 0);
         FOREACH(itlink, (pbody)->GetLinks()) {
             if( (*itlink)->IsEnabled() && (!bTrackActiveDOF || _vTrackingActiveLinks.at((*itlink)->GetIndex())) ) {
                 //pinfo->vlinks.at((*itlink)->GetIndex()).listRegisteredManagers.push_back(shared_from_this());
-                CollisionObjectPtr pcol = _fclspace.GetLinkBV(pinfo, (*itlink)->GetIndex());
+                CollisionObjectPtr pcol = _fclspace.GetLinkBV(*pinfo, (*itlink)->GetIndex());
                 if( !!pcol ) {
                     if( find(_tmpbuffer.begin(), _tmpbuffer.end(), pcol.get()) == _tmpbuffer.end() ) {
                         _tmpbuffer.push_back(pcol.get());
@@ -734,7 +749,7 @@ private:
                         RAVELOG_WARN_FORMAT("env=%d body %s link %s is added multiple times", pbody->GetEnv()->GetId()%pbody->GetName()%(*itlink)->GetName());
                     }
                     vcolobjs[(*itlink)->GetIndex()] = pcol;
-                    linkmask |= ((uint64_t)1 << (uint64_t)(*itlink)->GetIndex());
+                    linkEnableStates.at((*itlink)->GetIndex()) = 1;
                     bsetUpdateStamp = true;
                 }
             }
@@ -794,6 +809,7 @@ private:
 
     KinBodyConstWeakPtr _ptrackingbody; ///< if set, then only tracking the attached bodies if this body
     std::vector<int> _vTrackingActiveLinks; ///< indices of which links are active for tracking body
+    std::vector<uint8_t> _linkEnableStates; ///< links that are currently inside the manager
 
     bool _bTrackActiveDOF; ///< if true and _ptrackingbody is valid, then should be tracking the active dof of the _ptrackingbody
 

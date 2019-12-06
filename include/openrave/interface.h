@@ -39,9 +39,9 @@ enum SerializationOptions
     SO_RobotSensors = 0x20, ///< serialize robot sensors
     SO_Geometry = 0x40, ///< geometry information (for collision detection)
     SO_InverseKinematics = 0x80, ///< information necessary for inverse kinematics. If Transform6D, then don't include the manipulator local transform
-
-    SO_DynamicProperties = 0x100, ///< serialize the dynamic properties of kinbody
-    SO_StaticProperties = 0x200, ///< serialize the static properties of kinbody
+    SO_JointLimits = 0x100 ///< information of joint limits including velocity, acceleration, jerk, torque and inertia limits
+    SO_DynamicProperties = 0x200, ///< serialize the dynamic properties of kinbody
+    SO_StaticProperties = 0x400, ///< serialize the static properties of kinbody
 };
 
 /** \brief <b>[interface]</b> Base class for all interfaces that OpenRAVE provides. See \ref interface_concepts.
@@ -134,8 +134,12 @@ public:
     /// \brief return true if the command is supported
     virtual bool SupportsCommand(const std::string& cmd);
 
+#if OPENRAVE_RAPIDJSON
+
     /// \brief return true if the command is supported
     virtual bool SupportsJSONCommand(const std::string& cmd);
+
+#endif // OPENRAVE_RAPIDJSON
 
     /** \brief Used to send special commands to the interface and receive output.
 

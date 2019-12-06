@@ -340,7 +340,7 @@ inline double IKlog(double f) { return log(f); }
 
 // there are checkpoints in ikfast that are evaluated to make sure they are 0. This threshold speicfies by how much they can deviate
 #ifndef IKFAST_EVALCOND_THRESH
-#define IKFAST_EVALCOND_THRESH ((IkReal)0.00001)
+#define IKFAST_EVALCOND_THRESH ((IkReal)0.03) // 5D IK has some crazy degenerate cases, but can rely on jacobian refinment to make better, just need good starting point
 #endif
 
 
@@ -520,6 +520,20 @@ inline CheckValue<T> IKPowWithIntegerCheck(T f, int n)
     return ret;
 }
 
+template <typename T> struct ComplexLess
+{
+    bool operator()(const complex<T>& lhs, const complex<T>& rhs) const
+    {
+        if (real(lhs) < real(rhs)) {
+            return true;
+        }
+        if (real(lhs) > real(rhs)) {
+            return false;
+        }
+        return imag(lhs) < imag(rhs);
+    }
+};
+
 """%(self.version,str(datetime.datetime.now()),self.iktypestr,self.version)
         code += solvertree.generate(self)
         code += solvertree.end(self)
@@ -600,14 +614,14 @@ int main(int argc, char** argv)
     def getClassInit(self,node,iktype,userotation=7,usetranslation=7):
         code = "IKFAST_API int GetNumFreeParameters() { return %d; }\n"%len(node.freejointvars)
         if len(node.freejointvars) == 0:
-            code += "IKFAST_API int* GetFreeParameters() { return NULL; }\n"
+            code += "IKFAST_API const int* GetFreeIndices() { return NULL; }\n"
         else:
-            code += "IKFAST_API int* GetFreeParameters() { static int freeparams[] = {"
+            code += "IKFAST_API const int* GetFreeIndices() { static const int freeindices[] = {"
             for i,freejointvar in enumerate(node.freejointvars):
                 code += "%d"%(freejointvar[1])
                 if i < len(node.freejointvars)-1:
                     code += ", "
-            code += "}; return freeparams; }\n"
+            code += "}; return freeindices; }\n"
         code += "IKFAST_API int GetNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
         code += "IKFAST_API int GetIkRealSize() { return sizeof(IkReal); }\n\n"
         code += 'IKFAST_API int GetIkType() { return 0x%x; }\n\n'%iktype
@@ -2402,6 +2416,9 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         }
     }
 
+    // sort roots hoping that it solution indices become more robust to slight change in coeffs
+    std::sort(roots, roots+%(deg)d, ComplexLess<IkReal>());
+
     numroots = 0;
     bool visited[%(deg)d] = {false};
     for(int i = 0; i < %(deg)d; ++i) {
@@ -2412,7 +2429,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             int n = 1;
             for(int j = i+1; j < %(deg)d; ++j) {
                 // care about error in real much more than imaginary
-                if( abs(real(roots[i])-real(roots[j])) < tolsqrt && abs(imag(roots[i])-imag(roots[j])) < 0.002 ) {
+                if( abs(real(roots[i])-real(roots[j])) < tolsqrt && (abs(imag(roots[i])-imag(roots[j])) < 0.002 || abs(imag(roots[i])+imag(roots[j])) < 0.002) && abs(imag(roots[i])) < 0.002 ) {
                     newroot += roots[j];
                     n += 1;
                     visited[j] = true;

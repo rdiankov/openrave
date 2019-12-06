@@ -87,6 +87,13 @@ class PyConfigurationSpecification;
 class PyIkParameterization;
 class PyXMLReadable;
 class PyCameraIntrinsics;
+class PyLinkInfo;
+class PyJointInfo;
+class PyManipulatorInfo;
+class PyAttachedSensorInfo;
+class PyConnectedBodyInfo;
+class PyLink;
+class PyJoint;
 
 typedef boost::shared_ptr<PyInterfaceBase> PyInterfaceBasePtr;
 typedef boost::shared_ptr<PyInterfaceBase const> PyInterfaceBaseConstPtr;
@@ -127,6 +134,15 @@ typedef boost::shared_ptr<PyConfigurationSpecification const> PyConfigurationSpe
 typedef boost::shared_ptr<PyIkParameterization> PyIkParameterizationPtr;
 typedef boost::shared_ptr<PyXMLReadable> PyXMLReadablePtr;
 typedef boost::shared_ptr<PyCameraIntrinsics> PyCameraIntrinsicsPtr;
+typedef boost::shared_ptr<PyLinkInfo> PyLinkInfoPtr;
+typedef boost::shared_ptr<PyJointInfo> PyJointInfoPtr;
+typedef boost::shared_ptr<PyManipulatorInfo> PyManipulatorInfoPtr;
+typedef boost::shared_ptr<PyAttachedSensorInfo> PyAttachedSensorInfoPtr;
+typedef boost::shared_ptr<PyConnectedBodyInfo> PyConnectedBodyInfoPtr;
+typedef boost::shared_ptr<PyLink> PyLinkPtr;
+typedef boost::shared_ptr<PyLink const> PyLinkConstPtr;
+typedef boost::shared_ptr<PyJoint> PyJointPtr;
+typedef boost::shared_ptr<PyJoint const> PyJointConstPtr;
 
 inline uint64_t GetMicroTime()
 {
@@ -725,12 +741,21 @@ ViewerBasePtr GetViewer(PyViewerBasePtr);
 PyInterfaceBasePtr toPyViewer(ViewerBasePtr, PyEnvironmentBasePtr);
 
 int pyGetIntFromPy(object olevel, int defaultvalue);
-
+object toPyPlannerStatus(const PlannerStatus&);
+    
 PyConfigurationSpecificationPtr toPyConfigurationSpecification(const ConfigurationSpecification&);
 const ConfigurationSpecification& GetConfigurationSpecification(PyConfigurationSpecificationPtr);
 
 PyCameraIntrinsicsPtr toPyCameraIntrinsics(const geometry::RaveCameraIntrinsics<float>&);
 PyCameraIntrinsicsPtr toPyCameraIntrinsics(const geometry::RaveCameraIntrinsics<double>&);
+
+PyLinkPtr toPyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv);
+PyJointPtr toPyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv);
+PyLinkInfoPtr toPyLinkInfo(const KinBody::LinkInfo& linkinfo);
+PyJointInfoPtr toPyJointInfo(const KinBody::JointInfo& jointinfo, PyEnvironmentBasePtr pyenv);
+PyManipulatorInfoPtr toPyManipulatorInfo(const RobotBase::ManipulatorInfo& manipulatorinfo);
+PyAttachedSensorInfoPtr toPyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& attachedSensorinfo);
+PyConnectedBodyInfoPtr toPyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& connectedBodyInfo, PyEnvironmentBasePtr pyenv);
 
 PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType type, const std::string& name);
 void init_openravepy_global();

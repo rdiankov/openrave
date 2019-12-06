@@ -135,7 +135,8 @@ public:
     ///
     /// \param pbody the body to change the geometry group
     /// \param groupname the geometry group name. If empty, will disable the groups and use the current geometries set on the link.
-    virtual void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) OPENRAVE_DUMMY_IMPLEMENTATION;
+    /// \return true if body geometry group with groupname exists. false otherwise
+    virtual bool SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \biref Gets the geometry group that a body is currently using
     virtual const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const OPENRAVE_DUMMY_IMPLEMENTATION;
@@ -218,6 +219,14 @@ public:
     /// \param aabbPose the pose of the box
     /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
     virtual bool CheckCollision(const AABB& ab, const Transform& aabbPose, CollisionReportPtr report = CollisionReportPtr()) OPENRAVE_DUMMY_IMPLEMENTATION;
+
+    /// \brief Check collision with a dummy box and a list of bodies
+    ///
+    /// \param ab box to check collision with. The box is transformed by aabbPose
+    /// \param aabbPose the pose of the box
+    /// \param bodies vector of bodies to check collision with the dummy AABB
+    /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
+    virtual bool CheckCollision(const AABB& ab, const Transform& aabbPose, const std::vector<KinBodyConstPtr>& vbodies, CollisionReportPtr report = CollisionReportPtr()) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief Checks self collision only with the links of the passed in body.
     ///

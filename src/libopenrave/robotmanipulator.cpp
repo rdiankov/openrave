@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2014 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2019 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -391,33 +391,75 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
         break;
     }
     case IKP_TranslationXAxisAngle4D: {
-        Vector vglobaldirection = t.rotate(_info._vdirection);
-        ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(vglobaldirection.x));
+        if (inworld) {
+            Transform localt = GetBase()->GetTransform().inverse()*t;
+            const Vector vlocaldirection = localt.rotate(_info._vdirection);
+            ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.x,-1.0,1.0)));
+        }
+        else {
+            const Vector vlocaldirection = t.rotate(_info._vdirection);
+            ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.x,-1.0,1.0)));
+        }
         break;
     }
     case IKP_TranslationYAxisAngle4D: {
-        Vector vglobaldirection = t.rotate(_info._vdirection);
-        ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(vglobaldirection.y));
+        if (inworld) {
+            Transform localt = GetBase()->GetTransform().inverse()*t;
+            const Vector vlocaldirection = localt.rotate(_info._vdirection);
+            ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.y,-1.0,1.0)));
+        }
+        else {
+            const Vector vlocaldirection = t.rotate(_info._vdirection);
+            ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.y,-1.0,1.0)));
+        }
         break;
     }
     case IKP_TranslationZAxisAngle4D: {
-        Vector vglobaldirection = t.rotate(_info._vdirection);
-        ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(vglobaldirection.z));
+        if (inworld) {
+            Transform localt = GetBase()->GetTransform().inverse()*t;
+            const Vector vlocaldirection = localt.rotate(_info._vdirection);
+            ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.z,-1.0,1.0)));
+        }
+        else {
+            const Vector vlocaldirection = t.rotate(_info._vdirection);
+            ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.z,-1.0,1.0)));
+        }
         break;
     }
     case IKP_TranslationXAxisAngleZNorm4D: {
-        Vector vglobaldirection = t.rotate(_info._vdirection);
-        ikp.SetTranslationXAxisAngleZNorm4D(t.trans,RaveAtan2(vglobaldirection.y,vglobaldirection.x));
+        if (inworld) {
+            Transform localt = GetBase()->GetTransform().inverse()*t;
+            const Vector vlocaldirection = localt.rotate(_info._vdirection);
+            ikp.SetTranslationXAxisAngleZNorm4D(t.trans,RaveAtan2(vlocaldirection.y,vlocaldirection.x));
+        }
+        else {
+            Vector vlocaldirection = t.rotate(_info._vdirection);
+            ikp.SetTranslationXAxisAngleZNorm4D(t.trans,RaveAtan2(vlocaldirection.y,vlocaldirection.x));
+        }
         break;
     }
     case IKP_TranslationYAxisAngleXNorm4D: {
-        Vector vglobaldirection = t.rotate(_info._vdirection);
-        ikp.SetTranslationYAxisAngleXNorm4D(t.trans,RaveAtan2(vglobaldirection.z,vglobaldirection.y));
+        if (inworld) {
+            Transform localt = GetBase()->GetTransform().inverse()*t;
+            const Vector vlocaldirection = localt.rotate(_info._vdirection);
+            ikp.SetTranslationYAxisAngleXNorm4D(t.trans,RaveAtan2(vlocaldirection.z,vlocaldirection.y));
+        }
+        else {
+            Vector vlocaldirection = t.rotate(_info._vdirection);
+            ikp.SetTranslationYAxisAngleXNorm4D(t.trans,RaveAtan2(vlocaldirection.z,vlocaldirection.y));
+        }
         break;
     }
     case IKP_TranslationZAxisAngleYNorm4D: {
-        Vector vglobaldirection = t.rotate(_info._vdirection);
-        ikp.SetTranslationZAxisAngleYNorm4D(t.trans,RaveAtan2(vglobaldirection.x,vglobaldirection.z));
+        if (inworld) {
+            Transform localt = GetBase()->GetTransform().inverse()*t;
+            const Vector vlocaldirection = localt.rotate(_info._vdirection);
+            ikp.SetTranslationZAxisAngleYNorm4D(t.trans,RaveAtan2(vlocaldirection.x,vlocaldirection.z));
+        }
+        else {
+            Vector vlocaldirection = t.rotate(_info._vdirection);
+            ikp.SetTranslationZAxisAngleYNorm4D(t.trans,RaveAtan2(vlocaldirection.x,vlocaldirection.z));
+        }
         break;
     }
     // velocities
@@ -495,33 +537,75 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
         break;
     }
     case IKP_TranslationXAxisAngle4D: {
-        Vector vglobaldirection = t.rotate(_info._vdirection);
-        ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(vglobaldirection.x));
+        if (inworld) {
+            Transform localt = GetBase()->GetTransform().inverse()*t;
+            const Vector vlocaldirection = localt.rotate(_info._vdirection);
+            ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.x,-1.0,1.0)));
+        }
+        else {
+            const Vector vlocaldirection = t.rotate(_info._vdirection);
+            ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.x,-1.0,1.0)));
+        }
         break;
     }
     case IKP_TranslationYAxisAngle4D: {
-        Vector vglobaldirection = t.rotate(_info._vdirection);
-        ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(vglobaldirection.y));
+        if (inworld) {
+            Transform localt = GetBase()->GetTransform().inverse()*t;
+            const Vector vlocaldirection = localt.rotate(_info._vdirection);
+            ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.y,-1.0,1.0)));
+        }
+        else {
+            const Vector vlocaldirection = t.rotate(_info._vdirection);
+            ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.y,-1.0,1.0)));
+        }
         break;
     }
     case IKP_TranslationZAxisAngle4D: {
-        Vector vglobaldirection = t.rotate(_info._vdirection);
-        ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(vglobaldirection.z));
+        if (inworld) {
+            Transform localt = GetBase()->GetTransform().inverse()*t;
+            const Vector vlocaldirection = localt.rotate(_info._vdirection);
+            ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.z,-1.0,1.0)));
+        }
+        else {
+            const Vector vlocaldirection = t.rotate(_info._vdirection);
+            ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(OpenRAVE::utils::ClampOnRange(vlocaldirection.z,-1.0,1.0)));
+        }
         break;
     }
     case IKP_TranslationXAxisAngleZNorm4D: {
-        Vector vglobaldirection = t.rotate(_info._vdirection);
-        ikp.SetTranslationXAxisAngleZNorm4D(t.trans,RaveAtan2(vglobaldirection.y,vglobaldirection.x));
+        if (inworld) {
+            Transform localt = GetBase()->GetTransform().inverse()*t;
+            const Vector vlocaldirection = localt.rotate(_info._vdirection);
+            ikp.SetTranslationXAxisAngleZNorm4D(t.trans,RaveAtan2(vlocaldirection.y,vlocaldirection.x));
+        }
+        else {
+            Vector vlocaldirection = t.rotate(_info._vdirection);
+            ikp.SetTranslationXAxisAngleZNorm4D(t.trans,RaveAtan2(vlocaldirection.y,vlocaldirection.x));
+        }
         break;
     }
     case IKP_TranslationYAxisAngleXNorm4D: {
-        Vector vglobaldirection = t.rotate(_info._vdirection);
-        ikp.SetTranslationYAxisAngleXNorm4D(t.trans,RaveAtan2(vglobaldirection.z,vglobaldirection.y));
+        if (inworld) {
+            Transform localt = GetBase()->GetTransform().inverse()*t;
+            const Vector vlocaldirection = localt.rotate(_info._vdirection);
+            ikp.SetTranslationYAxisAngleXNorm4D(t.trans,RaveAtan2(vlocaldirection.z,vlocaldirection.y));
+        }
+        else {
+            Vector vlocaldirection = t.rotate(_info._vdirection);
+            ikp.SetTranslationYAxisAngleXNorm4D(t.trans,RaveAtan2(vlocaldirection.z,vlocaldirection.y));
+        }
         break;
     }
     case IKP_TranslationZAxisAngleYNorm4D: {
-        Vector vglobaldirection = t.rotate(_info._vdirection);
-        ikp.SetTranslationZAxisAngleYNorm4D(t.trans,RaveAtan2(vglobaldirection.x,vglobaldirection.z));
+        if (inworld) {
+            Transform localt = GetBase()->GetTransform().inverse()*t;
+            const Vector vlocaldirection = localt.rotate(_info._vdirection);
+            ikp.SetTranslationZAxisAngleYNorm4D(t.trans,RaveAtan2(vlocaldirection.x,vlocaldirection.z));
+        }
+        else {
+            Vector vlocaldirection = t.rotate(_info._vdirection);
+            ikp.SetTranslationZAxisAngleYNorm4D(t.trans,RaveAtan2(vlocaldirection.x,vlocaldirection.z));
+        }
         break;
     }
     // velocities
@@ -655,9 +739,9 @@ void RobotBase::Manipulator::GetChildLinks(std::vector<LinkPtr>& vlinks) const
     }
 }
 
-bool RobotBase::Manipulator::IsChildLink(LinkConstPtr plink) const
+bool RobotBase::Manipulator::IsChildLink(const KinBody::Link &link) const
 {
-    if( __pEffector->IsRigidlyAttached(plink) ) {
+    if( __pEffector->IsRigidlyAttached(link) ) {
         return true;
     }
 
@@ -756,8 +840,11 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(CollisionReportPtr report
         if( !bGripperLink ) {
             continue;
         }
+
+        bool bIsAffected = false;
         for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
             if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
+                bIsAffected = true;
                 if( probot->CheckLinkCollision(ilink, report) ) {
                     if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
                         return true;
@@ -765,6 +852,16 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(CollisionReportPtr report
                     bincollision = true;
                 }
                 break;
+            }
+        }
+
+        if( !bIsAffected ) {
+            // link is not affected by any of the joints, perhaps there could be passive joints that are attached to the end effector that are non-static. if a link is affected by all the joints in the chain, then it is most likely a child just by the fact that all the arm joints affect it.
+            if( probot->CheckLinkCollision(ilink, report) ) {
+                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                    return true;
+                }
+                bincollision = true;
             }
         }
     }
@@ -815,8 +912,11 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
         if( !bGripperLink ) {
             continue;
         }
+
+        bool bIsAffected = false;
         for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
             if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
+                bIsAffected = true;
                 if( probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),report) ) {
                     if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
                         return true;
@@ -824,6 +924,16 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
                     bincollision = true;
                 }
                 break;
+            }
+        }
+
+        if( !bIsAffected ) {
+            // link is not affected by any of the joints, perhaps there could be passive joints that are attached to the end effector that are non-static. if a link is affected by all the joints in the chain, then it is most likely a child just by the fact that all the arm joints affect it.
+            if( probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),report) ) {
+                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                    return true;
+                }
+                bincollision = true;
             }
         }
     }
@@ -898,8 +1008,11 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(CollisionReportPtr re
         if( !bGripperLink ) {
             continue;
         }
+
+        bool bIsAffected = false;
         for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
             if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
+                bIsAffected = true;
                 if( probot->CheckLinkSelfCollision(ilink,report) ) {
                     if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
                         return true;
@@ -907,6 +1020,16 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(CollisionReportPtr re
                     bincollision = true;
                 }
                 break;
+            }
+        }
+
+        if( !bIsAffected ) {
+            // link is not affected by any of the joints, perhaps there could be passive joints that are attached to the end effector that are non-static. if a link is affected by all the joints in the chain, then it is most likely a child just by the fact that all the arm joints affect it.
+            if( probot->CheckLinkSelfCollision(ilink,report) ) {
+                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                    return true;
+                }
+                bincollision = true;
             }
         }
     }
@@ -940,7 +1063,7 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
         GetIndependentLinks(vindependentinks);
         pselfchecker = !!probot->GetSelfCollisionChecker() ? probot->GetSelfCollisionChecker() : probot->GetEnv()->GetCollisionChecker();
     }
-    
+
     if( bIgnoreManipulatorLinks ) {
         GetIndependentLinks(vindependentinks);
         FOREACHC(itlink,vattachedlinks) {
@@ -992,13 +1115,16 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
         if( !bGripperLink ) {
             continue;
         }
+
+        bool bIsAffected = false;
         for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
             if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
+                bIsAffected = true;
                 if( bIgnoreManipulatorLinks ) {
                     boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(*itlink)); // gcc optimization bug when linksaver is on stack?
                     Transform tlinktrans = tdelta*(*itlink)->GetTransform();
                     (*itlink)->SetTransform(tlinktrans);
-                    
+
                     FOREACHC(itindependentlink,vindependentinks) {
                         if( *itlink != *itindependentlink && (*itindependentlink)->IsEnabled() ) {
                             if( pselfchecker->CheckCollision(*itlink, *itindependentlink,report) ) {
@@ -1021,6 +1147,36 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
                 }
                 break;
             }
+        }
+
+        if( !bIsAffected ) {
+            // link is not affected by any of the joints, perhaps there could be passive joints that are attached to the end effector that are non-static. if a link is affected by all the joints in the chain, then it is most likely a child just by the fact that all the arm joints affect it.
+            if( bIgnoreManipulatorLinks ) {
+                boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(*itlink)); // gcc optimization bug when linksaver is on stack?
+                Transform tlinktrans = tdelta*(*itlink)->GetTransform();
+                (*itlink)->SetTransform(tlinktrans);
+
+                FOREACHC(itindependentlink,vindependentinks) {
+                    if( *itlink != *itindependentlink && (*itindependentlink)->IsEnabled() ) {
+                        if( pselfchecker->CheckCollision(*itlink, *itindependentlink,report) ) {
+                            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                                RAVELOG_VERBOSE_FORMAT("gripper link self collision with link %s", (*itlink)->GetName());
+                                return true;
+                            }
+                            bincollision = true;
+                        }
+                    }
+                }
+            }
+            else {
+                if( probot->CheckLinkSelfCollision(ilink,tdelta*(*itlink)->GetTransform(),report) ) {
+                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                        return true;
+                    }
+                    bincollision = true;
+                }
+            }
+            break;
         }
     }
     return bincollision;
@@ -1159,7 +1315,7 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const IkParameterizat
             RAVELOG_WARN_FORMAT("do not support redundant checking for iktype 0x%x", ikparam.GetType());
         }
     }
-    
+
     IkSolverBasePtr pIkSolver = GetIkSolver();
     //OPENRAVE_ASSERT_OP_FORMAT(GetArmDOF(), <=, ikparam.GetDOF(), "ikparam type 0x%x does not fully determine manipulator %s:%s end effector configuration", ikparam.GetType()%probot->GetName()%GetName(),ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(!!pIkSolver, "manipulator %s:%s does not have an IK solver set",probot->GetName()%GetName(),ORE_Failed);
@@ -1296,10 +1452,10 @@ bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report
     return false;
 }
 
-bool RobotBase::Manipulator::IsGrabbing(KinBodyConstPtr pbody) const
+bool RobotBase::Manipulator::IsGrabbing(const KinBody &body) const
 {
     RobotBasePtr probot(__probot);
-    KinBody::LinkPtr plink = probot->IsGrabbing(pbody);
+    KinBody::LinkPtr plink = probot->IsGrabbing(body);
     if( !!plink ) {
         if( plink == __pEffector || plink == __pBase ) {
             return true;

@@ -229,7 +229,7 @@ public:
 
         // destroy the modules (their destructors could attempt to lock environment, so have to do it before global lock)
         // however, do not clear the _listModules yet
-        RAVELOG_DEBUG("destroy module\n");
+        RAVELOG_DEBUG_FORMAT("env=%d destroy module", GetId());
         list< pair<ModuleBasePtr, std::string> > listModules;
         list<ViewerBasePtr> listViewers = _listViewers;
         {
@@ -426,7 +426,7 @@ public:
         else {
             EnvironmentMutex::scoped_lock lockenv(GetMutex());
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-            _listModules.push_back(make_pair(module, cmdargs));
+            _listModules.emplace_back(module,  cmdargs);
         }
 
         return ret;
@@ -731,6 +731,10 @@ public:
         }
         pbody->_ComputeInternalInformation();
         _pCurrentChecker->InitKinBody(pbody);
+        if( !!pbody->GetSelfCollisionChecker() && pbody->GetSelfCollisionChecker() != _pCurrentChecker ) {
+            // also initialize external collision checker if specified for this body
+            pbody->GetSelfCollisionChecker()->InitKinBody(pbody);
+        }
         _pPhysicsEngine->InitKinBody(pbody);
         // send all the changed callbacks of the body since anything could have changed
         pbody->_PostprocessChangedParameters(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic&~KinBody::Prop_BodyRemoved);
@@ -785,6 +789,10 @@ public:
         }
         robot->_ComputeInternalInformation(); // have to do this after _vecrobots is added since SensorBase::SetName can call EnvironmentBase::GetSensor to initialize itself
         _pCurrentChecker->InitKinBody(robot);
+        if( !!robot->GetSelfCollisionChecker() && robot->GetSelfCollisionChecker() != _pCurrentChecker ) {
+            // also initialize external collision checker if specified for this body
+            robot->GetSelfCollisionChecker()->InitKinBody(robot);
+        }
         _pPhysicsEngine->InitKinBody(robot);
         // send all the changed callbacks of the body since anything could have changed
         robot->_PostprocessChangedParameters(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic&~KinBody::Prop_BodyRemoved);
@@ -901,7 +909,7 @@ public:
     virtual UserDataPtr RegisterBodyCallback(const BodyCallbackFn& callback)
     {
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-        BodyCallbackDataPtr pdata(new BodyCallbackData(callback,boost::dynamic_pointer_cast<Environment>(shared_from_this())));
+        BodyCallbackDataPtr pdata(new BodyCallbackData(callback,boost::static_pointer_cast<Environment>(shared_from_this())));
         pdata->_iterator = _listRegisteredBodyCallbacks.insert(_listRegisteredBodyCallbacks.end(),pdata);
         return pdata;
     }
@@ -973,7 +981,7 @@ public:
     virtual UserDataPtr RegisterCollisionCallback(const CollisionCallbackFn& callback)
     {
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-        CollisionCallbackDataPtr pdata(new CollisionCallbackData(callback,boost::dynamic_pointer_cast<Environment>(shared_from_this())));
+        CollisionCallbackDataPtr pdata(new CollisionCallbackData(callback,boost::static_pointer_cast<Environment>(shared_from_this())));
         pdata->_iterator = _listRegisteredCollisionCallbacks.insert(_listRegisteredCollisionCallbacks.end(),pdata);
         return pdata;
     }
@@ -1211,10 +1219,10 @@ public:
         }
     }
 
-    virtual void Triangulate(TriMesh& trimesh, KinBodyConstPtr pbody)
+    virtual void Triangulate(TriMesh& trimesh, const KinBody &body)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());     // reading collision data, so don't want anyone modifying it
-        FOREACHC(it, pbody->GetLinks()) {
+        FOREACHC(it, body.GetLinks()) {
             trimesh.Append((*it)->GetCollisionData(), (*it)->GetTransform());
         }
     }
@@ -1230,26 +1238,26 @@ public:
             switch(options) {
             case SO_NoRobots:
                 if( !robot ) {
-                    Triangulate(trimesh, *itbody);
+                    Triangulate(trimesh, **itbody);
                 }
                 break;
 
             case SO_Robots:
                 if( !!robot ) {
-                    Triangulate(trimesh, *itbody);
+                    Triangulate(trimesh, **itbody);
                 }
                 break;
             case SO_Everything:
-                Triangulate(trimesh, *itbody);
+                Triangulate(trimesh, **itbody);
                 break;
             case SO_Body:
                 if( (*itbody)->GetName() == selectname ) {
-                    Triangulate(trimesh, *itbody);
+                    Triangulate(trimesh, **itbody);
                 }
                 break;
             case SO_AllExceptBody:
                 if( (*itbody)->GetName() != selectname ) {
-                    Triangulate(trimesh, *itbody);
+                    Triangulate(trimesh, **itbody);
                 }
                 break;
 //            case SO_BodyList:
@@ -2115,7 +2123,7 @@ public:
             }
             for ( size_t ibody = 0; ibody < _vPublishedBodies.size(); ++ibody) {
                 if ( strncmp(_vPublishedBodies[ibody].strname.c_str(), prefix.c_str(), prefix.size()) == 0 ) {
-                    nameTransfPairs.push_back(std::make_pair(_vPublishedBodies[ibody].strname, _vPublishedBodies[ibody].vectrans.at(0)));
+                    nameTransfPairs.emplace_back(_vPublishedBodies[ibody].strname,  _vPublishedBodies[ibody].vectrans.at(0));
                 }
             }
         }
@@ -2131,7 +2139,7 @@ public:
             }
             for ( size_t ibody = 0; ibody < _vPublishedBodies.size(); ++ibody) {
                 if ( strncmp(_vPublishedBodies[ibody].strname.c_str(), prefix.c_str(), prefix.size()) == 0 ) {
-                    nameTransfPairs.push_back(std::make_pair(_vPublishedBodies[ibody].strname, _vPublishedBodies[ibody].vectrans.at(0)));
+                    nameTransfPairs.emplace_back(_vPublishedBodies[ibody].strname,  _vPublishedBodies[ibody].vectrans.at(0));
                 }
             }
         }
@@ -2173,6 +2181,7 @@ public:
             KinBody::BodyState& state = _vPublishedBodies.back();
             state.pbody = *itbody;
             (*itbody)->GetLinkTransformations(state.vectrans, vdoflastsetvalues);
+            (*itbody)->GetLinkEnableStates(state.vLinkEnableStates);
             (*itbody)->GetDOFValues(state.jointvalues);
             state.strname =(*itbody)->GetName();
             state.uri = (*itbody)->GetURI();
@@ -2186,6 +2195,7 @@ public:
                         state.activeManipulatorName = pmanip->GetName();
                         state.activeManipulatorTransform = pmanip->GetTransform();
                     }
+                    probot->GetConnectedBodyActiveStates(state.vConnectedBodyActiveStates);
                 }
             }
             _vPublishedBodies.push_back(state);
@@ -2212,9 +2222,10 @@ protected:
     {
         // before deleting, make sure no robots are grabbing it!!
         FOREACH(itrobot, _vecrobots) {
-            if( (*itrobot)->IsGrabbing(*it) ) {
-                RAVELOG_WARN("destroy %s already grabbed by robot %s!\n", (*it)->GetName().c_str(), (*itrobot)->GetName().c_str());
-                (*itrobot)->Release(*it);
+            KinBody &body = **it;
+            if( (*itrobot)->IsGrabbing(body) ) {
+                RAVELOG_WARN_FORMAT("env=%d, remove %s already grabbed by robot %s!", GetId()%body.GetName()%(*itrobot)->GetName());
+                (*itrobot)->Release(body);
             }
         }
 
@@ -2615,7 +2626,7 @@ protected:
         listViewers.clear();
 
         if( !bCheckSharedResources ) {
-            if( _bEnableSimulation ) {
+            if( !!_threadSimulation && _bEnableSimulation ) {
                 _StartSimulationThread();
             }
         }
@@ -2684,6 +2695,7 @@ protected:
         boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
         _mapBodies.erase(pbody->_environmentid);
         pbody->_environmentid = 0;
+        pbody->_DeinitializeInternalInformation();
     }
 
     void _StartSimulationThread()

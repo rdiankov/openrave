@@ -291,7 +291,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
                             log.info(u'computing hull for link %d/%d geom %d/%d: vertices=%d, indices=%d',il,len(links), ig, len(geometries), len(trimesh.vertices), len(trimesh.indices))
                             orghulls = [self.ComputePaddedConvexHullFromTriMesh(trimesh,padding)]
                         else:
-                            log.info(u'computing decomposition for link %d/%d geom %d/%d',il,len(links), ig, len(geometries))
+                            log.info(u'computing decomposition for link %d/%d geom %d/%d type %s',il,len(links), ig, len(geometries), geom.GetType())
                             orghulls = self.ComputePaddedConvexDecompositionFromTriMesh(trimesh,padding)
                         cdhulls = []
                         for hull in orghulls:
@@ -497,16 +497,18 @@ class ConvexDecompositionModel(DatabaseGenerator):
                         break
         return inside
 
-    def GetGeometryInfosFromLink(self,ilink,preservetransform=False):
+    def GetGeometryInfosFromLink(self,ilink,preservetransform=False,color=None):
         """gets a list of geometries for the link
         :param preservetransform: if True, will set the same geometry transform as the original geometry. Otherwise will pre-multiply with the new trimesh.
         """
+        if color is None:
+            color = [0,0,0.4]
         with self.env:
             geometryinfos = []
             geometries = self.robot.GetLinks()[ilink].GetGeometries()
             for ig,hulls in self.linkgeometry[ilink]:
                 ginfo = KinBody.GeometryInfo()
-                ginfo._vDiffuseColor = [0,0,0.4]
+                ginfo._vDiffuseColor = color
                 ginfo._type = GeometryType.Trimesh
                 ginfo._meshcollision = TriMesh()
                 if preservetransform:

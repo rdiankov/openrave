@@ -26,7 +26,7 @@ using namespace ikfast;
 
 // check if the included ikfast version matches what this file was compiled with
 #define IKFAST_COMPILE_ASSERT(x) extern int __dummy[(int)x]
-IKFAST_COMPILE_ASSERT(IKFAST_VERSION==0x10000048);
+IKFAST_COMPILE_ASSERT(IKFAST_VERSION==0x1000004b);
 
 #include <cmath>
 #include <vector>
@@ -316,7 +316,7 @@ eerot[2]=((-1.0)*x2);
 }
 
 IKFAST_API int GetNumFreeParameters() { return 1; }
-IKFAST_API int* GetFreeParameters() { static int freeparams[] = {0}; return freeparams; }
+IKFAST_API const int* GetFreeIndices() { static const int freeindices[] = {0}; return freeindices; }
 IKFAST_API int GetNumJoints() { return 3; }
 
 IKFAST_API int GetIkRealSize() { return sizeof(IkReal); }
@@ -758,7 +758,7 @@ IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, std::istream& sinput, co
     ikfunctions->_ComputeIk = IKFAST_NAMESPACE::ComputeIk;
     ikfunctions->_ComputeFk = IKFAST_NAMESPACE::ComputeFk;
     ikfunctions->_GetNumFreeParameters = IKFAST_NAMESPACE::GetNumFreeParameters;
-    ikfunctions->_GetFreeParameters = IKFAST_NAMESPACE::GetFreeParameters;
+    ikfunctions->_GetFreeIndices = IKFAST_NAMESPACE::GetFreeIndices;
     ikfunctions->_GetNumJoints = IKFAST_NAMESPACE::GetNumJoints;
     ikfunctions->_GetIkRealSize = IKFAST_NAMESPACE::GetIkRealSize;
     ikfunctions->_GetIkFastVersion = IKFAST_NAMESPACE::GetIkFastVersion;

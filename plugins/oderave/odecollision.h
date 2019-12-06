@@ -58,7 +58,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
             RobotBaseConstPtr probot = OpenRAVE::RaveInterfaceConstCast<RobotBase>(_pbody);
             if( pbody != _pbody ) {
                 // pbody could be attached to a robot's link that is not active!
-                KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(pbody);
+                KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*pbody);
                 if( !pgrabbinglink ) {
                     return true;
                 }
@@ -104,10 +104,10 @@ private:
     };
 
     inline boost::shared_ptr<ODECollisionChecker> shared_checker() {
-        return boost::dynamic_pointer_cast<ODECollisionChecker>(shared_from_this());
+        return boost::static_pointer_cast<ODECollisionChecker>(shared_from_this());
     }
     inline boost::shared_ptr<ODECollisionChecker const> shared_checker_const() const {
-        return boost::dynamic_pointer_cast<ODECollisionChecker const>(shared_from_this());
+        return boost::static_pointer_cast<ODECollisionChecker const>(shared_from_this());
     }
 
 public:
@@ -160,8 +160,9 @@ public:
     virtual void SetTolerance(OpenRAVE::dReal tolerance) {
     }
 
-    virtual void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname)
+    virtual bool SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname)
     {
+        return false;
     }
 
     const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const
@@ -245,7 +246,7 @@ public:
         if(( pbody2->GetLinks().size() == 0) || !pbody2->IsEnabled() ) {
             return false;
         }
-        if( pbody1->IsAttached(pbody2) ) {
+        if( pbody1->IsAttached(*pbody2) ) {
             return false;
         }
         if( _options & OpenRAVE::CO_Distance ) {
@@ -452,7 +453,7 @@ public:
             //RAVELOG_VERBOSE("calling collision on disabled link %s\n", plink->GetName().c_str());
             return false;
         }
-        if( pbody->IsAttached(plink->GetParent()) ) {
+        if( pbody->IsAttached(*plink->GetParent())) {
             return false;
         }
         if( _options & OpenRAVE::CO_Distance ) {
@@ -868,7 +869,7 @@ private:
         }
 
         // only recurse two spaces if exactly one of them is attached to _pbody
-        if( !!pbody1 && !!pbody2 &&( pcb->_pbody->IsAttached(pbody1) == pcb->_pbody->IsAttached(pbody2)) ) {
+        if( !!pbody1 && !!pbody2 &&( pcb->_pbody->IsAttached(*pbody1) == pcb->_pbody->IsAttached(*pbody2)) ) {
             return;
         }
         if (dGeomIsSpace(o1) || dGeomIsSpace(o2)) {
@@ -913,7 +914,7 @@ private:
 
         // redundant but necessary for some versions of ODE
         if( !!pkb1 && !!pkb2 ) {
-            if( pkb1->GetParent()->IsAttached(KinBodyConstPtr(pkb2->GetParent())) ) {
+            if( pkb1->GetParent()->IsAttached(*pkb2->GetParent())) {
                 return;
             }
             if( !!pcb->pvbodyexcluded ) {
@@ -939,7 +940,7 @@ private:
                 _report.plink1 = pkb1;
                 _report.plink2 = pkb2;
                 if( !!pkb1 && !!pkb2 ) {
-                    _report.vLinkColliding.push_back(std::make_pair(pkb1, pkb2));
+                    _report.vLinkColliding.emplace_back(pkb1,  pkb2);
                 }
                 if( !pkb1 || !pkb2 ) {
                     RAVELOG_WARN("one of the links is not specified\n");
@@ -1042,7 +1043,7 @@ private:
                 return;
             }
         }
-        if( !!pkb1 && !!pkb2 && pkb1->GetParent()->IsAttached(KinBodyConstPtr(pkb2->GetParent())) ) {
+        if( !!pkb1 && !!pkb2 && pkb1->GetParent()->IsAttached(*pkb2->GetParent())) {
             return;
         }
 
@@ -1056,7 +1057,7 @@ private:
                 _report.plink1 = pkb1;
                 _report.plink2 = pkb2;
                 if( !!pkb1 && !!pkb2 ) {
-                    _report.vLinkColliding.push_back(std::make_pair(pkb1, pkb2));
+                    _report.vLinkColliding.emplace_back(pkb1,  pkb2);
                 }
 
                 if( _options & OpenRAVE::CO_Contacts ) {
@@ -1141,13 +1142,13 @@ private:
         }
         if( dGeomIsSpace(o1) ) {
             BOOST_ASSERT(!!o1data);
-            if(( pbody != o1data->GetBody()) && pbody->IsAttached(KinBodyConstPtr(o1data->GetBody())) ) {
+            if(( pbody != o1data->GetBody()) && pbody->IsAttached(*o1data->GetBody()) ) {
                 return;
             }
         }
         if( dGeomIsSpace(o2) ) {
             BOOST_ASSERT(!!o2data);
-            if(( pbody != o2data->GetBody()) && pbody->IsAttached(KinBodyConstPtr(o2data->GetBody())) ) {
+            if(( pbody != o2data->GetBody()) && pbody->IsAttached(*o2data->GetBody())) {
                 return;
             }
         }
@@ -1176,7 +1177,7 @@ private:
             }
         }
 
-        if( !!pkb1 && !!pkb2 && pkb1->GetParent()->IsAttached(KinBodyConstPtr(pkb2->GetParent())) ) {
+        if( !!pkb1 && !!pkb2 && pkb1->GetParent()->IsAttached(*pkb2->GetParent())) {
             return;
         }
 
@@ -1190,7 +1191,7 @@ private:
                     _report.plink1 = pcb->_plink;
                     _report.plink2 = pkb1 != pcb->_plink ? pkb1 : pkb2;
                     if( !!_report.plink1 && !!_report.plink2 ) {
-                        _report.vLinkColliding.push_back(std::make_pair(_report.plink1, _report.plink2));
+                        _report.vLinkColliding.emplace_back(_report.plink1,  _report.plink2);
                     }
                     dGeomID checkgeom1 = pkb1 == pcb->_plink ? o1 : o2;
                     checkgeom1 = dGeomGetClass(checkgeom1) == dGeomTransformClass ? dGeomTransformGetGeom(checkgeom1) : checkgeom1;

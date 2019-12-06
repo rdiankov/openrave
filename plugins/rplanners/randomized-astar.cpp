@@ -344,23 +344,21 @@ Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf
         return true;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         if( !_parameters ) {
-            return PS_Failed;
+            return PlannerStatus(PS_Failed);
         }
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        Destroy();
 
         RobotBase::RobotStateSaver saver(_robot);
         Node* pcurrent=NULL, *pbest = NULL;
 
         if( _parameters->CheckPathAllConstraints(_parameters->vinitialconfig,_parameters->vinitialconfig,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) != 0 ) {
-            return PS_Failed;
+            return PlannerStatus(PS_Failed);
         }
 
         if( _parameters->SetStateValues(_parameters->vinitialconfig) != 0 ) {
-            return PS_Failed;
+            return PlannerStatus(PS_Failed);
         }
         pcurrent = CreateNode(0, NULL, _parameters->vinitialconfig);
 
@@ -431,7 +429,7 @@ Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf
         }
 
         if( !pbest ) {
-            return PS_Failed;
+            return PlannerStatus(PS_Failed);
         }
 
         RAVELOG_DEBUG("Path found, final node: %f, %f\n", pbest->fcost, pbest->ftotal-pbest->fcost);
@@ -471,7 +469,7 @@ Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf
         }
 
         _ProcessPostPlanners(_robot,ptraj);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     int GetTotalNodes() {

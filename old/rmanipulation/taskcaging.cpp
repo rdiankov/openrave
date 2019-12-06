@@ -744,10 +744,10 @@ private:
     };
 
     inline boost::shared_ptr<TaskCaging> shared_problem() {
-        return boost::dynamic_pointer_cast<TaskCaging>(shared_from_this());
+        return boost::static_pointer_cast<TaskCaging>(shared_from_this());
     }
     inline boost::shared_ptr<TaskCaging const> shared_problem_const() const {
-        return boost::dynamic_pointer_cast<TaskCaging const>(shared_from_this());
+        return boost::static_pointer_cast<TaskCaging const>(shared_from_this());
     }
 
 public:
@@ -954,7 +954,7 @@ private:
         uint32_t basetime = utils::GetMilliTime();
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
 
-        if( !planner->PlanPath(ptraj) ) {
+        if( !planner->PlanPath(ptraj).GetStatusCode() ) {
             RAVELOG_WARN("failed to plan\n");
             return false;
         }
@@ -1307,7 +1307,7 @@ private:
                 return false;
 
             RAVELOG_WARN("planning a caging grasp...\n");
-            if( !pra->PlanPath(ptrajtemp) ) {
+            if( !pra->PlanPath(ptrajtemp).GetStatusCode() ) {
                 RAVELOG_WARN("planner failure, time = %dms\n", utils::GetMilliTime()-basetime);
                 return false;
             }

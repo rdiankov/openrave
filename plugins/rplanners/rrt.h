@@ -256,10 +256,10 @@ protected:
     std::vector< NodeBase* > _vecInitialNodes;
 
     inline boost::shared_ptr<RrtPlanner> shared_planner() {
-        return boost::dynamic_pointer_cast<RrtPlanner>(shared_from_this());
+        return boost::static_pointer_cast<RrtPlanner>(shared_from_this());
     }
     inline boost::shared_ptr<RrtPlanner const> shared_planner_const() const {
-        return boost::dynamic_pointer_cast<RrtPlanner const>(shared_from_this());
+        return boost::static_pointer_cast<RrtPlanner const>(shared_from_this());
     }
 };
 
@@ -329,7 +329,7 @@ Some python code to display data::\n\
                 _nValidGoals++;
             }
             else {
-                RAVELOG_WARN_FORMAT("goal %d fails constraints with 0x%x", igoal%ret);
+                RAVELOG_WARN_FORMAT("env=%d, goal %d fails constraints with 0x%x", GetEnv()->GetId()%igoal%ret);
                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
                     int ret = _parameters->CheckPathAllConstraints(vgoal,vgoal,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart);
                 }
@@ -351,17 +351,16 @@ Some python code to display data::\n\
         if( _vgoalpaths.capacity() < _parameters->_minimumgoalpaths ) {
             _vgoalpaths.reserve(_parameters->_minimumgoalpaths);
         }
-        RAVELOG_DEBUG_FORMAT("env=%d BiRRT Planner Initialized, initial=%d, goal=%d, step=%f", GetEnv()->GetId()%_vecInitialNodes.size()%_treeBackward.GetNumNodes()%_parameters->_fStepLength);
+        RAVELOG_DEBUG_FORMAT("env=%d, BiRRT Planner Initialized, initial=%d, goal=%d, step=%f", GetEnv()->GetId()%_vecInitialNodes.size()%_treeBackward.GetNumNodes()%_parameters->_fStepLength);
         return true;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         _goalindex = -1;
         _startindex = -1;
         if(!_parameters) {
-            RAVELOG_ERROR("BirrtPlanner::PlanPath - Error, planner not initialized\n");
-            return PS_Failed;
+            return PlannerStatus("BirrtPlanner::PlanPath - Error, planner not initialized\n", PS_Failed);
         }
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -386,7 +385,7 @@ Some python code to display data::\n\
             // have to check callbacks at the beginning since code can continue
             callbackaction = _CallCallbacks(progress);
             if( callbackaction ==  PA_Interrupt ) {
-                return PS_Interrupted;
+                return PlannerStatus("Planning was interrupted", PS_Interrupted);
             }
             else if( callbackaction == PA_ReturnWithAnySolution ) {
                 if( _vgoalpaths.size() > 0 ) {
@@ -397,16 +396,16 @@ Some python code to display data::\n\
             if( _parameters->_nMaxPlanningTime > 0 ) {
                 uint32_t elapsedtime = utils::GetMilliTime()-basetime;
                 if( elapsedtime >= _parameters->_nMaxPlanningTime ) {
-                    RAVELOG_DEBUG_FORMAT("time exceeded (%dms) so breaking. iter=%d < %d", elapsedtime%(iter/3)%_parameters->_nMaxIterations);
+                    RAVELOG_DEBUG_FORMAT("env=%d, time exceeded (%dms) so breaking. iter=%d < %d", GetEnv()->GetId()%elapsedtime%(iter/3)%_parameters->_nMaxIterations);
                     break;
                 }
             }
 
-            
+
             if( !!_parameters->_samplegoalfn ) {
                 vector<dReal> vgoal;
                 if( _parameters->_samplegoalfn(vgoal) ) {
-                    RAVELOG_VERBOSE(str(boost::format("inserting new goal index %d")%_vecGoalNodes.size()));
+                    RAVELOG_VERBOSE(str(boost::format("env=%d, inserting new goal index %d")%GetEnv()->GetId()%_vecGoalNodes.size()));
                     _vecGoalNodes.push_back(_treeBackward.InsertNode(NULL, vgoal, _vecGoalNodes.size()));
                     _nValidGoals++;
                 }
@@ -414,7 +413,7 @@ Some python code to display data::\n\
             if( !!_parameters->_sampleinitialfn ) {
                 vector<dReal> vinitial;
                 if( _parameters->_sampleinitialfn(vinitial) ) {
-                    RAVELOG_VERBOSE(str(boost::format("inserting new initial %d")%_vecInitialNodes.size()));
+                    RAVELOG_VERBOSE(str(boost::format("env=%d, inserting new initial %d")%GetEnv()->GetId()%_vecInitialNodes.size()));
                     _vecInitialNodes.push_back(_treeForward.InsertNode(NULL,vinitial, _vecInitialNodes.size()));
                 }
             }
@@ -477,11 +476,15 @@ Some python code to display data::\n\
                 int startindex = _vgoalpaths.back().startindex;
                 if( IS_DEBUGLEVEL(Level_Debug) ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                    ss << "env=" << GetEnv()->GetId() << ", found a goal, start index=" << startindex << " goal index=" << goalindex << ", path length=" << _vgoalpaths.back().length << ", values=[";
+                    ss << "env=" << GetEnv()->GetId() << ", found a goal, start index=" << startindex << " goal index=" << goalindex << ", path length=" << _vgoalpaths.back().length << ", startvalues=[";
+                    for(int i = 0; i < _parameters->GetDOF(); ++i) {
+                        ss << _vgoalpaths.back().qall.at(i) << ", ";
+                    }
+                    ss << "]; goalvalues=[";
                     for(int i = 0; i < _parameters->GetDOF(); ++i) {
                         ss << _vgoalpaths.back().qall.at(_vgoalpaths.back().qall.size()-_parameters->GetDOF()+i) << ", ";
                     }
-                    ss << "]";
+                    ss << "];";
                     RAVELOG_DEBUG(ss.str());
                 }
                 if( _vgoalpaths.size() >= _parameters->_minimumgoalpaths || _vgoalpaths.size() >= _nValidGoals ) {
@@ -495,7 +498,7 @@ Some python code to display data::\n\
             swap(TreeA, TreeB);
             iter += 3;
             if( iter > 3*_parameters->_nMaxIterations ) {
-                RAVELOG_WARN_FORMAT("iterations exceeded %d", _parameters->_nMaxIterations);
+                RAVELOG_WARN_FORMAT("env=%d, iterations exceeded %d", GetEnv()->GetId()%_parameters->_nMaxIterations);
                 break;
             }
 
@@ -503,8 +506,9 @@ Some python code to display data::\n\
         }
 
         if( _vgoalpaths.size() == 0 ) {
-            RAVELOG_WARN_FORMAT("Plan failed in %fs, iter=%d, nMaxIterations=%d",(0.001f*(float)(utils::GetMilliTime()-basetime))%(iter/3)%_parameters->_nMaxIterations);
-            return PS_Failed;
+            std::string description = str(boost::format(_("env=%d, plan failed in %fs, iter=%d, nMaxIterations=%d"))%GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime))%(iter/3)%_parameters->_nMaxIterations);
+            RAVELOG_WARN(description);
+            return PlannerStatus(description, PS_Failed);
         }
 
         vector<GOALPATH>::iterator itbest = _vgoalpaths.begin();
@@ -519,8 +523,12 @@ Some python code to display data::\n\
             ptraj->Init(_parameters->_configurationspecification);
         }
         ptraj->Insert(ptraj->GetNumWaypoints(), itbest->qall, _parameters->_configurationspecification);
-        RAVELOG_DEBUG_FORMAT("env=%d, plan success, iters=%d, path=%d points, computation time=%fs\n", GetEnv()->GetId()%progress._iteration%ptraj->GetNumWaypoints()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
-        return _ProcessPostPlanners(_robot,ptraj);
+        std::string description = str(boost::format(_("env=%d, plan success, iters=%d, path=%d points, computation time=%fs\n"))%GetEnv()->GetId()%progress._iteration%ptraj->GetNumWaypoints()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
+        RAVELOG_DEBUG(description);
+        PlannerStatus status = _ProcessPostPlanners(_robot,ptraj);
+        //TODO should use accessor to change description
+        status.description = description;
+        return status;
     }
 
     virtual void _ExtractPath(GOALPATH& goalpath, NodeBase* iConnectedForward, NodeBase* iConnectedBackward)
@@ -715,11 +723,12 @@ public:
         return true;
     }
 
-    PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         if(!_parameters) {
-            RAVELOG_WARN("RrtPlanner::PlanPath - Error, planner not initialized\n");
-            return PS_Failed;
+            std::string description = "RrtPlanner::PlanPath - Error, planner not initialized\n";
+            RAVELOG_WARN(description);
+            return PlannerStatus(description, PS_Failed);
         }
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -741,7 +750,7 @@ public:
         _startindex = -1;
 
         int numfoundgoals = 0;
-        
+
         while(iter < _parameters->_nMaxIterations) {
             iter++;
             if( !!bestGoalNode && iter >= _parameters->_nMinIterations ) {
@@ -830,7 +839,7 @@ public:
                 if( bfound ) {
                     if( iter >= _parameters->_nMinIterations ) {
                         // check how many times we've got a goal?
-                        if( numfoundgoals >= _parameters->_minimumgoalpaths ) {
+                        if( numfoundgoals >= (int)_parameters->_minimumgoalpaths ) {
                             break;
                         }
                     }
@@ -854,7 +863,7 @@ public:
             progress._iteration = iter;
             callbackaction = _CallCallbacks(progress);
             if( callbackaction ==  PA_Interrupt ) {
-                return PS_Interrupted;
+                return PlannerStatus(PS_Interrupted);
             }
             else if( callbackaction == PA_ReturnWithAnySolution ) {
                 if( !!bestGoalNode ) {
@@ -864,8 +873,9 @@ public:
         }
 
         if( !bestGoalNode ) {
-            RAVELOG_DEBUG_FORMAT("plan failed, %fs",(0.001f*(float)(utils::GetMilliTime()-basetime)));
-            return PS_Failed;
+            std::string description = str(boost::format("env=%d, plan failed, %fs")%GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
+            RAVELOG_DEBUG(description);
+            return PlannerStatus(description, PS_Failed);
         }
 
         const int dof = _parameters->GetDOF();
@@ -937,12 +947,12 @@ public:
         return true;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         _goalindex = -1;
         _startindex = -1;
         if( !_parameters ) {
-            return PS_Failed;
+            return PlannerStatus(PS_Failed);
         }
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         vector<dReal> vSampleConfig;
@@ -988,7 +998,7 @@ public:
         FOREACH(itnode, vnodes) {
             ptraj->Insert(ptraj->GetNumWaypoints(), _treeForward.GetVectorConfig(*itnode), _parameters->_configurationspecification);
         }
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     virtual PlannerParametersConstPtr GetParameters() const {

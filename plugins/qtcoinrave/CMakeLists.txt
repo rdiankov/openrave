@@ -12,6 +12,11 @@ if(NOT OPENGL_FOUND)
   message(STATUS "WARNING: OpenGL not found. This library is not necessary, but it is good to link with")
 endif()
 
+find_package(Qt4 COMPONENTS QtCore QtGui QtDeclarative)
+if (NOT QT_FOUND)
+  message(STATUS "WARNING: Qt4 not found, is your QTDIR enviornment variable set?")
+endif()
+
 if (QT_FOUND AND QT_QTCORE_FOUND AND QT_QTGUI_FOUND AND SOQT_LIBRARY_FOUND AND COIN_LIBRARY_FOUND)
   message(STATUS "Detected SoQt/Coin3D GUI, making plugin")
   include_directories(${OPENGL_INCLUDE_DIR} ${SOQT_INCLUDE_DIRS} ${COIN_INCLUDE_DIRS})

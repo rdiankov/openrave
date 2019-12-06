@@ -1,7 +1,7 @@
 ###########################################
 # rmanipulation openrave plugin
 ###########################################
-add_library(rmanipulation SHARED rmanipulation.cpp basemanipulation.cpp    plugindefs.h  taskmanipulation.cpp commonmanipulation.h  taskcaging.cpp  visualfeedback.cpp)
+add_library(rmanipulation SHARED rmanipulation.cpp basemanipulation.cpp    plugindefs.h  taskmanipulation.cpp commonmanipulation.h  visualfeedback.cpp)
 
 # check boost regex
 if( Boost_REGEX_FOUND )

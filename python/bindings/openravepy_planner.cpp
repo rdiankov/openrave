@@ -34,6 +34,48 @@ public:
     int _iteration;
 };
 
+
+class PyPlannerStatus
+{
+public:
+    PyPlannerStatus() {
+        statusCode = 0;
+        jointValues = numeric::array(boost::python::list());
+    }
+
+    PyPlannerStatus(const PlannerStatus& status) {
+        // Just serializeToJason?
+        description = ConvertStringToUnicode(status.description);
+        errorOrigin = ConvertStringToUnicode(status.errorOrigin);
+        statusCode = status.statusCode;
+        jointValues = toPyArray(status.jointValues);
+
+        if( !status.report ) {
+            //_report = "";
+            report = object();
+        }
+        else {
+            //_report = status._report->__str__();
+            report = object(openravepy::toPyCollisionReport(status.report, NULL));
+        }
+
+        ikparam = toPyIkParameterization(status.ikparam);
+    }
+
+    object report;
+    //std::string _report;
+    object description;
+    object errorOrigin;
+    object jointValues;
+    object ikparam;
+    uint32_t statusCode;
+};
+
+object toPyPlannerStatus(const PlannerStatus& status)
+{
+    return object(boost::shared_ptr<PyPlannerStatus>(new PyPlannerStatus(status)));
+}
+
 class PyPlannerBase : public PyInterfaceBase
 {
 protected:
@@ -133,7 +175,7 @@ public:
         {
             _paramswrite->_nMaxIterations = nMaxIterations;
         }
-        
+
         object CheckPathAllConstraints(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval, uint32_t options=0xffff, bool filterreturn=false)
         {
             const std::vector<dReal> q0, q1, dq0, dq1;
@@ -208,14 +250,16 @@ public:
         return _pplanner->InitPlan(openravepy::GetRobot(pbase),ss);
     }
 
-    PlannerStatus PlanPath(PyTrajectoryBasePtr pytraj,bool releasegil=true)
+    object PlanPath(PyTrajectoryBasePtr pytraj,bool releasegil=true)
     {
         openravepy::PythonThreadSaverPtr statesaver;
         TrajectoryBasePtr ptraj = openravepy::GetTrajectory(pytraj);
         if( releasegil ) {
             statesaver.reset(new openravepy::PythonThreadSaver());
         }
-        return _pplanner->PlanPath(ptraj);
+        PlannerStatus status = _pplanner->PlanPath(ptraj);
+        statesaver.reset(); // unlock
+        return openravepy::toPyPlannerStatus(status);
     }
 
     PyPlannerParametersPtr GetParameters() const
@@ -326,11 +370,12 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckPathAllConstraints_overloads, CheckP
 
 void init_openravepy_planner()
 {
-    object plannerstatus = enum_<PlannerStatus>("PlannerStatus" DOXY_ENUM(PlannerStatus))
-                           .value("Failed",PS_Failed)
-                           .value("HasSolution",PS_HasSolution)
-                           .value("Interrupted",PS_Interrupted)
-                           .value("InterruptedWithSolution",PS_InterruptedWithSolution)
+
+    object plannerstatuscode = enum_<PlannerStatusCode>("PlannerStatusCode" DOXY_ENUM(PlannerStatusCode))
+                               .value("Failed",PS_Failed)
+                               .value("HasSolution",PS_HasSolution)
+                               .value("Interrupted",PS_Interrupted)
+                               .value("InterruptedWithSolution",PS_InterruptedWithSolution)
     ;
 
     object planneraction = enum_<PlannerAction>("PlannerAction" DOXY_ENUM(PlannerAction))
@@ -338,6 +383,16 @@ void init_openravepy_planner()
                            .value("Interrupt",PA_Interrupt)
                            .value("ReturnWithAnySolution",PA_ReturnWithAnySolution)
     ;
+
+    class_<PyPlannerStatus, boost::shared_ptr<PyPlannerStatus> >("PlannerStatus", DOXY_CLASS(PlannerStatus))
+    .def_readwrite("report",&PyPlannerStatus::report)
+    .def_readwrite("description",&PyPlannerStatus::description)
+    .def_readwrite("errorOrigin",&PyPlannerStatus::errorOrigin)
+    .def_readwrite("jointValues",&PyPlannerStatus::jointValues)
+    .def_readwrite("ikparam",&PyPlannerStatus::ikparam)
+    .def_readwrite("statusCode",&PyPlannerStatus::statusCode)
+    ;
+
     class_<PyPlannerProgress, boost::shared_ptr<PyPlannerProgress> >("PlannerProgress", DOXY_CLASS(PlannerBase::PlannerProgress))
     .def_readwrite("_iteration",&PyPlannerProgress::_iteration)
     ;
