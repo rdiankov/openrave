@@ -310,7 +310,7 @@ void init_openravepy_iksolver()
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals;  // "..."_a
-    enum_<IkFilterOptions>(m, "IkFilterOptions" DOXY_ENUM(IkFilterOptions))
+    enum_<IkFilterOptions>(m, "IkFilterOptions", py::arithmetic() DOXY_ENUM(IkFilterOptions))
 #else
     enum_<IkFilterOptions>("IkFilterOptions" DOXY_ENUM(IkFilterOptions))
 #endif
