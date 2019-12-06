@@ -1566,6 +1566,13 @@ void init_openravepy_global()
                                            .def("ExtractIkParameterization",&PyConfigurationSpecification::ExtractIkParameterization,ExtractIkParameterization_overloads(PY_ARGS("data","timederivative","robotname","manipulatorname") DOXY_FN(ConfigurationSpecification,ExtractIkParameterization)))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+                                           .def("ExtractJointValues", &PyConfigurationSpecification::ExtractJointValues,
+                                                "data"_a,
+                                                "body"_a,
+                                                "indices"_a,
+                                                "timederivative"_a = 0,
+                                                DOXY_FN(ConfigurationSpecification,ExtractJointValues)
+                                            )
 #else
                                            .def("ExtractJointValues",&PyConfigurationSpecification::ExtractJointValues,ExtractJointValues_overloads(PY_ARGS("data","body","indices","timederivative") DOXY_FN(ConfigurationSpecification,ExtractJointValues)))
 #endif

@@ -4577,6 +4577,10 @@ void init_openravepy_kinbody()
 #endif
                                .def("GetBody",&PyKinBodyStateSaver::GetBody,DOXY_FN(KinBody::KinBodyStateSaver, GetBody))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+                               .def("Restore", &PyKinBodyStateSaver::Restore,
+                                    "body"_a = py::none_(),
+                                    DOXY_FN(KinBody::KinBodyStateSaver, Restore)
+                                )
 #else
                                .def("Restore",&PyKinBodyStateSaver::Restore,Restore_overloads(PY_ARGS("body") DOXY_FN(KinBody::KinBodyStateSaver, Restore)))
 #endif
