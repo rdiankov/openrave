@@ -2894,11 +2894,13 @@ Because race conditions can pop up when trying to lock the openrave environment 
 
     {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        scope_ options = class_<DummyStruct>(m, "options").def_property_static
+        scope_ options = class_<DummyStruct>(m, "options").def_readwrite_static
+                        ("returnTransformQuaternion", &s_bReturnTransformQuaternions);
 #else
         scope_ options = class_<DummyStruct>("options").add_static_property
-#endif
                         ("returnTransformQuaternion",GetReturnTransformQuaternions,SetReturnTransformQuaternions);
+#endif
+
     }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
