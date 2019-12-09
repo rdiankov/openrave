@@ -2382,7 +2382,6 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     py::register_exception<openrave_exception>(m, "openrave_exception");
-
     m.
     def("GetOpenRAVEExceptionCode", [](const object& e) {
         // e is openravepy._openravepy_0_XXX.openravepy_int.openrave_exception
@@ -2402,20 +2401,10 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
         // _RAVE_DISPLAY(std::cout << errorstring;);
         return errorstring;
     })
+    .def("MyThrow", [] {
+        throw openrave_exception("experiment on openrave_exception with pybind11", ORE_InvalidArguments);
+    })
     ;
-
-    m.def("MyThrow", [] {
-        throw openrave_exception("points cannot be empty", ORE_InvalidArguments);
-    });
-    // class_< openrave_exception >( m, "_openrave_exception_", DOXY_CLASS(openrave_exception) )
-    // .def(init<>())
-    // .def(init<const std::string&, OpenRAVEErrorCode>(), "s"_a, "error"_a = (int) ORE_Failed)
-    // .def( "message", &openrave_exception::message )
-    // .def("GetCode", &openrave_exception::GetCode )
-    // .def( "__str__", &openrave_exception::message )
-    // .def( "__unicode__", get_openrave_exception_unicode)
-    // .def( "__repr__", get_openrave_exception_repr)
-    // ;
 #else
     class_< openrave_exception >( "_openrave_exception_", DOXY_CLASS(openrave_exception) )
     .def( init<const std::string&>() )
