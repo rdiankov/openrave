@@ -12,11 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from common_test_openrave import *
-
-# https://github.com/pybind/pybind11/issues/253
-def enum_to_dict(enum):
-    import re
-    return {k: v for k, v in enum.__dict__.iteritems() if not re.match("__(.*)__", str(k))}
+from openravepy.openravepy_ext import enum_to_dict
 
 class TestSampling(EnvironmentSetup):
     def _runsampler(self,samplername):
