@@ -22,6 +22,11 @@ except:
 import logging
 log = logging.getLogger('openravepy')
 
+# https://github.com/pybind/pybind11/issues/253
+def enum_to_dict(enum):
+    import re
+    return {k: v for k, v in enum.__dict__.iteritems() if not re.match("__(.*)__", str(k))}
+
 def KinBodyStateSaver(body,options=None):
     log.warn('use body.CreateKinBodyStateSaver instead of KinBodyStateSaver')
     return body.CreateKinBodyStateSaver(options)
