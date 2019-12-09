@@ -671,7 +671,6 @@ AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const
     TransformMatrix tglobal = tGeometryWorld * _t;
 
     switch(_type) {
->>>>>>> production
     case GT_None:
         ab.extents.x = 0;
         ab.extents.y = 0;

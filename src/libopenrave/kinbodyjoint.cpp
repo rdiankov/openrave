@@ -27,6 +27,8 @@ namespace OpenRAVE {
 // member, so need to disable deprecation warnings
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#pragma GCC diagnostic ignored "-Wno-deprecated"
+
 KinBody::JointInfo::JointInfo() :
     XMLReadable("joint"),
     _type(type),
@@ -39,6 +41,7 @@ KinBody::JointInfo::JointInfo() :
     _vresolution(resolutions),
     _vmaxvel(maxVel),
     _vhardmaxvel(hardMaxVel),
+    _vhardmaxaccel(hardMaxAccel),
     _vmaxaccel(maxAccel),
     _vmaxjerk(maxJerk),
     _vmaxtorque(maxTorque),
@@ -52,6 +55,7 @@ KinBody::JointInfo::JointInfo() :
     _mapIntParameters(intParameters),
     _mapStringParameters(stringParameters),
     _infoElectricMotor(electricMotorActuator),
+    _trajfollow(trajfollow),
     _bIsCircular(isCircular),
     _bIsActive(isActive)
 {
@@ -74,11 +78,6 @@ KinBody::JointInfo::JointInfo() :
     std::fill(isCircular.begin(), isCircular.end(), 0);
 }
 #pragma GCC diagnostic pop
-
-KinBody::JointInfo::JointInfo(const KinBody::JointInfo& other) : KinBody::JointInfo()
-{
-    *this = other;
-}
 
 KinBody::JointInfo::~JointInfo()
 {
@@ -104,11 +103,32 @@ KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& othe
     offsets = other.offsets;
     lowerLimit = other.lowerLimit;
     upperLimit = other.upperLimit;
-    mimic = other.mimic;
+
+    if(!other.trajfollow){
+        trajfollow.reset();
+    }
+    else {
+        trajfollow = RaveClone<TrajectoryBase>(other.trajfollow, Clone_All);
+    }
+
+    for(size_t i=0; i<mimic.size(); i++){
+        if(!other.mimic[i]) {
+            mimic[i].reset();
+        }
+        else {
+            mimic[i].reset(new MimicInfo(*(other.mimic[i])));
+        }
+    }
+
     floatParameters = other.floatParameters;
     intParameters = other.intParameters;
     stringParameters = other.stringParameters;
-    electricMotorActuator = other.electricMotorActuator;
+    if( !other.electricMotorActuator ) {
+        electricMotorActuator.reset();
+    }
+    else {
+        electricMotorActuator.reset(new ElectricMotorActuatorInfo(*other.electricMotorActuator));
+    }
     isCircular = other.isCircular;
     isActive = other.isActive;
 
@@ -311,65 +331,9 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value &value, const dR
     std::fill(_bIsCircular.begin(), _bIsCircular.end(), 0);
 }
 
-KinBody::JointInfo::JointInfo(const JointInfo& other) : XMLReadable("joint")
+KinBody::JointInfo::JointInfo(const JointInfo& other) : JointInfo()
 {
     *this = other;
-}
-
-KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& other)
-{
-    _type = other._type;
-    _name = other._name;
-    _linkname0 = other._linkname0;
-    _linkname1 = other._linkname1;
-    _vanchor = other._vanchor;
-    _vaxes = other._vaxes;
-    _vcurrentvalues = other._vcurrentvalues;
-    _vresolution = other._vresolution;
-    _vmaxvel = other._vmaxvel;
-    _vhardmaxvel = other._vhardmaxvel;
-    _vmaxaccel = other._vmaxaccel;
-    _vhardmaxaccel = other._vhardmaxaccel;
-    _vmaxjerk = other._vmaxjerk;
-    _vhardmaxjerk = other._vhardmaxjerk;
-    _vmaxtorque = other._vmaxtorque;
-    _vmaxinertia = other._vmaxinertia;
-    _vweights = other._vweights;
-    _voffsets = other._voffsets;
-    _vlowerlimit = other._vlowerlimit;
-    _vupperlimit = other._vupperlimit;
-
-    if( !other._trajfollow ) {
-        _trajfollow.reset();
-    }
-    else {
-        _trajfollow = RaveClone<TrajectoryBase>(other._trajfollow, Clone_All);
-    }
-
-    for( size_t i = 0; i < _vmimic.size(); ++i ) {
-        if( !other._vmimic[i] ) {
-            _vmimic[i].reset();
-        }
-        else {
-            _vmimic[i].reset(new MimicInfo(*(other._vmimic[i])));
-        }
-    }
-
-    _mapFloatParameters = other._mapFloatParameters;
-    _mapIntParameters = other._mapIntParameters;
-    _mapStringParameters = other._mapStringParameters;
-
-    if( !other._infoElectricMotor ) {
-        _infoElectricMotor.reset();
-    }
-    else {
-        _infoElectricMotor.reset(new ElectricMotorActuatorInfo(*other._infoElectricMotor));
-    }
-
-    _bIsCircular = other._bIsCircular;
-    _bIsActive = other._bIsActive;
-
-    return *this;
 }
 
 static void fparser_polyroots2(vector<dReal>& rawroots, const vector<dReal>& rawcoeffs)

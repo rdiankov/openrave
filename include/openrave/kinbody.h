@@ -182,9 +182,6 @@ public:
         /// \param fTessellation to control how fine the triangles need to be. 1.0f is the default value
         bool InitCollisionMesh(float fTessellation=1);
 
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
-        virtual void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale = 1);
-
         inline dReal GetSphereRadius() const {
             return _vGeomData.x;
         }
@@ -258,10 +255,7 @@ public:
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height
         ///< for trimesh, none
-
-        Vector _vGeomData2; ///< For containers, the first 3 values are the full inner extents.
-        Vector _vGeomData3; ///< For containers, the first 3 values is the bottom cross XY full extents and Z height from bottom face.
-
+        
         RaveVector<float> diffuseColor;
         RaveVector<float> ambientColor;
         RaveVector<float>& _vDiffuseColor RAVE_DEPRECATED; ///< hints for how to color the meshes
@@ -1005,6 +999,9 @@ public:
         boost::array<dReal,3> maxAccel; ///< the maximum acceleration (rad/s^2) of the joint
         boost::array<dReal,3>& _vmaxaccel RAVE_DEPRECATED; ///< the maximum acceleration (rad/s^2) of the joint
 
+        boost::array<dReal,3> hardMaxAccel;
+        boost::array<dReal,3>& _vhardmaxaccel RAVE_DEPRECATED;
+
         boost::array<dReal,3> maxJerk; ///< the maximum jerk (rad/s^3) of the joint
         boost::array<dReal,3> _vmaxjerk RAVE_DEPRECATED; ///< the maximum jerk (rad/s^3) of the joint
 
@@ -1029,13 +1026,13 @@ public:
         boost::array<dReal,3> offsets;
         boost::array<dReal,3>& _voffsets RAVE_DEPRECATED;
         
-
         boost::array<dReal,3> lowerLimit; ///< joint limits
         boost::array<dReal,3> upperLimit; ///< joint limits
         boost::array<dReal,3>& _vlowerlimit RAVE_DEPRECATED; ///< joint limits
         boost::array<dReal,3>& _vupperlimit RAVE_DEPRECATED; ///< joint limits
 
-        TrajectoryBasePtr _trajfollow; ///< used if joint type is JointTrajectory
+        TrajectoryBasePtr trajfollow;
+        TrajectoryBasePtr& _trajfollow RAVE_DEPRECATED; ///< used if joint type is JointTrajectory
 
         boost::array<MimicInfoPtr,3> mimic; ///< the mimic properties of each of the joint axes. It is theoretically possible for a multi-dof joint to have one axes mimiced and the others free. When cloning, is it ok to copy this and assume it is constant?
         boost::array<MimicInfoPtr,3>& _vmimic RAVE_DEPRECATED; ///< the mimic properties of each of the joint axes. It is theoretically possible for a multi-dof joint to have one axes mimiced and the others free. When cloning, is it ok to copy this and assume it is constant?

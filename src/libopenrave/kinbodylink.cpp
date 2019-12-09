@@ -49,15 +49,29 @@ KinBody::LinkInfo::LinkInfo(const KinBody::LinkInfo& other) : LinkInfo()
     *this = other;
 }
 
-KinBody::LinkInfo::~LinkInfo()
-{
-}
-
 KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& other)
 {
-    sid = other.sid;
-    geometries = other.geometries;
-    extraGeometries = other.extraGeometries;
+    geometries.resize(other.geometries.size());
+    for( size_t i = 0; i < geometries.size(); ++i ) {
+        if( !other.geometries[i] ) {
+            geometries[i].reset();
+        }
+        else {
+            geometries[i].reset(new GeometryInfo(*(other.geometries[i])));
+        }
+    }
+
+    extraGeometries.clear();
+    for( std::map< std::string, std::vector<GeometryInfoPtr> >::const_iterator it = other.extraGeometries.begin(); it != other.extraGeometries.end(); ++it ) {
+        extraGeometries[it->first] = std::vector<GeometryInfoPtr>(it->second.size());
+        std::vector<GeometryInfoPtr>& geometries = extraGeometries[it->first];
+        for( size_t i = 0; i < geometries.size(); ++i ) {
+            if( !!(it->second[i]) ) {
+                geometries[i].reset(new GeometryInfo(*(it->second[i])));
+            }
+        }
+    }
+
     name = other.name;
     transform = other.transform;
     massTransform = other.massTransform;
@@ -69,48 +83,6 @@ KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& other)
     forcedAdjacentLinks = other.forcedAdjacentLinks;
     isStatic = other.isStatic;
     isEnabled = other.isEnabled;
-    return *this;
-}
-
-KinBody::LinkInfo::LinkInfo(const LinkInfo& other) : XMLReadable("link")
-{
-    *this = other;
-}
-
-KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& other)
-{
-    _vgeometryinfos.resize(other._vgeometryinfos.size());
-    for( size_t i = 0; i < _vgeometryinfos.size(); ++i ) {
-        if( !other._vgeometryinfos[i] ) {
-            _vgeometryinfos[i].reset();
-        }
-        else {
-            _vgeometryinfos[i].reset(new GeometryInfo(*(other._vgeometryinfos[i])));
-        }
-    }
-
-    _mapExtraGeometries.clear();
-    for( std::map< std::string, std::vector<GeometryInfoPtr> >::const_iterator it = other._mapExtraGeometries.begin(); it != other._mapExtraGeometries.end(); ++it ) {
-        _mapExtraGeometries[it->first] = std::vector<GeometryInfoPtr>(it->second.size());
-        std::vector<GeometryInfoPtr>& extraGeometries = _mapExtraGeometries[it->first];
-        for( size_t i = 0; i < extraGeometries.size(); ++i ) {
-            if( !!(it->second[i]) ) {
-                extraGeometries[i].reset(new GeometryInfo(*(it->second[i])));
-            }
-        }
-    }
-
-    _name = other._name;
-    _t = other._t;
-    _tMassFrame = other._tMassFrame;
-    _mass = other._mass;
-    _vinertiamoments = other._vinertiamoments;
-    _mapFloatParameters = other._mapFloatParameters;
-    _mapIntParameters = other._mapIntParameters;
-    _mapStringParameters = other._mapStringParameters;
-    _vForcedAdjacentLinks = other._vForcedAdjacentLinks;
-    _bStatic = other._bStatic;
-    _bIsEnabled = other._bIsEnabled;
 
     return *this;
 }
