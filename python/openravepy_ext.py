@@ -95,7 +95,6 @@ _registerEnumPicklers()
 import atexit
 atexit.register(openravepy_int.RaveDestroy)
 
-"""
 class openrave_exception(Exception):
     # wrap up the C++ openrave_exception
     def __init__( self, app_error ):
@@ -111,7 +110,6 @@ class openrave_exception(Exception):
             return getattr(my_pimpl, attr)
         except AttributeError:
             return super(openrave_exception,self).__getattribute__(attr)
-"""
 
 class std_exception(Exception):
     """wrap up the C++ std_exception"""

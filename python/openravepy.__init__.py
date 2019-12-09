@@ -27,7 +27,10 @@ except NameError:
     __builtins__['__openravepy_build_doc__'] = False
 
 from .openravepy_int import *
-# from .openravepy_int import _openrave_exception_
+if openravepy_int.__pythonbinding__ == 'pybind11':
+    pass
+else:
+    from .openravepy_int import _openrave_exception_
 from .openravepy_int import _std_runtime_error_, _boost_bad_function_call_
 from .openravepy_int import __version__
 from .openravepy_int import __author__
@@ -42,7 +45,10 @@ from . import interfaces
 from . import databases
 
 OpenRAVEModel = databases.DatabaseGenerator # for backwards compatibility
-# _openrave_exception_.py_err_class = openrave_exception
+if openravepy_int.__pythonbinding__ == 'pybind11':
+    pass
+else:
+    _openrave_exception_.py_err_class = openrave_exception
 _std_runtime_error_.py_err_class = runtime_error
 _boost_bad_function_call_.py_err_class = runtime_error
 
