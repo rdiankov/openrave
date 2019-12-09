@@ -90,6 +90,9 @@ class RunPlanning(EnvironmentSetup):
             basemanip = interfaces.BaseManipulation(robot)
             robot.SetDOFValues([.31],[robot.GetJoint('torso_lift_joint').GetDOFIndex()])
             T=array([[0,0,1,.6], [0,1,0,.1], [-1,0,0,.73], [0,0,0,1]])
+            ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,manip=manip,iktype=IkParameterization.Type.Transform6D)
+            if not ikmodel.load():
+                ikmodel.autogenerate()
             robot.SetDOFValues(manip.FindIKSolution(T,IkFilterOptions.CheckEnvCollisions),manip.GetArmIndices())
             Tgoal=array([[0,0,1,.6], [0,1,0,.3], [-1,0,0,.73], [0,0,0,1]])
             constraintfreedoms=array([1,1,0,1,0,0]) # can rotate along z, translate along y
@@ -415,12 +418,12 @@ class RunPlanning(EnvironmentSetup):
                 table.SetTransform(Ttable)
                 p = ab.pos()
                 e = ab.extents()
-                Nx = floor(2*e[0]/transdelta)
-                Ny = floor(2*e[1]/transdelta)
+                Nx = int(floor(2*e[0]/transdelta))
+                Ny = int(floor(2*e[1]/transdelta))
                 X = []
                 Y = []
                 for x in arange(Nx):
-                    X = r_[X, tile((x+1)/(Nx+1),Ny)]
+                    X = r_[X, tile(int((x+1)/(Nx+1)),Ny)]
                     Y = r_[Y, arange(0.5,Ny,1.0)/(Ny+1)]
                 translations = c_[p[0]-e[0]+2*e[0]*X,p[1]-e[1]+2*e[1]*Y,tile(p[2]+e[2]+zoffset,len(X))]
                 Trolls = [matrixFromAxisAngle(array((0,0,1)),roll) for roll in arange(0,2*pi,pi/2)] + [matrixFromAxisAngle(array((1,0,0)),roll) for roll in [pi/2,pi,1.5*pi]]
@@ -564,16 +567,21 @@ class RunPlanning(EnvironmentSetup):
             try:
                 basemanip.MoveActiveJoints(goal=robot.GetActiveDOFValues())
                 raise ValueError('let static link pass')
-            except openrave_exception, ex:
-                # assert(ex.GetCode()==ErrorCode.InvalidState)
-                assert(GetOpenRAVEExceptionCode(ex)==ErrorCode.InvalidState)
+            except openrave_exception as ex:
+                if openravepy_int.__pythonbinding__ == 'pybind11':
+                    assert(GetOpenRAVEExceptionCode(ex)==ErrorCode.InvalidState)
+                else:
+                    assert(ex.GetCode()==ErrorCode.InvalidState)
                 
             try:
                 params=Planner.PlannerParameters()
                 params.SetRobotActiveJoints(robot)
                 raise ValueError('let static link pass')
-            except openrave_exception, ex:
-                assert(ex.GetCode()==ErrorCode.InvalidState)
+            except openrave_exception as ex:
+                if openravepy_int.__pythonbinding__ == 'pybind11':
+                    assert(GetOpenRAVEExceptionCode(ex)==ErrorCode.InvalidState)
+                else:
+                    assert(ex.GetCode()==ErrorCode.InvalidState)
 
     def test_multipath(self):
         env = self.env
