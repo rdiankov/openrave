@@ -216,5 +216,34 @@ void RaveWriteJSONFile(const std::list<KinBodyPtr>& listbodies, const std::strin
     jsonwriter.Write(listbodies);
     doc.Accept(writer);
 }
+void RaveWriteJSONStream(EnvironmentBasePtr penv, ostream& os, const AttributesList& atts)
+{
+    rapidjson::OStreamWrapper ostreamwrapper(os);
+    rapidjson::Writer<rapidjson::OStreamWrapper> writer(ostreamwrapper);
+    rapidjson::Document doc;
 
+    JSONWriter jsonwriter(atts, doc);
+    jsonwriter.Write(penv);
+    doc.Accept(writer);
+}
+void RaveWriteJSONStream(KinBodyPtr pbody, ostream& os, const AttributesList& atts)
+{
+    rapidjson::OStreamWrapper ostreamwrapper(os);
+    rapidjson::Writer<rapidjson::OStreamWrapper> writer(ostreamwrapper);
+    rapidjson::Document doc;
+
+    JSONWriter jsonwriter(atts, doc);
+    jsonwriter.Write(pbody);
+    doc.Accept(writer);
+}
+void RaveWriteJSONFile(const std::list<KinBodyPtr>& listbodies, ostream& os, const AttributesList& atts)
+{
+    rapidjson::OStreamWrapper ostreamwrapper(os);
+    rapidjson::Writer<rapidjson::OStreamWrapper> writer(ostreamwrapper);
+    rapidjson::Document doc;
+
+    JSONWriter jsonwriter(atts, doc);
+    jsonwriter.Write(listbodies);
+    doc.Accept(writer);
+}
 }

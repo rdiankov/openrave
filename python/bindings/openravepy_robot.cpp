@@ -22,16 +22,6 @@ namespace openravepy {
 class PyManipulatorInfo
 {
 public:
-        PyManipulatorInfo() {
-            _tLocalTool = ReturnTransform(Transform());
-            _vChuckingDirection = numeric::array(boost::python::list());
-            _vdirection = toPyVector3(Vector(0,0,1));
-            _vGripperJointNames = boost::python::list();
-        }
-        PyManipulatorInfo(const RobotBase::ManipulatorInfo& info) {
-            _Update(info);
-        }
-
     PyManipulatorInfo() {
         _tLocalTool = ReturnTransform(Transform());
         _vChuckingDirection = numeric::array(boost::python::list());
@@ -39,18 +29,7 @@ public:
         _vGripperJointNames = boost::python::list();
     }
     PyManipulatorInfo(const RobotBase::ManipulatorInfo& info) {
-        _name = ConvertStringToUnicode(info._name);
-        _sBaseLinkName = ConvertStringToUnicode(info._sBaseLinkName);
-        _sEffectorLinkName = ConvertStringToUnicode(info._sEffectorLinkName);
-        _tLocalTool = ReturnTransform(info._tLocalTool);
-        _vChuckingDirection = toPyArray(info._vChuckingDirection);
-        _vdirection = toPyVector3(info._vdirection);
-        _sIkSolverXMLId = info._sIkSolverXMLId;
-        boost::python::list vGripperJointNames;
-        FOREACHC(itname, info._vGripperJointNames) {
-            vGripperJointNames.append(ConvertStringToUnicode(*itname));
-        }
-        _vGripperJointNames = vGripperJointNames;
+        _Update(info);
     }
 
     RobotBase::ManipulatorInfoPtr GetManipulatorInfo() const
@@ -75,13 +54,20 @@ public:
         _Update(info);
     }
 
-
     object SerializeJSON(object options=object()){
         rapidjson::Document doc;
         RobotBase::ManipulatorInfoPtr pInfo = GetManipulatorInfo();
         pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(options, 0));
         return toPyObject(doc);
     }
+
+    object _name, _sBaseLinkName, _sEffectorLinkName;
+    object _tLocalTool;
+    object _vChuckingDirection;
+    object _vdirection;
+    std::string _sIkSolverXMLId;
+    object _vGripperJointNames;
+
 private:
     void _Update(const RobotBase::ManipulatorInfo& info){
         _name = ConvertStringToUnicode(info._name);
@@ -97,14 +83,6 @@ private:
         }
         _vGripperJointNames = vGripperJointNames;
     }
-    typedef boost::shared_ptr<PyManipulatorInfo> PyManipulatorInfoPtr;
-
-    object _name, _sBaseLinkName, _sEffectorLinkName;
-    object _tLocalTool;
-    object _vChuckingDirection;
-    object _vdirection;
-    std::string _sIkSolverXMLId;
-    object _vGripperJointNames;
 };
 
 PyManipulatorInfoPtr toPyManipulatorInfo(const RobotBase::ManipulatorInfo& manipulatorinfo)
@@ -1724,18 +1702,18 @@ void init_openravepy_robot()
     ;
 
 
-    object manipulatorinfo = class_<PyRobotBase::PyManipulatorInfo, boost::shared_ptr<PyRobotBase::PyManipulatorInfo> >("ManipulatorInfo", DOXY_CLASS(RobotBase::ManipulatorInfo))
-                             .def_readwrite("_name",&PyRobotBase::PyManipulatorInfo::_name)
-                             .def_readwrite("_sBaseLinkName",&PyRobotBase::PyManipulatorInfo::_sBaseLinkName)
-                             .def_readwrite("_sEffectorLinkName",&PyRobotBase::PyManipulatorInfo::_sEffectorLinkName)
-                             .def_readwrite("_tLocalTool",&PyRobotBase::PyManipulatorInfo::_tLocalTool)
-                             .def_readwrite("_vChuckingDirection",&PyRobotBase::PyManipulatorInfo::_vChuckingDirection)
-                             .def_readwrite("_vClosingDirection",&PyRobotBase::PyManipulatorInfo::_vChuckingDirection) // back compat
-                             .def_readwrite("_vdirection",&PyRobotBase::PyManipulatorInfo::_vdirection)
-                             .def_readwrite("_sIkSolverXMLId",&PyRobotBase::PyManipulatorInfo::_sIkSolverXMLId)
-                             .def_readwrite("_vGripperJointNames",&PyRobotBase::PyManipulatorInfo::_vGripperJointNames)
-                             .def("DeserializeJSON", &PyRobotBase::PyManipulatorInfo::DeserializeJSON, args("obj"), DOXY_FN(RobotBase::ManipulatorInfo, DeserializeJSON))
-                             .def("SerializeJSON", &PyRobotBase::PyManipulatorInfo::SerializeJSON, SerializeJSON_overloads(args("options"), DOXY_FN(RobotBase::ManipulatorInfo, SerializeJSON)))
+    object manipulatorinfo = class_<PyManipulatorInfo, boost::shared_ptr<PyManipulatorInfo> >("ManipulatorInfo", DOXY_CLASS(RobotBase::ManipulatorInfo))
+                             .def_readwrite("_name",&PyManipulatorInfo::_name)
+                             .def_readwrite("_sBaseLinkName",&PyManipulatorInfo::_sBaseLinkName)
+                             .def_readwrite("_sEffectorLinkName",&PyManipulatorInfo::_sEffectorLinkName)
+                             .def_readwrite("_tLocalTool",&PyManipulatorInfo::_tLocalTool)
+                             .def_readwrite("_vChuckingDirection",&PyManipulatorInfo::_vChuckingDirection)
+                             .def_readwrite("_vClosingDirection",&PyManipulatorInfo::_vChuckingDirection) // back compat
+                             .def_readwrite("_vdirection",&PyManipulatorInfo::_vdirection)
+                             .def_readwrite("_sIkSolverXMLId",&PyManipulatorInfo::_sIkSolverXMLId)
+                             .def_readwrite("_vGripperJointNames",&PyManipulatorInfo::_vGripperJointNames)
+                             .def("DeserializeJSON", &PyManipulatorInfo::DeserializeJSON, args("obj"), DOXY_FN(RobotBase::ManipulatorInfo, DeserializeJSON))
+                             .def("SerializeJSON", &PyManipulatorInfo::SerializeJSON, SerializeJSON_overloads(args("options"), DOXY_FN(RobotBase::ManipulatorInfo, SerializeJSON)))
                              .def_pickle(ManipulatorInfo_pickle_suite())
     ;
 

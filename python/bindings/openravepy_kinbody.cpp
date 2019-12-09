@@ -149,7 +149,7 @@ public:
     {
         rapidjson::Document doc;
         KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
-        pgeominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(ooptions,0));
+        pgeominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(ooptions, 0));
         return toPyObject(doc);
     }
 
@@ -2977,7 +2977,7 @@ void PyKinBody::DeserializeJSON(object obj, const dReal fUnitScale)
 object PyKinBody::SerializeJSON(object ooptions)
 {
     rapidjson::Document doc;
-    _pbody->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(ooptions,0));
+    _pbody->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(ooptions, 0));
     return toPyObject(doc);
 }
 
@@ -3701,7 +3701,7 @@ void init_openravepy_kinbody()
                         .def("GetKinematicsGeometryHash",&PyKinBody::GetKinematicsGeometryHash, DOXY_FN(KinBody,GetKinematicsGeometryHash))
                         .def("CreateKinBodyStateSaver",&PyKinBody::CreateKinBodyStateSaver, CreateKinBodyStateSaver_overloads(args("options"), "Creates an object that can be entered using 'with' and returns a KinBodyStateSaver")[return_value_policy<manage_new_object>()])
                         .def("DeserializeJSON", &PyKinBody::DeserializeJSON, args("obj", "fUnitScale"), DOXY_FN(KinBody, DeserializeJSON))
-                        .def("SerializeJSON", &PyKinBody::SerializeJSON,SerializeJSON_overloads(args("options"), DOXY_FN(KinBody,SerializeJSON)))
+                        .def("SerializeJSON", &PyKinBody::SerializeJSON, DOXY_FN(KinBody,SerializeJSON))
                         .def("__enter__",&PyKinBody::__enter__)
                         .def("__exit__",&PyKinBody::__exit__)
                         .def("__repr__",&PyKinBody::__repr__)
