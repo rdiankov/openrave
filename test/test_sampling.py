@@ -13,13 +13,18 @@
 # limitations under the License.
 from common_test_openrave import *
 
+# https://github.com/pybind/pybind11/issues/253
+def enum_to_dict(enum):
+    import re
+    return {k: v for k, v in enum.__dict__.iteritems() if not re.match("__(.*)__", str(k))}
+
 class TestSampling(EnvironmentSetup):
     def _runsampler(self,samplername):
         sp=RaveCreateSpaceSampler(self.env,samplername)
         if sp is None:
             return
         
-        for type in SampleDataType.values.values():
+        for type in enum_to_dict(openravepy_int.SampleDataType).values():
             if sp.Supports(type):
                 for dim in [1,5]:
                     self.log.debug('name=%s, type=%s, dim=%d',samplername,type,dim)
@@ -51,8 +56,9 @@ class TestSampling(EnvironmentSetup):
         robot = self.env.GetRobots()[0]
         sp=RaveCreateSpaceSampler(self.env,'RobotConfiguration %s'%robot.GetName())
         assert(sp.Supports(SampleDataType.Real))
+        # values is obtained by toPyArray, so should be a 1D numpy array
         values = sp.SampleSequence(SampleDataType.Real,1)
-        assert(len(values[0]) == robot.GetActiveDOF())
+        assert(len(values) == robot.GetActiveDOF())
         robot.SetActiveDOFs(range(robot.GetDOF()-4),Robot.DOFAffine.X|Robot.DOFAffine.Y|Robot.DOFAffine.RotationAxis,[0,0,1])
         values = sp.SampleSequence(SampleDataType.Real,1)
-        assert(len(values[0]) == robot.GetActiveDOF())
+        assert(len(values) == robot.GetActiveDOF())

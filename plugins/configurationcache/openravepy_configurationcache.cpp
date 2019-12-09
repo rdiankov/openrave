@@ -169,8 +169,8 @@ public:
 
     object FindNearestNode(object ovalues, dReal dist) {
         std::pair<std::vector<dReal>, dReal> nn = _cache->FindNearestNode(openravepy::ExtractArray<dReal>(ovalues), dist);
-        if( nn.first.size() == 0 ) {
-            return object(); // didn't find anything
+        if( nn.first.empty() ) {
+            return py::none_(); // didn't find anything
         }
         else {
            return py::make_tuple(openravepy::toPyArray(nn.first), nn.second);

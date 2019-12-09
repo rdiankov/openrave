@@ -565,7 +565,8 @@ class RunPlanning(EnvironmentSetup):
                 basemanip.MoveActiveJoints(goal=robot.GetActiveDOFValues())
                 raise ValueError('let static link pass')
             except openrave_exception, ex:
-                assert(ex.GetCode()==ErrorCode.InvalidState)
+                # assert(ex.GetCode()==ErrorCode.InvalidState)
+                assert(GetOpenRAVEExceptionCode(ex)==ErrorCode.InvalidState)
                 
             try:
                 params=Planner.PlannerParameters()

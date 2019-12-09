@@ -4564,7 +4564,7 @@ void init_openravepy_kinbody()
 
         {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-            scope_ statesaver = class_<PyKinBodyStateSaver, OPENRAVE_SHARED_PTR<PyKinBodyStateSaver> >(m, "KinBodyStateSaver", DOXY_CLASS(KinBody::KinBodyStateSaver))
+            scope_ statesaver = class_<PyKinBodyStateSaver, OPENRAVE_SHARED_PTR<PyKinBodyStateSaver> >(kinbody, "KinBodyStateSaver", DOXY_CLASS(KinBody::KinBodyStateSaver))
 #else
             scope_ statesaver = class_<PyKinBodyStateSaver, OPENRAVE_SHARED_PTR<PyKinBodyStateSaver> >("KinBodyStateSaver", DOXY_CLASS(KinBody::KinBodyStateSaver), no_init)
 #endif

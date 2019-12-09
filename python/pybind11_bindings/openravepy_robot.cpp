@@ -1717,6 +1717,7 @@ void init_openravepy_robot()
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object manipulatorinfo = class_<PyManipulatorInfo, OPENRAVE_SHARED_PTR<PyManipulatorInfo> >(m, "ManipulatorInfo", DOXY_CLASS(RobotBase::ManipulatorInfo))
+                             .def(init<>())
 #else
     object manipulatorinfo = class_<PyManipulatorInfo, OPENRAVE_SHARED_PTR<PyManipulatorInfo> >("ManipulatorInfo", DOXY_CLASS(RobotBase::ManipulatorInfo))
 #endif
@@ -1749,6 +1750,7 @@ void init_openravepy_robot()
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object attachedsensorinfo = class_<PyAttachedSensorInfo, OPENRAVE_SHARED_PTR<PyAttachedSensorInfo> >(m, "AttachedSensorInfo", DOXY_CLASS(RobotBase::AttachedSensorInfo))
+                                .def(init<>())
 #else
     object attachedsensorinfo = class_<PyAttachedSensorInfo, OPENRAVE_SHARED_PTR<PyAttachedSensorInfo> >("AttachedSensorInfo", DOXY_CLASS(RobotBase::AttachedSensorInfo))
 #endif
@@ -1760,6 +1762,7 @@ void init_openravepy_robot()
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object connectedbodyinfo = class_<PyConnectedBodyInfo, OPENRAVE_SHARED_PTR<PyConnectedBodyInfo> >(m, "ConnectedBodyInfo", DOXY_CLASS(RobotBase::ConnectedBodyInfo))
+                               .def(init<>())
 #else
     object connectedbodyinfo = class_<PyConnectedBodyInfo, OPENRAVE_SHARED_PTR<PyConnectedBodyInfo> >("ConnectedBodyInfo", DOXY_CLASS(RobotBase::ConnectedBodyInfo))
 #endif
