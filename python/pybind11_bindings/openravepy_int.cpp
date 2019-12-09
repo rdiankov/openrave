@@ -406,23 +406,29 @@ AttributesList toAttributesList(py::list oattributes)
 
 AttributesList toAttributesList(object oattributes)
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    if( PyDict_Check(oattributes.ptr()) ) {
+        // assume dict
+        py::dict d = py::extract<py::dict>(oattributes);
+        return toAttributesList(d);
+    }
+    else if (PyList_Check(oattributes.ptr())) {
+        // assume list
+        py::list l = py::extract<py::list>(oattributes);
+        return toAttributesList(l);
+    }
+#else
     if( !IS_PYTHONOBJECT_NONE(oattributes) ) {
+        // assume dict
         py::extract_<py::dict> odictextractor(oattributes);
         if( odictextractor.check() ) {
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-            return toAttributesList((py::dict)odictextractor);
-#else
             return toAttributesList((py::dict)odictextractor());
-#endif
         }
         // assume list
         py::extract_<py::list> olistextractor(oattributes);
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        return toAttributesList((py::list)olistextractor);
-#else
         return toAttributesList((py::list)olistextractor());
-#endif
     }
+#endif // USE_PYBIND11_PYTHON_BINDINGS
     return AttributesList();
 }
 
@@ -1405,15 +1411,20 @@ public:
     }
 
     void Save(const std::string &filename, const int options = EnvironmentBase::SelectionOptions::SO_Everything, object odictatts = py::none_()) {
-        extract_<std::string> otarget(odictatts);
-        if( otarget.check() ) {
-            // old versions
-            AttributesList atts;
-            atts.emplace_back("target", (std::string)otarget);
-            openravepy::PythonThreadSaver threadsaver;
-            _penv->Save(filename, (EnvironmentBase::SelectionOptions) options, atts);
+        bool bSuccess = false;
+        // avoid destined extract failure
+        if(!IS_PYTHONOBJECT_NONE(odictatts)) {
+            extract_<std::string> otarget(odictatts);
+            if( otarget.check() ) {
+                // old versions
+                AttributesList atts;
+                atts.emplace_back("target", (std::string)otarget);
+                openravepy::PythonThreadSaver threadsaver;
+                _penv->Save(filename, (EnvironmentBase::SelectionOptions) options, atts);
+                bSuccess = true;
+            }
         }
-        else {
+        if(!bSuccess) {
             AttributesList dictatts = toAttributesList(odictatts);
             openravepy::PythonThreadSaver threadsaver;
             _penv->Save(filename, (EnvironmentBase::SelectionOptions) options, dictatts);
@@ -1422,14 +1433,19 @@ public:
 
     object WriteToMemory(const std::string &filetype, const int options = EnvironmentBase::SelectionOptions::SO_Everything, object odictatts = py::none_()) {
         std::vector<char> output;
-        extract_<std::string> otarget(odictatts);
-        if( otarget.check() ) {
-            // old versions
-            AttributesList atts;
-            atts.emplace_back("target", (std::string)otarget);
-            _penv->WriteToMemory(filetype, output, (EnvironmentBase::SelectionOptions) options, atts);
+        bool bSuccess = false;
+        // avoid destined extract failure
+        if(!IS_PYTHONOBJECT_NONE(odictatts)) {
+            extract_<std::string> otarget(odictatts);
+            if( otarget.check() ) {
+                // old versions
+                AttributesList atts;
+                atts.emplace_back("target", (std::string)otarget);
+                _penv->WriteToMemory(filetype, output, (EnvironmentBase::SelectionOptions) options, atts);
+                bSuccess = true;
+            }
         }
-        else {
+        if(!bSuccess) {
             _penv->WriteToMemory(filetype, output, (EnvironmentBase::SelectionOptions) options, toAttributesList(odictatts));
         }
 
