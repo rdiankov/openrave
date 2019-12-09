@@ -27,7 +27,6 @@ namespace OpenRAVE {
 // member, so need to disable deprecation warnings
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#pragma GCC diagnostic ignored "-Wno-deprecated"
 
 KinBody::JointInfo::JointInfo() :
     XMLReadable("joint"),
