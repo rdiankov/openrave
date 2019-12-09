@@ -2925,12 +2925,14 @@ Because race conditions can pop up when trying to lock the openrave environment 
     m.attr("__copyright__") = "2009-2012 Rosen Diankov (rosen.diankov@gmail.com)";
     m.attr("__license__") = "Lesser GPL";
     m.attr("__docformat__") = "restructuredtext";
+    m.attr("__pythonbinding__") = "pybind11";
 #else
     scope().attr("__version__") = OPENRAVE_VERSION_STRING;
     scope().attr("__author__") = "Rosen Diankov";
     scope().attr("__copyright__") = "2009-2012 Rosen Diankov (rosen.diankov@gmail.com)";
     scope().attr("__license__") = "Lesser GPL";
     scope().attr("__docformat__") = "restructuredtext";
+    scope().attr("__pythonbinding__") = "Boost.Python." + std::to_string(BOOST_VERSION);
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
