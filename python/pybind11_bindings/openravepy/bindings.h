@@ -22,8 +22,11 @@
 // numpy
 #include <numpy/arrayobject.h>
 #include <numpy/arrayscalars.h>
+
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
 // boost
 #include <boost/multi_array.hpp>
+#endif
 
 #ifdef _MSC_VER
 #include <boost/typeof/std/string.hpp>
