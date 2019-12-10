@@ -18,17 +18,25 @@ endif()
 set(SUCCESS_BUILD_PYTHON_BINDINGS ON)
 
 if(USE_PYBIND11_PYTHON_BINDINGS)
+  # check if all header files can be included
+  # find_package(pybind11 REQUIRED)
+  add_definitions(${Boost_CFLAGS})
   set(CMAKE_REQUIRED_INCLUDES ${PYTHON_INCLUDE_DIRS} ${Boost_INCLUDE_DIR} ${REQUIRED_INCLUDES})
   set(CMAKE_REQUIRED_LIBRARIES ${PYTHON_LIBRARIES} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY})
   set(CMAKE_REQUIRED_FLAGS ${Boost_CFLAGS} "-DCMAKE_BUILD_TYPE:STRING=Release")
-
-  # check if all header files can be included
-  find_package(pybind11 REQUIRED)
   check_cxx_source_runs("
-  #include <pybind11/pybind11.h>
-  #include <pybind11/stl.h>
-  #include <pybind11/numpy.h>
-  int main() { return 0; }
+    // python
+    #include <Python.h>
+    #include <pyconfig.h>
+    // numpy
+    #include <numpy/arrayobject.h>
+    #include <numpy/arrayscalars.h>
+    // pybind11
+    #include <pybind11/pybind11.h>
+    #include <pybind11/stl.h>
+    #include <pybind11/numpy.h>
+    // #include <pybind11/eigen.h> // requires Eigen3 and include ${CMAKE_INSTALL_PREFIX}/include/eigen3
+    int main() { return 0; }
   "
   HAVE_ALL_PYTHON_HEADERS)
   set(HAVE_ALL_PYTHON_HEADERS ${HAVE_ALL_PYTHON_HEADERS} PARENT_SCOPE)
