@@ -57,7 +57,7 @@
 #else
 #define FOREACH(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); (it)++)
 #define FOREACH_NOINC(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); )
-#endif
+#endif // __cplusplus > 199711L || defined(__GXX_EXPERIMENTAL_CXX0X__)
 
 #define FOREACHC FOREACH
 #define FOREACHC_NOINC FOREACH_NOINC
@@ -225,18 +225,11 @@ auto handle_to_object(T const& h) -> decltype(to_object<T>(h))
 {
     return to_object<T>(h);
 }
-// inline object to_array(PyObject* pyo) {
-//     // do we need to implement the conversion?
-//     return handle(pyo).cast<array_t<double>>();
-// }
 template <typename T>
 inline object to_array_astype(PyObject* pyo) {
     // do we need to implement the conversion?
     return handle(pyo).cast<array_t<T>>();
 }
-// inline object empty_array() {
-//     return numeric::array({}, nullptr);
-// }
 template <typename T>
 inline object empty_array_astype() {
     return array_t<T>({}, nullptr);
@@ -290,16 +283,10 @@ inline object to_object(const T& t) {
 inline object handle_to_object(PyObject* pyo) {
     return object(handle<>(pyo));
 }
-// inline numeric::array to_array(PyObject* pyo) {
-//     return static_cast<numeric::array>(handle<>(pyo));
-// }
 template<typename T>
 inline numeric::array to_array_astype(PyObject* pyo) {
     return static_cast<numeric::array>(static_cast<numeric::array>(handle<>(pyo)).astype(openravepy::select_dtype<T>::type));
 }
-// inline numeric::array empty_array() {
-//     return numeric::array(list());
-// }
 template<typename T>
 inline object empty_array_astype() {
     return numeric::array(list()).astype(openravepy::select_dtype<T>::type);
@@ -317,7 +304,7 @@ using array_int = object; // py::array_int
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 // is_none is not supported by older versions of python
-#if BOOST_VERSION >= 104300
+#if BOOST_VERSION >= 104300 || defined(USE_PYBIND11_PYTHON_BINDINGS)
 #define IS_PYTHONOBJECT_NONE(o) (o).is_none()
 #else
 #define IS_PYTHONOBJECT_NONE(o) (!!(o))
@@ -404,84 +391,6 @@ inline std::set<T> ExtractSet(const py::object& o)
     return v;
 }
 
-/// class for truly registering a C++ exception to a python exception
-/// add this definition to BOOST_PYTHON_MODULE:
-//
-//    typedef return_value_policy< copy_const_reference > return_copy_const_ref;
-//    class_< T >( "_custom_exception_" )
-//        .def( init<const std::string&>() )
-//        .def( init<const T&>() )
-//        .def( "message", &T::message, return_copy_const_ref() )
-//        .def( "__str__", &T::message, return_copy_const_ref() )
-//        ;
-// inside python do:
-//
-//class custom_exception(Exception):
-//    """wrap up the C++ custom_exception"""
-//    def __init__( self, app_error ):
-//        Exception.__init__( self )
-//        self._pimpl = app_error
-//    def __str__( self ):
-//        return self._pimpl.message()
-//    def __getattribute__(self, attr):
-//        my_pimpl = super(custom_exception, self).__getattribute__("_pimpl")
-//        try:
-//            return getattr(my_pimpl, attr)
-//        except AttributeError:
-//            return super(custom_exception,self).__getattribute__(attr)
-//
-// import custom_module
-// custom_module._custom_exception_.py_err_class = custom_exception
-
-//template <typename ExceptionType>
-//struct ExceptionTranslator
-//{
-//   typedef ExceptionTranslator<ExceptionType> type;
-//
-//   static PyObject *pyException;
-//
-//   static void RegisterExceptionTranslator(scope & scope, const char*
-//moduleName, const char* name)
-//   {
-//     // Add the exception to the module scope
-//     std::strstream exName;
-//     exName << moduleName << "." << name << '\0';
-//     pyException = PyErr_NewException(exName.str(), nullptr, nullptr);
-//     handle<> instanceException(pyException);
-//     scope.attr(name) = object(instanceException);
-//
-//     // Register a translator for the type
-//     register_exception_translator< ExceptionType >
-//       (
-//        &ExceptionTranslator<ExceptionType>::translateException
-//        );
-//   }
-//
-//   static void translateException(const ExceptionType& ex)
-//   {
-//     PyErr_SetString(pyException, ex.getMessage().ptr());
-//   }
-//};
-//
-//template<typename ExceptionType>
-//PyObject* ExceptionTranslator<ExceptionType>::pyException;
-//
-//// Convenience macro
-//#define REGISTER_EXCEPTION(scopeRef, moduleName, className) ExceptionTranslator<className>::RegisterExceptionTranslator(scopeRef, moduleName, #className)
-//
-//
-//// Module
-//======================================================================
-//OPENRAVE_PYTHON_MODULE(my_module)
-//{
-//
-//   scope moduleScope;
-//
-//   REGISTER_EXCEPTION(moduleScope, "my_module", InstanceException);
-//
-//.....
-//}
-
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
 template <typename T>
 struct exception_translator
@@ -535,18 +444,6 @@ struct exception_translator
         data->convertible = memory_chunk;
     }
 }; // struct exception_translator
-
-// register const versions of the classes
-//template <class T> inline T* get_pointer( OPENRAVE_SHARED_PTR<const T>
-//const& p){
-//     return const_cast<T*>(p.get());
-//}
-//
-//template <class T> struct pintee< OPENRAVE_SHARED_PTR<const T> >{
-//     typedef T type;
-//};
-//
-//py::register_ptr_to_python< OPENRAVE_SHARED_PTR<const my_class> >();
 
 template<typename T>
 struct float_from_number
