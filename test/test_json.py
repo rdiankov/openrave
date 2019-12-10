@@ -19,14 +19,56 @@ except ImportError as e:
 from common_test_openrave import *
 
 class TestJSONSeralization(EnvironmentSetup):
-    def test_manipInfo(self):
-        self.log.info('test serialize/deserialize manipualtor info')
+
+    def _test_info(self, info, emptyInfo):
+        """ 
+        Steps:
+        1. serialize info
+        2. deserialize step 1 result into emptyInfo
+        3. compare info and emptyInfo.
+        """
+        emptyInfo.DeserializeJSON(info.SerializeJSON())
+        assert info == emptyInfo
+
+    # robot.h
+    def test_ManipulatorInfo(self):
+        self.log.info('test serialize/deserialize manipulator info')
         env = self.env
         with env:
             for robotfile in g_robotfiles:
                 env.Reset()
-                robot0 = self.LoadRobot(robotfile)
-                manips = robot0.GetManipulators()
+                robot = self.LoadRobot(robotfile)
+                manips = robot.GetManipulators()
                 for manip in manips:
-                    manipInfo = manip.GetInfo().SeiralizeJSON()
-                    manip.DeserializeJSON(json.dumps(manipInfo))
+                    self._test_info(manip.GetInfo(), ManipulatorInfo())
+
+    def test_AttachedSensorInfo(self):
+        pass
+
+    def test_ConnectedBodyInfo(self):
+        pass
+
+    # kinbody.h
+    def test_ElectricMotorActuatorInfo(self):
+        pass
+
+    def test_GeometryInfo(self):
+        pass
+    
+    def test_LinkInfo(self):
+        pass
+
+    def test_MimicInfo(self):
+        pass
+
+
+    def test_JointInfo(self):
+        pass
+
+    def test_GrabbedInfo(self):
+        pass
+
+    # trajectory.h
+    def test_TrajectoryBase(self):
+        pass
+
