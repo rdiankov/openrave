@@ -858,6 +858,10 @@ if(OPT_PYTHON AND PYTHON_EXECUTABLE)
     set(OPENRAVEPY_VER_NAME "_openravepy_")
   endif()
   set(OPENRAVEPY_VER_INSTALL_DIR "${OPENRAVEPY_INSTALL_DIR}/${OPENRAVEPY_VER_NAME}") # used by openrave-config.cmake
+
+  # build python bindings, either with pybind11 or Boost.Python
+  set(USE_PYBIND11_PYTHON_BINDINGS OFF)
+  set(PYBIND11_PYTHON_BINDINGS_DEBUG OFF)
   add_subdirectory(python)
 endif()
 
