@@ -357,7 +357,8 @@ OPENRAVE_PYTHON_MODULE(pyANN_int)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<ANNkd_tree, OPENRAVE_SHARED_PTR<ANNkd_tree>>(m, "KDTree")
     .def(init<int, int, int>(), "n"_a = 0, "dd"_a = 0, "bs"_a = 1)
-    .def(init<int, int, int, ANNsplitRule>(), "n"_a, "dd"_a, "bs"_a = 1, "split"_a = (int) ANN_KD_SUGGEST)
+    // ANNpointArray is double**; pybind11 does not know how to convert, unless it is smart_ptr
+    // .def(init<ANNpointArray, int, int, int, ANNsplitRule>(), "pa"_a, "n"_a, "dd"_a, "bs"_a = 1, "split"_a = ANN_KD_SUGGEST)
     // https://pybind11.readthedocs.io/en/stable/advanced/classes.html#custom-constructors
     .def( init<>(&init_from_list))
 #else
