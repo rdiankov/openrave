@@ -546,7 +546,7 @@ bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, co
 
 bool RobotBase::SetController(ControllerBasePtr controller, const std::vector<int>& jointindices, int nControlTransformation)
 {
-    RAVELOG_DEBUG("default robot doesn't not support setting controllers (try GenericRobot)\n");
+    RAVELOG_DEBUG_FORMAT("env=%d, default robot doesn't not support setting controllers (try GenericRobot)", GetEnv()->GetId());
     return false;
 }
 
