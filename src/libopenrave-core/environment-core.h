@@ -216,14 +216,14 @@ public:
     {
         boost::mutex::scoped_lock lockdestroy(_mutexInit);
         if( !_bInit ) {
-            RAVELOG_VERBOSE("environment is already destroyed\n");
+            RAVELOG_VERBOSE_FORMAT("env=%d is already destroyed", GetId());
             return;
         }
 
         // destruction order is *very* important, don't touch it without consultation
         _bInit = false;
 
-        RAVELOG_VERBOSE("Environment destructor\n");
+        RAVELOG_VERBOSE_FORMAT("env=%d destructor", GetId());
         _StopSimulationThread();
 
         // destroy the modules (their destructors could attempt to lock environment, so have to do it before global lock)
@@ -2094,7 +2094,7 @@ protected:
         FOREACH(itrobot, _vecrobots) {
             KinBody &body = **it;
             if( (*itrobot)->IsGrabbing(body) ) {
-                RAVELOG_WARN_FORMAT("env=%d, destroy %s already grabbed by robot %s!", GetId()%body.GetName()%(*itrobot)->GetName());
+                RAVELOG_WARN_FORMAT("env=%d, remove %s already grabbed by robot %s!", GetId()%body.GetName()%(*itrobot)->GetName());
                 (*itrobot)->Release(body);
             }
         }
@@ -2496,7 +2496,7 @@ protected:
         listViewers.clear();
 
         if( !bCheckSharedResources ) {
-            if( _bEnableSimulation ) {
+            if( !!_threadSimulation && _bEnableSimulation ) {
                 _StartSimulationThread();
             }
         }
