@@ -59,6 +59,16 @@ RobotBase::ManipulatorInfo& RobotBase::ManipulatorInfo::operator=(const RobotBas
     gripperJointNames = other.gripperJointNames;
     return *this;
 }
+bool RobotBase::ManipulatorInfo::operator==(const ManipulatorInfo& other){
+    return sid == sid \
+        && name == other.name \
+        && baseLinkName == other.baseLinkName \
+        && effectorLinkName == other.effectorLinkName \
+        && iksolverType == other.iksolverType;
+}
+bool RobotBase::ManipulatorInfo::operator!=(const ManipulatorInfo& other){
+    return !(*this == other);
+}
 
 void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {

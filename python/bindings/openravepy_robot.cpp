@@ -23,6 +23,9 @@ class PyManipulatorInfo
 {
 public:
     PyManipulatorInfo() {
+        _name = ConvertStringToUnicode("");
+        _sBaseLinkName = ConvertStringToUnicode("");
+        _sEffectorLinkName = ConvertStringToUnicode("");
         _tLocalTool = ReturnTransform(Transform());
         _vChuckingDirection = numeric::array(boost::python::list());
         _vdirection = toPyVector3(Vector(0,0,1));
@@ -59,6 +62,13 @@ public:
         RobotBase::ManipulatorInfoPtr pInfo = GetManipulatorInfo();
         pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(options, 0));
         return toPyObject(doc);
+    }
+
+    bool __eq__(boost::shared_ptr<PyManipulatorInfo> rhs){
+        return *(this->GetManipulatorInfo()) == *(rhs->GetManipulatorInfo());
+    }
+    bool __ne__(boost::shared_ptr<PyManipulatorInfo> rhs){
+        return !__eq__(rhs);
     }
 
     object _name, _sBaseLinkName, _sEffectorLinkName;
@@ -1714,6 +1724,8 @@ void init_openravepy_robot()
                              .def_readwrite("_vGripperJointNames",&PyManipulatorInfo::_vGripperJointNames)
                              .def("DeserializeJSON", &PyManipulatorInfo::DeserializeJSON, args("obj"), DOXY_FN(RobotBase::ManipulatorInfo, DeserializeJSON))
                              .def("SerializeJSON", &PyManipulatorInfo::SerializeJSON, SerializeJSON_overloads(args("options"), DOXY_FN(RobotBase::ManipulatorInfo, SerializeJSON)))
+                             .def("__eq__", &PyManipulatorInfo::__eq__)
+                             .def("__ne__", &PyManipulatorInfo::__ne__)
                              .def_pickle(ManipulatorInfo_pickle_suite())
     ;
 
