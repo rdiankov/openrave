@@ -22,7 +22,7 @@
 
 namespace OpenRAVE {
 
-// forward declaration
+// forward declarations of serialization functions
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, bool v);
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int v);
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, double v);
@@ -53,14 +53,14 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const SensorBase::CameraIntrinsics& intrinsics);
 
 template<typename T, typename ... Types>
-inline rapidjson::Value RAVE_SERIALIZEJSON(T& allocator, Types ... Fargs) {
+inline rapidjson::Value RAVE_SERIALIZEJSON(T& allocator, const Types& ... Fargs) {
     rapidjson::Value value;
     RaveSerializeJSON(value, allocator, Fargs...);
     return value;
 }
 
 template<typename T, typename ... Types>
-inline void RAVE_SERIALIZEJSON_PUSHBACK(T& allocator, Types ... Fargs) {
+inline void RAVE_SERIALIZEJSON_PUSHBACK(T& allocator, const Types& ... Fargs) {
     do {
         rapidjson::Value value = RAVE_SERIALIZEJSON(allocator, Fargs...);
         value.PushBack(value, allocator);
@@ -68,7 +68,7 @@ inline void RAVE_SERIALIZEJSON_PUSHBACK(T& allocator, Types ... Fargs) {
 }
 
 template<typename T, typename U, typename ... Types>
-inline void RAVE_SERIALIZEJSON_ADDMEMBER(T& allocator, U& key, Types ... Fargs) {
+inline void RAVE_SERIALIZEJSON_ADDMEMBER(T& allocator, U& key, const Types& ... Fargs) {
     do {
         rapidjson::Value value = RAVE_SERIALIZEJSON(allocator, Fargs...);
         value.AddMember(key, value, allocator);
@@ -111,7 +111,7 @@ inline void RAVE_DESERIALIZEJSON_ENSURE_ARRAY(const rapidjson::Value &value) {
     }
 }
 
-// forward declaration
+// forward declarations of deserialization functions
 inline void RaveDeserializeJSON(const rapidjson::Value &value, bool &v);
 inline void RaveDeserializeJSON(const rapidjson::Value &value, int &v);
 inline void RaveDeserializeJSON(const rapidjson::Value &value, double &v);
