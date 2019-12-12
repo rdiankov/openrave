@@ -64,6 +64,8 @@ void TrajectoryBase::SerializeJSON(rapidjson::Value &value, rapidjson::Document:
     std::vector<dReal> data;
     GetWaypoints(0, GetNumWaypoints(), data);
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "data", data);
+    int count = GetNumWaypoints();
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "dataCount", count);
 
     if( GetDescription().size() > 0 ) {
         RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "description", GetDescription());
@@ -93,6 +95,33 @@ InterfaceBasePtr TrajectoryBase::deserialize(std::istream& I)
     xmlreaders::TrajectoryReader readerdata(GetEnv(),shared_trajectory());
     LocalXML::ParseXMLData(readerdata, pbuf.c_str(), ppsize);
     return shared_from_this();
+}
+
+void TrajectoryBase::DeserializeJSON(const rapidjson::Value& value, const dReal fUnitScale)
+{
+    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
+    TrajectoryBasePtr traj = shared_trajectory();
+    string specStr;
+    ConfigurationSpecification spec;;
+    string dataCount;
+    std::vector<dReal> data;
+    string xmlid;
+
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "type", xmlid);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "configuration", specStr);
+    // TODO: spec.DeserializeJSON(specStr);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "dataCount", dataCount);
+    data.resize(spec.GetDOF()*std::stoi(dataCount));
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "data", data);
+
+    traj->Init(spec);
+    traj->Insert(traj->GetNumWaypoints(), data);
+    
+    if(value.HasMember("description")){
+        string description;
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "description", description);
+        traj->SetDescription(description);
+    }
 }
 
 void TrajectoryBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)

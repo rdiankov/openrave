@@ -20,7 +20,7 @@ from common_test_openrave import *
 
 class TestJSONSeralization(EnvironmentSetup):
 
-    def _test_info(self, info, emptyInfo):
+    def _testInfo(self, info, emptyInfo):
         """ 
         Steps:
         1. serialize info
@@ -32,7 +32,7 @@ class TestJSONSeralization(EnvironmentSetup):
 
     # robot.h
     def test_ManipulatorInfo(self):
-        self.log.info('test serialize/deserialize manipulator info')
+        self.log.info('test serialize/deserialize ManipulatorInfo')
         env = self.env
         with env:
             for robotfile in g_robotfiles:
@@ -40,12 +40,61 @@ class TestJSONSeralization(EnvironmentSetup):
                 robot = self.LoadRobot(robotfile)
                 manips = robot.GetManipulators()
                 for manip in manips:
-                    self._test_info(manip.GetInfo(), ManipulatorInfo())
+                    self._testInfo(manip.GetInfo(), ManipulatorInfo())
 
     def test_AttachedSensorInfo(self):
-        pass
+        self.log.info('test serialize/deserialize AttachedSensorInfo')
+        env = self.env
+        with env:
+            for robotfile in g_robotfiles:
+                env.Reset()
+                robot = self.LoadRobot(robotfile)
+                attachedsensors = robot.GetAttachedSensors()
+                if len(attachedsensors) == 0:
+                    self.log.warn("AttachedSensorInfo is empty in %s" % robotfile)
+                for attachedsensor in attachedsensors:
+                    self._testInfo(attachedsensor.GetInfo(), AttachedSensorInfo())
 
     def test_ConnectedBodyInfo(self):
+        self.log.info('test serialize/deserialize ConnectedBodyInfo')
+        env = self.env
+        with env:
+            for robotfile in g_robotfiles:
+                env.Reset()
+                robot = self.LoadRobot(robotfile)
+                connectedbodies = robot.GetConnectedBodies()
+                if len(connectedbodies) == 0:
+                    self.log.warn("ConnectedBodyInfo is empty in %s" % robotfile)
+                for connectedbody in connectedbodies:
+                    self._testInfo(connectedbody.GetInfo(), ConnectedBodyInfo())
+
+    # trajectory.h
+    def test_TrajectoryBase(self):
+        self.log.info('test serialize/deserialize Trajectory')
+        env = self.env
+        with env:
+            trajxml = """
+            <trajectory type="string">
+                <configuration>
+                    <group name="string" offset="#OFF1" dof="#D1" interpolation="string"/>
+                    <group name="string" offset="#OFF2" dof="#D2" interpolation="string"/>
+                </configuration>
+                <data count="#N">
+                    1 2 3 4 5
+                </data>
+                <readable>
+                    <usercustomclasses/>
+                </readable>
+                <description>My trajectory
+                </description>
+            </trajectory>
+            """
+            trajFromXML = RaveCreateTrajectory(env, 'xml').deserialize(trajxml)
+            trajjson = traj.SerializeJSON()
+            trajFromJSON = RaveCreateTrajectorY(env, 'json').DeserializeJSON(trajjson)
+            assert trajFromXML == trajfromJSON
+
+    def test_GenericTrajectory(self):
         pass
 
     # kinbody.h
@@ -54,21 +103,16 @@ class TestJSONSeralization(EnvironmentSetup):
 
     def test_GeometryInfo(self):
         pass
-    
+
     def test_LinkInfo(self):
         pass
 
     def test_MimicInfo(self):
         pass
 
-
     def test_JointInfo(self):
         pass
 
     def test_GrabbedInfo(self):
-        pass
-
-    # trajectory.h
-    def test_TrajectoryBase(self):
         pass
 

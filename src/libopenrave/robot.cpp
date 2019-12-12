@@ -54,6 +54,17 @@ RobotBase::AttachedSensorInfo& RobotBase::AttachedSensorInfo::operator=(const Ro
     return *this;
 }
 
+bool RobotBase::AttachedSensorInfo::operator==(const RobotBase::AttachedSensorInfo& other){
+    return sid == other.sid \
+        && name == other.name \
+        && type == other.type \
+        && linkName == other.linkName;
+}
+
+bool RobotBase::AttachedSensorInfo::operator!=(const RobotBase::AttachedSensorInfo& other){
+    return !(*this == other);
+}
+
 void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options) const
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
@@ -74,7 +85,6 @@ void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapid
 void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value &value, EnvironmentBasePtr penv)
 {
     RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
-
     RAVE_DESERIALIZEJSON_REQUIRED(value, "sid", sid);
     RAVE_DESERIALIZEJSON_REQUIRED(value, "name", name);
     RAVE_DESERIALIZEJSON_REQUIRED(value, "type", type);
@@ -83,20 +93,17 @@ void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value &valu
 
     // TODO create a non-null psensor to pass in
     if (value.HasMember("sensorGeometry")) {
-
       // BaseJSONReaderPtr preader = RaveCallJSONReader(PT_Sensor, type, InterfaceBasePtr(), AttributesList());
-      SensorBasePtr psensor = RaveCreateSensor(penv, value["type"].GetString());
-      BaseJSONReaderPtr preader = RaveCallJSONReader(PT_Sensor, type, psensor, AttributesList());
-      if( !!preader ) {
-        preader->DeserializeJSON(value["sensorGeometry"]);
-        if( !!preader->GetReadable() ) {
-          sensorGeometry = boost::dynamic_pointer_cast<SensorBase::SensorGeometry>(preader->GetReadable());
+        SensorBasePtr psensor = RaveCreateSensor(penv, value["type"].GetString());
+        BaseJSONReaderPtr preader = RaveCallJSONReader(PT_Sensor, type, psensor, AttributesList());
+        if( !!preader ) {
+            preader->DeserializeJSON(value["sensorGeometry"]);
+            if(!!preader->GetReadable()){
+                sensorGeometry = boost::dynamic_pointer_cast<SensorBase::SensorGeometry>(preader->GetReadable());
+            }
         }
-      }
     }
 }
-
-
 
 RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot) : _probot(probot)
 {
@@ -146,10 +153,6 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const RobotBase::
 RobotBase::AttachedSensor::~AttachedSensor()
 {
 }
-
-
-
-
 
 //void RobotBase::AttachedSensor::_ComputeInternalInformation()
 //{
@@ -1770,7 +1773,6 @@ void RobotBase::SetActiveManipulator(ManipulatorConstPtr pmanip)
                 return;
             }
         }
-
         _pManipActive.reset();
         RAVELOG_WARN_FORMAT("failed to find manipulator with name %s, most likely removed", pmanip->GetName());
     }

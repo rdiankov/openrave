@@ -45,6 +45,9 @@ public:
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
         virtual void DeserializeJSON(const rapidjson::Value &value);
 
+        bool operator==(const ManipulatorInfo& other);
+        bool operator!=(const ManipulatorInfo& other);
+
         /// \brief unique and constant scoped identifier
         std::string sid;
 
@@ -451,6 +454,8 @@ public:
         virtual ~AttachedSensorInfo();
 
         AttachedSensorInfo& operator=(const AttachedSensorInfo& other);
+        bool operator==(const AttachedSensorInfo& other);
+        bool operator!=(const AttachedSensorInfo& other);
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value &value, EnvironmentBasePtr penv);
