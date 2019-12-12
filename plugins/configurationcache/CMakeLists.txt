@@ -7,8 +7,9 @@ target_link_libraries(configurationcache PRIVATE boost_assertion_failed)
 set_target_properties(configurationcache PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
 install(TARGETS configurationcache DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${PLUGINS_BASE})
 
-set(USE_PYBIND11_PYTHON_BINDINGS ON)
-set(PYBIND11_PYTHON_BINDINGS_DEBUG ON)
+if(USE_PYBIND11_PYTHON_BINDINGS)
+  message(STATUS "Build openravepy_configurationcache with pybind11")
+endif()
 
 # python bindings
 if(OPT_PYTHON AND PYTHON_EXECUTABLE AND LAPACK_FOUND)
