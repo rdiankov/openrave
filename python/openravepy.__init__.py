@@ -28,9 +28,7 @@ except NameError:
 
 from .openravepy_int import *
 # may no longer need _std_runtime_error_, _boost_bad_function_call_
-if openravepy_int.__pythonbinding__ == 'pybind11':
-    pass
-else:
+if openravepy_int.__pythonbinding__ != 'pybind11':
     from .openravepy_int import _openrave_exception_
 from .openravepy_int import __version__
 from .openravepy_int import __author__
@@ -45,12 +43,8 @@ from . import interfaces
 from . import databases
 
 OpenRAVEModel = databases.DatabaseGenerator # for backwards compatibility
-if openravepy_int.__pythonbinding__ == 'pybind11':
-    pass
-else:
+if openravepy_int.__pythonbinding__ != 'pybind11':
     _openrave_exception_.py_err_class = openrave_exception
-# _std_runtime_error_.py_err_class = runtime_error
-# _boost_bad_function_call_.py_err_class = runtime_error
 
 # deprecated
 Problem = Module
