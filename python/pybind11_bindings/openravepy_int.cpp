@@ -2385,7 +2385,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::register_exception<openrave_exception>(m, "openrave_exception");
+    py::register_exception<openrave_exception>(m, "_openrave_exception_");
     m.
     def("GetOpenRAVEExceptionCode", [](const object& e) {
         // e is openravepy._openravepy_0_XXX.openravepy_int.openrave_exception

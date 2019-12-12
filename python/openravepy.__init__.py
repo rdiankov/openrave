@@ -27,8 +27,6 @@ except NameError:
     __builtins__['__openravepy_build_doc__'] = False
 
 from .openravepy_int import *
-if openravepy_int.__pythonbinding__ != 'pybind11':
-    from .openravepy_int import _openrave_exception_
 from .openravepy_int import __version__
 from .openravepy_int import __author__
 from .openravepy_int import __copyright__
@@ -54,8 +52,10 @@ Available methods are
 - GetOpenRAVEExceptionCode(e)
 - GetOpenRAVEExceptionMessage(e)
 """
-if openravepy_int.__pythonbinding__ != 'pybind11':
-    from .openravepy_ext import openrave_exception
+if openravepy_int.__pythonbinding__ == 'pybind11':
+    from .openravepy_int import _openrave_exception_ as openrave_exception
+else:
+    from .openravepy_int import _openrave_exception_
     _openrave_exception_.py_err_class = openravepy_ext.openrave_exception
 
 # deprecated
