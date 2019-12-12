@@ -29,7 +29,7 @@ except:
     import pickle
 
 from .. import openravepy_int
-from ..openravepy_ext import openrave_exception
+from ..openravepy_ext import openrave_exception_helper as openrave_exception
 from .. import metaclass
 from ..misc import OpenRAVEGlobalArguments
 import os.path

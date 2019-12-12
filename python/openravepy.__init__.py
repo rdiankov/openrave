@@ -59,7 +59,7 @@ Available methods are
 if openravepy_int.__pythonbinding__ == 'pybind11':
     pass
 else:
-    _openrave_exception_.py_err_class = openravepy_ext.openrave_exception
+    _openrave_exception_.py_err_class = openravepy_ext.openrave_exception_helper
 
 # deprecated
 Problem = Module
