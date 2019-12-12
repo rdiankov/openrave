@@ -159,7 +159,7 @@ object toPyObject(const rapidjson::Value& value)
 }
 
 // convert from python object to rapidjson
-void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator)
+void toRapidJSONValue(const object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     if (obj.is_none())
@@ -221,7 +221,7 @@ void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
     {
         py::list l = py::extract<py::list>(obj);
         value.SetArray();
-        int numitems = len(l);
+        const int numitems = len(l);
         for (int i = 0; i < numitems; i++) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
             rapidjson::Value elementValue;
@@ -2944,15 +2944,15 @@ Because race conditions can pop up when trying to lock the openrave environment 
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.attr("__version__") = OPENRAVE_VERSION_STRING;
-    m.attr("__author__") = "Rosen Diankov";
-    m.attr("__copyright__") = "2009-2012 Rosen Diankov (rosen.diankov@gmail.com)";
+    m.attr("__author__") = "Rosen Diankov, Guangning Tan";
+    m.attr("__copyright__") = "2009-2019 Rosen Diankov (rosen.diankov@gmail.com), Guangning Tan (tgntanguangning@gmail.com)";
     m.attr("__license__") = "Lesser GPL";
     m.attr("__docformat__") = "restructuredtext";
     m.attr("__pythonbinding__") = "pybind11";
 #else
     scope().attr("__version__") = OPENRAVE_VERSION_STRING;
-    scope().attr("__author__") = "Rosen Diankov";
-    scope().attr("__copyright__") = "2009-2012 Rosen Diankov (rosen.diankov@gmail.com)";
+    scope().attr("__author__") = "Rosen Diankov, Guangning Tan";
+    scope().attr("__copyright__") = "2009-2019 Rosen Diankov (rosen.diankov@gmail.com), Guangning Tan (tgntanguangning@gmail.com)";
     scope().attr("__license__") = "Lesser GPL";
     scope().attr("__docformat__") = "restructuredtext";
     scope().attr("__pythonbinding__") = "Boost.Python." + std::to_string(BOOST_VERSION);

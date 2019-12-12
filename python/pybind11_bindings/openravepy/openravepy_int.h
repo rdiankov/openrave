@@ -162,7 +162,7 @@ inline uint64_t GetMicroTime()
 #if OPENRAVE_RAPIDJSON
 /// conversion between rapidjson value and py::object
 OPENRAVEPY_API py::object toPyObject(const rapidjson::Value& value);
-OPENRAVEPY_API void toRapidJSONValue(py::object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator);
+OPENRAVEPY_API void toRapidJSONValue(const py::object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator);
 #endif // OPENRAVE_RAPIDJSON
 
 /// used externally, don't change definitions
