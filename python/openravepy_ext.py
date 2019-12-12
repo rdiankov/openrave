@@ -116,6 +116,9 @@ class openrave_exception_helper(Exception):
         except AttributeError:
             return super(openrave_exception_helper,self).__getattribute__(attr)
 
+if openravepy_int.__pythonbinding__ != 'pybind11':
+    openrave_exception = openrave_exception_helper
+
 class std_exception(Exception):
     """wrap up the C++ std_exception"""
     def __init__( self, app_error ):

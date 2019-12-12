@@ -2332,7 +2332,6 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBody_overloads, GetPublishedB
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodies_overloads, GetPublishedBodies, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodyJointValues_overloads, GetPublishedBodyJointValues, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodyTransformsMatchingPrefix_overloads, GetPublishedBodyTransformsMatchingPrefix, 1, 2)
-#endif // USE_PYBIND11_PYTHON_BINDINGS
 
 object get_openrave_exception_unicode(openrave_exception* p)
 {
@@ -2355,6 +2354,11 @@ std::string get_std_runtime_error_repr(std::runtime_error* p)
 {
     return boost::str(boost::format("<std_exception('%s')>")%p->what());
 }
+
+void MyThrow() {
+        throw openrave_exception("experiment on openrave_exception with Boost.Python", ORE_InvalidArguments);
+}
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
 }
 
@@ -2415,6 +2419,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
     .def( "__unicode__", get_openrave_exception_unicode)
     .def( "__repr__", get_openrave_exception_repr)
     ;
+    def("MyThrow", MyThrow);
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
