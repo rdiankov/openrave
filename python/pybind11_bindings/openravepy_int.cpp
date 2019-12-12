@@ -2356,7 +2356,15 @@ std::string get_std_runtime_error_repr(std::runtime_error* p)
     return boost::str(boost::format("<std_exception('%s')>")%p->what());
 }
 
+void MyThrow() {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    throw openrave_exception("experiment on openrave_exception with pybind11", ORE_InvalidArguments);
+#else
+    throw openrave_exception("experiment on openrave_exception with Boost.Python", ORE_InvalidArguments);
+#endif
 }
+
+} // namespace openravepy
 
 OPENRAVE_PYTHON_MODULE(openravepy_int)
 {
@@ -2401,9 +2409,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
         // _RAVE_DISPLAY(std::cout << errorstring;);
         return errorstring;
     })
-    .def("MyThrow", [] {
-        throw openrave_exception("experiment on openrave_exception with pybind11", ORE_InvalidArguments);
-    })
+    .def("MyThrow", MyThrow)
     ;
 #else
     class_< openrave_exception >( "_openrave_exception_", DOXY_CLASS(openrave_exception) )
@@ -2415,6 +2421,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
     .def( "__unicode__", get_openrave_exception_unicode)
     .def( "__repr__", get_openrave_exception_repr)
     ;
+    def("MyThrow", MyThrow);
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
