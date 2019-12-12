@@ -1186,7 +1186,15 @@ inline void svd3(const T* A, T* U, T* D, T* V)
 
     mult3_s3(U, A, V); // U = A V = U D
     for(int i = 0; i < 3; ++i) {
-        D[i] = sqrt(eigenvalues[i]);
+        if( eigenvalues[i] > 0 ) {
+            D[i] = sqrt(eigenvalues[i]);
+        }
+        else {
+            if( eigenvalues[i] < -std::numeric_limits<T>::epsilon() ) {
+                throw std::runtime_error("eigenvalue should be non-negative");
+            }
+            D[i] = 0; // close to 0
+        }
         T f = 1/D[i];
         U[i] *= f;
         U[i+3] *= f;
