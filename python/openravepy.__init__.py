@@ -42,6 +42,18 @@ from . import interfaces
 from . import databases
 
 OpenRAVEModel = databases.DatabaseGenerator # for backwards compatibility
+
+"""
+When building with Boost.Python, this wraps up the C++ class openravepy::openrave_exception.
+Available methods are
+- e.GetCode()
+- e.message()
+
+When building with pybind11, openrave_exception is simple Python Exception class and does not have its own method.
+Available methods are
+- GetOpenRAVEExceptionCode(e)
+- GetOpenRAVEExceptionMessage(e)
+"""
 if openravepy_int.__pythonbinding__ != 'pybind11':
     _openrave_exception_.py_err_class = openravepy_ext.openrave_exception_helper
 
