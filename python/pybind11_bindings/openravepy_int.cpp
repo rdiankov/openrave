@@ -28,6 +28,8 @@
 #include <openravepy/openravepy_module.h>
 #include <openravepy/openravepy_physicalenginebase.h>
 
+#define OPENRAVE_EXCEPTION_CLASS_NAME "_openrave_exception_"
+
 namespace openravepy
 {
 using py::object;
@@ -236,7 +238,6 @@ void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
     else if (PyDict_Check(obj.ptr()))
     {
         py::dict d = py::extract<py::dict>(obj);
-        int numitems = len(d);
         value.SetObject();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         for (pybind11::detail::dict_iterator it = d.begin(); it != d.end(); ++it) {
@@ -248,6 +249,7 @@ void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
         }
 #else
         object iterator = d.iteritems();
+        const int numitems = len(d);
         for (int i = 0; i < numitems; i++)
         {
             py::tuple kv = py::extract<py::tuple>(iterator.attr("next")());
@@ -2343,6 +2345,7 @@ std::string get_openrave_exception_repr(openrave_exception* p)
 {
     return boost::str(boost::format("<openrave_exception('%s',ErrorCode.%s)>")%p->message()%GetErrorCodeString(p->GetCode()));
 }
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
 object get_std_runtime_error_unicode(std::runtime_error* p)
 {
@@ -2355,12 +2358,33 @@ std::string get_std_runtime_error_repr(std::runtime_error* p)
     return boost::str(boost::format("<std_exception('%s')>")%p->what());
 }
 
-void MyThrow() {
-        throw openrave_exception("experiment on openrave_exception with Boost.Python", ORE_InvalidArguments);
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+std::string GetClassTypeString(object o) {
+    const std::string classtype = py::str(o.attr("__class__")).cast<std::string>();
+    const std::size_t left = classtype.find_first_of("'") + 1; // before is <class '
+    const std::size_t right = classtype.find_last_of("'"); // after is '>"
+    return classtype.substr(left, right-left); // openravepy._openravepy_0_26.openravepy_int.openrave_exception
+}
+
+bool IsOpenRAVEException(object o, const std::string& openrave_exception_class_name = OPENRAVE_EXCEPTION_CLASS_NAME) {
+    const std::string classtype = GetClassTypeString(o); // openravepy._openravepy_0_26.openravepy_int.openrave_exception
+    const std::size_t left = classtype.find_first_of("0123456789"); // openravepy._openravepy_
+    const std::size_t right = classtype.find_last_of("0123456789") + 1; // .openravepy_int.openrave_exception
+    // _RAVE_DISPLAY(std::cout << classtype.substr(0, left) << ", " << classtype.substr(right););
+    return (classtype.substr(0, left) == "openravepy._openravepy_") 
+        && (classtype.substr(right) == ".openravepy_int." + openrave_exception_class_name);
 }
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
+void MyThrow() {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    throw openrave_exception("experiment on openrave_exception with pybind11", ORE_InvalidArguments);
+#else
+    throw openrave_exception("experiment on openrave_exception with Boost.Python", ORE_InvalidArguments);
+#endif
 }
+
+} // namespace openravepy
 
 OPENRAVE_PYTHON_MODULE(openravepy_int)
 {
@@ -2384,33 +2408,38 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
     typedef return_value_policy< copy_const_reference > return_copy_const_ref;
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
+    const char openrave_exception_class_name[] = OPENRAVE_EXCEPTION_CLASS_NAME;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::register_exception<openrave_exception>(m, "_openrave_exception_");
-    m.
-    def("GetOpenRAVEExceptionCode", [](const object& e) {
+    py::register_exception<openrave_exception>(m, openrave_exception_class_name);
+    m
+    .def("IsOpenRAVEException", IsOpenRAVEException,
+        "exception"_a,
+        "openrave_exception_class_name"_a = openrave_exception_class_name
+    )
+    .def("GetOpenRAVEExceptionCode", [](const object& e) {
+        BOOST_ASSERT(IsOpenRAVEException(e));
         // e is openravepy._openravepy_0_XXX.openravepy_int.openrave_exception
         const std::string message = e.attr("message").cast<std::string>();
-        const std::size_t left_par = message.find_first_of("(");
-        const std::size_t right_par = message.find_first_of(")");
-        const std::string errorcodestring = message.substr(left_par+1, right_par-left_par-1);
+        const std::size_t left = message.find_first_of("(") + 1;
+        const std::size_t right = message.find_first_of(")");
+        const std::string errorcodestring = message.substr(left, right-left);
         const int errorcode = OpenRAVE::GetErrorCodeFromErrorString(errorcodestring);
         // _RAVE_DISPLAY(std::cout << errorcodestring << ", " << errorcode;);
         return errorcode;
     })
     .def("GetOpenRAVEExceptionMessage", [](const object& e) {
+        BOOST_ASSERT(IsOpenRAVEException(e));
         // e is openravepy._openravepy_0_XXX.openravepy_int.openrave_exception
         const std::string message = e.attr("message").cast<std::string>();
-        const std::size_t right_par = message.find_first_of(")");
-        const std::string errorstring = message.substr(right_par+3);
+        const std::size_t right = message.find_first_of(")");
+        const std::string errorstring = message.substr(right+3);
         // _RAVE_DISPLAY(std::cout << errorstring;);
         return errorstring;
     })
-    .def("MyThrow", [] {
-        throw openrave_exception("experiment on openrave_exception with pybind11", ORE_InvalidArguments);
-    })
+    .def("MyThrow", MyThrow)
     ;
 #else
-    class_< openrave_exception >( "_openrave_exception_", DOXY_CLASS(openrave_exception) )
+    class_< openrave_exception >( openrave_exception_class_name, DOXY_CLASS(openrave_exception) )
     .def( init<const std::string&>() )
     .def( init<const openrave_exception&>() )
     .def( "message", &openrave_exception::message, return_copy_const_ref() )
