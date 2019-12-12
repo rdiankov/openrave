@@ -52,23 +52,23 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const IkParameterization& ikparam);
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const SensorBase::CameraIntrinsics& intrinsics);
 
-template<typename T, typename ... Types>
-inline rapidjson::Value RAVE_SERIALIZEJSON(T& allocator, const Types& ... Fargs) {
+template<typename ... Types>
+inline rapidjson::Value RAVE_SERIALIZEJSON(rapidjson::Document::AllocatorType& allocator, const Types& ... Fargs) {
     rapidjson::Value value;
     RaveSerializeJSON(value, allocator, Fargs...);
     return value;
 }
 
-template<typename T, typename ... Types>
-inline void RAVE_SERIALIZEJSON_PUSHBACK(T& allocator, const Types& ... Fargs) {
+template<typename ... Types>
+inline void RAVE_SERIALIZEJSON_PUSHBACK(rapidjson::Document::AllocatorType& allocator, const Types& ... Fargs) {
     do {
         rapidjson::Value value = RAVE_SERIALIZEJSON(allocator, Fargs...);
         value.PushBack(value, allocator);
     } while(false);
 }
 
-template<typename T, typename U, typename ... Types>
-inline void RAVE_SERIALIZEJSON_ADDMEMBER(T& allocator, U& key, const Types& ... Fargs) {
+template<typename T, typename ... Types>
+inline void RAVE_SERIALIZEJSON_ADDMEMBER(rapidjson::Document::AllocatorType& allocator, T& key, const Types& ... Fargs) {
     do {
         rapidjson::Value value = RAVE_SERIALIZEJSON(allocator, Fargs...);
         value.AddMember(key, value, allocator);
