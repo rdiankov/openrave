@@ -53,94 +53,99 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const SensorBase::CameraIntrinsics& intrinsics);
 
 template<typename T, typename ... Types>
-rapidjson::Value RAVE_SERIALIZEJSON(T& allocator, Types ... Fargs) {
+inline rapidjson::Value RAVE_SERIALIZEJSON(T& allocator, Types ... Fargs) {
     rapidjson::Value value;
     RaveSerializeJSON(value, allocator, Fargs...);
     return value;
 }
 
-// #define RAVE_SERIALIZEJSON(value, allocator, ...) \
-//     rapidjson::Value value; \
-//     RaveSerializeJSON(value, allocator, ##__VA_ARGS__)
-
 template<typename T, typename ... Types>
-void RAVE_SERIALIZEJSON_PUSHBACK(T& allocator, Types ... Fargs) {
+inline void RAVE_SERIALIZEJSON_PUSHBACK(T& allocator, Types ... Fargs) {
     do {
         rapidjson::Value value = RAVE_SERIALIZEJSON(allocator, Fargs...);
         value.PushBack(value, allocator);
     } while(false);
 }
 
-// #define RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, ...) \
-//     { do \
-//         { \
-//             RAVE_SERIALIZEJSON(value, allocator, ##__VA_ARGS__); \
-//             (value).PushBack(value, allocator);\
-//         } while(false); \
-//     };
-
 template<typename T, typename U, typename ... Types>
-void RAVE_SERIALIZEJSON_ADDMEMBER(T& allocator, U& key, Types ... Fargs) {
+inline void RAVE_SERIALIZEJSON_ADDMEMBER(T& allocator, U& key, Types ... Fargs) {
     do {
         rapidjson::Value value = RAVE_SERIALIZEJSON(allocator, Fargs...);
         value.AddMember(key, value, allocator);
     } while(false);
 }
 
-// #define RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, key, ...) \
-//     { do \
-//         { \
-//             RAVE_SERIALIZEJSON(value, allocator, ##__VA_ARGS__); \
-//             (value).AddMember(key, value, allocator); \
-//         } while(false); \
-//     };
-
-#define RAVE_SERIALIZEJSON_ENSURE_OBJECT(value) \
-    { \
-        if (!(value).IsObject()) { \
-            (value).SetObject(); \
-        } \
+inline void RAVE_SERIALIZEJSON_ENSURE_OBJECT(rapidjson::Value &value) {
+    if (!value.IsObject()) { 
+        value.SetObject();
     }
-#define RAVE_SERIALIZEJSON_ENSURE_ARRAY(value) \
-    { \
-        if (!(value).IsArray()) { \
-            (value).SetArray(); \
-        } \
-    }
-
-#define RAVE_SERIALIZEJSON_CLEAR_OBJECT(value) \
-    { \
-        do { \
-            (value).SetObject(); \
-        } while (false); \
-    }
-#define RAVE_SERIALIZEJSON_CLEAR_ARRAY(value) \
-    { \
-        do { \
-            (value).SetArray(); \
-        } while (false); \
-    }
-
-#define RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value) { \
-    if (!(value).IsObject()) { \
-        throw OPENRAVE_EXCEPTION_FORMAT0("failed deserialize json, an object is expected", ORE_InvalidArguments); \
-    } \
 }
-#define RAVE_DESERIALIZEJSON_ENSURE_ARRAY(value) { \
-    if (!(value).IsArray()) { \
-        throw OPENRAVE_EXCEPTION_FORMAT0("failed deserialize json, an array is expected", ORE_InvalidArguments); \
-    } \
+
+inline void RAVE_SERIALIZEJSON_ENSURE_ARRAY(rapidjson::Value &value) {
+    if (!value.IsArray()) { 
+        value.SetArray();
+    }
 }
-#define RAVE_DESERIALIZEJSON_REQUIRED(value, key, destination) { \
-    if (!(value).HasMember(key)) { \
-        throw OPENRAVE_EXCEPTION_FORMAT("failed deserialize json due to missing key \"%s\"", key, ORE_InvalidArguments); \
-    } \
-    RaveDeserializeJSON((value)[key], destination); \
+
+inline void RAVE_SERIALIZEJSON_CLEAR_OBJECT(rapidjson::Value &value) {
+    do {
+        value.SetObject();
+    } while (false);
 }
-#define RAVE_DESERIALIZEJSON_OPTIONAL(value, key, destination) { \
-    if ((value).HasMember(key)) { \
-        RaveDeserializeJSON((value)[key], destination); \
-    } \
+
+inline void RAVE_SERIALIZEJSON_CLEAR_ARRAY(rapidjson::Value &value) {
+    do {
+        value.SetArray();
+    } while (false);
+}
+
+inline void RAVE_DESERIALIZEJSON_ENSURE_OBJECT(const rapidjson::Value &value) {
+    if (!value.IsObject()) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed deserialize json, an object is expected", ORE_InvalidArguments);
+    }
+}
+
+inline void RAVE_DESERIALIZEJSON_ENSURE_ARRAY(const rapidjson::Value &value) {
+    if (!value.IsArray()) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed deserialize json, an array is expected", ORE_InvalidArguments);
+    }
+}
+
+// forward declaration
+inline void RaveDeserializeJSON(const rapidjson::Value &value, bool &v);
+inline void RaveDeserializeJSON(const rapidjson::Value &value, int &v);
+inline void RaveDeserializeJSON(const rapidjson::Value &value, double &v);
+inline void RaveDeserializeJSON(const rapidjson::Value &value, float &v);
+inline void RaveDeserializeJSON(const rapidjson::Value &value, std::string &v);
+inline void RaveDeserializeJSON(const rapidjson::Value &value, uint8_t &v);
+template <typename T1, typename T2>
+inline void RaveDeserializeJSON(const rapidjson::Value &value, std::pair<T1, T2>& p);
+template <typename T>
+inline void RaveDeserializeJSON(const rapidjson::Value &value, std::vector<T>& v);
+template <typename K, typename V>
+inline void RaveDeserializeJSON(const rapidjson::Value &value, std::map<K, V>& m);
+template <typename T, std::size_t N>
+inline void RaveDeserializeJSON(const rapidjson::Value &value, boost::array<T, N>& a);
+template <typename T>
+inline void RaveDeserializeJSON(const rapidjson::Value &value, RaveVector<T>& v);
+template <typename T>
+inline void RaveDeserializeJSON(const rapidjson::Value &value, RaveTransform<T>& t);
+inline void RaveDeserializeJSON(const rapidjson::Value &value, TriMesh& trimesh);
+inline void RaveDeserializeJSON(const rapidjson::Value &value, SensorBase::CameraIntrinsics& intrinsics);
+
+template<typename T, typename U>
+inline void RAVE_DESERIALIZEJSON_REQUIRED(const rapidjson::Value &value, const T& key, U& destination) {
+    if (!value.HasMember(key)) {
+        throw OPENRAVE_EXCEPTION_FORMAT("failed deserialize json due to missing key \"%s\"", key, ORE_InvalidArguments);
+    }
+    RaveDeserializeJSON(value[key], destination);
+}
+
+template<typename T, typename U>
+inline void RAVE_DESERIALIZEJSON_OPTIONAL(const rapidjson::Value &value, const T& key, U& destination) {
+    if (value.HasMember(key)) {
+        RaveDeserializeJSON(value[key], destination);
+    }
 }
 
 /// \brief serialize a bool as json, these functions are overloaded to allow for templates
@@ -301,27 +306,6 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
     RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "distortionCoeffs", intrinsics.distortion_coeffs);
 }
 
-inline void RaveDeserializeJSON(const rapidjson::Value &value, bool &v);
-inline void RaveDeserializeJSON(const rapidjson::Value &value, int &v);
-inline void RaveDeserializeJSON(const rapidjson::Value &value, double &v);
-inline void RaveDeserializeJSON(const rapidjson::Value &value, float &v);
-inline void RaveDeserializeJSON(const rapidjson::Value &value, std::string &v);
-inline void RaveDeserializeJSON(const rapidjson::Value &value, uint8_t &v);
-template <typename T1, typename T2>
-inline void RaveDeserializeJSON(const rapidjson::Value &value, std::pair<T1, T2>& p);
-template <typename T>
-inline void RaveDeserializeJSON(const rapidjson::Value &value, std::vector<T>& v);
-template <typename K, typename V>
-inline void RaveDeserializeJSON(const rapidjson::Value &value, std::map<K, V>& m);
-template <typename T, std::size_t N>
-inline void RaveDeserializeJSON(const rapidjson::Value &value, boost::array<T, N>& a);
-template <typename T>
-inline void RaveDeserializeJSON(const rapidjson::Value &value, RaveVector<T>& v);
-template <typename T>
-inline void RaveDeserializeJSON(const rapidjson::Value &value, RaveTransform<T>& t);
-inline void RaveDeserializeJSON(const rapidjson::Value &value, TriMesh& trimesh);
-inline void RaveDeserializeJSON(const rapidjson::Value &value, SensorBase::CameraIntrinsics& intrinsics);
-
 inline void RaveDeserializeJSON(const rapidjson::Value &value, bool &v)
 {
     if (!value.IsBool()) {
@@ -477,7 +461,7 @@ inline void RaveDeserializeJSON(const rapidjson::Value &value, IkParameterizatio
     RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
 
     std::string typestr;
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "type", typestr)
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "type", typestr);
 
     if (typestr == "Transform6D")
     {
