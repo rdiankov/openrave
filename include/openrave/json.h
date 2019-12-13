@@ -20,6 +20,12 @@
 #ifndef OPENRAVE_SERIALIZE_JSON_H
 #define OPENRAVE_SERIALIZE_JSON_H
 
+#include <openrave/config.h>
+
+#if OPENRAVE_RAPIDJSON
+#include <openrave/openrave.h>
+#include <rapidjson/document.h>
+
 namespace OpenRAVE {
 
 // forward declarations of serialization functions
@@ -495,6 +501,8 @@ inline void RaveDeserializeJSON(const rapidjson::Value &value, SensorBase::Camer
     RAVE_DESERIALIZEJSON_REQUIRED(value, "distortionCoeffs", intrinsics.distortion_coeffs);
 }
 
-}
+} // namespace OpenRAVE
+
+#endif // OPENRAVE_RAPIDJSON != 0
 
 #endif // OPENRAVE_SERIALIZE_JSON_H
