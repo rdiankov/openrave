@@ -25,12 +25,17 @@ namespace OpenRAVE {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 RobotBase::AttachedSensorInfo::AttachedSensorInfo() :
     XMLReadable("attachedsensor"),
-    _name(name),
-    _linkname(linkName),
-    _trelative(transform),
-    _sensorname(type),
-    _sensorgeometry(sensorGeometry)
+    name(name),
+    linkName(linkName),
+    transform(transform),
+    sensorName(type),
+    sensorGeometry(sensorGeometry)
 {
+    _name = name;
+    _linkname = linkName;
+    _trelative = transform;
+    _sensorname = type;
+    _sensorgeometry = sensorGeometry;
 }
 #pragma GCC diagnostic pop
 
@@ -54,14 +59,15 @@ RobotBase::AttachedSensorInfo& RobotBase::AttachedSensorInfo::operator=(const Ro
     return *this;
 }
 
-bool RobotBase::AttachedSensorInfo::operator==(const RobotBase::AttachedSensorInfo& other){
-    return sid == other.sid \
-        && name == other.name \
-        && type == other.type \
-        && linkName == other.linkName;
+bool RobotBase::AttachedSensorInfo::operator==(const RobotBase::AttachedSensorInfo& other)
+{
+    return sid == sid \
+        && name == name \
+        && linkName == linkName \
+        && type == type;
 }
-
-bool RobotBase::AttachedSensorInfo::operator!=(const RobotBase::AttachedSensorInfo& other){
+bool RobotBase::AttachedSensorInfo::operator!=(const RobotBase::AttachedSensorInfo& other)
+{
     return !(*this == other);
 }
 

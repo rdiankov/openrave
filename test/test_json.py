@@ -20,16 +20,6 @@ from common_test_openrave import *
 
 class TestJSONSeralization(EnvironmentSetup):
 
-    def _testInfo(self, info, emptyInfo):
-        """ 
-        Steps:
-        1. serialize info
-        2. deserialize step 1 result into emptyInfo
-        3. compare info and emptyInfo.
-        """
-        emptyInfo.DeserializeJSON(info.SerializeJSON())
-        assert info == emptyInfo
-
     # robot.h
     def test_ManipulatorInfo(self):
         self.log.info('test serialize/deserialize ManipulatorInfo')
@@ -40,7 +30,10 @@ class TestJSONSeralization(EnvironmentSetup):
                 robot = self.LoadRobot(robotfile)
                 manips = robot.GetManipulators()
                 for manip in manips:
-                    self._testInfo(manip.GetInfo(), ManipulatorInfo())
+                    emptyInfo =  ManipulatorInfo()
+                    emptyInfo.DeserializeJSON(manip.GetInfo().SerializeJSON())
+                    assert emptyInfo == manip.GetInfo()
+                    
 
     def test_AttachedSensorInfo(self):
         self.log.info('test serialize/deserialize AttachedSensorInfo')
@@ -53,7 +46,9 @@ class TestJSONSeralization(EnvironmentSetup):
                 if len(attachedsensors) == 0:
                     self.log.warn("AttachedSensorInfo is empty in %s" % robotfile)
                 for attachedsensor in attachedsensors:
-                    self._testInfo(attachedsensor.GetInfo(), AttachedSensorInfo())
+                    emptyInfo = AttachedSensorInfo()
+                    emptyInfo.DeserializeJSON(attachedsensor.GetInfo().SerializeJSON(), env)
+                    assert emptyInfo == attachedsensor.GetInfo()
 
     def test_ConnectedBodyInfo(self):
         self.log.info('test serialize/deserialize ConnectedBodyInfo')
@@ -66,7 +61,9 @@ class TestJSONSeralization(EnvironmentSetup):
                 if len(connectedbodies) == 0:
                     self.log.warn("ConnectedBodyInfo is empty in %s" % robotfile)
                 for connectedbody in connectedbodies:
-                    self._testInfo(connectedbody.GetInfo(), ConnectedBodyInfo())
+                    emptyInfo = ConnectedBodyInfo()
+                    emptyInfo.DeserializeJSON(connectedbody.GetInfo().SerializeJSON())
+                    assert emptyInfo == connectedbody.GetInfO()
 
     # trajectory.h
     def test_TrajectoryBase(self):
@@ -89,7 +86,7 @@ class TestJSONSeralization(EnvironmentSetup):
                 </description>
             </trajectory>
             """
-            trajFromXML = RaveCreateTrajectory(env, 'xml').deserialize(trajxml)
+            trajFromXML = RaveCreateTrajectory(env, '').deserialize(trajxml)
             trajjson = traj.SerializeJSON()
             trajFromJSON = RaveCreateTrajectorY(env, 'json').DeserializeJSON(trajjson)
             assert trajFromXML == trajfromJSON

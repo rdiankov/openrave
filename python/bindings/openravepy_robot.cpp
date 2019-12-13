@@ -64,11 +64,11 @@ public:
         return toPyObject(doc);
     }
 
-    bool __eq__(boost::shared_ptr<PyManipulatorInfo> rhs){
-        return *(this->GetManipulatorInfo()) == *(rhs->GetManipulatorInfo());
+    bool __eq__(boost::shared_ptr<PyManipulatorInfo> other){
+        return *(this->GetManipulatorInfo()) == *(other->GetManipulatorInfo());
     }
-    bool __ne__(boost::shared_ptr<PyManipulatorInfo> rhs){
-        return !__eq__(rhs);
+    bool __ne__(boost::shared_ptr<PyManipulatorInfo> other){
+        return !__eq__(other);
     }
 
     object _name, _sBaseLinkName, _sEffectorLinkName;
@@ -104,13 +104,14 @@ class PyAttachedSensorInfo
 {
 public:
     PyAttachedSensorInfo() {
+        _name = ConvertStringToUnicode("");
+        _linkname = ConvertStringToUnicode("");
+        _trelative = ReturnTransform(Transform());
+        _sensorname = ConvertStringToUnicode("");
+        _sensorgeometry = toPySensorGeometry(nullptr);
     }
     PyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& info) {
-        _name = ConvertStringToUnicode(info._name);
-        _linkname = ConvertStringToUnicode(info._linkname);
-        _trelative = ReturnTransform(info._trelative);
-        _sensorname = ConvertStringToUnicode(info._sensorname);
-        _sensorgeometry = toPySensorGeometry(info._sensorgeometry);
+        _Update(info);
     }
 
     RobotBase::AttachedSensorInfoPtr GetAttachedSensorInfo() const
@@ -120,14 +121,51 @@ public:
         pinfo->_linkname = boost::python::extract<std::string>(_linkname);
         pinfo->_trelative = ExtractTransform(_trelative);
         pinfo->_sensorname = boost::python::extract<std::string>(_sensorname);
-        pinfo->_sensorgeometry = _sensorgeometry->GetGeometry();
+        pinfo->_sensorgeometry = !!_sensorgeometry?_sensorgeometry->GetGeometry():nullptr;
         return pinfo;
+    }
+
+    object SerializeJSON(object options=object())
+    {
+        rapidjson::Document doc;
+        RobotBase::AttachedSensorInfoPtr pInfo = GetAttachedSensorInfo();
+        pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(options, 0));
+        return toPyObject(doc);
+    }
+
+    void DeserializeJSON(object obj, PyEnvironmentBasePtr penv)
+    {
+        rapidjson::Document doc;
+        toRapidJSONValue(obj, doc, doc.GetAllocator());
+
+        RobotBase::AttachedSensorInfo info;
+        info.DeserializeJSON(doc, GetEnvironment(penv));
+        _Update(info);
+    }
+
+    bool __eq__(boost::shared_ptr<PyAttachedSensorInfo> other)
+    {
+        return *(this->GetAttachedSensorInfo()) == *(other->GetAttachedSensorInfo());
+    }
+
+    bool __ne__(boost::shared_ptr<PyAttachedSensorInfo> other)
+    {
+        return !__eq__(other);
     }
 
     object _name, _linkname;
     object _trelative;
     object _sensorname;
     PySensorGeometryPtr _sensorgeometry;
+
+private:
+    void _Update(const RobotBase::AttachedSensorInfo& info){
+        _name = ConvertStringToUnicode(info.name);
+        _linkname = ConvertStringToUnicode(info.linkName);
+        _trelative = ReturnTransform(info.transform);
+        _sensorname = ConvertStringToUnicode(info.type);
+        _sensorgeometry = toPySensorGeometry(info.sensorGeometry);
+    }
 };
 
 PyAttachedSensorInfoPtr toPyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& attachedSensorinfo)
@@ -1735,6 +1773,10 @@ void init_openravepy_robot()
                                 .def_readwrite("_trelative", &PyAttachedSensorInfo::_trelative)
                                 .def_readwrite("_sensorname", &PyAttachedSensorInfo::_sensorname)
                                 .def_readwrite("_sensorgeometry", &PyAttachedSensorInfo::_sensorgeometry)
+                                .def("SerializeJSON", &PyAttachedSensorInfo::SerializeJSON, SerializeJSON_overloads(args("options"), DOXY_FN(RobotBase::AttachedSensorInfo, SerializeJSON)))
+                                .def("DeserializeJSON", &PyAttachedSensorInfo::DeserializeJSON, args("obj", "penv"), DOXY_FN(RobotBase::AttachedSensorInfo, DeserializeJSON))
+                                .def("__eq__", &PyAttachedSensorInfo::__eq__)
+                                .def("__ne__", &PyAttachedSensorInfo::__ne__)
     ;
 
     object connectedbodyinfo = class_<PyConnectedBodyInfo, boost::shared_ptr<PyConnectedBodyInfo> >("ConnectedBodyInfo", DOXY_CLASS(RobotBase::ConnectedBodyInfo))

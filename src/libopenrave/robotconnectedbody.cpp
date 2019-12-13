@@ -20,7 +20,7 @@
 
 namespace OpenRAVE {
 
-RobotBase::ConnectedBodyInfo::ConnectedBodyInfo() : _bIsActive(false)
+RobotBase::ConnectedBodyInfo::ConnectedBodyInfo() : isActive(false)
 {
 }
 
@@ -54,6 +54,56 @@ void RobotBase::ConnectedBodyInfo::InitInfoFromBody(RobotBase& robot)
     FOREACH(itattachedsensor, robot.GetAttachedSensors()) {
         _vAttachedSensorInfos.push_back(boost::make_shared<RobotBase::AttachedSensorInfo>((*itattachedsensor)->UpdateAndGetInfo()));
     }
+}
+
+void RobotBase::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0)
+{
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
+
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "sid", sid);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "linkName", linkName);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "url", url);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", transform);
+
+    rapidjson::value linkInfosValue(rapidjson::kArrayType);
+    FOREACHC(it, linkInfos)
+    {
+        linkInfosValue.push_back(it->SerializeJSON(), allocator);
+    }
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "linkInfos", linkInfosValue);
+
+    rapidjson::value jointInfosValue(rapidjson::kArrayType);
+    FOREACHC(it, jointInfos)
+    {
+        jointInfosValue.push_back(it->SerializeJSON(), allocator);
+    }
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "jointInfos", jointInfosValue);
+
+    rapidjson::value manipulatorInfosValue(rapidjson::kArraryType);
+    FOREACHC(it, manipulatorInfos)
+    {
+        manipulatorInfosValue.push_back(it->SerializeJSON(), allocator);
+    }
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "manipulatorInfos",
+    manipulatorInfosValue);
+
+
+    rapidjson::value attachedSensorInfosValue(rapidjson::kArrayType);
+    FOREACHC(it, attachedSensorInfos)
+    {
+        attachedSensorInfosValue.push_back(it->SerializeJSON());
+    }
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "attachedSensorInfos", attachedSensorInfosValue);
+
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "isActive", isActive);
+}
+
+void RobotBase::DeserializeJSON(const rapidjson::Value &value)
+{
+
+
+
 }
 
 RobotBase::ConnectedBody::ConnectedBody(OpenRAVE::RobotBasePtr probot) : _pattachedrobot(probot)
@@ -255,6 +305,17 @@ RobotBase::ConnectedBodyPtr RobotBase::AddConnectedBody(const RobotBase::Connect
     //newConnectedBody->UpdateInfo(); // just in case
     __hashrobotstructure.resize(0);
     return newConnectedBody;
+}
+
+void RobotBase::SerializeJSON(rapidjson::Value& value, rapidjson::DocumentAllocatorType& allocator, int options=0)
+{
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "sid", sid);
+}
+
+void RobotBase::DeserializeJSON(const rapidjson::Value &value)
+{
+
 }
 
 RobotBase::ConnectedBodyPtr RobotBase::GetConnectedBody(const std::string& name) const

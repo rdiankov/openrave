@@ -591,15 +591,37 @@ public:
         /// \brief Updates the infos depending on the robot at the identity and zero position.
         virtual void InitInfoFromBody(RobotBase& robot);
 
-        std::string _name; ///< the name of the connected body info
-        std::string _linkname; ///< the robot link that the body is attached to
-        std::string _url;  //< the url where the connected body came from. this is used when writing back to the filename.
-        Transform _trelative;  ///< relative transform of the body with respect to the attached link. The link transforms are multiplied by the transform of _linkname and _trelative to put them on the real robot.
-        std::vector<KinBody::LinkInfoPtr> _vLinkInfos; ///< extracted link infos representing the connected body. The names are the original "desired" names. Should not consider _linkname and _trelative.
-        std::vector<KinBody::JointInfoPtr> _vJointInfos; ///< extracted joint infos (inluding passive) representing the connected body. The names are the original "desired" names.
-        std::vector<RobotBase::ManipulatorInfoPtr> _vManipulatorInfos; ///< extracted manip infos representing the connected body. The names are the original "desired" names.
-        std::vector<RobotBase::AttachedSensorInfoPtr> _vAttachedSensorInfos; ///< extracted sensor infos representing the connected body. The names are the original "desired" names.
-        bool _bIsActive; ///< if true, then add the connected body. Otherwise do not add it.
+        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
+        virtual void DeserializeJSON(const rapidjson::Value &value);
+
+        std::string sid;
+
+        std::string name;
+        std::string& _name RAVE_DEPRECATED; ///< the name of the connected body info
+
+        std::string linkName;
+        std::string& _linkname RAVE_DEPRECATED; ///< the robot link that the body is attached to
+
+        std::string url;
+        std::string& _url RAVE_DEPRECATED;  //< the url where the connected body came from. this is used when writing back to the filename.
+
+        Transform transform;
+        Transform& _trelative RAVE_DEPRECATED;  ///< relative transform of the body with respect to the attached link. The link transforms are multiplied by the transform of _linkname and _trelative to put them on the real robot.
+
+        std::vector<KinBody::LinkInfoPtr> linkInfos;
+        std::vector<KinBody::LinkInfoPtr>& _vLinkInfos RAVE_DEPRECATED; ///< extracted link infos representing the connected body. The names are the original "desired" names. Should not consider _linkname and _trelative.
+
+        std::vector<KinBody::JointInfoPtr> jointInfos;
+        std::vector<KinBody::JointInfoPtr>& _vJointInfos RAVE_DEPRECATED; ///< extracted joint infos (inluding passive) representing the connected body. The names are the original "desired" names.
+        
+        std::vector<RobotBase::ManipulatorInfoPtr> manipulatorInfos;
+        std::vector<RobotBase::ManipulatorInfoPtr>& _vManipulatorInfos RAVE_DEPRECATED; ///< extracted manip infos representing the connected body. The names are the original "desired" names.
+
+        std::vector<RobotBase::AttachedSensorInfoPtr> attachedSensorInfos;
+        std::vector<RobotBase::AttachedSensorInfoPtr>& _vAttachedSensorInfos RAVE_DEPRECATED; ///< extracted sensor infos representing the connected body. The names are the original "desired" names.
+
+        bool isActive;
+        bool& _bIsActive RAVE_DEPRECATED; ///< if true, then add the connected body. Otherwise do not add it.
     };
     typedef boost::shared_ptr<ConnectedBodyInfo> ConnectedBodyInfoPtr;
     typedef boost::shared_ptr<ConnectedBodyInfo const> ConnectedBodyInfoConstPtr;
