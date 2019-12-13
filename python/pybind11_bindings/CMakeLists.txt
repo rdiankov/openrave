@@ -19,7 +19,7 @@ set(SUCCESS_BUILD_PYTHON_BINDINGS ON)
 
 if(USE_PYBIND11_PYTHON_BINDINGS)
   # check if all header files can be included
-  find_package(pybind11 REQUIRED)
+  # find_package(pybind11 REQUIRED)
   add_definitions(${Boost_CFLAGS})
   set(CMAKE_REQUIRED_INCLUDES ${PYTHON_INCLUDE_DIRS} ${Boost_INCLUDE_DIR} ${REQUIRED_INCLUDES})
   set(CMAKE_REQUIRED_LIBRARIES ${PYTHON_LIBRARIES} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY})
