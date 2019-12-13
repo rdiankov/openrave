@@ -188,6 +188,7 @@ message(STATUS "installing to ${CMAKE_INSTALL_PREFIX}, python exe ${PYTHON_EXECU
 set(CMAKE_TRY_COMPILE_CONFIGURATION Release CACHE STRING "very important to only test release since default is debug, and it usually reuquires special libraries")
 
 set(OPENRAVE_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(OPENRAVEPY_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/python/pybind11_bindings)
 
 # need this in the very first include, otherwise openrave plugins can accidentaly compile with a system-installed openrave headers.
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)

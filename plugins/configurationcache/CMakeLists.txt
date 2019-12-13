@@ -17,7 +17,7 @@ if(OPT_PYTHON AND PYTHON_EXECUTABLE AND LAPACK_FOUND)
     if( HAVE_ALL_PYTHON_HEADERS )
       include_directories(${PYTHON_INCLUDE_PATH} ${PYTHON_INCLUDE_DIRS}
         ${OPENRAVE_CORE_INCLUDE_LOCAL_DIRS}
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../python/pybind11_bindings
+        ${OPENRAVEPY_INCLUDE_LOCAL_DIRS}
       )
       add_library(openravepy_configurationcache SHARED openravepy_configurationcache.cpp)
       target_link_libraries(openravepy_configurationcache 
