@@ -231,7 +231,7 @@ endif()
 
 if(SUCCESS_BUILD_PYTHON_BINDINGS)
   message(STATUS "Can successfully build OpenRAVE python bindings; will install headers for python bindings of other modules")
-  file(GLOB openravepy_headers "openravepy/*.h")
+  file(GLOB openravepy_headers openravepy/bindings.h openravepy/map.h openravepy/docstrings.h openravepy/openravepy_int.h openravepy/openravepy_module.h)
   install(FILES ${openravepy_headers} DESTINATION include/openravepy COMPONENT ${COMPONENT_PREFIX}python)
 else()
   message(STATUS "Failed to build OpenRAVE python bindings")
