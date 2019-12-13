@@ -266,7 +266,7 @@ inline object none_() {
 using array_int = array_t<int>; // py::array_int
 } // namespace pybind11
 #define OPENRAVE_PYTHON_MODULE(X) PYBIND11_MODULE(X, m)
-#include "map.h"
+#include <openravepy/map.h>
 #define PY_ARG_(x) py ::arg(x),
 #define PY_ARGS(...) MAP(PY_ARG_, __VA_ARGS__)
 /* ==================== BOOST.PYTHON ==================== */
