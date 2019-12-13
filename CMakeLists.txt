@@ -188,6 +188,7 @@ message(STATUS "installing to ${CMAKE_INSTALL_PREFIX}, python exe ${PYTHON_EXECU
 set(CMAKE_TRY_COMPILE_CONFIGURATION Release CACHE STRING "very important to only test release since default is debug, and it usually reuquires special libraries")
 
 set(OPENRAVE_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(OPENRAVEPY_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/python/pybind11_bindings)
 
 # need this in the very first include, otherwise openrave plugins can accidentaly compile with a system-installed openrave headers.
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
@@ -860,8 +861,8 @@ if(OPT_PYTHON AND PYTHON_EXECUTABLE)
   set(OPENRAVEPY_VER_INSTALL_DIR "${OPENRAVEPY_INSTALL_DIR}/${OPENRAVEPY_VER_NAME}") # used by openrave-config.cmake
 
   # build python bindings, either with pybind11 or Boost.Python
-  set(USE_PYBIND11_PYTHON_BINDINGS OFF CACHE BOOL "Build OpenRAVE's python bindings with pybind11 (ON) or Boost.Python (OFF)")
-  set(PYBIND11_PYTHON_BINDINGS_DEBUG OFF)
+  set(USE_PYBIND11_PYTHON_BINDINGS ON CACHE BOOL "Build OpenRAVE's python bindings with pybind11 (ON) or Boost.Python (OFF)")
+  set(PYBIND11_PYTHON_BINDINGS_DEBUG ON)
   add_subdirectory(python)
 endif()
 
