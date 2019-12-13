@@ -61,18 +61,14 @@ inline rapidjson::Value RAVE_SERIALIZEJSON(rapidjson::Document::AllocatorType& a
 
 template<typename ... Types>
 inline void RAVE_SERIALIZEJSON_PUSHBACK(rapidjson::Document::AllocatorType& allocator, const Types& ... Fargs) {
-    do {
-        rapidjson::Value value = RAVE_SERIALIZEJSON(allocator, Fargs...);
-        value.PushBack(value, allocator);
-    } while(false);
+    rapidjson::Value value = RAVE_SERIALIZEJSON(allocator, Fargs...);
+    value.PushBack(value, allocator);
 }
 
 template<typename T, typename ... Types>
 inline void RAVE_SERIALIZEJSON_ADDMEMBER(rapidjson::Document::AllocatorType& allocator, T& key, const Types& ... Fargs) {
-    do {
-        rapidjson::Value value = RAVE_SERIALIZEJSON(allocator, Fargs...);
-        value.AddMember(key, value, allocator);
-    } while(false);
+    rapidjson::Value value = RAVE_SERIALIZEJSON(allocator, Fargs...);
+    value.AddMember(key, value, allocator);
 }
 
 inline void RAVE_SERIALIZEJSON_ENSURE_OBJECT(rapidjson::Value &value) {
@@ -88,15 +84,11 @@ inline void RAVE_SERIALIZEJSON_ENSURE_ARRAY(rapidjson::Value &value) {
 }
 
 inline void RAVE_SERIALIZEJSON_CLEAR_OBJECT(rapidjson::Value &value) {
-    do {
-        value.SetObject();
-    } while (false);
+    value.SetObject();
 }
 
 inline void RAVE_SERIALIZEJSON_CLEAR_ARRAY(rapidjson::Value &value) {
-    do {
-        value.SetArray();
-    } while (false);
+    value.SetArray();
 }
 
 inline void RAVE_DESERIALIZEJSON_ENSURE_OBJECT(const rapidjson::Value &value) {
