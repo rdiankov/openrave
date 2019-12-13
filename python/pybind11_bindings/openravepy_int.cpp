@@ -2367,12 +2367,12 @@ std::string GetClassTypeString(object o) {
 }
 
 bool IsOpenRAVEException(object o, const std::string& openrave_exception_class_name = OPENRAVE_EXCEPTION_CLASS_NAME) {
-    const std::string classtype = GetClassTypeString(o); // openravepy._openravepy_0_26.openravepy_int.openrave_exception
-    const std::size_t left = classtype.find_first_of("0123456789"); // openravepy._openravepy_
-    const std::size_t right = classtype.find_last_of("0123456789") + 1; // .openravepy_int.openrave_exception
-    // _RAVE_DISPLAY(std::cout << classtype.substr(0, left) << ", " << classtype.substr(right););
-    return (classtype.substr(0, left) == "openravepy._openravepy_") 
-        && (classtype.substr(right) == ".openravepy_int." + openrave_exception_class_name);
+    const std::string classtype = GetClassTypeString(o);
+    // openravepy._openravepy_0_26.openravepy_int.openrave_exception
+    static const std::string local_classtype = "openravepy._openravepy_" + std::to_string(OPENRAVE_VERSION_MAJOR) + "_" + std::to_string(OPENRAVE_VERSION_MINOR) + ".openravepy_int." + openrave_exception_class_name;
+    // openravepy._openravepy_.openravepy_int.openrave_exception
+    static const std::string controller_classtype = "openravepy._openravepy_.openravepy_int." + openrave_exception_class_name;
+    return classtype == local_classtype || classtype == controller_classtype;
 }
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
