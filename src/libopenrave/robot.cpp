@@ -25,17 +25,12 @@ namespace OpenRAVE {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 RobotBase::AttachedSensorInfo::AttachedSensorInfo() :
     XMLReadable("attachedsensor"),
-    name(name),
-    linkName(linkName),
-    transform(transform),
-    sensorName(type),
-    sensorGeometry(sensorGeometry)
+    _name(name),
+    _linkname(linkName),
+    _trelative(transform),
+    _sensorname(type),
+    _sensorgeometry(sensorGeometry)
 {
-    _name = name;
-    _linkname = linkName;
-    _trelative = transform;
-    _sensorname = type;
-    _sensorgeometry = sensorGeometry;
 }
 #pragma GCC diagnostic pop
 

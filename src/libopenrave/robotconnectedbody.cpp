@@ -20,8 +20,27 @@
 
 namespace OpenRAVE {
 
-RobotBase::ConnectedBodyInfo::ConnectedBodyInfo() : isActive(false)
+// the following constructor handles mapping from deprecated reference to the actual
+// member, so need to disable deprecation warnings
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+RobotBase::ConnectedBodyInfo::ConnectedBodyInfo() :
+    _name(name),
+    _linkname(linkName),
+    _url(url),
+    _trelative(transform),
+    _vLinkInfos(linkInfos),
+    _vJointInfos(jointInfos),
+    _vManipulatorInfos(manipulatorInfos),
+    _vAttachedSensorInfos(attachedSensorInfos),
+    isActive(false),
+    _bIsActive(isActive)
 {
+}
+
+RobotBase::ConnectedBodyInfo::ConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& other): ConnectedBodyInfo()
+{
+    *this = other;
 }
 
 void RobotBase::ConnectedBodyInfo::InitInfoFromBody(RobotBase& robot)
@@ -56,7 +75,21 @@ void RobotBase::ConnectedBodyInfo::InitInfoFromBody(RobotBase& robot)
     }
 }
 
-void RobotBase::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0)
+RobotBase::ConnectedBodyInfo& RobotBase::ConnectedBodyInfo::operator=(const RobotBase::ConnectedBodyInfo& other){
+    sid = other.sid;
+    name = other.name;
+    linkName = other.linkName;
+    url = other.url;
+    transform = other.transform;
+    linkInfos = other.linkInfos;
+    jointInfos = other.jointInfos;
+    manipulatorInfos = other.manipulatorInfos;
+    attachedSensorInfos = other.attachedSensorInfos;
+    isActive = other.isActive;
+    return *this;
+}
+
+void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
 
@@ -66,44 +99,51 @@ void RobotBase::SerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "url", url);
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", transform);
 
-    rapidjson::value linkInfosValue(rapidjson::kArrayType);
+    rapidjson::Value linkInfosValue;
+    RAVE_SERIALIZEJSON_CLEAR_ARRAY(linkInfosValue);
     FOREACHC(it, linkInfos)
     {
-        linkInfosValue.push_back(it->SerializeJSON(), allocator);
+        rapidjson::Value linkInfoValue;
+        (*it)->SerializeJSON(linkInfoValue, allocator, options);
+        linkInfosValue.PushBack(linkInfoValue, allocator);
     }
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "linkInfos", linkInfosValue);
+    value.AddMember("linkInfos", linkInfosValue, allocator);
 
-    rapidjson::value jointInfosValue(rapidjson::kArrayType);
+    rapidjson::Value jointInfosValue;
+    RAVE_SERIALIZEJSON_CLEAR_ARRAY(jointInfosValue);
     FOREACHC(it, jointInfos)
     {
-        jointInfosValue.push_back(it->SerializeJSON(), allocator);
+        rapidjson::Value jointInfoValue;
+        (*it)->SerializeJSON(jointInfoValue, allocator, options);
+        jointInfosValue.PushBack(jointInfoValue, allocator);
     }
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "jointInfos", jointInfosValue);
+    value.AddMember("jointInfos", jointInfosValue, allocator);
 
-    rapidjson::value manipulatorInfosValue(rapidjson::kArraryType);
+    rapidjson::Value manipulatorInfosValue;
+    RAVE_SERIALIZEJSON_CLEAR_ARRAY(manipulatorInfosValue);
     FOREACHC(it, manipulatorInfos)
     {
-        manipulatorInfosValue.push_back(it->SerializeJSON(), allocator);
+        rapidjson::Value manipulatorInfoValue;
+        (*it)->SerializeJSON(manipulatorInfoValue, allocator, options);
+        manipulatorInfosValue.PushBack(manipulatorInfoValue, allocator);
     }
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "manipulatorInfos",
-    manipulatorInfosValue);
+    value.AddMember("manipulatorInfos", manipulatorInfosValue, allocator);
 
-
-    rapidjson::value attachedSensorInfosValue(rapidjson::kArrayType);
+    rapidjson::Value attachedSensorInfosValue;
+    RAVE_SERIALIZEJSON_CLEAR_ARRAY(attachedSensorInfosValue);
     FOREACHC(it, attachedSensorInfos)
     {
-        attachedSensorInfosValue.push_back(it->SerializeJSON());
+        rapidjson::Value attachedSensorInfoValue;
+        (*it)->SerializeJSON(attachedSensorInfoValue, allocator, options);
+        attachedSensorInfosValue.PushBack(attachedSensorInfoValue, allocator);
     }
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "attachedSensorInfos", attachedSensorInfosValue);
+    value.AddMember("attachedSensorInfos", attachedSensorInfosValue, allocator);
 
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "isActive", isActive);
 }
 
-void RobotBase::DeserializeJSON(const rapidjson::Value &value)
+void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value)
 {
-
-
-
 }
 
 RobotBase::ConnectedBody::ConnectedBody(OpenRAVE::RobotBasePtr probot) : _pattachedrobot(probot)
@@ -126,7 +166,7 @@ RobotBase::ConnectedBody::ConnectedBody(OpenRAVE::RobotBasePtr probot, const Ope
 }
 
 
-RobotBase::ConnectedBody::ConnectedBody(OpenRAVE::RobotBasePtr probot, const ConnectedBody &connectedBody, int cloningoptions)
+RobotBase::ConnectedBody::ConnectedBody(OpenRAVE::RobotBasePtr probot, const RobotBase::ConnectedBody &connectedBody, int cloningoptions)
 {
     *this = connectedBody;
     _pDummyJointCache = probot->GetJoint(_dummyPassiveJointName);
@@ -305,17 +345,6 @@ RobotBase::ConnectedBodyPtr RobotBase::AddConnectedBody(const RobotBase::Connect
     //newConnectedBody->UpdateInfo(); // just in case
     __hashrobotstructure.resize(0);
     return newConnectedBody;
-}
-
-void RobotBase::SerializeJSON(rapidjson::Value& value, rapidjson::DocumentAllocatorType& allocator, int options=0)
-{
-    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "sid", sid);
-}
-
-void RobotBase::DeserializeJSON(const rapidjson::Value &value)
-{
-
 }
 
 RobotBase::ConnectedBodyPtr RobotBase::GetConnectedBody(const std::string& name) const

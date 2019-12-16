@@ -585,6 +585,7 @@ private:
     {
 public:
         ConnectedBodyInfo();
+        ConnectedBodyInfo(const ConnectedBodyInfo& other);
         virtual ~ConnectedBodyInfo() {
         }
 
@@ -593,6 +594,8 @@ public:
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
         virtual void DeserializeJSON(const rapidjson::Value &value);
+
+        ConnectedBodyInfo& operator=(const ConnectedBodyInfo& other);
 
         std::string sid;
 
