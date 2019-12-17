@@ -159,7 +159,7 @@ object toPyObject(const rapidjson::Value& value)
 }
 
 // convert from python object to rapidjson
-void toRapidJSONValue(const object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator)
+void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     if (obj.is_none())
