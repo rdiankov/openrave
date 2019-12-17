@@ -1528,6 +1528,14 @@ public:
         return _probot->Grab(pbody->GetBody(), setlinkstoignore);
     }
 
+    bool Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore)
+    {
+        CHECK_POINTER(pbody);
+        CHECK_POINTER(pylink);
+        std::set<int> setlinkstoignore = ExtractSet<int>(linkstoignore);
+        return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignore);
+    }
+
     bool CheckLinkSelfCollision(int ilinkindex, object olinktrans, PyCollisionReportPtr pyreport=PyCollisionReportPtr())
     {
         return _probot->CheckLinkSelfCollision(ilinkindex, ExtractTransform(olinktrans), !pyreport ? CollisionReportPtr() : openravepy::GetCollisionReport(pyreport));
@@ -1783,6 +1791,7 @@ void init_openravepy_robot()
 
         bool (PyRobotBase::*pgrab1)(PyKinBodyPtr) = &PyRobotBase::Grab;
         bool (PyRobotBase::*pgrab2)(PyKinBodyPtr,object) = &PyRobotBase::Grab;
+        bool (PyRobotBase::*pgrab3)(PyKinBodyPtr,object,object) = &PyRobotBase::Grab;
 
         PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator2)(const std::string&) = &PyRobotBase::SetActiveManipulator;
         PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator3)(PyRobotBase::PyManipulatorPtr) = &PyRobotBase::SetActiveManipulator;
@@ -1941,6 +1950,7 @@ void init_openravepy_robot()
                       .def("CalculateActiveAngularVelocityJacobian",&PyRobotBase::CalculateActiveAngularVelocityJacobian, PY_ARGS("linkindex") DOXY_FN(RobotBase,CalculateActiveAngularVelocityJacobian "int; std::vector"))
                       .def("Grab",pgrab1, PY_ARGS("body") DOXY_FN(RobotBase,Grab "KinBodyPtr"))
                       .def("Grab",pgrab2, PY_ARGS("body","grablink") DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr"))
+                      .def("Grab",pgrab3, PY_ARGS("body","grablink", "linkstoignore") DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr; LinkPtr"))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                       .def("CheckLinkSelfCollision", &PyRobotBase::CheckLinkSelfCollision,
                         "linkindex"_a,
