@@ -383,6 +383,7 @@ public:
 
     // since PyKinBody::Grab is overloaded with (pbody, plink) parameters, have to support both...?
     bool Grab(PyKinBodyPtr pbody, object pylink_or_linkstoignore);
+    bool Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore);
 
     bool CheckLinkSelfCollision(int ilinkindex, object olinktrans, PyCollisionReportPtr pyreport=PyCollisionReportPtr());
 
