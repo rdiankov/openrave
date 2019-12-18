@@ -165,7 +165,7 @@ public:
     /// \brief output the trajectory in JSON format
     virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
 
-    virtual void DeserializeJSON(const rapidjson::Value& value, const dReal fUnitScale = 1);
+    virtual void DeserializeJSON(const rapidjson::Value& value);
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 
     /// \brief swap the contents of the data between the two trajectories.

@@ -251,6 +251,12 @@ public:
         return toPyObject(doc);
     }
 
+    void DeserializeJSON(object obj){
+        rapidjson::Document doc;
+        toRapidJSONValue(obj, doc, doc.GetAllocator());
+        _ptrajectory->DeserializeJSON(doc);
+    }
+
     bool Read(const string& s, object probot) {
         RAVELOG_WARN("Trajectory.Read deprecated please use Trajerctory.deserialize\n");
         deserialize(s);
@@ -359,6 +365,7 @@ void init_openravepy_trajectory()
     .def("serialize",&PyTrajectoryBase::serialize,serialize_overloads(args("options"),DOXY_FN(TrajectoryBase,serialize)))
     .def("SerializeJSON",&PyTrajectoryBase::SerializeJSON,SerializeJSON_overloads(args("options"),DOXY_FN(TrajectoryBase,SerializeJSON)))
     .def("deserialize",&PyTrajectoryBase::deserialize,args("data"),DOXY_FN(TrajectoryBase,deserialize))
+    .def("DeserializeJSON", &PyTrajectoryBase::DeserializeJSON, args("obj"), DOXY_FN(TrajectoryBase, DeserializeJSON))
     .def("Write",&PyTrajectoryBase::Write,args("options"),DOXY_FN(TrajectoryBase,Write))
     .def("Read",&PyTrajectoryBase::Read,args("data","robot"),DOXY_FN(TrajectoryBase,Read))
     .def("__len__",&PyTrajectoryBase::GetNumWaypoints,DOXY_FN(TrajectoryBase,__len__))

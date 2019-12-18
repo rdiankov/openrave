@@ -97,7 +97,7 @@ InterfaceBasePtr TrajectoryBase::deserialize(std::istream& I)
     return shared_from_this();
 }
 
-void TrajectoryBase::DeserializeJSON(const rapidjson::Value& value, const dReal fUnitScale)
+void TrajectoryBase::DeserializeJSON(const rapidjson::Value& value)
 {
     RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
     TrajectoryBasePtr traj = shared_trajectory();
