@@ -158,7 +158,7 @@ PyInterfaceBasePtr toPyController(ControllerBasePtr pcontroller, PyEnvironmentBa
     // TODO this is a hack
     // unfortunately dynamic_pointer_cast will not work. The most ideal situation is to have MultiControllerBase registered as its own individual interface....
     else if( pcontroller->GetXMLId() == std::string("MultiController") ) {
-        return PyInterfaceBasePtr(new PyMultiControllerBase(OPENRAVE_STATIC_POINTER_CAST<MultiControllerBase>(pcontroller), pyenv));
+        return PyInterfaceBasePtr(new PyMultiControllerBase(boost::static_pointer_cast<MultiControllerBase>(pcontroller), pyenv));
     }
     else {
         return PyInterfaceBasePtr(new PyControllerBase(pcontroller, pyenv));
@@ -192,7 +192,7 @@ void init_openravepy_controller()
         bool (PyControllerBase::*init2)(PyRobotBasePtr,object,int) = &PyControllerBase::Init;
         bool (PyControllerBase::*setdesired1)(object) = &PyControllerBase::SetDesired;
         bool (PyControllerBase::*setdesired2)(object,object) = &PyControllerBase::SetDesired;
-        class_<PyControllerBase, OPENRAVE_SHARED_PTR<PyControllerBase>, bases<PyInterfaceBase> >("Controller", DOXY_CLASS(ControllerBase), no_init)
+        class_<PyControllerBase, boost::shared_ptr<PyControllerBase>, bases<PyInterfaceBase> >("Controller", DOXY_CLASS(ControllerBase), no_init)
         .def("Init",init1, DOXY_FN(ControllerBase,Init))
         .def("Init",init2, args("robot","dofindices","controltransform"), DOXY_FN(ControllerBase,Init))
         .def("GetControlDOFIndices",&PyControllerBase::GetControlDOFIndices,DOXY_FN(ControllerBase,GetControlDOFIndices))
@@ -211,7 +211,7 @@ void init_openravepy_controller()
     }
 
     {
-        class_<PyMultiControllerBase, OPENRAVE_SHARED_PTR<PyMultiControllerBase>, bases<PyControllerBase, PyInterfaceBase> >("MultiController", DOXY_CLASS(MultiControllerBase), no_init)
+        class_<PyMultiControllerBase, boost::shared_ptr<PyMultiControllerBase>, bases<PyControllerBase, PyInterfaceBase> >("MultiController", DOXY_CLASS(MultiControllerBase), no_init)
         .def("AttachController",&PyMultiControllerBase::AttachController, args("controller","dofindices","controltransform"), DOXY_FN(MultiControllerBase,AttachController))
         .def("RemoveController",&PyMultiControllerBase::RemoveController, args("controller"), DOXY_FN(MultiControllerBase,RemoveController))
         .def("GetController",&PyMultiControllerBase::GetController, args("dof"), DOXY_FN(MultiControllerBase,GetController))

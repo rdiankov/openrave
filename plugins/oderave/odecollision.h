@@ -31,7 +31,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
     class CollisionCallbackData
     {
     public:
-        CollisionCallbackData(OPENRAVE_SHARED_PTR<ODECollisionChecker> pchecker, CollisionReportPtr report, KinBodyConstPtr pbody, KinBody::LinkConstPtr plink) : _pchecker(pchecker), _report(report), _pbody(pbody), _plink(plink), fraymaxdist(0), pvbodyexcluded(NULL), pvlinkexcluded(NULL), _bCollision(false), _bStopChecking(false)
+        CollisionCallbackData(boost::shared_ptr<ODECollisionChecker> pchecker, CollisionReportPtr report, KinBodyConstPtr pbody, KinBody::LinkConstPtr plink) : _pchecker(pchecker), _report(report), _pbody(pbody), _plink(plink), fraymaxdist(0), pvbodyexcluded(NULL), pvlinkexcluded(NULL), _bCollision(false), _bStopChecking(false)
         {
             _bHasCallbacks = pchecker->GetEnv()->HasRegisteredCollisionCallbacks();
             if( _bHasCallbacks && !_report ) {
@@ -86,7 +86,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
             return _vactivelinks.at(linkindex)>0;
         }
 
-        OPENRAVE_SHARED_PTR<ODECollisionChecker> _pchecker;
+        boost::shared_ptr<ODECollisionChecker> _pchecker;
         CollisionReportPtr _report;
         KinBodyConstPtr _pbody;
         KinBody::LinkConstPtr _plink;
@@ -103,11 +103,11 @@ private:
         std::list<EnvironmentBase::CollisionCallbackFn> _listcallbacks;
     };
 
-    inline OPENRAVE_SHARED_PTR<ODECollisionChecker> shared_checker() {
-        return OPENRAVE_STATIC_POINTER_CAST<ODECollisionChecker>(shared_from_this());
+    inline boost::shared_ptr<ODECollisionChecker> shared_checker() {
+        return boost::static_pointer_cast<ODECollisionChecker>(shared_from_this());
     }
-    inline OPENRAVE_SHARED_PTR<ODECollisionChecker const> shared_checker_const() const {
-        return OPENRAVE_STATIC_POINTER_CAST<ODECollisionChecker const>(shared_from_this());
+    inline boost::shared_ptr<ODECollisionChecker const> shared_checker_const() const {
+        return boost::static_pointer_cast<ODECollisionChecker const>(shared_from_this());
     }
 
 public:
@@ -144,7 +144,7 @@ public:
     void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
         CollisionCheckerBase::Clone(preference, cloningoptions);
-        OPENRAVE_SHARED_PTR<ODECollisionChecker const > r = OPENRAVE_DYNAMIC_POINTER_CAST<ODECollisionChecker const>(preference);
+        boost::shared_ptr<ODECollisionChecker const > r = boost::dynamic_pointer_cast<ODECollisionChecker const>(preference);
         _odespace->SetGeometryGroup(r->GetGeometryGroup());
         _options = r->_options;
         _nMaxStartContacts = r->_nMaxStartContacts;
@@ -192,7 +192,7 @@ public:
 
     virtual bool InitKinBody(KinBodyPtr pbody)
     {
-        ODESpace::KinBodyInfoPtr pinfo = OPENRAVE_DYNAMIC_POINTER_CAST<ODESpace::KinBodyInfo>(pbody->GetUserData(_userdatakey));
+        ODESpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetUserData(_userdatakey));
         // need the pbody check since kinbodies can be cloned and could have the wrong pointer
         if( !pinfo || pinfo->GetBody() != pbody ) {
             pinfo = _odespace->InitKinBody(pbody);
@@ -1378,7 +1378,7 @@ private:
 
     int _options;
     dGeomID geomray;     // used for all ray tests
-    OPENRAVE_SHARED_PTR<ODESpace> _odespace;
+    boost::shared_ptr<ODESpace> _odespace;
     size_t _nMaxStartContacts, _nMaxContacts;
     std::string _userdatakey;
     CollisionReport _report;

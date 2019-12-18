@@ -285,9 +285,9 @@ template<class T> inline void LoadJsonValue(const rapidjson::Value& v, std::vect
 
 template<class T, size_t N> inline void LoadJsonValue(const rapidjson::Value& v, std::array<T, N>& t);
 
-template<class T> inline void LoadJsonValue(const rapidjson::Value& v, OPENRAVE_SHARED_PTR<T>& ptr) {
+template<class T> inline void LoadJsonValue(const rapidjson::Value& v, boost::shared_ptr<T>& ptr) {
     // this way prevents copy constructor from getting called
-    ptr = OPENRAVE_SHARED_PTR<T>(new T());
+    ptr = boost::shared_ptr<T>(new T());
     LoadJsonValue(v, *ptr);
 }
 
@@ -434,9 +434,9 @@ template<class T> inline void SaveJsonValue(rapidjson::Value& v, const std::vect
 
 template<class T, size_t N> inline void SaveJsonValue(rapidjson::Value& v, const std::array<T, N>& t, rapidjson::Document::AllocatorType& alloc);
 
-/** do not remove: otherwise OPENRAVE_SHARED_PTR could be treated as bool
+/** do not remove: otherwise boost::shared_ptr could be treated as bool
  */
-template<class T> inline void SaveJsonValue(rapidjson::Value& v, const OPENRAVE_SHARED_PTR<T>& ptr, rapidjson::Document::AllocatorType& alloc) {
+template<class T> inline void SaveJsonValue(rapidjson::Value& v, const boost::shared_ptr<T>& ptr, rapidjson::Document::AllocatorType& alloc) {
     SaveJsonValue(v, *ptr, alloc);
 }
 

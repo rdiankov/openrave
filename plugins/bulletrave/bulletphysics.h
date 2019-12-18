@@ -68,17 +68,17 @@ public:
         }
     };
 
-    inline OPENRAVE_SHARED_PTR<BulletPhysicsEngine> shared_physics() {
-        return OPENRAVE_STATIC_POINTER_CAST<BulletPhysicsEngine>(shared_from_this());
+    inline boost::shared_ptr<BulletPhysicsEngine> shared_physics() {
+        return boost::static_pointer_cast<BulletPhysicsEngine>(shared_from_this());
     }
-    inline OPENRAVE_SHARED_PTR<BulletPhysicsEngine const> shared_physics_const() const {
-        return OPENRAVE_STATIC_POINTER_CAST<BulletPhysicsEngine const>(shared_from_this());
+    inline boost::shared_ptr<BulletPhysicsEngine const> shared_physics_const() const {
+        return boost::static_pointer_cast<BulletPhysicsEngine const>(shared_from_this());
     }
 
 class PhysicsPropertiesXMLReader : public BaseXMLReader
     {
 public:
-        PhysicsPropertiesXMLReader(OPENRAVE_SHARED_PTR<BulletPhysicsEngine> physics, const AttributesList& atts) : _physics(physics) {
+        PhysicsPropertiesXMLReader(boost::shared_ptr<BulletPhysicsEngine> physics, const AttributesList& atts) : _physics(physics) {
         }
 
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) {
@@ -176,7 +176,7 @@ public:
 
 protected:
         BaseXMLReaderPtr _pcurreader;
-        OPENRAVE_SHARED_PTR<BulletPhysicsEngine> _physics;
+        boost::shared_ptr<BulletPhysicsEngine> _physics;
         stringstream _ss;
     };
 
@@ -184,7 +184,7 @@ public:
     
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-    	return BaseXMLReaderPtr(new PhysicsPropertiesXMLReader(OPENRAVE_DYNAMIC_POINTER_CAST<BulletPhysicsEngine>(ptr),atts));
+    	return BaseXMLReaderPtr(new PhysicsPropertiesXMLReader(boost::dynamic_pointer_cast<BulletPhysicsEngine>(ptr),atts));
     }
 
     BulletPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput) : PhysicsEngineBase(penv), _space(new BulletSpace(penv, GetPhysicsInfo, true))
@@ -281,7 +281,7 @@ public:
 	    }
 	
 	}
-	OPENRAVE_SHARED_PTR<btRigidBody> rigidbody = OPENRAVE_DYNAMIC_POINTER_CAST<btRigidBody>(_space->GetLinkBody(plink));
+	boost::shared_ptr<btRigidBody> rigidbody = boost::dynamic_pointer_cast<btRigidBody>(_space->GetLinkBody(plink));
         btVector3 _axis(_rotation[0], _rotation[1], _rotation[2]);
         btVector3 _Position(_translation[0], _translation[1], _translation[2]);
         _space->Synchronize(KinBodyConstPtr(plink->GetParent()));
@@ -467,7 +467,7 @@ public:
     virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& linearvel, const Vector& angularvel)
     {
         BulletSpace::KinBodyInfoPtr pinfo = GetPhysicsInfo(plink->GetParent());
-        OPENRAVE_SHARED_PTR<btRigidBody> rigidbody(pinfo->vlinks.at(plink->GetIndex())->_rigidbody);
+        boost::shared_ptr<btRigidBody> rigidbody(pinfo->vlinks.at(plink->GetIndex())->_rigidbody);
         if( !rigidbody ) {
             RAVELOG_DEBUG(str(boost::format("link %s does not have rigid body")%plink->GetName()));
         }
@@ -494,7 +494,7 @@ public:
     virtual bool GetLinkVelocity(KinBody::LinkConstPtr plink, Vector& linearvel, Vector& angularvel)
     {
         _space->Synchronize(KinBodyConstPtr(plink->GetParent()));
-        OPENRAVE_SHARED_PTR<btRigidBody> rigidbody = OPENRAVE_DYNAMIC_POINTER_CAST<btRigidBody>(_space->GetLinkBody(plink));
+        boost::shared_ptr<btRigidBody> rigidbody = boost::dynamic_pointer_cast<btRigidBody>(_space->GetLinkBody(plink));
         if (!!rigidbody) {
             btVector3 pf = rigidbody->getLinearVelocity();
             linearvel = Vector(pf[0],pf[1],pf[2]);
@@ -514,7 +514,7 @@ public:
         velocities.resize(pbody->GetLinks().size());
 
         FOREACHC(itlink, pbody->GetLinks()) {
-            OPENRAVE_SHARED_PTR<btRigidBody> rigidbody = OPENRAVE_DYNAMIC_POINTER_CAST<btRigidBody>(_space->GetLinkBody(*itlink));
+            boost::shared_ptr<btRigidBody> rigidbody = boost::dynamic_pointer_cast<btRigidBody>(_space->GetLinkBody(*itlink));
             if(!!rigidbody) {
                 btVector3 pf = rigidbody->getLinearVelocity();
                 Vector angularvel(pf[0], pf[1], pf[2]);
@@ -529,7 +529,7 @@ public:
 
     virtual bool SetJointVelocity(KinBody::JointPtr pjoint, const std::vector<dReal>& pJointVelocity)
     {
-        OPENRAVE_SHARED_PTR<btTypedConstraint> joint = _space->GetJoint(pjoint);
+        boost::shared_ptr<btTypedConstraint> joint = _space->GetJoint(pjoint);
         _space->Synchronize(KinBodyConstPtr(pjoint->GetParent()));
         std::vector<btScalar> vVelocity(pJointVelocity.size());
         std::copy(pJointVelocity.begin(),pJointVelocity.end(),vVelocity.begin());
@@ -547,7 +547,7 @@ public:
 
     virtual bool GetJointVelocity(KinBody::JointConstPtr pjoint, std::vector<dReal>& pJointVelocity)
     {
-        OPENRAVE_SHARED_PTR<btTypedConstraint> joint = _space->GetJoint(pjoint);
+        boost::shared_ptr<btTypedConstraint> joint = _space->GetJoint(pjoint);
         _space->Synchronize(KinBodyConstPtr(pjoint->GetParent()));
         pJointVelocity.resize(pjoint->GetDOF());
         switch(joint->getConstraintType()) {
@@ -564,7 +564,7 @@ public:
       virtual bool AddJointTorque(KinBody::JointPtr pjoint, const std::vector<dReal>& pTorques)
     {
        
-        OPENRAVE_SHARED_PTR<btTypedConstraint> joint = _space->GetJoint(pjoint);
+        boost::shared_ptr<btTypedConstraint> joint = _space->GetJoint(pjoint);
         _space->Synchronize(KinBodyConstPtr(pjoint->GetParent()));
         btVector3 t;
         t.setX(pTorques.at(0));
@@ -581,7 +581,7 @@ public:
         
         case D6_CONSTRAINT_TYPE:{
           
-            OPENRAVE_SHARED_PTR<btGeneric6DofConstraint> d6joint = OPENRAVE_DYNAMIC_POINTER_CAST<btGeneric6DofConstraint>(joint);
+            boost::shared_ptr<btGeneric6DofConstraint> d6joint = boost::dynamic_pointer_cast<btGeneric6DofConstraint>(joint);
             btTransform transB = bodyB.getWorldTransform();
             btTransform jointTransB = d6joint->getFrameOffsetB();
             btMatrix3x3 torqueB = transB.getBasis();
@@ -591,7 +591,7 @@ public:
         }
           
         case HINGE_CONSTRAINT_TYPE: {
-            OPENRAVE_SHARED_PTR<btHingeConstraint> hingejoint = OPENRAVE_DYNAMIC_POINTER_CAST<btHingeConstraint>(joint);
+            boost::shared_ptr<btHingeConstraint> hingejoint = boost::dynamic_pointer_cast<btHingeConstraint>(joint);
             btTransform transB = bodyB.getWorldTransform();
             btTransform jointTransB = hingejoint->getBFrame();
             transB = transB * jointTransB;
@@ -601,7 +601,7 @@ public:
             break;
         }
         case SLIDER_CONSTRAINT_TYPE: {
-            OPENRAVE_SHARED_PTR<btSliderConstraint> slidejoint = OPENRAVE_DYNAMIC_POINTER_CAST<btSliderConstraint>(joint);
+            boost::shared_ptr<btSliderConstraint> slidejoint = boost::dynamic_pointer_cast<btSliderConstraint>(joint);
             btTransform frameInA = slidejoint->getFrameOffsetA();
             btTransform frameInB = slidejoint->getFrameOffsetB();
             btVector3 locA = bodyA.getCenterOfMassTransform().getOrigin();
@@ -622,7 +622,7 @@ public:
 
    virtual bool SetBodyForce(KinBody::LinkPtr plink, const Vector& force, const Vector& position, bool bAdd)
     {
-        OPENRAVE_SHARED_PTR<btRigidBody> rigidbody = OPENRAVE_DYNAMIC_POINTER_CAST<btRigidBody>(_space->GetLinkBody(plink));
+        boost::shared_ptr<btRigidBody> rigidbody = boost::dynamic_pointer_cast<btRigidBody>(_space->GetLinkBody(plink));
         btVector3 _Force(force[0], force[1], force[2]);
         btVector3 _Position(position[0], position[1], position[2]);
         _space->Synchronize(KinBodyConstPtr(plink->GetParent()));
@@ -637,7 +637,7 @@ public:
     virtual bool SetBodyTorque(KinBody::LinkPtr plink, const Vector& torque, bool bAdd)
     {
         btVector3 _Torque(torque[0], torque[1], torque[2]);
-        OPENRAVE_SHARED_PTR<btRigidBody> rigidbody = OPENRAVE_DYNAMIC_POINTER_CAST<btRigidBody>(_space->GetLinkBody(plink));
+        boost::shared_ptr<btRigidBody> rigidbody = boost::dynamic_pointer_cast<btRigidBody>(_space->GetLinkBody(plink));
         _space->Synchronize(KinBodyConstPtr(plink->GetParent()));
         if( !bAdd ) {
             rigidbody->clearForces();
@@ -695,7 +695,7 @@ public:
 private:
     static BulletSpace::KinBodyInfoPtr GetPhysicsInfo(KinBodyConstPtr pbody)
     {
-        return OPENRAVE_DYNAMIC_POINTER_CAST<BulletSpace::KinBodyInfo>(pbody->GetUserData("bulletphysics"));
+        return boost::dynamic_pointer_cast<BulletSpace::KinBodyInfo>(pbody->GetUserData("bulletphysics"));
     }
 
     void _SyncCallback(BulletSpace::KinBodyInfoConstPtr pinfo)
@@ -710,13 +710,13 @@ private:
     }
 
     int _options;
-    OPENRAVE_SHARED_PTR<BulletSpace> _space;
-    OPENRAVE_SHARED_PTR<btDiscreteDynamicsWorld> _dynamicsWorld;
-    OPENRAVE_SHARED_PTR<btDefaultCollisionConfiguration> _collisionConfiguration;
-    OPENRAVE_SHARED_PTR<btBroadphaseInterface> _broadphase;
-    OPENRAVE_SHARED_PTR<btCollisionDispatcher> _dispatcher;
-    OPENRAVE_SHARED_PTR<btConstraintSolver> _solver;
-    OPENRAVE_SHARED_PTR<btOverlapFilterCallback> _filterCallback;
+    boost::shared_ptr<BulletSpace> _space;
+    boost::shared_ptr<btDiscreteDynamicsWorld> _dynamicsWorld;
+    boost::shared_ptr<btDefaultCollisionConfiguration> _collisionConfiguration;
+    boost::shared_ptr<btBroadphaseInterface> _broadphase;
+    boost::shared_ptr<btCollisionDispatcher> _dispatcher;
+    boost::shared_ptr<btConstraintSolver> _solver;
+    boost::shared_ptr<btOverlapFilterCallback> _filterCallback;
 
     std::list<EnvironmentBase::CollisionCallbackFn> _listcallbacks;
     CollisionReportPtr _report;

@@ -28,7 +28,7 @@ typedef boost::recursive_try_mutex EnvironmentMutex;
 
 /** \brief Maintains a world state, which serves as the gateway to all functions offered through %OpenRAVE. See \ref arch_environment.
  */
-class OPENRAVE_API EnvironmentBase : public OPENRAVE_ENABLE_SHARED_FROM_THIS<EnvironmentBase>
+class OPENRAVE_API EnvironmentBase : public boost::enable_shared_from_this<EnvironmentBase>
 {
 public:
     EnvironmentBase();
@@ -131,7 +131,7 @@ public:
         return CheckStandaloneSelfCollision(pbody, report);
     }
 
-    typedef OPENRAVE_FUNCTION<CollisionAction(CollisionReportPtr,bool)> CollisionCallbackFn;
+    typedef boost::function<CollisionAction(CollisionReportPtr,bool)> CollisionCallbackFn;
 
     /// Register a collision callback.
     ///
@@ -362,8 +362,8 @@ public:
         \param filename the name of the resource file, its extension determines the format of the file. Complex meshes and articulated meshes are all triangulated appropriately. See \ref supported_formats.
         \param atts Options to control the parsing process.
      */
-    virtual OPENRAVE_SHARED_PTR<TriMesh> ReadTrimeshURI(OPENRAVE_SHARED_PTR<TriMesh> ptrimesh, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
-    virtual OPENRAVE_SHARED_PTR<TriMesh> ReadTrimeshFile(OPENRAVE_SHARED_PTR<TriMesh> ptrimesh, const std::string& filename, const AttributesList& atts = AttributesList()) {
+    virtual boost::shared_ptr<TriMesh> ReadTrimeshURI(boost::shared_ptr<TriMesh> ptrimesh, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
+    virtual boost::shared_ptr<TriMesh> ReadTrimeshFile(boost::shared_ptr<TriMesh> ptrimesh, const std::string& filename, const AttributesList& atts = AttributesList()) {
         return ReadTrimeshURI(ptrimesh,filename,atts);
     }
 
@@ -373,7 +373,7 @@ public:
         \param formathint is the hint to the underlying cad importer for the format of data
         \param atts Options to control the parsing process.
      */
-    virtual OPENRAVE_SHARED_PTR<TriMesh> ReadTrimeshData(OPENRAVE_SHARED_PTR<TriMesh> ptrimesh, const std::string& data, const std::string& formathint, const AttributesList& atts = AttributesList()) = 0;
+    virtual boost::shared_ptr<TriMesh> ReadTrimeshData(boost::shared_ptr<TriMesh> ptrimesh, const std::string& data, const std::string& formathint, const AttributesList& atts = AttributesList()) = 0;
 
     //@}
 
@@ -413,7 +413,7 @@ public:
     ///
     /// \param body KinBodyPtr
     /// \param action if 0 body has been removed from the environment (environment id is already reset), if 1 body was just added to environment
-    typedef OPENRAVE_FUNCTION<void (KinBodyPtr, int)> BodyCallbackFn;
+    typedef boost::function<void (KinBodyPtr, int)> BodyCallbackFn;
     virtual UserDataPtr RegisterBodyCallback(const BodyCallbackFn& callback) = 0;
 
     /// \brief Fill an array with all sensors loaded in the environment. <b>[multi-thread safe]</b>

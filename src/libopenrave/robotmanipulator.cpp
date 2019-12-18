@@ -32,7 +32,7 @@ RobotBase::Manipulator::Manipulator(const RobotBase::Manipulator& r)
     }
 }
 
-RobotBase::Manipulator::Manipulator(RobotBasePtr probot, OPENRAVE_SHARED_PTR<RobotBase::Manipulator const> r)
+RobotBase::Manipulator::Manipulator(RobotBasePtr probot, boost::shared_ptr<RobotBase::Manipulator const> r)
 {
     *this = *r.get();
     __probot = probot;
@@ -206,7 +206,7 @@ bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, cons
     else {
         localgoal=goal;
     }
-    OPENRAVE_SHARED_PTR< vector<dReal> > psolution(&solution, utils::null_deleter());
+    boost::shared_ptr< vector<dReal> > psolution(&solution, utils::null_deleter());
     return vFreeParameters.size() == 0 ? pIkSolver->Solve(localgoal, solution, filteroptions, psolution) : pIkSolver->Solve(localgoal, solution, vFreeParameters, filteroptions, psolution);
 }
 
@@ -893,7 +893,7 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(CollisionReportPtr re
         FOREACHC(itlink,vattachedlinks) {
             KinBody::LinkPtr plink = *itlink;
             if( plink->IsEnabled() ) {
-                OPENRAVE_SHARED_PTR<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack?
+                boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack?
                 FOREACHC(itindependentlink,vindependentinks) {
                     if( *itlink != *itindependentlink && (*itindependentlink)->IsEnabled() ) {
                         if( pselfchecker->CheckCollision(*itlink, *itindependentlink,report) ) {
@@ -997,7 +997,7 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
         FOREACHC(itlink,vattachedlinks) {
             KinBody::LinkPtr plink = *itlink;
             if( plink->IsEnabled() ) {
-                OPENRAVE_SHARED_PTR<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack?
+                boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack?
                 Transform tlinktrans = tdelta*plink->GetTransform();
                 plink->SetTransform(tlinktrans);
 
@@ -1049,7 +1049,7 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
             if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
                 bIsAffected = true;
                 if( bIgnoreManipulatorLinks ) {
-                    OPENRAVE_SHARED_PTR<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(*itlink)); // gcc optimization bug when linksaver is on stack?
+                    boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(*itlink)); // gcc optimization bug when linksaver is on stack?
                     Transform tlinktrans = tdelta*(*itlink)->GetTransform();
                     (*itlink)->SetTransform(tlinktrans);
 
@@ -1080,7 +1080,7 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
         if( !bIsAffected ) {
             // link is not affected by any of the joints, perhaps there could be passive joints that are attached to the end effector that are non-static. if a link is affected by all the joints in the chain, then it is most likely a child just by the fact that all the arm joints affect it.
             if( bIgnoreManipulatorLinks ) {
-                OPENRAVE_SHARED_PTR<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(*itlink)); // gcc optimization bug when linksaver is on stack?
+                boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(*itlink)); // gcc optimization bug when linksaver is on stack?
                 Transform tlinktrans = tdelta*(*itlink)->GetTransform();
                 (*itlink)->SetTransform(tlinktrans);
 
@@ -1364,7 +1364,7 @@ bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report
 
             // check if any grabbed bodies are attached to this link
             FOREACHC(itgrabbed,probot->_vGrabbedBodies) {
-                GrabbedConstPtr pgrabbed = OPENRAVE_DYNAMIC_POINTER_CAST<Grabbed const>(*itgrabbed);
+                GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
                 if( pgrabbed->_plinkrobot == *itlink ) {
                     if( vbodyexcluded.empty() ) {
                         vbodyexcluded.push_back(KinBodyConstPtr(probot));

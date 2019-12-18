@@ -729,17 +729,17 @@ public:
         object __unicode__() {
             return ConvertStringToUnicode(__str__());
         }
-        bool __eq__(OPENRAVE_SHARED_PTR<PyManipulator> p) {
+        bool __eq__(boost::shared_ptr<PyManipulator> p) {
             return !!p && _pmanip==p->_pmanip;
         }
-        bool __ne__(OPENRAVE_SHARED_PTR<PyManipulator> p) {
+        bool __ne__(boost::shared_ptr<PyManipulator> p) {
             return !p || _pmanip!=p->_pmanip;
         }
         long __hash__() {
             return static_cast<long>(uintptr_t(_pmanip.get()));
         }
     };
-    typedef OPENRAVE_SHARED_PTR<PyManipulator> PyManipulatorPtr;
+    typedef boost::shared_ptr<PyManipulator> PyManipulatorPtr;
     PyManipulatorPtr _GetManipulator(RobotBase::ManipulatorPtr pmanip) {
         return !pmanip ? PyManipulatorPtr() : PyManipulatorPtr(new PyManipulator(pmanip,_pyenv));
     }
@@ -812,10 +812,10 @@ public:
         object __unicode__() {
             return ConvertStringToUnicode(__str__());
         }
-        bool __eq__(OPENRAVE_SHARED_PTR<PyAttachedSensor> p) {
+        bool __eq__(boost::shared_ptr<PyAttachedSensor> p) {
             return !!p && _pattached==p->_pattached;
         }
-        bool __ne__(OPENRAVE_SHARED_PTR<PyAttachedSensor> p) {
+        bool __ne__(boost::shared_ptr<PyAttachedSensor> p) {
             return !p || _pattached!=p->_pattached;
         }
         long __hash__() {
@@ -823,8 +823,8 @@ public:
         }
     };
 
-    typedef OPENRAVE_SHARED_PTR<PyAttachedSensor> PyAttachedSensorPtr;
-    OPENRAVE_SHARED_PTR<PyAttachedSensor> _GetAttachedSensor(RobotBase::AttachedSensorPtr pattachedsensor)
+    typedef boost::shared_ptr<PyAttachedSensor> PyAttachedSensorPtr;
+    boost::shared_ptr<PyAttachedSensor> _GetAttachedSensor(RobotBase::AttachedSensorPtr pattachedsensor)
     {
         return !pattachedsensor ? PyAttachedSensorPtr() : PyAttachedSensorPtr(new PyAttachedSensor(pattachedsensor, _pyenv));
     }
@@ -929,11 +929,11 @@ public:
             return ConvertStringToUnicode(__str__());
         }
 
-        bool __eq__(OPENRAVE_SHARED_PTR<PyConnectedBody> p) {
+        bool __eq__(boost::shared_ptr<PyConnectedBody> p) {
             return !!p && _pconnected == p->_pconnected;
         }
 
-        bool __ne__(OPENRAVE_SHARED_PTR<PyConnectedBody> p) {
+        bool __ne__(boost::shared_ptr<PyConnectedBody> p) {
             return !p || _pconnected != p->_pconnected;
         }
 
@@ -942,8 +942,8 @@ public:
         }
     };
 
-    typedef OPENRAVE_SHARED_PTR<PyConnectedBody> PyConnectedBodyPtr;
-    OPENRAVE_SHARED_PTR<PyConnectedBody> _GetConnectedBody(RobotBase::ConnectedBodyPtr pConnectedBody)
+    typedef boost::shared_ptr<PyConnectedBody> PyConnectedBodyPtr;
+    boost::shared_ptr<PyConnectedBody> _GetConnectedBody(RobotBase::ConnectedBodyPtr pConnectedBody)
     {
         return !pConnectedBody ? PyConnectedBodyPtr() : PyConnectedBodyPtr(new PyConnectedBody(pConnectedBody, _pyenv));
     }
@@ -996,7 +996,7 @@ public:
             return ConvertStringToUnicode(__str__());
         }
     };
-    typedef OPENRAVE_SHARED_PTR<PyRobotStateSaver> PyRobotStateSaverPtr;
+    typedef boost::shared_ptr<PyRobotStateSaver> PyRobotStateSaverPtr;
 
     PyRobotBase(RobotBasePtr probot, PyEnvironmentBasePtr pyenv) : PyKinBody(probot,pyenv), _probot(probot) {
     }
@@ -1095,17 +1095,17 @@ public:
     {
         boost::python::list sensors;
         FOREACH(itsensor, _probot->GetAttachedSensors()) {
-            sensors.append(OPENRAVE_SHARED_PTR<PyAttachedSensor>(new PyAttachedSensor(*itsensor,_pyenv)));
+            sensors.append(boost::shared_ptr<PyAttachedSensor>(new PyAttachedSensor(*itsensor,_pyenv)));
         }
         return sensors;
     }
-    OPENRAVE_SHARED_PTR<PyAttachedSensor> GetSensor(const string& sensorname)
+    boost::shared_ptr<PyAttachedSensor> GetSensor(const string& sensorname)
     {
         RAVELOG_WARN("GetSensor is deprecated, please use GetAttachedSensor\n");
         return GetAttachedSensor(sensorname);
     }
 
-    OPENRAVE_SHARED_PTR<PyAttachedSensor> GetAttachedSensor(const string& sensorname)
+    boost::shared_ptr<PyAttachedSensor> GetAttachedSensor(const string& sensorname)
     {
         return _GetAttachedSensor(_probot->GetAttachedSensor(sensorname));
     }
@@ -1122,7 +1122,7 @@ public:
     {
         boost::python::list bodies;
         FOREACH(itbody, _probot->GetConnectedBodies()) {
-            bodies.append(OPENRAVE_SHARED_PTR<PyConnectedBody>(new PyConnectedBody(*itbody, _pyenv)));
+            bodies.append(boost::shared_ptr<PyConnectedBody>(new PyConnectedBody(*itbody, _pyenv)));
         }
         return bodies;
     }
@@ -1569,7 +1569,7 @@ public:
         if( _listStateSavers.size() == 0 ) {
             openravepy::LockEnvironment(_pyenv);
         }
-        _listStateSavers.push_back(OPENRAVE_SHARED_PTR<void>(new RobotBase::RobotStateSaver(_probot)));
+        _listStateSavers.push_back(boost::shared_ptr<void>(new RobotBase::RobotStateSaver(_probot)));
     }
 };
 
@@ -1671,7 +1671,7 @@ void init_openravepy_robot()
     ;
 
 
-    object manipulatorinfo = class_<PyManipulatorInfo, OPENRAVE_SHARED_PTR<PyManipulatorInfo> >("ManipulatorInfo", DOXY_CLASS(RobotBase::ManipulatorInfo))
+    object manipulatorinfo = class_<PyManipulatorInfo, boost::shared_ptr<PyManipulatorInfo> >("ManipulatorInfo", DOXY_CLASS(RobotBase::ManipulatorInfo))
                              .def_readwrite("_name",&PyManipulatorInfo::_name)
                              .def_readwrite("_sBaseLinkName",&PyManipulatorInfo::_sBaseLinkName)
                              .def_readwrite("_sEffectorLinkName",&PyManipulatorInfo::_sEffectorLinkName)
@@ -1684,7 +1684,7 @@ void init_openravepy_robot()
                              .def_pickle(ManipulatorInfo_pickle_suite())
     ;
 
-    object attachedsensorinfo = class_<PyAttachedSensorInfo, OPENRAVE_SHARED_PTR<PyAttachedSensorInfo> >("AttachedSensorInfo", DOXY_CLASS(RobotBase::AttachedSensorInfo))
+    object attachedsensorinfo = class_<PyAttachedSensorInfo, boost::shared_ptr<PyAttachedSensorInfo> >("AttachedSensorInfo", DOXY_CLASS(RobotBase::AttachedSensorInfo))
                                 .def_readwrite("_name", &PyAttachedSensorInfo::_name)
                                 .def_readwrite("_linkname", &PyAttachedSensorInfo::_linkname)
                                 .def_readwrite("_trelative", &PyAttachedSensorInfo::_trelative)
@@ -1692,7 +1692,7 @@ void init_openravepy_robot()
                                 .def_readwrite("_sensorgeometry", &PyAttachedSensorInfo::_sensorgeometry)
     ;
 
-    object connectedbodyinfo = class_<PyConnectedBodyInfo, OPENRAVE_SHARED_PTR<PyConnectedBodyInfo> >("ConnectedBodyInfo", DOXY_CLASS(RobotBase::ConnectedBodyInfo))
+    object connectedbodyinfo = class_<PyConnectedBodyInfo, boost::shared_ptr<PyConnectedBodyInfo> >("ConnectedBodyInfo", DOXY_CLASS(RobotBase::ConnectedBodyInfo))
                                .def_readwrite("_name", &PyConnectedBodyInfo::_name)
                                .def_readwrite("_linkname", &PyConnectedBodyInfo::_linkname)
                                .def_readwrite("_trelative", &PyConnectedBodyInfo::_trelative)
@@ -1720,7 +1720,7 @@ void init_openravepy_robot()
         bool (PyRobotBase::*setcontroller2)(PyControllerBasePtr,object,int) = &PyRobotBase::SetController;
         bool (PyRobotBase::*setcontroller3)(PyControllerBasePtr) = &PyRobotBase::SetController;
         bool (PyRobotBase::*initrobot)(object, object, object, object, const std::string&) = &PyRobotBase::Init;
-        scope robot = class_<PyRobotBase, OPENRAVE_SHARED_PTR<PyRobotBase>, bases<PyKinBody, PyInterfaceBase> >("Robot", DOXY_CLASS(RobotBase), no_init)
+        scope robot = class_<PyRobotBase, boost::shared_ptr<PyRobotBase>, bases<PyKinBody, PyInterfaceBase> >("Robot", DOXY_CLASS(RobotBase), no_init)
                       .def("Init", initrobot, Init_overloads(args("linkinfos", "jointinfos", "manipinfos", "attachedsensorinfos", "uri"), DOXY_FN(RobotBase, Init)))
                       .def("GetManipulators",GetManipulators1, DOXY_FN(RobotBase,GetManipulators))
                       .def("GetManipulators",GetManipulators2,args("manipname"), DOXY_FN(RobotBase,GetManipulators))
@@ -1832,7 +1832,7 @@ void init_openravepy_robot()
         bool (PyRobotBase::PyManipulator::*pCheckIndependentCollision2)(PyCollisionReportPtr) const = &PyRobotBase::PyManipulator::CheckIndependentCollision;
 
         std::string GetIkParameterization_doc = std::string(DOXY_FN(RobotBase::Manipulator,GetIkParameterization "const IkParameterization; bool")) + std::string(DOXY_FN(RobotBase::Manipulator,GetIkParameterization "IkParameterizationType; bool"));
-        class_<PyRobotBase::PyManipulator, OPENRAVE_SHARED_PTR<PyRobotBase::PyManipulator> >("Manipulator", DOXY_CLASS(RobotBase::Manipulator), no_init)
+        class_<PyRobotBase::PyManipulator, boost::shared_ptr<PyRobotBase::PyManipulator> >("Manipulator", DOXY_CLASS(RobotBase::Manipulator), no_init)
         .def("GetEndEffectorTransform", &PyRobotBase::PyManipulator::GetTransform, DOXY_FN(RobotBase::Manipulator,GetTransform))
         .def("GetTransform", &PyRobotBase::PyManipulator::GetTransform, DOXY_FN(RobotBase::Manipulator,GetTransform))
         .def("GetTransformPose", &PyRobotBase::PyManipulator::GetTransformPose, DOXY_FN(RobotBase::Manipulator,GetTransform))
@@ -1901,7 +1901,7 @@ void init_openravepy_robot()
         .def("__hash__",&PyRobotBase::PyManipulator::__hash__)
         ;
 
-        class_<PyRobotBase::PyAttachedSensor, OPENRAVE_SHARED_PTR<PyRobotBase::PyAttachedSensor> >("AttachedSensor", DOXY_CLASS(RobotBase::AttachedSensor), no_init)
+        class_<PyRobotBase::PyAttachedSensor, boost::shared_ptr<PyRobotBase::PyAttachedSensor> >("AttachedSensor", DOXY_CLASS(RobotBase::AttachedSensor), no_init)
         .def("GetSensor",&PyRobotBase::PyAttachedSensor::GetSensor, DOXY_FN(RobotBase::AttachedSensor,GetSensor))
         .def("GetAttachingLink",&PyRobotBase::PyAttachedSensor::GetAttachingLink, DOXY_FN(RobotBase::AttachedSensor,GetAttachingLink))
         .def("GetRelativeTransform",&PyRobotBase::PyAttachedSensor::GetRelativeTransform, DOXY_FN(RobotBase::AttachedSensor,GetRelativeTransform))
@@ -1923,7 +1923,7 @@ void init_openravepy_robot()
         .def("__hash__",&PyRobotBase::PyAttachedSensor::__hash__)
         ;
 
-        class_<PyRobotBase::PyConnectedBody, OPENRAVE_SHARED_PTR<PyRobotBase::PyConnectedBody> >("ConnectedBody", DOXY_CLASS(RobotBase::ConnectedBody), no_init)
+        class_<PyRobotBase::PyConnectedBody, boost::shared_ptr<PyRobotBase::PyConnectedBody> >("ConnectedBody", DOXY_CLASS(RobotBase::ConnectedBody), no_init)
         .def("GetName",&PyRobotBase::PyConnectedBody::GetName, DOXY_FN(RobotBase::ConnectedBody,GetName))
         .def("GetInfo",&PyRobotBase::PyConnectedBody::GetInfo, DOXY_FN(RobotBase::ConnectedBody,GetInfo))
         .def("SetActive", &PyRobotBase::PyConnectedBody::SetActive, DOXY_FN(RobotBase::ConnectedBody,SetActive))
@@ -1944,7 +1944,7 @@ void init_openravepy_robot()
         .def("__ne__",&PyRobotBase::PyConnectedBody::__ne__)
         .def("__hash__",&PyRobotBase::PyConnectedBody::__hash__);
 
-        class_<PyRobotBase::PyRobotStateSaver, OPENRAVE_SHARED_PTR<PyRobotBase::PyRobotStateSaver> >("RobotStateSaver", DOXY_CLASS(Robot::RobotStateSaver), no_init)
+        class_<PyRobotBase::PyRobotStateSaver, boost::shared_ptr<PyRobotBase::PyRobotStateSaver> >("RobotStateSaver", DOXY_CLASS(Robot::RobotStateSaver), no_init)
         .def(init<PyRobotBasePtr>(args("robot")))
         .def(init<PyRobotBasePtr,object>(args("robot","options")))
         .def("GetBody",&PyRobotBase::PyRobotStateSaver::GetBody,DOXY_FN(Robot::RobotStateSaver, GetBody))

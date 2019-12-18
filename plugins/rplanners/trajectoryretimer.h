@@ -40,8 +40,8 @@ public:
         // optional
         std::vector<dReal> _vConfigJerkLimit;
     };
-    typedef OPENRAVE_SHARED_PTR<GroupInfo> GroupInfoPtr;
-    typedef OPENRAVE_SHARED_PTR<GroupInfo const> GroupInfoConstPtr;
+    typedef boost::shared_ptr<GroupInfo> GroupInfoPtr;
+    typedef boost::shared_ptr<GroupInfo const> GroupInfoConstPtr;
 
 public:
     TrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
@@ -479,15 +479,15 @@ protected:
     }
 
     ConstraintTrajectoryTimingParametersPtr _parameters;
-    OPENRAVE_SHARED_PTR<ManipConstraintChecker> _manipconstraintchecker;
+    boost::shared_ptr<ManipConstraintChecker> _manipconstraintchecker;
     
     // caching
     ConfigurationSpecification _cachedoldspec, _cachednewspec; ///< the configuration specification that the cached structures have been set for
     std::string _cachedposinterpolation;
-    std::list< OPENRAVE_FUNCTION<dReal(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,bool) > > _listmintimefns;
-    std::list< OPENRAVE_FUNCTION<void(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::iterator) > > _listvelocityfns;
-    std::list< OPENRAVE_FUNCTION<bool(std::vector<dReal>::const_iterator,std::vector<dReal>::iterator, int) > > _listcheckvelocityfns;
-    std::list< OPENRAVE_FUNCTION<bool(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::iterator) > > _listwritefns;
+    std::list< boost::function<dReal(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,bool) > > _listmintimefns;
+    std::list< boost::function<void(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::iterator) > > _listvelocityfns;
+    std::list< boost::function<bool(std::vector<dReal>::const_iterator,std::vector<dReal>::iterator, int) > > _listcheckvelocityfns;
+    std::list< boost::function<bool(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::iterator) > > _listwritefns;
     std::vector<dReal> _vimaxvel, _vimaxaccel;
     std::vector<dReal> _vdiffdata, _vdata;
     int _timeoffset;

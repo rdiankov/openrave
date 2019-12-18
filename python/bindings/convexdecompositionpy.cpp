@@ -73,7 +73,7 @@ inline void assertion_failed_msg(char const * expr, char const * msg, char const
 object computeConvexDecomposition(const boost::multi_array<float, 2>& vertices, const boost::multi_array<int, 2>& indices,
                                   NxF32 skinWidth=0, NxU32 decompositionDepth=8, NxU32 maxHullVertices=64, NxF32 concavityThresholdPercent=0.1f, NxF32 mergeThresholdPercent=30.0f, NxF32 volumeSplitThresholdPercent=0.1f, bool useInitialIslandGeneration=true, bool useIslandGeneration=false)
 {
-    OPENRAVE_SHARED_PTR<CONVEX_DECOMPOSITION::iConvexDecomposition> ic(CONVEX_DECOMPOSITION::createConvexDecomposition(),CONVEX_DECOMPOSITION::releaseConvexDecomposition);
+    boost::shared_ptr<CONVEX_DECOMPOSITION::iConvexDecomposition> ic(CONVEX_DECOMPOSITION::createConvexDecomposition(),CONVEX_DECOMPOSITION::releaseConvexDecomposition);
 
     if( indices.size() > 0 ) {
         FOREACHC(it,indices)

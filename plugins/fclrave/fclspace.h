@@ -10,15 +10,15 @@ namespace fclrave {
 
 typedef KinBody::LinkConstPtr LinkConstPtr;
 typedef std::pair<LinkConstPtr, LinkConstPtr> LinkPair;
-typedef OPENRAVE_WEAK_PTR<const KinBody> KinBodyConstWeakPtr;
+typedef boost::weak_ptr<const KinBody> KinBodyConstWeakPtr;
 using OpenRAVE::ORE_Assert;
 
 // Warning : this is the only place where we use std::shared_ptr (for compatibility with fcl)
 typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr;
-typedef OPENRAVE_SHARED_PTR<fcl::CollisionObject> CollisionObjectPtr;
-typedef OPENRAVE_FUNCTION<CollisionGeometryPtr (std::vector<fcl::Vec3f> const &points, std::vector<fcl::Triangle> const &triangles) > MeshFactory;
+typedef boost::shared_ptr<fcl::CollisionObject> CollisionObjectPtr;
+typedef boost::function<CollisionGeometryPtr (std::vector<fcl::Vec3f> const &points, std::vector<fcl::Triangle> const &triangles) > MeshFactory;
 typedef std::vector<fcl::CollisionObject *> CollisionGroup;
-typedef OPENRAVE_SHARED_PTR<CollisionGroup> CollisionGroupPtr;
+typedef boost::shared_ptr<CollisionGroup> CollisionGroupPtr;
 typedef std::pair<Transform, CollisionObjectPtr> TransformCollisionPair;
 
 
@@ -60,15 +60,15 @@ CollisionGeometryPtr ConvertMeshToFCL(std::vector<fcl::Vec3f> const &points,std:
 /// \brief fcl spaces manages the individual collision objects and sets up callbacks to track their changes.
 ///
 /// It does not know or manage the broadphase manager
-class FCLSpace : public OPENRAVE_ENABLE_SHARED_FROM_THIS<FCLSpace>
+class FCLSpace : public boost::enable_shared_from_this<FCLSpace>
 {
 public:
-    inline OPENRAVE_WEAK_PTR<FCLSpace> weak_space() {
+    inline boost::weak_ptr<FCLSpace> weak_space() {
         return shared_from_this();
     }
 
     // corresponds to FCLUserData
-    class KinBodyInfo : public OPENRAVE_ENABLE_SHARED_FROM_THIS<KinBodyInfo>, public OpenRAVE::UserData
+    class KinBodyInfo : public boost::enable_shared_from_this<KinBodyInfo>, public OpenRAVE::UserData
     {
 public:
         class LinkInfo
@@ -146,7 +146,7 @@ public:
         int nAttachedBodiesUpdateStamp; ///< update stamp for when attached bodies change of this body
         int nActiveDOFUpdateStamp; ///< update stamp for when active dofs change of this body
 
-        vector< OPENRAVE_SHARED_PTR<LinkInfo> > vlinks; ///< info for every link of the kinbody
+        vector< boost::shared_ptr<LinkInfo> > vlinks; ///< info for every link of the kinbody
 
         OpenRAVE::UserDataPtr _bodyAttachedCallback; ///< handle for the callback called when a body is attached or detached
         OpenRAVE::UserDataPtr _activeDOFsCallback; ///< handle for the callback called when a the activeDOFs have changed
@@ -160,11 +160,11 @@ public:
         std::string _geometrygroup; ///< name of the geometry group tracked by this kinbody info ; if empty, tracks the current geometries
     };
 
-    typedef OPENRAVE_SHARED_PTR<KinBodyInfo> KinBodyInfoPtr;
-    typedef OPENRAVE_SHARED_PTR<KinBodyInfo const> KinBodyInfoConstPtr;
-    typedef OPENRAVE_WEAK_PTR<KinBodyInfo> KinBodyInfoWeakPtr;
-    typedef OPENRAVE_SHARED_PTR<FCLSpace::KinBodyInfo::LinkInfo> LinkInfoPtr;
-    typedef OPENRAVE_FUNCTION<void (KinBodyInfoPtr)> SynchronizeCallbackFn;
+    typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
+    typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
+    typedef boost::weak_ptr<KinBodyInfo> KinBodyInfoWeakPtr;
+    typedef boost::shared_ptr<FCLSpace::KinBodyInfo::LinkInfo> LinkInfoPtr;
+    typedef boost::function<void (KinBodyInfoPtr)> SynchronizeCallbackFn;
 
     FCLSpace(EnvironmentBasePtr penv, const std::string& userdatakey)
         : _penv(penv), _userdatakey(userdatakey), _bIsSelfCollisionChecker(true)
@@ -201,14 +201,14 @@ public:
 
         RAVELOG_VERBOSE_FORMAT("env=%d, self=%d, init body %s (%d)", pbody->GetEnv()->GetId()%_bIsSelfCollisionChecker%pbody->GetName()%pbody->GetEnvironmentId());
         pinfo->Reset();
-        pinfo->_pbody = OPENRAVE_CONST_POINTER_CAST<KinBody>(pbody);
+        pinfo->_pbody = boost::const_pointer_cast<KinBody>(pbody);
         // make sure that synchronization do occur !
         pinfo->nLastStamp = pbody->GetUpdateStamp() - 1;
 
         pinfo->vlinks.reserve(pbody->GetLinks().size());
         FOREACHC(itlink, pbody->GetLinks()) {
 
-            OPENRAVE_SHARED_PTR<KinBodyInfo::LinkInfo> link(new KinBodyInfo::LinkInfo(*itlink));
+            boost::shared_ptr<KinBodyInfo::LinkInfo> link(new KinBodyInfo::LinkInfo(*itlink));
 
 
             typedef boost::range_detail::any_iterator<KinBody::GeometryInfo, boost::forward_traversal_tag, KinBody::GeometryInfo const&, std::ptrdiff_t> GeometryInfoIterator;
@@ -217,7 +217,7 @@ public:
             // Glue code for a unified access to geometries
             if(pinfo->_geometrygroup.size() > 0 && (*itlink)->GetGroupNumGeometries(pinfo->_geometrygroup) >= 0) {
                 const std::vector<KinBody::GeometryInfoPtr>& vgeometryinfos = (*itlink)->GetGeometriesFromGroup(pinfo->_geometrygroup);
-                typedef OPENRAVE_FUNCTION<KinBody::GeometryInfo const& (KinBody::GeometryInfoPtr const&)> Func;
+                typedef boost::function<KinBody::GeometryInfo const& (KinBody::GeometryInfoPtr const&)> Func;
                 typedef boost::transform_iterator<Func, std::vector<KinBody::GeometryInfoPtr>::const_iterator> PtrGeomInfoIterator;
                 Func deref = boost::mem_fn(&KinBody::GeometryInfoPtr::operator*);
                 begingeom = GeometryInfoIterator(PtrGeomInfoIterator(vgeometryinfos.begin(), deref));
@@ -225,7 +225,7 @@ public:
             }
             else {
                 std::vector<KinBody::Link::GeometryPtr> const &geoms = (*itlink)->GetGeometries();
-                typedef OPENRAVE_FUNCTION<KinBody::GeometryInfo const& (KinBody::Link::GeometryPtr const&)> Func;
+                typedef boost::function<KinBody::GeometryInfo const& (KinBody::Link::GeometryPtr const&)> Func;
                 typedef boost::transform_iterator<Func, std::vector<KinBody::Link::GeometryPtr>::const_iterator> PtrGeomInfoIterator;
                 Func getInfo = [] (KinBody::Link::GeometryPtr const &itgeom) -> KinBody::GeometryInfo const& {
                                    return itgeom->GetInfo();
@@ -242,7 +242,7 @@ public:
                 }
 
                 // We do not set the transformation here and leave it to _Synchronize
-                CollisionObjectPtr pfclcoll = OPENRAVE_MAKE_SHARED<fcl::CollisionObject>(pfclgeom);
+                CollisionObjectPtr pfclcoll = boost::make_shared<fcl::CollisionObject>(pfclgeom);
                 pfclcoll->setUserData(link.get());
 
                 link->vgeoms.push_back(TransformCollisionPair(itgeominfo->_t, pfclcoll));
@@ -252,14 +252,14 @@ public:
                 RAVELOG_DEBUG_FORMAT("Initializing link %s/%s with 0 geometries (env %d) (userdatakey %s)",pbody->GetName()%(*itlink)->GetName()%_penv->GetId()%_userdatakey);
             } else {
                 // create the bounding volume for the link
-                KinBody::Link::Geometry _tmpgeometry(OPENRAVE_SHARED_PTR<KinBody::Link>(), *begingeom);
+                KinBody::Link::Geometry _tmpgeometry(boost::shared_ptr<KinBody::Link>(), *begingeom);
                 fcl::AABB enclosingBV = ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
                 for(GeometryInfoIterator it = ++begingeom; it != endgeom; ++it) {
-                    KinBody::Link::Geometry _tmpgeometry(OPENRAVE_SHARED_PTR<KinBody::Link>(), *it);
+                    KinBody::Link::Geometry _tmpgeometry(boost::shared_ptr<KinBody::Link>(), *it);
                     enclosingBV += ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
                 }
                 CollisionGeometryPtr pfclgeomBV = std::make_shared<fcl::Box>(enclosingBV.max_ - enclosingBV.min_);
-                CollisionObjectPtr pfclcollBV = OPENRAVE_MAKE_SHARED<fcl::CollisionObject>(pfclgeomBV);
+                CollisionObjectPtr pfclcollBV = boost::make_shared<fcl::CollisionObject>(pfclgeomBV);
                 Transform trans(Vector(1,0,0,0),ConvertVectorFromFCL(0.5 * (enclosingBV.min_ + enclosingBV.max_)));
                 pfclcollBV->setUserData(link.get());
                 link->linkBV = std::make_pair(trans, pfclcollBV);
@@ -273,13 +273,13 @@ public:
 #endif
         }
 
-        pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&FCLSpace::_ResetCurrentGeometryCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),OPENRAVE_WEAK_PTR<KinBodyInfo>(pinfo)));
-        pinfo->_geometrygroupcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometryGroup, boost::bind(&FCLSpace::_ResetGeometryGroupsCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),OPENRAVE_WEAK_PTR<KinBodyInfo>(pinfo)));
-        pinfo->_linkenablecallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkEnable, boost::bind(&FCLSpace::_ResetLinkEnableCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), OPENRAVE_WEAK_PTR<KinBodyInfo>(pinfo)));
-        pinfo->_activeDOFsCallback = pbody->RegisterChangeCallback(KinBody::Prop_RobotActiveDOFs, boost::bind(&FCLSpace::_ResetActiveDOFsCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), OPENRAVE_WEAK_PTR<KinBodyInfo>(pinfo)));
+        pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&FCLSpace::_ResetCurrentGeometryCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<KinBodyInfo>(pinfo)));
+        pinfo->_geometrygroupcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometryGroup, boost::bind(&FCLSpace::_ResetGeometryGroupsCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<KinBodyInfo>(pinfo)));
+        pinfo->_linkenablecallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkEnable, boost::bind(&FCLSpace::_ResetLinkEnableCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBodyInfo>(pinfo)));
+        pinfo->_activeDOFsCallback = pbody->RegisterChangeCallback(KinBody::Prop_RobotActiveDOFs, boost::bind(&FCLSpace::_ResetActiveDOFsCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBodyInfo>(pinfo)));
 
-        pinfo->_bodyAttachedCallback = pbody->RegisterChangeCallback(KinBody::Prop_BodyAttached, boost::bind(&FCLSpace::_ResetAttachedBodyCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), OPENRAVE_WEAK_PTR<KinBodyInfo>(pinfo)));
-        pinfo->_bodyremovedcallback = pbody->RegisterChangeCallback(KinBody::Prop_BodyRemoved, boost::bind(&FCLSpace::RemoveUserData, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::bind(&OpenRAVE::utils::sptr_from<const KinBody>, OPENRAVE_WEAK_PTR<const KinBody>(pbody))));
+        pinfo->_bodyAttachedCallback = pbody->RegisterChangeCallback(KinBody::Prop_BodyAttached, boost::bind(&FCLSpace::_ResetAttachedBodyCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBodyInfo>(pinfo)));
+        pinfo->_bodyremovedcallback = pbody->RegisterChangeCallback(KinBody::Prop_BodyRemoved, boost::bind(&FCLSpace::RemoveUserData, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::bind(&OpenRAVE::utils::sptr_from<const KinBody>, boost::weak_ptr<const KinBody>(pbody))));
 
         BOOST_ASSERT(pbody->GetEnvironmentId() != 0);
         if( bSetToCurrentPInfo ) {
@@ -552,7 +552,7 @@ private:
 
     static TransformCollisionPair _CreateTransformCollisionPairFromOBB(fcl::OBB const &bv) {
         CollisionGeometryPtr pbvGeom = make_shared<fcl::Box>(bv.extent[0]*2.0f, bv.extent[1]*2.0f, bv.extent[2]*2.0f);
-        CollisionObjectPtr pbvColl = OPENRAVE_MAKE_SHARED<fcl::CollisionObject>(pbvGeom);
+        CollisionObjectPtr pbvColl = boost::make_shared<fcl::CollisionObject>(pbvGeom);
         fcl::Quaternion3f fclBvRot;
         fclBvRot.fromAxes(bv.axis);
         Vector bvRotation = ConvertQuaternionFromFCL(fclBvRot);
@@ -661,7 +661,7 @@ private:
     class KinBodyInfoRemover
     {
 public:
-        KinBodyInfoRemover(const OPENRAVE_FUNCTION<void()>& fn) : _fn(fn) {
+        KinBodyInfoRemover(const boost::function<void()>& fn) : _fn(fn) {
             _bDoRemove = true;
         }
         ~KinBodyInfoRemover() {
@@ -675,10 +675,10 @@ public:
         }
 
 private:
-        OPENRAVE_FUNCTION<void()> _fn;
+        boost::function<void()> _fn;
         bool _bDoRemove;
     };
-    void _ResetCurrentGeometryCallback(OPENRAVE_WEAK_PTR<KinBodyInfo> _pinfo)
+    void _ResetCurrentGeometryCallback(boost::weak_ptr<KinBodyInfo> _pinfo)
     {
         KinBodyInfoPtr pinfo = _pinfo.lock();
         KinBodyPtr pbody = pinfo->GetBody();
@@ -695,7 +695,7 @@ private:
         //_cachedpinfo[pbody->GetEnvironmentId()].erase(std::string());
     }
 
-    void _ResetGeometryGroupsCallback(OPENRAVE_WEAK_PTR<KinBodyInfo> _pinfo)
+    void _ResetGeometryGroupsCallback(boost::weak_ptr<KinBodyInfo> _pinfo)
     {
         KinBodyInfoPtr pinfo = _pinfo.lock();
         KinBodyPtr pbody = pinfo->GetBody();
@@ -716,21 +716,21 @@ private:
 //        }
     }
 
-    void _ResetLinkEnableCallback(OPENRAVE_WEAK_PTR<KinBodyInfo> _pinfo) {
+    void _ResetLinkEnableCallback(boost::weak_ptr<KinBodyInfo> _pinfo) {
         KinBodyInfoPtr pinfo = _pinfo.lock();
         if( !!pinfo ) {
             pinfo->nLinkUpdateStamp++;
         }
     }
 
-    void _ResetActiveDOFsCallback(OPENRAVE_WEAK_PTR<KinBodyInfo> _pinfo) {
+    void _ResetActiveDOFsCallback(boost::weak_ptr<KinBodyInfo> _pinfo) {
         KinBodyInfoPtr pinfo = _pinfo.lock();
         if( !!pinfo ) {
             pinfo->nActiveDOFUpdateStamp++;
         }
     }
 
-    void _ResetAttachedBodyCallback(OPENRAVE_WEAK_PTR<KinBodyInfo> _pinfo) {
+    void _ResetAttachedBodyCallback(boost::weak_ptr<KinBodyInfo> _pinfo) {
         KinBodyInfoPtr pinfo = _pinfo.lock();
         if( !!pinfo ) {
             pinfo->nAttachedBodiesUpdateStamp++;

@@ -262,10 +262,10 @@ protected:
     }
 
     inline CollisionCheckerBasePtr shared_collisionchecker() {
-        return OPENRAVE_STATIC_POINTER_CAST<CollisionCheckerBase>(shared_from_this());
+        return boost::static_pointer_cast<CollisionCheckerBase>(shared_from_this());
     }
     inline CollisionCheckerBaseConstPtr shared_collisionchecker_const() const {
-        return OPENRAVE_STATIC_POINTER_CAST<CollisionCheckerBase const>(shared_from_this());
+        return boost::static_pointer_cast<CollisionCheckerBase const>(shared_from_this());
     }
 
 private:
@@ -294,7 +294,7 @@ private:
     CollisionCheckerBasePtr _p;
 };
 
-typedef OPENRAVE_SHARED_PTR<CollisionOptionsStateSaver> CollisionOptionsStateSaverPtr;
+typedef boost::shared_ptr<CollisionOptionsStateSaver> CollisionOptionsStateSaverPtr;
 
 /** \brief Helper class to save and restore the nKeepPrevious variable in a collision report. Should be used by anyone using multiple CheckCollision calls and aggregating results.
 
@@ -326,7 +326,7 @@ private:
     uint8_t _nKeepPrevious;
 };
 
-typedef OPENRAVE_SHARED_PTR<CollisionReportKeepSaver> CollisionReportKeepSaverPtr;
+typedef boost::shared_ptr<CollisionReportKeepSaver> CollisionReportKeepSaverPtr;
 
 } // end namespace OpenRAVE
 

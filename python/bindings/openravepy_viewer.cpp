@@ -323,7 +323,7 @@ void init_openravepy_viewer()
     {
         void (PyViewerBase::*setcamera1)(object) = &PyViewerBase::SetCamera;
         void (PyViewerBase::*setcamera2)(object,float) = &PyViewerBase::SetCamera;
-        scope viewer = class_<PyViewerBase, OPENRAVE_SHARED_PTR<PyViewerBase>, bases<PyInterfaceBase> >("Viewer", DOXY_CLASS(ViewerBase), no_init)
+        scope viewer = class_<PyViewerBase, boost::shared_ptr<PyViewerBase>, bases<PyInterfaceBase> >("Viewer", DOXY_CLASS(ViewerBase), no_init)
                        .def("main",&PyViewerBase::main, main_overloads(args("show","sig_thread_id"), DOXY_FN(ViewerBase,main)))
                        .def("quitmainloop",&PyViewerBase::quitmainloop, DOXY_FN(ViewerBase,quitmainloop))
                        .def("SetSize",&PyViewerBase::SetSize, DOXY_FN(ViewerBase,SetSize))

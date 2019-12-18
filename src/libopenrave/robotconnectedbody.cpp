@@ -37,22 +37,22 @@ void RobotBase::ConnectedBodyInfo::InitInfoFromBody(RobotBase& robot)
     robot.SetDOFValues(vzeros, Transform());
 
     FOREACH(itlink, robot._veclinks) {
-        _vLinkInfos.push_back(OPENRAVE_MAKE_SHARED<KinBody::LinkInfo>((*itlink)->UpdateAndGetInfo()));
+        _vLinkInfos.push_back(boost::make_shared<KinBody::LinkInfo>((*itlink)->UpdateAndGetInfo()));
     }
 
     FOREACH(itjoint, robot._vecjoints) {
-        _vJointInfos.push_back(OPENRAVE_MAKE_SHARED<KinBody::JointInfo>((*itjoint)->UpdateAndGetInfo()));
+        _vJointInfos.push_back(boost::make_shared<KinBody::JointInfo>((*itjoint)->UpdateAndGetInfo()));
     }
     FOREACH(itjoint, robot._vPassiveJoints) {
-        _vJointInfos.push_back(OPENRAVE_MAKE_SHARED<KinBody::JointInfo>((*itjoint)->UpdateAndGetInfo()));
+        _vJointInfos.push_back(boost::make_shared<KinBody::JointInfo>((*itjoint)->UpdateAndGetInfo()));
     }
 
     FOREACH(itmanip, robot.GetManipulators()) {
-        _vManipulatorInfos.push_back(OPENRAVE_MAKE_SHARED<RobotBase::ManipulatorInfo>((*itmanip)->GetInfo()));
+        _vManipulatorInfos.push_back(boost::make_shared<RobotBase::ManipulatorInfo>((*itmanip)->GetInfo()));
     }
 
     FOREACH(itattachedsensor, robot.GetAttachedSensors()) {
-        _vAttachedSensorInfos.push_back(OPENRAVE_MAKE_SHARED<RobotBase::AttachedSensorInfo>((*itattachedsensor)->UpdateAndGetInfo()));
+        _vAttachedSensorInfos.push_back(boost::make_shared<RobotBase::AttachedSensorInfo>((*itattachedsensor)->UpdateAndGetInfo()));
     }
 }
 

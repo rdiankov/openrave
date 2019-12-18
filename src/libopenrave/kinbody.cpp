@@ -27,7 +27,7 @@ namespace OpenRAVE {
 class ChangeCallbackData : public UserData
 {
 public:
-    ChangeCallbackData(int properties, const OPENRAVE_FUNCTION<void()>& callback, KinBodyConstPtr pbody) : _properties(properties), _callback(callback), _pweakbody(pbody) {
+    ChangeCallbackData(int properties, const boost::function<void()>& callback, KinBodyConstPtr pbody) : _properties(properties), _callback(callback), _pweakbody(pbody) {
     }
     virtual ~ChangeCallbackData() {
         KinBodyConstPtr pbody = _pweakbody.lock();
@@ -41,25 +41,25 @@ public:
 
     list< std::pair<uint32_t, list<UserDataWeakPtr>::iterator> > _iterators;
     int _properties;
-    OPENRAVE_FUNCTION<void()> _callback;
+    boost::function<void()> _callback;
 protected:
-    OPENRAVE_WEAK_PTR<KinBody const> _pweakbody;
+    boost::weak_ptr<KinBody const> _pweakbody;
 };
 
 class CallFunctionAtDestructor
 {
 public:
-    CallFunctionAtDestructor(const OPENRAVE_FUNCTION<void()>& fn) : _fn(fn) {
+    CallFunctionAtDestructor(const boost::function<void()>& fn) : _fn(fn) {
     }
     ~CallFunctionAtDestructor() {
         _fn();
     }
 
 protected:
-    OPENRAVE_FUNCTION<void()> _fn;
+    boost::function<void()> _fn;
 };
 
-typedef OPENRAVE_SHARED_PTR<ChangeCallbackData> ChangeCallbackDataPtr;
+typedef boost::shared_ptr<ChangeCallbackData> ChangeCallbackDataPtr;
 
 ElectricMotorActuatorInfo::ElectricMotorActuatorInfo()
 {
@@ -3415,7 +3415,7 @@ void KinBody::_ComputeInternalInformation()
             }
         }
         // fill Mimic::_vmimicdofs, check that there are no circular dependencies between the mimic joints
-        std::map<Mimic::DOFFormat, OPENRAVE_SHARED_PTR<Mimic> > mapmimic;
+        std::map<Mimic::DOFFormat, boost::shared_ptr<Mimic> > mapmimic;
         for(int ijoints = 0; ijoints < 2; ++ijoints) {
             vector<JointPtr>& vjoints = ijoints ? _vPassiveJoints : _vecjoints;
             int jointindex=0;
@@ -3449,14 +3449,14 @@ void KinBody::_ComputeInternalInformation()
         while(bchanged) {
             bchanged = false;
             FOREACH(itmimic,mapmimic) {
-                OPENRAVE_SHARED_PTR<Mimic> mimic = itmimic->second;
+                boost::shared_ptr<Mimic> mimic = itmimic->second;
                 Mimic::DOFHierarchy h;
                 h.dofformatindex = 0;
                 FOREACH(itdofformat,mimic->_vdofformat) {
                     if( mapmimic.find(*itdofformat) == mapmimic.end() ) {
                         continue; // this is normal, just means that the parent is a regular dof
                     }
-                    OPENRAVE_SHARED_PTR<Mimic> mimicparent = mapmimic[*itdofformat];
+                    boost::shared_ptr<Mimic> mimicparent = mapmimic[*itdofformat];
                     FOREACH(itmimicdof, mimicparent->_vmimicdofs) {
                         if( mimicparent->_vdofformat[itmimicdof->dofformatindex] == itmimic->first ) {
                             JointPtr pjoint = itmimic->first.GetJoint(*this);
@@ -4201,7 +4201,7 @@ void KinBody::_ComputeInternalInformation()
                 listRegisteredCallbacks = _vlistRegisteredCallbacks.at(index); // copy since it can be changed
             }
             FOREACH(it,listRegisteredCallbacks) {
-                ChangeCallbackDataPtr pdata = OPENRAVE_DYNAMIC_POINTER_CAST<ChangeCallbackData>(it->lock());
+                ChangeCallbackDataPtr pdata = boost::dynamic_pointer_cast<ChangeCallbackData>(it->lock());
                 if( !!pdata ) {
                     pdata->_callback();
                 }
@@ -4230,7 +4230,7 @@ bool KinBody::IsAttached(const KinBody &body) const
 
 void KinBody::GetAttached(std::set<KinBodyPtr>&setAttached) const
 {
-    setAttached.insert(OPENRAVE_CONST_POINTER_CAST<KinBody>(shared_kinbody_const()));
+    setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
     FOREACHC(itbody,_listAttachedBodies) {
         KinBodyPtr pattached = itbody->lock();
         if( !!pattached && setAttached.insert(pattached).second ) {
@@ -4422,7 +4422,7 @@ public:
         }
         ~TransformsSaver() {
             for(size_t i = 0; i < _pbody->_veclinks.size(); ++i) {
-                OPENRAVE_STATIC_POINTER_CAST<Link>(_pbody->_veclinks[i])->_info._t = vcurtrans.at(i);
+                boost::static_pointer_cast<Link>(_pbody->_veclinks[i])->_info._t = vcurtrans.at(i);
             }
             for(size_t i = 0; i < _pbody->_vecjoints.size(); ++i) {
                 for(int j = 0; j < _pbody->_vecjoints[i]->GetDOF(); ++j) {
@@ -4444,7 +4444,7 @@ private:
         CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
         CollisionOptionsStateSaver colsaver(collisionchecker,0); // have to reset the collision options
         for(size_t i = 0; i < _veclinks.size(); ++i) {
-            OPENRAVE_STATIC_POINTER_CAST<Link>(_veclinks[i])->_info._t = _vInitialLinkTransformations.at(i);
+            boost::static_pointer_cast<Link>(_veclinks[i])->_info._t = _vInitialLinkTransformations.at(i);
         }
         _nUpdateStampId++; // because transforms were modified
         _vNonAdjacentLinks[0].resize(0);
@@ -4624,7 +4624,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     // clone the grabbed bodies, note that this can fail if the new cloned environment hasn't added the bodies yet (check out Environment::Clone)
     _vGrabbedBodies.resize(0);
     FOREACHC(itgrabbedref, r->_vGrabbedBodies) {
-        GrabbedConstPtr pgrabbedref = OPENRAVE_DYNAMIC_POINTER_CAST<Grabbed const>(*itgrabbedref);
+        GrabbedConstPtr pgrabbedref = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbedref);
 
         KinBodyPtr pbodyref = pgrabbedref->_pgrabbedbody.lock();
         KinBodyPtr pgrabbedbody;
@@ -4670,7 +4670,7 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
         FOREACH(itlink,_veclinks) {
             if( (*itlink)->IsEnabled() ) {
                 FOREACH(itgrabbed,_vGrabbedBodies) {
-                    GrabbedPtr pgrabbed = OPENRAVE_DYNAMIC_POINTER_CAST<Grabbed>(*itgrabbed);
+                    GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
                     if( find(pgrabbed->GetRigidlyAttachedLinks().begin(),pgrabbed->GetRigidlyAttachedLinks().end(), *itlink) == pgrabbed->GetRigidlyAttachedLinks().end() ) {
                         std::list<KinBody::LinkConstPtr>::iterator itnoncolliding = find(pgrabbed->_listNonCollidingLinks.begin(),pgrabbed->_listNonCollidingLinks.end(),*itlink);
                         if( itnoncolliding != pgrabbed->_listNonCollidingLinks.end() ) {
@@ -4691,7 +4691,7 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
             else {
                 // add since it is disabled?
                 FOREACH(itgrabbed,_vGrabbedBodies) {
-                    GrabbedPtr pgrabbed = OPENRAVE_DYNAMIC_POINTER_CAST<Grabbed>(*itgrabbed);
+                    GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
                     if( find(pgrabbed->GetRigidlyAttachedLinks().begin(),pgrabbed->GetRigidlyAttachedLinks().end(), *itlink) == pgrabbed->GetRigidlyAttachedLinks().end() ) {
                         if( find(pgrabbed->_listNonCollidingLinks.begin(),pgrabbed->_listNonCollidingLinks.end(),*itlink) == pgrabbed->_listNonCollidingLinks.end() ) {
                             if( pgrabbed->WasLinkNonColliding(*itlink) != 0 ) {
@@ -4727,7 +4727,7 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
                 listRegisteredCallbacks = _vlistRegisteredCallbacks.at(index); // copy since it can be changed
             }
             FOREACH(it,listRegisteredCallbacks) {
-                ChangeCallbackDataPtr pdata = OPENRAVE_DYNAMIC_POINTER_CAST<ChangeCallbackData>(it->lock());
+                ChangeCallbackDataPtr pdata = boost::dynamic_pointer_cast<ChangeCallbackData>(it->lock());
                 if( !!pdata ) {
                     pdata->_callback();
                 }
@@ -4834,7 +4834,7 @@ ConfigurationSpecification KinBody::GetConfigurationSpecificationIndices(const s
     return spec;
 }
 
-UserDataPtr KinBody::RegisterChangeCallback(uint32_t properties, const OPENRAVE_FUNCTION<void()>&callback) const
+UserDataPtr KinBody::RegisterChangeCallback(uint32_t properties, const boost::function<void()>&callback) const
 {
     ChangeCallbackDataPtr pdata(new ChangeCallbackData(properties,callback,shared_kinbody_const()));
     boost::unique_lock< boost::shared_mutex > lock(GetInterfaceMutex());

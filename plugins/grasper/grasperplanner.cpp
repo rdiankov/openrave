@@ -689,7 +689,7 @@ protected:
         return ct;
     }
     CollisionReportPtr _report;
-    OPENRAVE_SHARED_PTR<GraspParameters> _parameters;
+    boost::shared_ptr<GraspParameters> _parameters;
     RobotBasePtr _robot;
     vector<KinBody::LinkPtr> _vAvoidLinkGeometry;
     std::vector<KinBody::LinkPtr> _vlinks;

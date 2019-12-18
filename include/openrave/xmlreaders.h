@@ -38,7 +38,7 @@ public:
     std::string _data;
 };
 
-typedef OPENRAVE_SHARED_PTR<StringXMLReadable> StringXMLReadablePtr;
+typedef boost::shared_ptr<StringXMLReadable> StringXMLReadablePtr;
 
 /// \brief maintains a hierarchy of classes each containing the xml attributes and data
 class OPENRAVE_API HierarchicalXMLReadable : public XMLReadable
@@ -50,10 +50,10 @@ public:
     virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const;
     std::string _data;
     AttributesList _atts;
-    std::list<OPENRAVE_SHARED_PTR<HierarchicalXMLReadable> > _listchildren;
+    std::list<boost::shared_ptr<HierarchicalXMLReadable> > _listchildren;
 };
 
-typedef OPENRAVE_SHARED_PTR<HierarchicalXMLReadable> HierarchicalXMLReadablePtr;
+typedef boost::shared_ptr<HierarchicalXMLReadable> HierarchicalXMLReadablePtr;
 
 /// \brief create a xml parser for trajectories
 class OPENRAVE_API TrajectoryReader : public BaseXMLReader
@@ -81,7 +81,7 @@ protected:
     bool _bInReadable;
 };
 
-typedef OPENRAVE_SHARED_PTR<TrajectoryReader> TrajectoryReaderPtr;
+typedef boost::shared_ptr<TrajectoryReader> TrajectoryReaderPtr;
 
 /// \brief create a xml parser for \ref KinBody::GeometryInfo
 class OPENRAVE_API GeometryInfoReader : public BaseXMLReader
@@ -121,7 +121,7 @@ protected:
     std::string _sGroupName;
 };
 
-typedef OPENRAVE_SHARED_PTR<GeometryInfoReader> GeometryInfoReaderPtr;
+typedef boost::shared_ptr<GeometryInfoReader> GeometryInfoReaderPtr;
 
 /// \brief create a xml parser for \ref ElectricMotorActuatorInfo
 class OPENRAVE_API ElectricMotorActuatorInfoReader : public BaseXMLReader
@@ -145,7 +145,7 @@ protected:
     BaseXMLReaderPtr _pcurreader;
 };
 
-typedef OPENRAVE_SHARED_PTR<ElectricMotorActuatorInfoReader> ElectricMotorActuatorInfoReaderPtr;
+typedef boost::shared_ptr<ElectricMotorActuatorInfoReader> ElectricMotorActuatorInfoReaderPtr;
 
 /// \brief reads and stores the infromation hierarchically
 class OPENRAVE_API HierarchicalXMLReader : public BaseXMLReader
@@ -158,11 +158,11 @@ public:
     virtual XMLReadablePtr GetReadable();
 private:
     std::string _xmlid;
-    OPENRAVE_SHARED_PTR<HierarchicalXMLReader> _pcurreader;
+    boost::shared_ptr<HierarchicalXMLReader> _pcurreader;
     HierarchicalXMLReadablePtr _readable;
 };
 
-typedef OPENRAVE_SHARED_PTR<HierarchicalXMLReader> HierarchicalXMLReaderPtr;
+typedef boost::shared_ptr<HierarchicalXMLReader> HierarchicalXMLReaderPtr;
 
 class OPENRAVE_API StreamXMLWriter : public BaseXMLWriter
 {
@@ -173,12 +173,12 @@ public:
     virtual BaseXMLWriterPtr AddChild(const std::string& xmltag, const AttributesList& atts=AttributesList());
     virtual void Serialize(std::ostream& stream);
 
-    std::list<OPENRAVE_SHARED_PTR<StreamXMLWriter> > _listchildren;
+    std::list<boost::shared_ptr<StreamXMLWriter> > _listchildren;
     std::string _xmltag, _data;
     AttributesList _atts;
 };
 
-typedef OPENRAVE_SHARED_PTR<StreamXMLWriter> StreamXMLWriterPtr;
+typedef boost::shared_ptr<StreamXMLWriter> StreamXMLWriterPtr;
 
 } // xmlreaders
 } // OpenRAVE

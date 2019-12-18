@@ -107,7 +107,7 @@ bool InterfaceBase::SendCommand(ostream& sout, istream& sinput)
     if( !sinput ) {
         throw openrave_exception(_("invalid command"),ORE_InvalidArguments);
     }
-    OPENRAVE_SHARED_PTR<InterfaceCommand> interfacecmd;
+    boost::shared_ptr<InterfaceCommand> interfacecmd;
     {
         boost::shared_lock< boost::shared_mutex > lock(_mutexInterface);
         CMDMAP::iterator it = __mapCommands.find(cmd);
@@ -142,7 +142,7 @@ void InterfaceBase::RegisterCommand(const std::string& cmdname, InterfaceBase::I
     if( __mapCommands.find(cmdname) != __mapCommands.end() ) {
         throw openrave_exception(str(boost::format(_("command '%s' already registered"))%cmdname),ORE_InvalidArguments);
     }
-    __mapCommands[cmdname] = OPENRAVE_SHARED_PTR<InterfaceCommand>(new InterfaceCommand(fncmd, strhelp));
+    __mapCommands[cmdname] = boost::shared_ptr<InterfaceCommand>(new InterfaceCommand(fncmd, strhelp));
 }
 
 void InterfaceBase::UnregisterCommand(const std::string& cmdname)
@@ -227,7 +227,7 @@ void InterfaceBase::RegisterJSONCommand(const std::string& cmdname, InterfaceBas
     if( __mapJSONCommands.find(cmdname) != __mapJSONCommands.end() ) {
         throw openrave_exception(str(boost::format(_("command '%s' already registered"))%cmdname),ORE_InvalidArguments);
     }
-    __mapJSONCommands[cmdname] = OPENRAVE_SHARED_PTR<InterfaceJSONCommand>(new InterfaceJSONCommand(fncmd, strhelp));
+    __mapJSONCommands[cmdname] = boost::shared_ptr<InterfaceJSONCommand>(new InterfaceJSONCommand(fncmd, strhelp));
 }
 
 void InterfaceBase::UnregisterJSONCommand(const std::string& cmdname)
@@ -242,7 +242,7 @@ void InterfaceBase::UnregisterJSONCommand(const std::string& cmdname)
 void InterfaceBase::SendJSONCommand(const std::string& cmdname, const rapidjson::Value& input, rapidjson::Value& output, rapidjson::Document::AllocatorType& allocator) {
     output.SetNull();
 
-    OPENRAVE_SHARED_PTR<InterfaceJSONCommand> interfacecmd;
+    boost::shared_ptr<InterfaceJSONCommand> interfacecmd;
     {
         boost::shared_lock< boost::shared_mutex > lock(_mutexInterface);
         JSONCMDMAP::iterator it = __mapJSONCommands.find(cmdname);

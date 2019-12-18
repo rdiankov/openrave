@@ -172,13 +172,13 @@ private:
 class CallOnDestruction
 {
 public:
-    CallOnDestruction(const OPENRAVE_FUNCTION<void()>& fn) : _fn(fn) {
+    CallOnDestruction(const boost::function<void()>& fn) : _fn(fn) {
     }
     ~CallOnDestruction() {
         _fn();
     }
 private:
-    OPENRAVE_FUNCTION<void()> _fn;
+    boost::function<void()> _fn;
 };
 
 #define SERIALIZATION_PRECISION 4
@@ -287,7 +287,7 @@ void CallGetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters
 void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2);
 
 /// \brief The information of a currently grabbed body.
-class Grabbed : public UserData, public OPENRAVE_ENABLE_SHARED_FROM_THIS<Grabbed>
+class Grabbed : public UserData, public boost::enable_shared_from_this<Grabbed>
 {
 public:
     Grabbed(KinBodyPtr pgrabbedbody, KinBody::LinkPtr plinkrobot) : _pgrabbedbody(pgrabbedbody), _plinkrobot(plinkrobot) {
@@ -330,8 +330,8 @@ private:
     std::map<KinBody::LinkConstPtr, int> _mapLinkIsNonColliding; // the collision state for each link at the time the body was grabbed.
 };
 
-typedef OPENRAVE_SHARED_PTR<Grabbed> GrabbedPtr;
-typedef OPENRAVE_SHARED_PTR<Grabbed const> GrabbedConstPtr;
+typedef boost::shared_ptr<Grabbed> GrabbedPtr;
+typedef boost::shared_ptr<Grabbed const> GrabbedConstPtr;
 
 /// -1 v1 is smaller than v2
 // 0 two vectors are equivalent

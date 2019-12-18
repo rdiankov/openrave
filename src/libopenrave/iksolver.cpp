@@ -58,7 +58,7 @@ void IkReturn::Clear()
     //_reports.resize(0); // TODO
 }
 
-class CustomIkSolverFilterData : public OPENRAVE_ENABLE_SHARED_FROM_THIS<CustomIkSolverFilterData>, public UserData
+class CustomIkSolverFilterData : public boost::enable_shared_from_this<CustomIkSolverFilterData>, public UserData
 {
 public:
     CustomIkSolverFilterData(int32_t priority, const IkSolverBase::IkFilterCallbackFn& filterfn, IkSolverBasePtr iksolver) : _priority(priority), _filterfn(filterfn), _iksolverweak(iksolver) {
@@ -76,9 +76,9 @@ public:
     std::list<UserDataWeakPtr>::iterator _iterator;
 };
 
-typedef OPENRAVE_SHARED_PTR<CustomIkSolverFilterData> CustomIkSolverFilterDataPtr;
+typedef boost::shared_ptr<CustomIkSolverFilterData> CustomIkSolverFilterDataPtr;
 
-class IkSolverFinishCallbackData : public OPENRAVE_ENABLE_SHARED_FROM_THIS<IkSolverFinishCallbackData>, public UserData
+class IkSolverFinishCallbackData : public boost::enable_shared_from_this<IkSolverFinishCallbackData>, public UserData
 {
 public:
     IkSolverFinishCallbackData(const IkSolverBase::IkFinishCallbackFn& finishfn, IkSolverBasePtr iksolver) : _finishfn(finishfn), _iksolverweak(iksolver) {
@@ -95,20 +95,20 @@ public:
     std::list<UserDataWeakPtr>::iterator _iterator;
 };
 
-typedef OPENRAVE_SHARED_PTR<IkSolverFinishCallbackData> IkSolverFinishCallbackDataPtr;
+typedef boost::shared_ptr<IkSolverFinishCallbackData> IkSolverFinishCallbackDataPtr;
 
 bool CustomIkSolverFilterDataCompare(UserDataPtr data0, UserDataPtr data1)
 {
-    return OPENRAVE_DYNAMIC_POINTER_CAST<CustomIkSolverFilterData>(data0)->_priority > OPENRAVE_DYNAMIC_POINTER_CAST<CustomIkSolverFilterData>(data1)->_priority;
+    return boost::dynamic_pointer_cast<CustomIkSolverFilterData>(data0)->_priority > boost::dynamic_pointer_cast<CustomIkSolverFilterData>(data1)->_priority;
 }
 
 bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, IkReturnPtr ikreturn)
 {
     if( !ikreturn ) {
-        return Solve(param,q0,filteroptions,OPENRAVE_SHARED_PTR< vector<dReal> >());
+        return Solve(param,q0,filteroptions,boost::shared_ptr< vector<dReal> >());
     }
     ikreturn->Clear();
-    OPENRAVE_SHARED_PTR< vector<dReal> > psolution(&ikreturn->_vsolution, utils::null_deleter());
+    boost::shared_ptr< vector<dReal> > psolution(&ikreturn->_vsolution, utils::null_deleter());
     if( !Solve(param,q0,filteroptions,psolution) ) {
         ikreturn->_action = IKRA_Reject;
         return false;
@@ -136,10 +136,10 @@ bool IkSolverBase::SolveAll(const IkParameterization& param, int filteroptions, 
 bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturnPtr ikreturn)
 {
     if( !ikreturn ) {
-        return Solve(param,q0,vFreeParameters,filteroptions,OPENRAVE_SHARED_PTR< vector<dReal> >());
+        return Solve(param,q0,vFreeParameters,filteroptions,boost::shared_ptr< vector<dReal> >());
     }
     ikreturn->Clear();
-    OPENRAVE_SHARED_PTR< vector<dReal> > psolution(&ikreturn->_vsolution, utils::null_deleter());
+    boost::shared_ptr< vector<dReal> > psolution(&ikreturn->_vsolution, utils::null_deleter());
     if( !Solve(param,q0,vFreeParameters,filteroptions,psolution) ) {
         ikreturn->_action = IKRA_Reject;
         return false;
@@ -169,7 +169,7 @@ UserDataPtr IkSolverBase::RegisterCustomFilter(int32_t priority, const IkSolverB
     CustomIkSolverFilterDataPtr pdata(new CustomIkSolverFilterData(priority,filterfn,shared_iksolver()));
     std::list<UserDataWeakPtr>::iterator it;
     FORIT(it, __listRegisteredFilters) {
-        CustomIkSolverFilterDataPtr pitdata = OPENRAVE_DYNAMIC_POINTER_CAST<CustomIkSolverFilterData>(it->lock());
+        CustomIkSolverFilterDataPtr pitdata = boost::dynamic_pointer_cast<CustomIkSolverFilterData>(it->lock());
         if( !!pitdata && pdata->_priority > pitdata->_priority ) {
             break;
         }
@@ -203,7 +203,7 @@ IkReturnAction IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBas
     }
 
     FOREACHC(it,__listRegisteredFilters) {
-        CustomIkSolverFilterDataPtr pitdata = OPENRAVE_DYNAMIC_POINTER_CAST<CustomIkSolverFilterData>(it->lock());
+        CustomIkSolverFilterDataPtr pitdata = boost::dynamic_pointer_cast<CustomIkSolverFilterData>(it->lock());
         if( !!pitdata && pitdata->_priority >= minpriority && pitdata->_priority <= maxpriority) {
             IkReturn ret = pitdata->_filterfn(solution,manipulator,param);
             if( ret != IKRA_Success ) {
@@ -242,7 +242,7 @@ bool IkSolverBase::_HasFilterInRange(int32_t minpriority, int32_t maxpriority) c
 {
     // priorities are descending
     FOREACHC(it,__listRegisteredFilters) {
-        CustomIkSolverFilterDataPtr pitdata = OPENRAVE_DYNAMIC_POINTER_CAST<CustomIkSolverFilterData>(it->lock());
+        CustomIkSolverFilterDataPtr pitdata = boost::dynamic_pointer_cast<CustomIkSolverFilterData>(it->lock());
         if( !!pitdata ) {
             if( pitdata->_priority <= maxpriority && pitdata->_priority >= minpriority ) {
                 return true;
@@ -255,7 +255,7 @@ bool IkSolverBase::_HasFilterInRange(int32_t minpriority, int32_t maxpriority) c
 void IkSolverBase::_CallFinishCallbacks(IkReturnPtr ikreturn, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikparam)
 {
     FOREACH(it, __listRegisteredFinishCallbacks) {
-        IkSolverFinishCallbackDataPtr pitdata = OPENRAVE_DYNAMIC_POINTER_CAST<IkSolverFinishCallbackData>(it->lock());
+        IkSolverFinishCallbackDataPtr pitdata = boost::dynamic_pointer_cast<IkSolverFinishCallbackData>(it->lock());
         if( !!pitdata ) {
             pitdata->_finishfn(ikreturn, pmanip, ikparam);
         }

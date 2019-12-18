@@ -727,7 +727,7 @@ PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool 
         return PlannerStatus(PS_HasSolution);
     }
 
-    TrajectoryTimingParametersPtr parameters = OPENRAVE_DYNAMIC_POINTER_CAST<TrajectoryTimingParameters>(_parameters);
+    TrajectoryTimingParametersPtr parameters = boost::dynamic_pointer_cast<TrajectoryTimingParameters>(_parameters);
     if( parameters->_hastimestamps != hastimestamps ) {
         parameters->_hastimestamps = hastimestamps;
         if( !_planner->InitPlan(_robot,parameters) ) {
@@ -836,7 +836,7 @@ static dReal _ComputeTransformBodyDistance(std::vector<dReal>::const_iterator it
     return TransformDistance2(t0, t1, 0.3);
 }
 
-int _SetAffineState(const std::list< OPENRAVE_FUNCTION< void(std::vector<dReal>::const_iterator) > >& listsetfunctions, const std::vector<dReal>& v, int options)
+int _SetAffineState(const std::list< boost::function< void(std::vector<dReal>::const_iterator) > >& listsetfunctions, const std::vector<dReal>& v, int options)
 {
     FOREACHC(itfn,listsetfunctions) {
         (*itfn)(v.begin());
@@ -844,7 +844,7 @@ int _SetAffineState(const std::list< OPENRAVE_FUNCTION< void(std::vector<dReal>:
     return 0;
 }
 
-void _GetAffineState(std::vector<dReal>& v, size_t expectedsize, const std::list< OPENRAVE_FUNCTION< void(std::vector<dReal>::iterator) > >& listgetfunctions)
+void _GetAffineState(std::vector<dReal>& v, size_t expectedsize, const std::list< boost::function< void(std::vector<dReal>::iterator) > >& listgetfunctions)
 {
     v.resize(expectedsize);
     FOREACHC(itfn,listgetfunctions) {
@@ -852,7 +852,7 @@ void _GetAffineState(std::vector<dReal>& v, size_t expectedsize, const std::list
     }
 }
 
-dReal _ComputeAffineDistanceMetric(const std::vector<dReal>& v0, const std::vector<dReal>& v1, const std::list< OPENRAVE_FUNCTION< dReal(std::vector<dReal>::const_iterator, std::vector<dReal>::const_iterator) > >& listdistfunctions)
+dReal _ComputeAffineDistanceMetric(const std::vector<dReal>& v0, const std::vector<dReal>& v1, const std::list< boost::function< dReal(std::vector<dReal>::const_iterator, std::vector<dReal>::const_iterator) > >& listdistfunctions)
 {
     dReal dist = 0;
     FOREACHC(itfn,listdistfunctions) {
@@ -917,9 +917,9 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
         params->_vConfigResolution[i] = 0.01;
     }
 
-    std::list< OPENRAVE_FUNCTION<void(std::vector<dReal>::const_iterator) > > listsetfunctions;
-    std::list< OPENRAVE_FUNCTION<void(std::vector<dReal>::iterator) > > listgetfunctions;
-    std::list< OPENRAVE_FUNCTION<dReal(std::vector<dReal>::const_iterator, std::vector<dReal>::const_iterator) > > listdistfunctions;
+    std::list< boost::function<void(std::vector<dReal>::const_iterator) > > listsetfunctions;
+    std::list< boost::function<void(std::vector<dReal>::iterator) > > listgetfunctions;
+    std::list< boost::function<dReal(std::vector<dReal>::const_iterator, std::vector<dReal>::const_iterator) > > listdistfunctions;
     std::vector<int> vrotaxes;
     // analyze the configuration for identified dimensions
     KinBodyPtr robot;
@@ -962,14 +962,14 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
         }
     }
 
-    OPENRAVE_SHARED_PTR<PlannerStateSaver> statesaver;
+    boost::shared_ptr<PlannerStateSaver> statesaver;
     if( bsmooth ) {
         if( !listsetfunctions.empty() ) {
             params->_setstatevaluesfn = boost::bind(_SetAffineState,boost::ref(listsetfunctions), _1, _2);
             params->_getstatefn = boost::bind(_GetAffineState,_1,params->GetDOF(), boost::ref(listgetfunctions));
             params->_distmetricfn = boost::bind(_ComputeAffineDistanceMetric,_1,_2,boost::ref(listdistfunctions));
             std::list<KinBodyPtr> listCheckCollisions; listCheckCollisions.push_back(robot);
-            OPENRAVE_SHARED_PTR<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(params, listCheckCollisions, 0xffffffff&~CFO_CheckTimeBasedConstraints));
+            boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(params, listCheckCollisions, 0xffffffff&~CFO_CheckTimeBasedConstraints));
             params->_checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
             statesaver.reset(new PlannerStateSaver(newspec.GetDOF(), params->_setstatevaluesfn, params->_getstatefn));
         }
@@ -1063,7 +1063,7 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
         _parameters = parameters;
     }
     else {
-        parameters = OPENRAVE_DYNAMIC_POINTER_CAST<TrajectoryTimingParameters>(_parameters);
+        parameters = boost::dynamic_pointer_cast<TrajectoryTimingParameters>(_parameters);
     }
 
 
@@ -2103,7 +2103,7 @@ void DynamicsCollisionConstraint::SetPlannerParameters(PlannerBase::PlannerParam
     }
 }
 
-void DynamicsCollisionConstraint::SetUserCheckFunction(const OPENRAVE_FUNCTION<bool() >& usercheckfn, bool bCallAfterCheckCollision)
+void DynamicsCollisionConstraint::SetUserCheckFunction(const boost::function<bool() >& usercheckfn, bool bCallAfterCheckCollision)
 {
     _usercheckfns[bCallAfterCheckCollision] = usercheckfn;
 }

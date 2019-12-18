@@ -172,10 +172,10 @@ public:
 
 protected:
     inline TrajectoryBasePtr shared_trajectory() {
-        return OPENRAVE_STATIC_POINTER_CAST<TrajectoryBase>(shared_from_this());
+        return boost::static_pointer_cast<TrajectoryBase>(shared_from_this());
     }
     inline TrajectoryBaseConstPtr shared_trajectory_const() const {
-        return OPENRAVE_STATIC_POINTER_CAST<TrajectoryBase const>(shared_from_this());
+        return boost::static_pointer_cast<TrajectoryBase const>(shared_from_this());
     }
 
 private:

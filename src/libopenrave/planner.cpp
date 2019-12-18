@@ -305,7 +305,7 @@ PlannerParameters& PlannerParameters::operator=(const PlannerParameters& r)
     return *this;
 }
 
-void PlannerParameters::copy(OPENRAVE_SHARED_PTR<PlannerParameters const> r)
+void PlannerParameters::copy(boost::shared_ptr<PlannerParameters const> r)
 {
     *this = *r;
 }
@@ -437,7 +437,7 @@ bool PlannerParameters::endElement(const std::string& name)
 {
     if( !!__pcurreader ) {
         if( __pcurreader->endElement(name) ) {
-            OPENRAVE_SHARED_PTR<DummyXMLReader> pdummy = OPENRAVE_DYNAMIC_POINTER_CAST<DummyXMLReader>(__pcurreader);
+            boost::shared_ptr<DummyXMLReader> pdummy = boost::dynamic_pointer_cast<DummyXMLReader>(__pcurreader);
             if( !!pdummy ) {
                 if( pdummy->GetFieldName() == "_postprocessing" ) {
                     _sPostProcessingParameters = _sslocal->str();
@@ -558,7 +558,7 @@ void PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
     }
 
     using namespace planningutils;
-    _distmetricfn = boost::bind(&SimpleDistanceMetric::Eval,OPENRAVE_SHARED_PTR<SimpleDistanceMetric>(new SimpleDistanceMetric(robot)),_1,_2);
+    _distmetricfn = boost::bind(&SimpleDistanceMetric::Eval,boost::shared_ptr<SimpleDistanceMetric>(new SimpleDistanceMetric(robot)),_1,_2);
     if( robot->GetActiveDOF() == (int)robot->GetActiveDOFIndices().size() ) {
         // only roobt joint indices, so use a more resiliant function
         _getstatefn = boost::bind(&RobotBase::GetDOFValues,robot,_1,robot->GetActiveDOFIndices());
@@ -575,7 +575,7 @@ void PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
     _listInternalSamplers.clear();
     _listInternalSamplers.push_back(pconfigsampler);
 
-    OPENRAVE_SHARED_PTR<SimpleNeighborhoodSampler> defaultsamplefn(new SimpleNeighborhoodSampler(pconfigsampler,_distmetricfn, _diffstatefn));
+    boost::shared_ptr<SimpleNeighborhoodSampler> defaultsamplefn(new SimpleNeighborhoodSampler(pconfigsampler,_distmetricfn, _diffstatefn));
     _samplefn = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1);
     _sampleneighfn = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1,_2,_3);
 
@@ -591,7 +591,7 @@ void PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
 
     // have to do this last, disable timed constraints for default
     std::list<KinBodyPtr> listCheckCollisions; listCheckCollisions.push_back(robot);
-    OPENRAVE_SHARED_PTR<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(shared_parameters(), listCheckCollisions,0xffffffff&~CFO_CheckTimeBasedConstraints));
+    boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(shared_parameters(), listCheckCollisions,0xffffffff&~CFO_CheckTimeBasedConstraints));
     _checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
 
 }
@@ -841,7 +841,7 @@ void PlannerParameters::SetConfigurationSpecification(EnvironmentBasePtr penv, c
                     throw OPENRAVE_EXCEPTION_FORMAT(_("failed to set body %s configuration to %s"),pbody->GetName()%ss.str(), ORE_Assert);
                 }
             }
-            OPENRAVE_SHARED_PTR<SimpleNeighborhoodSampler> defaultsamplefn(new SimpleNeighborhoodSampler(pconfigsampler,distmetricfns[isavegroup].first, diffstatefns[isavegroup].first));
+            boost::shared_ptr<SimpleNeighborhoodSampler> defaultsamplefn(new SimpleNeighborhoodSampler(pconfigsampler,distmetricfns[isavegroup].first, diffstatefns[isavegroup].first));
             samplefns[isavegroup].first = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1);
             samplefns[isavegroup].second = g.dof;
             sampleneighfns[isavegroup].first = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1,_2,_3);
@@ -892,7 +892,7 @@ void PlannerParameters::SetConfigurationSpecification(EnvironmentBasePtr penv, c
     _configurationspecification = spec;
     _getstatefn(vinitialconfig);
     // have to do this last, disable timed constraints for default
-    OPENRAVE_SHARED_PTR<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(shared_parameters(), listCheckCollisions,0xffffffff&~CFO_CheckTimeBasedConstraints));
+    boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(shared_parameters(), listCheckCollisions,0xffffffff&~CFO_CheckTimeBasedConstraints));
     _checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
 }
 
@@ -971,7 +971,7 @@ PlannerBase::PlannerProgress::PlannerProgress() : _iteration(0)
 {
 }
 
-class CustomPlannerCallbackData : public OPENRAVE_ENABLE_SHARED_FROM_THIS<CustomPlannerCallbackData>, public UserData
+class CustomPlannerCallbackData : public boost::enable_shared_from_this<CustomPlannerCallbackData>, public UserData
 {
 public:
     CustomPlannerCallbackData(const PlannerBase::PlanCallbackFn& callbackfn, PlannerBasePtr planner) : _callbackfn(callbackfn), _plannerweak(planner) {
@@ -988,7 +988,7 @@ public:
     std::list<UserDataWeakPtr>::iterator _iterator;
 };
 
-typedef OPENRAVE_SHARED_PTR<CustomPlannerCallbackData> CustomPlannerCallbackDataPtr;
+typedef boost::shared_ptr<CustomPlannerCallbackData> CustomPlannerCallbackDataPtr;
 
 PlannerBase::PlannerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Planner, penv)
 {
@@ -997,7 +997,7 @@ PlannerBase::PlannerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Planner, pe
 bool PlannerBase::InitPlan(RobotBasePtr pbase, std::istream& isParameters)
 {
     RAVELOG_WARN(str(boost::format("using default planner parameters structure to de-serialize parameters data inside %s, information might be lost!! Please define a InitPlan(robot,stream) function!\n")%GetXMLId()));
-    OPENRAVE_SHARED_PTR<PlannerParameters> localparams(new PlannerParameters());
+    boost::shared_ptr<PlannerParameters> localparams(new PlannerParameters());
     isParameters >> *localparams;
     localparams->Validate();
     return InitPlan(pbase,localparams);
@@ -1029,7 +1029,7 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
     // transfer the callbacks?
     list<UserDataPtr> listhandles;
     FOREACHC(it,__listRegisteredCallbacks) {
-        CustomPlannerCallbackDataPtr pitdata = OPENRAVE_DYNAMIC_POINTER_CAST<CustomPlannerCallbackData>(it->lock());
+        CustomPlannerCallbackDataPtr pitdata = boost::dynamic_pointer_cast<CustomPlannerCallbackData>(it->lock());
         if( !!pitdata) {
             listhandles.push_back(__cachePostProcessPlanner->RegisterPlanCallback(pitdata->_callbackfn));
         }
@@ -1053,7 +1053,7 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
 PlannerAction PlannerBase::_CallCallbacks(const PlannerProgress& progress)
 {
     FOREACHC(it,__listRegisteredCallbacks) {
-        CustomPlannerCallbackDataPtr pitdata = OPENRAVE_DYNAMIC_POINTER_CAST<CustomPlannerCallbackData>(it->lock());
+        CustomPlannerCallbackDataPtr pitdata = boost::dynamic_pointer_cast<CustomPlannerCallbackData>(it->lock());
         if( !!pitdata) {
             PlannerAction ret = pitdata->_callbackfn(progress);
             if( ret != PA_None ) {

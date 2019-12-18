@@ -45,7 +45,7 @@ enum SerializationOptions
 /** \brief <b>[interface]</b> Base class for all interfaces that OpenRAVE provides. See \ref interface_concepts.
     \ingroup interfaces
  */
-class OPENRAVE_API InterfaceBase : public OPENRAVE_ENABLE_SHARED_FROM_THIS<InterfaceBase>
+class OPENRAVE_API InterfaceBase : public boost::enable_shared_from_this<InterfaceBase>
 {
 public:
     typedef std::map<std::string, XMLReadablePtr, CaseInsensitiveCompare> READERSMAP;
@@ -213,7 +213,7 @@ protected:
     /// \param sinput - input of the command
     /// \param sout - output of the command
     /// \return If false, there was an error with the command, true if successful
-    typedef OPENRAVE_FUNCTION<bool (std::ostream&, std::istream&)> InterfaceCommandFn;
+    typedef boost::function<bool (std::ostream&, std::istream&)> InterfaceCommandFn;
     class OPENRAVE_API InterfaceCommand
     {
 public:
@@ -243,7 +243,7 @@ public:
     /// \param input - input of the command
     /// \param output - output of the command
     /// \return If false, there was an error with the command, true if successful
-    typedef OPENRAVE_FUNCTION<void (const rapidjson::Value&, rapidjson::Value&, rapidjson::Document::AllocatorType&)> InterfaceJSONCommandFn;
+    typedef boost::function<void (const rapidjson::Value&, rapidjson::Value&, rapidjson::Document::AllocatorType&)> InterfaceJSONCommandFn;
     class OPENRAVE_API InterfaceJSONCommand
     {
 public:
@@ -298,11 +298,11 @@ private:
     mutable std::map<std::string, UserDataPtr> __mapUserData; ///< \see GetUserData
 
     READERSMAP __mapReadableInterfaces; ///< pointers to extra interfaces that are included with this object
-    typedef std::map<std::string, OPENRAVE_SHARED_PTR<InterfaceCommand>, CaseInsensitiveCompare> CMDMAP;
+    typedef std::map<std::string, boost::shared_ptr<InterfaceCommand>, CaseInsensitiveCompare> CMDMAP;
     CMDMAP __mapCommands; ///< all registered commands
 
 #if OPENRAVE_RAPIDJSON
-    typedef std::map<std::string, OPENRAVE_SHARED_PTR<InterfaceJSONCommand>, CaseInsensitiveCompare> JSONCMDMAP;
+    typedef std::map<std::string, boost::shared_ptr<InterfaceJSONCommand>, CaseInsensitiveCompare> JSONCMDMAP;
     JSONCMDMAP __mapJSONCommands; ///< all registered commands
 #endif
     

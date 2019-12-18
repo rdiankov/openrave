@@ -360,7 +360,7 @@ protected:
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
 
         vector<dReal> vgrasps;
-        OPENRAVE_SHARED_PTR<GraspParameters> graspparams(new GraspParameters(GetEnv()));
+        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
 
         KinBodyPtr ptarget;
         int nNumGrasps=0, nGraspDim=0;
@@ -372,7 +372,7 @@ protected:
         bool bExecute = true;
         string strtrajfilename;
         bool bRandomDests = true, bRandomGrasps = true;     // if true, permute the grasps and destinations when iterating through them
-        OPENRAVE_SHARED_PTR<ostream> pOutputTrajStream;
+        boost::shared_ptr<ostream> pOutputTrajStream;
         int nMaxSeedGrasps = 20, nMaxSeedDests = 5, nMaxSeedIkSolutions = 0;
         int nMaxIterations = 4000;
         bool bQuitAfterFirstRun = false;
@@ -406,7 +406,7 @@ protected:
                 }
             }
             else if( cmd == "outputtraj" ) {
-                pOutputTrajStream = OPENRAVE_SHARED_PTR<ostream>(&sout,utils::null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "execute" ) {
                 sinput >> bExecute;
@@ -1113,10 +1113,10 @@ protected:
     {
         bool bExecute = true, bOutputFinal=false;
         string strtrajfilename;
-        OPENRAVE_SHARED_PTR<ostream> pOutputTrajStream;
+        boost::shared_ptr<ostream> pOutputTrajStream;
         Vector direction;
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
-        OPENRAVE_SHARED_PTR<GraspParameters> graspparams(new GraspParameters(GetEnv()));
+        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
         graspparams->vgoalconfig = pmanip->GetChuckingDirection();
 
         vector<dReal> voffset;
@@ -1135,7 +1135,7 @@ protected:
                 sinput >> strtrajfilename;
             }
             else if( cmd == "outputtraj" ) {
-                pOutputTrajStream = OPENRAVE_SHARED_PTR<ostream>(&sout,utils::null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "outputfinal" ) {
                 bOutputFinal = true;
@@ -1174,7 +1174,7 @@ protected:
         RobotBase::RobotStateSaver saver(_robot);
         _robot->SetActiveDOFs(pmanip->GetGripperIndices());
 
-        OPENRAVE_SHARED_PTR<PlannerBase> graspplanner = RaveCreatePlanner(GetEnv(),"Grasper");
+        boost::shared_ptr<PlannerBase> graspplanner = RaveCreatePlanner(GetEnv(),"Grasper");
         if( !graspplanner ) {
             RAVELOG_ERROR("grasping planner failure!\n");
             return false;
@@ -1232,11 +1232,11 @@ protected:
     {
         bool bExecute = true, bOutputFinal=false;
         string strtrajfilename;
-        OPENRAVE_SHARED_PTR<ostream> pOutputTrajStream;
+        boost::shared_ptr<ostream> pOutputTrajStream;
         Vector direction;
         KinBodyPtr ptarget;
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
-        OPENRAVE_SHARED_PTR<GraspParameters> graspparams(new GraspParameters(GetEnv()));
+        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
         graspparams->vgoalconfig = pmanip->GetChuckingDirection();
         FOREACH(it,graspparams->vgoalconfig) {
             *it = -*it;
@@ -1260,7 +1260,7 @@ protected:
                 ptarget = GetEnv()->GetKinBody(name);
             }
             else if( cmd == "outputtraj" ) {
-                pOutputTrajStream = OPENRAVE_SHARED_PTR<ostream>(&sout,utils::null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "outputfinal" ) {
                 bOutputFinal = true;
@@ -1311,7 +1311,7 @@ protected:
             break;
         }
 
-        OPENRAVE_SHARED_PTR<PlannerBase> graspplanner = RaveCreatePlanner(GetEnv(),"Grasper");
+        boost::shared_ptr<PlannerBase> graspplanner = RaveCreatePlanner(GetEnv(),"Grasper");
         if( !graspplanner ) {
             RAVELOG_ERROR("grasping planner failure!\n");
             return false;
@@ -1376,8 +1376,8 @@ protected:
     {
         bool bExecute = true, bOutputFinal = false;
         string strtrajfilename;
-        OPENRAVE_SHARED_PTR<ostream> pOutputTrajStream;
-        OPENRAVE_SHARED_PTR<GraspParameters> graspparams(new GraspParameters(GetEnv()));
+        boost::shared_ptr<ostream> pOutputTrajStream;
+        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
 
         // initialize the moving direction as the opposite of the chucking direction defined in the manipulators
         vector<dReal> vchuckingsign_full(_robot->GetDOF(), 0);
@@ -1407,7 +1407,7 @@ protected:
                 sinput >> bExecute;
             }
             else if( cmd == "outputtraj" ) {
-                pOutputTrajStream = OPENRAVE_SHARED_PTR<ostream>(&sout,utils::null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "outputfinal" ) {
                 bOutputFinal = true;
@@ -1511,11 +1511,11 @@ protected:
     }
 
 protected:
-    inline OPENRAVE_SHARED_PTR<TaskManipulation> shared_problem() {
-        return OPENRAVE_STATIC_POINTER_CAST<TaskManipulation>(shared_from_this());
+    inline boost::shared_ptr<TaskManipulation> shared_problem() {
+        return boost::static_pointer_cast<TaskManipulation>(shared_from_this());
     }
-    inline OPENRAVE_SHARED_PTR<TaskManipulation const> shared_problem_const() const {
-        return OPENRAVE_STATIC_POINTER_CAST<TaskManipulation const>(shared_from_this());
+    inline boost::shared_ptr<TaskManipulation const> shared_problem_const() const {
+        return boost::static_pointer_cast<TaskManipulation const>(shared_from_this());
     }
 
     /// \brief grasps using the list of grasp goals. Removes all the goals that the planner planned with

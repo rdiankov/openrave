@@ -92,7 +92,7 @@ public:
         }
 
         uint32_t basetime = utils::GetMilliTime();
-        TrajectoryTimingParametersConstPtr parameters = OPENRAVE_DYNAMIC_POINTER_CAST<TrajectoryTimingParameters const>(GetParameters());
+        TrajectoryTimingParametersConstPtr parameters = boost::dynamic_pointer_cast<TrajectoryTimingParameters const>(GetParameters());
 
         vector<ParabolicRamp::Vector> path;
         path.reserve(ptraj->GetNumWaypoints());

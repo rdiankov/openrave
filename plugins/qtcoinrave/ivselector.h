@@ -59,7 +59,7 @@ protected:
     bool _checkCollision;
     SbColor _normalColor;
     ItemWeakPtr _selectedItem;
-    OPENRAVE_WEAK_PTR<QtCoinViewer> _viewer;
+    boost::weak_ptr<QtCoinViewer> _viewer;
     EnvironmentBasePtr _penv;
     vector<SoSeparator*> _vlinkaxes;     // axes of the object's origin
     vector<float> vtransparency;

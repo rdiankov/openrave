@@ -356,7 +356,7 @@ static boost::once_flag _onceRaveInitialize = BOOST_ONCE_INIT;
 
 /// there is only once global openrave state. It is created when openrave
 /// is first used, and destroyed when the program quits or RaveDestroy is called.
-class RaveGlobal : private boost::noncopyable, public OPENRAVE_ENABLE_SHARED_FROM_THIS<RaveGlobal>, public UserData
+class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_this<RaveGlobal>, public UserData
 {
     typedef std::map<std::string, CreateXMLReaderFn, CaseInsensitiveCompare> READERSMAP;
 
@@ -415,7 +415,7 @@ public:
         Destroy();
     }
 
-    static OPENRAVE_SHARED_PTR<RaveGlobal>& instance()
+    static boost::shared_ptr<RaveGlobal>& instance()
     {
         boost::call_once(_create,_onceRaveInitialize);
         return _state;
@@ -516,7 +516,7 @@ public:
         _mapreaders.clear();
 
         // process the callbacks
-        std::list<OPENRAVE_FUNCTION<void()> > listDestroyCallbacks;
+        std::list<boost::function<void()> > listDestroyCallbacks;
         {
             boost::mutex::scoped_lock lock(_mutexinternal);
             listDestroyCallbacks.swap(_listDestroyCallbacks);
@@ -547,7 +547,7 @@ public:
 #endif
     }
 
-    void AddCallbackForDestroy(const OPENRAVE_FUNCTION<void()>& fn)
+    void AddCallbackForDestroy(const boost::function<void()>& fn)
     {
         boost::mutex::scoped_lock lock(_mutexinternal);
         _listDestroyCallbacks.push_back(fn);
@@ -644,7 +644,7 @@ public:
     class XMLReaderFunctionData : public UserData
     {
 public:
-        XMLReaderFunctionData(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn, OPENRAVE_SHARED_PTR<RaveGlobal> global) : _global(global), _type(type), _xmltag(xmltag)
+        XMLReaderFunctionData(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn, boost::shared_ptr<RaveGlobal> global) : _global(global), _type(type), _xmltag(xmltag)
         {
             boost::mutex::scoped_lock lock(global->_mutexinternal);
             _oldfn = global->_mapreaders[_type][_xmltag];
@@ -652,7 +652,7 @@ public:
         }
         virtual ~XMLReaderFunctionData()
         {
-            OPENRAVE_SHARED_PTR<RaveGlobal> global = _global.lock();
+            boost::shared_ptr<RaveGlobal> global = _global.lock();
             if( !!global ) {
                 boost::mutex::scoped_lock lock(global->_mutexinternal);
                 global->_mapreaders[_type][_xmltag] = _oldfn;
@@ -660,7 +660,7 @@ public:
         }
 protected:
         CreateXMLReaderFn _oldfn;
-        OPENRAVE_WEAK_PTR<RaveGlobal> _global;
+        boost::weak_ptr<RaveGlobal> _global;
         InterfaceType _type;
         std::string _xmltag;
     };
@@ -680,7 +680,7 @@ protected:
         return it->second(pinterface,atts);
     }
 
-    OPENRAVE_SHARED_PTR<RaveDatabase> GetDatabase() const {
+    boost::shared_ptr<RaveDatabase> GetDatabase() const {
         return _pdatabase;
     }
     const std::map<InterfaceType,std::string>& GetInterfaceNamesMap() const {
@@ -853,7 +853,7 @@ protected:
         }
 
         // get the first viewer that can be loadable, with preferenace to qtosg, qtcoin
-        OPENRAVE_SHARED_PTR<RaveDatabase> pdatabase = _pdatabase;
+        boost::shared_ptr<RaveDatabase> pdatabase = _pdatabase;
         if( !!pdatabase ) {
             if( pdatabase->HasInterface(PT_Viewer, "qtosg") ) {
                 return std::string("qtosg");
@@ -1049,18 +1049,18 @@ protected:
     }
 
 private:
-    static OPENRAVE_SHARED_PTR<RaveGlobal> _state;
+    static boost::shared_ptr<RaveGlobal> _state;
     // state that is always present
 
     // state that is initialized/destroyed
-    OPENRAVE_SHARED_PTR<RaveDatabase> _pdatabase;
+    boost::shared_ptr<RaveDatabase> _pdatabase;
     int _nDebugLevel;
     boost::mutex _mutexinternal;
     std::map<InterfaceType, READERSMAP > _mapreaders;
     std::map<InterfaceType,string> _mapinterfacenames;
     std::map<IkParameterizationType,string> _mapikparameterization, _mapikparameterizationlower;
     std::map<int, EnvironmentBase*> _mapenvironments;
-    std::list<OPENRAVE_FUNCTION<void()> > _listDestroyCallbacks;
+    std::list<boost::function<void()> > _listDestroyCallbacks;
     std::string _homedirectory;
     std::string _defaultviewertype; ///< the default viewer type from the environment variable OPENRAVE_DEFAULT_VIEWER
     std::vector<std::string> _vdbdirectories;
@@ -1098,7 +1098,7 @@ log4cxx::LoggerPtr RaveGetLogger()
 }
 #endif
 
-OPENRAVE_SHARED_PTR<RaveGlobal> RaveGlobal::_state;
+boost::shared_ptr<RaveGlobal> RaveGlobal::_state;
 
 void RaveSetDebugLevel(int level)
 {
@@ -1147,13 +1147,13 @@ int RaveInitialize(bool bLoadAllPlugins, int level)
 
 void RaveInitializeFromState(UserDataPtr globalstate)
 {
-    RaveGlobal::_state = OPENRAVE_DYNAMIC_POINTER_CAST<RaveGlobal>(globalstate);
+    RaveGlobal::_state = boost::dynamic_pointer_cast<RaveGlobal>(globalstate);
 }
 
 UserDataPtr RaveGlobalState()
 {
     // only return valid pointer if initialized!
-    OPENRAVE_SHARED_PTR<RaveGlobal> state = RaveGlobal::_state;
+    boost::shared_ptr<RaveGlobal> state = RaveGlobal::_state;
     if( !!state && state->_IsInitialized() ) {
         return state;
     }
@@ -1165,7 +1165,7 @@ void RaveDestroy()
     RaveGlobal::instance()->Destroy();
 }
 
-void RaveAddCallbackForDestroy(const OPENRAVE_FUNCTION<void()>& fn)
+void RaveAddCallbackForDestroy(const boost::function<void()>& fn)
 {
     RaveGlobal::instance()->AddCallbackForDestroy(fn);
 }
@@ -1248,7 +1248,7 @@ MultiControllerBasePtr RaveCreateMultiController(EnvironmentBasePtr env, const s
     // TODO remove hack once MultiController is a registered interface
     ControllerBasePtr pcontroller = RaveGlobal::instance()->GetDatabase()->CreateController(env, name);
     if( name == "genericmulticontroller" ) {
-        return OPENRAVE_STATIC_POINTER_CAST<MultiControllerBase>(pcontroller);
+        return boost::static_pointer_cast<MultiControllerBase>(pcontroller);
     }
     // don't support anything else
     return MultiControllerBasePtr();
@@ -1314,7 +1314,7 @@ SpaceSamplerBasePtr RaveCreateSpaceSampler(EnvironmentBasePtr penv, const std::s
     return RaveGlobal::instance()->GetDatabase()->CreateSpaceSampler(penv, name);
 }
 
-UserDataPtr RaveRegisterInterface(InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, const OPENRAVE_FUNCTION<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn)
+UserDataPtr RaveRegisterInterface(InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn)
 {
     return RaveGlobal::instance()->GetDatabase()->RegisterInterface(type, name, interfacehash,envhash,createfn);
 }
@@ -2148,7 +2148,7 @@ void Grabbed::ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
 
         std::vector<KinBody::LinkPtr > vbodyattachedlinks;
         FOREACHC(itgrabbed, pbody->_vGrabbedBodies) {
-            OPENRAVE_SHARED_PTR<Grabbed const> pgrabbed = OPENRAVE_DYNAMIC_POINTER_CAST<Grabbed const>(*itgrabbed);
+            boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
             bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkrobot) != _vattachedlinks.end();
             KinBodyPtr pothergrabbedbody = pgrabbed->_pgrabbedbody.lock();
             if( !pothergrabbedbody ) {
@@ -2230,7 +2230,7 @@ void Grabbed::UpdateCollidingLinks()
     std::map<KinBody::LinkConstPtr, int>::iterator itnoncolliding;
     std::vector<KinBody::LinkPtr > vbodyattachedlinks;
     FOREACHC(itgrabbed, pbody->_vGrabbedBodies) {
-        OPENRAVE_SHARED_PTR<Grabbed const> pgrabbed = OPENRAVE_DYNAMIC_POINTER_CAST<Grabbed const>(*itgrabbed);
+        boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
         bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkrobot) != _vattachedlinks.end();
         KinBodyPtr pothergrabbedbody = pgrabbed->_pgrabbedbody.lock();
         if( !pothergrabbedbody ) {
@@ -2267,7 +2267,7 @@ void Grabbed::UpdateCollidingLinks()
 
     std::set<KinBodyConstPtr> _setgrabbed;
     FOREACHC(itgrabbed, pbody->_vGrabbedBodies) {
-        OPENRAVE_SHARED_PTR<Grabbed const> pgrabbed = OPENRAVE_DYNAMIC_POINTER_CAST<Grabbed const>(*itgrabbed);
+        boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
         KinBodyConstPtr pothergrabbedbody = pgrabbed->_pgrabbedbody.lock();
         if( !!pothergrabbedbody ) {
             _setgrabbed.insert(pothergrabbedbody);
@@ -2332,7 +2332,7 @@ std::istream& operator>>(std::istream& I, TriMesh& trimesh)
 
 
 // Dummy Reader
-DummyXMLReader::DummyXMLReader(const std::string& fieldname, const std::string& pparentname, OPENRAVE_SHARED_PTR<std::ostream> osrecord) : _fieldname(fieldname), _osrecord(osrecord)
+DummyXMLReader::DummyXMLReader(const std::string& fieldname, const std::string& pparentname, boost::shared_ptr<std::ostream> osrecord) : _fieldname(fieldname), _osrecord(osrecord)
 {
     _parentname = pparentname;
     _parentname += ":";
@@ -2476,7 +2476,7 @@ void SensorBase::Serialize(BaseXMLWriterPtr writer, int options) const
     RAVELOG_WARN(str(boost::format("sensor %s does not implement Serialize")%GetXMLId()));
 }
 
-class CustomSamplerCallbackData : public OPENRAVE_ENABLE_SHARED_FROM_THIS<CustomSamplerCallbackData>, public UserData
+class CustomSamplerCallbackData : public boost::enable_shared_from_this<CustomSamplerCallbackData>, public UserData
 {
 public:
     CustomSamplerCallbackData(const SpaceSamplerBase::StatusCallbackFn& callbackfn, SpaceSamplerBasePtr sampler) : _callbackfn(callbackfn), _samplerweak(sampler) {
@@ -2493,7 +2493,7 @@ public:
     std::list<UserDataWeakPtr>::iterator _iterator;
 };
 
-typedef OPENRAVE_SHARED_PTR<CustomSamplerCallbackData> CustomSamplerCallbackDataPtr;
+typedef boost::shared_ptr<CustomSamplerCallbackData> CustomSamplerCallbackDataPtr;
 
 UserDataPtr SpaceSamplerBase::RegisterStatusCallback(const StatusCallbackFn& callbackfn)
 {
@@ -2506,7 +2506,7 @@ int SpaceSamplerBase::_CallStatusFunctions(int sampleiteration)
 {
     int ret = 0;
     FOREACHC(it,__listRegisteredCallbacks) {
-        CustomSamplerCallbackDataPtr pitdata = OPENRAVE_DYNAMIC_POINTER_CAST<CustomSamplerCallbackData>(it->lock());
+        CustomSamplerCallbackDataPtr pitdata = boost::dynamic_pointer_cast<CustomSamplerCallbackData>(it->lock());
         if( !!pitdata) {
             ret |= pitdata->_callbackfn(sampleiteration);
         }

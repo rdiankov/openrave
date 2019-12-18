@@ -32,9 +32,9 @@ namespace qtosgrave {
 
 class QOSGViewerWidget;
 class QtOSGViewer;
-typedef OPENRAVE_SHARED_PTR<QtOSGViewer> QtOSGViewerPtr;
-typedef OPENRAVE_WEAK_PTR<QtOSGViewer> QtOSGViewerWeakPtr;
-typedef OPENRAVE_SHARED_PTR<QtOSGViewer const> QtOSGViewerConstPtr;
+typedef boost::shared_ptr<QtOSGViewer> QtOSGViewerPtr;
+typedef boost::weak_ptr<QtOSGViewer> QtOSGViewerWeakPtr;
+typedef boost::shared_ptr<QtOSGViewer const> QtOSGViewerConstPtr;
 
 /// \brief class of the entire viewer that periodically syncs with the openrave environment.
 class QtOSGViewer : public QMainWindow, public ViewerBase
@@ -138,7 +138,7 @@ public:
     virtual UserDataPtr RegisterViewerThreadCallback(const ViewerThreadCallbackFn& fncallback);
 
     /// \brief Locks environment
-    OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> LockEnvironment(uint64_t timeout=50000,bool bUpdateEnvironment = true);
+    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> LockEnvironment(uint64_t timeout=50000,bool bUpdateEnvironment = true);
 
 public slots:
 
@@ -224,12 +224,12 @@ protected:
     class GUIThreadFunction
     {
 public:
-        GUIThreadFunction(const OPENRAVE_FUNCTION<void()>& fn, bool isblocking=false) : _fn(fn), _bcalled(false), _bfinished(false), _bisblocking(isblocking) {
+        GUIThreadFunction(const boost::function<void()>& fn, bool isblocking=false) : _fn(fn), _bcalled(false), _bfinished(false), _bisblocking(isblocking) {
         }
 
         inline void Call() {
             // have to set finished at the end
-            OPENRAVE_SHARED_PTR<void> finishfn((void*) 0, boost::bind(&GUIThreadFunction::SetFinished, this));
+            boost::shared_ptr<void> finishfn((void*) 0, boost::bind(&GUIThreadFunction::SetFinished, this));
             BOOST_ASSERT(!_bcalled);
             _bcalled = true;
             _fn();
@@ -254,12 +254,12 @@ public:
 
 private:
 
-        OPENRAVE_FUNCTION<void()> _fn;
+        boost::function<void()> _fn;
         bool _bcalled; ///< true if function already called
         bool _bfinished; ///< true if function processing is finished
         bool _bisblocking; ///< if true, then the caller is blocking until the function completes
     };
-    typedef OPENRAVE_SHARED_PTR<GUIThreadFunction> GUIThreadFunctionPtr;
+    typedef boost::shared_ptr<GUIThreadFunction> GUIThreadFunctionPtr;
 
     /// \brief implementation of graph handles for qtosg
     class PrivateGraphHandle : public GraphHandle
@@ -269,7 +269,7 @@ public:
             BOOST_ASSERT(_handle != NULL);
         }
         virtual ~PrivateGraphHandle() {
-            OPENRAVE_SHARED_PTR<QtOSGViewer> viewer = _wviewer.lock();
+            boost::shared_ptr<QtOSGViewer> viewer = _wviewer.lock();
             if(!!viewer) {
                 viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_CloseGraphHandle, viewer, _handle)); // _handle is copied, so it will maintain the reference
             }
@@ -277,7 +277,7 @@ public:
 
         virtual void SetTransform(const RaveTransform<float>& t)
         {
-            OPENRAVE_SHARED_PTR<QtOSGViewer> viewer = _wviewer.lock();
+            boost::shared_ptr<QtOSGViewer> viewer = _wviewer.lock();
             if(!!viewer) {
                 viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_SetGraphTransform, viewer, _handle, t)); // _handle is copied, so it will maintain the reference
             }
@@ -285,7 +285,7 @@ public:
 
         virtual void SetShow(bool bShow)
         {
-            OPENRAVE_SHARED_PTR<QtOSGViewer> viewer = _wviewer.lock();
+            boost::shared_ptr<QtOSGViewer> viewer = _wviewer.lock();
             if(!!viewer) {
                 viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_SetGraphShow, viewer, _handle, bShow)); // _handle is copied, so it will maintain the reference
             }
@@ -296,13 +296,13 @@ public:
     };
 
     inline QtOSGViewerPtr shared_viewer() {
-        return OPENRAVE_STATIC_POINTER_CAST<QtOSGViewer>(shared_from_this());
+        return boost::static_pointer_cast<QtOSGViewer>(shared_from_this());
     }
     inline QtOSGViewerWeakPtr weak_viewer() {
         return QtOSGViewerWeakPtr(shared_viewer());
     }
     inline QtOSGViewerConstPtr shared_viewer_const() const {
-        return OPENRAVE_STATIC_POINTER_CAST<QtOSGViewer const>(shared_from_this());
+        return boost::static_pointer_cast<QtOSGViewer const>(shared_from_this());
     }
 
     /// \brief initializes osg view and the qt menus/dialog boxes
@@ -343,7 +343,7 @@ public:
     ///
     /// \param fn the function to execute
     /// \param block if true, will return once the function has been executed.
-    void _PostToGUIThread(const OPENRAVE_FUNCTION<void()>& fn, bool block=false);
+    void _PostToGUIThread(const boost::function<void()>& fn, bool block=false);
 
     /// \brief Actions that achieve buttons and menus
     void _CreateActions();

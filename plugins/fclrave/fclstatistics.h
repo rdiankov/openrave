@@ -14,7 +14,7 @@ namespace fclrave {
 
 class FCLStatistics;
 
-static std::vector<OPENRAVE_WEAK_PTR<FCLStatistics> > globalStatistics;
+static std::vector<boost::weak_ptr<FCLStatistics> > globalStatistics;
 static EnvironmentMutex log_out_mutex;
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> time_point;
 typedef std::chrono::duration<double> duration;
@@ -35,7 +35,7 @@ public:
 
     void DisplayAll() {
         FOREACH(itstat, globalStatistics) {
-            OPENRAVE_SHARED_PTR<FCLStatistics> pstat = itstat->lock();
+            boost::shared_ptr<FCLStatistics> pstat = itstat->lock();
             if( pstat ) {
                 pstat->Display();
             }
@@ -112,11 +112,11 @@ private:
     std::map< std::string, std::vector< std::vector<time_point> > > timings;
 };
 
-typedef OPENRAVE_SHARED_PTR<FCLStatistics> FCLStatisticsPtr;
+typedef boost::shared_ptr<FCLStatistics> FCLStatisticsPtr;
 
 #define SETUP_STATISTICS(statistics, userdatakey, id) \
-    statistics = OPENRAVE_MAKE_SHARED<FCLStatistics>(userdatakey, id); \
-    globalStatistics.push_back(OPENRAVE_WEAK_PTR<FCLStatistics>(statistics))
+    statistics = boost::make_shared<FCLStatistics>(userdatakey, id); \
+    globalStatistics.push_back(boost::weak_ptr<FCLStatistics>(statistics))
 
 #define START_TIMING(statistics, label) FCLStatistics::Timing t = statistics->StartTiming(label)
 

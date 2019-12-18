@@ -42,8 +42,8 @@ namespace fclrave {
 //    return count;
 //}
 
-typedef OPENRAVE_SHARED_PTR<fcl::BroadPhaseCollisionManager> BroadPhaseCollisionManagerPtr;
-typedef OPENRAVE_WEAK_PTR<fcl::BroadPhaseCollisionManager> BroadPhaseCollisionManagerWeakPtr;
+typedef boost::shared_ptr<fcl::BroadPhaseCollisionManager> BroadPhaseCollisionManagerPtr;
+typedef boost::weak_ptr<fcl::BroadPhaseCollisionManager> BroadPhaseCollisionManagerWeakPtr;
 
 struct EnvironmentState
 {
@@ -53,7 +53,7 @@ struct EnvironmentState
 /// \brief A broadphase collision manager together with cache data of the bodies it contains
 ///
 /// used to maintain the correct state of the broadphase manager
-class FCLCollisionManagerInstance : public OPENRAVE_ENABLE_SHARED_FROM_THIS<FCLCollisionManagerInstance>
+class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCollisionManagerInstance>
 {
     ///< cache data of body that is managed
     struct KinBodyCache
@@ -829,8 +829,8 @@ private:
 #endif
 };
 
-typedef OPENRAVE_SHARED_PTR<FCLCollisionManagerInstance> FCLCollisionManagerInstancePtr;
-typedef OPENRAVE_WEAK_PTR<FCLCollisionManagerInstance> FCLCollisionManagerInstanceWeakPtr;
+typedef boost::shared_ptr<FCLCollisionManagerInstance> FCLCollisionManagerInstancePtr;
+typedef boost::weak_ptr<FCLCollisionManagerInstance> FCLCollisionManagerInstanceWeakPtr;
 
 } // end namespace fclrave
 

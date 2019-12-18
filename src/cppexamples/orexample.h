@@ -100,7 +100,7 @@ private:
     }
 
     void _demothreadwrapper(int argc, char ** argv) {
-        OPENRAVE_SHARED_PTR<void> quitviewer((void*)NULL, boost::bind(&OpenRAVEExample::quitviewer, this,_1));
+        boost::shared_ptr<void> quitviewer((void*)NULL, boost::bind(&OpenRAVEExample::quitviewer, this,_1));
         demothread(argc,argv);
     }
 

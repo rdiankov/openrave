@@ -178,7 +178,7 @@ void KinBodyItem::Load()
                 // Fall back on OpenRAVE's standard mesh loader.
                 if( !bSucceeded ) {
                     // need to very careful
-                    typedef OPENRAVE_SHARED_PTR<TriMesh> TriMeshPtr;
+                    typedef boost::shared_ptr<TriMesh> TriMeshPtr;
                     TriMeshPtr mesh = _pchain->GetEnv()->ReadTrimeshURI(TriMeshPtr(), geom->GetRenderFilename());
                     if (mesh) {
                         // apply render scale to the mesh
@@ -393,7 +393,7 @@ bool KinBodyItem::UpdateFromIv()
         ++ittrans;
     }
 
-    OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> lockenv = _viewer.lock()->LockEnvironment(50000,false);
+    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer.lock()->LockEnvironment(50000,false);
     if( !!lockenv ) {
         _pchain->SetLinkTransformations(vtrans,_vdofbranches);
     }
@@ -422,7 +422,7 @@ bool KinBodyItem::UpdateFromModel()
     vector<dReal> vjointvalues;
 
     {
-        OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> lockenv = _viewer.lock()->LockEnvironment(50000,false);
+        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer.lock()->LockEnvironment(50000,false);
         if( !lockenv ) {
             return false;
         }

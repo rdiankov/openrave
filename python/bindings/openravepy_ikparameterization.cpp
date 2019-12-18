@@ -37,9 +37,9 @@ public:
         case IKP_Rotation3D: SetRotation3D(o); break;
         case IKP_Translation3D: SetTranslation3D(o); break;
         case IKP_Direction3D: SetDirection3D(o); break;
-        case IKP_Ray4D: SetRay4D(extract<OPENRAVE_SHARED_PTR<PyRay> >(o)); break;
+        case IKP_Ray4D: SetRay4D(extract<boost::shared_ptr<PyRay> >(o)); break;
         case IKP_Lookat3D: SetLookat3D(o); break;
-        case IKP_TranslationDirection5D: SetTranslationDirection5D(extract<OPENRAVE_SHARED_PTR<PyRay> >(o)); break;
+        case IKP_TranslationDirection5D: SetTranslationDirection5D(extract<boost::shared_ptr<PyRay> >(o)); break;
         case IKP_TranslationXY2D: SetTranslationXY2D(o); break;
         case IKP_TranslationXYOrientation3D: SetTranslationXYOrientation3D(o); break;
         case IKP_TranslationLocalGlobal6D: SetTranslationLocalGlobal6D(o[0],o[1]); break;
@@ -52,7 +52,7 @@ public:
         default: throw OPENRAVE_EXCEPTION_FORMAT(_("incorrect ik parameterization type 0x%x"), type, ORE_InvalidArguments);
         }
     }
-    PyIkParameterization(OPENRAVE_SHARED_PTR<PyIkParameterization> pyikparam) {
+    PyIkParameterization(boost::shared_ptr<PyIkParameterization> pyikparam) {
         _param = pyikparam->_param;
     }
     PyIkParameterization(const IkParameterization &ikparam) : _param(ikparam) {
@@ -73,9 +73,9 @@ public:
         if( pyik.check() ) {
             return ((PyIkParameterization*)pyik)->_param.GetDOF();
         }
-        extract<OPENRAVE_SHARED_PTR<PyIkParameterization> > pyikptr(o);
+        extract<boost::shared_ptr<PyIkParameterization> > pyikptr(o);
         if( pyikptr.check() ) {
-            return ((OPENRAVE_SHARED_PTR<PyIkParameterization>)pyikptr)->_param.GetDOF();
+            return ((boost::shared_ptr<PyIkParameterization>)pyikptr)->_param.GetDOF();
         }
         return IkParameterization::GetDOF((IkParameterizationType)extract<IkParameterizationType>(o));
     }
@@ -89,9 +89,9 @@ public:
         if( pyik.check() ) {
             return ((PyIkParameterization*)pyik)->_param.GetNumberOfValues();
         }
-        extract<OPENRAVE_SHARED_PTR<PyIkParameterization> > pyikptr(o);
+        extract<boost::shared_ptr<PyIkParameterization> > pyikptr(o);
         if( pyikptr.check() ) {
-            return ((OPENRAVE_SHARED_PTR<PyIkParameterization>)pyikptr)->_param.GetNumberOfValues();
+            return ((boost::shared_ptr<PyIkParameterization>)pyikptr)->_param.GetNumberOfValues();
         }
         return IkParameterization::GetNumberOfValues((IkParameterizationType)extract<IkParameterizationType>(o));
     }
@@ -105,9 +105,9 @@ public:
         if( pyik.check() ) {
             return object(openravepy::toPyConfigurationSpecification(((PyIkParameterization*)pyik)->_param.GetConfigurationSpecification(std::string(), robotname, manipname)));
         }
-        extract<OPENRAVE_SHARED_PTR<PyIkParameterization> > pyikptr(ointerpolation);
+        extract<boost::shared_ptr<PyIkParameterization> > pyikptr(ointerpolation);
         if( pyikptr.check() ) {
-            return object(openravepy::toPyConfigurationSpecification(((OPENRAVE_SHARED_PTR<PyIkParameterization>)pyikptr)->_param.GetConfigurationSpecification(std::string(), robotname, manipname)));
+            return object(openravepy::toPyConfigurationSpecification(((boost::shared_ptr<PyIkParameterization>)pyikptr)->_param.GetConfigurationSpecification(std::string(), robotname, manipname)));
         }
         extract<IkParameterizationType> pyiktype(ointerpolation);
         if( pyiktype.check() ) {
@@ -133,13 +133,13 @@ public:
     void SetDirection3D(object o) {
         _param.SetDirection3D(ExtractVector3(o));
     }
-    void SetRay4D(OPENRAVE_SHARED_PTR<PyRay> ray) {
+    void SetRay4D(boost::shared_ptr<PyRay> ray) {
         _param.SetRay4D(ray->r);
     }
     void SetLookat3D(object o) {
         _param.SetLookat3D(ExtractVector3(o));
     }
-    void SetTranslationDirection5D(OPENRAVE_SHARED_PTR<PyRay> ray) {
+    void SetTranslationDirection5D(boost::shared_ptr<PyRay> ray) {
         _param.SetTranslationDirection5D(ray->r);
     }
     void SetTranslationXY2D(object o) {
@@ -227,7 +227,7 @@ public:
         std::pair<Vector,dReal> p = _param.GetTranslationZAxisAngleYNorm4D();
         return boost::python::make_tuple(toPyVector3(p.first),object(p.second));
     }
-    dReal ComputeDistanceSqr(OPENRAVE_SHARED_PTR<PyIkParameterization> pyikparam)
+    dReal ComputeDistanceSqr(boost::shared_ptr<PyIkParameterization> pyikparam)
     {
         return _param.ComputeDistanceSqr(pyikparam->_param);
     }
@@ -411,7 +411,7 @@ void init_openravepy_ikparameterization()
         scope ikparameterization = class_<PyIkParameterization, PyIkParameterizationPtr >("IkParameterization", DOXY_CLASS(IkParameterization))
                                    .def(init<object,IkParameterizationType>(args("primitive","type")))
                                    .def(init<string>(args("str")))
-                                   .def(init<OPENRAVE_SHARED_PTR<PyIkParameterization> >(args("ikparam")))
+                                   .def(init<boost::shared_ptr<PyIkParameterization> >(args("ikparam")))
                                    .def("GetType",&PyIkParameterization::GetType, DOXY_FN(IkParameterization,GetType))
                                    .def("SetTransform6D",&PyIkParameterization::SetTransform6D,args("transform"), DOXY_FN(IkParameterization,SetTransform6D))
                                    .def("SetRotation3D",&PyIkParameterization::SetRotation3D,args("quat"), DOXY_FN(IkParameterization,SetRotation3D))

@@ -353,7 +353,7 @@ public:
     void Swap(TrajectoryBasePtr rawtraj)
     {
         OPENRAVE_ASSERT_OP(GetXMLId(),==,rawtraj->GetXMLId());
-        OPENRAVE_SHARED_PTR<GenericTrajectory> traj = OPENRAVE_DYNAMIC_POINTER_CAST<GenericTrajectory>(rawtraj);
+        boost::shared_ptr<GenericTrajectory> traj = boost::dynamic_pointer_cast<GenericTrajectory>(rawtraj);
         _spec.Swap(traj->_spec);
         _vderivoffsets.swap(traj->_vderivoffsets);
         _vddoffsets.swap(traj->_vddoffsets);
@@ -1060,8 +1060,8 @@ protected:
     }
 
     ConfigurationSpecification _spec;
-    std::vector< OPENRAVE_FUNCTION<void(size_t,dReal,std::vector<dReal>&)> > _vgroupinterpolators;
-    std::vector< OPENRAVE_FUNCTION<void(size_t,dReal)> > _vgroupvalidators;
+    std::vector< boost::function<void(size_t,dReal,std::vector<dReal>&)> > _vgroupinterpolators;
+    std::vector< boost::function<void(size_t,dReal)> > _vgroupvalidators;
     std::vector<int> _vderivoffsets, _vddoffsets, _vdddoffsets; ///< for every group that relies on other info to compute its position, this will point to the derivative offset. -1 if invalid and not needed, -2 if invalid and needed
     std::vector<int> _vintegraloffsets; ///< for every group that relies on other info to compute its position, this will point to the integral offset (ie the position for a velocity group). -1 if invalid and not needed, -2 if invalid and needed
     int _timeoffset;

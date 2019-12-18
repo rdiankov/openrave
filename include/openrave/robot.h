@@ -49,17 +49,17 @@ public:
         std::string _sIkSolverXMLId; ///< xml id of the IkSolver interface to attach
         std::vector<std::string> _vGripperJointNames;         ///< names of the gripper joints
     };
-    typedef OPENRAVE_SHARED_PTR<ManipulatorInfo> ManipulatorInfoPtr;
-    typedef OPENRAVE_SHARED_PTR<ManipulatorInfo const> ManipulatorInfoConstPtr;
+    typedef boost::shared_ptr<ManipulatorInfo> ManipulatorInfoPtr;
+    typedef boost::shared_ptr<ManipulatorInfo const> ManipulatorInfoConstPtr;
 
     /// \brief Defines a chain of joints for an arm and set of joints for a gripper. Simplifies operating with them.
-    class OPENRAVE_API Manipulator : public OPENRAVE_ENABLE_SHARED_FROM_THIS<Manipulator>
+    class OPENRAVE_API Manipulator : public boost::enable_shared_from_this<Manipulator>
     {
         Manipulator(RobotBasePtr probot, const ManipulatorInfo& info);
         Manipulator(const Manipulator &r);
 
         /// \brief can switch the underyling robot
-        Manipulator(RobotBasePtr probot, OPENRAVE_SHARED_PTR<Manipulator const> r);
+        Manipulator(RobotBasePtr probot, boost::shared_ptr<Manipulator const> r);
 
 public:
         virtual ~Manipulator();
@@ -411,9 +411,9 @@ private:
         friend class ColladaReader;
         friend class RobotBase;
     };
-    typedef OPENRAVE_SHARED_PTR<RobotBase::Manipulator> ManipulatorPtr;
-    typedef OPENRAVE_SHARED_PTR<RobotBase::Manipulator const> ManipulatorConstPtr;
-    typedef OPENRAVE_WEAK_PTR<RobotBase::Manipulator> ManipulatorWeakPtr;
+    typedef boost::shared_ptr<RobotBase::Manipulator> ManipulatorPtr;
+    typedef boost::shared_ptr<RobotBase::Manipulator const> ManipulatorConstPtr;
+    typedef boost::weak_ptr<RobotBase::Manipulator> ManipulatorWeakPtr;
 
     /// \brief holds all user-set attached sensor information used to initialize the AttachedSensor class.
     ///
@@ -432,11 +432,11 @@ public:
         std::string _sensorname; ///< name of the sensor interface to create, in other words the sensor type
         SensorBase::SensorGeometryPtr _sensorgeometry; ///< the sensor geometry to initialize the sensor with
     };
-    typedef OPENRAVE_SHARED_PTR<AttachedSensorInfo> AttachedSensorInfoPtr;
-    typedef OPENRAVE_SHARED_PTR<AttachedSensorInfo const> AttachedSensorInfoConstPtr;
+    typedef boost::shared_ptr<AttachedSensorInfo> AttachedSensorInfoPtr;
+    typedef boost::shared_ptr<AttachedSensorInfo const> AttachedSensorInfoConstPtr;
 
     /// \brief Attaches a sensor to a link on the robot.
-    class OPENRAVE_API AttachedSensor : public OPENRAVE_ENABLE_SHARED_FROM_THIS<AttachedSensor>
+    class OPENRAVE_API AttachedSensor : public boost::enable_shared_from_this<AttachedSensor>
     {
 public:
         AttachedSensor(RobotBasePtr probot);
@@ -525,9 +525,9 @@ private:
         friend class ColladaReader;
         friend class RobotBase;
     };
-    typedef OPENRAVE_SHARED_PTR<RobotBase::AttachedSensor> AttachedSensorPtr;
-    typedef OPENRAVE_SHARED_PTR<RobotBase::AttachedSensor const> AttachedSensorConstPtr;
-    typedef OPENRAVE_WEAK_PTR<RobotBase::AttachedSensor> AttachedSensorWeakPtr;
+    typedef boost::shared_ptr<RobotBase::AttachedSensor> AttachedSensorPtr;
+    typedef boost::shared_ptr<RobotBase::AttachedSensor const> AttachedSensorConstPtr;
+    typedef boost::weak_ptr<RobotBase::AttachedSensor> AttachedSensorWeakPtr;
 
     /// \brief holds all user-set attached kinbody information used to initialize the AttachedKinBody class.
     ///
@@ -552,11 +552,11 @@ public:
         std::vector<RobotBase::AttachedSensorInfoPtr> _vAttachedSensorInfos; ///< extracted sensor infos representing the connected body. The names are the original "desired" names.
         bool _bIsActive; ///< if true, then add the connected body. Otherwise do not add it.
     };
-    typedef OPENRAVE_SHARED_PTR<ConnectedBodyInfo> ConnectedBodyInfoPtr;
-    typedef OPENRAVE_SHARED_PTR<ConnectedBodyInfo const> ConnectedBodyInfoConstPtr;
+    typedef boost::shared_ptr<ConnectedBodyInfo> ConnectedBodyInfoPtr;
+    typedef boost::shared_ptr<ConnectedBodyInfo const> ConnectedBodyInfoConstPtr;
 
     /// \brief Attaches a kinbody to a link on the robot.
-    class OPENRAVE_API ConnectedBody : public OPENRAVE_ENABLE_SHARED_FROM_THIS<ConnectedBody>
+    class OPENRAVE_API ConnectedBody : public boost::enable_shared_from_this<ConnectedBody>
     {
 public:
         ConnectedBody(RobotBasePtr probot);
@@ -655,9 +655,9 @@ private:
         friend class RobotBase;
     };
 
-    typedef OPENRAVE_SHARED_PTR<RobotBase::ConnectedBody> ConnectedBodyPtr;
-    typedef OPENRAVE_SHARED_PTR<RobotBase::ConnectedBody const> ConnectedBodyConstPtr;
-    typedef OPENRAVE_WEAK_PTR<RobotBase::ConnectedBody> ConnectedBodyWeakPtr;
+    typedef boost::shared_ptr<RobotBase::ConnectedBody> ConnectedBodyPtr;
+    typedef boost::shared_ptr<RobotBase::ConnectedBody const> ConnectedBodyConstPtr;
+    typedef boost::weak_ptr<RobotBase::ConnectedBody> ConnectedBodyWeakPtr;
 
     /// \brief Helper class derived from KinBodyStateSaver to additionaly save robot information.
     class OPENRAVE_API RobotStateSaver : public KinBodyStateSaver
@@ -670,7 +670,7 @@ public:
         ///
         /// \param robot if set, will attempt to restore the stored state to the passed in body, otherwise will restore it for the original body.
         /// \throw openrave_exception if the passed in body is not compatible with the saved state, will throw
-        virtual void Restore(OPENRAVE_SHARED_PTR<RobotBase> robot=OPENRAVE_SHARED_PTR<RobotBase>());
+        virtual void Restore(boost::shared_ptr<RobotBase> robot=boost::shared_ptr<RobotBase>());
 
         /// \brief release the body state. _pbody will not get restored on destruction
         ///
@@ -691,10 +691,10 @@ protected:
         std::vector<IkSolverBasePtr> _vpManipsIkSolver;
         std::vector<uint8_t> _vConnectedBodyActiveStates; ///< GetConnectedBodyActiveStates
 private:
-        virtual void _RestoreRobot(OPENRAVE_SHARED_PTR<RobotBase> robot);
+        virtual void _RestoreRobot(boost::shared_ptr<RobotBase> robot);
     };
 
-    typedef OPENRAVE_SHARED_PTR<RobotStateSaver> RobotStateSaverPtr;
+    typedef boost::shared_ptr<RobotStateSaver> RobotStateSaverPtr;
 
     virtual ~RobotBase();
 
@@ -1068,10 +1068,10 @@ private:
     virtual bool SetController(ControllerBasePtr controller, const std::vector<int>& dofindices, int nControlTransformation);
 
     inline RobotBasePtr shared_robot() {
-        return OPENRAVE_STATIC_POINTER_CAST<RobotBase>(shared_from_this());
+        return boost::static_pointer_cast<RobotBase>(shared_from_this());
     }
     inline RobotBaseConstPtr shared_robot_const() const {
-        return OPENRAVE_STATIC_POINTER_CAST<RobotBase const>(shared_from_this());
+        return boost::static_pointer_cast<RobotBase const>(shared_from_this());
     }
 
 protected:

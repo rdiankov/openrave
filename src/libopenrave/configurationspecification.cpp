@@ -1150,9 +1150,9 @@ void GetAffineDOFVelocitiesFromBodyVelocity(std::vector<dReal>& values, KinBodyP
     RaveGetAffineDOFValuesFromVelocity(values.begin(), linearvel, angularvel, quatrotation, affinedofs, vaxis);
 }
 
-OPENRAVE_SHARED_PTR<ConfigurationSpecification::SetConfigurationStateFn> ConfigurationSpecification::GetSetFn(EnvironmentBasePtr penv) const
+boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> ConfigurationSpecification::GetSetFn(EnvironmentBasePtr penv) const
 {
-    OPENRAVE_SHARED_PTR<SetConfigurationStateFn> fn;
+    boost::shared_ptr<SetConfigurationStateFn> fn;
     Validate();
     std::vector< std::pair<PlannerBase::PlannerParameters::SetStateValuesFn, int> > setstatefns(_vgroups.size());
     string bodyname;
@@ -1233,9 +1233,9 @@ OPENRAVE_SHARED_PTR<ConfigurationSpecification::SetConfigurationStateFn> Configu
     return fn;
 }
 
-OPENRAVE_SHARED_PTR<ConfigurationSpecification::GetConfigurationStateFn> ConfigurationSpecification::GetGetFn(EnvironmentBasePtr penv) const
+boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> ConfigurationSpecification::GetGetFn(EnvironmentBasePtr penv) const
 {
-    OPENRAVE_SHARED_PTR<GetConfigurationStateFn> fn;
+    boost::shared_ptr<GetConfigurationStateFn> fn;
     Validate();
     std::vector< std::pair<GetConfigurationStateFn, int> > getstatefns(_vgroups.size());
     string bodyname;
@@ -1530,7 +1530,7 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
                 int commondata = affinesource&affinetarget;
                 int uninitdata = affinetarget&(~commondata);
                 int sourcerotationstart = -1, targetrotationstart = -1, targetrotationend = -1;
-                OPENRAVE_FUNCTION< void(std::vector<dReal>::iterator, std::vector<dReal>::const_iterator) > rotconverterfn;
+                boost::function< void(std::vector<dReal>::iterator, std::vector<dReal>::const_iterator) > rotconverterfn;
                 if( (uninitdata & DOF_RotationMask) && (affinetarget & DOF_RotationMask) && (affinesource & DOF_RotationMask) ) {
                     // both hold rotations, but need to convert
                     uninitdata &= ~DOF_RotationMask;

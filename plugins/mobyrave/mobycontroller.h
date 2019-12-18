@@ -23,7 +23,7 @@ class MobyController : public ControllerBase
     class ControllerPropertiesXMLReader : public BaseXMLReader
     {
     public:
-        ControllerPropertiesXMLReader(OPENRAVE_SHARED_PTR<MobyController> controller, const AttributesList& atts) : _controller(controller) {
+        ControllerPropertiesXMLReader(boost::shared_ptr<MobyController> controller, const AttributesList& atts) : _controller(controller) {
         }
 
         virtual ProcessElement startElement(const string& name, const AttributesList& atts) {
@@ -103,7 +103,7 @@ class MobyController : public ControllerBase
 
 protected:
         BaseXMLReaderPtr _pcurreader;
-        OPENRAVE_SHARED_PTR<MobyController> _controller;
+        boost::shared_ptr<MobyController> _controller;
         stringstream _ss;
     };
 
@@ -111,7 +111,7 @@ protected:
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-    	return BaseXMLReaderPtr(new ControllerPropertiesXMLReader(OPENRAVE_DYNAMIC_POINTER_CAST<MobyController>(ptr),atts));
+    	return BaseXMLReaderPtr(new ControllerPropertiesXMLReader(boost::dynamic_pointer_cast<MobyController>(ptr),atts));
     }
 
     MobyController(EnvironmentBasePtr penv, std::istream& sinput) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true), _bCheckCollision(false), _bThrowExceptions(false), _bEnableLogging(false), _bEnableTuningLogging(false), _bSteadyState(false)    {
@@ -218,7 +218,7 @@ public:
         }
 
         // get a reference to the physics engine
-        _mobyPhysics = OPENRAVE_DYNAMIC_POINTER_CAST<MobyPhysics>(_penv->GetPhysicsEngine());
+        _mobyPhysics = boost::dynamic_pointer_cast<MobyPhysics>(_penv->GetPhysicsEngine());
 
         RAVELOG_INFO(str(boost::format("Controller Initialized\n")));
         _bPause = false;
@@ -791,17 +791,17 @@ private:
         return !!is;
     }
 
-    inline OPENRAVE_SHARED_PTR<MobyController> shared_controller()
+    inline boost::shared_ptr<MobyController> shared_controller()
     {
-        return OPENRAVE_STATIC_POINTER_CAST<MobyController>(shared_from_this());
+        return boost::static_pointer_cast<MobyController>(shared_from_this());
     }
 
-    inline OPENRAVE_SHARED_PTR<MobyController const> shared_controller_const() const
+    inline boost::shared_ptr<MobyController const> shared_controller_const() const
     {
-        return OPENRAVE_STATIC_POINTER_CAST<MobyController const>(shared_from_this());
+        return boost::static_pointer_cast<MobyController const>(shared_from_this());
     }
 
-    inline OPENRAVE_WEAK_PTR<MobyController> weak_controller()
+    inline boost::weak_ptr<MobyController> weak_controller()
     {
         return shared_controller();
     }
@@ -952,7 +952,7 @@ private:
         int offset;
         int robotlinkindex;
         KinBodyPtr pbody;
-        OPENRAVE_SHARED_PTR<Transform> trelativepose; ///< relative pose of body with link when grabbed. if it doesn't exist, then do not pre-transform the pose
+        boost::shared_ptr<Transform> trelativepose; ///< relative pose of body with link when grabbed. if it doesn't exist, then do not pre-transform the pose
     };
     std::vector<GrabBody> _vgrabbodylinks;
     dReal _fCommandTime;
@@ -970,7 +970,7 @@ private:
     CollisionReportPtr _report;
     UserDataPtr _cblimits;
     ConfigurationSpecification _samplespec;
-    OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> _gjointvalues, _gjointvelocities, _gtransform;
+    boost::shared_ptr<ConfigurationSpecification::Group> _gjointvalues, _gjointvelocities, _gtransform;
     boost::mutex _mutex;
 
     vector<dReal> _aggregateErrorP;     //< PI history
@@ -978,7 +978,7 @@ private:
 
     EnvironmentBasePtr _penv;
 
-    OPENRAVE_SHARED_PTR<MobyPhysics> _mobyPhysics;
+    boost::shared_ptr<MobyPhysics> _mobyPhysics;
 
     bool _bEnableTuningLogging;
     std::ofstream _tuningLog;
@@ -992,7 +992,7 @@ private:
     template<class T>
     class _CompareSharedPtrs {
     public:
-       bool operator()(OPENRAVE_SHARED_PTR<T> a, OPENRAVE_SHARED_PTR<T> b) const {
+       bool operator()(boost::shared_ptr<T> a, boost::shared_ptr<T> b) const {
           return a.get() < b.get();
        }
     };

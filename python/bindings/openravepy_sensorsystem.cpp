@@ -56,7 +56,7 @@ PySensorSystemBasePtr RaveCreateSensorSystem(PyEnvironmentBasePtr pyenv, const s
 
 void init_openravepy_sensorsystem()
 {
-    class_<PySensorSystemBase, OPENRAVE_SHARED_PTR<PySensorSystemBase>, bases<PyInterfaceBase> >("SensorSystem", DOXY_CLASS(SensorSystemBase), no_init);
+    class_<PySensorSystemBase, boost::shared_ptr<PySensorSystemBase>, bases<PyInterfaceBase> >("SensorSystem", DOXY_CLASS(SensorSystemBase), no_init);
 
     def("RaveCreateSensorSystem",openravepy::RaveCreateSensorSystem,args("env","name"),DOXY_FN1(RaveCreateSensorSystem));
 }

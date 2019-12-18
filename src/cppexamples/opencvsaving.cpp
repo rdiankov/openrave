@@ -25,8 +25,8 @@ public:
     OpenRAVECamera(SensorBasePtr psensor)
     {
         pcamera=psensor;
-        pdata = OPENRAVE_STATIC_POINTER_CAST<SensorBase::CameraSensorData>(pcamera->CreateSensorData(SensorBase::ST_Camera));
-        geom = *OPENRAVE_STATIC_POINTER_CAST<SensorBase::CameraGeomData>(pcamera->GetSensorGeometry(SensorBase::ST_Camera));
+        pdata = boost::static_pointer_cast<SensorBase::CameraSensorData>(pcamera->CreateSensorData(SensorBase::ST_Camera));
+        geom = *boost::static_pointer_cast<SensorBase::CameraGeomData>(pcamera->GetSensorGeometry(SensorBase::ST_Camera));
         img = cvCreateImage(cvSize(geom.width,geom.height),IPL_DEPTH_8U,3);
     }
     virtual ~OpenRAVECamera() {
@@ -35,7 +35,7 @@ public:
 
     SensorBasePtr pcamera;
     SensorBase::CameraGeomData geom;
-    OPENRAVE_SHARED_PTR<SensorBase::CameraSensorData> pdata;
+    boost::shared_ptr<SensorBase::CameraSensorData> pdata;
     IplImage* img;
 };
 
@@ -57,12 +57,12 @@ public:
         // extract all the cameras
         std::vector<SensorBasePtr> allsensors;
         penv->GetSensors(allsensors);
-        std::vector< OPENRAVE_SHARED_PTR<OpenRAVECamera> > vcameras;
+        std::vector< boost::shared_ptr<OpenRAVECamera> > vcameras;
         for( std::vector<SensorBasePtr>::iterator itsensor = allsensors.begin(); itsensor != allsensors.end(); ++itsensor) {
             if( (*itsensor)->Supports(SensorBase::ST_Camera) ) {
                 (*itsensor)->Configure(SensorBase::CC_PowerOn);
                 (*itsensor)->Configure(SensorBase::CC_RenderDataOn);
-                vcameras.push_back(OPENRAVE_SHARED_PTR<OpenRAVECamera>(new OpenRAVECamera(*itsensor)));
+                vcameras.push_back(boost::shared_ptr<OpenRAVECamera>(new OpenRAVECamera(*itsensor)));
             }
         }
         while(IsOk()) {

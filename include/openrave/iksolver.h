@@ -120,11 +120,11 @@ public:
         \param param The paramterization that IK was called with. This is in the manipulator base link's coordinate system (which is not necessarily the world coordinate system).
         \return \ref IkReturn outputs the action to take for the current ik solution and any custom parameters the filter should pass to the user.
      */
-    typedef OPENRAVE_FUNCTION<IkReturn(std::vector<dReal>&, RobotBase::ManipulatorConstPtr, const IkParameterization&)> IkFilterCallbackFn;
+    typedef boost::function<IkReturn(std::vector<dReal>&, RobotBase::ManipulatorConstPtr, const IkParameterization&)> IkFilterCallbackFn;
 
     /** \brief gets called when an ik solution is accepted.
      */
-    typedef OPENRAVE_FUNCTION<void (IkReturnPtr, RobotBase::ManipulatorConstPtr, const IkParameterization&)> IkFinishCallbackFn;
+    typedef boost::function<void (IkReturnPtr, RobotBase::ManipulatorConstPtr, const IkParameterization&)> IkFinishCallbackFn;
 
     IkSolverBase(EnvironmentBasePtr penv) : InterfaceBase(PT_InverseKinematicsSolver, penv) {
     }
@@ -196,7 +196,7 @@ public:
         \param[out] solution [optional] Holds the IK solution
         \return true if solution is found
      */
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, OPENRAVE_SHARED_PTR< std::vector<dReal> > solution = OPENRAVE_SHARED_PTR< std::vector<dReal> >()) = 0;
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > solution = boost::shared_ptr< std::vector<dReal> >()) = 0;
 
     /** \brief Return a joint configuration for the given end effector transform.
 
@@ -241,7 +241,7 @@ public:
         \param[out] solution [optional] Holds the IK solution, must be of size RobotBase::Manipulator::_vecarmjoints
         \return true if solution is found
      */
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, OPENRAVE_SHARED_PTR< std::vector<dReal> > solution=OPENRAVE_SHARED_PTR< std::vector<dReal> >()) = 0;
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, boost::shared_ptr< std::vector<dReal> > solution=boost::shared_ptr< std::vector<dReal> >()) = 0;
 
     /** Return a joint configuration for the given end effector transform.
 
@@ -304,10 +304,10 @@ public:
     
 protected:
     inline IkSolverBasePtr shared_iksolver() {
-        return OPENRAVE_STATIC_POINTER_CAST<IkSolverBase>(shared_from_this());
+        return boost::static_pointer_cast<IkSolverBase>(shared_from_this());
     }
     inline IkSolverBaseConstPtr shared_iksolver_const() const {
-        return OPENRAVE_STATIC_POINTER_CAST<IkSolverBase const>(shared_from_this());
+        return boost::static_pointer_cast<IkSolverBase const>(shared_from_this());
     }
 
     virtual IkReturnAction _CallFilters(std::vector<dReal>& solution, RobotBase::ManipulatorPtr manipulator, const IkParameterization& param, IkReturnPtr ikreturn=IkReturnPtr(), int32_t minpriority=IKSP_MinPriority, int32_t maxpriority=IKSP_MaxPriority);

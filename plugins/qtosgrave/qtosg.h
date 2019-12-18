@@ -129,11 +129,11 @@ inline T ClampOnRange(T value, T min, T max)
 class MyCallbackEvent : public QEvent
 {
 public:
-    MyCallbackEvent(const OPENRAVE_FUNCTION<void()>& fn) : QEvent(CALLBACK_EVENT), _fn(fn) {
+    MyCallbackEvent(const boost::function<void()>& fn) : QEvent(CALLBACK_EVENT), _fn(fn) {
     }
     virtual ~MyCallbackEvent() {
     }
-    OPENRAVE_FUNCTION<void()> _fn;
+    boost::function<void()> _fn;
 };
 
 // common used typedefs
@@ -220,13 +220,13 @@ protected:
     bool _found;
 };
 
-inline OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> LockEnvironmentWithTimeout(EnvironmentBasePtr penv, uint64_t timeout)
+inline boost::shared_ptr<EnvironmentMutex::scoped_try_lock> LockEnvironmentWithTimeout(EnvironmentBasePtr penv, uint64_t timeout)
 {
     // try to acquire the lock
 #if BOOST_VERSION >= 103500
-    OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(penv->GetMutex(),boost::defer_lock_t()));
+    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(penv->GetMutex(),boost::defer_lock_t()));
 #else
-    OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(penv->GetMutex(),false));
+    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(penv->GetMutex(),false));
 #endif
     uint64_t basetime = utils::GetMicroTime();
     while(utils::GetMicroTime()-basetime<timeout ) {

@@ -25,18 +25,18 @@
 class MobyPhysics : public PhysicsEngineBase
 {
 
-    inline OPENRAVE_SHARED_PTR<MobyPhysics> shared_physics() {
-        return OPENRAVE_STATIC_POINTER_CAST<MobyPhysics>(shared_from_this());
+    inline boost::shared_ptr<MobyPhysics> shared_physics() {
+        return boost::static_pointer_cast<MobyPhysics>(shared_from_this());
     }
 
-    inline OPENRAVE_SHARED_PTR<MobyPhysics const> shared_physics_const() const {
-        return OPENRAVE_STATIC_POINTER_CAST<MobyPhysics const>(shared_from_this());
+    inline boost::shared_ptr<MobyPhysics const> shared_physics_const() const {
+        return boost::static_pointer_cast<MobyPhysics const>(shared_from_this());
     }
 
     class PhysicsPropertiesXMLReader : public BaseXMLReader
     {
     public:
-        PhysicsPropertiesXMLReader(OPENRAVE_SHARED_PTR<MobyPhysics> physics, const AttributesList& atts) : _physics(physics) {
+        PhysicsPropertiesXMLReader(boost::shared_ptr<MobyPhysics> physics, const AttributesList& atts) : _physics(physics) {
         }
 
         string robot_id;
@@ -108,7 +108,7 @@ class MobyPhysics : public PhysicsEngineBase
 
 protected:
         BaseXMLReaderPtr _pcurreader;
-        OPENRAVE_SHARED_PTR<MobyPhysics> _physics;
+        boost::shared_ptr<MobyPhysics> _physics;
         stringstream _ss;
     };
 
@@ -116,7 +116,7 @@ public:
 
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-    	return BaseXMLReaderPtr(new PhysicsPropertiesXMLReader(OPENRAVE_DYNAMIC_POINTER_CAST<MobyPhysics>(ptr),atts));
+    	return BaseXMLReaderPtr(new PhysicsPropertiesXMLReader(boost::dynamic_pointer_cast<MobyPhysics>(ptr),atts));
     }
 
     MobyPhysics(EnvironmentBasePtr penv, istream& sinput) : PhysicsEngineBase(penv), _StepSize(0.001), _space(new MobySpace(penv, GetPhysicsInfo, true)) 
@@ -143,7 +143,7 @@ public:
 
         // +basic simulator
         //_sim.reset(new Moby::Simulator());
-        //_sim->integrator = OPENRAVE_SHARED_PTR<Moby::Integrator>(new Moby::EulerIntegrator());
+        //_sim->integrator = boost::shared_ptr<Moby::Integrator>(new Moby::EulerIntegrator());
         // -basic simulator
 
         // +simulator with constraints (limits and contact)
@@ -223,7 +223,7 @@ public:
     {
         _space->Synchronize(KinBodyConstPtr(plink->GetParent()));
         Moby::RigidBodyPtr body = _space->GetLinkBody(plink);
-        OPENRAVE_SHARED_PTR<Ravelin::Pose3d> pose(new Ravelin::Pose3d(Ravelin::Quatd(0,0,0,1), _space->GetRavelinOrigin(position), Moby::GLOBAL));
+        boost::shared_ptr<Ravelin::Pose3d> pose(new Ravelin::Pose3d(Ravelin::Quatd(0,0,0,1), _space->GetRavelinOrigin(position), Moby::GLOBAL));
         _space->AddImpulse(body, _space->GetRavelinSForce(force, Vector(0,0,0), pose));
 
         return true;
@@ -459,12 +459,12 @@ public:
 
     dReal _StepSize;
     Vector _gravity;
-    OPENRAVE_SHARED_PTR<MobySpace> _space;
+    boost::shared_ptr<MobySpace> _space;
 
 private:
     static MobySpace::KinBodyInfoPtr GetPhysicsInfo(KinBodyConstPtr pbody)
     {
-        return OPENRAVE_DYNAMIC_POINTER_CAST<MobySpace::KinBodyInfo>(pbody->GetUserData("mobyphysics"));
+        return boost::dynamic_pointer_cast<MobySpace::KinBodyInfo>(pbody->GetUserData("mobyphysics"));
     }
 
     void _SyncCallback(MobySpace::KinBodyInfoConstPtr pinfo)
@@ -478,6 +478,6 @@ private:
     }
 
     int _options;
-    OPENRAVE_SHARED_PTR<Moby::Simulator> _sim; 
+    boost::shared_ptr<Moby::Simulator> _sim; 
 };
 

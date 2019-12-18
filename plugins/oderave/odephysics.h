@@ -58,17 +58,17 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
         return 0;
     }
 
-    inline OPENRAVE_SHARED_PTR<ODEPhysicsEngine> shared_physics() {
-        return OPENRAVE_STATIC_POINTER_CAST<ODEPhysicsEngine>(shared_from_this());
+    inline boost::shared_ptr<ODEPhysicsEngine> shared_physics() {
+        return boost::static_pointer_cast<ODEPhysicsEngine>(shared_from_this());
     }
-    inline OPENRAVE_SHARED_PTR<ODEPhysicsEngine const> shared_physics_const() const {
-        return OPENRAVE_STATIC_POINTER_CAST<ODEPhysicsEngine const>(shared_from_this());
+    inline boost::shared_ptr<ODEPhysicsEngine const> shared_physics_const() const {
+        return boost::static_pointer_cast<ODEPhysicsEngine const>(shared_from_this());
     }
 
     class PhysicsPropertiesXMLReader : public BaseXMLReader
     {
 public:
-        PhysicsPropertiesXMLReader(OPENRAVE_SHARED_PTR<ODEPhysicsEngine> physics, const AttributesList& atts) : _physics(physics) {
+        PhysicsPropertiesXMLReader(boost::shared_ptr<ODEPhysicsEngine> physics, const AttributesList& atts) : _physics(physics) {
         }
 
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) {
@@ -177,14 +177,14 @@ public:
 
 protected:
         BaseXMLReaderPtr _pcurreader;
-        OPENRAVE_SHARED_PTR<ODEPhysicsEngine> _physics;
+        boost::shared_ptr<ODEPhysicsEngine> _physics;
         stringstream _ss;
     };
 
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-        return BaseXMLReaderPtr(new PhysicsPropertiesXMLReader(OPENRAVE_DYNAMIC_POINTER_CAST<ODEPhysicsEngine>(ptr),atts));
+        return BaseXMLReaderPtr(new PhysicsPropertiesXMLReader(boost::dynamic_pointer_cast<ODEPhysicsEngine>(ptr),atts));
     }
 
     ODEPhysicsEngine(OpenRAVE::EnvironmentBasePtr penv) : OpenRAVE::PhysicsEngineBase(penv), _odespace(new ODESpace(penv, "odephysics", true)) {
@@ -277,7 +277,7 @@ The possible properties that can be set are: ";
 
     virtual bool InitKinBody(KinBodyPtr pbody)
     {
-        ODESpace::KinBodyInfoPtr pinfo = OPENRAVE_DYNAMIC_POINTER_CAST<ODESpace::KinBodyInfo>(pbody->GetUserData("odephysics"));
+        ODESpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetUserData("odephysics"));
         // need the pbody check since kinbodies can be cloned and could have the wrong pointer
         if( !pinfo || pinfo->GetBody() != pbody ) {
             pinfo = _odespace->InitKinBody(pbody);
@@ -312,7 +312,7 @@ The possible properties that can be set are: ";
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
         PhysicsEngineBase::Clone(preference,cloningoptions);
-        OPENRAVE_SHARED_PTR<ODEPhysicsEngine const> r = OPENRAVE_DYNAMIC_POINTER_CAST<ODEPhysicsEngine const>(preference);
+        boost::shared_ptr<ODEPhysicsEngine const> r = boost::dynamic_pointer_cast<ODEPhysicsEngine const>(preference);
 
         SetGravity(r->_gravity);
         _options = r->_options;
@@ -681,7 +681,7 @@ private:
 //        }
     }
 
-    OPENRAVE_SHARED_PTR<ODESpace> _odespace;
+    boost::shared_ptr<ODESpace> _odespace;
     Vector _gravity;
     int _options;
     dReal _globalfriction, _globalcfm, _globalerp;

@@ -188,7 +188,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SampleComplete2D_overloads, SampleComplet
 void init_openravepy_spacesampler()
 {
     {
-        scope spacesampler = class_<PySpaceSamplerBase, OPENRAVE_SHARED_PTR<PySpaceSamplerBase>, bases<PyInterfaceBase> >("SpaceSampler", DOXY_CLASS(SpaceSamplerBase), no_init)
+        scope spacesampler = class_<PySpaceSamplerBase, boost::shared_ptr<PySpaceSamplerBase>, bases<PyInterfaceBase> >("SpaceSampler", DOXY_CLASS(SpaceSamplerBase), no_init)
                              .def("SetSeed",&PySpaceSamplerBase::SetSeed, args("seed"), DOXY_FN(SpaceSamplerBase,SetSeed))
                              .def("SetSpaceDOF",&PySpaceSamplerBase::SetSpaceDOF, args("dof"), DOXY_FN(SpaceSamplerBase,SetSpaceDOF))
                              .def("GetDOF",&PySpaceSamplerBase::GetDOF, DOXY_FN(SpaceSamplerBase,GetDOF))

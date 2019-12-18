@@ -40,7 +40,7 @@ public:
             EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
             ODESpace::KinBodyInfoPtr pinfo = GetODESpace();
             if( !!pinfo ) {
-                OPENRAVE_SHARED_PTR<ODESpace> odespace(pinfo->_odespace);
+                boost::shared_ptr<ODESpace> odespace(pinfo->_odespace);
                 FOREACHC(it, _dofindices) {
                     KinBody::JointConstPtr pjoint = _probot->GetJointFromDOFIndex(*it);
                     dJointID jointid = pinfo->vjoints.at(pjoint->GetJointIndex());
@@ -83,7 +83,7 @@ public:
     }
 
     virtual ODESpace::KinBodyInfoPtr GetODESpace() {
-        return OPENRAVE_DYNAMIC_POINTER_CAST<ODESpace::KinBodyInfo>(_probot->GetUserData("odephysics"));
+        return boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(_probot->GetUserData("odephysics"));
     }
 
     bool SendCommand(std::ostream& os, std::istream& is)
@@ -118,7 +118,7 @@ protected:
             return false;
         }
         RobotBase::RobotStateSaver robotsaver(_probot,KinBody::Save_LinkVelocities);
-        OPENRAVE_SHARED_PTR<ODESpace> odespace(pinfo->_odespace);
+        boost::shared_ptr<ODESpace> odespace(pinfo->_odespace);
         int dofindex = 0;
         std::vector<OpenRAVE::dReal> valldofvelocities;
         _probot->GetDOFVelocities(valldofvelocities);
@@ -167,7 +167,7 @@ protected:
     void _TorqueChanged() {
         if( !!_probot ) {
             ODESpace::KinBodyInfoPtr pinfo = GetODESpace();
-            OPENRAVE_SHARED_PTR<ODESpace> odespace(pinfo->_odespace);
+            boost::shared_ptr<ODESpace> odespace(pinfo->_odespace);
             FOREACHC(it, _dofindices) {
                 KinBody::JointConstPtr pjoint = _probot->GetJointFromDOFIndex(*it);
                 dJointID jointid = pinfo->vjoints.at(pjoint->GetJointIndex());

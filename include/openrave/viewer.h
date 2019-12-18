@@ -43,9 +43,9 @@ public:
     virtual void SetShow(bool bshow) OPENRAVE_DUMMY_IMPLEMENTATION;
 };
 
-typedef OPENRAVE_SHARED_PTR<GraphHandle> GraphHandlePtr;
-typedef OPENRAVE_SHARED_PTR<GraphHandle const> GraphHandleConstPtr;
-typedef OPENRAVE_WEAK_PTR<GraphHandle const> GraphHandleWeakPtr;
+typedef boost::shared_ptr<GraphHandle> GraphHandlePtr;
+typedef boost::shared_ptr<GraphHandle const> GraphHandleConstPtr;
+typedef boost::weak_ptr<GraphHandle const> GraphHandleWeakPtr;
 
 /** \brief <b>[interface]</b> Base class for the graphics and gui engine that renders the environment and provides visual sensor information. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_viewer.
     \ingroup interfaces
@@ -117,7 +117,7 @@ public:
     ///
     /// If the function returns true, then the object will be selected. Otherwise, the object remains unselected.
     /// callback(target link,offset,direction)
-    typedef OPENRAVE_FUNCTION<bool (KinBody::LinkPtr plink,RaveVector<float>,RaveVector<float>)> ItemSelectionCallbackFn;
+    typedef boost::function<bool (KinBody::LinkPtr plink,RaveVector<float>,RaveVector<float>)> ItemSelectionCallbackFn;
 
     /// \brief registers a function with the viewer that gets called everytime mouse button is clicked
     ///
@@ -128,7 +128,7 @@ public:
     /// callback(imagememory,width,height,pixeldepth)
     ///
     /// \param imagememory width x height x pixeldepth RGB image
-    typedef OPENRAVE_FUNCTION<void (const uint8_t*,int,int,int)> ViewerImageCallbackFn;
+    typedef boost::function<void (const uint8_t*,int,int,int)> ViewerImageCallbackFn;
 
     /// \brief registers a function with the viewer that gets called for every new image rendered.
     ///
@@ -136,7 +136,7 @@ public:
     virtual UserDataPtr RegisterViewerImageCallback(const ViewerImageCallbackFn& fncallback) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief callback function for viewer thread
-    typedef OPENRAVE_FUNCTION<void ()> ViewerThreadCallbackFn;
+    typedef boost::function<void ()> ViewerThreadCallbackFn;
 
     /// \brief registers a function with the viewer that gets called in the viewer's GUI thread for every cycle the viewer refreshes at
     ///
@@ -215,10 +215,10 @@ protected:
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     inline ViewerBasePtr shared_viewer() {
-        return OPENRAVE_STATIC_POINTER_CAST<ViewerBase>(shared_from_this());
+        return boost::static_pointer_cast<ViewerBase>(shared_from_this());
     }
     inline ViewerBaseConstPtr shared_viewer_const() const {
-        return OPENRAVE_STATIC_POINTER_CAST<ViewerBase const>(shared_from_this());
+        return boost::static_pointer_cast<ViewerBase const>(shared_from_this());
     }
 
 private:

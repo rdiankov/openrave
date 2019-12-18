@@ -73,7 +73,7 @@ public:
 
 object toPyPlannerStatus(const PlannerStatus& status)
 {
-    return object(OPENRAVE_SHARED_PTR<PyPlannerStatus>(new PyPlannerStatus(status)));
+    return object(boost::shared_ptr<PyPlannerStatus>(new PyPlannerStatus(status)));
 }
 
 class PyPlannerBase : public PyInterfaceBase
@@ -90,7 +90,7 @@ public:
             _paramswrite.reset(new PlannerBase::PlannerParameters());
             _paramsread = _paramswrite;
         }
-        PyPlannerParameters(OPENRAVE_SHARED_PTR<PyPlannerParameters> pyparameters) {
+        PyPlannerParameters(boost::shared_ptr<PyPlannerParameters> pyparameters) {
             _paramswrite.reset(new PlannerBase::PlannerParameters());
             if( !!pyparameters ) {
                 _paramswrite->copy(pyparameters->GetParameters());
@@ -217,16 +217,16 @@ public:
         object __unicode__() {
             return ConvertStringToUnicode(__str__());
         }
-        bool __eq__(OPENRAVE_SHARED_PTR<PyPlannerParameters> p) {
+        bool __eq__(boost::shared_ptr<PyPlannerParameters> p) {
             return !!p && _paramsread == p->_paramsread;
         }
-        bool __ne__(OPENRAVE_SHARED_PTR<PyPlannerParameters> p) {
+        bool __ne__(boost::shared_ptr<PyPlannerParameters> p) {
             return !p || _paramsread != p->_paramsread;
         }
     };
 
-    typedef OPENRAVE_SHARED_PTR<PyPlannerParameters> PyPlannerParametersPtr;
-    typedef OPENRAVE_SHARED_PTR<PyPlannerParameters const> PyPlannerParametersConstPtr;
+    typedef boost::shared_ptr<PyPlannerParameters> PyPlannerParametersPtr;
+    typedef boost::shared_ptr<PyPlannerParameters const> PyPlannerParametersConstPtr;
 
     PyPlannerBase(PlannerBasePtr pplanner, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pplanner, pyenv), _pplanner(pplanner) {
     }
@@ -276,7 +276,7 @@ public:
         object res;
         PyGILState_STATE gstate = PyGILState_Ensure();
         try {
-            OPENRAVE_SHARED_PTR<PyPlannerProgress> pyprogress(new PyPlannerProgress(progress));
+            boost::shared_ptr<PyPlannerProgress> pyprogress(new PyPlannerProgress(progress));
             res = fncallback(object(pyprogress));
         }
         catch(...) {
@@ -384,7 +384,7 @@ void init_openravepy_planner()
                            .value("ReturnWithAnySolution",PA_ReturnWithAnySolution)
     ;
 
-    class_<PyPlannerStatus, OPENRAVE_SHARED_PTR<PyPlannerStatus> >("PlannerStatus", DOXY_CLASS(PlannerStatus))
+    class_<PyPlannerStatus, boost::shared_ptr<PyPlannerStatus> >("PlannerStatus", DOXY_CLASS(PlannerStatus))
     .def_readwrite("report",&PyPlannerStatus::report)
     .def_readwrite("description",&PyPlannerStatus::description)
     .def_readwrite("errorOrigin",&PyPlannerStatus::errorOrigin)
@@ -393,14 +393,14 @@ void init_openravepy_planner()
     .def_readwrite("statusCode",&PyPlannerStatus::statusCode)
     ;
 
-    class_<PyPlannerProgress, OPENRAVE_SHARED_PTR<PyPlannerProgress> >("PlannerProgress", DOXY_CLASS(PlannerBase::PlannerProgress))
+    class_<PyPlannerProgress, boost::shared_ptr<PyPlannerProgress> >("PlannerProgress", DOXY_CLASS(PlannerBase::PlannerProgress))
     .def_readwrite("_iteration",&PyPlannerProgress::_iteration)
     ;
 
     {
         bool (PyPlannerBase::*InitPlan1)(PyRobotBasePtr, PyPlannerBase::PyPlannerParametersPtr,bool) = &PyPlannerBase::InitPlan;
         bool (PyPlannerBase::*InitPlan2)(PyRobotBasePtr, const string &) = &PyPlannerBase::InitPlan;
-        scope planner = class_<PyPlannerBase, OPENRAVE_SHARED_PTR<PyPlannerBase>, bases<PyInterfaceBase> >("Planner", DOXY_CLASS(PlannerBase), no_init)
+        scope planner = class_<PyPlannerBase, boost::shared_ptr<PyPlannerBase>, bases<PyInterfaceBase> >("Planner", DOXY_CLASS(PlannerBase), no_init)
                         .def("InitPlan",InitPlan1,InitPlan_overloads(args("robot","params","releasegil"), DOXY_FN(PlannerBase,InitPlan "RobotBasePtr; PlannerParametersConstPtr")))
                         .def("InitPlan",InitPlan2,args("robot","xmlparams"), DOXY_FN(PlannerBase,InitPlan "RobotBasePtr; std::istream"))
                         .def("PlanPath",&PyPlannerBase::PlanPath,PlanPath_overloads(args("traj","releasegil"), DOXY_FN(PlannerBase,PlanPath)))
