@@ -189,43 +189,21 @@ inline const char* GetErrorCodeString(OpenRAVEErrorCode error)
 
 inline int GetErrorCodeFromErrorString(const std::string& errorstring)
 {
-    if(errorstring == "Failes") {
-        return ORE_Failed;
-    }
-    else if(errorstring == "InvalidArguments") {
-        return ORE_InvalidArguments;
-    }
-    else if(errorstring == "EnvironmentNotLocked") {
-        return ORE_EnvironmentNotLocked;
-    }
-    else if(errorstring == "CommandNotSupported") {
-        return ORE_CommandNotSupported;
-    }
-    else if(errorstring == "Assert") {
-        return ORE_Assert;
-    }
-    else if(errorstring == "InvalidPlugin") {
-        return ORE_InvalidPlugin;  
-    }
-    else if(errorstring == "InvalidInterfaceHash") {
-        return ORE_InvalidInterfaceHash;
-    }
-    else if(errorstring == "NotImplemented") {
-        return ORE_NotImplemented;
-    }
-    else if(errorstring == "InconsistentConstraints") {
-        return ORE_InconsistentConstraints;
-    }
-    else if(errorstring == "NotInitialized") {
-        return ORE_NotInitialized;
-    }
-    else if(errorstring == "InvalidState") {
-        return ORE_InvalidState;
-    }
-    else if(errorstring == "Timeout") {
-        return ORE_Timeout;
-    }
-    return -1;
+    static const std::map<std::string, int> mErrorStringToErrorCode {
+        {"Failed", ORE_Failed},
+        {"InvalidArguments", ORE_InvalidArguments},
+        {"EnvironmentNotLocked", ORE_EnvironmentNotLocked},
+        {"CommandNotSupported", ORE_CommandNotSupported},
+        {"Assert", ORE_Assert},
+        {"InvalidPlugin", ORE_InvalidPlugin},
+        {"InvalidInterfaceHash", ORE_InvalidInterfaceHash},
+        {"NotImplemented", ORE_NotImplemented},
+        {"InconsistentConstraints", ORE_InconsistentConstraints},
+        {"NotInitialized", ORE_NotInitialized},
+        {"InvalidState", ORE_InvalidState},
+        {"Timeout", ORE_Timeout},
+    };
+    return mErrorStringToErrorCode.count(errorstring) ? mErrorStringToErrorCode.at(errorstring) : -1;
 }
 
 /// \brief Exception that all OpenRAVE internal methods throw; the error codes are held in \ref OpenRAVEErrorCode.
