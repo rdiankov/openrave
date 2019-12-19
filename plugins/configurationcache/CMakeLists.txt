@@ -9,14 +9,20 @@ install(TARGETS configurationcache DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} C
 
 # python bindings
 if( HAVE_ALL_PYTHON_HEADERS )
+  # include
   include_directories(${PYTHON_INCLUDE_PATH} ${PYTHON_INCLUDE_DIRS}
     ${OPENRAVE_CORE_INCLUDE_LOCAL_DIRS} ${OPENRAVEPY_INCLUDE_LOCAL_DIRS}
   )
+
+  # link
+  set(OPENRAVEPY_CONFIGURATIONCACHE_LINKED_LIBRARIES openravepy_int configurationcache ${PYTHON_LIBRARIES} ${Boost_THREAD_LIBRARY} ${LAPACK_LIBRARIES})
+  if(NOT USE_PYBIND11_PYTHON_BINDINGS)
+    set(OPENRAVEPY_CONFIGURATIONCACHE_LINKED_LIBRARIES ${OPENRAVEPY_CONFIGURATIONCACHE_LINKED_LIBRARIES} ${Boost_PYTHON_LIBRARY})
+  endif()
+
   add_library(openravepy_configurationcache SHARED openravepy_configurationcache.cpp)
-  target_link_libraries(openravepy_configurationcache
-    PUBLIC openravepy_int configurationcache ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY} ${LAPACK_LIBRARIES}
-    PRIVATE boost_assertion_failed
-  )
+
+  target_link_libraries(openravepy_configurationcache PUBLIC ${OPENRAVEPY_CONFIGURATIONCACHE_LINKED_LIBRARIES} PRIVATE boost_assertion_failed)
 
   set(OPENRAVEPY_CONFIGURATIONCACHE_COMPILE_FLAGS "")
   if(USE_PYBIND11_PYTHON_BINDINGS)
