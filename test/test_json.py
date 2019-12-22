@@ -71,45 +71,44 @@ class TestJSONSeralization(EnvironmentSetup):
         env = self.env
         with env:
             trajxml = """
-            <trajectory type="string">
+            <trajectory>
                 <configuration>
                     <group name="string" offset="#OFF1" dof="#D1" interpolation="string"/>
                     <group name="string" offset="#OFF2" dof="#D2" interpolation="string"/>
                 </configuration>
-                <data count="#N">
-                    1 2 3 4 5
+                <data count="6">
+                    0 0 0 0 0 0 0
                 </data>
-                <readable>
-                    <usercustomclasses/>
-                </readable>
                 <description>My trajectory
                 </description>
             </trajectory>
             """
-            trajFromXML = RaveCreateTrajectory(env, '').deserialize(trajxml)
+            trajFromXML = RaveCreateTrajectory(env, '')
+            trajFromXML.deserialize(trajxml)
             trajjson = traj.SerializeJSON()
-            trajFromJSON = RaveCreateTrajectorY(env, 'json').DeserializeJSON(trajjson)
+            trajFromJSON = RaveCreateTrajectorY(env, 'json')
+            trajFromJSON.DeserializeJSON(trajjson)
             assert trajFromXML == trajfromJSON
 
-    def test_GenericTrajectory(self):
-        pass
+    # def test_GenericTrajectory(self):
+    #     pass
 
-    # kinbody.h
-    def test_ElectricMotorActuatorInfo(self):
-        pass
+    # # kinbody.h
+    # def test_ElectricMotorActuatorInfo(self):
+    #     pass
 
-    def test_GeometryInfo(self):
-        pass
+    # def test_GeometryInfo(self):
+    #     pass
 
-    def test_LinkInfo(self):
-        pass
+    # def test_LinkInfo(self):
+    #     pass
 
-    def test_MimicInfo(self):
-        pass
+    # def test_MimicInfo(self):
+    #     pass
 
-    def test_JointInfo(self):
-        pass
+    # def test_JointInfo(self):
+    #     pass
 
-    def test_GrabbedInfo(self):
-        pass
+    # def test_GrabbedInfo(self):
+    #     pass
 
