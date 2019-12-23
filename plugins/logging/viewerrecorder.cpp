@@ -76,15 +76,15 @@ public:
 
 #endif
 
-static OPENRAVE_SHARED_PTR<VideoGlobalState> s_pVideoGlobalState;
+static boost::shared_ptr<VideoGlobalState> s_pVideoGlobalState;
 
 class ViewerRecorder : public ModuleBase
 {
-    inline OPENRAVE_SHARED_PTR<ViewerRecorder> shared_module() {
-        return OPENRAVE_STATIC_POINTER_CAST<ViewerRecorder>(shared_from_this());
+    inline boost::shared_ptr<ViewerRecorder> shared_module() {
+        return boost::static_pointer_cast<ViewerRecorder>(shared_from_this());
     }
-    inline OPENRAVE_SHARED_PTR<ViewerRecorder const> shared_module_const() const {
-        return OPENRAVE_STATIC_POINTER_CAST<ViewerRecorder const>(shared_from_this());
+    inline boost::shared_ptr<ViewerRecorder const> shared_module_const() const {
+        return boost::static_pointer_cast<ViewerRecorder const>(shared_from_this());
     }
     struct VideoFrame
     {
@@ -100,7 +100,7 @@ class ViewerRecorder : public ModuleBase
     boost::mutex _mutexlibrary; // for video encoding library resources
     boost::condition _condnewframe;
     bool _bContinueThread, _bStopRecord;
-    OPENRAVE_SHARED_PTR<boost::thread> _threadrecord;
+    boost::shared_ptr<boost::thread> _threadrecord;
 
     boost::multi_array<uint32_t,2> _vwatermarkimage;
     int _nFrameCount, _nVideoWidth, _nVideoHeight;
@@ -111,8 +111,8 @@ class ViewerRecorder : public ModuleBase
     UserDataPtr _callback;
     int _nUseSimulationTime; // 0 to record as is, 1 to record with respect to simulation, 2 to control simulation to viewer updates
     dReal _fSimulationTimeMultiplier; // how many times to make the simulation time faster
-    list<OPENRAVE_SHARED_PTR<VideoFrame> > _listAddFrames, _listFinishedFrames;
-    OPENRAVE_SHARED_PTR<VideoFrame> _frameLastAdded;
+    list<boost::shared_ptr<VideoFrame> > _listAddFrames, _listFinishedFrames;
+    boost::shared_ptr<VideoFrame> _frameLastAdded;
 
 public:
     ViewerRecorder(EnvironmentBasePtr penv, std::istream& sinput) : ModuleBase(penv)
@@ -290,7 +290,7 @@ protected:
             return;
         }
         uint64_t timestamp = _nUseSimulationTime ? GetEnv()->GetSimulationTime() : utils::GetMicroTime();
-        OPENRAVE_SHARED_PTR<VideoFrame> frame;
+        boost::shared_ptr<VideoFrame> frame;
 
         if( _listAddFrames.size() > 0 ) {
             BOOST_ASSERT( timestamp-_starttime >= _listAddFrames.back()->_timestamp-_starttime );
@@ -326,7 +326,7 @@ protected:
             // calls the environment lock, which might be taken if the environment is destroying the problem
             // therefore need to take it first
             while(_bContinueThread && !_bStopRecord) {
-                OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> lockenv = _LockEnvironment(100000);
+                boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _LockEnvironment(100000);
                 if( !!lockenv ) {
                     GetEnv()->StepSimulation(_fSimulationTimeMultiplier/_framerate);
                     break;
@@ -335,13 +335,13 @@ protected:
         }
     }
 
-    OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> _LockEnvironment(uint64_t timeout)
+    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> _LockEnvironment(uint64_t timeout)
     {
         // try to acquire the lock
 #if BOOST_VERSION >= 103500
-        OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),boost::defer_lock_t()));
+        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),boost::defer_lock_t()));
 #else
-        OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
+        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
 #endif
         uint64_t basetime = utils::GetMicroTime();
         while(utils::GetMicroTime()-basetime<timeout ) {
@@ -359,7 +359,7 @@ protected:
     void _RecordThread()
     {
         while(_bContinueThread) {
-            OPENRAVE_SHARED_PTR<VideoFrame> frame;
+            boost::shared_ptr<VideoFrame> frame;
             uint64_t numstores=0;
             {
                 boost::mutex::scoped_lock lock(_mutex);
@@ -387,7 +387,7 @@ protected:
                         // not enough frames to predict what's coming next so wait
                         continue;
                     }
-                    list<OPENRAVE_SHARED_PTR<VideoFrame> >::iterator itframe = _listAddFrames.begin(), itbest = _listAddFrames.end();
+                    list<boost::shared_ptr<VideoFrame> >::iterator itframe = _listAddFrames.begin(), itbest = _listAddFrames.end();
                     uint64_t bestdist = 0;
                     while(itframe != _listAddFrames.end()) {
                         uint64_t offset = (*itframe)->_timestamp - _starttime;

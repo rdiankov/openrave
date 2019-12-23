@@ -23,7 +23,7 @@ protected:
     class BaseFlashLidar3DXMLReader : public BaseXMLReader
     {
 public:
-        BaseFlashLidar3DXMLReader(OPENRAVE_SHARED_PTR<BaseFlashLidar3DSensor> psensor) : _psensor(psensor) {
+        BaseFlashLidar3DXMLReader(boost::shared_ptr<BaseFlashLidar3DSensor> psensor) : _psensor(psensor) {
         }
 
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts)
@@ -109,7 +109,7 @@ public:
 
 protected:
         BaseXMLReaderPtr _pcurreader;
-        OPENRAVE_SHARED_PTR<BaseFlashLidar3DSensor> _psensor;
+        boost::shared_ptr<BaseFlashLidar3DSensor> _psensor;
         stringstream ss;
     };
 
@@ -123,7 +123,7 @@ public:
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-        return BaseXMLReaderPtr(new BaseFlashLidar3DXMLReader(OPENRAVE_DYNAMIC_POINTER_CAST<BaseFlashLidar3DSensor>(ptr)));
+        return BaseXMLReaderPtr(new BaseFlashLidar3DXMLReader(boost::dynamic_pointer_cast<BaseFlashLidar3DSensor>(ptr)));
     }
 
     BaseFlashLidar3DSensor(EnvironmentBasePtr penv) : SensorBase(penv)
@@ -322,7 +322,7 @@ public:
     {
         if( psensordata->GetType() == ST_Laser ) {
             boost::mutex::scoped_lock lock(_mutexdata);
-            *OPENRAVE_DYNAMIC_POINTER_CAST<LaserSensorData>(psensordata) = *_pdata;
+            *boost::dynamic_pointer_cast<LaserSensorData>(psensordata) = *_pdata;
             return true;
         }
         return false;
@@ -358,7 +358,7 @@ public:
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
         SensorBase::Clone(preference,cloningoptions);
-        OPENRAVE_SHARED_PTR<BaseFlashLidar3DSensor const> r = OPENRAVE_DYNAMIC_POINTER_CAST<BaseFlashLidar3DSensor const>(preference);
+        boost::shared_ptr<BaseFlashLidar3DSensor const> r = boost::dynamic_pointer_cast<BaseFlashLidar3DSensor const>(preference);
         *_pgeom = *r->_pgeom;
         _vColor = r->_vColor;
         std::copy(&r->_iKK[0],&r->_iKK[4],&_iKK[0]);
@@ -422,8 +422,8 @@ protected:
         }
     }
 
-    OPENRAVE_SHARED_PTR<BaseFlashLidar3DGeom> _pgeom;
-    OPENRAVE_SHARED_PTR<LaserSensorData> _pdata;
+    boost::shared_ptr<BaseFlashLidar3DGeom> _pgeom;
+    boost::shared_ptr<LaserSensorData> _pdata;
     vector<int> _databodyids;     ///< if non 0, for each point in _data, specifies the body that was hit
     CollisionReportPtr _report;
     // more geom stuff

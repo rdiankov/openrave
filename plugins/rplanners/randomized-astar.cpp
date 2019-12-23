@@ -267,7 +267,7 @@ public:
 
         list<Node*> _nodes;
         list<Node*> _dead;
-        OPENRAVE_FUNCTION<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _pDistMetric;
+        boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _pDistMetric;
         dReal _fBestDist;         ///< valid after a call to GetNN
     };
 
@@ -314,15 +314,15 @@ Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf
         _parameters.reset();
         Destroy();
         _robot = pbase;
-        OPENRAVE_SHARED_PTR<RAStarParameters> parameters(new RAStarParameters());
+        boost::shared_ptr<RAStarParameters> parameters(new RAStarParameters());
         parameters->copy(pparams);
 
         RobotBase::RobotStateSaver savestate(_robot);
 
         if( !parameters->_goalfn )
-            parameters->_goalfn = boost::bind(&SimpleGoalMetric::Eval,OPENRAVE_SHARED_PTR<SimpleGoalMetric>(new SimpleGoalMetric(_robot)),_1);
+            parameters->_goalfn = boost::bind(&SimpleGoalMetric::Eval,boost::shared_ptr<SimpleGoalMetric>(new SimpleGoalMetric(_robot)),_1);
         if( !parameters->_costfn )
-            parameters->_costfn = boost::bind(&SimpleCostMetric::Eval,OPENRAVE_SHARED_PTR<SimpleCostMetric>(new SimpleCostMetric(_robot)),_1);
+            parameters->_costfn = boost::bind(&SimpleCostMetric::Eval,boost::shared_ptr<SimpleCostMetric>(new SimpleCostMetric(_robot)),_1);
 
         _vSampleConfig.resize(GetDOF());
         _jointIncrement.resize(GetDOF());
@@ -604,7 +604,7 @@ private:
         return _parameters->GetDOF();
     }
 
-    OPENRAVE_SHARED_PTR<RAStarParameters> _parameters;
+    boost::shared_ptr<RAStarParameters> _parameters;
     SpatialTree _spatialtree;
     BinarySearchTree<Node*, dReal> _sortedtree;       // sorted by decreasing value
 

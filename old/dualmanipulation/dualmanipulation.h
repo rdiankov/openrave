@@ -93,11 +93,11 @@ public:
     }
 protected:
 
-    inline OPENRAVE_SHARED_PTR<DualManipulation> shared_problem() {
-        return OPENRAVE_STATIC_POINTER_CAST<DualManipulation>(shared_from_this());
+    inline boost::shared_ptr<DualManipulation> shared_problem() {
+        return boost::static_pointer_cast<DualManipulation>(shared_from_this());
     }
-    inline OPENRAVE_SHARED_PTR<DualManipulation const> shared_problem_const() const {
-        return OPENRAVE_STATIC_POINTER_CAST<DualManipulation const>(shared_from_this());
+    inline boost::shared_ptr<DualManipulation const> shared_problem_const() const {
+        return boost::static_pointer_cast<DualManipulation const>(shared_from_this());
     }
 
     bool SetActiveManip(ostream& sout, istream& sinput)
@@ -156,7 +156,7 @@ protected:
     {
         string strtrajfilename;
         bool bExecute = true;
-        OPENRAVE_SHARED_PTR<ostream> pOutputTrajStream;
+        boost::shared_ptr<ostream> pOutputTrajStream;
         int nMaxTries = 3;
         bool bSuccess=true;
 
@@ -188,7 +188,7 @@ protected:
                 sinput >> *it;
             }
             else if( cmd == "outputtraj" )
-                pOutputTrajStream = OPENRAVE_SHARED_PTR<ostream>(&sout,utils::null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             else if( cmd == "maxiter" )
                 sinput >> params->_nMaxIterations;
             else if( cmd == "execute" )
@@ -254,15 +254,15 @@ protected:
 
         if( constrainterrorthresh > 0 ) {
             RAVELOG_DEBUG("setting DualArmConstrained function in planner parameters\n");
-            OPENRAVE_SHARED_PTR<CM::DualArmManipulation<double> > dplanner(new CM::DualArmManipulation<double>(robot,pmanipA,pmanipI));
+            boost::shared_ptr<CM::DualArmManipulation<double> > dplanner(new CM::DualArmManipulation<double>(robot,pmanipA,pmanipI));
             dplanner->_distmetricfn = params->_distmetricfn;
             params->_neighstatefn = boost::bind(&CM::DualArmManipulation<double>::DualArmConstrained,dplanner,_1,_2);
             params->_nMaxIterations = 1000;
         }
 
-        OPENRAVE_SHARED_PTR<TrajectoryBase> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
+        boost::shared_ptr<TrajectoryBase> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
 
-        OPENRAVE_SHARED_PTR<PlannerBase> rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
+        boost::shared_ptr<PlannerBase> rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         if( !rrtplanner ) {
             RAVELOG_ERROR("failed to create BiRRTs\n");
             return false;
@@ -311,7 +311,7 @@ protected:
         RobotBase::ManipulatorConstPtr pmanip1 = robot->GetManipulators().at(1);
 
         bool bIgnoreFirstCollision = true;
-        OPENRAVE_SHARED_PTR<ostream> pOutputTrajStream;
+        boost::shared_ptr<ostream> pOutputTrajStream;
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;
@@ -322,7 +322,7 @@ protected:
             if( cmd == "minsteps" )
                 sinput >> minsteps;
             else if( cmd == "outputtraj")
-                pOutputTrajStream = OPENRAVE_SHARED_PTR<ostream>(&sout,utils::null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             else if( cmd == "maxsteps")
                 sinput >> maxsteps;
             else if( cmd == "stepsize")
@@ -376,7 +376,7 @@ protected:
         //robot->SetActiveDOFs(pmanip->GetArmIndices());
         planningutils::JitterActiveDOF(robot,100);     // try to jitter out, don't worry if it fails
 
-        OPENRAVE_SHARED_PTR<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
+        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
         Trajectory::TPOINT point;
         vector<dReal> vPrevValues,v0Joints,v1Joints;
         bool bPrevInCollision = GetEnv()->CheckCollision(KinBodyConstPtr(robot))||robot->CheckSelfCollision();

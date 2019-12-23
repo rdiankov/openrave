@@ -19,7 +19,7 @@
 /// samples rays from the projected OBB and returns true if the test function returns true
 /// for all the rays. Otherwise, returns false
 /// allowableoutliers - specifies the % of allowable outliying rays
-bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const OPENRAVE_FUNCTION<bool(const Vector&)>& testfn,dReal allowableocclusion=0)
+bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::function<bool(const Vector&)>& testfn,dReal allowableocclusion=0)
 {
     dReal fscalefactor = 0.95f; // have to make box smaller or else rays might miss
     Vector vpoints[8] = { obb.pos + fscalefactor*(obb.right*obb.extents.x + obb.up*obb.extents.y + obb.dir*obb.extents.z),
@@ -136,11 +136,11 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const OPENRAVE_FUNC
 class VisualFeedback : public ModuleBase
 {
 public:
-    inline OPENRAVE_SHARED_PTR<VisualFeedback> shared_problem() {
-        return OPENRAVE_STATIC_POINTER_CAST<VisualFeedback>(shared_from_this());
+    inline boost::shared_ptr<VisualFeedback> shared_problem() {
+        return boost::static_pointer_cast<VisualFeedback>(shared_from_this());
     }
-    inline OPENRAVE_SHARED_PTR<VisualFeedback const> shared_problem_const() const {
-        return OPENRAVE_STATIC_POINTER_CAST<VisualFeedback const>(shared_from_this());
+    inline boost::shared_ptr<VisualFeedback const> shared_problem_const() const {
+        return boost::static_pointer_cast<VisualFeedback const>(shared_from_this());
     }
     friend class VisibilityConstraintFunction;
 
@@ -176,7 +176,7 @@ public:
             vMax += obb.pos;
         }
 
-        VisibilityConstraintFunction(OPENRAVE_SHARED_PTR<VisualFeedback> vf, const PlannerBase::PlannerParameters::CheckPathVelocityConstraintFn& oldfn=PlannerBase::PlannerParameters::CheckPathVelocityConstraintFn()) : _vf(vf), _oldfn(oldfn) {
+        VisibilityConstraintFunction(boost::shared_ptr<VisualFeedback> vf, const PlannerBase::PlannerParameters::CheckPathVelocityConstraintFn& oldfn=PlannerBase::PlannerParameters::CheckPathVelocityConstraintFn()) : _vf(vf), _oldfn(oldfn) {
             _report.reset(new CollisionReport());
 
             // create the dummy box
@@ -506,7 +506,7 @@ private:
             return CA_DefaultAction;
         }
         bool _bSamplingRays;
-        OPENRAVE_SHARED_PTR<VisualFeedback> _vf;
+        boost::shared_ptr<VisualFeedback> _vf;
         KinBodyPtr _ptargetbox;         ///< box to represent the target for simulating ray collisions
         UserDataPtr _collisionfn;
 
@@ -522,7 +522,7 @@ private:
     class GoalSampleFunction
     {
 public:
-        GoalSampleFunction(OPENRAVE_SHARED_PTR<VisualFeedback> vf, const vector<Transform>& visibilitytransforms) : _vconstraint(vf), _fSampleGoalProb(1.0f), _vf(vf), _visibilitytransforms(visibilitytransforms)
+        GoalSampleFunction(boost::shared_ptr<VisualFeedback> vf, const vector<Transform>& visibilitytransforms) : _vconstraint(vf), _fSampleGoalProb(1.0f), _vf(vf), _visibilitytransforms(visibilitytransforms)
         {
             RAVELOG_DEBUG(str(boost::format("have %d detection extents hypotheses\n")%_visibilitytransforms.size()));
             _ttarget = _vf->_targetlink->GetTransform();
@@ -559,7 +559,7 @@ public:
         VisibilityConstraintFunction _vconstraint;
         dReal _fSampleGoalProb;
 private:
-        OPENRAVE_SHARED_PTR<VisualFeedback> _vf;
+        boost::shared_ptr<VisualFeedback> _vf;
         const vector<Transform>& _visibilitytransforms;
 
 
@@ -848,7 +848,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             }
         }
 
-        _pcamerageom = OPENRAVE_STATIC_POINTER_CAST<SensorBase::CameraGeomData const>(psensor->GetSensor()->GetSensorGeometry());
+        _pcamerageom = boost::static_pointer_cast<SensorBase::CameraGeomData const>(psensor->GetSensor()->GetSensorGeometry());
         if( !bHasRayDensity ) {
             _fSampleRayDensity = 20.0f/_pcamerageom->KK.fx;
         }
@@ -1043,7 +1043,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
         KinBody::KinBodyStateSaver saver(_targetlink->GetParent(),KinBody::Save_LinkTransformation);
         _targetlink->SetTransform(Transform());
-        OPENRAVE_SHARED_PTR<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
+        boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
 
         // get all the camera positions and test them
         FOREACHC(itcamera, vCamerasInTargetLinkCoord) {
@@ -1112,7 +1112,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         if( mindist != 0 ) {
             KinBody::KinBodyStateSaver saver(_targetlink->GetParent());
             _targetlink->SetTransform(Transform());
-            OPENRAVE_SHARED_PTR<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
+            boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
             vector<Transform> visibilitytransforms; visibilitytransforms.swap(_visibilitytransforms);
             _visibilitytransforms.reserve(visibilitytransforms.size());
             FOREACH(it,visibilitytransforms) {
@@ -1133,7 +1133,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         RobotBase::RobotStateSaver saver(_robot);
         _robot->SetActiveManipulator(_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmIndices());
-        OPENRAVE_SHARED_PTR<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
+        boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
 
         std::string errormsg;
         sout << pconstraintfn->IsVisible(bcheckocclusion, false, errormsg);
@@ -1202,7 +1202,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         RobotBase::RobotStateSaver saver(_robot);
         _robot->SetActiveManipulator(_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmIndices());
-        OPENRAVE_SHARED_PTR<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
+        boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
 
         if( _pmanip->CheckEndEffectorCollision(t*_tToManip, _preport) ) {
             RAVELOG_VERBOSE_FORMAT("endeffector is in collision, %s\n",_preport->__str__());
@@ -1267,7 +1267,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             return false;
         }
 
-        OPENRAVE_SHARED_PTR<GoalSampleFunction> pgoalsampler(new GoalSampleFunction(shared_problem(),_visibilitytransforms));
+        boost::shared_ptr<GoalSampleFunction> pgoalsampler(new GoalSampleFunction(shared_problem(),_visibilitytransforms));
 
         uint64_t starttime = utils::GetMicroTime();
         vector<dReal> vsample;
@@ -1296,7 +1296,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
     {
         string strtrajfilename;
         bool bExecute = true;
-        OPENRAVE_SHARED_PTR<ostream> pOutputTrajStream;
+        boost::shared_ptr<ostream> pOutputTrajStream;
 
         PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
         params->_nMaxIterations = 4000;
@@ -1312,7 +1312,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "outputtraj" ) {
-                pOutputTrajStream = OPENRAVE_SHARED_PTR<ostream>(&sout,utils::null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "affinedofs" ) {
                 sinput >> affinedofs;
@@ -1350,7 +1350,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         _robot->SetActiveManipulator(_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmIndices(), affinedofs);
 
-        OPENRAVE_SHARED_PTR<GoalSampleFunction> pgoalsampler(new GoalSampleFunction(shared_problem(),_visibilitytransforms));
+        boost::shared_ptr<GoalSampleFunction> pgoalsampler(new GoalSampleFunction(shared_problem(),_visibilitytransforms));
         pgoalsampler->_fSampleGoalProb = fSampleGoalProb;
         _robot->RegrabAll();
 
@@ -1409,9 +1409,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
     {
         string strtrajfilename;
         bool bExecute = true;
-        OPENRAVE_SHARED_PTR<ostream> pOutputTrajStream;
+        boost::shared_ptr<ostream> pOutputTrajStream;
 
-        OPENRAVE_SHARED_PTR<GraspSetParameters> params(new GraspSetParameters(GetEnv()));
+        boost::shared_ptr<GraspSetParameters> params(new GraspSetParameters(GetEnv()));
         params->_nMaxIterations = 4000;
         string cmd, plannername="GraspGradient";
         params->_fVisibiltyGraspThresh = 0.05f;
@@ -1424,7 +1424,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "outputtraj" ) {
-                pOutputTrajStream = OPENRAVE_SHARED_PTR<ostream>(&sout,utils::null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "maxiter" ) {
                 sinput >> params->_nMaxIterations;
@@ -1479,7 +1479,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
         if( bUseVisibility ) {
             RAVELOG_DEBUG("using visibility constraints\n");
-            OPENRAVE_SHARED_PTR<VisibilityConstraintFunction> pconstraint(new VisibilityConstraintFunction(shared_problem(), params->_checkpathvelocityconstraintsfn));
+            boost::shared_ptr<VisibilityConstraintFunction> pconstraint(new VisibilityConstraintFunction(shared_problem(), params->_checkpathvelocityconstraintsfn));
             params->_checkpathvelocityconstraintsfn = boost::bind(&VisibilityConstraintFunction::Constraint,pconstraint,_1,_2,_3,_4,_5,_6,_7,_8);
         }
 

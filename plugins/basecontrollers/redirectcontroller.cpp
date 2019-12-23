@@ -101,7 +101,7 @@ public:
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
         ControllerBase::Clone(preference,cloningoptions);
-        OPENRAVE_SHARED_PTR<RedirectController const> r = OPENRAVE_DYNAMIC_POINTER_CAST<RedirectController const>(preference);
+        boost::shared_ptr<RedirectController const> r = boost::dynamic_pointer_cast<RedirectController const>(preference);
         _probot = GetEnv()->GetRobot(r->_probot->GetName());
         _pcontroller = r->_pcontroller;     // hmm......... this requires some thought
     }

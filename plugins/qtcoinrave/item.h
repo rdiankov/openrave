@@ -28,7 +28,7 @@ enum ViewGeometry {
 };
 
 /// Encapsulate the Inventor rendering of an Item
-class Item : public OPENRAVE_ENABLE_SHARED_FROM_THIS<Item>, public OpenRAVE::UserData
+class Item : public boost::enable_shared_from_this<Item>, public OpenRAVE::UserData
 {
 public:
     Item(QtCoinViewerPtr viewer);
@@ -103,7 +103,7 @@ public:
 protected:
 
     // Instance Data
-    OPENRAVE_WEAK_PTR<QtCoinViewer> _viewer;
+    boost::weak_ptr<QtCoinViewer> _viewer;
     string _name;
 
     SoSeparator*   _ivRoot;               //!< root of Inventor data hierarchy
@@ -111,9 +111,9 @@ protected:
     SoSwitch*      _ivGeom;               //!< item geometry hierarchy
     SoTransparencyType* _ivTransparency;
 };
-typedef OPENRAVE_SHARED_PTR<Item> ItemPtr;
-typedef OPENRAVE_WEAK_PTR<Item> ItemWeakPtr;
-typedef OPENRAVE_SHARED_PTR<Item const> ItemConstPtr;
+typedef boost::shared_ptr<Item> ItemPtr;
+typedef boost::weak_ptr<Item> ItemWeakPtr;
+typedef boost::shared_ptr<Item const> ItemConstPtr;
 
 class KinBodyItem : public Item
 {
@@ -125,10 +125,10 @@ protected:
         KinBody::LinkWeakPtr plink;
     };
 
-    inline OPENRAVE_SHARED_PTR<KinBodyItem> shared_kinbody() {
-        return OPENRAVE_STATIC_POINTER_CAST<KinBodyItem>(shared_from_this());
+    inline boost::shared_ptr<KinBodyItem> shared_kinbody() {
+        return boost::static_pointer_cast<KinBodyItem>(shared_from_this());
     }
-    inline OPENRAVE_WEAK_PTR<KinBodyItem> weak_kinbody() {
+    inline boost::weak_ptr<KinBodyItem> weak_kinbody() {
         return shared_kinbody();
     }
 
@@ -204,8 +204,8 @@ protected:
     UserDataPtr _geometrycallback, _drawcallback;
 };
 
-typedef OPENRAVE_SHARED_PTR<KinBodyItem> KinBodyItemPtr;
-typedef OPENRAVE_SHARED_PTR<KinBodyItem const> KinBodyItemConstPtr;
+typedef boost::shared_ptr<KinBodyItem> KinBodyItemPtr;
+typedef boost::shared_ptr<KinBodyItem const> KinBodyItemConstPtr;
 
 class RobotItem : public KinBodyItem
 {
@@ -238,8 +238,8 @@ private:
     std::vector< EE > _vEndEffectors, _vAttachedSensors;
     RobotBasePtr _probot;
 };
-typedef OPENRAVE_SHARED_PTR<RobotItem> RobotItemPtr;
-typedef OPENRAVE_SHARED_PTR<RobotItem const> RobotItemConstPtr;
+typedef boost::shared_ptr<RobotItem> RobotItemPtr;
+typedef boost::shared_ptr<RobotItem const> RobotItemConstPtr;
 
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()

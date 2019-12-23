@@ -165,7 +165,7 @@ public:
         info._vSideWalls.clear();
         for (size_t i = 0; i < len(_vSideWalls); ++i) {
             info._vSideWalls.push_back({});
-            OPENRAVE_SHARED_PTR<PySideWall> pysidewall = boost::python::extract<OPENRAVE_SHARED_PTR<PySideWall> >(_vSideWalls[i]);
+            boost::shared_ptr<PySideWall> pysidewall = boost::python::extract<boost::shared_ptr<PySideWall> >(_vSideWalls[i]);
             pysidewall->Get(info._vSideWalls[i]);
         }
 
@@ -205,7 +205,7 @@ public:
     float _fTransparency;
     bool _bVisible, _bModifiable;
 };
-typedef OPENRAVE_SHARED_PTR<PyGeometryInfo> PyGeometryInfoPtr;
+typedef boost::shared_ptr<PyGeometryInfo> PyGeometryInfoPtr;
 
 class PyLinkInfo
 {
@@ -404,7 +404,7 @@ public:
     dReal coloumb_friction;
     dReal viscous_friction;
 };
-typedef OPENRAVE_SHARED_PTR<PyElectricMotorActuatorInfo> PyElectricMotorActuatorInfoPtr;
+typedef boost::shared_ptr<PyElectricMotorActuatorInfo> PyElectricMotorActuatorInfoPtr;
 
 class PyJointInfo
 {
@@ -792,10 +792,10 @@ public:
             }
             return boost::python::make_tuple(object(), object());
         }
-        bool __eq__(OPENRAVE_SHARED_PTR<PyGeometry> p) {
+        bool __eq__(boost::shared_ptr<PyGeometry> p) {
             return !!p && _pgeometry == p->_pgeometry;
         }
-        bool __ne__(OPENRAVE_SHARED_PTR<PyGeometry> p) {
+        bool __ne__(boost::shared_ptr<PyGeometry> p) {
             return !p || _pgeometry != p->_pgeometry;
         }
         int __hash__() {
@@ -856,7 +856,7 @@ public:
         return links;
     }
 
-    bool IsParentLink(OPENRAVE_SHARED_PTR<PyLink> pylink) const {
+    bool IsParentLink(boost::shared_ptr<PyLink> pylink) const {
         return _plink->IsParentLink(*pylink->GetLink());
     }
 
@@ -952,7 +952,7 @@ public:
         boost::python::list geoms;
         size_t N = _plink->GetGeometries().size();
         for(size_t i = 0; i < N; ++i) {
-            geoms.append(OPENRAVE_SHARED_PTR<PyGeometry>(new PyGeometry(_plink->GetGeometry(i))));
+            geoms.append(boost::shared_ptr<PyGeometry>(new PyGeometry(_plink->GetGeometry(i))));
         }
         return geoms;
     }
@@ -1026,7 +1026,7 @@ public:
         return links;
     }
 
-    bool IsRigidlyAttached(OPENRAVE_SHARED_PTR<PyLink> plink) {
+    bool IsRigidlyAttached(boost::shared_ptr<PyLink> plink) {
         CHECK_POINTER(plink);
         return _plink->IsRigidlyAttached(*plink->GetLink());
     }
@@ -1102,10 +1102,10 @@ public:
     object __unicode__() {
         return ConvertStringToUnicode(__str__());
     }
-    bool __eq__(OPENRAVE_SHARED_PTR<PyLink> p) {
+    bool __eq__(boost::shared_ptr<PyLink> p) {
         return !!p && _plink == p->_plink;
     }
-    bool __ne__(OPENRAVE_SHARED_PTR<PyLink> p) {
+    bool __ne__(boost::shared_ptr<PyLink> p) {
         return !p || _plink != p->_plink;
     }
     int __hash__() {
@@ -1459,10 +1459,10 @@ public:
     object __unicode__() {
         return ConvertStringToUnicode(__str__());
     }
-    bool __eq__(OPENRAVE_SHARED_PTR<PyJoint> p) {
+    bool __eq__(boost::shared_ptr<PyJoint> p) {
         return !!p && _pjoint==p->_pjoint;
     }
-    bool __ne__(OPENRAVE_SHARED_PTR<PyJoint> p) {
+    bool __ne__(boost::shared_ptr<PyJoint> p) {
         return !p || _pjoint!=p->_pjoint;
     }
     int __hash__() {
@@ -1537,7 +1537,7 @@ public:
         return ConvertStringToUnicode(__str__());
     }
 };
-typedef OPENRAVE_SHARED_PTR<PyKinBodyStateSaver> PyKinBodyStateSaverPtr;
+typedef boost::shared_ptr<PyKinBodyStateSaver> PyKinBodyStateSaverPtr;
 
 class PyManageData
 {
@@ -1589,15 +1589,15 @@ public:
     object __unicode__() {
         return ConvertStringToUnicode(__str__());
     }
-    bool __eq__(OPENRAVE_SHARED_PTR<PyManageData> p) {
+    bool __eq__(boost::shared_ptr<PyManageData> p) {
         return !!p && _pdata==p->_pdata;
     }
-    bool __ne__(OPENRAVE_SHARED_PTR<PyManageData> p) {
+    bool __ne__(boost::shared_ptr<PyManageData> p) {
         return !p || _pdata!=p->_pdata;
     }
 };
-typedef OPENRAVE_SHARED_PTR<PyManageData> PyManageDataPtr;
-typedef OPENRAVE_SHARED_PTR<PyManageData const> PyManageDataConstPtr;
+typedef boost::shared_ptr<PyManageData> PyManageDataPtr;
+typedef boost::shared_ptr<PyManageData const> PyManageDataConstPtr;
 
 PyKinBody::PyKinBody(KinBodyPtr pbody, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pbody,pyenv), _pbody(pbody)
 {
@@ -2978,7 +2978,7 @@ void PyKinBody::__enter__()
     if( _listStateSavers.size() == 0 ) {
         openravepy::LockEnvironment(_pyenv);
     }
-    _listStateSavers.push_back(OPENRAVE_SHARED_PTR<void>(new KinBody::KinBodyStateSaver(_pbody)));
+    _listStateSavers.push_back(boost::shared_ptr<void>(new KinBody::KinBodyStateSaver(_pbody)));
 }
 
 void PyKinBody::__exit__(object type, object value, object traceback)
@@ -3358,7 +3358,7 @@ void init_openravepy_kinbody()
                           .value("SWT_NY",KinBody::GeometryInfo::SideWallType::SWT_NY)
                           .value("SWT_PY",KinBody::GeometryInfo::SideWallType::SWT_PY)
     ;
-    object electricmotoractuatorinfo = class_<PyElectricMotorActuatorInfo, OPENRAVE_SHARED_PTR<PyElectricMotorActuatorInfo> >("ElectricMotorActuatorInfo", DOXY_CLASS(KinBody::ElectricMotorActuatorInfo))
+    object electricmotoractuatorinfo = class_<PyElectricMotorActuatorInfo, boost::shared_ptr<PyElectricMotorActuatorInfo> >("ElectricMotorActuatorInfo", DOXY_CLASS(KinBody::ElectricMotorActuatorInfo))
                                        .def_readwrite("model_type",&PyElectricMotorActuatorInfo::model_type)
                                        .def_readwrite("assigned_power_rating",&PyElectricMotorActuatorInfo::assigned_power_rating)
                                        .def_readwrite("max_speed",&PyElectricMotorActuatorInfo::max_speed)
@@ -3396,7 +3396,7 @@ void init_openravepy_kinbody()
                        .value("Trajectory",KinBody::JointTrajectory)
     ;
 
-    object geometryinfo = class_<PyGeometryInfo, OPENRAVE_SHARED_PTR<PyGeometryInfo> >("GeometryInfo", DOXY_CLASS(KinBody::GeometryInfo))
+    object geometryinfo = class_<PyGeometryInfo, boost::shared_ptr<PyGeometryInfo> >("GeometryInfo", DOXY_CLASS(KinBody::GeometryInfo))
                           .def_readwrite("_t",&PyGeometryInfo::_t)
                           .def_readwrite("_vGeomData",&PyGeometryInfo::_vGeomData)
                           .def_readwrite("_vGeomData2",&PyGeometryInfo::_vGeomData2)
@@ -3423,13 +3423,13 @@ void init_openravepy_kinbody()
                           .def_pickle(GeometryInfo_pickle_suite())
     ;
 
-    object sidewall = class_<PySideWall, OPENRAVE_SHARED_PTR<PySideWall> >("SideWall", DOXY_CLASS(KinBody::GeometryInfo::SideWall))
+    object sidewall = class_<PySideWall, boost::shared_ptr<PySideWall> >("SideWall", DOXY_CLASS(KinBody::GeometryInfo::SideWall))
                       .def_readwrite("transf",&PySideWall::transf)
                       .def_readwrite("vExtents",&PySideWall::vExtents)
                       .def_readwrite("type",&PySideWall::type)
     ;
 
-    object linkinfo = class_<PyLinkInfo, OPENRAVE_SHARED_PTR<PyLinkInfo> >("LinkInfo", DOXY_CLASS(KinBody::LinkInfo))
+    object linkinfo = class_<PyLinkInfo, boost::shared_ptr<PyLinkInfo> >("LinkInfo", DOXY_CLASS(KinBody::LinkInfo))
                       .def_readwrite("_vgeometryinfos",&PyLinkInfo::_vgeometryinfos)
                       .def_readwrite("_name",&PyLinkInfo::_name)
                       .def_readwrite("_t",&PyLinkInfo::_t)
@@ -3444,7 +3444,7 @@ void init_openravepy_kinbody()
                       .def_readwrite("_bIsEnabled",&PyLinkInfo::_bIsEnabled)
                       .def_pickle(LinkInfo_pickle_suite())
     ;
-    object jointinfo = class_<PyJointInfo, OPENRAVE_SHARED_PTR<PyJointInfo> >("JointInfo", DOXY_CLASS(KinBody::JointInfo))
+    object jointinfo = class_<PyJointInfo, boost::shared_ptr<PyJointInfo> >("JointInfo", DOXY_CLASS(KinBody::JointInfo))
                        .def_readwrite("_type",&PyJointInfo::_type)
                        .def_readwrite("_name",&PyJointInfo::_name)
                        .def_readwrite("_linkname0",&PyJointInfo::_linkname0)
@@ -3476,7 +3476,7 @@ void init_openravepy_kinbody()
                        .def_pickle(JointInfo_pickle_suite())
     ;
 
-    object grabbedinfo = class_<PyKinBody::PyGrabbedInfo, OPENRAVE_SHARED_PTR<PyKinBody::PyGrabbedInfo> >("GrabbedInfo", DOXY_CLASS(KinBody::GrabbedInfo))
+    object grabbedinfo = class_<PyKinBody::PyGrabbedInfo, boost::shared_ptr<PyKinBody::PyGrabbedInfo> >("GrabbedInfo", DOXY_CLASS(KinBody::GrabbedInfo))
                          .def_readwrite("_grabbedname",&PyKinBody::PyGrabbedInfo::_grabbedname)
                          .def_readwrite("_robotlinkname",&PyKinBody::PyGrabbedInfo::_robotlinkname)
                          .def_readwrite("_trelative",&PyKinBody::PyGrabbedInfo::_trelative)
@@ -3530,7 +3530,7 @@ void init_openravepy_kinbody()
         std::string sInitFromBoxesDoc = std::string(DOXY_FN(KinBody,InitFromBoxes "const std::vector< AABB; bool")) + std::string("\nboxes is a Nx6 array, first 3 columsn are position, last 3 are extents");
         std::string sGetChainDoc = std::string(DOXY_FN(KinBody,GetChain)) + std::string("If returnjoints is false will return a list of links, otherwise will return a list of links (default is true)");
         std::string sComputeInverseDynamicsDoc = std::string(":param returncomponents: If True will return three N-element arrays that represents the torque contributions to M, C, and G.\n\n:param externalforcetorque: A dictionary of link indices and a 6-element array of forces/torques in that order.\n\n") + std::string(DOXY_FN(KinBody, ComputeInverseDynamics));
-        scope kinbody = class_<PyKinBody, OPENRAVE_SHARED_PTR<PyKinBody>, bases<PyInterfaceBase> >("KinBody", DOXY_CLASS(KinBody), no_init)
+        scope kinbody = class_<PyKinBody, boost::shared_ptr<PyKinBody>, bases<PyInterfaceBase> >("KinBody", DOXY_CLASS(KinBody), no_init)
                         .def("Destroy",&PyKinBody::Destroy, DOXY_FN(KinBody,Destroy))
                         .def("InitFromBoxes",&PyKinBody::InitFromBoxes,InitFromBoxes_overloads(args("boxes","draw","uri"), sInitFromBoxesDoc.c_str()))
                         .def("InitFromSpheres",&PyKinBody::InitFromSpheres,InitFromSpheres_overloads(args("spherex","draw","uri"), DOXY_FN(KinBody,InitFromSpheres)))
@@ -3709,7 +3709,7 @@ void init_openravepy_kinbody()
         kinbody.attr("JointInfo") = jointinfo;
         kinbody.attr("GrabbedInfo") = grabbedinfo;
         {
-            scope link = class_<PyLink, OPENRAVE_SHARED_PTR<PyLink> >("Link", DOXY_CLASS(KinBody::Link), no_init)
+            scope link = class_<PyLink, boost::shared_ptr<PyLink> >("Link", DOXY_CLASS(KinBody::Link), no_init)
                          .def("GetName",&PyLink::GetName, DOXY_FN(KinBody::Link,GetName))
                          .def("GetIndex",&PyLink::GetIndex, DOXY_FN(KinBody::Link,GetIndex))
                          .def("Enable",&PyLink::Enable,args("enable"), DOXY_FN(KinBody::Link,Enable))
@@ -3775,7 +3775,7 @@ void init_openravepy_kinbody()
             link.attr("GeomType") = geometrytype;
             link.attr("GeometryInfo") = geometryinfo;
             {
-                scope geometry = class_<PyLink::PyGeometry, OPENRAVE_SHARED_PTR<PyLink::PyGeometry> >("Geometry", DOXY_CLASS(KinBody::Link::Geometry),no_init)
+                scope geometry = class_<PyLink::PyGeometry, boost::shared_ptr<PyLink::PyGeometry> >("Geometry", DOXY_CLASS(KinBody::Link::Geometry),no_init)
                                  .def("SetCollisionMesh",&PyLink::PyGeometry::SetCollisionMesh,args("trimesh"), DOXY_FN(KinBody::Link::Geometry,SetCollisionMesh))
                                  .def("GetCollisionMesh",&PyLink::PyGeometry::GetCollisionMesh, DOXY_FN(KinBody::Link::Geometry,GetCollisionMesh))
                                  .def("InitCollisionMesh",&PyLink::PyGeometry::InitCollisionMesh, InitCollisionMesh_overloads(args("tesselation"), DOXY_FN(KinBody::Link::Geometry,GetCollisionMesh)))
@@ -3821,7 +3821,7 @@ void init_openravepy_kinbody()
             link.attr("GeomProperties") = link.attr("Geometry");
         }
         {
-            scope joint = class_<PyJoint, OPENRAVE_SHARED_PTR<PyJoint> >("Joint", DOXY_CLASS(KinBody::Joint),no_init)
+            scope joint = class_<PyJoint, boost::shared_ptr<PyJoint> >("Joint", DOXY_CLASS(KinBody::Joint),no_init)
                           .def("GetName", &PyJoint::GetName, DOXY_FN(KinBody::Joint,GetName))
                           .def("IsMimic",&PyJoint::IsMimic,IsMimic_overloads(args("axis"), DOXY_FN(KinBody::Joint,IsMimic)))
                           .def("GetMimicEquation",&PyJoint::GetMimicEquation,GetMimicEquation_overloads(args("axis","type","format"), DOXY_FN(KinBody::Joint,GetMimicEquation)))
@@ -3905,7 +3905,7 @@ void init_openravepy_kinbody()
         }
 
         {
-            scope statesaver = class_<PyKinBodyStateSaver, OPENRAVE_SHARED_PTR<PyKinBodyStateSaver> >("KinBodyStateSaver", DOXY_CLASS(KinBody::KinBodyStateSaver), no_init)
+            scope statesaver = class_<PyKinBodyStateSaver, boost::shared_ptr<PyKinBodyStateSaver> >("KinBodyStateSaver", DOXY_CLASS(KinBody::KinBodyStateSaver), no_init)
                                .def(init<PyKinBodyPtr>(args("body")))
                                .def(init<PyKinBodyPtr,object>(args("body","options")))
                                .def("GetBody",&PyKinBodyStateSaver::GetBody,DOXY_FN(KinBody::KinBodyStateSaver, GetBody))
@@ -3917,7 +3917,7 @@ void init_openravepy_kinbody()
         }
 
         {
-            scope managedata = class_<PyManageData, OPENRAVE_SHARED_PTR<PyManageData> >("ManageData", DOXY_CLASS(KinBody::ManageData),no_init)
+            scope managedata = class_<PyManageData, boost::shared_ptr<PyManageData> >("ManageData", DOXY_CLASS(KinBody::ManageData),no_init)
                                .def("GetSystem", &PyManageData::GetSystem, DOXY_FN(KinBody::ManageData,GetSystem))
                                .def("GetData", &PyManageData::GetData, DOXY_FN(KinBody::ManageData,GetData))
                                .def("GetOffsetLink", &PyManageData::GetOffsetLink, DOXY_FN(KinBody::ManageData,GetOffsetLink))

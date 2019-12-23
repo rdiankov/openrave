@@ -413,13 +413,13 @@ private:
         return !!is;
     }
 
-    inline OPENRAVE_SHARED_PTR<IdealController> shared_controller() {
-        return OPENRAVE_STATIC_POINTER_CAST<IdealController>(shared_from_this());
+    inline boost::shared_ptr<IdealController> shared_controller() {
+        return boost::static_pointer_cast<IdealController>(shared_from_this());
     }
-    inline OPENRAVE_SHARED_PTR<IdealController const> shared_controller_const() const {
-        return OPENRAVE_STATIC_POINTER_CAST<IdealController const>(shared_from_this());
+    inline boost::shared_ptr<IdealController const> shared_controller_const() const {
+        return boost::static_pointer_cast<IdealController const>(shared_from_this());
     }
-    inline OPENRAVE_WEAK_PTR<IdealController> weak_controller() {
+    inline boost::weak_ptr<IdealController> weak_controller() {
         return shared_controller();
     }
 
@@ -541,7 +541,7 @@ private:
         int offset;
         int robotlinkindex;
         KinBodyPtr pbody;
-        OPENRAVE_SHARED_PTR<Transform> trelativepose; ///< relative pose of body with link when grabbed. if it doesn't exist, then do not pre-transform the pose
+        boost::shared_ptr<Transform> trelativepose; ///< relative pose of body with link when grabbed. if it doesn't exist, then do not pre-transform the pose
     };
     std::vector<GrabBody> _vgrabbodylinks;
     dReal _fCommandTime;
@@ -559,7 +559,7 @@ private:
     CollisionReportPtr _report;
     UserDataPtr _cblimits;
     ConfigurationSpecification _samplespec;
-    OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> _gjointvalues, _gtransform;
+    boost::shared_ptr<ConfigurationSpecification::Group> _gjointvalues, _gtransform;
     boost::mutex _mutex;
 };
 

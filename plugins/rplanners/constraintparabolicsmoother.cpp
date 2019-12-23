@@ -1099,8 +1099,8 @@ protected:
     RobotBasePtr _probot;
     CollisionCheckerBasePtr _distancechecker;
     ConstraintFilterReturnPtr _constraintreturn;
-    //OPENRAVE_SHARED_PTR<ConfigurationSpecification::SetConfigurationStateFn> _setstatefn, _setvelstatefn;
-    //OPENRAVE_SHARED_PTR<ConfigurationSpecification::GetConfigurationStateFn> _getstatefn, _getvelstatefn;
+    //boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> _setstatefn, _setvelstatefn;
+    //boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> _getstatefn, _getvelstatefn;
     std::vector<dReal> _vtrajpointscache;
 
     std::list< ManipConstraintInfo > _listCheckManips;

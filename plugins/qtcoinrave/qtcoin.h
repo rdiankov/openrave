@@ -198,9 +198,9 @@ inline void SetSoTransform(SoTransform* ptrans, const RaveTransform<float>& t)
 }
 
 class QtCoinViewer;
-typedef OPENRAVE_SHARED_PTR<QtCoinViewer> QtCoinViewerPtr;
-typedef OPENRAVE_WEAK_PTR<QtCoinViewer> QtCoinViewerWeakPtr;
-typedef OPENRAVE_SHARED_PTR<QtCoinViewer const> QtCoinViewerConstPtr;
+typedef boost::shared_ptr<QtCoinViewer> QtCoinViewerPtr;
+typedef boost::weak_ptr<QtCoinViewer> QtCoinViewerWeakPtr;
+typedef boost::shared_ptr<QtCoinViewer const> QtCoinViewerConstPtr;
 
 #define CALLBACK_EVENT QEvent::Type(QEvent::User+101)
 
@@ -212,11 +212,11 @@ void EnsureSoQtInit();
 class MyCallbackEvent : public QEvent
 {
 public:
-    MyCallbackEvent(const OPENRAVE_FUNCTION<void()>& fn) : QEvent(CALLBACK_EVENT), _fn(fn) {
+    MyCallbackEvent(const boost::function<void()>& fn) : QEvent(CALLBACK_EVENT), _fn(fn) {
     }
     virtual ~MyCallbackEvent() {
     }
-    OPENRAVE_FUNCTION<void()> _fn;
+    boost::function<void()> _fn;
 };
 
 #include "item.h"

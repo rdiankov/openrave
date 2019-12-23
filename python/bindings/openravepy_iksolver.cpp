@@ -66,7 +66,7 @@ public:
     IkReturn _ret;
 };
 
-typedef OPENRAVE_SHARED_PTR<PyIkReturn> PyIkReturnPtr;
+typedef boost::shared_ptr<PyIkReturn> PyIkReturnPtr;
 
 class PyIkSolverBase : public PyInterfaceBase
 {
@@ -79,7 +79,7 @@ protected:
         PyGILState_STATE gstate = PyGILState_Ensure();
         std::string errmsg;
         try {
-            RobotBase::ManipulatorPtr pmanip2 = OPENRAVE_CONST_POINTER_CAST<RobotBase::Manipulator>(pmanip);
+            RobotBase::ManipulatorPtr pmanip2 = boost::const_pointer_cast<RobotBase::Manipulator>(pmanip);
             res = fncallback(toPyArray(values), openravepy::toPyRobotManipulator(pmanip2,pyenv),toPyIkParameterization(ikparam));
         }
         catch(...) {
@@ -320,7 +320,7 @@ void init_openravepy_iksolver()
         PyIkReturnPtr (PyIkSolverBase::*SolveFree)(object, object, object, int) = &PyIkSolverBase::Solve;
         object (PyIkSolverBase::*SolveAll)(object, int) = &PyIkSolverBase::SolveAll;
         object (PyIkSolverBase::*SolveAllFree)(object, object, int) = &PyIkSolverBase::SolveAll;
-        class_<PyIkSolverBase, OPENRAVE_SHARED_PTR<PyIkSolverBase>, bases<PyInterfaceBase> >("IkSolver", DOXY_CLASS(IkSolverBase), no_init)
+        class_<PyIkSolverBase, boost::shared_ptr<PyIkSolverBase>, bases<PyInterfaceBase> >("IkSolver", DOXY_CLASS(IkSolverBase), no_init)
         .def("Solve",Solve,args("ikparam","q0","filteroptions"), DOXY_FN(IkSolverBase, Solve "const IkParameterization&; const std::vector; int; IkReturnPtr"))
         .def("Solve",SolveFree,args("ikparam","q0","freeparameters", "filteroptions"), DOXY_FN(IkSolverBase, Solve "const IkParameterization&; const std::vector; const std::vector; int; IkReturnPtr"))
         .def("SolveAll",SolveAll,args("ikparam","filteroptions"), DOXY_FN(IkSolverBase, SolveAll "const IkParameterization&; int; std::vector<IkReturnPtr>"))

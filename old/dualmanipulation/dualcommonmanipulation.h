@@ -88,7 +88,7 @@ public:
             return _CheckConstraint(vprev) ? NSS_SuccessfulWithDeviation : NSS_Failed;
         }
 
-        OPENRAVE_FUNCTION<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;
+        boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;
 
 protected:
         RobotBasePtr _probot;
@@ -120,7 +120,7 @@ protected:
         }
     };
 
-    static bool SetActiveTrajectory(RobotBasePtr robot, TrajectoryBasePtr pActiveTraj, bool bExecute, const string& strsavetraj, OPENRAVE_SHARED_PTR<ostream> pout,dReal fMaxVelMult=1)
+    static bool SetActiveTrajectory(RobotBasePtr robot, TrajectoryBasePtr pActiveTraj, bool bExecute, const string& strsavetraj, boost::shared_ptr<ostream> pout,dReal fMaxVelMult=1)
     {
         if( pActiveTraj->GetNumWaypoints() == 0 ) {
             return false;

@@ -114,7 +114,7 @@ public:
     using FunctionParserBase<Value_t>::NO_FUNCTION_PARSED_YET;
     using FunctionParserBase<Value_t>::FP_NO_ERROR;
 
-    typedef OPENRAVE_FUNCTION<void (std::vector<Value_t>&, const std::vector<Value_t>&)> BoostFunction;
+    typedef boost::function<void (std::vector<Value_t>&, const std::vector<Value_t>&)> BoostFunction;
     class BoostFunctionWrapper : public FunctionParserBase<Value_t>::FunctionWrapper
     {
 public:

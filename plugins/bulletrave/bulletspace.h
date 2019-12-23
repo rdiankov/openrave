@@ -34,9 +34,9 @@
 #define DISABLED_GROUP 256 // mask 0
 
 // manages a space of bullet objects
-class BulletSpace : public OPENRAVE_ENABLE_SHARED_FROM_THIS<BulletSpace>
+class BulletSpace : public boost::enable_shared_from_this<BulletSpace>
 {
-    inline OPENRAVE_WEAK_PTR<BulletSpace> weak_space() {
+    inline boost::weak_ptr<BulletSpace> weak_space() {
         return shared_from_this();
     }
 
@@ -65,19 +65,19 @@ public:
                 plink->SetTransform(GetTransform(centerOfMassWorldTrans)*tlocal.inverse());
             }
 
-            OPENRAVE_SHARED_PTR<btCollisionObject> obj;
-            OPENRAVE_SHARED_PTR<btRigidBody> _rigidbody;
-            OPENRAVE_SHARED_PTR<btCollisionShape> shape;
-            list<OPENRAVE_SHARED_PTR<btCollisionShape> > listchildren;
-            list<OPENRAVE_SHARED_PTR<btStridingMeshInterface> > listmeshes;
+            boost::shared_ptr<btCollisionObject> obj;
+            boost::shared_ptr<btRigidBody> _rigidbody;
+            boost::shared_ptr<btCollisionShape> shape;
+            list<boost::shared_ptr<btCollisionShape> > listchildren;
+            list<boost::shared_ptr<btStridingMeshInterface> > listmeshes;
 
             KinBody::LinkPtr plink;
             Transform tlocal;     /// local offset transform to account for inertias not aligned to axes
         };
 
-        KinBodyInfo(OPENRAVE_SHARED_PTR<btCollisionWorld> world, bool bPhysics) : _world(world), _bPhysics(bPhysics) {
+        KinBodyInfo(boost::shared_ptr<btCollisionWorld> world, bool bPhysics) : _world(world), _bPhysics(bPhysics) {
             nLastStamp = 0;
-            _worlddynamics = OPENRAVE_DYNAMIC_POINTER_CAST<btDiscreteDynamicsWorld>(_world);
+            _worlddynamics = boost::dynamic_pointer_cast<btDiscreteDynamicsWorld>(_world);
         }
         virtual ~KinBodyInfo() {
             Reset();
@@ -104,33 +104,33 @@ public:
         KinBodyPtr pbody;     ///< body associated with this structure
         int nLastStamp;
 
-        std::vector<OPENRAVE_SHARED_PTR<LINK> > vlinks;     ///< if body is disabled, then geom is static (it can't be connected to a joint!)
+        std::vector<boost::shared_ptr<LINK> > vlinks;     ///< if body is disabled, then geom is static (it can't be connected to a joint!)
         ///< the pointer to this Link is the userdata
-        typedef std::map< KinBody::JointConstPtr, OPENRAVE_SHARED_PTR<btTypedConstraint> > MAPJOINTS;
+        typedef std::map< KinBody::JointConstPtr, boost::shared_ptr<btTypedConstraint> > MAPJOINTS;
         MAPJOINTS _mapjoints;
         UserDataPtr _geometrycallback;
-        OPENRAVE_WEAK_PTR<BulletSpace> _bulletspace;
+        boost::weak_ptr<BulletSpace> _bulletspace;
 
 private:
-        OPENRAVE_SHARED_PTR<btCollisionWorld> _world;
-        OPENRAVE_SHARED_PTR<btDiscreteDynamicsWorld> _worlddynamics;
+        boost::shared_ptr<btCollisionWorld> _world;
+        boost::shared_ptr<btDiscreteDynamicsWorld> _worlddynamics;
         bool _bPhysics;
     };
 
-    typedef OPENRAVE_SHARED_PTR<KinBodyInfo> KinBodyInfoPtr;
-    typedef OPENRAVE_SHARED_PTR<KinBodyInfo const> KinBodyInfoConstPtr;
-    typedef OPENRAVE_FUNCTION<KinBodyInfoPtr(KinBodyConstPtr)> GetInfoFn;
-    typedef OPENRAVE_FUNCTION<void (KinBodyInfoPtr)> SynchronizeCallbackFn;
+    typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
+    typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
+    typedef boost::function<KinBodyInfoPtr(KinBodyConstPtr)> GetInfoFn;
+    typedef boost::function<void (KinBodyInfoPtr)> SynchronizeCallbackFn;
 
     BulletSpace(EnvironmentBasePtr penv, const GetInfoFn& infofn, bool bPhysics) : _penv(penv), GetInfo(infofn), _bPhysics(bPhysics) {
     }
     virtual ~BulletSpace() {
     }
 
-    bool InitEnvironment(OPENRAVE_SHARED_PTR<btCollisionWorld> world)
+    bool InitEnvironment(boost::shared_ptr<btCollisionWorld> world)
     {
         _world = world;
-        _worlddynamics = OPENRAVE_DYNAMIC_POINTER_CAST<btDiscreteDynamicsWorld>(_world);
+        _worlddynamics = boost::dynamic_pointer_cast<btDiscreteDynamicsWorld>(_world);
         btGImpactCollisionAlgorithm::registerAlgorithm((btCollisionDispatcher*)_world->getDispatcher());
         //btConcaveConcaveCollisionAlgorithm::registerAlgorithm(_world->getDispatcher());
 
@@ -155,7 +155,7 @@ private:
         pinfo->vlinks.reserve(pbody->GetLinks().size());
 
         FOREACHC(itlink, pbody->GetLinks()) {
-            OPENRAVE_SHARED_PTR<KinBodyInfo::LINK> link(new KinBodyInfo::LINK());
+            boost::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK());
 
             btCompoundShape* pshapeparent = new btCompoundShape();
             link->shape.reset(pshapeparent);
@@ -163,7 +163,7 @@ private:
 
             // add all the correct geometry objects
             FOREACHC(itgeom, (*itlink)->GetGeometries()) {
-                OPENRAVE_SHARED_PTR<btCollisionShape> child;
+                boost::shared_ptr<btCollisionShape> child;
                 KinBody::Link::GeometryPtr geom = *itgeom;
                 switch(geom->GetType()) {
                 case GT_None:
@@ -190,11 +190,11 @@ private:
 
                         if( _bPhysics ) {
                             RAVELOG_DEBUG("converting triangle mesh to convex hull for physics\n");
-                            OPENRAVE_SHARED_PTR<btConvexShape> pconvexbuilder(new btConvexTriangleMeshShape(ptrimesh));
+                            boost::shared_ptr<btConvexShape> pconvexbuilder(new btConvexTriangleMeshShape(ptrimesh));
                             pconvexbuilder->setMargin(fmargin);
 
                             //Create a hull shape to approximate Trimesh
-                            OPENRAVE_SHARED_PTR<btShapeHull> hull(new btShapeHull(pconvexbuilder.get()));
+                            boost::shared_ptr<btShapeHull> hull(new btShapeHull(pconvexbuilder.get()));
                             hull->buildHull(fmargin);
 
                             btConvexHullShape* convexShape = new btConvexHullShape();
@@ -212,7 +212,7 @@ private:
                             pgimpact->setMargin(fmargin);     // need to set margin very small (we're not simulating anyway)
                             pgimpact->updateBound();
                             child.reset(pgimpact);
-                            link->listmeshes.push_back(OPENRAVE_SHARED_PTR<btStridingMeshInterface>(ptrimesh));
+                            link->listmeshes.push_back(boost::shared_ptr<btStridingMeshInterface>(ptrimesh));
                         }
                     }
                     break;
@@ -300,14 +300,14 @@ private:
 
                 Transform t0inv = GetTransform(body0->getWorldTransform()).inverse();
                 Transform t1inv = GetTransform(body1->getWorldTransform()).inverse();
-                OPENRAVE_SHARED_PTR<btTypedConstraint> joint;
+                boost::shared_ptr<btTypedConstraint> joint;
                 switch((*itjoint)->GetType()) {
                 case KinBody::JointHinge: {
                     btVector3 pivotInA = GetBtVector(t0inv * (*itjoint)->GetAnchor());
                     btVector3 pivotInB = GetBtVector(t1inv * (*itjoint)->GetAnchor());
                     btVector3 axisInA = GetBtVector(t0inv.rotate((*itjoint)->GetAxis(0)));
                     btVector3 axisInB = GetBtVector(t1inv.rotate((*itjoint)->GetAxis(0)));
-                    OPENRAVE_SHARED_PTR<btHingeConstraint> hinge(new btHingeConstraint(*body0, *body1, pivotInA, pivotInB, axisInA, axisInB));
+                    boost::shared_ptr<btHingeConstraint> hinge(new btHingeConstraint(*body0, *body1, pivotInA, pivotInB, axisInA, axisInB));
                     //hinge->setParam(BT_CONSTRAINT_STOP_ERP,0.8);
                     //hinge->setParam(BT_CONSTRAINT_STOP_CFM,0);
                     //hinge->setParam(BT_CONSTRAINT_CFM,0);
@@ -338,7 +338,7 @@ private:
                 case KinBody::JointSpherical: {
                     btVector3 pivotInA = GetBtVector(t0inv * (*itjoint)->GetAnchor());
                     btVector3 pivotInB = GetBtVector(t1inv * (*itjoint)->GetAnchor());
-                    OPENRAVE_SHARED_PTR<btPoint2PointConstraint> spherical(new btPoint2PointConstraint(*body0, *body1, pivotInA, pivotInB));
+                    boost::shared_ptr<btPoint2PointConstraint> spherical(new btPoint2PointConstraint(*body0, *body1, pivotInA, pivotInB));
                     joint = spherical;
                     break;
                 }
@@ -392,14 +392,14 @@ private:
         }
     }
 
-    OPENRAVE_SHARED_PTR<btCollisionObject> GetLinkBody(KinBody::LinkConstPtr plink)
+    boost::shared_ptr<btCollisionObject> GetLinkBody(KinBody::LinkConstPtr plink)
     {
         KinBodyInfoPtr pinfo = GetInfo(plink->GetParent());
         BOOST_ASSERT(pinfo->pbody == plink->GetParent() );
         return pinfo->vlinks.at(plink->GetIndex())->obj;
     }
 
-    OPENRAVE_SHARED_PTR<btTypedConstraint> GetJoint(KinBody::JointConstPtr pjoint)
+    boost::shared_ptr<btTypedConstraint> GetJoint(KinBody::JointConstPtr pjoint)
     {
         KinBodyInfoPtr pinfo = GetInfo(pjoint->GetParent());
         BOOST_ASSERT(pinfo->pbody == pjoint->GetParent() );
@@ -460,15 +460,15 @@ private:
         if( !pinfo ) {
             return;
         }
-        BOOST_ASSERT(OPENRAVE_SHARED_PTR<BulletSpace>(pinfo->_bulletspace) == shared_from_this());
+        BOOST_ASSERT(boost::shared_ptr<BulletSpace>(pinfo->_bulletspace) == shared_from_this());
         BOOST_ASSERT(pinfo->pbody==pbody);
         InitKinBody(pbody,pinfo);
     }
 
     EnvironmentBasePtr _penv;
     GetInfoFn GetInfo;
-    OPENRAVE_SHARED_PTR<btCollisionWorld> _world;
-    OPENRAVE_SHARED_PTR<btDiscreteDynamicsWorld> _worlddynamics;
+    boost::shared_ptr<btCollisionWorld> _world;
+    boost::shared_ptr<btDiscreteDynamicsWorld> _worlddynamics;
     SynchronizeCallbackFn _synccallback;
     bool _bPhysics;
 };

@@ -324,7 +324,7 @@ void init_openravepy_trajectory()
     object (PyTrajectoryBase::*GetWaypoint2)(int,PyConfigurationSpecificationPtr) const = &PyTrajectoryBase::GetWaypoint;
     object (PyTrajectoryBase::*__getitem__1)(int) const = &PyTrajectoryBase::__getitem__;
     object (PyTrajectoryBase::*__getitem__2)(slice) const = &PyTrajectoryBase::__getitem__;
-    class_<PyTrajectoryBase, OPENRAVE_SHARED_PTR<PyTrajectoryBase>, bases<PyInterfaceBase> >("Trajectory", DOXY_CLASS(TrajectoryBase), no_init)
+    class_<PyTrajectoryBase, boost::shared_ptr<PyTrajectoryBase>, bases<PyInterfaceBase> >("Trajectory", DOXY_CLASS(TrajectoryBase), no_init)
     .def("Init",&PyTrajectoryBase::Init,args("spec"),DOXY_FN(TrajectoryBase,Init))
     .def("Insert",Insert1,args("index","data"),DOXY_FN(TrajectoryBase,Insert "size_t; const std::vector; bool"))
     .def("Insert",Insert2,args("index","data","overwrite"),DOXY_FN(TrajectoryBase,Insert "size_t; const std::vector; bool"))

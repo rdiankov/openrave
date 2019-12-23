@@ -29,12 +29,12 @@
 #include <Moby/SphericalJoint.h>
 #include <Moby/GravityForce.h>
 
-typedef void (*ControllerCallbackFn)(OPENRAVE_SHARED_PTR<Moby::DynamicBody>,double,void*);
+typedef void (*ControllerCallbackFn)(boost::shared_ptr<Moby::DynamicBody>,double,void*);
 
 // manages a space of Moby objects
-class MobySpace : public OPENRAVE_ENABLE_SHARED_FROM_THIS<MobySpace>
+class MobySpace : public boost::enable_shared_from_this<MobySpace>
 {
-    inline OPENRAVE_WEAK_PTR<MobySpace> weak_space() {
+    inline boost::weak_ptr<MobySpace> weak_space() {
         return shared_from_this();
     }
 
@@ -61,7 +61,7 @@ public:
             Transform tlocal;               // center of mass frame
         };
 
-        KinBodyInfo(OPENRAVE_SHARED_PTR<Moby::Simulator> world, bool bPhysics) : _world(world), _bPhysics(bPhysics) 
+        KinBodyInfo(boost::shared_ptr<Moby::Simulator> world, bool bPhysics) : _world(world), _bPhysics(bPhysics) 
         {
             nLastStamp = 0;
         }
@@ -80,18 +80,18 @@ public:
 
         KinBodyPtr pbody;     ///< body associated with this structure
         int nLastStamp;
-        vector<OPENRAVE_SHARED_PTR<LINK> > vlinks;     
+        vector<boost::shared_ptr<LINK> > vlinks;     
         UserDataPtr _geometrycallback;
-        OPENRAVE_WEAK_PTR<MobySpace> _mobyspace;
+        boost::weak_ptr<MobySpace> _mobyspace;
 private:
-        OPENRAVE_SHARED_PTR<Moby::Simulator> _world;
+        boost::shared_ptr<Moby::Simulator> _world;
         bool _bPhysics;
     };
 
-    typedef OPENRAVE_SHARED_PTR<KinBodyInfo> KinBodyInfoPtr;
-    typedef OPENRAVE_SHARED_PTR<KinBodyInfo const> KinBodyInfoConstPtr;
-    typedef OPENRAVE_FUNCTION<KinBodyInfoPtr(KinBodyConstPtr)> GetInfoFn;
-    typedef OPENRAVE_FUNCTION<void (KinBodyInfoPtr)> SynchronizeCallbackFn;
+    typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
+    typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
+    typedef boost::function<KinBodyInfoPtr(KinBodyConstPtr)> GetInfoFn;
+    typedef boost::function<void (KinBodyInfoPtr)> SynchronizeCallbackFn;
 
     MobySpace(EnvironmentBasePtr penv, const GetInfoFn& infofn, bool bPhysics) : _penv(penv), GetInfo(infofn), _bPhysics(bPhysics) 
     {
@@ -103,7 +103,7 @@ private:
 
     }
 
-    bool InitEnvironment(OPENRAVE_SHARED_PTR<Moby::Simulator> world)
+    bool InitEnvironment(boost::shared_ptr<Moby::Simulator> world)
     {
         _world = world;
 
@@ -115,10 +115,10 @@ private:
         _world.reset();
     }
 
-    inline OPENRAVE_SHARED_PTR<KinBodyInfo::LINK> DeriveLink(OPENRAVE_SHARED_PTR<KinBody::Link> plink) {
+    inline boost::shared_ptr<KinBodyInfo::LINK> DeriveLink(boost::shared_ptr<KinBody::Link> plink) {
 
-        OPENRAVE_SHARED_PTR<KinBodyInfo::LINK> link;
-        link = OPENRAVE_SHARED_PTR<KinBodyInfo::LINK>(new KinBodyInfo::LINK());
+        boost::shared_ptr<KinBodyInfo::LINK> link;
+        link = boost::shared_ptr<KinBodyInfo::LINK>(new KinBodyInfo::LINK());
         std::cout << "processing link[" << plink->GetName() << "], mass[" << plink->GetMass() << "]"<< std::endl; 
         if(plink->GetMass() < 1e-12)
         {
@@ -163,7 +163,7 @@ private:
         return link;
     }
 
-    inline Moby::JointPtr DeriveJoint(KinBodyInfoPtr pinfo, OPENRAVE_SHARED_PTR<KinBody::Joint> pjoint) {
+    inline Moby::JointPtr DeriveJoint(KinBodyInfoPtr pinfo, boost::shared_ptr<KinBody::Joint> pjoint) {
         Moby::RigidBodyPtr inboard, outboard; // inboard=parent, outboard=child
         Moby::JointPtr joint;
    
@@ -184,7 +184,7 @@ private:
             case KinBody::JointHinge: 
             {
                 // map a Moby revolute joint
-                OPENRAVE_SHARED_PTR<Moby::RevoluteJoint> rjoint(new Moby::RevoluteJoint);
+                boost::shared_ptr<Moby::RevoluteJoint> rjoint(new Moby::RevoluteJoint);
                 rjoint->id = pjoint->GetName();
         
                 // set the location of the joint with respect to body0 and body1
@@ -218,7 +218,7 @@ private:
             {
 /*
                 // map a Moby prismatic joint
-                OPENRAVE_SHARED_PTR<Moby::PrismaticJoint> sjoint(new Moby::PrismaticJoint);
+                boost::shared_ptr<Moby::PrismaticJoint> sjoint(new Moby::PrismaticJoint);
                 sjoint->id = pjoint->GetName();
         
                 // set the location of the joint with respect to body0 and body1
@@ -250,13 +250,13 @@ private:
             }
             case KinBody::JointSpherical: 
             {
-                OPENRAVE_SHARED_PTR<Moby::SphericalJoint> sjoint(new Moby::SphericalJoint);
+                boost::shared_ptr<Moby::SphericalJoint> sjoint(new Moby::SphericalJoint);
                 joint = sjoint;
                 break;
             }
             case KinBody::JointUniversal: 
             {
-                OPENRAVE_SHARED_PTR<Moby::UniversalJoint> sjoint(new Moby::UniversalJoint);
+                boost::shared_ptr<Moby::UniversalJoint> sjoint(new Moby::UniversalJoint);
                 joint = sjoint;
                 
                 break;
@@ -304,10 +304,10 @@ private:
         if(pbody->GetLinks().size() == 1) 
         {
             // branch already asserted size
-            OPENRAVE_SHARED_PTR<KinBody::Link> plink = pbody->GetLinks()[0];
+            boost::shared_ptr<KinBody::Link> plink = pbody->GetLinks()[0];
 
             // initialize the Moby compatible link by deriving from the OpenRave link
-            OPENRAVE_SHARED_PTR<KinBodyInfo::LINK> link = DeriveLink(plink);
+            boost::shared_ptr<KinBodyInfo::LINK> link = DeriveLink(plink);
 
             // if the link failed to be derived (most likely due to being just a collision hull) don't add it
             if(!link)
@@ -345,7 +345,7 @@ private:
             vbodyjoints.insert(vbodyjoints.end(),pbody->GetJoints().begin(),pbody->GetJoints().end());
             vbodyjoints.insert(vbodyjoints.end(),pbody->GetPassiveJoints().begin(),pbody->GetPassiveJoints().end());
             vector<Moby::JointPtr> mojoints;      // for adding the joints to the articulated body
-            vector<OPENRAVE_SHARED_PTR<KinBodyInfo::LINK> > veclinks;
+            vector<boost::shared_ptr<KinBodyInfo::LINK> > veclinks;
             mojoints.reserve(pbody->GetJoints().size()+pbody->GetPassiveJoints().size());
 
             // iterate over the set of links in the OpenRave environment
@@ -353,7 +353,7 @@ private:
             FOREACHC(itlink, pbody->GetLinks()) 
             {
                 // initialize the Moby compatible link by deriving from the OpenRave link
-                OPENRAVE_SHARED_PTR<KinBodyInfo::LINK> link = DeriveLink(*itlink);
+                boost::shared_ptr<KinBodyInfo::LINK> link = DeriveLink(*itlink);
 
                 // if the link failed to be derived (most likely due to being just a collision hull) don't add it
                 if(!link)
@@ -566,7 +566,7 @@ private:
         return Ravelin::Origin3d(v.x, v.y, v.z);
     }
 
-    static inline Ravelin::SForced GetRavelinSForce(const Vector& force, const Vector& torque, OPENRAVE_SHARED_PTR<const Ravelin::Pose3d> pose)
+    static inline Ravelin::SForced GetRavelinSForce(const Vector& force, const Vector& torque, boost::shared_ptr<const Ravelin::Pose3d> pose)
     {
         return Ravelin::SForced(Ravelin::Vector3d(force[0],force[1],force[2],Moby::GLOBAL), Ravelin::Vector3d(torque[0],torque[1],torque[2]),pose);
     }
@@ -613,7 +613,7 @@ private:
         {
             return;
         }
-        BOOST_ASSERT(OPENRAVE_SHARED_PTR<MobySpace>(pinfo->_mobyspace) == shared_from_this());
+        BOOST_ASSERT(boost::shared_ptr<MobySpace>(pinfo->_mobyspace) == shared_from_this());
         BOOST_ASSERT(pinfo->pbody==pbody);
         InitKinBody(pbody,pinfo);
     }
@@ -627,7 +627,7 @@ private:
         // output buffer for state?
 
         // try to process as an articulated body
-        Moby::ArticulatedBodyPtr ab = OPENRAVE_DYNAMIC_POINTER_CAST<Moby::ArticulatedBody>(db);
+        Moby::ArticulatedBodyPtr ab = boost::dynamic_pointer_cast<Moby::ArticulatedBody>(db);
         if(!!ab) 
         {
             vector<Moby::JointPtr> joints = ab->get_joints();
@@ -682,7 +682,7 @@ private:
         }
 
         // otherwise try to process as a rigid body
-        Moby::RigidBodyPtr rb = OPENRAVE_DYNAMIC_POINTER_CAST<Moby::RigidBody>(db);
+        Moby::RigidBodyPtr rb = boost::dynamic_pointer_cast<Moby::RigidBody>(db);
         if(!!rb) 
         {
 
@@ -716,7 +716,7 @@ private:
 private:
     EnvironmentBasePtr _penv;
     GetInfoFn GetInfo;
-    OPENRAVE_SHARED_PTR<Moby::Simulator> _world;
+    boost::shared_ptr<Moby::Simulator> _world;
     SynchronizeCallbackFn _synccallback;
     bool _bPhysics;
 
@@ -725,7 +725,7 @@ private:
     template<class T>
     class _CompareSharedPtrs {
     public:
-       bool operator()(OPENRAVE_SHARED_PTR<T> a, OPENRAVE_SHARED_PTR<T> b) const {
+       bool operator()(boost::shared_ptr<T> a, boost::shared_ptr<T> b) const {
           return a.get() < b.get();
        }
     };
@@ -738,7 +738,7 @@ private:
     map<Moby::RigidBodyPtr, Ravelin::SVelocityd, _CompareSharedPtrs<Moby::RigidBody> > _mapVelocity;
 
 public:
-    OPENRAVE_SHARED_PTR<Moby::GravityForce> _gravity;
+    boost::shared_ptr<Moby::GravityForce> _gravity;
 
 };
 

@@ -565,7 +565,7 @@ typedef double IkReal;
  */
 IKFAST_API bool ComputeIk(const IkReal* eetrans, const IkReal* eerot, const IkReal* pfree, ikfast::IkSolutionListBase<IkReal>& solutions);
 
-/** \brief Similar to ComputeIk except takes OpenRAVE OPENRAVE_SHARED_PTR<RobotBase::Manipulator>*
+/** \brief Similar to ComputeIk except takes OpenRAVE boost::shared_ptr<RobotBase::Manipulator>*
  */
 IKFAST_API bool ComputeIk2(const IkReal* eetrans, const IkReal* eerot, const IkReal* pfree, ikfast::IkSolutionListBase<IkReal>& solutions, void* pOpenRAVEManip);
 

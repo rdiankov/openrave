@@ -88,7 +88,7 @@ bool WorkspaceTrajectoryParameters::endElement(const std::string& name)
     // _ss is an internal stringstream that holds the data of the tag
     if( !!_pcurreader ) {
         if( _pcurreader->endElement(name) ) {
-            xmlreaders::TrajectoryReaderPtr ptrajreader = OPENRAVE_DYNAMIC_POINTER_CAST<xmlreaders::TrajectoryReader>(_pcurreader);
+            xmlreaders::TrajectoryReaderPtr ptrajreader = boost::dynamic_pointer_cast<xmlreaders::TrajectoryReader>(_pcurreader);
             if( !!ptrajreader ) {
                 workspacetraj = ptrajreader->GetTrajectory();
             }

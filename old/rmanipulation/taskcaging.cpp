@@ -28,11 +28,11 @@ public:
         }
         dReal time;
         KinBodyPtr ptarget;
-        OPENRAVE_SHARED_PTR<Trajectory> ptraj;
+        boost::shared_ptr<Trajectory> ptraj;
     };
 
     // discrete algorithm
-    class ConstrainedTaskData : public OPENRAVE_ENABLE_SHARED_FROM_THIS<ConstrainedTaskData> {
+    class ConstrainedTaskData : public boost::enable_shared_from_this<ConstrainedTaskData> {
 public:
         struct FEATURES
         {
@@ -295,7 +295,7 @@ public:
                 ptarget->SetDOFValues(vtargvalues);
 
                 // sample the grasp and execute in random permutation order (for now just select one grasp)
-                OPENRAVE_SHARED_PTR<vector<Transform> > vgrasps = Eval(pNewSample) < fGoalThresh ? pvGraspContactSet : pvGraspSet;
+                boost::shared_ptr<vector<Transform> > vgrasps = Eval(pNewSample) < fGoalThresh ? pvGraspContactSet : pvGraspSet;
                 if( SampleIkSolution(vgrasps->at(RaveRandomInt()%vgrasps->size()), vector<dReal>(), pNewSample))
                     return true;
             }
@@ -309,7 +309,7 @@ public:
 
         virtual bool SampleNeigh(vector<dReal>& pNewSample, const vector<dReal>& pCurSample, dReal fRadius)
         {
-            map<int, OPENRAVE_SHARED_PTR<FINDGRASPDATA> >::iterator itgrasp;
+            map<int, boost::shared_ptr<FINDGRASPDATA> >::iterator itgrasp;
             FORIT(itgrasp, mapgrasps)
             itgrasp->second->status = 0;
 
@@ -344,7 +344,7 @@ public:
                 ptarget->SetDOFValues(vtargvalues);
 
                 // choose a grasp
-                OPENRAVE_SHARED_PTR<FINDGRASPDATA> pdata;
+                boost::shared_ptr<FINDGRASPDATA> pdata;
                 itgrasp = mapgrasps.find(bestid);
                 if( itgrasp == mapgrasps.end() ) {
                     // create a new permuter
@@ -540,7 +540,7 @@ public:
         }
 
         // grasping
-        OPENRAVE_SHARED_PTR< vector< Transform > > pvGraspSet, pvGraspContactSet, pvGraspStartSet;
+        boost::shared_ptr< vector< Transform > > pvGraspSet, pvGraspContactSet, pvGraspStartSet;
         vector< list<GRASP> > vlistGraspSet;
         dReal fGraspThresh, fConfigThresh;
 
@@ -572,15 +572,15 @@ public:
 protected:
         struct FINDGRASPDATA
         {
-            OPENRAVE_SHARED_PTR<RandomPermutationExecutor> pexecutor;
-            OPENRAVE_SHARED_PTR< vector< Transform > > pgrasps;
+            boost::shared_ptr<RandomPermutationExecutor> pexecutor;
+            boost::shared_ptr< vector< Transform > > pgrasps;
             Transform tcurgrasp;
             Transform tlink;
             dReal fThresh2;
             int status;         // 0 not init, 1 init, 2 dead
         };
 
-        bool FindGraspPermutation(unsigned int index, OPENRAVE_SHARED_PTR<FINDGRASPDATA> pdata)
+        bool FindGraspPermutation(unsigned int index, boost::shared_ptr<FINDGRASPDATA> pdata)
         {
             return GraspDist(pdata->tcurgrasp, vector<dReal>(), pdata->tlink * pdata->pgrasps->at(index)) < pdata->fThresh2;
         }
@@ -593,7 +593,7 @@ protected:
         vector<dReal> vtargvalues, _vfreeparams, _vcurfreeparams;
         vector<dReal> _vfeatures;
         vector<dReal> _vRobotWeights;
-        map<int, OPENRAVE_SHARED_PTR<FINDGRASPDATA> > mapgrasps;
+        map<int, boost::shared_ptr<FINDGRASPDATA> > mapgrasps;
     };
 
     // used to prune grasps that are not caging a target object
@@ -743,11 +743,11 @@ private:
         vector<Transform> _vTargetTransforms;
     };
 
-    inline OPENRAVE_SHARED_PTR<TaskCaging> shared_problem() {
-        return OPENRAVE_STATIC_POINTER_CAST<TaskCaging>(shared_from_this());
+    inline boost::shared_ptr<TaskCaging> shared_problem() {
+        return boost::static_pointer_cast<TaskCaging>(shared_from_this());
     }
-    inline OPENRAVE_SHARED_PTR<TaskCaging const> shared_problem_const() const {
-        return OPENRAVE_STATIC_POINTER_CAST<TaskCaging const>(shared_from_this());
+    inline boost::shared_ptr<TaskCaging const> shared_problem_const() const {
+        return boost::static_pointer_cast<TaskCaging const>(shared_from_this());
     }
 
 public:
@@ -833,14 +833,14 @@ private:
         dReal fExploreProb = 0.02f;
 
         dReal fContactConfigDelta = 0.01f;     // how much to move in order to find the contact grasp set
-        OPENRAVE_SHARED_PTR<GraspConstraint> graspfn(new GraspConstraint());
+        boost::shared_ptr<GraspConstraint> graspfn(new GraspConstraint());
 
         KinBodyPtr ptarget;
         graspfn->fCagedConfig = 0.05f;
         graspfn->fIncrement = 0.005f;
         graspfn->_robot = _robot;
 
-        OPENRAVE_SHARED_PTR<ExplorationParameters> params(new ExplorationParameters());
+        boost::shared_ptr<ExplorationParameters> params(new ExplorationParameters());
         params->_nExpectedDataSize = 1000;
 
         vector<int> vTargetSides;
@@ -1005,14 +1005,14 @@ private:
 
     bool TaskConstrainedPlanner(ostream& sout, istream& sinput)
     {
-        OPENRAVE_SHARED_PTR<ConstrainedTaskData> taskdata(new ConstrainedTaskData());
+        boost::shared_ptr<ConstrainedTaskData> taskdata(new ConstrainedTaskData());
 
         int nLinkIndex=-1;
         string strsavetraj, strbodytraj;
 
         // randomized algorithm parameters
         string plannername;
-        OPENRAVE_SHARED_PTR<RAStarParameters> params(new RAStarParameters());
+        boost::shared_ptr<RAStarParameters> params(new RAStarParameters());
         params->fDistThresh = 0.03f;
         params->fRadius = 0.1f;
         params->fGoalCoeff = 1;
@@ -1199,12 +1199,12 @@ private:
 
         _robot->SetActiveDOFs(pmanip->GetArmIndices());
 
-        OPENRAVE_SHARED_PTR<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF()));
+        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF()));
 
         uint32_t basetime = utils::GetMilliTime(), finaltime;
         taskdata->SetRobot(_robot);
 
-        OPENRAVE_SHARED_PTR<Trajectory> ptrajtemp(RaveCreateTrajectory(GetEnv(),taskdata->GetDOF()));
+        boost::shared_ptr<Trajectory> ptrajtemp(RaveCreateTrajectory(GetEnv(),taskdata->GetDOF()));
         bool bReverseTrajectory = false;
 
         if( plannername.size() > 0 ) {
@@ -1297,7 +1297,7 @@ private:
 
             taskdata->SetState(params->vinitialconfig);
 
-            OPENRAVE_SHARED_PTR<PlannerBase> pra(RaveCreatePlanner(GetEnv(),plannername.c_str()));
+            boost::shared_ptr<PlannerBase> pra(RaveCreatePlanner(GetEnv(),plannername.c_str()));
             if( !pra ) {
                 RAVELOG_WARN(str(boost::format("could not find %s planner\n")%plannername));
                 return false;
@@ -1337,7 +1337,7 @@ private:
                 bool bIndependentCollision = pmanip->CheckIndependentCollision(report);
                 // check if non-manipulator links are in collision
                 if( !bIndependentCollision ) {
-                    OPENRAVE_SHARED_PTR< vector< Transform > > pvGraspSet = (realindex == 0 && !!taskdata->pvGraspStartSet && taskdata->pvGraspStartSet->size()>0) ? taskdata->pvGraspStartSet : taskdata->pvGraspSet;
+                    boost::shared_ptr< vector< Transform > > pvGraspSet = (realindex == 0 && !!taskdata->pvGraspStartSet && taskdata->pvGraspStartSet->size()>0) ? taskdata->pvGraspStartSet : taskdata->pvGraspSet;
                     FOREACH(it, *pvGraspSet) {
                         Transform tgrasp = Ttarget * *it;
 
@@ -1431,7 +1431,7 @@ private:
 
         if( strbodytraj.size() > 0 ) {
 
-            OPENRAVE_SHARED_PTR<Trajectory> pbodytraj(RaveCreateTrajectory(GetEnv(),taskdata->ptarget->GetDOF()));
+            boost::shared_ptr<Trajectory> pbodytraj(RaveCreateTrajectory(GetEnv(),taskdata->ptarget->GetDOF()));
 
             vector<Trajectory::TPOINT>::const_iterator itrobottraj = ptraj->GetPoints().begin();
             taskdata->ptarget->GetDOFValues(tp.q);
@@ -1475,7 +1475,7 @@ private:
         sout << *it << " ";
 
         if( strsavetraj.size() ) {
-            OPENRAVE_SHARED_PTR<Trajectory> pfulltraj(RaveCreateTrajectory(GetEnv(),_robot->GetDOF()));
+            boost::shared_ptr<Trajectory> pfulltraj(RaveCreateTrajectory(GetEnv(),_robot->GetDOF()));
             _robot->GetFullTrajectoryFromActive(pfulltraj, ptraj);
             ofstream f(strsavetraj.c_str());
             pfulltraj->serialize(f);
@@ -1493,7 +1493,7 @@ private:
 
         list< Transform > listGraspSet;
 
-        OPENRAVE_SHARED_PTR<ConstrainedTaskData> taskdata(new ConstrainedTaskData());
+        boost::shared_ptr<ConstrainedTaskData> taskdata(new ConstrainedTaskData());
 
         int nLinkIndex=-1;
         string strsavetraj, strbodytraj;
@@ -1664,7 +1664,7 @@ private:
         FOREACH(it, values)
         sout << *it << " ";
 
-        OPENRAVE_SHARED_PTR<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF()));
+        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF()));
         Trajectory::TPOINT tp;
         FOREACHR(itsol, vtrajectory) {
             tp.q.resize(0);
@@ -1678,7 +1678,7 @@ private:
 
         if( strbodytraj.size() > 0 ) {
 
-            OPENRAVE_SHARED_PTR<Trajectory> pbodytraj(RaveCreateTrajectory(GetEnv(),taskdata->ptarget->GetDOF()));
+            boost::shared_ptr<Trajectory> pbodytraj(RaveCreateTrajectory(GetEnv(),taskdata->ptarget->GetDOF()));
             vector<Trajectory::TPOINT>::const_iterator itrobottraj = ptraj->GetPoints().begin();
 
             taskdata->ptarget->GetDOFValues(tp.q);
@@ -1697,7 +1697,7 @@ private:
         }
 
         if( strsavetraj.size() ) {
-            OPENRAVE_SHARED_PTR<Trajectory> pfulltraj(RaveCreateTrajectory(GetEnv(),_robot->GetDOF()));
+            boost::shared_ptr<Trajectory> pfulltraj(RaveCreateTrajectory(GetEnv(),_robot->GetDOF()));
             _robot->GetFullTrajectoryFromActive(pfulltraj, ptraj);
             ofstream f(strsavetraj.c_str());
             pfulltraj->serialize(f);
@@ -1753,7 +1753,7 @@ private:
     }
 
     // relaxed task constraints
-    bool FindAllRelaxedForward(const vector<dReal>& qprev, int j, Trajectory* ptraj, OPENRAVE_SHARED_PTR<ConstrainedTaskData> taskdata)
+    bool FindAllRelaxedForward(const vector<dReal>& qprev, int j, Trajectory* ptraj, boost::shared_ptr<ConstrainedTaskData> taskdata)
     {
         //RAVELOG_WARN("%d\n", j);
         RobotBase::ManipulatorPtr pmanip = _robot->GetActiveManipulator();
@@ -1877,7 +1877,7 @@ private:
     }
 
     // simple task constraints
-    bool FindAllSimple(const vector<dReal>& qprev, int j, list<vector<dReal> >& vtrajectory, dReal fConfigThresh2, vector<list<vector<dReal> > >& vsolutions, OPENRAVE_SHARED_PTR<ConstrainedTaskData> taskdata)
+    bool FindAllSimple(const vector<dReal>& qprev, int j, list<vector<dReal> >& vtrajectory, dReal fConfigThresh2, vector<list<vector<dReal> > >& vsolutions, boost::shared_ptr<ConstrainedTaskData> taskdata)
     {
         FOREACH_NOINC(itsol, vsolutions[j]) {
 

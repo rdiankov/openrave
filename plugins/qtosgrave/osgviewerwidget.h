@@ -41,7 +41,7 @@ class QOSGViewerWidget : public QOpenGLWidget
 public:
 
     QOSGViewerWidget(EnvironmentBasePtr penv, const std::string &userdatakey,
-                     const OPENRAVE_FUNCTION<bool(int)> &onKeyDown = OPENRAVE_FUNCTION<bool(int)>(),
+                     const boost::function<bool(int)> &onKeyDown = boost::function<bool(int)>(),
                      double metersinunit = 1, QWidget *parent = 0);
 
     virtual ~QOSGViewerWidget();
@@ -257,7 +257,7 @@ protected:
     QTimer _timer; ///< Timer for repaint
     EnvironmentBasePtr _penv;
 
-    OPENRAVE_FUNCTION<bool(int)> _onKeyDown; ///< call whenever key press is detected
+    boost::function<bool(int)> _onKeyDown; ///< call whenever key press is detected
     bool _bSwitchMouseLeftMiddleButton;  ///< whether to switch mouse left button and middle button (camera control mode)
     bool _bLightOn; ///< whether lights are on or not
     bool _bIsSelectiveActive; ///< if true, then can select a new

@@ -18,7 +18,7 @@
 
 namespace OpenRAVE {
 
-SimpleSensorSystem::SimpleXMLReader::SimpleXMLReader(OPENRAVE_SHARED_PTR<XMLData> p) : _pdata(p)
+SimpleSensorSystem::SimpleXMLReader::SimpleXMLReader(boost::shared_ptr<XMLData> p) : _pdata(p)
 {
 }
 
@@ -91,7 +91,7 @@ void SimpleSensorSystem::SimpleXMLReader::characters(const std::string& ch)
 
 BaseXMLReaderPtr SimpleSensorSystem::CreateXMLReaderId(const string& xmlid, InterfaceBasePtr ptr, const AttributesList& atts)
 {
-    return BaseXMLReaderPtr(new SimpleXMLReader(OPENRAVE_SHARED_PTR<XMLData>(new XMLData(xmlid))));
+    return BaseXMLReaderPtr(new SimpleXMLReader(boost::shared_ptr<XMLData>(new XMLData(xmlid))));
 }
 
 UserDataPtr SimpleSensorSystem::RegisterXMLReaderId(EnvironmentBasePtr penv, const string& xmlid)
@@ -122,7 +122,7 @@ void SimpleSensorSystem::AddRegisteredBodies(const std::vector<KinBodyPtr>& vbod
 {
     // go through all bodies in the environment and check for mocap data
     FOREACHC(itbody, vbodies) {
-        OPENRAVE_SHARED_PTR<XMLData> pmocapdata = OPENRAVE_DYNAMIC_POINTER_CAST<XMLData>((*itbody)->GetReadableInterface(_xmlid));
+        boost::shared_ptr<XMLData> pmocapdata = boost::dynamic_pointer_cast<XMLData>((*itbody)->GetReadableInterface(_xmlid));
         if( !!pmocapdata ) {
             KinBody::ManageDataPtr p = AddKinBody(*itbody, pmocapdata);
             if( !!p ) {
@@ -135,9 +135,9 @@ void SimpleSensorSystem::AddRegisteredBodies(const std::vector<KinBodyPtr>& vbod
 KinBody::ManageDataPtr SimpleSensorSystem::AddKinBody(KinBodyPtr pbody, XMLReadableConstPtr _pdata)
 {
     BOOST_ASSERT(pbody->GetEnv()==GetEnv());
-    OPENRAVE_SHARED_PTR<XMLData const> pdata = OPENRAVE_STATIC_POINTER_CAST<XMLData const>(_pdata);
+    boost::shared_ptr<XMLData const> pdata = boost::static_pointer_cast<XMLData const>(_pdata);
     if( !pdata ) {
-        pdata = OPENRAVE_DYNAMIC_POINTER_CAST<XMLData const>(pbody->GetReadableInterface(_xmlid));
+        pdata = boost::dynamic_pointer_cast<XMLData const>(pbody->GetReadableInterface(_xmlid));
         if( !pdata ) {
             RAVELOG_VERBOSE(str(boost::format("failed to find manage data for body %s\n")%pbody->GetName()));
             return KinBody::ManageDataPtr();
@@ -150,7 +150,7 @@ KinBody::ManageDataPtr SimpleSensorSystem::AddKinBody(KinBodyPtr pbody, XMLReada
         return KinBody::ManageDataPtr();
     }
 
-    OPENRAVE_SHARED_PTR<BodyData> b = CreateBodyData(pbody, pdata);
+    boost::shared_ptr<BodyData> b = CreateBodyData(pbody, pdata);
     b->lastupdated = utils::GetMicroTime();
     _mapbodies[pbody->GetEnvironmentId()] = b;
     RAVELOG_VERBOSE(str(boost::format("system adding body %s (%s), total: %d\n")%pbody->GetName()%pbody->GetURI()%_mapbodies.size()));
@@ -189,7 +189,7 @@ bool SimpleSensorSystem::SwitchBody(KinBodyPtr pbody1, KinBodyPtr pbody2)
 {
     //boost::mutex::scoped_lock lock(_mutex);
     BODIES::iterator it = _mapbodies.find(pbody1->GetEnvironmentId());
-    OPENRAVE_SHARED_PTR<BodyData> pb1,pb2;
+    boost::shared_ptr<BodyData> pb1,pb2;
     if( it != _mapbodies.end() ) {
         pb1 = it->second;
     }
@@ -209,11 +209,11 @@ bool SimpleSensorSystem::SwitchBody(KinBodyPtr pbody1, KinBodyPtr pbody2)
     return true;
 }
 
-OPENRAVE_SHARED_PTR<SimpleSensorSystem::BodyData> SimpleSensorSystem::CreateBodyData(KinBodyPtr pbody, OPENRAVE_SHARED_PTR<XMLData const> pdata)
+boost::shared_ptr<SimpleSensorSystem::BodyData> SimpleSensorSystem::CreateBodyData(KinBodyPtr pbody, boost::shared_ptr<XMLData const> pdata)
 {
-    OPENRAVE_SHARED_PTR<XMLData> pnewdata(new XMLData(_xmlid));
+    boost::shared_ptr<XMLData> pnewdata(new XMLData(_xmlid));
     pnewdata->copy(pdata);
-    return OPENRAVE_SHARED_PTR<BodyData>(new BodyData(RaveInterfaceCast<SimpleSensorSystem>(shared_from_this()),pbody, pnewdata));
+    return boost::shared_ptr<BodyData>(new BodyData(RaveInterfaceCast<SimpleSensorSystem>(shared_from_this()),pbody, pnewdata));
 }
 
 void SimpleSensorSystem::_UpdateBodies(list<SimpleSensorSystem::SNAPSHOT>& listbodies)

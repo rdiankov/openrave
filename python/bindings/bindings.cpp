@@ -222,7 +222,7 @@ void init_python_bindings()
 
     stdstring_from_python_str();
 
-    class_<PyVoidHandle, OPENRAVE_SHARED_PTR<PyVoidHandle> >("VoidHandle")
+    class_<PyVoidHandle, boost::shared_ptr<PyVoidHandle> >("VoidHandle")
     .def("close",&PyVoidHandle::Close,"deprecated")
     .def("Close",&PyVoidHandle::Close)
     ;

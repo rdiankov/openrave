@@ -35,10 +35,10 @@ void DeleteItemCallbackSafe(QtOSGViewerWeakPtr wpt, Item* pItem)
 class ItemSelectionCallbackData : public UserData
 {
 public:
-    ItemSelectionCallbackData(const ViewerBase::ItemSelectionCallbackFn& callback, OPENRAVE_SHARED_PTR<QtOSGViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
+    ItemSelectionCallbackData(const ViewerBase::ItemSelectionCallbackFn& callback, boost::shared_ptr<QtOSGViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
     }
     virtual ~ItemSelectionCallbackData() {
-        OPENRAVE_SHARED_PTR<QtOSGViewer> pviewer = _pweakviewer.lock();
+        boost::shared_ptr<QtOSGViewer> pviewer = _pweakviewer.lock();
         if( !!pviewer ) {
             boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
             pviewer->_listRegisteredItemSelectionCallbacks.erase(_iterator);
@@ -48,17 +48,17 @@ public:
     list<UserDataWeakPtr>::iterator _iterator;
     ViewerBase::ItemSelectionCallbackFn _callback;
 protected:
-    OPENRAVE_WEAK_PTR<QtOSGViewer> _pweakviewer;
+    boost::weak_ptr<QtOSGViewer> _pweakviewer;
 };
-typedef OPENRAVE_SHARED_PTR<ItemSelectionCallbackData> ItemSelectionCallbackDataPtr;
+typedef boost::shared_ptr<ItemSelectionCallbackData> ItemSelectionCallbackDataPtr;
 
 class ViewerThreadCallbackData : public UserData
 {
 public:
-    ViewerThreadCallbackData(const ViewerBase::ViewerThreadCallbackFn& callback, OPENRAVE_SHARED_PTR<QtOSGViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
+    ViewerThreadCallbackData(const ViewerBase::ViewerThreadCallbackFn& callback, boost::shared_ptr<QtOSGViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
     }
     virtual ~ViewerThreadCallbackData() {
-        OPENRAVE_SHARED_PTR<QtOSGViewer> pviewer = _pweakviewer.lock();
+        boost::shared_ptr<QtOSGViewer> pviewer = _pweakviewer.lock();
         if( !!pviewer ) {
             boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
             pviewer->_listRegisteredViewerThreadCallbacks.erase(_iterator);
@@ -68,9 +68,9 @@ public:
     list<UserDataWeakPtr>::iterator _iterator;
     ViewerBase::ViewerThreadCallbackFn _callback;
 protected:
-    OPENRAVE_WEAK_PTR<QtOSGViewer> _pweakviewer;
+    boost::weak_ptr<QtOSGViewer> _pweakviewer;
 };
-typedef OPENRAVE_SHARED_PTR<ViewerThreadCallbackData> ViewerThreadCallbackDataPtr;
+typedef boost::shared_ptr<ViewerThreadCallbackData> ViewerThreadCallbackDataPtr;
 
 QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainWindow(NULL, Qt::Window), ViewerBase(penv)
 {
@@ -437,7 +437,7 @@ void QtOSGViewer::_UpdateViewerCallback()
                 listRegisteredViewerThreadCallbacks = _listRegisteredViewerThreadCallbacks;
             }
             FOREACH(it,listRegisteredViewerThreadCallbacks) {
-                ViewerThreadCallbackDataPtr pdata = OPENRAVE_DYNAMIC_POINTER_CAST<ViewerThreadCallbackData>(it->lock());
+                ViewerThreadCallbackDataPtr pdata = boost::dynamic_pointer_cast<ViewerThreadCallbackData>(it->lock());
                 if( !!pdata ) {
                     try {
                         pdata->_callback();
@@ -1918,7 +1918,7 @@ void QtOSGViewer::UpdateFromModel()
     FOREACH(itbody, vecbodies) {
         BOOST_ASSERT( !!itbody->pbody );
         KinBodyPtr pbody = itbody->pbody; // try to use only as an id, don't call any methods!
-        KinBodyItemPtr pitem = OPENRAVE_DYNAMIC_POINTER_CAST<KinBodyItem>(pbody->GetUserData(_userdatakey));
+        KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData(_userdatakey));
 
         if( !!pitem ) {
             if( !pitem->GetBody() ) {
@@ -1953,10 +1953,10 @@ void QtOSGViewer::UpdateFromModel()
                     }
 
                     if( pbody->IsRobot() ) {
-                        pitem = OPENRAVE_SHARED_PTR<RobotItem>(new RobotItem(_posgWidget->GetSceneRoot(), _posgWidget->GetFigureRoot(), OPENRAVE_STATIC_POINTER_CAST<RobotBase>(pbody), _viewGeometryMode), ITEM_DELETER);
+                        pitem = boost::shared_ptr<RobotItem>(new RobotItem(_posgWidget->GetSceneRoot(), _posgWidget->GetFigureRoot(), boost::static_pointer_cast<RobotBase>(pbody), _viewGeometryMode), ITEM_DELETER);
                     }
                     else {
-                        pitem = OPENRAVE_SHARED_PTR<KinBodyItem>(new KinBodyItem(_posgWidget->GetSceneRoot(), _posgWidget->GetFigureRoot(), pbody, _viewGeometryMode), ITEM_DELETER);
+                        pitem = boost::shared_ptr<KinBodyItem>(new KinBodyItem(_posgWidget->GetSceneRoot(), _posgWidget->GetFigureRoot(), pbody, _viewGeometryMode), ITEM_DELETER);
                     }
                     newdata = true;
 
@@ -1971,7 +1971,7 @@ void QtOSGViewer::UpdateFromModel()
                     newdata = true;
                 }
                 else {
-                    pitem = OPENRAVE_STATIC_POINTER_CAST<KinBodyItem>(pbody->GetUserData(_userdatakey));
+                    pitem = boost::static_pointer_cast<KinBodyItem>(pbody->GetUserData(_userdatakey));
                     BOOST_ASSERT( _mapbodies.find(pbody) != _mapbodies.end() && _mapbodies[pbody] == pitem );
                 }
             }
@@ -2036,13 +2036,13 @@ void QtOSGViewer::UpdateFromModel()
     }
 }
 
-OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> QtOSGViewer::LockEnvironment(uint64_t timeout,bool bUpdateEnvironment)
+boost::shared_ptr<EnvironmentMutex::scoped_try_lock> QtOSGViewer::LockEnvironment(uint64_t timeout,bool bUpdateEnvironment)
 {
     // try to acquire the lock
 #if BOOST_VERSION >= 103500
-    OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),boost::defer_lock_t()));
+    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),boost::defer_lock_t()));
 #else
-    OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
+    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
 #endif
     uint64_t basetime = utils::GetMicroTime();
     while(utils::GetMicroTime()-basetime<timeout ) {
@@ -2087,7 +2087,7 @@ void QtOSGViewer::_UpdateEnvironment(float fTimeElapsed)
     }
 }
 
-void QtOSGViewer::_PostToGUIThread(const OPENRAVE_FUNCTION<void()>& fn, bool block)
+void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, bool block)
 {
     if( _nQuitMainLoop != -1 ) {
         // viewer quit, so anything posted won't get processed

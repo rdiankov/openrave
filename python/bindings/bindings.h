@@ -95,12 +95,12 @@ class PyVoidHandle
 public:
     PyVoidHandle() {
     }
-    PyVoidHandle(OPENRAVE_SHARED_PTR<void> handle) : _handle(handle) {
+    PyVoidHandle(boost::shared_ptr<void> handle) : _handle(handle) {
     }
     void Close() {
         _handle.reset();
     }
-    OPENRAVE_SHARED_PTR<void> _handle;
+    boost::shared_ptr<void> _handle;
 };
 
 class PyVoidHandleConst
@@ -108,12 +108,12 @@ class PyVoidHandleConst
 public:
     PyVoidHandleConst() {
     }
-    PyVoidHandleConst(OPENRAVE_SHARED_PTR<void const> handle) : _handle(handle) {
+    PyVoidHandleConst(boost::shared_ptr<void const> handle) : _handle(handle) {
     }
     void Close() {
         _handle.reset();
     }
-    OPENRAVE_SHARED_PTR<void const> _handle;
+    boost::shared_ptr<void const> _handle;
 };
 
 template <typename T>
@@ -272,16 +272,16 @@ struct exception_translator
 };
 
 // register const versions of the classes
-//template <class T> inline T* get_pointer( OPENRAVE_SHARED_PTR<const T>
+//template <class T> inline T* get_pointer( boost::shared_ptr<const T>
 //const& p){
 //     return const_cast<T*>(p.get());
 //}
 //
-//template <class T> struct pintee< OPENRAVE_SHARED_PTR<const T> >{
+//template <class T> struct pintee< boost::shared_ptr<const T> >{
 //     typedef T type;
 //};
 //
-//boost::python::register_ptr_to_python< OPENRAVE_SHARED_PTR<const my_class> >();
+//boost::python::register_ptr_to_python< boost::shared_ptr<const my_class> >();
 
 template<typename T>
 struct float_from_number

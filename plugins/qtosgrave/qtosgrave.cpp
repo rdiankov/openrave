@@ -114,7 +114,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 #if 0
                     //RAVELOG_DEBUG("detect QApplication, so exiting from GUI thread in order to safely create\n");
                     RAVELOG_DEBUG("detect QApplication, so attempting to create new viewer in original GUI thread\n");
-                    OPENRAVE_SHARED_PTR<qtosgrave::QtOSGViewerCreator> creator(new qtosgrave::QtOSGViewerCreator(penv, sinput));
+                    boost::shared_ptr<qtosgrave::QtOSGViewerCreator> creator(new qtosgrave::QtOSGViewerCreator(penv, sinput));
                     // post on all of them
                     for(int i = 0; i < widgets.size(); ++i) {
                         QApplication::postEvent(widgets.at(i), new qtosgrave::MyCallbackEvent(boost::bind(&qtosgrave::QtOSGViewerCreator::ProcessEvent, creator)));

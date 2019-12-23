@@ -114,7 +114,7 @@ public:
             if( robot->GetActiveConfigurationSpecification() != ptraj->GetConfigurationSpecification() ) {
                 ptraj->Init(robot->GetActiveConfigurationSpecification());
             }
-            OPENRAVE_SHARED_PTR<MoveUnsync> pgoalfn(new MoveUnsync());
+            boost::shared_ptr<MoveUnsync> pgoalfn(new MoveUnsync());
             pgoalfn->thresh = 0;
             pgoalfn->vhandjoints = vhandjoints;
             pgoalfn->vhandgoal = vhandgoal;
@@ -135,7 +135,7 @@ public:
                 return true;
             }
 
-            OPENRAVE_SHARED_PTR<PlannerBase> planner(RaveCreatePlanner(penv,pplannername));
+            boost::shared_ptr<PlannerBase> planner(RaveCreatePlanner(penv,pplannername));
             if( !planner ) {
                 RAVELOG_WARN(str(boost::format("failed to find planner %s\n")%pplannername));
                 return false;
@@ -324,7 +324,7 @@ public:
             return true;
         }
 
-        OPENRAVE_FUNCTION<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;
+        boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;
 
         // statistics about last run
         int _iter;
@@ -343,7 +343,7 @@ protected:
         boost::numeric::ublas::matrix<T> _J, _Jt, _invJJt, _invJ, _error, _qdelta;
     };
 
-    static bool SetActiveTrajectory(RobotBasePtr robot, TrajectoryBasePtr pActiveTraj, bool bExecute, const string& strsavetraj, OPENRAVE_SHARED_PTR<ostream> pout,dReal fMaxVelMult=1)
+    static bool SetActiveTrajectory(RobotBasePtr robot, TrajectoryBasePtr pActiveTraj, bool bExecute, const string& strsavetraj, boost::shared_ptr<ostream> pout,dReal fMaxVelMult=1)
     {
         if( pActiveTraj->GetNumWaypoints() == 0 ) {
             return false;
@@ -536,7 +536,7 @@ class RandomPermutationExecutor
 public:
     RandomPermutationExecutor() : nextindex(-1) {
     }
-    RandomPermutationExecutor(const OPENRAVE_FUNCTION<bool(int)>& fn) : _fn(fn), nextindex(-1) {
+    RandomPermutationExecutor(const boost::function<bool(int)>& fn) : _fn(fn), nextindex(-1) {
     }
 
     /// returns the index of the permutation that the function returned true in
@@ -567,7 +567,7 @@ public:
         return -1;
     }
 
-    OPENRAVE_FUNCTION<bool(int)> _fn;
+    boost::function<bool(int)> _fn;
 
 private:
     std::vector<unsigned int> vpermutation;

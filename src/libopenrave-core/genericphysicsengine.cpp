@@ -31,12 +31,12 @@ public:
         std::vector< std::pair<Vector, Vector> > linkvelocities;
     };
 
-    OPENRAVE_SHARED_PTR<PhysicsData> _GetData(KinBodyConstPtr pbody) {
-        OPENRAVE_SHARED_PTR<PhysicsData> pdata = OPENRAVE_DYNAMIC_POINTER_CAST<PhysicsData>(pbody->GetUserData("_genericphysics_"));
+    boost::shared_ptr<PhysicsData> _GetData(KinBodyConstPtr pbody) {
+        boost::shared_ptr<PhysicsData> pdata = boost::dynamic_pointer_cast<PhysicsData>(pbody->GetUserData("_genericphysics_"));
         if( !pdata ) {
             // isn't initialized for some reason, this can happen during environment cloning
-            InitKinBody(OPENRAVE_CONST_POINTER_CAST<KinBody>(pbody)); // fixme
-            pdata = OPENRAVE_DYNAMIC_POINTER_CAST<PhysicsData>(pbody->GetUserData("_genericphysics_"));
+            InitKinBody(boost::const_pointer_cast<KinBody>(pbody)); // fixme
+            pdata = boost::dynamic_pointer_cast<PhysicsData>(pbody->GetUserData("_genericphysics_"));
         }
         return pdata;
     }
@@ -133,7 +133,7 @@ public:
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
         PhysicsEngineBase::Clone(preference,cloningoptions);
-        OPENRAVE_SHARED_PTR<GenericPhysicsEngine const> r = OPENRAVE_DYNAMIC_POINTER_CAST<GenericPhysicsEngine const>(preference);
+        boost::shared_ptr<GenericPhysicsEngine const> r = boost::dynamic_pointer_cast<GenericPhysicsEngine const>(preference);
         _vgravity = r->_vgravity;
     }
 

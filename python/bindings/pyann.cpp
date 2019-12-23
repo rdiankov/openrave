@@ -82,7 +82,7 @@ public:
 };
 
 // Constructor from list        TODO: change to iterator
-OPENRAVE_SHARED_PTR<ANNkd_tree>       init_from_list(object lst)
+boost::shared_ptr<ANNkd_tree>       init_from_list(object lst)
 {
     BOOST_ASSERT(sizeof(ANNdist)==8 || sizeof(ANNdist)==4);
     BOOST_ASSERT(sizeof(ANNidx)==4);
@@ -98,7 +98,7 @@ OPENRAVE_SHARED_PTR<ANNkd_tree>       init_from_list(object lst)
             pt[c] = extract<ANNcoord>(lst[p][c]);
     }
 
-    OPENRAVE_SHARED_PTR<ANNkd_tree>   p(new ANNkd_tree(dataPts, npts, dimension));
+    boost::shared_ptr<ANNkd_tree>   p(new ANNkd_tree(dataPts, npts, dimension));
     return p;
 }
 
@@ -303,7 +303,7 @@ BOOST_PYTHON_MODULE(pyANN_int)
     ;
     exception_translator<pyann_exception>();
 
-    class_<ANNkd_tree, OPENRAVE_SHARED_PTR<ANNkd_tree> >("KDTree")
+    class_<ANNkd_tree, boost::shared_ptr<ANNkd_tree> >("KDTree")
     .def("__init__", make_constructor(&init_from_list))
     .def("__del__", &destroy_points)
 

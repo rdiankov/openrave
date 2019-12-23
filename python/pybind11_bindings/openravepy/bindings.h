@@ -220,6 +220,11 @@ inline T extract(handle h) {
 }
 template <typename T>
 inline object to_object(const T& t) {
+    // https://github.com/pybind/pybind11/issues/1201
+    // to_object can either 
+    // (1) cast a shared pointer to py::object, or
+    // (2) cast a Cpp type to py::object,
+    // but (x) cannot cast *PyObject to py::object
     return cast(t);
 }
 // https://stackoverflow.com/questions/26184190/alias-a-templated-function

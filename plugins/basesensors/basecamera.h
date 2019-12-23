@@ -24,7 +24,7 @@ protected:
     class BaseCameraXMLReader : public BaseXMLReader
     {
 public:
-        BaseCameraXMLReader(OPENRAVE_SHARED_PTR<BaseCameraSensor> psensor) : _psensor(psensor) {
+        BaseCameraXMLReader(boost::shared_ptr<BaseCameraSensor> psensor) : _psensor(psensor) {
         }
 
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts)
@@ -161,13 +161,13 @@ public:
 
 protected:
         BaseXMLReaderPtr _pcurreader;
-        OPENRAVE_SHARED_PTR<BaseCameraSensor> _psensor;
+        boost::shared_ptr<BaseCameraSensor> _psensor;
         stringstream ss;
     };
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-        return BaseXMLReaderPtr(new BaseCameraXMLReader(OPENRAVE_DYNAMIC_POINTER_CAST<BaseCameraSensor>(ptr)));
+        return BaseXMLReaderPtr(new BaseCameraXMLReader(boost::dynamic_pointer_cast<BaseCameraSensor>(ptr)));
     }
 
     BaseCameraSensor(EnvironmentBasePtr penv) : SensorBase(penv) {
@@ -255,7 +255,7 @@ public:
         _dataviewer.reset();
         _psensor_reference.reset();
         
-        OPENRAVE_SHARED_PTR<CameraGeomData> pgeom = _pgeom;
+        boost::shared_ptr<CameraGeomData> pgeom = _pgeom;
         if( !!pgeom && pgeom->sensor_reference.size() > 0 ) {
             // does not exist yet
             SensorBasePtr psensor_reference = GetEnv()->GetSensor(pgeom->sensor_reference);
@@ -271,13 +271,13 @@ public:
     virtual void SetSensorGeometry(SensorGeometryConstPtr pgeometry)
     {
         OPENRAVE_ASSERT_OP(pgeometry->GetType(), ==, ST_Camera );
-        *_pgeom = *OPENRAVE_STATIC_POINTER_CAST<CameraGeomData const>(pgeometry);
+        *_pgeom = *boost::static_pointer_cast<CameraGeomData const>(pgeometry);
         _Reset();
     }
 
     virtual bool SimulationStep(dReal fTimeElapsed)
     {
-        OPENRAVE_SHARED_PTR<CameraSensorData> pdata = _pdata;
+        boost::shared_ptr<CameraSensorData> pdata = _pdata;
 
         _RenderGeometry();
         if(( _pgeom->width > 0) &&( _pgeom->height > 0) && _bPower) {
@@ -311,7 +311,7 @@ public:
             }
             CameraGeomData* pgeom = new CameraGeomData();
             *pgeom = *_pgeom;
-            return SensorGeometryConstPtr(OPENRAVE_SHARED_PTR<CameraGeomData>(pgeom));
+            return SensorGeometryConstPtr(boost::shared_ptr<CameraGeomData>(pgeom));
         }
         return SensorGeometryConstPtr();
     }
@@ -319,7 +319,7 @@ public:
     virtual SensorDataPtr CreateSensorData(SensorType type)
     {
         if(( type == ST_Invalid) ||( type == ST_Camera) ) {
-            return SensorDataPtr(OPENRAVE_SHARED_PTR<CameraSensorData>(new CameraSensorData()));
+            return SensorDataPtr(boost::shared_ptr<CameraSensorData>(new CameraSensorData()));
         }
         return SensorDataPtr();
     }
@@ -329,7 +329,7 @@ public:
         if( _bPower &&( psensordata->GetType() == ST_Camera) ) {
             boost::mutex::scoped_lock lock(_mutexdata);
             if( _pdata->vimagedata.size() > 0 ) {
-                *OPENRAVE_DYNAMIC_POINTER_CAST<CameraSensorData>(psensordata) = *_pdata;
+                *boost::dynamic_pointer_cast<CameraSensorData>(psensordata) = *_pdata;
                 return true;
             }
         }
@@ -389,7 +389,7 @@ public:
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
         SensorBase::Clone(preference,cloningoptions);
-        OPENRAVE_SHARED_PTR<BaseCameraSensor const> r = OPENRAVE_DYNAMIC_POINTER_CAST<BaseCameraSensor const>(preference);
+        boost::shared_ptr<BaseCameraSensor const> r = boost::dynamic_pointer_cast<BaseCameraSensor const>(preference);
         // r->_pgeom->sensor_reference should already be correct
         *_pgeom = *r->_pgeom;
         _vColor = r->_vColor;
@@ -421,7 +421,7 @@ public:
 
     virtual void SetName(const std::string& newname)
     {
-        OPENRAVE_SHARED_PTR<CameraGeomData> pgeom = _pgeom;
+        boost::shared_ptr<CameraGeomData> pgeom = _pgeom;
         if( !!pgeom && pgeom->sensor_reference.size() > 0 ) {
             // does not exist yet
             SensorBasePtr psensor_reference = _psensor_reference.lock();
@@ -493,8 +493,8 @@ protected:
         }
     }
 
-    OPENRAVE_SHARED_PTR<CameraGeomData> _pgeom;
-    OPENRAVE_SHARED_PTR<CameraSensorData> _pdata;
+    boost::shared_ptr<CameraGeomData> _pgeom;
+    boost::shared_ptr<CameraSensorData> _pdata;
 
     // more geom stuff
     vector<uint8_t> _vimagedata;

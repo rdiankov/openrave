@@ -336,7 +336,7 @@ protected:
 class OpenRAVEKeyboardEventHandler : public osgGA::GUIEventHandler
 {
 public:
-    OpenRAVEKeyboardEventHandler(const OPENRAVE_FUNCTION<bool(const osgGA::GUIEventAdapter&, osgGA::GUIActionAdapter&)>& onKeyDown) : _onKeyDown(onKeyDown) {
+    OpenRAVEKeyboardEventHandler(const boost::function<bool(const osgGA::GUIEventAdapter&, osgGA::GUIActionAdapter&)>& onKeyDown) : _onKeyDown(onKeyDown) {
     }
 
     virtual bool handle(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa)
@@ -352,7 +352,7 @@ public:
     }
 
 private:
-    OPENRAVE_FUNCTION<bool(const osgGA::GUIEventAdapter&, osgGA::GUIActionAdapter&)> _onKeyDown; ///< called when key is pressed
+    boost::function<bool(const osgGA::GUIEventAdapter&, osgGA::GUIActionAdapter&)> _onKeyDown; ///< called when key is pressed
 };
 
 //void QOSGViewerWidget::_ShowSceneGraph(const std::string& currLevel,OSGNodePtr currNode)
@@ -377,7 +377,7 @@ private:
 //}
 
 QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey,
-                                   const OPENRAVE_FUNCTION<bool(int)>& onKeyDown, double metersinunit,
+                                   const boost::function<bool(int)>& onKeyDown, double metersinunit,
                                    QWidget* parent) : QOpenGLWidget(parent), _onKeyDown(onKeyDown)
 {
 
@@ -996,7 +996,7 @@ osg::ref_ptr<osg::Camera> QOSGViewerWidget::_CreateHUDCamera( int x, int y, int 
 KinBodyItemPtr QOSGViewerWidget::_GetItemFromName(const std::string& name)
 {
     KinBodyPtr pbody = _penv->GetKinBody(name);
-    KinBodyItemPtr pitem = OPENRAVE_DYNAMIC_POINTER_CAST<KinBodyItem>(pbody->GetUserData(_userdatakey));
+    KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData(_userdatakey));
     return pitem;
 }
 
@@ -1013,7 +1013,7 @@ KinBodyItemPtr QOSGViewerWidget::FindKinBodyItemFromOSGNode(OSGNodePtr node)
             if( !pitem ) {
                 RAVELOG_WARN("trying to use a deleted item\n");
             }
-            return OPENRAVE_DYNAMIC_POINTER_CAST<KinBodyItem>(pitem);
+            return boost::dynamic_pointer_cast<KinBodyItem>(pitem);
         }
     }
 
@@ -1144,7 +1144,7 @@ void QOSGViewerWidget::_InitializeLights(int nlights)
 //    FOREACH(itbody,vecbodies) {
 //        BOOST_ASSERT( !!itbody->pbody );
 //        KinBodyPtr pbody = itbody->pbody; // try to use only as an id, don't call any methods!
-//        KinBodyItemPtr pitem = OPENRAVE_DYNAMIC_POINTER_CAST<KinBodyItem>(pbody->GetUserData(_userdatakey));
+//        KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData(_userdatakey));
 //        if (!!pitem) {
 //            pitem->UpdateFromOSG();
 //        }

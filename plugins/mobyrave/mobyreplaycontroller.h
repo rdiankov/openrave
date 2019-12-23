@@ -205,7 +205,7 @@ class MobyReplayController : public ControllerBase
     class ControllerPropertiesXMLReader : public BaseXMLReader
     {
     public:
-        ControllerPropertiesXMLReader(OPENRAVE_SHARED_PTR<MobyReplayController> controller, const AttributesList& atts) : _controller(controller) {
+        ControllerPropertiesXMLReader(boost::shared_ptr<MobyReplayController> controller, const AttributesList& atts) : _controller(controller) {
         }
 
         virtual ProcessElement startElement(const string& name, const AttributesList& atts) {
@@ -275,14 +275,14 @@ class MobyReplayController : public ControllerBase
 
 protected:
         BaseXMLReaderPtr _pcurreader;
-        OPENRAVE_SHARED_PTR<MobyReplayController> _controller;
+        boost::shared_ptr<MobyReplayController> _controller;
         stringstream _ss;
     };
 
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-    	return BaseXMLReaderPtr(new ControllerPropertiesXMLReader(OPENRAVE_DYNAMIC_POINTER_CAST<MobyReplayController>(ptr),atts));
+    	return BaseXMLReaderPtr(new ControllerPropertiesXMLReader(boost::dynamic_pointer_cast<MobyReplayController>(ptr),atts));
     }
 
     MobyReplayController(EnvironmentBasePtr penv, std::istream& sinput) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true), _bCheckCollision(false), _bThrowExceptions(false), _bEnableLogging(false), _mrdfilename(""), _firstAction(true) {
@@ -363,12 +363,12 @@ public:
         }
 
         // get a reference to the physics engine
-        _mobyPhysics = OPENRAVE_DYNAMIC_POINTER_CAST<MobyPhysics>(_penv->GetPhysicsEngine());
+        _mobyPhysics = boost::dynamic_pointer_cast<MobyPhysics>(_penv->GetPhysicsEngine());
 
         //std::cout << "_mrdfilename: " << _mrdfilename << std::endl;
         if(_mrdfilename == "") throw; // mrdfile set via xml
 
-        _mrdfile = OPENRAVE_SHARED_PTR<MRDFile>(new MRDFile(_mrdfilename));
+        _mrdfile = boost::shared_ptr<MRDFile>(new MRDFile(_mrdfilename));
         _mrdfile->Open();
         // get the mrd lookup table
         _mrdLookups = _mrdfile->GetLookup();
@@ -815,17 +815,17 @@ private:
         return !!is;
     }
 
-    inline OPENRAVE_SHARED_PTR<MobyReplayController> shared_controller()
+    inline boost::shared_ptr<MobyReplayController> shared_controller()
     {
-        return OPENRAVE_STATIC_POINTER_CAST<MobyReplayController>(shared_from_this());
+        return boost::static_pointer_cast<MobyReplayController>(shared_from_this());
     }
 
-    inline OPENRAVE_SHARED_PTR<MobyReplayController const> shared_controller_const() const
+    inline boost::shared_ptr<MobyReplayController const> shared_controller_const() const
     {
-        return OPENRAVE_STATIC_POINTER_CAST<MobyReplayController const>(shared_from_this());
+        return boost::static_pointer_cast<MobyReplayController const>(shared_from_this());
     }
 
-    inline OPENRAVE_WEAK_PTR<MobyReplayController> weak_controller()
+    inline boost::weak_ptr<MobyReplayController> weak_controller()
     {
         return shared_controller();
     }
@@ -944,7 +944,7 @@ private:
         int offset;
         int robotlinkindex;
         KinBodyPtr pbody;
-        OPENRAVE_SHARED_PTR<Transform> trelativepose; ///< relative pose of body with link when grabbed. if it doesn't exist, then do not pre-transform the pose
+        boost::shared_ptr<Transform> trelativepose; ///< relative pose of body with link when grabbed. if it doesn't exist, then do not pre-transform the pose
     };
     std::vector<GrabBody> _vgrabbodylinks;
     dReal _fCommandTime;
@@ -962,25 +962,25 @@ private:
     CollisionReportPtr _report;
     UserDataPtr _cblimits;
     ConfigurationSpecification _samplespec;
-    OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> _gjointvalues, _gjointvelocities, _gtransform;
+    boost::shared_ptr<ConfigurationSpecification::Group> _gjointvalues, _gjointvelocities, _gtransform;
     boost::mutex _mutex;
 
     EnvironmentBasePtr _penv;
 
-    OPENRAVE_SHARED_PTR<MobyPhysics> _mobyPhysics;
+    boost::shared_ptr<MobyPhysics> _mobyPhysics;
 
     // templated comparator for comparing the value of two shared pointers
     // used predominantly to ensure maps keyed on shared pointers are hashed properly
     template<class T>
     class _CompareSharedPtrs {
     public:
-       bool operator()(OPENRAVE_SHARED_PTR<T> a, OPENRAVE_SHARED_PTR<T> b) const {
+       bool operator()(boost::shared_ptr<T> a, boost::shared_ptr<T> b) const {
           return a.get() < b.get();
        }
     };
 
     std::string _mrdfilename;
-    OPENRAVE_SHARED_PTR<MRDFile> _mrdfile;
+    boost::shared_ptr<MRDFile> _mrdfile;
 
     bool _firstAction;
     dReal _currentTime, _startTime, _simTime;

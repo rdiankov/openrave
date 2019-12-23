@@ -25,7 +25,7 @@ using namespace std;
 namespace cppexamples {
 
 /// \brief builds up the configuration space of a robot and a door
-class DoorConfiguration : public OPENRAVE_ENABLE_SHARED_FROM_THIS<DoorConfiguration>
+class DoorConfiguration : public boost::enable_shared_from_this<DoorConfiguration>
 {
     static dReal TransformDistance2(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
     {
@@ -225,12 +225,12 @@ public:
     Transform _tmanipprev, _tmanipmidreal;
     UserDataPtr _ikfilter;
 
-    OPENRAVE_SHARED_PTR<planningutils::SimpleDistanceMetric> _robotdistmetric, _doordistmetric;
-    OPENRAVE_SHARED_PTR<planningutils::SimpleNeighborhoodSampler> _robotsamplefn, _doorsamplefn;
-    OPENRAVE_SHARED_PTR<planningutils::LineCollisionConstraint> _collision;
+    boost::shared_ptr<planningutils::SimpleDistanceMetric> _robotdistmetric, _doordistmetric;
+    boost::shared_ptr<planningutils::SimpleNeighborhoodSampler> _robotsamplefn, _doorsamplefn;
+    boost::shared_ptr<planningutils::LineCollisionConstraint> _collision;
 };
 
-typedef OPENRAVE_SHARED_PTR<DoorConfiguration> DoorConfigurationPtr;
+typedef boost::shared_ptr<DoorConfiguration> DoorConfigurationPtr;
 
 class PlanningDoorExample : public OpenRAVEExample
 {

@@ -46,7 +46,7 @@
 
 //#define INTERFACE_PREDELETER boost::bind(&RaveDatabase::_InterfaceDestroyCallbackShared,shared_from_this(),_1)
 
-#define INTERFACE_PREDELETER OPENRAVE_FUNCTION<void(void const*)>()
+#define INTERFACE_PREDELETER boost::function<void(void const*)>()
 #define INTERFACE_POSTDELETER(name, plugin) boost::bind(&RaveDatabase::_InterfaceDestroyCallbackSharedPost,shared_from_this(),name, plugin)
 
 #include <boost/thread/condition.hpp>
@@ -61,14 +61,14 @@ const char s_filesep = '/';
 namespace OpenRAVE {
 
 /// \brief database of interfaces from plugins
-class RaveDatabase : public OPENRAVE_ENABLE_SHARED_FROM_THIS<RaveDatabase>
+class RaveDatabase : public boost::enable_shared_from_this<RaveDatabase>
 {
     struct RegisteredInterface : public UserData
     {
-        RegisteredInterface(InterfaceType type, const std::string& name, const OPENRAVE_FUNCTION<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn, OPENRAVE_SHARED_PTR<RaveDatabase> database) : _type(type), _name(name), _createfn(createfn), _database(database) {
+        RegisteredInterface(InterfaceType type, const std::string& name, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn, boost::shared_ptr<RaveDatabase> database) : _type(type), _name(name), _createfn(createfn), _database(database) {
         }
         virtual ~RegisteredInterface() {
-            OPENRAVE_SHARED_PTR<RaveDatabase> database = _database.lock();
+            boost::shared_ptr<RaveDatabase> database = _database.lock();
             if( !!database ) {
                 boost::mutex::scoped_lock lock(database->_mutex);
                 database->_listRegisteredInterfaces.erase(_iterator);
@@ -77,18 +77,18 @@ class RaveDatabase : public OPENRAVE_ENABLE_SHARED_FROM_THIS<RaveDatabase>
 
         InterfaceType _type;
         std::string _name;
-        OPENRAVE_FUNCTION<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)> _createfn;
-        std::list< OPENRAVE_WEAK_PTR<RegisteredInterface> >::iterator _iterator;
+        boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)> _createfn;
+        std::list< boost::weak_ptr<RegisteredInterface> >::iterator _iterator;
 protected:
-        OPENRAVE_WEAK_PTR<RaveDatabase> _database;
+        boost::weak_ptr<RaveDatabase> _database;
     };
-    typedef OPENRAVE_SHARED_PTR<RegisteredInterface> RegisteredInterfacePtr;
+    typedef boost::shared_ptr<RegisteredInterface> RegisteredInterfacePtr;
 
 public:
-    class Plugin : public UserData, public OPENRAVE_ENABLE_SHARED_FROM_THIS<Plugin>
+    class Plugin : public UserData, public boost::enable_shared_from_this<Plugin>
     {
 public:
-        Plugin(OPENRAVE_SHARED_PTR<RaveDatabase> pdatabase) : _pdatabase(pdatabase), plibrary(NULL), pfnCreate(NULL), pfnCreateNew(NULL), pfnGetPluginAttributes(NULL), pfnGetPluginAttributesNew(NULL), pfnDestroyPlugin(NULL), pfnOnRaveInitialized(NULL), pfnOnRavePreDestroy(NULL), _bShutdown(false), _bInitializing(true), _bHasCalledOnRaveInitialized(false) {
+        Plugin(boost::shared_ptr<RaveDatabase> pdatabase) : _pdatabase(pdatabase), plibrary(NULL), pfnCreate(NULL), pfnCreateNew(NULL), pfnGetPluginAttributes(NULL), pfnGetPluginAttributesNew(NULL), pfnDestroyPlugin(NULL), pfnOnRaveInitialized(NULL), pfnOnRavePreDestroy(NULL), _bShutdown(false), _bInitializing(true), _bHasCalledOnRaveInitialized(false) {
         }
         virtual ~Plugin() {
             Destroy();
@@ -117,7 +117,7 @@ public:
                     if( pfnDestroyPlugin != NULL ) {
                         pfnDestroyPlugin();
                     }
-                    OPENRAVE_SHARED_PTR<RaveDatabase> pdatabase = _pdatabase.lock();
+                    boost::shared_ptr<RaveDatabase> pdatabase = _pdatabase.lock();
                     if( !!pdatabase ) {
                         pdatabase->_QueueLibraryDestruction(plibrary);
                     }
@@ -357,7 +357,7 @@ protected:
             }
         }
 
-        OPENRAVE_WEAK_PTR<RaveDatabase> _pdatabase;
+        boost::weak_ptr<RaveDatabase> _pdatabase;
         std::set<pair< InterfaceType, string> > _setBadInterfaces;         ///< interfaces whose hash is wrong and shouldn't be tried for this plugin
         string ppluginname;
 
@@ -378,8 +378,8 @@ protected:
 
         friend class RaveDatabase;
     };
-    typedef OPENRAVE_SHARED_PTR<Plugin> PluginPtr;
-    typedef OPENRAVE_SHARED_PTR<Plugin const> PluginConstPtr;
+    typedef boost::shared_ptr<Plugin> PluginPtr;
+    typedef boost::shared_ptr<Plugin const> PluginConstPtr;
     friend class Plugin;
 
     RaveDatabase() : _bShutdown(false) {
@@ -562,7 +562,7 @@ protected:
             }
 
             // have to copy in order to allow plugins to register stuff inside their creation methods
-            std::list< OPENRAVE_WEAK_PTR<RegisteredInterface> > listRegisteredInterfaces;
+            std::list< boost::weak_ptr<RegisteredInterface> > listRegisteredInterfaces;
             list<PluginPtr> listplugins;
             {
                 boost::mutex::scoped_lock lock(_mutex);
@@ -826,7 +826,7 @@ protected:
         }
     }
 
-    UserDataPtr RegisterInterface(InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, const OPENRAVE_FUNCTION<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn) {
+    UserDataPtr RegisterInterface(InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn) {
         BOOST_ASSERT(interfacehash != NULL && envhash != NULL);
         BOOST_ASSERT(!!createfn);
         BOOST_ASSERT(name.size()>0);
@@ -1117,7 +1117,7 @@ protected:
     list<PluginPtr> _listplugins;
     mutable boost::mutex _mutex;     ///< changing plugin database
     std::list<void*> _listDestroyLibraryQueue;
-    std::list< OPENRAVE_WEAK_PTR<RegisteredInterface> > _listRegisteredInterfaces;
+    std::list< boost::weak_ptr<RegisteredInterface> > _listRegisteredInterfaces;
     std::list<std::string> _listplugindirs;
 
     /// \name plugin loading
@@ -1125,7 +1125,7 @@ protected:
     mutable boost::mutex _mutexPluginLoader;     ///< specifically for loading shared objects
     boost::condition _condLoaderHasWork;
     std::list<PluginPtr> _listPluginsToLoad;
-    OPENRAVE_SHARED_PTR<boost::thread> _threadPluginLoader;
+    boost::shared_ptr<boost::thread> _threadPluginLoader;
     bool _bShutdown;
     //@}
 };

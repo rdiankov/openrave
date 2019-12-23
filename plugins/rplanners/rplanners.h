@@ -111,7 +111,7 @@ public:
 class SpatialTreeBase
 {
 public:
-    virtual void Init(OPENRAVE_WEAK_PTR<PlannerBase> planner, int dof, OPENRAVE_FUNCTION<dReal(const std::vector<dReal>&, const std::vector<dReal>&)>& distmetricfn, dReal fStepLength, dReal maxdistance) = 0;
+    virtual void Init(boost::weak_ptr<PlannerBase> planner, int dof, boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)>& distmetricfn, dReal fStepLength, dReal maxdistance) = 0;
 
     /// inserts a node in the try
     virtual NodeBasePtr InsertNode(NodeBasePtr parent, const vector<dReal>& config, uint32_t userdata) = 0;
@@ -165,7 +165,7 @@ public:
         Reset();
     }
 
-    virtual void Init(OPENRAVE_WEAK_PTR<PlannerBase> planner, int dof, OPENRAVE_FUNCTION<dReal(const std::vector<dReal>&, const std::vector<dReal>&)>& distmetricfn, dReal fStepLength, dReal maxdistance)
+    virtual void Init(boost::weak_ptr<PlannerBase> planner, int dof, boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)>& distmetricfn, dReal fStepLength, dReal maxdistance)
     {
         Reset();
         if( !!_pNodesPool ) {
@@ -315,7 +315,7 @@ public:
         NodePtr pnode = nn.first;
         lastnode = nn.first;
         bool bHasAdded = false;
-        OPENRAVE_SHARED_PTR<PlannerBase> planner(_planner);
+        boost::shared_ptr<PlannerBase> planner(_planner);
         PlannerBase::PlannerParametersConstPtr params = planner->GetParameters();
         _vCurConfig.resize(_dof);
         std::copy(pnode->q, pnode->q+_dof, _vCurConfig.begin());
@@ -1045,14 +1045,14 @@ private:
     }
 
 
-    OPENRAVE_FUNCTION<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;
-    OPENRAVE_WEAK_PTR<PlannerBase> _planner;
+    boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;
+    boost::weak_ptr<PlannerBase> _planner;
     dReal _fStepLength;
     int _dof; ///< the number of values of each state
     int _fromgoal;
 
     // cover tree data structures
-    OPENRAVE_SHARED_PTR< boost::pool<> > _pNodesPool; ///< pool nodes are created from
+    boost::shared_ptr< boost::pool<> > _pNodesPool; ///< pool nodes are created from
 
     std::vector< std::set<NodePtr> > _vsetLevelNodes; ///< _vsetLevelNodes[enc(level)][node] holds the indices of the children of "node" of a given the level. enc(level) maps (-inf,inf) into [0,inf) so it can be indexed by the vector. Every node has an entry in a map here. If the node doesn't hold any children, then it is at the leaf of the tree. _vsetLevelNodes.at(_EncodeLevel(_maxlevel)) is the root.
 

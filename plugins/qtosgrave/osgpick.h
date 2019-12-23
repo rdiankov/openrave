@@ -27,8 +27,8 @@ class OSGPickHandler : public osgGA::GUIEventHandler
 {
 public:
     /// select(node, modkeymask) where node is the ray-picked node, and modkeymask is the modifier key mask currently pressed
-    typedef OPENRAVE_FUNCTION<void (const osgUtil::LineSegmentIntersector::Intersection&, int, int)> HandleRayPickFn;
-    typedef OPENRAVE_FUNCTION<void ()> DragFn;
+    typedef boost::function<void (const osgUtil::LineSegmentIntersector::Intersection&, int, int)> HandleRayPickFn;
+    typedef boost::function<void ()> DragFn;
 
     OSGPickHandler(const HandleRayPickFn& handleRayPickFn=HandleRayPickFn(), const DragFn& dragfn=DragFn());
     virtual ~OSGPickHandler();

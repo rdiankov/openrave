@@ -255,11 +255,11 @@ protected:
     SpatialTree< Node > _treeForward;
     std::vector< NodeBase* > _vecInitialNodes;
 
-    inline OPENRAVE_SHARED_PTR<RrtPlanner> shared_planner() {
-        return OPENRAVE_STATIC_POINTER_CAST<RrtPlanner>(shared_from_this());
+    inline boost::shared_ptr<RrtPlanner> shared_planner() {
+        return boost::static_pointer_cast<RrtPlanner>(shared_from_this());
     }
-    inline OPENRAVE_SHARED_PTR<RrtPlanner const> shared_planner_const() const {
-        return OPENRAVE_STATIC_POINTER_CAST<RrtPlanner const>(shared_from_this());
+    inline boost::shared_ptr<RrtPlanner const> shared_planner_const() const {
+        return boost::static_pointer_cast<RrtPlanner const>(shared_from_this());
     }
 };
 
@@ -918,7 +918,7 @@ public:
         return true;
     }
 protected:
-    OPENRAVE_SHARED_PTR<BasicRRTParameters> _parameters;
+    boost::shared_ptr<BasicRRTParameters> _parameters;
     dReal _fGoalBiasProb;
     bool _bOneStep;
     std::vector< std::vector<dReal> > _vecGoals;
@@ -1006,7 +1006,7 @@ public:
     }
 
 private:
-    OPENRAVE_SHARED_PTR<ExplorationParameters> _parameters;
+    boost::shared_ptr<ExplorationParameters> _parameters;
 
 };
 

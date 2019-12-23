@@ -52,10 +52,10 @@ static bool bDisplayGUI = true, bShowGUI = true;
 static EnvironmentBasePtr s_penv;
 static ViewerBasePtr s_pviewer; ///< static viewer created by the main thread. need to quit from its main loop
 
-//static OPENRAVE_SHARED_PTR<boost::thread> s_mainThread;
+//static boost::shared_ptr<boost::thread> s_mainThread;
 static string s_sceneFile;
 static string s_saveScene; // if not NULL, saves the scene and exits
-static OPENRAVE_SHARED_PTR<string> s_viewerName;
+static boost::shared_ptr<string> s_viewerName;
 
 static list< pair<string, string> > s_listModules; // modules to initially create
 static vector<string> vResourceFiles; // xml files to open
