@@ -1456,7 +1456,8 @@ public:
         }
         else {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-            return py::to_object(PyString_FromStringAndSize(&output[0], output.size()));
+            // https://github.com/pybind/pybind11/issues/1201
+            return py::cast<py::object>(PyString_FromStringAndSize(&output[0], output.size()));
 #else
             return py::to_object(py::handle<>(PyString_FromStringAndSize(&output[0], output.size())));
 #endif
