@@ -1170,7 +1170,7 @@ inline void svd3(const T* A, T* U, T* D, T* V)
     multtrans3(VVt, A, A);
     // get eigen values of V: VVt  V = V  D^2
     T afSubDiag[3];
-    std::copy(&VVt,&VVt[9],&V[0]);
+    std::copy(&VVt[0],&VVt[9],&V[0]);
     Tridiagonal3(V,eigenvalues,afSubDiag);
     QLAlgorithm3(V,eigenvalues,afSubDiag);
 
@@ -1186,7 +1186,15 @@ inline void svd3(const T* A, T* U, T* D, T* V)
 
     mult3_s3(U, A, V); // U = A V = U D
     for(int i = 0; i < 3; ++i) {
-        D[i] = sqrt(eigenvalues[i]);
+        if( eigenvalues[i] > 0 ) {
+            D[i] = sqrt(eigenvalues[i]);
+        }
+        else {
+            if( eigenvalues[i] < -std::numeric_limits<T>::epsilon() ) {
+                throw std::runtime_error("eigenvalue should be non-negative");
+            }
+            D[i] = 0; // close to 0
+        }
         T f = 1/D[i];
         U[i] *= f;
         U[i+3] *= f;
@@ -1201,22 +1209,22 @@ inline void svd3(const T* A, T* U, T* D, T* V)
     }
     if( maxval > 0 ) {
         // flip columns
-        swap(U[0], U[maxval]);
-        swap(U[3], U[3+maxval]);
-        swap(U[6], U[6+maxval]);
-        swap(V[0], V[maxval]);
-        swap(V[3], V[3+maxval]);
-        swap(V[6], V[6+maxval]);
-        swap(D[0], D[maxval]);
+        std::swap(U[0], U[maxval]);
+        std::swap(U[3], U[3+maxval]);
+        std::swap(U[6], U[6+maxval]);
+        std::swap(V[0], V[maxval]);
+        std::swap(V[3], V[3+maxval]);
+        std::swap(V[6], V[6+maxval]);
+        std::swap(D[0], D[maxval]);
     }
     if( D[1] < D[2] ) {
-        swap(U[1], U[2]);
-        swap(U[4], U[5]);
-        swap(U[7], U[8]);
-        swap(V[1], V[2]);
-        swap(V[4], V[5]);
-        swap(V[7], V[8]);
-        swap(D[1], D[2]);
+        std::swap(U[1], U[2]);
+        std::swap(U[4], U[5]);
+        std::swap(U[7], U[8]);
+        std::swap(V[1], V[2]);
+        std::swap(V[4], V[5]);
+        std::swap(V[7], V[8]);
+        std::swap(D[1], D[2]);
     }
 }
 
