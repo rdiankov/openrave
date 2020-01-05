@@ -112,6 +112,7 @@ bool RobotBase::ConnectedBody::SetActive(bool active)
             throw OPENRAVE_EXCEPTION_FORMAT("Cannot set ConnectedBody %s active to %s since robot %s is still in the environment", _info._name%active%pattachedrobot->GetName(), ORE_InvalidState);
         }
     }
+    pattachedrobot->_nActiveDOF = -1;  // depending on the connected body active states, available dof indices can be different
     _info._bIsActive = active;
     return true; // changed
 }
