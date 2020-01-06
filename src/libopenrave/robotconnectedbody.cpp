@@ -112,6 +112,7 @@ bool RobotBase::ConnectedBody::SetActive(bool active)
             throw OPENRAVE_EXCEPTION_FORMAT("Cannot set ConnectedBody %s active to %s since robot %s is still in the environment", _info._name%active%pattachedrobot->GetName(), ORE_InvalidState);
         }
     }
+    pattachedrobot->_nActiveDOF = -1;  // depending on the connected body active states, available dof indices can be different
     _info._bIsActive = active;
     return true; // changed
 }
@@ -423,6 +424,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             }
 
             {
+                // base link of a manipulator needs to be that of robot
                 LinkPtr pArmBaseLink = !GetLinks().empty() ? GetLinks()[0] : LinkPtr();
                 if( !pArmBaseLink ) {
                     throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for manipulator %s, could not find a base link of the robot.", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name, ORE_InvalidArguments);
@@ -441,6 +443,24 @@ void RobotBase::_ComputeConnectedBodiesInformation()
 
             if( !bFoundEffectorLink ) {
                 throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for manipulator %s, could not find linkname1 %s in connected body link infos!", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name%pnewmanipulator->_info._sEffectorLinkName, ORE_InvalidArguments);
+            }
+
+            // resolve joints
+            FOREACH(itGripperJointName, pnewmanipulator->_info._vGripperJointNames) {
+                // ensure that the joint exists in the connected body model
+                {
+                    bool bFound = false;
+                    FOREACH(itJointInfo, connectedBodyInfo._vJointInfos) {
+                        if((*(itJointInfo))->_name == *itGripperJointName ) {
+                            bFound = true;
+                            break;
+                        }
+                    }
+                    if( !bFound ) {
+                        throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for manipulator %s, could not find a joint %s.", connectedBody.GetName() % GetName() % pnewmanipulator->_info._name % (*itGripperJointName), ORE_InvalidArguments);
+                    }
+                }
+                *itGripperJointName = connectedBody._nameprefix + (*itGripperJointName);
             }
 
             _vecManipulators.push_back(pnewmanipulator);
