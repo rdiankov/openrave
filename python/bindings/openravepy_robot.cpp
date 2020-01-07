@@ -91,22 +91,22 @@ public:
         return pinfo;
     }
 
-	object SerializeJSON(object options=object())
-	{
-		rapidjson::Document doc;
-		RobotBase::AttachedSensorInfoPtr pInfo = GetAttachedSensorInfo();
-		pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(options, 0));
-		return toPyObject(doc);
-	}
+    object SerializeJSON(object options=object())
+    {
+    	rapidjson::Document doc;
+    	RobotBase::AttachedSensorInfoPtr pInfo = GetAttachedSensorInfo();
+    	pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(options, 0));
+    	return toPyObject(doc);
+    }
 
-	object DeserializeJSON(object obj, PyEnvironmentBasePtr penv)
-	{
-		rapidjson::Document doc;
-		toRapidJSONValue(obj, doc, doc.GetAllocator());
-		RobotBase::AttachedSensorInfo info;
-		info.DeserializeJSON(doc, GetEnvironment(penv));
-		_Update(info);
-	}
+    object DeserializeJSON(object obj, PyEnvironmentBasePtr penv)
+    {
+        rapidjson::Document doc;
+        toRapidJSONValue(obj, doc, doc.GetAllocator());
+        RobotBase::AttachedSensorInfo info;
+        info.DeserializeJSON(doc, GetEnvironment(penv));
+        _Update(info);
+    }
 
     object _name, _linkname;
     object _trelative;
@@ -114,14 +114,14 @@ public:
     PySensorGeometryPtr _sensorgeometry;
 
 private:
-	void _Update(const RobotBase::AttachedSensorInfo& info)
-	{
-		_name  = ConvertStringToUnicode(info._name);
+    void _Update(const RobotBase::AttachedSensorInfo& info)
+    {
+        _name  = ConvertStringToUnicode(info._name);
         _linkname = ConvertStringToUnicode(info._linkname);
         _trelative = ReturnTransform(info._trelative);
         _sensorname = ConvertStringToUnicode(info._sensorname);
         _sensorgeometry = toPySensorGeometry(info._sensorgeometry);
-	}
+    }
 };
 
 PyAttachedSensorInfoPtr toPyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& attachedSensorinfo)
@@ -1723,8 +1723,8 @@ void init_openravepy_robot()
                                 .def_readwrite("_trelative", &PyAttachedSensorInfo::_trelative)
                                 .def_readwrite("_sensorname", &PyAttachedSensorInfo::_sensorname)
                                 .def_readwrite("_sensorgeometry", &PyAttachedSensorInfo::_sensorgeometry)
-								.def("SerializeJSON", &PyAttachedSensorInfo::SerializeJSON, SerializeJSON_overloads(args("options"), DOXY_FN(RobotBase::AttachedSensorInfo, SerializeJSON)))
-								.def("DeserializeJSON", &PyAttachedSensorInfo::DeserializeJSON, args("obj", "penv"), DOXY_FN(RobotBase::AttachedSensorInfo, DeserializeJSON))
+                                .def("SerializeJSON", &PyAttachedSensorInfo::SerializeJSON, SerializeJSON_overloads(args("options"), DOXY_FN(RobotBase::AttachedSensorInfo, SerializeJSON)))
+                                .def("DeserializeJSON", &PyAttachedSensorInfo::DeserializeJSON, args("obj", "penv"), DOXY_FN(RobotBase::AttachedSensorInfo, DeserializeJSON))
     ;
 
     object connectedbodyinfo = class_<PyConnectedBodyInfo, boost::shared_ptr<PyConnectedBodyInfo> >("ConnectedBodyInfo", DOXY_CLASS(RobotBase::ConnectedBodyInfo))

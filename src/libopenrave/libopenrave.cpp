@@ -359,7 +359,7 @@ static boost::once_flag _onceRaveInitialize = BOOST_ONCE_INIT;
 class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_this<RaveGlobal>, public UserData
 {
     typedef std::map<std::string, CreateXMLReaderFn, CaseInsensitiveCompare> XMLREADERSMAP;
-	typedef XMLREADERSMAP READERSMAP;
+    typedef XMLREADERSMAP READERSMAP;
     typedef std::map<std::string, CreateJSONReaderFn, CaseInsensitiveCompare> JSONREADERSMAP;
 
     RaveGlobal()
