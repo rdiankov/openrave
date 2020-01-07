@@ -20,6 +20,44 @@
 
 namespace OpenRAVE {
 
+void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options) const
+{
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
+	RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_name", _name);
+	RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_linkname", _linkname);
+	RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_trelative", _trelative);
+	RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_sensorname", _sensorname);
+
+	// TODO: SensorGeometry
+	// rapidjson::Value sensorGeometryValue;
+	// if(!!_sensorgeometry)
+	// {
+	// 	_sensorgeometry->SerializzeJSON(sensorGeometryValue, allocator, options);
+	// }
+	// RAVE_SERIALIZEJSON_REQUIRED(value, "_sensorgeometry", sensorGeometryValue);
+
+}
+void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv)
+{
+	RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
+	RAVE_DESERIALIZEJSON_REQUIRED(value, "_name", _name);
+	RAVE_DESERIALIZEJSON_REQUIRED(value, "_linkname", _linkname);
+	RAVE_DESERIALIZEJSON_REQUIRED(value, "_trelative", _trelative);
+	RAVE_DESERIALIZEJSON_REQUIRED(value, "_sensorname", _sensorname);
+
+	// TODO: SensorGeometry
+	if(value.HasMember("_sensorgeometry")) {
+		SensorBasePtr psensor = RaveCreateSensor(penv, value["_sensorname"].GetString());
+		BaseJSONReaderPtr preader = RaveCallJSONReader(PT_Sensor, _sensorname, psensor, AttributesList());
+		if(!!preader) {
+			preader->DeserializeJSON(value["_sensorgeometry"]);
+			if(!!preader->GetReadable()) {
+				_sensorgeometry = boost::dynamic_pointer_cast<SensorBase::SensorGeometry>(preader->GetReadable());
+			}
+		}
+	}
+}
+
 RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot) : _probot(probot)
 {
 }
@@ -67,6 +105,8 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const RobotBase::
 RobotBase::AttachedSensor::~AttachedSensor()
 {
 }
+
+
 
 //void RobotBase::AttachedSensor::_ComputeInternalInformation()
 //{
