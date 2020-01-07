@@ -77,7 +77,7 @@ public:
     }
 
     PyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& info) {
-		_Update(info);
+        _Update(info);
     }
 
     RobotBase::AttachedSensorInfoPtr GetAttachedSensorInfo() const

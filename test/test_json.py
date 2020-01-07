@@ -55,6 +55,7 @@ class TestJSONSeralization(EnvironmentSetup):
                     _AssertEqual(newInfo._linkname, oldInfo._linkname)
                     _AssertEqual(newInfo._trelative, oldInfo._trelative)
                     _AssertEqual(newInfo._sensorname, oldInfo._sensorname)
+                    #TODO: sensorGeometry
 
     # # robot.h
     # def test_ManipulatorInfo(self):
