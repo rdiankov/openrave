@@ -37,6 +37,12 @@ class TestJSONSeralization(EnvironmentSetup):
         if isinstance(lo, np.ndarray):
             assert all(lo == ro)
 
+    def _TestAttachedSensorInfo(self, lo, ro):
+        _AssertEqual(newInfo._name, oldInfo._name)
+        _AssertEqual(newInfo._linkname, oldInfo._linkname)
+        _AssertEqual(newInfo._trelative, oldInfo._trelative)
+        _AssertEqual(newInfo._sensorname, oldInfo._sensorname)
+
     def test_AttachedSensorInfo(self):
         self.log.info('test serialize/deserialize AttachedSensorInfo')
         env = self.env
@@ -51,11 +57,31 @@ class TestJSONSeralization(EnvironmentSetup):
                     newInfo = AttachedSensorInfo()
                     oldInfo = attachedsensor.GetInfo()
                     newInfo.DeserializeJSON(oldInfo.SerializeJSON(), env)
-                    _AssertEqual(newInfo._name, oldInfo._name)
-                    _AssertEqual(newInfo._linkname, oldInfo._linkname)
-                    _AssertEqual(newInfo._trelative, oldInfo._trelative)
-                    _AssertEqual(newInfo._sensorname, oldInfo._sensorname)
+                    _TestAttachedSensorInfo(newInfo, oldInfo)
                     #TODO: sensorGeometry
+
+    def _TestConnectedBodyInfo(self, lo, ro):
+        _AssertEqual(lo._name, ro._name)
+        _AssertEqual(lo._linkename, ro._linkname)
+        _AssertEqual(lo._trelative, ro._trelative)
+        _AssertEqual(lo._url, ro._url)
+
+    def test_ConnectedBodyInfo(self):
+        self.log.info('test serialize/deserialize ConnectedBodyInfo')
+        env = self.env
+        with env:
+            for robotfile in g_robotfiles:
+                env.Reset()
+                robot = self.LoadRobot(robotfile)
+                connectedbodies = robot.GetConnectedBodies()
+                if len(connectedbodies) == 0:
+                    self.log.warn("ConnectedBodyInfo is empty in %s" % robotfile)
+                for connectedbody in connectedbodies:
+                    newInfo = ConnectedBodyInfo()
+                    oldInfo = connectedbody.GetInfo()
+                    newInfo.DeserializeJSON(oldInfo.SerializeJSON())
+                    _TestConnectedBodyInfo(newInfo, oldInfo)
+                    #TODO: other infos
 
     # # robot.h
     # def test_ManipulatorInfo(self):
@@ -71,20 +97,6 @@ class TestJSONSeralization(EnvironmentSetup):
     #                 emptyInfo.DeserializeJSON(manip.GetInfo().SerializeJSON())
     #                 assert emptyInfo == manip.GetInfo()
 
-    # def test_ConnectedBodyInfo(self):
-    #     self.log.info('test serialize/deserialize ConnectedBodyInfo')
-    #     env = self.env
-    #     with env:
-    #         for robotfile in g_robotfiles:
-    #             env.Reset()
-    #             robot = self.LoadRobot(robotfile)
-    #             connectedbodies = robot.GetConnectedBodies()
-    #             if len(connectedbodies) == 0:
-    #                 self.log.warn("ConnectedBodyInfo is empty in %s" % robotfile)
-    #             for connectedbody in connectedbodies:
-    #                 emptyInfo = ConnectedBodyInfo()
-    #                 emptyInfo.DeserializeJSON(connectedbody.GetInfo().SerializeJSON())
-    #                 assert emptyInfo == connectedbody.GetInfO()
 
     # # trajectory.h
     # def test_TrajectoryBase(self):
