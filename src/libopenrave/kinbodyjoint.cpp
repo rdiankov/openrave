@@ -820,18 +820,18 @@ KinBody::LinkPtr KinBody::Joint::GetHierarchyChildLink() const
     return _attachedbodies[1];
 }
 
-Vector KinBody::Joint::GetInternalHierarchyAxis(int iaxis) const
+const Vector& KinBody::Joint::GetInternalHierarchyAxis(int iaxis) const
 {
     return _vaxes.at(iaxis);
 }
 
-Transform KinBody::Joint::GetInternalHierarchyLeftTransform() const
+const Transform& KinBody::Joint::GetInternalHierarchyLeftTransform() const
 {
     OPENRAVE_ASSERT_FORMAT0(_bInitialized, "joint not initialized",ORE_NotInitialized);
     return _tLeftNoOffset;
 }
 
-Transform KinBody::Joint::GetInternalHierarchyRightTransform() const
+const Transform& KinBody::Joint::GetInternalHierarchyRightTransform() const
 {
     OPENRAVE_ASSERT_FORMAT0(_bInitialized, "joint not initialized",ORE_NotInitialized);
     return _tRightNoOffset;

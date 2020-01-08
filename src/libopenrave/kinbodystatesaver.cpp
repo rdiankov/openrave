@@ -77,7 +77,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
         return;
     }
     if( pbody->GetEnvironmentId() == 0 ) {
-        RAVELOG_WARN(str(boost::format("body %s not added to environment, skipping restore")%pbody->GetName()));
+        RAVELOG_WARN_FORMAT("env=%d, body %s not added to environment, skipping restore", pbody->GetEnv()->GetId()%pbody->GetName());
         return;
     }
     if( _options & Save_JointLimits ) {
