@@ -323,6 +323,11 @@ public:
         return index;
     }
 
+    virtual void AddSolutions(const IkSolutionList& otherSolutions)
+    {
+        _listsolutions.insert(_listsolutions.end(), otherSolutions._listsolutions.begin(), otherSolutions._listsolutions.end());
+    }
+
     virtual const IkSolutionBase<T>& GetSolution(size_t index) const
     {
         if( index >= _listsolutions.size() ) {

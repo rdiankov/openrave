@@ -2306,9 +2306,14 @@ protected:
                     KinBodyPtr pnewbody;
                     if( bCheckSharedResources ) {
                         FOREACH(itbody2,vecbodies) {
-                            if( (*itbody2)->GetName() == (*itbody)->GetName() && (*itbody2)->GetKinematicsGeometryHash() == (*itbody)->GetKinematicsGeometryHash() ) {
-                                pnewbody = *itbody2;
-                                break;
+                            if( !(*itbody2) ) {
+                                RAVELOG_WARN_FORMAT("env=%d, a body in vecbodies is not initialized", GetId());
+                            }
+                            else {
+                                if( (*itbody2)->GetName() == (*itbody)->GetName() && (*itbody2)->GetKinematicsGeometryHash() == (*itbody)->GetKinematicsGeometryHash() ) {
+                                    pnewbody = *itbody2;
+                                    break;
+                                }
                             }
                         }
                     }
@@ -2325,7 +2330,7 @@ protected:
                     _mapBodies[pnewbody->GetEnvironmentId()] = pnewbody;
                 }
                 catch(const std::exception &ex) {
-                    RAVELOG_ERROR_FORMAT("failed to clone body %s: %s", (*itbody)->GetName()%ex.what());
+                    RAVELOG_ERROR_FORMAT("env=%d, failed to clone body %s: %s", GetId()%(*itbody)->GetName()%ex.what());
                 }
             }
 

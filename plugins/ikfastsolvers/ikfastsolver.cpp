@@ -1242,23 +1242,35 @@ protected:
                 IkReal eetrans[3] = {(IkReal)p.first.x, (IkReal)p.first.y, (IkReal)p.first.z};
                 IkReal eerot[9] = {(IkReal)p.second, 0, 0, 0, 0, 0, 0, 0, 0};
                 bool bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
-                if( !bret ) {
+                if( !bret || (vfree.empty() && solutions.GetNumSolutions() < 8) ) {
 #ifdef OPENRAVE_HAS_LAPACK
                     if( _fRefineWithJacobianInverseAllowedError > 0 ) {
+                        ikfast::IkSolutionList<IkReal> solutionsWithJitter;
                         // since will be refining, can add a little error to see if IK gets recomputed
-                        eetrans[0] += 0.0001;
-                        eetrans[1] += 0.0001;
-                        eetrans[2] += 0.0001;
-                        eerot[0] += 0.0001;
-                        bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
-                        if( !bret ) {
-                            eetrans[0] -= 0.0002;
-                            eetrans[1] -= 0.0002;
-                            eetrans[2] -= 0.0002;
-                            eerot[0] -= 0.0002;
-                            bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
+                        eetrans[0] += 0.001;
+                        eetrans[1] += 0.001;
+                        eetrans[2] += 0.001;
+                        eerot[0] += 0.001;
+                        bool bretJitterPositive(false);
+                        bool bretJitterNegative(false);
+                        bretJitterPositive = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutionsWithJitter, &pmanip);
+                        if (bretJitterPositive) {
+                            solutions.AddSolutions(solutionsWithJitter);
+                            RAVELOG_VERBOSE_FORMAT("%d solutions are added from +jittered ikparam, now %d solutions in total", solutionsWithJitter.GetNumSolutions()%solutions.GetNumSolutions());
                         }
-                        RAVELOG_VERBOSE("ik failed, trying with slight jitter, ret=%d", (int)bret);
+                        if( !bretJitterPositive || (vfree.empty() && solutionsWithJitter.GetNumSolutions() < 8) ) {
+                            eetrans[0] -= 0.002;
+                            eetrans[1] -= 0.002;
+                            eetrans[2] -= 0.002;
+                            eerot[0] -= 0.002;
+                            bretJitterNegative = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutionsWithJitter, &pmanip);
+                            if (bretJitterNegative) {
+                                solutions.AddSolutions(solutionsWithJitter);
+                                RAVELOG_VERBOSE_FORMAT("%d solutions are added from -jittered ikparam, now %d solutions in total", solutionsWithJitter.GetNumSolutions()%solutions.GetNumSolutions());
+                            }
+                        }
+                        RAVELOG_VERBOSE_FORMAT("ik failed, trying with slight jitter, ret=%d", (int)(bretJitterNegative || bretJitterPositive));
+                        bret |= bretJitterNegative || bretJitterPositive;
                     }
 #endif
                 }
@@ -1396,6 +1408,18 @@ protected:
                     RAVELOG_VERBOSE("did not converge, try to prioritize translation at least\n");
                     ret = _jacobinvsolver.ComputeSolutionTranslation(param.GetTransform6D(), manip, vsolution, bIgnoreJointLimits);
                 }
+                if( ret == 0 ) {
+                    stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                    ss << "IkParameterization('" << param << "'); sol=[";
+                    FOREACH(it, vsolution) {
+                        ss << *it << ",";
+                    }
+                    ss << "]";
+                    RAVELOG_WARN_FORMAT("failed to refine solution lasterror=%f, %s", RaveSqrt(_jacobinvsolver._lasterror2)%ss.str());
+                }
+            }
+            else if( param.GetType() == IKP_TranslationZAxisAngle4D ) {
+                int ret = _jacobinvsolver.ComputeSolution(param, manip, vsolution);
                 if( ret == 0 ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                     ss << "IkParameterization('" << param << "'); sol=[";
