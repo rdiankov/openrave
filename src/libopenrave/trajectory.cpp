@@ -22,7 +22,7 @@
 namespace OpenRAVE {
 
 // To distinguish between binary and XML trajectory files
-static const uint16_t MAGIC_NUMBER = 0xbf74;    // Binary file header. b (binary). f (file). 74 (t, trajectory)
+static const uint16_t MAGIC_NUMBER = 0x62ff;
 static const uint16_t VERSION_NUMBER = 0x0001;  // Version number for serialization
 
 TrajectoryBase::TrajectoryBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Trajectory,penv)
@@ -149,7 +149,7 @@ void TrajectoryBase::serialize(std::ostream& O, int options) const
 InterfaceBasePtr TrajectoryBase::deserialize(std::istream& I)
 {
     // Check whether binary or XML file
-    I.seekg(0, I.beg);
+    stringstream::streampos beginningPosition = I.tellg();  // Save old position
     uint16_t binaryFileHeader = 0;
     ReadBinaryUInt16(I, binaryFileHeader);
 
@@ -190,8 +190,7 @@ InterfaceBasePtr TrajectoryBase::deserialize(std::istream& I)
     else
     {
         stringbuf buf;
-        I.seekg(0, I.beg);
-        stringstream::streampos pos = I.tellg();
+        I.seekg((size_t) beginningPosition);    // Move back to old position
         I.get(buf, 0); // get all the data, yes this is inefficient, not sure if there anyway to search in streams
         BOOST_ASSERT(!!I);
 
