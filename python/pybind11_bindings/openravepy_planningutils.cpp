@@ -627,7 +627,7 @@ void InitPlanningUtils()
                     "trajectory"_a,
                     "robot"_a,
                     "maxvelmult"_a = 1.0,
-                    "maxaccelmult"_a = "",
+                    "maxaccelmult"_a = 1.0,
                     "plannername"_a = "",
                     DOXY_FN1(ExtendActiveDOFWaypoint)
                     )
