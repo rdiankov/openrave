@@ -29,18 +29,7 @@ public:
         _vGripperJointNames = boost::python::list();
     }
     PyManipulatorInfo(const RobotBase::ManipulatorInfo& info) {
-        _name = ConvertStringToUnicode(info._name);
-        _sBaseLinkName = ConvertStringToUnicode(info._sBaseLinkName);
-        _sEffectorLinkName = ConvertStringToUnicode(info._sEffectorLinkName);
-        _tLocalTool = ReturnTransform(info._tLocalTool);
-        _vChuckingDirection = toPyArray(info._vChuckingDirection);
-        _vdirection = toPyVector3(info._vdirection);
-        _sIkSolverXMLId = info._sIkSolverXMLId;
-        boost::python::list vGripperJointNames;
-        FOREACHC(itname, info._vGripperJointNames) {
-            vGripperJointNames.append(ConvertStringToUnicode(*itname));
-        }
-        _vGripperJointNames = vGripperJointNames;
+        _Update(info);
     }
 
     RobotBase::ManipulatorInfoPtr GetManipulatorInfo() const
@@ -57,12 +46,48 @@ public:
         return pinfo;
     }
 
+    object SerializeJSON(object options=object())
+    {
+    	rapidjson::Document doc;
+    	RobotBase::ManipulatorInfoPtr pInfo = GetManipulatorInfo();
+    	pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(options, 0));
+    	return toPyObject(doc);
+    }
+
+    void DeserializeJSON(object obj, PyEnvironmentBasePtr pyenv)
+    {
+        rapidjson::Document doc;
+        toRapidJSONValue(obj, doc, doc.GetAllocator());
+        RobotBase::ManipulatorInfo info;
+        info.DeserializeJSON(doc, GetEnvironment(pyenv));
+        _Update(info);
+        return;
+    }
+
+
     object _name, _sBaseLinkName, _sEffectorLinkName;
     object _tLocalTool;
     object _vChuckingDirection;
     object _vdirection;
     std::string _sIkSolverXMLId;
     object _vGripperJointNames;
+
+private:
+    void _Update(const RobotBase::ManipulatorInfo& info)
+    {
+        _name = ConvertStringToUnicode(info._name);
+        _sBaseLinkName = ConvertStringToUnicode(info._sBaseLinkName);
+        _sEffectorLinkName = ConvertStringToUnicode(info._sEffectorLinkName);
+        _tLocalTool = ReturnTransform(info._tLocalTool);
+        _vChuckingDirection = toPyArray(info._vChuckingDirection);
+        _vdirection = toPyVector3(info._vdirection);
+        _sIkSolverXMLId = info._sIkSolverXMLId;
+        boost::python::list vGripperJointNames;
+        FOREACHC(itname, info._vGripperJointNames) {
+            vGripperJointNames.append(ConvertStringToUnicode(*itname));
+        }
+        _vGripperJointNames = vGripperJointNames;
+    }
 };
 
 PyManipulatorInfoPtr toPyManipulatorInfo(const RobotBase::ManipulatorInfo& manipulatorinfo)
@@ -99,15 +124,15 @@ public:
     	return toPyObject(doc);
     }
 
-    object DeserializeJSON(object obj, PyEnvironmentBasePtr penv)
+    void DeserializeJSON(object obj, PyEnvironmentBasePtr pyenv)
     {
         rapidjson::Document doc;
         toRapidJSONValue(obj, doc, doc.GetAllocator());
         RobotBase::AttachedSensorInfo info;
-        info.DeserializeJSON(doc, GetEnvironment(penv));
+        info.DeserializeJSON(doc, GetEnvironment(pyenv));
         _Update(info);
+        return;
     }
-
     object _name, _linkname;
     object _trelative;
     object _sensorname;
@@ -116,12 +141,13 @@ public:
 private:
     void _Update(const RobotBase::AttachedSensorInfo& info)
     {
-        _name  = ConvertStringToUnicode(info._name);
+        _name = ConvertStringToUnicode(info._name);
         _linkname = ConvertStringToUnicode(info._linkname);
         _trelative = ReturnTransform(info._trelative);
         _sensorname = ConvertStringToUnicode(info._sensorname);
         _sensorgeometry = toPySensorGeometry(info._sensorgeometry);
     }
+
 };
 
 PyAttachedSensorInfoPtr toPyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& attachedSensorinfo)
@@ -135,6 +161,48 @@ public:
     PyConnectedBodyInfo() {
     }
     PyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& info, PyEnvironmentBasePtr pyenv)
+    {
+        _Update(info, pyenv);
+    }
+
+    RobotBase::ConnectedBodyInfoPtr GetConnectedBodyInfo() const
+    {
+        RobotBase::ConnectedBodyInfoPtr pinfo(new RobotBase::ConnectedBodyInfo());
+        pinfo->_name = boost::python::extract<std::string>(_name);
+        pinfo->_linkname = boost::python::extract<std::string>(_linkname);
+        pinfo->_trelative = ExtractTransform(_trelative);
+        pinfo->_url = boost::python::extract<std::string>(_url);
+        return pinfo;
+    }
+
+    object SerializeJSON(object options=object())
+    {
+    	rapidjson::Document doc;
+    	RobotBase::ConnectedBodyInfoPtr pInfo = GetConnectedBodyInfo();
+    	pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(options, 0));
+    	return toPyObject(doc);
+    }
+
+    void DeserializeJSON(object obj, PyEnvironmentBasePtr pyenv)
+    {
+        rapidjson::Document doc;
+        toRapidJSONValue(obj, doc, doc.GetAllocator());
+        RobotBase::ConnectedBodyInfo info;
+        info.DeserializeJSON(doc, GetEnvironment(pyenv));
+        _Update(info, pyenv);
+        return;
+    }
+
+    object _name;
+    object _linkname;
+    object _trelative;
+    object _url;
+    object _linkInfos;
+    object _jointInfos;
+    object _manipulatorInfos;
+    object _attachedSensorInfos;
+private:
+    void _Update(const RobotBase::ConnectedBodyInfo& info, PyEnvironmentBasePtr pyenv)
     {
         _name = ConvertStringToUnicode(info._name);
         _linkname = ConvertStringToUnicode(info._linkname);
@@ -165,27 +233,6 @@ public:
         }
         _attachedSensorInfos = attachedSensorInfos;
     }
-
-    RobotBase::ConnectedBodyInfoPtr GetConnectedBodyInfo() const
-    {
-        RobotBase::ConnectedBodyInfoPtr pinfo(new RobotBase::ConnectedBodyInfo());
-        pinfo->_name = boost::python::extract<std::string>(_name);
-        pinfo->_linkname = boost::python::extract<std::string>(_linkname);
-        pinfo->_trelative = ExtractTransform(_trelative);
-        pinfo->_url = boost::python::extract<std::string>(_url);
-        // extract all the infos
-        return pinfo;
-    }
-
-    object _name;
-    object _linkname;
-    object _trelative;
-    object _url;
-    object _linkInfos;
-    object _jointInfos;
-    object _manipulatorInfos;
-    object _attachedSensorInfos;
-
 };
 
 PyConnectedBodyInfoPtr toPyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& connectedBodyInfo, PyEnvironmentBasePtr pyenv)
@@ -197,6 +244,7 @@ class PyRobotBase : public PyKinBody
 {
 protected:
     RobotBasePtr _probot;
+
 public:
     RobotBasePtr GetRobot() {
         return _probot;
@@ -765,7 +813,7 @@ public:
     };
     typedef boost::shared_ptr<PyManipulator> PyManipulatorPtr;
     PyManipulatorPtr _GetManipulator(RobotBase::ManipulatorPtr pmanip) {
-        return !pmanip ? PyManipulatorPtr() : PyManipulatorPtr(new PyManipulator(pmanip,_pyenv));
+        return !pmanip ? PyManipulatorPtr() : PyManipulatorPtr(new PyManipulator(pmanip, _pyenv));
     }
 
     class PyAttachedSensor
@@ -1714,6 +1762,8 @@ void init_openravepy_robot()
                              .def_readwrite("_vdirection",&PyManipulatorInfo::_vdirection)
                              .def_readwrite("_sIkSolverXMLId",&PyManipulatorInfo::_sIkSolverXMLId)
                              .def_readwrite("_vGripperJointNames",&PyManipulatorInfo::_vGripperJointNames)
+                             .def("SerializeJSON", &PyManipulatorInfo::SerializeJSON, SerializeJSON_overloads(args("options"), DOXY_FN(RobotBase::ManipulatorInfo, SerializeJSON)))
+                             .def("DeserializeJSON", &PyManipulatorInfo::DeserializeJSON, args("obj", "pyenv"), DOXY_FN(RobotBase::ManipulatorInfo, DeserializeJSON))
                              .def_pickle(ManipulatorInfo_pickle_suite())
     ;
 
@@ -1724,7 +1774,7 @@ void init_openravepy_robot()
                                 .def_readwrite("_sensorname", &PyAttachedSensorInfo::_sensorname)
                                 .def_readwrite("_sensorgeometry", &PyAttachedSensorInfo::_sensorgeometry)
                                 .def("SerializeJSON", &PyAttachedSensorInfo::SerializeJSON, SerializeJSON_overloads(args("options"), DOXY_FN(RobotBase::AttachedSensorInfo, SerializeJSON)))
-                                .def("DeserializeJSON", &PyAttachedSensorInfo::DeserializeJSON, args("obj", "penv"), DOXY_FN(RobotBase::AttachedSensorInfo, DeserializeJSON))
+                                .def("DeserializeJSON", &PyAttachedSensorInfo::DeserializeJSON, args("obj", "pyenv"), DOXY_FN(RobotBase::AttachedSensorInfo, DeserializeJSON))
     ;
 
     object connectedbodyinfo = class_<PyConnectedBodyInfo, boost::shared_ptr<PyConnectedBodyInfo> >("ConnectedBodyInfo", DOXY_CLASS(RobotBase::ConnectedBodyInfo))
@@ -1736,6 +1786,9 @@ void init_openravepy_robot()
                                .def_readwrite("_jointInfos", &PyConnectedBodyInfo::_jointInfos)
                                .def_readwrite("_manipulatorInfos", &PyConnectedBodyInfo::_manipulatorInfos)
                                .def_readwrite("_attachedSensorInfos", &PyConnectedBodyInfo::_attachedSensorInfos)
+                               .def("SerializeJSON", &PyConnectedBodyInfo::SerializeJSON, SerializeJSON_overloads(args("options"), DOXY_FN(RobotBase::ConnectedBodyInfo, SerializeJSON)))
+                               .def("DeserializeJSON", &PyConnectedBodyInfo::DeserializeJSON, args("obj", "pyenv"), DOXY_FN(RobotBase::ConnectedBodyInfo, DeserializeJSON))
+
     ;
 
     {

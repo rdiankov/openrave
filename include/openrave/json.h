@@ -74,6 +74,9 @@ template <typename T>
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const std::vector<T>& v, std::size_t n = (std::size_t)-1);
 
 template <typename T>
+inline void RaveSerailizeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const std::set<T>& s);
+
+template <typename T>
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const RaveVector<T>& v, bool quat = false);
 
 template <typename T>
@@ -148,6 +151,17 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
     for (std::size_t i = 0; i < v.size() && i < n; ++i)
     {
         RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, v[i]);
+    }
+}
+
+/// \brief serailize a std::set
+template <typename T>
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const std::set<T>& s)
+{
+    RAVE_SERIALIZEJSON_CLEAR_ARRAY(value);
+    for(typename std::set<T>::const_iterator it = s.begin(); it != s.end(); ++it)
+    {
+        RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, *it);
     }
 }
 
@@ -253,6 +267,8 @@ template <typename T>
 inline void RaveDeserializeJSON(const rapidjson::Value &value, std::vector<T>& v);
 template <typename K, typename V>
 inline void RaveDeserializeJSON(const rapidjson::Value &value, std::map<K, V>& m);
+template <typename T>
+inline void RaveDeserializeJSON(const rapidjson::Value &value, std::set<T>& s);
 template <typename T, std::size_t N>
 inline void RaveDeserializeJSON(const rapidjson::Value &value, boost::array<T, N>& a);
 template <typename T>
@@ -344,6 +360,20 @@ inline void RaveDeserializeJSON(const rapidjson::Value &value, std::map<K, V>& m
         K k;
         RaveDeserializeJSON(it->name, k);
         RaveDeserializeJSON(it->value, m[k]);
+    }
+}
+
+template <typename T>
+inline void RaveDeserializeJSON(const rapidjson::Value& value, std::set<T>& s)
+{
+    if (!value.IsArray()) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a set", ORE_InvalidArguments);
+    }
+    s.clear();
+    for(rapidjson::SizeType i=0; i<value.Size(); ++i) {
+        T result;
+        RaveDeserializeJSON(value[i], result);
+        s.insert(result);
     }
 }
 

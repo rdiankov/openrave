@@ -27,6 +27,87 @@ KinBody::LinkInfo::LinkInfo(const LinkInfo& other) : XMLReadable("link")
     *this = other;
 }
 
+void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
+{
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_name", _name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_t", _t);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_tMassFrame", _tMassFrame);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_mass", _mass);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vinertiamoments", _vinertiamoments);
+
+    if (_mapFloatParameters.size() > 0) {
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_mapFloatParameters", _mapFloatParameters);
+    }
+
+    if (_mapIntParameters.size() > 0) {
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_mapIntParameters", _mapIntParameters);
+    }
+
+    if (_mapStringParameters.size() > 0) {
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_mapStringParameters", _mapStringParameters);
+    }
+
+    if (_vForcedAdjacentLinks.size() > 0) {
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vForcedAdjacentLinks", _vForcedAdjacentLinks);
+    }
+
+    if (_vgeometryinfos.size() > 0) {
+        rapidjson::Value geometriesValue;
+        RAVE_SERIALIZEJSON_CLEAR_ARRAY(geometriesValue);
+        FOREACHC(it, _vgeometryinfos) {
+            rapidjson::Value geometryValue;
+            (*it)->SerializeJSON(geometryValue, allocator, options);
+            geometriesValue.PushBack(geometryValue, allocator);
+        }
+        value.AddMember("_vgeometryinfos", geometriesValue, allocator);
+    }
+
+    // TODO(jsonserialization)
+    // _mapExtraGeometries
+
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_bStatic", _bStatic);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_bIsEnabled", _bIsEnabled);
+}
+
+void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale)
+{
+    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
+
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_name", _name);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_t", _t);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_tMassFrame", _tMassFrame);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_mass", _mass);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vinertiamoments", _vinertiamoments);
+    RAVE_DESERIALIZEJSON_OPTIONAL(value, "_mapFloatParameters", _mapFloatParameters);
+    RAVE_DESERIALIZEJSON_OPTIONAL(value, "_mapIntParameters", _mapIntParameters);
+    RAVE_DESERIALIZEJSON_OPTIONAL(value, "_mapStringParameters", _mapStringParameters);
+    RAVE_DESERIALIZEJSON_OPTIONAL(value, "_vForcedAdjacentLinks", _vForcedAdjacentLinks);
+
+    _t.trans *= fUnitScale;
+    _tMassFrame.trans *= fUnitScale;
+
+    if (value.HasMember("_vgeometryinfos")) {
+        RAVE_DESERIALIZEJSON_ENSURE_ARRAY(value["_vgeometryinfos"]);
+
+        _vgeometryinfos.resize(0);
+        _vgeometryinfos.reserve(value["_vgeometryinfos"].Size());
+        for (size_t i = 0; i < value["_vgeometryinfos"].Size(); ++i) {
+            GeometryInfoPtr geometry(new GeometryInfo());
+            geometry->DeserializeJSON(value["_vgeometryinfos"][i], fUnitScale);
+            _vgeometryinfos.push_back(geometry);
+        }
+    }
+
+    // TODO(jsonserialization)
+    // extraGeometries
+
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_bStatic", _bStatic);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_bIsEnabled", _bIsEnabled);
+}
+
+
+
 KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& other)
 {
     _vgeometryinfos.resize(other._vgeometryinfos.size());

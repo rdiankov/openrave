@@ -1,4 +1,4 @@
-// -*- coding: utf-8 -*-
+// -* coding: utf-8 -*-
 // Copyright (C) 2006-2013 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
@@ -91,7 +91,6 @@ public:
         Init(info);
     }
 
-
     void Init(const KinBody::GeometryInfo& info) {
         _t = ReturnTransform(info._t);
         _vGeomData = toPyVector4(info._vGeomData);
@@ -145,11 +144,11 @@ public:
         Init(*pgeominfo);
     }
 
-    object SerializeJSON(const dReal fUnitScale=1.0, object ooptions=object())
+    object SerializeJSON(const dReal fUnitScale=1.0, object options=object())
     {
         rapidjson::Document doc;
         KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
-        pgeominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(ooptions,0));
+        pgeominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(options,0));
         return toPyObject(doc);
     }
 
@@ -163,7 +162,7 @@ public:
         info._vGeomData4 = ExtractVector<dReal>(_vGeomData4);
 
         info._vSideWalls.clear();
-        for (size_t i = 0; i < len(_vSideWalls); ++i) {
+        for (size_t i = 0; i < info._vSideWalls.size(); ++i) {
             info._vSideWalls.push_back({});
             boost::shared_ptr<PySideWall> pysidewall = boost::python::extract<boost::shared_ptr<PySideWall> >(_vSideWalls[i]);
             pysidewall->Get(info._vSideWalls[i]);
@@ -220,30 +219,7 @@ public:
         _vForcedAdjacentLinks = boost::python::list();
     }
     PyLinkInfo(const KinBody::LinkInfo& info) {
-        FOREACHC(itgeominfo, info._vgeometryinfos) {
-            _vgeometryinfos.append(PyGeometryInfoPtr(new PyGeometryInfo(**itgeominfo)));
-        }
-        _name = ConvertStringToUnicode(info._name);
-        _t = ReturnTransform(info._t);
-        _tMassFrame = ReturnTransform(info._tMassFrame);
-        _mass = info._mass;
-        _vinertiamoments = toPyVector3(info._vinertiamoments);
-        FOREACHC(it, info._mapFloatParameters) {
-            _mapFloatParameters[it->first] = toPyArray(it->second);
-        }
-        FOREACHC(it, info._mapIntParameters) {
-            _mapIntParameters[it->first] = toPyArray(it->second);
-        }
-        FOREACHC(it, info._mapStringParameters) {
-            _mapStringParameters[it->first] = ConvertStringToUnicode(it->second);
-        }
-        boost::python::list vForcedAdjacentLinks;
-        FOREACHC(it, info._vForcedAdjacentLinks) {
-            vForcedAdjacentLinks.append(ConvertStringToUnicode(*it));
-        }
-        _vForcedAdjacentLinks = vForcedAdjacentLinks;
-        _bStatic = info._bStatic;
-        _bIsEnabled = info._bIsEnabled;
+        _Update(info);
     }
 
     KinBody::LinkInfoPtr GetLinkInfo() {
@@ -291,6 +267,23 @@ public:
         return pinfo;
     }
 
+    object SerializeJSON(const dReal fUnitScale=1.0, object options=object())
+    {
+        rapidjson::Document doc;
+        KinBody::LinkInfoPtr pInfo = GetLinkInfo();
+        pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(options, 0));
+        return toPyObject(doc);
+    }
+
+    void DeserializeJSON(object obj, const dReal fUnitScale=1.0)
+    {
+        rapidjson::Document doc;
+        toRapidJSONValue(obj, doc, doc.GetAllocator());
+        KinBody::LinkInfo info;
+        info.DeserializeJSON(doc, fUnitScale);
+        _Update(info);
+    }
+
     boost::python::list _vgeometryinfos;
     object _name;
     object _t, _tMassFrame;
@@ -300,6 +293,35 @@ public:
     object _vForcedAdjacentLinks;
     bool _bStatic;
     bool _bIsEnabled;
+
+private:
+    void _Update(const KinBody::LinkInfo& info)
+    {
+        FOREACHC(itgeominfo, info._vgeometryinfos) {
+            _vgeometryinfos.append(PyGeometryInfoPtr(new PyGeometryInfo(**itgeominfo)));
+        }
+        _name = ConvertStringToUnicode(info._name);
+        _t = ReturnTransform(info._t);
+        _tMassFrame = ReturnTransform(info._tMassFrame);
+        _mass = info._mass;
+        _vinertiamoments = toPyVector3(info._vinertiamoments);
+        FOREACHC(it, info._mapFloatParameters) {
+            _mapFloatParameters[it->first] = toPyArray(it->second);
+        }
+        FOREACHC(it, info._mapIntParameters) {
+            _mapIntParameters[it->first] = toPyArray(it->second);
+        }
+        FOREACHC(it, info._mapStringParameters) {
+            _mapStringParameters[it->first] = ConvertStringToUnicode(it->second);
+        }
+        boost::python::list vForcedAdjacentLinks;
+        FOREACHC(it, info._vForcedAdjacentLinks) {
+            vForcedAdjacentLinks.append(ConvertStringToUnicode(*it));
+        }
+        _vForcedAdjacentLinks = vForcedAdjacentLinks;
+        _bStatic = info._bStatic;
+        _bIsEnabled = info._bIsEnabled;
+    }
 };
 
 PyLinkInfoPtr toPyLinkInfo(const KinBody::LinkInfo& linkinfo)
@@ -328,28 +350,7 @@ public:
         viscous_friction = 0;
     }
     PyElectricMotorActuatorInfo(const ElectricMotorActuatorInfo& info) {
-        model_type = info.model_type;
-        gear_ratio = info.gear_ratio;
-        assigned_power_rating = info.assigned_power_rating;
-        max_speed = info.max_speed;
-        no_load_speed = info.no_load_speed;
-        stall_torque = info.stall_torque;
-        max_instantaneous_torque = info.max_instantaneous_torque;
-        FOREACH(itpoint, info.nominal_speed_torque_points) {
-            nominal_speed_torque_points.append(boost::python::make_tuple(itpoint->first, itpoint->second));
-        }
-        FOREACH(itpoint, info.max_speed_torque_points) {
-            max_speed_torque_points.append(boost::python::make_tuple(itpoint->first, itpoint->second));
-        }
-        nominal_torque = info.nominal_torque;
-        rotor_inertia = info.rotor_inertia;
-        torque_constant = info.torque_constant;
-        nominal_voltage = info.nominal_voltage;
-        speed_constant = info.speed_constant;
-        starting_current = info.starting_current;
-        terminal_resistance = info.terminal_resistance;
-        coloumb_friction = info.coloumb_friction;
-        viscous_friction = info.viscous_friction;
+        _Update(info);
     }
 
     ElectricMotorActuatorInfoPtr GetElectricMotorActuatorInfo() {
@@ -386,6 +387,23 @@ public:
         return pinfo;
     }
 
+    object SerializeJSON(object options=object())
+    {
+        rapidjson::Document doc;
+        ElectricMotorActuatorInfoPtr pInfo = GetElectricMotorActuatorInfo();
+        pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(options, 0));
+        return toPyObject(doc);
+    }
+    void DeserializeJSON(object obj, PyEnvironmentBasePtr penv)
+    {
+        rapidjson::Document doc;
+        toRapidJSONValue(obj, doc, doc.GetAllocator());
+        ElectricMotorActuatorInfo info;
+        info.DeserializeJSON(doc, GetEnvironment(penv));
+        _Update(info);
+        return;
+    }
+
     std::string model_type;
     dReal gear_ratio;
     dReal assigned_power_rating;
@@ -403,6 +421,33 @@ public:
     dReal terminal_resistance;
     dReal coloumb_friction;
     dReal viscous_friction;
+
+private:
+    void _Update(const ElectricMotorActuatorInfo& info)
+    {
+        model_type = info.model_type;
+        gear_ratio = info.gear_ratio;
+        assigned_power_rating = info.assigned_power_rating;
+        max_speed = info.max_speed;
+        no_load_speed = info.no_load_speed;
+        stall_torque = info.stall_torque;
+        max_instantaneous_torque = info.max_instantaneous_torque;
+        FOREACH(itpoint, info.nominal_speed_torque_points) {
+            nominal_speed_torque_points.append(boost::python::make_tuple(itpoint->first, itpoint->second));
+        }
+        FOREACH(itpoint, info.max_speed_torque_points) {
+            max_speed_torque_points.append(boost::python::make_tuple(itpoint->first, itpoint->second));
+        }
+        nominal_torque = info.nominal_torque;
+        rotor_inertia = info.rotor_inertia;
+        torque_constant = info.torque_constant;
+        nominal_voltage = info.nominal_voltage;
+        speed_constant = info.speed_constant;
+        starting_current = info.starting_current;
+        terminal_resistance = info.terminal_resistance;
+        coloumb_friction = info.coloumb_friction;
+        viscous_friction = info.viscous_friction;
+    }
 };
 typedef boost::shared_ptr<PyElectricMotorActuatorInfo> PyElectricMotorActuatorInfoPtr;
 
@@ -432,61 +477,7 @@ public:
     }
 
     PyJointInfo(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv) {
-        _type = info._type;
-        _name = ConvertStringToUnicode(info._name);
-        _linkname0 = ConvertStringToUnicode(info._linkname0);
-        _linkname1 = ConvertStringToUnicode(info._linkname1);
-        _vanchor = toPyVector3(info._vanchor);
-        boost::python::list vaxes;
-        for(size_t i = 0; i < info._vaxes.size(); ++i) {
-            vaxes.append(toPyVector3(info._vaxes[i]));
-        }
-        _vaxes = vaxes;
-        _vcurrentvalues = toPyArray(info._vcurrentvalues);
-        _vresolution = toPyArray<dReal,3>(info._vresolution);
-        _vmaxvel = toPyArray<dReal,3>(info._vmaxvel);
-        _vhardmaxvel = toPyArray<dReal,3>(info._vhardmaxvel);
-        _vmaxaccel = toPyArray<dReal,3>(info._vmaxaccel);
-        _vhardmaxaccel = toPyArray<dReal,3>(info._vhardmaxaccel);
-        _vmaxjerk = toPyArray<dReal,3>(info._vmaxjerk);
-        _vhardmaxjerk = toPyArray<dReal,3>(info._vhardmaxjerk);
-        _vmaxtorque = toPyArray<dReal,3>(info._vmaxtorque);
-        _vmaxinertia = toPyArray<dReal,3>(info._vmaxinertia);
-        _vweights = toPyArray<dReal,3>(info._vweights);
-        _voffsets = toPyArray<dReal,3>(info._voffsets);
-        _vlowerlimit = toPyArray<dReal,3>(info._vlowerlimit);
-        _vupperlimit = toPyArray<dReal,3>(info._vupperlimit);
-        _trajfollow = object(toPyTrajectory(info._trajfollow, pyenv));
-        FOREACHC(itmimic, info._vmimic) {
-            if( !*itmimic ) {
-                _vmimic.append(boost::python::object());
-            }
-            else {
-                boost::python::list oequations;
-                FOREACHC(itequation, (*itmimic)->_equations) {
-                    oequations.append(*itequation);
-                }
-                _vmimic.append(oequations);
-            }
-        }
-        FOREACHC(it, info._mapFloatParameters) {
-            _mapFloatParameters[it->first] = toPyArray(it->second);
-        }
-        FOREACHC(it, info._mapIntParameters) {
-            _mapIntParameters[it->first] = toPyArray(it->second);
-        }
-        FOREACHC(it, info._mapStringParameters) {
-            _mapStringParameters[it->first] = ConvertStringToUnicode(it->second);
-        }
-        boost::python::list bIsCircular;
-        FOREACHC(it, info._bIsCircular) {
-            bIsCircular.append(*it);
-        }
-        _bIsCircular = bIsCircular;
-        _bIsActive = info._bIsActive;
-        if( !!info._infoElectricMotor ) {
-            _infoElectricMotor = PyElectricMotorActuatorInfoPtr(new PyElectricMotorActuatorInfo(*info._infoElectricMotor));
-        }
+        _Update(info, pyenv);
     }
 
     KinBody::JointInfoPtr GetJointInfo() {
@@ -601,7 +592,6 @@ public:
             for(size_t i = 0; i < num; ++i) {
                 object omimic = _vmimic[i];
                 if( !IS_PYTHONOBJECT_NONE(omimic) ) {
-                    OPENRAVE_ASSERT_OP(len(omimic),==,3);
                     info._vmimic[i].reset(new KinBody::MimicInfo());
                     for(size_t j = 0; j < 3; ++j) {
                         info._vmimic[i]->_equations.at(j) = boost::python::extract<std::string>(omimic[j]);
@@ -646,6 +636,25 @@ public:
         }
         return pinfo;
     }
+
+    object SerializeJSON(object options=object())
+    {
+    	rapidjson::Document doc;
+    	KinBody::JointInfoPtr pInfo = GetJointInfo();
+    	pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(options, 0));
+    	return toPyObject(doc);
+    }
+
+    void DeserializeJSON(object obj, PyEnvironmentBasePtr penv, const dReal fUnitScale=1.0)
+    {
+        rapidjson::Document doc;
+        toRapidJSONValue(obj, doc, doc.GetAllocator());
+        KinBody::JointInfo info;
+        info.DeserializeJSON(doc, GetEnvironment(penv), fUnitScale);
+        _Update(info, penv);
+        return;
+    }
+
     KinBody::JointType _type;
     object _name;
     object _linkname0, _linkname1;
@@ -656,6 +665,66 @@ public:
     boost::python::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters;
     object _bIsCircular;
     bool _bIsActive;
+
+private:
+    void _Update(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv)
+    {
+        _type = info._type;
+        _name = ConvertStringToUnicode(info._name);
+        _linkname0 = ConvertStringToUnicode(info._linkname0);
+        _linkname1 = ConvertStringToUnicode(info._linkname1);
+        _vanchor = toPyVector3(info._vanchor);
+        boost::python::list vaxes;
+        for(size_t i = 0; i < info._vaxes.size(); ++i) {
+            vaxes.append(toPyVector3(info._vaxes[i]));
+        }
+        _vaxes = vaxes;
+        _vcurrentvalues = toPyArray(info._vcurrentvalues);
+        _vresolution = toPyArray<dReal,3>(info._vresolution);
+        _vmaxvel = toPyArray<dReal,3>(info._vmaxvel);
+        _vhardmaxvel = toPyArray<dReal,3>(info._vhardmaxvel);
+        _vmaxaccel = toPyArray<dReal,3>(info._vmaxaccel);
+        _vhardmaxaccel = toPyArray<dReal,3>(info._vhardmaxaccel);
+        _vmaxjerk = toPyArray<dReal,3>(info._vmaxjerk);
+        _vhardmaxjerk = toPyArray<dReal,3>(info._vhardmaxjerk);
+        _vmaxtorque = toPyArray<dReal,3>(info._vmaxtorque);
+        _vmaxinertia = toPyArray<dReal,3>(info._vmaxinertia);
+        _vweights = toPyArray<dReal,3>(info._vweights);
+        _voffsets = toPyArray<dReal,3>(info._voffsets);
+        _vlowerlimit = toPyArray<dReal,3>(info._vlowerlimit);
+        _vupperlimit = toPyArray<dReal,3>(info._vupperlimit);
+        _trajfollow = object(toPyTrajectory(info._trajfollow, pyenv));
+        FOREACHC(itmimic, info._vmimic) {
+            if( !*itmimic ) {
+                _vmimic.append(boost::python::object());
+            }
+            else {
+                boost::python::list oequations;
+                FOREACHC(itequation, (*itmimic)->_equations) {
+                    oequations.append(*itequation);
+                }
+                _vmimic.append(oequations);
+            }
+        }
+        FOREACHC(it, info._mapFloatParameters) {
+            _mapFloatParameters[it->first] = toPyArray(it->second);
+        }
+        FOREACHC(it, info._mapIntParameters) {
+            _mapIntParameters[it->first] = toPyArray(it->second);
+        }
+        FOREACHC(it, info._mapStringParameters) {
+            _mapStringParameters[it->first] = ConvertStringToUnicode(it->second);
+        }
+        boost::python::list bIsCircular;
+        FOREACHC(it, info._bIsCircular) {
+            bIsCircular.append(*it);
+        }
+        _bIsCircular = bIsCircular;
+        _bIsActive = info._bIsActive;
+        if( !!info._infoElectricMotor ) {
+            _infoElectricMotor = PyElectricMotorActuatorInfoPtr(new PyElectricMotorActuatorInfo(*info._infoElectricMotor));
+        }
+    }
 };
 
 PyJointInfoPtr toPyJointInfo(const KinBody::JointInfo& jointinfo, PyEnvironmentBasePtr pyenv)
@@ -3326,7 +3395,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromSpheres_overloads, InitFromSphere
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromTrimesh_overloads, InitFromTrimesh, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromGeometries_overloads, InitFromGeometries, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Init_overloads, Init, 2, 3)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SerializeJSON_overloads, SerializeJSON, 0, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SerializeJSON_overloads, SerializeJSON, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABB_overloads, ComputeAABB, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABBFromTransform_overloads, ComputeAABBFromTransform, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeLocalAABB_overloads, ComputeLocalAABB, 0, 1)
@@ -3378,6 +3447,8 @@ void init_openravepy_kinbody()
                                        .def_readwrite("coloumb_friction",&PyElectricMotorActuatorInfo::coloumb_friction)
                                        .def_readwrite("viscous_friction",&PyElectricMotorActuatorInfo::viscous_friction)
                                        .def_pickle(ElectricMotorActuatorInfo_pickle_suite())
+                                       .def("SerializeJSON", &PyElectricMotorActuatorInfo::SerializeJSON, SerializeJSON_overloads(args("options"), DOXY_FN(ElectricMotorActuatorInfo, SerializeJSON)))
+                                       .def("DeserializeJSON", &PyElectricMotorActuatorInfo::DeserializeJSON, args("obj", "penv"), DOXY_FN(ElectricMotorActuatorInfo, DeserializeJSON))
     ;
 
     object jointtype = enum_<KinBody::JointType>("JointType" DOXY_ENUM(JointType))
@@ -3419,7 +3490,7 @@ void init_openravepy_kinbody()
                           .def("ComputeInnerEmptyVolume",&PyGeometryInfo::ComputeInnerEmptyVolume, DOXY_FN(GeomeryInfo,ComputeInnerEmptyVolume))
                           .def("ComputeAABB",&PyGeometryInfo::ComputeAABB, args("transform"), DOXY_FN(GeomeryInfo,ComputeAABB))
                           .def("DeserializeJSON", &PyGeometryInfo::DeserializeJSON, args("obj", "unitScale"), DOXY_FN(GeometryInfo, DeserializeJSON))
-                          .def("SerializeJSON", &PyGeometryInfo::SerializeJSON,SerializeJSON_overloads(args("unitScale", "options"), DOXY_FN(GeometryInfo,SerializeJSON)))
+                          .def("SerializeJSON", &PyGeometryInfo::SerializeJSON, SerializeJSON_overloads(args("unitScale", "options"), DOXY_FN(GeometryInfo, SerializeJSON)))
                           .def_pickle(GeometryInfo_pickle_suite())
     ;
 
@@ -3442,6 +3513,8 @@ void init_openravepy_kinbody()
                       .def_readwrite("_vForcedAdjacentLinks",&PyLinkInfo::_vForcedAdjacentLinks)
                       .def_readwrite("_bStatic",&PyLinkInfo::_bStatic)
                       .def_readwrite("_bIsEnabled",&PyLinkInfo::_bIsEnabled)
+                      .def("DeserializeJSON", &PyLinkInfo::DeserializeJSON, args("obj", "unitScale"), DOXY_FN(LinkInfo, DeserializeJSON))
+                      .def("SerializeJSON", &PyLinkInfo::SerializeJSON,SerializeJSON_overloads(args("unitScale", "options"), DOXY_FN(LinkInfo, SerializeJSON)))
                       .def_pickle(LinkInfo_pickle_suite())
     ;
     object jointinfo = class_<PyJointInfo, boost::shared_ptr<PyJointInfo> >("JointInfo", DOXY_CLASS(KinBody::JointInfo))
@@ -3473,6 +3546,8 @@ void init_openravepy_kinbody()
                        .def_readwrite("_bIsCircular",&PyJointInfo::_bIsCircular)
                        .def_readwrite("_bIsActive",&PyJointInfo::_bIsActive)
                        .def_readwrite("_infoElectricMotor", &PyJointInfo::_infoElectricMotor)
+                       .def("SerializeJSON", &PyJointInfo::SerializeJSON, SerializeJSON_overloads(args("options"), DOXY_FN(KinBody::JointInfo, SerializeJSON)))
+                       .def("DeserializeJSON", &PyJointInfo::DeserializeJSON, args("obj", "penv"), DOXY_FN(KinBody::JointInfo, DeserializeJSON))
                        .def_pickle(JointInfo_pickle_suite())
     ;
 
@@ -3481,6 +3556,8 @@ void init_openravepy_kinbody()
                          .def_readwrite("_robotlinkname",&PyKinBody::PyGrabbedInfo::_robotlinkname)
                          .def_readwrite("_trelative",&PyKinBody::PyGrabbedInfo::_trelative)
                          .def_readwrite("_setRobotLinksToIgnore",&PyKinBody::PyGrabbedInfo::_setRobotLinksToIgnore)
+                         .def("SerializeJSON", &PyKinBody::PyGrabbedInfo::SerializeJSON, SerializeJSON_overloads(args("options"), DOXY_FN(KinBody::GrabbedInfo, SerializeJSON)))
+                         .def("DeserializeJSON", &PyKinBody::PyGrabbedInfo::DeserializeJSON, args("obj", "penv"), DOXY_FN(KinBody::GrabbedInfo, DeserializeJSON))
                          .def("__str__",&PyKinBody::PyGrabbedInfo::__str__)
                          .def("__unicode__",&PyKinBody::PyGrabbedInfo::__unicode__)
                          .def_pickle(GrabbedInfo_pickle_suite())

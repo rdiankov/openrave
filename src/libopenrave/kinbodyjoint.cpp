@@ -23,6 +23,7 @@
 
 namespace OpenRAVE {
 
+
 KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsActive(true) {
     for(size_t i = 0; i < _vaxes.size(); ++i) {
         _vaxes[i] = Vector(0,0,1);
@@ -46,6 +47,188 @@ KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsAc
 KinBody::JointInfo::JointInfo(const JointInfo& other) : XMLReadable("joint")
 {
     *this = other;
+}
+
+int KinBody::JointInfo::GetDOF() const
+{
+    if(_type & KinBody::JointSpecialBit){
+        switch(_type) {
+        case KinBody::JointHinge2:
+        case KinBody::JointUniversal: return 2;
+        case KinBody::JointSpherical: return 3;
+        case KinBody::JointTrajectory: return 1;
+        default:
+            throw OPENRAVE_EXCEPTION_FORMAT(_("invalid joint type 0x%x"), _type, ORE_Failed);
+        }
+    }
+    return int(_type & 0xf);
+}
+
+void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, int options) const
+{
+    int dof = GetDOF();
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
+
+    switch (_type) {
+    case JointRevolute:
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_type", "revolute");
+        break;
+    case JointPrismatic:
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_type", "prismatic");
+        break;
+    case JointNone:
+        break;
+    default:
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_type", static_cast<int>(_type));
+        break;
+    }
+
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_name", _name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vanchor", _vanchor);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_linkname0", _linkname0);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_linkname1", _linkname1);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vaxes", _vaxes);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vcurrentvalues", _vcurrentvalues);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vresolution", _vresolution, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vmaxvel", _vmaxvel, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vhardmaxvel", _vhardmaxvel, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vmaxaccel", _vmaxaccel, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vhardmaxaccel", _vhardmaxaccel, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vmaxjerk", _vmaxjerk, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vhardmaxjerk", _vhardmaxjerk, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vmaxtorque", _vmaxtorque, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vmaxinertia", _vmaxinertia, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vweights", _vweights, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_voffsets", _voffsets, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vupperlimit", _vupperlimit, dof);
+    // TODO: RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_trajfollow", _trajfollow);
+
+    if (_vmimic.size() > 0) {
+        bool bfound = false;
+        for (size_t i = 0; i < _vmimic.size() && i < (size_t)dof; ++i) {
+            if (!!_vmimic[i]) {
+                bfound = true;
+                break;
+            }
+        }
+        if (bfound) {
+            rapidjson::Value mimics;
+            RAVE_SERIALIZEJSON_CLEAR_ARRAY(mimics);
+            for (size_t i = 0; i < _vmimic.size() && i < (size_t)dof; ++i) {
+                rapidjson::Value mimicValue;
+                _vmimic[i]->SerializeJSON(mimicValue, allocator);
+                mimics.PushBack(mimicValue, allocator);
+            }
+            value.AddMember("_vmimic", mimics, allocator);
+        }
+    }
+
+    if(_mapFloatParameters.size() > 0)
+    {
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_mapFloatParameters", _mapFloatParameters);
+    }
+    if(_mapIntParameters.size() > 0)
+    {
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_mapIntParameters", _mapIntParameters);
+    }
+    if(_mapStringParameters.size() > 0)
+    {
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_mapStringParameters", _mapStringParameters);
+    }
+
+    if (!!_infoElectricMotor) {
+        rapidjson::Value electricMotorInfoValue;
+        RAVE_SERIALIZEJSON_CLEAR_OBJECT(electricMotorInfoValue);
+        _infoElectricMotor->SerializeJSON(electricMotorInfoValue, allocator, options);
+        value.AddMember("_infoElectricMotor", electricMotorInfoValue, allocator);
+    }
+
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_bIsCircular", _bIsCircular, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_bIsActive", _bIsActive);
+
+}
+
+void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv, const dReal fUnitScale)
+{
+    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
+    std::string typestr;
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_type", typestr);
+
+    if (typestr == "revolute")
+    {
+        _type = JointType::JointRevolute;
+    }
+    else if (typestr == "prismatic")
+    {
+        _type = JointType::JointPrismatic;
+    }
+    else
+    {
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported joint type \"%s\"", typestr, ORE_InvalidArguments);
+    }
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_name", _name);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_linkname0", _linkname0);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vanchor", _vanchor);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_linkname1", _linkname1);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vaxes", _vaxes);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vcurrentvalues", _vcurrentvalues);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vresolution", _vresolution);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vmaxvel", _vmaxvel);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vhardmaxvel", _vhardmaxvel);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vmaxaccel", _vmaxaccel);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vhardmaxaccel", _vhardmaxaccel);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vmaxjerk", _vmaxjerk);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vhardmaxjerk", _vhardmaxjerk);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vmaxtorque", _vmaxtorque);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vmaxinertia", _vmaxinertia);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vweights", _vweights);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_voffsets", _voffsets);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vupperlimit", _vupperlimit);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_voffsets", _voffsets);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vupperlimit", _vupperlimit);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_bIsCircular", _bIsCircular);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_bIsActive", _bIsActive);
+
+    // multiply fUnitScale on maxVel, maxAccel, lowerLimit, upperLimit
+
+    dReal fjointmult = fUnitScale;
+    if(_type == JointRevolute)
+    {
+        fjointmult = 1;
+    }
+    else if(_type == JointPrismatic)
+    {
+        fjointmult = fUnitScale;
+    }
+    for(size_t ic = 0; ic < _vaxes.size(); ic++)
+    {
+        _vmaxvel[ic] *= fjointmult;
+        _vmaxaccel[ic] *= fjointmult;
+        _vlowerlimit[ic] *= fjointmult;
+        _vupperlimit[ic] *= fjointmult;
+    }
+
+    boost::array<MimicInfoPtr, 3> newmimic;
+    if (value.HasMember("_vmimic"))
+    {
+        RAVE_DESERIALIZEJSON_ENSURE_ARRAY(value["_vmimic"]);
+        for (rapidjson::SizeType i = 0; i < value["_vmimic"].Size(); ++i) {
+            MimicInfoPtr mimicinfo(new MimicInfo());
+            mimicinfo->DeserializeJSON(value["_vmimic"][i]);
+            newmimic[i] = mimicinfo;
+        }
+    }
+    _vmimic = newmimic;
+
+    RAVE_DESERIALIZEJSON_OPTIONAL(value, "_mapFloatParameters", _mapFloatParameters);
+    RAVE_DESERIALIZEJSON_OPTIONAL(value, "_mapIntParameters", _mapIntParameters);
+    RAVE_DESERIALIZEJSON_OPTIONAL(value, "_mapStringParameters", _mapStringParameters);
+
+    if (value.HasMember("_infoElectricMotor")) {
+        ElectricMotorActuatorInfoPtr info(new ElectricMotorActuatorInfo());
+        info->DeserializeJSON(value["_infoElectricMotor"], penv);
+        _infoElectricMotor = info;
+    }
 }
 
 KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& other)
@@ -103,6 +286,9 @@ KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& othe
 
     return *this;
 }
+
+
+
 
 static void fparser_polyroots2(vector<dReal>& rawroots, const vector<dReal>& rawcoeffs)
 {
@@ -189,17 +375,7 @@ KinBody::Joint::~Joint()
 
 int KinBody::Joint::GetDOF() const
 {
-    if( _info._type & KinBody::JointSpecialBit ) {
-        switch(_info._type) {
-        case KinBody::JointHinge2:
-        case KinBody::JointUniversal: return 2;
-        case KinBody::JointSpherical: return 3;
-        case KinBody::JointTrajectory: return 1;
-        default:
-            throw OPENRAVE_EXCEPTION_FORMAT(_("invalid joint type 0x%x"), _info._type, ORE_Failed);
-        }
-    }
-    return int(_info._type & 0xf);
+    return _info.GetDOF();
 }
 
 bool KinBody::Joint::IsCircular() const
@@ -1783,6 +1959,18 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
             SerializeRound(o,_info._vupperlimit[i]);
         }
     }
+}
+
+void KinBody::MimicInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) const
+{
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_equations", _equations);
+}
+
+void KinBody::MimicInfo::DeserializeJSON(const rapidjson::Value& value)
+{
+    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_equations", _equations);
 }
 
 }

@@ -18,6 +18,34 @@
 
 namespace OpenRAVE {
 
+void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
+{
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
+
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_name", _name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_tLocalTool", _tLocalTool);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vChuckingDirection", _vChuckingDirection);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vdirection", _vdirection);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_sBaseLinkName", _sBaseLinkName);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_sEffectorLinkName", _sEffectorLinkName);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_sIkSolverXMLId", _sIkSolverXMLId);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vGripperJointNames", _vGripperJointNames);
+}
+
+void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv)
+{
+    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
+
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_name", _name);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_tLocalTool", _tLocalTool);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vChuckingDirection", _vChuckingDirection);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vdirection", _vdirection);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_sBaseLinkName", _sBaseLinkName);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_sEffectorLinkName", _sEffectorLinkName);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_sIkSolverXMLId", _sIkSolverXMLId);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vGripperJointNames", _vGripperJointNames);
+}
+
 RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::ManipulatorInfo& info) : _info(info), __probot(probot) {
 }
 RobotBase::Manipulator::~Manipulator() {

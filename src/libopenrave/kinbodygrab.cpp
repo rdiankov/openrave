@@ -293,6 +293,26 @@ void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vgrabbedinfo)
     }
 }
 
+void KinBody::GrabbedInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, int options) const
+{
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_grabbedname", _grabbedname);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_robotlinkname", _robotlinkname);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_trelative", _trelative);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_setRobotLinksToIgnore", _setRobotLinksToIgnore);
+
+}
+
+void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv)
+{
+    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
+
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_grabbedname", _grabbedname);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_robotlinkname", _robotlinkname);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_trelative", _trelative);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "_setRobotLinksToIgnore", _setRobotLinksToIgnore);
+}
+
 void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vgrabbedinfo)
 {
     ReleaseAllGrabbed();

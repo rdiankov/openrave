@@ -94,14 +94,7 @@ public:
         _trelative = ReturnTransform(Transform());
     }
     PyGrabbedInfo(const RobotBase::GrabbedInfo& info) {
-        _grabbedname = ConvertStringToUnicode(info._grabbedname);
-        _robotlinkname = ConvertStringToUnicode(info._robotlinkname);
-        _trelative = ReturnTransform(info._trelative);
-        boost::python::list setRobotLinksToIgnore;
-        FOREACHC(itindex, info._setRobotLinksToIgnore) {
-            setRobotLinksToIgnore.append(*itindex);
-        }
-        _setRobotLinksToIgnore = setRobotLinksToIgnore;
+        _Update(info);
     }
 
     RobotBase::GrabbedInfoPtr GetGrabbedInfo() const
@@ -118,6 +111,23 @@ public:
         return pinfo;
     }
 
+    void DeserializeJSON(object obj, PyEnvironmentBasePtr penv)
+    {
+        rapidjson::Document doc;
+        toRapidJSONValue(obj, doc, doc.GetAllocator());
+        KinBody::GrabbedInfo info;
+        info.DeserializeJSON(doc, GetEnvironment(penv));
+        _Update(info);
+    }
+
+    object SerializeJSON(object ooptions=object())
+    {
+        rapidjson::Document doc;
+        KinBody::GrabbedInfoPtr pInfo = GetGrabbedInfo();
+        pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(ooptions,0));
+        return toPyObject(doc);
+    }
+
     std::string __str__() {
         std::string robotlinkname = boost::python::extract<std::string>(_robotlinkname);
         std::string grabbedname = boost::python::extract<std::string>(_grabbedname);
@@ -130,6 +140,20 @@ public:
     object _grabbedname, _robotlinkname;
     object _trelative;
     object _setRobotLinksToIgnore;
+
+
+private:
+    void _Update(const RobotBase::GrabbedInfo& info)
+    {
+        _grabbedname = ConvertStringToUnicode(info._grabbedname);
+        _robotlinkname = ConvertStringToUnicode(info._robotlinkname);
+        _trelative = ReturnTransform(info._trelative);
+        boost::python::list setRobotLinksToIgnore;
+        FOREACHC(itindex, info._setRobotLinksToIgnore) {
+            setRobotLinksToIgnore.append(*itindex);
+        }
+        _setRobotLinksToIgnore = setRobotLinksToIgnore;
+    }
 };
 typedef boost::shared_ptr<PyGrabbedInfo> PyGrabbedInfoPtr;
 

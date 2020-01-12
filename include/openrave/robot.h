@@ -41,6 +41,9 @@ public:
         virtual ~ManipulatorInfo() {
         }
 
+        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
+        virtual void DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv);
+
         std::string _name;
         std::string _sBaseLinkName, _sEffectorLinkName; ///< name of the base and effector links of the robot used to determine the chain
         Transform _tLocalTool;
@@ -544,6 +547,9 @@ public:
 
         /// \brief Updates the infos depending on the robot at the identity and zero position.
         virtual void InitInfoFromBody(RobotBase& robot);
+        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0) const;
+        virtual void DeserializeJSON(const rapidjson::Value &value, EnvironmentBasePtr penv);
+
 
         std::string _name; ///< the name of the connected body info
         std::string _linkname; ///< the robot link that the body is attached to

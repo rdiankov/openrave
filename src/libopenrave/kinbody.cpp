@@ -80,6 +80,54 @@ ElectricMotorActuatorInfo::ElectricMotorActuatorInfo()
     viscous_friction = 0;
 }
 
+
+void ElectricMotorActuatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, int options) const
+{
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "model_type", model_type);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "assigned_power_rating", assigned_power_rating);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "max_speed", max_speed);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "no_load_speed", no_load_speed);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "stall_torque", stall_torque);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "max_instantaneous_torque", max_instantaneous_torque);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "nominal_speed_torque_points", nominal_speed_torque_points);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "max_speed_torque_points", max_speed_torque_points);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "nominal_torque", nominal_torque);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "rotor_inertia", rotor_inertia);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "torque_constant", torque_constant);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "nominal_voltage", nominal_voltage);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "speed_constant", speed_constant);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "starting_current", starting_current);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "terminal_resistance", terminal_resistance);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "gear_ratio", gear_ratio);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "coloumb_friction", coloumb_friction);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "viscous_friction", viscous_friction);
+}
+
+void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv)
+{
+    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "model_type", model_type);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "assigned_power_rating", assigned_power_rating);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "max_speed", max_speed);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "no_load_speed", no_load_speed);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "stall_torque", stall_torque);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "max_instantaneous_torque", max_instantaneous_torque);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "nominal_speed_torque_points", nominal_speed_torque_points);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "max_speed_torque_points", max_speed_torque_points);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "nominal_torque", nominal_torque);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "rotor_inertia", rotor_inertia);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "torque_constant", torque_constant);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "nominal_voltage", nominal_voltage);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "speed_constant", speed_constant);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "starting_current", starting_current);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "terminal_resistance", terminal_resistance);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "gear_ratio", gear_ratio);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "coloumb_friction", coloumb_friction);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "viscous_friction", viscous_friction);
+}
+
+
 KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)
 {
     _nHierarchyComputed = 0;
@@ -1202,7 +1250,7 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
 void KinBody::GetLinkTransformations(vector<Transform>& vtrans) const
 {
     if( RaveGetDebugLevel() & Level_VerifyPlans ) {
-        RAVELOG_VERBOSE("GetLinkTransformations should be called with doflastsetvalues\n");
+        RAVELOG_VERBOSE("GetLinkTransformations should be called with doflastsetvaluesn");
     }
     vtrans.resize(_veclinks.size());
     vector<Transform>::iterator it;
