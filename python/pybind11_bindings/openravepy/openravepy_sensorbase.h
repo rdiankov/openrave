@@ -34,7 +34,7 @@ public:
     virtual SensorBase::CameraIntrinsics GetCameraIntrinsics();
     object K = py::none_();
     std::string distortion_model;
-    object distortion_coeffs;
+    object distortion_coeffs = py::none_();
     dReal focal_length;
 };
 
@@ -49,11 +49,11 @@ public:
 
     std::string hardware_id;
     PyCameraIntrinsics intrinsics;
-    int width, height;
+    int width = 0, height = 0;
     std::string sensor_reference;
     std::string target_region;
-    dReal measurement_time;
-    dReal gain;
+    dReal measurement_time = 1.0;
+    dReal gain = 1.0;
 };
 
 class PyLaserGeomData : public PySensorGeometry
@@ -64,8 +64,8 @@ public:
     virtual ~PyLaserGeomData();
     virtual SensorBase::SensorType GetType();
     virtual SensorBase::SensorGeometryPtr GetGeometry();
-    py::tuple min_angle, max_angle, resolution;
-    dReal min_range, max_range, time_increment, time_scan;
+    py::tuple min_angle = py::make_tuple(0.0, 0.0), max_angle = py::make_tuple(0.0, 0.0), resolution;
+    dReal min_range = 0.0, max_range = 0.0, time_increment = 0.0, time_scan = 0.0;
 };
 
 class PyJointEncoderGeomData : public PySensorGeometry
@@ -99,7 +99,7 @@ public:
     virtual SensorBase::SensorType GetType();
     virtual SensorBase::SensorGeometryPtr GetGeometry();
 
-    dReal time_measurement;
+    dReal time_measurement = 0.0;
 };
 
 class PyOdometryGeomData : public PySensorGeometry
@@ -120,10 +120,11 @@ class PyTactileGeomData : public PySensorGeometry
 public:
     PyTactileGeomData();
     PyTactileGeomData(OPENRAVE_SHARED_PTR<SensorBase::TactileGeomData const> pgeom);
+    ~PyTactileGeomData();
     virtual SensorBase::SensorType GetType();
     virtual SensorBase::SensorGeometryPtr GetGeometry();
 
-    dReal thickness;
+    dReal thickness = 0.0;
 };
 
 class PyActuatorGeomData : public PySensorGeometry
@@ -135,7 +136,7 @@ public:
     virtual SensorBase::SensorType GetType();
     virtual SensorBase::SensorGeometryPtr GetGeometry();
 
-    dReal maxtorque, maxcurrent, nominalcurrent, maxvelocity, maxacceleration, maxjerk, staticfriction, viscousfriction;
+    dReal maxtorque = 0.0, maxcurrent = 0.0, nominalcurrent = 0.0, maxvelocity = 0.0, maxacceleration = 0.0, maxjerk = 0.0, staticfriction = 0.0, viscousfriction = 0.0;
 };
 
 class PySensorBase : public PyInterfaceBase

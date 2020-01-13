@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NO_IMPORT_ARRAY
-#include <openravepy/openravepy_int.h>
 #include <openravepy/openravepy_environmentbase.h>
+#include <openravepy/openravepy_module.h>
 
 namespace openravepy {
 
@@ -45,27 +45,15 @@ using py::def;
 
 namespace numeric = py::numeric;
 
-class OPENRAVEPY_API PyModuleBase : public PyInterfaceBase
-{
-protected:
-    ModuleBasePtr _pmodule;
-public:
-    PyModuleBase(ModuleBasePtr pmodule, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pmodule, pyenv), _pmodule(pmodule) {
-    }
-    virtual ~PyModuleBase() {
-    }
-    ModuleBasePtr GetModule() {
-        return _pmodule;
-    }
-
-    void Destroy() {
-        _pmodule->Destroy();
-    }
-
-    bool SimulationStep(dReal fElapsedTime) {
-        return _pmodule->SimulationStep(fElapsedTime);
-    }
-};
+PyModuleBase::PyModuleBase(ModuleBasePtr pmodule, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pmodule, pyenv), _pmodule(pmodule) {}
+PyModuleBase::~PyModuleBase() {}
+ModuleBasePtr PyModuleBase::GetModule() { return _pmodule; }
+void PyModuleBase::Destroy() {
+    _pmodule->Destroy();
+}
+bool PyModuleBase::SimulationStep(dReal fElapsedTime) {
+    return _pmodule->SimulationStep(fElapsedTime);
+}
 
 ModuleBasePtr GetModule(PyModuleBasePtr pymodule)
 {

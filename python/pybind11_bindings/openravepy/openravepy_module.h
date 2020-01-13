@@ -23,26 +23,16 @@
 namespace openravepy {
 using py::object;
 
-class PyModuleBase : public PyInterfaceBase
+class OPENRAVEPY_API PyModuleBase : public PyInterfaceBase
 {
 protected:
     ModuleBasePtr _pmodule;
 public:
-    PyModuleBase(ModuleBasePtr pmodule, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pmodule, pyenv), _pmodule(pmodule) {
-    }
-    virtual ~PyModuleBase() {
-    }
-    ModuleBasePtr GetModule() {
-        return _pmodule;
-    }
-
-    void Destroy() {
-        _pmodule->Destroy();
-    }
-
-    bool SimulationStep(dReal fElapsedTime) {
-        return _pmodule->SimulationStep(fElapsedTime);
-    }
+    PyModuleBase(ModuleBasePtr pmodule, PyEnvironmentBasePtr pyenv);
+    virtual ~PyModuleBase();
+    ModuleBasePtr GetModule();
+    void Destroy();
+    bool SimulationStep(dReal fElapsedTime);
 };
 
 } // namespace openravepy
