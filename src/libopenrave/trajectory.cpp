@@ -131,13 +131,12 @@ void TrajectoryBase::serialize(std::ostream& O, int options) const
     const uint16_t numGroups = spec._vgroups.size();
     WriteBinaryUInt16(O, numGroups);
 
-    for (uint16_t groupIndex = 0; groupIndex < numGroups; groupIndex++)
+    FOREACHC(itgroup, spec._vgroups)
     {
-        const ConfigurationSpecification::Group& group = spec._vgroups[groupIndex];
-        WriteBinaryString(O, group.name);   // Writes group name
-        WriteBinaryInt(O, group.offset);    // Writes offset
-        WriteBinaryInt(O, group.dof);       // Writes dof
-        WriteBinaryString(O, group.interpolation);  // Writes interpolation
+        WriteBinaryString(O, itgroup->name);   // Writes group name
+        WriteBinaryInt(O, itgroup->offset);    // Writes offset
+        WriteBinaryInt(O, itgroup->dof);       // Writes dof
+        WriteBinaryString(O, itgroup->interpolation);  // Writes interpolation
     }
 
     /* Store data waypoints */
@@ -172,12 +171,12 @@ InterfaceBasePtr TrajectoryBase::deserialize(std::istream& I)
 
         ConfigurationSpecification spec;
         spec._vgroups.resize(numGroups);
-        for (unsigned int groupIndex = 0; groupIndex < numGroups; groupIndex++)
+        FOREACH(itgroup, spec._vgroups)
         {
-            ReadBinaryString(I, spec._vgroups[groupIndex].name);    // Read group name
-            ReadBinaryInt(I, spec._vgroups[groupIndex].offset);     // Read offset
-            ReadBinaryInt(I, spec._vgroups[groupIndex].dof);        // Read dof
-            ReadBinaryString(I, spec._vgroups[groupIndex].interpolation);   // Read interpolation
+            ReadBinaryString(I, itgroup->name);             // Read group name
+            ReadBinaryInt(I, itgroup->offset);              // Read offset
+            ReadBinaryInt(I, itgroup->dof);                 // Read dof
+            ReadBinaryString(I, itgroup->interpolation);    // Read interpolation
         }
         this->Init(spec);
 
@@ -185,29 +184,28 @@ InterfaceBasePtr TrajectoryBase::deserialize(std::istream& I)
         std::vector<dReal> trajectoryData;
         ReadBinaryVector(I, trajectoryData);
         this->Insert(this->GetNumWaypoints(), trajectoryData);
+        return shared_from_this();
     }
     // Backwards compatible with old XML trajectory files
-    else
-    {
-        stringbuf buf;
-        I.seekg((size_t) beginningPosition);    // Move back to old position
-        I.get(buf, 0); // get all the data, yes this is inefficient, not sure if there anyway to search in streams
-        BOOST_ASSERT(!!I);
+    
+    stringbuf buf;
+    I.seekg((size_t) beginningPosition);    // Move back to old position
+    I.get(buf, 0); // get all the data, yes this is inefficient, not sure if there anyway to search in streams
+    BOOST_ASSERT(!!I);
 
-        string pbuf = buf.str();
-        const char* p = strcasestr(pbuf.c_str(), "</trajectory>");
-        int ppsize=-1;
-        if( p != NULL ) {
-            I.clear();
-            ppsize=(p-pbuf.c_str())+13;
-            I.seekg((size_t)pos+ppsize);
-        }
-        else {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("error, failed to find </trajectory> in %s"),buf.str(),ORE_InvalidArguments);
-        }
-        xmlreaders::TrajectoryReader readerdata(GetEnv(),shared_trajectory());
-        LocalXML::ParseXMLData(readerdata, pbuf.c_str(), ppsize);
+    string pbuf = buf.str();
+    const char* p = strcasestr(pbuf.c_str(), "</trajectory>");
+    int ppsize=-1;
+    if( p != NULL ) {
+        I.clear();
+        ppsize=(p-pbuf.c_str())+13;
+        I.seekg((size_t)pos+ppsize);
     }
+    else {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("error, failed to find </trajectory> in %s"),buf.str(),ORE_InvalidArguments);
+    }
+    xmlreaders::TrajectoryReader readerdata(GetEnv(),shared_trajectory());
+    LocalXML::ParseXMLData(readerdata, pbuf.c_str(), ppsize);
     return shared_from_this();
 }
 
