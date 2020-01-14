@@ -87,6 +87,60 @@ class TestJSONSeralization(EnvironmentSetup):
         _AssertEqual(lo.coloumb_friction, ro.coloumb_friction)
         _AssertEqual(lo.viscous_friction, ro.viscous_friction)
 
+    def _TestGeometryInfo(self, lo, ro):
+        """
+        variables:
+        _t
+        _vGeomData
+        _vGeomData2
+        _vGeomData3
+        _vGeomData4
+        _vSideWalls
+        _vDiffuseColor
+        _vAmbientColor
+        _meshcollision
+        _type
+        _name
+        _filenamerender
+        _filenamecollision
+        _vRenderScale
+        _vCollisionScale
+        _fTransparency
+        _bVisible
+        _bModifiable
+        """
+        _AssertEqual(lo._t, ro._t)
+        _AssertEqual(lo._vGeomData, ro._vGeomData)
+        _AssertEqual(lo._vGeomData2, ro._vGeomData2)
+        _AssertEqual(lo._vGeomData3, ro._vGeomData3)
+        _AssertEqual(lo._vGeomData4, ro._vGeomData4)
+        _AssertEqual(lo._vSideWalls, ro._vSideWalls)
+        _AssertEqual(lo._vDiffuseColor, ro._vDiffuseColor)
+        _AssertEqual(lo._vAmbientColor, ro._vAmbientColor)
+        _AssertEqual(lo._meshcollision, ro._meshcollision)
+        _AssertEqual(lo._type, ro._type)
+        _AssertEqual(lo._name, ro._name)
+        _AssertEqual(lo._filenamerender, ro._filenamerender)
+        _AssertEqual(lo._filenamecollision, ro._filenamecollision)
+        _AssertEqual(lo._vRenderScale, ro._vRenderScale)
+        _AssertEqual(lo._vCollisionScale, ro._vCollisionScale)
+        _AssertEqual(lo._fTransparency, ro._fTransparency)
+        _AssertEqual(lo._bVisible, ro._bVisible)
+        _AssertEqual(lo._bModifiable, ro._bModifiable)
+
+    def _TestGrabbedInfo(self, lo, ro):
+        """
+        variables:
+        _grabbedname
+        _robotlinkname
+        _trelative
+        _setRobotLinksToIgnore
+        """
+        _AssertEqual(lo._grabbedname, ro._grabbedname)
+        _AssertEqual(lo._robotlinkname, ro._robotlinkname)
+        _AssertEqual(lo._trelative, ro._trelative)
+        _AssertEqual(lo._setRobotLinksToIgnore, ro._setRobotLinksToIgnore)
+
 
     def _TestJointInfo(self, lo, ro):
         _AssertEqual(lo._type, ro._type)
@@ -116,6 +170,58 @@ class TestJSONSeralization(EnvironmentSetup):
         _TestElectricMotorActuatorInfo(lo._infoElectricMotor, ro._infoElectricMotor)
         _AssertEqual(lo._bIsCircular, ro._bIsCircular)
         _AssertEqual(lo._bIsActive, ro._bIsActive)
+
+    def _TestLinkInfo(self, lo, ro):
+        """
+        variables:
+        _vgeometryinfos
+        _mapExtraGeometries
+        _name
+        _t
+        _tMassFrame
+        _mass
+        _vinertiamoments
+        _mapFloatParameters
+        _mapIntParameters
+        _mapStringParameters
+        _vForcedAdjacentLinks
+        _bStatic
+        _bIsEnabled
+        """
+        _AssertEqual(lo._vgeometryinfos, ro._vgeometryinfos)
+        _AssertEqual(lo._mapExtraGeometries, ro._mapExtraGeometries)
+        _AssertEqual(lo._name, ro._name)
+        _AssertEqual(lo._t, ro._t)
+        _AssertEqual(lo._tMassFrame, ro._tMassFrame)
+        _AssertEqual(lo._mass, ro._mass)
+        _AssertEqual(lo._vinertiamoments, ro._vinertiamoments)
+        _AssertEqual(lo._mapFloatParameters, ro._mapFloatParameters)
+        _AssertEqual(lo._mapIntParameters, ro._mapIntParameters)
+        _AssertEqual(lo._mapStringParameters, ro._mapStringParameters)
+        _AssertEqual(lo._vForcedAdjacentLinks, ro._vForcedAdjacentLinks)
+        _AssertEqual(lo._bStatic, ro._bStatic)
+        _AssertEqual(lo._bIsEnabled, ro._bIsEnabled)
+
+    def _TestManipulatorInfo(self, lo, ro):
+        """
+        variables:
+        _name
+        _sBaseLinkName
+        _sEffectorLinkName
+        _tLocalTool
+        _vChuckingDirection
+        _vdirection
+        _sIkSolverXMLId
+        _vGripperJointNames
+        """
+        _AssertEqual(lo._name, ro._name)
+        _AssertEqual(lo._sBaseLinkName, ro._sBaseLinkName)
+        _AssertEqual(lo._sEffectorLinkName, ro._sEffectorLinkName)
+        _AssertEqual(lo._tLocalTool, ro._tLocalTool)
+        _AssertEqual(lo._vChuckingDirection, ro._vChuckingDirection)
+        _AssertEqual(lo._vdirection, ro._vdirection)
+        _AssertEqual(lo._sIkSolverXMLId, ro._sIkSolverXMLId)
+        _AssertEqual(lo._vGripperJointNames, ro._vGripperJointNames)
 
     def _TestMimicInfo(self, lo, ro):
         """ MimicInfo only serialize and deserialize in JointInfo as an arry of string.
