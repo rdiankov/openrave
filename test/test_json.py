@@ -18,25 +18,47 @@ except ImportError as e:
 
 import functools
 import numpy as np
+import weakref
+import glob
 from common_test_openrave import *
 
+def _AssertEqual(lo, ro):
+    if type(lo) != type(ro):
+        assert False
+    if type(lo) in [int, str, long, dict]:
+        assert lo == ro
+    if type(lo) in [list, tuple]:
+        for li in lo:
+            for ri in ro:
+                _AssertEqual(li, ri)
+    if isinstance(lo, np.ndarray):
+        assert all(lo == ro)
 
-class TestJSONSeralization(EnvironmentSetup):
-
-    def _AssertEqual(self, lo, ro):
-        if type(lo) != type(ro):
+def _TestArray(self, lo, ro, key, testFunc):
+    assert len(lo) == len(ro)
+    for linfo in lo:
+        found = False
+        for rinfo in ro:
+            if getattr(linfo, key) == getattr(rinfo, key):
+                testFunc(linfo, rinfo)
+                found = True
+        if not found:
             assert False
 
-        if type(lo) in [int, str, long, dict]:
-            assert lo == ro
-        if type(lo) in [list, tuple]:
-            for li in lo:
-                for ri in ro:
-                    _AssertEqual(li, ri)
+class TestJSONSerialization(EnvironmentSetup):
+    _daefiles = None
 
-        if isinstance(lo, np.ndarray):
-            assert all(lo == ro)
+    def setup_func(self):
+        self._daefiles = None
+        directory = os.env.get('OPENRAVE_DATA', '')
+        if directory:
+            for root, dirs, files in os.walk(directory):
+                for file_ in files:
+                    if file_.endswith(".dae") or file_.endswith('.zae'):
+                        self._daefiles.push(os.path.join(root, file_))
 
+    def teardown_func(self):
+        self._daefiles = []
 
     def _TestAttachedSensorInfo(self, lo, ro):
         _AssertEqual(newInfo._name, oldInfo._name)
@@ -45,102 +67,38 @@ class TestJSONSeralization(EnvironmentSetup):
         _AssertEqual(newInfo._sensorname, oldInfo._sensorname)
 
     def _TestAttachedSensorInfoArray(self, lo, ro):
-        assert len(lo) == len(ro)
-        for linfo in lo:
-            found = False
-            for rinfo in ro:
-                if linfo._name == rinfo._name:
-                    _TestAttachedSensorInfo(linfo, rinfo)
-                    found = true
-            if not found:
-                assert False
+        _TestArray(lo, ro, '_name', self._TestAttachedSensorInfo)
 
-    def _TestConnectedBodyInfo(self, lo, ro):
+    def _TestManipulatorInfo(self, lo, ro):
         _AssertEqual(lo._name, ro._name)
-        _AssertEqual(lo._linkename, ro._linkname)
-        _AssertEqual(lo._trelative, ro._trelative)
-        _AssertEqual(lo._url, ro._url)
+        _AssertEqual(lo._sBaseLinkName, ro._sBaseLinkName)
+        _AssertEqual(lo._sEffectorLinkName, ro._sEffectorLinkName)
+        _AssertEqual(lo._tLocalTool, ro._tLocalTool)
+        _AssertEqual(lo._vChuckingDirection, ro._vChuckingDirection)
+        _AssertEqual(lo._vdirection, ro._vdirection)
+        _AssertEqual(lo._sIkSolverXMLId, ro._sIkSolverXMLId)
+        _AssertEqual(lo._vGripperJointNames, ro._vGripperJointNames)
 
-        _TestLinkInfoArray(lo._linkInfos, ro._linkInfos)
-        _TestJointInfoArray(lo._jointInfos, ro._jointInfos)
-        _TestManipulatorInfoArray(lo._manipulatorInfos, ro._manipulatorInfos)
-        _TestAttachedSensorInfoArray(lo._attachedSensorInfos, ro._attachedSensorInfos)
+    def _TestManipulatorInfoArray(self, lo, ro):
+        _TestArray(lo, ro, '_name', self._TestManipulatorInfo)
 
-
-    def _TestElectricMotorActuatorInfo(self, lo, ro):
-        _AssertEqual(lo.model_type, ro.model_type)
-        _AssertEqual(lo.assigned_power_rating, ro.assigned_power_rating)
-        _AssertEqual(lo.max_speed, ro.max_speed)
-        _AssertEqual(lo.no_load_speed, ro.no_load_speed)
-        _AssertEqual(lo.stall_torque, ro.stall_torque)
-        _AssertEqual(lo.max_instantaneous_torque, ro.max_instantaneous_torque)
-        _AssertEqual(lo.nominal_speed_torque_points, ro.nominal_speed_torque_points)
-        _AssertEqual(lo.max_speed_torque_points, ro.max_speed_torque_points)
-        _AssertEqual(lo.nominal_torque, ro.nominal_torque)
-        _AssertEqual(lo.rotor_inertia, ro.rotor_inertia)
-        _AssertEqual(lo.torque_constant, ro.torque_constant)
-        _AssertEqual(lo.nominal_voltage, ro.nominal_voltage)
-        _AssertEqual(lo.speed_constant, ro.speed_constant)
-        _AssertEqual(lo.starting_current, ro.starting_current)
-        _AssertEqual(lo.terminal_resistance, ro.terminal_resistance)
-        _AssertEqual(lo.gear_ratio, ro.gear_ratio)
-        _AssertEqual(lo.coloumb_friction, ro.coloumb_friction)
-        _AssertEqual(lo.viscous_friction, ro.viscous_friction)
-
-    def _TestGeometryInfo(self, lo, ro):
-        """
-        variables:
-        _t
-        _vGeomData
-        _vGeomData2
-        _vGeomData3
-        _vGeomData4
-        _vSideWalls
-        _vDiffuseColor
-        _vAmbientColor
-        _meshcollision
-        _type
-        _name
-        _filenamerender
-        _filenamecollision
-        _vRenderScale
-        _vCollisionScale
-        _fTransparency
-        _bVisible
-        _bModifiable
-        """
+    def _TestLinkInfo(self, lo, ro):
+        _AssertEqual(lo._vgeometryinfos, ro._vgeometryinfos)
+        _AssertEqual(lo._mapExtraGeometries, ro._mapExtraGeometries)
+        _AssertEqual(lo._name, ro._name)
         _AssertEqual(lo._t, ro._t)
-        _AssertEqual(lo._vGeomData, ro._vGeomData)
-        _AssertEqual(lo._vGeomData2, ro._vGeomData2)
-        _AssertEqual(lo._vGeomData3, ro._vGeomData3)
-        _AssertEqual(lo._vGeomData4, ro._vGeomData4)
-        _AssertEqual(lo._vSideWalls, ro._vSideWalls)
-        _AssertEqual(lo._vDiffuseColor, ro._vDiffuseColor)
-        _AssertEqual(lo._vAmbientColor, ro._vAmbientColor)
-        _AssertEqual(lo._meshcollision, ro._meshcollision)
-        _AssertEqual(lo._type, ro._type)
-        _AssertEqual(lo._name, ro._name)
-        _AssertEqual(lo._filenamerender, ro._filenamerender)
-        _AssertEqual(lo._filenamecollision, ro._filenamecollision)
-        _AssertEqual(lo._vRenderScale, ro._vRenderScale)
-        _AssertEqual(lo._vCollisionScale, ro._vCollisionScale)
-        _AssertEqual(lo._fTransparency, ro._fTransparency)
-        _AssertEqual(lo._bVisible, ro._bVisible)
-        _AssertEqual(lo._bModifiable, ro._bModifiable)
+        _AssertEqual(lo._tMassFrame, ro._tMassFrame)
+        _AssertEqual(lo._mass, ro._mass)
+        _AssertEqual(lo._vinertiamoments, ro._vinertiamoments)
+        _AssertEqual(lo._mapFloatParameters, ro._mapFloatParameters)
+        _AssertEqual(lo._mapIntParameters, ro._mapIntParameters)
+        _AssertEqual(lo._mapStringParameters, ro._mapStringParameters)
+        _AssertEqual(lo._vForcedAdjacentLinks, ro._vForcedAdjacentLinks)
+        _AssertEqual(lo._bStatic, ro._bStatic)
+        _AssertEqual(lo._bIsEnabled, ro._bIsEnabled)
 
-    def _TestGrabbedInfo(self, lo, ro):
-        """
-        variables:
-        _grabbedname
-        _robotlinkname
-        _trelative
-        _setRobotLinksToIgnore
-        """
-        _AssertEqual(lo._grabbedname, ro._grabbedname)
-        _AssertEqual(lo._robotlinkname, ro._robotlinkname)
-        _AssertEqual(lo._trelative, ro._trelative)
-        _AssertEqual(lo._setRobotLinksToIgnore, ro._setRobotLinksToIgnore)
-
+    def _TestLinkInfoArray(self, lo, ro):
+        _TestArray(lo, ro, '_name', self._TestLinkInfo)
 
     def _TestJointInfo(self, lo, ro):
         _AssertEqual(lo._type, ro._type)
@@ -171,57 +129,64 @@ class TestJSONSeralization(EnvironmentSetup):
         _AssertEqual(lo._bIsCircular, ro._bIsCircular)
         _AssertEqual(lo._bIsActive, ro._bIsActive)
 
-    def _TestLinkInfo(self, lo, ro):
-        """
-        variables:
-        _vgeometryinfos
-        _mapExtraGeometries
-        _name
-        _t
-        _tMassFrame
-        _mass
-        _vinertiamoments
-        _mapFloatParameters
-        _mapIntParameters
-        _mapStringParameters
-        _vForcedAdjacentLinks
-        _bStatic
-        _bIsEnabled
-        """
-        _AssertEqual(lo._vgeometryinfos, ro._vgeometryinfos)
-        _AssertEqual(lo._mapExtraGeometries, ro._mapExtraGeometries)
-        _AssertEqual(lo._name, ro._name)
-        _AssertEqual(lo._t, ro._t)
-        _AssertEqual(lo._tMassFrame, ro._tMassFrame)
-        _AssertEqual(lo._mass, ro._mass)
-        _AssertEqual(lo._vinertiamoments, ro._vinertiamoments)
-        _AssertEqual(lo._mapFloatParameters, ro._mapFloatParameters)
-        _AssertEqual(lo._mapIntParameters, ro._mapIntParameters)
-        _AssertEqual(lo._mapStringParameters, ro._mapStringParameters)
-        _AssertEqual(lo._vForcedAdjacentLinks, ro._vForcedAdjacentLinks)
-        _AssertEqual(lo._bStatic, ro._bStatic)
-        _AssertEqual(lo._bIsEnabled, ro._bIsEnabled)
+    def _TestJointInfoArray(self, lo, ro):
+        _TestJointInfo(lo, ro, '_name', self._TestJointInfo)
 
-    def _TestManipulatorInfo(self, lo, ro):
-        """
-        variables:
-        _name
-        _sBaseLinkName
-        _sEffectorLinkName
-        _tLocalTool
-        _vChuckingDirection
-        _vdirection
-        _sIkSolverXMLId
-        _vGripperJointNames
-        """
+    def _TestConnectedBodyInfo(self, lo, ro):
         _AssertEqual(lo._name, ro._name)
-        _AssertEqual(lo._sBaseLinkName, ro._sBaseLinkName)
-        _AssertEqual(lo._sEffectorLinkName, ro._sEffectorLinkName)
-        _AssertEqual(lo._tLocalTool, ro._tLocalTool)
-        _AssertEqual(lo._vChuckingDirection, ro._vChuckingDirection)
-        _AssertEqual(lo._vdirection, ro._vdirection)
-        _AssertEqual(lo._sIkSolverXMLId, ro._sIkSolverXMLId)
-        _AssertEqual(lo._vGripperJointNames, ro._vGripperJointNames)
+        _AssertEqual(lo._linkename, ro._linkname)
+        _AssertEqual(lo._trelative, ro._trelative)
+        _AssertEqual(lo._url, ro._url)
+        _TestLinkInfoArray(lo._linkInfos, ro._linkInfos)
+        _TestJointInfoArray(lo._jointInfos, ro._jointInfos)
+        _TestManipulatorInfoArray(lo._manipulatorInfos, ro._manipulatorInfos)
+        _TestAttachedSensorInfoArray(lo._attachedSensorInfos, ro._attachedSensorInfos)
+
+    def _TestElectricMotorActuatorInfo(self, lo, ro):
+        _AssertEqual(lo.model_type, ro.model_type)
+        _AssertEqual(lo.assigned_power_rating, ro.assigned_power_rating)
+        _AssertEqual(lo.max_speed, ro.max_speed)
+        _AssertEqual(lo.no_load_speed, ro.no_load_speed)
+        _AssertEqual(lo.stall_torque, ro.stall_torque)
+        _AssertEqual(lo.max_instantaneous_torque, ro.max_instantaneous_torque)
+        _AssertEqual(lo.nominal_speed_torque_points, ro.nominal_speed_torque_points)
+        _AssertEqual(lo.max_speed_torque_points, ro.max_speed_torque_points)
+        _AssertEqual(lo.nominal_torque, ro.nominal_torque)
+        _AssertEqual(lo.rotor_inertia, ro.rotor_inertia)
+        _AssertEqual(lo.torque_constant, ro.torque_constant)
+        _AssertEqual(lo.nominal_voltage, ro.nominal_voltage)
+        _AssertEqual(lo.speed_constant, ro.speed_constant)
+        _AssertEqual(lo.starting_current, ro.starting_current)
+        _AssertEqual(lo.terminal_resistance, ro.terminal_resistance)
+        _AssertEqual(lo.gear_ratio, ro.gear_ratio)
+        _AssertEqual(lo.coloumb_friction, ro.coloumb_friction)
+        _AssertEqual(lo.viscous_friction, ro.viscous_friction)
+
+    def _TestGeometryInfo(self, lo, ro):
+        _AssertEqual(lo._t, ro._t)
+        _AssertEqual(lo._vGeomData, ro._vGeomData)
+        _AssertEqual(lo._vGeomData2, ro._vGeomData2)
+        _AssertEqual(lo._vGeomData3, ro._vGeomData3)
+        _AssertEqual(lo._vGeomData4, ro._vGeomData4)
+        _AssertEqual(lo._vSideWalls, ro._vSideWalls)
+        _AssertEqual(lo._vDiffuseColor, ro._vDiffuseColor)
+        _AssertEqual(lo._vAmbientColor, ro._vAmbientColor)
+        _AssertEqual(lo._meshcollision, ro._meshcollision)
+        _AssertEqual(lo._type, ro._type)
+        _AssertEqual(lo._name, ro._name)
+        _AssertEqual(lo._filenamerender, ro._filenamerender)
+        _AssertEqual(lo._filenamecollision, ro._filenamecollision)
+        _AssertEqual(lo._vRenderScale, ro._vRenderScale)
+        _AssertEqual(lo._vCollisionScale, ro._vCollisionScale)
+        _AssertEqual(lo._fTransparency, ro._fTransparency)
+        _AssertEqual(lo._bVisible, ro._bVisible)
+        _AssertEqual(lo._bModifiable, ro._bModifiable)
+
+    def _TestGrabbedInfo(self, lo, ro):
+        _AssertEqual(lo._grabbedname, ro._grabbedname)
+        _AssertEqual(lo._robotlinkname, ro._robotlinkname)
+        _AssertEqual(lo._trelative, ro._trelative)
+        _AssertEqual(lo._setRobotLinksToIgnore, ro._setRobotLinksToIgnore)
 
     def _TestMimicInfo(self, lo, ro):
         """ MimicInfo only serialize and deserialize in JointInfo as an arry of string.
@@ -242,9 +207,8 @@ class TestJSONSeralization(EnvironmentSetup):
                     newInfo = AttachedSensorInfo()
                     oldInfo = attachedsensor.GetInfo()
                     newInfo.DeserializeJSON(oldInfo.SerializeJSON(), env)
-                    _TestAttachedSensorInfo(newInfo, oldInfo)
+                    self._TestAttachedSensorInfo(newInfo, oldInfo)
                     #TODO: sensorGeometry
-
 
     def test_ConnectedBodyInfo(self):
         self.log.info('test serialize/deserialize ConnectedBodyInfo')
@@ -260,67 +224,36 @@ class TestJSONSeralization(EnvironmentSetup):
                     newInfo = ConnectedBodyInfo()
                     oldInfo = connectedbody.GetInfo()
                     newInfo.DeserializeJSON(oldInfo.SerializeJSON())
-                    _TestConnectedBodyInfo(newInfo, oldInfo)
+                    self._TestConnectedBodyInfo(newInfo, oldInfo)
 
-    # # robot.h
-    # def test_ManipulatorInfo(self):
-    #     self.log.info('test serialize/deserialize ManipulatorInfo')
-    #     env = self.env
-    #     with env:
-    #         for robotfile in g_robotfiles:
-    #             env.Reset()
-    #             robot = self.LoadRobot(robotfile)
-    #             manips = robot.GetManipulators()
-    #             for manip in manips:
-    #                 emptyInfo =  ManipulatorInfo()
-    #                 emptyInfo.DeserializeJSON(manip.GetInfo().SerializeJSON())
-    #                 assert emptyInfo == manip.GetInfo()
+    def test_ManipulatorInfo(self):
+        self.log.info('test serialize/deserialize ManipulatorInfo')
+        env = self.env
+        with env:
+            for robotfile in g_robotfiles:
+                env.Reset()
+                robot = self.LoadRobot(robotfile)
+                manips = robot.GetManipulators()
+                for manip in manips:
+                    newInfo =  ManipulatorInfo()
+                    oldInfo = manip.GetInfo()
+                    newInfo.DeserializeJSON(oldInfo.SerializeJSON(), env)
+                    self._TestManipulatorInfo(oldInfo, newInfo)
 
+    def test_ElectricMotorActuatorInfo(self):
+        self.log.info('test serialize/deserialize ElectricMotorActuatorInfo')
 
-    # # trajectory.h
-    # def test_TrajectoryBase(self):
-    #     self.log.info('test serialize/deserialize Trajectory')
-    #     env = self.env
-    #     with env:
-    #         trajxml = """
-    #         <trajectory>
-    #             <configuration>
-    #                 <group name="string" offset="#OFF1" dof="#D1" interpolation="string"/>
-    #                 <group name="string" offset="#OFF2" dof="#D2" interpolation="string"/>
-    #             </configuration>
-    #             <data count="6">
-    #                 0 0 0 0 0 0 0
-    #             </data>
-    #             <description>My trajectory
-    #             </description>
-    #         </trajectory>
-    #         """
-    #         trajFromXML = RaveCreateTrajectory(env, '')
-    #         trajFromXML.deserialize(trajxml)
-    #         trajjson = traj.SerializeJSON()
-    #         trajFromJSON = RaveCreateTrajectorY(env, 'json')
-    #         trajFromJSON.DeserializeJSON(trajjson)
-    #         assert trajFromXML == trajfromJSON
+    def test_GeometryInfo(self):
+        self.log.info('test serialize/deserialize GeometryInfo')
 
-    # def test_GenericTrajectory(self):
-    #     pass
+    def test_LinkInfo(self):
+        self.log.info('test serialize/deserialize LinkInfo')
 
-    # # kinbody.h
-    # def test_ElectricMotorActuatorInfo(self):
-    #     pass
+    def test_MimicInfo(self):
+        self.log.info('test serialize/deserialize MimicInfo')
 
-    # def test_GeometryInfo(self):
-    #     pass
+    def test_JointInfo(self):
+        self.log.info('test serialize/deserialize JointInfo')
 
-    # def test_LinkInfo(self):
-    #     pass
-
-    # def test_MimicInfo(self):
-    #     pass
-
-    # def test_JointInfo(self):
-    #     pass
-
-    # def test_GrabbedInfo(self):
-    #     pass
-
+    def test_GrabbedInfo(self):
+        self.log.info('test serialize/deserialize GrabbedInfo')
