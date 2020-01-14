@@ -366,14 +366,11 @@ AttributesList toAttributesList(py::dict odict)
 {
     AttributesList atts;
     if( !IS_PYTHONOBJECT_NONE(odict) ) {
-#ifndef USE_PYBIND11_PYTHON_BINDINGS
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        for (const std::pair<py::handle, py::handle>& item : odict)
+#else
         py::list iterkeys = (py::list)odict.iterkeys();
         const size_t num = py::len(iterkeys);
-#endif
-
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        for (auto item : odict)
-#else
         for (size_t i = 0; i < num; i++)
 #endif
         {

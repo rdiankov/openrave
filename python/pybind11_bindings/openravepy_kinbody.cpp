@@ -277,7 +277,7 @@ public:
         info._vinertiamoments = ExtractVector3(_vinertiamoments);
         info._mapFloatParameters.clear();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        for(auto item : _mapFloatParameters) {
+        for(const std::pair<py::handle, py::handle>& item : _mapFloatParameters) {
             std::string name = extract<std::string>(item.first);
             info._mapFloatParameters[name] = ExtractArray<dReal>(extract<py::object>(item.second));
         }
@@ -293,7 +293,7 @@ public:
 
         info._mapIntParameters.clear();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        for(auto item : _mapIntParameters) {
+        for(const std::pair<py::handle, py::handle>& item : _mapIntParameters) {
             std::string name = extract<std::string>(item.first);
             info._mapIntParameters[name] = ExtractArray<int>(extract<py::object>(item.second));
         }
@@ -309,7 +309,7 @@ public:
 
         info._mapStringParameters.clear();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        for(auto item : _mapStringParameters) {
+        for(const std::pair<py::handle, py::handle>& item : _mapStringParameters) {
             std::string name = extract<std::string>(item.first);
             info._mapStringParameters[name] = extract<std::string>(item.second);
         }
@@ -617,7 +617,7 @@ public:
         num = len(_mapFloatParameters);
         info._mapFloatParameters.clear();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        for(auto item : _mapFloatParameters) {
+        for(const std::pair<py::handle, py::handle>& item : _mapFloatParameters) {
             std::string name = extract<std::string>(item.first);
             info._mapFloatParameters[name] = ExtractArray<dReal>(extract<py::object>(item.second));
         }
@@ -632,7 +632,7 @@ public:
 
        info._mapIntParameters.clear();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        for(auto item : _mapIntParameters) {
+        for(const std::pair<py::handle, py::handle>& item : _mapIntParameters) {
             std::string name = extract<std::string>(item.first);
             info._mapIntParameters[name] = ExtractArray<int>(extract<py::object>(item.second));
         }
@@ -648,7 +648,7 @@ public:
 
        info._mapStringParameters.clear();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        for(auto item : _mapStringParameters) {
+        for(const std::pair<py::handle, py::handle>& item : _mapStringParameters) {
             std::string name = extract<std::string>(item.first);
             info._mapStringParameters[name] = extract<std::string>(item.second);
         }       
@@ -2412,7 +2412,7 @@ object PyKinBody::GetLinkAccelerations(object odofaccelerations, object oexterna
         py::dict odict = (py::dict)oexternalaccelerations;
         std::vector<dReal> v;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        for (auto item : odict) {
+        for (const std::pair<py::handle, py::handle>& item : odict) {
             int linkindex = py::extract<int>(item.first);
             object olinkaccelerations = extract<py::object>(item.second);
             OPENRAVE_ASSERT_OP(len(olinkaccelerations),==,6);
@@ -2784,7 +2784,7 @@ object PyKinBody::ComputeInverseDynamics(object odofaccelerations, object oexter
         py::dict odict = (py::dict)oexternalforcetorque;
         std::vector<dReal> v;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        for (auto item : odict) {
+        for (const std::pair<py::handle, py::handle>& item : odict) {
             int linkindex = py::extract<int>(item.first);
             object oforcetorque = extract<py::object>(item.second);
             OPENRAVE_ASSERT_OP(len(oforcetorque),==,6);
