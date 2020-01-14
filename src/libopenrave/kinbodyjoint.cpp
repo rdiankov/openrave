@@ -71,37 +71,37 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
 
     switch (_type) {
     case JointRevolute:
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_type", "revolute");
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "revolute");
         break;
     case JointPrismatic:
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_type", "prismatic");
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "prismatic");
         break;
     case JointNone:
         break;
     default:
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_type", static_cast<int>(_type));
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", static_cast<int>(_type));
         break;
     }
 
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_name", _name);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vanchor", _vanchor);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_linkname0", _linkname0);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_linkname1", _linkname1);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vaxes", _vaxes);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vcurrentvalues", _vcurrentvalues);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vresolution", _vresolution, dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vmaxvel", _vmaxvel, dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vhardmaxvel", _vhardmaxvel, dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vmaxaccel", _vmaxaccel, dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vhardmaxaccel", _vhardmaxaccel, dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vmaxjerk", _vmaxjerk, dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vhardmaxjerk", _vhardmaxjerk, dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vmaxtorque", _vmaxtorque, dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vmaxinertia", _vmaxinertia, dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vweights", _vweights, dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_voffsets", _voffsets, dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vupperlimit", _vupperlimit, dof);
-    // TODO: RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_trajfollow", _trajfollow);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", _name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "anchors", _vanchor);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "parentLinkName", _linkname0);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "childLinkName", _linkname1);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "axes", _vaxes);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "currentValues", _vcurrentvalues);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "resolutions", _vresolution, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "maxvel", _vmaxvel, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "hardMaxVel", _vhardmaxvel, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "maxAccel", _vmaxaccel, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "hardMaxAccel", _vhardmaxaccel, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "maxJerk", _vmaxjerk, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "hardMaxJerk", _vhardmaxjerk, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "maxTorque", _vmaxtorque, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "maxInertia", _vmaxinertia, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "weights", _vweights, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "offsets", _voffsets, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "upperlimit", _vupperlimit, dof);
+    // TODO: RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "trajfollow", _trajfollow);
 
     if (_vmimic.size() > 0) {
         bool bfound = false;
@@ -119,32 +119,32 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
                 _vmimic[i]->SerializeJSON(mimicValue, allocator);
                 mimics.PushBack(mimicValue, allocator);
             }
-            value.AddMember("_vmimic", mimics, allocator);
+            value.AddMember("mimics", mimics, allocator);
         }
     }
 
     if(_mapFloatParameters.size() > 0)
     {
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_mapFloatParameters", _mapFloatParameters);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "floatParameters", _mapFloatParameters);
     }
     if(_mapIntParameters.size() > 0)
     {
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_mapIntParameters", _mapIntParameters);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "intParameters", _mapIntParameters);
     }
     if(_mapStringParameters.size() > 0)
     {
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_mapStringParameters", _mapStringParameters);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "stringParameters", _mapStringParameters);
     }
 
     if (!!_infoElectricMotor) {
         rapidjson::Value electricMotorInfoValue;
         RAVE_SERIALIZEJSON_CLEAR_OBJECT(electricMotorInfoValue);
         _infoElectricMotor->SerializeJSON(electricMotorInfoValue, allocator, options);
-        value.AddMember("_infoElectricMotor", electricMotorInfoValue, allocator);
+        value.AddMember("electricMotorActuator", electricMotorInfoValue, allocator);
     }
 
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_bIsCircular", _bIsCircular, dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_bIsActive", _bIsActive);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "isCircular", _bIsCircular, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "isActive", _bIsActive);
 
 }
 
@@ -152,7 +152,7 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, Environm
 {
     RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
     std::string typestr;
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_type", typestr);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "type", typestr);
 
     if (typestr == "revolute")
     {
@@ -166,28 +166,26 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, Environm
     {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported joint type \"%s\"", typestr, ORE_InvalidArguments);
     }
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_name", _name);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_linkname0", _linkname0);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vanchor", _vanchor);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_linkname1", _linkname1);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vaxes", _vaxes);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vcurrentvalues", _vcurrentvalues);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vresolution", _vresolution);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vmaxvel", _vmaxvel);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vhardmaxvel", _vhardmaxvel);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vmaxaccel", _vmaxaccel);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vhardmaxaccel", _vhardmaxaccel);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vmaxjerk", _vmaxjerk);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vhardmaxjerk", _vhardmaxjerk);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vmaxtorque", _vmaxtorque);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vmaxinertia", _vmaxinertia);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vweights", _vweights);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_voffsets", _voffsets);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vupperlimit", _vupperlimit);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_voffsets", _voffsets);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vupperlimit", _vupperlimit);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_bIsCircular", _bIsCircular);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_bIsActive", _bIsActive);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "name", _name);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "parentLinkName", _linkname0);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "anchors", _vanchor);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "childLinkName", _linkname1);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "axes", _vaxes);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "currentValues", _vcurrentvalues);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "resolutions", _vresolution);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "maxvel", _vmaxvel);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "hardMaxVel", _vhardmaxvel);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "maxAccel", _vmaxaccel);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "hardMaxAccel", _vhardmaxaccel);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "maxJerk", _vmaxjerk);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "hardMaxJerk", _vhardmaxjerk);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "maxTorque", _vmaxtorque);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "maxInertia", _vmaxinertia);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "weights", _vweights);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "offsets", _voffsets);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "upperlimit", _vupperlimit);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "isCircular", _bIsCircular);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "isActive", _bIsActive);
 
     // multiply fUnitScale on maxVel, maxAccel, lowerLimit, upperLimit
 
@@ -209,24 +207,24 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, Environm
     }
 
     boost::array<MimicInfoPtr, 3> newmimic;
-    if (value.HasMember("_vmimic"))
+    if (value.HasMember("mimics"))
     {
-        RAVE_DESERIALIZEJSON_ENSURE_ARRAY(value["_vmimic"]);
-        for (rapidjson::SizeType i = 0; i < value["_vmimic"].Size(); ++i) {
+        RAVE_DESERIALIZEJSON_ENSURE_ARRAY(value["mimics"]);
+        for (rapidjson::SizeType i = 0; i < value["mimics"].Size(); ++i) {
             MimicInfoPtr mimicinfo(new MimicInfo());
-            mimicinfo->DeserializeJSON(value["_vmimic"][i]);
+            mimicinfo->DeserializeJSON(value["mimics"][i]);
             newmimic[i] = mimicinfo;
         }
     }
     _vmimic = newmimic;
 
-    RAVE_DESERIALIZEJSON_OPTIONAL(value, "_mapFloatParameters", _mapFloatParameters);
-    RAVE_DESERIALIZEJSON_OPTIONAL(value, "_mapIntParameters", _mapIntParameters);
-    RAVE_DESERIALIZEJSON_OPTIONAL(value, "_mapStringParameters", _mapStringParameters);
+    RAVE_DESERIALIZEJSON_OPTIONAL(value, "floatParameters", _mapFloatParameters);
+    RAVE_DESERIALIZEJSON_OPTIONAL(value, "intParameters", _mapIntParameters);
+    RAVE_DESERIALIZEJSON_OPTIONAL(value, "stringParameters", _mapStringParameters);
 
-    if (value.HasMember("_infoElectricMotor")) {
+    if (value.HasMember("electricMotorActuator")) {
         ElectricMotorActuatorInfoPtr info(new ElectricMotorActuatorInfo());
-        info->DeserializeJSON(value["_infoElectricMotor"], penv);
+        info->DeserializeJSON(value["electricMotorActuator"], penv);
         _infoElectricMotor = info;
     }
 }
@@ -1964,13 +1962,13 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
 void KinBody::MimicInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) const
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_equations", _equations);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "equations", _equations);
 }
 
 void KinBody::MimicInfo::DeserializeJSON(const rapidjson::Value& value)
 {
     RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_equations", _equations);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "equations", _equations);
 }
 
 }

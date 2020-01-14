@@ -23,10 +23,10 @@ namespace OpenRAVE {
 void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options) const
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_name", _name);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_linkname", _linkname);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_trelative", _trelative);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_sensorname", _sensorname);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", _name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "linkName", _linkname);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", _trelative);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", _sensorname);
 
     // TODO: SensorGeometry
     // rapidjson::Value sensorGeometryValue;
@@ -34,23 +34,23 @@ void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapid
     // {
     // 	_sensorgeometry->SerializzeJSON(sensorGeometryValue, allocator, options);
     // }
-    // RAVE_SERIALIZEJSON_REQUIRED(value, "_sensorgeometry", sensorGeometryValue);
+    // RAVE_SERIALIZEJSON_REQUIRED(value, "sensorGeometry", sensorGeometryValue);
 
 }
 void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv)
 {
     RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_name", _name);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_linkname", _linkname);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_trelative", _trelative);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_sensorname", _sensorname);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "name", _name);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "linkName", _linkname);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "transform", _trelative);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "type", _sensorname);
 
 	// TODO: SensorGeometry
-    if(value.HasMember("_sensorgeometry")) {
-    	SensorBasePtr psensor = RaveCreateSensor(penv, value["_sensorname"].GetString());
+    if(value.HasMember("sensorGeometry")) {
+    	SensorBasePtr psensor = RaveCreateSensor(penv, value["type"].GetString());
     	BaseJSONReaderPtr preader = RaveCallJSONReader(PT_Sensor, _sensorname, psensor, AttributesList());
     	if(!!preader) {
-    		preader->DeserializeJSON(value["_sensorgeometry"]);
+    		preader->DeserializeJSON(value["sensorGeometry"]);
     		if(!!preader->GetReadable()) {
     			_sensorgeometry = boost::dynamic_pointer_cast<SensorBase::SensorGeometry>(preader->GetReadable());
     		}
