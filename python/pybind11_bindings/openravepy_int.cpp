@@ -240,11 +240,10 @@ void toRapidJSONValue(const object &obj, rapidjson::Value &value, rapidjson::Doc
         py::dict d = py::extract<py::dict>(obj);
         value.SetObject();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        for (pybind11::detail::dict_iterator it = d.begin(); it != d.end(); ++it) {
-            std::pair<py::handle, py::handle> ref = *it;
+        for (const std::pair<py::handle, py::handle>& item : d) {
             rapidjson::Value k, v;
-            toRapidJSONValue(py::reinterpret_borrow<py::object>(ref.first), k, allocator);
-            toRapidJSONValue(py::reinterpret_borrow<py::object>(ref.second), v, allocator);
+            toRapidJSONValue(py::reinterpret_borrow<py::object>(item.first), k, allocator);
+            toRapidJSONValue(py::reinterpret_borrow<py::object>(item.second), v, allocator);
             value.AddMember(k, v, allocator);
         }
 #else
