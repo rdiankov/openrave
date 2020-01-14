@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8-*-
 # Copyright (C) 2011 Rosen Diankov <rosen.diankov@gmail.com>
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,12 @@ import functools
 import numpy as np
 import weakref
 import glob
+import urlparse
+import logging
+from nose import with_setup
+from nose.plugins.attrib import attr
 from common_test_openrave import *
+
 
 def _AssertEqual(lo, ro):
     if type(lo) != type(ro):
@@ -46,25 +51,34 @@ def _TestArray(self, lo, ro, key, testFunc):
             assert False
 
 class TestJSONSerialization(EnvironmentSetup):
+    _name_ = 'TestJSONSerializeJSON'
     _daefiles = None
 
-    def setup_func(self):
-        self._daefiles = None
-        directory = os.env.get('OPENRAVE_DATA', '')
-        if directory:
-            for root, dirs, files in os.walk(directory):
-                for file_ in files:
-                    if file_.endswith(".dae") or file_.endswith('.zae'):
-                        self._daefiles.push(os.path.join(root, file_))
+    def __init__(self, *args, **kwargs):
+        super(TestJSONSerialization, self).__init__(*args, **kwargs)
 
-    def teardown_func(self):
+    def setup(self):
+        super(TestJSONSerialization, self).setup()
         self._daefiles = []
+        directories = os.getenv('OPENRAVE_DATA', '') #TODO: maybe use OPENRAVE_TEST_DATA
+        for directory in directories.split(':'):
+            if os.path.isdir(directory):
+                for root, dirs, files in os.walk(directory):
+                    for file_ in files:
+                        if file_.endswith(".dae") or file_.endswith('.zae'):
+                            daeurl = urlparse.urlunparse(('file', os.path.join(root, file_), '', '', '', ''))
+                            self._daefiles.append(daeurl)
+
+    def teardown(self):
+        self._daefiles = None
+        super(TestJSONSerialization, self).teardown()
 
     def _TestAttachedSensorInfo(self, lo, ro):
         _AssertEqual(newInfo._name, oldInfo._name)
         _AssertEqual(newInfo._linkname, oldInfo._linkname)
         _AssertEqual(newInfo._trelative, oldInfo._trelative)
         _AssertEqual(newInfo._sensorname, oldInfo._sensorname)
+
 
     def _TestAttachedSensorInfoArray(self, lo, ro):
         _TestArray(lo, ro, '_name', self._TestAttachedSensorInfo)
