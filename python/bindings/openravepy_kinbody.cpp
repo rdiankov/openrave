@@ -1,4 +1,4 @@
-// -* coding: utf-8 -*-
+// -*- coding: utf-8 -*-
 // Copyright (C) 2006-2013 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
@@ -3547,7 +3547,7 @@ void init_openravepy_kinbody()
                        .def_readwrite("_bIsActive",&PyJointInfo::_bIsActive)
                        .def_readwrite("_infoElectricMotor", &PyJointInfo::_infoElectricMotor)
                        .def("SerializeJSON", &PyJointInfo::SerializeJSON, SerializeJSON_overloads(args("options"), DOXY_FN(KinBody::JointInfo, SerializeJSON)))
-                       .def("DeserializeJSON", &PyJointInfo::DeserializeJSON, args("obj", "penv"), DOXY_FN(KinBody::JointInfo, DeserializeJSON))
+                       .def("DeserializeJSON", &PyJointInfo::DeserializeJSON, args("obj", "penv", "unitScale"), DOXY_FN(KinBody::JointInfo, DeserializeJSON))
                        .def_pickle(JointInfo_pickle_suite())
     ;
 

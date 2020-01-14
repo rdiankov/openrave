@@ -1250,7 +1250,7 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
 void KinBody::GetLinkTransformations(vector<Transform>& vtrans) const
 {
     if( RaveGetDebugLevel() & Level_VerifyPlans ) {
-        RAVELOG_VERBOSE("GetLinkTransformations should be called with doflastsetvaluesn");
+        RAVELOG_VERBOSE("GetLinkTransformations should be called with doflastsetvalues\n");
     }
     vtrans.resize(_veclinks.size());
     vector<Transform>::iterator it;

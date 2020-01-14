@@ -489,18 +489,18 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Do
 
     case GT_TriMesh:
         RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "trimesh");
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_meshcollision", _meshcollision);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "meshCollision", _meshcollision);
         break;
 
     default:
         break;
     }
 
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_fTransparency", _fTransparency);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_bVisible", _bVisible);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vDiffuseColor", _vDiffuseColor);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_vAmbientColor", _vAmbientColor);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "_bModifiable", _bModifiable);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transparency", _fTransparency);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "isVisible", _bVisible);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "diffuseColors", _vDiffuseColor);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "ambientColors", _vAmbientColor);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "isModifiable", _bModifiable);
 }
 
 
@@ -571,7 +571,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
     }
     else if (typestr == "trimesh" or typestr == "mesh") {
         _type = GT_TriMesh;
-        RAVE_DESERIALIZEJSON_REQUIRED(value, "_meshcollision", _meshcollision);
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "meshCollision", _meshcollision);
 
         FOREACH(itvertex, _meshcollision.vertices) {
             *itvertex *= fUnitScale;
@@ -581,11 +581,11 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported geometry type \"%s\"", typestr, ORE_InvalidArguments);
     }
 
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_fTransparency", _fTransparency);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_bVisible", _bVisible);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vDiffuseColor", _vDiffuseColor);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_vAmbientColor", _vAmbientColor);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "_bModifiable", _bModifiable);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "transparency", _fTransparency);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "isVisible", _bVisible);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "diffuseColors", _vDiffuseColor);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "ambientColors", _vAmbientColor);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "isModifiable", _bModifiable);
 }
 
 
