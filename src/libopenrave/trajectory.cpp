@@ -148,7 +148,7 @@ void TrajectoryBase::serialize(std::ostream& O, int options) const
 InterfaceBasePtr TrajectoryBase::deserialize(std::istream& I)
 {
     // Check whether binary or XML file
-    stringstream::streampos beginningPosition = I.tellg();  // Save old position
+    stringstream::streampos pos = I.tellg();  // Save old position
     uint16_t binaryFileHeader = 0;
     ReadBinaryUInt16(I, binaryFileHeader);
 
@@ -160,7 +160,7 @@ InterfaceBasePtr TrajectoryBase::deserialize(std::istream& I)
 
         if (versionNumber != VERSION_NUMBER)
         {
-            // Throw assertion (for future versions)
+            throw OPENRAVE_EXCEPTION_FORMAT(_("unsupported trajectory format version %d "),versionNumber,ORE_InvalidArguments);
         }
             
         /* Read metadata */
@@ -189,7 +189,7 @@ InterfaceBasePtr TrajectoryBase::deserialize(std::istream& I)
     // Backwards compatible with old XML trajectory files
     
     stringbuf buf;
-    I.seekg((size_t) beginningPosition);    // Move back to old position
+    I.seekg((size_t) pos);    // Move back to old position
     I.get(buf, 0); // get all the data, yes this is inefficient, not sure if there anyway to search in streams
     BOOST_ASSERT(!!I);
 
