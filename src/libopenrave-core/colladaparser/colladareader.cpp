@@ -1731,8 +1731,8 @@ public:
                                     KinBody::JointInfo::JointControlInfo_ExternalDevice& jci = *pjoint->_info._jci_externaldevice;
                                     for( size_t ieltcontent = 0; ieltcontent < pelt->getChildren().getCount(); ++ieltcontent ) {
                                         daeElementRef pchild = pelt->getChildren()[ieltcontent];
-                                        if( pchild->getElementName() == std::string("gripperId") ) {
-                                            jci.gripperId = boost::lexical_cast<int>(pchild->getCharData());
+                                        if( pchild->getElementName() == std::string("externalDeviceId") ) {
+                                            jci.externalDeviceId = pchild->getCharData();
                                         }
                                     }
                                     continue;

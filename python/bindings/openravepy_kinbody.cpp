@@ -619,21 +619,20 @@ class PyJointControlInfo_ExternalDevice
 public:
     PyJointControlInfo_ExternalDevice()
     {
-        gripperId = -1;
     }
     PyJointControlInfo_ExternalDevice(const KinBody::JointInfo::JointControlInfo_ExternalDevice &jci)
     {
-        gripperId = jci.gripperId;
+        externalDeviceId = jci.externalDeviceId;
     }
     KinBody::JointInfo::JointControlInfo_ExternalDevicePtr GetJointControlInfo()
     {
         KinBody::JointInfo::JointControlInfo_ExternalDevicePtr pinfo(new KinBody::JointInfo::JointControlInfo_ExternalDevice());
         KinBody::JointInfo::JointControlInfo_ExternalDevice& info = *pinfo;
-        info.gripperId = gripperId;
+        info.externalDeviceId = externalDeviceId;
         return pinfo;
     }
 
-    int gripperId;
+    std::string externalDeviceId;
 };
 typedef boost::shared_ptr<PyJointControlInfo_ExternalDevice> PyJointControlInfo_ExternalDevicePtr;
 
@@ -3527,10 +3526,10 @@ class JointControlInfo_ExternalDevice_pickle_suite : public pickle_suite
 public:
     static boost::python::tuple getstate(const PyJointControlInfo_ExternalDevice& r)
     {
-        return boost::python::make_tuple(r.gripperId);
+        return boost::python::make_tuple(r.externalDeviceId);
     }
     static void setstate(PyJointControlInfo_ExternalDevice& r, boost::python::tuple state) {
-        r.gripperId = boost::python::extract<int>(state[0]);
+        r.externalDeviceId = boost::python::extract<int>(state[0]);
     }
 };
 
@@ -3792,7 +3791,7 @@ void init_openravepy_kinbody()
 
     object jointcontrolinfo_externaldevice =
         class_<PyJointControlInfo_ExternalDevice, boost::shared_ptr<PyJointControlInfo_ExternalDevice> >("JointControlInfo_ExternalDevice", DOXY_CLASS(KinBody::JointInfo::JointControlInfo_ExternalDevice))
-        .def_readwrite("gripperId", &PyJointControlInfo_ExternalDevice::gripperId)
+        .def_readwrite("externalDeviceId", &PyJointControlInfo_ExternalDevice::externalDeviceId)
         .def_pickle(JointControlInfo_ExternalDevice_pickle_suite())
     ;
 

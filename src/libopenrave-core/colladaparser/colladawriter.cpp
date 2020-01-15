@@ -1619,8 +1619,8 @@ private:
                     case KinBody::JCM_ExternalDevice: {
                         daeElementRef param_jointcontrolinfo_externaldevice = ptec->add("jointcontrolinfo_externaldevice");
                         // robotId
-                        daeElementRef param_gripperId = param_jointcontrolinfo_externaldevice->add("gripperId");
-                        param_gripperId->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_externaldevice->gripperId).c_str());
+                        daeElementRef param_externalDeviceId = param_jointcontrolinfo_externaldevice->add("externalDeviceId");
+                        param_externalDeviceId->setCharData(pjoint->_info._jci_externaldevice->externalDeviceId.c_str());
                         break;
                     } // end case KinBody::JCM_ExternalDevice
                     default: {

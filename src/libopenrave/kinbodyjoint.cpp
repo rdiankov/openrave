@@ -23,6 +23,19 @@
 
 namespace OpenRAVE {
 
+KinBody::JointInfo::JointControlInfo_RobotController::JointControlInfo_RobotController() : robotId(-1)
+{
+    robotControllerDOFIndex[0] = robotControllerDOFIndex[1] = robotControllerDOFIndex[2] = -1;
+}
+
+KinBody::JointInfo::JointControlInfo_IO::JointControlInfo_IO() : deviceId(-1)
+{
+}
+
+KinBody::JointInfo::JointControlInfo_ExternalDevice::JointControlInfo_ExternalDevice()
+{
+}
+
 KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsActive(true), _controlMode(JCM_None) {
     for(size_t i = 0; i < _vaxes.size(); ++i) {
         _vaxes[i] = Vector(0,0,1);
