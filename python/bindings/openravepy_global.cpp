@@ -22,6 +22,24 @@
 
 namespace openravepy {
 
+using py::object;
+using py::extract;
+using py::handle;
+using py::dict;
+using py::enum_;
+using py::class_;
+using py::no_init;
+using py::bases;
+using py::init;
+using py::scope;
+using py::args;
+using py::return_value_policy;
+using py::copy_const_reference;
+using py::docstring_options;
+using py::def;
+using py::pickle_suite;
+namespace numeric = py::numeric;
+
 PyRay::PyRay(object newpos, object newdir)
 {
     r.pos = ExtractVector3(newpos);
@@ -142,9 +160,9 @@ bool ExtractRay(object o, RAY& ray)
 class Ray_pickle_suite : public pickle_suite
 {
 public:
-    static boost::python::tuple getinitargs(const PyRay& r)
+    static py::tuple getinitargs(const PyRay& r)
     {
-        return boost::python::make_tuple(toPyVector3(r.r.pos),toPyVector3(r.r.dir));
+        return py::make_tuple(toPyVector3(r.r.pos),toPyVector3(r.r.dir));
     }
 };
 
@@ -201,9 +219,9 @@ object toPyAABB(const AABB& ab)
 class AABB_pickle_suite : public pickle_suite
 {
 public:
-    static boost::python::tuple getinitargs(const PyAABB& ab)
+    static py::tuple getinitargs(const PyAABB& ab)
     {
-        return boost::python::make_tuple(toPyVector3(ab.ab.pos),toPyVector3(ab.ab.extents));
+        return py::make_tuple(toPyVector3(ab.ab.pos),toPyVector3(ab.ab.extents));
     }
 };
 
@@ -363,9 +381,9 @@ object toPyTriMesh(const TriMesh& mesh)
 class TriMesh_pickle_suite : public pickle_suite
 {
 public:
-    static boost::python::tuple getinitargs(const PyTriMesh& r)
+    static py::tuple getinitargs(const PyTriMesh& r)
     {
-        return boost::python::make_tuple(r.vertices,r.indices);
+        return py::make_tuple(r.vertices,r.indices);
     }
 };
 
@@ -568,11 +586,11 @@ public:
         return false;
     }
 
-    boost::python::list ExtractUsedBodies(PyEnvironmentBasePtr pyenv)
+    py::list ExtractUsedBodies(PyEnvironmentBasePtr pyenv)
     {
         std::vector<KinBodyPtr> vusedbodies;
         _spec.ExtractUsedBodies(openravepy::GetEnvironment(pyenv), vusedbodies);
-        boost::python::list obodies;
+        py::list obodies;
         FOREACHC(itbody, vusedbodies) {
             if( (*itbody)->IsRobot() ) {
                 obodies.append(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(*itbody), pyenv));
@@ -588,7 +606,7 @@ public:
     {
         std::vector<int> useddofindices, usedconfigindices;
         _spec.ExtractUsedIndices(openravepy::GetKinBody(pybody), useddofindices, usedconfigindices);
-        return boost::python::make_tuple(toPyArray(useddofindices), toPyArray(usedconfigindices));
+        return py::make_tuple(toPyArray(useddofindices), toPyArray(usedconfigindices));
     }
 
 //
@@ -611,9 +629,9 @@ public:
         return toPyArray(vtargetdata);
     }
 
-    boost::python::list GetGroups()
+    py::list GetGroups()
     {
-        boost::python::list ogroups;
+        py::list ogroups;
         FOREACHC(itgroup, _spec._vgroups) {
             ogroups.append(*itgroup);
         }
@@ -658,11 +676,11 @@ public:
 class ConfigurationSpecification_pickle_suite : public pickle_suite
 {
 public:
-    static boost::python::tuple getinitargs(const PyConfigurationSpecification& pyspec)
+    static py::tuple getinitargs(const PyConfigurationSpecification& pyspec)
     {
         std::stringstream ss;
         ss << pyspec._spec;
-        return boost::python::make_tuple(ss.str());
+        return py::make_tuple(ss.str());
     }
 };
 
@@ -680,18 +698,18 @@ struct spec_from_group
 {
     spec_from_group()
     {
-        boost::python::converter::registry::push_back(&convertible, &construct, boost::python::type_id<PyConfigurationSpecificationPtr>());
+        py::converter::registry::push_back(&convertible, &construct, py::type_id<PyConfigurationSpecificationPtr>());
     }
 
     static void* convertible(PyObject* obj)
     {
-        return obj == Py_None ||  boost::python::extract<ConfigurationSpecification::Group>(obj).check() ? obj : NULL;
+        return obj == Py_None ||  py::extract<ConfigurationSpecification::Group>(obj).check() ? obj : NULL;
     }
 
-    static void construct(PyObject* obj, boost::python::converter::rvalue_from_python_stage1_data* data)
+    static void construct(PyObject* obj, py::converter::rvalue_from_python_stage1_data* data)
     {
-        ConfigurationSpecification::Group g = (ConfigurationSpecification::Group)boost::python::extract<ConfigurationSpecification::Group>(obj);
-        void* storage = ((boost::python::converter::rvalue_from_python_storage<PyConfigurationSpecificationPtr>*)data)->storage.bytes;
+        ConfigurationSpecification::Group g = (ConfigurationSpecification::Group)py::extract<ConfigurationSpecification::Group>(obj);
+        void* storage = ((py::converter::rvalue_from_python_storage<PyConfigurationSpecificationPtr>*)data)->storage.bytes;
         new (storage) PyConfigurationSpecificationPtr(new PyConfigurationSpecification(g));
         data->convertible = storage;
     }
@@ -816,16 +834,16 @@ object pyRaveInvertFileLookup(const std::string& filename)
     if( OpenRAVE::RaveInvertFileLookup(newfilename, filename) ) {
         return ConvertStringToUnicode(newfilename);
     }
-    return boost::python::object();
+    return object();
 }
 
 object RaveGetPluginInfo()
 {
-    boost::python::list plugins;
+    py::list plugins;
     std::list< std::pair<std::string, PLUGININFO> > listplugins;
     OpenRAVE::RaveGetPluginInfo(listplugins);
     FOREACH(itplugin, listplugins) {
-        plugins.append(boost::python::make_tuple(itplugin->first,object(boost::shared_ptr<PyPluginInfo>(new PyPluginInfo(itplugin->second)))));
+        plugins.append(py::make_tuple(itplugin->first,object(boost::shared_ptr<PyPluginInfo>(new PyPluginInfo(itplugin->second)))));
     }
     return plugins;
 }
@@ -834,9 +852,9 @@ object RaveGetLoadedInterfaces()
 {
     std::map<InterfaceType, std::vector<std::string> > interfacenames;
     OpenRAVE::RaveGetLoadedInterfaces(interfacenames);
-    boost::python::dict ointerfacenames;
+    py::dict ointerfacenames;
     FOREACHC(it, interfacenames) {
-        boost::python::list names;
+        py::list names;
         FOREACHC(itname,it->second) {
             names.append(*itname);
         }
@@ -920,7 +938,7 @@ object rotationMatrixFromQuat(object oquat)
 
 object rotationMatrixFromQArray(object qarray)
 {
-    boost::python::list orots;
+    py::list orots;
     int N = len(qarray);
     for(int i = 0; i < N; ++i) {
         orots.append(rotationMatrixFromQuat(qarray[i]));
@@ -960,7 +978,7 @@ object matrixFromPose(object opose)
 
 object matrixFromPoses(object oposes)
 {
-    boost::python::list omatrices;
+    py::list omatrices;
     int N = len(oposes);
     for(int i = 0; i < N; ++i) {
         omatrices.append(matrixFromPose(oposes[i]));
@@ -1010,7 +1028,7 @@ object InvertPoses(object o)
 {
     int N = len(o);
     if( N == 0 ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     npy_intp dims[] = { N,7};
     PyObject *pytrans = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
@@ -1044,7 +1062,7 @@ object ExtractAxisFromQuat(object oquat, int iaxis)
 object normalizeAxisRotation(object axis, object quat)
 {
     std::pair<dReal, Vector > res = normalizeAxisRotation(ExtractVector3(axis), ExtractVector4(quat));
-    return boost::python::make_tuple(res.first,toPyVector4(res.second));
+    return py::make_tuple(res.first,toPyVector4(res.second));
 }
 
 object MultiplyQuat(object oquat1, object oquat2)
@@ -1128,7 +1146,6 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractAffineValues_overloads, PyConfigur
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractJointValues_overloads, PyConfigurationSpecification::ExtractJointValues, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(RemoveGroups_overloads, PyConfigurationSpecification::RemoveGroups, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Serialize_overloads, Serialize, 0, 1)
-
 
 void init_openravepy_global()
 {

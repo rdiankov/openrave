@@ -21,6 +21,24 @@
 
 namespace openravepy {
 
+using py::object;
+using py::extract;
+using py::handle;
+using py::dict;
+using py::enum_;
+using py::class_;
+using py::no_init;
+using py::bases;
+using py::init;
+using py::scope;
+using py::args;
+using py::return_value_policy;
+using py::copy_const_reference;
+using py::docstring_options;
+using py::def;
+using py::pickle_suite;
+namespace numeric = py::numeric;
+
 class PyIkParameterization
 {
 public:
@@ -201,31 +219,31 @@ public:
         return toPyVector3(_param.GetTranslationXYOrientation3D());
     }
     object GetTranslationLocalGlobal6D() {
-        return boost::python::make_tuple(toPyVector3(_param.GetTranslationLocalGlobal6D().first),toPyVector3(_param.GetTranslationLocalGlobal6D().second));
+        return py::make_tuple(toPyVector3(_param.GetTranslationLocalGlobal6D().first),toPyVector3(_param.GetTranslationLocalGlobal6D().second));
     }
     object GetTranslationXAxisAngle4D() {
         std::pair<Vector,dReal> p = _param.GetTranslationXAxisAngle4D();
-        return boost::python::make_tuple(toPyVector3(p.first),object(p.second));
+        return py::make_tuple(toPyVector3(p.first),object(p.second));
     }
     object GetTranslationYAxisAngle4D() {
         std::pair<Vector,dReal> p = _param.GetTranslationYAxisAngle4D();
-        return boost::python::make_tuple(toPyVector3(p.first),object(p.second));
+        return py::make_tuple(toPyVector3(p.first),object(p.second));
     }
     object GetTranslationZAxisAngle4D() {
         std::pair<Vector,dReal> p = _param.GetTranslationZAxisAngle4D();
-        return boost::python::make_tuple(toPyVector3(p.first),object(p.second));
+        return py::make_tuple(toPyVector3(p.first),object(p.second));
     }
     object GetTranslationXAxisAngleZNorm4D() {
         std::pair<Vector,dReal> p = _param.GetTranslationXAxisAngleZNorm4D();
-        return boost::python::make_tuple(toPyVector3(p.first),object(p.second));
+        return py::make_tuple(toPyVector3(p.first),object(p.second));
     }
     object GetTranslationYAxisAngleXNorm4D() {
         std::pair<Vector,dReal> p = _param.GetTranslationYAxisAngleXNorm4D();
-        return boost::python::make_tuple(toPyVector3(p.first),object(p.second));
+        return py::make_tuple(toPyVector3(p.first),object(p.second));
     }
     object GetTranslationZAxisAngleYNorm4D() {
         std::pair<Vector,dReal> p = _param.GetTranslationZAxisAngleYNorm4D();
-        return boost::python::make_tuple(toPyVector3(p.first),object(p.second));
+        return py::make_tuple(toPyVector3(p.first),object(p.second));
     }
     dReal ComputeDistanceSqr(boost::shared_ptr<PyIkParameterization> pyikparam)
     {
@@ -258,7 +276,7 @@ public:
 
     object GetCustomDataMap()
     {
-        boost::python::dict odata;
+        py::dict odata;
         FOREACHC(it, _param.GetCustomDataMap()) {
             odata[it->first] = toPyArray(it->second);
         }
@@ -345,11 +363,11 @@ object toPyIkParameterization(const std::string& serializeddata)
 class IkParameterization_pickle_suite : public pickle_suite
 {
 public:
-    static boost::python::tuple getinitargs(const PyIkParameterization &r)
+    static py::tuple getinitargs(const PyIkParameterization &r)
     {
         std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
         ss << r._param;
-        return boost::python::make_tuple(ss.str());
+        return py::make_tuple(ss.str());
     }
 };
 
