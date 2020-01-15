@@ -19,6 +19,24 @@
 
 namespace openravepy {
 
+using py::object;
+using py::extract;
+using py::handle;
+using py::dict;
+using py::enum_;
+using py::class_;
+using py::no_init;
+using py::bases;
+using py::init;
+using py::scope;
+using py::args;
+using py::return_value_policy;
+using py::copy_const_reference;
+using py::docstring_options;
+using py::def;
+using py::pickle_suite;
+namespace numeric = py::numeric;
+
 class PyPhysicsEngineBase : public PyInterfaceBase
 {
 protected:
@@ -79,7 +97,7 @@ public:
         if( !_pPhysicsEngine->GetLinkVelocity(openravepy::GetKinBodyLink(pylink),linearvel,angularvel) ) {
             return object();
         }
-        return boost::python::make_tuple(toPyVector3(linearvel),toPyVector3(angularvel));
+        return py::make_tuple(toPyVector3(linearvel),toPyVector3(angularvel));
     }
 
     object GetLinkVelocities(PyKinBodyPtr pykinbody)
@@ -87,7 +105,7 @@ public:
         CHECK_POINTER(pykinbody);
         KinBodyPtr pbody = openravepy::GetKinBody(pykinbody);
         if( pbody->GetLinks().size() == 0 ) {
-            return numeric::array(boost::python::list());
+            return numeric::array(py::list());
         }
         std::vector<std::pair<Vector,Vector> > velocities;
         if( !_pPhysicsEngine->GetLinkVelocities(pbody,velocities) ) {
@@ -132,7 +150,7 @@ public:
         if( !_pPhysicsEngine->GetLinkForceTorque(openravepy::GetKinBodyLink(pylink),force,torque) ) {
             return object();
         }
-        return boost::python::make_tuple(toPyVector3(force),toPyVector3(torque));
+        return py::make_tuple(toPyVector3(force),toPyVector3(torque));
     }
 
     object GetJointForceTorque(object pyjoint)
@@ -142,7 +160,7 @@ public:
         if( !_pPhysicsEngine->GetJointForceTorque(openravepy::GetKinBodyJoint(pyjoint),force,torque) ) {
             return object();
         }
-        return boost::python::make_tuple(toPyVector3(force),toPyVector3(torque));
+        return py::make_tuple(toPyVector3(force),toPyVector3(torque));
     }
 
     void SetGravity(object gravity) {
