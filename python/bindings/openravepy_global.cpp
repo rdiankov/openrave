@@ -1206,6 +1206,7 @@ void init_openravepy_global()
     .value("RealControllers",Clone_RealControllers)
     .value("Sensors",Clone_Sensors)
     .value("Modules",Clone_Modules)
+    .value("IgnoreAttachedBodies", Clone_IgnoreAttachedBodies)
     ;
     enum_<PhysicsEngineOptions>("PhysicsEngineOptions" DOXY_ENUM(PhysicsEngineOptions))
     .value("SelfCollisions",PEO_SelfCollisions)

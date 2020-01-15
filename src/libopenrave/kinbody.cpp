@@ -80,6 +80,7 @@ ElectricMotorActuatorInfo::ElectricMotorActuatorInfo()
     viscous_friction = 0;
 }
 
+
 KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)
 {
     _nHierarchyComputed = 0;
@@ -93,7 +94,7 @@ KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(ty
 
 KinBody::~KinBody()
 {
-    RAVELOG_VERBOSE(str(boost::format("destroying kinbody: %s\n")%GetName()));
+    RAVELOG_VERBOSE_FORMAT("env=%d, destructing kinbody '%s'", GetEnv()->GetId()%GetName());
     Destroy();
 }
 
