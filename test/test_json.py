@@ -59,7 +59,7 @@ class TestJSONSerialization(EnvironmentSetup):
 
     def setup(self):
         super(TestJSONSerialization, self).setup()
-        self._daefiles = []
+        self._daefiles = set()
         directories = os.getenv('OPENRAVE_DATA', '') #TODO: maybe use OPENRAVE_TEST_DATA
         for directory in directories.split(':'):
             if os.path.isdir(directory):
@@ -67,7 +67,7 @@ class TestJSONSerialization(EnvironmentSetup):
                     for file_ in files:
                         if file_.endswith(".dae") or file_.endswith('.zae'):
                             daeurl = urlparse.urlunparse(('file', os.path.join(root, file_), '', '', '', ''))
-                            self._daefiles.append(daeurl)
+                            self._daefiles.update(daeurl)
 
     def teardown(self):
         self._daefiles = None

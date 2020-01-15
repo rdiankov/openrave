@@ -435,6 +435,7 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Do
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
 
+    // RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "sid", sid);
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", _name);
 
     Transform tscaled = _t;
@@ -489,7 +490,7 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Do
 
     case GT_TriMesh:
         RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "trimesh");
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "meshCollision", _meshcollision);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "mesh", _meshcollision);
         break;
 
     default:
@@ -497,10 +498,10 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Do
     }
 
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transparency", _fTransparency);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "isVisible", _bVisible);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "diffuseColors", _vDiffuseColor);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "ambientColors", _vAmbientColor);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "isModifiable", _bModifiable);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "visible", _bVisible);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "diffuseColor", _vDiffuseColor);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "ambientColor", _vAmbientColor);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "modifiable", _bModifiable);
 }
 
 
@@ -571,7 +572,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
     }
     else if (typestr == "trimesh" or typestr == "mesh") {
         _type = GT_TriMesh;
-        RAVE_DESERIALIZEJSON_REQUIRED(value, "meshCollision", _meshcollision);
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "mesh", _meshcollision);
 
         FOREACH(itvertex, _meshcollision.vertices) {
             *itvertex *= fUnitScale;
@@ -582,10 +583,10 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
     }
 
     RAVE_DESERIALIZEJSON_REQUIRED(value, "transparency", _fTransparency);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "isVisible", _bVisible);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "diffuseColors", _vDiffuseColor);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "ambientColors", _vAmbientColor);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "isModifiable", _bModifiable);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "visible", _bVisible);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "diffuseColor", _vDiffuseColor);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "ambientColor", _vAmbientColor);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "modifiable", _bModifiable);
 }
 
 
@@ -607,10 +608,6 @@ void RaveDeserializeJSON(const rapidjson::Value &value, KinBody::GeometryInfo::S
     RAVE_DESERIALIZEJSON_REQUIRED(value, "type", type);
     sidewall.type = (KinBody::GeometryInfo::SideWallType)type;
 }
-
-
-
-
 
 AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const
 {
