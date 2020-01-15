@@ -159,6 +159,14 @@ public:
         return _veclinks.at(index).second;
     }
 
+    /// \brief gets the geom from osg node
+    KinBody::Link::GeometryPtr GetGeomFromOSG(OSGNodePtr pgeomnode) const;
+
+    /// \brief gets the geom from the index
+    OSGMatrixTransformPtr GetOSGGeom(int linkindex, int geomindex) const {
+        return _vecgeoms.at(linkindex).at(geomindex).second;
+    }
+
     void SetUserData(int userdata) {
         _userdata = userdata;
     }
@@ -189,10 +197,12 @@ protected:
     virtual void _HandleDrawChangedCallback();
 
     typedef std::pair<OSGGroupPtr, OSGMatrixTransformPtr> LinkNodes;
+    typedef std::pair<OSGGroupPtr, OSGMatrixTransformPtr> GeomNodes;
 
     KinBodyPtr _pbody;
     int _environmentid;        ///< _pbody->GetEnvironmentId()
     std::vector<LinkNodes> _veclinks; ///< render items for each link, indexed same as links. The group's hierarchy mimics the kinematics hierarchy. For each pair, the first Group node is used for the hierarchy, the second node contains the transform with respect to the body's transform
+    std::vector<std::vector<GeomNodes> > _vecgeoms; ///< render items for each link's geometries, indexed same as geometries.
     bool bEnabled;
     bool bGrabbed, _bReload, _bDrawStateChanged;
     ViewGeometry _viewmode;
