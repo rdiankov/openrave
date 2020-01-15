@@ -354,17 +354,20 @@ inline py::object toPyArray3(const std::vector<RaveVector<T> >& v)
 
 inline py::object toPyVector2(Vector v)
 {
-    return py::numeric::array(py::make_tuple(v.x,v.y));
+    const dReal arr[2] {v.x, v.y};
+    return toPyArrayN(arr, 2);
 }
 
 inline py::object toPyVector3(Vector v)
 {
-    return py::numeric::array(py::make_tuple(v.x,v.y,v.z));
+    const dReal arr[3] {v.x, v.y, v.z};
+    return toPyArrayN(arr, 3);
 }
 
 inline py::object toPyVector4(Vector v)
 {
-    return py::numeric::array(py::make_tuple(v.x,v.y,v.z,v.w));
+    const dReal arr[4] {v.x, v.y, v.z, v.w};
+    return toPyArrayN(arr, 4);
 }
 
 /// \brief converts dictionary of keyvalue pairs
