@@ -20,6 +20,24 @@
 
 namespace openravepy {
 
+using py::object;
+using py::extract;
+using py::handle;
+using py::dict;
+using py::enum_;
+using py::class_;
+using py::no_init;
+using py::bases;
+using py::init;
+using py::scope;
+using py::args;
+using py::return_value_policy;
+using py::copy_const_reference;
+using py::docstring_options;
+using py::def;
+using py::pickle_suite;
+namespace numeric = py::numeric;
+
 class PyIkReturn
 {
 public:
@@ -46,7 +64,7 @@ public:
         return toPyArray(it->second);
     }
     object GetMapDataDict() {
-        boost::python::dict odata;
+        py::dict odata;
         FOREACHC(it,_ret._mapdata) {
             odata[it->first] = toPyArray(it->second);
         }
@@ -123,7 +141,7 @@ public:
     }
     object GetFreeParameters() const {
         if( _pIkSolver->GetNumFreeParameters() == 0 ) {
-            return numeric::array(boost::python::list());
+            return numeric::array(py::list());
         }
         vector<dReal> values;
         _pIkSolver->GetFreeParameters(values);
@@ -148,7 +166,7 @@ public:
 
     object SolveAll(object oparam, int filteroptions)
     {
-        boost::python::list pyreturns;
+        py::list pyreturns;
         std::vector<IkReturnPtr> vikreturns;
         IkParameterization ikparam;
         if( !ExtractIkParameterization(oparam,ikparam) ) {
@@ -182,7 +200,7 @@ public:
 
     object SolveAll(object oparam, object oFreeParameters, int filteroptions)
     {
-        boost::python::list pyreturns;
+        py::list pyreturns;
         std::vector<IkReturnPtr> vikreturns;
         IkParameterization ikparam;
         if( !ExtractIkParameterization(oparam,ikparam) ) {

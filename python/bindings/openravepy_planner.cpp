@@ -19,6 +19,24 @@
 
 namespace openravepy {
 
+using py::object;
+using py::extract;
+using py::handle;
+using py::dict;
+using py::enum_;
+using py::class_;
+using py::no_init;
+using py::bases;
+using py::init;
+using py::scope;
+using py::args;
+using py::return_value_policy;
+using py::copy_const_reference;
+using py::docstring_options;
+using py::def;
+using py::pickle_suite;
+namespace numeric = py::numeric;
+
 class PyPlannerProgress
 {
 public:
@@ -40,7 +58,7 @@ class PyPlannerStatus
 public:
     PyPlannerStatus() {
         statusCode = 0;
-        jointValues = numeric::array(boost::python::list());
+        jointValues = numeric::array(py::list());
     }
 
     PyPlannerStatus(const PlannerStatus& status) {
@@ -185,7 +203,7 @@ public:
             }
             int ret = _paramswrite->CheckPathAllConstraints(ExtractArray<dReal>(oq0), ExtractArray<dReal>(oq1), ExtractArray<dReal>(odq0), ExtractArray<dReal>(odq1), timeelapsed, interval, options, pfilterreturn);
             if( filterreturn ) {
-                boost::python::dict ofilterreturn;
+                py::dict ofilterreturn;
                 ofilterreturn["configurations"] = toPyArray(pfilterreturn->_configurations);
                 ofilterreturn["configurationtimes"] = toPyArray(pfilterreturn->_configurationtimes);
                 ofilterreturn["invalidvalues"] = toPyArray(pfilterreturn->_invalidvalues);
