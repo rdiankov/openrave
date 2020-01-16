@@ -3141,7 +3141,7 @@ public:
         int num = len(state);
         r._vgeometryinfos = py::list(state[0]);
         r._name = state[1];
-        r._t = py::cast<py::array_t<dReal>>(state[2]);
+        r._t = state[2];
         r._tMassFrame = state[3];
         r._mass = py::extract<dReal>(state[4]);
         r._vinertiamoments = state[5];
