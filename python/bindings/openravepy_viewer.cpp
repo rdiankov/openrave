@@ -40,8 +40,8 @@ extern "C" void openravepy_viewer_sigint_handler(int sig) //, siginfo_t *siginfo
     //PyGILState_STATE gstate = PyGILState_Ensure();
 //    try
 //    {
-//        exec("raise KeyboardInterrupt()\n"); // boost::python::globals(),locals);
-//        //exec("import thread; thread.interrupt_main()\n"); // boost::python::globals(),locals);
+//        exec("raise KeyboardInterrupt()\n"); // py::globals(),locals);
+//        //exec("import thread; thread.interrupt_main()\n"); // py::globals(),locals);
 //    }
 //    catch( const error_already_set& e )
 //    {
@@ -74,6 +74,25 @@ extern "C" void openravepy_viewer_sigint_handler(int sig) //, siginfo_t *siginfo
 }
 
 namespace openravepy {
+
+using py::object;
+using py::extract;
+using py::handle;
+using py::dict;
+using py::enum_;
+using py::class_;
+using py::no_init;
+using py::bases;
+using py::init;
+using py::scope;
+using py::args;
+using py::return_value_policy;
+using py::copy_const_reference;
+using py::docstring_options;
+using py::def;
+using py::pickle_suite;
+using py::error_already_set;
+namespace numeric = py::numeric;
 
 class PyViewerBase : public PyInterfaceBase
 {

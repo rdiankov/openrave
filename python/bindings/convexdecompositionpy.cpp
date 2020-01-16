@@ -30,9 +30,27 @@
 
 #include "NvConvexDecomposition.h"
 
-using namespace boost::python;
-using namespace std;
-using namespace openravepy;
+namespace py = openravepy::py;
+namespace numeric = py::numeric;
+using py::object;
+using py::extract;
+using py::handle;
+using py::dict;
+using py::enum_;
+using py::class_;
+using py::no_init;
+using py::bases;
+using py::init;
+using py::scope;
+using py::args;
+using py::return_value_policy;
+using py::copy_const_reference;
+using py::docstring_options;
+using py::optional;
+using py::def;
+using openravepy::int_from_number;
+using openravepy::float_from_number;
+using openravepy::exception_translator;
 
 struct OPENRAVE_API cdpy_exception : std::exception
 {
@@ -87,7 +105,7 @@ object computeConvexDecomposition(const boost::multi_array<float, 2>& vertices, 
 
     ic->computeConvexDecomposition(skinWidth, decompositionDepth, maxHullVertices, concavityThresholdPercent, mergeThresholdPercent, volumeSplitThresholdPercent, useInitialIslandGeneration, useIslandGeneration, false);
     NxU32 hullCount = ic->getHullCount();
-    boost::python::list hulls;
+    py::list hulls;
     CONVEX_DECOMPOSITION::ConvexHullResult result;
     for(NxU32 i = 0; i < hullCount; ++i) {
         ic->getConvexHullResult(i,result);
@@ -101,7 +119,7 @@ object computeConvexDecomposition(const boost::multi_array<float, 2>& vertices, 
         PyObject *pyindices = PyArray_SimpleNew(2,dims, PyArray_INT);
         std::copy(&result.mIndices[0],&result.mIndices[3*result.mTcount],(int*)PyArray_DATA(pyindices));
 
-        hulls.append(boost::python::make_tuple(static_cast<numeric::array>(handle<>(pyvertices)), static_cast<numeric::array>(handle<>(pyindices))));
+        hulls.append(py::make_tuple(static_cast<numeric::array>(handle<>(pyvertices)), static_cast<numeric::array>(handle<>(pyindices))));
     }
 
     return hulls;

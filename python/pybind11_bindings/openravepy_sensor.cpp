@@ -288,7 +288,7 @@ PySensorBase::PyLaserSensorData::PyLaserSensorData(OPENRAVE_SHARED_PTR<SensorBas
 {
     positions = toPyArray3(pdata->positions);
     ranges = toPyArray3(pdata->ranges);
-    intensity = toPyArrayN(pdata->intensity.size()>0 ? &pdata->intensity[0] : NULL,pdata->intensity.size());
+    intensity = toPyArrayN(pdata->intensity.data(), pdata->intensity.size());
 }
 PySensorBase::PyLaserSensorData::PyLaserSensorData(OPENRAVE_SHARED_PTR<SensorBase::LaserGeomData const> pgeom) : PySensorData(SensorBase::ST_Laser) {
 }
@@ -355,13 +355,13 @@ PySensorBase::PyIMUSensorData::PyIMUSensorData(OPENRAVE_SHARED_PTR<SensorBase::I
     rotation = toPyVector4(pdata->rotation);
     angular_velocity = toPyVector3(pdata->angular_velocity);
     linear_acceleration = toPyVector3(pdata->linear_acceleration);
-    numeric::array arr = toPyArrayN(&pdata->rotation_covariance[0],pdata->rotation_covariance.size());
+    numeric::array arr = toPyArrayN(pdata->rotation_covariance.data(), pdata->rotation_covariance.size());
     resize_3x3(arr);
     rotation_covariance = arr;
-    arr = toPyArrayN(&pdata->angular_velocity_covariance[0],pdata->angular_velocity_covariance.size());
+    arr = toPyArrayN(pdata->angular_velocity_covariance.data(), pdata->angular_velocity_covariance.size());
     resize_3x3(arr);
     angular_velocity_covariance = arr;
-    arr = toPyArrayN(&pdata->linear_acceleration_covariance[0],pdata->linear_acceleration_covariance.size());
+    arr = toPyArrayN(pdata->linear_acceleration_covariance.data(), pdata->linear_acceleration_covariance.size());
     resize_3x3(arr);
     linear_acceleration_covariance = arr;
 }
@@ -376,10 +376,10 @@ PySensorBase::PyOdometrySensorData::PyOdometrySensorData(OPENRAVE_SHARED_PTR<Sen
     pose = toPyArray(pdata->pose);
     linear_velocity = toPyVector3(pdata->linear_velocity);
     angular_velocity = toPyVector3(pdata->angular_velocity);
-    numeric::array arr = toPyArrayN(&pdata->pose_covariance[0],pdata->pose_covariance.size());
+    numeric::array arr = toPyArrayN(pdata->pose_covariance.data(), pdata->pose_covariance.size());
     resize_3x3(arr);
     pose_covariance = arr;
-    arr = toPyArrayN(&pdata->velocity_covariance[0],pdata->velocity_covariance.size());
+    arr = toPyArrayN(pdata->velocity_covariance.data(), pdata->velocity_covariance.size());
     resize_3x3(arr);
     velocity_covariance = arr;
     targetid = pgeom->targetid;
@@ -395,7 +395,7 @@ PySensorBase::PyOdometrySensorData::~PyOdometrySensorData() {
 PySensorBase::PyTactileSensorData::PyTactileSensorData(OPENRAVE_SHARED_PTR<SensorBase::TactileGeomData const> pgeom, OPENRAVE_SHARED_PTR<SensorBase::TactileSensorData> pdata) : PySensorData(pdata)
 {
     forces = toPyArray3(pdata->forces);
-    numeric::array arr = toPyArrayN(&pdata->force_covariance[0],pdata->force_covariance.size());
+    numeric::array arr = toPyArrayN(pdata->force_covariance.data(), pdata->force_covariance.size());
     resize_3x3(arr);
     force_covariance = arr;
     positions = toPyArray3(pgeom->positions);

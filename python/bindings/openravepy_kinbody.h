@@ -27,14 +27,14 @@ class PyStateRestoreContextBase
 public:
     virtual ~PyStateRestoreContextBase() {
     }
-    virtual object __enter__() = 0;
-    virtual void __exit__(object type, object value, object traceback) = 0;
-    virtual object GetBody() const = 0;
-    virtual void Restore(object p=object())  = 0;
+    virtual py::object __enter__() = 0;
+    virtual void __exit__(py::object type, py::object value, py::object traceback) = 0;
+    virtual py::object GetBody() const = 0;
+    virtual void Restore(py::object p=py::object())  = 0;
     virtual void Release() = 0;
     virtual void Close() = 0;
     virtual std::string __str__() = 0;
-    virtual object __unicode__() = 0;
+    virtual py::object __unicode__() = 0;
 };
 
 /// \brief simple wrapper around a save state that manages  enter/exit scope
@@ -47,23 +47,23 @@ public:
     }
     virtual ~PyStateRestoreContext() {
     }
-    object __enter__() {
-        return object(_state);
+    py::object __enter__() {
+        return py::object(_state);
     }
-    void __exit__(object type, object value, object traceback) {
+    void __exit__(py::object type, py::object value, py::object traceback) {
         _state->Restore();
     }
 
-    object GetBody() const {
+    py::object GetBody() const {
         return _state->GetBody();
     }
 
-    void Restore(object p=object()) {
+    void Restore(py::object p=py::object()) {
         if( IS_PYTHONOBJECT_NONE(p) ) {
             _state->Restore();
         }
         else {
-            U pytarget = boost::python::extract<U>(p);
+            U pytarget = py::extract<U>(p);
             _state->Restore(pytarget);
         }
     }
@@ -79,7 +79,7 @@ public:
     std::string __str__() {
         return _state->__str__();
     }
-    object __unicode__() {
+    py::object __unicode__() {
         return _state->__unicode__();
     }
 };
@@ -97,7 +97,7 @@ public:
         _grabbedname = ConvertStringToUnicode(info._grabbedname);
         _robotlinkname = ConvertStringToUnicode(info._robotlinkname);
         _trelative = ReturnTransform(info._trelative);
-        boost::python::list setRobotLinksToIgnore;
+        py::list setRobotLinksToIgnore;
         FOREACHC(itindex, info._setRobotLinksToIgnore) {
             setRobotLinksToIgnore.append(*itindex);
         }
@@ -107,8 +107,8 @@ public:
     RobotBase::GrabbedInfoPtr GetGrabbedInfo() const
     {
         RobotBase::GrabbedInfoPtr pinfo(new RobotBase::GrabbedInfo());
-        pinfo->_grabbedname = boost::python::extract<std::string>(_grabbedname);
-        pinfo->_robotlinkname = boost::python::extract<std::string>(_robotlinkname);
+        pinfo->_grabbedname = py::extract<std::string>(_grabbedname);
+        pinfo->_robotlinkname = py::extract<std::string>(_robotlinkname);
         pinfo->_trelative = ExtractTransform(_trelative);
         std::vector<int> v = ExtractArray<int>(_setRobotLinksToIgnore);
         pinfo->_setRobotLinksToIgnore.clear();
@@ -119,17 +119,17 @@ public:
     }
 
     std::string __str__() {
-        std::string robotlinkname = boost::python::extract<std::string>(_robotlinkname);
-        std::string grabbedname = boost::python::extract<std::string>(_grabbedname);
+        std::string robotlinkname = py::extract<std::string>(_robotlinkname);
+        std::string grabbedname = py::extract<std::string>(_grabbedname);
         return boost::str(boost::format("<grabbedinfo:%s -> %s>")%robotlinkname%grabbedname);
     }
-    object __unicode__() {
+    py::object __unicode__() {
         return ConvertStringToUnicode(__str__());
     }
 
-    object _grabbedname, _robotlinkname;
-    object _trelative;
-    object _setRobotLinksToIgnore;
+    py::object _grabbedname, _robotlinkname;
+    py::object _trelative;
+    py::object _setRobotLinksToIgnore;
 };
 typedef boost::shared_ptr<PyGrabbedInfo> PyGrabbedInfoPtr;
 
@@ -145,151 +145,151 @@ public:
     KinBodyPtr GetBody();
     bool InitFromBoxes(const boost::multi_array<dReal,2>& vboxes, bool bDraw=true, const std::string& uri=std::string());
     bool InitFromSpheres(const boost::multi_array<dReal,2>& vspheres, bool bDraw=true, const std::string& uri=std::string());
-    bool InitFromTrimesh(object pytrimesh, bool bDraw=true, const std::string& uri=std::string());
-    bool InitFromGeometries(object ogeometries, const std::string& uri=std::string());
-    bool Init(object olinkinfos, object ojointinfos, const std::string& uri=std::string());
+    bool InitFromTrimesh(py::object pytrimesh, bool bDraw=true, const std::string& uri=std::string());
+    bool InitFromGeometries(py::object ogeometries, const std::string& uri=std::string());
+    bool Init(py::object olinkinfos, py::object ojointinfos, const std::string& uri=std::string());
     void SetLinkGeometriesFromGroup(const std::string& geomname);
-    void SetLinkGroupGeometries(const std::string& geomname, object olinkgeometryinfos);
+    void SetLinkGroupGeometries(const std::string& geomname, py::object olinkgeometryinfos);
     void SetName(const std::string& name);
-    object GetName() const;
+    py::object GetName() const;
     int GetDOF() const;
-    object GetDOFValues() const;
-    object GetDOFValues(object oindices) const;
-    object GetDOFVelocities() const;
-    object GetDOFVelocities(object oindices) const;
-    object GetDOFLimits() const;
-    object GetDOFVelocityLimits() const;
-    object GetDOFAccelerationLimits() const;
-    object GetDOFJerkLimits() const;
-    object GetDOFHardVelocityLimits() const;
-    object GetDOFHardAccelerationLimits() const;
-    object GetDOFHardJerkLimits() const;
-    object GetDOFTorqueLimits() const;
-    object GetDOFLimits(object oindices) const;
-    object GetDOFVelocityLimits(object oindices) const;
-    object GetDOFAccelerationLimits(object oindices) const;
-    object GetDOFJerkLimits(object oindices) const;
-    object GetDOFHardVelocityLimits(object oindices) const;
-    object GetDOFHardAccelerationLimits(object oindices) const;
-    object GetDOFHardJerkLimits(object oindices) const;
-    object GetDOFTorqueLimits(object oindices) const;
-    object GetDOFMaxVel() const;
-    object GetDOFMaxTorque() const;
-    object GetDOFMaxAccel() const;
-    object GetDOFWeights() const;
-    object GetDOFWeights(object oindices) const;
-    object GetDOFResolutions() const;
-    object GetDOFResolutions(object oindices) const;
-    object GetLinks() const;
-    object GetLinks(object oindices) const;
-    object GetLink(const std::string& linkname) const;
-    object GetJoints() const;
-    object GetJoints(object oindices) const;
-    object GetPassiveJoints();
-    object GetDependencyOrderedJoints();
-    object GetClosedLoops();
-    object GetRigidlyAttachedLinks(int linkindex) const;
-    object GetChain(int linkindex1, int linkindex2,bool returnjoints = true) const;
+    py::object GetDOFValues() const;
+    py::object GetDOFValues(py::object oindices) const;
+    py::object GetDOFVelocities() const;
+    py::object GetDOFVelocities(py::object oindices) const;
+    py::object GetDOFLimits() const;
+    py::object GetDOFVelocityLimits() const;
+    py::object GetDOFAccelerationLimits() const;
+    py::object GetDOFJerkLimits() const;
+    py::object GetDOFHardVelocityLimits() const;
+    py::object GetDOFHardAccelerationLimits() const;
+    py::object GetDOFHardJerkLimits() const;
+    py::object GetDOFTorqueLimits() const;
+    py::object GetDOFLimits(py::object oindices) const;
+    py::object GetDOFVelocityLimits(py::object oindices) const;
+    py::object GetDOFAccelerationLimits(py::object oindices) const;
+    py::object GetDOFJerkLimits(py::object oindices) const;
+    py::object GetDOFHardVelocityLimits(py::object oindices) const;
+    py::object GetDOFHardAccelerationLimits(py::object oindices) const;
+    py::object GetDOFHardJerkLimits(py::object oindices) const;
+    py::object GetDOFTorqueLimits(py::object oindices) const;
+    py::object GetDOFMaxVel() const;
+    py::object GetDOFMaxTorque() const;
+    py::object GetDOFMaxAccel() const;
+    py::object GetDOFWeights() const;
+    py::object GetDOFWeights(py::object oindices) const;
+    py::object GetDOFResolutions() const;
+    py::object GetDOFResolutions(py::object oindices) const;
+    py::object GetLinks() const;
+    py::object GetLinks(py::object oindices) const;
+    py::object GetLink(const std::string& linkname) const;
+    py::object GetJoints() const;
+    py::object GetJoints(py::object oindices) const;
+    py::object GetPassiveJoints();
+    py::object GetDependencyOrderedJoints();
+    py::object GetClosedLoops();
+    py::object GetRigidlyAttachedLinks(int linkindex) const;
+    py::object GetChain(int linkindex1, int linkindex2,bool returnjoints = true) const;
     bool IsDOFInChain(int linkindex1, int linkindex2, int dofindex) const;
     int GetJointIndex(const std::string& jointname) const;
-    object GetJoint(const std::string& jointname) const;
-    object GetJointFromDOFIndex(int dofindex) const;
-    object GetTransform() const;
-    object GetTransformPose() const;
-    object GetLinkTransformations(bool returndoflastvlaues=false) const;
-    void SetLinkTransformations(object transforms, object odoflastvalues=object());
-    void SetLinkVelocities(object ovelocities);
-    object GetLinkEnableStates() const;
-    void SetLinkEnableStates(object oenablestates);
-    bool SetVelocity(object olinearvel, object oangularvel);
-    void SetDOFVelocities(object odofvelocities, object olinearvel, object oangularvel, uint32_t checklimits);
-    void SetDOFVelocities(object odofvelocities, object olinearvel, object oangularvel);
-    void SetDOFVelocities(object odofvelocities);
-    void SetDOFVelocities(object odofvelocities, uint32_t checklimits=KinBody::CLA_CheckLimits, object oindices = object());
-    object GetLinkVelocities() const;
-    object GetLinkAccelerations(object odofaccelerations, object oexternalaccelerations) const;
-    object ComputeAABB(bool bEnabledOnlyLinks=false);
-    object ComputeAABBFromTransform(object otransform, bool bEnabledOnlyLinks=false);
-    object ComputeLocalAABB(bool bEnabledOnlyLinks=false);
-    object GetCenterOfMass() const;
+    py::object GetJoint(const std::string& jointname) const;
+    py::object GetJointFromDOFIndex(int dofindex) const;
+    py::object GetTransform() const;
+    py::object GetTransformPose() const;
+    py::object GetLinkTransformations(bool returndoflastvlaues=false) const;
+    void SetLinkTransformations(py::object transforms, py::object odoflastvalues=py::object());
+    void SetLinkVelocities(py::object ovelocities);
+    py::object GetLinkEnableStates() const;
+    void SetLinkEnableStates(py::object oenablestates);
+    bool SetVelocity(py::object olinearvel, py::object oangularvel);
+    void SetDOFVelocities(py::object odofvelocities, py::object olinearvel, py::object oangularvel, uint32_t checklimits);
+    void SetDOFVelocities(py::object odofvelocities, py::object olinearvel, py::object oangularvel);
+    void SetDOFVelocities(py::object odofvelocities);
+    void SetDOFVelocities(py::object odofvelocities, uint32_t checklimits=KinBody::CLA_CheckLimits, py::object oindices = py::object());
+    py::object GetLinkVelocities() const;
+    py::object GetLinkAccelerations(py::object odofaccelerations, py::object oexternalaccelerations) const;
+    py::object ComputeAABB(bool bEnabledOnlyLinks=false);
+    py::object ComputeAABBFromTransform(py::object otransform, bool bEnabledOnlyLinks=false);
+    py::object ComputeLocalAABB(bool bEnabledOnlyLinks=false);
+    py::object GetCenterOfMass() const;
     void Enable(bool bEnable);
     bool IsEnabled() const;
     bool SetVisible(bool visible);
     bool IsVisible() const;
     bool IsDOFRevolute(int dofindex) const;
     bool IsDOFPrismatic(int dofindex) const;
-    void SetTransform(object otransform);
-    void SetDOFWeights(object o);
-    void SetDOFResolutions(object o);
-    void SetDOFLimits(object olower, object oupper, object oindices=object());
-    void SetDOFVelocityLimits(object o);
-    void SetDOFAccelerationLimits(object o);
-    void SetDOFJerkLimits(object o);
-    void SetDOFHardVelocityLimits(object o);
-    void SetDOFHardAccelerationLimits(object o);
-    void SetDOFHardJerkLimits(object o);
-    void SetDOFTorqueLimits(object o);
-    void SetDOFValues(object o);
-    void SetTransformWithDOFValues(object otrans,object ojoints);
-    void SetDOFValues(object o, object indices, uint32_t checklimits);
-    void SetDOFValues(object o, object indices);
-    object SubtractDOFValues(object ovalues0, object ovalues1, object oindices=object());
-    void SetDOFTorques(object otorques, bool bAdd);
-    object ComputeJacobianTranslation(int index, object oposition, object oindices=object());
-    object ComputeJacobianAxisAngle(int index, object oindices=object());
-    object CalculateJacobian(int index, object oposition);
-    object CalculateRotationJacobian(int index, object q) const;
-    object CalculateAngularVelocityJacobian(int index) const;
-    object ComputeHessianTranslation(int index, object oposition, object oindices=object());
-    object ComputeHessianAxisAngle(int index, object oindices=object());
-    object ComputeInverseDynamics(object odofaccelerations, object oexternalforcetorque=object(), bool returncomponents=false);
+    void SetTransform(py::object otransform);
+    void SetDOFWeights(py::object o);
+    void SetDOFResolutions(py::object o);
+    void SetDOFLimits(py::object olower, py::object oupper, py::object oindices=py::object());
+    void SetDOFVelocityLimits(py::object o);
+    void SetDOFAccelerationLimits(py::object o);
+    void SetDOFJerkLimits(py::object o);
+    void SetDOFHardVelocityLimits(py::object o);
+    void SetDOFHardAccelerationLimits(py::object o);
+    void SetDOFHardJerkLimits(py::object o);
+    void SetDOFTorqueLimits(py::object o);
+    void SetDOFValues(py::object o);
+    void SetTransformWithDOFValues(py::object otrans,py::object ojoints);
+    void SetDOFValues(py::object o, py::object indices, uint32_t checklimits);
+    void SetDOFValues(py::object o, py::object indices);
+    py::object SubtractDOFValues(py::object ovalues0, py::object ovalues1, py::object oindices=py::object());
+    void SetDOFTorques(py::object otorques, bool bAdd);
+    py::object ComputeJacobianTranslation(int index, py::object oposition, py::object oindices=py::object());
+    py::object ComputeJacobianAxisAngle(int index, py::object oindices=py::object());
+    py::object CalculateJacobian(int index, py::object oposition);
+    py::object CalculateRotationJacobian(int index, py::object q) const;
+    py::object CalculateAngularVelocityJacobian(int index) const;
+    py::object ComputeHessianTranslation(int index, py::object oposition, py::object oindices=py::object());
+    py::object ComputeHessianAxisAngle(int index, py::object oindices=py::object());
+    py::object ComputeInverseDynamics(py::object odofaccelerations, py::object oexternalforcetorque=py::object(), bool returncomponents=false);
     void SetSelfCollisionChecker(PyCollisionCheckerBasePtr pycollisionchecker);
     PyInterfaceBasePtr GetSelfCollisionChecker();
     bool CheckSelfCollision(PyCollisionReportPtr pReport=PyCollisionReportPtr(), PyCollisionCheckerBasePtr pycollisionchecker=PyCollisionCheckerBasePtr());
     bool IsAttached(PyKinBodyPtr pattachbody);
-    object GetAttached() const;
+    py::object GetAttached() const;
     void SetZeroConfiguration();
     void SetNonCollidingConfiguration();
-    object GetConfigurationSpecification(const std::string& interpolation="") const;
-    object GetConfigurationSpecificationIndices(object oindices,const std::string& interpolation="") const;
-    void SetConfigurationValues(object ovalues, uint32_t checklimits=KinBody::CLA_CheckLimits);
-    object GetConfigurationValues() const;
-    bool Grab(PyKinBodyPtr pbody, object pylink_or_linkstoignore);
-    bool Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore);
+    py::object GetConfigurationSpecification(const std::string& interpolation="") const;
+    py::object GetConfigurationSpecificationIndices(py::object oindices,const std::string& interpolation="") const;
+    void SetConfigurationValues(py::object ovalues, uint32_t checklimits=KinBody::CLA_CheckLimits);
+    py::object GetConfigurationValues() const;
+    bool Grab(PyKinBodyPtr pbody, py::object pylink_or_linkstoignore);
+    bool Grab(PyKinBodyPtr pbody, py::object pylink, py::object linkstoignore);
     void Release(PyKinBodyPtr pbody);
     void ReleaseAllGrabbed();
-    void ReleaseAllGrabbedWithLink(object pylink);
+    void ReleaseAllGrabbedWithLink(py::object pylink);
     void RegrabAll();
-    object IsGrabbing(PyKinBodyPtr pbody) const;
-    object GetGrabbed() const;
-    object GetGrabbedInfo() const;
-    void ResetGrabbed(object ograbbedinfos);
+    py::object IsGrabbing(PyKinBodyPtr pbody) const;
+    py::object GetGrabbed() const;
+    py::object GetGrabbedInfo() const;
+    void ResetGrabbed(py::object ograbbedinfos);
     bool IsRobot() const;
     int GetEnvironmentId() const;
     int DoesAffect(int jointindex, int linkindex ) const;
     int DoesDOFAffectLink(int dofindex, int linkindex ) const;
-    object GetURI() const;
-    object GetNonAdjacentLinks() const;
-    object GetNonAdjacentLinks(int adjacentoptions) const;
+    py::object GetURI() const;
+    py::object GetNonAdjacentLinks() const;
+    py::object GetNonAdjacentLinks(int adjacentoptions) const;
     void SetAdjacentLinks(int linkindex0, int linkindex1);
-    object GetAdjacentLinks() const;
-    object GetManageData() const;
+    py::object GetAdjacentLinks() const;
+    py::object GetManageData() const;
     int GetUpdateStamp() const;
     std::string serialize(int options) const;
     std::string GetKinematicsGeometryHash() const;
-    PyStateRestoreContextBase* CreateKinBodyStateSaver(object options=object());
-    virtual PyStateRestoreContextBase* CreateStateSaver(object options);
+    PyStateRestoreContextBase* CreateKinBodyStateSaver(py::object options=py::object());
+    virtual PyStateRestoreContextBase* CreateStateSaver(py::object options);
     virtual std::string __repr__();
     virtual std::string __str__();
-    virtual object __unicode__();
+    virtual py::object __unicode__();
     virtual void __enter__();
-    virtual void __exit__(object type, object value, object traceback);
+    virtual void __exit__(py::object type, py::object value, py::object traceback);
 
 protected:
     /// \brief parse list of PyLinkInfoPtr into LinkInfoPtr
-    void _ParseLinkInfos(object olinkinfos, std::vector<KinBody::LinkInfoConstPtr>& vlinkinfos);
+    void _ParseLinkInfos(py::object olinkinfos, std::vector<KinBody::LinkInfoConstPtr>& vlinkinfos);
     /// \brief parse list of PyJointInfoPtr into JointInfoPtr
-    void _ParseJointInfos(object ojointinfos, std::vector<KinBody::JointInfoConstPtr>& vjointinfos);
+    void _ParseJointInfos(py::object ojointinfos, std::vector<KinBody::JointInfoConstPtr>& vjointinfos);
 };
 
 }

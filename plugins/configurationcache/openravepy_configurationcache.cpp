@@ -173,10 +173,10 @@ public:
             return py::none_(); // didn't find anything
         }
         else {
-           return py::make_tuple(openravepy::toPyArray(nn.first), nn.second);
+            return py::make_tuple(openravepy::toPyArray(nn.first), nn.second);
         }
     }
-    
+
     dReal ComputeDistance(object oconfi, object oconff) {
         return _cache->ComputeDistance(openravepy::ExtractArray<dReal>(oconfi), openravepy::ExtractArray<dReal>(oconff));
     }

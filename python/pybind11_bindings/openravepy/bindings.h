@@ -227,11 +227,8 @@ inline object to_object(const T& t) {
     // but (x) cannot cast *PyObject to py::object
     return cast(t);
 }
-// https://stackoverflow.com/questions/26184190/alias-a-templated-function
-template <typename T>
-auto handle_to_object(T const& h) -> decltype(to_object<T>(h))
-{
-    return to_object<T>(h);
+inline object handle_to_object(PyObject* pyo) {
+    return cast<object>(pyo);
 }
 template <typename T>
 inline object to_array_astype(PyObject* pyo) {
@@ -333,7 +330,7 @@ inline py::object ConvertStringToUnicode(const std::string& s)
     TGN: Is the following an alternative?
     ```
     PyObject *pyo = PyUnicode_Decode(s.c_str(), s.size(), "utf-8", nullptr);
-    return py::handle(pyo).cast<py::array_t<double>>();
+    return py::cast<py::object>(pyo); // py::handle_to_object(pyo);
     ```
     */
     return py::cast(s);

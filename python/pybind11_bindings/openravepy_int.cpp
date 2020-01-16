@@ -240,11 +240,10 @@ void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
         py::dict d = py::extract<py::dict>(obj);
         value.SetObject();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        for (pybind11::detail::dict_iterator it = d.begin(); it != d.end(); ++it) {
-            std::pair<py::handle, py::handle> ref = *it;
+        for (const std::pair<py::handle, py::handle>& item : d) {
             rapidjson::Value k, v;
-            toRapidJSONValue(py::reinterpret_borrow<py::object>(ref.first), k, allocator);
-            toRapidJSONValue(py::reinterpret_borrow<py::object>(ref.second), v, allocator);
+            toRapidJSONValue(py::reinterpret_borrow<py::object>(item.first), k, allocator);
+            toRapidJSONValue(py::reinterpret_borrow<py::object>(item.second), v, allocator);
             value.AddMember(k, v, allocator);
         }
 #else
@@ -366,14 +365,11 @@ AttributesList toAttributesList(py::dict odict)
 {
     AttributesList atts;
     if( !IS_PYTHONOBJECT_NONE(odict) ) {
-#ifndef USE_PYBIND11_PYTHON_BINDINGS
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        for (const std::pair<py::handle, py::handle>& item : odict)
+#else
         py::list iterkeys = (py::list)odict.iterkeys();
         const size_t num = py::len(iterkeys);
-#endif
-
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        for (auto item : odict)
-#else
         for (size_t i = 0; i < num; i++)
 #endif
         {

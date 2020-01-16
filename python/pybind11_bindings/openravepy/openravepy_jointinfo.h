@@ -64,12 +64,14 @@ public:
     GeometryType _type = GT_None;
     // best to initialize these as None's
     object _name = py::none_();
-    object _filenamerender = py::none_(), _filenamecollision = py::none_();
+    object _filenamerender = py::none_();
+    object _filenamecollision = py::none_();
     object _vRenderScale = toPyVector3(Vector(1,1,1));
     object _vCollisionScale = toPyVector3(Vector(1,1,1));
     py::dict _mapExtraGeometries;
     float _fTransparency = 0.0;
-    bool _bVisible = true, _bModifiable = true;
+    bool _bVisible = true;
+    bool _bModifiable = true;
 };
 typedef OPENRAVE_SHARED_PTR<PyGeometryInfo> PyGeometryInfoPtr;
 
@@ -128,16 +130,32 @@ public:
 
     PyJointInfo(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv);
     KinBody::JointInfoPtr GetJointInfo();
-    KinBody::JointType _type;
+
+    KinBody::JointType _type = KinBody::JointNone;
     object _name = py::none_();
     object _linkname0 = py::none_(), _linkname1 = py::none_();
-    object _vanchor = py::none_(), _vaxes = py::none_(), _vcurrentvalues = py::none_(), _vresolution = py::none_(), _vmaxvel = py::none_(), _vhardmaxvel = py::none_(), _vmaxaccel = py::none_(), _vhardmaxaccel = py::none_(), _vmaxjerk = py::none_(), _vhardmaxjerk = py::none_(), _vmaxtorque = py::none_(), _vmaxinertia = py::none_(), _vweights = py::none_(), _voffsets = py::none_(), _vlowerlimit = py::none_(), _vupperlimit = py::none_();
-    object _trajfollow;
+    object _vanchor = toPyVector3(Vector());
+    object _vaxes = py::list();
+    object _vcurrentvalues = py::none_();
+    object _vresolution = toPyVector3(Vector(0.02,0.02,0.02));
+    object _vmaxvel = toPyVector3(Vector(10,10,10));
+    object _vhardmaxvel = toPyVector3(Vector(0,0,0));
+    object _vmaxaccel = toPyVector3(Vector(50,50,50));
+    object _vhardmaxaccel = toPyVector3(Vector(0,0,0));
+    object _vmaxjerk = toPyVector3(Vector(2e6,2e6,2e6));
+    object _vhardmaxjerk= toPyVector3(Vector(0, 0, 0));
+    object _vmaxtorque = toPyVector3(Vector(1e5,1e5,1e5));
+    object _vmaxinertia = toPyVector3(Vector(1e5,1e5,1e5));
+    object _vweights = toPyVector3(Vector(1,1,1));
+    object _voffsets = toPyVector3(Vector(0,0,0));
+    object _vlowerlimit = toPyVector3(Vector(0,0,0));
+    object _vupperlimit = toPyVector3(Vector(0,0,0));
+    object _trajfollow = py::none_();
     PyElectricMotorActuatorInfoPtr _infoElectricMotor;
     py::list _vmimic;
     py::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters;
-    object _bIsCircular;
-    bool _bIsActive;
+    object _bIsCircular = py::list();
+    bool _bIsActive = true;
 };
 
 class PyLink
