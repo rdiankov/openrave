@@ -53,7 +53,7 @@ class FunctionUserData : public UserData
 public:
     virtual ~FunctionUserData() {
     }
-    boost::python::object simulationfn;
+    py::object simulationfn;
 };
 
 class PythonBindingModule : public ModuleBase
@@ -95,7 +95,7 @@ InterfaceBasePtr PythonBindingCreateInterface(EnvironmentBasePtr penv, std::istr
     return InterfaceBasePtr(new PythonBindingModule(penv,istream));
 }
 
-InterfaceBasePtr RegisterSimulationFunction(int environmentid, boost::python::object simulationfn)
+InterfaceBasePtr RegisterSimulationFunction(int environmentid, py::object simulationfn)
 {
     ModuleBasePtr module = RaveCreateModule(RaveGetEnvironment(environmentid), "PythonBinding");
     if( !!module ) {
@@ -118,6 +118,6 @@ void Init(UserDataPtr globalstate)
 
 BOOST_PYTHON_MODULE(orpythonbinding)
 {
-    boost::python::def("Init", cppexamples::Init, boost::python::args("globalstate"), "initializes the python bindings with the openrave global state");
-    boost::python::def("RegisterSimulationFunction", cppexamples::RegisterSimulationFunction, boost::python::args("environmentid","simulationfn"));
+    py::def("Init", cppexamples::Init, py::args("globalstate"), "initializes the python bindings with the openrave global state");
+    py::def("RegisterSimulationFunction", cppexamples::RegisterSimulationFunction, py::args("environmentid","simulationfn"));
 };

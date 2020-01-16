@@ -23,11 +23,28 @@
 #include <openrave/xmlreaders.h>
 
 using namespace OpenRAVE;
-using namespace boost::python;
+namespace py = boost::python;
+using py::object;
+using py::extract;
+using py::handle;
+using py::dict;
+using py::enum_;
+using py::class_;
+using py::no_init;
+using py::bases;
+using py::init;
+using py::scope;
+using py::args;
+using py::return_value_policy;
+using py::copy_const_reference;
+using py::docstring_options;
+using py::pickle_suite;
+using py::manage_new_object;
+using py::def;
+namespace numeric = py::numeric;
 
 // declared from openravepy_int
 namespace openravepy {
-
 Transform ExtractTransform(const object& oraw);
 TransformMatrix ExtractTransformMatrix(const object& oraw);
 object toPyArray(const TransformMatrix& t);
@@ -45,7 +62,7 @@ object toPyEnvironment(object);
 object toPyKinBody(KinBodyPtr, object opyenv);
 object toPyKinBodyLink(KinBody::LinkPtr plink, object opyenv);
 
-//EnvironmentBasePtr GetEnvironment(boost::python::object);
+//EnvironmentBasePtr GetEnvironment(py::object);
 TrajectoryBasePtr GetTrajectory(object);
 KinBodyPtr GetKinBody(object);
 KinBody::LinkPtr GetKinBodyLink(object);
@@ -55,11 +72,11 @@ PlannerBase::PlannerParametersConstPtr GetPlannerParametersConst(object);
 CollisionReportPtr GetCollisionReport(object);
 
 EnvironmentBasePtr GetEnvironment(object o);
-}
+} // namespace openravepy
 
 namespace configurationcachepy {
 
-inline std::string _ExtractStringSafe(boost::python::object ostring)
+inline std::string _ExtractStringSafe(py::object ostring)
 {
     if( ostring == object() ) {
         return std::string();
@@ -69,9 +86,9 @@ inline std::string _ExtractStringSafe(boost::python::object ostring)
     }
 }
 
-inline boost::python::object ConvertStringToUnicode(const std::string& s)
+inline py::object ConvertStringToUnicode(const std::string& s)
 {
-    return boost::python::object(boost::python::handle<>(PyUnicode_Decode(s.c_str(),s.size(), "utf-8", NULL)));
+    return py::object(py::handle<>(PyUnicode_Decode(s.c_str(),s.size(), "utf-8", NULL)));
 }
 
 template <typename T>
@@ -93,7 +110,7 @@ inline std::vector<T> ExtractArray(const object& o)
 inline numeric::array toPyArrayN(const float* pvalues, size_t N)
 {
     if( N == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f4"));
+        return static_cast<numeric::array>(numeric::array(py::list()).astype("f4"));
     }
     npy_intp dims[] = {npy_intp(N)};
     PyObject *pyvalues = PyArray_SimpleNew(1,dims, PyArray_FLOAT);
@@ -106,14 +123,14 @@ inline numeric::array toPyArrayN(const float* pvalues, size_t N)
 inline numeric::array toPyArrayN(const float* pvalues, std::vector<npy_intp>& dims)
 {
     if( dims.size() == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f4"));
+        return static_cast<numeric::array>(numeric::array(py::list()).astype("f4"));
     }
     size_t totalsize = 1;
     FOREACH(it,dims) {
         totalsize *= *it;
     }
     if( totalsize == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f4"));
+        return static_cast<numeric::array>(numeric::array(py::list()).astype("f4"));
     }
     PyObject *pyvalues = PyArray_SimpleNew(dims.size(),&dims[0], PyArray_FLOAT);
     if( pvalues != NULL ) {
@@ -125,7 +142,7 @@ inline numeric::array toPyArrayN(const float* pvalues, std::vector<npy_intp>& di
 inline numeric::array toPyArrayN(const double* pvalues, size_t N)
 {
     if( N == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f8"));
+        return static_cast<numeric::array>(numeric::array(py::list()).astype("f8"));
     }
     npy_intp dims[] = {npy_intp(N)};
     PyObject *pyvalues = PyArray_SimpleNew(1,dims, PyArray_DOUBLE);
@@ -138,14 +155,14 @@ inline numeric::array toPyArrayN(const double* pvalues, size_t N)
 inline numeric::array toPyArrayN(const double* pvalues, std::vector<npy_intp>& dims)
 {
     if( dims.size() == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f8"));
+        return static_cast<numeric::array>(numeric::array(py::list()).astype("f8"));
     }
     size_t totalsize = 1;
     FOREACH(it,dims) {
         totalsize *= *it;
     }
     if( totalsize == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f8"));
+        return static_cast<numeric::array>(numeric::array(py::list()).astype("f8"));
     }
     PyObject *pyvalues = PyArray_SimpleNew(dims.size(),&dims[0], PyArray_DOUBLE);
     if( pvalues != NULL ) {
@@ -157,14 +174,14 @@ inline numeric::array toPyArrayN(const double* pvalues, std::vector<npy_intp>& d
 inline numeric::array toPyArrayN(const uint8_t* pvalues, std::vector<npy_intp>& dims)
 {
     if( dims.size() == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("u1"));
+        return static_cast<numeric::array>(numeric::array(py::list()).astype("u1"));
     }
     size_t totalsize = 1;
     for(size_t i = 0; i < dims.size(); ++i) {
         totalsize *= dims[i];
     }
     if( totalsize == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("u1"));
+        return static_cast<numeric::array>(numeric::array(py::list()).astype("u1"));
     }
     PyObject *pyvalues = PyArray_SimpleNew(dims.size(),&dims[0], PyArray_UINT8);
     if( pvalues != NULL ) {
@@ -176,7 +193,7 @@ inline numeric::array toPyArrayN(const uint8_t* pvalues, std::vector<npy_intp>& 
 inline numeric::array toPyArrayN(const uint8_t* pvalues, size_t N)
 {
     if( N == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("u1"));
+        return static_cast<numeric::array>(numeric::array(py::list()).astype("u1"));
     }
     npy_intp dims[] = {npy_intp(N)};
     PyObject *pyvalues = PyArray_SimpleNew(1,&dims[0], PyArray_UINT8);
@@ -189,7 +206,7 @@ inline numeric::array toPyArrayN(const uint8_t* pvalues, size_t N)
 inline numeric::array toPyArrayN(const int* pvalues, size_t N)
 {
     if( N == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("i4"));
+        return static_cast<numeric::array>(numeric::array(py::list()).astype("i4"));
     }
     npy_intp dims[] = {npy_intp(N)};
     PyObject *pyvalues = PyArray_SimpleNew(1,&dims[0], PyArray_INT32);
@@ -202,7 +219,7 @@ inline numeric::array toPyArrayN(const int* pvalues, size_t N)
 inline numeric::array toPyArrayN(const uint32_t* pvalues, size_t N)
 {
     if( N == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("u4"));
+        return static_cast<numeric::array>(numeric::array(py::list()).astype("u4"));
     }
     npy_intp dims[] = {npy_intp(N)};
     PyObject *pyvalues = PyArray_SimpleNew(1,&dims[0], PyArray_UINT32);
@@ -254,7 +271,7 @@ public:
         if( !!ccollidinglink ) {
             collidinglink = ccollidinglink->GetParent()->GetLinks().at(ccollidinglink->GetIndex());
         }
-        return boost::python::make_tuple(ret, closestdist, boost::python::make_tuple(openravepy::toPyKinBodyLink(robotlink, _pyenv), openravepy::toPyKinBodyLink(collidinglink, _pyenv)));
+        return py::make_tuple(ret, closestdist, py::make_tuple(openravepy::toPyKinBodyLink(robotlink, _pyenv), openravepy::toPyKinBodyLink(collidinglink, _pyenv)));
     }
 
     void Reset()
@@ -329,7 +346,7 @@ public:
             return object(); // didn't find anything
         }
         else {
-           return boost::python::make_tuple(toPyArray(nn.first), nn.second);
+           return py::make_tuple(toPyArray(nn.first), nn.second);
         }
     }
     

@@ -127,7 +127,6 @@ void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, E
     RAVE_DESERIALIZEJSON_REQUIRED(value, "viscousFriction", viscous_friction);
 }
 
-
 KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)
 {
     _nHierarchyComputed = 0;
