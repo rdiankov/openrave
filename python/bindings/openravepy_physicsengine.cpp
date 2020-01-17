@@ -18,6 +18,7 @@
 #include <openravepy/openravepy_int.h>
 #include <openravepy/openravepy_kinbody.h>
 #include <openravepy/openravepy_environmentbase.h>
+#include <openravepy/openravepy_physicalenginebase.h>
 
 namespace openravepy {
 
@@ -46,143 +47,137 @@ using py::def;
 
 namespace numeric = py::numeric;
 
-class PyPhysicsEngineBase : public PyInterfaceBase
+PyPhysicsEngineBase::PyPhysicsEngineBase(PhysicsEngineBasePtr pPhysicsEngine, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pPhysicsEngine, pyenv),_pPhysicsEngine(pPhysicsEngine) {
+}
+PyPhysicsEngineBase::~PyPhysicsEngineBase() {
+}
+
+PhysicsEngineBasePtr PyPhysicsEngineBase::GetPhysicsEngine() {
+    return _pPhysicsEngine;
+}
+
+bool PyPhysicsEngineBase::SetPhysicsOptions(int physicsoptions) {
+    return _pPhysicsEngine->SetPhysicsOptions(physicsoptions);
+}
+int PyPhysicsEngineBase::GetPhysicsOptions() const {
+    return _pPhysicsEngine->GetPhysicsOptions();
+}
+bool PyPhysicsEngineBase::InitEnvironment() {
+    return _pPhysicsEngine->InitEnvironment();
+}
+void PyPhysicsEngineBase::DestroyEnvironment() {
+    _pPhysicsEngine->DestroyEnvironment();
+}
+bool PyPhysicsEngineBase::InitKinBody(PyKinBodyPtr pbody) {
+    CHECK_POINTER(pbody); return _pPhysicsEngine->InitKinBody(openravepy::GetKinBody(pbody));
+}
+
+bool PyPhysicsEngineBase::SetLinkVelocity(object pylink, object linearvel, object angularvel)
 {
-protected:
-    PhysicsEngineBasePtr _pPhysicsEngine;
-public:
-    PyPhysicsEngineBase(PhysicsEngineBasePtr pPhysicsEngine, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pPhysicsEngine, pyenv),_pPhysicsEngine(pPhysicsEngine) {
-    }
-    virtual ~PyPhysicsEngineBase() {
-    }
+    CHECK_POINTER(pylink);
+    return _pPhysicsEngine->SetLinkVelocity(openravepy::GetKinBodyLink(pylink),ExtractVector3(linearvel),ExtractVector3(angularvel));
+}
 
-    PhysicsEngineBasePtr GetPhysicsEngine() {
-        return _pPhysicsEngine;
+bool PyPhysicsEngineBase::SetLinkVelocities(PyKinBodyPtr pykinbody, object ovelocities)
+{
+    std::vector<std::pair<Vector,Vector> > velocities;
+    velocities.resize(len(ovelocities));
+    for(size_t i = 0; i < velocities.size(); ++i) {
+        std::vector<dReal> v = ExtractArray<dReal>(ovelocities[i]);
+        BOOST_ASSERT(v.size()==6);
+        velocities[i].first.x = v[0];
+        velocities[i].first.y = v[1];
+        velocities[i].first.z = v[2];
+        velocities[i].second.x = v[3];
+        velocities[i].second.y = v[4];
+        velocities[i].second.z = v[5];
     }
+    return _pPhysicsEngine->SetLinkVelocities(openravepy::GetKinBody(pykinbody), velocities);
+}
 
-    bool SetPhysicsOptions(int physicsoptions) {
-        return _pPhysicsEngine->SetPhysicsOptions(physicsoptions);
+object PyPhysicsEngineBase::GetLinkVelocity(object pylink)
+{
+    CHECK_POINTER(pylink);
+    Vector linearvel, angularvel;
+    if( !_pPhysicsEngine->GetLinkVelocity(openravepy::GetKinBodyLink(pylink),linearvel,angularvel) ) {
+        return py::none_();
     }
-    int GetPhysicsOptions() const {
-        return _pPhysicsEngine->GetPhysicsOptions();
-    }
-    bool InitEnvironment() {
-        return _pPhysicsEngine->InitEnvironment();
-    }
-    void DestroyEnvironment() {
-        _pPhysicsEngine->DestroyEnvironment();
-    }
-    bool InitKinBody(PyKinBodyPtr pbody) {
-        CHECK_POINTER(pbody); return _pPhysicsEngine->InitKinBody(openravepy::GetKinBody(pbody));
-    }
+    return py::make_tuple(toPyVector3(linearvel),toPyVector3(angularvel));
+}
 
-    bool SetLinkVelocity(object pylink, object linearvel, object angularvel)
-    {
-        CHECK_POINTER(pylink);
-        return _pPhysicsEngine->SetLinkVelocity(openravepy::GetKinBodyLink(pylink),ExtractVector3(linearvel),ExtractVector3(angularvel));
+object PyPhysicsEngineBase::GetLinkVelocities(PyKinBodyPtr pykinbody)
+{
+    CHECK_POINTER(pykinbody);
+    KinBodyPtr pbody = openravepy::GetKinBody(pykinbody);
+    if( pbody->GetLinks().size() == 0 ) {
+        return py::empty_array_astype<dReal>();
     }
+    std::vector<std::pair<Vector,Vector> > velocities;
+    if( !_pPhysicsEngine->GetLinkVelocities(pbody,velocities) ) {
+        return py::none_();
+    }
+    npy_intp dims[] = { npy_intp(velocities.size()), 6};
+    PyObject *pyvel = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+    dReal* pfvel = (dReal*)PyArray_DATA(pyvel);
+    for(size_t i = 0; i < velocities.size(); ++i) {
+        pfvel[6*i+0] = velocities[i].first.x;
+        pfvel[6*i+1] = velocities[i].first.y;
+        pfvel[6*i+2] = velocities[i].first.z;
+        pfvel[6*i+3] = velocities[i].second.x;
+        pfvel[6*i+4] = velocities[i].second.y;
+        pfvel[6*i+5] = velocities[i].second.z;
+    }
+    return py::to_array_astype<dReal>(pyvel);
+}
 
-    bool SetLinkVelocities(PyKinBodyPtr pykinbody, object ovelocities)
-    {
-        std::vector<std::pair<Vector,Vector> > velocities;
-        velocities.resize(len(ovelocities));
-        for(size_t i = 0; i < velocities.size(); ++i) {
-            std::vector<dReal> v = ExtractArray<dReal>(ovelocities[i]);
-            BOOST_ASSERT(v.size()==6);
-            velocities[i].first.x = v[0];
-            velocities[i].first.y = v[1];
-            velocities[i].first.z = v[2];
-            velocities[i].second.x = v[3];
-            velocities[i].second.y = v[4];
-            velocities[i].second.z = v[5];
-        }
-        return _pPhysicsEngine->SetLinkVelocities(openravepy::GetKinBody(pykinbody), velocities);
-    }
+bool PyPhysicsEngineBase::SetBodyForce(object pylink, object force, object position, bool bAdd)
+{
+    CHECK_POINTER(pylink);
+    return _pPhysicsEngine->SetBodyForce(openravepy::GetKinBodyLink(pylink),ExtractVector3(force),ExtractVector3(position),bAdd);
+}
 
-    object GetLinkVelocity(object pylink)
-    {
-        CHECK_POINTER(pylink);
-        Vector linearvel, angularvel;
-        if( !_pPhysicsEngine->GetLinkVelocity(openravepy::GetKinBodyLink(pylink),linearvel,angularvel) ) {
-            return py::none_();
-        }
-        return py::make_tuple(toPyVector3(linearvel),toPyVector3(angularvel));
-    }
+bool PyPhysicsEngineBase::SetBodyTorque(object pylink, object torque, bool bAdd)
+{
+    CHECK_POINTER(pylink);
+    return _pPhysicsEngine->SetBodyTorque(openravepy::GetKinBodyLink(pylink),ExtractVector3(torque),bAdd);
+}
 
-    object GetLinkVelocities(PyKinBodyPtr pykinbody)
-    {
-        CHECK_POINTER(pykinbody);
-        KinBodyPtr pbody = openravepy::GetKinBody(pykinbody);
-        if( pbody->GetLinks().size() == 0 ) {
-            return py::empty_array_astype<dReal>();
-        }
-        std::vector<std::pair<Vector,Vector> > velocities;
-        if( !_pPhysicsEngine->GetLinkVelocities(pbody,velocities) ) {
-            return py::none_();
-        }
-        npy_intp dims[] = { npy_intp(velocities.size()), 6};
-        PyObject *pyvel = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-        dReal* pfvel = (dReal*)PyArray_DATA(pyvel);
-        for(size_t i = 0; i < velocities.size(); ++i) {
-            pfvel[6*i+0] = velocities[i].first.x;
-            pfvel[6*i+1] = velocities[i].first.y;
-            pfvel[6*i+2] = velocities[i].first.z;
-            pfvel[6*i+3] = velocities[i].second.x;
-            pfvel[6*i+4] = velocities[i].second.y;
-            pfvel[6*i+5] = velocities[i].second.z;
-        }
-        return py::to_array_astype<dReal>(pyvel);
-    }
+bool PyPhysicsEngineBase::AddJointTorque(object pyjoint, object torques)
+{
+    CHECK_POINTER(pyjoint);
+    return _pPhysicsEngine->AddJointTorque(openravepy::GetKinBodyJoint(pyjoint),ExtractArray<dReal>(torques));
+}
 
-    bool SetBodyForce(object pylink, object force, object position, bool bAdd)
-    {
-        CHECK_POINTER(pylink);
-        return _pPhysicsEngine->SetBodyForce(openravepy::GetKinBodyLink(pylink),ExtractVector3(force),ExtractVector3(position),bAdd);
+object PyPhysicsEngineBase::GetLinkForceTorque(object pylink)
+{
+    CHECK_POINTER(pylink);
+    Vector force, torque;
+    if( !_pPhysicsEngine->GetLinkForceTorque(openravepy::GetKinBodyLink(pylink),force,torque) ) {
+        return py::none_();
     }
+    return py::make_tuple(toPyVector3(force),toPyVector3(torque));
+}
 
-    bool SetBodyTorque(object pylink, object torque, bool bAdd)
-    {
-        CHECK_POINTER(pylink);
-        return _pPhysicsEngine->SetBodyTorque(openravepy::GetKinBodyLink(pylink),ExtractVector3(torque),bAdd);
+object PyPhysicsEngineBase::GetJointForceTorque(object pyjoint)
+{
+    CHECK_POINTER(pyjoint);
+    Vector force, torque;
+    if( !_pPhysicsEngine->GetJointForceTorque(openravepy::GetKinBodyJoint(pyjoint),force,torque) ) {
+        return py::none_();
     }
+    return py::make_tuple(toPyVector3(force),toPyVector3(torque));
+}
 
-    bool AddJointTorque(object pyjoint, object torques)
-    {
-        CHECK_POINTER(pyjoint);
-        return _pPhysicsEngine->AddJointTorque(openravepy::GetKinBodyJoint(pyjoint),ExtractArray<dReal>(torques));
-    }
+void PyPhysicsEngineBase::SetGravity(object gravity) {
+    _pPhysicsEngine->SetGravity(ExtractVector3(gravity));
+}
+object PyPhysicsEngineBase::GetGravity() {
+    return toPyVector3(_pPhysicsEngine->GetGravity());
+}
 
-    object GetLinkForceTorque(object pylink)
-    {
-        CHECK_POINTER(pylink);
-        Vector force, torque;
-        if( !_pPhysicsEngine->GetLinkForceTorque(openravepy::GetKinBodyLink(pylink),force,torque) ) {
-            return py::none_();
-        }
-        return py::make_tuple(toPyVector3(force),toPyVector3(torque));
-    }
-
-    object GetJointForceTorque(object pyjoint)
-    {
-        CHECK_POINTER(pyjoint);
-        Vector force, torque;
-        if( !_pPhysicsEngine->GetJointForceTorque(openravepy::GetKinBodyJoint(pyjoint),force,torque) ) {
-            return py::none_();
-        }
-        return py::make_tuple(toPyVector3(force),toPyVector3(torque));
-    }
-
-    void SetGravity(object gravity) {
-        _pPhysicsEngine->SetGravity(ExtractVector3(gravity));
-    }
-    object GetGravity() {
-        return toPyVector3(_pPhysicsEngine->GetGravity());
-    }
-
-    void SimulateStep(dReal fTimeElapsed) {
-        _pPhysicsEngine->SimulateStep(fTimeElapsed);
-    }
-};
+void PyPhysicsEngineBase::SimulateStep(dReal fTimeElapsed) {
+    _pPhysicsEngine->SimulateStep(fTimeElapsed);
+}
 
 PhysicsEngineBasePtr GetPhysicsEngine(PyPhysicsEngineBasePtr pyPhysicsEngine)
 {
