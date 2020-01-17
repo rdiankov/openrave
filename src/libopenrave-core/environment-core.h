@@ -2082,7 +2082,7 @@ protected:
     void _RemoveKinBodyFromIterator(vector<KinBodyPtr>::iterator it)
     {
         // before deleting, make sure no robots are grabbing it!!
-        FOREACH(itrobot, _vecrobots) {
+        FOREACH(itrobot, _vecbodies) {
             KinBody &body = **it;
             if( (*itrobot)->IsGrabbing(body) ) {
                 RAVELOG_WARN("destroy %s already grabbed by robot %s!\n", body.GetName().c_str(), (*itrobot)->GetName().c_str());
@@ -2161,7 +2161,7 @@ protected:
                 // clear internal interface lists
                 boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
                 // release all grabbed
-                FOREACH(itrobot,_vecrobots) {
+                FOREACH(itrobot,_vecbodies) {
                     (*itrobot)->ReleaseAllGrabbed();
                 }
                 FOREACH(itbody,_vecbodies) {
