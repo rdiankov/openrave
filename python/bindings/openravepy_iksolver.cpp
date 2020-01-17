@@ -17,6 +17,7 @@
 #define NO_IMPORT_ARRAY
 #include <openravepy/openravepy_int.h>
 #include <openravepy/openravepy_environmentbase.h>
+#include <openravepy/openravepy_iksolverbase.h>
 #include <openrave/utils.h>
 
 namespace openravepy {
@@ -46,209 +47,196 @@ using py::def;
 
 namespace numeric = py::numeric;
 
-class PyIkReturn
-{
-public:
-    PyIkReturn(const IkReturn& ret) : _ret(ret) {
+PyIkReturn::PyIkReturn(const IkReturn& ret) : _ret(ret) {
+}
+PyIkReturn::PyIkReturn(IkReturnPtr pret) : _ret(*pret) {
+}
+PyIkReturn::PyIkReturn(IkReturnAction action) : _ret(action) {
+}
+IkReturnAction PyIkReturn::GetAction() {
+    return _ret._action;
+}
+object PyIkReturn::GetSolution() {
+    return toPyArray(_ret._vsolution);
+}
+object PyIkReturn::GetUserData() {
+    return openravepy::GetUserData(_ret._userdata);
+}
+object PyIkReturn::GetMapData(const std::string& key) {
+    IkReturn::CustomData::const_iterator it = _ret._mapdata.find(key);
+    if( it == _ret._mapdata.end() ) {
+        return py::none_();
     }
-    PyIkReturn(IkReturnPtr pret) : _ret(*pret) {
+    return toPyArray(it->second);
+}
+object PyIkReturn::GetMapDataDict() {
+    py::dict odata;
+    FOREACHC(it,_ret._mapdata) {
+        odata[it->first] = toPyArray(it->second);
     }
-    PyIkReturn(IkReturnAction action) : _ret(action) {
-    }
-    IkReturnAction GetAction() {
-        return _ret._action;
-    }
-    object GetSolution() {
-        return toPyArray(_ret._vsolution);
-    }
-    object GetUserData() {
-        return openravepy::GetUserData(_ret._userdata);
-    }
-    object GetMapData(const std::string& key) {
-        IkReturn::CustomData::const_iterator it = _ret._mapdata.find(key);
-        if( it == _ret._mapdata.end() ) {
-            return py::none_();
-        }
-        return toPyArray(it->second);
-    }
-    object GetMapDataDict() {
-        py::dict odata;
-        FOREACHC(it,_ret._mapdata) {
-            odata[it->first] = toPyArray(it->second);
-        }
-        return odata;
-    }
+    return odata;
+}
 
-    void SetUserData(PyUserData pdata) {
-        _ret._userdata = pdata._handle;
-    }
-    void SetSolution(object osolution) {
-        _ret._vsolution = ExtractArray<dReal>(osolution);
-    }
-    void SetMapKeyValue(const std::string& key, object ovalues) {
-        _ret._mapdata[key] = ExtractArray<dReal>(ovalues);
-    }
-
-    IkReturn _ret;
-};
+void PyIkReturn::SetUserData(PyUserData pdata) {
+    _ret._userdata = pdata._handle;
+}
+void PyIkReturn::SetSolution(object osolution) {
+    _ret._vsolution = ExtractArray<dReal>(osolution);
+}
+void PyIkReturn::SetMapKeyValue(const std::string& key, object ovalues) {
+    _ret._mapdata[key] = ExtractArray<dReal>(ovalues);
+}
 
 typedef OPENRAVE_SHARED_PTR<PyIkReturn> PyIkReturnPtr;
 
-class PyIkSolverBase : public PyInterfaceBase
+IkReturn PyIkSolverBase::_CallCustomFilter(object fncallback, PyEnvironmentBasePtr pyenv, IkSolverBasePtr pIkSolver, std::vector<dReal>& values, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikparam)
 {
-protected:
-    IkSolverBasePtr _pIkSolver;
-
-    static IkReturn _CallCustomFilter(object fncallback, PyEnvironmentBasePtr pyenv, IkSolverBasePtr pIkSolver, std::vector<dReal>& values, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikparam)
-    {
-        object res;
-        PyGILState_STATE gstate = PyGILState_Ensure();
-        std::string errmsg;
-        try {
-            RobotBase::ManipulatorPtr pmanip2 = OPENRAVE_CONST_POINTER_CAST<RobotBase::Manipulator>(pmanip);
-            res = fncallback(toPyArray(values), openravepy::toPyRobotManipulator(pmanip2,pyenv),toPyIkParameterization(ikparam));
-        }
-        catch(...) {
-            errmsg = boost::str(boost::format("exception occured in python custom filter callback of iksolver %s: %s")%pIkSolver->GetXMLId()%GetPyErrorString());
-        }
-        IkReturn ikfr(IKRA_Success);
-        if( IS_PYTHONOBJECT_NONE(res) ) {
-            ikfr._action = IKRA_Reject;
-        }
-        else {
-            if( !openravepy::ExtractIkReturn(res,ikfr) ) {
-                extract_<IkReturnAction> ikfra(res);
-                if( ikfra.check() ) {
-                    ikfr._action = (IkReturnAction)ikfra;
-                }
-                else {
-                    errmsg = "failed to convert return type of filter to IkReturn";
-                }
+    object res;
+    PyGILState_STATE gstate = PyGILState_Ensure();
+    std::string errmsg;
+    try {
+        RobotBase::ManipulatorPtr pmanip2 = OPENRAVE_CONST_POINTER_CAST<RobotBase::Manipulator>(pmanip);
+        res = fncallback(toPyArray(values), openravepy::toPyRobotManipulator(pmanip2,pyenv),toPyIkParameterization(ikparam));
+    }
+    catch(...) {
+        errmsg = boost::str(boost::format("exception occured in python custom filter callback of iksolver %s: %s")%pIkSolver->GetXMLId()%GetPyErrorString());
+    }
+    IkReturn ikfr(IKRA_Success);
+    if( IS_PYTHONOBJECT_NONE(res) ) {
+        ikfr._action = IKRA_Reject;
+    }
+    else {
+        if( !openravepy::ExtractIkReturn(res,ikfr) ) {
+            extract_<IkReturnAction> ikfra(res);
+            if( ikfra.check() ) {
+                ikfr._action = (IkReturnAction)ikfra;
+            }
+            else {
+                errmsg = "failed to convert return type of filter to IkReturn";
             }
         }
-
-        PyGILState_Release(gstate);
-        if( errmsg.size() > 0 ) {
-            throw openrave_exception(errmsg,ORE_Assert);
-        }
-        return ikfr;
     }
 
-public:
-    PyIkSolverBase(IkSolverBasePtr pIkSolver, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pIkSolver, pyenv), _pIkSolver(pIkSolver) {
+    PyGILState_Release(gstate);
+    if( errmsg.size() > 0 ) {
+        throw openrave_exception(errmsg,ORE_Assert);
     }
-    virtual ~PyIkSolverBase() {
-    }
+    return ikfr;
+}
 
-    IkSolverBasePtr GetIkSolver() {
-        return _pIkSolver;
-    }
+PyIkSolverBase::PyIkSolverBase(IkSolverBasePtr pIkSolver, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pIkSolver, pyenv), _pIkSolver(pIkSolver) {
+}
+PyIkSolverBase::~PyIkSolverBase() {
+}
 
-    int GetNumFreeParameters() const {
-        return _pIkSolver->GetNumFreeParameters();
-    }
-    object GetFreeParameters() const {
-        if( _pIkSolver->GetNumFreeParameters() == 0 ) {
-            return py::empty_array_astype<dReal>();
-        }
-        std::vector<dReal> values;
-        _pIkSolver->GetFreeParameters(values);
-        return toPyArray(values);
-    }
+IkSolverBasePtr PyIkSolverBase::GetIkSolver() {
+    return _pIkSolver;
+}
 
-    PyIkReturnPtr Solve(object oparam, object oq0, int filteroptions)
-    {
-        PyIkReturnPtr pyreturn(new PyIkReturn(IKRA_Reject));
-        IkReturnPtr preturn(&pyreturn->_ret, utils::null_deleter());
-        std::vector<dReal> q0;
-        if( !IS_PYTHONOBJECT_NONE(oq0) ) {
-            q0 = ExtractArray<dReal>(oq0);
-        }
-        IkParameterization ikparam;
-        if( !ExtractIkParameterization(oparam,ikparam) ) {
-            throw openrave_exception(_("first argument to IkSolver.Solve needs to be IkParameterization"),ORE_InvalidArguments);
-        }
-        _pIkSolver->Solve(ikparam, q0, filteroptions, preturn);
-        return pyreturn;
+int PyIkSolverBase::GetNumFreeParameters() const {
+    return _pIkSolver->GetNumFreeParameters();
+}
+object PyIkSolverBase::GetFreeParameters() const {
+    if( _pIkSolver->GetNumFreeParameters() == 0 ) {
+        return py::empty_array_astype<dReal>();
     }
+    std::vector<dReal> values;
+    _pIkSolver->GetFreeParameters(values);
+    return toPyArray(values);
+}
 
-    object SolveAll(object oparam, int filteroptions)
-    {
-        py::list pyreturns;
-        std::vector<IkReturnPtr> vikreturns;
-        IkParameterization ikparam;
-        if( !ExtractIkParameterization(oparam,ikparam) ) {
-            throw openrave_exception(_("first argument to IkSolver.Solve needs to be IkParameterization"),ORE_InvalidArguments);
-        }
-        _pIkSolver->SolveAll(ikparam, filteroptions, vikreturns);
-        FOREACH(itikreturn,vikreturns) {
-            pyreturns.append(py::to_object(PyIkReturnPtr(new PyIkReturn(*itikreturn))));
-        }
-        return pyreturns;
+PyIkReturnPtr PyIkSolverBase::Solve(object oparam, object oq0, int filteroptions)
+{
+    PyIkReturnPtr pyreturn(new PyIkReturn(IKRA_Reject));
+    IkReturnPtr preturn(&pyreturn->_ret, utils::null_deleter());
+    std::vector<dReal> q0;
+    if( !IS_PYTHONOBJECT_NONE(oq0) ) {
+        q0 = ExtractArray<dReal>(oq0);
     }
+    IkParameterization ikparam;
+    if( !ExtractIkParameterization(oparam,ikparam) ) {
+        throw openrave_exception(_("first argument to IkSolver.Solve needs to be IkParameterization"),ORE_InvalidArguments);
+    }
+    _pIkSolver->Solve(ikparam, q0, filteroptions, preturn);
+    return pyreturn;
+}
 
-    PyIkReturnPtr Solve(object oparam, object oq0, object oFreeParameters, int filteroptions)
-    {
-        PyIkReturnPtr pyreturn(new PyIkReturn(IKRA_Reject));
-        IkReturnPtr preturn(&pyreturn->_ret, utils::null_deleter());
-        std::vector<dReal> q0, vFreeParameters;
-        if( !IS_PYTHONOBJECT_NONE(oq0) ) {
-            q0 = ExtractArray<dReal>(oq0);
-        }
-        if( !IS_PYTHONOBJECT_NONE(oFreeParameters) ) {
-            vFreeParameters = ExtractArray<dReal>(oFreeParameters);
-        }
-        IkParameterization ikparam;
-        if( !ExtractIkParameterization(oparam,ikparam) ) {
-            throw openrave_exception(_("first argument to IkSolver.Solve needs to be IkParameterization"),ORE_InvalidArguments);
-        }
-        _pIkSolver->Solve(ikparam, q0, vFreeParameters,filteroptions, preturn);
-        return pyreturn;
+object PyIkSolverBase::SolveAll(object oparam, int filteroptions)
+{
+    py::list pyreturns;
+    std::vector<IkReturnPtr> vikreturns;
+    IkParameterization ikparam;
+    if( !ExtractIkParameterization(oparam,ikparam) ) {
+        throw openrave_exception(_("first argument to IkSolver.Solve needs to be IkParameterization"),ORE_InvalidArguments);
     }
+    _pIkSolver->SolveAll(ikparam, filteroptions, vikreturns);
+    FOREACH(itikreturn,vikreturns) {
+        pyreturns.append(py::to_object(PyIkReturnPtr(new PyIkReturn(*itikreturn))));
+    }
+    return pyreturns;
+}
 
-    object SolveAll(object oparam, object oFreeParameters, int filteroptions)
-    {
-        py::list pyreturns;
-        std::vector<IkReturnPtr> vikreturns;
-        IkParameterization ikparam;
-        if( !ExtractIkParameterization(oparam,ikparam) ) {
-            throw openrave_exception(_("first argument to IkSolver.Solve needs to be IkParameterization"),ORE_InvalidArguments);
-        }
-        std::vector<dReal> vFreeParameters;
-        if( !IS_PYTHONOBJECT_NONE(oFreeParameters) ) {
-            vFreeParameters = ExtractArray<dReal>(oFreeParameters);
-        }
-        _pIkSolver->SolveAll(ikparam, vFreeParameters, filteroptions, vikreturns);
-        FOREACH(itikreturn,vikreturns) {
-            pyreturns.append(py::to_object(PyIkReturnPtr(new PyIkReturn(*itikreturn))));
-        }
-        return pyreturns;
+PyIkReturnPtr PyIkSolverBase::Solve(object oparam, object oq0, object oFreeParameters, int filteroptions)
+{
+    PyIkReturnPtr pyreturn(new PyIkReturn(IKRA_Reject));
+    IkReturnPtr preturn(&pyreturn->_ret, utils::null_deleter());
+    std::vector<dReal> q0, vFreeParameters;
+    if( !IS_PYTHONOBJECT_NONE(oq0) ) {
+        q0 = ExtractArray<dReal>(oq0);
     }
+    if( !IS_PYTHONOBJECT_NONE(oFreeParameters) ) {
+        vFreeParameters = ExtractArray<dReal>(oFreeParameters);
+    }
+    IkParameterization ikparam;
+    if( !ExtractIkParameterization(oparam,ikparam) ) {
+        throw openrave_exception(_("first argument to IkSolver.Solve needs to be IkParameterization"),ORE_InvalidArguments);
+    }
+    _pIkSolver->Solve(ikparam, q0, vFreeParameters,filteroptions, preturn);
+    return pyreturn;
+}
 
-    PyIkReturnPtr CallFilters(object oparam)
-    {
-        PyIkReturnPtr pyreturn(new PyIkReturn(IKRA_Reject));
-        IkReturnPtr preturn(&pyreturn->_ret, utils::null_deleter());
-        IkParameterization ikparam;
-        if( !ExtractIkParameterization(oparam,ikparam) ) {
-            throw openrave_exception(_("first argument to IkSolver.Solve needs to be IkParameterization"),ORE_InvalidArguments);
-        }
-        _pIkSolver->CallFilters(ikparam, preturn);
-        return pyreturn;
+object PyIkSolverBase::SolveAll(object oparam, object oFreeParameters, int filteroptions)
+{
+    py::list pyreturns;
+    std::vector<IkReturnPtr> vikreturns;
+    IkParameterization ikparam;
+    if( !ExtractIkParameterization(oparam,ikparam) ) {
+        throw openrave_exception(_("first argument to IkSolver.Solve needs to be IkParameterization"),ORE_InvalidArguments);
     }
+    std::vector<dReal> vFreeParameters;
+    if( !IS_PYTHONOBJECT_NONE(oFreeParameters) ) {
+        vFreeParameters = ExtractArray<dReal>(oFreeParameters);
+    }
+    _pIkSolver->SolveAll(ikparam, vFreeParameters, filteroptions, vikreturns);
+    FOREACH(itikreturn,vikreturns) {
+        pyreturns.append(py::to_object(PyIkReturnPtr(new PyIkReturn(*itikreturn))));
+    }
+    return pyreturns;
+}
 
-    bool Supports(IkParameterizationType type) {
-        return _pIkSolver->Supports(type);
+PyIkReturnPtr PyIkSolverBase::CallFilters(object oparam)
+{
+    PyIkReturnPtr pyreturn(new PyIkReturn(IKRA_Reject));
+    IkReturnPtr preturn(&pyreturn->_ret, utils::null_deleter());
+    IkParameterization ikparam;
+    if( !ExtractIkParameterization(oparam,ikparam) ) {
+        throw openrave_exception(_("first argument to IkSolver.Solve needs to be IkParameterization"),ORE_InvalidArguments);
     }
+    _pIkSolver->CallFilters(ikparam, preturn);
+    return pyreturn;
+}
 
-    object RegisterCustomFilter(int priority, object fncallback)
-    {
-        if( !fncallback ) {
-            throw OPENRAVE_EXCEPTION_FORMAT0(_("callback not specified"),ORE_InvalidArguments);
-        }
-        return toPyUserData(_pIkSolver->RegisterCustomFilter(priority,boost::bind(&PyIkSolverBase::_CallCustomFilter,fncallback,_pyenv,_pIkSolver,_1,_2,_3)));
+bool PyIkSolverBase::Supports(IkParameterizationType type) {
+    return _pIkSolver->Supports(type);
+}
+
+object PyIkSolverBase::RegisterCustomFilter(int priority, object fncallback)
+{
+    if( !fncallback ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("callback not specified"),ORE_InvalidArguments);
     }
-};
+    return toPyUserData(_pIkSolver->RegisterCustomFilter(priority,boost::bind(&PyIkSolverBase::_CallCustomFilter,fncallback,_pyenv,_pIkSolver,_1,_2,_3)));
+}
 
 bool ExtractIkReturn(object o, IkReturn& ikfr)
 {
