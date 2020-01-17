@@ -66,10 +66,10 @@ public:
         void SetLocalToolDirection(object odirection);
         void SetClosingDirection(object oclosingdirection);
         void SetChuckingDirection(object ochuckingdirection);
-        object GetGripperJoints();
-        object GetGripperIndices();
-        object GetArmJoints();
-        object GetArmIndices();
+        py::array_int GetGripperJoints();
+        py::array_int GetGripperIndices();
+        py::array_int GetArmJoints();
+        py::array_int GetArmIndices();
         object GetArmDOFValues();
         object GetGripperDOFValues();
         int GetArmDOF();
@@ -122,6 +122,7 @@ public:
         bool CheckEndEffectorSelfCollision(PyCollisionReportPtr pyreport) const;
         bool CheckEndEffectorSelfCollision(object otrans, PyCollisionReportPtr pyreport=PyCollisionReportPtr(), int numredundantsamples=0, bool ignoreManipulatorLinks=false) const;
         bool CheckIndependentCollision() const;
+        bool CheckIndependentCollision(PyCollisionReportPtr pReport) const;
 
         object CalculateJacobian();
         object CalculateRotationJacobian();

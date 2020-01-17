@@ -330,10 +330,10 @@ public:
     }
     virtual ~PyDHParameter() {
     }
-    string __repr__() {
+    std::string __repr__() {
         return boost::str(boost::format("<DHParameter(joint=%s, parentindex=%d, d=%f, a=%f, theta=%f, alpha=%f)>")%reprPyKinBodyJoint(joint)%parentindex%d%a%theta%alpha);
     }
-    string __str__() {
+    std::string __str__() {
         TransformMatrix tm = ExtractTransformMatrix(transform);
         return boost::str(boost::format("<joint %s, transform [[%f, %f, %f, %f], [%f, %f, %f, %f], [%f, %f, %f, %f]], parentindex %d>")%strPyKinBodyJoint(joint)%tm.m[0]%tm.m[1]%tm.m[2]%tm.trans[0]%tm.m[4]%tm.m[5]%tm.m[6]%tm.trans[1]%tm.m[8]%tm.m[9]%tm.m[10]%tm.trans[2]%parentindex);
     }
@@ -344,7 +344,10 @@ public:
     object joint = py::none_();
     int parentindex = -1;
     object transform = ReturnTransform(Transform());
-    dReal d = 0.0, a = 0.0, theta = 0.0, alpha = 0.0;
+    dReal d = 0.0;
+    dReal a = 0.0;
+    dReal theta = 0.0;
+    dReal alpha = 0.0;
 };
 
 object toPyDHParameter(const OpenRAVE::planningutils::DHParameter& p, PyEnvironmentBasePtr pyenv)
@@ -841,7 +844,11 @@ void InitPlanningUtils()
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         class_<planningutils::PyDynamicsCollisionConstraint, planningutils::PyDynamicsCollisionConstraintPtr >(planningutils, "DynamicsCollisionConstraint", DOXY_CLASS(planningutils::DynamicsCollisionConstraint))
-        .def(init<object, object, uint32_t>(), "plannerparameters"_a, "checkbodies"_a, "filtermask"_a)
+        .def(init<object, object, uint32_t>(),
+            "plannerparameters"_a,
+            "checkbodies"_a,
+            "filtermask"_a = 0xffffffff
+        )
 #else
         class_<planningutils::PyDynamicsCollisionConstraint, planningutils::PyDynamicsCollisionConstraintPtr >("DynamicsCollisionConstraint", DOXY_CLASS(planningutils::DynamicsCollisionConstraint), no_init)
         .def(init<object, object, uint32_t>(py::args("plannerparameters", "checkbodies", "filtermask")))
