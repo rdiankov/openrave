@@ -49,14 +49,9 @@ if(USE_PYBIND11_PYTHON_BINDINGS)
 
   if( HAVE_ALL_PYTHON_HEADERS )
     # include
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${PYTHON_INCLUDE_DIRS} ${OPENRAVE_INCLUDE_LOCAL_DIRS} ${OPENRAVE_CORE_INCLUDE_LOCAL_DIRS})
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${PYTHON_INCLUDE_DIRS} ${OPENRAVE_INCLUDE_LOCAL_DIRS} ${OPENRAVE_CORE_INCLUDE_LOCAL_DIRS})
     add_definitions("-DUSE_PYBIND11_PYTHON_BINDINGS")
     set(OPENRAVEPY_COMPILE_FLAGS "${OPENRAVEPY_COMPILE_FLAGS} -DOPENRAVE_CORE_DLL -fvisibility=hidden") # pybind11 requires less visibility
-    if(PYBIND11_PYTHON_BINDINGS_DEBUG)
-      set(OPENRAVEPY_COMPILE_FLAGS "${OPENRAVEPY_COMPILE_FLAGS} -g -O0")
-    else()
-      set(OPENRAVEPY_COMPILE_FLAGS "${OPENRAVEPY_COMPILE_FLAGS} -g0 -O3")
-    endif()
 
     # link
     set(OPENRAVEPY_LINKED_LIBRARIES "${STDC_LIBRARY} ${PYTHON_LIBRARIES} ${Boost_THREAD_LIBRARY}")
@@ -77,7 +72,10 @@ if(USE_PYBIND11_PYTHON_BINDINGS)
       set_target_properties(openravepy_int PROPERTIES SUFFIX ".so")
     endif()
     install(TARGETS openravepy_int DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
-
+    
+    file(GLOB openravepy_pybind11_headers include/openravepy/pybind11/*.h)
+    install(FILES ${openravepy_pybind11_headers} DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR}/openravepy/pybind11 COMPONENT ${COMPONENT_PREFIX}python)
+    
     ## ann bindings
     if( ANN_FOUND )
       add_library(pyANN_int SHARED pyann.cpp bindings.cpp)
@@ -183,6 +181,9 @@ elseif( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
     endif()
     install(TARGETS openravepy_int DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
 
+    file(GLOB openravepy_boostpython_headers include/openravepy/boostpython/*.h)
+    install(FILES ${openravepy_boostpython_headers} DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR}/openravepy/boostpython COMPONENT ${COMPONENT_PREFIX}python)
+    
     ## ann bindings
     if( ANN_FOUND )
       add_library(pyANN_int SHARED pyann.cpp bindings.cpp)
@@ -233,8 +234,8 @@ endif()
 
 if(SUCCESS_BUILD_PYTHON_BINDINGS)
   message(STATUS "Can successfully build OpenRAVE python bindings; will install headers for python bindings of other modules")
-  file(GLOB openravepy_headers openravepy/bindings.h openravepy/map.h openravepy/docstrings.h openravepy/openravepy_int.h openravepy/openravepy_module.h)
-  install(FILES ${openravepy_headers} DESTINATION include/openravepy COMPONENT ${COMPONENT_PREFIX}python)
+  file(GLOB openravepy_headers include/openravepy/*.h)
+  install(FILES ${openravepy_headers} DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR}/openravepy COMPONENT ${COMPONENT_PREFIX}python)
 else()
   message(STATUS "Failed to build OpenRAVE python bindings")
 endif()
