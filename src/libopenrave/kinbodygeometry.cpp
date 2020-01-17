@@ -14,8 +14,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#include <openrave/json.h>
 #include "libopenrave.h"
-#include <algorithm>
 
 namespace OpenRAVE {
 
@@ -436,29 +436,29 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Do
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
 
     // RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "sid", sid);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", _name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "name", _name);
 
     Transform tscaled = _t;
     tscaled.trans *= fUnitScale;
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", tscaled);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "transform", tscaled);
 
     switch(_type) {
     case GT_Box:
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "box");
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "halfExtents", _vGeomData*fUnitScale);
+        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "type", "box");
+        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "halfExtents", _vGeomData*fUnitScale);
         break;
 
     case GT_Container:
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "container");
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "outerExtents", _vGeomData*fUnitScale);
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "innerExtents", _vGeomData2*fUnitScale);
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "bottomCross", _vGeomData3*fUnitScale);
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "bottom", _vGeomData4*fUnitScale);
+        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "type", "container");
+        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "outerExtents", _vGeomData*fUnitScale);
+        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "innerExtents", _vGeomData2*fUnitScale);
+        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "bottomCross", _vGeomData3*fUnitScale);
+        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "bottom", _vGeomData4*fUnitScale);
         break;
 
     case GT_Cage: {
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "cage");
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "baseExtents", _vGeomData*fUnitScale);
+        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "type", "cage");
+        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "baseExtents", _vGeomData*fUnitScale);
 
         std::vector<SideWall> vScaledSideWalls = _vSideWalls;
         FOREACH(itwall, vScaledSideWalls) {
@@ -466,42 +466,42 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Do
             itwall->vExtents *= fUnitScale;
         }
         if( _vGeomData2.x > g_fEpsilon ) {
-            RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "innerSizeX", _vGeomData2.x*fUnitScale);
+            RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "innerSizeX", _vGeomData2.x*fUnitScale);
         }
         if( _vGeomData2.y > g_fEpsilon ) {
-            RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "innerSizeY", _vGeomData2.y*fUnitScale);
+            RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "innerSizeY", _vGeomData2.y*fUnitScale);
         }
         if( _vGeomData2.z > g_fEpsilon ) {
-            RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "innerSizeZ", _vGeomData2.z*fUnitScale);
+            RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "innerSizeZ", _vGeomData2.z*fUnitScale);
         }
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "sideWalls", vScaledSideWalls);
+        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "sideWalls", vScaledSideWalls);
         break;
     }
     case GT_Sphere:
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "sphere");
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "radius", _vGeomData.x*fUnitScale);
+        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "type", "sphere");
+        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "radius", _vGeomData.x*fUnitScale);
         break;
 
     case GT_Cylinder:
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "cylinder");
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "radius", _vGeomData.x*fUnitScale);
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "height", _vGeomData.y*fUnitScale);
+        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "type", "cylinder");
+        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "radius", _vGeomData.x*fUnitScale);
+        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "height", _vGeomData.y*fUnitScale);
         break;
 
     case GT_TriMesh:
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "trimesh");
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "mesh", _meshcollision);
+        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "type", "trimesh");
+        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "mesh", _meshcollision);
         break;
 
     default:
         break;
     }
 
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transparency", _fTransparency);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "visible", _bVisible);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "diffuseColor", _vDiffuseColor);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "ambientColor", _vAmbientColor);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "modifiable", _bModifiable);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "transparency", _fTransparency);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "visible", _bVisible);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "diffuseColor", _vDiffuseColor);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "ambientColor", _vAmbientColor);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "modifiable", _bModifiable);
 }
 
 
