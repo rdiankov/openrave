@@ -3467,7 +3467,7 @@ void init_openravepy_kinbody()
                           .def("DeserializeJSON", &PyGeometryInfo::DeserializeJSON, PY_ARGS("obj", "unitScale") DOXY_FN(GeometryInfo, DeserializeJSON))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                           .def("SerializeJSON", &PyGeometryInfo::SerializeJSON,
-                            "unitScale"_a,
+                            "unitScale"_a = 1.0,
                             "options"_a = py::none_(),
                             DOXY_FN(GeometryInfo,SerializeJSON)
                           )
