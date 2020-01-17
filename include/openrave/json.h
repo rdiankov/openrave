@@ -49,7 +49,7 @@ template <typename T>
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const std::vector<T>& v, std::size_t n = (std::size_t)-1);
 
 template <typename T>
-inline void RaveSerailizeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const std::set<T>& s);
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const std::set<T>& s);
 
 template <typename T>
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const RaveVector<T>& v, bool quat = false);
@@ -125,6 +125,8 @@ template <typename T>
 inline void RaveDeserializeJSON(const rapidjson::Value &value, std::vector<T>& v);
 template <typename K, typename V>
 inline void RaveDeserializeJSON(const rapidjson::Value &value, std::map<K, V>& m);
+template <typename T>
+inline void RaveDeserializeJSON(const rapidjson::Value& value, std::set<T>& s);
 template <typename T, std::size_t N>
 inline void RaveDeserializeJSON(const rapidjson::Value &value, boost::array<T, N>& a);
 template <typename T>
