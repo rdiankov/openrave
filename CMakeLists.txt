@@ -184,7 +184,7 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}" "${OPENRAVE_P
 
 set(CMAKE_TRY_COMPILE_CONFIGURATION Release CACHE STRING "very important to only test release since default is debug, and it usually reuquires special libraries")
 set(OPENRAVE_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
-set(OPENRAVEPY_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/python/bindings/include)
+set(OPENRAVEPY_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_BINARY_DIR}/python/bindings/include ${CMAKE_CURRENT_SOURCE_DIR}/python/bindings/include)
 
 message(STATUS "CMAKE_INSTALL_PREFIX          = ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "PYTHON_EXECUTABLE             = ${PYTHON_EXECUTABLE}")

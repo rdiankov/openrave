@@ -17,6 +17,8 @@ endif()
 
 set(SUCCESS_BUILD_PYTHON_BINDINGS ON)
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/openravepy_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/openravepy/openravepy_config.h IMMEDIATE @ONLY)
+
 if(USE_PYBIND11_PYTHON_BINDINGS)
   # check if all header files can be included
   set(PYTHON_INCLUDE_DIRS_BACKUP ${PYTHON_INCLUDE_DIRS}) # backup
@@ -46,13 +48,13 @@ if(USE_PYBIND11_PYTHON_BINDINGS)
   if(NOT HAVE_ALL_PYTHON_HEADERS)
     message(FATAL_ERROR "Should have installed pybind11; CMake will exit.")
   endif()
-
+  
   if( HAVE_ALL_PYTHON_HEADERS )
     # include
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${PYTHON_INCLUDE_DIRS} ${OPENRAVE_INCLUDE_LOCAL_DIRS} ${OPENRAVE_CORE_INCLUDE_LOCAL_DIRS})
+    include_directories(${CMAKE_CURRENT_BINARY_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/include ${PYTHON_INCLUDE_DIRS} ${OPENRAVE_INCLUDE_LOCAL_DIRS} ${OPENRAVE_CORE_INCLUDE_LOCAL_DIRS})
     add_definitions("-DUSE_PYBIND11_PYTHON_BINDINGS")
     set(OPENRAVEPY_COMPILE_FLAGS "${OPENRAVEPY_COMPILE_FLAGS} -DOPENRAVE_CORE_DLL -fvisibility=hidden") # pybind11 requires less visibility
-
+        
     # link
     set(OPENRAVEPY_LINKED_LIBRARIES "${STDC_LIBRARY} ${PYTHON_LIBRARIES} ${Boost_THREAD_LIBRARY}")
     if( CLOCK_GETTIME_FOUND )
@@ -148,7 +150,7 @@ elseif( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
   if( HAVE_ALL_PYTHON_HEADERS )
     message(STATUS "python and boost-python found")
     message(STATUS "CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}")
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${PYTHON_INCLUDE_DIRS} ${OPENRAVE_INCLUDE_LOCAL_DIRS} ${OPENRAVE_CORE_INCLUDE_LOCAL_DIRS})
+    include_directories(${CMAKE_CURRENT_BINARY_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/include ${PYTHON_INCLUDE_DIRS} ${OPENRAVE_INCLUDE_LOCAL_DIRS} ${OPENRAVE_CORE_INCLUDE_LOCAL_DIRS})
 
     # libraries to link
     set(OPENRAVEPY_LINKED_LIBRARIES "${STDC_LIBRARY} ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY}")
@@ -235,7 +237,7 @@ endif()
 if(SUCCESS_BUILD_PYTHON_BINDINGS)
   message(STATUS "Can successfully build OpenRAVE python bindings; will install headers for python bindings of other modules")
   file(GLOB openravepy_headers include/openravepy/*.h)
-  install(FILES ${openravepy_headers} DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR}/openravepy COMPONENT ${COMPONENT_PREFIX}python)
+  install(FILES ${openravepy_headers} ${CMAKE_CURRENT_BINARY_DIR}/include/openravepy/openravepy_config.h DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR}/openravepy COMPONENT ${COMPONENT_PREFIX}python)
 else()
   message(STATUS "Failed to build OpenRAVE python bindings")
 endif()

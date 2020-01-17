@@ -18,6 +18,8 @@
 #ifndef OPENRAVE_BOOST_PYTHON_BINDINGS
 #define OPENRAVE_BOOST_PYTHON_BINDINGS
 
+#include <openravepy/openravepy_config.h>
+
 #include <stdint.h>
 // numpy
 #include <numpy/arrayobject.h>
