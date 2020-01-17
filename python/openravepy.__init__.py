@@ -33,6 +33,66 @@ from .openravepy_int import __copyright__
 __license__ = 'core: Lesser GPL, examples: Apache License, Version 2.0'
 __docformat__ = 'restructuredtext'
 
+"""
+When building with Boost.Python, this wraps up the C++ class openravepy::openrave_exception.
+Available methods for an exception e are
+- e.GetCode()
+- e.message()
+"""
+if openravepy_int.__pythonbinding__ == 'pybind11':
+    from .openravepy_int import _OpenRAVEException as OpenRAVEException
+else:
+    from .openravepy_int import _OpenRAVEException
+    
+    class openrave_exception_helper(Exception):
+        # wrap up the C++ openrave_exception
+        def __init__( self, app_error ):
+            Exception.__init__( self )
+            self._pimpl = app_error
+        def __str__( self ):
+            return str(self._pimpl)
+        def __unicode__( self ):
+            return unicode(self._pimpl)
+        def __getattribute__(self, attr):
+            my_pimpl = super(openrave_exception_helper, self).__getattribute__("_pimpl")
+            try:
+                return getattr(my_pimpl, attr)
+            except AttributeError:
+                return super(openrave_exception_helper,self).__getattribute__(attr)
+    
+    class std_exception(Exception):
+        """wrap up the C++ std_exception"""
+        def __init__( self, app_error ):
+            Exception.__init__( self )
+            self._pimpl = app_error
+        def __str__( self ):
+            return self._pimpl.message()
+        def __getattribute__(self, attr):
+            my_pimpl = super(std_exception, self).__getattribute__("_pimpl")
+            try:
+                return getattr(my_pimpl, attr)
+            except AttributeError:
+                return super(std_exception,self).__getattribute__(attr)
+    
+    class runtime_error(Exception):
+        """wrap up the C++ runtime_error"""
+        def __init__( self, app_error ):
+            Exception.__init__( self )
+            self._pimpl = app_error
+        def __str__( self ):
+            return self._pimpl.message()
+        def __getattribute__(self, attr):
+            my_pimpl = super(runtime_error, self).__getattribute__("_pimpl")
+            try:
+                return getattr(my_pimpl, attr)
+            except AttributeError:
+                return super(runtime_error,self).__getattribute__(attr)
+    
+    OpenRAVEException = openrave_exception_helper
+    _OpenRAVEException.py_err_class = openrave_exception_helper
+
+openrave_exception = OpenRAVEException # for back compat
+
 from .openravepy_ext import *
 
 from . import metaclass
@@ -40,27 +100,6 @@ from . import interfaces
 from . import databases
 
 OpenRAVEModel = databases.DatabaseGenerator # for backwards compatibility
-
-"""
-When building with Boost.Python, this wraps up the C++ class openravepy::openrave_exception.
-Available methods for an exception e are
-- e.GetCode()
-- e.message()
-
-When building with pybind11, openrave_exception is simple Python Exception class and does not have its own method.
-Available methods for a Python object are
-- IsOpenRAVEException(o)
-- GetOpenRAVEExceptionCode(o), when IsOpenRAVEException(o) is True
-- GetOpenRAVEExceptionMessage(o), when IsOpenRAVEException(o) is True
-"""
-if openravepy_int.__pythonbinding__ == 'pybind11':
-    from .openravepy_int import _openrave_exception_ as openrave_exception
-else:
-    from .openravepy_int import _openrave_exception_
-    _openrave_exception_.py_err_class = openravepy_ext.openrave_exception
-
-# deprecated
-Problem = Module
 
 # would "from openravepy import *" be slower if this is enabled?
 #__all__ = ["interfaces", "databases", "metaclass", "openravepy_int"]

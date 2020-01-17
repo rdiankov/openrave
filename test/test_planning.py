@@ -571,19 +571,19 @@ class RunPlanning(EnvironmentSetup):
                 raise ValueError('let static link pass')
             except openrave_exception as ex:
                 if openravepy_int.__pythonbinding__ == 'pybind11':
-                    assert(GetOpenRAVEExceptionCode(ex)==ErrorCode.InvalidState)
+                    assert(ex.GetCode()=='InvalidState')
                 else:
-                    assert(ex.GetCode()==ErrorCode.InvalidState)
-                
+                    assert(ex.GetCode()=='InvalidState')
+            
             try:
                 params=Planner.PlannerParameters()
                 params.SetRobotActiveJoints(robot)
                 raise ValueError('let static link pass')
             except openrave_exception as ex:
                 if openravepy_int.__pythonbinding__ == 'pybind11':
-                    assert(GetOpenRAVEExceptionCode(ex)==ErrorCode.InvalidState)
+                    assert(ex.GetCode()=='InvalidState')
                 else:
-                    assert(ex.GetCode()==ErrorCode.InvalidState)
+                    assert(ex.GetCode()=='InvalidState')
 
     def test_multipath(self):
         env = self.env

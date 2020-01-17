@@ -64,7 +64,7 @@ namespace numeric = py::numeric;
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
 using openravepy::int_from_number;
 using openravepy::float_from_number;
-using openravepy::exception_translator;
+using openravepy::OpenRAVEBoostPythonExceptionTranslator;
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 struct OPENRAVE_API pyann_exception : std::exception
@@ -338,24 +338,22 @@ OPENRAVE_PYTHON_MODULE(pyANN_int)
     float_from_number<float>();
     float_from_number<double>();
     typedef return_value_policy< copy_const_reference > return_copy_const_ref;
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::register_exception<pyann_exception>(m, "_pyann_exception_");
+#else
     class_< pyann_exception >( "_pyann_exception_" )
-#endif // USE_PYBIND11_PYTHON_BINDINGS
     .def( init<const std::string&>() )
     .def( init<const pyann_exception&>() )
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    .def( "message", &pyann_exception::message )
-    .def( "__str__", &pyann_exception::message )
-#else
     .def( "message", &pyann_exception::message, return_copy_const_ref() )
     .def( "__str__", &pyann_exception::message, return_copy_const_ref() )
-#endif
     ;
-#ifndef USE_PYBIND11_PYTHON_BINDINGS
-    exception_translator<pyann_exception>();
+    OpenRAVEBoostPythonExceptionTranslator<pyann_exception>();
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    class_<ANNkd_tree, OPENRAVE_SHARED_PTR<ANNkd_tree>>(m, "KDTree")
+    class_<ANNkd_tree, OPENRAVE_SHARED_PTR<ANNkd_tree> >(m, "KDTree")
     .def(init<int, int, int>(), "n"_a = 0, "dd"_a = 0, "bs"_a = 1)
     // ANNpointArray is double**; pybind11 does not know how to convert, unless it is smart_ptr
     // .def(init<ANNpointArray, int, int, int, ANNsplitRule>(), "pa"_a, "n"_a, "dd"_a, "bs"_a = 1, "split"_a = ANN_KD_SUGGEST)

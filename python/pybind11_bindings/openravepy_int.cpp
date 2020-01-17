@@ -28,7 +28,7 @@
 #include <openravepy/openravepy_module.h>
 #include <openravepy/openravepy_physicalenginebase.h>
 
-#define OPENRAVE_EXCEPTION_CLASS_NAME "_openrave_exception_"
+#define OPENRAVE_EXCEPTION_CLASS_NAME "_OpenRAVEException"
 
 namespace openravepy
 {
@@ -203,7 +203,7 @@ void toRapidJSONValue(const object &obj, rapidjson::Value &value, rapidjson::Doc
     {
         py::tuple t = py::extract<py::tuple>(obj);
         value.SetArray();
-        for (size_t i = 0; i < len(t); i++)
+        for (size_t i = 0; i < (size_t)len(t); i++)
         {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
             rapidjson::Value elementValue;
@@ -1156,7 +1156,7 @@ public:
         KinBodyConstPtr pbody1 = openravepy::GetKinBody(o1);
 
         std::vector<KinBodyConstPtr> vbodyexcluded;
-        for(size_t i = 0; i < len(bodyexcluded); ++i) {
+        for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
             PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
             if( !!pbody ) {
                 vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
@@ -1166,7 +1166,7 @@ public:
             }
         }
         std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-        for(size_t i = 0; i < len(linkexcluded); ++i) {
+        for(size_t i = 0; i < (size_t)len(linkexcluded); ++i) {
             KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
             if( !!plink2 ) {
                 vlinkexcluded.push_back(plink2);
@@ -1192,7 +1192,7 @@ public:
         KinBody::LinkConstPtr plink1 = openravepy::GetKinBodyLinkConst(o1);
         KinBodyConstPtr pbody1 = openravepy::GetKinBody(o1);
 
-        for(size_t i = 0; i < len(bodyexcluded); ++i) {
+        for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
             PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
             if( !!pbody ) {
                 vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
@@ -1202,7 +1202,7 @@ public:
             }
         }
         std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-        for(size_t i = 0; i < len(linkexcluded); ++i) {
+        for(size_t i = 0; i < (size_t)len(linkexcluded); ++i) {
             KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
             if( !!plink2 ) {
                 vlinkexcluded.push_back(plink2);
@@ -1230,7 +1230,7 @@ public:
     bool CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, object linkexcluded)
     {
         std::vector<KinBodyConstPtr> vbodyexcluded;
-        for(size_t i = 0; i < len(bodyexcluded); ++i) {
+        for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
             PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
             if( !!pbody ) {
                 vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
@@ -1240,7 +1240,7 @@ public:
             }
         }
         std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-        for(size_t i = 0; i < len(linkexcluded); ++i) {
+        for(size_t i = 0; i < (size_t)len(linkexcluded); ++i) {
             KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
             if( !!plink2 ) {
                 vlinkexcluded.push_back(plink2);
@@ -1255,7 +1255,7 @@ public:
     bool CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, object linkexcluded, PyCollisionReportPtr pReport)
     {
         std::vector<KinBodyConstPtr> vbodyexcluded;
-        for(size_t i = 0; i < len(bodyexcluded); ++i) {
+        for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
             PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
             if( !!pbody ) {
                 vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
@@ -1265,7 +1265,7 @@ public:
             }
         }
         std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-        for(size_t i = 0; i < len(linkexcluded); ++i) {
+        for(size_t i = 0; i < (size_t)len(linkexcluded); ++i) {
             KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
             if( !!plink2 ) {
                 vlinkexcluded.push_back(plink2);
@@ -2340,9 +2340,8 @@ object get_openrave_exception_unicode(OpenRAVEException* p)
 
 std::string get_openrave_exception_repr(OpenRAVEException* p)
 {
-    return boost::str(boost::format("<OpenRAVEException('%s',ErrorCode.%s)>")%p->message()%GetErrorCodeString(p->GetCode()));
+    return boost::str(boost::format("<OpenRAVEException('%s','%s')>")%p->message()%RaveGetErrorCodeString(p->GetCode()));
 }
-#endif // USE_PYBIND11_PYTHON_BINDINGS
 
 object get_std_runtime_error_unicode(std::runtime_error* p)
 {
@@ -2355,109 +2354,10 @@ std::string get_std_runtime_error_repr(std::runtime_error* p)
     return boost::str(boost::format("<std_exception('%s')>")%p->what());
 }
 
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-
-template <typename type>
-class PyOpenRAVEException : public object {
-public:
-    PyOpenRAVEException() = default;
-    PyOpenRAVEException(handle scope, const char *name, PyObject *base = PyExc_Exception, PyObject* dict = NULL) {
-        std::string full_name = scope.attr("__name__").cast<std::string>() +
-                                std::string(".") + name;
-        m_ptr = PyErr_NewException(const_cast<char *>(full_name.c_str()), base, dict);
-        if (hasattr(scope, name))
-            RAVELOG_WARN("Error during initialization: multiple incompatible "
-                         "definitions with name \"" + std::string(name) + "\"");
-        scope.attr(name) = *this;
-    }
-
-    template <typename Func, typename ... Extra>
-    PyOpenRAVEException &def(const char *name_, Func&& f, const Extra& ... extra) {
-        py::cpp_function cf(py::method_adaptor<type>(std::forward<Func>(f)), py::name(name_), py::is_method(*this),
-                            py::sibling(py::getattr(*this, name_, py::none())), extra ...);
-        attr(cf.name()) = cf;
-        return *this;
-    }
-
-    /// Uses return_value_policy::reference_internal by default
-    template <typename Getter, typename ... Extra>
-    PyOpenRAVEException &def_property_readonly(const char *name, const Getter &fget, const Extra& ... extra) {
-        return def_property_readonly(name, py::cpp_function(py::method_adaptor<type>(fget)),
-                                     py::return_value_policy::reference_internal, extra ...);
-    }
-
-    /// Uses cpp_function's return_value_policy by default
-    template <typename ... Extra>
-    PyOpenRAVEException &def_property_readonly(const char *name, const py::cpp_function &fget, const Extra& ... extra) {
-        return def_property(name, fget, py::cpp_function(), extra ...);
-    }
-
-    /// Uses return_value_policy::reference_internal by default
-    template <typename Getter, typename Setter, typename ... Extra>
-    PyOpenRAVEException &def_property(const char *name, const Getter &fget, const Setter &fset, const Extra& ... extra) {
-        return def_property(name, fget, py::cpp_function(py::method_adaptor<type>(fset)), extra ...);
-    }
-    template <typename Getter, typename ... Extra>
-    PyOpenRAVEException &def_property(const char *name, const Getter &fget, const py::cpp_function &fset, const Extra& ... extra) {
-        return def_property(name, py::cpp_function(py::method_adaptor<type>(fget)), fset,
-                            py::return_value_policy::reference_internal, extra ...);
-    }
-
-    /// Uses cpp_function's return_value_policy by default
-    template <typename... Extra>
-    PyOpenRAVEException &def_property(const char *name, const py::cpp_function &fget, const py::cpp_function &fset, const Extra& ...extra) {
-        return def_property_static(name, fget, fset, py::is_method(*this), extra...);
-    }
-
-    /// Uses return_value_policy::reference by default
-    template <typename Getter, typename... Extra>
-    PyOpenRAVEException &def_property_static(const char *name, const Getter &fget, const py::cpp_function &fset, const Extra& ...extra) {
-        return def_property_static(name, py::cpp_function(fget), fset, py::return_value_policy::reference, extra...);
-    }
-
-    /// Uses cpp_function's return_value_policy by default
-    template <typename... Extra>
-    PyOpenRAVEException &def_property_static(const char *name, const py::cpp_function &fget, const py::cpp_function &fset, const Extra& ...extra) {
-        auto rec_fget = get_function_record(fget), rec_fset = get_function_record(fset);
-        char *doc_prev = rec_fget->doc; /* 'extra' field may include a property-specific documentation string */
-        py::detail::process_attributes<Extra...>::init(extra..., rec_fget);
-        if (rec_fget->doc && rec_fget->doc != doc_prev) {
-            free(doc_prev);
-            rec_fget->doc = strdup(rec_fget->doc);
-        }
-        if (rec_fset) {
-            doc_prev = rec_fset->doc;
-            py::detail::process_attributes<Extra...>::init(extra..., rec_fset);
-            if (rec_fset->doc && rec_fset->doc != doc_prev) {
-                free(doc_prev);
-                rec_fset->doc = strdup(rec_fset->doc);
-            }
-        }
-        def_property_static_impl(name, fget, fset, rec_fget);
-        return *this;
-    }
-
-private:
-    static py::detail::function_record *get_function_record(handle h) {
-        h = py::detail::get_function(h);
-        return h ? (py::detail::function_record *) py::reinterpret_borrow<py::capsule>(PyCFunction_GET_SELF(h.ptr()))
-                 : nullptr;
-    }
-    
-    void def_property_static_impl(const char *name,
-                                  py::handle fget, py::handle fset,
-                                  py::detail::function_record *rec_fget) {
-        const auto is_static = !(rec_fget->is_method && rec_fget->scope);
-        const auto has_doc = rec_fget->doc && pybind11::options::show_user_defined_docstrings();
-
-        auto property = handle((PyObject *) (is_static ? py::detail::get_internals().static_property_type
-                                                       : &PyProperty_Type));
-        attr(name) = property(fget.ptr() ? fget : py::none(),
-                                  fset.ptr() ? fset : py::none(),
-                                  /*deleter*/py::none(),
-                                  pybind11::str(has_doc ? rec_fget->doc : ""));
-    }
-};
+py::object GetCodeStringOpenRAVEException(OpenRAVEException* p)
+{
+    return ConvertStringToUnicode(RaveGetErrorCodeString(p->GetCode()));
+}
 
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
@@ -2485,7 +2385,6 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
     typedef return_value_policy< copy_const_reference > return_copy_const_ref;
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
-    //const char openrave_exception_class_name[] = OPENRAVE_EXCEPTION_CLASS_NAME;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 
     static PyOpenRAVEException<OpenRAVEException> pyOpenRAVEException(m, OPENRAVE_EXCEPTION_CLASS_NAME, PyExc_Exception);
@@ -2493,10 +2392,22 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
         return o.attr("args")[0];
     });
     pyOpenRAVEException.def_property_readonly("errortype",[](py::object o) {
-        return o.attr("args")[1];
+        py::object oargs = o.attr("args");
+        if( len(oargs) > 1 ) {
+            return oargs[1];
+        }
+        else {
+            return py::object();
+        }
     });
     pyOpenRAVEException.def("GetCode", [](py::object o) {
-        return o.attr("args")[1];
+        py::object oargs = o.attr("args");
+        if( len(oargs) > 1 ) {
+            return oargs[1];
+        }
+        else {
+            return py::object();
+        }
     });
 
     py::register_exception_translator([](std::exception_ptr p) {
@@ -2504,59 +2415,36 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
             if (p) {
                 std::rethrow_exception(p);
             }
-        } catch (const OpenRAVEException &e) {
+        }
+        catch( const boost::bad_function_call& e ) {
+            py::object pyerrdata = ConvertStringToUnicode(e.what());
+            pyerrdata.inc_ref(); // since passing to PyErr_SetObject
+            PyErr_SetObject(PyExc_TypeError, pyerrdata.ptr() );
+        }
+        catch( const std::runtime_error& e ) {
+            py::object pyerrdata = ConvertStringToUnicode(e.what());
+            pyerrdata.inc_ref(); // since passing to PyErr_SetObject
+            PyErr_SetObject(PyExc_RuntimeError, pyerrdata.ptr() );
+        }
+        catch( const OpenRAVEException &e ) {
             py::object pyerrdata = py::make_tuple(ConvertStringToUnicode(e.message()), ConvertStringToUnicode(RaveGetErrorCodeString(e.GetCode())));
             pyerrdata.inc_ref(); // since passing to PyErr_SetObject
             PyErr_SetObject(pyOpenRAVEException.ptr(), pyerrdata.ptr() );
         }
     });
-
-    //const std::string& s, OpenRAVEErrorCode error
-//    py::register_exception<OpenRAVEException>(m, openrave_exception_class_name);
-//    m
-//    .def("IsOpenRAVEException", IsOpenRAVEException,
-//        "exception"_a,
-//        "openrave_exception_class_name"_a = openrave_exception_class_name
-//    )
-////    .def("GetOpenRAVEExceptionCode", [](const object& e) {
-////        BOOST_ASSERT(IsOpenRAVEException(e));
-////        // e is openravepy._openravepy_0_XXX.openravepy_int.openrave_exception
-////        const std::string message = e.attr("message").cast<std::string>();
-////        const std::size_t left = message.find_first_of("(") + 1;
-////        const std::size_t right = message.find_first_of(")");
-////        const std::string errorcodestring = message.substr(left, right-left);
-////        const int errorcode = OpenRAVE::GetErrorCodeFromErrorString(errorcodestring);
-////        // _RAVE_DISPLAY(std::cout << errorcodestring << ", " << errorcode;);
-////        return errorcode;
-////    })
-//    .def("GetOpenRAVEExceptionMessage", [](const object& e) {
-//        BOOST_ASSERT(IsOpenRAVEException(e));
-//        // e is openravepy._openravepy_0_XXX.openravepy_int.openrave_exception
-//        const std::string message = e.attr("message").cast<std::string>();
-//        const std::size_t right = message.find_first_of(")");
-//        const std::string errorstring = message.substr(right+3);
-//        // _RAVE_DISPLAY(std::cout << errorstring;);
-//        return errorstring;
-//    })
-//    ;
 #else
     class_< OpenRAVEException >( OPENRAVE_EXCEPTION_CLASS_NAME, DOXY_CLASS(OpenRAVEException) )
     .def( init<const std::string&>() )
     .def( init<const OpenRAVEException&>() )
     .def( "message", &OpenRAVEException::message, return_copy_const_ref() )
-    .def("GetCode", &OpenRAVEException::GetCode )
+    .def("GetCode", GetCodeStringOpenRAVEException)
     .def( "__str__", &OpenRAVEException::message, return_copy_const_ref() )
     .def( "__unicode__", get_openrave_exception_unicode)
     .def( "__repr__", get_openrave_exception_repr)
     ;
-#endif // USE_PYBIND11_PYTHON_BINDINGS
+    OpenRAVEBoostPythonExceptionTranslator<OpenRAVEException>();
 
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    class_< std::runtime_error >( m, "_std_runtime_error_")
-#else
-    exception_translator<OpenRAVEException>();
     class_< std::runtime_error >( "_std_runtime_error_", no_init)
-#endif
     .def( init<const std::string&>() )
     .def( init<const std::runtime_error&>() )
     .def( "message", &std::runtime_error::what)
@@ -2564,14 +2452,11 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
     .def( "__unicode__", get_std_runtime_error_unicode)
     .def( "__repr__", get_std_runtime_error_repr)
     ;
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    class_< boost::bad_function_call, std::runtime_error>( m, "_boost_bad_function_call_");
-    // py::register_exception<boost::bad_function_call>(m, "_boost_bad_function_call_");
-#else
-    exception_translator<std::runtime_error>();
-    //exception_translator<std::exception>();
+    OpenRAVEBoostPythonExceptionTranslator<std::runtime_error>();
+
+    //OpenRAVEBoostPythonExceptionTranslator<std::exception>();
     class_< boost::bad_function_call, bases<std::runtime_error> >( "_boost_bad_function_call_");
-    exception_translator<boost::bad_function_call>();
+    OpenRAVEBoostPythonExceptionTranslator<boost::bad_function_call>();
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

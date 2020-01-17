@@ -52,7 +52,7 @@ using py::optional;
 using py::def;
 using openravepy::int_from_number;
 using openravepy::float_from_number;
-using openravepy::exception_translator;
+using openravepy::OpenRAVEBoostPythonExceptionTranslator;
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 struct OPENRAVE_API cdpy_exception : std::exception
@@ -181,23 +181,15 @@ OPENRAVE_PYTHON_MODULE(convexdecompositionpy)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    class_< cdpy_exception >( m, "_cdpy_exception_" )
+    py::register_exception<cdpy_exception>(m, "_cdpy_exception_");
 #else
     class_< cdpy_exception >( "_cdpy_exception_" )
-#endif 
     .def( init<const std::string&>() )
     .def( init<const cdpy_exception&>() )
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    .def( "message", &cdpy_exception::message )
-    .def( "__str__", &cdpy_exception::message )
-#else
     .def( "message", &cdpy_exception::message, return_copy_const_ref() )
     .def( "__str__", &cdpy_exception::message, return_copy_const_ref() )
-#endif // USE_PYBIND11_PYTHON_BINDINGS
     ;
-
-#ifndef USE_PYBIND11_PYTHON_BINDINGS  
-    exception_translator<cdpy_exception>();
+    OpenRAVEBoostPythonExceptionTranslator<cdpy_exception>();
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
