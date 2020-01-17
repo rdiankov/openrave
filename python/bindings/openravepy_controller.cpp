@@ -19,6 +19,7 @@
 #include <openravepy/openravepy_environmentbase.h>
 #include <openravepy/openravepy_robotbase.h>
 #include <openravepy/openravepy_trajectorybase.h>
+#include <openravepy/openravepy_controllerbase.h>
 
 namespace openravepy {
 
@@ -47,131 +48,118 @@ using py::def;
 
 namespace numeric = py::numeric;
 
-class PyControllerBase : public PyInterfaceBase
+PyControllerBase::PyControllerBase(ControllerBasePtr pcontroller, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pcontroller, pyenv), _pcontroller(pcontroller) {
+}
+PyControllerBase::~PyControllerBase() {
+}
+
+ControllerBasePtr PyControllerBase::GetOpenRAVEController() {
+    return _pcontroller;
+}
+
+bool PyControllerBase::Init(PyRobotBasePtr pyrobot, const string& PY_ARGS)
 {
-protected:
-    ControllerBasePtr _pcontroller;
-public:
-    PyControllerBase(ControllerBasePtr pcontroller, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pcontroller, pyenv), _pcontroller(pcontroller) {
+    RAVELOG_WARN("PyControllerBase::Init(robot,PY_ARGS) deprecated!\n");
+    CHECK_POINTER(pyrobot);
+    RobotBasePtr probot = openravepy::GetRobot(pyrobot);
+    std::vector<int> dofindices;
+    for(int i = 0; i < probot->GetDOF(); ++i) {
+        dofindices.push_back(i);
     }
-    virtual ~PyControllerBase() {
-    }
+    return _pcontroller->Init(probot, dofindices,1);
+}
 
-    ControllerBasePtr GetOpenRAVEController() {
-        return _pcontroller;
-    }
-
-    bool Init(PyRobotBasePtr pyrobot, const string& PY_ARGS)
-    {
-        RAVELOG_WARN("PyControllerBase::Init(robot,PY_ARGS) deprecated!\n");
-        CHECK_POINTER(pyrobot);
-        RobotBasePtr probot = openravepy::GetRobot(pyrobot);
-        std::vector<int> dofindices;
-        for(int i = 0; i < probot->GetDOF(); ++i) {
-            dofindices.push_back(i);
-        }
-        return _pcontroller->Init(probot, dofindices,1);
-    }
-
-    bool Init(PyRobotBasePtr pyrobot, object odofindices, int nControlTransformation)
-    {
-        CHECK_POINTER(pyrobot);
-        std::vector<int> dofindices = ExtractArray<int>(odofindices);
-        return _pcontroller->Init(openravepy::GetRobot(pyrobot),dofindices,nControlTransformation);
-    }
-
-    object GetControlDOFIndices() {
-        return toPyArray(_pcontroller->GetControlDOFIndices());
-    }
-    int IsControlTransformation() {
-        return _pcontroller->IsControlTransformation();
-    }
-    object GetRobot()
-    {
-        return py::to_object(openravepy::toPyRobot(_pcontroller->GetRobot(),_pyenv));
-    }
-
-    void Reset(int options=0) {
-        _pcontroller->Reset(options);
-    }
-
-    bool SetDesired(object o)
-    {
-        std::vector<dReal> values = ExtractArray<dReal>(o);
-        if( values.size() == 0 ) {
-            throw openrave_exception(_("no values specified"));
-        }
-        return _pcontroller->SetDesired(values);
-    }
-
-    bool SetDesired(object o, object otransform)
-    {
-        if( IS_PYTHONOBJECT_NONE(otransform) ) {
-            return SetDesired(o);
-        }
-        return _pcontroller->SetDesired(ExtractArray<dReal>(o),TransformConstPtr(new Transform(ExtractTransform(otransform))));
-    }
-
-    bool SetPath(PyTrajectoryBasePtr pytraj)
-    {
-        CHECK_POINTER(pytraj);
-        return _pcontroller->SetPath (openravepy::GetTrajectory(pytraj));
-    }
-
-    void SimulationStep(dReal fTimeElapsed) {
-        _pcontroller->SimulationStep(fTimeElapsed);
-    }
-
-    bool IsDone() {
-        return _pcontroller->IsDone();
-    }
-    dReal GetTime() {
-        return _pcontroller->GetTime();
-    }
-
-    object GetVelocity()
-    {
-        std::vector<dReal> velocity;
-        _pcontroller->GetVelocity(velocity);
-        return toPyArray(velocity);
-    }
-
-    object GetTorque()
-    {
-        std::vector<dReal> torque;
-        _pcontroller->GetTorque(torque);
-        return toPyArray(torque);
-    }
-};
-
-class PyMultiControllerBase : public PyControllerBase
+bool PyControllerBase::Init(PyRobotBasePtr pyrobot, object odofindices, int nControlTransformation)
 {
-private:
-    MultiControllerBasePtr _pmulticontroller;
+    CHECK_POINTER(pyrobot);
+    std::vector<int> dofindices = ExtractArray<int>(odofindices);
+    return _pcontroller->Init(openravepy::GetRobot(pyrobot),dofindices,nControlTransformation);
+}
 
-public:
-    PyMultiControllerBase(MultiControllerBasePtr pmulticontroller, PyEnvironmentBasePtr pyenv) : PyControllerBase(pmulticontroller, pyenv), _pmulticontroller(pmulticontroller) {
-    }
-    virtual ~PyMultiControllerBase() {
-    }
+object PyControllerBase::GetControlDOFIndices() {
+    return toPyArray(_pcontroller->GetControlDOFIndices());
+}
+int PyControllerBase::IsControlTransformation() {
+    return _pcontroller->IsControlTransformation();
+}
+object PyControllerBase::GetRobot()
+{
+    return py::to_object(openravepy::toPyRobot(_pcontroller->GetRobot(),_pyenv));
+}
 
-    bool AttachController(PyControllerBasePtr ocontroller, object odofindices, int nControlTransformation) {
-        CHECK_POINTER(ocontroller);
-        std::vector<int> dofindices = ExtractArray<int>(odofindices);
-        return _pmulticontroller->AttachController(ocontroller->GetOpenRAVEController(), dofindices, nControlTransformation);
-    }
+void PyControllerBase::Reset(int options) {
+    _pcontroller->Reset(options);
+}
 
-    void RemoveController(PyControllerBasePtr ocontroller) {
-        CHECK_POINTER(ocontroller);
-        _pmulticontroller->RemoveController(ocontroller->GetOpenRAVEController());
+bool PyControllerBase::SetDesired(object o)
+{
+    std::vector<dReal> values = ExtractArray<dReal>(o);
+    if( values.size() == 0 ) {
+        throw openrave_exception(_("no values specified"));
     }
+    return _pcontroller->SetDesired(values);
+}
 
-    object GetController(int dof) {
-        CHECK_POINTER(_pmulticontroller);
-        ControllerBasePtr pcontroller = _pmulticontroller->GetController(dof);
-        return py::to_object(openravepy::toPyController(pcontroller, _pyenv));
+bool PyControllerBase::SetDesired(object o, object otransform)
+{
+    if( IS_PYTHONOBJECT_NONE(otransform) ) {
+        return SetDesired(o);
     }
-};
+    return _pcontroller->SetDesired(ExtractArray<dReal>(o),TransformConstPtr(new Transform(ExtractTransform(otransform))));
+}
+
+bool PyControllerBase::SetPath(PyTrajectoryBasePtr pytraj)
+{
+    CHECK_POINTER(pytraj);
+    return _pcontroller->SetPath (openravepy::GetTrajectory(pytraj));
+}
+
+void PyControllerBase::SimulationStep(dReal fTimeElapsed) {
+    _pcontroller->SimulationStep(fTimeElapsed);
+}
+
+bool PyControllerBase::IsDone() {
+    return _pcontroller->IsDone();
+}
+dReal PyControllerBase::GetTime() {
+    return _pcontroller->GetTime();
+}
+
+object PyControllerBase::GetVelocity()
+{
+    std::vector<dReal> velocity;
+    _pcontroller->GetVelocity(velocity);
+    return toPyArray(velocity);
+}
+
+object PyControllerBase::GetTorque()
+{
+    std::vector<dReal> torque;
+    _pcontroller->GetTorque(torque);
+    return toPyArray(torque);
+}
+
+PyMultiControllerBase::PyMultiControllerBase(MultiControllerBasePtr pmulticontroller, PyEnvironmentBasePtr pyenv) : PyControllerBase(pmulticontroller, pyenv), _pmulticontroller(pmulticontroller) {
+}
+PyMultiControllerBase::~PyMultiControllerBase() {
+}
+
+bool PyMultiControllerBase::AttachController(PyControllerBasePtr ocontroller, object odofindices, int nControlTransformation) {
+    CHECK_POINTER(ocontroller);
+    std::vector<int> dofindices = ExtractArray<int>(odofindices);
+    return _pmulticontroller->AttachController(ocontroller->GetOpenRAVEController(), dofindices, nControlTransformation);
+}
+
+void PyMultiControllerBase::RemoveController(PyControllerBasePtr ocontroller) {
+    CHECK_POINTER(ocontroller);
+    _pmulticontroller->RemoveController(ocontroller->GetOpenRAVEController());
+}
+
+object PyMultiControllerBase::GetController(int dof) {
+    CHECK_POINTER(_pmulticontroller);
+    ControllerBasePtr pcontroller = _pmulticontroller->GetController(dof);
+    return py::to_object(openravepy::toPyController(pcontroller, _pyenv));
+}
 
 ControllerBasePtr GetController(PyControllerBasePtr pycontroller)
 {
