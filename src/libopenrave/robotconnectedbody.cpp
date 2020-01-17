@@ -58,10 +58,10 @@ void RobotBase::ConnectedBodyInfo::InitInfoFromBody(RobotBase& robot)
 void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options) const
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", _name);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "linkName", _linkname);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "url", _url);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", _trelative);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "name", _name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "linkName", _linkname);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "url", _url);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "transform", _trelative);
 
     rapidjson::Value linkInfosValue;
     RAVE_SERIALIZEJSON_CLEAR_ARRAY(linkInfosValue);
@@ -103,7 +103,7 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
     }
     value.AddMember("_vAttachedSensorInfos", attachedSensorInfosValue, allocator);
 
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "isActive", _bIsActive);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "isActive", _bIsActive);
 }
 
 void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value, EnvironmentBasePtr penv)

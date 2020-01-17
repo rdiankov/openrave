@@ -74,10 +74,19 @@ inline void RAVE_SERIALIZEJSON_PUSHBACK(rapidjson::Document::AllocatorType& allo
     value.PushBack(value, allocator);
 }
 
-template<typename T1, typename T2>
-inline void RAVE_SERIALIZEJSON_ADDMEMBER(rapidjson::Document::AllocatorType& allocator, T1& key, const T2& arg) {
+template<typename T>
+inline void _RAVE_SERIALIZEJSON_ADDMEMBER_HELPER(rapidjson::Document::AllocatorType& allocator, T& key) { /* base */ }
+
+template<typename T, typename U, typename ... Types>
+inline void _RAVE_SERIALIZEJSON_ADDMEMBER_HELPER(rapidjson::Document::AllocatorType& allocator, T& key, const U& arg, const Types& ... args) {
     rapidjson::Value value = RAVE_SERIALIZEJSON(allocator, arg);
     value.AddMember(key, value, allocator);
+    _RAVE_SERIALIZEJSON_ADDMEMBER_HELPER(allocator, key, args...); // recursion
+}
+
+template<typename T, typename ... Types>
+inline void RAVE_SERIALIZEJSON_ADDMEMBER(rapidjson::Document::AllocatorType& allocator, T& key, const Types& ... args) {
+    _RAVE_SERIALIZEJSON_ADDMEMBER_HELPER(allocator, key, args...);
 }
 
 inline void RAVE_SERIALIZEJSON_ENSURE_OBJECT(rapidjson::Value &value) {
@@ -226,7 +235,7 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
     RAVE_SERIALIZEJSON_CLEAR_ARRAY(value);
     for(typename std::set<T>::const_iterator it = s.begin(); it != s.end(); ++it)
     {
-        RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, *it);
+        RAVE_SERIALIZEJSON_PUSHBACK(allocator, *it);
     }
 }
 

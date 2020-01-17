@@ -23,10 +23,10 @@ namespace OpenRAVE {
 void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options) const
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", _name);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "linkName", _linkname);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", _trelative);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", _sensorname);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "name", _name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "linkName", _linkname);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "transform", _trelative);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "type", _sensorname);
 
     // TODO: SensorGeometry
     // rapidjson::Value sensorGeometryValue;
