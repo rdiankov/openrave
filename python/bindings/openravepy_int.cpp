@@ -2397,6 +2397,9 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
         if( len(oargs) > 1 ) {
             oret = oargs[1];
         }
+        else {
+            oret = py::none_();
+        }
         return oret;
     });
     pyOpenRAVEException.def("GetCode", [](py::object o) {
@@ -2404,6 +2407,9 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
         py::object oret;
         if( len(oargs) > 1 ) {
             oret = oargs[1];
+        }
+        else {
+            oret = py::none_();
         }
         return oret;
     });
