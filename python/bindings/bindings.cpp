@@ -13,7 +13,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#include "bindings.h"
+#include <openravepy/bindings.h>
 
 namespace mydetail {
 template< typename T >
@@ -33,19 +33,26 @@ constexpr char select_dtype<int>::type[];
 constexpr char select_dtype<uint8_t>::type[];
 constexpr char select_dtype<uint16_t>::type[];
 constexpr char select_dtype<uint32_t>::type[];
+constexpr char select_dtype<bool>::type[];
 
 using py::object;
 using py::list;
 using py::tuple;
 using py::type_id;
 using py::handle;
-using py::borrowed;
-using py::to_python_converter;
 using py::extract;
-using py::incref;
 using py::class_;
-using py::allow_null;
+using py::init;
 
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+using py::borrowed;
+using py::to_python_converter;;
+using py::incref;
+using py::allow_null;
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+
+
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
 // namespace impl
 template< typename MultiArrayType >
 struct numpy_multi_array_converter
@@ -216,9 +223,19 @@ struct stdstring_from_python_str
         }
     }
 };
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_python_bindings(py::module &m)
+#else
 void init_python_bindings()
+#endif
 {
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    using namespace py::literals; // "..."_a
+#else
     numpy_multi_array_converter< boost::multi_array<float,1> >::register_to_and_from_python();
     numpy_multi_array_converter< boost::multi_array<float,2> >::register_to_and_from_python();
     numpy_multi_array_converter< boost::multi_array<float,3> >::register_to_and_from_python();
@@ -229,8 +246,16 @@ void init_python_bindings()
     numpy_multi_array_converter< boost::multi_array<int,2> >::register_to_and_from_python();
 
     stdstring_from_python_str();
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 
-    class_<PyVoidHandle, boost::shared_ptr<PyVoidHandle> >("VoidHandle")
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyVoidHandle, OPENRAVE_SHARED_PTR<PyVoidHandle>>(m, "VoidHandle")
+    .def(init<>())
+    // error: static assertion failed: Holder classes are only supported for custom types, so cannot do
+    // .def(init<OPENRAVE_SHARED_PTR<void>>(), "handle"_a)
+#else
+    class_<PyVoidHandle, OPENRAVE_SHARED_PTR<PyVoidHandle> >("VoidHandle")
+#endif
     .def("close",&PyVoidHandle::Close,"deprecated")
     .def("Close",&PyVoidHandle::Close)
     ;
