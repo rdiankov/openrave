@@ -217,7 +217,9 @@ class InverseKinematicsModel(DatabaseGenerator):
                 for geom,isdraw,tr in self.hiddengeoms:
                     geom.SetDraw(isdraw)
                     geom.SetTransparency(tr)
-                    
+    
+    env = None
+    ikfastproblem = None
     _cachedKinematicsHash = None # manip.GetInverseKinematicsStructureHash() when the ik was built with
     def __init__(self,robot=None,iktype=None,forceikfast=False,freeindices=None,freejoints=None,manip=None, checkpreemptfn=None):
         """
@@ -227,7 +229,6 @@ class InverseKinematicsModel(DatabaseGenerator):
         :param freeindices: force the following freeindices on the ik solver
         :param checkpreemptfn: a function to check if ik generation should be canceled
         """
-        self.ikfastproblem = None
         if manip is not None:
             robot = manip.GetRobot()
         else:
@@ -273,7 +274,7 @@ class InverseKinematicsModel(DatabaseGenerator):
     def  __del__(self):
         if self.ikfastproblem is not None:
             # need to lock the environment since Remove locks it
-            if self.env.Lock(1.0):
+            if self.env is not None and self.env.Lock(1.0):
                 try:
                     self.env.Remove(self.ikfastproblem)
                 finally:
@@ -281,7 +282,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             else:
                 log.warn('failed to lock environment for InverseKinematicsModel.__del__!')
         DatabaseGenerator.__del__(self)
-        
+    
     def clone(self,envother):
         clone = DatabaseGenerator.clone(self,envother)
         clone.ikfastproblem = RaveCreateModule(envother,'ikfast')
@@ -294,15 +295,33 @@ class InverseKinematicsModel(DatabaseGenerator):
     def has(self):
         return self.iksolver is not None and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype) and self.iksolver.GetXMLId() == self.manip.GetIkSolver().GetXMLId()
     
-    def save(self):
+    def save(self, filepermissions = None):
         statsfilename=self.getstatsfilename(False)
         try:
-            os.makedirs(os.path.split(statsfilename)[0])
-        except OSError:
-            pass
-        with open(statsfilename, 'w') as f:
-            pickle.dump((self.getversion(),self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc), f)
-        log.info('inversekinematics generation is done, compiled shared object: %s',self.getfilename(False))
+            defaultMask = os.umask(0)
+            basepath = os.path.split(statsfilename)[0]
+            try:
+                os.makedirs(basepath)
+            except OSError as e:
+                pass
+
+            with open(statsfilename, 'w') as f:
+                pickle.dump((self.getversion(),self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc), f)
+            log.info('inversekinematics generation is done, compiled shared object: %s',self.getfilename(False))
+
+            if filepermissions is not None and filepermissions >= 0:
+                log.info('changing filepermissions of path %s to \'%s\' recursively.', basepath, filepermissions)
+                try:
+                    os.chmod(basepath, filepermissions)
+                    for root, dirs, files in os.walk(basepath):
+                        for d in dirs:
+                            os.chmod(os.path.join(root, d), filepermissions)
+                        for f in files:
+                            os.chmod(os.path.join(root, f), filepermissions)
+                except OSError:
+                    pass
+        finally:
+            os.umask(defaultMask)
         
     def load(self,freeinc=None,checkforloaded=True,*args,**kwargs):
         try:
@@ -617,6 +636,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         ipython = None
         freeinc = None
         ikfastmaxcasedepth = 3
+        filepermissions = None
         if options is not None:
             forceikbuild=options.force
             precision=options.precision
@@ -627,6 +647,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             if options.freeinc is not None:
                 freeinc = [float64(s) for s in options.freeinc]
             ikfastmaxcasedepth = options.maxcasedepth
+            filepermissions = options.filepermissions
         if self.manip.GetKinematicsStructureHash() == 'f17f58ee53cc9d185c2634e721af7cd3': # wam 4dof
             if iktype is None:
                 iktype=IkParameterizationType.Translation3D
@@ -656,7 +677,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             if iktype==None:
                 iktype == IkParameterizationType.TranslationDirection5D
         self.generate(iktype=iktype,freejoints=freejoints,precision=precision,forceikbuild=forceikbuild,outputlang=outputlang,ipython=ipython,ikfastmaxcasedepth=ikfastmaxcasedepth)
-        self.save()
+        self.save(filepermissions)
 
     def getIndicesFromJointNames(self,freejoints):
         freeindices = []
@@ -1083,6 +1104,8 @@ class InverseKinematicsModel(DatabaseGenerator):
                           help='if true will drop into the ipython interpreter right before ikfast is called')
         parser.add_option('--iktype', action='store',type='string',dest='iktype',default=None,
                           help='The ik type to build the solver current types are: %s'%(', '.join(iktype.name for iktype in IkParameterizationType.values.values() if not int(iktype) & IkParameterizationType.VelocityDataBit )))
+        parser.add_option('--filepermissions', action='store',type='int',dest='filepermissions',default=-1,
+                          help='The desired permissions for saving the iksolver files and directories')
         return parser
     
     @staticmethod

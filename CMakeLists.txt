@@ -4,8 +4,8 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
-set (OPENRAVE_VERSION_MINOR 15)
-set (OPENRAVE_VERSION_PATCH 0)
+set (OPENRAVE_VERSION_MINOR 26)
+set (OPENRAVE_VERSION_PATCH 1)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 message(STATUS "Compiling OpenRAVE Version ${OPENRAVE_VERSION}, soversion=${OPENRAVE_SOVERSION}")
@@ -184,6 +184,13 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}" "${OPENRAVE_P
 message(STATUS "installing to ${CMAKE_INSTALL_PREFIX}, python exe ${PYTHON_EXECUTABLE}, python subdir is ${OPENRAVE_PYTHON_INSTALL_DIR}, program suffix is '${OPENRAVE_BIN_SUFFIX}'")
 
 set(CMAKE_TRY_COMPILE_CONFIGURATION Release CACHE STRING "very important to only test release since default is debug, and it usually reuquires special libraries")
+
+set(OPENRAVE_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+# need this in the very first include, otherwise openrave plugins can accidentaly compile with a system-installed openrave headers.
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
+include_directories(${OPENRAVE_INCLUDE_LOCAL_DIRS}) # needed since plugins include openrave/openrave.h
+
 set(REQUIRED_INCLUDES "" CACHE STRING "Includes to always force  when compiling")
 include_directories(${REQUIRED_INCLUDES})
 
@@ -236,7 +243,6 @@ if( APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   add_definitions(-Dfopen64=fopen -Dfseeko64=fseeko -Dfseek64=fseek -Dftell64=ftell -Dftello64=ftello)
 endif()
 
-set(OPENRAVE_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(OPENRAVE_CORE_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src/libopenrave-core)
 set(OPENRAVE_LINK_DIRS "")
 
@@ -793,7 +799,6 @@ if( Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
 endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h IMMEDIATE @ONLY)
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
 
 add_subdirectory(src)
 add_subdirectory(octave_matlab)

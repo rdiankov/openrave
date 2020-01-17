@@ -29,11 +29,11 @@ KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsAc
     }
     std::fill(_vresolution.begin(), _vresolution.end(), 0.02);
     std::fill(_vmaxvel.begin(), _vmaxvel.end(), 10);
-    std::fill(_vhardmaxvel.begin(), _vhardmaxvel.end(), 100); // Hard limis is 10 times larger than default soft limit.
+    std::fill(_vhardmaxvel.begin(), _vhardmaxvel.end(), 0); // Default hard limits is 0. if 0, the user should not use the hard limit value.
     std::fill(_vmaxaccel.begin(), _vmaxaccel.end(), 50);
-    std::fill(_vhardmaxaccel.begin(), _vhardmaxaccel.end(), 1000); // Hard limit is more than 10 times larger than soft limit for acceleration.
-    std::fill(_vmaxjerk.begin(), _vmaxjerk.end(), 2e6); // Set negligibly large jerk by default which can change acceleration between min and max within a typical time step. We compute 2e6=(1000-(-1000))/0.001, by assuming max/min accelerations are 1000 and -1000.
-    std::fill(_vhardmaxjerk.begin(), _vhardmaxjerk.end(), 2e7); // Hard limit is 10 times larger than soft limit for jerk.
+    std::fill(_vhardmaxaccel.begin(), _vhardmaxaccel.end(), 0); // Default hard limits is 0. if 0, the user should not use the hard limit value.
+    std::fill(_vmaxjerk.begin(), _vmaxjerk.end(), 50*1000); // Set negligibly large jerk by default which can change acceleration between min and max within a typical time step.
+    std::fill(_vhardmaxjerk.begin(), _vhardmaxjerk.end(), 0); // Default hard limits is 0. if 0, the user should not use the hard limit value.
     std::fill(_vmaxtorque.begin(), _vmaxtorque.end(), 0); // set max torque to 0 to notify the system that dynamics parameters might not be valid.
     std::fill(_vmaxinertia.begin(), _vmaxinertia.end(), 0);
     std::fill(_vweights.begin(), _vweights.end(), 1);
@@ -41,6 +41,67 @@ KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsAc
     std::fill(_vlowerlimit.begin(), _vlowerlimit.end(), 0);
     std::fill(_vupperlimit.begin(), _vupperlimit.end(), 0);
     std::fill(_bIsCircular.begin(), _bIsCircular.end(), 0);
+}
+
+KinBody::JointInfo::JointInfo(const JointInfo& other) : XMLReadable("joint")
+{
+    *this = other;
+}
+
+KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& other)
+{
+    _type = other._type;
+    _name = other._name;
+    _linkname0 = other._linkname0;
+    _linkname1 = other._linkname1;
+    _vanchor = other._vanchor;
+    _vaxes = other._vaxes;
+    _vcurrentvalues = other._vcurrentvalues;
+    _vresolution = other._vresolution;
+    _vmaxvel = other._vmaxvel;
+    _vhardmaxvel = other._vhardmaxvel;
+    _vmaxaccel = other._vmaxaccel;
+    _vhardmaxaccel = other._vhardmaxaccel;
+    _vmaxjerk = other._vmaxjerk;
+    _vhardmaxjerk = other._vhardmaxjerk;
+    _vmaxtorque = other._vmaxtorque;
+    _vmaxinertia = other._vmaxinertia;
+    _vweights = other._vweights;
+    _voffsets = other._voffsets;
+    _vlowerlimit = other._vlowerlimit;
+    _vupperlimit = other._vupperlimit;
+
+    if( !other._trajfollow ) {
+        _trajfollow.reset();
+    }
+    else {
+        _trajfollow = RaveClone<TrajectoryBase>(other._trajfollow, Clone_All);
+    }
+
+    for( size_t i = 0; i < _vmimic.size(); ++i ) {
+        if( !other._vmimic[i] ) {
+            _vmimic[i].reset();
+        }
+        else {
+            _vmimic[i].reset(new MimicInfo(*(other._vmimic[i])));
+        }
+    }
+
+    _mapFloatParameters = other._mapFloatParameters;
+    _mapIntParameters = other._mapIntParameters;
+    _mapStringParameters = other._mapStringParameters;
+
+    if( !other._infoElectricMotor ) {
+        _infoElectricMotor.reset();
+    }
+    else {
+        _infoElectricMotor.reset(new ElectricMotorActuatorInfo(*other._infoElectricMotor));
+    }
+
+    _bIsCircular = other._bIsCircular;
+    _bIsActive = other._bIsActive;
+
+    return *this;
 }
 
 static void fparser_polyroots2(vector<dReal>& rawroots, const vector<dReal>& rawcoeffs)
@@ -759,18 +820,18 @@ KinBody::LinkPtr KinBody::Joint::GetHierarchyChildLink() const
     return _attachedbodies[1];
 }
 
-Vector KinBody::Joint::GetInternalHierarchyAxis(int iaxis) const
+const Vector& KinBody::Joint::GetInternalHierarchyAxis(int iaxis) const
 {
     return _vaxes.at(iaxis);
 }
 
-Transform KinBody::Joint::GetInternalHierarchyLeftTransform() const
+const Transform& KinBody::Joint::GetInternalHierarchyLeftTransform() const
 {
     OPENRAVE_ASSERT_FORMAT0(_bInitialized, "joint not initialized",ORE_NotInitialized);
     return _tLeftNoOffset;
 }
 
-Transform KinBody::Joint::GetInternalHierarchyRightTransform() const
+const Transform& KinBody::Joint::GetInternalHierarchyRightTransform() const
 {
     OPENRAVE_ASSERT_FORMAT0(_bInitialized, "joint not initialized",ORE_NotInitialized);
     return _tRightNoOffset;
@@ -1414,14 +1475,14 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     FOREACHC(itjoint,parent->GetJoints()) {
         if( (*itjoint)->GetName().size() > 0 ) {
             std::string newname = str(boost::format("joint%d")%(*itjoint)->GetJointIndex());
-            jointnamepairs.push_back(make_pair((*itjoint)->GetName(),newname));
+            jointnamepairs.emplace_back((*itjoint)->GetName(), newname);
         }
     }
     size_t index = parent->GetJoints().size();
     FOREACHC(itjoint,parent->GetPassiveJoints()) {
         if( (*itjoint)->GetName().size() > 0 ) {
             std::string newname = str(boost::format("joint%d")%index);
-            jointnamepairs.push_back(make_pair((*itjoint)->GetName(),newname));
+            jointnamepairs.emplace_back((*itjoint)->GetName(), newname);
         }
         ++index;
     }
@@ -1536,7 +1597,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> 
 {
     vpartials.resize(0);
     if( dofindex >= 0 ) {
-        vpartials.push_back(make_pair(dofindex+iaxis,1.0));
+        vpartials.emplace_back(dofindex+iaxis, 1.0);
         return;
     }
     OPENRAVE_ASSERT_FORMAT(!!_vmimic.at(iaxis), "cannot compute partial velocities of joint %s", _info._name, ORE_Failed);
@@ -1583,7 +1644,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> 
                 }
             }
             if( badd ) {
-                vpartials.push_back(make_pair(itmimicdof->dofindex, fvel));
+                vpartials.emplace_back(itmimicdof->dofindex,  fvel);
             }
         }
         else {
@@ -1595,7 +1656,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> 
                 }
             }
             if( badd ) {
-                vpartials.push_back(make_pair(itmimicdof->dofindex, it->second));
+                vpartials.emplace_back(itmimicdof->dofindex,  it->second);
             }
         }
     }

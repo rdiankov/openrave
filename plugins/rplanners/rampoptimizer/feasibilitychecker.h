@@ -26,7 +26,7 @@ struct CheckReturn {
         // vAccelReductionFactors.resize(0);
     }
 
-    CheckReturn(int retcode, std::vector<dReal> vfactors) : retcode(retcode), vReductionFactors(vfactors), fTimeBasedSurpassMult(1.0), bDifferentVelocity(false), fMaxManipSpeed(0), fMaxManipAccel(0) {
+    CheckReturn(int retcode, std::vector<dReal> vfactors) : retcode(retcode), fTimeBasedSurpassMult(1.0), bDifferentVelocity(false), fMaxManipSpeed(0), fMaxManipAccel(0), vReductionFactors(vfactors) {
     }
 
     int retcode; // one of CFO_X defined in planner.h

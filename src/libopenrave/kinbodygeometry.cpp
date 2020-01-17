@@ -249,29 +249,57 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
         }
         break;
     }
+    case GT_Cage: {
+        const Vector& vCageBaseExtents = _vGeomData;
+        for (size_t i = 0; i < _vSideWalls.size(); ++i) {
+            const SideWall &s = _vSideWalls[i];
+            const size_t vBase = _meshcollision.vertices.size();
+            AppendBoxTriangulation(Vector(0, 0, s.vExtents[2]), s.vExtents, _meshcollision);
+
+            for (size_t j = 0; j < 8; ++j) {
+                _meshcollision.vertices[vBase + j] = s.transf * _meshcollision.vertices[vBase + j];
+            }
+        }
+        // finally add the base
+        AppendBoxTriangulation(Vector(0, 0, vCageBaseExtents.z),vCageBaseExtents, _meshcollision);
+        break;
+    }
     case GT_Container: {
         const Vector& outerextents = _vGeomData;
         const Vector& innerextents = _vGeomData2;
         const Vector& bottomcross = _vGeomData3;
+        const Vector& bottom = _vGeomData4;
+        dReal zoffset = 0;
+        if( bottom[2] > 0 ) {
+            if( bottom[0] > 0 && bottom[1] > 0 ) {
+                zoffset = bottom[2];
+            }
+        }
         // +x wall
-        AppendBoxTriangulation(Vector((outerextents[0]+innerextents[0])/4.,0,outerextents[2]/2.), Vector((outerextents[0]-innerextents[0])/4., outerextents[1]/2., outerextents[2]/2.), _meshcollision);
+        AppendBoxTriangulation(Vector((outerextents[0]+innerextents[0])/4.,0,outerextents[2]/2.+zoffset), Vector((outerextents[0]-innerextents[0])/4., outerextents[1]/2., outerextents[2]/2.), _meshcollision);
         // -x wall
-        AppendBoxTriangulation(Vector(-(outerextents[0]+innerextents[0])/4.,0,outerextents[2]/2.), Vector((outerextents[0]-innerextents[0])/4., outerextents[1]/2., outerextents[2]/2.), _meshcollision);
+        AppendBoxTriangulation(Vector(-(outerextents[0]+innerextents[0])/4.,0,outerextents[2]/2.+zoffset), Vector((outerextents[0]-innerextents[0])/4., outerextents[1]/2., outerextents[2]/2.), _meshcollision);
         // +y wall
-        AppendBoxTriangulation(Vector(0,(outerextents[1]+innerextents[1])/4.,outerextents[2]/2.), Vector(outerextents[0]/2., (outerextents[1]-innerextents[1])/4., outerextents[2]/2.), _meshcollision);
+        AppendBoxTriangulation(Vector(0,(outerextents[1]+innerextents[1])/4.,outerextents[2]/2.+zoffset), Vector(outerextents[0]/2., (outerextents[1]-innerextents[1])/4., outerextents[2]/2.), _meshcollision);
         // -y wall
-        AppendBoxTriangulation(Vector(0,-(outerextents[1]+innerextents[1])/4.,outerextents[2]/2.), Vector(outerextents[0]/2., (outerextents[1]-innerextents[1])/4., outerextents[2]/2.), _meshcollision);
+        AppendBoxTriangulation(Vector(0,-(outerextents[1]+innerextents[1])/4.,outerextents[2]/2.+zoffset), Vector(outerextents[0]/2., (outerextents[1]-innerextents[1])/4., outerextents[2]/2.), _meshcollision);
         // bottom
         if( outerextents[2] - innerextents[2] >= 1e-6 ) { // small epsilon error can make thin triangles appear, so test with a reasonable threshold
-            AppendBoxTriangulation(Vector(0,0,(outerextents[2]-innerextents[2])/2.), Vector(outerextents[0]/2., outerextents[1]/2., (outerextents[2]-innerextents[2])/2), _meshcollision);
+            AppendBoxTriangulation(Vector(0,0,(outerextents[2]-innerextents[2])/2.+zoffset), Vector(outerextents[0]/2., outerextents[1]/2., (outerextents[2]-innerextents[2])/2), _meshcollision);
         }
         // cross
         if( bottomcross[2] > 0 ) {
             if( bottomcross[0] > 0 ) {
-                AppendBoxTriangulation(Vector(0, 0, bottomcross[2]/2+outerextents[2]-innerextents[2]), Vector(bottomcross[0]/2, innerextents[1]/2, bottomcross[2]/2), _meshcollision);
+                AppendBoxTriangulation(Vector(0, 0, bottomcross[2]/2+outerextents[2]-innerextents[2]+zoffset), Vector(bottomcross[0]/2, innerextents[1]/2, bottomcross[2]/2), _meshcollision);
             }
             if( bottomcross[1] > 0 ) {
-                AppendBoxTriangulation(Vector(0, 0, bottomcross[2]/2+outerextents[2]-innerextents[2]), Vector(innerextents[0]/2, bottomcross[1]/2, bottomcross[2]/2), _meshcollision);
+                AppendBoxTriangulation(Vector(0, 0, bottomcross[2]/2+outerextents[2]-innerextents[2]+zoffset), Vector(innerextents[0]/2, bottomcross[1]/2, bottomcross[2]/2), _meshcollision);
+            }
+        }
+        // bottom
+        if( bottom[2] > 0 ) {
+            if( bottom[0] > 0 && bottom[1] > 0 ) {
+                AppendBoxTriangulation(Vector(0, 0, bottom[2]/2), Vector(bottom[0]/2., bottom[1]/2., bottom[2]/2.), _meshcollision);
             }
         }
         break;
@@ -283,53 +311,453 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
     return true;
 }
 
-KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
+bool KinBody::GeometryInfo::ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const
 {
+    switch(_type) {
+    case GT_Cage: {
+        Vector vwallmin, vwallmax;
+        vwallmax.z = vwallmin.z = _vGeomData.z*2;
+
+        // initialize to the base extents if there is no wall
+        vwallmin.x = -_vGeomData.x;
+        vwallmin.y = -_vGeomData.y;
+        vwallmax.x = _vGeomData.x;
+        vwallmax.y = _vGeomData.y;
+        int sideWallExtents = 0;
+
+        FOREACH(itwall, _vSideWalls) {
+            // compute the XYZ extents of the wall
+            Vector vxaxis = geometry::ExtractAxisFromQuat(itwall->transf.rot, 0);
+            Vector vyaxis = geometry::ExtractAxisFromQuat(itwall->transf.rot, 1);
+            Vector vzaxis = geometry::ExtractAxisFromQuat(itwall->transf.rot, 2);
+
+            Vector vprojectedextents;
+            for(int idim = 0; idim < 3; ++idim) {
+                vprojectedextents[idim] = RaveFabs(vxaxis[idim])*itwall->vExtents.x + RaveFabs(vyaxis[idim])*itwall->vExtents.y + RaveFabs(vzaxis[idim])*itwall->vExtents.z;
+            }
+
+            // the origin of the side wall is the bottom center
+            if( vwallmax.z < itwall->transf.trans.z + 2*vprojectedextents.z ) {
+                vwallmax.z = itwall->transf.trans.z + 2*vprojectedextents.z;
+            }
+
+            sideWallExtents |= (int)(1<<itwall->type);
+
+            switch(itwall->type) {
+            case GeometryInfo::SWT_NX:
+                vwallmin.x = itwall->transf.trans.x + vprojectedextents.x;
+                break;
+            case GeometryInfo::SWT_NY:
+                vwallmin.y = itwall->transf.trans.y + vprojectedextents.y;
+                break;
+            case GeometryInfo::SWT_PX:
+                vwallmax.x = itwall->transf.trans.x - vprojectedextents.x;
+                break;
+            case GeometryInfo::SWT_PY:
+                vwallmax.y = itwall->transf.trans.y - vprojectedextents.y;
+                break;
+            }
+        }
+
+        // if _vGeomData2 is greater than 0, force inner region wherever possible.
+        // The only thing that will prevent _vGeomData2's inner region is a wall present.
+        // Should not use base to restrict _vGeomData2
+        if( _vGeomData2.x > 0 ) {
+            if( sideWallExtents & (1<<GeometryInfo::SWT_NX) ) {
+                if( vwallmin.x < -0.5*_vGeomData2.x ) {
+                    vwallmin.x = -0.5*_vGeomData2.x;
+                }
+            }
+            else {
+                // no wall defined on NX
+                vwallmin.x = -0.5*_vGeomData2.x;
+            }
+
+            if( sideWallExtents & (1<<GeometryInfo::SWT_PX) ) {
+                if( vwallmax.x > 0.5*_vGeomData2.x ) {
+                    vwallmax.x = 0.5*_vGeomData2.x;
+                }
+            }
+            else {
+                // no wall defined on NX
+                vwallmax.x = 0.5*_vGeomData2.x;
+            }
+        }
+
+        if( _vGeomData2.y > 0 ) {
+            if( sideWallExtents & (1<<GeometryInfo::SWT_NY) ) {
+                if( vwallmin.y < -0.5*_vGeomData2.y ) {
+                    vwallmin.y = -0.5*_vGeomData2.y;
+                }
+            }
+            else {
+                vwallmin.y = -0.5*_vGeomData2.y;
+            }
+
+            if( sideWallExtents & (1<<GeometryInfo::SWT_PY) ) {
+                if( vwallmax.y > 0.5*_vGeomData2.y ) {
+                    vwallmax.y = 0.5*_vGeomData2.y;
+                }
+            }
+            else {
+                vwallmax.y = 0.5*_vGeomData2.y;
+            }
+        }
+
+        // the top has no constraints, so use the max of walls and force inner region
+        if( vwallmax.z < _vGeomData.z*2 + _vGeomData2.z ) {
+            vwallmax.z = _vGeomData.z*2 + _vGeomData2.z;
+        }
+
+        abInnerEmptyExtents = 0.5*(vwallmax - vwallmin);
+        tInnerEmptyVolume = _t;
+        tInnerEmptyVolume.trans += tInnerEmptyVolume.rotate(0.5*(vwallmax + vwallmin));
+        return true;
+    }
+    case GT_Container: {
+        Transform tempty;
+        // full outer extents - full inner extents + inner extents = _vGeomData.z - 0.5*_vGeomData2.z
+        tempty.trans.z = _vGeomData.z - 0.5 * _vGeomData2.z;
+        if( _vGeomData4.x > 0 && _vGeomData4.y > 0 && _vGeomData4.z > 0 ) {
+            // if _vGeomData4 is valid, need to shift the empty region up.
+            tempty.trans.z += _vGeomData4.z;
+        }
+        tInnerEmptyVolume = _t*tempty;
+        abInnerEmptyExtents = 0.5*_vGeomData2;
+        return true;
+    }
+    default:
+        return false;
+    }
 }
 
-bool KinBody::Link::Geometry::InitCollisionMesh(float fTessellation)
+void RaveSerializeJSON(rapidjson::Value &rSideWall, rapidjson::Document::AllocatorType& allocator, const KinBody::GeometryInfo::SideWall& sidewall)
 {
-    return _info.InitCollisionMesh(fTessellation);
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(rSideWall);
+    RAVE_SERIALIZEJSON_ADDMEMBER(rSideWall, allocator, "transform", sidewall.transf);
+    RAVE_SERIALIZEJSON_ADDMEMBER(rSideWall, allocator, "halfExtents", sidewall.vExtents);
+    RAVE_SERIALIZEJSON_ADDMEMBER(rSideWall, allocator, "type", (int)sidewall.type);
 }
 
-AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
+void RaveDeserializeJSON(const rapidjson::Value &value, KinBody::GeometryInfo::SideWall& sidewall)
+{
+    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "transform", sidewall.transf);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "halfExtents", sidewall.vExtents);
+    int type=0;
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "type", type);
+    sidewall.type = (KinBody::GeometryInfo::SideWallType)type;
+}
+
+void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options)
+{
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
+
+    //RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "sid", sid);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", _name);
+
+    Transform tscaled=_t;
+    tscaled.trans *= fUnitScale;
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", tscaled);
+
+    switch(_type) {
+    case GT_Box:
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "box");
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "halfExtents", _vGeomData*fUnitScale);
+        break;
+
+    case GT_Container:
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "container");
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "outerExtents", _vGeomData*fUnitScale);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "innerExtents", _vGeomData2*fUnitScale);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "bottomCross", _vGeomData3*fUnitScale);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "bottom", _vGeomData4*fUnitScale);
+        break;
+
+    case GT_Cage: {
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "cage");
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "baseExtents", _vGeomData*fUnitScale);
+
+        std::vector<SideWall> vScaledSideWalls = _vSideWalls;
+        FOREACH(itwall, vScaledSideWalls) {
+            itwall->transf.trans *= fUnitScale;
+            itwall->vExtents *= fUnitScale;
+        }
+        if( _vGeomData2.x > g_fEpsilon ) {
+            RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "innerSizeX", _vGeomData2.x*fUnitScale);
+        }
+        if( _vGeomData2.y > g_fEpsilon ) {
+            RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "innerSizeY", _vGeomData2.y*fUnitScale);
+        }
+        if( _vGeomData2.z > g_fEpsilon ) {
+            RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "innerSizeZ", _vGeomData2.z*fUnitScale);
+        }
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "sideWalls", vScaledSideWalls);
+        break;
+    }
+    case GT_Sphere:
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "sphere");
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "radius", _vGeomData.x*fUnitScale);
+        break;
+
+    case GT_Cylinder:
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "cylinder");
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "radius", _vGeomData.x*fUnitScale);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "height", _vGeomData.y*fUnitScale);
+        break;
+
+    case GT_TriMesh:
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "trimesh");
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "mesh", _meshcollision);
+        break;
+
+    default:
+        break;
+    }
+
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transparency", _fTransparency);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "visible", _bVisible);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "diffuseColor", _vDiffuseColor);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "ambientColor", _vAmbientColor);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "modifiable", _bModifiable);
+}
+
+void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale)
+{
+    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
+
+    //RAVE_DESERIALIZEJSON_REQUIRED(value, "sid", sid);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "name", _name);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "transform", _t);
+
+    _t.trans *= fUnitScale;
+
+    std::string typestr;
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "type", typestr);
+
+    if (typestr == "box") {
+        _type = GT_Box;
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "halfExtents", _vGeomData);
+        _vGeomData *= fUnitScale;
+    }
+    else if (typestr == "container") {
+        _type = GT_Container;
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "outerExtents", _vGeomData);
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "innerExtents", _vGeomData2);
+
+        _vGeomData3 = Vector();
+        RAVE_DESERIALIZEJSON_OPTIONAL(value, "bottomCross", _vGeomData3);
+
+        _vGeomData4 = Vector();
+        RAVE_DESERIALIZEJSON_OPTIONAL(value, "bottom", _vGeomData4);
+
+        _vGeomData *= fUnitScale;
+        _vGeomData2 *= fUnitScale;
+        _vGeomData3 *= fUnitScale;
+        _vGeomData4 *= fUnitScale;
+    }
+    else if (typestr == "cage") {
+        _type = GT_Cage;
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "baseExtents", _vGeomData);
+        _vGeomData *= fUnitScale;
+
+        _vGeomData2 = Vector();
+        RAVE_DESERIALIZEJSON_OPTIONAL(value, "innerSizeX", _vGeomData2.x);
+        RAVE_DESERIALIZEJSON_OPTIONAL(value, "innerSizeY", _vGeomData2.y);
+        RAVE_DESERIALIZEJSON_OPTIONAL(value, "innerSizeZ", _vGeomData2.z);
+        _vGeomData2 *= fUnitScale;
+
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "sideWalls", _vSideWalls);
+        FOREACH(itsidewall, _vSideWalls) {
+            itsidewall->transf.trans *= fUnitScale;
+            itsidewall->vExtents *= fUnitScale;
+        }
+    }
+    else if (typestr == "sphere") {
+        _type = GT_Sphere;
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "radius", _vGeomData.x);
+
+        _vGeomData *= fUnitScale;
+    }
+    else if (typestr == "cylinder") {
+        _type = GT_Cylinder;
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "radius", _vGeomData.x);
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "height", _vGeomData.y);
+
+        _vGeomData.x *= fUnitScale;
+        _vGeomData.y *= fUnitScale;
+
+    }
+    else if (typestr == "trimesh" or typestr == "mesh") {
+        _type = GT_TriMesh;
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "mesh", _meshcollision);
+
+        FOREACH(itvertex, _meshcollision.vertices) {
+            *itvertex *= fUnitScale;
+        }
+    }
+    else {
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported geometry type \"%s\"", typestr, ORE_InvalidArguments);
+    }
+
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "transparency", _fTransparency);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "visible", _bVisible);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "diffuseColor", _vDiffuseColor);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "ambientColor", _vAmbientColor);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "modifiable", _bModifiable);
+}
+
+AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const
 {
     AABB ab;
-    TransformMatrix tglobal = t * _info._t;
+    TransformMatrix tglobal = tGeometryWorld * _t;
 
-    switch(_info._type) {
+    switch(_type) {
     case GT_None:
         ab.extents.x = 0;
         ab.extents.y = 0;
         ab.extents.z = 0;
         break;
     case GT_Box: // origin of box is at the center
-        ab.extents.x = RaveFabs(tglobal.m[0])*_info._vGeomData.x + RaveFabs(tglobal.m[1])*_info._vGeomData.y + RaveFabs(tglobal.m[2])*_info._vGeomData.z;
-        ab.extents.y = RaveFabs(tglobal.m[4])*_info._vGeomData.x + RaveFabs(tglobal.m[5])*_info._vGeomData.y + RaveFabs(tglobal.m[6])*_info._vGeomData.z;
-        ab.extents.z = RaveFabs(tglobal.m[8])*_info._vGeomData.x + RaveFabs(tglobal.m[9])*_info._vGeomData.y + RaveFabs(tglobal.m[10])*_info._vGeomData.z;
+        ab.extents.x = RaveFabs(tglobal.m[0])*_vGeomData.x + RaveFabs(tglobal.m[1])*_vGeomData.y + RaveFabs(tglobal.m[2])*_vGeomData.z;
+        ab.extents.y = RaveFabs(tglobal.m[4])*_vGeomData.x + RaveFabs(tglobal.m[5])*_vGeomData.y + RaveFabs(tglobal.m[6])*_vGeomData.z;
+        ab.extents.z = RaveFabs(tglobal.m[8])*_vGeomData.x + RaveFabs(tglobal.m[9])*_vGeomData.y + RaveFabs(tglobal.m[10])*_vGeomData.z;
         ab.pos = tglobal.trans;
         break;
     case GT_Container: // origin of container is at the bottom
-        ab.extents.x = 0.5*(RaveFabs(tglobal.m[0])*_info._vGeomData.x + RaveFabs(tglobal.m[1])*_info._vGeomData.y + RaveFabs(tglobal.m[2])*_info._vGeomData.z);
-        ab.extents.y = 0.5*(RaveFabs(tglobal.m[4])*_info._vGeomData.x + RaveFabs(tglobal.m[5])*_info._vGeomData.y + RaveFabs(tglobal.m[6])*_info._vGeomData.z);
-        ab.extents.z = 0.5*(RaveFabs(tglobal.m[8])*_info._vGeomData.x + RaveFabs(tglobal.m[9])*_info._vGeomData.y + RaveFabs(tglobal.m[10])*_info._vGeomData.z);
-        ab.pos = tglobal.trans + Vector(tglobal.m[2], tglobal.m[6], tglobal.m[10])*(0.5*_info._vGeomData.z);
+        ab.extents.x = 0.5*(RaveFabs(tglobal.m[0])*_vGeomData.x + RaveFabs(tglobal.m[1])*_vGeomData.y + RaveFabs(tglobal.m[2])*_vGeomData.z);
+        ab.extents.y = 0.5*(RaveFabs(tglobal.m[4])*_vGeomData.x + RaveFabs(tglobal.m[5])*_vGeomData.y + RaveFabs(tglobal.m[6])*_vGeomData.z);
+        ab.extents.z = 0.5*(RaveFabs(tglobal.m[8])*_vGeomData.x + RaveFabs(tglobal.m[9])*_vGeomData.y + RaveFabs(tglobal.m[10])*_vGeomData.z);
+        ab.pos = tglobal.trans + Vector(tglobal.m[2], tglobal.m[6], tglobal.m[10])*(0.5*_vGeomData.z);
+
+        if( _vGeomData4.x > 0 && _vGeomData4.y > 0 && _vGeomData4.z > 0 ) {
+            // Container with bottom
+            Vector vcontainerdir = Vector(tglobal.m[2], tglobal.m[6], tglobal.m[10]);
+            ab.pos += vcontainerdir*_vGeomData4.z; // take into account the bottom of the container
+
+            Vector vbottompos = tglobal.trans + vcontainerdir*(0.5*_vGeomData4.z);
+            Vector vbottomextents;
+            vbottomextents.x = 0.5*(RaveFabs(tglobal.m[0])*_vGeomData4.x + RaveFabs(tglobal.m[1])*_vGeomData4.y + RaveFabs(tglobal.m[2])*_vGeomData4.z);
+            vbottomextents.y = 0.5*(RaveFabs(tglobal.m[4])*_vGeomData4.x + RaveFabs(tglobal.m[5])*_vGeomData4.y + RaveFabs(tglobal.m[6])*_vGeomData4.z);
+            vbottomextents.z = 0.5*(RaveFabs(tglobal.m[8])*_vGeomData4.x + RaveFabs(tglobal.m[9])*_vGeomData4.y + RaveFabs(tglobal.m[10])*_vGeomData4.z);
+            Vector vmin = ab.pos - ab.extents;
+            Vector vmax = ab.pos + ab.extents;
+            Vector vbottommin = vbottompos - vbottomextents;
+            Vector vbottommax = vbottompos + vbottomextents;
+            if( vmin.x > vbottommin.x ) {
+                vmin.x = vbottommin.x;
+            }
+            if( vmin.y > vbottommin.y ) {
+                vmin.y = vbottommin.y;
+            }
+            if( vmin.z > vbottommin.z ) {
+                vmin.z = vbottommin.z;
+            }
+            if( vmax.x < vbottommax.x ) {
+                vmax.x = vbottommax.x;
+            }
+            if( vmax.y < vbottommax.y ) {
+                vmax.y = vbottommax.y;
+            }
+            if( vmax.z < vbottommax.z ) {
+                vmax.z = vbottommax.z;
+            }
+            ab.pos = 0.5 * (vmin + vmax);
+            ab.extents = vmax - ab.pos;
+        }
         break;
     case GT_Sphere:
-        ab.extents.x = ab.extents.y = ab.extents.z = _info._vGeomData[0];
+        ab.extents.x = ab.extents.y = ab.extents.z = _vGeomData[0];
         ab.pos = tglobal.trans;
         break;
     case GT_Cylinder:
-        ab.extents.x = (dReal)0.5*RaveFabs(tglobal.m[2])*_info._vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[2]*tglobal.m[2]))*_info._vGeomData.x;
-        ab.extents.y = (dReal)0.5*RaveFabs(tglobal.m[6])*_info._vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[6]*tglobal.m[6]))*_info._vGeomData.x;
-        ab.extents.z = (dReal)0.5*RaveFabs(tglobal.m[10])*_info._vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[10]*tglobal.m[10]))*_info._vGeomData.x;
-        ab.pos = tglobal.trans; //+(dReal)0.5*_info._vGeomData.y*Vector(tglobal.m[2],tglobal.m[6],tglobal.m[10]);
+        ab.extents.x = (dReal)0.5*RaveFabs(tglobal.m[2])*_vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[2]*tglobal.m[2]))*_vGeomData.x;
+        ab.extents.y = (dReal)0.5*RaveFabs(tglobal.m[6])*_vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[6]*tglobal.m[6]))*_vGeomData.x;
+        ab.extents.z = (dReal)0.5*RaveFabs(tglobal.m[10])*_vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[10]*tglobal.m[10]))*_vGeomData.x;
+        ab.pos = tglobal.trans; //+(dReal)0.5*_vGeomData.y*Vector(tglobal.m[2],tglobal.m[6],tglobal.m[10]);
         break;
-    case GT_TriMesh:
-        // just use _info._meshcollision
-        if( _info._meshcollision.vertices.size() > 0) {
-            Vector vmin, vmax; vmin = vmax = tglobal*_info._meshcollision.vertices.at(0);
-            FOREACHC(itv, _info._meshcollision.vertices) {
+    case GT_Cage: {
+        // have to return the entire volume, even the inner region since a lot of code use the bounding box to compute cropping and other functions
+        const Vector& vCageBaseExtents = _vGeomData;
+        const Vector& vCageForceInnerFull = _vGeomData2;
+
+        Vector vmin, vmax;
+        vmin.x = -vCageBaseExtents.x;
+        vmin.y = -vCageBaseExtents.y;
+        vmax.x = vCageBaseExtents.x;
+        vmax.y = vCageBaseExtents.y;
+        vmax.z = vCageBaseExtents.z*2;
+        for (size_t i = 0; i < _vSideWalls.size(); ++i) {
+            const GeometryInfo::SideWall &s = _vSideWalls[i];
+            TransformMatrix sidewallmat = s.transf;
+            Vector vselocal = s.vExtents;
+            Vector vsegeom;
+            vsegeom.x = RaveFabs(sidewallmat.m[0])*vselocal.x + RaveFabs(sidewallmat.m[1])*vselocal.y + RaveFabs(sidewallmat.m[2])*vselocal.z;
+            vsegeom.y = RaveFabs(sidewallmat.m[4])*vselocal.x + RaveFabs(sidewallmat.m[5])*vselocal.y + RaveFabs(sidewallmat.m[6])*vselocal.z;
+            vsegeom.z = RaveFabs(sidewallmat.m[8])*vselocal.x + RaveFabs(sidewallmat.m[9])*vselocal.y + RaveFabs(sidewallmat.m[10])*vselocal.z;
+
+            Vector vcenterpos = s.transf.trans + Vector(sidewallmat.m[2], sidewallmat.m[6], sidewallmat.m[10])*(vselocal.z);
+            Vector vsidemin = vcenterpos - vsegeom;
+            Vector vsidemax = vcenterpos + vsegeom;
+
+            if( vmin.x > vsidemin.x ) {
+                vmin.x = vsidemin.x;
+            }
+            if( vmin.y > vsidemin.y ) {
+                vmin.y = vsidemin.y;
+            }
+            if( vmin.z > vsidemin.z ) {
+                vmin.z = vsidemin.z;
+            }
+            if( vmax.x < vsidemax.x ) {
+                vmax.x = vsidemax.x;
+            }
+            if( vmax.y < vsidemax.y ) {
+                vmax.y = vsidemax.y;
+            }
+            if( vmax.z < vsidemax.z ) {
+                vmax.z = vsidemax.z;
+            }
+        }
+
+        if( vCageForceInnerFull.x > 0 ) {
+            if( vmin.x > -0.5*vCageForceInnerFull.x ) {
+                vmin.x = -0.5*vCageForceInnerFull.x;
+            }
+            if( vmax.x < 0.5*vCageForceInnerFull.x ) {
+                vmax.x = 0.5*vCageForceInnerFull.x;
+            }
+        }
+        if( vCageForceInnerFull.y > 0 ) {
+            if( vmin.y > -0.5*vCageForceInnerFull.y ) {
+                vmin.y = -0.5*vCageForceInnerFull.y;
+            }
+            if( vmax.y < 0.5*vCageForceInnerFull.y ) {
+                vmax.y = 0.5*vCageForceInnerFull.y;
+            }
+        }
+        if( vCageForceInnerFull.z > 0 ) {
+            if( vmax.z < vCageBaseExtents.z*2+vCageForceInnerFull.z ) {
+                vmax.z = vCageBaseExtents.z*2+vCageForceInnerFull.z;
+            }
+        }
+
+        // now that vmin and vmax are in geom space, transform them
+        Vector vgeomextents = 0.5*(vmax-vmin);
+
+        ab.extents.x = RaveFabs(tglobal.m[0])*vgeomextents.x + RaveFabs(tglobal.m[1])*vgeomextents.y + RaveFabs(tglobal.m[2])*vgeomextents.z;
+        ab.extents.y = RaveFabs(tglobal.m[4])*vgeomextents.x + RaveFabs(tglobal.m[5])*vgeomextents.y + RaveFabs(tglobal.m[6])*vgeomextents.z;
+        ab.extents.z = RaveFabs(tglobal.m[8])*vgeomextents.x + RaveFabs(tglobal.m[9])*vgeomextents.y + RaveFabs(tglobal.m[10])*vgeomextents.z;
+        ab.pos = tglobal*(0.5*(vmin+vmax));
+        break;
+
+    }
+    case GT_TriMesh: {
+        // Cage: init collision mesh?
+        // just use _meshcollision
+        if( _meshcollision.vertices.size() > 0) {
+            Vector vmin, vmax; vmin = vmax = tglobal*_meshcollision.vertices.at(0);
+            FOREACHC(itv, _meshcollision.vertices) {
                 Vector v = tglobal * *itv;
                 if( vmin.x > v.x ) {
                     vmin.x = v.x;
@@ -357,11 +785,32 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
             ab.pos = tglobal.trans;
         }
         break;
+    }
     default:
-        throw OPENRAVE_EXCEPTION_FORMAT(_("unknown geometry type %d"), _info._type, ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("unknown geometry type %d"), _type, ORE_InvalidArguments);
     }
 
     return ab;
+}
+
+
+KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
+{
+}
+
+bool KinBody::Link::Geometry::InitCollisionMesh(float fTessellation)
+{
+    return _info.InitCollisionMesh(fTessellation);
+}
+
+bool KinBody::Link::Geometry::ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const
+{
+    return _info.ComputeInnerEmptyVolume(tInnerEmptyVolume, abInnerEmptyExtents);
+}
+
+AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
+{
+    return _info.ComputeAABB(t);
 }
 
 void KinBody::Link::Geometry::serialize(std::ostream& o, int options) const
@@ -374,6 +823,20 @@ void KinBody::Link::Geometry::serialize(std::ostream& o, int options) const
     }
     else {
         SerializeRound3(o,_info._vGeomData);
+        if( _info._type == GT_Cage ) {
+            SerializeRound3(o,_info._vGeomData2);
+            for (size_t iwall = 0; iwall < _info._vSideWalls.size(); ++iwall) {
+                const GeometryInfo::SideWall &s = _info._vSideWalls[iwall];
+                SerializeRound(o,s.transf);
+                SerializeRound3(o,s.vExtents);
+                o << (uint32_t)s.type;
+            }
+        }
+        else if( _info._type == GT_Container ) {
+            SerializeRound3(o,_info._vGeomData2);
+            SerializeRound3(o,_info._vGeomData3);
+            SerializeRound3(o,_info._vGeomData4);
+        }
     }
 }
 
@@ -538,5 +1001,14 @@ void KinBody::Link::Geometry::SetName(const std::string& name)
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkGeometry);
 
 }
-    
+
+uint8_t KinBody::Link::Geometry::GetSideWallExists() const
+{
+    uint8_t mask = 0;
+    for (size_t i = 0; i < _info._vSideWalls.size(); ++i) {
+        mask |= 1 << _info._vSideWalls[i].type;
+    }
+    return mask;
+}
+
 }

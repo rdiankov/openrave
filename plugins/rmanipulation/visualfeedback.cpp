@@ -176,7 +176,7 @@ public:
             vMax += obb.pos;
         }
 
-        VisibilityConstraintFunction(boost::shared_ptr<VisualFeedback> vf) : _vf(vf) {
+        VisibilityConstraintFunction(boost::shared_ptr<VisualFeedback> vf, const PlannerBase::PlannerParameters::CheckPathVelocityConstraintFn& oldfn=PlannerBase::PlannerParameters::CheckPathVelocityConstraintFn()) : _vf(vf), _oldfn(oldfn) {
             _report.reset(new CollisionReport());
 
             // create the dummy box
@@ -185,7 +185,7 @@ public:
             if( !_vf->_targetlink->IsVisible() ) {
                 throw OPENRAVE_EXCEPTION_FORMAT("no geometries target link %s is visible so cannot use it for visibility checking", _vf->_targetlink->GetName(), ORE_InvalidArguments);
             }
-            
+
             // We assume only one geometry named exactly _vf->_targetGeomName exists on
             // the targetlink. This geometry name is hard-coded in
             // handeyecalibrationtask.py in planning common. Here the
@@ -197,7 +197,7 @@ public:
                     break;
                 }
             }
-            
+
             if (_vTargetLocalOBBs.size() == 0 ) {
                 std::stringstream ss;
                 for(size_t igeom = 0; igeom < _vf->_targetlink->GetGeometries().size(); ++igeom) {
@@ -275,10 +275,11 @@ public:
             return true;
         }
 
-        virtual bool Constraint(const PlannerBase::PlannerParameters::CheckPathConstraintFn& oldfn, const vector<dReal>& pSrcConf, const vector<dReal>& pDestConf, IntervalType interval, PlannerBase::ConfigurationListPtr configurations)
+        virtual int Constraint(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal elapsedtime, IntervalType interval, int options=0xffff, ConstraintFilterReturnPtr filterreturn=ConstraintFilterReturnPtr())
         {
-            if( !oldfn(pSrcConf,pDestConf,interval,configurations) ) {
-                return false;
+            int ret = _oldfn(q0, q1, dq0, dq1, elapsedtime, interval, options, filterreturn);
+            if( ret ) {
+                return ret;
             }
             std::string errormsg;
             return IsVisible(true, false, errormsg);
@@ -515,6 +516,7 @@ private:
         CollisionReportPtr _report;
         AABB _abTarget;         // local aabb in the targetlink coordinate system
         vector<Vector> _vconvexplanes3d; ///< the convex planes of the camera in the target link coordinate system
+        PlannerBase::PlannerParameters::CheckPathVelocityConstraintFn _oldfn;
     };
 
     class GoalSampleFunction
@@ -954,7 +956,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 vCamerasInPatternCoord.resize(spheremesh.vertices.size()*numdists*numrolls);
                 vector<Transform>::iterator itcamera = vCamerasInPatternCoord.begin();
                 for(size_t j = 0; j < spheremesh.vertices.size(); ++j) {
-                    Vector v = spheremesh.vertices[j];
+                    //Vector v = spheremesh.vertices[j];
                     for(int i = 0; i < numdists; ++i) {
                         dReal froll = 0;
                         for(int iroll = 0; iroll < numrolls; ++iroll, froll += deltaroll) {
@@ -1017,8 +1019,6 @@ Visibility computation checks occlusion with other objects using ray sampling in
                     // outside of camera FOV
                     continue;
                 }
-
-                bool bInCone = false;
 
                 // We hard-code the cone direction (0,0,1) for initial visibility checking
                 // because only patterns in front of the camera lens will pass InConvexHull().
@@ -1383,7 +1383,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 RAVELOG_ERROR("InitPlan failed\n");
                 return false;
             }
-            if( planner->PlanPath(ptraj) ) {
+            if( planner->PlanPath(ptraj).GetStatusCode() ) {
                 bSuccess = true;
                 RAVELOG_INFOA("finished planning\n");
                 break;
@@ -1479,8 +1479,8 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
         if( bUseVisibility ) {
             RAVELOG_DEBUG("using visibility constraints\n");
-            boost::shared_ptr<VisibilityConstraintFunction> pconstraint(new VisibilityConstraintFunction(shared_problem()));
-            params->_checkpathconstraintsfn = boost::bind(&VisibilityConstraintFunction::Constraint,pconstraint,params->_checkpathconstraintsfn,_1,_2,_3,_4);
+            boost::shared_ptr<VisibilityConstraintFunction> pconstraint(new VisibilityConstraintFunction(shared_problem(), params->_checkpathvelocityconstraintsfn));
+            params->_checkpathvelocityconstraintsfn = boost::bind(&VisibilityConstraintFunction::Constraint,pconstraint,_1,_2,_3,_4,_5,_6,_7,_8);
         }
 
         params->_ptarget = _targetlink->GetParent();
@@ -1502,7 +1502,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             return false;
         }
 
-        if( planner->PlanPath(ptraj) ) {
+        if( planner->PlanPath(ptraj).GetStatusCode() ) {
             bSuccess = true;
         }
         else {

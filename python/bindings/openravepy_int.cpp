@@ -66,6 +66,40 @@ object toPyObject(const rapidjson::Value& value)
     }
 }
 
+#define FILL_RAPIDJSON_FROMARRAY_1D(pyarrayvalues, T, rapidjsonsetfn) {  \
+    const T *vdata = reinterpret_cast<T*>(PyArray_DATA(pyarrayvalues)); \
+    for (int i = 0; i < dims[0]; i++) { \
+        rapidjson::Value elementValue; \
+        elementValue.rapidjsonsetfn(vdata[i]); \
+        value.PushBack(elementValue, allocator); \
+    } \
+} \
+
+#define FILL_RAPIDJSON_FROMARRAY_2D(pyarrayvalues, T, rapidjsonsetfn) {                            \
+    const T *vdata = reinterpret_cast<T*>(PyArray_DATA(pyarrayvalues)); \
+    for (int i = 0; i < dims[0]; i++) { \
+        rapidjson::Value colvalues(rapidjson::kArrayType); \
+        for (int j = 0; j < dims[1]; j++) { \
+            rapidjson::Value elementValue; \
+            elementValue.rapidjsonsetfn(vdata[i*dims[0]+j]); \
+            colvalues.PushBack(elementValue, allocator); \
+        } \
+        value.PushBack(colvalues, allocator); \
+    } \
+} \
+
+#define FILL_RAPIDJSON_FROMARRAY(pyarrayvalues, T, rapidjsonsetfn, ndims) { \
+    if( ndims == 1 ) { \
+        FILL_RAPIDJSON_FROMARRAY_1D(pyarrayvalues, T, rapidjsonsetfn); \
+    } \
+    else if( ndims == 2 ) { \
+        FILL_RAPIDJSON_FROMARRAY_2D(pyarrayvalues, T, rapidjsonsetfn); \
+    } \
+    else { \
+        throw OPENRAVE_EXCEPTION_FORMAT(_("do not support array object with %d dims"), ndims, ORE_InvalidArguments); \
+    } \
+}
+
 // convert from python object to rapidjson
 void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator)
 {
@@ -109,8 +143,8 @@ void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
     {
         boost::python::list l = boost::python::extract<boost::python::list>(obj);
         value.SetArray();
-        for (int i = 0; i < len(l); i++)
-        {
+        int numitems = len(l);
+        for (int i = 0; i < numitems; i++) {
             boost::python::object o = boost::python::extract<boost::python::object>(l[i]);
             rapidjson::Value elementValue;
             toRapidJSONValue(o, elementValue, allocator);
@@ -122,7 +156,8 @@ void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
         boost::python::dict d = boost::python::extract<boost::python::dict>(obj);
         boost::python::object iterator = d.iteritems();
         value.SetObject();
-        for (int i = 0; i < len(d); i++)
+        int numitems = len(d);
+        for (int i = 0; i < numitems; i++)
         {
             rapidjson::Value keyValue, valueValue;
             boost::python::tuple kv = boost::python::extract<boost::python::tuple>(iterator.attr("next")());
@@ -137,6 +172,52 @@ void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
             value.AddMember(keyValue, valueValue, allocator);
         }
     }
+    else if (PyArray_Check(obj.ptr()) ) {
+        PyArrayObject* pyarrayvalues = PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(obj.ptr()));
+        AutoPyArrayObjectDereferencer pydecref(pyarrayvalues);
+
+        int ndims = PyArray_NDIM(pyarrayvalues);
+        npy_intp* dims = PyArray_DIMS(pyarrayvalues);
+        const size_t typeSize = PyArray_ITEMSIZE(pyarrayvalues);
+        value.SetArray();
+        if( ndims > 0 ) {
+            if (PyArray_ISFLOAT(pyarrayvalues) ) {
+                if( typeSize == sizeof(float)) {
+                    FILL_RAPIDJSON_FROMARRAY(pyarrayvalues, float, SetFloat, ndims);
+                }
+                else if( typeSize == sizeof(double)) {
+                    FILL_RAPIDJSON_FROMARRAY(pyarrayvalues, double, SetDouble, ndims);
+                }
+                else {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("do not support array object float with %d type size"), typeSize, ORE_InvalidArguments);
+                }
+            }
+            else if (PyArray_ISINTEGER(pyarrayvalues) ) {
+                if( typeSize == sizeof(int) ) {
+                    if( PyArray_ISSIGNED(pyarrayvalues) ) {
+                        FILL_RAPIDJSON_FROMARRAY(pyarrayvalues, int, SetInt, ndims);
+                    }
+                    else {
+                        FILL_RAPIDJSON_FROMARRAY(pyarrayvalues, uint32_t, SetUint, ndims);
+                    }
+                }
+                else if( typeSize == sizeof(int64_t) ) {
+                    if( PyArray_ISSIGNED(pyarrayvalues) ) {
+                        FILL_RAPIDJSON_FROMARRAY(pyarrayvalues, uint64_t, SetInt64, ndims);
+                    }
+                    else {
+                        FILL_RAPIDJSON_FROMARRAY(pyarrayvalues, uint64_t, SetUint64, ndims);
+                    }
+                }
+                else {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("do not support array object integer with %d type size"), typeSize, ORE_InvalidArguments);
+                }
+            }
+            else {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("do not support array object with %d type size"), typeSize, ORE_InvalidArguments);
+            }
+        }
+    }           
     else
     {
         throw OPENRAVE_EXCEPTION_FORMAT0(_("unsupported python type"), ORE_InvalidArguments);
@@ -197,7 +278,7 @@ AttributesList toAttributesList(boost::python::dict odict)
             // Because we know they're strings, we can do this
             std::string key = boost::python::extract<std::string>(iterkeys[i]);
             std::string value = boost::python::extract<std::string>(odict[iterkeys[i]]);
-            atts.push_back(make_pair(key,value));
+            atts.emplace_back(key, value);
         }
     }
     return atts;
@@ -212,7 +293,7 @@ AttributesList toAttributesList(boost::python::list oattributes)
             // Because we know they're strings, we can do this
             std::string key = boost::python::extract<std::string>(oattributes[i][0]);
             std::string value = boost::python::extract<std::string>(oattributes[i][1]);
-            atts.push_back(make_pair(key,value));
+            atts.emplace_back(key, value);
         }
     }
     return atts;
@@ -1215,7 +1296,7 @@ public:
         if( otarget.check() ) {
             // old versions
             AttributesList atts;
-            atts.push_back(std::make_pair(std::string("target"),(std::string)otarget));
+            atts.emplace_back("target", (std::string)otarget);
             openravepy::PythonThreadSaver threadsaver;
             _penv->Save(filename,options,atts);
         }
@@ -1232,7 +1313,7 @@ public:
         if( otarget.check() ) {
             // old versions
             AttributesList atts;
-            atts.push_back(std::make_pair(std::string("target"),(std::string)otarget));
+            atts.emplace_back("target", (std::string)otarget);
             _penv->WriteToMemory(filetype,output,options,atts);
         }
         else {
@@ -1856,6 +1937,7 @@ public:
             ostate["linktransforms"] = olinktransforms;
             ostate["jointvalues"] = toPyArray(itstate->jointvalues);
             ostate["linkEnableStates"] = toPyArray(itstate->vLinkEnableStates);
+            ostate["connectedBodyActiveStates"] = toPyArray(itstate->vConnectedBodyActiveStates);
             ostate["name"] = ConvertStringToUnicode(itstate->strname);
             ostate["uri"] = ConvertStringToUnicode(itstate->uri);
             ostate["updatestamp"] = itstate->updatestamp;
@@ -1883,6 +1965,7 @@ public:
         ostate["linktransforms"] = olinktransforms;
         ostate["jointvalues"] = toPyArray(bodystate.jointvalues);
         ostate["linkEnableStates"] = toPyArray(bodystate.vLinkEnableStates);
+        ostate["connectedBodyActiveStates"] = toPyArray(bodystate.vConnectedBodyActiveStates);
         ostate["name"] = ConvertStringToUnicode(bodystate.strname);
         ostate["uri"] = ConvertStringToUnicode(bodystate.uri);
         ostate["updatestamp"] = bodystate.updatestamp;

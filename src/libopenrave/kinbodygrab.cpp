@@ -38,7 +38,20 @@ bool KinBody::Grab(KinBodyPtr pbody, LinkPtr plink)
 
     // double check since collision checkers might not support this case
     if( pbody->HasAttached() ) {
-        RAVELOG_WARN_FORMAT("body %s trying to grab body %s with %d attached bodies", GetName()%pbody->GetName()%pbody->HasAttached());
+        if( !!pPreviousGrabbed ) {
+            RAVELOG_INFO_FORMAT("env=%d, body %s is previously grabbed by %s, so", GetEnv()->GetId()%pbody->GetName()%GetName());
+        }
+        else {
+            std::set<KinBodyPtr> setAttached;
+            pbody->GetAttached(setAttached);
+            std::stringstream ss;
+            if( setAttached.size() > 1 ) {
+                FOREACH(itbody, setAttached) {
+                    ss << (*itbody)->GetName() << ", ";
+                }
+            }
+            RAVELOG_WARN_FORMAT("env=%d, body %s trying to grab body %s with %d attached bodies [%s]", GetEnv()->GetId()%GetName()%pbody->GetName()%setAttached.size()%ss.str());
+        }
     }
 
     Transform t = plink->GetTransform();
@@ -159,7 +172,7 @@ void KinBody::Release(KinBody &body)
         }
     }
 
-    RAVELOG_DEBUG(str(boost::format("Body %s: body %s not grabbed\n")%GetName()%body.GetName()));
+    RAVELOG_DEBUG_FORMAT("env=%d, body %s is not grabbing body %s", GetEnv()->GetId()%GetName()%body.GetName());
 }
 
 void KinBody::ReleaseAllGrabbed()

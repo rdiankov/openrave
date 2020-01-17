@@ -144,7 +144,7 @@ public:
             if( !planner->InitPlan(robot, params) ) {
                 return false;
             }
-            if( !planner->PlanPath(ptraj) ) {
+            if( !planner->PlanPath(ptraj).GetStatusCode() ) {
                 return false;
             }
 

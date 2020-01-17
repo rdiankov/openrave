@@ -786,11 +786,11 @@ protected:
         FOREACHC(itplugin, _listplugins) {
             PLUGININFO info;
             if( (*itplugin)->GetInfo(info) ) {
-                plugins.push_back(pair<string,PLUGININFO>((*itplugin)->GetName(),info));
+                plugins.emplace_back((*itplugin)->GetName(),info);
             }
         }
         if( !_listRegisteredInterfaces.empty() ) {
-            plugins.push_back(make_pair(string("__internal__"),PLUGININFO()));
+            plugins.emplace_back("__internal__", PLUGININFO());
             plugins.back().second.version = OPENRAVE_VERSION;
             FOREACHC(it,_listRegisteredInterfaces) {
                 RegisteredInterfacePtr registration = it->lock();
