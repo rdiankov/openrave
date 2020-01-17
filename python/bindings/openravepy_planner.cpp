@@ -21,6 +21,7 @@
 #include <openravepy/openravepy_environmentbase.h>
 #include <openravepy/openravepy_collisionreport.h>
 #include <openravepy/openravepy_trajectorybase.h>
+#include <openravepy/openravepy_plannerbase.h>
 
 namespace openravepy {
 
@@ -49,303 +50,273 @@ using py::def;
 
 namespace numeric = py::numeric;
 
-class PyPlannerProgress
-{
-public:
-    PyPlannerProgress() {
+PyPlannerProgress::PyPlannerProgress() {
+}
+PyPlannerProgress::PyPlannerProgress(const PlannerBase::PlannerProgress& progress) {
+    _iteration = progress._iteration;
+}
+std::string PyPlannerProgress::__str__() {
+    return boost::str(boost::format("<PlannerProgress: iter=%d>")%_iteration);
+}
+
+PyPlannerStatus::PyPlannerStatus() {
+}
+
+PyPlannerStatus::PyPlannerStatus(const PlannerStatus& status) {
+    // Just serializeToJason?
+    description = ConvertStringToUnicode(status.description);
+    errorOrigin = ConvertStringToUnicode(status.errorOrigin);
+    statusCode = status.statusCode;
+    jointValues = toPyArray(status.jointValues);
+
+    if( !status.report ) {
+        //_report = "";
+        report = py::none_();
     }
-    PyPlannerProgress(const PlannerBase::PlannerProgress& progress) {
-        _iteration = progress._iteration;
-    }
-    string __str__() {
-        return boost::str(boost::format("<PlannerProgress: iter=%d>")%_iteration);
-    }
-
-    int _iteration = 0;
-};
-
-
-class PyPlannerStatus
-{
-public:
-    PyPlannerStatus() {
-    }
-
-    PyPlannerStatus(const PlannerStatus& status) {
-        // Just serializeToJason?
-        description = ConvertStringToUnicode(status.description);
-        errorOrigin = ConvertStringToUnicode(status.errorOrigin);
-        statusCode = status.statusCode;
-        jointValues = toPyArray(status.jointValues);
-
-        if( !status.report ) {
-            //_report = "";
-            report = py::none_();
-        }
-        else {
-            //_report = status._report->__str__();
-            report = py::to_object(openravepy::toPyCollisionReport(status.report, NULL));
-        }
-
-        ikparam = toPyIkParameterization(status.ikparam);
+    else {
+        //_report = status._report->__str__();
+        report = py::to_object(openravepy::toPyCollisionReport(status.report, NULL));
     }
 
-    object report = py::none_();
-    //std::string _report;
-    object description = py::none_();
-    object errorOrigin = py::none_();
-    object jointValues = py::empty_array_astype<dReal>();
-    object ikparam = py::none_();
-    uint32_t statusCode = 0;
-};
+    ikparam = toPyIkParameterization(status.ikparam);
+}
 
 object toPyPlannerStatus(const PlannerStatus& status)
 {
     return py::to_object(OPENRAVE_SHARED_PTR<PyPlannerStatus>(new PyPlannerStatus(status)));
 }
 
-class PyPlannerBase : public PyInterfaceBase
+PyPlannerBase::PyPlannerParameters::PyPlannerParameters() {
+    _paramswrite.reset(new PlannerBase::PlannerParameters());
+    _paramsread = _paramswrite;
+}
+PyPlannerBase::PyPlannerParameters::PyPlannerParameters(OPENRAVE_SHARED_PTR<PyPlannerParameters> pyparameters) {
+    _paramswrite.reset(new PlannerBase::PlannerParameters());
+    if( !!pyparameters ) {
+        _paramswrite->copy(pyparameters->GetParameters());
+    }
+    _paramsread = _paramswrite;
+}
+PyPlannerBase::PyPlannerParameters::PyPlannerParameters(PlannerBase::PlannerParametersPtr params) : _paramswrite(params), _paramsread(params) {
+}
+PyPlannerBase::PyPlannerParameters::PyPlannerParameters(PlannerBase::PlannerParametersConstPtr params) : _paramsread(params) {
+}
+PyPlannerBase::PyPlannerParameters::~PyPlannerParameters() {
+}
+
+PlannerBase::PlannerParametersConstPtr PyPlannerBase::PyPlannerParameters::GetParameters() const {
+    return _paramsread;
+}
+
+PlannerBase::PlannerParametersPtr PyPlannerBase::PyPlannerParameters::GetParameters() {
+    return _paramswrite;
+}
+
+void PyPlannerBase::PyPlannerParameters::SetRobotActiveJoints(PyRobotBasePtr robot)
 {
-protected:
-    PlannerBasePtr _pplanner;
-public:
-    class PyPlannerParameters
-    {
-        PlannerBase::PlannerParametersPtr _paramswrite;
-        PlannerBase::PlannerParametersConstPtr _paramsread;
-public:
-        PyPlannerParameters() {
-            _paramswrite.reset(new PlannerBase::PlannerParameters());
-            _paramsread = _paramswrite;
-        }
-        PyPlannerParameters(OPENRAVE_SHARED_PTR<PyPlannerParameters> pyparameters) {
-            _paramswrite.reset(new PlannerBase::PlannerParameters());
-            if( !!pyparameters ) {
-                _paramswrite->copy(pyparameters->GetParameters());
-            }
-            _paramsread = _paramswrite;
-        }
-        PyPlannerParameters(PlannerBase::PlannerParametersPtr params) : _paramswrite(params), _paramsread(params) {
-        }
-        PyPlannerParameters(PlannerBase::PlannerParametersConstPtr params) : _paramsread(params) {
-        }
-        virtual ~PyPlannerParameters() {
-        }
-
-        PlannerBase::PlannerParametersConstPtr GetParameters() const {
-            return _paramsread;
-        }
-
-        PlannerBase::PlannerParametersPtr GetParameters() {
-            return _paramswrite;
-        }
-
-        void SetRobotActiveJoints(PyRobotBasePtr robot)
-        {
-            if( !_paramswrite ) {
-                throw OPENRAVE_EXCEPTION_FORMAT0(_("PlannerParameters needs to be non-const"),ORE_Failed);
-            }
-            _paramswrite->SetRobotActiveJoints(openravepy::GetRobot(robot));
-        }
-
-        void SetConfigurationSpecification(PyEnvironmentBasePtr pyenv, PyConfigurationSpecificationPtr pyspec) {
-            _paramswrite->SetConfigurationSpecification(openravepy::GetEnvironment(pyenv), openravepy::GetConfigurationSpecification(pyspec));
-        }
-
-        object GetConfigurationSpecification() const {
-            return py::to_object(openravepy::toPyConfigurationSpecification(_paramswrite->_configurationspecification));
-        }
-
-        void SetExtraParameters(const std::string& s) {
-            _paramswrite->_sExtraParameters = s;
-        }
-
-        void SetRandomGeneratorSeed(uint32_t seed) {
-            _paramswrite->_nRandomGeneratorSeed = seed;
-        }
-
-        void SetGoalConfig(object o)
-        {
-            _paramswrite->vgoalconfig = ExtractArray<dReal>(o);
-        }
-
-        void SetInitialConfig(object o)
-        {
-            _paramswrite->vinitialconfig = ExtractArray<dReal>(o);
-        }
-
-        void SetInitialConfigVelocities(object o)
-        {
-            _paramswrite->_vInitialConfigVelocities = ExtractArray<dReal>(o);
-        }
-
-        void SetGoalConfigVelocities(object o)
-        {
-            _paramswrite->_vGoalConfigVelocities = ExtractArray<dReal>(o);
-        }
-
-        void SetConfigVelocityLimit(object o)
-        {
-            _paramswrite->_vConfigVelocityLimit = ExtractArray<dReal>(o);
-        }
-
-        void SetConfigAccelerationLimit(object o)
-        {
-            _paramswrite->_vConfigAccelerationLimit = ExtractArray<dReal>(o);
-        }
-
-        void SetConfigResolution(object o)
-        {
-            _paramswrite->_vConfigResolution = ExtractArray<dReal>(o);
-        }
-
-        void SetMaxIterations(int nMaxIterations)
-        {
-            _paramswrite->_nMaxIterations = nMaxIterations;
-        }
-
-        object CheckPathAllConstraints(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval, uint32_t options=0xffff, bool filterreturn=false)
-        {
-            const std::vector<dReal> q0, q1, dq0, dq1;
-            ConstraintFilterReturnPtr pfilterreturn;
-            if( filterreturn ) {
-                pfilterreturn.reset(new ConstraintFilterReturn());
-            }
-            int ret = _paramswrite->CheckPathAllConstraints(ExtractArray<dReal>(oq0), ExtractArray<dReal>(oq1), ExtractArray<dReal>(odq0), ExtractArray<dReal>(odq1), timeelapsed, interval, options, pfilterreturn);
-            if( filterreturn ) {
-                py::dict ofilterreturn;
-                ofilterreturn["configurations"] = toPyArray(pfilterreturn->_configurations);
-                ofilterreturn["configurationtimes"] = toPyArray(pfilterreturn->_configurationtimes);
-                ofilterreturn["invalidvalues"] = toPyArray(pfilterreturn->_invalidvalues);
-                ofilterreturn["invalidvelocities"] = toPyArray(pfilterreturn->_invalidvelocities);
-                ofilterreturn["fTimeWhenInvalid"] = pfilterreturn->_fTimeWhenInvalid;
-                ofilterreturn["returncode"] = pfilterreturn->_returncode;
-                ofilterreturn["reportstr"] = pfilterreturn->_report.__str__();
-                return ofilterreturn;
-            }
-            return py::to_object(ret);
-        }
-
-        void SetPostProcessing(const std::string& plannername, const std::string& plannerparameters)
-        {
-            _paramswrite->_sPostProcessingPlanner = plannername;
-            _paramswrite->_sPostProcessingParameters = plannerparameters;
-        }
-
-        string __repr__() {
-            std::stringstream ss;
-            ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);         /// have to do this or otherwise precision gets lost
-            ss << "Planner.PlannerParameters(\"\"\"";
-            ss << *_paramsread << "\"\"\")" << endl;
-            return ss.str();
-        }
-        string __str__() {
-            return boost::str(boost::format("<PlannerParameters, dof=%d>")%_paramsread->GetDOF());
-        }
-        object __unicode__() {
-            return ConvertStringToUnicode(__str__());
-        }
-        bool __eq__(OPENRAVE_SHARED_PTR<PyPlannerParameters> p) {
-            return !!p && _paramsread == p->_paramsread;
-        }
-        bool __ne__(OPENRAVE_SHARED_PTR<PyPlannerParameters> p) {
-            return !p || _paramsread != p->_paramsread;
-        }
-    };
-
-    typedef OPENRAVE_SHARED_PTR<PyPlannerParameters> PyPlannerParametersPtr;
-    typedef OPENRAVE_SHARED_PTR<PyPlannerParameters const> PyPlannerParametersConstPtr;
-
-    PyPlannerBase(PlannerBasePtr pplanner, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pplanner, pyenv), _pplanner(pplanner) {
+    if( !_paramswrite ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("PlannerParameters needs to be non-const"),ORE_Failed);
     }
-    virtual ~PyPlannerBase() {
-    }
+    _paramswrite->SetRobotActiveJoints(openravepy::GetRobot(robot));
+}
 
-    bool InitPlan(PyRobotBasePtr pyrobot, PyPlannerParametersPtr pparams, bool releasegil=false)
-    {
-        openravepy::PythonThreadSaverPtr statesaver;
-        PlannerBase::PlannerParametersConstPtr parameters = pparams->GetParameters();
-        RobotBasePtr probot = openravepy::GetRobot(pyrobot);
-        if( releasegil ) {
-            statesaver.reset(new openravepy::PythonThreadSaver());
-        }
-        return _pplanner->InitPlan(probot,parameters);
-    }
+void PyPlannerBase::PyPlannerParameters::SetConfigurationSpecification(PyEnvironmentBasePtr pyenv, PyConfigurationSpecificationPtr pyspec) {
+    _paramswrite->SetConfigurationSpecification(openravepy::GetEnvironment(pyenv), openravepy::GetConfigurationSpecification(pyspec));
+}
 
-    bool InitPlan(PyRobotBasePtr pbase, const string& params)
-    {
-        std::stringstream ss(params);
-        return _pplanner->InitPlan(openravepy::GetRobot(pbase),ss);
-    }
+object PyPlannerBase::PyPlannerParameters::GetConfigurationSpecification() const {
+    return py::to_object(openravepy::toPyConfigurationSpecification(_paramswrite->_configurationspecification));
+}
 
-    object PlanPath(PyTrajectoryBasePtr pytraj,bool releasegil=true)
-    {
-        openravepy::PythonThreadSaverPtr statesaver;
-        TrajectoryBasePtr ptraj = openravepy::GetTrajectory(pytraj);
-        if( releasegil ) {
-            statesaver.reset(new openravepy::PythonThreadSaver());
-        }
-        PlannerStatus status = _pplanner->PlanPath(ptraj);
-        statesaver.reset(); // unlock
-        return openravepy::toPyPlannerStatus(status);
-    }
+void PyPlannerBase::PyPlannerParameters::SetExtraParameters(const std::string& s) {
+    _paramswrite->_sExtraParameters = s;
+}
 
-    PyPlannerParametersPtr GetParameters() const
-    {
-        PlannerBase::PlannerParametersConstPtr params = _pplanner->GetParameters();
-        if( !params ) {
-            return PyPlannerParametersPtr();
-        }
-        return PyPlannerParametersPtr(new PyPlannerParameters(params));
-    }
+void PyPlannerBase::PyPlannerParameters::SetRandomGeneratorSeed(uint32_t seed) {
+    _paramswrite->_nRandomGeneratorSeed = seed;
+}
 
-    static PlannerAction _PlanCallback(object fncallback, PyEnvironmentBasePtr pyenv, const PlannerBase::PlannerProgress& progress)
-    {
-        object res;
-        PyGILState_STATE gstate = PyGILState_Ensure();
-        try {
-            OPENRAVE_SHARED_PTR<PyPlannerProgress> pyprogress(new PyPlannerProgress(progress));
-            res = fncallback(py::to_object(pyprogress));
-        }
-        catch(...) {
-            RAVELOG_ERROR("exception occured in _PlanCallback:\n");
-            PyErr_Print();
-        }
-        PlannerAction ret = PA_None;
-        if( IS_PYTHONOBJECT_NONE(res) || !res ) {
-            ret = PA_None;
-            RAVELOG_WARN("plan callback nothing returning, so executing default action\n");
+void PyPlannerBase::PyPlannerParameters::SetGoalConfig(object o)
+{
+    _paramswrite->vgoalconfig = ExtractArray<dReal>(o);
+}
+
+void PyPlannerBase::PyPlannerParameters::SetInitialConfig(object o)
+{
+    _paramswrite->vinitialconfig = ExtractArray<dReal>(o);
+}
+
+void PyPlannerBase::PyPlannerParameters::SetInitialConfigVelocities(object o)
+{
+    _paramswrite->_vInitialConfigVelocities = ExtractArray<dReal>(o);
+}
+
+void PyPlannerBase::PyPlannerParameters::SetGoalConfigVelocities(object o)
+{
+    _paramswrite->_vGoalConfigVelocities = ExtractArray<dReal>(o);
+}
+
+void PyPlannerBase::PyPlannerParameters::SetConfigVelocityLimit(object o)
+{
+    _paramswrite->_vConfigVelocityLimit = ExtractArray<dReal>(o);
+}
+
+void PyPlannerBase::PyPlannerParameters::SetConfigAccelerationLimit(object o)
+{
+    _paramswrite->_vConfigAccelerationLimit = ExtractArray<dReal>(o);
+}
+
+void PyPlannerBase::PyPlannerParameters::SetConfigResolution(object o)
+{
+    _paramswrite->_vConfigResolution = ExtractArray<dReal>(o);
+}
+
+void PyPlannerBase::PyPlannerParameters::SetMaxIterations(int nMaxIterations)
+{
+    _paramswrite->_nMaxIterations = nMaxIterations;
+}
+
+object PyPlannerBase::PyPlannerParameters::CheckPathAllConstraints(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval, uint32_t options, bool filterreturn)
+{
+    const std::vector<dReal> q0, q1, dq0, dq1;
+    ConstraintFilterReturnPtr pfilterreturn;
+    if( filterreturn ) {
+        pfilterreturn.reset(new ConstraintFilterReturn());
+    }
+    int ret = _paramswrite->CheckPathAllConstraints(ExtractArray<dReal>(oq0), ExtractArray<dReal>(oq1), ExtractArray<dReal>(odq0), ExtractArray<dReal>(odq1), timeelapsed, interval, options, pfilterreturn);
+    if( filterreturn ) {
+        py::dict ofilterreturn;
+        ofilterreturn["configurations"] = toPyArray(pfilterreturn->_configurations);
+        ofilterreturn["configurationtimes"] = toPyArray(pfilterreturn->_configurationtimes);
+        ofilterreturn["invalidvalues"] = toPyArray(pfilterreturn->_invalidvalues);
+        ofilterreturn["invalidvelocities"] = toPyArray(pfilterreturn->_invalidvelocities);
+        ofilterreturn["fTimeWhenInvalid"] = pfilterreturn->_fTimeWhenInvalid;
+        ofilterreturn["returncode"] = pfilterreturn->_returncode;
+        ofilterreturn["reportstr"] = pfilterreturn->_report.__str__();
+        return ofilterreturn;
+    }
+    return py::to_object(ret);
+}
+
+void PyPlannerBase::PyPlannerParameters::SetPostProcessing(const std::string& plannername, const std::string& plannerparameters)
+{
+    _paramswrite->_sPostProcessingPlanner = plannername;
+    _paramswrite->_sPostProcessingParameters = plannerparameters;
+}
+
+std::string PyPlannerBase::PyPlannerParameters::__repr__() {
+    std::stringstream ss;
+    ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);         /// have to do this or otherwise precision gets lost
+    ss << "Planner.PlannerParameters(\"\"\"";
+    ss << *_paramsread << "\"\"\")" << endl;
+    return ss.str();
+}
+std::string PyPlannerBase::PyPlannerParameters::__str__() {
+    return boost::str(boost::format("<PlannerParameters, dof=%d>")%_paramsread->GetDOF());
+}
+object PyPlannerBase::PyPlannerParameters::__unicode__() {
+    return ConvertStringToUnicode(__str__());
+}
+bool PyPlannerBase::PyPlannerParameters::__eq__(OPENRAVE_SHARED_PTR<PyPlannerParameters> p) {
+    return !!p && _paramsread == p->_paramsread;
+}
+bool PyPlannerBase::PyPlannerParameters::__ne__(OPENRAVE_SHARED_PTR<PyPlannerParameters> p) {
+    return !p || _paramsread != p->_paramsread;
+}
+
+typedef OPENRAVE_SHARED_PTR<PyPlannerBase::PyPlannerParameters> PyPlannerParametersPtr;
+typedef OPENRAVE_SHARED_PTR<PyPlannerBase::PyPlannerParameters const> PyPlannerParametersConstPtr;
+
+PyPlannerBase::PyPlannerBase(PlannerBasePtr pplanner, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pplanner, pyenv), _pplanner(pplanner) {
+}
+PyPlannerBase::~PyPlannerBase() {
+}
+
+bool PyPlannerBase::InitPlan(PyRobotBasePtr pyrobot, PyPlannerParametersPtr pparams, bool releasegil)
+{
+    openravepy::PythonThreadSaverPtr statesaver;
+    PlannerBase::PlannerParametersConstPtr parameters = pparams->GetParameters();
+    RobotBasePtr probot = openravepy::GetRobot(pyrobot);
+    if( releasegil ) {
+        statesaver.reset(new openravepy::PythonThreadSaver());
+    }
+    return _pplanner->InitPlan(probot,parameters);
+}
+
+bool PyPlannerBase::InitPlan(PyRobotBasePtr pbase, const string& params)
+{
+    std::stringstream ss(params);
+    return _pplanner->InitPlan(openravepy::GetRobot(pbase),ss);
+}
+
+object PyPlannerBase::PlanPath(PyTrajectoryBasePtr pytraj, bool releasegil)
+{
+    openravepy::PythonThreadSaverPtr statesaver;
+    TrajectoryBasePtr ptraj = openravepy::GetTrajectory(pytraj);
+    if( releasegil ) {
+        statesaver.reset(new openravepy::PythonThreadSaver());
+    }
+    PlannerStatus status = _pplanner->PlanPath(ptraj);
+    statesaver.reset(); // unlock
+    return openravepy::toPyPlannerStatus(status);
+}
+
+PyPlannerParametersPtr PyPlannerBase::GetParameters() const
+{
+    PlannerBase::PlannerParametersConstPtr params = _pplanner->GetParameters();
+    if( !params ) {
+        return PyPlannerParametersPtr();
+    }
+    return PyPlannerParametersPtr(new PyPlannerParameters(params));
+}
+
+PlannerAction PyPlannerBase::_PlanCallback(object fncallback, PyEnvironmentBasePtr pyenv, const PlannerBase::PlannerProgress& progress)
+{
+    object res;
+    PyGILState_STATE gstate = PyGILState_Ensure();
+    try {
+        OPENRAVE_SHARED_PTR<PyPlannerProgress> pyprogress(new PyPlannerProgress(progress));
+        res = fncallback(py::to_object(pyprogress));
+    }
+    catch(...) {
+        RAVELOG_ERROR("exception occured in _PlanCallback:\n");
+        PyErr_Print();
+    }
+    PlannerAction ret = PA_None;
+    if( IS_PYTHONOBJECT_NONE(res) || !res ) {
+        ret = PA_None;
+        RAVELOG_WARN("plan callback nothing returning, so executing default action\n");
+    }
+    else {
+        extract_<PlannerAction> xb(res);
+        if( xb.check() ) {
+            ret = (PlannerAction)xb;
         }
         else {
-            extract_<PlannerAction> xb(res);
-            if( xb.check() ) {
-                ret = (PlannerAction)xb;
-            }
-            else {
-                RAVELOG_WARN("plan callback nothing returning, so executing default action\n");
-            }
+            RAVELOG_WARN("plan callback nothing returning, so executing default action\n");
         }
-        PyGILState_Release(gstate);
-        return ret;
     }
+    PyGILState_Release(gstate);
+    return ret;
+}
 
-    object RegisterPlanCallback(object fncallback)
-    {
-        if( !fncallback ) {
-            throw openrave_exception(_("callback not specified"));
-        }
-        UserDataPtr p = _pplanner->RegisterPlanCallback(boost::bind(&PyPlannerBase::_PlanCallback,fncallback,_pyenv,_1));
-        if( !p ) {
-            throw openrave_exception(_("no registration callback returned"));
-        }
-        return toPyUserData(p);
+object PyPlannerBase::RegisterPlanCallback(object fncallback)
+{
+    if( !fncallback ) {
+        throw openrave_exception(_("callback not specified"));
     }
+    UserDataPtr p = _pplanner->RegisterPlanCallback(boost::bind(&PyPlannerBase::_PlanCallback,fncallback,_pyenv,_1));
+    if( !p ) {
+        throw openrave_exception(_("no registration callback returned"));
+    }
+    return toPyUserData(p);
+}
 
-    PlannerBasePtr GetPlanner()
-    {
-        return _pplanner;
-    }
-};
+PlannerBasePtr PyPlannerBase::GetPlanner()
+{
+    return _pplanner;
+}
+
 
 PlannerBasePtr GetPlanner(PyPlannerBasePtr pyplanner)
 {

@@ -23,6 +23,31 @@
 namespace openravepy {
 using py::object;
 
+class PyPlannerProgress
+{
+public:
+    PyPlannerProgress();
+    PyPlannerProgress(const PlannerBase::PlannerProgress& progress);
+    std::string __str__();
+    int _iteration = 0;
+};
+
+
+class PyPlannerStatus
+{
+public:
+    PyPlannerStatus();
+    PyPlannerStatus(const PlannerStatus& status);
+
+    object report = py::none_();
+    //std::string _report;
+    object description = py::none_();
+    object errorOrigin = py::none_();
+    object jointValues = py::empty_array_astype<dReal>();
+    object ikparam = py::none_();
+    uint32_t statusCode = 0;
+};
+
 class PyPlannerBase : public PyInterfaceBase
 {
 protected:
