@@ -1586,10 +1586,32 @@ void init_openravepy_global()
 #endif
                                            .def("ExtractDeltaTime",&PyConfigurationSpecification::ExtractDeltaTime, PY_ARGS("data") DOXY_FN(ConfigurationSpecification,ExtractDeltaTime))
                                            .def("InsertDeltaTime",&PyConfigurationSpecification::InsertDeltaTime, PY_ARGS("data","deltatime") DOXY_FN(ConfigurationSpecification,InsertDeltaTime))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                                           .def("InsertJointValues", &PyConfigurationSpecification::InsertJointValues,
+                                                "data"_a,
+                                                "values"_a,
+                                                "body"_a,
+                                                "indices"_a,
+                                                "timederivative"_a = 0,
+                                                DOXY_FN(ConfigurationSpecification, InsertJointValues)
+                                            )                          
+#else
                                            .def("InsertJointValues",&PyConfigurationSpecification::InsertJointValues, PY_ARGS("data","values","body","indices","timederivative") DOXY_FN(ConfigurationSpecification,InsertJointValues))
+#endif
                                            .def("ExtractUsedBodies", &PyConfigurationSpecification::ExtractUsedBodies, PY_ARGS("env") DOXY_FN(ConfigurationSpecification, ExtractUsedBodies))
                                            .def("ExtractUsedIndices", &PyConfigurationSpecification::ExtractUsedIndices, PY_ARGS("env") DOXY_FN(ConfigurationSpecification, ExtractUsedIndices))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                                           .def("ConvertData", &PyConfigurationSpecification::ConvertData, 
+                                                "targetspec"_a,
+                                                "sourcedata"_a,
+                                                "numpoints"_a,
+                                                "env"_a,
+                                                "filluninitialized"_a = true,
+                                                DOXY_FN(ConfigurationSpecification, ConvertData)
+                                            )
+#else
                                            .def("ConvertData", &PyConfigurationSpecification::ConvertData, PY_ARGS("targetspec", "sourcedata", "numpoints", "env", "filluninitialized") DOXY_FN(ConfigurationSpecification, ConvertData))
+#endif
                                            .def("ConvertDataFromPrevious", &PyConfigurationSpecification::ConvertDataFromPrevious, PY_ARGS("targetdata", "targetspec", "sourcedata", "numpoints", "env") DOXY_FN(ConfigurationSpecification, ConvertData))
                                            .def("GetGroups", &PyConfigurationSpecification::GetGroups, /*PY_ARGS("env")*/ "returns a list of the groups")
                                            .def("__eq__",&PyConfigurationSpecification::__eq__)
