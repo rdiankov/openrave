@@ -2393,21 +2393,19 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
     });
     pyOpenRAVEException.def_property_readonly("errortype",[](py::object o) {
         py::object oargs = o.attr("args");
+        py::object oret;
         if( len(oargs) > 1 ) {
-            return oargs[1];
+            oret = oargs[1];
         }
-        else {
-            return py::object();
-        }
+        return oret;
     });
     pyOpenRAVEException.def("GetCode", [](py::object o) {
         py::object oargs = o.attr("args");
+        py::object oret;
         if( len(oargs) > 1 ) {
-            return oargs[1];
+            oret = oargs[1];
         }
-        else {
-            return py::object();
-        }
+        return oret;
     });
 
     py::register_exception_translator([](std::exception_ptr p) {

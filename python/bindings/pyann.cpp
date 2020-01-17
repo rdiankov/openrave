@@ -331,7 +331,6 @@ OPENRAVE_PYTHON_MODULE(pyANN_int)
     import_array();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals; // "..."_a
-    class_< pyann_exception >(m, "_pyann_exception_" )
 #else
     numeric::array::set_module_and_type("numpy", "ndarray");
     int_from_number<int>();
