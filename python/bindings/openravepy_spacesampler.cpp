@@ -91,11 +91,11 @@ public:
         throw OPENRAVE_EXCEPTION_FORMAT(_("%d sampling type not supported"),type,ORE_InvalidArguments);
     }
 
-    object SampleSequence(SampleDataType type, size_t num,IntervalType interval=IT_Closed)
+    object SampleSequence(SampleDataType type, size_t num, int interval = IntervalType::IT_Closed)
     {
         if( type == SDT_Real ) {
             std::vector<dReal> samples;
-            _pspacesampler->SampleSequence(samples,num,interval);
+            _pspacesampler->SampleSequence(samples,num, (IntervalType) interval);
             return toPyArray(samples);
         }
         else if( type == SDT_Uint32 ) {
@@ -106,11 +106,11 @@ public:
         throw OPENRAVE_EXCEPTION_FORMAT(_("%d sampling type not supported"),type,ORE_InvalidArguments);
     }
 
-    object SampleSequence2D(SampleDataType type, size_t num,IntervalType interval=IT_Closed)
+    object SampleSequence2D(SampleDataType type, size_t num, int interval = IntervalType::IT_Closed)
     {
         if( type == SDT_Real ) {
             std::vector<dReal> samples;
-            _pspacesampler->SampleSequence(samples,num,interval);
+            _pspacesampler->SampleSequence(samples,num, (IntervalType) interval);
             return _ReturnSamples2D(samples);
         }
         else if( type == SDT_Uint32 ) {
@@ -121,9 +121,9 @@ public:
         throw OPENRAVE_EXCEPTION_FORMAT(_("%d sampling type not supported"),type,ORE_InvalidArguments);
     }
 
-    dReal SampleSequenceOneReal(IntervalType interval=IT_Closed)
+    dReal SampleSequenceOneReal(int interval = IntervalType::IT_Closed)
     {
-        return _pspacesampler->SampleSequenceOneReal(interval);
+        return _pspacesampler->SampleSequenceOneReal((IntervalType) interval);
     }
 
     uint32_t SampleSequenceOneUInt32()
@@ -131,11 +131,11 @@ public:
         return _pspacesampler->SampleSequenceOneUInt32();
     }
 
-    object SampleComplete(SampleDataType type, size_t num,IntervalType interval=IT_Closed)
+    object SampleComplete(SampleDataType type, size_t num, int interval = IntervalType::IT_Closed)
     {
         if( type == SDT_Real ) {
             std::vector<dReal> samples;
-            _pspacesampler->SampleComplete(samples,num,interval);
+            _pspacesampler->SampleComplete(samples,num, (IntervalType) interval);
             return toPyArray(samples);
         }
         else if( type == SDT_Uint32 ) {
@@ -146,11 +146,11 @@ public:
         throw OPENRAVE_EXCEPTION_FORMAT(_("%d sampling type not supported"),type,ORE_InvalidArguments);
     }
 
-    object SampleComplete2D(SampleDataType type, size_t num,IntervalType interval=IT_Closed)
+    object SampleComplete2D(SampleDataType type, size_t num, int interval = IntervalType::IT_Closed)
     {
         if( type == SDT_Real ) {
             std::vector<dReal> samples;
-            _pspacesampler->SampleComplete(samples,num,interval);
+            _pspacesampler->SampleComplete(samples,num, (IntervalType) interval);
             return _ReturnSamples2D(samples);
         }
         else if( type == SDT_Uint32 ) {
@@ -238,7 +238,7 @@ void init_openravepy_spacesampler()
                              .def("SampleSequence", &PySpaceSamplerBase::SampleSequence,
                                 "type"_a,
                                 "num"_a,
-                                "interval"_a = IT_Closed,
+                                "interval"_a = (int) IntervalType::IT_Closed,
                                 DOXY_FN(SpaceSamplerBase, SampleSequence "std::vector; size_t; IntervalType")
                             )
 #else
@@ -248,7 +248,7 @@ void init_openravepy_spacesampler()
                              .def("SampleSequence2D", &PySpaceSamplerBase::SampleSequence2D,
                                 "type"_a,
                                 "num"_a,
-                                "interval"_a = IT_Closed,
+                                "interval"_a = (int) IntervalType::IT_Closed,
                                 DOXY_FN(SpaceSamplerBase, SampleSequence "std::vector; size_t; IntervalType")
                             )
 #else
@@ -256,7 +256,7 @@ void init_openravepy_spacesampler()
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                              .def("SampleSequenceOneReal", &PySpaceSamplerBase::SampleSequenceOneReal,
-                                "interval"_a = IT_Closed,
+                                "interval"_a = (int) IntervalType::IT_Closed,
                                 DOXY_FN(SpaceSamplerBase, SampleSequenceOneReal)
                             )
 #else
@@ -267,7 +267,7 @@ void init_openravepy_spacesampler()
                              .def("SampleComplete", &PySpaceSamplerBase::SampleComplete,
                                 "type"_a,
                                 "num"_a,
-                                "interval"_a = IT_Closed,
+                                "interval"_a = (int) IntervalType::IT_Closed,
                                 DOXY_FN(SpaceSamplerBase, ampleComplete "std::vector; size_t; IntervalType")
                             )
 #else
@@ -277,7 +277,7 @@ void init_openravepy_spacesampler()
                              .def("SampleComplete2D", &PySpaceSamplerBase::SampleComplete2D,
                                 "type"_a,
                                 "num"_a,
-                                "interval"_a = IT_Closed,
+                                "interval"_a = (int) IntervalType::IT_Closed,
                                 DOXY_FN(SpaceSamplerBase, SampleComplete "std::vector; size_t; IntervalType")
                             )
 #else

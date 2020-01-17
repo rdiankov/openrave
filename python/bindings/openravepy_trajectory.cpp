@@ -18,6 +18,7 @@
 #include <openravepy/openravepy_int.h>
 #include <openravepy/openravepy_configurationspecification.h>
 #include <openravepy/openravepy_environmentbase.h>
+#include <openravepy/openravepy_trajectorybase.h>
 
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
 #include <boost/python/slice.hpp> // slice objects
@@ -51,321 +52,315 @@ using py::def;
 
 namespace numeric = py::numeric;
 
-class PyTrajectoryBase : public PyInterfaceBase
+PyTrajectoryBase::PyTrajectoryBase(TrajectoryBasePtr pTrajectory, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pTrajectory, pyenv),_ptrajectory(pTrajectory) {
+}
+PyTrajectoryBase::~PyTrajectoryBase() {
+}
+
+void PyTrajectoryBase::Init(PyConfigurationSpecificationPtr pyspec) {
+    _ptrajectory->Init(openravepy::GetConfigurationSpecification(pyspec));
+}
+
+void PyTrajectoryBase::Init(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) {
+    PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pygroup));
+    this->Init(pyspec);
+}
+
+void PyTrajectoryBase::Insert(size_t index, object odata)
 {
-protected:
-    TrajectoryBasePtr _ptrajectory;
-public:
-    PyTrajectoryBase(TrajectoryBasePtr pTrajectory, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pTrajectory, pyenv),_ptrajectory(pTrajectory) {
+    std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+    _ptrajectory->Insert(index,vdata);
+}
+
+void PyTrajectoryBase::Insert(size_t index, object odata, bool bOverwrite)
+{
+    std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+    _ptrajectory->Insert(index,vdata,bOverwrite);
+}
+
+void PyTrajectoryBase::Insert(size_t index, object odata, PyConfigurationSpecificationPtr pyspec)
+{
+    std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+    _ptrajectory->Insert(index,vdata,openravepy::GetConfigurationSpecification(pyspec));
+}
+
+void PyTrajectoryBase::Insert(size_t index, object odata, PyConfigurationSpecificationPtr pyspec, bool bOverwrite)
+{
+    std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+    _ptrajectory->Insert(index,vdata,openravepy::GetConfigurationSpecification(pyspec),bOverwrite);
+}
+
+void PyTrajectoryBase::Insert(size_t index, object odata, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup)
+{
+    PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pygroup));
+    this->Insert(index, odata, pyspec);
+}
+
+void PyTrajectoryBase::Insert(size_t index, object odata, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup, bool bOverwrite)
+{
+    PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pygroup));
+    this->Insert(index, odata, pyspec, bOverwrite);
+}
+
+void PyTrajectoryBase::Remove(size_t startindex, size_t endindex)
+{
+    _ptrajectory->Remove(startindex,endindex);
+}
+
+object PyTrajectoryBase::Sample(dReal time) const
+{
+    std::vector<dReal> values;
+    _ptrajectory->Sample(values,time);
+    return toPyArray(values);
+}
+
+object PyTrajectoryBase::Sample(dReal time, PyConfigurationSpecificationPtr pyspec) const
+{
+    std::vector<dReal> values;
+    _ptrajectory->Sample(values,time,openravepy::GetConfigurationSpecification(pyspec), true);
+    return toPyArray(values);
+}
+
+object PyTrajectoryBase::Sample(dReal time, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const
+{
+    // pybind11 does not like implicit conversion, so fails to convert this function into
+    // object Sample(dReal time, PyConfigurationSpecificationPtr pyspec) const;
+    PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pygroup));
+    return this->Sample(time, pyspec);
+}
+
+object PyTrajectoryBase::SampleFromPrevious(object odata, dReal time, PyConfigurationSpecificationPtr pyspec) const
+{
+    std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+    _ptrajectory->Sample(vdata,time,openravepy::GetConfigurationSpecification(pyspec), false);
+    return toPyArray(vdata);
+}
+
+object PyTrajectoryBase::SampleFromPrevious(object odata, dReal time, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const
+{
+    PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pygroup));
+    return this->SampleFromPrevious(odata, time, pyspec);
+}
+
+object PyTrajectoryBase::SamplePoints2D(object otimes) const
+{
+    std::vector<dReal> values;
+    std::vector<dReal> vtimes = ExtractArray<dReal>(otimes);
+    _ptrajectory->SamplePoints(values,vtimes);
+
+    int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
+    npy_intp dims[] = { npy_intp(values.size()/numdof), npy_intp(numdof) };
+    PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+    if( values.size() > 0 ) {
+        memcpy(PyArray_DATA(pypos), &values[0], values.size()*sizeof(values[0]));
     }
-    virtual ~PyTrajectoryBase() {
+    return py::to_array_astype<dReal>(pypos);
+}
+
+object PyTrajectoryBase::SamplePoints2D(object otimes, PyConfigurationSpecificationPtr pyspec) const
+{
+    std::vector<dReal> values;
+    ConfigurationSpecification spec = openravepy::GetConfigurationSpecification(pyspec);
+    std::vector<dReal> vtimes = ExtractArray<dReal>(otimes);
+    _ptrajectory->SamplePoints(values, vtimes, spec);
+
+    npy_intp dims[] = { npy_intp(values.size()/spec.GetDOF()), npy_intp(spec.GetDOF()) };
+    PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+    if( values.size() > 0 ) {
+        memcpy(PyArray_DATA(pypos), &values[0], values.size()*sizeof(values[0]));
     }
+    return py::to_array_astype<dReal>(pypos);
+}
 
-    void Init(PyConfigurationSpecificationPtr pyspec) {
-        _ptrajectory->Init(openravepy::GetConfigurationSpecification(pyspec));
+object PyTrajectoryBase::SamplePoints2D(object otimes, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const
+{
+    PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pygroup));
+    return this->SamplePoints2D(otimes, pyspec);
+}
+
+object PyTrajectoryBase::GetConfigurationSpecification() const {
+    return py::to_object(openravepy::toPyConfigurationSpecification(_ptrajectory->GetConfigurationSpecification()));
+}
+
+size_t PyTrajectoryBase::GetNumWaypoints() const {
+    return _ptrajectory->GetNumWaypoints();
+}
+
+object PyTrajectoryBase::GetWaypoints(size_t startindex, size_t endindex) const
+{
+    std::vector<dReal> values;
+    _ptrajectory->GetWaypoints(startindex,endindex,values);
+    return toPyArray(values);
+}
+
+object PyTrajectoryBase::GetWaypoints(size_t startindex, size_t endindex, PyConfigurationSpecificationPtr pyspec) const
+{
+    std::vector<dReal> values;
+    _ptrajectory->GetWaypoints(startindex,endindex,values,openravepy::GetConfigurationSpecification(pyspec));
+    return toPyArray(values);
+}
+
+object PyTrajectoryBase::GetWaypoints(size_t startindex, size_t endindex, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const
+{
+    PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pygroup));
+    return this->GetWaypoints(startindex, endindex, pyspec);
+}
+
+// similar to GetWaypoints except returns a 2D array, one row for every waypoint
+object PyTrajectoryBase::GetWaypoints2D(size_t startindex, size_t endindex) const
+{
+    std::vector<dReal> values;
+    _ptrajectory->GetWaypoints(startindex,endindex,values);
+    int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
+    npy_intp dims[] = { npy_intp(values.size()/numdof), npy_intp(numdof) };
+    PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+    if( values.size() > 0 ) {
+        memcpy(PyArray_DATA(pypos), &values[0], values.size()*sizeof(values[0]));
     }
+    return py::to_array_astype<dReal>(pypos);
+}
 
-    void Init(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) {
-        PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pygroup));
-        this->Init(pyspec);
-    }
+object PyTrajectoryBase::__getitem__(int index) const
+{
+    return GetWaypoint(index);
+}
 
-    void Insert(size_t index, object odata)
-    {
-        std::vector<dReal> vdata = ExtractArray<dReal>(odata);
-        _ptrajectory->Insert(index,vdata);
-    }
-
-    void Insert(size_t index, object odata, bool bOverwrite)
-    {
-        std::vector<dReal> vdata = ExtractArray<dReal>(odata);
-        _ptrajectory->Insert(index,vdata,bOverwrite);
-    }
-
-    void Insert(size_t index, object odata, PyConfigurationSpecificationPtr pyspec)
-    {
-        std::vector<dReal> vdata = ExtractArray<dReal>(odata);
-        _ptrajectory->Insert(index,vdata,openravepy::GetConfigurationSpecification(pyspec));
-    }
-
-    void Insert(size_t index, object odata, PyConfigurationSpecificationPtr pyspec, bool bOverwrite)
-    {
-        std::vector<dReal> vdata = ExtractArray<dReal>(odata);
-        _ptrajectory->Insert(index,vdata,openravepy::GetConfigurationSpecification(pyspec),bOverwrite);
-    }
-
-    void Insert(size_t index, object odata, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup)
-    {
-        PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pygroup));
-        this->Insert(index, odata, pyspec);
-    }
-
-    void Insert(size_t index, object odata, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup, bool bOverwrite)
-    {
-        PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pygroup));
-        this->Insert(index, odata, pyspec, bOverwrite);
-    }
-
-    void Remove(size_t startindex, size_t endindex)
-    {
-        _ptrajectory->Remove(startindex,endindex);
-    }
-
-    object Sample(dReal time) const
-    {
-        std::vector<dReal> values;
-        _ptrajectory->Sample(values,time);
-        return toPyArray(values);
-    }
-
-    object Sample(dReal time, PyConfigurationSpecificationPtr pyspec) const
-    {
-        std::vector<dReal> values;
-        _ptrajectory->Sample(values,time,openravepy::GetConfigurationSpecification(pyspec), true);
-        return toPyArray(values);
-    }
-
-    object Sample(dReal time, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const
-    {
-        // pybind11 does not like implicit conversion, so fails to convert this function into
-        // object Sample(dReal time, PyConfigurationSpecificationPtr pyspec) const;
-        PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pygroup));
-        return this->Sample(time, pyspec);
-    }
-
-    object SampleFromPrevious(object odata, dReal time, PyConfigurationSpecificationPtr pyspec) const
-    {
-        std::vector<dReal> vdata = ExtractArray<dReal>(odata);
-        _ptrajectory->Sample(vdata,time,openravepy::GetConfigurationSpecification(pyspec), false);
-        return toPyArray(vdata);
-    }
-
-    object SampleFromPrevious(object odata, dReal time, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const
-    {
-        PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pygroup));
-        return this->SampleFromPrevious(odata, time, pyspec);
-    }
-
-    object SamplePoints2D(object otimes) const
-    {
-        std::vector<dReal> values;
-        std::vector<dReal> vtimes = ExtractArray<dReal>(otimes);
-        _ptrajectory->SamplePoints(values,vtimes);
-
-        int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
-        npy_intp dims[] = { npy_intp(values.size()/numdof), npy_intp(numdof) };
-        PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-        if( values.size() > 0 ) {
-            memcpy(PyArray_DATA(pypos), &values[0], values.size()*sizeof(values[0]));
-        }
-        return py::to_array_astype<dReal>(pypos);
-    }
-
-    object SamplePoints2D(object otimes, PyConfigurationSpecificationPtr pyspec) const
-    {
-        std::vector<dReal> values;
-        ConfigurationSpecification spec = openravepy::GetConfigurationSpecification(pyspec);
-        std::vector<dReal> vtimes = ExtractArray<dReal>(otimes);
-        _ptrajectory->SamplePoints(values, vtimes, spec);
-
-        npy_intp dims[] = { npy_intp(values.size()/spec.GetDOF()), npy_intp(spec.GetDOF()) };
-        PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-        if( values.size() > 0 ) {
-            memcpy(PyArray_DATA(pypos), &values[0], values.size()*sizeof(values[0]));
-        }
-        return py::to_array_astype<dReal>(pypos);
-    }
-
-    object SamplePoints2D(object otimes, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const
-    {
-        PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pygroup));
-        return this->SamplePoints2D(otimes, pyspec);
-    }
-
-    object GetConfigurationSpecification() const {
-        return py::to_object(openravepy::toPyConfigurationSpecification(_ptrajectory->GetConfigurationSpecification()));
-    }
-
-    size_t GetNumWaypoints() const {
-        return _ptrajectory->GetNumWaypoints();
-    }
-
-    object GetWaypoints(size_t startindex, size_t endindex) const
-    {
-        std::vector<dReal> values;
-        _ptrajectory->GetWaypoints(startindex,endindex,values);
-        return toPyArray(values);
-    }
-
-    object GetWaypoints(size_t startindex, size_t endindex, PyConfigurationSpecificationPtr pyspec) const
-    {
-        std::vector<dReal> values;
-        _ptrajectory->GetWaypoints(startindex,endindex,values,openravepy::GetConfigurationSpecification(pyspec));
-        return toPyArray(values);
-    }
-
-    object GetWaypoints(size_t startindex, size_t endindex, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const
-    {
-        PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pygroup));
-        return this->GetWaypoints(startindex, endindex, pyspec);
-    }
-
-    // similar to GetWaypoints except returns a 2D array, one row for every waypoint
-    object GetWaypoints2D(size_t startindex, size_t endindex) const
-    {
-        std::vector<dReal> values;
-        _ptrajectory->GetWaypoints(startindex,endindex,values);
-        int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
-        npy_intp dims[] = { npy_intp(values.size()/numdof), npy_intp(numdof) };
-        PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-        if( values.size() > 0 ) {
-            memcpy(PyArray_DATA(pypos), &values[0], values.size()*sizeof(values[0]));
-        }
-        return py::to_array_astype<dReal>(pypos);
-    }
-
-    object __getitem__(int index) const
-    {
-        return GetWaypoint(index);
-    }
-
-    object __getitem__(py::slice indices) const
-    {
-        std::vector<int>vindices;
-        int len = _ptrajectory->GetNumWaypoints();
+object PyTrajectoryBase::__getitem__(py::slice indices) const
+{
+    std::vector<int>vindices;
+    int len = _ptrajectory->GetNumWaypoints();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        // https://github.com/pybind/pybind11/issues/1095
-        int start, stop, step;
-        size_t len_ = len, start_, stop_, step_, slicelength_;
-        if (indices.compute(len_, &start_, &stop_, &step_, &slicelength_)) {
-            step = step_;
-            start = start_;
-            stop = stop_;
-        }
-        else {
-            step = 1;
-            start = step > 0 ? 0 : len-1;
-            stop = step > 0 ? len : -1;
-        }
+    // https://github.com/pybind/pybind11/issues/1095
+    int start, stop, step;
+    size_t len_ = len, start_, stop_, step_, slicelength_;
+    if (indices.compute(len_, &start_, &stop_, &step_, &slicelength_)) {
+        step = step_;
+        start = start_;
+        stop = stop_;
+    }
+    else {
+        step = 1;
+        start = step > 0 ? 0 : len-1;
+        stop = step > 0 ? len : -1;
+    }
 #else
-        int step = !IS_PYTHONOBJECT_NONE(indices.step()) ? extract<int>(indices.step()) : 1;
-        int start = !IS_PYTHONOBJECT_NONE(indices.start()) ? extract<int>(indices.start()) : step>0 ? 0 : len-1;
-        int stop = !IS_PYTHONOBJECT_NONE(indices.stop()) ? extract<int>(indices.stop()) : step>0 ? len : -1;
+    int step = !IS_PYTHONOBJECT_NONE(indices.step()) ? extract<int>(indices.step()) : 1;
+    int start = !IS_PYTHONOBJECT_NONE(indices.start()) ? extract<int>(indices.start()) : step>0 ? 0 : len-1;
+    int stop = !IS_PYTHONOBJECT_NONE(indices.stop()) ? extract<int>(indices.stop()) : step>0 ? len : -1;
 #endif // USE_PYBIND11_PYTHON_BINDINGS
-        if(step==0) {
-            throw OPENRAVE_EXCEPTION_FORMAT0(_("step cannot be 0"),ORE_InvalidArguments);
-        }
-        for(int i=start;step>0 ? i<stop : i>stop;i+=step) {
-            vindices.push_back(i);
-        }
-
-        std::vector<dReal> values;
-        _ptrajectory->GetWaypoint(0,values);
-        int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
-        npy_intp dims[] = { npy_intp(vindices.size()), npy_intp(numdof) };
-        PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-        int waypointSize = values.size()*sizeof(values[0]);
-        for(int i=0;i<vindices.size();i++) {
-            _ptrajectory->GetWaypoint(vindices[i],values);
-            memcpy(PyArray_BYTES(pypos)+(i*waypointSize), &values[0], waypointSize);
-        }
-        return py::to_array_astype<dReal>(pypos);
+    if(step==0) {
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("step cannot be 0"),ORE_InvalidArguments);
+    }
+    for(int i=start;step>0 ? i<stop : i>stop;i+=step) {
+        vindices.push_back(i);
     }
 
-    object GetAllWaypoints2D() const
-    {
-        return GetWaypoints2D(0, _ptrajectory->GetNumWaypoints());
+    std::vector<dReal> values;
+    _ptrajectory->GetWaypoint(0,values);
+    int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
+    npy_intp dims[] = { npy_intp(vindices.size()), npy_intp(numdof) };
+    PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+    int waypointSize = values.size()*sizeof(values[0]);
+    for(int i=0;i<vindices.size();i++) {
+        _ptrajectory->GetWaypoint(vindices[i],values);
+        memcpy(PyArray_BYTES(pypos)+(i*waypointSize), &values[0], waypointSize);
     }
+    return py::to_array_astype<dReal>(pypos);
+}
 
-    object GetWaypoints2D(size_t startindex, size_t endindex, PyConfigurationSpecificationPtr pyspec) const
-    {
-        std::vector<dReal> values;
-        ConfigurationSpecification spec = openravepy::GetConfigurationSpecification(pyspec);
-        _ptrajectory->GetWaypoints(startindex,endindex,values,spec);
-        npy_intp dims[] = { npy_intp(values.size()/spec.GetDOF()), npy_intp(spec.GetDOF()) };
-        PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-        if( values.size() > 0 ) {
-            memcpy(PyArray_DATA(pypos), &values[0], values.size()*sizeof(values[0]));
-        }
-        return py::to_array_astype<dReal>(pypos);
-    }
+object PyTrajectoryBase::GetAllWaypoints2D() const
+{
+    return GetWaypoints2D(0, _ptrajectory->GetNumWaypoints());
+}
 
-    object GetWaypoints2D(size_t startindex, size_t endindex, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const
-    {
-        PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pygroup));
-        return this->GetWaypoints2D(startindex, endindex, pyspec);
+object PyTrajectoryBase::GetWaypoints2D(size_t startindex, size_t endindex, PyConfigurationSpecificationPtr pyspec) const
+{
+    std::vector<dReal> values;
+    ConfigurationSpecification spec = openravepy::GetConfigurationSpecification(pyspec);
+    _ptrajectory->GetWaypoints(startindex,endindex,values,spec);
+    npy_intp dims[] = { npy_intp(values.size()/spec.GetDOF()), npy_intp(spec.GetDOF()) };
+    PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+    if( values.size() > 0 ) {
+        memcpy(PyArray_DATA(pypos), &values[0], values.size()*sizeof(values[0]));
     }
+    return py::to_array_astype<dReal>(pypos);
+}
 
-    object GetAllWaypoints2D(PyConfigurationSpecificationPtr pyspec) const
-    {
-        return GetWaypoints2D(0, _ptrajectory->GetNumWaypoints(), pyspec);
-    }
+object PyTrajectoryBase::GetWaypoints2D(size_t startindex, size_t endindex, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const
+{
+    PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pygroup));
+    return this->GetWaypoints2D(startindex, endindex, pyspec);
+}
 
-    object GetAllWaypoints2D(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const
-    {
-        PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pygroup));
-        return this->GetAllWaypoints2D(pyspec);
-    }
+object PyTrajectoryBase::GetAllWaypoints2D(PyConfigurationSpecificationPtr pyspec) const
+{
+    return GetWaypoints2D(0, _ptrajectory->GetNumWaypoints(), pyspec);
+}
 
-    object GetWaypoint(int index) const
-    {
-        std::vector<dReal> values;
-        _ptrajectory->GetWaypoint(index,values);
-        return toPyArray(values);
-    }
+object PyTrajectoryBase::GetAllWaypoints2D(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const
+{
+    PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pygroup));
+    return this->GetAllWaypoints2D(pyspec);
+}
 
-    object GetWaypoint(int index, PyConfigurationSpecificationPtr pyspec) const
-    {
-        std::vector<dReal> values;
-        _ptrajectory->GetWaypoint(index,values,openravepy::GetConfigurationSpecification(pyspec));
-        return toPyArray(values);
-    }
+object PyTrajectoryBase::GetWaypoint(int index) const
+{
+    std::vector<dReal> values;
+    _ptrajectory->GetWaypoint(index,values);
+    return toPyArray(values);
+}
 
-    object GetWaypoint(int index, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const
-    {
-        PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pygroup));
-        return this->GetWaypoint(index, pyspec);
-    }
+object PyTrajectoryBase::GetWaypoint(int index, PyConfigurationSpecificationPtr pyspec) const
+{
+    std::vector<dReal> values;
+    _ptrajectory->GetWaypoint(index,values,openravepy::GetConfigurationSpecification(pyspec));
+    return toPyArray(values);
+}
 
-    size_t GetFirstWaypointIndexAfterTime(dReal time) const
-    {
-        return _ptrajectory->GetFirstWaypointIndexAfterTime(time);
-    }
+object PyTrajectoryBase::GetWaypoint(int index, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const
+{
+    PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pygroup));
+    return this->GetWaypoint(index, pyspec);
+}
 
-    dReal GetDuration() const {
-        return _ptrajectory->GetDuration();
-    }
+size_t PyTrajectoryBase::GetFirstWaypointIndexAfterTime(dReal time) const
+{
+    return _ptrajectory->GetFirstWaypointIndexAfterTime(time);
+}
 
-    PyTrajectoryBasePtr deserialize(const string& s)
-    {
-        std::stringstream ss(s);
-        InterfaceBasePtr p = _ptrajectory->deserialize(ss);
-        return PyTrajectoryBasePtr(new PyTrajectoryBase(RaveInterfaceCast<TrajectoryBase>(p),_pyenv));
-    }
+dReal PyTrajectoryBase::GetDuration() const {
+    return _ptrajectory->GetDuration();
+}
 
-    object serialize(object ooptions=py::none_())
-    {
-        std::stringstream ss;
-        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-        _ptrajectory->serialize(ss,pyGetIntFromPy(ooptions,0));
-        return py::to_object(ss.str());
-    }
+PyTrajectoryBasePtr PyTrajectoryBase::deserialize(const string& s)
+{
+    std::stringstream ss(s);
+    InterfaceBasePtr p = _ptrajectory->deserialize(ss);
+    return PyTrajectoryBasePtr(new PyTrajectoryBase(RaveInterfaceCast<TrajectoryBase>(p),_pyenv));
+}
 
-    bool Read(const string& s, object probot) {
-        RAVELOG_WARN("Trajectory.Read deprecated please use Trajerctory.deserialize\n");
-        deserialize(s);
-        return true;
-    }
+object PyTrajectoryBase::serialize(object ooptions)
+{
+    std::stringstream ss;
+    ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+    _ptrajectory->serialize(ss,pyGetIntFromPy(ooptions,0));
+    return py::to_object(ss.str());
+}
 
-    object Write(object options) {
-        RAVELOG_WARN("Trajectory.Write deprecated please use Trajerctory.serialize\n");
-        return serialize(options);
-    }
+bool PyTrajectoryBase::Read(const string& s, object probot) {
+    RAVELOG_WARN("Trajectory.Read deprecated please use Trajerctory.deserialize\n");
+    deserialize(s);
+    return true;
+}
 
-    TrajectoryBasePtr GetTrajectory() {
-        return _ptrajectory;
-    }
-};
+object PyTrajectoryBase::Write(object options) {
+    RAVELOG_WARN("Trajectory.Write deprecated please use Trajerctory.serialize\n");
+    return serialize(options);
+}
+
+TrajectoryBasePtr PyTrajectoryBase::GetTrajectory() {
+    return _ptrajectory;
+}
 
 TrajectoryBasePtr GetTrajectory(object o)
 {
