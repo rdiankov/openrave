@@ -3833,7 +3833,16 @@ void init_openravepy_kinbody()
                          .def("SetVelocity",&PyKinBody::SetVelocity, PY_ARGS("linear","angular") DOXY_FN(KinBody,SetVelocity "const Vector; const Vector"))
                          .def("SetDOFVelocities",setdofvelocities1, PY_ARGS("dofvelocities") DOXY_FN(KinBody,SetDOFVelocities "const std::vector; uint32_t"))
                          .def("SetDOFVelocities",setdofvelocities2, PY_ARGS("dofvelocities","linear","angular") DOXY_FN(KinBody,SetDOFVelocities "const std::vector; const Vector; const Vector; uint32_t"))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                         .def("SetDOFVelocities", setdofvelocities3,
+                            "dofvelocities"_a,
+                            "checklimits"_a = (int) KinBody::CLA_CheckLimits,
+                            "indices"_a = py::none_(),
+                            DOXY_FN(KinBody,SetDOFVelocities "const std::vector; uint32_t; const std::vector")
+                         )
+#else
                          .def("SetDOFVelocities",setdofvelocities3, PY_ARGS("dofvelocities","checklimits","indices") DOXY_FN(KinBody,SetDOFVelocities "const std::vector; uint32_t; const std::vector"))
+#endif
                          .def("SetDOFVelocities",setdofvelocities4, PY_ARGS("dofvelocities","linear","angular","checklimits") DOXY_FN(KinBody,SetDOFVelocities "const std::vector; const Vector; const Vector; uint32_t"))
                          .def("GetLinkVelocities",&PyKinBody::GetLinkVelocities, DOXY_FN(KinBody,GetLinkVelocities))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
