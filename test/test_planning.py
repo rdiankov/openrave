@@ -570,20 +570,14 @@ class RunPlanning(EnvironmentSetup):
                 basemanip.MoveActiveJoints(goal=robot.GetActiveDOFValues())
                 raise ValueError('let static link pass')
             except openrave_exception as ex:
-                if openravepy_int.__pythonbinding__ == 'pybind11':
-                    assert(ex.GetCode()=='InvalidState')
-                else:
-                    assert(ex.GetCode()=='InvalidState')
+                assert(ex.GetCode()=='InvalidState')
             
             try:
                 params=Planner.PlannerParameters()
                 params.SetRobotActiveJoints(robot)
                 raise ValueError('let static link pass')
             except openrave_exception as ex:
-                if openravepy_int.__pythonbinding__ == 'pybind11':
-                    assert(ex.GetCode()=='InvalidState')
-                else:
-                    assert(ex.GetCode()=='InvalidState')
+                assert(ex.GetCode()=='InvalidState')
 
     def test_multipath(self):
         env = self.env
