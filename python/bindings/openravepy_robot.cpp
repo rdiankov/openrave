@@ -1909,7 +1909,7 @@ void init_openravepy_robot()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                       .def("SetActiveDOFValues", &PyRobotBase::SetActiveDOFValues,
                         "values"_a,
-                        "checklimits"_a = KinBody::CLA_CheckLimits,
+                        "checklimits"_a = (int) KinBody::CLA_CheckLimits,
                         DOXY_FN(RobotBase, SetActiveDOFValues)
                         )
 #else
@@ -1920,7 +1920,7 @@ void init_openravepy_robot()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                       .def("SetActiveDOFVelocities", &PyRobotBase::SetActiveDOFVelocities,
                         "velocities"_a,
-                        "checklimits"_a = KinBody::CLA_CheckLimits,
+                        "checklimits"_a = (int) KinBody::CLA_CheckLimits,
                         DOXY_FN(RobotBase, SetActiveDOFVelocities))
 #else
                       .def("SetActiveDOFVelocities",&PyRobotBase::SetActiveDOFVelocities, SetActiveDOFVelocities_overloads(PY_ARGS("velocities","checklimits") DOXY_FN(RobotBase,SetActiveDOFVelocities)))
