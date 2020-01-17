@@ -19,17 +19,36 @@
 
 namespace openravepy {
 
+using py::object;
+using py::extract;
+using py::handle;
+using py::dict;
+using py::enum_;
+using py::class_;
+using py::no_init;
+using py::bases;
+using py::init;
+using py::scope;
+using py::args;
+using py::return_value_policy;
+using py::copy_const_reference;
+using py::docstring_options;
+using py::pickle_suite;
+using py::manage_new_object;
+using py::def;
+namespace numeric = py::numeric;
+
 template <typename T>
-boost::python::object GetCustomParameters(const std::map<std::string, std::vector<T> >& parameters, boost::python::object oname=boost::python::object(), int index=-1)
+object GetCustomParameters(const std::map<std::string, std::vector<T> >& parameters, object oname=object(), int index=-1)
 {
     if( IS_PYTHONOBJECT_NONE(oname) ) {
-        boost::python::dict oparameters;
+        py::dict oparameters;
         FOREACHC(it, parameters) {
             oparameters[it->first] = toPyArray(it->second);
         }
         return oparameters;
     }
-    std::string name = boost::python::extract<std::string>(oname);
+    std::string name = py::extract<std::string>(oname);
     typename std::map<std::string, std::vector<T> >::const_iterator it = parameters.find(name);
     if( it != parameters.end() ) {
         if( index >= 0 ) {
@@ -37,12 +56,12 @@ boost::python::object GetCustomParameters(const std::map<std::string, std::vecto
                 return object(it->second.at(index));
             }
             else {
-                return boost::python::object();
+                return object();
             }
         }
         return toPyArray(it->second);
     }
-    return boost::python::object();
+    return object();
 }
 
 class PySideWall
@@ -64,7 +83,7 @@ public:
         sidewall.type = static_cast<KinBody::GeometryInfo::SideWallType>(type);
     }
 
-    boost::python::object transf, vExtents;
+    object transf, vExtents;
     int type;
 };
 
@@ -85,7 +104,7 @@ public:
         _vCollisionScale = toPyVector3(Vector(1,1,1));
         _bVisible = true;
         _bModifiable = true;
-        _vSideWalls = boost::python::list();
+        _vSideWalls = py::list();
     }
     PyGeometryInfo(const KinBody::GeometryInfo& info) {
         Init(info);
@@ -99,7 +118,7 @@ public:
         _vGeomData3 = toPyVector4(info._vGeomData3);
         _vGeomData4 = toPyVector4(info._vGeomData4);
 
-        _vSideWalls = boost::python::list();
+        _vSideWalls = py::list();
         for (size_t i = 0; i < info._vSideWalls.size(); ++i) {
             _vSideWalls.append(PySideWall(info._vSideWalls[i]));
         }
@@ -126,9 +145,9 @@ public:
         Vector abInnerEmptyExtents;
         KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
         if( pgeominfo->ComputeInnerEmptyVolume(tInnerEmptyVolume, abInnerEmptyExtents) ) {
-            return boost::python::make_tuple(ReturnTransform(tInnerEmptyVolume), toPyVector3(abInnerEmptyExtents));
+            return py::make_tuple(ReturnTransform(tInnerEmptyVolume), toPyVector3(abInnerEmptyExtents));
         }
-        return boost::python::make_tuple(object(), object());
+        return py::make_tuple(object(), object());
     }
 
     object ComputeAABB(object otransform) {
@@ -163,9 +182,9 @@ public:
         info._vGeomData4 = ExtractVector<dReal>(_vGeomData4);
 
         info._vSideWalls.clear();
-        for (size_t i = 0; i < len(_vSideWalls); ++i) {
+        for (int i = 0; i < len(_vSideWalls); ++i) {
             info._vSideWalls.push_back({});
-            boost::shared_ptr<PySideWall> pysidewall = boost::python::extract<boost::shared_ptr<PySideWall> >(_vSideWalls[i]);
+            boost::shared_ptr<PySideWall> pysidewall = py::extract<boost::shared_ptr<PySideWall> >(_vSideWalls[i]);
             pysidewall->Get(info._vSideWalls[i]);
         }
 
@@ -176,13 +195,13 @@ public:
         }
         info._type = _type;
         if( !IS_PYTHONOBJECT_NONE(_name) ) {
-            info._name = boost::python::extract<std::string>(_name);
+            info._name = py::extract<std::string>(_name);
         }
         if( !IS_PYTHONOBJECT_NONE(_filenamerender) ) {
-            info._filenamerender = boost::python::extract<std::string>(_filenamerender);
+            info._filenamerender = py::extract<std::string>(_filenamerender);
         }
         if( !IS_PYTHONOBJECT_NONE(_filenamecollision) ) {
-            info._filenamecollision = boost::python::extract<std::string>(_filenamecollision);
+            info._filenamecollision = py::extract<std::string>(_filenamecollision);
         }
         info._vRenderScale = ExtractVector3(_vRenderScale);
         info._vCollisionScale = ExtractVector3(_vCollisionScale);
@@ -195,13 +214,13 @@ public:
     }
 
     object _t, _vGeomData, _vGeomData2, _vGeomData3, _vGeomData4, _vDiffuseColor, _vAmbientColor, _meshcollision;
-    boost::python::list _vSideWalls;
+    py::list _vSideWalls;
     float _containerBaseHeight;
     GeometryType _type;
     object _name;
     object _filenamerender, _filenamecollision;
     object _vRenderScale, _vCollisionScale;
-    boost::python::dict _mapExtraGeometries;
+    py::dict _mapExtraGeometries;
     float _fTransparency;
     bool _bVisible, _bModifiable;
 };
@@ -217,7 +236,7 @@ public:
         _vinertiamoments = toPyVector3(Vector(1,1,1));
         _bStatic = false;
         _bIsEnabled = true;
-        _vForcedAdjacentLinks = boost::python::list();
+        _vForcedAdjacentLinks = py::list();
     }
     PyLinkInfo(const KinBody::LinkInfo& info) {
         FOREACHC(itgeominfo, info._vgeometryinfos) {
@@ -237,7 +256,7 @@ public:
         FOREACHC(it, info._mapStringParameters) {
             _mapStringParameters[it->first] = ConvertStringToUnicode(it->second);
         }
-        boost::python::list vForcedAdjacentLinks;
+        py::list vForcedAdjacentLinks;
         FOREACHC(it, info._vForcedAdjacentLinks) {
             vForcedAdjacentLinks.append(ConvertStringToUnicode(*it));
         }
@@ -251,11 +270,11 @@ public:
         KinBody::LinkInfo& info = *pinfo;
         info._vgeometryinfos.resize(len(_vgeometryinfos));
         for(size_t i = 0; i < info._vgeometryinfos.size(); ++i) {
-            PyGeometryInfoPtr pygeom = boost::python::extract<PyGeometryInfoPtr>(_vgeometryinfos[i]);
+            PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(_vgeometryinfos[i]);
             info._vgeometryinfos[i] = pygeom->GetGeometryInfo();
         }
         if( !IS_PYTHONOBJECT_NONE(_name) ) {
-            info._name = boost::python::extract<std::string>(_name);
+            info._name = py::extract<std::string>(_name);
         }
         info._t = ExtractTransform(_t);
         info._tMassFrame = ExtractTransform(_tMassFrame);
@@ -291,12 +310,12 @@ public:
         return pinfo;
     }
 
-    boost::python::list _vgeometryinfos;
+    py::list _vgeometryinfos;
     object _name;
     object _t, _tMassFrame;
     dReal _mass;
     object _vinertiamoments;
-    boost::python::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters;
+    py::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters;
     object _vForcedAdjacentLinks;
     bool _bStatic;
     bool _bIsEnabled;
@@ -336,10 +355,10 @@ public:
         stall_torque = info.stall_torque;
         max_instantaneous_torque = info.max_instantaneous_torque;
         FOREACH(itpoint, info.nominal_speed_torque_points) {
-            nominal_speed_torque_points.append(boost::python::make_tuple(itpoint->first, itpoint->second));
+            nominal_speed_torque_points.append(py::make_tuple(itpoint->first, itpoint->second));
         }
         FOREACH(itpoint, info.max_speed_torque_points) {
-            max_speed_torque_points.append(boost::python::make_tuple(itpoint->first, itpoint->second));
+            max_speed_torque_points.append(py::make_tuple(itpoint->first, itpoint->second));
         }
         nominal_torque = info.nominal_torque;
         rotor_inertia = info.rotor_inertia;
@@ -365,13 +384,13 @@ public:
         if( !IS_PYTHONOBJECT_NONE(nominal_speed_torque_points) ) {
             size_t num = len(nominal_speed_torque_points);
             for(size_t i = 0; i < num; ++i) {
-                info.nominal_speed_torque_points.emplace_back((dReal) boost::python::extract<dReal>(nominal_speed_torque_points[i][0]),  (dReal) boost::python::extract<dReal>(nominal_speed_torque_points[i][1]));
+                info.nominal_speed_torque_points.emplace_back((dReal) py::extract<dReal>(nominal_speed_torque_points[i][0]),  (dReal) py::extract<dReal>(nominal_speed_torque_points[i][1]));
             }
         }
         if( !IS_PYTHONOBJECT_NONE(max_speed_torque_points) ) {
             size_t num = len(max_speed_torque_points);
             for(size_t i = 0; i < num; ++i) {
-                info.max_speed_torque_points.emplace_back((dReal) boost::python::extract<dReal>(max_speed_torque_points[i][0]),  (dReal) boost::python::extract<dReal>(max_speed_torque_points[i][1]));
+                info.max_speed_torque_points.emplace_back((dReal) py::extract<dReal>(max_speed_torque_points[i][0]),  (dReal) py::extract<dReal>(max_speed_torque_points[i][1]));
             }
         }
         info.nominal_torque = nominal_torque;
@@ -393,7 +412,7 @@ public:
     dReal no_load_speed;
     dReal stall_torque;
     dReal max_instantaneous_torque;
-    boost::python::list nominal_speed_torque_points, max_speed_torque_points;
+    py::list nominal_speed_torque_points, max_speed_torque_points;
     dReal nominal_torque;
     dReal rotor_inertia;
     dReal torque_constant;
@@ -406,13 +425,243 @@ public:
 };
 typedef boost::shared_ptr<PyElectricMotorActuatorInfo> PyElectricMotorActuatorInfoPtr;
 
+class PyJointControlInfo_RobotController
+{
+public:
+    PyJointControlInfo_RobotController()
+    {
+        robotId = -1;
+        robotControllerDOFIndex = toPyVector3(Vector(-1, -1, -1));
+    }
+    PyJointControlInfo_RobotController(const KinBody::JointInfo::JointControlInfo_RobotController& jci)
+    {
+        robotId = jci.robotId;
+
+        py::list _robotControllerDOFIndex;
+        FOREACHC(itdofindex, jci.robotControllerDOFIndex) {
+            _robotControllerDOFIndex.append(*itdofindex);
+        }
+        robotControllerDOFIndex = _robotControllerDOFIndex;
+    }
+    KinBody::JointInfo::JointControlInfo_RobotControllerPtr GetJointControlInfo()
+    {
+        KinBody::JointInfo::JointControlInfo_RobotControllerPtr pinfo(new KinBody::JointInfo::JointControlInfo_RobotController());
+        KinBody::JointInfo::JointControlInfo_RobotController& info = *pinfo;
+        info.robotId = robotId;
+        if( !IS_PYTHONOBJECT_NONE(robotControllerDOFIndex) ) {
+            size_t num = len(robotControllerDOFIndex);
+            OPENRAVE_EXCEPTION_FORMAT0(num == info.robotControllerDOFIndex.size(), ORE_InvalidState);
+            for( size_t i = 0; i < num; ++i ) {
+                info.robotControllerDOFIndex[i] = py::extract<int>(robotControllerDOFIndex[i]);
+            }
+        }
+        return pinfo;
+    }
+
+    int robotId;
+    object robotControllerDOFIndex;
+};
+typedef boost::shared_ptr<PyJointControlInfo_RobotController> PyJointControlInfo_RobotControllerPtr;
+
+class PyJointControlInfo_IO
+{
+public:
+    PyJointControlInfo_IO()
+    {
+        deviceId = -1;
+        vMoveIONames = py::list();
+        vUpperLimitIONames = py::list();
+        vUpperLimitSensorIsOn = py::list();
+        vLowerLimitIONames = py::list();
+        vLowerLimitSensorIsOn = py::list();
+    }
+    PyJointControlInfo_IO(const KinBody::JointInfo::JointControlInfo_IO& jci)
+    {
+        deviceId = jci.deviceId;
+
+        py::list _vMoveIONames;
+        FOREACHC(itmoveionamelist, jci.vMoveIONames) {
+            if( itmoveionamelist->size() == 0 ) {
+                _vMoveIONames.append(py::list());
+            }
+            else {
+                py::list ionames;
+                FOREACHC(itioname, *itmoveionamelist) {
+                    ionames.append(ConvertStringToUnicode(*itioname));
+                }
+                _vMoveIONames.append(ionames);
+            }
+        }
+        vMoveIONames = _vMoveIONames;
+
+        py::list _vUpperLimitIONames;
+        FOREACHC(itupperlimitionamelist, jci.vUpperLimitIONames) {
+            if( itupperlimitionamelist->size() == 0 ) {
+                _vUpperLimitIONames.append(py::list());
+            }
+            else {
+                py::list ionames;
+                FOREACHC(itioname, *itupperlimitionamelist) {
+                    ionames.append(ConvertStringToUnicode(*itioname));
+                }
+                _vUpperLimitIONames.append(ionames);
+            }
+        }
+        vUpperLimitIONames = _vUpperLimitIONames;
+
+        py::list _vUpperLimitSensorIsOn;
+        FOREACHC(itiovaluelist, jci.vUpperLimitSensorIsOn) {
+            if( itiovaluelist->size() == 0 ) {
+                _vUpperLimitSensorIsOn.append(py::list());
+            }
+            else {
+                py::list iovalues;
+                FOREACHC(itiovalue, *itiovaluelist) {
+                    iovalues.append(*itiovalue);
+                }
+                _vUpperLimitSensorIsOn.append(iovalues);
+            }
+        }
+        vUpperLimitSensorIsOn = _vUpperLimitSensorIsOn;
+
+        py::list _vLowerLimitIONames;
+        FOREACHC(itlowerlimitionamelist, jci.vLowerLimitIONames) {
+            if( itlowerlimitionamelist->size() == 0 ) {
+                _vLowerLimitIONames.append(py::list());
+            }
+            else {
+                py::list ionames;
+                FOREACHC(itioname, *itlowerlimitionamelist) {
+                    ionames.append(ConvertStringToUnicode(*itioname));
+                }
+                _vLowerLimitIONames.append(ionames);
+            }
+        }
+        vLowerLimitIONames = _vLowerLimitIONames;
+
+        py::list _vLowerLimitSensorIsOn;
+        FOREACHC(itiovaluelist, jci.vLowerLimitSensorIsOn) {
+            if( itiovaluelist->size() == 0 ) {
+                _vLowerLimitSensorIsOn.append(py::list());
+            }
+            else {
+                py::list iovalues;
+                FOREACHC(itiovalue, *itiovaluelist) {
+                    iovalues.append(*itiovalue);
+                }
+                _vLowerLimitSensorIsOn.append(iovalues);
+            }
+        }
+        vLowerLimitSensorIsOn = _vLowerLimitSensorIsOn;
+    }
+
+    KinBody::JointInfo::JointControlInfo_IOPtr GetJointControlInfo()
+    {
+        KinBody::JointInfo::JointControlInfo_IOPtr pinfo(new KinBody::JointInfo::JointControlInfo_IO());
+        KinBody::JointInfo::JointControlInfo_IO& info = *pinfo;
+        info.deviceId = deviceId;
+
+        size_t num1, num2;
+        if( !IS_PYTHONOBJECT_NONE(vMoveIONames) ) {
+            num1 = len(vMoveIONames);
+            OPENRAVE_EXCEPTION_FORMAT0(num1 == info.vMoveIONames.size(), ORE_InvalidState);
+            for( size_t i1 = 0; i1 < num1; ++i1 ) {
+                num2 = len(vMoveIONames[i1]);
+                info.vMoveIONames[i1].resize(num2);
+                for( size_t i2 = 0; i2 < num2; ++i2 ) {
+                    info.vMoveIONames[i1].at(i2) = py::extract<std::string>(vMoveIONames[i1][i2]);
+                }
+            }
+        }
+
+        if( !IS_PYTHONOBJECT_NONE(vUpperLimitIONames) ) {
+            num1 = len(vUpperLimitIONames);
+            OPENRAVE_EXCEPTION_FORMAT0(num1 == info.vUpperLimitIONames.size(), ORE_InvalidState);
+            for( size_t i1 = 0; i1 < num1; ++i1 ) {
+                num2 = len(vUpperLimitIONames[i1]);
+                info.vUpperLimitIONames[i1].resize(num2);
+                for( size_t i2 = 0; i2 < num2; ++i2 ) {
+                    info.vUpperLimitIONames[i1].at(i2) = py::extract<std::string>(vUpperLimitIONames[i1][i2]);
+                }
+            }
+        }
+
+        if( !IS_PYTHONOBJECT_NONE(vUpperLimitSensorIsOn) ) {
+            num1 = len(vUpperLimitSensorIsOn);
+            OPENRAVE_EXCEPTION_FORMAT0(num1 == info.vUpperLimitSensorIsOn.size(), ORE_InvalidState);
+            for( size_t i1 = 0; i1 < num1; ++i1 ) {
+                num2 = len(vUpperLimitSensorIsOn[i1]);
+                info.vUpperLimitSensorIsOn[i1].resize(num2);
+                for( size_t i2 = 0; i2 < num2; ++i2 ) {
+                    info.vUpperLimitSensorIsOn[i1].at(i2) = py::extract<uint8_t>(vUpperLimitSensorIsOn[i1][i2]);
+                }
+            }
+        }
+
+        if( !IS_PYTHONOBJECT_NONE(vLowerLimitIONames) ) {
+            num1 = len(vLowerLimitIONames);
+            OPENRAVE_EXCEPTION_FORMAT0(num1 == info.vLowerLimitIONames.size(), ORE_InvalidState);
+            for( size_t i1 = 0; i1 < num1; ++i1 ) {
+                num2 = len(vLowerLimitIONames[i1]);
+                info.vLowerLimitIONames[i1].resize(num2);
+                for( size_t i2 = 0; i2 < num2; ++i2 ) {
+                    info.vLowerLimitIONames[i1].at(i2) = py::extract<std::string>(vLowerLimitIONames[i1][i2]);
+                }
+            }
+        }
+
+        if( !IS_PYTHONOBJECT_NONE(vLowerLimitSensorIsOn) ) {
+            num1 = len(vLowerLimitSensorIsOn);
+            OPENRAVE_EXCEPTION_FORMAT0(num1 == info.vLowerLimitSensorIsOn.size(), ORE_InvalidState);
+            for( size_t i1 = 0; i1 < num1; ++i1 ) {
+                num2 = len(vLowerLimitSensorIsOn[i1]);
+                info.vLowerLimitSensorIsOn[i1].resize(num2);
+                for( size_t i2 = 0; i2 < num2; ++i2 ) {
+                    info.vLowerLimitSensorIsOn[i1].at(i2) = py::extract<uint8_t>(vLowerLimitSensorIsOn[i1][i2]);
+                }
+            }
+        }
+        return pinfo;
+    }
+
+    int deviceId;
+    object vMoveIONames;
+    object vUpperLimitIONames;
+    object vUpperLimitSensorIsOn;
+    object vLowerLimitIONames;
+    object vLowerLimitSensorIsOn;
+};
+typedef boost::shared_ptr<PyJointControlInfo_IO> PyJointControlInfo_IOPtr;
+
+class PyJointControlInfo_ExternalDevice
+{
+public:
+    PyJointControlInfo_ExternalDevice()
+    {
+    }
+    PyJointControlInfo_ExternalDevice(const KinBody::JointInfo::JointControlInfo_ExternalDevice &jci)
+    {
+        externalDeviceId = jci.externalDeviceId;
+    }
+    KinBody::JointInfo::JointControlInfo_ExternalDevicePtr GetJointControlInfo()
+    {
+        KinBody::JointInfo::JointControlInfo_ExternalDevicePtr pinfo(new KinBody::JointInfo::JointControlInfo_ExternalDevice());
+        KinBody::JointInfo::JointControlInfo_ExternalDevice& info = *pinfo;
+        info.externalDeviceId = externalDeviceId;
+        return pinfo;
+    }
+
+    std::string externalDeviceId;
+};
+typedef boost::shared_ptr<PyJointControlInfo_ExternalDevice> PyJointControlInfo_ExternalDevicePtr;
+
 class PyJointInfo
 {
 public:
     PyJointInfo() {
         _type = KinBody::JointNone;
         _vanchor = toPyVector3(Vector());
-        _vaxes = boost::python::list();
+        _vaxes = py::list();
         _vresolution = toPyVector3(Vector(0.02,0.02,0.02));
         // As for initial values for vel, accel, and jerk, please see kinbodyjoint.cpp's definition.
         _vmaxvel = toPyVector3(Vector(10,10,10));
@@ -427,8 +676,9 @@ public:
         _voffsets = toPyVector3(Vector(0,0,0));
         _vlowerlimit = toPyVector3(Vector(0,0,0));
         _vupperlimit = toPyVector3(Vector(0,0,0));
-        _bIsCircular = boost::python::list();
+        _bIsCircular = py::list();
         _bIsActive = true;
+        _controlMode = KinBody::JCM_None;
     }
 
     PyJointInfo(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv) {
@@ -437,7 +687,7 @@ public:
         _linkname0 = ConvertStringToUnicode(info._linkname0);
         _linkname1 = ConvertStringToUnicode(info._linkname1);
         _vanchor = toPyVector3(info._vanchor);
-        boost::python::list vaxes;
+        py::list vaxes;
         for(size_t i = 0; i < info._vaxes.size(); ++i) {
             vaxes.append(toPyVector3(info._vaxes[i]));
         }
@@ -459,10 +709,10 @@ public:
         _trajfollow = object(toPyTrajectory(info._trajfollow, pyenv));
         FOREACHC(itmimic, info._vmimic) {
             if( !*itmimic ) {
-                _vmimic.append(boost::python::object());
+                _vmimic.append(object());
             }
             else {
-                boost::python::list oequations;
+                py::list oequations;
                 FOREACHC(itequation, (*itmimic)->_equations) {
                     oequations.append(*itequation);
                 }
@@ -478,7 +728,7 @@ public:
         FOREACHC(it, info._mapStringParameters) {
             _mapStringParameters[it->first] = ConvertStringToUnicode(it->second);
         }
-        boost::python::list bIsCircular;
+        py::list bIsCircular;
         FOREACHC(it, info._bIsCircular) {
             bIsCircular.append(*it);
         }
@@ -487,6 +737,24 @@ public:
         if( !!info._infoElectricMotor ) {
             _infoElectricMotor = PyElectricMotorActuatorInfoPtr(new PyElectricMotorActuatorInfo(*info._infoElectricMotor));
         }
+
+        // joint control
+        _controlMode = info._controlMode;
+        if( _controlMode == KinBody::JCM_RobotController ) {
+            if( !!info._jci_robotcontroller ) {
+                _jci_robotcontroller = PyJointControlInfo_RobotControllerPtr(new PyJointControlInfo_RobotController(*info._jci_robotcontroller));
+            }
+        }
+        else if( _controlMode == KinBody::JCM_IO ) {
+            if( !!info._jci_io ) {
+                _jci_io = PyJointControlInfo_IOPtr(new PyJointControlInfo_IO(*info._jci_io));
+            }
+        }
+        else if( _controlMode == KinBody::JCM_ExternalDevice ) {
+            if( !!info._jci_externaldevice ) {
+                _jci_externaldevice = PyJointControlInfo_ExternalDevicePtr(new PyJointControlInfo_ExternalDevice(*info._jci_externaldevice));
+            }
+        }
     }
 
     KinBody::JointInfoPtr GetJointInfo() {
@@ -494,13 +762,13 @@ public:
         KinBody::JointInfo& info = *pinfo;
         info._type = _type;
         if( !IS_PYTHONOBJECT_NONE(_name) ) {
-            info._name = boost::python::extract<std::string>(_name);
+            info._name = py::extract<std::string>(_name);
         }
         if( !IS_PYTHONOBJECT_NONE(_linkname0) ) {
-            info._linkname0 = boost::python::extract<std::string>(_linkname0);
+            info._linkname0 = py::extract<std::string>(_linkname0);
         }
         if( !IS_PYTHONOBJECT_NONE(_linkname1) ) {
-            info._linkname1 = boost::python::extract<std::string>(_linkname1);
+            info._linkname1 = py::extract<std::string>(_linkname1);
         }
         info._vanchor = ExtractVector3(_vanchor);
 
@@ -518,79 +786,79 @@ public:
         num = len(_vresolution);
         OPENRAVE_EXCEPTION_FORMAT0(num == info._vresolution.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vresolution[i] = boost::python::extract<dReal>(_vresolution[i]);
+            info._vresolution[i] = py::extract<dReal>(_vresolution[i]);
         }
 
         num = len(_vmaxvel);
         OPENRAVE_EXCEPTION_FORMAT0(num == info._vmaxvel.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vmaxvel[i] = boost::python::extract<dReal>(_vmaxvel[i]);
+            info._vmaxvel[i] = py::extract<dReal>(_vmaxvel[i]);
         }
 
         num = len(_vhardmaxvel);
         OPENRAVE_EXCEPTION_FORMAT0(num == info._vhardmaxvel.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vhardmaxvel[i] = boost::python::extract<dReal>(_vhardmaxvel[i]);
+            info._vhardmaxvel[i] = py::extract<dReal>(_vhardmaxvel[i]);
         }
 
         num = len(_vmaxaccel);
         OPENRAVE_EXCEPTION_FORMAT0(num == info._vmaxaccel.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vmaxaccel[i] = boost::python::extract<dReal>(_vmaxaccel[i]);
+            info._vmaxaccel[i] = py::extract<dReal>(_vmaxaccel[i]);
         }
 
         num = len(_vhardmaxaccel);
         OPENRAVE_EXCEPTION_FORMAT0(num == info._vhardmaxaccel.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vhardmaxaccel[i] = boost::python::extract<dReal>(_vhardmaxaccel[i]);
+            info._vhardmaxaccel[i] = py::extract<dReal>(_vhardmaxaccel[i]);
         }
 
         num = len(_vmaxjerk);
         OPENRAVE_EXCEPTION_FORMAT0(num == info._vmaxjerk.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vmaxjerk[i] = boost::python::extract<dReal>(_vmaxjerk[i]);
+            info._vmaxjerk[i] = py::extract<dReal>(_vmaxjerk[i]);
         }
 
         num = len(_vhardmaxjerk);
         OPENRAVE_EXCEPTION_FORMAT0(num == info._vhardmaxjerk.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vhardmaxjerk[i] = boost::python::extract<dReal>(_vhardmaxjerk[i]);
+            info._vhardmaxjerk[i] = py::extract<dReal>(_vhardmaxjerk[i]);
         }
 
         num = len(_vmaxtorque);
         OPENRAVE_EXCEPTION_FORMAT0(num == info._vmaxtorque.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vmaxtorque[i] = boost::python::extract<dReal>(_vmaxtorque[i]);
+            info._vmaxtorque[i] = py::extract<dReal>(_vmaxtorque[i]);
         }
 
         num = len(_vmaxinertia);
         OPENRAVE_EXCEPTION_FORMAT0(num == info._vmaxinertia.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vmaxinertia[i] = boost::python::extract<dReal>(_vmaxinertia[i]);
+            info._vmaxinertia[i] = py::extract<dReal>(_vmaxinertia[i]);
         }
 
         num = len(_vweights);
         OPENRAVE_EXCEPTION_FORMAT0(num == info._vweights.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vweights[i] = boost::python::extract<dReal>(_vweights[i]);
+            info._vweights[i] = py::extract<dReal>(_vweights[i]);
         }
 
         num = len(_voffsets);
         OPENRAVE_EXCEPTION_FORMAT0(num == info._voffsets.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._voffsets[i] = boost::python::extract<dReal>(_voffsets[i]);
+            info._voffsets[i] = py::extract<dReal>(_voffsets[i]);
         }
 
         num = len(_vlowerlimit);
         OPENRAVE_EXCEPTION_FORMAT0(num == info._vlowerlimit.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vlowerlimit[i] = boost::python::extract<dReal>(_vlowerlimit[i]);
+            info._vlowerlimit[i] = py::extract<dReal>(_vlowerlimit[i]);
         }
 
         num = len(_vupperlimit);
         OPENRAVE_EXCEPTION_FORMAT0(num == info._vupperlimit.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vupperlimit[i] = boost::python::extract<dReal>(_vupperlimit[i]);
+            info._vupperlimit[i] = py::extract<dReal>(_vupperlimit[i]);
         }
 
         if( !IS_PYTHONOBJECT_NONE(_trajfollow) ) {
@@ -604,7 +872,7 @@ public:
                     OPENRAVE_ASSERT_OP(len(omimic),==,3);
                     info._vmimic[i].reset(new KinBody::MimicInfo());
                     for(size_t j = 0; j < 3; ++j) {
-                        info._vmimic[i]->_equations.at(j) = boost::python::extract<std::string>(omimic[j]);
+                        info._vmimic[i]->_equations.at(j) = py::extract<std::string>(omimic[j]);
                     }
                 }
             }
@@ -635,15 +903,28 @@ public:
         }
         num = len(_bIsCircular);
         for(size_t i = 0; i < num; ++i) {
-            info._bIsCircular.at(i) = boost::python::extract<int>(_bIsCircular[i])!=0;
+            info._bIsCircular.at(i) = py::extract<int>(_bIsCircular[i])!=0;
         }
         info._bIsActive = _bIsActive;
         if( !!_infoElectricMotor ) {
-            //PyElectricMotorActuatorInfoPtr pinfo = boost::python::extract<PyElectricMotorActuatorInfoPtr>(_infoElectricMotor);
+            //PyElectricMotorActuatorInfoPtr pinfo = py::extract<PyElectricMotorActuatorInfoPtr>(_infoElectricMotor);
             //if( !!pinfo ) {
             info._infoElectricMotor = _infoElectricMotor->GetElectricMotorActuatorInfo();
             //}
         }
+
+        // joint control
+        info._controlMode = _controlMode;
+        if( _controlMode == KinBody::JCM_RobotController ) {
+            info._jci_robotcontroller = _jci_robotcontroller->GetJointControlInfo();
+        }
+        else if( _controlMode == KinBody::JCM_IO ) {
+            info._jci_io = _jci_io->GetJointControlInfo();
+        }
+        else if( _controlMode == KinBody::JCM_ExternalDevice ) {
+            info._jci_externaldevice = _jci_externaldevice->GetJointControlInfo();
+        }
+
         return pinfo;
     }
     KinBody::JointType _type;
@@ -652,10 +933,15 @@ public:
     object _vanchor, _vaxes, _vcurrentvalues, _vresolution, _vmaxvel, _vhardmaxvel, _vmaxaccel, _vhardmaxaccel, _vmaxjerk, _vhardmaxjerk, _vmaxtorque, _vmaxinertia, _vweights, _voffsets, _vlowerlimit, _vupperlimit;
     object _trajfollow;
     PyElectricMotorActuatorInfoPtr _infoElectricMotor;
-    boost::python::list _vmimic;
-    boost::python::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters;
+    py::list _vmimic;
+    py::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters;
     object _bIsCircular;
     bool _bIsActive;
+
+    KinBody::JointControlMode _controlMode;
+    PyJointControlInfo_RobotControllerPtr _jci_robotcontroller;
+    PyJointControlInfo_IOPtr _jci_io;
+    PyJointControlInfo_ExternalDevicePtr _jci_externaldevice;
 };
 
 PyJointInfoPtr toPyJointInfo(const KinBody::JointInfo& jointinfo, PyEnvironmentBasePtr pyenv)
@@ -788,9 +1074,9 @@ public:
             Transform tInnerEmptyVolume;
             Vector abInnerEmptyExtents;
             if( _pgeometry->ComputeInnerEmptyVolume(tInnerEmptyVolume, abInnerEmptyExtents) ) {
-                return boost::python::make_tuple(ReturnTransform(tInnerEmptyVolume), toPyVector3(abInnerEmptyExtents));
+                return py::make_tuple(ReturnTransform(tInnerEmptyVolume), toPyVector3(abInnerEmptyExtents));
             }
-            return boost::python::make_tuple(object(), object());
+            return py::make_tuple(object(), object());
         }
         bool __eq__(boost::shared_ptr<PyGeometry> p) {
             return !!p && _pgeometry == p->_pgeometry;
@@ -849,7 +1135,7 @@ public:
     {
         std::vector<KinBody::LinkPtr> vParentLinks;
         _plink->GetParentLinks(vParentLinks);
-        boost::python::list links;
+        py::list links;
         FOREACHC(itlink, vParentLinks) {
             links.append(PyLinkPtr(new PyLink(*itlink, _pyenv)));
         }
@@ -949,7 +1235,7 @@ public:
     }
 
     object GetGeometries() {
-        boost::python::list geoms;
+        py::list geoms;
         size_t N = _plink->GetGeometries().size();
         for(size_t i = 0; i < N; ++i) {
             geoms.append(boost::shared_ptr<PyGeometry>(new PyGeometry(_plink->GetGeometry(i))));
@@ -961,7 +1247,7 @@ public:
     {
         std::vector<KinBody::GeometryInfoConstPtr> geometries(len(ogeometryinfos));
         for(size_t i = 0; i < geometries.size(); ++i) {
-            PyGeometryInfoPtr pygeom = boost::python::extract<PyGeometryInfoPtr>(ogeometryinfos[i]);
+            PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(ogeometryinfos[i]);
             if( !pygeom ) {
                 throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.GeometryInfo"),ORE_InvalidArguments);
             }
@@ -972,7 +1258,7 @@ public:
 
     void AddGeometry(object ogeometryinfo, bool addToGroups)
     {
-        PyGeometryInfoPtr pygeom = boost::python::extract<PyGeometryInfoPtr>(ogeometryinfo);
+        PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(ogeometryinfo);
         if( !pygeom ) {
             throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.GeometryInfo"),ORE_InvalidArguments);
         }
@@ -991,7 +1277,7 @@ public:
 
     object GetGeometriesFromGroup(const std::string& name)
     {
-        boost::python::list ogeometryinfos;
+        py::list ogeometryinfos;
         FOREACHC(itinfo, _plink->GetGeometriesFromGroup(name)) {
             ogeometryinfos.append(PyGeometryInfoPtr(new PyGeometryInfo(**itinfo)));
         }
@@ -1002,7 +1288,7 @@ public:
     {
         std::vector<KinBody::GeometryInfoPtr> geometries(len(ogeometryinfos));
         for(size_t i = 0; i < geometries.size(); ++i) {
-            PyGeometryInfoPtr pygeom = boost::python::extract<PyGeometryInfoPtr>(ogeometryinfos[i]);
+            PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(ogeometryinfos[i]);
             if( !pygeom ) {
                 throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.GeometryInfo"),ORE_InvalidArguments);
             }
@@ -1019,7 +1305,7 @@ public:
     object GetRigidlyAttachedLinks() const {
         std::vector<KinBody::LinkPtr> vattachedlinks;
         _plink->GetRigidlyAttachedLinks(vattachedlinks);
-        boost::python::list links;
+        py::list links;
         FOREACHC(itlink, vattachedlinks) {
             links.append(PyLinkPtr(new PyLink(*itlink, _pyenv)));
         }
@@ -1042,7 +1328,7 @@ public:
         return toPyArray<dReal,6>(v);
     }
 
-    boost::python::object GetFloatParameters(object oname=boost::python::object(), int index=-1) const {
+    object GetFloatParameters(object oname=object(), int index=-1) const {
         return GetCustomParameters(_plink->GetFloatParameters(), oname, index);
     }
 
@@ -1051,7 +1337,7 @@ public:
         _plink->SetFloatParameters(key,ExtractArray<dReal>(oparameters));
     }
 
-    boost::python::object GetIntParameters(object oname=boost::python::object(), int index=-1) const {
+    object GetIntParameters(object oname=object(), int index=-1) const {
         return GetCustomParameters(_plink->GetIntParameters(), oname, index);
     }
 
@@ -1060,21 +1346,21 @@ public:
         _plink->SetIntParameters(key,ExtractArray<int>(oparameters));
     }
 
-    boost::python::object GetStringParameters(object oname=boost::python::object()) const
+    object GetStringParameters(object oname=object()) const
     {
         if( IS_PYTHONOBJECT_NONE(oname) ) {
-            boost::python::dict oparameters;
+            py::dict oparameters;
             FOREACHC(it, _plink->GetStringParameters()) {
                 oparameters[it->first] = ConvertStringToUnicode(it->second);
             }
             return oparameters;
         }
-        std::string name = boost::python::extract<std::string>(oname);
+        std::string name = py::extract<std::string>(oname);
         std::map<std::string, std::string >::const_iterator it = _plink->GetStringParameters().find(name);
         if( it != _plink->GetStringParameters().end() ) {
             return ConvertStringToUnicode(it->second);
         }
-        return boost::python::object();
+        return object();
     }
 
     void SetStringParameters(const std::string& key, object ovalue)
@@ -1164,11 +1450,11 @@ public:
     }
     object GetInstantaneousTorqueLimits(int iaxis=0) const {
         std::pair<dReal, dReal> values = _pjoint->GetInstantaneousTorqueLimits(iaxis);
-        return boost::python::make_tuple(values.first, values.second);
+        return py::make_tuple(values.first, values.second);
     }
     object GetNominalTorqueLimits(int iaxis=0) const {
         std::pair<dReal, dReal> values = _pjoint->GetNominalTorqueLimits(iaxis);
-        return boost::python::make_tuple(values.first, values.second);
+        return py::make_tuple(values.first, values.second);
     }
 
     dReal GetMaxInertia(int iaxis=0) const {
@@ -1257,12 +1543,12 @@ public:
     object GetLimits() const {
         vector<dReal> lower, upper;
         _pjoint->GetLimits(lower,upper);
-        return boost::python::make_tuple(toPyArray(lower),toPyArray(upper));
+        return py::make_tuple(toPyArray(lower),toPyArray(upper));
     }
     object GetVelocityLimits() const {
         vector<dReal> vlower,vupper;
         _pjoint->GetVelocityLimits(vlower,vupper);
-        return boost::python::make_tuple(toPyArray(vlower),toPyArray(vupper));
+        return py::make_tuple(toPyArray(vlower),toPyArray(vupper));
     }
     object GetAccelerationLimits() const {
         vector<dReal> v;
@@ -1401,7 +1687,7 @@ public:
         return _pjoint->AddTorque(vtorques);
     }
 
-    boost::python::object GetFloatParameters(object oname=boost::python::object(), int index=-1) const {
+    object GetFloatParameters(object oname=object(), int index=-1) const {
         return GetCustomParameters(_pjoint->GetFloatParameters(), oname, index);
     }
 
@@ -1410,7 +1696,7 @@ public:
         _pjoint->SetFloatParameters(key,ExtractArray<dReal>(oparameters));
     }
 
-    boost::python::object GetIntParameters(object oname=boost::python::object(), int index=-1) const {
+    object GetIntParameters(object oname=object(), int index=-1) const {
         return GetCustomParameters(_pjoint->GetIntParameters(), oname, index);
     }
 
@@ -1419,25 +1705,29 @@ public:
         _pjoint->SetIntParameters(key,ExtractArray<int>(oparameters));
     }
 
-    boost::python::object GetStringParameters(object oname=boost::python::object()) const {
+    object GetStringParameters(object oname=object()) const {
         if( IS_PYTHONOBJECT_NONE(oname) ) {
-            boost::python::dict oparameters;
+            py::dict oparameters;
             FOREACHC(it, _pjoint->GetStringParameters()) {
                 oparameters[it->first] = ConvertStringToUnicode(it->second);
             }
             return oparameters;
         }
-        std::string name = boost::python::extract<std::string>(oname);
+        std::string name = py::extract<std::string>(oname);
         std::map<std::string, std::string >::const_iterator it = _pjoint->GetStringParameters().find(name);
         if( it != _pjoint->GetStringParameters().end() ) {
             return ConvertStringToUnicode(it->second);
         }
-        return boost::python::object();
+        return object();
     }
 
     void SetStringParameters(const std::string& key, object ovalue)
     {
         _pjoint->SetStringParameters(key,extract<std::string>(ovalue));
+    }
+
+    KinBody::JointControlMode GetControlMode() const {
+        return _pjoint->GetControlMode();
     }
 
     void UpdateInfo() {
@@ -1661,7 +1951,7 @@ bool PyKinBody::InitFromGeometries(object ogeometries, const std::string& uri)
 {
     std::vector<KinBody::GeometryInfoConstPtr> geometries(len(ogeometries));
     for(size_t i = 0; i < geometries.size(); ++i) {
-        PyGeometryInfoPtr pygeom = boost::python::extract<PyGeometryInfoPtr>(ogeometries[i]);
+        PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(ogeometries[i]);
         if( !pygeom ) {
             throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.GeometryInfo"),ORE_InvalidArguments);
         }
@@ -1691,7 +1981,7 @@ void PyKinBody::SetLinkGroupGeometries(const std::string& geomname, object olink
         std::vector<KinBody::GeometryInfoPtr>& geometries = linkgeometries[i];
         geometries.resize(len(olinkgeometryinfos[i]));
         for(size_t j = 0; j < geometries.size(); ++j) {
-            PyGeometryInfoPtr pygeom = boost::python::extract<PyGeometryInfoPtr>(olinkgeometryinfos[i][j]);
+            PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(olinkgeometryinfos[i][j]);
             if( !pygeom ) {
                 throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.GeometryInfo"),ORE_InvalidArguments);
             }
@@ -1705,7 +1995,7 @@ void PyKinBody::_ParseLinkInfos(object olinkinfos, std::vector<KinBody::LinkInfo
 {
     vlinkinfos.resize(len(olinkinfos));
     for(size_t i = 0; i < vlinkinfos.size(); ++i) {
-        PyLinkInfoPtr pylink = boost::python::extract<PyLinkInfoPtr>(olinkinfos[i]);
+        PyLinkInfoPtr pylink = py::extract<PyLinkInfoPtr>(olinkinfos[i]);
         if( !pylink ) {
             throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.LinkInfo"),ORE_InvalidArguments);
         }
@@ -1717,7 +2007,7 @@ void PyKinBody::_ParseJointInfos(object ojointinfos, std::vector<KinBody::JointI
 {
     vjointinfos.resize(len(ojointinfos));
     for(size_t i = 0; i < vjointinfos.size(); ++i) {
-        PyJointInfoPtr pyjoint = boost::python::extract<PyJointInfoPtr>(ojointinfos[i]);
+        PyJointInfoPtr pyjoint = py::extract<PyJointInfoPtr>(ojointinfos[i]);
         if( !pyjoint ) {
             throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.JointInfo"),ORE_InvalidArguments);
         }
@@ -1747,11 +2037,11 @@ object PyKinBody::GetDOFValues() const
 object PyKinBody::GetDOFValues(object oindices) const
 {
     if( IS_PYTHONOBJECT_NONE(oindices) ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     vector<int> vindices = ExtractArray<int>(oindices);
     if( vindices.size() == 0 ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     vector<dReal> values;
     _pbody->GetDOFValues(values,vindices);
@@ -1768,11 +2058,11 @@ object PyKinBody::GetDOFVelocities() const
 object PyKinBody::GetDOFVelocities(object oindices) const
 {
     if( IS_PYTHONOBJECT_NONE(oindices) ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     vector<int> vindices = ExtractArray<int>(oindices);
     if( vindices.size() == 0 ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     vector<dReal> values;
     _pbody->GetDOFVelocities(values,vindices);
@@ -1783,7 +2073,7 @@ object PyKinBody::GetDOFLimits() const
 {
     vector<dReal> vlower, vupper;
     _pbody->GetDOFLimits(vlower,vupper);
-    return boost::python::make_tuple(toPyArray(vlower),toPyArray(vupper));
+    return py::make_tuple(toPyArray(vlower),toPyArray(vupper));
 }
 
 object PyKinBody::GetDOFVelocityLimits() const
@@ -1838,11 +2128,11 @@ object PyKinBody::GetDOFTorqueLimits() const
 object PyKinBody::GetDOFLimits(object oindices) const
 {
     if( IS_PYTHONOBJECT_NONE(oindices) ) {
-        return boost::python::make_tuple(numeric::array(boost::python::list()), numeric::array(boost::python::list())); // always need 2 since users can do lower, upper = GetDOFLimits()
+        return py::make_tuple(numeric::array(py::list()), numeric::array(py::list())); // always need 2 since users can do lower, upper = GetDOFLimits()
     }
     vector<int> vindices = ExtractArray<int>(oindices);
     if( vindices.size() == 0 ) {
-        return boost::python::make_tuple(numeric::array(boost::python::list()), numeric::array(boost::python::list())); // always need 2 since users can do lower, upper = GetDOFLimits()
+        return py::make_tuple(numeric::array(py::list()), numeric::array(py::list())); // always need 2 since users can do lower, upper = GetDOFLimits()
     }
     vector<dReal> vlower, vupper, vtemplower, vtempupper;
     vlower.reserve(vindices.size());
@@ -1853,17 +2143,17 @@ object PyKinBody::GetDOFLimits(object oindices) const
         vlower.push_back(vtemplower.at(*it-pjoint->GetDOFIndex()));
         vupper.push_back(vtempupper.at(*it-pjoint->GetDOFIndex()));
     }
-    return boost::python::make_tuple(toPyArray(vlower),toPyArray(vupper));
+    return py::make_tuple(toPyArray(vlower),toPyArray(vupper));
 }
 
 object PyKinBody::GetDOFVelocityLimits(object oindices) const
 {
     if( IS_PYTHONOBJECT_NONE(oindices) ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     vector<int> vindices = ExtractArray<int>(oindices);
     if( vindices.size() == 0 ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     vector<dReal> vmax, vtempmax;
     vmax.reserve(vindices.size());
@@ -1878,11 +2168,11 @@ object PyKinBody::GetDOFVelocityLimits(object oindices) const
 object PyKinBody::GetDOFAccelerationLimits(object oindices) const
 {
     if( IS_PYTHONOBJECT_NONE(oindices) ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     vector<int> vindices = ExtractArray<int>(oindices);
     if( vindices.size() == 0 ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     vector<dReal> vmax, vtempmax;
     vmax.reserve(vindices.size());
@@ -1897,11 +2187,11 @@ object PyKinBody::GetDOFAccelerationLimits(object oindices) const
 object PyKinBody::GetDOFJerkLimits(object oindices) const
 {
     if( IS_PYTHONOBJECT_NONE(oindices) ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     vector<int> vindices = ExtractArray<int>(oindices);
     if( vindices.size() == 0 ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     vector<dReal> vmax, vtempmax;
     vmax.reserve(vindices.size());
@@ -1916,11 +2206,11 @@ object PyKinBody::GetDOFJerkLimits(object oindices) const
 object PyKinBody::GetDOFHardVelocityLimits(object oindices) const
 {
     if( IS_PYTHONOBJECT_NONE(oindices) ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     vector<int> vindices = ExtractArray<int>(oindices);
     if( vindices.size() == 0 ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     vector<dReal> vmax, vtempmax;
     vmax.reserve(vindices.size());
@@ -1935,11 +2225,11 @@ object PyKinBody::GetDOFHardVelocityLimits(object oindices) const
 object PyKinBody::GetDOFHardAccelerationLimits(object oindices) const
 {
     if( IS_PYTHONOBJECT_NONE(oindices) ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     vector<int> vindices = ExtractArray<int>(oindices);
     if( vindices.size() == 0 ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     vector<dReal> vmax, vtempmax;
     vmax.reserve(vindices.size());
@@ -1954,11 +2244,11 @@ object PyKinBody::GetDOFHardAccelerationLimits(object oindices) const
 object PyKinBody::GetDOFHardJerkLimits(object oindices) const
 {
     if( IS_PYTHONOBJECT_NONE(oindices) ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     vector<int> vindices = ExtractArray<int>(oindices);
     if( vindices.size() == 0 ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     vector<dReal> vmax, vtempmax;
     vmax.reserve(vindices.size());
@@ -1973,11 +2263,11 @@ object PyKinBody::GetDOFHardJerkLimits(object oindices) const
 object PyKinBody::GetDOFTorqueLimits(object oindices) const
 {
     if( IS_PYTHONOBJECT_NONE(oindices) ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     vector<int> vindices = ExtractArray<int>(oindices);
     if( vindices.size() == 0 ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     vector<dReal> vmax, vtempmax;
     vmax.reserve(vindices.size());
@@ -2020,11 +2310,11 @@ object PyKinBody::GetDOFWeights() const
 object PyKinBody::GetDOFWeights(object oindices) const
 {
     if( IS_PYTHONOBJECT_NONE(oindices) ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     vector<int> vindices = ExtractArray<int>(oindices);
     if( vindices.size() == 0 ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     vector<dReal> values, v;
     values.reserve(vindices.size());
@@ -2045,11 +2335,11 @@ object PyKinBody::GetDOFResolutions() const
 object PyKinBody::GetDOFResolutions(object oindices) const
 {
     if( IS_PYTHONOBJECT_NONE(oindices) ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     vector<int> vindices = ExtractArray<int>(oindices);
     if( vindices.size() == 0 ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     vector<dReal> values, v;
     values.reserve(vindices.size());
@@ -2062,7 +2352,7 @@ object PyKinBody::GetDOFResolutions(object oindices) const
 
 object PyKinBody::GetLinks() const
 {
-    boost::python::list links;
+    py::list links;
     FOREACHC(itlink, _pbody->GetLinks()) {
         links.append(PyLinkPtr(new PyLink(*itlink, GetEnv())));
     }
@@ -2075,7 +2365,7 @@ object PyKinBody::GetLinks(object oindices) const
         return GetLinks();
     }
     vector<int> vindices = ExtractArray<int>(oindices);
-    boost::python::list links;
+    py::list links;
     FOREACHC(it, vindices) {
         links.append(PyLinkPtr(new PyLink(_pbody->GetLinks().at(*it),GetEnv())));
     }
@@ -2090,7 +2380,7 @@ object PyKinBody::GetLink(const std::string& linkname) const
 
 object PyKinBody::GetJoints() const
 {
-    boost::python::list joints;
+    py::list joints;
     FOREACHC(itjoint, _pbody->GetJoints()) {
         joints.append(PyJointPtr(new PyJoint(*itjoint, GetEnv())));
     }
@@ -2103,7 +2393,7 @@ object PyKinBody::GetJoints(object oindices) const
         return GetJoints();
     }
     vector<int> vindices = ExtractArray<int>(oindices);
-    boost::python::list joints;
+    py::list joints;
     FOREACHC(it, vindices) {
         joints.append(PyJointPtr(new PyJoint(_pbody->GetJoints().at(*it),GetEnv())));
     }
@@ -2112,7 +2402,7 @@ object PyKinBody::GetJoints(object oindices) const
 
 object PyKinBody::GetPassiveJoints()
 {
-    boost::python::list joints;
+    py::list joints;
     FOREACHC(itjoint, _pbody->GetPassiveJoints()) {
         joints.append(PyJointPtr(new PyJoint(*itjoint, GetEnv())));
     }
@@ -2121,7 +2411,7 @@ object PyKinBody::GetPassiveJoints()
 
 object PyKinBody::GetDependencyOrderedJoints()
 {
-    boost::python::list joints;
+    py::list joints;
     FOREACHC(itjoint, _pbody->GetDependencyOrderedJoints()) {
         joints.append(PyJointPtr(new PyJoint(*itjoint, GetEnv())));
     }
@@ -2130,11 +2420,11 @@ object PyKinBody::GetDependencyOrderedJoints()
 
 object PyKinBody::GetClosedLoops()
 {
-    boost::python::list loops;
+    py::list loops;
     FOREACHC(itloop, _pbody->GetClosedLoops()) {
-        boost::python::list loop;
+        py::list loop;
         FOREACHC(itpair,*itloop) {
-            loop.append(boost::python::make_tuple(PyLinkPtr(new PyLink(itpair->first,GetEnv())),PyJointPtr(new PyJoint(itpair->second,GetEnv()))));
+            loop.append(py::make_tuple(PyLinkPtr(new PyLink(itpair->first,GetEnv())),PyJointPtr(new PyJoint(itpair->second,GetEnv()))));
         }
         loops.append(loop);
     }
@@ -2146,7 +2436,7 @@ object PyKinBody::GetRigidlyAttachedLinks(int linkindex) const
     RAVELOG_WARN("KinBody.GetRigidlyAttachedLinks is deprecated, use KinBody.Link.GetRigidlyAttachedLinks\n");
     std::vector<KinBody::LinkPtr> vattachedlinks;
     _pbody->GetLinks().at(linkindex)->GetRigidlyAttachedLinks(vattachedlinks);
-    boost::python::list links;
+    py::list links;
     FOREACHC(itlink, vattachedlinks) {
         links.append(PyLinkPtr(new PyLink(*itlink, GetEnv())));
     }
@@ -2155,7 +2445,7 @@ object PyKinBody::GetRigidlyAttachedLinks(int linkindex) const
 
 object PyKinBody::GetChain(int linkindex1, int linkindex2,bool returnjoints) const
 {
-    boost::python::list chain;
+    py::list chain;
     if( returnjoints ) {
         std::vector<KinBody::JointPtr> vjoints;
         _pbody->GetChain(linkindex1,linkindex2,vjoints);
@@ -2205,7 +2495,7 @@ object PyKinBody::GetTransformPose() const {
 
 object PyKinBody::GetLinkTransformations(bool returndoflastvlaues) const
 {
-    boost::python::list otransforms;
+    py::list otransforms;
     vector<Transform> vtransforms;
     std::vector<dReal> vdoflastsetvalues;
     _pbody->GetLinkTransformations(vtransforms, vdoflastsetvalues);
@@ -2213,7 +2503,7 @@ object PyKinBody::GetLinkTransformations(bool returndoflastvlaues) const
         otransforms.append(ReturnTransform(*it));
     }
     if( returndoflastvlaues ) {
-        return boost::python::make_tuple(otransforms, toPyArray(vdoflastsetvalues));
+        return py::make_tuple(otransforms, toPyArray(vdoflastsetvalues));
     }
     return otransforms;
 }
@@ -2307,7 +2597,7 @@ void PyKinBody::SetDOFVelocities(object odofvelocities, uint32_t checklimits, ob
 object PyKinBody::GetLinkVelocities() const
 {
     if( _pbody->GetLinks().size() == 0 ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     std::vector<std::pair<Vector,Vector> > velocities;
     _pbody->GetLinkVelocities(velocities);
@@ -2329,21 +2619,21 @@ object PyKinBody::GetLinkVelocities() const
 object PyKinBody::GetLinkAccelerations(object odofaccelerations, object oexternalaccelerations=object()) const
 {
     if( _pbody->GetLinks().size() == 0 ) {
-        return numeric::array(boost::python::list());
+        return numeric::array(py::list());
     }
     vector<dReal> vDOFAccelerations = ExtractArray<dReal>(odofaccelerations);
     KinBody::AccelerationMapPtr pmapExternalAccelerations;
     if( !IS_PYTHONOBJECT_NONE(oexternalaccelerations) ) {
         //externalaccelerations
         pmapExternalAccelerations.reset(new KinBody::AccelerationMap());
-        boost::python::dict odict = (boost::python::dict)oexternalaccelerations;
-        boost::python::list iterkeys = (boost::python::list)odict.iterkeys();
+        py::dict odict = (py::dict)oexternalaccelerations;
+        py::list iterkeys = (py::list)odict.iterkeys();
         vector<dReal> v;
-        for (int i = 0; i < boost::python::len(iterkeys); i++) {
-            int linkindex = boost::python::extract<int>(iterkeys[i]);
+        for (int i = 0; i < py::len(iterkeys); i++) {
+            int linkindex = py::extract<int>(iterkeys[i]);
             object olinkaccelerations = odict[iterkeys[i]];
             OPENRAVE_ASSERT_OP(len(olinkaccelerations),==,6);
-            (*pmapExternalAccelerations)[linkindex] = make_pair(Vector(boost::python::extract<dReal>(olinkaccelerations[0]),boost::python::extract<dReal>(olinkaccelerations[1]),boost::python::extract<dReal>(olinkaccelerations[2])),Vector(boost::python::extract<dReal>(olinkaccelerations[3]),boost::python::extract<dReal>(olinkaccelerations[4]),boost::python::extract<dReal>(olinkaccelerations[5])));
+            (*pmapExternalAccelerations)[linkindex] = make_pair(Vector(py::extract<dReal>(olinkaccelerations[0]),py::extract<dReal>(olinkaccelerations[1]),py::extract<dReal>(olinkaccelerations[2])),Vector(py::extract<dReal>(olinkaccelerations[3]),py::extract<dReal>(olinkaccelerations[4]),py::extract<dReal>(olinkaccelerations[5])));
         }
     }
     std::vector<std::pair<Vector,Vector> > vLinkAccelerations;
@@ -2699,20 +2989,20 @@ object PyKinBody::ComputeInverseDynamics(object odofaccelerations, object oexter
     }
     KinBody::ForceTorqueMap mapExternalForceTorque;
     if( !IS_PYTHONOBJECT_NONE(oexternalforcetorque) ) {
-        boost::python::dict odict = (boost::python::dict)oexternalforcetorque;
-        boost::python::list iterkeys = (boost::python::list)odict.iterkeys();
+        py::dict odict = (py::dict)oexternalforcetorque;
+        py::list iterkeys = (py::list)odict.iterkeys();
         vector<dReal> v;
-        for (int i = 0; i < boost::python::len(iterkeys); i++) {
-            int linkindex = boost::python::extract<int>(iterkeys[i]);
+        for (int i = 0; i < py::len(iterkeys); i++) {
+            int linkindex = py::extract<int>(iterkeys[i]);
             object oforcetorque = odict[iterkeys[i]];
             OPENRAVE_ASSERT_OP(len(oforcetorque),==,6);
-            mapExternalForceTorque[linkindex] = make_pair(Vector(boost::python::extract<dReal>(oforcetorque[0]),boost::python::extract<dReal>(oforcetorque[1]),boost::python::extract<dReal>(oforcetorque[2])),Vector(boost::python::extract<dReal>(oforcetorque[3]),boost::python::extract<dReal>(oforcetorque[4]),boost::python::extract<dReal>(oforcetorque[5])));
+            mapExternalForceTorque[linkindex] = make_pair(Vector(py::extract<dReal>(oforcetorque[0]),py::extract<dReal>(oforcetorque[1]),py::extract<dReal>(oforcetorque[2])),Vector(py::extract<dReal>(oforcetorque[3]),py::extract<dReal>(oforcetorque[4]),py::extract<dReal>(oforcetorque[5])));
         }
     }
     if( returncomponents ) {
         boost::array< vector<dReal>, 3> vDOFTorqueComponents;
         _pbody->ComputeInverseDynamics(vDOFTorqueComponents,vDOFAccelerations,mapExternalForceTorque);
-        return boost::python::make_tuple(toPyArray(vDOFTorqueComponents[0]), toPyArray(vDOFTorqueComponents[1]), toPyArray(vDOFTorqueComponents[2]));
+        return py::make_tuple(toPyArray(vDOFTorqueComponents[0]), toPyArray(vDOFTorqueComponents[1]), toPyArray(vDOFTorqueComponents[2]));
     }
     else {
         vector<dReal> vDOFTorques;
@@ -2745,7 +3035,7 @@ bool PyKinBody::IsAttached(PyKinBodyPtr pattachbody)
 }
 object PyKinBody::GetAttached() const
 {
-    boost::python::list attached;
+    py::list attached;
     std::set<KinBodyPtr> vattached;
     _pbody->GetAttached(vattached);
     FOREACHC(it,vattached)
@@ -2829,7 +3119,7 @@ object PyKinBody::IsGrabbing(PyKinBodyPtr pbody) const
 
 object PyKinBody::GetGrabbed() const
 {
-    boost::python::list bodies;
+    py::list bodies;
     std::vector<KinBodyPtr> vbodies;
     _pbody->GetGrabbed(vbodies);
     FOREACH(itbody, vbodies) {
@@ -2840,7 +3130,7 @@ object PyKinBody::GetGrabbed() const
 
 object PyKinBody::GetGrabbedInfo() const
 {
-    boost::python::list ograbbed;
+    py::list ograbbed;
     std::vector<RobotBase::GrabbedInfoPtr> vgrabbedinfo;
     _pbody->GetGrabbedInfo(vgrabbedinfo);
     FOREACH(itgrabbed, vgrabbedinfo) {
@@ -2853,7 +3143,7 @@ void PyKinBody::ResetGrabbed(object ograbbedinfos)
 {
     std::vector<RobotBase::GrabbedInfoConstPtr> vgrabbedinfos(len(ograbbedinfos));
     for(size_t i = 0; i < vgrabbedinfos.size(); ++i) {
-        PyGrabbedInfoPtr pygrabbed = boost::python::extract<PyGrabbedInfoPtr>(ograbbedinfos[i]);
+        PyGrabbedInfoPtr pygrabbed = py::extract<PyGrabbedInfoPtr>(ograbbedinfos[i]);
         if( !pygrabbed ) {
             throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to Robot.GrabbedInfo"),ORE_InvalidArguments);
         }
@@ -2888,19 +3178,19 @@ object PyKinBody::GetURI() const
 
 object PyKinBody::GetNonAdjacentLinks() const
 {
-    boost::python::list ononadjacent;
+    py::list ononadjacent;
     const std::vector<int>& nonadjacent = _pbody->GetNonAdjacentLinks();
     FOREACHC(it,nonadjacent) {
-        ononadjacent.append(boost::python::make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
+        ononadjacent.append(py::make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
     }
     return ononadjacent;
 }
 object PyKinBody::GetNonAdjacentLinks(int adjacentoptions) const
 {
-    boost::python::list ononadjacent;
+    py::list ononadjacent;
     const std::vector<int>& nonadjacent = _pbody->GetNonAdjacentLinks(adjacentoptions);
     FOREACHC(it,nonadjacent) {
-        ononadjacent.append(boost::python::make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
+        ononadjacent.append(py::make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
     }
     return ononadjacent;
 }
@@ -2912,9 +3202,9 @@ void PyKinBody::SetAdjacentLinks(int linkindex0, int linkindex1)
 
 object PyKinBody::GetAdjacentLinks() const
 {
-    boost::python::list adjacent;
+    py::list adjacent;
     FOREACHC(it,_pbody->GetAdjacentLinks())
-    adjacent.append(boost::python::make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
+    adjacent.append(py::make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
     return adjacent;
 }
 
@@ -3120,35 +3410,35 @@ PyKinBodyPtr RaveCreateKinBody(PyEnvironmentBasePtr pyenv, const std::string& na
 class GeometryInfo_pickle_suite : public pickle_suite
 {
 public:
-    static boost::python::tuple getstate(const PyGeometryInfo& r)
+    static py::tuple getstate(const PyGeometryInfo& r)
     {
-        return boost::python::make_tuple(r._t, boost::python::make_tuple(r._vGeomData, r._vGeomData2, r._vGeomData3, r._vGeomData4), r._vDiffuseColor, r._vAmbientColor, r._meshcollision, (int)r._type, boost::python::make_tuple(r._name, r._filenamerender, r._filenamecollision), r._vRenderScale, r._vCollisionScale, r._fTransparency, r._bVisible, r._bModifiable, r._mapExtraGeometries);
+        return py::make_tuple(r._t, py::make_tuple(r._vGeomData, r._vGeomData2, r._vGeomData3, r._vGeomData4), r._vDiffuseColor, r._vAmbientColor, r._meshcollision, (int)r._type, py::make_tuple(r._name, r._filenamerender, r._filenamecollision), r._vRenderScale, r._vCollisionScale, r._fTransparency, r._bVisible, r._bModifiable, r._mapExtraGeometries);
     }
-    static void setstate(PyGeometryInfo& r, boost::python::tuple state) {
+    static void setstate(PyGeometryInfo& r, py::tuple state) {
         //int num = len(state);
         r._t = state[0];
         r._vGeomData = state[1][0];
         r._vGeomData2 = state[1][1];
         r._vGeomData3 = state[1][2];
-        if( boost::python::len(state[1]) >= 4 ) { // for backward compatibility
+        if( py::len(state[1]) >= 4 ) { // for backward compatibility
             r._vGeomData4 = state[1][3];
         }
         r._vDiffuseColor = state[2];
         r._vAmbientColor = state[3];
         r._meshcollision = state[4];
-        r._type = (GeometryType)(int)boost::python::extract<int>(state[5]);
+        r._type = (GeometryType)(int)py::extract<int>(state[5]);
 
-        boost::python::extract<std::string> pyoldfilenamerender(state[6]);
+        py::extract<std::string> pyoldfilenamerender(state[6]);
         if( pyoldfilenamerender.check() ) {
             // old format
             r._filenamerender = state[6];
             r._filenamecollision = state[7];
-            r._name = boost::python::object();
+            r._name = object();
             r._vRenderScale = state[8];
             r._vCollisionScale = state[9];
-            r._fTransparency = boost::python::extract<float>(state[10]);
-            r._bVisible = boost::python::extract<bool>(state[11]);
-            r._bModifiable = boost::python::extract<bool>(state[12]);
+            r._fTransparency = py::extract<float>(state[10]);
+            r._bVisible = py::extract<bool>(state[11]);
+            r._bModifiable = py::extract<bool>(state[12]);
             r._mapExtraGeometries = dict(state[13]);
         }
         else {
@@ -3158,9 +3448,9 @@ public:
             r._filenamecollision = state[6][2];
             r._vRenderScale = state[7];
             r._vCollisionScale = state[8];
-            r._fTransparency = boost::python::extract<float>(state[9]);
-            r._bVisible = boost::python::extract<bool>(state[10]);
-            r._bModifiable = boost::python::extract<bool>(state[11]);
+            r._fTransparency = py::extract<float>(state[9]);
+            r._bVisible = py::extract<bool>(state[10]);
+            r._bModifiable = py::extract<bool>(state[11]);
             r._mapExtraGeometries = dict(state[12]);
         }
     }
@@ -3169,23 +3459,23 @@ public:
 class LinkInfo_pickle_suite : public pickle_suite
 {
 public:
-    static boost::python::tuple getstate(const PyLinkInfo& r)
+    static py::tuple getstate(const PyLinkInfo& r)
     {
-        return boost::python::make_tuple(r._vgeometryinfos, r._name, r._t, r._tMassFrame, r._mass, r._vinertiamoments, r._mapFloatParameters, r._mapIntParameters, r._vForcedAdjacentLinks, r._bStatic, r._bIsEnabled, r._mapStringParameters);
+        return py::make_tuple(r._vgeometryinfos, r._name, r._t, r._tMassFrame, r._mass, r._vinertiamoments, r._mapFloatParameters, r._mapIntParameters, r._vForcedAdjacentLinks, r._bStatic, r._bIsEnabled, r._mapStringParameters);
     }
-    static void setstate(PyLinkInfo& r, boost::python::tuple state) {
+    static void setstate(PyLinkInfo& r, py::tuple state) {
         int num = len(state);
-        r._vgeometryinfos = boost::python::list(state[0]);
+        r._vgeometryinfos = py::list(state[0]);
         r._name = state[1];
         r._t = state[2];
         r._tMassFrame = state[3];
-        r._mass = boost::python::extract<dReal>(state[4]);
+        r._mass = py::extract<dReal>(state[4]);
         r._vinertiamoments = state[5];
         r._mapFloatParameters = dict(state[6]);
         r._mapIntParameters = dict(state[7]);
         r._vForcedAdjacentLinks = dict(state[8]);
-        r._bStatic = boost::python::extract<bool>(state[9]);
-        r._bIsEnabled = boost::python::extract<bool>(state[10]);
+        r._bStatic = py::extract<bool>(state[9]);
+        r._bIsEnabled = py::extract<bool>(state[10]);
         if( num > 11 ) {
             r._mapStringParameters = dict(state[11]);
         }
@@ -3195,40 +3485,82 @@ public:
 class ElectricMotorActuatorInfo_pickle_suite : public pickle_suite
 {
 public:
-    static boost::python::tuple getstate(const PyElectricMotorActuatorInfo& r)
+    static py::tuple getstate(const PyElectricMotorActuatorInfo& r)
     {
-        return boost::python::make_tuple(r.gear_ratio, r.assigned_power_rating, r.max_speed, r.no_load_speed, boost::python::make_tuple(r.stall_torque, r.max_instantaneous_torque), boost::python::make_tuple(r.nominal_speed_torque_points, r.max_speed_torque_points), r.nominal_torque, r.rotor_inertia, r.torque_constant, r.nominal_voltage, r.speed_constant, r.starting_current, r.terminal_resistance, boost::python::make_tuple(r.coloumb_friction, r.viscous_friction));
+        return py::make_tuple(r.gear_ratio, r.assigned_power_rating, r.max_speed, r.no_load_speed, py::make_tuple(r.stall_torque, r.max_instantaneous_torque), py::make_tuple(r.nominal_speed_torque_points, r.max_speed_torque_points), r.nominal_torque, r.rotor_inertia, r.torque_constant, r.nominal_voltage, r.speed_constant, r.starting_current, r.terminal_resistance, py::make_tuple(r.coloumb_friction, r.viscous_friction));
     }
-    static void setstate(PyElectricMotorActuatorInfo& r, boost::python::tuple state) {
-        r.gear_ratio = boost::python::extract<dReal>(state[0]);
-        r.assigned_power_rating = boost::python::extract<dReal>(state[1]);
-        r.max_speed = boost::python::extract<dReal>(state[2]);
-        r.no_load_speed = boost::python::extract<dReal>(state[3]);
-        r.stall_torque = boost::python::extract<dReal>(state[4][0]);
-        r.max_instantaneous_torque = boost::python::extract<dReal>(state[4][1]);
-        r.nominal_speed_torque_points = boost::python::list(state[5][0]);
-        r.max_speed_torque_points = boost::python::list(state[5][1]);
-        r.nominal_torque = boost::python::extract<dReal>(state[6]);
-        r.rotor_inertia = boost::python::extract<dReal>(state[7]);
-        r.torque_constant = boost::python::extract<dReal>(state[8]);
-        r.nominal_voltage = boost::python::extract<dReal>(state[9]);
-        r.speed_constant = boost::python::extract<dReal>(state[10]);
-        r.starting_current = boost::python::extract<dReal>(state[11]);
-        r.terminal_resistance = boost::python::extract<dReal>(state[12]);
-        r.coloumb_friction = boost::python::extract<dReal>(state[13][0]);
-        r.viscous_friction = boost::python::extract<dReal>(state[13][1]);
+    static void setstate(PyElectricMotorActuatorInfo& r, py::tuple state) {
+        r.gear_ratio = py::extract<dReal>(state[0]);
+        r.assigned_power_rating = py::extract<dReal>(state[1]);
+        r.max_speed = py::extract<dReal>(state[2]);
+        r.no_load_speed = py::extract<dReal>(state[3]);
+        r.stall_torque = py::extract<dReal>(state[4][0]);
+        r.max_instantaneous_torque = py::extract<dReal>(state[4][1]);
+        r.nominal_speed_torque_points = py::list(state[5][0]);
+        r.max_speed_torque_points = py::list(state[5][1]);
+        r.nominal_torque = py::extract<dReal>(state[6]);
+        r.rotor_inertia = py::extract<dReal>(state[7]);
+        r.torque_constant = py::extract<dReal>(state[8]);
+        r.nominal_voltage = py::extract<dReal>(state[9]);
+        r.speed_constant = py::extract<dReal>(state[10]);
+        r.starting_current = py::extract<dReal>(state[11]);
+        r.terminal_resistance = py::extract<dReal>(state[12]);
+        r.coloumb_friction = py::extract<dReal>(state[13][0]);
+        r.viscous_friction = py::extract<dReal>(state[13][1]);
+    }
+};
+
+class JointControlInfo_RobotController_pickle_suite : public pickle_suite
+{
+public:
+    static py::tuple getstate(const PyJointControlInfo_RobotController& r)
+    {
+        return py::make_tuple(r.robotId, r.robotControllerDOFIndex);
+    }
+    static void setstate(PyJointControlInfo_RobotController& r, py::tuple state) {
+        r.robotId = py::extract<int>(state[0]);
+        r.robotControllerDOFIndex = state[1];
+    }
+};
+
+class JointControlInfo_IO_pickle_suite : public pickle_suite
+{
+public:
+    static py::tuple getstate(const PyJointControlInfo_IO& r)
+    {
+        return py::make_tuple(r.deviceId, r.vMoveIONames, r.vUpperLimitIONames, r.vUpperLimitSensorIsOn, r.vLowerLimitIONames, r.vLowerLimitSensorIsOn);
+    }
+    static void setstate(PyJointControlInfo_IO& r, py::tuple state) {
+        r.deviceId = py::extract<int>(state[0]);
+        r.vMoveIONames = state[1];
+        r.vUpperLimitIONames = state[2];
+        r.vUpperLimitSensorIsOn = state[3];
+        r.vLowerLimitIONames = state[4];
+        r.vLowerLimitSensorIsOn = state[5];
+    }
+};
+
+class JointControlInfo_ExternalDevice_pickle_suite : public pickle_suite
+{
+public:
+    static py::tuple getstate(const PyJointControlInfo_ExternalDevice& r)
+    {
+        return py::make_tuple(r.externalDeviceId);
+    }
+    static void setstate(PyJointControlInfo_ExternalDevice& r, py::tuple state) {
+        r.externalDeviceId = py::extract<int>(state[0]);
     }
 };
 
 class JointInfo_pickle_suite : public pickle_suite
 {
 public:
-    static boost::python::tuple getstate(const PyJointInfo& r)
+    static py::tuple getstate(const PyJointInfo& r)
     {
-        return boost::python::make_tuple(boost::python::make_tuple((int)r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), boost::python::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), boost::python::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular, r._bIsActive, r._mapStringParameters, r._infoElectricMotor, r._vmaxinertia, r._vmaxjerk, r._vhardmaxaccel, r._vhardmaxjerk));
+        return py::make_tuple(py::make_tuple((int)r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), py::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), py::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular, r._bIsActive, r._mapStringParameters, r._infoElectricMotor, r._vmaxinertia, r._vmaxjerk, r._vhardmaxaccel, r._vhardmaxjerk), py::make_tuple((int)r._controlMode, r._jci_robotcontroller, r._jci_io, r._jci_externaldevice));
     }
-    static void setstate(PyJointInfo& r, boost::python::tuple state) {
-        r._type = (KinBody::JointType)(int)boost::python::extract<int>(state[0][0]);
+    static void setstate(PyJointInfo& r, py::tuple state) {
+        r._type = (KinBody::JointType)(int)py::extract<int>(state[0][0]);
         r._name = state[0][1];
         r._linkname0 = state[0][2];
         r._linkname1 = state[0][3];
@@ -3246,15 +3578,15 @@ public:
         r._vupperlimit = state[1][8];
         r._trajfollow = state[2][0];
         int num2 = len(state[2]);
-        r._vmimic = boost::python::list(state[2][1]);
-        r._mapFloatParameters = boost::python::dict(state[2][2]);
-        r._mapIntParameters = boost::python::dict(state[2][3]);
+        r._vmimic = py::list(state[2][1]);
+        r._mapFloatParameters = py::dict(state[2][2]);
+        r._mapIntParameters = py::dict(state[2][3]);
         r._bIsCircular = state[2][4];
-        r._bIsActive = boost::python::extract<bool>(state[2][5]);
+        r._bIsActive = py::extract<bool>(state[2][5]);
         if( num2 > 6 ) {
-            r._mapStringParameters = boost::python::dict(state[2][6]);
+            r._mapStringParameters = py::dict(state[2][6]);
             if( num2 > 7 ) {
-                r._infoElectricMotor = boost::python::extract<PyElectricMotorActuatorInfoPtr>(state[2][7]);
+                r._infoElectricMotor = py::extract<PyElectricMotorActuatorInfoPtr>(state[2][7]);
                 if( num2 > 8 ) {
                     r._vmaxinertia = state[2][8];
                     if( num2 > 9 ) {
@@ -3269,17 +3601,23 @@ public:
                 }
             }
         }
+        if( len(state) > 3 ) {
+            r._controlMode = (KinBody::JointControlMode)(int)py::extract<int>(state[3][0]);
+            r._jci_robotcontroller = py::extract<PyJointControlInfo_RobotControllerPtr>(state[3][1]);
+            r._jci_io = py::extract<PyJointControlInfo_IOPtr>(state[3][2]);
+            r._jci_externaldevice = py::extract<PyJointControlInfo_ExternalDevicePtr>(state[3][3]);
+        }
     }
 };
 
 class GrabbedInfo_pickle_suite : public pickle_suite
 {
 public:
-    static boost::python::tuple getstate(const PyKinBody::PyGrabbedInfo& r)
+    static py::tuple getstate(const PyKinBody::PyGrabbedInfo& r)
     {
-        return boost::python::make_tuple(r._grabbedname, r._robotlinkname, r._trelative, r._setRobotLinksToIgnore);
+        return py::make_tuple(r._grabbedname, r._robotlinkname, r._trelative, r._setRobotLinksToIgnore);
     }
-    static void setstate(PyKinBody::PyGrabbedInfo& r, boost::python::tuple state) {
+    static void setstate(PyKinBody::PyGrabbedInfo& r, py::tuple state) {
         r._grabbedname = state[0];
         r._robotlinkname = state[1];
         r._trelative = state[2];
@@ -3396,6 +3734,13 @@ void init_openravepy_kinbody()
                        .value("Trajectory",KinBody::JointTrajectory)
     ;
 
+    object jointcontrolmode = enum_<KinBody::JointControlMode>("JointControlMode" DOXY_ENUM(JointControlMode))
+                              .value("JCM_None",KinBody::JCM_None)
+                              .value("JCM_RobotController",KinBody::JCM_RobotController)
+                              .value("JCM_IO",KinBody::JCM_IO)
+                              .value("JCM_ExternalDevice",KinBody::JCM_ExternalDevice)
+    ;
+
     object geometryinfo = class_<PyGeometryInfo, boost::shared_ptr<PyGeometryInfo> >("GeometryInfo", DOXY_CLASS(KinBody::GeometryInfo))
                           .def_readwrite("_t",&PyGeometryInfo::_t)
                           .def_readwrite("_vGeomData",&PyGeometryInfo::_vGeomData)
@@ -3444,6 +3789,31 @@ void init_openravepy_kinbody()
                       .def_readwrite("_bIsEnabled",&PyLinkInfo::_bIsEnabled)
                       .def_pickle(LinkInfo_pickle_suite())
     ;
+
+    object jointcontrolinfo_robotcontroller =
+        class_<PyJointControlInfo_RobotController, boost::shared_ptr<PyJointControlInfo_RobotController> >("JointControlInfo_RobotController", DOXY_CLASS(KinBody::JointInfo::JointControlInfo_RobotController))
+        .def_readwrite("robotId", &PyJointControlInfo_RobotController::robotId)
+        .def_readwrite("robotControllerDOFIndex", &PyJointControlInfo_RobotController::robotControllerDOFIndex)
+        .def_pickle(JointControlInfo_RobotController_pickle_suite())
+    ;
+
+    object jointcontrolinfo_io =
+        class_<PyJointControlInfo_IO, boost::shared_ptr<PyJointControlInfo_IO> >("JointControlInfo_IO", DOXY_CLASS(KinBody::JointInfo::JointControlInfo_IO))
+        .def_readwrite("deviceId", &PyJointControlInfo_IO::deviceId)
+        .def_readwrite("vMoveIONames", &PyJointControlInfo_IO::vMoveIONames)
+        .def_readwrite("vUpperLimitIONames", &PyJointControlInfo_IO::vUpperLimitIONames)
+        .def_readwrite("vUpperLimitSensorIsOn", &PyJointControlInfo_IO::vUpperLimitSensorIsOn)
+        .def_readwrite("vLowerLimitIONames", &PyJointControlInfo_IO::vLowerLimitIONames)
+        .def_readwrite("vLowerLimitSensorIsOn", &PyJointControlInfo_IO::vLowerLimitSensorIsOn)
+        .def_pickle(JointControlInfo_IO_pickle_suite())
+    ;
+
+    object jointcontrolinfo_externaldevice =
+        class_<PyJointControlInfo_ExternalDevice, boost::shared_ptr<PyJointControlInfo_ExternalDevice> >("JointControlInfo_ExternalDevice", DOXY_CLASS(KinBody::JointInfo::JointControlInfo_ExternalDevice))
+        .def_readwrite("externalDeviceId", &PyJointControlInfo_ExternalDevice::externalDeviceId)
+        .def_pickle(JointControlInfo_ExternalDevice_pickle_suite())
+    ;
+
     object jointinfo = class_<PyJointInfo, boost::shared_ptr<PyJointInfo> >("JointInfo", DOXY_CLASS(KinBody::JointInfo))
                        .def_readwrite("_type",&PyJointInfo::_type)
                        .def_readwrite("_name",&PyJointInfo::_name)
@@ -3473,6 +3843,10 @@ void init_openravepy_kinbody()
                        .def_readwrite("_bIsCircular",&PyJointInfo::_bIsCircular)
                        .def_readwrite("_bIsActive",&PyJointInfo::_bIsActive)
                        .def_readwrite("_infoElectricMotor", &PyJointInfo::_infoElectricMotor)
+                       .def_readwrite("_controlMode", &PyJointInfo::_controlMode)
+                       .def_readwrite("_jci_robotcontroller", &PyJointInfo::_jci_robotcontroller)
+                       .def_readwrite("_jci_io", &PyJointInfo::_jci_io)
+                       .def_readwrite("_jci_externaldevice", &PyJointInfo::_jci_externaldevice)
                        .def_pickle(JointInfo_pickle_suite())
     ;
 
@@ -3891,6 +4265,7 @@ void init_openravepy_kinbody()
                           .def("SetIntParameters",&PyJoint::SetIntParameters,DOXY_FN(KinBody::Joint,SetIntParameters))
                           .def("GetStringParameters",&PyJoint::GetStringParameters,GetStringParameters_overloads(args("name", "index"), DOXY_FN(KinBody::Joint,GetStringParameters)))
                           .def("SetStringParameters",&PyJoint::SetStringParameters,DOXY_FN(KinBody::Joint,SetStringParameters))
+                          .def("GetControlMode",&PyJoint::GetControlMode,DOXY_FN(KinBody::Joint,GetControlMode))
                           .def("UpdateInfo",&PyJoint::UpdateInfo,DOXY_FN(KinBody::Joint,UpdateInfo))
                           .def("GetInfo",&PyJoint::GetInfo,DOXY_FN(KinBody::Joint,GetInfo))
                           .def("UpdateAndGetInfo",&PyJoint::UpdateAndGetInfo,DOXY_FN(KinBody::Joint,UpdateAndGetInfo))

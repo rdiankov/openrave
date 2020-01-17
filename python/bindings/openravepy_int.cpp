@@ -22,7 +22,23 @@
 
 namespace openravepy
 {
-
+using py::object;
+using py::extract;
+using py::handle;
+using py::dict;
+using py::enum_;
+using py::class_;
+using py::no_init;
+using py::bases;
+using py::init;
+using py::scope;
+using py::args;
+using py::return_value_policy;
+using py::copy_const_reference;
+using py::docstring_options;
+using py::optional;
+using py::def;
+namespace numeric = py::numeric;
 #if OPENRAVE_RAPIDJSON
 
 // convert from rapidjson to python object
@@ -31,7 +47,7 @@ object toPyObject(const rapidjson::Value& value)
     switch (value.GetType()) {
     case rapidjson::kObjectType:
         {
-            boost::python::dict d;
+            py::dict d;
             for (rapidjson::Value::ConstMemberIterator it = value.MemberBegin(); it != value.MemberEnd(); ++it) {
                 d[it->name.GetString()] = toPyObject(it->value);
             }
@@ -39,24 +55,24 @@ object toPyObject(const rapidjson::Value& value)
         }
     case rapidjson::kArrayType:
         {
-            boost::python::list l;
+            py::list l;
             for (rapidjson::Value::ConstValueIterator it = value.Begin(); it != value.End(); ++it) {
                 l.append(toPyObject(*it));
             }
             return l;
         }
     case rapidjson::kTrueType:
-        return boost::python::object(boost::python::handle<>(PyBool_FromLong(1)));
+        return object(py::handle<>(PyBool_FromLong(1)));
     case rapidjson::kFalseType:
-        return boost::python::object(boost::python::handle<>(PyBool_FromLong(0)));
+        return object(py::handle<>(PyBool_FromLong(0)));
     case rapidjson::kStringType:
         return ConvertStringToUnicode(value.GetString());
     case rapidjson::kNumberType:
         if (value.IsDouble()) {
-            return boost::python::object(boost::python::handle<>(PyFloat_FromDouble(value.GetDouble())));
+            return object(py::handle<>(PyFloat_FromDouble(value.GetDouble())));
         }
         else {
-            return boost::python::object(boost::python::handle<>(PyInt_FromLong(value.GetInt64())));
+            return object(py::handle<>(PyInt_FromLong(value.GetInt64())));
         }
     case rapidjson::kNullType:
         return object();
@@ -129,11 +145,11 @@ void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
     }
     else if (PyTuple_Check(obj.ptr()))
     {
-        boost::python::tuple t = boost::python::extract<boost::python::tuple>(obj);
+        py::tuple t = py::extract<py::tuple>(obj);
         value.SetArray();
         for (int i = 0; i < len(t); i++)
         {
-            boost::python::object o = boost::python::extract<boost::python::object>(t[i]);
+            object o = py::extract<object>(t[i]);
             rapidjson::Value elementValue;
             toRapidJSONValue(o, elementValue, allocator);
             value.PushBack(elementValue, allocator);
@@ -141,11 +157,11 @@ void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
     }
     else if (PyList_Check(obj.ptr()))
     {
-        boost::python::list l = boost::python::extract<boost::python::list>(obj);
+        py::list l = py::extract<py::list>(obj);
         value.SetArray();
         int numitems = len(l);
         for (int i = 0; i < numitems; i++) {
-            boost::python::object o = boost::python::extract<boost::python::object>(l[i]);
+            object o = py::extract<object>(l[i]);
             rapidjson::Value elementValue;
             toRapidJSONValue(o, elementValue, allocator);
             value.PushBack(elementValue, allocator);
@@ -153,20 +169,20 @@ void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
     }
     else if (PyDict_Check(obj.ptr()))
     {
-        boost::python::dict d = boost::python::extract<boost::python::dict>(obj);
-        boost::python::object iterator = d.iteritems();
+        py::dict d = py::extract<py::dict>(obj);
+        object iterator = d.iteritems();
         value.SetObject();
         int numitems = len(d);
         for (int i = 0; i < numitems; i++)
         {
             rapidjson::Value keyValue, valueValue;
-            boost::python::tuple kv = boost::python::extract<boost::python::tuple>(iterator.attr("next")());
+            py::tuple kv = py::extract<py::tuple>(iterator.attr("next")());
             {
-                boost::python::object k = boost::python::extract<object>(kv[0]);
+                object k = py::extract<object>(kv[0]);
                 toRapidJSONValue(k, keyValue, allocator);
             }
             {
-                boost::python::object v = boost::python::extract<object>(kv[1]);
+                object v = py::extract<object>(kv[1]);
                 toRapidJSONValue(v, valueValue, allocator);
             }
             value.AddMember(keyValue, valueValue, allocator);
@@ -268,47 +284,47 @@ object toPyArray(const Transform& t)
     return static_cast<numeric::array>(handle<>(pyvalues));
 }
 
-AttributesList toAttributesList(boost::python::dict odict)
+AttributesList toAttributesList(py::dict odict)
 {
     AttributesList atts;
     if( !IS_PYTHONOBJECT_NONE(odict) ) {
-        boost::python::list iterkeys = (boost::python::list)odict.iterkeys();
-        size_t num = boost::python::len(iterkeys);
+        py::list iterkeys = (py::list)odict.iterkeys();
+        size_t num = py::len(iterkeys);
         for (size_t i = 0; i < num; i++) {
             // Because we know they're strings, we can do this
-            std::string key = boost::python::extract<std::string>(iterkeys[i]);
-            std::string value = boost::python::extract<std::string>(odict[iterkeys[i]]);
+            std::string key = py::extract<std::string>(iterkeys[i]);
+            std::string value = py::extract<std::string>(odict[iterkeys[i]]);
             atts.emplace_back(key, value);
         }
     }
     return atts;
 }
 
-AttributesList toAttributesList(boost::python::list oattributes)
+AttributesList toAttributesList(py::list oattributes)
 {
     AttributesList atts;
     if( !IS_PYTHONOBJECT_NONE(oattributes) ) {
         size_t num=len(oattributes);
         for (size_t i = 0; i < num; i++) {
             // Because we know they're strings, we can do this
-            std::string key = boost::python::extract<std::string>(oattributes[i][0]);
-            std::string value = boost::python::extract<std::string>(oattributes[i][1]);
+            std::string key = py::extract<std::string>(oattributes[i][0]);
+            std::string value = py::extract<std::string>(oattributes[i][1]);
             atts.emplace_back(key, value);
         }
     }
     return atts;
 }
 
-AttributesList toAttributesList(boost::python::object oattributes)
+AttributesList toAttributesList(object oattributes)
 {
     if( !IS_PYTHONOBJECT_NONE(oattributes) ) {
-        boost::python::extract<boost::python::dict> odictextractor(oattributes);
+        py::extract<py::dict> odictextractor(oattributes);
         if( odictextractor.check() ) {
-            return toAttributesList((boost::python::dict)odictextractor());
+            return toAttributesList((py::dict)odictextractor());
         }
         // assume list
-        boost::python::extract<boost::python::list> olistextractor(oattributes);
-        return toAttributesList((boost::python::list)olistextractor());
+        py::extract<py::list> olistextractor(oattributes);
+        return toAttributesList((py::list)olistextractor());
     }
     return AttributesList();
 }
@@ -679,7 +695,7 @@ object PyInterfaceBase::SendJSONCommand(const string& cmd, object input, bool re
 
 object PyInterfaceBase::GetReadableInterfaces()
 {
-    boost::python::dict ointerfaces;
+    py::dict ointerfaces;
     FOREACHC(it,_pbase->GetReadableInterfaces()) {
         ointerfaces[it->first] = toPyXMLReadable(it->second);
     }
@@ -1175,12 +1191,12 @@ public:
         return bCollision;
     }
 
-    object CheckCollisionRays(boost::python::numeric::array rays, PyKinBodyPtr pbody,bool bFrontFacingOnly=false)
+    object CheckCollisionRays(py::numeric::array rays, PyKinBodyPtr pbody,bool bFrontFacingOnly=false)
     {
         object shape = rays.attr("shape");
         int nRays = extract<int>(shape[0]);
         if( nRays == 0 ) {
-            return boost::python::make_tuple(numeric::array(boost::python::list()).astype("i4"),numeric::array(boost::python::list()));
+            return py::make_tuple(numeric::array(py::list()).astype("i4"),numeric::array(py::list()));
         }
         if( extract<int>(shape[1]) != 6 ) {
             throw openrave_exception(_("rays object needs to be a Nx6 vector\n"));
@@ -1252,7 +1268,7 @@ public:
             }
         }
 
-        return boost::python::make_tuple(static_cast<numeric::array>(handle<>(pycollision)),static_cast<numeric::array>(handle<>(pypos)));
+        return py::make_tuple(static_cast<numeric::array>(handle<>(pycollision)),static_cast<numeric::array>(handle<>(pypos)));
     }
 
     bool CheckCollision(boost::shared_ptr<PyRay> pyray)
@@ -1321,10 +1337,10 @@ public:
         }
 
         if( output.size() == 0 ) {
-            return boost::python::object();
+            return object();
         }
         else {
-            return boost::python::object(boost::python::handle<>(PyString_FromStringAndSize(&output[0], output.size())));
+            return object(py::handle<>(PyString_FromStringAndSize(&output[0], output.size())));
         }
     }
 
@@ -1494,7 +1510,7 @@ public:
     {
         std::list<ModuleBasePtr> listModules;
         _penv->GetModules(listModules);
-        boost::python::list modules;
+        py::list modules;
         FOREACHC(itprob, listModules) {
             modules.append(openravepy::toPyModule(*itprob,shared_from_this()));
         }
@@ -1883,7 +1899,7 @@ public:
     {
         std::vector<KinBodyPtr> vbodies;
         _penv->GetBodies(vbodies);
-        boost::python::list bodies;
+        py::list bodies;
         FOREACHC(itbody, vbodies) {
             if( (*itbody)->IsRobot() ) {
                 bodies.append(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(*itbody),shared_from_this()));
@@ -1899,7 +1915,7 @@ public:
     {
         std::vector<RobotBasePtr> vrobots;
         _penv->GetRobots(vrobots);
-        boost::python::list robots;
+        py::list robots;
         FOREACHC(itrobot, vrobots) {
             robots.append(openravepy::toPyRobot(*itrobot,shared_from_this()));
         }
@@ -1910,7 +1926,7 @@ public:
     {
         std::vector<SensorBasePtr> vsensors;
         _penv->GetSensors(vsensors);
-        boost::python::list sensors;
+        py::list sensors;
         FOREACHC(itsensor, vsensors) {
             sensors.append(openravepy::toPySensor(*itsensor,shared_from_this()));
         }
@@ -1926,11 +1942,11 @@ public:
     {
         std::vector<KinBody::BodyState> vbodystates;
         _penv->GetPublishedBodies(vbodystates, timeout);
-        boost::python::list ostates;
+        py::list ostates;
         FOREACH(itstate, vbodystates) {
-            boost::python::dict ostate;
+            py::dict ostate;
             ostate["body"] = toPyKinBody(itstate->pbody, shared_from_this());
-            boost::python::list olinktransforms;
+            py::list olinktransforms;
             FOREACH(ittransform, itstate->vectrans) {
                 olinktransforms.append(ReturnTransform(*ittransform));
             }
@@ -1956,9 +1972,9 @@ public:
             return object();
         }
 
-        boost::python::dict ostate;
+        py::dict ostate;
         ostate["body"] = toPyKinBody(bodystate.pbody, shared_from_this());
-        boost::python::list olinktransforms;
+        py::list olinktransforms;
         FOREACH(ittransform, bodystate.vectrans) {
             olinktransforms.append(ReturnTransform(*ittransform));
         }
@@ -1988,7 +2004,7 @@ public:
         std::vector< std::pair<std::string, Transform> > nameTransfPairs;
         _penv->GetPublishedBodyTransformsMatchingPrefix(prefix, nameTransfPairs, timeout);
 
-        boost::python::dict otransforms;
+        py::dict otransforms;
         FOREACH(itpair, nameTransfPairs) {
             otransforms[itpair->first] = ReturnTransform(itpair->second);
         }
@@ -2038,7 +2054,7 @@ public:
 
     object GetUnit() const {
         std::pair<std::string, dReal> unit = _penv->GetUnit();
-        return boost::python::make_tuple(unit.first, unit.second);
+        return py::make_tuple(unit.first, unit.second);
 
     }
 
@@ -2146,7 +2162,7 @@ object RaveGetEnvironments()
 {
     std::list<EnvironmentBasePtr> listenvironments;
     OpenRAVE::RaveGetEnvironments(listenvironments);
-    boost::python::list oenvironments;
+    py::list oenvironments;
     FOREACH(it,listenvironments) {
         oenvironments.append(PyEnvironmentBasePtr(new PyEnvironmentBase(*it)));
     }
