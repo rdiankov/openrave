@@ -371,7 +371,7 @@ void init_openravepy_viewer()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                        .def("main", &PyViewerBase::main,
                         "show"_a,
-                        "sig_thread_id"_a,
+                        "sig_thread_id"_a = 0,
                         DOXY_FN(ViewerBase,main)
                         )
 #else
