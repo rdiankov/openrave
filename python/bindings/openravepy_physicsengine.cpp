@@ -15,26 +15,35 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NO_IMPORT_ARRAY
-#include "openravepy_int.h"
+#include <openravepy/openravepy_int.h>
+#include <openravepy/openravepy_kinbody.h>
+#include <openravepy/openravepy_environmentbase.h>
 
 namespace openravepy {
 
 using py::object;
 using py::extract;
+using py::extract_;
 using py::handle;
 using py::dict;
 using py::enum_;
 using py::class_;
-using py::no_init;
-using py::bases;
 using py::init;
+using py::scope_; // py::object if USE_PYBIND11_PYTHON_BINDINGS
 using py::scope;
 using py::args;
 using py::return_value_policy;
+
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+using py::no_init;
+using py::bases;
 using py::copy_const_reference;
 using py::docstring_options;
-using py::def;
 using py::pickle_suite;
+using py::manage_new_object;
+using py::def;
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+
 namespace numeric = py::numeric;
 
 class PyPhysicsEngineBase : public PyInterfaceBase
@@ -78,7 +87,7 @@ public:
         std::vector<std::pair<Vector,Vector> > velocities;
         velocities.resize(len(ovelocities));
         for(size_t i = 0; i < velocities.size(); ++i) {
-            vector<dReal> v = ExtractArray<dReal>(ovelocities[i]);
+            std::vector<dReal> v = ExtractArray<dReal>(ovelocities[i]);
             BOOST_ASSERT(v.size()==6);
             velocities[i].first.x = v[0];
             velocities[i].first.y = v[1];
@@ -95,7 +104,7 @@ public:
         CHECK_POINTER(pylink);
         Vector linearvel, angularvel;
         if( !_pPhysicsEngine->GetLinkVelocity(openravepy::GetKinBodyLink(pylink),linearvel,angularvel) ) {
-            return object();
+            return py::none_();
         }
         return py::make_tuple(toPyVector3(linearvel),toPyVector3(angularvel));
     }
@@ -105,11 +114,11 @@ public:
         CHECK_POINTER(pykinbody);
         KinBodyPtr pbody = openravepy::GetKinBody(pykinbody);
         if( pbody->GetLinks().size() == 0 ) {
-            return numeric::array(py::list());
+            return py::empty_array_astype<dReal>();
         }
         std::vector<std::pair<Vector,Vector> > velocities;
         if( !_pPhysicsEngine->GetLinkVelocities(pbody,velocities) ) {
-            return object();
+            return py::none_();
         }
         npy_intp dims[] = { npy_intp(velocities.size()), 6};
         PyObject *pyvel = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
@@ -122,7 +131,7 @@ public:
             pfvel[6*i+4] = velocities[i].second.y;
             pfvel[6*i+5] = velocities[i].second.z;
         }
-        return static_cast<numeric::array>(handle<>(pyvel));
+        return py::to_array_astype<dReal>(pyvel);
     }
 
     bool SetBodyForce(object pylink, object force, object position, bool bAdd)
@@ -148,7 +157,7 @@ public:
         CHECK_POINTER(pylink);
         Vector force, torque;
         if( !_pPhysicsEngine->GetLinkForceTorque(openravepy::GetKinBodyLink(pylink),force,torque) ) {
-            return object();
+            return py::none_();
         }
         return py::make_tuple(toPyVector3(force),toPyVector3(torque));
     }
@@ -158,7 +167,7 @@ public:
         CHECK_POINTER(pyjoint);
         Vector force, torque;
         if( !_pPhysicsEngine->GetJointForceTorque(openravepy::GetKinBodyJoint(pyjoint),force,torque) ) {
-            return object();
+            return py::none_();
         }
         return py::make_tuple(toPyVector3(force),toPyVector3(torque));
     }
@@ -194,16 +203,26 @@ PyPhysicsEngineBasePtr RaveCreatePhysicsEngine(PyEnvironmentBasePtr pyenv, const
     return PyPhysicsEngineBasePtr(new PyPhysicsEngineBase(p,pyenv));
 }
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_openravepy_physicsengine(py::module& m)
+#else
 void init_openravepy_physicsengine()
+#endif
 {
-    class_<PyPhysicsEngineBase, boost::shared_ptr<PyPhysicsEngineBase>, bases<PyInterfaceBase> >("PhysicsEngine", DOXY_CLASS(PhysicsEngineBase), no_init)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    using namespace py::literals; // "..."_a
+    class_<PyPhysicsEngineBase, OPENRAVE_SHARED_PTR<PyPhysicsEngineBase>, PyInterfaceBase>(m, "PhysicsEngine", DOXY_CLASS(PhysicsEngineBase))
+    .def(init<PhysicsEngineBasePtr, PyEnvironmentBasePtr>(), "physicsengine"_a, "env"_a)
+#else
+    class_<PyPhysicsEngineBase, OPENRAVE_SHARED_PTR<PyPhysicsEngineBase>, bases<PyInterfaceBase> >("PhysicsEngine", DOXY_CLASS(PhysicsEngineBase), no_init)
+#endif
     .def("GetPhysicsOptions",&PyPhysicsEngineBase::GetPhysicsOptions, DOXY_FN(PhysicsEngineBase,GetPhysicsOptions))
     .def("SetPhysicsOptions",&PyPhysicsEngineBase::SetPhysicsOptions, DOXY_FN(PhysicsEngineBase,SetPhysicsOptions "int"))
     .def("InitEnvironment",&PyPhysicsEngineBase::InitEnvironment, DOXY_FN(PhysicsEngineBase,InitEnvironment))
     .def("DestroyEnvironment",&PyPhysicsEngineBase::DestroyEnvironment, DOXY_FN(PhysicsEngineBase,DestroyEnvironment))
     .def("InitKinBody",&PyPhysicsEngineBase::InitKinBody, DOXY_FN(PhysicsEngineBase,InitKinBody))
-    .def("SetLinkVelocity",&PyPhysicsEngineBase::SetLinkVelocity, args("link","velocity"), DOXY_FN(PhysicsEngineBase,SetLinkVelocity))
-    .def("SetLinkVelocities",&PyPhysicsEngineBase::SetLinkVelocity, args("body","velocities"), DOXY_FN(PhysicsEngineBase,SetLinkVelocities))
+    .def("SetLinkVelocity",&PyPhysicsEngineBase::SetLinkVelocity, PY_ARGS("link", "linearvel", "angularvel") DOXY_FN(PhysicsEngineBase,SetLinkVelocity))
+    .def("SetLinkVelocities",&PyPhysicsEngineBase::SetLinkVelocities, PY_ARGS("body","velocities") DOXY_FN(PhysicsEngineBase,SetLinkVelocities))
     .def("GetLinkVelocity",&PyPhysicsEngineBase::GetLinkVelocity, DOXY_FN(PhysicsEngineBase,GetLinkVelocity))
     .def("GetLinkVelocities",&PyPhysicsEngineBase::GetLinkVelocity, DOXY_FN(PhysicsEngineBase,GetLinkVelocities))
     .def("SetBodyForce",&PyPhysicsEngineBase::SetBodyForce, DOXY_FN(PhysicsEngineBase,SetBodyForce))
@@ -216,7 +235,11 @@ void init_openravepy_physicsengine()
     .def("SimulateStep",&PyPhysicsEngineBase::SimulateStep, DOXY_FN(PhysicsEngineBase,SimulateStep))
     ;
 
-    def("RaveCreatePhysicsEngine",openravepy::RaveCreatePhysicsEngine,args("env","name"),DOXY_FN1(RaveCreatePhysicsEngine));
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveCreatePhysicsEngine",openravepy::RaveCreatePhysicsEngine, PY_ARGS("env","name") DOXY_FN1(RaveCreatePhysicsEngine));
+#else
+    def("RaveCreatePhysicsEngine",openravepy::RaveCreatePhysicsEngine, PY_ARGS("env","name") DOXY_FN1(RaveCreatePhysicsEngine));
+#endif
 }
 
 }

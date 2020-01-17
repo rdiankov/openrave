@@ -14,7 +14,7 @@ __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov <rosen.diankov@gmail.com>
 __license__ = 'Apache License, Version 2.0'
 # python 2.5 raises 'import *' not allowed with 'from .'
 from ..openravepy_int import RaveCreateModule, RaveCreateTrajectory, matrixSerialization, IkParameterization, IkParameterization, poseSerialization
-from ..openravepy_ext import PlanningError
+from .. import PlanningError
 
 from numpy import *
 from copy import copy as shallowcopy

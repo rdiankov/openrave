@@ -100,40 +100,6 @@ _registerEnumPicklers()
 import atexit
 atexit.register(openravepy_int.RaveDestroy)
 
-class PlanningError(Exception):
-    def __init__(self,parameter=u'', recoverySuggestions=None):
-        """:param recoverySuggestions: list of unicode suggestions to fix or recover from the error
-        """
-        self.parameter = unicode(parameter)
-        if recoverySuggestions is None:
-            self.recoverySuggestions = []
-        else:
-            self.recoverySuggestions = [unicode(s) for s in recoverySuggestions]
-            
-    def __unicode__(self):
-        s = u'Planning Error\n%s'%self.parameter
-        if len(self.recoverySuggestions) > 0:
-            s += u'\nRecovery Suggestions:\n'
-            for suggestion in self.recoverySuggestions:
-                s += u'- %s\n'%unicode(suggestion)
-            s += u'\n'
-        return s
-        
-    def __str__(self):
-        return unicode(self).encode('utf-8')
-    
-    def __repr__(self):
-        return '<openravepy.PlanningError(%r,%r)>'%(self.parameter,self.recoverySuggestions)
-    
-    def __eq__(self, r):
-        return self.parameter == r.parameter and self.recoverySuggestions == r.recoverySuggestions
-    
-    def __ne__(self, r):
-        return self.parameter != r.parameter or self.recoverySuggestions != r.recoverySuggestions
-    
-# deprecated
-planning_error = PlanningError
-
 def normalizeZRotation(qarray):
     """for each quaternion, find the rotation about z that minimizes the distance between the identify (1,0,0,0).
     Return the transformed the quaternions along with the angle around the z-axis eliminated.
