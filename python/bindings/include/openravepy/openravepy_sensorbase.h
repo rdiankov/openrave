@@ -49,7 +49,8 @@ public:
 
     std::string hardware_id;
     PyCameraIntrinsics intrinsics;
-    int width = 0, height = 0;
+    int width = 0;
+    int height = 0;
     std::string sensor_reference;
     std::string target_region;
     dReal measurement_time = 1.0;
@@ -64,8 +65,13 @@ public:
     virtual ~PyLaserGeomData();
     virtual SensorBase::SensorType GetType();
     virtual SensorBase::SensorGeometryPtr GetGeometry();
-    py::tuple min_angle = py::make_tuple(0.0, 0.0), max_angle = py::make_tuple(0.0, 0.0), resolution;
-    dReal min_range = 0.0, max_range = 0.0, time_increment = 0.0, time_scan = 0.0;
+    py::tuple min_angle = py::make_tuple(0.0, 0.0);
+    py::tuple max_angle = py::make_tuple(0.0, 0.0);
+    py::tuple resolution;
+    dReal min_range = 0.0;
+    dReal max_range = 0.0;
+    dReal time_increment = 0.0;
+    dReal time_scan = 0.0;
 };
 
 class PyJointEncoderGeomData : public PySensorGeometry
@@ -136,7 +142,14 @@ public:
     virtual SensorBase::SensorType GetType();
     virtual SensorBase::SensorGeometryPtr GetGeometry();
 
-    dReal maxtorque = 0.0, maxcurrent = 0.0, nominalcurrent = 0.0, maxvelocity = 0.0, maxacceleration = 0.0, maxjerk = 0.0, staticfriction = 0.0, viscousfriction = 0.0;
+    dReal maxtorque = 0.0;
+    dReal maxcurrent = 0.0;
+    dReal nominalcurrent = 0.0;
+    dReal maxvelocity = 0.0;
+    dReal maxacceleration = 0.0;
+    dReal maxjerk = 0.0;
+    dReal staticfriction = 0.0;
+    dReal viscousfriction = 0.0;
 };
 
 class PySensorBase : public PyInterfaceBase
@@ -280,8 +293,8 @@ public:
 
     void SetName(const std::string& name);
 
-    virtual string __repr__();
-    virtual string __str__();
+    virtual std::string __repr__();
+    virtual std::string __str__();
     virtual object __unicode__();
 };
 
