@@ -2853,35 +2853,24 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("GetPublishedBody",&PyEnvironmentBase::GetPublishedBody,
                           "name"_a,
                           "timeout"_a = 0,
-                          DOXY_FN(EnvironmentBase,GetPublishedBody)
-                          )
-#else
-                     .def("GetPublishedBody",&PyEnvironmentBase::GetPublishedBody, GetPublishedBody_overloads(PY_ARGS("name", "timeout") DOXY_FN(EnvironmentBase,GetPublishedBody)))
-#endif
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                          DOXY_FN(EnvironmentBase,GetPublishedBody))
                      .def("GetPublishedBodies", &PyEnvironmentBase::GetPublishedBodies,
                           "timeout"_a = 0,
-                          DOXY_FN(EnvironmentBase,GetPublishedBodies)
-                          )
-#else
-                     .def("GetPublishedBodies",&PyEnvironmentBase::GetPublishedBodies, GetPublishedBodies_overloads(PY_ARGS("timeout") DOXY_FN(EnvironmentBase,GetPublishedBodies)))
-#endif
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                          DOXY_FN(EnvironmentBase,GetPublishedBodies))
                      .def("GetPublishedBodyJointValues", &PyEnvironmentBase::GetPublishedBodyJointValues,
                           "name"_a,
-                          "timeout"_a,
-                          DOXY_FN(EnvironmentBase,GetPublishedBodyJointValues)
-                          )
-#else
-                     .def("GetPublishedBodyJointValues",&PyEnvironmentBase::GetPublishedBodyJointValues, GetPublishedBodyJointValues_overloads(PY_ARGS("name", "timeout") DOXY_FN(EnvironmentBase,GetPublishedBodyJointValues)))
-#endif
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                          "timeout"_a=0,
+                          DOXY_FN(EnvironmentBase,GetPublishedBodyJointValues))
                      .def("GetPublishedBodyTransformsMatchingPrefix", &PyEnvironmentBase::GetPublishedBodyTransformsMatchingPrefix,
                           "prefix"_a,
                           "timeout"_a = 0,
-                          DOXY_FN(EnvironmentBase,GetPublishedBodyTransformsMatchingPrefix)
-                          )
+                          DOXY_FN(EnvironmentBase,GetPublishedBodyTransformsMatchingPrefix))
 #else
+                     .def("GetPublishedBody",&PyEnvironmentBase::GetPublishedBody, GetPublishedBody_overloads(PY_ARGS("name", "timeout") DOXY_FN(EnvironmentBase,GetPublishedBody)))
+                     .def("GetPublishedBodies",&PyEnvironmentBase::GetPublishedBodies, GetPublishedBodies_overloads(PY_ARGS("timeout") DOXY_FN(EnvironmentBase,GetPublishedBodies)))
+
+                     .def("GetPublishedBodyJointValues",&PyEnvironmentBase::GetPublishedBodyJointValues, GetPublishedBodyJointValues_overloads(PY_ARGS("name", "timeout") DOXY_FN(EnvironmentBase,GetPublishedBodyJointValues)))
+
                      .def("GetPublishedBodyTransformsMatchingPrefix",&PyEnvironmentBase::GetPublishedBodyTransformsMatchingPrefix, GetPublishedBodyTransformsMatchingPrefix_overloads(PY_ARGS("prefix", "timeout") DOXY_FN(EnvironmentBase,GetPublishedBodyTransformsMatchingPrefix)))
 #endif
                      .def("Triangulate",&PyEnvironmentBase::Triangulate, PY_ARGS("body") DOXY_FN(EnvironmentBase,Triangulate))
