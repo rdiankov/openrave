@@ -27,6 +27,7 @@
 #include <openravepy/openravepy_sensorbase.h>
 #include <openravepy/openravepy_module.h>
 #include <openravepy/openravepy_physicalenginebase.h>
+#include <openravepy/openravepy_environmentbase.h>
 
 #define OPENRAVE_EXCEPTION_CLASS_NAME "_OpenRAVEException"
 
@@ -813,111 +814,101 @@ void PyInterfaceBase::SetReadableInterface(const std::string& xmltag, object ore
     _pbase->SetReadableInterface(xmltag,ExtractXMLReadable(oreadable));
 }
 
-class PyEnvironmentBase : public OPENRAVE_ENABLE_SHARED_FROM_THIS<PyEnvironmentBase>
+PyInterfaceBasePtr PyEnvironmentBase::_toPyInterface(InterfaceBasePtr pinterface)
 {
-#if BOOST_VERSION < 103500
-    boost::mutex _envmutex;
-    std::list<OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_lock> > _listenvlocks, _listfreelocks;
-#endif
-protected:
-    EnvironmentBasePtr _penv;
-
-    PyInterfaceBasePtr _toPyInterface(InterfaceBasePtr pinterface)
-    {
-        if( !pinterface ) {
-            return PyInterfaceBasePtr();
-        }
-        switch(pinterface->GetInterfaceType()) {
-        case PT_Planner: return openravepy::toPyPlanner(OPENRAVE_STATIC_POINTER_CAST<PlannerBase>(pinterface),shared_from_this());
-        case PT_Robot: return openravepy::toPyRobot(OPENRAVE_STATIC_POINTER_CAST<RobotBase>(pinterface),shared_from_this());
-        case PT_SensorSystem: return openravepy::toPySensorSystem(OPENRAVE_STATIC_POINTER_CAST<SensorSystemBase>(pinterface),shared_from_this());
-        case PT_Controller: return openravepy::toPyController(OPENRAVE_STATIC_POINTER_CAST<ControllerBase>(pinterface),shared_from_this());
-        case PT_Module: return openravepy::toPyModule(OPENRAVE_STATIC_POINTER_CAST<ModuleBase>(pinterface),shared_from_this());
-        case PT_IkSolver: return openravepy::toPyIkSolver(OPENRAVE_STATIC_POINTER_CAST<IkSolverBase>(pinterface),shared_from_this());
-        case PT_KinBody: return openravepy::toPyKinBody(OPENRAVE_STATIC_POINTER_CAST<KinBody>(pinterface),shared_from_this());
-        case PT_PhysicsEngine: return openravepy::toPyPhysicsEngine(OPENRAVE_STATIC_POINTER_CAST<PhysicsEngineBase>(pinterface),shared_from_this());
-        case PT_Sensor: return openravepy::toPySensor(OPENRAVE_STATIC_POINTER_CAST<SensorBase>(pinterface),shared_from_this());
-        case PT_CollisionChecker: return openravepy::toPyCollisionChecker(OPENRAVE_STATIC_POINTER_CAST<CollisionCheckerBase>(pinterface),shared_from_this());
-        case PT_Trajectory: return openravepy::toPyTrajectory(OPENRAVE_STATIC_POINTER_CAST<TrajectoryBase>(pinterface),shared_from_this());
-        case PT_Viewer: return openravepy::toPyViewer(OPENRAVE_STATIC_POINTER_CAST<ViewerBase>(pinterface),shared_from_this());
-        case PT_SpaceSampler: return openravepy::toPySpaceSampler(OPENRAVE_STATIC_POINTER_CAST<SpaceSamplerBase>(pinterface),shared_from_this());
-        }
+    if( !pinterface ) {
         return PyInterfaceBasePtr();
     }
-
-    void _BodyCallback(object fncallback, KinBodyPtr pbody, int action)
-    {
-        object res;
-        PyGILState_STATE gstate = PyGILState_Ensure();
-        try {
-            fncallback(openravepy::toPyKinBody(pbody, shared_from_this()), action);
-        }
-        catch(...) {
-            RAVELOG_ERROR("exception occured in python body callback:\n");
-            PyErr_Print();
-        }
-        PyGILState_Release(gstate);
+    switch(pinterface->GetInterfaceType()) {
+    case PT_Planner: return openravepy::toPyPlanner(OPENRAVE_STATIC_POINTER_CAST<PlannerBase>(pinterface),shared_from_this());
+    case PT_Robot: return openravepy::toPyRobot(OPENRAVE_STATIC_POINTER_CAST<RobotBase>(pinterface),shared_from_this());
+    case PT_SensorSystem: return openravepy::toPySensorSystem(OPENRAVE_STATIC_POINTER_CAST<SensorSystemBase>(pinterface),shared_from_this());
+    case PT_Controller: return openravepy::toPyController(OPENRAVE_STATIC_POINTER_CAST<ControllerBase>(pinterface),shared_from_this());
+    case PT_Module: return openravepy::toPyModule(OPENRAVE_STATIC_POINTER_CAST<ModuleBase>(pinterface),shared_from_this());
+    case PT_IkSolver: return openravepy::toPyIkSolver(OPENRAVE_STATIC_POINTER_CAST<IkSolverBase>(pinterface),shared_from_this());
+    case PT_KinBody: return openravepy::toPyKinBody(OPENRAVE_STATIC_POINTER_CAST<KinBody>(pinterface),shared_from_this());
+    case PT_PhysicsEngine: return openravepy::toPyPhysicsEngine(OPENRAVE_STATIC_POINTER_CAST<PhysicsEngineBase>(pinterface),shared_from_this());
+    case PT_Sensor: return openravepy::toPySensor(OPENRAVE_STATIC_POINTER_CAST<SensorBase>(pinterface),shared_from_this());
+    case PT_CollisionChecker: return openravepy::toPyCollisionChecker(OPENRAVE_STATIC_POINTER_CAST<CollisionCheckerBase>(pinterface),shared_from_this());
+    case PT_Trajectory: return openravepy::toPyTrajectory(OPENRAVE_STATIC_POINTER_CAST<TrajectoryBase>(pinterface),shared_from_this());
+    case PT_Viewer: return openravepy::toPyViewer(OPENRAVE_STATIC_POINTER_CAST<ViewerBase>(pinterface),shared_from_this());
+    case PT_SpaceSampler: return openravepy::toPySpaceSampler(OPENRAVE_STATIC_POINTER_CAST<SpaceSamplerBase>(pinterface),shared_from_this());
     }
+    return PyInterfaceBasePtr();
+}
 
-    CollisionAction _CollisionCallback(object fncallback, CollisionReportPtr preport, bool bFromPhysics)
-    {
-        object res;
-        PyGILState_STATE gstate = PyGILState_Ensure();
-        try {
-            res = fncallback(openravepy::toPyCollisionReport(preport,shared_from_this()),bFromPhysics);
-        }
-        catch(...) {
-            RAVELOG_ERROR("exception occured in python collision callback:\n");
-            PyErr_Print();
-        }
-        CollisionAction ret = CA_DefaultAction;
-        if( IS_PYTHONOBJECT_NONE(res) || !res ) {
-            ret = CA_DefaultAction;
-            RAVELOG_WARN("collision callback nothing returning, so executing default action\n");
+void PyEnvironmentBase::_BodyCallback(object fncallback, KinBodyPtr pbody, int action)
+{
+    object res;
+    PyGILState_STATE gstate = PyGILState_Ensure();
+    try {
+        fncallback(openravepy::toPyKinBody(pbody, shared_from_this()), action);
+    }
+    catch(...) {
+        RAVELOG_ERROR("exception occured in python body callback:\n");
+        PyErr_Print();
+    }
+    PyGILState_Release(gstate);
+}
+
+CollisionAction PyEnvironmentBase::_CollisionCallback(object fncallback, CollisionReportPtr preport, bool bFromPhysics)
+{
+    object res;
+    PyGILState_STATE gstate = PyGILState_Ensure();
+    try {
+        res = fncallback(openravepy::toPyCollisionReport(preport,shared_from_this()),bFromPhysics);
+    }
+    catch(...) {
+        RAVELOG_ERROR("exception occured in python collision callback:\n");
+        PyErr_Print();
+    }
+    CollisionAction ret = CA_DefaultAction;
+    if( IS_PYTHONOBJECT_NONE(res) || !res ) {
+        ret = CA_DefaultAction;
+        RAVELOG_WARN("collision callback nothing returning, so executing default action\n");
+    }
+    else {
+        extract_<int> xi(res);
+        if( xi.check() ) {
+            ret = (CollisionAction)(int) xi;
         }
         else {
-            extract_<int> xi(res);
-            if( xi.check() ) {
-                ret = (CollisionAction)(int) xi;
-            }
-            else {
-                RAVELOG_WARN("collision callback nothing returning, so executing default action\n");
-            }
+            RAVELOG_WARN("collision callback nothing returning, so executing default action\n");
         }
-        PyGILState_Release(gstate);
-        return ret;
     }
+    PyGILState_Release(gstate);
+    return ret;
+}
 
-public:
-    PyEnvironmentBase(int options=ECO_StartSimulationThread)
-    {
-        if( !RaveGlobalState() ) {
-            RaveInitialize(true);
-        }
-        _penv = RaveCreateEnvironment(options);
+PyEnvironmentBase::PyEnvironmentBase(int options)
+{
+    if( !RaveGlobalState() ) {
+        RaveInitialize(true);
     }
-    PyEnvironmentBase(EnvironmentBasePtr penv) : _penv(penv) {
-    }
+    _penv = RaveCreateEnvironment(options);
+}
+PyEnvironmentBase::PyEnvironmentBase(EnvironmentBasePtr penv) : _penv(penv) {
+}
 
-    PyEnvironmentBase(const PyEnvironmentBase &pyenv)
-    {
-        _penv = pyenv._penv;
-    }
+PyEnvironmentBase::PyEnvironmentBase(const PyEnvironmentBase &pyenv)
+{
+    _penv = pyenv._penv;
+}
 
-    virtual ~PyEnvironmentBase()
-    {
-    }
+PyEnvironmentBase::~PyEnvironmentBase()
+{
+}
 
-    void Reset() {
-        _penv->Reset();
-    }
-    void Destroy() {
-        ViewerManager::GetInstance().RemoveViewersOfEnvironment(_penv);
-        _penv->Destroy();
-    }
+void PyEnvironmentBase::Reset() {
+    _penv->Reset();
+}
+void PyEnvironmentBase::Destroy() {
+    ViewerManager::GetInstance().RemoveViewersOfEnvironment(_penv);
+    _penv->Destroy();
+}
 
-    PyEnvironmentBasePtr CloneSelf(int options)
-    {
+PyEnvironmentBasePtr PyEnvironmentBase::CloneSelf(int options)
+{
 //        string strviewer;
 //        if( options & Clone_Viewer ) {
 //            boost::mutex::scoped_lock lockcreate(_mutexViewer);
@@ -925,1275 +916,1274 @@ public:
 //                strviewer = _penv->GetViewer()->GetXMLId();
 //            }
 //        }
-        PyEnvironmentBasePtr pnewenv(new PyEnvironmentBase(_penv->CloneSelf(options)));
+    PyEnvironmentBasePtr pnewenv(new PyEnvironmentBase(_penv->CloneSelf(options)));
 //        if( strviewer.size() > 0 ) {
 //            pnewenv->SetViewer(strviewer);
 //        }
-        return pnewenv;
-    }
+    return pnewenv;
+}
 
-    void Clone(PyEnvironmentBasePtr pyreference, int options)
-    {
-        if( options & Clone_Viewer ) {
-            if( !!_penv->GetViewer() && !!pyreference->GetEnv()->GetViewer() ) {
-                if( _penv->GetViewer()->GetXMLId() != pyreference->GetEnv()->GetViewer()->GetXMLId() ) {
-                    RAVELOG_VERBOSE("reset the viewer since it has to be cloned\n");
-                    //boost::mutex::scoped_lock lockcreate(pyreference->_mutexViewer);
-                    SetViewer("");
-                }
+void PyEnvironmentBase::Clone(PyEnvironmentBasePtr pyreference, int options)
+{
+    if( options & Clone_Viewer ) {
+        if( !!_penv->GetViewer() && !!pyreference->GetEnv()->GetViewer() ) {
+            if( _penv->GetViewer()->GetXMLId() != pyreference->GetEnv()->GetViewer()->GetXMLId() ) {
+                RAVELOG_VERBOSE("reset the viewer since it has to be cloned\n");
+                //boost::mutex::scoped_lock lockcreate(pyreference->_mutexViewer);
+                SetViewer("");
             }
         }
-        _penv->Clone(pyreference->GetEnv(),options);
     }
+    _penv->Clone(pyreference->GetEnv(),options);
+}
 
-    bool SetCollisionChecker(PyCollisionCheckerBasePtr pchecker)
-    {
-        return _penv->SetCollisionChecker(openravepy::GetCollisionChecker(pchecker));
-    }
-    object GetCollisionChecker()
-    {
-        return py::to_object(openravepy::toPyCollisionChecker(_penv->GetCollisionChecker(), shared_from_this()));
-    }
-    bool CheckCollision(PyKinBodyPtr pbody1)
-    {
-        CHECK_POINTER(pbody1);
-        return _penv->CheckCollision(KinBodyConstPtr(openravepy::GetKinBody(pbody1)));
-    }
-    bool CheckCollision(PyKinBodyPtr pbody1, PyCollisionReportPtr pReport)
-    {
-        CHECK_POINTER(pbody1);
-        bool bCollision = _penv->CheckCollision(KinBodyConstPtr(openravepy::GetKinBody(pbody1)), openravepy::GetCollisionReport(pReport));
-        openravepy::UpdateCollisionReport(pReport,shared_from_this());
-        return bCollision;
-    }
+bool PyEnvironmentBase::SetCollisionChecker(PyCollisionCheckerBasePtr pchecker)
+{
+    return _penv->SetCollisionChecker(openravepy::GetCollisionChecker(pchecker));
+}
+object PyEnvironmentBase::GetCollisionChecker()
+{
+    return py::to_object(openravepy::toPyCollisionChecker(_penv->GetCollisionChecker(), shared_from_this()));
+}
+bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody1)
+{
+    CHECK_POINTER(pbody1);
+    return _penv->CheckCollision(KinBodyConstPtr(openravepy::GetKinBody(pbody1)));
+}
+bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody1, PyCollisionReportPtr pReport)
+{
+    CHECK_POINTER(pbody1);
+    bool bCollision = _penv->CheckCollision(KinBodyConstPtr(openravepy::GetKinBody(pbody1)), openravepy::GetCollisionReport(pReport));
+    openravepy::UpdateCollisionReport(pReport,shared_from_this());
+    return bCollision;
+}
 
-    bool CheckCollision(PyKinBodyPtr pbody1, PyKinBodyPtr pbody2)
-    {
-        CHECK_POINTER(pbody1);
-        CHECK_POINTER(pbody2);
-        return _penv->CheckCollision(KinBodyConstPtr(openravepy::GetKinBody(pbody1)), KinBodyConstPtr(openravepy::GetKinBody(pbody2)));
-    }
+bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody1, PyKinBodyPtr pbody2)
+{
+    CHECK_POINTER(pbody1);
+    CHECK_POINTER(pbody2);
+    return _penv->CheckCollision(KinBodyConstPtr(openravepy::GetKinBody(pbody1)), KinBodyConstPtr(openravepy::GetKinBody(pbody2)));
+}
 
-    bool CheckCollision(PyKinBodyPtr pbody1, PyKinBodyPtr pbody2, PyCollisionReportPtr pReport)
-    {
-        CHECK_POINTER(pbody1);
-        CHECK_POINTER(pbody2);
-        bool bCollision = _penv->CheckCollision(KinBodyConstPtr(openravepy::GetKinBody(pbody1)), KinBodyConstPtr(openravepy::GetKinBody(pbody2)), openravepy::GetCollisionReport(pReport));
-        openravepy::UpdateCollisionReport(pReport,shared_from_this());
-        return bCollision;
-    }
+bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody1, PyKinBodyPtr pbody2, PyCollisionReportPtr pReport)
+{
+    CHECK_POINTER(pbody1);
+    CHECK_POINTER(pbody2);
+    bool bCollision = _penv->CheckCollision(KinBodyConstPtr(openravepy::GetKinBody(pbody1)), KinBodyConstPtr(openravepy::GetKinBody(pbody2)), openravepy::GetCollisionReport(pReport));
+    openravepy::UpdateCollisionReport(pReport,shared_from_this());
+    return bCollision;
+}
 
-    bool CheckCollision(object o1)
-    {
-        CHECK_POINTER(o1);
-        KinBody::LinkConstPtr plink = openravepy::GetKinBodyLinkConst(o1);
-        if( !!plink ) {
-            return _penv->CheckCollision(plink);
-        }
+bool PyEnvironmentBase::CheckCollision(object o1)
+{
+    CHECK_POINTER(o1);
+    KinBody::LinkConstPtr plink = openravepy::GetKinBodyLinkConst(o1);
+    if( !!plink ) {
+        return _penv->CheckCollision(plink);
+    }
+    KinBodyConstPtr pbody = openravepy::GetKinBody(o1);
+    if( !!pbody ) {
+        return _penv->CheckCollision(pbody);
+    }
+    throw OPENRAVE_EXCEPTION_FORMAT0(_("CheckCollision(object) invalid argument"),ORE_InvalidArguments);
+}
+
+bool PyEnvironmentBase::CheckCollision(object o1, PyCollisionReportPtr pReport)
+{
+    CHECK_POINTER(o1);
+    KinBody::LinkConstPtr plink = openravepy::GetKinBodyLinkConst(o1);
+    bool bCollision;
+    if( !!plink ) {
+        bCollision = _penv->CheckCollision(plink,openravepy::GetCollisionReport(pReport));
+    }
+    else {
         KinBodyConstPtr pbody = openravepy::GetKinBody(o1);
         if( !!pbody ) {
-            return _penv->CheckCollision(pbody);
-        }
-        throw OPENRAVE_EXCEPTION_FORMAT0(_("CheckCollision(object) invalid argument"),ORE_InvalidArguments);
-    }
-
-    bool CheckCollision(object o1, PyCollisionReportPtr pReport)
-    {
-        CHECK_POINTER(o1);
-        KinBody::LinkConstPtr plink = openravepy::GetKinBodyLinkConst(o1);
-        bool bCollision;
-        if( !!plink ) {
-            bCollision = _penv->CheckCollision(plink,openravepy::GetCollisionReport(pReport));
+            bCollision = _penv->CheckCollision(pbody,openravepy::GetCollisionReport(pReport));
         }
         else {
-            KinBodyConstPtr pbody = openravepy::GetKinBody(o1);
-            if( !!pbody ) {
-                bCollision = _penv->CheckCollision(pbody,openravepy::GetCollisionReport(pReport));
-            }
-            else {
-                throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument"),ORE_InvalidArguments);
-            }
+            throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument"),ORE_InvalidArguments);
         }
-        openravepy::UpdateCollisionReport(pReport,shared_from_this());
-        return bCollision;
     }
+    openravepy::UpdateCollisionReport(pReport,shared_from_this());
+    return bCollision;
+}
 
-    bool CheckCollision(object o1, object o2)
-    {
-        CHECK_POINTER(o1);
-        CHECK_POINTER(o2);
-        KinBody::LinkConstPtr plink = openravepy::GetKinBodyLinkConst(o1);
-        if( !!plink ) {
-            KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(o2);
-            if( !!plink2 ) {
-                return _penv->CheckCollision(plink,plink2);
-            }
+bool PyEnvironmentBase::CheckCollision(object o1, object o2)
+{
+    CHECK_POINTER(o1);
+    CHECK_POINTER(o2);
+    KinBody::LinkConstPtr plink = openravepy::GetKinBodyLinkConst(o1);
+    if( !!plink ) {
+        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(o2);
+        if( !!plink2 ) {
+            return _penv->CheckCollision(plink,plink2);
+        }
+        KinBodyConstPtr pbody2 = openravepy::GetKinBody(o2);
+        if( !!pbody2 ) {
+            return _penv->CheckCollision(plink,pbody2);
+        }
+        CollisionReportPtr preport2 = openravepy::GetCollisionReport(o2);
+        if( !!preport2 ) {
+            bool bCollision = _penv->CheckCollision(plink,preport2);
+            openravepy::UpdateCollisionReport(o2,shared_from_this());
+            return bCollision;
+        }
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 2"),ORE_InvalidArguments);
+    }
+    KinBodyConstPtr pbody = openravepy::GetKinBody(o1);
+    if( !!pbody ) {
+        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(o2);
+        if( !!plink2 ) {
+            return _penv->CheckCollision(plink2,pbody);
+        }
+        KinBodyConstPtr pbody2 = openravepy::GetKinBody(o2);
+        if( !!pbody2 ) {
+            return _penv->CheckCollision(pbody,pbody2);
+        }
+        CollisionReportPtr preport2 = openravepy::GetCollisionReport(o2);
+        if( !!preport2 ) {
+            bool bCollision = _penv->CheckCollision(pbody,preport2);
+            openravepy::UpdateCollisionReport(o2,shared_from_this());
+            return bCollision;
+        }
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 2"),ORE_InvalidArguments);
+    }
+    throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 1"),ORE_InvalidArguments);
+}
+bool PyEnvironmentBase::CheckCollision(object o1, object o2, PyCollisionReportPtr pReport)
+{
+    CHECK_POINTER(o1);
+    CHECK_POINTER(o2);
+    bool bCollision = false;
+    KinBody::LinkConstPtr plink = openravepy::GetKinBodyLinkConst(o1);
+    if( !!plink ) {
+        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(o2);
+        if( !!plink2 ) {
+            bCollision = _penv->CheckCollision(plink,plink2, openravepy::GetCollisionReport(pReport));
+        }
+        else {
             KinBodyConstPtr pbody2 = openravepy::GetKinBody(o2);
             if( !!pbody2 ) {
-                return _penv->CheckCollision(plink,pbody2);
+                bCollision = _penv->CheckCollision(plink,pbody2, openravepy::GetCollisionReport(pReport));
             }
-            CollisionReportPtr preport2 = openravepy::GetCollisionReport(o2);
-            if( !!preport2 ) {
-                bool bCollision = _penv->CheckCollision(plink,preport2);
-                openravepy::UpdateCollisionReport(o2,shared_from_this());
-                return bCollision;
+            else {
+                throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 2"),ORE_InvalidArguments);
             }
-            throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 2"),ORE_InvalidArguments);
         }
+    }
+    {
         KinBodyConstPtr pbody = openravepy::GetKinBody(o1);
         if( !!pbody ) {
             KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(o2);
             if( !!plink2 ) {
-                return _penv->CheckCollision(plink2,pbody);
-            }
-            KinBodyConstPtr pbody2 = openravepy::GetKinBody(o2);
-            if( !!pbody2 ) {
-                return _penv->CheckCollision(pbody,pbody2);
-            }
-            CollisionReportPtr preport2 = openravepy::GetCollisionReport(o2);
-            if( !!preport2 ) {
-                bool bCollision = _penv->CheckCollision(pbody,preport2);
-                openravepy::UpdateCollisionReport(o2,shared_from_this());
-                return bCollision;
-            }
-            throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 2"),ORE_InvalidArguments);
-        }
-        throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 1"),ORE_InvalidArguments);
-    }
-    bool CheckCollision(object o1, object o2, PyCollisionReportPtr pReport)
-    {
-        CHECK_POINTER(o1);
-        CHECK_POINTER(o2);
-        bool bCollision = false;
-        KinBody::LinkConstPtr plink = openravepy::GetKinBodyLinkConst(o1);
-        if( !!plink ) {
-            KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(o2);
-            if( !!plink2 ) {
-                bCollision = _penv->CheckCollision(plink,plink2, openravepy::GetCollisionReport(pReport));
+                bCollision = _penv->CheckCollision(plink2,pbody, openravepy::GetCollisionReport(pReport));
             }
             else {
                 KinBodyConstPtr pbody2 = openravepy::GetKinBody(o2);
                 if( !!pbody2 ) {
-                    bCollision = _penv->CheckCollision(plink,pbody2, openravepy::GetCollisionReport(pReport));
+                    bCollision = _penv->CheckCollision(pbody,pbody2, openravepy::GetCollisionReport(pReport));
                 }
                 else {
                     throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 2"),ORE_InvalidArguments);
                 }
             }
         }
-        {
-            KinBodyConstPtr pbody = openravepy::GetKinBody(o1);
-            if( !!pbody ) {
-                KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(o2);
-                if( !!plink2 ) {
-                    bCollision = _penv->CheckCollision(plink2,pbody, openravepy::GetCollisionReport(pReport));
-                }
-                else {
-                    KinBodyConstPtr pbody2 = openravepy::GetKinBody(o2);
-                    if( !!pbody2 ) {
-                        bCollision = _penv->CheckCollision(pbody,pbody2, openravepy::GetCollisionReport(pReport));
-                    }
-                    else {
-                        throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 2"),ORE_InvalidArguments);
-                    }
-                }
-            }
-            else {
-                throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 1"),ORE_InvalidArguments);
-            }
+        else {
+            throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 1"),ORE_InvalidArguments);
         }
-        openravepy::UpdateCollisionReport(pReport,shared_from_this());
-        return bCollision;
     }
+    openravepy::UpdateCollisionReport(pReport,shared_from_this());
+    return bCollision;
+}
 
-    bool CheckCollision(object o1, PyKinBodyPtr pybody2)
-    {
-        CHECK_POINTER(o1);
-        CHECK_POINTER(pybody2);
-        KinBodyConstPtr pbody2 = openravepy::GetKinBody(pybody2);
-        KinBody::LinkConstPtr plink = openravepy::GetKinBodyLinkConst(o1);
-        if( !!plink ) {
-            return _penv->CheckCollision(plink,pbody2);
-        }
+bool PyEnvironmentBase::CheckCollision(object o1, PyKinBodyPtr pybody2)
+{
+    CHECK_POINTER(o1);
+    CHECK_POINTER(pybody2);
+    KinBodyConstPtr pbody2 = openravepy::GetKinBody(pybody2);
+    KinBody::LinkConstPtr plink = openravepy::GetKinBodyLinkConst(o1);
+    if( !!plink ) {
+        return _penv->CheckCollision(plink,pbody2);
+    }
+    KinBodyConstPtr pbody1 = openravepy::GetKinBody(o1);
+    if( !!pbody1 ) {
+        return _penv->CheckCollision(pbody1,pbody2);
+    }
+    throw OPENRAVE_EXCEPTION_FORMAT0(_("CheckCollision(object) invalid argument"),ORE_InvalidArguments);
+}
+
+bool PyEnvironmentBase::CheckCollision(object o1, PyKinBodyPtr pybody2, PyCollisionReportPtr pReport)
+{
+    CHECK_POINTER(o1);
+    CHECK_POINTER(pybody2);
+    KinBodyConstPtr pbody2 = openravepy::GetKinBody(pybody2);
+    KinBody::LinkConstPtr plink = openravepy::GetKinBodyLinkConst(o1);
+    bool bCollision = false;
+    if( !!plink ) {
+        bCollision = _penv->CheckCollision(plink,pbody2,openravepy::GetCollisionReport(pReport));
+    }
+    else {
         KinBodyConstPtr pbody1 = openravepy::GetKinBody(o1);
         if( !!pbody1 ) {
-            return _penv->CheckCollision(pbody1,pbody2);
-        }
-        throw OPENRAVE_EXCEPTION_FORMAT0(_("CheckCollision(object) invalid argument"),ORE_InvalidArguments);
-    }
-
-    bool CheckCollision(object o1, PyKinBodyPtr pybody2, PyCollisionReportPtr pReport)
-    {
-        CHECK_POINTER(o1);
-        CHECK_POINTER(pybody2);
-        KinBodyConstPtr pbody2 = openravepy::GetKinBody(pybody2);
-        KinBody::LinkConstPtr plink = openravepy::GetKinBodyLinkConst(o1);
-        bool bCollision = false;
-        if( !!plink ) {
-            bCollision = _penv->CheckCollision(plink,pbody2,openravepy::GetCollisionReport(pReport));
+            bCollision = _penv->CheckCollision(pbody1,pbody2,openravepy::GetCollisionReport(pReport));
         }
         else {
-            KinBodyConstPtr pbody1 = openravepy::GetKinBody(o1);
-            if( !!pbody1 ) {
-                bCollision = _penv->CheckCollision(pbody1,pbody2,openravepy::GetCollisionReport(pReport));
-            }
-            else {
-                throw OPENRAVE_EXCEPTION_FORMAT0(_("CheckCollision(object) invalid argument"),ORE_InvalidArguments);
-            }
+            throw OPENRAVE_EXCEPTION_FORMAT0(_("CheckCollision(object) invalid argument"),ORE_InvalidArguments);
         }
-        openravepy::UpdateCollisionReport(pReport,shared_from_this());
-        return bCollision;
+    }
+    openravepy::UpdateCollisionReport(pReport,shared_from_this());
+    return bCollision;
+}
+
+bool PyEnvironmentBase::CheckCollision(object o1, object bodyexcluded, object linkexcluded)
+{
+    CollisionReportPtr preport = openravepy::GetCollisionReport(linkexcluded);
+    if( !!preport ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("3rd argument should be linkexcluded, rather than CollisionReport! Try report="),ORE_InvalidArguments);
     }
 
-    bool CheckCollision(object o1, object bodyexcluded, object linkexcluded)
-    {
-        CollisionReportPtr preport = openravepy::GetCollisionReport(linkexcluded);
-        if( !!preport ) {
-            throw OPENRAVE_EXCEPTION_FORMAT0(_("3rd argument should be linkexcluded, rather than CollisionReport! Try report="),ORE_InvalidArguments);
-        }
+    KinBody::LinkConstPtr plink1 = openravepy::GetKinBodyLinkConst(o1);
+    KinBodyConstPtr pbody1 = openravepy::GetKinBody(o1);
 
-        KinBody::LinkConstPtr plink1 = openravepy::GetKinBodyLinkConst(o1);
-        KinBodyConstPtr pbody1 = openravepy::GetKinBody(o1);
-
-        std::vector<KinBodyConstPtr> vbodyexcluded;
-        for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
-            PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
-            if( !!pbody ) {
-                vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
-            }
-            else {
-                RAVELOG_ERROR("failed to get excluded body\n");
-            }
-        }
-        std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-        for(size_t i = 0; i < (size_t)len(linkexcluded); ++i) {
-            KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
-            if( !!plink2 ) {
-                vlinkexcluded.push_back(plink2);
-            }
-            else {
-                RAVELOG_ERROR("failed to get excluded link\n");
-            }
-        }
-        if( !!plink1 ) {
-            return _penv->CheckCollision(plink1,vbodyexcluded,vlinkexcluded);
-        }
-        else if( !!pbody1 ) {
-            return _penv->CheckCollision(pbody1,vbodyexcluded,vlinkexcluded);
+    std::vector<KinBodyConstPtr> vbodyexcluded;
+    for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
+        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        if( !!pbody ) {
+            vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
         }
         else {
-            throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 1"),ORE_InvalidArguments);
+            RAVELOG_ERROR("failed to get excluded body\n");
         }
     }
-
-    bool CheckCollision(object o1, object bodyexcluded, object linkexcluded, PyCollisionReportPtr pReport)
-    {
-        std::vector<KinBodyConstPtr> vbodyexcluded;
-        KinBody::LinkConstPtr plink1 = openravepy::GetKinBodyLinkConst(o1);
-        KinBodyConstPtr pbody1 = openravepy::GetKinBody(o1);
-
-        for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
-            PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
-            if( !!pbody ) {
-                vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
-            }
-            else {
-                RAVELOG_ERROR("failed to get excluded body\n");
-            }
-        }
-        std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-        for(size_t i = 0; i < (size_t)len(linkexcluded); ++i) {
-            KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
-            if( !!plink2 ) {
-                vlinkexcluded.push_back(plink2);
-            }
-            else {
-                RAVELOG_ERROR("failed to get excluded link\n");
-            }
-        }
-
-        bool bCollision=false;
-        if( !!plink1 ) {
-            bCollision = _penv->CheckCollision(plink1, vbodyexcluded, vlinkexcluded, openravepy::GetCollisionReport(pReport));
-        }
-        else if( !!pbody1 ) {
-            bCollision = _penv->CheckCollision(pbody1, vbodyexcluded, vlinkexcluded, openravepy::GetCollisionReport(pReport));
+    std::vector<KinBody::LinkConstPtr> vlinkexcluded;
+    for(size_t i = 0; i < (size_t)len(linkexcluded); ++i) {
+        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
+        if( !!plink2 ) {
+            vlinkexcluded.push_back(plink2);
         }
         else {
-            throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 1"),ORE_InvalidArguments);
+            RAVELOG_ERROR("failed to get excluded link\n");
         }
+    }
+    if( !!plink1 ) {
+        return _penv->CheckCollision(plink1,vbodyexcluded,vlinkexcluded);
+    }
+    else if( !!pbody1 ) {
+        return _penv->CheckCollision(pbody1,vbodyexcluded,vlinkexcluded);
+    }
+    else {
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 1"),ORE_InvalidArguments);
+    }
+}
 
-        openravepy::UpdateCollisionReport(pReport,shared_from_this());
-        return bCollision;
+bool PyEnvironmentBase::CheckCollision(object o1, object bodyexcluded, object linkexcluded, PyCollisionReportPtr pReport)
+{
+    std::vector<KinBodyConstPtr> vbodyexcluded;
+    KinBody::LinkConstPtr plink1 = openravepy::GetKinBodyLinkConst(o1);
+    KinBodyConstPtr pbody1 = openravepy::GetKinBody(o1);
+
+    for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
+        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        if( !!pbody ) {
+            vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
+        }
+        else {
+            RAVELOG_ERROR("failed to get excluded body\n");
+        }
+    }
+    std::vector<KinBody::LinkConstPtr> vlinkexcluded;
+    for(size_t i = 0; i < (size_t)len(linkexcluded); ++i) {
+        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
+        if( !!plink2 ) {
+            vlinkexcluded.push_back(plink2);
+        }
+        else {
+            RAVELOG_ERROR("failed to get excluded link\n");
+        }
     }
 
-    bool CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, object linkexcluded)
+    bool bCollision=false;
+    if( !!plink1 ) {
+        bCollision = _penv->CheckCollision(plink1, vbodyexcluded, vlinkexcluded, openravepy::GetCollisionReport(pReport));
+    }
+    else if( !!pbody1 ) {
+        bCollision = _penv->CheckCollision(pbody1, vbodyexcluded, vlinkexcluded, openravepy::GetCollisionReport(pReport));
+    }
+    else {
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 1"),ORE_InvalidArguments);
+    }
+
+    openravepy::UpdateCollisionReport(pReport,shared_from_this());
+    return bCollision;
+}
+
+bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, object linkexcluded)
+{
+    std::vector<KinBodyConstPtr> vbodyexcluded;
+    for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
+        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        if( !!pbody ) {
+            vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
+        }
+        else {
+            RAVELOG_ERROR("failed to get excluded body\n");
+        }
+    }
+    std::vector<KinBody::LinkConstPtr> vlinkexcluded;
+    for(size_t i = 0; i < (size_t)len(linkexcluded); ++i) {
+        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
+        if( !!plink2 ) {
+            vlinkexcluded.push_back(plink2);
+        }
+        else {
+            RAVELOG_ERROR("failed to get excluded link\n");
+        }
+    }
+    return _penv->CheckCollision(KinBodyConstPtr(openravepy::GetKinBody(pbody)),vbodyexcluded,vlinkexcluded);
+}
+
+bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, object linkexcluded, PyCollisionReportPtr pReport)
+{
+    std::vector<KinBodyConstPtr> vbodyexcluded;
+    for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
+        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        if( !!pbody ) {
+            vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
+        }
+        else {
+            RAVELOG_ERROR("failed to get excluded body\n");
+        }
+    }
+    std::vector<KinBody::LinkConstPtr> vlinkexcluded;
+    for(size_t i = 0; i < (size_t)len(linkexcluded); ++i) {
+        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
+        if( !!plink2 ) {
+            vlinkexcluded.push_back(plink2);
+        }
+        else {
+            RAVELOG_ERROR("failed to get excluded link\n");
+        }
+    }
+
+    bool bCollision = _penv->CheckCollision(KinBodyConstPtr(openravepy::GetKinBody(pbody)), vbodyexcluded, vlinkexcluded, openravepy::GetCollisionReport(pReport));
+    openravepy::UpdateCollisionReport(pReport,shared_from_this());
+    return bCollision;
+}
+
+bool PyEnvironmentBase::CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, PyKinBodyPtr pbody)
+{
+    return _penv->CheckCollision(pyray->r,KinBodyConstPtr(openravepy::GetKinBody(pbody)));
+}
+
+bool PyEnvironmentBase::CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, PyKinBodyPtr pbody, PyCollisionReportPtr pReport)
+{
+    bool bCollision = _penv->CheckCollision(pyray->r, KinBodyConstPtr(openravepy::GetKinBody(pbody)), openravepy::GetCollisionReport(pReport));
+    openravepy::UpdateCollisionReport(pReport,shared_from_this());
+    return bCollision;
+}
+
+object PyEnvironmentBase::CheckCollisionRays(py::numeric::array rays, PyKinBodyPtr pbody, bool bFrontFacingOnly)
+{
+    object shape = rays.attr("shape");
+    int nRays = extract<int>(shape[0]);
+    if( nRays == 0 ) {
+        return py::make_tuple(py::empty_array_astype<int>(), py::empty_array_astype<dReal>());
+    }
+    if( extract<int>(shape[1]) != 6 ) {
+        throw OpenRAVEException(_("rays object needs to be a Nx6 vector\n"));
+    }
+    CollisionReport report;
+    CollisionReportPtr preport(&report,null_deleter());
+
+    PyArrayObject *pPyRays = PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(rays.ptr()));
+    AutoPyArrayObjectDereferencer pyderef(pPyRays);
+
+    if( !PyArray_ISFLOAT(pPyRays) ) {
+        throw OpenRAVEException(_("rays has to be a float array\n"));
+    }
+
+    bool isFloat = PyArray_ITEMSIZE(pPyRays) == sizeof(float); // or double
+    const float *pRaysFloat = isFloat ? reinterpret_cast<const float*>(PyArray_DATA(pPyRays)) : NULL;
+    const double *pRaysDouble = isFloat ? NULL : reinterpret_cast<const double*>(PyArray_DATA(pPyRays));
+
+    RAY r;
+    npy_intp dims[] = { nRays,6};
+    PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal) == sizeof(double) ? PyArray_DOUBLE : PyArray_FLOAT);
+    dReal* ppos = (dReal*)PyArray_DATA(pypos);
+    std::memset(ppos, 0, nRays * sizeof(dReal));
+    PyObject* pycollision = PyArray_SimpleNew(1,&dims[0], PyArray_BOOL);
+    // numpy bool = uint8_t
+    uint8_t* pcollision = (uint8_t*)PyArray_DATA(pycollision);
+    std::memset(pcollision, 0, nRays * sizeof(uint8_t));
     {
-        std::vector<KinBodyConstPtr> vbodyexcluded;
-        for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
-            PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
-            if( !!pbody ) {
-                vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
+        openravepy::PythonThreadSaver threadsaver;
+
+        for(int i = 0; i < nRays; ++i, ppos += 6) {
+            if (isFloat) {
+                r.pos.x = pRaysFloat[0];
+                r.pos.y = pRaysFloat[1];
+                r.pos.z = pRaysFloat[2];
+                r.dir.x = pRaysFloat[3];
+                r.dir.y = pRaysFloat[4];
+                r.dir.z = pRaysFloat[5];
+                pRaysFloat += 6;
+            } else {
+                r.pos.x = pRaysDouble[0];
+                r.pos.y = pRaysDouble[1];
+                r.pos.z = pRaysDouble[2];
+                r.dir.x = pRaysDouble[3];
+                r.dir.y = pRaysDouble[4];
+                r.dir.z = pRaysDouble[5];
+                pRaysDouble += 6;
+            }
+
+            bool bCollision;
+            if( !pbody ) {
+                bCollision = _penv->CheckCollision(r, preport);
             }
             else {
-                RAVELOG_ERROR("failed to get excluded body\n");
+                bCollision = _penv->CheckCollision(r, KinBodyConstPtr(openravepy::GetKinBody(pbody)), preport);
+            }
+
+            if( bCollision &&( report.contacts.size() > 0) ) {
+                if( !bFrontFacingOnly ||( report.contacts[0].norm.dot3(r.dir)<0) ) {
+                    pcollision[i] = true;
+                    ppos[0] = report.contacts[0].pos.x;
+                    ppos[1] = report.contacts[0].pos.y;
+                    ppos[2] = report.contacts[0].pos.z;
+                    ppos[3] = report.contacts[0].norm.x;
+                    ppos[4] = report.contacts[0].norm.y;
+                    ppos[5] = report.contacts[0].norm.z;
+                }
             }
         }
-        std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-        for(size_t i = 0; i < (size_t)len(linkexcluded); ++i) {
-            KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
-            if( !!plink2 ) {
-                vlinkexcluded.push_back(plink2);
-            }
-            else {
-                RAVELOG_ERROR("failed to get excluded link\n");
-            }
-        }
-        return _penv->CheckCollision(KinBodyConstPtr(openravepy::GetKinBody(pbody)),vbodyexcluded,vlinkexcluded);
     }
 
-    bool CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, object linkexcluded, PyCollisionReportPtr pReport)
-    {
-        std::vector<KinBodyConstPtr> vbodyexcluded;
-        for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
-            PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
-            if( !!pbody ) {
-                vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
-            }
-            else {
-                RAVELOG_ERROR("failed to get excluded body\n");
-            }
-        }
-        std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-        for(size_t i = 0; i < (size_t)len(linkexcluded); ++i) {
-            KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
-            if( !!plink2 ) {
-                vlinkexcluded.push_back(plink2);
-            }
-            else {
-                RAVELOG_ERROR("failed to get excluded link\n");
-            }
-        }
+    return py::make_tuple(py::to_array_astype<bool>(pycollision), py::to_array_astype<dReal>(pypos));
+}
 
-        bool bCollision = _penv->CheckCollision(KinBodyConstPtr(openravepy::GetKinBody(pbody)), vbodyexcluded, vlinkexcluded, openravepy::GetCollisionReport(pReport));
-        openravepy::UpdateCollisionReport(pReport,shared_from_this());
-        return bCollision;
-    }
+bool PyEnvironmentBase::CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray)
+{
+    return _penv->CheckCollision(pyray->r);
+}
 
-    bool CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, PyKinBodyPtr pbody)
-    {
-        return _penv->CheckCollision(pyray->r,KinBodyConstPtr(openravepy::GetKinBody(pbody)));
-    }
+bool PyEnvironmentBase::CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, PyCollisionReportPtr pReport)
+{
+    bool bCollision = _penv->CheckCollision(pyray->r, openravepy::GetCollisionReport(pReport));
+    openravepy::UpdateCollisionReport(pReport,shared_from_this());
+    return bCollision;
+}
 
-    bool CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, PyKinBodyPtr pbody, PyCollisionReportPtr pReport)
-    {
-        bool bCollision = _penv->CheckCollision(pyray->r, KinBodyConstPtr(openravepy::GetKinBody(pbody)), openravepy::GetCollisionReport(pReport));
-        openravepy::UpdateCollisionReport(pReport,shared_from_this());
-        return bCollision;
-    }
+bool PyEnvironmentBase::Load(const std::string &filename) {
+    openravepy::PythonThreadSaver threadsaver;
+    return _penv->Load(filename);
+}
+bool PyEnvironmentBase::Load(const std::string &filename, object odictatts) {
+    AttributesList dictatts = toAttributesList(odictatts);
+    openravepy::PythonThreadSaver threadsaver;
+    return _penv->Load(filename, dictatts);
+}
+bool PyEnvironmentBase::LoadURI(const std::string &filename, object odictatts) {
+    AttributesList dictatts = toAttributesList(odictatts);
+    openravepy::PythonThreadSaver threadsaver;
+    return _penv->LoadURI(filename, dictatts);
+}
+bool PyEnvironmentBase::LoadData(const std::string &data) {
+    openravepy::PythonThreadSaver threadsaver;
+    return _penv->LoadData(data);
+}
+bool PyEnvironmentBase::LoadData(const std::string &data, object odictatts) {
+    AttributesList dictatts = toAttributesList(odictatts);
+    openravepy::PythonThreadSaver threadsaver;
+    return _penv->LoadData(data, dictatts);
+}
 
-    object CheckCollisionRays(py::numeric::array rays, PyKinBodyPtr pbody,bool bFrontFacingOnly=false)
-    {
-        object shape = rays.attr("shape");
-        int nRays = extract<int>(shape[0]);
-        if( nRays == 0 ) {
-            return py::make_tuple(py::empty_array_astype<int>(), py::empty_array_astype<dReal>());
-        }
-        if( extract<int>(shape[1]) != 6 ) {
-            throw OpenRAVEException(_("rays object needs to be a Nx6 vector\n"));
-        }
-        CollisionReport report;
-        CollisionReportPtr preport(&report,null_deleter());
-
-        PyArrayObject *pPyRays = PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(rays.ptr()));
-        AutoPyArrayObjectDereferencer pyderef(pPyRays);
-
-        if( !PyArray_ISFLOAT(pPyRays) ) {
-            throw OpenRAVEException(_("rays has to be a float array\n"));
-        }
-
-        bool isFloat = PyArray_ITEMSIZE(pPyRays) == sizeof(float); // or double
-        const float *pRaysFloat = isFloat ? reinterpret_cast<const float*>(PyArray_DATA(pPyRays)) : NULL;
-        const double *pRaysDouble = isFloat ? NULL : reinterpret_cast<const double*>(PyArray_DATA(pPyRays));
-
-        RAY r;
-        npy_intp dims[] = { nRays,6};
-        PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal) == sizeof(double) ? PyArray_DOUBLE : PyArray_FLOAT);
-        dReal* ppos = (dReal*)PyArray_DATA(pypos);
-        std::memset(ppos, 0, nRays * sizeof(dReal));
-        PyObject* pycollision = PyArray_SimpleNew(1,&dims[0], PyArray_BOOL);
-        // numpy bool = uint8_t
-        uint8_t* pcollision = (uint8_t*)PyArray_DATA(pycollision);
-        std::memset(pcollision, 0, nRays * sizeof(uint8_t));
-        {
+void PyEnvironmentBase::Save(const std::string &filename, const int options, object odictatts) {
+    bool bSuccess = false;
+    // avoid destined extract failure
+    if(!IS_PYTHONOBJECT_NONE(odictatts)) {
+        extract_<std::string> otarget(odictatts);
+        if( otarget.check() ) {
+            // old versions
+            AttributesList atts;
+            atts.emplace_back("target", (std::string)otarget);
             openravepy::PythonThreadSaver threadsaver;
-
-            for(int i = 0; i < nRays; ++i, ppos += 6) {
-                if (isFloat) {
-                    r.pos.x = pRaysFloat[0];
-                    r.pos.y = pRaysFloat[1];
-                    r.pos.z = pRaysFloat[2];
-                    r.dir.x = pRaysFloat[3];
-                    r.dir.y = pRaysFloat[4];
-                    r.dir.z = pRaysFloat[5];
-                    pRaysFloat += 6;
-                } else {
-                    r.pos.x = pRaysDouble[0];
-                    r.pos.y = pRaysDouble[1];
-                    r.pos.z = pRaysDouble[2];
-                    r.dir.x = pRaysDouble[3];
-                    r.dir.y = pRaysDouble[4];
-                    r.dir.z = pRaysDouble[5];
-                    pRaysDouble += 6;
-                }
-
-                bool bCollision;
-                if( !pbody ) {
-                    bCollision = _penv->CheckCollision(r, preport);
-                }
-                else {
-                    bCollision = _penv->CheckCollision(r, KinBodyConstPtr(openravepy::GetKinBody(pbody)), preport);
-                }
-
-                if( bCollision &&( report.contacts.size() > 0) ) {
-                    if( !bFrontFacingOnly ||( report.contacts[0].norm.dot3(r.dir)<0) ) {
-                        pcollision[i] = true;
-                        ppos[0] = report.contacts[0].pos.x;
-                        ppos[1] = report.contacts[0].pos.y;
-                        ppos[2] = report.contacts[0].pos.z;
-                        ppos[3] = report.contacts[0].norm.x;
-                        ppos[4] = report.contacts[0].norm.y;
-                        ppos[5] = report.contacts[0].norm.z;
-                    }
-                }
-            }
+            _penv->Save(filename, (EnvironmentBase::SelectionOptions) options, atts);
+            bSuccess = true;
         }
-
-        return py::make_tuple(py::to_array_astype<bool>(pycollision), py::to_array_astype<dReal>(pypos));
     }
-
-    bool CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray)
-    {
-        return _penv->CheckCollision(pyray->r);
-    }
-
-    bool CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, PyCollisionReportPtr pReport)
-    {
-        bool bCollision = _penv->CheckCollision(pyray->r, openravepy::GetCollisionReport(pReport));
-        openravepy::UpdateCollisionReport(pReport,shared_from_this());
-        return bCollision;
-    }
-
-    bool Load(const string &filename) {
-        openravepy::PythonThreadSaver threadsaver;
-        return _penv->Load(filename);
-    }
-    bool Load(const string &filename, object odictatts) {
+    if(!bSuccess) {
         AttributesList dictatts = toAttributesList(odictatts);
         openravepy::PythonThreadSaver threadsaver;
-        return _penv->Load(filename, dictatts);
+        _penv->Save(filename, (EnvironmentBase::SelectionOptions) options, dictatts);
     }
-    bool LoadURI(const string &filename, object odictatts=py::none_()) {
-        AttributesList dictatts = toAttributesList(odictatts);
-        openravepy::PythonThreadSaver threadsaver;
-        return _penv->LoadURI(filename, dictatts);
+}
+
+object PyEnvironmentBase::WriteToMemory(const std::string &filetype, const int options, object odictatts) {
+    std::vector<char> output;
+    bool bSuccess = false;
+    // avoid destined extract failure
+    if(!IS_PYTHONOBJECT_NONE(odictatts)) {
+        extract_<std::string> otarget(odictatts);
+        if( otarget.check() ) {
+            // old versions
+            AttributesList atts;
+            atts.emplace_back("target", (std::string)otarget);
+            _penv->WriteToMemory(filetype, output, (EnvironmentBase::SelectionOptions) options, atts);
+            bSuccess = true;
+        }
     }
-    bool LoadData(const string &data) {
-        openravepy::PythonThreadSaver threadsaver;
-        return _penv->LoadData(data);
-    }
-    bool LoadData(const string &data, object odictatts) {
-        AttributesList dictatts = toAttributesList(odictatts);
-        openravepy::PythonThreadSaver threadsaver;
-        return _penv->LoadData(data, dictatts);
+    if(!bSuccess) {
+        _penv->WriteToMemory(filetype, output, (EnvironmentBase::SelectionOptions) options, toAttributesList(odictatts));
     }
 
-    void Save(const std::string &filename, const int options = EnvironmentBase::SelectionOptions::SO_Everything, object odictatts = py::none_()) {
-        bool bSuccess = false;
-        // avoid destined extract failure
-        if(!IS_PYTHONOBJECT_NONE(odictatts)) {
-            extract_<std::string> otarget(odictatts);
-            if( otarget.check() ) {
-                // old versions
-                AttributesList atts;
-                atts.emplace_back("target", (std::string)otarget);
-                openravepy::PythonThreadSaver threadsaver;
-                _penv->Save(filename, (EnvironmentBase::SelectionOptions) options, atts);
-                bSuccess = true;
-            }
-        }
-        if(!bSuccess) {
-            AttributesList dictatts = toAttributesList(odictatts);
-            openravepy::PythonThreadSaver threadsaver;
-            _penv->Save(filename, (EnvironmentBase::SelectionOptions) options, dictatts);
-        }
+    if( output.empty() ) {
+        return py::none_();
     }
-
-    object WriteToMemory(const std::string &filetype, const int options = EnvironmentBase::SelectionOptions::SO_Everything, object odictatts = py::none_()) {
-        std::vector<char> output;
-        bool bSuccess = false;
-        // avoid destined extract failure
-        if(!IS_PYTHONOBJECT_NONE(odictatts)) {
-            extract_<std::string> otarget(odictatts);
-            if( otarget.check() ) {
-                // old versions
-                AttributesList atts;
-                atts.emplace_back("target", (std::string)otarget);
-                _penv->WriteToMemory(filetype, output, (EnvironmentBase::SelectionOptions) options, atts);
-                bSuccess = true;
-            }
-        }
-        if(!bSuccess) {
-            _penv->WriteToMemory(filetype, output, (EnvironmentBase::SelectionOptions) options, toAttributesList(odictatts));
-        }
-
-        if( output.empty() ) {
-            return py::none_();
-        }
-        else {
+    else {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-            // https://github.com/pybind/pybind11/issues/1201
-            return py::cast<py::object>(PyString_FromStringAndSize(&output[0], output.size()));
+        // https://github.com/pybind/pybind11/issues/1201
+        return py::cast<py::object>(PyString_FromStringAndSize(&output[0], output.size()));
 #else
-            return py::to_object(py::handle<>(PyString_FromStringAndSize(&output[0], output.size())));
+        return py::to_object(py::handle<>(PyString_FromStringAndSize(&output[0], output.size())));
 #endif
+    }
+}
+
+object PyEnvironmentBase::ReadRobotURI(const string &filename)
+{
+    return py::to_object(openravepy::toPyRobot(_penv->ReadRobotURI(filename),shared_from_this()));
+}
+object PyEnvironmentBase::ReadRobotURI(const string &filename, object odictatts)
+{
+    return py::to_object(openravepy::toPyRobot(_penv->ReadRobotURI(RobotBasePtr(), filename,toAttributesList(odictatts)),shared_from_this()));
+}
+object PyEnvironmentBase::ReadRobotData(const string &data)
+{
+    return py::to_object(openravepy::toPyRobot(_penv->ReadRobotData(RobotBasePtr(), data, AttributesList()), shared_from_this()));
+}
+object PyEnvironmentBase::ReadRobotData(const string &data, object odictatts)
+{
+    return py::to_object(openravepy::toPyRobot(_penv->ReadRobotData(RobotBasePtr(), data, toAttributesList(odictatts)),shared_from_this()));
+}
+object PyEnvironmentBase::ReadKinBodyURI(const string &filename)
+{
+    return py::to_object(openravepy::toPyKinBody(_penv->ReadKinBodyURI(filename), shared_from_this()));
+}
+object PyEnvironmentBase::ReadKinBodyURI(const string &filename, object odictatts)
+{
+    return py::to_object(openravepy::toPyKinBody(_penv->ReadKinBodyURI(KinBodyPtr(), filename, toAttributesList(odictatts)),shared_from_this()));
+}
+object PyEnvironmentBase::ReadKinBodyData(const string &data)
+{
+    return py::to_object(openravepy::toPyKinBody(_penv->ReadKinBodyData(KinBodyPtr(), data, AttributesList()),shared_from_this()));
+}
+object PyEnvironmentBase::ReadKinBodyData(const string &data, object odictatts)
+{
+    return py::to_object(openravepy::toPyKinBody(_penv->ReadKinBodyData(KinBodyPtr(), data, toAttributesList(odictatts)),shared_from_this()));
+}
+PyInterfaceBasePtr PyEnvironmentBase::ReadInterfaceURI(const std::string& filename)
+{
+    return _toPyInterface(_penv->ReadInterfaceURI(filename));
+}
+PyInterfaceBasePtr PyEnvironmentBase::ReadInterfaceURI(const std::string& filename, object odictatts)
+{
+    return _toPyInterface(_penv->ReadInterfaceURI(filename, toAttributesList(odictatts)));
+}
+object PyEnvironmentBase::ReadTrimeshURI(const std::string& filename)
+{
+    OPENRAVE_SHARED_PTR<TriMesh> ptrimesh = _penv->ReadTrimeshURI(OPENRAVE_SHARED_PTR<TriMesh>(),filename);
+    if( !ptrimesh ) {
+        return py::none_();
+    }
+    return toPyTriMesh(*ptrimesh);
+}
+object PyEnvironmentBase::ReadTrimeshURI(const std::string& filename, object odictatts)
+{
+    OPENRAVE_SHARED_PTR<TriMesh> ptrimesh = _penv->ReadTrimeshURI(OPENRAVE_SHARED_PTR<TriMesh>(),filename,toAttributesList(odictatts));
+    if( !ptrimesh ) {
+        return py::none_();
+    }
+    return toPyTriMesh(*ptrimesh);
+}
+
+object PyEnvironmentBase::ReadTrimeshData(const std::string& data, const std::string& formathint)
+{
+    OPENRAVE_SHARED_PTR<TriMesh> ptrimesh = _penv->ReadTrimeshData(OPENRAVE_SHARED_PTR<TriMesh>(),data,formathint);
+    if( !ptrimesh ) {
+        return py::none_();
+    }
+    return toPyTriMesh(*ptrimesh);
+}
+object PyEnvironmentBase::ReadTrimeshData(const std::string& data, const std::string& formathint, object odictatts)
+{
+    OPENRAVE_SHARED_PTR<TriMesh> ptrimesh = _penv->ReadTrimeshData(OPENRAVE_SHARED_PTR<TriMesh>(),data,formathint,toAttributesList(odictatts));
+    if( !ptrimesh ) {
+        return py::none_();
+    }
+    return toPyTriMesh(*ptrimesh);
+}
+
+void PyEnvironmentBase::Add(PyInterfaceBasePtr pinterface, bool bAnonymous, const std::string& cmdargs) {
+    _penv->Add(pinterface->GetInterfaceBase(), bAnonymous, cmdargs);
+}
+
+void PyEnvironmentBase::AddKinBody(PyKinBodyPtr pbody) {
+    CHECK_POINTER(pbody); _penv->Add(openravepy::GetKinBody(pbody));
+}
+void PyEnvironmentBase::AddKinBody(PyKinBodyPtr pbody, bool bAnonymous) {
+    CHECK_POINTER(pbody); _penv->Add(openravepy::GetKinBody(pbody),bAnonymous);
+}
+void PyEnvironmentBase::AddRobot(PyRobotBasePtr robot) {
+    CHECK_POINTER(robot);
+    _penv->Add(openravepy::GetRobot(robot));
+}
+void PyEnvironmentBase::AddRobot(PyRobotBasePtr robot, bool bAnonymous) {
+    CHECK_POINTER(robot);
+    _penv->Add(openravepy::GetRobot(robot),bAnonymous);
+}
+void PyEnvironmentBase::AddSensor(PySensorBasePtr sensor) {
+    CHECK_POINTER(sensor);
+    _penv->Add(openravepy::GetSensor(sensor));
+}
+void PyEnvironmentBase::AddSensor(PySensorBasePtr sensor, bool bAnonymous) {
+    CHECK_POINTER(sensor);
+    _penv->Add(openravepy::GetSensor(sensor),bAnonymous);
+}
+void PyEnvironmentBase::AddViewer(PyViewerBasePtr viewer) {
+    CHECK_POINTER(viewer);
+    _penv->Add(openravepy::GetViewer(viewer));
+}
+
+bool PyEnvironmentBase::RemoveKinBody(PyKinBodyPtr pbody) {
+    CHECK_POINTER(pbody);
+    RAVELOG_WARN("openravepy RemoveKinBody deprecated, use Remove\n");
+    return _penv->Remove(openravepy::GetKinBody(pbody));
+}
+
+bool PyEnvironmentBase::RemoveKinBodyByName(const std::string& name) {
+    return _penv->RemoveKinBodyByName(name);
+}
+
+object PyEnvironmentBase::GetKinBody(const string &name)
+{
+    KinBodyPtr pbody = _penv->GetKinBody(name);
+    if( !pbody ) {
+        return py::none_();
+    }
+    if( pbody->IsRobot() ) {
+        return py::to_object(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(pbody),shared_from_this()));
+    }
+    else {
+        return py::to_object(openravepy::toPyKinBody(pbody,shared_from_this()));
+    }
+}
+object PyEnvironmentBase::GetRobot(const string &name)
+{
+    return py::to_object(openravepy::toPyRobot(_penv->GetRobot(name), shared_from_this()));
+}
+object PyEnvironmentBase::GetSensor(const string &name)
+{
+    return py::to_object(openravepy::toPySensor(_penv->GetSensor(name),shared_from_this()));
+}
+
+object PyEnvironmentBase::GetBodyFromEnvironmentId(int id)
+{
+    return py::to_object(openravepy::toPyKinBody(_penv->GetBodyFromEnvironmentId(id),shared_from_this()));
+}
+
+int PyEnvironmentBase::AddModule(PyModuleBasePtr prob, const string &PY_ARGS) {
+    CHECK_POINTER(prob);
+    return _penv->AddModule(openravepy::GetModule(prob),PY_ARGS);
+}
+bool PyEnvironmentBase::RemoveProblem(PyModuleBasePtr prob) {
+    CHECK_POINTER(prob);
+    RAVELOG_WARN("openravepy RemoveProblem deprecated, use Remove\n");
+    return _penv->Remove(openravepy::GetModule(prob));
+}
+bool PyEnvironmentBase::Remove(PyInterfaceBasePtr obj) {
+    CHECK_POINTER(obj);
+
+    // have to check if viewer in order to notify viewer manager
+    ViewerBasePtr pviewer = RaveInterfaceCast<ViewerBase>(obj->GetInterfaceBase());
+    if( !!pviewer ) {
+        ViewerManager::GetInstance().RemoveViewer(pviewer);
+    }
+    return _penv->Remove(obj->GetInterfaceBase());
+}
+
+object PyEnvironmentBase::GetModules()
+{
+    std::list<ModuleBasePtr> listModules;
+    _penv->GetModules(listModules);
+    py::list modules;
+    FOREACHC(itprob, listModules) {
+        modules.append(openravepy::toPyModule(*itprob,shared_from_this()));
+    }
+    return modules;
+}
+
+bool PyEnvironmentBase::SetPhysicsEngine(PyPhysicsEngineBasePtr pengine)
+{
+    return _penv->SetPhysicsEngine(openravepy::GetPhysicsEngine(pengine));
+}
+object PyEnvironmentBase::GetPhysicsEngine() {
+    return py::to_object(openravepy::toPyPhysicsEngine(_penv->GetPhysicsEngine(),shared_from_this()));
+}
+
+object PyEnvironmentBase::RegisterBodyCallback(object fncallback)
+{
+    if( !fncallback ) {
+        throw OpenRAVEException(_("callback not specified"));
+    }
+    UserDataPtr p = _penv->RegisterBodyCallback(boost::bind(&PyEnvironmentBase::_BodyCallback,shared_from_this(),fncallback,_1,_2));
+    if( !p ) {
+        throw OpenRAVEException(_("registration handle is NULL"));
+    }
+    return openravepy::GetUserData(p);
+}
+
+object PyEnvironmentBase::RegisterCollisionCallback(object fncallback)
+{
+    if( !fncallback ) {
+        throw OpenRAVEException(_("callback not specified"));
+    }
+    UserDataPtr p = _penv->RegisterCollisionCallback(boost::bind(&PyEnvironmentBase::_CollisionCallback,shared_from_this(),fncallback,_1,_2));
+    if( !p ) {
+        throw OpenRAVEException(_("registration handle is NULL"));
+    }
+    return openravepy::GetUserData(p);
+}
+
+bool PyEnvironmentBase::HasRegisteredCollisionCallbacks()
+{
+    return _penv->HasRegisteredCollisionCallbacks();
+}
+
+void PyEnvironmentBase::StepSimulation(dReal timeStep) {
+    _penv->StepSimulation(timeStep);
+}
+void PyEnvironmentBase::StartSimulation(dReal fDeltaTime, bool bRealTime) {
+    _penv->StartSimulation(fDeltaTime,bRealTime);
+}
+void PyEnvironmentBase::StopSimulation(int shutdownthread) {
+    _penv->StopSimulation(shutdownthread);
+}
+uint64_t PyEnvironmentBase::GetSimulationTime() {
+    return _penv->GetSimulationTime();
+}
+bool PyEnvironmentBase::IsSimulationRunning() {
+    return _penv->IsSimulationRunning();
+}
+
+void PyEnvironmentBase::Lock()
+{
+    // first try to lock without releasing the GIL since it is faster
+    uint64_t nTimeoutMicroseconds = 2000; // 2ms
+    uint64_t basetime = OpenRAVE::utils::GetMicroTime();
+    while(OpenRAVE::utils::GetMicroTime()-basetime<nTimeoutMicroseconds ) {
+        if( TryLock() ) {
+            return;
         }
+        boost::this_thread::sleep(boost::posix_time::microseconds(10));
     }
 
-    object ReadRobotURI(const string &filename)
-    {
-        return py::to_object(openravepy::toPyRobot(_penv->ReadRobotURI(filename),shared_from_this()));
-    }
-    object ReadRobotURI(const string &filename, object odictatts)
-    {
-        return py::to_object(openravepy::toPyRobot(_penv->ReadRobotURI(RobotBasePtr(), filename,toAttributesList(odictatts)),shared_from_this()));
-    }
-    object ReadRobotData(const string &data)
-    {
-        return py::to_object(openravepy::toPyRobot(_penv->ReadRobotData(RobotBasePtr(), data, AttributesList()), shared_from_this()));
-    }
-    object ReadRobotData(const string &data, object odictatts)
-    {
-        return py::to_object(openravepy::toPyRobot(_penv->ReadRobotData(RobotBasePtr(), data, toAttributesList(odictatts)),shared_from_this()));
-    }
-    object ReadKinBodyURI(const string &filename)
-    {
-        return py::to_object(openravepy::toPyKinBody(_penv->ReadKinBodyURI(filename), shared_from_this()));
-    }
-    object ReadKinBodyURI(const string &filename, object odictatts)
-    {
-        return py::to_object(openravepy::toPyKinBody(_penv->ReadKinBodyURI(KinBodyPtr(), filename, toAttributesList(odictatts)),shared_from_this()));
-    }
-    object ReadKinBodyData(const string &data)
-    {
-        return py::to_object(openravepy::toPyKinBody(_penv->ReadKinBodyData(KinBodyPtr(), data, AttributesList()),shared_from_this()));
-    }
-    object ReadKinBodyData(const string &data, object odictatts)
-    {
-        return py::to_object(openravepy::toPyKinBody(_penv->ReadKinBodyData(KinBodyPtr(), data, toAttributesList(odictatts)),shared_from_this()));
-    }
-    PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename)
-    {
-        return _toPyInterface(_penv->ReadInterfaceURI(filename));
-    }
-    PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename, object odictatts)
-    {
-        return _toPyInterface(_penv->ReadInterfaceURI(filename, toAttributesList(odictatts)));
-    }
-    object ReadTrimeshURI(const std::string& filename)
-    {
-        OPENRAVE_SHARED_PTR<TriMesh> ptrimesh = _penv->ReadTrimeshURI(OPENRAVE_SHARED_PTR<TriMesh>(),filename);
-        if( !ptrimesh ) {
-            return py::none_();
-        }
-        return toPyTriMesh(*ptrimesh);
-    }
-    object ReadTrimeshURI(const std::string& filename, object odictatts)
-    {
-        OPENRAVE_SHARED_PTR<TriMesh> ptrimesh = _penv->ReadTrimeshURI(OPENRAVE_SHARED_PTR<TriMesh>(),filename,toAttributesList(odictatts));
-        if( !ptrimesh ) {
-            return py::none_();
-        }
-        return toPyTriMesh(*ptrimesh);
-    }
+    // failed, so must be a python thread blocking it...
+    LockReleaseGil();
+}
 
-    object ReadTrimeshData(const std::string& data, const std::string& formathint)
-    {
-        OPENRAVE_SHARED_PTR<TriMesh> ptrimesh = _penv->ReadTrimeshData(OPENRAVE_SHARED_PTR<TriMesh>(),data,formathint);
-        if( !ptrimesh ) {
-            return py::none_();
-        }
-        return toPyTriMesh(*ptrimesh);
-    }
-    object ReadTrimeshData(const std::string& data, const std::string& formathint, object odictatts)
-    {
-        OPENRAVE_SHARED_PTR<TriMesh> ptrimesh = _penv->ReadTrimeshData(OPENRAVE_SHARED_PTR<TriMesh>(),data,formathint,toAttributesList(odictatts));
-        if( !ptrimesh ) {
-            return py::none_();
-        }
-        return toPyTriMesh(*ptrimesh);
-    }
-
-    void Add(PyInterfaceBasePtr pinterface, bool bAnonymous=false, const std::string& cmdargs="") {
-        _penv->Add(pinterface->GetInterfaceBase(), bAnonymous, cmdargs);
-    }
-
-    void AddKinBody(PyKinBodyPtr pbody) {
-        CHECK_POINTER(pbody); _penv->Add(openravepy::GetKinBody(pbody));
-    }
-    void AddKinBody(PyKinBodyPtr pbody, bool bAnonymous) {
-        CHECK_POINTER(pbody); _penv->Add(openravepy::GetKinBody(pbody),bAnonymous);
-    }
-    void AddRobot(PyRobotBasePtr robot) {
-        CHECK_POINTER(robot);
-        _penv->Add(openravepy::GetRobot(robot));
-    }
-    void AddRobot(PyRobotBasePtr robot, bool bAnonymous) {
-        CHECK_POINTER(robot);
-        _penv->Add(openravepy::GetRobot(robot),bAnonymous);
-    }
-    void AddSensor(PySensorBasePtr sensor) {
-        CHECK_POINTER(sensor);
-        _penv->Add(openravepy::GetSensor(sensor));
-    }
-    void AddSensor(PySensorBasePtr sensor, bool bAnonymous) {
-        CHECK_POINTER(sensor);
-        _penv->Add(openravepy::GetSensor(sensor),bAnonymous);
-    }
-    void AddViewer(PyViewerBasePtr viewer) {
-        CHECK_POINTER(viewer);
-        _penv->Add(openravepy::GetViewer(viewer));
-    }
-
-    bool RemoveKinBody(PyKinBodyPtr pbody) {
-        CHECK_POINTER(pbody);
-        RAVELOG_WARN("openravepy RemoveKinBody deprecated, use Remove\n");
-        return _penv->Remove(openravepy::GetKinBody(pbody));
-    }
-
-    bool RemoveKinBodyByName(const std::string& name) {
-        return _penv->RemoveKinBodyByName(name);
-    }
-
-    object GetKinBody(const string &name)
-    {
-        KinBodyPtr pbody = _penv->GetKinBody(name);
-        if( !pbody ) {
-            return py::none_();
-        }
-        if( pbody->IsRobot() ) {
-            return py::to_object(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(pbody),shared_from_this()));
-        }
-        else {
-            return py::to_object(openravepy::toPyKinBody(pbody,shared_from_this()));
-        }
-    }
-    object GetRobot(const string &name)
-    {
-        return py::to_object(openravepy::toPyRobot(_penv->GetRobot(name), shared_from_this()));
-    }
-    object GetSensor(const string &name)
-    {
-        return py::to_object(openravepy::toPySensor(_penv->GetSensor(name),shared_from_this()));
-    }
-
-    object GetBodyFromEnvironmentId(int id)
-    {
-        return py::to_object(openravepy::toPyKinBody(_penv->GetBodyFromEnvironmentId(id),shared_from_this()));
-    }
-
-    int AddModule(PyModuleBasePtr prob, const string &PY_ARGS) {
-        CHECK_POINTER(prob);
-        return _penv->AddModule(openravepy::GetModule(prob),PY_ARGS);
-    }
-    bool RemoveProblem(PyModuleBasePtr prob) {
-        CHECK_POINTER(prob);
-        RAVELOG_WARN("openravepy RemoveProblem deprecated, use Remove\n");
-        return _penv->Remove(openravepy::GetModule(prob));
-    }
-    bool Remove(PyInterfaceBasePtr obj) {
-        CHECK_POINTER(obj);
-
-        // have to check if viewer in order to notify viewer manager
-        ViewerBasePtr pviewer = RaveInterfaceCast<ViewerBase>(obj->GetInterfaceBase());
-        if( !!pviewer ) {
-            ViewerManager::GetInstance().RemoveViewer(pviewer);
-        }
-        return _penv->Remove(obj->GetInterfaceBase());
-    }
-
-    object GetModules()
-    {
-        std::list<ModuleBasePtr> listModules;
-        _penv->GetModules(listModules);
-        py::list modules;
-        FOREACHC(itprob, listModules) {
-            modules.append(openravepy::toPyModule(*itprob,shared_from_this()));
-        }
-        return modules;
-    }
-
-    bool SetPhysicsEngine(PyPhysicsEngineBasePtr pengine)
-    {
-        return _penv->SetPhysicsEngine(openravepy::GetPhysicsEngine(pengine));
-    }
-    object GetPhysicsEngine() {
-        return py::to_object(openravepy::toPyPhysicsEngine(_penv->GetPhysicsEngine(),shared_from_this()));
-    }
-
-    object RegisterBodyCallback(object fncallback)
-    {
-        if( !fncallback ) {
-            throw OpenRAVEException(_("callback not specified"));
-        }
-        UserDataPtr p = _penv->RegisterBodyCallback(boost::bind(&PyEnvironmentBase::_BodyCallback,shared_from_this(),fncallback,_1,_2));
-        if( !p ) {
-            throw OpenRAVEException(_("registration handle is NULL"));
-        }
-        return openravepy::GetUserData(p);
-    }
-
-    object RegisterCollisionCallback(object fncallback)
-    {
-        if( !fncallback ) {
-            throw OpenRAVEException(_("callback not specified"));
-        }
-        UserDataPtr p = _penv->RegisterCollisionCallback(boost::bind(&PyEnvironmentBase::_CollisionCallback,shared_from_this(),fncallback,_1,_2));
-        if( !p ) {
-            throw OpenRAVEException(_("registration handle is NULL"));
-        }
-        return openravepy::GetUserData(p);
-    }
-
-    bool HasRegisteredCollisionCallbacks()
-    {
-        return _penv->HasRegisteredCollisionCallbacks();
-    }
-
-    void StepSimulation(dReal timeStep) {
-        _penv->StepSimulation(timeStep);
-    }
-    void StartSimulation(dReal fDeltaTime, bool bRealTime=true) {
-        _penv->StartSimulation(fDeltaTime,bRealTime);
-    }
-    void StopSimulation(int shutdownthread=1) {
-        _penv->StopSimulation(shutdownthread);
-    }
-    uint64_t GetSimulationTime() {
-        return _penv->GetSimulationTime();
-    }
-    bool IsSimulationRunning() {
-        return _penv->IsSimulationRunning();
-    }
-
-    void Lock()
-    {
-        // first try to lock without releasing the GIL since it is faster
-        uint64_t nTimeoutMicroseconds = 2000; // 2ms
-        uint64_t basetime = OpenRAVE::utils::GetMicroTime();
-        while(OpenRAVE::utils::GetMicroTime()-basetime<nTimeoutMicroseconds ) {
-            if( TryLock() ) {
-                return;
-            }
-            boost::this_thread::sleep(boost::posix_time::microseconds(10));
-        }
-
-        // failed, so must be a python thread blocking it...
-        LockReleaseGil();
-    }
-
-    /// \brief raw locking without any python overhead
-    void LockRaw()
-    {
+/// \brief raw locking without any python overhead
+void PyEnvironmentBase::LockRaw()
+{
 #if BOOST_VERSION < 103500
-        boost::mutex::scoped_lock envlock(_envmutex);
-        if( _listfreelocks.size() > 0 ) {
-            _listfreelocks.back()->lock();
-            _listenvlocks.splice(_listenvlocks.end(),_listfreelocks,--_listfreelocks.end());
-        }
-        else {
-            _listenvlocks.push_back(OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
-        }
+    boost::mutex::scoped_lock envlock(_envmutex);
+    if( _listfreelocks.size() > 0 ) {
+        _listfreelocks.back()->lock();
+        _listenvlocks.splice(_listenvlocks.end(),_listfreelocks,--_listfreelocks.end());
+    }
+    else {
+        _listenvlocks.push_back(OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
+    }
 #else
-        _penv->GetMutex().lock();
+    _penv->GetMutex().lock();
 #endif
-    }
+}
 
-    void LockReleaseGil()
-    {
-        PythonThreadSaver saver;
-        LockRaw();
-    }
+void PyEnvironmentBase::LockReleaseGil()
+{
+    PythonThreadSaver saver;
+    LockRaw();
+}
 
-    void Unlock()
-    {
+void PyEnvironmentBase::Unlock()
+{
 #if BOOST_VERSION < 103500
-        boost::mutex::scoped_lock envlock(_envmutex);
-        BOOST_ASSERT(_listenvlocks.size()>0);
-        _listenvlocks.back()->unlock();
-        _listfreelocks.splice(_listfreelocks.end(),_listenvlocks,--_listenvlocks.end());
+    boost::mutex::scoped_lock envlock(_envmutex);
+    BOOST_ASSERT(_listenvlocks.size()>0);
+    _listenvlocks.back()->unlock();
+    _listfreelocks.splice(_listfreelocks.end(),_listenvlocks,--_listenvlocks.end());
 #else
-        _penv->GetMutex().unlock();
+    _penv->GetMutex().unlock();
 #endif
-    }
+}
 
-    /// try locking the environment while releasing the GIL. This can get into a deadlock after env lock is acquired and before gil is re-acquired
-    bool TryLockReleaseGil()
-    {
-        bool bSuccess = false;
-        PythonThreadSaver saver;
+/// try locking the environment while releasing the GIL. This can get into a deadlock after env lock is acquired and before gil is re-acquired
+bool PyEnvironmentBase::TryLockReleaseGil()
+{
+    bool bSuccess = false;
+    PythonThreadSaver saver;
 #if BOOST_VERSION < 103500
-        OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
-        if( !!lockenv->try_lock() ) {
-            bSuccess = true;
-            _listenvlocks.push_back(OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
-        }
-#else
-        if( _penv->GetMutex().try_lock() ) {
-            bSuccess = true;
-        }
-#endif
-        return bSuccess;
+    OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
+    if( !!lockenv->try_lock() ) {
+        bSuccess = true;
+        _listenvlocks.push_back(OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
     }
+#else
+    if( _penv->GetMutex().try_lock() ) {
+        bSuccess = true;
+    }
+#endif
+    return bSuccess;
+}
 
-    bool TryLock()
-    {
-        bool bSuccess = false;
+bool PyEnvironmentBase::TryLock()
+{
+    bool bSuccess = false;
 #if BOOST_VERSION < 103500
-        OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
-        if( !!lockenv->try_lock() ) {
-            bSuccess = true;
-            _listenvlocks.push_back(OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
-        }
+    OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
+    if( !!lockenv->try_lock() ) {
+        bSuccess = true;
+        _listenvlocks.push_back(OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
+    }
 #else
-        if( _penv->GetMutex().try_lock() ) {
-            bSuccess = true;
-        }
+    if( _penv->GetMutex().try_lock() ) {
+        bSuccess = true;
+    }
 #endif
-        return bSuccess;
-    }
+    return bSuccess;
+}
 
 
-    bool Lock(float timeout)
-    {
-        uint64_t nTimeoutMicroseconds = timeout*1000000;
-        uint64_t basetime = OpenRAVE::utils::GetMicroTime();
-        while(OpenRAVE::utils::GetMicroTime()-basetime<nTimeoutMicroseconds ) {
-            if( TryLock() ) {
-                return true;
-            }
-            boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+bool PyEnvironmentBase::Lock(float timeout)
+{
+    uint64_t nTimeoutMicroseconds = timeout*1000000;
+    uint64_t basetime = OpenRAVE::utils::GetMicroTime();
+    while(OpenRAVE::utils::GetMicroTime()-basetime<nTimeoutMicroseconds ) {
+        if( TryLock() ) {
+            return true;
         }
-        return false;
+        boost::this_thread::sleep(boost::posix_time::milliseconds(1));
     }
+    return false;
+}
 
-    void __enter__()
-    {
-        Lock();
-    }
+void PyEnvironmentBase::__enter__()
+{
+    Lock();
+}
 
-    void __exit__(object type, object value, object traceback)
-    {
-        Unlock();
-    }
+void PyEnvironmentBase::__exit__(object type, object value, object traceback)
+{
+    Unlock();
+}
 
-    bool SetViewer(const string &viewername, bool showviewer=true)
-    {
+bool PyEnvironmentBase::SetViewer(const string &viewername, bool showviewer)
+{
+    ViewerBasePtr pviewer = ViewerManager::GetInstance().AddViewer(_penv, viewername, showviewer, true);
+    return !(pviewer == NULL);
+}
+
+/// \brief sets the default viewer
+bool PyEnvironmentBase::SetDefaultViewer(bool showviewer)
+{
+    std::string viewername = RaveGetDefaultViewerType();
+    if( viewername.size() > 0 ) {
         ViewerBasePtr pviewer = ViewerManager::GetInstance().AddViewer(_penv, viewername, showviewer, true);
-        return !(pviewer == NULL);
+        return !!pviewer;
     }
 
-    /// \brief sets the default viewer
-    bool SetDefaultViewer(bool showviewer=true)
-    {
-        std::string viewername = RaveGetDefaultViewerType();
-        if( viewername.size() > 0 ) {
-            ViewerBasePtr pviewer = ViewerManager::GetInstance().AddViewer(_penv, viewername, showviewer, true);
-            return !!pviewer;
+    return false;
+}
+
+object PyEnvironmentBase::GetViewer()
+{
+    return py::to_object(openravepy::toPyViewer(_penv->GetViewer(),shared_from_this()));
+}
+
+/// returns the number of points
+size_t PyEnvironmentBase::_getGraphPoints(object opoints, std::vector<float>&vpoints)
+{
+    if( PyObject_HasAttrString(opoints.ptr(),"shape") ) {
+        object pointshape = opoints.attr("shape");
+        switch(len(pointshape)) {
+        case 1:
+            vpoints = ExtractArray<float>(opoints);
+            if( vpoints.size()%3 ) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("points have bad size %d"), vpoints.size(),ORE_InvalidArguments);
+            }
+            return vpoints.size()/3;
+        case 2: {
+            int num = extract<int>(pointshape[0]);
+            int dim = extract<int>(pointshape[1]);
+            vpoints = ExtractArray<float>(opoints.attr("flat"));
+            if(dim % 3) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("points have bad size %dx%d"), num%dim,ORE_InvalidArguments);
+            }
+            return num*(dim/3);
         }
-
-        return false;
+        default:
+            throw OpenRAVEException(_("points have bad dimension"));
+        }
     }
-
-    object GetViewer()
-    {
-        return py::to_object(openravepy::toPyViewer(_penv->GetViewer(),shared_from_this()));
+    // assume it is a regular 1D list
+    vpoints = ExtractArray<float>(opoints);
+    if( vpoints.size()% 3 ) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("points have bad size %d"), vpoints.size(),ORE_InvalidArguments);
     }
+    return vpoints.size()/3;
+}
 
-    /// returns the number of points
-    static size_t _getGraphPoints(object opoints, std::vector<float>&vpoints)
-    {
-        if( PyObject_HasAttrString(opoints.ptr(),"shape") ) {
-            object pointshape = opoints.attr("shape");
-            switch(len(pointshape)) {
+/// returns the number of colors
+size_t PyEnvironmentBase::_getGraphColors(object ocolors, std::vector<float>&vcolors)
+{
+    if( !IS_PYTHONOBJECT_NONE(ocolors) ) {
+        if( PyObject_HasAttrString(ocolors.ptr(),"shape") ) {
+            object colorshape = ocolors.attr("shape");
+            switch( len(colorshape) ) {
             case 1:
-                vpoints = ExtractArray<float>(opoints);
-                if( vpoints.size()%3 ) {
-                    throw OPENRAVE_EXCEPTION_FORMAT(_("points have bad size %d"), vpoints.size(),ORE_InvalidArguments);
-                }
-                return vpoints.size()/3;
+                break;
             case 2: {
-                int num = extract<int>(pointshape[0]);
-                int dim = extract<int>(pointshape[1]);
-                vpoints = ExtractArray<float>(opoints.attr("flat"));
-                if(dim % 3) {
-                    throw OPENRAVE_EXCEPTION_FORMAT(_("points have bad size %dx%d"), num%dim,ORE_InvalidArguments);
+                int numcolors = extract<int>(colorshape[0]);
+                int colordim = extract<int>(colorshape[1]);
+                if(( colordim != 3) &&( colordim != 4) ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("colors dim %d needs to be 3 or 4"),colordim, ORE_InvalidArguments);
                 }
-                return num*(dim/3);
+                vcolors = ExtractArray<float>(ocolors.attr("flat"));
+                return numcolors;
             }
             default:
-                throw OpenRAVEException(_("points have bad dimension"));
+                throw OPENRAVE_EXCEPTION_FORMAT(_("colors has %d dimensions"),len(colorshape), ORE_InvalidArguments);
             }
         }
-        // assume it is a regular 1D list
-        vpoints = ExtractArray<float>(opoints);
-        if( vpoints.size()% 3 ) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("points have bad size %d"), vpoints.size(),ORE_InvalidArguments);
+        vcolors = ExtractArray<float>(ocolors);
+        if( vcolors.size() == 3 ) {
+            vcolors.push_back(1.0f);
         }
-        return vpoints.size()/3;
-    }
-
-    /// returns the number of colors
-    static size_t _getGraphColors(object ocolors, std::vector<float>&vcolors)
-    {
-        if( !IS_PYTHONOBJECT_NONE(ocolors) ) {
-            if( PyObject_HasAttrString(ocolors.ptr(),"shape") ) {
-                object colorshape = ocolors.attr("shape");
-                switch( len(colorshape) ) {
-                case 1:
-                    break;
-                case 2: {
-                    int numcolors = extract<int>(colorshape[0]);
-                    int colordim = extract<int>(colorshape[1]);
-                    if(( colordim != 3) &&( colordim != 4) ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT(_("colors dim %d needs to be 3 or 4"),colordim, ORE_InvalidArguments);
-                    }
-                    vcolors = ExtractArray<float>(ocolors.attr("flat"));
-                    return numcolors;
-                }
-                default:
-                    throw OPENRAVE_EXCEPTION_FORMAT(_("colors has %d dimensions"),len(colorshape), ORE_InvalidArguments);
-                }
-            }
-            vcolors = ExtractArray<float>(ocolors);
-            if( vcolors.size() == 3 ) {
-                vcolors.push_back(1.0f);
-            }
-            else if( vcolors.size() != 4 ) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("colors has incorrect number of values %d"),vcolors.size(), ORE_InvalidArguments);
-            }
-            return 1;
+        else if( vcolors.size() != 4 ) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("colors has incorrect number of values %d"),vcolors.size(), ORE_InvalidArguments);
         }
-        // default
-        RaveVector<float> vcolor(1,0.5,0.5,1.0);
-        vcolors.resize(4);
-        vcolors[0] = 1; vcolors[1] = 0.5f; vcolors[2] = 0.5f; vcolors[3] = 1.0f;
         return 1;
     }
+    // default
+    RaveVector<float> vcolor(1,0.5,0.5,1.0);
+    vcolors.resize(4);
+    vcolors[0] = 1; vcolors[1] = 0.5f; vcolors[2] = 0.5f; vcolors[3] = 1.0f;
+    return 1;
+}
 
-    static pair<size_t,size_t> _getGraphPointsColors(object opoints, object ocolors, std::vector<float>&vpoints, std::vector<float>&vcolors)
-    {
-        size_t numpoints = _getGraphPoints(opoints,vpoints);
-        size_t numcolors = _getGraphColors(ocolors,vcolors);
-        if( numpoints <= 0 ) {
-            throw OpenRAVEException(_("points cannot be empty"),ORE_InvalidArguments);
-        }
-        if(( numcolors > 1) &&( numpoints != numcolors) ) {
-            throw OpenRAVEException(boost::str(boost::format(_("number of points (%d) need to match number of colors (%d)"))%numpoints%numcolors));
-        }
-        return make_pair(numpoints,numcolors);
+std::pair<size_t,size_t> PyEnvironmentBase::_getGraphPointsColors(object opoints, object ocolors, std::vector<float>&vpoints, std::vector<float>&vcolors)
+{
+    size_t numpoints = _getGraphPoints(opoints,vpoints);
+    size_t numcolors = _getGraphColors(ocolors,vcolors);
+    if( numpoints <= 0 ) {
+        throw OpenRAVEException(_("points cannot be empty"),ORE_InvalidArguments);
     }
-
-    object plot3(object opoints,float pointsize,object ocolors=py::none_(),int drawstyle=0)
-    {
-        std::vector<float> vpoints, vcolors;
-        pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
-        bool bhasalpha = vcolors.size() == 4*sizes.second;
-        if( sizes.first == sizes.second ) {
-            return toPyGraphHandle(_penv->plot3(&vpoints[0],sizes.first,sizeof(float)*3,pointsize,&vcolors[0],drawstyle,bhasalpha));
-        }
-        BOOST_ASSERT(vcolors.size()<=4);
-        RaveVector<float> vcolor;
-        for(int i = 0; i < (int)vcolors.size(); ++i) {
-            vcolor[i] = vcolors[i];
-        }
-        return toPyGraphHandle(_penv->plot3(&vpoints[0],sizes.first,sizeof(float)*3,pointsize,vcolor,drawstyle));
+    if(( numcolors > 1) &&( numpoints != numcolors) ) {
+        throw OpenRAVEException(boost::str(boost::format(_("number of points (%d) need to match number of colors (%d)"))%numpoints%numcolors));
     }
+    return make_pair(numpoints,numcolors);
+}
 
-    object drawlinestrip(object opoints,float linewidth,object ocolors=py::none_(),int drawstyle=0)
-    {
-        std::vector<float> vpoints, vcolors;
-        pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
-        //bool bhasalpha = vcolors.size() == 4*sizes.second;
-        if( sizes.first == sizes.second ) {
-            return toPyGraphHandle(_penv->drawlinestrip(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,&vcolors[0]));
-        }
-        BOOST_ASSERT(vcolors.size()<=4);
-        RaveVector<float> vcolor;
-        for(int i = 0; i < (int)vcolors.size(); ++i) {
-            vcolor[i] = vcolors[i];
-        }
-        return toPyGraphHandle(_penv->drawlinestrip(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,vcolor));
+object PyEnvironmentBase::plot3(object opoints,float pointsize,object ocolors, int drawstyle)
+{
+    std::vector<float> vpoints, vcolors;
+    pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
+    bool bhasalpha = vcolors.size() == 4*sizes.second;
+    if( sizes.first == sizes.second ) {
+        return toPyGraphHandle(_penv->plot3(&vpoints[0],sizes.first,sizeof(float)*3,pointsize,&vcolors[0],drawstyle,bhasalpha));
     }
-
-    object drawlinelist(object opoints,float linewidth,object ocolors=py::none_(),int drawstyle=0)
-    {
-        std::vector<float> vpoints, vcolors;
-        pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
-        //bool bhasalpha = vcolors.size() == 4*sizes.second;
-        if( sizes.first == sizes.second ) {
-            return toPyGraphHandle(_penv->drawlinelist(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,&vcolors[0]));
-        }
-        BOOST_ASSERT(vcolors.size()<=4);
-        RaveVector<float> vcolor;
-        for(int i = 0; i < (int)vcolors.size(); ++i) {
-            vcolor[i] = vcolors[i];
-        }
-        return toPyGraphHandle(_penv->drawlinelist(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,vcolor));
+    BOOST_ASSERT(vcolors.size()<=4);
+    RaveVector<float> vcolor;
+    for(int i = 0; i < (int)vcolors.size(); ++i) {
+        vcolor[i] = vcolors[i];
     }
+    return toPyGraphHandle(_penv->plot3(&vpoints[0],sizes.first,sizeof(float)*3,pointsize,vcolor,drawstyle));
+}
 
-    object drawarrow(object op1, object op2, float linewidth=0.002, object ocolor=py::none_())
-    {
-        RaveVector<float> vcolor(1,0.5,0.5,1);
-        if( !IS_PYTHONOBJECT_NONE(ocolor) ) {
-            vcolor = ExtractVector34(ocolor,1.0f);
+object PyEnvironmentBase::drawlinestrip(object opoints,float linewidth,object ocolors, int drawstyle)
+{
+    std::vector<float> vpoints, vcolors;
+    pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
+    //bool bhasalpha = vcolors.size() == 4*sizes.second;
+    if( sizes.first == sizes.second ) {
+        return toPyGraphHandle(_penv->drawlinestrip(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,&vcolors[0]));
+    }
+    BOOST_ASSERT(vcolors.size()<=4);
+    RaveVector<float> vcolor;
+    for(int i = 0; i < (int)vcolors.size(); ++i) {
+        vcolor[i] = vcolors[i];
+    }
+    return toPyGraphHandle(_penv->drawlinestrip(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,vcolor));
+}
+
+object PyEnvironmentBase::drawlinelist(object opoints,float linewidth,object ocolors, int drawstyle)
+{
+    std::vector<float> vpoints, vcolors;
+    pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
+    //bool bhasalpha = vcolors.size() == 4*sizes.second;
+    if( sizes.first == sizes.second ) {
+        return toPyGraphHandle(_penv->drawlinelist(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,&vcolors[0]));
+    }
+    BOOST_ASSERT(vcolors.size()<=4);
+    RaveVector<float> vcolor;
+    for(int i = 0; i < (int)vcolors.size(); ++i) {
+        vcolor[i] = vcolors[i];
+    }
+    return toPyGraphHandle(_penv->drawlinelist(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,vcolor));
+}
+
+object PyEnvironmentBase::drawarrow(object op1, object op2, float linewidth, object ocolor)
+{
+    RaveVector<float> vcolor(1,0.5,0.5,1);
+    if( !IS_PYTHONOBJECT_NONE(ocolor) ) {
+        vcolor = ExtractVector34(ocolor,1.0f);
+    }
+    return toPyGraphHandle(_penv->drawarrow(ExtractVector3(op1),ExtractVector3(op2),linewidth,vcolor));
+}
+
+object PyEnvironmentBase::drawbox(object opos, object oextents, object ocolor)
+{
+    RaveVector<float> vcolor(1,0.5,0.5,1);
+    if( !IS_PYTHONOBJECT_NONE(ocolor) ) {
+        vcolor = ExtractVector34(ocolor,1.0f);
+    }
+    return toPyGraphHandle(_penv->drawbox(ExtractVector3(opos),ExtractVector3(oextents)));
+}
+
+object PyEnvironmentBase::drawplane(object otransform, object oextents, const boost::multi_array<float,2>&_vtexture)
+{
+    boost::multi_array<float,3> vtexture(boost::extents[1][_vtexture.shape()[0]][_vtexture.shape()[1]]);
+    vtexture[0] = _vtexture;
+    boost::array<size_t,3> dims = { { _vtexture.shape()[0],_vtexture.shape()[1],1}};
+    vtexture.reshape(dims);
+    return toPyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture));
+}
+object PyEnvironmentBase::drawplane(object otransform, object oextents, const boost::multi_array<float,3>&vtexture)
+{
+    return toPyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture));
+}
+
+object PyEnvironmentBase::drawtrimesh(object opoints, object oindices, object ocolors)
+{
+    std::vector<float> vpoints;
+    _getGraphPoints(opoints,vpoints);
+    std::vector<int> vindices;
+    int* pindices = NULL;
+    int numTriangles = vpoints.size()/9;
+    if( !IS_PYTHONOBJECT_NONE(oindices) ) {
+        vindices = ExtractArray<int>(oindices.attr("flat"));
+        if( vindices.size() > 0 ) {
+            numTriangles = vindices.size()/3;
+            pindices = &vindices[0];
         }
-        return toPyGraphHandle(_penv->drawarrow(ExtractVector3(op1),ExtractVector3(op2),linewidth,vcolor));
     }
-
-    object drawbox(object opos, object oextents, object ocolor=py::none_())
-    {
-        RaveVector<float> vcolor(1,0.5,0.5,1);
-        if( !IS_PYTHONOBJECT_NONE(ocolor) ) {
-            vcolor = ExtractVector34(ocolor,1.0f);
+    RaveVector<float> vcolor(1,0.5,0.5,1);
+    if( !IS_PYTHONOBJECT_NONE(ocolors) ) {
+        object shape = ocolors.attr("shape");
+        if( len(shape) == 1 ) {
+            return toPyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,ExtractVector34(ocolors,1.0f)));
         }
-        return toPyGraphHandle(_penv->drawbox(ExtractVector3(opos),ExtractVector3(oextents)));
-    }
-
-    object drawplane(object otransform, object oextents, const boost::multi_array<float,2>&_vtexture)
-    {
-        boost::multi_array<float,3> vtexture(boost::extents[1][_vtexture.shape()[0]][_vtexture.shape()[1]]);
-        vtexture[0] = _vtexture;
-        boost::array<size_t,3> dims = { { _vtexture.shape()[0],_vtexture.shape()[1],1}};
-        vtexture.reshape(dims);
-        return toPyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture));
-    }
-    object drawplane(object otransform, object oextents, const boost::multi_array<float,3>&vtexture)
-    {
-        return toPyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture));
-    }
-
-    object drawtrimesh(object opoints, object oindices=py::none_(), object ocolors=py::none_())
-    {
-        std::vector<float> vpoints;
-        _getGraphPoints(opoints,vpoints);
-        std::vector<int> vindices;
-        int* pindices = NULL;
-        int numTriangles = vpoints.size()/9;
-        if( !IS_PYTHONOBJECT_NONE(oindices) ) {
-            vindices = ExtractArray<int>(oindices.attr("flat"));
-            if( vindices.size() > 0 ) {
-                numTriangles = vindices.size()/3;
-                pindices = &vindices[0];
-            }
+        else {
+            BOOST_ASSERT(extract<size_t>(shape[0])==vpoints.size()/3);
+            return toPyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,extract<boost::multi_array<float,2> >(ocolors)));
         }
-        RaveVector<float> vcolor(1,0.5,0.5,1);
-        if( !IS_PYTHONOBJECT_NONE(ocolors) ) {
-            object shape = ocolors.attr("shape");
-            if( len(shape) == 1 ) {
-                return toPyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,ExtractVector34(ocolors,1.0f)));
-            }
-            else {
-                BOOST_ASSERT(extract<size_t>(shape[0])==vpoints.size()/3);
-                return toPyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,extract<boost::multi_array<float,2> >(ocolors)));
-            }
-        }
-        return toPyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,RaveVector<float>(1,0.5,0.5,1)));
     }
+    return toPyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,RaveVector<float>(1,0.5,0.5,1)));
+}
 
-    object GetBodies()
-    {
-        std::vector<KinBodyPtr> vbodies;
-        _penv->GetBodies(vbodies);
-        py::list bodies;
-        FOREACHC(itbody, vbodies) {
-            if( (*itbody)->IsRobot() ) {
-                bodies.append(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(*itbody),shared_from_this()));
-            }
-            else {
-                bodies.append(openravepy::toPyKinBody(*itbody,shared_from_this()));
-            }
+object PyEnvironmentBase::GetBodies()
+{
+    std::vector<KinBodyPtr> vbodies;
+    _penv->GetBodies(vbodies);
+    py::list bodies;
+    FOREACHC(itbody, vbodies) {
+        if( (*itbody)->IsRobot() ) {
+            bodies.append(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(*itbody),shared_from_this()));
         }
-        return bodies;
-    }
-
-    object GetRobots()
-    {
-        std::vector<RobotBasePtr> vrobots;
-        _penv->GetRobots(vrobots);
-        py::list robots;
-        FOREACHC(itrobot, vrobots) {
-            robots.append(openravepy::toPyRobot(*itrobot,shared_from_this()));
+        else {
+            bodies.append(openravepy::toPyKinBody(*itbody,shared_from_this()));
         }
-        return robots;
     }
+    return bodies;
+}
 
-    object GetSensors()
-    {
-        std::vector<SensorBasePtr> vsensors;
-        _penv->GetSensors(vsensors);
-        py::list sensors;
-        FOREACHC(itsensor, vsensors) {
-            sensors.append(openravepy::toPySensor(*itsensor,shared_from_this()));
-        }
-        return sensors;
+object PyEnvironmentBase::GetRobots()
+{
+    std::vector<RobotBasePtr> vrobots;
+    _penv->GetRobots(vrobots);
+    py::list robots;
+    FOREACHC(itrobot, vrobots) {
+        robots.append(openravepy::toPyRobot(*itrobot,shared_from_this()));
     }
+    return robots;
+}
 
-    void UpdatePublishedBodies()
-    {
-        _penv->UpdatePublishedBodies();
+object PyEnvironmentBase::GetSensors()
+{
+    std::vector<SensorBasePtr> vsensors;
+    _penv->GetSensors(vsensors);
+    py::list sensors;
+    FOREACHC(itsensor, vsensors) {
+        sensors.append(openravepy::toPySensor(*itsensor,shared_from_this()));
     }
+    return sensors;
+}
 
-    object GetPublishedBodies(uint64_t timeout=0)
-    {
-        std::vector<KinBody::BodyState> vbodystates;
-        _penv->GetPublishedBodies(vbodystates, timeout);
-        py::list ostates;
-        FOREACH(itstate, vbodystates) {
-            py::dict ostate;
-            ostate["body"] = toPyKinBody(itstate->pbody, shared_from_this());
-            py::list olinktransforms;
-            FOREACH(ittransform, itstate->vectrans) {
-                olinktransforms.append(ReturnTransform(*ittransform));
-            }
-            ostate["linktransforms"] = olinktransforms;
-            ostate["jointvalues"] = toPyArray(itstate->jointvalues);
-            ostate["linkEnableStates"] = toPyArray(itstate->vLinkEnableStates);
-            ostate["connectedBodyActiveStates"] = toPyArray(itstate->vConnectedBodyActiveStates);
-            ostate["name"] = ConvertStringToUnicode(itstate->strname);
-            ostate["uri"] = ConvertStringToUnicode(itstate->uri);
-            ostate["updatestamp"] = itstate->updatestamp;
-            ostate["environmentid"] = itstate->environmentid;
-            ostate["activeManipulatorName"] = itstate->activeManipulatorName;
-            ostate["activeManipulatorTransform"] = ReturnTransform(itstate->activeManipulatorTransform);
-            ostates.append(ostate);
-        }
-        return ostates;
-    }
+void PyEnvironmentBase::UpdatePublishedBodies()
+{
+    _penv->UpdatePublishedBodies();
+}
 
-    object GetPublishedBody(const string &name, uint64_t timeout = 0)
-    {
-        KinBody::BodyState bodystate;
-        if( !_penv->GetPublishedBody(name, bodystate, timeout) ) {
-            return py::none_();
-        }
-
+object PyEnvironmentBase::GetPublishedBodies(uint64_t timeout)
+{
+    std::vector<KinBody::BodyState> vbodystates;
+    _penv->GetPublishedBodies(vbodystates, timeout);
+    py::list ostates;
+    FOREACH(itstate, vbodystates) {
         py::dict ostate;
-        ostate["body"] = toPyKinBody(bodystate.pbody, shared_from_this());
+        ostate["body"] = toPyKinBody(itstate->pbody, shared_from_this());
         py::list olinktransforms;
-        FOREACH(ittransform, bodystate.vectrans) {
+        FOREACH(ittransform, itstate->vectrans) {
             olinktransforms.append(ReturnTransform(*ittransform));
         }
         ostate["linktransforms"] = olinktransforms;
-        ostate["jointvalues"] = toPyArray(bodystate.jointvalues);
-        ostate["linkEnableStates"] = toPyArray(bodystate.vLinkEnableStates);
-        ostate["connectedBodyActiveStates"] = toPyArray(bodystate.vConnectedBodyActiveStates);
-        ostate["name"] = ConvertStringToUnicode(bodystate.strname);
-        ostate["uri"] = ConvertStringToUnicode(bodystate.uri);
-        ostate["updatestamp"] = bodystate.updatestamp;
-        ostate["environmentid"] = bodystate.environmentid;
-        ostate["activeManipulatorName"] = bodystate.activeManipulatorName;
-        ostate["activeManipulatorTransform"] = ReturnTransform(bodystate.activeManipulatorTransform);
-        return ostate;
+        ostate["jointvalues"] = toPyArray(itstate->jointvalues);
+        ostate["linkEnableStates"] = toPyArray(itstate->vLinkEnableStates);
+        ostate["connectedBodyActiveStates"] = toPyArray(itstate->vConnectedBodyActiveStates);
+        ostate["name"] = ConvertStringToUnicode(itstate->strname);
+        ostate["uri"] = ConvertStringToUnicode(itstate->uri);
+        ostate["updatestamp"] = itstate->updatestamp;
+        ostate["environmentid"] = itstate->environmentid;
+        ostate["activeManipulatorName"] = itstate->activeManipulatorName;
+        ostate["activeManipulatorTransform"] = ReturnTransform(itstate->activeManipulatorTransform);
+        ostates.append(ostate);
+    }
+    return ostates;
+}
+
+object PyEnvironmentBase::GetPublishedBody(const std::string &name, uint64_t timeout)
+{
+    KinBody::BodyState bodystate;
+    if( !_penv->GetPublishedBody(name, bodystate, timeout) ) {
+        return py::none_();
     }
 
-    object GetPublishedBodyJointValues(const string &name, uint64_t timeout=0)
-    {
-        std::vector<dReal> jointValues;
-        if( !_penv->GetPublishedBodyJointValues(name, jointValues, timeout) ) {
-            return py::none_();
-        }
-        return toPyArray(jointValues);
+    py::dict ostate;
+    ostate["body"] = toPyKinBody(bodystate.pbody, shared_from_this());
+    py::list olinktransforms;
+    FOREACH(ittransform, bodystate.vectrans) {
+        olinktransforms.append(ReturnTransform(*ittransform));
+    }
+    ostate["linktransforms"] = olinktransforms;
+    ostate["jointvalues"] = toPyArray(bodystate.jointvalues);
+    ostate["linkEnableStates"] = toPyArray(bodystate.vLinkEnableStates);
+    ostate["connectedBodyActiveStates"] = toPyArray(bodystate.vConnectedBodyActiveStates);
+    ostate["name"] = ConvertStringToUnicode(bodystate.strname);
+    ostate["uri"] = ConvertStringToUnicode(bodystate.uri);
+    ostate["updatestamp"] = bodystate.updatestamp;
+    ostate["environmentid"] = bodystate.environmentid;
+    ostate["activeManipulatorName"] = bodystate.activeManipulatorName;
+    ostate["activeManipulatorTransform"] = ReturnTransform(bodystate.activeManipulatorTransform);
+    return ostate;
+}
+
+object PyEnvironmentBase::GetPublishedBodyJointValues(const std::string &name, uint64_t timeout)
+{
+    std::vector<dReal> jointValues;
+    if( !_penv->GetPublishedBodyJointValues(name, jointValues, timeout) ) {
+        return py::none_();
+    }
+    return toPyArray(jointValues);
+}
+
+object PyEnvironmentBase::GetPublishedBodyTransformsMatchingPrefix(const string &prefix, uint64_t timeout) {
+    std::vector< std::pair<std::string, Transform> > nameTransfPairs;
+    _penv->GetPublishedBodyTransformsMatchingPrefix(prefix, nameTransfPairs, timeout);
+
+    py::dict otransforms;
+    FOREACH(itpair, nameTransfPairs) {
+        otransforms[itpair->first] = ReturnTransform(itpair->second);
     }
 
-    object GetPublishedBodyTransformsMatchingPrefix(const string &prefix, uint64_t timeout=0) {
-        std::vector< std::pair<std::string, Transform> > nameTransfPairs;
-        _penv->GetPublishedBodyTransformsMatchingPrefix(prefix, nameTransfPairs, timeout);
+    return otransforms;
+}
 
-        py::dict otransforms;
-        FOREACH(itpair, nameTransfPairs) {
-            otransforms[itpair->first] = ReturnTransform(itpair->second);
-        }
+object PyEnvironmentBase::Triangulate(PyKinBodyPtr pbody)
+{
+    CHECK_POINTER(pbody);
+    TriMesh mesh;
+    _penv->Triangulate(mesh, *openravepy::GetKinBody(pbody));
+    return toPyTriMesh(mesh);
+}
 
-        return otransforms;
-    }
+object PyEnvironmentBase::TriangulateScene(const int options, const std::string &name)
+{
+    TriMesh mesh;
+    _penv->TriangulateScene(mesh, (EnvironmentBase::SelectionOptions) options, name);
+    return toPyTriMesh(mesh);
+}
 
-    object Triangulate(PyKinBodyPtr pbody)
-    {
-        CHECK_POINTER(pbody);
-        TriMesh mesh;
-        _penv->Triangulate(mesh, *openravepy::GetKinBody(pbody));
-        return toPyTriMesh(mesh);
-    }
+void PyEnvironmentBase::SetDebugLevel(object olevel) {
+    _penv->SetDebugLevel(pyGetIntFromPy(olevel,Level_Info));
+}
+int PyEnvironmentBase::GetDebugLevel() const {
+    return _penv->GetDebugLevel();
+}
 
-    object TriangulateScene(const int options, const std::string &name)
-    {
-        TriMesh mesh;
-        _penv->TriangulateScene(mesh, (EnvironmentBase::SelectionOptions) options, name);
-        return toPyTriMesh(mesh);
-    }
+std::string PyEnvironmentBase::GetHomeDirectory() {
+    RAVELOG_WARN("Environment.GetHomeDirectory is deprecated, use RaveGetHomeDirectory\n"); return RaveGetHomeDirectory();
+}
 
-    void SetDebugLevel(object olevel) {
-        _penv->SetDebugLevel(pyGetIntFromPy(olevel,Level_Info));
-    }
-    int GetDebugLevel() const {
-        return _penv->GetDebugLevel();
-    }
+void PyEnvironmentBase::SetUserData(PyUserData pdata) {
+    _penv->SetUserData(pdata._handle);
+}
+void PyEnvironmentBase::SetUserData(object o) {
+    _penv->SetUserData(OPENRAVE_SHARED_PTR<UserData>(new PyUserObject(o)));
+}
+object PyEnvironmentBase::GetUserData() const {
+    return openravepy::GetUserData(_penv->GetUserData());
+}
 
-    string GetHomeDirectory() {
-        RAVELOG_WARN("Environment.GetHomeDirectory is deprecated, use RaveGetHomeDirectory\n"); return RaveGetHomeDirectory();
-    }
+void PyEnvironmentBase::SetUnit(std::string unitname, dReal unitmult){
+    _penv->SetUnit(std::make_pair(unitname, unitmult));
+}
 
-    void SetUserData(PyUserData pdata) {
-        _penv->SetUserData(pdata._handle);
-    }
-    void SetUserData(object o) {
-        _penv->SetUserData(OPENRAVE_SHARED_PTR<UserData>(new PyUserObject(o)));
-    }
-    object GetUserData() const {
-        return openravepy::GetUserData(_penv->GetUserData());
-    }
+object PyEnvironmentBase::GetUnit() const {
+    std::pair<std::string, dReal> unit = _penv->GetUnit();
+    return py::make_tuple(unit.first, unit.second);
 
-    void SetUnit(std::string unitname, dReal unitmult){
-        _penv->SetUnit(std::make_pair(unitname, unitmult));
-    }
+}
 
-    object GetUnit() const {
-        std::pair<std::string, dReal> unit = _penv->GetUnit();
-        return py::make_tuple(unit.first, unit.second);
+bool PyEnvironmentBase::__eq__(PyEnvironmentBasePtr p) {
+    return !!p && _penv==p->_penv;
+}
+bool PyEnvironmentBase::__ne__(PyEnvironmentBasePtr p) {
+    return !p || _penv!=p->_penv;
+}
+std::string PyEnvironmentBase::__repr__() {
+    return boost::str(boost::format("RaveGetEnvironment(%d)")%RaveGetEnvironmentId(_penv));
+}
+std::string PyEnvironmentBase::__str__() {
+    return boost::str(boost::format("<env %d>")%RaveGetEnvironmentId(_penv));
+}
+object PyEnvironmentBase::__unicode__() {
+    return ConvertStringToUnicode(__str__());
+}
 
-    }
-
-    bool __eq__(PyEnvironmentBasePtr p) {
-        return !!p && _penv==p->_penv;
-    }
-    bool __ne__(PyEnvironmentBasePtr p) {
-        return !p || _penv!=p->_penv;
-    }
-    string __repr__() {
-        return boost::str(boost::format("RaveGetEnvironment(%d)")%RaveGetEnvironmentId(_penv));
-    }
-    string __str__() {
-        return boost::str(boost::format("<env %d>")%RaveGetEnvironmentId(_penv));
-    }
-    object __unicode__() {
-        return ConvertStringToUnicode(__str__());
-    }
-
-    EnvironmentBasePtr GetEnv() const {
-        return _penv;
-    }
-};
+EnvironmentBasePtr PyEnvironmentBase::GetEnv() const {
+    return _penv;
+}
 
 PyEnvironmentBasePtr PyInterfaceBase::GetEnv() const
 {
@@ -2578,20 +2568,20 @@ Because race conditions can pop up when trying to lock the openrave environment 
         void (PyEnvironmentBase::*addsensor2)(PySensorBasePtr,bool) = &PyEnvironmentBase::AddSensor;
         void (PyEnvironmentBase::*setuserdata1)(PyUserData) = &PyEnvironmentBase::SetUserData;
         void (PyEnvironmentBase::*setuserdata2)(object) = &PyEnvironmentBase::SetUserData;
-        bool (PyEnvironmentBase::*load1)(const string &) = &PyEnvironmentBase::Load;
-        bool (PyEnvironmentBase::*load2)(const string &, object) = &PyEnvironmentBase::Load;
-        bool (PyEnvironmentBase::*loaddata1)(const string &) = &PyEnvironmentBase::LoadData;
-        bool (PyEnvironmentBase::*loaddata2)(const string &, object) = &PyEnvironmentBase::LoadData;
-        object (PyEnvironmentBase::*readrobotxmlfile1)(const string &) = &PyEnvironmentBase::ReadRobotURI;
-        object (PyEnvironmentBase::*readrobotxmlfile2)(const string &,object) = &PyEnvironmentBase::ReadRobotURI;
-        object (PyEnvironmentBase::*readrobotxmldata1)(const string &) = &PyEnvironmentBase::ReadRobotData;
-        object (PyEnvironmentBase::*readrobotxmldata2)(const string &,object) = &PyEnvironmentBase::ReadRobotData;
-        object (PyEnvironmentBase::*readkinbodyxmlfile1)(const string &) = &PyEnvironmentBase::ReadKinBodyURI;
-        object (PyEnvironmentBase::*readkinbodyxmlfile2)(const string &,object) = &PyEnvironmentBase::ReadKinBodyURI;
-        object (PyEnvironmentBase::*readkinbodyxmldata1)(const string &) = &PyEnvironmentBase::ReadKinBodyData;
-        object (PyEnvironmentBase::*readkinbodyxmldata2)(const string &,object) = &PyEnvironmentBase::ReadKinBodyData;
-        PyInterfaceBasePtr (PyEnvironmentBase::*readinterfacexmlfile1)(const string &) = &PyEnvironmentBase::ReadInterfaceURI;
-        PyInterfaceBasePtr (PyEnvironmentBase::*readinterfacexmlfile2)(const string &,object) = &PyEnvironmentBase::ReadInterfaceURI;
+        bool (PyEnvironmentBase::*load1)(const std::string &) = &PyEnvironmentBase::Load;
+        bool (PyEnvironmentBase::*load2)(const std::string &, object) = &PyEnvironmentBase::Load;
+        bool (PyEnvironmentBase::*loaddata1)(const std::string &) = &PyEnvironmentBase::LoadData;
+        bool (PyEnvironmentBase::*loaddata2)(const std::string &, object) = &PyEnvironmentBase::LoadData;
+        object (PyEnvironmentBase::*readrobotxmlfile1)(const std::string &) = &PyEnvironmentBase::ReadRobotURI;
+        object (PyEnvironmentBase::*readrobotxmlfile2)(const std::string &,object) = &PyEnvironmentBase::ReadRobotURI;
+        object (PyEnvironmentBase::*readrobotxmldata1)(const std::string &) = &PyEnvironmentBase::ReadRobotData;
+        object (PyEnvironmentBase::*readrobotxmldata2)(const std::string &,object) = &PyEnvironmentBase::ReadRobotData;
+        object (PyEnvironmentBase::*readkinbodyxmlfile1)(const std::string &) = &PyEnvironmentBase::ReadKinBodyURI;
+        object (PyEnvironmentBase::*readkinbodyxmlfile2)(const std::string &,object) = &PyEnvironmentBase::ReadKinBodyURI;
+        object (PyEnvironmentBase::*readkinbodyxmldata1)(const std::string &) = &PyEnvironmentBase::ReadKinBodyData;
+        object (PyEnvironmentBase::*readkinbodyxmldata2)(const std::string &,object) = &PyEnvironmentBase::ReadKinBodyData;
+        PyInterfaceBasePtr (PyEnvironmentBase::*readinterfacexmlfile1)(const std::string &) = &PyEnvironmentBase::ReadInterfaceURI;
+        PyInterfaceBasePtr (PyEnvironmentBase::*readinterfacexmlfile2)(const std::string &,object) = &PyEnvironmentBase::ReadInterfaceURI;
         object (PyEnvironmentBase::*readtrimeshfile1)(const std::string&) = &PyEnvironmentBase::ReadTrimeshURI;
         object (PyEnvironmentBase::*readtrimeshfile2)(const std::string&,object) = &PyEnvironmentBase::ReadTrimeshURI;
         object (PyEnvironmentBase::*readtrimeshdata1)(const std::string&,const std::string&) = &PyEnvironmentBase::ReadTrimeshData;
