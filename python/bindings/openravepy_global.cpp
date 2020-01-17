@@ -62,10 +62,10 @@ object PyRay::pos() {
     return toPyVector3(r.pos);
 }
 
-string PyRay::__repr__() {
+std::string PyRay::__repr__() {
     return boost::str(boost::format("<Ray([%.15e,%.15e,%.15e],[%.15e,%.15e,%.15e])>")%r.pos.x%r.pos.y%r.pos.z%r.dir.x%r.dir.y%r.dir.z);
 }
-string PyRay::__str__() {
+std::string PyRay::__str__() {
     return boost::str(boost::format("<%.15e %.15e %.15e %.15e %.15e %.15e>")%r.pos.x%r.pos.y%r.pos.z%r.dir.x%r.dir.y%r.dir.z);
 }
 object PyRay::__unicode__() {
@@ -204,10 +204,10 @@ public:
         return d;
     }
 
-    virtual string __repr__() {
+    virtual std::string __repr__() {
         return boost::str(boost::format("AABB([%.15e,%.15e,%.15e],[%.15e,%.15e,%.15e])")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z);
     }
-    virtual string __str__() {
+    virtual std::string __str__() {
         return boost::str(boost::format("<%.15e %.15e %.15e %.15e %.15e %.15e>")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z);
     }
     virtual object __unicode__() {
@@ -368,7 +368,7 @@ public:
         }
     }
 
-    string __str__() {
+    std::string __str__() {
         return boost::str(boost::format("<trimesh: verts %d, tris=%d>")%len(vertices)%len(indices));
     }
     object __unicode__() {
@@ -763,34 +763,34 @@ std::string openravepyCompilerVersion()
     return ss.str();
 }
 
-void raveLog(const string &s, int level)
+void raveLog(const std::string &s, int level)
 {
     if( s.size() > 0 ) {
         RavePrintfA(s,level);
     }
 }
 
-void raveLogFatal(const string &s)
+void raveLogFatal(const std::string &s)
 {
     raveLog(s,Level_Fatal);
 }
-void raveLogError(const string &s)
+void raveLogError(const std::string &s)
 {
     raveLog(s,Level_Error);
 }
-void raveLogWarn(const string &s)
+void raveLogWarn(const std::string &s)
 {
     raveLog(s,Level_Warn);
 }
-void raveLogInfo(const string &s)
+void raveLogInfo(const std::string &s)
 {
     raveLog(s,Level_Info);
 }
-void raveLogDebug(const string &s)
+void raveLogDebug(const std::string &s)
 {
     raveLog(s,Level_Debug);
 }
-void raveLogVerbose(const string &s)
+void raveLogVerbose(const std::string &s)
 {
     raveLog(s,Level_Verbose);
 }
