@@ -40,7 +40,9 @@ class PyTestPickle
 {
 public:
     PyTestPickle();
-    object _t = ReturnTransform(Transform());
+    ~PyTestPickle();
+    std::string _t = "hello"; 
+    object _arr; // = ReturnTransform(Transform());
 };
 
 class PyGeometryInfo

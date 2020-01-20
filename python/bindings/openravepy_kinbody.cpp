@@ -87,18 +87,24 @@ void PySideWall::Get(KinBody::GeometryInfo::SideWall& sidewall) {
     sidewall.type = static_cast<KinBody::GeometryInfo::SideWallType>(type);
 }
 
-PyTestPickle::PyTestPickle() {}
+PyTestPickle::PyTestPickle() {
+    const std::vector<dReal> v {1, 2, 4.5, -3.0, 8, 9, 10, 11, 12};
+    _arr = py::array_t<double>(v.size(), v.data());
+}
+PyTestPickle::~PyTestPickle() {}
 class TestPickle_pickle_suite
 {
 public:
     static py::tuple getstate(const PyTestPickle& r)
     {
         return py::make_tuple(
-            r._t
+            r._t,
+            r._arr
         );
     }
-    static void setstate(PyTestPickle& r, py::tuple state) {
-        r._t = state[0];
+    static void setstate(PyTestPickle& r, const py::tuple& state) {
+        r._t = extract<std::string>(state[0]);
+        r._arr = state[1];
     }
 };
 
@@ -3511,15 +3517,21 @@ void init_openravepy_kinbody()
                         .def(py::pickle(
                         [](const PyTestPickle &pypickle) {
                             // __getstate__
-                            return TestPickle_pickle_suite::getstate(pypickle);
+                            // return TestPickle_pickle_suite::getstate(pypickle);
+                            return py::make_tuple(pypickle._t, pypickle._arr);
                         },
-                        [](py::tuple state) {
+                        [](const py::tuple& state) {
+                            // PyTestPickle pypickle;
+                            // TestPickle_pickle_suite::setstate(pypickle, state);
+                            // return pypickle;
                             PyTestPickle pypickle;
-                            TestPickle_pickle_suite::setstate(pypickle, state);
+                            pypickle._t = extract<std::string>(state[0]);
+                            pypickle._arr = state[1];
                             return pypickle;
                         }
                         ))
                         .def_readwrite("t", &PyTestPickle::_t)
+                        .def_readwrite("arr", &PyTestPickle::_arr)
                         ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
