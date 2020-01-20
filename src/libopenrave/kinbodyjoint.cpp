@@ -23,7 +23,20 @@
 
 namespace OpenRAVE {
 
-KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsActive(true) {
+KinBody::JointInfo::JointControlInfo_RobotController::JointControlInfo_RobotController() : robotId(-1)
+{
+    robotControllerDOFIndex[0] = robotControllerDOFIndex[1] = robotControllerDOFIndex[2] = -1;
+}
+
+KinBody::JointInfo::JointControlInfo_IO::JointControlInfo_IO() : deviceId(-1)
+{
+}
+
+KinBody::JointInfo::JointControlInfo_ExternalDevice::JointControlInfo_ExternalDevice()
+{
+}
+
+KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsActive(true), _controlMode(JCM_None) {
     for(size_t i = 0; i < _vaxes.size(); ++i) {
         _vaxes[i] = Vector(0,0,1);
     }
@@ -101,6 +114,31 @@ KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& othe
     _bIsCircular = other._bIsCircular;
     _bIsActive = other._bIsActive;
 
+    _controlMode = other._controlMode;
+    if( _controlMode == KinBody::JCM_RobotController ) {
+        if( !other._jci_robotcontroller ) {
+            _jci_robotcontroller.reset();
+        }
+        else {
+            _jci_robotcontroller.reset(new JointControlInfo_RobotController(*other._jci_robotcontroller));
+        }
+    }
+    else if( _controlMode == KinBody::JCM_IO ) {
+        if( !other._jci_io ) {
+            _jci_io.reset();
+        }
+        else {
+            _jci_io.reset(new JointControlInfo_IO(*other._jci_io));
+        }
+    }
+    else if( _controlMode == KinBody::JCM_ExternalDevice ) {
+        if( !other._jci_externaldevice ) {
+            _jci_externaldevice.reset();
+        }
+        else {
+            _jci_externaldevice.reset(new JointControlInfo_ExternalDevice(*other._jci_externaldevice));
+        }
+    }
     return *this;
 }
 
@@ -181,6 +219,7 @@ KinBody::Joint::Joint(KinBodyPtr parent, KinBody::JointType type)
     dofindex = -1; // invalid index
     _bInitialized = false;
     _info._type = type;
+    _info._controlMode = JCM_None;
 }
 
 KinBody::Joint::~Joint()
