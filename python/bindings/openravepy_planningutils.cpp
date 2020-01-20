@@ -193,7 +193,7 @@ public:
     {
         PlannerBase::PlannerParametersConstPtr parameters = openravepy::GetPlannerParametersConst(oparameters);
         std::list<KinBodyPtr> listCheckBodies;
-        for(int i = 0; i < len(olistCheckBodies); ++i) {
+        for(size_t i = 0; i < len(olistCheckBodies); ++i) {
             KinBodyPtr pbody = openravepy::GetKinBody(olistCheckBodies[i]);
             BOOST_ASSERT(!!pbody);
             _pyenv = GetPyEnvFromPyKinBody(olistCheckBodies[i]);
@@ -305,7 +305,7 @@ object pyMergeTrajectories(object pytrajectories)
 {
     std::list<TrajectoryBaseConstPtr> listtrajectories;
     PyEnvironmentBasePtr pyenv;
-    for(int i = 0; i < len(pytrajectories); ++i) {
+    for(size_t i = 0; i < len(pytrajectories); ++i) {
         extract_<PyTrajectoryBasePtr> epytrajectory(pytrajectories[i]);
         PyTrajectoryBasePtr pytrajectory = (PyTrajectoryBasePtr)epytrajectory;
         if( !pyenv ) {
