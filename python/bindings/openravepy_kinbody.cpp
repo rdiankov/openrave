@@ -87,21 +87,36 @@ void PySideWall::Get(KinBody::GeometryInfo::SideWall& sidewall) {
     sidewall.type = static_cast<KinBody::GeometryInfo::SideWallType>(type);
 }
 
+PyTestPickle::PyTestPickle() {}
+class TestPickle_pickle_suite
+{
+public:
+    static py::tuple getstate(const PyTestPickle& r)
+    {
+        return py::make_tuple(
+            r._t
+        );
+    }
+    static void setstate(PyTestPickle& r, py::tuple state) {
+        r._t = state[0];
+    }
+};
+
 PyGeometryInfo::PyGeometryInfo() {
-    _t = ReturnTransform(Transform());
-    _vGeomData = toPyVector4(Vector());
-    _vGeomData2 = toPyVector4(Vector());
-    _vGeomData3 = toPyVector4(Vector());
-    _vGeomData4 = toPyVector4(Vector());
-    _vDiffuseColor = toPyVector3(Vector(1,1,1));
-    _vAmbientColor = toPyVector3(Vector(0,0,0));
-    _meshcollision = py::none_();
-    _type = GT_None;
-    _name = py::none_();
-    _filenamerender = py::none_();
-    _filenamecollision = py::none_();
-    _vRenderScale = toPyVector3(Vector(1,1,1));
-    _vCollisionScale = toPyVector3(Vector(1,1,1));
+    // _t = ReturnTransform(Transform());
+    // _vGeomData = toPyVector4(Vector());
+    // _vGeomData2 = toPyVector4(Vector());
+    // _vGeomData3 = toPyVector4(Vector());
+    // _vGeomData4 = toPyVector4(Vector());
+    // _vDiffuseColor = toPyVector3(Vector(1,1,1));
+    // _vAmbientColor = toPyVector3(Vector(0,0,0));
+    // _meshcollision = py::none_();
+    // _type = GT_None;
+    // _name = py::none_();
+    // _filenamerender = py::none_();
+    // _filenamecollision = py::none_();
+    // _vRenderScale = toPyVector3(Vector(1,1,1));
+    // _vCollisionScale = toPyVector3(Vector(1,1,1));
 }
 
 //PyGeometryInfo::PyGeometryInfo(const PyGeometryInfo& pyinfo) {
@@ -3101,51 +3116,75 @@ class GeometryInfo_pickle_suite
 public:
     static py::tuple getstate(const PyGeometryInfo& r)
     {
-        return py::make_tuple(r._t, py::make_tuple(r._vGeomData, r._vGeomData2, r._vGeomData3, r._vGeomData4), r._vDiffuseColor, r._vAmbientColor, r._meshcollision, (int)r._type, py::make_tuple(r._name, r._filenamerender, r._filenamecollision), r._vRenderScale, r._vCollisionScale, r._fTransparency, r._bVisible, r._bModifiable, r._mapExtraGeometries);
+        return py::make_tuple(
+            r._t
+            // , 
+            // py::make_tuple(
+            //     r._vGeomData, 
+            //     r._vGeomData2, 
+            //     r._vGeomData3, 
+            //     r._vGeomData4
+            // ), 
+            // r._vDiffuseColor, 
+            // r._vAmbientColor, 
+            // r._meshcollision, 
+            // (int)r._type, 
+            // py::make_tuple(
+            //     r._name, 
+            //     r._filenamerender, 
+            //     r._filenamecollision
+            // ), 
+            // r._vRenderScale, 
+            // r._vCollisionScale, 
+            // r._fTransparency, 
+            // r._bVisible, 
+            // r._bModifiable, 
+            // r._mapExtraGeometries
+        );
     }
     static void setstate(PyGeometryInfo& r, py::tuple state) {
         //int num = len(state);
         r._t = state[0];
-        r._vGeomData = state[1][0];
-        r._vGeomData2 = state[1][1];
-        r._vGeomData3 = state[1][2];
-        if( py::len(state[1]) >= 4 ) { // for backward compatibility
-            r._vGeomData4 = state[1][3];
-        }
-        r._vDiffuseColor = state[2];
-        r._vAmbientColor = state[3];
-        r._meshcollision = state[4];
-        r._type = (GeometryType)(int)py::extract<int>(state[5]);
+//         r._vGeomData = state[1][0];
+//         r._vGeomData2 = state[1][1];
+//         r._vGeomData3 = state[1][2];
+//         if( py::len(state[1]) >= 4 ) { // for backward compatibility
+//             r._vGeomData4 = state[1][3];
+//         }
+//         r._vDiffuseColor = state[2];
+//         r._vAmbientColor = state[3];
+//         r._meshcollision = state[4];
+//         r._type = (GeometryType)(int)py::extract<int>(state[5]);
 
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        bool bIsState6Str = IS_PYTHONOBJECT_STRING(state[6]);
-#else
-        bool bIsState6Str = IS_PYTHONOBJECT_STRING(py::object(state[6]));
-#endif
-        if( bIsState6Str ) {
-            // old format
-            r._filenamerender = state[6];
-            r._filenamecollision = state[7];
-            r._name = py::none_();
-            r._vRenderScale = state[8];
-            r._vCollisionScale = state[9];
-            r._fTransparency = py::extract<float>(state[10]);
-            r._bVisible = py::extract<bool>(state[11]);
-            r._bModifiable = py::extract<bool>(state[12]);
-            r._mapExtraGeometries = dict(state[13]);
-        }
-        else {
-            // new format
-            r._name = state[6][0];
-            r._filenamerender = state[6][1];
-            r._filenamecollision = state[6][2];
-            r._vRenderScale = state[7];
-            r._vCollisionScale = state[8];
-            r._fTransparency = py::extract<float>(state[9]);
-            r._bVisible = py::extract<bool>(state[10]);
-            r._bModifiable = py::extract<bool>(state[11]);
-            r._mapExtraGeometries = dict(state[12]);
-        }
+// #ifdef USE_PYBIND11_PYTHON_BINDINGS
+//         bool bIsState6Str = IS_PYTHONOBJECT_STRING(state[6]);
+// #else
+//         bool bIsState6Str = IS_PYTHONOBJECT_STRING(py::object(state[6]));
+// #endif
+//         if( bIsState6Str ) {
+//             // old format
+//             r._filenamerender = state[6];
+//             r._filenamecollision = state[7];
+//             r._name = py::none_();
+//             r._vRenderScale = state[8];
+//             r._vCollisionScale = state[9];
+//             r._fTransparency = py::extract<float>(state[10]);
+//             r._bVisible = py::extract<bool>(state[11]);
+//             r._bModifiable = py::extract<bool>(state[12]);
+//             r._mapExtraGeometries = dict(state[13]);
+//         }
+//         else {
+//             // new format
+//             r._name = state[6][0];
+//             r._filenamerender = state[6][1];
+//             r._filenamecollision = state[6][2];
+//             r._vRenderScale = state[7];
+//             r._vCollisionScale = state[8];
+//             r._fTransparency = py::extract<float>(state[9]);
+//             r._bVisible = py::extract<bool>(state[10]);
+//             r._bModifiable = py::extract<bool>(state[11]);
+//             r._mapExtraGeometries = dict(state[12]);
+//         }
     }
 };
 
@@ -3466,6 +3505,22 @@ void init_openravepy_kinbody()
                        .value("Spherical",KinBody::JointSpherical)
                        .value("Trajectory",KinBody::JointTrajectory)
     ;
+
+    object testpickle = class_<PyTestPickle, OPENRAVE_SHARED_PTR<PyTestPickle> >(m, "TestPickle")
+                        .def(init<>())
+                        .def(py::pickle(
+                        [](const PyTestPickle &pypickle) {
+                            // __getstate__
+                            return TestPickle_pickle_suite::getstate(pypickle);
+                        },
+                        [](py::tuple state) {
+                            PyTestPickle pypickle;
+                            TestPickle_pickle_suite::setstate(pypickle, state);
+                            return pypickle;
+                        }
+                        ))
+                        .def_readwrite("t", &PyTestPickle::_t)
+                        ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object geometryinfo = class_<PyGeometryInfo, OPENRAVE_SHARED_PTR<PyGeometryInfo> >(m, "GeometryInfo", DOXY_CLASS(KinBody::GeometryInfo))

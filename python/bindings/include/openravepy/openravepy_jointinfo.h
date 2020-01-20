@@ -36,6 +36,13 @@ public:
     int type = 0;
 };
 
+class PyTestPickle
+{
+public:
+    PyTestPickle();
+    object _t = ReturnTransform(Transform());
+};
+
 class PyGeometryInfo
 {
 public:
@@ -52,23 +59,38 @@ public:
 
     KinBody::GeometryInfoPtr GetGeometryInfo();
 
-    object _t;
-    object _vGeomData;
-    object _vGeomData2;
-    object _vGeomData3;
-    object _vGeomData4;
-    object _vDiffuseColor;
-    object _vAmbientColor;
-    object _meshcollision;
+    object _t = ReturnTransform(Transform());
+    object _vGeomData = toPyVector4(Vector());
+    object _vGeomData2 = toPyVector4(Vector());
+    object _vGeomData3 = toPyVector4(Vector());
+    object _vGeomData4 = toPyVector4(Vector());
+    object _vDiffuseColor = toPyVector3(Vector(1,1,1));
+    object _vAmbientColor = toPyVector3(Vector(0,0,0));
+    object _meshcollision = py::none_();
+    GeometryType _type = GT_None;
+    object _name = py::none_();
+    object _filenamerender = py::none_();
+    object _filenamecollision = py::none_();
+    object _vRenderScale = toPyVector3(Vector(1,1,1));
+    object _vCollisionScale = toPyVector3(Vector(1,1,1));
+
+    // object _t;
+    // object _vGeomData;
+    // object _vGeomData2;
+    // object _vGeomData3;
+    // object _vGeomData4;
+    // object _vDiffuseColor;
+    // object _vAmbientColor;
+    // object _meshcollision;
     py::list _vSideWalls;
     float _containerBaseHeight;
-    GeometryType _type;
-    // best to initialize these as None's
-    object _name;
-    object _filenamerender;
-    object _filenamecollision;
-    object _vRenderScale;
-    object _vCollisionScale;
+    // GeometryType _type;
+    // // best to initialize these as None's
+    // object _name;
+    // object _filenamerender;
+    // object _filenamecollision;
+    // object _vRenderScale;
+    // object _vCollisionScale;
     py::dict _mapExtraGeometries;
     float _fTransparency;
     bool _bVisible;
