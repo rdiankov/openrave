@@ -14,7 +14,7 @@
 """Misc openravepy functions. Need to explicitly import to use them.
 """
 from __future__ import with_statement # for python 2.5
-from . import openravepy_int, OpenRAVEException
+from . import openravepy_int, openravepy_ext, OpenRAVEException
 import os.path
 from sys import platform as sysplatformname
 from sys import stdout
