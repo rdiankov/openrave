@@ -2,6 +2,8 @@
 #ifndef OPENRAVE_PYBIND11_BINDINGS_H
 #define OPENRAVE_PYBIND11_BINDINGS_H
 
+#include <boost/format.hpp>
+
 #define OPENRAVEPY_API __attribute__ ((visibility ("default")))
 #include <iostream>
 // use std::cout temporarily
@@ -44,16 +46,17 @@ template <typename T>
 inline object empty_array_astype() {
     return array_t<T>({}, nullptr);
 }
+
 template <typename T>
 struct extract_ {
     extract_() = delete; // disable default constructor
     explicit extract_(const object& o) {
         try {
-            _data = extract<T>(o);
+            _data = extract<T>(o); // in pybind11 actually does the extract/cast, which is not good since it will throw exception
         }
-        catch(...) {
+        catch(const std::exception& ex) {
             _bcheck = false;
-            RAVELOG_WARN("Cannot extract type " + std::string(typeid(T).name()) + " from a pybind11::object");
+            RAVELOG_WARN_FORMAT("Cannot extract type %s from a pybind11::object: %s", std::string(typeid(T).name())%ex.what());
         }
     }
     // user-defined conversion:
@@ -83,6 +86,8 @@ using array_int = array_t<int>; // py::array_int
 
 // is_none is not supported by older versions of python
 #define IS_PYTHONOBJECT_NONE(o) (o).is_none()
+
+#define IS_PYTHONOBJECT_STRING(o) (!(o).is_none() && (PyString_Check((o).ptr()) || PyUnicode_Check((o).ptr())))
 
 namespace openravepy
 {

@@ -45,6 +45,9 @@ using array_int = object; // py::array_int
 #define IS_PYTHONOBJECT_NONE(o) (!!(o))
 #endif
 
+
+#define IS_PYTHONOBJECT_STRING(o) (!IS_PYTHONOBJECT_NONE(o) && (PyString_Check((o).ptr()) || PyUnicode_Check((o).ptr())))
+
 namespace openravepy {
 
 namespace py = boost::python;
