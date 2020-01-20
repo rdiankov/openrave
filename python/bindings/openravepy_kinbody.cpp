@@ -88,8 +88,10 @@ void PySideWall::Get(KinBody::GeometryInfo::SideWall& sidewall) {
 }
 
 PyTestPickle::PyTestPickle() {
-    const std::vector<dReal> v {1, 2, 4.5, -3.0, 8, 9, 10, 11, 12};
-    _arr = py::array_t<double>(v.size(), v.data());
+    if(IS_PYTHONOBJECT_NONE(_arr)) {
+        const std::vector<dReal> v {1, 2, 4.5, -3.0, 8, 9, 10, 11, 12};
+        _arr = py::array_t<double>(v.size(), v.data());
+    }
 }
 PyTestPickle::~PyTestPickle() {}
 class TestPickle_pickle_suite

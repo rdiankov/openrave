@@ -341,14 +341,23 @@ TransformMatrix ExtractTransformMatrix(const object& oraw)
 
 object toPyArray(const TransformMatrix& t)
 {
-    npy_intp dims[] = { 4,4};
-    PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-    dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
-    pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2]; pdata[3] = t.trans.x;
-    pdata[4] = t.m[4]; pdata[5] = t.m[5]; pdata[6] = t.m[6]; pdata[7] = t.trans.y;
-    pdata[8] = t.m[8]; pdata[9] = t.m[9]; pdata[10] = t.m[10]; pdata[11] = t.trans.z;
-    pdata[12] = 0; pdata[13] = 0; pdata[14] = 0; pdata[15] = 1;
-    return py::to_array_astype<dReal>(pyvalues);
+    const std::array<dReal, 16> arr {
+        t.m[0], t.m[1], t.m[2], t.trans.x,
+        t.m[4], t.m[5], t.m[6], t.trans.y,
+        t.m[8], t.m[9], t.m[10], t.trans.z,
+        0, 0, 0, 1
+    };
+    py::array_t<dReal> o(arr.size(), arr.data());
+    o.resize({4, 4});
+    return o;
+    // npy_intp dims[] = { 4,4};
+    // PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+    // dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
+    // pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2]; pdata[3] = t.trans.x;
+    // pdata[4] = t.m[4]; pdata[5] = t.m[5]; pdata[6] = t.m[6]; pdata[7] = t.trans.y;
+    // pdata[8] = t.m[8]; pdata[9] = t.m[9]; pdata[10] = t.m[10]; pdata[11] = t.trans.z;
+    // pdata[12] = 0; pdata[13] = 0; pdata[14] = 0; pdata[15] = 1;
+    // return py::to_array_astype<dReal>(pyvalues);
 }
 
 
