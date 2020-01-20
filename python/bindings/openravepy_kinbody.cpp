@@ -96,8 +96,6 @@ PyGeometryInfo::PyGeometryInfo() {
     _vDiffuseColor = toPyVector3(Vector(1,1,1));
     _vAmbientColor = toPyVector3(Vector(0,0,0));
     _meshcollision = py::none_();
-    _vSideWalls;
-    _containerBaseHeight;
     _type = GT_None;
     _name = py::none_();
     _filenamerender = py::none_();
@@ -3119,7 +3117,7 @@ public:
         r._meshcollision = state[4];
         r._type = (GeometryType)(int)py::extract<int>(state[5]);
 
-        bool bIsState6Str = IS_PYTHONOBJECT_STRING(state[6]);
+        bool bIsState6Str = IS_PYTHONOBJECT_STRING(py::object(state[6]));
         if( bIsState6Str ) {
             // old format
             r._filenamerender = state[6];
@@ -3167,7 +3165,7 @@ public:
         r._vinertiamoments = state[5];
         r._mapFloatParameters = dict(state[6]);
         r._mapIntParameters = dict(state[7]);
-        if( IS_PYTHONOBJECT_NONE(state[8]) ) {
+        if( IS_PYTHONOBJECT_NONE(py::object(state[8])) ) {
             r._vForcedAdjacentLinks = py::list(state[8]);
         }
         else {
