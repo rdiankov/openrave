@@ -3117,7 +3117,11 @@ public:
         r._meshcollision = state[4];
         r._type = (GeometryType)(int)py::extract<int>(state[5]);
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        bool bIsState6Str = IS_PYTHONOBJECT_STRING(state[6]);
+#else
         bool bIsState6Str = IS_PYTHONOBJECT_STRING(py::object(state[6]));
+#endif
         if( bIsState6Str ) {
             // old format
             r._filenamerender = state[6];
@@ -3165,7 +3169,11 @@ public:
         r._vinertiamoments = state[5];
         r._mapFloatParameters = dict(state[6]);
         r._mapIntParameters = dict(state[7]);
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        if( IS_PYTHONOBJECT_NONE(state[8]) ) {
+#else
         if( IS_PYTHONOBJECT_NONE(py::object(state[8])) ) {
+#endif
             r._vForcedAdjacentLinks = py::list(state[8]);
         }
         else {
