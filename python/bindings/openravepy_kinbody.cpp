@@ -88,7 +88,25 @@ void PySideWall::Get(KinBody::GeometryInfo::SideWall& sidewall) {
 }
 
 PyGeometryInfo::PyGeometryInfo() {
+    _t = ReturnTransform(Transform());
+    _vGeomData = toPyVector4(Vector());
+    _vGeomData2 = toPyVector4(Vector());
+    _vGeomData3 = toPyVector4(Vector());
+    _vGeomData4 = toPyVector4(Vector());
+    _vDiffuseColor = toPyVector3(Vector(1,1,1));
+    _vAmbientColor = toPyVector3(Vector(0,0,0));
+    _meshcollision = py::none_();
+    _type = GT_None;
+    _name = py::none_();
+    _filenamerender = py::none_();
+    _filenamecollision = py::none_();
+    _vRenderScale = toPyVector3(Vector(1,1,1));
+    _vCollisionScale = toPyVector3(Vector(1,1,1));
 }
+
+//PyGeometryInfo::PyGeometryInfo(const PyGeometryInfo& pyinfo) {
+//    //*this = pyinfo;
+//}
 PyGeometryInfo::PyGeometryInfo(const KinBody::GeometryInfo& info) {
     Init(info);
 }
@@ -3099,8 +3117,8 @@ public:
         r._meshcollision = state[4];
         r._type = (GeometryType)(int)py::extract<int>(state[5]);
 
-        py::extract_<std::string> pyoldfilenamerender(state[6]);
-        if( pyoldfilenamerender.check() ) {
+        bool bIsState6Str = IS_PYTHONOBJECT_STRING(py::object(state[6]));
+        if( bIsState6Str ) {
             // old format
             r._filenamerender = state[6];
             r._filenamecollision = state[7];
@@ -3147,7 +3165,12 @@ public:
         r._vinertiamoments = state[5];
         r._mapFloatParameters = dict(state[6]);
         r._mapIntParameters = dict(state[7]);
-        r._vForcedAdjacentLinks = dict(state[8]);
+        if( IS_PYTHONOBJECT_NONE(py::object(state[8])) ) {
+            r._vForcedAdjacentLinks = py::list(state[8]);
+        }
+        else {
+            r._vForcedAdjacentLinks = py::list();
+        }
         r._bStatic = py::extract<bool>(state[9]);
         r._bIsEnabled = py::extract<bool>(state[10]);
         if( num > 11 ) {
@@ -3439,7 +3462,7 @@ void init_openravepy_kinbody()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object geometryinfo = class_<PyGeometryInfo, OPENRAVE_SHARED_PTR<PyGeometryInfo> >(m, "GeometryInfo", DOXY_CLASS(KinBody::GeometryInfo))
                           .def(init<>())
-                          .def(init<const KinBody::GeometryInfo&>(), "info"_a)
+                          //.def(init<const KinBody::GeometryInfo&>(), "info"_a)
 #else
     object geometryinfo = class_<PyGeometryInfo, OPENRAVE_SHARED_PTR<PyGeometryInfo> >("GeometryInfo", DOXY_CLASS(KinBody::GeometryInfo))
 #endif
@@ -3484,8 +3507,6 @@ void init_openravepy_kinbody()
             return GeometryInfo_pickle_suite::getstate(pygeom);
         },
                                    [](py::tuple state) {
-            // __setstate__
-            /* Create a new C++ instance */
             PyGeometryInfo pygeom;
             GeometryInfo_pickle_suite::setstate(pygeom, state);
             return pygeom;
@@ -3526,19 +3547,15 @@ void init_openravepy_kinbody()
                       .def_readwrite("_bStatic",&PyLinkInfo::_bStatic)
                       .def_readwrite("_bIsEnabled",&PyLinkInfo::_bIsEnabled)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                      .def(py::pickle(
-                               [](const PyLinkInfo &pyinfo) {
+                      .def(py::pickle([](const PyLinkInfo &pyinfo) {
             // __getstate__
             return LinkInfo_pickle_suite::getstate(pyinfo);
         },
-                               [](py::tuple state) {
-            // __setstate__
-            /* Create a new C++ instance */
+                                      [](py::tuple state) {
             PyLinkInfo pyinfo;
             LinkInfo_pickle_suite::setstate(pyinfo, state);
             return pyinfo;
-        }
-                               ))
+        }))
 #else
                       .def_pickle(LinkInfo_pickle_suite())
 #endif
@@ -3578,22 +3595,15 @@ void init_openravepy_kinbody()
                        .def_readwrite("_bIsActive",&PyJointInfo::_bIsActive)
                        .def_readwrite("_infoElectricMotor", &PyJointInfo::_infoElectricMotor)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                       // TGN: can simplify in future using
-                       .def(py::pickle(
-                                [](const PyJointInfo &pyinfo) {
+                       .def(py::pickle([](const PyJointInfo &pyinfo) {
             // __getstate__
             return JointInfo_pickle_suite::getstate(pyinfo);
         },
-                                [](py::tuple state) {
-            // __setstate__
-            if (state.size() != 3) {
-                RAVELOG_WARN("Invalid state!");
-            }
+                                       [](py::tuple state) {
             PyJointInfo pyinfo;
             JointInfo_pickle_suite::setstate(pyinfo, state);
             return pyinfo;
-        }
-                                ))
+        }))
 #else
                        .def_pickle(JointInfo_pickle_suite())
 #endif
@@ -3835,11 +3845,11 @@ void init_openravepy_kinbody()
                          .def("SetDOFVelocities",setdofvelocities2, PY_ARGS("dofvelocities","linear","angular") DOXY_FN(KinBody,SetDOFVelocities "const std::vector; const Vector; const Vector; uint32_t"))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("SetDOFVelocities", setdofvelocities3,
-                            "dofvelocities"_a,
-                            "checklimits"_a = (int) KinBody::CLA_CheckLimits,
-                            "indices"_a = py::none_(),
-                            DOXY_FN(KinBody,SetDOFVelocities "const std::vector; uint32_t; const std::vector")
-                         )
+                              "dofvelocities"_a,
+                              "checklimits"_a = (int) KinBody::CLA_CheckLimits,
+                              "indices"_a = py::none_(),
+                              DOXY_FN(KinBody,SetDOFVelocities "const std::vector; uint32_t; const std::vector")
+                              )
 #else
                          .def("SetDOFVelocities",setdofvelocities3, PY_ARGS("dofvelocities","checklimits","indices") DOXY_FN(KinBody,SetDOFVelocities "const std::vector; uint32_t; const std::vector"))
 #endif
