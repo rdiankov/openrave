@@ -110,26 +110,8 @@ public:
     }
 };
 
-PyGeometryInfo::PyGeometryInfo() {
-    // _t = ReturnTransform(Transform());
-    // _vGeomData = toPyVector4(Vector());
-    // _vGeomData2 = toPyVector4(Vector());
-    // _vGeomData3 = toPyVector4(Vector());
-    // _vGeomData4 = toPyVector4(Vector());
-    // _vDiffuseColor = toPyVector3(Vector(1,1,1));
-    // _vAmbientColor = toPyVector3(Vector(0,0,0));
-    // _meshcollision = py::none_();
-    // _type = GT_None;
-    // _name = py::none_();
-    // _filenamerender = py::none_();
-    // _filenamecollision = py::none_();
-    // _vRenderScale = toPyVector3(Vector(1,1,1));
-    // _vCollisionScale = toPyVector3(Vector(1,1,1));
-}
+PyGeometryInfo::PyGeometryInfo() {}
 
-//PyGeometryInfo::PyGeometryInfo(const PyGeometryInfo& pyinfo) {
-//    //*this = pyinfo;
-//}
 PyGeometryInfo::PyGeometryInfo(const KinBody::GeometryInfo& info) {
     Init(info);
 }

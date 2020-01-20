@@ -16,8 +16,6 @@ cmake_policy(SET CMP0002 NEW)
 # http://www.cmake.org/cmake/help/cmake-2.6.html#policy:CMP0003
 cmake_policy(SET CMP0003 NEW)
 
-# use -std=c++11
-# https://github.com/pybind/pybind11/issues/1088
 set(CMAKE_CXX_STANDARD 11)
 # Use, i.e. don't skip the full RPATH for the build tree
 set(CMAKE_SKIP_BUILD_RPATH  FALSE)

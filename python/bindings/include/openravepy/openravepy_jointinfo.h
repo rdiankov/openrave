@@ -95,9 +95,9 @@ public:
     // object _vRenderScale;
     // object _vCollisionScale;
     py::dict _mapExtraGeometries;
-    float _fTransparency;
-    bool _bVisible;
-    bool _bModifiable;
+    float _fTransparency = 0.0;
+    bool _bVisible = true;
+    bool _bModifiable = true;
 };
 
 typedef OPENRAVE_SHARED_PTR<PyGeometryInfo> PyGeometryInfoPtr;
