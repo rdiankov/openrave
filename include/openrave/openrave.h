@@ -87,6 +87,8 @@
 #define RAVE_DEPRECATED
 #endif
 
+#include <openrave/smart_ptr.h>
+
 /// The entire %OpenRAVE library
 namespace OpenRAVE {
 
@@ -165,54 +167,23 @@ enum OpenRAVEErrorCode {
     ORE_Timeout=11, ///< process timed out
 };
 
-inline const char* GetErrorCodeString(OpenRAVEErrorCode error)
-{
-    switch(error) {
-    case ORE_Failed: return "Failed";
-    case ORE_InvalidArguments: return "InvalidArguments";
-    case ORE_EnvironmentNotLocked: return "EnvironmentNotLocked";
-    case ORE_CommandNotSupported: return "CommandNotSupported";
-    case ORE_Assert: return "Assert";
-    case ORE_InvalidPlugin: return "InvalidPlugin";
-    case ORE_InvalidInterfaceHash: return "InvalidInterfaceHash";
-    case ORE_NotImplemented: return "NotImplemented";
-    case ORE_InconsistentConstraints: return "InconsistentConstraints";
-    case ORE_NotInitialized: return "NotInitialized";
-    case ORE_InvalidState: return "InvalidState";
-    case ORE_Timeout: return "Timeout";
-    }
-    // should throw an exception?
-    return "";
-}
-
 /// \brief Exception that all OpenRAVE internal methods throw; the error codes are held in \ref OpenRAVEErrorCode.
-class OPENRAVE_API openrave_exception : public std::exception
+class OPENRAVE_API OpenRAVEException : public std::exception
 {
 public:
-    openrave_exception() : std::exception(), _s("unknown exception"), _error(ORE_Failed) {
+    OpenRAVEException();
+    OpenRAVEException(const std::string& s, OpenRAVEErrorCode error=ORE_Failed);
+    virtual ~OpenRAVEException() throw() {
     }
-    openrave_exception(const std::string& s, OpenRAVEErrorCode error=ORE_Failed) : std::exception() {
-        _error = error;
-        _s = "openrave (";
-        _s += GetErrorCodeString(_error);
-        _s += "): ";
-        _s += s;
-    }
-    virtual ~openrave_exception() throw() {
-    }
-    char const* what() const throw() {
-        return _s.c_str();
-    }
-    const std::string& message() const {
-        return _s;
-    }
-    OpenRAVEErrorCode GetCode() const {
-        return _error;
-    }
+    char const* what() const throw();
+    const std::string& message() const;
+    OpenRAVEErrorCode GetCode() const;
 private:
     std::string _s;
     OpenRAVEErrorCode _error;
 };
+
+typedef OpenRAVEException openrave_exception;
 
 class OPENRAVE_LOCAL CaseInsensitiveCompare
 {
@@ -2358,6 +2329,10 @@ enum DOFAffine
     DOF_RotationMask=(DOF_RotationAxis|DOF_Rotation3D|DOF_RotationQuat), ///< mask for all bits representing 3D rotations
     DOF_Transform = (DOF_XYZ|DOF_RotationQuat), ///< translate and rotate freely in 3D space
 };
+
+/** \brief returns a string representation of the error code
+ */
+OPENRAVE_API const char* RaveGetErrorCodeString(OpenRAVEErrorCode error);
 
 /** \brief Given a mask of affine dofs and a dof inside that mask, returns the index where the value could be found.
 
