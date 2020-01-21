@@ -48,6 +48,7 @@ public:
         Vector _vdirection;
         std::string _sIkSolverXMLId; ///< xml id of the IkSolver interface to attach
         std::vector<std::string> _vGripperJointNames;         ///< names of the gripper joints
+        std::string _gripperControlID;
     };
     typedef boost::shared_ptr<ManipulatorInfo> ManipulatorInfoPtr;
     typedef boost::shared_ptr<ManipulatorInfo const> ManipulatorInfoConstPtr;
@@ -118,6 +119,11 @@ public:
             return __pEffector;
         }
 
+        virtual std::string GetGripperControlID() const {
+            RAVELOG_WARN_FORMAT("_info._gripperControlID %s", _info._gripperControlID);
+            return _info._gripperControlID;
+        }
+        
         /// \brief Release all bodies grabbed by the end effector of this manipualtor
         virtual void ReleaseAllGrabbed() {
             RobotBasePtr probot(__probot);

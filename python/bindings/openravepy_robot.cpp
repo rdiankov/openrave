@@ -41,6 +41,7 @@ public:
             vGripperJointNames.append(ConvertStringToUnicode(*itname));
         }
         _vGripperJointNames = vGripperJointNames;
+        _gripperControlID = ConvertStringToUnicode(info._gripperControlID);
     }
 
     RobotBase::ManipulatorInfoPtr GetManipulatorInfo() const
@@ -54,6 +55,7 @@ public:
         pinfo->_vdirection = ExtractVector3(_vdirection);
         pinfo->_sIkSolverXMLId = _sIkSolverXMLId;
         pinfo->_vGripperJointNames = ExtractArray<std::string>(_vGripperJointNames);
+        pinfo->_gripperControlID = boost::python::extract<std::string>(_gripperControlID);
         return pinfo;
     }
 
@@ -63,6 +65,7 @@ public:
     object _vdirection;
     std::string _sIkSolverXMLId;
     object _vGripperJointNames;
+    object _gripperControlID;
 };
 
 PyManipulatorInfoPtr toPyManipulatorInfo(const RobotBase::ManipulatorInfo& manipulatorinfo)
@@ -1586,7 +1589,7 @@ class ManipulatorInfo_pickle_suite : public pickle_suite
 public:
     static boost::python::tuple getstate(const PyManipulatorInfo& r)
     {
-        return boost::python::make_tuple(r._name, r._sBaseLinkName, r._sEffectorLinkName, r._tLocalTool, r._vChuckingDirection, r._vdirection, r._sIkSolverXMLId, r._vGripperJointNames);
+        return boost::python::make_tuple(r._name, r._sBaseLinkName, r._sEffectorLinkName, r._tLocalTool, r._vChuckingDirection, r._vdirection, r._sIkSolverXMLId, r._vGripperJointNames, r._gripperControlID);
     }
     static void setstate(PyManipulatorInfo& r, boost::python::tuple state) {
         r._name = state[0];
@@ -1597,6 +1600,7 @@ public:
         r._vdirection = state[5];
         r._sIkSolverXMLId = boost::python::extract<std::string>(state[6]);
         r._vGripperJointNames = state[7];
+        r._gripperControlID = state[8];
     }
 };
 
@@ -1689,6 +1693,7 @@ void init_openravepy_robot()
                              .def_readwrite("_vdirection",&PyManipulatorInfo::_vdirection)
                              .def_readwrite("_sIkSolverXMLId",&PyManipulatorInfo::_sIkSolverXMLId)
                              .def_readwrite("_vGripperJointNames",&PyManipulatorInfo::_vGripperJointNames)
+                             .def_readwrite("_gripperControlID",&PyManipulatorInfo::_gripperControlID)
                              .def_pickle(ManipulatorInfo_pickle_suite())
     ;
 
