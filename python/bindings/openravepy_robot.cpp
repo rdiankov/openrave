@@ -71,6 +71,7 @@ PyManipulatorInfo::PyManipulatorInfo(const RobotBase::ManipulatorInfo& info) {
         vGripperJointNames.append(ConvertStringToUnicode(*itname));
     }
     _vGripperJointNames = vGripperJointNames;
+    _gripperControlID = ConvertStringToUnicode(info._gripperControlID);
 }
 
 RobotBase::ManipulatorInfoPtr PyManipulatorInfo::GetManipulatorInfo() const
@@ -84,6 +85,7 @@ RobotBase::ManipulatorInfoPtr PyManipulatorInfo::GetManipulatorInfo() const
     pinfo->_vdirection = ExtractVector3(_vdirection);
     pinfo->_sIkSolverXMLId = _sIkSolverXMLId;
     pinfo->_vGripperJointNames = ExtractArray<std::string>(_vGripperJointNames);
+    pinfo->_gripperControlID = boost::python::extract<std::string>(_gripperControlID);
     return pinfo;
 }
 
@@ -1561,7 +1563,7 @@ class ManipulatorInfo_pickle_suite
 public:
     static py::tuple getstate(const PyManipulatorInfo& r)
     {
-        return py::make_tuple(r._name, r._sBaseLinkName, r._sEffectorLinkName, r._tLocalTool, r._vChuckingDirection, r._vdirection, r._sIkSolverXMLId, r._vGripperJointNames);
+        return py::make_tuple(r._name, r._sBaseLinkName, r._sEffectorLinkName, r._tLocalTool, r._vChuckingDirection, r._vdirection, r._sIkSolverXMLId, r._vGripperJointNames, r._gripperControlID);
     }
     static void setstate(PyManipulatorInfo& r, py::tuple state) {
         r._name = state[0];
@@ -1572,6 +1574,7 @@ public:
         r._vdirection = state[5];
         r._sIkSolverXMLId = py::extract<std::string>(state[6]);
         r._vGripperJointNames = state[7];
+        r._gripperControlID = state[8];
     }
 };
 
@@ -1679,6 +1682,7 @@ void init_openravepy_robot()
                              .def_readwrite("_vdirection",&PyManipulatorInfo::_vdirection)
                              .def_readwrite("_sIkSolverXMLId",&PyManipulatorInfo::_sIkSolverXMLId)
                              .def_readwrite("_vGripperJointNames",&PyManipulatorInfo::_vGripperJointNames)
+                             .def_readwrite("_gripperControlID",&PyManipulatorInfo::_gripperControlID)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                              .def(py::pickle(
                              [](const PyManipulatorInfo &pyinfo) {

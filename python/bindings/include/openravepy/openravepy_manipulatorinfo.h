@@ -39,6 +39,7 @@ public:
     object _vdirection = py::none_();
     std::string _sIkSolverXMLId;
     object _vGripperJointNames = py::none_();
+    object _gripperControlID = py::none_();
 };
 
 class PyAttachedSensorInfo

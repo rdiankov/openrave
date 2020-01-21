@@ -3196,8 +3196,7 @@ public:
                 if( !!tec ) {
                     RobotBase::ManipulatorInfo manipinfo;
                     manipinfo._name = _ConvertToOpenRAVEName(name);
-                    daeElementRef pframe_origin = tec->getChild("frame_origin");
-                    daeElementRef pframe_tip = tec->getChild("frame_tip");
+                    daeElementRef pframe_origin = tec->getChild("frame_origin");                    
                     if( !!pframe_origin ) {
                         domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pframe_origin->getAttribute("link"), as).resolve().elt);
                         if( !!pdomlink ) {
@@ -3214,6 +3213,14 @@ public:
                             continue;
                         }
                     }
+
+                    daeElementRef pgripperControlID = tec->getChild("gripperControlID");                    
+                    if( !!pgripperControlID ) {
+                        string gripperControlID = pgripperControlID->getAttribute("name");
+                        manipinfo._gripperControlID = gripperControlID;
+                    }
+
+                    daeElementRef pframe_tip = tec->getChild("frame_tip");
                     if( !!pframe_tip ) {
                         domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pframe_tip->getAttribute("link"), as).resolve().elt);
                         if( !!pdomlink ) {
@@ -3290,7 +3297,7 @@ public:
                                 }
                             }
                         }
-                        else if((pmanipchild->getElementName() != string("frame_origin"))&&(pmanipchild->getElementName() != string("frame_tip"))) {
+                        else if((pmanipchild->getElementName() != string("frame_origin"))&&(pmanipchild->getElementName() != string("frame_tip"))&&(pmanipchild->getElementName() != string("gripperControlID"))) {
                             RAVELOG_WARN(str(boost::format("unrecognized tag <%s> in manipulator '%s'")%pmanipchild->getElementName()%manipinfo._name));
                         }
                     }
