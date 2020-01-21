@@ -279,10 +279,11 @@ void KinBodyItem::Load()
 //        }
 
         _veclinks.push_back(LinkNodes(posglinkroot, posglinktrans));
-        _vecgeoms.at(_veclinks.size() - 1).resize(0);
+        size_t linkindex = itlink - _pbody->GetLinks().begin();
+        _vecgeoms.at(linkindex).resize(0);
 
         for(size_t igeom = 0; igeom < porlink->GetGeometries().size(); ++igeom) {
-            _vecgeoms[_veclinks.size() - 1].push_back( GeomNodes(new osg::Group(), new osg::MatrixTransform()) );
+            _vecgeoms[linkindex].push_back( GeomNodes(new osg::Group(), new osg::MatrixTransform()) );
             KinBody::Link::GeometryPtr orgeom = porlink->GetGeometries()[igeom];
             if( !orgeom->IsVisible() && _viewmode == VG_RenderOnly ) {
                 continue;
@@ -481,7 +482,7 @@ void KinBodyItem::Load()
                 //  Apply external transform to local transform
                 posglinktrans->addChild(pgeometryroot);
 
-                _vecgeoms[_veclinks.size() - 1][igeom] = GeomNodes(pgeometrydata, pgeometryroot); // overwrite
+                _vecgeoms[linkindex][igeom] = GeomNodes(pgeometrydata, pgeometryroot); // overwrite
             }
         }
     }
