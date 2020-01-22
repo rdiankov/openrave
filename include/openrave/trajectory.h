@@ -157,9 +157,21 @@ public:
     virtual dReal GetDuration() const = 0;
 
     /// \brief output the trajectory in XML format
+
+    /* DEVELOPER's NOTE:
+    Base serialization/deserialiation implementation is considerably slower. For improved performance,
+    developers should implement their own serialization/deserialization methods in inherited classes.
+    For example implementation, please see GenericTrajectory serialization/deserialization implementation
+    */
     virtual void serialize(std::ostream& O, int options=0) const;
 
     /// \brief initialize the trajectory
+
+    /* DEVELOPER's NOTE:
+    Base serialization/deserialiation implementation is considerably slower. For improved performance,
+    developers should implement their own serialization/deserialization methods in inherited classes.
+    For example implementation, please see GenericTrajectory serialization/deserialization implementation
+    */
     virtual InterfaceBasePtr deserialize(std::istream& I);
 
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
