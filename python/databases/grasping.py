@@ -167,7 +167,8 @@ else:
     from numpy import inf, array
 
 import numpy
-from ..openravepy_ext import openrave_exception, planning_error, transformPoints
+from .. import PlanningError
+from ..openravepy_ext import transformPoints
 from ..openravepy_int import RaveCreateModule, RaveCreateTrajectory, IkParameterization, IkParameterizationType, IkFilterOptions, RaveFindDatabaseFile, RaveDestroy, Environment, Robot, KinBody, DOFAffine, CollisionReport, RaveCreateCollisionChecker, quatRotateDirection, rotationMatrixFromQuat, Ray, poseFromMatrix
 from . import DatabaseGenerator
 from ..misc import SpaceSamplerExtra
@@ -490,7 +491,7 @@ class GraspingModel(DatabaseGenerator):
             grasp[self.graspindices.get('imanipulatordirection')] = manipulatordirection
             try:
                 contacts,finalconfig,mindist,volume = self.testGrasp(grasp=grasp,graspingnoise=graspingnoise,translate=True,forceclosure=forceclosure,forceclosurethreshold=forceclosurethreshold)
-            except planning_error, e:
+            except PlanningError, e:
                 print 'Grasp Failed: '
                 print_exc(e)
                 return ()
@@ -586,7 +587,7 @@ class GraspingModel(DatabaseGenerator):
             chuckingdirection = self.manip.GetChuckingDirection()
             self.robot.SetActiveManipulator(self.manip)
             self.robot.SetTransform(eye(4)) # have to reset transform in order to remove randomness
-            self.robot.SetActiveDOFs(self.manip.GetGripperIndices(),DOFAffine.X+DOFAffine.Y+DOFAffine.Z if translate else 0)
+            self.robot.SetActiveDOFs(self.manip.GetGripperIndices(),DOFAffine.X|DOFAffine.Y|DOFAffine.Z if translate else 0)
             approachrays[:,3:6] = -approachrays[:,3:6]
             self.nextid, self.resultgrasps = self.grasper.GraspThreaded(approachrays=approachrays, rolls=rolls, standoffs=standoffs, preshapes=preshapes, manipulatordirections=manipulatordirections, target=self.target, graspingnoise=graspingnoise, forceclosurethreshold=forceclosurethreshold,numthreads=numthreads,translationstepmult=self.translationstepmult,finestep=self.finestep)
             print 'graspthreaded done, processing grasps %d'%len(self.resultgrasps)
@@ -674,7 +675,7 @@ class GraspingModel(DatabaseGenerator):
                             raw_input('press any key to continue: ')
                         elif delay > 0:
                             time.sleep(delay)
-                    except planning_error,e:
+                    except PlanningError,e:
                         print 'bad grasp!',e
 
     def showgrasp(self,grasp,collisionfree=False,useik=False,delay=None,showfinal=False):
@@ -739,7 +740,7 @@ class GraspingModel(DatabaseGenerator):
             self.robot.SetActiveManipulator(self.manip)
             self.robot.SetTransform(eye(4)) # have to reset transform in order to remove randomness
             self.robot.SetDOFValues(grasp[self.graspindices.get('igrasppreshape')],self.manip.GetGripperIndices())
-            self.robot.SetActiveDOFs(self.manip.GetGripperIndices(),DOFAffine.X+DOFAffine.Y+DOFAffine.Z if translate else 0)
+            self.robot.SetActiveDOFs(self.manip.GetGripperIndices(),DOFAffine.X|DOFAffine.Y|DOFAffine.Z if translate else 0)
             vintersectplane = None
             if 'vintersectplane' in self.graspindices:
                 vintersectplane = grasp[self.graspindices.get('vintersectplane')]
@@ -862,7 +863,7 @@ class GraspingModel(DatabaseGenerator):
                 if checkcollision and checkgrasper:
                     try:
                         contacts2,finalconfig2,mindist2,volume2 = self.runGraspFromTrans(grasp)
-                    except planning_error, e:
+                    except PlanningError, e:
                         continue
                 validgrasps.append(grasp)
                 validindices.append(i)
@@ -903,7 +904,7 @@ class GraspingModel(DatabaseGenerator):
                 if checkcollision and checkgrasper:
                     try:
                         contacts,finalconfig,mindist,volume = self.runGraspFromTrans(grasp)
-                    except planning_error, e:
+                    except PlanningError, e:
                         continue
 
             if returnfinal:
@@ -919,7 +920,7 @@ class GraspingModel(DatabaseGenerator):
                 kwargs['translate'] = True
                 kwargs['forceclosure'] = False
                 contacts,finalconfig,mindist,volume = self.runGrasp(grasp=grasp,**kwargs)
-            except planning_error, e:
+            except PlanningError, e:
                 print 'grasp failed: ',e
                 return inf
             

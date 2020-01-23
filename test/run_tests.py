@@ -18,13 +18,13 @@ import nose
 from nose.plugins import failuredetail
 from noseplugins import capture, callableclass
 
-usemultiprocess = False
 try:
     from multiprocessing import cpu_count
     from noseplugins import xunitmultiprocess, multiprocess
     usemultiprocess = True
 except ImportError:
     def cpu_count(): return 1
+usemultiprocess = False 
     
 if __name__ == "__main__":
     import test_kinematics
@@ -64,4 +64,5 @@ if __name__ == "__main__":
         plugins+=[multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp()]
         argv += ['--with-xunitmp','--xunit-file=results.xml','--processes=%d'%numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker']
         
+    # from IPython import embed; embed()
     prog=nose.core.TestProgram(argv=argv,plugins=plugins,exit=False)
