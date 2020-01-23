@@ -159,18 +159,16 @@ public:
     /// \brief output the trajectory in XML format
 
     /* DEVELOPER'S NOTE:
-    Base serialization/deserialiation implementation is slower. For improved performance,
-    developers should implement their own serialization/deserialization methods in inherited classes.
-    For example implementation, please see GenericTrajectory serialization/deserialization implementation
+    Developers should implement their own serialization methods(s) in inherited classes.
+    For example implementation, please see GenericTrajectory serialization implementation
     */
-    virtual void serialize(std::ostream& O, int options=0) const;
+    virtual void serialize(std::ostream& O, int options=0) const = 0;
 
     /// \brief initialize the trajectory
 
     /* DEVELOPER'S NOTE:
-    Base serialization/deserialiation implementation is slower. For improved performance,
-    developers should implement their own serialization/deserialization methods in inherited classes.
-    For example implementation, please see GenericTrajectory serialization/deserialization implementation
+    Base implementation is slow. For improved performance, developers should implement their own deserialization method(s) in inherited classes.
+    For example implementation, please see GenericTrajectory deserialization implementation
     */
     virtual InterfaceBasePtr deserialize(std::istream& I);
 
