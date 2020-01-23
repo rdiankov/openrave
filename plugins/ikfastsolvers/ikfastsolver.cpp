@@ -64,6 +64,8 @@ public:
                         "sets the allowed workspace error, if ik solver returns above that, then use jacobian inverse to refine.");
         RegisterCommand("GetJacobianRefine",boost::bind(&IkFastSolver<IkReal>::_GetJacobianRefineCommand,this,_1,_2),
                         "returns the jaocbian refinement error threshold and max iterations.");
+        RegisterCommand("SetWorkspaceDiscretizedRotationAngle",boost::bind(&IkFastSolver<IkReal>::_SetWorkspaceDiscretizedRotationAngleCommand,this,_1,_2),
+                        "sets the workspace discretization value when using 6D iksolvers to solve for 5D.");
         RegisterCommand("SetDefaultIncrements",boost::bind(&IkFastSolver<IkReal>::_SetDefaultIncrementsCommand,this,_1,_2),
                         "Specify four values (2 pairs). Each pair is the free increment for revolute joint and second is the number of segment to divide free prismatic joints. The first pair is for structural free joints, the second pair is for solutions where axes align");
         RegisterCommand("GetFreeIndices",boost::bind(&IkFastSolver<IkReal>::_GetFreeIndicesCommand,this,_1,_2),
@@ -123,6 +125,13 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
             _jacobinvsolver.SetMaxIterations(nMaxIterations);
         }
 #endif
+    }
+
+    bool _SetWorkspaceDiscretizedRotationAngleCommand(ostream& sout, istream& sinput)
+    {
+        dReal workspaceDiscretizedRotationAngle = 0;
+        sinput >> workspaceDiscretizedRotationAngle;
+        return !!sinput;
     }
 
     bool _SetDefaultIncrementsCommand(ostream& sout, istream& sinput)

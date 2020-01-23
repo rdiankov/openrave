@@ -216,14 +216,14 @@ public:
     {
         boost::mutex::scoped_lock lockdestroy(_mutexInit);
         if( !_bInit ) {
-            RAVELOG_VERBOSE("environment is already destroyed\n");
+            RAVELOG_VERBOSE_FORMAT("env=%d is already destroyed", GetId());
             return;
         }
 
         // destruction order is *very* important, don't touch it without consultation
         _bInit = false;
 
-        RAVELOG_VERBOSE("Environment destructor\n");
+        RAVELOG_VERBOSE_FORMAT("env=%d destructor", GetId());
         _StopSimulationThread();
 
         // destroy the modules (their destructors could attempt to lock environment, so have to do it before global lock)
@@ -2091,10 +2091,10 @@ protected:
     void _RemoveKinBodyFromIterator(vector<KinBodyPtr>::iterator it)
     {
         // before deleting, make sure no robots are grabbing it!!
-        FOREACH(itrobot, _vecrobots) {
+        FOREACH(itrobot, _vecbodies) {
             KinBody &body = **it;
             if( (*itrobot)->IsGrabbing(body) ) {
-                RAVELOG_WARN_FORMAT("env=%d, destroy %s already grabbed by robot %s!", GetId()%body.GetName()%(*itrobot)->GetName());
+                RAVELOG_WARN_FORMAT("env=%d, remove %s already grabbed by robot %s!", GetId()%body.GetName()%(*itrobot)->GetName());
                 (*itrobot)->Release(body);
             }
         }
@@ -2170,7 +2170,7 @@ protected:
                 // clear internal interface lists
                 boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
                 // release all grabbed
-                FOREACH(itrobot,_vecrobots) {
+                FOREACH(itrobot,_vecbodies) {
                     (*itrobot)->ReleaseAllGrabbed();
                 }
                 FOREACH(itbody,_vecbodies) {
@@ -2496,7 +2496,7 @@ protected:
         listViewers.clear();
 
         if( !bCheckSharedResources ) {
-            if( _bEnableSimulation ) {
+            if( !!_threadSimulation && _bEnableSimulation ) {
                 _StartSimulationThread();
             }
         }

@@ -73,7 +73,9 @@ if __name__ == "__main__":
     parser.add_option('--openravescheme', action='store',type='string',dest='openravescheme',default=None,
                       help='Specify openravescheme for external reference.')
     parser.add_option('--listinterfaces', action="store",type='string',dest='listinterfaces',default=None,
-                      help='List the provided interfaces of a particular type from all plugins. Possible values are: %s.'%(', '.join(type.name for type in InterfaceType.values.values())))
+                      help='List the provided interfaces of a particular type from all plugins.' 
+                      # Possible values are: %s.'%(', '.join(type.name for type in InterfaceType.values.values()))
+                      )
     parser.add_option('--listplugins', action="store_true",dest='listplugins',default=False,
                       help='List all plugins and the interfaces they provide.')
     parser.add_option('--listdatabases',action='store_true',dest='listdatabases',default=False,

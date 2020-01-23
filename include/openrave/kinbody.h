@@ -159,7 +159,7 @@ public:
 
         /// \brief computes the bounding box in the world. tGeometryWorld is for the world transform.
         AABB ComputeAABB(const Transform& tGeometryWorld) const;
-            
+
 #if OPENRAVE_RAPIDJSON
         ///< \param multiply all translational values by fUnitScale
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale=1.0, int options=0);
@@ -805,6 +805,13 @@ private:
         JointTrajectory = 0x80000004, ///< there is no axis defined, instead the relative transformation is directly output from the trajectory affine_transform structure
     };
 
+    enum JointControlMode {
+        JCM_None = 0, ///< unspecified
+        JCM_RobotController = 1, ///< joint controlled by the robot controller
+        JCM_IO = 2,              ///< joint controlled by I/O signals
+        JCM_ExternalDevice = 3,  ///< joint controlled by an external device
+    };
+
     class Joint;
 
     /// \brief Holds mimic information about position, velocity, and acceleration of one axis of the joint.
@@ -908,6 +915,40 @@ public:
         boost::array<uint8_t,3> _bIsCircular;
 
         bool _bIsActive;                 ///< if true, should belong to the DOF of the body, unless it is a mimic joint (_ComputeInternalInformation decides this)
+
+        /// \brief _controlMode specifies how this joint is controlled. For possible control modes, see enum JointControlMode.
+        JointControlMode _controlMode;
+
+        struct JointControlInfo_RobotController
+        {
+            JointControlInfo_RobotController();
+            int robotId;
+            boost::array<int16_t, 3> robotControllerDOFIndex; ///< indicates which DOF in the robot controller controls which joint axis. -1 if not specified/not valid.
+        };
+        typedef boost::shared_ptr<JointControlInfo_RobotController> JointControlInfo_RobotControllerPtr;
+
+        struct JointControlInfo_IO
+        {
+            JointControlInfo_IO();
+            int deviceId;
+            boost::array< std::vector<std::string>, 3 > vMoveIONames;       ///< io names for controlling positions of this joint.
+            boost::array< std::vector<std::string>, 3 > vUpperLimitIONames; ///< io names for detecting if the joint is at its upper limit
+            boost::array< std::vector<uint8_t>, 3 > vUpperLimitSensorIsOn;  ///< if true, the corresponding upper limit sensor reads 1 when the joint is at its upper limit. otherwise, the upper limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
+            boost::array< std::vector<std::string>, 3 > vLowerLimitIONames; ///< io names for detecting if the joint is at its lower limit
+            boost::array< std::vector<uint8_t>, 3 > vLowerLimitSensorIsOn;  ///< if true, the corresponding lower limit sensor reads 1 when the joint is at its lower limit. otherwise, the lower limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
+        };
+        typedef boost::shared_ptr<JointControlInfo_IO> JointControlInfo_IOPtr;
+
+        struct JointControlInfo_ExternalDevice
+        {
+            JointControlInfo_ExternalDevice();
+            std::string externalDeviceId; ///< id for the external device
+        };
+        typedef boost::shared_ptr<JointControlInfo_ExternalDevice> JointControlInfo_ExternalDevicePtr;
+
+        JointControlInfo_RobotControllerPtr _jci_robotcontroller;
+        JointControlInfo_IOPtr _jci_io;
+        JointControlInfo_ExternalDevicePtr _jci_externaldevice;
     };
     typedef boost::shared_ptr<JointInfo> JointInfoPtr;
     typedef boost::shared_ptr<JointInfo const> JointInfoConstPtr;
@@ -1241,11 +1282,11 @@ public:
         /// \brief Return the child link whose transformation is computed by this joint's values (either GetFirstAttached() or GetSecondAttached())
         virtual LinkPtr GetHierarchyChildLink() const;
         /// \brief The axis of the joint in local coordinates.
-        virtual Vector GetInternalHierarchyAxis(int axis = 0) const;
+        virtual const Vector& GetInternalHierarchyAxis(int axis = 0) const;
         /// \brief Left multiply transform given the base body.
-        virtual Transform GetInternalHierarchyLeftTransform() const;
+        virtual const Transform& GetInternalHierarchyLeftTransform() const;
         /// \brief Right multiply transform given the base body.
-        virtual Transform GetInternalHierarchyRightTransform() const;
+        virtual const Transform& GetInternalHierarchyRightTransform() const;
         //@}
 
         /// A mimic joint's angles are automatically determined from other joints based on a general purpose formula.
@@ -1334,6 +1375,11 @@ public:
         ///
         /// \param parameters if empty, then removes the parameter
         virtual void SetStringParameters(const std::string& key, const std::string& value);
+
+        /// \brief return controlMode for this joint
+        inline JointControlMode GetControlMode() const {
+            return _info._controlMode;
+        }
 
         /// \brief Updates several fields in \ref _info depending on the current state of the joint.
         virtual void UpdateInfo();
@@ -2460,15 +2506,16 @@ private:
     /// only used for hashes...
     virtual void serialize(std::ostream& o, int options) const;
 
-protected:
-    /// \brief constructors declared protected so that user always goes through environment to create bodies
-    KinBody(InterfaceType type, EnvironmentBasePtr penv);
     inline KinBodyPtr shared_kinbody() {
         return boost::static_pointer_cast<KinBody>(shared_from_this());
     }
     inline KinBodyConstPtr shared_kinbody_const() const {
         return boost::static_pointer_cast<KinBody const>(shared_from_this());
     }
+
+protected:
+    /// \brief constructors declared protected so that user always goes through environment to create bodies
+    KinBody(InterfaceType type, EnvironmentBasePtr penv);
 
     /// \brief **internal use only** Releases and grabs the body inside the grabbed structure from _vGrabbedBodies.
     virtual void _Regrab(UserDataPtr pgrabbed);
