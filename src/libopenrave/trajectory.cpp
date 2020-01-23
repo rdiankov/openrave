@@ -21,32 +21,128 @@
 
 namespace OpenRAVE {
 
+// To distinguish between binary and XML trajectory files
+static const uint16_t MAGIC_NUMBER = 0x62ff;
+static const uint16_t VERSION_NUMBER = 0x0001;  // Version number for serialization
+
+/* Helper functions for binary trajectory file writing */
+inline void WriteBinaryUInt16(std::ostream& f, uint16_t value)
+{
+    f.write((const char*) &value, sizeof(value));
+}
+
+inline void WriteBinaryUInt32(std::ostream& f, uint32_t value)
+{
+    f.write((const char*) &value, sizeof(value));
+}
+
+inline void WriteBinaryInt(std::ostream& f, int value)
+{
+    f.write((const char*) &value, sizeof(value));
+}
+
+inline void WriteBinaryString(std::ostream& f, const std::string& s)
+{
+    const uint16_t length = (uint16_t) s.length();
+    WriteBinaryUInt16(f, length);
+    if (length > 0)
+    {
+        f.write(s.c_str(), length);
+    }
+}
+
+inline void WriteBinaryVector(std::ostream&f, const std::vector<dReal>& v)
+{
+    // Indicate number of data points
+    const uint32_t numDataPoints = v.size();
+    WriteBinaryUInt32(f, numDataPoints);
+
+    // Write vector memory block to binary file
+    const uint64_t vectorLengthBytes = numDataPoints*sizeof(dReal);
+    f.write((const char*) &v[0], vectorLengthBytes);
+}
+
+/* Helper functions for binary trajectory file reading */
+inline bool ReadBinaryUInt16(std::istream& f, uint16_t& value)
+{
+    f.read((char*) &value, sizeof(value));
+    return !!f;
+}
+
+inline bool ReadBinaryUInt32(std::istream& f, uint32_t& value)
+{
+    f.read((char*) &value, sizeof(value));
+    return !!f;
+}
+
+inline bool ReadBinaryInt(std::istream& f, int& value)
+{
+    f.read((char*) &value, sizeof(value));
+    return !!f;
+}
+
+inline bool ReadBinaryString(std::istream& f, std::string& s)
+{
+    uint16_t length = 0;
+    ReadBinaryUInt16(f, length);
+    if (length > 0)
+    {
+        s.resize(length);
+        f.read(&s[0], length);
+    }
+    else
+    {
+        s.clear();
+    }
+    return !!f;
+}
+
+inline bool ReadBinaryVector(std::istream& f, std::vector<dReal>& v)
+{
+    // Get number of data points
+    uint32_t numDataPoints = 0;
+    ReadBinaryUInt32(f, numDataPoints);
+    v.resize(numDataPoints);
+
+    // Load binary directly to vector
+    const uint64_t vectorLengthBytes = numDataPoints*sizeof(dReal);
+    f.read((char*) &v[0], vectorLengthBytes);
+
+    return !!f;
+}
+
 TrajectoryBase::TrajectoryBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Trajectory,penv)
 {
 }
 
+// New feature: Store trajectory file in binary
 void TrajectoryBase::serialize(std::ostream& O, int options) const
 {
-    O << "<trajectory type=\"" << GetXMLId() << "\">" << endl << GetConfigurationSpecification();
-    O << "<data count=\"" << GetNumWaypoints() << "\">" << endl;
-    std::vector<dReal> data;
-    GetWaypoints(0,GetNumWaypoints(),data);
-    FOREACHC(it,data){
-        O << *it << " ";
+    // NOTE: Ignore 'options' argument for now
+
+    // Write binary file header
+    WriteBinaryUInt16(O, MAGIC_NUMBER);
+    WriteBinaryUInt16(O, VERSION_NUMBER);
+
+    /* Store meta-data */
+
+    // Indicate size of meta data
+    const ConfigurationSpecification& spec = this->GetConfigurationSpecification();
+    const uint16_t numGroups = spec._vgroups.size();
+    WriteBinaryUInt16(O, numGroups);
+
+    FOREACHC(itgroup, spec._vgroups)
+    {
+        WriteBinaryString(O, itgroup->name);   // Writes group name
+        WriteBinaryInt(O, itgroup->offset);    // Writes offset
+        WriteBinaryInt(O, itgroup->dof);       // Writes dof
+        WriteBinaryString(O, itgroup->interpolation);  // Writes interpolation
     }
-    O << "</data>" << endl;
-    if( GetDescription().size() > 0 ) {
-        O << "<description><![CDATA[" << GetDescription() << "]]></description>" << endl;
-    }
-    if( GetReadableInterfaces().size() > 0 ) {
-        xmlreaders::StreamXMLWriterPtr writer(new xmlreaders::StreamXMLWriter("readable"));
-        FOREACHC(it, GetReadableInterfaces()) {
-            BaseXMLWriterPtr newwriter = writer->AddChild(it->first);
-            it->second->Serialize(newwriter,options);
-        }
-        writer->Serialize(O);
-    }
-    O << "</trajectory>" << endl;
+
+    /* Store data waypoints */
+    std::vector<dReal> trajectoryData;
+    this->GetWaypoints(0, this->GetNumWaypoints(), trajectoryData);
+    WriteBinaryVector(O, trajectoryData);
 }
 
 InterfaceBasePtr TrajectoryBase::deserialize(std::istream& I)

@@ -158,8 +158,8 @@ public:
 
     /// \brief output the trajectory in XML format
 
-    /* DEVELOPER's NOTE:
-    Base serialization/deserialiation implementation is considerably slower. For improved performance,
+    /* DEVELOPER'S NOTE:
+    Base serialization/deserialiation implementation is slower. For improved performance,
     developers should implement their own serialization/deserialization methods in inherited classes.
     For example implementation, please see GenericTrajectory serialization/deserialization implementation
     */
@@ -167,8 +167,8 @@ public:
 
     /// \brief initialize the trajectory
 
-    /* DEVELOPER's NOTE:
-    Base serialization/deserialiation implementation is considerably slower. For improved performance,
+    /* DEVELOPER'S NOTE:
+    Base serialization/deserialiation implementation is slower. For improved performance,
     developers should implement their own serialization/deserialization methods in inherited classes.
     For example implementation, please see GenericTrajectory serialization/deserialization implementation
     */
