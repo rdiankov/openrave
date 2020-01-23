@@ -477,8 +477,8 @@ public:
             return shared_from_this();
         }
         
-        // Call on parent class deserialize method for backwards compatible with old XML trajectory files
-        return TrajectoryBase::deserialize(I);
+        I.seekg((size_t) pos);                  // Reset to initial positoin
+        return TrajectoryBase::deserialize(I);  // Call on parent class deserialize method for backwards compatible with old XML trajectory files
     }
 
     void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
