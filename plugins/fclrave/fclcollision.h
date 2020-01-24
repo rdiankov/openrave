@@ -79,7 +79,7 @@ public:
 
             // set the gjk solver (collision checking between convex bodies) so that we can use hints
             _request.gjk_solver_type = fcl::GST_INDEP;
-            _distanceRequest.gjk_solver_type = fcl::GST_INDEP;
+            _distanceRequest.gjk_solver_type = fcl::GST_LIBCCD;
 
             if( !!_report ) {
                 _report->Reset(_pchecker->GetCollisionOptions());
