@@ -3214,10 +3214,13 @@ public:
                         }
                     }
 
-                    daeElementRef pgripperControlID = tec->getChild("gripperControlID");                    
+                    daeElementRef pgripperControlID = tec->getChild("gripperControlID");
                     if( !!pgripperControlID ) {
                         string gripperControlID = pgripperControlID->getAttribute("name");
                         manipinfo._gripperControlID = gripperControlID;
+                    }
+                    else{
+                        manipinfo._gripperControlID = name;
                     }
 
                     daeElementRef pframe_tip = tec->getChild("frame_tip");
