@@ -410,7 +410,7 @@ public:
     }
 
     // New feature: Store trajectory file in binary
-    void serialize(std::ostream& O, int options) const
+    void serialize(std::ostream& O, int options) const override
     {
         // NOTE: Ignore 'options' argument for now
 
@@ -437,16 +437,18 @@ public:
         WriteBinaryVector(O, this->_vtrajdata);
     }
 
-    InterfaceBasePtr deserialize(std::istream& I)
+    void deserialize(std::istream& I) override
     {
         // Check whether binary or XML file
         stringstream::streampos pos = I.tellg();  // Save old position
         uint16_t binaryFileHeader = 0;
-        ReadBinaryUInt16(I, binaryFileHeader);
+        if( !ReadBinaryUInt16(I, binaryFileHeader) ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot read first 2 bytes for deserializing traj, stream might be empty "),ORE_InvalidArguments);
+        }
 
         // Read binary trajectory files
         if (binaryFileHeader == MAGIC_NUMBER)
-        {   
+        {
             uint16_t versionNumber = 0;
             ReadBinaryUInt16(I, versionNumber);
 
@@ -454,7 +456,7 @@ public:
             {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("unsupported trajectory format version %d "),versionNumber,ORE_InvalidArguments);
             }
-                
+
             /* Read metadata */
 
             // Read number of groups
@@ -474,11 +476,12 @@ public:
 
             /* Read trajectory data */
             ReadBinaryVector(I, this->_vtrajdata);
-            return shared_from_this();
         }
-        
-        I.seekg((size_t) pos);                  // Reset to initial positoin
-        return TrajectoryBase::deserialize(I);  // Call on parent class deserialize method for backwards compatible with old XML trajectory files
+        else {
+            // try XML deserialization
+            I.seekg((size_t) pos);                  // Reset to initial positoin
+            TrajectoryBase::deserialize(I);
+        }
     }
 
     void Clone(InterfaceBaseConstPtr preference, int cloningoptions)

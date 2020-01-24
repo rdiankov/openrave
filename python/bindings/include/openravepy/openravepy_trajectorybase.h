@@ -81,13 +81,14 @@ public:
 
     dReal GetDuration() const;
 
-    PyTrajectoryBasePtr deserialize(const string& s);
+    void deserialize(const string& s);
 
     object serialize(object ooptions=py::none_());
-    bool Read(const string& s, object probot);
 
-    object Write(object options);
+    void SaveToFile(const std::string& filename, object ooptions=py::none_());
 
+    void LoadFromFile(const std::string& filename);
+    
     TrajectoryBasePtr GetTrajectory();
 
     // functions that explictly initialize ConfigurationSpecification with ConfigurationSpecification::Group

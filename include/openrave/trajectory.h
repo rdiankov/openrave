@@ -79,14 +79,14 @@ public:
     virtual void Sample(std::vector<dReal>& data, dReal time, const ConfigurationSpecification& spec, bool reintializeData=true) const;
 
     /** \brief bulk samples the trajectory given a vector of times using the trajectory's specification.
-        
+
         \param data[out] the sampled points depending on the times
         \param times[in] the times to sample
      */
     virtual void SamplePoints(std::vector<dReal>& data, const std::vector<dReal>& times) const;
-    
+
     /** \brief bulk samples the trajectory given a vector of times and a specific configuration specification.
-        
+
         The default implementation is slow, so interface developers should override it.
         \param data[out] the sampled points for every time entry.
         \param times[in] the times to sample
@@ -157,20 +157,10 @@ public:
     virtual dReal GetDuration() const = 0;
 
     /// \brief output the trajectory in XML format
-
-    /* DEVELOPER'S NOTE:
-    Developers should implement their own serialization methods(s) in inherited classes.
-    For example implementation, please see GenericTrajectory serialization implementation
-    */
-    virtual void serialize(std::ostream& O, int options=0) const = 0;
+    virtual void serialize(std::ostream& O, int options=0) const;
 
     /// \brief initialize the trajectory
-
-    /* DEVELOPER'S NOTE:
-    Base implementation is slow. For improved performance, developers should implement their own deserialization method(s) in inherited classes.
-    For example implementation, please see GenericTrajectory deserialization implementation
-    */
-    virtual InterfaceBasePtr deserialize(std::istream& I);
+    virtual void deserialize(std::istream& I);
 
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 
