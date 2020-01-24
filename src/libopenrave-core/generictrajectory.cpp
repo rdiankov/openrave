@@ -412,29 +412,34 @@ public:
     // New feature: Store trajectory file in binary
     void serialize(std::ostream& O, int options) const override
     {
-        // NOTE: Ignore 'options' argument for now
-
-        // Write binary file header
-        WriteBinaryUInt16(O, MAGIC_NUMBER);
-        WriteBinaryUInt16(O, VERSION_NUMBER);
-
-        /* Store meta-data */
-
-        // Indicate size of meta data
-        const ConfigurationSpecification& spec = this->GetConfigurationSpecification();
-        const uint16_t numGroups = spec._vgroups.size();
-        WriteBinaryUInt16(O, numGroups);
-
-        FOREACHC(itgroup, spec._vgroups)
-        {
-            WriteBinaryString(O, itgroup->name);   // Writes group name
-            WriteBinaryInt(O, itgroup->offset);    // Writes offset
-            WriteBinaryInt(O, itgroup->dof);       // Writes dof
-            WriteBinaryString(O, itgroup->interpolation);  // Writes interpolation
+        if( options & 0x8000 ) {
+            TrajectoryBase::serialize(O, options);
         }
+        else {
+            // NOTE: Ignore 'options' argument for now
 
-        /* Store data waypoints */
-        WriteBinaryVector(O, this->_vtrajdata);
+            // Write binary file header
+            WriteBinaryUInt16(O, MAGIC_NUMBER);
+            WriteBinaryUInt16(O, VERSION_NUMBER);
+
+            /* Store meta-data */
+
+            // Indicate size of meta data
+            const ConfigurationSpecification& spec = this->GetConfigurationSpecification();
+            const uint16_t numGroups = spec._vgroups.size();
+            WriteBinaryUInt16(O, numGroups);
+
+            FOREACHC(itgroup, spec._vgroups)
+            {
+                WriteBinaryString(O, itgroup->name);   // Writes group name
+                WriteBinaryInt(O, itgroup->offset);    // Writes offset
+                WriteBinaryInt(O, itgroup->dof);       // Writes dof
+                WriteBinaryString(O, itgroup->interpolation);  // Writes interpolation
+            }
+
+            /* Store data waypoints */
+            WriteBinaryVector(O, this->_vtrajdata);
+        }
     }
 
     void deserialize(std::istream& I) override
