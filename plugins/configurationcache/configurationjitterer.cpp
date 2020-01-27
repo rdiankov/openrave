@@ -51,7 +51,7 @@ public:
     dReal fCosAngleThresh; ///< the cos angle threshold
 };
 
-typedef boost::shared_ptr<ManipDirectionThresh> ManipDirectionThreshPtr;
+typedef OPENRAVE_SHARED_PTR<ManipDirectionThresh> ManipDirectionThreshPtr;
 
 /// \brief holds parameters for threshing the position with respect to a bounding box.
 class ManipPositionConstraints
@@ -85,7 +85,7 @@ public:
     OBB obb;
 };
 
-typedef boost::shared_ptr<ManipPositionConstraints> ManipPositionConstraintsPtr;
+typedef OPENRAVE_SHARED_PTR<ManipPositionConstraints> ManipPositionConstraintsPtr;
 
 class ConfigurationJitterer : public SpaceSamplerBase
 {

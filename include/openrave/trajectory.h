@@ -79,14 +79,14 @@ public:
     virtual void Sample(std::vector<dReal>& data, dReal time, const ConfigurationSpecification& spec, bool reintializeData=true) const;
 
     /** \brief bulk samples the trajectory given a vector of times using the trajectory's specification.
-        
+
         \param data[out] the sampled points depending on the times
         \param times[in] the times to sample
      */
     virtual void SamplePoints(std::vector<dReal>& data, const std::vector<dReal>& times) const;
-    
+
     /** \brief bulk samples the trajectory given a vector of times and a specific configuration specification.
-        
+
         The default implementation is slow, so interface developers should override it.
         \param data[out] the sampled points for every time entry.
         \param times[in] the times to sample
@@ -160,7 +160,7 @@ public:
     virtual void serialize(std::ostream& O, int options=0) const;
 
     /// \brief initialize the trajectory
-    virtual InterfaceBasePtr deserialize(std::istream& I);
+    virtual void deserialize(std::istream& I);
 
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 
