@@ -804,7 +804,8 @@ class GraspingModel(DatabaseGenerator):
                 if outputtrajobj:
                     traj = trajdata[-1]
                 else:
-                    traj = RaveCreateTrajectory(self.env,'').deserialize(trajdata[-1])
+                    traj = RaveCreateTrajectory(self.env,'')
+                    traj.deserialize(trajdata[-1])
                 values = traj.GetConfigurationSpecification().ExtractJointValues(GetWaypoint(-1),self.robot,self.robot.GetActiveDOFIndices(),0)
                 self.robot.SetActiveDOFValues(values)
             self.robot.SetActiveDOFs(self.manip.GetGripperIndices())

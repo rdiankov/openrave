@@ -14,7 +14,7 @@
 """Misc openravepy functions. Need to explicitly import to use them.
 """
 from __future__ import with_statement # for python 2.5
-from . import openravepy_int, OpenRAVEException
+from . import openravepy_int, openravepy_ext, OpenRAVEException
 import os.path
 from sys import platform as sysplatformname
 from sys import stdout
@@ -58,8 +58,8 @@ except ImportError:
         return curdir if not rel_list else join(*rel_list)
 
 def LoadTrajectoryFromFile(env,trajfile,trajtype=''):
-    with open(trajfile,'r') as f:
-        traj = openravepy_int.RaveCreateTrajectory(env,trajtype).deserialize(f.read())
+    traj = openravepy_int.RaveCreateTrajectory(env,trajtype)
+    traj.LoadFromFile(trajfile)
     return traj
 
 def InitOpenRAVELogging(stream=stdout):
