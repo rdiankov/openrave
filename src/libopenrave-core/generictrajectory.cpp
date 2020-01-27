@@ -163,7 +163,7 @@ public:
             // already init
         }
         else {
-            BOOST_ASSERT(spec.GetDOF()>0 && spec.IsValid());
+            //BOOST_ASSERT(spec.GetDOF()>0 && spec.IsValid()); // when deserializing, can sometimes get invalid spec, but that's ok
             _bInit = false;
             _vgroupinterpolators.resize(0);
             _vgroupvalidators.resize(0);
@@ -171,7 +171,7 @@ public:
             _vddoffsets.resize(0);
             _vdddoffsets.resize(0);
             _vintegraloffsets.resize(0);
-            _spec = spec;
+            _spec = spec; // what if this pointer is the same?
             // order the groups based on computation order
             stable_sort(_spec._vgroups.begin(),_spec._vgroups.end(),boost::bind(&GenericTrajectory::SortGroups,this,_1,_2));
             _timeoffset = -1;
@@ -470,16 +470,16 @@ public:
             uint16_t numGroups = 0;
             ReadBinaryUInt16(I, numGroups);
 
-            ConfigurationSpecification spec;
-            spec._vgroups.resize(numGroups);
-            FOREACH(itgroup, spec._vgroups)
+            _bInit = false;
+            _spec._vgroups.resize(numGroups);
+            FOREACH(itgroup, _spec._vgroups)
             {
                 ReadBinaryString(I, itgroup->name);             // Read group name
                 ReadBinaryInt(I, itgroup->offset);              // Read offset
                 ReadBinaryInt(I, itgroup->dof);                 // Read dof
                 ReadBinaryString(I, itgroup->interpolation);    // Read interpolation
             }
-            this->Init(spec);
+            this->Init(_spec);
 
             /* Read trajectory data */
             ReadBinaryVector(I, this->_vtrajdata);

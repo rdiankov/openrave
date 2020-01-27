@@ -34,7 +34,7 @@ std::istream& operator>>(std::istream& I, PlannerParameters& pp)
         I.seekg(0, ios::end);
         stringstream::streampos endpos = I.tellg();
         I.seekg(pos);
-        
+
         std::vector<char> vstrbuf; vstrbuf.reserve((size_t)(endpos-pos)); // make sure there are at least this many bytes
 
         const char* pMatchPlannerParameters = "</PlannerParameters>";
@@ -98,6 +98,10 @@ int AddStatesWithLimitCheck(std::vector<dReal>& q, const std::vector<dReal>& qde
         }
     }
     return status;
+}
+
+PlannerStatus::PlannerStatus() : statusCode(0)
+{
 }
 
 PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, CollisionReportPtr report) :
