@@ -439,6 +439,8 @@ public:
 
             /* Store data waypoints */
             WriteBinaryVector(O, this->_vtrajdata);
+
+            WriteBinaryString(O, GetDescription());
         }
     }
 
@@ -481,6 +483,7 @@ public:
 
             /* Read trajectory data */
             ReadBinaryVector(I, this->_vtrajdata);
+            ReadBinaryString(I, __description);
         }
         else {
             // try XML deserialization
