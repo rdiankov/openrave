@@ -120,7 +120,6 @@ public:
         }
 
         virtual std::string GetGripperControlID() const {
-            RAVELOG_WARN_FORMAT("_info._gripperControlID %s", _info._gripperControlID);
             return _info._gripperControlID;
         }
         
