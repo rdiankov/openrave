@@ -2221,6 +2221,8 @@ private:
                 piksolverinterface->setCharData(iksolver->GetXMLId().c_str());
                 // TODO add the free joints
             }
+            daeElementRef gripperControlID = ptec->add("gripperControlID");
+            gripperControlID->setAttribute("name",(*itmanip)->GetGripperControlID().c_str());
         }
     }
 
