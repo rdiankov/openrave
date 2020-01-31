@@ -20,12 +20,12 @@ inline object handle_to_object(PyObject* pyo) {
     return object(handle<>(pyo));
 }
 template<typename T>
-inline numeric::array to_array_astype(PyObject* pyo) {
-    return static_cast<numeric::array>(static_cast<numeric::array>(handle<>(pyo)).astype(openravepy::select_dtype<T>::type));
+inline boost::python::numeric::array to_array_astype(PyObject* pyo) {
+    return static_cast<boost::python::numeric::array>(static_cast<boost::python::numeric::array>(handle<>(pyo)).astype(openravepy::select_dtype<T>::type));
 }
 template<typename T>
 inline object empty_array_astype() {
-    return numeric::array(list()).astype(openravepy::select_dtype<T>::type);
+    return boost::python::numeric::array(boost::python::list()).astype(openravepy::select_dtype<T>::type);
 }
 template <typename T>
 using extract_ = extract<T>;
@@ -114,7 +114,7 @@ inline py::numeric::array toPyArray(const std::vector<T>& v, std::vector<npy_int
 }
 
 template <typename T, int N>
-inline  py::numeric::array toPyArray(const boost::array<T, N>& v)
+inline py::numeric::array toPyArray(const boost::array<T, N>& v)
 {
     return toPyArrayN(v.data(), N);
 }

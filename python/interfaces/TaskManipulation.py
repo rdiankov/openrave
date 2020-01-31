@@ -143,7 +143,9 @@ class TaskManipulation:
         if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
             trajdata = ' '.join(resvalues)
             if outputtrajobj is not None and outputtrajobj:
-                trajdata = RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(trajdata)
+                newtraj = RaveCreateTrajectory(self.prob.GetEnv(),'')
+                newtraj.deserialize(trajdata)
+                trajdata = newtraj
         return goals,graspindex,searchtime,trajdata
     def EvaluateConstraints(self,freedoms,configs,targetframematrix=None,targetframepose=None,errorthresh=None):
         """See :ref:`module-taskmanipulation-evaluateconstraints`
@@ -198,7 +200,9 @@ class TaskManipulation:
         if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
             traj = ' '.join(resvalues)
             if outputtrajobj is not None and outputtrajobj:
-                traj = RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(traj)
+                newtraj = RaveCreateTrajectory(self.prob.GetEnv(),'')
+                newtraj.deserialize(traj)
+                traj = newtraj
         else:
             traj = None
         return final,traj
@@ -240,7 +244,9 @@ class TaskManipulation:
         if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
             traj = ' '.join(resvalues)
             if outputtrajobj is not None and outputtrajobj:
-                traj = RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(traj)
+                newtraj = RaveCreateTrajectory(self.prob.GetEnv(),'')
+                newtraj.deserialize(traj)
+                traj = newtraj
         else:
             traj = None
         return final,traj
@@ -277,7 +283,9 @@ class TaskManipulation:
         if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
             traj = ' '.join(resvalues)
             if outputtrajobj is not None and outputtrajobj:
-                traj = RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(traj)
+                newtraj = RaveCreateTrajectory(self.prob.GetEnv(),'')
+                newtraj.deserialize(traj)
+                traj = newtraj
         else:
             traj = None
         return final,traj
