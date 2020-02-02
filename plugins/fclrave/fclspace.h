@@ -169,6 +169,7 @@ public:
     FCLSpace(EnvironmentBasePtr penv, const std::string& userdatakey)
         : _penv(penv), _userdatakey(userdatakey), _bIsSelfCollisionChecker(true)
     {
+
         // After many test, OBB seems to be the only real option (followed by kIOS which is needed for distance checking)
         SetBVHRepresentation("OBB");
     }
