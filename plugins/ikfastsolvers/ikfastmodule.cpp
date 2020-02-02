@@ -461,8 +461,12 @@ public:
 
         std::vector<std::string> vikfasttokens;
         utils::TokenizeString(vtokens[1], ".", vikfasttokens);
-        if( vikfasttokens.size() != 4 || vikfasttokens[0] != "ikfast" ) {
+        if( vikfasttokens.size() != 4 ) {
             RAVELOG_WARN_FORMAT("not enough tokens for: %s", xmlid);
+            return false;
+        }
+        if( vikfasttokens[0] != "ikfast" ) {
+            RAVELOG_WARN_FORMAT("not enough an ikfast solver: %s", xmlid);
             return false;
         }
 
@@ -627,7 +631,7 @@ public:
                 // file not found, so create
                 RAVELOG_INFO(str(boost::format("Generating inverse kinematics %s for manip %s:%s, hash=%s, saving intermediate data to %s, will take several minutes...\n")%striktype%probot->GetName()%pmanip->GetName()%pmanip->GetInverseKinematicsStructureHash(iktype)%tempfilename));
                 GetEnv()->Save(tempfilename,EnvironmentBase::SO_Body,atts);
-                string cmdgen = str(boost::format("openrave.py --database inversekinematics --usecached --robot=\"%s\" --manipname=%s --iktype=%s")%tempfilename%pmanip->GetName()%striktype);
+                string cmdgen = str(boost::format("openrave.py --database inversekinematics --usecached --robot=\"%s\" --manipname=%s --iktype=%s --filepermissions=%i")%tempfilename%pmanip->GetName()%striktype%0777);
                 // use raw system call, popen causes weird crash in the inversekinematics compiler
                 int generateexit = system(cmdgen.c_str());
                 //FILE* pipe = MYPOPEN(cmdgen.c_str(), "r");

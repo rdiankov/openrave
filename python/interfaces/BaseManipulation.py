@@ -111,7 +111,9 @@ class BaseManipulation:
         if res is None:
             raise PlanningError('MoveHandStraight')
         if outputtrajobj is not None and outputtrajobj:
-            return RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(res)
+            traj = RaveCreateTrajectory(self.prob.GetEnv(),'')
+            traj.deserialize(res)
+            return traj
         return res
     def MoveManipulator(self,goal=None,maxiter=None,execute=None,outputtraj=None,maxtries=None,goals=None,steplength=None,outputtrajobj=None,jitter=None,releasegil=False):
         """See :ref:`module-basemanipulation-movemanipulator`
@@ -165,7 +167,9 @@ class BaseManipulation:
         if res is None:
             raise PlanningError('MoveActiveJoints')
         if outputtrajobj is not None and outputtrajobj:
-            return RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(res)
+            traj = RaveCreateTrajectory(self.prob.GetEnv(),'')
+            traj.deserialize(res)
+            return traj
         return res
 
     def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None,ikparam=None,ikparams=None,jitter=None,minimumgoalpaths=None,outputtrajobj=None,postprocessing=None,jittergoal=None, constrainttaskmatrix=None, constrainttaskpose=None,goalsampleprob=None,goalmaxsamples=None,goalmaxtries=None,releasegil=False,initialconfigs=None,freevalues=None):
@@ -235,7 +239,9 @@ class BaseManipulation:
         if res is None:
             raise PlanningError('MoveToHandPosition')
         if outputtrajobj is not None and outputtrajobj:
-            return RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(res)
+            traj = RaveCreateTrajectory(self.prob.GetEnv(),'')
+            traj.deserialize(res)
+            return traj
         return res
     def MoveUnsyncJoints(self,jointvalues,jointinds,maxtries=None,planner=None,maxdivision=None,execute=None,outputtraj=None,outputtrajobj=None):
         """See :ref:`module-basemanipulation-moveunsyncjoints`
@@ -256,7 +262,9 @@ class BaseManipulation:
         if res is None:
             raise PlanningError('MoveUnsyncJoints')
         if outputtrajobj is not None and outputtrajobj:
-            return RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(res)
+            traj=RaveCreateTrajectory(self.prob.GetEnv(),'')
+            traj.deserialize(res)
+            return traj
         return res
     def JitterActive(self,maxiter=None,jitter=None,execute=None,outputtraj=None,outputfinal=None,outputtrajobj=None):
         """See :ref:`module-basemanipulation-jitteractive`
@@ -286,8 +294,11 @@ class BaseManipulation:
         else:
             traj = None
         if traj is not None and outputtrajobj is not None and outputtrajobj:
-            traj = RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(traj)
+            newtraj = RaveCreateTrajectory(self.prob.GetEnv(),'')
+            newtraj.deserialize(traj)
+            traj=newtraj
         return final,traj
+    
     def FindIKWithFilters(self,ikparam,cone=None,solveall=None,filteroptions=None):
         """See :ref:`module-basemanipulation-findikwithfilters`
         """
