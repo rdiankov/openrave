@@ -77,24 +77,10 @@ public:
     object _vRenderScale = toPyVector3(Vector(1,1,1));
     object _vCollisionScale = toPyVector3(Vector(1,1,1));
 
-    // object _t;
-    // object _vGeomData;
-    // object _vGeomData2;
-    // object _vGeomData3;
-    // object _vGeomData4;
-    // object _vDiffuseColor;
-    // object _vAmbientColor;
-    // object _meshcollision;
     py::list _vSideWalls;
-    float _containerBaseHeight;
-    // GeometryType _type;
-    // // best to initialize these as None's
-    // object _name;
-    // object _filenamerender;
-    // object _filenamecollision;
-    // object _vRenderScale;
-    // object _vCollisionScale;
     py::dict _mapExtraGeometries;
+
+    float _containerBaseHeight = 0.0;
     float _fTransparency = 0.0;
     bool _bVisible = true;
     bool _bModifiable = true;

@@ -46,6 +46,7 @@
 #include <boost/python.hpp>
 #include <boost/python/exception_translator.hpp>
 #include <boost/python/docstring_options.hpp>
+#include <boost/python/slice.hpp>
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 #include <pyconfig.h>
 #include <numpy/arrayobject.h>
