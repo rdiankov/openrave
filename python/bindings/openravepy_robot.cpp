@@ -491,15 +491,29 @@ object PyRobotBase::PyManipulator::FindIKSolutions(object oparam, int filteropti
             return py::empty_array_astype<dReal>();
         }
 
-        npy_intp dims[] = { npy_intp(vsolutions.size()), npy_intp(_pmanip->GetArmIndices().size()) };
+        const size_t nSolutions = vsolutions.size();
+        const size_t nArmIndices = _pmanip->GetArmIndices().size();
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        const size_t numel = nSolutions * nArmIndices;
+        std::vector<dReal> vpos(numel);
+        dReal* ppos = vpos.data();
+#else // USE_PYBIND11_PYTHON_BINDINGS
+        npy_intp dims[] = { npy_intp(nSolutions), npy_intp(nArmIndices) };
         PyObject *pysolutions = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
         dReal* ppos = (dReal*)PyArray_DATA(pysolutions);
-        FOREACH(itsol,vsolutions) {
-            BOOST_ASSERT(itsol->size()==size_t(dims[1]));
-            std::copy(itsol->begin(),itsol->end(),ppos);
-            ppos += itsol->size();
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+        for(const std::vector<dReal>& solution : vsolutions) {
+            BOOST_ASSERT(solution.size() == nArmIndices);
+            std::copy(begin(solution), end(solution), ppos);
+            ppos += nArmIndices;
         }
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        py::array_t<dReal> pysolutions = toPyArray(vpos);
+        pysolutions.resize({(int) nSolutions, (int) nArmIndices});
+        return pysolutions;
+#else // USE_PYBIND11_PYTHON_BINDINGS
         return py::to_array_astype<dReal>(pysolutions);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
     }
 }
 
@@ -538,15 +552,29 @@ object PyRobotBase::PyManipulator::FindIKSolutions(object oparam, object freepar
             return py::empty_array_astype<dReal>();
         }
 
-        npy_intp dims[] = { npy_intp(vsolutions.size()), npy_intp(_pmanip->GetArmIndices().size()) };
+        const size_t nSolutions = vsolutions.size();
+        const size_t nArmIndices = _pmanip->GetArmIndices().size();
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        const size_t numel = nSolutions * nArmIndices;
+        std::vector<dReal> vpos(numel);
+        dReal* ppos = vpos.data();
+#else // USE_PYBIND11_PYTHON_BINDINGS
+        npy_intp dims[] = { npy_intp(nSolutions), npy_intp(nArmIndices) };
         PyObject *pysolutions = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
         dReal* ppos = (dReal*)PyArray_DATA(pysolutions);
-        FOREACH(itsol,vsolutions) {
-            BOOST_ASSERT(itsol->size()==size_t(dims[1]));
-            std::copy(itsol->begin(),itsol->end(),ppos);
-            ppos += itsol->size();
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+        for(const std::vector<dReal>& solution : vsolutions) {
+            BOOST_ASSERT(solution.size() == nArmIndices);
+            std::copy(begin(solution), end(solution), ppos);
+            ppos += nArmIndices;
         }
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        py::array_t<dReal> pysolutions = toPyArray(vpos);
+        pysolutions.resize({(int) nSolutions, (int) nArmIndices});
+        return pysolutions;
+#else // USE_PYBIND11_PYTHON_BINDINGS
         return py::to_array_astype<dReal>(pysolutions);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
     }
 }
 

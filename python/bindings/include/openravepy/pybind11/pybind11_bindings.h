@@ -128,6 +128,18 @@ inline py::array_t<T> toPyArray(const std::vector<T>& v)
     return toPyArrayN(v.data(), v.size());
 }
 
+// std::vector<bool> is special
+template <>
+inline py::array_t<bool> toPyArray(const std::vector<bool>& v)
+{
+    py::array_t<bool> arr;
+    arr.resize({(int) v.size()});
+    for(size_t i = 0; i < v.size(); ++i) {
+        arr[i] = v[i];
+    }
+    return arr;
+}
+
 template <typename T>
 inline py::array_t<T> toPyArray(const std::vector<T>& v, std::vector<npy_intp>& dims)
 {
@@ -140,6 +152,12 @@ inline py::array_t<T> toPyArray(const std::vector<T>& v, std::vector<npy_intp>& 
     }
     BOOST_ASSERT(numel == v.size());
     return toPyArrayN(v.data(), dims);
+}
+
+template <typename T, long unsigned int N>
+inline py::array_t<T> toPyArray(const std::array<T, N>& v)
+{
+    return toPyArrayN(v.data(), N);
 }
 
 template <typename T, int N>

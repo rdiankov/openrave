@@ -297,25 +297,43 @@ PySensorBase::PyLaserSensorData::~PyLaserSensorData() {
 
 PySensorBase::PyCameraSensorData::PyCameraSensorData(OPENRAVE_SHARED_PTR<SensorBase::CameraGeomData const> pgeom, OPENRAVE_SHARED_PTR<SensorBase::CameraSensorData> pdata) : PySensorData(pdata), intrinsics(pgeom->intrinsics)
 {
-    if( (int)pdata->vimagedata.size() != pgeom->height*pgeom->width*3 ) {
+    const std::vector<uint8_t>& vimagedata = pdata->vimagedata;
+    const size_t numel = pgeom->height * pgeom->width * 3;
+    if( vimagedata.size() != numel ) {
         throw openrave_exception(_("bad image data"));
     }
+
     {
-        npy_intp dims[] = { pgeom->height,pgeom->width,3};
-        PyObject *pyvalues = PyArray_SimpleNew(3,dims, PyArray_UINT8);
-        if( pdata->vimagedata.size() > 0 ) {
-            memcpy(PyArray_DATA(pyvalues),&pdata->vimagedata[0],pdata->vimagedata.size());
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        py::array_t<uint8_t> pyimagedata = toPyArray(vimagedata);
+        pyimagedata.resize({pgeom->height, pgeom->width, 3});
+        imagedata = pyimagedata;
+#else // USE_PYBIND11_PYTHON_BINDINGS
+        npy_intp dims[] = {npy_intp(pgeom->height), npy_intp(pgeom->width), npy_intp(3)};
+        PyObject *pyvalues = PyArray_SimpleNew(3, dims, PyArray_UINT8);
+        if( !vimagedata.empty() ) {
+            memcpy(PyArray_DATA(pyvalues), vimagedata.data(), numel);
         }
         imagedata = py::to_array_astype<uint8_t>(pyvalues);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
     }
 }
 PySensorBase::PyCameraSensorData::PyCameraSensorData(OPENRAVE_SHARED_PTR<SensorBase::CameraGeomData const> pgeom) : PySensorData(SensorBase::ST_Camera), intrinsics(pgeom->intrinsics)
 {
     {
+        const size_t numel = pgeom->height * pgeom->width * 3;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        py::array_t<uint8_t> pyimagedata(numel);
+        py::buffer_info buf = pyimagedata.request();
+        memset((uint8_t*)buf.ptr, 0, numel);
+        pyimagedata.resize({pgeom->height, pgeom->width, 3});
+        imagedata = pyimagedata;
+#else // USE_PYBIND11_PYTHON_BINDINGS
         npy_intp dims[] = { pgeom->height,pgeom->width,3};
         PyObject *pyvalues = PyArray_SimpleNew(3,dims, PyArray_UINT8);
-        memset(PyArray_DATA(pyvalues),0,pgeom->height*pgeom->width*3);
+        memset(PyArray_DATA(pyvalues), 0, numel);
         imagedata = py::to_array_astype<uint8_t>(pyvalues);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
     }
     {
         numeric::array arr(py::make_tuple(pgeom->intrinsics.fx,0,pgeom->intrinsics.cx,0,pgeom->intrinsics.fy,pgeom->intrinsics.cy,0,0,1));

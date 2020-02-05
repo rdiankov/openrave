@@ -341,6 +341,17 @@ TransformMatrix ExtractTransformMatrix(const object& oraw)
 
 object toPyArray(const TransformMatrix& t)
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    const std::array<dReal, 16> arr {
+        t.m[0], t.m[1], t.m[2], t.trans.x,
+        t.m[4], t.m[5], t.m[6], t.trans.y,
+        t.m[8], t.m[9], t.m[10], t.trans.z,
+        0, 0, 0, 1
+    };
+    py::array_t<dReal> pyvalues = toPyArray(arr);
+    pyvalues.resize({4, 4});
+    return pyvalues;
+#else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { 4,4};
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
@@ -349,17 +360,25 @@ object toPyArray(const TransformMatrix& t)
     pdata[8] = t.m[8]; pdata[9] = t.m[9]; pdata[10] = t.m[10]; pdata[11] = t.trans.z;
     pdata[12] = 0; pdata[13] = 0; pdata[14] = 0; pdata[15] = 1;
     return py::to_array_astype<dReal>(pyvalues);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 
 object toPyArray(const Transform& t)
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    const std::array<dReal, 7> arr {
+        t.rot.x, t.rot.y, t.rot.z, t.rot.w, t.trans.x, t.trans.y, t.trans.z
+    };
+    return toPyArray(arr);
+#else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { 7};
     PyObject *pyvalues = PyArray_SimpleNew(1,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
     pdata[0] = t.rot.x; pdata[1] = t.rot.y; pdata[2] = t.rot.z; pdata[3] = t.rot.w;
     pdata[4] = t.trans.x; pdata[5] = t.trans.y; pdata[6] = t.trans.z;
     return py::to_array_astype<dReal>(pyvalues);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 AttributesList toAttributesList(py::dict odict)
@@ -1286,7 +1305,7 @@ bool PyEnvironmentBase::CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, PyKinBo
 object PyEnvironmentBase::CheckCollisionRays(py::numeric::array rays, PyKinBodyPtr pbody, bool bFrontFacingOnly)
 {
     object shape = rays.attr("shape");
-    int nRays = extract<int>(shape[0]);
+    const int nRays = extract<int>(shape[0]);
     if( nRays == 0 ) {
         return py::make_tuple(py::empty_array_astype<int>(), py::empty_array_astype<dReal>());
     }
@@ -1303,11 +1322,19 @@ object PyEnvironmentBase::CheckCollisionRays(py::numeric::array rays, PyKinBodyP
         throw OpenRAVEException(_("rays has to be a float array\n"));
     }
 
-    bool isFloat = PyArray_ITEMSIZE(pPyRays) == sizeof(float); // or double
+    const bool isFloat = PyArray_ITEMSIZE(pPyRays) == sizeof(float); // or double
     const float *pRaysFloat = isFloat ? reinterpret_cast<const float*>(PyArray_DATA(pPyRays)) : NULL;
     const double *pRaysDouble = isFloat ? NULL : reinterpret_cast<const double*>(PyArray_DATA(pPyRays));
 
     RAY r;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    const size_t numel = nRays * 6;
+    std::vector<dReal> vpos(numel);
+    std::vector<bool> vcollision(nRays);
+    dReal* ppos = vpos.data();
+    // std::vector<bool> is special, so use alias
+    std::vector<bool>& pcollision = vcollision;
+#else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { nRays,6};
     PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal) == sizeof(double) ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* ppos = (dReal*)PyArray_DATA(pypos);
@@ -1316,6 +1343,7 @@ object PyEnvironmentBase::CheckCollisionRays(py::numeric::array rays, PyKinBodyP
     // numpy bool = uint8_t
     uint8_t* pcollision = (uint8_t*)PyArray_DATA(pycollision);
     std::memset(pcollision, 0, nRays * sizeof(uint8_t));
+#endif // USE_PYBIND11_PYTHON_BINDINGS
     {
         openravepy::PythonThreadSaver threadsaver;
 
@@ -1338,13 +1366,7 @@ object PyEnvironmentBase::CheckCollisionRays(py::numeric::array rays, PyKinBodyP
                 pRaysDouble += 6;
             }
 
-            bool bCollision;
-            if( !pbody ) {
-                bCollision = _penv->CheckCollision(r, preport);
-            }
-            else {
-                bCollision = _penv->CheckCollision(r, KinBodyConstPtr(openravepy::GetKinBody(pbody)), preport);
-            }
+            const bool bCollision = pbody ? _penv->CheckCollision(r, KinBodyConstPtr(openravepy::GetKinBody(pbody)), preport) : _penv->CheckCollision(r, preport);
 
             if( bCollision &&( report.contacts.size() > 0) ) {
                 if( !bFrontFacingOnly ||( report.contacts[0].norm.dot3(r.dir)<0) ) {
@@ -1359,8 +1381,14 @@ object PyEnvironmentBase::CheckCollisionRays(py::numeric::array rays, PyKinBodyP
             }
         }
     }
-
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pypos = toPyArray(vpos);
+    pypos.resize({nRays, 6});
+    py::array_t<bool> pycollision = toPyArray(vcollision);
+    return py::make_tuple(pycollision, pypos);
+#else // USE_PYBIND11_PYTHON_BINDINGS
     return py::make_tuple(py::to_array_astype<bool>(pycollision), py::to_array_astype<dReal>(pypos));
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 bool PyEnvironmentBase::CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray)
@@ -2348,8 +2376,11 @@ py::object GetCodeStringOpenRAVEException(OpenRAVEException* p)
 {
     return ConvertStringToUnicode(RaveGetErrorCodeString(p->GetCode()));
 }
-
 #endif // USE_PYBIND11_PYTHON_BINDINGS
+
+object MyIdentityTransformMatrix() {
+    return toPyArray(TransformMatrix());
+}
 
 } // namespace openravepy
 
@@ -2913,14 +2944,14 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.attr("__version__") = OPENRAVE_VERSION_STRING;
     m.attr("__author__") = "Rosen Diankov, Guangning Tan";
-    m.attr("__copyright__") = "2009-2019 Rosen Diankov (rosen.diankov@gmail.com), Guangning Tan (tgntanguangning@gmail.com)";
+    m.attr("__copyright__") = "2009-2020 Rosen Diankov (rosen.diankov@gmail.com), Guangning Tan (tgntanguangning@gmail.com)";
     m.attr("__license__") = "Lesser GPL";
     m.attr("__docformat__") = "restructuredtext";
     m.attr("__pythonbinding__") = "pybind11";
 #else
     scope().attr("__version__") = OPENRAVE_VERSION_STRING;
     scope().attr("__author__") = "Rosen Diankov, Guangning Tan";
-    scope().attr("__copyright__") = "2009-2019 Rosen Diankov (rosen.diankov@gmail.com), Guangning Tan (tgntanguangning@gmail.com)";
+    scope().attr("__copyright__") = "2009-2020 Rosen Diankov (rosen.diankov@gmail.com), Guangning Tan (tgntanguangning@gmail.com)";
     scope().attr("__license__") = "Lesser GPL";
     scope().attr("__docformat__") = "restructuredtext";
     scope().attr("__pythonbinding__") = "Boost.Python." + std::to_string(BOOST_VERSION);
@@ -2969,11 +3000,13 @@ Because race conditions can pop up when trying to lock the openrave environment 
     m.def("RaveGetEnvironment", openravepy::RaveGetEnvironment, DOXY_FN1(RaveGetEnvironment));
     m.def("RaveGetEnvironments", openravepy::RaveGetEnvironments, DOXY_FN1(RaveGetEnvironments));
     m.def("RaveCreateInterface", openravepy::RaveCreateInterface, PY_ARGS("env","type","name") DOXY_FN1(RaveCreateInterface));
+    m.def("MyIdentityTransformMatrix", openravepy::MyIdentityTransformMatrix);
 #else
     def("RaveGetEnvironmentId",openravepy::RaveGetEnvironmentId,DOXY_FN1(RaveGetEnvironmentId));
     def("RaveGetEnvironment",openravepy::RaveGetEnvironment,DOXY_FN1(RaveGetEnvironment));
     def("RaveGetEnvironments",openravepy::RaveGetEnvironments,DOXY_FN1(RaveGetEnvironments));
     def("RaveCreateInterface",openravepy::RaveCreateInterface, PY_ARGS("env","type","name") DOXY_FN1(RaveCreateInterface));
+    def("MyIdentityTransformMatrix", openravepy::MyIdentityTransformMatrix);
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
