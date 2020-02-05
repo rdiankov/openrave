@@ -496,9 +496,9 @@ void init_openravepy_trajectory()
          DOXY_FN(TrajectoryBase, serialize)
          )
     .def("SaveToFile", &PyTrajectoryBase::SaveToFile,
-         "filename",
+         "filename"_a,
          "options"_a = py::none_(),
-         DOXY_FN(TrajectoryBase, serialize)
+         DOXY_FN(TrajectoryBase, SaveToFile)
          )
 #else
     .def("serialize",&PyTrajectoryBase::serialize,serialize_overloads(PY_ARGS("options") DOXY_FN(TrajectoryBase,serialize)))
