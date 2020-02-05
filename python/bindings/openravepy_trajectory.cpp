@@ -251,7 +251,7 @@ object PyTrajectoryBase::__getitem__(py::slice indices) const
     if(step==0) {
         throw OPENRAVE_EXCEPTION_FORMAT0(_("step cannot be 0"),ORE_InvalidArguments);
     }
-    for(int i=start;step>0 ? i<stop : i>stop;i+=step) {
+    for(int i=start; step>0 ? i<stop : i>stop; i+=step) {
         vindices.push_back(i);
     }
 
@@ -261,7 +261,7 @@ object PyTrajectoryBase::__getitem__(py::slice indices) const
     npy_intp dims[] = { npy_intp(vindices.size()), npy_intp(numdof) };
     PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     int waypointSize = values.size()*sizeof(values[0]);
-    for(int i=0;i<vindices.size();i++) {
+    for(int i=0; i< (int)vindices.size(); i++) {
         _ptrajectory->GetWaypoint(vindices[i],values);
         memcpy(PyArray_BYTES(pypos)+(i*waypointSize), &values[0], waypointSize);
     }
@@ -332,11 +332,10 @@ dReal PyTrajectoryBase::GetDuration() const {
     return _ptrajectory->GetDuration();
 }
 
-PyTrajectoryBasePtr PyTrajectoryBase::deserialize(const string& s)
+void PyTrajectoryBase::deserialize(const string& s)
 {
     std::stringstream ss(s);
-    InterfaceBasePtr p = _ptrajectory->deserialize(ss);
-    return PyTrajectoryBasePtr(new PyTrajectoryBase(RaveInterfaceCast<TrajectoryBase>(p),_pyenv));
+    _ptrajectory->deserialize(ss);
 }
 
 object PyTrajectoryBase::serialize(object ooptions)
@@ -347,15 +346,19 @@ object PyTrajectoryBase::serialize(object ooptions)
     return py::to_object(ss.str());
 }
 
-bool PyTrajectoryBase::Read(const string& s, object probot) {
-    RAVELOG_WARN("Trajectory.Read deprecated please use Trajerctory.deserialize\n");
-    deserialize(s);
-    return true;
+void PyTrajectoryBase::SaveToFile(const std::string& filename, object ooptions)
+{
+    std::ofstream f(filename.c_str(), ios::binary);
+    f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+    _ptrajectory->serialize(f, pyGetIntFromPy(ooptions,0));
+    f.close(); // necessary?
 }
 
-object PyTrajectoryBase::Write(object options) {
-    RAVELOG_WARN("Trajectory.Write deprecated please use Trajerctory.serialize\n");
-    return serialize(options);
+void PyTrajectoryBase::LoadFromFile(const std::string& filename)
+{
+    std::ifstream f(filename.c_str(), ios::binary);
+    _ptrajectory->deserialize(f);
+    f.close(); // necessary?
 }
 
 TrajectoryBasePtr PyTrajectoryBase::GetTrajectory() {
@@ -406,7 +409,8 @@ PyTrajectoryBasePtr RaveCreateTrajectory(PyEnvironmentBasePtr pyenv, const std::
 
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(serialize_overloads, serialize, 0, 1)
-#endif // 
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SaveToFile_overloads, SaveToFile, 1, 2)
+#endif //
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 void init_openravepy_trajectory(py::module& m)
@@ -488,15 +492,20 @@ void init_openravepy_trajectory()
     .def("GetDuration",&PyTrajectoryBase::GetDuration,DOXY_FN(TrajectoryBase, GetDuration))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .def("serialize", &PyTrajectoryBase::serialize,
-        "options"_a = py::none_(),
-        DOXY_FN(TrajectoryBase, serialize)
-    )
+         "options"_a = py::none_(),
+         DOXY_FN(TrajectoryBase, serialize)
+         )
+    .def("SaveToFile", &PyTrajectoryBase::SaveToFile,
+         "filename"_a,
+         "options"_a = py::none_(),
+         DOXY_FN(TrajectoryBase, SaveToFile)
+         )
 #else
     .def("serialize",&PyTrajectoryBase::serialize,serialize_overloads(PY_ARGS("options") DOXY_FN(TrajectoryBase,serialize)))
+    .def("SaveToFile",&PyTrajectoryBase::SaveToFile,SaveToFile_overloads(PY_ARGS("filename, options") DOXY_FN(TrajectoryBase,SaveToFile)))
 #endif
     .def("deserialize",&PyTrajectoryBase::deserialize, PY_ARGS("data") DOXY_FN(TrajectoryBase,deserialize))
-    .def("Write",&PyTrajectoryBase::Write, PY_ARGS("options") DOXY_FN(TrajectoryBase,Write))
-    .def("Read",&PyTrajectoryBase::Read, PY_ARGS("data","robot") DOXY_FN(TrajectoryBase,Read))
+    .def("LoadFromFile",&PyTrajectoryBase::LoadFromFile, PY_ARGS("filename") DOXY_FN(TrajectoryBase,deserialize))
     .def("__len__",&PyTrajectoryBase::GetNumWaypoints,DOXY_FN(TrajectoryBase,__len__))
     .def("__getitem__",__getitem__1, PY_ARGS("index") DOXY_FN(TrajectoryBase, __getitem__ "int"))
     .def("__getitem__",__getitem__2, PY_ARGS("indices") DOXY_FN(TrajectoryBase, __getitem__ "slice"))

@@ -209,7 +209,9 @@ class TestTrajectory(EnvironmentSetup):
                 assert(smoothers[plannername].PlanPath(traj)==PlannerStatusCode.HasSolution)
                 assert(smoothers[plannername].PlanPath(traj)==PlannerStatusCode.HasSolution)
                 self.RunTrajectory(robot,traj)
-                self.RunTrajectory(robot,RaveCreateTrajectory(env,traj.GetXMLId()).deserialize(traj.serialize(0)))
+                newtraj = RaveCreateTrajectory(env,traj.GetXMLId())
+                newtraj.deserialize(traj.serialize(0))
+                self.RunTrajectory(robot,newtraj)
             traj.Init(robot.GetActiveConfigurationSpecification())
             traj.Insert(0,robot.GetActiveDOFValues())
             traj.Insert(1,robot.GetActiveDOFValues()+delta*ones(robot.GetActiveDOF()))
@@ -220,7 +222,9 @@ class TestTrajectory(EnvironmentSetup):
                 ret=planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,maxaccelmult=1,plannername=plannername)
                 assert(ret.statusCode==PlannerStatusCode.HasSolution)
                 self.RunTrajectory(robot,traj)
-                self.RunTrajectory(robot,RaveCreateTrajectory(env,traj.GetXMLId()).deserialize(traj.serialize(0)))
+                newtraj = RaveCreateTrajectory(env,traj.GetXMLId())
+                newtraj.deserialize(traj.serialize(0))
+                self.RunTrajectory(robot,newtraj)
                 
     def test_smoothing(self):
         env = self.env
@@ -557,7 +561,9 @@ class TestTrajectory(EnvironmentSetup):
                         waypoint1=traj2.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
                         assert(transdist(waypoint0,waypoint1) <= g_epsilon)
                     self.RunTrajectory(robot,traj2)
-                    self.RunTrajectory(robot,RaveCreateTrajectory(env,traj2.GetXMLId()).deserialize(traj2.serialize(0)))
+                    newtraj2 = RaveCreateTrajectory(env,traj2.GetXMLId())
+                    newtraj2.deserialize(traj2.serialize(0))
+                    self.RunTrajectory(robot,newtraj2)
 
                 plannernames = ['parabolicsmoother','linearsmoother']
                 for plannername in plannernames:
@@ -572,7 +578,9 @@ class TestTrajectory(EnvironmentSetup):
                             waypoint1=traj2.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
                             assert(transdist(waypoint0,waypoint1) <= g_epsilon)
                         self.RunTrajectory(robot,traj2)
-                        self.RunTrajectory(robot,RaveCreateTrajectory(env,traj2.GetXMLId()).deserialize(traj2.serialize(0)))
+                        newtraj2 = RaveCreateTrajectory(env,traj2.GetXMLId())
+                        newtraj2.deserialize(traj2.serialize(0))
+                        self.RunTrajectory(robot,newtraj2)
 
     def test_overwritetraj(self):
         env=self.env
@@ -619,7 +627,8 @@ class TestTrajectory(EnvironmentSetup):
 <description>Not documented yet.</description>
 </trajectory>
 """
-        traj=RaveCreateTrajectory(env,'').deserialize(xml)
+        traj=RaveCreateTrajectory(env,'')
+        traj.deserialize(xml)
 
         with env:
             manip=robot.GetActiveManipulator()
@@ -844,12 +853,14 @@ class TestTrajectory(EnvironmentSetup):
 <group name="joint_values muratecpicker0 0 1 2 3 4 5" offset="0" dof="6" interpolation="quadratic"/>
 <group name="iswaypoint" offset="13" dof="1" interpolation="next"/>
 </configuration>
+<description>yooo</description>
 <data count="3">
 0.6117269650558744 0.9266602002674107 0.8438166789174414 0 1.371115774404944 -0.9590693617390226 0 0 0 0 0 0 0 1 1.17529158313744 0.189183598445679 1.49708779104353 -0.001910739864792349 1.446569660068643 0.1559566101894805 2.196724161297836 -2.874617422095069 2.546392001631284 -0.00744789202919198 0.294112455578719 4.346270887885016 0.5130954791780579 0 1.738856201219005 -0.5482930033760525 2.150358903169619 -0.003821479729584697 1.522023545732342 1.270982582117983 0 0 0 0 0 0 0.5130954791780579 1 </data>
 </trajectory>
         '''
         traj=RaveCreateTrajectory(env, '')
         traj.deserialize(trajstr)
+        assert(traj.GetDescription()=='yooo')
         startoffset = 0.995555555555555
         duration = traj.GetDuration()
         planningutils.SegmentTrajectory(traj, startoffset, duration)

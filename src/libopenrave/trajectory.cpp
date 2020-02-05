@@ -49,7 +49,7 @@ void TrajectoryBase::serialize(std::ostream& O, int options) const
     O << "</trajectory>" << endl;
 }
 
-InterfaceBasePtr TrajectoryBase::deserialize(std::istream& I)
+void TrajectoryBase::deserialize(std::istream& I)
 {
     stringbuf buf;
     stringstream::streampos pos = I.tellg();
@@ -69,7 +69,6 @@ InterfaceBasePtr TrajectoryBase::deserialize(std::istream& I)
     }
     xmlreaders::TrajectoryReader readerdata(GetEnv(),shared_trajectory());
     LocalXML::ParseXMLData(readerdata, pbuf.c_str(), ppsize);
-    return shared_from_this();
 }
 
 void TrajectoryBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)

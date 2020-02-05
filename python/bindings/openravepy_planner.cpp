@@ -257,7 +257,7 @@ object PyPlannerBase::PlanPath(PyTrajectoryBasePtr pytraj, bool releasegil)
         statesaver.reset(new openravepy::PythonThreadSaver());
     }
     PlannerStatus status = _pplanner->PlanPath(ptraj);
-    statesaver.reset(); // unlock
+    statesaver.reset(); // re-lock GIL
     return openravepy::toPyPlannerStatus(status);
 }
 
@@ -425,27 +425,27 @@ void init_openravepy_planner()
         scope_ planner = class_<PyPlannerBase, OPENRAVE_SHARED_PTR<PyPlannerBase>, bases<PyInterfaceBase> >("Planner", DOXY_CLASS(PlannerBase), no_init)
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                        .def("InitPlan", InitPlan1,
-                            "robot"_a,
-                            "params"_a,
-                            "releasegil"_a = false,
-                            DOXY_FN(PlannerBase, InitPlan "RobotBasePtr; PlannerParametersConstPtr")
-                        )
+                         .def("InitPlan", InitPlan1,
+                              "robot"_a,
+                              "params"_a,
+                              "releasegil"_a = false,
+                              DOXY_FN(PlannerBase, InitPlan "RobotBasePtr; PlannerParametersConstPtr")
+                              )
 #else
-                        .def("InitPlan",InitPlan1,InitPlan_overloads(PY_ARGS("robot","params","releasegil") DOXY_FN(PlannerBase,InitPlan "RobotBasePtr; PlannerParametersConstPtr")))
+                         .def("InitPlan",InitPlan1,InitPlan_overloads(PY_ARGS("robot","params","releasegil") DOXY_FN(PlannerBase,InitPlan "RobotBasePtr; PlannerParametersConstPtr")))
 #endif
-                        .def("InitPlan",InitPlan2, PY_ARGS("robot","xmlparams") DOXY_FN(PlannerBase,InitPlan "RobotBasePtr; std::istream"))
+                         .def("InitPlan",InitPlan2, PY_ARGS("robot","xmlparams") DOXY_FN(PlannerBase,InitPlan "RobotBasePtr; std::istream"))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                        .def("PlanPath", &PyPlannerBase::PlanPath,
-                            "traj"_a,
-                            "releasegil"_a = true,
-                            DOXY_FN(PlannerBase, PlanPath)
-                        )
+                         .def("PlanPath", &PyPlannerBase::PlanPath,
+                              "traj"_a,
+                              "releasegil"_a = true,
+                              DOXY_FN(PlannerBase, PlanPath)
+                              )
 #else
-                        .def("PlanPath",&PyPlannerBase::PlanPath,PlanPath_overloads(PY_ARGS("traj","releasegil") DOXY_FN(PlannerBase,PlanPath)))
+                         .def("PlanPath",&PyPlannerBase::PlanPath,PlanPath_overloads(PY_ARGS("traj","releasegil") DOXY_FN(PlannerBase,PlanPath)))
 #endif
-                        .def("GetParameters",&PyPlannerBase::GetParameters, DOXY_FN(PlannerBase,GetParameters))
-                        .def("RegisterPlanCallback",&PyPlannerBase::RegisterPlanCallback, DOXY_FN(PlannerBase,RegisterPlanCallback))
+                         .def("GetParameters",&PyPlannerBase::GetParameters, DOXY_FN(PlannerBase,GetParameters))
+                         .def("RegisterPlanCallback",&PyPlannerBase::RegisterPlanCallback, DOXY_FN(PlannerBase,RegisterPlanCallback))
         ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         // PlannerParameters belongs to Planner
@@ -474,16 +474,16 @@ void init_openravepy_planner()
         .def("SetMaxIterations",&PyPlannerBase::PyPlannerParameters::SetMaxIterations, PY_ARGS("maxiterations") "sets PlannerParameters::_nMaxIterations")
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("CheckPathAllConstraints", &PyPlannerBase::PyPlannerParameters::CheckPathAllConstraints,
-            "q0"_a,
-            "q1"_a,
-            "dq0"_a,
-            "dq1"_a,
-            "timeelapsed"_a,
-            "interval"_a,
-            "options"_a = 0xffff,
-            "filterreturn"_a = false,
-            DOXY_FN(PlannerBase::PlannerParameters, CheckPathAllConstraints)
-        )
+             "q0"_a,
+             "q1"_a,
+             "dq0"_a,
+             "dq1"_a,
+             "timeelapsed"_a,
+             "interval"_a,
+             "options"_a = 0xffff,
+             "filterreturn"_a = false,
+             DOXY_FN(PlannerBase::PlannerParameters, CheckPathAllConstraints)
+             )
 #else
         .def("CheckPathAllConstraints",&PyPlannerBase::PyPlannerParameters::CheckPathAllConstraints,CheckPathAllConstraints_overloads(PY_ARGS("q0","q1","dq0","dq1","timeelapsed","interval","options", "filterreturn") DOXY_FN(PlannerBase::PlannerParameters, CheckPathAllConstraints)))
 #endif
