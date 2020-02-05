@@ -327,6 +327,16 @@ inline RaveTransformMatrix<T> ExtractTransformMatrixType(const py::object& o)
 
 inline py::object toPyArrayRotation(const TransformMatrix& t)
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    const std::array<dReal, 9> arr {
+        t.m[0], t.m[1], t.m[2],
+        t.m[4], t.m[5], t.m[6],
+        t.m[8], t.m[9], t.m[10]
+    };
+    py::array_t<dReal> pyvalues(9, arr.data());
+    pyvalues.resize({3, 3});
+    return pyvalues;
+#else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = {3,3};
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
@@ -334,11 +344,25 @@ inline py::object toPyArrayRotation(const TransformMatrix& t)
     pdata[3] = t.m[4]; pdata[4] = t.m[5]; pdata[5] = t.m[6];
     pdata[6] = t.m[8]; pdata[7] = t.m[9]; pdata[8] = t.m[10];
     return py::to_array_astype<dReal>(pyvalues);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 template <typename T>
 inline py::object toPyArray3(const std::vector<RaveVector<T> >& v)
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    const size_t numel = v.size() * 3;
+    std::vector<T> arr(numel);
+    typename std::vector<T>::iterator it = begin(arr);
+    for(const RaveVector<T>& vi : v) {
+        *it++ = vi.x;
+        *it++ = vi.y;
+        *it++ = vi.z;
+    }
+    py::array_t<T> pyvalues(numel, arr.data());
+    pyvalues.resize({(int) v.size(), 3});
+    return pyvalues;
+#else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { npy_intp(v.size()), npy_intp(3) };
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(T)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     if( v.size() > 0 ) {
@@ -350,6 +374,7 @@ inline py::object toPyArray3(const std::vector<RaveVector<T> >& v)
         }
     }
     return py::to_array_astype<T>(pyvalues);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 inline py::object toPyVector2(Vector v)

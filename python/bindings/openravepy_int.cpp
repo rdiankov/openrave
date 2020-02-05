@@ -348,9 +348,9 @@ object toPyArray(const TransformMatrix& t)
         t.m[8], t.m[9], t.m[10], t.trans.z,
         0, 0, 0, 1
     };
-    py::array_t<dReal> o(16, arr.data());
-    o.resize({4, 4});
-    return o;
+    py::array_t<dReal> pyvalues(16, arr.data());
+    pyvalues.resize({4, 4});
+    return pyvalues;
 #else
     npy_intp dims[] = { 4,4};
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
@@ -360,7 +360,7 @@ object toPyArray(const TransformMatrix& t)
     pdata[8] = t.m[8]; pdata[9] = t.m[9]; pdata[10] = t.m[10]; pdata[11] = t.trans.z;
     pdata[12] = 0; pdata[13] = 0; pdata[14] = 0; pdata[15] = 1;
     return py::to_array_astype<dReal>(pyvalues);
-#endif
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 
@@ -378,7 +378,7 @@ object toPyArray(const Transform& t)
     pdata[0] = t.rot.x; pdata[1] = t.rot.y; pdata[2] = t.rot.z; pdata[3] = t.rot.w;
     pdata[4] = t.trans.x; pdata[5] = t.trans.y; pdata[6] = t.trans.z;
     return py::to_array_astype<dReal>(pyvalues);
-#endif
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 AttributesList toAttributesList(py::dict odict)

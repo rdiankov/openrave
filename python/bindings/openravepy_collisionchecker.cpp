@@ -513,7 +513,7 @@ bool PyCollisionCheckerBase::CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, Py
 object PyCollisionCheckerBase::CheckCollisionRays(object rays, PyKinBodyPtr pbody, bool bFrontFacingOnly)
 {
     object shape = rays.attr("shape");
-    int num = extract<int>(shape[0]);
+    const int num = extract<int>(shape[0]);
     if( num == 0 ) {
         return py::make_tuple(py::empty_array_astype<int>(), py::empty_array_astype<dReal>());
     }
@@ -524,11 +524,20 @@ object PyCollisionCheckerBase::CheckCollisionRays(object rays, PyKinBodyPtr pbod
     CollisionReportPtr preport(&report,null_deleter());
 
     RAY r;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    const size_t numel = num * 6;
+    std::vector<dReal> vpos(numel);
+    std::vector<bool> vcollision(num);
+    dReal* ppos = vpos.data();
+    // std::vector<bool> is special, so use alias
+    std::vector<bool>& pcollision = vcollision;
+#else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { num,6};
     PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* ppos = (dReal*)PyArray_DATA(pypos);
     PyObject* pycollision = PyArray_SimpleNew(1,&dims[0], PyArray_BOOL);
     bool* pcollision = (bool*)PyArray_DATA(pycollision);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
     for(int i = 0; i < num; ++i, ppos += 6) {
         std::vector<dReal> ray = ExtractArray<dReal>(rays[i]);
         r.pos.x = ray[0];
@@ -558,8 +567,14 @@ object PyCollisionCheckerBase::CheckCollisionRays(object rays, PyKinBodyPtr pbod
             }
         }
     }
-
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pypos(numel, vpos.data());
+    pypos.resize({num, 6});
+    py::array_t<bool> pycollision = toPyArray(vcollision);
+    return py::make_tuple(pycollision, pypos);
+#else
     return py::make_tuple(py::to_array_astype<bool>(pycollision), py::to_array_astype<dReal>(pypos));
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 bool PyCollisionCheckerBase::CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray)
