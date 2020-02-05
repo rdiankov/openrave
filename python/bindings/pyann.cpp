@@ -219,10 +219,10 @@ object search_array(ANNkd_tree& kdtree, object qarray, int k, double eps, bool p
             annq.pt[c] = extract<ANNcoord>(q[c]);
         }
         if (priority) {
-            kdtree.annkPriSearch(annq.pt, k, &nn_idx[0], &dists[0], eps);
+            kdtree.annkPriSearch(annq.pt, k, nn_idx.data(), dists.data(), eps);
         }
         else {
-            kdtree.annkSearch(annq.pt, k, &nn_idx[0], &dists[0], eps);
+            kdtree.annkSearch(annq.pt, k, nn_idx.data(), dists.data(), eps);
         }
 
         std::copy(nn_idx.begin(),nn_idx.end(),pidx); pidx += k;

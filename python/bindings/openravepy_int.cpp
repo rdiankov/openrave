@@ -1339,7 +1339,7 @@ object PyEnvironmentBase::CheckCollisionRays(py::numeric::array rays, PyKinBodyP
     PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal) == sizeof(double) ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* ppos = (dReal*)PyArray_DATA(pypos);
     std::memset(ppos, 0, nRays * sizeof(dReal));
-    PyObject* pycollision = PyArray_SimpleNew(1,&dims[0], PyArray_BOOL);
+    PyObject* pycollision = PyArray_SimpleNew(1,dims, PyArray_BOOL);
     // numpy bool = uint8_t
     uint8_t* pcollision = (uint8_t*)PyArray_DATA(pycollision);
     std::memset(pcollision, 0, nRays * sizeof(uint8_t));
@@ -1472,9 +1472,9 @@ object PyEnvironmentBase::WriteToMemory(const std::string &filetype, const int o
     else {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         // https://github.com/pybind/pybind11/issues/1201
-        return py::cast<py::object>(PyString_FromStringAndSize(&output[0], output.size()));
+        return py::cast<py::object>(PyString_FromStringAndSize(output.data(), output.size()));
 #else
-        return py::to_object(py::handle<>(PyString_FromStringAndSize(&output[0], output.size())));
+        return py::to_object(py::handle<>(PyString_FromStringAndSize(output.data(), output.size())));
 #endif
     }
 }
@@ -1929,14 +1929,14 @@ object PyEnvironmentBase::plot3(object opoints,float pointsize,object ocolors, i
     pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
     bool bhasalpha = vcolors.size() == 4*sizes.second;
     if( sizes.first == sizes.second ) {
-        return toPyGraphHandle(_penv->plot3(&vpoints[0],sizes.first,sizeof(float)*3,pointsize,&vcolors[0],drawstyle,bhasalpha));
+        return toPyGraphHandle(_penv->plot3(vpoints.data(),sizes.first,sizeof(float)*3,pointsize,vcolors.data(),drawstyle,bhasalpha));
     }
     BOOST_ASSERT(vcolors.size()<=4);
     RaveVector<float> vcolor;
     for(int i = 0; i < (int)vcolors.size(); ++i) {
         vcolor[i] = vcolors[i];
     }
-    return toPyGraphHandle(_penv->plot3(&vpoints[0],sizes.first,sizeof(float)*3,pointsize,vcolor,drawstyle));
+    return toPyGraphHandle(_penv->plot3(vpoints.data(),sizes.first,sizeof(float)*3,pointsize,vcolor,drawstyle));
 }
 
 object PyEnvironmentBase::drawlinestrip(object opoints,float linewidth,object ocolors, int drawstyle)
@@ -1945,14 +1945,14 @@ object PyEnvironmentBase::drawlinestrip(object opoints,float linewidth,object oc
     pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
     //bool bhasalpha = vcolors.size() == 4*sizes.second;
     if( sizes.first == sizes.second ) {
-        return toPyGraphHandle(_penv->drawlinestrip(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,&vcolors[0]));
+        return toPyGraphHandle(_penv->drawlinestrip(vpoints.data(),sizes.first,sizeof(float)*3,linewidth,vcolors.data()));
     }
     BOOST_ASSERT(vcolors.size()<=4);
     RaveVector<float> vcolor;
     for(int i = 0; i < (int)vcolors.size(); ++i) {
         vcolor[i] = vcolors[i];
     }
-    return toPyGraphHandle(_penv->drawlinestrip(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,vcolor));
+    return toPyGraphHandle(_penv->drawlinestrip(vpoints.data(),sizes.first,sizeof(float)*3,linewidth,vcolor));
 }
 
 object PyEnvironmentBase::drawlinelist(object opoints,float linewidth,object ocolors, int drawstyle)
@@ -1961,14 +1961,14 @@ object PyEnvironmentBase::drawlinelist(object opoints,float linewidth,object oco
     pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
     //bool bhasalpha = vcolors.size() == 4*sizes.second;
     if( sizes.first == sizes.second ) {
-        return toPyGraphHandle(_penv->drawlinelist(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,&vcolors[0]));
+        return toPyGraphHandle(_penv->drawlinelist(vpoints.data(),sizes.first,sizeof(float)*3,linewidth,vcolors.data()));
     }
     BOOST_ASSERT(vcolors.size()<=4);
     RaveVector<float> vcolor;
     for(int i = 0; i < (int)vcolors.size(); ++i) {
         vcolor[i] = vcolors[i];
     }
-    return toPyGraphHandle(_penv->drawlinelist(&vpoints[0],sizes.first,sizeof(float)*3,linewidth,vcolor));
+    return toPyGraphHandle(_penv->drawlinelist(vpoints.data(),sizes.first,sizeof(float)*3,linewidth,vcolor));
 }
 
 object PyEnvironmentBase::drawarrow(object op1, object op2, float linewidth, object ocolor)
@@ -2013,21 +2013,21 @@ object PyEnvironmentBase::drawtrimesh(object opoints, object oindices, object oc
         vindices = ExtractArray<int>(oindices.attr("flat"));
         if( vindices.size() > 0 ) {
             numTriangles = vindices.size()/3;
-            pindices = &vindices[0];
+            pindices = vindices.data();
         }
     }
     RaveVector<float> vcolor(1,0.5,0.5,1);
     if( !IS_PYTHONOBJECT_NONE(ocolors) ) {
         object shape = ocolors.attr("shape");
         if( len(shape) == 1 ) {
-            return toPyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,ExtractVector34(ocolors,1.0f)));
+            return toPyGraphHandle(_penv->drawtrimesh(vpoints.data(),sizeof(float)*3,pindices,numTriangles,ExtractVector34(ocolors,1.0f)));
         }
         else {
             BOOST_ASSERT(extract<size_t>(shape[0])==vpoints.size()/3);
-            return toPyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,extract<boost::multi_array<float,2> >(ocolors)));
+            return toPyGraphHandle(_penv->drawtrimesh(vpoints.data(),sizeof(float)*3,pindices,numTriangles,extract<boost::multi_array<float,2> >(ocolors)));
         }
     }
-    return toPyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,RaveVector<float>(1,0.5,0.5,1)));
+    return toPyGraphHandle(_penv->drawtrimesh(vpoints.data(),sizeof(float)*3,pindices,numTriangles,RaveVector<float>(1,0.5,0.5,1)));
 }
 
 object PyEnvironmentBase::GetBodies()
