@@ -87,14 +87,18 @@ void PySideWall::Get(KinBody::GeometryInfo::SideWall& sidewall) {
     sidewall.type = static_cast<KinBody::GeometryInfo::SideWallType>(type);
 }
 
+// TGN: debug; will remove PyTestPickle
 PyTestPickle::PyTestPickle() {
     if(IS_PYTHONOBJECT_NONE(_arr)) {
         const std::vector<dReal> v {1, 2, 4.5, -3.0, 8, 9, 10, 11, 12};
-        _arr = py::array_t<double>(v.size(), v.data());
+        _arr = toPyArray(v);
     }
 }
 PyTestPickle::~PyTestPickle() {}
 class TestPickle_pickle_suite
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+    : public pickle_suite
+#endif
 {
 public:
     static py::tuple getstate(const PyTestPickle& r)
@@ -851,7 +855,13 @@ object PyLink::GetGlobalCOM() const {
 }
 
 object PyLink::GetLocalInertia() const {
-    TransformMatrix t = _plink->GetLocalInertia();
+    const TransformMatrix t = _plink->GetLocalInertia();
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    const std::array<dReal, 9> arr {t.m[0], t.m[1], t.m[2], t.m[4], t.m[5], t.m[6], t.m[8], t.m[9], t.m[10]};
+    py::array_t<dReal> pyvalues = toPyArray(arr);
+    pyvalues.resize({3, 3});
+    return pyvalues;
+#else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { 3, 3};
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
@@ -859,9 +869,16 @@ object PyLink::GetLocalInertia() const {
     pdata[3] = t.m[4]; pdata[4] = t.m[5]; pdata[5] = t.m[6];
     pdata[6] = t.m[8]; pdata[7] = t.m[9]; pdata[8] = t.m[10];
     return py::to_array_astype<dReal>(pyvalues);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 object PyLink::GetGlobalInertia() const {
-    TransformMatrix t = _plink->GetGlobalInertia();
+    const TransformMatrix t = _plink->GetGlobalInertia();
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    const std::array<dReal, 9> arr {t.m[0], t.m[1], t.m[2], t.m[4], t.m[5], t.m[6], t.m[8], t.m[9], t.m[10]};
+    py::array_t<dReal> pyvalues = toPyArray(arr);
+    pyvalues.resize({3, 3});
+    return pyvalues;
+#else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { 3, 3};
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
@@ -869,6 +886,7 @@ object PyLink::GetGlobalInertia() const {
     pdata[3] = t.m[4]; pdata[4] = t.m[5]; pdata[5] = t.m[6];
     pdata[6] = t.m[8]; pdata[7] = t.m[9]; pdata[8] = t.m[10];
     return py::to_array_astype<dReal>(pyvalues);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 dReal PyLink::GetMass() const {
     return _plink->GetMass();
@@ -2268,16 +2286,22 @@ void PyKinBody::SetDOFVelocities(object odofvelocities, uint32_t checklimits, ob
 
 object PyKinBody::GetLinkVelocities() const
 {
-    if( _pbody->GetLinks().size() == 0 ) {
+    if( _pbody->GetLinks().empty() ) {
         return py::empty_array_astype<dReal>();
     }
     std::vector<std::pair<Vector,Vector> > velocities;
     _pbody->GetLinkVelocities(velocities);
-
+    const size_t nvelocities = velocities.size();
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    const size_t numel = nvelocities * 6;
+    std::vector<dReal> vvelocities(numel);
+    dReal *pfvel = vvelocities.data();
+#else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = {npy_intp(velocities.size()),npy_intp(6)};
     PyObject *pyvel = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* pfvel = (dReal*)PyArray_DATA(pyvel);
-    for(size_t i = 0; i < velocities.size(); ++i) {
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+    for(size_t i = 0; i < nvelocities; ++i) {
         pfvel[6*i+0] = velocities[i].first.x;
         pfvel[6*i+1] = velocities[i].first.y;
         pfvel[6*i+2] = velocities[i].first.z;
@@ -2285,7 +2309,13 @@ object PyKinBody::GetLinkVelocities() const
         pfvel[6*i+4] = velocities[i].second.y;
         pfvel[6*i+5] = velocities[i].second.z;
     }
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pyvel = toPyArray(vvelocities);
+    pyvel.resize({(int) nvelocities, 6});
+    return pyvel;
+#else // USE_PYBIND11_PYTHON_BINDINGS
     return py::to_array_astype<dReal>(pyvel);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 object PyKinBody::GetLinkAccelerations(object odofaccelerations, object oexternalaccelerations) const
@@ -2320,9 +2350,16 @@ object PyKinBody::GetLinkAccelerations(object odofaccelerations, object oexterna
     std::vector<std::pair<Vector,Vector> > vLinkAccelerations;
     _pbody->GetLinkAccelerations(vDOFAccelerations, vLinkAccelerations, pmapExternalAccelerations);
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    const size_t nLinkAccelerations = vLinkAccelerations.size();
+    const size_t numel = nLinkAccelerations * 6;
+    std::vector<dReal> vaccel(numel);
+    dReal* pf = vaccel.data();
+#else // USE_PYBIND11_PYTHON_BINDINGS    
     npy_intp dims[] = {npy_intp(vLinkAccelerations.size()),npy_intp(6)};
     PyObject *pyaccel = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* pf = (dReal*)PyArray_DATA(pyaccel);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
     for(size_t i = 0; i < vLinkAccelerations.size(); ++i) {
         pf[6*i+0] = vLinkAccelerations[i].first.x;
         pf[6*i+1] = vLinkAccelerations[i].first.y;
@@ -2331,7 +2368,13 @@ object PyKinBody::GetLinkAccelerations(object odofaccelerations, object oexterna
         pf[6*i+4] = vLinkAccelerations[i].second.y;
         pf[6*i+5] = vLinkAccelerations[i].second.z;
     }
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pyaccel = toPyArray(vaccel);
+    pyaccel.resize({(int) nLinkAccelerations, 6});
+    return pyaccel;
+#else
     return py::to_array_astype<dReal>(pyaccel);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 object PyKinBody::ComputeAABB(bool bEnabledOnlyLinks)
@@ -3496,8 +3539,13 @@ void init_openravepy_kinbody()
                        .value("Trajectory",KinBody::JointTrajectory)
     ;
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
     object testpickle = class_<PyTestPickle, OPENRAVE_SHARED_PTR<PyTestPickle> >(m, "TestPickle")
                         .def(init<>())
+#else
+    object testpickle = class_<PyTestPickle, OPENRAVE_SHARED_PTR<PyTestPickle> >("TestPickle")
+#endif // USE_PYBIND11_PYTHON_BINDINGS       
+#ifdef USE_PYBIND11_PYTHON_BINDINGS            
                         .def(py::pickle(
                         [](const PyTestPickle &pypickle) {
                             // __getstate__
@@ -3514,6 +3562,9 @@ void init_openravepy_kinbody()
                             return pypickle;
                         }
                         ))
+#else
+                        .def_pickle(TestPickle_pickle_suite())
+#endif // USE_PYBIND11_PYTHON_BINDINGS
                         .def_readwrite("t", &PyTestPickle::_t)
                         .def_readwrite("arr", &PyTestPickle::_arr)
                         ;

@@ -154,6 +154,12 @@ inline py::array_t<T> toPyArray(const std::vector<T>& v, std::vector<npy_intp>& 
     return toPyArrayN(v.data(), dims);
 }
 
+template <typename T, long unsigned int N>
+inline py::array_t<T> toPyArray(const std::array<T, N>& v)
+{
+    return toPyArrayN(v.data(), N);
+}
+
 template <typename T, int N>
 inline py::array_t<T> toPyArray(const boost::array<T, N>& v)
 {

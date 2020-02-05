@@ -248,6 +248,27 @@ public:
     PyTriMesh(object vertices, object indices) : vertices(vertices), indices(indices) {
     }
     PyTriMesh(const TriMesh& mesh) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        // vertices
+        const int nvertices = mesh.vertices.size();
+        const int numel = nvertices * 3;
+        std::vector<dReal> vvertices(numel);
+        dReal* pvdata = vvertices.data();
+        for(const Vector& vertex : mesh.vertices) {
+            *pvdata++ = vertex.x;
+            *pvdata++ = vertex.y;
+            *pvdata++ = vertex.z;
+        }
+        py::array_t<dReal> pyvertices = toPyArray(vvertices);
+        pyvertices.resize({nvertices, 3});
+        vertices = pyvertices;
+
+        // indices
+        const int nindices = mesh.indices.size()/3;
+        py::array_t<int32_t> pyindices = toPyArray(mesh.indices);
+        pyindices.resize({nindices, 3});
+        indices = pyindices;
+#else // USE_PYBIND11_PYTHON_BINDINGS
         npy_intp dims[] = { npy_intp(mesh.vertices.size()), npy_intp(3)};
         PyObject *pyvertices = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
         dReal* pvdata = (dReal*)PyArray_DATA(pyvertices);
@@ -263,7 +284,8 @@ public:
         PyObject *pyindices = PyArray_SimpleNew(2,dims, PyArray_INT32);
         int32_t* pidata = reinterpret_cast<int32_t*>PyArray_DATA(pyindices);
         std::memcpy(pidata, mesh.indices.data(), mesh.indices.size() * sizeof(int32_t));
-        indices = py::to_array_astype<int>(pyindices);
+        indices = py::to_array_astype<int32_t>(pyindices);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
     }
 
     void GetTriMesh(TriMesh& mesh) {
@@ -1025,13 +1047,18 @@ object poseFromMatrix(object o)
 
 object poseFromMatrices(object otransforms)
 {
-    int N = len(otransforms);
+    const int N = len(otransforms);
     if( N == 0 ) {
         return py::empty_array_astype<dReal>();
     }
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    std::vector<dReal> vvalues(N * 7);
+    dReal* pvalues = vvalues.data();
+#else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { N,7};
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* pvalues = (dReal*)PyArray_DATA(pyvalues);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
     TransformMatrix tm;
     for(int j = 0; j < N; ++j) {
         object o = otransforms[j];
@@ -1041,23 +1068,35 @@ object poseFromMatrices(object otransforms)
             tm.m[4*i+2] = extract<dReal>(o[i][2]);
             tm.trans[i] = extract<dReal>(o[i][3]);
         }
+        // convert 4x4 transform matrix (stored as 3x4) to quat+trans (4+3) form
         Transform tpose(tm);
         pvalues[0] = tpose.rot.x; pvalues[1] = tpose.rot.y; pvalues[2] = tpose.rot.z; pvalues[3] = tpose.rot.w;
         pvalues[4] = tpose.trans.x; pvalues[5] = tpose.trans.y; pvalues[6] = tpose.trans.z;
         pvalues += 7;
     }
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pyvalues = toPyArray(vvalues);
+    pyvalues.resize({N, 7});
+    return pyvalues;
+#else
     return py::to_array_astype<dReal>(pyvalues);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 object InvertPoses(object o)
 {
-    int N = len(o);
+    const int N = len(o);
     if( N == 0 ) {
         return py::empty_array_astype<dReal>();
     }
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    std::vector<dReal> vtrans(N * 7);
+    dReal* ptrans = vtrans.data();
+#else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { N,7};
     PyObject *pytrans = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* ptrans = (dReal*)PyArray_DATA(pytrans);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
     for(int i = 0; i < N; ++i, ptrans += 7) {
         object oinputtrans = o[i];
         Transform t = Transform(Vector(extract<dReal>(oinputtrans[0]),extract<dReal>(oinputtrans[1]),extract<dReal>(oinputtrans[2]),extract<dReal>(oinputtrans[3])),
@@ -1065,7 +1104,13 @@ object InvertPoses(object o)
         ptrans[0] = t.rot.x; ptrans[1] = t.rot.y; ptrans[2] = t.rot.z; ptrans[3] = t.rot.w;
         ptrans[4] = t.trans.x; ptrans[5] = t.trans.y; ptrans[6] = t.trans.z;
     }
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pytrans = toPyArray(vtrans);
+    pytrans.resize({N, 7});
+    return pytrans;
+#else
     return py::to_array_astype<dReal>(pytrans);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 object InvertPose(object opose)
@@ -1114,16 +1159,27 @@ object poseTransformPoint(object opose, object opoint)
 
 object poseTransformPoints(object opose, object opoints)
 {
-    Transform t = ExtractTransformType<dReal>(opose);
-    int N = len(opoints);
+    const Transform t = ExtractTransformType<dReal>(opose);
+    const int N = len(opoints);
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    std::vector<dReal> vtrans(N * 3);
+    dReal* ptrans = vtrans.data();
+#else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { N,3};
     PyObject *pytrans = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* ptrans = (dReal*)PyArray_DATA(pytrans);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
     for(int i = 0; i < N; ++i, ptrans += 3) {
         Vector newpoint = t*ExtractVector3(opoints[i]);
         ptrans[0] = newpoint.x; ptrans[1] = newpoint.y; ptrans[2] = newpoint.z;
     }
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pytrans = toPyArray(vtrans);
+    pytrans.resize({N, 3});
+    return pytrans;
+#else
     return py::to_array_astype<dReal>(pytrans);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 object TransformLookat(object olookat, object ocamerapos, object ocameraup)

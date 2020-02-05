@@ -333,7 +333,7 @@ inline py::object toPyArrayRotation(const TransformMatrix& t)
         t.m[4], t.m[5], t.m[6],
         t.m[8], t.m[9], t.m[10]
     };
-    py::array_t<dReal> pyvalues(9, arr.data());
+    py::array_t<dReal> pyvalues = toPyArray(arr);
     pyvalues.resize({3, 3});
     return pyvalues;
 #else // USE_PYBIND11_PYTHON_BINDINGS

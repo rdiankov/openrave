@@ -568,11 +568,11 @@ object PyCollisionCheckerBase::CheckCollisionRays(object rays, PyKinBodyPtr pbod
         }
     }
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pypos(numel, vpos.data());
+    py::array_t<dReal> pypos = toPyArray(vpos);
     pypos.resize({num, 6});
     py::array_t<bool> pycollision = toPyArray(vcollision);
     return py::make_tuple(pycollision, pypos);
-#else
+#else // USE_PYBIND11_PYTHON_BINDINGS
     return py::make_tuple(py::to_array_astype<bool>(pycollision), py::to_array_astype<dReal>(pypos));
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 }
