@@ -45,10 +45,9 @@ public:
 
     object ComputeInnerEmptyVolume();
     object ComputeAABB(object otransform);
-
-    void DeserializeJSON(object obj, const dReal fUnitScale=1.0);
+    // Simon's work (in charge)
     object SerializeJSON(const dReal fUnitScale=1.0, object ooptions=py::none_());
-
+    void DeserializeJSON(object obj, const dReal fUnitScale=1.0);
     KinBody::GeometryInfoPtr GetGeometryInfo();
 
     object _t = ReturnTransform(Transform());
