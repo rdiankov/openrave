@@ -535,7 +535,7 @@ object PyCollisionCheckerBase::CheckCollisionRays(object rays, PyKinBodyPtr pbod
     npy_intp dims[] = { num,6};
     PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* ppos = (dReal*)PyArray_DATA(pypos);
-    PyObject* pycollision = PyArray_SimpleNew(1,&dims[0], PyArray_BOOL);
+    PyObject* pycollision = PyArray_SimpleNew(1, dims, PyArray_BOOL);
     bool* pcollision = (bool*)PyArray_DATA(pycollision);
 #endif // USE_PYBIND11_PYTHON_BINDINGS
     for(int i = 0; i < num; ++i, ppos += 6) {
