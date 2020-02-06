@@ -462,6 +462,7 @@ public:
 
     void SetStringParameters(const std::string& key, object ovalue);
 
+    KinBody::JointControlMode GetControlMode() const;
     void UpdateInfo();
     object GetInfo();
     object UpdateAndGetInfo();

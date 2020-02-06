@@ -528,7 +528,11 @@ KinBody::JointInfo::JointControlInfo_IOPtr PyJointControlInfo_IO::GetJointContro
         num1 = len(vMoveIONames);
         OPENRAVE_EXCEPTION_FORMAT0(num1 == info.vMoveIONames.size(), ORE_InvalidState);
         for( size_t i1 = 0; i1 < num1; ++i1 ) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            num2 = len(extract<py::object>(vMoveIONames[i1]));
+#else
             num2 = len(vMoveIONames[i1]);
+#endif
             info.vMoveIONames[i1].resize(num2);
             for( size_t i2 = 0; i2 < num2; ++i2 ) {
                 info.vMoveIONames[i1].at(i2) = py::extract<std::string>(vMoveIONames[i1][i2]);
@@ -540,7 +544,11 @@ KinBody::JointInfo::JointControlInfo_IOPtr PyJointControlInfo_IO::GetJointContro
         num1 = len(vUpperLimitIONames);
         OPENRAVE_EXCEPTION_FORMAT0(num1 == info.vUpperLimitIONames.size(), ORE_InvalidState);
         for( size_t i1 = 0; i1 < num1; ++i1 ) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            num2 = len(extract<py::object>(vUpperLimitIONames[i1]));
+#else
             num2 = len(vUpperLimitIONames[i1]);
+#endif
             info.vUpperLimitIONames[i1].resize(num2);
             for( size_t i2 = 0; i2 < num2; ++i2 ) {
                 info.vUpperLimitIONames[i1].at(i2) = py::extract<std::string>(vUpperLimitIONames[i1][i2]);
@@ -552,7 +560,11 @@ KinBody::JointInfo::JointControlInfo_IOPtr PyJointControlInfo_IO::GetJointContro
         num1 = len(vUpperLimitSensorIsOn);
         OPENRAVE_EXCEPTION_FORMAT0(num1 == info.vUpperLimitSensorIsOn.size(), ORE_InvalidState);
         for( size_t i1 = 0; i1 < num1; ++i1 ) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            num2 = len(extract<py::object>(vUpperLimitSensorIsOn[i1]));
+#else
             num2 = len(vUpperLimitSensorIsOn[i1]);
+#endif
             info.vUpperLimitSensorIsOn[i1].resize(num2);
             for( size_t i2 = 0; i2 < num2; ++i2 ) {
                 info.vUpperLimitSensorIsOn[i1].at(i2) = py::extract<uint8_t>(vUpperLimitSensorIsOn[i1][i2]);
@@ -564,7 +576,11 @@ KinBody::JointInfo::JointControlInfo_IOPtr PyJointControlInfo_IO::GetJointContro
         num1 = len(vLowerLimitIONames);
         OPENRAVE_EXCEPTION_FORMAT0(num1 == info.vLowerLimitIONames.size(), ORE_InvalidState);
         for( size_t i1 = 0; i1 < num1; ++i1 ) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            num2 = len(extract<py::object>(vLowerLimitIONames[i1]));
+#else
             num2 = len(vLowerLimitIONames[i1]);
+#endif
             info.vLowerLimitIONames[i1].resize(num2);
             for( size_t i2 = 0; i2 < num2; ++i2 ) {
                 info.vLowerLimitIONames[i1].at(i2) = py::extract<std::string>(vLowerLimitIONames[i1][i2]);
@@ -576,7 +592,11 @@ KinBody::JointInfo::JointControlInfo_IOPtr PyJointControlInfo_IO::GetJointContro
         num1 = len(vLowerLimitSensorIsOn);
         OPENRAVE_EXCEPTION_FORMAT0(num1 == info.vLowerLimitSensorIsOn.size(), ORE_InvalidState);
         for( size_t i1 = 0; i1 < num1; ++i1 ) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            num2 = len(extract<py::object>(vLowerLimitSensorIsOn[i1]));
+#else
             num2 = len(vLowerLimitSensorIsOn[i1]);
+#endif
             info.vLowerLimitSensorIsOn[i1].resize(num2);
             for( size_t i2 = 0; i2 < num2; ++i2 ) {
                 info.vLowerLimitSensorIsOn[i1].at(i2) = py::extract<uint8_t>(vLowerLimitSensorIsOn[i1][i2]);
@@ -1661,6 +1681,10 @@ object PyJoint::GetStringParameters(object oname) const {
 void PyJoint::SetStringParameters(const std::string& key, object ovalue)
 {
     _pjoint->SetStringParameters(key,extract<std::string>(ovalue));
+}
+
+KinBody::JointControlMode PyJoint::GetControlMode() const {
+    return _pjoint->GetControlMode();
 }
 
 void PyJoint::UpdateInfo() {
@@ -3799,9 +3823,9 @@ void init_openravepy_kinbody()
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    object jointcontrolmode = enum_<KinBody::JointControlMode>("JointControlMode" DOXY_ENUM(JointControlMode))
-#else    
     object jointcontrolmode = enum_<KinBody::JointControlMode>(m, "JointControlMode" DOXY_ENUM(JointControlMode))
+#else    
+    object jointcontrolmode = enum_<KinBody::JointControlMode>("JointControlMode" DOXY_ENUM(JointControlMode))
 #endif
                               .value("JCM_None",KinBody::JCM_None)
                               .value("JCM_RobotController",KinBody::JCM_RobotController)
@@ -3851,19 +3875,19 @@ void init_openravepy_kinbody()
                           .def("DeserializeJSON", &PyGeometryInfo::DeserializeJSON, PY_ARGS("obj", "unitScale") DOXY_FN(GeometryInfo, DeserializeJSON))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                          .def(py::pickle(
-                                   [](const PyGeometryInfo &pygeom) {
+        .def(py::pickle(
+            [](const PyGeometryInfo &pygeom) {
             // __getstate__
             return GeometryInfo_pickle_suite::getstate(pygeom);
         },
-                                   [](py::tuple state) {
+        [](py::tuple state) {
             // __setstate__
             /* Create a new C++ instance */
             PyGeometryInfo pygeom;
             GeometryInfo_pickle_suite::setstate(pygeom, state);
             return pygeom;
         }
-                                   ))
+        ))
 #else
                           .def_pickle(GeometryInfo_pickle_suite())
 #endif
@@ -4668,7 +4692,6 @@ void init_openravepy_kinbody()
                           .def("GetStringParameters",&PyLink::GetStringParameters,GetStringParameters_overloads(PY_ARGS("name") DOXY_FN(KinBody::Link,GetStringParameters)))
 #endif
                           .def("SetStringParameters",&PyLink::SetStringParameters,DOXY_FN(KinBody::Link,SetStringParameters))
-                          .def("GetControlMode",&PyJoint::GetControlMode,DOXY_FN(KinBody::Joint,GetControlMode))
                           .def("UpdateInfo",&PyLink::UpdateInfo,DOXY_FN(KinBody::Link,UpdateInfo))
                           .def("GetInfo",&PyLink::GetInfo,DOXY_FN(KinBody::Link,GetInfo))
                           .def("UpdateAndGetInfo",&PyLink::UpdateAndGetInfo,DOXY_FN(KinBody::Link,UpdateAndGetInfo))
@@ -4933,6 +4956,7 @@ void init_openravepy_kinbody()
                            .def("GetStringParameters",&PyJoint::GetStringParameters,GetStringParameters_overloads(PY_ARGS("name", "index") DOXY_FN(KinBody::Joint,GetStringParameters)))
 #endif
                            .def("SetStringParameters",&PyJoint::SetStringParameters,DOXY_FN(KinBody::Joint,SetStringParameters))
+                           .def("GetControlMode",&PyJoint::GetControlMode,DOXY_FN(KinBody::Joint,GetControlMode))
                            .def("UpdateInfo",&PyJoint::UpdateInfo,DOXY_FN(KinBody::Joint,UpdateInfo))
                            .def("GetInfo",&PyJoint::GetInfo,DOXY_FN(KinBody::Joint,GetInfo))
                            .def("UpdateAndGetInfo",&PyJoint::UpdateAndGetInfo,DOXY_FN(KinBody::Joint,UpdateAndGetInfo))
