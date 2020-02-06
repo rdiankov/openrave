@@ -3508,6 +3508,57 @@ public:
     }
 };
 
+class JointControlInfo_RobotController_pickle_suite
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+    : public pickle_suite
+#endif
+{
+public:
+    static py::tuple getstate(const PyJointControlInfo_RobotController& r)
+    {
+        return py::make_tuple(r.robotId, r.robotControllerDOFIndex);
+    }
+    static void setstate(PyJointControlInfo_RobotController& r, py::tuple state) {
+        r.robotId = py::extract<int>(state[0]);
+        r.robotControllerDOFIndex = state[1];
+    }
+};
+
+class JointControlInfo_IO_pickle_suite
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+    : public pickle_suite
+#endif
+{
+public:
+    static py::tuple getstate(const PyJointControlInfo_IO& r)
+    {
+        return py::make_tuple(r.deviceId, r.vMoveIONames, r.vUpperLimitIONames, r.vUpperLimitSensorIsOn, r.vLowerLimitIONames, r.vLowerLimitSensorIsOn);
+    }
+    static void setstate(PyJointControlInfo_IO& r, py::tuple state) {
+        r.deviceId = py::extract<int>(state[0]);
+        r.vMoveIONames = state[1];
+        r.vUpperLimitIONames = state[2];
+        r.vUpperLimitSensorIsOn = state[3];
+        r.vLowerLimitIONames = state[4];
+        r.vLowerLimitSensorIsOn = state[5];
+    }
+};
+
+class JointControlInfo_ExternalDevice_pickle_suite
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+    : public pickle_suite
+#endif
+{
+public:
+    static py::tuple getstate(const PyJointControlInfo_ExternalDevice& r)
+    {
+        return py::make_tuple(r.externalDeviceId);
+    }
+    static void setstate(PyJointControlInfo_ExternalDevice& r, py::tuple state) {
+        r.externalDeviceId = py::extract<int>(state[0]);
+    }
+};
+
 class JointInfo_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
     : public pickle_suite
@@ -3563,6 +3614,12 @@ public:
                     }
                 }
             }
+        }
+        if( len(state) > 3 ) {
+            r._controlMode = (KinBody::JointControlMode)(int)py::extract<int>(state[3][0]);
+            r._jci_robotcontroller = py::extract<PyJointControlInfo_RobotControllerPtr>(state[3][1]);
+            r._jci_io = py::extract<PyJointControlInfo_IOPtr>(state[3][2]);
+            r._jci_externaldevice = py::extract<PyJointControlInfo_ExternalDevicePtr>(state[3][3]);
         }
     }
 };
