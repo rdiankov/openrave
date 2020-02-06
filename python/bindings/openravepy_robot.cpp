@@ -165,7 +165,11 @@ PyAttachedSensorInfoPtr toPyAttachedSensorInfo(const RobotBase::AttachedSensorIn
 PyConnectedBodyInfo::PyConnectedBodyInfo() {
 }
 
-PyConnectedBodyInfo::PyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& info, PyEnvironmentBasePtr pyenv)
+PyConnectedBodyInfo::PyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& info, PyEnvironmentBasePtr pyenv) {
+    _Update(info, pyenv);
+}
+
+void PyConnectedBodyInfo::_Update(const RobotBase::ConnectedBodyInfo& info, PyEnvironmentBasePtr pyenv)
 {
     _name = ConvertStringToUnicode(info._name);
     _linkname = ConvertStringToUnicode(info._linkname);
