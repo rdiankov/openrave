@@ -136,9 +136,11 @@ class PyJointInfo
 {
 public:
     PyJointInfo();
-
     PyJointInfo(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv);
     KinBody::JointInfoPtr GetJointInfo();
+    // Simon's work
+    object SerializeJSON(object options=py::none_());
+    void DeserializeJSON(object obj, PyEnvironmentBasePtr penv, const dReal fUnitScale=1.0);
 
     KinBody::JointType _type = KinBody::JointNone;
     object _name = py::none_();
@@ -165,6 +167,15 @@ public:
     py::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters;
     object _bIsCircular = py::list();
     bool _bIsActive = true;
+
+    // Simon's work
+    KinBody::JointControlMode _controlMode = KinBody::JointControlMode::JCM_None;
+    PyJointControlInfo_RobotControllerPtr _jci_robotcontroller;
+    PyJointControlInfo_IOPtr _jci_io;
+    PyJointControlInfo_ExternalDevicePtr _jci_externaldevice;
+
+private:
+    void _Update(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv);
 };
 
 class PyLink
