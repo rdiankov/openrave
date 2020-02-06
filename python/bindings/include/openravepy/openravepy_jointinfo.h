@@ -132,6 +132,44 @@ private:
 };
 typedef OPENRAVE_SHARED_PTR<PyElectricMotorActuatorInfo> PyElectricMotorActuatorInfoPtr;
 
+class PyJointControlInfo_RobotController
+{
+public:
+    PyJointControlInfo_RobotController();
+    PyJointControlInfo_RobotController(const KinBody::JointInfo::JointControlInfo_RobotController& jci);
+    KinBody::JointInfo::JointControlInfo_RobotControllerPtr GetJointControlInfo();
+
+    int robotId = -1;
+    object robotControllerDOFIndex = toPyVector3(Vector(-1, -1, -1));
+};
+typedef OPENRAVE_SHARED_PTR<PyJointControlInfo_RobotController> PyJointControlInfo_RobotControllerPtr;
+
+class PyJointControlInfo_IO
+{
+public:
+    PyJointControlInfo_IO();
+    PyJointControlInfo_IO(const KinBody::JointInfo::JointControlInfo_IO& jci);
+    KinBody::JointInfo::JointControlInfo_IOPtr GetJointControlInfo();
+
+    int deviceId = -1;
+    object vMoveIONames = py::list();
+    object vUpperLimitIONames = py::list();
+    object vUpperLimitSensorIsOn = py::list();
+    object vLowerLimitIONames = py::list();
+    object vLowerLimitSensorIsOn = py::list();
+};
+typedef OPENRAVE_SHARED_PTR<PyJointControlInfo_IO> PyJointControlInfo_IOPtr;
+
+class PyJointControlInfo_ExternalDevice
+{
+public:
+    PyJointControlInfo_ExternalDevice();
+    PyJointControlInfo_ExternalDevice(const KinBody::JointInfo::JointControlInfo_ExternalDevice &jci);
+    KinBody::JointInfo::JointControlInfo_ExternalDevicePtr GetJointControlInfo();
+    std::string externalDeviceId;
+};
+typedef OPENRAVE_SHARED_PTR<PyJointControlInfo_ExternalDevice> PyJointControlInfo_ExternalDevicePtr;
+
 class PyJointInfo
 {
 public:
