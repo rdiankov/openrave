@@ -102,6 +102,10 @@ PyGeometryInfo::PyGeometryInfo() {
     _filenamecollision = py::none_();
     _vRenderScale = toPyVector3(Vector(1,1,1));
     _vCollisionScale = toPyVector3(Vector(1,1,1));
+    _containerBaseHeight = 0.0;
+    _fTransparency = 0.0;
+    _bVisible = true;
+    _bModifiable = true;
 }
 
 //PyGeometryInfo::PyGeometryInfo(const PyGeometryInfo& pyinfo) {
