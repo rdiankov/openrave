@@ -118,6 +118,14 @@ public:
         return pinfo;
     }
 
+    py::object SerializeJSON(py::object ooptions=py::none_())
+    {
+        rapidjson::Document doc;
+        KinBody::GrabbedInfoPtr pInfo = GetGrabbedInfo();
+        pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(ooptions,0));
+        return toPyObject(doc);
+    }
+
     void DeserializeJSON(py::object obj, PyEnvironmentBasePtr penv)
     {
         rapidjson::Document doc;
@@ -125,14 +133,6 @@ public:
         KinBody::GrabbedInfo info;
         info.DeserializeJSON(doc, GetEnvironment(penv));
         _Update(info);
-    }
-
-    py::object SerializeJSON(py::object ooptions=py::object())
-    {
-        rapidjson::Document doc;
-        KinBody::GrabbedInfoPtr pInfo = GetGrabbedInfo();
-        pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(ooptions,0));
-        return toPyObject(doc);
     }
 
     std::string __str__() {
