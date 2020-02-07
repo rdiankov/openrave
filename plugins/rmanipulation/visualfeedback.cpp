@@ -415,7 +415,7 @@ private:
         {
             RAY r;
             dReal filen = 1/RaveSqrt(v.lengthsqr3());
-            r.dir = tcamera.rotate((2.0f*filen)*v);
+            r.dir = tcamera.rotate((200.0f*filen)*v);                     // hardcoded test ray length of 200 meters
             r.pos = tcamera.trans + 0.5f*_vf->_fRayMinDist*r.dir;         // move the rays a little forward
             if( !_vf->_robot->GetEnv()->CheckCollision(r,_report) ) {
                 return true;         // not supposed to happen, but it is OK
@@ -481,7 +481,7 @@ private:
         bool _TestRayRigid(const Vector& v, const TransformMatrix& tcamera, const vector<KinBody::LinkPtr>& vattachedlinks)
         {
             dReal filen = 1/RaveSqrt(v.lengthsqr3());
-            RAY r((_vf->_fRayMinDist*filen)*v,(2.0f*filen)*v);
+            RAY r((_vf->_fRayMinDist*filen)*v,(200.0f*filen)*v);           // hardcoded test ray length of 200 meters
             if( _vf->_robot->GetEnv()->CheckCollision(r,KinBodyConstPtr(_vf->_robot),_report) ) {
                 //RAVELOG_INFO(str(boost::format("ray col: %s\n")%_report->__str__()));
                 return false;
