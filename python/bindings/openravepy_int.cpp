@@ -757,7 +757,8 @@ bool PyInterfaceBase::SupportsJSONCommand(const string& cmd)
 
 object PyInterfaceBase::SendCommand(const string& in, bool releasegil, bool lockenv)
 {
-    std::stringstream sin(in), sout;
+    std::stringstream sin(in);
+    std::stringstream sout;
     {
         openravepy::PythonThreadSaverPtr statesaver;
         openravepy::PyEnvironmentLockSaverPtr envsaver;
@@ -779,7 +780,12 @@ object PyInterfaceBase::SendCommand(const string& in, bool releasegil, bool lock
             return py::none_();
         }
     }
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    // https://pybind11.readthedocs.io/en/stable/advanced/cast/strings.html#return-c-strings-without-conversion
+    return py::bytes(sout.str()); // Return the data without transcoding
+#else
     return py::to_object(sout.str());
+#endif
 }
 
 #if OPENRAVE_RAPIDJSON
