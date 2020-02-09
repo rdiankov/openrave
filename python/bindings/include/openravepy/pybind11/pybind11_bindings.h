@@ -109,7 +109,7 @@ inline py::object ConvertStringToUnicode(const std::string& s)
        return py::cast<py::object>(pyo); // py::handle_to_object(pyo);
        ```
      */
-    return py::cast(s);
+    return py::to_object(s);
 }
 
 #ifdef OPENRAVE_BINDINGS_PYARRAY
