@@ -391,12 +391,7 @@ object PyTrajectoryBase::serialize(object ooptions)
     std::stringstream ss;
     ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
     _ptrajectory->serialize(ss,pyGetIntFromPy(ooptions,0));
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    // https://pybind11.readthedocs.io/en/stable/advanced/cast/strings.html#return-c-strings-without-conversion
-    return py::bytes(ss.str()); // Return the data without transcoding
-#else
     return py::to_object(ss.str());
-#endif
 }
 
 void PyTrajectoryBase::SaveToFile(const std::string& filename, object ooptions)
