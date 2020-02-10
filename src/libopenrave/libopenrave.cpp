@@ -371,7 +371,7 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
 #ifdef USE_CRLIBM
         _bcrlibmInit = false;
 #endif
-        
+
         _mapinterfacenames[PT_Planner] = "planner";
         _mapinterfacenames[PT_Robot] = "robot";
         _mapinterfacenames[PT_SensorSystem] = "sensorsystem";
@@ -1881,6 +1881,51 @@ void RaveGetVelocityFromAffineDOFVelocities(Vector& linearvel, Vector& angularve
         angularvel.y = angularvel2.z * 2;
         angularvel.z = angularvel2.w * 2;
     }
+}
+
+OpenRAVEException::OpenRAVEException() : std::exception(), _s("unknown exception"), _error(ORE_Failed)
+{
+}
+
+OpenRAVEException::OpenRAVEException(const std::string& s, OpenRAVEErrorCode error) : std::exception()
+{
+    _error = error;
+    _s = "openrave (";
+    _s += RaveGetErrorCodeString(_error);
+    _s += "): ";
+    _s += s;
+}
+
+char const* OpenRAVEException::what() const throw() {
+    return _s.c_str();
+}
+
+const std::string& OpenRAVEException::message() const {
+    return _s;
+}
+
+OpenRAVEErrorCode OpenRAVEException::GetCode() const {
+    return _error;
+}
+
+const char* RaveGetErrorCodeString(OpenRAVEErrorCode error)
+{
+    switch(error) {
+    case ORE_Failed: return "Failed";
+    case ORE_InvalidArguments: return "InvalidArguments";
+    case ORE_EnvironmentNotLocked: return "EnvironmentNotLocked";
+    case ORE_CommandNotSupported: return "CommandNotSupported";
+    case ORE_Assert: return "Assert";
+    case ORE_InvalidPlugin: return "InvalidPlugin";
+    case ORE_InvalidInterfaceHash: return "InvalidInterfaceHash";
+    case ORE_NotImplemented: return "NotImplemented";
+    case ORE_InconsistentConstraints: return "InconsistentConstraints";
+    case ORE_NotInitialized: return "NotInitialized";
+    case ORE_InvalidState: return "InvalidState";
+    case ORE_Timeout: return "Timeout";
+    }
+    // should throw an exception?
+    return "";
 }
 
 void CollisionReport::Reset(int coloptions)

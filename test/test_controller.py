@@ -50,7 +50,7 @@ class RunController(EnvironmentSetup):
             traj.Init(robot1.GetActiveConfigurationSpecification('quadratic'))
             traj.Insert(0,r_[initvalues1,waypoint])
             ret=planningutils.RetimeActiveDOFTrajectory(traj,robot1,False, 1, 1, 'ParabolicTrajectoryRetimer2')
-            assert(ret==PlannerStatusCode.HasSolution)
+            assert(ret.statusCode==PlannerStatusCode.HasSolution)
             assert(traj.GetDuration()>0)
             # shouldn't move
             self.RunTrajectory(robot2,traj)
