@@ -33,6 +33,7 @@
 #include <boost/weak_ptr.hpp>
 #include <boost/function.hpp>
 #include <boost/assert.hpp>
+#include <openrave/smart_ptr.h>
 
 #include <time.h>
 

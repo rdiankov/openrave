@@ -15,26 +15,34 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NO_IMPORT_ARRAY
-#include "openravepy_int.h"
+#include <openravepy/openravepy_int.h>
+#include <openravepy/openravepy_environmentbase.h>
 
 namespace openravepy {
 
 using py::object;
 using py::extract;
+using py::extract_;
 using py::handle;
 using py::dict;
 using py::enum_;
 using py::class_;
-using py::no_init;
-using py::bases;
 using py::init;
+using py::scope_; // py::object if USE_PYBIND11_PYTHON_BINDINGS
 using py::scope;
 using py::args;
 using py::return_value_policy;
+
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+using py::no_init;
+using py::bases;
 using py::copy_const_reference;
 using py::docstring_options;
-using py::def;
 using py::pickle_suite;
+using py::manage_new_object;
+using py::def;
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+
 namespace numeric = py::numeric;
 
 class PySensorSystemBase : public PyInterfaceBase
@@ -72,11 +80,26 @@ PySensorSystemBasePtr RaveCreateSensorSystem(PyEnvironmentBasePtr pyenv, const s
     return PySensorSystemBasePtr(new PySensorSystemBase(p,pyenv));
 }
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_openravepy_sensorsystem(py::module& m)
+#else
 void init_openravepy_sensorsystem()
+#endif
 {
-    class_<PySensorSystemBase, boost::shared_ptr<PySensorSystemBase>, bases<PyInterfaceBase> >("SensorSystem", DOXY_CLASS(SensorSystemBase), no_init);
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    using namespace py::literals; // "..."_a
+    class_<PySensorSystemBase, OPENRAVE_SHARED_PTR<PySensorSystemBase>, PyInterfaceBase>(m, "SensorSystem", DOXY_CLASS(SensorSystemBase))
+    .def(init<SensorSystemBasePtr, PyEnvironmentBasePtr>(), "sensorsystem"_a, "env"_a)
+#else
+    class_<PySensorSystemBase, OPENRAVE_SHARED_PTR<PySensorSystemBase>, bases<PyInterfaceBase> >("SensorSystem", DOXY_CLASS(SensorSystemBase), no_init)
+#endif
+    ;
 
-    def("RaveCreateSensorSystem",openravepy::RaveCreateSensorSystem,args("env","name"),DOXY_FN1(RaveCreateSensorSystem));
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("RaveCreateSensorSystem", openravepy::RaveCreateSensorSystem, PY_ARGS("env","name") DOXY_FN1(RaveCreateSensorSystem));
+#else
+    def("RaveCreateSensorSystem",openravepy::RaveCreateSensorSystem, PY_ARGS("env","name") DOXY_FN1(RaveCreateSensorSystem));
+#endif
 }
 
 }

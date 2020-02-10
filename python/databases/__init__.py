@@ -28,7 +28,8 @@ try:
 except:
     import pickle
 
-from .. import openravepy_int, openrave_exception
+from .. import openravepy_int
+from .. import OpenRAVEException
 from .. import metaclass
 from ..misc import OpenRAVEGlobalArguments
 import os.path
@@ -202,8 +203,8 @@ class DatabaseGenerator(metaclass.AutoReloader):
                         if robot.GetDOF() > 0:
                             break
                     if robot is None or robot.GetDOF() == 0:
-                        raise openrave_exception('there is no robot with DOF > 0')
-                    
+                        raise OpenRAVEException('there is no robot with DOF > 0', 'Assert')
+                
                 elif allowkinbody:
                     robot = env.GetBodies()[0]
                 assert(robot is not None)

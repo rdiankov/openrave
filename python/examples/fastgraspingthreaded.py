@@ -142,7 +142,7 @@ class FastGraspingThreaded:
             grasps = []
             jointvalues = []
             with self.robot:
-                self.robot.SetActiveDOFs(self.manip.GetGripperIndices(),DOFAffine.X+DOFAffine.Y+DOFAffine.Z)
+                self.robot.SetActiveDOFs(self.manip.GetGripperIndices(),DOFAffine.X|DOFAffine.Y|DOFAffine.Z)
                 approachrays[:,3:6] = -approachrays[:,3:6]
 
                 # initial preshape for robot is the released fingers
