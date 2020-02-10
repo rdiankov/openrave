@@ -14,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#include <openrave/json.h>
 #include "libopenrave.h"
 
 #define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "robot %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetName()%_nHierarchyComputed, ORE_NotInitialized);
@@ -23,10 +24,10 @@ namespace OpenRAVE {
 void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options) const
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", _name);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "linkName", _linkname);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", _trelative);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", _sensorname);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "name", _name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "linkName", _linkname);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "transform", _trelative);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "type", _sensorname);
 
     // TODO: SensorGeometry
     // rapidjson::Value sensorGeometryValue;

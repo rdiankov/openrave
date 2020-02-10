@@ -118,7 +118,7 @@ public:
         return pinfo;
     }
 
-    void DeserializeJSON(object obj, PyEnvironmentBasePtr penv)
+    void DeserializeJSON(py::object obj, PyEnvironmentBasePtr penv)
     {
         rapidjson::Document doc;
         toRapidJSONValue(obj, doc, doc.GetAllocator());
@@ -127,7 +127,7 @@ public:
         _Update(info);
     }
 
-    object SerializeJSON(object ooptions=object())
+    py::object SerializeJSON(py::object ooptions=py::object())
     {
         rapidjson::Document doc;
         KinBody::GrabbedInfoPtr pInfo = GetGrabbedInfo();

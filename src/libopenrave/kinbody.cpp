@@ -14,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#include <openrave/json.h>
 #include "libopenrave.h"
 #include <algorithm>
 
@@ -84,24 +85,24 @@ ElectricMotorActuatorInfo::ElectricMotorActuatorInfo()
 void ElectricMotorActuatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, int options) const
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "modelType", model_type);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "assignedPowerRating", assigned_power_rating);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "maxSpeed", max_speed);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "noLoadSpeed", no_load_speed);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "stallTorque", stall_torque);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "maxInstantaneousTorque", max_instantaneous_torque);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "nominalSpeedTorquePoints", nominal_speed_torque_points);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "maxSpeedTorquePoints", max_speed_torque_points);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "nominalTorque", nominal_torque);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "rotorInertia", rotor_inertia);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "torqueConstant", torque_constant);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "nominalVoltage", nominal_voltage);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "speedConstant", speed_constant);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "startingCurrent", starting_current);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "terminalResistance", terminal_resistance);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "gearRatio", gear_ratio);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "coloumbFriction", coloumb_friction);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "viscousFriction", viscous_friction);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "modelType", model_type);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "assignedPowerRating", assigned_power_rating);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "maxSpeed", max_speed);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "noLoadSpeed", no_load_speed);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "stallTorque", stall_torque);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "maxInstantaneousTorque", max_instantaneous_torque);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "nominalSpeedTorquePoints", nominal_speed_torque_points);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "maxSpeedTorquePoints", max_speed_torque_points);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "nominalTorque", nominal_torque);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "rotorInertia", rotor_inertia);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "torqueConstant", torque_constant);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "nominalVoltage", nominal_voltage);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "speedConstant", speed_constant);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "startingCurrent", starting_current);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "terminalResistance", terminal_resistance);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "gearRatio", gear_ratio);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "coloumbFriction", coloumb_friction);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "viscousFriction", viscous_friction);
 }
 
 void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv)

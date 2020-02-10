@@ -645,7 +645,7 @@ KinBody::JointInfoPtr PyJointInfo::GetJointInfo() {
     return pinfo;
 }
 
-py::object PyJointInfo::SerializeJSON(py::object options
+py::object PyJointInfo::SerializeJSON(py::object options)
 {
     rapidjson::Document doc;
     KinBody::JointInfoPtr pInfo = GetJointInfo();
@@ -3560,7 +3560,6 @@ void init_openravepy_kinbody()
         }
                                    ))
 #else
->>>>>>> tgn_clean_json
                           .def_pickle(GeometryInfo_pickle_suite())
 #endif
     ;
@@ -3607,7 +3606,6 @@ void init_openravepy_kinbody()
             return pyinfo;
         }))
 #else
->>>>>>> tgn_clean_json
                       .def_pickle(LinkInfo_pickle_suite())
 #endif
     ;
