@@ -59,6 +59,10 @@ PyManipulatorInfo::PyManipulatorInfo() {
     _vGripperJointNames = py::list();
 }
 PyManipulatorInfo::PyManipulatorInfo(const RobotBase::ManipulatorInfo& info) {
+    _Update(info);
+}
+
+void PyManipulatorInfo::_Update(const RobotBase::ManipulatorInfo& info){
     _name = ConvertStringToUnicode(info._name);
     _sBaseLinkName = ConvertStringToUnicode(info._sBaseLinkName);
     _sEffectorLinkName = ConvertStringToUnicode(info._sEffectorLinkName);
@@ -87,7 +91,7 @@ RobotBase::ManipulatorInfoPtr PyManipulatorInfo::GetManipulatorInfo() const
     return pinfo;
 }
 
-py::object PyManipulatorInfo::SerializeJSON(py::object options
+py::object PyManipulatorInfo::SerializeJSON(py::object options)
 {
     rapidjson::Document doc;
     RobotBase::ManipulatorInfoPtr pInfo = GetManipulatorInfo();
@@ -113,6 +117,9 @@ PyManipulatorInfoPtr toPyManipulatorInfo(const RobotBase::ManipulatorInfo& manip
 PyAttachedSensorInfo::PyAttachedSensorInfo() {
 }
 PyAttachedSensorInfo::PyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& info) {
+    _Update(info);
+}
+void PyAttachedSensorInfo::_Update(const RobotBase::AttachedSensorInfo& info){
     _name = ConvertStringToUnicode(info._name);
     _linkname = ConvertStringToUnicode(info._linkname);
     _trelative = ReturnTransform(info._trelative);
@@ -136,7 +143,7 @@ PyAttachedSensorInfoPtr toPyAttachedSensorInfo(const RobotBase::AttachedSensorIn
     return PyAttachedSensorInfoPtr(new PyAttachedSensorInfo(attachedSensorinfo));
 }
 
-py::object PyAttachedSensorInfo::SerializeJSON(object options=object())
+py::object PyAttachedSensorInfo::SerializeJSON(py::object options)
 {
   	rapidjson::Document doc;
   	RobotBase::AttachedSensorInfoPtr pInfo = GetAttachedSensorInfo();
@@ -144,7 +151,7 @@ py::object PyAttachedSensorInfo::SerializeJSON(object options=object())
   	return toPyObject(doc);
 }
 
-void PyAttachedSensorInfo::DeserializeJSON(object obj, PyEnvironmentBasePtr pyenv)
+void PyAttachedSensorInfo::DeserializeJSON(py::object obj, PyEnvironmentBasePtr pyenv)
 {
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
@@ -156,8 +163,11 @@ void PyAttachedSensorInfo::DeserializeJSON(object obj, PyEnvironmentBasePtr pyen
 
 PyConnectedBodyInfo::PyConnectedBodyInfo() {
 }
-PyConnectedBodyInfo::PyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& info, PyEnvironmentBasePtr pyenv)
-{
+PyConnectedBodyInfo::PyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& info, PyEnvironmentBasePtr pyenv) {
+    _Update(info, pyenv);
+}
+
+void PyConnectedBodyInfo::_Update(const RobotBase::ConnectedBodyInfo& info, PyEnvironmentBasePtr pyenv){
     _name = ConvertStringToUnicode(info._name);
     _linkname = ConvertStringToUnicode(info._linkname);
     _trelative = ReturnTransform(info._trelative);
@@ -213,7 +223,7 @@ py::object PyConnectedBodyInfo::SerializeJSON(py::object options)
     return toPyObject(doc);
 }
 
-void DeserializeJSON(py::object obj, PyEnvironmentBasePtr pyenv)
+void PyConnectedBodyInfo::DeserializeJSON(py::object obj, PyEnvironmentBasePtr pyenv)
 {
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());

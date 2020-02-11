@@ -220,6 +220,10 @@ KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo() {
 PyLinkInfo::PyLinkInfo() {
 }
 PyLinkInfo::PyLinkInfo(const KinBody::LinkInfo& info) {
+    _Update(info);
+}
+
+void PyLinkInfo::_Update(const KinBody::LinkInfo& info){
     FOREACHC(itgeominfo, info._vgeometryinfos) {
         _vgeometryinfos.append(PyGeometryInfoPtr(new PyGeometryInfo(**itgeominfo)));
     }
@@ -244,6 +248,23 @@ PyLinkInfo::PyLinkInfo(const KinBody::LinkInfo& info) {
     _vForcedAdjacentLinks = vForcedAdjacentLinks;
     _bStatic = info._bStatic;
     _bIsEnabled = info._bIsEnabled;
+}
+
+py::object PyLinkInfo::SerializeJSON(const dReal fUnitScale, object options)
+{
+    rapidjson::Document doc;
+    KinBody::LinkInfoPtr pInfo = GetLinkInfo();
+    pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(options, 0));
+    return toPyObject(doc);
+}
+
+void PyLinkInfo::DeserializeJSON(object obj, const dReal fUnitScale)
+{
+    rapidjson::Document doc;
+    toRapidJSONValue(obj, doc, doc.GetAllocator());
+    KinBody::LinkInfo info;
+    info.DeserializeJSON(doc, fUnitScale);
+    _Update(info);
 }
 
 KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
@@ -319,9 +340,15 @@ PyLinkInfoPtr toPyLinkInfo(const KinBody::LinkInfo& linkinfo)
 {
     return PyLinkInfoPtr(new PyLinkInfo(linkinfo));
 }
+
 PyElectricMotorActuatorInfo::PyElectricMotorActuatorInfo() {
 }
+
 PyElectricMotorActuatorInfo::PyElectricMotorActuatorInfo(const ElectricMotorActuatorInfo& info) {
+    _Update(info);
+}
+
+void PyElectricMotorActuatorInfo::_Update(const ElectricMotorActuatorInfo& info){
     model_type = info.model_type;
     gear_ratio = info.gear_ratio;
     assigned_power_rating = info.assigned_power_rating;
@@ -344,6 +371,22 @@ PyElectricMotorActuatorInfo::PyElectricMotorActuatorInfo(const ElectricMotorActu
     terminal_resistance = info.terminal_resistance;
     coloumb_friction = info.coloumb_friction;
     viscous_friction = info.viscous_friction;
+}
+py::object PyElectricMotorActuatorInfo::SerializeJSON(py::object options)
+{
+    rapidjson::Document doc;
+    ElectricMotorActuatorInfoPtr pInfo = GetElectricMotorActuatorInfo();
+    pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(options, 0));
+    return toPyObject(doc);
+}
+void PyElectricMotorActuatorInfo::DeserializeJSON(py::object obj, PyEnvironmentBasePtr penv)
+{
+    rapidjson::Document doc;
+    toRapidJSONValue(obj, doc, doc.GetAllocator());
+    ElectricMotorActuatorInfo info;
+    info.DeserializeJSON(doc, GetEnvironment(penv));
+    _Update(info);
+    return;
 }
 
 ElectricMotorActuatorInfoPtr PyElectricMotorActuatorInfo::GetElectricMotorActuatorInfo() {
@@ -387,22 +430,6 @@ PyJointInfo::PyJointInfo(const KinBody::JointInfo& info, PyEnvironmentBasePtr py
     _Update(info, pyenv);
 }
 
-py::object PyJointInfo::SerializeJSON(py::object options)
-{
-    rapidjson::Document doc;
-    ElectricMotorActuatorInfoPtr pInfo = GetElectricMotorActuatorInfo();
-    pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(options, 0));
-    return toPyObject(doc);
-}
-void PyJointInfo::DeserializeJSON(py::object obj, PyEnvironmentBasePtr penv)
-{
-    rapidjson::Document doc;
-    toRapidJSONValue(obj, doc, doc.GetAllocator());
-    ElectricMotorActuatorInfo info;
-    info.DeserializeJSON(doc, GetEnvironment(penv));
-    _Update(info);
-    return;
-}
 
 void PyJointInfo::_Update(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv){
     _type = info._type;
@@ -662,7 +689,6 @@ void PyJointInfo::DeserializeJSON(py::object obj, PyEnvironmentBasePtr penv, con
     _Update(info, penv);
     return;
 }
-
 
 PyJointInfoPtr toPyJointInfo(const KinBody::JointInfo& jointinfo, PyEnvironmentBasePtr pyenv)
 {
@@ -3643,10 +3669,6 @@ void init_openravepy_kinbody()
                        .def_readwrite("_bIsCircular",&PyJointInfo::_bIsCircular)
                        .def_readwrite("_bIsActive",&PyJointInfo::_bIsActive)
                        .def_readwrite("_infoElectricMotor", &PyJointInfo::_infoElectricMotor)
-                       .def_readwrite("_controlMode", &PyJointInfo::_controlMode)
-                       .def_readwrite("_jci_robotcontroller", &PyJointInfo::_jci_robotcontroller)
-                       .def_readwrite("_jci_io", &PyJointInfo::_jci_io)
-                       .def_readwrite("_jci_externaldevice", &PyJointInfo::_jci_externaldevice)
                        .def("SerializeJSON", &PyJointInfo::SerializeJSON, SerializeJSON_overloads(args("options"), DOXY_FN(KinBody::JointInfo, SerializeJSON)))
                        .def("DeserializeJSON", &PyJointInfo::DeserializeJSON, args("obj", "penv", "unitScale"), DOXY_FN(KinBody::JointInfo, DeserializeJSON))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

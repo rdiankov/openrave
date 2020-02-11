@@ -30,7 +30,8 @@ public:
     PyManipulatorInfo(const RobotBase::ManipulatorInfo& info);
 
     RobotBase::ManipulatorInfoPtr GetManipulatorInfo() const;
-
+    py::object SerializeJSON(py::object options = py::object());
+    void DeserializeJSON(py::object obj, PyEnvironmentBasePtr pyenv);
     object _name = py::none_();
     object _sBaseLinkName = py::none_();
     object _sEffectorLinkName = py::none_();
@@ -39,6 +40,9 @@ public:
     object _vdirection = py::none_();
     std::string _sIkSolverXMLId;
     object _vGripperJointNames = py::none_();
+
+private:
+    void _Update(const RobotBase::ManipulatorInfo& info);
 };
 
 class PyAttachedSensorInfo
@@ -48,12 +52,16 @@ public:
     PyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& info);
 
     RobotBase::AttachedSensorInfoPtr GetAttachedSensorInfo() const;
+    py::object SerializeJSON(py::object options = py::object());
+    void DeserializeJSON(py::object obj, PyEnvironmentBasePtr pyenv);
 
     object _name = py::none_();
     object _linkname = py::none_();
     object _trelative = py::none_();
     object _sensorname = py::none_();
     PySensorGeometryPtr _sensorgeometry;
+private:
+    void _Update(const RobotBase::AttachedSensorInfo& info);
 };
 
 class PyConnectedBodyInfo
@@ -63,7 +71,8 @@ public:
     PyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& info, PyEnvironmentBasePtr pyenv);
 
     RobotBase::ConnectedBodyInfoPtr GetConnectedBodyInfo() const;
-
+    py::object SerializeJSON(py::object options = py::object());
+    void DeserializeJSON(py::object obj, PyEnvironmentBasePtr pyenv);
     object _name = py::none_();
     object _linkname = py::none_();
     object _trelative = py::none_();
@@ -72,7 +81,8 @@ public:
     object _jointInfos = py::none_();
     object _manipulatorInfos = py::none_();
     object _attachedSensorInfos = py::none_();
-
+private:
+    void _Update(const RobotBase::ConnectedBodyInfo& info, PyEnvironmentBasePtr pyenv);
 };
 
 } // namespace openravepy

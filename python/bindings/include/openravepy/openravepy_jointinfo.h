@@ -84,7 +84,8 @@ public:
     PyLinkInfo(const KinBody::LinkInfo& info);
 
     KinBody::LinkInfoPtr GetLinkInfo();
-
+    py::object SerializeJSON(const dReal fUnitScale=1.0, py::object options=py::object());
+    void DeserializeJSON(py::object obj, const dReal fUnitScale=1.0);
     py::list _vgeometryinfos;
     object _name = py::none_();
     object _t = ReturnTransform(Transform());
@@ -95,6 +96,9 @@ public:
     object _vForcedAdjacentLinks = py::list();
     bool _bStatic = false;
     bool _bIsEnabled = true;
+
+private:
+    void _Update(const KinBody::LinkInfo& info);
 };
 
 class PyElectricMotorActuatorInfo
@@ -104,6 +108,8 @@ public:
     PyElectricMotorActuatorInfo(const ElectricMotorActuatorInfo& info);
 
     ElectricMotorActuatorInfoPtr GetElectricMotorActuatorInfo();
+    py::object SerializeJSON(py::object options=py::object());
+    void DeserializeJSON(py::object obj, PyEnvironmentBasePtr penv);
 
     std::string model_type;
     dReal gear_ratio = 0.0;
@@ -122,6 +128,9 @@ public:
     dReal terminal_resistance = 0.0;
     dReal coloumb_friction = 0.0;
     dReal viscous_friction = 0.0;
+
+private:
+    void _Update(const ElectricMotorActuatorInfo& info);
 };
 typedef OPENRAVE_SHARED_PTR<PyElectricMotorActuatorInfo> PyElectricMotorActuatorInfoPtr;
 
@@ -132,6 +141,8 @@ public:
 
     PyJointInfo(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv);
     KinBody::JointInfoPtr GetJointInfo();
+    py::object SerializeJSON(py::object options=py::object());
+    void DeserializeJSON(py::object obj, PyEnvironmentBasePtr penv, const dReal fUnitScale);
 
     KinBody::JointType _type = KinBody::JointNone;
     object _name = py::none_();
@@ -158,6 +169,9 @@ public:
     py::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters;
     object _bIsCircular = py::list();
     bool _bIsActive = true;
+
+private:
+    void _Update(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv);
 };
 
 class PyLink
