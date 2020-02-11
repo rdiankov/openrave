@@ -21,7 +21,7 @@
 #include <openrave/utils.h>
 
 namespace openravepy {
-
+using py::object;
 class PyStateRestoreContextBase
 {
 public:
@@ -184,7 +184,6 @@ public:
 #else
     py::object _setRobotLinksToIgnore = py::none_();
 #endif
-    }
 }; // class PyGrabbedInfo
 typedef OPENRAVE_SHARED_PTR<PyGrabbedInfo> PyGrabbedInfoPtr;
 

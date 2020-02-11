@@ -53,10 +53,7 @@ public:
     PyAttachedSensorInfo();
     PyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& info);
     RobotBase::AttachedSensorInfoPtr GetAttachedSensorInfo() const;
-    py::object SerializeJSON(py::object options = py::object());
-    void DeserializeJSON(py::object obj, PyEnvironmentBasePtr pyenv);
 
-    // Simon's work
     object SerializeJSON(object options=py::none_());
     void DeserializeJSON(object obj, PyEnvironmentBasePtr pyenv);
 

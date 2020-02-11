@@ -334,23 +334,6 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
     return pinfo;
 }
 
-object PyLinkInfo::SerializeJSON(const dReal fUnitScale, object ooptions)
-{
-    rapidjson::Document doc;
-    KinBody::LinkInfoPtr pInfo = GetLinkInfo();
-    pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(ooptions, 0));
-    return toPyObject(doc);
-}
-
-void PyLinkInfo::DeserializeJSON(object obj, const dReal fUnitScale)
-{
-    rapidjson::Document doc;
-    toRapidJSONValue(obj, doc, doc.GetAllocator());
-    KinBody::LinkInfo info;
-    info.DeserializeJSON(doc, fUnitScale);
-    _Update(info);
-}
-
 PyLinkInfoPtr toPyLinkInfo(const KinBody::LinkInfo& linkinfo)
 {
     return PyLinkInfoPtr(new PyLinkInfo(linkinfo));
@@ -436,23 +419,6 @@ ElectricMotorActuatorInfoPtr PyElectricMotorActuatorInfo::GetElectricMotorActuat
     info.coloumb_friction = coloumb_friction;
     info.viscous_friction = viscous_friction;
     return pinfo;
-}
-
-object PyElectricMotorActuatorInfo::SerializeJSON(object ooptions)
-{
-    rapidjson::Document doc;
-    ElectricMotorActuatorInfoPtr pInfo = GetElectricMotorActuatorInfo();
-    pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(ooptions, 0));
-    return toPyObject(doc);
-}
-
-void PyElectricMotorActuatorInfo::DeserializeJSON(object obj, PyEnvironmentBasePtr penv)
-{
-    rapidjson::Document doc;
-    toRapidJSONValue(obj, doc, doc.GetAllocator());
-    ElectricMotorActuatorInfo info;
-    info.DeserializeJSON(doc, GetEnvironment(penv));
-    _Update(info);
 }
 
 PyJointControlInfo_RobotController::PyJointControlInfo_RobotController()
