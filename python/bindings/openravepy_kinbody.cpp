@@ -108,9 +108,6 @@ PyGeometryInfo::PyGeometryInfo() {
     _bModifiable = true;
 }
 
-//PyGeometryInfo::PyGeometryInfo(const PyGeometryInfo& pyinfo) {
-//    //*this = pyinfo;
-//}
 PyGeometryInfo::PyGeometryInfo(const KinBody::GeometryInfo& info) {
     Init(info);
 }
@@ -159,6 +156,14 @@ object PyGeometryInfo::ComputeAABB(object otransform) {
     return toPyAABB(pgeominfo->ComputeAABB(ExtractTransform(otransform)));
 }
 
+object PyGeometryInfo::SerializeJSON(const dReal fUnitScale, object ooptions)
+{
+    rapidjson::Document doc;
+    KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
+    pgeominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(ooptions,0));
+    return toPyObject(doc);
+}
+
 void PyGeometryInfo::DeserializeJSON(object obj, const dReal fUnitScale)
 {
     rapidjson::Document doc;
@@ -166,14 +171,6 @@ void PyGeometryInfo::DeserializeJSON(object obj, const dReal fUnitScale)
     KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
     pgeominfo->DeserializeJSON(doc, fUnitScale);
     Init(*pgeominfo);
-}
-
-object PyGeometryInfo::SerializeJSON(const dReal fUnitScale, object ooptions)
-{
-    rapidjson::Document doc;
-    KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
-    pgeominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(ooptions,0));
-    return toPyObject(doc);
 }
 
 KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo() {
@@ -219,11 +216,12 @@ KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo() {
 
 PyLinkInfo::PyLinkInfo() {
 }
+
 PyLinkInfo::PyLinkInfo(const KinBody::LinkInfo& info) {
     _Update(info);
 }
 
-void PyLinkInfo::_Update(const KinBody::LinkInfo& info){
+void PyLinkInfo::_Update(const KinBody::LinkInfo& info) {
     FOREACHC(itgeominfo, info._vgeometryinfos) {
         _vgeometryinfos.append(PyGeometryInfoPtr(new PyGeometryInfo(**itgeominfo)));
     }
@@ -336,6 +334,23 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
     return pinfo;
 }
 
+object PyLinkInfo::SerializeJSON(const dReal fUnitScale, object ooptions)
+{
+    rapidjson::Document doc;
+    KinBody::LinkInfoPtr pInfo = GetLinkInfo();
+    pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(ooptions, 0));
+    return toPyObject(doc);
+}
+
+void PyLinkInfo::DeserializeJSON(object obj, const dReal fUnitScale)
+{
+    rapidjson::Document doc;
+    toRapidJSONValue(obj, doc, doc.GetAllocator());
+    KinBody::LinkInfo info;
+    info.DeserializeJSON(doc, fUnitScale);
+    _Update(info);
+}
+
 PyLinkInfoPtr toPyLinkInfo(const KinBody::LinkInfo& linkinfo)
 {
     return PyLinkInfoPtr(new PyLinkInfo(linkinfo));
@@ -348,7 +363,7 @@ PyElectricMotorActuatorInfo::PyElectricMotorActuatorInfo(const ElectricMotorActu
     _Update(info);
 }
 
-void PyElectricMotorActuatorInfo::_Update(const ElectricMotorActuatorInfo& info){
+void PyElectricMotorActuatorInfo::_Update(const ElectricMotorActuatorInfo& info) {
     model_type = info.model_type;
     gear_ratio = info.gear_ratio;
     assigned_power_rating = info.assigned_power_rating;
@@ -423,6 +438,243 @@ ElectricMotorActuatorInfoPtr PyElectricMotorActuatorInfo::GetElectricMotorActuat
     return pinfo;
 }
 
+object PyElectricMotorActuatorInfo::SerializeJSON(object ooptions)
+{
+    rapidjson::Document doc;
+    ElectricMotorActuatorInfoPtr pInfo = GetElectricMotorActuatorInfo();
+    pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(ooptions, 0));
+    return toPyObject(doc);
+}
+
+void PyElectricMotorActuatorInfo::DeserializeJSON(object obj, PyEnvironmentBasePtr penv)
+{
+    rapidjson::Document doc;
+    toRapidJSONValue(obj, doc, doc.GetAllocator());
+    ElectricMotorActuatorInfo info;
+    info.DeserializeJSON(doc, GetEnvironment(penv));
+    _Update(info);
+}
+
+PyJointControlInfo_RobotController::PyJointControlInfo_RobotController()
+{
+}
+
+PyJointControlInfo_RobotController::PyJointControlInfo_RobotController(const KinBody::JointInfo::JointControlInfo_RobotController& jci)
+{
+    robotId = jci.robotId;
+
+    py::list _robotControllerDOFIndex;
+    FOREACHC(itdofindex, jci.robotControllerDOFIndex) {
+        _robotControllerDOFIndex.append(*itdofindex);
+    }
+    robotControllerDOFIndex = _robotControllerDOFIndex;
+}
+
+KinBody::JointInfo::JointControlInfo_RobotControllerPtr PyJointControlInfo_RobotController::GetJointControlInfo()
+{
+    KinBody::JointInfo::JointControlInfo_RobotControllerPtr pinfo(new KinBody::JointInfo::JointControlInfo_RobotController());
+    KinBody::JointInfo::JointControlInfo_RobotController& info = *pinfo;
+    info.robotId = robotId;
+    if( !IS_PYTHONOBJECT_NONE(robotControllerDOFIndex) ) {
+        size_t num = len(robotControllerDOFIndex);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info.robotControllerDOFIndex.size(), ORE_InvalidState);
+        for( size_t i = 0; i < num; ++i ) {
+            info.robotControllerDOFIndex[i] = py::extract<int>(robotControllerDOFIndex[i]);
+        }
+    }
+    return pinfo;
+}
+
+PyJointControlInfo_IO::PyJointControlInfo_IO()
+{
+}
+
+PyJointControlInfo_IO::PyJointControlInfo_IO(const KinBody::JointInfo::JointControlInfo_IO& jci)
+{
+    deviceId = jci.deviceId;
+
+    py::list _vMoveIONames;
+    FOREACHC(itmoveionamelist, jci.vMoveIONames) {
+        if( itmoveionamelist->size() == 0 ) {
+            _vMoveIONames.append(py::list());
+        }
+        else {
+            py::list ionames;
+            FOREACHC(itioname, *itmoveionamelist) {
+                ionames.append(ConvertStringToUnicode(*itioname));
+            }
+            _vMoveIONames.append(ionames);
+        }
+    }
+    vMoveIONames = _vMoveIONames;
+
+    py::list _vUpperLimitIONames;
+    FOREACHC(itupperlimitionamelist, jci.vUpperLimitIONames) {
+        if( itupperlimitionamelist->size() == 0 ) {
+            _vUpperLimitIONames.append(py::list());
+        }
+        else {
+            py::list ionames;
+            FOREACHC(itioname, *itupperlimitionamelist) {
+                ionames.append(ConvertStringToUnicode(*itioname));
+            }
+            _vUpperLimitIONames.append(ionames);
+        }
+    }
+    vUpperLimitIONames = _vUpperLimitIONames;
+
+    py::list _vUpperLimitSensorIsOn;
+    FOREACHC(itiovaluelist, jci.vUpperLimitSensorIsOn) {
+        if( itiovaluelist->size() == 0 ) {
+            _vUpperLimitSensorIsOn.append(py::list());
+        }
+        else {
+            py::list iovalues;
+            FOREACHC(itiovalue, *itiovaluelist) {
+                iovalues.append(*itiovalue);
+            }
+            _vUpperLimitSensorIsOn.append(iovalues);
+        }
+    }
+    vUpperLimitSensorIsOn = _vUpperLimitSensorIsOn;
+
+    py::list _vLowerLimitIONames;
+    FOREACHC(itlowerlimitionamelist, jci.vLowerLimitIONames) {
+        if( itlowerlimitionamelist->size() == 0 ) {
+            _vLowerLimitIONames.append(py::list());
+        }
+        else {
+            py::list ionames;
+            FOREACHC(itioname, *itlowerlimitionamelist) {
+                ionames.append(ConvertStringToUnicode(*itioname));
+            }
+            _vLowerLimitIONames.append(ionames);
+        }
+    }
+    vLowerLimitIONames = _vLowerLimitIONames;
+
+    py::list _vLowerLimitSensorIsOn;
+    FOREACHC(itiovaluelist, jci.vLowerLimitSensorIsOn) {
+        if( itiovaluelist->size() == 0 ) {
+            _vLowerLimitSensorIsOn.append(py::list());
+        }
+        else {
+            py::list iovalues;
+            FOREACHC(itiovalue, *itiovaluelist) {
+                iovalues.append(*itiovalue);
+            }
+            _vLowerLimitSensorIsOn.append(iovalues);
+        }
+    }
+    vLowerLimitSensorIsOn = _vLowerLimitSensorIsOn;
+}
+
+KinBody::JointInfo::JointControlInfo_IOPtr PyJointControlInfo_IO::GetJointControlInfo()
+{
+    KinBody::JointInfo::JointControlInfo_IOPtr pinfo(new KinBody::JointInfo::JointControlInfo_IO());
+    KinBody::JointInfo::JointControlInfo_IO& info = *pinfo;
+    info.deviceId = deviceId;
+
+    size_t num1, num2;
+    if( !IS_PYTHONOBJECT_NONE(vMoveIONames) ) {
+        num1 = len(vMoveIONames);
+        OPENRAVE_EXCEPTION_FORMAT0(num1 == info.vMoveIONames.size(), ORE_InvalidState);
+        for( size_t i1 = 0; i1 < num1; ++i1 ) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            num2 = len(extract<py::object>(vMoveIONames[i1]));
+#else
+            num2 = len(vMoveIONames[i1]);
+#endif
+            info.vMoveIONames[i1].resize(num2);
+            for( size_t i2 = 0; i2 < num2; ++i2 ) {
+                info.vMoveIONames[i1].at(i2) = py::extract<std::string>(vMoveIONames[i1][i2]);
+            }
+        }
+    }
+
+    if( !IS_PYTHONOBJECT_NONE(vUpperLimitIONames) ) {
+        num1 = len(vUpperLimitIONames);
+        OPENRAVE_EXCEPTION_FORMAT0(num1 == info.vUpperLimitIONames.size(), ORE_InvalidState);
+        for( size_t i1 = 0; i1 < num1; ++i1 ) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            num2 = len(extract<py::object>(vUpperLimitIONames[i1]));
+#else
+            num2 = len(vUpperLimitIONames[i1]);
+#endif
+            info.vUpperLimitIONames[i1].resize(num2);
+            for( size_t i2 = 0; i2 < num2; ++i2 ) {
+                info.vUpperLimitIONames[i1].at(i2) = py::extract<std::string>(vUpperLimitIONames[i1][i2]);
+            }
+        }
+    }
+
+    if( !IS_PYTHONOBJECT_NONE(vUpperLimitSensorIsOn) ) {
+        num1 = len(vUpperLimitSensorIsOn);
+        OPENRAVE_EXCEPTION_FORMAT0(num1 == info.vUpperLimitSensorIsOn.size(), ORE_InvalidState);
+        for( size_t i1 = 0; i1 < num1; ++i1 ) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            num2 = len(extract<py::object>(vUpperLimitSensorIsOn[i1]));
+#else
+            num2 = len(vUpperLimitSensorIsOn[i1]);
+#endif
+            info.vUpperLimitSensorIsOn[i1].resize(num2);
+            for( size_t i2 = 0; i2 < num2; ++i2 ) {
+                info.vUpperLimitSensorIsOn[i1].at(i2) = py::extract<uint8_t>(vUpperLimitSensorIsOn[i1][i2]);
+            }
+        }
+    }
+
+    if( !IS_PYTHONOBJECT_NONE(vLowerLimitIONames) ) {
+        num1 = len(vLowerLimitIONames);
+        OPENRAVE_EXCEPTION_FORMAT0(num1 == info.vLowerLimitIONames.size(), ORE_InvalidState);
+        for( size_t i1 = 0; i1 < num1; ++i1 ) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            num2 = len(extract<py::object>(vLowerLimitIONames[i1]));
+#else
+            num2 = len(vLowerLimitIONames[i1]);
+#endif
+            info.vLowerLimitIONames[i1].resize(num2);
+            for( size_t i2 = 0; i2 < num2; ++i2 ) {
+                info.vLowerLimitIONames[i1].at(i2) = py::extract<std::string>(vLowerLimitIONames[i1][i2]);
+            }
+        }
+    }
+
+    if( !IS_PYTHONOBJECT_NONE(vLowerLimitSensorIsOn) ) {
+        num1 = len(vLowerLimitSensorIsOn);
+        OPENRAVE_EXCEPTION_FORMAT0(num1 == info.vLowerLimitSensorIsOn.size(), ORE_InvalidState);
+        for( size_t i1 = 0; i1 < num1; ++i1 ) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            num2 = len(extract<py::object>(vLowerLimitSensorIsOn[i1]));
+#else
+            num2 = len(vLowerLimitSensorIsOn[i1]);
+#endif
+            info.vLowerLimitSensorIsOn[i1].resize(num2);
+            for( size_t i2 = 0; i2 < num2; ++i2 ) {
+                info.vLowerLimitSensorIsOn[i1].at(i2) = py::extract<uint8_t>(vLowerLimitSensorIsOn[i1][i2]);
+            }
+        }
+    }
+    return pinfo;
+}
+
+PyJointControlInfo_ExternalDevice::PyJointControlInfo_ExternalDevice()
+{
+}
+
+PyJointControlInfo_ExternalDevice::PyJointControlInfo_ExternalDevice(const KinBody::JointInfo::JointControlInfo_ExternalDevice &jci)
+{
+    externalDeviceId = jci.externalDeviceId;
+}
+
+KinBody::JointInfo::JointControlInfo_ExternalDevicePtr PyJointControlInfo_ExternalDevice::GetJointControlInfo()
+{
+    KinBody::JointInfo::JointControlInfo_ExternalDevicePtr pinfo(new KinBody::JointInfo::JointControlInfo_ExternalDevice());
+    KinBody::JointInfo::JointControlInfo_ExternalDevice& info = *pinfo;
+    info.externalDeviceId = externalDeviceId;
+    return pinfo;
+}
+
 PyJointInfo::PyJointInfo() {
 }
 
@@ -430,8 +682,7 @@ PyJointInfo::PyJointInfo(const KinBody::JointInfo& info, PyEnvironmentBasePtr py
     _Update(info, pyenv);
 }
 
-
-void PyJointInfo::_Update(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv){
+void PyJointInfo::_Update(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv) {
     _type = info._type;
     _name = ConvertStringToUnicode(info._name);
     _linkname0 = ConvertStringToUnicode(info._linkname0);
@@ -468,7 +719,6 @@ void PyJointInfo::_Update(const KinBody::JointInfo& info, PyEnvironmentBasePtr p
             }
             _vmimic.append(oequations);
         }
-
     }
     FOREACHC(it, info._mapFloatParameters) {
         _mapFloatParameters[it->first] = toPyArray(it->second);
@@ -487,6 +737,24 @@ void PyJointInfo::_Update(const KinBody::JointInfo& info, PyEnvironmentBasePtr p
     _bIsActive = info._bIsActive;
     if( !!info._infoElectricMotor ) {
         _infoElectricMotor = PyElectricMotorActuatorInfoPtr(new PyElectricMotorActuatorInfo(*info._infoElectricMotor));
+    }
+
+    // joint control
+    _controlMode = info._controlMode;
+    if( _controlMode == KinBody::JCM_RobotController ) {
+        if( !!info._jci_robotcontroller ) {
+            _jci_robotcontroller = PyJointControlInfo_RobotControllerPtr(new PyJointControlInfo_RobotController(*info._jci_robotcontroller));
+        }
+    }
+    else if( _controlMode == KinBody::JCM_IO ) {
+        if( !!info._jci_io ) {
+            _jci_io = PyJointControlInfo_IOPtr(new PyJointControlInfo_IO(*info._jci_io));
+        }
+    }
+    else if( _controlMode == KinBody::JCM_ExternalDevice ) {
+        if( !!info._jci_externaldevice ) {
+            _jci_externaldevice = PyJointControlInfo_ExternalDevicePtr(new PyJointControlInfo_ExternalDevice(*info._jci_externaldevice));
+        }
     }
 }
 
@@ -669,10 +937,23 @@ KinBody::JointInfoPtr PyJointInfo::GetJointInfo() {
         info._infoElectricMotor = _infoElectricMotor->GetElectricMotorActuatorInfo();
         //}
     }
+
+    // joint control
+    info._controlMode = _controlMode;
+    if( _controlMode == KinBody::JCM_RobotController ) {
+        info._jci_robotcontroller = _jci_robotcontroller->GetJointControlInfo();
+    }
+    else if( _controlMode == KinBody::JCM_IO ) {
+        info._jci_io = _jci_io->GetJointControlInfo();
+    }
+    else if( _controlMode == KinBody::JCM_ExternalDevice ) {
+        info._jci_externaldevice = _jci_externaldevice->GetJointControlInfo();
+    }
+
     return pinfo;
 }
 
-py::object PyJointInfo::SerializeJSON(py::object options)
+object PyJointInfo::SerializeJSON(object options)
 {
     rapidjson::Document doc;
     KinBody::JointInfoPtr pInfo = GetJointInfo();
@@ -680,14 +961,13 @@ py::object PyJointInfo::SerializeJSON(py::object options)
     return toPyObject(doc);
 }
 
-void PyJointInfo::DeserializeJSON(py::object obj, PyEnvironmentBasePtr penv, const dReal fUnitScale)
+void PyJointInfo::DeserializeJSON(object obj, PyEnvironmentBasePtr penv, const dReal fUnitScale)
 {
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
     KinBody::JointInfo info;
     info.DeserializeJSON(doc, GetEnvironment(penv), fUnitScale);
     _Update(info, penv);
-    return;
 }
 
 PyJointInfoPtr toPyJointInfo(const KinBody::JointInfo& jointinfo, PyEnvironmentBasePtr pyenv)
@@ -1453,6 +1733,10 @@ object PyJoint::GetStringParameters(object oname) const {
 void PyJoint::SetStringParameters(const std::string& key, object ovalue)
 {
     _pjoint->SetStringParameters(key,extract<std::string>(ovalue));
+}
+
+KinBody::JointControlMode PyJoint::GetControlMode() const {
+    return _pjoint->GetControlMode();
 }
 
 void PyJoint::UpdateInfo() {
@@ -3280,6 +3564,57 @@ public:
     }
 };
 
+class JointControlInfo_RobotController_pickle_suite
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+    : public pickle_suite
+#endif
+{
+public:
+    static py::tuple getstate(const PyJointControlInfo_RobotController& r)
+    {
+        return py::make_tuple(r.robotId, r.robotControllerDOFIndex);
+    }
+    static void setstate(PyJointControlInfo_RobotController& r, py::tuple state) {
+        r.robotId = py::extract<int>(state[0]);
+        r.robotControllerDOFIndex = state[1];
+    }
+};
+
+class JointControlInfo_IO_pickle_suite
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+    : public pickle_suite
+#endif
+{
+public:
+    static py::tuple getstate(const PyJointControlInfo_IO& r)
+    {
+        return py::make_tuple(r.deviceId, r.vMoveIONames, r.vUpperLimitIONames, r.vUpperLimitSensorIsOn, r.vLowerLimitIONames, r.vLowerLimitSensorIsOn);
+    }
+    static void setstate(PyJointControlInfo_IO& r, py::tuple state) {
+        r.deviceId = py::extract<int>(state[0]);
+        r.vMoveIONames = state[1];
+        r.vUpperLimitIONames = state[2];
+        r.vUpperLimitSensorIsOn = state[3];
+        r.vLowerLimitIONames = state[4];
+        r.vLowerLimitSensorIsOn = state[5];
+    }
+};
+
+class JointControlInfo_ExternalDevice_pickle_suite
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+    : public pickle_suite
+#endif
+{
+public:
+    static py::tuple getstate(const PyJointControlInfo_ExternalDevice& r)
+    {
+        return py::make_tuple(r.externalDeviceId);
+    }
+    static void setstate(PyJointControlInfo_ExternalDevice& r, py::tuple state) {
+        r.externalDeviceId = py::extract<int>(state[0]);
+    }
+};
+
 class JointInfo_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
     : public pickle_suite
@@ -3335,6 +3670,12 @@ public:
                     }
                 }
             }
+        }
+        if( len(state) > 3 ) {
+            r._controlMode = (KinBody::JointControlMode)(int)py::extract<int>(state[3][0]);
+            r._jci_robotcontroller = py::extract<PyJointControlInfo_RobotControllerPtr>(state[3][1]);
+            r._jci_io = py::extract<PyJointControlInfo_IOPtr>(state[3][2]);
+            r._jci_externaldevice = py::extract<PyJointControlInfo_ExternalDevicePtr>(state[3][3]);
         }
     }
 };
@@ -3406,7 +3747,17 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromSpheres_overloads, InitFromSphere
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromTrimesh_overloads, InitFromTrimesh, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromGeometries_overloads, InitFromGeometries, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Init_overloads, Init, 2, 3)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SerializeJSON_overloads, SerializeJSON, 0, 1)
+// SerializeJSON
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyElectricMotorActuatorInfo_SerializeJSON_overloads, SerializeJSON, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGeometryInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyLinkInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyJointInfo_SerializeJSON_overloads, SerializeJSON, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGrabbedInfo_SerializeJSON_overloads, SerializeJSON, 0, 1)
+// DeserializeJSON
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGeometryInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyLinkInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyJointInfo_DeserializeJSON_overloads, DeserializeJSON, 2, 3)
+// end of JSON
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABB_overloads, ComputeAABB, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABBFromTransform_overloads, ComputeAABBFromTransform, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeLocalAABB_overloads, ComputeLocalAABB, 0, 1)
@@ -3488,6 +3839,15 @@ void init_openravepy_kinbody()
                                        .def_readwrite("coloumb_friction",&PyElectricMotorActuatorInfo::coloumb_friction)
                                        .def_readwrite("viscous_friction",&PyElectricMotorActuatorInfo::viscous_friction)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+                                       .def("SerializeJSON", &PyElectricMotorActuatorInfo::SerializeJSON, 
+                                           "options"_a = py::none_(), 
+                                           DOXY_FN(ElectricMotorActuatorInfo, SerializeJSON)
+                                       )
+#else
+                                       .def("SerializeJSON", &PyElectricMotorActuatorInfo::SerializeJSON, PyElectricMotorActuatorInfo_SerializeJSON_overloads(PY_ARGS("options") DOXY_FN(ElectricMotorActuatorInfo, SerializeJSON)))
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+                                       .def("DeserializeJSON", &PyElectricMotorActuatorInfo::DeserializeJSON, PY_ARGS("obj", "penv") DOXY_FN(ElectricMotorActuatorInfo, DeserializeJSON))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
                                        .def(py::pickle(
                                                 [](const PyElectricMotorActuatorInfo& pyinfo) {
             return ElectricMotorActuatorInfo_pickle_suite::getstate(pyinfo);
@@ -3506,9 +3866,6 @@ void init_openravepy_kinbody()
                                                 ))
 #else
                                        .def_pickle(ElectricMotorActuatorInfo_pickle_suite())
-                                       .def("SerializeJSON", &PyElectricMotorActuatorInfo::SerializeJSON, SerializeJSON_overloads(args("options"), DOXY_FN(ElectricMotorActuatorInfo, SerializeJSON)))
-                                       .def("DeserializeJSON", &PyElectricMotorActuatorInfo::DeserializeJSON, args("obj", "penv"), DOXY_FN(ElectricMotorActuatorInfo, DeserializeJSON))
-
 #endif // USE_PYBIND11_PYTHON_BINDINGS
     ;
 
@@ -3530,6 +3887,17 @@ void init_openravepy_kinbody()
                        .value("Hinge2",KinBody::JointHinge2)
                        .value("Spherical",KinBody::JointSpherical)
                        .value("Trajectory",KinBody::JointTrajectory)
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object jointcontrolmode = enum_<KinBody::JointControlMode>(m, "JointControlMode" DOXY_ENUM(JointControlMode))
+#else    
+    object jointcontrolmode = enum_<KinBody::JointControlMode>("JointControlMode" DOXY_ENUM(JointControlMode))
+#endif
+                              .value("JCM_None",KinBody::JCM_None)
+                              .value("JCM_RobotController",KinBody::JCM_RobotController)
+                              .value("JCM_IO",KinBody::JCM_IO)
+                              .value("JCM_ExternalDevice",KinBody::JCM_ExternalDevice)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -3561,30 +3929,34 @@ void init_openravepy_kinbody()
                           .def("ComputeInnerEmptyVolume",&PyGeometryInfo::ComputeInnerEmptyVolume, DOXY_FN(GeomeryInfo,ComputeInnerEmptyVolume))
                           .def("ComputeAABB",&PyGeometryInfo::ComputeAABB, PY_ARGS("transform") DOXY_FN(GeomeryInfo,ComputeAABB))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                          .def("DeserializeJSON", &PyGeometryInfo::DeserializeJSON,
-                               py::arg("obj"),
-                               "unitScale"_a = 1.0,
-                               DOXY_FN(GeometryInfo, DeserializeJSON))
                           .def("SerializeJSON", &PyGeometryInfo::SerializeJSON,
                                "unitScale"_a = 1.0,
                                "options"_a = py::none_(),
-                               DOXY_FN(GeometryInfo,SerializeJSON))
+                               DOXY_FN(GeometryInfo,SerializeJSON)
+                          )
+                          .def("DeserializeJSON", &PyGeometryInfo::DeserializeJSON,
+                               "obj"_a,
+                               "unitScale"_a = 1.0,
+                               DOXY_FN(GeometryInfo, DeserializeJSON)
+                          )
 #else
-                          .def("DeserializeJSON", &PyGeometryInfo::DeserializeJSON, PY_ARGS("obj", "unitScale") DOXY_FN(GeometryInfo, DeserializeJSON))
-                          .def("SerializeJSON", &PyGeometryInfo::SerializeJSON,SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(GeometryInfo,SerializeJSON)))
+                          .def("SerializeJSON", &PyGeometryInfo::SerializeJSON, PyGeometryInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(GeometryInfo,SerializeJSON)))
+                          .def("DeserializeJSON", &PyGeometryInfo::DeserializeJSON, PyGeometryInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(GeometryInfo, DeserializeJSON)))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                          .def(py::pickle(
-                                   [](const PyGeometryInfo &pygeom) {
+        .def(py::pickle(
+            [](const PyGeometryInfo &pygeom) {
             // __getstate__
             return GeometryInfo_pickle_suite::getstate(pygeom);
         },
-                                   [](py::tuple state) {
+        [](py::tuple state) {
+            // __setstate__
+            /* Create a new C++ instance */
             PyGeometryInfo pygeom;
             GeometryInfo_pickle_suite::setstate(pygeom, state);
             return pygeom;
         }
-                                   ))
+        ))
 #else
                           .def_pickle(GeometryInfo_pickle_suite())
 #endif
@@ -3619,10 +3991,24 @@ void init_openravepy_kinbody()
                       .def_readwrite("_vForcedAdjacentLinks",&PyLinkInfo::_vForcedAdjacentLinks)
                       .def_readwrite("_bStatic",&PyLinkInfo::_bStatic)
                       .def_readwrite("_bIsEnabled",&PyLinkInfo::_bIsEnabled)
-                      .def("DeserializeJSON", &PyLinkInfo::DeserializeJSON, args("obj", "unitScale"), DOXY_FN(LinkInfo, DeserializeJSON))
-                      .def("SerializeJSON", &PyLinkInfo::SerializeJSON,SerializeJSON_overloads(args("unitScale", "options"), DOXY_FN(LinkInfo, SerializeJSON)))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                      .def(py::pickle([](const PyLinkInfo &pyinfo) {
+                      .def("SerializeJSON", &PyLinkInfo::SerializeJSON, 
+                          "unitScale"_a = 1.0,
+                          "options"_a = py::none_(),
+                          DOXY_FN(LinkInfo, SerializeJSON)
+                       )
+                      .def("DeserializeJSON", &PyLinkInfo::DeserializeJSON,
+                          "obj"_a,
+                          "unitScale"_a = 1.0,
+                          DOXY_FN(LinkInfo, DeserializeJSON)
+                      )
+#else
+                      .def("SerializeJSON", &PyLinkInfo::SerializeJSON, PyLinkInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(LinkInfo, SerializeJSON)))
+                      .def("DeserializeJSON", &PyLinkInfo::DeserializeJSON, PyLinkInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(LinkInfo, DeserializeJSON)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                      .def(py::pickle(
+                               [](const PyLinkInfo &pyinfo) {
             // __getstate__
             return LinkInfo_pickle_suite::getstate(pyinfo);
         },
@@ -3635,6 +4021,94 @@ void init_openravepy_kinbody()
                       .def_pickle(LinkInfo_pickle_suite())
 #endif
     ;
+
+    object jointcontrolinfo_robotcontroller =
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        class_<PyJointControlInfo_RobotController, OPENRAVE_SHARED_PTR<PyJointControlInfo_RobotController> >(m, "JointControlInfo_RobotController", DOXY_CLASS(KinBody::JointInfo::JointControlInfo_RobotController))
+        .def(init<>())
+#else
+        class_<PyJointControlInfo_RobotController, OPENRAVE_SHARED_PTR<PyJointControlInfo_RobotController> >("JointControlInfo_RobotController", DOXY_CLASS(KinBody::JointInfo::JointControlInfo_RobotController))
+#endif
+        .def_readwrite("robotId", &PyJointControlInfo_RobotController::robotId)
+        .def_readwrite("robotControllerDOFIndex", &PyJointControlInfo_RobotController::robotControllerDOFIndex)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        .def(py::pickle(
+            [](const PyJointControlInfo_RobotController &pyinfo) {
+            // __getstate__
+            return JointControlInfo_RobotController_pickle_suite::getstate(pyinfo);
+        },
+            [](py::tuple state) {
+            // __setstate__
+            /* Create a new C++ instance */
+            PyJointControlInfo_RobotController pyinfo;
+            JointControlInfo_RobotController_pickle_suite::setstate(pyinfo, state);
+            return pyinfo;
+        }
+        ))
+#else
+        .def_pickle(JointControlInfo_RobotController_pickle_suite())
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+    ;
+
+    object jointcontrolinfo_io =
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        class_<PyJointControlInfo_IO, OPENRAVE_SHARED_PTR<PyJointControlInfo_IO> >(m, "JointControlInfo_IO", DOXY_CLASS(KinBody::JointInfo::JointControlInfo_IO))
+        .def(init<>())
+#else
+        class_<PyJointControlInfo_IO, OPENRAVE_SHARED_PTR<PyJointControlInfo_IO> >("JointControlInfo_IO", DOXY_CLASS(KinBody::JointInfo::JointControlInfo_IO))
+#endif
+        .def_readwrite("deviceId", &PyJointControlInfo_IO::deviceId)
+        .def_readwrite("vMoveIONames", &PyJointControlInfo_IO::vMoveIONames)
+        .def_readwrite("vUpperLimitIONames", &PyJointControlInfo_IO::vUpperLimitIONames)
+        .def_readwrite("vUpperLimitSensorIsOn", &PyJointControlInfo_IO::vUpperLimitSensorIsOn)
+        .def_readwrite("vLowerLimitIONames", &PyJointControlInfo_IO::vLowerLimitIONames)
+        .def_readwrite("vLowerLimitSensorIsOn", &PyJointControlInfo_IO::vLowerLimitSensorIsOn)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        .def(py::pickle(
+            [](const PyJointControlInfo_IO &pyinfo) {
+            // __getstate__
+            return JointControlInfo_IO_pickle_suite::getstate(pyinfo);
+        },
+            [](py::tuple state) {
+            // __setstate__
+            /* Create a new C++ instance */
+            PyJointControlInfo_IO pyinfo;
+            JointControlInfo_IO_pickle_suite::setstate(pyinfo, state);
+            return pyinfo;
+        }
+        ))
+#else
+        .def_pickle(JointControlInfo_IO_pickle_suite())
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+    ;
+
+    object jointcontrolinfo_externaldevice =
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        class_<PyJointControlInfo_ExternalDevice, OPENRAVE_SHARED_PTR<PyJointControlInfo_ExternalDevice> >(m, "JointControlInfo_ExternalDevice", DOXY_CLASS(KinBody::JointInfo::JointControlInfo_ExternalDevice))
+        .def(init<>())
+#else
+        class_<PyJointControlInfo_ExternalDevice, OPENRAVE_SHARED_PTR<PyJointControlInfo_ExternalDevice> >("JointControlInfo_ExternalDevice", DOXY_CLASS(KinBody::JointInfo::JointControlInfo_ExternalDevice))
+#endif
+        .def_readwrite("externalDeviceId", &PyJointControlInfo_ExternalDevice::externalDeviceId)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        .def(py::pickle(
+            [](const PyJointControlInfo_ExternalDevice &pyinfo) {
+            // __getstate__
+            return JointControlInfo_ExternalDevice_pickle_suite::getstate(pyinfo);
+        },
+            [](py::tuple state) {
+            // __setstate__
+            /* Create a new C++ instance */
+            PyJointControlInfo_ExternalDevice pyinfo;
+            JointControlInfo_ExternalDevice_pickle_suite::setstate(pyinfo, state);
+            return pyinfo;
+        }
+        ))
+#else 
+        .def_pickle(JointControlInfo_ExternalDevice_pickle_suite())
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+    ;
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object jointinfo = class_<PyJointInfo, OPENRAVE_SHARED_PTR<PyJointInfo> >(m, "JointInfo", DOXY_CLASS(KinBody::JointInfo))
                        .def(init<>())
@@ -3669,10 +4143,30 @@ void init_openravepy_kinbody()
                        .def_readwrite("_bIsCircular",&PyJointInfo::_bIsCircular)
                        .def_readwrite("_bIsActive",&PyJointInfo::_bIsActive)
                        .def_readwrite("_infoElectricMotor", &PyJointInfo::_infoElectricMotor)
-                       .def("SerializeJSON", &PyJointInfo::SerializeJSON, SerializeJSON_overloads(args("options"), DOXY_FN(KinBody::JointInfo, SerializeJSON)))
-                       .def("DeserializeJSON", &PyJointInfo::DeserializeJSON, args("obj", "penv", "unitScale"), DOXY_FN(KinBody::JointInfo, DeserializeJSON))
+                       // joint mode
+                       .def_readwrite("_controlMode", &PyJointInfo::_controlMode)
+                       .def_readwrite("_jci_robotcontroller", &PyJointInfo::_jci_robotcontroller)
+                       .def_readwrite("_jci_io", &PyJointInfo::_jci_io)
+                       .def_readwrite("_jci_externaldevice", &PyJointInfo::_jci_externaldevice)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                       .def(py::pickle([](const PyJointInfo &pyinfo) {
+                       .def("SerializeJSON", &PyJointInfo::SerializeJSON,
+                            "options"_a = py::none_(),
+                            DOXY_FN(KinBody::JointInfo, SerializeJSON)
+                        )
+                       .def("DeserializeJSON", &PyJointInfo::DeserializeJSON,
+                            "obj"_a,
+                            "penv"_a,
+                            "unitScale"_a = 1.0,
+                            DOXY_FN(KinBody::JointInfo, DeserializeJSON)
+                        )
+#else
+                       .def("SerializeJSON", &PyJointInfo::SerializeJSON, PyJointInfo_SerializeJSON_overloads(PY_ARGS("options") DOXY_FN(KinBody::JointInfo, SerializeJSON)))
+                       .def("DeserializeJSON", &PyJointInfo::DeserializeJSON, PyJointInfo_DeserializeJSON_overloads(PY_ARGS("obj", "penv", "unitScale") DOXY_FN(KinBody::JointInfo, DeserializeJSON)))
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                       // TGN: can simplify in future using
+                       .def(py::pickle(
+                                [](const PyJointInfo &pyinfo) {
             // __getstate__
             return JointInfo_pickle_suite::getstate(pyinfo);
         },
@@ -3697,8 +4191,15 @@ void init_openravepy_kinbody()
                          .def_readwrite("_robotlinkname",&PyKinBody::PyGrabbedInfo::_robotlinkname)
                          .def_readwrite("_trelative",&PyKinBody::PyGrabbedInfo::_trelative)
                          .def_readwrite("_setRobotLinksToIgnore",&PyKinBody::PyGrabbedInfo::_setRobotLinksToIgnore)
-                         .def("SerializeJSON", &PyKinBody::PyGrabbedInfo::SerializeJSON, SerializeJSON_overloads(args("options"), DOXY_FN(KinBody::GrabbedInfo, SerializeJSON)))
-                         .def("DeserializeJSON", &PyKinBody::PyGrabbedInfo::DeserializeJSON, args("obj", "penv"), DOXY_FN(KinBody::GrabbedInfo, DeserializeJSON))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                         .def("SerializeJSON", &PyKinBody::PyGrabbedInfo::SerializeJSON,
+                            "options"_a = py::none_(),
+                            DOXY_FN(KinBody::GrabbedInfo, SerializeJSON)
+                         )
+#else
+                         .def("SerializeJSON", &PyKinBody::PyGrabbedInfo::SerializeJSON, PyGrabbedInfo_SerializeJSON_overloads(PY_ARGS("options") DOXY_FN(KinBody::GrabbedInfo, SerializeJSON)))
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+                         .def("DeserializeJSON", &PyKinBody::PyGrabbedInfo::DeserializeJSON, PY_ARGS("obj", "penv") DOXY_FN(KinBody::GrabbedInfo, DeserializeJSON))
                          .def("__str__",&PyKinBody::PyGrabbedInfo::__str__)
                          .def("__unicode__",&PyKinBody::PyGrabbedInfo::__unicode__)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -4516,6 +5017,7 @@ void init_openravepy_kinbody()
                            .def("GetStringParameters",&PyJoint::GetStringParameters,GetStringParameters_overloads(PY_ARGS("name", "index") DOXY_FN(KinBody::Joint,GetStringParameters)))
 #endif
                            .def("SetStringParameters",&PyJoint::SetStringParameters,DOXY_FN(KinBody::Joint,SetStringParameters))
+                           .def("GetControlMode",&PyJoint::GetControlMode,DOXY_FN(KinBody::Joint,GetControlMode))
                            .def("UpdateInfo",&PyJoint::UpdateInfo,DOXY_FN(KinBody::Joint,UpdateInfo))
                            .def("GetInfo",&PyJoint::GetInfo,DOXY_FN(KinBody::Joint,GetInfo))
                            .def("UpdateAndGetInfo",&PyJoint::UpdateAndGetInfo,DOXY_FN(KinBody::Joint,UpdateAndGetInfo))

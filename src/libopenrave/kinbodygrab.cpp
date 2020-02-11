@@ -318,7 +318,7 @@ void KinBody::GrabbedInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
     RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "grabbedName", _grabbedname);
     RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "robotLinkName", _robotlinkname);
     RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "transform", _trelative);
-    // RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "robotLinksToIgnoreSet", _setRobotLinksToIgnore);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "robotLinksToIgnoreSet", _setRobotLinksToIgnore);
 }
 
 void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv)

@@ -118,6 +118,14 @@ public:
         return pinfo;
     }
 
+    py::object SerializeJSON(py::object ooptions=py::none_())
+    {
+        rapidjson::Document doc;
+        KinBody::GrabbedInfoPtr pInfo = GetGrabbedInfo();
+        pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(ooptions,0));
+        return toPyObject(doc);
+    }
+
     void DeserializeJSON(py::object obj, PyEnvironmentBasePtr penv)
     {
         rapidjson::Document doc;
@@ -125,14 +133,6 @@ public:
         KinBody::GrabbedInfo info;
         info.DeserializeJSON(doc, GetEnvironment(penv));
         _Update(info);
-    }
-
-    py::object SerializeJSON(py::object ooptions=py::object())
-    {
-        rapidjson::Document doc;
-        KinBody::GrabbedInfoPtr pInfo = GetGrabbedInfo();
-        pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(ooptions,0));
-        return toPyObject(doc);
     }
 
     std::string __str__() {
@@ -148,18 +148,6 @@ public:
     py::object __unicode__() {
         return ConvertStringToUnicode(__str__());
     }
-
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    std::string _grabbedname, _robotlinkname;
-#else
-    py::object _grabbedname = py::none_(), _robotlinkname = py::none_();
-#endif
-    py::object _trelative = py::none_();
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    std::vector<int> _setRobotLinksToIgnore;
-#else
-    py::object _setRobotLinksToIgnore = py::none_();
-#endif
 
 private:
     void _Update(const RobotBase::GrabbedInfo& info)
@@ -180,6 +168,21 @@ private:
             setRobotLinksToIgnore.append(*itindex);
         }
         _setRobotLinksToIgnore = setRobotLinksToIgnore;
+#endif
+    }
+
+public:
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    std::string _grabbedname, _robotlinkname;
+#else
+    py::object _grabbedname = py::none_(), _robotlinkname = py::none_();
+#endif
+    py::object _trelative = py::none_();
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    std::vector<int> _setRobotLinksToIgnore;
+#else
+    py::object _setRobotLinksToIgnore = py::none_();
 #endif
     }
 }; // class PyGrabbedInfo
