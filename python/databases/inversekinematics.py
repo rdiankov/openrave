@@ -148,7 +148,6 @@ if not __openravepy_build_doc__:
 else:
     from numpy import array
 
-from .. import openrave_exception
 from ..openravepy_ext import RobotStateSaver
 from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, openravepyCompilerVersion, IkFilterOptions, KinBody, normalizeAxisRotation, quatFromRotationMatrix, RaveGetDefaultViewerType
 from . import DatabaseGenerator

@@ -66,7 +66,7 @@ else:
     from numpy import array
 
 import numpy
-from ..openravepy_ext import transformPoints, openrave_exception
+from ..openravepy_ext import transformPoints
 from ..openravepy_int import RaveFindDatabaseFile, RaveDestroy, Environment, KinBody, rotationMatrixFromQuat, quatRotateDirection, rotationMatrixFromAxisAngle, RaveGetDefaultViewerType
 from . import DatabaseGenerator
 from .. import pyANN

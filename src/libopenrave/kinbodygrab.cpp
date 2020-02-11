@@ -164,15 +164,33 @@ void KinBody::Release(KinBody &body)
     FOREACH(itgrabbed, _vGrabbedBodies) {
         GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
         KinBodyConstPtr pgrabbedbody = pgrabbed->_pgrabbedbody.lock();
-        if( !!pgrabbedbody && pgrabbedbody.get() == &body ) {
-            _vGrabbedBodies.erase(itgrabbed);
-            _RemoveAttachedBody(body);
-            _PostprocessChangedParameters(Prop_RobotGrabbed);
-            return;
+        if( !!pgrabbedbody ) {
+            bool bpointermatch = pgrabbedbody.get() == &body;
+            bool bnamematch = pgrabbedbody->GetName() == body.GetName();
+            if( bpointermatch != bnamematch ) {
+                RAVELOG_WARN_FORMAT("env=%d, body %s has grabbed body %s (%d), but it does not match with %s (%d) ", GetEnv()->GetId()%pgrabbedbody->GetName()%pgrabbedbody->GetEnvironmentId()%body.GetName()%body.GetEnvironmentId());
+            }
+            if( bpointermatch ) {
+                _vGrabbedBodies.erase(itgrabbed);
+                _RemoveAttachedBody(body);
+                _PostprocessChangedParameters(Prop_RobotGrabbed);
+                return;
+            }
         }
     }
 
-    RAVELOG_DEBUG_FORMAT("env=%d, body %s is not grabbing body %s", GetEnv()->GetId()%GetName()%body.GetName());
+    if( IS_DEBUGLEVEL(Level_Debug) ) {
+        std::stringstream ss;
+        FOREACH(itgrabbed, _vGrabbedBodies) {
+            GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
+            KinBodyConstPtr pgrabbedbody = pgrabbed->_pgrabbedbody.lock();
+            if( !!pgrabbedbody ) {
+                ss << pgrabbedbody->GetName() << ", ";
+            }
+        }
+
+        RAVELOG_DEBUG_FORMAT("env=%d, body %s is not grabbing body %s (%d), but grabbing bodies [%s]", GetEnv()->GetId()%GetName()%body.GetName()%body.GetEnvironmentId()%ss.str());
+    }
 }
 
 void KinBody::ReleaseAllGrabbed()
@@ -296,17 +314,15 @@ void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vgrabbedinfo)
 void KinBody::GrabbedInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, int options) const
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "grabbedName", _grabbedname);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "robotLinkName", _robotlinkname);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", _trelative);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "robotLinksToIgnoreSet", _setRobotLinksToIgnore);
-
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "grabbedName", _grabbedname);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "robotLinkName", _robotlinkname);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "transform", _trelative);
+    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "robotLinksToIgnoreSet", _setRobotLinksToIgnore);
 }
 
 void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv)
 {
     RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
-
     RAVE_DESERIALIZEJSON_REQUIRED(value, "grabbedName", _grabbedname);
     RAVE_DESERIALIZEJSON_REQUIRED(value, "robotLinkName", _robotlinkname);
     RAVE_DESERIALIZEJSON_REQUIRED(value, "transform", _trelative);
