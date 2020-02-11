@@ -95,6 +95,7 @@ void pyVerifyTrajectory(object pyparameters, PyTrajectoryBasePtr pytraj, dReal s
     OpenRAVE::planningutils::VerifyTrajectory(openravepy::GetPlannerParametersConst(pyparameters), openravepy::GetTrajectory(pytraj),samplingstep);
 }
 
+// GIL is assumed locked
 object pySmoothActiveDOFTrajectory(PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyrobot, dReal fmaxvelmult=1.0, dReal fmaxaccelmult=1.0, const std::string& plannername="", const std::string& plannerparameters="")
 {
     return openravepy::toPyPlannerStatus(OpenRAVE::planningutils::SmoothActiveDOFTrajectory(openravepy::GetTrajectory(pytraj),openravepy::GetRobot(pyrobot),fmaxvelmult,fmaxaccelmult,plannername,plannerparameters));
@@ -115,7 +116,9 @@ public:
         if( releasegil ) {
             statesaver.reset(new openravepy::PythonThreadSaver());
         }
-        return openravepy::toPyPlannerStatus(_smoother.PlanPath(ptraj));
+        PlannerStatus status = _smoother.PlanPath(ptraj);
+        statesaver.reset(); // re-lock GIL
+        return openravepy::toPyPlannerStatus(status);
     }
 
     OpenRAVE::planningutils::ActiveDOFTrajectorySmoother _smoother;
@@ -123,16 +126,19 @@ public:
 
 typedef OPENRAVE_SHARED_PTR<PyActiveDOFTrajectorySmoother> PyActiveDOFTrajectorySmootherPtr;
 
+// assume python GIL is locked
 object pySmoothAffineTrajectory(PyTrajectoryBasePtr pytraj, object omaxvelocities, object omaxaccelerations, const std::string& plannername="", const std::string& plannerparameters="")
 {
     return openravepy::toPyPlannerStatus(OpenRAVE::planningutils::SmoothAffineTrajectory(openravepy::GetTrajectory(pytraj),ExtractArray<dReal>(omaxvelocities), ExtractArray<dReal>(omaxaccelerations),plannername,plannerparameters));
 }
 
+// assume python GIL is locked
 object pySmoothTrajectory(PyTrajectoryBasePtr pytraj, dReal fmaxvelmult=1.0, dReal fmaxaccelmult=1.0, const std::string& plannername="", const std::string& plannerparameters="")
 {
     return openravepy::toPyPlannerStatus(OpenRAVE::planningutils::SmoothTrajectory(openravepy::GetTrajectory(pytraj),fmaxvelmult,fmaxaccelmult,plannername,plannerparameters));
 }
 
+// assume python GIL is locked
 object pyRetimeActiveDOFTrajectory(PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyrobot, bool hastimestamps=false, dReal fmaxvelmult=1.0, dReal fmaxaccelmult=1.0, const std::string& plannername="", const std::string& plannerparameters="")
 {
     return openravepy::toPyPlannerStatus(OpenRAVE::planningutils::RetimeActiveDOFTrajectory(openravepy::GetTrajectory(pytraj),openravepy::GetRobot(pyrobot),hastimestamps,fmaxvelmult,fmaxaccelmult,plannername,plannerparameters));
@@ -153,7 +159,9 @@ public:
         if( releasegil ) {
             statesaver.reset(new openravepy::PythonThreadSaver());
         }
-        return openravepy::toPyPlannerStatus(_retimer.PlanPath(ptraj, hastimestamps));
+        PlannerStatus status = _retimer.PlanPath(ptraj, hastimestamps);
+        statesaver.reset(); // re-lock GIL
+        return openravepy::toPyPlannerStatus(status);
     }
 
     OpenRAVE::planningutils::ActiveDOFTrajectoryRetimer _retimer;
@@ -178,7 +186,9 @@ public:
         if( releasegil ) {
             statesaver.reset(new openravepy::PythonThreadSaver());
         }
-        return openravepy::toPyPlannerStatus(_retimer.PlanPath(ptraj,vmaxvelocities, vmaxaccelerations, hastimestamps));
+        PlannerStatus status = _retimer.PlanPath(ptraj,vmaxvelocities, vmaxaccelerations, hastimestamps);
+        statesaver.reset(); // to re-lock the GIL
+        return openravepy::toPyPlannerStatus(status);
     }
 
     OpenRAVE::planningutils::AffineTrajectoryRetimer _retimer;
@@ -357,7 +367,7 @@ object toPyDHParameter(const OpenRAVE::planningutils::DHParameter& p, PyEnvironm
 
 class DHParameter_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
- : public pickle_suite
+    : public pickle_suite
 #endif
 {
 public:
@@ -487,212 +497,212 @@ void InitPlanningUtils()
         scope_ planningutils = class_<planningutils::PyStaticClass>("planningutils")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                  .def_static("JitterTransform", planningutils::pyJitterTransform,
-                    "body"_a,
-                    "jitter"_a,
-                    "maxiterations"_a = 1000,
-                    DOXY_FN1(JitterTransform)
-                    )
+                               .def_static("JitterTransform", planningutils::pyJitterTransform,
+                                           "body"_a,
+                                           "jitter"_a,
+                                           "maxiterations"_a = 1000,
+                                           DOXY_FN1(JitterTransform)
+                                           )
 #else
-                  .def("JitterTransform",planningutils::pyJitterTransform,JitterTransform_overloads(PY_ARGS("body","jitter","maxiterations") DOXY_FN1(JitterTransform)))
-                  .staticmethod("JitterTransform")
+                               .def("JitterTransform",planningutils::pyJitterTransform,JitterTransform_overloads(PY_ARGS("body","jitter","maxiterations") DOXY_FN1(JitterTransform)))
+                               .staticmethod("JitterTransform")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                  .def_static("JitterCurrentConfiguration", planningutils::pyJitterCurrentConfiguration,
-                    "plannerparameters"_a,
-                    "maxiterations"_a = 5000,
-                    "jitter"_a = 0.015,
-                    "perturbation"_a = 1e-5,
-                    DOXY_FN1(JitterCurrentConfiguration)
-                    )
+                               .def_static("JitterCurrentConfiguration", planningutils::pyJitterCurrentConfiguration,
+                                           "plannerparameters"_a,
+                                           "maxiterations"_a = 5000,
+                                           "jitter"_a = 0.015,
+                                           "perturbation"_a = 1e-5,
+                                           DOXY_FN1(JitterCurrentConfiguration)
+                                           )
 #else
-                  .def("JitterCurrentConfiguration",planningutils::pyJitterCurrentConfiguration,JitterCurrentConfiguration_overloads(PY_ARGS("plannerparameters","maxiterations", "jitter", "perturbation") DOXY_FN1(JitterCurrentConfiguration)))
-                  .staticmethod("JitterCurrentConfiguration")
+                               .def("JitterCurrentConfiguration",planningutils::pyJitterCurrentConfiguration,JitterCurrentConfiguration_overloads(PY_ARGS("plannerparameters","maxiterations", "jitter", "perturbation") DOXY_FN1(JitterCurrentConfiguration)))
+                               .staticmethod("JitterCurrentConfiguration")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                  .def_static("ConvertTrajectorySpecification",planningutils::pyConvertTrajectorySpecification, PY_ARGS("trajectory","spec") DOXY_FN1(ConvertTrajectorySpecification))
+                               .def_static("ConvertTrajectorySpecification",planningutils::pyConvertTrajectorySpecification, PY_ARGS("trajectory","spec") DOXY_FN1(ConvertTrajectorySpecification))
 #else
-                  .def("ConvertTrajectorySpecification",planningutils::pyConvertTrajectorySpecification, PY_ARGS("trajectory","spec") DOXY_FN1(ConvertTrajectorySpecification))
-                  .staticmethod("ConvertTrajectorySpecification")
+                               .def("ConvertTrajectorySpecification",planningutils::pyConvertTrajectorySpecification, PY_ARGS("trajectory","spec") DOXY_FN1(ConvertTrajectorySpecification))
+                               .staticmethod("ConvertTrajectorySpecification")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                  .def_static("ComputeTrajectoryDerivatives",planningutils::pyComputeTrajectoryDerivatives, PY_ARGS("trajectory","maxderiv") DOXY_FN1(ComputeTrajectoryDerivatives))
+                               .def_static("ComputeTrajectoryDerivatives",planningutils::pyComputeTrajectoryDerivatives, PY_ARGS("trajectory","maxderiv") DOXY_FN1(ComputeTrajectoryDerivatives))
 #else
-                  .def("ComputeTrajectoryDerivatives",planningutils::pyComputeTrajectoryDerivatives, PY_ARGS("trajectory","maxderiv") DOXY_FN1(ComputeTrajectoryDerivatives))
-                  .staticmethod("ComputeTrajectoryDerivatives")
+                               .def("ComputeTrajectoryDerivatives",planningutils::pyComputeTrajectoryDerivatives, PY_ARGS("trajectory","maxderiv") DOXY_FN1(ComputeTrajectoryDerivatives))
+                               .staticmethod("ComputeTrajectoryDerivatives")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                  .def_static("ReverseTrajectory",planningutils::pyReverseTrajectory, PY_ARGS("trajectory") DOXY_FN1(ReverseTrajectory))
+                               .def_static("ReverseTrajectory",planningutils::pyReverseTrajectory, PY_ARGS("trajectory") DOXY_FN1(ReverseTrajectory))
 #else
-                  .def("ReverseTrajectory",planningutils::pyReverseTrajectory, PY_ARGS("trajectory") DOXY_FN1(ReverseTrajectory))
-                  .staticmethod("ReverseTrajectory")
+                               .def("ReverseTrajectory",planningutils::pyReverseTrajectory, PY_ARGS("trajectory") DOXY_FN1(ReverseTrajectory))
+                               .staticmethod("ReverseTrajectory")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                  .def_static("VerifyTrajectory",planningutils::pyVerifyTrajectory, PY_ARGS("parameters","trajectory","samplingstep") DOXY_FN1(VerifyTrajectory))
+                               .def_static("VerifyTrajectory",planningutils::pyVerifyTrajectory, PY_ARGS("parameters","trajectory","samplingstep") DOXY_FN1(VerifyTrajectory))
 #else
-                  .def("VerifyTrajectory",planningutils::pyVerifyTrajectory, PY_ARGS("parameters","trajectory","samplingstep") DOXY_FN1(VerifyTrajectory))
-                  .staticmethod("VerifyTrajectory")
+                               .def("VerifyTrajectory",planningutils::pyVerifyTrajectory, PY_ARGS("parameters","trajectory","samplingstep") DOXY_FN1(VerifyTrajectory))
+                               .staticmethod("VerifyTrajectory")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                  .def_static("SmoothActiveDOFTrajectory", planningutils::pySmoothActiveDOFTrajectory,
-                    "trajectory"_a,
-                    "robot"_a,
-                    "maxvelmult"_a = 1.0,
-                    "maxaccelmult"_a = 1.0,
-                    "plannername"_a = "",
-                    "plannerparameters"_a = "",
-                    DOXY_FN1(SmoothActiveDOFTrajectory)
-                    )
+                               .def_static("SmoothActiveDOFTrajectory", planningutils::pySmoothActiveDOFTrajectory,
+                                           "trajectory"_a,
+                                           "robot"_a,
+                                           "maxvelmult"_a = 1.0,
+                                           "maxaccelmult"_a = 1.0,
+                                           "plannername"_a = "",
+                                           "plannerparameters"_a = "",
+                                           DOXY_FN1(SmoothActiveDOFTrajectory)
+                                           )
 #else
-                  .def("SmoothActiveDOFTrajectory",planningutils::pySmoothActiveDOFTrajectory, SmoothActiveDOFTrajectory_overloads(PY_ARGS("trajectory","robot","maxvelmult","maxaccelmult","plannername","plannerparameters") DOXY_FN1(SmoothActiveDOFTrajectory)))
-                  .staticmethod("SmoothActiveDOFTrajectory")
+                               .def("SmoothActiveDOFTrajectory",planningutils::pySmoothActiveDOFTrajectory, SmoothActiveDOFTrajectory_overloads(PY_ARGS("trajectory","robot","maxvelmult","maxaccelmult","plannername","plannerparameters") DOXY_FN1(SmoothActiveDOFTrajectory)))
+                               .staticmethod("SmoothActiveDOFTrajectory")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                  .def_static("SmoothAffineTrajectory", planningutils::pySmoothAffineTrajectory,
-                    "trajectory"_a,
-                    "maxvelocities"_a,
-                    "maxaccelerations"_a,
-                    "plannername"_a = "",
-                    "plannerparameters"_a = "",
-                    DOXY_FN1(SmoothAffineTrajectory)
-                    )
+                               .def_static("SmoothAffineTrajectory", planningutils::pySmoothAffineTrajectory,
+                                           "trajectory"_a,
+                                           "maxvelocities"_a,
+                                           "maxaccelerations"_a,
+                                           "plannername"_a = "",
+                                           "plannerparameters"_a = "",
+                                           DOXY_FN1(SmoothAffineTrajectory)
+                                           )
 #else
-                  .def("SmoothAffineTrajectory",planningutils::pySmoothAffineTrajectory, SmoothAffineTrajectory_overloads(PY_ARGS("trajectory","maxvelocities","maxaccelerations","plannername","plannerparameters") DOXY_FN1(SmoothAffineTrajectory)))
-                  .staticmethod("SmoothAffineTrajectory")
+                               .def("SmoothAffineTrajectory",planningutils::pySmoothAffineTrajectory, SmoothAffineTrajectory_overloads(PY_ARGS("trajectory","maxvelocities","maxaccelerations","plannername","plannerparameters") DOXY_FN1(SmoothAffineTrajectory)))
+                               .staticmethod("SmoothAffineTrajectory")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                  .def_static("SmoothTrajectory", planningutils::pySmoothTrajectory,
-                    "trajectory"_a,
-                    "maxvelmult"_a = 1.0,
-                    "maxaccelmult"_a = 1.0,
-                    "plannername"_a = "",
-                    "plannerparameters"_a = "",
-                    DOXY_FN1(SmoothTrajectory)
-                    )
+                               .def_static("SmoothTrajectory", planningutils::pySmoothTrajectory,
+                                           "trajectory"_a,
+                                           "maxvelmult"_a = 1.0,
+                                           "maxaccelmult"_a = 1.0,
+                                           "plannername"_a = "",
+                                           "plannerparameters"_a = "",
+                                           DOXY_FN1(SmoothTrajectory)
+                                           )
 #else
-                  .def("SmoothTrajectory",planningutils::pySmoothTrajectory, SmoothTrajectory_overloads(PY_ARGS("trajectory","maxvelmult","maxaccelmult","plannername","plannerparameters") DOXY_FN1(SmoothTrajectory)))
-                  .staticmethod("SmoothTrajectory")
+                               .def("SmoothTrajectory",planningutils::pySmoothTrajectory, SmoothTrajectory_overloads(PY_ARGS("trajectory","maxvelmult","maxaccelmult","plannername","plannerparameters") DOXY_FN1(SmoothTrajectory)))
+                               .staticmethod("SmoothTrajectory")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                  .def_static("RetimeActiveDOFTrajectory", planningutils::pyRetimeActiveDOFTrajectory,
-                    "trajectory"_a,
-                    "robot"_a,
-                    "hastimestamps"_a = false,
-                    "maxvelmult"_a = 1.0,
-                    "maxaccelmult"_a = 1.0,
-                    "plannername"_a = "",
-                    "plannerparameters"_a = "",
-                    DOXY_FN1(RetimeActiveDOFTrajectory)
-                    )
+                               .def_static("RetimeActiveDOFTrajectory", planningutils::pyRetimeActiveDOFTrajectory,
+                                           "trajectory"_a,
+                                           "robot"_a,
+                                           "hastimestamps"_a = false,
+                                           "maxvelmult"_a = 1.0,
+                                           "maxaccelmult"_a = 1.0,
+                                           "plannername"_a = "",
+                                           "plannerparameters"_a = "",
+                                           DOXY_FN1(RetimeActiveDOFTrajectory)
+                                           )
 #else
-                  .def("RetimeActiveDOFTrajectory",planningutils::pyRetimeActiveDOFTrajectory, RetimeActiveDOFTrajectory_overloads(PY_ARGS("trajectory","robot","hastimestamps","maxvelmult","maxaccelmult","plannername","plannerparameters") DOXY_FN1(RetimeActiveDOFTrajectory)))
-                  .staticmethod("RetimeActiveDOFTrajectory")
+                               .def("RetimeActiveDOFTrajectory",planningutils::pyRetimeActiveDOFTrajectory, RetimeActiveDOFTrajectory_overloads(PY_ARGS("trajectory","robot","hastimestamps","maxvelmult","maxaccelmult","plannername","plannerparameters") DOXY_FN1(RetimeActiveDOFTrajectory)))
+                               .staticmethod("RetimeActiveDOFTrajectory")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                  .def_static("RetimeAffineTrajectory", planningutils::pyRetimeAffineTrajectory,
-                    "trajectory"_a,
-                    "maxvelocities"_a,
-                    "maxaccelerations"_a,
-                    "hastimestamps"_a = false,
-                    "plannername"_a = "",
-                    "plannerparameters"_a = "",
-                    DOXY_FN1(RetimeAffineTrajectory)
-                    )
+                               .def_static("RetimeAffineTrajectory", planningutils::pyRetimeAffineTrajectory,
+                                           "trajectory"_a,
+                                           "maxvelocities"_a,
+                                           "maxaccelerations"_a,
+                                           "hastimestamps"_a = false,
+                                           "plannername"_a = "",
+                                           "plannerparameters"_a = "",
+                                           DOXY_FN1(RetimeAffineTrajectory)
+                                           )
 #else
-                  .def("RetimeAffineTrajectory",planningutils::pyRetimeAffineTrajectory, RetimeAffineTrajectory_overloads(PY_ARGS("trajectory","maxvelocities","maxaccelerations","hastimestamps","plannername","plannerparameters") DOXY_FN1(RetimeAffineTrajectory)))
-                  .staticmethod("RetimeAffineTrajectory")
+                               .def("RetimeAffineTrajectory",planningutils::pyRetimeAffineTrajectory, RetimeAffineTrajectory_overloads(PY_ARGS("trajectory","maxvelocities","maxaccelerations","hastimestamps","plannername","plannerparameters") DOXY_FN1(RetimeAffineTrajectory)))
+                               .staticmethod("RetimeAffineTrajectory")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                  .def_static("RetimeTrajectory", planningutils::pyRetimeTrajectory,
-                    "trajectory"_a,
-                    "hastimestamps"_a = false,
-                    "maxvelmult"_a = 1.0,
-                    "maxaccelmult"_a = 1.0,
-                    "plannername"_a = "",
-                    "plannerparameters"_a = "",
-                    DOXY_FN1(RetimeTrajectory)
-                    )
+                               .def_static("RetimeTrajectory", planningutils::pyRetimeTrajectory,
+                                           "trajectory"_a,
+                                           "hastimestamps"_a = false,
+                                           "maxvelmult"_a = 1.0,
+                                           "maxaccelmult"_a = 1.0,
+                                           "plannername"_a = "",
+                                           "plannerparameters"_a = "",
+                                           DOXY_FN1(RetimeTrajectory)
+                                           )
 #else
-                  .def("RetimeTrajectory",planningutils::pyRetimeTrajectory, RetimeTrajectory_overloads(PY_ARGS("trajectory","hastimestamps","maxvelmult","maxaccelmult","plannername","plannerparameters") DOXY_FN1(RetimeTrajectory)))
-                  .staticmethod("RetimeTrajectory")
+                               .def("RetimeTrajectory",planningutils::pyRetimeTrajectory, RetimeTrajectory_overloads(PY_ARGS("trajectory","hastimestamps","maxvelmult","maxaccelmult","plannername","plannerparameters") DOXY_FN1(RetimeTrajectory)))
+                               .staticmethod("RetimeTrajectory")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                  .def_static("ExtendWaypoint",planningutils::pyExtendWaypoint, PY_ARGS("index","dofvalues", "dofvelocities", "trajectory", "planner") DOXY_FN1(ExtendWaypoint))
+                               .def_static("ExtendWaypoint",planningutils::pyExtendWaypoint, PY_ARGS("index","dofvalues", "dofvelocities", "trajectory", "planner") DOXY_FN1(ExtendWaypoint))
 #else
-                  .def("ExtendWaypoint",planningutils::pyExtendWaypoint, PY_ARGS("index","dofvalues", "dofvelocities", "trajectory", "planner") DOXY_FN1(ExtendWaypoint))
-                  .staticmethod("ExtendWaypoint")
+                               .def("ExtendWaypoint",planningutils::pyExtendWaypoint, PY_ARGS("index","dofvalues", "dofvelocities", "trajectory", "planner") DOXY_FN1(ExtendWaypoint))
+                               .staticmethod("ExtendWaypoint")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                  .def_static("ExtendActiveDOFWaypoint", planningutils::pyExtendActiveDOFWaypoint,
-                    "index"_a,
-                    "dofvalues"_a,
-                    "dofvelocities"_a,
-                    "trajectory"_a,
-                    "robot"_a,
-                    "maxvelmult"_a = 1.0,
-                    "maxaccelmult"_a = 1.0,
-                    "plannername"_a = "",
-                    DOXY_FN1(ExtendActiveDOFWaypoint)
-                    )
+                               .def_static("ExtendActiveDOFWaypoint", planningutils::pyExtendActiveDOFWaypoint,
+                                           "index"_a,
+                                           "dofvalues"_a,
+                                           "dofvelocities"_a,
+                                           "trajectory"_a,
+                                           "robot"_a,
+                                           "maxvelmult"_a = 1.0,
+                                           "maxaccelmult"_a = 1.0,
+                                           "plannername"_a = "",
+                                           DOXY_FN1(ExtendActiveDOFWaypoint)
+                                           )
 #else
-                  .def("ExtendActiveDOFWaypoint",planningutils::pyExtendActiveDOFWaypoint, ExtendActiveDOFWaypoint_overloads(PY_ARGS("index","dofvalues", "dofvelocities", "trajectory", "robot", "maxvelmult", "maxaccelmult", "plannername") DOXY_FN1(ExtendActiveDOFWaypoint)))
-                  .staticmethod("ExtendActiveDOFWaypoint")
+                               .def("ExtendActiveDOFWaypoint",planningutils::pyExtendActiveDOFWaypoint, ExtendActiveDOFWaypoint_overloads(PY_ARGS("index","dofvalues", "dofvelocities", "trajectory", "robot", "maxvelmult", "maxaccelmult", "plannername") DOXY_FN1(ExtendActiveDOFWaypoint)))
+                               .staticmethod("ExtendActiveDOFWaypoint")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                  .def_static("InsertActiveDOFWaypointWithRetiming", planningutils::pyInsertActiveDOFWaypointWithRetiming, 
-                    "index"_a,
-                    "dofvalues"_a,
-                    "dofvelocities"_a,
-                    "trajectory"_a,
-                    "robot"_a,
-                    "maxvelmult"_a = 1.0,
-                    "maxaccelmult"_a = 1.0,
-                    "plannername"_a = "",
-                    "plannerparameters"_a = "",
-                    DOXY_FN1(InsertActiveDOFWaypointWithRetiming)
-                    )
+                               .def_static("InsertActiveDOFWaypointWithRetiming", planningutils::pyInsertActiveDOFWaypointWithRetiming,
+                                           "index"_a,
+                                           "dofvalues"_a,
+                                           "dofvelocities"_a,
+                                           "trajectory"_a,
+                                           "robot"_a,
+                                           "maxvelmult"_a = 1.0,
+                                           "maxaccelmult"_a = 1.0,
+                                           "plannername"_a = "",
+                                           "plannerparameters"_a = "",
+                                           DOXY_FN1(InsertActiveDOFWaypointWithRetiming)
+                                           )
 #else
-                  .def("InsertActiveDOFWaypointWithRetiming",planningutils::pyInsertActiveDOFWaypointWithRetiming, InsertActiveDOFWaypointWithRetiming_overloads(PY_ARGS("index","dofvalues", "dofvelocities", "trajectory", "robot", "maxvelmult", "maxaccelmult", "plannername", "plannerparameters") DOXY_FN1(InsertActiveDOFWaypointWithRetiming)))
-                  .staticmethod("InsertActiveDOFWaypointWithRetiming")
+                               .def("InsertActiveDOFWaypointWithRetiming",planningutils::pyInsertActiveDOFWaypointWithRetiming, InsertActiveDOFWaypointWithRetiming_overloads(PY_ARGS("index","dofvalues", "dofvelocities", "trajectory", "robot", "maxvelmult", "maxaccelmult", "plannername", "plannerparameters") DOXY_FN1(InsertActiveDOFWaypointWithRetiming)))
+                               .staticmethod("InsertActiveDOFWaypointWithRetiming")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                  .def_static("InsertWaypointWithSmoothing",planningutils::pyInsertWaypointWithSmoothing,
-                    "index"_a,
-                    "dofvalues"_a,
-                    "dofvelocities"_a,
-                    "trajectory"_a,
-                    "maxvelmult"_a = 1.0,
-                    "maxaccelmult"_a = 1.0,
-                    "plannername"_a = "",
-                    DOXY_FN1(InsertWaypointWithSmoothing)
-                    )
+                               .def_static("InsertWaypointWithSmoothing",planningutils::pyInsertWaypointWithSmoothing,
+                                           "index"_a,
+                                           "dofvalues"_a,
+                                           "dofvelocities"_a,
+                                           "trajectory"_a,
+                                           "maxvelmult"_a = 1.0,
+                                           "maxaccelmult"_a = 1.0,
+                                           "plannername"_a = "",
+                                           DOXY_FN1(InsertWaypointWithSmoothing)
+                                           )
 #else
-                  .def("InsertWaypointWithSmoothing",planningutils::pyInsertWaypointWithSmoothing, InsertWaypointWithSmoothing_overloads(PY_ARGS("index","dofvalues","dofvelocities","trajectory","maxvelmult","maxaccelmult","plannername") DOXY_FN1(InsertWaypointWithSmoothing)))
-                  .staticmethod("InsertWaypointWithSmoothing")
+                               .def("InsertWaypointWithSmoothing",planningutils::pyInsertWaypointWithSmoothing, InsertWaypointWithSmoothing_overloads(PY_ARGS("index","dofvalues","dofvelocities","trajectory","maxvelmult","maxaccelmult","plannername") DOXY_FN1(InsertWaypointWithSmoothing)))
+                               .staticmethod("InsertWaypointWithSmoothing")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                  .def_static("SegmentTrajectory",planningutils::pySegmentTrajectory, PY_ARGS("trajectory","starttime", "endtime") DOXY_FN1(SegmentTrajectory))
+                               .def_static("SegmentTrajectory",planningutils::pySegmentTrajectory, PY_ARGS("trajectory","starttime", "endtime") DOXY_FN1(SegmentTrajectory))
 #else
-                  .def("SegmentTrajectory",planningutils::pySegmentTrajectory, PY_ARGS("trajectory","starttime", "endtime") DOXY_FN1(SegmentTrajectory))
-                  .staticmethod("SegmentTrajectory")
+                               .def("SegmentTrajectory",planningutils::pySegmentTrajectory, PY_ARGS("trajectory","starttime", "endtime") DOXY_FN1(SegmentTrajectory))
+                               .staticmethod("SegmentTrajectory")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                  .def_static("GetTrajectorySegment",planningutils::pyGetTrajectorySegment, PY_ARGS("trajectory","starttime", "endtime") DOXY_FN1(GetTrajectorySegment))
+                               .def_static("GetTrajectorySegment",planningutils::pyGetTrajectorySegment, PY_ARGS("trajectory","starttime", "endtime") DOXY_FN1(GetTrajectorySegment))
 #else
-                  .def("GetTrajectorySegment",planningutils::pyGetTrajectorySegment, PY_ARGS("trajectory","starttime", "endtime") DOXY_FN1(GetTrajectorySegment))
-                  .staticmethod("GetTrajectorySegment")
+                               .def("GetTrajectorySegment",planningutils::pyGetTrajectorySegment, PY_ARGS("trajectory","starttime", "endtime") DOXY_FN1(GetTrajectorySegment))
+                               .staticmethod("GetTrajectorySegment")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                  .def_static("MergeTrajectories",planningutils::pyMergeTrajectories, PY_ARGS("trajectories") DOXY_FN1(MergeTrajectories))
+                               .def_static("MergeTrajectories",planningutils::pyMergeTrajectories, PY_ARGS("trajectories") DOXY_FN1(MergeTrajectories))
 #else
-                  .def("MergeTrajectories",planningutils::pyMergeTrajectories, PY_ARGS("trajectories") DOXY_FN1(MergeTrajectories))
-                  .staticmethod("MergeTrajectories")
+                               .def("MergeTrajectories",planningutils::pyMergeTrajectories, PY_ARGS("trajectories") DOXY_FN1(MergeTrajectories))
+                               .staticmethod("MergeTrajectories")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                  .def_static("GetDHParameters",planningutils::pyGetDHParameters, PY_ARGS("body") DOXY_FN1(GetDHParameters))
+                               .def_static("GetDHParameters",planningutils::pyGetDHParameters, PY_ARGS("body") DOXY_FN1(GetDHParameters))
 #else
-                  .def("GetDHParameters",planningutils::pyGetDHParameters, PY_ARGS("body") DOXY_FN1(GetDHParameters))
-                  .staticmethod("GetDHParameters")
+                               .def("GetDHParameters",planningutils::pyGetDHParameters, PY_ARGS("body") DOXY_FN1(GetDHParameters))
+                               .staticmethod("GetDHParameters")
 #endif
         ;
 
@@ -717,27 +727,27 @@ void InitPlanningUtils()
         .def("__repr__",&planningutils::PyDHParameter::__repr__)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def(py::pickle(
-        [](const planningutils::PyDHParameter &pyparams) {
-            // __getstate__
-            return planningutils::DHParameter_pickle_suite::getinitargs(pyparams);
-        },
-        [](py::tuple state) {
-            // __setstate__
-            /* Create a new C++ instance */
-            if(state.size() != 7) {
-                RAVELOG_WARN("Invalid state!");
+                 [](const planningutils::PyDHParameter &pyparams) {
+                // __getstate__
+                return planningutils::DHParameter_pickle_suite::getinitargs(pyparams);
+            },
+                 [](py::tuple state) {
+                // __setstate__
+                /* Create a new C++ instance */
+                if(state.size() != 7) {
+                    RAVELOG_WARN("Invalid state!");
+                }
+                planningutils::PyDHParameter pyparams;
+                pyparams.joint = extract<object>(state[0]); // py::none_()?
+                pyparams.parentindex = extract<int>(state[1]);
+                pyparams.transform = extract<object>(state[2]);
+                pyparams.d = extract<dReal>(state[3]);
+                pyparams.a = extract<dReal>(state[4]);
+                pyparams.theta = extract<dReal>(state[5]);
+                pyparams.alpha = extract<dReal>(state[6]);
+                return pyparams;
             }
-            planningutils::PyDHParameter pyparams;
-            pyparams.joint = extract<object>(state[0]); // py::none_()?
-            pyparams.parentindex = extract<int>(state[1]);
-            pyparams.transform = extract<object>(state[2]);
-            pyparams.d = extract<dReal>(state[3]);
-            pyparams.a = extract<dReal>(state[4]);
-            pyparams.theta = extract<dReal>(state[5]);
-            pyparams.alpha = extract<dReal>(state[6]);
-            return pyparams;
-        } 
-        ))
+                 ))
 #else
         .def_pickle(planningutils::DHParameter_pickle_suite())
 #endif
@@ -747,37 +757,37 @@ void InitPlanningUtils()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         class_<planningutils::PyManipulatorIKGoalSampler, planningutils::PyManipulatorIKGoalSamplerPtr >(planningutils, "ManipulatorIKGoalSampler", DOXY_CLASS(planningutils::ManipulatorIKGoalSampler))
         .def(init<object, object, int, int, dReal, bool, int, object>(),
-            "manip"_a,
-            "parameterizations"_a,
-            "nummaxsamples"_a = 20,
-            "nummaxtries"_a = 10,
-            "jitter"_a = 0,
-            "searchfreeparameters"_a = true,
-            // In openravepy_iksolver.cpp binds IkFilterOptions::IKFO_CheckEnvCollisions
-            // How to use it here?
-            "ikfilteroptions"_a = (int) IKFO_CheckEnvCollisions,
-            "freevalues"_a = py::none_()
-        )
+             "manip"_a,
+             "parameterizations"_a,
+             "nummaxsamples"_a = 20,
+             "nummaxtries"_a = 10,
+             "jitter"_a = 0,
+             "searchfreeparameters"_a = true,
+             // In openravepy_iksolver.cpp binds IkFilterOptions::IKFO_CheckEnvCollisions
+             // How to use it here?
+             "ikfilteroptions"_a = (int) IKFO_CheckEnvCollisions,
+             "freevalues"_a = py::none_()
+             )
 #else
         class_<planningutils::PyManipulatorIKGoalSampler, planningutils::PyManipulatorIKGoalSamplerPtr >("ManipulatorIKGoalSampler", DOXY_CLASS(planningutils::ManipulatorIKGoalSampler), no_init)
         .def(init<object, object, optional<int, int, dReal, bool, int, object> >(py::args("manip", "parameterizations", "nummaxsamples", "nummaxtries", "jitter","searchfreeparameters","ikfilteroptions","freevalues")))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("Sample", &planningutils::PyManipulatorIKGoalSampler::Sample,
-            "ikreturn"_a = false,
-            "releasegil"_a = false,
-            DOXY_FN(planningutils::ManipulatorIKGoalSampler, Sample)
-        )
+             "ikreturn"_a = false,
+             "releasegil"_a = false,
+             DOXY_FN(planningutils::ManipulatorIKGoalSampler, Sample)
+             )
 #else
         .def("Sample",&planningutils::PyManipulatorIKGoalSampler::Sample, Sample_overloads(PY_ARGS("ikreturn","releasegil") DOXY_FN(planningutils::ManipulatorIKGoalSampler, Sample)))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("SampleAll", &planningutils::PyManipulatorIKGoalSampler::SampleAll,
-            "maxsamples"_a = 0,
-            "maxchecksamples"_a = 0,
-            "releasegil"_a = false,
-            DOXY_FN(planningutils::ManipulatorIKGoalSampler, SampleAll)
-        )
+             "maxsamples"_a = 0,
+             "maxchecksamples"_a = 0,
+             "releasegil"_a = false,
+             DOXY_FN(planningutils::ManipulatorIKGoalSampler, SampleAll)
+             )
 #else
         .def("SampleAll",&planningutils::PyManipulatorIKGoalSampler::SampleAll, SampleAll_overloads(PY_ARGS("maxsamples", "maxchecksamples", "releasegil") DOXY_FN(planningutils::ManipulatorIKGoalSampler, SampleAll)))
 
@@ -794,10 +804,10 @@ void InitPlanningUtils()
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("PlanPath", &planningutils::PyActiveDOFTrajectorySmoother::PlanPath,
-            "traj"_a,
-            "releasegil"_a = true,
-            DOXY_FN(planningutils::ActiveDOFTrajectorySmoother, PlanPath)
-        )
+             "traj"_a,
+             "releasegil"_a = true,
+             DOXY_FN(planningutils::ActiveDOFTrajectorySmoother, PlanPath)
+             )
 #else
         .def("PlanPath",&planningutils::PyActiveDOFTrajectorySmoother::PlanPath,PlanPath_overloads(PY_ARGS("traj","releasegil") DOXY_FN(planningutils::ActiveDOFTrajectorySmoother,PlanPath)))
 #endif
@@ -811,11 +821,11 @@ void InitPlanningUtils()
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("PlanPath", &planningutils::PyActiveDOFTrajectoryRetimer::PlanPath,
-            "traj"_a,
-            "hastimestamps"_a = false,
-            "releasegil"_a = true,
-            DOXY_FN(planningutils::ActiveDOFTrajectoryRetimer, PlanPath)
-        )
+             "traj"_a,
+             "hastimestamps"_a = false,
+             "releasegil"_a = true,
+             DOXY_FN(planningutils::ActiveDOFTrajectoryRetimer, PlanPath)
+             )
 #else
         .def("PlanPath",&planningutils::PyActiveDOFTrajectoryRetimer::PlanPath,PlanPath_overloads3(PY_ARGS("traj","hastimestamps", "releasegil") DOXY_FN(planningutils::ActiveDOFTrajectoryRetimer,PlanPath)))
 #endif
@@ -830,13 +840,13 @@ void InitPlanningUtils()
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("PlanPath", &planningutils::PyAffineTrajectoryRetimer::PlanPath,
-            "traj"_a,
-            "maxvelocities"_a,
-            "maxaccelerations"_a,
-            "hastimestamps"_a = false,
-            "releasegil"_a = true,
-            DOXY_FN(planningutils::AffineTrajectoryRetimer, PlanPath)
-        )
+             "traj"_a,
+             "maxvelocities"_a,
+             "maxaccelerations"_a,
+             "hastimestamps"_a = false,
+             "releasegil"_a = true,
+             DOXY_FN(planningutils::AffineTrajectoryRetimer, PlanPath)
+             )
 #else
         .def("PlanPath",&planningutils::PyAffineTrajectoryRetimer::PlanPath,PlanPath_overloads2(PY_ARGS("traj","maxvelocities", "maxaccelerations", "hastimestamps", "releasegil") DOXY_FN(planningutils::AffineTrajectoryRetimer,PlanPath)))
 #endif
@@ -845,26 +855,26 @@ void InitPlanningUtils()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         class_<planningutils::PyDynamicsCollisionConstraint, planningutils::PyDynamicsCollisionConstraintPtr >(planningutils, "DynamicsCollisionConstraint", DOXY_CLASS(planningutils::DynamicsCollisionConstraint))
         .def(init<object, object, uint32_t>(),
-            "plannerparameters"_a,
-            "checkbodies"_a,
-            "filtermask"_a = 0xffffffff
-        )
+             "plannerparameters"_a,
+             "checkbodies"_a,
+             "filtermask"_a = 0xffffffff
+             )
 #else
         class_<planningutils::PyDynamicsCollisionConstraint, planningutils::PyDynamicsCollisionConstraintPtr >("DynamicsCollisionConstraint", DOXY_CLASS(planningutils::DynamicsCollisionConstraint), no_init)
         .def(init<object, object, uint32_t>(py::args("plannerparameters", "checkbodies", "filtermask")))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("Check", &planningutils::PyDynamicsCollisionConstraint::Check,
-            "q0"_a,
-            "q1"_a,
-            "dq0"_a,
-            "dq1"_a,
-            "timeelapsed"_a,
-            "interval"_a,
-            "options"_a = 0xffff,
-            "filterreturn"_a = false,
-            DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)
-        )
+             "q0"_a,
+             "q1"_a,
+             "dq0"_a,
+             "dq1"_a,
+             "timeelapsed"_a,
+             "interval"_a,
+             "options"_a = 0xffff,
+             "filterreturn"_a = false,
+             DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)
+             )
 #else
         .def("Check",&planningutils::PyDynamicsCollisionConstraint::Check,Check_overloads(PY_ARGS("q0","q1", "dq0", "dq1", "timeelapsed", "interval", "options", "filterreturn") DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)))
 #endif

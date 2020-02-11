@@ -166,9 +166,9 @@ bool ExtractRay(object o, RAY& ray)
     return false;
 }
 
-class Ray_pickle_suite 
+class Ray_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
-: public pickle_suite
+    : public pickle_suite
 #endif
 {
 public:
@@ -230,7 +230,7 @@ object toPyAABB(const AABB& ab)
 
 class AABB_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
-: public pickle_suite
+    : public pickle_suite
 #endif
 {
 public:
@@ -267,6 +267,12 @@ public:
     }
 
     void GetTriMesh(TriMesh& mesh) {
+        if( IS_PYTHONOBJECT_NONE(vertices) ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("python TriMesh 'vertices' is not initialized correctly", ORE_InvalidState);
+        }
+        if( IS_PYTHONOBJECT_NONE(indices) ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("python TriMesh 'indices' is not initialized correctly", ORE_InvalidState);
+        }
         int numverts = len(vertices);
         mesh.vertices.resize(numverts);
 
@@ -397,7 +403,7 @@ object toPyTriMesh(const TriMesh& mesh)
 
 class TriMesh_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
-: public pickle_suite
+    : public pickle_suite
 #endif
 {
 public:
@@ -407,289 +413,289 @@ public:
     }
 };
 
-    PyConfigurationSpecification::PyConfigurationSpecification() {
-    }
-    PyConfigurationSpecification::PyConfigurationSpecification(const std::string &s) {
-        std::stringstream ss(s);
-        ss >> _spec;
-    }
-    PyConfigurationSpecification::PyConfigurationSpecification(const ConfigurationSpecification& spec) {
-        _spec = spec;
-    }
-    PyConfigurationSpecification::PyConfigurationSpecification(const ConfigurationSpecification::Group& g) {
-        _spec = ConfigurationSpecification(g);
-    }
-    PyConfigurationSpecification::PyConfigurationSpecification(PyConfigurationSpecificationPtr pyspec) {
-        _spec = pyspec->_spec;
-    }
-    PyConfigurationSpecification::~PyConfigurationSpecification() {
-    }
+PyConfigurationSpecification::PyConfigurationSpecification() {
+}
+PyConfigurationSpecification::PyConfigurationSpecification(const std::string &s) {
+    std::stringstream ss(s);
+    ss >> _spec;
+}
+PyConfigurationSpecification::PyConfigurationSpecification(const ConfigurationSpecification& spec) {
+    _spec = spec;
+}
+PyConfigurationSpecification::PyConfigurationSpecification(const ConfigurationSpecification::Group& g) {
+    _spec = ConfigurationSpecification(g);
+}
+PyConfigurationSpecification::PyConfigurationSpecification(PyConfigurationSpecificationPtr pyspec) {
+    _spec = pyspec->_spec;
+}
+PyConfigurationSpecification::~PyConfigurationSpecification() {
+}
 
-    int PyConfigurationSpecification::GetDOF() const {
-        return _spec.GetDOF();
-    }
+int PyConfigurationSpecification::GetDOF() const {
+    return _spec.GetDOF();
+}
 
-    bool PyConfigurationSpecification::IsValid() const {
-        return _spec.IsValid();
-    }
+bool PyConfigurationSpecification::IsValid() const {
+    return _spec.IsValid();
+}
 
-    const ConfigurationSpecification::Group& PyConfigurationSpecification::GetGroupFromName(const std::string& name) {
-        return _spec.GetGroupFromName(name);
-    }
+const ConfigurationSpecification::Group& PyConfigurationSpecification::GetGroupFromName(const std::string& name) {
+    return _spec.GetGroupFromName(name);
+}
 
-    object PyConfigurationSpecification::FindCompatibleGroup(const std::string& name, bool exactmatch) const
-    {
-        std::vector<ConfigurationSpecification::Group>::const_iterator it  = _spec.FindCompatibleGroup(name,exactmatch);
-        if( it == _spec._vgroups.end() ) {
-            return py::none_();
-        }
-        return py::to_object(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group>(new ConfigurationSpecification::Group(*it)));
+object PyConfigurationSpecification::FindCompatibleGroup(const std::string& name, bool exactmatch) const
+{
+    std::vector<ConfigurationSpecification::Group>::const_iterator it  = _spec.FindCompatibleGroup(name,exactmatch);
+    if( it == _spec._vgroups.end() ) {
+        return py::none_();
     }
+    return py::to_object(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group>(new ConfigurationSpecification::Group(*it)));
+}
 
-    object PyConfigurationSpecification::FindTimeDerivativeGroup(const std::string& name, bool exactmatch) const
-    {
-        std::vector<ConfigurationSpecification::Group>::const_iterator it  = _spec.FindTimeDerivativeGroup(name,exactmatch);
-        if( it == _spec._vgroups.end() ) {
-            return py::none_();
-        }
-        return py::to_object(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group>(new ConfigurationSpecification::Group(*it)));
+object PyConfigurationSpecification::FindTimeDerivativeGroup(const std::string& name, bool exactmatch) const
+{
+    std::vector<ConfigurationSpecification::Group>::const_iterator it  = _spec.FindTimeDerivativeGroup(name,exactmatch);
+    if( it == _spec._vgroups.end() ) {
+        return py::none_();
     }
+    return py::to_object(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group>(new ConfigurationSpecification::Group(*it)));
+}
 
 //    ConfigurationSpecification GetTimeDerivativeSpecification(int timederivative) const;
 
-    void PyConfigurationSpecification::ResetGroupOffsets()
-    {
-        _spec.ResetGroupOffsets();
-    }
+void PyConfigurationSpecification::ResetGroupOffsets()
+{
+    _spec.ResetGroupOffsets();
+}
 
-    void PyConfigurationSpecification::AddVelocityGroups(bool adddeltatime)
-    {
-        RAVELOG_WARN("openravepy AddVelocityGroups is deprecated, use AddDerivativeGroups\n");
-        _spec.AddDerivativeGroups(1,adddeltatime);
-    }
+void PyConfigurationSpecification::AddVelocityGroups(bool adddeltatime)
+{
+    RAVELOG_WARN("openravepy AddVelocityGroups is deprecated, use AddDerivativeGroups\n");
+    _spec.AddDerivativeGroups(1,adddeltatime);
+}
 
-    void PyConfigurationSpecification::AddDerivativeGroups(int deriv, bool adddeltatime)
-    {
-        _spec.AddDerivativeGroups(deriv,adddeltatime);
-    }
+void PyConfigurationSpecification::AddDerivativeGroups(int deriv, bool adddeltatime)
+{
+    _spec.AddDerivativeGroups(deriv,adddeltatime);
+}
 
-    int PyConfigurationSpecification::AddDeltaTimeGroup() {
-        return _spec.AddDeltaTimeGroup();
-    }
+int PyConfigurationSpecification::AddDeltaTimeGroup() {
+    return _spec.AddDeltaTimeGroup();
+}
 
-    int PyConfigurationSpecification::AddGroup(const std::string& name, int dof, const std::string& interpolation)
-    {
-        return _spec.AddGroup(name,dof,interpolation);
-    }
+int PyConfigurationSpecification::AddGroup(const std::string& name, int dof, const std::string& interpolation)
+{
+    return _spec.AddGroup(name,dof,interpolation);
+}
 
-    int PyConfigurationSpecification::AddGroup(const ConfigurationSpecification::Group& g)
-    {
-        return _spec.AddGroup(g);
-    }
+int PyConfigurationSpecification::AddGroup(const ConfigurationSpecification::Group& g)
+{
+    return _spec.AddGroup(g);
+}
 
-    int PyConfigurationSpecification::RemoveGroups(const std::string& groupname, bool exactmatch)
-    {
-        return _spec.RemoveGroups(groupname, exactmatch);
-    }
+int PyConfigurationSpecification::RemoveGroups(const std::string& groupname, bool exactmatch)
+{
+    return _spec.RemoveGroups(groupname, exactmatch);
+}
 
-    PyConfigurationSpecificationPtr PyConfigurationSpecification::ConvertToVelocitySpecification() const
-    {
-        return openravepy::toPyConfigurationSpecification(_spec.ConvertToVelocitySpecification());
-    }
+PyConfigurationSpecificationPtr PyConfigurationSpecification::ConvertToVelocitySpecification() const
+{
+    return openravepy::toPyConfigurationSpecification(_spec.ConvertToVelocitySpecification());
+}
 
-    PyConfigurationSpecificationPtr PyConfigurationSpecification::ConvertToDerivativeSpecification(uint32_t timederivative) const
-    {
-        return openravepy::toPyConfigurationSpecification(_spec.ConvertToDerivativeSpecification(timederivative));
-    }
+PyConfigurationSpecificationPtr PyConfigurationSpecification::ConvertToDerivativeSpecification(uint32_t timederivative) const
+{
+    return openravepy::toPyConfigurationSpecification(_spec.ConvertToDerivativeSpecification(timederivative));
+}
 
-    PyConfigurationSpecificationPtr PyConfigurationSpecification::GetTimeDerivativeSpecification(int timederivative) const
-    {
-        return openravepy::toPyConfigurationSpecification(_spec.GetTimeDerivativeSpecification(timederivative));
-    }
+PyConfigurationSpecificationPtr PyConfigurationSpecification::GetTimeDerivativeSpecification(int timederivative) const
+{
+    return openravepy::toPyConfigurationSpecification(_spec.GetTimeDerivativeSpecification(timederivative));
+}
 
-    object PyConfigurationSpecification::ExtractTransform(object otransform, object odata, PyKinBodyPtr pybody, int timederivative) const
-    {
-        std::vector<dReal> vdata = ExtractArray<dReal>(odata);
-        Transform t;
-        if( !IS_PYTHONOBJECT_NONE(otransform) ) {
-            t = openravepy::ExtractTransform(otransform);
-        }
-        if( _spec.ExtractTransform(t,vdata.begin(),openravepy::GetKinBody(pybody)) ) {
-            return openravepy::ReturnTransform(t);
-        }
+object PyConfigurationSpecification::ExtractTransform(object otransform, object odata, PyKinBodyPtr pybody, int timederivative) const
+{
+    std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+    Transform t;
+    if( !IS_PYTHONOBJECT_NONE(otransform) ) {
+        t = openravepy::ExtractTransform(otransform);
+    }
+    if( _spec.ExtractTransform(t,vdata.begin(),openravepy::GetKinBody(pybody)) ) {
+        return openravepy::ReturnTransform(t);
+    }
+    return py::none_();
+}
+
+object PyConfigurationSpecification::ExtractIkParameterization(object odata, int timederivative, const std::string& robotname, const std::string& manipulatorname) const
+{
+    IkParameterization ikparam;
+    std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+    bool bfound = _spec.ExtractIkParameterization(ikparam, vdata.begin(), timederivative, robotname, manipulatorname);
+    if( bfound ) {
+        return toPyIkParameterization(ikparam);
+    }
+    else {
         return py::none_();
     }
+}
 
-    object PyConfigurationSpecification::ExtractIkParameterization(object odata, int timederivative, const std::string& robotname, const std::string& manipulatorname) const
-    {
-        IkParameterization ikparam;
-        std::vector<dReal> vdata = ExtractArray<dReal>(odata);
-        bool bfound = _spec.ExtractIkParameterization(ikparam, vdata.begin(), timederivative, robotname, manipulatorname);
-        if( bfound ) {
-            return toPyIkParameterization(ikparam);
-        }
-        else {
-            return py::none_();
-        }
+object PyConfigurationSpecification::ExtractAffineValues(object odata, PyKinBodyPtr pybody, int affinedofs, int timederivative) const
+{
+    std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+    std::vector<dReal> values(RaveGetAffineDOF(affinedofs),0);
+    bool bfound = _spec.ExtractAffineValues(values.begin(),vdata.begin(),openravepy::GetKinBody(pybody),affinedofs, timederivative);
+    if( bfound ) {
+        return toPyArray(values);
     }
-
-    object PyConfigurationSpecification::ExtractAffineValues(object odata, PyKinBodyPtr pybody, int affinedofs, int timederivative) const
-    {
-        std::vector<dReal> vdata = ExtractArray<dReal>(odata);
-        std::vector<dReal> values(RaveGetAffineDOF(affinedofs),0);
-        bool bfound = _spec.ExtractAffineValues(values.begin(),vdata.begin(),openravepy::GetKinBody(pybody),affinedofs, timederivative);
-        if( bfound ) {
-            return toPyArray(values);
-        }
-        else {
-            return py::none_();
-        }
+    else {
+        return py::none_();
     }
+}
 
-    object PyConfigurationSpecification::ExtractJointValues(object odata, PyKinBodyPtr pybody, object oindices, int timederivative) const
-    {
-        std::vector<int> vindices = ExtractArray<int>(oindices);
-        std::vector<dReal> vdata = ExtractArray<dReal>(odata);
-        std::vector<dReal> values(vindices.size(),0);
-        bool bfound = _spec.ExtractJointValues(values.begin(),vdata.begin(),openravepy::GetKinBody(pybody),vindices,timederivative);
-        if( bfound ) {
-            return toPyArray(values);
-        }
-        else {
-            return py::none_();
-        }
+object PyConfigurationSpecification::ExtractJointValues(object odata, PyKinBodyPtr pybody, object oindices, int timederivative) const
+{
+    std::vector<int> vindices = ExtractArray<int>(oindices);
+    std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+    std::vector<dReal> values(vindices.size(),0);
+    bool bfound = _spec.ExtractJointValues(values.begin(),vdata.begin(),openravepy::GetKinBody(pybody),vindices,timederivative);
+    if( bfound ) {
+        return toPyArray(values);
     }
-
-    object PyConfigurationSpecification::ExtractDeltaTime(object odata) const
-    {
-        std::vector<dReal> vdata = ExtractArray<dReal>(odata);
-        dReal deltatime=0;
-        bool bfound = _spec.ExtractDeltaTime(deltatime,vdata.begin());
-        if( bfound ) {
-            return py::to_object(deltatime);
-        }
-        else {
-            return py::none_();
-        }
+    else {
+        return py::none_();
     }
+}
 
-    bool PyConfigurationSpecification::InsertJointValues(object odata, object ovalues, PyKinBodyPtr pybody, object oindices, int timederivative) const
-    {
-        std::vector<int> vindices = ExtractArray<int>(oindices);
-        std::vector<dReal> vdata = ExtractArray<dReal>(odata);
-        std::vector<dReal> vvalues = ExtractArray<dReal>(ovalues);
-        OPENRAVE_ASSERT_OP(vvalues.size(),==,vindices.size());
-        OPENRAVE_ASSERT_OP(vdata.size(),>=,vvalues.size());
-        OPENRAVE_ASSERT_OP((int)vdata.size(),==,_spec.GetDOF());
-        if( !_spec.InsertJointValues(vdata.begin(), vvalues.begin(), openravepy::GetKinBody(pybody), vindices, timederivative) ) {
-            return false;
-        }
-        // copy the value back, this is wasteful, but no other way to do it unless vdata pointer pointed directly to odata
-        for(size_t i = 0; i < vdata.size(); ++i) {
-            odata[i] = vdata[i];
-        }
-        return true;
+object PyConfigurationSpecification::ExtractDeltaTime(object odata) const
+{
+    std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+    dReal deltatime=0;
+    bool bfound = _spec.ExtractDeltaTime(deltatime,vdata.begin());
+    if( bfound ) {
+        return py::to_object(deltatime);
     }
+    else {
+        return py::none_();
+    }
+}
 
-    bool PyConfigurationSpecification::InsertDeltaTime(object odata, dReal deltatime)
-    {
-        // it is easier to get the time index
-        FOREACHC(itgroup,_spec._vgroups) {
-            if( itgroup->name == "deltatime" ) {
-                odata[itgroup->offset] = py::to_object(deltatime);
-                return true;
-            }
-        }
+bool PyConfigurationSpecification::InsertJointValues(object odata, object ovalues, PyKinBodyPtr pybody, object oindices, int timederivative) const
+{
+    std::vector<int> vindices = ExtractArray<int>(oindices);
+    std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+    std::vector<dReal> vvalues = ExtractArray<dReal>(ovalues);
+    OPENRAVE_ASSERT_OP(vvalues.size(),==,vindices.size());
+    OPENRAVE_ASSERT_OP(vdata.size(),>=,vvalues.size());
+    OPENRAVE_ASSERT_OP((int)vdata.size(),==,_spec.GetDOF());
+    if( !_spec.InsertJointValues(vdata.begin(), vvalues.begin(), openravepy::GetKinBody(pybody), vindices, timederivative) ) {
         return false;
     }
+    // copy the value back, this is wasteful, but no other way to do it unless vdata pointer pointed directly to odata
+    for(size_t i = 0; i < vdata.size(); ++i) {
+        odata[i] = vdata[i];
+    }
+    return true;
+}
 
-    py::list PyConfigurationSpecification::ExtractUsedBodies(PyEnvironmentBasePtr pyenv)
-    {
-        std::vector<KinBodyPtr> vusedbodies;
-        _spec.ExtractUsedBodies(openravepy::GetEnvironment(pyenv), vusedbodies);
-        py::list obodies;
-        FOREACHC(itbody, vusedbodies) {
-            if( (*itbody)->IsRobot() ) {
-                obodies.append(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(*itbody), pyenv));
-            }
-            else {
-                obodies.append(openravepy::toPyKinBody(*itbody, pyenv));
-            }
+bool PyConfigurationSpecification::InsertDeltaTime(object odata, dReal deltatime)
+{
+    // it is easier to get the time index
+    FOREACHC(itgroup,_spec._vgroups) {
+        if( itgroup->name == "deltatime" ) {
+            odata[itgroup->offset] = py::to_object(deltatime);
+            return true;
         }
-        return obodies;
     }
+    return false;
+}
 
-    object PyConfigurationSpecification::ExtractUsedIndices(PyKinBodyPtr pybody)
-    {
-        std::vector<int> useddofindices, usedconfigindices;
-        _spec.ExtractUsedIndices(openravepy::GetKinBody(pybody), useddofindices, usedconfigindices);
-        return py::make_tuple(toPyArray(useddofindices), toPyArray(usedconfigindices));
+py::list PyConfigurationSpecification::ExtractUsedBodies(PyEnvironmentBasePtr pyenv)
+{
+    std::vector<KinBodyPtr> vusedbodies;
+    _spec.ExtractUsedBodies(openravepy::GetEnvironment(pyenv), vusedbodies);
+    py::list obodies;
+    FOREACHC(itbody, vusedbodies) {
+        if( (*itbody)->IsRobot() ) {
+            obodies.append(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(*itbody), pyenv));
+        }
+        else {
+            obodies.append(openravepy::toPyKinBody(*itbody, pyenv));
+        }
     }
+    return obodies;
+}
+
+object PyConfigurationSpecification::ExtractUsedIndices(PyKinBodyPtr pybody)
+{
+    std::vector<int> useddofindices, usedconfigindices;
+    _spec.ExtractUsedIndices(openravepy::GetKinBody(pybody), useddofindices, usedconfigindices);
+    return py::make_tuple(toPyArray(useddofindices), toPyArray(usedconfigindices));
+}
 
 //
 //    static void ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const Group& gtarget, std::vector<dReal>::const_iterator itsourcedata, size_t sourcestride, const Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv);
 //
-    // source spec is the current configurationspecification spec
-    object PyConfigurationSpecification::ConvertData(PyConfigurationSpecificationPtr pytargetspec, object osourcedata, size_t numpoints, PyEnvironmentBasePtr pyenv, bool filluninitialized)
-    {
-        std::vector<dReal> vtargetdata(pytargetspec->_spec.GetDOF()*numpoints,0);
-        std::vector<dReal> vsourcedata = ExtractArray<dReal>(osourcedata);
-        ConfigurationSpecification::ConvertData(vtargetdata.begin(), pytargetspec->_spec, vsourcedata.begin(), _spec, numpoints, openravepy::GetEnvironment(pyenv), filluninitialized);
-        return toPyArray(vtargetdata);
-    }
+// source spec is the current configurationspecification spec
+object PyConfigurationSpecification::ConvertData(PyConfigurationSpecificationPtr pytargetspec, object osourcedata, size_t numpoints, PyEnvironmentBasePtr pyenv, bool filluninitialized)
+{
+    std::vector<dReal> vtargetdata(pytargetspec->_spec.GetDOF()*numpoints,0);
+    std::vector<dReal> vsourcedata = ExtractArray<dReal>(osourcedata);
+    ConfigurationSpecification::ConvertData(vtargetdata.begin(), pytargetspec->_spec, vsourcedata.begin(), _spec, numpoints, openravepy::GetEnvironment(pyenv), filluninitialized);
+    return toPyArray(vtargetdata);
+}
 
-    object PyConfigurationSpecification::ConvertDataFromPrevious(object otargetdata, PyConfigurationSpecificationPtr pytargetspec, object osourcedata, size_t numpoints, PyEnvironmentBasePtr pyenv)
-    {
-        std::vector<dReal> vtargetdata = ExtractArray<dReal>(otargetdata);
-        std::vector<dReal> vsourcedata = ExtractArray<dReal>(osourcedata);
-        ConfigurationSpecification::ConvertData(vtargetdata.begin(), pytargetspec->_spec, vsourcedata.begin(), _spec, numpoints, openravepy::GetEnvironment(pyenv), false);
-        return toPyArray(vtargetdata);
-    }
+object PyConfigurationSpecification::ConvertDataFromPrevious(object otargetdata, PyConfigurationSpecificationPtr pytargetspec, object osourcedata, size_t numpoints, PyEnvironmentBasePtr pyenv)
+{
+    std::vector<dReal> vtargetdata = ExtractArray<dReal>(otargetdata);
+    std::vector<dReal> vsourcedata = ExtractArray<dReal>(osourcedata);
+    ConfigurationSpecification::ConvertData(vtargetdata.begin(), pytargetspec->_spec, vsourcedata.begin(), _spec, numpoints, openravepy::GetEnvironment(pyenv), false);
+    return toPyArray(vtargetdata);
+}
 
-    py::list PyConfigurationSpecification::GetGroups()
-    {
-        py::list ogroups;
-        FOREACHC(itgroup, _spec._vgroups) {
-            ogroups.append(*itgroup);
-        }
-        return ogroups;
+py::list PyConfigurationSpecification::GetGroups()
+{
+    py::list ogroups;
+    FOREACHC(itgroup, _spec._vgroups) {
+        ogroups.append(*itgroup);
     }
+    return ogroups;
+}
 
-    bool PyConfigurationSpecification::__eq__(PyConfigurationSpecificationPtr p) {
-        return !!p && _spec==p->_spec;
-    }
-    bool PyConfigurationSpecification::__ne__(PyConfigurationSpecificationPtr p) {
-        return !p || _spec!=p->_spec;
-    }
+bool PyConfigurationSpecification::__eq__(PyConfigurationSpecificationPtr p) {
+    return !!p && _spec==p->_spec;
+}
+bool PyConfigurationSpecification::__ne__(PyConfigurationSpecificationPtr p) {
+    return !p || _spec!=p->_spec;
+}
 
-    PyConfigurationSpecificationPtr PyConfigurationSpecification::__add__(PyConfigurationSpecificationPtr r)
-    {
-        return PyConfigurationSpecificationPtr(new PyConfigurationSpecification(_spec + r->_spec));
-    }
+PyConfigurationSpecificationPtr PyConfigurationSpecification::__add__(PyConfigurationSpecificationPtr r)
+{
+    return PyConfigurationSpecificationPtr(new PyConfigurationSpecification(_spec + r->_spec));
+}
 
-    PyConfigurationSpecificationPtr PyConfigurationSpecification::__iadd__(PyConfigurationSpecificationPtr r)
-    {
-        _spec += r->_spec;
-        return shared_from_this();
-    }
+PyConfigurationSpecificationPtr PyConfigurationSpecification::__iadd__(PyConfigurationSpecificationPtr r)
+{
+    _spec += r->_spec;
+    return shared_from_this();
+}
 
-    std::string PyConfigurationSpecification::__repr__() {
-        std::stringstream ss;
-        ss << "ConfigurationSpecification(\"\"\"" << _spec << "\"\"\")";
-        return ss.str();
-    }
-    std::string PyConfigurationSpecification::__str__() {
-        std::stringstream ss;
-        ss << "<configuration dof=\"" << _spec.GetDOF() << "\">";
-        return ss.str();
-    }
-    object PyConfigurationSpecification::__unicode__() {
-        return ConvertStringToUnicode(__str__());
-    }
+std::string PyConfigurationSpecification::__repr__() {
+    std::stringstream ss;
+    ss << "ConfigurationSpecification(\"\"\"" << _spec << "\"\"\")";
+    return ss.str();
+}
+std::string PyConfigurationSpecification::__str__() {
+    std::stringstream ss;
+    ss << "<configuration dof=\"" << _spec.GetDOF() << "\">";
+    return ss.str();
+}
+object PyConfigurationSpecification::__unicode__() {
+    return ConvertStringToUnicode(__str__());
+}
 
 class OPENRAVEPY_API ConfigurationSpecification_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
-: public pickle_suite
+    : public pickle_suite
 #endif
 {
 public:
@@ -1355,28 +1361,28 @@ void init_openravepy_global()
     .def("__repr__",&PyRay::__repr__)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .def(py::pickle(
-    [](const PyRay &pyr) {
-        // __getstate__
-        return Ray_pickle_suite::getinitargs(pyr);
-    },
-    [](py::tuple state) {
-        // __setstate__
-        if (state.size() != 2) {
-            throw std::runtime_error("Invalid state!");
+             [](const PyRay &pyr) {
+            // __getstate__
+            return Ray_pickle_suite::getinitargs(pyr);
+        },
+             [](py::tuple state) {
+            // __setstate__
+            if (state.size() != 2) {
+                throw std::runtime_error("Invalid state!");
+            }
+            /* Create a new C++ instance */
+            PyRay pyr;
+            /* Assign any additional state */
+            py::array_t<dReal> pos = state[0].cast<py::array_t<dReal> >();
+            py::array_t<dReal> dir = state[1].cast<py::array_t<dReal> >();
+            for(size_t i = 0; i < 3; ++i) {
+                pyr.r.pos[i] = *pos.data(i);
+                pyr.r.dir[i] = *dir.data(i);
+            }
+            pyr.r.pos[3] = pyr.r.dir[3] = 0;
+            return pyr;
         }
-        /* Create a new C++ instance */
-        PyRay pyr;
-        /* Assign any additional state */
-        py::array_t<dReal> pos = state[0].cast<py::array_t<dReal>>();
-        py::array_t<dReal> dir = state[1].cast<py::array_t<dReal>>();
-        for(size_t i = 0; i < 3; ++i) {
-            pyr.r.pos[i] = *pos.data(i);
-            pyr.r.dir[i] = *dir.data(i);
-        }
-        pyr.r.pos[3] = pyr.r.dir[3] = 0;
-        return pyr;
-    }
-    ))
+             ))
 #else
     .def_pickle(Ray_pickle_suite())
 #endif
@@ -1386,11 +1392,13 @@ void init_openravepy_global()
     .def(init<>())
     .def(init<object, object>(), "pos"_a, "extents"_a)
     .def(init<const AABB&>(), "ab"_a)
-    .def("__copy__", [](const PyAABB& self){ return self; })
+    .def("__copy__", [](const PyAABB& self){
+            return self;
+        })
     .def("__deepcopy__", [](const PyAABB& self, const py::dict& memo) {
-        OPENRAVE_SHARED_PTR<PyAABB> pyaabb(new PyAABB(self.ab));
-        return py::to_object(pyaabb);
-    })
+            OPENRAVE_SHARED_PTR<PyAABB> pyaabb(new PyAABB(self.ab));
+            return py::to_object(pyaabb);
+        })
 #else
     class_<PyAABB, OPENRAVE_SHARED_PTR<PyAABB> >("AABB", DOXY_CLASS(geometry::aabb))
     .def(init<object,object>(py::args("pos","extents")))
@@ -1403,28 +1411,28 @@ void init_openravepy_global()
     .def("toDict", &PyAABB::toDict)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .def(py::pickle(
-    [](const PyAABB &pyab) {
-        // __getstate__
-        return AABB_pickle_suite::getinitargs(pyab);
-    },
-    [](py::tuple state) {
-        // __setstate__
-        if (state.size() != 2) {
-            throw std::runtime_error("Invalid state!");
+             [](const PyAABB &pyab) {
+            // __getstate__
+            return AABB_pickle_suite::getinitargs(pyab);
+        },
+             [](py::tuple state) {
+            // __setstate__
+            if (state.size() != 2) {
+                throw std::runtime_error("Invalid state!");
+            }
+            /* Create a new C++ instance */
+            PyAABB pyab;
+            /* Assign any additional state */
+            py::array_t<dReal> pos = state[0].cast<py::array_t<dReal> >();
+            py::array_t<dReal> extents = state[1].cast<py::array_t<dReal> >();
+            for(size_t i = 0; i < 3; ++i) {
+                pyab.ab.pos[i] = *pos.data(i);
+                pyab.ab.extents[i] = *extents.data(i);
+            }
+            pyab.ab.pos[3] = pyab.ab.extents[3] = 0;
+            return pyab;
         }
-        /* Create a new C++ instance */
-        PyAABB pyab;
-        /* Assign any additional state */
-        py::array_t<dReal> pos = state[0].cast<py::array_t<dReal>>();
-        py::array_t<dReal> extents = state[1].cast<py::array_t<dReal>>();
-        for(size_t i = 0; i < 3; ++i) {
-            pyab.ab.pos[i] = *pos.data(i);
-            pyab.ab.extents[i] = *extents.data(i);
-        }
-        pyab.ab.pos[3] = pyab.ab.extents[3] = 0;
-        return pyab;
-    }
-    ))
+             ))
 #else
     .def_pickle(AABB_pickle_suite())
 #endif // USE_PYBIND11_PYTHON_BINDINGS
@@ -1443,24 +1451,16 @@ void init_openravepy_global()
     .def("__str__",&PyTriMesh::__str__)
     .def("__unicode__",&PyTriMesh::__unicode__)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    .def(py::pickle(
-    [](const PyTriMesh &pymesh) {
-        // __getstate__
-        return TriMesh_pickle_suite::getinitargs(pymesh);
-    },
-    [](py::tuple state) {
-        // __setstate__
-        if (state.size() != 2) {
-            throw std::runtime_error("Invalid state!");
-        }
-        /* Create a new C++ instance */
-        PyTriMesh pymesh;
-        /* Assign any additional state */
-        pymesh.vertices = state[0];
-        pymesh.indices = state[1];
-        return pymesh;
-    }
-    ))
+    .def(py::pickle([](const PyTriMesh &pymesh) {
+            // __getstate__
+            return TriMesh_pickle_suite::getinitargs(pymesh);
+        },
+                    [](py::tuple state) {
+            PyTriMesh pymesh;
+            pymesh.vertices = state[0];
+            pymesh.indices = state[1];
+            return pymesh;
+        }))
 #else
     .def_pickle(TriMesh_pickle_suite())
 #endif
@@ -1481,9 +1481,9 @@ void init_openravepy_global()
     .def("GetXMLId", &PyXMLReadable::GetXMLId, DOXY_FN(XMLReadable, GetXMLId))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .def("Serialize", &PyXMLReadable::Serialize,
-        "options"_a = 0,
-        DOXY_FN(XMLReadable, Serialize)
-    )
+         "options"_a = 0,
+         DOXY_FN(XMLReadable, Serialize)
+         )
 #else
     .def("Serialize", &PyXMLReadable::Serialize, Serialize_overloads(PY_ARGS("options") DOXY_FN(XMLReadable, Serialize)))
 #endif
@@ -1503,156 +1503,156 @@ void init_openravepy_global()
         int (PyConfigurationSpecification::*addgroup2)(const ConfigurationSpecification::Group&) = &PyConfigurationSpecification::AddGroup;
 
         scope_ configurationspecification =
-#ifdef USE_PYBIND11_PYTHON_BINDINGS 
-                                           class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >(m, "ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
-                                           .def(init<>())
-                                           .def(init<const ConfigurationSpecification&>(), "spec"_a)
-                                           .def(init<PyConfigurationSpecificationPtr>(), "pyspec"_a)
-                                           .def(init<const ConfigurationSpecification::Group&>(), "group"_a)
-                                           .def(init<const std::string&>(), "xmldata"_a)
-                                           .def("GetGroupFromName", &PyConfigurationSpecification::GetGroupFromName, DOXY_FN(ConfigurationSpecification,GetGroupFromName))
-#else
-                                           class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >("ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
-                                           .def(init<PyConfigurationSpecificationPtr>(py::args("spec")) )
-                                           .def(init<const ConfigurationSpecification::Group&>(py::args("group")) )
-                                           .def(init<const std::string&>(py::args("xmldata")) )
-                                           .def("GetGroupFromName",&PyConfigurationSpecification::GetGroupFromName, return_value_policy<copy_const_reference>(), DOXY_FN(ConfigurationSpecification,GetGroupFromName))
-#endif
-                                           .def("FindCompatibleGroup",&PyConfigurationSpecification::FindCompatibleGroup, DOXY_FN(ConfigurationSpecification,FindCompatibleGroup))
-                                           .def("FindTimeDerivativeGroup",&PyConfigurationSpecification::FindTimeDerivativeGroup, DOXY_FN(ConfigurationSpecification,FindTimeDerivativeGroup))
-                                           .def("GetDOF",&PyConfigurationSpecification::GetDOF,DOXY_FN(ConfigurationSpecification,GetDOF))
-                                           .def("IsValid",&PyConfigurationSpecification::IsValid,DOXY_FN(ConfigurationSpecification,IsValid))
-                                           .def("ResetGroupOffsets",&PyConfigurationSpecification::ResetGroupOffsets,DOXY_FN(ConfigurationSpecification,ResetGroupOffsets))
-                                           .def("AddVelocityGroups",&PyConfigurationSpecification::AddVelocityGroups, PY_ARGS("adddeltatime") DOXY_FN(ConfigurationSpecification,AddVelocityGroups))
-                                           .def("AddDerivativeGroups",&PyConfigurationSpecification::AddDerivativeGroups, PY_ARGS("deriv", "adddeltatime") DOXY_FN(ConfigurationSpecification,AddDerivativeGroups))
-                                           .def("AddDeltaTimeGroup",&PyConfigurationSpecification::AddDeltaTimeGroup,DOXY_FN(ConfigurationSpecification,AddDeltaTimeGroup))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                                           .def("RemoveGroups", &PyConfigurationSpecification::RemoveGroups, 
-                                                "groupname"_a,
-                                                "exactmatch"_a = true,
-                                                DOXY_FN(ConfigurationSpecification, RemoveGroups)
-                                            )
+            class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >(m, "ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
+            .def(init<>())
+            .def(init<const ConfigurationSpecification&>(), "spec"_a)
+            .def(init<PyConfigurationSpecificationPtr>(), "pyspec"_a)
+            .def(init<const ConfigurationSpecification::Group&>(), "group"_a)
+            .def(init<const std::string&>(), "xmldata"_a)
+            .def("GetGroupFromName", &PyConfigurationSpecification::GetGroupFromName, DOXY_FN(ConfigurationSpecification,GetGroupFromName))
 #else
-                                           .def("RemoveGroups", &PyConfigurationSpecification::RemoveGroups, RemoveGroups_overloads(PY_ARGS("groupname","exactmatch") DOXY_FN(ConfigurationSpecification, RemoveGroups)))
+            class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >("ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
+            .def(init<PyConfigurationSpecificationPtr>(py::args("spec")) )
+            .def(init<const ConfigurationSpecification::Group&>(py::args("group")) )
+            .def(init<const std::string&>(py::args("xmldata")) )
+            .def("GetGroupFromName",&PyConfigurationSpecification::GetGroupFromName, return_value_policy<copy_const_reference>(), DOXY_FN(ConfigurationSpecification,GetGroupFromName))
 #endif
-                                           .def("AddGroup",addgroup1, PY_ARGS("name","dof","interpolation") DOXY_FN(ConfigurationSpecification,AddGroup "const std::string; int; const std::string"))
-                                           .def("AddGroup",addgroup2, PY_ARGS("group") DOXY_FN(ConfigurationSpecification,AddGroup "const"))
-                                           .def("ConvertToVelocitySpecification",&PyConfigurationSpecification::ConvertToVelocitySpecification,DOXY_FN(ConfigurationSpecification,ConvertToVelocitySpecification))
-                                           .def("ConvertToDerivativeSpecification",&PyConfigurationSpecification::ConvertToDerivativeSpecification, PY_ARGS("timederivative") DOXY_FN(ConfigurationSpecification, ConvertToDerivativeSpecification))
-                                           .def("GetTimeDerivativeSpecification",&PyConfigurationSpecification::GetTimeDerivativeSpecification,DOXY_FN(ConfigurationSpecification,GetTimeDerivativeSpecification))
+            .def("FindCompatibleGroup",&PyConfigurationSpecification::FindCompatibleGroup, DOXY_FN(ConfigurationSpecification,FindCompatibleGroup))
+            .def("FindTimeDerivativeGroup",&PyConfigurationSpecification::FindTimeDerivativeGroup, DOXY_FN(ConfigurationSpecification,FindTimeDerivativeGroup))
+            .def("GetDOF",&PyConfigurationSpecification::GetDOF,DOXY_FN(ConfigurationSpecification,GetDOF))
+            .def("IsValid",&PyConfigurationSpecification::IsValid,DOXY_FN(ConfigurationSpecification,IsValid))
+            .def("ResetGroupOffsets",&PyConfigurationSpecification::ResetGroupOffsets,DOXY_FN(ConfigurationSpecification,ResetGroupOffsets))
+            .def("AddVelocityGroups",&PyConfigurationSpecification::AddVelocityGroups, PY_ARGS("adddeltatime") DOXY_FN(ConfigurationSpecification,AddVelocityGroups))
+            .def("AddDerivativeGroups",&PyConfigurationSpecification::AddDerivativeGroups, PY_ARGS("deriv", "adddeltatime") DOXY_FN(ConfigurationSpecification,AddDerivativeGroups))
+            .def("AddDeltaTimeGroup",&PyConfigurationSpecification::AddDeltaTimeGroup,DOXY_FN(ConfigurationSpecification,AddDeltaTimeGroup))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                                           .def("ExtractTransform", &PyConfigurationSpecification::ExtractTransform,
-                                                "transform"_a,
-                                                "data"_a,
-                                                "body"_a,
-                                                "timederivative"_a = 0,
-                                                DOXY_FN(ConfigurationSpecification,ExtractTransform)
-                                            )
+            .def("RemoveGroups", &PyConfigurationSpecification::RemoveGroups,
+                 "groupname"_a,
+                 "exactmatch"_a = true,
+                 DOXY_FN(ConfigurationSpecification, RemoveGroups)
+                 )
 #else
-                                           .def("ExtractTransform",&PyConfigurationSpecification::ExtractTransform,ExtractTransform_overloads(PY_ARGS("transform","data","body","timederivative") DOXY_FN(ConfigurationSpecification,ExtractTransform)))
+            .def("RemoveGroups", &PyConfigurationSpecification::RemoveGroups, RemoveGroups_overloads(PY_ARGS("groupname","exactmatch") DOXY_FN(ConfigurationSpecification, RemoveGroups)))
 #endif
+            .def("AddGroup",addgroup1, PY_ARGS("name","dof","interpolation") DOXY_FN(ConfigurationSpecification,AddGroup "const std::string; int; const std::string"))
+            .def("AddGroup",addgroup2, PY_ARGS("group") DOXY_FN(ConfigurationSpecification,AddGroup "const"))
+            .def("ConvertToVelocitySpecification",&PyConfigurationSpecification::ConvertToVelocitySpecification,DOXY_FN(ConfigurationSpecification,ConvertToVelocitySpecification))
+            .def("ConvertToDerivativeSpecification",&PyConfigurationSpecification::ConvertToDerivativeSpecification, PY_ARGS("timederivative") DOXY_FN(ConfigurationSpecification, ConvertToDerivativeSpecification))
+            .def("GetTimeDerivativeSpecification",&PyConfigurationSpecification::GetTimeDerivativeSpecification,DOXY_FN(ConfigurationSpecification,GetTimeDerivativeSpecification))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                                           .def("ExtractAffineValues", &PyConfigurationSpecification::ExtractAffineValues,
-                                                "data"_a,
-                                                "body"_a,
-                                                "affinedofs"_a,
-                                                "timederivative"_a = 0,
-                                                DOXY_FN(ConfigurationSpecification,ExtractAffineValues)
-                                            )
+            .def("ExtractTransform", &PyConfigurationSpecification::ExtractTransform,
+                 "transform"_a,
+                 "data"_a,
+                 "body"_a,
+                 "timederivative"_a = 0,
+                 DOXY_FN(ConfigurationSpecification,ExtractTransform)
+                 )
 #else
-                                           .def("ExtractAffineValues",&PyConfigurationSpecification::ExtractAffineValues,ExtractAffineValues_overloads(PY_ARGS("data","body","affinedofs","timederivative") DOXY_FN(ConfigurationSpecification,ExtractAffineValues)))
+            .def("ExtractTransform",&PyConfigurationSpecification::ExtractTransform,ExtractTransform_overloads(PY_ARGS("transform","data","body","timederivative") DOXY_FN(ConfigurationSpecification,ExtractTransform)))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                                           .def("ExtractIkParameterization", &PyConfigurationSpecification::ExtractIkParameterization,
-                                                "data"_a,
-                                                "timederivative"_a = 0,
-                                                "robotname"_a = "",
-                                                "manipulatorname"_a = "",
-                                                DOXY_FN(ConfigurationSpecification, ExtractIkParameterization)
-                                            )
+            .def("ExtractAffineValues", &PyConfigurationSpecification::ExtractAffineValues,
+                 "data"_a,
+                 "body"_a,
+                 "affinedofs"_a,
+                 "timederivative"_a = 0,
+                 DOXY_FN(ConfigurationSpecification,ExtractAffineValues)
+                 )
 #else
-                                           .def("ExtractIkParameterization",&PyConfigurationSpecification::ExtractIkParameterization,ExtractIkParameterization_overloads(PY_ARGS("data","timederivative","robotname","manipulatorname") DOXY_FN(ConfigurationSpecification,ExtractIkParameterization)))
+            .def("ExtractAffineValues",&PyConfigurationSpecification::ExtractAffineValues,ExtractAffineValues_overloads(PY_ARGS("data","body","affinedofs","timederivative") DOXY_FN(ConfigurationSpecification,ExtractAffineValues)))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                                           .def("ExtractJointValues", &PyConfigurationSpecification::ExtractJointValues,
-                                                "data"_a,
-                                                "body"_a,
-                                                "indices"_a,
-                                                "timederivative"_a = 0,
-                                                DOXY_FN(ConfigurationSpecification,ExtractJointValues)
-                                            )
+            .def("ExtractIkParameterization", &PyConfigurationSpecification::ExtractIkParameterization,
+                 "data"_a,
+                 "timederivative"_a = 0,
+                 "robotname"_a = "",
+                 "manipulatorname"_a = "",
+                 DOXY_FN(ConfigurationSpecification, ExtractIkParameterization)
+                 )
 #else
-                                           .def("ExtractJointValues",&PyConfigurationSpecification::ExtractJointValues,ExtractJointValues_overloads(PY_ARGS("data","body","indices","timederivative") DOXY_FN(ConfigurationSpecification,ExtractJointValues)))
+            .def("ExtractIkParameterization",&PyConfigurationSpecification::ExtractIkParameterization,ExtractIkParameterization_overloads(PY_ARGS("data","timederivative","robotname","manipulatorname") DOXY_FN(ConfigurationSpecification,ExtractIkParameterization)))
 #endif
-                                           .def("ExtractDeltaTime",&PyConfigurationSpecification::ExtractDeltaTime, PY_ARGS("data") DOXY_FN(ConfigurationSpecification,ExtractDeltaTime))
-                                           .def("InsertDeltaTime",&PyConfigurationSpecification::InsertDeltaTime, PY_ARGS("data","deltatime") DOXY_FN(ConfigurationSpecification,InsertDeltaTime))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                                           .def("InsertJointValues", &PyConfigurationSpecification::InsertJointValues,
-                                                "data"_a,
-                                                "values"_a,
-                                                "body"_a,
-                                                "indices"_a,
-                                                "timederivative"_a = 0,
-                                                DOXY_FN(ConfigurationSpecification, InsertJointValues)
-                                            )                          
+            .def("ExtractJointValues", &PyConfigurationSpecification::ExtractJointValues,
+                 "data"_a,
+                 "body"_a,
+                 "indices"_a,
+                 "timederivative"_a = 0,
+                 DOXY_FN(ConfigurationSpecification,ExtractJointValues)
+                 )
 #else
-                                           .def("InsertJointValues",&PyConfigurationSpecification::InsertJointValues, PY_ARGS("data","values","body","indices","timederivative") DOXY_FN(ConfigurationSpecification,InsertJointValues))
+            .def("ExtractJointValues",&PyConfigurationSpecification::ExtractJointValues,ExtractJointValues_overloads(PY_ARGS("data","body","indices","timederivative") DOXY_FN(ConfigurationSpecification,ExtractJointValues)))
 #endif
-                                           .def("ExtractUsedBodies", &PyConfigurationSpecification::ExtractUsedBodies, PY_ARGS("env") DOXY_FN(ConfigurationSpecification, ExtractUsedBodies))
-                                           .def("ExtractUsedIndices", &PyConfigurationSpecification::ExtractUsedIndices, PY_ARGS("env") DOXY_FN(ConfigurationSpecification, ExtractUsedIndices))
+            .def("ExtractDeltaTime",&PyConfigurationSpecification::ExtractDeltaTime, PY_ARGS("data") DOXY_FN(ConfigurationSpecification,ExtractDeltaTime))
+            .def("InsertDeltaTime",&PyConfigurationSpecification::InsertDeltaTime, PY_ARGS("data","deltatime") DOXY_FN(ConfigurationSpecification,InsertDeltaTime))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                                           .def("ConvertData", &PyConfigurationSpecification::ConvertData, 
-                                                "targetspec"_a,
-                                                "sourcedata"_a,
-                                                "numpoints"_a,
-                                                "env"_a,
-                                                "filluninitialized"_a = true,
-                                                DOXY_FN(ConfigurationSpecification, ConvertData)
-                                            )
+            .def("InsertJointValues", &PyConfigurationSpecification::InsertJointValues,
+                 "data"_a,
+                 "values"_a,
+                 "body"_a,
+                 "indices"_a,
+                 "timederivative"_a = 0,
+                 DOXY_FN(ConfigurationSpecification, InsertJointValues)
+                 )
 #else
-                                           .def("ConvertData", &PyConfigurationSpecification::ConvertData, PY_ARGS("targetspec", "sourcedata", "numpoints", "env", "filluninitialized") DOXY_FN(ConfigurationSpecification, ConvertData))
+            .def("InsertJointValues",&PyConfigurationSpecification::InsertJointValues, PY_ARGS("data","values","body","indices","timederivative") DOXY_FN(ConfigurationSpecification,InsertJointValues))
 #endif
-                                           .def("ConvertDataFromPrevious", &PyConfigurationSpecification::ConvertDataFromPrevious, PY_ARGS("targetdata", "targetspec", "sourcedata", "numpoints", "env") DOXY_FN(ConfigurationSpecification, ConvertData))
-                                           .def("GetGroups", &PyConfigurationSpecification::GetGroups, /*PY_ARGS("env")*/ "returns a list of the groups")
-                                           .def("__eq__",&PyConfigurationSpecification::__eq__)
-                                           .def("__ne__",&PyConfigurationSpecification::__ne__)
-                                           .def("__add__",&PyConfigurationSpecification::__add__)
-                                           .def("__iadd__",&PyConfigurationSpecification::__iadd__)
+            .def("ExtractUsedBodies", &PyConfigurationSpecification::ExtractUsedBodies, PY_ARGS("env") DOXY_FN(ConfigurationSpecification, ExtractUsedBodies))
+            .def("ExtractUsedIndices", &PyConfigurationSpecification::ExtractUsedIndices, PY_ARGS("env") DOXY_FN(ConfigurationSpecification, ExtractUsedIndices))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                                           .def(py::pickle(
-                                            [](const PyConfigurationSpecification& pyspec) {
-                                                std::stringstream ss;
-                                                ss << pyspec._spec;
-                                                return py::make_tuple(ss.str());
-                                            },
-                                            [](py::tuple state) {
-                                                // __setstate__
-                                                if(state.size() != 1) {
-                                                    throw std::runtime_error("Invalid state");
-                                                }
-                                                return PyConfigurationSpecification(state[0].cast<std::string>());
-                                            }
-                                            ))
+            .def("ConvertData", &PyConfigurationSpecification::ConvertData,
+                 "targetspec"_a,
+                 "sourcedata"_a,
+                 "numpoints"_a,
+                 "env"_a,
+                 "filluninitialized"_a = true,
+                 DOXY_FN(ConfigurationSpecification, ConvertData)
+                 )
 #else
-                                           .def_pickle(ConfigurationSpecification_pickle_suite())
+            .def("ConvertData", &PyConfigurationSpecification::ConvertData, PY_ARGS("targetspec", "sourcedata", "numpoints", "env", "filluninitialized") DOXY_FN(ConfigurationSpecification, ConvertData))
 #endif
-                                           .def("__str__",&PyConfigurationSpecification::__str__)
-                                           .def("__unicode__",&PyConfigurationSpecification::__unicode__)
-                                           .def("__repr__",&PyConfigurationSpecification::__repr__)
+            .def("ConvertDataFromPrevious", &PyConfigurationSpecification::ConvertDataFromPrevious, PY_ARGS("targetdata", "targetspec", "sourcedata", "numpoints", "env") DOXY_FN(ConfigurationSpecification, ConvertData))
+            .def("GetGroups", &PyConfigurationSpecification::GetGroups, /*PY_ARGS("env")*/ "returns a list of the groups")
+            .def("__eq__",&PyConfigurationSpecification::__eq__)
+            .def("__ne__",&PyConfigurationSpecification::__ne__)
+            .def("__add__",&PyConfigurationSpecification::__add__)
+            .def("__iadd__",&PyConfigurationSpecification::__iadd__)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            .def(py::pickle(
+                     [](const PyConfigurationSpecification& pyspec) {
+                std::stringstream ss;
+                ss << pyspec._spec;
+                return py::make_tuple(ss.str());
+            },
+                     [](py::tuple state) {
+                // __setstate__
+                if(state.size() != 1) {
+                    throw std::runtime_error("Invalid state");
+                }
+                return PyConfigurationSpecification(state[0].cast<std::string>());
+            }
+                     ))
+#else
+            .def_pickle(ConfigurationSpecification_pickle_suite())
+#endif
+            .def("__str__",&PyConfigurationSpecification::__str__)
+            .def("__unicode__",&PyConfigurationSpecification::__unicode__)
+            .def("__repr__",&PyConfigurationSpecification::__repr__)
         ;
 
         {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
             // Group belongs to ConfigurationSpecification
             scope_ group = class_<ConfigurationSpecification::Group, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> >(configurationspecification, "Group",DOXY_CLASS(ConfigurationSpecification::Group))
-            .def(init<>())
+                           .def(init<>())
 #else
             scope_ group = class_<ConfigurationSpecification::Group, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> >("Group",DOXY_CLASS(ConfigurationSpecification::Group))
 #endif
-                          .def_readwrite("name",&ConfigurationSpecification::Group::name)
-                          .def_readwrite("interpolation",&ConfigurationSpecification::Group::interpolation)
-                          .def_readwrite("offset",&ConfigurationSpecification::Group::offset)
-                          .def_readwrite("dof",&ConfigurationSpecification::Group::dof)
+                           .def_readwrite("name",&ConfigurationSpecification::Group::name)
+                           .def_readwrite("interpolation",&ConfigurationSpecification::Group::interpolation)
+                           .def_readwrite("offset",&ConfigurationSpecification::Group::offset)
+                           .def_readwrite("dof",&ConfigurationSpecification::Group::dof)
             ;
         }
     }
@@ -1667,11 +1667,11 @@ void init_openravepy_global()
         scope_ scope_xmlreaders = class_<xmlreaders::PyStaticClass>("xmlreaders")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                                 .def_static("CreateStringXMLReadable", xmlreaders::pyCreateStringXMLReadable, PY_ARGS("xmlid", "data") DOXY_FN1(pyCreateStringXMLReadable))
+                                  .def_static("CreateStringXMLReadable", xmlreaders::pyCreateStringXMLReadable, PY_ARGS("xmlid", "data") DOXY_FN1(pyCreateStringXMLReadable))
 #else
-                                 // https://wiki.python.org/moin/boost.python/HowTo
-                                 .def("CreateStringXMLReadable",xmlreaders::pyCreateStringXMLReadable, PY_ARGS("xmlid", "data") DOXY_FN1(pyCreateStringXMLReadable))
-                                 .staticmethod("CreateStringXMLReadable")
+                                  // https://wiki.python.org/moin/boost.python/HowTo
+                                  .def("CreateStringXMLReadable",xmlreaders::pyCreateStringXMLReadable, PY_ARGS("xmlid", "data") DOXY_FN1(pyCreateStringXMLReadable))
+                                  .staticmethod("CreateStringXMLReadable")
 #endif
         ;
     }
@@ -1707,10 +1707,10 @@ void init_openravepy_global()
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("RaveFindLocalFile", OpenRAVE::RaveFindLocalFile,
-        "filename"_a,
-        "curdir"_a = "",
-        DOXY_FN1(RaveFindLocalFile)
-    );
+          "filename"_a,
+          "curdir"_a = "",
+          DOXY_FN1(RaveFindLocalFile)
+          );
 #else
     def("RaveFindLocalFile",OpenRAVE::RaveFindLocalFile,RaveFindLocalFile_overloads(PY_ARGS("filename","curdir") DOXY_FN1(RaveFindLocalFile)));
 #endif
@@ -1766,10 +1766,10 @@ void init_openravepy_global()
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("RaveInitialize", openravepy::pyRaveInitialize,
-        "load_all_plugins"_a = true,
-        "level"_a = py::none_(),
-        DOXY_FN1(RaveInitialize)
-    );
+          "load_all_plugins"_a = true,
+          "level"_a = py::none_(),
+          DOXY_FN1(RaveInitialize)
+          );
 #else
     def("RaveInitialize",openravepy::pyRaveInitialize,RaveInitialize_overloads(PY_ARGS("load_all_plugins","level") DOXY_FN1(RaveInitialize)));
 #endif
@@ -1810,11 +1810,11 @@ void init_openravepy_global()
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("RaveClone", openravepy::pyRaveClone,
-        "ref"_a,
-        "cloningoptions"_a,
-        "cloneenv"_a = py::none_(), // PyEnvironmentBasePtr(),
-        DOXY_FN1(RaveClone)
-    );
+          "ref"_a,
+          "cloningoptions"_a,
+          "cloneenv"_a = py::none_(), // PyEnvironmentBasePtr(),
+          DOXY_FN1(RaveClone)
+          );
 #else
     def("RaveClone",openravepy::pyRaveClone,RaveClone_overloads(PY_ARGS("ref","cloningoptions", "cloneenv") DOXY_FN1(RaveClone)));
 #endif
@@ -1839,22 +1839,22 @@ void init_openravepy_global()
     def("RaveGetAffineDOF",OpenRAVE::RaveGetAffineDOF, PY_ARGS("affinedofs") DOXY_FN1(RaveGetAffineDOF));
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    m.def("RaveGetAffineDOFValuesFromTransform", openravepy::pyRaveGetAffineDOFValuesFromTransform, 
-        "transform"_a,
-        "affinedofs"_a,
-        "rotationaxis"_a = py::none_(),
-        DOXY_FN1(RaveGetAffineDOFValuesFromTransform)
-    );
+    m.def("RaveGetAffineDOFValuesFromTransform", openravepy::pyRaveGetAffineDOFValuesFromTransform,
+          "transform"_a,
+          "affinedofs"_a,
+          "rotationaxis"_a = py::none_(),
+          DOXY_FN1(RaveGetAffineDOFValuesFromTransform)
+          );
 #else
     def("RaveGetAffineDOFValuesFromTransform",openravepy::pyRaveGetAffineDOFValuesFromTransform, pyRaveGetAffineDOFValuesFromTransform_overloads(PY_ARGS("transform","affinedofs","rotationaxis") DOXY_FN1(RaveGetAffineDOFValuesFromTransform)));
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("RaveGetAffineConfigurationSpecification", openravepy::pyRaveGetAffineConfigurationSpecification,
-        "affinedofs"_a,
-        "body"_a = py::none_(), // PyKinBodyPtr(),
-        "interpolation"_a = "",
-        DOXY_FN1(RaveGetAffineConfigurationSpecification)
-    );
+          "affinedofs"_a,
+          "body"_a = py::none_(), // PyKinBodyPtr(),
+          "interpolation"_a = "",
+          DOXY_FN1(RaveGetAffineConfigurationSpecification)
+          );
 #else
     def("RaveGetAffineConfigurationSpecification",openravepy::pyRaveGetAffineConfigurationSpecification, pyRaveGetAffineConfigurationSpecification_overloads(PY_ARGS("affinedofs","body","interpolation") DOXY_FN1(RaveGetAffineConfigurationSpecification)));
 #endif
@@ -1922,36 +1922,36 @@ void init_openravepy_global()
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("InterpolateQuatSlerp", openravepy::InterpolateQuatSlerp,
-        "quat0"_a,
-        "quat1"_a,
-        "t"_a,
-        "forceshortarc"_a = true,
-        DOXY_FN1(InterpolateQuatSlerp "const RaveVector; const RaveVector; T")
-    );
+          "quat0"_a,
+          "quat1"_a,
+          "t"_a,
+          "forceshortarc"_a = true,
+          DOXY_FN1(InterpolateQuatSlerp "const RaveVector; const RaveVector; T")
+          );
 #else
     def("InterpolateQuatSlerp",openravepy::InterpolateQuatSlerp, InterpolateQuatSlerp_overloads(PY_ARGS("quat0","quat1","t","forceshortarc") DOXY_FN1(InterpolateQuatSlerp "const RaveVector; const RaveVector; T")));
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("InterpolateQuatSquad",openravepy::InterpolateQuatSquad,
-        "quat0"_a,
-        "quat1"_a,
-        "quat2"_a,
-        "quat3"_a,
-        "t"_a,
-        "forceshortarc"_a = true,
-        DOXY_FN1(InterpolateQuatSquad)
-    );
+          "quat0"_a,
+          "quat1"_a,
+          "quat2"_a,
+          "quat3"_a,
+          "t"_a,
+          "forceshortarc"_a = true,
+          DOXY_FN1(InterpolateQuatSquad)
+          );
 #else
     def("InterpolateQuatSquad",openravepy::InterpolateQuatSquad, InterpolateQuatSquad_overloads(PY_ARGS("quat0","quat1","quat2","quat3","t","forceshortarc") DOXY_FN1(InterpolateQuatSquad)));
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("quatSlerp",openravepy::InterpolateQuatSlerp,
-        "quat0"_a,
-        "quat1"_a,
-        "t"_a,
-        "forceshortarc"_a = true,
-        DOXY_FN1(quatSlerp "const RaveVector; const RaveVector; T")
-    ); // deprecated
+          "quat0"_a,
+          "quat1"_a,
+          "t"_a,
+          "forceshortarc"_a = true,
+          DOXY_FN1(quatSlerp "const RaveVector; const RaveVector; T")
+          ); // deprecated
 #else
     def("quatSlerp",openravepy::InterpolateQuatSlerp, PY_ARGS("quat0","quat1","t", "forceshortarc") DOXY_FN1(quatSlerp "const RaveVector; const RaveVector; T")); // deprecated
 #endif
@@ -2111,12 +2111,12 @@ void init_openravepy_global()
     def("normalizeAxisRotation",openravepy::normalizeAxisRotation, PY_ARGS("axis","quat") DOXY_FN1(normalizeAxisRotation));
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    m.def("ComputePoseDistSqr", openravepy::ComputePoseDistSqr, 
-        "pose0"_a,
-        "pose1"_a,
-        "quatweight"_a = 1.0,
-        DOXY_FN1(ComputePoseDistSqr)
-    );
+    m.def("ComputePoseDistSqr", openravepy::ComputePoseDistSqr,
+          "pose0"_a,
+          "pose1"_a,
+          "quatweight"_a = 1.0,
+          DOXY_FN1(ComputePoseDistSqr)
+          );
 #else
     def("ComputePoseDistSqr", openravepy::ComputePoseDistSqr, ComputePoseDistSqr_overloads(PY_ARGS("pose0", "pose1", "quatweight") DOXY_FN1(ComputePoseDistSqr)));
 #endif
