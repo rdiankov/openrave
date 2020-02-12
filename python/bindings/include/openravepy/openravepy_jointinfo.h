@@ -106,6 +106,7 @@ public:
     object _vForcedAdjacentLinks = py::list();
     bool _bStatic = false;
     bool _bIsEnabled = true;
+    bool _bVisible = true;
 };
 
 class PyElectricMotorActuatorInfo

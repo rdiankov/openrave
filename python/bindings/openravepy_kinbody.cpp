@@ -3716,6 +3716,7 @@ void init_openravepy_kinbody()
                       .def_readwrite("_vForcedAdjacentLinks",&PyLinkInfo::_vForcedAdjacentLinks)
                       .def_readwrite("_bStatic",&PyLinkInfo::_bStatic)
                       .def_readwrite("_bIsEnabled",&PyLinkInfo::_bIsEnabled)
+                      .def_readwrite("_bVisible",&PyLinkInfo::_bVisible)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                       .def(py::pickle([](const PyLinkInfo &pyinfo) {
             // __getstate__
