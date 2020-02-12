@@ -757,7 +757,8 @@ bool PyInterfaceBase::SupportsJSONCommand(const string& cmd)
 
 object PyInterfaceBase::SendCommand(const string& in, bool releasegil, bool lockenv)
 {
-    std::stringstream sin(in), sout;
+    std::stringstream sin(in);
+    std::stringstream sout;
     {
         openravepy::PythonThreadSaverPtr statesaver;
         openravepy::PyEnvironmentLockSaverPtr envsaver;

@@ -34,6 +34,13 @@ inline object to_object(const T& t) {
     // but (x) cannot cast *PyObject to py::object
     return cast(t);
 }
+template <>
+inline object to_object(const std::string& t) {
+    // https://pybind11.readthedocs.io/en/stable/advanced/cast/strings.html#return-c-strings-without-conversion
+    // std::string is special; since we may store Joseph's GenericTrajectory in binary form,
+    // we should return std::string without transcoding
+    return bytes(t);
+}
 inline object handle_to_object(PyObject* pyo) {
     return cast<object>(pyo);
 }
@@ -102,7 +109,7 @@ inline py::object ConvertStringToUnicode(const std::string& s)
        return py::cast<py::object>(pyo); // py::handle_to_object(pyo);
        ```
      */
-    return py::cast(s);
+    return py::to_object(s);
 }
 
 #ifdef OPENRAVE_BINDINGS_PYARRAY
