@@ -376,7 +376,7 @@ private:
 
     /// \param docname the top level document?
     virtual void Init(const string& docname, const std::string& keywords=std::string(),
-                      const std::string& subject=std::string())
+                      const std::string& subject=std::string(), const std::string& author=std::string())
     {
         daeInt error = _dae->getDatabase()->insertDocument(docname.c_str(), &_doc );     // also creates a collada root
         BOOST_ASSERT( error == DAE_OK && !!_doc );
@@ -401,6 +401,9 @@ private:
             domAsset::domContributorRef contrib = daeSafeCast<domAsset::domContributor>( asset->add( COLLADA_TYPE_CONTRIBUTOR ) );
             domAsset::domContributor::domAuthoring_toolRef authoringtool = daeSafeCast<domAsset::domContributor::domAuthoring_tool>( contrib->add( COLLADA_ELEMENT_AUTHORING_TOOL ) );
             authoringtool->setValue("OpenRAVE Collada Writer v0.3.5");
+
+            domAsset::domContributor::domAuthorRef contribAuthor = daeSafeCast<domAsset::domContributor::domAuthor>( contrib->add( COLLADA_ELEMENT_AUTHOR ) );
+            contribAuthor->setValue(author.c_str());
 
             domAsset::domUnitRef units = daeSafeCast<domAsset::domUnit>( asset->add( COLLADA_ELEMENT_UNIT ) );
             std::pair<std::string, dReal> unit = _penv->GetUnit();
@@ -665,7 +668,7 @@ private:
             iasout->vaxissids.resize(pcolladainfo->_bindingAxesSIDs.size());
             for(size_t idof = 0; idof < pcolladainfo->_bindingAxesSIDs.size(); ++idof) {
                 // there's no way to directly call a setparam on a SIDREF, so have to <bind>
-                std::string sparamref = str(boost::format("ias_extern_param%d")%idof);
+                std::string sparamref = str(boost::format("ias_extern_%s_param%d")%asid%idof);
                 domKinematics_newparamRef param = daeSafeCast<domKinematics_newparam>(ias_external->add(COLLADA_ELEMENT_NEWPARAM));
                 param->setSid(sparamref.c_str());
                 daeSafeCast<domKinematics_newparam::domSIDREF>(param->add(COLLADA_ELEMENT_SIDREF))->setValue(pcolladainfo->_bindingAxesSIDs[idof].kmodelaxissidref.c_str());
@@ -674,7 +677,7 @@ private:
                 if( pbody->IsDOFRevolute(idof) ) {
                     dofvalue *= 180/M_PI;
                 }
-                std::string sparamrefvalue = str(boost::format("ias_extern_param%d_value")%idof);
+                std::string sparamrefvalue = str(boost::format("ias_extern_%s_param%d_value")%asid%idof);
                 domKinematics_newparamRef paramvalue = daeSafeCast<domKinematics_newparam>(ias_external->add(COLLADA_ELEMENT_NEWPARAM));
                 paramvalue->setSid(sparamrefvalue.c_str());
                 paramvalue->add(COLLADA_TYPE_FLOAT)->setCharData(boost::lexical_cast<std::string>(dofvalue));
@@ -695,7 +698,7 @@ private:
             }
             size_t index = pcolladainfo->_bindingAxesSIDs.size();
             FOREACH(itpassive,pcolladainfo->_bindingPassiveAxesSIDs) {
-                std::string sparamref = str(boost::format("ias_extern_param%d")%index);
+                std::string sparamref = str(boost::format("ias_extern_%s_param%d")%asid%index);
                 domKinematics_newparamRef param = daeSafeCast<domKinematics_newparam>(ias_external->add(COLLADA_ELEMENT_NEWPARAM));
                 param->setSid(sparamref.c_str());
                 daeSafeCast<domKinematics_newparam::domSIDREF>(param->add(COLLADA_ELEMENT_SIDREF))->setValue(itpassive->kmodelaxissidref.c_str());
@@ -788,7 +791,7 @@ private:
                         smodelref = str(boost::format("ikmodel%d_%d")%_mapBodyIds[pbody->GetEnvironmentId()]%imodel);
                         param2->setSid(smodelref.c_str());
                     }
-                    iasout->vkinematicsbindings.push_back(make_pair(smodelref, sidref));
+                    iasout->vkinematicsbindings.emplace_back(smodelref,  sidref);
                 }
             }
 
@@ -1012,7 +1015,7 @@ private:
             domKinematics_newparamRef ab = daeSafeCast<domKinematics_newparam>(ias->add(COLLADA_ELEMENT_NEWPARAM));
             ab->setSid(assym.c_str());
             daeSafeCast<domKinematics_newparam::domSIDREF>(ab->add(COLLADA_ELEMENT_SIDREF))->setValue(str(boost::format("%s/%s")%asmid%asmsym).c_str());
-            iasout->vkinematicsbindings.push_back(make_pair(string(ab->getSid()), it->second));
+            iasout->vkinematicsbindings.emplace_back(ab->getSid(),  it->second);
         }
         for(size_t iaxissid = 0; iaxissid < ikmout->vaxissids.size(); ++iaxissid) {
             const axis_sids& kas = ikmout->vaxissids.at(iaxissid);
@@ -1153,7 +1156,7 @@ private:
             kbind->setSid((symscope+ikmsid).c_str());
             daeSafeCast<domKinematics_newparam::domSIDREF>(kbind->add(COLLADA_ELEMENT_SIDREF))->setValue((refscope+ikmsid).c_str());
             // needs to be node0 instead of _GetNodeId(pbody) since the kinematics hierarchy origin does not have the current body's transform
-            ikmout->vkinematicsbindings.push_back(make_pair(string(kbind->getSid()), str(boost::format("%s/node0")%_GetNodeId(pbody))));
+            ikmout->vkinematicsbindings.emplace_back(kbind->getSid(),  str(boost::format("%s/node0")%_GetNodeId(pbody)));
         }
 
         ikmout->vaxissids.reserve(kmout->vaxissids.size());
@@ -1328,11 +1331,11 @@ private:
         vector< pair<int,KinBody::JointConstPtr> > vjoints;
         vjoints.reserve(pbody->GetJoints().size()+pbody->GetPassiveJoints().size());
         FOREACHC(itj, pbody->GetJoints() ) {
-            vjoints.push_back(make_pair((*itj)->GetJointIndex(),*itj));
+            vjoints.emplace_back((*itj)->GetJointIndex(), *itj);
         }
         int index=pbody->GetJoints().size();
         FOREACHC(itj, pbody->GetPassiveJoints()) {
-            vjoints.push_back(make_pair(index++,*itj));
+            vjoints.emplace_back(index++, *itj);
         }
         vector<dReal> lmin, lmax;
         vector<domJointRef> vdomjoints(vjoints.size());
@@ -1502,7 +1505,7 @@ private:
             // write the float/int parameters for all joints
             FOREACH(itjoint, vjoints) {
                 KinBody::JointConstPtr pjoint = itjoint->second;
-                if( pjoint->GetFloatParameters().size() == 0 && pjoint->GetIntParameters().size() == 0 && pjoint->GetStringParameters().size() == 0 ) {
+                if( pjoint->GetFloatParameters().size() == 0 && pjoint->GetIntParameters().size() == 0 && pjoint->GetStringParameters().size() == 0 && pjoint->GetControlMode() == KinBody::JCM_None ) {
                     continue;
                 }
                 string jointsid = str(boost::format("joint%d")%itjoint->first);
@@ -1537,6 +1540,93 @@ private:
                     daeElementRef string_value = ptec->add("string_value");
                     string_value->setAttribute("name",itparam->first.c_str());
                     string_value->setCharData(itparam->second);
+                }
+                if( pjoint->GetControlMode() != KinBody::JCM_None ) {
+                    daeElementRef param_controlMode = ptec->add("controlMode");
+                    param_controlMode->setCharData(boost::lexical_cast<std::string>(pjoint->_info._controlMode).c_str());
+                    switch( pjoint->_info._controlMode ) {
+                    case KinBody::JCM_RobotController: {
+                        daeElementRef param_jointcontrolinfo_robotcontroller = ptec->add("jointcontrolinfo_robotcontroller");
+                        // robotId
+                        daeElementRef param_robotId = param_jointcontrolinfo_robotcontroller->add("robotId");
+                        param_robotId->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotId).c_str());
+                        // robotControllerDOFIndex
+                        for( int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis ) {
+                            daeElementRef param_robotControllerDOFIndex = param_jointcontrolinfo_robotcontroller->add("robotControllerDOFIndex");
+                            param_robotControllerDOFIndex->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_robotControllerDOFIndex->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotControllerDOFIndex[iaxis]).c_str());
+                        }
+                        break;
+                    } // end case KinBody::JCM_RobotController
+                    case KinBody::JCM_IO: {
+                        daeElementRef param_jointcontrolinfo_io = ptec->add("jointcontrolinfo_io");
+                        // deviceId
+                        daeElementRef param_deviceId = param_jointcontrolinfo_io->add("deviceId");
+                        param_deviceId->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_io->deviceId).c_str());
+                        for( int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis ) {
+                            // vMoveIONames
+                            daeElementRef param_vMoveIONames = param_jointcontrolinfo_io->add("vMoveIONames");
+                            param_vMoveIONames->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_vMoveIONames->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->vMoveIONames[iaxis].size()).c_str());
+                            ss.str(""); ss.clear();
+                            FOREACHC(itioname, pjoint->_info._jci_io->vMoveIONames[iaxis]) {
+                                ss << *itioname << " ";
+                            }
+                            param_vMoveIONames->setCharData(ss.str());
+
+                            // vUpperLimitIONames
+                            daeElementRef param_vUpperLimitIONames = param_jointcontrolinfo_io->add("vUpperLimitIONames");
+                            param_vUpperLimitIONames->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_vUpperLimitIONames->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->vUpperLimitIONames[iaxis].size()).c_str());
+                            ss.str(""); ss.clear();
+                            FOREACHC(itioname, pjoint->_info._jci_io->vUpperLimitIONames[iaxis]) {
+                                ss << *itioname << " ";
+                            }
+                            param_vUpperLimitIONames->setCharData(ss.str());
+
+                            // vUpperLimitSensorIsOn
+                            daeElementRef param_vUpperLimitSensorIsOn = param_jointcontrolinfo_io->add("vUpperLimitSensorIsOn");
+                            param_vUpperLimitSensorIsOn->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_vUpperLimitSensorIsOn->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->vUpperLimitSensorIsOn[iaxis].size()).c_str());
+                            ss.str(""); ss.clear();
+                            FOREACHC(itiovalue, pjoint->_info._jci_io->vUpperLimitSensorIsOn[iaxis]) {
+                                ss << (int)*itiovalue << " ";
+                            }
+                            param_vUpperLimitSensorIsOn->setCharData(ss.str());
+
+                            // vLowerLimitIONames
+                            daeElementRef param_vLowerLimitIONames = param_jointcontrolinfo_io->add("vLowerLimitIONames");
+                            param_vLowerLimitIONames->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_vLowerLimitIONames->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->vLowerLimitIONames[iaxis].size()).c_str());
+                            ss.str(""); ss.clear();
+                            FOREACHC(itioname, pjoint->_info._jci_io->vLowerLimitIONames[iaxis]) {
+                                ss << *itioname << " ";
+                            }
+                            param_vLowerLimitIONames->setCharData(ss.str());
+
+                            // vLowerLimitSensorIsOn
+                            daeElementRef param_vLowerLimitSensorIsOn = param_jointcontrolinfo_io->add("vLowerLimitSensorIsOn");
+                            param_vLowerLimitSensorIsOn->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_vLowerLimitSensorIsOn->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->vLowerLimitSensorIsOn[iaxis].size()).c_str());
+                            ss.str(""); ss.clear();
+                            FOREACHC(itiovalue, pjoint->_info._jci_io->vLowerLimitSensorIsOn[iaxis]) {
+                                ss << (int)*itiovalue << " ";
+                            }
+                            param_vLowerLimitSensorIsOn->setCharData(ss.str());
+                        }
+                        break;
+                    } // end case KinBody::JCM_IO
+                    case KinBody::JCM_ExternalDevice: {
+                        daeElementRef param_jointcontrolinfo_externaldevice = ptec->add("jointcontrolinfo_externaldevice");
+                        // robotId
+                        daeElementRef param_externalDeviceId = param_jointcontrolinfo_externaldevice->add("externalDeviceId");
+                        param_externalDeviceId->setCharData(pjoint->_info._jci_externaldevice->externalDeviceId.c_str());
+                        break;
+                    } // end case KinBody::JCM_ExternalDevice
+                    default: {
+                        break;
+                    } // end default
+                    } // end switch
                 }
             }
         }
@@ -1770,6 +1860,9 @@ private:
                 ss.clear(); ss.str("");
                 ss << geom->GetContainerBottomCross().x << " " << geom->GetContainerBottomCross().y << " " << geom->GetContainerBottomCross().z;
                 pcontainer->add("bottom_cross")->setCharData(ss.str());
+                ss.clear(); ss.str("");
+                ss << geom->GetContainerBottom().x << " " << geom->GetContainerBottom().y << " " << geom->GetContainerBottom().z;
+                pcontainer->add("bottom")->setCharData(ss.str());
                 break;
             }
             case GT_Cage: {
@@ -1940,11 +2033,11 @@ private:
 
     /** \brief Write link of a kinematic body
 
-        \param link Link to write
-        \param pkinparent Kinbody parent
-        \param pnodeparent Node parent
-        \param strModelUri
-        \param vjoints Vector of joints
+       \param link Link to write
+       \param pkinparent Kinbody parent
+       \param pnodeparent Node parent
+       \param strModelUri
+       \param vjoints Vector of joints
      */
     virtual LINKOUTPUT _WriteLink(KinBody::LinkConstPtr plink, daeElementRef pkinparent, daeElementRef pnodeparent, const string& strModelUri, const vector<pair<int, KinBody::JointConstPtr> >& vjoints)
     {
@@ -2043,7 +2136,7 @@ private:
             }
         }
 
-        out.listusedlinks.push_back(make_pair(plink->GetIndex(),linksid));
+        out.listusedlinks.emplace_back(plink->GetIndex(), linksid);
         out.plink = pdomlink;
         out.pnode = pnode;
         return out;
@@ -2551,7 +2644,7 @@ void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const
 {
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaWriter writer(penv, atts);
-    std::string scenename, keywords, subject;
+    std::string scenename, keywords, subject, author;
     FOREACHC(itatt,atts) {
         if( itatt->first == "scenename" ) {
             scenename = itatt->second;
@@ -2562,9 +2655,12 @@ void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const
         else if( itatt->first == "subject" ) {
             subject = itatt->second;
         }
+        else if( itatt->first == "author" ) {
+            author = itatt->second;
+        }
     }
 
-    writer.Init("openrave_snapshot", keywords, subject);
+    writer.Init("openrave_snapshot", keywords, subject, author);
 
     if( scenename.size() == 0 ) {
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
@@ -2593,7 +2689,7 @@ void RaveWriteColladaFile(KinBodyPtr pbody, const string& filename, const Attrib
 {
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaWriter writer(pbody->GetEnv(),atts);
-    std::string keywords, subject;
+    std::string keywords, subject, author;
     FOREACHC(itatt,atts) {
         if( itatt->first == "keywords" ) {
             keywords = itatt->second;
@@ -2601,9 +2697,12 @@ void RaveWriteColladaFile(KinBodyPtr pbody, const string& filename, const Attrib
         else if( itatt->first == "subject" ) {
             subject = itatt->second;
         }
+        else if( itatt->first == "author" ) {
+            author = itatt->second;
+        }
     }
 
-    writer.Init("openrave_snapshot", keywords, subject);
+    writer.Init("openrave_snapshot", keywords, subject, author);
     if( !writer.Write(pbody) ) {
         throw openrave_exception(_("ColladaWriter::Write(KinBodyPtr) failed"));
     }
@@ -2615,7 +2714,7 @@ void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::st
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     if( listbodies.size() > 0 ) {
         ColladaWriter writer(listbodies.front()->GetEnv(),atts);
-        std::string scenename, keywords, subject;
+        std::string scenename, keywords, subject, author;
         FOREACHC(itatt,atts) {
             if( itatt->first == "scenename" ) {
                 scenename = itatt->second;
@@ -2627,8 +2726,11 @@ void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::st
             else if( itatt->first == "subject" ) {
                 subject = itatt->second;
             }
+            else if( itatt->first == "author" ) {
+                author = itatt->second;
+            }
         }
-        writer.Init("openrave_snapshot", keywords, subject);
+        writer.Init("openrave_snapshot", keywords, subject, author);
 
         if( scenename.size() == 0 ) {
     #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
@@ -2658,7 +2760,7 @@ void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output, 
 {
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaWriter writer(penv, atts);
-    std::string scenename, keywords, subject;
+    std::string scenename, keywords, subject, author;
     FOREACHC(itatt,atts) {
         if( itatt->first == "scenename" ) {
             scenename = itatt->second;
@@ -2669,9 +2771,12 @@ void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output, 
         else if( itatt->first == "subject" ) {
             subject = itatt->second;
         }
+        else if( itatt->first == "author" ) {
+            author = itatt->second;
+        }
     }
 
-    writer.Init("openrave_snapshot", keywords, subject);
+    writer.Init("openrave_snapshot", keywords, subject, author);
 
     if( scenename.size() == 0 ) {
         scenename = "scene";
@@ -2687,7 +2792,7 @@ void RaveWriteColladaMemory(KinBodyPtr pbody, std::vector<char>& output, const A
 {
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaWriter writer(pbody->GetEnv(),atts);
-    std::string keywords, subject;
+    std::string keywords, subject, author;
     FOREACHC(itatt,atts) {
         if( itatt->first == "keywords" ) {
             keywords = itatt->second;
@@ -2695,9 +2800,12 @@ void RaveWriteColladaMemory(KinBodyPtr pbody, std::vector<char>& output, const A
         else if( itatt->first == "subject" ) {
             subject = itatt->second;
         }
+        else if( itatt->first == "author" ) {
+            author = itatt->second;
+        }
     }
 
-    writer.Init("openrave_snapshot", keywords, subject);
+    writer.Init("openrave_snapshot", keywords, subject, author);
     if( !writer.Write(pbody) ) {
         throw openrave_exception(_("ColladaWriter::Write(KinBodyPtr) failed"));
     }
@@ -2710,7 +2818,7 @@ void RaveWriteColladaMemory(const std::list<KinBodyPtr>& listbodies, std::vector
     output.clear();
     if( listbodies.size() > 0 ) {
         ColladaWriter writer(listbodies.front()->GetEnv(),atts);
-        std::string scenename, keywords, subject;
+        std::string scenename, keywords, subject, author;
         FOREACHC(itatt,atts) {
             if( itatt->first == "scenename" ) {
                 scenename = itatt->second;
@@ -2722,8 +2830,11 @@ void RaveWriteColladaMemory(const std::list<KinBodyPtr>& listbodies, std::vector
             else if( itatt->first == "subject" ) {
                 subject = itatt->second;
             }
+            else if( itatt->first == "author" ) {
+                author = itatt->second;
+            }
         }
-        writer.Init("openrave_snapshot", keywords, subject);
+        writer.Init("openrave_snapshot", keywords, subject, author);
 
         if( scenename.size() == 0 ) {
             scenename = "scene";

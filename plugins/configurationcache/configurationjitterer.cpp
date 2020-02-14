@@ -51,7 +51,7 @@ public:
     dReal fCosAngleThresh; ///< the cos angle threshold
 };
 
-typedef boost::shared_ptr<ManipDirectionThresh> ManipDirectionThreshPtr;
+typedef OPENRAVE_SHARED_PTR<ManipDirectionThresh> ManipDirectionThreshPtr;
 
 /// \brief holds parameters for threshing the position with respect to a bounding box.
 class ManipPositionConstraints
@@ -85,7 +85,7 @@ public:
     OBB obb;
 };
 
-typedef boost::shared_ptr<ManipPositionConstraints> ManipPositionConstraintsPtr;
+typedef OPENRAVE_SHARED_PTR<ManipPositionConstraints> ManipPositionConstraintsPtr;
 
 class ConfigurationJitterer : public SpaceSamplerBase
 {
@@ -484,7 +484,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         int nSampleSamples = 0;
         int nCacheHitSamples = 0;
         int nLinkDistThreshRejections = 0;
-        
+
         if( _nNumIterations == 0 ) {
             FOREACH(itperturbation,perturbations) {
                 // Perturbation is added to a config to make sure that the config is not too close to collision and tool
@@ -1010,7 +1010,7 @@ protected:
     {
         vector<KinBodyPtr> vgrabbedbodies;
         _probot->GetGrabbed(vgrabbedbodies);
-        _vLinks.resize(_probot->GetLinks().size());
+        _vLinks = _probot->GetLinks(); // robot itself might have changed?
         FOREACHC(itgrabbed, vgrabbedbodies) {
             FOREACHC(itlink2, (*itgrabbed)->GetLinks()) {
                 _vLinks.push_back(*itlink2);
@@ -1019,7 +1019,7 @@ protected:
 
         // update all the grabbed links
         _vLinkAABBs.resize(_vLinks.size());
-        for(size_t i = _probot->GetLinks().size(); i < _vLinks.size(); ++i) {
+        for(size_t i = 0; i < _vLinks.size(); ++i) {
             _vLinkAABBs[i] = _vLinks[i]->ComputeLocalAABB();
         }
 

@@ -38,7 +38,20 @@ bool KinBody::Grab(KinBodyPtr pbody, LinkPtr plink)
 
     // double check since collision checkers might not support this case
     if( pbody->HasAttached() ) {
-        RAVELOG_WARN_FORMAT("body %s trying to grab body %s with %d attached bodies", GetName()%pbody->GetName()%pbody->HasAttached());
+        if( !!pPreviousGrabbed ) {
+            RAVELOG_INFO_FORMAT("env=%d, body %s is previously grabbed by %s, so", GetEnv()->GetId()%pbody->GetName()%GetName());
+        }
+        else {
+            std::set<KinBodyPtr> setAttached;
+            pbody->GetAttached(setAttached);
+            std::stringstream ss;
+            if( setAttached.size() > 1 ) {
+                FOREACH(itbody, setAttached) {
+                    ss << (*itbody)->GetName() << ", ";
+                }
+            }
+            RAVELOG_WARN_FORMAT("env=%d, body %s trying to grab body %s with %d attached bodies [%s]", GetEnv()->GetId()%GetName()%pbody->GetName()%setAttached.size()%ss.str());
+        }
     }
 
     Transform t = plink->GetTransform();
@@ -151,15 +164,33 @@ void KinBody::Release(KinBody &body)
     FOREACH(itgrabbed, _vGrabbedBodies) {
         GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
         KinBodyConstPtr pgrabbedbody = pgrabbed->_pgrabbedbody.lock();
-        if( !!pgrabbedbody && pgrabbedbody.get() == &body ) {
-            _vGrabbedBodies.erase(itgrabbed);
-            _RemoveAttachedBody(body);
-            _PostprocessChangedParameters(Prop_RobotGrabbed);
-            return;
+        if( !!pgrabbedbody ) {
+            bool bpointermatch = pgrabbedbody.get() == &body;
+            bool bnamematch = pgrabbedbody->GetName() == body.GetName();
+            if( bpointermatch != bnamematch ) {
+                RAVELOG_WARN_FORMAT("env=%d, body %s has grabbed body %s (%d), but it does not match with %s (%d) ", GetEnv()->GetId()%pgrabbedbody->GetName()%pgrabbedbody->GetEnvironmentId()%body.GetName()%body.GetEnvironmentId());
+            }
+            if( bpointermatch ) {
+                _vGrabbedBodies.erase(itgrabbed);
+                _RemoveAttachedBody(body);
+                _PostprocessChangedParameters(Prop_RobotGrabbed);
+                return;
+            }
         }
     }
 
-    RAVELOG_DEBUG_FORMAT("env=%d, body %s is not grabbing body %s", GetEnv()->GetId()%GetName()%body.GetName());
+    if( IS_DEBUGLEVEL(Level_Debug) ) {
+        std::stringstream ss;
+        FOREACH(itgrabbed, _vGrabbedBodies) {
+            GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
+            KinBodyConstPtr pgrabbedbody = pgrabbed->_pgrabbedbody.lock();
+            if( !!pgrabbedbody ) {
+                ss << pgrabbedbody->GetName() << ", ";
+            }
+        }
+
+        RAVELOG_DEBUG_FORMAT("env=%d, body %s is not grabbing body %s (%d), but grabbing bodies [%s]", GetEnv()->GetId()%GetName()%body.GetName()%body.GetEnvironmentId()%ss.str());
+    }
 }
 
 void KinBody::ReleaseAllGrabbed()

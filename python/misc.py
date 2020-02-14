@@ -14,7 +14,7 @@
 """Misc openravepy functions. Need to explicitly import to use them.
 """
 from __future__ import with_statement # for python 2.5
-from . import openravepy_int, openravepy_ext
+from . import openravepy_int, openravepy_ext, OpenRAVEException
 import os.path
 from sys import platform as sysplatformname
 from sys import stdout
@@ -58,8 +58,8 @@ except ImportError:
         return curdir if not rel_list else join(*rel_list)
 
 def LoadTrajectoryFromFile(env,trajfile,trajtype=''):
-    with open(trajfile,'r') as f:
-        traj = openravepy_int.RaveCreateTrajectory(env,trajtype).deserialize(f.read())
+    traj = openravepy_int.RaveCreateTrajectory(env,trajtype)
+    traj.LoadFromFile(trajfile)
     return traj
 
 def InitOpenRAVELogging(stream=stdout):
@@ -144,7 +144,7 @@ class OpenRAVEGlobalArguments:
         ogroup.add_option('--module', action="append",type='string',dest='_modules',default=[],nargs=2,
                           help='module to load, can specify multiple modules. Two arguments are required: "name" "args".')
         ogroup.add_option('--level','-l','--log_level', action="store",type='string',dest='_level',default=None,
-                          help='Debug level, one of (%s)'%(','.join(str(debugname).lower() for debuglevel,debugname in openravepy_int.DebugLevel.values.iteritems())))
+                          help='Debug level')#, one of (%s)'%(','.join(str(debugname).lower() for debuglevel,debugname in openravepy_int.DebugLevel.values.iteritems())))
         if testmode:
             ogroup.add_option('--testmode', action="store_true",dest='testmode',default=False,
                               help='if set, will run the program in a finite amount of time and spend computation time validating results. Used for testing')
@@ -168,28 +168,28 @@ class OpenRAVEGlobalArguments:
                 cc = openravepy_int.RaveCreateCollisionChecker(env,options._collision)
                 if cc is not None:
                     env.SetCollisionChecker(cc)
-        except openravepy_ext.openrave_exception, e:
+        except OpenRAVEException as e:
             log.warn(e)
         try:
             if options._physics:
                 ph = openravepy_int.RaveCreatePhysicsEngine(env,options._physics)
                 if ph is not None:
                     env.SetPhysicsEngine(ph)
-        except openravepy_ext.openrave_exception, e:
+        except OpenRAVEException as e:
             log.warn(e)
         try:
             if options._server:
                 sr = openravepy_int.RaveCreateModule(env,options._server)
                 if sr is not None:
                     env.Add(sr,True,'%d'%options._serverport)
-        except openravepy_ext.openrave_exception, e:
+        except OpenRAVEException as e:
             log.warn(e)
         for name,args in options._modules:
             try:
                 module = openravepy_int.RaveCreateModule(env,name)
                 if module is not None:
                     env.Add(module,True,args)
-            except openravepy_ext.openrave_exception, e:
+            except OpenRAVEException as e:
                 log.warn(e)
         try:
             viewername=None
@@ -203,7 +203,7 @@ class OpenRAVEGlobalArguments:
                 return viewername
             elif viewername is not None:
                 env.SetViewer(viewername)
-        except openravepy_ext.openrave_exception, e:
+        except OpenRAVEException as e:
             log.warn(e)
             
     @staticmethod
@@ -236,7 +236,7 @@ class OpenRAVEGlobalArguments:
             openravepy_int.RaveLoadPlugin(plugin)
         OpenRAVEGlobalArguments.parseGlobal(options,**kwargs)
         if createenv is None:
-            raise openravepy_ext.openrave_exception('failed to create environment')
+            raise OpenRAVEException('failed to create environment')
         env = createenv()
         viewername = OpenRAVEGlobalArguments.parseEnvironment(options,env,returnviewer=True,**kwargs)
         SetViewerUserThread(env,viewername,lambda: userfn(env,options))

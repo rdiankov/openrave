@@ -157,6 +157,9 @@ public:
         /// \return bool true if the geometry has a concept of empty volume nad tInnerEmptyVolume/abInnerEmptyVolume are filled
         bool ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume, Vector& abInnerEmptyExtents) const;
 
+        /// \brief computes the bounding box in the world. tGeometryWorld is for the world transform.
+        AABB ComputeAABB(const Transform& tGeometryWorld) const;
+
 #if OPENRAVE_RAPIDJSON
         ///< \param multiply all translational values by fUnitScale
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale=1.0, int options=0);
@@ -175,6 +178,11 @@ public:
         ///< For GT_Cage, if any are non-zero, then force the full inner extents (bottom center) to be this much, starting at the base center top
         Vector _vGeomData2;
         Vector _vGeomData3; ///< For containers, the first 3 values is the bottom cross XY full extents and Z height from bottom face.
+
+        ///< For containers, the first 3 values are the full extents of the bottom pad (a box attached to the container
+        ///  beneath the container bottom). This geometry only valid if the first 3 values are all positive. The origin
+        ///  of the container will still be at the outer bottom of the container.
+        Vector _vGeomData4;
 
         // For GT_Cage
         enum SideWallType
@@ -237,6 +245,10 @@ public:
         LinkInfo();
         virtual ~LinkInfo() {
         }
+
+        LinkInfo(const LinkInfo& other);
+        LinkInfo& operator=(const LinkInfo& other);
+
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like
         /// self -  self-collision specific geometry. By default, this type of geometry will be always set
@@ -352,6 +364,9 @@ public:
             inline const Vector& GetContainerBottomCross() const {
                 return _info._vGeomData3;
             }
+            inline const Vector& GetContainerBottom() const {
+                return _info._vGeomData4;
+            }
             inline const RaveVector<float>& GetDiffuseColor() const {
                 return _info._vDiffuseColor;
             }
@@ -398,7 +413,7 @@ public:
             ///
             /// \return true if changed
             virtual bool SetVisible(bool visible);
-            
+
             /// \deprecated (12/1/12)
             inline void SetDraw(bool bDraw) RAVE_DEPRECATED {
                 SetVisible(bDraw);
@@ -545,12 +560,6 @@ protected:
 
         // \brief return inertia around the link's COM in the global coordinate frame.
         virtual TransformMatrix GetGlobalInertia() const;
-
-        /// \deprecated (12/1/20)
-        inline TransformMatrix GetInertia() const RAVE_DEPRECATED {
-            RAVELOG_WARN("KinBody::Link::GetInertia is deprecated, use KinBody::Link::GetLocalInertia\n");
-            return GetLocalInertia();
-        }
 
         /// \brief sets a new mass frame with respect to the link coordinate system
         virtual void SetLocalMassFrame(const Transform& massframe);
@@ -796,6 +805,13 @@ private:
         JointTrajectory = 0x80000004, ///< there is no axis defined, instead the relative transformation is directly output from the trajectory affine_transform structure
     };
 
+    enum JointControlMode {
+        JCM_None = 0, ///< unspecified
+        JCM_RobotController = 1, ///< joint controlled by the robot controller
+        JCM_IO = 2,              ///< joint controlled by I/O signals
+        JCM_ExternalDevice = 3,  ///< joint controlled by an external device
+    };
+
     class Joint;
 
     /// \brief Holds mimic information about position, velocity, and acceleration of one axis of the joint.
@@ -821,12 +837,6 @@ public:
             uint8_t axis : 2;         ///< the axis of the joint index
             bool operator <(const DOFFormat& r) const;
             bool operator ==(const DOFFormat& r) const;
-            boost::shared_ptr<Joint> GetJoint(KinBodyPtr parent) const RAVE_DEPRECATED {
-                return GetJoint(*parent);
-            }
-            boost::shared_ptr<Joint const> GetJoint(KinBodyConstPtr parent) const RAVE_DEPRECATED {
-                return GetJoint(*parent);
-            }
             boost::shared_ptr<Joint> GetJoint(KinBody &parent) const;
             boost::shared_ptr<Joint const> GetJoint(const KinBody &parent) const;
         };
@@ -857,6 +867,9 @@ public:
         JointInfo();
         virtual ~JointInfo() {
         }
+
+        JointInfo(const JointInfo& other);
+        JointInfo& operator=(const JointInfo& other);
 
         JointType _type; /// The joint type
         std::string _name;         ///< the unique joint name
@@ -902,6 +915,40 @@ public:
         boost::array<uint8_t,3> _bIsCircular;
 
         bool _bIsActive;                 ///< if true, should belong to the DOF of the body, unless it is a mimic joint (_ComputeInternalInformation decides this)
+
+        /// \brief _controlMode specifies how this joint is controlled. For possible control modes, see enum JointControlMode.
+        JointControlMode _controlMode;
+
+        struct JointControlInfo_RobotController
+        {
+            JointControlInfo_RobotController();
+            int robotId;
+            boost::array<int16_t, 3> robotControllerDOFIndex; ///< indicates which DOF in the robot controller controls which joint axis. -1 if not specified/not valid.
+        };
+        typedef boost::shared_ptr<JointControlInfo_RobotController> JointControlInfo_RobotControllerPtr;
+
+        struct JointControlInfo_IO
+        {
+            JointControlInfo_IO();
+            int deviceId;
+            boost::array< std::vector<std::string>, 3 > vMoveIONames;       ///< io names for controlling positions of this joint.
+            boost::array< std::vector<std::string>, 3 > vUpperLimitIONames; ///< io names for detecting if the joint is at its upper limit
+            boost::array< std::vector<uint8_t>, 3 > vUpperLimitSensorIsOn;  ///< if true, the corresponding upper limit sensor reads 1 when the joint is at its upper limit. otherwise, the upper limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
+            boost::array< std::vector<std::string>, 3 > vLowerLimitIONames; ///< io names for detecting if the joint is at its lower limit
+            boost::array< std::vector<uint8_t>, 3 > vLowerLimitSensorIsOn;  ///< if true, the corresponding lower limit sensor reads 1 when the joint is at its lower limit. otherwise, the lower limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
+        };
+        typedef boost::shared_ptr<JointControlInfo_IO> JointControlInfo_IOPtr;
+
+        struct JointControlInfo_ExternalDevice
+        {
+            JointControlInfo_ExternalDevice();
+            std::string externalDeviceId; ///< id for the external device
+        };
+        typedef boost::shared_ptr<JointControlInfo_ExternalDevice> JointControlInfo_ExternalDevicePtr;
+
+        JointControlInfo_RobotControllerPtr _jci_robotcontroller;
+        JointControlInfo_IOPtr _jci_io;
+        JointControlInfo_ExternalDevicePtr _jci_externaldevice;
     };
     typedef boost::shared_ptr<JointInfo> JointInfoPtr;
     typedef boost::shared_ptr<JointInfo const> JointInfoConstPtr;
@@ -1235,11 +1282,11 @@ public:
         /// \brief Return the child link whose transformation is computed by this joint's values (either GetFirstAttached() or GetSecondAttached())
         virtual LinkPtr GetHierarchyChildLink() const;
         /// \brief The axis of the joint in local coordinates.
-        virtual Vector GetInternalHierarchyAxis(int axis = 0) const;
+        virtual const Vector& GetInternalHierarchyAxis(int axis = 0) const;
         /// \brief Left multiply transform given the base body.
-        virtual Transform GetInternalHierarchyLeftTransform() const;
+        virtual const Transform& GetInternalHierarchyLeftTransform() const;
         /// \brief Right multiply transform given the base body.
-        virtual Transform GetInternalHierarchyRightTransform() const;
+        virtual const Transform& GetInternalHierarchyRightTransform() const;
         //@}
 
         /// A mimic joint's angles are automatically determined from other joints based on a general purpose formula.
@@ -1328,6 +1375,11 @@ public:
         ///
         /// \param parameters if empty, then removes the parameter
         virtual void SetStringParameters(const std::string& key, const std::string& value);
+
+        /// \brief return controlMode for this joint
+        inline JointControlMode GetControlMode() const {
+            return _info._controlMode;
+        }
 
         /// \brief Updates several fields in \ref _info depending on the current state of the joint.
         virtual void UpdateInfo();
@@ -1438,6 +1490,7 @@ public:
         KinBodyPtr pbody; ///< pointer to the body. if using this, make sure the environment is locked.
         std::vector<Transform> vectrans; ///< \see KinBody::GetLinkTransformations
         std::vector<uint8_t> vLinkEnableStates; ///< \see KinBody::GetLinkEnableStates
+        std::vector<uint8_t> vConnectedBodyActiveStates; ///< IsActive state of ConnectedBody \see RobotBase::GetConnectedBodyActiveStates
         std::vector<dReal> jointvalues; ///< \see KinBody::GetDOFValues
         std::string strname;         ///< \see KinBody::GetName
         std::string uri; ///< \see KinBody::GetURI
@@ -1609,7 +1662,7 @@ private:
     };
 
     typedef boost::shared_ptr<KinBodyStateSaverRef> KinBodyStateSaverRefPtr;
-    
+
     virtual ~KinBody();
 
     /// return the static interface type this class points to (used for safe casting)
@@ -1914,14 +1967,6 @@ private:
     /// Knowing the dof branches allows the robot to recover the full state of the joints with SetLinkTransformations
     virtual void GetLinkTransformations(std::vector<Transform>& transforms, std::vector<dReal>& doflastsetvalues) const;
 
-    /// \deprecated (14/05/26)
-    virtual void GetLinkTransformations(std::vector<Transform>& transforms, std::vector<int>& dofbranches) const RAVE_DEPRECATED;
-
-    /// \deprecated (11/05/26)
-    virtual void GetBodyTransformations(std::vector<Transform>& transforms) const RAVE_DEPRECATED {
-        GetLinkTransformations(transforms);
-    }
-
     /// \brief gets the enable states of all links
     virtual void GetLinkEnableStates(std::vector<uint8_t>& enablestates) const;
 
@@ -2056,21 +2101,6 @@ private:
     ///
     /// Using dof branches allows the full joint state to be recovered
     virtual void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<dReal>& doflastsetvalues);
-
-    /// \deprecated (14/01/15)
-    virtual void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<int>& dofbranches) RAVE_DEPRECATED
-    {
-        std::vector<dReal> doflastsetvalues(dofbranches.size());
-        for(size_t i = 0; i < dofbranches.size(); ++i) {
-            doflastsetvalues[i] = dofbranches[i]*2*PI;
-        }
-        SetLinkTransformations(transforms, doflastsetvalues);
-    }
-
-    /// \deprecated (11/05/26)
-    virtual void SetBodyTransformations(const std::vector<Transform>& transforms) RAVE_DEPRECATED {
-        SetLinkTransformations(transforms);
-    }
 
     /// \brief sets the link velocities
     virtual void SetLinkVelocities(const std::vector<std::pair<Vector,Vector> >& velocities);
@@ -2300,11 +2330,6 @@ private:
      */
     virtual int8_t DoesDOFAffectLink(int dofindex, int linkindex) const;
 
-    /// \deprecated (12/12/11)
-    virtual UserDataPtr GetViewerData() const RAVE_DEPRECATED {
-        return GetUserData("_viewer_");
-    }
-
     /// \brief specifies the type of adjacent link information to receive
     enum AdjacentOptions
     {
@@ -2322,14 +2347,6 @@ private:
     /// \brief adds the pair of links to the adjacency list. This is
     virtual void SetAdjacentLinks(int linkindex0, int linkindex1);
 
-    /// \deprecated (12/12/11)
-    virtual UserDataPtr GetPhysicsData() const RAVE_DEPRECATED {
-        return GetUserData("_physics_");
-    }
-    /// \deprecated (12/12/11)
-    virtual UserDataPtr GetCollisionData() const RAVE_DEPRECATED {
-        return GetUserData("_collision_");
-    }
     virtual ManageDataPtr GetManageData() const {
         return _pManageData;
     }
@@ -2489,9 +2506,6 @@ private:
     /// only used for hashes...
     virtual void serialize(std::ostream& o, int options) const;
 
-protected:
-    /// \brief constructors declared protected so that user always goes through environment to create bodies
-    KinBody(InterfaceType type, EnvironmentBasePtr penv);
     inline KinBodyPtr shared_kinbody() {
         return boost::static_pointer_cast<KinBody>(shared_from_this());
     }
@@ -2499,22 +2513,13 @@ protected:
         return boost::static_pointer_cast<KinBody const>(shared_from_this());
     }
 
+protected:
+    /// \brief constructors declared protected so that user always goes through environment to create bodies
+    KinBody(InterfaceType type, EnvironmentBasePtr penv);
+
     /// \brief **internal use only** Releases and grabs the body inside the grabbed structure from _vGrabbedBodies.
     virtual void _Regrab(UserDataPtr pgrabbed);
 
-    /// \deprecated (12/12/11)
-    virtual void SetPhysicsData(UserDataPtr pdata) RAVE_DEPRECATED {
-        SetUserData("_physics_", pdata);
-    }
-    /// \deprecated (12/12/11)
-    virtual void SetCollisionData(UserDataPtr pdata) RAVE_DEPRECATED {
-        SetUserData("_collision_", pdata);
-    }
-
-    /// \deprecated (12/12/11)
-    virtual void SetViewerData(UserDataPtr pdata) RAVE_DEPRECATED {
-        SetUserData("_viewer_",pdata);
-    }
     virtual void SetManageData(ManageDataPtr pdata) {
         _pManageData = pdata;
     }
@@ -2529,7 +2534,7 @@ protected:
 
     /// \brief de-initializes any internal information computed
     virtual void _DeinitializeInternalInformation();
-        
+
     /// \brief returns the dof velocities and link velocities
     ///
     /// \param[in] usebaselinkvelocity if true, will compute all velocities using the base link velocity. otherwise will assume it is 0
@@ -2576,7 +2581,7 @@ protected:
     /// Assumes plink has _info initialized correctly, so will be initializing the other data depending on it.
     /// Can only be called before internal robot hierarchy is initialized
     virtual void _InitAndAddJoint(JointPtr pjoint);
-    
+
     std::string _name; ///< name of body
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints
     std::vector<JointPtr> _vTopologicallySortedJoints; ///< \see GetDependencyOrderedJoints

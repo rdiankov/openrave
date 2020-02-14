@@ -77,11 +77,11 @@ public:
         return _parameters;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         BOOST_ASSERT(!!_parameters && !!ptraj );
         if( ptraj->GetNumWaypoints() < 2 ) {
-            return PS_Failed;
+            return PlannerStatus(PS_Failed);
         }
 
         RobotBase::RobotStateSaverPtr statesaver;
@@ -169,11 +169,11 @@ public:
         RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time=%fs\n", GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
         if( parameters->_sPostProcessingPlanner.size() == 0 ) {
             // no other planner so at least retime
-            PlannerStatus status = _linearretimer->PlanPath(ptraj);
-            if( status != PS_HasSolution ) {
+            PlannerStatus status = _linearretimer->PlanPath(ptraj, planningoptions);
+            if( status.GetStatusCode() != PS_HasSolution ) {
                 return status;
             }
-            return PS_HasSolution;
+            return PlannerStatus(PS_HasSolution);
         }
         return _ProcessPostPlanners(RobotBasePtr(),ptraj);
     }
@@ -601,7 +601,7 @@ protected:
         ptraj->GetWaypoints(0, ptraj->GetNumWaypoints(), vtrajdata, parameters->_configurationspecification);
 
         std::copy(vtrajdata.begin(), vtrajdata.begin() + parameters->GetDOF(), q0.begin());
-        listpath.push_back(make_pair(q0, dReal(0)));
+        listpath.emplace_back(q0,  dReal(0));
         qcur = q0;
 
         for(size_t ipoint = 1; ipoint < ptraj->GetNumWaypoints(); ++ipoint) {
@@ -653,19 +653,19 @@ protected:
                     continue;
                 }
                 dReal dist = parameters->_distmetricfn(listpath.back().first, qcur);
-                listpath.push_back(make_pair(qcur, dist));
+                listpath.emplace_back(qcur,  dist);
                 mult = 1;
             }
             // always add the last point
             dReal dist = parameters->_distmetricfn(listpath.back().first, q1);
-            listpath.push_back(make_pair(q1, dist));
+            listpath.emplace_back(q1,  dist);
             qcur = q1;
             q0.swap(q1);
         }
 
         std::copy(vtrajdata.end() - parameters->GetDOF(), vtrajdata.end(), q1.begin());
         dReal dist = parameters->_distmetricfn(listpath.back().first, q1);
-        listpath.push_back(make_pair(q1, dist));
+        listpath.emplace_back(q1,  dist);
     }
 
     std::string _DumpTrajectory(TrajectoryBasePtr traj, DebugLevel level, int option)

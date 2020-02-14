@@ -135,7 +135,8 @@ public:
     ///
     /// \param pbody the body to change the geometry group
     /// \param groupname the geometry group name. If empty, will disable the groups and use the current geometries set on the link.
-    virtual void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) OPENRAVE_DUMMY_IMPLEMENTATION;
+    /// \return true if body geometry group with groupname exists. false otherwise
+    virtual bool SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \biref Gets the geometry group that a body is currently using
     virtual const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const OPENRAVE_DUMMY_IMPLEMENTATION;

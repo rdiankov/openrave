@@ -536,7 +536,7 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
         }
         break;
     }
-   // velocities
+    // velocities
     case IKP_Transform6DVelocity: {
         Vector vlinearvel, vangularvel;
         GetEndEffector()->GetVelocity(vlinearvel, vangularvel);
@@ -743,7 +743,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(CollisionReportPtr report
     }
 
     bool bincollision = false;
-    
+
     FOREACHC(itlink,vattachedlinks) {
         if( probot->CheckLinkCollision((*itlink)->GetIndex(), report) ) {
             if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
@@ -768,8 +768,11 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(CollisionReportPtr report
         if( !bGripperLink ) {
             continue;
         }
+
+        bool bIsAffected = false;
         for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
             if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
+                bIsAffected = true;
                 if( probot->CheckLinkCollision(ilink, report) ) {
                     if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
                         return true;
@@ -777,6 +780,16 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(CollisionReportPtr report
                     bincollision = true;
                 }
                 break;
+            }
+        }
+
+        if( !bIsAffected ) {
+            // link is not affected by any of the joints, perhaps there could be passive joints that are attached to the end effector that are non-static. if a link is affected by all the joints in the chain, then it is most likely a child just by the fact that all the arm joints affect it.
+            if( probot->CheckLinkCollision(ilink, report) ) {
+                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                    return true;
+                }
+                bincollision = true;
             }
         }
     }
@@ -827,8 +840,11 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
         if( !bGripperLink ) {
             continue;
         }
+
+        bool bIsAffected = false;
         for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
             if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
+                bIsAffected = true;
                 if( probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),report) ) {
                     if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
                         return true;
@@ -836,6 +852,16 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
                     bincollision = true;
                 }
                 break;
+            }
+        }
+
+        if( !bIsAffected ) {
+            // link is not affected by any of the joints, perhaps there could be passive joints that are attached to the end effector that are non-static. if a link is affected by all the joints in the chain, then it is most likely a child just by the fact that all the arm joints affect it.
+            if( probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),report) ) {
+                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                    return true;
+                }
+                bincollision = true;
             }
         }
     }
@@ -910,8 +936,11 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(CollisionReportPtr re
         if( !bGripperLink ) {
             continue;
         }
+
+        bool bIsAffected = false;
         for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
             if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
+                bIsAffected = true;
                 if( probot->CheckLinkSelfCollision(ilink,report) ) {
                     if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
                         return true;
@@ -919,6 +948,16 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(CollisionReportPtr re
                     bincollision = true;
                 }
                 break;
+            }
+        }
+
+        if( !bIsAffected ) {
+            // link is not affected by any of the joints, perhaps there could be passive joints that are attached to the end effector that are non-static. if a link is affected by all the joints in the chain, then it is most likely a child just by the fact that all the arm joints affect it.
+            if( probot->CheckLinkSelfCollision(ilink,report) ) {
+                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                    return true;
+                }
+                bincollision = true;
             }
         }
     }
@@ -952,7 +991,7 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
         GetIndependentLinks(vindependentinks);
         pselfchecker = !!probot->GetSelfCollisionChecker() ? probot->GetSelfCollisionChecker() : probot->GetEnv()->GetCollisionChecker();
     }
-    
+
     if( bIgnoreManipulatorLinks ) {
         GetIndependentLinks(vindependentinks);
         FOREACHC(itlink,vattachedlinks) {
@@ -1004,13 +1043,16 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
         if( !bGripperLink ) {
             continue;
         }
+
+        bool bIsAffected = false;
         for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
             if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
+                bIsAffected = true;
                 if( bIgnoreManipulatorLinks ) {
                     boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(*itlink)); // gcc optimization bug when linksaver is on stack?
                     Transform tlinktrans = tdelta*(*itlink)->GetTransform();
                     (*itlink)->SetTransform(tlinktrans);
-                    
+
                     FOREACHC(itindependentlink,vindependentinks) {
                         if( *itlink != *itindependentlink && (*itindependentlink)->IsEnabled() ) {
                             if( pselfchecker->CheckCollision(*itlink, *itindependentlink,report) ) {
@@ -1033,6 +1075,36 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
                 }
                 break;
             }
+        }
+
+        if( !bIsAffected ) {
+            // link is not affected by any of the joints, perhaps there could be passive joints that are attached to the end effector that are non-static. if a link is affected by all the joints in the chain, then it is most likely a child just by the fact that all the arm joints affect it.
+            if( bIgnoreManipulatorLinks ) {
+                boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(*itlink)); // gcc optimization bug when linksaver is on stack?
+                Transform tlinktrans = tdelta*(*itlink)->GetTransform();
+                (*itlink)->SetTransform(tlinktrans);
+
+                FOREACHC(itindependentlink,vindependentinks) {
+                    if( *itlink != *itindependentlink && (*itindependentlink)->IsEnabled() ) {
+                        if( pselfchecker->CheckCollision(*itlink, *itindependentlink,report) ) {
+                            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                                RAVELOG_VERBOSE_FORMAT("gripper link self collision with link %s", (*itlink)->GetName());
+                                return true;
+                            }
+                            bincollision = true;
+                        }
+                    }
+                }
+            }
+            else {
+                if( probot->CheckLinkSelfCollision(ilink,tdelta*(*itlink)->GetTransform(),report) ) {
+                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                        return true;
+                    }
+                    bincollision = true;
+                }
+            }
+            break;
         }
     }
     return bincollision;
@@ -1171,7 +1243,7 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const IkParameterizat
             RAVELOG_WARN_FORMAT("do not support redundant checking for iktype 0x%x", ikparam.GetType());
         }
     }
-    
+
     IkSolverBasePtr pIkSolver = GetIkSolver();
     //OPENRAVE_ASSERT_OP_FORMAT(GetArmDOF(), <=, ikparam.GetDOF(), "ikparam type 0x%x does not fully determine manipulator %s:%s end effector configuration", ikparam.GetType()%probot->GetName()%GetName(),ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(!!pIkSolver, "manipulator %s:%s does not have an IK solver set",probot->GetName()%GetName(),ORE_Failed);

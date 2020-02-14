@@ -23,7 +23,20 @@
 
 namespace OpenRAVE {
 
-KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsActive(true) {
+KinBody::JointInfo::JointControlInfo_RobotController::JointControlInfo_RobotController() : robotId(-1)
+{
+    robotControllerDOFIndex[0] = robotControllerDOFIndex[1] = robotControllerDOFIndex[2] = -1;
+}
+
+KinBody::JointInfo::JointControlInfo_IO::JointControlInfo_IO() : deviceId(-1)
+{
+}
+
+KinBody::JointInfo::JointControlInfo_ExternalDevice::JointControlInfo_ExternalDevice()
+{
+}
+
+KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsActive(true), _controlMode(JCM_None) {
     for(size_t i = 0; i < _vaxes.size(); ++i) {
         _vaxes[i] = Vector(0,0,1);
     }
@@ -41,6 +54,92 @@ KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsAc
     std::fill(_vlowerlimit.begin(), _vlowerlimit.end(), 0);
     std::fill(_vupperlimit.begin(), _vupperlimit.end(), 0);
     std::fill(_bIsCircular.begin(), _bIsCircular.end(), 0);
+}
+
+KinBody::JointInfo::JointInfo(const JointInfo& other) : XMLReadable("joint")
+{
+    *this = other;
+}
+
+KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& other)
+{
+    _type = other._type;
+    _name = other._name;
+    _linkname0 = other._linkname0;
+    _linkname1 = other._linkname1;
+    _vanchor = other._vanchor;
+    _vaxes = other._vaxes;
+    _vcurrentvalues = other._vcurrentvalues;
+    _vresolution = other._vresolution;
+    _vmaxvel = other._vmaxvel;
+    _vhardmaxvel = other._vhardmaxvel;
+    _vmaxaccel = other._vmaxaccel;
+    _vhardmaxaccel = other._vhardmaxaccel;
+    _vmaxjerk = other._vmaxjerk;
+    _vhardmaxjerk = other._vhardmaxjerk;
+    _vmaxtorque = other._vmaxtorque;
+    _vmaxinertia = other._vmaxinertia;
+    _vweights = other._vweights;
+    _voffsets = other._voffsets;
+    _vlowerlimit = other._vlowerlimit;
+    _vupperlimit = other._vupperlimit;
+
+    if( !other._trajfollow ) {
+        _trajfollow.reset();
+    }
+    else {
+        _trajfollow = RaveClone<TrajectoryBase>(other._trajfollow, Clone_All);
+    }
+
+    for( size_t i = 0; i < _vmimic.size(); ++i ) {
+        if( !other._vmimic[i] ) {
+            _vmimic[i].reset();
+        }
+        else {
+            _vmimic[i].reset(new MimicInfo(*(other._vmimic[i])));
+        }
+    }
+
+    _mapFloatParameters = other._mapFloatParameters;
+    _mapIntParameters = other._mapIntParameters;
+    _mapStringParameters = other._mapStringParameters;
+
+    if( !other._infoElectricMotor ) {
+        _infoElectricMotor.reset();
+    }
+    else {
+        _infoElectricMotor.reset(new ElectricMotorActuatorInfo(*other._infoElectricMotor));
+    }
+
+    _bIsCircular = other._bIsCircular;
+    _bIsActive = other._bIsActive;
+
+    _controlMode = other._controlMode;
+    if( _controlMode == KinBody::JCM_RobotController ) {
+        if( !other._jci_robotcontroller ) {
+            _jci_robotcontroller.reset();
+        }
+        else {
+            _jci_robotcontroller.reset(new JointControlInfo_RobotController(*other._jci_robotcontroller));
+        }
+    }
+    else if( _controlMode == KinBody::JCM_IO ) {
+        if( !other._jci_io ) {
+            _jci_io.reset();
+        }
+        else {
+            _jci_io.reset(new JointControlInfo_IO(*other._jci_io));
+        }
+    }
+    else if( _controlMode == KinBody::JCM_ExternalDevice ) {
+        if( !other._jci_externaldevice ) {
+            _jci_externaldevice.reset();
+        }
+        else {
+            _jci_externaldevice.reset(new JointControlInfo_ExternalDevice(*other._jci_externaldevice));
+        }
+    }
+    return *this;
 }
 
 static void fparser_polyroots2(vector<dReal>& rawroots, const vector<dReal>& rawcoeffs)
@@ -120,6 +219,7 @@ KinBody::Joint::Joint(KinBodyPtr parent, KinBody::JointType type)
     dofindex = -1; // invalid index
     _bInitialized = false;
     _info._type = type;
+    _info._controlMode = JCM_None;
 }
 
 KinBody::Joint::~Joint()
@@ -759,18 +859,18 @@ KinBody::LinkPtr KinBody::Joint::GetHierarchyChildLink() const
     return _attachedbodies[1];
 }
 
-Vector KinBody::Joint::GetInternalHierarchyAxis(int iaxis) const
+const Vector& KinBody::Joint::GetInternalHierarchyAxis(int iaxis) const
 {
     return _vaxes.at(iaxis);
 }
 
-Transform KinBody::Joint::GetInternalHierarchyLeftTransform() const
+const Transform& KinBody::Joint::GetInternalHierarchyLeftTransform() const
 {
     OPENRAVE_ASSERT_FORMAT0(_bInitialized, "joint not initialized",ORE_NotInitialized);
     return _tLeftNoOffset;
 }
 
-Transform KinBody::Joint::GetInternalHierarchyRightTransform() const
+const Transform& KinBody::Joint::GetInternalHierarchyRightTransform() const
 {
     OPENRAVE_ASSERT_FORMAT0(_bInitialized, "joint not initialized",ORE_NotInitialized);
     return _tRightNoOffset;
@@ -1414,14 +1514,14 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     FOREACHC(itjoint,parent->GetJoints()) {
         if( (*itjoint)->GetName().size() > 0 ) {
             std::string newname = str(boost::format("joint%d")%(*itjoint)->GetJointIndex());
-            jointnamepairs.push_back(make_pair((*itjoint)->GetName(),newname));
+            jointnamepairs.emplace_back((*itjoint)->GetName(), newname);
         }
     }
     size_t index = parent->GetJoints().size();
     FOREACHC(itjoint,parent->GetPassiveJoints()) {
         if( (*itjoint)->GetName().size() > 0 ) {
             std::string newname = str(boost::format("joint%d")%index);
-            jointnamepairs.push_back(make_pair((*itjoint)->GetName(),newname));
+            jointnamepairs.emplace_back((*itjoint)->GetName(), newname);
         }
         ++index;
     }
@@ -1536,7 +1636,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> 
 {
     vpartials.resize(0);
     if( dofindex >= 0 ) {
-        vpartials.push_back(make_pair(dofindex+iaxis,1.0));
+        vpartials.emplace_back(dofindex+iaxis, 1.0);
         return;
     }
     OPENRAVE_ASSERT_FORMAT(!!_vmimic.at(iaxis), "cannot compute partial velocities of joint %s", _info._name, ORE_Failed);
@@ -1583,7 +1683,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> 
                 }
             }
             if( badd ) {
-                vpartials.push_back(make_pair(itmimicdof->dofindex, fvel));
+                vpartials.emplace_back(itmimicdof->dofindex,  fvel);
             }
         }
         else {
@@ -1595,7 +1695,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> 
                 }
             }
             if( badd ) {
-                vpartials.push_back(make_pair(itmimicdof->dofindex, it->second));
+                vpartials.emplace_back(itmimicdof->dofindex,  it->second);
             }
         }
     }

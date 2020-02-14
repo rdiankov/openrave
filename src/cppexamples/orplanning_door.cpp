@@ -210,6 +210,7 @@ public:
         std::list<KinBodyPtr> listCheckCollisions;
         listCheckCollisions.push_back(_probot);
         _collision.reset(new planningutils::LineCollisionConstraint(listCheckCollisions));
+        // _checkpathconstraintsfn had been deprecated, so this line no longer works
         params->_checkpathconstraintsfn = boost::bind(&planningutils::LineCollisionConstraint::Check,_collision,params, _1, _2, _3, _4);
 
         _ikfilter = _pmanip->GetIkSolver()->RegisterCustomFilter(0, boost::bind(&DoorConfiguration::_CheckContinuityFilter, shared_from_this(), _1, _2, _3));
