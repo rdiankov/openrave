@@ -239,9 +239,9 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
         probot->GetActiveDOFLimits(_qlower,_qupper);
         const size_t ndof = _qlower.size();
         _qmid.resize(ndof);
-        _qbigrangeindices.resize(0);
-        _qbigrangemaxsols.resize(0);
-        _qbigrangemaxcumprod.resize(0); _qbigrangemaxcumprod.push_back(1);
+        _qbigrangeindices.clear();
+        _qbigrangemaxsols.clear();
+        _qbigrangemaxcumprod = {1};
         const dReal twopi = 2.0 * PI;
         for(size_t i = 0; i < ndof; ++i) {
             _qmid[i] = 0.5 * (_qupper[i] + _qlower[i]);
@@ -257,7 +257,7 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
                 }
             }
         }
-        _vfreeparamscales.resize(0);
+        _vfreeparamscales.clear();
         for(int freeparam : _vfreeparams) {
             if( freeparam < 0 || freeparam >= (int) ndof ) {
                 throw openrave_exception(str(boost::format(_("free parameter idx %d out of bounds\n")) % freeparam));
@@ -297,7 +297,7 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
             return false;
         }
 
-        _vfreerevolute.resize(0);
+        _vfreerevolute.clear();
         FOREACH(itfree, _vfreeparams) {
             int index = pmanip->GetArmIndices().at(*itfree);
             KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(index);
@@ -309,7 +309,7 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
             }
         }
 
-        _vjointrevolute.resize(0);
+        _vjointrevolute.clear();
         FOREACHC(it,pmanip->GetArmIndices()) {
             KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(*it);
             if( pjoint->IsRevolute(*it-pjoint->GetDOFIndex()) ) {
@@ -357,7 +357,7 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
                 }
             }
 
-            _vIndependentLinksIncludingFreeJoints.resize(0);
+            _vIndependentLinksIncludingFreeJoints.clear();
             FOREACHC(itlink, probot->GetLinks()) {
                 bool bAffected = false;
                 FOREACHC(itindex,vactiveindices) {
@@ -604,7 +604,7 @@ protected:
     {
         std::vector<dReal> q0local = q0; // copy in case result points to q0
         if( !!result ) {
-            result->resize(0);
+            result->clear();
         }
         IkReturn ikreturn(IKRA_Success);
         IkReturnPtr pikreturn(&ikreturn,utils::null_deleter());
@@ -620,7 +620,7 @@ protected:
     virtual bool SolveAll(const IkParameterization& rawparam, int filteroptions, std::vector< std::vector<dReal> >& qSolutions)
     {
         std::vector<IkReturnPtr> vikreturns;
-        qSolutions.resize(0);
+        qSolutions.clear();
         if( !SolveAll(rawparam,filteroptions,vikreturns) ) {
             return false;
         }
@@ -635,7 +635,7 @@ protected:
     {
         std::vector<dReal> q0local = q0; // copy in case result points to q0
         if( !!result ) {
-            result->resize(0);
+            result->clear();
         }
         IkReturn ikreturn(IKRA_Success);
         IkReturnPtr pikreturn(&ikreturn,utils::null_deleter());
@@ -651,7 +651,7 @@ protected:
     virtual bool SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector< std::vector<dReal> >& qSolutions)
     {
         std::vector<IkReturnPtr> vikreturns;
-        qSolutions.resize(0);
+        qSolutions.clear();
         if( !SolveAll(param,vFreeParameters,filteroptions,vikreturns) ) {
             return false;
         }
@@ -685,7 +685,7 @@ protected:
 
     virtual bool SolveAll(const IkParameterization& rawparam, int filteroptions, std::vector<IkReturnPtr>& vikreturns)
     {
-        vikreturns.resize(0);
+        vikreturns.clear();
         IkParameterization ikparamdummy;
         const IkParameterization& param = _ConvertIkParameterization(rawparam, ikparamdummy);
         RobotBase::ManipulatorPtr pmanip(_pmanip);
@@ -732,7 +732,7 @@ protected:
 
     virtual bool SolveAll(const IkParameterization& rawparam, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& vikreturns)
     {
-        vikreturns.resize(0);
+        vikreturns.clear();
         IkParameterization ikparamdummy;
         const IkParameterization& param = _ConvertIkParameterization(rawparam, ikparamdummy);
         if( vFreeParameters.size() != _vfreeparams.size() ) {
@@ -792,9 +792,9 @@ protected:
 
         _pmanip.reset();
         _cblimits.reset();
-        _vchildlinks.resize(0);
-        _vchildlinkindices.resize(0);
-        _vindependentlinks.resize(0);
+        _vchildlinks.clear();
+        _vchildlinkindices.clear();
+        _vindependentlinks.clear();
         RobotBase::ManipulatorPtr rmanip = r->_pmanip.lock();
         if( !!rmanip ) {
             RobotBasePtr probot = GetEnv()->GetRobot(rmanip->GetRobot()->GetName());
@@ -1345,7 +1345,7 @@ protected:
                 res = ComposeSolution(iksol.GetFree(), vsolfree, 0, q0, boost::bind(&IkFastSolver::_ValidateSolutionSingle,shared_solver(), boost::ref(iksol), boost::ref(textra), boost::ref(sol), boost::ref(vravesol), boost::ref(bestsolution), boost::ref(param), boost::ref(stateCheck), boost::ref(paramnewglobal)), vFreeInc);
             }
             else {
-                vsolfree.resize(0);
+                vsolfree.clear();
                 res = _ValidateSolutionSingle(iksol, textra, sol, vravesol, bestsolution, param, stateCheck, paramnewglobal);
             }
             allres |= res;
@@ -1770,7 +1770,7 @@ protected:
             listtestikreturns.swap(listlocalikreturns);
             FOREACH(ittestreturn, listtestikreturns) {//itravesol, vravesols) {
                 IkReturnPtr localret = *ittestreturn;
-                _vsolutionindices.resize(0);
+                _vsolutionindices.clear();
                 FOREACH(it, localret->_mapdata["solutionindices"]) {
                     _vsolutionindices.push_back((unsigned int)(*it+0.5)); // round
                 }
@@ -2131,7 +2131,7 @@ protected:
             list< std::pair<IkReturnPtr, IkParameterization> >::iterator ittestreturn = listlocalikreturns.begin();
             while(ittestreturn != listlocalikreturns.end()) {
                 IkReturnPtr localret = ittestreturn->first;
-                _vsolutionindices.resize(0);
+                _vsolutionindices.clear();
                 FOREACH(it, localret->_mapdata["solutionindices"]) {
                     _vsolutionindices.push_back((unsigned int)(*it+0.5)); // round
                 }
@@ -2253,7 +2253,7 @@ protected:
 
     void _ComputeAllSimilarJointAngles(std::vector< std::pair<std::vector<dReal>, int> >& vravesols, std::vector<dReal>& vravesol)
     {
-        vravesols.resize(0);
+        vravesols.clear();
         if( !_CheckJointAngles(vravesol) ) {
             return;
         }
