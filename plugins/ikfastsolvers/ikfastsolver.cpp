@@ -234,36 +234,36 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
         RobotBase::RobotStateSaver saver(probot);
-        probot->SetActiveDOFs(pmanip->GetArmIndices());
+        const std::vector<int>& vArmIndices = pmanip->GetArmIndices();
+        probot->SetActiveDOFs(vArmIndices);
         probot->GetActiveDOFLimits(_qlower,_qupper);
-        _qmid.resize(_qlower.size());
+        const size_t ndof = _qlower.size();
+        _qmid.resize(ndof);
         _qbigrangeindices.resize(0);
         _qbigrangemaxsols.resize(0);
         _qbigrangemaxcumprod.resize(0); _qbigrangemaxcumprod.push_back(1);
-        for(size_t i = 0; i < _qmid.size(); ++i) {
-            _qmid[i] = 0.5*(_qlower[i]*_qupper[i]);
-            if( _qupper[i]-_qlower[i] > 2*PI ) {
-                int dofindex = pmanip->GetArmIndices().at(i);
-                KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(dofindex);
-                int iaxis = dofindex-pjoint->GetDOFIndex();
+        const dReal twopi = 2.0 * PI;
+        for(size_t i = 0; i < ndof; ++i) {
+            _qmid[i] = 0.5 * (_qupper[i] + _qlower[i]);
+            const dReal qrange = _qupper[i] - _qlower[i];
+            if( qrange > twopi ) {
+                const int dofindex = vArmIndices.at(i);
+                const KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(dofindex);
+                const int iaxis = dofindex - pjoint->GetDOFIndex();
                 if( pjoint->IsRevolute(iaxis) && !pjoint->IsCircular(iaxis) ) {
                     _qbigrangeindices.push_back(i);
-                    _qbigrangemaxsols.push_back( 1+int((_qupper[i]-_qlower[i])/(2*PI))); // max redundant solutions
+                    _qbigrangemaxsols.push_back(1 + int(qrange/twopi)); // max redundant solutions
                     _qbigrangemaxcumprod.push_back(_qbigrangemaxcumprod.back() * _qbigrangemaxsols.back());
                 }
             }
         }
         _vfreeparamscales.resize(0);
-        FOREACH(itfree, _vfreeparams) {
-            if( *itfree < 0 || *itfree >= (int)_qlower.size() ) {
-                throw openrave_exception(str(boost::format(_("free parameter idx %d out of bounds\n"))%*itfree));
+        for(int freeparam : _vfreeparams) {
+            if( freeparam < 0 || freeparam >= (int) ndof ) {
+                throw openrave_exception(str(boost::format(_("free parameter idx %d out of bounds\n")) % freeparam));
             }
-            if( _qupper[*itfree] > _qlower[*itfree] ) {
-                _vfreeparamscales.push_back(1.0f/(_qupper[*itfree]-_qlower[*itfree]));
-            }
-            else {
-                _vfreeparamscales.push_back(0.0f);
-            }
+            const dReal qrange = _qupper[freeparam] - _qlower[freeparam];
+            _vfreeparamscales.push_back(qrange > 0.0 ? 1.0/qrange : 0.0);
         }
     }
 
