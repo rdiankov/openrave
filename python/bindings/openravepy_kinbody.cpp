@@ -1705,13 +1705,35 @@ object PyKinBody::GetDOFValues() const
     _pbody->GetDOFValues(values);
     return toPyArray(values);
 }
+
 object PyKinBody::GetDOFValues(object oindices) const
 {
     if( IS_PYTHONOBJECT_NONE(oindices) ) {
         return py::empty_array_astype<dReal>();
     }
     std::vector<int> vindices = ExtractArray<int>(oindices);
-    if( vindices.size() == 0 ) {
+    if( vindices.empty() ) {
+        return py::empty_array_astype<dReal>();
+    }
+    std::vector<dReal> values;
+    _pbody->GetDOFValues(values,vindices);
+    return toPyArray(values);
+}
+
+object PyKinBody::GetDOFIntervalIndices() const
+{
+    std::vector<dReal> values;
+    _pbody->GetDOFValues(values);
+    return toPyArray(values);
+}
+
+object PyKinBody::GetDOFIntervalIndices(object oindices) const
+{
+    if( IS_PYTHONOBJECT_NONE(oindices) ) {
+        return py::empty_array_astype<dReal>();
+    }
+    std::vector<int> vindices = ExtractArray<int>(oindices);
+    if( vindices.empty() ) {
         return py::empty_array_astype<dReal>();
     }
     std::vector<dReal> values;

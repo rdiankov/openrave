@@ -188,6 +188,8 @@ public:
     int GetDOF() const;
     py::object GetDOFValues() const;
     py::object GetDOFValues(py::object oindices) const;
+    py::object GetDOFIntervalIndices() const;
+    py::object GetDOFIntervalIndices(py::object oindices) const;
     py::object GetDOFVelocities() const;
     py::object GetDOFVelocities(py::object oindices) const;
     py::object GetDOFLimits() const;
