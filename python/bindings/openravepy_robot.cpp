@@ -85,7 +85,7 @@ RobotBase::ManipulatorInfoPtr PyManipulatorInfo::GetManipulatorInfo() const
     pinfo->_vdirection = ExtractVector3(_vdirection);
     pinfo->_sIkSolverXMLId = _sIkSolverXMLId;
     pinfo->_vGripperJointNames = ExtractArray<std::string>(_vGripperJointNames);
-    pinfo->_gripperControlID = boost::python::extract<std::string>(_gripperControlID);
+    pinfo->_gripperControlID = py::extract<std::string>(_gripperControlID);
     return pinfo;
 }
 
