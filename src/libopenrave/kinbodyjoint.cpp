@@ -85,37 +85,37 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
 
     switch (_type) {
     case JointRevolute:
-        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "type", "revolute");
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "revolute");
         break;
     case JointPrismatic:
-        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "type", "prismatic");
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "prismatic");
         break;
     case JointNone:
         break;
     default:
-        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "type", static_cast<int>(_type));
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", static_cast<int>(_type));
         break;
     }
 
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "name", _name);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "anchors", _vanchor);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "parentLinkName", _linkname0);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "childLinkName", _linkname1);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "axes", _vaxes);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "currentValues", _vcurrentvalues);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "resolutions", _vresolution, dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "maxvel", _vmaxvel, dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "hardMaxVel", _vhardmaxvel, dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "maxAccel", _vmaxaccel, dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "hardMaxAccel", _vhardmaxaccel, dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "maxJerk", _vmaxjerk, dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "hardMaxJerk", _vhardmaxjerk, dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "maxTorque", _vmaxtorque, dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "maxInertia", _vmaxinertia, dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "weights", _vweights, dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "offsets", _voffsets, dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "upperlimit", _vupperlimit, dof);
-    // TODO: RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "trajfollow", _trajfollow);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", _name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "anchors", _vanchor);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "parentLinkName", _linkname0);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "childLinkName", _linkname1);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "axes", _vaxes);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "currentValues", _vcurrentvalues);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "resolutions", _vresolution, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "maxvel", _vmaxvel, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "hardMaxVel", _vhardmaxvel, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "maxAccel", _vmaxaccel, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "hardMaxAccel", _vhardmaxaccel, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "maxJerk", _vmaxjerk, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "hardMaxJerk", _vhardmaxjerk, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "maxTorque", _vmaxtorque, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "maxInertia", _vmaxinertia, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "weights", _vweights, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "offsets", _voffsets, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "upperlimit", _vupperlimit, dof);
+    // TODO: RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "trajfollow", _trajfollow);
 
     if (_vmimic.size() > 0) {
         bool bfound = false;
@@ -139,15 +139,15 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
 
     if(_mapFloatParameters.size() > 0)
     {
-        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "floatParameters", _mapFloatParameters);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "floatParameters", _mapFloatParameters);
     }
     if(_mapIntParameters.size() > 0)
     {
-        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "intParameters", _mapIntParameters);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "intParameters", _mapIntParameters);
     }
     if(_mapStringParameters.size() > 0)
     {
-        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "stringParameters", _mapStringParameters);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "stringParameters", _mapStringParameters);
     }
 
     if (!!_infoElectricMotor) {
@@ -157,8 +157,8 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
         value.AddMember("electricMotorActuator", electricMotorInfoValue, allocator);
     }
 
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "isCircular", _bIsCircular, dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "isActive", _bIsActive);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "isCircular", _bIsCircular, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "isActive", _bIsActive);
 
 }
 
@@ -2002,7 +2002,7 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
 void KinBody::MimicInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) const
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "equations", _equations);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "equations", _equations);
 }
 
 void KinBody::MimicInfo::DeserializeJSON(const rapidjson::Value& value)

@@ -136,7 +136,9 @@ RobotBase::AttachedSensorInfoPtr PyAttachedSensorInfo::GetAttachedSensorInfo() c
     pinfo->_linkname = py::extract<std::string>(_linkname);
     pinfo->_trelative = ExtractTransform(_trelative);
     pinfo->_sensorname = py::extract<std::string>(_sensorname);
-    pinfo->_sensorgeometry = _sensorgeometry->GetGeometry();
+    if(!!_sensorgeometry){
+        pinfo->_sensorgeometry = _sensorgeometry->GetGeometry();
+    }
     return pinfo;
 }
 

@@ -61,6 +61,7 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const IkParameterization& ikparam);
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const SensorBase::CameraIntrinsics& intrinsics);
 
+
 template<typename T>
 inline rapidjson::Value RAVE_SERIALIZEJSON(rapidjson::Document::AllocatorType& allocator, const T& arg) {
     rapidjson::Value value;
@@ -69,34 +70,37 @@ inline rapidjson::Value RAVE_SERIALIZEJSON(rapidjson::Document::AllocatorType& a
 }
 
 template<typename T>
-inline void RAVE_SERIALIZEJSON_PUSHBACK(rapidjson::Document::AllocatorType& allocator, const T& arg) {
-    rapidjson::Value value = RAVE_SERIALIZEJSON(allocator, arg);
-    value.PushBack(value, allocator);
+inline void RAVE_SERIALIZEJSON_PUSHBACK(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, const T& arg) {
+    rapidjson::Value __v = RAVE_SERIALIZEJSON(allocator, arg);
+    value.PushBack(__v, allocator);
+    // rapidjson::Value value = RAVE_SERIALIZEJSON(allocator, arg);
+    // value.PushBack(value, allocator);
 }
 
 template<typename T>
-inline void _RAVE_SERIALIZEJSON_ADDMEMBER_HELPER(rapidjson::Document::AllocatorType& allocator, T& key) { /* base */ }
+inline void _RAVE_SERIALIZEJSON_ADDMEMBER_HELPER(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, T& key) { /* base */ }
 
 template<typename T, typename U, typename ... Types>
-inline void _RAVE_SERIALIZEJSON_ADDMEMBER_HELPER(rapidjson::Document::AllocatorType& allocator, T& key, const U& arg, const Types& ... args) {
-    rapidjson::Value value = RAVE_SERIALIZEJSON(allocator, arg);
-    value.AddMember(key, value, allocator);
-    _RAVE_SERIALIZEJSON_ADDMEMBER_HELPER(allocator, key, args...); // recursion
+inline void _RAVE_SERIALIZEJSON_ADDMEMBER_HELPER(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, T& key, const U& arg, const Types& ... args) {
+    rapidjson::Value v = RAVE_SERIALIZEJSON(allocator, arg);
+    // RAVE_SERIALIZEJSON(value, allocator, arg);
+    value.AddMember(key, v, allocator);
+    _RAVE_SERIALIZEJSON_ADDMEMBER_HELPER(value, allocator, key, args...); // recursion
 }
 
 template<typename T, typename ... Types>
-inline void RAVE_SERIALIZEJSON_ADDMEMBER(rapidjson::Document::AllocatorType& allocator, T& key, const Types& ... args) {
-    _RAVE_SERIALIZEJSON_ADDMEMBER_HELPER(allocator, key, args...);
+inline void RAVE_SERIALIZEJSON_ADDMEMBER(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, T& key, const Types& ... args) {
+    _RAVE_SERIALIZEJSON_ADDMEMBER_HELPER(value, allocator, key, args...);
 }
 
 inline void RAVE_SERIALIZEJSON_ENSURE_OBJECT(rapidjson::Value &value) {
-    if (!value.IsObject()) { 
+    if (!value.IsObject()) {
         value.SetObject();
     }
 }
 
 inline void RAVE_SERIALIZEJSON_ENSURE_ARRAY(rapidjson::Value &value) {
-    if (!value.IsArray()) { 
+    if (!value.IsArray()) {
         value.SetArray();
     }
 }
@@ -201,8 +205,8 @@ template <typename T1, typename T2>
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const std::pair<T1, T2>& p)
 {
     RAVE_SERIALIZEJSON_CLEAR_ARRAY(value);
-    RAVE_SERIALIZEJSON_PUSHBACK(allocator, p.first);
-    RAVE_SERIALIZEJSON_PUSHBACK(allocator, p.second);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, p.first);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, p.second);
 }
 
 /// \brief serialize a std::map as json
@@ -213,7 +217,7 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
 
     for (typename std::map<K, V>::const_iterator it = m.begin(); it != m.end(); ++it) {
         rapidjson::Value key = RAVE_SERIALIZEJSON(allocator, it->first);
-        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, key, it->second);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, key, it->second);
     }
 }
 
@@ -224,7 +228,7 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
     RAVE_SERIALIZEJSON_CLEAR_ARRAY(value);
     for (std::size_t i = 0; i < v.size() && i < n; ++i)
     {
-        RAVE_SERIALIZEJSON_PUSHBACK(allocator, v[i]);
+        RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, v[i]);
     }
 }
 
@@ -235,7 +239,7 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
     RAVE_SERIALIZEJSON_CLEAR_ARRAY(value);
     for(typename std::set<T>::const_iterator it = s.begin(); it != s.end(); ++it)
     {
-        RAVE_SERIALIZEJSON_PUSHBACK(allocator, *it);
+        RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, *it);
     }
 }
 
@@ -246,7 +250,7 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
     RAVE_SERIALIZEJSON_CLEAR_ARRAY(value);
     for (std::size_t i = 0; i < a.size() && i < n; ++i)
     {
-        RAVE_SERIALIZEJSON_PUSHBACK(allocator, a[i]);
+        RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, a[i]);
     }
 }
 
@@ -255,12 +259,12 @@ template <typename T>
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const RaveVector<T>& v, bool quat)
 {
     RAVE_SERIALIZEJSON_CLEAR_ARRAY(value);
-    RAVE_SERIALIZEJSON_PUSHBACK(allocator, v[0]);
-    RAVE_SERIALIZEJSON_PUSHBACK(allocator, v[1]);
-    RAVE_SERIALIZEJSON_PUSHBACK(allocator, v[2]);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, v.x);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, v.y);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, v.z);
     if (quat)
     {
-        RAVE_SERIALIZEJSON_PUSHBACK(allocator, v[3]);
+        RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, v.w);
     }
 }
 
@@ -269,13 +273,13 @@ template <typename T>
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const RaveTransform<T>& t)
 {
     RAVE_SERIALIZEJSON_CLEAR_ARRAY(value);
-    RAVE_SERIALIZEJSON_PUSHBACK(allocator, t.rot[0]);
-    RAVE_SERIALIZEJSON_PUSHBACK(allocator, t.rot[1]);
-    RAVE_SERIALIZEJSON_PUSHBACK(allocator, t.rot[2]);
-    RAVE_SERIALIZEJSON_PUSHBACK(allocator, t.rot[3]);
-    RAVE_SERIALIZEJSON_PUSHBACK(allocator, t.trans[0]);
-    RAVE_SERIALIZEJSON_PUSHBACK(allocator, t.trans[1]);
-    RAVE_SERIALIZEJSON_PUSHBACK(allocator, t.trans[2]);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, t.rot.x);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, t.rot.y);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, t.rot.z);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, t.rot.w);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, t.trans[0]);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, t.trans[1]);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, t.trans[2]);
 }
 
 /// \brief serialize an OpenRAVE TriMesh as json
@@ -286,47 +290,47 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
         rapidjson::Value verticesValue;
         verticesValue.SetArray();
         for (std::vector<Vector>::const_iterator it = trimesh.vertices.begin(); it != trimesh.vertices.end(); ++it) {
-            RAVE_SERIALIZEJSON_PUSHBACK(allocator, (*it)[0]);
-            RAVE_SERIALIZEJSON_PUSHBACK(allocator, (*it)[1]);
-            RAVE_SERIALIZEJSON_PUSHBACK(allocator, (*it)[2]);
+            RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, (*it)[0]);
+            RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, (*it)[1]);
+            RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, (*it)[2]);
         }
         value.AddMember("vertices", verticesValue, allocator);
     }
 
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "indices", trimesh.indices);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "indices", trimesh.indices);
 }
 
 /// \brief serialize an OpenRAVE IkParameterization as json
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const IkParameterization& ikparam)
 {
     RAVE_SERIALIZEJSON_CLEAR_OBJECT(value);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "type", ikparam.GetName());
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", ikparam.GetName());
     switch(ikparam.GetType()) {
     case IKP_Transform6D:
-        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "rotate", ikparam.GetTransform6D().rot);
-        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "translate", ikparam.GetTransform6D().trans);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "rotate", ikparam.GetTransform6D().rot);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "translate", ikparam.GetTransform6D().trans);
         break;
     case IKP_TranslationDirection5D:
-        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "translate", ikparam.GetTranslationDirection5D().pos);
-        RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "direction", ikparam.GetTranslationDirection5D().dir);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "translate", ikparam.GetTranslationDirection5D().pos);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "direction", ikparam.GetTranslationDirection5D().dir);
         break;
     default:
         break;
     }
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "customData", ikparam.GetCustomDataMap());
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "customData", ikparam.GetCustomDataMap());
 }
 
 /// \brief serialize an OpenRAVE CameraIntrinsics as json
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const SensorBase::CameraIntrinsics& intrinsics)
 {
     RAVE_SERIALIZEJSON_CLEAR_OBJECT(value);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "fx", intrinsics.fx);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "fy", intrinsics.fy);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "cx", intrinsics.cx);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "cy", intrinsics.cy);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "focalLength", intrinsics.focal_length);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "distortionModel", intrinsics.distortion_model);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "distortionCoeffs", intrinsics.distortion_coeffs);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "fx", intrinsics.fx);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "fy", intrinsics.fy);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "cx", intrinsics.cx);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "cy", intrinsics.cy);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "focalLength", intrinsics.focal_length);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "distortionModel", intrinsics.distortion_model);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "distortionCoeffs", intrinsics.distortion_coeffs);
 }
 
 inline void RaveDeserializeJSON(const rapidjson::Value &value, bool &v)
@@ -446,12 +450,12 @@ inline void RaveDeserializeJSON(const rapidjson::Value &value, RaveVector<T>& v)
     if (!value.IsArray() || (value.Size() != 3 && value.Size() != 4)) {
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a RaveVector", ORE_InvalidArguments);
     }
-    RaveDeserializeJSON(value[0], v[0]);
-    RaveDeserializeJSON(value[1], v[1]);
-    RaveDeserializeJSON(value[2], v[2]);
+    RaveDeserializeJSON(value[0], v.x);
+    RaveDeserializeJSON(value[1], v.y);
+    RaveDeserializeJSON(value[2], v.z);
     if (value.Size() == 4)
     {
-        RaveDeserializeJSON(value[3], v[3]);
+        RaveDeserializeJSON(value[3], v.w);
     }
 }
 
@@ -461,10 +465,10 @@ inline void RaveDeserializeJSON(const rapidjson::Value &value, RaveTransform<T>&
     if (!value.IsArray() || value.Size() != 7) {
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a RaveTransform", ORE_InvalidArguments);
     }
-    RaveDeserializeJSON(value[0], t.rot[0]);
-    RaveDeserializeJSON(value[1], t.rot[1]);
-    RaveDeserializeJSON(value[2], t.rot[2]);
-    RaveDeserializeJSON(value[3], t.rot[3]);
+    RaveDeserializeJSON(value[0], t.rot.x);
+    RaveDeserializeJSON(value[1], t.rot.y);
+    RaveDeserializeJSON(value[2], t.rot.z);
+    RaveDeserializeJSON(value[3], t.rot.w);
     RaveDeserializeJSON(value[4], t.trans[0]);
     RaveDeserializeJSON(value[5], t.trans[1]);
     RaveDeserializeJSON(value[6], t.trans[2]);

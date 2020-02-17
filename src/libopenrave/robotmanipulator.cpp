@@ -23,14 +23,14 @@ void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value &value, rapidjso
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
 
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "name", _name);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "transform", _tLocalTool);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "chuckingDirections", _vChuckingDirection);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "direction", _vdirection);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "baseLInkName", _sBaseLinkName);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "effectorLinkName", _sEffectorLinkName);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "iksolverType", _sIkSolverXMLId);
-    RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "gripperJointNames", _vGripperJointNames);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", _name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", _tLocalTool);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "chuckingDirections", _vChuckingDirection);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "direction", _vdirection);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "baseLInkName", _sBaseLinkName);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "effectorLinkName", _sEffectorLinkName);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "iksolverType", _sIkSolverXMLId);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "gripperJointNames", _vGripperJointNames);
 }
 
 void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv)
