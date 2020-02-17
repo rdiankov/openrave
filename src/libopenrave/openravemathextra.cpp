@@ -254,5 +254,77 @@ void EigenSymmetric3(const double* fmat, double* afEigenvalue, double* fevecs)
 }
 /* end of MAGIC code */
 
-} // end namespace geometry
+template <typename T>
+inline bool ComputeEigenValues2D(const T* pfmat, T* peigs, T& fv1x, T& fv1y, T& fv2x, T& fv2y)
+{
+    // x^2 + bx + c
+    T a, b, c, d;
+    b = -(pfmat[0] + pfmat[3]);
+    c = pfmat[0] * pfmat[3] - pfmat[1] * pfmat[2];
+    d = b * b - 4.0f * c + 1e-16f;
+    if( d < 0 ) {
+        return false;
+    }
+    if( d < 1e-16f ) {
+        a = -0.5f * b;
+        peigs[0] = a;
+        peigs[1] = a;
+        fv1x = pfmat[1];
+        fv1y = a - pfmat[0];
+        c = 1 / sqrt(fv1x*fv1x + fv1y*fv1y);
+        fv1x *= c;
+        fv1y *= c;
+        fv2x = -fv1y;
+        fv2y = fv1x;
+        return true;
+    }
+    // two roots
+    d = sqrt(d);
+    a = -0.5f * (b + d);
+    peigs[0] = a;
+
+    T firsteig_len2_0 = (pfmat[0] - a)*(pfmat[0] - a) + pfmat[1]*pfmat[1];
+    T firsteig_len2_1 = pfmat[2]*pfmat[2] + (pfmat[3] - a)*(pfmat[3] - a);
+    if( RaveFabs(firsteig_len2_0) > RaveFabs(firsteig_len2_1) ) {
+        fv1x = pfmat[1];
+        fv1y = -(pfmat[0] - a);
+        c = 1 / firsteig_len2_0;
+    }
+    else {
+        fv1x = pfmat[3]-a;
+        fv1y = -pfmat[2];
+        c = 1 / firsteig_len2_1;
+    }
+    fv1x *= c;
+    fv1y *= c;
+    a += d;
+    peigs[1] = a;
+    T secondeig_len2_0 = (pfmat[0] - a)*(pfmat[0] - a) + pfmat[1]*pfmat[1];
+    T secondeig_len2_1 = pfmat[2]*pfmat[2] + (pfmat[3] - a)*(pfmat[3] - a);
+    if( RaveFabs(secondeig_len2_0) > RaveFabs(secondeig_len2_1) ) {
+        fv2x = pfmat[1];
+        fv2y = -(pfmat[0] - a);
+        c = 1 / RaveSqrt(secondeig_len2_0);
+    }
+    else {
+        fv2x = pfmat[3]-a;
+        fv2y = -pfmat[2];
+        c = 1 / RaveSqrt(secondeig_len2_1);
+    }
+    fv2x *= c;
+    fv2y *= c;
+    return true;
+}
+
+bool eig2(const float* pfmat, float* peigs, float& fv1x, float& fv1y, float& fv2x, float& fv2y)
+{
+    return ComputeEigenValues2D(pfmat, peigs, fv1x, fv1y, fv2x, fv2y);
+}
+
+bool eig2(const double* pfmat, double* peigs, double& fv1x, double& fv1y, double& fv2x, double& fv2y)
+{
+    return ComputeEigenValues2D(pfmat, peigs, fv1x, fv1y, fv2x, fv2y);
+}
+
+} // end namespace mathextra
 } // end namespace OpenRAVE
