@@ -428,6 +428,17 @@ void KinBody::GetDOFValues(std::vector<dReal>& v, const std::vector<int>& dofind
     }
 }
 
+void KinBody::GetDOFIntervalIndices(std::vector<int>& v, const std::vector<int>& dofindices) const {
+    std::vector<dReal> dofvalues;
+    this->GetDOFValues(dofvalues, dofindices);
+    const size_t ndof = dofvalues.size();
+    const dReal twopi = 2.0 * M_PI;
+    v.resize(ndof);
+    for(size_t idof = 0; idof < ndof; ++idof) {
+        v[idof] = ceil((dofvalues[idof] - M_PI)/twopi);
+    }
+} 
+
 void KinBody::GetDOFVelocities(std::vector<dReal>& v, const std::vector<int>& dofindices) const
 {
     if( dofindices.size() == 0 ) {
