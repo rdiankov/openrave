@@ -1722,9 +1722,9 @@ object PyKinBody::GetDOFValues(object oindices) const
 
 object PyKinBody::GetDOFIntervalIndices() const
 {
-    std::vector<dReal> values;
-    _pbody->GetDOFValues(values);
-    return toPyArray(values);
+    std::vector<int> intindices;
+    _pbody->GetDOFIntervalIndices(intindices);
+    return toPyArray(intindices);
 }
 
 object PyKinBody::GetDOFIntervalIndices(object oindices) const
@@ -1736,9 +1736,9 @@ object PyKinBody::GetDOFIntervalIndices(object oindices) const
     if( vindices.empty() ) {
         return py::empty_array_astype<dReal>();
     }
-    std::vector<dReal> values;
-    _pbody->GetDOFValues(values,vindices);
-    return toPyArray(values);
+    std::vector<int> intindices;
+    _pbody->GetDOFIntervalIndices(intindices, vindices);
+    return toPyArray(intindices);
 }
 
 object PyKinBody::GetDOFVelocities() const
@@ -3678,6 +3678,8 @@ void init_openravepy_kinbody()
         void (PyKinBody::*psetdofvalues3)(object,object,uint32_t) = &PyKinBody::SetDOFValues;
         object (PyKinBody::*getdofvalues1)() const = &PyKinBody::GetDOFValues;
         object (PyKinBody::*getdofvalues2)(object) const = &PyKinBody::GetDOFValues;
+        object (PyKinBody::*getdofintindices1)() const = &PyKinBody::GetDOFIntervalIndices;
+        object (PyKinBody::*getdofintindices2)(object) const = &PyKinBody::GetDOFIntervalIndices;
         object (PyKinBody::*getdofvelocities1)() const = &PyKinBody::GetDOFVelocities;
         object (PyKinBody::*getdofvelocities2)(object) const = &PyKinBody::GetDOFVelocities;
         object (PyKinBody::*getdoflimits1)() const = &PyKinBody::GetDOFLimits;
@@ -3777,6 +3779,8 @@ void init_openravepy_kinbody()
                          .def("GetDOF",&PyKinBody::GetDOF,DOXY_FN(KinBody,GetDOF))
                          .def("GetDOFValues",getdofvalues1,DOXY_FN(KinBody,GetDOFValues))
                          .def("GetDOFValues",getdofvalues2,PY_ARGS("indices") DOXY_FN(KinBody,GetDOFValues))
+                         .def("GetDOFIntervalIndices",getdofintindices1,DOXY_FN(KinBody,GetDOFIntervalIndices))
+                         .def("GetDOFIntervalIndices",getdofintindices2,PY_ARGS("indices") DOXY_FN(KinBody,GetDOFIntervalIndices))
                          .def("GetDOFVelocities",getdofvelocities1, DOXY_FN(KinBody,GetDOFVelocities))
                          .def("GetDOFVelocities",getdofvelocities2, PY_ARGS("indices") DOXY_FN(KinBody,GetDOFVelocities))
                          .def("GetDOFLimits",getdoflimits1, DOXY_FN(KinBody,GetDOFLimits))
