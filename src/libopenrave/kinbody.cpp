@@ -400,43 +400,73 @@ int KinBody::GetDOF() const
     return _vecjoints.size() > 0 ? _vecjoints.back()->GetDOFIndex()+_vecjoints.back()->GetDOF() : 0;
 }
 
-void KinBody::GetDOFValues(std::vector<dReal>& v, const std::vector<int>& dofindices) const
+void KinBody::GetDOFValues(std::vector<dReal>& vdofvalues, const std::vector<int>& vdofindices) const
 {
     CHECK_INTERNAL_COMPUTATION;
-    const size_t ndof = dofindices.size();
-    if( ndof == 0 ) {
-        v.clear();
-        if( (int)v.capacity() < GetDOF() ) {
-            v.reserve(GetDOF());
+    const size_t ndofindices = vdofindices.size();
+    if( ndofindices == 0 ) {
+        vdofvalues.clear();
+        const size_t dof = GetDOF();
+        if( (int)vdofvalues.capacity() < dof ) {
+            vdofvalues.reserve(dof);
         }
         for(const JointPtr& joint : _vDOFOrderedJoints) {
-            const int toadd = joint->GetDOFIndex() - (int)v.size();
+            const int toadd = joint->GetDOFIndex() - (int)vdofvalues.size();
             if( toadd > 0 ) {
-                v.insert(v.end(), toadd, 0);
+                vdofvalues.insert(vdofvalues.end(), toadd, 0);
             }
             else if( toadd < 0 ) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("dof indices mismatch joint %s, toadd=%d"), joint->GetName() % toadd, ORE_InvalidState);
             }
-            joint->GetValues(v, true);
+            joint->GetValues(vdofvalues, true);
         }
     }
     else {
-        v.resize(ndof);
-        for(size_t i = 0; i < ndof; ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            v[i] = pjoint->GetValue(dofindices[i]-pjoint->GetDOFIndex());
+        vdofvalues.resize(ndofindices);
+        size_t i = 0;
+        for(int dofindex : vdofindices) {
+            const JointPtr pjoint = GetJointFromDOFIndex(dofindex);
+            vdofvalues[i++] = pjoint->GetValue(dofindex - pjoint->GetDOFIndex());
         }
     }
 }
 
-void KinBody::GetDOFIntervalIndices(std::vector<int>& v, const std::vector<int>& dofindices) const {
-    std::vector<dReal> dofvalues;
-    this->GetDOFValues(dofvalues, dofindices);
-    const size_t ndof = dofvalues.size();
+void KinBody::GetDOFIntervalIndices(std::vector<int>& vintindices, const std::vector<int>& vdofindices) const {
+    CHECK_INTERNAL_COMPUTATION;
+    const size_t ndofindices = vdofindices.size();
     const dReal twopi = 2.0 * M_PI;
-    v.resize(ndof);
-    for(size_t idof = 0; idof < ndof; ++idof) {
-        v[idof] = ceil((dofvalues[idof] - M_PI)/twopi);
+    
+    if( ndofindices == 0 ) {
+        vintindices.clear();
+        std::vector<dReal> vdofvalues;
+        const size_t dof = GetDOF();
+        if(vintindices.capacity() < dof) {
+            vintindices.reserve(dof);
+            vdofvalues.reserve(dof);
+        }
+        BOOST_ASSERT(vintindices.empty());
+        for(const JointPtr& joint : _vDOFOrderedJoints) {
+            const int toadd = joint->GetDOFIndex() - (int)vdofvalues.size();
+            OPENRAVE_ASSERT_OP_FORMAT0(toadd,           ==, 0, "only support one-dof joint for now", ORE_NotImplemented);
+            OPENRAVE_ASSERT_OP_FORMAT0(joint->GetDOF(), ==, 1, "only support one-dof joint for now", ORE_NotImplemented);
+            joint->GetValues(vdofvalues, true);
+            vintindices.push_back(joint->IsRevolute(0) ? ceil((vdofvalues.back() - M_PI)/twopi) : 0);
+        }
+    }
+    else {
+        vintindices.resize(ndofindices);
+        // joint is either prismatic or revolute, either way the joint value is 0.0, so the interval index is always 0
+        std::fill(begin(vintindices), end(vintindices), 0);
+        size_t i = 0;
+        for(int dofindex : vdofindices) {
+            const JointPtr pjoint = GetJointFromDOFIndex(dofindex);
+            if(pjoint->IsRevolute(0)) {
+                const dReal dofvalue = pjoint->GetValue(dofindex - pjoint->GetDOFIndex());
+                // (-pi, pi] has 2*pi interval index 0, (-3*pi, -pi] index -1, (pi, 3*pi] index 1, etc.
+                vintindices[i] = ceil((dofvalue - M_PI)/twopi);
+            }
+            ++i;
+        }
     }
 } 
 
