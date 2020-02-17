@@ -403,25 +403,26 @@ int KinBody::GetDOF() const
 void KinBody::GetDOFValues(std::vector<dReal>& v, const std::vector<int>& dofindices) const
 {
     CHECK_INTERNAL_COMPUTATION;
-    if( dofindices.size() == 0 ) {
-        v.resize(0);
+    const size_t ndof = dofindices.size();
+    if( ndof == 0 ) {
+        v.clear();
         if( (int)v.capacity() < GetDOF() ) {
             v.reserve(GetDOF());
         }
-        FOREACHC(it, _vDOFOrderedJoints) {
-            int toadd = (*it)->GetDOFIndex()-(int)v.size();
+        for(const JointPtr& joint : _vDOFOrderedJoints) {
+            const int toadd = joint->GetDOFIndex() - (int)v.size();
             if( toadd > 0 ) {
-                v.insert(v.end(),toadd,0);
+                v.insert(v.end(), toadd, 0);
             }
             else if( toadd < 0 ) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("dof indices mismatch joint %s, toadd=%d"), (*it)->GetName()%toadd, ORE_InvalidState);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("dof indices mismatch joint %s, toadd=%d"), joint->GetName() % toadd, ORE_InvalidState);
             }
-            (*it)->GetValues(v,true);
+            joint->GetValues(v, true);
         }
     }
     else {
-        v.resize(dofindices.size());
-        for(size_t i = 0; i < dofindices.size(); ++i) {
+        v.resize(ndof);
+        for(size_t i = 0; i < ndof; ++i) {
             JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
             v[i] = pjoint->GetValue(dofindices[i]-pjoint->GetDOFIndex());
         }

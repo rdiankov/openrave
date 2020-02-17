@@ -1751,7 +1751,7 @@ private:
     /// \brief Returns all the joint values as organized by the DOF indices.
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFValues(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
+    virtual void GetDOFValues(std::vector<dReal>& v, const std::vector<int>& dofindices = {}) const;
 
     /** \brief Returns 2*PI interval indices for all joint values as organized by the DOF indices
       For a revolute  joint, index is 0 for (-pi, pi], -1 for (-3*pi, -pi], 1 for (pi, 3*pi], etc.
@@ -1763,47 +1763,47 @@ private:
     /// \brief Returns all the joint velocities as organized by the DOF indices.
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFVelocities(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
+    virtual void GetDOFVelocities(std::vector<dReal>& v, const std::vector<int>& dofindices = {}) const;
 
     /// \brief Returns all the joint limits as organized by the DOF indices.
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFLimits(std::vector<dReal>& lowerlimit, std::vector<dReal>& upperlimit, const std::vector<int>& dofindices = std::vector<int>()) const;
+    virtual void GetDOFLimits(std::vector<dReal>& lowerlimit, std::vector<dReal>& upperlimit, const std::vector<int>& dofindices = {}) const;
 
     /// \brief Returns all the joint velocity limits as organized by the DOF indices.
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFVelocityLimits(std::vector<dReal>& lowerlimit, std::vector<dReal>& upperlimit, const std::vector<int>& dofindices = std::vector<int>()) const;
+    virtual void GetDOFVelocityLimits(std::vector<dReal>& lowerlimit, std::vector<dReal>& upperlimit, const std::vector<int>& dofindices = {}) const;
 
     /// \brief Returns the max velocity for each DOF
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFVelocityLimits(std::vector<dReal>& maxvelocities, const std::vector<int>& dofindices = std::vector<int>()) const;
+    virtual void GetDOFVelocityLimits(std::vector<dReal>& maxvelocities, const std::vector<int>& dofindices = {}) const;
 
     /// \brief Returns the max acceleration for each DOF
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFAccelerationLimits(std::vector<dReal>& maxaccelerations, const std::vector<int>& dofindices = std::vector<int>()) const;
+    virtual void GetDOFAccelerationLimits(std::vector<dReal>& maxaccelerations, const std::vector<int>& dofindices = {}) const;
 
     /// \brief Returns the max jerk for each DOF
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFJerkLimits(std::vector<dReal>& maxjerks, const std::vector<int>& dofindices = std::vector<int>()) const;
+    virtual void GetDOFJerkLimits(std::vector<dReal>& maxjerks, const std::vector<int>& dofindices = {}) const;
 
     /// \brief Returns the hard max velocity for each DOF
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFHardVelocityLimits(std::vector<dReal>& maxvels, const std::vector<int>& dofindices = std::vector<int>()) const;
+    virtual void GetDOFHardVelocityLimits(std::vector<dReal>& maxvels, const std::vector<int>& dofindices = {}) const;
 
     /// \brief Returns the hard max acceleration for each DOF
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFHardAccelerationLimits(std::vector<dReal>& maxaccels, const std::vector<int>& dofindices = std::vector<int>()) const;
+    virtual void GetDOFHardAccelerationLimits(std::vector<dReal>& maxaccels, const std::vector<int>& dofindices = {}) const;
 
     /// \brief Returns the hard max jerk for each DOF
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFHardJerkLimits(std::vector<dReal>& maxjerks, const std::vector<int>& dofindices = std::vector<int>()) const;
+    virtual void GetDOFHardJerkLimits(std::vector<dReal>& maxjerks, const std::vector<int>& dofindices = {}) const;
 
     /// \brief Returns the max torque for each DOF
     virtual void GetDOFTorqueLimits(std::vector<dReal>& maxaccelerations) const;
@@ -1820,12 +1820,12 @@ private:
     /// \brief get the dof resolutions
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFResolutions(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
+    virtual void GetDOFResolutions(std::vector<dReal>& v, const std::vector<int>& dofindices = {}) const;
 
     /// \brief get dof weights
     ///
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void GetDOFWeights(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
+    virtual void GetDOFWeights(std::vector<dReal>& v, const std::vector<int>& dofindices = {}) const;
 
     /// \brief \see GetDOFVelocityLimits
     virtual void SetDOFVelocityLimits(const std::vector<dReal>& maxlimits);
@@ -1851,15 +1851,15 @@ private:
     /// \brief sets dof weights
     ///
     /// \param dofindices the dof indices to set the values for. If empty, will use all the dofs
-    virtual void SetDOFWeights(const std::vector<dReal>& weights, const std::vector<int>& dofindices = std::vector<int>());
+    virtual void SetDOFWeights(const std::vector<dReal>& weights, const std::vector<int>& dofindices = {});
 
     /// \brief sets dof resolutoins
     ///
     /// \param dofindices the dof indices to set the values for. If empty, will use all the dofs
-    virtual void SetDOFResolutions(const std::vector<dReal>& resolutions, const std::vector<int>& dofindices = std::vector<int>());
+    virtual void SetDOFResolutions(const std::vector<dReal>& resolutions, const std::vector<int>& dofindices = {});
 
     /// \brief \see GetDOFLimits
-    virtual void SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper, const std::vector<int>& dofindices = std::vector<int>());
+    virtual void SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper, const std::vector<int>& dofindices = {});
 
     /// \brief Returns the joints making up the controllable degrees of freedom of the body.
     const std::vector<JointPtr>& GetJoints() const {
@@ -2008,7 +2008,7 @@ private:
     /// \param[in] dofvelocities - velocities of each of the degrees of freeom
     /// \param[in] checklimits if >0, will excplicitly check the joint velocity limits before setting the values and clamp them. If == 1, then will warn if the limits are overboard, if == 2, then will not warn (used for code that knows it's giving bad values)
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>());
+    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = {});
 
     /// \brief Returns the linear and angular velocities for each link
     ///
@@ -2083,7 +2083,7 @@ private:
     /// \param values the values to set the joint angles (ordered by the dof indices)
     /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void SetDOFValues(const std::vector<dReal>& values, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>());
+    virtual void SetDOFValues(const std::vector<dReal>& values, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = {});
 
     virtual void SetJointValues(const std::vector<dReal>& values, bool checklimits = true) {
         SetDOFValues(values,static_cast<uint32_t>(checklimits));
