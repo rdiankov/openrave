@@ -1450,7 +1450,9 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
                     }
                     if( vbodyvalues.size() > 0 ) {
                         for(size_t i = 0; i < vdefaultvalues.size(); ++i) {
-                            vdefaultvalues[i] = vbodyvalues.at(vtargetindices[i]);
+                            if( vtargetindices[i] >= 0 ) { // sometimes index can be -1 to indicate that no robot value is mapped. This is used when trying to preserve an output order of values
+                                vdefaultvalues[i] = vbodyvalues.at(vtargetindices[i]);
+                            }
                         }
                     }
                 }
