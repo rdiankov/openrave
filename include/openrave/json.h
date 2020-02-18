@@ -288,9 +288,9 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
         rapidjson::Value verticesValue;
         verticesValue.SetArray();
         for (std::vector<Vector>::const_iterator it = trimesh.vertices.begin(); it != trimesh.vertices.end(); ++it) {
-            RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, (*it)[0]);
-            RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, (*it)[1]);
-            RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, (*it)[2]);
+            RAVE_SERIALIZEJSON_PUSHBACK(verticesValue, allocator, (*it)[0]);
+            RAVE_SERIALIZEJSON_PUSHBACK(verticesValue, allocator, (*it)[1]);
+            RAVE_SERIALIZEJSON_PUSHBACK(verticesValue, allocator, (*it)[2]);
         }
         value.AddMember("vertices", verticesValue, allocator);
     }

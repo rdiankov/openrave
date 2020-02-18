@@ -46,7 +46,6 @@ public:
 
     object ComputeInnerEmptyVolume();
     object ComputeAABB(object otransform);
-    // Simon's work (in charge)
     object SerializeJSON(const dReal fUnitScale=1.0, object ooptions=py::none_());
     void DeserializeJSON(object obj, const dReal fUnitScale=1.0);
     KinBody::GeometryInfoPtr GetGeometryInfo();
@@ -82,7 +81,6 @@ public:
     PyLinkInfo();
     PyLinkInfo(const KinBody::LinkInfo& info);
     KinBody::LinkInfoPtr GetLinkInfo();
-    // Simon's work
     object SerializeJSON(const dReal fUnitScale=1.0, object ooptions=py::none_());
     void DeserializeJSON(object obj, const dReal fUnitScale=1.0);
 
@@ -107,7 +105,6 @@ public:
     PyElectricMotorActuatorInfo();
     PyElectricMotorActuatorInfo(const ElectricMotorActuatorInfo& info);
     ElectricMotorActuatorInfoPtr GetElectricMotorActuatorInfo();
-    // Simon's work
     object SerializeJSON(object options=py::none_());
     void DeserializeJSON(object obj, PyEnvironmentBasePtr penv);
 
@@ -177,7 +174,6 @@ public:
     PyJointInfo();
     PyJointInfo(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv);
     KinBody::JointInfoPtr GetJointInfo();
-    // Simon's work
     object SerializeJSON(object options=py::none_());
     void DeserializeJSON(object obj, PyEnvironmentBasePtr penv, const dReal fUnitScale=1.0);
 
@@ -206,8 +202,6 @@ public:
     py::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters;
     object _bIsCircular = py::list();
     bool _bIsActive = true;
-
-    // Simon's work
     KinBody::JointControlMode _controlMode = KinBody::JointControlMode::JCM_None;
     PyJointControlInfo_RobotControllerPtr _jci_robotcontroller;
     PyJointControlInfo_IOPtr _jci_io;

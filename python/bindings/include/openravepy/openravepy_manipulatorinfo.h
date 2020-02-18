@@ -30,7 +30,6 @@ public:
     PyManipulatorInfo(const RobotBase::ManipulatorInfo& info);
     RobotBase::ManipulatorInfoPtr GetManipulatorInfo() const;
 
-    // Simon's work
     object SerializeJSON(object ooptions=py::none_());
     void DeserializeJSON(object obj, PyEnvironmentBasePtr pyenv);
 
@@ -74,7 +73,6 @@ public:
     PyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& info, PyEnvironmentBasePtr pyenv);
     RobotBase::ConnectedBodyInfoPtr GetConnectedBodyInfo() const;
 
-    // Simon's work
     object SerializeJSON(object options=py::none_());
     void DeserializeJSON(object obj, PyEnvironmentBasePtr pyenv);
 
