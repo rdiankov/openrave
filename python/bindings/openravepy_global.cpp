@@ -1213,7 +1213,7 @@ string poseSerialization(object o)
     return ss.str();
 }
 
-object ComputeIntervalIndices(object orevolutejointvalues) {
+object ComputeTwoPiIntervalIndices(object orevolutejointvalues) {
     if( IS_PYTHONOBJECT_NONE(orevolutejointvalues) ) {
         return py::empty_array_astype<dReal>();
     }
@@ -1222,7 +1222,7 @@ object ComputeIntervalIndices(object orevolutejointvalues) {
     if( n == 0 ) {
         return py::empty_array_astype<dReal>();
     }
-    return toPyArray(ComputeIntervalIndices<dReal>(vrevolutejointvalues));
+    return toPyArray(OpenRAVE::geometry::ComputeTwoPiIntervalIndices<dReal>(vrevolutejointvalues));
 }
 
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
@@ -2169,9 +2169,9 @@ void init_openravepy_global()
     def("poseSerialization",openravepy::poseSerialization, PY_ARGS("pose") "Serializes a transformation into a string representing a quaternion with translation.\n\n:param pose: 7 values\n");
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    m.def("ComputeIntervalIndices",openravepy::ComputeIntervalIndices, PY_ARGS("revolutejointvalues") "Compute the two-pi interval index where joint values are in,\ne.g. (-pi, pi] has index 0, (-3*pi, -pi] has index -1, (pi, 3*pi] has index 1, etc.\n");
+    m.def("ComputeTwoPiIntervalIndices",openravepy::ComputeTwoPiIntervalIndices, PY_ARGS("revolutejointvalues") "Compute the two-pi interval index where joint values are in,\ne.g. (-pi, pi] has index 0, (-3*pi, -pi] has index -1, (pi, 3*pi] has index 1, etc.\n");
 #else
-    def("ComputeIntervalIndices",openravepy::ComputeIntervalIndices, PY_ARGS("revolutejointvalues") "Compute the two-pi interval index where joint values are in,\ne.g. (-pi, pi] has index 0, (-3*pi, -pi] has index -1, (pi, 3*pi] has index 1, etc.\n");
+    def("ComputeTwoPiIntervalIndices",openravepy::ComputeTwoPiIntervalIndices, PY_ARGS("revolutejointvalues") "Compute the two-pi interval index where joint values are in,\ne.g. (-pi, pi] has index 0, (-3*pi, -pi] has index -1, (pi, 3*pi] has index 1, etc.\n");
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("openravepyCompilerVersion",openravepy::openravepyCompilerVersion, "Returns the compiler version that openravepy_int was compiled with");
