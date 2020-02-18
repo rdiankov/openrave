@@ -1166,12 +1166,7 @@ object ComputeIntervalIndices(object orevolutejointvalues) {
     if( n == 0 ) {
         return py::empty_array_astype<dReal>();
     }
-    std::vector<int> vintindices(n, 0);
-    for(size_t i = 0; i < n; ++i) {
-#define TWOPI 6.2831853071795864769252
-        vintindices[i] = ceil((vrevolutejointvalues[i] - M_PI)/TWOPI);
-    }
-    return toPyArray(vintindices);
+    return toPyArray(ComputeIntervalIndices<dReal>(vrevolutejointvalues));
 }
 
 #ifndef USE_PYBIND11_PYTHON_BINDINGS

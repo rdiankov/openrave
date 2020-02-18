@@ -2850,6 +2850,17 @@ T DistVertexOBBSq(const RaveVector<T>& v, const obb<T>& o)
 //	return PLANE( vn, vsign );
 //}
 
+template <typename T>
+std::vector<int> ComputeIntervalIndices(const std::vector<T>& vrevolutejointvalues) {
+    const size_t n = vrevolutejointvalues.size();
+    std::vector<int> vintindices(n, 0);
+    for(size_t i = 0; i < n; ++i) {
+#define TWOPI 6.2831853071795864769252
+        vintindices[i] = ceil((vrevolutejointvalues[i] - M_PI)/TWOPI);
+    }
+    return vintindices;
+}
+
 } // end namespace geometry
 } // end namespace OpenRAVE
 
