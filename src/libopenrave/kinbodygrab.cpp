@@ -327,7 +327,7 @@ void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, Enviro
     RAVE_DESERIALIZEJSON_REQUIRED(value, "grabbedName", _grabbedname);
     RAVE_DESERIALIZEJSON_REQUIRED(value, "robotLinkName", _robotlinkname);
     RAVE_DESERIALIZEJSON_REQUIRED(value, "transform", _trelative);
-    // RAVE_DESERIALIZEJSON_REQUIRED(value, "robotLinksToIgnoreSet", _setRobotLinksToIgnore);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "robotLinksToIgnoreSet", _setRobotLinksToIgnore);
 }
 
 void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vgrabbedinfo)

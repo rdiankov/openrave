@@ -431,7 +431,7 @@ bool KinBody::GeometryInfo::ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume
     }
 }
 
-void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options)
+void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options)
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
 
@@ -490,7 +490,7 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Do
 
     case GT_TriMesh:
         RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "trimesh");
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "mesh", _meshcollision);
+        // TODO: RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "mesh", _meshcollision);
         break;
 
     default:
@@ -572,11 +572,11 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
     }
     else if (typestr == "trimesh" or typestr == "mesh") {
         _type = GT_TriMesh;
-        RAVE_DESERIALIZEJSON_REQUIRED(value, "mesh", _meshcollision);
+        // TODO: RAVE_DESERIALIZEJSON_REQUIRED(value, "mesh", _meshcollision);
 
-        FOREACH(itvertex, _meshcollision.vertices) {
-            *itvertex *= fUnitScale;
-        }
+        // FOREACH(itvertex, _meshcollision.vertices) {
+        //     *itvertex *= fUnitScale;
+        // }
     }
     else {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported geometry type \"%s\"", typestr, ORE_InvalidArguments);

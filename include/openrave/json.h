@@ -71,10 +71,8 @@ inline rapidjson::Value RAVE_SERIALIZEJSON(rapidjson::Document::AllocatorType& a
 
 template<typename T>
 inline void RAVE_SERIALIZEJSON_PUSHBACK(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, const T& arg) {
-    rapidjson::Value __v = RAVE_SERIALIZEJSON(allocator, arg);
-    value.PushBack(__v, allocator);
-    // rapidjson::Value value = RAVE_SERIALIZEJSON(allocator, arg);
-    // value.PushBack(value, allocator);
+    rapidjson::Value v = RAVE_SERIALIZEJSON(allocator, arg);
+    value.PushBack(v, allocator);
 }
 
 template<typename T>
@@ -83,7 +81,6 @@ inline void _RAVE_SERIALIZEJSON_ADDMEMBER_HELPER(rapidjson::Value& value, rapidj
 template<typename T, typename U, typename ... Types>
 inline void _RAVE_SERIALIZEJSON_ADDMEMBER_HELPER(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, T& key, const U& arg, const Types& ... args) {
     rapidjson::Value v = RAVE_SERIALIZEJSON(allocator, arg);
-    // RAVE_SERIALIZEJSON(value, allocator, arg);
     value.AddMember(key, v, allocator);
     _RAVE_SERIALIZEJSON_ADDMEMBER_HELPER(value, allocator, key, args...); // recursion
 }
@@ -155,6 +152,7 @@ inline void RAVE_DESERIALIZEJSON_REQUIRED(const rapidjson::Value &value, const T
         throw OPENRAVE_EXCEPTION_FORMAT("failed deserialize json due to missing key \"%s\"", key, ORE_InvalidArguments);
     }
     RaveDeserializeJSON(value[key], destination);
+    RAVELOG_ERROR("key=%s", key);
 }
 
 template<typename T, typename U>

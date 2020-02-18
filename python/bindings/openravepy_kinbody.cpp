@@ -160,7 +160,7 @@ object PyGeometryInfo::SerializeJSON(const dReal fUnitScale, object ooptions)
 {
     rapidjson::Document doc;
     KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
-    pgeominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(ooptions,0));
+    pgeominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(ooptions, 0));
     return toPyObject(doc);
 }
 
