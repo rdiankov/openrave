@@ -407,7 +407,7 @@ void KinBody::GetDOFValues(std::vector<dReal>& vdofvalues, const std::vector<int
     if( ndofindices == 0 ) {
         vdofvalues.clear();
         const size_t dof = GetDOF();
-        if( (int)vdofvalues.capacity() < dof ) {
+        if( vdofvalues.capacity() < dof ) {
             vdofvalues.reserve(dof);
         }
         for(const JointPtr& joint : _vDOFOrderedJoints) {

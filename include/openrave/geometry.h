@@ -2850,13 +2850,24 @@ T DistVertexOBBSq(const RaveVector<T>& v, const obb<T>& o)
 //	return PLANE( vn, vsign );
 //}
 
+/// \brief Two-pi interval index for value of a revolute joint, e.g. (-pi, pi] has index 0, (-3*pi, -pi] index -1; (pi, 3*pi] index 1, etc.
+///
+/// \ingroup geometric_primitives
+/// \param[in] jval value of a revolute joint 
+/// \return a two-pi interval index
+#define M_TWO_PI 6.2831853071795864769252
 template <typename T>
-std::vector<int> ComputeIntervalIndices(const std::vector<T>& vrevolutejointvalues) {
-    const size_t n = vrevolutejointvalues.size();
+int ComputeTwoPiIntervalIndex(const T jval) {
+    return ceil((jval - M_PI)/M_TWO_PI);
+}
+
+template <typename T>
+std::vector<int> ComputeTwoPiIntervalIndices(const std::vector<T>& vjvals) {
+    const size_t n = vjvals.size();
     std::vector<int> vintindices(n, 0);
     for(size_t i = 0; i < n; ++i) {
 #define TWOPI 6.2831853071795864769252
-        vintindices[i] = ceil((vrevolutejointvalues[i] - M_PI)/TWOPI);
+        vintindices[i] = ComputeTwoPiIntervalIndex(vjvals[i]);
     }
     return vintindices;
 }
