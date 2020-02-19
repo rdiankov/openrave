@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
+#include <openrave/openravejson.h>
 #include <boost/make_shared.hpp>
 
 namespace OpenRAVE {
@@ -56,14 +57,13 @@ void RobotBase::ConnectedBodyInfo::InitInfoFromBody(RobotBase& robot)
 }
 void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options) const
 {
-    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", _name);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "linkName", _linkname);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "url", _url);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", _trelative);
+    SetJsonValueByKey(value, "name", _name, allocator);
+    SetJsonValueByKey(value, "linkName", _linkname, allocator);
+    SetJsonValueByKey(value, "url", _url, allocator);
+    SetJsonValueByKey(value, "transform", _trelative, allocator);
 
     rapidjson::Value linkInfosValue;
-    RAVE_SERIALIZEJSON_CLEAR_ARRAY(linkInfosValue);
+    linkInfosValue.SetArray();
     FOREACH(it, _vLinkInfos)
     {
         rapidjson::Value info;
@@ -73,17 +73,17 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
     value.AddMember("linkInfos", linkInfosValue, allocator);
 
     rapidjson::Value jointInfosValue;
-    RAVE_SERIALIZEJSON_CLEAR_ARRAY(jointInfosValue);
+    jointInfosValue.SetArray();
     FOREACH(it, _vJointInfos)
     {
-        rapidjson::Value info;
-        (*it)->SerializeJSON(info, allocator, options);
-        jointInfosValue.PushBack(info, allocator);
+        rapidjson::Value v;
+        (*it)->SerializeJSON(v, allocator, options);
+        jointInfosValue.PushBack(v, allocator);
     }
     value.AddMember("jointInfos", jointInfosValue, allocator);
 
     rapidjson::Value manipulatorInfosValue;
-    RAVE_SERIALIZEJSON_CLEAR_ARRAY(manipulatorInfosValue);
+    manipulatorInfosValue.SetArray();
     FOREACH(it, _vManipulatorInfos)
     {
         rapidjson::Value info;
@@ -93,7 +93,7 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
     value.AddMember("manipulatorInfos", manipulatorInfosValue, allocator);
 
     rapidjson::Value attachedSensorInfosValue;
-    RAVE_SERIALIZEJSON_CLEAR_ARRAY(attachedSensorInfosValue);
+    attachedSensorInfosValue.SetArray();
     FOREACH(it, _vAttachedSensorInfos)
     {
         rapidjson::Value info;
@@ -102,20 +102,18 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
     }
     value.AddMember("_vAttachedSensorInfos", attachedSensorInfosValue, allocator);
 
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "isActive", _bIsActive);
+    SetJsonValueByKey(value, "isActive", _bIsActive, allocator);
 }
 
 void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value, EnvironmentBasePtr penv)
 {
-    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "name", _name);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "linkName", _linkname);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "url", _url);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "transform", _trelative);
+    GetJsonValueByKey(value, "name", _name);
+    GetJsonValueByKey(value, "linkName", _linkname);
+    GetJsonValueByKey(value, "url", _url);
+    GetJsonValueByKey(value, "transform", _trelative);
 
     if(value.HasMember("linkInfos"))
     {
-        RAVE_DESERIALIZEJSON_ENSURE_ARRAY(value["linkInfos"]);
         _vLinkInfos.resize(0);
         _vLinkInfos.reserve(value["linkInfos"].Size());
         for (size_t i = 0; i < value["linkInfos"].Size(); ++i) {
@@ -127,7 +125,6 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
 
     if(value.HasMember("jointInfos"))
     {
-        RAVE_DESERIALIZEJSON_ENSURE_ARRAY(value["jointInfos"]);
         _vJointInfos.resize(0);
         _vJointInfos.reserve(value["jointInfos"].Size());
         for (size_t i = 0; i < value["jointInfos"].Size(); ++i) {
@@ -139,7 +136,6 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
 
     if(value.HasMember("manipulatorInfos"))
     {
-        RAVE_DESERIALIZEJSON_ENSURE_ARRAY(value["manipulatorInfos"]);
         _vManipulatorInfos.resize(0);
         _vManipulatorInfos.reserve(value["manipulatorInfos"].Size());
         for (size_t i = 0; i < value["manipulatorInfos"].Size(); ++i) {
@@ -151,7 +147,6 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
 
     if(value.HasMember("_vAttachedSensorInfos"))
     {
-        RAVE_DESERIALIZEJSON_ENSURE_ARRAY(value["_vAttachedSensorInfos"]);
         _vAttachedSensorInfos.resize(0);
         _vAttachedSensorInfos.reserve(value["_vAttachedSensorInfos"].Size());
         for (size_t i = 0; i < value["_vAttachedSensorInfos"].Size(); ++i) {
@@ -160,7 +155,7 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
             _vAttachedSensorInfos.push_back(attachedsensorinfo);
         }
     }
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "isActive", _bIsActive);
+    GetJsonValueByKey(value, "isActive", _bIsActive);
 }
 
 

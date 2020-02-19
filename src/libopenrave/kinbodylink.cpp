@@ -16,7 +16,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 #include <algorithm>
-#include <openrave/json.h>
+#include <openrave/openrave.h>
 
 namespace OpenRAVE {
 
@@ -30,32 +30,30 @@ KinBody::LinkInfo::LinkInfo(const LinkInfo& other) : XMLReadable("link")
 
 void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
-    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", _name);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", _t);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "massTransform", _tMassFrame);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "mass", _mass);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "intertialMoments", _vinertiamoments);
+    SetJsonValueByKey(value, "name", _name, allocator);
+    SetJsonValueByKey(value, "transform", _t, allocator);
+    SetJsonValueByKey(value, "massTransform", _tMassFrame, allocator);
+    SetJsonValueByKey(value, "mass", _mass, allocator);
+    SetJsonValueByKey(value, "intertialMoments", _vinertiamoments, allocator);
 
     if (_mapFloatParameters.size() > 0) {
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "floatParameters", _mapFloatParameters);
+        SetJsonValueByKey(value, "floatParameters", _mapFloatParameters, allocator);
     }
 
     if (_mapIntParameters.size() > 0) {
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "intParameters", _mapIntParameters);
+        SetJsonValueByKey(value, "intParameters", _mapIntParameters, allocator);
     }
 
     if (_mapStringParameters.size() > 0) {
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "stringParameters", _mapStringParameters);
+        SetJsonValueByKey(value, "stringParameters", _mapStringParameters, allocator);
     }
 
     if (_vForcedAdjacentLinks.size() > 0) {
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "forcedAdjacentLinks", _vForcedAdjacentLinks);
+        SetJsonValueByKey(value, "forcedAdjacentLinks", _vForcedAdjacentLinks, allocator);
     }
 
     if (_vgeometryinfos.size() > 0) {
         rapidjson::Value geometriesValue;
-        RAVE_SERIALIZEJSON_CLEAR_ARRAY(geometriesValue);
         FOREACHC(it, _vgeometryinfos) {
             rapidjson::Value geometryValue;
             (*it)->SerializeJSON(geometryValue, allocator, options);
@@ -67,30 +65,26 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
     // TODO(jsonserialization)
     // _mapExtraGeometries
 
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "isStatic", _bStatic);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "isEnabled", _bIsEnabled);
+    SetJsonValueByKey(value, "isStatic", _bStatic, allocator);
+    SetJsonValueByKey(value, "isEnabled", _bIsEnabled, allocator);
 }
 
 void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale)
 {
-    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
-
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "name", _name);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "transform", _t);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "massTransform", _tMassFrame);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "mass", _mass);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "intertialMoments", _vinertiamoments);
-    RAVE_DESERIALIZEJSON_OPTIONAL(value, "floatParameters", _mapFloatParameters);
-    RAVE_DESERIALIZEJSON_OPTIONAL(value, "intParameters", _mapIntParameters);
-    RAVE_DESERIALIZEJSON_OPTIONAL(value, "stringParameters", _mapStringParameters);
-    RAVE_DESERIALIZEJSON_OPTIONAL(value, "forcedAdjacentLinks", _vForcedAdjacentLinks);
+    GetJsonValueByKey(value, "name", _name);
+    GetJsonValueByKey(value, "transform", _t);
+    GetJsonValueByKey(value, "massTransform", _tMassFrame);
+    GetJsonValueByKey(value, "mass", _mass);
+    GetJsonValueByKey(value, "intertialMoments", _vinertiamoments);
+    GetJsonValueByKey(value, "floatParameters", _mapFloatParameters);
+    GetJsonValueByKey(value, "intParameters", _mapIntParameters);
+    GetJsonValueByKey(value, "stringParameters", _mapStringParameters);
+    GetJsonValueByKey(value, "forcedAdjacentLinks", _vForcedAdjacentLinks);
 
     _t.trans *= fUnitScale;
     _tMassFrame.trans *= fUnitScale;
 
     if (value.HasMember("geometryinfos")) {
-        RAVE_DESERIALIZEJSON_ENSURE_ARRAY(value["geometryinfos"]);
-
         _vgeometryinfos.resize(0);
         _vgeometryinfos.reserve(value["geometryinfos"].Size());
         for (size_t i = 0; i < value["geometryinfos"].Size(); ++i) {
@@ -103,8 +97,8 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, const dRe
     // TODO(jsonserialization)
     // extraGeometries
 
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "isStatic", _bStatic);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "isEnabled", _bIsEnabled);
+    GetJsonValueByKey(value, "isStatic", _bStatic);
+    GetJsonValueByKey(value, "isEnabled", _bIsEnabled);
 }
 
 

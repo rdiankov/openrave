@@ -164,7 +164,7 @@ enum OpenRAVEErrorCode {
     ORE_InconsistentConstraints=8, ///< returned solutions or trajectories do not follow the constraints of the planner/module. The constraints invalidated here are planning constraints, not programming constraints.
     ORE_NotInitialized=9, ///< when object is used without it getting fully initialized
     ORE_InvalidState=10, ///< the state of the object is not consistent with its parameters, or cannot be used. This is usually due to a programming error where a vector is not the correct length, etc.
-    ORE_Timeout=11, ///< process timed out
+    ORE_Timeout=11 ///< process timed out.
 };
 
 /// \brief Exception that all OpenRAVE internal methods throw; the error codes are held in \ref OpenRAVEErrorCode.
@@ -2753,9 +2753,6 @@ const std::string& IkParameterization::GetName() const
 
 } // end namespace OpenRAVE
 
-#if OPENRAVE_RAPIDJSON
-#include <openrave/json.h>
-#endif
 
 BOOST_STATIC_ASSERT(OPENRAVE_VERSION_MAJOR>=0&&OPENRAVE_VERSION_MAJOR<=255);
 BOOST_STATIC_ASSERT(OPENRAVE_VERSION_MINOR>=0&&OPENRAVE_VERSION_MINOR<=255);

@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
-
+#include <openrave/openravejson.h>
 namespace OpenRAVE {
 
 bool KinBody::Grab(KinBodyPtr pbody, LinkPtr plink)
@@ -313,20 +313,18 @@ void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vgrabbedinfo)
 
 void KinBody::GrabbedInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, int options) const
 {
-    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "grabbedName", _grabbedname);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "robotLinkName", _robotlinkname);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", _trelative);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "robotLinksToIgnoreSet", _setRobotLinksToIgnore);
+    SetJsonValueByKey(value, "grabbedName", _grabbedname, allocator);
+    SetJsonValueByKey(value, "robotLinkName", _robotlinkname, allocator);
+    SetJsonValueByKey(value, "transform", _trelative, allocator);
+    SetJsonValueByKey(value, "robotLinksToIgnoreSet", _setRobotLinksToIgnore, allocator);
 }
 
 void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv)
 {
-    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "grabbedName", _grabbedname);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "robotLinkName", _robotlinkname);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "transform", _trelative);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "robotLinksToIgnoreSet", _setRobotLinksToIgnore);
+    GetJsonValueByKey(value, "grabbedName", _grabbedname);
+    GetJsonValueByKey(value, "robotLinkName", _robotlinkname);
+    GetJsonValueByKey(value, "transform", _trelative);
+    GetJsonValueByKey(value, "robotLinksToIgnoreSet", _setRobotLinksToIgnore);
 }
 
 void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vgrabbedinfo)

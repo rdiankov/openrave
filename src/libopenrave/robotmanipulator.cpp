@@ -15,35 +15,31 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
-
+#include <openrave/openravejson.h>
 namespace OpenRAVE {
 
 void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
-    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
-
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", _name);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", _tLocalTool);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "chuckingDirections", _vChuckingDirection);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "direction", _vdirection);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "baseLInkName", _sBaseLinkName);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "effectorLinkName", _sEffectorLinkName);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "iksolverType", _sIkSolverXMLId);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "gripperJointNames", _vGripperJointNames);
+    SetJsonValueByKey(value, "name", _name, allocator);
+    SetJsonValueByKey(value, "transform", _tLocalTool, allocator);
+    SetJsonValueByKey(value, "chuckingDirections", _vChuckingDirection, allocator);
+    SetJsonValueByKey(value, "direction", _vdirection, allocator);
+    SetJsonValueByKey(value, "baseLInkName", _sBaseLinkName, allocator);
+    SetJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName, allocator);
+    SetJsonValueByKey(value, "iksolverType", _sIkSolverXMLId, allocator);
+    SetJsonValueByKey(value, "gripperJointNames", _vGripperJointNames, allocator);
 }
 
 void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv)
 {
-    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
-
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "name", _name);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "transform", _tLocalTool);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "chuckingDirections", _vChuckingDirection);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "direction", _vdirection);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "baseLInkName", _sBaseLinkName);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "effectorLinkName", _sEffectorLinkName);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "iksolverType", _sIkSolverXMLId);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "gripperJointNames", _vGripperJointNames);
+    GetJsonValueByKey(value, "name", _name);
+    GetJsonValueByKey(value, "transform", _tLocalTool);
+    GetJsonValueByKey(value, "chuckingDirections", _vChuckingDirection);
+    GetJsonValueByKey(value, "direction", _vdirection);
+    GetJsonValueByKey(value, "baseLInkName", _sBaseLinkName);
+    GetJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName);
+    GetJsonValueByKey(value, "iksolverType", _sIkSolverXMLId);
+    GetJsonValueByKey(value, "gripperJointNames", _vGripperJointNames);
 }
 
 RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::ManipulatorInfo& info) : _info(info), __probot(probot) {
