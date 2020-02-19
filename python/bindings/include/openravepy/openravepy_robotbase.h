@@ -102,6 +102,7 @@ public:
 
         object FindIKSolutions(object oparam, object freeparams, int filteroptions, bool ikreturn=false, bool releasegil=false) const;
 
+        object GetIkParameterization(bool inworld=true);
         object GetIkParameterization(object oparam, bool inworld=true);
 
         object GetChildJoints();

@@ -578,6 +578,11 @@ object PyRobotBase::PyManipulator::FindIKSolutions(object oparam, object freepar
     }
 }
 
+object PyRobotBase::PyManipulator::GetIkParameterization(bool inworld)
+{
+    return toPyIkParameterization(_pmanip->GetIkParameterization(OpenRAVE::IkParameterizationType::IKP_Transform6D, inworld));
+}
+
 object PyRobotBase::PyManipulator::GetIkParameterization(object oparam, bool inworld)
 {
     IkParameterization ikparam;
@@ -1646,7 +1651,8 @@ PyRobotBasePtr RaveCreateRobot(PyEnvironmentBasePtr pyenv, const std::string& na
 }
 
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetIkParameterization_overloads, GetIkParameterization, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetIkParameterization_overloads1, GetIkParameterization, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetIkParameterization_overloads2, GetIkParameterization, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckEndEffectorCollision_overloads, CheckEndEffectorCollision, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckEndEffectorSelfCollision_overloads, CheckEndEffectorSelfCollision, 1, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolution_overloads, FindIKSolution, 2, 4)
@@ -1960,6 +1966,9 @@ void init_openravepy_robot()
         bool (PyRobotBase::PyManipulator::*pCheckIndependentCollision1)() const = &PyRobotBase::PyManipulator::CheckIndependentCollision;
         bool (PyRobotBase::PyManipulator::*pCheckIndependentCollision2)(PyCollisionReportPtr) const = &PyRobotBase::PyManipulator::CheckIndependentCollision;
 
+        object (PyRobotBase::PyManipulator::*getikparameterization1)(bool) = &PyRobotBase::PyManipulator::GetIkParameterization;
+        object (PyRobotBase::PyManipulator::*getikparameterization2)(object, bool) = &PyRobotBase::PyManipulator::GetIkParameterization;
+
         std::string GetIkParameterization_doc = std::string(DOXY_FN(RobotBase::Manipulator,GetIkParameterization "const IkParameterization; bool")) + std::string(DOXY_FN(RobotBase::Manipulator,GetIkParameterization "IkParameterizationType; bool"));
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         class_<PyRobotBase::PyManipulator, OPENRAVE_SHARED_PTR<PyRobotBase::PyManipulator> >(m, "Manipulator", DOXY_CLASS(RobotBase::Manipulator))
@@ -2025,13 +2034,18 @@ void init_openravepy_robot()
         .def("FindIKSolutions",pmanipiksf,FindIKSolutionsFree_overloads(PY_ARGS("param","freevalues","filteroptions","ikreturn","releasegil") DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; const std::vector; std::vector; int")))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        .def("GetIkParameterization", &PyRobotBase::PyManipulator::GetIkParameterization,
+        .def("GetIkParameterization", getikparameterization1,
+            "inworld"_a = true,
+            GetIkParameterization_doc.c_str()
+        )
+        .def("GetIkParameterization", getikparameterization2,
             "iktype"_a,
             "inworld"_a = true,
             GetIkParameterization_doc.c_str()
         )
 #else
-        .def("GetIkParameterization",&PyRobotBase::PyManipulator::GetIkParameterization, GetIkParameterization_overloads(PY_ARGS("iktype","inworld") GetIkParameterization_doc.c_str()))
+        .def("GetIkParameterization", getikparameterization1, GetIkParameterization_overloads1(PY_ARGS("inworld") GetIkParameterization_doc.c_str()))
+        .def("GetIkParameterization", getikparameterization2, GetIkParameterization_overloads2(PY_ARGS("iktype","inworld") GetIkParameterization_doc.c_str()))
 #endif
         .def("GetBase",&PyRobotBase::PyManipulator::GetBase, DOXY_FN(RobotBase::Manipulator,GetBase))
         .def("GetEndEffector",&PyRobotBase::PyManipulator::GetEndEffector, DOXY_FN(RobotBase::Manipulator,GetEndEffector))
