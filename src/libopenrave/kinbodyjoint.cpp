@@ -15,7 +15,6 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
-#include <openrave/openravejson.h>
 #include <algorithm>
 #include <boost/algorithm/string.hpp> // boost::trim
 #include <boost/lexical_cast.hpp>

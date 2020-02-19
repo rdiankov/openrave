@@ -15,7 +15,6 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
-#include <openrave/openravejson.h>
 #include <boost/make_shared.hpp>
 
 namespace OpenRAVE {

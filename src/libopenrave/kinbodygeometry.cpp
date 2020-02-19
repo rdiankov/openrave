@@ -16,7 +16,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "libopenrave.h"
-#include <openrave/kinbodygeometry.h>
+
 namespace OpenRAVE {
 
 #define GTS_M_ICOSAHEDRON_X /* sqrt(sqrt(5)+1)/sqrt(2*sqrt(5)) */ \
