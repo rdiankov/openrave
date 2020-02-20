@@ -168,7 +168,7 @@ void KinBody::Release(KinBody &body)
             bool bpointermatch = pgrabbedbody.get() == &body;
             bool bnamematch = pgrabbedbody->GetName() == body.GetName();
             if( bpointermatch != bnamematch ) {
-                RAVELOG_WARN_FORMAT("env=%d, body %s has grabbed body %s (%d), but it does not match with %s (%d) ", GetEnv()->GetId()%pgrabbedbody->GetName()%pgrabbedbody->GetEnvironmentId()%body.GetName()%body.GetEnvironmentId());
+                RAVELOG_WARN_FORMAT("env=%d, body %s has grabbed body %s (%d), but it does not match with %s (%d) ", GetEnv()->GetId()%GetName()%pgrabbedbody->GetName()%pgrabbedbody->GetEnvironmentId()%body.GetName()%body.GetEnvironmentId());
             }
             if( bpointermatch ) {
                 _vGrabbedBodies.erase(itgrabbed);
