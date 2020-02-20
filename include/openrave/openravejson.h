@@ -109,13 +109,7 @@ inline std::string GetJsonTypeName(const rapidjson::Value& v) {
     }
 }
 
-// forward declaration
 template<class T> inline std::string GetJsonString(const T& t);
-inline void LoadJsonValue(const rapidjson::Value& v, JsonSerializable& t);
-inline void LoadJsonValue(const rapidjson::Value& v, std::string& t);
-inline void LoadJsonValue(const rapidjson::Value& v, int& t);
-template<class T> inline void LoadJsonValue(const rapidjson::Value& v, std::vector<T>& t);
-template<class T, size_t N> inline void LoadJsonValue(const rapidjson::Value& v, std::array<T, N>& t);
 
 inline std::string DumpJson(const rapidjson::Value& value, const unsigned int indent=0) {
     rapidjson::StringBuffer stringbuffer;
@@ -180,6 +174,57 @@ public:
         SaveToJson(d, d.GetAllocator());
     }
 };
+
+
+// forward declares
+// LoadJsonValue
+inline void LoadJsonValue(const rapidjson::Value& v, JsonSerializable& t);
+inline void LoadJsonValue(const rapidjson::Value& v, std::string& t);
+inline void LoadJsonValue(const rapidjson::Value& v, int& t);
+inline void LoadJsonValue(const rapidjson::Value& v, uint8_t& t);
+inline void LoadJsonValue(const rapidjson::Value& v, unsigned long long& t);
+inline void LoadJsonValue(const rapidjson::Value& v, uint64_t& t);
+inline void LoadJsonValue(const rapidjson::Value& v, int64_t& t);
+inline void LoadJsonValue(const rapidjson::Value& v, double& t);
+inline void LoadJsonValue(const rapidjson::Value& v, float& t);
+inline void LoadJsonValue(const rapidjson::Value& v, bool& t);
+template<class T> inline void LoadJsonValue(const rapidjson::Value& v, RaveVector<T>& t);
+template<class T> inline void LoadJsonValue(const rapidjson::Value& v, boost::shared_ptr<T>& ptr);
+template<class T, size_t N> inline void LoadJsonValue(const rapidjson::Value& v, boost::array<T, N>& t);
+template<class T, class U> inline void LoadJsonValue(const rapidjson::Value& v, std::pair<T, U>& t);
+template<class T, size_t N> inline void LoadJsonValue(const rapidjson::Value& v, T (&p)[N]);
+template<class T> inline void LoadJsonValue(const rapidjson::Value& v, std::vector<T>& t);
+template<class T, size_t N> inline void LoadJsonValue(const rapidjson::Value& v, std::array<T, N>& t);
+template<class T> inline void LoadJsonValue(const rapidjson::Value& v, std::set<T>& t);
+template<class U> inline void LoadJsonValue(const rapidjson::Value& v, std::map<std::string, U>& t);
+template<class T> inline void LoadJsonValue(const rapidjson::Value& v, RaveTransform<T>& t);
+// SaveJsonValue
+inline void SaveJsonValue(rapidjson::Value& v, const JsonSerializable& t, rapidjson::Document::AllocatorType& alloc);
+inline void SaveJsonValue(rapidjson::Value& v, const std::string& t, rapidjson::Document::AllocatorType& alloc);
+inline void SaveJsonValue(rapidjson::Value& v, const char* t, rapidjson::Document::AllocatorType& alloc);
+inline void SaveJsonValue(rapidjson::Value& v, int t, rapidjson::Document::AllocatorType& alloc);
+inline void SaveJsonValue(rapidjson::Value& v, unsigned int t, rapidjson::Document::AllocatorType& alloc);
+inline void SaveJsonValue(rapidjson::Value& v, long long t, rapidjson::Document::AllocatorType& alloc);
+inline void SaveJsonValue(rapidjson::Value& v, int64_t t, rapidjson::Document::AllocatorType& alloc);
+inline void SaveJsonValue(rapidjson::Value& v, unsigned long long t, rapidjson::Document::AllocatorType& alloc);
+inline void SaveJsonValue(rapidjson::Value& v, uint64_t t, rapidjson::Document::AllocatorType& alloc);
+inline void SaveJsonValue(rapidjson::Value& v, bool t, rapidjson::Document::AllocatorType& alloc);
+inline void SaveJsonValue(rapidjson::Value& v, double t, rapidjson::Document::AllocatorType& alloc);
+inline void SaveJsonValue(rapidjson::Value& v, float t, rapidjson::Document::AllocatorType& alloc);
+inline void SaveJsonValue(rapidjson::Value& v, const rapidjson::Value& t, rapidjson::Document::AllocatorType& alloc);
+template<class T> inline void SaveJsonValue(rapidjson::Value& v, const boost::shared_ptr<T>& ptr, rapidjson::Document::AllocatorType& alloc);
+template<class T, class U> inline void SaveJsonValue(rapidjson::Value& v, const std::pair<T, U>& t, rapidjson::Document::AllocatorType& alloc);
+template<class T> inline void SaveJsonValue(rapidjson::Value& v, const std::set<T>& t, rapidjson::Document::AllocatorType& alloc);
+template<class T> inline void SaveJsonValue(rapidjson::Value& v, const RaveTransform<T>& t, rapidjson::Document::AllocatorType& alloc);
+template<class T> inline void SaveJsonValue(rapidjson::Value& v, const std::vector<T>& t, rapidjson::Document::AllocatorType& alloc);
+template<class T> inline void SaveJsonValue(rapidjson::Value& v, const RaveVector<T>& t, rapidjson::Document::AllocatorType& alloc);
+template<class T, size_t N> inline void SaveJsonValue(rapidjson::Value& v, const std::array<T, N>& t, rapidjson::Document::AllocatorType& alloc);
+template<class T, size_t N> inline void SaveJsonValue(rapidjson::Value& v, const boost::array<T, N>& t, rapidjson::Document::AllocatorType& alloc);
+template<> inline void SaveJsonValue(rapidjson::Value& v, const std::vector<double>& t, rapidjson::Document::AllocatorType& alloc);
+template<size_t N> inline void SaveJsonValue(rapidjson::Value& v, const double (&t)[N], rapidjson::Document::AllocatorType& alloc);
+template<size_t N> inline void SaveJsonValue(rapidjson::Value& v, const std::array<double, N>& t, rapidjson::Document::AllocatorType& alloc);
+template<class T> inline void SaveJsonValue(rapidjson::Value& v, const std::map<std::string, T>& t, rapidjson::Document::AllocatorType& alloc);
+template<class T> inline void SaveJsonValue(rapidjson::Document& v, const T& t);
 
 
 //store a json value to local data structures
@@ -247,7 +292,6 @@ inline void LoadJsonValue(const rapidjson::Value& v, uint64_t& t) {
     }
 }
 
-
 inline void LoadJsonValue(const rapidjson::Value& v, int64_t& t) {
     if (v.IsInt64()) {
         t = v.GetInt64();
@@ -289,7 +333,6 @@ inline void LoadJsonValue(const rapidjson::Value& v, bool& t) {
         throw OpenRAVEJSONException("Cannot convert json type " + GetJsonString(v) + " to Bool", ORJE_InvalidArguments);
     }
 }
-
 
 template<class T>
 inline void LoadJsonValue(const rapidjson::Value& v, RaveVector<T>& t) {
@@ -507,9 +550,6 @@ inline void SaveJsonValue(rapidjson::Value& v, const rapidjson::Value& t, rapidj
     v.CopyFrom(t, alloc);
 }
 
-template<class T> inline void SaveJsonValue(rapidjson::Value& v, const std::vector<T>& t, rapidjson::Document::AllocatorType& alloc);
-template<class T, size_t N>inline void SaveJsonValue(rapidjson::Value& v, const std::array<T, N>& t, rapidjson::Document::AllocatorType& alloc);
-
 /** do not remove: otherwise boost::shared_ptr could be treated as bool
  */
 template<class T>
@@ -538,8 +578,8 @@ inline void SaveJsonValue(rapidjson::Value& v, const std::set<T>& t, rapidjson::
     }
 }
 
-template<class T> inline void SaveJsonValue(rapidjson::Value& v, const RaveTransform<T>& t, rapidjson::Document::AllocatorType& alloc)
-{
+template<class T>
+inline void SaveJsonValue(rapidjson::Value& v, const RaveTransform<T>& t, rapidjson::Document::AllocatorType& alloc) {
     v.SetArray();
 
     for(size_t i = 0; i < 4; i++) {
@@ -553,6 +593,7 @@ template<class T> inline void SaveJsonValue(rapidjson::Value& v, const RaveTrans
         v.PushBack(tmpv, alloc);
     }
 }
+
 template<class T>
 inline void SaveJsonValue(rapidjson::Value& v, const std::vector<T>& t, rapidjson::Document::AllocatorType& alloc) {
     v.SetArray();
@@ -625,10 +666,10 @@ inline void SaveJsonValue(rapidjson::Value& v, const std::array<double, N>& t, r
     }
 }
 
-template<class U>
-inline void SaveJsonValue(rapidjson::Value& v, const std::map<std::string, U>& t, rapidjson::Document::AllocatorType& alloc) {
+template<class T>
+inline void SaveJsonValue(rapidjson::Value& v, const std::map<std::string, T>& t, rapidjson::Document::AllocatorType& alloc) {
     v.SetObject();
-    for (typename std::map<std::string, U>::const_iterator it = t.begin(); it != t.end(); ++it) {
+    for (typename std::map<std::string, T>::const_iterator it = t.begin(); it != t.end(); ++it) {
         rapidjson::Value name, value;
         SaveJsonValue(name, it->first, alloc);
         SaveJsonValue(value, it->second, alloc);
@@ -802,6 +843,6 @@ inline void UpdateJson(rapidjson::Document& a, const rapidjson::Value& b) {
 }
 
 } // namespace openravejson
-namespace openravejson = OpenRAVE;
+namespace openravejson = OpenRAVE; // PlannerStatus is using openravejson
 #endif
 #endif
