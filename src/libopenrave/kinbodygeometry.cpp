@@ -605,24 +605,6 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
     GetJsonValueByKey(value, "modifiable", _bModifiable);
 }
 
-
-
-// void RaveSerializeJSON(rapidjson::Value &rSideWall, rapidjson::Document::AllocatorType& allocator, const KinBody::GeometryInfo::SideWall& sidewall)
-// {
-//     SetJsonValueByKey(rSideWall, "transform", sidewall.transf, allocator);
-//     SetJsonValueByKey(rSideWall, "halfExtents", sidewall.vExtents, allocator);
-//     SetJsonValueByKey(rSideWall, "type", (int)sidewall.type, allocator);
-// }
-
-// void RaveDeserializeJSON(const rapidjson::Value &value, KinBody::GeometryInfo::SideWall& sidewall)
-// {
-//     GetJsonValueByKey(value, "transform", sidewall.transf);
-//     GetJsonValueByKey(value, "halfExtents", sidewall.vExtents);
-//     int type=0;
-//     GetJsonValueByKey(value, "type", type);
-//     sidewall.type = (KinBody::GeometryInfo::SideWallType)type;
-// }
-
 AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const
 {
     AABB ab;
