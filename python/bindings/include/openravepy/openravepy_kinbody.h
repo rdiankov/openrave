@@ -126,12 +126,12 @@ public:
         return toPyObject(doc);
     }
 
-    void DeserializeJSON(py::object obj, PyEnvironmentBasePtr penv)
+    void DeserializeJSON(py::object obj)
     {
         rapidjson::Document doc;
         toRapidJSONValue(obj, doc, doc.GetAllocator());
         KinBody::GrabbedInfo info;
-        info.DeserializeJSON(doc, GetEnvironment(penv));
+        info.DeserializeJSON(doc);
         _Update(info);
     }
 

@@ -4165,7 +4165,7 @@ void init_openravepy_kinbody()
 #else
                          .def("SerializeJSON", &PyKinBody::PyGrabbedInfo::SerializeJSON, PyGrabbedInfo_SerializeJSON_overloads(PY_ARGS("options") DOXY_FN(KinBody::GrabbedInfo, SerializeJSON)))
 #endif // USE_PYBIND11_PYTHON_BINDINGS
-                         .def("DeserializeJSON", &PyKinBody::PyGrabbedInfo::DeserializeJSON, PY_ARGS("obj", "penv") DOXY_FN(KinBody::GrabbedInfo, DeserializeJSON))
+                         .def("DeserializeJSON", &PyKinBody::PyGrabbedInfo::DeserializeJSON, PY_ARGS("obj") DOXY_FN(KinBody::GrabbedInfo, DeserializeJSON))
                          .def("__str__",&PyKinBody::PyGrabbedInfo::__str__)
                          .def("__unicode__",&PyKinBody::PyGrabbedInfo::__unicode__)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

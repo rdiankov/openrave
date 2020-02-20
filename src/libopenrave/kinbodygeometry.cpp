@@ -508,7 +508,7 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Do
 
     case GT_TriMesh:
         SetJsonValueByKey(value, "type", "trimesh", allocator);
-        // TODO: SetJsonValueByKey(value, allocator, "mesh", _meshcollision);
+        SetJsonValueByKey(value, "mesh", _meshcollision, allocator);
         break;
 
     default:
@@ -588,11 +588,11 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
     }
     else if (typestr == "trimesh" or typestr == "mesh") {
         _type = GT_TriMesh;
-        // TODO: GetJsonValueByKey(value, "mesh", _meshcollision);
+        GetJsonValueByKey(value, "mesh", _meshcollision);
 
-        // FOREACH(itvertex, _meshcollision.vertices) {
-        //     *itvertex *= fUnitScale;
-        // }
+        FOREACH(itvertex, _meshcollision.vertices) {
+            *itvertex *= fUnitScale;
+        }
     }
     else {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported geometry type \"%s\"", typestr, ORE_InvalidArguments);
