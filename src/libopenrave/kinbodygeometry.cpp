@@ -431,6 +431,26 @@ bool KinBody::GeometryInfo::ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume
     }
 }
 
+inline void SaveJsonValue(rapidjson::Value& v, const KinBody::GeometryInfo::SideWall& t, rapidjson::Document::AllocatorType& alloc) {
+    v.SetObject();
+    SetJsonValueByKey(v, "transform", t.transf, alloc);
+    SetJsonValueByKey(v, "halfExtents", t.vExtents, alloc);
+    SetJsonValueByKey(v, "type", (int)t.type, alloc);
+}
+
+inline void LoadJsonValue(const rapidjson::Value& v, KinBody::GeometryInfo::SideWall& t) {
+    if(v.IsObject()) {
+        GetJsonValueByKey(v, "transform", t.transf);
+        GetJsonValueByKey(v, "halfExtents", t.vExtents);
+        int type = 0;
+        GetJsonValueByKey(v, "type", type);
+        t.type = (KinBody::GeometryInfo::SideWallType)type;
+    } else {
+        throw OpenRAVEJSONException("Cannot convert json type " + GetJsonTypeName(v) + " to OpenRAVE::Geometry::SideWall");
+    }
+}
+
+
 void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options)
 {
     // RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "sid", sid);
@@ -472,7 +492,7 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Do
         if( _vGeomData2.z > g_fEpsilon ) {
             SetJsonValueByKey(value, "innerSizeZ", _vGeomData2.z*fUnitScale, allocator);
         }
-        //TODO: SetJsonValueByKey(value, "sideWalls", vScaledSideWalls, allocator);
+        SetJsonValueByKey(value, "sideWalls", vScaledSideWalls, allocator);
         break;
     }
     case GT_Sphere:
@@ -545,7 +565,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         GetJsonValueByKey(value, "innerSizeZ", _vGeomData2.z);
         _vGeomData2 *= fUnitScale;
 
-        //TODO: GetJsonValueByKey(value, "sideWalls", _vSideWalls);
+        GetJsonValueByKey(value, "sideWalls", _vSideWalls);
         FOREACH(itsidewall, _vSideWalls) {
             itsidewall->transf.trans *= fUnitScale;
             itsidewall->vExtents *= fUnitScale;
