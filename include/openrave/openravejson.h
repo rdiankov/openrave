@@ -26,7 +26,6 @@
 #include <rapidjson/writer.h>
 #include <rapidjson/error/en.h>
 #include <rapidjson/prettywriter.h>
-#include <openrave/openrave.h>
 
 namespace OpenRAVE {
 enum OpenRAVEJSONErrorCode
