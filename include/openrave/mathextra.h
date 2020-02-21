@@ -116,8 +116,8 @@ inline double* inv4(const double* pf, double* pfres);
 
 /// extract eigen values and vectors from a 2x2 matrix and returns true if all values are real
 /// returned eigen vectors are normalized
-template <typename T>
-inline bool eig2(const T* pfmat, T* peigs, T& fv1x, T& fv1y, T& fv2x, T& fv2y);
+OPENRAVE_API bool eig2(const float* pfmat, float* peigs, float& fv1x, float& fv1y, float& fv2x, float& fv2y);
+OPENRAVE_API bool eig2(const double* pfmat, double* peigs, double& fv1x, double& fv1y, double& fv2x, double& fv2y);
 
 // Simple routines for linear algebra algorithms //
 
@@ -208,48 +208,6 @@ template <typename T> inline bool inv2(T* pf, T* pfres);
 ///////////////////////
 // Function Definitions
 ///////////////////////
-template <typename T>
-bool eig2(const T* pfmat, T* peigs, T& fv1x, T& fv1y, T& fv2x, T& fv2y)
-{
-    // x^2 + bx + c
-    T a, b, c, d;
-    b = -(pfmat[0] + pfmat[3]);
-    c = pfmat[0] * pfmat[3] - pfmat[1] * pfmat[2];
-    d = b * b - 4.0f * c + 1e-16f;
-    if( d < 0 ) {
-        return false;
-    }
-    if( d < 1e-16f ) {
-        a = -0.5f * b;
-        peigs[0] = a;
-        peigs[1] = a;
-        fv1x = pfmat[1];
-        fv1y = a - pfmat[0];
-        c = 1 / sqrt(fv1x*fv1x + fv1y*fv1y);
-        fv1x *= c;
-        fv1y *= c;
-        fv2x = -fv1y;
-        fv2y = fv1x;
-        return true;
-    }
-    // two roots
-    d = sqrt(d);
-    a = -0.5f * (b + d);
-    peigs[0] = a;
-    fv1x = pfmat[1];
-    fv1y = a-pfmat[0];
-    c = 1 / sqrt(fv1x*fv1x + fv1y*fv1y);
-    fv1x *= c;
-    fv1y *= c;
-    a += d;
-    peigs[1] = a;
-    fv2x = pfmat[1];
-    fv2y = a-pfmat[0];
-    c = 1 / sqrt(fv2x*fv2x + fv2y*fv2y);
-    fv2x *= c;
-    fv2y *= c;
-    return true;
-}
 
 // returns the number of real roots, fills r1 and r2 with the answers
 template <typename T>
