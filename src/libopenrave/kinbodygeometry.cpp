@@ -525,29 +525,29 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Do
 
 void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale)
 {
-    GetJsonValueByKey(value, "name", _name);
-    GetJsonValueByKey(value, "transform", _t);
+    LoadJsonValueByKey(value, "name", _name);
+    LoadJsonValueByKey(value, "transform", _t);
 
     _t.trans *= fUnitScale;
 
     std::string typestr;
-    GetJsonValueByKey(value, "type", typestr);
+    LoadJsonValueByKey(value, "type", typestr);
 
     if (typestr == "box") {
         _type = GT_Box;
-        GetJsonValueByKey(value, "halfExtents", _vGeomData);
+        LoadJsonValueByKey(value, "halfExtents", _vGeomData);
         _vGeomData *= fUnitScale;
     }
     else if (typestr == "container") {
         _type = GT_Container;
-        GetJsonValueByKey(value, "outerExtents", _vGeomData);
-        GetJsonValueByKey(value, "innerExtents", _vGeomData2);
+        LoadJsonValueByKey(value, "outerExtents", _vGeomData);
+        LoadJsonValueByKey(value, "innerExtents", _vGeomData2);
 
         _vGeomData3 = Vector();
-        GetJsonValueByKey(value, "bottomCross", _vGeomData3);
+        LoadJsonValueByKey(value, "bottomCross", _vGeomData3);
 
         _vGeomData4 = Vector();
-        GetJsonValueByKey(value, "bottom", _vGeomData4);
+        LoadJsonValueByKey(value, "bottom", _vGeomData4);
 
         _vGeomData *= fUnitScale;
         _vGeomData2 *= fUnitScale;
@@ -556,16 +556,16 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
     }
     else if (typestr == "cage") {
         _type = GT_Cage;
-        GetJsonValueByKey(value, "baseExtents", _vGeomData);
+        LoadJsonValueByKey(value, "baseExtents", _vGeomData);
         _vGeomData *= fUnitScale;
 
         _vGeomData2 = Vector();
-        GetJsonValueByKey(value, "innerSizeX", _vGeomData2.x);
-        GetJsonValueByKey(value, "innerSizeY", _vGeomData2.y);
-        GetJsonValueByKey(value, "innerSizeZ", _vGeomData2.z);
+        LoadJsonValueByKey(value, "innerSizeX", _vGeomData2.x);
+        LoadJsonValueByKey(value, "innerSizeY", _vGeomData2.y);
+        LoadJsonValueByKey(value, "innerSizeZ", _vGeomData2.z);
         _vGeomData2 *= fUnitScale;
 
-        GetJsonValueByKey(value, "sideWalls", _vSideWalls);
+        LoadJsonValueByKey(value, "sideWalls", _vSideWalls);
         FOREACH(itsidewall, _vSideWalls) {
             itsidewall->transf.trans *= fUnitScale;
             itsidewall->vExtents *= fUnitScale;
@@ -573,14 +573,14 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
     }
     else if (typestr == "sphere") {
         _type = GT_Sphere;
-        GetJsonValueByKey(value, "radius", _vGeomData.x);
+        LoadJsonValueByKey(value, "radius", _vGeomData.x);
 
         _vGeomData *= fUnitScale;
     }
     else if (typestr == "cylinder") {
         _type = GT_Cylinder;
-        GetJsonValueByKey(value, "radius", _vGeomData.x);
-        GetJsonValueByKey(value, "height", _vGeomData.y);
+        LoadJsonValueByKey(value, "radius", _vGeomData.x);
+        LoadJsonValueByKey(value, "height", _vGeomData.y);
 
         _vGeomData.x *= fUnitScale;
         _vGeomData.y *= fUnitScale;
@@ -588,7 +588,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
     }
     else if (typestr == "trimesh" or typestr == "mesh") {
         _type = GT_TriMesh;
-        GetJsonValueByKey(value, "mesh", _meshcollision);
+        LoadJsonValueByKey(value, "mesh", _meshcollision);
 
         FOREACH(itvertex, _meshcollision.vertices) {
             *itvertex *= fUnitScale;
@@ -598,11 +598,11 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported geometry type \"%s\"", typestr, ORE_InvalidArguments);
     }
 
-    GetJsonValueByKey(value, "transparency", _fTransparency);
-    GetJsonValueByKey(value, "visible", _bVisible);
-    GetJsonValueByKey(value, "diffuseColor", _vDiffuseColor);
-    GetJsonValueByKey(value, "ambientColor", _vAmbientColor);
-    GetJsonValueByKey(value, "modifiable", _bModifiable);
+    LoadJsonValueByKey(value, "transparency", _fTransparency);
+    LoadJsonValueByKey(value, "visible", _bVisible);
+    LoadJsonValueByKey(value, "diffuseColor", _vDiffuseColor);
+    LoadJsonValueByKey(value, "ambientColor", _vAmbientColor);
+    LoadJsonValueByKey(value, "modifiable", _bModifiable);
 }
 
 AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const

@@ -2530,6 +2530,18 @@ void SensorBase::SensorGeometry::Serialize(BaseXMLWriterPtr writer, int options)
     }
 }
 
+void SensorBase::SensorGeometry::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, int options) const
+{
+    if(hardware_id.size() > 0) {
+        SetJsonValueByKey(value, "hardware_id", hardware_id, allocator);
+    }
+}
+
+void SensorBase::SensorGeometry::DeserializeJSON(const rapidjson::Value& value)
+{
+    LoadJsonValueByKey(value, "hardware_id", hardware_id);
+}
+
 void SensorBase::CameraGeomData::Serialize(BaseXMLWriterPtr writer, int options) const
 {
     SensorGeometry::Serialize(writer, options);
@@ -2567,6 +2579,31 @@ void SensorBase::CameraGeomData::Serialize(BaseXMLWriterPtr writer, int options)
         atts.clear();
     }
 }
+
+void SensorBase::CameraGeomData::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, int options) const
+{
+    SensorBase::SensorGeometry::SerializeJSON(value, allocator, options);
+    SetJsonValueByKey(value, "sensor_reference", sensor_reference, allocator);
+    SetJsonValueByKey(value, "target_region", target_region, allocator);
+    SetJsonValueByKey(value, "intrinstics", intrinsics, allocator);
+    SetJsonValueByKey(value, "width", width, allocator);
+    SetJsonValueByKey(value, "height", height, allocator);
+    SetJsonValueByKey(value, "measurement_time", measurement_time, allocator);
+    SetJsonValueByKey(value, "gain", gain, allocator);
+}
+
+void SensorBase::CameraGeomData::DeserializeJSON(const rapidjson::Value& value)
+{
+    SensorBase::SensorGeometry::DeserializeJSON(value);
+    LoadJsonValueByKey(value, "sensor_reference", sensor_reference);
+    LoadJsonValueByKey(value, "target_region", target_region);
+    LoadJsonValueByKey(value, "intrinstics", intrinsics);
+    LoadJsonValueByKey(value, "width", width);
+    LoadJsonValueByKey(value, "height", height);
+    LoadJsonValueByKey(value, "measurement_time", measurement_time);
+    LoadJsonValueByKey(value, "gain", gain);
+}
+
 
 void SensorBase::Serialize(BaseXMLWriterPtr writer, int options) const
 {

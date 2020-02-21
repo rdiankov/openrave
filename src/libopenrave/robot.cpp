@@ -26,24 +26,21 @@ void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapid
     SetJsonValueByKey(value, "transform", _trelative, allocator);
     SetJsonValueByKey(value, "type", _sensorname, allocator);
 
-    // TODO: SensorGeometry
     rapidjson::Value sensorGeometryValue;
-    // if(!!_sensorgeometry)
-    // {
-    // 	_sensorgeometry->SerializzeJSON(sensorGeometryValue, allocator, options);
-    // }
-    // RAVE_SERIALIZEJSON_REQUIRED(value, "sensorGeometry", sensorGeometryValue);
-
-
+    if(!!_sensorgeometry)
+    {
+        _sensorgeometry->SerializeJSON(sensorGeometryValue, allocator, options);
+    }
+    SetJsonValueByKey(value, "sensorGeometry", sensorGeometryValue, allocator);
 }
+
 void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv)
 {
-    GetJsonValueByKey(value, "name", _name);
-    GetJsonValueByKey(value, "linkName", _linkname);
-    GetJsonValueByKey(value, "transform", _trelative);
-    GetJsonValueByKey(value, "type", _sensorname);
+    LoadJsonValueByKey(value, "name", _name);
+    LoadJsonValueByKey(value, "linkName", _linkname);
+    LoadJsonValueByKey(value, "transform", _trelative);
+    LoadJsonValueByKey(value, "type", _sensorname);
 
-	// TODO: SensorGeometry
     if(value.HasMember("sensorGeometry")) {
     	SensorBasePtr psensor = RaveCreateSensor(penv, value["type"].GetString());
     	BaseJSONReaderPtr preader = RaveCallJSONReader(PT_Sensor, _sensorname, psensor, AttributesList());
