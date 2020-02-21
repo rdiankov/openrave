@@ -827,8 +827,8 @@ private:
     {
 public:
         boost::array< std::string, 3>  _equations;         ///< the original equations
-        void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) const;
-        void DeserializeJSON(const rapidjson::Value& value);
+        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) const;
+        virtual void DeserializeJSON(const rapidjson::Value& value);
     };
     typedef boost::shared_ptr<MimicInfo> MimicInfoPtr;
     typedef boost::shared_ptr<MimicInfo const> MimicInfoConstPtr;
@@ -881,8 +881,8 @@ public:
 
         virtual int GetDOF() const;
 
-        void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, int options=0) const;
-        void DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv, const dReal fUnitScale=1);
+        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, int options=0) const;
+        virtual void DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv, const dReal fUnitScale=1);
 
         JointType _type; /// The joint type
         std::string _name;         ///< the unique joint name

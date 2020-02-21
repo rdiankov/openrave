@@ -61,8 +61,22 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
         value.AddMember("geometryinfos", geometriesValue, allocator);
     }
 
-    // TODO(jsonserialization)
-    // _mapExtraGeometries
+    if(_mapExtraGeometries.size() > 0 ){
+        std::map<std::string, rapidjson::Value> mGeomInfos;
+        vector<rapidjson::Value> vGeomInfos;
+
+        FOREACHC(im, _mapExtraGeometries) {
+            rapidjson::Value rExtraGeometries;
+            rExtraGeometries.SetArray();
+            FOREACHC(iv, im->second){
+                rapidjson::Value rGeomInfo;
+                (*iv)->SerializeJSON(rGeomInfo, allocator);
+                rExtraGeometries.PushBack(rGeomInfo, allocator);
+            }
+            mGeomInfos[im->first] = rExtraGeometries;
+        }
+        SetJsonValueByKey(value, "extraGeometries", mGeomInfos, allocator);
+    }
 
     SetJsonValueByKey(value, "isStatic", _bStatic, allocator);
     SetJsonValueByKey(value, "isEnabled", _bIsEnabled, allocator);
@@ -70,15 +84,15 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
 
 void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale)
 {
-    GetJsonValueByKey(value, "name", _name);
-    GetJsonValueByKey(value, "transform", _t);
-    GetJsonValueByKey(value, "massTransform", _tMassFrame);
-    GetJsonValueByKey(value, "mass", _mass);
-    GetJsonValueByKey(value, "intertialMoments", _vinertiamoments);
-    GetJsonValueByKey(value, "floatParameters", _mapFloatParameters);
-    GetJsonValueByKey(value, "intParameters", _mapIntParameters);
-    GetJsonValueByKey(value, "stringParameters", _mapStringParameters);
-    GetJsonValueByKey(value, "forcedAdjacentLinks", _vForcedAdjacentLinks);
+    LoadJsonValueByKey(value, "name", _name);
+    LoadJsonValueByKey(value, "transform", _t);
+    LoadJsonValueByKey(value, "massTransform", _tMassFrame);
+    LoadJsonValueByKey(value, "mass", _mass);
+    LoadJsonValueByKey(value, "intertialMoments", _vinertiamoments);
+    LoadJsonValueByKey(value, "floatParameters", _mapFloatParameters);
+    LoadJsonValueByKey(value, "intParameters", _mapIntParameters);
+    LoadJsonValueByKey(value, "stringParameters", _mapStringParameters);
+    LoadJsonValueByKey(value, "forcedAdjacentLinks", _vForcedAdjacentLinks);
 
     _t.trans *= fUnitScale;
     _tMassFrame.trans *= fUnitScale;
@@ -96,8 +110,8 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, const dRe
     // TODO(jsonserialization)
     // extraGeometries
 
-    GetJsonValueByKey(value, "isStatic", _bStatic);
-    GetJsonValueByKey(value, "isEnabled", _bIsEnabled);
+    LoadJsonValueByKey(value, "isStatic", _bStatic);
+    LoadJsonValueByKey(value, "isEnabled", _bIsEnabled);
 }
 
 

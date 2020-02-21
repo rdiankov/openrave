@@ -105,24 +105,24 @@ void ElectricMotorActuatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson
 
 void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv)
 {
-    GetJsonValueByKey(value, "modelType", model_type);
-    GetJsonValueByKey(value, "assignedPowerRating", assigned_power_rating);
-    GetJsonValueByKey(value, "maxSpeed", max_speed);
-    GetJsonValueByKey(value, "noLoadSpeed", no_load_speed);
-    GetJsonValueByKey(value, "stallTorque", stall_torque);
-    GetJsonValueByKey(value, "maxInstantaneousTorque", max_instantaneous_torque);
-    GetJsonValueByKey(value, "nominalSpeedTorquePoints", nominal_speed_torque_points);
-    GetJsonValueByKey(value, "maxSpeedTorquePoints", max_speed_torque_points);
-    GetJsonValueByKey(value, "nominalTorque", nominal_torque);
-    GetJsonValueByKey(value, "rotorInertia", rotor_inertia);
-    GetJsonValueByKey(value, "torqueConstant", torque_constant);
-    GetJsonValueByKey(value, "nominalVoltage", nominal_voltage);
-    GetJsonValueByKey(value, "speedConstant", speed_constant);
-    GetJsonValueByKey(value, "startingCurrent", starting_current);
-    GetJsonValueByKey(value, "terminalResistance", terminal_resistance);
-    GetJsonValueByKey(value, "gearRatio", gear_ratio);
-    GetJsonValueByKey(value, "coloumbFriction", coloumb_friction);
-    GetJsonValueByKey(value, "viscousFriction", viscous_friction);
+    LoadJsonValueByKey(value, "modelType", model_type);
+    LoadJsonValueByKey(value, "assignedPowerRating", assigned_power_rating);
+    LoadJsonValueByKey(value, "maxSpeed", max_speed);
+    LoadJsonValueByKey(value, "noLoadSpeed", no_load_speed);
+    LoadJsonValueByKey(value, "stallTorque", stall_torque);
+    LoadJsonValueByKey(value, "maxInstantaneousTorque", max_instantaneous_torque);
+    LoadJsonValueByKey(value, "nominalSpeedTorquePoints", nominal_speed_torque_points);
+    LoadJsonValueByKey(value, "maxSpeedTorquePoints", max_speed_torque_points);
+    LoadJsonValueByKey(value, "nominalTorque", nominal_torque);
+    LoadJsonValueByKey(value, "rotorInertia", rotor_inertia);
+    LoadJsonValueByKey(value, "torqueConstant", torque_constant);
+    LoadJsonValueByKey(value, "nominalVoltage", nominal_voltage);
+    LoadJsonValueByKey(value, "speedConstant", speed_constant);
+    LoadJsonValueByKey(value, "startingCurrent", starting_current);
+    LoadJsonValueByKey(value, "terminalResistance", terminal_resistance);
+    LoadJsonValueByKey(value, "gearRatio", gear_ratio);
+    LoadJsonValueByKey(value, "coloumbFriction", coloumb_friction);
+    LoadJsonValueByKey(value, "viscousFriction", viscous_friction);
 }
 
 KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)

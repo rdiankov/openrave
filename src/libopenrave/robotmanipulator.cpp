@@ -31,14 +31,14 @@ void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value &value, rapidjso
 
 void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv)
 {
-    GetJsonValueByKey(value, "name", _name);
-    GetJsonValueByKey(value, "transform", _tLocalTool);
-    GetJsonValueByKey(value, "chuckingDirections", _vChuckingDirection);
-    GetJsonValueByKey(value, "direction", _vdirection);
-    GetJsonValueByKey(value, "baseLInkName", _sBaseLinkName);
-    GetJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName);
-    GetJsonValueByKey(value, "iksolverType", _sIkSolverXMLId);
-    GetJsonValueByKey(value, "gripperJointNames", _vGripperJointNames);
+    LoadJsonValueByKey(value, "name", _name);
+    LoadJsonValueByKey(value, "transform", _tLocalTool);
+    LoadJsonValueByKey(value, "chuckingDirections", _vChuckingDirection);
+    LoadJsonValueByKey(value, "direction", _vdirection);
+    LoadJsonValueByKey(value, "baseLInkName", _sBaseLinkName);
+    LoadJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName);
+    LoadJsonValueByKey(value, "iksolverType", _sIkSolverXMLId);
+    LoadJsonValueByKey(value, "gripperJointNames", _vGripperJointNames);
 }
 
 RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::ManipulatorInfo& info) : _info(info), __probot(probot) {

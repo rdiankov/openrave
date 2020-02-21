@@ -164,7 +164,7 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
 void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv, const dReal fUnitScale)
 {
     std::string typestr;
-    GetJsonValueByKey(value, "type", typestr);
+    LoadJsonValueByKey(value, "type", typestr);
 
     if (typestr == "revolute")
     {
@@ -178,26 +178,26 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, Environm
     {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported joint type \"%s\"", typestr, ORE_InvalidArguments);
     }
-    GetJsonValueByKey(value, "name", _name);
-    GetJsonValueByKey(value, "parentLinkName", _linkname0);
-    GetJsonValueByKey(value, "anchors", _vanchor);
-    GetJsonValueByKey(value, "childLinkName", _linkname1);
-    GetJsonValueByKey(value, "axes", _vaxes);
-    GetJsonValueByKey(value, "currentValues", _vcurrentvalues);
-    GetJsonValueByKey(value, "resolutions", _vresolution);
-    GetJsonValueByKey(value, "maxvel", _vmaxvel);
-    GetJsonValueByKey(value, "hardMaxVel", _vhardmaxvel);
-    GetJsonValueByKey(value, "maxAccel", _vmaxaccel);
-    GetJsonValueByKey(value, "hardMaxAccel", _vhardmaxaccel);
-    GetJsonValueByKey(value, "maxJerk", _vmaxjerk);
-    GetJsonValueByKey(value, "hardMaxJerk", _vhardmaxjerk);
-    GetJsonValueByKey(value, "maxTorque", _vmaxtorque);
-    GetJsonValueByKey(value, "maxInertia", _vmaxinertia);
-    GetJsonValueByKey(value, "weights", _vweights);
-    GetJsonValueByKey(value, "offsets", _voffsets);
-    GetJsonValueByKey(value, "upperlimit", _vupperlimit);
-    GetJsonValueByKey(value, "isCircular", _bIsCircular);
-    GetJsonValueByKey(value, "isActive", _bIsActive);
+    LoadJsonValueByKey(value, "name", _name);
+    LoadJsonValueByKey(value, "parentLinkName", _linkname0);
+    LoadJsonValueByKey(value, "anchors", _vanchor);
+    LoadJsonValueByKey(value, "childLinkName", _linkname1);
+    LoadJsonValueByKey(value, "axes", _vaxes);
+    LoadJsonValueByKey(value, "currentValues", _vcurrentvalues);
+    LoadJsonValueByKey(value, "resolutions", _vresolution);
+    LoadJsonValueByKey(value, "maxvel", _vmaxvel);
+    LoadJsonValueByKey(value, "hardMaxVel", _vhardmaxvel);
+    LoadJsonValueByKey(value, "maxAccel", _vmaxaccel);
+    LoadJsonValueByKey(value, "hardMaxAccel", _vhardmaxaccel);
+    LoadJsonValueByKey(value, "maxJerk", _vmaxjerk);
+    LoadJsonValueByKey(value, "hardMaxJerk", _vhardmaxjerk);
+    LoadJsonValueByKey(value, "maxTorque", _vmaxtorque);
+    LoadJsonValueByKey(value, "maxInertia", _vmaxinertia);
+    LoadJsonValueByKey(value, "weights", _vweights);
+    LoadJsonValueByKey(value, "offsets", _voffsets);
+    LoadJsonValueByKey(value, "upperlimit", _vupperlimit);
+    LoadJsonValueByKey(value, "isCircular", _bIsCircular);
+    LoadJsonValueByKey(value, "isActive", _bIsActive);
 
     // multiply fUnitScale on maxVel, maxAccel, lowerLimit, upperLimit
 
@@ -229,9 +229,9 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, Environm
     }
     _vmimic = newmimic;
 
-    GetJsonValueByKey(value, "floatParameters", _mapFloatParameters);
-    GetJsonValueByKey(value, "intParameters", _mapIntParameters);
-    GetJsonValueByKey(value, "stringParameters", _mapStringParameters);
+    LoadJsonValueByKey(value, "floatParameters", _mapFloatParameters);
+    LoadJsonValueByKey(value, "intParameters", _mapIntParameters);
+    LoadJsonValueByKey(value, "stringParameters", _mapStringParameters);
 
     if (value.HasMember("electricMotorActuator")) {
         ElectricMotorActuatorInfoPtr info(new ElectricMotorActuatorInfo());
@@ -2003,7 +2003,7 @@ void KinBody::MimicInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
 
 void KinBody::MimicInfo::DeserializeJSON(const rapidjson::Value& value)
 {
-    GetJsonValueByKey(value, "equations", _equations);
+    LoadJsonValueByKey(value, "equations", _equations);
 }
 
 }

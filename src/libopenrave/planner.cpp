@@ -183,35 +183,35 @@ PlannerStatus& PlannerStatus::SetPlannerParameters(PlannerParametersConstPtr par
 void PlannerStatus::SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Document::AllocatorType& alloc) const
 {
     rPlannerStatus.SetObject();
-    openravejson::SetJsonValueByKey(rPlannerStatus, "errorOrigin", errorOrigin, alloc);
-    openravejson::SetJsonValueByKey(rPlannerStatus, "description", description, alloc);
-    openravejson::SetJsonValueByKey(rPlannerStatus, "statusCode", statusCode, alloc);
+    SetJsonValueByKey(rPlannerStatus, "errorOrigin", errorOrigin, alloc);
+    SetJsonValueByKey(rPlannerStatus, "description", description, alloc);
+    SetJsonValueByKey(rPlannerStatus, "statusCode", statusCode, alloc);
     if(jointValues.size() > 0) {
-        openravejson::SetJsonValueByKey(rPlannerStatus, "jointValues", jointValues, alloc);
+        SetJsonValueByKey(rPlannerStatus, "jointValues", jointValues, alloc);
     }
 
     if(report != NULL) {
         rapidjson::Value reportjson(rapidjson::kObjectType);
         if(!!report->plink1) {
-            openravejson::SetJsonValueByKey(reportjson, "plink1", report->plink1->GetName(), alloc);
+            SetJsonValueByKey(reportjson, "plink1", report->plink1->GetName(), alloc);
         }
         if(!!report->plink2) {
-            openravejson::SetJsonValueByKey(reportjson, "plink2", report->plink2->GetName(), alloc);
+            SetJsonValueByKey(reportjson, "plink2", report->plink2->GetName(), alloc);
         }
         rapidjson::Value reportContactsjson(rapidjson::kObjectType);
         for (size_t i=0; i<report->contacts.size(); ++i) {
             rapidjson::Value reportContactsPosjson(rapidjson::kObjectType);
-            openravejson::SetJsonValueByKey(reportContactsPosjson, "x", report->contacts[i].pos.x, alloc);
-            openravejson::SetJsonValueByKey(reportContactsPosjson, "y", report->contacts[i].pos.y, alloc);
-            openravejson::SetJsonValueByKey(reportContactsPosjson, "z", report->contacts[i].pos.z, alloc);
+            SetJsonValueByKey(reportContactsPosjson, "x", report->contacts[i].pos.x, alloc);
+            SetJsonValueByKey(reportContactsPosjson, "y", report->contacts[i].pos.y, alloc);
+            SetJsonValueByKey(reportContactsPosjson, "z", report->contacts[i].pos.z, alloc);
 
             rapidjson::Value rname;
-            openravejson::SaveJsonValue(rname, std::to_string(i), alloc);
+            SaveJsonValue(rname, std::to_string(i), alloc);
             reportContactsjson.AddMember(rname, reportContactsPosjson, alloc);
         }
-        openravejson::SetJsonValueByKey(reportjson, "contacts", reportContactsjson, alloc);
+        SetJsonValueByKey(reportjson, "contacts", reportContactsjson, alloc);
         //Eventually, serialization could be in openravejson.h
-        openravejson::SetJsonValueByKey(rPlannerStatus, "collisionReport", reportjson, alloc);
+        SetJsonValueByKey(rPlannerStatus, "collisionReport", reportjson, alloc);
     }
 
     //Eventually, serialization could be in openravejson.h ?
@@ -219,7 +219,7 @@ void PlannerStatus::SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Docu
         std::stringstream ss;
         ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
         ss << ikparam;
-        openravejson::SetJsonValueByKey(rPlannerStatus, "ikparam", ss.str(), alloc);
+        SetJsonValueByKey(rPlannerStatus, "ikparam", ss.str(), alloc);
     }
 }
 

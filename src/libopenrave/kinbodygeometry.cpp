@@ -440,10 +440,10 @@ inline void SaveJsonValue(rapidjson::Value& v, const KinBody::GeometryInfo::Side
 
 inline void LoadJsonValue(const rapidjson::Value& v, KinBody::GeometryInfo::SideWall& t) {
     if(v.IsObject()) {
-        GetJsonValueByKey(v, "transform", t.transf);
-        GetJsonValueByKey(v, "halfExtents", t.vExtents);
+        LoadJsonValueByKey(v, "transform", t.transf);
+        LoadJsonValueByKey(v, "halfExtents", t.vExtents);
         int type = 0;
-        GetJsonValueByKey(v, "type", type);
+        LoadJsonValueByKey(v, "type", type);
         t.type = (KinBody::GeometryInfo::SideWallType)type;
     } else {
         throw OpenRAVEJSONException("Cannot convert json type " + GetJsonTypeName(v) + " to OpenRAVE::Geometry::SideWall");

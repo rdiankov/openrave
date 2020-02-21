@@ -106,10 +106,10 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
 
 void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value, EnvironmentBasePtr penv)
 {
-    GetJsonValueByKey(value, "name", _name);
-    GetJsonValueByKey(value, "linkName", _linkname);
-    GetJsonValueByKey(value, "url", _url);
-    GetJsonValueByKey(value, "transform", _trelative);
+    LoadJsonValueByKey(value, "name", _name);
+    LoadJsonValueByKey(value, "linkName", _linkname);
+    LoadJsonValueByKey(value, "url", _url);
+    LoadJsonValueByKey(value, "transform", _trelative);
 
     if(value.HasMember("linkInfos"))
     {
@@ -154,7 +154,7 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
             _vAttachedSensorInfos.push_back(attachedsensorinfo);
         }
     }
-    GetJsonValueByKey(value, "isActive", _bIsActive);
+    LoadJsonValueByKey(value, "isActive", _bIsActive);
 }
 
 
