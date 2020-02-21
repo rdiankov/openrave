@@ -42,14 +42,7 @@ void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& valu
     LoadJsonValueByKey(value, "type", _sensorname);
 
     if(value.HasMember("sensorGeometry")) {
-    	SensorBasePtr psensor = RaveCreateSensor(penv, value["type"].GetString());
-    	BaseJSONReaderPtr preader = RaveCallJSONReader(PT_Sensor, _sensorname, psensor, AttributesList());
-    	if(!!preader) {
-    		preader->DeserializeJSON(value["sensorGeometry"]);
-    		if(!!preader->GetReadable()) {
-    			_sensorgeometry = boost::dynamic_pointer_cast<SensorBase::SensorGeometry>(preader->GetReadable());
-    		}
-    	}
+        RAVELOG_WARN("Not support SensorGeometry DeserializeJSON");
     }
 }
 
