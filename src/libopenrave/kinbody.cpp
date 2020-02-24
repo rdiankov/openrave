@@ -434,7 +434,6 @@ void KinBody::GetDOFValues(std::vector<dReal>& vdofvalues, const std::vector<int
 void KinBody::GetDOFIntervalIndices(std::vector<int>& vintindices, const std::vector<int>& vdofindices) const {
     CHECK_INTERNAL_COMPUTATION;
     const size_t ndofindices = vdofindices.size();
-    const dReal twopi = 2.0 * M_PI;
     
     if( ndofindices == 0 ) {
         vintindices.clear();
@@ -450,7 +449,7 @@ void KinBody::GetDOFIntervalIndices(std::vector<int>& vintindices, const std::ve
             OPENRAVE_ASSERT_OP_FORMAT0(toadd,           ==, 0, "only support one-dof joint for now", ORE_NotImplemented);
             OPENRAVE_ASSERT_OP_FORMAT0(joint->GetDOF(), ==, 1, "only support one-dof joint for now", ORE_NotImplemented);
             joint->GetValues(vdofvalues, true);
-            vintindices.push_back(joint->IsRevolute(0) ? ceil((vdofvalues.back() - M_PI)/twopi) : 0);
+            vintindices.push_back(joint->IsRevolute(0) ? geometry::ComputeTwoPiIntervalIndex(vdofvalues.back()) : 0);
         }
     }
     else {
@@ -463,7 +462,7 @@ void KinBody::GetDOFIntervalIndices(std::vector<int>& vintindices, const std::ve
             if(pjoint->IsRevolute(0)) {
                 const dReal dofvalue = pjoint->GetValue(dofindex - pjoint->GetDOFIndex());
                 // (-pi, pi] has 2*pi interval index 0, (-3*pi, -pi] index -1, (pi, 3*pi] index 1, etc.
-                vintindices[i] = ceil((dofvalue - M_PI)/twopi);
+                vintindices[i] = geometry::ComputeTwoPiIntervalIndex(dofvalue);
             }
             ++i;
         }

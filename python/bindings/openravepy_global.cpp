@@ -1162,8 +1162,7 @@ object ComputeTwoPiIntervalIndices(object orevolutejointvalues) {
         return py::empty_array_astype<dReal>();
     }
     const std::vector<dReal> vrevolutejointvalues = ExtractArray<dReal>(orevolutejointvalues);
-    const size_t n = vrevolutejointvalues.size();
-    if( n == 0 ) {
+    if( vrevolutejointvalues.empty() ) {
         return py::empty_array_astype<dReal>();
     }
     return toPyArray(OpenRAVE::geometry::ComputeTwoPiIntervalIndices<dReal>(vrevolutejointvalues));

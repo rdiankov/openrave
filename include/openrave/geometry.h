@@ -2866,7 +2866,6 @@ std::vector<int> ComputeTwoPiIntervalIndices(const std::vector<T>& vjvals) {
     const size_t n = vjvals.size();
     std::vector<int> vintindices(n, 0);
     for(size_t i = 0; i < n; ++i) {
-#define TWOPI 6.2831853071795864769252
         vintindices[i] = ComputeTwoPiIntervalIndex(vjvals[i]);
     }
     return vintindices;
