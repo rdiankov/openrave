@@ -165,7 +165,7 @@ public:
 
 #if OPENRAVE_RAPIDJSON
         ///< \param multiply all translational values by fUnitScale
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale=1.0, int options=0);
+        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale=1.0, int options=0) const;
 
         ///< \param multiply all translational values by fUnitScale
         virtual void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale = 1);
@@ -252,7 +252,7 @@ public:
         LinkInfo(const LinkInfo& other);
         LinkInfo& operator=(const LinkInfo& other);
 
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
+        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale = 1);
 
         std::vector<GeometryInfoPtr> _vgeometryinfos;

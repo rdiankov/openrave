@@ -27,7 +27,7 @@ KinBody::LinkInfo::LinkInfo(const LinkInfo& other) : XMLReadable("link")
     *this = other;
 }
 
-void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
+void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options) const
 {
     SetJsonValueByKey(value, "name", _name, allocator);
     SetJsonValueByKey(value, "transform", _t, allocator);
