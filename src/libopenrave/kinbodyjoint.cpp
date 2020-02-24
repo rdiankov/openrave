@@ -113,7 +113,8 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
     SetJsonValueByKey(value, "maxInertia", _vmaxinertia, allocator);
     SetJsonValueByKey(value, "weights", _vweights, allocator);
     SetJsonValueByKey(value, "offsets", _voffsets, allocator);
-    SetJsonValueByKey(value, "upperlimit", _vupperlimit, allocator);
+    SetJsonValueByKey(value, "lowerLimit", _vlowerlimit, allocator);
+    SetJsonValueByKey(value, "upperLimit", _vupperlimit, allocator);
     // TODO: SetJsonValueByKey(value, allocator, "trajfollow", _trajfollow);
 
     if (_vmimic.size() > 0) {
@@ -195,7 +196,8 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, Environm
     LoadJsonValueByKey(value, "maxInertia", _vmaxinertia);
     LoadJsonValueByKey(value, "weights", _vweights);
     LoadJsonValueByKey(value, "offsets", _voffsets);
-    LoadJsonValueByKey(value, "upperlimit", _vupperlimit);
+    LoadJsonValueByKey(value, "lowerLimit", _vlowerlimit);
+    LoadJsonValueByKey(value, "upperLimit", _vupperlimit);
     LoadJsonValueByKey(value, "isCircular", _bIsCircular);
     LoadJsonValueByKey(value, "isActive", _bIsActive);
 
