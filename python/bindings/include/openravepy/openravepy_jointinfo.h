@@ -100,7 +100,10 @@ public:
     object _tMassFrame = ReturnTransform(Transform());
     dReal _mass = 0.0;
     object _vinertiamoments = toPyVector3(Vector(1,1,1));
-    py::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters, _mapExtraGeometries;
+    py::dict _mapFloatParameters;
+    py::dict _mapIntParameters;
+    py::dict _mapStringParameters;
+    py::dict _mapExtraGeometries;
     object _vForcedAdjacentLinks = py::list();
     bool _bStatic = false;
     bool _bIsEnabled = true;

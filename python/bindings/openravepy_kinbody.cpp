@@ -1469,7 +1469,7 @@ PyJointPtr toPyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv)
         return PyJointPtr();
     }
 }
-PyGeometryInfoPtr toPyGeometryInfo(const KinBody::GeometryInfo geominfo)
+PyGeometryInfoPtr toPyGeometryInfo(const KinBody::GeometryInfo& geominfo)
 {
     return PyGeometryInfoPtr(new PyGeometryInfo(geominfo));
 }
