@@ -78,8 +78,6 @@ public:
     object _vCollisionScale = toPyVector3(Vector(1,1,1));
 
     py::list _vSideWalls;
-    py::dict _mapExtraGeometries;
-
     float _containerBaseHeight = 0.0;
     float _fTransparency = 0.0;
     bool _bVisible = true;
@@ -102,7 +100,7 @@ public:
     object _tMassFrame = ReturnTransform(Transform());
     dReal _mass = 0.0;
     object _vinertiamoments = toPyVector3(Vector(1,1,1));
-    py::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters;
+    py::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters, _mapExtraGeometries;
     object _vForcedAdjacentLinks = py::list();
     bool _bStatic = false;
     bool _bIsEnabled = true;

@@ -381,6 +381,16 @@ object toPyArray(const Transform& t)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
+object toPyArray(const std::vector<KinBody::GeometryInfoPtr>& infos)
+{
+    py::list pyvalues;
+    for(size_t i = 0; i < infos.size(); ++i) {
+        pyvalues.append(toPyGeometryInfo(*infos[i]));
+    }
+    return pyvalues;
+}
+
+
 AttributesList toAttributesList(py::dict odict)
 {
     AttributesList atts;
