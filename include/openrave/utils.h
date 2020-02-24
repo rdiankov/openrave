@@ -286,21 +286,15 @@ inline T ClampOnRange(T value, T min, T max)
 }
 
 template <typename T>
-inline T NormalizeCircularAngle(T theta, T min, T max)
+inline T NormalizeCircularAngle(T theta, const T min, const T max)
 {
-    T range = max-min;
-    BOOST_ASSERT(range>0);
-    if (theta < min) {
+    const T range = max - min;
+    BOOST_ASSERT(range > 0);
+    while (theta < min) {
         theta += range;
-        while (theta < min) {
-            theta += range;
-        }
     }
-    else if (theta > max) {
+    while (theta > max) {
         theta -= range;
-        while (theta > max) {
-            theta -= range;
-        }
     }
     return theta;
 }
@@ -308,7 +302,7 @@ inline T NormalizeCircularAngle(T theta, T min, T max)
 template <typename T>
 inline T SubtractCircularAngle(T f0, T f1)
 {
-    const T PI = T(3.14159265358979323846);
+    const T PI(M_PI);
     return NormalizeCircularAngle(f0-f1, T(-PI), T(PI));
 }
 

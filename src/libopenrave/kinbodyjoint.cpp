@@ -327,10 +327,10 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
             vec3 = axis2cur.cross(vec1);
             f = 2.0*RaveAtan2(vec3.dot(vec2), vec1.dot(vec2));
             if( f < -PI ) {
-                f += 2*PI;
+                f += M_TWO_PI;
             }
             else if( f > PI ) {
-                f -= 2*PI;
+                f -= M_TWO_PI;
             }
             pValues.push_back(GetClosestValueAlongCircle(_info._voffsets[1]+f, _doflastsetvalues[1]));
             break;
@@ -374,10 +374,10 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
                 }
                 // expect values to be within -PI to PI range
                 if( f < -PI ) {
-                    f += 2*PI;
+                    f += M_TWO_PI;
                 }
                 else if( f > PI ) {
-                    f -= 2*PI;
+                    f -= M_TWO_PI;
                 }
                 pValues.push_back(GetClosestValueAlongCircle(_info._voffsets[i]+f, _doflastsetvalues[i]));
             }
@@ -408,10 +408,10 @@ dReal KinBody::Joint::GetValue(int iaxis) const
                 vec3 = _vaxes[0].cross(vec1);
                 f = 2.0*RaveAtan2(vec3.dot3(vec2), vec1.dot3(vec2));
                 if( f < -PI ) {
-                    f += 2*PI;
+                    f += M_TWO_PI;
                 }
                 else if( f > PI ) {
-                    f -= 2*PI;
+                    f -= M_TWO_PI;
                 }
                 return GetClosestValueAlongCircle(_info._voffsets[0]+f, _doflastsetvalues[0]);
             }
@@ -421,10 +421,10 @@ dReal KinBody::Joint::GetValue(int iaxis) const
                 vec3 = axis2cur.cross(vec1);
                 f = 2.0*RaveAtan2(vec3.dot(vec2), vec1.dot(vec2));
                 if( f < -PI ) {
-                    f += 2*PI;
+                    f += M_TWO_PI;
                 }
                 else if( f > PI ) {
-                    f -= 2*PI;
+                    f -= M_TWO_PI;
                 }
                 return GetClosestValueAlongCircle(_info._voffsets[1]+f, _doflastsetvalues[1]);
             }
@@ -499,10 +499,10 @@ dReal KinBody::Joint::GetValue(int iaxis) const
             f = 2.0f*RaveAtan2(tjoint.rot.y*_vaxes[0].x+tjoint.rot.z*_vaxes[0].y+tjoint.rot.w*_vaxes[0].z, tjoint.rot.x);
             // expect values to be within -PI to PI range
             if( f < -PI ) {
-                f += 2*PI;
+                f += M_TWO_PI;
             }
             else if( f > PI ) {
-                f -= 2*PI;
+                f -= M_TWO_PI;
             }
             return GetClosestValueAlongCircle(_info._voffsets[0]+f, _doflastsetvalues[0]);
         }
@@ -525,10 +525,10 @@ dReal KinBody::Joint::GetValue(int iaxis) const
                 }
                 // expect values to be within -PI to PI range
                 if( f < -PI ) {
-                    f += 2*PI;
+                    f += M_TWO_PI;
                 }
                 else if( f > PI ) {
-                    f -= 2*PI;
+                    f -= M_TWO_PI;
                 }
                 if( i == iaxis ) {
                     return GetClosestValueAlongCircle(_info._voffsets[i]+f, _doflastsetvalues[i]);

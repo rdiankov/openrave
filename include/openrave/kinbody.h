@@ -1753,7 +1753,7 @@ private:
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
     virtual void GetDOFValues(std::vector<dReal>& v, const std::vector<int>& dofindices = {}) const;
 
-    /** \brief Returns 2*PI interval indices for all joint values as organized by the DOF indices
+    /** \brief Returns M_TWO_PI interval indices for all joint values as organized by the DOF indices
       For a revolute  joint, index is 0 for (-pi, pi], -1 for (-3*pi, -pi], 1 for (pi, 3*pi], etc.
       For a prismatic joint, index is always 0.
     */

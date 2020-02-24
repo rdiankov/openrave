@@ -523,7 +523,7 @@ void IvJointDragger::UpdateSkeleton()
                 vjoints.at(d+0) = fang+_jointoffset;
                 if( pjoint->IsRevolute(0) ) {
                     if( vjoints.at(d) < vlower.at(d) ) {
-                        if( vlower.at(d)-vjoints.at(d) < vjoints.at(d)+2*PI-vupper.at(d) ) {
+                        if( vlower.at(d)-vjoints.at(d) < vjoints.at(d)+M_TWO_PI-vupper.at(d) ) {
                             vjoints[d] = vlower[d];
                         }
                         else {
@@ -531,7 +531,7 @@ void IvJointDragger::UpdateSkeleton()
                         }
                     }
                     else if( vjoints.at(d) > vupper.at(d) ) {
-                        if( vlower.at(d)-vjoints.at(d)+2*PI < vjoints.at(d)-vupper.at(d) ) {
+                        if( vlower.at(d)-vjoints.at(d)+M_TWO_PI < vjoints.at(d)-vupper.at(d) ) {
                             vjoints[d] = vlower[d];
                         }
                         else {

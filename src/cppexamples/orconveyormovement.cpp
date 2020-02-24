@@ -74,7 +74,7 @@ public:
                 InstancedBody b;
                 for(int iter = 0; iter < 10; ++iter) {
                     Transform t;
-                    t.rot = geometry::quatFromAxisAngle<dReal>(Vector(0,0,1),vsample.at(1)*2*PI);
+                    t.rot = geometry::quatFromAxisAngle<dReal>(Vector(0,0,1),vsample.at(1)*M_TWO_PI);
                     t.trans = start + Vector(vsample.at(2)-0.5,vsample.at(3)-0.5,0)*0.4;
                     pbody->SetTransform(t);
                     if( !GetEnv()->CheckCollision(KinBodyConstPtr(pbody)) ) {

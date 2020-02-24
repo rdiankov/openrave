@@ -240,23 +240,23 @@ inline void SerializeRound(std::ostream& o, const RaveTransformMatrix<T>& t)
 inline int CountCircularBranches(dReal angle)
 {
     if( angle > PI ) {
-        return static_cast<int>((angle+PI)/(2*PI));
+        return static_cast<int>((angle+PI)/(M_TWO_PI));
     }
     else if( angle < -PI ) {
-        return static_cast<int>((angle-PI)/(2*PI));
+        return static_cast<int>((angle-PI)/(M_TWO_PI));
     }
     return 0;
 }
 
-/// returns a value=angle+2*PI*N such that value is closest to testvalue
+/// returns a value=angle+M_TWO_PI*N such that value is closest to testvalue
 inline dReal GetClosestValueAlongCircle(dReal angle, dReal testvalue)
 {
     int n = static_cast<int>((testvalue-angle)/PI);
     if( n >= 1 ) {
-        return angle + static_cast<dReal>((n+1)/2)*2*PI;
+        return angle + static_cast<dReal>((n+1)/2)*M_TWO_PI;
     }
     else if( n <= -1 ) {
-        return angle + static_cast<dReal>((n-1)/2)*2*PI;
+        return angle + static_cast<dReal>((n-1)/2)*M_TWO_PI;
     }
     return angle;
 }
