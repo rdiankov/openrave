@@ -781,6 +781,11 @@ protected:
         return true;
     }
 
+    virtual bool GetRobotPoseStates(const std::vector<dReal>& solution, std::vector<int>& vstates) const {
+        // dummy implementation
+        return true;
+    }
+
     virtual RobotBase::ManipulatorPtr GetManipulator() const {
         return RobotBase::ManipulatorPtr(_pmanip);
     }
