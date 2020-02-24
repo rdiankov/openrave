@@ -188,6 +188,13 @@ public:
      */
     virtual bool GetFreeIndices(std::vector<int>& vFreeIndices) const = 0;
 
+    /** \brief gets a set of possible states of a robot's pose, determined solely by joint values
+
+        \param[out] States of a robot's pose
+        \return true if succeeded
+     */
+    virtual bool GetRobotPoseStates(const std::vector<dReal>& solution, std::vector<int>& vstates) const = 0;
+
     /** \brief Return a joint configuration for the given end effector transform.
 
         \param[in] param the pose the end effector has to achieve in the manipulator base's coordinate system. Note that the end effector pose takes into account the grasp coordinate frame for the RobotBase::Manipulator

@@ -126,6 +126,7 @@ IkReturn PyIkSolverBase::_CallCustomFilter(object fncallback, PyEnvironmentBaseP
 
 PyIkSolverBase::PyIkSolverBase(IkSolverBasePtr pIkSolver, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pIkSolver, pyenv), _pIkSolver(pIkSolver) {
 }
+
 PyIkSolverBase::~PyIkSolverBase() {
 }
 
@@ -136,6 +137,7 @@ IkSolverBasePtr PyIkSolverBase::GetIkSolver() {
 int PyIkSolverBase::GetNumFreeParameters() const {
     return _pIkSolver->GetNumFreeParameters();
 }
+
 object PyIkSolverBase::GetFreeParameters() const {
     if( _pIkSolver->GetNumFreeParameters() == 0 ) {
         return py::empty_array_astype<dReal>();
@@ -143,6 +145,19 @@ object PyIkSolverBase::GetFreeParameters() const {
     std::vector<dReal> values;
     _pIkSolver->GetFreeParameters(values);
     return toPyArray(values);
+}
+
+object PyIkSolverBase::GetRobotPoseStates(object ojointvalues) const {
+    if( IS_PYTHONOBJECT_NONE(ojointvalues) ) {
+        return py::empty_array_astype<dReal>();
+    }
+    if(_pIkSolver == nullptr) {
+        RAVELOG_WARN("_pIkSolver == nullptr");
+    }
+    const std::vector<dReal> vjointvalues = ExtractArray<dReal>(ojointvalues);
+    std::vector<int> vstates;
+    _pIkSolver->GetRobotPoseStates(vjointvalues, vstates);
+    return toPyArray(vstates);
 }
 
 PyIkReturnPtr PyIkSolverBase::Solve(object oparam, object oq0, int filteroptions)
@@ -363,6 +378,7 @@ void init_openravepy_iksolver()
         .def("SolveAll",SolveAllFree, PY_ARGS("ikparam","freeparameters","filteroptions") DOXY_FN(IkSolverBase, SolveAll "const IkParameterization&; const std::vector; int; std::vector<IkReturnPtr>"))
         .def("GetNumFreeParameters",&PyIkSolverBase::GetNumFreeParameters, DOXY_FN(IkSolverBase,GetNumFreeParameters))
         .def("GetFreeParameters",&PyIkSolverBase::GetFreeParameters, DOXY_FN(IkSolverBase,GetFreeParameters))
+        .def("GetRobotPoseStates",&PyIkSolverBase::GetRobotPoseStates, DOXY_FN(IkSolverBase,GetRobotPoseStates))
         .def("Supports",&PyIkSolverBase::Supports, PY_ARGS("iktype") DOXY_FN(IkSolverBase,Supports))
         .def("CallFilters",&PyIkSolverBase::CallFilters, PY_ARGS("ikparam") DOXY_FN(IkSolverBase,CallFilters))
         .def("RegisterCustomFilter",&PyIkSolverBase::RegisterCustomFilter, PY_ARGS("priority","callback") DOXY_FN(IkSolverBase,RegisterCustomFilter))

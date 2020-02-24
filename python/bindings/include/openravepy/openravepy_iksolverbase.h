@@ -60,6 +60,8 @@ public:
     int GetNumFreeParameters() const;
     object GetFreeParameters() const;
 
+    object GetRobotPoseStates(object ojointvalues) const;
+
     PyIkReturnPtr Solve(object oparam, object oq0, int filteroptions);
 
     object SolveAll(object oparam, int filteroptions);
