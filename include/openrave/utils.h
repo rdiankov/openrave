@@ -28,6 +28,7 @@
 #include <string>
 #include <istream>
 #include <vector>
+#include <cmath> // M_PI
 
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
