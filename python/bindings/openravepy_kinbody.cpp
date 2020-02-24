@@ -117,8 +117,6 @@ void PyGeometryInfo::Init(const KinBody::GeometryInfo& info) {
     _fTransparency = info._fTransparency;
     _bVisible = info._bVisible;
     _bModifiable = info._bModifiable;
-    //TODO
-    //_mapExtraGeometries = info. _mapExtraGeometries;
 }
 
 object PyGeometryInfo::ComputeInnerEmptyVolume()
@@ -190,13 +188,12 @@ KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo() {
     info._fTransparency = _fTransparency;
     info._bVisible = _bVisible;
     info._bModifiable = _bModifiable;
-    //TODO
-    //info._mapExtraGeometries =  _mapExtraGeometries;
     return pinfo;
 }
 
 PyLinkInfo::PyLinkInfo() {
 }
+
 PyLinkInfo::PyLinkInfo(const KinBody::LinkInfo& info) {
     FOREACHC(itgeominfo, info._vgeometryinfos) {
         _vgeometryinfos.append(PyGeometryInfoPtr(new PyGeometryInfo(**itgeominfo)));
@@ -219,9 +216,13 @@ PyLinkInfo::PyLinkInfo(const KinBody::LinkInfo& info) {
     FOREACHC(it, info._vForcedAdjacentLinks) {
         vForcedAdjacentLinks.append(ConvertStringToUnicode(*it));
     }
+    FOREACHC(it, info._mapExtraGeometries) {
+        _mapExtraGeometries[it->first] = toPyArray(it->second);
+    }
     _vForcedAdjacentLinks = vForcedAdjacentLinks;
     _bStatic = info._bStatic;
     _bIsEnabled = info._bIsEnabled;
+
 }
 
 KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
@@ -284,6 +285,28 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
         object okeyvalue = okeyvalueiter.attr("next") ();
         std::string name = extract<std::string>(okeyvalue[0]);
         info._mapStringParameters[name] = (std::string)extract<std::string>(okeyvalue[1]);
+    }
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    for(const std::pair<py::handle, py::handle>& item : _mapExtraGeometries) {
+        std::string name = extract<std::string>(item.first);
+        info._mapExtraGeometries[name] = std::vector<KinBody::GeometryInfoPtr>(len(item.second));
+        for(size_t j = 0; j < len(item.second); j++){
+            PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(item.second[j]);
+            info._mapExtraGeometries[name].push_back(pygeom->GetGeometryInfo());
+        }
+    }
+#else
+    num = len(_mapExtraGeometries);
+    okeyvalueiter = _mapExtraGeometries.iteritems();
+    for(size_t i = 0; i < num; ++i) {
+        object okeyvalue = okeyvalueiter.attr("next") ();
+        std::string name = extract<std::string>(okeyvalue[0]);
+        for(size_t j = 0; j < len(okeyvalue[1]); j++){
+            PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(okeyvalue[1][j]);
+            info._mapExtraGeometries[name].push_back(pygeom->GetGeometryInfo());
+        }
     }
 #endif
 
@@ -1418,6 +1441,10 @@ PyJointPtr toPyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv)
     else {
         return PyJointPtr();
     }
+}
+PyGeometryInfoPtr toPyGeometryInfo(const KinBody::GeometryInfo& geominfo)
+{
+    return PyGeometryInfoPtr(new PyGeometryInfo(geominfo));
 }
 
 PyKinBodyStateSaver::PyKinBodyStateSaver(PyKinBodyPtr pybody) : _pyenv(pybody->GetEnv()), _state(pybody->GetBody()) {
@@ -3203,8 +3230,7 @@ public:
             r._vCollisionScale, 
             r._fTransparency, 
             r._bVisible, 
-            r._bModifiable, 
-            r._mapExtraGeometries
+            r._bModifiable 
         );
     }
     static void setstate(PyGeometryInfo& r, py::tuple state) {
@@ -3236,7 +3262,6 @@ public:
             r._fTransparency = py::extract<float>(state[10]);
             r._bVisible = py::extract<bool>(state[11]);
             r._bModifiable = py::extract<bool>(state[12]);
-            r._mapExtraGeometries = dict(state[13]);
         }
         else {
             // new format
@@ -3248,7 +3273,6 @@ public:
             r._fTransparency = py::extract<float>(state[9]);
             r._bVisible = py::extract<bool>(state[10]);
             r._bModifiable = py::extract<bool>(state[11]);
-            r._mapExtraGeometries = dict(state[12]);
         }
     }
 };
@@ -3261,7 +3285,7 @@ class LinkInfo_pickle_suite
 public:
     static py::tuple getstate(const PyLinkInfo& r)
     {
-        return py::make_tuple(r._vgeometryinfos, r._name, r._t, r._tMassFrame, r._mass, r._vinertiamoments, r._mapFloatParameters, r._mapIntParameters, r._vForcedAdjacentLinks, r._bStatic, r._bIsEnabled, r._mapStringParameters);
+        return py::make_tuple(r._vgeometryinfos, r._name, r._t, r._tMassFrame, r._mass, r._vinertiamoments, r._mapFloatParameters, r._mapIntParameters, r._vForcedAdjacentLinks, r._bStatic, r._bIsEnabled, r._mapStringParameters, r._mapExtraGeometries);
     }
     static void setstate(PyLinkInfo& r, py::tuple state) {
         int num = len(state);
@@ -3288,6 +3312,8 @@ public:
         if( num > 11 ) {
             r._mapStringParameters = dict(state[11]);
         }
+
+        r._mapExtraGeometries = dict(state[12]);
     }
 };
 
@@ -3595,7 +3621,6 @@ void init_openravepy_kinbody()
                           .def_readwrite("_fTransparency",&PyGeometryInfo::_fTransparency)
                           .def_readwrite("_bVisible",&PyGeometryInfo::_bVisible)
                           .def_readwrite("_bModifiable",&PyGeometryInfo::_bModifiable)
-                          .def_readwrite("_mapExtraGeometries",&PyGeometryInfo::_mapExtraGeometries)
                           .def_readwrite("_vSideWalls", &PyGeometryInfo::_vSideWalls)
                           .def("ComputeInnerEmptyVolume",&PyGeometryInfo::ComputeInnerEmptyVolume, DOXY_FN(GeomeryInfo,ComputeInnerEmptyVolume))
                           .def("ComputeAABB",&PyGeometryInfo::ComputeAABB, PY_ARGS("transform") DOXY_FN(GeomeryInfo,ComputeAABB))
@@ -3655,6 +3680,7 @@ void init_openravepy_kinbody()
                       .def_readwrite("_mapFloatParameters",&PyLinkInfo::_mapFloatParameters)
                       .def_readwrite("_mapIntParameters",&PyLinkInfo::_mapIntParameters)
                       .def_readwrite("_mapStringParameters",&PyLinkInfo::_mapStringParameters)
+                      .def_readwrite("_mapExtraGeometries",&PyLinkInfo::_mapExtraGeometries)
                       .def_readwrite("_vForcedAdjacentLinks",&PyLinkInfo::_vForcedAdjacentLinks)
                       .def_readwrite("_bStatic",&PyLinkInfo::_bStatic)
                       .def_readwrite("_bIsEnabled",&PyLinkInfo::_bIsEnabled)
