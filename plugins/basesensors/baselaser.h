@@ -532,8 +532,8 @@ public:
     {
         if( _bPower ) {
             _fCurAngle += _fGeomSpinSpeed*fTimeElapsed;
-            if( _fCurAngle > 2*PI ) {
-                _fCurAngle -= 2*PI;
+            if( _fCurAngle > M_TWO_PI ) {
+                _fCurAngle -= M_TWO_PI;
             }
             if( _fTimeToScan <= fTimeElapsed ) {
                 // have to update

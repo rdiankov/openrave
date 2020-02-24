@@ -620,7 +620,7 @@ public:
                     dReal cosang = point0[0]*point1[0] + point0[1]*point1[1] + point0[2]*point1[2];
                     angles[i].first = RaveAtan2(sinang,cosang);
                     if( angles[i].first < 0 ) {
-                        angles[i].first += 2*PI;
+                        angles[i].first += M_TWO_PI;
                     }
                     angles[i].second = i;
                 }
@@ -1563,7 +1563,7 @@ protected:
             }
         }
 
-        dReal fdeltaang = 2*PI/(dReal)Nconepoints;
+        dReal fdeltaang = M_TWO_PI/(dReal)Nconepoints;
         dReal fang = 0;
         vector<pair<dReal,dReal> > vsincos(Nconepoints);
         FOREACH(it,vsincos) {

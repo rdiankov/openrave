@@ -82,7 +82,7 @@ By default will sample the entire body space, can use 'SetDOFs' command to set a
         for (size_t inum = 0; inum < num*_lower.size(); inum += _lower.size()) {
             for (size_t i = 0; i < _lower.size(); i++) {
                 if( _viscircular[i] ) {
-                    samples[inum+i] = -PI + 2*PI*samples[inum+i];
+                    samples[inum+i] = -PI + M_TWO_PI*samples[inum+i];
                 }
                 else {
                     samples[inum+i] = _lower[i] + samples[inum+i]*_range[i];

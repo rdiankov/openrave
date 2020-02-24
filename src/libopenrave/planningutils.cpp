@@ -2386,7 +2386,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 _vtempaccelconfig[i] = (dq1.at(i)-dq0.at(i))*itimeelapsed;
                 if( IS_DEBUGLEVEL(Level_Verbose) || IS_DEBUGLEVEL(Level_VerifyPlans) ) {
                     dReal consistencyerror = RaveFabs(q0.at(i) + timeelapsed*0.5*(dq0.at(i)+dq1.at(i)) - q1.at(i));
-                    if( RaveFabs(consistencyerror-2*PI) > g_fEpsilonQuadratic ) { // TODO, officially track circular joints
+                    if( RaveFabs(consistencyerror-M_TWO_PI) > g_fEpsilonQuadratic ) { // TODO, officially track circular joints
                         OPENRAVE_ASSERT_OP_FORMAT(consistencyerror,<=,g_fEpsilonQuadratic*100, "dof %d is not consistent with time elapsed", i, ORE_InvalidArguments);
                     }
                 }

@@ -242,13 +242,13 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
         _qbigrangemaxcumprod.resize(0); _qbigrangemaxcumprod.push_back(1);
         for(size_t i = 0; i < _qmid.size(); ++i) {
             _qmid[i] = 0.5*(_qlower[i]*_qupper[i]);
-            if( _qupper[i]-_qlower[i] > 2*PI ) {
+            if( _qupper[i]-_qlower[i] > M_TWO_PI ) {
                 int dofindex = pmanip->GetArmIndices().at(i);
                 KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(dofindex);
                 int iaxis = dofindex-pjoint->GetDOFIndex();
                 if( pjoint->IsRevolute(iaxis) && !pjoint->IsCircular(iaxis) ) {
                     _qbigrangeindices.push_back(i);
-                    _qbigrangemaxsols.push_back( 1+int((_qupper[i]-_qlower[i])/(2*PI))); // max redundant solutions
+                    _qbigrangemaxsols.push_back( 1+int((_qupper[i]-_qlower[i])/(M_TWO_PI))); // max redundant solutions
                     _qbigrangemaxcumprod.push_back(_qbigrangemaxcumprod.back() * _qbigrangemaxsols.back());
                 }
             }
@@ -881,7 +881,7 @@ protected:
                     continue;
                 }
                 upperChecked = curphi;
-                if( isJointRevolute != 0 && upperChecked - lowerChecked >= 2*PI-g_fEpsilonJointLimit ) {
+                if( isJointRevolute != 0 && upperChecked - lowerChecked >= M_TWO_PI-g_fEpsilonJointLimit ) {
                     // reached full circle
                     break;
                 }
@@ -897,7 +897,7 @@ protected:
                     continue;
                 }
                 lowerChecked = curphi;
-                if( isJointRevolute != 0 && upperChecked - lowerChecked >= 2*PI-fFreeInc*0.1 ) {
+                if( isJointRevolute != 0 && upperChecked - lowerChecked >= M_TWO_PI-fFreeInc*0.1 ) {
                     // reached full circle
                     break;
                 }
@@ -2210,18 +2210,18 @@ protected:
         for(int j = 0; j < (int)_qlower.size(); ++j) {
             if( _vjointrevolute.at(j) == 2 ) {
                 while( vravesol.at(j) > PI ) {
-                    vravesol[j] -= 2*PI;
+                    vravesol[j] -= M_TWO_PI;
                 }
                 while( vravesol[j] < -PI ) {
-                    vravesol[j] += 2*PI;
+                    vravesol[j] += M_TWO_PI;
                 }
             }
             else if( _vjointrevolute.at(j) == 1 ) {
                 while( vravesol.at(j) > _qupper[j] ) {
-                    vravesol[j] -= 2*PI;
+                    vravesol[j] -= M_TWO_PI;
                 }
                 while( vravesol[j] < _qlower[j] ) {
-                    vravesol[j] += 2*PI;
+                    vravesol[j] += M_TWO_PI;
                 }
             }
             // due to error propagation, give error bounds for lower and upper limits
@@ -2234,7 +2234,7 @@ protected:
 
     /// \brief configuraiton distance
     ///
-    /// \param bNormalizeRevolute if true, then compute difference mod 2*PI
+    /// \param bNormalizeRevolute if true, then compute difference mod M_TWO_PI
     dReal _ComputeGeometricConfigDistSqr(RobotBasePtr probot, const vector<dReal>& q1, const vector<dReal>& q2, bool bNormalizeRevolute=false) const
     {
         vector<dReal> q = q1;
@@ -2271,15 +2271,15 @@ protected:
             FOREACH(itindex, _qbigrangeindices) {
                 dReal foriginal = vravesol.at(*itindex);
                 itextra->push_back(foriginal);
-                dReal f = foriginal-2*PI;
+                dReal f = foriginal-M_TWO_PI;
                 while(f >= _qlower[*itindex]) {
                     itextra->push_back(f);
-                    f -= 2*PI;
+                    f -= M_TWO_PI;
                 }
-                f = foriginal+2*PI;
+                f = foriginal+M_TWO_PI;
                 while(f <= _qupper[*itindex]) {
                     itextra->push_back(f);
-                    f += 2*PI;
+                    f += M_TWO_PI;
                 }
                 vcumproduct.push_back(nTotal);
                 OPENRAVE_ASSERT_OP_FORMAT(itextra->size(),<=,_qbigrangemaxsols.at(k),"exceeded max possible redundant solutions for manip arm index %d",_qbigrangeindices.at(k),ORE_InconsistentConstraints);

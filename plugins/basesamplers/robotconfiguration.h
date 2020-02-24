@@ -80,7 +80,7 @@ If the robot active DOFs change, can use the 'TrackActiveSpace' command to autom
         for (size_t inum = 0; inum < num*_lower.size(); inum += _lower.size()) {
             for (size_t i = 0; i < _lower.size(); i++) {
                 if( _viscircular[i] || (int)i == _affinerotaxis ) {
-                    samples[inum+i] = -PI + 2*PI*samples[inum+i];
+                    samples[inum+i] = -PI + M_TWO_PI*samples[inum+i];
                 }
                 else if( _affinerot3d >= 0 && (int)i >= _affinerot3d && (int)i < _affinerot3d+3 ) {
                     if( (int)i == _affinerot3d ) {

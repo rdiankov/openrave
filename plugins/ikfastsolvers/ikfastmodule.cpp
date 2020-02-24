@@ -787,7 +787,7 @@ public:
                 break;
             }
             for(size_t j = 0; j < vjoints.size(); ++j) {
-                vjoints[j] = RaveRandomDouble()*2*PI;
+                vjoints[j] = RaveRandomDouble()*M_TWO_PI;
             }
             for(size_t j = 0; j < vfree.size(); ++j) {
                 vfree[j] = vjoints[ikfunctions->_GetFreeIndices()[j]];
@@ -1081,7 +1081,7 @@ public:
                             for(int j = 0; j < (int)vrealsolution.size(); j++) {
                                 int dof = pmanip->GetArmIndices().at(j);
                                 if( robot->GetJointFromDOFIndex(dof)->IsCircular(dof-robot->GetJointFromDOFIndex(dof)->GetDOFIndex()) ) {
-                                    vrealsolution[j] = -PI + 2*PI*RaveRandomFloat();
+                                    vrealsolution[j] = -PI + M_TWO_PI*RaveRandomFloat();
                                 }
                                 else {
                                     vrealsolution[j] = vlowerlimit[j] + (vupperlimit[j]-vlowerlimit[j])*RaveRandomFloat();
@@ -1093,7 +1093,7 @@ public:
                                 if( RaveRandomFloat() >= sampledegeneratecases ) {
                                     int dof = pmanip->GetArmIndices().at(j);
                                     if( robot->GetJointFromDOFIndex(dof)->IsCircular(dof-robot->GetJointFromDOFIndex(dof)->GetDOFIndex()) ) {
-                                        vrealsolution[j] = -PI + 2*PI*RaveRandomFloat();
+                                        vrealsolution[j] = -PI + M_TWO_PI*RaveRandomFloat();
                                     }
                                     else {
                                         vrealsolution[j] = vlowerlimit[j] + (vupperlimit[j]-vlowerlimit[j])*RaveRandomFloat();

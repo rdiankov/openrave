@@ -1838,13 +1838,13 @@ object PyKinBody::GetDOFIntervalIndices(object oindices) const
     if( IS_PYTHONOBJECT_NONE(oindices) ) {
         return py::empty_array_astype<dReal>();
     }
-    std::vector<int> vindices = ExtractArray<int>(oindices);
+    const std::vector<int> vindices = ExtractArray<int>(oindices);
     if( vindices.empty() ) {
         return py::empty_array_astype<dReal>();
     }
-    std::vector<int> intindices;
-    _pbody->GetDOFIntervalIndices(intindices, vindices);
-    return toPyArray(intindices);
+    std::vector<int> vintindices;
+    _pbody->GetDOFIntervalIndices(vintindices, vindices);
+    return toPyArray(vintindices);
 }
 
 object PyKinBody::GetDOFVelocities() const

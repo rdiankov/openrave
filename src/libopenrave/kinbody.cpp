@@ -434,7 +434,6 @@ void KinBody::GetDOFValues(std::vector<dReal>& vdofvalues, const std::vector<int
 void KinBody::GetDOFIntervalIndices(std::vector<int>& vintindices, const std::vector<int>& vdofindices) const {
     CHECK_INTERNAL_COMPUTATION;
     const size_t ndofindices = vdofindices.size();
-    const dReal twopi = 2.0 * M_PI;
     
     if( ndofindices == 0 ) {
         vintindices.clear();
@@ -450,7 +449,7 @@ void KinBody::GetDOFIntervalIndices(std::vector<int>& vintindices, const std::ve
             OPENRAVE_ASSERT_OP_FORMAT0(toadd,           ==, 0, "only support one-dof joint for now", ORE_NotImplemented);
             OPENRAVE_ASSERT_OP_FORMAT0(joint->GetDOF(), ==, 1, "only support one-dof joint for now", ORE_NotImplemented);
             joint->GetValues(vdofvalues, true);
-            vintindices.push_back(joint->IsRevolute(0) ? ceil((vdofvalues.back() - M_PI)/twopi) : 0);
+            vintindices.push_back(joint->IsRevolute(0) ? geometry::ComputeTwoPiIntervalIndex(vdofvalues.back()) : 0);
         }
     }
     else {
@@ -463,7 +462,7 @@ void KinBody::GetDOFIntervalIndices(std::vector<int>& vintindices, const std::ve
             if(pjoint->IsRevolute(0)) {
                 const dReal dofvalue = pjoint->GetValue(dofindex - pjoint->GetDOFIndex());
                 // (-pi, pi] has 2*pi interval index 0, (-3*pi, -pi] index -1, (pi, 3*pi] index 1, etc.
-                vintindices[i] = ceil((dofvalue - M_PI)/twopi);
+                vintindices[i] = geometry::ComputeTwoPiIntervalIndex(dofvalue);
             }
             ++i;
         }
@@ -1559,7 +1558,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
             OPENRAVE_ASSERT_OP( (*it)->GetDOF(), <=, 3 );
             (*it)->GetLimits(lowerlim, upperlim);
             if( (*it)->GetType() == JointSpherical ) {
-                dReal fcurang = fmod(RaveSqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]),2*PI);
+                dReal fcurang = fmod(RaveSqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]),M_TWO_PI);
                 if( fcurang < lowerlim[0] ) {
                     if( fcurang < 1e-10 ) {
                         *ptempjoints++ = lowerlim[0]; *ptempjoints++ = 0; *ptempjoints++ = 0;
@@ -2806,7 +2805,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
                 doftorques.at(pjoint->GetDOFIndex()) += pjoint->GetAxis(0).dot3(vjointtorque + vcomtoanchor.cross(vcomforce));
             }
             else if( pjoint->GetType() == JointSlider ) {
-                doftorques.at(pjoint->GetDOFIndex()) += pjoint->GetAxis(0).dot3(vcomforce)/(2*PI);
+                doftorques.at(pjoint->GetDOFIndex()) += pjoint->GetAxis(0).dot3(vcomforce)/(M_TWO_PI);
             }
             else {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), pjoint->GetType(), ORE_Assert);
@@ -2844,7 +2843,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
                 faxistorque = pjoint->GetAxis(0).dot3(vjointtorque + vcomtoanchor.cross(vcomforce));
             }
             else if( pjoint->GetType() == JointSlider ) {
-                faxistorque = pjoint->GetAxis(0).dot3(vcomforce)/(2*PI);
+                faxistorque = pjoint->GetAxis(0).dot3(vcomforce)/(M_TWO_PI);
             }
             else {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), pjoint->GetType(), ORE_Assert);
@@ -3032,7 +3031,7 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
                     vDOFTorqueComponents[j].at(pjoint->GetDOFIndex()) += pjoint->GetAxis(0).dot3(vjointtorque + vcomtoanchor.cross(vcomforce));
                 }
                 else if( pjoint->GetType() == JointSlider ) {
-                    vDOFTorqueComponents[j].at(pjoint->GetDOFIndex()) += pjoint->GetAxis(0).dot3(vcomforce)/(2*PI);
+                    vDOFTorqueComponents[j].at(pjoint->GetDOFIndex()) += pjoint->GetAxis(0).dot3(vcomforce)/(M_TWO_PI);
                 }
                 else {
                     throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), pjoint->GetType(), ORE_Assert);
@@ -3046,7 +3045,7 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
                     faxistorque = pjoint->GetAxis(0).dot3(vjointtorque + vcomtoanchor.cross(vcomforce));
                 }
                 else if( pjoint->GetType() == JointSlider ) {
-                    faxistorque = pjoint->GetAxis(0).dot3(vcomforce)/(2*PI);
+                    faxistorque = pjoint->GetAxis(0).dot3(vcomforce)/(M_TWO_PI);
                 }
                 else {
                     throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), pjoint->GetType(), ORE_Assert);

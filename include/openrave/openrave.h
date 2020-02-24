@@ -114,7 +114,7 @@ typedef float dReal;
 #endif
 
 /// \brief openrave constant for PI, could be replaced by accurate precision number depending on choice of dReal.
-static const dReal PI = dReal(3.14159265358979323846);
+static const dReal PI(M_PI);
 
 /// Wrappers of common basic math functions, allows OpenRAVE to control the precision requirements.
 /// \ingroup affine_math
@@ -1272,14 +1272,14 @@ public:
             Vector v1 = ikparam.GetTranslationXYOrientation3D();
             dReal anglediff = v0.z-v1.z;
             if (anglediff < dReal(-PI)) {
-                anglediff += dReal(2*PI);
+                anglediff += dReal(M_TWO_PI);
                 while (anglediff < dReal(-PI))
-                    anglediff += dReal(2*PI);
+                    anglediff += dReal(M_TWO_PI);
             }
             else if (anglediff > dReal(PI)) {
-                anglediff -= dReal(2*PI);
+                anglediff -= dReal(M_TWO_PI);
                 while (anglediff > dReal(PI))
-                    anglediff -= dReal(2*PI);
+                    anglediff -= dReal(M_TWO_PI);
             }
             return (v0-v1).lengthsqr2() + anglemult*anglediff*anglediff;
         }
@@ -1433,14 +1433,14 @@ public:
             Vector v1 = ikparam.GetTranslationXYOrientation3D();
             dReal anglediff = v0.z-v1.z;
             if (anglediff < dReal(-PI)) {
-                anglediff += dReal(2*PI);
+                anglediff += dReal(M_TWO_PI);
                 while (anglediff < dReal(-PI))
-                    anglediff += dReal(2*PI);
+                    anglediff += dReal(M_TWO_PI);
             }
             else if (anglediff > dReal(PI)) {
-                anglediff -= dReal(2*PI);
+                anglediff -= dReal(M_TWO_PI);
                 while (anglediff > dReal(PI))
-                    anglediff -= dReal(2*PI);
+                    anglediff -= dReal(M_TWO_PI);
             }
             return anglediff*anglediff;
         }
