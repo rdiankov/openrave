@@ -126,17 +126,12 @@ void PyCameraGeomData::DeserializeJSON(object obj) {
 
 void PyCameraGeomData::_Update(OPENRAVE_SHARED_PTR<SensorBase::CameraGeomData const> pgeom)
 {
-    intrinsics = pgeom->intrinsics; // TODO: copy
+    intrinsics = pgeom->intrinsics;
     hardware_id = pgeom->hardware_id;
     width = pgeom->width;
     height = pgeom->height;
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
     sensor_reference = pgeom->sensor_reference;
     target_region = pgeom->target_region;
-#else
-    sensor_reference = ConvertStringToUnicode(pgeom->sensor_reference);
-    target_region = ConvertStringToUnicode(pgeom->target_region);
-#endif
     measurement_time = pgeom->measurement_time;
     gain = pgeom->gain;
 }
