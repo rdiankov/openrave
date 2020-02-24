@@ -36,6 +36,7 @@ public:
     int type = 0;
 };
 
+
 class PyGeometryInfo
 {
 public:
@@ -67,7 +68,6 @@ public:
     object _filenamecollision;
     object _vRenderScale;
     object _vCollisionScale;
-    py::dict _mapExtraGeometries;
     float _fTransparency;
     bool _bVisible;
     bool _bModifiable;
@@ -90,7 +90,7 @@ public:
     object _tMassFrame = ReturnTransform(Transform());
     dReal _mass = 0.0;
     object _vinertiamoments = toPyVector3(Vector(1,1,1));
-    py::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters;
+    py::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters, _mapExtraGeometries;
     object _vForcedAdjacentLinks = py::list();
     bool _bStatic = false;
     bool _bIsEnabled = true;
