@@ -450,7 +450,6 @@ inline void LoadJsonValue(const rapidjson::Value& v, KinBody::GeometryInfo::Side
     }
 }
 
-
 void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options) const
 {
     // RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "sid", sid);

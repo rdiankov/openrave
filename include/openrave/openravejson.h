@@ -487,8 +487,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, std::map<std::string, T>& t
     } else if (v.IsObject()) {
         t.clear();
         T value;
-        for (rapidjson::Value::ConstMemberIterator it = v.MemberBegin();
-             it != v.MemberEnd(); ++it) {
+        for (rapidjson::Value::ConstMemberIterator it = v.MemberBegin(); it != v.MemberEnd(); ++it) {
             LoadJsonValue(it->value, value);
             t[it->name.GetString()] = value;
         }

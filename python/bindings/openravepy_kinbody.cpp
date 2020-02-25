@@ -260,9 +260,9 @@ void PyLinkInfo::DeserializeJSON(object obj, const dReal fUnitScale)
 {
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
-    KinBody::LinkInfo info;
-    info.DeserializeJSON(doc, fUnitScale);
-    _Update(info);
+    KinBody::LinkInfoPtr pInfo = GetLinkInfo();
+    pInfo->DeserializeJSON(doc, fUnitScale);
+    _Update(*pInfo);
 }
 
 KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {

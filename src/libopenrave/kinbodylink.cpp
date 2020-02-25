@@ -101,20 +101,27 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, const dRe
         _vgeometryinfos.resize(0);
         _vgeometryinfos.reserve(value["geometryinfos"].Size());
         for (size_t i = 0; i < value["geometryinfos"].Size(); ++i) {
-            GeometryInfoPtr geometry(new GeometryInfo());
-            geometry->DeserializeJSON(value["geometryinfos"][i], fUnitScale);
-            _vgeometryinfos.push_back(geometry);
+            GeometryInfoPtr pGeometryInfo(new GeometryInfo());
+            pGeometryInfo->DeserializeJSON(value["geometryinfos"][i], fUnitScale);
+            _vgeometryinfos.push_back(pGeometryInfo);
         }
     }
+    if (value.HasMember("extraGeometries")) {
+        _mapExtraGeometries.clear();
+        for (rapidjson::Value::ConstMemberIterator it = value["extraGeometries"].MemberBegin(); it != value["extraGeometries"].MemberEnd(); ++it) {
+            _mapExtraGeometries[it->name.GetString()] = std::vector<GeometryInfoPtr>();
 
-    // TODO(jsonserialization)
-    // extraGeometries
+            for(rapidjson::Value::ConstValueIterator im = it->value.Begin(); im != it->value.End(); ++im) {
+                GeometryInfoPtr pInfo (new GeometryInfo());
+                pInfo->DeserializeJSON(*im, fUnitScale);
+                _mapExtraGeometries[it->name.GetString()].push_back(pInfo);
+            }
+        }
+    }
 
     LoadJsonValueByKey(value, "isStatic", _bStatic);
     LoadJsonValueByKey(value, "isEnabled", _bIsEnabled);
 }
-
-
 
 KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& other)
 {
