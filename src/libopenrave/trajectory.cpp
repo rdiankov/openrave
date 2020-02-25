@@ -57,11 +57,16 @@ void TrajectoryBase::deserialize(std::istream& I)
     BOOST_ASSERT(!!I);
 
     string pbuf = buf.str();
+    size_t endTagSize = 13;  // "</trajectory>"
     const char* p = strcasestr(pbuf.c_str(), "</trajectory>");
+    if( p == NULL ) {
+        endTagSize = 19;  // "</trajectory_addon>"
+        p = strcasestr(pbuf.c_str(), "</trajectory_addon>");
+    }
     int ppsize=-1;
     if( p != NULL ) {
         I.clear();
-        ppsize=(p-pbuf.c_str())+13;
+        ppsize=(p-pbuf.c_str()) + endTagSize;
         I.seekg((size_t)pos+ppsize);
     }
     else {

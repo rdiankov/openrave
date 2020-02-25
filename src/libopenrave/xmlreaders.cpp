@@ -95,6 +95,9 @@ BaseXMLReader::ProcessElement TrajectoryReader::startElement(const std::string& 
         _pcurreader.reset(new TrajectoryReader(_ptraj->GetEnv(), _ptraj, atts));
         return PE_Support;
     }
+    if( name == "trajectory_addon" ) {
+        return PE_Support;
+    }
     else if( name == "configuration" ) {
         _pcurreader.reset(new ConfigurationSpecification::Reader(_spec));
         return PE_Support;
@@ -156,7 +159,7 @@ bool TrajectoryReader::endElement(const std::string& name)
     else if( name == "description" ) {
         _ptraj->SetDescription(_ss.str());
     }
-    else if( name == "trajectory" ) {
+    else if( name == "trajectory" || name == "trajectory_addon" ) {
         return true;
     }
     else if( name == "readable" ) {

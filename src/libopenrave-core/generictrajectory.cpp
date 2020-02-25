@@ -441,6 +441,17 @@ public:
             WriteBinaryVector(O, this->_vtrajdata);
 
             WriteBinaryString(O, GetDescription());
+
+            if( !GetReadableInterfaces().empty() ) {
+                O << "<trajectory_addon>";
+                xmlreaders::StreamXMLWriterPtr writer(new xmlreaders::StreamXMLWriter("readable"));
+                FOREACHC(it, GetReadableInterfaces()) {
+                    BaseXMLWriterPtr newwriter = writer->AddChild(it->first);
+                    it->second->Serialize(newwriter,options);
+                }
+                writer->Serialize(O);
+                O << "</trajectory_addon>";
+            }
         }
     }
 
@@ -484,6 +495,7 @@ public:
             /* Read trajectory data */
             ReadBinaryVector(I, this->_vtrajdata);
             ReadBinaryString(I, __description);
+            TrajectoryBase::deserialize(I);  // allows parsing extra trajectory data like readable interfaces
         }
         else {
             // try XML deserialization
