@@ -3849,7 +3849,7 @@ void init_openravepy_kinbody()
                                            "options"_a = py::none_(), 
                                            DOXY_FN(ElectricMotorActuatorInfo, SerializeJSON)
                                        )
-                                       .def("DeserializeJSON", &PyGeometryInfo::DeserializeJSON,
+                                       .def("DeserializeJSON", &PyElectricMotorActuatorInfo::DeserializeJSON,
                                            "obj"_a,
                                            "unitScale"_a = 1.0,
                                            DOXY_FN(GeometryInfo, DeserializeJSON)
