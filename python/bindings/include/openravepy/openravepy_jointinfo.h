@@ -176,6 +176,7 @@ public:
     KinBody::JointInfoPtr GetJointInfo();
     object SerializeJSON(object options=py::none_());
     void DeserializeJSON(object obj, PyEnvironmentBasePtr penv, const dReal fUnitScale=1.0);
+    object GetDOF();
 
     KinBody::JointType _type = KinBody::JointNone;
     object _name = py::none_();

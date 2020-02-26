@@ -96,25 +96,25 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
         break;
     }
 
-    SetJsonValueByKey(value, "name", _name, allocator);
-    SetJsonValueByKey(value, "anchors", _vanchor, allocator);
-    SetJsonValueByKey(value, "parentLinkName", _linkname0, allocator);
-    SetJsonValueByKey(value, "childLinkName", _linkname1, allocator);
-    SetJsonValueByKey(value, "axes", _vaxes, allocator);
-    SetJsonValueByKey(value, "currentValues", _vcurrentvalues, allocator);
-    SetJsonValueByKey(value, "resolutions", _vresolution, allocator);
-    SetJsonValueByKey(value, "maxvel", _vmaxvel, allocator);
-    SetJsonValueByKey(value, "hardMaxVel", _vhardmaxvel, allocator);
-    SetJsonValueByKey(value, "maxAccel", _vmaxaccel, allocator);
-    SetJsonValueByKey(value, "hardMaxAccel", _vhardmaxaccel, allocator);
-    SetJsonValueByKey(value, "maxJerk", _vmaxjerk, allocator);
-    SetJsonValueByKey(value, "hardMaxJerk", _vhardmaxjerk, allocator);
-    SetJsonValueByKey(value, "maxTorque", _vmaxtorque, allocator);
-    SetJsonValueByKey(value, "maxInertia", _vmaxinertia, allocator);
-    SetJsonValueByKey(value, "weights", _vweights, allocator);
-    SetJsonValueByKey(value, "offsets", _voffsets, allocator);
-    SetJsonValueByKey(value, "lowerLimit", _vlowerlimit, allocator);
-    SetJsonValueByKey(value, "upperLimit", _vupperlimit, allocator);
+    SetJsonValueByKey(value, "_name", _name, allocator);
+    SetJsonValueByKey(value, "_vanchor", _vanchor, allocator);
+    SetJsonValueByKey(value, "_linkname0", _linkname0, allocator);
+    SetJsonValueByKey(value, "_linkname1", _linkname1, allocator);
+    SetJsonValueByKey(value, "_vaxes", _vaxes, allocator);
+    SetJsonValueByKey(value, "_vcurrentvalues", _vcurrentvalues, allocator);
+    SetJsonValueByKey(value, "_vresolution", _vresolution, allocator, dof);
+    SetJsonValueByKey(value, "_vmaxvel", _vmaxvel, allocator, dof);
+    SetJsonValueByKey(value, "_vhardmaxvel", _vhardmaxvel, allocator, dof);
+    SetJsonValueByKey(value, "_vmaxaccel", _vmaxaccel, allocator, dof);
+    SetJsonValueByKey(value, "_vhardmaxaccel", _vhardmaxaccel, allocator, dof);
+    SetJsonValueByKey(value, "_vmaxjerk", _vmaxjerk, allocator, dof);
+    SetJsonValueByKey(value, "_vhardmaxjerk", _vhardmaxjerk, allocator, dof);
+    SetJsonValueByKey(value, "_vmaxtorque", _vmaxtorque, allocator, dof);
+    SetJsonValueByKey(value, "_vmaxinertia", _vmaxinertia, allocator, dof);
+    SetJsonValueByKey(value, "_vweights", _vweights, allocator, dof);
+    SetJsonValueByKey(value, "_voffsets", _voffsets, allocator, dof);
+    SetJsonValueByKey(value, "_vlowerlimit", _vlowerlimit, allocator, dof);
+    SetJsonValueByKey(value, "_vupperlimit", _vupperlimit, allocator, dof);
     // TODO: SetJsonValueByKey(value, allocator, "trajfollow", _trajfollow);
 
     if (_vmimic.size() > 0) {
@@ -133,21 +133,21 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
                 _vmimic[i]->SerializeJSON(mimicValue, allocator);
                 mimics.PushBack(mimicValue, allocator);
             }
-            value.AddMember("mimics", mimics, allocator);
+            value.AddMember("_vmimic", mimics, allocator);
         }
     }
 
     if(_mapFloatParameters.size() > 0)
     {
-        SetJsonValueByKey(value, "floatParameters", _mapFloatParameters, allocator);
+        SetJsonValueByKey(value, "_mapFloatParameters", _mapFloatParameters, allocator);
     }
     if(_mapIntParameters.size() > 0)
     {
-        SetJsonValueByKey(value, "intParameters", _mapIntParameters, allocator);
+        SetJsonValueByKey(value, "_mapIntParameters", _mapIntParameters, allocator);
     }
     if(_mapStringParameters.size() > 0)
     {
-        SetJsonValueByKey(value, "stringParameters", _mapStringParameters, allocator);
+        SetJsonValueByKey(value, "_mapStringParameters", _mapStringParameters, allocator);
     }
 
     if (!!_infoElectricMotor) {
@@ -157,8 +157,8 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
         value.AddMember("electricMotorActuator", electricMotorInfoValue, allocator);
     }
 
-    SetJsonValueByKey(value, "isCircular", _bIsCircular, allocator);
-    SetJsonValueByKey(value, "isActive", _bIsActive, allocator);
+    SetJsonValueByKey(value, "_bIsCircular", _bIsCircular, allocator, dof);
+    SetJsonValueByKey(value, "_bIsActive", _bIsActive, allocator);
 
 }
 
@@ -179,27 +179,27 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, Environm
     {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported joint type \"%s\"", typestr, ORE_InvalidArguments);
     }
-    LoadJsonValueByKey(value, "name", _name);
-    LoadJsonValueByKey(value, "parentLinkName", _linkname0);
-    LoadJsonValueByKey(value, "anchors", _vanchor);
-    LoadJsonValueByKey(value, "childLinkName", _linkname1);
-    LoadJsonValueByKey(value, "axes", _vaxes);
-    LoadJsonValueByKey(value, "currentValues", _vcurrentvalues);
-    LoadJsonValueByKey(value, "resolutions", _vresolution);
-    LoadJsonValueByKey(value, "maxvel", _vmaxvel);
-    LoadJsonValueByKey(value, "hardMaxVel", _vhardmaxvel);
-    LoadJsonValueByKey(value, "maxAccel", _vmaxaccel);
-    LoadJsonValueByKey(value, "hardMaxAccel", _vhardmaxaccel);
-    LoadJsonValueByKey(value, "maxJerk", _vmaxjerk);
-    LoadJsonValueByKey(value, "hardMaxJerk", _vhardmaxjerk);
-    LoadJsonValueByKey(value, "maxTorque", _vmaxtorque);
-    LoadJsonValueByKey(value, "maxInertia", _vmaxinertia);
-    LoadJsonValueByKey(value, "weights", _vweights);
-    LoadJsonValueByKey(value, "offsets", _voffsets);
-    LoadJsonValueByKey(value, "lowerLimit", _vlowerlimit);
-    LoadJsonValueByKey(value, "upperLimit", _vupperlimit);
-    LoadJsonValueByKey(value, "isCircular", _bIsCircular);
-    LoadJsonValueByKey(value, "isActive", _bIsActive);
+    LoadJsonValueByKey(value, "_name", _name);
+    LoadJsonValueByKey(value, "_vanchor", _vanchor);
+    LoadJsonValueByKey(value, "_linkname0", _linkname0);
+    LoadJsonValueByKey(value, "_linkname1", _linkname1);
+    LoadJsonValueByKey(value, "_vaxes", _vaxes);
+    LoadJsonValueByKey(value, "_vcurrentvalue", _vcurrentvalues);
+    LoadJsonValueByKey(value, "_vresolution", _vresolution);
+    LoadJsonValueByKey(value, "_vmaxvel", _vmaxvel);
+    LoadJsonValueByKey(value, "_vhardmaxvel", _vhardmaxvel);
+    LoadJsonValueByKey(value, "_vmaxaccel", _vmaxaccel);
+    LoadJsonValueByKey(value, "_vhardmaxaccel", _vhardmaxaccel);
+    LoadJsonValueByKey(value, "_vmaxjerk", _vmaxjerk);
+    LoadJsonValueByKey(value, "_vhardmaxjerk", _vhardmaxjerk);
+    LoadJsonValueByKey(value, "_vmaxtorque", _vmaxtorque);
+    LoadJsonValueByKey(value, "_vmaxinertia", _vmaxinertia);
+    LoadJsonValueByKey(value, "_vweights", _vweights);
+    LoadJsonValueByKey(value, "_voffsets", _voffsets);
+    LoadJsonValueByKey(value, "_vlowerlimit", _vlowerlimit);
+    LoadJsonValueByKey(value, "_vupperlimit", _vupperlimit);
+    LoadJsonValueByKey(value, "_vIsCircular", _bIsCircular);
+    LoadJsonValueByKey(value, "_vIsActive", _bIsActive);
 
     // multiply fUnitScale on maxVel, maxAccel, lowerLimit, upperLimit
 
@@ -221,19 +221,19 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, Environm
     }
 
     boost::array<MimicInfoPtr, 3> newmimic;
-    if (value.HasMember("mimics"))
+    if (value.HasMember("_vmimic"))
     {
-        for (rapidjson::SizeType i = 0; i < value["mimics"].Size(); ++i) {
+        for (rapidjson::SizeType i = 0; i < value["_vmimic"].Size(); ++i) {
             MimicInfoPtr mimicinfo(new MimicInfo());
-            mimicinfo->DeserializeJSON(value["mimics"][i]);
+            mimicinfo->DeserializeJSON(value["_vmimic"][i]);
             newmimic[i] = mimicinfo;
         }
     }
     _vmimic = newmimic;
 
-    LoadJsonValueByKey(value, "floatParameters", _mapFloatParameters);
-    LoadJsonValueByKey(value, "intParameters", _mapIntParameters);
-    LoadJsonValueByKey(value, "stringParameters", _mapStringParameters);
+    LoadJsonValueByKey(value, "_mapFloatParameters", _mapFloatParameters);
+    LoadJsonValueByKey(value, "_mapIntParameters", _mapIntParameters);
+    LoadJsonValueByKey(value, "_mapStringParameters", _mapStringParameters);
 
     if (value.HasMember("electricMotorActuator")) {
         ElectricMotorActuatorInfoPtr info(new ElectricMotorActuatorInfo());

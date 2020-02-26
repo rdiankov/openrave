@@ -746,6 +746,15 @@ void PyJointInfo::_Update(const KinBody::JointInfo& info, PyEnvironmentBasePtr p
     }
 }
 
+object PyJointInfo::GetDOF() {
+    KinBody::JointInfoPtr pInfo = GetJointInfo();
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    return py::int_(pInfo->GetDOF());
+#else
+    return py::to_object(py::handle<>(PyInt_FromLong(pInfo->GetDOF())));
+#endif
+}
+
 KinBody::JointInfoPtr PyJointInfo::GetJointInfo() {
     KinBody::JointInfoPtr pinfo(new KinBody::JointInfo());
     KinBody::JointInfo& info = *pinfo;
@@ -4140,6 +4149,7 @@ void init_openravepy_kinbody()
                        .def_readwrite("_jci_robotcontroller", &PyJointInfo::_jci_robotcontroller)
                        .def_readwrite("_jci_io", &PyJointInfo::_jci_io)
                        .def_readwrite("_jci_externaldevice", &PyJointInfo::_jci_externaldevice)
+                       .def("GetDOF", &PyJointInfo::GetDOF)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                        .def("SerializeJSON", &PyJointInfo::SerializeJSON,
                             "options"_a = py::none_(),
