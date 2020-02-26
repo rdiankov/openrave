@@ -1833,6 +1833,7 @@ void init_openravepy_robot()
                                .def_readwrite("_attachedSensorInfos", &PyConnectedBodyInfo::_attachedSensorInfos)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                                .def("SerializeJSON", &PyConnectedBodyInfo::SerializeJSON,
+                                   "unitScale"_a = 1.0,
                                    "options"_a = py::none_(),
                                    DOXY_FN(RobotBase::ConnectedBodyInfo, SerializeJSON)
                                )
