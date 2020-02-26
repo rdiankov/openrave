@@ -495,7 +495,11 @@ public:
             /* Read trajectory data */
             ReadBinaryVector(I, this->_vtrajdata);
             ReadBinaryString(I, __description);
-            TrajectoryBase::deserialize(I);  // allows parsing extra trajectory data like readable interfaces
+
+            char nextChar = I.peek();
+            if (!!I && nextChar == '<') {
+                TrajectoryBase::deserialize(I);  // allows parsing extra trajectory data like readable interfaces
+            }
         }
         else {
             // try XML deserialization
