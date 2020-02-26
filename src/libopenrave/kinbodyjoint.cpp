@@ -96,6 +96,16 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
         break;
     }
 
+    dReal fjointmult = fUnitScale;
+    if(_type == JointRevolute)
+    {
+        fjointmult = 1;
+    }
+    else if(_type == JointPrismatic)
+    {
+        fjointmult = fUnitScale;
+    }
+
     SetJsonValueByKey(value, "name", _name, allocator);
     SetJsonValueByKey(value, "anchors", _vanchor, allocator);
     SetJsonValueByKey(value, "parentLinkName", _linkname0, allocator);
@@ -103,9 +113,20 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
     SetJsonValueByKey(value, "axes", _vaxes, allocator);
     SetJsonValueByKey(value, "currentValues", _vcurrentvalues, allocator);
     SetJsonValueByKey(value, "resolutions", _vresolution, allocator);
-    SetJsonValueByKey(value, "maxvel", _vmaxvel, allocator);
+
+    boost::array<dReal, 3> newvmaxvel = _vmaxvel;
+    boost::array<dReal, 3> newvmaxaccel = _vmaxaccel;
+    boost::array<dReal, 3> newvlowerlimit = _vlowerlimit;
+    boost::array<dReal, 3> newvupperlimit = _vupperlimit;
+    for(size_t i = 0; i < 3; i++) {
+        newvmaxvel[i] *= fjointmult;
+        newvmaxaccel[i] *= fjointmult;
+        newvlowerlimit[i] *= fjointmult;
+        newvupperlimit[i] *= fjointmult;
+    }
+    SetJsonValueByKey(value, "maxVel", newvmaxvel, allocator);
     SetJsonValueByKey(value, "hardMaxVel", _vhardmaxvel, allocator);
-    SetJsonValueByKey(value, "maxAccel", _vmaxaccel, allocator);
+    SetJsonValueByKey(value, "maxAccel", newvmaxaccel, allocator);
     SetJsonValueByKey(value, "hardMaxAccel", _vhardmaxaccel, allocator);
     SetJsonValueByKey(value, "maxJerk", _vmaxjerk, allocator);
     SetJsonValueByKey(value, "hardMaxJerk", _vhardmaxjerk, allocator);
@@ -113,8 +134,8 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
     SetJsonValueByKey(value, "maxInertia", _vmaxinertia, allocator);
     SetJsonValueByKey(value, "weights", _vweights, allocator);
     SetJsonValueByKey(value, "offsets", _voffsets, allocator);
-    SetJsonValueByKey(value, "lowerLimit", _vlowerlimit, allocator);
-    SetJsonValueByKey(value, "upperLimit", _vupperlimit, allocator);
+    SetJsonValueByKey(value, "lowerLimit", newvlowerlimit, allocator);
+    SetJsonValueByKey(value, "upperLimit", newvupperlimit, allocator);
     // TODO: SetJsonValueByKey(value, allocator, "trajfollow", _trajfollow);
 
     if (_vmimic.size() > 0) {
@@ -157,7 +178,7 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
         value.AddMember("electricMotorActuator", electricMotorInfoValue, allocator);
     }
 
-    SetJsonValueByKey(value, "isCircular", _bIsCircular, allocator);
+    SetJsonValueByKey(value, "isCircular", _bIsCircular, allocator, dof);
     SetJsonValueByKey(value, "isActive", _bIsActive, allocator);
 
 }
@@ -179,6 +200,7 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
     {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported joint type \"%s\"", typestr, ORE_InvalidArguments);
     }
+
     LoadJsonValueByKey(value, "name", _name);
     LoadJsonValueByKey(value, "parentLinkName", _linkname0);
     LoadJsonValueByKey(value, "anchors", _vanchor);
@@ -186,7 +208,7 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
     LoadJsonValueByKey(value, "axes", _vaxes);
     LoadJsonValueByKey(value, "currentValues", _vcurrentvalues);
     LoadJsonValueByKey(value, "resolutions", _vresolution);
-    LoadJsonValueByKey(value, "maxvel", _vmaxvel);
+    LoadJsonValueByKey(value, "maxVel", _vmaxvel);
     LoadJsonValueByKey(value, "hardMaxVel", _vhardmaxvel);
     LoadJsonValueByKey(value, "maxAccel", _vmaxaccel);
     LoadJsonValueByKey(value, "hardMaxAccel", _vhardmaxaccel);
@@ -202,7 +224,6 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
     LoadJsonValueByKey(value, "isActive", _bIsActive);
 
     // multiply fUnitScale on maxVel, maxAccel, lowerLimit, upperLimit
-
     dReal fjointmult = fUnitScale;
     if(_type == JointRevolute)
     {

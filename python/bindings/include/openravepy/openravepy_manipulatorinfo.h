@@ -30,7 +30,7 @@ public:
     PyManipulatorInfo(const RobotBase::ManipulatorInfo& info);
     RobotBase::ManipulatorInfoPtr GetManipulatorInfo() const;
 
-    object SerializeJSON(dReal fUnitScale=1.0, object ooptions=py::none_());
+    object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
     void DeserializeJSON(object obj, dReal fUnitScale=1.0);
 
     object _name = py::none_();

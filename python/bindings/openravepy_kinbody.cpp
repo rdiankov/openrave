@@ -154,11 +154,11 @@ object PyGeometryInfo::ComputeAABB(object otransform) {
     return toPyAABB(pgeominfo->ComputeAABB(ExtractTransform(otransform)));
 }
 
-object PyGeometryInfo::SerializeJSON(dReal fUnitScale, object ooptions)
+object PyGeometryInfo::SerializeJSON(dReal fUnitScale, object options)
 {
     rapidjson::Document doc;
     KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
-    pgeominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(ooptions, 0));
+    pgeominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(options, 0));
     return toPyObject(doc);
 }
 
@@ -181,7 +181,7 @@ KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo() {
     info._vGeomData4 = ExtractVector<dReal>(_vGeomData4);
 
     info._vSideWalls.clear();
-    for (size_t i = 0; i < len(_vSideWalls); ++i) {
+    for (size_t i = 0; i < (size_t)len(_vSideWalls); ++i) {
         info._vSideWalls.push_back({});
         OPENRAVE_SHARED_PTR<PySideWall> pysidewall = py::extract<OPENRAVE_SHARED_PTR<PySideWall> >(_vSideWalls[i]);
         pysidewall->Get(info._vSideWalls[i]);
@@ -252,7 +252,7 @@ py::object PyLinkInfo::SerializeJSON(dReal fUnitScale, object options)
 {
     rapidjson::Document doc;
     KinBody::LinkInfoPtr pInfo = GetLinkInfo();
-    pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(options, 0));
+    pInfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(options, 0));
     return toPyObject(doc);
 }
 
@@ -343,7 +343,8 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
     for(size_t i = 0; i < num; ++i) {
         object okeyvalue = okeyvalueiter.attr("next") ();
         std::string name = extract<std::string>(okeyvalue[0]);
-        for(size_t j = 0; j < len(okeyvalue[1]); j++){
+        info._mapExtraGeometries[name] = std::vector<KinBody::GeometryInfoPtr>(len(okeyvalue[1]));
+        for(size_t j = 0; j < (size_t)len(okeyvalue[1]); j++){
             PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(okeyvalue[1][j]);
             info._mapExtraGeometries[name].push_back(pygeom->GetGeometryInfo());
         }
@@ -745,6 +746,15 @@ void PyJointInfo::_Update(const KinBody::JointInfo& info) {
             _jci_externaldevice = PyJointControlInfo_ExternalDevicePtr(new PyJointControlInfo_ExternalDevice(*info._jci_externaldevice));
         }
     }
+}
+
+object PyJointInfo::GetDOF() {
+    KinBody::JointInfoPtr pInfo = GetJointInfo();
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    return py::int_(pInfo->GetDOF());
+#else
+    return py::to_object(py::handle<>(PyInt_FromLong(pInfo->GetDOF())));
+#endif
 }
 
 KinBody::JointInfoPtr PyJointInfo::GetJointInfo() {
@@ -4150,6 +4160,7 @@ void init_openravepy_kinbody()
                        .def_readwrite("_jci_robotcontroller", &PyJointInfo::_jci_robotcontroller)
                        .def_readwrite("_jci_io", &PyJointInfo::_jci_io)
                        .def_readwrite("_jci_externaldevice", &PyJointInfo::_jci_externaldevice)
+                       .def("GetDOF", &PyJointInfo::GetDOF)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                        .def("SerializeJSON", &PyJointInfo::SerializeJSON,
                             "unitScale"_a = 1.0,

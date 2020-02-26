@@ -69,7 +69,7 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
         (*it)->SerializeJSON(info, allocator, options);
         linkInfosValue.PushBack(info, allocator);
     }
-    value.AddMember("linkInfos", linkInfosValue, allocator);
+    value.AddMember("links", linkInfosValue, allocator);
 
     rapidjson::Value jointInfosValue;
     jointInfosValue.SetArray();
@@ -79,7 +79,7 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
         (*it)->SerializeJSON(v, allocator, options);
         jointInfosValue.PushBack(v, allocator);
     }
-    value.AddMember("jointInfos", jointInfosValue, allocator);
+    value.AddMember("joints", jointInfosValue, allocator);
 
     rapidjson::Value manipulatorInfosValue;
     manipulatorInfosValue.SetArray();
@@ -89,7 +89,7 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
         (*it)->SerializeJSON(info, allocator, options);
         manipulatorInfosValue.PushBack(info, allocator);
     }
-    value.AddMember("manipulatorInfos", manipulatorInfosValue, allocator);
+    value.AddMember("manipulators", manipulatorInfosValue, allocator);
 
     rapidjson::Value attachedSensorInfosValue;
     attachedSensorInfosValue.SetArray();
@@ -99,7 +99,7 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
         (*it)->SerializeJSON(info, allocator, options);
         attachedSensorInfosValue.PushBack(info, allocator);
     }
-    value.AddMember("_vAttachedSensorInfos", attachedSensorInfosValue, allocator);
+    value.AddMember("attachedSensors", attachedSensorInfosValue, allocator);
 
     SetJsonValueByKey(value, "isActive", _bIsActive, allocator);
 }
@@ -111,46 +111,46 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
     LoadJsonValueByKey(value, "url", _url);
     LoadJsonValueByKey(value, "transform", _trelative);
 
-    if(value.HasMember("linkInfos"))
+    if(value.HasMember("links"))
     {
         _vLinkInfos.resize(0);
-        _vLinkInfos.reserve(value["linkInfos"].Size());
-        for (size_t i = 0; i < value["linkInfos"].Size(); ++i) {
+        _vLinkInfos.reserve(value["links"].Size());
+        for (size_t i = 0; i < value["links"].Size(); ++i) {
             LinkInfoPtr linkinfo(new LinkInfo());
-            linkinfo->DeserializeJSON(value["linkInfos"][i]);
+            linkinfo->DeserializeJSON(value["links"][i]);
             _vLinkInfos.push_back(linkinfo);
         }
     }
 
-    if(value.HasMember("jointInfos"))
+    if(value.HasMember("joints"))
     {
         _vJointInfos.resize(0);
-        _vJointInfos.reserve(value["jointInfos"].Size());
-        for (size_t i = 0; i < value["jointInfos"].Size(); ++i) {
+        _vJointInfos.reserve(value["joints"].Size());
+        for (size_t i = 0; i < value["joints"].Size(); ++i) {
             JointInfoPtr jointinfo(new JointInfo());
-            jointinfo->DeserializeJSON(value["jointInfos"][i]);
+            jointinfo->DeserializeJSON(value["joints"][i]);
             _vJointInfos.push_back(jointinfo);
         }
     }
 
-    if(value.HasMember("manipulatorInfos"))
+    if(value.HasMember("manipulators"))
     {
         _vManipulatorInfos.resize(0);
-        _vManipulatorInfos.reserve(value["manipulatorInfos"].Size());
-        for (size_t i = 0; i < value["manipulatorInfos"].Size(); ++i) {
+        _vManipulatorInfos.reserve(value["manipulators"].Size());
+        for (size_t i = 0; i < value["manipulators"].Size(); ++i) {
             ManipulatorInfoPtr manipulatorinfo(new ManipulatorInfo());
-            manipulatorinfo->DeserializeJSON(value["manipulatorInfos"][i]);
+            manipulatorinfo->DeserializeJSON(value["manipulators"][i]);
             _vManipulatorInfos.push_back(manipulatorinfo);
         }
     }
 
-    if(value.HasMember("_vAttachedSensorInfos"))
+    if(value.HasMember("attachedSensors"))
     {
         _vAttachedSensorInfos.resize(0);
-        _vAttachedSensorInfos.reserve(value["_vAttachedSensorInfos"].Size());
-        for (size_t i = 0; i < value["_vAttachedSensorInfos"].Size(); ++i) {
+        _vAttachedSensorInfos.reserve(value["attachedSensors"].Size());
+        for (size_t i = 0; i < value["attachedSensors"].Size(); ++i) {
             AttachedSensorInfoPtr attachedsensorinfo(new AttachedSensorInfo());
-            attachedsensorinfo->DeserializeJSON(value["_vAttachedSensorInfos"][i]);
+            attachedsensorinfo->DeserializeJSON(value["attachedSensors"][i]);
             _vAttachedSensorInfos.push_back(attachedsensorinfo);
         }
     }
