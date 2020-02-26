@@ -124,7 +124,7 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
         newvlowerlimit[i] *= fjointmult;
         newvupperlimit[i] *= fjointmult;
     }
-    SetJsonValueByKey(value, "maxvel", newvmaxvel, allocator);
+    SetJsonValueByKey(value, "maxVel", newvmaxvel, allocator);
     SetJsonValueByKey(value, "hardMaxVel", _vhardmaxvel, allocator);
     SetJsonValueByKey(value, "maxAccel", newvmaxaccel, allocator);
     SetJsonValueByKey(value, "hardMaxAccel", _vhardmaxaccel, allocator);
@@ -208,7 +208,7 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
     LoadJsonValueByKey(value, "axes", _vaxes);
     LoadJsonValueByKey(value, "currentValues", _vcurrentvalues);
     LoadJsonValueByKey(value, "resolutions", _vresolution);
-    LoadJsonValueByKey(value, "maxvel", _vmaxvel);
+    LoadJsonValueByKey(value, "maxVel", _vmaxvel);
     LoadJsonValueByKey(value, "hardMaxVel", _vhardmaxvel);
     LoadJsonValueByKey(value, "maxAccel", _vmaxaccel);
     LoadJsonValueByKey(value, "hardMaxAccel", _vhardmaxaccel);
