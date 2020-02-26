@@ -41,7 +41,7 @@ public:
         virtual ~ManipulatorInfo() {
         }
 
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
+        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv);
 
         std::string _name;
