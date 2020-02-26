@@ -700,7 +700,7 @@ void init_openravepy_sensor()
         ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        class_<PyCameraIntrinsics, OPENRAVE_SHARED_PTR<PyCameraIntrinsics> >(m, "CameraIntrinsics", DOXY_CLASS(geometry::RaveCameraIntrinsics))
+        class_<PyCameraIntrinsics, OPENRAVE_SHARED_PTR<PyCameraIntrinsics> >(sensor, "CameraIntrinsics", DOXY_CLASS(geometry::RaveCameraIntrinsics))
 #else
         class_<PyCameraIntrinsics, OPENRAVE_SHARED_PTR<PyCameraIntrinsics> >("CameraIntrinsics", DOXY_CLASS(geometry::RaveCameraIntrinsics))
 #endif
