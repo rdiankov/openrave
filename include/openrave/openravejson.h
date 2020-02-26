@@ -20,7 +20,6 @@
 
 #include <openrave/config.h>
 
-#if OPENRAVE_RAPIDJSON
 #include <array>
 #include <boost/shared_ptr.hpp>
 #include <boost/lexical_cast.hpp>
@@ -975,5 +974,5 @@ inline void UpdateJson(rapidjson::Document& a, const rapidjson::Value& b) {
 }
 
 } // namespace openravejson
-#endif
-#endif
+
+#endif // OPENRAVE_JSON_H

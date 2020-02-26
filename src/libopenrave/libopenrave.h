@@ -89,9 +89,7 @@
 #include <sstream>
 #include <iomanip>
 
-#if OPENRAVE_RAPIDJSON
 #include <openrave/openravejson.h>
-#endif
 
 #ifdef USE_CRLIBM
 #include <crlibm.h> // robust/accurate math

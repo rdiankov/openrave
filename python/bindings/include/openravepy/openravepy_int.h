@@ -66,11 +66,9 @@ using namespace OpenRAVE;
 
 namespace openravepy {
 
-#if OPENRAVE_RAPIDJSON
 /// conversion between rapidjson value and py::object
 OPENRAVEPY_API py::object toPyObject(const rapidjson::Value& value);
 OPENRAVEPY_API void toRapidJSONValue(const py::object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator);
-#endif // OPENRAVE_RAPIDJSON
 
 /// used externally, don't change definitions
 //@{
@@ -603,10 +601,8 @@ public:
     bool SupportsCommand(const string& cmd);
     py::object SendCommand(const string& in, bool releasegil=false, bool lockenv=false);
 
-#if OPENRAVE_RAPIDJSON
     bool SupportsJSONCommand(const string& cmd);
     py::object SendJSONCommand(const string& cmd, py::object input, bool releasegil=false, bool lockenv=false);
-#endif // OPENRAVE_RAPIDJSON
 
     virtual py::object GetReadableInterfaces();
     virtual py::object GetReadableInterface(const std::string& xmltag);

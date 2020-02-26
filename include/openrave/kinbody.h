@@ -163,13 +163,11 @@ public:
         /// \brief computes the bounding box in the world. tGeometryWorld is for the world transform.
         AABB ComputeAABB(const Transform& tGeometryWorld) const;
 
-#if OPENRAVE_RAPIDJSON
         ///< \param multiply all translational values by fUnitScale
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale=1.0, int options=0) const;
 
         ///< \param multiply all translational values by fUnitScale
         virtual void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale = 1);
-#endif
 
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
 
