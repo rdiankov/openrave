@@ -412,6 +412,7 @@ private:
 #endif
 #endif
         friend class ColladaReader;
+        friend class JSONReader;
         friend class RobotBase;
     };
     typedef boost::shared_ptr<RobotBase::Manipulator> ManipulatorPtr;
@@ -529,6 +530,7 @@ private:
 #endif
 #endif
         friend class ColladaReader;
+        friend class JSONReader;
         friend class RobotBase;
     };
     typedef boost::shared_ptr<RobotBase::AttachedSensor> AttachedSensorPtr;
@@ -661,6 +663,7 @@ private:
         mutable std::string __hashstructure;
 
         friend class ColladaReader;
+        friend class JSONReader;
         friend class RobotBase;
     };
 
@@ -1149,6 +1152,7 @@ private:
 #endif
     friend class ColladaWriter;
     friend class ColladaReader;
+    friend class JSONReader;
     friend class RaveDatabase;
     friend class Grabbed;
 };

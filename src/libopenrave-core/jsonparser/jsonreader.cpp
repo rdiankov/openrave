@@ -218,7 +218,6 @@ namespace OpenRAVE {
                 return false;
             }
 
-            KinBodyPtr body = RaveCreateKinBody(_penv, "");
             dReal fUnitScale = _GetUnitScale();
 
             std::string uri;
@@ -230,10 +229,12 @@ namespace OpenRAVE {
             std::vector<KinBody::JointInfoConstPtr> jointinfos;
             _ExtractJoints(value, jointinfos, fUnitScale);
 
+            KinBodyPtr body = RaveCreateKinBody(_penv, "");
             if (!body->Init(linkinfos, jointinfos, uri)) {
                 return false;
             }
 
+            body->SetName(GetJsonValueByKey<std::string>(value, "name"));
             pbody = body;
             return true;
         }
@@ -244,7 +245,6 @@ namespace OpenRAVE {
                 return false;
             }
 
-            RobotBasePtr robot = RaveCreateRobot(_penv, "");
             dReal fUnitScale = _GetUnitScale();
 
             std::string uri;
@@ -256,6 +256,18 @@ namespace OpenRAVE {
             std::vector<KinBody::JointInfoConstPtr> jointinfos;
             _ExtractJoints(value, jointinfos, fUnitScale);
 
+            std::vector<RobotBase::ManipulatorInfoConstPtr> manipinfos;
+            _ExtractManipulators(value, manipinfos, fUnitScale);
+
+            std::vector<RobotBase::AttachedSensorInfoConstPtr> attachedsensorinfos;
+            _ExtractAttachedSensors(value, attachedsensorinfos, fUnitScale);
+
+            RobotBasePtr robot = RaveCreateRobot(_penv, "");
+            if (!robot->Init(linkinfos, jointinfos, manipinfos, attachedsensorinfos, uri)) {
+                return false;
+            }
+
+            robot->SetName(GetJsonValueByKey<std::string>(value, "name"));
             probot = robot;
             return true;
         }
@@ -282,6 +294,34 @@ namespace OpenRAVE {
                     KinBody::JointInfoPtr jointinfo(new KinBody::JointInfo());
                     jointinfo->DeserializeJSON(*itr, fUnitScale);
                     jointinfos.push_back(jointinfo);
+                }
+                return true;
+            }
+            return false;
+        }
+
+        bool _ExtractManipulators(const rapidjson::Value &value, std::vector<RobotBase::ManipulatorInfoConstPtr> &manipinfos, dReal fUnitScale)
+        {
+            if (value.HasMember("manipulators") && value["manipulators"].IsArray()) {
+                manipinfos.reserve(manipinfos.size() + value["manipulators"].MemberCount());
+                for (rapidjson::Value::ConstValueIterator itr = value["manipulators"].Begin(); itr != value["manipulators"].End(); ++itr) {
+                    RobotBase::ManipulatorInfoPtr manipinfo(new RobotBase::ManipulatorInfo());
+                    manipinfo->DeserializeJSON(*itr, fUnitScale);
+                    manipinfos.push_back(manipinfo);
+                }
+                return true;
+            }
+            return false;
+        }
+
+        bool _ExtractAttachedSensors(const rapidjson::Value &value, std::vector<RobotBase::AttachedSensorInfoConstPtr> &attachedsensorinfos, dReal fUnitScale)
+        {
+            if (value.HasMember("attachedSensors") && value["attachedSensors"].IsArray()) {
+                attachedsensorinfos.reserve(attachedsensorinfos.size() + value["attachedSensors"].MemberCount());
+                for (rapidjson::Value::ConstValueIterator itr = value["attachedSensors"].Begin(); itr != value["attachedSensors"].End(); ++itr) {
+                    RobotBase::AttachedSensorInfoPtr attachedsensorinfo(new RobotBase::AttachedSensorInfo());
+                    attachedsensorinfo->DeserializeJSON(*itr, fUnitScale);
+                    attachedsensorinfos.push_back(attachedsensorinfo);
                 }
                 return true;
             }

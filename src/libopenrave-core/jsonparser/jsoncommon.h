@@ -26,6 +26,9 @@
 namespace OpenRAVE
 {
 
+class JSONReader;
+class JSONWriter;
+
 bool RaveParseJSONURI(EnvironmentBasePtr penv, const std::string& uri,const AttributesList& atts);
 bool RaveParseJSONURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const AttributesList& atts);
 bool RaveParseJSONURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts);

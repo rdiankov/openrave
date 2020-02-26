@@ -301,6 +301,7 @@ private:
 #endif
 #endif
     friend class ColladaReader;
+    friend class JSONReader;
     friend class RaveDatabase;
 };
 

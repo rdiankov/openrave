@@ -457,6 +457,7 @@ protected:
 #endif
 #endif
             friend class ColladaReader;
+            friend class JSONReader;
             friend class RobotBase;
             friend class KinBody;
             friend class KinBody::Link;
@@ -777,6 +778,7 @@ private:
 #endif
 #endif
         friend class ColladaReader;
+        friend class JSONReader;
         friend class KinBody;
         friend class RobotBase;
     };
@@ -1483,6 +1485,7 @@ private:
 #endif
         friend class ColladaReader;
         friend class ColladaWriter;
+        friend class JSONReader;
         friend class KinBody;
         friend class RobotBase;
     };
@@ -2655,6 +2658,7 @@ private:
 
     friend class ColladaReader;
     friend class ColladaWriter;
+    friend class JSONReader;
     friend class PhysicsEngineBase;
     friend class CollisionCheckerBase;
     friend class ViewerBase;
