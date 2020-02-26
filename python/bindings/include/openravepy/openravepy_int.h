@@ -66,6 +66,28 @@ using namespace OpenRAVE;
 
 namespace openravepy {
 
+#if OPENRAVE_RAPIDJSON
+/// conversion between rapidjson value and py::object
+OPENRAVEPY_API py::object toPyObject(const rapidjson::Value& value);
+OPENRAVEPY_API void toRapidJSONValue(const py::object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator);
+#endif // OPENRAVE_RAPIDJSON
+
+/// used externally, don't change definitions
+//@{
+OPENRAVEPY_API Transform ExtractTransform(const py::object& oraw);
+OPENRAVEPY_API TransformMatrix ExtractTransformMatrix(const py::object& oraw);
+OPENRAVEPY_API py::object toPyArray(const TransformMatrix& t);
+OPENRAVEPY_API py::object toPyArray(const Transform& t);
+OPENRAVEPY_API py::object toPyArray(const std::vector<KinBody::GeometryInfoPtr>& infos);
+// OPENRAVEPY_API py::object toPyArray(std::vector<KinBody::GeometryInfoPtr>& infos);
+OPENRAVEPY_API XMLReadablePtr ExtractXMLReadable(py::object o);
+OPENRAVEPY_API py::object toPyXMLReadable(XMLReadablePtr p);
+OPENRAVEPY_API bool ExtractIkParameterization(py::object o, IkParameterization& ikparam);
+OPENRAVEPY_API py::object toPyIkParameterization(const IkParameterization& ikparam);
+OPENRAVEPY_API py::object toPyIkParameterization(const std::string& serializeddata);
+//@}
+
+
 struct DummyStruct {};
 
 class PyInterfaceBase;
@@ -91,6 +113,7 @@ class PyXMLReadable;
 class PyCameraIntrinsics;
 class PyLinkInfo;
 class PyJointInfo;
+class PyGeometryInfo;
 class PyManipulatorInfo;
 class PyAttachedSensorInfo;
 class PyConnectedBodyInfo;
@@ -138,6 +161,7 @@ typedef OPENRAVE_SHARED_PTR<PyXMLReadable> PyXMLReadablePtr;
 typedef OPENRAVE_SHARED_PTR<PyCameraIntrinsics> PyCameraIntrinsicsPtr;
 typedef OPENRAVE_SHARED_PTR<PyLinkInfo> PyLinkInfoPtr;
 typedef OPENRAVE_SHARED_PTR<PyJointInfo> PyJointInfoPtr;
+typedef OPENRAVE_SHARED_PTR<PyGeometryInfo> PyGeometryInfoPtr;
 typedef OPENRAVE_SHARED_PTR<PyManipulatorInfo> PyManipulatorInfoPtr;
 typedef OPENRAVE_SHARED_PTR<PyAttachedSensorInfo> PyAttachedSensorInfoPtr;
 typedef OPENRAVE_SHARED_PTR<PyConnectedBodyInfo> PyConnectedBodyInfoPtr;
@@ -160,25 +184,6 @@ inline uint64_t GetMicroTime()
 #endif
 }
 
-#if OPENRAVE_RAPIDJSON
-/// conversion between rapidjson value and py::object
-OPENRAVEPY_API py::object toPyObject(const rapidjson::Value& value);
-OPENRAVEPY_API void toRapidJSONValue(const py::object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator);
-#endif // OPENRAVE_RAPIDJSON
-
-/// used externally, don't change definitions
-//@{
-OPENRAVEPY_API Transform ExtractTransform(const py::object& oraw);
-OPENRAVEPY_API TransformMatrix ExtractTransformMatrix(const py::object& oraw);
-OPENRAVEPY_API py::object toPyArray(const TransformMatrix& t);
-OPENRAVEPY_API py::object toPyArray(const Transform& t);
-
-OPENRAVEPY_API XMLReadablePtr ExtractXMLReadable(py::object o);
-OPENRAVEPY_API py::object toPyXMLReadable(XMLReadablePtr p);
-OPENRAVEPY_API bool ExtractIkParameterization(py::object o, IkParameterization& ikparam);
-OPENRAVEPY_API py::object toPyIkParameterization(const IkParameterization& ikparam);
-OPENRAVEPY_API py::object toPyIkParameterization(const std::string& serializeddata);
-//@}
 
 struct OPENRAVEPY_API null_deleter {
     void operator()(void const *) const {
@@ -793,6 +798,7 @@ OPENRAVEPY_API PyLinkPtr toPyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr p
 OPENRAVEPY_API PyJointPtr toPyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv);
 OPENRAVEPY_API PyLinkInfoPtr toPyLinkInfo(const KinBody::LinkInfo& linkinfo);
 OPENRAVEPY_API PyJointInfoPtr toPyJointInfo(const KinBody::JointInfo& jointinfo, PyEnvironmentBasePtr pyenv);
+OPENRAVEPY_API PyGeometryInfoPtr toPyGeometryInfo(const KinBody::GeometryInfo geominfo);
 OPENRAVEPY_API PyManipulatorInfoPtr toPyManipulatorInfo(const RobotBase::ManipulatorInfo& manipulatorinfo);
 OPENRAVEPY_API PyAttachedSensorInfoPtr toPyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& attachedSensorinfo);
 OPENRAVEPY_API PyConnectedBodyInfoPtr toPyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& connectedBodyInfo, PyEnvironmentBasePtr pyenv);
