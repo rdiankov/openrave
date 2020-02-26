@@ -122,7 +122,6 @@ inline std::string GetJsonTypeName(const rapidjson::Value& v) {
 }
 
 template<class T> inline std::string GetJsonString(const T& t);
-
 inline std::string DumpJson(const rapidjson::Value& value, const unsigned int indent=0) {
     rapidjson::StringBuffer stringbuffer;
     if (indent == 0) {
@@ -177,7 +176,6 @@ inline void ParseJson(rapidjson::Document& d, std::istream& is) {
     d.Swap(tempDoc);
 }
 
-
 class JsonSerializable {
 public:
     virtual void LoadFromJson(const rapidjson::Value& v) = 0;
@@ -186,70 +184,6 @@ public:
         SaveToJson(d, d.GetAllocator());
     }
 };
-
-
-// forward declares
-// LoadJsonValue
-template<class T> void inline LoadJsonValueByKey(const rapidjson::Value& v, const char* key, T& t);
-template<class T, class U> inline void LoadJsonValueByKey(const rapidjson::Value& v, const char* key, T& t, const U& d);
-inline void LoadJsonValue(const rapidjson::Value& v, JsonSerializable& t);
-inline void LoadJsonValue(const rapidjson::Value& v, std::string& t);
-inline void LoadJsonValue(const rapidjson::Value& v, int& t);
-inline void LoadJsonValue(const rapidjson::Value& v, uint8_t& t);
-inline void LoadJsonValue(const rapidjson::Value& v, unsigned long long& t);
-inline void LoadJsonValue(const rapidjson::Value& v, uint64_t& t);
-inline void LoadJsonValue(const rapidjson::Value& v, int64_t& t);
-inline void LoadJsonValue(const rapidjson::Value& v, double& t);
-inline void LoadJsonValue(const rapidjson::Value& v, float& t);
-inline void LoadJsonValue(const rapidjson::Value& v, bool& t);
-template<class T> inline void LoadJsonValue(const rapidjson::Value& v, RaveVector<T>& t);
-template<class T> inline void LoadJsonValue(const rapidjson::Value& v, boost::shared_ptr<T>& ptr);
-template<class T, size_t N> inline void LoadJsonValue(const rapidjson::Value& v, boost::array<T, N>& t);
-template<class T, class U> inline void LoadJsonValue(const rapidjson::Value& v, std::pair<T, U>& t);
-template<class T, size_t N> inline void LoadJsonValue(const rapidjson::Value& v, T (&p)[N]);
-template<class T> inline void LoadJsonValue(const rapidjson::Value& v, std::vector<T>& t);
-template<class T, size_t N> inline void LoadJsonValue(const rapidjson::Value& v, std::array<T, N>& t);
-template<class T> inline void LoadJsonValue(const rapidjson::Value& v, std::set<T>& t);
-template<class T> inline void LoadJsonValue(const rapidjson::Value& v, std::map<std::string, T>& t);
-template<class T> inline void LoadJsonValue(const rapidjson::Value& v, RaveTransform<T>& t);
-inline void LoadJsonValue(const rapidjson::Value& v, TriMesh& trimesh);
-inline void LoadJsonValue(const rapidjson::Value& v, SensorBase::CameraIntrinsics& t);
-inline void LoadJsonValue(const rapidjson::Value& v, IkParameterization& t);
-
-// SaveJsonValue
-inline void SaveJsonValue(rapidjson::Value& v, const JsonSerializable& t, rapidjson::Document::AllocatorType& alloc);
-inline void SaveJsonValue(rapidjson::Value& v, const std::string& t, rapidjson::Document::AllocatorType& alloc);
-inline void SaveJsonValue(rapidjson::Value& v, const char* t, rapidjson::Document::AllocatorType& alloc);
-inline void SaveJsonValue(rapidjson::Value& v, int t, rapidjson::Document::AllocatorType& alloc);
-inline void SaveJsonValue(rapidjson::Value& v, unsigned int t, rapidjson::Document::AllocatorType& alloc);
-inline void SaveJsonValue(rapidjson::Value& v, long long t, rapidjson::Document::AllocatorType& alloc);
-inline void SaveJsonValue(rapidjson::Value& v, int64_t t, rapidjson::Document::AllocatorType& alloc);
-inline void SaveJsonValue(rapidjson::Value& v, unsigned long long t, rapidjson::Document::AllocatorType& alloc);
-inline void SaveJsonValue(rapidjson::Value& v, uint64_t t, rapidjson::Document::AllocatorType& alloc);
-inline void SaveJsonValue(rapidjson::Value& v, bool t, rapidjson::Document::AllocatorType& alloc);
-inline void SaveJsonValue(rapidjson::Value& v, double t, rapidjson::Document::AllocatorType& alloc);
-inline void SaveJsonValue(rapidjson::Value& v, float t, rapidjson::Document::AllocatorType& alloc);
-inline void SaveJsonValue(rapidjson::Value& v, const rapidjson::Value& t, rapidjson::Document::AllocatorType& alloc);
-template<class T> inline void SaveJsonValue(rapidjson::Value& v, const boost::shared_ptr<T>& ptr, rapidjson::Document::AllocatorType& alloc);
-template<class T, class U> inline void SaveJsonValue(rapidjson::Value& v, const std::pair<T, U>& t, rapidjson::Document::AllocatorType& alloc);
-template<class T> inline void SaveJsonValue(rapidjson::Value& v, const std::set<T>& t, rapidjson::Document::AllocatorType& alloc);
-template<class T> inline void SaveJsonValue(rapidjson::Value& v, const RaveTransform<T>& t, rapidjson::Document::AllocatorType& alloc);
-template<class T> inline void SaveJsonValue(rapidjson::Value& v, const std::vector<T>& t, rapidjson::Document::AllocatorType& alloc);
-template<class T> inline void SaveJsonValue(rapidjson::Value& v, const RaveVector<T>& t, rapidjson::Document::AllocatorType& alloc);
-template<class T, size_t N> inline void SaveJsonValue(rapidjson::Value& v, const std::array<T, N>& t, rapidjson::Document::AllocatorType& alloc);
-template<class T, size_t N> inline void SaveJsonValue(rapidjson::Value& v, const boost::array<T, N>& t, rapidjson::Document::AllocatorType& alloc);
-template<> inline void SaveJsonValue(rapidjson::Value& v, const std::vector<double>& t, rapidjson::Document::AllocatorType& alloc);
-template<size_t N> inline void SaveJsonValue(rapidjson::Value& v, const double (&t)[N], rapidjson::Document::AllocatorType& alloc);
-template<size_t N> inline void SaveJsonValue(rapidjson::Value& v, const std::array<double, N>& t, rapidjson::Document::AllocatorType& alloc);
-template<class T> inline void SaveJsonValue(rapidjson::Value& v, const std::map<std::string, T>& t, rapidjson::Document::AllocatorType& alloc);
-template<class T> inline void SaveJsonValue(rapidjson::Document& v, const T& t);
-inline void SaveJsonValue(rapidjson::Value& v, const TriMesh& t, rapidjson::Document::AllocatorType& alloc);
-
-template<class T, class U> T GetJsonValueByKey(const rapidjson::Value& v, const char* key, const U& t);
-template<class T> inline T GetJsonValueByKey(const rapidjson::Value& v, const char* key);
-template<class T, class U> inline void SetJsonValueByKey(rapidjson::Value& v, const U& key, const T& t, rapidjson::Document::AllocatorType& alloc);
-
-
 
 //store a json value to local data structures
 //for compatibility with ptree, type conversion is made. will remove them in the future
@@ -397,20 +331,6 @@ inline void LoadJsonValue(const rapidjson::Value& v, boost::array<T, N>& t) {
     }
 }
 
-template<class T, class U>
-inline void LoadJsonValue(const rapidjson::Value& v, std::pair<T, U>& t) {
-    if (v.IsArray()) {
-        if (v.GetArray().Size() == 2) {
-            LoadJsonValue(v[0], t.first);
-            LoadJsonValue(v[1], t.second);
-        } else {
-            throw OpenRAVEJSONException("List-based map has entry with size != 2", ORJE_InvalidArguments);
-        }
-    } else {
-        throw OpenRAVEJSONException("Cannot convert json type " + GetJsonTypeName(v) + " to Pair", ORJE_InvalidArguments);
-    }
-}
-
 template<class T, size_t N>
 inline void LoadJsonValue(const rapidjson::Value& v, T (&p)[N]) {
     if (v.IsArray()) {
@@ -424,6 +344,21 @@ inline void LoadJsonValue(const rapidjson::Value& v, T (&p)[N]) {
         }
     } else {
         throw OpenRAVEJSONException("Cannot convert json type " + GetJsonTypeName(v) + " to Array", ORJE_InvalidArguments);
+    }
+}
+
+template<class T> inline void LoadJsonValue(const rapidjson::Value& v, std::vector<T>& t);
+template<class T, class U>
+inline void LoadJsonValue(const rapidjson::Value& v, std::pair<T, U>& t) {
+    if (v.IsArray()) {
+        if (v.GetArray().Size() == 2) {
+            LoadJsonValue(v[0], t.first);
+            LoadJsonValue(v[1], t.second);
+        } else {
+            throw OpenRAVEJSONException("List-based map has entry with size != 2", ORJE_InvalidArguments);
+        }
+    } else {
+        throw OpenRAVEJSONException("Cannot convert json type " + GetJsonTypeName(v) + " to Pair", ORJE_InvalidArguments);
     }
 }
 
@@ -495,7 +430,6 @@ inline void LoadJsonValue(const rapidjson::Value& v, std::map<std::string, T>& t
     }
 }
 
-
 template<class T>
 inline void LoadJsonValue(const rapidjson::Value& v, RaveTransform<T>& t) {
     if (v.IsArray()){
@@ -537,53 +471,6 @@ inline void LoadJsonValue(const rapidjson::Value& v, TriMesh& t)
     LoadJsonValue(v["indices"], t.indices);
 }
 
-inline void LoadJsonValue(const rapidjson::Value& v, IkParameterization& t) {
-    if (!v.IsObject()) {
-        throw OpenRAVEJSONException("Cannot load value of non-object to IkParameterization.", ORJE_InvalidArguments);
-    }
-    std::string typestr;
-    LoadJsonValueByKey(v, "type", typestr);
-
-    if (typestr == "Transform6D")
-    {
-        Transform transform;
-        LoadJsonValueByKey(v, "rotate", transform.rot);
-        LoadJsonValueByKey(v, "translate", transform.trans);
-        t.SetTransform6D(transform);
-    }
-    else if (typestr == "TranslationDirection5D")
-    {
-        RAY ray;
-        LoadJsonValueByKey(v, "translate", ray.pos);
-        LoadJsonValueByKey(v, "direction", ray.dir);
-        t.SetTranslationDirection5D(ray);
-    }
-    else
-    {
-        throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported IkParameterization type \"%s\"", typestr, ORE_InvalidArguments);
-    }
-
-    std::map<std::string, std::vector<dReal> > customData;
-    LoadJsonValueByKey(v, "customData", customData);
-
-    t.ClearCustomValues();
-    for (std::map<std::string, std::vector<dReal> >::const_iterator it = customData.begin(); it != customData.end(); ++it) {
-        t.SetCustomValues(it->first, it->second);
-    }
-}
-
-inline void LoadJsonValue(const rapidjson::Value& v, SensorBase::CameraIntrinsics& t) {
-    if (!v.IsObject()) {
-        throw OpenRAVEJSONException("Cannot load value of non-object to SensorBase::CameraIntrinsics.", ORJE_InvalidArguments);
-    }
-    LoadJsonValueByKey(v, "fx", t.fx);
-    LoadJsonValueByKey(v, "fy", t.fy);
-    LoadJsonValueByKey(v, "cx", t.cx);
-    LoadJsonValueByKey(v, "cy", t.cy);
-    LoadJsonValueByKey(v, "focalLength", t.focal_length);
-    LoadJsonValueByKey(v, "distortionModel", t.distortion_model);
-    LoadJsonValueByKey(v, "distortionCoeffs", t.distortion_coeffs);
-}
 
 //Save a data structure to rapidjson::Value format
 
@@ -778,49 +665,18 @@ inline void SaveJsonValue(rapidjson::Document& v, const T& t) {
     SaveJsonValue(tempDoc, t, tempDoc.GetAllocator());
     v.Swap(tempDoc);
 }
-
-inline void SaveJsonValue(rapidjson::Value &v, const TriMesh& t, rapidjson::Document::AllocatorType& alloc) {
-    v.SetObject();
-    rapidjson::Value verticesValue;
-    verticesValue.SetArray();
-    for (std::vector<Vector>::const_iterator it = t.vertices.begin(); it != t.vertices.end(); ++it) {
-        verticesValue.PushBack((*it)[0], alloc);
-        verticesValue.PushBack((*it)[1], alloc);
-        verticesValue.PushBack((*it)[2], alloc);
+template<class T> void inline LoadJsonValueByKey(const rapidjson::Value& v, const char* key, T& t);
+inline void LoadJsonValue(const rapidjson::Value& v, SensorBase::CameraIntrinsics& t) {
+    if (!v.IsObject()) {
+        throw OpenRAVEJSONException("Cannot load value of non-object to SensorBase::CameraIntrinsics.", ORJE_InvalidArguments);
     }
-    v.AddMember("vertices", verticesValue, alloc);
-    SetJsonValueByKey(v, "indices", t.indices, alloc);
-}
-
-/// \brief serialize an OpenRAVE IkParameterization as json
-inline void SaveJsonValue(rapidjson::Value &v, const IkParameterization& t, rapidjson::Document::AllocatorType& alloc) {
-    v.SetObject();
-    SetJsonValueByKey(v, "type", t.GetName(), alloc);
-    switch(t.GetType()) {
-    case IKP_Transform6D:
-        SetJsonValueByKey(v, "rotate", t.GetTransform6D().rot, alloc);
-        SetJsonValueByKey(v, "translate", t.GetTransform6D().trans, alloc);
-        break;
-    case IKP_TranslationDirection5D:
-        SetJsonValueByKey(v, "translate", t.GetTranslationDirection5D().pos, alloc);
-        SetJsonValueByKey(v, "direction", t.GetTranslationDirection5D().dir, alloc);
-        break;
-    default:
-        break;
-    }
-    SetJsonValueByKey(v, "customData", t.GetCustomDataMap(), alloc);
-}
-
-/// \brief serialize an OpenRAVE CameraIntrinsics as json
-inline void SaveJsonValue(rapidjson::Value& v, const SensorBase::CameraIntrinsics& t, rapidjson::Document::AllocatorType& alloc) {
-    v.SetObject();
-    SetJsonValueByKey(v, "fx", t.fx, alloc);
-    SetJsonValueByKey(v, "fy", t.fy, alloc);
-    SetJsonValueByKey(v, "cx", t.cx, alloc);
-    SetJsonValueByKey(v, "cy", t.cy, alloc);
-    SetJsonValueByKey(v, "focalLength", t.focal_length, alloc);
-    SetJsonValueByKey(v, "distortionModel", t.distortion_model, alloc);
-    SetJsonValueByKey(v, "distortionCoeffs", t.distortion_coeffs, alloc);
+    LoadJsonValueByKey(v, "fx", t.fx);
+    LoadJsonValueByKey(v, "fy", t.fy);
+    LoadJsonValueByKey(v, "cx", t.cx);
+    LoadJsonValueByKey(v, "cy", t.cy);
+    LoadJsonValueByKey(v, "focalLength", t.focal_length);
+    LoadJsonValueByKey(v, "distortionModel", t.distortion_model);
+    LoadJsonValueByKey(v, "distortionCoeffs", t.distortion_coeffs);
 }
 
 //get one json value by key, and store it in local data structures
@@ -861,6 +717,41 @@ T GetJsonValueByKey(const rapidjson::Value& v, const char* key, const U& t) {
         }
     }
     return T(t);
+}
+
+inline void LoadJsonValue(const rapidjson::Value& v, IkParameterization& t) {
+    if (!v.IsObject()) {
+        throw OpenRAVEJSONException("Cannot load value of non-object to IkParameterization.", ORJE_InvalidArguments);
+    }
+    std::string typestr;
+    LoadJsonValueByKey(v, "type", typestr);
+
+    if (typestr == "Transform6D")
+    {
+        Transform transform;
+        LoadJsonValueByKey(v, "rotate", transform.rot);
+        LoadJsonValueByKey(v, "translate", transform.trans);
+        t.SetTransform6D(transform);
+    }
+    else if (typestr == "TranslationDirection5D")
+    {
+        RAY ray;
+        LoadJsonValueByKey(v, "translate", ray.pos);
+        LoadJsonValueByKey(v, "direction", ray.dir);
+        t.SetTranslationDirection5D(ray);
+    }
+    else
+    {
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported IkParameterization type \"%s\"", typestr, ORE_InvalidArguments);
+    }
+
+    std::map<std::string, std::vector<dReal> > customData;
+    LoadJsonValueByKey(v, "customData", customData);
+
+    t.ClearCustomValues();
+    for (std::map<std::string, std::vector<dReal> >::const_iterator it = customData.begin(); it != customData.end(); ++it) {
+        t.SetCustomValues(it->first, it->second);
+    }
 }
 
 template<class T>
@@ -905,11 +796,18 @@ T GetJsonValueByPath(const rapidjson::Value& v, const char* key, const U& t) {
     }
 }
 
-template<class T>
-inline void SetJsonValueByPath(rapidjson::Document& d, const char* path, const T& t) {
-    rapidjson::Value v;
-    SaveJsonValue(v, t, d.GetAllocator());
-    rapidjson::Pointer(path).Swap(d, v, d.GetAllocator());
+template<class T, class U>
+inline void SetJsonValueByKey(rapidjson::Value& v, const U& key, const T& t, rapidjson::Document::AllocatorType& alloc);
+/// \brief serialize an OpenRAVE CameraIntrinsics as json
+inline void SaveJsonValue(rapidjson::Value& v, const SensorBase::CameraIntrinsics& t, rapidjson::Document::AllocatorType& alloc) {
+    v.SetObject();
+    SetJsonValueByKey(v, "fx", t.fx, alloc);
+    SetJsonValueByKey(v, "fy", t.fy, alloc);
+    SetJsonValueByKey(v, "cx", t.cx, alloc);
+    SetJsonValueByKey(v, "cy", t.cy, alloc);
+    SetJsonValueByKey(v, "focalLength", t.focal_length, alloc);
+    SetJsonValueByKey(v, "distortionModel", t.distortion_model, alloc);
+    SetJsonValueByKey(v, "distortionCoeffs", t.distortion_coeffs, alloc);
 }
 
 template<class T, class U>
@@ -944,6 +842,45 @@ inline void SetJsonValueByKey(rapidjson::Document& d, const std::string& key, co
     rapidjson::Value v;
     SetJsonValueByKey(v, key.c_str(), t, d.GetAllocator());
     d.Swap(v);
+}
+
+inline void SaveJsonValue(rapidjson::Value &v, const TriMesh& t, rapidjson::Document::AllocatorType& alloc) {
+    v.SetObject();
+    rapidjson::Value verticesValue;
+    verticesValue.SetArray();
+    for (std::vector<Vector>::const_iterator it = t.vertices.begin(); it != t.vertices.end(); ++it) {
+        verticesValue.PushBack((*it)[0], alloc);
+        verticesValue.PushBack((*it)[1], alloc);
+        verticesValue.PushBack((*it)[2], alloc);
+    }
+    v.AddMember("vertices", verticesValue, alloc);
+    SetJsonValueByKey(v, "indices", t.indices, alloc);
+}
+
+/// \brief serialize an OpenRAVE IkParameterization as json
+inline void SaveJsonValue(rapidjson::Value &v, const IkParameterization& t, rapidjson::Document::AllocatorType& alloc) {
+    v.SetObject();
+    SetJsonValueByKey(v, "type", t.GetName(), alloc);
+    switch(t.GetType()) {
+    case IKP_Transform6D:
+        SetJsonValueByKey(v, "rotate", t.GetTransform6D().rot, alloc);
+        SetJsonValueByKey(v, "translate", t.GetTransform6D().trans, alloc);
+        break;
+    case IKP_TranslationDirection5D:
+        SetJsonValueByKey(v, "translate", t.GetTranslationDirection5D().pos, alloc);
+        SetJsonValueByKey(v, "direction", t.GetTranslationDirection5D().dir, alloc);
+        break;
+    default:
+        break;
+    }
+    SetJsonValueByKey(v, "customData", t.GetCustomDataMap(), alloc);
+}
+
+template<class T>
+inline void SetJsonValueByPath(rapidjson::Document& d, const char* path, const T& t) {
+    rapidjson::Value v;
+    SaveJsonValue(v, t, d.GetAllocator());
+    rapidjson::Pointer(path).Swap(d, v, d.GetAllocator());
 }
 
 inline void ValidateJsonString(const std::string& str) {
