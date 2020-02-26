@@ -244,7 +244,7 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
     boost::array<MimicInfoPtr, 3> newmimic;
     if (value.HasMember("mimics"))
     {
-        for (rapidjson::SizeType i = 0; i < value["mimic"].Size(); ++i) {
+        for (rapidjson::SizeType i = 0; i < value["mimics"].Size(); ++i) {
             MimicInfoPtr mimicinfo(new MimicInfo());
             mimicinfo->DeserializeJSON(value["mimics"][i], fUnitScale);
             newmimic[i] = mimicinfo;
