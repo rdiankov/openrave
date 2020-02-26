@@ -250,7 +250,7 @@ public:
         LinkInfo(const LinkInfo& other);
         LinkInfo& operator=(const LinkInfo& other);
 
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale=1.0, int options=0) const;
+        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale=1.0);
 
         std::vector<GeometryInfoPtr> _vgeometryinfos;
@@ -879,7 +879,7 @@ public:
 
         virtual int GetDOF() const;
 
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, const dReal funitScale=1.0, int options=0) const;
+        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv, const dReal fUnitScale=1.0);
 
         JointType _type; /// The joint type
