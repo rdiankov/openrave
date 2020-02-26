@@ -30,8 +30,8 @@ public:
     PyManipulatorInfo(const RobotBase::ManipulatorInfo& info);
     RobotBase::ManipulatorInfoPtr GetManipulatorInfo() const;
 
-    object SerializeJSON(object ooptions=py::none_());
-    void DeserializeJSON(object obj, PyEnvironmentBasePtr pyenv);
+    object SerializeJSON(dReal fUnitScale=1.0, object ooptions=py::none_());
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
 
     object _name = py::none_();
     object _sBaseLinkName = py::none_();
@@ -53,8 +53,8 @@ public:
     PyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& info);
     RobotBase::AttachedSensorInfoPtr GetAttachedSensorInfo() const;
 
-    object SerializeJSON(object options=py::none_());
-    void DeserializeJSON(object obj, PyEnvironmentBasePtr pyenv);
+    object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
 
     object _name = py::none_();
     object _linkname = py::none_();
@@ -70,11 +70,11 @@ class PyConnectedBodyInfo
 {
 public:
     PyConnectedBodyInfo();
-    PyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& info, PyEnvironmentBasePtr pyenv);
+    PyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& info);
     RobotBase::ConnectedBodyInfoPtr GetConnectedBodyInfo() const;
 
-    object SerializeJSON(object options=py::none_());
-    void DeserializeJSON(object obj, PyEnvironmentBasePtr pyenv);
+    object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
 
     object _name = py::none_();
     object _linkname = py::none_();
@@ -86,7 +86,7 @@ public:
     object _attachedSensorInfos = py::none_();
 
 private:
-    void _Update(const RobotBase::ConnectedBodyInfo& info, PyEnvironmentBasePtr pyenv);
+    void _Update(const RobotBase::ConnectedBodyInfo& info);
 };
 
 } // namespace openravepy

@@ -109,18 +109,18 @@ SensorBase::SensorType PyCameraGeomData::GetType() {
     return SensorBase::ST_Camera;
 }
 
-object PyCameraGeomData::SerializeJSON(object options) {
+object PyCameraGeomData::SerializeJSON(dReal fUnitScale, object options) {
     rapidjson::Document doc;
     SensorBase::SensorGeometryPtr pgeom = GetGeometry();
-    pgeom->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(options, 0));
+    pgeom->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(options, 0));
     return toPyObject(doc);
 }
 
-void PyCameraGeomData::DeserializeJSON(object obj) {
+void PyCameraGeomData::DeserializeJSON(object obj, dReal fUnitScale) {
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
     SensorBase::CameraGeomDataPtr pgeom(new SensorBase::CameraGeomData());
-    pgeom->DeserializeJSON(doc);
+    pgeom->DeserializeJSON(doc, fUnitScale);
     _Update(pgeom);
 }
 
@@ -648,9 +648,11 @@ PyCameraIntrinsicsPtr toPyCameraIntrinsics(const geometry::RaveCameraIntrinsics<
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Configure_overloads, Configure, 1, 2)
 // SerializeJSON
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PySensorGeometry_SerializeJSON_overloads, SerializeJSON, 0, 1)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyCameraGeomData_SerializeJSON_overloads, SerializeJSON, 0, 1)
-
+// BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PySensorGeometry_SerializeJSON_overloads, SerializeJSON, 0, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyCameraGeomData_SerializeJSON_overloads, SerializeJSON, 0, 2)
+// DeserializeJSON
+// BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PySensorGeometry_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyCameraGeomData_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -928,13 +930,19 @@ void init_openravepy_sensor()
     .def_readwrite("KK",&PyCameraGeomData::intrinsics) // deprecated
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .def("SerializeJSON", &PyCameraGeomData::SerializeJSON,
+        "unitScale"_a = 1.0,
         "options"_a = py::none_(),
         DOXY_FN(SensorBase::CameraGeomData, SerializeJSON)
     )
+    .def("DeserializeJSON", &PyCameraGeomData::DeserializeJSON,
+        "obj"_a,
+        "unitScale"_a = 1.0,
+        DOXY_FN(SensorBase::CameraGeomData, DeserializeJSON)
+    )
 #else
-    .def("SerializeJSON", &PyCameraGeomData::SerializeJSON, PyCameraGeomData_SerializeJSON_overloads(PY_ARGS("options") DOXY_FN(SensorBase::CameraGeomData, SerializeJSON)))
+    .def("SerializeJSON", &PyCameraGeomData::SerializeJSON, PyCameraGeomData_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(SensorBase::CameraGeomData, SerializeJSON)))
+    .def("DeserializeJSON", &PyCameraGeomData::DeserializeJSON, PyCameraGeomData_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(SensorBase::CameraGeomData, DeserializeJSON)))
 #endif
-    .def("DeserializeJSON", &PyCameraGeomData::DeserializeJSON, PY_ARGS("obj") DOXY_FN(SensorBase::CameraGeomData, DeserializeJSON))
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

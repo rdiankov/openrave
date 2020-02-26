@@ -154,7 +154,7 @@ object PyGeometryInfo::ComputeAABB(object otransform) {
     return toPyAABB(pgeominfo->ComputeAABB(ExtractTransform(otransform)));
 }
 
-object PyGeometryInfo::SerializeJSON(const dReal fUnitScale, object ooptions)
+object PyGeometryInfo::SerializeJSON(dReal fUnitScale, object ooptions)
 {
     rapidjson::Document doc;
     KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
@@ -162,7 +162,7 @@ object PyGeometryInfo::SerializeJSON(const dReal fUnitScale, object ooptions)
     return toPyObject(doc);
 }
 
-void PyGeometryInfo::DeserializeJSON(object obj, const dReal fUnitScale)
+void PyGeometryInfo::DeserializeJSON(object obj, dReal fUnitScale)
 {
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
@@ -248,7 +248,7 @@ void PyLinkInfo::_Update(const KinBody::LinkInfo& info) {
 
 }
 
-py::object PyLinkInfo::SerializeJSON(const dReal fUnitScale, object options)
+py::object PyLinkInfo::SerializeJSON(dReal fUnitScale, object options)
 {
     rapidjson::Document doc;
     KinBody::LinkInfoPtr pInfo = GetLinkInfo();
@@ -256,7 +256,7 @@ py::object PyLinkInfo::SerializeJSON(const dReal fUnitScale, object options)
     return toPyObject(doc);
 }
 
-void PyLinkInfo::DeserializeJSON(object obj, const dReal fUnitScale)
+void PyLinkInfo::DeserializeJSON(object obj, dReal fUnitScale)
 {
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
@@ -392,19 +392,19 @@ void PyElectricMotorActuatorInfo::_Update(const ElectricMotorActuatorInfo& info)
     coloumb_friction = info.coloumb_friction;
     viscous_friction = info.viscous_friction;
 }
-py::object PyElectricMotorActuatorInfo::SerializeJSON(py::object options)
+py::object PyElectricMotorActuatorInfo::SerializeJSON(dReal fUnitScale, py::object options)
 {
     rapidjson::Document doc;
     ElectricMotorActuatorInfoPtr pInfo = GetElectricMotorActuatorInfo();
-    pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(options, 0));
+    pInfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(options, 0));
     return toPyObject(doc);
 }
-void PyElectricMotorActuatorInfo::DeserializeJSON(py::object obj, PyEnvironmentBasePtr penv)
+void PyElectricMotorActuatorInfo::DeserializeJSON(py::object obj, dReal fUnitScale)
 {
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
     ElectricMotorActuatorInfo info;
-    info.DeserializeJSON(doc, GetEnvironment(penv));
+    info.DeserializeJSON(doc, fUnitScale);
     _Update(info);
     return;
 }
@@ -666,11 +666,11 @@ KinBody::JointInfo::JointControlInfo_ExternalDevicePtr PyJointControlInfo_Extern
 PyJointInfo::PyJointInfo() {
 }
 
-PyJointInfo::PyJointInfo(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv) {
-    _Update(info, pyenv);
+PyJointInfo::PyJointInfo(const KinBody::JointInfo& info) {
+    _Update(info);
 }
 
-void PyJointInfo::_Update(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv) {
+void PyJointInfo::_Update(const KinBody::JointInfo& info) {
     _type = info._type;
     _name = ConvertStringToUnicode(info._name);
     _linkname0 = ConvertStringToUnicode(info._linkname0);
@@ -695,7 +695,8 @@ void PyJointInfo::_Update(const KinBody::JointInfo& info, PyEnvironmentBasePtr p
     _voffsets = toPyArray<dReal,3>(info._voffsets);
     _vlowerlimit = toPyArray<dReal,3>(info._vlowerlimit);
     _vupperlimit = toPyArray<dReal,3>(info._vupperlimit);
-    _trajfollow = py::to_object(toPyTrajectory(info._trajfollow, pyenv));
+    // TODO
+    // _trajfollow = py::to_object(toPyTrajectory(info._trajfollow, ?env?));
     FOREACHC(itmimic, info._vmimic) {
         if( !*itmimic ) {
             _vmimic.append(py::none_());
@@ -941,26 +942,26 @@ KinBody::JointInfoPtr PyJointInfo::GetJointInfo() {
     return pinfo;
 }
 
-object PyJointInfo::SerializeJSON(object options)
+object PyJointInfo::SerializeJSON(dReal fUnitScale, object options)
 {
     rapidjson::Document doc;
     KinBody::JointInfoPtr pInfo = GetJointInfo();
-    pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(options, 0));
+    pInfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(options, 0));
     return toPyObject(doc);
 }
 
-void PyJointInfo::DeserializeJSON(object obj, PyEnvironmentBasePtr penv, const dReal fUnitScale)
+void PyJointInfo::DeserializeJSON(object obj, dReal fUnitScale)
 {
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
     KinBody::JointInfo info;
-    info.DeserializeJSON(doc, GetEnvironment(penv), fUnitScale);
-    _Update(info, penv);
+    info.DeserializeJSON(doc, fUnitScale);
+    _Update(info);
 }
 
-PyJointInfoPtr toPyJointInfo(const KinBody::JointInfo& jointinfo, PyEnvironmentBasePtr pyenv)
+PyJointInfoPtr toPyJointInfo(const KinBody::JointInfo& jointinfo)
 {
-    return PyJointInfoPtr(new PyJointInfo(jointinfo, pyenv));
+    return PyJointInfoPtr(new PyJointInfo(jointinfo));
 }
 
 PyLink::PyGeometry::PyGeometry(KinBody::Link::GeometryPtr pgeometry) : _pgeometry(pgeometry) {
@@ -1731,10 +1732,10 @@ void PyJoint::UpdateInfo() {
     _pjoint->UpdateInfo();
 }
 object PyJoint::GetInfo() {
-    return py::to_object(PyJointInfoPtr(new PyJointInfo(_pjoint->GetInfo(), _pyenv)));
+    return py::to_object(PyJointInfoPtr(new PyJointInfo(_pjoint->GetInfo())));
 }
 object PyJoint::UpdateAndGetInfo() {
-    return py::to_object(PyJointInfoPtr(new PyJointInfo(_pjoint->UpdateAndGetInfo(), _pyenv)));
+    return py::to_object(PyJointInfoPtr(new PyJointInfo(_pjoint->UpdateAndGetInfo())));
 }
 
 std::string PyJoint::__repr__() {
@@ -3740,15 +3741,17 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromTrimesh_overloads, InitFromTrimes
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromGeometries_overloads, InitFromGeometries, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Init_overloads, Init, 2, 3)
 // SerializeJSON
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyElectricMotorActuatorInfo_SerializeJSON_overloads, SerializeJSON, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyElectricMotorActuatorInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGeometryInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyLinkInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyJointInfo_SerializeJSON_overloads, SerializeJSON, 0, 1)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGrabbedInfo_SerializeJSON_overloads, SerializeJSON, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyJointInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGrabbedInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
 // DeserializeJSON
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyElectricMotorActuatorInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGeometryInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyLinkInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyJointInfo_DeserializeJSON_overloads, DeserializeJSON, 2, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyJointInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGrabbedInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
 // end of JSON
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABB_overloads, ComputeAABB, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeAABBFromTransform_overloads, ComputeAABBFromTransform, 1, 2)
@@ -3832,13 +3835,20 @@ void init_openravepy_kinbody()
                                        .def_readwrite("viscous_friction",&PyElectricMotorActuatorInfo::viscous_friction)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                                        .def("SerializeJSON", &PyElectricMotorActuatorInfo::SerializeJSON, 
+                                           "unitScale"_a = 1.0,
                                            "options"_a = py::none_(), 
                                            DOXY_FN(ElectricMotorActuatorInfo, SerializeJSON)
                                        )
+                                       .def("DeserializeJSON", &PyGeometryInfo::DeserializeJSON,
+                                           "obj"_a,
+                                           "unitScale"_a = 1.0,
+                                           DOXY_FN(GeometryInfo, DeserializeJSON)
+                                       )
 #else
-                                       .def("SerializeJSON", &PyElectricMotorActuatorInfo::SerializeJSON, PyElectricMotorActuatorInfo_SerializeJSON_overloads(PY_ARGS("options") DOXY_FN(ElectricMotorActuatorInfo, SerializeJSON)))
+                                       .def("SerializeJSON", &PyElectricMotorActuatorInfo::SerializeJSON, PyElectricMotorActuatorInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(ElectricMotorActuatorInfo, SerializeJSON)))
+                                       .def("DeserializeJSON", &PyElectricMotorActuatorInfo::DeserializeJSON, PyElectricMotorActuatorInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(ElectricMotorActuatorInfo, DeserializeJSON)))
 #endif // USE_PYBIND11_PYTHON_BINDINGS
-                                       .def("DeserializeJSON", &PyElectricMotorActuatorInfo::DeserializeJSON, PY_ARGS("obj", "penv") DOXY_FN(ElectricMotorActuatorInfo, DeserializeJSON))
+                                       
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                                        .def(py::pickle(
                                                 [](const PyElectricMotorActuatorInfo& pyinfo) {
@@ -4142,18 +4152,18 @@ void init_openravepy_kinbody()
                        .def_readwrite("_jci_externaldevice", &PyJointInfo::_jci_externaldevice)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                        .def("SerializeJSON", &PyJointInfo::SerializeJSON,
+                            "unitScale"_a = 1.0,
                             "options"_a = py::none_(),
                             DOXY_FN(KinBody::JointInfo, SerializeJSON)
                         )
                        .def("DeserializeJSON", &PyJointInfo::DeserializeJSON,
                             "obj"_a,
-                            "penv"_a,
                             "unitScale"_a = 1.0,
                             DOXY_FN(KinBody::JointInfo, DeserializeJSON)
                         )
 #else
-                       .def("SerializeJSON", &PyJointInfo::SerializeJSON, PyJointInfo_SerializeJSON_overloads(PY_ARGS("options") DOXY_FN(KinBody::JointInfo, SerializeJSON)))
-                       .def("DeserializeJSON", &PyJointInfo::DeserializeJSON, PyJointInfo_DeserializeJSON_overloads(PY_ARGS("obj", "penv", "unitScale") DOXY_FN(KinBody::JointInfo, DeserializeJSON)))
+                       .def("SerializeJSON", &PyJointInfo::SerializeJSON, PyJointInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(KinBody::JointInfo, SerializeJSON)))
+                       .def("DeserializeJSON", &PyJointInfo::DeserializeJSON, PyJointInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(KinBody::JointInfo, DeserializeJSON)))
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                        // TGN: can simplify in future using
@@ -4185,13 +4195,19 @@ void init_openravepy_kinbody()
                          .def_readwrite("_setRobotLinksToIgnore",&PyKinBody::PyGrabbedInfo::_setRobotLinksToIgnore)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("SerializeJSON", &PyKinBody::PyGrabbedInfo::SerializeJSON,
+                            "unitScale"_a = 1.0,
                             "options"_a = py::none_(),
                             DOXY_FN(KinBody::GrabbedInfo, SerializeJSON)
                          )
+                         .def("DeserializeJSON", &PyKinBody::PyGrabbedInfo::DeserializeJSON,
+                            "obj"_a,
+                            "unitScale"_a = 1.0,
+                            DOXY_FN(KinBody::GrabbedInfo, DeserializeJSON)
+                         )
 #else
-                         .def("SerializeJSON", &PyKinBody::PyGrabbedInfo::SerializeJSON, PyGrabbedInfo_SerializeJSON_overloads(PY_ARGS("options") DOXY_FN(KinBody::GrabbedInfo, SerializeJSON)))
+                         .def("SerializeJSON", &PyKinBody::PyGrabbedInfo::SerializeJSON, PyGrabbedInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(KinBody::GrabbedInfo, SerializeJSON)))
+                         .def("DeserializeJSON", &PyKinBody::PyGrabbedInfo::DeserializeJSON, PyGrabbedInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(KinBody::GrabbedInfo, DeserializeJSON)))
 #endif // USE_PYBIND11_PYTHON_BINDINGS
-                         .def("DeserializeJSON", &PyKinBody::PyGrabbedInfo::DeserializeJSON, PY_ARGS("obj") DOXY_FN(KinBody::GrabbedInfo, DeserializeJSON))
                          .def("__str__",&PyKinBody::PyGrabbedInfo::__str__)
                          .def("__unicode__",&PyKinBody::PyGrabbedInfo::__unicode__)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

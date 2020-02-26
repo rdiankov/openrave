@@ -2478,14 +2478,14 @@ void SensorBase::SensorGeometry::Serialize(BaseXMLWriterPtr writer, int options)
     }
 }
 
-void SensorBase::SensorGeometry::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, int options) const
+void SensorBase::SensorGeometry::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     if(hardware_id.size() > 0) {
         SetJsonValueByKey(value, "hardware_id", hardware_id, allocator);
     }
 }
 
-void SensorBase::SensorGeometry::DeserializeJSON(const rapidjson::Value& value)
+void SensorBase::SensorGeometry::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
     LoadJsonValueByKey(value, "hardware_id", hardware_id);
 }
@@ -2528,9 +2528,9 @@ void SensorBase::CameraGeomData::Serialize(BaseXMLWriterPtr writer, int options)
     }
 }
 
-void SensorBase::CameraGeomData::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, int options) const
+void SensorBase::CameraGeomData::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    SensorBase::SensorGeometry::SerializeJSON(value, allocator, options);
+    SensorBase::SensorGeometry::SerializeJSON(value, allocator, fUnitScale, options);
     SetJsonValueByKey(value, "sensor_reference", sensor_reference, allocator);
     SetJsonValueByKey(value, "target_region", target_region, allocator);
     SetJsonValueByKey(value, "intrinstics", intrinsics, allocator);
@@ -2540,9 +2540,9 @@ void SensorBase::CameraGeomData::SerializeJSON(rapidjson::Value& value, rapidjso
     SetJsonValueByKey(value, "gain", gain, allocator);
 }
 
-void SensorBase::CameraGeomData::DeserializeJSON(const rapidjson::Value& value)
+void SensorBase::CameraGeomData::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
-    SensorBase::SensorGeometry::DeserializeJSON(value);
+    SensorBase::SensorGeometry::DeserializeJSON(value, fUnitScale);
     LoadJsonValueByKey(value, "sensor_reference", sensor_reference);
     LoadJsonValueByKey(value, "target_region", target_region);
     LoadJsonValueByKey(value, "intrinstics", intrinsics);

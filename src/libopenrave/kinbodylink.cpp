@@ -27,7 +27,7 @@ KinBody::LinkInfo::LinkInfo(const LinkInfo& other) : XMLReadable("link")
     *this = other;
 }
 
-void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options) const
+void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     SetJsonValueByKey(value, "name", _name, allocator);
     SetJsonValueByKey(value, "transform", _t, allocator);
@@ -81,7 +81,7 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
     SetJsonValueByKey(value, "isEnabled", _bIsEnabled, allocator);
 }
 
-void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale)
+void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale)
 {
     LoadJsonValueByKey(value, "name", _name);
     LoadJsonValueByKey(value, "transform", _t);

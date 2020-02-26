@@ -47,8 +47,8 @@ public:
 
     object ComputeInnerEmptyVolume();
     object ComputeAABB(object otransform);
-    object SerializeJSON(const dReal fUnitScale=1.0, object ooptions=py::none_());
-    void DeserializeJSON(object obj, const dReal fUnitScale=1.0);
+    object SerializeJSON(dReal fUnitScale=1.0, object ooptions=py::none_());
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
     KinBody::GeometryInfoPtr GetGeometryInfo();
 
     object _t;
@@ -81,8 +81,8 @@ public:
     PyLinkInfo();
     PyLinkInfo(const KinBody::LinkInfo& info);
     KinBody::LinkInfoPtr GetLinkInfo();
-    object SerializeJSON(const dReal fUnitScale=1.0, object ooptions=py::none_());
-    void DeserializeJSON(object obj, const dReal fUnitScale=1.0);
+    object SerializeJSON(dReal fUnitScale=1.0, object ooptions=py::none_());
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
 
     py::list _vgeometryinfos;
     object _name = py::none_();
@@ -105,8 +105,8 @@ public:
     PyElectricMotorActuatorInfo();
     PyElectricMotorActuatorInfo(const ElectricMotorActuatorInfo& info);
     ElectricMotorActuatorInfoPtr GetElectricMotorActuatorInfo();
-    object SerializeJSON(object options=py::none_());
-    void DeserializeJSON(object obj, PyEnvironmentBasePtr penv);
+    object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
 
     std::string model_type;
     dReal gear_ratio = 0.0;
@@ -172,10 +172,10 @@ class PyJointInfo
 {
 public:
     PyJointInfo();
-    PyJointInfo(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv);
+    PyJointInfo(const KinBody::JointInfo& info);
     KinBody::JointInfoPtr GetJointInfo();
-    object SerializeJSON(object options=py::none_());
-    void DeserializeJSON(object obj, PyEnvironmentBasePtr penv, const dReal fUnitScale=1.0);
+    object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
 
     KinBody::JointType _type = KinBody::JointNone;
     object _name = py::none_();
@@ -208,7 +208,7 @@ public:
     PyJointControlInfo_ExternalDevicePtr _jci_externaldevice;
 
 private:
-    void _Update(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv);
+    void _Update(const KinBody::JointInfo& info);
 };
 
 class PyLink

@@ -46,8 +46,8 @@ class OPENRAVE_API ElectricMotorActuatorInfo
 public:
     ElectricMotorActuatorInfo();
 
-    virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, int options=0) const;
-    virtual void DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv);
+    virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
+    virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
 
     std::string model_type; ///< the type of actuator it is. Usually the motor model name is ok, but can include other info like gear box, etc
     //@{ from motor data sheet
@@ -164,10 +164,10 @@ public:
         AABB ComputeAABB(const Transform& tGeometryWorld) const;
 
         ///< \param multiply all translational values by fUnitScale
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale=1.0, int options=0) const;
+        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
 
         ///< \param multiply all translational values by fUnitScale
-        virtual void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale=1.0);
+        virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
 
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
 
@@ -250,8 +250,8 @@ public:
         LinkInfo(const LinkInfo& other);
         LinkInfo& operator=(const LinkInfo& other);
 
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale=1.0);
+        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
+        virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
 
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like
@@ -825,8 +825,8 @@ private:
     {
 public:
         boost::array< std::string, 3>  _equations;         ///< the original equations
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value);
+        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
+        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
     };
     typedef boost::shared_ptr<MimicInfo> MimicInfoPtr;
     typedef boost::shared_ptr<MimicInfo const> MimicInfoConstPtr;
@@ -879,8 +879,8 @@ public:
 
         virtual int GetDOF() const;
 
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv, const dReal fUnitScale=1.0);
+        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
+        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
 
         JointType _type; /// The joint type
         std::string _name;         ///< the unique joint name
@@ -1582,8 +1582,8 @@ public:
         std::string _robotlinkname;  ///< the name of the body link that is grabbing the body
         Transform _trelative; ///< transform of first link of body relative to _robotlinkname's transform. In other words, grabbed->GetTransform() == bodylink->GetTransform()*trelative
         std::set<int> _setRobotLinksToIgnore; ///< links of the body to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the body and the relative position of the grabbed body.
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value);
+        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
+        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
     };
     typedef boost::shared_ptr<GrabbedInfo> GrabbedInfoPtr;
     typedef boost::shared_ptr<GrabbedInfo const> GrabbedInfoConstPtr;
