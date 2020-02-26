@@ -92,11 +92,11 @@ RobotBase::ManipulatorInfoPtr PyManipulatorInfo::GetManipulatorInfo() const
     return pinfo;
 }
 
-object PyManipulatorInfo::SerializeJSON(object ooptions)
+object PyManipulatorInfo::SerializeJSON(object options)
 {
     rapidjson::Document doc;
     RobotBase::ManipulatorInfoPtr pInfo = GetManipulatorInfo();
-    pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(ooptions, 0));
+    pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(options, 0));
     return toPyObject(doc);
 }
 
