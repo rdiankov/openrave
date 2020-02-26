@@ -54,7 +54,7 @@ void RobotBase::ConnectedBodyInfo::InitInfoFromBody(RobotBase& robot)
         _vAttachedSensorInfos.push_back(boost::make_shared<RobotBase::AttachedSensorInfo>((*itattachedsensor)->UpdateAndGetInfo()));
     }
 }
-void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options) const
+void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     SetJsonValueByKey(value, "name", _name, allocator);
     SetJsonValueByKey(value, "linkName", _linkname, allocator);
@@ -104,7 +104,7 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
     SetJsonValueByKey(value, "isActive", _bIsActive, allocator);
 }
 
-void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value, EnvironmentBasePtr penv)
+void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale)
 {
     LoadJsonValueByKey(value, "name", _name);
     LoadJsonValueByKey(value, "linkName", _linkname);
@@ -128,7 +128,7 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
         _vJointInfos.reserve(value["jointInfos"].Size());
         for (size_t i = 0; i < value["jointInfos"].Size(); ++i) {
             JointInfoPtr jointinfo(new JointInfo());
-            jointinfo->DeserializeJSON(value["jointInfos"][i], penv);
+            jointinfo->DeserializeJSON(value["jointInfos"][i]);
             _vJointInfos.push_back(jointinfo);
         }
     }
@@ -139,7 +139,7 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
         _vManipulatorInfos.reserve(value["manipulatorInfos"].Size());
         for (size_t i = 0; i < value["manipulatorInfos"].Size(); ++i) {
             ManipulatorInfoPtr manipulatorinfo(new ManipulatorInfo());
-            manipulatorinfo->DeserializeJSON(value["manipulatorInfos"][i], penv);
+            manipulatorinfo->DeserializeJSON(value["manipulatorInfos"][i]);
             _vManipulatorInfos.push_back(manipulatorinfo);
         }
     }
@@ -150,7 +150,7 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
         _vAttachedSensorInfos.reserve(value["_vAttachedSensorInfos"].Size());
         for (size_t i = 0; i < value["_vAttachedSensorInfos"].Size(); ++i) {
             AttachedSensorInfoPtr attachedsensorinfo(new AttachedSensorInfo());
-            attachedsensorinfo->DeserializeJSON(value["_vAttachedSensorInfos"][i], penv);
+            attachedsensorinfo->DeserializeJSON(value["_vAttachedSensorInfos"][i]);
             _vAttachedSensorInfos.push_back(attachedsensorinfo);
         }
     }

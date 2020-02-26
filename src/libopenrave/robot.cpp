@@ -19,7 +19,7 @@
 
 namespace OpenRAVE {
 
-void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options) const
+void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     SetJsonValueByKey(value, "name", _name, allocator);
     SetJsonValueByKey(value, "linkName", _linkname, allocator);
@@ -29,21 +29,19 @@ void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapid
     rapidjson::Value sensorGeometryValue;
     if(!!_sensorgeometry)
     {
-        _sensorgeometry->SerializeJSON(sensorGeometryValue, allocator, options);
+        _sensorgeometry->SerializeJSON(sensorGeometryValue, allocator, fUnitScale, options);
     }
     SetJsonValueByKey(value, "sensorGeometry", sensorGeometryValue, allocator);
 }
 
-void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv)
+void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
     LoadJsonValueByKey(value, "name", _name);
     LoadJsonValueByKey(value, "linkName", _linkname);
     LoadJsonValueByKey(value, "transform", _trelative);
     LoadJsonValueByKey(value, "type", _sensorname);
 
-    if(value.HasMember("sensorGeometry")) {
-        RAVELOG_WARN("Not support SensorGeometry DeserializeJSON");
-    }
+    // desrialization of sensorGeometry is handled by json reader
 }
 
 RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot) : _probot(probot)

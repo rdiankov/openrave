@@ -81,7 +81,7 @@ ElectricMotorActuatorInfo::ElectricMotorActuatorInfo()
 }
 
 
-void ElectricMotorActuatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, int options) const
+void ElectricMotorActuatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     SetJsonValueByKey(value, "modelType", model_type, allocator);
     SetJsonValueByKey(value, "assignedPowerRating", assigned_power_rating, allocator);
@@ -103,7 +103,7 @@ void ElectricMotorActuatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson
     SetJsonValueByKey(value, "viscousFriction", viscous_friction, allocator);
 }
 
-void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv)
+void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
     LoadJsonValueByKey(value, "modelType", model_type);
     LoadJsonValueByKey(value, "assignedPowerRating", assigned_power_rating);

@@ -78,7 +78,7 @@ int KinBody::JointInfo::GetDOF() const
     return int(_type & 0xf);
 }
 
-void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options) const
+void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     int dof = GetDOF();
 
@@ -150,7 +150,7 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
             mimics.SetArray();
             for (size_t i = 0; i < _vmimic.size() && i < (size_t)dof; ++i) {
                 rapidjson::Value mimicValue;
-                _vmimic[i]->SerializeJSON(mimicValue, allocator);
+                _vmimic[i]->SerializeJSON(mimicValue, allocator, fUnitScale);
                 mimics.PushBack(mimicValue, allocator);
             }
             value.AddMember("_vmimic", mimics, allocator);
@@ -173,7 +173,7 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
     if (!!_infoElectricMotor) {
         rapidjson::Value electricMotorInfoValue;
         electricMotorInfoValue.SetObject();
-        _infoElectricMotor->SerializeJSON(electricMotorInfoValue, allocator, options);
+        _infoElectricMotor->SerializeJSON(electricMotorInfoValue, allocator, fUnitScale, options);
         value.AddMember("electricMotorActuator", electricMotorInfoValue, allocator);
     }
 
@@ -182,7 +182,7 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
 
 }
 
-void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv, const dReal fUnitScale)
+void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
     std::string typestr;
     LoadJsonValueByKey(value, "type", typestr);
@@ -245,7 +245,7 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, Environm
     {
         for (rapidjson::SizeType i = 0; i < value["_vmimic"].Size(); ++i) {
             MimicInfoPtr mimicinfo(new MimicInfo());
-            mimicinfo->DeserializeJSON(value["_vmimic"][i]);
+            mimicinfo->DeserializeJSON(value["_vmimic"][i], fUnitScale);
             newmimic[i] = mimicinfo;
         }
     }
@@ -257,7 +257,7 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, Environm
 
     if (value.HasMember("electricMotorActuator")) {
         ElectricMotorActuatorInfoPtr info(new ElectricMotorActuatorInfo());
-        info->DeserializeJSON(value["electricMotorActuator"], penv);
+        info->DeserializeJSON(value["electricMotorActuator"], fUnitScale);
         _infoElectricMotor = info;
     }
 }
@@ -2018,12 +2018,12 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
     }
 }
 
-void KinBody::MimicInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) const
+void KinBody::MimicInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     SetJsonValueByKey(value, "equations", _equations, allocator);
 }
 
-void KinBody::MimicInfo::DeserializeJSON(const rapidjson::Value& value)
+void KinBody::MimicInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
     LoadJsonValueByKey(value, "equations", _equations);
 }
