@@ -181,7 +181,7 @@ KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo() {
     info._vGeomData4 = ExtractVector<dReal>(_vGeomData4);
 
     info._vSideWalls.clear();
-    for (size_t i = 0; i < len(_vSideWalls); ++i) {
+    for (size_t i = 0; i < (size_t)len(_vSideWalls); ++i) {
         info._vSideWalls.push_back({});
         OPENRAVE_SHARED_PTR<PySideWall> pysidewall = py::extract<OPENRAVE_SHARED_PTR<PySideWall> >(_vSideWalls[i]);
         pysidewall->Get(info._vSideWalls[i]);
@@ -344,7 +344,7 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
         object okeyvalue = okeyvalueiter.attr("next") ();
         std::string name = extract<std::string>(okeyvalue[0]);
         info._mapExtraGeometries[name] = std::vector<KinBody::GeometryInfoPtr>(len(okeyvalue[1]));
-        for(size_t j = 0; j < len(okeyvalue[1]); j++){
+        for(size_t j = 0; j < (size_t)len(okeyvalue[1]); j++){
             PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(okeyvalue[1][j]);
             info._mapExtraGeometries[name].push_back(pygeom->GetGeometryInfo());
         }
