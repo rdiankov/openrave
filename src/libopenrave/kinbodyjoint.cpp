@@ -154,21 +154,21 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
                 _vmimic[i]->SerializeJSON(mimicValue, allocator, fUnitScale);
                 mimics.PushBack(mimicValue, allocator);
             }
-            value.AddMember("_vmimic", mimics, allocator);
+            value.AddMember("mimics", mimics, allocator);
         }
     }
 
     if(_mapFloatParameters.size() > 0)
     {
-        SetJsonValueByKey(value, "_mapFloatParameters", _mapFloatParameters, allocator);
+        SetJsonValueByKey(value, "floatParameters", _mapFloatParameters, allocator);
     }
     if(_mapIntParameters.size() > 0)
     {
-        SetJsonValueByKey(value, "_mapIntParameters", _mapIntParameters, allocator);
+        SetJsonValueByKey(value, "intParameters", _mapIntParameters, allocator);
     }
     if(_mapStringParameters.size() > 0)
     {
-        SetJsonValueByKey(value, "_mapStringParameters", _mapStringParameters, allocator);
+        SetJsonValueByKey(value, "stringParameters", _mapStringParameters, allocator);
     }
 
     if (!!_infoElectricMotor) {
@@ -178,8 +178,8 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
         value.AddMember("electricMotorActuator", electricMotorInfoValue, allocator);
     }
 
-    SetJsonValueByKey(value, "_bIsCircular", _bIsCircular, allocator, dof);
-    SetJsonValueByKey(value, "_bIsActive", _bIsActive, allocator);
+    SetJsonValueByKey(value, "isCircular", _bIsCircular, allocator, dof);
+    SetJsonValueByKey(value, "isActive", _bIsActive, allocator);
 
 }
 
@@ -242,19 +242,19 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
     }
 
     boost::array<MimicInfoPtr, 3> newmimic;
-    if (value.HasMember("_vmimic"))
+    if (value.HasMember("mimics"))
     {
-        for (rapidjson::SizeType i = 0; i < value["_vmimic"].Size(); ++i) {
+        for (rapidjson::SizeType i = 0; i < value["mimics"].Size(); ++i) {
             MimicInfoPtr mimicinfo(new MimicInfo());
-            mimicinfo->DeserializeJSON(value["_vmimic"][i], fUnitScale);
+            mimicinfo->DeserializeJSON(value["mimics"][i], fUnitScale);
             newmimic[i] = mimicinfo;
         }
     }
     _vmimic = newmimic;
 
-    LoadJsonValueByKey(value, "_mapFloatParameters", _mapFloatParameters);
-    LoadJsonValueByKey(value, "_mapIntParameters", _mapIntParameters);
-    LoadJsonValueByKey(value, "_mapStringParameters", _mapStringParameters);
+    LoadJsonValueByKey(value, "floatParameters", _mapFloatParameters);
+    LoadJsonValueByKey(value, "intParameters", _mapIntParameters);
+    LoadJsonValueByKey(value, "stringParameters", _mapStringParameters);
 
     if (value.HasMember("electricMotorActuator")) {
         ElectricMotorActuatorInfoPtr info(new ElectricMotorActuatorInfo());
