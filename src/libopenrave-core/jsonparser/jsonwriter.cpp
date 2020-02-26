@@ -87,7 +87,7 @@ protected:
             objectsValue.SetArray();
 
             FOREACHC(itbody,listbodies) {
-                KinBodyPtr pbody = pbody;
+                KinBodyPtr pbody = *itbody;
 
                 rapidjson::Value bodyValue;
                 bodyValue.SetObject();
@@ -98,6 +98,19 @@ protected:
                 pbody->GetDOFValues(vDOFValues);
                 if (vDOFValues.size() > 0) {
                     SetJsonValueByKey(bodyValue, "dofValues", vDOFValues, _doc.GetAllocator());
+                }
+
+                std::vector<KinBody::GrabbedInfoPtr> vGrabbedInfo;
+                pbody->GetGrabbedInfo(vGrabbedInfo);
+                if (vGrabbedInfo.size() > 0) {
+                    rapidjson::Value grabbedsValue;
+                    grabbedsValue.SetArray();
+                    FOREACHC(itgrabbedinfo, vGrabbedInfo) {
+                        rapidjson::Value grabbedValue;
+                        (*itgrabbedinfo)->SerializeJSON(grabbedValue, _doc.GetAllocator());
+                        grabbedsValue.PushBack(grabbedValue, _doc.GetAllocator());
+                    }
+                    bodyValue.AddMember("grabbed", grabbedsValue, _doc.GetAllocator());
                 }
 
                 if (_CheckForExternalWrite(pbody)) {
@@ -170,7 +183,18 @@ protected:
                         objectValue.AddMember("attachedSensors", attachedSensorsValue, _doc.GetAllocator());
                     }
 
-                    SetJsonValueByKey(objectValue, "robot", true, _doc.GetAllocator());
+                    if (probot->GetConnectedBodies().size() > 0) {
+                        rapidjson::Value connectedBodiesValue;
+                        connectedBodiesValue.SetArray();
+                        FOREACHC(itconnectedbody, probot->GetConnectedBodies()) {
+                            rapidjson::Value connectedBodyValue;
+                            (*itconnectedbody)->GetInfo().SerializeJSON(connectedBodyValue, _doc.GetAllocator());
+                            connectedBodiesValue.PushBack(connectedBodyValue, _doc.GetAllocator());
+                        }
+                        objectValue.AddMember("connectedBodies", connectedBodiesValue, _doc.GetAllocator());
+                    }
+
+                    SetJsonValueByKey(objectValue, "isRobot", true, _doc.GetAllocator());
                 }
 
                 objectsValue.PushBack(objectValue, _doc.GetAllocator());

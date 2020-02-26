@@ -82,10 +82,10 @@ namespace OpenRAVE {
                 for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
                     _FillBody(*itr, _doc->GetAllocator());
 
-                    bool robot = false;
-                    LoadJsonValueByKey(*itr, "robot", robot);
+                    bool isRobot = false;
+                    LoadJsonValueByKey(*itr, "isRobot", isRobot);
 
-                    if (robot) {
+                    if (isRobot) {
                         _ExtractRobot(*itr);
                     } else {
                         _ExtractKinBody(*itr);
@@ -121,10 +121,10 @@ namespace OpenRAVE {
             {
                 _FillBody(*itr, _doc->GetAllocator());
 
-                bool robot = false;
-                LoadJsonValueByKey(*itr, "robot", robot);
+                bool isRobot = false;
+                LoadJsonValueByKey(*itr, "isRobot", isRobot);
 
-                if (robot) {
+                if (isRobot) {
                     _ExtractRobot(*itr, pprobot);
                     break;
                 }
@@ -171,9 +171,9 @@ namespace OpenRAVE {
                 for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr)
                 {
                     _FillBody(*itr, _doc->GetAllocator());
-                    bool robot = false;
-                    LoadJsonValueByKey(*itr, "robot", robot);
-                    if (robot) {
+                    bool isRobot = false;
+                    LoadJsonValueByKey(*itr, "isRobot", isRobot);
+                    if (isRobot) {
                         _ExtractRobot(*itr, pprobot);
                         break;
                     }
