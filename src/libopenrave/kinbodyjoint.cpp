@@ -112,7 +112,7 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
     SetJsonValueByKey(value, "childLinkName", _linkname1, allocator);
     SetJsonValueByKey(value, "axes", _vaxes, allocator);
     SetJsonValueByKey(value, "currentValues", _vcurrentvalues, allocator);
-    SetJsonValueByKey(value, "resolutions", _vresolution, allocator);
+    SetJsonValueByKey(value, "resolutions", _vresolution, allocator, dof);
 
     boost::array<dReal, 3> newvmaxvel = _vmaxvel;
     boost::array<dReal, 3> newvmaxaccel = _vmaxaccel;
@@ -124,18 +124,18 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
         newvlowerlimit[i] *= fjointmult;
         newvupperlimit[i] *= fjointmult;
     }
-    SetJsonValueByKey(value, "maxVel", newvmaxvel, allocator);
-    SetJsonValueByKey(value, "hardMaxVel", _vhardmaxvel, allocator);
-    SetJsonValueByKey(value, "maxAccel", newvmaxaccel, allocator);
-    SetJsonValueByKey(value, "hardMaxAccel", _vhardmaxaccel, allocator);
-    SetJsonValueByKey(value, "maxJerk", _vmaxjerk, allocator);
-    SetJsonValueByKey(value, "hardMaxJerk", _vhardmaxjerk, allocator);
-    SetJsonValueByKey(value, "maxTorque", _vmaxtorque, allocator);
-    SetJsonValueByKey(value, "maxInertia", _vmaxinertia, allocator);
-    SetJsonValueByKey(value, "weights", _vweights, allocator);
-    SetJsonValueByKey(value, "offsets", _voffsets, allocator);
-    SetJsonValueByKey(value, "lowerLimit", newvlowerlimit, allocator);
-    SetJsonValueByKey(value, "upperLimit", newvupperlimit, allocator);
+    SetJsonValueByKey(value, "maxVel", newvmaxvel, allocator, dof);
+    SetJsonValueByKey(value, "hardMaxVel", _vhardmaxvel, allocator, dof);
+    SetJsonValueByKey(value, "maxAccel", newvmaxaccel, allocator, dof);
+    SetJsonValueByKey(value, "hardMaxAccel", _vhardmaxaccel, allocator, dof);
+    SetJsonValueByKey(value, "maxJerk", _vmaxjerk, allocator, dof);
+    SetJsonValueByKey(value, "hardMaxJerk", _vhardmaxjerk, allocator, dof);
+    SetJsonValueByKey(value, "maxTorque", _vmaxtorque, allocator, dof);
+    SetJsonValueByKey(value, "maxInertia", _vmaxinertia, allocator, dof);
+    SetJsonValueByKey(value, "weights", _vweights, allocator, dof);
+    SetJsonValueByKey(value, "offsets", _voffsets, allocator, dof);
+    SetJsonValueByKey(value, "lowerLimit", newvlowerlimit, allocator, dof);
+    SetJsonValueByKey(value, "upperLimit", newvupperlimit, allocator, dof);
     // TODO: SetJsonValueByKey(value, allocator, "trajfollow", _trajfollow);
 
     if (_vmimic.size() > 0) {
