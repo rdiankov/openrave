@@ -252,7 +252,7 @@ py::object PyLinkInfo::SerializeJSON(const dReal fUnitScale, object options)
 {
     rapidjson::Document doc;
     KinBody::LinkInfoPtr pInfo = GetLinkInfo();
-    pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(options, 0));
+    pInfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(options, 0));
     return toPyObject(doc);
 }
 
@@ -343,6 +343,7 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
     for(size_t i = 0; i < num; ++i) {
         object okeyvalue = okeyvalueiter.attr("next") ();
         std::string name = extract<std::string>(okeyvalue[0]);
+        info._mapExtraGeometries[name] = std::vector<KinBody::GeometryInfoPtr>(len(okeyvalue[1]));
         for(size_t j = 0; j < len(okeyvalue[1]); j++){
             PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(okeyvalue[1][j]);
             info._mapExtraGeometries[name].push_back(pygeom->GetGeometryInfo());
@@ -950,11 +951,11 @@ KinBody::JointInfoPtr PyJointInfo::GetJointInfo() {
     return pinfo;
 }
 
-object PyJointInfo::SerializeJSON(object options)
+object PyJointInfo::SerializeJSON(const dReal fUnitScale, object options)
 {
     rapidjson::Document doc;
     KinBody::JointInfoPtr pInfo = GetJointInfo();
-    pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(options, 0));
+    pInfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(options, 0));
     return toPyObject(doc);
 }
 
@@ -3752,7 +3753,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Init_overloads, Init, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyElectricMotorActuatorInfo_SerializeJSON_overloads, SerializeJSON, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGeometryInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyLinkInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyJointInfo_SerializeJSON_overloads, SerializeJSON, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyJointInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGrabbedInfo_SerializeJSON_overloads, SerializeJSON, 0, 1)
 // DeserializeJSON
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGeometryInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
@@ -4162,7 +4163,7 @@ void init_openravepy_kinbody()
                             DOXY_FN(KinBody::JointInfo, DeserializeJSON)
                         )
 #else
-                       .def("SerializeJSON", &PyJointInfo::SerializeJSON, PyJointInfo_SerializeJSON_overloads(PY_ARGS("options") DOXY_FN(KinBody::JointInfo, SerializeJSON)))
+                       .def("SerializeJSON", &PyJointInfo::SerializeJSON, PyJointInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(KinBody::JointInfo, SerializeJSON)))
                        .def("DeserializeJSON", &PyJointInfo::DeserializeJSON, PyJointInfo_DeserializeJSON_overloads(PY_ARGS("obj", "penv", "unitScale") DOXY_FN(KinBody::JointInfo, DeserializeJSON)))
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

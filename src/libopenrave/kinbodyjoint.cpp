@@ -78,7 +78,7 @@ int KinBody::JointInfo::GetDOF() const
     return int(_type & 0xf);
 }
 
-void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, int options) const
+void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options) const
 {
     int dof = GetDOF();
 
@@ -96,6 +96,16 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
         break;
     }
 
+    dReal fjointmult = fUnitScale;
+    if(_type == JointRevolute)
+    {
+        fjointmult = 1;
+    }
+    else if(_type == JointPrismatic)
+    {
+        fjointmult = fUnitScale;
+    }
+
     SetJsonValueByKey(value, "_name", _name, allocator);
     SetJsonValueByKey(value, "_vanchor", _vanchor, allocator);
     SetJsonValueByKey(value, "_linkname0", _linkname0, allocator);
@@ -103,9 +113,19 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
     SetJsonValueByKey(value, "_vaxes", _vaxes, allocator);
     SetJsonValueByKey(value, "_vcurrentvalues", _vcurrentvalues, allocator);
     SetJsonValueByKey(value, "_vresolution", _vresolution, allocator, dof);
-    SetJsonValueByKey(value, "_vmaxvel", _vmaxvel, allocator, dof);
+    boost::array<dReal, 3> newvmaxvel = _vmaxvel;
+    boost::array<dReal, 3> newvmaxaccel = _vmaxaccel;
+    boost::array<dReal, 3> newvlowerlimit = _vlowerlimit;
+    boost::array<dReal, 3> newvupperlimit = _vupperlimit;
+    for(size_t i = 0; i < 3; i++) {
+        newvmaxvel[i] *= fjointmult;
+        newvmaxaccel[i] *= fjointmult;
+        newvlowerlimit[i] *= fjointmult;
+        newvupperlimit[i] *= fjointmult;
+    }
+    SetJsonValueByKey(value, "_vmaxvel", newvmaxvel, allocator, dof);
     SetJsonValueByKey(value, "_vhardmaxvel", _vhardmaxvel, allocator, dof);
-    SetJsonValueByKey(value, "_vmaxaccel", _vmaxaccel, allocator, dof);
+    SetJsonValueByKey(value, "_vmaxaccel", newvmaxaccel, allocator, dof);
     SetJsonValueByKey(value, "_vhardmaxaccel", _vhardmaxaccel, allocator, dof);
     SetJsonValueByKey(value, "_vmaxjerk", _vmaxjerk, allocator, dof);
     SetJsonValueByKey(value, "_vhardmaxjerk", _vhardmaxjerk, allocator, dof);
@@ -113,8 +133,8 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
     SetJsonValueByKey(value, "_vmaxinertia", _vmaxinertia, allocator, dof);
     SetJsonValueByKey(value, "_vweights", _vweights, allocator, dof);
     SetJsonValueByKey(value, "_voffsets", _voffsets, allocator, dof);
-    SetJsonValueByKey(value, "_vlowerlimit", _vlowerlimit, allocator, dof);
-    SetJsonValueByKey(value, "_vupperlimit", _vupperlimit, allocator, dof);
+    SetJsonValueByKey(value, "_vlowerlimit", newvlowerlimit, allocator, dof);
+    SetJsonValueByKey(value, "_vupperlimit", newvupperlimit, allocator, dof);
     // TODO: SetJsonValueByKey(value, allocator, "trajfollow", _trajfollow);
 
     if (_vmimic.size() > 0) {

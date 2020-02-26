@@ -27,11 +27,17 @@ KinBody::LinkInfo::LinkInfo(const LinkInfo& other) : XMLReadable("link")
     *this = other;
 }
 
-void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options) const
+void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options) const
 {
     SetJsonValueByKey(value, "name", _name, allocator);
-    SetJsonValueByKey(value, "transform", _t, allocator);
-    SetJsonValueByKey(value, "massTransform", _tMassFrame, allocator);
+
+    Transform tmpTransform {_t};
+    Transform tmpMassTransform {_tMassFrame};
+    tmpTransform.trans *= fUnitScale;
+    tmpMassTransform.trans *= fUnitScale;
+
+    SetJsonValueByKey(value, "transform", tmpTransform, allocator);
+    SetJsonValueByKey(value, "massTransform", tmpMassTransform, allocator);
     SetJsonValueByKey(value, "mass", _mass, allocator);
     SetJsonValueByKey(value, "intertialMoments", _vinertiamoments, allocator);
 
@@ -70,8 +76,11 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
             rExtraGeometries.SetArray();
             FOREACHC(iv, im->second){
                 rapidjson::Value rGeomInfo;
-                (*iv)->SerializeJSON(rGeomInfo, allocator);
-                rExtraGeometries.PushBack(rGeomInfo, allocator);
+                if(!!(*iv))
+                {
+                    (*iv)->SerializeJSON(rGeomInfo, allocator, fUnitScale);
+                    rExtraGeometries.PushBack(rGeomInfo, allocator);
+                }
             }
             mGeomInfos[im->first] = rExtraGeometries;
         }
