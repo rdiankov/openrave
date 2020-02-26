@@ -64,27 +64,26 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
             (*it)->SerializeJSON(geometryValue, allocator, options);
             geometriesValue.PushBack(geometryValue, allocator);
         }
-        value.AddMember("geometryinfos", geometriesValue, allocator);
+        value.AddMember("geometries", geometriesValue, allocator);
     }
 
     if(_mapExtraGeometries.size() > 0 ){
-        std::map<std::string, rapidjson::Value> mGeomInfos;
-        vector<rapidjson::Value> vGeomInfos;
-
+        rapidjson::Value extraGeometriesValue;
+        extraGeometriesValue.SetObject();
         FOREACHC(im, _mapExtraGeometries) {
-            rapidjson::Value rExtraGeometries;
-            rExtraGeometries.SetArray();
+            rapidjson::Value geometriesValue;
+            geometriesValue.SetArray();
             FOREACHC(iv, im->second){
-                rapidjson::Value rGeomInfo;
                 if(!!(*iv))
                 {
-                    (*iv)->SerializeJSON(rGeomInfo, allocator, fUnitScale);
-                    rExtraGeometries.PushBack(rGeomInfo, allocator);
+                    rapidjson::Value geometryValue;
+                    (*iv)->SerializeJSON(geometryValue, allocator);
+                    geometriesValue.PushBack(geometryValue, allocator);
                 }
             }
-            mGeomInfos[im->first] = rExtraGeometries;
+            extraGeometriesValue.AddMember(rapidjson::Value(im->first.c_str(), allocator).Move(), geometriesValue, allocator);
         }
-        SetJsonValueByKey(value, "extraGeometries", mGeomInfos, allocator);
+        value.AddMember("extraGeometries", extraGeometriesValue, allocator);
     }
 
     SetJsonValueByKey(value, "isStatic", _bStatic, allocator);
@@ -106,12 +105,12 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, const dRe
     _t.trans *= fUnitScale;
     _tMassFrame.trans *= fUnitScale;
 
-    if (value.HasMember("geometryinfos")) {
+    if (value.HasMember("geometries")) {
         _vgeometryinfos.resize(0);
-        _vgeometryinfos.reserve(value["geometryinfos"].Size());
-        for (size_t i = 0; i < value["geometryinfos"].Size(); ++i) {
+        _vgeometryinfos.reserve(value["geometries"].Size());
+        for (size_t i = 0; i < value["geometries"].Size(); ++i) {
             GeometryInfoPtr pGeometryInfo(new GeometryInfo());
-            pGeometryInfo->DeserializeJSON(value["geometryinfos"][i], fUnitScale);
+            pGeometryInfo->DeserializeJSON(value["geometries"][i], fUnitScale);
             _vgeometryinfos.push_back(pGeometryInfo);
         }
     }
