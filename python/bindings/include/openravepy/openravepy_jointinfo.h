@@ -48,7 +48,7 @@ public:
     object ComputeInnerEmptyVolume();
     object ComputeAABB(object otransform);
 
-    object SerializeJSON(dReal fUnitScale=1.0, object ooptions=py::none_());
+    object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
     void DeserializeJSON(object obj, dReal fUnitScale=1.0);
     KinBody::GeometryInfoPtr GetGeometryInfo();
 
@@ -83,7 +83,7 @@ public:
     PyLinkInfo(const KinBody::LinkInfo& info);
     KinBody::LinkInfoPtr GetLinkInfo();
 
-    object SerializeJSON(dReal fUnitScale=1.0, object ooptions=py::none_());
+    object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
     void DeserializeJSON(object obj, dReal fUnitScale=1.0);
 
     py::list _vgeometryinfos;
