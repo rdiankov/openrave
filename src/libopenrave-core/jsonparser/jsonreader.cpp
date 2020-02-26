@@ -42,8 +42,8 @@ namespace OpenRAVE {
             if (_vOpenRAVESchemeAliases.size() == 0) {
                 _vOpenRAVESchemeAliases.push_back("openrave");
             }
-            // set global scale when initalize jsonreader.
 
+            // set global scale when initalize jsonreader.
             _fGlobalScale = 1.0 / _penv->GetUnit().second;
         }
 
@@ -72,119 +72,85 @@ namespace OpenRAVE {
             return true;
         }
 
-        bool Extract()
-        {
+        bool ExtractAll() {
+            bool allSucceeded = true;
+            // extra all bodies and add to env
             std::pair<std::string, dReal> unit;
             LoadJsonValueByKey(*_doc, "unit", unit);
             _penv->SetUnit(unit);
 
             if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()) {
                 for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
-                    _FillBody(*itr, _doc->GetAllocator());
-
-                    bool isRobot = false;
-                    LoadJsonValueByKey(*itr, "isRobot", isRobot);
-
-                    if (isRobot) {
-                        _ExtractRobot(*itr);
+                    KinBodyPtr pbody;
+                    if (_Extract(*itr, pbody)) {
+                        _penv->Add(pbody, false);
                     } else {
-                        _ExtractKinBody(*itr);
+                        allSucceeded = false;
                     }
                 }
+                return allSucceeded;
             }
-            return true;
+            return false;
         }
 
-        bool Extract(KinBodyPtr& ppbody) {
+        bool ExtractFirst(KinBodyPtr& ppbody) {
             // extract the first articulated system found.
-            std::pair<std::string, dReal> unit;
-            LoadJsonValueByKey(*_doc, "unit", unit);
-            _penv->SetUnit(unit);
-
-            if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()){
-                rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin();
-                _FillBody(*itr, _doc->GetAllocator()); 
-                _ExtractKinBody(*itr, ppbody);
-            }
-
-            return true;
-        }
-
-        bool Extract(RobotBasePtr& pprobot){
-            // extract the first robot 
-            std::pair<std::string, dReal> unit;
-            LoadJsonValueByKey(*_doc, "unit", unit);
-
-            _penv->SetUnit(unit);
-
-            for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr)
-            {
-                _FillBody(*itr, _doc->GetAllocator());
-
-                bool isRobot = false;
-                LoadJsonValueByKey(*itr, "isRobot", isRobot);
-
-                if (isRobot) {
-                    _ExtractRobot(*itr, pprobot);
-                    break;
+            if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()) {
+                for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
+                    return _Extract(*itr, ppbody);
                 }
             }
-            return true;
+            return false;
         }
 
-
-        bool ExtractKinBody(KinBodyPtr& ppbody, const string& uri, const AttributesList& atts){
-            // TODO
-            std::string scheme, path, fragment;
-            _ParseURI(uri, scheme, path, fragment);
-
-            dReal fUnitScale = _GetUnitScale();
-            
-            if (fragment == "") {
-                // if fragment is empty, take the first body in the scene
-                rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin();
-                std::string objectUri;
-                // LoadJsonValueByKey(*itr, "uri", objectUri);
-                _FillBody(*itr, _doc->GetAllocator());
-                KinBodyPtr tmpBody = RaveCreateKinBody(_penv, "");
-                // tmpBody->DeserializeJSON(*itr, fUnitScale);
-                ppbody = tmpBody;
-            } else {
-                // find object by uri
-                rapidjson::Value::ValueIterator object = _ResolveObjectInDocument(_doc, fragment);
-                SetJsonValueByKey(*object, "uri", _CanonicalizeURI(uri), _doc->GetAllocator());
-                KinBodyPtr tmpBody = RaveCreateKinBody(_penv, "");
-                // tmpBody->DeserializeJSON(*object, fUnitScale);
-                ppbody = tmpBody;
+        bool ExtractFirst(RobotBasePtr& pprobot) {
+            // extract the first robot 
+            if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()) {
+                for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
+                    return _Extract(*itr, pprobot);
+                }
             }
-            return true;
+            return false;
         }
 
-
-        bool ExtractRobot(RobotBasePtr& pprobot, const string& uri, const AttributesList& atts){
+        bool ExtractOne(KinBodyPtr& ppbody, const string& uri) {
             std::string scheme, path, fragment;
-            _ParseURI(uri, scheme, path, fragment);
-
-            dReal fUnitScale = _GetUnitScale(); // TODO(simon): use this
-
+            _ParseURI(uri, scheme, path, fragment);            
             if (fragment == "") {
-                for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr)
-                {
-                    _FillBody(*itr, _doc->GetAllocator());
-                    bool isRobot = false;
-                    LoadJsonValueByKey(*itr, "isRobot", isRobot);
-                    if (isRobot) {
-                        _ExtractRobot(*itr, pprobot);
-                        break;
+                return ExtractFirst(ppbody);
+            }
+
+            // find the body by uri
+            if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()) {
+                for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
+                    std::string bodyUri;
+                    LoadJsonValueByKey(*itr, "uri", bodyUri);
+                    if (bodyUri == std::string("#") + fragment) {
+                        return _Extract(*itr, ppbody);
                     }
                 }
-            } else {
-                // find robot by uri
-                rapidjson::Value::ValueIterator robot = _ResolveObjectInDocument(_doc, fragment);
-                SetJsonValueByKey(*robot, "uri", _CanonicalizeURI(uri), _doc->GetAllocator());
-                _ExtractRobot(*robot, pprobot);
             }
-            return true;
+            return false;
+        }
+
+        bool ExtractOne(RobotBasePtr& pprobot, const string& uri) {
+            std::string scheme, path, fragment;
+            _ParseURI(uri, scheme, path, fragment);
+            if (fragment == "") {
+                return ExtractFirst(pprobot);
+            }
+
+            // find the body by uri
+            if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()) {
+                for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
+                    std::string bodyUri;
+                    LoadJsonValueByKey(*itr, "uri", bodyUri);
+                    if (bodyUri == std::string("#") + fragment) {
+                        return _Extract(*itr, pprobot);
+                    }
+                }
+            }
+            return false;
         }
 
     protected:
@@ -242,38 +208,84 @@ namespace OpenRAVE {
             SetJsonValueByKey(body, "uri", _CanonicalizeURI(uri), allocator);
         }
 
-        void _ExtractKinBody(const rapidjson::Value &value)
+        bool _Extract(const rapidjson::Value &value, KinBodyPtr& pbody)
         {
+            if (GetJsonValueByKey<bool>(value, "isRobot")) {
+                RobotBasePtr probot;
+                if (_Extract(value, probot)) {
+                    pbody = probot;
+                }
+                return false;
+            }
+
             KinBodyPtr body = RaveCreateKinBody(_penv, "");
             dReal fUnitScale = _GetUnitScale();
-            // body->DeserializeJSON(value, fUnitScale);
-            _penv->Add(body, false);
+
+            std::string uri;
+            LoadJsonValueByKey(value, "uri", uri);
+
+            std::vector<KinBody::LinkInfoConstPtr> linkinfos;
+            _ExtractLinks(value, linkinfos, fUnitScale);
+            
+            std::vector<KinBody::JointInfoConstPtr> jointinfos;
+            _ExtractJoints(value, jointinfos, fUnitScale);
+
+            if (!body->Init(linkinfos, jointinfos, uri)) {
+                return false;
+            }
+
+            pbody = body;
+            return true;
         }
 
-        void _ExtractKinBody(const rapidjson::Value &value, KinBodyPtr& ppbody)
+        bool _Extract(const rapidjson::Value &value, RobotBasePtr& probot)
         {
-            KinBodyPtr body = RaveCreateKinBody(_penv, "");
-            dReal fUnitScale = _GetUnitScale();
-            // body->DeserializeJSON(value, fUnitScale);
-            _penv->Add(body, false);
-            ppbody = body;
-        }
+            if (!GetJsonValueByKey<bool>(value, "isRobot")) {
+                return false;
+            }
 
-        void _ExtractRobot(const rapidjson::Value &value)
-        {
             RobotBasePtr robot = RaveCreateRobot(_penv, "");
             dReal fUnitScale = _GetUnitScale();
-            // robot->DeserializeJSON(value, fUnitScale);
-            _penv->Add(robot, false);
-        }
 
-        void _ExtractRobot(const rapidjson::Value &value, RobotBasePtr& probot)
-        {
-            RobotBasePtr robot = RaveCreateRobot(_penv, "");
-            dReal fUnitScale = _GetUnitScale();
-            // robot->DeserializeJSON(value, fUnitScale);
-            _penv->Add(robot, false);
+            std::string uri;
+            LoadJsonValueByKey(value, "uri", uri);
+
+            std::vector<KinBody::LinkInfoConstPtr> linkinfos;
+            _ExtractLinks(value, linkinfos, fUnitScale);
+            
+            std::vector<KinBody::JointInfoConstPtr> jointinfos;
+            _ExtractJoints(value, jointinfos, fUnitScale);
+
             probot = robot;
+            return true;
+        }
+
+        bool _ExtractLinks(const rapidjson::Value &value, std::vector<KinBody::LinkInfoConstPtr> &linkinfos, dReal fUnitScale)
+        {
+            if (value.HasMember("links") && value["links"].IsArray()) {
+                linkinfos.reserve(linkinfos.size() + value["links"].MemberCount());
+                for (rapidjson::Value::ConstValueIterator itr = value["links"].Begin(); itr != value["links"].End(); ++itr) {
+                    KinBody::LinkInfoPtr linkinfo(new KinBody::LinkInfo());
+                    linkinfo->DeserializeJSON(*itr, fUnitScale);
+                    linkinfos.push_back(linkinfo);
+                }
+                return true;
+            }
+            return false;
+        }
+
+        bool _ExtractJoints(const rapidjson::Value &value, std::vector<KinBody::JointInfoConstPtr> &jointinfos, dReal fUnitScale)
+        {
+            if (value.HasMember("joints") && value["joints"].IsArray()) {
+                jointinfos.reserve(jointinfos.size() + value["joints"].MemberCount());
+                for (rapidjson::Value::ConstValueIterator itr = value["joints"].Begin(); itr != value["joints"].End(); ++itr) {
+                    KinBody::JointInfoPtr jointinfo(new KinBody::JointInfo());
+                    jointinfo->DeserializeJSON(*itr, fUnitScale);
+                    jointinfos.push_back(jointinfo);
+                }
+                return true;
+            }
+            return false;
         }
 
         /// \brief get the scheme of the uri, e.g. file: or openrave:
@@ -421,7 +433,7 @@ namespace OpenRAVE {
         if (fullFilename.size() == 0 || !reader.InitFromFile(fullFilename)) {
             return false;
         }
-        return reader.Extract();
+        return reader.ExtractAll();
     }
 
     bool RaveParseJSONFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename, const AttributesList& atts)
@@ -431,7 +443,7 @@ namespace OpenRAVE {
         if (fullFilename.size() == 0 || !reader.InitFromFile(fullFilename)) {
             return false;
         }
-        return reader.Extract(ppbody);
+        return reader.ExtractFirst(ppbody);
     }
 
     bool RaveParseJSONFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename, const AttributesList& atts)
@@ -441,7 +453,7 @@ namespace OpenRAVE {
         if (fullFilename.size() == 0 || !reader.InitFromFile(fullFilename)) {
             return false;
         }
-        return reader.Extract(pprobot);
+        return reader.ExtractFirst(pprobot);
     }
 
     bool RaveParseJSONURI(EnvironmentBasePtr penv, const std::string& uri, const AttributesList& atts)
@@ -450,7 +462,7 @@ namespace OpenRAVE {
         if (!reader.InitFromURI(uri)) {
             return false;
         }
-        return reader.Extract();
+        return reader.ExtractAll();
     }
 
     bool RaveParseJSONURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const AttributesList& atts)
@@ -459,7 +471,7 @@ namespace OpenRAVE {
         if (!reader.InitFromURI(uri)) {
             return false;
         }
-        return reader.ExtractKinBody(ppbody, uri, atts);
+        return reader.ExtractOne(ppbody, uri);
     }
 
     bool RaveParseJSONURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts)
@@ -468,8 +480,7 @@ namespace OpenRAVE {
         if (!reader.InitFromURI(uri)) {
             return false;
         }
-        // TODO
-        return reader.ExtractRobot(pprobot, uri, atts);
+        return reader.ExtractOne(pprobot, uri);
     }
 
     bool RaveParseJSONData(EnvironmentBasePtr penv, const std::string& data, const AttributesList& atts)
@@ -478,7 +489,7 @@ namespace OpenRAVE {
         if (!reader.InitFromData(data)) {
             return false;
         }
-        return reader.Extract();
+        return reader.ExtractAll();
     }
 
     bool RaveParseJSONData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data, const AttributesList& atts)
@@ -487,9 +498,7 @@ namespace OpenRAVE {
         if (!reader.InitFromData(data)) {
             return false;
         }
-        // TODO
-        // return reader.ExtractKinBody(ppbody, )
-        return false;
+        return reader.ExtractFirst(ppbody);
     }
 
     bool RaveParseJSONData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data, const AttributesList& atts)
@@ -498,7 +507,6 @@ namespace OpenRAVE {
         if (!reader.InitFromData(data)) {
             return false;
         }
-        // TODO
-        return false;
+        return reader.ExtractFirst(pprobot);
     }
 }
