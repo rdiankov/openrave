@@ -167,7 +167,7 @@ public:
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale=1.0, int options=0) const;
 
         ///< \param multiply all translational values by fUnitScale
-        virtual void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale = 1);
+        virtual void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale=1.0);
 
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
 
@@ -251,7 +251,7 @@ public:
         LinkInfo& operator=(const LinkInfo& other);
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale = 1);
+        virtual void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale=1.0);
 
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like
@@ -880,7 +880,7 @@ public:
         virtual int GetDOF() const;
 
         virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv, const dReal fUnitScale=1);
+        virtual void DeserializeJSON(const rapidjson::Value& value, EnvironmentBasePtr penv, const dReal fUnitScale=1.0);
 
         JointType _type; /// The joint type
         std::string _name;         ///< the unique joint name
