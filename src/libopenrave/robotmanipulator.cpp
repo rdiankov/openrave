@@ -23,9 +23,9 @@ void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value& value, rapidjso
     SetJsonValueByKey(value, "transform", _tLocalTool, allocator);
     SetJsonValueByKey(value, "chuckingDirections", _vChuckingDirection, allocator);
     SetJsonValueByKey(value, "direction", _vdirection, allocator);
-    SetJsonValueByKey(value, "baseLInkName", _sBaseLinkName, allocator);
+    SetJsonValueByKey(value, "baseLinkName", _sBaseLinkName, allocator);
     SetJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName, allocator);
-    SetJsonValueByKey(value, "iksolverType", _sIkSolverXMLId, allocator);
+    SetJsonValueByKey(value, "ikSolverType", _sIkSolverXMLId, allocator);
     SetJsonValueByKey(value, "gripperJointNames", _vGripperJointNames, allocator);
 }
 
@@ -35,9 +35,9 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
     LoadJsonValueByKey(value, "transform", _tLocalTool);
     LoadJsonValueByKey(value, "chuckingDirections", _vChuckingDirection);
     LoadJsonValueByKey(value, "direction", _vdirection);
-    LoadJsonValueByKey(value, "baseLInkName", _sBaseLinkName);
+    LoadJsonValueByKey(value, "baseLinkName", _sBaseLinkName);
     LoadJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName);
-    LoadJsonValueByKey(value, "iksolverType", _sIkSolverXMLId);
+    LoadJsonValueByKey(value, "ikSolverType", _sIkSolverXMLId);
     LoadJsonValueByKey(value, "gripperJointNames", _vGripperJointNames);
 }
 
