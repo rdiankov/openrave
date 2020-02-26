@@ -100,6 +100,11 @@ protected:
                     SetJsonValueByKey(bodyValue, "dofValues", vDOFValues, _doc.GetAllocator());
                 }
 
+                KinBody::KinBodyStateSaver saver(pbody);
+                vector<dReal> vZeros(pbody->GetDOF());
+                pbody->SetDOFValues(vZeros);
+                pbody->SetTransform(Transform());
+
                 std::vector<KinBody::GrabbedInfoPtr> vGrabbedInfo;
                 pbody->GetGrabbedInfo(vGrabbedInfo);
                 if (vGrabbedInfo.size() > 0) {
@@ -137,6 +142,19 @@ protected:
                     FOREACHC(itlink, pbody->GetLinks()) {
                         rapidjson::Value linkValue;
                         (*itlink)->GetInfo().SerializeJSON(linkValue, _doc.GetAllocator());
+
+                        rapidjson::Value geometriesValue;
+                        geometriesValue.SetArray();
+                        FOREACHC(itgeom, (*itlink)->GetGeometries()) {
+                            rapidjson::Value geometryValue;
+                            (*itgeom)->GetInfo().SerializeJSON(geometryValue, _doc.GetAllocator());
+                            geometriesValue.PushBack(geometryValue, _doc.GetAllocator());
+                        }
+                        if (linkValue.HasMember("geometries")) {
+                            linkValue.RemoveMember("geometries");
+                        }
+                        linkValue.AddMember("geometries", geometriesValue, _doc.GetAllocator());
+
                         linksValue.PushBack(linkValue, _doc.GetAllocator());
                     }
                     objectValue.AddMember("links", linksValue, _doc.GetAllocator());

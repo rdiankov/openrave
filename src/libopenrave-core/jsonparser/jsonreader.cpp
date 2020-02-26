@@ -84,6 +84,12 @@ namespace OpenRAVE {
                     KinBodyPtr pbody;
                     if (_Extract(*itr, pbody)) {
                         _penv->Add(pbody, false);
+
+                        if (itr->HasMember("dofValues")) {
+                            std::vector<dReal> vDOFValues;
+                            LoadJsonValueByKey(*itr, "dofValues", vDOFValues);
+                            pbody->SetDOFValues(vDOFValues);
+                        }
                     } else {
                         allSucceeded = false;
                     }
@@ -186,97 +192,94 @@ namespace OpenRAVE {
             return uri;
         }
 
-        void _FillBody(rapidjson::Value &body, rapidjson::Document::AllocatorType& allocator)
+        bool _Extract(const rapidjson::Value &bodyValue, KinBodyPtr& pbody)
         {
             std::string uri;
-            LoadJsonValueByKey(body, "uri", uri);
+            LoadJsonValueByKey(bodyValue, "uri", uri);
 
             rapidjson::Value::ValueIterator object = _ResolveObject(uri);
 
-            // add the object items into instobjects
-            for (rapidjson::Value::MemberIterator it = object->MemberBegin(); it != object->MemberEnd(); ++it) {
-                std::string key = it->name.GetString();
-                if (key != "" && !body.HasMember(key.c_str())) {
-                    rapidjson::Value key(key, allocator);
-                    rapidjson::Value value(it->value, allocator);
-                    body.AddMember(key, value, allocator);
-                }
-            }
-
-            // fix the uri
-            body.RemoveMember("uri");
-            SetJsonValueByKey(body, "uri", _CanonicalizeURI(uri), allocator);
-        }
-
-        bool _Extract(const rapidjson::Value &value, KinBodyPtr& pbody)
-        {
-            if (GetJsonValueByKey<bool>(value, "isRobot")) {
+            if (GetJsonValueByKey<bool>(*object, "isRobot")) {
                 RobotBasePtr probot;
-                if (_Extract(value, probot)) {
+                if (_Extract(bodyValue, probot)) {
                     pbody = probot;
+                    return true;
                 }
                 return false;
             }
 
             dReal fUnitScale = _GetUnitScale();
 
-            std::string uri;
-            LoadJsonValueByKey(value, "uri", uri);
-
             std::vector<KinBody::LinkInfoConstPtr> linkinfos;
-            _ExtractLinks(value, linkinfos, fUnitScale);
+            _ExtractLinks(*object, linkinfos, fUnitScale);
             
             std::vector<KinBody::JointInfoConstPtr> jointinfos;
-            _ExtractJoints(value, jointinfos, fUnitScale);
+            _ExtractJoints(*object, jointinfos, fUnitScale);
 
             KinBodyPtr body = RaveCreateKinBody(_penv, "");
-            if (!body->Init(linkinfos, jointinfos, uri)) {
+            if (!body->Init(linkinfos, jointinfos, _CanonicalizeURI(uri))) {
                 return false;
             }
 
-            body->SetName(GetJsonValueByKey<std::string>(value, "name"));
+            body->SetName(GetJsonValueByKey<std::string>(bodyValue, "name"));
+
+            if (bodyValue.HasMember("transform")) {
+                Transform transform;
+                LoadJsonValueByKey(bodyValue, "transform", transform);
+                body->SetTransform(transform);
+            }
+
             pbody = body;
             return true;
         }
 
-        bool _Extract(const rapidjson::Value &value, RobotBasePtr& probot)
+        bool _Extract(const rapidjson::Value &bodyValue, RobotBasePtr& probot)
         {
-            if (!GetJsonValueByKey<bool>(value, "isRobot")) {
+            std::string uri;
+            LoadJsonValueByKey(bodyValue, "uri", uri);
+
+            rapidjson::Value::ValueIterator object = _ResolveObject(uri);
+
+            if (!GetJsonValueByKey<bool>(*object, "isRobot")) {
                 return false;
             }
 
             dReal fUnitScale = _GetUnitScale();
 
-            std::string uri;
-            LoadJsonValueByKey(value, "uri", uri);
-
             std::vector<KinBody::LinkInfoConstPtr> linkinfos;
-            _ExtractLinks(value, linkinfos, fUnitScale);
+            _ExtractLinks(*object, linkinfos, fUnitScale);
             
             std::vector<KinBody::JointInfoConstPtr> jointinfos;
-            _ExtractJoints(value, jointinfos, fUnitScale);
+            _ExtractJoints(*object, jointinfos, fUnitScale);
 
             std::vector<RobotBase::ManipulatorInfoConstPtr> manipinfos;
-            _ExtractManipulators(value, manipinfos, fUnitScale);
+            _ExtractManipulators(*object, manipinfos, fUnitScale);
 
             std::vector<RobotBase::AttachedSensorInfoConstPtr> attachedsensorinfos;
-            _ExtractAttachedSensors(value, attachedsensorinfos, fUnitScale);
+            _ExtractAttachedSensors(*object, attachedsensorinfos, fUnitScale);
 
             RobotBasePtr robot = RaveCreateRobot(_penv, "");
-            if (!robot->Init(linkinfos, jointinfos, manipinfos, attachedsensorinfos, uri)) {
+            if (!robot->Init(linkinfos, jointinfos, manipinfos, attachedsensorinfos, _CanonicalizeURI(uri))) {
                 return false;
             }
 
-            robot->SetName(GetJsonValueByKey<std::string>(value, "name"));
+            robot->SetName(GetJsonValueByKey<std::string>(bodyValue, "name"));
+
+            if (bodyValue.HasMember("transform")) {
+                Transform transform;
+                LoadJsonValueByKey(bodyValue, "transform", transform);
+                robot->SetTransform(transform);
+            }
+
             probot = robot;
             return true;
         }
 
-        bool _ExtractLinks(const rapidjson::Value &value, std::vector<KinBody::LinkInfoConstPtr> &linkinfos, dReal fUnitScale)
+        bool _ExtractLinks(const rapidjson::Value &objectValue, std::vector<KinBody::LinkInfoConstPtr> &linkinfos, dReal fUnitScale)
         {
-            if (value.HasMember("links") && value["links"].IsArray()) {
-                linkinfos.reserve(linkinfos.size() + value["links"].MemberCount());
-                for (rapidjson::Value::ConstValueIterator itr = value["links"].Begin(); itr != value["links"].End(); ++itr) {
+            if (objectValue.HasMember("links") && objectValue["links"].IsArray()) {
+                linkinfos.reserve(linkinfos.size() + objectValue["links"].MemberCount());
+                for (rapidjson::Value::ConstValueIterator itr = objectValue["links"].Begin(); itr != objectValue["links"].End(); ++itr) {
                     KinBody::LinkInfoPtr linkinfo(new KinBody::LinkInfo());
                     linkinfo->DeserializeJSON(*itr, fUnitScale);
                     linkinfos.push_back(linkinfo);
@@ -286,11 +289,11 @@ namespace OpenRAVE {
             return false;
         }
 
-        bool _ExtractJoints(const rapidjson::Value &value, std::vector<KinBody::JointInfoConstPtr> &jointinfos, dReal fUnitScale)
+        bool _ExtractJoints(const rapidjson::Value &objectValue, std::vector<KinBody::JointInfoConstPtr> &jointinfos, dReal fUnitScale)
         {
-            if (value.HasMember("joints") && value["joints"].IsArray()) {
-                jointinfos.reserve(jointinfos.size() + value["joints"].MemberCount());
-                for (rapidjson::Value::ConstValueIterator itr = value["joints"].Begin(); itr != value["joints"].End(); ++itr) {
+            if (objectValue.HasMember("joints") && objectValue["joints"].IsArray()) {
+                jointinfos.reserve(jointinfos.size() + objectValue["joints"].MemberCount());
+                for (rapidjson::Value::ConstValueIterator itr = objectValue["joints"].Begin(); itr != objectValue["joints"].End(); ++itr) {
                     KinBody::JointInfoPtr jointinfo(new KinBody::JointInfo());
                     jointinfo->DeserializeJSON(*itr, fUnitScale);
                     jointinfos.push_back(jointinfo);
@@ -300,11 +303,11 @@ namespace OpenRAVE {
             return false;
         }
 
-        bool _ExtractManipulators(const rapidjson::Value &value, std::vector<RobotBase::ManipulatorInfoConstPtr> &manipinfos, dReal fUnitScale)
+        bool _ExtractManipulators(const rapidjson::Value &objectValue, std::vector<RobotBase::ManipulatorInfoConstPtr> &manipinfos, dReal fUnitScale)
         {
-            if (value.HasMember("manipulators") && value["manipulators"].IsArray()) {
-                manipinfos.reserve(manipinfos.size() + value["manipulators"].MemberCount());
-                for (rapidjson::Value::ConstValueIterator itr = value["manipulators"].Begin(); itr != value["manipulators"].End(); ++itr) {
+            if (objectValue.HasMember("manipulators") && objectValue["manipulators"].IsArray()) {
+                manipinfos.reserve(manipinfos.size() + objectValue["manipulators"].MemberCount());
+                for (rapidjson::Value::ConstValueIterator itr = objectValue["manipulators"].Begin(); itr != objectValue["manipulators"].End(); ++itr) {
                     RobotBase::ManipulatorInfoPtr manipinfo(new RobotBase::ManipulatorInfo());
                     manipinfo->DeserializeJSON(*itr, fUnitScale);
                     manipinfos.push_back(manipinfo);
@@ -314,11 +317,11 @@ namespace OpenRAVE {
             return false;
         }
 
-        bool _ExtractAttachedSensors(const rapidjson::Value &value, std::vector<RobotBase::AttachedSensorInfoConstPtr> &attachedsensorinfos, dReal fUnitScale)
+        bool _ExtractAttachedSensors(const rapidjson::Value &objectValue, std::vector<RobotBase::AttachedSensorInfoConstPtr> &attachedsensorinfos, dReal fUnitScale)
         {
-            if (value.HasMember("attachedSensors") && value["attachedSensors"].IsArray()) {
-                attachedsensorinfos.reserve(attachedsensorinfos.size() + value["attachedSensors"].MemberCount());
-                for (rapidjson::Value::ConstValueIterator itr = value["attachedSensors"].Begin(); itr != value["attachedSensors"].End(); ++itr) {
+            if (objectValue.HasMember("attachedSensors") && objectValue["attachedSensors"].IsArray()) {
+                attachedsensorinfos.reserve(attachedsensorinfos.size() + objectValue["attachedSensors"].MemberCount());
+                for (rapidjson::Value::ConstValueIterator itr = objectValue["attachedSensors"].Begin(); itr != objectValue["attachedSensors"].End(); ++itr) {
                     RobotBase::AttachedSensorInfoPtr attachedsensorinfo(new RobotBase::AttachedSensorInfo());
                     attachedsensorinfo->DeserializeJSON(*itr, fUnitScale);
                     attachedsensorinfos.push_back(attachedsensorinfo);

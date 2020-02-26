@@ -57,34 +57,34 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
         SetJsonValueByKey(value, "forcedAdjacentLinks", _vForcedAdjacentLinks, allocator);
     }
 
-    if (_vgeometryinfos.size() > 0) {
-        rapidjson::Value geometriesValue;
-        FOREACHC(it, _vgeometryinfos) {
-            rapidjson::Value geometryValue;
-            (*it)->SerializeJSON(geometryValue, allocator, options);
-            geometriesValue.PushBack(geometryValue, allocator);
-        }
-        value.AddMember("geometries", geometriesValue, allocator);
-    }
+    // if (_vgeometryinfos.size() > 0) {
+    //     rapidjson::Value geometriesValue;
+    //     FOREACHC(it, _vgeometryinfos) {
+    //         rapidjson::Value geometryValue;
+    //         (*it)->SerializeJSON(geometryValue, allocator, options);
+    //         geometriesValue.PushBack(geometryValue, allocator);
+    //     }
+    //     value.AddMember("geometries", geometriesValue, allocator);
+    // }
 
-    if(_mapExtraGeometries.size() > 0 ){
-        rapidjson::Value extraGeometriesValue;
-        extraGeometriesValue.SetObject();
-        FOREACHC(im, _mapExtraGeometries) {
-            rapidjson::Value geometriesValue;
-            geometriesValue.SetArray();
-            FOREACHC(iv, im->second){
-                if(!!(*iv))
-                {
-                    rapidjson::Value geometryValue;
-                    (*iv)->SerializeJSON(geometryValue, allocator);
-                    geometriesValue.PushBack(geometryValue, allocator);
-                }
-            }
-            extraGeometriesValue.AddMember(rapidjson::Value(im->first.c_str(), allocator).Move(), geometriesValue, allocator);
-        }
-        value.AddMember("extraGeometries", extraGeometriesValue, allocator);
-    }
+    // if(_mapExtraGeometries.size() > 0 ){
+    //     rapidjson::Value extraGeometriesValue;
+    //     extraGeometriesValue.SetObject();
+    //     FOREACHC(im, _mapExtraGeometries) {
+    //         rapidjson::Value geometriesValue;
+    //         geometriesValue.SetArray();
+    //         FOREACHC(iv, im->second){
+    //             if(!!(*iv))
+    //             {
+    //                 rapidjson::Value geometryValue;
+    //                 (*iv)->SerializeJSON(geometryValue, allocator);
+    //                 geometriesValue.PushBack(geometryValue, allocator);
+    //             }
+    //         }
+    //         extraGeometriesValue.AddMember(rapidjson::Value(im->first.c_str(), allocator).Move(), geometriesValue, allocator);
+    //     }
+    //     value.AddMember("extraGeometries", extraGeometriesValue, allocator);
+    // }
 
     SetJsonValueByKey(value, "isStatic", _bStatic, allocator);
     SetJsonValueByKey(value, "isEnabled", _bIsEnabled, allocator);
@@ -114,18 +114,19 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
             _vgeometryinfos.push_back(pGeometryInfo);
         }
     }
-    if (value.HasMember("extraGeometries")) {
-        _mapExtraGeometries.clear();
-        for (rapidjson::Value::ConstMemberIterator it = value["extraGeometries"].MemberBegin(); it != value["extraGeometries"].MemberEnd(); ++it) {
-            _mapExtraGeometries[it->name.GetString()] = std::vector<GeometryInfoPtr>();
 
-            for(rapidjson::Value::ConstValueIterator im = it->value.Begin(); im != it->value.End(); ++im) {
-                GeometryInfoPtr pInfo (new GeometryInfo());
-                pInfo->DeserializeJSON(*im, fUnitScale);
-                _mapExtraGeometries[it->name.GetString()].push_back(pInfo);
-            }
-        }
-    }
+    // if (value.HasMember("extraGeometries")) {
+    //     _mapExtraGeometries.clear();
+    //     for (rapidjson::Value::ConstMemberIterator it = value["extraGeometries"].MemberBegin(); it != value["extraGeometries"].MemberEnd(); ++it) {
+    //         _mapExtraGeometries[it->name.GetString()] = std::vector<GeometryInfoPtr>();
+
+    //         for(rapidjson::Value::ConstValueIterator im = it->value.Begin(); im != it->value.End(); ++im) {
+    //             GeometryInfoPtr pInfo (new GeometryInfo());
+    //             pInfo->DeserializeJSON(*im, fUnitScale);
+    //             _mapExtraGeometries[it->name.GetString()].push_back(pInfo);
+    //         }
+    //     }
+    // }
 
     LoadJsonValueByKey(value, "isStatic", _bStatic);
     LoadJsonValueByKey(value, "isEnabled", _bIsEnabled);
