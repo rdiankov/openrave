@@ -118,11 +118,11 @@ public:
         return pinfo;
     }
 
-    py::object SerializeJSON(dReal fUnitScale=1.0, py::object ooptions=py::none_())
+    py::object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_())
     {
         rapidjson::Document doc;
         KinBody::GrabbedInfoPtr pInfo = GetGrabbedInfo();
-        pInfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(ooptions,0));
+        pInfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(options,0));
         return toPyObject(doc);
     }
 

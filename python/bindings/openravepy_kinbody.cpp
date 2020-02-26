@@ -154,7 +154,7 @@ object PyGeometryInfo::ComputeAABB(object otransform) {
     return toPyAABB(pgeominfo->ComputeAABB(ExtractTransform(otransform)));
 }
 
-object PyGeometryInfo::SerializeJSON(dReal fUnitScale, object ooptions)
+object PyGeometryInfo::SerializeJSON(dReal fUnitScale, object options)
 {
     rapidjson::Document doc;
     KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
