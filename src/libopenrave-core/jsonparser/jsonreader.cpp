@@ -83,7 +83,7 @@ namespace OpenRAVE {
                 for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
                     KinBodyPtr pbody;
                     if (_Extract(*itr, pbody)) {
-                        _penv->Add(pbody, false);
+                        _penv->Add(pbody, true);
 
                         if (itr->HasMember("dofValues")) {
                             std::vector<dReal> vDOFValues;

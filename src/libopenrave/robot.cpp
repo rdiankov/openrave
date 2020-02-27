@@ -26,12 +26,12 @@ void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapid
     SetJsonValueByKey(value, "transform", _trelative, allocator);
     SetJsonValueByKey(value, "type", _sensorname, allocator);
 
-    rapidjson::Value sensorGeometryValue;
     if(!!_sensorgeometry)
     {
+        rapidjson::Value sensorGeometryValue;
         _sensorgeometry->SerializeJSON(sensorGeometryValue, allocator, fUnitScale, options);
+        SetJsonValueByKey(value, "sensorGeometry", sensorGeometryValue, allocator);
     }
-    SetJsonValueByKey(value, "sensorGeometry", sensorGeometryValue, allocator);
 }
 
 void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
@@ -49,6 +49,8 @@ void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& valu
                 pReadable->DeserializeJSON(value["sensorGeometry"], fUnitScale);
                 _sensorgeometry = OPENRAVE_DYNAMIC_POINTER_CAST<SensorBase::SensorGeometry>(pReadable);
             }
+        } else {
+            RAVELOG_WARN_FORMAT("failed to get json reader for sensor type \"%s\"", _sensorname);
         }
     }
 }
