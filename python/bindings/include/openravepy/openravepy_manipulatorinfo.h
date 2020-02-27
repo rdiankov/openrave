@@ -79,7 +79,7 @@ public:
     object _name = py::none_();
     object _linkname = py::none_();
     object _trelative = py::none_();
-    object _url = py::none_();
+    object _uri = py::none_();
     object _linkInfos = py::none_();
     object _jointInfos = py::none_();
     object _manipulatorInfos = py::none_();

@@ -58,7 +58,7 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
 {
     SetJsonValueByKey(value, "name", _name, allocator);
     SetJsonValueByKey(value, "linkName", _linkname, allocator);
-    SetJsonValueByKey(value, "url", _url, allocator);
+    SetJsonValueByKey(value, "uri", _uri, allocator);
     SetJsonValueByKey(value, "transform", _trelative, allocator);
 
     rapidjson::Value linkInfosValue;
@@ -108,7 +108,7 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
 {
     LoadJsonValueByKey(value, "name", _name);
     LoadJsonValueByKey(value, "linkName", _linkname);
-    LoadJsonValueByKey(value, "url", _url);
+    LoadJsonValueByKey(value, "uri", _uri);
     LoadJsonValueByKey(value, "transform", _trelative);
 
     if(value.HasMember("links"))
@@ -407,7 +407,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
         Transform tBaseLinkInWorld = connectedBody.GetTransform(); // transform all links and joints by this
 
         if( connectedBody.GetName().size() == 0 ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("ConnectedBody %s attached to link %s has no name initialized", connectedBodyInfo._url%connectedBodyInfo._linkname, ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT("ConnectedBody %s attached to link %s has no name initialized", connectedBodyInfo._uri%connectedBodyInfo._linkname, ORE_InvalidArguments);
         }
 
         vector<ConnectedBodyPtr>::iterator itconnectedBody2 = itconnectedBody; ++itconnectedBody2;

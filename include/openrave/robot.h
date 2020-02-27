@@ -555,7 +555,7 @@ public:
 
         std::string _name; ///< the name of the connected body info
         std::string _linkname; ///< the robot link that the body is attached to
-        std::string _url;  //< the url where the connected body came from. this is used when writing back to the filename.
+        std::string _uri;  //< the uri where the connected body came from. this is used when writing back to the filename.
         Transform _trelative;  ///< relative transform of the body with respect to the attached link. The link transforms are multiplied by the transform of _linkname and _trelative to put them on the real robot.
         std::vector<KinBody::LinkInfoPtr> _vLinkInfos; ///< extracted link infos representing the connected body. The names are the original "desired" names. Should not consider _linkname and _trelative.
         std::vector<KinBody::JointInfoPtr> _vJointInfos; ///< extracted joint infos (inluding passive) representing the connected body. The names are the original "desired" names.
