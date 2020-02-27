@@ -1177,7 +1177,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractIkParameterization_overloads, PyCo
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractAffineValues_overloads, PyConfigurationSpecification::ExtractAffineValues, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractJointValues_overloads, PyConfigurationSpecification::ExtractJointValues, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(RemoveGroups_overloads, PyConfigurationSpecification::RemoveGroups, 1, 2)
-// BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Serialize_overloads, Serialize, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Serialize_overloads, Serialize, 0, 1)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -1478,20 +1478,21 @@ void init_openravepy_global()
 #endif
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    class_<PyReadable, PyReadablePtr >(m, "XMLReadable", DOXY_CLASS(XMLReadable))
+    class_<PyReadable, PyReadablePtr >(m, "Readable", DOXY_CLASS(eadable))
     .def(init<ReadablePtr>(), "readableraw"_a)
 #else
-    class_<PyReadable, PyReadablePtr >("XMLReadable", DOXY_CLASS(XMLReadable), no_init)
+    class_<PyReadable, PyReadablePtr >("Readable", DOXY_CLASS(eadable), no_init)
     .def(init<ReadablePtr>(py::args("readableraw")))
 #endif
-    .def("GetId", &PyReadable::GetId, DOXY_FN(XMLReadable, GetId))
+    .def("GetId", &PyReadable::GetId, DOXY_FN(eadable, GetId))
+    .def("GetXMLId", &PyReadable::GetId, DOXY_FN(eadable, GetId)) // for back-compact
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .def("Serialize", &PyReadable::Serialize,
          "options"_a = 0,
-         DOXY_FN(XMLReadable, Serialize)
+         DOXY_FN(eadable, Serialize)
          )
 #else
-    // .def("Serialize", &PyReadable::Serialize, Serialize_overloads(PY_ARGS("options") DOXY_FN(XMLReadable, Serialize)))
+    .def("Serialize", &PyReadable::Serialize, Serialize_overloads(PY_ARGS("options") DOXY_FN(Readable, Serialize)))
 #endif
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

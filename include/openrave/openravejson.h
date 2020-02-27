@@ -919,7 +919,9 @@ inline void SaveJsonValue(rapidjson::Value &v, const IkParameterization& t, rapi
     default:
         break;
     }
-    SetJsonValueByKey(v, "customData", t.GetCustomDataMap(), alloc);
+    if (t.GetCustomDataMap().size() > 0) {
+        SetJsonValueByKey(v, "customData", t.GetCustomDataMap(), alloc);
+    }
 }
 
 template<class T>

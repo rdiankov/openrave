@@ -371,7 +371,7 @@ enum CloningOptions {
 class OPENRAVE_API Readable : public UserData
 {
 public:
-    Readable(const std::string& id) : __id(id) {}
+    Readable() {}
     virtual ~Readable() {}
     virtual const std::string& GetId() const {
         return __id;
@@ -383,10 +383,11 @@ typedef boost::shared_ptr<Readable> ReadablePtr;
 typedef boost::shared_ptr<Readable const> ReadableConstPtr;
 
 /// base class for xml readable interfaces
-class OPENRAVE_API XMLReadable : public Readable
+class OPENRAVE_API XMLReadable : virtual public Readable
 {
 public:
-    XMLReadable(const std::string& xmlid) : Readable(xmlid) {
+    XMLReadable(const std::string& xmlid) {
+        __id = xmlid;
     }
     virtual ~XMLReadable() {
     }
@@ -490,10 +491,12 @@ public:
 };
 
 /// base class for json readable interfaces
-class OPENRAVE_API JSONReadable : public Readable
+class OPENRAVE_API JSONReadable : virtual public Readable
 {
 public:
-    JSONReadable(const std::string& jsonid) : Readable(jsonid) {}
+    JSONReadable(const std::string& id) {
+        __id = id;
+    }
     virtual ~JSONReadable() {}
     virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const = 0;
     virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) = 0;

@@ -215,6 +215,22 @@ protected:
                     SetJsonValueByKey(objectValue, "isRobot", true, _doc.GetAllocator());
                 }
 
+                if (pbody->GetReadableInterfaces().size() > 0) {
+                    rapidjson::Value readableInterfacesValue;
+                    readableInterfacesValue.SetObject();
+                    FOREACHC(it, pbody->GetReadableInterfaces()) {
+                        JSONReadablePtr pReadable = OPENRAVE_DYNAMIC_POINTER_CAST<JSONReadable>(it->second);
+                        if (!!pReadable) {
+                            rapidjson::Value readableValue;
+                            pReadable->SerializeJSON(readableValue, _doc.GetAllocator());
+                            readableInterfacesValue.AddMember(rapidjson::Value(it->first.c_str(), _doc.GetAllocator()).Move(), readableValue, _doc.GetAllocator());
+                        }
+                    }
+                    if (readableInterfacesValue.MemberCount() > 0) {
+                        objectValue.AddMember("readableInterfaces", readableInterfacesValue, _doc.GetAllocator());
+                    }
+                }
+
                 objectsValue.PushBack(objectValue, _doc.GetAllocator());
             }
 

@@ -221,6 +221,10 @@ namespace OpenRAVE {
                 return false;
             }
 
+            if (!_ExtractReadableInterfaces(*object, body, fUnitScale)) {
+                return false;
+            }
+
             body->SetName(GetJsonValueByKey<std::string>(bodyValue, "name"));
 
             if (bodyValue.HasMember("transform")) {
@@ -263,6 +267,10 @@ namespace OpenRAVE {
                 return false;
             }
 
+            if (!_ExtractReadableInterfaces(*object, robot, fUnitScale)) {
+                return false;
+            }
+
             robot->SetName(GetJsonValueByKey<std::string>(bodyValue, "name"));
 
             if (bodyValue.HasMember("transform")) {
@@ -278,7 +286,7 @@ namespace OpenRAVE {
         bool _ExtractLinks(const rapidjson::Value &objectValue, std::vector<KinBody::LinkInfoConstPtr> &linkinfos, dReal fUnitScale)
         {
             if (objectValue.HasMember("links") && objectValue["links"].IsArray()) {
-                linkinfos.reserve(linkinfos.size() + objectValue["links"].MemberCount());
+                linkinfos.reserve(linkinfos.size() + objectValue["links"].Size());
                 for (rapidjson::Value::ConstValueIterator itr = objectValue["links"].Begin(); itr != objectValue["links"].End(); ++itr) {
                     KinBody::LinkInfoPtr linkinfo(new KinBody::LinkInfo());
                     linkinfo->DeserializeJSON(*itr, fUnitScale);
@@ -292,7 +300,7 @@ namespace OpenRAVE {
         bool _ExtractJoints(const rapidjson::Value &objectValue, std::vector<KinBody::JointInfoConstPtr> &jointinfos, dReal fUnitScale)
         {
             if (objectValue.HasMember("joints") && objectValue["joints"].IsArray()) {
-                jointinfos.reserve(jointinfos.size() + objectValue["joints"].MemberCount());
+                jointinfos.reserve(jointinfos.size() + objectValue["joints"].Size());
                 for (rapidjson::Value::ConstValueIterator itr = objectValue["joints"].Begin(); itr != objectValue["joints"].End(); ++itr) {
                     KinBody::JointInfoPtr jointinfo(new KinBody::JointInfo());
                     jointinfo->DeserializeJSON(*itr, fUnitScale);
@@ -306,7 +314,7 @@ namespace OpenRAVE {
         bool _ExtractManipulators(const rapidjson::Value &objectValue, std::vector<RobotBase::ManipulatorInfoConstPtr> &manipinfos, dReal fUnitScale)
         {
             if (objectValue.HasMember("manipulators") && objectValue["manipulators"].IsArray()) {
-                manipinfos.reserve(manipinfos.size() + objectValue["manipulators"].MemberCount());
+                manipinfos.reserve(manipinfos.size() + objectValue["manipulators"].Size());
                 for (rapidjson::Value::ConstValueIterator itr = objectValue["manipulators"].Begin(); itr != objectValue["manipulators"].End(); ++itr) {
                     RobotBase::ManipulatorInfoPtr manipinfo(new RobotBase::ManipulatorInfo());
                     manipinfo->DeserializeJSON(*itr, fUnitScale);
@@ -320,7 +328,7 @@ namespace OpenRAVE {
         bool _ExtractAttachedSensors(const rapidjson::Value &objectValue, std::vector<RobotBase::AttachedSensorInfoConstPtr> &attachedsensorinfos, dReal fUnitScale)
         {
             if (objectValue.HasMember("attachedSensors") && objectValue["attachedSensors"].IsArray()) {
-                attachedsensorinfos.reserve(attachedsensorinfos.size() + objectValue["attachedSensors"].MemberCount());
+                attachedsensorinfos.reserve(attachedsensorinfos.size() + objectValue["attachedSensors"].Size());
                 for (rapidjson::Value::ConstValueIterator itr = objectValue["attachedSensors"].Begin(); itr != objectValue["attachedSensors"].End(); ++itr) {
                     RobotBase::AttachedSensorInfoPtr attachedsensorinfo(new RobotBase::AttachedSensorInfo());
                     attachedsensorinfo->DeserializeJSON(*itr, fUnitScale);
@@ -329,6 +337,21 @@ namespace OpenRAVE {
                 return true;
             }
             return false;
+        }
+
+        bool _ExtractReadableInterfaces(const rapidjson::Value &objectValue, InterfaceBasePtr pInterface, dReal fUnitScale)
+        {
+            if (!objectValue.HasMember("readableInterfaces") || !objectValue["readableInterfaces"].IsObject()) {
+                return true;
+            }
+            for (rapidjson::Value::ConstMemberIterator itr = objectValue["readableInterfaces"].MemberBegin(); itr != objectValue["readableInterfaces"].MemberEnd(); itr++) {
+                std::string id = itr->name.GetString();
+                BaseJSONReaderPtr preader = RaveCallJSONReader(pInterface->GetInterfaceType(), id, pInterface, AttributesList());
+                JSONReadablePtr preadable = preader->GetReadable();
+                preadable->DeserializeJSON(itr->value, fUnitScale);
+                pInterface->SetReadableInterface(id, preadable);
+            }
+            return true;
         }
 
         /// \brief get the scheme of the uri, e.g. file: or openrave:
