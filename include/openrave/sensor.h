@@ -178,10 +178,10 @@ public:
     };
 
     /// permanent properties of the sensors
-    class OPENRAVE_API SensorGeometry : public XMLReadable
+    class OPENRAVE_API SensorGeometry : public XMLReadable, public JSONReadable
     {
 public:
-        SensorGeometry(const std::string& xmlid) : XMLReadable(xmlid) {
+        SensorGeometry(const std::string& xmlid) : XMLReadable(xmlid), JSONReadable(xmlid) {
         }
         virtual ~SensorGeometry() {
         }

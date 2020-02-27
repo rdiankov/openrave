@@ -41,7 +41,16 @@ void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& valu
     LoadJsonValueByKey(value, "transform", _trelative);
     LoadJsonValueByKey(value, "type", _sensorname);
 
-    // desrialization of sensorGeometry is handled by json reader
+    if (value.HasMember("sensorGeometry")) {
+        BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Sensor, _sensorname, InterfaceBasePtr(), AttributesList());
+        if (!!pReader) {
+            JSONReadablePtr pReadable = pReader->GetReadable();
+            if (!!pReadable) {
+                pReadable->DeserializeJSON(value["sensorGeometry"], fUnitScale);
+                _sensorgeometry = OPENRAVE_DYNAMIC_POINTER_CAST<SensorBase::SensorGeometry>(pReadable);
+            }
+        }
+    }
 }
 
 RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot) : _probot(probot)

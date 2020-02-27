@@ -164,10 +164,31 @@ protected:
         boost::shared_ptr<BaseCameraSensor> _psensor;
         stringstream ss;
     };
+
+
+    class BaseCameraJSONReader : public BaseJSONReader
+    {
+public:
+        BaseCameraJSONReader() { 
+            _pgeom.reset(new CameraGeomData());
+        }
+        virtual ~BaseCameraJSONReader() {}
+        virtual JSONReadablePtr GetReadable() {
+            return _pgeom;
+        }
+protected:
+        CameraGeomDataPtr _pgeom;
+    };
+
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
         return BaseXMLReaderPtr(new BaseCameraXMLReader(boost::dynamic_pointer_cast<BaseCameraSensor>(ptr)));
+    }
+
+    static BaseJSONReaderPtr CreateJSONReader(InterfaceBasePtr ptr, const AttributesList& atts)
+    {
+        return BaseJSONReaderPtr(new BaseCameraJSONReader());
     }
 
     BaseCameraSensor(EnvironmentBasePtr penv) : SensorBase(penv) {
