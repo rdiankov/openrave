@@ -458,7 +458,7 @@ namespace OpenRAVE {
             rapidjson::IStreamWrapper isw(ifs);
             boost::shared_ptr<rapidjson::Document> doc;
             doc.reset(new rapidjson::Document);
-            rapidjson::ParseResult ok = doc->ParseStream(isw);
+            rapidjson::ParseResult ok = doc->ParseStream<rapidjson::kParseFullPrecisionFlag>(isw);
             if (!ok) {
                 throw OPENRAVE_EXCEPTION_FORMAT("failed parse json document \"%s\"", filename, ORE_InvalidArguments);
             }
@@ -472,7 +472,7 @@ namespace OpenRAVE {
         {
             boost::shared_ptr<rapidjson::Document> doc;
             doc.reset(new rapidjson::Document);
-            rapidjson::ParseResult ok = doc->Parse(data.c_str());
+            rapidjson::ParseResult ok = doc->Parse<rapidjson::kParseFullPrecisionFlag>(data.c_str());
             if (!ok) {
                 throw OPENRAVE_EXCEPTION_FORMAT0("failed parse json document", ORE_InvalidArguments);
             }

@@ -21,8 +21,6 @@
 #ifndef OPENRAVE_JSON_COMMON_H
 #define OPENRAVE_JSON_COMMON_H
 
-#define RAPIDJSON_PARSE_DEFAULT_FLAGS kParseFullPrecisionFlag
-
 #include "../ravep.h"
 
 namespace OpenRAVE
