@@ -373,11 +373,6 @@ class OPENRAVE_API Readable : public UserData
 public:
     Readable() {}
     virtual ~Readable() {}
-    virtual const std::string& GetId() const {
-        return __id;
-    }
-protected:
-    std::string __id;
 };
 typedef boost::shared_ptr<Readable> ReadablePtr;
 typedef boost::shared_ptr<Readable const> ReadableConstPtr;
@@ -386,17 +381,16 @@ typedef boost::shared_ptr<Readable const> ReadableConstPtr;
 class OPENRAVE_API XMLReadable : virtual public Readable
 {
 public:
-    XMLReadable(const std::string& xmlid) {
-        __id = xmlid;
-    }
-    virtual ~XMLReadable() {
-    }
+    XMLReadable(const std::string& xmlid) : __xmlid(xmlid) { }
+    virtual ~XMLReadable() { }
     virtual const std::string& GetXMLId() const {
-        return GetId();
+        return __xmlid;
     }
     /// \brief serializes the interface
     virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const {
     }
+protected:
+    std::string __xmlid;
 };
 typedef boost::shared_ptr<XMLReadable> XMLReadablePtr;
 typedef boost::shared_ptr<XMLReadable const> XMLReadableConstPtr;
@@ -494,9 +488,7 @@ public:
 class OPENRAVE_API JSONReadable : virtual public Readable
 {
 public:
-    JSONReadable(const std::string& id) {
-        __id = id;
-    }
+    JSONReadable() { }
     virtual ~JSONReadable() {}
     virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const = 0;
     virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) = 0;
