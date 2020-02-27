@@ -160,7 +160,7 @@ void AppendBoxTriangulation(const Vector& pos, const Vector& ex, TriMesh& tri)
     tri.indices.insert(tri.indices.end(), &indices[0], &indices[nindices]);
 }
 
-KinBody::GeometryInfo::GeometryInfo() : XMLReadable("geometry")
+KinBody::GeometryInfo::GeometryInfo()
 {
     _vDiffuseColor = Vector(1,1,1);
     _type = GT_None;

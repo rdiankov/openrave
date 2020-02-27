@@ -38,7 +38,7 @@ KinBody::JointInfo::JointControlInfo_ExternalDevice::JointControlInfo_ExternalDe
 {
 }
 
-KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsActive(true), _controlMode(JCM_None) {
+KinBody::JointInfo::JointInfo() : _type(JointNone), _bIsActive(true), _controlMode(JCM_None) {
     for(size_t i = 0; i < _vaxes.size(); ++i) {
         _vaxes[i] = Vector(0,0,1);
     }
@@ -58,7 +58,7 @@ KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsAc
     std::fill(_bIsCircular.begin(), _bIsCircular.end(), 0);
 }
 
-KinBody::JointInfo::JointInfo(const JointInfo& other) : XMLReadable("joint")
+KinBody::JointInfo::JointInfo(const JointInfo& other)
 {
     *this = other;
 }

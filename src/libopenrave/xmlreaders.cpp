@@ -246,7 +246,7 @@ BaseXMLReader::ProcessElement GeometryInfoReader::startElement(const std::string
         return PE_Ignore;
     }
 
-    if( xmlname == _pgeom->GetXMLId() || xmlname == "geom" ) {
+    if( xmlname == "geometry" || xmlname == "geom" ) {
         _pcurreader.reset(new GeometryInfoReader(_pgeom, atts));
         return PE_Support;
     }
@@ -308,7 +308,7 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
         return false;
     }
 
-    if( xmlname == _pgeom->GetXMLId() || xmlname == "geom" ) {
+    if( xmlname == "geometry" || xmlname == "geom" ) {
         return true;
     }
     else if( xmlname == "translation" ) {

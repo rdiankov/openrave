@@ -131,7 +131,7 @@ public:
     /// \brief Describes the properties of a geometric primitive.
     ///
     /// Contains everything associated with a geometry's appearance and shape
-    class OPENRAVE_API GeometryInfo : public XMLReadable
+    class OPENRAVE_API GeometryInfo
     {
 public:
         GeometryInfo();
@@ -240,7 +240,7 @@ public:
     typedef boost::shared_ptr<GeometryInfo const> GeometryInfoConstPtr;
 
     /// \brief Describes the properties of a link used to initialize it
-    class OPENRAVE_API LinkInfo : public XMLReadable
+    class OPENRAVE_API LinkInfo
     {
 public:
         LinkInfo();
@@ -869,7 +869,7 @@ public:
     typedef boost::shared_ptr<Mimic const> MimicConstPtr;
 
     /// \brief Describes the properties of a joint used to initialize it
-    class OPENRAVE_API JointInfo : public XMLReadable
+    class OPENRAVE_API JointInfo
     {
 public:
         JointInfo();

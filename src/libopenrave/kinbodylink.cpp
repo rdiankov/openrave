@@ -19,10 +19,10 @@
 
 namespace OpenRAVE {
 
-KinBody::LinkInfo::LinkInfo() : XMLReadable("link"), _mass(0), _bStatic(false), _bIsEnabled(true) {
+KinBody::LinkInfo::LinkInfo() : _mass(0), _bStatic(false), _bIsEnabled(true) {
 }
 
-KinBody::LinkInfo::LinkInfo(const LinkInfo& other) : XMLReadable("link")
+KinBody::LinkInfo::LinkInfo(const LinkInfo& other)
 {
     *this = other;
 }
