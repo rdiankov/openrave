@@ -176,7 +176,7 @@ void PyConnectedBodyInfo::_Update(const RobotBase::ConnectedBodyInfo& info)
     _name = ConvertStringToUnicode(info._name);
     _linkname = ConvertStringToUnicode(info._linkname);
     _trelative = ReturnTransform(info._trelative);
-    _url = ConvertStringToUnicode(info._url);
+    _uri = ConvertStringToUnicode(info._uri);
 
     py::list linkInfos;
     FOREACH(itlinkinfo, info._vLinkInfos) {
@@ -209,7 +209,7 @@ RobotBase::ConnectedBodyInfoPtr PyConnectedBodyInfo::GetConnectedBodyInfo() cons
     pinfo->_name = py::extract<std::string>(_name);
     pinfo->_linkname = py::extract<std::string>(_linkname);
     pinfo->_trelative = ExtractTransform(_trelative);
-    pinfo->_url = py::extract<std::string>(_url);
+    pinfo->_uri = py::extract<std::string>(_uri);
     // extract all the infos
     return pinfo;
 }
@@ -1826,7 +1826,7 @@ void init_openravepy_robot()
                                .def_readwrite("_name", &PyConnectedBodyInfo::_name)
                                .def_readwrite("_linkname", &PyConnectedBodyInfo::_linkname)
                                .def_readwrite("_trelative", &PyConnectedBodyInfo::_trelative)
-                               .def_readwrite("_url", &PyConnectedBodyInfo::_url)
+                               .def_readwrite("_uri", &PyConnectedBodyInfo::_uri)
                                .def_readwrite("_linkInfos", &PyConnectedBodyInfo::_linkInfos)
                                .def_readwrite("_jointInfos", &PyConnectedBodyInfo::_jointInfos)
                                .def_readwrite("_manipulatorInfos", &PyConnectedBodyInfo::_manipulatorInfos)

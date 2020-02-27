@@ -79,12 +79,16 @@ public:
     }
     virtual ~PyReadable() {
     }
-    std::string GetId() const {
-        return _readable->GetId();
+    std::string GetXMLId() const {
+        // some readable are not xml readable and does have a xml id
+        XMLReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<XMLReadable>(_readable);
+        if (!pxmlreadable) {
+            return "";
+        }
+        return pxmlreadable->GetXMLId();
     }
 
-    object Serialize(int options=0)
-    {
+    object Serialize(int options=0) {
         // some readable are not xml readable and does not get serialized here
         XMLReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<XMLReadable>(_readable);
         if (!pxmlreadable) {
@@ -1496,8 +1500,7 @@ void init_openravepy_global()
     class_<PyReadable, PyReadablePtr >("Readable", DOXY_CLASS(eadable), no_init)
     .def(init<ReadablePtr>(py::args("readableraw")))
 #endif
-    .def("GetId", &PyReadable::GetId, DOXY_FN(eadable, GetId))
-    .def("GetXMLId", &PyReadable::GetId, DOXY_FN(eadable, GetId)) // for back-compact
+    .def("GetXMLId", &PyReadable::GetXMLId, DOXY_FN(eadable, GetXMLId))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .def("Serialize", &PyReadable::Serialize,
          "options"_a = 0,

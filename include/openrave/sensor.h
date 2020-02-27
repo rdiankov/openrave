@@ -181,7 +181,7 @@ public:
     class OPENRAVE_API SensorGeometry : public XMLReadable, public JSONReadable
     {
 public:
-        SensorGeometry(const std::string& xmlid) : XMLReadable(xmlid), JSONReadable(xmlid) {
+        SensorGeometry(const std::string& xmlid) : XMLReadable(xmlid), JSONReadable() {
         }
         virtual ~SensorGeometry() {
         }
