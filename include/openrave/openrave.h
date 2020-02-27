@@ -382,18 +382,6 @@ protected:
 typedef boost::shared_ptr<Readable> ReadablePtr;
 typedef boost::shared_ptr<Readable const> ReadableConstPtr;
 
-/// base class for json readable interfaces
-class OPENRAVE_API JSONReadable : public Readable
-{
-public:
-    JSONReadable(const std::string& jsonid) : Readable(jsonid) {}
-    virtual ~JSONReadable() {}
-    virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const = 0;
-    virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) = 0;
-};
-typedef boost::shared_ptr<JSONReadable> JSONReadablePtr;
-typedef boost::shared_ptr<JSONReadable const> JSONReadableConstPtr;
-
 /// base class for xml readable interfaces
 class OPENRAVE_API XMLReadable : public Readable
 {
@@ -456,9 +444,7 @@ public:
     /// XML filename/resource used for this class (can be empty)
     std::string _filename;
 };
-
 typedef boost::function<BaseXMLReaderPtr(InterfaceBasePtr, const AttributesList&)> CreateXMLReaderFn;
-
 
 /// \brief reads until the tag ends
 class OPENRAVE_API DummyXMLReader : public BaseXMLReader
@@ -502,6 +488,38 @@ public:
     /// \brief returns a writer for child elements
     virtual BaseXMLWriterPtr AddChild(const std::string& xmltag, const AttributesList& atts=AttributesList()) = 0;
 };
+
+/// base class for json readable interfaces
+class OPENRAVE_API JSONReadable : public Readable
+{
+public:
+    JSONReadable(const std::string& jsonid) : Readable(jsonid) {}
+    virtual ~JSONReadable() {}
+    virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const = 0;
+    virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) = 0;
+};
+typedef boost::shared_ptr<JSONReadable> JSONReadablePtr;
+typedef boost::shared_ptr<JSONReadable const> JSONReadableConstPtr;
+
+/// \brief base class for all json readers. JSONReaders are used to process data from json files.
+///
+/// Custom readers can be registered through \ref RaveRegisterJSONReader.
+class OPENRAVE_API BaseJSONReader : public boost::enable_shared_from_this<BaseJSONReader>
+{
+public:
+
+    BaseJSONReader() {}
+    virtual ~BaseJSONReader() {}
+
+    /// a readable interface that stores the information processsed for the current tag
+    /// This pointer is used to the InterfaceBase class registered readers
+    virtual JSONReadablePtr GetReadable() {
+        return JSONReadablePtr();
+    }
+};
+typedef boost::shared_ptr<BaseJSONReader> BaseJSONReaderPtr;
+typedef boost::shared_ptr<BaseJSONReader const> BaseJSONReaderConstPtr;
+typedef boost::function<BaseJSONReaderPtr(InterfaceBasePtr, const AttributesList&)> CreateJSONReaderFn;
 
 } // end namespace OpenRAVE
 
@@ -2623,6 +2641,16 @@ OPENRAVE_API UserDataPtr RaveRegisterInterface(InterfaceType type, const std::st
  */
 OPENRAVE_API UserDataPtr RaveRegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn);
 
+/** \brief Registers a custom json reader for a particular interface.
+
+    Once registered, anytime an interface is created through JSON and
+    the id is seen, the function CreateJSONReaderFn will be called to get a reader
+    \param id the id specified is seen in the interface, the the custom reader will be created.
+    \param fn CreateJSONReaderFn(pinterface,atts) - passed in the pointer to the interface where the id was seen along with the list of attributes
+    \return a pointer holding the registration, releasing the pointer will unregister the XML reader
+ */
+OPENRAVE_API UserDataPtr RaveRegisterJSONReader(InterfaceType type, const std::string& id, const CreateJSONReaderFn& fn);
+
 /// \brief return the environment's unique id, returns 0 if environment could not be found or not registered
 OPENRAVE_API int RaveGetEnvironmentId(EnvironmentBaseConstPtr env);
 
@@ -2637,6 +2665,11 @@ OPENRAVE_API void RaveGetEnvironments(std::list<EnvironmentBasePtr>& listenviron
 ///
 /// \throw openrave_exception Will throw with ORE_InvalidArguments if registered function could not be found.
 OPENRAVE_API BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const AttributesList& atts);
+
+/// \brief Returns the current registered json reader for the interface type/id
+///
+/// \throw openrave_exception Will throw with ORE_InvalidArguments if registered function could not be found.
+OPENRAVE_API BaseJSONReaderPtr RaveCallJSONReader(InterfaceType type, const std::string& id, InterfaceBasePtr pinterface, const AttributesList& atts);
 
 /** \brief Returns the absolute path of the filename on the local filesystem resolving relative paths from OpenRAVE paths.
 
