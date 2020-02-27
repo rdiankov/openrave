@@ -368,23 +368,47 @@ enum CloningOptions {
 };
 
 /// base class for readable interfaces
-class OPENRAVE_API XMLReadable : public UserData
+class OPENRAVE_API Readable : public UserData
 {
 public:
-    XMLReadable(const std::string& xmlid) : __xmlid(xmlid) {
+    Readable(const std::string& id) : __id(id) {}
+    virtual ~Readable() {}
+    virtual const std::string& GetId() const {
+        return __id;
+    }
+protected:
+    std::string __id;
+};
+typedef boost::shared_ptr<Readable> ReadablePtr;
+typedef boost::shared_ptr<Readable const> ReadableConstPtr;
+
+/// base class for json readable interfaces
+class OPENRAVE_API JSONReadable : public Readable
+{
+public:
+    JSONReadable(const std::string& jsonid) : Readable(jsonid) {}
+    virtual ~JSONReadable() {}
+    virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const = 0;
+    virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) = 0;
+};
+typedef boost::shared_ptr<JSONReadable> JSONReadablePtr;
+typedef boost::shared_ptr<JSONReadable const> JSONReadableConstPtr;
+
+/// base class for xml readable interfaces
+class OPENRAVE_API XMLReadable : public Readable
+{
+public:
+    XMLReadable(const std::string& xmlid) : Readable(xmlid) {
     }
     virtual ~XMLReadable() {
     }
     virtual const std::string& GetXMLId() const {
-        return __xmlid;
+        return GetId();
     }
     /// \brief serializes the interface
     virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const {
     }
-private:
-    std::string __xmlid;
 };
-
 typedef boost::shared_ptr<XMLReadable> XMLReadablePtr;
 typedef boost::shared_ptr<XMLReadable const> XMLReadableConstPtr;
 

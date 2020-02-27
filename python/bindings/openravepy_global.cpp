@@ -72,46 +72,48 @@ object PyRay::__unicode__() {
     return ConvertStringToUnicode(__str__());
 }
 
-class PyXMLReadable
+class PyReadable
 {
 public:
-    PyXMLReadable(XMLReadablePtr xmlreadable) : _xmlreadable(xmlreadable) {
+    PyReadable(ReadablePtr readable) : _readable(readable) {
     }
-    virtual ~PyXMLReadable() {
+    virtual ~PyReadable() {
     }
-    std::string GetXMLId() const {
-        return _xmlreadable->GetXMLId();
-    }
-    object Serialize(int options=0)
-    {
-        std::string xmlid;
-        OpenRAVE::xmlreaders::StreamXMLWriter writer(xmlid);
-        _xmlreadable->Serialize(OpenRAVE::xmlreaders::StreamXMLWriterPtr(&writer,utils::null_deleter()),options);
-        std::stringstream ss;
-        writer.Serialize(ss);
-        return ConvertStringToUnicode(ss.str());
+    std::string GetId() const {
+        return _readable->GetId();
     }
 
-    XMLReadablePtr GetXMLReadable() {
-        return _xmlreadable;
+    // TODO(readable): not all readable can be serialized to xml
+    // object Serialize(int options=0)
+    // {
+    //     std::string xmlid;
+    //     OpenRAVE::xmlreaders::StreamXMLWriter writer(xmlid);
+    //     _readable->Serialize(OpenRAVE::xmlreaders::StreamXMLWriterPtr(&writer,utils::null_deleter()),options);
+    //     std::stringstream ss;
+    //     writer.Serialize(ss);
+    //     return ConvertStringToUnicode(ss.str());
+    // }
+
+    ReadablePtr GetReadable() {
+        return _readable;
     }
 protected:
-    XMLReadablePtr _xmlreadable;
+    ReadablePtr _readable;
 };
 
-XMLReadablePtr ExtractXMLReadable(object o) {
+ReadablePtr ExtractReadable(object o) {
     if( !IS_PYTHONOBJECT_NONE(o) ) {
-        extract_<PyXMLReadablePtr> pyreadable(o);
-        return ((PyXMLReadablePtr)pyreadable)->GetXMLReadable();
+        extract_<PyReadablePtr> pyreadable(o);
+        return ((PyReadablePtr)pyreadable)->GetReadable();
     }
-    return XMLReadablePtr();
+    return ReadablePtr();
 }
 
-object toPyXMLReadable(XMLReadablePtr p) {
+object toPyReadable(ReadablePtr p) {
     if( !p ) {
         return py::none_();
     }
-    return py::to_object(PyXMLReadablePtr(new PyXMLReadable(p)));
+    return py::to_object(PyReadablePtr(new PyReadable(p)));
 }
 
 namespace xmlreaders
@@ -122,9 +124,9 @@ class PyStaticClass
 public:
 };
 
-PyXMLReadablePtr pyCreateStringXMLReadable(const std::string& xmlid, const std::string& data)
+PyReadablePtr pyCreateStringXMLReadable(const std::string& xmlid, const std::string& data)
 {
-    return PyXMLReadablePtr(new PyXMLReadable(XMLReadablePtr(new OpenRAVE::xmlreaders::StringXMLReadable(xmlid, data))));
+    return PyReadablePtr(new PyReadable(ReadablePtr(new OpenRAVE::xmlreaders::StringXMLReadable(xmlid, data))));
 }
 
 } // end namespace xmlreaders
@@ -1171,7 +1173,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractIkParameterization_overloads, PyCo
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractAffineValues_overloads, PyConfigurationSpecification::ExtractAffineValues, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractJointValues_overloads, PyConfigurationSpecification::ExtractJointValues, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(RemoveGroups_overloads, PyConfigurationSpecification::RemoveGroups, 1, 2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Serialize_overloads, Serialize, 0, 1)
+// BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Serialize_overloads, Serialize, 0, 1)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -1472,20 +1474,20 @@ void init_openravepy_global()
 #endif
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    class_<PyXMLReadable, PyXMLReadablePtr >(m, "XMLReadable", DOXY_CLASS(XMLReadable))
-    .def(init<XMLReadablePtr>(), "readableraw"_a)
+    class_<PyReadable, PyReadablePtr >(m, "XMLReadable", DOXY_CLASS(XMLReadable))
+    .def(init<ReadablePtr>(), "readableraw"_a)
 #else
-    class_<PyXMLReadable, PyXMLReadablePtr >("XMLReadable", DOXY_CLASS(XMLReadable), no_init)
-    .def(init<XMLReadablePtr>(py::args("readableraw")))
+    class_<PyReadable, PyReadablePtr >("XMLReadable", DOXY_CLASS(XMLReadable), no_init)
+    .def(init<ReadablePtr>(py::args("readableraw")))
 #endif
-    .def("GetXMLId", &PyXMLReadable::GetXMLId, DOXY_FN(XMLReadable, GetXMLId))
+    .def("GetId", &PyReadable::GetId, DOXY_FN(XMLReadable, GetId))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    .def("Serialize", &PyXMLReadable::Serialize,
+    .def("Serialize", &PyReadable::Serialize,
          "options"_a = 0,
          DOXY_FN(XMLReadable, Serialize)
          )
 #else
-    .def("Serialize", &PyXMLReadable::Serialize, Serialize_overloads(PY_ARGS("options") DOXY_FN(XMLReadable, Serialize)))
+    // .def("Serialize", &PyReadable::Serialize, Serialize_overloads(PY_ARGS("options") DOXY_FN(XMLReadable, Serialize)))
 #endif
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

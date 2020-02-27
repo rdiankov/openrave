@@ -800,19 +800,19 @@ object PyInterfaceBase::GetReadableInterfaces()
 {
     py::dict ointerfaces;
     FOREACHC(it,_pbase->GetReadableInterfaces()) {
-        ointerfaces[it->first] = toPyXMLReadable(it->second);
+        ointerfaces[it->first] = toPyReadable(it->second);
     }
     return ointerfaces;
 }
 
-object PyInterfaceBase::GetReadableInterface(const std::string& xmltag)
+object PyInterfaceBase::GetReadableInterface(const std::string& id)
 {
-    return toPyXMLReadable(_pbase->GetReadableInterface(xmltag));
+    return toPyReadable(_pbase->GetReadableInterface(id));
 }
 
-void PyInterfaceBase::SetReadableInterface(const std::string& xmltag, object oreadable)
+void PyInterfaceBase::SetReadableInterface(const std::string& id, object oreadable)
 {
-    _pbase->SetReadableInterface(xmltag,ExtractXMLReadable(oreadable));
+    _pbase->SetReadableInterface(id,ExtractReadable(oreadable));
 }
 
 PyInterfaceBasePtr PyEnvironmentBase::_toPyInterface(InterfaceBasePtr pinterface)
@@ -2523,7 +2523,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #endif
         .def("GetReadableInterfaces",&PyInterfaceBase::GetReadableInterfaces, DOXY_FN(InterfaceBase,GetReadableInterfaces))
         .def("GetReadableInterface",&PyInterfaceBase::GetReadableInterface, DOXY_FN(InterfaceBase,GetReadableInterface))
-        .def("SetReadableInterface",&PyInterfaceBase::SetReadableInterface, PY_ARGS("xmltag","xmlreadable") DOXY_FN(InterfaceBase,SetReadableInterface))
+        .def("SetReadableInterface",&PyInterfaceBase::SetReadableInterface, PY_ARGS("id","readable") DOXY_FN(InterfaceBase,SetReadableInterface))
         .def("__repr__", &PyInterfaceBase::__repr__)
         .def("__str__", &PyInterfaceBase::__str__)
         .def("__unicode__", &PyInterfaceBase::__unicode__)

@@ -121,12 +121,13 @@ bool InterfaceBase::SendCommand(ostream& sout, istream& sinput)
 
 void InterfaceBase::Serialize(BaseXMLWriterPtr writer, int options) const
 {
-    FOREACHC(it, __mapReadableInterfaces) {
-        // sometimes interfaces might be disabled
-        if( !!it->second ) {
-            it->second->Serialize(writer,options);
-        }
-    }
+    // TODO(readable): not all readable can be serialized to xml
+    // FOREACHC(it, __mapReadableInterfaces) {
+    //     // sometimes interfaces might be disabled
+    //     if( !!it->second ) {
+    //         it->second->Serialize(writer,options);
+    //     }
+    // }
 }
 
 void InterfaceBase::RegisterCommand(const std::string& cmdname, InterfaceBase::InterfaceCommandFn fncmd, const std::string& strhelp)
@@ -257,24 +258,24 @@ void InterfaceBase::_GetJSONCommandHelp(const rapidjson::Value& input, rapidjson
     }
 }
 
-XMLReadablePtr InterfaceBase::GetReadableInterface(const std::string& xmltag) const
+ReadablePtr InterfaceBase::GetReadableInterface(const std::string& id) const
 {
     boost::shared_lock< boost::shared_mutex > lock(_mutexInterface);
-    READERSMAP::const_iterator it = __mapReadableInterfaces.find(xmltag);
-    return it != __mapReadableInterfaces.end() ? it->second : XMLReadablePtr();
+    READERSMAP::const_iterator it = __mapReadableInterfaces.find(id);
+    return it != __mapReadableInterfaces.end() ? it->second : ReadablePtr();
 }
 
-XMLReadablePtr InterfaceBase::SetReadableInterface(const std::string& xmltag, XMLReadablePtr readable)
+ReadablePtr InterfaceBase::SetReadableInterface(const std::string& id, ReadablePtr readable)
 {
     boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
-    READERSMAP::iterator it = __mapReadableInterfaces.find(xmltag);
+    READERSMAP::iterator it = __mapReadableInterfaces.find(id);
     if( it == __mapReadableInterfaces.end() ) {
         if( !!readable ) {
-            __mapReadableInterfaces[xmltag] = readable;
+            __mapReadableInterfaces[id] = readable;
         }
-        return XMLReadablePtr();
+        return ReadablePtr();
     }
-    XMLReadablePtr pprev = it->second;
+    ReadablePtr pprev = it->second;
     if( !!readable ) {
         it->second = readable;
     }

@@ -46,7 +46,7 @@ enum SerializationOptions
 class OPENRAVE_API InterfaceBase : public boost::enable_shared_from_this<InterfaceBase>
 {
 public:
-    typedef std::map<std::string, XMLReadablePtr, CaseInsensitiveCompare> READERSMAP;
+    typedef std::map<std::string, ReadablePtr, CaseInsensitiveCompare> READERSMAP;
 
     InterfaceBase(InterfaceType type, EnvironmentBasePtr penv);
     virtual ~InterfaceBase();
@@ -79,10 +79,10 @@ public:
     }
 
     /// \brief Returns the readable interface. <b>[multi-thread safe]</b>
-    virtual XMLReadablePtr GetReadableInterface(const std::string& xmltag) const;
+    virtual ReadablePtr GetReadableInterface(const std::string& id) const;
 
     /// \brief Set a new readable interface and return the previously set interface if it exists. <b>[multi-thread safe]</b>
-    virtual XMLReadablePtr SetReadableInterface(const std::string& xmltag, XMLReadablePtr readable);
+    virtual ReadablePtr SetReadableInterface(const std::string& id, ReadablePtr readable);
 
     /// \brief Documentation of the interface in reStructuredText format. See \ref writing_plugins_doc. <b>[multi-thread safe]</b>
     virtual const std::string& GetDescription() const {
