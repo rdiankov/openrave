@@ -215,14 +215,15 @@ namespace OpenRAVE {
             
             std::vector<KinBody::JointInfoPtr> vJointInfos;
             _ExtractJoints(*object, vJointInfos, fUnitScale);
-
-            KinBodyPtr body = RaveCreateKinBody(_penv, "");
+            
             std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(vLinkInfos.begin(), vLinkInfos.end());
             std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(vJointInfos.begin(), vJointInfos.end());
+            
+            KinBodyPtr body = RaveCreateKinBody(_penv, "");
             if (!body->Init(vLinkInfosConst, vJointInfosConst, _CanonicalizeURI(uri))) {
                 return false;
             }
-
+            
             _ExtractReadableInterfaces(*object, body, fUnitScale);
 
             body->SetName(GetJsonValueByKey<std::string>(bodyValue, "name"));
@@ -265,20 +266,16 @@ namespace OpenRAVE {
             std::vector<RobotBase::ConnectedBodyInfoPtr> vConnectedBodyInfos;
             _ExtractConnectedBodies(*object, vConnectedBodyInfos, fUnitScale);
 
-            RobotBasePtr robot = RaveCreateRobot(_penv, "");
+            
             std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(vLinkInfos.begin(), vLinkInfos.end());
             std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(vJointInfos.begin(), vJointInfos.end());
             std::vector<RobotBase::ManipulatorInfoConstPtr> vManipulatorInfosConst(vManipulatorInfos.begin(), vManipulatorInfos.end());
             std::vector<RobotBase::AttachedSensorInfoConstPtr> vAttachedSensorInfosConst(vAttachedSensorInfos.begin(), vAttachedSensorInfos.end());
+            std::vector<RobotBase::ConnectedBodyInfoConstPtr> vConnectedBodyInfosConst(vConnectedBodyInfos.begin(), vConnectedBodyInfos.end());
             
-            if (!robot->Init(vLinkInfosConst, vJointInfosConst, vManipulatorInfosConst, vAttachedSensorInfosConst, _CanonicalizeURI(uri))) {
+            RobotBasePtr robot = RaveCreateRobot(_penv, "");
+            if (!robot->Init(vLinkInfosConst, vJointInfosConst, vManipulatorInfosConst, vAttachedSensorInfosConst, vConnectedBodyInfosConst, _CanonicalizeURI(uri))) {
                 return false;
-            }
-
-            // add the connected bodies
-            FOREACHC(it, vConnectedBodyInfos) {
-                RobotBase::ConnectedBodyPtr pConnectedBody(new RobotBase::ConnectedBody(robot, **it));
-                robot->_vecConnectedBodies.push_back(pConnectedBody);
             }
 
             _ExtractReadableInterfaces(*object, robot, fUnitScale);

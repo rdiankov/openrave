@@ -99,7 +99,6 @@ namespace OpenRAVE
 
 class ColladaReader;
 class ColladaWriter;
-class JSONReader;
 
 RobotBasePtr CreateGenericRobot(EnvironmentBasePtr penv, std::istream& sinput);
 MultiControllerBasePtr CreateMultiController(EnvironmentBasePtr penv, std::istream& sinput);

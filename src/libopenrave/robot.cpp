@@ -414,7 +414,7 @@ void RobotBase::Destroy()
     KinBody::Destroy();
 }
 
-bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, const std::vector<KinBody::JointInfoConstPtr>& jointinfos, const std::vector<RobotBase::ManipulatorInfoConstPtr>& manipinfos, const std::vector<RobotBase::AttachedSensorInfoConstPtr>& attachedsensorinfos, const std::string& uri)
+bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, const std::vector<KinBody::JointInfoConstPtr>& jointinfos, const std::vector<RobotBase::ManipulatorInfoConstPtr>& manipinfos, const std::vector<RobotBase::AttachedSensorInfoConstPtr>& attachedsensorinfos, const std::vector<ConnectedBodyInfoConstPtr>& connectedbodyinfos, const std::string& uri)
 {
     if( !KinBody::Init(linkinfos, jointinfos, uri) ) {
         return false;
@@ -431,6 +431,11 @@ bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, co
         _vecAttachedSensors.push_back(newattachedsensor);
         newattachedsensor->UpdateInfo(); // just in case
         __hashrobotstructure.resize(0);
+    }
+    _vecConnectedBodies.clear();
+    FOREACHC(itconnectedbodyinfo, connectedbodyinfos) {
+        ConnectedBodyPtr newconnectedbody(new ConnectedBody(shared_robot(),**itconnectedbodyinfo));
+        _vecConnectedBodies.push_back(newconnectedbody);
     }
     return true;
 }

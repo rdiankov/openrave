@@ -412,7 +412,6 @@ private:
 #endif
 #endif
         friend class ColladaReader;
-        friend class JSONReader;
         friend class RobotBase;
     };
     typedef boost::shared_ptr<RobotBase::Manipulator> ManipulatorPtr;
@@ -530,7 +529,6 @@ private:
 #endif
 #endif
         friend class ColladaReader;
-        friend class JSONReader;
         friend class RobotBase;
     };
     typedef boost::shared_ptr<RobotBase::AttachedSensor> AttachedSensorPtr;
@@ -663,7 +661,6 @@ private:
         mutable std::string __hashstructure;
 
         friend class ColladaReader;
-        friend class JSONReader;
         friend class RobotBase;
     };
 
@@ -722,7 +719,7 @@ private:
     /// Calls \ref KinBody::Init(linkinfos, jointinfos) and then adds the robot-specific information afterwards
     /// \param linkinfos information for all the links. Links will be created in this order
     /// \param jointinfos information for all the joints. Joints might be rearranged depending on their mimic properties
-    virtual bool Init(const std::vector<LinkInfoConstPtr>& linkinfos, const std::vector<JointInfoConstPtr>& jointinfos, const std::vector<ManipulatorInfoConstPtr>& manipinfos, const std::vector<AttachedSensorInfoConstPtr>& attachedsensorinfos, const std::string& uri=std::string());
+    virtual bool Init(const std::vector<LinkInfoConstPtr>& linkinfos, const std::vector<JointInfoConstPtr>& jointinfos, const std::vector<ManipulatorInfoConstPtr>& manipinfos, const std::vector<AttachedSensorInfoConstPtr>& attachedsensorinfos, const std::vector<ConnectedBodyInfoConstPtr>& connectedbodyinfos, const std::string& uri=std::string());
 
 
     /// \brief Returns the manipulators of the robot
@@ -1152,7 +1149,6 @@ private:
 #endif
     friend class ColladaWriter;
     friend class ColladaReader;
-    friend class JSONReader;
     friend class RaveDatabase;
     friend class Grabbed;
 };
