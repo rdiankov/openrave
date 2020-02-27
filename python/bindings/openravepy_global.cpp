@@ -83,16 +83,20 @@ public:
         return _readable->GetId();
     }
 
-    // TODO(readable): not all readable can be serialized to xml
-    // object Serialize(int options=0)
-    // {
-    //     std::string xmlid;
-    //     OpenRAVE::xmlreaders::StreamXMLWriter writer(xmlid);
-    //     _readable->Serialize(OpenRAVE::xmlreaders::StreamXMLWriterPtr(&writer,utils::null_deleter()),options);
-    //     std::stringstream ss;
-    //     writer.Serialize(ss);
-    //     return ConvertStringToUnicode(ss.str());
-    // }
+    object Serialize(int options=0)
+    {
+        // some readable are not xml readable and does not get serialized here
+        XMLReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<XMLReadable>(_readable);
+        if (!pxmlreadable) {
+            return py::none_();
+        }
+        std::string xmlid;
+        OpenRAVE::xmlreaders::StreamXMLWriter writer(xmlid);
+        pxmlreadable->Serialize(OpenRAVE::xmlreaders::StreamXMLWriterPtr(&writer,utils::null_deleter()),options);
+        std::stringstream ss;
+        writer.Serialize(ss);
+        return ConvertStringToUnicode(ss.str());
+    }
 
     ReadablePtr GetReadable() {
         return _readable;

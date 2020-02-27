@@ -38,15 +38,18 @@ void TrajectoryBase::serialize(std::ostream& O, int options) const
     if( GetDescription().size() > 0 ) {
         O << "<description><![CDATA[" << GetDescription() << "]]></description>" << endl;
     }
-    // TODO(readable): not all readable can be serialized to xml
-    // if( GetReadableInterfaces().size() > 0 ) {
-    //     xmlreaders::StreamXMLWriterPtr writer(new xmlreaders::StreamXMLWriter("readable"));
-    //     FOREACHC(it, GetReadableInterfaces()) {
-    //         BaseXMLWriterPtr newwriter = writer->AddChild(it->first);
-    //         it->second->Serialize(newwriter,options);
-    //     }
-    //     writer->Serialize(O);
-    // }
+    if( GetReadableInterfaces().size() > 0 ) {
+        xmlreaders::StreamXMLWriterPtr writer(new xmlreaders::StreamXMLWriter("readable"));
+        FOREACHC(it, GetReadableInterfaces()) {
+            // some readable are not xml readable and does not get serialized here
+            XMLReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<XMLReadable>(it->second);
+            if( !!pxmlreadable ) {
+                BaseXMLWriterPtr newwriter = writer->AddChild(it->first);
+                pxmlreadable->Serialize(newwriter,options);
+            }
+        }
+        writer->Serialize(O);
+    }
     O << "</trajectory>" << endl;
 }
 

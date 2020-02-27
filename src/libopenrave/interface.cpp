@@ -121,13 +121,14 @@ bool InterfaceBase::SendCommand(ostream& sout, istream& sinput)
 
 void InterfaceBase::Serialize(BaseXMLWriterPtr writer, int options) const
 {
-    // TODO(readable): not all readable can be serialized to xml
-    // FOREACHC(it, __mapReadableInterfaces) {
-    //     // sometimes interfaces might be disabled
-    //     if( !!it->second ) {
-    //         it->second->Serialize(writer,options);
-    //     }
-    // }
+    FOREACHC(it, __mapReadableInterfaces) {
+        // sometimes interfaces might be disabled
+        // some readable are not xml readable and does not get serialized here
+        XMLReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<XMLReadable>(it->second);
+        if( !!pxmlreadable ) {
+            pxmlreadable->Serialize(writer,options);
+        }
+    }
 }
 
 void InterfaceBase::RegisterCommand(const std::string& cmdname, InterfaceBase::InterfaceCommandFn fncmd, const std::string& strhelp)
