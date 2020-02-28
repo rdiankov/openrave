@@ -39,10 +39,12 @@ bool RaveParseJSONData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std
 void RaveWriteJSONFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts);
 void RaveWriteJSONFile(KinBodyPtr pbody, const std::string& filename, const AttributesList& atts);
 void RaveWriteJSONFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename, const AttributesList& atts);
-
 void RaveWriteJSONStream(EnvironmentBasePtr penv, const ostream& os, const AttributesList& atts);
 void RaveWriteJSONStream(KinBodyPtr pbody, const ostream& os, const AttributesList& atts);
-void RaveWriteJSONFile(const std::list<KinBodyPtr>& listbodies, const ostream& os, const AttributesList& atts);
+void RaveWriteJSONStream(const std::list<KinBodyPtr>& listbodies, const ostream& os, const AttributesList& atts);
+void RaveWriteJSONMemory(EnvironmentBasePtr penv, std::vector<char>& output,const AttributesList& atts);
+void RaveWriteJSONMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts);
+void RaveWriteJSONMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts);
 
 }
 

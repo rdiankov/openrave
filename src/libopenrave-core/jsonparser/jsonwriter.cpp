@@ -375,7 +375,7 @@ void RaveWriteJSONStream(KinBodyPtr pbody, ostream& os, const AttributesList& at
     jsonwriter.Write(pbody);
     doc.Accept(writer);
 }
-void RaveWriteJSONFile(const std::list<KinBodyPtr>& listbodies, ostream& os, const AttributesList& atts)
+void RaveWriteJSONStream(const std::list<KinBodyPtr>& listbodies, ostream& os, const AttributesList& atts)
 {
     rapidjson::OStreamWrapper ostreamwrapper(os);
     rapidjson::Writer<rapidjson::OStreamWrapper> writer(ostreamwrapper);
@@ -385,4 +385,59 @@ void RaveWriteJSONFile(const std::list<KinBodyPtr>& listbodies, ostream& os, con
     jsonwriter.Write(listbodies);
     doc.Accept(writer);
 }
+
+class VectorWrapper {
+public:
+    typedef char Ch;
+
+    VectorWrapper(std::vector<Ch>& v) : _v(v) { }
+
+    Ch Peek() const { BOOST_ASSERT(0); return '\0'; }
+    Ch Take() { BOOST_ASSERT(0); return '\0'; }
+    size_t Tell() const { return _v.size(); }
+ 
+    Ch* PutBegin() { BOOST_ASSERT(0); return 0; }
+    void Put(Ch c) { _v.push_back(c); }
+    void Flush() { }
+    size_t PutEnd(Ch*) { BOOST_ASSERT(0); return 0; }
+ 
+private:
+    VectorWrapper(const VectorWrapper&);
+    VectorWrapper& operator=(const VectorWrapper&);
+ 
+    std::vector<Ch>& _v;
+};
+
+void RaveWriteJSONMemory(EnvironmentBasePtr penv, std::vector<char>& output,const AttributesList& atts)
+{
+    VectorWrapper wrapper(output);
+    rapidjson::Writer<VectorWrapper> writer(wrapper);
+    rapidjson::Document doc;
+
+    JSONWriter jsonwriter(atts, doc);
+    jsonwriter.Write(penv);
+    doc.Accept(writer);
+}
+
+void RaveWriteJSONMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts)
+{
+    VectorWrapper wrapper(output);
+    rapidjson::Writer<VectorWrapper> writer(wrapper);
+    rapidjson::Document doc;
+
+    JSONWriter jsonwriter(atts, doc);
+    jsonwriter.Write(pbody);
+    doc.Accept(writer);
+}
+void RaveWriteJSONMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts)
+{
+    VectorWrapper wrapper(output);
+    rapidjson::Writer<VectorWrapper> writer(wrapper);
+    rapidjson::Document doc;
+
+    JSONWriter jsonwriter(atts, doc);
+    jsonwriter.Write(listbodies);
+    doc.Accept(writer);
+}
+
 }

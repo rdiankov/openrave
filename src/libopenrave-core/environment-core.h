@@ -605,15 +605,20 @@ public:
 
     virtual void WriteToMemory(const std::string& filetype, std::vector<char>& output, SelectionOptions options=SO_Everything, const AttributesList& atts = AttributesList())
     {
-        if( filetype != "collada" ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("got invalid filetype %s, only support collada", filetype, ORE_InvalidArguments);
+        if (filetype != "collada" && filetype != "json") {
+            throw OPENRAVE_EXCEPTION_FORMAT("got invalid filetype %s, only support collada and json", filetype, ORE_InvalidArguments);
         }
 
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         std::list<KinBodyPtr> listbodies;
         switch(options) {
         case SO_Everything:
-            RaveWriteColladaMemory(shared_from_this(),output,atts);
+            if (filetype == "collada") {
+                RaveWriteColladaMemory(shared_from_this(), output, atts);
+            }
+            else if (filetype == "json") {
+                RaveWriteJSONMemory(shared_from_this(), output, atts);
+            }
             return;
 
         case SO_Body: {
@@ -660,10 +665,20 @@ public:
         }
 
         if( listbodies.size() == 1 ) {
-            RaveWriteColladaMemory(listbodies.front(),output,atts);
+            if (filetype == "collada") {
+                RaveWriteColladaMemory(listbodies.front(), output, atts);
+            }
+            else if (filetype == "json") {
+                RaveWriteJSONMemory(listbodies.front(), output, atts);
+            }
         }
         else {
-            RaveWriteColladaMemory(listbodies,output,atts);
+            if (filetype == "collada") {
+                RaveWriteColladaMemory(listbodies, output, atts);
+            }
+            else if (filetype == "json") {
+                RaveWriteJSONMemory(listbodies, output, atts);
+            }
         }
     }
 
