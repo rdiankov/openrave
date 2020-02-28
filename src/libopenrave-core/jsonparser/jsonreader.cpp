@@ -362,10 +362,12 @@ namespace OpenRAVE {
             if (objectValue.HasMember("readableInterfaces") && objectValue["readableInterfaces"].IsObject()) {
                 for (rapidjson::Value::ConstMemberIterator itr = objectValue["readableInterfaces"].MemberBegin(); itr != objectValue["readableInterfaces"].MemberEnd(); itr++) {
                     std::string id = itr->name.GetString();
-                    BaseJSONReaderPtr preader = RaveCallJSONReader(pInterface->GetInterfaceType(), id, pInterface, AttributesList());
-                    JSONReadablePtr preadable = preader->GetReadable();
-                    preadable->DeserializeJSON(itr->value, fUnitScale);
-                    pInterface->SetReadableInterface(id, preadable);
+                    BaseJSONReaderPtr pReader = RaveCallJSONReader(pInterface->GetInterfaceType(), id, pInterface, AttributesList());
+                    pReader->DeserializeJSON(itr->value, fUnitScale);
+                    JSONReadablePtr pReadable = pReader->GetReadable();
+                    if (!!pReadable) {
+                        pInterface->SetReadableInterface(id, pReadable);
+                    }
                 }
             }
         }

@@ -511,6 +511,14 @@ public:
     virtual JSONReadablePtr GetReadable() {
         return JSONReadablePtr();
     }
+
+    /// by default, json reader will simply call readable's deserialize function
+    virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) {
+        JSONReadablePtr pReadable = GetReadable();
+        if (!!pReadable) {
+            pReadable->DeserializeJSON(value, fUnitScale);
+        }
+    }
 };
 typedef boost::shared_ptr<BaseJSONReader> BaseJSONReaderPtr;
 typedef boost::shared_ptr<BaseJSONReader const> BaseJSONReaderConstPtr;
