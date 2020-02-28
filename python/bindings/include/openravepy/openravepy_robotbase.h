@@ -256,7 +256,7 @@ public:
     PyRobotBase(const PyRobotBase &r);
     virtual ~PyRobotBase();
 
-    bool Init(object olinkinfos, object ojointinfos, object omanipinfos, object oattachedsensorinfos, const std::string& uri=std::string());
+    bool Init(object olinkinfos, object ojointinfos, object omanipinfos, object oattachedsensorinfos, object oconnectedbodyinfos, const std::string& uri=std::string());
 
     object GetManipulators();
 

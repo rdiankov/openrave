@@ -26,12 +26,12 @@ void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapid
     SetJsonValueByKey(value, "transform", _trelative, allocator);
     SetJsonValueByKey(value, "type", _sensorname, allocator);
 
-    rapidjson::Value sensorGeometryValue;
     if(!!_sensorgeometry)
     {
+        rapidjson::Value sensorGeometryValue;
         _sensorgeometry->SerializeJSON(sensorGeometryValue, allocator, fUnitScale, options);
+        SetJsonValueByKey(value, "sensorGeometry", sensorGeometryValue, allocator);
     }
-    SetJsonValueByKey(value, "sensorGeometry", sensorGeometryValue, allocator);
 }
 
 void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
@@ -44,11 +44,13 @@ void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& valu
     if (value.HasMember("sensorGeometry")) {
         BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Sensor, _sensorname, InterfaceBasePtr(), AttributesList());
         if (!!pReader) {
+            pReader->DeserializeJSON(value["sensorGeometry"], fUnitScale);
             JSONReadablePtr pReadable = pReader->GetReadable();
             if (!!pReadable) {
-                pReadable->DeserializeJSON(value["sensorGeometry"], fUnitScale);
                 _sensorgeometry = OPENRAVE_DYNAMIC_POINTER_CAST<SensorBase::SensorGeometry>(pReadable);
             }
+        } else {
+            RAVELOG_WARN_FORMAT("failed to get json reader for sensor type \"%s\"", _sensorname);
         }
     }
 }
@@ -412,7 +414,7 @@ void RobotBase::Destroy()
     KinBody::Destroy();
 }
 
-bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, const std::vector<KinBody::JointInfoConstPtr>& jointinfos, const std::vector<RobotBase::ManipulatorInfoConstPtr>& manipinfos, const std::vector<RobotBase::AttachedSensorInfoConstPtr>& attachedsensorinfos, const std::string& uri)
+bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, const std::vector<KinBody::JointInfoConstPtr>& jointinfos, const std::vector<RobotBase::ManipulatorInfoConstPtr>& manipinfos, const std::vector<RobotBase::AttachedSensorInfoConstPtr>& attachedsensorinfos, const std::vector<ConnectedBodyInfoConstPtr>& connectedbodyinfos, const std::string& uri)
 {
     if( !KinBody::Init(linkinfos, jointinfos, uri) ) {
         return false;
@@ -429,6 +431,11 @@ bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, co
         _vecAttachedSensors.push_back(newattachedsensor);
         newattachedsensor->UpdateInfo(); // just in case
         __hashrobotstructure.resize(0);
+    }
+    _vecConnectedBodies.clear();
+    FOREACHC(itconnectedbodyinfo, connectedbodyinfos) {
+        ConnectedBodyPtr newconnectedbody(new ConnectedBody(shared_robot(),**itconnectedbodyinfo));
+        _vecConnectedBodies.push_back(newconnectedbody);
     }
     return true;
 }

@@ -281,7 +281,7 @@ public:
             // does not exist yet
             SensorBasePtr psensor_reference = GetEnv()->GetSensor(pgeom->sensor_reference);
             if( !psensor_reference ) {
-                RAVELOG_WARN_FORMAT("could not find sensor reference %s of sensor %s", pgeom->sensor_reference%_name);
+                RAVELOG_VERBOSE_FORMAT("could not find sensor reference %s of sensor %s", pgeom->sensor_reference%_name);
             }
 //            else {
 //                _psensor_reference = psensor_reference;

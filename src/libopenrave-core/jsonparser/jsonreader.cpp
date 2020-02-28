@@ -83,7 +83,7 @@ namespace OpenRAVE {
                 for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
                     KinBodyPtr pbody;
                     if (_Extract(*itr, pbody)) {
-                        _penv->Add(pbody, false);
+                        _penv->Add(pbody, true);
 
                         if (itr->HasMember("dofValues")) {
                             std::vector<dReal> vDOFValues;
@@ -210,20 +210,21 @@ namespace OpenRAVE {
 
             dReal fUnitScale = _GetUnitScale();
 
-            std::vector<KinBody::LinkInfoConstPtr> linkinfos;
-            _ExtractLinks(*object, linkinfos, fUnitScale);
+            std::vector<KinBody::LinkInfoPtr> vLinkInfos;
+            _ExtractLinks(*object, vLinkInfos, fUnitScale);
             
-            std::vector<KinBody::JointInfoConstPtr> jointinfos;
-            _ExtractJoints(*object, jointinfos, fUnitScale);
-
+            std::vector<KinBody::JointInfoPtr> vJointInfos;
+            _ExtractJoints(*object, vJointInfos, fUnitScale);
+            
+            std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(vLinkInfos.begin(), vLinkInfos.end());
+            std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(vJointInfos.begin(), vJointInfos.end());
+            
             KinBodyPtr body = RaveCreateKinBody(_penv, "");
-            if (!body->Init(linkinfos, jointinfos, _CanonicalizeURI(uri))) {
+            if (!body->Init(vLinkInfosConst, vJointInfosConst, _CanonicalizeURI(uri))) {
                 return false;
             }
-
-            if (!_ExtractReadableInterfaces(*object, body, fUnitScale)) {
-                return false;
-            }
+            
+            _ExtractReadableInterfaces(*object, body, fUnitScale);
 
             body->SetName(GetJsonValueByKey<std::string>(bodyValue, "name"));
 
@@ -250,26 +251,34 @@ namespace OpenRAVE {
 
             dReal fUnitScale = _GetUnitScale();
 
-            std::vector<KinBody::LinkInfoConstPtr> linkinfos;
-            _ExtractLinks(*object, linkinfos, fUnitScale);
+            std::vector<KinBody::LinkInfoPtr> vLinkInfos;
+            _ExtractLinks(*object, vLinkInfos, fUnitScale);
             
-            std::vector<KinBody::JointInfoConstPtr> jointinfos;
-            _ExtractJoints(*object, jointinfos, fUnitScale);
+            std::vector<KinBody::JointInfoPtr> vJointInfos;
+            _ExtractJoints(*object, vJointInfos, fUnitScale);
 
-            std::vector<RobotBase::ManipulatorInfoConstPtr> manipinfos;
-            _ExtractManipulators(*object, manipinfos, fUnitScale);
+            std::vector<RobotBase::ManipulatorInfoPtr> vManipulatorInfos;
+            _ExtractManipulators(*object, vManipulatorInfos, fUnitScale);
 
-            std::vector<RobotBase::AttachedSensorInfoConstPtr> attachedsensorinfos;
-            _ExtractAttachedSensors(*object, attachedsensorinfos, fUnitScale);
+            std::vector<RobotBase::AttachedSensorInfoPtr> vAttachedSensorInfos;
+            _ExtractAttachedSensors(*object, vAttachedSensorInfos, fUnitScale);
 
+            std::vector<RobotBase::ConnectedBodyInfoPtr> vConnectedBodyInfos;
+            _ExtractConnectedBodies(*object, vConnectedBodyInfos, fUnitScale);
+
+            
+            std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(vLinkInfos.begin(), vLinkInfos.end());
+            std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(vJointInfos.begin(), vJointInfos.end());
+            std::vector<RobotBase::ManipulatorInfoConstPtr> vManipulatorInfosConst(vManipulatorInfos.begin(), vManipulatorInfos.end());
+            std::vector<RobotBase::AttachedSensorInfoConstPtr> vAttachedSensorInfosConst(vAttachedSensorInfos.begin(), vAttachedSensorInfos.end());
+            std::vector<RobotBase::ConnectedBodyInfoConstPtr> vConnectedBodyInfosConst(vConnectedBodyInfos.begin(), vConnectedBodyInfos.end());
+            
             RobotBasePtr robot = RaveCreateRobot(_penv, "");
-            if (!robot->Init(linkinfos, jointinfos, manipinfos, attachedsensorinfos, _CanonicalizeURI(uri))) {
+            if (!robot->Init(vLinkInfosConst, vJointInfosConst, vManipulatorInfosConst, vAttachedSensorInfosConst, vConnectedBodyInfosConst, _CanonicalizeURI(uri))) {
                 return false;
             }
 
-            if (!_ExtractReadableInterfaces(*object, robot, fUnitScale)) {
-                return false;
-            }
+            _ExtractReadableInterfaces(*object, robot, fUnitScale);
 
             robot->SetName(GetJsonValueByKey<std::string>(bodyValue, "name"));
 
@@ -283,7 +292,7 @@ namespace OpenRAVE {
             return true;
         }
 
-        bool _ExtractLinks(const rapidjson::Value &objectValue, std::vector<KinBody::LinkInfoConstPtr> &linkinfos, dReal fUnitScale)
+        void _ExtractLinks(const rapidjson::Value &objectValue, std::vector<KinBody::LinkInfoPtr> &linkinfos, dReal fUnitScale)
         {
             if (objectValue.HasMember("links") && objectValue["links"].IsArray()) {
                 linkinfos.reserve(linkinfos.size() + objectValue["links"].Size());
@@ -292,12 +301,10 @@ namespace OpenRAVE {
                     linkinfo->DeserializeJSON(*itr, fUnitScale);
                     linkinfos.push_back(linkinfo);
                 }
-                return true;
             }
-            return false;
         }
 
-        bool _ExtractJoints(const rapidjson::Value &objectValue, std::vector<KinBody::JointInfoConstPtr> &jointinfos, dReal fUnitScale)
+        void _ExtractJoints(const rapidjson::Value &objectValue, std::vector<KinBody::JointInfoPtr> &jointinfos, dReal fUnitScale)
         {
             if (objectValue.HasMember("joints") && objectValue["joints"].IsArray()) {
                 jointinfos.reserve(jointinfos.size() + objectValue["joints"].Size());
@@ -306,12 +313,10 @@ namespace OpenRAVE {
                     jointinfo->DeserializeJSON(*itr, fUnitScale);
                     jointinfos.push_back(jointinfo);
                 }
-                return true;
             }
-            return false;
         }
 
-        bool _ExtractManipulators(const rapidjson::Value &objectValue, std::vector<RobotBase::ManipulatorInfoConstPtr> &manipinfos, dReal fUnitScale)
+        void _ExtractManipulators(const rapidjson::Value &objectValue, std::vector<RobotBase::ManipulatorInfoPtr> &manipinfos, dReal fUnitScale)
         {
             if (objectValue.HasMember("manipulators") && objectValue["manipulators"].IsArray()) {
                 manipinfos.reserve(manipinfos.size() + objectValue["manipulators"].Size());
@@ -320,12 +325,10 @@ namespace OpenRAVE {
                     manipinfo->DeserializeJSON(*itr, fUnitScale);
                     manipinfos.push_back(manipinfo);
                 }
-                return true;
             }
-            return false;
         }
 
-        bool _ExtractAttachedSensors(const rapidjson::Value &objectValue, std::vector<RobotBase::AttachedSensorInfoConstPtr> &attachedsensorinfos, dReal fUnitScale)
+        void _ExtractAttachedSensors(const rapidjson::Value &objectValue, std::vector<RobotBase::AttachedSensorInfoPtr> &attachedsensorinfos, dReal fUnitScale)
         {
             if (objectValue.HasMember("attachedSensors") && objectValue["attachedSensors"].IsArray()) {
                 attachedsensorinfos.reserve(attachedsensorinfos.size() + objectValue["attachedSensors"].Size());
@@ -334,24 +337,39 @@ namespace OpenRAVE {
                     attachedsensorinfo->DeserializeJSON(*itr, fUnitScale);
                     attachedsensorinfos.push_back(attachedsensorinfo);
                 }
-                return true;
             }
-            return false;
         }
 
-        bool _ExtractReadableInterfaces(const rapidjson::Value &objectValue, InterfaceBasePtr pInterface, dReal fUnitScale)
+        void _ExtractConnectedBodies(const rapidjson::Value &objectValue, std::vector<RobotBase::ConnectedBodyInfoPtr> &connectedbodyinfos, dReal fUnitScale)
         {
-            if (!objectValue.HasMember("readableInterfaces") || !objectValue["readableInterfaces"].IsObject()) {
-                return true;
+            if (objectValue.HasMember("connectedBodies") && objectValue["connectedBodies"].IsArray()) {
+                for (rapidjson::Value::ConstValueIterator itr = objectValue["connectedBodies"].Begin(); itr != objectValue["connectedBodies"].End(); ++itr) {
+                    RobotBase::ConnectedBodyInfoPtr connectedbodyinfo(new RobotBase::ConnectedBodyInfo());
+                    connectedbodyinfo->DeserializeJSON(*itr, fUnitScale);
+
+                    rapidjson::Value::ValueIterator connectedBodyObject = _ResolveObject(connectedbodyinfo->_uri);
+                    _ExtractLinks(*connectedBodyObject, connectedbodyinfo->_vLinkInfos, fUnitScale);
+                    _ExtractJoints(*connectedBodyObject, connectedbodyinfo->_vJointInfos, fUnitScale);
+                    _ExtractManipulators(*connectedBodyObject, connectedbodyinfo->_vManipulatorInfos, fUnitScale);
+                    _ExtractAttachedSensors(*connectedBodyObject, connectedbodyinfo->_vAttachedSensorInfos, fUnitScale);
+                    connectedbodyinfos.push_back(connectedbodyinfo);
+                }
             }
-            for (rapidjson::Value::ConstMemberIterator itr = objectValue["readableInterfaces"].MemberBegin(); itr != objectValue["readableInterfaces"].MemberEnd(); itr++) {
-                std::string id = itr->name.GetString();
-                BaseJSONReaderPtr preader = RaveCallJSONReader(pInterface->GetInterfaceType(), id, pInterface, AttributesList());
-                JSONReadablePtr preadable = preader->GetReadable();
-                preadable->DeserializeJSON(itr->value, fUnitScale);
-                pInterface->SetReadableInterface(id, preadable);
+        }
+
+        void _ExtractReadableInterfaces(const rapidjson::Value &objectValue, InterfaceBasePtr pInterface, dReal fUnitScale)
+        {
+            if (objectValue.HasMember("readableInterfaces") && objectValue["readableInterfaces"].IsObject()) {
+                for (rapidjson::Value::ConstMemberIterator itr = objectValue["readableInterfaces"].MemberBegin(); itr != objectValue["readableInterfaces"].MemberEnd(); itr++) {
+                    std::string id = itr->name.GetString();
+                    BaseJSONReaderPtr pReader = RaveCallJSONReader(pInterface->GetInterfaceType(), id, pInterface, AttributesList());
+                    pReader->DeserializeJSON(itr->value, fUnitScale);
+                    JSONReadablePtr pReadable = pReader->GetReadable();
+                    if (!!pReadable) {
+                        pInterface->SetReadableInterface(id, pReadable);
+                    }
+                }
             }
-            return true;
         }
 
         /// \brief get the scheme of the uri, e.g. file: or openrave:
@@ -388,17 +406,12 @@ namespace OpenRAVE {
 
         void _IndexObjectsInDocument(boost::shared_ptr<rapidjson::Document> doc)
         {
-            if (doc->IsObject() && doc->HasMember("objects") && (*doc)["objects"].IsArray())
-            {
-                for (rapidjson::Value::ValueIterator itr = (*doc)["objects"].Begin(); itr != (*doc)["objects"].End(); ++itr)
-                {
-                    rapidjson::Value::MemberIterator id = itr->FindMember("id");
-                    if (id != itr->MemberEnd() && id->value.IsString()) {
-                        std::string idstr = id->value.GetString();
-                        if (idstr != "")
-                        {
-                            _objects[doc][idstr] = itr;
-                        }
+            if (doc->IsObject() && doc->HasMember("objects") && (*doc)["objects"].IsArray()) {
+                for (rapidjson::Value::ValueIterator itr = (*doc)["objects"].Begin(); itr != (*doc)["objects"].End(); ++itr) {
+                    std::string id;
+                    LoadJsonValueByKey(*itr, "id", id);
+                    if (!id.empty()) {
+                        _objects[doc][id] = itr;
                     }
                 }
             }
@@ -406,14 +419,21 @@ namespace OpenRAVE {
 
         rapidjson::Value::ValueIterator _ResolveObjectInDocument(boost::shared_ptr<rapidjson::Document> doc, const std::string& id)
         {
-            if (!!doc)
-            {
-                if (_objects.find(doc) == _objects.end())
-                {
+            if (!!doc) {
+                // look for first in doc
+                if (id.empty()) {
+                    if (doc->IsObject() && doc->HasMember("objects") && (*doc)["objects"].IsArray()) {
+                        for (rapidjson::Value::ValueIterator itr = (*doc)["objects"].Begin(); itr != (*doc)["objects"].End(); ++itr) {
+                            return itr;
+                        }
+                    }
+                }
+
+                // use the cache
+                if (_objects.find(doc) == _objects.end()) {
                     _IndexObjectsInDocument(doc);
                 }
-                if (_objects[doc].find(id) != _objects[doc].end())
-                {
+                if (_objects[doc].find(id) != _objects[doc].end()) {
                     return _objects[doc][id];
                 }
             }
@@ -439,10 +459,9 @@ namespace OpenRAVE {
             {
                 return RaveFindLocalFile(path);
             }
-            else if(find(_vOpenRAVESchemeAliases.begin(), _vOpenRAVESchemeAliases.end(), scheme) != _vOpenRAVESchemeAliases.end())
+            else if (find(_vOpenRAVESchemeAliases.begin(), _vOpenRAVESchemeAliases.end(), scheme) != _vOpenRAVESchemeAliases.end())
             {
                 return RaveFindLocalFile(path);
-                // TODO deal with openrave: or mujin:
             }
             
             return "";

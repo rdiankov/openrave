@@ -389,7 +389,7 @@ public:
     /// \brief serializes the interface
     virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const {
     }
-protected:
+private:
     std::string __xmlid;
 };
 typedef boost::shared_ptr<XMLReadable> XMLReadablePtr;
@@ -510,6 +510,14 @@ public:
     /// This pointer is used to the InterfaceBase class registered readers
     virtual JSONReadablePtr GetReadable() {
         return JSONReadablePtr();
+    }
+
+    /// by default, json reader will simply call readable's deserialize function
+    virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) {
+        JSONReadablePtr pReadable = GetReadable();
+        if (!!pReadable) {
+            pReadable->DeserializeJSON(value, fUnitScale);
+        }
     }
 };
 typedef boost::shared_ptr<BaseJSONReader> BaseJSONReaderPtr;

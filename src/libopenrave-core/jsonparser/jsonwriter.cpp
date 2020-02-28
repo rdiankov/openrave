@@ -207,6 +207,13 @@ protected:
                         FOREACHC(itconnectedbody, probot->GetConnectedBodies()) {
                             rapidjson::Value connectedBodyValue;
                             (*itconnectedbody)->GetInfo().SerializeJSON(connectedBodyValue, _doc.GetAllocator());
+
+                            // here we try to fix the uri in connected body
+                            if (connectedBodyValue.HasMember("uri")) {
+                                std::string uri = _CanonicalizeURI(connectedBodyValue["uri"].GetString());
+                                connectedBodyValue.RemoveMember("uri");
+                                SetJsonValueByKey(connectedBodyValue, "uri", uri, _doc.GetAllocator());
+                            }
                             connectedBodiesValue.PushBack(connectedBodyValue, _doc.GetAllocator());
                         }
                         objectValue.AddMember("connectedBodies", connectedBodiesValue, _doc.GetAllocator());

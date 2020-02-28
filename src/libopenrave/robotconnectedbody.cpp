@@ -61,45 +61,45 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
     SetJsonValueByKey(value, "uri", _uri, allocator);
     SetJsonValueByKey(value, "transform", _trelative, allocator);
 
-    rapidjson::Value linkInfosValue;
-    linkInfosValue.SetArray();
-    FOREACH(it, _vLinkInfos)
-    {
-        rapidjson::Value info;
-        (*it)->SerializeJSON(info, allocator, options);
-        linkInfosValue.PushBack(info, allocator);
-    }
-    value.AddMember("links", linkInfosValue, allocator);
+    // rapidjson::Value linkInfosValue;
+    // linkInfosValue.SetArray();
+    // FOREACH(it, _vLinkInfos)
+    // {
+    //     rapidjson::Value info;
+    //     (*it)->SerializeJSON(info, allocator, options);
+    //     linkInfosValue.PushBack(info, allocator);
+    // }
+    // value.AddMember("links", linkInfosValue, allocator);
 
-    rapidjson::Value jointInfosValue;
-    jointInfosValue.SetArray();
-    FOREACH(it, _vJointInfos)
-    {
-        rapidjson::Value v;
-        (*it)->SerializeJSON(v, allocator, options);
-        jointInfosValue.PushBack(v, allocator);
-    }
-    value.AddMember("joints", jointInfosValue, allocator);
+    // rapidjson::Value jointInfosValue;
+    // jointInfosValue.SetArray();
+    // FOREACH(it, _vJointInfos)
+    // {
+    //     rapidjson::Value v;
+    //     (*it)->SerializeJSON(v, allocator, options);
+    //     jointInfosValue.PushBack(v, allocator);
+    // }
+    // value.AddMember("joints", jointInfosValue, allocator);
 
-    rapidjson::Value manipulatorInfosValue;
-    manipulatorInfosValue.SetArray();
-    FOREACH(it, _vManipulatorInfos)
-    {
-        rapidjson::Value info;
-        (*it)->SerializeJSON(info, allocator, options);
-        manipulatorInfosValue.PushBack(info, allocator);
-    }
-    value.AddMember("manipulators", manipulatorInfosValue, allocator);
+    // rapidjson::Value manipulatorInfosValue;
+    // manipulatorInfosValue.SetArray();
+    // FOREACH(it, _vManipulatorInfos)
+    // {
+    //     rapidjson::Value info;
+    //     (*it)->SerializeJSON(info, allocator, options);
+    //     manipulatorInfosValue.PushBack(info, allocator);
+    // }
+    // value.AddMember("manipulators", manipulatorInfosValue, allocator);
 
-    rapidjson::Value attachedSensorInfosValue;
-    attachedSensorInfosValue.SetArray();
-    FOREACH(it, _vAttachedSensorInfos)
-    {
-        rapidjson::Value info;
-        (*it)->SerializeJSON(info, allocator, options);
-        attachedSensorInfosValue.PushBack(info, allocator);
-    }
-    value.AddMember("attachedSensors", attachedSensorInfosValue, allocator);
+    // rapidjson::Value attachedSensorInfosValue;
+    // attachedSensorInfosValue.SetArray();
+    // FOREACH(it, _vAttachedSensorInfos)
+    // {
+    //     rapidjson::Value info;
+    //     (*it)->SerializeJSON(info, allocator, options);
+    //     attachedSensorInfosValue.PushBack(info, allocator);
+    // }
+    // value.AddMember("attachedSensors", attachedSensorInfosValue, allocator);
 
     SetJsonValueByKey(value, "isActive", _bIsActive, allocator);
 }
@@ -111,49 +111,50 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
     LoadJsonValueByKey(value, "uri", _uri);
     LoadJsonValueByKey(value, "transform", _trelative);
 
-    if(value.HasMember("links"))
-    {
-        _vLinkInfos.resize(0);
-        _vLinkInfos.reserve(value["links"].Size());
-        for (size_t i = 0; i < value["links"].Size(); ++i) {
-            LinkInfoPtr linkinfo(new LinkInfo());
-            linkinfo->DeserializeJSON(value["links"][i]);
-            _vLinkInfos.push_back(linkinfo);
-        }
-    }
+    // if(value.HasMember("links"))
+    // {
+    //     _vLinkInfos.resize(0);
+    //     _vLinkInfos.reserve(value["links"].Size());
+    //     for (size_t i = 0; i < value["links"].Size(); ++i) {
+    //         LinkInfoPtr linkinfo(new LinkInfo());
+    //         linkinfo->DeserializeJSON(value["links"][i]);
+    //         _vLinkInfos.push_back(linkinfo);
+    //     }
+    // }
 
-    if(value.HasMember("joints"))
-    {
-        _vJointInfos.resize(0);
-        _vJointInfos.reserve(value["joints"].Size());
-        for (size_t i = 0; i < value["joints"].Size(); ++i) {
-            JointInfoPtr jointinfo(new JointInfo());
-            jointinfo->DeserializeJSON(value["joints"][i]);
-            _vJointInfos.push_back(jointinfo);
-        }
-    }
+    // if(value.HasMember("joints"))
+    // {
+    //     _vJointInfos.resize(0);
+    //     _vJointInfos.reserve(value["joints"].Size());
+    //     for (size_t i = 0; i < value["joints"].Size(); ++i) {
+    //         JointInfoPtr jointinfo(new JointInfo());
+    //         jointinfo->DeserializeJSON(value["joints"][i]);
+    //         _vJointInfos.push_back(jointinfo);
+    //     }
+    // }
 
-    if(value.HasMember("manipulators"))
-    {
-        _vManipulatorInfos.resize(0);
-        _vManipulatorInfos.reserve(value["manipulators"].Size());
-        for (size_t i = 0; i < value["manipulators"].Size(); ++i) {
-            ManipulatorInfoPtr manipulatorinfo(new ManipulatorInfo());
-            manipulatorinfo->DeserializeJSON(value["manipulators"][i]);
-            _vManipulatorInfos.push_back(manipulatorinfo);
-        }
-    }
+    // if(value.HasMember("manipulators"))
+    // {
+    //     _vManipulatorInfos.resize(0);
+    //     _vManipulatorInfos.reserve(value["manipulators"].Size());
+    //     for (size_t i = 0; i < value["manipulators"].Size(); ++i) {
+    //         ManipulatorInfoPtr manipulatorinfo(new ManipulatorInfo());
+    //         manipulatorinfo->DeserializeJSON(value["manipulators"][i]);
+    //         _vManipulatorInfos.push_back(manipulatorinfo);
+    //     }
+    // }
 
-    if(value.HasMember("attachedSensors"))
-    {
-        _vAttachedSensorInfos.resize(0);
-        _vAttachedSensorInfos.reserve(value["attachedSensors"].Size());
-        for (size_t i = 0; i < value["attachedSensors"].Size(); ++i) {
-            AttachedSensorInfoPtr attachedsensorinfo(new AttachedSensorInfo());
-            attachedsensorinfo->DeserializeJSON(value["attachedSensors"][i]);
-            _vAttachedSensorInfos.push_back(attachedsensorinfo);
-        }
-    }
+    // if(value.HasMember("attachedSensors"))
+    // {
+    //     _vAttachedSensorInfos.resize(0);
+    //     _vAttachedSensorInfos.reserve(value["attachedSensors"].Size());
+    //     for (size_t i = 0; i < value["attachedSensors"].Size(); ++i) {
+    //         AttachedSensorInfoPtr attachedsensorinfo(new AttachedSensorInfo());
+    //         attachedsensorinfo->DeserializeJSON(value["attachedSensors"][i]);
+    //         _vAttachedSensorInfos.push_back(attachedsensorinfo);
+    //     }
+    // }
+
     LoadJsonValueByKey(value, "isActive", _bIsActive);
 }
 
