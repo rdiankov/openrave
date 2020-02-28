@@ -102,6 +102,25 @@ public:
         return ConvertStringToUnicode(ss.str());
     }
 
+    py::object SerializeJSON(dReal fUnitScale=1.0, int options=0) const
+    {
+        JSONReadablePtr pjsonreadable = OPENRAVE_DYNAMIC_POINTER_CAST<JSONReadable>(_readable);
+        if (!pjsonreadable) {
+            return py::none_();
+        }
+        rapidjson::Document doc;
+        pjsonreadable->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, options);
+        return toPyObject(doc);
+    }
+
+    void DeserializeJSON(py::object obj, dReal fUnitScale=1.0)
+    {
+        rapidjson::Document doc;
+        toRapidJSONValue(obj, doc, doc.GetAllocator());
+        JSONReadablePtr pjsonreadable = OPENRAVE_DYNAMIC_POINTER_CAST<JSONReadable>(_readable);
+        pjsonreadable->DeserializeJSON(doc, fUnitScale);
+    }
+
     ReadablePtr GetReadable() {
         return _readable;
     }
@@ -1182,6 +1201,8 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractAffineValues_overloads, PyConfigur
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractJointValues_overloads, PyConfigurationSpecification::ExtractJointValues, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(RemoveGroups_overloads, PyConfigurationSpecification::RemoveGroups, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Serialize_overloads, Serialize, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SerializeJSON_overloads, SerializeJSON, 0, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(DeserializeJSON_overloads, DeserializeJSON, 1, 2)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -1496,6 +1517,21 @@ void init_openravepy_global()
          )
 #else
     .def("Serialize", &PyReadable::Serialize, Serialize_overloads(PY_ARGS("options") DOXY_FN(Readable, Serialize)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def("SerializeJSON", &PyReadable::SerializeJSON,
+        "unitScale"_a = 1.0,
+        "options"_a = py::none_(),
+        DOXY_FN(Readable, SerializeJSON)
+    )
+    .def("DeserializeJSON", &PyReadable::DeserializeJSON,
+        "obj"_a,
+        "unitScale"_a = 1.0,
+        DOXY_FN(Readable, DeserializeJSON)
+    )
+#else
+    .def("SerializeJSON", &PyReadable::SerializeJSON, SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(Readable, SerializeJSON)))
+    .def("DeserializeJSON", &PyReadable::DeserializeJSON, DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(Readable, DeserializeJSON)))
 #endif
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
