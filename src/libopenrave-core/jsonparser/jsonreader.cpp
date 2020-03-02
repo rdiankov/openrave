@@ -88,7 +88,7 @@ namespace OpenRAVE {
                         if (itr->HasMember("dofValues")) {
                             std::vector<dReal> vDOFValues;
                             LoadJsonValueByKey(*itr, "dofValues", vDOFValues);
-                            pbody->SetDOFValues(vDOFValues);
+                            pbody->SetDOFValues(vDOFValues, KinBody::CLA_Nothing);
                         }
                     } else {
                         allSucceeded = false;

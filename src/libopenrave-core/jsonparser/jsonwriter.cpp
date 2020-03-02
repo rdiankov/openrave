@@ -102,7 +102,7 @@ protected:
 
                 KinBody::KinBodyStateSaver saver(pbody);
                 vector<dReal> vZeros(pbody->GetDOF());
-                pbody->SetDOFValues(vZeros);
+                pbody->SetDOFValues(vZeros, KinBody::CLA_Nothing);
                 pbody->SetTransform(Transform());
 
                 std::vector<KinBody::GrabbedInfoPtr> vGrabbedInfo;
