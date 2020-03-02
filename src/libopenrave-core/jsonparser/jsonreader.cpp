@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "jsoncommon.h"
+#include "jsonmsgpack.h"
 
 #include <openrave/openravejson.h>
 #include <rapidjson/istreamwrapper.h>
@@ -23,575 +24,703 @@
 
 namespace OpenRAVE {
 
-    class JSONReader {
+class JSONReader {
+public:
 
-    public:
-
-        JSONReader(const AttributesList& atts, EnvironmentBasePtr penv): _penv(penv), _prefix("")
-        {
-            FOREACHC(itatt, atts) {
-                if (itatt->first == "prefix") {
-                    _prefix = itatt->second;
-                }
-                else if (itatt->first == "openravescheme")
-                {
-                    std::stringstream ss(itatt->second);
-                    _vOpenRAVESchemeAliases = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
-                }
+    JSONReader(const AttributesList& atts, EnvironmentBasePtr penv): _penv(penv), _prefix("")
+    {
+        FOREACHC(itatt, atts) {
+            if (itatt->first == "prefix") {
+                _prefix = itatt->second;
             }
-            if (_vOpenRAVESchemeAliases.size() == 0) {
-                _vOpenRAVESchemeAliases.push_back("openrave");
+            else if (itatt->first == "openravescheme")
+            {
+                std::stringstream ss(itatt->second);
+                _vOpenRAVESchemeAliases = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
             }
-
-            // set global scale when initalize jsonreader.
-            _fGlobalScale = 1.0 / _penv->GetUnit().second;
+        }
+        if (_vOpenRAVESchemeAliases.size() == 0) {
+            _vOpenRAVESchemeAliases.push_back("openrave");
         }
 
-        virtual ~JSONReader()
-        {
-        }
+        // set global scale when initalize jsonreader.
+        _fGlobalScale = 1.0 / _penv->GetUnit().second;
+    }
 
-        bool InitFromFile(const std::string& filename)
-        {
-            _filename = filename;
-            _doc = _OpenDocument(_filename);
-            return true;
-        }
+    virtual ~JSONReader()
+    {
+    }
 
-        bool InitFromURI(const std::string& uri)
-        {
-            _uri = uri;
-            _filename = _ResolveURI(_uri);
-            _doc = _OpenDocument(_filename);
-            return true;
-        }
+    bool InitFromFile(const std::string& filename)
+    {
+        _filename = filename;
+        _doc = _OpenDocument(_filename);
+        return true;
+    }
 
-        bool InitFromData(const std::string& data)
-        {
-            _doc = _ParseDocument(data);
-            return true;
-        }
+    bool InitFromURI(const std::string& uri)
+    {
+        _uri = uri;
+        _filename = _ResolveURI(_uri);
+        _doc = _OpenDocument(_filename);
+        return true;
+    }
 
-        bool ExtractAll() {
-            bool allSucceeded = true;
-            // extra all bodies and add to env
-            std::pair<std::string, dReal> unit;
-            LoadJsonValueByKey(*_doc, "unit", unit);
-            _penv->SetUnit(unit);
+    bool InitFromData(const std::string& data)
+    {
+        _doc = _ParseDocument(data);
+        return true;
+    }
 
-            if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()) {
-                for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
-                    KinBodyPtr pbody;
-                    if (_Extract(*itr, pbody)) {
-                        _penv->Add(pbody, true);
+    bool ExtractAll() {
+        bool allSucceeded = true;
+        // extra all bodies and add to env
+        std::pair<std::string, dReal> unit;
+        LoadJsonValueByKey(*_doc, "unit", unit);
+        _penv->SetUnit(unit);
 
-                        if (itr->HasMember("dofValues")) {
-                            std::vector<dReal> vDOFValues;
-                            LoadJsonValueByKey(*itr, "dofValues", vDOFValues);
-                            pbody->SetDOFValues(vDOFValues);
-                        }
-                    } else {
-                        allSucceeded = false;
+        if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()) {
+            for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
+                KinBodyPtr pbody;
+                if (_Extract(*itr, pbody)) {
+                    _penv->Add(pbody, true);
+
+                    if (itr->HasMember("dofValues")) {
+                        std::vector<dReal> vDOFValues;
+                        LoadJsonValueByKey(*itr, "dofValues", vDOFValues);
+                        pbody->SetDOFValues(vDOFValues);
                     }
+                } else {
+                    allSucceeded = false;
                 }
-                return allSucceeded;
             }
-            return false;
+            return allSucceeded;
+        }
+        return false;
+    }
+
+    bool ExtractFirst(KinBodyPtr& ppbody) {
+        // extract the first articulated system found.
+        if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()) {
+            for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
+                return _Extract(*itr, ppbody);
+            }
+        }
+        return false;
+    }
+
+    bool ExtractFirst(RobotBasePtr& pprobot) {
+        // extract the first robot 
+        if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()) {
+            for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
+                return _Extract(*itr, pprobot);
+            }
+        }
+        return false;
+    }
+
+    bool ExtractOne(KinBodyPtr& ppbody, const string& uri) {
+        std::string scheme, path, fragment;
+        _ParseURI(uri, scheme, path, fragment);            
+        if (fragment == "") {
+            return ExtractFirst(ppbody);
         }
 
-        bool ExtractFirst(KinBodyPtr& ppbody) {
-            // extract the first articulated system found.
-            if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()) {
-                for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
+        // find the body by uri
+        if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()) {
+            for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
+                std::string bodyUri;
+                LoadJsonValueByKey(*itr, "uri", bodyUri);
+                if (bodyUri == std::string("#") + fragment) {
                     return _Extract(*itr, ppbody);
                 }
             }
-            return false;
+        }
+        return false;
+    }
+
+    bool ExtractOne(RobotBasePtr& pprobot, const string& uri) {
+        std::string scheme, path, fragment;
+        _ParseURI(uri, scheme, path, fragment);
+        if (fragment == "") {
+            return ExtractFirst(pprobot);
         }
 
-        bool ExtractFirst(RobotBasePtr& pprobot) {
-            // extract the first robot 
-            if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()) {
-                for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
+        // find the body by uri
+        if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()) {
+            for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
+                std::string bodyUri;
+                LoadJsonValueByKey(*itr, "uri", bodyUri);
+                if (bodyUri == std::string("#") + fragment) {
                     return _Extract(*itr, pprobot);
                 }
             }
+        }
+        return false;
+    }
+
+protected:
+    inline dReal _GetUnitScale()
+    {
+        std::pair<std::string, dReal> unit;
+        LoadJsonValueByKey(*_doc, "unit", unit);
+        if (unit.first == "mm")
+        {
+            unit.second *= 0.001;
+        }
+        else if (unit.first == "cm")
+        {
+            unit.second *= 0.01;
+        }
+        dReal scale = unit.second / _fGlobalScale;
+        return scale;
+    }
+
+    std::string _CanonicalizeURI(const std::string& uri)
+    {
+        std::string scheme, path, fragment;
+        _ParseURI(uri, scheme, path, fragment);
+
+        if (scheme == "" && path == "") {
+            if (_uri != "") {
+                std::string scheme2, path2, fragment2;
+                _ParseURI(_uri, scheme2, path2, fragment2);
+                return scheme2 + ":" + path2 + "#" + fragment;
+            }
+            return std::string("file:") + _filename + "#" + fragment;
+        }
+        return uri;
+    }
+
+    bool _Extract(const rapidjson::Value &bodyValue, KinBodyPtr& pbody)
+    {
+        std::string uri;
+        LoadJsonValueByKey(bodyValue, "uri", uri);
+
+        rapidjson::Value::ValueIterator object = _ResolveObject(uri);
+
+        if (GetJsonValueByKey<bool>(*object, "isRobot")) {
+            RobotBasePtr probot;
+            if (_Extract(bodyValue, probot)) {
+                pbody = probot;
+                return true;
+            }
             return false;
         }
 
-        bool ExtractOne(KinBodyPtr& ppbody, const string& uri) {
-            std::string scheme, path, fragment;
-            _ParseURI(uri, scheme, path, fragment);            
-            if (fragment == "") {
-                return ExtractFirst(ppbody);
-            }
+        dReal fUnitScale = _GetUnitScale();
 
-            // find the body by uri
-            if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()) {
-                for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
-                    std::string bodyUri;
-                    LoadJsonValueByKey(*itr, "uri", bodyUri);
-                    if (bodyUri == std::string("#") + fragment) {
-                        return _Extract(*itr, ppbody);
+        std::vector<KinBody::LinkInfoPtr> vLinkInfos;
+        _ExtractLinks(*object, vLinkInfos, fUnitScale);
+        
+        std::vector<KinBody::JointInfoPtr> vJointInfos;
+        _ExtractJoints(*object, vJointInfos, fUnitScale);
+        
+        std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(vLinkInfos.begin(), vLinkInfos.end());
+        std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(vJointInfos.begin(), vJointInfos.end());
+        
+        KinBodyPtr body = RaveCreateKinBody(_penv, "");
+        if (!body->Init(vLinkInfosConst, vJointInfosConst, _CanonicalizeURI(uri))) {
+            return false;
+        }
+        
+        _ExtractReadableInterfaces(*object, body, fUnitScale);
+
+        body->SetName(GetJsonValueByKey<std::string>(bodyValue, "name"));
+
+        if (bodyValue.HasMember("transform")) {
+            Transform transform;
+            LoadJsonValueByKey(bodyValue, "transform", transform);
+            body->SetTransform(transform);
+        }
+
+        pbody = body;
+        return true;
+    }
+
+    bool _Extract(const rapidjson::Value &bodyValue, RobotBasePtr& probot)
+    {
+        std::string uri;
+        LoadJsonValueByKey(bodyValue, "uri", uri);
+
+        rapidjson::Value::ValueIterator object = _ResolveObject(uri);
+
+        if (!GetJsonValueByKey<bool>(*object, "isRobot")) {
+            return false;
+        }
+
+        dReal fUnitScale = _GetUnitScale();
+
+        std::vector<KinBody::LinkInfoPtr> vLinkInfos;
+        _ExtractLinks(*object, vLinkInfos, fUnitScale);
+        
+        std::vector<KinBody::JointInfoPtr> vJointInfos;
+        _ExtractJoints(*object, vJointInfos, fUnitScale);
+
+        std::vector<RobotBase::ManipulatorInfoPtr> vManipulatorInfos;
+        _ExtractManipulators(*object, vManipulatorInfos, fUnitScale);
+
+        std::vector<RobotBase::AttachedSensorInfoPtr> vAttachedSensorInfos;
+        _ExtractAttachedSensors(*object, vAttachedSensorInfos, fUnitScale);
+
+        std::vector<RobotBase::ConnectedBodyInfoPtr> vConnectedBodyInfos;
+        _ExtractConnectedBodies(*object, vConnectedBodyInfos, fUnitScale);
+
+        
+        std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(vLinkInfos.begin(), vLinkInfos.end());
+        std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(vJointInfos.begin(), vJointInfos.end());
+        std::vector<RobotBase::ManipulatorInfoConstPtr> vManipulatorInfosConst(vManipulatorInfos.begin(), vManipulatorInfos.end());
+        std::vector<RobotBase::AttachedSensorInfoConstPtr> vAttachedSensorInfosConst(vAttachedSensorInfos.begin(), vAttachedSensorInfos.end());
+        std::vector<RobotBase::ConnectedBodyInfoConstPtr> vConnectedBodyInfosConst(vConnectedBodyInfos.begin(), vConnectedBodyInfos.end());
+        
+        RobotBasePtr robot = RaveCreateRobot(_penv, "");
+        if (!robot->Init(vLinkInfosConst, vJointInfosConst, vManipulatorInfosConst, vAttachedSensorInfosConst, vConnectedBodyInfosConst, _CanonicalizeURI(uri))) {
+            return false;
+        }
+
+        _ExtractReadableInterfaces(*object, robot, fUnitScale);
+
+        robot->SetName(GetJsonValueByKey<std::string>(bodyValue, "name"));
+
+        if (bodyValue.HasMember("transform")) {
+            Transform transform;
+            LoadJsonValueByKey(bodyValue, "transform", transform);
+            robot->SetTransform(transform);
+        }
+
+        probot = robot;
+        return true;
+    }
+
+    void _ExtractLinks(const rapidjson::Value &objectValue, std::vector<KinBody::LinkInfoPtr> &linkinfos, dReal fUnitScale)
+    {
+        if (objectValue.HasMember("links") && objectValue["links"].IsArray()) {
+            linkinfos.reserve(linkinfos.size() + objectValue["links"].Size());
+            for (rapidjson::Value::ConstValueIterator itr = objectValue["links"].Begin(); itr != objectValue["links"].End(); ++itr) {
+                KinBody::LinkInfoPtr linkinfo(new KinBody::LinkInfo());
+                linkinfo->DeserializeJSON(*itr, fUnitScale);
+                linkinfos.push_back(linkinfo);
+            }
+        }
+    }
+
+    void _ExtractJoints(const rapidjson::Value &objectValue, std::vector<KinBody::JointInfoPtr> &jointinfos, dReal fUnitScale)
+    {
+        if (objectValue.HasMember("joints") && objectValue["joints"].IsArray()) {
+            jointinfos.reserve(jointinfos.size() + objectValue["joints"].Size());
+            for (rapidjson::Value::ConstValueIterator itr = objectValue["joints"].Begin(); itr != objectValue["joints"].End(); ++itr) {
+                KinBody::JointInfoPtr jointinfo(new KinBody::JointInfo());
+                jointinfo->DeserializeJSON(*itr, fUnitScale);
+                jointinfos.push_back(jointinfo);
+            }
+        }
+    }
+
+    void _ExtractManipulators(const rapidjson::Value &objectValue, std::vector<RobotBase::ManipulatorInfoPtr> &manipinfos, dReal fUnitScale)
+    {
+        if (objectValue.HasMember("manipulators") && objectValue["manipulators"].IsArray()) {
+            manipinfos.reserve(manipinfos.size() + objectValue["manipulators"].Size());
+            for (rapidjson::Value::ConstValueIterator itr = objectValue["manipulators"].Begin(); itr != objectValue["manipulators"].End(); ++itr) {
+                RobotBase::ManipulatorInfoPtr manipinfo(new RobotBase::ManipulatorInfo());
+                manipinfo->DeserializeJSON(*itr, fUnitScale);
+                manipinfos.push_back(manipinfo);
+            }
+        }
+    }
+
+    void _ExtractAttachedSensors(const rapidjson::Value &objectValue, std::vector<RobotBase::AttachedSensorInfoPtr> &attachedsensorinfos, dReal fUnitScale)
+    {
+        if (objectValue.HasMember("attachedSensors") && objectValue["attachedSensors"].IsArray()) {
+            attachedsensorinfos.reserve(attachedsensorinfos.size() + objectValue["attachedSensors"].Size());
+            for (rapidjson::Value::ConstValueIterator itr = objectValue["attachedSensors"].Begin(); itr != objectValue["attachedSensors"].End(); ++itr) {
+                RobotBase::AttachedSensorInfoPtr attachedsensorinfo(new RobotBase::AttachedSensorInfo());
+                attachedsensorinfo->DeserializeJSON(*itr, fUnitScale);
+                attachedsensorinfos.push_back(attachedsensorinfo);
+            }
+        }
+    }
+
+    void _ExtractConnectedBodies(const rapidjson::Value &objectValue, std::vector<RobotBase::ConnectedBodyInfoPtr> &connectedbodyinfos, dReal fUnitScale)
+    {
+        if (objectValue.HasMember("connectedBodies") && objectValue["connectedBodies"].IsArray()) {
+            for (rapidjson::Value::ConstValueIterator itr = objectValue["connectedBodies"].Begin(); itr != objectValue["connectedBodies"].End(); ++itr) {
+                RobotBase::ConnectedBodyInfoPtr connectedbodyinfo(new RobotBase::ConnectedBodyInfo());
+                connectedbodyinfo->DeserializeJSON(*itr, fUnitScale);
+
+                rapidjson::Value::ValueIterator connectedBodyObject = _ResolveObject(connectedbodyinfo->_uri);
+                _ExtractLinks(*connectedBodyObject, connectedbodyinfo->_vLinkInfos, fUnitScale);
+                _ExtractJoints(*connectedBodyObject, connectedbodyinfo->_vJointInfos, fUnitScale);
+                _ExtractManipulators(*connectedBodyObject, connectedbodyinfo->_vManipulatorInfos, fUnitScale);
+                _ExtractAttachedSensors(*connectedBodyObject, connectedbodyinfo->_vAttachedSensorInfos, fUnitScale);
+                connectedbodyinfos.push_back(connectedbodyinfo);
+            }
+        }
+    }
+
+    void _ExtractReadableInterfaces(const rapidjson::Value &objectValue, InterfaceBasePtr pInterface, dReal fUnitScale)
+    {
+        if (objectValue.HasMember("readableInterfaces") && objectValue["readableInterfaces"].IsObject()) {
+            for (rapidjson::Value::ConstMemberIterator itr = objectValue["readableInterfaces"].MemberBegin(); itr != objectValue["readableInterfaces"].MemberEnd(); itr++) {
+                std::string id = itr->name.GetString();
+                BaseJSONReaderPtr pReader = RaveCallJSONReader(pInterface->GetInterfaceType(), id, pInterface, AttributesList());
+                pReader->DeserializeJSON(itr->value, fUnitScale);
+                JSONReadablePtr pReadable = pReader->GetReadable();
+                if (!!pReadable) {
+                    pInterface->SetReadableInterface(id, pReadable);
+                }
+            }
+        }
+    }
+
+    /// \brief get the scheme of the uri, e.g. file: or openrave:
+    void _ParseURI(const std::string& uri, std::string& scheme, std::string& path, std::string& fragment)
+    {
+        path = uri;
+        size_t hashindex = path.find_last_of('#');
+        if (hashindex != std::string::npos) {
+            fragment = path.substr(hashindex + 1);
+            path = path.substr(0, hashindex);
+        }
+
+        size_t colonindex = path.find_first_of(':');
+        if (colonindex != std::string::npos) {
+            // notice: in python code, like realtimerobottask3.py, it pass scheme as {openravescene: mujin}. No colon,
+            scheme = path.substr(0, colonindex);
+            path = path.substr(colonindex + 1);
+        }
+
+    }
+
+    rapidjson::Value::ValueIterator _ResolveObject(const std::string &uri)
+    {
+        std::string scheme, path, fragment;
+        _ParseURI(uri, scheme, path, fragment);
+
+        std::string filename = _ResolveURI(scheme, path);
+        boost::shared_ptr<rapidjson::Document> doc = _OpenDocument(filename);
+        if (!doc) {
+            throw OPENRAVE_EXCEPTION_FORMAT("failed to resolve json document \"%s\"", uri, ORE_InvalidArguments);
+        }
+        return _ResolveObjectInDocument(doc, fragment);
+    }
+
+    void _IndexObjectsInDocument(boost::shared_ptr<rapidjson::Document> doc)
+    {
+        if (doc->IsObject() && doc->HasMember("objects") && (*doc)["objects"].IsArray()) {
+            for (rapidjson::Value::ValueIterator itr = (*doc)["objects"].Begin(); itr != (*doc)["objects"].End(); ++itr) {
+                std::string id;
+                LoadJsonValueByKey(*itr, "id", id);
+                if (!id.empty()) {
+                    _objects[doc][id] = itr;
+                }
+            }
+        }
+    }
+
+    rapidjson::Value::ValueIterator _ResolveObjectInDocument(boost::shared_ptr<rapidjson::Document> doc, const std::string& id)
+    {
+        if (!!doc) {
+            // look for first in doc
+            if (id.empty()) {
+                if (doc->IsObject() && doc->HasMember("objects") && (*doc)["objects"].IsArray()) {
+                    for (rapidjson::Value::ValueIterator itr = (*doc)["objects"].Begin(); itr != (*doc)["objects"].End(); ++itr) {
+                        return itr;
                     }
                 }
             }
-            return false;
-        }
 
-        bool ExtractOne(RobotBasePtr& pprobot, const string& uri) {
-            std::string scheme, path, fragment;
-            _ParseURI(uri, scheme, path, fragment);
-            if (fragment == "") {
-                return ExtractFirst(pprobot);
+            // use the cache
+            if (_objects.find(doc) == _objects.end()) {
+                _IndexObjectsInDocument(doc);
             }
-
-            // find the body by uri
-            if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()) {
-                for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
-                    std::string bodyUri;
-                    LoadJsonValueByKey(*itr, "uri", bodyUri);
-                    if (bodyUri == std::string("#") + fragment) {
-                        return _Extract(*itr, pprobot);
-                    }
-                }
-            }
-            return false;
-        }
-
-    protected:
-        inline dReal _GetUnitScale()
-        {
-            std::pair<std::string, dReal> unit;
-            LoadJsonValueByKey(*_doc, "unit", unit);
-            if (unit.first == "mm")
-            {
-                unit.second *= 0.001;
-            }
-            else if (unit.first == "cm")
-            {
-                unit.second *= 0.01;
-            }
-            dReal scale = unit.second / _fGlobalScale;
-            return scale;
-        }
-
-        std::string _CanonicalizeURI(const std::string& uri)
-        {
-            std::string scheme, path, fragment;
-            _ParseURI(uri, scheme, path, fragment);
-
-            if (scheme == "" && path == "") {
-                if (_uri != "") {
-                    std::string scheme2, path2, fragment2;
-                    _ParseURI(_uri, scheme2, path2, fragment2);
-                    return scheme2 + ":" + path2 + "#" + fragment;
-                }
-                return std::string("file:") + _filename + "#" + fragment;
-            }
-            return uri;
-        }
-
-        bool _Extract(const rapidjson::Value &bodyValue, KinBodyPtr& pbody)
-        {
-            std::string uri;
-            LoadJsonValueByKey(bodyValue, "uri", uri);
-
-            rapidjson::Value::ValueIterator object = _ResolveObject(uri);
-
-            if (GetJsonValueByKey<bool>(*object, "isRobot")) {
-                RobotBasePtr probot;
-                if (_Extract(bodyValue, probot)) {
-                    pbody = probot;
-                    return true;
-                }
-                return false;
-            }
-
-            dReal fUnitScale = _GetUnitScale();
-
-            std::vector<KinBody::LinkInfoPtr> vLinkInfos;
-            _ExtractLinks(*object, vLinkInfos, fUnitScale);
-            
-            std::vector<KinBody::JointInfoPtr> vJointInfos;
-            _ExtractJoints(*object, vJointInfos, fUnitScale);
-            
-            std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(vLinkInfos.begin(), vLinkInfos.end());
-            std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(vJointInfos.begin(), vJointInfos.end());
-            
-            KinBodyPtr body = RaveCreateKinBody(_penv, "");
-            if (!body->Init(vLinkInfosConst, vJointInfosConst, _CanonicalizeURI(uri))) {
-                return false;
-            }
-            
-            _ExtractReadableInterfaces(*object, body, fUnitScale);
-
-            body->SetName(GetJsonValueByKey<std::string>(bodyValue, "name"));
-
-            if (bodyValue.HasMember("transform")) {
-                Transform transform;
-                LoadJsonValueByKey(bodyValue, "transform", transform);
-                body->SetTransform(transform);
-            }
-
-            pbody = body;
-            return true;
-        }
-
-        bool _Extract(const rapidjson::Value &bodyValue, RobotBasePtr& probot)
-        {
-            std::string uri;
-            LoadJsonValueByKey(bodyValue, "uri", uri);
-
-            rapidjson::Value::ValueIterator object = _ResolveObject(uri);
-
-            if (!GetJsonValueByKey<bool>(*object, "isRobot")) {
-                return false;
-            }
-
-            dReal fUnitScale = _GetUnitScale();
-
-            std::vector<KinBody::LinkInfoPtr> vLinkInfos;
-            _ExtractLinks(*object, vLinkInfos, fUnitScale);
-            
-            std::vector<KinBody::JointInfoPtr> vJointInfos;
-            _ExtractJoints(*object, vJointInfos, fUnitScale);
-
-            std::vector<RobotBase::ManipulatorInfoPtr> vManipulatorInfos;
-            _ExtractManipulators(*object, vManipulatorInfos, fUnitScale);
-
-            std::vector<RobotBase::AttachedSensorInfoPtr> vAttachedSensorInfos;
-            _ExtractAttachedSensors(*object, vAttachedSensorInfos, fUnitScale);
-
-            std::vector<RobotBase::ConnectedBodyInfoPtr> vConnectedBodyInfos;
-            _ExtractConnectedBodies(*object, vConnectedBodyInfos, fUnitScale);
-
-            
-            std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(vLinkInfos.begin(), vLinkInfos.end());
-            std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(vJointInfos.begin(), vJointInfos.end());
-            std::vector<RobotBase::ManipulatorInfoConstPtr> vManipulatorInfosConst(vManipulatorInfos.begin(), vManipulatorInfos.end());
-            std::vector<RobotBase::AttachedSensorInfoConstPtr> vAttachedSensorInfosConst(vAttachedSensorInfos.begin(), vAttachedSensorInfos.end());
-            std::vector<RobotBase::ConnectedBodyInfoConstPtr> vConnectedBodyInfosConst(vConnectedBodyInfos.begin(), vConnectedBodyInfos.end());
-            
-            RobotBasePtr robot = RaveCreateRobot(_penv, "");
-            if (!robot->Init(vLinkInfosConst, vJointInfosConst, vManipulatorInfosConst, vAttachedSensorInfosConst, vConnectedBodyInfosConst, _CanonicalizeURI(uri))) {
-                return false;
-            }
-
-            _ExtractReadableInterfaces(*object, robot, fUnitScale);
-
-            robot->SetName(GetJsonValueByKey<std::string>(bodyValue, "name"));
-
-            if (bodyValue.HasMember("transform")) {
-                Transform transform;
-                LoadJsonValueByKey(bodyValue, "transform", transform);
-                robot->SetTransform(transform);
-            }
-
-            probot = robot;
-            return true;
-        }
-
-        void _ExtractLinks(const rapidjson::Value &objectValue, std::vector<KinBody::LinkInfoPtr> &linkinfos, dReal fUnitScale)
-        {
-            if (objectValue.HasMember("links") && objectValue["links"].IsArray()) {
-                linkinfos.reserve(linkinfos.size() + objectValue["links"].Size());
-                for (rapidjson::Value::ConstValueIterator itr = objectValue["links"].Begin(); itr != objectValue["links"].End(); ++itr) {
-                    KinBody::LinkInfoPtr linkinfo(new KinBody::LinkInfo());
-                    linkinfo->DeserializeJSON(*itr, fUnitScale);
-                    linkinfos.push_back(linkinfo);
-                }
+            if (_objects[doc].find(id) != _objects[doc].end()) {
+                return _objects[doc][id];
             }
         }
-
-        void _ExtractJoints(const rapidjson::Value &objectValue, std::vector<KinBody::JointInfoPtr> &jointinfos, dReal fUnitScale)
-        {
-            if (objectValue.HasMember("joints") && objectValue["joints"].IsArray()) {
-                jointinfos.reserve(jointinfos.size() + objectValue["joints"].Size());
-                for (rapidjson::Value::ConstValueIterator itr = objectValue["joints"].Begin(); itr != objectValue["joints"].End(); ++itr) {
-                    KinBody::JointInfoPtr jointinfo(new KinBody::JointInfo());
-                    jointinfo->DeserializeJSON(*itr, fUnitScale);
-                    jointinfos.push_back(jointinfo);
-                }
-            }
-        }
-
-        void _ExtractManipulators(const rapidjson::Value &objectValue, std::vector<RobotBase::ManipulatorInfoPtr> &manipinfos, dReal fUnitScale)
-        {
-            if (objectValue.HasMember("manipulators") && objectValue["manipulators"].IsArray()) {
-                manipinfos.reserve(manipinfos.size() + objectValue["manipulators"].Size());
-                for (rapidjson::Value::ConstValueIterator itr = objectValue["manipulators"].Begin(); itr != objectValue["manipulators"].End(); ++itr) {
-                    RobotBase::ManipulatorInfoPtr manipinfo(new RobotBase::ManipulatorInfo());
-                    manipinfo->DeserializeJSON(*itr, fUnitScale);
-                    manipinfos.push_back(manipinfo);
-                }
-            }
-        }
-
-        void _ExtractAttachedSensors(const rapidjson::Value &objectValue, std::vector<RobotBase::AttachedSensorInfoPtr> &attachedsensorinfos, dReal fUnitScale)
-        {
-            if (objectValue.HasMember("attachedSensors") && objectValue["attachedSensors"].IsArray()) {
-                attachedsensorinfos.reserve(attachedsensorinfos.size() + objectValue["attachedSensors"].Size());
-                for (rapidjson::Value::ConstValueIterator itr = objectValue["attachedSensors"].Begin(); itr != objectValue["attachedSensors"].End(); ++itr) {
-                    RobotBase::AttachedSensorInfoPtr attachedsensorinfo(new RobotBase::AttachedSensorInfo());
-                    attachedsensorinfo->DeserializeJSON(*itr, fUnitScale);
-                    attachedsensorinfos.push_back(attachedsensorinfo);
-                }
-            }
-        }
-
-        void _ExtractConnectedBodies(const rapidjson::Value &objectValue, std::vector<RobotBase::ConnectedBodyInfoPtr> &connectedbodyinfos, dReal fUnitScale)
-        {
-            if (objectValue.HasMember("connectedBodies") && objectValue["connectedBodies"].IsArray()) {
-                for (rapidjson::Value::ConstValueIterator itr = objectValue["connectedBodies"].Begin(); itr != objectValue["connectedBodies"].End(); ++itr) {
-                    RobotBase::ConnectedBodyInfoPtr connectedbodyinfo(new RobotBase::ConnectedBodyInfo());
-                    connectedbodyinfo->DeserializeJSON(*itr, fUnitScale);
-
-                    rapidjson::Value::ValueIterator connectedBodyObject = _ResolveObject(connectedbodyinfo->_uri);
-                    _ExtractLinks(*connectedBodyObject, connectedbodyinfo->_vLinkInfos, fUnitScale);
-                    _ExtractJoints(*connectedBodyObject, connectedbodyinfo->_vJointInfos, fUnitScale);
-                    _ExtractManipulators(*connectedBodyObject, connectedbodyinfo->_vManipulatorInfos, fUnitScale);
-                    _ExtractAttachedSensors(*connectedBodyObject, connectedbodyinfo->_vAttachedSensorInfos, fUnitScale);
-                    connectedbodyinfos.push_back(connectedbodyinfo);
-                }
-            }
-        }
-
-        void _ExtractReadableInterfaces(const rapidjson::Value &objectValue, InterfaceBasePtr pInterface, dReal fUnitScale)
-        {
-            if (objectValue.HasMember("readableInterfaces") && objectValue["readableInterfaces"].IsObject()) {
-                for (rapidjson::Value::ConstMemberIterator itr = objectValue["readableInterfaces"].MemberBegin(); itr != objectValue["readableInterfaces"].MemberEnd(); itr++) {
-                    std::string id = itr->name.GetString();
-                    BaseJSONReaderPtr pReader = RaveCallJSONReader(pInterface->GetInterfaceType(), id, pInterface, AttributesList());
-                    pReader->DeserializeJSON(itr->value, fUnitScale);
-                    JSONReadablePtr pReadable = pReader->GetReadable();
-                    if (!!pReadable) {
-                        pInterface->SetReadableInterface(id, pReadable);
-                    }
-                }
-            }
-        }
-
-        /// \brief get the scheme of the uri, e.g. file: or openrave:
-        void _ParseURI(const std::string& uri, std::string& scheme, std::string& path, std::string& fragment)
-        {
-            path = uri;
-            size_t hashindex = path.find_last_of('#');
-            if (hashindex != std::string::npos) {
-                fragment = path.substr(hashindex + 1);
-                path = path.substr(0, hashindex);
-            }
-
-            size_t colonindex = path.find_first_of(':');
-            if (colonindex != std::string::npos) {
-                // notice: in python code, like realtimerobottask3.py, it pass scheme as {openravescene: mujin}. No colon,
-                scheme = path.substr(0, colonindex);
-                path = path.substr(colonindex + 1);
-            }
-
-        }
-
-        rapidjson::Value::ValueIterator _ResolveObject(const std::string &uri)
-        {
-            std::string scheme, path, fragment;
-            _ParseURI(uri, scheme, path, fragment);
-
-            std::string filename = _ResolveURI(scheme, path);
-            boost::shared_ptr<rapidjson::Document> doc = _OpenDocument(filename);
-            if (!doc) {
-                throw OPENRAVE_EXCEPTION_FORMAT("failed resolve json document \"%s\"", uri, ORE_InvalidArguments);
-            }
-            return _ResolveObjectInDocument(doc, fragment);
-        }
-
-        void _IndexObjectsInDocument(boost::shared_ptr<rapidjson::Document> doc)
-        {
-            if (doc->IsObject() && doc->HasMember("objects") && (*doc)["objects"].IsArray()) {
-                for (rapidjson::Value::ValueIterator itr = (*doc)["objects"].Begin(); itr != (*doc)["objects"].End(); ++itr) {
-                    std::string id;
-                    LoadJsonValueByKey(*itr, "id", id);
-                    if (!id.empty()) {
-                        _objects[doc][id] = itr;
-                    }
-                }
-            }
-        }
-
-        rapidjson::Value::ValueIterator _ResolveObjectInDocument(boost::shared_ptr<rapidjson::Document> doc, const std::string& id)
-        {
-            if (!!doc) {
-                // look for first in doc
-                if (id.empty()) {
-                    if (doc->IsObject() && doc->HasMember("objects") && (*doc)["objects"].IsArray()) {
-                        for (rapidjson::Value::ValueIterator itr = (*doc)["objects"].Begin(); itr != (*doc)["objects"].End(); ++itr) {
-                            return itr;
-                        }
-                    }
-                }
-
-                // use the cache
-                if (_objects.find(doc) == _objects.end()) {
-                    _IndexObjectsInDocument(doc);
-                }
-                if (_objects[doc].find(id) != _objects[doc].end()) {
-                    return _objects[doc][id];
-                }
-            }
-            throw OPENRAVE_EXCEPTION_FORMAT("failed resolve object \"%s\" in json document", id, ORE_InvalidArguments);
-        }
-
-        /// \brief resolve a uri
-        std::string _ResolveURI(const std::string& uri)
-        {
-            std::string scheme, path, fragment;
-            _ParseURI(uri, scheme, path, fragment);
-
-            return _ResolveURI(scheme, path);
-        }
-
-        std::string _ResolveURI(const std::string& scheme, const std::string& path)
-        {
-            if (scheme == "" && path == "")
-            {
-                return _filename;
-            }
-            else if (scheme == "file")
-            {
-                return RaveFindLocalFile(path);
-            }
-            else if (find(_vOpenRAVESchemeAliases.begin(), _vOpenRAVESchemeAliases.end(), scheme) != _vOpenRAVESchemeAliases.end())
-            {
-                return RaveFindLocalFile(path);
-            }
-            
-            return "";
-        }
-
-        /// \brief open and cache a json document
-        boost::shared_ptr<rapidjson::Document> _OpenDocument(const std::string& filename)
-        {
-            if (_docs.find(filename) != _docs.end()) {
-                return _docs[filename];
-            }
-            std::ifstream ifs(filename.c_str());
-            rapidjson::IStreamWrapper isw(ifs);
-            boost::shared_ptr<rapidjson::Document> doc;
-            doc.reset(new rapidjson::Document);
-            rapidjson::ParseResult ok = doc->ParseStream<rapidjson::kParseFullPrecisionFlag>(isw);
-            if (!ok) {
-                throw OPENRAVE_EXCEPTION_FORMAT("failed parse json document \"%s\"", filename, ORE_InvalidArguments);
-            }
-
-            _docs[filename] = doc;
-            return doc;
-        }
-
-        /// \brief parse and cache a json document
-        boost::shared_ptr<rapidjson::Document> _ParseDocument(const std::string& data)
-        {
-            boost::shared_ptr<rapidjson::Document> doc;
-            doc.reset(new rapidjson::Document);
-            rapidjson::ParseResult ok = doc->Parse<rapidjson::kParseFullPrecisionFlag>(data.c_str());
-            if (!ok) {
-                throw OPENRAVE_EXCEPTION_FORMAT0("failed parse json document", ORE_InvalidArguments);
-            }
-
-            _docs[""] = doc;
-            return doc;
-        }
-
-        dReal _fGlobalScale;
-        EnvironmentBasePtr _penv;
-        std::string _prefix;
-        std::string _filename;
-        std::string _uri;
-        std::vector<std::string> _vOpenRAVESchemeAliases;
-        boost::shared_ptr<rapidjson::Document> _doc;
-        std::map<std::string, boost::shared_ptr<rapidjson::Document> > _docs; ///< key is filename
-        std::map<boost::shared_ptr<rapidjson::Document>, std::map<std::string, rapidjson::Value::ValueIterator> > _objects; ///< key is pointer to doc
-    };
-
-    bool RaveParseJSONFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts)
-    {
-        JSONReader reader(atts, penv);
-        std::string fullFilename = RaveFindLocalFile(filename);
-        if (fullFilename.size() == 0 || !reader.InitFromFile(fullFilename)) {
-            return false;
-        }
-        return reader.ExtractAll();
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to resolve object \"%s\" in json document", id, ORE_InvalidArguments);
     }
 
-    bool RaveParseJSONFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename, const AttributesList& atts)
+    /// \brief resolve a uri
+    std::string _ResolveURI(const std::string& uri)
     {
-        JSONReader reader(atts, penv);
-        std::string fullFilename = RaveFindLocalFile(filename);
-        if (fullFilename.size() == 0 || !reader.InitFromFile(fullFilename)) {
-            return false;
-        }
-        return reader.ExtractFirst(ppbody);
+        std::string scheme, path, fragment;
+        _ParseURI(uri, scheme, path, fragment);
+
+        return _ResolveURI(scheme, path);
     }
 
-    bool RaveParseJSONFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename, const AttributesList& atts)
+    std::string _ResolveURI(const std::string& scheme, const std::string& path)
     {
-        JSONReader reader(atts, penv);
-        std::string fullFilename = RaveFindLocalFile(filename);
-        if (fullFilename.size() == 0 || !reader.InitFromFile(fullFilename)) {
-            return false;
+        if (scheme == "" && path == "")
+        {
+            return _filename;
         }
-        return reader.ExtractFirst(pprobot);
+        else if (scheme == "file")
+        {
+            return RaveFindLocalFile(path);
+        }
+        else if (find(_vOpenRAVESchemeAliases.begin(), _vOpenRAVESchemeAliases.end(), scheme) != _vOpenRAVESchemeAliases.end())
+        {
+            return RaveFindLocalFile(path);
+        }
+        
+        return "";
     }
 
-    bool RaveParseJSONURI(EnvironmentBasePtr penv, const std::string& uri, const AttributesList& atts)
+    /// \brief open and cache a json document
+    virtual boost::shared_ptr<rapidjson::Document> _OpenDocument(const std::string& filename)
     {
-        JSONReader reader(atts, penv);
-        if (!reader.InitFromURI(uri)) {
-            return false;
+        if (_docs.find(filename) != _docs.end()) {
+            return _docs[filename];
         }
-        return reader.ExtractAll();
+        std::ifstream ifs(filename.c_str());
+        rapidjson::IStreamWrapper isw(ifs);
+        boost::shared_ptr<rapidjson::Document> doc;
+        doc.reset(new rapidjson::Document);
+        rapidjson::ParseResult ok = doc->ParseStream<rapidjson::kParseFullPrecisionFlag>(isw);
+        if (!ok) {
+            throw OPENRAVE_EXCEPTION_FORMAT("failed to parse json document \"%s\"", filename, ORE_InvalidArguments);
+        }
+
+        _docs[filename] = doc;
+        return doc;
     }
 
-    bool RaveParseJSONURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const AttributesList& atts)
+    /// \brief parse and cache a json document
+    virtual boost::shared_ptr<rapidjson::Document> _ParseDocument(const std::string& data)
     {
-        JSONReader reader(atts, penv);
-        if (!reader.InitFromURI(uri)) {
-            return false;
+        boost::shared_ptr<rapidjson::Document> doc;
+        doc.reset(new rapidjson::Document);
+        rapidjson::ParseResult ok = doc->Parse<rapidjson::kParseFullPrecisionFlag>(data.c_str());
+        if (!ok) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("failed to parse json document", ORE_InvalidArguments);
         }
-        return reader.ExtractOne(ppbody, uri);
+
+        _docs[""] = doc;
+        return doc;
     }
 
-    bool RaveParseJSONURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts)
+    dReal _fGlobalScale;
+    EnvironmentBasePtr _penv;
+    std::string _prefix;
+    std::string _filename;
+    std::string _uri;
+    std::vector<std::string> _vOpenRAVESchemeAliases;
+    boost::shared_ptr<rapidjson::Document> _doc;
+    std::map<std::string, boost::shared_ptr<rapidjson::Document> > _docs; ///< key is filename
+    std::map<boost::shared_ptr<rapidjson::Document>, std::map<std::string, rapidjson::Value::ValueIterator> > _objects; ///< key is pointer to doc
+};
+
+bool RaveParseJSONFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts)
+{
+    JSONReader reader(atts, penv);
+    std::string fullFilename = RaveFindLocalFile(filename);
+    if (fullFilename.size() == 0 || !reader.InitFromFile(fullFilename)) {
+        return false;
+    }
+    return reader.ExtractAll();
+}
+
+bool RaveParseJSONFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename, const AttributesList& atts)
+{
+    JSONReader reader(atts, penv);
+    std::string fullFilename = RaveFindLocalFile(filename);
+    if (fullFilename.size() == 0 || !reader.InitFromFile(fullFilename)) {
+        return false;
+    }
+    return reader.ExtractFirst(ppbody);
+}
+
+bool RaveParseJSONFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename, const AttributesList& atts)
+{
+    JSONReader reader(atts, penv);
+    std::string fullFilename = RaveFindLocalFile(filename);
+    if (fullFilename.size() == 0 || !reader.InitFromFile(fullFilename)) {
+        return false;
+    }
+    return reader.ExtractFirst(pprobot);
+}
+
+bool RaveParseJSONURI(EnvironmentBasePtr penv, const std::string& uri, const AttributesList& atts)
+{
+    JSONReader reader(atts, penv);
+    if (!reader.InitFromURI(uri)) {
+        return false;
+    }
+    return reader.ExtractAll();
+}
+
+bool RaveParseJSONURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const AttributesList& atts)
+{
+    JSONReader reader(atts, penv);
+    if (!reader.InitFromURI(uri)) {
+        return false;
+    }
+    return reader.ExtractOne(ppbody, uri);
+}
+
+bool RaveParseJSONURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts)
+{
+    JSONReader reader(atts, penv);
+    if (!reader.InitFromURI(uri)) {
+        return false;
+    }
+    return reader.ExtractOne(pprobot, uri);
+}
+
+bool RaveParseJSONData(EnvironmentBasePtr penv, const std::string& data, const AttributesList& atts)
+{
+    JSONReader reader(atts, penv);
+    if (!reader.InitFromData(data)) {
+        return false;
+    }
+    return reader.ExtractAll();
+}
+
+bool RaveParseJSONData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data, const AttributesList& atts)
+{
+    JSONReader reader(atts, penv);
+    if (!reader.InitFromData(data)) {
+        return false;
+    }
+    return reader.ExtractFirst(ppbody);
+}
+
+bool RaveParseJSONData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data, const AttributesList& atts)
+{
+    JSONReader reader(atts, penv);
+    if (!reader.InitFromData(data)) {
+        return false;
+    }
+    return reader.ExtractFirst(pprobot);
+}
+
+class MsgPackReader : public JSONReader {
+public:
+
+    MsgPackReader(const AttributesList& atts, EnvironmentBasePtr penv): JSONReader(atts, penv) {}
+    virtual ~MsgPackReader() {}
+protected:
+
+    /// \brief open and cache a msgpack document
+    virtual boost::shared_ptr<rapidjson::Document> _OpenDocument(const std::string& filename) override
     {
-        JSONReader reader(atts, penv);
-        if (!reader.InitFromURI(uri)) {
-            return false;
+        if (_docs.find(filename) != _docs.end()) {
+            return _docs[filename];
         }
-        return reader.ExtractOne(pprobot, uri);
+
+        std::ifstream ifs(filename.c_str());
+        std::string data;
+        data.assign(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
+
+        msgpack::unpacked unpacked;
+        msgpack::unpack(&unpacked, data.data(), data.size());
+
+        boost::shared_ptr<rapidjson::Document> doc;
+        doc.reset(new rapidjson::Document);
+        unpacked.get().convert(*doc);
+        
+        _docs[filename] = doc;
+        return doc;
     }
 
-    bool RaveParseJSONData(EnvironmentBasePtr penv, const std::string& data, const AttributesList& atts)
+    /// \brief parse and cache a msgpack document
+    virtual boost::shared_ptr<rapidjson::Document> _ParseDocument(const std::string& data) override
     {
-        JSONReader reader(atts, penv);
-        if (!reader.InitFromData(data)) {
-            return false;
-        }
-        return reader.ExtractAll();
-    }
+        msgpack::unpacked unpacked;
+        msgpack::unpack(&unpacked, data.data(), data.size());
 
-    bool RaveParseJSONData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data, const AttributesList& atts)
-    {
-        JSONReader reader(atts, penv);
-        if (!reader.InitFromData(data)) {
-            return false;
-        }
-        return reader.ExtractFirst(ppbody);
-    }
+        boost::shared_ptr<rapidjson::Document> doc;
+        doc.reset(new rapidjson::Document);
+        unpacked.get().convert(*doc);
 
-    bool RaveParseJSONData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data, const AttributesList& atts)
-    {
-        JSONReader reader(atts, penv);
-        if (!reader.InitFromData(data)) {
-            return false;
-        }
-        return reader.ExtractFirst(pprobot);
+        _docs[""] = doc;
+        return doc;
     }
+};
+
+bool RaveParseMsgPackFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts)
+{
+    MsgPackReader reader(atts, penv);
+    std::string fullFilename = RaveFindLocalFile(filename);
+    if (fullFilename.size() == 0 || !reader.InitFromFile(fullFilename)) {
+        return false;
+    }
+    return reader.ExtractAll();
+}
+
+bool RaveParseMsgPackFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename, const AttributesList& atts)
+{
+    MsgPackReader reader(atts, penv);
+    std::string fullFilename = RaveFindLocalFile(filename);
+    if (fullFilename.size() == 0 || !reader.InitFromFile(fullFilename)) {
+        return false;
+    }
+    return reader.ExtractFirst(ppbody);
+}
+
+bool RaveParseMsgPackFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename, const AttributesList& atts)
+{
+    MsgPackReader reader(atts, penv);
+    std::string fullFilename = RaveFindLocalFile(filename);
+    if (fullFilename.size() == 0 || !reader.InitFromFile(fullFilename)) {
+        return false;
+    }
+    return reader.ExtractFirst(pprobot);
+}
+
+bool RaveParseMsgPackURI(EnvironmentBasePtr penv, const std::string& uri, const AttributesList& atts)
+{
+    MsgPackReader reader(atts, penv);
+    if (!reader.InitFromURI(uri)) {
+        return false;
+    }
+    return reader.ExtractAll();
+}
+
+bool RaveParseMsgPackURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const AttributesList& atts)
+{
+    MsgPackReader reader(atts, penv);
+    if (!reader.InitFromURI(uri)) {
+        return false;
+    }
+    return reader.ExtractOne(ppbody, uri);
+}
+
+bool RaveParseMsgPackURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts)
+{
+    MsgPackReader reader(atts, penv);
+    if (!reader.InitFromURI(uri)) {
+        return false;
+    }
+    return reader.ExtractOne(pprobot, uri);
+}
+
+bool RaveParseMsgPackData(EnvironmentBasePtr penv, const std::string& data, const AttributesList& atts)
+{
+    MsgPackReader reader(atts, penv);
+    if (!reader.InitFromData(data)) {
+        return false;
+    }
+    return reader.ExtractAll();
+}
+
+bool RaveParseMsgPackData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data, const AttributesList& atts)
+{
+    MsgPackReader reader(atts, penv);
+    if (!reader.InitFromData(data)) {
+        return false;
+    }
+    return reader.ExtractFirst(ppbody);
+}
+
+bool RaveParseMsgPackData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data, const AttributesList& atts)
+{
+    MsgPackReader reader(atts, penv);
+    if (!reader.InitFromData(data)) {
+        return false;
+    }
+    return reader.ExtractFirst(pprobot);
+}
+
 }

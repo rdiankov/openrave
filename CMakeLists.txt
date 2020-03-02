@@ -546,6 +546,12 @@ else()
   message(FATAL_ERROR "rapidjson library not found")
 endif()
 
+pkg_check_modules(msgpack msgpack)
+if( msgpack_FOUND )
+else()
+  message(FATAL_ERROR "msgpack-c library not found")
+endif()
+
 find_package(LibXml2)
 
 if( LIBXML2_FOUND )

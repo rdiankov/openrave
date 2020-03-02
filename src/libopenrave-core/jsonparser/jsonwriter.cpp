@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "jsoncommon.h"
+#include "jsonmsgpack.h"
 
 #include <openrave/openravejson.h>
 #include <fstream>
@@ -355,6 +356,7 @@ void RaveWriteJSONFile(const std::list<KinBodyPtr>& listbodies, const std::strin
     jsonwriter.Write(listbodies);
     doc.Accept(writer);
 }
+
 void RaveWriteJSONStream(EnvironmentBasePtr penv, ostream& os, const AttributesList& atts)
 {
     rapidjson::OStreamWrapper ostreamwrapper(os);
@@ -365,6 +367,7 @@ void RaveWriteJSONStream(EnvironmentBasePtr penv, ostream& os, const AttributesL
     jsonwriter.Write(penv);
     doc.Accept(writer);
 }
+
 void RaveWriteJSONStream(KinBodyPtr pbody, ostream& os, const AttributesList& atts)
 {
     rapidjson::OStreamWrapper ostreamwrapper(os);
@@ -375,6 +378,7 @@ void RaveWriteJSONStream(KinBodyPtr pbody, ostream& os, const AttributesList& at
     jsonwriter.Write(pbody);
     doc.Accept(writer);
 }
+
 void RaveWriteJSONStream(const std::list<KinBodyPtr>& listbodies, ostream& os, const AttributesList& atts)
 {
     rapidjson::OStreamWrapper ostreamwrapper(os);
@@ -438,6 +442,100 @@ void RaveWriteJSONMemory(const std::list<KinBodyPtr>& listbodies, std::vector<ch
     JSONWriter jsonwriter(atts, doc);
     jsonwriter.Write(listbodies);
     doc.Accept(writer);
+}
+
+void RaveWriteMsgPackFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts)
+{
+    std::ofstream ofstream(filename.c_str());
+    msgpack::osbuffer buf(ofstream);
+    rapidjson::Document doc;
+
+    JSONWriter jsonwriter(atts, doc);
+    jsonwriter.Write(penv);
+    msgpack::pack(&buf, doc);
+}
+
+void RaveWriteMsgPackFile(KinBodyPtr pbody, const std::string& filename, const AttributesList& atts)
+{
+    std::ofstream ofstream(filename.c_str());
+    msgpack::osbuffer buf(ofstream);
+    rapidjson::Document doc;
+
+    JSONWriter jsonwriter(atts, doc);
+    jsonwriter.Write(pbody);
+    msgpack::pack(&buf, doc);
+}
+
+void RaveWriteMsgPackFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename, const AttributesList& atts)
+{
+    std::ofstream ofstream(filename.c_str());
+    msgpack::osbuffer buf(ofstream);
+    rapidjson::Document doc;
+
+    JSONWriter jsonwriter(atts, doc);
+    jsonwriter.Write(listbodies);
+    msgpack::pack(&buf, doc);
+}
+
+void RaveWriteMsgPackStream(EnvironmentBasePtr penv, ostream& os, const AttributesList& atts)
+{
+    msgpack::osbuffer buf(os);
+    rapidjson::Document doc;
+
+    JSONWriter jsonwriter(atts, doc);
+    jsonwriter.Write(penv);
+    msgpack::pack(&buf, doc);
+}
+
+void RaveWriteMsgPackStream(KinBodyPtr pbody, ostream& os, const AttributesList& atts)
+{
+    msgpack::osbuffer buf(os);
+    rapidjson::Document doc;
+
+    JSONWriter jsonwriter(atts, doc);
+    jsonwriter.Write(pbody);
+    msgpack::pack(&buf, doc);
+}
+
+void RaveWriteMsgPackStream(const std::list<KinBodyPtr>& listbodies, ostream& os, const AttributesList& atts)
+{
+    msgpack::osbuffer buf(os);
+    rapidjson::Document doc;
+
+    JSONWriter jsonwriter(atts, doc);
+    jsonwriter.Write(listbodies);
+    msgpack::pack(&buf, doc);
+}
+
+void RaveWriteMsgPackMemory(EnvironmentBasePtr penv, std::vector<char>& output,const AttributesList& atts)
+{
+    rapidjson::Document doc;
+    JSONWriter jsonwriter(atts, doc);
+    jsonwriter.Write(penv);
+    
+    msgpack::vbuffer buf(output);
+    msgpack::pack(&buf, doc);
+}
+
+void RaveWriteMsgPackMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts)
+{
+    rapidjson::Document doc;
+
+    JSONWriter jsonwriter(atts, doc);
+    jsonwriter.Write(pbody);
+
+    msgpack::vbuffer buf(output);
+    msgpack::pack(&buf, doc);
+}
+void RaveWriteMsgPackMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts)
+{
+    rapidjson::Document doc;
+
+    JSONWriter jsonwriter(atts, doc);
+    jsonwriter.Write(listbodies);
+    
+    msgpack::vbuffer buf(output);
+    msgpack::pack(&buf, doc);
 }
 
 }
