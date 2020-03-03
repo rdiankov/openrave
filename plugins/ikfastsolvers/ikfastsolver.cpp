@@ -81,6 +81,7 @@ public:
         RegisterCommand("SetBackTraceSelfCollisionLinks",boost::bind(&IkFastSolver<IkReal>::_SetBackTraceSelfCollisionLinksCommand,this,_1,_2),
                         "format: int int\n\n\
 for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfCollisionWithFree, when pruning self collisions, the number of links to look at. If the tip of the manip self collides with the base, then can safely quit the IK.");
+        RegisterCommand("ReloadDOFLimits", boost::bind(&IkFastSolver<IkReal>::_ReloadDOFLimitsCommand, this, _1, _2), "Reload DOF limits from robot");
         _numBacktraceLinksForSelfCollisionWithNonMoving = 2;
         _numBacktraceLinksForSelfCollisionWithFree = 0;
     }
@@ -206,6 +207,20 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
     bool _SetBackTraceSelfCollisionLinksCommand(ostream& sout, istream& sinput)
     {
         sinput >> _numBacktraceLinksForSelfCollisionWithNonMoving >> _numBacktraceLinksForSelfCollisionWithFree;
+        return true;
+    }
+
+    bool _ReloadDOFLimitsCommand(ostream& sout, istream& sinput)
+    {
+        this->SetJointLimits();
+        sout << "lower bounds: ";
+        for(dReal qi : _qlower) {
+            sout << qi << ", ";
+        }
+        sout << "; upper bounds: ";
+        for(dReal qi : _qupper) {
+            sout << qi << ", ";
+        }
         return true;
     }
 
@@ -2261,7 +2276,8 @@ protected:
         if( _qbigrangeindices.size() > 0 ) {
             std::vector< std::list<dReal> > vextravalues(_qbigrangeindices.size());
             std::vector< std::list<dReal> >::iterator itextra = vextravalues.begin();
-            std::vector< size_t > vcumproduct; vcumproduct.reserve(_qbigrangeindices.size());
+            std::vector< size_t > vcumproduct;
+            vcumproduct.reserve(_qbigrangeindices.size());
             size_t nTotal = 1, k = 0;
             FOREACH(itindex, _qbigrangeindices) {
                 dReal foriginal = vravesol.at(*itindex);
