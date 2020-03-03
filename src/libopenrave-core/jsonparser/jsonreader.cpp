@@ -71,6 +71,16 @@ public:
         return true;
     }
 
+    bool InitFromDocument(const rapidjson::Document& doc)
+    {
+        boost::shared_ptr<rapidjson::Document> pDoc;
+        pDoc.reset(new rapidjson::Document);
+        pDoc->CopyFrom(doc, pDoc->GetAllocator());
+        _docs[""] = pDoc;
+        _doc = pDoc;
+        return true;
+    }
+
     bool ExtractAll() {
         bool allSucceeded = true;
         // extra all bodies and add to env
@@ -509,6 +519,34 @@ protected:
     std::map<std::string, boost::shared_ptr<rapidjson::Document> > _docs; ///< key is filename
     std::map<boost::shared_ptr<rapidjson::Document>, std::map<std::string, rapidjson::Value::ValueIterator> > _objects; ///< key is pointer to doc
 };
+
+
+bool RaveParseJSON(EnvironmentBasePtr penv, const rapidjson::Document& doc, const AttributesList& atts)
+{
+    JSONReader reader(atts, penv);
+    if (!reader.InitFromDocument(doc)) {
+        return false;
+    }
+    return reader.ExtractAll();
+}
+
+bool RaveParseJSON(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const rapidjson::Document& doc, const AttributesList& atts)
+{
+    JSONReader reader(atts, penv);
+    if (!reader.InitFromDocument(doc)) {
+        return false;
+    }
+    return reader.ExtractFirst(ppbody);
+}
+
+bool RaveParseJSON(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const rapidjson::Document& doc, const AttributesList& atts)
+{
+    JSONReader reader(atts, penv);
+    if (!reader.InitFromDocument(doc)) {
+        return false;
+    }
+    return reader.ExtractFirst(pprobot);
+}
 
 bool RaveParseJSONFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts)
 {

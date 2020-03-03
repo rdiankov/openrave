@@ -408,7 +408,25 @@ private:
     std::vector<Ch>& _v;
 };
 
-void RaveWriteJSONMemory(EnvironmentBasePtr penv, std::vector<char>& output,const AttributesList& atts)
+void RaveWriteJSON(EnvironmentBasePtr penv, rapidjson::Document& doc, const AttributesList& atts)
+{
+    JSONWriter jsonwriter(atts, doc);
+    jsonwriter.Write(penv);
+}
+
+void RaveWriteJSON(KinBodyPtr pbody, rapidjson::Document& doc, const AttributesList& atts)
+{
+    JSONWriter jsonwriter(atts, doc);
+    jsonwriter.Write(pbody);
+}
+
+void RaveWriteJSON(const std::list<KinBodyPtr>& listbodies, rapidjson::Document& doc, const AttributesList& atts)
+{
+    JSONWriter jsonwriter(atts, doc);
+    jsonwriter.Write(listbodies);
+}
+
+void RaveWriteJSONMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts)
 {
     VectorWrapper wrapper(output);
     rapidjson::Writer<VectorWrapper> writer(wrapper);
@@ -429,6 +447,7 @@ void RaveWriteJSONMemory(KinBodyPtr pbody, std::vector<char>& output, const Attr
     jsonwriter.Write(pbody);
     doc.Accept(writer);
 }
+
 void RaveWriteJSONMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts)
 {
     VectorWrapper wrapper(output);

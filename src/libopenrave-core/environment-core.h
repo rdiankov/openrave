@@ -528,6 +528,12 @@ public:
         return _ParseXMLData(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),atts),data);
     }
 
+    virtual bool LoadJSON(const rapidjson::Document& doc, const AttributesList& atts)
+    {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        return RaveParseJSON(shared_from_this(), doc, atts);
+    }
+
     virtual void Save(const std::string& filename, SelectionOptions options, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
@@ -600,6 +606,66 @@ public:
             else {
                 RaveWriteColladaFile(listbodies,filename,atts);
             }
+        }
+    }
+
+    virtual void SaveJSON(rapidjson::Document& doc, SelectionOptions options, const AttributesList& atts)
+    {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        std::list<KinBodyPtr> listbodies;
+        switch(options) {
+        case SO_Everything:
+            RaveWriteJSON(shared_from_this(), doc, atts);
+            return;
+
+        case SO_Body: {
+            std::string targetname;
+            FOREACHC(itatt,atts) {
+                if( itatt->first == "target" ) {
+                    KinBodyPtr pbody = GetKinBody(itatt->second);
+                    if( !pbody ) {
+                        RAVELOG_WARN_FORMAT("failed to get body %s", itatt->second);
+                    }
+                    else {
+                        listbodies.push_back(pbody);
+                    }
+                }
+            }
+            break;
+        }
+        case SO_NoRobots:
+            FOREACH(itbody,_vecbodies) {
+                if( !(*itbody)->IsRobot() ) {
+                    listbodies.push_back(*itbody);
+                }
+            }
+            break;
+        case SO_Robots:
+            FOREACH(itrobot,_vecrobots) {
+                listbodies.push_back(*itrobot);
+            }
+            break;
+        case SO_AllExceptBody: {
+            std::list<std::string> listignore;
+            FOREACHC(itatt,atts) {
+                if( itatt->first == "target" ) {
+                    listignore.push_back(itatt->second);
+                }
+            }
+            FOREACH(itbody,_vecbodies) {
+                if( find(listignore.begin(),listignore.end(),(*itbody)->GetName()) == listignore.end() ) {
+                    listbodies.push_back(*itbody);
+                }
+            }
+            break;
+        }
+        }
+
+        if( listbodies.size() == 1 ) {
+            RaveWriteJSON(listbodies.front(), doc, atts);
+        }
+        else {
+            RaveWriteJSON(listbodies, doc, atts);
         }
     }
 
