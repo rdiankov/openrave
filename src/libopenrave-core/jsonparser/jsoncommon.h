@@ -38,7 +38,6 @@ bool RaveParseJSONFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std
 bool RaveParseJSONData(EnvironmentBasePtr penv, const std::string& data, const AttributesList& atts);
 bool RaveParseJSONData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data, const AttributesList& atts);
 bool RaveParseJSONData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data, const AttributesList& atts);
-
 bool RaveParseMsgPackURI(EnvironmentBasePtr penv, const std::string& uri, const AttributesList& atts);
 bool RaveParseMsgPackURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const AttributesList& atts);
 bool RaveParseMsgPackURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts);
@@ -52,7 +51,6 @@ bool RaveParseMsgPackData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const 
 void RaveWriteJSON(EnvironmentBasePtr penv, rapidjson::Document& doc, const AttributesList& atts);
 void RaveWriteJSON(KinBodyPtr pbody, rapidjson::Document& doc, const AttributesList& atts);
 void RaveWriteJSON(const std::list<KinBodyPtr>& listbodies, rapidjson::Document& doc, const AttributesList& atts);
-
 void RaveWriteJSONFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts);
 void RaveWriteJSONFile(KinBodyPtr pbody, const std::string& filename, const AttributesList& atts);
 void RaveWriteJSONFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename, const AttributesList& atts);

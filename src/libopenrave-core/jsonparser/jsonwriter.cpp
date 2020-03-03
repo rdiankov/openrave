@@ -242,10 +242,10 @@ protected:
                 objectsValue.PushBack(objectValue, _doc.GetAllocator());
             }
 
-            if (bodiesValue.MemberCount() > 0) {
+            if (bodiesValue.Size() > 0) {
                 _doc.AddMember("bodies", bodiesValue, _doc.GetAllocator());
             }
-            if (objectsValue.MemberCount() > 0) {
+            if (objectsValue.Size() > 0) {
                 _doc.AddMember("objects", objectsValue, _doc.GetAllocator());
             }
         }
@@ -559,3 +559,4 @@ void RaveWriteMsgPackMemory(const std::list<KinBodyPtr>& listbodies, std::vector
 }
 
 }
+
