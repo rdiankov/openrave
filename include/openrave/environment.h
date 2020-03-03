@@ -228,6 +228,9 @@ public:
     /// \brief Loads a scene from in-memory data and adds all objects in the environment. <b>[multi-thread safe]</b>
     virtual bool LoadData(const std::string& data, const AttributesList& atts = AttributesList()) = 0;
 
+    /// \brief loads a scene from rapidjson document
+    virtual bool LoadJSON(const rapidjson::Document& doc, const AttributesList& atts = AttributesList()) = 0;
+
     virtual bool LoadXMLData(const std::string& data, const AttributesList& atts = AttributesList()) {
         return LoadData(data,atts);
     }
@@ -253,6 +256,9 @@ public:
         atts.emplace_back("target", selectname);
         Save(filename,options,atts);
     }
+
+    /// \brief saves a scene to rapidjson document
+    virtual void SaveJSON(rapidjson::Document& doc, SelectionOptions options=SO_Everything, const AttributesList& atts = AttributesList()) = 0;
 
     /** \brief Saves a scene depending on the filename extension.
 

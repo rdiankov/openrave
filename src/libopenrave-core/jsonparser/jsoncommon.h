@@ -26,25 +26,32 @@
 namespace OpenRAVE
 {
 
-bool RaveParseJSONURI(EnvironmentBasePtr penv, const std::string& uri,const AttributesList& atts);
+bool RaveParseJSON(EnvironmentBasePtr penv, const rapidjson::Document& doc, const AttributesList& atts);
+bool RaveParseJSON(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const rapidjson::Document& doc, const AttributesList& atts);
+bool RaveParseJSON(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const rapidjson::Document& doc, const AttributesList& atts);
+bool RaveParseJSONURI(EnvironmentBasePtr penv, const std::string& uri, const AttributesList& atts);
 bool RaveParseJSONURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const AttributesList& atts);
 bool RaveParseJSONURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts);
-bool RaveParseJSONFile(EnvironmentBasePtr penv, const std::string& filename,const AttributesList& atts);
-bool RaveParseJSONFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename,const AttributesList& atts);
-bool RaveParseJSONFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename,const AttributesList& atts);
-bool RaveParseJSONData(EnvironmentBasePtr penv, const std::string& data,const AttributesList& atts);
-bool RaveParseJSONData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data,const AttributesList& atts);
-bool RaveParseJSONData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data,const AttributesList& atts);
+bool RaveParseJSONFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts);
+bool RaveParseJSONFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename, const AttributesList& atts);
+bool RaveParseJSONFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename, const AttributesList& atts);
+bool RaveParseJSONData(EnvironmentBasePtr penv, const std::string& data, const AttributesList& atts);
+bool RaveParseJSONData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data, const AttributesList& atts);
+bool RaveParseJSONData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data, const AttributesList& atts);
 
-bool RaveParseMsgPackURI(EnvironmentBasePtr penv, const std::string& uri,const AttributesList& atts);
+bool RaveParseMsgPackURI(EnvironmentBasePtr penv, const std::string& uri, const AttributesList& atts);
 bool RaveParseMsgPackURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const AttributesList& atts);
 bool RaveParseMsgPackURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts);
-bool RaveParseMsgPackFile(EnvironmentBasePtr penv, const std::string& filename,const AttributesList& atts);
-bool RaveParseMsgPackFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename,const AttributesList& atts);
-bool RaveParseMsgPackFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename,const AttributesList& atts);
-bool RaveParseMsgPackData(EnvironmentBasePtr penv, const std::string& data,const AttributesList& atts);
-bool RaveParseMsgPackData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data,const AttributesList& atts);
-bool RaveParseMsgPackData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data,const AttributesList& atts);
+bool RaveParseMsgPackFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts);
+bool RaveParseMsgPackFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename, const AttributesList& atts);
+bool RaveParseMsgPackFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename, const AttributesList& atts);
+bool RaveParseMsgPackData(EnvironmentBasePtr penv, const std::string& data, const AttributesList& atts);
+bool RaveParseMsgPackData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data, const AttributesList& atts);
+bool RaveParseMsgPackData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data, const AttributesList& atts);
+
+void RaveWriteJSON(EnvironmentBasePtr penv, rapidjson::Document& doc, const AttributesList& atts);
+void RaveWriteJSON(KinBodyPtr pbody, rapidjson::Document& doc, const AttributesList& atts);
+void RaveWriteJSON(const std::list<KinBodyPtr>& listbodies, rapidjson::Document& doc, const AttributesList& atts);
 
 void RaveWriteJSONFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts);
 void RaveWriteJSONFile(KinBodyPtr pbody, const std::string& filename, const AttributesList& atts);
@@ -52,7 +59,7 @@ void RaveWriteJSONFile(const std::list<KinBodyPtr>& listbodies, const std::strin
 void RaveWriteJSONStream(EnvironmentBasePtr penv, const ostream& os, const AttributesList& atts);
 void RaveWriteJSONStream(KinBodyPtr pbody, const ostream& os, const AttributesList& atts);
 void RaveWriteJSONStream(const std::list<KinBodyPtr>& listbodies, const ostream& os, const AttributesList& atts);
-void RaveWriteJSONMemory(EnvironmentBasePtr penv, std::vector<char>& output,const AttributesList& atts);
+void RaveWriteJSONMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts);
 void RaveWriteJSONMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts);
 void RaveWriteJSONMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts);
 
@@ -62,7 +69,7 @@ void RaveWriteMsgPackFile(const std::list<KinBodyPtr>& listbodies, const std::st
 void RaveWriteMsgPackStream(EnvironmentBasePtr penv, const ostream& os, const AttributesList& atts);
 void RaveWriteMsgPackStream(KinBodyPtr pbody, const ostream& os, const AttributesList& atts);
 void RaveWriteMsgPackStream(const std::list<KinBodyPtr>& listbodies, const ostream& os, const AttributesList& atts);
-void RaveWriteMsgPackMemory(EnvironmentBasePtr penv, std::vector<char>& output,const AttributesList& atts);
+void RaveWriteMsgPackMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts);
 void RaveWriteMsgPackMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts);
 void RaveWriteMsgPackMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts);
 
