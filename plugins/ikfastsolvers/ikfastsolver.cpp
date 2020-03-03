@@ -98,6 +98,7 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
         return shared_solver();
     }
 
+private:
     bool _SetIkThresholdCommand(ostream& sout, istream& sinput)
     {
         sinput >> _ikthreshold;
@@ -212,7 +213,7 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
 
     bool _ReloadDOFLimitsCommand(ostream& sout, istream& sinput)
     {
-        this->SetJointLimits();
+        _SetJointLimits();
         sout << "lower bounds: ";
         for(dReal qi : _qlower) {
             sout << qi << ", ";
@@ -224,6 +225,7 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
         return true;
     }
 
+public:
     virtual IkReturnAction CallFilters(const IkParameterization& param, IkReturnPtr ikreturn, int minpriority, int maxpriority) {
         // have to convert to the manipulator's base coordinate system
         RobotBase::ManipulatorPtr pmanip(_pmanip);
@@ -244,7 +246,8 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
         return _CallFilters(vsolution, pmanip, param, ikreturn, minpriority, maxpriority);
     }
 
-    virtual void SetJointLimits()
+private:
+    virtual void _SetJointLimits()
     {
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
@@ -282,11 +285,12 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
         }
     }
 
-    const std::string& GetKinematicsStructureHash() const {
+public:
+    const std::string& GetKinematicsStructureHash() const override {
         return _kinematicshash;
     }
 
-    virtual bool Init(RobotBase::ManipulatorConstPtr pmanip)
+    virtual bool Init(RobotBase::ManipulatorConstPtr pmanip) override
     {
         if( _kinematicshash.size() > 0 && pmanip->GetInverseKinematicsStructureHash(_iktype) != _kinematicshash ) {
             RAVELOG_ERROR_FORMAT("env=%d, inverse kinematics hashes do not match for manip %s:%s. IK will not work!  manip (%s) != loaded (%s)", pmanip->GetRobot()->GetEnv()->GetId()%pmanip->GetRobot()->GetName()%pmanip->GetName()%pmanip->GetInverseKinematicsStructureHash(_iktype)%_kinematicshash);
@@ -305,7 +309,7 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
             throw OPENRAVE_EXCEPTION_FORMAT(_("manipulator %s not found in robot"), pmanip->GetName(), ORE_InvalidArguments);
         }
 
-        _cblimits = probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IkReal>::SetJointLimits,boost::bind(&utils::sptr_from<IkFastSolver<IkReal> >, weak_solver())));
+        _cblimits = probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IkReal>::_SetJointLimits,boost::bind(&utils::sptr_from<IkFastSolver<IkReal> >, weak_solver())));
 
         if( _nTotalDOF != (int)pmanip->GetArmIndices().size() ) {
             RAVELOG_ERROR(str(boost::format("ik %s configured with different number of joints than robot manipulator (%d!=%d)\n")%GetXMLId()%pmanip->GetArmIndices().size()%_nTotalDOF));
@@ -403,11 +407,15 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
         // get the joint limits
         RobotBase::RobotStateSaver saver(probot);
         probot->SetActiveDOFs(pmanip->GetArmIndices());
-        SetJointLimits();
+        _SetJointLimits();
         return true;
     }
 
-    virtual bool Supports(IkParameterizationType iktype) const
+    virtual void ReloadData() override {
+        _SetJointLimits();
+    }
+
+    virtual bool Supports(IkParameterizationType iktype) const override
     {
         if( iktype == _iktype ) {
             return true;
@@ -615,7 +623,7 @@ protected:
         bool _bCheckEndEffectorEnvCollision, _bCheckEndEffectorSelfCollision, _bCheckSelfCollision, _bDisabled;
     };
 
-    virtual bool Solve(const IkParameterization& rawparam, const std::vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > result)
+    virtual bool Solve(const IkParameterization& rawparam, const std::vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > result) override
     {
         std::vector<dReal> q0local = q0; // copy in case result points to q0
         if( !!result ) {
@@ -632,7 +640,7 @@ protected:
         return true;
     }
 
-    virtual bool SolveAll(const IkParameterization& rawparam, int filteroptions, std::vector< std::vector<dReal> >& qSolutions)
+    virtual bool SolveAll(const IkParameterization& rawparam, int filteroptions, std::vector< std::vector<dReal> >& qSolutions) override
     {
         std::vector<IkReturnPtr> vikreturns;
         qSolutions.resize(0);
@@ -646,7 +654,7 @@ protected:
         return qSolutions.size()>0;
     }
 
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, boost::shared_ptr< std::vector<dReal> > result)
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, boost::shared_ptr< std::vector<dReal> > result) override
     {
         std::vector<dReal> q0local = q0; // copy in case result points to q0
         if( !!result ) {
@@ -663,7 +671,7 @@ protected:
         return true;
     }
 
-    virtual bool SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector< std::vector<dReal> >& qSolutions)
+    virtual bool SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector< std::vector<dReal> >& qSolutions) override
     {
         std::vector<IkReturnPtr> vikreturns;
         qSolutions.resize(0);
@@ -677,7 +685,7 @@ protected:
         return qSolutions.size()>0;
     }
 
-    virtual bool Solve(const IkParameterization& rawparam, const std::vector<dReal>& q0, int filteroptions, IkReturnPtr ikreturn)
+    virtual bool Solve(const IkParameterization& rawparam, const std::vector<dReal>& q0, int filteroptions, IkReturnPtr ikreturn) override
     {
         IkParameterization ikparamdummy;
         const IkParameterization& param = _ConvertIkParameterization(rawparam, ikparamdummy);
@@ -698,7 +706,7 @@ protected:
         return retaction == IKRA_Success;
     }
 
-    virtual bool SolveAll(const IkParameterization& rawparam, int filteroptions, std::vector<IkReturnPtr>& vikreturns)
+    virtual bool SolveAll(const IkParameterization& rawparam, int filteroptions, std::vector<IkReturnPtr>& vikreturns) override
     {
         vikreturns.resize(0);
         IkParameterization ikparamdummy;
@@ -718,7 +726,7 @@ protected:
         return vikreturns.size()>0;
     }
 
-    virtual bool Solve(const IkParameterization& rawparam, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturnPtr ikreturn)
+    virtual bool Solve(const IkParameterization& rawparam, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturnPtr ikreturn) override
     {
         IkParameterization ikparamdummy;
         const IkParameterization& param = _ConvertIkParameterization(rawparam, ikparamdummy);
@@ -745,7 +753,7 @@ protected:
         return retaction==IKRA_Success;
     }
 
-    virtual bool SolveAll(const IkParameterization& rawparam, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& vikreturns)
+    virtual bool SolveAll(const IkParameterization& rawparam, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& vikreturns) override
     {
         vikreturns.resize(0);
         IkParameterization ikparamdummy;
@@ -771,12 +779,12 @@ protected:
         return vikreturns.size()>0;
     }
 
-    virtual int GetNumFreeParameters() const
+    virtual int GetNumFreeParameters() const override
     {
         return (int)_vfreeparams.size();
     }
 
-    virtual bool GetFreeParameters(std::vector<dReal>& pFreeParameters) const
+    virtual bool GetFreeParameters(std::vector<dReal>& pFreeParameters) const override
     {
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
@@ -790,13 +798,13 @@ protected:
         return true;
     }
 
-    virtual bool GetFreeIndices(std::vector<int>& vFreeIndices) const
+    virtual bool GetFreeIndices(std::vector<int>& vFreeIndices) const override
     {
         vFreeIndices = _vfreeparams;
         return true;
     }
 
-    virtual RobotBase::ManipulatorPtr GetManipulator() const {
+    virtual RobotBase::ManipulatorPtr GetManipulator() const override {
         return RobotBase::ManipulatorPtr(_pmanip);
     }
 
@@ -816,7 +824,7 @@ protected:
             if( !!probot ) {
                 RobotBase::ManipulatorPtr pmanip = probot->GetManipulator(rmanip->GetName());
                 _pmanip = pmanip;
-                _cblimits = probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IkReal>::SetJointLimits,boost::bind(&utils::sptr_from<IkFastSolver<IkReal> >, weak_solver())));
+                _cblimits = probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IkReal>::_SetJointLimits,boost::bind(&utils::sptr_from<IkFastSolver<IkReal> >, weak_solver())));
 
                 if( !!pmanip ) {
                     pmanip->GetChildLinks(_vchildlinks);

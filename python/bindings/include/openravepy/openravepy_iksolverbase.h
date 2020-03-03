@@ -73,6 +73,9 @@ public:
     bool Supports(IkParameterizationType type);
 
     object RegisterCustomFilter(int priority, object fncallback);
+
+    // reload data from openrave to the IK solver, e.g., joint limits
+    void ReloadData();
 };
 } // namespace openravepy
 #endif // OPENRAVEPY_INTERNAL_IKSOLVERBASE_H
