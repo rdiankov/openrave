@@ -253,6 +253,10 @@ object PyIkSolverBase::RegisterCustomFilter(int priority, object fncallback)
     return toPyUserData(_pIkSolver->RegisterCustomFilter(priority,boost::bind(&PyIkSolverBase::_CallCustomFilter,fncallback,_pyenv,_pIkSolver,_1,_2,_3)));
 }
 
+void PyIkSolverBase::ReloadData() {
+    _pIkSolver->ReloadData();
+}
+
 bool ExtractIkReturn(object o, IkReturn& ikfr)
 {
     extract_<PyIkReturnPtr > pyikfr(o);
@@ -382,6 +386,7 @@ void init_openravepy_iksolver()
         .def("Supports",&PyIkSolverBase::Supports, PY_ARGS("iktype") DOXY_FN(IkSolverBase,Supports))
         .def("CallFilters",&PyIkSolverBase::CallFilters, PY_ARGS("ikparam") DOXY_FN(IkSolverBase,CallFilters))
         .def("RegisterCustomFilter",&PyIkSolverBase::RegisterCustomFilter, PY_ARGS("priority","callback") DOXY_FN(IkSolverBase,RegisterCustomFilter))
+        .def("ReloadData",&PyIkSolverBase::ReloadData, DOXY_FN(IkSolverBase,ReloadData))
         ;
     }
 

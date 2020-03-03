@@ -142,6 +142,9 @@ public:
     /// \param pmanip The manipulator the IK solver is attached to
     virtual bool Init(RobotBase::ManipulatorConstPtr pmanip) = 0;
 
+    /// \brief reloads data from openrave into IK solver, e.g., joint limits
+    virtual void ReloadData() OPENRAVE_DUMMY_IMPLEMENTATION;
+
     virtual RobotBase::ManipulatorPtr GetManipulator() const = 0;
 
     /** \brief Sets an ik solution filter that is called for every ik solution.
