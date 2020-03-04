@@ -89,19 +89,37 @@ public:
         LoadJsonValueByKey(*_doc, "unit", unit);
         _penv->SetUnit(unit);
 
+        dReal fUnitScale = _GetUnitScale();
         if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()) {
+            std::map<KinBodyPtr, std::vector<KinBody::GrabbedInfoConstPtr>> mapKinBodyGrabbedInfos;
             for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
                 KinBodyPtr pbody;
                 if (_Extract(*itr, pbody)) {
                     _penv->Add(pbody, true);
 
+                    // set dof values
                     if (itr->HasMember("dofValues")) {
                         std::vector<dReal> vDOFValues;
                         LoadJsonValueByKey(*itr, "dofValues", vDOFValues);
                         pbody->SetDOFValues(vDOFValues, KinBody::CLA_Nothing);
                     }
+
+                    // parse grabbed infos
+                    if (itr->HasMember("grabbed") && (*itr)["grabbed"].IsArray()) {
+                        for(rapidjson::Value::ValueIterator itGrabInfo = (*itr)["grabbed"].Begin(); itGrabInfo != (*itr)["grabbed"].End(); ++itGrabInfo){
+                            KinBody::GrabbedInfoPtr pGrabbedInfo(new KinBody::GrabbedInfo());
+                            pGrabbedInfo->DeserializeJSON(*itGrabInfo, fUnitScale);
+                            mapKinBodyGrabbedInfos[pbody].push_back(pGrabbedInfo);
+                        }
+                    }
                 } else {
                     allSucceeded = false;
+                }
+            }
+            if (allSucceeded) {
+                // reset grabbed
+                FOREACH(it, mapKinBodyGrabbedInfos) {
+                    it->first->ResetGrabbed(it->second);
                 }
             }
             return allSucceeded;

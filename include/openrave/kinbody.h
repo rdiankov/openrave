@@ -1572,7 +1572,7 @@ private:
         Save_ManipulatorsToolTransform       = 0x00100000, ///< [robot only], saves every manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
     };
 
-    /// \brief holds all user-set attached sensor information used to initialize the AttachedSensor class.
+    /// \brief holds all user-set grabbed object information used to initialize kinbody
     ///
     /// This is serializable and independent of environment.
     class OPENRAVE_API GrabbedInfo
