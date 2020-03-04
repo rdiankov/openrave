@@ -67,7 +67,7 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
         value.AddMember("geometries", geometriesValue, allocator);
     }
 
-    if(_mapExtraGeometries.size() > 0 ){
+    if(_mapExtraGeometries.size() > 0 ) {
         rapidjson::Value extraGeometriesValue;
         extraGeometriesValue.SetObject();
         FOREACHC(im, _mapExtraGeometries) {
@@ -523,7 +523,7 @@ void KinBody::Link::AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroup
     if( !pginfo ) {
         throw OPENRAVE_EXCEPTION_FORMAT(_("tried to add improper geometry to link %s"), GetName(), ORE_InvalidArguments);
     }
-    
+
     const KinBody::GeometryInfo& ginfo = *pginfo;
     if( ginfo._name.size() > 0 ) {
         // check if similar name exists and throw if it does
@@ -532,7 +532,7 @@ void KinBody::Link::AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroup
                 throw OPENRAVE_EXCEPTION_FORMAT(_("new added geometry %s has conflicting name for link %s"), ginfo._name%GetName(), ORE_InvalidArguments);
             }
         }
-        
+
         FOREACH(itgeometryinfo, _info._vgeometryinfos) {
             if( (*itgeometryinfo)->_name == ginfo._name ) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("new added geometry %s has conflicting name for link %s"), ginfo._name%GetName(), ORE_InvalidArguments);
@@ -548,7 +548,7 @@ void KinBody::Link::AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroup
             }
         }
     }
-    
+
     _vGeometries.push_back(GeometryPtr(new Geometry(shared_from_this(),*pginfo)));
     _vGeometries.back()->InitCollisionMesh();
     _info._vgeometryinfos.push_back(pginfo);
@@ -564,7 +564,7 @@ void KinBody::Link::RemoveGeometryByName(const std::string& geometryname, bool r
 {
     OPENRAVE_ASSERT_OP(geometryname.size(),>,0);
     bool bChanged = false;
-    
+
     std::vector<GeometryPtr>::iterator itgeometry = _vGeometries.begin();
     while(itgeometry != _vGeometries.end()) {
         if( (*itgeometry)->GetName() == geometryname ) {
@@ -600,7 +600,7 @@ void KinBody::Link::RemoveGeometryByName(const std::string& geometryname, bool r
             }
         }
     }
-    
+
     if( bChanged ) {
         _Update(true, Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
     }

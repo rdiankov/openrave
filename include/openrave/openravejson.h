@@ -421,7 +421,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, std::map<std::string, T>& t
 
 template<class T>
 inline void LoadJsonValue(const rapidjson::Value& v, RaveTransform<T>& t) {
-    if (v.IsArray()){
+    if (v.IsArray()) {
         if(v.Size() != 7) {
             throw OpenRAVEJSONException((boost::format("Cannot convert json type " + GetJsonTypeName(v) + " to Transform. " + "Array length does not match (%d != %d)") % v.Size()% 7).str(), ORJE_InvalidArguments);
         }
@@ -450,7 +450,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, TriMesh& t)
     t.vertices.clear();
     t.vertices.reserve(v["vertices"].Size() / 3);
 
-    for (rapidjson::Value::ConstValueIterator it = v["vertices"].Begin(); it != v["vertices"].End();) {
+    for (rapidjson::Value::ConstValueIterator it = v["vertices"].Begin(); it != v["vertices"].End(); ) {
         Vector vertex;
         LoadJsonValue(*(it++), vertex.x);
         LoadJsonValue(*(it++), vertex.y);
@@ -623,7 +623,7 @@ template<class T, size_t N>
 inline void SaveJsonValue(rapidjson::Value& v, const boost::array<T, N>& t, rapidjson::Document::AllocatorType& alloc) {
     v.SetArray();
     v.Reserve(N, alloc);
-    for(size_t i = 0; i < t.size(); i++){
+    for(size_t i = 0; i < t.size(); i++) {
         rapidjson::Value tmpv;
         SaveJsonValue(tmpv, t[i], alloc);
         v.PushBack(tmpv, alloc);
@@ -634,7 +634,7 @@ template<class T, size_t N>
 inline void SaveJsonValue(rapidjson::Value& v, const boost::array<T, N>& t, rapidjson::Document::AllocatorType& alloc, size_t n) {
     v.SetArray();
     v.Reserve(N, alloc);
-    for(size_t i = 0; i < N && i < n; i++){
+    for(size_t i = 0; i < N && i < n; i++) {
         rapidjson::Value tmpv;
         SaveJsonValue(tmpv, t[i], alloc);
         v.PushBack(tmpv, alloc);

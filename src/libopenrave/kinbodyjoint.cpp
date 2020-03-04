@@ -65,7 +65,7 @@ KinBody::JointInfo::JointInfo(const JointInfo& other) : XMLReadable("joint")
 
 int KinBody::JointInfo::GetDOF() const
 {
-    if(_type & KinBody::JointSpecialBit){
+    if(_type & KinBody::JointSpecialBit) {
         switch(_type) {
         case KinBody::JointHinge2:
         case KinBody::JointUniversal: return 2;
