@@ -113,11 +113,9 @@ public:
             }
             if (allSucceeded) {
                 // Extract Grabbed
-                std::vector<KinBodyPtr> bodies {};
-                _penv->GetBodies(bodies);
-                FOREACHC(itr, mapKinBodyGrabbedInfo){
-                    KinBodyPtr pbody = _penv->GetKinBody(itr->first);
-                    pbody->ResetGrabbed(itr->second);
+                FOREACHC(it, mapKinBodyGrabbedInfo){
+                    KinBodyPtr pbody = _penv->GetKinBody(it->first);
+                    pbody->ResetGrabbed(it->second);
                 }
             }
             return allSucceeded;
