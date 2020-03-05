@@ -23,7 +23,7 @@ namespace OpenRAVE {
 
 // To distinguish between binary and XML trajectory files
 static const uint16_t MAGIC_NUMBER = 0x62ff;
-static const uint16_t VERSION_NUMBER = 0x0001;  // Version number for serialization
+static const uint16_t VERSION_NUMBER = 0x0002;  // Version number for serialization
 
 static const dReal g_fEpsilonLinear = RavePow(g_fEpsilon,0.9);
 static const dReal g_fEpsilonQuadratic = RavePow(g_fEpsilon,0.45); // should be 0.6...perhaps this is related to parabolic smoother epsilons?
@@ -46,6 +46,7 @@ inline void WriteBinaryInt(std::ostream& f, int value)
 
 inline void WriteBinaryString(std::ostream& f, const std::string& s)
 {
+    BOOST_ASSERT(s.length() <= std::numeric_limits<uint16_t>::max());
     const uint16_t length = (uint16_t) s.length();
     WriteBinaryUInt16(f, length);
     if (length > 0)
@@ -442,15 +443,16 @@ public:
 
             WriteBinaryString(O, GetDescription());
 
-            if( !GetReadableInterfaces().empty() ) {
-                O << "<trajectory_addon>";
-                xmlreaders::StreamXMLWriterPtr writer(new xmlreaders::StreamXMLWriter("readable"));
-                FOREACHC(it, GetReadableInterfaces()) {
-                    BaseXMLWriterPtr newwriter = writer->AddChild(it->first);
-                    it->second->Serialize(newwriter,options);
-                }
-                writer->Serialize(O);
-                O << "</trajectory_addon>";
+            // Readable interfaces, added on VERSION_NUMBER=0x0002
+            const uint16_t numReadableInterfaces = GetReadableInterfaces().size();
+            WriteBinaryUInt16(O, numReadableInterfaces);
+            FOREACHC(itReadableInterface, GetReadableInterfaces()) {
+                WriteBinaryString(O, itReadableInterface->first);  // xmlid
+                std::stringstream ss;
+                xmlreaders::StreamXMLWriterPtr writer(new xmlreaders::StreamXMLWriter(std::string()));
+                itReadableInterface->second->Serialize(writer, options);
+                writer->Serialize(ss);
+                WriteBinaryString(O, ss.str());
             }
         }
     }
@@ -470,7 +472,8 @@ public:
             uint16_t versionNumber = 0;
             ReadBinaryUInt16(I, versionNumber);
 
-            if (versionNumber != VERSION_NUMBER)
+            // currently supported versions: 0x0001, 0x0002
+            if (versionNumber > VERSION_NUMBER || versionNumber < 0x0001)
             {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("unsupported trajectory format version %d "),versionNumber,ORE_InvalidArguments);
             }
@@ -496,9 +499,22 @@ public:
             ReadBinaryVector(I, this->_vtrajdata);
             ReadBinaryString(I, __description);
 
-            char nextChar = I.peek();
-            if (!!I && nextChar == '<') {
-                TrajectoryBase::deserialize(I);  // allows parsing extra trajectory data like readable interfaces
+            // versions >= 0x0002 have readable interfaces
+            if (versionNumber >= 0x0002)
+            {
+                // read readable interfaces
+                uint16_t numReadableInterfaces = 0;
+                ReadBinaryUInt16(I, numReadableInterfaces);
+                std::string xmlid;
+                std::string serializedReadableInterface;
+                for (size_t readableInterfaceIndex = 0; readableInterfaceIndex < numReadableInterfaces; ++readableInterfaceIndex)
+                {
+                    ReadBinaryString(I, xmlid);
+                    ReadBinaryString(I, serializedReadableInterface);
+
+                    XMLReadablePtr readableInterface(new xmlreaders::StringXMLReadable(xmlid, serializedReadableInterface));
+                    SetReadableInterface(xmlid, readableInterface);
+                }
             }
         }
         else {
