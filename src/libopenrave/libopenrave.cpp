@@ -2795,44 +2795,44 @@ bool ParseXMLData(BaseXMLReader& reader, const char* buffer, int size)
 
 }
 
-void IkParameterization::SerializeJSON(rapidjson::Value& rIkParameterization, rapidjson::Document::AllocatorType& alloc) const
+void IkParameterization::SerializeJSON(rapidjson::Value& rIkParameterization, rapidjson::Document::AllocatorType& alloc, dReal fUnitScale) const
 {
     rIkParameterization.SetObject();
     openravejson::SetJsonValueByKey(rIkParameterization, "type", GetName(), alloc);
     switch (_type) {
     case IKP_Transform6D:
         openravejson::SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
-        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans, alloc);
+        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
         break;
     case IKP_Rotation3D:
         openravejson::SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
         break;
     case IKP_Translation3D:
-        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans, alloc);
+        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
         break;
     case IKP_Direction3D:
         openravejson::SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
         break;
     case IKP_Ray4D:
         openravejson::SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
-        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans, alloc);
+        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
         break;
     case IKP_Lookat3D:
-        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans, alloc);
+        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
         break;
     case IKP_TranslationDirection5D:
         openravejson::SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
-        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans, alloc);
+        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
         break;
     case IKP_TranslationXY2D:
-        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans, alloc);
+        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
         break;
     case IKP_TranslationXYOrientation3D:
-        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans, alloc);
+        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
         break;
     case IKP_TranslationLocalGlobal6D:
         openravejson::SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
-        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans, alloc);
+        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
         break;
     case IKP_TranslationXAxisAngle4D:
     case IKP_TranslationYAxisAngle4D:
@@ -2841,17 +2841,18 @@ void IkParameterization::SerializeJSON(rapidjson::Value& rIkParameterization, ra
     case IKP_TranslationYAxisAngleXNorm4D:
     case IKP_TranslationZAxisAngleYNorm4D:
         openravejson::SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
-        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans, alloc);
+        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
         break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization %s"), GetName(),ORE_InvalidArguments);
     }
     if (_mapCustomData.size() > 0) {
+        // TODO have to scale _mapCustomData by fUnitScale
         openravejson::SetJsonValueByKey(rIkParameterization, "customData", _mapCustomData, alloc);
     }
 }
 
-void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameterization)
+void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameterization, dReal fUnitScale)
 {
     if (!rIkParameterization.IsObject()) {
         throw openravejson::OpenRAVEJSONException("Cannot load value of non-object to IkParameterization.", openravejson::ORJE_InvalidArguments);
@@ -2935,9 +2936,11 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
     default:
         throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization 0x%x"), _type,ORE_InvalidArguments);
     }
+    _transform.trans *= fUnitScale;
 
     _mapCustomData.clear();
     openravejson::LoadJsonValueByKey(rIkParameterization, "customData", _mapCustomData);
+    // TODO have to scale _mapCustomData by fUnitScale
 }
 
 
