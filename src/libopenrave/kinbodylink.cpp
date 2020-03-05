@@ -29,32 +29,32 @@ KinBody::LinkInfo::LinkInfo(const LinkInfo& other)
 
 void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    SetJsonValueByKey(value, "name", _name, allocator);
+    openravejson::SetJsonValueByKey(value, "name", _name, allocator);
 
     Transform tmpTransform {_t};
     Transform tmpMassTransform {_tMassFrame};
     tmpTransform.trans *= fUnitScale;
     tmpMassTransform.trans *= fUnitScale;
 
-    SetJsonValueByKey(value, "transform", tmpTransform, allocator);
-    SetJsonValueByKey(value, "massTransform", tmpMassTransform, allocator);
-    SetJsonValueByKey(value, "mass", _mass, allocator);
-    SetJsonValueByKey(value, "intertialMoments", _vinertiamoments, allocator);
+    openravejson::SetJsonValueByKey(value, "transform", tmpTransform, allocator);
+    openravejson::SetJsonValueByKey(value, "massTransform", tmpMassTransform, allocator);
+    openravejson::SetJsonValueByKey(value, "mass", _mass, allocator);
+    openravejson::SetJsonValueByKey(value, "intertialMoments", _vinertiamoments, allocator);
 
     if (_mapFloatParameters.size() > 0) {
-        SetJsonValueByKey(value, "floatParameters", _mapFloatParameters, allocator);
+        openravejson::SetJsonValueByKey(value, "floatParameters", _mapFloatParameters, allocator);
     }
 
     if (_mapIntParameters.size() > 0) {
-        SetJsonValueByKey(value, "intParameters", _mapIntParameters, allocator);
+        openravejson::SetJsonValueByKey(value, "intParameters", _mapIntParameters, allocator);
     }
 
     if (_mapStringParameters.size() > 0) {
-        SetJsonValueByKey(value, "stringParameters", _mapStringParameters, allocator);
+        openravejson::SetJsonValueByKey(value, "stringParameters", _mapStringParameters, allocator);
     }
 
     if (_vForcedAdjacentLinks.size() > 0) {
-        SetJsonValueByKey(value, "forcedAdjacentLinks", _vForcedAdjacentLinks, allocator);
+        openravejson::SetJsonValueByKey(value, "forcedAdjacentLinks", _vForcedAdjacentLinks, allocator);
     }
 
     // if (_vgeometryinfos.size() > 0) {
@@ -86,21 +86,21 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
     //     value.AddMember("extraGeometries", extraGeometriesValue, allocator);
     // }
 
-    SetJsonValueByKey(value, "isStatic", _bStatic, allocator);
-    SetJsonValueByKey(value, "isEnabled", _bIsEnabled, allocator);
+    openravejson::SetJsonValueByKey(value, "isStatic", _bStatic, allocator);
+    openravejson::SetJsonValueByKey(value, "isEnabled", _bIsEnabled, allocator);
 }
 
 void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale)
 {
-    LoadJsonValueByKey(value, "name", _name);
-    LoadJsonValueByKey(value, "transform", _t);
-    LoadJsonValueByKey(value, "massTransform", _tMassFrame);
-    LoadJsonValueByKey(value, "mass", _mass);
-    LoadJsonValueByKey(value, "intertialMoments", _vinertiamoments);
-    LoadJsonValueByKey(value, "floatParameters", _mapFloatParameters);
-    LoadJsonValueByKey(value, "intParameters", _mapIntParameters);
-    LoadJsonValueByKey(value, "stringParameters", _mapStringParameters);
-    LoadJsonValueByKey(value, "forcedAdjacentLinks", _vForcedAdjacentLinks);
+    openravejson::LoadJsonValueByKey(value, "name", _name);
+    openravejson::LoadJsonValueByKey(value, "transform", _t);
+    openravejson::LoadJsonValueByKey(value, "massTransform", _tMassFrame);
+    openravejson::LoadJsonValueByKey(value, "mass", _mass);
+    openravejson::LoadJsonValueByKey(value, "intertialMoments", _vinertiamoments);
+    openravejson::LoadJsonValueByKey(value, "floatParameters", _mapFloatParameters);
+    openravejson::LoadJsonValueByKey(value, "intParameters", _mapIntParameters);
+    openravejson::LoadJsonValueByKey(value, "stringParameters", _mapStringParameters);
+    openravejson::LoadJsonValueByKey(value, "forcedAdjacentLinks", _vForcedAdjacentLinks);
 
     _t.trans *= fUnitScale;
     _tMassFrame.trans *= fUnitScale;
@@ -128,8 +128,8 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     //     }
     // }
 
-    LoadJsonValueByKey(value, "isStatic", _bStatic);
-    LoadJsonValueByKey(value, "isEnabled", _bIsEnabled);
+    openravejson::LoadJsonValueByKey(value, "isStatic", _bStatic);
+    openravejson::LoadJsonValueByKey(value, "isEnabled", _bIsEnabled);
 }
 
 KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& other)
@@ -524,7 +524,7 @@ void KinBody::Link::AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroup
     if( !pginfo ) {
         throw OPENRAVE_EXCEPTION_FORMAT(_("tried to add improper geometry to link %s"), GetName(), ORE_InvalidArguments);
     }
-    
+
     const KinBody::GeometryInfo& ginfo = *pginfo;
     if( ginfo._name.size() > 0 ) {
         // check if similar name exists and throw if it does
@@ -533,7 +533,7 @@ void KinBody::Link::AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroup
                 throw OPENRAVE_EXCEPTION_FORMAT(_("new added geometry %s has conflicting name for link %s"), ginfo._name%GetName(), ORE_InvalidArguments);
             }
         }
-        
+
         FOREACH(itgeometryinfo, _info._vgeometryinfos) {
             if( (*itgeometryinfo)->_name == ginfo._name ) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("new added geometry %s has conflicting name for link %s"), ginfo._name%GetName(), ORE_InvalidArguments);
@@ -549,7 +549,7 @@ void KinBody::Link::AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroup
             }
         }
     }
-    
+
     _vGeometries.push_back(GeometryPtr(new Geometry(shared_from_this(),*pginfo)));
     _vGeometries.back()->InitCollisionMesh();
     _info._vgeometryinfos.push_back(pginfo);
@@ -565,7 +565,7 @@ void KinBody::Link::RemoveGeometryByName(const std::string& geometryname, bool r
 {
     OPENRAVE_ASSERT_OP(geometryname.size(),>,0);
     bool bChanged = false;
-    
+
     std::vector<GeometryPtr>::iterator itgeometry = _vGeometries.begin();
     while(itgeometry != _vGeometries.end()) {
         if( (*itgeometry)->GetName() == geometryname ) {
@@ -601,7 +601,7 @@ void KinBody::Link::RemoveGeometryByName(const std::string& geometryname, bool r
             }
         }
     }
-    
+
     if( bChanged ) {
         _Update(true, Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
     }

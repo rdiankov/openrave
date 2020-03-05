@@ -83,46 +83,46 @@ ElectricMotorActuatorInfo::ElectricMotorActuatorInfo()
 
 void ElectricMotorActuatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    SetJsonValueByKey(value, "modelType", model_type, allocator);
-    SetJsonValueByKey(value, "assignedPowerRating", assigned_power_rating, allocator);
-    SetJsonValueByKey(value, "maxSpeed", max_speed, allocator);
-    SetJsonValueByKey(value, "noLoadSpeed", no_load_speed, allocator);
-    SetJsonValueByKey(value, "stallTorque", stall_torque, allocator);
-    SetJsonValueByKey(value, "maxInstantaneousTorque", max_instantaneous_torque, allocator);
-    SetJsonValueByKey(value, "nominalSpeedTorquePoints", nominal_speed_torque_points, allocator);
-    SetJsonValueByKey(value, "maxSpeedTorquePoints", max_speed_torque_points, allocator);
-    SetJsonValueByKey(value, "nominalTorque", nominal_torque, allocator);
-    SetJsonValueByKey(value, "rotorInertia", rotor_inertia, allocator);
-    SetJsonValueByKey(value, "torqueConstant", torque_constant, allocator);
-    SetJsonValueByKey(value, "nominalVoltage", nominal_voltage, allocator);
-    SetJsonValueByKey(value, "speedConstant", speed_constant, allocator);
-    SetJsonValueByKey(value, "startingCurrent", starting_current, allocator);
-    SetJsonValueByKey(value, "terminalResistance", terminal_resistance, allocator);
-    SetJsonValueByKey(value, "gearRatio", gear_ratio, allocator);
-    SetJsonValueByKey(value, "coloumbFriction", coloumb_friction, allocator);
-    SetJsonValueByKey(value, "viscousFriction", viscous_friction, allocator);
+    openravejson::SetJsonValueByKey(value, "modelType", model_type, allocator);
+    openravejson::SetJsonValueByKey(value, "assignedPowerRating", assigned_power_rating, allocator);
+    openravejson::SetJsonValueByKey(value, "maxSpeed", max_speed, allocator);
+    openravejson::SetJsonValueByKey(value, "noLoadSpeed", no_load_speed, allocator);
+    openravejson::SetJsonValueByKey(value, "stallTorque", stall_torque, allocator);
+    openravejson::SetJsonValueByKey(value, "maxInstantaneousTorque", max_instantaneous_torque, allocator);
+    openravejson::SetJsonValueByKey(value, "nominalSpeedTorquePoints", nominal_speed_torque_points, allocator);
+    openravejson::SetJsonValueByKey(value, "maxSpeedTorquePoints", max_speed_torque_points, allocator);
+    openravejson::SetJsonValueByKey(value, "nominalTorque", nominal_torque, allocator);
+    openravejson::SetJsonValueByKey(value, "rotorInertia", rotor_inertia, allocator);
+    openravejson::SetJsonValueByKey(value, "torqueConstant", torque_constant, allocator);
+    openravejson::SetJsonValueByKey(value, "nominalVoltage", nominal_voltage, allocator);
+    openravejson::SetJsonValueByKey(value, "speedConstant", speed_constant, allocator);
+    openravejson::SetJsonValueByKey(value, "startingCurrent", starting_current, allocator);
+    openravejson::SetJsonValueByKey(value, "terminalResistance", terminal_resistance, allocator);
+    openravejson::SetJsonValueByKey(value, "gearRatio", gear_ratio, allocator);
+    openravejson::SetJsonValueByKey(value, "coloumbFriction", coloumb_friction, allocator);
+    openravejson::SetJsonValueByKey(value, "viscousFriction", viscous_friction, allocator);
 }
 
 void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
-    LoadJsonValueByKey(value, "modelType", model_type);
-    LoadJsonValueByKey(value, "assignedPowerRating", assigned_power_rating);
-    LoadJsonValueByKey(value, "maxSpeed", max_speed);
-    LoadJsonValueByKey(value, "noLoadSpeed", no_load_speed);
-    LoadJsonValueByKey(value, "stallTorque", stall_torque);
-    LoadJsonValueByKey(value, "maxInstantaneousTorque", max_instantaneous_torque);
-    LoadJsonValueByKey(value, "nominalSpeedTorquePoints", nominal_speed_torque_points);
-    LoadJsonValueByKey(value, "maxSpeedTorquePoints", max_speed_torque_points);
-    LoadJsonValueByKey(value, "nominalTorque", nominal_torque);
-    LoadJsonValueByKey(value, "rotorInertia", rotor_inertia);
-    LoadJsonValueByKey(value, "torqueConstant", torque_constant);
-    LoadJsonValueByKey(value, "nominalVoltage", nominal_voltage);
-    LoadJsonValueByKey(value, "speedConstant", speed_constant);
-    LoadJsonValueByKey(value, "startingCurrent", starting_current);
-    LoadJsonValueByKey(value, "terminalResistance", terminal_resistance);
-    LoadJsonValueByKey(value, "gearRatio", gear_ratio);
-    LoadJsonValueByKey(value, "coloumbFriction", coloumb_friction);
-    LoadJsonValueByKey(value, "viscousFriction", viscous_friction);
+    openravejson::LoadJsonValueByKey(value, "modelType", model_type);
+    openravejson::LoadJsonValueByKey(value, "assignedPowerRating", assigned_power_rating);
+    openravejson::LoadJsonValueByKey(value, "maxSpeed", max_speed);
+    openravejson::LoadJsonValueByKey(value, "noLoadSpeed", no_load_speed);
+    openravejson::LoadJsonValueByKey(value, "stallTorque", stall_torque);
+    openravejson::LoadJsonValueByKey(value, "maxInstantaneousTorque", max_instantaneous_torque);
+    openravejson::LoadJsonValueByKey(value, "nominalSpeedTorquePoints", nominal_speed_torque_points);
+    openravejson::LoadJsonValueByKey(value, "maxSpeedTorquePoints", max_speed_torque_points);
+    openravejson::LoadJsonValueByKey(value, "nominalTorque", nominal_torque);
+    openravejson::LoadJsonValueByKey(value, "rotorInertia", rotor_inertia);
+    openravejson::LoadJsonValueByKey(value, "torqueConstant", torque_constant);
+    openravejson::LoadJsonValueByKey(value, "nominalVoltage", nominal_voltage);
+    openravejson::LoadJsonValueByKey(value, "speedConstant", speed_constant);
+    openravejson::LoadJsonValueByKey(value, "startingCurrent", starting_current);
+    openravejson::LoadJsonValueByKey(value, "terminalResistance", terminal_resistance);
+    openravejson::LoadJsonValueByKey(value, "gearRatio", gear_ratio);
+    openravejson::LoadJsonValueByKey(value, "coloumbFriction", coloumb_friction);
+    openravejson::LoadJsonValueByKey(value, "viscousFriction", viscous_friction);
 }
 
 KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)

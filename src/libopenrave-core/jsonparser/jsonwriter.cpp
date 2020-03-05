@@ -71,7 +71,7 @@ protected:
         _mapBodyIds.clear();
         if (listbodies.size() > 0) {
             EnvironmentBaseConstPtr penv = listbodies.front()->GetEnv();
-            SetJsonValueByKey(_doc, "unit", penv->GetUnit(), _doc.GetAllocator());
+            openravejson::SetJsonValueByKey(_doc, "unit", penv->GetUnit(), _doc.GetAllocator());
 
             int globalId = 0;
             FOREACHC(itbody, listbodies) {
@@ -91,13 +91,13 @@ protected:
 
                 rapidjson::Value bodyValue;
                 bodyValue.SetObject();
-                SetJsonValueByKey(bodyValue, "name", pbody->GetName(), _doc.GetAllocator());
-                SetJsonValueByKey(bodyValue, "transform", pbody->GetTransform(), _doc.GetAllocator());
+                openravejson::SetJsonValueByKey(bodyValue, "name", pbody->GetName(), _doc.GetAllocator());
+                openravejson::SetJsonValueByKey(bodyValue, "transform", pbody->GetTransform(), _doc.GetAllocator());
 
                 std::vector<dReal> vDOFValues;
                 pbody->GetDOFValues(vDOFValues);
                 if (vDOFValues.size() > 0) {
-                    SetJsonValueByKey(bodyValue, "dofValues", vDOFValues, _doc.GetAllocator());
+                    openravejson::SetJsonValueByKey(bodyValue, "dofValues", vDOFValues, _doc.GetAllocator());
                 }
 
                 KinBody::KinBodyStateSaver saver(pbody);
@@ -121,20 +121,20 @@ protected:
                 if (_CheckForExternalWrite(pbody)) {
                     // for external references, need to canonicalize the uri
                     std::string uri = _CanonicalizeURI(pbody->GetURI());
-                    SetJsonValueByKey(bodyValue, "uri", uri, _doc.GetAllocator());
+                    openravejson::SetJsonValueByKey(bodyValue, "uri", uri, _doc.GetAllocator());
                     bodiesValue.PushBack(bodyValue, _doc.GetAllocator());
                     continue;
                 }
 
                 // non-external reference
                 std::string id = str(boost::format("body%d_motion")%_mapBodyIds[pbody->GetEnvironmentId()]);
-                SetJsonValueByKey(bodyValue, "uri", std::string("#") + id, _doc.GetAllocator());
+                openravejson::SetJsonValueByKey(bodyValue, "uri", std::string("#") + id, _doc.GetAllocator());
                 bodiesValue.PushBack(bodyValue, _doc.GetAllocator());
 
                 rapidjson::Value objectValue;
                 objectValue.SetObject();
-                SetJsonValueByKey(objectValue, "id", id, _doc.GetAllocator());
-                SetJsonValueByKey(objectValue, "name", pbody->GetName(), _doc.GetAllocator());
+                openravejson::SetJsonValueByKey(objectValue, "id", id, _doc.GetAllocator());
+                openravejson::SetJsonValueByKey(objectValue, "name", pbody->GetName(), _doc.GetAllocator());
 
                 {
                     rapidjson::Value linksValue;
@@ -212,14 +212,14 @@ protected:
                             if (connectedBodyValue.HasMember("uri")) {
                                 std::string uri = _CanonicalizeURI(connectedBodyValue["uri"].GetString());
                                 connectedBodyValue.RemoveMember("uri");
-                                SetJsonValueByKey(connectedBodyValue, "uri", uri, _doc.GetAllocator());
+                                openravejson::SetJsonValueByKey(connectedBodyValue, "uri", uri, _doc.GetAllocator());
                             }
                             connectedBodiesValue.PushBack(connectedBodyValue, _doc.GetAllocator());
                         }
                         objectValue.AddMember("connectedBodies", connectedBodiesValue, _doc.GetAllocator());
                     }
 
-                    SetJsonValueByKey(objectValue, "isRobot", true, _doc.GetAllocator());
+                    openravejson::SetJsonValueByKey(objectValue, "isRobot", true, _doc.GetAllocator());
                 }
 
                 if (pbody->GetReadableInterfaces().size() > 0) {

@@ -65,7 +65,7 @@ KinBody::JointInfo::JointInfo(const JointInfo& other)
 
 int KinBody::JointInfo::GetDOF() const
 {
-    if(_type & KinBody::JointSpecialBit){
+    if(_type & KinBody::JointSpecialBit) {
         switch(_type) {
         case KinBody::JointHinge2:
         case KinBody::JointUniversal: return 2;
@@ -84,15 +84,15 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
 
     switch (_type) {
     case JointRevolute:
-        SetJsonValueByKey(value, "type", "revolute", allocator);
+        openravejson::SetJsonValueByKey(value, "type", "revolute", allocator);
         break;
     case JointPrismatic:
-        SetJsonValueByKey(value, "type", "prismatic", allocator);
+        openravejson::SetJsonValueByKey(value, "type", "prismatic", allocator);
         break;
     case JointNone:
         break;
     default:
-        SetJsonValueByKey(value, "type", static_cast<int>(_type), allocator);
+        openravejson::SetJsonValueByKey(value, "type", static_cast<int>(_type), allocator);
         break;
     }
 
@@ -106,13 +106,13 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
         fjointmult = fUnitScale;
     }
 
-    SetJsonValueByKey(value, "name", _name, allocator);
-    SetJsonValueByKey(value, "anchors", _vanchor, allocator);
-    SetJsonValueByKey(value, "parentLinkName", _linkname0, allocator);
-    SetJsonValueByKey(value, "childLinkName", _linkname1, allocator);
-    SetJsonValueByKey(value, "axes", _vaxes, allocator);
-    SetJsonValueByKey(value, "currentValues", _vcurrentvalues, allocator);
-    SetJsonValueByKey(value, "resolutions", _vresolution, allocator, dof);
+    openravejson::SetJsonValueByKey(value, "name", _name, allocator);
+    openravejson::SetJsonValueByKey(value, "anchors", _vanchor, allocator);
+    openravejson::SetJsonValueByKey(value, "parentLinkName", _linkname0, allocator);
+    openravejson::SetJsonValueByKey(value, "childLinkName", _linkname1, allocator);
+    openravejson::SetJsonValueByKey(value, "axes", _vaxes, allocator);
+    openravejson::SetJsonValueByKey(value, "currentValues", _vcurrentvalues, allocator);
+    openravejson::SetJsonValueByKey(value, "resolutions", _vresolution, allocator, dof);
 
     boost::array<dReal, 3> newvmaxvel = _vmaxvel;
     boost::array<dReal, 3> newvmaxaccel = _vmaxaccel;
@@ -124,19 +124,19 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
         newvlowerlimit[i] *= fjointmult;
         newvupperlimit[i] *= fjointmult;
     }
-    SetJsonValueByKey(value, "maxVel", newvmaxvel, allocator, dof);
-    SetJsonValueByKey(value, "hardMaxVel", _vhardmaxvel, allocator, dof);
-    SetJsonValueByKey(value, "maxAccel", newvmaxaccel, allocator, dof);
-    SetJsonValueByKey(value, "hardMaxAccel", _vhardmaxaccel, allocator, dof);
-    SetJsonValueByKey(value, "maxJerk", _vmaxjerk, allocator, dof);
-    SetJsonValueByKey(value, "hardMaxJerk", _vhardmaxjerk, allocator, dof);
-    SetJsonValueByKey(value, "maxTorque", _vmaxtorque, allocator, dof);
-    SetJsonValueByKey(value, "maxInertia", _vmaxinertia, allocator, dof);
-    SetJsonValueByKey(value, "weights", _vweights, allocator, dof);
-    SetJsonValueByKey(value, "offsets", _voffsets, allocator, dof);
-    SetJsonValueByKey(value, "lowerLimit", newvlowerlimit, allocator, dof);
-    SetJsonValueByKey(value, "upperLimit", newvupperlimit, allocator, dof);
-    // TODO: SetJsonValueByKey(value, allocator, "trajfollow", _trajfollow);
+    openravejson::SetJsonValueByKey(value, "maxVel", newvmaxvel, allocator, dof);
+    openravejson::SetJsonValueByKey(value, "hardMaxVel", _vhardmaxvel, allocator, dof);
+    openravejson::SetJsonValueByKey(value, "maxAccel", newvmaxaccel, allocator, dof);
+    openravejson::SetJsonValueByKey(value, "hardMaxAccel", _vhardmaxaccel, allocator, dof);
+    openravejson::SetJsonValueByKey(value, "maxJerk", _vmaxjerk, allocator, dof);
+    openravejson::SetJsonValueByKey(value, "hardMaxJerk", _vhardmaxjerk, allocator, dof);
+    openravejson::SetJsonValueByKey(value, "maxTorque", _vmaxtorque, allocator, dof);
+    openravejson::SetJsonValueByKey(value, "maxInertia", _vmaxinertia, allocator, dof);
+    openravejson::SetJsonValueByKey(value, "weights", _vweights, allocator, dof);
+    openravejson::SetJsonValueByKey(value, "offsets", _voffsets, allocator, dof);
+    openravejson::SetJsonValueByKey(value, "lowerLimit", newvlowerlimit, allocator, dof);
+    openravejson::SetJsonValueByKey(value, "upperLimit", newvupperlimit, allocator, dof);
+    // TODO: openravejson::SetJsonValueByKey(value, allocator, "trajfollow", _trajfollow);
 
     if (_vmimic.size() > 0) {
         bool bfound = false;
@@ -160,15 +160,15 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
 
     if(_mapFloatParameters.size() > 0)
     {
-        SetJsonValueByKey(value, "floatParameters", _mapFloatParameters, allocator);
+        openravejson::SetJsonValueByKey(value, "floatParameters", _mapFloatParameters, allocator);
     }
     if(_mapIntParameters.size() > 0)
     {
-        SetJsonValueByKey(value, "intParameters", _mapIntParameters, allocator);
+        openravejson::SetJsonValueByKey(value, "intParameters", _mapIntParameters, allocator);
     }
     if(_mapStringParameters.size() > 0)
     {
-        SetJsonValueByKey(value, "stringParameters", _mapStringParameters, allocator);
+        openravejson::SetJsonValueByKey(value, "stringParameters", _mapStringParameters, allocator);
     }
 
     if (!!_infoElectricMotor) {
@@ -178,15 +178,15 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
         value.AddMember("electricMotorActuator", electricMotorInfoValue, allocator);
     }
 
-    SetJsonValueByKey(value, "isCircular", _bIsCircular, allocator, dof);
-    SetJsonValueByKey(value, "isActive", _bIsActive, allocator);
+    openravejson::SetJsonValueByKey(value, "isCircular", _bIsCircular, allocator, dof);
+    openravejson::SetJsonValueByKey(value, "isActive", _bIsActive, allocator);
 
 }
 
 void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
     std::string typestr;
-    LoadJsonValueByKey(value, "type", typestr);
+    openravejson::LoadJsonValueByKey(value, "type", typestr);
 
     if (typestr == "revolute")
     {
@@ -201,27 +201,27 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
         throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported joint type \"%s\"", typestr, ORE_InvalidArguments);
     }
 
-    LoadJsonValueByKey(value, "name", _name);
-    LoadJsonValueByKey(value, "parentLinkName", _linkname0);
-    LoadJsonValueByKey(value, "anchors", _vanchor);
-    LoadJsonValueByKey(value, "childLinkName", _linkname1);
-    LoadJsonValueByKey(value, "axes", _vaxes);
-    LoadJsonValueByKey(value, "currentValues", _vcurrentvalues);
-    LoadJsonValueByKey(value, "resolutions", _vresolution);
-    LoadJsonValueByKey(value, "maxVel", _vmaxvel);
-    LoadJsonValueByKey(value, "hardMaxVel", _vhardmaxvel);
-    LoadJsonValueByKey(value, "maxAccel", _vmaxaccel);
-    LoadJsonValueByKey(value, "hardMaxAccel", _vhardmaxaccel);
-    LoadJsonValueByKey(value, "maxJerk", _vmaxjerk);
-    LoadJsonValueByKey(value, "hardMaxJerk", _vhardmaxjerk);
-    LoadJsonValueByKey(value, "maxTorque", _vmaxtorque);
-    LoadJsonValueByKey(value, "maxInertia", _vmaxinertia);
-    LoadJsonValueByKey(value, "weights", _vweights);
-    LoadJsonValueByKey(value, "offsets", _voffsets);
-    LoadJsonValueByKey(value, "lowerLimit", _vlowerlimit);
-    LoadJsonValueByKey(value, "upperLimit", _vupperlimit);
-    LoadJsonValueByKey(value, "isCircular", _bIsCircular);
-    LoadJsonValueByKey(value, "isActive", _bIsActive);
+    openravejson::LoadJsonValueByKey(value, "name", _name);
+    openravejson::LoadJsonValueByKey(value, "parentLinkName", _linkname0);
+    openravejson::LoadJsonValueByKey(value, "anchors", _vanchor);
+    openravejson::LoadJsonValueByKey(value, "childLinkName", _linkname1);
+    openravejson::LoadJsonValueByKey(value, "axes", _vaxes);
+    openravejson::LoadJsonValueByKey(value, "currentValues", _vcurrentvalues);
+    openravejson::LoadJsonValueByKey(value, "resolutions", _vresolution);
+    openravejson::LoadJsonValueByKey(value, "maxVel", _vmaxvel);
+    openravejson::LoadJsonValueByKey(value, "hardMaxVel", _vhardmaxvel);
+    openravejson::LoadJsonValueByKey(value, "maxAccel", _vmaxaccel);
+    openravejson::LoadJsonValueByKey(value, "hardMaxAccel", _vhardmaxaccel);
+    openravejson::LoadJsonValueByKey(value, "maxJerk", _vmaxjerk);
+    openravejson::LoadJsonValueByKey(value, "hardMaxJerk", _vhardmaxjerk);
+    openravejson::LoadJsonValueByKey(value, "maxTorque", _vmaxtorque);
+    openravejson::LoadJsonValueByKey(value, "maxInertia", _vmaxinertia);
+    openravejson::LoadJsonValueByKey(value, "weights", _vweights);
+    openravejson::LoadJsonValueByKey(value, "offsets", _voffsets);
+    openravejson::LoadJsonValueByKey(value, "lowerLimit", _vlowerlimit);
+    openravejson::LoadJsonValueByKey(value, "upperLimit", _vupperlimit);
+    openravejson::LoadJsonValueByKey(value, "isCircular", _bIsCircular);
+    openravejson::LoadJsonValueByKey(value, "isActive", _bIsActive);
 
     // multiply fUnitScale on maxVel, maxAccel, lowerLimit, upperLimit
     dReal fjointmult = fUnitScale;
@@ -252,9 +252,9 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
     }
     _vmimic = newmimic;
 
-    LoadJsonValueByKey(value, "floatParameters", _mapFloatParameters);
-    LoadJsonValueByKey(value, "intParameters", _mapIntParameters);
-    LoadJsonValueByKey(value, "stringParameters", _mapStringParameters);
+    openravejson::LoadJsonValueByKey(value, "floatParameters", _mapFloatParameters);
+    openravejson::LoadJsonValueByKey(value, "intParameters", _mapIntParameters);
+    openravejson::LoadJsonValueByKey(value, "stringParameters", _mapStringParameters);
 
     if (value.HasMember("electricMotorActuator")) {
         ElectricMotorActuatorInfoPtr info(new ElectricMotorActuatorInfo());
@@ -2021,12 +2021,12 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
 
 void KinBody::MimicInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    SetJsonValueByKey(value, "equations", _equations, allocator);
+    openravejson::SetJsonValueByKey(value, "equations", _equations, allocator);
 }
 
 void KinBody::MimicInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
-    LoadJsonValueByKey(value, "equations", _equations);
+    openravejson::LoadJsonValueByKey(value, "equations", _equations);
 }
 
 }
