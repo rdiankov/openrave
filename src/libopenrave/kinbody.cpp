@@ -1989,14 +1989,8 @@ bool KinBody::IsDOFInChain(int linkindex1, int linkindex2, int dofindex) const
 int KinBody::GetJointIndex(const std::string& jointname) const
 {
     int index = 0;
-    for(const JointPtr& joint : _vecjoints) {
-        if (joint->GetName() == jointname) {
-            return index;
-        }
-        ++index;
-    }
-    for(const JointPtr& joint : _vPassiveJoints) {
-        if (joint->GetName() == jointname) {
+    FOREACHC(it,_vecjoints) {
+        if ((*it)->GetName() == jointname ) {
             return index;
         }
         ++index;
@@ -3471,9 +3465,7 @@ void KinBody::_ComputeInternalInformation()
             dofindex += (*itjoint)->GetDOF();
         }
         FOREACH(itjoint,_vPassiveJoints) {
-            (*itjoint)->jointindex = jointindex++; // -1;
-            // TGN: should this be "dofindex++", considering some joint may have >1 dof?
-            // but then it no longer means a joint index
+            (*itjoint)->jointindex = -1;
             (*itjoint)->dofindex = -1;
             (*itjoint)->_info._bIsActive = false;
         }

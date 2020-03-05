@@ -3464,11 +3464,6 @@ public:
             (*itjoint)->dofindex = dofindex;
             dofindex += (*itjoint)->GetDOF();
         }
-        FOREACH(itjoint,probot->_vPassiveJoints) {
-            (*itjoint)->jointindex = jointindex++; 
-            // TGN: should this be "dofindex++", considering some joint may have >1 dof?
-            // but then it no longer means a joint index
-        }
     }
 
     void ExtractRobotConnectedBodies(const RobotBasePtr probot, const domArticulated_systemRef &as) {
