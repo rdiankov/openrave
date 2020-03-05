@@ -2067,6 +2067,10 @@ public:
         _mapCustomData.swap(r._mapCustomData);
     }
 
+    void SerializeJSON(rapidjson::Value& rIkParameterization, rapidjson::Document::AllocatorType& alloc) const;
+
+    void DeserializeJSON(const rapidjson::Value& rIkParameterization);
+
 protected:
     inline static bool _IsValidCharInName(char c) {
         return c < 0 || c >= 33;

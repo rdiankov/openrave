@@ -298,12 +298,15 @@ inline void LoadJsonValue(const rapidjson::Value& v, RaveVector<T>& t) {
         throw OpenRAVEJSONException("failed to deserialize json, value cannot be decoded as a RaveVector", ORJE_InvalidArguments);
     }
 
-    LoadJsonValue(v[0], t.x);
-    LoadJsonValue(v[1], t.y);
-    LoadJsonValue(v[2], t.z);
+    LoadJsonValue(v[0], t[0]);
+    LoadJsonValue(v[1], t[1]);
+    LoadJsonValue(v[2], t[2]);
     if (v.Size() == 4)
     {
-        LoadJsonValue(v[3], t.w);
+        LoadJsonValue(v[3], t[3]);
+    }
+    else {
+        t[3] = 0; // have to reset
     }
 }
 
@@ -589,10 +592,13 @@ inline void SaveJsonValue(rapidjson::Value& v, const std::vector<T>& t, rapidjso
 template<class T>
 inline void SaveJsonValue(rapidjson::Value& v, const RaveVector<T>& t, rapidjson::Document::AllocatorType& alloc) {
     v.SetArray();
-    v.Reserve(3, alloc);
-    for (size_t i = 0; i < 3; ++i) {
+    // TODO, what's a better way to serialize?
+    bool bHas4Values = t[3] != 0;
+    int numvalues = bHas4Values ? 4 : 3;
+    v.Reserve(numvalues, alloc);
+    for (int ivalue = 0; ivalue < numvalues; ++ivalue) {
         rapidjson::Value tmpv;
-        SaveJsonValue(tmpv, t[i], alloc);
+        SaveJsonValue(tmpv, t[ivalue], alloc);
         v.PushBack(tmpv, alloc);
     }
 }
@@ -751,38 +757,7 @@ T GetJsonValueByKey(const rapidjson::Value& v, const char* key, const U& t) {
 }
 
 inline void LoadJsonValue(const rapidjson::Value& v, IkParameterization& t) {
-    if (!v.IsObject()) {
-        throw OpenRAVEJSONException("Cannot load value of non-object to IkParameterization.", ORJE_InvalidArguments);
-    }
-    std::string typestr;
-    LoadJsonValueByKey(v, "type", typestr);
-
-    if (typestr == "Transform6D")
-    {
-        Transform transform;
-        LoadJsonValueByKey(v, "rotate", transform.rot);
-        LoadJsonValueByKey(v, "translate", transform.trans);
-        t.SetTransform6D(transform);
-    }
-    else if (typestr == "TranslationDirection5D")
-    {
-        RAY ray;
-        LoadJsonValueByKey(v, "translate", ray.pos);
-        LoadJsonValueByKey(v, "direction", ray.dir);
-        t.SetTranslationDirection5D(ray);
-    }
-    else
-    {
-        throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported IkParameterization type \"%s\"", typestr, ORE_InvalidArguments);
-    }
-
-    std::map<std::string, std::vector<dReal> > customData;
-    LoadJsonValueByKey(v, "customData", customData);
-
-    t.ClearCustomValues();
-    for (std::map<std::string, std::vector<dReal> >::const_iterator it = customData.begin(); it != customData.end(); ++it) {
-        t.SetCustomValues(it->first, it->second);
-    }
+    t.DeserializeJSON(v);
 }
 
 template<class T>
@@ -905,21 +880,7 @@ inline void SaveJsonValue(rapidjson::Value &v, const TriMesh& t, rapidjson::Docu
 
 /// \brief serialize an OpenRAVE IkParameterization as json
 inline void SaveJsonValue(rapidjson::Value &v, const IkParameterization& t, rapidjson::Document::AllocatorType& alloc) {
-    v.SetObject();
-    SetJsonValueByKey(v, "type", t.GetName(), alloc);
-    switch(t.GetType()) {
-    case IKP_Transform6D:
-        SetJsonValueByKey(v, "rotate", t.GetTransform6D().rot, alloc);
-        SetJsonValueByKey(v, "translate", t.GetTransform6D().trans, alloc);
-        break;
-    case IKP_TranslationDirection5D:
-        SetJsonValueByKey(v, "translate", t.GetTranslationDirection5D().pos, alloc);
-        SetJsonValueByKey(v, "direction", t.GetTranslationDirection5D().dir, alloc);
-        break;
-    default:
-        break;
-    }
-    SetJsonValueByKey(v, "customData", t.GetCustomDataMap(), alloc);
+    t.SerializeJSON(v, alloc);
 }
 
 template<class T>
