@@ -64,6 +64,4 @@
 // whether log4cxx is to be used
 #define OPENRAVE_LOG4CXX @OPENRAVE_LOG4CXX@
 
-#define OPENRAVE_RAPIDJSON @OPENRAVE_RAPIDJSON@
-
 #endif
