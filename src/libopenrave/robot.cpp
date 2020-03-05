@@ -21,25 +21,25 @@ namespace OpenRAVE {
 
 void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    SetJsonValueByKey(value, "name", _name, allocator);
-    SetJsonValueByKey(value, "linkName", _linkname, allocator);
-    SetJsonValueByKey(value, "transform", _trelative, allocator);
-    SetJsonValueByKey(value, "type", _sensorname, allocator);
+    openravejson::SetJsonValueByKey(value, "name", _name, allocator);
+    openravejson::SetJsonValueByKey(value, "linkName", _linkname, allocator);
+    openravejson::SetJsonValueByKey(value, "transform", _trelative, allocator);
+    openravejson::SetJsonValueByKey(value, "type", _sensorname, allocator);
 
     rapidjson::Value sensorGeometryValue;
     if(!!_sensorgeometry)
     {
         _sensorgeometry->SerializeJSON(sensorGeometryValue, allocator, fUnitScale, options);
     }
-    SetJsonValueByKey(value, "sensorGeometry", sensorGeometryValue, allocator);
+    openravejson::SetJsonValueByKey(value, "sensorGeometry", sensorGeometryValue, allocator);
 }
 
 void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
-    LoadJsonValueByKey(value, "name", _name);
-    LoadJsonValueByKey(value, "linkName", _linkname);
-    LoadJsonValueByKey(value, "transform", _trelative);
-    LoadJsonValueByKey(value, "type", _sensorname);
+    openravejson::LoadJsonValueByKey(value, "name", _name);
+    openravejson::LoadJsonValueByKey(value, "linkName", _linkname);
+    openravejson::LoadJsonValueByKey(value, "transform", _trelative);
+    openravejson::LoadJsonValueByKey(value, "type", _sensorname);
 
     // desrialization of sensorGeometry is handled by json reader
 }
