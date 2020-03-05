@@ -2795,25 +2795,56 @@ bool ParseXMLData(BaseXMLReader& reader, const char* buffer, int size)
 
 }
 
-
 void IkParameterization::SerializeJSON(rapidjson::Value& rIkParameterization, rapidjson::Document::AllocatorType& alloc) const
 {
     rIkParameterization.SetObject();
     SetJsonValueByKey(rIkParameterization, "type", GetName(), alloc);
-    switch(_type) {
+    switch (_type) {
     case IKP_Transform6D:
         SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
         SetJsonValueByKey(rIkParameterization, "translate", _transform.trans, alloc);
         break;
-    case IKP_TranslationDirection5D:
-        SetJsonValueByKey(rIkParameterization, "direction", _transform.rot, alloc);
+    case IKP_Rotation3D:
+        SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
+        break;
+    case IKP_Translation3D:
         SetJsonValueByKey(rIkParameterization, "translate", _transform.trans, alloc);
         break;
-    default:
-        // in the worst case, save the data
+    case IKP_Direction3D:
+        SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
+        break;
+    case IKP_Ray4D:
         SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
         SetJsonValueByKey(rIkParameterization, "translate", _transform.trans, alloc);
         break;
+    case IKP_Lookat3D:
+        SetJsonValueByKey(rIkParameterization, "translate", _transform.trans, alloc);
+        break;
+    case IKP_TranslationDirection5D:
+        SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
+        SetJsonValueByKey(rIkParameterization, "translate", _transform.trans, alloc);
+        break;
+    case IKP_TranslationXY2D:
+        SetJsonValueByKey(rIkParameterization, "translate", _transform.trans, alloc);
+        break;
+    case IKP_TranslationXYOrientation3D:
+        SetJsonValueByKey(rIkParameterization, "translate", _transform.trans, alloc);
+        break;
+    case IKP_TranslationLocalGlobal6D:
+        SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
+        SetJsonValueByKey(rIkParameterization, "translate", _transform.trans, alloc);
+        break;
+    case IKP_TranslationXAxisAngle4D:
+    case IKP_TranslationYAxisAngle4D:
+    case IKP_TranslationZAxisAngle4D:
+    case IKP_TranslationXAxisAngleZNorm4D:
+    case IKP_TranslationYAxisAngleXNorm4D:
+    case IKP_TranslationZAxisAngleYNorm4D:
+        SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
+        SetJsonValueByKey(rIkParameterization, "translate", _transform.trans, alloc);
+        break;
+    default:
+        throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization %s"), GetName(),ORE_InvalidArguments);
     }
     if (_mapCustomData.size() > 0) {
         SetJsonValueByKey(rIkParameterization, "customData", _mapCustomData, alloc);
@@ -2829,35 +2860,80 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
     if( rIkParameterization.HasMember("type") ) {
         const char* ptype =  rIkParameterization["type"].GetString();
         if( !!ptype ) {
-            if (strcmp(ptype, "Transform6D") == 0 ) {
-                _type = IKP_Transform6D;
-            }
-            else if (strcmp(ptype, "TranslationDirection5D") == 0 ) {
-                _type = IKP_TranslationDirection5D;
-            }
-            else {
-                const std::map<IkParameterizationType,std::string>::const_iterator itend = RaveGetIkParameterizationMap().end();
-                for(std::map<IkParameterizationType,std::string>::const_iterator it = RaveGetIkParameterizationMap().begin(); it != itend; ++it) {
-                    if( strcmp(ptype, it->second.c_str()) == 0 ) {
-                        _type = it->first;
-                        break;
-                    }
+            const std::map<IkParameterizationType,std::string>::const_iterator itend = RaveGetIkParameterizationMap().end();
+            for(std::map<IkParameterizationType,std::string>::const_iterator it = RaveGetIkParameterizationMap().begin(); it != itend; ++it) {
+                if( strcmp(ptype, it->second.c_str()) == 0 ) {
+                    _type = it->first;
+                    break;
                 }
             }
         }
     }
-
-    if (_type == IKP_Transform6D ) {
+    switch (_type) {
+    case IKP_Transform6D:
+    case IKP_Transform6DVelocity:
         LoadJsonValueByKey(rIkParameterization, "rotate", _transform.rot);
         LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
-    }
-    else if (_type == IKP_TranslationDirection5D ) {
-        LoadJsonValueByKey(rIkParameterization, "direction", _transform.rot);
+        break;
+    case IKP_Rotation3D:
+    case IKP_Rotation3DVelocity:
+        LoadJsonValueByKey(rIkParameterization, "rotate", _transform.rot);
+        break;
+    case IKP_Translation3D:
         LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
-    }
-    else {
+        break;
+    case IKP_Translation3DVelocity:
+    case IKP_TranslationXYOrientation3DVelocity:
         LoadJsonValueByKey(rIkParameterization, "rotate", _transform.rot);
         LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
+        break;
+    case IKP_Direction3D:
+    case IKP_Direction3DVelocity:
+        LoadJsonValueByKey(rIkParameterization, "rotate", _transform.rot);
+        break;
+    case IKP_Ray4D:
+    case IKP_Ray4DVelocity:
+        LoadJsonValueByKey(rIkParameterization, "rotate", _transform.rot);
+        LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
+        break;
+    case IKP_TranslationDirection5D:
+    case IKP_TranslationDirection5DVelocity:
+        LoadJsonValueByKey(rIkParameterization, "rotate", _transform.rot);
+        LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
+        break;
+    case IKP_Lookat3D:
+    case IKP_Lookat3DVelocity:
+        LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
+        break;
+    case IKP_TranslationXY2D:
+    case IKP_TranslationXY2DVelocity:
+        LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
+        break;
+    case IKP_TranslationXYOrientation3D:
+        LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
+        break;
+    case IKP_TranslationLocalGlobal6D:
+    case IKP_TranslationLocalGlobal6DVelocity:
+        LoadJsonValueByKey(rIkParameterization, "rotate", _transform.rot);
+        LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
+        break;
+    case IKP_TranslationXAxisAngle4D:
+    case IKP_TranslationXAxisAngle4DVelocity:
+    case IKP_TranslationYAxisAngle4D:
+    case IKP_TranslationYAxisAngle4DVelocity:
+    case IKP_TranslationZAxisAngle4D:
+    case IKP_TranslationZAxisAngle4DVelocity:
+    case IKP_TranslationXAxisAngleZNorm4D:
+    case IKP_TranslationXAxisAngleZNorm4DVelocity:
+    case IKP_TranslationYAxisAngleXNorm4D:
+    case IKP_TranslationYAxisAngleXNorm4DVelocity:
+    case IKP_TranslationZAxisAngleYNorm4D:
+    case IKP_TranslationZAxisAngleYNorm4DVelocity:
+        LoadJsonValueByKey(rIkParameterization, "rotate", _transform.rot);
+        LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
+        break;
+    default:
+        throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization 0x%x"), _type,ORE_InvalidArguments);
     }
 
     _mapCustomData.clear();
