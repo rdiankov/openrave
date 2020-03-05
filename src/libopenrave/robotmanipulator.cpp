@@ -35,7 +35,7 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
     openravejson::LoadJsonValueByKey(value, "transform", _tLocalTool);
     openravejson::LoadJsonValueByKey(value, "chuckingDirections", _vChuckingDirection);
     openravejson::LoadJsonValueByKey(value, "direction", _vdirection);
-    openravejson::LoadJsonValueByKey(value, "baseLInkName", _sBaseLinkName);
+    openravejson::LoadJsonValueByKey(value, "baseLinkName", _sBaseLinkName);
     openravejson::LoadJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName);
     openravejson::LoadJsonValueByKey(value, "iksolverType", _sIkSolverXMLId);
     openravejson::LoadJsonValueByKey(value, "gripperJointNames", _vGripperJointNames);
