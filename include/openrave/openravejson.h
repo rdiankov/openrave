@@ -318,6 +318,15 @@ inline void LoadJsonValue(const rapidjson::Value& v, boost::shared_ptr<T>& ptr) 
     LoadJsonValue(v, *ptr);
 }
 
+inline void LoadJsonValue(const rapidjson::Value& v, IkParameterization& t) {
+    t.DeserializeJSON(v);
+}
+
+/// \brief serialize an OpenRAVE IkParameterization as json
+inline void SaveJsonValue(rapidjson::Value &v, const IkParameterization& t, rapidjson::Document::AllocatorType& alloc) {
+    t.SerializeJSON(v, alloc);
+}
+
 template<class T, size_t N>
 inline void LoadJsonValue(const rapidjson::Value& v, boost::array<T, N>& t) {
     if (v.IsArray()) {
@@ -757,10 +766,6 @@ T GetJsonValueByKey(const rapidjson::Value& v, const char* key, const U& t) {
     return T(t);
 }
 
-inline void LoadJsonValue(const rapidjson::Value& v, IkParameterization& t) {
-    t.DeserializeJSON(v);
-}
-
 template<class T>
 inline T GetJsonValueByKey(const rapidjson::Value& v, const char* key) {
     if (!v.IsObject()) {
@@ -879,11 +884,6 @@ inline void SetJsonValueByKey(rapidjson::Document& d, const std::string& key, co
     rapidjson::Value v;
     SetJsonValueByKey(v, key.c_str(), t, d.GetAllocator());
     d.Swap(v);
-}
-
-/// \brief serialize an OpenRAVE IkParameterization as json
-inline void SaveJsonValue(rapidjson::Value &v, const IkParameterization& t, rapidjson::Document::AllocatorType& alloc) {
-    t.SerializeJSON(v, alloc);
 }
 
 template<class T>
