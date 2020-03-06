@@ -99,8 +99,34 @@ SensorBase::CameraIntrinsics PyCameraIntrinsics::GetCameraIntrinsics()
 
 PyCameraGeomData::PyCameraGeomData() {
 }
-PyCameraGeomData::PyCameraGeomData(OPENRAVE_SHARED_PTR<SensorBase::CameraGeomData const> pgeom) : intrinsics(pgeom->intrinsics)
+PyCameraGeomData::PyCameraGeomData(OPENRAVE_SHARED_PTR<SensorBase::CameraGeomData const> pgeom)
 {
+    _Update(pgeom);
+}
+PyCameraGeomData::~PyCameraGeomData() {
+}
+SensorBase::SensorType PyCameraGeomData::GetType() {
+    return SensorBase::ST_Camera;
+}
+
+object PyCameraGeomData::SerializeJSON(dReal fUnitScale, object options) {
+    rapidjson::Document doc;
+    SensorBase::SensorGeometryPtr pgeom = GetGeometry();
+    pgeom->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(options, 0));
+    return toPyObject(doc);
+}
+
+void PyCameraGeomData::DeserializeJSON(object obj, dReal fUnitScale) {
+    rapidjson::Document doc;
+    toRapidJSONValue(obj, doc, doc.GetAllocator());
+    SensorBase::CameraGeomDataPtr pgeom(new SensorBase::CameraGeomData());
+    pgeom->DeserializeJSON(doc, fUnitScale);
+    _Update(pgeom);
+}
+
+void PyCameraGeomData::_Update(OPENRAVE_SHARED_PTR<SensorBase::CameraGeomData const> pgeom)
+{
+    intrinsics = pgeom->intrinsics;
     hardware_id = pgeom->hardware_id;
     width = pgeom->width;
     height = pgeom->height;
@@ -109,11 +135,7 @@ PyCameraGeomData::PyCameraGeomData(OPENRAVE_SHARED_PTR<SensorBase::CameraGeomDat
     measurement_time = pgeom->measurement_time;
     gain = pgeom->gain;
 }
-PyCameraGeomData::~PyCameraGeomData() {
-}
-SensorBase::SensorType PyCameraGeomData::GetType() {
-    return SensorBase::ST_Camera;
-}
+
 SensorBase::SensorGeometryPtr PyCameraGeomData::GetGeometry() {
     OPENRAVE_SHARED_PTR<SensorBase::CameraGeomData> geom(new SensorBase::CameraGeomData());
     geom->hardware_id = hardware_id;
@@ -625,6 +647,12 @@ PyCameraIntrinsicsPtr toPyCameraIntrinsics(const geometry::RaveCameraIntrinsics<
 
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Configure_overloads, Configure, 1, 2)
+// SerializeJSON
+// BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PySensorGeometry_SerializeJSON_overloads, SerializeJSON, 0, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyCameraGeomData_SerializeJSON_overloads, SerializeJSON, 0, 2)
+// DeserializeJSON
+// BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PySensorGeometry_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyCameraGeomData_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -672,7 +700,7 @@ void init_openravepy_sensor()
         ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        class_<PyCameraIntrinsics, OPENRAVE_SHARED_PTR<PyCameraIntrinsics> >(m, "CameraIntrinsics", DOXY_CLASS(geometry::RaveCameraIntrinsics))
+        class_<PyCameraIntrinsics, OPENRAVE_SHARED_PTR<PyCameraIntrinsics> >(sensor, "CameraIntrinsics", DOXY_CLASS(geometry::RaveCameraIntrinsics))
 #else
         class_<PyCameraIntrinsics, OPENRAVE_SHARED_PTR<PyCameraIntrinsics> >("CameraIntrinsics", DOXY_CLASS(geometry::RaveCameraIntrinsics))
 #endif
@@ -900,6 +928,21 @@ void init_openravepy_sensor()
     .def_readwrite("measurement_time",&PyCameraGeomData::measurement_time)
     .def_readwrite("gain",&PyCameraGeomData::gain)
     .def_readwrite("KK",&PyCameraGeomData::intrinsics) // deprecated
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def("SerializeJSON", &PyCameraGeomData::SerializeJSON,
+        "unitScale"_a = 1.0,
+        "options"_a = py::none_(),
+        DOXY_FN(SensorBase::CameraGeomData, SerializeJSON)
+    )
+    .def("DeserializeJSON", &PyCameraGeomData::DeserializeJSON,
+        "obj"_a,
+        "unitScale"_a = 1.0,
+        DOXY_FN(SensorBase::CameraGeomData, DeserializeJSON)
+    )
+#else
+    .def("SerializeJSON", &PyCameraGeomData::SerializeJSON, PyCameraGeomData_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(SensorBase::CameraGeomData, SerializeJSON)))
+    .def("DeserializeJSON", &PyCameraGeomData::DeserializeJSON, PyCameraGeomData_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(SensorBase::CameraGeomData, DeserializeJSON)))
+#endif
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

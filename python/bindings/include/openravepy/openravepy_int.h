@@ -66,11 +66,9 @@ using namespace OpenRAVE;
 
 namespace openravepy {
 
-#if OPENRAVE_RAPIDJSON
 /// conversion between rapidjson value and py::object
 OPENRAVEPY_API py::object toPyObject(const rapidjson::Value& value);
 OPENRAVEPY_API void toRapidJSONValue(const py::object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator);
-#endif // OPENRAVE_RAPIDJSON
 
 /// used externally, don't change definitions
 //@{
@@ -603,10 +601,8 @@ public:
     bool SupportsCommand(const string& cmd);
     py::object SendCommand(const string& in, bool releasegil=false, bool lockenv=false);
 
-#if OPENRAVE_RAPIDJSON
     bool SupportsJSONCommand(const string& cmd);
     py::object SendJSONCommand(const string& cmd, py::object input, bool releasegil=false, bool lockenv=false);
-#endif // OPENRAVE_RAPIDJSON
 
     virtual py::object GetReadableInterfaces();
     virtual py::object GetReadableInterface(const std::string& xmltag);
@@ -797,11 +793,11 @@ OPENRAVEPY_API PyCameraIntrinsicsPtr toPyCameraIntrinsics(const geometry::RaveCa
 OPENRAVEPY_API PyLinkPtr toPyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv);
 OPENRAVEPY_API PyJointPtr toPyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv);
 OPENRAVEPY_API PyLinkInfoPtr toPyLinkInfo(const KinBody::LinkInfo& linkinfo);
-OPENRAVEPY_API PyJointInfoPtr toPyJointInfo(const KinBody::JointInfo& jointinfo, PyEnvironmentBasePtr pyenv);
+OPENRAVEPY_API PyJointInfoPtr toPyJointInfo(const KinBody::JointInfo& jointinfo);
 OPENRAVEPY_API PyGeometryInfoPtr toPyGeometryInfo(const KinBody::GeometryInfo geominfo);
 OPENRAVEPY_API PyManipulatorInfoPtr toPyManipulatorInfo(const RobotBase::ManipulatorInfo& manipulatorinfo);
 OPENRAVEPY_API PyAttachedSensorInfoPtr toPyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& attachedSensorinfo);
-OPENRAVEPY_API PyConnectedBodyInfoPtr toPyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& connectedBodyInfo, PyEnvironmentBasePtr pyenv);
+OPENRAVEPY_API PyConnectedBodyInfoPtr toPyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& connectedBodyInfo);
 
 OPENRAVEPY_API PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType type, const std::string& name);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

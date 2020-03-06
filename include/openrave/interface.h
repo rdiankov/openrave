@@ -22,9 +22,7 @@
 #ifndef OPENRAVE_INTERFACE_BASE
 #define OPENRAVE_INTERFACE_BASE
 
-#if OPENRAVE_RAPIDJSON
 #include <rapidjson/document.h>
-#endif // OPENRAVE_RAPIDJSON
 
 namespace OpenRAVE {
 
@@ -132,12 +130,8 @@ public:
     /// \brief return true if the command is supported
     virtual bool SupportsCommand(const std::string& cmd);
 
-#if OPENRAVE_RAPIDJSON
-
     /// \brief return true if the command is supported
     virtual bool SupportsJSONCommand(const std::string& cmd);
-
-#endif // OPENRAVE_RAPIDJSON
 
     /** \brief Used to send special commands to the interface and receive output.
 
@@ -167,7 +161,6 @@ public:
         return bSuccess;
     }
 
-#if OPENRAVE_RAPIDJSON
     /** \brief Used to send special JSON commands to the interface and receive output.
 
         The command must be registered by \ref RegisterJSONCommand. A special command '\b help' is
@@ -188,8 +181,6 @@ public:
     inline void SendJSONCommand(const std::string& cmdname, const rapidjson::Value& input, rapidjson::Document& output) {
         SendJSONCommand(cmdname, input, output, output.GetAllocator());
     }
-
-#endif // OPENRAVE_RAPIDJSON
 
     /** \brief serializes the interface
 
@@ -236,8 +227,6 @@ public:
     /// \brief Unregisters the command. <b>[multi-thread safe]</b>
     virtual void UnregisterCommand(const std::string& cmdname);
 
-#if OPENRAVE_RAPIDJSON
-
     /// \brief The function to be executed for every JSON command.
     ///
     /// \param input - input of the command
@@ -266,8 +255,6 @@ public:
     /// \brief Unregisters the command. <b>[multi-thread safe]</b>
     virtual void UnregisterJSONCommand(const std::string& cmdname);
 
-#endif // OPENRAVE_RAPIDJSON
-
     virtual const char* GetHash() const = 0;
     std::string __description;     /// \see GetDescription()
     std::string __struri; ///< \see GetURI
@@ -280,10 +267,8 @@ private:
     /// Write the help commands to an output stream
     virtual bool _GetCommandHelp(std::ostream& sout, std::istream& sinput) const;
 
-#if OPENRAVE_RAPIDJSON
     /// Write the help commands to an output stream
     virtual void _GetJSONCommandHelp(const rapidjson::Value& input, rapidjson::Value& output, rapidjson::Document::AllocatorType& allocator) const;
-#endif // OPENRAVE_RAPIDJSON
 
     inline InterfaceBase& operator=(const InterfaceBase&r) {
         throw openrave_exception("InterfaceBase copying not allowed");
@@ -301,10 +286,8 @@ private:
     typedef std::map<std::string, boost::shared_ptr<InterfaceCommand>, CaseInsensitiveCompare> CMDMAP;
     CMDMAP __mapCommands; ///< all registered commands
 
-#if OPENRAVE_RAPIDJSON
     typedef std::map<std::string, boost::shared_ptr<InterfaceJSONCommand>, CaseInsensitiveCompare> JSONCMDMAP;
     JSONCMDMAP __mapJSONCommands; ///< all registered commands
-#endif
     
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
