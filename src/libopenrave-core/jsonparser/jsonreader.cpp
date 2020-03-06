@@ -258,6 +258,7 @@ protected:
         if (bodyValue.HasMember("transform")) {
             Transform transform;
             openravejson::LoadJsonValueByKey(bodyValue, "transform", transform);
+            transform.trans *= fUnitScale;
             body->SetTransform(transform);
         }
 
@@ -312,6 +313,7 @@ protected:
         if (bodyValue.HasMember("transform")) {
             Transform transform;
             openravejson::LoadJsonValueByKey(bodyValue, "transform", transform);
+            transform.trans *= fUnitScale;
             robot->SetTransform(transform);
         }
 
