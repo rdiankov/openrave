@@ -83,9 +83,9 @@ public:
 
     void deserialize(const string& s);
 
-    object serialize(object ooptions=py::none_());
+    object serialize(object options=py::none_());
 
-    void SaveToFile(const std::string& filename, object ooptions=py::none_());
+    void SaveToFile(const std::string& filename, object options=py::none_());
 
     void LoadFromFile(const std::string& filename);
     
