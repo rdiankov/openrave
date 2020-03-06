@@ -40,16 +40,14 @@ class PyGeometryInfo
 {
 public:
     PyGeometryInfo();
-    //PyGeometryInfo(const PyGeometryInfo& pyinfo);
     PyGeometryInfo(const KinBody::GeometryInfo& info);
     void Init(const KinBody::GeometryInfo& info);
 
     object ComputeInnerEmptyVolume();
     object ComputeAABB(object otransform);
 
-    void DeserializeJSON(object obj, const dReal fUnitScale=1.0);
-    object SerializeJSON(const dReal fUnitScale=1.0, object ooptions=py::none_());
-
+    object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
     KinBody::GeometryInfoPtr GetGeometryInfo();
 
     object _t = ReturnTransform(Transform());
@@ -81,8 +79,10 @@ class PyLinkInfo
 public:
     PyLinkInfo();
     PyLinkInfo(const KinBody::LinkInfo& info);
-
     KinBody::LinkInfoPtr GetLinkInfo();
+
+    object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
 
     py::list _vgeometryinfos;
     object _name = py::none_();
@@ -98,6 +98,9 @@ public:
     bool _bStatic = false;
     bool _bIsEnabled = true;
     bool _bVisible = true;
+
+private:
+    void _Update(const KinBody::LinkInfo& info);
 };
 
 class PyElectricMotorActuatorInfo
@@ -105,8 +108,9 @@ class PyElectricMotorActuatorInfo
 public:
     PyElectricMotorActuatorInfo();
     PyElectricMotorActuatorInfo(const ElectricMotorActuatorInfo& info);
-
     ElectricMotorActuatorInfoPtr GetElectricMotorActuatorInfo();
+    object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
 
     std::string model_type;
     dReal gear_ratio = 0.0;
@@ -125,16 +129,58 @@ public:
     dReal terminal_resistance = 0.0;
     dReal coloumb_friction = 0.0;
     dReal viscous_friction = 0.0;
+private:
+    void _Update(const ElectricMotorActuatorInfo& info);
 };
 typedef OPENRAVE_SHARED_PTR<PyElectricMotorActuatorInfo> PyElectricMotorActuatorInfoPtr;
+
+class PyJointControlInfo_RobotController
+{
+public:
+    PyJointControlInfo_RobotController();
+    PyJointControlInfo_RobotController(const KinBody::JointInfo::JointControlInfo_RobotController& jci);
+    KinBody::JointInfo::JointControlInfo_RobotControllerPtr GetJointControlInfo();
+
+    int robotId = -1;
+    object robotControllerDOFIndex = toPyVector3(Vector(-1, -1, -1));
+};
+typedef OPENRAVE_SHARED_PTR<PyJointControlInfo_RobotController> PyJointControlInfo_RobotControllerPtr;
+
+class PyJointControlInfo_IO
+{
+public:
+    PyJointControlInfo_IO();
+    PyJointControlInfo_IO(const KinBody::JointInfo::JointControlInfo_IO& jci);
+    KinBody::JointInfo::JointControlInfo_IOPtr GetJointControlInfo();
+
+    int deviceId = -1;
+    object vMoveIONames = py::list();
+    object vUpperLimitIONames = py::list();
+    object vUpperLimitSensorIsOn = py::list();
+    object vLowerLimitIONames = py::list();
+    object vLowerLimitSensorIsOn = py::list();
+};
+typedef OPENRAVE_SHARED_PTR<PyJointControlInfo_IO> PyJointControlInfo_IOPtr;
+
+class PyJointControlInfo_ExternalDevice
+{
+public:
+    PyJointControlInfo_ExternalDevice();
+    PyJointControlInfo_ExternalDevice(const KinBody::JointInfo::JointControlInfo_ExternalDevice &jci);
+    KinBody::JointInfo::JointControlInfo_ExternalDevicePtr GetJointControlInfo();
+    std::string externalDeviceId;
+};
+typedef OPENRAVE_SHARED_PTR<PyJointControlInfo_ExternalDevice> PyJointControlInfo_ExternalDevicePtr;
 
 class PyJointInfo
 {
 public:
     PyJointInfo();
-
-    PyJointInfo(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv);
+    PyJointInfo(const KinBody::JointInfo& info);
     KinBody::JointInfoPtr GetJointInfo();
+    object GetDOF();
+    object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0);
 
     KinBody::JointType _type = KinBody::JointNone;
     object _name = py::none_();
@@ -161,6 +207,13 @@ public:
     py::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters;
     object _bIsCircular = py::list();
     bool _bIsActive = true;
+    KinBody::JointControlMode _controlMode = KinBody::JointControlMode::JCM_None;
+    PyJointControlInfo_RobotControllerPtr _jci_robotcontroller;
+    PyJointControlInfo_IOPtr _jci_io;
+    PyJointControlInfo_ExternalDevicePtr _jci_externaldevice;
+
+private:
+    void _Update(const KinBody::JointInfo& info);
 };
 
 class PyLink
@@ -409,6 +462,7 @@ public:
 
     void SetStringParameters(const std::string& key, object ovalue);
 
+    KinBody::JointControlMode GetControlMode() const;
     void UpdateInfo();
     object GetInfo();
     object UpdateAndGetInfo();

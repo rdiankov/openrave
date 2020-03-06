@@ -18,7 +18,6 @@
 
 #include <openrave/planningutils.h>
 
-#include <openrave/openravejson.h>
 
 namespace OpenRAVE {
 

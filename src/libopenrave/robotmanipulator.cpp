@@ -15,8 +15,31 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
-
 namespace OpenRAVE {
+
+void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    openravejson::SetJsonValueByKey(value, "name", _name, allocator);
+    openravejson::SetJsonValueByKey(value, "transform", _tLocalTool, allocator);
+    openravejson::SetJsonValueByKey(value, "chuckingDirections", _vChuckingDirection, allocator);
+    openravejson::SetJsonValueByKey(value, "direction", _vdirection, allocator);
+    openravejson::SetJsonValueByKey(value, "baseLInkName", _sBaseLinkName, allocator);
+    openravejson::SetJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName, allocator);
+    openravejson::SetJsonValueByKey(value, "iksolverType", _sIkSolverXMLId, allocator);
+    openravejson::SetJsonValueByKey(value, "gripperJointNames", _vGripperJointNames, allocator);
+}
+
+void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+{
+    openravejson::LoadJsonValueByKey(value, "name", _name);
+    openravejson::LoadJsonValueByKey(value, "transform", _tLocalTool);
+    openravejson::LoadJsonValueByKey(value, "chuckingDirections", _vChuckingDirection);
+    openravejson::LoadJsonValueByKey(value, "direction", _vdirection);
+    openravejson::LoadJsonValueByKey(value, "baseLinkName", _sBaseLinkName);
+    openravejson::LoadJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName);
+    openravejson::LoadJsonValueByKey(value, "iksolverType", _sIkSolverXMLId);
+    openravejson::LoadJsonValueByKey(value, "gripperJointNames", _vGripperJointNames);
+}
 
 RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::ManipulatorInfo& info) : _info(info), __probot(probot) {
 }

@@ -21,7 +21,6 @@
 #include <openrave/utils.h>
 
 namespace openravepy {
-
 class PyStateRestoreContextBase
 {
 public:
@@ -96,8 +95,18 @@ public:
 
     RobotBase::GrabbedInfoPtr GetGrabbedInfo() const;
 
+    py::object SerializeJSON(dReal fUnitScale=1.0, py::object ooptions=py::none_());
+
+    void DeserializeJSON(py::object obj, dReal fUnitScale=1.0);
+
     std::string __str__();
     py::object __unicode__();
+
+private:
+    void _Update(const RobotBase::GrabbedInfo& info);
+
+public:
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     std::string _grabbedname;
     std::string _robotlinkname;
@@ -105,7 +114,7 @@ public:
     py::object _grabbedname = py::none_();
     py::object _robotlinkname = py::none_();
 #endif
-    py::object _trelative = py::none_();
+    py::object _trelative = ReturnTransform(Transform());
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     std::vector<int> _setRobotLinksToIgnore;
 #else
