@@ -363,11 +363,13 @@ object toPyArray(const std::vector<KinBody::GeometryInfoPtr>& infos)
 {
     py::list pyvalues;
     for(size_t i = 0; i < infos.size(); ++i) {
+        if( !infos[i] ) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("geometryInfo[%d] is invalid"),i, ORE_InvalidArguments);
+        }
         pyvalues.append(toPyGeometryInfo(*infos[i]));
     }
     return pyvalues;
 }
-
 
 AttributesList toAttributesList(py::dict odict)
 {

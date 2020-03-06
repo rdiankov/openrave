@@ -88,9 +88,22 @@ bool KinBody::Grab(KinBodyPtr pbody, LinkPtr plink)
     }
     if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() ) {
         // collision checking will not be automatically updated with environment calls, so need to do this manually
+        //try {
         _selfcollisionchecker->InitKinBody(pbody);
+//        }
+//        catch (const std::exception& ex) {
+//            RAVELOG_ERROR_FORMAT("env=%d, failed in _selfcollisionchecker->InitKinBody for body %s: %s", GetEnv()->GetId()%pbody->GetName()%ex.what());
+//            throw;
+//        }
     }
+    //    try {
     pgrabbed->ProcessCollidingLinks(setBodyLinksToIgnore);
+//    }
+//    catch(const std::exception& ex) {
+//        RAVELOG_ERROR_FORMAT("env=%d, failed in ProcessCollidingLinks for body %s: %s", GetEnv()->GetId()%pbody->GetName()%ex.what());
+//        throw;
+//    }
+
     pbody->SetVelocity(velocity.first, velocity.second);
     _vGrabbedBodies.push_back(pgrabbed);
     //uint64_t starttime2 = utils::GetMicroTime();
@@ -99,13 +112,20 @@ bool KinBody::Grab(KinBodyPtr pbody, LinkPtr plink)
         _AttachBody(pbody);
     }
     catch(...) {
+        RAVELOG_ERROR_FORMAT("env=%d, failed in attach body", GetEnv()->GetId());
         BOOST_ASSERT(_vGrabbedBodies.back()==pgrabbed);
         // do not call _selfcollisionchecker->RemoveKinBody since the same object might be re-attached later on and we should preserve the structures.
         _vGrabbedBodies.pop_back();
         throw;
     }
     //uint64_t starttime3 = utils::GetMicroTime();
-    _PostprocessChangedParameters(Prop_RobotGrabbed);
+    try {
+        _PostprocessChangedParameters(Prop_RobotGrabbed);
+    }
+    catch (const std::exception& ex) {
+        RAVELOG_ERROR_FORMAT("env=%d, failed in _PostprocessChangedParameters: %s", GetEnv()->GetId()%ex.what());
+        throw;
+    }
     //RAVELOG_DEBUG_FORMAT("env=%d, post process elapsed (%d) %fs, %fs, %fs, %fs", GetEnv()->GetId()%vattachedlinks.size()%(1e-6*(starttime1-starttime0))%(1e-6*(starttime2-starttime0))%(1e-6*(starttime3-starttime0))%(1e-6*(utils::GetMicroTime()-starttime0)));
     return true;
 }
