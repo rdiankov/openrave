@@ -553,7 +553,7 @@ inline void SaveJsonValue(rapidjson::Value& v, const std::pair<T, U>& t, rapidjs
 template<class T>
 inline void SaveJsonValue(rapidjson::Value& v, const std::set<T>& t, rapidjson::Document::AllocatorType& alloc) {
     v.SetArray();
-
+    v.Reserve(t.size(), alloc);
     for(typename std::set<T>::const_iterator it = t.begin(); it != t.end(); it++) {
         rapidjson::Value tmpv;
         SaveJsonValue(tmpv, *it, alloc);
@@ -562,19 +562,16 @@ inline void SaveJsonValue(rapidjson::Value& v, const std::set<T>& t, rapidjson::
 }
 
 template<class T>
-inline void SaveJsonValue(rapidjson::Value& v, const RaveTransform<T>& t, rapidjson::Document::AllocatorType& alloc) {
-    v.SetArray();
-
-    for(size_t irot = 0; irot < 4; ++irot) {
-        rapidjson::Value tmpv;
-        SaveJsonValue(tmpv, t.rot[irot], alloc);
-        v.PushBack(tmpv, alloc);
-    }
-    for(size_t itrans = 0; itrans < 3; ++itrans) {
-        rapidjson::Value tmpv;
-        SaveJsonValue(tmpv, t.trans[itrans], alloc);
-        v.PushBack(tmpv, alloc);
-    }
+inline void SaveJsonValue(rapidjson::Value& rTransform, const RaveTransform<T>& t, rapidjson::Document::AllocatorType& alloc) {
+    rTransform.SetArray();
+    rTransform.Reserve(7, alloc);
+    rTransform.PushBack(t.rot[0], alloc);
+    rTransform.PushBack(t.rot[1], alloc);
+    rTransform.PushBack(t.rot[2], alloc);
+    rTransform.PushBack(t.rot[3], alloc);
+    rTransform.PushBack(t.trans[0], alloc);
+    rTransform.PushBack(t.trans[1], alloc);
+    rTransform.PushBack(t.trans[2], alloc);
 }
 
 template<class T>
@@ -822,19 +819,19 @@ inline void SaveJsonValue(rapidjson::Value& v, const SensorBase::CameraIntrinsic
     SetJsonValueByKey(v, "distortionCoeffs", t.distortion_coeffs, alloc);
 }
 
-inline void SaveJsonValue(rapidjson::Value &v, const TriMesh& t, rapidjson::Document::AllocatorType& alloc) {
-    v.SetObject();
-    rapidjson::Value verticesValue;
-    verticesValue.SetArray();
-    for (std::vector<Vector>::const_iterator it = t.vertices.begin(); it != t.vertices.end(); ++it) {
-        verticesValue.PushBack((*it)[0], alloc);
-        verticesValue.PushBack((*it)[1], alloc);
-        verticesValue.PushBack((*it)[2], alloc);
+inline void SaveJsonValue(rapidjson::Value &rTriMesh, const TriMesh& t, rapidjson::Document::AllocatorType& alloc) {
+    rTriMesh.SetObject();
+    rapidjson::Value rVertices;
+    rVertices.SetArray();
+    rVertices.Reserve(t.vertices.size()*3, alloc);
+    for(size_t ivertex = 0; ivertex < t.vertices.size(); ++ivertex) {
+        rVertices.PushBack(t.vertices[ivertex][0], alloc);
+        rVertices.PushBack(t.vertices[ivertex][1], alloc);
+        rVertices.PushBack(t.vertices[ivertex][2], alloc);
     }
-    v.AddMember("vertices", verticesValue, alloc);
-    SetJsonValueByKey(v, "indices", t.indices, alloc);
+    rTriMesh.AddMember("vertices", rVertices, alloc);
+    SetJsonValueByKey(rTriMesh, "indices", t.indices, alloc);
 }
-
 
 template<class T, class U>
 inline void SetJsonValueByKey(rapidjson::Value& v, const U& key, const T& t, rapidjson::Document::AllocatorType& alloc)
