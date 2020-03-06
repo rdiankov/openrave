@@ -21,7 +21,7 @@
 #include <openrave/utils.h>
 
 namespace openravepy {
-
+using py::object;
 class PyStateRestoreContextBase
 {
 public:
@@ -94,23 +94,7 @@ public:
         _trelative = ReturnTransform(Transform());
     }
     PyGrabbedInfo(const RobotBase::GrabbedInfo& info) {
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        _grabbedname = info._grabbedname;
-        _robotlinkname = info._robotlinkname;
-#else
-        _grabbedname = ConvertStringToUnicode(info._grabbedname);
-        _robotlinkname = ConvertStringToUnicode(info._robotlinkname);
-#endif
-        _trelative = ReturnTransform(info._trelative);
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        _setRobotLinksToIgnore = std::vector<int>(begin(info._setRobotLinksToIgnore), end(info._setRobotLinksToIgnore));
-#else
-        py::list setRobotLinksToIgnore;
-        FOREACHC(itindex, info._setRobotLinksToIgnore) {
-            setRobotLinksToIgnore.append(*itindex);
-        }
-        _setRobotLinksToIgnore = setRobotLinksToIgnore;
-#endif
+        _Update(info);
     }
 
     RobotBase::GrabbedInfoPtr GetGrabbedInfo() const
@@ -134,6 +118,23 @@ public:
         return pinfo;
     }
 
+    py::object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_())
+    {
+        rapidjson::Document doc;
+        KinBody::GrabbedInfoPtr pInfo = GetGrabbedInfo();
+        pInfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(options,0));
+        return toPyObject(doc);
+    }
+
+    void DeserializeJSON(py::object obj, dReal fUnitScale=1.0)
+    {
+        rapidjson::Document doc;
+        toRapidJSONValue(obj, doc, doc.GetAllocator());
+        KinBody::GrabbedInfo info;
+        info.DeserializeJSON(doc, fUnitScale);
+        _Update(info);
+    }
+
     std::string __str__() {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         std::string robotlinkname = _robotlinkname;
@@ -147,6 +148,31 @@ public:
     py::object __unicode__() {
         return ConvertStringToUnicode(__str__());
     }
+
+private:
+    void _Update(const RobotBase::GrabbedInfo& info)
+    {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        _grabbedname = info._grabbedname;
+        _robotlinkname = info._robotlinkname;
+#else
+        _grabbedname = ConvertStringToUnicode(info._grabbedname);
+        _robotlinkname = ConvertStringToUnicode(info._robotlinkname);
+#endif
+        _trelative = ReturnTransform(info._trelative);
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        _setRobotLinksToIgnore = std::vector<int>(begin(info._setRobotLinksToIgnore), end(info._setRobotLinksToIgnore));
+#else
+        py::list setRobotLinksToIgnore;
+        FOREACHC(itindex, info._setRobotLinksToIgnore) {
+            setRobotLinksToIgnore.append(*itindex);
+        }
+        _setRobotLinksToIgnore = setRobotLinksToIgnore;
+#endif
+    }
+
+public:
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     std::string _grabbedname, _robotlinkname;
 #else
