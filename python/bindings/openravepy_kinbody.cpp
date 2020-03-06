@@ -114,28 +114,7 @@ public:
     }
 };
 
-// PyGeometryInfo::PyGeometryInfo() {}
-
-PyGeometryInfo::PyGeometryInfo() {
-    _t = ReturnTransform(Transform());
-    _vGeomData = toPyVector4(Vector());
-    _vGeomData2 = toPyVector4(Vector());
-    _vGeomData3 = toPyVector4(Vector());
-    _vGeomData4 = toPyVector4(Vector());
-    _vDiffuseColor = toPyVector3(Vector(1,1,1));
-    _vAmbientColor = toPyVector3(Vector(0,0,0));
-    _meshcollision = py::none_();
-    _type = GT_None;
-    _name = py::none_();
-    _filenamerender = py::none_();
-    _filenamecollision = py::none_();
-    _vRenderScale = toPyVector3(Vector(1,1,1));
-    _vCollisionScale = toPyVector3(Vector(1,1,1));
-    _containerBaseHeight = 0.0;
-    _fTransparency = 0.0;
-    _bVisible = true;
-    _bModifiable = true;
-}
+PyGeometryInfo::PyGeometryInfo() {}
 
 PyGeometryInfo::PyGeometryInfo(const KinBody::GeometryInfo& info) {
     Init(info);
@@ -1935,26 +1914,6 @@ PyKinBody::PyGrabbedInfo::PyGrabbedInfo(const RobotBase::GrabbedInfo& info) {
     _Update(info);
 }
 
-// PyKinBody::PyGrabbedInfo::PyGrabbedInfo(const RobotBase::GrabbedInfo& info) {
-// #ifdef USE_PYBIND11_PYTHON_BINDINGS
-//     _grabbedname = info._grabbedname;
-//     _robotlinkname = info._robotlinkname;
-// #else
-//     _grabbedname = ConvertStringToUnicode(info._grabbedname);
-//     _robotlinkname = ConvertStringToUnicode(info._robotlinkname);
-// #endif
-//     _trelative = ReturnTransform(info._trelative);
-// #ifdef USE_PYBIND11_PYTHON_BINDINGS
-//     _setRobotLinksToIgnore = std::vector<int>(begin(info._setRobotLinksToIgnore), end(info._setRobotLinksToIgnore));
-// #else
-//     py::list setRobotLinksToIgnore;
-//     FOREACHC(itindex, info._setRobotLinksToIgnore) {
-//         setRobotLinksToIgnore.append(*itindex);
-//     }
-//     _setRobotLinksToIgnore = setRobotLinksToIgnore;
-// #endif
-// }
-
 RobotBase::GrabbedInfoPtr PyKinBody::PyGrabbedInfo::GetGrabbedInfo() const
 {
     RobotBase::GrabbedInfoPtr pinfo(new RobotBase::GrabbedInfo());
@@ -1995,11 +1954,11 @@ void PyKinBody::PyGrabbedInfo::DeserializeJSON(py::object obj, dReal fUnitScale)
 
 std::string PyKinBody::PyGrabbedInfo::__str__() {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        return boost::str(boost::format("<grabbedinfo:%s -> %s>")%_robotlinkname%_grabbedname);
+    return boost::str(boost::format("<grabbedinfo:%s -> %s>")%_robotlinkname%_grabbedname);
 #else
-        std::string robotlinkname = py::extract<std::string>(_robotlinkname);
-        std::string grabbedname = py::extract<std::string>(_grabbedname);
-        return boost::str(boost::format("<grabbedinfo:%s -> %s>")%robotlinkname%grabbedname);
+    std::string robotlinkname = py::extract<std::string>(_robotlinkname);
+    std::string grabbedname = py::extract<std::string>(_grabbedname);
+    return boost::str(boost::format("<grabbedinfo:%s -> %s>")%robotlinkname%grabbedname);
 #endif
 }
 
@@ -4404,7 +4363,6 @@ void init_openravepy_kinbody()
                        .def("DeserializeJSON", &PyJointInfo::DeserializeJSON, PyJointInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(KinBody::JointInfo, DeserializeJSON)))
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                       // TGN: can simplify in future using
                        .def(py::pickle(
                                 [](const PyJointInfo &pyinfo) {
             // __getstate__

@@ -50,7 +50,6 @@ class PyGeometryInfo
 {
 public:
     PyGeometryInfo();
-    //PyGeometryInfo(const PyGeometryInfo& pyinfo);
     PyGeometryInfo(const KinBody::GeometryInfo& info);
     void Init(const KinBody::GeometryInfo& info);
 
