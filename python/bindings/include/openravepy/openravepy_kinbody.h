@@ -90,67 +90,20 @@ class PyKinBody : public PyInterfaceBase
     class PyGrabbedInfo
 {
 public:
-    PyGrabbedInfo() {
-        _trelative = ReturnTransform(Transform());
-    }
-    PyGrabbedInfo(const RobotBase::GrabbedInfo& info) {
-        _Update(info);
-    }
+    PyGrabbedInfo();
+    PyGrabbedInfo(const RobotBase::GrabbedInfo& info);
 
     RobotBase::GrabbedInfoPtr GetGrabbedInfo() const;
 
-    py::object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_())
-    {
-        rapidjson::Document doc;
-        KinBody::GrabbedInfoPtr pInfo = GetGrabbedInfo();
-        pInfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(options,0));
-        return toPyObject(doc);
-    }
+    py::object SerializeJSON(dReal fUnitScale=1.0, py::object ooptions=py::none_());
 
-    void DeserializeJSON(py::object obj, dReal fUnitScale=1.0)
-    {
-        rapidjson::Document doc;
-        toRapidJSONValue(obj, doc, doc.GetAllocator());
-        KinBody::GrabbedInfo info;
-        info.DeserializeJSON(doc, fUnitScale);
-        _Update(info);
-    }
+    void DeserializeJSON(py::object obj, dReal fUnitScale=1.0);
 
-    std::string __str__() {
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        return boost::str(boost::format("<grabbedinfo:%s -> %s>")%_robotlinkname%_grabbedname);
-#else
-        std::string robotlinkname = py::extract<std::string>(_robotlinkname);
-        std::string grabbedname = py::extract<std::string>(_grabbedname);
-        return boost::str(boost::format("<grabbedinfo:%s -> %s>")%robotlinkname%grabbedname);
-#endif
-        
-    }
-    py::object __unicode__() {
-        return ConvertStringToUnicode(__str__());
-    }
+    std::string __str__();
+    py::object __unicode__();
 
 private:
-    void _Update(const RobotBase::GrabbedInfo& info)
-    {
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        _grabbedname = info._grabbedname;
-        _robotlinkname = info._robotlinkname;
-#else
-        _grabbedname = ConvertStringToUnicode(info._grabbedname);
-        _robotlinkname = ConvertStringToUnicode(info._robotlinkname);
-#endif
-        _trelative = ReturnTransform(info._trelative);
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        _setRobotLinksToIgnore = std::vector<int>(begin(info._setRobotLinksToIgnore), end(info._setRobotLinksToIgnore));
-#else
-        py::list setRobotLinksToIgnore;
-        FOREACHC(itindex, info._setRobotLinksToIgnore) {
-            setRobotLinksToIgnore.append(*itindex);
-        }
-        _setRobotLinksToIgnore = setRobotLinksToIgnore;
-#endif
-    }
+    void _Update(const RobotBase::GrabbedInfo& info);
 
 public:
 
@@ -161,7 +114,7 @@ public:
     py::object _grabbedname = py::none_();
     py::object _robotlinkname = py::none_();
 #endif
-    py::object _trelative = py::none_();
+    py::object _trelative = ReturnTransform(Transform());
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     std::vector<int> _setRobotLinksToIgnore;
 #else

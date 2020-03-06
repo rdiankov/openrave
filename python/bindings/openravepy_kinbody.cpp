@@ -1928,9 +1928,12 @@ bool PyManageData::__ne__(OPENRAVE_SHARED_PTR<PyManageData> p) {
     return !p || _pdata!=p->_pdata;
 }
 
-// PyKinBody::PyGrabbedInfo::PyGrabbedInfo() {
-//     _trelative = ReturnTransform(Transform());
-// }
+PyKinBody::PyGrabbedInfo::PyGrabbedInfo() {
+}
+
+PyKinBody::PyGrabbedInfo::PyGrabbedInfo(const RobotBase::GrabbedInfo& info) {
+    _Update(info);
+}
 
 // PyKinBody::PyGrabbedInfo::PyGrabbedInfo(const RobotBase::GrabbedInfo& info) {
 // #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -1973,20 +1976,56 @@ RobotBase::GrabbedInfoPtr PyKinBody::PyGrabbedInfo::GetGrabbedInfo() const
     return pinfo;
 }
 
-// std::string PyKinBody::PyGrabbedInfo::__str__() {
-// #ifdef USE_PYBIND11_PYTHON_BINDINGS
-//     std::string robotlinkname = _robotlinkname;
-//     std::string grabbedname = _grabbedname;
-// #else
-//     std::string robotlinkname = py::extract<std::string>(_robotlinkname);
-//     std::string grabbedname = py::extract<std::string>(_grabbedname);
-// #endif
-//     return boost::str(boost::format("<grabbedinfo:%s -> %s>")%robotlinkname%grabbedname);
-// }
+py::object PyKinBody::PyGrabbedInfo::SerializeJSON(dReal fUnitScale, py::object ooptions)
+{
+    rapidjson::Document doc;
+    KinBody::GrabbedInfoPtr pInfo = GetGrabbedInfo();
+    pInfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(ooptions,0));
+    return toPyObject(doc);
+}
 
-// py::object PyKinBody::PyGrabbedInfo::__unicode__() {
-//     return ConvertStringToUnicode(__str__());
-// }
+void PyKinBody::PyGrabbedInfo::DeserializeJSON(py::object obj, dReal fUnitScale)
+{
+    rapidjson::Document doc;
+    toRapidJSONValue(obj, doc, doc.GetAllocator());
+    KinBody::GrabbedInfo info;
+    info.DeserializeJSON(doc, fUnitScale);
+    _Update(info);
+}
+
+std::string PyKinBody::PyGrabbedInfo::__str__() {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        return boost::str(boost::format("<grabbedinfo:%s -> %s>")%_robotlinkname%_grabbedname);
+#else
+        std::string robotlinkname = py::extract<std::string>(_robotlinkname);
+        std::string grabbedname = py::extract<std::string>(_grabbedname);
+        return boost::str(boost::format("<grabbedinfo:%s -> %s>")%robotlinkname%grabbedname);
+#endif
+}
+
+void PyKinBody::PyGrabbedInfo::_Update(const RobotBase::GrabbedInfo& info) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    _grabbedname = info._grabbedname;
+    _robotlinkname = info._robotlinkname;
+#else
+    _grabbedname = ConvertStringToUnicode(info._grabbedname);
+    _robotlinkname = ConvertStringToUnicode(info._robotlinkname);
+#endif
+    _trelative = ReturnTransform(info._trelative);
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    _setRobotLinksToIgnore = std::vector<int>(begin(info._setRobotLinksToIgnore), end(info._setRobotLinksToIgnore));
+#else
+    py::list setRobotLinksToIgnore;
+    FOREACHC(itindex, info._setRobotLinksToIgnore) {
+        setRobotLinksToIgnore.append(*itindex);
+    }
+    _setRobotLinksToIgnore = setRobotLinksToIgnore;
+#endif
+}
+
+py::object PyKinBody::PyGrabbedInfo::__unicode__() {
+    return ConvertStringToUnicode(__str__());
+}
 
 PyKinBody::PyKinBody(KinBodyPtr pbody, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pbody,pyenv), _pbody(pbody)
 {
