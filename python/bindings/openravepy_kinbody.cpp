@@ -87,6 +87,33 @@ void PySideWall::Get(KinBody::GeometryInfo::SideWall& sidewall) {
     sidewall.type = static_cast<KinBody::GeometryInfo::SideWallType>(type);
 }
 
+// TGN: debug; will remove PyTestPickle
+PyTestPickle::PyTestPickle() {
+    if(IS_PYTHONOBJECT_NONE(_arr)) {
+        const std::vector<dReal> v {1, 2, 4.5, -3.0, 8, 9, 10, 11, 12};
+        _arr = toPyArray(v);
+    }
+}
+PyTestPickle::~PyTestPickle() {}
+class TestPickle_pickle_suite
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+    : public pickle_suite
+#endif
+{
+public:
+    static py::tuple getstate(const PyTestPickle& r)
+    {
+        return py::make_tuple(
+            r._t,
+            r._arr
+        );
+    }
+    static void setstate(PyTestPickle& r, const py::tuple& state) {
+        r._t = extract<std::string>(state[0]);
+        r._arr = state[1];
+    }
+};
+
 PyGeometryInfo::PyGeometryInfo() {}
 
 PyGeometryInfo::PyGeometryInfo(const KinBody::GeometryInfo& info) {
@@ -312,7 +339,7 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     for(const std::pair<py::handle, py::handle>& item : _mapExtraGeometries) {
         std::string name = extract<std::string>(item.first);
-        info._mapExtraGeometries[name] = std::vector<KinBody::GeometryInfoPtr>(len(item.second));
+        info._mapExtraGeometries[name] = std::vector<KinBody::GeometryInfoPtr>(); info._mapExtraGeometries[name].reserve(len(item.second));
         for(size_t j = 0; j < len(item.second); j++){
             PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(item.second[j]);
             info._mapExtraGeometries[name].push_back(pygeom->GetGeometryInfo());
@@ -324,7 +351,7 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
     for(size_t i = 0; i < num; ++i) {
         object okeyvalue = okeyvalueiter.attr("next") ();
         std::string name = extract<std::string>(okeyvalue[0]);
-        info._mapExtraGeometries[name] = std::vector<KinBody::GeometryInfoPtr>(len(okeyvalue[1]));
+        info._mapExtraGeometries[name] = std::vector<KinBody::GeometryInfoPtr>(); info._mapExtraGeometries[name].reserve(len(okeyvalue[1]));
         for(size_t j = 0; j < (size_t)len(okeyvalue[1]); j++){
             PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(okeyvalue[1][j]);
             info._mapExtraGeometries[name].push_back(pygeom->GetGeometryInfo());
@@ -4029,6 +4056,36 @@ void init_openravepy_kinbody()
                        .value("Spherical",KinBody::JointSpherical)
                        .value("Trajectory",KinBody::JointTrajectory)
     ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object testpickle = class_<PyTestPickle, OPENRAVE_SHARED_PTR<PyTestPickle> >(m, "TestPickle")
+                        .def(init<>())
+#else
+    object testpickle = class_<PyTestPickle, OPENRAVE_SHARED_PTR<PyTestPickle> >("TestPickle")
+#endif // USE_PYBIND11_PYTHON_BINDINGS       
+#ifdef USE_PYBIND11_PYTHON_BINDINGS            
+                        .def(py::pickle(
+                        [](const PyTestPickle &pypickle) {
+                            // __getstate__
+                            // return TestPickle_pickle_suite::getstate(pypickle);
+                            return py::make_tuple(pypickle._t, pypickle._arr);
+                        },
+                        [](const py::tuple& state) {
+                            // PyTestPickle pypickle;
+                            // TestPickle_pickle_suite::setstate(pypickle, state);
+                            // return pypickle;
+                            PyTestPickle pypickle;
+                            pypickle._t = extract<std::string>(state[0]);
+                            pypickle._arr = state[1];
+                            return pypickle;
+                        }
+                        ))
+#else
+                        .def_pickle(TestPickle_pickle_suite())
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+                        .def_readwrite("t", &PyTestPickle::_t)
+                        .def_readwrite("arr", &PyTestPickle::_arr)
+                        ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object jointcontrolmode = enum_<KinBody::JointControlMode>(m, "JointControlMode" DOXY_ENUM(JointControlMode))

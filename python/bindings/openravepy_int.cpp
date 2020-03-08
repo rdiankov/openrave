@@ -378,11 +378,14 @@ object toPyArray(const Transform& t)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
-object toPyArray(const std::vector<KinBody::GeometryInfoPtr>& pinfos)
+object toPyArray(const std::vector<KinBody::GeometryInfoPtr>& infos)
 {
     py::list pyvalues;
-    for(const KinBody::GeometryInfoPtr& pinfo : pinfos) {
-        pyvalues.append(toPyGeometryInfo(*pinfo));
+    for(size_t i = 0; i < infos.size(); ++i) {
+        if( !infos[i] ) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("geometryInfo[%d] is invalid"),i, ORE_InvalidArguments);
+        }
+        pyvalues.append(toPyGeometryInfo(*infos[i]));
     }
     return pyvalues;
 }
@@ -2378,6 +2381,11 @@ py::object GetCodeStringOpenRAVEException(OpenRAVEException* p)
     return ConvertStringToUnicode(RaveGetErrorCodeString(p->GetCode()));
 }
 #endif // USE_PYBIND11_PYTHON_BINDINGS
+
+object MyIdentityTransformMatrix() {
+    return toPyArray(TransformMatrix());
+}
+
 } // namespace openravepy
 
 OPENRAVE_PYTHON_MODULE(openravepy_int)
@@ -2994,11 +3002,13 @@ Because race conditions can pop up when trying to lock the openrave environment 
     m.def("RaveGetEnvironment", openravepy::RaveGetEnvironment, DOXY_FN1(RaveGetEnvironment));
     m.def("RaveGetEnvironments", openravepy::RaveGetEnvironments, DOXY_FN1(RaveGetEnvironments));
     m.def("RaveCreateInterface", openravepy::RaveCreateInterface, PY_ARGS("env","type","name") DOXY_FN1(RaveCreateInterface));
+    m.def("MyIdentityTransformMatrix", openravepy::MyIdentityTransformMatrix);
 #else
     def("RaveGetEnvironmentId",openravepy::RaveGetEnvironmentId,DOXY_FN1(RaveGetEnvironmentId));
     def("RaveGetEnvironment",openravepy::RaveGetEnvironment,DOXY_FN1(RaveGetEnvironment));
     def("RaveGetEnvironments",openravepy::RaveGetEnvironments,DOXY_FN1(RaveGetEnvironments));
     def("RaveCreateInterface",openravepy::RaveCreateInterface, PY_ARGS("env","type","name") DOXY_FN1(RaveCreateInterface));
+    def("MyIdentityTransformMatrix", openravepy::MyIdentityTransformMatrix);
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

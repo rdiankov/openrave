@@ -448,17 +448,25 @@ void KinBody::GetDOFValues(std::vector<dReal>& v, const std::vector<int>& dofind
 {
     CHECK_INTERNAL_COMPUTATION;
     if( dofindices.size() == 0 ) {
-        v.resize(0);
-        if( (int)v.capacity() < GetDOF() ) {
-            v.reserve(GetDOF());
-        }
+        v.clear();
+        v.reserve(GetDOF());
         FOREACHC(it, _vDOFOrderedJoints) {
             int toadd = (*it)->GetDOFIndex()-(int)v.size();
             if( toadd > 0 ) {
                 v.insert(v.end(),toadd,0);
             }
             else if( toadd < 0 ) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("dof indices mismatch joint %s, toadd=%d"), (*it)->GetName()%toadd, ORE_InvalidState);
+                std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                ss << "values=[";
+                FOREACH(itvalue, v) {
+                    ss << *itvalue << ", ";
+                }
+                ss << "]; jointorder=[";
+                FOREACH(itj, _vDOFOrderedJoints) {
+                    ss << (*itj)->GetName() << ", ";
+                }
+                ss << "];";
+                throw OPENRAVE_EXCEPTION_FORMAT(_("dof indices mismatch joint %s (dofindex=%d), toadd=%d, v.size()=%d in call GetDOFValues with %s"), (*it)->GetName()%(*it)->GetDOFIndex()%toadd%v.size()%ss.str(), ORE_InvalidState);
             }
             (*it)->GetValues(v,true);
         }

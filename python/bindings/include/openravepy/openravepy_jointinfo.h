@@ -36,6 +36,16 @@ public:
     int type = 0;
 };
 
+class PyTestPickle
+{
+public:
+    PyTestPickle();
+    ~PyTestPickle();
+    std::string _t = "hello"; 
+    // object _arr; // = ReturnTransform(Transform());
+    object _arr = ReturnTransform(Transform());
+};
+
 class PyGeometryInfo
 {
 public:
