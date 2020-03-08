@@ -460,7 +460,18 @@ void KinBody::GetDOFValues(std::vector<dReal>& vdofvalues, const std::vector<int
                 vdofvalues.insert(vdofvalues.end(), toadd, 0);
             }
             else if( toadd < 0 ) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("dof indices mismatch joint %s, toadd=%d"), joint->GetName() % toadd, ORE_InvalidState);
+                std::stringstream ss;
+                ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                ss << "values=[";
+                for(dReal dofvalue : vdofvalues) {
+                    ss << dofvalue << ", ";
+                }
+                ss << "]; jointorder=[";
+                for(const JointPtr& joint : _vDOFOrderedJoints) {
+                    ss << joint->GetName() << ", ";
+                }
+                ss << "];";
+                throw OPENRAVE_EXCEPTION_FORMAT(_("dof indices mismatch joint %s (dofindex=%d), toadd=%d, v.size()=%d in call GetDOFValues with %s"), joint->GetName()%joint->GetDOFIndex()%toadd%vdofvalues.size()%ss.str(), ORE_InvalidState);
             }
             joint->GetValues(vdofvalues, true);
         }
