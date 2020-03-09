@@ -56,10 +56,10 @@ void RobotBase::ConnectedBodyInfo::InitInfoFromBody(RobotBase& robot)
 }
 void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    SetJsonValueByKey(value, "name", _name, allocator);
-    SetJsonValueByKey(value, "linkName", _linkname, allocator);
-    SetJsonValueByKey(value, "uri", _uri, allocator);
-    SetJsonValueByKey(value, "transform", _trelative, allocator);
+    openravejson::SetJsonValueByKey(value, "name", _name, allocator);
+    openravejson::SetJsonValueByKey(value, "linkName", _linkname, allocator);
+    openravejson::SetJsonValueByKey(value, "uri", _uri, allocator);
+    openravejson::SetJsonValueByKey(value, "transform", _trelative, allocator);
 
     // rapidjson::Value linkInfosValue;
     // linkInfosValue.SetArray();
@@ -101,15 +101,15 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
     // }
     // value.AddMember("attachedSensors", attachedSensorInfosValue, allocator);
 
-    SetJsonValueByKey(value, "isActive", _bIsActive, allocator);
+    openravejson::SetJsonValueByKey(value, "isActive", _bIsActive, allocator);
 }
 
 void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale)
 {
-    LoadJsonValueByKey(value, "name", _name);
-    LoadJsonValueByKey(value, "linkName", _linkname);
-    LoadJsonValueByKey(value, "uri", _uri);
-    LoadJsonValueByKey(value, "transform", _trelative);
+    openravejson::LoadJsonValueByKey(value, "name", _name);
+    openravejson::LoadJsonValueByKey(value, "linkName", _linkname);
+    openravejson::LoadJsonValueByKey(value, "uri", _uri);
+    openravejson::LoadJsonValueByKey(value, "transform", _trelative);
 
     // if(value.HasMember("links"))
     // {
@@ -155,7 +155,7 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
     //     }
     // }
 
-    LoadJsonValueByKey(value, "isActive", _bIsActive);
+    openravejson::LoadJsonValueByKey(value, "isActive", _bIsActive);
 }
 
 
