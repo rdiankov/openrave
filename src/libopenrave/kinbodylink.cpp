@@ -507,6 +507,12 @@ const std::vector<KinBody::GeometryInfoPtr>& KinBody::Link::GetGeometriesFromGro
 
 void KinBody::Link::SetGroupGeometries(const std::string& groupname, const std::vector<KinBody::GeometryInfoPtr>& geometries)
 {
+    FOREACH(itgeominfo, geometries) {
+        if( !(*itgeominfo) ) {
+            int igeominfo = itgeominfo - geometries.begin();
+            throw OPENRAVE_EXCEPTION_FORMAT("GeometryInfo index %d is invalid for body %s", igeominfo%GetParent()->GetName(), ORE_InvalidArguments);
+        }
+    }
     std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = _info._mapExtraGeometries.insert(make_pair(groupname,std::vector<KinBody::GeometryInfoPtr>())).first;
     it->second.resize(geometries.size());
     std::copy(geometries.begin(),geometries.end(),it->second.begin());
