@@ -1146,12 +1146,17 @@ bool QtOSGViewer::_SetItemVisualizationCommand(ostream& sout, istream& sinput)
     std::string itemname, visualizationmode;
     sinput >> itemname >> visualizationmode;
 
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetItemVisualization, this, itemname, visualizationmode));
+    return !!sinput;
+}
+
+void QtOSGViewer::_SetItemVisualization(std::string& itemname, std::string& visualizationmode)
+{
     FOREACH(it, _mapbodies) {
         if( it->second->GetName() == itemname ) {
             it->second->SetVisualizationMode(visualizationmode);
         }
     }
-    return !!sinput;
 }
 
 bool QtOSGViewer::_ShowWorldAxesCommand(ostream& sout, istream& sinput)
