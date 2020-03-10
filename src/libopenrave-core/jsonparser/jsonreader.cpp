@@ -17,6 +17,7 @@
 #include "jsoncommon.h"
 
 #include <openrave/openravejson.h>
+#include <openrave/openrave.h>
 #include <rapidjson/istreamwrapper.h>
 #include <string>
 #include <fstream>
@@ -390,9 +391,16 @@ protected:
             for (rapidjson::Value::ConstMemberIterator itr = objectValue["readableInterfaces"].MemberBegin(); itr != objectValue["readableInterfaces"].MemberEnd(); itr++) {
                 std::string id = itr->name.GetString();
                 BaseJSONReaderPtr pReader = RaveCallJSONReader(pInterface->GetInterfaceType(), id, pInterface, AttributesList());
-                pReader->DeserializeJSON(itr->value, fUnitScale);
-                JSONReadablePtr pReadable = pReader->GetReadable();
-                if (!!pReadable) {
+                if(!!pReader) {
+                    pReader->DeserializeJSON(itr->value, fUnitScale);
+                    JSONReadablePtr pReadable = pReader->GetReadable();
+                    if (!!pReadable) {
+                        pInterface->SetReadableInterface(id, pReadable);
+                    }
+                }
+                else if(itr->value.IsString()){
+                    // try string readable interface ?
+                    StringReadablePtr pReadable(new StringReadable(id, itr->value.GetString()));
                     pInterface->SetReadableInterface(id, pReadable);
                 }
             }
