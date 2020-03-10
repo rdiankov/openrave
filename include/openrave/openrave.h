@@ -646,6 +646,7 @@ class OPENRAVE_API StringReadable: public XMLReadable, public JSONReadable
 {
 public:
     StringReadable(const std::string& id, const std::string& data);
+    virtual ~StringReadable();
     virtual void Serialize(BaseXMLWriterPtr wirter, int options=0) const;
     virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
     virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);

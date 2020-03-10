@@ -399,7 +399,7 @@ protected:
                     }
                 }
                 else if(itr->value.IsString()){
-                    // try string readable interface ?
+                    // TODO: current json data is not able to help distinguish the type. So we try to use string readable if the value is string and no reader is found.
                     StringReadablePtr pReadable(new StringReadable(id, itr->value.GetString()));
                     pInterface->SetReadableInterface(id, pReadable);
                 }

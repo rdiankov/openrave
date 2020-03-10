@@ -2999,6 +2999,10 @@ StringReadable::StringReadable(const std::string& id, const std::string& data): 
 {
 }
 
+StringReadable::~StringReadable()
+{
+}
+
 void StringReadable::Serialize(BaseXMLWriterPtr writer, int options) const
 {
     if( writer->GetFormat() == "collada" ) {
