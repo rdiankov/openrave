@@ -444,13 +444,16 @@ public:
             WriteBinaryString(O, GetDescription());
 
             // Readable interfaces, added on VERSION_NUMBER=0x0002
+            std::stringstream ss;
             const uint16_t numReadableInterfaces = GetReadableInterfaces().size();
             WriteBinaryUInt16(O, numReadableInterfaces);
             FOREACHC(itReadableInterface, GetReadableInterfaces()) {
                 WriteBinaryString(O, itReadableInterface->first);  // xmlid
-                std::stringstream ss;
+
                 xmlreaders::StreamXMLWriterPtr writer(new xmlreaders::StreamXMLWriter(std::string()));
                 itReadableInterface->second->Serialize(writer, options);
+                ss.clear();
+                ss.str(std::string());
                 writer->Serialize(ss);
                 WriteBinaryString(O, ss.str());
             }
