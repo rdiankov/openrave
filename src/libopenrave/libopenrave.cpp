@@ -2995,8 +2995,7 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
     // TODO have to scale _mapCustomData by fUnitScale
 }
 
-
-StringReadable::StringReadable(const std::string& xmlid, const std::string& data): XMLReadable(xmlid), JSONReadable(), _data(data)
+StringReadable::StringReadable(const std::string& id, const std::string& data): XMLReadable(id), JSONReadable(), _data(data)
 {
 }
 
