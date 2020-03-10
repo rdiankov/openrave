@@ -29,9 +29,9 @@
 
 #ifdef _MSC_VER
 
-#pragma warning(disable:4251)// needs to have dll-interface to be used by clients of class
-#pragma warning(disable:4190)// C-linkage specified, but returns UDT 'boost::shared_ptr<T>' which is incompatible with C
-#pragma warning(disable:4819)//The file contains a character that cannot be represented in the current code page (932). Save the file in Unicode format to prevent data loss using native typeof
+#pragma warning(disable:4251) // needs to have dll-interface to be used by clients of class
+#pragma warning(disable:4190) // C-linkage specified, but returns UDT 'boost::shared_ptr<T>' which is incompatible with C
+#pragma warning(disable:4819) //The file contains a character that cannot be represented in the current code page (932). Save the file in Unicode format to prevent data loss using native typeof
 
 // needed to get typeof working
 //#include <boost/typeof/std/string.hpp>
@@ -97,9 +97,7 @@ namespace OpenRAVE {
 
 }
 
-#if OPENRAVE_RAPIDJSON
 #include <rapidjson/document.h>
-#endif
 
 #include <openrave/logging.h>
 
@@ -356,6 +354,7 @@ class BaseXMLWriter;
 typedef boost::shared_ptr<BaseXMLWriter> BaseXMLWriterPtr;
 typedef boost::shared_ptr<BaseXMLWriter const> BaseXMLWriterConstPtr;
 
+
 ///< Cloning Options for interfaces and environments
 enum CloningOptions {
     Clone_Bodies = 1, ///< clone all the bodies/robots of the environment, exclude attached interfaces like sensors/controllers
@@ -435,6 +434,7 @@ public:
 };
 
 typedef boost::function<BaseXMLReaderPtr(InterfaceBasePtr, const AttributesList&)> CreateXMLReaderFn;
+
 
 /// \brief reads until the tag ends
 class OPENRAVE_API DummyXMLReader : public BaseXMLReader
@@ -2067,6 +2067,10 @@ public:
         _mapCustomData.swap(r._mapCustomData);
     }
 
+    void SerializeJSON(rapidjson::Value& rIkParameterization, rapidjson::Document::AllocatorType& alloc, dReal fUnitScale=1.0) const;
+
+    void DeserializeJSON(const rapidjson::Value& rIkParameterization, dReal fUnitScale=1.0);
+
 protected:
     inline static bool _IsValidCharInName(char c) {
         return c < 0 || c >= 33;
@@ -2730,9 +2734,6 @@ const std::string& IkParameterization::GetName() const
 
 } // end namespace OpenRAVE
 
-#if OPENRAVE_RAPIDJSON
-#include <openrave/json.h>
-#endif
 
 BOOST_STATIC_ASSERT(OPENRAVE_VERSION_MAJOR>=0&&OPENRAVE_VERSION_MAJOR<=255);
 BOOST_STATIC_ASSERT(OPENRAVE_VERSION_MINOR>=0&&OPENRAVE_VERSION_MINOR<=255);

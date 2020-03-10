@@ -338,19 +338,19 @@ void PyTrajectoryBase::deserialize(const string& s)
     _ptrajectory->deserialize(ss);
 }
 
-object PyTrajectoryBase::serialize(object ooptions)
+object PyTrajectoryBase::serialize(object options)
 {
     std::stringstream ss;
     ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-    _ptrajectory->serialize(ss,pyGetIntFromPy(ooptions,0));
+    _ptrajectory->serialize(ss,pyGetIntFromPy(options, 0));
     return py::to_object(ss.str());
 }
 
-void PyTrajectoryBase::SaveToFile(const std::string& filename, object ooptions)
+void PyTrajectoryBase::SaveToFile(const std::string& filename, object options)
 {
     std::ofstream f(filename.c_str(), ios::binary);
     f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-    _ptrajectory->serialize(f, pyGetIntFromPy(ooptions,0));
+    _ptrajectory->serialize(f, pyGetIntFromPy(options, 0));
     f.close(); // necessary?
 }
 
@@ -496,7 +496,7 @@ void init_openravepy_trajectory()
          DOXY_FN(TrajectoryBase, serialize)
          )
     .def("SaveToFile", &PyTrajectoryBase::SaveToFile,
-         "filename",
+         "filename"_a,
          "options"_a = py::none_(),
          DOXY_FN(TrajectoryBase, serialize)
          )
