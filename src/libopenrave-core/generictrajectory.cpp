@@ -502,6 +502,13 @@ public:
             ReadBinaryVector(I, this->_vtrajdata);
             ReadBinaryString(I, __description);
 
+            // clear out existing readable interfaces
+            {
+                const READERSMAP& readableInterfaces = GetReadableInterfaces();
+                for (READERSMAP::const_iterator itReadableInterface = readableInterfaces.begin(); itReadableInterface != readableInterfaces.end(); ++itReadableInterface ) {
+                    SetReadableInterface(itReadableInterface->first, XMLReadablePtr());
+                }
+            }
             // versions >= 0x0002 have readable interfaces
             if (versionNumber >= 0x0002)
             {
