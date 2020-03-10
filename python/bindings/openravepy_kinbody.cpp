@@ -331,7 +331,7 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     for(const std::pair<py::handle, py::handle>& item : _mapExtraGeometries) {
         std::string name = extract<std::string>(item.first);
-        info._mapExtraGeometries[name] = std::vector<KinBody::GeometryInfoPtr>(len(item.second));
+        info._mapExtraGeometries[name] = std::vector<KinBody::GeometryInfoPtr>(); info._mapExtraGeometries[name].reserve(len(item.second));
         for(size_t j = 0; j < len(item.second); j++){
             PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(item.second[j]);
             info._mapExtraGeometries[name].push_back(pygeom->GetGeometryInfo());
@@ -343,7 +343,7 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
     for(size_t i = 0; i < num; ++i) {
         object okeyvalue = okeyvalueiter.attr("next") ();
         std::string name = extract<std::string>(okeyvalue[0]);
-        info._mapExtraGeometries[name] = std::vector<KinBody::GeometryInfoPtr>(len(okeyvalue[1]));
+        info._mapExtraGeometries[name] = std::vector<KinBody::GeometryInfoPtr>(); info._mapExtraGeometries[name].reserve(len(okeyvalue[1]));
         for(size_t j = 0; j < (size_t)len(okeyvalue[1]); j++){
             PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(okeyvalue[1][j]);
             info._mapExtraGeometries[name].push_back(pygeom->GetGeometryInfo());
