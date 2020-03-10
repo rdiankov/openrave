@@ -156,6 +156,7 @@ public:
         dReal friction = 0;
 
         GraspParametersPtr params(new GraspParameters(GetEnv()));
+        params->bavoidcontact = false;
         params->btransformrobot = true;
         params->bonlycontacttarget = true;
         params->btightgrasp = false;
@@ -196,6 +197,10 @@ public:
                 string linkname;
                 sinput >> linkname;
                 params->vavoidlinkgeometry.push_back(linkname);
+            }
+            else if( cmd == "avoidcontact" ) {
+                // initialization
+                params->bavoidcontact = true;
             }
             else if( cmd == "notrans" ) {
                 // initialization
@@ -273,6 +278,9 @@ public:
                 // initialization
                 sinput >> params->ftranslationstepmult;
             }
+            else if( cmd == "coarsestep" ) {
+                sinput >> params->fcoarsestep;
+            }
             else if( cmd == "finestep" ) {
                 sinput >> params->ffinestep;
             }
@@ -280,6 +288,12 @@ public:
                 vchuckingdir.resize(_robot->GetActiveManipulator()->GetGripperDOF());
                 for(size_t i = 0; i < vchuckingdir.size(); ++i) {
                     sinput >> vchuckingdir.at(i);
+                }
+            }
+            else if( cmd == "ordereddofindices" ) {
+                params->vordereddofindices.resize(_robot->GetActiveManipulator()->GetGripperDOF());
+                for(size_t idofindex = 0; idofindex < params->vordereddofindices.size(); ++idofindex) {
+                    sinput >> params->vordereddofindices.at(idofindex);
                 }
             }
             else {
