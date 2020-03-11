@@ -386,16 +386,22 @@ inline py::object toPyArray3(const std::vector<RaveVector<T> >& v)
 
 inline py::object toPyVector2(Vector v)
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
     py::array_t<dReal> pyvec({2});
     py::buffer_info buf = pyvec.request();
     dReal* pvec = (dReal*) buf.ptr;
     pvec[0] = v.x;
     pvec[1] = v.y;
     return pyvec;
+#else
+    const dReal arr[2] {v.x, v.y};
+    return toPyArrayN(arr, 2);
+#endif
 }
 
 inline py::object toPyVector3(Vector v)
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
     py::array_t<dReal> pyvec({3});
     py::buffer_info buf = pyvec.request();
     dReal* pvec = (dReal*) buf.ptr;
@@ -403,10 +409,15 @@ inline py::object toPyVector3(Vector v)
     pvec[1] = v.y;
     pvec[2] = v.z;
     return pyvec;
+#else
+    const dReal arr[3] {v.x, v.y, v.z};
+    return toPyArrayN(arr, 3);
+#endif
 }
 
 inline py::object toPyVector4(Vector v)
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
     py::array_t<dReal> pyvec({4});
     py::buffer_info buf = pyvec.request();
     dReal* pvec = (dReal*) buf.ptr;
@@ -415,6 +426,10 @@ inline py::object toPyVector4(Vector v)
     pvec[2] = v.z;
     pvec[3] = v.w;
     return pyvec;
+#else
+    const dReal arr[4] {v.x, v.y, v.z, v.w};
+    return toPyArrayN(arr, 4);
+#endif
 }
 
 /// \brief converts dictionary of keyvalue pairs

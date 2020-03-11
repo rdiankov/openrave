@@ -91,11 +91,15 @@ void PySideWall::Get(KinBody::GeometryInfo::SideWall& sidewall) {
 PyTestPickle::PyTestPickle() {
     if(IS_PYTHONOBJECT_NONE(_arr)) {
         const std::vector<dReal> v {1, 2, 4.5, -3.0, 8, 9, 10, 11, 12};
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
         py::array_t<dReal> pyarr({(int) v.size()});
         py::buffer_info buf = pyarr.request();
         dReal* parr = (dReal*) buf.ptr;
         std::memcpy(parr, v.data(), v.size() * sizeof(dReal));
         _arr = pyarr;
+#else
+        _arr = toPyArray(v);
+#endif
     }
 }
 PyTestPickle::~PyTestPickle() {}
