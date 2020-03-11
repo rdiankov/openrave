@@ -151,10 +151,15 @@ object search(ANNkd_tree& kdtree, object q, int k, double eps, bool priority = f
     }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    std::vector<ANNdist> vdists(k);
-    std::vector<ANNidx> vidx(k);
-    ANNdist* pdists = vdists.data();
-    ANNidx* pidx = vidx.data();
+    // distance
+    py::array_t<ANNdist> pydists({k});
+    py::buffer_info bufdists = pydists.request();
+    ANNdist* pdists = (ANNdist*) bufdists.ptr;
+
+    // index
+    py::array_t<ANNidx> pyidx({k});
+    py::buffer_info bufidx = pyidx.request();
+    ANNidx* pidx = (ANNidx*) bufidx.ptr;
 #else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { k};
     PyObject *pydists = PyArray_SimpleNew(1,dims, sizeof(ANNdist)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
@@ -176,7 +181,7 @@ object search(ANNkd_tree& kdtree, object q, int k, double eps, bool priority = f
     }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    return py::make_tuple(openravepy::toPyArray(vidx), openravepy::toPyArray(vdists));
+    return py::make_tuple(pyidx, pydists);
 #else // USE_PYBIND11_PYTHON_BINDINGS
     return py::make_tuple(py::to_array_astype<int>(pyidx), py::to_array_astype<ANNdist>(pydists));
 #endif // USE_PYBIND11_PYTHON_BINDINGS

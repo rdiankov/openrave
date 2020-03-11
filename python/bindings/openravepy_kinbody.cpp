@@ -1209,9 +1209,18 @@ object PyLink::GetGlobalCOM() const {
 object PyLink::GetLocalInertia() const {
     const TransformMatrix t = _plink->GetLocalInertia();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    const std::array<dReal, 9> arr {t.m[0], t.m[1], t.m[2], t.m[4], t.m[5], t.m[6], t.m[8], t.m[9], t.m[10]};
-    py::array_t<dReal> pyvalues = toPyArray(arr);
-    pyvalues.resize({3, 3});
+    py::array_t<dReal> pyvalues({3, 3});
+    py::buffer_info buf = pyvalues.request();
+    dReal* pvalue = (dReal*) buf.ptr;
+    pvalue[0] = t.m[0];
+    pvalue[1] = t.m[1];
+    pvalue[2] = t.m[2];
+    pvalue[3] = t.m[4];
+    pvalue[4] = t.m[5];
+    pvalue[5] = t.m[6];
+    pvalue[6] = t.m[8];
+    pvalue[7] = t.m[9];
+    pvalue[8] = t.m[10];
     return pyvalues;
 #else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { 3, 3};
@@ -1226,10 +1235,18 @@ object PyLink::GetLocalInertia() const {
 object PyLink::GetGlobalInertia() const {
     const TransformMatrix t = _plink->GetGlobalInertia();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    const std::array<dReal, 9> arr {t.m[0], t.m[1], t.m[2], t.m[4], t.m[5], t.m[6], t.m[8], t.m[9], t.m[10]};
-    py::array_t<dReal> pyvalues = toPyArray(arr);
-    pyvalues.resize({3, 3});
-    return pyvalues;
+    py::array_t<dReal> pyvalues({3, 3});
+    py::buffer_info buf = pyvalues.request();
+    dReal* pvalue = (dReal*) buf.ptr;
+    pvalue[0] = t.m[0];
+    pvalue[1] = t.m[1];
+    pvalue[2] = t.m[2];
+    pvalue[3] = t.m[4];
+    pvalue[4] = t.m[5];
+    pvalue[5] = t.m[6];
+    pvalue[6] = t.m[8];
+    pvalue[7] = t.m[9];
+    pvalue[8] = t.m[10];
 #else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { 3, 3};
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);

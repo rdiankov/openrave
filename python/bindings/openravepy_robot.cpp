@@ -258,10 +258,22 @@ object PyRobotBase::PyManipulator::GetTransformPose() const {
 }
 
 object PyRobotBase::PyManipulator::GetVelocity() const {
-    std::pair<Vector, Vector> velocity;
-    velocity = _pmanip->GetVelocity();
+    const std::pair<Vector, Vector> velocity = _pmanip->GetVelocity();
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pyvalues({6});
+    py::buffer_info buf = pyvalues.request();
+    dReal* pvalue = (dReal*) buf.ptr;
+    pvalue[0] = velocity.first.x;
+    pvalue[1] = velocity.first.y;
+    pvalue[2] = velocity.first.z;
+    pvalue[3] = velocity.second.x;
+    pvalue[4] = velocity.second.y;
+    pvalue[5] = velocity.second.z;
+    return pyvalues;
+#else
     boost::array<dReal,6> v = {{ velocity.first.x, velocity.first.y, velocity.first.z, velocity.second.x, velocity.second.y, velocity.second.z}};
     return toPyArray<dReal,6>(v);
+#endif
 }
 
 object PyRobotBase::PyManipulator::GetName() const {
