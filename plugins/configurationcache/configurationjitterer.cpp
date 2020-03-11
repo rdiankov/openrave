@@ -267,7 +267,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 
     bool SetPerturbationCommand(std::ostream& sout, std::istream& sinput)
     {
-        int perturbation=0;
+        dReal perturbation=0;
         sinput >> perturbation;
         if( perturbation < 0 ) {
             return false;
