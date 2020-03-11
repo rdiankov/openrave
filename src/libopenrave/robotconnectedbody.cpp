@@ -15,7 +15,6 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
-
 #include <boost/make_shared.hpp>
 
 namespace OpenRAVE {
@@ -55,6 +54,110 @@ void RobotBase::ConnectedBodyInfo::InitInfoFromBody(RobotBase& robot)
         _vAttachedSensorInfos.push_back(boost::make_shared<RobotBase::AttachedSensorInfo>((*itattachedsensor)->UpdateAndGetInfo()));
     }
 }
+void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    openravejson::SetJsonValueByKey(value, "name", _name, allocator);
+    openravejson::SetJsonValueByKey(value, "linkName", _linkname, allocator);
+    openravejson::SetJsonValueByKey(value, "url", _url, allocator);
+    openravejson::SetJsonValueByKey(value, "transform", _trelative, allocator);
+
+    rapidjson::Value linkInfosValue;
+    linkInfosValue.SetArray();
+    FOREACH(it, _vLinkInfos)
+    {
+        rapidjson::Value info;
+        (*it)->SerializeJSON(info, allocator, options);
+        linkInfosValue.PushBack(info, allocator);
+    }
+    value.AddMember("links", linkInfosValue, allocator);
+
+    rapidjson::Value jointInfosValue;
+    jointInfosValue.SetArray();
+    FOREACH(it, _vJointInfos)
+    {
+        rapidjson::Value v;
+        (*it)->SerializeJSON(v, allocator, options);
+        jointInfosValue.PushBack(v, allocator);
+    }
+    value.AddMember("joints", jointInfosValue, allocator);
+
+    rapidjson::Value manipulatorInfosValue;
+    manipulatorInfosValue.SetArray();
+    FOREACH(it, _vManipulatorInfos)
+    {
+        rapidjson::Value info;
+        (*it)->SerializeJSON(info, allocator, options);
+        manipulatorInfosValue.PushBack(info, allocator);
+    }
+    value.AddMember("manipulators", manipulatorInfosValue, allocator);
+
+    rapidjson::Value attachedSensorInfosValue;
+    attachedSensorInfosValue.SetArray();
+    FOREACH(it, _vAttachedSensorInfos)
+    {
+        rapidjson::Value info;
+        (*it)->SerializeJSON(info, allocator, options);
+        attachedSensorInfosValue.PushBack(info, allocator);
+    }
+    value.AddMember("attachedSensors", attachedSensorInfosValue, allocator);
+
+    openravejson::SetJsonValueByKey(value, "isActive", _bIsActive, allocator);
+}
+
+void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale)
+{
+    openravejson::LoadJsonValueByKey(value, "name", _name);
+    openravejson::LoadJsonValueByKey(value, "linkName", _linkname);
+    openravejson::LoadJsonValueByKey(value, "url", _url);
+    openravejson::LoadJsonValueByKey(value, "transform", _trelative);
+
+    if(value.HasMember("links"))
+    {
+        _vLinkInfos.resize(0);
+        _vLinkInfos.reserve(value["links"].Size());
+        for (size_t i = 0; i < value["links"].Size(); ++i) {
+            LinkInfoPtr linkinfo(new LinkInfo());
+            linkinfo->DeserializeJSON(value["links"][i]);
+            _vLinkInfos.push_back(linkinfo);
+        }
+    }
+
+    if(value.HasMember("joints"))
+    {
+        _vJointInfos.resize(0);
+        _vJointInfos.reserve(value["joints"].Size());
+        for (size_t i = 0; i < value["joints"].Size(); ++i) {
+            JointInfoPtr jointinfo(new JointInfo());
+            jointinfo->DeserializeJSON(value["joints"][i]);
+            _vJointInfos.push_back(jointinfo);
+        }
+    }
+
+    if(value.HasMember("manipulators"))
+    {
+        _vManipulatorInfos.resize(0);
+        _vManipulatorInfos.reserve(value["manipulators"].Size());
+        for (size_t i = 0; i < value["manipulators"].Size(); ++i) {
+            ManipulatorInfoPtr manipulatorinfo(new ManipulatorInfo());
+            manipulatorinfo->DeserializeJSON(value["manipulators"][i]);
+            _vManipulatorInfos.push_back(manipulatorinfo);
+        }
+    }
+
+    if(value.HasMember("attachedSensors"))
+    {
+        _vAttachedSensorInfos.resize(0);
+        _vAttachedSensorInfos.reserve(value["attachedSensors"].Size());
+        for (size_t i = 0; i < value["attachedSensors"].Size(); ++i) {
+            AttachedSensorInfoPtr attachedsensorinfo(new AttachedSensorInfo());
+            attachedsensorinfo->DeserializeJSON(value["attachedSensors"][i]);
+            _vAttachedSensorInfos.push_back(attachedsensorinfo);
+        }
+    }
+    openravejson::LoadJsonValueByKey(value, "isActive", _bIsActive);
+}
+
+
 
 RobotBase::ConnectedBody::ConnectedBody(OpenRAVE::RobotBasePtr probot) : _pattachedrobot(probot)
 {

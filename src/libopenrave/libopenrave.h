@@ -89,6 +89,8 @@
 #include <sstream>
 #include <iomanip>
 
+#include <openrave/openravejson.h>
+
 #ifdef USE_CRLIBM
 #include <crlibm.h> // robust/accurate math
 #endif

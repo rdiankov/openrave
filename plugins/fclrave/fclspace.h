@@ -208,69 +208,84 @@ public:
 
         pinfo->vlinks.reserve(pbody->GetLinks().size());
         FOREACHC(itlink, pbody->GetLinks()) {
-
-            boost::shared_ptr<KinBodyInfo::LinkInfo> link(new KinBodyInfo::LinkInfo(*itlink));
+            const KinBody::LinkPtr& plink = *itlink;
+            boost::shared_ptr<KinBodyInfo::LinkInfo> linkinfo(new KinBodyInfo::LinkInfo(plink));
 
 
             typedef boost::range_detail::any_iterator<KinBody::GeometryInfo, boost::forward_traversal_tag, KinBody::GeometryInfo const&, std::ptrdiff_t> GeometryInfoIterator;
-            GeometryInfoIterator begingeom, endgeom;
+            fcl::AABB enclosingBV;
 
             // Glue code for a unified access to geometries
-            if(pinfo->_geometrygroup.size() > 0 && (*itlink)->GetGroupNumGeometries(pinfo->_geometrygroup) >= 0) {
-                const std::vector<KinBody::GeometryInfoPtr>& vgeometryinfos = (*itlink)->GetGeometriesFromGroup(pinfo->_geometrygroup);
-                typedef boost::function<KinBody::GeometryInfo const& (KinBody::GeometryInfoPtr const&)> Func;
-                typedef boost::transform_iterator<Func, std::vector<KinBody::GeometryInfoPtr>::const_iterator> PtrGeomInfoIterator;
-                Func deref = boost::mem_fn(&KinBody::GeometryInfoPtr::operator*);
-                begingeom = GeometryInfoIterator(PtrGeomInfoIterator(vgeometryinfos.begin(), deref));
-                endgeom = GeometryInfoIterator(PtrGeomInfoIterator(vgeometryinfos.end(), deref));
+            if(pinfo->_geometrygroup.size() > 0 && plink->GetGroupNumGeometries(pinfo->_geometrygroup) >= 0) {
+                const std::vector<KinBody::GeometryInfoPtr>& vgeometryinfos = plink->GetGeometriesFromGroup(pinfo->_geometrygroup);
+                FOREACH(itgeominfo, vgeometryinfos) {
+                    const KinBody::GeometryInfoPtr& pgeominfo = *itgeominfo;
+                    if( !pgeominfo ) {
+                        int igeominfo = itgeominfo - vgeometryinfos.begin();
+                        throw OpenRAVE::OpenRAVEException(str(boost::format("Failed to access geometry info %d for link %s:%s with geometrygroup %s")%igeominfo%plink->GetParent()->GetName()%plink->GetName()%pinfo->_geometrygroup), OpenRAVE::ORE_InvalidState);
+                    }
+                    const CollisionGeometryPtr pfclgeom = _CreateFCLGeomFromGeometryInfo(_meshFactory, *pgeominfo);
+
+                    if( !pfclgeom ) {
+                        continue;
+                    }
+
+                    // We do not set the transformation here and leave it to _Synchronize
+                    CollisionObjectPtr pfclcoll = boost::make_shared<fcl::CollisionObject>(pfclgeom);
+                    pfclcoll->setUserData(linkinfo.get());
+                    linkinfo->vgeoms.push_back(TransformCollisionPair(pgeominfo->_t, pfclcoll));
+
+                    KinBody::Link::Geometry _tmpgeometry(boost::shared_ptr<KinBody::Link>(), *pgeominfo);
+                    if( itgeominfo == vgeometryinfos.begin() ) {
+                        enclosingBV = ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
+                    }
+                    else {
+                        enclosingBV += ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
+                    }
+                }
             }
             else {
-                std::vector<KinBody::Link::GeometryPtr> const &geoms = (*itlink)->GetGeometries();
-                typedef boost::function<KinBody::GeometryInfo const& (KinBody::Link::GeometryPtr const&)> Func;
-                typedef boost::transform_iterator<Func, std::vector<KinBody::Link::GeometryPtr>::const_iterator> PtrGeomInfoIterator;
-                Func getInfo = [] (KinBody::Link::GeometryPtr const &itgeom) -> KinBody::GeometryInfo const& {
-                                   return itgeom->GetInfo();
-                               };
-                begingeom = GeometryInfoIterator(PtrGeomInfoIterator(geoms.begin(), getInfo));
-                endgeom = GeometryInfoIterator(PtrGeomInfoIterator(geoms.end(), getInfo));
+                const std::vector<KinBody::Link::GeometryPtr> & vgeometries = plink->GetGeometries();
+                FOREACH(itgeom, vgeometries) {
+                    const KinBody::GeometryInfo& geominfo = (*itgeom)->GetInfo();
+                    const CollisionGeometryPtr pfclgeom = _CreateFCLGeomFromGeometryInfo(_meshFactory, geominfo);
+
+                    if( !pfclgeom ) {
+                        continue;
+                    }
+
+                    // We do not set the transformation here and leave it to _Synchronize
+                    CollisionObjectPtr pfclcoll = boost::make_shared<fcl::CollisionObject>(pfclgeom);
+                    pfclcoll->setUserData(linkinfo.get());
+
+                    linkinfo->vgeoms.push_back(TransformCollisionPair(geominfo._t, pfclcoll));
+
+                    KinBody::Link::Geometry _tmpgeometry(boost::shared_ptr<KinBody::Link>(), geominfo);
+                    if( itgeom == vgeometries.begin() ) {
+                        enclosingBV = ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
+                    }
+                    else {
+                        enclosingBV += ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
+                    }
+                }
             }
 
-            for(GeometryInfoIterator itgeominfo = begingeom; itgeominfo != endgeom; ++itgeominfo) {
-                const CollisionGeometryPtr pfclgeom = _CreateFCLGeomFromGeometryInfo(_meshFactory, *itgeominfo);
-
-                if( !pfclgeom ) {
-                    continue;
-                }
-
-                // We do not set the transformation here and leave it to _Synchronize
-                CollisionObjectPtr pfclcoll = boost::make_shared<fcl::CollisionObject>(pfclgeom);
-                pfclcoll->setUserData(link.get());
-
-                link->vgeoms.push_back(TransformCollisionPair(itgeominfo->_t, pfclcoll));
+            if( linkinfo->vgeoms.size() == 0 ) {
+                RAVELOG_DEBUG_FORMAT("Initializing link %s/%s with 0 geometries (env %d) (userdatakey %s)",pbody->GetName()%plink->GetName()%_penv->GetId()%_userdatakey);
             }
-
-            if( link->vgeoms.size() == 0 ) {
-                RAVELOG_DEBUG_FORMAT("Initializing link %s/%s with 0 geometries (env %d) (userdatakey %s)",pbody->GetName()%(*itlink)->GetName()%_penv->GetId()%_userdatakey);
-            } else {
-                // create the bounding volume for the link
-                KinBody::Link::Geometry _tmpgeometry(boost::shared_ptr<KinBody::Link>(), *begingeom);
-                fcl::AABB enclosingBV = ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
-                for(GeometryInfoIterator it = ++begingeom; it != endgeom; ++it) {
-                    KinBody::Link::Geometry _tmpgeometry(boost::shared_ptr<KinBody::Link>(), *it);
-                    enclosingBV += ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
-                }
+            else {
                 CollisionGeometryPtr pfclgeomBV = std::make_shared<fcl::Box>(enclosingBV.max_ - enclosingBV.min_);
                 CollisionObjectPtr pfclcollBV = boost::make_shared<fcl::CollisionObject>(pfclgeomBV);
                 Transform trans(Vector(1,0,0,0),ConvertVectorFromFCL(0.5 * (enclosingBV.min_ + enclosingBV.max_)));
-                pfclcollBV->setUserData(link.get());
-                link->linkBV = std::make_pair(trans, pfclcollBV);
+                pfclcollBV->setUserData(linkinfo.get());
+                linkinfo->linkBV = std::make_pair(trans, pfclcollBV);
             }
 
             //link->nLastStamp = pinfo->nLastStamp;
-            link->bodylinkname = pbody->GetName() + "/" + (*itlink)->GetName();
-            pinfo->vlinks.push_back(link);
+            linkinfo->bodylinkname = pbody->GetName() + "/" + plink->GetName();
+            pinfo->vlinks.push_back(linkinfo);
 #ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
-            RAVELOG_DEBUG_FORMAT("FCLSPACECOLLISIONOBJECT|%s|%s", link->linkBV.second.get()%link->bodylinkname);
+            RAVELOG_DEBUG_FORMAT("FCLSPACECOLLISIONOBJECT|%s|%s", linkinfo->linkBV.second.get()%linkinfo->bodylinkname);
 #endif
         }
 
