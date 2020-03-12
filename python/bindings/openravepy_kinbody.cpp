@@ -1251,6 +1251,7 @@ object PyLink::GetGlobalInertia() const {
     pvalue[6] = t.m[8];
     pvalue[7] = t.m[9];
     pvalue[8] = t.m[10];
+    return pyvalues;
 #else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { 3, 3};
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
