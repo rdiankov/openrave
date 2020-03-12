@@ -339,14 +339,23 @@ TransformMatrix ExtractTransformMatrix(const object& oraw)
 object toPyArray(const TransformMatrix& t)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    const std::array<dReal, 16> arr {
-        t.m[0], t.m[1], t.m[2], t.trans.x,
-        t.m[4], t.m[5], t.m[6], t.trans.y,
-        t.m[8], t.m[9], t.m[10], t.trans.z,
-        0, 0, 0, 1
-    };
-    py::array_t<dReal> pyvalues = toPyArray(arr);
-    pyvalues.resize({4, 4});
+    py::array_t<dReal> pyvalues({4, 4});
+    py::buffer_info buf = pyvalues.request();
+    dReal* pvalue = (dReal*) buf.ptr;
+    pvalue[0] = t.m[0];
+    pvalue[1] = t.m[1];
+    pvalue[2] = t.m[2];
+    pvalue[3] = t.trans.x;
+    pvalue[4] = t.m[4];
+    pvalue[5] = t.m[5];
+    pvalue[6] = t.m[6];
+    pvalue[7] = t.trans.y;
+    pvalue[8] = t.m[8];
+    pvalue[9] = t.m[9];
+    pvalue[10] = t.m[10];
+    pvalue[11] = t.trans.z;
+    pvalue[12] = pvalue[13] = pvalue[14] = 0.0;
+    pvalue[15] = 1.0;
     return pyvalues;
 #else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { 4,4};
@@ -364,10 +373,17 @@ object toPyArray(const TransformMatrix& t)
 object toPyArray(const Transform& t)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    const std::array<dReal, 7> arr {
-        t.rot.x, t.rot.y, t.rot.z, t.rot.w, t.trans.x, t.trans.y, t.trans.z
-    };
-    return toPyArray(arr);
+    py::array_t<dReal> pyvalues({7});
+    py::buffer_info buf = pyvalues.request();
+    dReal* pvalue = (dReal*) buf.ptr;
+    pvalue[0] = t.rot.x;
+    pvalue[1] = t.rot.y;
+    pvalue[2] = t.rot.z;
+    pvalue[3] = t.rot.w;
+    pvalue[4] = t.trans.x;
+    pvalue[5] = t.trans.y;
+    pvalue[6] = t.trans.z;
+    return pyvalues;
 #else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { 7};
     PyObject *pyvalues = PyArray_SimpleNew(1,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
@@ -1332,12 +1348,15 @@ object PyEnvironmentBase::CheckCollisionRays(py::numeric::array rays, PyKinBodyP
 
     RAY r;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    const size_t numel = nRays * 6;
-    std::vector<dReal> vpos(numel);
-    std::vector<bool> vcollision(nRays);
-    dReal* ppos = vpos.data();
-    // std::vector<bool> is special, so use alias
-    std::vector<bool>& pcollision = vcollision;
+    // position
+    py::array_t<dReal> pypos({nRays, 6});
+    py::buffer_info bufpos = pypos.request();
+    dReal* ppos = (dReal*) bufpos.ptr;
+
+    // collision
+    py::array_t<bool> pycollision({nRays});
+    py::buffer_info bufcollision = pycollision.request();
+    bool* pcollision = (bool*) bufcollision.ptr;   
 #else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { nRays,6};
     PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal) == sizeof(double) ? PyArray_DOUBLE : PyArray_FLOAT);
@@ -1386,9 +1405,6 @@ object PyEnvironmentBase::CheckCollisionRays(py::numeric::array rays, PyKinBodyP
         }
     }
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pypos = toPyArray(vpos);
-    pypos.resize({nRays, 6});
-    py::array_t<bool> pycollision = toPyArray(vcollision);
     return py::make_tuple(pycollision, pypos);
 #else // USE_PYBIND11_PYTHON_BINDINGS
     return py::make_tuple(py::to_array_astype<bool>(pycollision), py::to_array_astype<dReal>(pypos));

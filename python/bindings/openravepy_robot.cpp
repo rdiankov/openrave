@@ -562,9 +562,9 @@ object PyRobotBase::PyManipulator::FindIKSolutions(object oparam, int filteropti
         const size_t nSolutions = vsolutions.size();
         const size_t nArmIndices = _pmanip->GetArmIndices().size();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        const size_t numel = nSolutions * nArmIndices;
-        std::vector<dReal> vpos(numel);
-        dReal* ppos = vpos.data();
+        py::array_t<dReal> pysolutions({nSolutions, nArmIndices});
+        py::buffer_info buf = pysolutions.request();
+        dReal* ppos = (dReal*) buf.ptr;
 #else // USE_PYBIND11_PYTHON_BINDINGS
         npy_intp dims[] = { npy_intp(nSolutions), npy_intp(nArmIndices) };
         PyObject *pysolutions = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
@@ -576,8 +576,6 @@ object PyRobotBase::PyManipulator::FindIKSolutions(object oparam, int filteropti
             ppos += nArmIndices;
         }
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        py::array_t<dReal> pysolutions = toPyArray(vpos);
-        pysolutions.resize({(int) nSolutions, (int) nArmIndices});
         return pysolutions;
 #else // USE_PYBIND11_PYTHON_BINDINGS
         return py::to_array_astype<dReal>(pysolutions);
@@ -623,9 +621,9 @@ object PyRobotBase::PyManipulator::FindIKSolutions(object oparam, object freepar
         const size_t nSolutions = vsolutions.size();
         const size_t nArmIndices = _pmanip->GetArmIndices().size();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        const size_t numel = nSolutions * nArmIndices;
-        std::vector<dReal> vpos(numel);
-        dReal* ppos = vpos.data();
+        py::array_t<dReal> pysolutions({nSolutions, nArmIndices});
+        py::buffer_info buf = pysolutions.request();
+        dReal* ppos = (dReal*) buf.ptr;
 #else // USE_PYBIND11_PYTHON_BINDINGS
         npy_intp dims[] = { npy_intp(nSolutions), npy_intp(nArmIndices) };
         PyObject *pysolutions = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
@@ -637,8 +635,6 @@ object PyRobotBase::PyManipulator::FindIKSolutions(object oparam, object freepar
             ppos += nArmIndices;
         }
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        py::array_t<dReal> pysolutions = toPyArray(vpos);
-        pysolutions.resize({(int) nSolutions, (int) nArmIndices});
         return pysolutions;
 #else // USE_PYBIND11_PYTHON_BINDINGS
         return py::to_array_astype<dReal>(pysolutions);

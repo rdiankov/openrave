@@ -194,10 +194,15 @@ object search_array(ANNkd_tree& kdtree, object qarray, int k, double eps, bool p
     ANNpointManaged annq(kdtree.theDim());
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    std::vector<ANNdist> vdists(N * k);
-    std::vector<int> vidx(N * k);
-    ANNdist* pdists = vdists.data();
-    ANNidx* pidx = vidx.data();
+    // distance
+    py::array_t<ANNdist> pydists({N, k});
+    py::buffer_info bufdists = pydists.request();
+    ANNdist* pdists = (ANNdist*) bufdists.ptr;
+
+    // index
+    py::array_t<ANNidx> pyidx({N, k});
+    py::buffer_info bufidx = pyidx.request();
+    ANNidx* pidx = (ANNidx*) bufidx.ptr;
 #else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { N,k};
     PyObject *pydists = PyArray_SimpleNew(2,dims, sizeof(ANNdist)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
@@ -230,10 +235,6 @@ object search_array(ANNkd_tree& kdtree, object qarray, int k, double eps, bool p
     }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<ANNdist> pydists = openravepy::toPyArray(vdists);
-    pydists.resize({N, k});
-    py::array_t<int> pyidx = openravepy::toPyArray(vidx);
-    pyidx.resize({N, k});
     return py::make_tuple(pyidx, pydists);
 #else // USE_PYBIND11_PYTHON_BINDINGS
     return py::make_tuple(py::to_array_astype<int>(pyidx), py::to_array_astype<ANNdist>(pydists));
@@ -262,10 +263,15 @@ object k_fixed_radius_search(ANNkd_tree& kdtree, object q, double sqRad, int k, 
     
     const int numel = std::min(k, kball);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    std::vector<ANNdist> vdists(numel);
-    std::vector<int> vidx(numel);
-    ANNdist* pdists = vdists.data();
-    ANNidx* pidx = vidx.data();
+    // distance
+    py::array_t<ANNdist> pydists({numel});
+    py::buffer_info bufdists = pydists.request();
+    ANNdist* pdists = (ANNdist*) bufdists.ptr;
+
+    // index
+    py::array_t<ANNidx> pyidx({numel});
+    py::buffer_info bufidx = pyidx.request();
+    ANNidx* pidx = (ANNidx*) bufidx.ptr;
 #else // USE_PYBIND11_PYTHON_BINDINGS    
     npy_intp dims[] = {numel};
     PyObject *pydists = PyArray_SimpleNew(1,dims, sizeof(ANNdist)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
@@ -289,7 +295,7 @@ object k_fixed_radius_search(ANNkd_tree& kdtree, object q, double sqRad, int k, 
 
     BOOST_ASSERT(kball > k || addindex==kball);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    return py::make_tuple(openravepy::toPyArray(vidx), openravepy::toPyArray(vdists), kball);
+    return py::make_tuple(pyidx, pydists, kball);
 #else // USE_PYBIND11_PYTHON_BINDINGS
     return py::make_tuple(py::to_array_astype<int>(pyidx), py::to_array_astype<ANNdist>(pydists), kball);
 #endif // USE_PYBIND11_PYTHON_BINDINGS
@@ -306,8 +312,9 @@ object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqR
     BOOST_ASSERT(len(qarray[0])==kdtree.theDim());
     ANNpointManaged annq(kdtree.theDim());
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    std::vector<int> vkball(N);
-    int* pkball = vkball.data();
+    py::array_t<int> pykball({N});
+    py::buffer_info bufkball = pykball.request();
+    int* pkball = (int*) bufkball.ptr;
 #else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dimsball[] = { N};
     PyObject *pykball = PyArray_SimpleNew(1,dimsball, PyArray_INT);
@@ -324,18 +331,22 @@ object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqR
             pkball[i] = kdtree.annkFRSearch(annq.pt, sqRad, k, NULL, NULL, eps);
         }
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        return py::make_tuple(py::empty_array_astype<int>(), py::empty_array_astype<ANNdist>(), openravepy::toPyArray(vkball));
+        return py::make_tuple(py::empty_array_astype<int>(), py::empty_array_astype<ANNdist>(), pykball);
 #else
         return py::make_tuple(py::empty_array_astype<int>(), py::empty_array_astype<ANNdist>(), py::to_array_astype<int>(pykball));
 #endif // USE_PYBIND11_PYTHON_BINDINGS
     }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    const size_t numel = N * k;
-    std::vector<ANNdist> vdists(numel);
-    std::vector<int> vidx(numel);
-    ANNdist* pdists = vdists.data();
-    ANNidx* pidx = vidx.data();
+    // distance
+    py::array_t<ANNdist> pydists({N, k});
+    py::buffer_info bufdists = pydists.request();
+    ANNdist* pdists = (ANNdist*) bufdists.ptr;
+
+    // index
+    py::array_t<ANNidx> pyidx({N, k});
+    py::buffer_info bufidx = pyidx.request();
+    ANNidx* pidx = (ANNidx*) bufidx.ptr;
 #else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { N,k};
     PyObject *pydists = PyArray_SimpleNew(2,dims, sizeof(ANNdist)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
@@ -367,11 +378,7 @@ object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqR
     }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<ANNdist> pydists = openravepy::toPyArray(vdists);
-    pydists.resize({N, k});
-    py::array_t<int> pyidx = openravepy::toPyArray(vidx);
-    pyidx.resize({N, k});
-    return py::make_tuple(pyidx, pydists, openravepy::toPyArray(vkball));
+    return py::make_tuple(pyidx, pydists, pykball);
 #else // USE_PYBIND11_PYTHON_BINDINGS
     return py::make_tuple(py::to_array_astype<int>(pyidx), py::to_array_astype<ANNdist>(pydists), py::to_array_astype<int>(pykball));
 #endif // USE_PYBIND11_PYTHON_BINDINGS

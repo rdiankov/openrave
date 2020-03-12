@@ -91,7 +91,11 @@ void PySideWall::Get(KinBody::GeometryInfo::SideWall& sidewall) {
 PyTestPickle::PyTestPickle() {
     if(IS_PYTHONOBJECT_NONE(_arr)) {
         const std::vector<dReal> v {1, 2, 4.5, -3.0, 8, 9, 10, 11, 12};
-        _arr = toPyArray(v);
+        py::array_t<dReal> pyarr({(int) v.size()});
+        py::buffer_info buf = pyarr.request();
+        dReal* parr = (dReal*) buf.ptr;
+        std::memcpy(parr, v.data(), v.size() * sizeof(dReal));
+        _arr = pyarr;
     }
 }
 PyTestPickle::~PyTestPickle() {}
@@ -2728,9 +2732,9 @@ object PyKinBody::GetLinkVelocities() const
     _pbody->GetLinkVelocities(velocities);
     const size_t nvelocities = velocities.size();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    const size_t numel = nvelocities * 6;
-    std::vector<dReal> vvelocities(numel);
-    dReal *pfvel = vvelocities.data();
+    py::array_t<dReal> pyvel({(int) nvelocities, 6});
+    py::buffer_info buf = pyvel.request();
+    dReal* pfvel = (dReal*) buf.ptr;
 #else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = {npy_intp(velocities.size()),npy_intp(6)};
     PyObject *pyvel = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
@@ -2745,8 +2749,6 @@ object PyKinBody::GetLinkVelocities() const
         pfvel[6*i+5] = velocities[i].second.z;
     }
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pyvel = toPyArray(vvelocities);
-    pyvel.resize({(int) nvelocities, 6});
     return pyvel;
 #else // USE_PYBIND11_PYTHON_BINDINGS
     return py::to_array_astype<dReal>(pyvel);
@@ -2785,17 +2787,17 @@ object PyKinBody::GetLinkAccelerations(object odofaccelerations, object oexterna
     std::vector<std::pair<Vector,Vector> > vLinkAccelerations;
     _pbody->GetLinkAccelerations(vDOFAccelerations, vLinkAccelerations, pmapExternalAccelerations);
 
+   const size_t nLinkAccelerations = vLinkAccelerations.size();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    const size_t nLinkAccelerations = vLinkAccelerations.size();
-    const size_t numel = nLinkAccelerations * 6;
-    std::vector<dReal> vaccel(numel);
-    dReal* pf = vaccel.data();
+    py::array_t<dReal> pyaccel({(int) nLinkAccelerations, 6});
+    py::buffer_info buf = pyaccel.request();
+    dReal* pf = (dReal*) buf.ptr;
 #else // USE_PYBIND11_PYTHON_BINDINGS    
-    npy_intp dims[] = {npy_intp(vLinkAccelerations.size()),npy_intp(6)};
+    npy_intp dims[] = {npy_intp(nLinkAccelerations), npy_intp(6)};
     PyObject *pyaccel = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* pf = (dReal*)PyArray_DATA(pyaccel);
 #endif // USE_PYBIND11_PYTHON_BINDINGS
-    for(size_t i = 0; i < vLinkAccelerations.size(); ++i) {
+    for(size_t i = 0; i < nLinkAccelerations; ++i) {
         pf[6*i+0] = vLinkAccelerations[i].first.x;
         pf[6*i+1] = vLinkAccelerations[i].first.y;
         pf[6*i+2] = vLinkAccelerations[i].first.z;
@@ -2804,8 +2806,6 @@ object PyKinBody::GetLinkAccelerations(object odofaccelerations, object oexterna
         pf[6*i+5] = vLinkAccelerations[i].second.z;
     }
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pyaccel = toPyArray(vaccel);
-    pyaccel.resize({(int) nLinkAccelerations, 6});
     return pyaccel;
 #else
     return py::to_array_astype<dReal>(pyaccel);
