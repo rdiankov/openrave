@@ -156,13 +156,18 @@ PyReadablePtr pyCreateStringReadable(const std::string& id, const std::string& d
 
 namespace xmlreaders
 {
-class PyXMLReaderStaticClass
+class RAVE_DEPRECATED PyXMLReaderStaticClass
 {
 public:
 };
-typedef PyReadablePtr (*pyCreateStringXMLReadableFunc)(const std::string& xmlid, const std::string& data);
-pyCreateStringXMLReadableFunc pyCreateStringXMLReadable = pyCreateStringReadable;
-} // end namespace xmlreaders
+
+PyReadablePtr RAVE_DEPRECATED pyCreateStringXMLReadable(const std::string& xmlid, const std::string& data)
+{
+    RAVELOG_WARN("CreateStringXMLReadable is deprecated. Use CreateStringReadable instead.");
+    return pyCreateStringReadable(xmlid, data);
+}
+
+} // end namespace xmlreaders (deprecated)
 
 object toPyGraphHandle(const GraphHandlePtr p)
 {
@@ -1730,9 +1735,9 @@ void init_openravepy_global()
 
     {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        scope_ scope_xmlreaders = class_<xmlreaders::PyXMLReaderStaticClass>(m, "xmlreaders")
+        scope_ RAVE_DEPRECATED scope_xmlreaders = class_<xmlreaders::PyXMLReaderStaticClass>(m, "xmlreaders")
 #else
-        scope_ scope_xmlreaders = class_<xmlreaders::PyXMLReaderStaticClass>("xmlreaders")
+        scope_ RAVE_DEPRECATED scope_xmlreaders = class_<xmlreaders::PyXMLReaderStaticClass>("xmlreaders")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                                   .def_static("CreateStringXMLReadable", xmlreaders::pyCreateStringXMLReadable, PY_ARGS("xmlid", "data") DOXY_FN1(pyCreateStringXMLReadable))

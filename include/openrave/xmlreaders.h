@@ -29,8 +29,8 @@ namespace OpenRAVE {
 
 namespace xmlreaders {
 
-typedef OpenRAVE::StringReadable StringXMLReadable;
-typedef boost::shared_ptr<StringXMLReadable> StringXMLReadablePtr;
+typedef OpenRAVE::StringReadable StringXMLReadable RAVE_DEPRECATED;
+typedef boost::shared_ptr<StringXMLReadable> StringXMLReadablePtr RAVE_DEPRECATED;
 
 /// \brief maintains a hierarchy of classes each containing the xml attributes and data
 class OPENRAVE_API HierarchicalXMLReadable : public XMLReadable
