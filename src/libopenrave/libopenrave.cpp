@@ -2995,6 +2995,41 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
     // TODO have to scale _mapCustomData by fUnitScale
 }
 
+StringReadable::StringReadable(const std::string& id, const std::string& data): XMLReadable(id), JSONReadable(), _data(data)
+{
+}
+
+StringReadable::~StringReadable()
+{
+}
+
+void StringReadable::Serialize(BaseXMLWriterPtr writer, int options) const
+{
+    if( writer->GetFormat() == "collada" ) {
+        AttributesList atts;
+        atts.emplace_back("type", "stringxmlreadable");
+        atts.emplace_back("name", GetXMLId());
+        BaseXMLWriterPtr child = writer->AddChild("extra",atts);
+        atts.clear();
+        atts.emplace_back("profile", "OpenRAVE");
+        writer = child->AddChild("technique",atts)->AddChild("data");
+    }
+    writer->SetCharData(_data);
+}
+
+const std::string& StringReadable::GetData() const
+{
+    return _data;
+}
+
+void StringReadable::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    openravejson::SaveJsonValue(value, _data, allocator);
+}
+void StringReadable::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+{
+    openravejson::LoadJsonValue(value, _data);
+}
 
 } // end namespace OpenRAVE
 

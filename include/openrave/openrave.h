@@ -642,6 +642,20 @@ enum IkParameterizationType {
     IKP_CustomDataBit = 0x00010000, ///< bit is set if the ikparameterization contains custom data, this is only used when serializing the ik parameterizations
 };
 
+class OPENRAVE_API StringReadable: public XMLReadable, public JSONReadable
+{
+public:
+    StringReadable(const std::string& id, const std::string& data);
+    virtual ~StringReadable();
+    virtual void Serialize(BaseXMLWriterPtr wirter, int options=0) const;
+    virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
+    virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+
+    const std::string& GetData() const;
+    std::string _data;
+};
+typedef boost::shared_ptr<StringReadable> StringReadablePtr;
+
 /// \brief returns a string of the ik parameterization type names
 ///
 /// \param[in] alllowercase If 1, sets all characters to lower case. Otherwise can include upper case in order to match \ref IkParameterizationType definition.

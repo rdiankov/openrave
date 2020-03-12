@@ -18,6 +18,7 @@
 #include "jsonmsgpack.h"
 
 #include <openrave/openravejson.h>
+#include <openrave/openrave.h>
 #include <rapidjson/istreamwrapper.h>
 #include <string>
 #include <fstream>
@@ -393,9 +394,16 @@ protected:
             for (rapidjson::Value::ConstMemberIterator itr = objectValue["readableInterfaces"].MemberBegin(); itr != objectValue["readableInterfaces"].MemberEnd(); itr++) {
                 std::string id = itr->name.GetString();
                 BaseJSONReaderPtr pReader = RaveCallJSONReader(pInterface->GetInterfaceType(), id, pInterface, AttributesList());
-                pReader->DeserializeJSON(itr->value, fUnitScale);
-                JSONReadablePtr pReadable = pReader->GetReadable();
-                if (!!pReadable) {
+                if(!!pReader) {
+                    pReader->DeserializeJSON(itr->value, fUnitScale);
+                    JSONReadablePtr pReadable = pReader->GetReadable();
+                    if (!!pReadable) {
+                        pInterface->SetReadableInterface(id, pReadable);
+                    }
+                }
+                else if(itr->value.IsString()){
+                    // TODO: current json data is not able to help distinguish the type. So we try to use string readable if the value is string and no reader is found.
+                    StringReadablePtr pReadable(new StringReadable(id, itr->value.GetString()));
                     pInterface->SetReadableInterface(id, pReadable);
                 }
             }

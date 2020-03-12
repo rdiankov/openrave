@@ -143,20 +143,31 @@ object toPyReadable(ReadablePtr p) {
     return py::to_object(PyReadablePtr(new PyReadable(p)));
 }
 
-namespace xmlreaders
-{
 
-class PyStaticClass
+class PyStringReaderStaticClass
 {
 public:
 };
 
-PyReadablePtr pyCreateStringXMLReadable(const std::string& xmlid, const std::string& data)
+PyReadablePtr pyCreateStringReadable(const std::string& id, const std::string& data)
 {
-    return PyReadablePtr(new PyReadable(ReadablePtr(new OpenRAVE::xmlreaders::StringXMLReadable(xmlid, data))));
+    return PyReadablePtr(new PyReadable(ReadablePtr(new OpenRAVE::StringReadable(id, data))));
 }
 
-} // end namespace xmlreaders
+namespace xmlreaders
+{
+class RAVE_DEPRECATED PyXMLReaderStaticClass
+{
+public:
+};
+
+PyReadablePtr RAVE_DEPRECATED pyCreateStringXMLReadable(const std::string& xmlid, const std::string& data)
+{
+    RAVELOG_WARN("CreateStringXMLReadable is deprecated. Use CreateStringReadable instead.");
+    return pyCreateStringReadable(xmlid, data);
+}
+
+} // end namespace xmlreaders (deprecated)
 
 object toPyGraphHandle(const GraphHandlePtr p)
 {
@@ -1708,9 +1719,25 @@ void init_openravepy_global()
 
     {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        scope_ scope_xmlreaders = class_<xmlreaders::PyStaticClass>(m, "xmlreaders")
+        scope_ scope_stringreaders = class_<PyStringReaderStaticClass>(m, "stringreaders")
 #else
-        scope_ scope_xmlreaders = class_<xmlreaders::PyStaticClass>("xmlreaders")
+        scope_ scope_stringreaders = class_<PyStringReaderStaticClass>("stringreaders")
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                            .def_static("CreateStringReadable", xmlreaders::pyCreateStringXMLReadable, PY_ARGS("id", "data") DOXY_FN1(pyCreateStringReadable))
+#else
+                            // https://wiki.python.org/moin/boost.python/HowTo
+                            .def("CreateStringReadable", pyCreateStringReadable, PY_ARGS("id", "data") DOXY_FN1(pyCreateStringReadable))
+                            .staticmethod("CreateStringReadable")
+#endif
+        ;
+    }
+
+    {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        scope_ RAVE_DEPRECATED scope_xmlreaders = class_<xmlreaders::PyXMLReaderStaticClass>(m, "xmlreaders")
+#else
+        scope_ RAVE_DEPRECATED scope_xmlreaders = class_<xmlreaders::PyXMLReaderStaticClass>("xmlreaders")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                                   .def_static("CreateStringXMLReadable", xmlreaders::pyCreateStringXMLReadable, PY_ARGS("xmlid", "data") DOXY_FN1(pyCreateStringXMLReadable))
