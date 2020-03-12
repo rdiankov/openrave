@@ -282,9 +282,9 @@ object PyTrajectoryBase::__getitem__(py::slice indices) const
     const int nvalues = values.size();
     OPENRAVE_ASSERT_OP(numdof, ==, nvalues);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    const int numel = nindices * numdof;
-    std::vector<dReal> vpos(numel);
-    dReal* ppos = vpos.data();
+    py::array_t<dReal> pypos({nindices, numdof});
+    py::buffer_info buf = pypos.request();
+    dReal* ppos = (dReal*) buf.ptr;
 #else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { npy_intp(nindices), npy_intp(numdof) };
     PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
@@ -300,8 +300,6 @@ object PyTrajectoryBase::__getitem__(py::slice indices) const
 #endif // USE_PYBIND11_PYTHON_BINDINGS
     }
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pypos = toPyArray(vpos);
-    pypos.resize({nindices, numdof});
     return pypos;
 #else // USE_PYBIND11_PYTHON_BINDINGS
     return py::to_array_astype<dReal>(pypos);

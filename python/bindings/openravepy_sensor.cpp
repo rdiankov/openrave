@@ -345,15 +345,15 @@ PySensorBase::PyCameraSensorData::PyCameraSensorData(OPENRAVE_SHARED_PTR<SensorB
     {
         const size_t numel = pgeom->height * pgeom->width * 3;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        py::array_t<uint8_t> pyimagedata(numel);
+        py::array_t<uint8_t> pyimagedata({pgeom->height, pgeom->width, 3});
         py::buffer_info buf = pyimagedata.request();
-        memset((uint8_t*)buf.ptr, 0, numel);
-        pyimagedata.resize({pgeom->height, pgeom->width, 3});
+        uint8_t* pimagedata = (uint8_t*) buf.ptr;
+        memset(pimagedata, 0, numel * sizeof(uint8_t)); // although we know sizeof(uint8_t)==1
         imagedata = pyimagedata;
 #else // USE_PYBIND11_PYTHON_BINDINGS
         npy_intp dims[] = { pgeom->height,pgeom->width,3};
         PyObject *pyvalues = PyArray_SimpleNew(3,dims, PyArray_UINT8);
-        memset(PyArray_DATA(pyvalues), 0, numel);
+        memset(PyArray_DATA(pyvalues), 0, numel * sizeof(uint8_t));
         imagedata = py::to_array_astype<uint8_t>(pyvalues);
 #endif // USE_PYBIND11_PYTHON_BINDINGS
     }

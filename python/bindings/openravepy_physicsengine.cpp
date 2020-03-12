@@ -116,17 +116,17 @@ object PyPhysicsEngineBase::GetLinkVelocities(PyKinBodyPtr pykinbody)
     if( !_pPhysicsEngine->GetLinkVelocities(pbody,velocities) ) {
         return py::none_();
     }
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
     const size_t nvelocities = velocities.size();
-    const size_t numel = nvelocities * 6;
-    std::vector<dReal> vvel(numel);
-    dReal* pfvel = vvel.data();
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pyvel({(int) nvelocities, 6});
+    py::buffer_info bufvel = pyvel.request();
+    dReal* pfvel = (dReal*) bufvel.ptr;
 #else // USE_PYBIND11_PYTHON_BINDINGS
-    npy_intp dims[] = { npy_intp(velocities.size()), 6};
+    npy_intp dims[] = {npy_intp(nvelocities), 6};
     PyObject *pyvel = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* pfvel = (dReal*)PyArray_DATA(pyvel);
 #endif // USE_PYBIND11_PYTHON_BINDINGS
-    for(size_t i = 0; i < velocities.size(); ++i) {
+    for(size_t i = 0; i < nvelocities; ++i) {
         pfvel[6*i+0] = velocities[i].first.x;
         pfvel[6*i+1] = velocities[i].first.y;
         pfvel[6*i+2] = velocities[i].first.z;
@@ -135,8 +135,6 @@ object PyPhysicsEngineBase::GetLinkVelocities(PyKinBodyPtr pykinbody)
         pfvel[6*i+5] = velocities[i].second.z;
     }
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pyvel = toPyArray(vvel);
-    pyvel.resize({(int) nvelocities, 6});
     return pyvel;
 #else
     return py::to_array_astype<dReal>(pyvel);

@@ -525,12 +525,13 @@ object PyCollisionCheckerBase::CheckCollisionRays(object rays, PyKinBodyPtr pbod
 
     RAY r;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    const size_t numel = num * 6;
-    std::vector<dReal> vpos(numel);
-    std::vector<bool> vcollision(num);
-    dReal* ppos = vpos.data();
-    // std::vector<bool> is special, so use alias
-    std::vector<bool>& pcollision = vcollision;
+    py::array_t<dReal> pypos({num, 6});
+    py::buffer_info bufpos = pypos.request();
+    dReal* ppos = (dReal*) bufpos.ptr;
+
+    py::array_t<bool> pycollision({num});
+    py::buffer_info bufcollision = pycollision.request();
+    bool* pcollision = (bool*) bufcollision.ptr;
 #else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { num,6};
     PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
@@ -568,9 +569,6 @@ object PyCollisionCheckerBase::CheckCollisionRays(object rays, PyKinBodyPtr pbod
         }
     }
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pypos = toPyArray(vpos);
-    pypos.resize({num, 6});
-    py::array_t<bool> pycollision = toPyArray(vcollision);
     return py::make_tuple(pycollision, pypos);
 #else // USE_PYBIND11_PYTHON_BINDINGS
     return py::make_tuple(py::to_array_astype<bool>(pycollision), py::to_array_astype<dReal>(pypos));
