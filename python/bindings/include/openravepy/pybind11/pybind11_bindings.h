@@ -34,6 +34,13 @@ inline object to_object(const T& t) {
     // but (x) cannot cast *PyObject to py::object
     return cast(t);
 }
+template <>
+inline object to_object(const std::string& t) {
+    // https://pybind11.readthedocs.io/en/stable/advanced/cast/strings.html#return-c-strings-without-conversion
+    // std::string is special; since we may store Joseph's GenericTrajectory in binary form,
+    // we should return std::string without transcoding
+    return bytes(t);
+}
 inline object handle_to_object(PyObject* pyo) {
     return cast<object>(pyo);
 }
@@ -102,7 +109,7 @@ inline py::object ConvertStringToUnicode(const std::string& s)
        return py::cast<py::object>(pyo); // py::handle_to_object(pyo);
        ```
      */
-    return py::cast(s);
+    return py::to_object(s);
 }
 
 #ifdef OPENRAVE_BINDINGS_PYARRAY
@@ -128,6 +135,18 @@ inline py::array_t<T> toPyArray(const std::vector<T>& v)
     return toPyArrayN(v.data(), v.size());
 }
 
+// std::vector<bool> is special
+template <>
+inline py::array_t<bool> toPyArray(const std::vector<bool>& v)
+{
+    py::array_t<bool> arr;
+    arr.resize({(int) v.size()});
+    for(size_t i = 0; i < v.size(); ++i) {
+        arr[i] = v[i];
+    }
+    return arr;
+}
+
 template <typename T>
 inline py::array_t<T> toPyArray(const std::vector<T>& v, std::vector<npy_intp>& dims)
 {
@@ -140,6 +159,12 @@ inline py::array_t<T> toPyArray(const std::vector<T>& v, std::vector<npy_intp>& 
     }
     BOOST_ASSERT(numel == v.size());
     return toPyArrayN(v.data(), dims);
+}
+
+template <typename T, long unsigned int N>
+inline py::array_t<T> toPyArray(const std::array<T, N>& v)
+{
+    return toPyArrayN(v.data(), N);
 }
 
 template <typename T, int N>

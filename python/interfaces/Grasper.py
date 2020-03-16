@@ -58,19 +58,19 @@ class Grasper:
         clone.avoidlinks = [clone.robot.GetLink(link.GetName()) for link in self.avoidlinks]
         envother.Add(clone.prob,True,clone.args)
         return clone
-    def Grasp(self,direction=None,roll=None,position=None,standoff=None,target=None,stablecontacts=False,forceclosure=False,transformrobot=True,onlycontacttarget=True,tightgrasp=False,graspingnoise=None,execute=None,translationstepmult=None,outputfinal=False,manipulatordirection=None,finestep=None,vintersectplane=None,chuckingdirection=None):
+    def Grasp(self, direction=None, roll=None, position=None, standoff=None, target=None, stablecontacts=False, forceclosure=False, transformrobot=True, onlycontacttarget=True, tightgrasp=False, graspingnoise=None, execute=None, translationstepmult=None, outputfinal=False, manipulatordirection=None, coarsestep=None, finestep=None, vintersectplane=None, chuckingdirection=None, ordereddofindices=None, avoidcontact=False):
         """See :ref:`module-grasper-grasp`
         """
         cmd = 'Grasp '
         if direction is not None:
-            cmd += 'direction %.15e %.15e %.15e '%(direction[0],direction[1],direction[2])
+            cmd += 'direction %.15e %.15e %.15e '%(direction[0], direction[1], direction[2])
         if transformrobot:
-            cmd += 'roll %.15e position %.15e %.15e %.15e manipulatordirection %.15e %.15e %.15e '%(roll,position[0],position[1],position[2],manipulatordirection[0],manipulatordirection[1],manipulatordirection[2])
+            cmd += 'roll %.15e position %.15e %.15e %.15e manipulatordirection %.15e %.15e %.15e '%(roll, position[0], position[1], position[2], manipulatordirection[0], manipulatordirection[1], manipulatordirection[2])
         if standoff is not None:
             cmd += 'standoff %.15e '%standoff
         if target is not None:
             cmd += 'target %s '%target.GetName()
-        cmd += 'stablecontacts %d forceclosure %d transformrobot %d onlycontacttarget %d tightgrasp %d outputfinal %d '%(stablecontacts,forceclosure,transformrobot,onlycontacttarget,tightgrasp,outputfinal)
+        cmd += 'stablecontacts %d forceclosure %d transformrobot %d onlycontacttarget %d tightgrasp %d outputfinal %d '%(stablecontacts, forceclosure, transformrobot, onlycontacttarget, tightgrasp, outputfinal)
         if self.friction is not None:
             cmd += 'friction %.15e '%self.friction
         for link in self.avoidlinks:
@@ -79,6 +79,8 @@ class Grasper:
             cmd += 'graspingnoise %.15e '%graspingnoise
         if translationstepmult is not None:
             cmd += 'translationstepmult %.15e '%translationstepmult
+        if coarsestep is not None:
+            cmd += 'coarsestep %.15e '%coarsestep
         if finestep is not None:
             cmd += 'finestep %.15e '%finestep
         if vintersectplane is not None:
@@ -89,6 +91,12 @@ class Grasper:
                 cmd += '%.15e '%value
         if execute is not None:
             cmd += 'execute %d '%execute
+        if ordereddofindices is not None:
+            cmd += 'ordereddofindices '
+            for value in ordereddofindices:
+                cmd += '%d '%value
+        if avoidcontact:
+            cmd += 'avoidcontact '
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise PlanningError('Grasp failed')

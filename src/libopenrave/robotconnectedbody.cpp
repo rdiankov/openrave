@@ -111,9 +111,9 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
     openravejson::LoadJsonValueByKey(value, "uri", _uri);
     openravejson::LoadJsonValueByKey(value, "transform", _trelative);
 
+    _vLinkInfos.resize(0);
     // if(value.HasMember("links"))
     // {
-    //     _vLinkInfos.resize(0);
     //     _vLinkInfos.reserve(value["links"].Size());
     //     for (size_t i = 0; i < value["links"].Size(); ++i) {
     //         LinkInfoPtr linkinfo(new LinkInfo());
@@ -122,9 +122,9 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
     //     }
     // }
 
+    _vJointInfos.resize(0);
     // if(value.HasMember("joints"))
     // {
-    //     _vJointInfos.resize(0);
     //     _vJointInfos.reserve(value["joints"].Size());
     //     for (size_t i = 0; i < value["joints"].Size(); ++i) {
     //         JointInfoPtr jointinfo(new JointInfo());
@@ -133,9 +133,9 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
     //     }
     // }
 
+    _vManipulatorInfos.resize(0);
     // if(value.HasMember("manipulators"))
     // {
-    //     _vManipulatorInfos.resize(0);
     //     _vManipulatorInfos.reserve(value["manipulators"].Size());
     //     for (size_t i = 0; i < value["manipulators"].Size(); ++i) {
     //         ManipulatorInfoPtr manipulatorinfo(new ManipulatorInfo());
@@ -144,9 +144,9 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
     //     }
     // }
 
+    _vAttachedSensorInfos.resize(0);
     // if(value.HasMember("attachedSensors"))
     // {
-    //     _vAttachedSensorInfos.resize(0);
     //     _vAttachedSensorInfos.reserve(value["attachedSensors"].Size());
     //     for (size_t i = 0; i < value["attachedSensors"].Size(); ++i) {
     //         AttachedSensorInfoPtr attachedsensorinfo(new AttachedSensorInfo());
