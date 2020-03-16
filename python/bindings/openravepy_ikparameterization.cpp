@@ -51,8 +51,16 @@ namespace numeric = py::numeric;
 PyIkParameterization::PyIkParameterization() {
 }
 PyIkParameterization::PyIkParameterization(const string &s) {
-    std::stringstream ss(s);
-    ss >> _param;
+    rapidjson::Document document;
+    rapidjson::ParseResult isJson = document.Parse(s.c_str());
+    if (isJson) {
+        _param.DeserializeJSON(document);
+    }
+    else { // backward compatibility
+        std::stringstream ss(s);
+        ss >> _param;
+    }
+
 }
 PyIkParameterization::PyIkParameterization(object o, IkParameterizationType type)
 {
