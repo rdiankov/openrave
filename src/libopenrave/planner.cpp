@@ -216,10 +216,7 @@ void PlannerStatus::SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Docu
 
     //Eventually, serialization could be in openravejson.h ?
     if( ikparam.GetType() != IKP_None ) {
-        std::stringstream ss;
-        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
-        ss << ikparam;
-        openravejson::SetJsonValueByKey(rPlannerStatus, "ikparam", ss.str(), alloc);
+        openravejson::SetJsonValueByKey(rPlannerStatus, "ikparam", ikparam, alloc);
     }
 }
 
