@@ -122,7 +122,7 @@ inline std::string GetJsonTypeName(const rapidjson::Value& v) {
     }
 }
 
-template<class T> inline std::string GetJsonString(const T& t);
+/// \brief dump json to a std::string
 inline std::string DumpJson(const rapidjson::Value& value, const unsigned int indent=0) {
     rapidjson::StringBuffer stringbuffer;
     if (indent == 0) {
@@ -136,6 +136,7 @@ inline std::string DumpJson(const rapidjson::Value& value, const unsigned int in
     return std::string(stringbuffer.GetString(), stringbuffer.GetSize());
 }
 
+/// \brief dump json to ostream
 inline void DumpJson(const rapidjson::Value& value, std::ostream& os, const unsigned int indent=0) {
     rapidjson::OStreamWrapper osw(os);
     if (indent == 0) {
@@ -143,6 +144,41 @@ inline void DumpJson(const rapidjson::Value& value, std::ostream& os, const unsi
         value.Accept(writer);
     } else {
         rapidjson::PrettyWriter<rapidjson::OStreamWrapper> writer(osw);
+        writer.SetIndent(' ', indent);
+        value.Accept(writer);
+    }
+}
+
+class VectorWrapper {
+public:
+    typedef char Ch;
+
+    VectorWrapper(std::vector<Ch>& v) : _v(v) { }
+
+    Ch Peek() const { BOOST_ASSERT(0); return '\0'; }
+    Ch Take() { BOOST_ASSERT(0); return '\0'; }
+    size_t Tell() const { return _v.size(); }
+ 
+    Ch* PutBegin() { BOOST_ASSERT(0); return 0; }
+    void Put(Ch c) { _v.push_back(c); }
+    void Flush() { }
+    size_t PutEnd(Ch*) { BOOST_ASSERT(0); return 0; }
+ 
+private:
+    VectorWrapper(const VectorWrapper&);
+    VectorWrapper& operator=(const VectorWrapper&);
+ 
+    std::vector<Ch>& _v;
+};
+
+/// \brief dump json to vector buffer
+inline void DumpJson(const rapidjson::Value& value, std::vector<char>& output, const unsigned int indent=0) {
+    VectorWrapper wrapper(output);
+    if (indent == 0) {
+        rapidjson::Writer<VectorWrapper> writer(wrapper);
+        value.Accept(writer);
+    } else {
+        rapidjson::PrettyWriter<VectorWrapper> writer(wrapper);
         writer.SetIndent(' ', indent);
         value.Accept(writer);
     }
@@ -185,6 +221,8 @@ public:
         SaveToJson(d, d.GetAllocator());
     }
 };
+
+template<class T> inline std::string GetJsonString(const T& t);
 
 //store a json value to local data structures
 //for compatibility with ptree, type conversion is made. will remove them in the future
