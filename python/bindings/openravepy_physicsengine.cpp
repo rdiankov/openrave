@@ -116,10 +116,17 @@ object PyPhysicsEngineBase::GetLinkVelocities(PyKinBodyPtr pykinbody)
     if( !_pPhysicsEngine->GetLinkVelocities(pbody,velocities) ) {
         return py::none_();
     }
-    npy_intp dims[] = { npy_intp(velocities.size()), 6};
+    const size_t nvelocities = velocities.size();
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pyvel({(int) nvelocities, 6});
+    py::buffer_info bufvel = pyvel.request();
+    dReal* pfvel = (dReal*) bufvel.ptr;
+#else // USE_PYBIND11_PYTHON_BINDINGS
+    npy_intp dims[] = {npy_intp(nvelocities), 6};
     PyObject *pyvel = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* pfvel = (dReal*)PyArray_DATA(pyvel);
-    for(size_t i = 0; i < velocities.size(); ++i) {
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+    for(size_t i = 0; i < nvelocities; ++i) {
         pfvel[6*i+0] = velocities[i].first.x;
         pfvel[6*i+1] = velocities[i].first.y;
         pfvel[6*i+2] = velocities[i].first.z;
@@ -127,7 +134,11 @@ object PyPhysicsEngineBase::GetLinkVelocities(PyKinBodyPtr pykinbody)
         pfvel[6*i+4] = velocities[i].second.y;
         pfvel[6*i+5] = velocities[i].second.z;
     }
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    return pyvel;
+#else
     return py::to_array_astype<dReal>(pyvel);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 bool PyPhysicsEngineBase::SetBodyForce(object pylink, object force, object position, bool bAdd)

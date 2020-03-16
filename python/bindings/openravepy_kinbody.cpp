@@ -87,26 +87,7 @@ void PySideWall::Get(KinBody::GeometryInfo::SideWall& sidewall) {
     sidewall.type = static_cast<KinBody::GeometryInfo::SideWallType>(type);
 }
 
-PyGeometryInfo::PyGeometryInfo() {
-    _t = ReturnTransform(Transform());
-    _vGeomData = toPyVector4(Vector());
-    _vGeomData2 = toPyVector4(Vector());
-    _vGeomData3 = toPyVector4(Vector());
-    _vGeomData4 = toPyVector4(Vector());
-    _vDiffuseColor = toPyVector3(Vector(1,1,1));
-    _vAmbientColor = toPyVector3(Vector(0,0,0));
-    _meshcollision = py::none_();
-    _type = GT_None;
-    _name = py::none_();
-    _filenamerender = py::none_();
-    _filenamecollision = py::none_();
-    _vRenderScale = toPyVector3(Vector(1,1,1));
-    _vCollisionScale = toPyVector3(Vector(1,1,1));
-    _containerBaseHeight = 0.0;
-    _fTransparency = 0.0;
-    _bVisible = true;
-    _bModifiable = true;
-}
+PyGeometryInfo::PyGeometryInfo() {}
 
 PyGeometryInfo::PyGeometryInfo(const KinBody::GeometryInfo& info) {
     Init(info);
@@ -1195,7 +1176,22 @@ object PyLink::GetGlobalCOM() const {
 }
 
 object PyLink::GetLocalInertia() const {
-    TransformMatrix t = _plink->GetLocalInertia();
+    const TransformMatrix t = _plink->GetLocalInertia();
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pyvalues({3, 3});
+    py::buffer_info buf = pyvalues.request();
+    dReal* pvalue = (dReal*) buf.ptr;
+    pvalue[0] = t.m[0];
+    pvalue[1] = t.m[1];
+    pvalue[2] = t.m[2];
+    pvalue[3] = t.m[4];
+    pvalue[4] = t.m[5];
+    pvalue[5] = t.m[6];
+    pvalue[6] = t.m[8];
+    pvalue[7] = t.m[9];
+    pvalue[8] = t.m[10];
+    return pyvalues;
+#else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { 3, 3};
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
@@ -1203,9 +1199,25 @@ object PyLink::GetLocalInertia() const {
     pdata[3] = t.m[4]; pdata[4] = t.m[5]; pdata[5] = t.m[6];
     pdata[6] = t.m[8]; pdata[7] = t.m[9]; pdata[8] = t.m[10];
     return py::to_array_astype<dReal>(pyvalues);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 object PyLink::GetGlobalInertia() const {
-    TransformMatrix t = _plink->GetGlobalInertia();
+    const TransformMatrix t = _plink->GetGlobalInertia();
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pyvalues({3, 3});
+    py::buffer_info buf = pyvalues.request();
+    dReal* pvalue = (dReal*) buf.ptr;
+    pvalue[0] = t.m[0];
+    pvalue[1] = t.m[1];
+    pvalue[2] = t.m[2];
+    pvalue[3] = t.m[4];
+    pvalue[4] = t.m[5];
+    pvalue[5] = t.m[6];
+    pvalue[6] = t.m[8];
+    pvalue[7] = t.m[9];
+    pvalue[8] = t.m[10];
+    return pyvalues;
+#else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { 3, 3};
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
@@ -1213,6 +1225,7 @@ object PyLink::GetGlobalInertia() const {
     pdata[3] = t.m[4]; pdata[4] = t.m[5]; pdata[5] = t.m[6];
     pdata[6] = t.m[8]; pdata[7] = t.m[9]; pdata[8] = t.m[10];
     return py::to_array_astype<dReal>(pyvalues);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 dReal PyLink::GetMass() const {
     return _plink->GetMass();
@@ -1776,7 +1789,7 @@ PyJointPtr toPyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv)
         return PyJointPtr();
     }
 }
-PyGeometryInfoPtr toPyGeometryInfo(const KinBody::GeometryInfo geominfo)
+PyGeometryInfoPtr toPyGeometryInfo(const KinBody::GeometryInfo& geominfo)
 {
     return PyGeometryInfoPtr(new PyGeometryInfo(geominfo));
 }
@@ -1883,6 +1896,85 @@ bool PyManageData::__eq__(OPENRAVE_SHARED_PTR<PyManageData> p) {
 }
 bool PyManageData::__ne__(OPENRAVE_SHARED_PTR<PyManageData> p) {
     return !p || _pdata!=p->_pdata;
+}
+
+PyKinBody::PyGrabbedInfo::PyGrabbedInfo() {
+}
+
+PyKinBody::PyGrabbedInfo::PyGrabbedInfo(const RobotBase::GrabbedInfo& info) {
+    _Update(info);
+}
+
+RobotBase::GrabbedInfoPtr PyKinBody::PyGrabbedInfo::GetGrabbedInfo() const
+{
+    RobotBase::GrabbedInfoPtr pinfo(new RobotBase::GrabbedInfo());
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    pinfo->_grabbedname = _grabbedname;
+    pinfo->_robotlinkname = _robotlinkname;
+    pinfo->_trelative = ExtractTransform(_trelative);
+    pinfo->_setRobotLinksToIgnore = std::set<int>(begin(_setRobotLinksToIgnore), end(_setRobotLinksToIgnore));
+#else
+    pinfo->_grabbedname = py::extract<std::string>(_grabbedname);
+    pinfo->_robotlinkname = py::extract<std::string>(_robotlinkname);
+    pinfo->_trelative = ExtractTransform(_trelative);
+    std::vector<int> v = ExtractArray<int>(_setRobotLinksToIgnore);
+    pinfo->_setRobotLinksToIgnore.clear();
+    FOREACHC(it,v) {
+        pinfo->_setRobotLinksToIgnore.insert(*it);
+    }
+#endif
+    return pinfo;
+}
+
+py::object PyKinBody::PyGrabbedInfo::SerializeJSON(dReal fUnitScale, py::object ooptions)
+{
+    rapidjson::Document doc;
+    KinBody::GrabbedInfoPtr pInfo = GetGrabbedInfo();
+    pInfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(ooptions,0));
+    return toPyObject(doc);
+}
+
+void PyKinBody::PyGrabbedInfo::DeserializeJSON(py::object obj, dReal fUnitScale)
+{
+    rapidjson::Document doc;
+    toRapidJSONValue(obj, doc, doc.GetAllocator());
+    KinBody::GrabbedInfo info;
+    info.DeserializeJSON(doc, fUnitScale);
+    _Update(info);
+}
+
+std::string PyKinBody::PyGrabbedInfo::__str__() {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    return boost::str(boost::format("<grabbedinfo:%s -> %s>")%_robotlinkname%_grabbedname);
+#else
+    std::string robotlinkname = py::extract<std::string>(_robotlinkname);
+    std::string grabbedname = py::extract<std::string>(_grabbedname);
+    return boost::str(boost::format("<grabbedinfo:%s -> %s>")%robotlinkname%grabbedname);
+#endif
+}
+
+void PyKinBody::PyGrabbedInfo::_Update(const RobotBase::GrabbedInfo& info) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    _grabbedname = info._grabbedname;
+    _robotlinkname = info._robotlinkname;
+#else
+    _grabbedname = ConvertStringToUnicode(info._grabbedname);
+    _robotlinkname = ConvertStringToUnicode(info._robotlinkname);
+#endif
+    _trelative = ReturnTransform(info._trelative);
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    _setRobotLinksToIgnore = std::vector<int>(begin(info._setRobotLinksToIgnore), end(info._setRobotLinksToIgnore));
+#else
+    py::list setRobotLinksToIgnore;
+    FOREACHC(itindex, info._setRobotLinksToIgnore) {
+        setRobotLinksToIgnore.append(*itindex);
+    }
+    _setRobotLinksToIgnore = setRobotLinksToIgnore;
+#endif
+}
+
+py::object PyKinBody::PyGrabbedInfo::__unicode__() {
+    return ConvertStringToUnicode(__str__());
 }
 
 PyKinBody::PyKinBody(KinBodyPtr pbody, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pbody,pyenv), _pbody(pbody)
@@ -2620,16 +2712,22 @@ void PyKinBody::SetDOFVelocities(object odofvelocities, uint32_t checklimits, ob
 
 object PyKinBody::GetLinkVelocities() const
 {
-    if( _pbody->GetLinks().size() == 0 ) {
+    if( _pbody->GetLinks().empty() ) {
         return py::empty_array_astype<dReal>();
     }
     std::vector<std::pair<Vector,Vector> > velocities;
     _pbody->GetLinkVelocities(velocities);
-
+    const size_t nvelocities = velocities.size();
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pyvel({(int) nvelocities, 6});
+    py::buffer_info buf = pyvel.request();
+    dReal* pfvel = (dReal*) buf.ptr;
+#else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = {npy_intp(velocities.size()),npy_intp(6)};
     PyObject *pyvel = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* pfvel = (dReal*)PyArray_DATA(pyvel);
-    for(size_t i = 0; i < velocities.size(); ++i) {
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+    for(size_t i = 0; i < nvelocities; ++i) {
         pfvel[6*i+0] = velocities[i].first.x;
         pfvel[6*i+1] = velocities[i].first.y;
         pfvel[6*i+2] = velocities[i].first.z;
@@ -2637,7 +2735,11 @@ object PyKinBody::GetLinkVelocities() const
         pfvel[6*i+4] = velocities[i].second.y;
         pfvel[6*i+5] = velocities[i].second.z;
     }
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    return pyvel;
+#else // USE_PYBIND11_PYTHON_BINDINGS
     return py::to_array_astype<dReal>(pyvel);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 object PyKinBody::GetLinkAccelerations(object odofaccelerations, object oexternalaccelerations) const
@@ -2672,10 +2774,17 @@ object PyKinBody::GetLinkAccelerations(object odofaccelerations, object oexterna
     std::vector<std::pair<Vector,Vector> > vLinkAccelerations;
     _pbody->GetLinkAccelerations(vDOFAccelerations, vLinkAccelerations, pmapExternalAccelerations);
 
-    npy_intp dims[] = {npy_intp(vLinkAccelerations.size()),npy_intp(6)};
+   const size_t nLinkAccelerations = vLinkAccelerations.size();
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pyaccel({(int) nLinkAccelerations, 6});
+    py::buffer_info buf = pyaccel.request();
+    dReal* pf = (dReal*) buf.ptr;
+#else // USE_PYBIND11_PYTHON_BINDINGS    
+    npy_intp dims[] = {npy_intp(nLinkAccelerations), npy_intp(6)};
     PyObject *pyaccel = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* pf = (dReal*)PyArray_DATA(pyaccel);
-    for(size_t i = 0; i < vLinkAccelerations.size(); ++i) {
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+    for(size_t i = 0; i < nLinkAccelerations; ++i) {
         pf[6*i+0] = vLinkAccelerations[i].first.x;
         pf[6*i+1] = vLinkAccelerations[i].first.y;
         pf[6*i+2] = vLinkAccelerations[i].first.z;
@@ -2683,7 +2792,11 @@ object PyKinBody::GetLinkAccelerations(object odofaccelerations, object oexterna
         pf[6*i+4] = vLinkAccelerations[i].second.y;
         pf[6*i+5] = vLinkAccelerations[i].second.z;
     }
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    return pyaccel;
+#else
     return py::to_array_astype<dReal>(pyaccel);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 object PyKinBody::ComputeAABB(bool bEnabledOnlyLinks)
@@ -3458,7 +3571,29 @@ class GeometryInfo_pickle_suite
 public:
     static py::tuple getstate(const PyGeometryInfo& r)
     {
-        return py::make_tuple(r._t, py::make_tuple(r._vGeomData, r._vGeomData2, r._vGeomData3, r._vGeomData4), r._vDiffuseColor, r._vAmbientColor, r._meshcollision, (int)r._type, py::make_tuple(r._name, r._filenamerender, r._filenamecollision), r._vRenderScale, r._vCollisionScale, r._fTransparency, r._bVisible, r._bModifiable);
+        return py::make_tuple(
+            r._t, 
+            py::make_tuple(
+                r._vGeomData, 
+                r._vGeomData2, 
+                r._vGeomData3, 
+                r._vGeomData4
+            ), 
+            r._vDiffuseColor, 
+            r._vAmbientColor, 
+            r._meshcollision, 
+            (int)r._type, 
+            py::make_tuple(
+                r._name, 
+                r._filenamerender, 
+                r._filenamecollision
+            ), 
+            r._vRenderScale, 
+            r._vCollisionScale, 
+            r._fTransparency, 
+            r._bVisible, 
+            r._bModifiable 
+        );
     }
     static void setstate(PyGeometryInfo& r, py::tuple state) {
         //int num = len(state);
@@ -3474,7 +3609,11 @@ public:
         r._meshcollision = state[4];
         r._type = (GeometryType)(int)py::extract<int>(state[5]);
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        bool bIsState6Str = IS_PYTHONOBJECT_STRING(state[6]);
+#else
         bool bIsState6Str = IS_PYTHONOBJECT_STRING(py::object(state[6]));
+#endif
         if( bIsState6Str ) {
             // old format
             r._filenamerender = state[6];
@@ -3520,7 +3659,11 @@ public:
         r._vinertiamoments = state[5];
         r._mapFloatParameters = dict(state[6]);
         r._mapIntParameters = dict(state[7]);
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        if( IS_PYTHONOBJECT_NONE(state[8]) ) {
+#else
         if( IS_PYTHONOBJECT_NONE(py::object(state[8])) ) {
+#endif
             r._vForcedAdjacentLinks = py::list(state[8]);
         }
         else {
@@ -3909,8 +4052,7 @@ void init_openravepy_kinbody()
                               .value("JCM_None",KinBody::JCM_None)
                               .value("JCM_RobotController",KinBody::JCM_RobotController)
                               .value("JCM_IO",KinBody::JCM_IO)
-                              .value("JCM_ExternalDevice",KinBody::JCM_ExternalDevice)
-    ;
+                              .value("JCM_ExternalDevice",KinBody::JCM_ExternalDevice);
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object geometryinfo = class_<PyGeometryInfo, OPENRAVE_SHARED_PTR<PyGeometryInfo> >(m, "GeometryInfo", DOXY_CLASS(KinBody::GeometryInfo))
@@ -4003,6 +4145,7 @@ void init_openravepy_kinbody()
                       .def_readwrite("_vForcedAdjacentLinks",&PyLinkInfo::_vForcedAdjacentLinks)
                       .def_readwrite("_bStatic",&PyLinkInfo::_bStatic)
                       .def_readwrite("_bIsEnabled",&PyLinkInfo::_bIsEnabled)
+                      .def_readwrite("_bVisible",&PyLinkInfo::_bVisible)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                       .def("SerializeJSON", &PyLinkInfo::SerializeJSON, 
                           "unitScale"_a = 1.0,
@@ -4177,7 +4320,6 @@ void init_openravepy_kinbody()
                        .def("DeserializeJSON", &PyJointInfo::DeserializeJSON, PyJointInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(KinBody::JointInfo, DeserializeJSON)))
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                       // TGN: can simplify in future using
                        .def(py::pickle(
                                 [](const PyJointInfo &pyinfo) {
             // __getstate__

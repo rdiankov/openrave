@@ -282,6 +282,7 @@ public:
         _vXMLParameters.push_back("ftranslationstepmult");
         _vXMLParameters.push_back("fgraspingnoise");
         _vXMLParameters.push_back("vintersectplane");
+        _vXMLParameters.push_back("vordereddofindices");
         _bProcessingGrasp = false;
     }
 
@@ -303,6 +304,8 @@ public:
     dReal ftranslationstepmult;     ///< multiplication factor for translational movements of the hand or joints
     dReal fgraspingnoise;     ///< random undeterministic noise to add to the target object, represents the max possible displacement of any point on the object (noise added after global direction and start have been determined)
     Vector vintersectplane; ///< if norm > 0, then the manipulator transform has to be on the plane for grabbing to work. This is mutually exclusive from the standoff.
+
+    std::vector<int> vordereddofindices; ///< if specified, will move fingers in this order instead of the order specified by robot->GetActiveDOFIndices().
 
 protected:
     EnvironmentBasePtr _penv;     ///< environment target belongs to
@@ -334,6 +337,11 @@ protected:
         O << "<ftranslationstepmult>" << ftranslationstepmult << "</ftranslationstepmult>" << std::endl;
         O << "<fgraspingnoise>" << fgraspingnoise << "</fgraspingnoise>" << std::endl;
         O << "<vintersectplane>" << vintersectplane << "</vintersectplane>" << std::endl;
+        O << "<vordereddofindices>" << std::endl;
+        for(std::vector<int>::const_iterator it = vordereddofindices.begin(); it != vordereddofindices.end(); ++it) {
+            O << *it << " ";
+        }
+        O << "</vordereddofindices>" << std::endl;
         if( !(options & 1) ) {
             O << _sExtraParameters << std::endl;
         }
@@ -355,7 +363,7 @@ protected:
             return PE_Support;
         }
 
-        static boost::array<std::string,17> tags = {{"fstandoff","targetbody","ftargetroll","vtargetdirection","vtargetposition","vmanipulatordirection", "btransformrobot","breturntrajectory","bonlycontacttarget","btightgrasp","bavoidcontact","vavoidlinkgeometry","fcoarsestep","ffinestep","ftranslationstepmult","fgraspingnoise","vintersectplane"}};
+        static boost::array<std::string,18> tags = {{"fstandoff","targetbody","ftargetroll","vtargetdirection","vtargetposition","vmanipulatordirection", "btransformrobot","breturntrajectory","bonlycontacttarget","btightgrasp","bavoidcontact","vavoidlinkgeometry","fcoarsestep","ffinestep","ftranslationstepmult","fgraspingnoise","vintersectplane","vordereddofindices"}};
         _bProcessingGrasp = find(tags.begin(),tags.end(),name) != tags.end();
         return _bProcessingGrasp ? PE_Support : PE_Pass;
     }
@@ -367,6 +375,9 @@ protected:
         if( _bProcessingGrasp ) {
             if( name == "vavoidlinkgeometry" ) {
                 vavoidlinkgeometry = std::vector<std::string>((std::istream_iterator<std::string>(_ss)), std::istream_iterator<std::string>());
+            }
+            else if( name == "vordereddofindices" ) {
+                vordereddofindices = std::vector<int>((std::istream_iterator<int>(_ss)), std::istream_iterator<int>());
             }
             else if( name == "fstandoff") {
                 _ss >> fstandoff;

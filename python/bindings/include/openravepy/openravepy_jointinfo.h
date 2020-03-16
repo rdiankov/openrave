@@ -36,12 +36,10 @@ public:
     int type = 0;
 };
 
-
 class PyGeometryInfo
 {
 public:
     PyGeometryInfo();
-    //PyGeometryInfo(const PyGeometryInfo& pyinfo);
     PyGeometryInfo(const KinBody::GeometryInfo& info);
     void Init(const KinBody::GeometryInfo& info);
 
@@ -52,26 +50,26 @@ public:
     void DeserializeJSON(object obj, dReal fUnitScale=1.0);
     KinBody::GeometryInfoPtr GetGeometryInfo();
 
-    object _t;
-    object _vGeomData;
-    object _vGeomData2;
-    object _vGeomData3;
-    object _vGeomData4;
-    object _vDiffuseColor;
-    object _vAmbientColor;
-    object _meshcollision;
+    object _t = ReturnTransform(Transform());
+    object _vGeomData = toPyVector4(Vector());
+    object _vGeomData2 = toPyVector4(Vector());
+    object _vGeomData3 = toPyVector4(Vector());
+    object _vGeomData4 = toPyVector4(Vector());
+    object _vDiffuseColor = toPyVector3(Vector(1,1,1));
+    object _vAmbientColor = toPyVector3(Vector(0,0,0));
+    object _meshcollision = py::none_();
+    GeometryType _type = GT_None;
+    object _name = py::none_();
+    object _filenamerender = py::none_();
+    object _filenamecollision = py::none_();
+    object _vRenderScale = toPyVector3(Vector(1,1,1));
+    object _vCollisionScale = toPyVector3(Vector(1,1,1));
+
     py::list _vSideWalls;
-    float _containerBaseHeight;
-    GeometryType _type;
-    // best to initialize these as None's
-    object _name;
-    object _filenamerender;
-    object _filenamecollision;
-    object _vRenderScale;
-    object _vCollisionScale;
-    float _fTransparency;
-    bool _bVisible;
-    bool _bModifiable;
+    float _containerBaseHeight = 0.0;
+    float _fTransparency = 0.0;
+    bool _bVisible = true;
+    bool _bModifiable = true;
 };
 
 typedef OPENRAVE_SHARED_PTR<PyGeometryInfo> PyGeometryInfoPtr;
@@ -92,10 +90,14 @@ public:
     object _tMassFrame = ReturnTransform(Transform());
     dReal _mass = 0.0;
     object _vinertiamoments = toPyVector3(Vector(1,1,1));
-    py::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters, _mapExtraGeometries;
+    py::dict _mapFloatParameters;
+    py::dict _mapIntParameters;
+    py::dict _mapStringParameters;
+    py::dict _mapExtraGeometries;
     object _vForcedAdjacentLinks = py::list();
     bool _bStatic = false;
     bool _bIsEnabled = true;
+    bool _bVisible = true;
 
 private:
     void _Update(const KinBody::LinkInfo& info);

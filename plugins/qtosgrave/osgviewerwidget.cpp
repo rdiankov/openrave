@@ -134,11 +134,11 @@ public:
         }
         switch( ea.getEventType() )
         {
-            case osgGA::GUIEventAdapter::DOUBLECLICK:
-                return handleMouseDoubleClick( ea, us );
+        case osgGA::GUIEventAdapter::DOUBLECLICK:
+            return handleMouseDoubleClick( ea, us );
 
-            default:
-                return false;
+        default:
+            return false;
         }
     }
 
@@ -723,7 +723,12 @@ void QOSGViewerWidget::HandleRayPick(const osgUtil::LineSegmentIntersector::Inte
                 if( !!link ) {
                     linkname = link->GetName();
                 }
-                _strRayInfoText = str(boost::format("mouse on %s:%s: (%.5f, %.5f, %.5f), n=(%.5f, %.5f, %.5f)")%item->GetName()%linkname%pos.x()%pos.y()%pos.z()%normal.x()%normal.y()%normal.z());
+                KinBody::Link::GeometryPtr geom = item->GetGeomFromOSG(node);
+                std::string geomname;
+                if( !!geom ) {
+                    geomname = geom->GetName();
+                }
+                _strRayInfoText = str(boost::format("mouse on %s:%s:%s: (%.5f, %.5f, %.5f), n=(%.5f, %.5f, %.5f)")%item->GetName()%linkname%geomname%pos.x()%pos.y()%pos.z()%normal.x()%normal.y()%normal.z());
             }
             else {
                 _strRayInfoText.clear();
