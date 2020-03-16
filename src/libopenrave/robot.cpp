@@ -41,6 +41,10 @@ void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& valu
     openravejson::LoadJsonValueByKey(value, "transform", _trelative);
     openravejson::LoadJsonValueByKey(value, "type", _sensorname);
 
+    if (!!_sensorgeometry) {
+        _sensorgeometry.reset();
+    }
+
     if (value.HasMember("sensorGeometry")) {
         BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Sensor, _sensorname, InterfaceBasePtr(), AttributesList());
         if (!!pReader) {

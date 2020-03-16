@@ -256,6 +256,9 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
     openravejson::LoadJsonValueByKey(value, "intParameters", _mapIntParameters);
     openravejson::LoadJsonValueByKey(value, "stringParameters", _mapStringParameters);
 
+    if (!!_infoElectricMotor) {
+        _infoElectricMotor.reset();
+    }
     if (value.HasMember("electricMotorActuator")) {
         ElectricMotorActuatorInfoPtr info(new ElectricMotorActuatorInfo());
         info->DeserializeJSON(value["electricMotorActuator"], fUnitScale);
