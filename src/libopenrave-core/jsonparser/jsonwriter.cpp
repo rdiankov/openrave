@@ -323,90 +323,83 @@ protected:
 void RaveWriteJSONFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts)
 {
     std::ofstream ofstream(filename.c_str());
-    rapidjson::OStreamWrapper ostreamwrapper(ofstream);
-    rapidjson::Writer<rapidjson::OStreamWrapper> writer(ostreamwrapper);
     rapidjson::Document doc;
 
     JSONWriter jsonwriter(atts, doc);
     jsonwriter.Write(penv);
-    doc.Accept(writer);
+    openravejson::DumpJson(doc, ofstream);
 }
 
 void RaveWriteJSONFile(KinBodyPtr pbody, const std::string& filename, const AttributesList& atts)
 {
     std::ofstream ofstream(filename.c_str());
-    rapidjson::OStreamWrapper ostreamwrapper(ofstream);
-    rapidjson::Writer<rapidjson::OStreamWrapper> writer(ostreamwrapper);
     rapidjson::Document doc;
 
     JSONWriter jsonwriter(atts, doc);
     jsonwriter.Write(pbody);
-    doc.Accept(writer);
+    openravejson::DumpJson(doc, ofstream);
 }
 
 void RaveWriteJSONFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename, const AttributesList& atts)
 {
     std::ofstream ofstream(filename.c_str());
-    rapidjson::OStreamWrapper ostreamwrapper(ofstream);
-    rapidjson::Writer<rapidjson::OStreamWrapper> writer(ostreamwrapper);
     rapidjson::Document doc;
 
     JSONWriter jsonwriter(atts, doc);
     jsonwriter.Write(listbodies);
-    doc.Accept(writer);
+    openravejson::DumpJson(doc, ofstream);
 }
 void RaveWriteJSONStream(EnvironmentBasePtr penv, ostream& os, const AttributesList& atts)
 {
-    rapidjson::OStreamWrapper ostreamwrapper(os);
-    rapidjson::Writer<rapidjson::OStreamWrapper> writer(ostreamwrapper);
     rapidjson::Document doc;
 
     JSONWriter jsonwriter(atts, doc);
     jsonwriter.Write(penv);
-    doc.Accept(writer);
+    openravejson::DumpJson(doc, os);
 }
 void RaveWriteJSONStream(KinBodyPtr pbody, ostream& os, const AttributesList& atts)
 {
-    rapidjson::OStreamWrapper ostreamwrapper(os);
-    rapidjson::Writer<rapidjson::OStreamWrapper> writer(ostreamwrapper);
     rapidjson::Document doc;
 
     JSONWriter jsonwriter(atts, doc);
     jsonwriter.Write(pbody);
-    doc.Accept(writer);
+    openravejson::DumpJson(doc, os);
 }
 void RaveWriteJSONStream(const std::list<KinBodyPtr>& listbodies, ostream& os, const AttributesList& atts)
 {
-    rapidjson::OStreamWrapper ostreamwrapper(os);
-    rapidjson::Writer<rapidjson::OStreamWrapper> writer(ostreamwrapper);
     rapidjson::Document doc;
 
     JSONWriter jsonwriter(atts, doc);
     jsonwriter.Write(listbodies);
-    doc.Accept(writer);
+    openravejson::DumpJson(doc, os);
 }
 
-class VectorWrapper {
-public:
-    typedef char Ch;
+void RaveWriteJSONMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts)
+{
+    rapidjson::Document doc;
 
-    VectorWrapper(std::vector<Ch>& v) : _v(v) { }
+    JSONWriter jsonwriter(atts, doc);
+    jsonwriter.Write(penv);
+    openravejson::DumpJson(doc, output);
+}
 
-    Ch Peek() const { BOOST_ASSERT(0); return '\0'; }
-    Ch Take() { BOOST_ASSERT(0); return '\0'; }
-    size_t Tell() const { return _v.size(); }
- 
-    Ch* PutBegin() { BOOST_ASSERT(0); return 0; }
-    void Put(Ch c) { _v.push_back(c); }
-    void Flush() { }
-    size_t PutEnd(Ch*) { BOOST_ASSERT(0); return 0; }
- 
-private:
-    VectorWrapper(const VectorWrapper&);
-    VectorWrapper& operator=(const VectorWrapper&);
- 
-    std::vector<Ch>& _v;
-};
+void RaveWriteJSONMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts)
+{
+    rapidjson::Document doc;
+
+    JSONWriter jsonwriter(atts, doc);
+    jsonwriter.Write(pbody);
+    openravejson::DumpJson(doc, output);
+}
+
+void RaveWriteJSONMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts)
+{
+    rapidjson::Document doc;
+
+    JSONWriter jsonwriter(atts, doc);
+    jsonwriter.Write(listbodies);
+    openravejson::DumpJson(doc, output);
+}
 
 void RaveWriteJSON(EnvironmentBasePtr penv, rapidjson::Document& doc, const AttributesList& atts)
 {
@@ -424,39 +417,6 @@ void RaveWriteJSON(const std::list<KinBodyPtr>& listbodies, rapidjson::Document&
 {
     JSONWriter jsonwriter(atts, doc);
     jsonwriter.Write(listbodies);
-}
-
-void RaveWriteJSONMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts)
-{
-    VectorWrapper wrapper(output);
-    rapidjson::Writer<VectorWrapper> writer(wrapper);
-    rapidjson::Document doc;
-
-    JSONWriter jsonwriter(atts, doc);
-    jsonwriter.Write(penv);
-    doc.Accept(writer);
-}
-
-void RaveWriteJSONMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts)
-{
-    VectorWrapper wrapper(output);
-    rapidjson::Writer<VectorWrapper> writer(wrapper);
-    rapidjson::Document doc;
-
-    JSONWriter jsonwriter(atts, doc);
-    jsonwriter.Write(pbody);
-    doc.Accept(writer);
-}
-
-void RaveWriteJSONMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts)
-{
-    VectorWrapper wrapper(output);
-    rapidjson::Writer<VectorWrapper> writer(wrapper);
-    rapidjson::Document doc;
-
-    JSONWriter jsonwriter(atts, doc);
-    jsonwriter.Write(listbodies);
-    doc.Accept(writer);
 }
 
 }
