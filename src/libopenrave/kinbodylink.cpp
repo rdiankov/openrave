@@ -107,8 +107,8 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     _t.trans *= fUnitScale;
     _tMassFrame.trans *= fUnitScale;
 
+    _vgeometryinfos.clear();
     if (value.HasMember("geometries")) {
-        _vgeometryinfos.clear();
         _vgeometryinfos.reserve(value["geometries"].Size());
         for (size_t i = 0; i < value["geometries"].Size(); ++i) {
             GeometryInfoPtr pGeometryInfo(new GeometryInfo());
@@ -116,8 +116,9 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
             _vgeometryinfos.push_back(pGeometryInfo);
         }
     }
+
+    _mapExtraGeometries.clear();
     if (value.HasMember("extraGeometries")) {
-        _mapExtraGeometries.clear();
         for (rapidjson::Value::ConstMemberIterator it = value["extraGeometries"].MemberBegin(); it != value["extraGeometries"].MemberEnd(); ++it) {
             _mapExtraGeometries[it->name.GetString()] = std::vector<GeometryInfoPtr>();
             std::vector<GeometryInfoPtr>& vgeometries = _mapExtraGeometries[it->name.GetString()];
