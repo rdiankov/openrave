@@ -447,15 +447,30 @@ public:
             std::stringstream ss;
             const uint16_t numReadableInterfaces = GetReadableInterfaces().size();
             WriteBinaryUInt16(O, numReadableInterfaces);
-            FOREACHC(itReadableInterface, GetReadableInterfaces()) {
-                WriteBinaryString(O, itReadableInterface->first);  // xmlid
 
+            rapidjson::Document document;
+            FOREACHC(itReadableInterface, GetReadableInterfaces()) {
+                WriteBinaryString(O, itReadableInterface->first);  // readable interface id
+                // The result of serialize from  XMLReadable or JSONReadable should be the same. only use one of them.
                 xmlreaders::StreamXMLWriterPtr writer(new xmlreaders::StreamXMLWriter(std::string()));
-                itReadableInterface->second->Serialize(writer, options);
-                ss.clear();
-                ss.str(std::string());
-                writer->Serialize(ss);
-                WriteBinaryString(O, ss.str());
+                XMLReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<XMLReadable>(itReadableInterface->second);
+                if (!!pxmlreadable) {
+                    // xml serialize
+                    pxmlreadable->Serialize(writer, options);
+                    ss.clear();
+                    ss.str(std::string());
+                    writer->Serialize(ss);
+                    WriteBinaryString(O, ss.str());
+                }
+                else{
+                    // json serialize
+                    JSONReadablePtr pjsonreadable = OPENRAVE_DYNAMIC_POINTER_CAST<JSONReadable>(itReadableInterface->second);
+                    if (!!pjsonreadable) {
+                        rapidjson::Value rReadable;
+                        pjsonreadable->SerializeJSON(rReadable, document.GetAllocator());
+                        WriteBinaryString(O, rReadable.GetString());
+                    }
+                }
             }
         }
     }
