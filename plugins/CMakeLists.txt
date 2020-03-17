@@ -18,11 +18,8 @@ if(NOT OPENRAVE_DISABLE_ASSERT_HANDLER)
   add_definitions("-DBOOST_ENABLE_ASSERT_HANDLER") # turns segfault into exception
 endif()
 
-check_library_exists(lapack cgesdd_ "" LAPACK_FOUND)
-#CheckLibraryExists
-#find_package(LAPACK)
+find_package(LAPACK)
 if( LAPACK_FOUND )
-  set(LAPACK_LIBRARIES lapack)
   set(PLUGIN_COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} -DOPENRAVE_HAS_LAPACK")
 else()
   message(STATUS "lapack dev library not found")
