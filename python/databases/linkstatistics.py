@@ -219,13 +219,16 @@ class LinkStatisticsModel(DatabaseGenerator):
             
             childlinks = j.GetHierarchyChildLink().GetRigidlyAttachedLinks()
             sphereradius = 0.0
+            spherepos = zeros(3)
             for childlink in childlinks:
                 Tlink = childlink.GetTransform()
                 localaabb = childlink.ComputeLocalAABB()
-                spherepos = dot(Tlink[:3,:3], localaabb.pos()) + Tlink[:3,3]
-                extensiondist = linalg.norm(j.GetAnchor() - spherepos)
+                curspherepos = dot(Tlink[:3,:3], localaabb.pos()) + Tlink[:3,3]
+                extensiondist = linalg.norm(j.GetAnchor() - curspherepos)
                 linkradius = linalg.norm(localaabb.extents())
-                sphereradius = max(sphereradius, linkradius+extensiondist)
+                if linkradius+extensiondist > sphereradius:
+                    sphereradius = linkradius+extensiondist
+                    spherepos = curspherepos
             
             # process any child joints
             minpos = spherepos - sphereradius*ones([1,1,1])
