@@ -2991,7 +2991,9 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
     _transform.trans *= fUnitScale;
 
     _mapCustomData.clear();
-    openravejson::LoadJsonValueByKey(rIkParameterization, "customData", _mapCustomData);
+    if (rIkParameterization.HasMember("customData")) {
+       openravejson::LoadJsonValueByKey(rIkParameterization, "customData", _mapCustomData);
+    }
     // TODO have to scale _mapCustomData by fUnitScale
 }
 
