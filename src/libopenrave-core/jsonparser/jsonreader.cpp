@@ -15,9 +15,9 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "jsoncommon.h"
-#include "jsonmsgpack.h"
 
 #include <openrave/openravejson.h>
+#include <openrave/openravemsgpack.h>
 #include <openrave/openrave.h>
 #include <rapidjson/istreamwrapper.h>
 #include <string>
@@ -675,16 +675,11 @@ protected:
             return _docs[filename];
         }
 
-        std::ifstream ifs(filename.c_str());
-        std::string data;
-        data.assign(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
-
-        msgpack::unpacked unpacked;
-        msgpack::unpack(&unpacked, data.data(), data.size());
-
         boost::shared_ptr<rapidjson::Document> doc;
         doc.reset(new rapidjson::Document);
-        unpacked.get().convert(*doc);
+        
+        std::ifstream ifs(filename.c_str());
+        openravemsgpack::ParseMsgPack(*doc, ifs);
         
         _docs[filename] = doc;
         return doc;
@@ -693,12 +688,10 @@ protected:
     /// \brief parse and cache a msgpack document
     virtual boost::shared_ptr<rapidjson::Document> _ParseDocument(const std::string& data) override
     {
-        msgpack::unpacked unpacked;
-        msgpack::unpack(&unpacked, data.data(), data.size());
-
         boost::shared_ptr<rapidjson::Document> doc;
         doc.reset(new rapidjson::Document);
-        unpacked.get().convert(*doc);
+
+        openravemsgpack::ParseMsgPack(*doc, data);
 
         _docs[""] = doc;
         return doc;

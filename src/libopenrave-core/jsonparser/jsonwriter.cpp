@@ -15,9 +15,9 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "jsoncommon.h"
-#include "jsonmsgpack.h"
 
 #include <openrave/openravejson.h>
+#include <openrave/openravemsgpack.h>
 #include <fstream>
 #include <rapidjson/writer.h>
 #include <rapidjson/ostreamwrapper.h>
@@ -426,64 +426,58 @@ void RaveWriteJSON(const std::list<KinBodyPtr>& listbodies, rapidjson::Document&
 void RaveWriteMsgPackFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts)
 {
     std::ofstream ofstream(filename.c_str());
-    msgpack::osbuffer buf(ofstream);
     rapidjson::Document doc;
 
     JSONWriter jsonwriter(atts, doc);
     jsonwriter.Write(penv);
-    msgpack::pack(&buf, doc);
+    openravemsgpack::DumpMsgPack(doc, ofstream);
 }
 
 void RaveWriteMsgPackFile(KinBodyPtr pbody, const std::string& filename, const AttributesList& atts)
 {
     std::ofstream ofstream(filename.c_str());
-    msgpack::osbuffer buf(ofstream);
     rapidjson::Document doc;
 
     JSONWriter jsonwriter(atts, doc);
     jsonwriter.Write(pbody);
-    msgpack::pack(&buf, doc);
+    openravemsgpack::DumpMsgPack(doc, ofstream);
 }
 
 void RaveWriteMsgPackFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename, const AttributesList& atts)
 {
     std::ofstream ofstream(filename.c_str());
-    msgpack::osbuffer buf(ofstream);
     rapidjson::Document doc;
 
     JSONWriter jsonwriter(atts, doc);
     jsonwriter.Write(listbodies);
-    msgpack::pack(&buf, doc);
+    openravemsgpack::DumpMsgPack(doc, ofstream);
 }
 
 void RaveWriteMsgPackStream(EnvironmentBasePtr penv, ostream& os, const AttributesList& atts)
 {
-    msgpack::osbuffer buf(os);
     rapidjson::Document doc;
 
     JSONWriter jsonwriter(atts, doc);
     jsonwriter.Write(penv);
-    msgpack::pack(&buf, doc);
+    openravemsgpack::DumpMsgPack(doc, os);
 }
 
 void RaveWriteMsgPackStream(KinBodyPtr pbody, ostream& os, const AttributesList& atts)
 {
-    msgpack::osbuffer buf(os);
     rapidjson::Document doc;
 
     JSONWriter jsonwriter(atts, doc);
     jsonwriter.Write(pbody);
-    msgpack::pack(&buf, doc);
+    openravemsgpack::DumpMsgPack(doc, os);
 }
 
 void RaveWriteMsgPackStream(const std::list<KinBodyPtr>& listbodies, ostream& os, const AttributesList& atts)
 {
-    msgpack::osbuffer buf(os);
     rapidjson::Document doc;
 
     JSONWriter jsonwriter(atts, doc);
     jsonwriter.Write(listbodies);
-    msgpack::pack(&buf, doc);
+    openravemsgpack::DumpMsgPack(doc, os);
 }
 
 void RaveWriteMsgPackMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts)
@@ -491,9 +485,7 @@ void RaveWriteMsgPackMemory(EnvironmentBasePtr penv, std::vector<char>& output, 
     rapidjson::Document doc;
     JSONWriter jsonwriter(atts, doc);
     jsonwriter.Write(penv);
-    
-    msgpack::vbuffer buf(output);
-    msgpack::pack(&buf, doc);
+    openravemsgpack::DumpMsgPack(doc, output);
 }
 
 void RaveWriteMsgPackMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts)
@@ -502,9 +494,7 @@ void RaveWriteMsgPackMemory(KinBodyPtr pbody, std::vector<char>& output, const A
 
     JSONWriter jsonwriter(atts, doc);
     jsonwriter.Write(pbody);
-
-    msgpack::vbuffer buf(output);
-    msgpack::pack(&buf, doc);
+    openravemsgpack::DumpMsgPack(doc, output);
 }
 
 void RaveWriteMsgPackMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts)
@@ -513,9 +503,7 @@ void RaveWriteMsgPackMemory(const std::list<KinBodyPtr>& listbodies, std::vector
 
     JSONWriter jsonwriter(atts, doc);
     jsonwriter.Write(listbodies);
-    
-    msgpack::vbuffer buf(output);
-    msgpack::pack(&buf, doc);
+    openravemsgpack::DumpMsgPack(doc, output);
 }
 
 }

@@ -1,13 +1,31 @@
-// originally from https://github.com/xpol/xchange
-// works with msgpack-c e183efcc
-
-#ifndef OPENRAVE_JSON_MSGPACK_H
-#define OPENRAVE_JSON_MSGPACK_H
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2020 Rosen Diankov <rosen.diankov@gmail.com>
+//
+// This file is part of OpenRAVE.
+// OpenRAVE is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#include "libopenrave.h"
 
 #include <msgpack.hpp>
 #include <rapidjson/document.h>
 
-namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { namespace adaptor {
+#include <openrave/openravemsgpack.h>
+
+namespace msgpack {
+
+MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {
+
+namespace adaptor {
 
 template <typename Encoding, typename Allocator, typename StackAllocator>
 struct convert< rapidjson::GenericDocument<Encoding, Allocator, StackAllocator> > {
@@ -55,7 +73,6 @@ struct convert< rapidjson::GenericDocument<Encoding, Allocator, StackAllocator> 
         return o;
     }
 };
-
 
 template <typename Encoding, typename Allocator>
 struct convert< rapidjson::GenericValue<Encoding, Allocator> > {
@@ -236,9 +253,7 @@ struct object_with_zone< rapidjson::GenericDocument<Encoding, Allocator, StackAl
     }
 };
 
-}}}
-
-namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {
+} // namespace adaptor
 
 class vbuffer {
 public:
@@ -250,9 +265,6 @@ private:
     std::vector<char>& _v;
 };
 
-}}
-
-namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {
 
 class osbuffer {
 public:
@@ -264,7 +276,32 @@ private:
     std::ostream& _os;
 };
 
-}}
+} // MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS)
 
+} // namespace msgpack
 
-#endif // OPENRAVE_JSON_MSGPACK_H
+void openravemsgpack::DumpMsgPack(const rapidjson::Value& value, std::ostream& os)
+{
+	msgpack::osbuffer buf(os);
+    msgpack::pack(&buf, value);
+}
+
+void openravemsgpack::DumpMsgPack(const rapidjson::Value& value, std::vector<char>& output)
+{   
+    msgpack::vbuffer buf(output);
+    msgpack::pack(&buf, value);
+}
+
+void openravemsgpack::ParseMsgPack(rapidjson::Document& d, const std::string& str)
+{
+	msgpack::unpacked unpacked;
+    msgpack::unpack(&unpacked, str.data(), str.size());
+    unpacked.get().convert(d);
+}
+
+void openravemsgpack::ParseMsgPack(rapidjson::Document& d, std::istream& is)
+{
+	std::string str;
+    str.assign(std::istreambuf_iterator<char>(is), std::istreambuf_iterator<char>());
+    openravemsgpack::ParseMsgPack(d, str);
+}
