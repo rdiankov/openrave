@@ -668,6 +668,20 @@ private:
     typedef boost::shared_ptr<RobotBase::ConnectedBody const> ConnectedBodyConstPtr;
     typedef boost::weak_ptr<RobotBase::ConnectedBody> ConnectedBodyWeakPtr;
 
+    /// \brief info structure used to initialize a robot
+    class OPENRAVE_API RobotBaseInfo : public KinBodyInfo
+    {
+public:
+        RobotBaseInfo() : KinBodyInfo() {}
+        virtual ~RobotBaseInfo() {}
+
+        std::vector<ManipulatorInfoPtr> _vManipInfos; ///< list of pointers to ManipulatorInfo
+        std::vector<AttachedSensorInfoPtr> _vAttachedSensorInfos; ///< list of pointers to AttachedSensorInfo
+        std::vector<ConnectedBodyInfoPtr> _vConnectedBodyInfos; ///< list of pointers to ConnectedBodyInfo
+    };
+    typedef boost::shared_ptr<RobotBaseInfo> RobotBaseInfoPtr;
+    typedef boost::shared_ptr<RobotBaseInfo const> RobotBaseInfoConstPtr;
+
     /// \brief Helper class derived from KinBodyStateSaver to additionaly save robot information.
     class OPENRAVE_API RobotStateSaver : public KinBodyStateSaver
     {
@@ -719,8 +733,10 @@ private:
     /// Calls \ref KinBody::Init(linkinfos, jointinfos) and then adds the robot-specific information afterwards
     /// \param linkinfos information for all the links. Links will be created in this order
     /// \param jointinfos information for all the joints. Joints might be rearranged depending on their mimic properties
-    virtual bool Init(const std::vector<LinkInfoConstPtr>& linkinfos, const std::vector<JointInfoConstPtr>& jointinfos, const std::vector<ManipulatorInfoConstPtr>& manipinfos, const std::vector<AttachedSensorInfoConstPtr>& attachedsensorinfos, const std::vector<ConnectedBodyInfoConstPtr>& connectedbodyinfos, const std::string& uri=std::string());
+    virtual bool Init(const std::vector<LinkInfoConstPtr>& linkinfos, const std::vector<JointInfoConstPtr>& jointinfos, const std::vector<ManipulatorInfoConstPtr>& manipinfos, const std::vector<AttachedSensorInfoConstPtr>& attachedsensorinfos, const std::string& uri=std::string());
 
+    /// \brief initializes a robot with info structure
+    virtual bool InitFromInfo(const RobotBaseInfoConstPtr& info);
 
     /// \brief Returns the manipulators of the robot
     virtual const std::vector<ManipulatorPtr>& GetManipulators() const;

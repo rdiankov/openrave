@@ -238,17 +238,13 @@ protected:
 
         dReal fUnitScale = _GetUnitScale();
 
-        std::vector<KinBody::LinkInfoPtr> vLinkInfos;
-        _ExtractLinks(*object, vLinkInfos, fUnitScale);
-        
-        std::vector<KinBody::JointInfoPtr> vJointInfos;
-        _ExtractJoints(*object, vJointInfos, fUnitScale);
-        
-        std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(vLinkInfos.begin(), vLinkInfos.end());
-        std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(vJointInfos.begin(), vJointInfos.end());
-        
+        KinBody::KinBodyInfoPtr info(new KinBody::KinBodyInfo());
+        info->_uri = _CanonicalizeURI(uri);
+        _ExtractLinks(*object, info->_vLinkInfos, fUnitScale);
+        _ExtractJoints(*object, info->_vJointInfos, fUnitScale);
+                
         KinBodyPtr body = RaveCreateKinBody(_penv, "");
-        if (!body->Init(vLinkInfosConst, vJointInfosConst, _CanonicalizeURI(uri))) {
+        if (!body->InitFromInfo(info)) {
             return false;
         }
         
@@ -280,30 +276,16 @@ protected:
 
         dReal fUnitScale = _GetUnitScale();
 
-        std::vector<KinBody::LinkInfoPtr> vLinkInfos;
-        _ExtractLinks(*object, vLinkInfos, fUnitScale);
-        
-        std::vector<KinBody::JointInfoPtr> vJointInfos;
-        _ExtractJoints(*object, vJointInfos, fUnitScale);
+        RobotBase::RobotBaseInfoPtr info(new RobotBase::RobotBaseInfo());
+        info->_uri = _CanonicalizeURI(uri);
+        _ExtractLinks(*object, info->_vLinkInfos, fUnitScale);
+        _ExtractJoints(*object, info->_vJointInfos, fUnitScale);
+        _ExtractManipulators(*object, info->_vManipInfos, fUnitScale);
+        _ExtractAttachedSensors(*object, info->_vAttachedSensorInfos, fUnitScale);
+        _ExtractConnectedBodies(*object, info->_vConnectedBodyInfos, fUnitScale);
 
-        std::vector<RobotBase::ManipulatorInfoPtr> vManipulatorInfos;
-        _ExtractManipulators(*object, vManipulatorInfos, fUnitScale);
-
-        std::vector<RobotBase::AttachedSensorInfoPtr> vAttachedSensorInfos;
-        _ExtractAttachedSensors(*object, vAttachedSensorInfos, fUnitScale);
-
-        std::vector<RobotBase::ConnectedBodyInfoPtr> vConnectedBodyInfos;
-        _ExtractConnectedBodies(*object, vConnectedBodyInfos, fUnitScale);
-
-        
-        std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(vLinkInfos.begin(), vLinkInfos.end());
-        std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(vJointInfos.begin(), vJointInfos.end());
-        std::vector<RobotBase::ManipulatorInfoConstPtr> vManipulatorInfosConst(vManipulatorInfos.begin(), vManipulatorInfos.end());
-        std::vector<RobotBase::AttachedSensorInfoConstPtr> vAttachedSensorInfosConst(vAttachedSensorInfos.begin(), vAttachedSensorInfos.end());
-        std::vector<RobotBase::ConnectedBodyInfoConstPtr> vConnectedBodyInfosConst(vConnectedBodyInfos.begin(), vConnectedBodyInfos.end());
-        
         RobotBasePtr robot = RaveCreateRobot(_penv, "");
-        if (!robot->Init(vLinkInfosConst, vJointInfosConst, vManipulatorInfosConst, vAttachedSensorInfosConst, vConnectedBodyInfosConst, _CanonicalizeURI(uri))) {
+        if (!robot->InitFromInfo(info)) {
             return false;
         }
 

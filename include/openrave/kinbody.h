@@ -1588,6 +1588,20 @@ public:
     typedef boost::shared_ptr<GrabbedInfo> GrabbedInfoPtr;
     typedef boost::shared_ptr<GrabbedInfo const> GrabbedInfoConstPtr;
 
+    /// \brief info structure used to initialize a kinbody
+    class OPENRAVE_API KinBodyInfo
+    {
+public:
+        KinBodyInfo() {}
+        virtual ~KinBodyInfo() {}
+
+        std::vector<LinkInfoPtr> _vLinkInfos; ///< list of pointers to LinkInfo
+        std::vector<JointInfoPtr> _vJointInfos; ///< list of pointers to JointInfo
+        std::string _uri;
+    };
+    typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
+    typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
+
     /// \brief Helper class to save and restore the entire kinbody state.
     ///
     /// Options can be passed to the constructor in order to choose which parameters to save (see \ref SaveParameters)
@@ -1727,6 +1741,9 @@ private:
     /// \param jointinfos information for all the joints. Joints might be rearranged depending on their mimic properties
     /// \param uri the new URI to set for the interface
     virtual bool Init(const std::vector<LinkInfoConstPtr>& linkinfos, const std::vector<JointInfoConstPtr>& jointinfos, const std::string& uri=std::string());
+
+    /// \brief initializes an complex kinematics body from info structure
+    virtual bool InitFromInfo(const KinBodyInfoConstPtr& info);
 
     /// \brief Sets new geometries for all the links depending on the stored extra geometries each link has.
     ///
