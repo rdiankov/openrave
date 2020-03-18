@@ -66,7 +66,8 @@ public:
     }
     OpenRAVEJSONException(const std::string& s, OpenRAVEJSONErrorCode error=ORJE_Failed ) : std::exception() {
         _error = error;
-        _s = "openrave (";
+        _s = "openrave json (";
+        _s += GetErrorCodeString(error);
         _s += "): ";
         _s += s;
         _ssub = s;
