@@ -16,10 +16,11 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 
+#include <openrave/openravemsgpack.h>
+
+#if OPENRAVE_MSGPACK
 #include <msgpack.hpp>
 #include <rapidjson/document.h>
-
-#include <openrave/openravemsgpack.h>
 
 namespace msgpack {
 
@@ -282,7 +283,7 @@ private:
 
 void openravemsgpack::DumpMsgPack(const rapidjson::Value& value, std::ostream& os)
 {
-	msgpack::osbuffer buf(os);
+    msgpack::osbuffer buf(os);
     msgpack::pack(&buf, value);
 }
 
@@ -294,14 +295,38 @@ void openravemsgpack::DumpMsgPack(const rapidjson::Value& value, std::vector<cha
 
 void openravemsgpack::ParseMsgPack(rapidjson::Document& d, const std::string& str)
 {
-	msgpack::unpacked unpacked;
+    msgpack::unpacked unpacked;
     msgpack::unpack(&unpacked, str.data(), str.size());
     unpacked.get().convert(d);
 }
 
 void openravemsgpack::ParseMsgPack(rapidjson::Document& d, std::istream& is)
 {
-	std::string str;
+    std::string str;
     str.assign(std::istreambuf_iterator<char>(is), std::istreambuf_iterator<char>());
     openravemsgpack::ParseMsgPack(d, str);
 }
+
+#else
+
+void openravemsgpack::DumpMsgPack(const rapidjson::Value& value, std::ostream& os)
+{
+    throw new OpenRAVEMsgPackException("Operation is not supported.");
+}
+
+void openravemsgpack::DumpMsgPack(const rapidjson::Value& value, std::vector<char>& output)
+{
+    throw new OpenRAVEMsgPackException("Operation is not supported.");
+}
+
+void openravemsgpack::ParseMsgPack(rapidjson::Document& d, const std::string& str)
+{
+    throw new OpenRAVEMsgPackException("Operation is not supported.");
+}
+
+void openravemsgpack::ParseMsgPack(rapidjson::Document& d, std::istream& is)
+{
+    throw new OpenRAVEMsgPackException("Operation is not supported.");
+}
+
+#endif
