@@ -41,7 +41,6 @@
 #include <rapidjson/error/en.h>
 #include <rapidjson/prettywriter.h>
 
-using namespace OpenRAVE;
 namespace openravejson {
 
 /// \brief gets a string of the Value type for debugging purposes
@@ -277,7 +276,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, bool& t) {
 }
 
 template<class T>
-inline void LoadJsonValue(const rapidjson::Value& v, RaveVector<T>& t) {
+inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::RaveVector<T>& t) {
     if(!v.IsArray() || (v.Size() != 3 && v.Size() != 4)) {
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a RaveVector", OpenRAVE::ORE_InvalidArguments);
     }
@@ -301,12 +300,12 @@ inline void LoadJsonValue(const rapidjson::Value& v, boost::shared_ptr<T>& ptr) 
     LoadJsonValue(v, *ptr);
 }
 
-inline void LoadJsonValue(const rapidjson::Value& v, IkParameterization& t) {
+inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::IkParameterization& t) {
     t.DeserializeJSON(v);
 }
 
 /// \brief serialize an OpenRAVE IkParameterization as json
-inline void SaveJsonValue(rapidjson::Value &v, const IkParameterization& t, rapidjson::Document::AllocatorType& alloc) {
+inline void SaveJsonValue(rapidjson::Value &v, const OpenRAVE::IkParameterization& t, rapidjson::Document::AllocatorType& alloc) {
     t.SerializeJSON(v, alloc);
 }
 
@@ -416,7 +415,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, std::map<std::string, T>& t
 }
 
 template<class T>
-inline void LoadJsonValue(const rapidjson::Value& v, RaveTransform<T>& t) {
+inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::RaveTransform<T>& t) {
     if (v.IsArray()) {
         if(v.Size() != 7) {
             throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Transform. Array length does not match (%d != 7)", GetJsonTypeName(v)%v.Size(), OpenRAVE::ORE_InvalidArguments);
@@ -433,21 +432,21 @@ inline void LoadJsonValue(const rapidjson::Value& v, RaveTransform<T>& t) {
     }
 }
 
-inline void LoadJsonValue(const rapidjson::Value& v, TriMesh& t)
+inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::TriMesh& t)
 {
     if (!v.IsObject()) {
         throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object.", OpenRAVE::ORE_InvalidArguments);
     }
 
     if (!v.HasMember("vertices") || !v["vertices"].IsArray() || v["vertices"].Size() % 3 != 0) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a TriMesh, \"vertices\" malformatted", ORE_InvalidArguments);
+        throw openravejson::OpenRAVEJSONException("failed to deserialize json, value cannot be decoded as a TriMesh, \"vertices\" malformatted", openravejson::ORJE_InvalidArguments);
     }
 
     t.vertices.clear();
     t.vertices.reserve(v["vertices"].Size() / 3);
 
     for (rapidjson::Value::ConstValueIterator it = v["vertices"].Begin(); it != v["vertices"].End(); ) {
-        Vector vertex;
+        OpenRAVE::Vector vertex;
         LoadJsonValue(*(it++), vertex.x);
         LoadJsonValue(*(it++), vertex.y);
         LoadJsonValue(*(it++), vertex.z);
@@ -545,7 +544,7 @@ inline void SaveJsonValue(rapidjson::Value& v, const std::set<T>& t, rapidjson::
 }
 
 template<class T>
-inline void SaveJsonValue(rapidjson::Value& rTransform, const RaveTransform<T>& t, rapidjson::Document::AllocatorType& alloc) {
+inline void SaveJsonValue(rapidjson::Value& rTransform, const OpenRAVE::RaveTransform<T>& t, rapidjson::Document::AllocatorType& alloc) {
     rTransform.SetArray();
     rTransform.Reserve(7, alloc);
     rTransform.PushBack(t.rot[0], alloc);
@@ -580,7 +579,7 @@ inline void SaveJsonValue(rapidjson::Value& v, const std::vector<T>& t, rapidjso
 }
 
 template<class T>
-inline void SaveJsonValue(rapidjson::Value& v, const RaveVector<T>& t, rapidjson::Document::AllocatorType& alloc) {
+inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::RaveVector<T>& t, rapidjson::Document::AllocatorType& alloc) {
     v.SetArray();
     // TODO, what's a better way to serialize?
     bool bHas4Values = t[3] != 0;
@@ -692,7 +691,7 @@ inline void SaveJsonValue(rapidjson::Document& v, const T& t) {
     v.Swap(tempDoc);
 }
 template<class T> void inline LoadJsonValueByKey(const rapidjson::Value& v, const char* key, T& t);
-inline void LoadJsonValue(const rapidjson::Value& v, SensorBase::CameraIntrinsics& t) {
+inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::SensorBase::CameraIntrinsics& t) {
     if (!v.IsObject()) {
         throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object to SensorBase::CameraIntrinsics.", OpenRAVE::ORE_InvalidArguments);
     }
@@ -791,7 +790,7 @@ T GetJsonValueByPath(const rapidjson::Value& v, const char* key, const U& t) {
 template<class T, class U>
 inline void SetJsonValueByKey(rapidjson::Value& v, const U& key, const T& t, rapidjson::Document::AllocatorType& alloc);
 /// \brief serialize an OpenRAVE CameraIntrinsics as json
-inline void SaveJsonValue(rapidjson::Value& v, const SensorBase::CameraIntrinsics& t, rapidjson::Document::AllocatorType& alloc) {
+inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::SensorBase::CameraIntrinsics& t, rapidjson::Document::AllocatorType& alloc) {
     v.SetObject();
     SetJsonValueByKey(v, "fx", t.fx, alloc);
     SetJsonValueByKey(v, "fy", t.fy, alloc);
@@ -802,7 +801,7 @@ inline void SaveJsonValue(rapidjson::Value& v, const SensorBase::CameraIntrinsic
     SetJsonValueByKey(v, "distortionCoeffs", t.distortion_coeffs, alloc);
 }
 
-inline void SaveJsonValue(rapidjson::Value &rTriMesh, const TriMesh& t, rapidjson::Document::AllocatorType& alloc) {
+inline void SaveJsonValue(rapidjson::Value &rTriMesh, const OpenRAVE::TriMesh& t, rapidjson::Document::AllocatorType& alloc) {
     rTriMesh.SetObject();
     rapidjson::Value rVertices;
     rVertices.SetArray();
