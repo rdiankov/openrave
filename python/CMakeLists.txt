@@ -16,6 +16,9 @@ endif()
 
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../src/cppexamples/FindOpenRAVE.cmake" FindOpenRAVE)
 
+# find LAPACK so that ikfastpy can link to it
+find_package(LAPACK)
+
 # python executables need renaming
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave.py.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave${OPENRAVE_BIN_SUFFIX}.py" IMMEDIATE @ONLY)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-robot.py.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave${OPENRAVE_BIN_SUFFIX}-robot.py" IMMEDIATE @ONLY)

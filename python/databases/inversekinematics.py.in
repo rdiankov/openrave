@@ -957,7 +957,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                     try:
                         iswindows = sys.platform.startswith('win') or platform.system().lower() == 'windows'
                         if self.statistics.get('usinglapack',False) or not iswindows:
-                            libraryFiles = "@LAPACK_LIBRARIES@".split()
+                            libraryFiles = "@LAPACK_LIBRARIES@".split(';')
                         compiler.link_shared_object(objectfiles,output_filename=output_filename, extra_postargs=libraryFiles)
                     except distutils.errors.LinkError,e:
                         log.warn(e)
