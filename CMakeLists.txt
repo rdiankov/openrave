@@ -5,7 +5,7 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
 set (OPENRAVE_VERSION_MINOR 31)
-set (OPENRAVE_VERSION_PATCH 1)
+set (OPENRAVE_VERSION_PATCH 3)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 message(STATUS "Compiling OpenRAVE Version ${OPENRAVE_VERSION}, soversion=${OPENRAVE_SOVERSION}")
@@ -861,7 +861,7 @@ if(OPT_PYTHON AND PYTHON_EXECUTABLE)
   set(OPENRAVEPY_VER_INSTALL_DIR "${OPENRAVEPY_INSTALL_DIR}/${OPENRAVEPY_VER_NAME}") # used by openrave-config.cmake
 
   # build python bindings, either with pybind11 or Boost.Python
-  set(USE_PYBIND11_PYTHON_BINDINGS ON CACHE BOOL "Build OpenRAVE's python bindings with pybind11 (ON) or Boost.Python (OFF)")
+  set(USE_PYBIND11_PYTHON_BINDINGS OFF CACHE BOOL "Build OpenRAVE's python bindings with pybind11 (ON) or Boost.Python (OFF)")
   add_subdirectory(python)
 endif()
 
