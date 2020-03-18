@@ -41,7 +41,9 @@
 #include <rapidjson/error/en.h>
 #include <rapidjson/prettywriter.h>
 
-namespace openravejson {
+namespace OpenRAVE {
+
+namespace JSON {
 
 /// \brief gets a string of the Value type for debugging purposes
 inline std::string GetJsonTypeName(const rapidjson::Value& v) {
@@ -439,7 +441,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::TriMesh& t)
     }
 
     if (!v.HasMember("vertices") || !v["vertices"].IsArray() || v["vertices"].Size() % 3 != 0) {
-        throw openravejson::OpenRAVEJSONException("failed to deserialize json, value cannot be decoded as a TriMesh, \"vertices\" malformatted", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a TriMesh, \"vertices\" malformatted", OpenRAVE::ORE_InvalidArguments);
     }
 
     t.vertices.clear();
@@ -881,7 +883,7 @@ inline void ValidateJsonString(const std::string& str) {
 template<class T> inline std::string GetJsonString(const T& t) {
     rapidjson::Document d;
     SaveJsonValue(d, t);
-    return openravejson::DumpJson(d);
+    return OpenRAVE::JSON::DumpJson(d);
 }
 
 /** update a json object with another one, new key-value pair will be added, existing ones will be overwritten
@@ -898,6 +900,8 @@ inline void UpdateJson(rapidjson::Document& a, const rapidjson::Value& b) {
     }
 }
 
-} // namespace openravejson
+} // namespace JSON
+
+} // namespace OpenRAVE
 
 #endif // OPENRAVE_JSON_H

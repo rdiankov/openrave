@@ -87,7 +87,7 @@ public:
         bool allSucceeded = true;
         // extra all bodies and add to env
         std::pair<std::string, dReal> unit;
-        openravejson::LoadJsonValueByKey(*_doc, "unit", unit);
+        OpenRAVE::JSON::LoadJsonValueByKey(*_doc, "unit", unit);
         _penv->SetUnit(unit);
 
         dReal fUnitScale = _GetUnitScale();
@@ -101,7 +101,7 @@ public:
                     // set dof values
                     if (itr->HasMember("dofValues")) {
                         std::vector<dReal> vDOFValues;
-                        openravejson::LoadJsonValueByKey(*itr, "dofValues", vDOFValues);
+                        OpenRAVE::JSON::LoadJsonValueByKey(*itr, "dofValues", vDOFValues);
                         pbody->SetDOFValues(vDOFValues, KinBody::CLA_Nothing);
                     }
 
@@ -159,7 +159,7 @@ public:
         if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()) {
             for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
                 std::string bodyUri;
-                openravejson::LoadJsonValueByKey(*itr, "uri", bodyUri);
+                OpenRAVE::JSON::LoadJsonValueByKey(*itr, "uri", bodyUri);
                 if (bodyUri == std::string("#") + fragment) {
                     return _Extract(*itr, ppbody);
                 }
@@ -179,7 +179,7 @@ public:
         if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()) {
             for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
                 std::string bodyUri;
-                openravejson::LoadJsonValueByKey(*itr, "uri", bodyUri);
+                OpenRAVE::JSON::LoadJsonValueByKey(*itr, "uri", bodyUri);
                 if (bodyUri == std::string("#") + fragment) {
                     return _Extract(*itr, pprobot);
                 }
@@ -192,7 +192,7 @@ protected:
     inline dReal _GetUnitScale()
     {
         std::pair<std::string, dReal> unit;
-        openravejson::LoadJsonValueByKey(*_doc, "unit", unit);
+        OpenRAVE::JSON::LoadJsonValueByKey(*_doc, "unit", unit);
         if (unit.first == "mm")
         {
             unit.second *= 0.001;
@@ -224,11 +224,11 @@ protected:
     bool _Extract(const rapidjson::Value &bodyValue, KinBodyPtr& pbody)
     {
         std::string uri;
-        openravejson::LoadJsonValueByKey(bodyValue, "uri", uri);
+        OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "uri", uri);
 
         rapidjson::Value::ValueIterator object = _ResolveObject(uri);
 
-        if (openravejson::GetJsonValueByKey<bool>(*object, "isRobot")) {
+        if (OpenRAVE::JSON::GetJsonValueByKey<bool>(*object, "isRobot")) {
             RobotBasePtr probot;
             if (_Extract(bodyValue, probot)) {
                 pbody = probot;
@@ -255,11 +255,11 @@ protected:
         
         _ExtractReadableInterfaces(*object, body, fUnitScale);
 
-        body->SetName(openravejson::GetJsonValueByKey<std::string>(bodyValue, "name"));
+        body->SetName(OpenRAVE::JSON::GetJsonValueByKey<std::string>(bodyValue, "name"));
 
         if (bodyValue.HasMember("transform")) {
             Transform transform;
-            openravejson::LoadJsonValueByKey(bodyValue, "transform", transform);
+            OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "transform", transform);
             transform.trans *= fUnitScale;
             body->SetTransform(transform);
         }
@@ -271,11 +271,11 @@ protected:
     bool _Extract(const rapidjson::Value &bodyValue, RobotBasePtr& probot)
     {
         std::string uri;
-        openravejson::LoadJsonValueByKey(bodyValue, "uri", uri);
+        OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "uri", uri);
 
         rapidjson::Value::ValueIterator object = _ResolveObject(uri);
 
-        if (!openravejson::GetJsonValueByKey<bool>(*object, "isRobot")) {
+        if (!OpenRAVE::JSON::GetJsonValueByKey<bool>(*object, "isRobot")) {
             return false;
         }
 
@@ -310,11 +310,11 @@ protected:
 
         _ExtractReadableInterfaces(*object, robot, fUnitScale);
 
-        robot->SetName(openravejson::GetJsonValueByKey<std::string>(bodyValue, "name"));
+        robot->SetName(OpenRAVE::JSON::GetJsonValueByKey<std::string>(bodyValue, "name"));
 
         if (bodyValue.HasMember("transform")) {
             Transform transform;
-            openravejson::LoadJsonValueByKey(bodyValue, "transform", transform);
+            OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "transform", transform);
             transform.trans *= fUnitScale;
             robot->SetTransform(transform);
         }
@@ -447,7 +447,7 @@ protected:
         if (doc->IsObject() && doc->HasMember("objects") && (*doc)["objects"].IsArray()) {
             for (rapidjson::Value::ValueIterator itr = (*doc)["objects"].Begin(); itr != (*doc)["objects"].End(); ++itr) {
                 std::string id;
-                openravejson::LoadJsonValueByKey(*itr, "id", id);
+                OpenRAVE::JSON::LoadJsonValueByKey(*itr, "id", id);
                 if (!id.empty()) {
                     _objects[doc][id] = itr;
                 }

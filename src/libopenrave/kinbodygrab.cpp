@@ -333,18 +333,18 @@ void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vgrabbedinfo)
 
 void KinBody::GrabbedInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    openravejson::SetJsonValueByKey(value, "grabbedName", _grabbedname, allocator);
-    openravejson::SetJsonValueByKey(value, "robotLinkName", _robotlinkname, allocator);
-    openravejson::SetJsonValueByKey(value, "transform", _trelative, allocator);
-    openravejson::SetJsonValueByKey(value, "robotLinksToIgnoreSet", _setRobotLinksToIgnore, allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(value, "grabbedName", _grabbedname, allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(value, "robotLinkName", _robotlinkname, allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(value, "transform", _trelative, allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(value, "robotLinksToIgnoreSet", _setRobotLinksToIgnore, allocator);
 }
 
 void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
-    openravejson::LoadJsonValueByKey(value, "grabbedName", _grabbedname);
-    openravejson::LoadJsonValueByKey(value, "robotLinkName", _robotlinkname);
-    openravejson::LoadJsonValueByKey(value, "transform", _trelative);
-    openravejson::LoadJsonValueByKey(value, "robotLinksToIgnoreSet", _setRobotLinksToIgnore);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "grabbedName", _grabbedname);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "robotLinkName", _robotlinkname);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _trelative);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "robotLinksToIgnoreSet", _setRobotLinksToIgnore);
 }
 
 void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vgrabbedinfo)
