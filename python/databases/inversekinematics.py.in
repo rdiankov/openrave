@@ -961,7 +961,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                         compiler.link_shared_object(objectfiles,output_filename=output_filename, extra_postargs=libraryFiles)
                     except distutils.errors.LinkError,e:
                         log.warn(e)
-                        log.info('linking again with %r... (MSVC bug?)',libraries)
+                        log.info('linking again without lapack... (MSVC bug?)')
                         compiler.link_shared_object(objectfiles,output_filename=output_filename)
                         
                     if not self.setrobot():
