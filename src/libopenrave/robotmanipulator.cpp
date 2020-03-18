@@ -450,7 +450,7 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
 IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParameterization& ikparam, bool inworld) const
 {
     IkParameterization ikp = ikparam; // copies the custom data
-    Transform t = GetTransform();
+    Transform t = this->GetTransform();
     if( !inworld ) {
         t = GetBase()->GetTransform().inverse()*t;
     }

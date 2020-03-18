@@ -1490,6 +1490,10 @@ std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam)
         O << p.second << " " << p.first.x << " " << p.first.y << " " << p.first.z << " ";
         break;
     }
+    case IKP_None : {
+        O << "IKP_None";
+        break;
+    }
     default:
         throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization 0x%x"), ikparam.GetType(),ORE_InvalidArguments);
     }
