@@ -311,22 +311,22 @@ void openravemsgpack::ParseMsgPack(rapidjson::Document& d, std::istream& is)
 
 void openravemsgpack::DumpMsgPack(const rapidjson::Value& value, std::ostream& os)
 {
-    throw new OpenRAVEMsgPackException("Operation is not supported.");
+    throw OPENRAVE_EXCEPTION_FORMAT0("MsgPack support is not enabled", ORE_NotImplemented);
 }
 
 void openravemsgpack::DumpMsgPack(const rapidjson::Value& value, std::vector<char>& output)
 {
-    throw new OpenRAVEMsgPackException("Operation is not supported.");
+    throw OPENRAVE_EXCEPTION_FORMAT0("MsgPack support is not enabled", ORE_NotImplemented);
 }
 
 void openravemsgpack::ParseMsgPack(rapidjson::Document& d, const std::string& str)
 {
-    throw new OpenRAVEMsgPackException("Operation is not supported.");
+    throw OPENRAVE_EXCEPTION_FORMAT0("MsgPack support is not enabled", ORE_NotImplemented);
 }
 
 void openravemsgpack::ParseMsgPack(rapidjson::Document& d, std::istream& is)
 {
-    throw new OpenRAVEMsgPackException("Operation is not supported.");
+    throw OPENRAVE_EXCEPTION_FORMAT0("MsgPack support is not enabled", ORE_NotImplemented);
 }
 
 #endif
