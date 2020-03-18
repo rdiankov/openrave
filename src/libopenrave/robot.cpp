@@ -418,7 +418,7 @@ void RobotBase::Destroy()
     KinBody::Destroy();
 }
 
-bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, const std::vector<KinBody::JointInfoConstPtr>& jointinfos, const std::vector<RobotBase::ManipulatorInfoConstPtr>& manipinfos, const std::vector<RobotBase::AttachedSensorInfoConstPtr>& attachedsensorinfos, const std::vector<ConnectedBodyInfoConstPtr>& connectedbodyinfos, const std::string& uri)
+bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, const std::vector<KinBody::JointInfoConstPtr>& jointinfos, const std::vector<RobotBase::ManipulatorInfoConstPtr>& manipinfos, const std::vector<RobotBase::AttachedSensorInfoConstPtr>& attachedsensorinfos, const std::string& uri)
 {
     if( !KinBody::Init(linkinfos, jointinfos, uri) ) {
         return false;
@@ -437,7 +437,29 @@ bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, co
         __hashrobotstructure.resize(0);
     }
     _vecConnectedBodies.clear();
-    FOREACHC(itconnectedbodyinfo, connectedbodyinfos) {
+    return true;
+}
+
+bool RobotBase::InitFromInfo(const RobotBaseInfoConstPtr& info)
+{
+    if( !KinBody::InitFromInfo(info) ) {
+        return false;
+    }
+    _vecManipulators.resize(0);
+    FOREACHC(itmanipinfo, info->_vManipInfos) {
+        ManipulatorPtr newmanip(new Manipulator(shared_robot(),**itmanipinfo));
+        _vecManipulators.push_back(newmanip);
+        __hashrobotstructure.resize(0);
+    }
+    _vecAttachedSensors.clear();
+    FOREACHC(itattachedsensorinfo, info->_vAttachedSensorInfos) {
+        AttachedSensorPtr newattachedsensor(new AttachedSensor(shared_robot(),**itattachedsensorinfo));
+        _vecAttachedSensors.push_back(newattachedsensor);
+        newattachedsensor->UpdateInfo(); // just in case
+        __hashrobotstructure.resize(0);
+    }
+    _vecConnectedBodies.clear();
+    FOREACHC(itconnectedbodyinfo, info->_vConnectedBodyInfos) {
         ConnectedBodyPtr newconnectedbody(new ConnectedBody(shared_robot(),**itconnectedbodyinfo));
         _vecConnectedBodies.push_back(newconnectedbody);
     }

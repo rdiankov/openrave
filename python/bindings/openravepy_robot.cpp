@@ -1083,7 +1083,7 @@ PyRobotBase::PyRobotBase(const PyRobotBase &r) : PyKinBody(r._probot,r._pyenv) {
 PyRobotBase::~PyRobotBase() {
 }
 
-bool PyRobotBase::Init(object olinkinfos, object ojointinfos, object omanipinfos, object oattachedsensorinfos, object oconnectedbodyinfos, const std::string& uri) {
+bool PyRobotBase::Init(object olinkinfos, object ojointinfos, object omanipinfos, object oattachedsensorinfos, const std::string& uri) {
     std::vector<KinBody::LinkInfoConstPtr> vlinkinfos;
     _ParseLinkInfos(olinkinfos, vlinkinfos);
     std::vector<KinBody::JointInfoConstPtr> vjointinfos;
@@ -1104,15 +1104,7 @@ bool PyRobotBase::Init(object olinkinfos, object ojointinfos, object omanipinfos
         }
         vattachedsensorinfos[i] = pyattachedsensor->GetAttachedSensorInfo();
     }
-    std::vector<RobotBase::ConnectedBodyInfoConstPtr> vconnectedbodyinfos(len(oconnectedbodyinfos));
-    for(size_t i = 0; i < vconnectedbodyinfos.size(); ++i) {
-        PyConnectedBodyInfoPtr pyconnectedbody = py::extract<PyConnectedBodyInfoPtr>(oconnectedbodyinfos[i]);
-        if( !pyconnectedbody ) {
-            throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.AttachedsensorInfo"),ORE_InvalidArguments);
-        }
-        vconnectedbodyinfos[i] = pyconnectedbody->GetConnectedBodyInfo();
-    }
-    return _probot->Init(vlinkinfos, vjointinfos, vmanipinfos, vattachedsensorinfos, vconnectedbodyinfos, uri);
+    return _probot->Init(vlinkinfos, vjointinfos, vmanipinfos, vattachedsensorinfos, uri);
 }
 
 object PyRobotBase::GetManipulators()
@@ -1747,7 +1739,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(AddAttachedSensor_overloads, AddAttachedS
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(AddConnectedBody_overloads, AddConnectedBody, 1,2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetActiveConfigurationSpecification_overloads, GetActiveConfigurationSpecification, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Restore_overloads, Restore, 0,1)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Init_overloads, Init, 5,6)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Init_overloads, Init, 4,5)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(UpdateInfo_overloads, UpdateInfo, 0,1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(UpdateAndGetInfo_overloads, UpdateAndGetInfo, 0,1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckLinkSelfCollision_overloads, CheckLinkSelfCollision, 2, 3)
@@ -1910,7 +1902,7 @@ void init_openravepy_robot()
         bool (PyRobotBase::*setcontroller1)(PyControllerBasePtr,const string &) = &PyRobotBase::SetController;
         bool (PyRobotBase::*setcontroller2)(PyControllerBasePtr,object,int) = &PyRobotBase::SetController;
         bool (PyRobotBase::*setcontroller3)(PyControllerBasePtr) = &PyRobotBase::SetController;
-        bool (PyRobotBase::*initrobot)(object, object, object, object, object, const std::string&) = &PyRobotBase::Init;
+        bool (PyRobotBase::*initrobot)(object, object, object, object, const std::string&) = &PyRobotBase::Init;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         scope_ robot = class_<PyRobotBase, OPENRAVE_SHARED_PTR<PyRobotBase>, PyKinBody>(m, "Robot", DOXY_CLASS(RobotBase))
 #else
@@ -1922,12 +1914,11 @@ void init_openravepy_robot()
                         "jointinfos"_a,
                         "manipinfos"_a,
                         "attachedsensorinfos"_a,
-                        "connectedbodyinfos"_a,
                         "uri"_a = "",
                         DOXY_FN(RobotBase, Init)
                         )
 #else
-                      .def("Init", initrobot, Init_overloads(PY_ARGS("linkinfos", "jointinfos", "manipinfos", "attachedsensorinfos", "connectedbodyinfos", "uri") DOXY_FN(RobotBase, Init)))
+                      .def("Init", initrobot, Init_overloads(PY_ARGS("linkinfos", "jointinfos", "manipinfos", "attachedsensorinfos", "uri") DOXY_FN(RobotBase, Init)))
 #endif
                       .def("GetManipulators",GetManipulators1, DOXY_FN(RobotBase,GetManipulators))
                       .def("GetManipulators",GetManipulators2, PY_ARGS("manipname") DOXY_FN(RobotBase,GetManipulators))
