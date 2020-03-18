@@ -679,7 +679,7 @@ protected:
         doc.reset(new rapidjson::Document);
         
         std::ifstream ifs(filename.c_str());
-        openravemsgpack::ParseMsgPack(*doc, ifs);
+        OpenRAVE::MsgPack::ParseMsgPack(*doc, ifs);
         
         _docs[filename] = doc;
         return doc;
@@ -691,7 +691,7 @@ protected:
         boost::shared_ptr<rapidjson::Document> doc;
         doc.reset(new rapidjson::Document);
 
-        openravemsgpack::ParseMsgPack(*doc, data);
+        OpenRAVE::MsgPack::ParseMsgPack(*doc, data);
 
         _docs[""] = doc;
         return doc;

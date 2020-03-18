@@ -281,50 +281,50 @@ private:
 
 } // namespace msgpack
 
-void openravemsgpack::DumpMsgPack(const rapidjson::Value& value, std::ostream& os)
+void OpenRAVE::MsgPack::DumpMsgPack(const rapidjson::Value& value, std::ostream& os)
 {
     msgpack::osbuffer buf(os);
     msgpack::pack(&buf, value);
 }
 
-void openravemsgpack::DumpMsgPack(const rapidjson::Value& value, std::vector<char>& output)
+void OpenRAVE::MsgPack::DumpMsgPack(const rapidjson::Value& value, std::vector<char>& output)
 {   
     msgpack::vbuffer buf(output);
     msgpack::pack(&buf, value);
 }
 
-void openravemsgpack::ParseMsgPack(rapidjson::Document& d, const std::string& str)
+void OpenRAVE::MsgPack::ParseMsgPack(rapidjson::Document& d, const std::string& str)
 {
     msgpack::unpacked unpacked;
     msgpack::unpack(&unpacked, str.data(), str.size());
     unpacked.get().convert(d);
 }
 
-void openravemsgpack::ParseMsgPack(rapidjson::Document& d, std::istream& is)
+void OpenRAVE::MsgPack::ParseMsgPack(rapidjson::Document& d, std::istream& is)
 {
     std::string str;
     str.assign(std::istreambuf_iterator<char>(is), std::istreambuf_iterator<char>());
-    openravemsgpack::ParseMsgPack(d, str);
+    OpenRAVE::MsgPack::ParseMsgPack(d, str);
 }
 
 #else
 
-void openravemsgpack::DumpMsgPack(const rapidjson::Value& value, std::ostream& os)
+void OpenRAVE::MsgPack::DumpMsgPack(const rapidjson::Value& value, std::ostream& os)
 {
     throw OPENRAVE_EXCEPTION_FORMAT0("MsgPack support is not enabled", ORE_NotImplemented);
 }
 
-void openravemsgpack::DumpMsgPack(const rapidjson::Value& value, std::vector<char>& output)
+void OpenRAVE::MsgPack::DumpMsgPack(const rapidjson::Value& value, std::vector<char>& output)
 {
     throw OPENRAVE_EXCEPTION_FORMAT0("MsgPack support is not enabled", ORE_NotImplemented);
 }
 
-void openravemsgpack::ParseMsgPack(rapidjson::Document& d, const std::string& str)
+void OpenRAVE::MsgPack::ParseMsgPack(rapidjson::Document& d, const std::string& str)
 {
     throw OPENRAVE_EXCEPTION_FORMAT0("MsgPack support is not enabled", ORE_NotImplemented);
 }
 
-void openravemsgpack::ParseMsgPack(rapidjson::Document& d, std::istream& is)
+void OpenRAVE::MsgPack::ParseMsgPack(rapidjson::Document& d, std::istream& is)
 {
     throw OPENRAVE_EXCEPTION_FORMAT0("MsgPack support is not enabled", ORE_NotImplemented);
 }
