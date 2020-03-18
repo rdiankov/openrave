@@ -442,22 +442,14 @@ bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, co
 
 bool RobotBase::InitFromInfo(const RobotBaseInfoConstPtr& info)
 {
-    if( !KinBody::InitFromInfo(info) ) {
+    std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(info->_vLinkInfos.begin(), info->_vLinkInfos.end());
+    std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(info->_vJointInfos.begin(), info->_vJointInfos.end());
+    std::vector<RobotBase::ManipulatorInfoConstPtr> vManipInfosConst(info->_vManipInfos.begin(), info->_vManipInfos.end());
+    std::vector<RobotBase::AttachedSensorInfoConstPtr> vAttachedSensorInfosConst(info->_vAttachedSensorInfos.begin(), info->_vAttachedSensorInfos.end());
+    if( !RobotBase::Init(vLinkInfosConst, vJointInfosConst, vManipInfosConst, vAttachedSensorInfosConst, info->_uri) ) {
         return false;
     }
-    _vecManipulators.resize(0);
-    FOREACHC(itmanipinfo, info->_vManipInfos) {
-        ManipulatorPtr newmanip(new Manipulator(shared_robot(),**itmanipinfo));
-        _vecManipulators.push_back(newmanip);
-        __hashrobotstructure.resize(0);
-    }
-    _vecAttachedSensors.clear();
-    FOREACHC(itattachedsensorinfo, info->_vAttachedSensorInfos) {
-        AttachedSensorPtr newattachedsensor(new AttachedSensor(shared_robot(),**itattachedsensorinfo));
-        _vecAttachedSensors.push_back(newattachedsensor);
-        newattachedsensor->UpdateInfo(); // just in case
-        __hashrobotstructure.resize(0);
-    }
+
     _vecConnectedBodies.clear();
     FOREACHC(itconnectedbodyinfo, info->_vConnectedBodyInfos) {
         ConnectedBodyPtr newconnectedbody(new ConnectedBody(shared_robot(),**itconnectedbodyinfo));
