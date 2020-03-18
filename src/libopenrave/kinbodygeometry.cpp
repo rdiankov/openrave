@@ -451,7 +451,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, KinBody::GeometryInfo::Side
         openravejson::LoadJsonValueByKey(v, "type", type);
         t.type = (KinBody::GeometryInfo::SideWallType)type;
     } else {
-        throw openravejson::OpenRAVEJSONException("Cannot convert json type " + openravejson::GetJsonTypeName(v) + " to OpenRAVE::Geometry::SideWall");
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to OpenRAVE::Geometry::SideWall", openravejson::GetJsonTypeName(v), OpenRAVE::ORE_InvalidArguments);
     }
 }
 

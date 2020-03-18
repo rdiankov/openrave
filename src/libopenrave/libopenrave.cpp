@@ -2907,7 +2907,7 @@ void IkParameterization::SerializeJSON(rapidjson::Value& rIkParameterization, ra
 void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameterization, dReal fUnitScale)
 {
     if (!rIkParameterization.IsObject()) {
-        throw openravejson::OpenRAVEJSONException("Cannot load value of non-object to IkParameterization.", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("Cannot decode non-object JSON value to IkParameterization"), ORE_InvalidArguments);
     }
     _type = IKP_None;
     if( rIkParameterization.HasMember("type") ) {
