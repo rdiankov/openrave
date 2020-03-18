@@ -56,10 +56,10 @@ void RobotBase::ConnectedBodyInfo::InitInfoFromBody(RobotBase& robot)
 }
 void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    openravejson::SetJsonValueByKey(value, "name", _name, allocator);
-    openravejson::SetJsonValueByKey(value, "linkName", _linkname, allocator);
-    openravejson::SetJsonValueByKey(value, "uri", _uri, allocator);
-    openravejson::SetJsonValueByKey(value, "transform", _trelative, allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(value, "linkName", _linkname, allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(value, "uri", _uri, allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(value, "transform", _trelative, allocator);
 
     // rapidjson::Value linkInfosValue;
     // linkInfosValue.SetArray();
@@ -101,15 +101,15 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
     // }
     // value.AddMember("attachedSensors", attachedSensorInfosValue, allocator);
 
-    openravejson::SetJsonValueByKey(value, "isActive", _bIsActive, allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(value, "isActive", _bIsActive, allocator);
 }
 
 void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale)
 {
-    openravejson::LoadJsonValueByKey(value, "name", _name);
-    openravejson::LoadJsonValueByKey(value, "linkName", _linkname);
-    openravejson::LoadJsonValueByKey(value, "uri", _uri);
-    openravejson::LoadJsonValueByKey(value, "transform", _trelative);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "linkName", _linkname);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _trelative);
 
     _vLinkInfos.resize(0);
     // if(value.HasMember("links"))
@@ -155,7 +155,7 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
     //     }
     // }
 
-    openravejson::LoadJsonValueByKey(value, "isActive", _bIsActive);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "isActive", _bIsActive);
 }
 
 
