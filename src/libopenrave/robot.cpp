@@ -365,6 +365,81 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
     }
 }
 
+void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    OpenRAVE::JSON::SetJsonValueByKey(value, "uri", _uri, allocator);
+    if (_vManipInfos.size() > 0) {
+        rapidjson::Value rManipInfoValues;
+        rManipInfoValues.SetArray();
+        rManipInfoValues.Reserve(_vManipInfos.size(), allocator);
+        FOREACHC(it, _vManipInfos) {
+            rapidjson::Value manipInfoValue;
+            (*it)->SerializeJSON(manipInfoValue, allocator, options);
+            rManipInfoValues.PushBack(manipInfoValue, allocator);
+        }
+        value.AddMember("manipInfos", rManipInfoValues, allocator);
+    }
+
+    if (_vAttachedSensorInfos.size() > 0) {
+        rapidjson::Value rAttachedSensorInfoValues;
+        rAttachedSensorInfoValues.SetArray();
+        rAttachedSensorInfoValues.Reserve(_vAttachedSensorInfos.size(), allocator);
+        FOREACHC(it, _vAttachedSensorInfos) {
+            rapidjson::Value attachedSensorInfoValue;
+            (*it)->SerializeJSON(attachedSensorInfoValue, allocator, options);
+            rAttachedSensorInfoValues.PushBack(attachedSensorInfoValue, allocator);
+        }
+        value.AddMember("attachedSensorInfos", rAttachedSensorInfoValues, allocator);
+    }
+
+    if (_vConnectedBodyInfos.size() > 0) {
+        rapidjson::Value rConnectedBodyInfoValues;
+        rConnectedBodyInfoValues.SetArray();
+        rConnectedBodyInfoValues.Reserve(_vConnectedBodyInfos.size(), allocator);
+        FOREACHC(it, _vConnectedBodyInfos) {
+            rapidjson::Value connectedBodyInfoValue;
+            (*it)->SerializeJSON(connectedBodyInfoValue, allocator, options);
+            rConnectedBodyInfoValues.PushBack(connectedBodyInfoValue, allocator);
+        }
+        value.AddMember("connectedBodyInfos", rConnectedBodyInfoValues, allocator);
+    }
+}
+
+void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+{
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri);
+
+    _vManipInfos.clear();
+    if (value.HasMember("manipInfos")) {
+        _vManipInfos.reserve(value["manipInfos"].Size());
+        for (size_t iManipInfo = 0; iManipInfo < value["manipInfos"].Size(); iManipInfo++) {
+            ManipulatorInfoPtr pManipInfo(new ManipulatorInfo());
+            pManipInfo->DeserializeJSON(value["manipInfos"][iManipInfo], fUnitScale);
+            _vManipInfos.push_back(pManipInfo);
+        }
+    }
+
+    _vAttachedSensorInfos.clear();
+    if (value.HasMember("attachedSensorInfos")) {
+        _vAttachedSensorInfos.reserve(value["attachedSensorInfos"].Size());
+        for (size_t iAttachedSensorInfo = 0; iAttachedSensorInfo < value["attachedSensorInfos"].Size(); iAttachedSensorInfo++) {
+            AttachedSensorInfoPtr pAttachedSensorInfo(new AttachedSensorInfo());
+            pAttachedSensorInfo->DeserializeJSON(value["attachedSensorInfos"][iAttachedSensorInfo], fUnitScale);
+            _vAttachedSensorInfos.push_back(pAttachedSensorInfo);
+        }
+    }
+
+    _vConnectedBodyInfos.clear();
+    if (value.HasMember("connectedBodyInfos")) {
+        _vConnectedBodyInfos.reserve(value["connectedBodyInfos"].Size());
+        for (size_t iConnectedBodyInfo = 0; iConnectedBodyInfo < value["connectedBodyInfos"].Size(); iConnectedBodyInfo++) {
+            ConnectedBodyInfoPtr pConnectedBodyInfo(new ConnectedBodyInfo());
+            pConnectedBodyInfo->DeserializeJSON(value["connectedBodyInfos"][iConnectedBodyInfo], fUnitScale);
+            _vConnectedBodyInfos.push_back(pConnectedBodyInfo);
+        }
+    }
+}
+
 RobotBase::RobotBase(EnvironmentBasePtr penv) : KinBody(PT_Robot, penv)
 {
     _nAffineDOFs = 0;

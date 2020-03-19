@@ -125,11 +125,6 @@ void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, d
     OpenRAVE::JSON::LoadJsonValueByKey(value, "viscousFriction", viscous_friction);
 }
 
-
-KinBody::KinBodyInfo::KinBodyInfo(std::string uri, std::vector<LinkInfoPtr>& linkInfos, std::vector<JointInfoPtr>& jointInfos): _uri(uri), _vLinkInfos(linkInfos), _vJointInfos(jointInfos)
-{
-}
-
 void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     OpenRAVE::JSON::SetJsonValueByKey(value, "uri", _uri, allocator);
