@@ -677,10 +677,11 @@ public:
 
         virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
-
         std::vector<ManipulatorInfoPtr> _vManipInfos; ///< list of pointers to ManipulatorInfo
         std::vector<AttachedSensorInfoPtr> _vAttachedSensorInfos; ///< list of pointers to AttachedSensorInfo
         std::vector<ConnectedBodyInfoPtr> _vConnectedBodyInfos; ///< list of pointers to ConnectedBodyInfo
+private:
+        void _Update(const RobotBase::RobotBaseInfo& info);
     };
     typedef boost::shared_ptr<RobotBaseInfo> RobotBaseInfoPtr;
     typedef boost::shared_ptr<RobotBaseInfo const> RobotBaseInfoConstPtr;
