@@ -125,6 +125,63 @@ void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, d
     OpenRAVE::JSON::LoadJsonValueByKey(value, "viscousFriction", viscous_friction);
 }
 
+
+KinBody::KinBodyInfo::KinBodyInfo(std::string uri, std::vector<LinkInfoPtr>& linkInfos, std::vector<JointInfoPtr>& jointInfos): _uri(uri), _vLinkInfos(linkInfos), _vJointInfos(jointInfos)
+{
+}
+
+void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    OpenRAVE::JSON::SetJsonValueByKey(value, "uri", _uri, allocator);
+    if (_vLinkInfos.size() > 0) {
+        rapidjson::Value rLinkInfoValues;
+        rLinkInfoValues.SetArray();
+        rLinkInfoValues.Reserve(_vLinkInfos.size(), allocator);
+        FOREACHC(it, _vLinkInfos) {
+            rapidjson::Value linkInfoValue;
+            (*it)->SerializeJSON(linkInfoValue, allocator, options);
+            rLinkInfoValues.PushBack(linkInfoValue, allocator);
+        }
+        value.AddMember("linkInfos", rLinkInfoValues, allocator);
+    }
+
+    if (_vJointInfos.size() > 0) {
+        rapidjson::Value rJointInfoValues;
+        rJointInfoValues.SetArray();
+        rJointInfoValues.Reserve(_vJointInfos.size(), allocator);
+        FOREACHC(it, _vJointInfos) {
+            rapidjson::Value jointInfo;
+            (*it)->SerializeJSON(jointInfo, allocator, options);
+            rJointInfoValues.PushBack(jointInfo, allocator);
+        }
+        value.AddMember("jointInfos", rJointInfoValues, allocator);
+    }
+}
+
+void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+{
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri);
+
+    _vLinkInfos.clear();
+    if (value.HasMember("linkInfos")) {
+        _vLinkInfos.reserve(value["linkInfos"].Size());
+        for (size_t iLinkInfo = 0; iLinkInfo < value["linkInfos"].Size(); iLinkInfo++) {
+            LinkInfoPtr pLinkInfo(new LinkInfo());
+            pLinkInfo->DeserializeJSON(value["linkInfos"][iLinkInfo], fUnitScale);
+            _vLinkInfos.push_back(pLinkInfo);
+        }
+    }
+    _vJointInfos.clear();
+    if (value.HasMember("jointInfos")) {
+        _vJointInfos.reserve(value["jointInfos"].Size());
+        for (size_t iJointInfo = 0; iJointInfo < value["jointInfos"].Size(); iJointInfo++) {
+            JointInfoPtr pJointInfo(new JointInfo());
+            pJointInfo->DeserializeJSON(value["jointInfos"][iJointInfo], fUnitScale);
+            _vJointInfos.push_back(pJointInfo);
+        }
+    }
+}
+
 KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)
 {
     _nHierarchyComputed = 0;
