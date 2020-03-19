@@ -78,6 +78,7 @@ if(@USE_OPENRAVEPY@)
 endif()
 
 set( OpenRAVE_Boost_VERSION "@Boost_MAJOR_VERSION@.@Boost_MINOR_VERSION@")
+set( OpenRAVE_BLA_VENDOR "@BLA_VENDOR@" )
 
 if( WIN32 )
   # search for the boost version openrave was compiled with
