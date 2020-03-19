@@ -53,7 +53,7 @@ option(OPT_CBINDINGS "Build the C-bindings libraries libopenrave_c and libopenra
 option(OPT_LOG4CXX "Use log4cxx for logging" ON)
 
 set(PACKAGE_VERSION "0" CACHE STRING "the package-specific version used for uploading the sources")
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
 set(CPACK_DEBIAN_PACKAGE_NAME openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 
 if(OPT_DOUBLE_PRECISION)
