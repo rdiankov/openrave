@@ -183,12 +183,23 @@ public:
             }
             _InitializeGroupFunctions();
         }
-        _vtrajdata.resize(0);
-        _vaccumtime.resize(0);
-        _vdeltainvtime.resize(0);
+        _vtrajdata.clear();
+        _vaccumtime.clear();
+        _vdeltainvtime.clear();
         _bChanged = true;
         _bSamplingVerified = false;
         _bInit = true;
+    }
+
+    void ClearWaypoints()
+    {
+        if( _bInit ) {
+            if( _vtrajdata.size() > 0 ) {
+                _bSamplingVerified = false;
+                _bChanged = true;
+                _vtrajdata.clear();
+            }
+        }
     }
 
     void Insert(size_t index, const std::vector<dReal>& data, bool bOverwrite)
