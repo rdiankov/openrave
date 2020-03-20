@@ -29,10 +29,10 @@ namespace OpenRAVE {
 /// By default, inverse kinematics checks joint values, self-collisions, and custom filters. Unless specified with an option, it will not check environment collisions.
 enum IkFilterOptions
 {
-    IKFO_CheckEnvCollisions=1, ///< will check environment collisions with the robot (not checked by default)
-    IKFO_IgnoreSelfCollisions=2, ///< will not check the self-collision of the robot (checked by default). This also ignores the end effector collisions.
-    IKFO_IgnoreJointLimits=4, ///< will not check the joint limits of the robot (checked by default). This has the side effect of only returning solutions within 360 degrees for revolute joints, even if they have a range > 360.
-    IKFO_IgnoreCustomFilters=8, ///< will not use the registered custom filters, even if one is set. Custom filters are registered through \ref IkSolverBase::RegisterCustomFilter
+    IKFO_CheckEnvCollisions=0x1, ///< will check environment collisions with the robot (not checked by default)
+    IKFO_IgnoreSelfCollisions=0x2, ///< will not check the self-collision of the robot (checked by default). This also ignores the end effector collisions.
+    IKFO_IgnoreJointLimits=0x4, ///< will not check the joint limits of the robot (checked by default). This has the side effect of only returning solutions within 360 degrees for revolute joints, even if they have a range > 360.
+    IKFO_IgnoreCustomFilters=0x8, ///< will not use the registered custom filters, even if one is set. Custom filters are registered through \ref IkSolverBase::RegisterCustomFilter
     IKFO_IgnoreEndEffectorCollisions=0x10, ///< \see IKFO_IgnoreEndEffectorEnvCollisions
     IKFO_IgnoreEndEffectorEnvCollisions=0x10, ///< will not check collision with the environment and the end effector links and bodies attached to the end effector links. The end effector links are defined by \ref RobotBase::Manipulator::GetChildLinks. Use this option when \ref RobotBase::Manipulator::CheckEndEffectorCollision has already been called, or it is ok for the end effector to collide given the IK constraints. Self-collisions between the moving links and end effector are still checked.
     IKFO_IgnoreEndEffectorSelfCollisions=0x20, ///< will not check self-collisions with the end effector. The end effector links are defined by \ref RobotBase::Manipulator::GetChildLinks. Use this option if it is ok for the end effector to collide given the IK constraints. Collisions between the moving links and end effector are still checked.
