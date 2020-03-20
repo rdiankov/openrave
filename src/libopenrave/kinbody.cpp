@@ -137,7 +137,7 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
             (*it)->SerializeJSON(linkInfoValue, allocator, options);
             rLinkInfoValues.PushBack(linkInfoValue, allocator);
         }
-        value.AddMember("linkInfos", rLinkInfoValues, allocator);
+        value.AddMember("links", rLinkInfoValues, allocator);
     }
 
     if (_vJointInfos.size() > 0) {
@@ -149,7 +149,7 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
             (*it)->SerializeJSON(jointInfo, allocator, options);
             rJointInfoValues.PushBack(jointInfo, allocator);
         }
-        value.AddMember("jointInfos", rJointInfoValues, allocator);
+        value.AddMember("joints", rJointInfoValues, allocator);
     }
 }
 
@@ -158,7 +158,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri);
 
     _vLinkInfos.clear();
-    if (value.HasMember("linkInfos")) {
+    if (value.HasMember("links")) {
         _vLinkInfos.reserve(value["linkInfos"].Size());
         for (size_t iLinkInfo = 0; iLinkInfo < value["linkInfos"].Size(); iLinkInfo++) {
             LinkInfoPtr pLinkInfo(new LinkInfo());
@@ -167,7 +167,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         }
     }
     _vJointInfos.clear();
-    if (value.HasMember("jointInfos")) {
+    if (value.HasMember("joints")) {
         _vJointInfos.reserve(value["jointInfos"].Size());
         for (size_t iJointInfo = 0; iJointInfo < value["jointInfos"].Size(); iJointInfo++) {
             JointInfoPtr pJointInfo(new JointInfo());
