@@ -464,7 +464,6 @@ object toPyTriMesh(const TriMesh& mesh)
     return py::to_object(OPENRAVE_SHARED_PTR<PyTriMesh>(new PyTriMesh(mesh)));
 }
 
-
 class TriMesh_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
     : public pickle_suite

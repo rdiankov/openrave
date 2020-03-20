@@ -183,12 +183,23 @@ public:
             }
             _InitializeGroupFunctions();
         }
-        _vtrajdata.resize(0);
-        _vaccumtime.resize(0);
-        _vdeltainvtime.resize(0);
+        _vtrajdata.clear();
+        _vaccumtime.clear();
+        _vdeltainvtime.clear();
         _bChanged = true;
         _bSamplingVerified = false;
         _bInit = true;
+    }
+
+    void ClearWaypoints()
+    {
+        if( _bInit ) {
+            if( _vtrajdata.size() > 0 ) {
+                _bSamplingVerified = false;
+                _bChanged = true;
+                _vtrajdata.clear();
+            }
+        }
     }
 
     void Insert(size_t index, const std::vector<dReal>& data, bool bOverwrite)
@@ -523,22 +534,16 @@ public:
             ReadBinaryString(I, __description);
 
             // clear out existing readable interfaces
-            {
-                const READERSMAP& readableInterfaces = GetReadableInterfaces();
-                for (READERSMAP::const_iterator itReadableInterface = readableInterfaces.begin(); itReadableInterface != readableInterfaces.end(); ++itReadableInterface ) {
-                    SetReadableInterface(itReadableInterface->first, ReadablePtr());
-                }
-            }
+            ClearReadableInterfaces();
+
             // versions >= 0x0002 have readable interfaces
-            if (versionNumber >= 0x0002)
-            {
+            if (versionNumber >= 0x0002) {
                 // read readable interfaces
                 uint16_t numReadableInterfaces = 0;
                 ReadBinaryUInt16(I, numReadableInterfaces);
                 std::string xmlid;
                 std::string serializedReadableInterface;
-                for (size_t readableInterfaceIndex = 0; readableInterfaceIndex < numReadableInterfaces; ++readableInterfaceIndex)
-                {
+                for (size_t readableInterfaceIndex = 0; readableInterfaceIndex < numReadableInterfaces; ++readableInterfaceIndex) {
                     ReadBinaryString(I, xmlid);
                     ReadBinaryString(I, serializedReadableInterface);
 
