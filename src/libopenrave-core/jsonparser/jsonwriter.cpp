@@ -429,7 +429,7 @@ void RaveWriteMsgPackFile(EnvironmentBasePtr penv, const std::string& filename, 
     std::ofstream ofstream(filename.c_str());
     rapidjson::Document doc;
 
-    JSONWriter jsonwriter(atts, doc);
+    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(penv);
     OpenRAVE::MsgPack::DumpMsgPack(doc, ofstream);
 }
@@ -439,7 +439,7 @@ void RaveWriteMsgPackFile(KinBodyPtr pbody, const std::string& filename, const A
     std::ofstream ofstream(filename.c_str());
     rapidjson::Document doc;
 
-    JSONWriter jsonwriter(atts, doc);
+    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(pbody);
     OpenRAVE::MsgPack::DumpMsgPack(doc, ofstream);
 }
@@ -449,7 +449,7 @@ void RaveWriteMsgPackFile(const std::list<KinBodyPtr>& listbodies, const std::st
     std::ofstream ofstream(filename.c_str());
     rapidjson::Document doc;
 
-    JSONWriter jsonwriter(atts, doc);
+    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(listbodies);
     OpenRAVE::MsgPack::DumpMsgPack(doc, ofstream);
 }
@@ -458,7 +458,7 @@ void RaveWriteMsgPackStream(EnvironmentBasePtr penv, ostream& os, const Attribut
 {
     rapidjson::Document doc;
 
-    JSONWriter jsonwriter(atts, doc);
+    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(penv);
     OpenRAVE::MsgPack::DumpMsgPack(doc, os);
 }
@@ -467,7 +467,7 @@ void RaveWriteMsgPackStream(KinBodyPtr pbody, ostream& os, const AttributesList&
 {
     rapidjson::Document doc;
 
-    JSONWriter jsonwriter(atts, doc);
+    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(pbody);
     OpenRAVE::MsgPack::DumpMsgPack(doc, os);
 }
@@ -476,7 +476,7 @@ void RaveWriteMsgPackStream(const std::list<KinBodyPtr>& listbodies, ostream& os
 {
     rapidjson::Document doc;
 
-    JSONWriter jsonwriter(atts, doc);
+    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(listbodies);
     OpenRAVE::MsgPack::DumpMsgPack(doc, os);
 }
@@ -484,7 +484,7 @@ void RaveWriteMsgPackStream(const std::list<KinBodyPtr>& listbodies, ostream& os
 void RaveWriteMsgPackMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts)
 {
     rapidjson::Document doc;
-    JSONWriter jsonwriter(atts, doc);
+    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(penv);
     OpenRAVE::MsgPack::DumpMsgPack(doc, output);
 }
@@ -493,7 +493,7 @@ void RaveWriteMsgPackMemory(KinBodyPtr pbody, std::vector<char>& output, const A
 {
     rapidjson::Document doc;
 
-    JSONWriter jsonwriter(atts, doc);
+    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(pbody);
     OpenRAVE::MsgPack::DumpMsgPack(doc, output);
 }
@@ -502,7 +502,7 @@ void RaveWriteMsgPackMemory(const std::list<KinBodyPtr>& listbodies, std::vector
 {
     rapidjson::Document doc;
 
-    JSONWriter jsonwriter(atts, doc);
+    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(listbodies);
     OpenRAVE::MsgPack::DumpMsgPack(doc, output);
 }
