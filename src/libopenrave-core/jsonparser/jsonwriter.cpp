@@ -23,10 +23,10 @@
 
 namespace OpenRAVE {
 
-class JSONWriter {
+class EnvironmentJSONWriter
+{
 public:
-
-    JSONWriter(const AttributesList& atts, rapidjson::Document &doc) : _bExternalRefAllBodies(false), _doc(doc) {
+    EnvironmentJSONWriter(const AttributesList& atts, rapidjson::Value& rScene, rapidjson::Document::AllocatorType& allocator) : _bExternalRefAllBodies(false), _rScene(rScene), _allocator(allocator) {
         FOREACHC(itatt,atts) {
             if( itatt->first == "externalref" ) {
                 if( itatt->second == "*" ) {
@@ -44,7 +44,7 @@ public:
         }
     }
 
-    virtual ~JSONWriter() {
+    virtual ~EnvironmentJSONWriter() {
     }
 
     virtual void Write(EnvironmentBasePtr penv) {
@@ -67,11 +67,11 @@ public:
 protected:
 
     virtual void _Write(const std::list<KinBodyPtr>& listbodies) {
-        _doc.SetObject();
+        _rScene.SetObject();
         _mapBodyIds.clear();
         if (listbodies.size() > 0) {
             EnvironmentBaseConstPtr penv = listbodies.front()->GetEnv();
-            OpenRAVE::JSON::SetJsonValueByKey(_doc, "unit", penv->GetUnit(), _doc.GetAllocator());
+            OpenRAVE::JSON::SetJsonValueByKey(_rScene, "unit", penv->GetUnit(), _allocator);
 
             int globalId = 0;
             FOREACHC(itbody, listbodies) {
@@ -91,13 +91,13 @@ protected:
 
                 rapidjson::Value bodyValue;
                 bodyValue.SetObject();
-                OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "name", pbody->GetName(), _doc.GetAllocator());
-                OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "transform", pbody->GetTransform(), _doc.GetAllocator());
+                OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "name", pbody->GetName(), _allocator);
+                OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "transform", pbody->GetTransform(), _allocator);
 
                 std::vector<dReal> vDOFValues;
                 pbody->GetDOFValues(vDOFValues);
                 if (vDOFValues.size() > 0) {
-                    OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "dofValues", vDOFValues, _doc.GetAllocator());
+                    OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "dofValues", vDOFValues, _allocator);
                 }
 
                 KinBody::KinBodyStateSaver saver(pbody);
@@ -112,52 +112,52 @@ protected:
                     grabbedsValue.SetArray();
                     FOREACHC(itgrabbedinfo, vGrabbedInfo) {
                         rapidjson::Value grabbedValue;
-                        (*itgrabbedinfo)->SerializeJSON(grabbedValue, _doc.GetAllocator());
-                        grabbedsValue.PushBack(grabbedValue, _doc.GetAllocator());
+                        (*itgrabbedinfo)->SerializeJSON(grabbedValue, _allocator);
+                        grabbedsValue.PushBack(grabbedValue, _allocator);
                     }
-                    bodyValue.AddMember("grabbed", grabbedsValue, _doc.GetAllocator());
+                    bodyValue.AddMember("grabbed", grabbedsValue, _allocator);
                 }
 
                 if (_CheckForExternalWrite(pbody)) {
                     // for external references, need to canonicalize the uri
                     std::string uri = _CanonicalizeURI(pbody->GetURI());
-                    OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "uri", uri, _doc.GetAllocator());
-                    bodiesValue.PushBack(bodyValue, _doc.GetAllocator());
+                    OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "uri", uri, _allocator);
+                    bodiesValue.PushBack(bodyValue, _allocator);
                     continue;
                 }
 
                 // non-external reference
                 std::string id = str(boost::format("body%d_motion")%_mapBodyIds[pbody->GetEnvironmentId()]);
-                OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "uri", std::string("#") + id, _doc.GetAllocator());
-                bodiesValue.PushBack(bodyValue, _doc.GetAllocator());
+                OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "uri", std::string("#") + id, _allocator);
+                bodiesValue.PushBack(bodyValue, _allocator);
 
                 rapidjson::Value objectValue;
                 objectValue.SetObject();
-                OpenRAVE::JSON::SetJsonValueByKey(objectValue, "id", id, _doc.GetAllocator());
-                OpenRAVE::JSON::SetJsonValueByKey(objectValue, "name", pbody->GetName(), _doc.GetAllocator());
+                OpenRAVE::JSON::SetJsonValueByKey(objectValue, "id", id, _allocator);
+                OpenRAVE::JSON::SetJsonValueByKey(objectValue, "name", pbody->GetName(), _allocator);
 
                 {
                     rapidjson::Value linksValue;
                     linksValue.SetArray();
                     FOREACHC(itlink, pbody->GetLinks()) {
                         rapidjson::Value linkValue;
-                        (*itlink)->GetInfo().SerializeJSON(linkValue, _doc.GetAllocator());
+                        (*itlink)->GetInfo().SerializeJSON(linkValue, _allocator);
 
                         rapidjson::Value geometriesValue;
                         geometriesValue.SetArray();
                         FOREACHC(itgeom, (*itlink)->GetGeometries()) {
                             rapidjson::Value geometryValue;
-                            (*itgeom)->GetInfo().SerializeJSON(geometryValue, _doc.GetAllocator());
-                            geometriesValue.PushBack(geometryValue, _doc.GetAllocator());
+                            (*itgeom)->GetInfo().SerializeJSON(geometryValue, _allocator);
+                            geometriesValue.PushBack(geometryValue, _allocator);
                         }
                         if (linkValue.HasMember("geometries")) {
                             linkValue.RemoveMember("geometries");
                         }
-                        linkValue.AddMember("geometries", geometriesValue, _doc.GetAllocator());
+                        linkValue.AddMember("geometries", geometriesValue, _allocator);
 
-                        linksValue.PushBack(linkValue, _doc.GetAllocator());
+                        linksValue.PushBack(linkValue, _allocator);
                     }
-                    objectValue.AddMember("links", linksValue, _doc.GetAllocator());
+                    objectValue.AddMember("links", linksValue, _allocator);
                 }
 
                 if (pbody->GetJoints().size() + pbody->GetPassiveJoints().size() > 0)
@@ -166,15 +166,15 @@ protected:
                     jointsValue.SetArray();
                     FOREACHC(itjoint, pbody->GetJoints()) {
                         rapidjson::Value jointValue;
-                        (*itjoint)->GetInfo().SerializeJSON(jointValue, _doc.GetAllocator());
-                        jointsValue.PushBack(jointValue, _doc.GetAllocator());
+                        (*itjoint)->GetInfo().SerializeJSON(jointValue, _allocator);
+                        jointsValue.PushBack(jointValue, _allocator);
                     }
                     FOREACHC(itjoint, pbody->GetPassiveJoints()) {
                         rapidjson::Value jointValue;
-                        (*itjoint)->GetInfo().SerializeJSON(jointValue, _doc.GetAllocator());
-                        jointsValue.PushBack(jointValue, _doc.GetAllocator());
+                        (*itjoint)->GetInfo().SerializeJSON(jointValue, _allocator);
+                        jointsValue.PushBack(jointValue, _allocator);
                     }
-                    objectValue.AddMember("joints", jointsValue, _doc.GetAllocator());
+                    objectValue.AddMember("joints", jointsValue, _allocator);
                 }
 
                 if (pbody->IsRobot()) {
@@ -184,10 +184,10 @@ protected:
                         manipulatorsValue.SetArray();
                         FOREACHC(itmanip, probot->GetManipulators()) {
                             rapidjson::Value manipulatorValue;
-                            (*itmanip)->GetInfo().SerializeJSON(manipulatorValue, _doc.GetAllocator());
-                            manipulatorsValue.PushBack(manipulatorValue, _doc.GetAllocator());
+                            (*itmanip)->GetInfo().SerializeJSON(manipulatorValue, _allocator);
+                            manipulatorsValue.PushBack(manipulatorValue, _allocator);
                         }
-                        objectValue.AddMember("manipulators", manipulatorsValue, _doc.GetAllocator());
+                        objectValue.AddMember("manipulators", manipulatorsValue, _allocator);
                     }
 
                     if (probot->GetAttachedSensors().size() > 0) {
@@ -195,10 +195,10 @@ protected:
                         attachedSensorsValue.SetArray();
                         FOREACHC(itattachedsensor, probot->GetAttachedSensors()) {
                             rapidjson::Value attachedSensorValue;
-                            (*itattachedsensor)->UpdateAndGetInfo().SerializeJSON(attachedSensorValue, _doc.GetAllocator());
-                            attachedSensorsValue.PushBack(attachedSensorValue, _doc.GetAllocator());
+                            (*itattachedsensor)->UpdateAndGetInfo().SerializeJSON(attachedSensorValue, _allocator);
+                            attachedSensorsValue.PushBack(attachedSensorValue, _allocator);
                         }
-                        objectValue.AddMember("attachedSensors", attachedSensorsValue, _doc.GetAllocator());
+                        objectValue.AddMember("attachedSensors", attachedSensorsValue, _allocator);
                     }
 
                     if (probot->GetConnectedBodies().size() > 0) {
@@ -206,20 +206,20 @@ protected:
                         connectedBodiesValue.SetArray();
                         FOREACHC(itconnectedbody, probot->GetConnectedBodies()) {
                             rapidjson::Value connectedBodyValue;
-                            (*itconnectedbody)->GetInfo().SerializeJSON(connectedBodyValue, _doc.GetAllocator());
+                            (*itconnectedbody)->GetInfo().SerializeJSON(connectedBodyValue, _allocator);
 
                             // here we try to fix the uri in connected body
                             if (connectedBodyValue.HasMember("uri")) {
                                 std::string uri = _CanonicalizeURI(connectedBodyValue["uri"].GetString());
                                 connectedBodyValue.RemoveMember("uri");
-                                OpenRAVE::JSON::SetJsonValueByKey(connectedBodyValue, "uri", uri, _doc.GetAllocator());
+                                OpenRAVE::JSON::SetJsonValueByKey(connectedBodyValue, "uri", uri, _allocator);
                             }
-                            connectedBodiesValue.PushBack(connectedBodyValue, _doc.GetAllocator());
+                            connectedBodiesValue.PushBack(connectedBodyValue, _allocator);
                         }
-                        objectValue.AddMember("connectedBodies", connectedBodiesValue, _doc.GetAllocator());
+                        objectValue.AddMember("connectedBodies", connectedBodiesValue, _allocator);
                     }
 
-                    OpenRAVE::JSON::SetJsonValueByKey(objectValue, "isRobot", true, _doc.GetAllocator());
+                    OpenRAVE::JSON::SetJsonValueByKey(objectValue, "isRobot", true, _allocator);
                 }
 
                 if (pbody->GetReadableInterfaces().size() > 0) {
@@ -229,23 +229,23 @@ protected:
                         JSONReadablePtr pReadable = OPENRAVE_DYNAMIC_POINTER_CAST<JSONReadable>(it->second);
                         if (!!pReadable) {
                             rapidjson::Value readableValue;
-                            pReadable->SerializeJSON(readableValue, _doc.GetAllocator());
-                            readableInterfacesValue.AddMember(rapidjson::Value(it->first.c_str(), _doc.GetAllocator()).Move(), readableValue, _doc.GetAllocator());
+                            pReadable->SerializeJSON(readableValue, _allocator);
+                            readableInterfacesValue.AddMember(rapidjson::Value(it->first.c_str(), _allocator).Move(), readableValue, _allocator);
                         }
                     }
                     if (readableInterfacesValue.MemberCount() > 0) {
-                        objectValue.AddMember("readableInterfaces", readableInterfacesValue, _doc.GetAllocator());
+                        objectValue.AddMember("readableInterfaces", readableInterfacesValue, _allocator);
                     }
                 }
 
-                objectsValue.PushBack(objectValue, _doc.GetAllocator());
+                objectsValue.PushBack(objectValue, _allocator);
             }
 
             if (bodiesValue.Size() > 0) {
-                _doc.AddMember("bodies", bodiesValue, _doc.GetAllocator());
+                _rScene.AddMember("bodies", bodiesValue, _allocator);
             }
             if (objectsValue.Size() > 0) {
-                _doc.AddMember("objects", objectsValue, _doc.GetAllocator());
+                _rScene.AddMember("objects", objectsValue, _allocator);
             }
         }
     }
@@ -314,10 +314,11 @@ protected:
     std::string _vForceResolveOpenRAVEScheme; ///< if specified, writer will attempt to convert a local system URI (**file:/**) to a a relative path with respect to $OPENRAVE_DATA paths and use **customscheme** as the scheme
     std::list<std::string> _listExternalRefExports; ///< body names to try to export externally
     bool _bExternalRefAllBodies; ///< if true, attempts to externally write all bodies
-    
+
     std::map<int, int> _mapBodyIds; ///< map from body environment id to unique json ids
 
-    rapidjson::Document& _doc;
+    rapidjson::Value& _rScene;
+    rapidjson::Document::AllocatorType& _allocator;
 };
 
 void RaveWriteJSONFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts)
@@ -325,7 +326,7 @@ void RaveWriteJSONFile(EnvironmentBasePtr penv, const std::string& filename, con
     std::ofstream ofstream(filename.c_str());
     rapidjson::Document doc;
 
-    JSONWriter jsonwriter(atts, doc);
+    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(penv);
     OpenRAVE::JSON::DumpJson(doc, ofstream);
 }
@@ -335,7 +336,7 @@ void RaveWriteJSONFile(KinBodyPtr pbody, const std::string& filename, const Attr
     std::ofstream ofstream(filename.c_str());
     rapidjson::Document doc;
 
-    JSONWriter jsonwriter(atts, doc);
+    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(pbody);
     OpenRAVE::JSON::DumpJson(doc, ofstream);
 }
@@ -345,7 +346,7 @@ void RaveWriteJSONFile(const std::list<KinBodyPtr>& listbodies, const std::strin
     std::ofstream ofstream(filename.c_str());
     rapidjson::Document doc;
 
-    JSONWriter jsonwriter(atts, doc);
+    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(listbodies);
     OpenRAVE::JSON::DumpJson(doc, ofstream);
 }
@@ -353,7 +354,7 @@ void RaveWriteJSONStream(EnvironmentBasePtr penv, ostream& os, const AttributesL
 {
     rapidjson::Document doc;
 
-    JSONWriter jsonwriter(atts, doc);
+    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(penv);
     OpenRAVE::JSON::DumpJson(doc, os);
 }
@@ -361,7 +362,7 @@ void RaveWriteJSONStream(KinBodyPtr pbody, ostream& os, const AttributesList& at
 {
     rapidjson::Document doc;
 
-    JSONWriter jsonwriter(atts, doc);
+    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(pbody);
     OpenRAVE::JSON::DumpJson(doc, os);
 }
@@ -369,7 +370,7 @@ void RaveWriteJSONStream(const std::list<KinBodyPtr>& listbodies, ostream& os, c
 {
     rapidjson::Document doc;
 
-    JSONWriter jsonwriter(atts, doc);
+    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(listbodies);
     OpenRAVE::JSON::DumpJson(doc, os);
 }
@@ -378,7 +379,7 @@ void RaveWriteJSONMemory(EnvironmentBasePtr penv, std::vector<char>& output, con
 {
     rapidjson::Document doc;
 
-    JSONWriter jsonwriter(atts, doc);
+    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(penv);
     OpenRAVE::JSON::DumpJson(doc, output);
 }
@@ -387,7 +388,7 @@ void RaveWriteJSONMemory(KinBodyPtr pbody, std::vector<char>& output, const Attr
 {
     rapidjson::Document doc;
 
-    JSONWriter jsonwriter(atts, doc);
+    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(pbody);
     OpenRAVE::JSON::DumpJson(doc, output);
 }
@@ -396,26 +397,26 @@ void RaveWriteJSONMemory(const std::list<KinBodyPtr>& listbodies, std::vector<ch
 {
     rapidjson::Document doc;
 
-    JSONWriter jsonwriter(atts, doc);
+    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(listbodies);
     OpenRAVE::JSON::DumpJson(doc, output);
 }
 
-void RaveWriteJSON(EnvironmentBasePtr penv, rapidjson::Document& doc, const AttributesList& atts)
+void RaveWriteJSON(EnvironmentBasePtr penv, rapidjson::Value& rScene, rapidjson::Document::AllocatorType& allocator, const AttributesList& atts)
 {
-    JSONWriter jsonwriter(atts, doc);
+    EnvironmentJSONWriter jsonwriter(atts, rScene, allocator);
     jsonwriter.Write(penv);
 }
 
-void RaveWriteJSON(KinBodyPtr pbody, rapidjson::Document& doc, const AttributesList& atts)
+void RaveWriteJSON(KinBodyPtr pbody, rapidjson::Value& rScene, rapidjson::Document::AllocatorType& allocator, const AttributesList& atts)
 {
-    JSONWriter jsonwriter(atts, doc);
+    EnvironmentJSONWriter jsonwriter(atts, rScene, allocator);
     jsonwriter.Write(pbody);
 }
 
-void RaveWriteJSON(const std::list<KinBodyPtr>& listbodies, rapidjson::Document& doc, const AttributesList& atts)
+void RaveWriteJSON(const std::list<KinBodyPtr>& listbodies, rapidjson::Value& rScene, rapidjson::Document::AllocatorType& allocator, const AttributesList& atts)
 {
-    JSONWriter jsonwriter(atts, doc);
+    EnvironmentJSONWriter jsonwriter(atts, rScene, allocator);
     jsonwriter.Write(listbodies);
 }
 

@@ -258,7 +258,7 @@ public:
     }
 
     /// \brief saves a scene to rapidjson document
-    virtual void SaveJSON(rapidjson::Document& doc, SelectionOptions options=SO_Everything, const AttributesList& atts = AttributesList()) = 0;
+    virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, SelectionOptions options=SO_Everything, const AttributesList& atts = AttributesList()) = 0;
 
     /** \brief Saves a scene depending on the filename extension.
 

@@ -271,19 +271,19 @@ void PyRobotBase::PyRobotBaseInfo::_Update(const RobotBase::RobotBaseInfo& info)
 #else
     py::list vManipInfos;
     FOREACHC(itManipInfo, info._vManipInfos) {
-        vManipInfos.append(PyManipulatorInfoPtr(new PyManipulatorInfo(**itManipInfo)));
+        vManipInfos.append(*itManipInfo);
     }
     _vManipInfos = vManipInfos;
 
     py::list vAttachedSensorInfos;
     FOREACHC(itAttachedSensorInfo, info._vAttachedSensorInfos) {
-        vAttachedSensorInfos.append(PyAttachedSensorInfoPtr(new PyAttachedSensorInfo(**itAttachedSensorInfo)));
+        vAttachedSensorInfos.append(*itAttachedSensorInfo);
     }
     _vAttachedSensorInfos = vAttachedSensorInfos;
 
     py::list vConnectedBodyInfos;
     FOREACHC(itConnectedBodyInfo, info._vConnectedBodyInfos) {
-        vConnectedBodyInfos.append(PyConnectedBodyInfoPtr(new PyConnectedBodyInfo(**itConnectedBodyInfo)));
+        vConnectedBodyInfos.append(*itConnectedBodyInfo);
     }
     _vConnectedBodyInfos = vConnectedBodyInfos;
 #endif
@@ -1872,10 +1872,52 @@ void PyRobotBase::__enter__()
     _listStateSavers.push_back(OPENRAVE_SHARED_PTR<void>(new RobotBase::RobotStateSaver(_probot)));
 }
 
+class RobotBaseInfo_pickle_suite
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+    : public pickle_suite
+#endif
+{
+public:
+    static py::tuple getstate(const PyRobotBase::PyRobotBaseInfo& r)
+    {
+        return py::make_tuple(r._vManipInfos, r._vAttachedSensorInfos, r._vConnectedBodyInfos);
+    }
+    static void setstate(PyRobotBase::PyRobotBaseInfo& r, py::tuple state) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        r._vManipInfos.clear();
+        py::tuple pyManipInfos = extract_<py::tuple>(state[0]);
+        r._vManipInfos.reserve(len(pyManipInfos));
+        for(size_t iState = 0; iState < len(pyManipInfos); iState++) {
+            r._vManipInfos.push_back(extract_<RobotBase::ManipulatorInfoPtr>(pyManipInfos[iState]));
+        }
+
+        py::tuple pyAttachedSensorInfos = extract_<py::tuple>(state[1]);
+        r._vAttachedSensorInfos.clear();
+        r._vAttachedSensorInfos.reserve(len(pyAttachedSensorInfos));
+        for(size_t iState = 0; iState < len(pyAttachedSensorInfos); iState++) {
+            r._vAttachedSensorInfos.push_back(extract_<RobotBase::AttachedSensorInfoPtr>(pyAttachedSensorInfos[iState]));
+        }
+
+        py::tuple pyConnectedBodyInfos = extract_<py::tuple>(state[2]);
+        r._vConnectedBodyInfos.clear();
+        r._vConnectedBodyInfos.reserve(len(pyConnectedBodyInfos));
+        for(size_t iState = 0; iState < len(pyConnectedBodyInfos); iState++) {
+            r._vConnectedBodyInfos.push_back(extract_<RobotBase::ConnectedBodyInfoPtr>(pyConnectedBodyInfos[iState]));
+        }
+#else
+        r._vManipInfos = extract_<py::tuple>(state[0]);
+        r._vAttachedSensorInfos = extract_<py::tuple>(state[1]);
+        r._vConnectedBodyInfos = extract_<py::tuple>(state[2]);
+#endif
+    }
+
+};
+
+
 class ManipulatorInfo_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
  : public pickle_suite
-#endif 
+#endif
 {
 public:
     static py::tuple getstate(const PyManipulatorInfo& r)
@@ -1962,10 +2004,12 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckLinkSelfCollision_overloads, CheckLi
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyManipulatorInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyAttachedSensorInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyConnectedBodyInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyRobotBaseInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
 // DeserializeJSON
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyManipulatorInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyAttachedSensorInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyConnectedBodyInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyRobotBaseInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -1990,6 +2034,57 @@ void init_openravepy_robot()
                        .value("RotationMask",DOF_RotationMask)
                        .value("Transform",DOF_Transform)
     ;
+
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object robotbaseinfo = class_<PyRobotBase::PyRobotBaseInfo, OPENRAVE_SHARED_PTR<PyRobotBase::PyRobotBaseInfo>, PyKinBody::PyKinBodyInfo>(m, "RobotBaseInfo", DOXY_CLASS(RobotBase::RobotBaseInfo))
+                         .def(init<>())
+#else
+    object robotbaseinfo = class_<PyRobotBase::PyRobotBaseInfo, OPENRAVE_SHARED_PTR<PyRobotBase::PyRobotBaseInfo>, bases<PyKinBody::PyKinBodyInfo> >("RobotBaseInfo", DOXY_CLASS(RobotBase::RobotBaseInfo))
+#endif
+                         .def_readwrite("_vManipInfos",&PyRobotBase::PyRobotBaseInfo::_vManipInfos)
+                         .def_readwrite("_vAttachedSensorInfos",&PyRobotBase::PyRobotBaseInfo::_vAttachedSensorInfos)
+                         .def_readwrite("_vConnectedBodyInfos",&PyRobotBase::PyRobotBaseInfo::_vConnectedBodyInfos)
+                         .def("__str__",&PyRobotBase::PyRobotBaseInfo::__str__)
+                         .def("__unicode__",&PyRobotBase::PyRobotBaseInfo::__unicode__)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                         .def("SerializeJSON", &PyRobotBase::PyRobotBaseInfo::SerializeJSON,
+                              "unitScale"_a = 1.0,
+                              "options"_a = py::none_(),
+                              DOXY_FN(RobotBase::RobotBaseInfo, SerializeJSON)
+                         )
+                         .def("DeserializeJSON", &PyRobotBase::PyRobotBaseInfo::DeserializeJSON,
+                              "obj"_a,
+                              "unitScale"_a = 1.0,
+                              DOXY_FN(RobotBase::RobotBaseInfo, DeserializeJSON)
+                         )
+#else
+                         .def("SerializeJSON", &PyRobotBase::PyRobotBaseInfo::SerializeJSON, PyRobotBaseInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(RobotBase::RobotBaseInfo, SerializeJSON)))
+                         .def("DeserializeJSON", &PyRobotBase::PyRobotBaseInfo::DeserializeJSON, PyRobotBaseInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(RobotBase::RobotBaseInfo, DeserializeJSON)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                         // https://pybind11.readthedocs.io/en/stable/advanced/classes.html#pickling-support
+                         .def(py::pickle(
+                                  // __getstate__
+                                  [](const PyRobotBase::PyRobotBaseInfo &pyinfo) {
+                                        return RobotBaseInfo_pickle_suite::getstate(pyinfo);
+                                  },
+                                  // __setstate__
+                                  [](py::tuple state) {
+                                        if (state.size() != 3) {
+                                            RAVELOG_WARN("Invalid state!");
+                                        }
+                                        /* Create a new C++ instance */
+                                        PyRobotBase::PyRobotBaseInfo pyinfo;
+                                        RobotBaseInfo_pickle_suite::setstate(pyinfo, state);
+                                        return pyinfo;
+                                    }
+                         ))
+#else
+                         .def_pickle(RobotBaseInfo_pickle_suite())
+#endif
+    ;
+
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object manipulatorinfo = class_<PyManipulatorInfo, OPENRAVE_SHARED_PTR<PyManipulatorInfo> >(m, "ManipulatorInfo", DOXY_CLASS(RobotBase::ManipulatorInfo))
@@ -2106,8 +2201,8 @@ void init_openravepy_robot()
         void (PyRobotBase::*psetactivedofs3)(const object&, int, object) = &PyRobotBase::SetActiveDOFs;
 
         bool (PyRobotBase::*pgrab1)(PyKinBodyPtr) = &PyRobotBase::Grab;
-        bool (PyRobotBase::*pgrab2)(PyKinBodyPtr,object) = &PyRobotBase::Grab;
-        bool (PyRobotBase::*pgrab3)(PyKinBodyPtr,object,object) = &PyRobotBase::Grab;
+        bool (PyRobotBase::*pgrab2)(PyKinBodyPtr, object) = &PyRobotBase::Grab;
+        bool (PyRobotBase::*pgrab3)(PyKinBodyPtr, object, object) = &PyRobotBase::Grab;
 
         PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator2)(const std::string&) = &PyRobotBase::SetActiveManipulator;
         PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator3)(PyRobotBase::PyManipulatorPtr) = &PyRobotBase::SetActiveManipulator;
@@ -2134,6 +2229,13 @@ void init_openravepy_robot()
                         )
 #else
                       .def("Init", initrobot, Init_overloads(PY_ARGS("linkinfos", "jointinfos", "manipinfos", "attachedsensorinfos", "uri") DOXY_FN(RobotBase, Init)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                      .def("InitFromInfo", &PyRobotBase::InitFromInfo,
+                           "info"_a,
+                           DOXY_FN(RobotBase, InitFromInfo))
+#else
+                      .def("InitFromInfo",&PyRobotBase::InitFromInfo, DOXY_FN(RobotBase, InitFromInfo))
 #endif
                       .def("GetManipulators",GetManipulators1, DOXY_FN(RobotBase,GetManipulators))
                       .def("GetManipulators",GetManipulators2, PY_ARGS("manipname") DOXY_FN(RobotBase,GetManipulators))

@@ -254,8 +254,7 @@ void InterfaceBase::_GetJSONCommandHelp(const rapidjson::Value& input, rapidjson
     output.SetObject();
 
     for(JSONCMDMAP::const_iterator it = __mapJSONCommands.begin(); it != __mapJSONCommands.end(); ++it) {
-        output.AddMember(rapidjson::Value().SetString(it->first.c_str(), allocator), rapidjson::Value().SetString(it->second->help.c_str
-            (), allocator), allocator);
+        output.AddMember(rapidjson::Value().SetString(it->first.c_str(), allocator), rapidjson::Value().SetString(it->second->help.c_str(), allocator), allocator);
     }
 }
 
@@ -284,6 +283,12 @@ ReadablePtr InterfaceBase::SetReadableInterface(const std::string& id, ReadableP
         __mapReadableInterfaces.erase(it);
     }
     return pprev;
+}
+
+void InterfaceBase::ClearReadableInterfaces()
+{
+    boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
+    __mapReadableInterfaces.clear();
 }
 
 }

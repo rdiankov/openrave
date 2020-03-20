@@ -498,13 +498,16 @@ bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, co
     if( !KinBody::Init(linkinfos, jointinfos, uri) ) {
         return false;
     }
-    _vecManipulators.resize(0);
+
+    _vecManipulators.clear();
+    _vecManipulators.reserve(manipinfos.size());
     FOREACHC(itmanipinfo, manipinfos) {
         ManipulatorPtr newmanip(new Manipulator(shared_robot(),**itmanipinfo));
         _vecManipulators.push_back(newmanip);
         __hashrobotstructure.resize(0);
     }
     _vecAttachedSensors.clear();
+    _vecAttachedSensors.reserve(attachedsensorinfos.size());
     FOREACHC(itattachedsensorinfo, attachedsensorinfos) {
         AttachedSensorPtr newattachedsensor(new AttachedSensor(shared_robot(),**itattachedsensorinfo));
         _vecAttachedSensors.push_back(newattachedsensor);

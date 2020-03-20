@@ -609,13 +609,13 @@ public:
         }
     }
 
-    virtual void SaveJSON(rapidjson::Document& doc, SelectionOptions options, const AttributesList& atts)
+    virtual void SerializeJSON(rapidjson::Value& rScene, rapidjson::Document::AllocatorType& allocator, SelectionOptions options, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         std::list<KinBodyPtr> listbodies;
         switch(options) {
         case SO_Everything:
-            RaveWriteJSON(shared_from_this(), doc, atts);
+            RaveWriteJSON(shared_from_this(), rScene, allocator, atts);
             return;
 
         case SO_Body: {
@@ -662,10 +662,10 @@ public:
         }
 
         if( listbodies.size() == 1 ) {
-            RaveWriteJSON(listbodies.front(), doc, atts);
+            RaveWriteJSON(listbodies.front(), rScene, allocator, atts);
         }
         else {
-            RaveWriteJSON(listbodies, doc, atts);
+            RaveWriteJSON(listbodies, rScene, allocator, atts);
         }
     }
 

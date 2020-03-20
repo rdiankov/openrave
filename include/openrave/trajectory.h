@@ -41,6 +41,9 @@ public:
 
     virtual void Init(const ConfigurationSpecification& spec) = 0;
 
+    /// \brief clears the waypoint data from the trajectory
+    virtual void ClearWaypoints() = 0;
+
     /** \brief Sets/inserts new waypoints in the same configuration specification as the trajectory.
 
         \param index The index where to start modifying the trajectory.
