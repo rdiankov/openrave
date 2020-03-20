@@ -442,7 +442,10 @@ std::string PyRobotBase::PyRobotBaseInfo::__str__() {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     return boost::str(boost::format("<robotbaseinfo: %s>")%_uri);
 #else
-    std::string uri = py::extract<std::string>(_uri);
+    std::string uri = "";
+    if (!IS_PYTHONOBJECT_NONE(_uri)) {
+        uri = extract<std::string>(_uri);
+    }
     return boost::str(boost::format("<robotbaseinfo: %s")%uri);
 #endif
 }
