@@ -534,22 +534,16 @@ public:
             ReadBinaryString(I, __description);
 
             // clear out existing readable interfaces
-            {
-                const READERSMAP& readableInterfaces = GetReadableInterfaces();
-                for (READERSMAP::const_iterator itReadableInterface = readableInterfaces.begin(); itReadableInterface != readableInterfaces.end(); ++itReadableInterface ) {
-                    SetReadableInterface(itReadableInterface->first, ReadablePtr());
-                }
-            }
+            ClearReadableInterfaces();
+
             // versions >= 0x0002 have readable interfaces
-            if (versionNumber >= 0x0002)
-            {
+            if (versionNumber >= 0x0002) {
                 // read readable interfaces
                 uint16_t numReadableInterfaces = 0;
                 ReadBinaryUInt16(I, numReadableInterfaces);
                 std::string xmlid;
                 std::string serializedReadableInterface;
-                for (size_t readableInterfaceIndex = 0; readableInterfaceIndex < numReadableInterfaces; ++readableInterfaceIndex)
-                {
+                for (size_t readableInterfaceIndex = 0; readableInterfaceIndex < numReadableInterfaces; ++readableInterfaceIndex) {
                     ReadBinaryString(I, xmlid);
                     ReadBinaryString(I, serializedReadableInterface);
 
