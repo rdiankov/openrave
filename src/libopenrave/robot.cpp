@@ -377,7 +377,7 @@ void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson:
             (*it)->SerializeJSON(manipInfoValue, allocator, options);
             rManipInfoValues.PushBack(manipInfoValue, allocator);
         }
-        value.AddMember("manipInfos", rManipInfoValues, allocator);
+        value.AddMember("manipulators", rManipInfoValues, allocator);
     }
 
     if (_vAttachedSensorInfos.size() > 0) {
@@ -389,7 +389,7 @@ void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson:
             (*it)->SerializeJSON(attachedSensorInfoValue, allocator, options);
             rAttachedSensorInfoValues.PushBack(attachedSensorInfoValue, allocator);
         }
-        value.AddMember("attachedSensorInfos", rAttachedSensorInfoValues, allocator);
+        value.AddMember("attachedSensors", rAttachedSensorInfoValues, allocator);
     }
 
     if (_vConnectedBodyInfos.size() > 0) {
@@ -401,7 +401,7 @@ void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson:
             (*it)->SerializeJSON(connectedBodyInfoValue, allocator, options);
             rConnectedBodyInfoValues.PushBack(connectedBodyInfoValue, allocator);
         }
-        value.AddMember("connectedBodyInfos", rConnectedBodyInfoValues, allocator);
+        value.AddMember("connectedBodies", rConnectedBodyInfoValues, allocator);
     }
 }
 
@@ -410,31 +410,31 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
     OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri);
 
     _vManipInfos.clear();
-    if (value.HasMember("manipInfos")) {
-        _vManipInfos.reserve(value["manipInfos"].Size());
-        for (size_t iManipInfo = 0; iManipInfo < value["manipInfos"].Size(); iManipInfo++) {
+    if (value.HasMember("manipulators")) {
+        _vManipInfos.reserve(value["manipulators"].Size());
+        for (size_t iManipInfo = 0; iManipInfo < value["manipulators"].Size(); iManipInfo++) {
             ManipulatorInfoPtr pManipInfo(new ManipulatorInfo());
-            pManipInfo->DeserializeJSON(value["manipInfos"][iManipInfo], fUnitScale);
+            pManipInfo->DeserializeJSON(value["manipulators"][iManipInfo], fUnitScale);
             _vManipInfos.push_back(pManipInfo);
         }
     }
 
     _vAttachedSensorInfos.clear();
-    if (value.HasMember("attachedSensorInfos")) {
-        _vAttachedSensorInfos.reserve(value["attachedSensorInfos"].Size());
-        for (size_t iAttachedSensorInfo = 0; iAttachedSensorInfo < value["attachedSensorInfos"].Size(); iAttachedSensorInfo++) {
+    if (value.HasMember("attachedSensors")) {
+        _vAttachedSensorInfos.reserve(value["attachedSensors"].Size());
+        for (size_t iAttachedSensorInfo = 0; iAttachedSensorInfo < value["attachedSensors"].Size(); iAttachedSensorInfo++) {
             AttachedSensorInfoPtr pAttachedSensorInfo(new AttachedSensorInfo());
-            pAttachedSensorInfo->DeserializeJSON(value["attachedSensorInfos"][iAttachedSensorInfo], fUnitScale);
+            pAttachedSensorInfo->DeserializeJSON(value["attachedSensors"][iAttachedSensorInfo], fUnitScale);
             _vAttachedSensorInfos.push_back(pAttachedSensorInfo);
         }
     }
 
     _vConnectedBodyInfos.clear();
-    if (value.HasMember("connectedBodyInfos")) {
-        _vConnectedBodyInfos.reserve(value["connectedBodyInfos"].Size());
-        for (size_t iConnectedBodyInfo = 0; iConnectedBodyInfo < value["connectedBodyInfos"].Size(); iConnectedBodyInfo++) {
+    if (value.HasMember("connectedBodies")) {
+        _vConnectedBodyInfos.reserve(value["connectedBodies"].Size());
+        for (size_t iConnectedBodyInfo = 0; iConnectedBodyInfo < value["connectedBodies"].Size(); iConnectedBodyInfo++) {
             ConnectedBodyInfoPtr pConnectedBodyInfo(new ConnectedBodyInfo());
-            pConnectedBodyInfo->DeserializeJSON(value["connectedBodyInfos"][iConnectedBodyInfo], fUnitScale);
+            pConnectedBodyInfo->DeserializeJSON(value["connectedBodies"][iConnectedBodyInfo], fUnitScale);
             _vConnectedBodyInfos.push_back(pConnectedBodyInfo);
         }
     }

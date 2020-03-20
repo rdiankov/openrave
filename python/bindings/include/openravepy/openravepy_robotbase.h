@@ -33,14 +33,16 @@ public:
 {
 public:
     PyRobotBaseInfo();
+    PyRobotBaseInfo(const RobotBase::RobotBaseInfo& info);
+    RobotBase::RobotBaseInfoPtr GetRobotBaseInfo() const;
 
     py::object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
     void DeserializeJSON(py::object obj, dReal fUnitScale=1.0);
-    RobotBase::RobotBaseInfoPtr GetRobotBaseInfo() const;
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    std::vector<ManipulatorInfoPtr> _vManipInfos;
-    std::vector<AttachedSensorInfoPtr> _vAttachedSensorInfos;
-    std::vector<ConnectedBodyInfoPtr> _vConnectedBodyInfos;
+    std::vector<RobotBase::ManipulatorInfoPtr> _vManipInfos;
+    std::vector<RobotBase::AttachedSensorInfoPtr> _vAttachedSensorInfos;
+    std::vector<RobotBase::ConnectedBodyInfoPtr> _vConnectedBodyInfos;
 #else
     py::object _vManipInfos = py::none_();
     py::object _vAttachedSensorInfos = py::none_();

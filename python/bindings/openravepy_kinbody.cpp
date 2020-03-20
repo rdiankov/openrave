@@ -2088,7 +2088,7 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     _uri = info._uri;
     _vLinkInfos = std::vector<KinBody::LinkInfoPtr>(begin(info._vLinkInfos), end(info._vLinkInfos));
-    _vJointInfos = std::vector<KiNBody::JointInfoPtr>(begin(info._vJointInfos), end(info._vJointInfos));
+    _vJointInfos = std::vector<KinBody::JointInfoPtr>(begin(info._vJointInfos), end(info._vJointInfos));
 #else
     _uri = ConvertStringToUnicode(info._uri);
     py::list vLinkInfos;
@@ -2110,7 +2110,7 @@ std::string PyKinBody::PyKinBodyInfo::__str__() {
     return boost::str(boost::format("<kinbodyinfo: %s>")%_uri);
 #else
     std::string uri = py::extract<std::string>(_uri);
-    return boost::str(boost::format("<kinbodyinfo: %s")%uri);
+    return boost::str(boost::format("<kinbodyinfo: %s>")%uri);
 #endif
 }
 
@@ -4012,17 +4012,29 @@ class KinBodyInfo_pickle_suite
 public:
     static py::tuple getstate(const PyKinBody::PyKinBodyInfo& r)
     {
-        return py::make_tuple(r._vLinkInfos, r._vJointInfos);
+        return py::make_tuple(r._uri, r._vLinkInfos, r._vJointInfos);
     }
     static void setstate(PyKinBody::PyKinBodyInfo& r, py::tuple state) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        r._vLinkInfos = extract<std::vector<LinkInfoPtr> >(state[0]);
-        r._vJointInfos = extract<std::vector<JointInfoPtr>(state[1]);
-        r._uri = extract<std::string>(state[2]);
+        r._uri = extract<std::string>(state[0]);
+
+        py::tuple pyKinBodyInfos = extract_<py::tuple>(state[1]);
+        r._vLinkInfos.clear();
+        r._vLinkInfos.reserve(len(pyKinBodyInfos));
+        for(size_t iState=0; iState < len(pyKinBodyInfos); iState++) {
+            r._vLinkInfos.push_back(extract_<KinBody::LinkInfoPtr>(pyKinBodyInfos[iState]));
+        }
+
+        py::tuple pyJointInfos = extract_<py::tuple>(state[2]);
+        r._vJointInfos.clear();
+        r._vJointInfos.reserve(len(pyJointInfos));
+        for(size_t iState=0; iState < len(pyJointInfos); iState++) {
+            r._vJointInfos.push_back(extract_<KinBody::JointInfoPtr>(pyJointInfos[iState]));
+        }
 #else
-        r._vLinkInfos = state[0];
-        r._vJointInfos = state[1];
-        r._uri = state[2];
+        r._uri = state[0];
+        r._vLinkInfos = extract_<py::tuple>(state[1]);
+        r._vJointInfos = extract_<py::tuple>(state[2]);
 #endif
     }
 };
@@ -4222,7 +4234,7 @@ void init_openravepy_kinbody()
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object jointcontrolmode = enum_<KinBody::JointControlMode>(m, "JointControlMode" DOXY_ENUM(JointControlMode))
-#else    
+#else
     object jointcontrolmode = enum_<KinBody::JointControlMode>("JointControlMode" DOXY_ENUM(JointControlMode))
 #endif
                               .value("JCM_None",KinBody::JCM_None)
@@ -4579,7 +4591,7 @@ void init_openravepy_kinbody()
                               "options"_a = py::none_(),
                               DOXY_FN(KinBody::KinBodyInfo, SerializeJSON)
                           )
-                          .def("DeserializeJSON", &PyKinbody::PyKinBodyInfo::DeserializeJSON,
+                          .def("DeserializeJSON", &PyKinBody::PyKinBodyInfo::DeserializeJSON,
                               "obj"_a,
                               "unitScale"_a = 1.0,
                               DOXY_FN(KinBody::KinBodyInfo, DeserializeJSON)
