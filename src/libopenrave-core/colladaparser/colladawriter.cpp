@@ -2264,13 +2264,17 @@ private:
             pextra->setType("manipulator");
             domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
             ptec->setProfile("OpenRAVE");
-            daeElementRef frame_origin = ptec->add("frame_origin");
-            frame_origin->setAttribute("link",vlinksidrefs.at((*itmanip)->GetBase()->GetIndex()).c_str());
+            if( !!(*itmanip)->GetBase() ) {
+                daeElementRef frame_origin = ptec->add("frame_origin");
+                frame_origin->setAttribute("link",vlinksidrefs.at((*itmanip)->GetBase()->GetIndex()).c_str());
+            }
             daeElementRef frame_tip = ptec->add("frame_tip");
-            frame_tip->setAttribute("link",vlinksidrefs.at((*itmanip)->GetEndEffector()->GetIndex()).c_str());
+            if( !!(*itmanip)->GetEndEffector() ) {
+                frame_tip->setAttribute("link",vlinksidrefs.at((*itmanip)->GetEndEffector()->GetIndex()).c_str());
+            }
             _WriteTransformation(frame_tip,(*itmanip)->GetLocalToolTransform());
+            daeElementRef direction = frame_tip->add("direction");
             {
-                daeElementRef direction = frame_tip->add("direction");
                 stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                 ss << (*itmanip)->GetLocalToolDirection().x << " " << (*itmanip)->GetLocalToolDirection().y << " " << (*itmanip)->GetLocalToolDirection().z;
                 direction->setCharData(ss.str());
