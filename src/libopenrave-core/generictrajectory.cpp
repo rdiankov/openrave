@@ -451,26 +451,31 @@ public:
             rapidjson::Document document;
             FOREACHC(itReadableInterface, GetReadableInterfaces()) {
                 WriteBinaryString(O, itReadableInterface->first);  // readable interface id
-                // The result of serialize from  XMLReadable or JSONReadable should be the same. only use one of them.
-                xmlreaders::StreamXMLWriterPtr writer(new xmlreaders::StreamXMLWriter(std::string()));
+
+                // try to serialize to json first
+                JSONReadablePtr pjsonreadable = OPENRAVE_DYNAMIC_POINTER_CAST<JSONReadable>(itReadableInterface->second);
+                if (!!pjsonreadable) {
+                    rapidjson::Value rReadable;
+                    pjsonreadable->SerializeJSON(rReadable, document.GetAllocator());
+                    WriteBinaryString(O, rReadable.GetString());
+                    continue;
+                }
+
+                // then try to serialize to xml
                 XMLReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<XMLReadable>(itReadableInterface->second);
                 if (!!pxmlreadable) {
                     // xml serialize
+                    xmlreaders::StreamXMLWriterPtr writer(new xmlreaders::StreamXMLWriter(std::string()));
                     pxmlreadable->Serialize(writer, options);
                     ss.clear();
                     ss.str(std::string());
                     writer->Serialize(ss);
                     WriteBinaryString(O, ss.str());
+                    continue;
                 }
-                else{
-                    // json serialize
-                    JSONReadablePtr pjsonreadable = OPENRAVE_DYNAMIC_POINTER_CAST<JSONReadable>(itReadableInterface->second);
-                    if (!!pjsonreadable) {
-                        rapidjson::Value rReadable;
-                        pjsonreadable->SerializeJSON(rReadable, document.GetAllocator());
-                        WriteBinaryString(O, rReadable.GetString());
-                    }
-                }
+
+                // if neither json or xml serializable, write an empty string
+                WriteBinaryString(O, "");
             }
         }
     }
@@ -521,7 +526,7 @@ public:
             {
                 const READERSMAP& readableInterfaces = GetReadableInterfaces();
                 for (READERSMAP::const_iterator itReadableInterface = readableInterfaces.begin(); itReadableInterface != readableInterfaces.end(); ++itReadableInterface ) {
-                    SetReadableInterface(itReadableInterface->first, XMLReadablePtr());
+                    SetReadableInterface(itReadableInterface->first, ReadablePtr());
                 }
             }
             // versions >= 0x0002 have readable interfaces
@@ -537,7 +542,8 @@ public:
                     ReadBinaryString(I, xmlid);
                     ReadBinaryString(I, serializedReadableInterface);
 
-                    XMLReadablePtr readableInterface(new xmlreaders::StringXMLReadable(xmlid, serializedReadableInterface));
+                    // TODO: right now deserialize into just a string readable without actually parsing the content
+                    ReadablePtr readableInterface(new StringReadable(xmlid, serializedReadableInterface));
                     SetReadableInterface(xmlid, readableInterface);
                 }
             }
