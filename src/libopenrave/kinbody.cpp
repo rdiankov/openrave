@@ -159,19 +159,19 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 
     _vLinkInfos.clear();
     if (value.HasMember("links")) {
-        _vLinkInfos.reserve(value["linkInfos"].Size());
-        for (size_t iLinkInfo = 0; iLinkInfo < value["linkInfos"].Size(); iLinkInfo++) {
+        _vLinkInfos.reserve(value["links"].Size());
+        for (size_t iLinkInfo = 0; iLinkInfo < value["links"].Size(); iLinkInfo++) {
             LinkInfoPtr pLinkInfo(new LinkInfo());
-            pLinkInfo->DeserializeJSON(value["linkInfos"][iLinkInfo], fUnitScale);
+            pLinkInfo->DeserializeJSON(value["links"][iLinkInfo], fUnitScale);
             _vLinkInfos.push_back(pLinkInfo);
         }
     }
     _vJointInfos.clear();
     if (value.HasMember("joints")) {
-        _vJointInfos.reserve(value["jointInfos"].Size());
-        for (size_t iJointInfo = 0; iJointInfo < value["jointInfos"].Size(); iJointInfo++) {
+        _vJointInfos.reserve(value["joints"].Size());
+        for (size_t iJointInfo = 0; iJointInfo < value["joints"].Size(); iJointInfo++) {
             JointInfoPtr pJointInfo(new JointInfo());
-            pJointInfo->DeserializeJSON(value["jointInfos"][iJointInfo], fUnitScale);
+            pJointInfo->DeserializeJSON(value["joints"][iJointInfo], fUnitScale);
             _vJointInfos.push_back(pJointInfo);
         }
     }
