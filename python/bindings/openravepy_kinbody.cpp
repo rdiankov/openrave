@@ -48,6 +48,67 @@ using py::def;
 
 namespace numeric = py::numeric;
 
+KinBody::KinBodyInfoPtr ExtractKinBodyInfo(object obj)
+{
+    extract_<OPENRAVE_SHARED_PTR<PyKinBody::PyKinBodyInfo>> pyKinBodyInfo(obj);
+    if (pyKinBodyInfo.check()) {
+        return (OPENRAVE_SHARED_PTR<PyKinBody::PyKinBodyInfo>(pyKinBodyInfo))->GetKinBodyInfo();
+    }
+    return NULL;
+}
+
+inline std::vector<KinBody::LinkInfoPtr> ExtractLinkInfoArray(object pyLinkInfoList)
+{
+    if( IS_PYTHONOBJECT_NONE(pyLinkInfoList) ) {
+        return {};
+    }
+    std::vector<KinBody::LinkInfoPtr> vLinkInfos;
+    try {
+        const size_t arraySize = len(pyLinkInfoList);
+        vLinkInfos.resize(arraySize);
+
+        for(size_t iLinkInfo = 0; iLinkInfo < arraySize; iLinkInfo++) {
+            extract_<OPENRAVE_SHARED_PTR<PyLinkInfo>> pylinkinfo(pyLinkInfoList[iLinkInfo]);
+            if (pylinkinfo.check()) {
+                vLinkInfos[iLinkInfo] = ((OPENRAVE_SHARED_PTR<PyLinkInfo>)pylinkinfo)->GetLinkInfo();
+            }
+            else{
+                throw openrave_exception(_("Bad LinkInfo"));
+            }
+        }
+    }
+    catch(...) {
+        RAVELOG_WARN("Cannot do ExtractArray for LinkInfos");
+    }
+    return vLinkInfos;
+}
+
+inline std::vector<KinBody::JointInfoPtr> ExtractJointInfoArray(object pyJointInfoList)
+{
+    if( IS_PYTHONOBJECT_NONE(pyJointInfoList) ) {
+        return {};
+    }
+    std::vector<KinBody::JointInfoPtr> vJointInfos;
+    try {
+        const size_t arraySize = len(pyJointInfoList);
+        vJointInfos.resize(arraySize);
+
+        for(size_t iJointInfo = 0; iJointInfo < arraySize; iJointInfo++) {
+            extract_<OPENRAVE_SHARED_PTR<PyJointInfo>> pyjointinfo(pyJointInfoList[iJointInfo]);
+            if (pyjointinfo.check()) {
+                vJointInfos[iJointInfo] = ((OPENRAVE_SHARED_PTR<PyJointInfo>)pyjointinfo)->GetJointInfo();
+            }
+            else {
+                throw openrave_exception(_("Bad JointInfo"));
+            }
+        }
+    }
+    catch(...) {
+        RAVELOG_WARN("Cannot do ExtractArray for JointInfos");
+    }
+    return vJointInfos;
+}
+
 template <typename T>
 object GetCustomParameters(const std::map<std::string, std::vector<T> >& parameters, object oname, int index)
 {
