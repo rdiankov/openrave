@@ -134,7 +134,7 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
         rLinkInfoValues.Reserve(_vLinkInfos.size(), allocator);
         FOREACHC(it, _vLinkInfos) {
             rapidjson::Value linkInfoValue;
-            (*it)->SerializeJSON(linkInfoValue, allocator, options);
+            (*it)->SerializeJSON(linkInfoValue, allocator, fUnitScale, options);
             rLinkInfoValues.PushBack(linkInfoValue, allocator);
         }
         value.AddMember("links", rLinkInfoValues, allocator);
@@ -145,9 +145,9 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
         rJointInfoValues.SetArray();
         rJointInfoValues.Reserve(_vJointInfos.size(), allocator);
         FOREACHC(it, _vJointInfos) {
-            rapidjson::Value jointInfo;
-            (*it)->SerializeJSON(jointInfo, allocator, options);
-            rJointInfoValues.PushBack(jointInfo, allocator);
+            rapidjson::Value jointInfoValue;
+            (*it)->SerializeJSON(jointInfoValue, allocator, fUnitScale, options);
+            rJointInfoValues.PushBack(jointInfoValue, allocator);
         }
         value.AddMember("joints", rJointInfoValues, allocator);
     }

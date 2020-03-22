@@ -68,9 +68,9 @@ inline std::vector<KinBody::LinkInfoPtr> ExtractLinkInfoArray(object pyLinkInfoL
         vLinkInfos.resize(arraySize);
 
         for(size_t iLinkInfo = 0; iLinkInfo < arraySize; iLinkInfo++) {
-            extract_<PyLinkInfoPtr> pylinkinfo(pyLinkInfoList[iLinkInfo]);
+            extract_<OPENRAVE_SHARED_PTR<PyLinkInfo>> pylinkinfo(pyLinkInfoList[iLinkInfo]);
             if (pylinkinfo.check()) {
-                vLinkInfos[iLinkInfo] = (PyLinkInfoPtr(pylinkinfo))->GetLinkInfo();
+                vLinkInfos[iLinkInfo] = ((OPENRAVE_SHARED_PTR<PyLinkInfo>)pylinkinfo)->GetLinkInfo();
             }
             else{
                 throw openrave_exception(_("Bad LinkInfo"));
@@ -94,9 +94,9 @@ inline std::vector<KinBody::JointInfoPtr> ExtractJointInfoArray(object pyJointIn
         vJointInfos.resize(arraySize);
 
         for(size_t iJointInfo = 0; iJointInfo < arraySize; iJointInfo++) {
-            extract_<PyJointInfoPtr> pyjointinfo(pyJointInfoList[iJointInfo]);
+            extract_<OPENRAVE_SHARED_PTR<PyJointInfo>> pyjointinfo(pyJointInfoList[iJointInfo]);
             if (pyjointinfo.check()) {
-                vJointInfos[iJointInfo] = (PyJointInfoPtr(pyjointinfo))->GetJointInfo();
+                vJointInfos[iJointInfo] = ((OPENRAVE_SHARED_PTR<PyJointInfo>)pyjointinfo)->GetJointInfo();
             }
             else {
                 throw openrave_exception(_("Bad JointInfo"));
