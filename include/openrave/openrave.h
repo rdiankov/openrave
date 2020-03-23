@@ -1724,6 +1724,12 @@ public:
         return _mapCustomData;
     }
 
+    /// \brief sets custom data key/value pairs
+    void SetCustomDataMap(const std::map<std::string, std::vector<dReal> >& mapCustomData)
+    {
+        _mapCustomData = mapCustomData;
+    }
+
     /// \brief clears custom data
     ///
     /// \param name if name is empty, will clear all the data, otherwise will clear only the custom data with that name
