@@ -374,7 +374,7 @@ void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson:
         rManipInfoValues.Reserve(_vManipInfos.size(), allocator);
         FOREACHC(it, _vManipInfos) {
             rapidjson::Value manipInfoValue;
-            (*it)->SerializeJSON(manipInfoValue, allocator, options);
+            (*it)->SerializeJSON(manipInfoValue, allocator, fUnitScale, options);
             rManipInfoValues.PushBack(manipInfoValue, allocator);
         }
         value.AddMember("manipulators", rManipInfoValues, allocator);
@@ -386,7 +386,7 @@ void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson:
         rAttachedSensorInfoValues.Reserve(_vAttachedSensorInfos.size(), allocator);
         FOREACHC(it, _vAttachedSensorInfos) {
             rapidjson::Value attachedSensorInfoValue;
-            (*it)->SerializeJSON(attachedSensorInfoValue, allocator, options);
+            (*it)->SerializeJSON(attachedSensorInfoValue, allocator, fUnitScale, options);
             rAttachedSensorInfoValues.PushBack(attachedSensorInfoValue, allocator);
         }
         value.AddMember("attachedSensors", rAttachedSensorInfoValues, allocator);
@@ -398,7 +398,7 @@ void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson:
         rConnectedBodyInfoValues.Reserve(_vConnectedBodyInfos.size(), allocator);
         FOREACHC(it, _vConnectedBodyInfos) {
             rapidjson::Value connectedBodyInfoValue;
-            (*it)->SerializeJSON(connectedBodyInfoValue, allocator, options);
+            (*it)->SerializeJSON(connectedBodyInfoValue, allocator, fUnitScale, options);
             rConnectedBodyInfoValues.PushBack(connectedBodyInfoValue, allocator);
         }
         value.AddMember("connectedBodies", rConnectedBodyInfoValues, allocator);

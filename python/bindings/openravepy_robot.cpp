@@ -301,9 +301,9 @@ inline std::vector<RobotBase::ManipulatorInfoPtr> ExtractManipInfoArray(object p
         vManipInfos.resize(arraySize);
 
         for(size_t iManipInfo = 0; iManipInfo < arraySize; iManipInfo++) {
-            extract_<PyManipulatorInfoPtr> pymanipinfo(pyManipList[iManipInfo]);
+            extract_<OPENRAVE_SHARED_PTR<PyManipulatorInfo>> pymanipinfo(pyManipList[iManipInfo]);
             if (pymanipinfo.check()) {
-                vManipInfos[iManipInfo] = (PyManipulatorInfoPtr(pymanipinfo))->GetManipulatorInfo();
+                vManipInfos[iManipInfo] = ((OPENRAVE_SHARED_PTR<PyManipulatorInfo>)pymanipinfo)->GetManipulatorInfo();
             }
             else{
                 throw openrave_exception(_("Bad ManipulatorInfo"));
@@ -327,9 +327,9 @@ inline std::vector<RobotBase::AttachedSensorInfoPtr> ExtractAttachedSensorInfoAr
         vAttachedSensorInfos.resize(arraySize);
 
         for(size_t iAttachedSensorInfo = 0; iAttachedSensorInfo < arraySize; iAttachedSensorInfo++) {
-            extract_<PyAttachedSensorInfoPtr> pyattachensensorinfo(pyAttachedSensorInfoList[iAttachedSensorInfo]);
+            extract_<OPENRAVE_SHARED_PTR<PyAttachedSensorInfo>> pyattachensensorinfo(pyAttachedSensorInfoList[iAttachedSensorInfo]);
             if (pyattachensensorinfo.check()) {
-                vAttachedSensorInfos[iAttachedSensorInfo] = (PyAttachedSensorInfoPtr(pyattachensensorinfo))->GetAttachedSensorInfo();
+                vAttachedSensorInfos[iAttachedSensorInfo] = ((OPENRAVE_SHARED_PTR<PyAttachedSensorInfo>)pyattachensensorinfo)->GetAttachedSensorInfo();
             }
             else{
                 throw openrave_exception(_("Bad AttachedSensorInfo"));
@@ -354,9 +354,9 @@ inline std::vector<RobotBase::ConnectedBodyInfoPtr> ExtractConnectedBodyInfoArra
         vConnectedBodyInfos.resize(arraySize);
 
         for(size_t iConnectedBodyInfo = 0; iConnectedBodyInfo < arraySize; iConnectedBodyInfo++) {
-            extract_<PyConnectedBodyInfoPtr> pyconnectedbodyinfo(pyConnectedBodyInfoList[iConnectedBodyInfo]);
+            extract_<OPENRAVE_SHARED_PTR<PyConnectedBodyInfo>> pyconnectedbodyinfo(pyConnectedBodyInfoList[iConnectedBodyInfo]);
             if (pyconnectedbodyinfo.check()) {
-                vConnectedBodyInfos[iConnectedBodyInfo] = (PyConnectedBodyInfoPtr(pyconnectedbodyinfo))->GetConnectedBodyInfo();
+                vConnectedBodyInfos[iConnectedBodyInfo] = ((OPENRAVE_SHARED_PTR<PyConnectedBodyInfo>)pyconnectedbodyinfo)->GetConnectedBodyInfo();
             }
             else{
                 throw openrave_exception(_("Bad ConnectedBodyInfo"));
