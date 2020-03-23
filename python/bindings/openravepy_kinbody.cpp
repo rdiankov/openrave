@@ -2093,13 +2093,15 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
     _uri = ConvertStringToUnicode(info._uri);
     py::list vLinkInfos;
     FOREACHC(itLinkInfo, info._vLinkInfos) {
-        vLinkInfos.append(*itLinkInfo);
+        PyLinkInfo info = PyLinkInfo(**itLinkInfo);
+        vLinkInfos.append(info);
     }
     _vLinkInfos = vLinkInfos;
 
     py::list vJointInfos;
     FOREACHC(itJointInfo, info._vJointInfos) {
-        vJointInfos.append(*itJointInfo);
+        PyJointInfo info = PyJointInfo(**itJointInfo);
+        vJointInfos.append(info);
     }
     _vJointInfos = vJointInfos;
 #endif
@@ -4043,8 +4045,8 @@ public:
         }
 #else
         r._uri = state[0];
-        r._vLinkInfos = extract_<py::tuple>(state[1]);
-        r._vJointInfos = extract_<py::tuple>(state[2]);
+        r._vLinkInfos = extract_<py::list>(state[1]);
+        r._vJointInfos = extract_<py::list>(state[2]);
 #endif
     }
 };
@@ -4617,19 +4619,19 @@ void init_openravepy_kinbody()
                          .def(py::pickle(
                                   // __getstate__
                                   [](const PyKinBody::PyKinBodyInfo &pyinfo) {
-            return KinBodyInfo_pickle_suite::getstate(pyinfo);
-        },
+                                      return KinBodyInfo_pickle_suite::getstate(pyinfo);
+                                  },
                                   // __setstate__
                                   [](py::tuple state) {
-            if (state.size() != 3) {
-                RAVELOG_WARN("Invalid state!");
-            }
-            /* Create a new C++ instance */
-            PyKinBody::PyKinBodyInfo pyinfo;
-            KinBodyInfo_pickle_suite::setstate(pyinfo, state);
-            return pyinfo;
-        }
-                                  ))
+                                      if (state.size() != 3) {
+                                          RAVELOG_WARN("Invalid state!");
+                                      }
+                                      /* Create a new C++ instance */
+                                      PyKinBody::PyKinBodyInfo pyinfo;
+                                      KinBodyInfo_pickle_suite::setstate(pyinfo, state);
+                                      return pyinfo;
+                                  }
+                         ))
 #else
                          .def_pickle(KinBodyInfo_pickle_suite())
 #endif
