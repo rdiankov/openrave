@@ -282,6 +282,9 @@ public:
         /// \true false if the link is disabled. disabled links do not participate in collision detection
         bool _bIsEnabled;
         bool __padding0, __padding1; // for 4-byte alignment
+
+        // reference architecture
+        boost::shared_ptr<KinBody::LinkInfo> _referenceInfo;
     };
     typedef boost::shared_ptr<LinkInfo> LinkInfoPtr;
     typedef boost::shared_ptr<LinkInfo const> LinkInfoConstPtr;

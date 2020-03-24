@@ -21,6 +21,8 @@
 #ifndef OPENRAVE_JSON_COMMON_H
 #define OPENRAVE_JSON_COMMON_H
 
+#include <openrave/openrave.h>
+#include <openrave/openravejson.h>
 #include "../ravep.h"
 
 namespace OpenRAVE
@@ -51,6 +53,9 @@ void RaveWriteJSONStream(const std::list<KinBodyPtr>& listbodies, const ostream&
 void RaveWriteJSONMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts);
 void RaveWriteJSONMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts);
 void RaveWriteJSONMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts);
+
+void SerializeDiffJSON(const KinBody::LinkInfo& lhs, const KinBody::LinkInfo& rhs, rapidjson::Document::AllocatorType allocator, rapidjson::Value& value);
+
 
 }
 #endif
