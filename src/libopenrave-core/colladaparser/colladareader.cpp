@@ -1644,6 +1644,113 @@ public:
                                         pjoint->_info._mapStringParameters[name] = pelt->getCharData();
                                     }
                                 }
+                                bool bControlMode = pelt->getElementName() == std::string("controlMode");
+                                if( bControlMode ) {
+                                    pjoint->_info._controlMode = (KinBody::JointControlMode)boost::lexical_cast<int>(pelt->getCharData());
+                                    continue;
+                                }
+                                bool bJCIRobotController = pelt->getElementName() == std::string("jointcontrolinfo_robotcontroller");
+                                if( bJCIRobotController ) {
+                                    pjoint->_info._jci_robotcontroller.reset(new KinBody::JointInfo::JointControlInfo_RobotController());
+                                    KinBody::JointInfo::JointControlInfo_RobotController& jci = *pjoint->_info._jci_robotcontroller;
+                                    for( size_t ieltcontent = 0; ieltcontent < pelt->getChildren().getCount(); ++ieltcontent ) {
+                                        daeElementRef pchild = pelt->getChildren()[ieltcontent];
+                                        if( pchild->getElementName() == std::string("robotId") ) {
+                                            jci.robotId = boost::lexical_cast<int>(pchild->getCharData());
+                                        }
+                                        else if( pchild->getElementName() == std::string("robotControllerDOFIndex") ) {
+                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
+                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
+                                                continue;
+                                            }
+                                            jci.robotControllerDOFIndex.at(ijointaxis) = boost::lexical_cast<int>(pchild->getCharData());
+                                        }
+                                    }
+                                    continue;
+                                }
+                                bool bJCIIO = pelt->getElementName() == std::string("jointcontrolinfo_io");
+                                if( bJCIIO ) {
+                                    pjoint->_info._jci_io.reset(new KinBody::JointInfo::JointControlInfo_IO());
+                                    KinBody::JointInfo::JointControlInfo_IO& jci = *pjoint->_info._jci_io;
+                                    for( size_t ieltcontent = 0; ieltcontent < pelt->getChildren().getCount(); ++ieltcontent ) {
+                                        daeElementRef pchild = pelt->getChildren()[ieltcontent];
+                                        if( pchild->getElementName() == std::string("deviceId") ) {
+                                            jci.deviceId = boost::lexical_cast<int>(pchild->getCharData());
+                                        }
+                                        else if( pchild->getElementName() == std::string("vMoveIONames") ) {
+                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
+                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
+                                                continue;
+                                            }
+                                            ss.clear();
+                                            ss.str(pchild->getCharData());
+                                            jci.vMoveIONames.at(ijointaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
+                                        }
+                                        else if( pchild->getElementName() == std::string("vUpperLimitIONames") ) {
+                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
+                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
+                                                continue;
+                                            }
+                                            ss.clear();
+                                            ss.str(pchild->getCharData());
+                                            jci.vUpperLimitIONames.at(ijointaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
+                                        }
+                                        else if( pchild->getElementName() == std::string("vUpperLimitSensorIsOn") ) {
+                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
+                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
+                                                continue;
+                                            }
+                                            ss.clear();
+                                            ss.str(pchild->getCharData());
+                                            jci.vUpperLimitSensorIsOn.at(ijointaxis) = std::vector<uint8_t>((istream_iterator<int>(ss)), istream_iterator<int>());
+                                        }
+                                        else if( pchild->getElementName() == std::string("vLowerLimitIONames") ) {
+                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
+                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
+                                                continue;
+                                            }
+                                            ss.clear();
+                                            ss.str(pchild->getCharData());
+                                            jci.vLowerLimitIONames.at(ijointaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
+                                        }
+                                        else if( pchild->getElementName() == std::string("vLowerLimitSensorIsOn") ) {
+                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
+                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
+                                                continue;
+                                            }
+                                            ss.clear();
+                                            ss.str(pchild->getCharData());
+                                            jci.vLowerLimitSensorIsOn.at(ijointaxis) = std::vector<uint8_t>((istream_iterator<int>(ss)), istream_iterator<int>());
+                                        }
+                                    }
+                                    continue;
+                                }
+                                bool bJCIExternalDevice = pelt->getElementName() == std::string("jointcontrolinfo_externaldevice");
+                                if( bJCIExternalDevice ) {
+                                    pjoint->_info._jci_externaldevice.reset(new KinBody::JointInfo::JointControlInfo_ExternalDevice());
+                                    KinBody::JointInfo::JointControlInfo_ExternalDevice& jci = *pjoint->_info._jci_externaldevice;
+                                    for( size_t ieltcontent = 0; ieltcontent < pelt->getChildren().getCount(); ++ieltcontent ) {
+                                        daeElementRef pchild = pelt->getChildren()[ieltcontent];
+                                        if( pchild->getElementName() == std::string("externalDeviceId") ) {
+                                            jci.externalDeviceId = pchild->getCharData();
+                                        }
+                                    }
+                                    continue;
+                                }
+
+                            }
+                            // vUpper/LowerLimitSensorIsOn would be meaningless without vUpper/LowerLimitIONames. If the
+                            // sizes of the two are not equal, resize vUpperLimitSensorIsOn to have the same size as
+                            // vUpperLimitIONames and fill in the default value (1) if necessary.
+                            if( pjoint->_info._controlMode == KinBody::JointControlMode::JCM_IO ) {
+                                for( int ijointaxis = 0; ijointaxis < pjoint->GetDOF(); ++ijointaxis ) {
+                                    if( pjoint->_info._jci_io->vUpperLimitIONames.at(ijointaxis).size() != pjoint->_info._jci_io->vUpperLimitSensorIsOn.at(ijointaxis).size() ) {
+                                        pjoint->_info._jci_io->vUpperLimitSensorIsOn[ijointaxis].resize(pjoint->_info._jci_io->vUpperLimitIONames.at(ijointaxis).size(), 1);
+                                    }
+                                    if( pjoint->_info._jci_io->vLowerLimitIONames.at(ijointaxis).size() != pjoint->_info._jci_io->vLowerLimitSensorIsOn.at(ijointaxis).size() ) {
+                                        pjoint->_info._jci_io->vLowerLimitSensorIsOn[ijointaxis].resize(pjoint->_info._jci_io->vLowerLimitIONames.at(ijointaxis).size(), 1);
+                                    }
+                                }
                             }
                         }
                     }

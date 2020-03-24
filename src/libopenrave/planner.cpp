@@ -18,7 +18,6 @@
 
 #include <openrave/planningutils.h>
 
-#include <openrave/openravejson.h>
 
 namespace OpenRAVE {
 
@@ -28,22 +27,38 @@ std::istream& operator>>(std::istream& I, PlannerParameters& pp)
 {
     if( !!I) {
         stringbuf buf;
-        stringstream::streampos pos = I.tellg();
-        I.get(buf, 0); // get all the data, yes this is inefficient, not sure if there anyway to search in streams
 
-        string pbuf = buf.str();
-        const char* p = strcasestr(pbuf.c_str(), "</PlannerParameters>");
-        int ppsize=-1;
-        if( p != NULL ) {
-            I.clear();
-            ppsize=(p-pbuf.c_str())+20;
-            I.seekg((size_t)pos+ppsize);
+        //std::istream::sentry sentry(I); // necessary?!
+        stringstream::streampos pos = I.tellg();
+        I.seekg(0, ios::end);
+        stringstream::streampos endpos = I.tellg();
+        I.seekg(pos);
+
+        std::vector<char> vstrbuf; vstrbuf.reserve((size_t)(endpos-pos)); // make sure there are at least this many bytes
+
+        const char* pMatchPlannerParameters = "</PlannerParameters>";
+        size_t nMatchPlannerParametersSize = 20;
+        bool bFoundMatch = false;
+        for (char c = I.get(); I; c = I.get()) {
+            vstrbuf.push_back(c);
+            if( c == pMatchPlannerParameters[nMatchPlannerParametersSize-1] ) {
+                // matches at the end, check if previous string matches
+                if( vstrbuf.size() >= nMatchPlannerParametersSize) {
+                    if( strncasecmp(&vstrbuf[vstrbuf.size()-nMatchPlannerParametersSize], pMatchPlannerParameters, nMatchPlannerParametersSize) == 0 ) {
+                        // matches, so quit
+                        bFoundMatch = true;
+                        break;
+                    }
+                }
+            }
         }
-        else {
+
+        if( !bFoundMatch ) {
             throw OPENRAVE_EXCEPTION_FORMAT(_("error, failed to find </PlannerParameters> in %s"),buf.str(),ORE_InvalidArguments);
         }
+
         pp._plannerparametersdepth = 0;
-        LocalXML::ParseXMLData(pp, pbuf.c_str(), ppsize);
+        LocalXML::ParseXMLData(pp, &vstrbuf[0], vstrbuf.size());
     }
 
     return I;
@@ -82,6 +97,10 @@ int AddStatesWithLimitCheck(std::vector<dReal>& q, const std::vector<dReal>& qde
         }
     }
     return status;
+}
+
+PlannerStatus::PlannerStatus() : statusCode(0)
+{
 }
 
 PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, CollisionReportPtr report) :

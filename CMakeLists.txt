@@ -4,8 +4,8 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
-set (OPENRAVE_VERSION_MINOR 26)
-set (OPENRAVE_VERSION_PATCH 1)
+set (OPENRAVE_VERSION_MINOR 31)
+set (OPENRAVE_VERSION_PATCH 3)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 message(STATUS "Compiling OpenRAVE Version ${OPENRAVE_VERSION}, soversion=${OPENRAVE_SOVERSION}")
@@ -16,6 +16,7 @@ cmake_policy(SET CMP0002 NEW)
 # http://www.cmake.org/cmake/help/cmake-2.6.html#policy:CMP0003
 cmake_policy(SET CMP0003 NEW)
 
+set(CMAKE_CXX_STANDARD 11)
 # Use, i.e. don't skip the full RPATH for the build tree
 set(CMAKE_SKIP_BUILD_RPATH  FALSE)
 
@@ -180,12 +181,16 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}" "${OPENRAVE_P
 #define OPENRAVE_DATA_INSTALL_DIR "@CMAKE_INSTALL_PREFIX@/@OPENRAVE_DATA_INSTALL_DIR@"
 #define OPENRAVE_PYTHON_INSTALL_DIR "@CMAKE_INSTALL_PREFIX@/@OPENRAVE_PYTHON_INSTALL_DIR@"
 
-
-message(STATUS "installing to ${CMAKE_INSTALL_PREFIX}, python exe ${PYTHON_EXECUTABLE}, python subdir is ${OPENRAVE_PYTHON_INSTALL_DIR}, program suffix is '${OPENRAVE_BIN_SUFFIX}'")
-
 set(CMAKE_TRY_COMPILE_CONFIGURATION Release CACHE STRING "very important to only test release since default is debug, and it usually reuquires special libraries")
-
 set(OPENRAVE_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(OPENRAVEPY_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_BINARY_DIR}/python/bindings/include ${CMAKE_CURRENT_SOURCE_DIR}/python/bindings/include)
+
+message(STATUS "CMAKE_INSTALL_PREFIX          = ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "PYTHON_EXECUTABLE             = ${PYTHON_EXECUTABLE}")
+message(STATUS "OPENRAVE_PYTHON_INSTALL_DIR   = ${OPENRAVE_PYTHON_INSTALL_DIR}")
+message(STATUS "OPENRAVE_BIN_SUFFIX           = ${OPENRAVE_BIN_SUFFIX}")
+message(STATUS "OPENRAVE_INCLUDE_LOCAL_DIRS   = ${OPENRAVE_INCLUDE_LOCAL_DIRS}")
+message(STATUS "OPENRAVEPY_INCLUDE_LOCAL_DIRS = ${OPENRAVEPY_INCLUDE_LOCAL_DIRS}")
 
 # need this in the very first include, otherwise openrave plugins can accidentaly compile with a system-installed openrave headers.
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
@@ -536,10 +541,8 @@ endif()
 
 find_package(RapidJSON)
 if( RAPIDJSON_FOUND )
-  set(OPENRAVE_RAPIDJSON 1)
 else()
-  set(OPENRAVE_RAPIDJSON 0)
-  message(WARNING "rapidjson library not found")
+  message(FATAL_ERROR "rapidjson library not found")
 endif()
 
 find_package(LibXml2)
@@ -856,6 +859,9 @@ if(OPT_PYTHON AND PYTHON_EXECUTABLE)
     set(OPENRAVEPY_VER_NAME "_openravepy_")
   endif()
   set(OPENRAVEPY_VER_INSTALL_DIR "${OPENRAVEPY_INSTALL_DIR}/${OPENRAVEPY_VER_NAME}") # used by openrave-config.cmake
+
+  # build python bindings, either with pybind11 or Boost.Python
+  set(USE_PYBIND11_PYTHON_BINDINGS OFF CACHE BOOL "Build OpenRAVE's python bindings with pybind11 (ON) or Boost.Python (OFF)")
   add_subdirectory(python)
 endif()
 
