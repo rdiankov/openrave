@@ -133,6 +133,11 @@ void RobotBase::Manipulator::SetName(const std::string& name)
     probot->_PostprocessChangedParameters(Prop_RobotManipulatorName);
 }
 
+Transform RobotBase::Manipulator::GetEndEffectorTransform() const
+{
+    return __pEffector->GetTransform();
+}
+
 Transform RobotBase::Manipulator::GetTransform() const
 {
     return __pEffector->GetTransform() * _info._tLocalTool;
