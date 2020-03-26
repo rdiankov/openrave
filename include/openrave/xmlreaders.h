@@ -29,6 +29,8 @@ namespace OpenRAVE {
 
 namespace xmlreaders {
 
+OPENRAVE_API bool ParseXMLData(BaseXMLReader& reader, const char* buffer, int size);
+
 class OPENRAVE_API StringXMLReadable : public XMLReadable
 {
 public:

@@ -448,11 +448,6 @@ inline void polyroots(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
     }
 }
 
-namespace LocalXML
-{
-bool ParseXMLData(BaseXMLReader& reader, const char* buffer, int size);
-}
-
 #ifdef _WIN32
 inline const char *strcasestr(const char *s, const char *find)
 {
