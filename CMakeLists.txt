@@ -89,7 +89,7 @@ find_package(PkgConfig) # pkg_check_modules
 set(OPENRAVE_PYTHON_INSTALL_DIR)
 
 if( OPT_PYTHON )
-  include(FindPythonInterp)
+  find_package(PythonInterp 2)
   ## check python
   find_package(PythonLibs 2) # using PYTHON_INCLUDE_PATH instead of PYTHON_INCLUDE_DIRS?
   if( NOT PYTHON_EXECUTABLE )
