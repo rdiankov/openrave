@@ -36,16 +36,6 @@
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/lexical_cast.hpp>
 
-#define LIBXML_SAX1_ENABLED
-#include <libxml/globals.h>
-#include <libxml/xmlerror.h>
-#include <libxml/parser.h>
-#include <libxml/parserInternals.h> // only for xmlNewInputFromFile()
-#include <libxml/tree.h>
-
-#include <libxml/debugXML.h>
-#include <libxml/xmlmemory.h>
-
 #if OPENRAVE_LOG4CXX
 
 #include <log4cxx/layout.h>

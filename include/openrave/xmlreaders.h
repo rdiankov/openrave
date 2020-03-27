@@ -158,6 +158,7 @@ public:
     virtual bool endElement(const std::string& name);
     virtual void characters(const std::string& ch);
     virtual XMLReadablePtr GetReadable();
+    virtual HierarchicalXMLReadablePtr GetHierarchicalReadable();
 private:
     std::string _xmlid;
     boost::shared_ptr<HierarchicalXMLReader> _pcurreader;

@@ -450,17 +450,22 @@ public:
             FOREACHC(itReadableInterface, GetReadableInterfaces()) {
                 WriteBinaryString(O, itReadableInterface->first);  // xmlid
 
-                // try to see if the readable interface is a known type                ss.clear();
+                // try to see if the readable interface is a known type
                 ss.str(std::string());
-                xmlreaders::StreamXMLWriterPtr writer(new xmlreaders::StreamXMLWriter(itReadableInterface->second->GetXMLId()));
-                itReadableInterface->second->Serialize(writer, options);
-                writer->Serialize(ss);
 
                 std::string readerType;
                 xmlreaders::HierarchicalXMLReadablePtr pHierarchical = boost::dynamic_pointer_cast<xmlreaders::HierarchicalXMLReadable>(itReadableInterface->second);
+                xmlreaders::StreamXMLWriterPtr writer;
                 if( !!pHierarchical ) {
                     readerType = "HierarchicalXMLReadable";
+                    writer.reset(new xmlreaders::StreamXMLWriter("root")); // need to parse with xml, so need a root
                 }
+                else {
+                    writer.reset(new xmlreaders::StreamXMLWriter(std::string()));
+                }
+                itReadableInterface->second->Serialize(writer, options);
+                writer->Serialize(ss);
+
                 WriteBinaryString(O, ss.str());
                 WriteBinaryString(O, readerType);
             }
@@ -532,10 +537,22 @@ public:
                     XMLReadablePtr readableInterface;
                     if( versionNumber >= 3 ) {
                         ReadBinaryString(I, readerType);
-                        if( readerType == "HierarchicalXMLReadable" ) {     
+                        if( readerType == "HierarchicalXMLReadable" ) {
                             xmlreaders::HierarchicalXMLReader xmlreader(xmlid, AttributesList());
                             xmlreaders::ParseXMLData(xmlreader, serializedReadableInterface.c_str(), serializedReadableInterface.size());
-                            readableInterface = xmlreader.GetReadable();
+                            if( !!xmlreader.GetHierarchicalReadable() ) {
+                                // should be one root only
+                                if( xmlreader.GetHierarchicalReadable()->_listchildren.size() == 1 ) {
+                                    readableInterface = xmlreader.GetHierarchicalReadable()->_listchildren.front();
+                                }
+                                else {
+                                    RAVELOG_WARN_FORMAT("tried to parse readable interface %s, but got more than one root", xmlid);
+                                    readableInterface = xmlreader.GetHierarchicalReadable();
+                                }
+                            }
+                            else {
+                                readableInterface = xmlreader.GetReadable();
+                            }
                         }
                         else {
                             readableInterface.reset(new xmlreaders::StringXMLReadable(xmlid, serializedReadableInterface));
