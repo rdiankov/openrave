@@ -16,6 +16,7 @@ endif()
 
 if(NOT OPENRAVE_DISABLE_ASSERT_HANDLER)
   add_definitions("-DBOOST_ENABLE_ASSERT_HANDLER") # turns segfault into exception
+  add_definitions("-DRAPIDJSON_ASSERT=BOOST_ASSERT") # turns segfault into exception
 endif()
 
 find_package(LAPACK)
