@@ -681,6 +681,10 @@ XMLReadablePtr HierarchicalXMLReader::GetReadable()
     return _readable;
 }
 
+HierarchicalXMLReadablePtr HierarchicalXMLReader::GetHierarchicalReadable()
+{
+    return _readable;
+}
 
 StreamXMLWriter::StreamXMLWriter(const std::string& xmltag, const AttributesList& atts) : _xmltag(xmltag), _atts(atts)
 {
