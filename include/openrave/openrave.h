@@ -97,9 +97,7 @@ namespace OpenRAVE {
 
 }
 
-#if OPENRAVE_RAPIDJSON
 #include <rapidjson/document.h>
-#endif
 
 #include <openrave/logging.h>
 
@@ -356,6 +354,7 @@ class BaseXMLWriter;
 typedef boost::shared_ptr<BaseXMLWriter> BaseXMLWriterPtr;
 typedef boost::shared_ptr<BaseXMLWriter const> BaseXMLWriterConstPtr;
 
+
 ///< Cloning Options for interfaces and environments
 enum CloningOptions {
     Clone_Bodies = 1, ///< clone all the bodies/robots of the environment, exclude attached interfaces like sensors/controllers
@@ -435,6 +434,7 @@ public:
 };
 
 typedef boost::function<BaseXMLReaderPtr(InterfaceBasePtr, const AttributesList&)> CreateXMLReaderFn;
+
 
 /// \brief reads until the tag ends
 class OPENRAVE_API DummyXMLReader : public BaseXMLReader
@@ -799,7 +799,7 @@ protected:
     virtual ConfigurationSpecification ConvertToVelocitySpecification() const;
 
     /** \brief converts all the groups to the corresponding derivative group and returns the specification
-        
+
         The new derivative configuration space will have a one-to-one correspondence with the original configuration.
         The interpolation of each of the groups will correspondingly represent the derivative as returned by \ref GetInterpolationDerivative(deriv).
         Only position specifications will be converted, any other groups will be left untouched.
@@ -1489,7 +1489,7 @@ public:
         }
         return 1e30;
     }
-    
+
     /// \brief fills the iterator with the serialized values of the ikparameterization.
     ///
     /// The container the iterator points to needs to have \ref GetNumberOfValues() available.
@@ -1707,6 +1707,15 @@ public:
         }
         values = it->second;
         return true;
+    }
+
+    /// \brief returns the first element of a custom value. If _mapCustomData does not have 'name' and is not > 0, then will return defaultValue
+    inline dReal GetCustomValue(const std::string& name, dReal defaultValue) const {
+        std::map<std::string, std::vector<dReal> >::const_iterator it = _mapCustomData.find(name);
+        if( it != _mapCustomData.end() && it->second.size() > 0 ) {
+            return it->second[0];
+        }
+        return defaultValue;
     }
 
     /// \brief returns a const reference of the custom data key/value pairs
@@ -2057,6 +2066,10 @@ public:
         std::swap(_type, r._type);
         _mapCustomData.swap(r._mapCustomData);
     }
+
+    void SerializeJSON(rapidjson::Value& rIkParameterization, rapidjson::Document::AllocatorType& alloc, dReal fUnitScale=1.0) const;
+
+    void DeserializeJSON(const rapidjson::Value& rIkParameterization, dReal fUnitScale=1.0);
 
 protected:
     inline static bool _IsValidCharInName(char c) {
@@ -2635,7 +2648,7 @@ OPENRAVE_API int RaveGetDataAccess();
 
 /// \brief Gets the default viewer type name
 OPENRAVE_API std::string RaveGetDefaultViewerType();
-    
+
 /** \brief Returns the gettext translated string of the given message id
 
     \param domainname translation domain name
@@ -2702,7 +2715,7 @@ typedef void (*PluginExportFn_OnRaveInitialized)();
 /// \brief Called when OpenRAVE global runtime is about to be destroyed. See \ref OnRavePreDestroy.
 /// \ingroup plugin_exports
 typedef void (*PluginExportFn_OnRavePreDestroy)();
-    
+
 /// \deprecated (12/01/01)
 typedef InterfaceBasePtr (*PluginExportFn_CreateInterface)(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr env) RAVE_DEPRECATED;
 
@@ -2721,9 +2734,6 @@ const std::string& IkParameterization::GetName() const
 
 } // end namespace OpenRAVE
 
-#if OPENRAVE_RAPIDJSON
-#include <openrave/json.h>
-#endif
 
 BOOST_STATIC_ASSERT(OPENRAVE_VERSION_MAJOR>=0&&OPENRAVE_VERSION_MAJOR<=255);
 BOOST_STATIC_ASSERT(OPENRAVE_VERSION_MINOR>=0&&OPENRAVE_VERSION_MINOR<=255);

@@ -148,13 +148,19 @@ object PyTrajectoryBase::SamplePoints2D(object otimes) const
     std::vector<dReal> vtimes = ExtractArray<dReal>(otimes);
     _ptrajectory->SamplePoints(values,vtimes);
 
-    int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
+    const int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pypos = toPyArray(values);
+    pypos.resize({(int) values.size()/numdof, numdof});
+    return pypos;
+#else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { npy_intp(values.size()/numdof), npy_intp(numdof) };
     PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-    if( values.size() > 0 ) {
-        memcpy(PyArray_DATA(pypos), &values[0], values.size()*sizeof(values[0]));
+    if( !values.empty() ) {
+        memcpy(PyArray_DATA(pypos), values.data(), values.size()*sizeof(values[0]));
     }
     return py::to_array_astype<dReal>(pypos);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 object PyTrajectoryBase::SamplePoints2D(object otimes, PyConfigurationSpecificationPtr pyspec) const
@@ -164,12 +170,19 @@ object PyTrajectoryBase::SamplePoints2D(object otimes, PyConfigurationSpecificat
     std::vector<dReal> vtimes = ExtractArray<dReal>(otimes);
     _ptrajectory->SamplePoints(values, vtimes, spec);
 
-    npy_intp dims[] = { npy_intp(values.size()/spec.GetDOF()), npy_intp(spec.GetDOF()) };
+    const int numdof = spec.GetDOF();
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pypos = toPyArray(values);
+    pypos.resize({(int) values.size()/numdof, numdof});
+    return pypos;
+#else // USE_PYBIND11_PYTHON_BINDINGS
+    npy_intp dims[] = { npy_intp(values.size()/numdof), npy_intp(numdof) };
     PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-    if( values.size() > 0 ) {
-        memcpy(PyArray_DATA(pypos), &values[0], values.size()*sizeof(values[0]));
+    if( !values.empty() ) {
+        memcpy(PyArray_DATA(pypos), values.data(), values.size()*sizeof(values[0]));
     }
     return py::to_array_astype<dReal>(pypos);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 object PyTrajectoryBase::SamplePoints2D(object otimes, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const
@@ -211,13 +224,20 @@ object PyTrajectoryBase::GetWaypoints2D(size_t startindex, size_t endindex) cons
 {
     std::vector<dReal> values;
     _ptrajectory->GetWaypoints(startindex,endindex,values);
-    int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
+    const int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pypos = toPyArray(values);
+    pypos.resize({(int) values.size()/numdof, numdof});
+    return pypos;
+#else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { npy_intp(values.size()/numdof), npy_intp(numdof) };
     PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-    if( values.size() > 0 ) {
-        memcpy(PyArray_DATA(pypos), &values[0], values.size()*sizeof(values[0]));
+    if( !values.empty() ) {
+        memcpy(PyArray_DATA(pypos), values.data(), values.size()*sizeof(values[0]));
     }
     return py::to_array_astype<dReal>(pypos);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 object PyTrajectoryBase::__getitem__(int index) const
@@ -255,17 +275,35 @@ object PyTrajectoryBase::__getitem__(py::slice indices) const
         vindices.push_back(i);
     }
 
-    std::vector<dReal> values;
+    std::vector<dReal> values; // workspace
     _ptrajectory->GetWaypoint(0,values);
-    int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
-    npy_intp dims[] = { npy_intp(vindices.size()), npy_intp(numdof) };
+    const int nindices = vindices.size();
+    const int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
+    const int nvalues = values.size();
+    OPENRAVE_ASSERT_OP(numdof, ==, nvalues);
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pypos({nindices, numdof});
+    py::buffer_info buf = pypos.request();
+    dReal* ppos = (dReal*) buf.ptr;
+#else // USE_PYBIND11_PYTHON_BINDINGS
+    npy_intp dims[] = { npy_intp(nindices), npy_intp(numdof) };
     PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-    int waypointSize = values.size()*sizeof(values[0]);
-    for(int i=0; i< (int)vindices.size(); i++) {
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+    const int waypointSize = nvalues * sizeof(values[0]);
+    for(int i = 0; i < nindices; i++) {
         _ptrajectory->GetWaypoint(vindices[i],values);
-        memcpy(PyArray_BYTES(pypos)+(i*waypointSize), &values[0], waypointSize);
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        memcpy(ppos, values.data(), waypointSize);
+        ppos += numdof;
+#else
+        memcpy(PyArray_BYTES(pypos)+(i*waypointSize), values.data(), waypointSize);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
     }
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    return pypos;
+#else // USE_PYBIND11_PYTHON_BINDINGS
     return py::to_array_astype<dReal>(pypos);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 object PyTrajectoryBase::GetAllWaypoints2D() const
@@ -278,12 +316,20 @@ object PyTrajectoryBase::GetWaypoints2D(size_t startindex, size_t endindex, PyCo
     std::vector<dReal> values;
     ConfigurationSpecification spec = openravepy::GetConfigurationSpecification(pyspec);
     _ptrajectory->GetWaypoints(startindex,endindex,values,spec);
-    npy_intp dims[] = { npy_intp(values.size()/spec.GetDOF()), npy_intp(spec.GetDOF()) };
+    const int numdof = spec.GetDOF();
+    const int nvalues = values.size();
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pypos = toPyArray(values);
+    pypos.resize({nvalues/numdof, numdof});
+    return pypos;
+#else // USE_PYBIND11_PYTHON_BINDINGS
+    npy_intp dims[] = { npy_intp(nvalues/numdof), npy_intp(numdof) };
     PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-    if( values.size() > 0 ) {
-        memcpy(PyArray_DATA(pypos), &values[0], values.size()*sizeof(values[0]));
+    if( !values.empty() ) {
+        memcpy(PyArray_DATA(pypos), values.data(), nvalues*sizeof(values[0]));
     }
     return py::to_array_astype<dReal>(pypos);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 object PyTrajectoryBase::GetWaypoints2D(size_t startindex, size_t endindex, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const
@@ -338,19 +384,19 @@ void PyTrajectoryBase::deserialize(const string& s)
     _ptrajectory->deserialize(ss);
 }
 
-object PyTrajectoryBase::serialize(object ooptions)
+object PyTrajectoryBase::serialize(object options)
 {
     std::stringstream ss;
     ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-    _ptrajectory->serialize(ss,pyGetIntFromPy(ooptions,0));
+    _ptrajectory->serialize(ss,pyGetIntFromPy(options, 0));
     return py::to_object(ss.str());
 }
 
-void PyTrajectoryBase::SaveToFile(const std::string& filename, object ooptions)
+void PyTrajectoryBase::SaveToFile(const std::string& filename, object options)
 {
     std::ofstream f(filename.c_str(), ios::binary);
     f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-    _ptrajectory->serialize(f, pyGetIntFromPy(ooptions,0));
+    _ptrajectory->serialize(f, pyGetIntFromPy(options, 0));
     f.close(); // necessary?
 }
 
@@ -496,9 +542,9 @@ void init_openravepy_trajectory()
          DOXY_FN(TrajectoryBase, serialize)
          )
     .def("SaveToFile", &PyTrajectoryBase::SaveToFile,
-         "filename",
+         "filename"_a,
          "options"_a = py::none_(),
-         DOXY_FN(TrajectoryBase, serialize)
+         DOXY_FN(TrajectoryBase, SaveToFile)
          )
 #else
     .def("serialize",&PyTrajectoryBase::serialize,serialize_overloads(PY_ARGS("options") DOXY_FN(TrajectoryBase,serialize)))

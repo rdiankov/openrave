@@ -66,6 +66,26 @@ using namespace OpenRAVE;
 
 namespace openravepy {
 
+/// conversion between rapidjson value and py::object
+OPENRAVEPY_API py::object toPyObject(const rapidjson::Value& value);
+OPENRAVEPY_API void toRapidJSONValue(const py::object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator);
+
+/// used externally, don't change definitions
+//@{
+OPENRAVEPY_API Transform ExtractTransform(const py::object& oraw);
+OPENRAVEPY_API TransformMatrix ExtractTransformMatrix(const py::object& oraw);
+OPENRAVEPY_API py::object toPyArray(const TransformMatrix& t);
+OPENRAVEPY_API py::object toPyArray(const Transform& t);
+OPENRAVEPY_API py::object toPyArray(const std::vector<KinBody::GeometryInfoPtr>& infos);
+// OPENRAVEPY_API py::object toPyArray(std::vector<KinBody::GeometryInfoPtr>& infos);
+OPENRAVEPY_API XMLReadablePtr ExtractXMLReadable(py::object o);
+OPENRAVEPY_API py::object toPyXMLReadable(XMLReadablePtr p);
+OPENRAVEPY_API bool ExtractIkParameterization(py::object o, IkParameterization& ikparam);
+OPENRAVEPY_API py::object toPyIkParameterization(const IkParameterization& ikparam);
+OPENRAVEPY_API py::object toPyIkParameterization(const std::string& serializeddata);
+//@}
+
+
 struct DummyStruct {};
 
 class PyInterfaceBase;
@@ -91,6 +111,7 @@ class PyXMLReadable;
 class PyCameraIntrinsics;
 class PyLinkInfo;
 class PyJointInfo;
+class PyGeometryInfo;
 class PyManipulatorInfo;
 class PyAttachedSensorInfo;
 class PyConnectedBodyInfo;
@@ -138,6 +159,7 @@ typedef OPENRAVE_SHARED_PTR<PyXMLReadable> PyXMLReadablePtr;
 typedef OPENRAVE_SHARED_PTR<PyCameraIntrinsics> PyCameraIntrinsicsPtr;
 typedef OPENRAVE_SHARED_PTR<PyLinkInfo> PyLinkInfoPtr;
 typedef OPENRAVE_SHARED_PTR<PyJointInfo> PyJointInfoPtr;
+typedef OPENRAVE_SHARED_PTR<PyGeometryInfo> PyGeometryInfoPtr;
 typedef OPENRAVE_SHARED_PTR<PyManipulatorInfo> PyManipulatorInfoPtr;
 typedef OPENRAVE_SHARED_PTR<PyAttachedSensorInfo> PyAttachedSensorInfoPtr;
 typedef OPENRAVE_SHARED_PTR<PyConnectedBodyInfo> PyConnectedBodyInfoPtr;
@@ -160,25 +182,6 @@ inline uint64_t GetMicroTime()
 #endif
 }
 
-#if OPENRAVE_RAPIDJSON
-/// conversion between rapidjson value and py::object
-OPENRAVEPY_API py::object toPyObject(const rapidjson::Value& value);
-OPENRAVEPY_API void toRapidJSONValue(const py::object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator);
-#endif // OPENRAVE_RAPIDJSON
-
-/// used externally, don't change definitions
-//@{
-OPENRAVEPY_API Transform ExtractTransform(const py::object& oraw);
-OPENRAVEPY_API TransformMatrix ExtractTransformMatrix(const py::object& oraw);
-OPENRAVEPY_API py::object toPyArray(const TransformMatrix& t);
-OPENRAVEPY_API py::object toPyArray(const Transform& t);
-
-OPENRAVEPY_API XMLReadablePtr ExtractXMLReadable(py::object o);
-OPENRAVEPY_API py::object toPyXMLReadable(XMLReadablePtr p);
-OPENRAVEPY_API bool ExtractIkParameterization(py::object o, IkParameterization& ikparam);
-OPENRAVEPY_API py::object toPyIkParameterization(const IkParameterization& ikparam);
-OPENRAVEPY_API py::object toPyIkParameterization(const std::string& serializeddata);
-//@}
 
 struct OPENRAVEPY_API null_deleter {
     void operator()(void const *) const {
@@ -328,6 +331,21 @@ inline RaveTransformMatrix<T> ExtractTransformMatrixType(const py::object& o)
 
 inline py::object toPyArrayRotation(const TransformMatrix& t)
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pyvalues({3, 3});
+    py::buffer_info buf = pyvalues.request();
+    dReal* pvalue = (dReal*) buf.ptr;
+    pvalue[0] = t.m[0];
+    pvalue[1] = t.m[1];
+    pvalue[2] = t.m[2];
+    pvalue[3] = t.m[4];
+    pvalue[4] = t.m[5];
+    pvalue[5] = t.m[6];
+    pvalue[6] = t.m[8];
+    pvalue[7] = t.m[9];
+    pvalue[8] = t.m[10];
+    return pyvalues;
+#else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = {3,3};
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
@@ -335,11 +353,23 @@ inline py::object toPyArrayRotation(const TransformMatrix& t)
     pdata[3] = t.m[4]; pdata[4] = t.m[5]; pdata[5] = t.m[6];
     pdata[6] = t.m[8]; pdata[7] = t.m[9]; pdata[8] = t.m[10];
     return py::to_array_astype<dReal>(pyvalues);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 template <typename T>
 inline py::object toPyArray3(const std::vector<RaveVector<T> >& v)
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pyvalues({(int) v.size(), 3});
+    py::buffer_info buf = pyvalues.request();
+    dReal* pvalue = (dReal*) buf.ptr;
+    for(const RaveVector<T>& vi : v) {
+        *pvalue++ = vi.x;
+        *pvalue++ = vi.y;
+        *pvalue++ = vi.z;
+    }
+    return pyvalues;
+#else // USE_PYBIND11_PYTHON_BINDINGS
     npy_intp dims[] = { npy_intp(v.size()), npy_intp(3) };
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(T)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     if( v.size() > 0 ) {
@@ -351,24 +381,55 @@ inline py::object toPyArray3(const std::vector<RaveVector<T> >& v)
         }
     }
     return py::to_array_astype<T>(pyvalues);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 inline py::object toPyVector2(Vector v)
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pyvec({2});
+    py::buffer_info buf = pyvec.request();
+    dReal* pvec = (dReal*) buf.ptr;
+    pvec[0] = v.x;
+    pvec[1] = v.y;
+    return pyvec;
+#else
     const dReal arr[2] {v.x, v.y};
     return toPyArrayN(arr, 2);
+#endif
 }
 
 inline py::object toPyVector3(Vector v)
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pyvec({3});
+    py::buffer_info buf = pyvec.request();
+    dReal* pvec = (dReal*) buf.ptr;
+    pvec[0] = v.x;
+    pvec[1] = v.y;
+    pvec[2] = v.z;
+    return pyvec;
+#else
     const dReal arr[3] {v.x, v.y, v.z};
     return toPyArrayN(arr, 3);
+#endif
 }
 
 inline py::object toPyVector4(Vector v)
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pyvec({4});
+    py::buffer_info buf = pyvec.request();
+    dReal* pvec = (dReal*) buf.ptr;
+    pvec[0] = v.x;
+    pvec[1] = v.y;
+    pvec[2] = v.z;
+    pvec[3] = v.w;
+    return pyvec;
+#else
     const dReal arr[4] {v.x, v.y, v.z, v.w};
     return toPyArrayN(arr, 4);
+#endif
 }
 
 /// \brief converts dictionary of keyvalue pairs
@@ -598,10 +659,8 @@ public:
     bool SupportsCommand(const string& cmd);
     py::object SendCommand(const string& in, bool releasegil=false, bool lockenv=false);
 
-#if OPENRAVE_RAPIDJSON
     bool SupportsJSONCommand(const string& cmd);
     py::object SendJSONCommand(const string& cmd, py::object input, bool releasegil=false, bool lockenv=false);
-#endif // OPENRAVE_RAPIDJSON
 
     virtual py::object GetReadableInterfaces();
     virtual py::object GetReadableInterface(const std::string& xmltag);
@@ -792,10 +851,11 @@ OPENRAVEPY_API PyCameraIntrinsicsPtr toPyCameraIntrinsics(const geometry::RaveCa
 OPENRAVEPY_API PyLinkPtr toPyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv);
 OPENRAVEPY_API PyJointPtr toPyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv);
 OPENRAVEPY_API PyLinkInfoPtr toPyLinkInfo(const KinBody::LinkInfo& linkinfo);
-OPENRAVEPY_API PyJointInfoPtr toPyJointInfo(const KinBody::JointInfo& jointinfo, PyEnvironmentBasePtr pyenv);
+OPENRAVEPY_API PyJointInfoPtr toPyJointInfo(const KinBody::JointInfo& jointinfo);
+OPENRAVEPY_API PyGeometryInfoPtr toPyGeometryInfo(const KinBody::GeometryInfo& geominfo);
 OPENRAVEPY_API PyManipulatorInfoPtr toPyManipulatorInfo(const RobotBase::ManipulatorInfo& manipulatorinfo);
 OPENRAVEPY_API PyAttachedSensorInfoPtr toPyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& attachedSensorinfo);
-OPENRAVEPY_API PyConnectedBodyInfoPtr toPyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& connectedBodyInfo, PyEnvironmentBasePtr pyenv);
+OPENRAVEPY_API PyConnectedBodyInfoPtr toPyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& connectedBodyInfo);
 
 OPENRAVEPY_API PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType type, const std::string& name);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
