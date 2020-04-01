@@ -1917,10 +1917,9 @@ RobotBase::GrabbedInfoPtr PyKinBody::PyGrabbedInfo::GetGrabbedInfo() const
     pinfo->_grabbedname = py::extract<std::string>(_grabbedname);
     pinfo->_robotlinkname = py::extract<std::string>(_robotlinkname);
     pinfo->_trelative = ExtractTransform(_trelative);
-    std::vector<int> v = ExtractArray<int>(_setRobotLinksToIgnore);
-    pinfo->_setRobotLinksToIgnore.clear();
-    FOREACHC(it,v) {
-        pinfo->_setRobotLinksToIgnore.insert(*it);
+    if( !IS_PYTHONOBJECT_NONE(_setRobotLinksToIgnore) ) {
+        std::vector<int> v = ExtractArray<int>(_setRobotLinksToIgnore);
+        pinfo->_setRobotLinksToIgnore = std::set<int>(begin(v), end(v));
     }
 #endif
     return pinfo;
