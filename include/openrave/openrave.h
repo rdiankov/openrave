@@ -1227,7 +1227,8 @@ public:
         BOOST_ASSERT(_type==ikparam.GetType());
         switch(_type) {
         case IKP_Transform6D: {
-            Transform t0 = GetTransform6D(), t1 = ikparam.GetTransform6D();
+            const Transform& t0 = GetTransform6D();
+            const Transform& t1 = ikparam.GetTransform6D();
             dReal fcos = RaveFabs(t0.rot.dot(t1.rot));
             dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
             return (t0.trans-t1.trans).lengthsqr3() + anglemult*facos*facos;
@@ -1260,9 +1261,9 @@ public:
             return v.lengthsqr3();
         }
         case IKP_TranslationDirection5D: {
-            dReal fcos = GetTranslationDirection5D().dir.dot(ikparam.GetTranslationDirection5D().dir);
+            dReal fcos = _transform.rot.dot(ikparam._transform.rot);
             dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
-            return (GetTranslationDirection5D().pos-ikparam.GetTranslationDirection5D().pos).lengthsqr3() + anglemult*facos*facos;
+            return (_transform.trans-ikparam._transform.trans).lengthsqr3() + anglemult*facos*facos;
         }
         case IKP_TranslationXY2D: {
             return (GetTranslationXY2D()-ikparam.GetTranslationXY2D()).lengthsqr2();
@@ -1722,6 +1723,12 @@ public:
     inline const std::map<std::string, std::vector<dReal> >& GetCustomDataMap() const
     {
         return _mapCustomData;
+    }
+
+    /// \brief sets custom data key/value pairs
+    void SetCustomDataMap(const std::map<std::string, std::vector<dReal> >& mapCustomData)
+    {
+        _mapCustomData = mapCustomData;
     }
 
     /// \brief clears custom data
