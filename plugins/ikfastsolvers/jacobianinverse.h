@@ -505,9 +505,9 @@ public:
     /// \param tgoal the goal in the manipulator's base frame
     /// \param vsolution output if successful
     /// \return -1 if not changed, 0 if failed, 1 if changed and new succeeded in getting new position
-    int ComputeSolution(const Transform& tgoal, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution)
+    int ComputeSolution(const Transform& tgoal, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution, bool bIgnoreJointLimits=false)
     {
-        return ComputeSolution(IkParameterization(tgoal, IKP_Transform6D), manip, vsolution);
+        return ComputeSolution(IkParameterization(tgoal, IKP_Transform6D), manip, vsolution, bIgnoreJointLimits);
     }
     
     int ComputeSolutionTranslation(const Transform& tgoal, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution)
