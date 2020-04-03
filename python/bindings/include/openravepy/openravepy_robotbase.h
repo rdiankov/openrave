@@ -43,6 +43,7 @@ public:
         RobotBase::ManipulatorPtr GetManipulator() const;
 
         object GetTransform() const;
+        object GetEndEffectorTransform() const;
 
         object GetTransformPose() const;
 

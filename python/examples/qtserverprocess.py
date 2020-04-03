@@ -132,7 +132,7 @@ class OpenRaveServer(object):
                 notFound = False
                 try:
                     Tnewgoals = []
-                    Tnewgoals.append(self.manip.GetEndEffectorTransform() +(random.rand(4,4)-0.5))
+                    Tnewgoals.append(self.manip.GetTransform() +(random.rand(4,4)-0.5))
                     data = interfaces.BaseManipulation(self.robot).MoveToHandPosition(matrices=Tnewgoals,maxiter=1000,maxtries=1,seedik=4,execute=True,outputtraj=True).split(" ")
                 except Exception as e:
                     notFound = True

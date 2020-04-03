@@ -81,9 +81,7 @@ public:
         /// \brief return the linear/angular velocity of the manipulator coordinate system
         virtual std::pair<Vector,Vector> GetVelocity() const;
 
-        virtual Transform GetEndEffectorTransform() const {
-            return GetTransform();
-        }
+        virtual Transform GetEndEffectorTransform() const;
 
         virtual const std::string& GetName() const {
             return _info._name;

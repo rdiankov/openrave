@@ -291,7 +291,7 @@ class ReachabilityModel(DatabaseGenerator):
             # the best estimate of arm length is to sum up the distances of the anchors of all the points in between the chain
             armjoints = self.getOrderedArmJoints()
             baseanchor = armjoints[0].GetAnchor()
-            eetrans = self.manip.GetEndEffectorTransform()[0:3,3]
+            eetrans = self.manip.GetTransform()[0:3,3]
             armlength = 0
             for j in armjoints[::-1]:
                 armlength += sqrt(sum((eetrans-j.GetAnchor())**2))
