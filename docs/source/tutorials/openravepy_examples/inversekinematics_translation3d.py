@@ -14,7 +14,7 @@ if not ikmodel.load():
 
 with robot: # lock environment and save robot state
     robot.SetDOFValues([2.58, 0.547, 1.5, -0.7],[0,1,2,3]) # set the first 4 dof values
-    Tee = manip.GetEndEffectorTransform() # get end effector
+    Tee = manip.GetTransform() # get end effector
     ikparam = IkParameterization(Tee[0:3,3],ikmodel.iktype) # build up the translation3d ik query
     sols = manip.FindIKSolutions(ikparam, IkFilterOptions.CheckEnvCollisions) # get all solutions
 

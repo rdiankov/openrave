@@ -665,7 +665,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                     self.robot.SetDOFValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
                     if not self.robot.CheckSelfCollision():
                         break
-                Tgrasp = self.manip.GetEndEffectorTransform()
+                Tgrasp = self.manip.GetTransform()
             with self.env:
                 densityfn,samplerfn,bounds = self.computeBaseDistribution(Tgrasp,logllthresh=1.0)
                 if densityfn is None:

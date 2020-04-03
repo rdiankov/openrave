@@ -231,7 +231,7 @@ def test_constraintplanning():
     self.robot.SetJointValues([-0.90993702,  1.4134903 ,  1.18074048,  1.6281302 , -1.42419982, 1.17677045, -2.48384023,  0.98699927,  0.59599888,  1.1350019 ,  0])
     target = self.gmodel.target
     robot.Grab(target)
-    T = self.manip.GetEndEffectorTransform()
+    T = self.manip.GetTransform()
     T[2,3] += 0.4
     constraintfreedoms = [1,1,0,0,0,0]
     constraintmatrix = eye(4)

@@ -499,7 +499,7 @@ class GraspingModel(DatabaseGenerator):
             Tlocalgrasp = eye(4)
             with self.robot:
                 self.robot.SetTransform(finalconfig[1])
-                Tgrasp = self.manip.GetEndEffectorTransform()
+                Tgrasp = self.manip.GetTransform()
                 Tlocalgrasp = dot(linalg.inv(self.target.GetTransform()),Tgrasp)
                 # find a non-colliding transform
                 self.setPreshape(grasp)
@@ -610,7 +610,7 @@ class GraspingModel(DatabaseGenerator):
                 with self.robot:
                     Tlocalgrasp = eye(4)
                     self.robot.SetTransform(Tfinal)
-                    Tgrasp = self.manip.GetEndEffectorTransform()
+                    Tgrasp = self.manip.GetTransform()
                     Tlocalgrasp = dot(linalg.inv(self.target.GetTransform()),Tgrasp)
                     # find a non-colliding transform
                     direction = self.getGlobalApproachDir(grasp)
@@ -843,7 +843,7 @@ class GraspingModel(DatabaseGenerator):
                             continue
                         with self.robot.CreateRobotStateSaver():
                             self.robot.SetDOFValues(solution, self.manip.GetArmIndices())
-                            Tglobalgrasp = self.manip.GetEndEffectorTransform()
+                            Tglobalgrasp = self.manip.GetTransform()
                             grasp = array(grasp)
                             grasp[self.graspindices['grasptrans_nocol']] = Tglobalgrasp[0:3,0:4].flatten()
                             grasp[self.graspindices.get('graspikparam_nocol')] = r_[int(IkParameterizationType.Transform6D), poseFromMatrix(Tglobalgrasp)]

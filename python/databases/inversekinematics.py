@@ -399,7 +399,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         """
         with self.env:
             values = []
-            eetrans = self.manip.GetEndEffectorTransform()[0:3,3]
+            eetrans = self.manip.GetTransform()[0:3,3]
             armlength = 0
             orderedarmindices = [j for j in self.robot.GetDependencyOrderedJoints() if j.GetJointIndex() in self.manip.GetArmIndices()]
             for j in orderedarmindices[::-1]:
