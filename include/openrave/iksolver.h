@@ -42,18 +42,36 @@ enum IkFilterOptions
 /// \brief Return value for the ik filter that can be optionally set on an ik solver.
 enum IkReturnAction
 {
-    IKRA_Success = 0, ///< the ik solution is good
-    IKRA_Reject = 1, ///< reject the ik solution
-    IKRA_Quit = 2, ///< the ik solution is rejected and the ik call itself should quit with failure
+    IKRA_Success                        = 0x00000000, ///< the ik solution is good
+    IKRA_Reject                         = 0x00000001, ///< reject the ik solution
+    IKRA_Quit                           = 0x00000002, ///< the ik solution is rejected and the ik call itself should quit with failure
 
     // reasons why rejected
-    IKRA_QuitEndEffectorCollision = (IKRA_Quit|0x00000080),
-    IKRA_RejectKinematics = (IKRA_Reject|0x00000010),
-    IKRA_RejectSelfCollision = (IKRA_Reject|0x00000020),
-    IKRA_RejectEnvCollision = (IKRA_Reject|0x00000040),
-    IKRA_RejectJointLimits = (IKRA_Reject|0x00000100),
-    IKRA_RejectKinematicsPrecision = (IKRA_Reject|0x00000200),
-    IKRA_RejectCustomFilter = (IKRA_Reject|0x00008000), // the reason should be set in the upper 16 bits
+    IKRA_QuitEndEffectorCollision       = (IKRA_Quit  |0x00000080),
+    IKRA_RejectKinematics               = (IKRA_Reject|0x00000010),
+    IKRA_RejectSelfCollision            = (IKRA_Reject|0x00000020),
+    IKRA_RejectEnvCollision             = (IKRA_Reject|0x00000040),
+    IKRA_RejectJointLimits              = (IKRA_Reject|0x00000100),
+    IKRA_RejectKinematicsPrecision      = (IKRA_Reject|0x00000200),
+    IKRA_RejectCustomFilter             = (IKRA_Reject|0x00008000), // the reason should be set in the upper 16 bits
+
+    // more reject reasons
+    IKRA_RejectTranslationDiscontinuity = (IKRA_Reject|0x00010000),
+    IKRA_RejectRotationDiscontinuity    = (IKRA_Reject|0x00020000),
+    IKRA_RejectDirectionDiscontinuity   = (IKRA_Reject|0x00040000),
+    IKRA_RejectPrevDiscontinuity        = (IKRA_Reject|0x00080000),
+    IKRA_RejectMidDiscontinuity         = (IKRA_Reject|0x00100000),
+    IKRA_RejectVelocitySolution         = (IKRA_Reject|0x00200000),
+    IKRA_RejectVelocityConstraints      = (IKRA_Reject|0x00400000),
+    IKRA_RejectApproachDirection        = (IKRA_Reject|0x00800000),
+    IKRA_RejectDepartDirection          = (IKRA_Reject|0x01000000),
+    IKRA_RejectTorqueExceeded           = (IKRA_Reject|0x02000000),
+    IKRA_RejectGrabbedAboveLink         = (IKRA_Reject|0x04000000),
+    IKRA_RejectDirectionThresh          = (IKRA_Reject|0x08000000),
+    IKRA_RejectLinkOverlapThresh        = (IKRA_Reject|0x10000000),
+    IKRA_RejectEndEffectorDistThresh    = (IKRA_Reject|0x20000000),
+    IKRA_RejectMaxJointDiffThresh       = (IKRA_Reject|0x40000000),
+    IKRA_RejectTimeBasedConstraints     = (IKRA_Reject|0x80000000),
 };
 
 /// \brief priorities for what an ik solver checks. Should be a signed int
