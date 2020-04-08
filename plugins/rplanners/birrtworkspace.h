@@ -46,8 +46,9 @@ public:
     /// \brief Initialize a node with a parent node, a config, and a corresponding transform
     NodeWithTransform(NodeWithTransform* pparent, const std::vector<dReal>& vconfig, const Transform& pose) : rrtparent(pparent) {
         std::copy(vconfig.begin(), vconfig.end(), q);
-        p.rot = pose.rot;
-        p.trans = pose.trans;
+        // Assign rot, trans separately to skip checking of rot normalization. Is it ok, though?
+        this->pose.rot = pose.rot;
+        this->pose.trans = pose.trans;
         _level = 0;
         _hasselfchild = 0;
         _usenn = 1;
@@ -57,8 +58,8 @@ public:
 
     NodeWithTransform(NodeWithTransform* pparent, const dReal* pconfig, int ndof, const Transform& pose) : rrtparent(pparent) {
         std::copy(pconfig, pconfig + ndof, q);
-        p.rot = pose.rot;
-        p.trans = pose.trans;
+        this->pose.rot = pose.rot;
+        this->pose.trans = pose.trans;
         _level = 0;
         _hasselfchild = 0;
         _usenn = 1;
@@ -77,7 +78,7 @@ public:
     uint8_t _userdata;
 
     uint8_t _transformComputed;
-    Transform p;
+    Transform pose;
     dReal q[0];
 };
 
@@ -85,14 +86,38 @@ public:
 template <typename Node>
 class SpatialTree2 : public SpatialTree<Node>
 {
+public:
     typedef Node* NodePtr;
+
+    SpatialTree2(int fromgoal) : SpatialTree<Node>(fromgoal)
+    {
+        _fromgoal = fromgoal;
+        _fStepLength = 0.04f;
+        _dof = 0;
+        _numnodes = 0;
+        _base = 1.5; // optimal is 1.3?
+        _fBaseInv = 1/_base;
+        _fBaseChildMult = 1/(_base-1);
+        _maxdistance = 0;
+        _mindistance = 0;
+        _maxlevel = 0;
+        _minlevel = 0;
+        _fMaxLevelBound = 0;
+    }
 
     ~SpatialTree2()
     {
         Reset();
     }
 
-    virtual void Init(boost::weak_ptr<PlannerBase> planner, int dof, boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)>& distmetricfn, dReal fStepLength, dReal maxdistance)
+    virtual void Init(boost::weak_ptr<PlannerBase> planner,
+                      int dof,
+                      boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)>& distmetricfn,
+                      boost::function<bool(const std::vector<dReal>&, Transform&)>& fkfn,
+                      boost::function<bool(const Transform&, std::vector<dReal>&)>& ikfn,
+                      dReal fStepLength,
+                      dReal fWorkspaceStepLength,
+                      dReal maxdistance)
     {
         Reset();
         if( !!_pNodesPool ) {
@@ -107,7 +132,10 @@ class SpatialTree2 : public SpatialTree<Node>
 
         _planner = planner;
         _distmetricfn = distmetricfn;
+        _fkfn = fkfn;
+        _ikfn = ikfn;
         _fStepLength = fStepLength;
+        _fWorkspaceStepLength = fWorkspaceStepLength;
         _dof = dof;
         _vNewConfig.resize(dof);
         _vDeltaConfig.resize(dof);
@@ -179,7 +207,6 @@ class SpatialTree2 : public SpatialTree<Node>
 
         _vCurConfig.resize(_dof);
         std::copy(pnode->q, pnode->q + _dof, _vCurConfig.begin());
-
 
         // Extend the tree
         for( int iter = 0; iter < 100; ++iter ) {
@@ -284,9 +311,119 @@ class SpatialTree2 : public SpatialTree<Node>
 
     // TODO
     /// \brief
-    virtual ExtendType ExtendWithTransform(const std::vector<dReal>& vTargetConfig, const Transform& tTarget, NodeBasePtr& plastnode, bool bOneStep=false)
+    virtual ExtendType ExtendWithDirection(const Vector& vdirection, NodeBasePtr& plastnode, dReal fSampledValue, bool bOneStep=false)
     {
-        return ET_Success;
+        NodePtr pnode = SampleNode(fSampledValue);
+        if( !pnode ) {
+            return ET_Failed;
+        }
+        plastnode = pnode;
+
+        bool bHasAdded = false;
+        boost::shared_ptr<PlannerBase> planner(_planner);
+        PlannerBase::PlannerParametersConstPtr params = planner->GetParameters();
+
+        _vCurConfig.resize(_dof);
+        std::copy(pnode->q, pnode->q + _dof, _vCurConfig.begin());
+        _curpose.rot = pnode->pose.rot;
+        _curpose.trans = pnode->pose.trans;
+
+        _newpose.rot = _curpose.rot;
+
+        // Suppose vdirection is normalized.
+        _vstepdirection = vdirection * _fWorkspaceStepLength;
+
+        // Extend the tree
+        int maxExtensionIters = 100;
+        for( int iter = 0; iter < maxExtensionIters; ++iter ) {
+            _newpose.trans = _curpose.trans + _curpose.rotate(_vstepdirection);
+            if( !_ikfn(_newpose, _vNewConfig) ) {
+                return bHasAdded ? ET_Success : ET_Failed;
+            }
+
+            _vDeltaConfig = _vNewConfig;
+            params->_diffstatefn(_vDeltaConfig, _vCurConfig);
+            // Should we still adjust _vDeltaConfig based on _fStepLength here?
+
+            _vNewConfig = _vCurConfig;
+            if( params->SetStateValues(_vNewConfig) != 0 ) {
+                return bHasAdded ? ET_Success : ET_Failed;
+            }
+
+            if( params->_neighstatefn(_vNewConfig, _vDeltaConfig, _fromgoal ? NSO_GoalToInitial : 0) == NSS_Failed ) {
+                return bHasAdded ? ET_Success : ET_Failed;
+            }
+
+            if( _fromgoal ) {
+                if( params->CheckPathAllConstraints(_vNewConfig, _vCurConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenEnd, 0xffff|CFO_FillCheckedConfiguration, _constraintreturn) != 0 ) {
+                    return bHasAdded ? ET_Success : ET_Failed;
+                }
+            }
+            else { // not _fromgoal
+                if( params->CheckPathAllConstraints(_vCurConfig, _vNewConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenEnd, 0xffff|CFO_FillCheckedConfiguration, _constraintreturn) != 0 ) {
+                    return bHasAdded ? ET_Success : ET_Failed;
+                }
+            }
+
+            int iAdded = 0; // number of nodes added to the tree
+            if( _constraintreturn->_bHasRampDeviatedFromInterpolation ) {
+                // Since the path checked by CheckPathAllConstraints can be different from the
+                // straight line connecting _vNewConfig and _vCurConfig, we add all checked
+                // configurations along the checked segment to the tree.
+                if( _fromgoal ) {
+                    for( int iconfig = ((int)_constraintreturn->_configurations.size()) - _dof; iconfig >= 0; iconfig -= _dof ) {
+                        std::copy(_constraintreturn->_configurations.begin() + iconfig,
+                                  _constraintreturn->_configurations.begin() + iconfig + _dof,
+                                  _vNewConfig.begin());
+                        NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0);
+                        if( !!pnewnode ) {
+                            bHasAdded = true;
+                            pnode = pnewnode;
+                            plastnode = pnode;
+                            ++iAdded;
+                        }
+                        else {
+                            break;
+                        }
+                    } // end for iconfig
+                }
+                else { // not _fromgoal
+                    for( int iconfig = 0; iconfig + _dof - 1 < (int)_constraintreturn->_configurations.size(); iconfig += _dof ) {
+                        std::copy(_constraintreturn->_configurations.begin() + iconfig,
+                                  _constraintreturn->_configurations.begin() + iconfig + _dof,
+                                  _vNewConfig.begin());
+                        NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0);
+                        if( !!pnewnode ) {
+                            bHasAdded = true;
+                            pnode = pnewnode;
+                            plastnode = pnode;
+                            ++iAdded;
+                        }
+                        else {
+                            break;
+                        }
+                    } // end for iconfig
+                }
+            }
+            else {
+                // not _bHasRampDeviatedFromInterpolation
+
+                // Since the final configuration is dircetly _vNewConfig, simply add only _vNewConfig to the tree
+                NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0);
+                if( !!pnewnode ) {
+                    pnode = pnewnode;
+                    plastnode = pnode;
+                    bHasAdded = true;
+                }
+            }
+
+            if( bHasAdded && bOneStep ) {
+                return ET_Connected; //
+            }
+            _vCurConfig.swap(_vNewConfig);
+        }
+
+        return bHasAdded ? ET_Success : ET_Failed;
     }
 
     /// \brief Select a node in the tree based on the given fSampledValue.
@@ -296,15 +433,17 @@ class SpatialTree2 : public SpatialTree<Node>
         for( int ilevel = 0; ilevel < _maxlevel; ++ilevel ) {
             if( fSampledValue <= _vAccumWeights[ilevel] ) {
                 // Select ilevel
-                std::vector<NodePtr>& setLevelChildren = _vsetLevelNodes.at(ilevel);
+                std::set<NodePtr>& setLevelChildren = _vsetLevelNodes.at(ilevel);
                 size_t numLevelNodes = setLevelChildren.size();
-                int iSelectedNode = (int)((fSampledValue - fPrevLevelBound)/(_vAccumWeights[ilevel] - fPrevLevelBound));
-                return _vsetLevelNodes.at(ilevel).at(iSelectedNode);
+                int iSelectedNode = floorf((fSampledValue - fPrevLevelBound)*numLevelNodes/(_vAccumWeights[ilevel] - fPrevLevelBound));
+		typename std::set<NodePtr>::iterator itnode = setLevelChildren.begin();
+		std::advance(itnode, iSelectedNode);
+                return *itnode;
             }
             fPrevLevelBound = _vAccumWeights[ilevel];
         }
         //
-        return _vsetLevelNodes.at(_maxlevel).at(0);
+        return *(_vsetLevelNodes.at(_maxlevel).begin());
     }
 
     inline int _EncodeLevel(int level) const {
@@ -460,6 +599,172 @@ class SpatialTree2 : public SpatialTree<Node>
         return pnewnode;
     }
 
+    /// \brief the recursive function that inserts a configuration into the cache tree
+    ///
+    /// \param[in] nodein the input node to insert
+    /// \param[in] vCurrentLevelNodes the tree nodes at "level" with the respecitve distances computed for them
+    /// \param[in] currentlevel the current level traversing
+    /// \param[in] fLevelBound pow(_base, level)
+    /// \return 1 if point is inserted and parent found. 0 if no parent found and point is not inserted. -1 if parent found but point not inserted since it is close to _mindistance
+    int _InsertRecursive(NodePtr nodein, const std::vector< std::pair<NodePtr, dReal> >& vCurrentLevelNodes, int currentlevel, dReal fLevelBound)
+    {
+        dReal closestDist = std::numeric_limits<dReal>::infinity();
+        NodePtr closestNodeInRange = NULL; // one of the nodes in vCurrentLevelNodes such that its distance to nodein is <= fLevelBound
+        int enclevel = _EncodeLevel(currentlevel);
+        if( enclevel < (int)_vsetLevelNodes.size() ) {
+            // build the level below
+            _vNextLevelNodes.resize(0); // for currentlevel-1
+            FOREACHC(itcurrentnode, vCurrentLevelNodes) {
+                if( itcurrentnode->second <= fLevelBound ) {
+                    if( !closestNodeInRange ) {
+                        closestNodeInRange = itcurrentnode->first;
+                        closestDist = itcurrentnode->second;
+                    }
+                    else {
+                        if(  itcurrentnode->second < closestDist-g_fEpsilonLinear ) {
+                            closestNodeInRange = itcurrentnode->first;
+                            closestDist = itcurrentnode->second;
+                        }
+                        // if distances are close, get the node on the lowest level...
+                        else if( itcurrentnode->second < closestDist+_mindistance && itcurrentnode->first->_level < closestNodeInRange->_level ) {
+                            closestNodeInRange = itcurrentnode->first;
+                            closestDist = itcurrentnode->second;
+                        }
+                    }
+                    if ( (closestDist <= _mindistance) ) {
+                        // pretty close, so return as if node was added
+                        return -1;
+                    }
+                }
+                if( itcurrentnode->second <= fLevelBound*_fBaseChildMult ) {
+                    // node is part of all sets below its level
+                    _vNextLevelNodes.push_back(*itcurrentnode);
+                }
+                // only take the children whose distances are within the bound
+                if( itcurrentnode->first->_level == currentlevel ) {
+                    FOREACHC(itchild, itcurrentnode->first->_vchildren) {
+                        dReal curdist = _ComputeDistance(nodein, *itchild);
+                        if( curdist <= fLevelBound*_fBaseChildMult ) {
+                            _vNextLevelNodes.emplace_back(*itchild,  curdist);
+                        }
+                    }
+                }
+            }
+
+            if( _vNextLevelNodes.size() > 0 ) {
+                _vCurrentLevelNodes.swap(_vNextLevelNodes); // invalidates vCurrentLevelNodes
+                // note that after _Insert call, _vCurrentLevelNodes could be complete lost/reset
+                int nParentFound = _InsertRecursive(nodein, _vCurrentLevelNodes, currentlevel-1, fLevelBound*_fBaseInv);
+                if( nParentFound != 0 ) {
+                    return nParentFound;
+                }
+            }
+        }
+        else {
+            FOREACHC(itcurrentnode, vCurrentLevelNodes) {
+                if( itcurrentnode->second <= fLevelBound ) {
+                    if( !closestNodeInRange ) {
+                        closestNodeInRange = itcurrentnode->first;
+                        closestDist = itcurrentnode->second;
+                    }
+                    else {
+                        if(  itcurrentnode->second < closestDist-g_fEpsilonLinear ) {
+                            closestNodeInRange = itcurrentnode->first;
+                            closestDist = itcurrentnode->second;
+                        }
+                        // if distances are close, get the node on the lowest level...
+                        else if( itcurrentnode->second < closestDist+_mindistance && itcurrentnode->first->_level < closestNodeInRange->_level ) {
+                            closestNodeInRange = itcurrentnode->first;
+                            closestDist = itcurrentnode->second;
+                        }
+                    }
+                    if ( (closestDist < _mindistance) ) {
+                        // pretty close, so return as if node was added
+                        return -1;
+                    }
+                }
+            }
+        }
+
+        if( !closestNodeInRange ) {
+            return 0;
+        }
+
+        _InsertDirectly(nodein, closestNodeInRange, closestDist, currentlevel-1, fLevelBound*_fBaseInv);
+        _numnodes += 1;
+        return 1;
+    }
+
+    /// \brief inerts a node directly to parentnode
+    ///
+    /// If parentnode's configuration is too close to nodein, or parentnode's level is too high, will create dummy child nodes
+    bool _InsertDirectly(NodePtr nodein, NodePtr parentnode, dReal parentdist, int maxinsertlevel, dReal fInsertLevelBound)
+    {
+        int insertlevel = maxinsertlevel;
+        if( parentdist <= _mindistance ) {
+            // pretty close, so notify parent that there's a similar child already underneath it
+            if( parentnode->_hasselfchild ) {
+                // already has a similar child, so go one level below...?
+                FOREACH(itchild, parentnode->_vchildren) {
+                    dReal childdist = _ComputeDistance(nodein, *itchild);
+                    if( childdist <= _mindistance ) {
+                        return _InsertDirectly(nodein, *itchild, childdist, maxinsertlevel-1, fInsertLevelBound*_fBaseInv);
+                    }
+                }
+                RAVELOG_WARN("inconsistent node found\n");
+                return false;
+            }
+        }
+        else {
+            // depending on parentdist, might have to insert at a lower level in order to keep the sibling invariant
+            dReal fChildLevelBound = fInsertLevelBound;
+            while(parentdist < fChildLevelBound) {
+                fChildLevelBound *= _fBaseInv;
+                insertlevel--;
+            }
+        }
+
+        // have to add at insertlevel. If currentNodeInRange->_level is > insertlevel+1, will have to clone it. note that it will still represent the same RRT node with same rrtparent
+        while( parentnode->_level > insertlevel+1 ) {
+            NodePtr clonenode = _CloneNode(parentnode);
+            clonenode->_level = parentnode->_level-1;
+            parentnode->_vchildren.push_back(clonenode);
+            parentnode->_hasselfchild = 1;
+            int encclonelevel = _EncodeLevel(clonenode->_level);
+            if( encclonelevel >= (int)_vsetLevelNodes.size() ) {
+                _vsetLevelNodes.resize(encclonelevel+1);
+            }
+            _vsetLevelNodes.at(encclonelevel).insert(clonenode);
+            _numnodes +=1;
+            parentnode = clonenode;
+        }
+
+        if( parentdist <= _mindistance ) {
+            parentnode->_hasselfchild = 1;
+        }
+        nodein->_level = insertlevel;
+        int enclevel2 = _EncodeLevel(nodein->_level);
+        if( enclevel2 >= (int)_vsetLevelNodes.size() ) {
+            _vsetLevelNodes.resize(enclevel2+1);
+        }
+        _vsetLevelNodes.at(enclevel2).insert(nodein);
+        parentnode->_vchildren.push_back(nodein);
+
+        if( _minlevel > nodein->_level ) {
+            _minlevel = nodein->_level;
+        }
+        return true;
+    }
+
+    inline NodePtr _CloneNode(NodePtr refnode)
+    {
+        // allocate memory for the structur and the internal state vectors
+        void* pmemory = _pNodesPool->malloc();
+        NodePtr node = new (pmemory) Node(refnode->rrtparent, refnode->q, _dof);
+        node->_userdata = refnode->_userdata;
+        return node;
+    }    
+
 private:
     boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;
     boost::weak_ptr<PlannerBase> _planner;
@@ -481,22 +786,29 @@ private:
     dReal _fMaxLevelBound; // pow(_base, _maxlevel)
 
     // cache
-    vector<NodePtr> _vchildcache;
-    set<NodePtr> _setchildcache;
-    vector<dReal> _vNewConfig, _vDeltaConfig, _vCurConfig;
-    mutable vector<dReal> _vTempConfig;
+    std::vector<NodePtr> _vchildcache;
+    std::set<NodePtr> _setchildcache;
+    std::vector<dReal> _vNewConfig, _vDeltaConfig, _vCurConfig;
+    mutable std::vector<dReal> _vTempConfig;
     ConstraintFilterReturnPtr _constraintreturn;
 
     mutable std::vector< std::pair<NodePtr, dReal> > _vCurrentLevelNodes, _vNextLevelNodes;
     mutable std::vector< std::vector<NodePtr> > _vvCacheNodes;
+
+    // extra stuff for workspace sampling
+    dReal _fWorkspaceStepLength;
+    boost::function<bool(const std::vector<dReal>&, Transform&)> _fkfn; // forward kinematics
+    boost::function<bool(const Transform&, std::vector<dReal>&)> _ikfn; // inverse kinematics
     std::vector<dReal> _vAccumWeights;
+    Transform _curpose, _newpose;
+    Vector _vstepdirection;
 };
 
 // (TODO)
 class BirrtPlanner2 : public RrtPlanner<NodeWithTransform>
 {
 public:
-    BirrtPlanner2(EnvironmentBasePtr penv) : RrtPlanner<NodeWithTransform>(penv), _treeBackward(1)
+    BirrtPlanner2(EnvironmentBasePtr penv) : RrtPlanner<NodeWithTransform>(penv), _treeForward(0), _treeBackward(1)
     {
         __description += "";
         RegisterCommand("DumpTree", boost::bind(&BirrtPlanner2::_DumpTreeCommand, this, _1, _2), "");
@@ -550,10 +862,54 @@ public:
         return status;
     }
 
-    // TODO
     /// \brief
     virtual void _ExtractPath(GOALPATH& goalpath, NodeBase* iConnectedForward, NodeBase* iConnectedBackward)
     {
+        const int ndof = _parameters->GetDOF();
+        _cachedpath.resize(0);
+
+        // Add nodes from treeForward
+        goalpath.startindex = -1;
+        NodeWithTransform* pforwardnode = (NodeWithTransform*)iConnectedForward;
+        while( true ) {
+            _cachedpath.insert(_cachedpath.begin(), pforwardnode->q, pforwardnode->q + ndof);
+            if( !pforwardnode->rrtparent ) {
+                goalpath.startindex = pforwardnode->_userdata;
+                break;
+            }
+            pforwardnode = pforwardnode->rrtparent;
+        }
+
+        // Add nodes from treeBackward
+        goalpath.goalindex = -1;
+        NodeWithTransform* pbackwardnode = (NodeWithTransform*)iConnectedBackward;
+        while( true ) {
+            _cachedpath.insert(_cachedpath.end(), pbackwardnode->q, pbackwardnode->q + ndof);
+            if( !pbackwardnode->rrtparent ) {
+                goalpath.goalindex = pbackwardnode->_userdata;
+                break;
+            }
+            pbackwardnode = pbackwardnode->rrtparent;
+        }
+
+        BOOST_ASSERT(goalpath.goalindex >= 0 && goalpath.goalindex < (int)_vecGoalNodes.size());
+
+        _SimpleOptimizePath(_cachedpath, 10);
+
+        goalpath.qall.resize(_cachedpath.size());
+        std::copy(_cachedpath.begin(), _cachedpath.end(), goalpath.qall.begin());
+
+        goalpath.length = 0;
+        std::vector<dReal> vdiff(goalpath.qall.begin(), goalpath.qall.begin() + ndof);
+        _parameters->_diffstatefn(vdiff, std::vector<dReal>(goalpath.qall.end() - ndof, goalpath.qall.end()));
+        for( int idof = 0; idof < ndof; ++idof ) {
+            dReal fLength = RaveFabs(vdiff.at(idof));
+            if( _parameters->_vConfigVelocityLimit.at(idof) != 0 ) {
+                fLength /= _parameters->_vConfigVelocityLimit[idof];
+            }
+            goalpath.length += fLength;
+        }
+        return;
     }
 
     /// \brief
@@ -578,10 +934,10 @@ public:
 
 protected:
     RRTParametersPtr _parameters;
-    SpatialTree< NodeWithTransform > _treeBackward;
+    SpatialTree2< NodeWithTransform > _treeForward, _treeBackward;
     dReal _fGoalBiasProb;
     dReal _fWorkspaceSamplingBiasProb;
-    std::vector< NodeBase* > _vGoalNodes;
+    std::vector< NodeBase* > _vecGoalNodes;
     size_t _nValidGoals;
     std::vector< GOALPATH > _vGoalPaths;
 };
