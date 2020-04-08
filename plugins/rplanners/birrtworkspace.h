@@ -317,9 +317,9 @@ public:
         if( !pnode ) {
             return ET_Failed;
         }
-        if( !pnode->_transformComputed ) {
+        if( pnode->_transformComputed == 0) {
             _fkfn(VectorWrapper<dReal>(pnode->q, pnode->q + _dof), pnode->pose);
-            pnode->_transformComputed = true;
+            pnode->_transformComputed = 1;
         }
         plastnode = pnode;
 
