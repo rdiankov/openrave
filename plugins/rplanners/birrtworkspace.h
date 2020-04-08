@@ -317,6 +317,10 @@ public:
         if( !pnode ) {
             return ET_Failed;
         }
+        if( !pnode->_transformComputed ) {
+            _fkfn(VectorWrapper<dReal>(pnode->q, pnode->q + _dof), pnode->pose);
+            pnode->_transformComputed = true;
+        }
         plastnode = pnode;
 
         bool bHasAdded = false;
@@ -436,8 +440,8 @@ public:
                 std::set<NodePtr>& setLevelChildren = _vsetLevelNodes.at(ilevel);
                 size_t numLevelNodes = setLevelChildren.size();
                 int iSelectedNode = floorf((fSampledValue - fPrevLevelBound)*numLevelNodes/(_vAccumWeights[ilevel] - fPrevLevelBound));
-		typename std::set<NodePtr>::iterator itnode = setLevelChildren.begin();
-		std::advance(itnode, iSelectedNode);
+                typename std::set<NodePtr>::iterator itnode = setLevelChildren.begin();
+                std::advance(itnode, iSelectedNode);
                 return *itnode;
             }
             fPrevLevelBound = _vAccumWeights[ilevel];
@@ -763,7 +767,7 @@ public:
         NodePtr node = new (pmemory) Node(refnode->rrtparent, refnode->q, _dof);
         node->_userdata = refnode->_userdata;
         return node;
-    }    
+    }
 
 private:
     boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;
