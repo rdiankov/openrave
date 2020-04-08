@@ -441,12 +441,16 @@ protected:
         if( pOPENRAVE_PLUGINS != NULL ) {
             utils::TokenizeString(pOPENRAVE_PLUGINS, delim, vplugindirs);
         }
-        for(int i=vplugindirs.size()-1;i>0;i--){
-            int j=0;
-            for(;j<i;j++){
-                if(vplugindirs[i]==vplugindirs[j])break;
+        for(int iplugindir=vplugindirs.size()-1;iplugindir>0;iplugindir--){
+            int jplugindir=0;
+            for(;jplugindir<iplugindir;jplugindir++){
+                if(vplugindirs[iplugindir]==vplugindirs[jplugindir]){
+                    break;
+                }
             }
-            if(j<i)vplugindirs.erase(vplugindirs.begin()+i);
+            if(jplugindir<iplugindir){
+                vplugindirs.erase(vplugindirs.begin()+iplugindir);
+            }
         }
         bool bExists=false;
         string installdir = OPENRAVE_PLUGINS_INSTALL_DIR;
