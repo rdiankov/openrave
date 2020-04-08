@@ -25,7 +25,7 @@
 
 enum ExtendType {
     ET_Failed=0,
-    ET_Sucess=1,
+    ET_Success=1,
     ET_Connected=2
 };
 
@@ -341,13 +341,13 @@ public:
             }
             if( params->SetStateValues(_vNewConfig) != 0 ) {
                 if(bHasAdded) {
-                    return ET_Sucess;
+                    return ET_Success;
                 }
                 return ET_Failed;
             }
             if( params->_neighstatefn(_vNewConfig,_vDeltaConfig,_fromgoal ? NSO_GoalToInitial : 0) == NSS_Failed ) {
                 if(bHasAdded) {
-                    return ET_Sucess;
+                    return ET_Success;
                 }
                 return ET_Failed;
             }
@@ -355,7 +355,7 @@ public:
             // it could be the case that the node didn't move anywhere, in which case we would go into an infinite loop
             if( _ComputeDistance(&_vCurConfig[0], _vNewConfig) <= dReal(0.01)*_fStepLength ) {
                 if(bHasAdded) {
-                    return ET_Sucess;
+                    return ET_Success;
                 }
                 return ET_Failed;
             }
@@ -363,12 +363,12 @@ public:
             // necessary to pass in _constraintreturn since _neighstatefn can have constraints and it can change the interpolation. Use _constraintreturn->_bHasRampDeviatedFromInterpolation to figure out if something changed.
             if( _fromgoal ) {
                 if( params->CheckPathAllConstraints(_vNewConfig, _vCurConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenEnd, 0xffff|CFO_FillCheckedConfiguration, _constraintreturn) != 0 ) {
-                    return bHasAdded ? ET_Sucess : ET_Failed;
+                    return bHasAdded ? ET_Success : ET_Failed;
                 }
             }
             else {
                 if( params->CheckPathAllConstraints(_vCurConfig, _vNewConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, 0xffff|CFO_FillCheckedConfiguration, _constraintreturn) != 0 ) {
-                    return bHasAdded ? ET_Sucess : ET_Failed;
+                    return bHasAdded ? ET_Success : ET_Failed;
                 }
             }
 
@@ -440,12 +440,12 @@ public:
             }
 
             if( bHasAdded && bOneStep ) {
-                return ET_Connected; // is it ok to return ET_Connected rather than ET_Sucess. BasicRRT relies on ET_Connected
+                return ET_Connected; // is it ok to return ET_Connected rather than ET_Success. BasicRRT relies on ET_Connected
             }
             _vCurConfig.swap(_vNewConfig);
         }
 
-        return bHasAdded ? ET_Sucess : ET_Failed;
+        return bHasAdded ? ET_Success : ET_Failed;
     }
 
     virtual int GetNumNodes() const {
