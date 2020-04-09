@@ -134,7 +134,7 @@ void FillRapidJsonFromArray1D(PyArrayObject* pyarr,
     const T *pv = reinterpret_cast<T*>(PyArray_DATA(pyarr)); 
     for (int i = 0; i < dims[0]; ++i) { 
         rapidjson::Value elementValue; 
-        ((&elementValue)->*f)(pv[i]); 
+        (elementValue.*f)(pv[i]); 
         value.PushBack(elementValue, allocator); 
     }
 }
@@ -151,7 +151,7 @@ void FillRapidJsonFromArray2D(PyArrayObject* pyarr,
         rapidjson::Value colvalues(rapidjson::kArrayType); 
         for (int j = 0; j < dims[1]; ++j) { 
             rapidjson::Value elementValue; 
-            ((&elementValue)->*f)(pv[i*dims[0]+j]); 
+            (elementValue.*f)(pv[i*dims[0]+j]); 
             colvalues.PushBack(elementValue, allocator); 
         } 
         value.PushBack(colvalues, allocator); 
