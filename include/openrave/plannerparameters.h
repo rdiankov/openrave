@@ -854,6 +854,88 @@ protected:
 
 typedef boost::shared_ptr<BasicRRTParameters> BasicRRTParametersPtr;
 
+// TODO
+/// \brief
+class OPENRAVE_API RRTWorkspaceSamplingParameters : public RRTParameters
+{
+public:
+    RRTWorkspaceSamplingParameters() : RRTParameters(), _fGoalBiasProb(0.01f), _fWorkspaceSamplingBiasProb(0.01f), _fWorkspaceStepLength(0.01f), _bProcessingRRTWS(false)
+    {
+        _vXMLParameters.push_back("goalbias");
+        _vXMLParameters.push_back("workspacesamplingbias");
+        _vXMLParameters.push_back("workspacesteplength");
+        _vXMLParameters.push_back("manipname");
+    }
+
+    dReal _fGoalBiasProb;
+    dReal _fWorkspaceSamplingBiasProb;
+    dReal _fWorkspaceStepLength;
+    std::string manipname;
+
+protected:
+    bool _bProcessingRRTWS;
+
+    virtual bool serialize(std::ostream& O, int options=0) const
+    {
+        if( !PlannerParameters::serialize(O, options&~1) ) {
+            return false;
+        }
+        O << "<goalbias>" << _fGoalBiasProb << "</goalbias>" << std::endl;
+        O << "<workspacesamplingbias>" << _fWorkspaceSamplingBiasProb << "</workspacesamplingbias>" << std::endl;
+        O << "<workspacesteplength>" << _fWorkspaceStepLength << "</workspacesteplength>" << std::endl;
+        O << "<manipname>" << manipname << "</manipname>" << std::endl;
+        if( !(options & 1) ) {
+            O << _sExtraParameters << std::endl;
+        }
+        return !!O;
+    }
+
+    ProcessElement startElement(const std::string& name, const AttributesList& atts)
+    {
+        if( _bProcessingRRTWS ) {
+            return PE_Ignore;
+        }
+
+        switch( PlannerBase::PlannerParameters::startElement(name, atts) ) {
+        case PE_Pass: break;
+        case PE_Support: return PE_Support;
+        case PE_Ignore: return PE_Ignore;
+        }
+
+        _bProcessingRRTWS = name == "goalbias" || name == "workspacesamplingbias" || name == "workspacesteplength" || name == "manipname";
+
+        return _bProcessingRRTWS ? PE_Support : PE_Pass;
+    }
+
+    virtual bool endElement(const std::string& name)
+    {
+        if( _bProcessingRRTWS ) {
+            if( name == "goalbias" ) {
+                _ss >> _fGoalBiasProb;
+            }
+            else if( name == "workspacesamplingbias" ) {
+                _ss >> _fWorkspaceSamplingBiasProb;
+            }
+            else if( name == "workspacesteplength" ) {
+                _ss >> _fWorkspaceStepLength;
+            }
+            else if( name == "manipname" ) {
+                _ss >> manipname;
+            }
+            else {
+                RAVELOG_WARN_FORMAT("unknown tag %s", name);
+            }
+            _bProcessingRRTWS = false;
+            return false;
+        }
+
+        // Give a chance for the default parameters to get processed
+        return PlannerParameters::endElement(name);
+    }
+};
+
+typedef boost::shared_ptr<RRTWorkspaceSamplingParameters> RRTWorkspaceSamplingParametersPtr;
+
 } // OpenRAVE
 
 #endif

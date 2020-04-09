@@ -77,6 +77,10 @@ public:
     uint8_t _usenn;
     uint8_t _userdata;
 
+#ifdef _DEBUG
+    int id;
+#endif
+
     uint8_t _transformComputed;
     Transform pose;
     dReal q[0];
@@ -113,8 +117,8 @@ public:
     virtual void Init(boost::weak_ptr<PlannerBase> planner,
                       int dof,
                       boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)>& distmetricfn,
-                      boost::function<bool(const std::vector<dReal>&, Transform&)>& fkfn,
-                      boost::function<bool(const Transform&, std::vector<dReal>&)>& ikfn,
+                      boost::function<bool(const std::vector<dReal>&, Transform&)> fkfn,
+                      boost::function<bool(const Transform&, const std::vector<dReal>&, std::vector<dReal>&)> ikfn,
                       dReal fStepLength,
                       dReal fWorkspaceStepLength,
                       dReal maxdistance)
@@ -127,7 +131,7 @@ public:
             }
         }
         if( !_pNodesPool ) {
-            _pNodesPool.reset(new boost::pool<>(sizeof(Node) + _dof*sizeof(dReal)));
+            _pNodesPool.reset(new boost::pool<>(sizeof(Node) + dof*sizeof(dReal)));
         }
 
         _planner = planner;
@@ -318,7 +322,9 @@ public:
             return ET_Failed;
         }
         if( pnode->_transformComputed == 0) {
-            _fkfn(VectorWrapper<dReal>(pnode->q, pnode->q + _dof), pnode->pose);
+            if( !_fkfn(VectorWrapper<dReal>(pnode->q, pnode->q + _dof), pnode->pose) ) {
+                return ET_Failed;
+            }
             pnode->_transformComputed = 1;
         }
         plastnode = pnode;
@@ -341,7 +347,7 @@ public:
         int maxExtensionIters = 100;
         for( int iter = 0; iter < maxExtensionIters; ++iter ) {
             _newpose.trans = _curpose.trans + _curpose.rotate(_vstepdirection);
-            if( !_ikfn(_newpose, _vNewConfig) ) {
+            if( !_ikfn(_newpose, _vCurConfig, _vNewConfig) ) {
                 return bHasAdded ? ET_Success : ET_Failed;
             }
 
@@ -525,6 +531,31 @@ public:
         return bestnode;
     }
 
+    static int GetNewStaticId() {
+        static int s_id = 0;
+        int retid = s_id++;
+        return retid;
+    }
+
+    virtual int GetNumNodes() const {
+        return _numnodes;
+    }
+
+    virtual const std::vector<dReal>& GetVectorConfig(NodeBasePtr nodebase) const
+    {
+        NodePtr pnode = (NodePtr)nodebase;
+        _vTempConfig.resize(_dof);
+        std::copy(pnode->q, pnode->q + _dof, _vTempConfig.begin());
+        return _vTempConfig;
+    }
+
+    virtual void GetVectorConfig(NodeBasePtr nodebase, std::vector<dReal>& v) const
+    {
+        NodePtr pnode = (NodePtr)nodebase;
+        v.resize(_dof);
+        std::copy(pnode->q, pnode->q + _dof, v.begin());
+    }
+
     /// \brief
     inline NodePtr _CreateNode(NodePtr pparent, const std::vector<dReal>& vconfig, uint32_t userdata)
     {
@@ -532,6 +563,9 @@ public:
         void* pmemory = _pNodesPool->malloc();
         NodePtr pnode = new (pmemory) Node(pparent, vconfig);
         pnode->_userdata = userdata;
+#ifdef _DEBUG
+        pnode->id = GetNewStaticId();
+#endif
         return pnode;
     }
 
@@ -542,7 +576,15 @@ public:
         void* pmemory = _pNodesPool->malloc();
         NodePtr pnode = new (pmemory) Node(pparent, vconfig, pose);
         pnode->_userdata = userdata;
+#ifdef _DEBUG
+        pnode->id = GetNewStaticId();
+#endif
         return pnode;
+    }
+
+    virtual NodeBasePtr InsertNode(NodeBasePtr parent, const std::vector<dReal>& vconfig, uint32_t userdata)
+    {
+        return _InsertNode((NodePtr)parent, vconfig, userdata);
     }
 
     /// \brief
@@ -764,9 +806,12 @@ public:
     {
         // allocate memory for the structur and the internal state vectors
         void* pmemory = _pNodesPool->malloc();
-        NodePtr node = new (pmemory) Node(refnode->rrtparent, refnode->q, _dof);
-        node->_userdata = refnode->_userdata;
-        return node;
+        NodePtr pnode = new (pmemory) Node(refnode->rrtparent, refnode->q, _dof);
+        pnode->_userdata = refnode->_userdata;
+#ifdef _DEBUG
+        pnode->id = GetNewStaticId();
+#endif
+        return pnode;
     }
 
 private:
@@ -802,7 +847,7 @@ private:
     // extra stuff for workspace sampling
     dReal _fWorkspaceStepLength;
     boost::function<bool(const std::vector<dReal>&, Transform&)> _fkfn; // forward kinematics
-    boost::function<bool(const Transform&, std::vector<dReal>&)> _ikfn; // inverse kinematics
+    boost::function<bool(const Transform&, const std::vector<dReal>&, std::vector<dReal>&)> _ikfn; // inverse kinematics
     std::vector<dReal> _vAccumWeights;
     Transform _curpose, _newpose;
     Vector _vstepdirection;
@@ -832,22 +877,172 @@ public:
         dReal length;
     };
 
-    // TODO
     /// \brief
     virtual bool InitPlan(RobotBasePtr probot, PlannerParametersConstPtr pparams)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        _parameters.reset(new RRTParameters());
+        _environmentid = GetEnv()->GetId();
+
+        _parameters.reset(new RRTWorkspaceSamplingParameters());
         _parameters->copy(pparams);
-        if( !RrtPlanner<NodeWithTransform>::_InitPlan(probot, _parameters) ) {
+        // Do not call RrtPlanner::_InitPlan
+        // if( !RrtPlanner<NodeWithTransform>::_InitPlan(probot, _parameters) ) {
+        //     _parameters.reset();
+        //     return false;
+        // }
+        _robot = probot;
+        _pmanip = _robot->GetManipulator(_parameters->manipname);
+        if( !_pmanip ) {
+            RAVELOG_ERROR_FORMAT("env=%d, failed to get manip %s from robot %s", _environmentid%_parameters->manipname%_robot->GetName());
+            return false;
+        }
+
+        _piksolver = _pmanip->GetIkSolver();
+        if( !_piksolver ) {
+            RAVELOG_ERROR_FORMAT("env=%d, no ik solver set for manip %s", _environmentid%_parameters->manipname);
+            return false;
+        }
+
+        // TODO: clean this up
+        {
+            _iktype = IKP_Transform6D;
+            _vcacheikreturns.reserve(8);
+        }
+
+        if( !_uniformsampler ) {
+            _uniformsampler = RaveCreateSpaceSampler(GetEnv(), "mt19937");
+        }
+        _uniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
+        FOREACHC(it, _parameters->_listInternalSamplers) {
+            (*it)->SetSeed(_parameters->_nRandomGeneratorSeed);
+        }
+
+        PlannerParameters::StateSaver savestate(_parameters);
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(), GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs, false);
+
+        dReal fMaxDistance = _parameters->_distmetricfn(_parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit);
+        _treeForward.Init(shared_planner(), _parameters->GetDOF(), _parameters->_distmetricfn,
+                          boost::bind(&BirrtPlanner2::FK, this, _1, _2),
+                          boost::bind(&BirrtPlanner2::IK, this, _1, _2, _3),
+                          _parameters->_fStepLength, _parameters->_fWorkspaceStepLength, fMaxDistance);
+        _treeBackward.Init(shared_planner(), _parameters->GetDOF(), _parameters->_distmetricfn,
+                           boost::bind(&BirrtPlanner2::FK, this, _1, _2),
+                           boost::bind(&BirrtPlanner2::IK, this, _1, _2, _3),
+                           _parameters->_fStepLength, _parameters->_fWorkspaceStepLength, fMaxDistance);
+
+        // Read all initials
+        if( (_parameters->vinitialconfig.size() % _parameters->GetDOF()) != 0 ) {
+            RAVELOG_ERROR_FORMAT("env=%d, initials are not properly specified. vgoalconfig.size()=%d; ndof=%d", _environmentid%_parameters->vinitialconfig.size()%_parameters->GetDOF());
             _parameters.reset();
             return false;
         }
 
-        _fGoalBiasProb = dReal(0.01);
-        _fWorkspaceSamplingBiasProb = dReal(0.01);
+        std::vector<dReal> vinitial(_parameters->GetDOF());
+        _vecInitialNodes.resize(0);
+        _sampleConfig.resize(_parameters->GetDOF());
+        for( size_t iinitial = 0; iinitial < _parameters->vinitialconfig.size(); iinitial += _parameters->GetDOF() ) {
+            std::copy(_parameters->vinitialconfig.begin() + iinitial,
+                      _parameters->vinitialconfig.begin() + iinitial + _parameters->GetDOF(),
+                      vinitial.begin());
+            _filterreturn->Clear();
+            int ret = _parameters->CheckPathAllConstraints(vinitial, vinitial, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, CFO_FillCollisionReport, _filterreturn);
+            if( ret == 0 ) {
+                // userdata being the initial index
+                _vecInitialNodes.push_back(_treeForward.InsertNode(NULL, vinitial, _vecInitialNodes.size()));
+            }
+            else {
+                // initial invalidated due to constraints
+                RAVELOG_WARN_FORMAT("env=%d, initial %d fails constraints ret=0x%x: %s", _environmentid%iinitial%ret%_filterreturn->_report.__str__());
+            }
+        } // end for iinitial
+        if( _treeForward.GetNumNodes() == 0 && !_parameters->_sampleinitialfn ) {
+            RAVELOG_WARN_FORMAT("env=%d, no initials specified", _environmentid);
+            _parameters.reset();
+            return false;
+        }
 
-        // TODO
+        // Read all goals
+        if( (_parameters->vgoalconfig.size() % _parameters->GetDOF()) != 0 ) {
+            RAVELOG_ERROR_FORMAT("env=%d, goals are not properly specified. vgoalconfig.size()=%d; ndof=%d", _environmentid%_parameters->vgoalconfig.size()%_parameters->GetDOF());
+            _parameters.reset();
+            return false;
+        }
+
+        std::vector<dReal> vgoal(_parameters->GetDOF());
+        _vecGoalNodes.resize(0);
+        _nValidGoals = 0;
+        for( size_t igoal = 0; igoal < _parameters->vgoalconfig.size(); igoal += _parameters->GetDOF() ) {
+            std::copy(_parameters->vgoalconfig.begin() + igoal,
+                      _parameters->vgoalconfig.begin() + igoal + _parameters->GetDOF(),
+                      vgoal.begin());
+            _filterreturn->Clear();
+            int ret = _parameters->CheckPathAllConstraints(vgoal, vgoal, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, CFO_FillCollisionReport, _filterreturn);
+            if( ret == 0 ) {
+                // userdata being the goal index
+                _vecGoalNodes.push_back(_treeBackward.InsertNode(NULL, vgoal, _vecGoalNodes.size()));
+                ++_nValidGoals;
+            }
+            else {
+                // goal invalidated due to constraints
+                RAVELOG_WARN_FORMAT("env=%d, goal %d fails constraints ret=0x%x: %s", _environmentid%igoal%ret%_filterreturn->_report.__str__());
+                _vecGoalNodes.push_back(NULL); // have to push back a dummy so that indices are not messed up.
+            }
+        } // end for igoal
+
+        if( _treeBackward.GetNumNodes() == 0 && !_parameters->_samplegoalfn ) {
+            RAVELOG_WARN_FORMAT("env=%d, no goals specified", _environmentid);
+            _parameters.reset();
+            return false;
+        }
+
+        if( _parameters->_nMaxIterations <= 0 ) {
+            _parameters->_nMaxIterations = 10000;
+        }
+
+        _vgoalpaths.resize(0);
+        if( _vgoalpaths.capacity() < _parameters->_minimumgoalpaths ) {
+            _vgoalpaths.reserve(_parameters->_minimumgoalpaths);
+        }
+
+        RAVELOG_DEBUG_FORMAT("env=%d, BiRRT planner with workspace sampling initialized, numinitials=%d; numgoals=%d; fStepLength=%f; fGoalBiasProb=%f; fWorkspaceSamplingProb=%f; fWorkspaceStepLength=%f", _environmentid%_vecInitialNodes.size()%_treeBackward.GetNumNodes()%
+                             _parameters->_fStepLength%_parameters->_fGoalBiasProb%_parameters->_fWorkspaceSamplingBiasProb%_parameters->_fWorkspaceStepLength);
+        return true;
+    }
+
+    /// \brief
+    virtual bool FK(const std::vector<dReal>& vconfig, Transform& pose)
+    {
+        if( _parameters->SetStateValues(vconfig, 0) != 0 ) {
+            RAVELOG_WARN_FORMAT("env=%d, failed to set state", _environmentid);
+            return false;
+        }
+        pose = _pmanip->GetTransform();
+        return true;
+    }
+
+    /// \brief
+    virtual bool IK(const Transform& pose, const std::vector<dReal>& vrefconfig, std::vector<dReal>& vconfig)
+    {
+        _ikparam.SetTransform6D(pose);
+        _pmanip->FindIKSolutions(_ikparam, IKFO_CheckEnvCollisions, _vcacheikreturns);
+        if( _vcacheikreturns.size() == 0 ) {
+            return false;
+        }
+
+        dReal fMinConfigDist = 1e30;
+        dReal fCurConfigDist;
+        IkReturnPtr bestikret;
+        for( const IkReturnPtr& ikret : _vcacheikreturns ) {
+            fCurConfigDist = _parameters->_distmetricfn(vrefconfig, ikret->_vsolution);
+            if( fCurConfigDist < fMinConfigDist ) {
+                bestikret = ikret;
+            }
+        }
+        if( !bestikret ) {
+            RAVELOG_WARN_FORMAT("env=%d, !bestikret is true even though _vcacheikreturns.size()=%d", _environmentid%_vcacheikreturns.size());
+            return false;
+        }
+        vconfig.swap(bestikret->_vsolution);
         return true;
     }
 
@@ -861,8 +1056,182 @@ public:
             return PlannerStatus("BirrtPlanner2::PlanPath - Error, planner not initialized", PS_Failed);
         }
 
-        // TODO
-        PlannerStatus status;
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        uint32_t basetime = utils::GetMilliTime();
+
+        PlannerParameters::StateSaver savestate(_parameters);
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(), GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs, false);
+
+        SpatialTreeBase* TreeA = &_treeForward;
+        SpatialTreeBase* TreeB = &_treeBackward;
+        NodeBase* iConnectedA = NULL;
+        NodeBase* iConnectedB = NULL;
+        int iter = 0;
+
+        bool bSampleGoal = true;
+        PlannerProgress progress;
+        PlannerAction callbackaction = PA_None;
+        while( _vgoalpaths.size() < _parameters->_minimumgoalpaths && iter < 3*_parameters->_nMaxIterations ) {
+            RAVELOG_VERBOSE_FORMAT("env=%d, iter=%d, forward=%d, backward=%d", _environmentid%(iter/3)%_treeForward.GetNumNodes()%_treeBackward.GetNumNodes());
+            ++iter;
+
+            callbackaction = _CallCallbacks(progress);
+            if( callbackaction == PA_Interrupt ) {
+                return PlannerStatus("Planning was interrupted", PS_Interrupted);
+            }
+            else if( callbackaction == PA_ReturnWithAnySolution ) {
+                if( _vgoalpaths.size() > 0 ) {
+                    break;
+                }
+            }
+
+            if( _parameters->_nMaxPlanningTime > 0 ) {
+                uint32_t elapsedtime = utils::GetMilliTime() - basetime;
+                if( elapsedtime > _parameters->_nMaxPlanningTime ) {
+                    RAVELOG_DEBUG_FORMAT("env=%d, time exceeded (%dms) so breaking. iter=%d < %d", _environmentid%elapsedtime%(iter/3)%_parameters->_nMaxIterations);
+                    break;
+                }
+            }
+
+            if( !!_parameters->_samplegoalfn ) {
+                std::vector<dReal> vgoal;
+                if( _parameters->_samplegoalfn(vgoal) ) {
+                    RAVELOG_VERBOSE_FORMAT("env=%d, inserting new goal index %d", _environmentid%_vecGoalNodes.size());
+                    _vecGoalNodes.push_back(_treeBackward.InsertNode(NULL, vgoal, _vecGoalNodes.size()));
+                    ++_nValidGoals;
+                }
+            }
+
+            if( !!_parameters->_sampleinitialfn ) {
+                std::vector<dReal> vinitial;
+                if( _parameters->_sampleinitialfn(vinitial) ) {
+                    RAVELOG_VERBOSE_FORMAT("env=%d, inserting new initial %d", _environmentid%_vecInitialNodes.size());
+                    _vecInitialNodes.push_back(_treeForward.InsertNode(NULL, vinitial, _vecInitialNodes.size()));
+                }
+            }
+
+            _sampleConfig.resize(0);
+            dReal fSampledValue1 = _uniformsampler->SampleSequenceOneReal();
+            if( fSampledValue1 >= _parameters->_fGoalBiasProb && fSampledValue1 < _parameters->_fGoalBiasProb + _parameters->_fWorkspaceSamplingBiasProb ) {
+                // Do workspace sampling
+            }
+            else {
+                // Use normal RRT logic
+                if( (bSampleGoal || fSampledValue1 < _parameters->_fGoalBiasProb) && _nValidGoals > 0 ) {
+                    bSampleGoal = false;
+
+                    uint32_t bestgoalindex = -1;
+                    for( size_t testiter = 0; testiter < _vecGoalNodes.size()*3; ++testiter ) {
+                        uint32_t sampleindex = _uniformsampler->SampleSequenceOneUInt32();
+                        uint32_t goalindex = sampleindex%_vecGoalNodes.size();
+                        if( !_vecGoalNodes.at(goalindex) ) {
+                            // Sampled a dummy goal so continue.
+                            continue;
+                        }
+
+                        bool bfound = false;
+                        FOREACHC(itpath, _vgoalpaths) {
+                            if( goalindex == (uint32_t)itpath->goalindex ) {
+                                bfound = true;
+                                break;
+                            }
+                        }
+                        if( !bfound ) {
+                            bestgoalindex = goalindex;
+                            break;
+                        }
+                    } // end for testiter
+                    if( bestgoalindex != uint32_t(-1) ) {
+                        _treeBackward.GetVectorConfig(_vecGoalNodes.at(bestgoalindex), _sampleConfig);
+                    }
+                }
+
+                if( _sampleConfig.size() == 0 ) {
+                    if( !_parameters->_samplefn(_sampleConfig) ) {
+                        continue;
+                    }
+                }
+
+                // Extend A
+                ExtendType et = TreeA->Extend(_sampleConfig, iConnectedA);
+                // Although this check is not necessary, having it improves running time
+                if( et == ET_Failed ) {
+                    if( iter > 3*_parameters->_nMaxIterations ) {
+                        RAVELOG_WARN_FORMAT("env=%d, iterations exceeded %d", _environmentid%_parameters->_nMaxIterations);
+                        break;
+                    }
+                    continue;
+                }
+
+                // Extend B towards A
+                et = TreeB->Extend(TreeA->GetVectorConfig(iConnectedA), iConnectedB);
+                if( et == ET_Connected ) {
+                    // Trees are connected. Now process goals.
+                    _vgoalpaths.push_back(GOALPATH());
+                    _ExtractPath(_vgoalpaths.back(),
+                                 TreeA == &_treeForward ? iConnectedA : iConnectedB,
+                                 TreeA == &_treeBackward ? iConnectedA : iConnectedB);
+                    int goalindex = _vgoalpaths.back().goalindex;
+                    int startindex = _vgoalpaths.back().startindex;
+                    if( IS_DEBUGLEVEL(Level_Debug) ) {
+                        std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+                        ss << "startvalues=[";
+                        for( int idof = 0; idof < _parameters->GetDOF(); ++idof ) {
+                            ss << _vgoalpaths.back().qall.at(idof) << ", ";
+                        }
+                        ss << "]; goalvalues=[";
+                        for( int idof = 0; idof < _parameters->GetDOF(); ++idof ) {
+                            ss << _vgoalpaths.back().qall.at(_vgoalpaths.back().qall.size() - _parameters->GetDOF() + idof) << ", ";
+                        }
+                        ss << "]; ";
+                        RAVELOG_DEBUG_FORMAT("env=%d, found a goal, startindex=%d; goalindex=%d; pathlength=%f; %s", _environmentid%startindex%goalindex%_vgoalpaths.back().length%ss.str());
+                    }
+                    if( _vgoalpaths.size() >= _parameters->_minimumgoalpaths || _vgoalpaths.size() >= _nValidGoals ) {
+                        break;
+                    }
+
+                    bSampleGoal = true;
+                    // More goals requested, so make sure to remove all the nodes pointing to the newly found goal
+                    _treeBackward.InvalidateNodesWithParent(_vecGoalNodes.at(goalindex));
+
+                } // end if et == ET_Connected
+
+                std::swap(TreeA, TreeB);
+                iter += 3;
+                if( iter >= 3*_parameters->_nMaxIterations ) {
+                    RAVELOG_WARN_FORMAT("env=%d, iterations exceeded %d", _environmentid%_parameters->_nMaxIterations);
+                    break;
+                }
+                progress._iteration = iter/3;
+
+            } // end if fSampledValue1
+
+        } // end while (main planning loop)
+
+        if( _vgoalpaths.size() == 0 ) {
+            std::string description = str(boost::format(_("env=%d, plan failed in %fs, iter=%d, nMaxIterations=%d"))%_environmentid%(0.001f*(float)(utils::GetMilliTime() - basetime))%(iter/3)%_parameters->_nMaxIterations);
+            RAVELOG_WARN(description);
+            return PlannerStatus(description, PS_Failed);
+        }
+
+        std::vector<GOALPATH>::iterator itbest = _vgoalpaths.begin();
+        FOREACH(itpath, _vgoalpaths) {
+            if( itpath->length < itbest->length ) {
+                itbest = itpath;
+            }
+        }
+        _goalindex = itbest->goalindex;
+        _startindex = itbest->startindex;
+        if( ptraj->GetConfigurationSpecification().GetDOF() == 0 ) {
+            ptraj->Init(_parameters->_configurationspecification);
+        }
+        ptraj->Insert(ptraj->GetNumWaypoints(), itbest->qall, _parameters->_configurationspecification);
+
+        std::string description = str(boost::format(_("env=%d, plan success, iters=%d, path=%d points, computation time=%fs"))%_environmentid%progress._iteration%ptraj->GetNumWaypoints()%(0.001f*(float)(utils::GetMilliTime() - basetime)));
+        RAVELOG_DEBUG(description);
+
+        PlannerStatus status = _ProcessPostPlanners(_robot, ptraj);
+        status.description = description;
         return status;
     }
 
@@ -928,7 +1297,7 @@ public:
         std::string filename = RaveGetHomeDirectory() + std::string("/birrt2dump.txt");
         std::getline(is, filename);
         boost::trim(filename);
-        RAVELOG_VERBOSE_FORMAT("env=%d, dumping RRT tree to %s", GetEnv()->GetId()%filename);
+        RAVELOG_VERBOSE_FORMAT("env=%d, dumping RRT tree to %s", _environmentid%filename);
         std::ofstream f(filename.c_str());
         f << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
         _treeForward.DumpTree(f);
@@ -937,13 +1306,21 @@ public:
     }
 
 protected:
-    RRTParametersPtr _parameters;
+    int _environmentid;
+    RobotBase::ManipulatorPtr _pmanip;
+    IkSolverBasePtr _piksolver;
+
+    RRTWorkspaceSamplingParametersPtr _parameters;
+
     SpatialTree2< NodeWithTransform > _treeForward, _treeBackward;
-    dReal _fGoalBiasProb;
-    dReal _fWorkspaceSamplingBiasProb;
+
     std::vector< NodeBase* > _vecGoalNodes;
     size_t _nValidGoals;
-    std::vector< GOALPATH > _vGoalPaths;
+    std::vector< GOALPATH > _vgoalpaths;
+
+    IkParameterization _ikparam;
+    IkParameterizationType _iktype;
+    std::vector<IkReturnPtr> _vcacheikreturns;
 };
 
 #ifdef RAVE_REGISTER_BOOST
