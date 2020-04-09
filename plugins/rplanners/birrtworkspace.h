@@ -194,7 +194,7 @@ public:
     /// target config vTargetConfig. The difference is that it also
     /// keeps track of the transform tTarget corresponding to
     /// vTargetConfig.
-    virtual ExtendType Extend(const std::vector<dReal>& vTargetConfig, NodeBasePtr& plastnode, bool bOneStep=false)
+    virtual ExtendType Extend(const std::vector<dReal>& vTargetConfig, NodePtr& plastnode, bool bOneStep=false)
     {
         // Get the nearnest neighbor of vTargetConfig on the tree
         std::pair<NodePtr, dReal> nn = _FindNearestNode(vTargetConfig);
@@ -240,6 +240,10 @@ public:
             if( params->_neighstatefn(_vNewConfig, _vDeltaConfig, _fromgoal ? NSO_GoalToInitial : 0) == NSS_Failed ) {
                 return bHasAdded ? ET_Success : ET_Failed;
             }
+            // There could be cases when the node did not move anywhere.
+            if( _ComputeDistance(&_vCurConfig[0], _vNewConfig) <= dReal(0.01)*_fStepLength ) {
+                return bHasAdded ? ET_Success : ET_Failed;
+            }
 
             if( _fromgoal ) {
                 if( params->CheckPathAllConstraints(_vNewConfig, _vCurConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenEnd, 0xffff|CFO_FillCheckedConfiguration, _constraintreturn) != 0 ) {
@@ -247,7 +251,7 @@ public:
                 }
             }
             else { // not _fromgoal
-                if( params->CheckPathAllConstraints(_vCurConfig, _vNewConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenEnd, 0xffff|CFO_FillCheckedConfiguration, _constraintreturn) != 0 ) {
+                if( params->CheckPathAllConstraints(_vCurConfig, _vNewConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, 0xffff|CFO_FillCheckedConfiguration, _constraintreturn) != 0 ) {
                     return bHasAdded ? ET_Success : ET_Failed;
                 }
             }
@@ -313,9 +317,8 @@ public:
         return bHasAdded ? ET_Success : ET_Failed;
     }
 
-    // TODO
     /// \brief
-    virtual ExtendType ExtendWithDirection(const Vector& vdirection, NodeBasePtr& plastnode, dReal fSampledValue, bool bOneStep=false)
+    virtual ExtendType ExtendWithDirection(const Vector& vdirection, NodePtr& plastnode, dReal fSampledValue, bool bOneStep=false)
     {
         NodePtr pnode = SampleNode(fSampledValue);
         if( !pnode ) {
@@ -541,17 +544,15 @@ public:
         return _numnodes;
     }
 
-    virtual const std::vector<dReal>& GetVectorConfig(NodeBasePtr nodebase) const
+    virtual const std::vector<dReal>& GetVectorConfig(NodePtr pnode) const
     {
-        NodePtr pnode = (NodePtr)nodebase;
         _vTempConfig.resize(_dof);
         std::copy(pnode->q, pnode->q + _dof, _vTempConfig.begin());
         return _vTempConfig;
     }
 
-    virtual void GetVectorConfig(NodeBasePtr nodebase, std::vector<dReal>& v) const
+    virtual void GetVectorConfig(NodePtr pnode, std::vector<dReal>& v) const
     {
-        NodePtr pnode = (NodePtr)nodebase;
         v.resize(_dof);
         std::copy(pnode->q, pnode->q + _dof, v.begin());
     }
@@ -582,9 +583,9 @@ public:
         return pnode;
     }
 
-    virtual NodeBasePtr InsertNode(NodeBasePtr parent, const std::vector<dReal>& vconfig, uint32_t userdata)
+    virtual NodePtr InsertNode(NodePtr pparent, const std::vector<dReal>& vconfig, uint32_t userdata)
     {
-        return _InsertNode((NodePtr)parent, vconfig, userdata);
+        return _InsertNode(pparent, vconfig, userdata);
     }
 
     /// \brief
@@ -1062,15 +1063,16 @@ public:
         PlannerParameters::StateSaver savestate(_parameters);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(), GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs, false);
 
-        SpatialTreeBase* TreeA = &_treeForward;
-        SpatialTreeBase* TreeB = &_treeBackward;
-        NodeBase* iConnectedA = NULL;
-        NodeBase* iConnectedB = NULL;
+        SpatialTree2<NodeWithTransform>* TreeA = &_treeForward;
+        SpatialTree2<NodeWithTransform>* TreeB = &_treeBackward;
+        NodeWithTransform* iConnectedA = NULL;
+        NodeWithTransform* iConnectedB = NULL;
         int iter = 0;
 
         bool bSampleGoal = true;
         PlannerProgress progress;
         PlannerAction callbackaction = PA_None;
+        ExtendType et;
         while( _vgoalpaths.size() < _parameters->_minimumgoalpaths && iter < 3*_parameters->_nMaxIterations ) {
             RAVELOG_VERBOSE_FORMAT("env=%d, iter=%d, forward=%d, backward=%d", _environmentid%(iter/3)%_treeForward.GetNumNodes()%_treeBackward.GetNumNodes());
             ++iter;
@@ -1110,13 +1112,59 @@ public:
                 }
             }
 
-            _sampleConfig.resize(0);
             dReal fSampledValue1 = _uniformsampler->SampleSequenceOneReal();
             if( fSampledValue1 >= _parameters->_fGoalBiasProb && fSampledValue1 < _parameters->_fGoalBiasProb + _parameters->_fWorkspaceSamplingBiasProb ) {
+                RAVELOG_VERBOSE_FORMAT("env=%d, iter=%d, fSampledValue=%f so doing workspace sampling", _environmentid%(iter/3)%fSampledValue1);
                 // Do workspace sampling
+                uint32_t sampleindex = _uniformsampler->SampleSequenceOneUInt32();
+                uint32_t directionindex = sampleindex % 6;
+                switch( directionindex ) {
+                case 0:
+                    _vcachedirection.x = 1;
+                    _vcachedirection.y = 0;
+                    _vcachedirection.z = 0;
+                    break;
+                case 1:
+                    _vcachedirection.x = 0;
+                    _vcachedirection.y = 1;
+                    _vcachedirection.z = 0;
+                    break;
+                case 2:
+                    _vcachedirection.x = 0;
+                    _vcachedirection.y = 0;
+                    _vcachedirection.z = 1;
+                    break;
+                case 3:
+                    _vcachedirection.x = -1;
+                    _vcachedirection.y = 0;
+                    _vcachedirection.z = 0;
+                    break;
+                case 4:
+                    _vcachedirection.x = 0;
+                    _vcachedirection.y = -1;
+                    _vcachedirection.z = 0;
+                    break;
+                case 5:
+                    _vcachedirection.x = 0;
+                    _vcachedirection.y = 0;
+                    _vcachedirection.z = -1;
+                    break;
+                }
+                dReal fSampledValue2 = _uniformsampler->SampleSequenceOneReal();
+
+                // Extend A
+                et = TreeA->ExtendWithDirection(_vcachedirection, iConnectedA, fSampledValue2);
+                if( et == ET_Failed ) {
+                    if( iter > 3*_parameters->_nMaxIterations ) {
+                        RAVELOG_WARN_FORMAT("env=%d, iterations exceeded %d", _environmentid%_parameters->_nMaxIterations);
+                        break;
+                    }
+                    continue;
+                }
             }
             else {
                 // Use normal RRT logic
+                _sampleConfig.resize(0);
                 if( (bSampleGoal || fSampledValue1 < _parameters->_fGoalBiasProb) && _nValidGoals > 0 ) {
                     bSampleGoal = false;
 
@@ -1153,7 +1201,7 @@ public:
                 }
 
                 // Extend A
-                ExtendType et = TreeA->Extend(_sampleConfig, iConnectedA);
+                et = TreeA->Extend(_sampleConfig, iConnectedA);
                 // Although this check is not necessary, having it improves running time
                 if( et == ET_Failed ) {
                     if( iter > 3*_parameters->_nMaxIterations ) {
@@ -1162,49 +1210,48 @@ public:
                     }
                     continue;
                 }
+            } // end if fSampledValue1
 
-                // Extend B towards A
-                et = TreeB->Extend(TreeA->GetVectorConfig(iConnectedA), iConnectedB);
-                if( et == ET_Connected ) {
-                    // Trees are connected. Now process goals.
-                    _vgoalpaths.push_back(GOALPATH());
-                    _ExtractPath(_vgoalpaths.back(),
-                                 TreeA == &_treeForward ? iConnectedA : iConnectedB,
-                                 TreeA == &_treeBackward ? iConnectedA : iConnectedB);
-                    int goalindex = _vgoalpaths.back().goalindex;
-                    int startindex = _vgoalpaths.back().startindex;
-                    if( IS_DEBUGLEVEL(Level_Debug) ) {
-                        std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
-                        ss << "startvalues=[";
-                        for( int idof = 0; idof < _parameters->GetDOF(); ++idof ) {
-                            ss << _vgoalpaths.back().qall.at(idof) << ", ";
-                        }
-                        ss << "]; goalvalues=[";
-                        for( int idof = 0; idof < _parameters->GetDOF(); ++idof ) {
-                            ss << _vgoalpaths.back().qall.at(_vgoalpaths.back().qall.size() - _parameters->GetDOF() + idof) << ", ";
-                        }
-                        ss << "]; ";
-                        RAVELOG_DEBUG_FORMAT("env=%d, found a goal, startindex=%d; goalindex=%d; pathlength=%f; %s", _environmentid%startindex%goalindex%_vgoalpaths.back().length%ss.str());
+            // Extend B towards A
+            et = TreeB->Extend(TreeA->GetVectorConfig(iConnectedA), iConnectedB);
+            if( et == ET_Connected ) {
+                // Trees are connected. Now process goals.
+                _vgoalpaths.push_back(GOALPATH());
+                _ExtractPath(_vgoalpaths.back(),
+                             TreeA == &_treeForward ? iConnectedA : iConnectedB,
+                             TreeA == &_treeBackward ? iConnectedA : iConnectedB);
+                int goalindex = _vgoalpaths.back().goalindex;
+                int startindex = _vgoalpaths.back().startindex;
+                if( IS_DEBUGLEVEL(Level_Debug) ) {
+                    std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+                    ss << "startvalues=[";
+                    for( int idof = 0; idof < _parameters->GetDOF(); ++idof ) {
+                        ss << _vgoalpaths.back().qall.at(idof) << ", ";
                     }
-                    if( _vgoalpaths.size() >= _parameters->_minimumgoalpaths || _vgoalpaths.size() >= _nValidGoals ) {
-                        break;
+                    ss << "]; goalvalues=[";
+                    for( int idof = 0; idof < _parameters->GetDOF(); ++idof ) {
+                        ss << _vgoalpaths.back().qall.at(_vgoalpaths.back().qall.size() - _parameters->GetDOF() + idof) << ", ";
                     }
-
-                    bSampleGoal = true;
-                    // More goals requested, so make sure to remove all the nodes pointing to the newly found goal
-                    _treeBackward.InvalidateNodesWithParent(_vecGoalNodes.at(goalindex));
-
-                } // end if et == ET_Connected
-
-                std::swap(TreeA, TreeB);
-                iter += 3;
-                if( iter >= 3*_parameters->_nMaxIterations ) {
-                    RAVELOG_WARN_FORMAT("env=%d, iterations exceeded %d", _environmentid%_parameters->_nMaxIterations);
+                    ss << "]; ";
+                    RAVELOG_DEBUG_FORMAT("env=%d, found a goal, startindex=%d; goalindex=%d; pathlength=%f; %s", _environmentid%startindex%goalindex%_vgoalpaths.back().length%ss.str());
+                }
+                if( _vgoalpaths.size() >= _parameters->_minimumgoalpaths || _vgoalpaths.size() >= _nValidGoals ) {
                     break;
                 }
-                progress._iteration = iter/3;
 
-            } // end if fSampledValue1
+                bSampleGoal = true;
+                // More goals requested, so make sure to remove all the nodes pointing to the newly found goal
+                _treeBackward.InvalidateNodesWithParent(_vecGoalNodes.at(goalindex));
+
+            } // end if et == ET_Connected
+
+            std::swap(TreeA, TreeB);
+            iter += 3;
+            if( iter >= 3*_parameters->_nMaxIterations ) {
+                RAVELOG_WARN_FORMAT("env=%d, iterations exceeded %d", _environmentid%_parameters->_nMaxIterations);
+                break;
+            }
+            progress._iteration = iter/3;
 
         } // end while (main planning loop)
 
@@ -1314,13 +1361,14 @@ protected:
 
     SpatialTree2< NodeWithTransform > _treeForward, _treeBackward;
 
-    std::vector< NodeBase* > _vecGoalNodes;
+    std::vector< NodeWithTransform* > _vecInitialNodes, _vecGoalNodes;
     size_t _nValidGoals;
     std::vector< GOALPATH > _vgoalpaths;
 
     IkParameterization _ikparam;
     IkParameterizationType _iktype;
     std::vector<IkReturnPtr> _vcacheikreturns;
+    Vector _vcachedirection;
 };
 
 #ifdef RAVE_REGISTER_BOOST
