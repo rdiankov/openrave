@@ -956,18 +956,13 @@ class InverseKinematicsModel(DatabaseGenerator):
                     # because some parts of ikfast require lapack, always try to link with it
                     try:
                         iswindows = sys.platform.startswith('win') or platform.system().lower() == 'windows'
-                        libraries = None
                         if self.statistics.get('usinglapack',False) or not iswindows:
-                            libraries = ['lapack']
-                        compiler.link_shared_object(objectfiles,output_filename=output_filename, libraries=libraries)
+                            libraryFiles = "@LAPACK_LIBRARIES@".split(';')
+                        compiler.link_shared_object(objectfiles,output_filename=output_filename, extra_postargs=libraryFiles)
                     except distutils.errors.LinkError,e:
                         log.warn(e)
-                        if libraries is not None and 'lapack' in libraries:
-                            libraries.remove('lapack')
-                            if len(libraries) == 0:
-                                libraries = None
-                        log.info('linking again with %r... (MSVC bug?)',libraries)
-                        compiler.link_shared_object(objectfiles,output_filename=output_filename, libraries=libraries)
+                        log.info('linking again without lapack... (MSVC bug?)')
+                        compiler.link_shared_object(objectfiles,output_filename=output_filename)
                         
                     if not self.setrobot():
                         return ValueError('failed to generate ik solver')
