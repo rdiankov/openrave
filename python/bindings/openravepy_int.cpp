@@ -124,11 +124,15 @@ object toPyObject(const rapidjson::Value& value)
     }
 }
 
+using RapidJsonGenericValueUTF8 = rapidjson::GenericValue<rapidjson::UTF8<> >;
+template <typename T>
+using RapidJsonSetFn = RapidJsonGenericValueUTF8&(RapidJsonGenericValueUTF8::*)(T);
+
 template <typename T>
 void FillRapidJsonFromArray1D(PyArrayObject* pyarr,
                               rapidjson::Value &value,
                               rapidjson::Document::AllocatorType& allocator,
-                              rapidjson::GenericValue<rapidjson::UTF8<> >&(rapidjson::Value::*f)(T),
+                              RapidJsonSetFn<T> f,
                               npy_intp const* dims)
 { 
     const T *pv = reinterpret_cast<T*>(PyArray_DATA(pyarr));
@@ -145,7 +149,7 @@ template <typename T>
 void FillRapidJsonFromArray2D(PyArrayObject* pyarr,
                               rapidjson::Value &value,
                               rapidjson::Document::AllocatorType& allocator,
-                              rapidjson::GenericValue<rapidjson::UTF8<> >&(rapidjson::Value::*f)(T),
+                              RapidJsonSetFn<T> f,
                               npy_intp const* dims) 
 { 
     const T *pv = reinterpret_cast<T*>(PyArray_DATA(pyarr));
@@ -166,7 +170,7 @@ template <typename T>
 void FillRapidJsonFromArray(PyArrayObject* pyarr,
                             rapidjson::Value &value,
                             rapidjson::Document::AllocatorType& allocator,
-                            rapidjson::GenericValue<rapidjson::UTF8<> >&(rapidjson::Value::*f)(T),
+                            RapidJsonSetFn<T> f,
                             const size_t ndims, npy_intp const* dims) 
 { 
     if( ndims == 1 ) {
