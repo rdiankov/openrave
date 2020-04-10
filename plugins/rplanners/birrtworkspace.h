@@ -1112,7 +1112,9 @@ public:
                 }
             }
 
-            dReal fSampledValue1 = _uniformsampler->SampleSequenceOneReal();
+            // Only call SampleSequenceOneReal when !bSampleGoal so that the behavior is exactly the
+            // same with the original rrt and _fWorkspaceSamplingBiasProb = 0.
+            dReal fSampledValue1 = bSampleGoal ? 0 : _uniformsampler->SampleSequenceOneReal();
             if( fSampledValue1 >= _parameters->_fGoalBiasProb && fSampledValue1 < _parameters->_fGoalBiasProb + _parameters->_fWorkspaceSamplingBiasProb ) {
                 RAVELOG_VERBOSE_FORMAT("env=%d, iter=%d, fSampledValue=%f so doing workspace sampling", _environmentid%(iter/3)%fSampledValue1);
                 // Do workspace sampling
