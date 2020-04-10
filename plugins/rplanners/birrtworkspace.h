@@ -892,16 +892,20 @@ public:
         //     return false;
         // }
         _robot = probot;
-        _pmanip = _robot->GetManipulator(_parameters->manipname);
-        if( !_pmanip ) {
-            RAVELOG_ERROR_FORMAT("env=%d, failed to get manip %s from robot %s", _environmentid%_parameters->manipname%_robot->GetName());
-            return false;
-        }
+        if( _parameters->_fWorkspaceSamplingBiasProb > 0 ) {
+            // _pmanip and stuff are only needed when using workspace sampling
+            _pmanip = _robot->GetManipulator(_parameters->manipname);
+            if( !_pmanip ) {
+                RAVELOG_ERROR_FORMAT("env=%d, failed to get manip %s from robot %s", _environmentid%_parameters->manipname%_robot->GetName());
+                return false;
+            }
 
-        _piksolver = _pmanip->GetIkSolver();
-        if( !_piksolver ) {
-            RAVELOG_ERROR_FORMAT("env=%d, no ik solver set for manip %s", _environmentid%_parameters->manipname);
-            return false;
+            // Need to set iksolver beforehand
+            _piksolver = _pmanip->GetIkSolver();
+            if( !_piksolver ) {
+                RAVELOG_ERROR_FORMAT("env=%d, no ik solver set for manip %s", _environmentid%_parameters->manipname);
+                return false;
+            }
         }
 
         // TODO: clean this up
