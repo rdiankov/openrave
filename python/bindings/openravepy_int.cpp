@@ -131,8 +131,10 @@ void FillRapidJsonFromArray1D(PyArrayObject* pyarr,
                               rapidjson::GenericValue<rapidjson::UTF8<> >&(rapidjson::Value::*f)(T),
                               npy_intp const* dims)
 { 
-    const T *pv = reinterpret_cast<T*>(PyArray_DATA(pyarr)); 
-    for (int i = 0; i < dims[0]; ++i) { 
+    const T *pv = reinterpret_cast<T*>(PyArray_DATA(pyarr));
+    const size_t numel = dims[0];
+    value.Reserve(numel, allocator);
+    for (size_t i = 0; i < numel; ++i) { 
         rapidjson::Value elementValue; 
         (elementValue.*f)(pv[i]); 
         value.PushBack(elementValue, allocator); 
@@ -146,12 +148,14 @@ void FillRapidJsonFromArray2D(PyArrayObject* pyarr,
                               rapidjson::GenericValue<rapidjson::UTF8<> >&(rapidjson::Value::*f)(T),
                               npy_intp const* dims) 
 { 
-    const T *pv = reinterpret_cast<T*>(PyArray_DATA(pyarr)); 
-    for (int i = 0; i < dims[0]; ++i) { 
+    const T *pv = reinterpret_cast<T*>(PyArray_DATA(pyarr));
+    const size_t numel = dims[0] * dims[1];
+    value.Reserve(numel, allocator);
+    for (size_t i = 0, ij = 0; i < dims[0]; ++i) { 
         rapidjson::Value colvalues(rapidjson::kArrayType); 
-        for (int j = 0; j < dims[1]; ++j) { 
+        for (size_t j = 0; j < dims[1]; ++j, ++ij) { 
             rapidjson::Value elementValue; 
-            (elementValue.*f)(pv[i*dims[0]+j]); 
+            (elementValue.*f)(pv[ij]);
             colvalues.PushBack(elementValue, allocator); 
         } 
         value.PushBack(colvalues, allocator); 
