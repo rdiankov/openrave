@@ -854,8 +854,7 @@ protected:
 
 typedef boost::shared_ptr<BasicRRTParameters> BasicRRTParametersPtr;
 
-// TODO
-/// \brief
+/// \brief Parameters for the BiRRT planner with workspace sampling.
 class OPENRAVE_API RRTWorkspaceSamplingParameters : public RRTParameters
 {
 public:
@@ -867,10 +866,10 @@ public:
         _vXMLParameters.push_back("manipname");
     }
 
-    dReal _fGoalBiasProb;
-    dReal _fWorkspaceSamplingBiasProb;
-    dReal _fWorkspaceStepLength;
-    std::string manipname;
+    dReal _fGoalBiasProb; ///< the probability of the sampled configuration being the root of the other tree (therefore, the extension is biased towards a goal).
+    dReal _fWorkspaceSamplingBiasProb; ///< the probability that the tree extension will be done by moving the tool along a randomly sampled workspace direction.
+    dReal _fWorkspaceStepLength; ///< in m., how much to move the tool in each step of tree extension.
+    std::string manipname; ///< name of the used manipulator.
 
 protected:
     bool _bProcessingRRTWS;
