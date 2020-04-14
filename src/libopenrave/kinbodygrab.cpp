@@ -331,6 +331,30 @@ void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vgrabbedinfo)
     }
 }
 
+void KinBody::GetGrabbedInfo(std::vector<GrabbedInfo>& vgrabbedinfo) const
+{
+    vgrabbedinfo.resize(_vGrabbedBodies.size());
+    for(size_t igrabbed = 0; igrabbed < _vGrabbedBodies.size(); ++igrabbed) {
+        vgrabbedinfo[igrabbed].Reset(); /// have to reset everything
+
+        GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(_vGrabbedBodies[igrabbed]);
+        KinBodyPtr pgrabbedbody = pgrabbed->_pgrabbedbody.lock();
+        // sometimes bodies can be removed before they are Released, this is ok and can happen during exceptions and stack unwinding
+        if( !!pgrabbedbody ) {
+            KinBody::GrabbedInfo& outputinfo = vgrabbedinfo[igrabbed];
+            outputinfo._grabbedname = pgrabbedbody->GetName();
+            outputinfo._robotlinkname = pgrabbed->_plinkrobot->GetName();
+            outputinfo._trelative = pgrabbed->_troot;
+            outputinfo._setRobotLinksToIgnore = pgrabbed->_setRobotLinksToIgnore;
+            FOREACHC(itlink, _veclinks) {
+                if( find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), *itlink) == pgrabbed->_listNonCollidingLinks.end() ) {
+                    outputinfo._setRobotLinksToIgnore.insert((*itlink)->GetIndex());
+                }
+            }
+        }
+    }
+}
+
 void KinBody::GrabbedInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     openravejson::SetJsonValueByKey(value, "grabbedName", _grabbedname, allocator);
