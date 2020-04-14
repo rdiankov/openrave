@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2020 Puttichai Lertkultanon
+// Copyright (C) 2020 Puttichai Lertkultanon and Rosen Diankov
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -20,7 +20,7 @@
 #include "rplanners.h"
 #include <boost/algorithm/string.hpp>
 
-/// \brief (TODO)
+/// \brief Node in free configuration space.
 class NodeWithTransform : public NodeBase
 {
 public:
@@ -58,6 +58,7 @@ public:
 
     NodeWithTransform(NodeWithTransform* pparent, const dReal* pconfig, int ndof, const Transform& pose) : rrtparent(pparent) {
         std::copy(pconfig, pconfig + ndof, q);
+        // Assign rot, trans separately to skip checking of rot normalization. Is it ok, though?
         this->pose.rot = pose.rot;
         this->pose.trans = pose.trans;
         _level = 0;
@@ -70,23 +71,23 @@ public:
     ~NodeWithTransform() {
     }
 
-    NodeWithTransform* rrtparent;
-    std::vector<NodeWithTransform*> _vchildren;
-    int16_t _level;
-    uint8_t _hasselfchild;
-    uint8_t _usenn;
+    NodeWithTransform* rrtparent; ///< pointer to the parent of this node in RRT tree.
+    std::vector<NodeWithTransform*> _vchildren; ///< direct children of this node in cover tree (nodes in the level below this). This is not related to RRT tree's children of this node.
+    int16_t _level; ///< cover tree's level of this node
+    uint8_t _hasselfchild; ///< if 1, then _vchildren contains a clone of this node in the level below it.
+    uint8_t _usenn; ///< if 1, then include this node in the nearest neighbor search. otherwise, ignore this node.
     uint8_t _userdata;
 
 #ifdef _DEBUG
     int id;
 #endif
 
-    uint8_t _transformComputed;
-    Transform pose;
-    dReal q[0];
+    uint8_t _transformComputed; ///< if 1, the transform corresponding to this node (`pose`) has been computed.
+    Transform pose; ///< a transform corresponding to this node.
+    dReal q[0]; ///< the configuration immediately following this struct.
 };
 
-/// \brief (TODO)
+/// \brief Data structure storing configuration information based on the Cover Tree (Beygelzimer et al. 2006 http://hunch.net/~jl/projects/cover_tree/icml_final/final-icml.pdf)
 template <typename Node>
 class SpatialTree2 : public SpatialTree<Node>
 {
@@ -155,7 +156,11 @@ public:
         }
         _constraintreturn.reset(new ConstraintFilterReturn());
 
+        // Is it ok to compute the weights for random sampling (SampleNode) based on the cover tree instead of the RRT?
         {
+            // Probability of level ilevel being selected in SampleNode is p_select = weight^(_maxlevel - 1 -
+            // ilevel)/totalweight. That is, the level ilevel is `weight` times more likely to be sampled that level
+            // (ilevel + 1).
             _vAccumWeights.resize(_maxlevel); // need numlevels - 1 values
             dReal weight = 2.0;
             dReal fTotalWeight = 0;
@@ -190,10 +195,8 @@ public:
         _numnodes = 0;
     }
 
-    /// \brief Perform a normal tree extension operation given a
-    /// target config vTargetConfig. The difference is that it also
-    /// keeps track of the transform tTarget corresponding to
-    /// vTargetConfig.
+    /// \brief Perform a normal tree extension operation given a target config vTargetConfig. The difference is that it
+    ///        also keeps track of the transform tTarget corresponding to vTargetConfig.
     virtual ExtendType Extend(const std::vector<dReal>& vTargetConfig, NodePtr& plastnode, bool bOneStep=false)
     {
         // Get the nearnest neighbor of vTargetConfig on the tree
@@ -317,7 +320,8 @@ public:
         return bHasAdded ? ET_Success : ET_Failed;
     }
 
-    /// \brief
+    /// \brief Perform a tree extension operation where a randomly selected node is extended such that the tool moves
+    ///        along the given vdirection.
     virtual ExtendType ExtendWithDirection(const Vector& vdirection, NodePtr& plastnode, dReal fSampledValue, bool bOneStep=false)
     {
         NodePtr pnode = SampleNode(fSampledValue);
@@ -847,14 +851,13 @@ private:
 
     // extra stuff for workspace sampling
     dReal _fWorkspaceStepLength;
-    boost::function<bool(const std::vector<dReal>&, Transform&)> _fkfn; // forward kinematics
-    boost::function<bool(const Transform&, const std::vector<dReal>&, std::vector<dReal>&)> _ikfn; // inverse kinematics
-    std::vector<dReal> _vAccumWeights;
+    boost::function<bool(const std::vector<dReal>&, Transform&)> _fkfn; ///< forward kinematics function
+    boost::function<bool(const Transform&, const std::vector<dReal>&, std::vector<dReal>&)> _ikfn; ///< inverse kinematics function
+    std::vector<dReal> _vAccumWeights; ///< weights for each level of the tree, used for sampling tree nodes.
     Transform _curpose, _newpose;
     Vector _vstepdirection;
 };
 
-// (TODO)
 class BirrtPlanner2 : public RrtPlanner<NodeWithTransform>
 {
 public:
@@ -908,11 +911,9 @@ public:
             }
         }
 
-        // TODO: clean this up
-        {
-            _iktype = IKP_Transform6D;
-            _vcacheikreturns.reserve(8);
-        }
+        // Note: for now, only support iktype transform 6d.
+        _iktype = IKP_Transform6D;
+        _vcacheikreturns.reserve(8);
 
         if( !_uniformsampler ) {
             _uniformsampler = RaveCreateSpaceSampler(GetEnv(), "mt19937");
@@ -1014,7 +1015,7 @@ public:
         return true;
     }
 
-    /// \brief
+    /// \brief Compute forward kinematics of the given configuration.
     virtual bool FK(const std::vector<dReal>& vconfig, Transform& pose)
     {
         if( _parameters->SetStateValues(vconfig, 0) != 0 ) {
@@ -1025,7 +1026,11 @@ public:
         return true;
     }
 
-    /// \brief
+    /// \brief Compute inverse kinematics of the given tool transform.
+    ///
+    /// \param[in] pose, the given tool transform.
+    /// \param[in] vrefconfig, the returned configuration is the one closest to this reference.
+    /// \param[out] vconfig, a configuration that gives the specified tool pose and is closest to vrefconfig.
     virtual bool IK(const Transform& pose, const std::vector<dReal>& vrefconfig, std::vector<dReal>& vconfig)
     {
         _ikparam.SetTransform6D(pose);
@@ -1051,8 +1056,7 @@ public:
         return true;
     }
 
-    // TODO
-    /// \brief
+    /// \brief Find a piecewise linear path that connects an initial configuration to a goal configuration.
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         _goalindex = -1;
@@ -1111,17 +1115,17 @@ public:
             if( !!_parameters->_sampleinitialfn ) {
                 std::vector<dReal> vinitial;
                 if( _parameters->_sampleinitialfn(vinitial) ) {
-                    RAVELOG_VERBOSE_FORMAT("env=%d, inserting new initial %d", _environmentid%_vecInitialNodes.size());
+                    RAVELOG_VERBOSE_FORMAT("env=%d, inserting new initial index %d", _environmentid%_vecInitialNodes.size());
                     _vecInitialNodes.push_back(_treeForward.InsertNode(NULL, vinitial, _vecInitialNodes.size()));
                 }
             }
 
             // Only call SampleSequenceOneReal when !bSampleGoal so that the behavior is exactly the
-            // same with the original rrt and _fWorkspaceSamplingBiasProb = 0.
+            // same with the original rrt in case _fWorkspaceSamplingBiasProb = 0.
             dReal fSampledValue1 = bSampleGoal ? 0 : _uniformsampler->SampleSequenceOneReal();
             if( fSampledValue1 >= _parameters->_fGoalBiasProb && fSampledValue1 < _parameters->_fGoalBiasProb + _parameters->_fWorkspaceSamplingBiasProb ) {
                 RAVELOG_VERBOSE_FORMAT("env=%d, iter=%d, fSampledValue=%f so doing workspace sampling", _environmentid%(iter/3)%fSampledValue1);
-                // Do workspace sampling
+                // Sample one out of six directions in tool local frame.
                 uint32_t sampleindex = _uniformsampler->SampleSequenceOneUInt32();
                 uint32_t directionindex = sampleindex % 6;
                 switch( directionindex ) {
@@ -1156,6 +1160,7 @@ public:
                     _vcachedirection.z = -1;
                     break;
                 }
+                // Sample another number for selecting a node on a tree.
                 dReal fSampledValue2 = _uniformsampler->SampleSequenceOneReal();
 
                 // Extend A
@@ -1288,7 +1293,7 @@ public:
         return status;
     }
 
-    /// \brief
+    /// \brief Extract the path connecting the roots of _treeForward and _treeBackward.
     virtual void _ExtractPath(GOALPATH& goalpath, NodeBase* iConnectedForward, NodeBase* iConnectedBackward)
     {
         const int ndof = _parameters->GetDOF();
