@@ -479,7 +479,7 @@ public:
                 xmlreaders::HierarchicalXMLReadablePtr pHierarchical = OPENRAVE_DYNAMIC_POINTER_CAST<xmlreaders::HierarchicalXMLReadable>(itReadableInterface->second);
                 if( !!pHierarchical ) {
                     writer.reset(new xmlreaders::StreamXMLWriter("root")); // need to parse with xml, so need a root
-                    itReadableInterface->second->Serialize(writer, options);
+                    pHierarchical->Serialize(writer, options);
                     writer->Serialize(ss);
 
                     WriteBinaryString(O, ss.str());
@@ -488,7 +488,7 @@ public:
                 }
 
                 // try xml serializable
-                XMLReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<xmlreaders::XMLReadable>(itReadableInterface->second);
+                XMLReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<XMLReadable>(itReadableInterface->second);
                 if (!!pxmlreadable) {
                     writer.reset(new xmlreaders::StreamXMLWriter(std::string()));
                     pxmlreadable->Serialize(writer, options);
