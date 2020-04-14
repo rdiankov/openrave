@@ -387,7 +387,7 @@ public:
         }
         boost::trim(libraryname);
         if( !sinput ||( libraryname.size() == 0) ||( ikname.size() == 0) ) {
-            RAVELOG_DEBUG("bad input\n");
+            RAVELOG_DEBUG_FORMAT("bad input, ikname=%s, libraryname=%s", ikname%libraryname);
             return false;
         }
 
