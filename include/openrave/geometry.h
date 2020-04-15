@@ -225,12 +225,12 @@ public:
     }
 
     template <typename U>
-    bool operator==(const RaveVector<U>& r) {
+    bool operator==(const RaveVector<U>& r) const{
         return x == r.x && y == r.y && z == r.z && w == r.w;
     }
 
     template <typename U>
-    bool operator!=(const RaveVector<U>& r) {
+    bool operator!=(const RaveVector<U>& r) const{
         return x != r.x || y != r.y || z != r.z || w != r.w;
     }
 
