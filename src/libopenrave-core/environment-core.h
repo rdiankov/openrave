@@ -2035,30 +2035,30 @@ public:
     {
         // updated the published bodies, resize dynamically in case an exception occurs
         // when creating an item and bad data is left inside _vPublishedBodies
-        _vPublishedBodies.resize(0);
-        if( _vPublishedBodies.capacity() < _vecbodies.size() ) {
-            _vPublishedBodies.reserve(_vecbodies.size());
-        }
+        _vPublishedBodies.resize(_vecbodies.size());
+        int iwritten = 0;
 
         std::vector<dReal> vdoflastsetvalues;
-        FOREACH(itbody, _vecbodies) {
-            if( (*itbody)->_nHierarchyComputed != 2 ) {
+        for(int ibody = 0; ibody < (int)_vecbodies.size(); ++ibody) {
+            const KinBodyPtr& pbody = _vecbodies[ibody];
+            if( pbody->_nHierarchyComputed != 2 ) {
                 // skip
                 continue;
             }
 
-            _vPublishedBodies.push_back(KinBody::BodyState());
-            KinBody::BodyState& state = _vPublishedBodies.back();
-            state.pbody = *itbody;
-            (*itbody)->GetLinkTransformations(state.vectrans, vdoflastsetvalues);
-            (*itbody)->GetLinkEnableStates(state.vLinkEnableStates);
-            (*itbody)->GetDOFValues(state.jointvalues);
-            state.strname =(*itbody)->GetName();
-            state.uri = (*itbody)->GetURI();
-            state.updatestamp = (*itbody)->GetUpdateStamp();
-            state.environmentid = (*itbody)->GetEnvironmentId();
-            if( (*itbody)->IsRobot() ) {
-                RobotBasePtr probot = RaveInterfaceCast<RobotBase>(*itbody);
+            KinBody::BodyState& state = _vPublishedBodies[iwritten];
+            state.Reset();
+            state.pbody = pbody;
+            pbody->GetLinkTransformations(state.vectrans, vdoflastsetvalues);
+            pbody->GetLinkEnableStates(state.vLinkEnableStates);
+            pbody->GetDOFValues(state.jointvalues);
+            pbody->GetGrabbedInfo(state.vGrabbedInfos);
+            state.strname =pbody->GetName();
+            state.uri = pbody->GetURI();
+            state.updatestamp = pbody->GetUpdateStamp();
+            state.environmentid = pbody->GetEnvironmentId();
+            if( pbody->IsRobot() ) {
+                RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
                 if( !!probot ) {
                     RobotBase::ManipulatorPtr pmanip = probot->GetActiveManipulator();
                     if( !!pmanip ) {
@@ -2068,7 +2068,11 @@ public:
                     probot->GetConnectedBodyActiveStates(state.vConnectedBodyActiveStates);
                 }
             }
-            _vPublishedBodies.push_back(state);
+            ++iwritten;
+        }
+
+        if( iwritten < _vPublishedBodies.size() ) {
+            _vPublishedBodies.resize(iwritten);
         }
     }
 
