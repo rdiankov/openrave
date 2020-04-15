@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
+
 #include <algorithm>
 
 namespace OpenRAVE {
@@ -63,7 +64,7 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
         geometriesValue.Reserve(_vgeometryinfos.size(), allocator);
         FOREACHC(it, _vgeometryinfos) {
             rapidjson::Value geometryValue;
-            (*it)->SerializeJSON(geometryValue, allocator, options);
+            (*it)->SerializeJSON(geometryValue, allocator, fUnitScale, options);
             geometriesValue.PushBack(geometryValue, allocator);
         }
         value.AddMember("geometries", geometriesValue, allocator);
@@ -79,7 +80,7 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
                 if(!!(*iv))
                 {
                     rapidjson::Value geometryValue;
-                    (*iv)->SerializeJSON(geometryValue, allocator);
+                    (*iv)->SerializeJSON(geometryValue, allocator, fUnitScale, options);
                     geometriesValue.PushBack(geometryValue, allocator);
                 }
             }
@@ -136,8 +137,22 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     OpenRAVE::JSON::LoadJsonValueByKey(value, "isEnabled", _bIsEnabled);
 }
 
-KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& other)
+// \breif keep the refInfo pointer and copy the content
+void KinBody::LinkInfo::SetReferenceInfo(boost::shared_ptr<const LinkInfo> refInfo) {
+    if (!!refInfo) {
+        _Update(*refInfo);
+        _referenceInfo.reset();
+        _referenceInfo = refInfo;
+    }
+}
+
+const KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& other)
 {
+    _Update(other);
+    return *this;
+}
+
+void KinBody::LinkInfo::_Update(const KinBody::LinkInfo& other) {
     _vgeometryinfos.resize(other._vgeometryinfos.size());
     for( size_t i = 0; i < _vgeometryinfos.size(); ++i ) {
         if( !other._vgeometryinfos[i] ) {
@@ -170,9 +185,8 @@ KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& other)
     _vForcedAdjacentLinks = other._vForcedAdjacentLinks;
     _bStatic = other._bStatic;
     _bIsEnabled = other._bIsEnabled;
-
-    return *this;
 }
+
 
 KinBody::Link::Link(KinBodyPtr parent)
 {
@@ -443,7 +457,8 @@ void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& g
     vgeometryinfos.resize(_vGeometries.size());
     for(size_t i = 0; i < vgeometryinfos.size(); ++i) {
         vgeometryinfos[i].reset(new KinBody::GeometryInfo());
-        *vgeometryinfos[i] = _vGeometries[i]->_info;
+        // *vgeometryinfos[i] = _vGeometries[i]->_info;
+        *vgeometryinfos[i] = _vGeometries[i]->GetInfo();
     }
     SetGroupGeometries("self", vgeometryinfos);
     _Update();
@@ -467,7 +482,8 @@ void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries,
     vgeometryinfos.resize(_vGeometries.size());
     for(size_t i = 0; i < vgeometryinfos.size(); ++i) {
         vgeometryinfos[i].reset(new KinBody::GeometryInfo());
-        *vgeometryinfos[i] = _vGeometries[i]->_info;
+        // *vgeometryinfos[i] = _vGeometries[i]->_info;
+        *vgeometryinfos[i] = _vGeometries[i]->GetInfo();
     }
     SetGroupGeometries("self", vgeometryinfos);
     _Update();

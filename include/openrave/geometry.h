@@ -462,11 +462,11 @@ public:
         return *this;
     }
 
-    inline bool operator== (const RaveTransform<T>& right) {
+    inline bool operator== (const RaveTransform<T>& right) const{
         return trans == right.trans && rot == right.rot;
     }
-    inline bool operator!=(const RaveTransform<T>& right) {
-        return trans != right.trans || rot != right.rot;
+    inline bool operator!= (const RaveTransform<T>& right) const{
+        return !operator==(right);
     }
 
     inline RaveTransform<T> inverse() const {

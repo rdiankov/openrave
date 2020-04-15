@@ -266,6 +266,14 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
     }
 }
 
+void KinBody::JointInfo::SetReferenceInfo(boost::shared_ptr<const JointInfo> refInfo) {
+    if (!!refInfo) {
+        *this = *refInfo;
+        _referenceInfo.reset();
+        _referenceInfo = refInfo;
+    }
+}
+
 KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& other)
 {
     _type = other._type;

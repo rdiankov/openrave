@@ -155,6 +155,10 @@ public:
             return _vGeomData;
         }
 
+        const GeometryInfo& operator=(const GeometryInfo& info){
+            _Update(info);
+            return *this;
+        }
         /// \brief compute the inner empty volume in the geometry coordinate system
         ///
         /// \return bool true if the geometry has a concept of empty volume nad tInnerEmptyVolume/abInnerEmptyVolume are filled
@@ -168,6 +172,8 @@ public:
 
         ///< \param multiply all translational values by fUnitScale
         virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
+
+        virtual void SetReferenceInfo(boost::shared_ptr<GeometryInfo const> refInfo);
 
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
 
@@ -235,6 +241,15 @@ public:
         float _fTransparency; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
         bool _bVisible; ///< if true, geometry is visible as part of the 3d model (default is true)
         bool _bModifiable; ///< if true, object geometry can be dynamically modified (default is true)
+
+        // reference architecture
+        std::string _id;
+        bool _bIsDeleted;
+        boost::shared_ptr<GeometryInfo const> _referenceInfo;
+
+private:
+        void _Update(const KinBody::GeometryInfo& info);
+
     };
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
     typedef boost::shared_ptr<GeometryInfo const> GeometryInfoConstPtr;
@@ -248,10 +263,12 @@ public:
         }
 
         LinkInfo(const LinkInfo& other);
-        LinkInfo& operator=(const LinkInfo& other);
+        const LinkInfo& operator=(const LinkInfo& other);
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
+
+        virtual void SetReferenceInfo(boost::shared_ptr<LinkInfo const> refInfo);
 
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like
@@ -284,7 +301,12 @@ public:
         bool __padding0, __padding1; // for 4-byte alignment
 
         // reference architecture
-        boost::shared_ptr<KinBody::LinkInfo> _referenceInfo;
+        std::string _id;
+        boost::shared_ptr<KinBody::LinkInfo const> _referenceInfo;
+        bool _bIsDeleted;   // indicated if the inherited link should be deleted in current environment
+
+private:
+        void _Update(const KinBody::LinkInfo& other);
     };
     typedef boost::shared_ptr<LinkInfo> LinkInfoPtr;
     typedef boost::shared_ptr<LinkInfo const> LinkInfoConstPtr;
@@ -884,6 +906,7 @@ public:
 
         virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+        virtual void SetReferenceInfo(boost::shared_ptr<const JointInfo> refInfo);
 
         JointType _type; /// The joint type
         std::string _name;         ///< the unique joint name
@@ -963,6 +986,11 @@ public:
         JointControlInfo_RobotControllerPtr _jci_robotcontroller;
         JointControlInfo_IOPtr _jci_io;
         JointControlInfo_ExternalDevicePtr _jci_externaldevice;
+
+        // reference architecture
+        std::string _id;
+        boost::shared_ptr<JointInfo const> _referenceInfo;
+        bool _bIsDeleted;
     };
     typedef boost::shared_ptr<JointInfo> JointInfoPtr;
     typedef boost::shared_ptr<JointInfo const> JointInfoConstPtr;
@@ -1599,12 +1627,18 @@ public:
 
         virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+        virtual void SetReferenceInfo(boost::shared_ptr<const KinBodyInfo> refInfo);
 
         virtual ~KinBodyInfo() {}
 
+        std::string _id;
         std::string _uri;
         std::vector<LinkInfoPtr> _vLinkInfos; ///< list of pointers to LinkInfo
         std::vector<JointInfoPtr> _vJointInfos; ///< list of pointers to JointInfo
+
+        // reference architecture
+        boost::shared_ptr<KinBody::KinBodyInfo const> _referenceInfo;
+        bool _bIsDeleted;   // indicated if the inherited link should be deleted in current environment
     };
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
@@ -2656,6 +2690,7 @@ protected:
     uint32_t _nHierarchyComputed; ///< 2 if the joint heirarchy and other cached information is computed. 1 if the hierarchy information is computing
     bool _bMakeJoinedLinksAdjacent; ///< if true, then automatically add adjacent links to the adjacency list so that their self-collisions are ignored.
     bool _bAreAllJoints1DOFAndNonCircular; ///< if true, then all controllable joints  of the robot are guaranteed to be either revolute or prismatic and non-circular. This allows certain functions that do operations on the joint values (like SubtractActiveDOFValues) to be optimized without calling Joint functions.
+
 private:
     mutable std::string __hashkinematics;
     mutable std::vector<dReal> _vTempJoints;

@@ -609,6 +609,40 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
     OpenRAVE::JSON::LoadJsonValueByKey(value, "modifiable", _bModifiable);
 }
 
+void KinBody::GeometryInfo::SetReferenceInfo(boost::shared_ptr<GeometryInfo const> refInfo) {
+    if (!!refInfo) {
+        _Update(*refInfo);
+        _referenceInfo.reset();
+        _referenceInfo = refInfo;
+    }
+}
+
+void KinBody::GeometryInfo::_Update(const KinBody::GeometryInfo& info) {
+
+    _t = info._t;
+    _vGeomData = info._vGeomData;
+    _vGeomData2 = info._vGeomData2;
+    _vGeomData3 = info._vGeomData3;
+    _vGeomData4 = info._vGeomData4;
+    _vSideWalls = info._vSideWalls;
+
+    _vDiffuseColor = info._vDiffuseColor;
+    _vAmbientColor = info._vAmbientColor;
+    _meshcollision = info._meshcollision;
+
+    _name = info._name;
+    _type = info._type;
+    _filenamerender = info._filenamerender;
+    _filenamecollision = info._filenamecollision;
+    _vRenderScale = info._vRenderScale;
+    _vCollisionScale = info._vCollisionScale;
+    _fTransparency = info._fTransparency;
+    _bVisible = info._bVisible;
+    _bModifiable = info._bModifiable;
+    _id = info._id;
+    _bIsDeleted = info._bIsDeleted;
+}
+
 AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const
 {
     AABB ab;

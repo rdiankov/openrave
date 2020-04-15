@@ -43,6 +43,7 @@ public:
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+        virtual void SetReferenceInfo(boost::shared_ptr<const ManipulatorInfo> refInfo);
 
         std::string _name;
         std::string _sBaseLinkName, _sEffectorLinkName; ///< name of the base and effector links of the robot used to determine the chain
@@ -51,6 +52,14 @@ public:
         Vector _vdirection;
         std::string _sIkSolverXMLId; ///< xml id of the IkSolver interface to attach
         std::vector<std::string> _vGripperJointNames;         ///< names of the gripper joints
+
+        // reference architexture
+        std::string _id;
+        boost::shared_ptr<ManipulatorInfo const> _referenceInfo;
+        bool _bIsDeleted;
+
+private:
+        void _Update(const ManipulatorInfo& info);
     };
     typedef boost::shared_ptr<ManipulatorInfo> ManipulatorInfoPtr;
     typedef boost::shared_ptr<ManipulatorInfo const> ManipulatorInfoConstPtr;
@@ -437,6 +446,11 @@ public:
         virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
 
+        // reference architexture
+        std::string _id;
+        boost::shared_ptr<AttachedSensorInfo const> _referenceInfo;
+        bool _bIsDeleted;
+
     };
     typedef boost::shared_ptr<AttachedSensorInfo> AttachedSensorInfoPtr;
     typedef boost::shared_ptr<AttachedSensorInfo const> AttachedSensorInfoConstPtr;
@@ -550,7 +564,6 @@ public:
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
 
-
         std::string _name; ///< the name of the connected body info
         std::string _linkname; ///< the robot link that the body is attached to
         std::string _uri;  //< the uri where the connected body came from. this is used when writing back to the filename.
@@ -560,6 +573,10 @@ public:
         std::vector<RobotBase::ManipulatorInfoPtr> _vManipulatorInfos; ///< extracted manip infos representing the connected body. The names are the original "desired" names.
         std::vector<RobotBase::AttachedSensorInfoPtr> _vAttachedSensorInfos; ///< extracted sensor infos representing the connected body. The names are the original "desired" names.
         bool _bIsActive; ///< if true, then add the connected body. Otherwise do not add it.
+        // reference architexture
+        std::string _id;
+        boost::shared_ptr<ConnectedBodyInfo const> _referenceInfo;
+        bool _bIsDeleted;
     };
     typedef boost::shared_ptr<ConnectedBodyInfo> ConnectedBodyInfoPtr;
     typedef boost::shared_ptr<ConnectedBodyInfo const> ConnectedBodyInfoConstPtr;
@@ -680,6 +697,9 @@ public:
         std::vector<ManipulatorInfoPtr> _vManipInfos; ///< list of pointers to ManipulatorInfo
         std::vector<AttachedSensorInfoPtr> _vAttachedSensorInfos; ///< list of pointers to AttachedSensorInfo
         std::vector<ConnectedBodyInfoPtr> _vConnectedBodyInfos; ///< list of pointers to ConnectedBodyInfo
+
+        std::string _id;
+
 private:
         void _Update(const RobotBase::RobotBaseInfo& info);
     };

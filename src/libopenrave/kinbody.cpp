@@ -125,9 +125,11 @@ void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, d
     OpenRAVE::JSON::LoadJsonValueByKey(value, "viscousFriction", viscous_friction);
 }
 
+
 void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     OpenRAVE::JSON::SetJsonValueByKey(value, "uri", _uri, allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(value, "__deleted__", _bIsDeleted, allocator);
     if (_vLinkInfos.size() > 0) {
         rapidjson::Value rLinkInfoValues;
         rLinkInfoValues.SetArray();
@@ -156,6 +158,7 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
 void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
     OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "__deleted__", _bIsDeleted);
 
     _vLinkInfos.clear();
     if (value.HasMember("links")) {
@@ -174,6 +177,16 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
             pJointInfo->DeserializeJSON(value["joints"][iJointInfo], fUnitScale);
             _vJointInfos.push_back(pJointInfo);
         }
+    }
+}
+
+void KinBody::KinBodyInfo::SetReferenceInfo(boost::shared_ptr<const KinBody::KinBodyInfo> refInfo) {
+    if (!!refInfo) {
+        _id = refInfo->_id;
+        _vLinkInfos = refInfo->_vLinkInfos;
+        _vJointInfos = refInfo->_vJointInfos;
+        _referenceInfo.reset();
+        _referenceInfo = refInfo;
     }
 }
 

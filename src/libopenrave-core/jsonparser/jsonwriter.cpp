@@ -83,28 +83,31 @@ protected:
             rapidjson::Value bodiesValue;
             bodiesValue.SetArray();
 
-            rapidjson::Value objectsValue;
-            objectsValue.SetArray();
-
             FOREACHC(itbody,listbodies) {
                 KinBodyPtr pbody = *itbody;
 
                 rapidjson::Value bodyValue;
                 bodyValue.SetObject();
+
+                // name and transform
                 OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "name", pbody->GetName(), _allocator);
                 OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "transform", pbody->GetTransform(), _allocator);
 
+                // dof value
                 std::vector<dReal> vDOFValues;
                 pbody->GetDOFValues(vDOFValues);
                 if (vDOFValues.size() > 0) {
                     OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "dofValues", vDOFValues, _allocator);
                 }
 
+                // state saver
+
                 KinBody::KinBodyStateSaver saver(pbody);
                 vector<dReal> vZeros(pbody->GetDOF());
                 pbody->SetDOFValues(vZeros, KinBody::CLA_Nothing);
                 pbody->SetTransform(Transform());
 
+                // grabbed info
                 std::vector<KinBody::GrabbedInfoPtr> vGrabbedInfo;
                 pbody->GetGrabbedInfo(vGrabbedInfo);
                 if (vGrabbedInfo.size() > 0) {
@@ -118,65 +121,60 @@ protected:
                     bodyValue.AddMember("grabbed", grabbedsValue, _allocator);
                 }
 
+                // id
+                std::string id = str(boost::format("body%d_motion")%_mapBodyIds[pbody->GetEnvironmentId()]);
+                OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "id", id, _allocator);
+
+                // uri
                 if (_CheckForExternalWrite(pbody)) {
                     // for external references, need to canonicalize the uri
                     std::string uri = _CanonicalizeURI(pbody->GetURI());
                     OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "uri", uri, _allocator);
-                    bodiesValue.PushBack(bodyValue, _allocator);
-                    continue;
+                }
+                else {
+                    OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "uri", std::string("#") + id, _allocator);
                 }
 
-                // non-external reference
-                std::string id = str(boost::format("body%d_motion")%_mapBodyIds[pbody->GetEnvironmentId()]);
-                OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "uri", std::string("#") + id, _allocator);
-                bodiesValue.PushBack(bodyValue, _allocator);
-
-                rapidjson::Value objectValue;
-                objectValue.SetObject();
-                OpenRAVE::JSON::SetJsonValueByKey(objectValue, "id", id, _allocator);
-                OpenRAVE::JSON::SetJsonValueByKey(objectValue, "name", pbody->GetName(), _allocator);
-
+                // Links
                 {
                     rapidjson::Value linksValue;
                     linksValue.SetArray();
                     FOREACHC(itlink, pbody->GetLinks()) {
                         rapidjson::Value linkValue;
-                        (*itlink)->GetInfo().SerializeJSON(linkValue, _allocator);
-
-                        rapidjson::Value geometriesValue;
-                        geometriesValue.SetArray();
-                        FOREACHC(itgeom, (*itlink)->GetGeometries()) {
-                            rapidjson::Value geometryValue;
-                            (*itgeom)->GetInfo().SerializeJSON(geometryValue, _allocator);
-                            geometriesValue.PushBack(geometryValue, _allocator);
+                        const KinBody::LinkInfo& linkInfo = (*itlink)->GetInfo();
+                        if (!!linkInfo._referenceInfo) {
+                            SerializeDiffJSON(linkInfo, *linkInfo._referenceInfo, linkValue, _allocator);
                         }
-                        if (linkValue.HasMember("geometries")) {
-                            linkValue.RemoveMember("geometries");
+                        else {
+                            linkInfo.SerializeJSON(linkValue, _allocator);
                         }
-                        linkValue.AddMember("geometries", geometriesValue, _allocator);
-
                         linksValue.PushBack(linkValue, _allocator);
                     }
-                    objectValue.AddMember("links", linksValue, _allocator);
+                    bodyValue.AddMember("links", linksValue, _allocator);
                 }
 
+
+                // joints
                 if (pbody->GetJoints().size() + pbody->GetPassiveJoints().size() > 0)
                 {
                     rapidjson::Value jointsValue;
                     jointsValue.SetArray();
                     FOREACHC(itjoint, pbody->GetJoints()) {
                         rapidjson::Value jointValue;
-                        (*itjoint)->GetInfo().SerializeJSON(jointValue, _allocator);
+                        const KinBody::JointInfo& jointInfo = (*itjoint)->GetInfo();
+                        SerializeDiffJSON(jointInfo, *jointInfo._referenceInfo, jointValue, _allocator);
                         jointsValue.PushBack(jointValue, _allocator);
                     }
                     FOREACHC(itjoint, pbody->GetPassiveJoints()) {
                         rapidjson::Value jointValue;
-                        (*itjoint)->GetInfo().SerializeJSON(jointValue, _allocator);
+                        const KinBody::JointInfo& jointInfo = (*itjoint)->GetInfo();
+                        SerializeDiffJSON(jointInfo, *jointInfo._referenceInfo, jointValue, _allocator);
                         jointsValue.PushBack(jointValue, _allocator);
                     }
-                    objectValue.AddMember("joints", jointsValue, _allocator);
+                    bodyValue.AddMember("joints", jointsValue, _allocator);
                 }
 
+                // robot realted structues
                 if (pbody->IsRobot()) {
                     RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
                     if (probot->GetManipulators().size() > 0) {
@@ -184,10 +182,11 @@ protected:
                         manipulatorsValue.SetArray();
                         FOREACHC(itmanip, probot->GetManipulators()) {
                             rapidjson::Value manipulatorValue;
-                            (*itmanip)->GetInfo().SerializeJSON(manipulatorValue, _allocator);
+                            const RobotBase::ManipulatorInfo& manipulatorInfo = (*itmanip)->GetInfo();
+                            SerializeDiffJSON(manipulatorInfo, *manipulatorInfo._referenceInfo, manipulatorValue, _allocator);
                             manipulatorsValue.PushBack(manipulatorValue, _allocator);
                         }
-                        objectValue.AddMember("manipulators", manipulatorsValue, _allocator);
+                        bodyValue.AddMember("manipulators", manipulatorsValue, _allocator);
                     }
 
                     if (probot->GetAttachedSensors().size() > 0) {
@@ -195,10 +194,11 @@ protected:
                         attachedSensorsValue.SetArray();
                         FOREACHC(itattachedsensor, probot->GetAttachedSensors()) {
                             rapidjson::Value attachedSensorValue;
-                            (*itattachedsensor)->UpdateAndGetInfo().SerializeJSON(attachedSensorValue, _allocator);
+                            const RobotBase::AttachedSensorInfo& attachedSensorInfo = (*itattachedsensor)->UpdateAndGetInfo();
+                            SerializeDiffJSON(attachedSensorInfo, *attachedSensorInfo._referenceInfo, attachedSensorValue, _allocator);
                             attachedSensorsValue.PushBack(attachedSensorValue, _allocator);
                         }
-                        objectValue.AddMember("attachedSensors", attachedSensorsValue, _allocator);
+                        bodyValue.AddMember("attachedSensors", attachedSensorsValue, _allocator);
                     }
 
                     if (probot->GetConnectedBodies().size() > 0) {
@@ -206,7 +206,8 @@ protected:
                         connectedBodiesValue.SetArray();
                         FOREACHC(itconnectedbody, probot->GetConnectedBodies()) {
                             rapidjson::Value connectedBodyValue;
-                            (*itconnectedbody)->GetInfo().SerializeJSON(connectedBodyValue, _allocator);
+                            const RobotBase::ConnectedBodyInfo connectedBodyInfo = (*itconnectedbody)->GetInfo();
+                            SerializeDiffJSON(connectedBodyInfo, *connectedBodyInfo._referenceInfo, connectedBodyValue, _allocator);
 
                             // here we try to fix the uri in connected body
                             if (connectedBodyValue.HasMember("uri")) {
@@ -216,12 +217,12 @@ protected:
                             }
                             connectedBodiesValue.PushBack(connectedBodyValue, _allocator);
                         }
-                        objectValue.AddMember("connectedBodies", connectedBodiesValue, _allocator);
+                        bodyValue.AddMember("connectedBodies", connectedBodiesValue, _allocator);
                     }
-
-                    OpenRAVE::JSON::SetJsonValueByKey(objectValue, "isRobot", true, _allocator);
+                    OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "isRobot", true, _allocator);
                 }
 
+                // readable interface
                 if (pbody->GetReadableInterfaces().size() > 0) {
                     rapidjson::Value readableInterfacesValue;
                     readableInterfacesValue.SetObject();
@@ -234,18 +235,15 @@ protected:
                         }
                     }
                     if (readableInterfacesValue.MemberCount() > 0) {
-                        objectValue.AddMember("readableInterfaces", readableInterfacesValue, _allocator);
+                        bodyValue.AddMember("readableInterfaces", readableInterfacesValue, _allocator);
                     }
                 }
-
-                objectsValue.PushBack(objectValue, _allocator);
+                // finally push to the bodiesValue array
+                bodiesValue.PushBack(bodyValue, _allocator);
             }
 
             if (bodiesValue.Size() > 0) {
                 _rScene.AddMember("bodies", bodiesValue, _allocator);
-            }
-            if (objectsValue.Size() > 0) {
-                _rScene.AddMember("objects", objectsValue, _allocator);
             }
         }
     }
