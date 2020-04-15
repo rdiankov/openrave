@@ -31,6 +31,7 @@ namespace xmlreaders {
 
 typedef OpenRAVE::StringReadable StringXMLReadable RAVE_DEPRECATED;
 typedef boost::shared_ptr<StringXMLReadable> StringXMLReadablePtr RAVE_DEPRECATED;
+OPENRAVE_API bool ParseXMLData(BaseXMLReader& reader, const char* buffer, int size);
 
 /// \brief maintains a hierarchy of classes each containing the xml attributes and data
 class OPENRAVE_API HierarchicalXMLReadable : public XMLReadable
@@ -149,6 +150,7 @@ public:
     virtual bool endElement(const std::string& name);
     virtual void characters(const std::string& ch);
     virtual XMLReadablePtr GetReadable();
+    virtual HierarchicalXMLReadablePtr GetHierarchicalReadable();
 private:
     std::string _xmlid;
     boost::shared_ptr<HierarchicalXMLReader> _pcurreader;
