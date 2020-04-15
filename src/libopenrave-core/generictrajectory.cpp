@@ -482,8 +482,6 @@ public:
         // Check whether binary or XML file
         stringstream::streampos pos = I.tellg();  // Save old position
         uint16_t binaryFileHeader = 0;
-
-
         if( !ReadBinaryUInt16(I, binaryFileHeader) ) {
             throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot read first 2 bytes for deserializing traj, stream might be empty "),ORE_InvalidArguments);
         }
