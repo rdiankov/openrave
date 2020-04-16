@@ -69,7 +69,7 @@ inline void WriteBinaryVector(std::ostream&f, const std::vector<dReal>& v)
 /* Helper functions for binary trajectory file reading */
 inline bool ReadBinaryUInt16(std::istream& f, uint16_t& value)
 {
-    f.read((char*) &value, (unsigned int)sizeof(value));
+    f.read((char*) &value, sizeof(value));
     return !!f;
 }
 
