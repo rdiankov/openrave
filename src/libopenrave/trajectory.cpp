@@ -68,7 +68,7 @@ void TrajectoryBase::deserialize(std::istream& I)
         throw OPENRAVE_EXCEPTION_FORMAT(_("error, failed to find </trajectory> in %s"),buf.str(),ORE_InvalidArguments);
     }
     xmlreaders::TrajectoryReader readerdata(GetEnv(),shared_trajectory());
-    LocalXML::ParseXMLData(readerdata, pbuf.c_str(), ppsize);
+    xmlreaders::ParseXMLData(readerdata, pbuf.c_str(), ppsize);
 }
 
 void TrajectoryBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)

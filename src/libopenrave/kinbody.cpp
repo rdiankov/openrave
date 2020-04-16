@@ -81,6 +81,50 @@ ElectricMotorActuatorInfo::ElectricMotorActuatorInfo()
 }
 
 
+void ElectricMotorActuatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    openravejson::SetJsonValueByKey(value, "modelType", model_type, allocator);
+    openravejson::SetJsonValueByKey(value, "assignedPowerRating", assigned_power_rating, allocator);
+    openravejson::SetJsonValueByKey(value, "maxSpeed", max_speed, allocator);
+    openravejson::SetJsonValueByKey(value, "noLoadSpeed", no_load_speed, allocator);
+    openravejson::SetJsonValueByKey(value, "stallTorque", stall_torque, allocator);
+    openravejson::SetJsonValueByKey(value, "maxInstantaneousTorque", max_instantaneous_torque, allocator);
+    openravejson::SetJsonValueByKey(value, "nominalSpeedTorquePoints", nominal_speed_torque_points, allocator);
+    openravejson::SetJsonValueByKey(value, "maxSpeedTorquePoints", max_speed_torque_points, allocator);
+    openravejson::SetJsonValueByKey(value, "nominalTorque", nominal_torque, allocator);
+    openravejson::SetJsonValueByKey(value, "rotorInertia", rotor_inertia, allocator);
+    openravejson::SetJsonValueByKey(value, "torqueConstant", torque_constant, allocator);
+    openravejson::SetJsonValueByKey(value, "nominalVoltage", nominal_voltage, allocator);
+    openravejson::SetJsonValueByKey(value, "speedConstant", speed_constant, allocator);
+    openravejson::SetJsonValueByKey(value, "startingCurrent", starting_current, allocator);
+    openravejson::SetJsonValueByKey(value, "terminalResistance", terminal_resistance, allocator);
+    openravejson::SetJsonValueByKey(value, "gearRatio", gear_ratio, allocator);
+    openravejson::SetJsonValueByKey(value, "coloumbFriction", coloumb_friction, allocator);
+    openravejson::SetJsonValueByKey(value, "viscousFriction", viscous_friction, allocator);
+}
+
+void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+{
+    openravejson::LoadJsonValueByKey(value, "modelType", model_type);
+    openravejson::LoadJsonValueByKey(value, "assignedPowerRating", assigned_power_rating);
+    openravejson::LoadJsonValueByKey(value, "maxSpeed", max_speed);
+    openravejson::LoadJsonValueByKey(value, "noLoadSpeed", no_load_speed);
+    openravejson::LoadJsonValueByKey(value, "stallTorque", stall_torque);
+    openravejson::LoadJsonValueByKey(value, "maxInstantaneousTorque", max_instantaneous_torque);
+    openravejson::LoadJsonValueByKey(value, "nominalSpeedTorquePoints", nominal_speed_torque_points);
+    openravejson::LoadJsonValueByKey(value, "maxSpeedTorquePoints", max_speed_torque_points);
+    openravejson::LoadJsonValueByKey(value, "nominalTorque", nominal_torque);
+    openravejson::LoadJsonValueByKey(value, "rotorInertia", rotor_inertia);
+    openravejson::LoadJsonValueByKey(value, "torqueConstant", torque_constant);
+    openravejson::LoadJsonValueByKey(value, "nominalVoltage", nominal_voltage);
+    openravejson::LoadJsonValueByKey(value, "speedConstant", speed_constant);
+    openravejson::LoadJsonValueByKey(value, "startingCurrent", starting_current);
+    openravejson::LoadJsonValueByKey(value, "terminalResistance", terminal_resistance);
+    openravejson::LoadJsonValueByKey(value, "gearRatio", gear_ratio);
+    openravejson::LoadJsonValueByKey(value, "coloumbFriction", coloumb_friction);
+    openravejson::LoadJsonValueByKey(value, "viscousFriction", viscous_friction);
+}
+
 KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)
 {
     _nHierarchyComputed = 0;
@@ -404,17 +448,25 @@ void KinBody::GetDOFValues(std::vector<dReal>& v, const std::vector<int>& dofind
 {
     CHECK_INTERNAL_COMPUTATION;
     if( dofindices.size() == 0 ) {
-        v.resize(0);
-        if( (int)v.capacity() < GetDOF() ) {
-            v.reserve(GetDOF());
-        }
+        v.clear();
+        v.reserve(GetDOF());
         FOREACHC(it, _vDOFOrderedJoints) {
             int toadd = (*it)->GetDOFIndex()-(int)v.size();
             if( toadd > 0 ) {
                 v.insert(v.end(),toadd,0);
             }
             else if( toadd < 0 ) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("dof indices mismatch joint %s, toadd=%d"), (*it)->GetName()%toadd, ORE_InvalidState);
+                std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                ss << "values=[";
+                FOREACH(itvalue, v) {
+                    ss << *itvalue << ", ";
+                }
+                ss << "]; jointorder=[";
+                FOREACH(itj, _vDOFOrderedJoints) {
+                    ss << (*itj)->GetName() << ", ";
+                }
+                ss << "];";
+                throw OPENRAVE_EXCEPTION_FORMAT(_("dof indices mismatch joint %s (dofindex=%d), toadd=%d, v.size()=%d in call GetDOFValues with %s"), (*it)->GetName()%(*it)->GetDOFIndex()%toadd%v.size()%ss.str(), ORE_InvalidState);
             }
             (*it)->GetValues(v,true);
         }
@@ -4595,7 +4647,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                     _vClosedLoops.back().back().second = _vPassiveJoints.at(itjoint-r->_vPassiveJoints.begin());
                 }
                 else {
-                    throw OPENRAVE_EXCEPTION_FORMAT(_("joint %s in closed loop doesn't belong to anythong?"),(*itjoint)->GetName(), ORE_Assert);
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("joint %s in closed loop doesn't belong to anything?"),(*itjoint)->GetName(), ORE_Assert);
                 }
             }
         }
@@ -4626,12 +4678,20 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _vGrabbedBodies.resize(0);
     FOREACHC(itgrabbedref, r->_vGrabbedBodies) {
         GrabbedConstPtr pgrabbedref = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbedref);
+        if( !pgrabbedref ) {
+            RAVELOG_WARN_FORMAT("env=%d, have uninitialized GrabbedConstPtr in _vGrabbedBodies", GetEnv()->GetId());
+            continue;
+        }
 
         KinBodyPtr pbodyref = pgrabbedref->_pgrabbedbody.lock();
         KinBodyPtr pgrabbedbody;
         if( !!pbodyref ) {
-            pgrabbedbody = GetEnv()->GetBodyFromEnvironmentId(pbodyref->GetEnvironmentId());
-            BOOST_ASSERT(pgrabbedbody->GetName() == pbodyref->GetName());
+            //pgrabbedbody = GetEnv()->GetBodyFromEnvironmentId(pbodyref->GetEnvironmentId());
+            pgrabbedbody = GetEnv()->GetKinBody(pbodyref->GetName());
+            if( !pgrabbedbody ) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("When cloning body '%s', could not find grabbed object '%s' in environmentid=%d"), GetName()%pbodyref->GetName()%pbodyref->GetEnv()->GetId(), ORE_InvalidState);
+            }
+            //BOOST_ASSERT(pgrabbedbody->GetName() == pbodyref->GetName());
 
             GrabbedPtr pgrabbed(new Grabbed(pgrabbedbody,_veclinks.at(KinBody::LinkPtr(pgrabbedref->_plinkrobot)->GetIndex())));
             pgrabbed->_troot = pgrabbedref->_troot;

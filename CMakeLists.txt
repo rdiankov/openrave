@@ -4,7 +4,7 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
-set (OPENRAVE_VERSION_MINOR 30)
+set (OPENRAVE_VERSION_MINOR 32)
 set (OPENRAVE_VERSION_PATCH 0)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
@@ -16,7 +16,6 @@ cmake_policy(SET CMP0002 NEW)
 # http://www.cmake.org/cmake/help/cmake-2.6.html#policy:CMP0003
 cmake_policy(SET CMP0003 NEW)
 
-# -std=c++11
 set(CMAKE_CXX_STANDARD 11)
 # Use, i.e. don't skip the full RPATH for the build tree
 set(CMAKE_SKIP_BUILD_RPATH  FALSE)
@@ -542,10 +541,8 @@ endif()
 
 find_package(RapidJSON)
 if( RAPIDJSON_FOUND )
-  set(OPENRAVE_RAPIDJSON 1)
 else()
-  set(OPENRAVE_RAPIDJSON 0)
-  message(WARNING "rapidjson library not found")
+  message(FATAL_ERROR "rapidjson library not found")
 endif()
 
 find_package(LibXml2)

@@ -21,10 +21,10 @@
 #include <openrave/utils.h>
 
 namespace openravepy {
-
 class PyStateRestoreContextBase
 {
 public:
+    PyStateRestoreContextBase() {}
     virtual ~PyStateRestoreContextBase() {
     }
     virtual py::object __enter__() = 0;
@@ -90,69 +90,31 @@ class PyKinBody : public PyInterfaceBase
     class PyGrabbedInfo
 {
 public:
-    PyGrabbedInfo() {
-        _trelative = ReturnTransform(Transform());
-    }
-    PyGrabbedInfo(const RobotBase::GrabbedInfo& info) {
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        _grabbedname = info._grabbedname;
-        _robotlinkname = info._robotlinkname;
-#else
-        _grabbedname = ConvertStringToUnicode(info._grabbedname);
-        _robotlinkname = ConvertStringToUnicode(info._robotlinkname);
-#endif
-        _trelative = ReturnTransform(info._trelative);
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        _setRobotLinksToIgnore = std::vector<int>(begin(info._setRobotLinksToIgnore), end(info._setRobotLinksToIgnore));
-#else
-        py::list setRobotLinksToIgnore;
-        FOREACHC(itindex, info._setRobotLinksToIgnore) {
-            setRobotLinksToIgnore.append(*itindex);
-        }
-        _setRobotLinksToIgnore = setRobotLinksToIgnore;
-#endif
-    }
+    PyGrabbedInfo();
+    PyGrabbedInfo(const RobotBase::GrabbedInfo& info);
 
-    RobotBase::GrabbedInfoPtr GetGrabbedInfo() const
-    {
-        RobotBase::GrabbedInfoPtr pinfo(new RobotBase::GrabbedInfo());
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        pinfo->_grabbedname = _grabbedname;
-        pinfo->_robotlinkname = _robotlinkname;
-        pinfo->_trelative = ExtractTransform(_trelative);
-        pinfo->_setRobotLinksToIgnore = std::set<int>(begin(_setRobotLinksToIgnore), end(_setRobotLinksToIgnore));
-#else
-        pinfo->_grabbedname = py::extract<std::string>(_grabbedname);
-        pinfo->_robotlinkname = py::extract<std::string>(_robotlinkname);
-        pinfo->_trelative = ExtractTransform(_trelative);
-        std::vector<int> v = ExtractArray<int>(_setRobotLinksToIgnore);
-        pinfo->_setRobotLinksToIgnore.clear();
-        FOREACHC(it,v) {
-            pinfo->_setRobotLinksToIgnore.insert(*it);
-        }
-#endif
-        return pinfo;
-    }
+    RobotBase::GrabbedInfoPtr GetGrabbedInfo() const;
 
-    std::string __str__() {
+    py::object SerializeJSON(dReal fUnitScale=1.0, py::object ooptions=py::none_());
+
+    void DeserializeJSON(py::object obj, dReal fUnitScale=1.0);
+
+    std::string __str__();
+    py::object __unicode__();
+
+private:
+    void _Update(const RobotBase::GrabbedInfo& info);
+
+public:
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        std::string robotlinkname = _robotlinkname;
-        std::string grabbedname = _grabbedname;
+    std::string _grabbedname;
+    std::string _robotlinkname;
 #else
-        std::string robotlinkname = py::extract<std::string>(_robotlinkname);
-        std::string grabbedname = py::extract<std::string>(_grabbedname);
+    py::object _grabbedname = py::none_();
+    py::object _robotlinkname = py::none_();
 #endif
-        return boost::str(boost::format("<grabbedinfo:%s -> %s>")%robotlinkname%grabbedname);
-    }
-    py::object __unicode__() {
-        return ConvertStringToUnicode(__str__());
-    }
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    std::string _grabbedname, _robotlinkname;
-#else
-    py::object _grabbedname = py::none_(), _robotlinkname = py::none_();
-#endif
-    py::object _trelative = py::none_();
+    py::object _trelative = ReturnTransform(Transform());
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     std::vector<int> _setRobotLinksToIgnore;
 #else

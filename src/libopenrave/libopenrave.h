@@ -89,6 +89,8 @@
 #include <sstream>
 #include <iomanip>
 
+#include <openrave/openravejson.h>
+
 #ifdef USE_CRLIBM
 #include <crlibm.h> // robust/accurate math
 #endif
@@ -444,11 +446,6 @@ inline void polyroots(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
             }
         }
     }
-}
-
-namespace LocalXML
-{
-bool ParseXMLData(BaseXMLReader& reader, const char* buffer, int size);
 }
 
 #ifdef _WIN32

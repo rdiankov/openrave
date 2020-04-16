@@ -29,6 +29,8 @@ namespace OpenRAVE {
 
 namespace xmlreaders {
 
+OPENRAVE_API bool ParseXMLData(BaseXMLReader& reader, const char* buffer, int size);
+
 class OPENRAVE_API StringXMLReadable : public XMLReadable
 {
 public:
@@ -156,6 +158,7 @@ public:
     virtual bool endElement(const std::string& name);
     virtual void characters(const std::string& ch);
     virtual XMLReadablePtr GetReadable();
+    virtual HierarchicalXMLReadablePtr GetHierarchicalReadable();
 private:
     std::string _xmlid;
     boost::shared_ptr<HierarchicalXMLReader> _pcurreader;

@@ -23,7 +23,7 @@ namespace OpenRAVE {
 
 // To distinguish between binary and XML trajectory files
 static const uint16_t MAGIC_NUMBER = 0x62ff;
-static const uint16_t VERSION_NUMBER = 0x0001;  // Version number for serialization
+static const uint16_t BINARY_TRAJECTORY_VERSION_NUMBER = 0x0003;  // Version number for serialization
 
 static const dReal g_fEpsilonLinear = RavePow(g_fEpsilon,0.9);
 static const dReal g_fEpsilonQuadratic = RavePow(g_fEpsilon,0.45); // should be 0.6...perhaps this is related to parabolic smoother epsilons?
@@ -46,6 +46,7 @@ inline void WriteBinaryInt(std::ostream& f, int value)
 
 inline void WriteBinaryString(std::ostream& f, const std::string& s)
 {
+    BOOST_ASSERT(s.length() <= std::numeric_limits<uint16_t>::max());
     const uint16_t length = (uint16_t) s.length();
     WriteBinaryUInt16(f, length);
     if (length > 0)
@@ -420,7 +421,7 @@ public:
 
             // Write binary file header
             WriteBinaryUInt16(O, MAGIC_NUMBER);
-            WriteBinaryUInt16(O, VERSION_NUMBER);
+            WriteBinaryUInt16(O, BINARY_TRAJECTORY_VERSION_NUMBER);
 
             /* Store meta-data */
 
@@ -441,6 +442,33 @@ public:
             WriteBinaryVector(O, this->_vtrajdata);
 
             WriteBinaryString(O, GetDescription());
+
+            // Readable interfaces, added on BINARY_TRAJECTORY_VERSION_NUMBER=0x0002
+            std::stringstream ss;
+            const uint16_t numReadableInterfaces = GetReadableInterfaces().size();
+            WriteBinaryUInt16(O, numReadableInterfaces);
+            FOREACHC(itReadableInterface, GetReadableInterfaces()) {
+                WriteBinaryString(O, itReadableInterface->first);  // xmlid
+
+                // try to see if the readable interface is a known type
+                ss.str(std::string());
+
+                std::string readerType;
+                xmlreaders::HierarchicalXMLReadablePtr pHierarchical = boost::dynamic_pointer_cast<xmlreaders::HierarchicalXMLReadable>(itReadableInterface->second);
+                xmlreaders::StreamXMLWriterPtr writer;
+                if( !!pHierarchical ) {
+                    readerType = "HierarchicalXMLReadable";
+                    writer.reset(new xmlreaders::StreamXMLWriter("root")); // need to parse with xml, so need a root
+                }
+                else {
+                    writer.reset(new xmlreaders::StreamXMLWriter(std::string()));
+                }
+                itReadableInterface->second->Serialize(writer, options);
+                writer->Serialize(ss);
+
+                WriteBinaryString(O, ss.str());
+                WriteBinaryString(O, readerType);
+            }
         }
     }
 
@@ -459,7 +487,8 @@ public:
             uint16_t versionNumber = 0;
             ReadBinaryUInt16(I, versionNumber);
 
-            if (versionNumber != VERSION_NUMBER)
+            // currently supported versions: 0x0001, 0x0002
+            if (versionNumber > BINARY_TRAJECTORY_VERSION_NUMBER || versionNumber < 0x0001)
             {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("unsupported trajectory format version %d "),versionNumber,ORE_InvalidArguments);
             }
@@ -484,6 +513,57 @@ public:
             /* Read trajectory data */
             ReadBinaryVector(I, this->_vtrajdata);
             ReadBinaryString(I, __description);
+
+            // clear out existing readable interfaces
+            {
+                const READERSMAP& readableInterfaces = GetReadableInterfaces();
+                for (READERSMAP::const_iterator itReadableInterface = readableInterfaces.begin(); itReadableInterface != readableInterfaces.end(); ++itReadableInterface ) {
+                    SetReadableInterface(itReadableInterface->first, XMLReadablePtr());
+                }
+            }
+            // versions >= 0x0002 have readable interfaces
+            if (versionNumber >= 0x0002)
+            {
+                // read readable interfaces
+                uint16_t numReadableInterfaces = 0;
+                ReadBinaryUInt16(I, numReadableInterfaces);
+                std::string xmlid, readerType;
+                std::string serializedReadableInterface;
+                for (size_t readableInterfaceIndex = 0; readableInterfaceIndex < numReadableInterfaces; ++readableInterfaceIndex)
+                {
+                    ReadBinaryString(I, xmlid);
+                    ReadBinaryString(I, serializedReadableInterface);
+
+                    XMLReadablePtr readableInterface;
+                    if( versionNumber >= 3 ) {
+                        ReadBinaryString(I, readerType);
+                        if( readerType == "HierarchicalXMLReadable" ) {
+                            xmlreaders::HierarchicalXMLReader xmlreader(xmlid, AttributesList());
+                            xmlreaders::ParseXMLData(xmlreader, serializedReadableInterface.c_str(), serializedReadableInterface.size());
+                            if( !!xmlreader.GetHierarchicalReadable() ) {
+                                // should be one root only
+                                if( xmlreader.GetHierarchicalReadable()->_listchildren.size() == 1 ) {
+                                    readableInterface = xmlreader.GetHierarchicalReadable()->_listchildren.front();
+                                }
+                                else {
+                                    RAVELOG_WARN_FORMAT("tried to parse readable interface %s, but got more than one root", xmlid);
+                                    readableInterface = xmlreader.GetHierarchicalReadable();
+                                }
+                            }
+                            else {
+                                readableInterface = xmlreader.GetReadable();
+                            }
+                        }
+                        else {
+                            readableInterface.reset(new xmlreaders::StringXMLReadable(xmlid, serializedReadableInterface));
+                        }
+                    }
+                    else {
+                        readableInterface.reset(new xmlreaders::StringXMLReadable(xmlid, serializedReadableInterface));
+                    }
+                    SetReadableInterface(xmlid, readableInterface);
+                }
+            }
         }
         else {
             // try XML deserialization
