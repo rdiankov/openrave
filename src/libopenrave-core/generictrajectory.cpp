@@ -69,12 +69,7 @@ inline void WriteBinaryVector(std::ostream&f, const std::vector<dReal>& v)
 /* Helper functions for binary trajectory file reading */
 inline bool ReadBinaryUInt16(std::istream& f, uint16_t& value)
 {
-    while (f.peek() == ' ') {
-        f.ignore(1);
-    }
-    if (!!f) {
-        f.read((char*) &value, (unsigned int)sizeof(value));
-    }
+    f.read((char*) &value, (unsigned int)sizeof(value));
     return !!f;
 }
 
@@ -481,6 +476,12 @@ public:
     {
         // Check whether binary or XML file
         stringstream::streampos pos = I.tellg();  // Save old position
+
+        // try to remove the leading whitespace
+        while (I.peek() == ' ') {
+            I.ignore(1);
+        }
+
         uint16_t binaryFileHeader = 0;
         if( !ReadBinaryUInt16(I, binaryFileHeader) ) {
             throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot read first 2 bytes for deserializing traj, stream might be empty "),ORE_InvalidArguments);
