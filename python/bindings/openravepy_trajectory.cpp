@@ -387,7 +387,6 @@ void PyTrajectoryBase::deserialize(const string& s)
 object PyTrajectoryBase::serialize(object options)
 {
     std::stringstream ss;
-    ss.clear();
     ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
     _ptrajectory->serialize(ss,pyGetIntFromPy(options, 0));
     return py::to_object(ss.str());
