@@ -858,7 +858,7 @@ typedef boost::shared_ptr<BasicRRTParameters> BasicRRTParametersPtr;
 class OPENRAVE_API RRTWorkspaceSamplingParameters : public RRTParameters
 {
 public:
-    RRTWorkspaceSamplingParameters() : RRTParameters(), _fGoalBiasProb(0.01f), _fWorkspaceSamplingBiasProb(0.01f), _fWorkspaceStepLength(0.01f), _bProcessingRRTWS(false)
+    RRTWorkspaceSamplingParameters() : RRTParameters()
     {
         _vXMLParameters.push_back("goalbias");
         _vXMLParameters.push_back("workspacesamplingbias");
@@ -866,13 +866,13 @@ public:
         _vXMLParameters.push_back("manipname");
     }
 
-    dReal _fGoalBiasProb; ///< the probability of the sampled configuration being the root of the other tree (therefore, the extension is biased towards a goal).
-    dReal _fWorkspaceSamplingBiasProb; ///< the probability that the tree extension will be done by moving the tool along a randomly sampled workspace direction.
-    dReal _fWorkspaceStepLength; ///< in m., how much to move the tool in each step of tree extension.
+    dReal _fGoalBiasProb = 0.01; ///< the probability of the sampled configuration being the root of the other tree (therefore, the extension is biased towards a goal).
+    dReal _fWorkspaceSamplingBiasProb = 0.01; ///< the probability that the tree extension will be done by moving the tool along a randomly sampled workspace direction.
+    dReal _fWorkspaceStepLength = 0.01; ///< in m., how much to move the tool in each step of tree extension.
     std::string manipname; ///< name of the used manipulator.
 
 protected:
-    bool _bProcessingRRTWS;
+    bool _bProcessingRRTWS = false;
 
     virtual bool serialize(std::ostream& O, int options=0) const
     {
