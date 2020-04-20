@@ -27,20 +27,10 @@ public:
     /// \brief Initialize a node with a parent node and a config
     NodeWithTransform(NodeWithTransform* pparent, const std::vector<dReal>& vconfig) : rrtparent(pparent) {
         std::copy(vconfig.begin(), vconfig.end(), q);
-        _level = 0;
-        _hasselfchild = 0;
-        _usenn = 1;
-        _userdata = 0;
-        _transformComputed = 0;
     }
 
     NodeWithTransform(NodeWithTransform* pparent, const dReal* pconfig, int ndof) : rrtparent(pparent) {
         std::copy(pconfig, pconfig + ndof, q);
-        _level = 0;
-        _hasselfchild = 0;
-        _usenn = 1;
-        _userdata = 0;
-        _transformComputed = 0;
     }
 
     /// \brief Initialize a node with a parent node, a config, and a corresponding transform
@@ -49,10 +39,6 @@ public:
         // Assign rot, trans separately to skip checking of rot normalization. Is it ok, though?
         this->pose.rot = pose.rot;
         this->pose.trans = pose.trans;
-        _level = 0;
-        _hasselfchild = 0;
-        _usenn = 1;
-        _userdata = 0;
         _transformComputed = 1;
     }
 
@@ -61,10 +47,6 @@ public:
         // Assign rot, trans separately to skip checking of rot normalization. Is it ok, though?
         this->pose.rot = pose.rot;
         this->pose.trans = pose.trans;
-        _level = 0;
-        _hasselfchild = 0;
-        _usenn = 1;
-        _userdata = 0;
         _transformComputed = 1;
     }
 
@@ -73,16 +55,16 @@ public:
 
     NodeWithTransform* rrtparent; ///< pointer to the parent of this node in RRT tree.
     std::vector<NodeWithTransform*> _vchildren; ///< direct children of this node in cover tree (nodes in the level below this). This is not related to RRT tree's children of this node.
-    int16_t _level; ///< cover tree's level of this node
-    uint8_t _hasselfchild; ///< if 1, then _vchildren contains a clone of this node in the level below it.
-    uint8_t _usenn; ///< if 1, then include this node in the nearest neighbor search. otherwise, ignore this node.
-    uint8_t _userdata;
+    int16_t _level = 0; ///< cover tree's level of this node
+    uint8_t _hasselfchild = 0; ///< if 1, then _vchildren contains a clone of this node in the level below it.
+    uint8_t _usenn = 1; ///< if 1, then include this node in the nearest neighbor search. otherwise, ignore this node.
+    uint8_t _userdata = 0;
 
 #ifdef _DEBUG
     int id;
 #endif
 
-    uint8_t _transformComputed; ///< if 1, the transform corresponding to this node (`pose`) has been computed.
+    uint8_t _transformComputed = 0; ///< if 1, the transform corresponding to this node (`pose`) has been computed.
     Transform pose; ///< a transform corresponding to this node.
     dReal q[0]; ///< the configuration immediately following this struct.
 };
@@ -97,17 +79,6 @@ public:
     SpatialTree2(int fromgoal) : SpatialTree<Node>(fromgoal)
     {
         _fromgoal = fromgoal;
-        _fStepLength = 0.04f;
-        _dof = 0;
-        _numnodes = 0;
-        _base = 1.5; // optimal is 1.3?
-        _fBaseInv = 1/_base;
-        _fBaseChildMult = 1/(_base-1);
-        _maxdistance = 0;
-        _mindistance = 0;
-        _maxlevel = 0;
-        _minlevel = 0;
-        _fMaxLevelBound = 0;
     }
 
     ~SpatialTree2()
@@ -506,8 +477,8 @@ public:
         if( _vCurrentLevelNodes[0].first->_usenn ) {
             bestnode = _vCurrentLevelNodes[0];
         }
-        while(_vCurrentLevelNodes.size() > 0 ) {
-            _vNextLevelNodes.resize(0);
+        while(!_vCurrentLevelNodes.empty()) {
+            _vNextLevelNodes.clear();
             //RAVELOG_VERBOSE_FORMAT("level %d (%f) has %d nodes", currentlevel%fLevelBound%_vCurrentLevelNodes.size());
             dReal minchilddist=std::numeric_limits<dReal>::infinity();
             FOREACH(itcurrentnode, _vCurrentLevelNodes) {
@@ -524,7 +495,7 @@ public:
                 }
             }
 
-            _vCurrentLevelNodes.resize(0);
+            _vCurrentLevelNodes.clear();
             dReal ftestbound = minchilddist + fLevelBound;
             FOREACH(itnode, _vNextLevelNodes) {
                 if( itnode->second < ftestbound ) {
@@ -664,7 +635,7 @@ public:
         int enclevel = _EncodeLevel(currentlevel);
         if( enclevel < (int)_vsetLevelNodes.size() ) {
             // build the level below
-            _vNextLevelNodes.resize(0); // for currentlevel-1
+            _vNextLevelNodes.clear(); // for currentlevel-1
             FOREACHC(itcurrentnode, vCurrentLevelNodes) {
                 if( itcurrentnode->second <= fLevelBound ) {
                     if( !closestNodeInRange ) {
@@ -702,7 +673,7 @@ public:
                 }
             }
 
-            if( _vNextLevelNodes.size() > 0 ) {
+            if( !_vNextLevelNodes.empty() ) {
                 _vCurrentLevelNodes.swap(_vNextLevelNodes); // invalidates vCurrentLevelNodes
                 // note that after _Insert call, _vCurrentLevelNodes could be complete lost/reset
                 int nParentFound = _InsertRecursive(nodein, _vCurrentLevelNodes, currentlevel-1, fLevelBound*_fBaseInv);
@@ -822,8 +793,8 @@ public:
 private:
     boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;
     boost::weak_ptr<PlannerBase> _planner;
-    dReal _fStepLength;
-    int _dof; ///< the number of values of each state
+    dReal _fStepLength = 0.04;
+    int _dof = 0; ///< the number of values of each state
     int _fromgoal;
 
     // cover tree data structures
@@ -831,13 +802,13 @@ private:
 
     std::vector< std::set<NodePtr> > _vsetLevelNodes; ///< _vsetLevelNodes[enc(level)][node] holds the indices of the children of "node" of a given the level. enc(level) maps (-inf,inf) into [0,inf) so it can be indexed by the vector. Every node has an entry in a map here. If the node doesn't hold any children, then it is at the leaf of the tree. _vsetLevelNodes.at(_EncodeLevel(_maxlevel)) is the root.
 
-    dReal _maxdistance; ///< maximum possible distance between two states. used to balance the tree. Has to be > 0.
-    dReal _mindistance; ///< minimum possible distance between two states until they are declared the same
-    dReal _base, _fBaseInv, _fBaseChildMult; ///< a constant used to control the max level of traversion. _fBaseInv = 1/_base, _fBaseChildMult=1/(_base-1)
-    int _maxlevel; ///< the maximum allowed levels in the tree, this is where the root node starts (inclusive)
-    int _minlevel; ///< the minimum allowed levels in the tree (inclusive)
-    int _numnodes; ///< the number of nodes in the current tree starting at the root at _vsetLevelNodes.at(_EncodeLevel(_maxlevel))
-    dReal _fMaxLevelBound; // pow(_base, _maxlevel)
+    dReal _maxdistance = 0.0; ///< maximum possible distance between two states. used to balance the tree. Has to be > 0.
+    dReal _mindistance = 0.0; ///< minimum possible distance between two states until they are declared the same
+    dReal _base = 1.5, _fBaseInv = 1.0/_base, _fBaseChildMult = 1.0/(_base-1.0); ///< a constant used to control the max level of traversion. _fBaseInv = 1/_base, _fBaseChildMult=1/(_base-1)
+    int _maxlevel = 0; ///< the maximum allowed levels in the tree, this is where the root node starts (inclusive)
+    int _minlevel = 0; ///< the minimum allowed levels in the tree (inclusive)
+    int _numnodes = 0; ///< the number of nodes in the current tree starting at the root at _vsetLevelNodes.at(_EncodeLevel(_maxlevel))
+    dReal _fMaxLevelBound = 0.0; // pow(_base, _maxlevel)
 
     // cache
     std::vector<NodePtr> _vchildcache;
@@ -944,7 +915,7 @@ public:
         }
 
         std::vector<dReal> vinitial(_parameters->GetDOF());
-        _vecInitialNodes.resize(0);
+        _vecInitialNodes.clear();
         _sampleConfig.resize(_parameters->GetDOF());
         for( size_t iinitial = 0; iinitial < _parameters->vinitialconfig.size(); iinitial += _parameters->GetDOF() ) {
             std::copy(_parameters->vinitialconfig.begin() + iinitial,
@@ -975,7 +946,7 @@ public:
         }
 
         std::vector<dReal> vgoal(_parameters->GetDOF());
-        _vecGoalNodes.resize(0);
+        _vecGoalNodes.clear();
         _nValidGoals = 0;
         for( size_t igoal = 0; igoal < _parameters->vgoalconfig.size(); igoal += _parameters->GetDOF() ) {
             std::copy(_parameters->vgoalconfig.begin() + igoal,
@@ -1005,7 +976,7 @@ public:
             _parameters->_nMaxIterations = 10000;
         }
 
-        _vgoalpaths.resize(0);
+        _vgoalpaths.clear();
         if( _vgoalpaths.capacity() < _parameters->_minimumgoalpaths ) {
             _vgoalpaths.reserve(_parameters->_minimumgoalpaths);
         }
@@ -1035,7 +1006,7 @@ public:
     {
         _ikparam.SetTransform6D(pose);
         _pmanip->FindIKSolutions(_ikparam, IKFO_CheckEnvCollisions, _vcacheikreturns);
-        if( _vcacheikreturns.size() == 0 ) {
+        if( _vcacheikreturns.empty() ) {
             return false;
         }
 
@@ -1090,7 +1061,7 @@ public:
                 return PlannerStatus("Planning was interrupted", PS_Interrupted);
             }
             else if( callbackaction == PA_ReturnWithAnySolution ) {
-                if( _vgoalpaths.size() > 0 ) {
+                if( !_vgoalpaths.empty() ) {
                     break;
                 }
             }
@@ -1175,7 +1146,7 @@ public:
             }
             else {
                 // Use normal RRT logic
-                _sampleConfig.resize(0);
+                _sampleConfig.clear();
                 if( (bSampleGoal || fSampledValue1 < _parameters->_fGoalBiasProb) && _nValidGoals > 0 ) {
                     bSampleGoal = false;
 
@@ -1205,7 +1176,7 @@ public:
                     }
                 }
 
-                if( _sampleConfig.size() == 0 ) {
+                if( _sampleConfig.empty() ) {
                     if( !_parameters->_samplefn(_sampleConfig) ) {
                         continue;
                     }
@@ -1266,7 +1237,7 @@ public:
 
         } // end while (main planning loop)
 
-        if( _vgoalpaths.size() == 0 ) {
+        if( _vgoalpaths.empty() ) {
             std::string description = str(boost::format(_("env=%d, plan failed in %fs, iter=%d, nMaxIterations=%d"))%_environmentid%(0.001f*(float)(utils::GetMilliTime() - basetime))%(iter/3)%_parameters->_nMaxIterations);
             RAVELOG_WARN(description);
             return PlannerStatus(description, PS_Failed);
@@ -1297,7 +1268,7 @@ public:
     virtual void _ExtractPath(GOALPATH& goalpath, NodeBase* iConnectedForward, NodeBase* iConnectedBackward)
     {
         const int ndof = _parameters->GetDOF();
-        _cachedpath.resize(0);
+        _cachedpath.clear();
 
         // Add nodes from treeForward
         goalpath.startindex = -1;
