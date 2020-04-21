@@ -51,9 +51,26 @@ public:
         Vector _vdirection;
         std::string _sIkSolverXMLId; ///< xml id of the IkSolver interface to attach
         std::vector<std::string> _vGripperJointNames;         ///< names of the gripper joints
+        std::string _gripperid; ///< associates the manipulator with a GripperInfo
     };
     typedef boost::shared_ptr<ManipulatorInfo> ManipulatorInfoPtr;
     typedef boost::shared_ptr<ManipulatorInfo const> ManipulatorInfoConstPtr;
+
+    /// \brief Holds the definition of a gripper that can be mounted on the robot.
+    class OPENRAVE_API GripperInfo
+    {
+public:
+        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
+        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+
+        std::string gripperid; ///< unique gripperid
+        std::string grippertype; ///< gripper type
+        std::vector<std::string> gripperJointNames; ///< names of the gripper joints
+
+        boost::shared_ptr<rapidjson::Document> _pdocument;  ///< contains entire rapid json document to hold custom parameters
+    };
+    typedef boost::shared_ptr<GripperInfo> GripperInfoPtr;
+    typedef boost::shared_ptr<GripperInfo const> GripperInfoConstPtr;
 
     /// \brief Defines a chain of joints for an arm and set of joints for a gripper. Simplifies operating with them.
     class OPENRAVE_API Manipulator : public boost::enable_shared_from_this<Manipulator>
@@ -119,6 +136,10 @@ public:
         /// \brief the end effector link (used to define workspace distance)
         virtual LinkPtr GetEndEffector() const {
             return __pEffector;
+        }
+
+        virtual std::string GetGripperId() const {
+            return _info._gripperid;
         }
 
         /// \brief Release all bodies grabbed by the end effector of this manipualtor
@@ -559,6 +580,7 @@ public:
         std::vector<KinBody::JointInfoPtr> _vJointInfos; ///< extracted joint infos (inluding passive) representing the connected body. The names are the original "desired" names.
         std::vector<RobotBase::ManipulatorInfoPtr> _vManipulatorInfos; ///< extracted manip infos representing the connected body. The names are the original "desired" names.
         std::vector<RobotBase::AttachedSensorInfoPtr> _vAttachedSensorInfos; ///< extracted sensor infos representing the connected body. The names are the original "desired" names.
+        std::vector<RobotBase::GripperInfoPtr> _vGripperInfos; ///< extracted gripper infos representing the connected body. The names are the original "desired" names.
         bool _bIsActive; ///< if true, then add the connected body. Otherwise do not add it.
     };
     typedef boost::shared_ptr<ConnectedBodyInfo> ConnectedBodyInfoPtr;
@@ -605,7 +627,12 @@ public:
         /// \brief gets the resolved links added to the robot.
         ///
         /// Has one-to-one correspondence with _info._vAttachedSensorInfos
-        virtual void GetResolvedAttachedSensors(std::vector<RobotBase::AttachedSensorPtr>& attachedsensors);
+        virtual void GetResolvedAttachedSensors(std::vector<RobotBase::AttachedSensorPtr>& attachedSensors);
+
+        /// \brief gets the resolved gripper infos added to the robot.
+        ///
+        /// Has one-to-one correspondence with _info._vGripperInfos
+        virtual void GetResolvedGripperInfos(std::vector<RobotBase::GripperInfoPtr>& gripperInfos);
 
         virtual LinkPtr GetAttachingLink() const {
             return LinkPtr(_pattachedlink);
@@ -655,6 +682,7 @@ private:
         std::vector< std::pair<std::string, RobotBase::JointPtr> > _vResolvedJointNames; ///< for every entry in _info._vJointInfos, the resolved link names. Also serves as cache for pointers.
         std::vector< std::pair<std::string, RobotBase::ManipulatorPtr> > _vResolvedManipulatorNames; ///< for every entry in _info._vManipInfos. Also serves as cache for pointers
         std::vector< std::pair<std::string, RobotBase::AttachedSensorPtr> > _vResolvedAttachedSensorNames; ///< for every entry in _info._vAttachedSensorResolvedNames. Also serves as cache for pointers
+        std::vector< std::pair<std::string, RobotBase::GripperInfoPtr> > _vResolvedGripperInfoNames; ///< for every entry in _info._vGripperInfos. Also serves as cache for pointers
 
         RobotBaseWeakPtr _pattachedrobot; ///< the robot that the body is attached to
         LinkWeakPtr _pattachedlink;         ///< the robot link that the body is attached to
@@ -735,6 +763,13 @@ private:
     virtual const std::vector<ConnectedBodyPtr>& GetConnectedBodies() const {
         return _vecConnectedBodies;
     }
+
+    virtual const std::vector<GripperInfoPtr>& GetGripperInfos() const {
+        return _vecGripperInfos;
+    }
+
+    /// \brief Returns a GriperInfo that matches with gripperid
+    virtual GripperInfoPtr GetGripperInfo(const std::string& gripperid) const;
 
     // \brief gets the active states of all connected bodies
     virtual void GetConnectedBodyActiveStates(std::vector<uint8_t>& activestates) const;
@@ -972,6 +1007,14 @@ private:
     /// Will change the robot structure hash..
     virtual bool RemoveConnectedBody(RobotBase::ConnectedBody &connectedBody);
 
+    /// \brief adds a GripperInfo to the list
+    ///
+    /// \throw openrave_exception If removeduplicate is false and there exists a manipulator with the same gripperid, will throw an exception
+    /// \return true if added a new gripper
+    virtual bool AddGripperInfo(GripperInfoPtr gripperinfo, bool removeduplicate=false);
+
+    /// \brief removes a gripper from the robot list. if successful, returns true
+    virtual bool RemoveGripperInfo(const std::string& gripperid);
 
     /** \brief Calculates the translation jacobian with respect to a link.
 
@@ -1108,6 +1151,7 @@ protected:
     std::vector<AttachedSensorPtr> _vecAttachedSensors; ///< \see GetAttachedSensors
 
     std::vector<ConnectedBodyPtr> _vecConnectedBodies;  ///< \see GetConnectedBodies
+    std::vector<GripperInfoPtr> _vecGripperInfos; /// \see GetGripperInfos
 
     std::vector<int> _vActiveDOFIndices, _vAllDOFIndices;
     Vector vActvAffineRotationAxis;
