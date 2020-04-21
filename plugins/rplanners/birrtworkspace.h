@@ -152,13 +152,13 @@ public:
     {
         if( !!_pNodesPool ) {
             // make sure all children are deleted
-            for(size_t ilevel = 0; ilevel < _vsetLevelNodes.size(); ++ilevel) {
-                FOREACH(itnode, _vsetLevelNodes[ilevel]) {
-                    (*itnode)->~Node();
+            for(const std::set<NodePtr>& setLevelNodes : _vsetLevelNodes) {
+                for(const NodePtr& node : setLevelNodes) {
+                    node->~Node();
                 }
             }
-            FOREACH(itchildren, _vsetLevelNodes) {
-                itchildren->clear();
+            for(std::set<NodePtr>& setLevelNodes : _vsetLevelNodes) {
+                setLevelNodes.clear();
             }
             //_pNodesPool->purge_memory();
             _pNodesPool.reset(new boost::pool<>(sizeof(Node) + _dof*sizeof(dReal)));
@@ -243,8 +243,7 @@ public:
                         NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0);
                         if( !!pnewnode ) {
                             bHasAdded = true;
-                            pnode = pnewnode;
-                            plastnode = pnode;
+                            plastnode = pnode = pnewnode;
                             ++iAdded;
                         }
                         else {
@@ -260,8 +259,7 @@ public:
                         NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0);
                         if( !!pnewnode ) {
                             bHasAdded = true;
-                            pnode = pnewnode;
-                            plastnode = pnode;
+                            plastnode = pnode = pnewnode;
                             ++iAdded;
                         }
                         else {
@@ -276,8 +274,7 @@ public:
                 // Since the final configuration is dircetly _vNewConfig, simply add only _vNewConfig to the tree
                 NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0);
                 if( !!pnewnode ) {
-                    pnode = pnewnode;
-                    plastnode = pnode;
+                    plastnode = pnode = pnewnode;
                     bHasAdded = true;
                 }
             }
@@ -324,7 +321,7 @@ public:
         // Extend the tree
         int maxExtensionIters = 100;
         for( int iter = 0; iter < maxExtensionIters; ++iter ) {
-            _newpose.trans = _curpose.trans + _curpose.rotate(_vstepdirection);
+            _newpose.trans = _curpose * _vstepdirection;
             if( !_ikfn(_newpose, _vCurConfig, _vNewConfig) ) {
                 return bHasAdded ? ET_Success : ET_Failed;
             }
@@ -366,8 +363,7 @@ public:
                         NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0);
                         if( !!pnewnode ) {
                             bHasAdded = true;
-                            pnode = pnewnode;
-                            plastnode = pnode;
+                            plastnode = pnode = pnewnode;
                             ++iAdded;
                         }
                         else {
@@ -383,8 +379,7 @@ public:
                         NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0);
                         if( !!pnewnode ) {
                             bHasAdded = true;
-                            pnode = pnewnode;
-                            plastnode = pnode;
+                            plastnode = pnode = pnewnode;
                             ++iAdded;
                         }
                         else {
@@ -399,8 +394,7 @@ public:
                 // Since the final configuration is dircetly _vNewConfig, simply add only _vNewConfig to the tree
                 NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0);
                 if( !!pnewnode ) {
-                    pnode = pnewnode;
-                    plastnode = pnode;
+                    plastnode = pnode = pnewnode;
                     bHasAdded = true;
                 }
             }
@@ -422,9 +416,9 @@ public:
             if( fSampledValue <= _vAccumWeights[ilevel] ) {
                 // Select ilevel
                 std::set<NodePtr>& setLevelChildren = _vsetLevelNodes.at(ilevel);
-                size_t numLevelNodes = setLevelChildren.size();
-                int iSelectedNode = floorf((fSampledValue - fPrevLevelBound)*numLevelNodes/(_vAccumWeights[ilevel] - fPrevLevelBound));
-                typename std::set<NodePtr>::iterator itnode = setLevelChildren.begin();
+                const size_t numLevelNodes = setLevelChildren.size();
+                const int iSelectedNode = floorf((fSampledValue - fPrevLevelBound)*numLevelNodes/(_vAccumWeights[ilevel] - fPrevLevelBound));
+                typename std::set<NodePtr>::const_iterator itnode = setLevelChildren.begin();
                 std::advance(itnode, iSelectedNode);
                 return *itnode;
             }
@@ -435,12 +429,7 @@ public:
     }
 
     inline int _EncodeLevel(int level) const {
-        if( level <= 0 ) {
-            return -2*level;
-        }
-        else {
-            return 2*level+1;
-        }
+        return (level <= 0) ?  (-2*level) : (2*level+1);
     }
 
     inline dReal _ComputeDistance(const dReal* config0, const dReal* config1) const
@@ -460,9 +449,7 @@ public:
 
     std::pair<NodePtr, dReal> _FindNearestNode(const std::vector<dReal>& vquerystate) const
     {
-        std::pair<NodePtr, dReal> bestnode;
-        bestnode.first = NULL;
-        bestnode.second = std::numeric_limits<dReal>::infinity();
+        std::pair<NodePtr, dReal> bestnode {NULL, std::numeric_limits<dReal>::infinity()};
         if( _numnodes == 0 ) {
             return bestnode;
         }
@@ -471,16 +458,14 @@ public:
         int currentlevel = _maxlevel; // where the root node is
         // traverse all levels gathering up the children at each level
         dReal fLevelBound = _fMaxLevelBound;
-        _vCurrentLevelNodes.resize(1);
-        _vCurrentLevelNodes[0].first = *_vsetLevelNodes.at(_EncodeLevel(_maxlevel)).begin();
-        _vCurrentLevelNodes[0].second = _ComputeDistance(_vCurrentLevelNodes[0].first->q, vquerystate);
+        _vCurrentLevelNodes = {{*_vsetLevelNodes.at(_EncodeLevel(_maxlevel)).begin(), _ComputeDistance(_vCurrentLevelNodes[0].first->q, vquerystate)}};
         if( _vCurrentLevelNodes[0].first->_usenn ) {
             bestnode = _vCurrentLevelNodes[0];
         }
         while(!_vCurrentLevelNodes.empty()) {
             _vNextLevelNodes.clear();
             //RAVELOG_VERBOSE_FORMAT("level %d (%f) has %d nodes", currentlevel%fLevelBound%_vCurrentLevelNodes.size());
-            dReal minchilddist=std::numeric_limits<dReal>::infinity();
+            dReal minchilddist = std::numeric_limits<dReal>::infinity();
             FOREACH(itcurrentnode, _vCurrentLevelNodes) {
                 // only take the children whose distances are within the bound
                 FOREACHC(itchild, itcurrentnode->first->_vchildren) {
@@ -573,9 +558,7 @@ public:
             _numnodes += 1;
         }
         else { // _numnodes > 0
-            _vCurrentLevelNodes.resize(1);
-            _vCurrentLevelNodes[0].first = *_vsetLevelNodes.at(_EncodeLevel(_maxlevel)).begin();
-            _vCurrentLevelNodes[0].second = _ComputeDistance(_vCurrentLevelNodes[0].first->q, vconfig);
+            _vCurrentLevelNodes = {{*_vsetLevelNodes.at(_EncodeLevel(_maxlevel)).begin(), _ComputeDistance(_vCurrentLevelNodes[0].first->q, vconfig)}};
             int nParentFound = _InsertRecursive(pnewnode, _vCurrentLevelNodes, _maxlevel, _fMaxLevelBound);
             if( nParentFound == 0 ) {
                 // This could possibly happen with circular joints. See https://github.com/rdiankov/openrave/issues/323
