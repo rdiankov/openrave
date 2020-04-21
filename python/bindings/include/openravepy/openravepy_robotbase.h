@@ -53,6 +53,8 @@ public:
 
         void SetName(const std::string& s);
 
+        object GetGripperId() const;
+        
         PyRobotBasePtr GetRobot();
 
         bool SetIkSolver(PyIkSolverBasePtr iksolver);
@@ -217,6 +219,10 @@ public:
 
         object GetResolvedManipulators();
 
+        object GetResolvedAttachedSensors();
+
+        object GetResolvedGripperInfos();
+
         std::string __repr__();
 
         std::string __str__();
@@ -293,6 +299,11 @@ public:
 
     void SetConnectedBodyActiveStates(object oactivestates);
 
+    bool AddGripperInfo(object oGripperInfo, bool removeduplicate=false);
+    bool RemoveGripperInfo(const std::string& gripperid);
+
+    object GetGripperInfos();
+
     object GetController() const;
 
     bool SetController(PyControllerBasePtr pController, const std::string& args);
@@ -305,7 +316,7 @@ public:
     void SetActiveDOFs(const object& dofindices, int nAffineDOsBitmask);
     void SetActiveDOFs(const object& dofindices, int nAffineDOsBitmask, object rotationaxis);
 
-    int GetActiveDOF() const ;
+    int GetActiveDOF() const;
     int GetAffineDOF() const;
     int GetAffineDOFIndex(DOFAffine dof) const;
 
