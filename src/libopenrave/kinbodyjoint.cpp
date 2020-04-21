@@ -83,16 +83,43 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
     int dof = GetDOF();
 
     switch (_type) {
-    case JointRevolute:
+    case JointRevolute: // jointHinge and jointRevolute have same value
         OpenRAVE::JSON::SetJsonValueByKey(value, "type", "revolute", allocator);
         break;
-    case JointPrismatic:
+    case JointPrismatic: // jointSlider and jointPrismatic have same value
         OpenRAVE::JSON::SetJsonValueByKey(value, "type", "prismatic", allocator);
+        break;
+    case JointRR:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "rr", allocator);
+        break;
+    case JointRP:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "rp", allocator);
+        break;
+    case JointPR:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "pr", allocator);
+        break;
+    case JointPP:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "pp", allocator);
+        break;
+    case JointSpecialBit:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "specialbit", allocator);
+        break;
+    case JointUniversal:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "universal", allocator);
+        break;
+    case JointHinge2:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "hinge2", allocator);
+        break;
+    case JointSpherical:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "spherical", allocator);
+        break;
+    case JointTrajectory:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "trajectory", allocator);
         break;
     case JointNone:
         break;
     default:
-        OpenRAVE::JSON::SetJsonValueByKey(value, "type", static_cast<int>(_type), allocator);
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", static_cast<int>(_type), allocator);  // TODO: should we raise error here ?
         break;
     }
 
