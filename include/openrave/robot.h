@@ -580,6 +580,7 @@ public:
         std::vector<KinBody::JointInfoPtr> _vJointInfos; ///< extracted joint infos (inluding passive) representing the connected body. The names are the original "desired" names.
         std::vector<RobotBase::ManipulatorInfoPtr> _vManipulatorInfos; ///< extracted manip infos representing the connected body. The names are the original "desired" names.
         std::vector<RobotBase::AttachedSensorInfoPtr> _vAttachedSensorInfos; ///< extracted sensor infos representing the connected body. The names are the original "desired" names.
+        std::vector<RobotBase::GripperInfoPtr> _vGripperInfos; ///< extracted gripper infos representing the connected body. The names are the original "desired" names.
         bool _bIsActive; ///< if true, then add the connected body. Otherwise do not add it.
     };
     typedef boost::shared_ptr<ConnectedBodyInfo> ConnectedBodyInfoPtr;
@@ -626,7 +627,12 @@ public:
         /// \brief gets the resolved links added to the robot.
         ///
         /// Has one-to-one correspondence with _info._vAttachedSensorInfos
-        virtual void GetResolvedAttachedSensors(std::vector<RobotBase::AttachedSensorPtr>& attachedsensors);
+        virtual void GetResolvedAttachedSensors(std::vector<RobotBase::AttachedSensorPtr>& attachedSensors);
+
+        /// \brief gets the resolved gripper infos added to the robot.
+        ///
+        /// Has one-to-one correspondence with _info._vGripperInfos
+        virtual void GetResolvedGripperInfos(std::vector<RobotBase::GripperInfoPtr>& gripperInfos);
 
         virtual LinkPtr GetAttachingLink() const {
             return LinkPtr(_pattachedlink);
@@ -676,6 +682,7 @@ private:
         std::vector< std::pair<std::string, RobotBase::JointPtr> > _vResolvedJointNames; ///< for every entry in _info._vJointInfos, the resolved link names. Also serves as cache for pointers.
         std::vector< std::pair<std::string, RobotBase::ManipulatorPtr> > _vResolvedManipulatorNames; ///< for every entry in _info._vManipInfos. Also serves as cache for pointers
         std::vector< std::pair<std::string, RobotBase::AttachedSensorPtr> > _vResolvedAttachedSensorNames; ///< for every entry in _info._vAttachedSensorResolvedNames. Also serves as cache for pointers
+        std::vector< std::pair<std::string, RobotBase::GripperInfoPtr> > _vResolvedGripperInfoNames; ///< for every entry in _info._vGripperInfos. Also serves as cache for pointers
 
         RobotBaseWeakPtr _pattachedrobot; ///< the robot that the body is attached to
         LinkWeakPtr _pattachedlink;         ///< the robot link that the body is attached to
@@ -760,6 +767,9 @@ private:
     virtual const std::vector<GripperInfoPtr>& GetGripperInfos() const {
         return _vecGripperInfos;
     }
+
+    /// \brief Returns a GriperInfo that matches with gripperid
+    virtual GripperInfoPtr GetGripperInfo(const std::string& gripperid) const;
 
     // \brief gets the active states of all connected bodies
     virtual void GetConnectedBodyActiveStates(std::vector<uint8_t>& activestates) const;

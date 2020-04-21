@@ -217,6 +217,10 @@ public:
 
         object GetResolvedManipulators();
 
+        object GetResolvedAttachedSensors();
+
+        object GetResolvedGripperInfos();
+
         std::string __repr__();
 
         std::string __str__();

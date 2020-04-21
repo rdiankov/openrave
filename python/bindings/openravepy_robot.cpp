@@ -203,15 +203,34 @@ void PyConnectedBodyInfo::_Update(const RobotBase::ConnectedBodyInfo& info)
         attachedSensorInfos.append(toPyAttachedSensorInfo(**itattachedSensorinfo));
     }
     _attachedSensorInfos = attachedSensorInfos;
+
+    py::list gripperInfos;
+    FOREACH(itGripperInfo, info._vGripperInfos) {
+        rapidjson::Document rGripperInfo;
+        (*itGripperInfo)->SerializeJSON(rGripperInfo, rGripperInfo.GetAllocator());
+        gripperInfos.append(toPyObject(rGripperInfo));
+    }
+    _gripperInfos = gripperInfos;
+
+    _bIsActive = info._bIsActive;
 }
 
 RobotBase::ConnectedBodyInfoPtr PyConnectedBodyInfo::GetConnectedBodyInfo() const
 {
     RobotBase::ConnectedBodyInfoPtr pinfo(new RobotBase::ConnectedBodyInfo());
-    pinfo->_name = py::extract<std::string>(_name);
-    pinfo->_linkname = py::extract<std::string>(_linkname);
-    pinfo->_trelative = ExtractTransform(_trelative);
-    pinfo->_url = py::extract<std::string>(_url);
+    if( !IS_PYTHONOBJECT_NONE(_name) ) {
+        pinfo->_name = py::extract<std::string>(_name);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_linkname) ) {
+        pinfo->_linkname = py::extract<std::string>(_linkname);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_trelative) ) {
+        pinfo->_trelative = ExtractTransform(_trelative);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_url) ) {
+        pinfo->_url = py::extract<std::string>(_url);
+    }
+    pinfo->_bIsActive = _bIsActive;
     // extract all the infos
     return pinfo;
 }
@@ -1001,6 +1020,30 @@ object PyRobotBase::PyConnectedBody::GetResolvedManipulators()
         omanips.append(toPyRobotManipulator(*itmanip, _pyenv));
     }
     return omanips;
+}
+
+object PyRobotBase::PyConnectedBody::GetResolvedAttachedSensors()
+{
+    py::list oattachedSensors;
+    std::vector<RobotBase::AttachedSensorPtr> vattachedSensors;
+    _pconnected->GetResolvedAttachedSensors(vattachedSensors);
+    FOREACH(itattachedSensor, vattachedSensors) {
+        //oattachedSensors.append(toPyRobotAttachedSensorulator(*itattachedSensor, _pyenv));
+    }
+    return oattachedSensors;
+}
+
+object PyRobotBase::PyConnectedBody::GetResolvedGripperInfos()
+{
+    py::list pyGripperInfos;
+    std::vector<RobotBase::GripperInfoPtr> vgripperInfos;
+    _pconnected->GetResolvedGripperInfos(vgripperInfos);
+    FOREACH(itGripperInfo, vgripperInfos) {
+        rapidjson::Document rGripperInfo;
+        (*itGripperInfo)->SerializeJSON(rGripperInfo, rGripperInfo.GetAllocator());
+        pyGripperInfos.append(toPyObject(rGripperInfo));
+    }
+    return pyGripperInfos;
 }
 
 std::string PyRobotBase::PyConnectedBody::__repr__() {
@@ -1906,6 +1949,8 @@ void init_openravepy_robot()
                                .def_readwrite("_jointInfos", &PyConnectedBodyInfo::_jointInfos)
                                .def_readwrite("_manipulatorInfos", &PyConnectedBodyInfo::_manipulatorInfos)
                                .def_readwrite("_attachedSensorInfos", &PyConnectedBodyInfo::_attachedSensorInfos)
+                               .def_readwrite("_gripperInfos", &PyConnectedBodyInfo::_gripperInfos)
+                               .def_readwrite("_bIsActive", &PyConnectedBodyInfo::_bIsActive)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                                .def("SerializeJSON", &PyConnectedBodyInfo::SerializeJSON,
                                     "unitScale"_a = 1.0,
@@ -2359,6 +2404,8 @@ void init_openravepy_robot()
         .def("GetResolvedLinks",&PyRobotBase::PyConnectedBody::GetResolvedLinks, DOXY_FN(RobotBase::ConnectedBody,GetResolvedLinks))
         .def("GetResolvedJoints",&PyRobotBase::PyConnectedBody::GetResolvedJoints, DOXY_FN(RobotBase::ConnectedBody,GetResolvedJoints))
         .def("GetResolvedManipulators",&PyRobotBase::PyConnectedBody::GetResolvedManipulators, DOXY_FN(RobotBase::ConnectedBody,GetResolvedManipulators))
+        .def("GetResolvedAttachedSensors",&PyRobotBase::PyConnectedBody::GetResolvedAttachedSensors, DOXY_FN(RobotBase::ConnectedBody,GetResolvedAttachedSensors))
+        .def("GetResolvedGripperInfos",&PyRobotBase::PyConnectedBody::GetResolvedGripperInfos, DOXY_FN(RobotBase::ConnectedBody,GetResolvedGripperInfos))
         .def("__str__",&PyRobotBase::PyConnectedBody::__str__)
         .def("__repr__",&PyRobotBase::PyConnectedBody::__repr__)
         .def("__unicode__",&PyRobotBase::PyConnectedBody::__unicode__)

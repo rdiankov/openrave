@@ -1830,6 +1830,16 @@ bool RobotBase::RemoveGripperInfo(const std::string& gripperid)
     return false;
 }
 
+RobotBase::GripperInfoPtr RobotBase::GetGripperInfo(const std::string& gripperid) const
+{
+    FOREACHC(itGripperInfo, _vecGripperInfos) {
+        if( (*itGripperInfo)->gripperid == gripperid ) {
+            return *itGripperInfo;
+        }
+    }
+    return RobotBase::GripperInfoPtr();
+}
+
 void RobotBase::SimulationStep(dReal fElapsedTime)
 {
     KinBody::SimulationStep(fElapsedTime);
