@@ -2317,7 +2317,7 @@ private:
                 // TODO add the free joints
             }
             daeElementRef gripperid = ptec->add("gripperid");
-            gripperid->setAttribute("name",(*itmanip)->GetGripperId().c_str());
+            gripperid->setCharData((*itmanip)->GetGripperId().c_str());
         }
     }
 

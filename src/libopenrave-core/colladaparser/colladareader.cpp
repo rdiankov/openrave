@@ -3226,7 +3226,7 @@ public:
 
                     daeElementRef pgripperid = tec->getChild("gripperid");
                     if( !!pgripperid ) {
-                        manipinfo._gripperid = pgripperid->getAttribute("name");
+                        manipinfo._gripperid = pgripperid->getCharData();
                     }
                     else{
                         manipinfo._gripperid.clear();
