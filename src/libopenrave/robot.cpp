@@ -26,15 +26,15 @@ void RobotBase::GripperInfo::SerializeJSON(rapidjson::Value &value, rapidjson::D
         BOOST_ASSERT(_pdocument->IsObject());
         value.CopyFrom(*_pdocument, allocator, true);
     }
-    openravejson::SetJsonValueByKey(value, "gripperid", gripperid, allocator);
-    openravejson::SetJsonValueByKey(value, "grippertype", grippertype, allocator);
+    openravejson::SetJsonValueByKey(value, "id", gripperid, allocator);
+    openravejson::SetJsonValueByKey(value, "gripperType", grippertype, allocator);
     openravejson::SetJsonValueByKey(value, "gripperJointNames", gripperJointNames, allocator);
 }
 
 void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
-    openravejson::LoadJsonValueByKey(value, "gripperid", gripperid);
-    openravejson::LoadJsonValueByKey(value, "grippertype", grippertype);
+    openravejson::LoadJsonValueByKey(value, "id", gripperid);
+    openravejson::LoadJsonValueByKey(value, "gripperType", grippertype);
     openravejson::LoadJsonValueByKey(value, "gripperJointNames", gripperJointNames);
 
     // should always create a new _pdocument in case an old one is initialized and copied
