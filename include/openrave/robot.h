@@ -692,6 +692,21 @@ public:
         RobotBaseInfo() : KinBodyInfo() {}
         virtual ~RobotBaseInfo() {}
 
+        virtual const RobotBaseInfo& operator=(const RobotBaseInfo& other) {
+            _id = other._id;
+            _vLinkInfos = other._vLinkInfos;
+            _vJointInfos = other._vJointInfos;
+            _vManipInfos = other._vManipInfos;
+            _vAttachedSensorInfos = other._vAttachedSensorInfos;
+            _vConnectedBodyInfos = other._vConnectedBodyInfos;
+            return *this;
+        }
+
+        virtual void SetReferenceInfo(const RobotBaseInfo& other) {
+            _referenceInfo = boost::make_shared<RobotBaseInfo>(other);
+            *this = other;
+        }
+
         virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
         std::vector<ManipulatorInfoPtr> _vManipInfos; ///< list of pointers to ManipulatorInfo
@@ -699,6 +714,7 @@ public:
         std::vector<ConnectedBodyInfoPtr> _vConnectedBodyInfos; ///< list of pointers to ConnectedBodyInfo
 
         std::string _id;
+        boost::shared_ptr<RobotBaseInfo> _referenceInfo;
 
 private:
         void _Update(const RobotBase::RobotBaseInfo& info);
@@ -1123,6 +1139,15 @@ private:
         return boost::static_pointer_cast<RobotBase const>(shared_from_this());
     }
 
+    virtual inline const RobotBaseInfo& GetInfo() const {
+        return _info;
+    }
+    virtual inline void SetInfo(const RobotBaseInfo& info) {
+        _info = info;
+    }
+
+
+
 protected:
     RobotBase(EnvironmentBasePtr penv);
 
@@ -1162,6 +1187,8 @@ protected:
     dReal _fQuatLimitMaxAngle, _fQuatMaxAngleVelocity, _fQuatAngleResolution, _fQuatAngleWeight;
 
     ConfigurationSpecification _activespec;
+
+    RobotBaseInfo _info;
 private:
     virtual const char* GetHash() const {
         return OPENRAVE_ROBOT_HASH;

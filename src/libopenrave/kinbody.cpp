@@ -129,7 +129,6 @@ void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, d
 void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     OpenRAVE::JSON::SetJsonValueByKey(value, "uri", _uri, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "__deleted__", _bIsDeleted, allocator);
     if (_vLinkInfos.size() > 0) {
         rapidjson::Value rLinkInfoValues;
         rLinkInfoValues.SetArray();
@@ -157,8 +156,8 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
 
 void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "__deleted__", _bIsDeleted);
 
     _vLinkInfos.clear();
     if (value.HasMember("links")) {
@@ -180,15 +179,6 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     }
 }
 
-void KinBody::KinBodyInfo::SetReferenceInfo(boost::shared_ptr<const KinBody::KinBodyInfo> refInfo) {
-    if (!!refInfo) {
-        _id = refInfo->_id;
-        _vLinkInfos = refInfo->_vLinkInfos;
-        _vJointInfos = refInfo->_vJointInfos;
-        _referenceInfo.reset();
-        _referenceInfo = refInfo;
-    }
-}
 
 KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)
 {
@@ -473,6 +463,7 @@ bool KinBody::InitFromInfo(const KinBodyInfoConstPtr& info)
 {
     std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(info->_vLinkInfos.begin(), info->_vLinkInfos.end());
     std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(info->_vJointInfos.begin(), info->_vJointInfos.end());
+    SetInfo(*info);
     return KinBody::Init(vLinkInfosConst, vJointInfosConst, info->_uri);
 }
 
@@ -5049,7 +5040,7 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
             if( !!plink1 ) {
                 break;
             }
-            }
+        }
         if( (*itlink)->_info._name == info._linkname1 ) {
             plink1 = *itlink;
             if( !!plink0 ) {

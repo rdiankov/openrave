@@ -353,6 +353,18 @@ inline void LoadJsonValue(const rapidjson::Value& v, std::pair<T, U>& t) {
     }
 }
 
+inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::DOFValue& dofValue) {
+    if (!v.IsObject()) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object.", OpenRAVE::ORE_InvalidArguments);
+    }
+    if (!v.HasMember("jointId") || !v.HasMember("value")) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value is missing jointId or jointValue", OpenRAVE::ORE_InvalidArguments);
+    }
+
+    LoadJsonValue(v["jointId"], dofValue.jointId);
+    LoadJsonValue(v["value"], dofValue.value);
+}
+
 template<class T>
 inline void LoadJsonValue(const rapidjson::Value& v, std::vector<T>& t) {
     if (v.IsArray()) {
@@ -447,7 +459,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::TriMesh& t)
     t.vertices.clear();
     t.vertices.reserve(v["vertices"].Size() / 3);
 
-    for (rapidjson::Value::ConstValueIterator it = v["vertices"].Begin(); it != v["vertices"].End(); ) {
+    for (rapidjson::Value::ConstValueIterator it = v["vertices"].Begin(); it != v["vertices"].End();) {
         OpenRAVE::Vector vertex;
         LoadJsonValue(*(it++), vertex.x);
         LoadJsonValue(*(it++), vertex.y);

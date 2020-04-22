@@ -95,6 +95,7 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
 
 void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale)
 {
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _t);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "massTransform", _tMassFrame);
@@ -135,15 +136,6 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
 
     OpenRAVE::JSON::LoadJsonValueByKey(value, "isStatic", _bStatic);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "isEnabled", _bIsEnabled);
-}
-
-// \breif keep the refInfo pointer and copy the content
-void KinBody::LinkInfo::SetReferenceInfo(boost::shared_ptr<const LinkInfo> refInfo) {
-    if (!!refInfo) {
-        _Update(*refInfo);
-        _referenceInfo.reset();
-        _referenceInfo = refInfo;
-    }
 }
 
 const KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& other)

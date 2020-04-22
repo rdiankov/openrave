@@ -2322,6 +2322,13 @@ enum DOFAffine
     DOF_Transform = (DOF_XYZ|DOF_RotationQuat), ///< translate and rotate freely in 3D space
 };
 
+/// \brief joint id and dofvalue mapping structure for serialize and deserialize
+typedef struct DOFValue {
+    std::string jointId;
+    dReal value;
+} DOFValue;
+
+
 /** \brief returns a string representation of the error code
  */
 OPENRAVE_API const char* RaveGetErrorCodeString(OpenRAVEErrorCode error);

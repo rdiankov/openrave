@@ -555,16 +555,7 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Do
 }
 
 
-void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale)
-{
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _t);
-
-    _t.trans *= fUnitScale;
-
-    std::string typestr;
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "type", typestr);
-
+void KinBody::GeometryInfo::DeserializeGeomData(const rapidjson::Value& value, std::string typestr, dReal fUnitScale){
     if (typestr == "box") {
         _type = GT_Box;
         OpenRAVE::JSON::LoadJsonValueByKey(value, "halfExtents", _vGeomData);
@@ -630,19 +621,24 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported geometry type \"%s\"", typestr, ORE_InvalidArguments);
     }
 
+}
+
+void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale)
+{
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _t);
+
+    _t.trans *= fUnitScale;
+
+    std::string typestr;
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "type", typestr);
+    DeserializeGeomData(value, typestr, fUnitScale);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "transparency", _fTransparency);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "visible", _bVisible);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "diffuseColor", _vDiffuseColor);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "ambientColor", _vAmbientColor);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "modifiable", _bModifiable);
-}
-
-void KinBody::GeometryInfo::SetReferenceInfo(boost::shared_ptr<GeometryInfo const> refInfo) {
-    if (!!refInfo) {
-        _Update(*refInfo);
-        _referenceInfo.reset();
-        _referenceInfo = refInfo;
-    }
 }
 
 void KinBody::GeometryInfo::_Update(const KinBody::GeometryInfo& info) {
@@ -668,7 +664,6 @@ void KinBody::GeometryInfo::_Update(const KinBody::GeometryInfo& info) {
     _bVisible = info._bVisible;
     _bModifiable = info._bModifiable;
     _id = info._id;
-    _bIsDeleted = info._bIsDeleted;
 }
 
 AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const

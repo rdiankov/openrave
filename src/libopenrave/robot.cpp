@@ -524,6 +524,7 @@ bool RobotBase::InitFromInfo(const RobotBaseInfoConstPtr& info)
     std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(info->_vJointInfos.begin(), info->_vJointInfos.end());
     std::vector<RobotBase::ManipulatorInfoConstPtr> vManipInfosConst(info->_vManipInfos.begin(), info->_vManipInfos.end());
     std::vector<RobotBase::AttachedSensorInfoConstPtr> vAttachedSensorInfosConst(info->_vAttachedSensorInfos.begin(), info->_vAttachedSensorInfos.end());
+    SetInfo(*info);
     if( !RobotBase::Init(vLinkInfosConst, vJointInfosConst, vManipInfosConst, vAttachedSensorInfosConst, info->_uri) ) {
         return false;
     }

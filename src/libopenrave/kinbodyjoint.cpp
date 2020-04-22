@@ -228,6 +228,7 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
         throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported joint type \"%s\"", typestr, ORE_InvalidArguments);
     }
 
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "parentLinkName", _linkname0);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "anchors", _vanchor);
@@ -290,14 +291,6 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
         ElectricMotorActuatorInfoPtr info(new ElectricMotorActuatorInfo());
         info->DeserializeJSON(value["electricMotorActuator"], fUnitScale);
         _infoElectricMotor = info;
-    }
-}
-
-void KinBody::JointInfo::SetReferenceInfo(boost::shared_ptr<const JointInfo> refInfo) {
-    if (!!refInfo) {
-        *this = *refInfo;
-        _referenceInfo.reset();
-        _referenceInfo = refInfo;
     }
 }
 

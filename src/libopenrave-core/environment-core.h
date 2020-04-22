@@ -2252,9 +2252,13 @@ public:
 
     virtual void SetUnit(std::pair<std::string, dReal> unit)
     {
+        if (unit.first.empty() || unit.second == 0) {
+            RAVELOG_WARN("unit is empty or scale is 0. set to [meter, 1]");
+            unit.first = "meter";
+            unit.second = 1;
+        }
         _unit = unit;
     }
-
 
 protected:
 

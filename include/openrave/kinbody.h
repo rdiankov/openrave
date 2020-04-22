@@ -22,6 +22,8 @@
 #ifndef OPENRAVE_KINBODY_H
 #define OPENRAVE_KINBODY_H
 
+#include <boost/make_shared.hpp>
+
 namespace OpenRAVE {
 
 class OpenRAVEFunctionParserReal;
@@ -172,8 +174,8 @@ public:
 
         ///< \param multiply all translational values by fUnitScale
         virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
+        virtual void DeserializeGeomData(const rapidjson::Value& value, std::string typestr, dReal fUnitScale=1.0);
 
-        virtual void SetReferenceInfo(boost::shared_ptr<GeometryInfo const> refInfo);
 
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
 
@@ -244,8 +246,6 @@ public:
 
         // reference architecture
         std::string _id;
-        bool _bIsDeleted;
-        boost::shared_ptr<GeometryInfo const> _referenceInfo;
 
 private:
         void _Update(const KinBody::GeometryInfo& info);
@@ -267,8 +267,6 @@ public:
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
-
-        virtual void SetReferenceInfo(boost::shared_ptr<LinkInfo const> refInfo);
 
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like
@@ -302,8 +300,6 @@ public:
 
         // reference architecture
         std::string _id;
-        boost::shared_ptr<KinBody::LinkInfo const> _referenceInfo;
-        bool _bIsDeleted;   // indicated if the inherited link should be deleted in current environment
 
 private:
         void _Update(const KinBody::LinkInfo& other);
@@ -906,7 +902,6 @@ public:
 
         virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
-        virtual void SetReferenceInfo(boost::shared_ptr<const JointInfo> refInfo);
 
         JointType _type; /// The joint type
         std::string _name;         ///< the unique joint name
@@ -989,8 +984,6 @@ public:
 
         // reference architecture
         std::string _id;
-        boost::shared_ptr<JointInfo const> _referenceInfo;
-        bool _bIsDeleted;
     };
     typedef boost::shared_ptr<JointInfo> JointInfoPtr;
     typedef boost::shared_ptr<JointInfo const> JointInfoConstPtr;
@@ -1627,18 +1620,31 @@ public:
 
         virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
-        virtual void SetReferenceInfo(boost::shared_ptr<const KinBodyInfo> refInfo);
 
         virtual ~KinBodyInfo() {}
 
+
+        virtual const KinBodyInfo& operator=(const KinBodyInfo& other) {
+            _id = other._id;
+            _uri = other._uri;
+            _referenceUri = other._referenceUri;
+            _vLinkInfos = other._vLinkInfos;
+            _vJointInfos = other._vJointInfos;
+            return *this;
+        }
+
+        virtual void SetReferenceInfo(const KinBodyInfo& other) {
+            _referenceInfo = boost::make_shared<KinBodyInfo>(other);
+            *this = other;
+        }
+
         std::string _id;
-        std::string _uri;
+        std::string _uri;  // current body info uri
+        std::string _referenceUri;  // referenced body info uri
         std::vector<LinkInfoPtr> _vLinkInfos; ///< list of pointers to LinkInfo
         std::vector<JointInfoPtr> _vJointInfos; ///< list of pointers to JointInfo
 
-        // reference architecture
-        boost::shared_ptr<KinBody::KinBodyInfo const> _referenceInfo;
-        bool _bIsDeleted;   // indicated if the inherited link should be deleted in current environment
+        boost::shared_ptr<KinBodyInfo> _referenceInfo;
     };
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
@@ -2584,6 +2590,13 @@ private:
         return boost::static_pointer_cast<KinBody const>(shared_from_this());
     }
 
+    virtual inline const KinBodyInfo& GetInfo() const {
+        return _info;
+    }
+    virtual inline void SetInfo(const KinBodyInfo& info) {
+        _info = info;
+    }
+
 protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies
     KinBody(InterfaceType type, EnvironmentBasePtr penv);
@@ -2690,6 +2703,8 @@ protected:
     uint32_t _nHierarchyComputed; ///< 2 if the joint heirarchy and other cached information is computed. 1 if the hierarchy information is computing
     bool _bMakeJoinedLinksAdjacent; ///< if true, then automatically add adjacent links to the adjacency list so that their self-collisions are ignored.
     bool _bAreAllJoints1DOFAndNonCircular; ///< if true, then all controllable joints  of the robot are guaranteed to be either revolute or prismatic and non-circular. This allows certain functions that do operations on the joint values (like SubtractActiveDOFValues) to be optimized without calling Joint functions.
+
+    KinBodyInfo _info; // kinbody info
 
 private:
     mutable std::string __hashkinematics;

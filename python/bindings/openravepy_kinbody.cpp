@@ -404,6 +404,7 @@ PyLinkInfoPtr toPyLinkInfo(const KinBody::LinkInfo& linkinfo)
     return PyLinkInfoPtr(new PyLinkInfo(linkinfo));
 }
 
+
 PyElectricMotorActuatorInfo::PyElectricMotorActuatorInfo() {
 }
 
@@ -2045,6 +2046,10 @@ py::object PyKinBody::PyGrabbedInfo::__unicode__() {
 PyKinBody::PyKinBodyInfo::PyKinBodyInfo() {
 }
 
+PyKinBody::PyKinBodyInfo::PyKinBodyInfo(const KinBody::KinBodyInfo& info) {
+    _Update(info);
+}
+
 KinBody::KinBodyInfoPtr PyKinBody::PyKinBodyInfo::GetKinBodyInfo() const {
     KinBody::KinBodyInfoPtr pInfo(new KinBody::KinBodyInfo());
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -3550,6 +3555,11 @@ PyStateRestoreContextBase* PyKinBody::CreateKinBodyStateSaver(object options)
     return CreateStateSaver(options);
 }
 
+object PyKinBody::GetInfo() {
+    return py::to_object(boost::shared_ptr<PyKinBody::PyKinBodyInfo>(new PyKinBody::PyKinBodyInfo(_pbody->GetInfo())));
+}
+
+
 PyStateRestoreContextBase* PyKinBody::CreateStateSaver(object options)
 {
     PyKinBodyStateSaverPtr saver;
@@ -5044,6 +5054,7 @@ void init_openravepy_kinbody()
 #else
                          .def("CreateKinBodyStateSaver",&PyKinBody::CreateKinBodyStateSaver, CreateKinBodyStateSaver_overloads(PY_ARGS("options") "Creates an object that can be entered using 'with' and returns a KinBodyStateSaver")[return_value_policy<manage_new_object>()])
 #endif
+                         .def("GetInfo", &PyKinBody::GetInfo, DOXY_FN(KinBody, GetInfo))
                          .def("__enter__",&PyKinBody::__enter__)
                          .def("__exit__",&PyKinBody::__exit__)
                          .def("__repr__",&PyKinBody::__repr__)

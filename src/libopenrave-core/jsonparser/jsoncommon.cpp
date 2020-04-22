@@ -21,37 +21,59 @@ namespace OpenRAVE {
 // \brief extract info from rapidjson Value and merge it into vector
 template<typename T>
 void _ExtractInfo(const rapidjson::Value& value, std::vector<OPENRAVE_SHARED_PTR<T>>& infos, dReal fUnitScale) {
-    std::string name;
+    std::string id = "";
+    std::string name = "";
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", name);
-    bool found = false;
-    OPENRAVE_SHARED_PTR<T> ref;
-    FOREACHC(itRef, infos) {
-        if ((*itRef)->_name == name) {
-            found = true;
-            ref = *itRef;
-            infos.erase(itRef);
-            break;
+
+    // generate a new id for this structure
+    if (id.empty()) {
+        std::set<std::string> usedId;
+        FOREACH(it, infos) {
+            usedId.insert((*it)->_id);
         }
+        unsigned int suffix = 0;
+        do {
+            id = name + std::to_string(suffix);
+            RAVELOG_WARN_FORMAT("missing id in info %s, create a new id %s", name%id);
+            suffix += 1;
+        } while(usedId.find(id) != usedId.end());
     }
-    OPENRAVE_SHARED_PTR<T> info(new T());
-    if (!found) {
-        info->DeserializeJSON(value, fUnitScale);  // TODO: DeserializeJSON  is equal to DeSerializeDiffJSON with an empty refInfo
-    }
-    else {
+
+    typename std::vector<OPENRAVE_SHARED_PTR<T>>::iterator itRef;
+    itRef = std::find_if(infos.begin(), infos.end(), [&](OPENRAVE_SHARED_PTR<const T> info){return info->_id == id;});
+    if (itRef != infos.end()){
         if (value.HasMember("__deleted__") && value["__deleted__"].GetBool() == true) {
+            infos.erase(itRef); // remove from vector
             return;
         }
-        info->SetReferenceInfo(ref);
-        DeserializeDiffJSON(*info, value, fUnitScale);
+        else {
+            DeserializeDiffJSON(**itRef, value, fUnitScale);
+        }
     }
-    infos.push_back(info);
+    else{
+        OPENRAVE_SHARED_PTR<T> info(new T());
+        info->DeserializeJSON(value, fUnitScale);
+        info->_id = id;
+        infos.push_back(info);
+    }
 }
+
+
+template void _MergeInfo(std::string id, std::vector<boost::shared_ptr<KinBody::LinkInfo>>& infos, const rapidjson::Value& value, dReal fUnitScale);
 
 template void _ExtractInfo(const rapidjson::Value& value, std::vector<KinBody::LinkInfoPtr>& infos, dReal fUnitScale=1.0);
 template void _ExtractInfo(const rapidjson::Value& value, std::vector<KinBody::JointInfoPtr>& infos, dReal fUnitScale=1.0);
 template void _ExtractInfo(const rapidjson::Value& value, std::vector<RobotBase::ManipulatorInfoPtr>& infos, dReal fUnitScale=1.0);
+template void _ExtractInfo(const rapidjson::Value& value, std::vector<RobotBase::AttachedSensorInfoPtr>& infos, dReal fUnitScale=1.0);
 
-
+template<typename T> inline bool OverwriteJsonValueByKey(const rapidjson::Value& value, const char* key, T& field) {
+    if (value.HasMember(key)) {
+        OpenRAVE::JSON::LoadJsonValueByKey(value, key, field);
+        return true;
+    }
+    return false;
+}
 
 void SerializeDiffJSON(const KinBody::GeometryInfo& coverInfo, const KinBody::GeometryInfo& baseInfo, rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options)
 {
@@ -85,6 +107,7 @@ void SerializeDiffJSON(const RobotBase::ConnectedBodyInfo& coverInfo, const Robo
 
 // overwrite refInfo with value and save result into targetInfo
 void DeserializeDiffJSON(KinBody::LinkInfo& targetInfo, const rapidjson::Value& value, dReal fUnitScale) {
+
     // TODO assert name/id is equal
     OpenRAVE::JSON::LoadJsonValueByKey(value, "id", targetInfo._id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", targetInfo._name);
@@ -135,26 +158,63 @@ void DeserializeDiffJSON(KinBody::LinkInfo& targetInfo, const rapidjson::Value& 
 
 void DeserializeDiffJSON(KinBody::JointInfo& targetInfo, const rapidjson::Value& value, dReal fUnitScale) {
 
+
 }
 
 void DeserializeDiffJSON(KinBody::GeometryInfo& targetInfo, const rapidjson::Value& value, dReal fUnitScale) {
+    OverwriteJsonValueByKey(value, "name", targetInfo._name);
+    if (OverwriteJsonValueByKey(value, "transform", targetInfo._t)) {
+        targetInfo._t.trans *= fUnitScale;
+    }
 
+    std::string typestr;
+    if(OverwriteJsonValueByKey(value, "type", typestr)) {
+        // reload geometry data
+        targetInfo.DeserializeGeomData(value, typestr, fUnitScale);
+    }
+
+    OverwriteJsonValueByKey(value, "transparency", targetInfo._fTransparency);
+    OverwriteJsonValueByKey(value, "visible", targetInfo._bVisible);
+    OverwriteJsonValueByKey(value, "diffuseColor", targetInfo._vDiffuseColor);
+    OverwriteJsonValueByKey(value, "ambientColor", targetInfo._vAmbientColor);
+    OverwriteJsonValueByKey(value, "modifiable", targetInfo._bModifiable);
 }
-
 
 void DeserializeDiffJSON(RobotBase::ManipulatorInfo& targetInfo, const rapidjson::Value& value, dReal fUnitScale) {
 
 }
+
+void DeserializeDiffJSON(RobotBase::AttachedSensorInfo& targetInfo, const rapidjson::Value& value, dReal fUnitScale) {
+    OverwriteJsonValueByKey(value, "name", targetInfo._name);
+    OverwriteJsonValueByKey(value, "linkName", targetInfo._linkname);
+    OverwriteJsonValueByKey(value, "transform", targetInfo._trelative);
+    OverwriteJsonValueByKey(value, "type", targetInfo._sensorname);
+
+    if (!!targetInfo._sensorgeometry) {
+        targetInfo._sensorgeometry.reset();
+    }
+
+    if (value.HasMember("sensorGeometry")) {
+        BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Sensor, targetInfo._sensorname, InterfaceBasePtr(), AttributesList());
+        if (!!pReader) {
+            pReader->DeserializeJSON(value["sensorGeometry"], fUnitScale);
+            JSONReadablePtr pReadable = pReader->GetReadable();
+            if (!!pReadable) {
+                targetInfo._sensorgeometry = OPENRAVE_DYNAMIC_POINTER_CAST<SensorBase::SensorGeometry>(pReadable);
+            }
+        } else {
+            RAVELOG_WARN_FORMAT("failed to get json reader for sensor type \"%s\"", targetInfo._sensorname);
+        }
+    }
+}
+
+
 
 
 // \brief Serialize the different between coverInfo and baseInfo, save the result into rapidjson value;
 void SerializeDiffJSON(const KinBody::LinkInfo& coverInfo, const KinBody::LinkInfo& baseInfo, rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options)
 {
     value.SetObject();
-    if (coverInfo._bIsDeleted) {
-        OpenRAVE::JSON::SetJsonValueByKey(value, "__deleted__", coverInfo._bIsDeleted, allocator);
-    }
-
     if (coverInfo._t != baseInfo._t) {
         Transform tmpTransform {coverInfo._t};
         tmpTransform.trans *= fUnitScale;
@@ -213,12 +273,13 @@ void SerializeDiffJSON(const KinBody::LinkInfo& coverInfo, const KinBody::LinkIn
         geometriesValue.Reserve(diffGeometries.size(), allocator);
         FOREACHC(it, diffGeometries) {
             rapidjson::Value geometryValue;
-            if (!!(*it)->_referenceInfo) {
-                SerializeDiffJSON(**it, *(*it)->_referenceInfo, geometryValue, allocator);
-            }
-            else {
-                (*it)->SerializeJSON(geometryValue, allocator, options);
-            }
+            // TODO:
+            // if (!!(*it)->_referenceInfo) {
+            //     SerializeDiffJSON(**it, *(*it)->_referenceInfo, geometryValue, allocator);
+            // }
+            // else {
+            //     (*it)->SerializeJSON(geometryValue, allocator, options);
+            // }
 
             geometriesValue.PushBack(geometryValue, allocator);
         }
