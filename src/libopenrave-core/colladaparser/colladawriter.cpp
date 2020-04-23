@@ -23,6 +23,8 @@ using namespace ColladaDOM150;
 #include <boost/algorithm/string.hpp>
 #include <ctime>
 
+#include <openrave/openravejson.h>
+
 #define LIBXML_SAX1_ENABLED
 #include <libxml/globals.h>
 #include <libxml/xmlerror.h>
@@ -738,6 +740,9 @@ private:
             if( IsForceWrite("sensor") ) {
                 _WriteAttachedSensors(probot, articulated_system_motion, vlinksidrefs);
             }
+            if( IsForceWrite("gripper_info") ) {
+                _WriteGripperInfos(probot, articulated_system_motion);
+            }
         }
         if( IsForceWrite("jointlimit") ) {
             RAVELOG_WARN("do not support jointlimit writing\n");
@@ -1124,6 +1129,9 @@ private:
             }
             if( IsWrite("sensor") ) {
                 _WriteAttachedSensors(probot, articulated_system_motion, vlinksidrefs);
+            }
+            if( IsWrite("gripper_info") ) {
+                _WriteGripperInfos(probot, articulated_system_motion);
             }
         }
 
@@ -2308,6 +2316,8 @@ private:
                 piksolverinterface->setCharData(iksolver->GetXMLId().c_str());
                 // TODO add the free joints
             }
+            daeElementRef gripperid = ptec->add("gripperid");
+            gripperid->setCharData((*itmanip)->GetGripperId().c_str());
         }
     }
 
@@ -2384,6 +2394,27 @@ private:
                     daeElementRef isensor = ptec->add("instance_sensor");
                     isensor->setAttribute("url", strurl.c_str());
                 }
+            }
+        }
+    }
+
+    void _WriteGripperInfos(RobotBasePtr probot, daeElementRef parent)
+    {
+        if (probot->GetGripperInfos().size() > 0) {
+            std::map<RobotBase::GripperInfoPtr, std::string> mapAttachedSensorIDs;
+            FOREACHC(itGripperInfo, probot->GetGripperInfos()) {
+                domExtraRef pextra = daeSafeCast<domExtra>(parent->add(COLLADA_ELEMENT_EXTRA));
+                pextra->setName((*itGripperInfo)->gripperid.c_str());
+                pextra->setType("gripper_info");
+                domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
+                ptec->setProfile("OpenRAVE");
+
+                rapidjson::Document rGripperInfo;
+                (*itGripperInfo)->SerializeJSON(rGripperInfo, rGripperInfo.GetAllocator());
+
+                daeElementRef pjson_data = ptec->add("json_data");
+                std::string sGripperInfoJSON = openravejson::DumpJson(rGripperInfo);
+                pjson_data->setCharData(sGripperInfoJSON.c_str());
             }
         }
     }

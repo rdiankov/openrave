@@ -3289,10 +3289,10 @@ object PyKinBody::GetGrabbed() const
 object PyKinBody::GetGrabbedInfo() const
 {
     py::list ograbbed;
-    std::vector<RobotBase::GrabbedInfoPtr> vgrabbedinfo;
+    std::vector<RobotBase::GrabbedInfo> vgrabbedinfo;
     _pbody->GetGrabbedInfo(vgrabbedinfo);
     FOREACH(itgrabbed, vgrabbedinfo) {
-        ograbbed.append(PyGrabbedInfoPtr(new PyGrabbedInfo(**itgrabbed)));
+        ograbbed.append(PyGrabbedInfoPtr(new PyGrabbedInfo(*itgrabbed)));
     }
     return ograbbed;
 }
