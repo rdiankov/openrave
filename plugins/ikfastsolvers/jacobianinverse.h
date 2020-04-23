@@ -100,29 +100,40 @@ public:
         return _nMaxIterations;
     }
 
-    /// \brief computes the jacobian inverse solution.
+    /// \brief computes the jacobian inverse solution. Supports different ik param types, and computes error vector and jacobian accordingly
     ///
     /// robot is at the starting solution and solution should already be very close to the goal.
     /// assumes the robot's active dof is already set to the manipulator arm indices
-    /// \param tgoal the goal in the manipulator's base frame
-    /// \param vsolution output if successful
+    /// \param ikgoal the goal ik parameterization in the manipulator's base frame
+    /// \param vsolution output if successful. vsolution should be initialized to current robot dof
     /// \return -1 if not changed, 0 if failed, 1 if changed and new succeeded in getting new position
-    int ComputeSolution(const Transform& tgoal, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution, bool bIgnoreJointLimits=false)
+    int ComputeSolution(const IkParameterization& ikgoal, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution, bool bIgnoreJointLimits=false)
     {
-        _vGoalQuat = tgoal.rot;
-        _vGoalAxisAngle = axisAngleFromQuat(tgoal.rot);
-        _vGoalPosition = tgoal.trans;
+        // check if manip's iksolver suppports this ikgoal type
+        if (! manip.GetIkSolver()->Supports(ikgoal.GetType())) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("iksolver %s of manipulator %s do not support "),manip.GetIkSolver()%manip.GetName(),ORE_InvalidArguments);
+        }
 
         RobotBasePtr probot = manip.GetRobot();
         uint32_t checklimits = bIgnoreJointLimits ? OpenRAVE::KinBody::CLA_Nothing : OpenRAVE::KinBody::CLA_CheckLimitsSilent; // if not ignoring limits, silently clamp the values to their limits.
+        const int ikdof = ikgoal.GetDOF();
+        BOOST_ASSERT(6 >= ikdof && ikdof > 0);
+        _J.resize(ikdof,probot->GetActiveDOF());
+        _invJJt.resize(ikdof, ikdof);
+        _error.resize(ikdof,1);
 
+        _goalIkp = ikgoal;
+        //_vGoalQuat = tgoal.rot;
+        //_vGoalAxisAngle = axisAngleFromQuat(tgoal.rot);
+        //_vGoalPosition = tgoal.trans;
+        
         KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation);
         Transform tbase = manip.GetBase()->GetTransform();
         Transform trobot = probot->GetTransform();
         probot->SetTransform(tbase.inverse()*trobot); // transform so that the manip's base is at the identity and matches tgoal
 
-        Transform tprev = manip.GetTransform();
-        T totalerror2 = _ComputeConstraintError(tprev, _error, _nMaxIterations);
+        const IkParameterization ikpprev = manip.GetIkParameterization(ikgoal);
+        T totalerror2 = _ComputeConstraintError(ikpprev, _error, _nMaxIterations);
         if( totalerror2 <= _errorthresh2 ) {
             return -1;
         }
@@ -141,8 +152,8 @@ public:
         // setup a class so its destructor saves the last iter used in _lastiter
         ValueSaver valuesaver(&iter, &_lastiter);
         for(iter = 0; iter < _nMaxIterations; ++iter) {
-            Transform tmanip = manip.GetTransform();
-            T totalerror2 = _ComputeConstraintError(tmanip, _error, _nMaxIterations-iter);
+            const IkParameterization ikpmanip = manip.GetIkParameterization(ikgoal);
+            T totalerror2 = _ComputeConstraintError(ikpmanip, _error, _nMaxIterations-iter);
             //dReal ratio = totalerror2/_lasterror2;
             //RAVELOG_VERBOSE_FORMAT("%s:%s iter=%d, totalerror %.15e (%f)", probot->GetName()%manip.GetName()%iter%RaveSqrt(totalerror2)%RaveSqrt(totalerror2/_lasterror2));
             if( totalerror2 < besterror2 ) {
@@ -167,41 +178,29 @@ public:
             }
             _lasterror2 = totalerror2;
 
-            // compute jacobians, make sure to transform by the world frame
-            manip.CalculateAngularVelocityJacobian(_vjacobian); // doesn't work well...
-            for(size_t j = 0; j < _viweights.size(); ++j) {
-                Vector v = Vector(_vjacobian[j],_vjacobian[armdof+j],_vjacobian[2*armdof+j]);
-                _J(0,j) = v[0]*_viweights[j];
-                _J(1,j) = v[1]*_viweights[j];
-                _J(2,j) = v[2]*_viweights[j];
-            }
-            manip.CalculateJacobian(_vjacobian);
-            for(size_t j = 0; j < _viweights.size(); ++j) {
-                Vector v = Vector(_vjacobian[j],_vjacobian[armdof+j],_vjacobian[2*armdof+j]);
-                _J(0+3,j) = v[0]*_viweights[j];
-                _J(1+3,j) = v[1]*_viweights[j];
-                _J(2+3,j) = v[2]*_viweights[j];
-            }
+            // calculate jacobians
+            _CalculateJacobian(manip, ikpmanip);
+
             // pseudo inverse of jacobian
             _Jt = trans(_J);
             _invJJt = prod(_J,_Jt);
-            for(int i = 0; i < 6; ++i) {
+            for(int i = 0; i < ikdof; ++i) {
                 _invJJt(i,i) += lambda2;
             }
 
 #ifdef OPENRAVE_DISPLAY_CONVERGENCESTATS
             stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+2);
             ss << std::endl << "J=array([" << std::endl;
-            for(int i = 0; i < 6; ++i) {
+            for(int i = 0; i < armdof; ++i) {
                 ss << "[";
-                for(int j = 0; j < 6; ++j) {
+                for(int j = 0; j < ikdof; ++j) {
                     ss << _J(i,j) << ", ";
                 }
                 ss << "]," << std::endl;
             }
             ss << "]);" << std::endl;
             ss << "error=array([";
-            for(int i = 0; i < 6; ++i) {
+            for(int i = 0; i < ikdof; ++i) {
                 ss << _error(i,0) << ", ";
             }
             ss << "]);" << std::endl;
@@ -228,9 +227,9 @@ public:
 
 #ifdef OPENRAVE_DISPLAY_CONVERGENCESTATS
             ss << std::endl << "invJJt=array([" << std::endl;
-            for(int i = 0; i < 6; ++i) {
+            for(int i = 0; i < armdof; ++i) {
                 ss << "[";
-                for(int j = 0; j < 6; ++j) {
+                for(int j = 0; j < armdof; ++j) {
                     ss << _invJJt(i,j) << ", ";
                 }
                 ss << "]," << std::endl;
@@ -305,12 +304,15 @@ public:
         return retcode;
     }
 
-    int ComputeSolutionTranslation(const Transform& tgoal, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution, bool bIgnoreJointLimits=false)
+    int ComputeSolutionTranslation(const IkParameterization& ikgoal, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution, bool bIgnoreJointLimits=false)
     {
-        _vGoalQuat = tgoal.rot;
-        _vGoalAxisAngle = axisAngleFromQuat(tgoal.rot);
-        _vGoalPosition = tgoal.trans;
+        // check if manip's iksolver suppports this ikgoal type
+        if (! manip.GetIkSolver()->Supports(ikgoal.GetType())) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("iksolver %s of manipulator %s do not support "),manip.GetIkSolver()%manip.GetName(),ORE_InvalidArguments);
+        }
 
+        _goalIkp = ikgoal;
+        
         RobotBasePtr probot = manip.GetRobot();
         uint32_t checklimits = bIgnoreJointLimits ? OpenRAVE::KinBody::CLA_Nothing : OpenRAVE::KinBody::CLA_CheckLimitsSilent; // if not ignoring limits, silently clamp the values to their limits.
 
@@ -496,39 +498,158 @@ public:
         return retcode;
     }
 
-    virtual T _ComputeConstraintError(const Transform& tcur, boost::numeric::ublas::matrix<T>& error, int nMaxIterations, bool bAddRotation=true)
+    /// \brief computes the jacobian inverse solution.
+    ///
+    /// robot is at the starting solution and solution should already be very close to the goal.
+    /// assumes the robot's active dof is already set to the manipulator arm indices
+    /// \param tgoal the goal in the manipulator's base frame
+    /// \param vsolution output if successful
+    /// \return -1 if not changed, 0 if failed, 1 if changed and new succeeded in getting new position
+    int ComputeSolution(const Transform& tgoal, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution, bool bIgnoreJointLimits=false)
+    {
+        return ComputeSolution(IkParameterization(tgoal, IKP_Transform6D), manip, vsolution, bIgnoreJointLimits);
+    }
+    
+    int ComputeSolutionTranslation(const Transform& tgoal, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution)
+    {
+        return ComputeSolutionTranslation(IkParameterization(tgoal, IKP_Translation3D), manip, vsolution);
+    }
+
+    virtual T _ComputeConstraintError(const IkParameterization& ikpcur, boost::numeric::ublas::matrix<T>& error, int nMaxIterations, bool bAddRotation=true)
     {
         T totalerror2=0;
         int transoffset = 0;
-        if( bAddRotation ) {
-            const Vector axisangleerror = axisAngleFromQuat(quatMultiply(_vGoalQuat, quatInverse(tcur.rot)));
-            for(int i = 0; i < 3; ++i) {
-                error(i,0) = axisangleerror[i];
-                totalerror2 += error(i,0)*error(i,0);
-            }
-            transoffset += 3;
-        }
+        switch (ikpcur.GetType()) {
+        case IKP_Transform6D:
+            {
+                const Transform tcur = ikpcur.GetTransform6D();
+                const Transform tgoal = _goalIkp.GetTransform6D();
+                if( bAddRotation ) {
+                    const Vector axisangleerror = axisAngleFromQuat(quatMultiply(tgoal.rot, quatInverse(tcur.rot)));
+                    for(int i = 0; i < 3; ++i) {
+                        error(i,0) = axisangleerror[i];
+                        totalerror2 += error(i,0)*error(i,0);
+                    }
+                    transoffset += 3;
+                }
 
-        for(int i = 0; i < 3; ++i) {
-            error(i+transoffset,0) = (_vGoalPosition[i]-tcur.trans[i]);
-            totalerror2 += error(i+transoffset,0)*error(i+transoffset,0);
-        }
+                for(int i = 0; i < 3; ++i) {
+                    error(i+transoffset,0) = (tgoal.trans[i]-tcur.trans[i]);
+                    totalerror2 += error(i+transoffset,0)*error(i+transoffset,0);
+                }
+        
+                dReal fallowableerror2 = 0.03; // arbitrary... since solutions are close, is this step necessary?
+                if( totalerror2 > _errorthresh2 && totalerror2 > fallowableerror2+1e-7 ) {
+                    // have to reduce the error or else the jacobian will not converge to the correct place and diverge too much from the current solution
+                    // depending on how many iterations there is left, have to adjust the error
+                    T fscale = sqrt(totalerror2/fallowableerror2);
+                    if( fscale > nMaxIterations ) {
+                        fscale = nMaxIterations;
+                    }
+                    T fiscale = 1/fscale;
+                    RAVELOG_VERBOSE_FORMAT("fiscale=%f", fiscale);
+                    for(int i = 0; i < (int)error.size1(); ++i) {
+                        error(i,0) *= fiscale;
+                    }
+                }
+                break;
+            }
+        case IKP_TranslationZAxisAngle4D:
+            {
+                const std::pair<Vector,dReal> cur = ikpcur.GetTranslationZAxisAngle4D();
+                const std::pair<Vector,dReal> goal = _goalIkp.GetTranslationZAxisAngle4D();
+                if( bAddRotation ) {
+                    error(0,0) = goal.second - cur.second;
+                    totalerror2 += error(0,0)*error(0,0);
+                    transoffset = 1;
+                }
 
-        dReal fallowableerror2 = 0.03; // arbitrary... since solutions are close, is this step necessary?
-        if( totalerror2 > _errorthresh2 && totalerror2 > fallowableerror2+1e-7 ) {
-            // have to reduce the error or else the jacobian will not converge to the correct place and diverge too much from the current solution
-            // depending on how many iterations there is left, have to adjust the error
-            T fscale = sqrt(totalerror2/fallowableerror2);
-            if( fscale > nMaxIterations ) {
-                fscale = nMaxIterations;
+                for(int i = 0; i < 3; ++i) {
+                    error(i+transoffset,0) = (goal.first[i]-cur.first[i]);
+                    totalerror2 += error(i+transoffset,0)*error(i+transoffset,0);
+                }
+                break;
             }
-            T fiscale = 1/fscale;
-            RAVELOG_VERBOSE_FORMAT("fiscale=%f", fiscale);
-            for(int i = 0; i < (int)error.size1(); ++i) {
-                error(i,0) *= fiscale;
-            }
-        }
+        default:
+            throw OPENRAVE_EXCEPTION_FORMAT(_("unsupported ikparam %s."),ikpcur.GetName(),ORE_InvalidArguments);
+            break;
+        };
         return totalerror2;
+    }
+
+    // Calculates jacobian depending on ikparameter type. jacobian and error vector has to be consistent
+    virtual void _CalculateJacobian(const RobotBase::Manipulator& manip, const IkParameterization& ikp)
+    {
+        const int armdof = manip.GetArmDOF();
+        switch (ikp.GetType()) {
+        case IKP_Transform6D:
+            {
+                manip.CalculateAngularVelocityJacobian(_vjacobian); // doesn't work well...
+                for(size_t j = 0; j < _viweights.size(); ++j) {
+                    Vector v = Vector(_vjacobian[j],_vjacobian[armdof+j],_vjacobian[2*armdof+j]);
+                    _J(0,j) = v[0]*_viweights[j];
+                    _J(1,j) = v[1]*_viweights[j];
+                    _J(2,j) = v[2]*_viweights[j];
+                }
+                manip.CalculateJacobian(_vjacobian);
+                for(size_t j = 0; j < _viweights.size(); ++j) {
+                    Vector v = Vector(_vjacobian[j],_vjacobian[armdof+j],_vjacobian[2*armdof+j]);
+                    _J(0+3,j) = v[0]*_viweights[j];
+                    _J(1+3,j) = v[1]*_viweights[j];
+                    _J(2+3,j) = v[2]*_viweights[j];
+                }
+                break;
+            }
+        case IKP_TranslationZAxisAngle4D:
+            {
+                const RobotBasePtr probot = manip.GetRobot();
+                const TransformMatrix robotrot = matrixFromQuat(probot->GetTransform().rot);
+                const Vector robotZDir(robotrot.rot(0, 2), robotrot.rot(1, 2), robotrot.rot(2, 2));
+
+                const TransformMatrix maniprot = matrixFromQuat(manip.GetTransform().rot);
+                const Vector manipZDir(maniprot.rot(0, 2), maniprot.rot(1, 2), maniprot.rot(2, 2));
+                const double rzzSq = maniprot.rot(2, 2)*maniprot.rot(2, 2);
+                // angle part, definition is arccos(Rzz(q)) where Rzz is the z-z component of manip's 3x3 rotation matrix
+                // a = f(h(q)) where q is the joint angle, h is the forward kinematics for Rzz and f is the arccos
+                // using chain rule, da/dq = df/dh times dh/dq
+                // df/dh is -1 / sqrt(1-h^2) and
+                // dh/dq is cross product b/w joint axis and manipulator direction
+
+                manip.CalculateAngularVelocityJacobian(_vjacobian);
+                for(size_t j = 0; j < _viweights.size(); ++j) {
+                    // better to get joint axis from angular jacobian than, directly getting it from joint->getaxis to handle prismatic joint properly
+                    const Vector jointAxis = Vector(_vjacobian[j],_vjacobian[armdof+j],_vjacobian[2*armdof+j]);
+                    //int dof = manip.GetArmIndices().at(j);
+                    //const Vector jointAxis = probot->GetJointFromDOFIndex(dof)->GetAxis();
+
+                    if (1.0 - rzzSq > 1.0e-9) { // non-singular
+                        const double dfdh = -1.0 / sqrt(1.0 - rzzSq);
+                        const double dhdq = jointAxis.cross(manipZDir)[2];
+                        _J(0,j) = dfdh * dhdq * _viweights[j];
+                    }
+                    else { // singular, base z axis and manip z axis are almost parallel
+                        // positive value means error increases if joint is rotated positively
+                        const double jacobianZDot = (robotZDir.cross(manipZDir)).dot(jointAxis);
+                        const double jacobianSign = jacobianZDot > 0 ? 1 : -1;
+
+                        const double jacobianZAngle = (jointAxis.cross(manipZDir)).lengthsqr2();
+                        _J(0,j) = jacobianSign * jacobianZAngle *_viweights[j];
+                    }
+                }
+            
+                // position part
+                manip.CalculateJacobian(_vjacobian);
+                for(size_t j = 0; j < _viweights.size(); ++j) {
+                    Vector v = Vector(_vjacobian[j],_vjacobian[armdof+j],_vjacobian[2*armdof+j]);
+                    _J(0+1,j) = v[0]*_viweights[j];
+                    _J(1+1,j) = v[1]*_viweights[j];
+                    _J(2+1,j) = v[2]*_viweights[j];
+                }
+                break;
+            }
+        default:
+            break;
+        };
     }
 
     // Matrix inversion routine. Uses lu_factorize and lu_substitute in uBLAS to invert a matrix */
@@ -568,7 +689,8 @@ public:
     int _nMaxIterations;
 
 protected:
-    Vector _vGoalQuat, _vGoalAxisAngle, _vGoalPosition;
+    //Vector _vGoalQuat, _vGoalAxisAngle, _vGoalPosition;
+    IkParameterization _goalIkp;
     std::vector<dReal> _viweights, _vcachevalues;
     T _errorthresh2;
     std::vector<dReal> _vjacobian;

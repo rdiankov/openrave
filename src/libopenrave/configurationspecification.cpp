@@ -18,6 +18,7 @@
     \brief All definitions that involve ConfigurationSpecification
  */
 #include "libopenrave.h"
+#include <openrave/xmlreaders.h>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/thread/once.hpp>
@@ -1881,7 +1882,7 @@ std::istream& operator>>(std::istream& I, ConfigurationSpecification& spec)
             throw OPENRAVE_EXCEPTION_FORMAT(_("error, failed to find </configuration> in %s"),buf.str(),ORE_InvalidArguments);
         }
         ConfigurationSpecification::Reader reader(spec);
-        LocalXML::ParseXMLData(reader, pbuf.c_str(), ppsize);
+        xmlreaders::ParseXMLData(reader, pbuf.c_str(), ppsize);
         BOOST_ASSERT(spec.IsValid());
     }
 

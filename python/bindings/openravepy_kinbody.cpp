@@ -1917,10 +1917,13 @@ RobotBase::GrabbedInfoPtr PyKinBody::PyGrabbedInfo::GetGrabbedInfo() const
     pinfo->_grabbedname = py::extract<std::string>(_grabbedname);
     pinfo->_robotlinkname = py::extract<std::string>(_robotlinkname);
     pinfo->_trelative = ExtractTransform(_trelative);
-    std::vector<int> v = ExtractArray<int>(_setRobotLinksToIgnore);
     pinfo->_setRobotLinksToIgnore.clear();
-    FOREACHC(it,v) {
-        pinfo->_setRobotLinksToIgnore.insert(*it);
+
+    if( !IS_PYTHONOBJECT_NONE(_setRobotLinksToIgnore) ) {
+        std::vector<int> v = ExtractArray<int>(_setRobotLinksToIgnore);
+        FOREACHC(it,v) {
+            pinfo->_setRobotLinksToIgnore.insert(*it);
+        }
     }
 #endif
     return pinfo;
@@ -3286,10 +3289,10 @@ object PyKinBody::GetGrabbed() const
 object PyKinBody::GetGrabbedInfo() const
 {
     py::list ograbbed;
-    std::vector<RobotBase::GrabbedInfoPtr> vgrabbedinfo;
+    std::vector<RobotBase::GrabbedInfo> vgrabbedinfo;
     _pbody->GetGrabbedInfo(vgrabbedinfo);
     FOREACH(itgrabbed, vgrabbedinfo) {
-        ograbbed.append(PyGrabbedInfoPtr(new PyGrabbedInfo(**itgrabbed)));
+        ograbbed.append(PyGrabbedInfoPtr(new PyGrabbedInfo(*itgrabbed)));
     }
     return ograbbed;
 }
