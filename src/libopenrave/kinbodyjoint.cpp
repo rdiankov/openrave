@@ -200,8 +200,14 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
     {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported joint type \"%s\"", typestr, ORE_InvalidArguments);
     }
-
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
+    if (value.HasMember("id")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
+    }
+    else {
+        _id = _name;
+    }
+
     OpenRAVE::JSON::LoadJsonValueByKey(value, "parentLinkName", _linkname0);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "anchors", _vanchor);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "childLinkName", _linkname1);

@@ -103,8 +103,21 @@ public:
 
                     // set dof values
                     if (itr->HasMember("dofValues")) {
+                        std::map<std::string, dReal> jointDOFValues;
+                        for(rapidjson::Value::ValueIterator itrDOFValue = (*itr)["dofValues"].Begin(); itrDOFValue != (*itr)["dofValues"].End(); ++itrDOFValue)
+                        {
+                            std::string jointId;
+                            dReal dofValue;
+                            OpenRAVE::JSON::LoadJsonValueByKey(*itrDOFValue, "jointId", jointId);
+                            OpenRAVE::JSON::LoadJsonValueByKey(*itrDOFValue, "value", dofValue);
+
+                            jointDOFValues[jointId] = dofValue;
+                        }
                         std::vector<dReal> vDOFValues;
-                        OpenRAVE::JSON::LoadJsonValueByKey(*itr, "dofValues", vDOFValues);
+                        vDOFValues.reserve(pbody->GetJoints().size());
+                        FOREACH(itJoint, pbody->GetJoints()) {
+                            vDOFValues[(*itJoint)->GetDOFIndex()] = jointDOFValues[(*itJoint)->GetInfo()._id];
+                        }
                         pbody->SetDOFValues(vDOFValues, KinBody::CLA_Nothing);
                     }
 

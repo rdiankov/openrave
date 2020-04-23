@@ -97,7 +97,21 @@ protected:
                 std::vector<dReal> vDOFValues;
                 pbody->GetDOFValues(vDOFValues);
                 if (vDOFValues.size() > 0) {
-                    OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "dofValues", vDOFValues, _allocator);
+                    rapidjson::Value dofValues;
+                    dofValues.SetArray();
+                    dofValues.Reserve(vDOFValues.size(), _allocator);
+                    for(size_t iDOF=0; iDOF<vDOFValues.size(); iDOF++) {
+                        rapidjson::Value jointDOFValue;
+                        KinBody::JointPtr pJoint = pbody->GetJointFromDOFIndex(iDOF);
+                        std::string jointId = pJoint->GetInfo()._id;
+                        if (jointId.empty()) {
+                            jointId = pJoint->GetInfo()._name;
+                        }
+                        OpenRAVE::JSON::SetJsonValueByKey(jointDOFValue, "jointId", jointId, _allocator);
+                        OpenRAVE::JSON::SetJsonValueByKey(jointDOFValue, "value", vDOFValues[iDOF], _allocator);
+                        dofValues.PushBack(jointDOFValue, _allocator);
+                    }
+                    OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "dofValues", dofValues, _allocator);
                 }
 
                 KinBody::KinBodyStateSaver saver(pbody);
