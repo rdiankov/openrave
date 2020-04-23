@@ -449,8 +449,7 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
 
 IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParameterization& ikparam, bool inworld) const
 {
-    IkParameterization ikp;
-    IkParameterizationType iktype = ikparam.GetType();
+    const IkParameterizationType iktype = ikparam.GetType();
     Transform t = this->GetTransform();
     if( !inworld ) {
         t = GetBase()->GetTransform().inverse()*t;
@@ -459,23 +458,24 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
     // TGN: only IKP_Lookat3D and IKP_TranslationLocalGlobal6D are different from the overloaded function
     case IKP_Lookat3D: {
         // find the closest point to ikparam.GetLookat3D() to the current ray
-        ikp = ikparam; // copies the custom data
+        IkParameterization ikp = ikparam; // copies the custom data
         Vector vdir = t.rotate(_info._vdirection);
         ikp.SetLookat3D(RAY(t.trans + vdir*vdir.dot(ikparam.GetLookat3D()-t.trans),vdir));
-        break;
+        return ikp;
     }
     case IKP_TranslationLocalGlobal6D: {
-        ikp = ikparam; // copies the custom data
+        IkParameterization ikp = ikparam; // copies the custom data
         Vector localtrans = ikparam.GetTranslationLocalGlobal6D().first;
         ikp.SetTranslationLocalGlobal6D(localtrans,t * localtrans);
-        break;
+        return ikp;
     }
     default: {
-        ikp = GetIkParameterization(iktype, inworld);
+        IkParameterization ikp = GetIkParameterization(iktype, inworld);
         ikp.SetCustomDataMap(ikparam.GetCustomDataMap());
+        return ikp;
     }
     }
-    return ikp;
+    return IkParameterization(); // dummy, as we always return in above
 }
 
 void RobotBase::Manipulator::GetChildJoints(std::vector<JointPtr>& vjoints) const
