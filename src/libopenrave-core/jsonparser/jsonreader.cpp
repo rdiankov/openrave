@@ -114,7 +114,7 @@ public:
                             jointDOFValues[jointId] = dofValue;
                         }
                         std::vector<dReal> vDOFValues;
-                        vDOFValues.reserve(pbody->GetJoints().size());
+                        vDOFValues.resize(pbody->GetJoints().size());
                         FOREACH(itJoint, pbody->GetJoints()) {
                             vDOFValues[(*itJoint)->GetDOFIndex()] = jointDOFValues[(*itJoint)->GetInfo()._id];
                         }
