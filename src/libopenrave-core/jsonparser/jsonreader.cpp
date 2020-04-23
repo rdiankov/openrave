@@ -204,8 +204,9 @@ protected:
         {
             unit.second *= 0.01;
         }
-        else {
+        if (unit.first.empty()){
             unit.first = "meter";
+            unit.second = 1.0;
         }
         dReal scale = unit.second / _fGlobalScale;
         return scale;
