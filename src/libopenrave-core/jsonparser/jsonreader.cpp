@@ -87,6 +87,10 @@ public:
         // extra all bodies and add to env
         std::pair<std::string, dReal> unit;
         OpenRAVE::JSON::LoadJsonValueByKey(*_doc, "unit", unit);
+        if (unit.first.empty()) {
+            unit.first = "meter";
+            unit.second = 1.0;
+        }
         _penv->SetUnit(unit);
 
         dReal fUnitScale = _GetUnitScale();
@@ -200,6 +204,9 @@ protected:
         {
             unit.second *= 0.01;
         }
+        else {
+            unit.first = "meter";
+        }
         dReal scale = unit.second / _fGlobalScale;
         return scale;
     }
@@ -222,12 +229,7 @@ protected:
 
     bool _Extract(const rapidjson::Value &bodyValue, KinBodyPtr& pbody)
     {
-        std::string uri;
-        OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "uri", uri);
-
-        rapidjson::Value::ValueIterator object = _ResolveObject(uri);
-
-        if (OpenRAVE::JSON::GetJsonValueByKey<bool>(*object, "isRobot")) {
+        if (OpenRAVE::JSON::GetJsonValueByKey<bool>(bodyValue, "isRobot")) {
             RobotBasePtr probot;
             if (_Extract(bodyValue, probot)) {
                 pbody = probot;
@@ -239,16 +241,15 @@ protected:
         dReal fUnitScale = _GetUnitScale();
 
         KinBody::KinBodyInfoPtr info(new KinBody::KinBodyInfo());
-        info->_uri = _CanonicalizeURI(uri);
-        _ExtractLinks(*object, info->_vLinkInfos, fUnitScale);
-        _ExtractJoints(*object, info->_vJointInfos, fUnitScale);
-                
+        _ExtractLinks(bodyValue, info->_vLinkInfos, fUnitScale);
+        _ExtractJoints(bodyValue, info->_vJointInfos, fUnitScale);
+
         KinBodyPtr body = RaveCreateKinBody(_penv, "");
         if (!body->InitFromInfo(info)) {
             return false;
         }
-        
-        _ExtractReadableInterfaces(*object, body, fUnitScale);
+
+        _ExtractReadableInterfaces(bodyValue, body, fUnitScale);
 
         body->SetName(OpenRAVE::JSON::GetJsonValueByKey<std::string>(bodyValue, "name"));
 
@@ -265,31 +266,25 @@ protected:
 
     bool _Extract(const rapidjson::Value &bodyValue, RobotBasePtr& probot)
     {
-        std::string uri;
-        OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "uri", uri);
-
-        rapidjson::Value::ValueIterator object = _ResolveObject(uri);
-
-        if (!OpenRAVE::JSON::GetJsonValueByKey<bool>(*object, "isRobot")) {
+        if (!OpenRAVE::JSON::GetJsonValueByKey<bool>(bodyValue, "isRobot")) {
             return false;
         }
 
         dReal fUnitScale = _GetUnitScale();
 
         RobotBase::RobotBaseInfoPtr info(new RobotBase::RobotBaseInfo());
-        info->_uri = _CanonicalizeURI(uri);
-        _ExtractLinks(*object, info->_vLinkInfos, fUnitScale);
-        _ExtractJoints(*object, info->_vJointInfos, fUnitScale);
-        _ExtractManipulators(*object, info->_vManipInfos, fUnitScale);
-        _ExtractAttachedSensors(*object, info->_vAttachedSensorInfos, fUnitScale);
-        _ExtractConnectedBodies(*object, info->_vConnectedBodyInfos, fUnitScale);
+        _ExtractLinks(bodyValue, info->_vLinkInfos, fUnitScale);
+        _ExtractJoints(bodyValue, info->_vJointInfos, fUnitScale);
+        _ExtractManipulators(bodyValue, info->_vManipInfos, fUnitScale);
+        _ExtractAttachedSensors(bodyValue, info->_vAttachedSensorInfos, fUnitScale);
+        _ExtractConnectedBodies(bodyValue, info->_vConnectedBodyInfos, fUnitScale);
 
         RobotBasePtr robot = RaveCreateRobot(_penv, "");
         if (!robot->InitFromInfo(info)) {
             return false;
         }
 
-        _ExtractReadableInterfaces(*object, robot, fUnitScale);
+        _ExtractReadableInterfaces(bodyValue, robot, fUnitScale);
 
         robot->SetName(OpenRAVE::JSON::GetJsonValueByKey<std::string>(bodyValue, "name"));
 
