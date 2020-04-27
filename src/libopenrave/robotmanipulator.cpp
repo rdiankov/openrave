@@ -108,8 +108,7 @@ void RobotBase::Manipulator::SetLocalToolTransform(const Transform& t)
 void RobotBase::Manipulator::SetLocalToolDirection(const Vector& direction)
 {
     _info._sIkSolverXMLId.resize(0);
-    __pIkSolver.reset();
-    // only reset the iksolver if transform is different. note that the correct way is to see if the hash changes, but that could take too much computation. also hashes truncate the numbers.
+    // only reset the iksolver if direction is different. note that the correct way is to see if the hash changes, but that could take too much computation. also hashes truncate the numbers.
     if( (_info._vdirection-direction).lengthsqr3() > g_fEpsilonLinear ) {
         // only reset if direction is actually used
         if( !!__pIkSolver && (__pIkSolver->Supports(IKP_TranslationDirection5D) || __pIkSolver->Supports(IKP_Direction3D)) ) {
