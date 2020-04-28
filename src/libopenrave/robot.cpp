@@ -367,6 +367,7 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
 
 void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "uri", _uri, allocator);
     if (_vManipInfos.size() > 0) {
         rapidjson::Value rManipInfoValues;
@@ -407,7 +408,31 @@ void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson:
 
 void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri);
+    if (_uri.empty()) {
+        OPENRAVE_ASSERT_FORMAT0(!_id.empty(), "kinbody uri and id are empty", ORE_Failed); // assert one of _id and _uri is not empty;
+        _uri = "#" + _id;
+    }
+
+    _vLinkInfos.clear();
+    if (value.HasMember("links")) {
+        _vLinkInfos.reserve(value["links"].Size());
+        for (size_t iLinkInfo = 0; iLinkInfo < value["links"].Size(); iLinkInfo++) {
+            LinkInfoPtr pLinkInfo(new LinkInfo());
+            pLinkInfo->DeserializeJSON(value["links"][iLinkInfo], fUnitScale);
+            _vLinkInfos.push_back(pLinkInfo);
+        }
+    }
+    _vJointInfos.clear();
+    if (value.HasMember("joints")) {
+        _vJointInfos.reserve(value["joints"].Size());
+        for (size_t iJointInfo = 0; iJointInfo < value["joints"].Size(); iJointInfo++) {
+            JointInfoPtr pJointInfo(new JointInfo());
+            pJointInfo->DeserializeJSON(value["joints"][iJointInfo], fUnitScale);
+            _vJointInfos.push_back(pJointInfo);
+        }
+    }
 
     _vManipInfos.clear();
     if (value.HasMember("manipulators")) {

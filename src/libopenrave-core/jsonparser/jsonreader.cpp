@@ -196,6 +196,13 @@ public:
             for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
                 std::string bodyUri;
                 OpenRAVE::JSON::LoadJsonValueByKey(*itr, "uri", bodyUri);
+                if (bodyUri.empty()) {
+                    std::string id;
+                    OpenRAVE:JSON::LoadJsonValueByKey(*itr, "id", id);
+                    if (!id.empty()) {
+                        bodyUri = "#" + id;
+                    }
+                }
                 if (bodyUri == std::string("#") + fragment) {
                     return _Extract(*itr, pprobot);
                 }
@@ -255,8 +262,11 @@ protected:
         dReal fUnitScale = _GetUnitScale();
 
         KinBody::KinBodyInfoPtr info(new KinBody::KinBodyInfo());
-        _ExtractLinks(bodyValue, info->_vLinkInfos, fUnitScale);
-        _ExtractJoints(bodyValue, info->_vJointInfos, fUnitScale);
+
+        info->DeserializeJSON(bodyValue, fUnitScale);
+        info->_uri = _CanonicalizeURI(info->_uri);
+        // _ExtractLinks(bodyValue, info->_vLinkInfos, fUnitScale);
+        // _ExtractJoints(bodyValue, info->_vJointInfos, fUnitScale);
 
         KinBodyPtr body = RaveCreateKinBody(_penv, "");
         if (!body->InitFromInfo(info)) {
@@ -287,11 +297,13 @@ protected:
         dReal fUnitScale = _GetUnitScale();
 
         RobotBase::RobotBaseInfoPtr info(new RobotBase::RobotBaseInfo());
-        _ExtractLinks(bodyValue, info->_vLinkInfos, fUnitScale);
-        _ExtractJoints(bodyValue, info->_vJointInfos, fUnitScale);
-        _ExtractManipulators(bodyValue, info->_vManipInfos, fUnitScale);
-        _ExtractAttachedSensors(bodyValue, info->_vAttachedSensorInfos, fUnitScale);
-        _ExtractConnectedBodies(bodyValue, info->_vConnectedBodyInfos, fUnitScale);
+        info->DeserializeJSON(bodyValue, fUnitScale);
+        info->_uri = _CanonicalizeURI(info->_uri);
+        // _ExtractLinks(bodyValue, info->_vLinkInfos, fUnitScale);
+        // _ExtractJoints(bodyValue, info->_vJointInfos, fUnitScale);
+        // _ExtractManipulators(bodyValue, info->_vManipInfos, fUnitScale);
+        // _ExtractAttachedSensors(bodyValue, info->_vAttachedSensorInfos, fUnitScale);
+        // _ExtractConnectedBodies(bodyValue, info->_vConnectedBodyInfos, fUnitScale);
 
         RobotBasePtr robot = RaveCreateRobot(_penv, "");
         if (!robot->InitFromInfo(info)) {

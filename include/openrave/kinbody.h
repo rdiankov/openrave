@@ -1601,6 +1601,7 @@ public:
 
         virtual ~KinBodyInfo() {}
 
+        std::string _id;
         std::string _uri;
         std::vector<LinkInfoPtr> _vLinkInfos; ///< list of pointers to LinkInfo
         std::vector<JointInfoPtr> _vJointInfos; ///< list of pointers to JointInfo

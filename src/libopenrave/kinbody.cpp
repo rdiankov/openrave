@@ -127,6 +127,7 @@ void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, d
 
 void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "uri", _uri, allocator);
     if (_vLinkInfos.size() > 0) {
         rapidjson::Value rLinkInfoValues;
@@ -155,8 +156,13 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
 
 void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri);
 
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri);
+    if (_uri.empty()) {
+        OPENRAVE_ASSERT_FORMAT0(!_id.empty(), "kinbody uri and id are empty", ORE_Failed);
+        _uri = "#" + _id;
+    }
     _vLinkInfos.clear();
     if (value.HasMember("links")) {
         _vLinkInfos.reserve(value["links"].Size());
