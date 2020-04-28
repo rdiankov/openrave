@@ -211,9 +211,10 @@ class DatabaseGenerator(metaclass.AutoReloader):
                 if hasattr(options,'manipname') and robot.IsRobot():
                     if options.manipname is None:
                         # prioritize manipulators with ik solvers
-                        indices = [i for i,m in enumerate(robot.GetManipulators()) if m.GetIkSolver() is not None]
-                        if len(indices) > 0:
-                            robot.SetActiveManipulator(indices[0])
+                        for i,m in enumerate(robot.GetManipulators()):
+                            if m.GetIkSolver() is not None:
+                                robot.SetActiveManipulator(m)
+                                break
                     else:
                         for i,m in enumerate(robot.GetManipulators()):
                             if m.GetName()==options.manipname:

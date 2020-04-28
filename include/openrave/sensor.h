@@ -188,7 +188,9 @@ public:
         virtual SensorType GetType() const = 0;
 
         virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const;
-        
+        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const;
+        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale);
+
         virtual SensorGeometry& operator=(const SensorGeometry& r) {
             hardware_id = r.hardware_id;
             return *this;
@@ -241,7 +243,9 @@ public:
         }
 
         virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const;
-        
+        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const;
+        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale);
+
         std::string sensor_reference; ///< name of sensor that whose data is referenced. This sensor transforms the data in a particular way.
         std::string target_region; ///< name of the kinbody that describes the region of interest for the camera. 
         CameraIntrinsics intrinsics;         ///< intrinsic matrix

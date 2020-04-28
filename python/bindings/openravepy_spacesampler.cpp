@@ -166,11 +166,17 @@ protected:
         if( samples.empty() ) {
             return py::empty_array_astype<double>();
         }
-        int dim = _pspacesampler->GetNumberOfValues();
+        const int dim = _pspacesampler->GetNumberOfValues();
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        py::array_t<dReal> pyvalues = toPyArray(samples);
+        pyvalues.resize({(int) samples.size()/dim, dim});
+        return pyvalues;
+#else // USE_PYBIND11_PYTHON_BINDINGS
         npy_intp dims[] = { npy_intp(samples.size()/dim), npy_intp(dim) };
         PyObject *pyvalues = PyArray_SimpleNew(2, dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-        memcpy(PyArray_DATA(pyvalues),&samples.at(0),samples.size()*sizeof(samples[0]));
+        memcpy(PyArray_DATA(pyvalues), samples.data(), samples.size()*sizeof(samples[0]));
         return py::to_array_astype<dReal>(pyvalues);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
     }
 
     object _ReturnSamples2D(const std::vector<uint32_t>&samples)
@@ -178,11 +184,17 @@ protected:
         if( samples.empty() == 0 ) {
             return py::empty_array_astype<uint32_t>();
         }
-        int dim = _pspacesampler->GetNumberOfValues();
+        const int dim = _pspacesampler->GetNumberOfValues();
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        py::array_t<uint32_t> pyvalues = toPyArray(samples);
+        pyvalues.resize({(int) samples.size()/dim, dim});
+        return pyvalues;
+#else // USE_PYBIND11_PYTHON_BINDINGS
         npy_intp dims[] = { npy_intp(samples.size()/dim), npy_intp(dim) };
         PyObject *pyvalues = PyArray_SimpleNew(2,dims, PyArray_UINT32);
-        memcpy(PyArray_DATA(pyvalues),&samples.at(0),samples.size()*sizeof(samples[0]));
+        memcpy(PyArray_DATA(pyvalues), samples.data(), samples.size()*sizeof(samples[0]));
         return py::to_array_astype<uint32_t>(pyvalues);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
     }
 };
 

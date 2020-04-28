@@ -441,6 +441,13 @@ protected:
                         }
                     }
 
+                    // Need to set state to vnextconfig since _neighstatefn expects the starting values to be set
+                    if( parameters->SetStateValues(vnextconfig, 0) != 0 ) {
+                        RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, failed to set state", GetEnv()->GetId()%itercount%numiters);
+                        bSuccess = false;
+                        break;
+                    }
+
                     int neighstatus = parameters->_neighstatefn(vnextconfig, vdeltaconfig, NSO_OnlyHardConstraints);
                     if( neighstatus == NSS_Failed ) {
                         RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, failed neighstatus %d", GetEnv()->GetId()%itercount%numiters%neighstatus);
@@ -457,7 +464,7 @@ protected:
                         }
                     }
                 }
-                
+
                 _filterreturn->Clear();
                 int ret = parameters->CheckPathAllConstraints(vcurconfig, vnextconfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, 0xffff|CFO_FillCheckedConfiguration, _filterreturn);
                 if ( ret != 0 ) {
@@ -525,7 +532,7 @@ protected:
 
             // should check if the last point in listshortcutpath is close to itendnode
             //dReal fenddist = parameters->_distmetricfn(itendnode->first, listshortcutpath.back().first);
-            
+
             // Shortcut is successful. Replace the original segments with the content in listshortcutpath.
             ++numshortcuts;
             std::advance(itstartnode, 1);
@@ -586,6 +593,13 @@ protected:
             // config outside of the original straight line, we give up subsampling.
             int mult = 1;
             for( int f = 1; f < numSteps; f++ ) {
+                // Need to set state to vnextconfig since _neighstatefn expects the starting values to be set
+                if( parameters->SetStateValues(qcur, 0) != 0 ) {
+                    RAVELOG_WARN_FORMAT("env=%d, failed to set state values, stop subsampling segment (%d, %d) at step %d/%d, numwaypoints=%d", GetEnv()->GetId()%(ipoint - 1)%ipoint%f%numSteps%ptraj->GetNumWaypoints());
+                    qcur = listpath.back().first; // restore qcur
+                    break;
+                }
+
                 int neighstatus = NSS_Failed;
                 if( mult > 1 ) {
                     dq2 = dq;

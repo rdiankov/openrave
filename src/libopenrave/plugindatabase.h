@@ -441,6 +441,17 @@ protected:
         if( pOPENRAVE_PLUGINS != NULL ) {
             utils::TokenizeString(pOPENRAVE_PLUGINS, delim, vplugindirs);
         }
+        for(int iplugindir=vplugindirs.size()-1;iplugindir>0;iplugindir--){
+            int jplugindir=0;
+            for(;jplugindir<iplugindir;jplugindir++){
+                if(vplugindirs[iplugindir]==vplugindirs[jplugindir]){
+                    break;
+                }
+            }
+            if(jplugindir<iplugindir){
+                vplugindirs.erase(vplugindirs.begin()+iplugindir);
+            }
+        }
         bool bExists=false;
         string installdir = OPENRAVE_PLUGINS_INSTALL_DIR;
 #ifdef HAVE_BOOST_FILESYSTEM
