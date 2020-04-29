@@ -19,6 +19,29 @@
 
 namespace OpenRAVE {
 
+void RobotBase::GripperInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    value.SetObject();
+    if( !!_pdocument ) {
+        BOOST_ASSERT(_pdocument->IsObject());
+        value.CopyFrom(*_pdocument, allocator, true);
+    }
+    openravejson::SetJsonValueByKey(value, "id", gripperid, allocator);
+    openravejson::SetJsonValueByKey(value, "grippertype", grippertype, allocator);
+    openravejson::SetJsonValueByKey(value, "gripperJointNames", gripperJointNames, allocator);
+}
+
+void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+{
+    openravejson::LoadJsonValueByKey(value, "id", gripperid);
+    openravejson::LoadJsonValueByKey(value, "grippertype", grippertype);
+    openravejson::LoadJsonValueByKey(value, "gripperJointNames", gripperJointNames);
+
+    // should always create a new _pdocument in case an old one is initialized and copied
+    _pdocument.reset(new rapidjson::Document());
+    _pdocument->CopyFrom(value, _pdocument->GetAllocator(), true);
+}
+
 void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
@@ -1887,6 +1910,51 @@ bool RobotBase::RemoveAttachedSensor(RobotBase::AttachedSensor &attsensor)
         }
     }
     return false;
+}
+
+bool RobotBase::AddGripperInfo(GripperInfoPtr gripperInfo, bool removeduplicate)
+{
+    if( !gripperInfo ) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("Cannot add invalid gripperInfo to robot %s."),GetName(),ORE_InvalidArguments);
+    }
+    if( gripperInfo->gripperid.size() == 0 ) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("Cannot add gripperInfo to robot %s since its gripperid is empty."),GetName(),ORE_InvalidArguments);
+    }
+
+    for(int igripper = 0; igripper < (int)_vecGripperInfos.size(); ++igripper) {
+        if( _vecGripperInfos[igripper]->gripperid == gripperInfo->gripperid ) {
+            if( removeduplicate ) {
+                _vecGripperInfos[igripper] = gripperInfo;
+            }
+            else {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("gripper with name %s already exists"),gripperInfo->gripperid,ORE_InvalidArguments);
+            }
+        }
+    }
+
+    _vecGripperInfos.push_back(gripperInfo);
+    return true;
+}
+
+bool RobotBase::RemoveGripperInfo(const std::string& gripperid)
+{
+    for(int igripper = 0; igripper < (int)_vecGripperInfos.size(); ++igripper) {
+        if( _vecGripperInfos[igripper]->gripperid == gripperid ) {
+            _vecGripperInfos.erase(_vecGripperInfos.begin()+igripper);
+            return true;
+        }
+    }
+    return false;
+}
+
+RobotBase::GripperInfoPtr RobotBase::GetGripperInfo(const std::string& gripperid) const
+{
+    FOREACHC(itGripperInfo, _vecGripperInfos) {
+        if( (*itGripperInfo)->gripperid == gripperid ) {
+            return *itGripperInfo;
+        }
+    }
+    return RobotBase::GripperInfoPtr();
 }
 
 void RobotBase::SimulationStep(dReal fElapsedTime)

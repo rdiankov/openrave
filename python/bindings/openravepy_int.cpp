@@ -153,11 +153,11 @@ void FillRapidJsonFromArray2D(PyArrayObject* pyarr,
                               npy_intp const* dims) 
 { 
     const T *pv = reinterpret_cast<T*>(PyArray_DATA(pyarr));
-    const size_t numel = dims[0] * dims[1];
-    value.Reserve(numel, allocator);
-    for (size_t i = 0, ij = 0; i < dims[0]; ++i) { 
-        rapidjson::Value colvalues(rapidjson::kArrayType); 
-        for (size_t j = 0; j < dims[1]; ++j, ++ij) { 
+    value.Reserve(dims[0], allocator);
+    for (int i = 0, ij = 0; i < dims[0]; ++i) { 
+        rapidjson::Value colvalues(rapidjson::kArrayType);
+        colvalues.Reserve(dims[1], allocator);
+        for (int j = 0; j < dims[1]; ++j, ++ij) { 
             rapidjson::Value elementValue; 
             (elementValue.*f)(pv[ij]);
             colvalues.PushBack(elementValue, allocator); 
