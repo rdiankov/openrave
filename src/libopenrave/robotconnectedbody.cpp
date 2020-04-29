@@ -118,7 +118,7 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
     }
     value.AddMember("gripperInfos", rGripperInfos, allocator);
 
-    openravejson::SetJsonValueByKey(value, "isActive", _bIsActive, allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(value, "isActive", _bIsActive, allocator);
 }
 
 void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale)
@@ -178,7 +178,7 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
         }
     }
 
-    openravejson::LoadJsonValueByKey(value, "isActive", _bIsActive);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "isActive", _bIsActive);
 }
 
 RobotBase::ConnectedBody::ConnectedBody(OpenRAVE::RobotBasePtr probot) : _pattachedrobot(probot)

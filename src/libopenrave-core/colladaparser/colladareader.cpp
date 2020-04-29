@@ -3430,7 +3430,7 @@ public:
                     daeElementRef pjson_data = tec->getChild("json_data");
                     if( !!pjson_data ) {
                         rapidjson::Document rGripperInfo;
-                        openravejson::ParseJson(rGripperInfo, pjson_data->getCharData());
+                        OpenRAVE::JSON::ParseJson(rGripperInfo, pjson_data->getCharData());
                         dReal fUnitScale=1.0;
                         pGripperInfo->DeserializeJSON(rGripperInfo, fUnitScale);
                         probot->_vecGripperInfos.push_back(pGripperInfo);

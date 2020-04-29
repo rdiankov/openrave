@@ -2417,7 +2417,7 @@ private:
                 (*itGripperInfo)->SerializeJSON(rGripperInfo, rGripperInfo.GetAllocator());
 
                 daeElementRef pjson_data = ptec->add("json_data");
-                std::string sGripperInfoJSON = openravejson::DumpJson(rGripperInfo);
+                std::string sGripperInfoJSON = OpenRAVE::JSON::DumpJson(rGripperInfo);
                 pjson_data->setCharData(sGripperInfoJSON.c_str());
             }
         }
