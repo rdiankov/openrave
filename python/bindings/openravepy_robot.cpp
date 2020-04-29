@@ -227,8 +227,8 @@ RobotBase::ConnectedBodyInfoPtr PyConnectedBodyInfo::GetConnectedBodyInfo() cons
     if( !IS_PYTHONOBJECT_NONE(_trelative) ) {
         pinfo->_trelative = ExtractTransform(_trelative);
     }
-    if( !IS_PYTHONOBJECT_NONE(_url) ) {
-        pinfo->_url = py::extract<std::string>(_url);
+    if( !IS_PYTHONOBJECT_NONE(_uri) ) {
+        pinfo->_uri = py::extract<std::string>(_uri);
     }
     pinfo->_bIsActive = _bIsActive;
     // extract all the infos
