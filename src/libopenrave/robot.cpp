@@ -2040,6 +2040,17 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     }
     _UpdateAttachedSensors();
 
+    // gripper infos, have to recreate the _pdocument
+    _vecGripperInfos = r->_vecGripperInfos;
+    FOREACH(itGripperInfo, _vecGripperInfos) {
+        GripperInfoPtr& pGripperInfo = *itGripperInfo;
+        if( !!pGripperInfo && !!pGripperInfo->_pdocument) {
+            boost::shared_ptr<rapidjson::Document> pnewdocument(new rapidjson::Document());
+            pnewdocument->CopyFrom(*pGripperInfo->_pdocument, pnewdocument->GetAllocator());
+            pGripperInfo->_pdocument = pnewdocument;
+        }
+    }
+
     _vActiveDOFIndices = r->_vActiveDOFIndices;
     _activespec = r->_activespec;
     _vAllDOFIndices = r->_vAllDOFIndices;
