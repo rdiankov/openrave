@@ -1290,6 +1290,18 @@ bool PyRobotBase::RemoveGripperInfo(const std::string& gripperid)
     _probot->RemoveGripperInfo(gripperid);
 }
 
+object PyRobotBase::GetGripperInfo(const std::string& gripperid)
+{
+    RobotBase::GripperInfoPtr pGripperInfo = _probot->GetGripperInfo(gripperid);
+    if( !pGripperInfo ) {
+        return py::object();
+    }
+
+    rapidjson::Document rGripperInfo;
+    pGripperInfo->SerializeJSON(rGripperInfo, rGripperInfo.GetAllocator());
+    return toPyObject(rGripperInfo);
+}
+
 object PyRobotBase::GetGripperInfos()
 {
     py::list pyGripperInfos;
@@ -2058,6 +2070,7 @@ void init_openravepy_robot()
                        .def("AddGripperInfo",&PyRobotBase::AddGripperInfo, AddGripperInfo_overloads(PY_ARGS("gripperInfo", "removeduplicate") DOXY_FN(RobotBase,AddGripperInfo)))
 #endif
                        .def("RemoveGripperInfo",&PyRobotBase::RemoveGripperInfo, PY_ARGS("gripperid") DOXY_FN(RobotBase,RemoveGripperInfo))
+                       .def("GetGripperInfo",&PyRobotBase::GetGripperInfo, PY_ARGS("gripperid") DOXY_FN(RobotBase,GetGripperInfo))
                        .def("GetGripperInfos",&PyRobotBase::GetGripperInfos, DOXY_FN(RobotBase,GetGripperInfos))
                        .def("GetController",&PyRobotBase::GetController, DOXY_FN(RobotBase,GetController))
                        .def("SetController",setcontroller1,DOXY_FN(RobotBase,SetController))
