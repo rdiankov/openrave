@@ -3226,7 +3226,7 @@ public:
 
                     daeElementRef pgripperid = tec->getChild("gripperid");
                     if( !!pgripperid ) {
-                        manipinfo._gripperid = pgripperid->getAttribute("name");
+                        manipinfo._gripperid = pgripperid->getCharData();
                     }
                     else{
                         manipinfo._gripperid.clear();
@@ -3417,7 +3417,7 @@ public:
             if( !pextra->getType() ) {
                 continue;
             }
-            if( strcmp(pextra->getType(), "attach_gripper_info") == 0 ) {
+            if( strcmp(pextra->getType(), "gripper_info") == 0 ) {
                 string gripperid = pextra->getAttribute("name");
                 if( gripperid.size() == 0 ) {
                     gripperid = str(boost::format("gripper%d")%_nGlobalGripperInfoId++);

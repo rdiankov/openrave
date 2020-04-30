@@ -2103,6 +2103,7 @@ protected:
             }
         }
 
+        (*it)->ReleaseAllGrabbed();
         if( (*it)->IsRobot() ) {
             vector<RobotBasePtr>::iterator itrobot = std::find(_vecrobots.begin(), _vecrobots.end(), RaveInterfaceCast<RobotBase>(*it));
             if( itrobot != _vecrobots.end() ) {

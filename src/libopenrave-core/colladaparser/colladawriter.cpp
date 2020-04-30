@@ -2317,7 +2317,7 @@ private:
                 // TODO add the free joints
             }
             daeElementRef gripperid = ptec->add("gripperid");
-            gripperid->setAttribute("name",(*itmanip)->GetGripperId().c_str());
+            gripperid->setCharData((*itmanip)->GetGripperId().c_str());
         }
     }
 
@@ -2405,7 +2405,7 @@ private:
             FOREACHC(itGripperInfo, probot->GetGripperInfos()) {
                 domExtraRef pextra = daeSafeCast<domExtra>(parent->add(COLLADA_ELEMENT_EXTRA));
                 pextra->setName((*itGripperInfo)->gripperid.c_str());
-                pextra->setType("attach_gripper_info");
+                pextra->setType("gripper_info");
                 domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
                 ptec->setProfile("OpenRAVE");
 

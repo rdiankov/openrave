@@ -302,6 +302,7 @@ public:
     bool AddGripperInfo(object oGripperInfo, bool removeduplicate=false);
     bool RemoveGripperInfo(const std::string& gripperid);
 
+    object GetGripperInfo(const std::string& gripperid);
     object GetGripperInfos();
 
     object GetController() const;
