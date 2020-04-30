@@ -166,7 +166,7 @@ public:
 
     bool ExtractOne(KinBodyPtr& ppbody, const string& uri) {
         std::string scheme, path, fragment;
-        _ParseURI(uri, scheme, path, fragment);            
+        _ParseURI(uri, scheme, path, fragment);
         if (fragment == "") {
             return ExtractFirst(ppbody);
         }
@@ -262,11 +262,8 @@ protected:
         dReal fUnitScale = _GetUnitScale();
 
         KinBody::KinBodyInfoPtr info(new KinBody::KinBodyInfo());
-
         info->DeserializeJSON(bodyValue, fUnitScale);
         info->_uri = _CanonicalizeURI(info->_uri);
-        // _ExtractLinks(bodyValue, info->_vLinkInfos, fUnitScale);
-        // _ExtractJoints(bodyValue, info->_vJointInfos, fUnitScale);
 
         KinBodyPtr body = RaveCreateKinBody(_penv, "");
         if (!body->InitFromInfo(info)) {
@@ -299,11 +296,6 @@ protected:
         RobotBase::RobotBaseInfoPtr info(new RobotBase::RobotBaseInfo());
         info->DeserializeJSON(bodyValue, fUnitScale);
         info->_uri = _CanonicalizeURI(info->_uri);
-        // _ExtractLinks(bodyValue, info->_vLinkInfos, fUnitScale);
-        // _ExtractJoints(bodyValue, info->_vJointInfos, fUnitScale);
-        // _ExtractManipulators(bodyValue, info->_vManipInfos, fUnitScale);
-        // _ExtractAttachedSensors(bodyValue, info->_vAttachedSensorInfos, fUnitScale);
-        // _ExtractConnectedBodies(bodyValue, info->_vConnectedBodyInfos, fUnitScale);
 
         RobotBasePtr robot = RaveCreateRobot(_penv, "");
         if (!robot->InitFromInfo(info)) {
