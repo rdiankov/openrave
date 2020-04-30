@@ -1801,21 +1801,27 @@ bool RobotBase::RemoveAttachedSensor(RobotBase::AttachedSensor &attsensor)
     return false;
 }
 
-bool RobotBase::AddGripperInfo(GripperInfoPtr gripperinfo, bool removeduplicate)
+bool RobotBase::AddGripperInfo(GripperInfoPtr gripperInfo, bool removeduplicate)
 {
-    OPENRAVE_ASSERT_OP(gripperinfo->gripperid.size(),>,0);
+    if( !gripperInfo ) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("Cannot add invalid gripperInfo to robot %s."),GetName(),ORE_InvalidArguments);
+    }
+    if( gripperInfo->gripperid.size() == 0 ) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("Cannot add gripperInfo to robot %s since its gripperid is empty."),GetName(),ORE_InvalidArguments);
+    }
+
     for(int igripper = 0; igripper < (int)_vecGripperInfos.size(); ++igripper) {
-        if( _vecGripperInfos[igripper]->gripperid == gripperinfo->gripperid ) {
+        if( _vecGripperInfos[igripper]->gripperid == gripperInfo->gripperid ) {
             if( removeduplicate ) {
-                _vecGripperInfos[igripper] = gripperinfo;
+                _vecGripperInfos[igripper] = gripperInfo;
             }
             else {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("gripper with name %s already exists"),gripperinfo->gripperid,ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("gripper with name %s already exists"),gripperInfo->gripperid,ORE_InvalidArguments);
             }
         }
     }
 
-    _vecGripperInfos.push_back(gripperinfo);
+    _vecGripperInfos.push_back(gripperInfo);
     return true;
 }
 
@@ -2033,6 +2039,17 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         _vecAttachedSensors.push_back(AttachedSensorPtr(new AttachedSensor(shared_robot(),**itsensor,cloningoptions)));
     }
     _UpdateAttachedSensors();
+
+    // gripper infos, have to recreate the _pdocument
+    _vecGripperInfos = r->_vecGripperInfos;
+    FOREACH(itGripperInfo, _vecGripperInfos) {
+        GripperInfoPtr& pGripperInfo = *itGripperInfo;
+        if( !!pGripperInfo && !!pGripperInfo->_pdocument) {
+            boost::shared_ptr<rapidjson::Document> pnewdocument(new rapidjson::Document());
+            pnewdocument->CopyFrom(*pGripperInfo->_pdocument, pnewdocument->GetAllocator());
+            pGripperInfo->_pdocument = pnewdocument;
+        }
+    }
 
     _vActiveDOFIndices = r->_vActiveDOFIndices;
     _activespec = r->_activespec;
