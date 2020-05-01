@@ -89,8 +89,19 @@ RobotBase::ManipulatorInfoPtr PyManipulatorInfo::GetManipulatorInfo() const
     pinfo->_vChuckingDirection = ExtractArray<dReal>(_vChuckingDirection);
     pinfo->_vdirection = ExtractVector3(_vdirection);
     pinfo->_sIkSolverXMLId = _sIkSolverXMLId;
-    pinfo->_vGripperJointNames = ExtractArray<std::string>(_vGripperJointNames);
-    pinfo->_gripperid = py::extract<std::string>(_gripperid);
+    if( !IS_PYTHONOBJECT_NONE(_vGripperJointNames) ) {
+        pinfo->_vGripperJointNames = ExtractArray<std::string>(_vGripperJointNames);
+    }
+    else {
+        pinfo->_vGripperJointNames.clear();
+    }
+    if( !IS_PYTHONOBJECT_NONE(_gripperid) ) {
+        pinfo->_gripperid = py::extract<std::string>(_gripperid);
+    }
+    else {
+        RAVELOG_WARN_FORMAT("python manipulator %s has gripperid that is None", pinfo->_name);
+        pinfo->_gripperid.clear();
+    }
     return pinfo;
 }
 
@@ -1287,7 +1298,7 @@ bool PyRobotBase::AddGripperInfo(object oGripperInfo, bool removeduplicate)
 
 bool PyRobotBase::RemoveGripperInfo(const std::string& gripperid)
 {
-    _probot->RemoveGripperInfo(gripperid);
+    return _probot->RemoveGripperInfo(gripperid);
 }
 
 object PyRobotBase::GetGripperInfo(const std::string& gripperid)
