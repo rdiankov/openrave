@@ -83,41 +83,46 @@ public:
         return true;
     }
 
+    /*
+    * dofValue format migration
+    * dof json value format has changed to a mapping with jointId and value as key, {"jointId": "joint0", "value": 1.234}
+    * we need to convert dofvalues from mapping to list for openrave ;
+    */
+    void _ConvertJointDOFValueFormat(const std::vector<KinBody::JointPtr>& vJoints, std::vector<dReal>& vDOFValues, const rapidjson::Value& rDOFValues) {
+        std::map<std::string, dReal> jointDOFValues;
+        for(rapidjson::Value::ConstValueIterator itrDOFValue = rDOFValues.Begin(); itrDOFValue != rDOFValues.End(); ++itrDOFValue) {
+            std::string jointId;
+            dReal dofValue;
+            OpenRAVE::JSON::LoadJsonValueByKey(*itrDOFValue, "jointId", jointId);
+            OpenRAVE::JSON::LoadJsonValueByKey(*itrDOFValue, "value", dofValue);
+            jointDOFValues[jointId] = dofValue;
+        }
+        vDOFValues.resize(vJoints.size());
+        FOREACH(itJoint, vJoints) {
+            vDOFValues[(*itJoint)->GetDOFIndex()] = jointDOFValues[(*itJoint)->GetInfo()._id];
+        }
+    }
+
+    /// \brief Extrat all bodies and add them into environment
     bool ExtractAll() {
         bool allSucceeded = true;
-        // extra all bodies and add to env
-        std::pair<std::string, dReal> unit;
-        OpenRAVE::JSON::LoadJsonValueByKey(*_doc, "unit", unit);
-        _penv->SetUnit(unit);
-
         dReal fUnitScale = _GetUnitScale();
-
         if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()) {
             std::map<KinBodyPtr, std::vector<KinBody::GrabbedInfoConstPtr>> mapKinBodyGrabbedInfos;
-            for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
+            for (rapidjson::Value::ValueIterator itrBodyValue = (*_doc)["bodies"].Begin(); itrBodyValue != (*_doc)["bodies"].End(); ++itrBodyValue) {
                 KinBodyPtr pbody;
-                if (_Extract(*itr, pbody)) {
+                if (_Extract(*itrBodyValue, pbody)) {
                     _penv->Add(pbody, true);
                     // set dof values
-                    // dof value changes to a mapping, {"jointId": "joint0", "value": 1.234}
-                    if (itr->HasMember("dofValues")) {
-                        // convert mapping to list of dofvalues;
-                        std::vector<DOFValue> vJointDOFValues = {};
-                        OpenRAVE::JSON::LoadJsonValueByKey(*itr, "dofValues", vJointDOFValues);
-                        std::vector<dReal> vDOFValues = {};
-                        FOREACH(itJoint, pbody->GetJoints()) {
-                            FOREACH(itJointDofValue, vJointDOFValues) {
-                                if ((*itJoint)->GetInfo()._id == (*itJointDofValue).jointId) {
-                                    vDOFValues.push_back((*itJointDofValue).value);
-                                }
-                            }
-                        }
+                    if (itrBodyValue->HasMember("dofValues") && (*itrBodyValue)["dofValues"].IsObject()) {
+                        std::vector<dReal> vDOFValues {};
+                        _ConvertJointDOFValueFormat(pbody->GetJoints(), vDOFValues, (*itrBodyValue)["dofValues"]);
                         pbody->SetDOFValues(vDOFValues, KinBody::CLA_Nothing);
                     }
 
                     // parse grabbed infos
-                    if (itr->HasMember("grabbed") && (*itr)["grabbed"].IsArray()) {
-                        for(rapidjson::Value::ValueIterator itGrabInfo = (*itr)["grabbed"].Begin(); itGrabInfo != (*itr)["grabbed"].End(); ++itGrabInfo){
+                    if (itrBodyValue->HasMember("grabbed") && (*itrBodyValue)["grabbed"].IsArray()) {
+                        for(rapidjson::Value::ValueIterator itGrabInfo = (*itrBodyValue)["grabbed"].Begin(); itGrabInfo != (*itrBodyValue)["grabbed"].End(); ++itGrabInfo){
                             KinBody::GrabbedInfoPtr pGrabbedInfo(new KinBody::GrabbedInfo());
                             pGrabbedInfo->DeserializeJSON(*itGrabInfo, fUnitScale);
                             mapKinBodyGrabbedInfos[pbody].push_back(pGrabbedInfo);
@@ -190,6 +195,13 @@ public:
             for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
                 std::string bodyUri;
                 OpenRAVE::JSON::LoadJsonValueByKey(*itr, "uri", bodyUri);
+                if (bodyUri.empty()) {
+                    std::string id;
+                    OpenRAVE::JSON::LoadJsonValueByKey(*itr, "id", id);
+                    if (!id.empty()) {
+                        bodyUri = "#" + id;
+                    }
+                }
                 if (bodyUri == std::string("#") + fragment) {
                     return _Extract(*itr, pprobot); // TODO: change to iterator
                 }
@@ -203,14 +215,20 @@ protected:
     {
         std::pair<std::string, dReal> unit = {"meter", 1};
         OpenRAVE::JSON::LoadJsonValueByKey(*_doc, "unit", unit);
-        if (unit.first == "mm")
-        {
+
+        // TODO: for now we just set defautl to ["meter", 1]
+        if (unit.first.empty()){
+            unit.first = "meter";
+            unit.second = 1;
+        }
+
+        if (unit.first == "mm") {
             unit.second *= 0.001;
         }
-        else if (unit.first == "cm")
-        {
+        else if (unit.first == "cm") {
             unit.second *= 0.01;
         }
+
         dReal scale = unit.second / _fGlobalScale;
         return scale;
     }
@@ -231,33 +249,72 @@ protected:
         return uri;
     }
 
-    bool _Extract(const rapidjson::Value& bodyValue, KinBodyPtr& pbody)
-    {
-        dReal fUnitScale = _GetUnitScale();
-        KinBody::KinBodyInfoPtr info(new KinBody::KinBodyInfo());
-
-        std::string id;
-        OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "id", id);
-
-        if (id.empty()) {
+    void _ExtractCommon(const rapidjson::Value& bodyValue, KinBody::KinBodyInfo& bodyInfo) {
+        OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "id", bodyInfo._id);
+        if (bodyInfo._id.empty()) {
             RAVELOG_WARN("info id is empty");
-            id = "body0";
+            bodyInfo._id = "body0";
         }
         int suffix = 1;
-        while(_bodyUniqueIds.find(id) != _bodyUniqueIds.end()) {
-            id = "body" + std::to_string(suffix);
+        while(_bodyUniqueIds.find(bodyInfo._id) != _bodyUniqueIds.end()) {
+            bodyInfo._id = "body" + std::to_string(suffix);
             suffix += 1;
         }
-        info->_id = id;
-        _bodyUniqueIds.insert(id);
+        _bodyUniqueIds.insert(bodyInfo._id);
 
         // uri
         std::string uri;
         OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "uri", uri);
-        if (!uri.empty()) {
-            info->_uri = _CanonicalizeURI(uri);
+        if (uri.empty()) {
+            bodyInfo._uri = "#" + bodyInfo._id;
+        }
+        _CanonicalizeURI(bodyInfo._uri);
+    }
+
+    template<typename T>
+    void _ExtractReference(const rapidjson::Value& bodyValue, T& info, dReal fUnitScale) {
+        std::vector<std::string> vBodyReferenceUri;
+        while(true) {
+            std::string referenceUri;
+            OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "referenceUri", referenceUri);
+            if (referenceUri.empty()) {
+                break;
+            }
+            if (std::find(vBodyReferenceUri.begin(), vBodyReferenceUri.end(), referenceUri) != vBodyReferenceUri.end()) {
+                throw OPENRAVE_EXCEPTION_FORMAT("circular reference found in document %s", referenceUri, ORE_InvalidArguments);
+            }
+            vBodyReferenceUri.push_back(referenceUri);
         }
 
+        boost::shared_ptr<T> referenceInfo;
+        for(std::vector<std::string>::reverse_iterator itUri = vBodyReferenceUri.rbegin(); itUri!=vBodyReferenceUri.rend(); itUri++) {
+            rapidjson::Value::ValueIterator itrBodyValue = _ResolveBodyValue(*itUri);
+            if (itUri == (vBodyReferenceUri.rend() - 1) && vBodyReferenceUri.size() > 1){
+                // copy to referenceInfo;
+                referenceInfo.reset(new T());
+                *referenceInfo = info;
+            }
+            _Merge(info, itrBodyValue, fUnitScale);
+        }
+        info._referenceInfo = referenceInfo;
+    }
+
+    template<typename T>
+    void _ExtractEnvInfo(const rapidjson::Value& bodyValue, boost::shared_ptr<T> pbody, dReal fUnitScale) {
+        if (!!pbody) {
+            _ExtractReadableInterfaces(bodyValue, pbody, fUnitScale);
+            pbody->SetName(OpenRAVE::JSON::GetJsonValueByKey<std::string>(bodyValue, "name"));
+            if (bodyValue.HasMember("transform")) {
+                Transform transform;
+                OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "transform", transform);
+                transform.trans *= fUnitScale;
+                pbody->SetTransform(transform);
+            }
+        }
+    }
+
+    bool _Extract(const rapidjson::Value& bodyValue, KinBodyPtr& pbody)
+    {
         // extract for robot
         if (OpenRAVE::JSON::GetJsonValueByKey<bool>(bodyValue, "isRobot")) {
             RobotBasePtr probot;
@@ -267,102 +324,47 @@ protected:
             }
             return false;
         }
-        std::vector<std::string> bodyReferenceUri;
 
-        // TODO: check uri exists
-        bodyReferenceUri.push_back(bodyValue["uri"].GetString());
-        std::string referenceUri;
-        bool isCircularReference = false;
-        std::map<std::string, bool> referenceChecking {{info->_uri, true}};
-        while(!isCircularReference) {
-            referenceUri.clear();
-            OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "referenceUri", referenceUri);
-            if (referenceUri.empty()) {
-                break;
-            }
-            if (referenceChecking.find(referenceUri) != referenceChecking.end()) {
-                throw OPENRAVE_EXCEPTION_FORMAT("circular reference found in document %s", referenceUri, ORE_InvalidArguments);
-            }
-//            rapidjson::Value::ValueIterator itReferenceBodyValue = _ResolveBodyValue(referenceUri);
-            bodyReferenceUri.push_back(referenceUri);
-            referenceChecking[referenceUri] = true;
-        }
+        dReal fUnitScale = _GetUnitScale();
+        KinBody::KinBodyInfoPtr kinBodyInfo(new KinBody::KinBodyInfo());
 
-        for(std::vector<std::string>::reverse_iterator it = bodyReferenceUri.rbegin(); it!=bodyReferenceUri.rend(); it++) {
-            _MergeKinBodyInfo(*info, *it, fUnitScale);
-        }
+        _ExtractCommon(bodyValue, *kinBodyInfo);
+        _ExtractReference(bodyValue, *kinBodyInfo, fUnitScale);
+
+        _ExtractLinks(bodyValue, kinBodyInfo->_vLinkInfos, fUnitScale);
+        _ExtractJoints(bodyValue, kinBodyInfo->_vJointInfos, fUnitScale);
 
         KinBodyPtr body = RaveCreateKinBody(_penv, "");
-        if (!body->InitFromInfo(info)) {
+        if (!body->InitFromInfo(kinBodyInfo)) {
             return false;
         }
-
-        if (bodyValue.HasMember("readableInterfaces")) {
-            _ExtractReadableInterfaces((bodyValue)["readableInterfaces"], body, fUnitScale);
-        }
-
-        body->SetName(OpenRAVE::JSON::GetJsonValueByKey<std::string>(bodyValue, "name"));
-
-        if (bodyValue.HasMember("transform")) {
-            Transform transform;
-            OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "transform", transform);
-            transform.trans *= fUnitScale;
-            body->SetTransform(transform);
-        }
-
-        body->SetInfo(*info);
+        _ExtractEnvInfo(bodyValue, body, fUnitScale);
         pbody = body;
         return true;
     }
 
     bool _Extract(const rapidjson::Value& bodyValue, RobotBasePtr& probot)
     {
-
-        std::string referenceUri, uri;
-        OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "referenceUri", referenceUri);
-
-        dReal fUnitScale = _GetUnitScale();
-
         if (!OpenRAVE::JSON::GetJsonValueByKey<bool>(bodyValue, "isRobot")) {
             return false;
         }
 
-        RobotBase::RobotBaseInfoPtr info(new RobotBase::RobotBaseInfo());
-        // uri
-        OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "uri", uri);
-        if (!uri.empty()) {
-            info->_uri = _CanonicalizeURI(uri);
-        }
+        dReal fUnitScale = _GetUnitScale();
+        RobotBase::RobotBaseInfoPtr robotBaseInfo(new RobotBase::RobotBaseInfo());
+        _ExtractCommon(bodyValue, *robotBaseInfo);
+        _ExtractReference(bodyValue, *robotBaseInfo, fUnitScale);
 
-
-        if (!referenceUri.empty()) {
-            std::set<std::string> referenceCircularCount;
-            RobotBase::RobotBaseInfoPtr referenceRobot = _ResolveRobot(referenceUri, referenceCircularCount, fUnitScale);
-            info->SetReferenceInfo(*referenceRobot);
-        }
-
-
-        _ExtractLinks(bodyValue, info->_vLinkInfos, fUnitScale);
-        _ExtractJoints(bodyValue, info->_vJointInfos, fUnitScale);
-        _ExtractManipulators(bodyValue, info->_vManipInfos, fUnitScale);
-        _ExtractAttachedSensors(bodyValue, info->_vAttachedSensorInfos, fUnitScale);
-        _ExtractConnectedBodies(bodyValue, info->_vConnectedBodyInfos, fUnitScale);
+        _ExtractLinks(bodyValue, robotBaseInfo->_vLinkInfos, fUnitScale);
+        _ExtractJoints(bodyValue, robotBaseInfo->_vJointInfos, fUnitScale);
+        _ExtractManipulators(bodyValue, robotBaseInfo->_vManipInfos, fUnitScale);
+        _ExtractAttachedSensors(bodyValue, robotBaseInfo->_vAttachedSensorInfos, fUnitScale);
+        _ExtractConnectedBodies(bodyValue, robotBaseInfo->_vConnectedBodyInfos, fUnitScale);
 
         RobotBasePtr robot = RaveCreateRobot(_penv, "");
-        if (!robot->InitFromInfo(info)) {
+        if (!robot->InitFromInfo(robotBaseInfo)) {
             return false;
         }
-
-        _ExtractReadableInterfaces(bodyValue, robot, fUnitScale);
-        robot->SetName(OpenRAVE::JSON::GetJsonValueByKey<std::string>(bodyValue, "name"));
-
-        if (bodyValue.HasMember("transform")) {
-            Transform transform;
-            OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "transform", transform);
-            transform.trans *= fUnitScale;
-            robot->SetTransform(transform);
-        }
-
+        _ExtractEnvInfo(bodyValue, robot, fUnitScale);
         probot = robot;
         return true;
     }
@@ -469,100 +471,22 @@ protected:
         }
     }
 
-    KinBody::KinBodyInfoPtr _ResolveBody(const std::string& uri, std::set<std::string>& referenceCircularCount, dReal fUnitScale=1.0) {
-        rapidjson::Value::ValueIterator bodyValue = _ResolveBodyValue(uri);
-
-        KinBody::KinBodyInfoPtr pBodyInfo(new KinBody::KinBodyInfo());
-
-        if (bodyValue->HasMember("referenceUri")) {
-            KinBody::KinBodyInfoPtr pBodyInfoRef;
-            std::string referenceUri;
-            OpenRAVE::JSON::LoadJsonValueByKey(*bodyValue, "referenceUri", referenceUri);
-            if (referenceCircularCount.find(referenceUri) != referenceCircularCount.end()) {
-                // circular reference
-                throw OPENRAVE_EXCEPTION_FORMAT("circular reference found in document %s", referenceUri, ORE_InvalidArguments);
-            }
-            referenceCircularCount.insert(referenceUri);
-            pBodyInfoRef = _ResolveBody(referenceUri, referenceCircularCount, fUnitScale);   // recursively load body
-            pBodyInfo->SetReferenceInfo(*pBodyInfoRef);
-        };
-
-        _ExtractLinks(*bodyValue, pBodyInfo->_vLinkInfos, fUnitScale);
-        _ExtractJoints(*bodyValue, pBodyInfo->_vJointInfos, fUnitScale);
-        return pBodyInfo;
-    }
-
-
-    std::string _GetUniqueId(std::string prefix, std::set<std::string> sUniqueId) {
-        std::string id;
-        int suffix = 0;
-        do {
-            id = prefix + std::to_string(suffix);
-        } while(sUniqueId.find(id) != sUniqueId.end());
-        return id;
-    }
-
-    template<typename T>
-    void _MergeInfo(std::string id, std::vector<boost::shared_ptr<T>>& infos, const rapidjson::Value& value, dReal fUnitScale) {
-        std::map<std::string, boost::shared_ptr<T>> infoMap;
-        FOREACH(itr, infos) {
-            infoMap[(*itr)->_id] = *itr;
-        }
-        bool isDeleted = false;
-        typename std::map<std::string, boost::shared_ptr<T>>::iterator itInfo = infoMap.find(id);
-        if (isDeleted && itInfo != infoMap.end()) {
-            infoMap.erase(itInfo);
-        }
-        else {
-            if (infoMap.find(id) == infoMap.end()) {
-                infoMap[id] = boost::shared_ptr<T>(new T());
-            }
-            DeserializeDiffJSON(*infoMap[id], value, fUnitScale);
-        }
-        infos.clear();
-        infos.reserve(infoMap.size());
-        FOREACH(itr, infoMap) {
-            infos.push_back((*itr).second);
-        }
-    }
-
-
-    void _MergeKinBodyInfo(KinBody::KinBodyInfo& bodyInfo, const std::string& bodyUri, dReal fUnitScale) {
-        std::set<std::string> uniqueId;
-        rapidjson::Value::ValueIterator value = _ResolveBodyValue(bodyUri);
-        if (value->HasMember("links") && (*value)["links"].IsArray()) {
-            for (rapidjson::Value::ConstValueIterator itr=(*value)["links"].Begin(); itr != (*value)["links"].End(); ++itr) {
-                std::string linkId;
-                OpenRAVE::JSON::LoadJsonValueByKey(*value, "id", linkId);
-                if (linkId.empty()) {
-                    FOREACHC(it, bodyInfo._vLinkInfos) {
-                        uniqueId.insert((*it)->_id);
-                    }
-                    linkId = _GetUniqueId("link", uniqueId);
-                }
-                _MergeInfo(linkId, bodyInfo._vLinkInfos, *value, fUnitScale);
+    void _Merge(KinBody::KinBodyInfo& bodyInfo, rapidjson::Value::ConstValueIterator bodyValue, dReal fUnitScale)
+    {
+        if (bodyValue->HasMember("links") && (*bodyValue)["links"].IsArray()) {
+            for (rapidjson::Value::ConstValueIterator itr=(*bodyValue)["links"].Begin(); itr != (*bodyValue)["links"].End(); ++itr) {
+                _ExtractInfo(*itr, bodyInfo._vLinkInfos, fUnitScale);
             }
         }
-        if (value->HasMember("joints") && (*value)["joints"].IsArray()) {
-            for (rapidjson::Value::ConstValueIterator itr=(*value)["joints"].Begin(); itr != (*value)["joints"].End(); ++itr) {
-                std::string jointId;
-                OpenRAVE::JSON::LoadJsonValueByKey(*value, "id", jointId);
-                if (jointId.empty()) {
-                    FOREACHC(it, bodyInfo._vJointInfos) {
-                        uniqueId.insert((*it)->_id);
-                    }
-                    jointId = _GetUniqueId("joint", uniqueId);
-                }
-                _MergeInfo(jointId, bodyInfo._vJointInfos, *value, fUnitScale);
+        if (bodyValue->HasMember("joints") && (*bodyValue)["joints"].IsArray()) {
+            for (rapidjson::Value::ConstValueIterator itr=(*bodyValue)["joints"].Begin(); itr != (*bodyValue)["joints"].End(); ++itr) {
+                _ExtractInfo(*itr, bodyInfo._vJointInfos, fUnitScale);
             }
         }
     }
 
-    void _ResolveBody(const std::vector<std::reference_wrapper<rapidjson::Value>>& bodyValues, KinBody::KinBodyInfo& bodyInfo, dReal fUnitScale=1.0) {
-
-    }
-
-    rapidjson::Value::ValueIterator _ResolveBodyValue(const std::string &uri) {
+    rapidjson::Value::ValueIterator _ResolveBodyValue(const std::string &uri)
+    {
         std::string scheme, path, fragment;
         _ParseURI(uri, scheme, path, fragment);
         std::string filename = _ResolveURI(scheme, path);
@@ -571,29 +495,6 @@ protected:
             throw OPENRAVE_EXCEPTION_FORMAT("failed resolve json document \"%s\"", uri, ORE_InvalidArguments);
         }
         return _ResolveBodyInDocument(doc, fragment);
-    }
-
-    RobotBase::RobotBaseInfoPtr _ResolveRobot(const std::string& uri, std::set<std::string>& referenceCircularCount, dReal fUnitScale) {
-        rapidjson::Value::ValueIterator bodyValue = _ResolveBodyValue(uri);
-
-        RobotBase::RobotBaseInfoPtr pRobotInfo(new RobotBase::RobotBaseInfo());
-        if (bodyValue->HasMember("referenceUri")) {
-            RobotBase::RobotBaseInfoPtr pRobotInfoRef;
-            std::string referenceUri;
-            OpenRAVE::JSON::LoadJsonValueByKey(*bodyValue, "referenceUri", referenceUri);
-            if (referenceCircularCount.find(referenceUri) != referenceCircularCount.end()) {
-                throw OPENRAVE_EXCEPTION_FORMAT("circular reference found in document %s", referenceUri, ORE_InvalidArguments);
-            }
-            referenceCircularCount.insert(referenceUri);
-            pRobotInfoRef = _ResolveRobot(referenceUri, referenceCircularCount, fUnitScale);   // recursively load body
-            pRobotInfo->SetReferenceInfo(*pRobotInfoRef);
-        }
-        _ExtractLinks(*bodyValue, pRobotInfo->_vLinkInfos, fUnitScale);
-        _ExtractJoints(*bodyValue, pRobotInfo->_vJointInfos, fUnitScale);
-        _ExtractManipulators(*bodyValue, pRobotInfo->_vManipInfos, fUnitScale);
-        _ExtractAttachedSensors(*bodyValue, pRobotInfo->_vAttachedSensorInfos, fUnitScale);
-        _ExtractConnectedBodies(*bodyValue, pRobotInfo->_vConnectedBodyInfos, fUnitScale);
-        return pRobotInfo;
     }
 
     rapidjson::Value::ValueIterator _ResolveBodyInDocument(boost::shared_ptr<rapidjson::Document> doc, const std::string& id)
@@ -701,8 +602,7 @@ protected:
     std::map<std::string, boost::shared_ptr<rapidjson::Document> > _docs; ///< key is filename
     std::map<boost::shared_ptr<rapidjson::Document>, std::map<std::string, rapidjson::Value::ValueIterator> > _bodies; ///< key is pointer to doc
 
-    std::set<std::string> _bodyUniqueIds;
-
+    std::set<std::string> _bodyUniqueIds; ///< unique id for bodies in current _doc
 };
 
 

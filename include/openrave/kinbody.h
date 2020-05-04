@@ -246,6 +246,8 @@ public:
 
         // reference architecture
         std::string _id;
+        bool _bIsDeleted;
+        boost::shared_ptr<GeometryInfo> _referenceInfo;
 
 private:
         void _Update(const KinBody::GeometryInfo& info);
@@ -904,6 +906,8 @@ public:
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
 
         JointType _type; /// The joint type
+
+        std::string _id;   // joint unique id
         std::string _name;         ///< the unique joint name
         std::string _linkname0, _linkname1; ///< attaching links, all axes and anchors are defined in the link pointed to by _linkname0 coordinate system. _linkname0 is usually the parent link.
         Vector _vanchor; ///< the anchor of the rotation axes defined in _linkname0's coordinate system. this is only used to construct the internal left/right matrices. passed into Joint::_ComputeInternalInformation
@@ -982,8 +986,6 @@ public:
         JointControlInfo_IOPtr _jci_io;
         JointControlInfo_ExternalDevicePtr _jci_externaldevice;
 
-        // reference architecture
-        std::string _id;
     };
     typedef boost::shared_ptr<JointInfo> JointInfoPtr;
     typedef boost::shared_ptr<JointInfo const> JointInfoConstPtr;
@@ -1514,6 +1516,30 @@ private:
     typedef boost::shared_ptr<KinBody::Joint const> JointConstPtr;
     typedef boost::weak_ptr<KinBody::Joint> JointWeakPtr;
 
+    /// \brief holds all user-set attached sensor information used to initialize the AttachedSensor class.
+    ///
+    /// This is serializable and independent of environment.
+    class OPENRAVE_API GrabbedInfo
+    {
+public:
+        /// \brief resets the info
+        inline void Reset() {
+            _grabbedname.clear();
+            _robotlinkname.clear();
+            _trelative = Transform();
+            _setRobotLinksToIgnore.clear();
+        }
+
+        std::string _grabbedname; ///< the name of the body to grab
+        std::string _robotlinkname;  ///< the name of the body link that is grabbing the body
+        Transform _trelative; ///< transform of first link of body relative to _robotlinkname's transform. In other words, grabbed->GetTransform() == bodylink->GetTransform()*trelative
+        std::set<int> _setRobotLinksToIgnore; ///< links of the body to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the body and the relative position of the grabbed body.
+        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
+        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+    };
+    typedef boost::shared_ptr<GrabbedInfo> GrabbedInfoPtr;
+    typedef boost::shared_ptr<GrabbedInfo const> GrabbedInfoConstPtr;
+
     /// \brief Stores the state of the current body that is published in a thread safe way from the environment without requiring locking the environment.
     class BodyState
     {
@@ -1522,17 +1548,35 @@ public:
         }
         virtual ~BodyState() {
         }
+
+        /// \brief clears any previous set state
+        inline void Reset() {
+            strname.clear();
+            pbody.reset();
+            vectrans.clear();
+            vLinkEnableStates.clear();
+            vConnectedBodyActiveStates.clear();
+            jointvalues.clear();
+            uri.clear();
+            updatestamp = 0;
+            environmentid = 0;
+            activeManipulatorName.clear();
+            activeManipulatorTransform = Transform();
+            vGrabbedInfos.clear();
+        }
+
         KinBodyPtr pbody; ///< pointer to the body. if using this, make sure the environment is locked.
+        std::string strname;         ///< \see KinBody::GetName
         std::vector<Transform> vectrans; ///< \see KinBody::GetLinkTransformations
         std::vector<uint8_t> vLinkEnableStates; ///< \see KinBody::GetLinkEnableStates
         std::vector<uint8_t> vConnectedBodyActiveStates; ///< IsActive state of ConnectedBody \see RobotBase::GetConnectedBodyActiveStates
         std::vector<dReal> jointvalues; ///< \see KinBody::GetDOFValues
-        std::string strname;         ///< \see KinBody::GetName
         std::string uri; ///< \see KinBody::GetURI
         int updatestamp; ///< \see KinBody::GetUpdateStamp
         int environmentid; ///< \see KinBody::GetEnvironmentId
         std::string activeManipulatorName; ///< the currently active manpiulator set for the body
         Transform activeManipulatorTransform; ///< the active manipulator's transform
+        std::vector<GrabbedInfo> vGrabbedInfos; ///< list of grabbed bodies
     };
     typedef boost::shared_ptr<KinBody::BodyState> BodyStatePtr;
     typedef boost::shared_ptr<KinBody::BodyState const> BodyStateConstPtr;
@@ -1596,22 +1640,6 @@ private:
         Save_ManipulatorsToolTransform       = 0x00100000, ///< [robot only], saves every manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
     };
 
-    /// \brief holds all user-set grabbed object information used to initialize kinbody
-    ///
-    /// This is serializable and independent of environment.
-    class OPENRAVE_API GrabbedInfo
-    {
-public:
-        std::string _grabbedname; ///< the name of the body to grab
-        std::string _robotlinkname;  ///< the name of the body link that is grabbing the body
-        Transform _trelative; ///< transform of first link of body relative to _robotlinkname's transform. In other words, grabbed->GetTransform() == bodylink->GetTransform()*trelative
-        std::set<int> _setRobotLinksToIgnore; ///< links of the body to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the body and the relative position of the grabbed body.
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
-    };
-    typedef boost::shared_ptr<GrabbedInfo> GrabbedInfoPtr;
-    typedef boost::shared_ptr<GrabbedInfo const> GrabbedInfoConstPtr;
-
     /// \brief info structure used to initialize a kinbody
     class OPENRAVE_API KinBodyInfo
     {
@@ -1623,7 +1651,6 @@ public:
 
         virtual ~KinBodyInfo() {}
 
-
         virtual const KinBodyInfo& operator=(const KinBodyInfo& other) {
             _id = other._id;
             _uri = other._uri;
@@ -1633,14 +1660,10 @@ public:
             return *this;
         }
 
-        virtual void SetReferenceInfo(const KinBodyInfo& other) {
-            _referenceInfo = boost::make_shared<KinBodyInfo>(other);
-            *this = other;
-        }
-
         std::string _id;
-        std::string _uri;  // current body info uri
+        std::string _uri;
         std::string _referenceUri;  // referenced body info uri
+
         std::vector<LinkInfoPtr> _vLinkInfos; ///< list of pointers to LinkInfo
         std::vector<JointInfoPtr> _vJointInfos; ///< list of pointers to JointInfo
 
@@ -2560,9 +2583,15 @@ private:
 
     /** \brief gets all grabbed bodies of the body
 
-        \param[out] vgrabbedinfo filled with the grabbed info for every body
+        \param[out] vgrabbedinfo filled with the grabbed info for every body. The pointers are newly created.
      */
     virtual void GetGrabbedInfo(std::vector<GrabbedInfoPtr>& vgrabbedinfo) const;
+
+    /** \brief gets all grabbed bodies of the body
+
+        \param[out] vgrabbedinfo all the grabbed infos
+     */
+    virtual void GetGrabbedInfo(std::vector<GrabbedInfo>& vgrabbedinfo) const;
 
     /** \brief resets the grabbed bodies of the body
 

@@ -90,7 +90,13 @@ protected:
     void _SerializeInfoJSON(const std::vector<T>& currentInfos, const std::vector<T>& referenceInfos, rapidjson::Value& valueArray) {
         FOREACHC(it, currentInfos) {
             rapidjson::Value value;
-            auto itRef = std::find_if(referenceInfos.begin(), referenceInfos.end(), [&](T info){return info->_id == (*it)->_id;});
+            typename std::vector<T>::const_iterator itRef = referenceInfos.begin();
+            for(itRef = referenceInfos.begin(); itRef != referenceInfos.end(); itRef++) {
+                if ((*itRef)->_id == (*it)->_id) {
+                    break;
+                }
+            }
+            // TODO: combine two function togegher ?
             if ( itRef != referenceInfos.end()) {
                 SerializeDiffJSON(**it, **itRef, value, _allocator);
             }
@@ -99,8 +105,6 @@ protected:
             }
             valueArray.PushBack(value, _allocator);
         }
-
-        _SerializeDeletedInfoJSON(currentInfos, referenceInfos, valueArray);
     }
 
     virtual void _Write(const std::list<KinBodyPtr>& listbodies) {
@@ -130,11 +134,24 @@ protected:
                 std::vector<dReal> vDOFValues;
                 pbody->GetDOFValues(vDOFValues);
                 if (vDOFValues.size() > 0) {
-                    OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "dofValues", vDOFValues, _allocator);
+                    rapidjson::Value dofValues;
+                    dofValues.SetArray();
+                    dofValues.Reserve(vDOFValues.size(), _allocator);
+                    for(size_t iDOF=0; iDOF<vDOFValues.size(); iDOF++) {
+                        rapidjson::Value jointDOFValue;
+                        KinBody::JointPtr pJoint = pbody->GetJointFromDOFIndex(iDOF);
+                        std::string jointId = pJoint->GetInfo()._id;
+                        if (jointId.empty()) {
+                            jointId = pJoint->GetInfo()._name;
+                        }
+                        OpenRAVE::JSON::SetJsonValueByKey(jointDOFValue, "jointId", jointId, _allocator);
+                        OpenRAVE::JSON::SetJsonValueByKey(jointDOFValue, "value", vDOFValues[iDOF], _allocator);
+                        dofValues.PushBack(jointDOFValue, _allocator);
+                    }
+                    OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "dofValues", dofValues, _allocator);
                 }
 
                 // state saver
-
                 KinBody::KinBodyStateSaver saver(pbody);
                 vector<dReal> vZeros(pbody->GetDOF());
                 pbody->SetDOFValues(vZeros, KinBody::CLA_Nothing);
@@ -154,9 +171,18 @@ protected:
                     bodyValue.AddMember("grabbed", grabbedsValue, _allocator);
                 }
 
-                // id
-                std::string id = str(boost::format("body%d_motion")%_mapBodyIds[pbody->GetEnvironmentId()]);
-                OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "_id", id, _allocator);
+
+                std::string id = (*itbody)->GetInfo()._id;
+                if (id.empty()) {
+                    id = str(boost::format("body%d_motion")%_mapBodyIds[pbody->GetEnvironmentId()]);
+                }
+                OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "id", id, _allocator);
+                OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "name", pbody->GetName(), _allocator);
+
+                // referenceUri
+                if (!!pbody && !!pbody->GetInfo()._referenceInfo) {
+                    OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "referenceUri", (*itbody)->GetInfo()._referenceUri, _allocator);
+                }
 
                 // links
                 {
@@ -198,9 +224,11 @@ protected:
                     }
                 }
 
-                // robot realted structues
+                // robot
                 if (pbody->IsRobot()) {
                     RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
+
+                    // manipulators
                     if (probot->GetManipulators().size() > 0) {
                         rapidjson::Value manipulatorsValue;
                         manipulatorsValue.SetArray();
@@ -216,7 +244,7 @@ protected:
                             bodyValue.AddMember("manipulators", manipulatorsValue, _allocator);
                         }
                     }
-
+                    // attachedsensors
                     if (probot->GetAttachedSensors().size() > 0) {
                         rapidjson::Value attachedSensorsValue;
                         attachedSensorsValue.SetArray();
@@ -231,7 +259,7 @@ protected:
                             bodyValue.AddMember("attachedSensors", attachedSensorsValue, _allocator);
                         }
                     }
-
+                    // connectedbodies
                     if (probot->GetConnectedBodies().size() > 0) {
                         rapidjson::Value connectedBodiesValue;
                         connectedBodiesValue.SetArray();
@@ -244,7 +272,6 @@ protected:
                         if (connectedBodiesValue.Size() > 0) {
                             bodyValue.AddMember("connectedBodies", connectedBodiesValue, _allocator);
                         }
-
                     }
                     OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "isRobot", true, _allocator);
                 }
@@ -266,7 +293,6 @@ protected:
                     }
                 }
                 // finally push to the bodiesValue array if bodyValue is not empty
-
                 if (bodyValue.MemberCount() > 0) {
                     // name and transform
                     OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "name", pbody->GetName(), _allocator);
@@ -279,18 +305,6 @@ protected:
                 _rScene.AddMember("bodies", bodiesValue, _allocator);
             }
         }
-    }
-
-    /// \brief checks if a body can be written externally
-    virtual bool _CheckForExternalWrite(KinBodyPtr pbody)
-    {
-        if( !_bExternalRefAllBodies && find(_listExternalRefExports.begin(),_listExternalRefExports.end(),pbody->GetName()) == _listExternalRefExports.end() ) {
-            // user doesn't want to use external refs
-            return false;
-        }
-
-        // TODO: need to check if the external reference is refering to a json file
-        return pbody->GetURI().size() > 0;
     }
 
     /// \brief get the scheme of the uri, e.g. file: or openrave:

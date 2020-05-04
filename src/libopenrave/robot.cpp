@@ -18,6 +18,35 @@
 #define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "robot %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetName()%_nHierarchyComputed, ORE_NotInitialized);
 
 namespace OpenRAVE {
+RobotBase::GripperInfo::GripperInfo(): _id(gripperid) {}
+void RobotBase::GripperInfo::operator=(const RobotBase::GripperInfo& other) {
+    gripperid = other.gripperid;
+    grippertype = other.grippertype;
+    gripperJointNames = other.gripperJointNames;
+    _pdocument = other._pdocument;
+}
+void RobotBase::GripperInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    value.SetObject();
+    if( !!_pdocument ) {
+        BOOST_ASSERT(_pdocument->IsObject());
+        value.CopyFrom(*_pdocument, allocator, true);
+    }
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", gripperid, allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(value, "grippertype", grippertype, allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(value, "gripperJointNames", gripperJointNames, allocator);
+}
+
+void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+{
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", gripperid);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "grippertype", grippertype);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "gripperJointNames", gripperJointNames);
+
+    // should always create a new _pdocument in case an old one is initialized and copied
+    _pdocument.reset(new rapidjson::Document());
+    _pdocument->CopyFrom(value, _pdocument->GetAllocator(), true);
+}
 
 void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
@@ -367,6 +396,7 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
 
 void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "uri", _uri, allocator);
     if (_vManipInfos.size() > 0) {
         rapidjson::Value rManipInfoValues;
@@ -407,7 +437,31 @@ void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson:
 
 void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri);
+    if (_uri.empty()) {
+        OPENRAVE_ASSERT_FORMAT0(!_id.empty(), "kinbody uri and id are empty", ORE_Failed); // assert one of _id and _uri is not empty;
+        _uri = "#" + _id;
+    }
+
+    _vLinkInfos.clear();
+    if (value.HasMember("links")) {
+        _vLinkInfos.reserve(value["links"].Size());
+        for (size_t iLinkInfo = 0; iLinkInfo < value["links"].Size(); iLinkInfo++) {
+            LinkInfoPtr pLinkInfo(new LinkInfo());
+            pLinkInfo->DeserializeJSON(value["links"][iLinkInfo], fUnitScale);
+            _vLinkInfos.push_back(pLinkInfo);
+        }
+    }
+    _vJointInfos.clear();
+    if (value.HasMember("joints")) {
+        _vJointInfos.reserve(value["joints"].Size());
+        for (size_t iJointInfo = 0; iJointInfo < value["joints"].Size(); iJointInfo++) {
+            JointInfoPtr pJointInfo(new JointInfo());
+            pJointInfo->DeserializeJSON(value["joints"][iJointInfo], fUnitScale);
+            _vJointInfos.push_back(pJointInfo);
+        }
+    }
 
     _vManipInfos.clear();
     if (value.HasMember("manipulators")) {
@@ -1888,6 +1942,51 @@ bool RobotBase::RemoveAttachedSensor(RobotBase::AttachedSensor &attsensor)
         }
     }
     return false;
+}
+
+bool RobotBase::AddGripperInfo(GripperInfoPtr gripperInfo, bool removeduplicate)
+{
+    if( !gripperInfo ) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("Cannot add invalid gripperInfo to robot %s."),GetName(),ORE_InvalidArguments);
+    }
+    if( gripperInfo->gripperid.size() == 0 ) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("Cannot add gripperInfo to robot %s since its gripperid is empty."),GetName(),ORE_InvalidArguments);
+    }
+
+    for(int igripper = 0; igripper < (int)_vecGripperInfos.size(); ++igripper) {
+        if( _vecGripperInfos[igripper]->gripperid == gripperInfo->gripperid ) {
+            if( removeduplicate ) {
+                _vecGripperInfos[igripper] = gripperInfo;
+            }
+            else {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("gripper with name %s already exists"),gripperInfo->gripperid,ORE_InvalidArguments);
+            }
+        }
+    }
+
+    _vecGripperInfos.push_back(gripperInfo);
+    return true;
+}
+
+bool RobotBase::RemoveGripperInfo(const std::string& gripperid)
+{
+    for(int igripper = 0; igripper < (int)_vecGripperInfos.size(); ++igripper) {
+        if( _vecGripperInfos[igripper]->gripperid == gripperid ) {
+            _vecGripperInfos.erase(_vecGripperInfos.begin()+igripper);
+            return true;
+        }
+    }
+    return false;
+}
+
+RobotBase::GripperInfoPtr RobotBase::GetGripperInfo(const std::string& gripperid) const
+{
+    FOREACHC(itGripperInfo, _vecGripperInfos) {
+        if( (*itGripperInfo)->gripperid == gripperid ) {
+            return *itGripperInfo;
+        }
+    }
+    return RobotBase::GripperInfoPtr();
 }
 
 void RobotBase::SimulationStep(dReal fElapsedTime)

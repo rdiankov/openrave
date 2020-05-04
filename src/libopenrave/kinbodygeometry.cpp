@@ -440,7 +440,7 @@ inline void SaveJsonValue(rapidjson::Value& v, const KinBody::GeometryInfo::Side
     v.SetObject();
     OpenRAVE::JSON::SetJsonValueByKey(v, "transform", t.transf, alloc);
     OpenRAVE::JSON::SetJsonValueByKey(v, "halfExtents", t.vExtents, alloc);
-    switch(t.type) {
+    switch (t.type) {
     case KinBody::GeometryInfo::SideWallType::SWT_NX:
         OpenRAVE::JSON::SetJsonValueByKey(v, "type", "nx", alloc);
         break;
@@ -454,7 +454,7 @@ inline void SaveJsonValue(rapidjson::Value& v, const KinBody::GeometryInfo::Side
         OpenRAVE::JSON::SetJsonValueByKey(v, "type", "py", alloc);
         break;
     default:
-        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert SideWall to JSON value, unknown type %d", (int)t.type, OpenRAVE::ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("unrecognized sidewall type %d for saving to json"), t.type, ORE_InvalidArguments);
     }
 }
 
@@ -464,20 +464,17 @@ inline void LoadJsonValue(const rapidjson::Value& v, KinBody::GeometryInfo::Side
         OpenRAVE::JSON::LoadJsonValueByKey(v, "halfExtents", t.vExtents);
         std::string type = "";
         OpenRAVE::JSON::LoadJsonValueByKey(v, "type", type);
-
-        std::map<std::string, KinBody::GeometryInfo::SideWallType> typeMapping = {
+        std::map<std::string, KinBody::GeometryInfo::SideWallType> sideWallTypeMapping = {
             {"nx", KinBody::GeometryInfo::SideWallType::SWT_NX},
             {"px", KinBody::GeometryInfo::SideWallType::SWT_PX},
             {"ny", KinBody::GeometryInfo::SideWallType::SWT_NY},
-            {"py", KinBody::GeometryInfo::SideWallType::SWT_PY}
+            {"py", KinBody::GeometryInfo::SideWallType::SWT_PY},
         };
-        if (typeMapping.find(type) != typeMapping.end()){
-            t.type = typeMapping[type];
-        }
-        else{
-            throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON value to SideWall, unknown type %s", type, OpenRAVE::ORE_InvalidArguments);
-        }
 
+        if (sideWallTypeMapping.find(type) == sideWallTypeMapping.end()) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("unrecognized sidewall type %s for loading from json"), type, ORE_InvalidArguments);
+        }
+        t.type = sideWallTypeMapping[type];
     } else {
         throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to OpenRAVE::Geometry::SideWall", OpenRAVE::JSON::GetJsonTypeName(v), OpenRAVE::ORE_InvalidArguments);
     }

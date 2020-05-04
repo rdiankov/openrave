@@ -29,6 +29,7 @@ void RobotBase::ConnectedBodyInfo::InitInfoFromBody(RobotBase& robot)
     _vJointInfos.clear();
     _vManipulatorInfos.clear();
     _vAttachedSensorInfos.clear();
+    _vGripperInfos.clear();
 
     // have to set to the identity before extracting info
     KinBody::KinBodyStateSaverRef statesaver(robot, Save_LinkTransformation);
@@ -53,7 +54,13 @@ void RobotBase::ConnectedBodyInfo::InitInfoFromBody(RobotBase& robot)
     FOREACH(itattachedsensor, robot.GetAttachedSensors()) {
         _vAttachedSensorInfos.push_back(boost::make_shared<RobotBase::AttachedSensorInfo>((*itattachedsensor)->UpdateAndGetInfo()));
     }
+    FOREACH(itGripperInfo, robot.GetGripperInfos()) {
+        RobotBase::GripperInfoPtr pGripperInfo(new RobotBase::GripperInfo());
+        *pGripperInfo = **itGripperInfo;
+        _vGripperInfos.push_back(pGripperInfo);
+    }
 }
+
 void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
@@ -61,45 +68,55 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
     OpenRAVE::JSON::SetJsonValueByKey(value, "uri", _uri, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "transform", _trelative, allocator);
 
-    // rapidjson::Value linkInfosValue;
-    // linkInfosValue.SetArray();
-    // FOREACH(it, _vLinkInfos)
-    // {
-    //     rapidjson::Value info;
-    //     (*it)->SerializeJSON(info, allocator, options);
-    //     linkInfosValue.PushBack(info, allocator);
-    // }
-    // value.AddMember("links", linkInfosValue, allocator);
+    rapidjson::Value linkInfosValue;
+    linkInfosValue.SetArray();
+    FOREACH(it, _vLinkInfos)
+    {
+        rapidjson::Value info;
+        (*it)->SerializeJSON(info, allocator, options);
+        linkInfosValue.PushBack(info, allocator);
+    }
+    value.AddMember("links", linkInfosValue, allocator);
 
-    // rapidjson::Value jointInfosValue;
-    // jointInfosValue.SetArray();
-    // FOREACH(it, _vJointInfos)
-    // {
-    //     rapidjson::Value v;
-    //     (*it)->SerializeJSON(v, allocator, options);
-    //     jointInfosValue.PushBack(v, allocator);
-    // }
-    // value.AddMember("joints", jointInfosValue, allocator);
+    rapidjson::Value jointInfosValue;
+    jointInfosValue.SetArray();
+    FOREACH(it, _vJointInfos)
+    {
+        rapidjson::Value v;
+        (*it)->SerializeJSON(v, allocator, options);
+        jointInfosValue.PushBack(v, allocator);
+    }
+    value.AddMember("joints", jointInfosValue, allocator);
 
-    // rapidjson::Value manipulatorInfosValue;
-    // manipulatorInfosValue.SetArray();
-    // FOREACH(it, _vManipulatorInfos)
-    // {
-    //     rapidjson::Value info;
-    //     (*it)->SerializeJSON(info, allocator, options);
-    //     manipulatorInfosValue.PushBack(info, allocator);
-    // }
-    // value.AddMember("manipulators", manipulatorInfosValue, allocator);
+    rapidjson::Value manipulatorInfosValue;
+    manipulatorInfosValue.SetArray();
+    FOREACH(it, _vManipulatorInfos)
+    {
+        rapidjson::Value info;
+        (*it)->SerializeJSON(info, allocator, options);
+        manipulatorInfosValue.PushBack(info, allocator);
+    }
+    value.AddMember("manipulators", manipulatorInfosValue, allocator);
 
-    // rapidjson::Value attachedSensorInfosValue;
-    // attachedSensorInfosValue.SetArray();
-    // FOREACH(it, _vAttachedSensorInfos)
-    // {
-    //     rapidjson::Value info;
-    //     (*it)->SerializeJSON(info, allocator, options);
-    //     attachedSensorInfosValue.PushBack(info, allocator);
-    // }
-    // value.AddMember("attachedSensors", attachedSensorInfosValue, allocator);
+    rapidjson::Value attachedSensorInfosValue;
+    attachedSensorInfosValue.SetArray();
+    FOREACH(it, _vAttachedSensorInfos)
+    {
+        rapidjson::Value info;
+        (*it)->SerializeJSON(info, allocator, options);
+        attachedSensorInfosValue.PushBack(info, allocator);
+    }
+    value.AddMember("attachedSensors", attachedSensorInfosValue, allocator);
+
+    rapidjson::Value rGripperInfos;
+    rGripperInfos.SetArray();
+    FOREACH(it, _vGripperInfos)
+    {
+        rapidjson::Value info;
+        (*it)->SerializeJSON(info, allocator, options);
+        rGripperInfos.PushBack(info, allocator);
+    }
+    value.AddMember("gripperInfos", rGripperInfos, allocator);
 
     OpenRAVE::JSON::SetJsonValueByKey(value, "isActive", _bIsActive, allocator);
 }
@@ -111,54 +128,58 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
     OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _trelative);
 
-    _vLinkInfos.resize(0);
-    // if(value.HasMember("links"))
-    // {
-    //     _vLinkInfos.reserve(value["links"].Size());
-    //     for (size_t i = 0; i < value["links"].Size(); ++i) {
-    //         LinkInfoPtr linkinfo(new LinkInfo());
-    //         linkinfo->DeserializeJSON(value["links"][i]);
-    //         _vLinkInfos.push_back(linkinfo);
-    //     }
-    // }
+    if(value.HasMember("links")) {
+        _vLinkInfos.clear();
+        _vLinkInfos.reserve(value["links"].Size());
+        for (size_t i = 0; i < value["links"].Size(); ++i) {
+            LinkInfoPtr linkinfo(new LinkInfo());
+            linkinfo->DeserializeJSON(value["links"][i]);
+            _vLinkInfos.push_back(linkinfo);
+        }
+    }
 
-    _vJointInfos.resize(0);
-    // if(value.HasMember("joints"))
-    // {
-    //     _vJointInfos.reserve(value["joints"].Size());
-    //     for (size_t i = 0; i < value["joints"].Size(); ++i) {
-    //         JointInfoPtr jointinfo(new JointInfo());
-    //         jointinfo->DeserializeJSON(value["joints"][i]);
-    //         _vJointInfos.push_back(jointinfo);
-    //     }
-    // }
+    if(value.HasMember("joints")) {
+        _vJointInfos.clear();
+        _vJointInfos.reserve(value["joints"].Size());
+        for (size_t i = 0; i < value["joints"].Size(); ++i) {
+            JointInfoPtr jointinfo(new JointInfo());
+            jointinfo->DeserializeJSON(value["joints"][i]);
+            _vJointInfos.push_back(jointinfo);
+        }
+    }
 
-    _vManipulatorInfos.resize(0);
-    // if(value.HasMember("manipulators"))
-    // {
-    //     _vManipulatorInfos.reserve(value["manipulators"].Size());
-    //     for (size_t i = 0; i < value["manipulators"].Size(); ++i) {
-    //         ManipulatorInfoPtr manipulatorinfo(new ManipulatorInfo());
-    //         manipulatorinfo->DeserializeJSON(value["manipulators"][i]);
-    //         _vManipulatorInfos.push_back(manipulatorinfo);
-    //     }
-    // }
+    if(value.HasMember("manipulators")) {
+        _vManipulatorInfos.clear();
+        _vManipulatorInfos.reserve(value["manipulators"].Size());
+        for (size_t i = 0; i < value["manipulators"].Size(); ++i) {
+            ManipulatorInfoPtr manipulatorinfo(new ManipulatorInfo());
+            manipulatorinfo->DeserializeJSON(value["manipulators"][i]);
+            _vManipulatorInfos.push_back(manipulatorinfo);
+        }
+    }
 
-    _vAttachedSensorInfos.resize(0);
-    // if(value.HasMember("attachedSensors"))
-    // {
-    //     _vAttachedSensorInfos.reserve(value["attachedSensors"].Size());
-    //     for (size_t i = 0; i < value["attachedSensors"].Size(); ++i) {
-    //         AttachedSensorInfoPtr attachedsensorinfo(new AttachedSensorInfo());
-    //         attachedsensorinfo->DeserializeJSON(value["attachedSensors"][i]);
-    //         _vAttachedSensorInfos.push_back(attachedsensorinfo);
-    //     }
-    // }
+    if(value.HasMember("attachedSensors")) {
+        _vAttachedSensorInfos.clear();
+        _vAttachedSensorInfos.reserve(value["attachedSensors"].Size());
+        for (size_t i = 0; i < value["attachedSensors"].Size(); ++i) {
+            AttachedSensorInfoPtr attachedsensorinfo(new AttachedSensorInfo());
+            attachedsensorinfo->DeserializeJSON(value["attachedSensors"][i]);
+            _vAttachedSensorInfos.push_back(attachedsensorinfo);
+        }
+    }
+
+    if(value.HasMember("gripperInfos")) {
+        _vGripperInfos.clear();
+        _vGripperInfos.reserve(value["gripperInfos"].Size());
+        for (size_t igripperInfo = 0; igripperInfo < value["gripperInfos"].Size(); ++igripperInfo) {
+            GripperInfoPtr gripperInfo(new GripperInfo());
+            gripperInfo->DeserializeJSON(value["gripperInfos"][igripperInfo]);
+            _vGripperInfos.push_back(gripperInfo);
+        }
+    }
 
     OpenRAVE::JSON::LoadJsonValueByKey(value, "isActive", _bIsActive);
 }
-
-
 
 RobotBase::ConnectedBody::ConnectedBody(OpenRAVE::RobotBasePtr probot) : _pattachedrobot(probot)
 {
@@ -195,6 +216,9 @@ RobotBase::ConnectedBody::ConnectedBody(OpenRAVE::RobotBasePtr probot, const Con
     }
     FOREACH(itinfo, _vResolvedAttachedSensorNames) {
         itinfo->second = probot->GetAttachedSensor(itinfo->first);
+    }
+    FOREACH(itinfo, _vResolvedGripperInfoNames) {
+        itinfo->second = probot->GetGripperInfo(itinfo->first);
     }
     _pattachedrobot = probot;
     _pattachedlink = probot->GetLink(LinkPtr(connectedBody._pattachedlink)->GetName());
@@ -322,6 +346,22 @@ void RobotBase::ConnectedBody::GetResolvedAttachedSensors(std::vector<RobotBase:
     else {
         FOREACH(itattachedSensor, attachedSensors) {
             itattachedSensor->reset();
+        }
+    }
+}
+
+void RobotBase::ConnectedBody::GetResolvedGripperInfos(std::vector<RobotBase::GripperInfoPtr>& gripperInfos)
+{
+    gripperInfos.resize(_vResolvedGripperInfoNames.size());
+    RobotBasePtr pattachedrobot = _pattachedrobot.lock();
+    if( !!pattachedrobot ) {
+        for(size_t igripperInfo = 0; igripperInfo < _vResolvedGripperInfoNames.size(); ++igripperInfo) {
+            gripperInfos[igripperInfo] = pattachedrobot->GetGripperInfo(_vResolvedGripperInfoNames[igripperInfo].first);
+        }
+    }
+    else {
+        FOREACH(itgripperInfo, gripperInfos) {
+            itgripperInfo->reset();
         }
     }
 }
@@ -547,6 +587,22 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for manipulator %s, could not find linkname1 %s in connected body link infos!", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name%pnewmanipulator->_info._sEffectorLinkName, ORE_InvalidArguments);
             }
 
+            // search for the correct resolved joint name
+            for(size_t iGripperJoint = 0; iGripperJoint < pnewmanipulator->_info._vGripperJointNames.size(); ++iGripperJoint) {
+                std::string& gripperJointName = pnewmanipulator->_info._vGripperJointNames[iGripperJoint];
+                bool bFoundJoint = false;
+                for(size_t ijoint = 0; ijoint < connectedBodyInfo._vJointInfos.size(); ++ijoint) {
+                    if( gripperJointName == connectedBodyInfo._vJointInfos[ijoint]->_name ) {
+                        gripperJointName = connectedBody._vResolvedJointNames.at(ijoint).first;
+                        bFoundJoint = true;
+                    }
+                }
+                
+                if( !bFoundJoint ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for Manipulator %s, could not find joint %s in connected body joint infos!", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name%gripperJointName, ORE_InvalidArguments);
+                }
+            }
+
             _vecManipulators.push_back(pnewmanipulator);
             connectedBody._vResolvedManipulatorNames[imanipulator].first = pnewmanipulator->_info._name;
         }
@@ -584,6 +640,42 @@ void RobotBase::_ComputeConnectedBodiesInformation()
 
             _vecAttachedSensors.push_back(pnewattachedSensor);
             connectedBody._vResolvedAttachedSensorNames[iattachedsensor].first = pnewattachedSensor->_info._name;
+        }
+
+        // GripperInfos
+        connectedBody._vResolvedGripperInfoNames.resize(connectedBodyInfo._vGripperInfos.size());
+        for(int iGripperInfo = 0; iGripperInfo < (int)connectedBodyInfo._vGripperInfos.size(); ++iGripperInfo) {
+            RobotBase::GripperInfoPtr& pnewgripperInfo = connectedBody._vResolvedGripperInfoNames[iGripperInfo].second;
+            if( !pnewgripperInfo ) {
+                pnewgripperInfo.reset(new RobotBase::GripperInfo());
+            }
+            *pnewgripperInfo = *connectedBodyInfo._vGripperInfos[iGripperInfo];
+            pnewgripperInfo->gripperid = connectedBody._nameprefix + pnewgripperInfo->gripperid;
+
+            FOREACH(ittestgripperInfo, _vecGripperInfos) {
+                if( pnewgripperInfo->gripperid == (*ittestgripperInfo)->gripperid ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, got resolved gripperInfo with same name %s!", connectedBody.GetName()%GetName()%pnewgripperInfo->gripperid, ORE_InvalidArguments);
+                }
+            }
+
+            // search for the correct resolved joint name
+            for(size_t iGripperJoint = 0; iGripperJoint < pnewgripperInfo->gripperJointNames.size(); ++iGripperJoint) {
+                std::string& gripperJointName = pnewgripperInfo->gripperJointNames[iGripperJoint];
+                bool bFoundJoint = false;
+                for(size_t ijoint = 0; ijoint < connectedBodyInfo._vJointInfos.size(); ++ijoint) {
+                    if( gripperJointName == connectedBodyInfo._vJointInfos[ijoint]->_name ) {
+                        gripperJointName = connectedBody._vResolvedJointNames.at(ijoint).first;
+                        bFoundJoint = true;
+                    }
+                }
+                
+                if( !bFoundJoint ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for gripperInfo %s, could not find joint %s in connected body joint infos!", connectedBody.GetName()%GetName()%pnewgripperInfo->gripperid%gripperJointName, ORE_InvalidArguments);
+                }
+            }
+
+            _vecGripperInfos.push_back(pnewgripperInfo);
+            connectedBody._vResolvedGripperInfoNames[iGripperInfo].first = pnewgripperInfo->gripperid;
         }
 
         connectedBody._dummyPassiveJointName = connectedBody._nameprefix + "_dummyconnectedbody__";
@@ -656,6 +748,14 @@ void RobotBase::_DeinitializeConnectedBodiesInformation()
                 RemoveAttachedSensor(*presolvedattachedSensor);
             }
             connectedBody._vResolvedAttachedSensorNames[iresolvedattachedSensor].first.clear();
+        }
+
+        for(int iresolvedGripperInfo = 0; iresolvedGripperInfo < (int)connectedBody._vResolvedGripperInfoNames.size(); ++iresolvedGripperInfo) {
+            GripperInfoPtr presolvedGripperInfo = GetGripperInfo(connectedBody._vResolvedGripperInfoNames[iresolvedGripperInfo].first);
+            if( !!presolvedGripperInfo ) {
+                RemoveGripperInfo(presolvedGripperInfo->gripperid);
+            }
+            connectedBody._vResolvedGripperInfoNames[iresolvedGripperInfo].first.clear();
         }
 
         for(int ijointindex = 0; ijointindex < (int)_vPassiveJoints.size(); ++ijointindex) {

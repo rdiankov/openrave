@@ -230,6 +230,13 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
 
     OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
+    if (value.HasMember("id")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
+    }
+    else {
+        _id = _name;
+    }
+
     OpenRAVE::JSON::LoadJsonValueByKey(value, "parentLinkName", _linkname0);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "anchors", _vanchor);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "childLinkName", _linkname1);
@@ -296,6 +303,7 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
 
 KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& other)
 {
+    _id = other._id;
     _type = other._type;
     _name = other._name;
     _linkname0 = other._linkname0;
