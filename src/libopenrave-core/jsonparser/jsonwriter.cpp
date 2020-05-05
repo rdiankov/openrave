@@ -87,7 +87,7 @@ protected:
     }
 
     template<typename T>
-    void _SerializeInfoJSON(const std::vector<T>& currentInfos, const std::vector<T>& referenceInfos, rapidjson::Value& valueArray) {
+    void _SerializeInfoJSON(const std::vector<T>& currentInfos, const std::vector<T>& referenceInfos, rapidjson::Value& valueArray, dReal fUnitScale=1.0, int options=0) {
         FOREACHC(it, currentInfos) {
             rapidjson::Value value;
             typename std::vector<T>::const_iterator itRef = referenceInfos.begin();
@@ -97,11 +97,11 @@ protected:
                 }
             }
             // TODO: combine two function togegher ?
-            if ( itRef != referenceInfos.end()) {
+            if (referenceInfos.size() > 0 && itRef != referenceInfos.end()) {
                 SerializeDiffJSON(**it, **itRef, value, _allocator);
             }
             else {
-                (*it)->SerializeJSON(value, _allocator);
+                (*it)->SerializeJSON(value, _allocator, fUnitScale, options);
             }
             valueArray.PushBack(value, _allocator);
         }
@@ -151,12 +151,6 @@ protected:
                     OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "dofValues", dofValues, _allocator);
                 }
 
-                // state saver
-                KinBody::KinBodyStateSaver saver(pbody);
-                vector<dReal> vZeros(pbody->GetDOF());
-                pbody->SetDOFValues(vZeros, KinBody::CLA_Nothing);
-                pbody->SetTransform(Transform());
-
                 // grabbed info
                 std::vector<KinBody::GrabbedInfoPtr> vGrabbedInfo;
                 pbody->GetGrabbedInfo(vGrabbedInfo);
@@ -170,7 +164,6 @@ protected:
                     }
                     bodyValue.AddMember("grabbed", grabbedsValue, _allocator);
                 }
-
 
                 std::string id = (*itbody)->GetInfo()._id;
                 if (id.empty()) {
@@ -193,9 +186,12 @@ protected:
                     std::vector<KinBody::LinkInfoPtr> currentLinkInfos;
                     currentLinkInfos.reserve(pbody->GetLinks().size());
                     FOREACHC(itlink, pbody->GetLinks()) {
-                        currentLinkInfos.push_back(boost::make_shared<KinBody::LinkInfo>((*itlink)->GetInfo()));
+                        // udpate link geometryinfos;
+                        KinBody::LinkInfoPtr pLinkInfo = boost::make_shared<KinBody::LinkInfo>((*itlink)->UpdateAndGetInfo());
+                        currentLinkInfos.push_back(pLinkInfo);
                     }
-                    _SerializeInfoJSON(currentLinkInfos, pbody->GetInfo()._vLinkInfos, linksValue);
+                    const std::vector<KinBody::LinkInfoPtr>& referenceLinkInfos = (!!pbody->GetInfo()._referenceInfo)?pbody->GetInfo()._referenceInfo->_vLinkInfos : std::vector<KinBody::LinkInfoPtr>();
+                    _SerializeInfoJSON(currentLinkInfos, referenceLinkInfos, linksValue);
 
                     if (linksValue.Size() > 0) {
                         bodyValue.AddMember("links", linksValue, _allocator);
