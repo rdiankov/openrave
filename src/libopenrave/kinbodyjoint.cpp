@@ -119,6 +119,7 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
     case JointNone:
         break;
     default:
+        RAVELOG_WARN(str(boost::format("Unknow JointType %d")%static_cast<int>(_type)));
         OpenRAVE::JSON::SetJsonValueByKey(value, "type", static_cast<int>(_type), allocator);  // TODO: should we raise error here ?
         break;
     }
@@ -215,20 +216,25 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
     std::string typestr;
     OpenRAVE::JSON::LoadJsonValueByKey(value, "type", typestr);
 
-    if (typestr == "revolute")
-    {
-        _type = JointType::JointRevolute;
-    }
-    else if (typestr == "prismatic")
-    {
-        _type = JointType::JointPrismatic;
-    }
-    else
-    {
+    std::map<std::string, KinBody::JointType> jointTypeMapping = {
+        {"revolute", JointType::JointRevolute},
+        {"prismatic", JointType::JointPrismatic},
+        {"rr", JointType::JointRR},
+        {"rp", JointType::JointRP},
+        {"pr", JointType::JointPR},
+        {"pp", JointType::JointPP},
+        {"specialbit", JointType::JointSpecialBit},
+        {"universal", JointType::JointUniversal},
+        {"hinge2", JointType::JointHinge2},
+        {"spherical", JointType::JointSpherical},
+        {"trajectory", JointType::JointTrajectory},
+        {"", JointType::JointNone}  //  TODO: do we allow empty?
+    };
+
+    if (jointTypeMapping.find(typestr) == jointTypeMapping.end()) {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported joint type \"%s\"", typestr, ORE_InvalidArguments);
     }
-
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
+    _type = jointTypeMapping[typestr];
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
     if (value.HasMember("id")) {
         OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
@@ -382,9 +388,6 @@ KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& othe
     }
     return *this;
 }
-
-
-
 
 static void fparser_polyroots2(vector<dReal>& rawroots, const vector<dReal>& rawcoeffs)
 {
