@@ -870,7 +870,7 @@ public:
                 }
                 FOREACH(itGripperInfo, probot->_vecGripperInfos) {
                     if( _setInitialGripperInfos.find(*itGripperInfo) == _setInitialGripperInfos.end() ) {
-                        (*itGripperInfo)->gripperid = _prefix + (*itGripperInfo)->gripperid;
+                        (*itGripperInfo)->name = _prefix + (*itGripperInfo)->name;
                     }
                 }
             }
@@ -3206,7 +3206,7 @@ public:
                 if( !!tec ) {
                     RobotBase::ManipulatorInfo manipinfo;
                     manipinfo._name = _ConvertToOpenRAVEName(name);
-                    daeElementRef pframe_origin = tec->getChild("frame_origin");                    
+                    daeElementRef pframe_origin = tec->getChild("frame_origin");
                     if( !!pframe_origin ) {
                         domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pframe_origin->getAttribute("link"), as).resolve().elt);
                         if( !!pdomlink ) {
@@ -3224,12 +3224,21 @@ public:
                         }
                     }
 
-                    daeElementRef pgripperid = tec->getChild("gripperid");
-                    if( !!pgripperid ) {
-                        manipinfo._gripperid = pgripperid->getCharData();
+                    daeElementRef pgrippername = tec->getChild("grippername");
+                    if( !!pgrippername ) {
+                        manipinfo._grippername = pgrippername->getCharData();
                     }
                     else{
-                        manipinfo._gripperid.clear();
+
+                        // see if there is an old deprecated gripperid
+                        daeElementRef pgripperid = tec->getChild("gripperid");
+                        if( !!pgripperid ) {
+                            manipinfo._grippername = pgripperid->getCharData();
+                            RAVELOG_WARN_FORMAT("manipulator is old, got gripperid %s rather than grippername", manipinfo._grippername);
+                        }
+                        else {
+                            manipinfo._grippername.clear();
+                        }
                     }
 
                     daeElementRef pframe_tip = tec->getChild("frame_tip");
@@ -3309,7 +3318,7 @@ public:
                                 }
                             }
                         }
-                        else if((pmanipchild->getElementName() != string("frame_origin"))&&(pmanipchild->getElementName() != string("frame_tip"))&&(pmanipchild->getElementName() != string("gripperid"))) {
+                        else if((pmanipchild->getElementName() != string("frame_origin"))&&(pmanipchild->getElementName() != string("frame_tip"))&&(pmanipchild->getElementName() != string("grippername"))) {
                             RAVELOG_WARN(str(boost::format("unrecognized tag <%s> in manipulator '%s'")%pmanipchild->getElementName()%manipinfo._name));
                         }
                     }
@@ -3418,14 +3427,14 @@ public:
                 continue;
             }
             if( strcmp(pextra->getType(), "gripper_info") == 0 ) {
-                string gripperid = pextra->getAttribute("name");
-                if( gripperid.size() == 0 ) {
-                    gripperid = str(boost::format("gripper%d")%_nGlobalGripperInfoId++);
+                string grippername = pextra->getAttribute("name");
+                if( grippername.size() == 0 ) {
+                    grippername = str(boost::format("gripper%d")%_nGlobalGripperInfoId++);
                 }
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
                 if( !!tec ) {
                     RobotBase::GripperInfoPtr pGripperInfo(new RobotBase::GripperInfo());
-                    pGripperInfo->gripperid = _ConvertToOpenRAVEName(gripperid);
+                    pGripperInfo->name = _ConvertToOpenRAVEName(grippername);
 
                     daeElementRef pjson_data = tec->getChild("json_data");
                     if( !!pjson_data ) {
@@ -3437,7 +3446,7 @@ public:
                     }
                 }
                 else {
-                    RAVELOG_WARN(str(boost::format("cannot create robot %s gripperInfo %s\n")%probot->GetName()%gripperid));
+                    RAVELOG_WARN_FORMAT("cannot create robot %s gripperInfo %s", probot->GetName()%grippername);
                 }
             }
         }

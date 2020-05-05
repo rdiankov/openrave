@@ -2316,8 +2316,8 @@ private:
                 piksolverinterface->setCharData(iksolver->GetXMLId().c_str());
                 // TODO add the free joints
             }
-            daeElementRef gripperid = ptec->add("gripperid");
-            gripperid->setCharData((*itmanip)->GetGripperId().c_str());
+            daeElementRef pgrippername = ptec->add("grippername");
+            pgrippername->setCharData((*itmanip)->GetGripperName().c_str());
         }
     }
 
@@ -2404,7 +2404,7 @@ private:
             std::map<RobotBase::GripperInfoPtr, std::string> mapAttachedSensorIDs;
             FOREACHC(itGripperInfo, probot->GetGripperInfos()) {
                 domExtraRef pextra = daeSafeCast<domExtra>(parent->add(COLLADA_ELEMENT_EXTRA));
-                pextra->setName((*itGripperInfo)->gripperid.c_str());
+                pextra->setName((*itGripperInfo)->name.c_str());
                 pextra->setType("gripper_info");
                 domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
                 ptec->setProfile("OpenRAVE");
