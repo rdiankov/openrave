@@ -359,6 +359,7 @@ protected:
         _ExtractManipulators(bodyValue, robotBaseInfo->_vManipInfos, fUnitScale);
         _ExtractAttachedSensors(bodyValue, robotBaseInfo->_vAttachedSensorInfos, fUnitScale);
         _ExtractConnectedBodies(bodyValue, robotBaseInfo->_vConnectedBodyInfos, fUnitScale);
+        _ExtractGripperInfos(bodyValue, robotBaseInfo->_vGripperInfos, fUnitScale);
 
         RobotBasePtr robot = RaveCreateRobot(_penv, "");
         if (!robot->InitFromInfo(robotBaseInfo)) {
@@ -427,6 +428,17 @@ protected:
                 _ExtractManipulators(*connectedBodyObject, connectedbodyinfo->_vManipulatorInfos, fUnitScale);
                 _ExtractAttachedSensors(*connectedBodyObject, connectedbodyinfo->_vAttachedSensorInfos, fUnitScale);
                 connectedbodyinfos.push_back(connectedbodyinfo);
+            }
+        }
+    }
+
+    void _ExtractGripperInfos(const rapidjson::Value& objectValue, std::vector<RobotBase::GripperInfoPtr>& gripperInfos, dReal fUnitScale)
+    {
+        if (objectValue.HasMember("gripperInfos") && objectValue["gripperInfos"].IsArray()) {
+            gripperInfos.reserve(gripperInfos.size() + objectValue["gripperInfos"].Size());
+            for (rapidjson::Value::ConstValueIterator itr = objectValue["gripperInfos"].Begin(); itr != objectValue["gripperInfos"].End(); ++itr) {
+                _ExtractInfo(*itr, gripperInfos, fUnitScale);
+                gripperInfos.shrink_to_fit();
             }
         }
     }

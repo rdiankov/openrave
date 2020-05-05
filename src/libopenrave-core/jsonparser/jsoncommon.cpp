@@ -66,8 +66,8 @@ template void _ExtractInfo(const rapidjson::Value& value, std::vector<KinBody::L
 template void _ExtractInfo(const rapidjson::Value& value, std::vector<KinBody::JointInfoPtr>& infos, dReal fUnitScale=1.0);
 template void _ExtractInfo(const rapidjson::Value& value, std::vector<RobotBase::ManipulatorInfoPtr>& infos, dReal fUnitScale=1.0);
 template void _ExtractInfo(const rapidjson::Value& value, std::vector<RobotBase::AttachedSensorInfoPtr>& infos, dReal fUnitScale=1.0);
-// template void _ExtractInfo(const rapidjson::Value& value, std::vector<RobotBase::ConnectedBodyInfoPtr>& infos, dReal fUnitScale=1.0);
-// template void _ExtractInfo(const rapidjson::Value& value, std::vector<RobotBase::GripperInfoPtr>& infos, dReal fUnitScale=1.0);
+template void _ExtractInfo(const rapidjson::Value& value, std::vector<RobotBase::ConnectedBodyInfoPtr>& infos, dReal fUnitScale=1.0);
+template void _ExtractInfo(const rapidjson::Value& value, std::vector<RobotBase::GripperInfoPtr>& infos, dReal fUnitScale=1.0);
 
 template<typename T> inline bool OverwriteJsonValueByKey(const rapidjson::Value& value, const char* key, T& field) {
     if (value.HasMember(key)) {
@@ -173,6 +173,11 @@ void SerializeDiffJSON(const RobotBase::ConnectedBodyInfo& coverInfo, const Robo
     OpenRAVE::JSON::SetJsonValueByKey(value, "id", coverInfo._id, allocator);
 }
 
+void SerializeDiffJSON(const RobotBase::GripperInfo& coverInfo, const RobotBase::GripperInfo& baseInfo, rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) {
+    // TODO
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", coverInfo._id, allocator);
+}
+
 // overwrite refInfo with value and save result into targetInfo
 void DeserializeDiffJSON(KinBody::LinkInfo& targetInfo, const rapidjson::Value& value, dReal fUnitScale) {
 
@@ -273,6 +278,12 @@ void DeserializeDiffJSON(RobotBase::AttachedSensorInfo& targetInfo, const rapidj
             RAVELOG_WARN_FORMAT("failed to get json reader for sensor type \"%s\"", targetInfo._sensorname);
         }
     }
+}
+
+void DeserializeDiffJSON(RobotBase::ConnectedBodyInfo& targetinfo, const rapidjson::Value& value, dReal fUnitScale) {
+}
+
+void DeserializeDiffJSON(RobotBase::GripperInfo& targetinfo, const rapidjson::Value& value, dReal fUnitScale) {
 }
 
 // \brief Serialize the different between coverInfo and baseInfo, save the result into rapidjson value;

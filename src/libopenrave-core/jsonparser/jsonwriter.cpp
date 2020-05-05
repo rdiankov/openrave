@@ -87,23 +87,18 @@ protected:
     }
 
     template<typename T>
-    void _SerializeInfoJSON(const std::vector<T>& currentInfos, const std::vector<T>& referenceInfos, rapidjson::Value& valueArray, dReal fUnitScale=1.0, int options=0) {
-        FOREACHC(it, currentInfos) {
-            rapidjson::Value value;
-            typename std::vector<T>::const_iterator itRef = referenceInfos.begin();
-            for(itRef = referenceInfos.begin(); itRef != referenceInfos.end(); itRef++) {
-                if ((*itRef)->_id == (*it)->_id) {
-                    break;
-                }
+    void _SerializeInfoJSON(const T& currentInfo, const std::vector<boost::shared_ptr<T>>& referenceInfos, rapidjson::Value& value, dReal fUnitScale=1.0, int options=0) {
+        typename std::vector<boost::shared_ptr<T>>::const_iterator itRef = referenceInfos.begin();
+        for (itRef = referenceInfos.begin(); itRef != referenceInfos.end(); itRef++) {
+            if ((*itRef)->_id == currentInfo._id) {
+                break;
             }
-            // TODO: combine two function togegher ?
-            if (referenceInfos.size() > 0 && itRef != referenceInfos.end()) {
-                SerializeDiffJSON(**it, **itRef, value, _allocator);
-            }
-            else {
-                (*it)->SerializeJSON(value, _allocator, fUnitScale, options);
-            }
-            valueArray.PushBack(value, _allocator);
+        }
+        if (referenceInfos.size() > 0 && itRef != referenceInfos.end()) {
+            SerializeDiffJSON(currentInfo, **itRef, value, _allocator);
+        }
+        else {
+            currentInfo.SerializeJSON(value, _allocator, fUnitScale, options);
         }
     }
 
@@ -177,21 +172,23 @@ protected:
                     OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "referenceUri", (*itbody)->GetInfo()._referenceUri, _allocator);
                 }
 
+                const KinBody::KinBodyInfo& bodyInfo = pbody->GetInfo();
                 // links
                 {
                     rapidjson::Value linksValue;
                     linksValue.SetArray();
-
                     // get current linkinfoptr vector
-                    std::vector<KinBody::LinkInfoPtr> currentLinkInfos;
-                    currentLinkInfos.reserve(pbody->GetLinks().size());
                     FOREACHC(itlink, pbody->GetLinks()) {
-                        // udpate link geometryinfos;
                         KinBody::LinkInfoPtr pLinkInfo = boost::make_shared<KinBody::LinkInfo>((*itlink)->UpdateAndGetInfo());
-                        currentLinkInfos.push_back(pLinkInfo);
+                        rapidjson::Value value;
+                        if (!!bodyInfo._referenceInfo) {
+                            _SerializeInfoJSON(*pLinkInfo, bodyInfo._referenceInfo->_vLinkInfos, value);
+                        }
+                        else {
+                            pLinkInfo->SerializeJSON(value, _allocator);
+                        }
+                        linksValue.PushBack(value, _allocator);
                     }
-                    const std::vector<KinBody::LinkInfoPtr>& referenceLinkInfos = (!!pbody->GetInfo()._referenceInfo)?pbody->GetInfo()._referenceInfo->_vLinkInfos : std::vector<KinBody::LinkInfoPtr>();
-                    _SerializeInfoJSON(currentLinkInfos, referenceLinkInfos, linksValue);
 
                     if (linksValue.Size() > 0) {
                         bodyValue.AddMember("links", linksValue, _allocator);
@@ -204,16 +201,35 @@ protected:
                     rapidjson::Value jointsValue;
                     jointsValue.SetArray();
 
-                    std::vector<KinBody::JointInfoPtr> currentJointInfos;
-                    FOREACHC(itjoint, pbody->GetJoints()) {
-                        currentJointInfos.push_back(boost::make_shared<KinBody::JointInfo>((*itjoint)->GetInfo()));
+                    const std::vector<KinBody::JointPtr>& vJoints = pbody->GetJoints();
+                    const std::vector<KinBody::JointPtr>& vPassiveJoints = pbody->GetPassiveJoints();
+
+                    typename std::vector<KinBody::JointPtr>::const_iterator itJoint = vJoints.begin();
+                    for(;itJoint!=vJoints.end(); itJoint++){
+                        KinBody::JointInfoPtr pJointInfo = boost::make_shared<KinBody::JointInfo>((*itJoint)->GetInfo());
+                        rapidjson::Value value;
+                        if (!!bodyInfo._referenceInfo) {
+                            _SerializeInfoJSON(*pJointInfo, bodyInfo._referenceInfo->_vJointInfos, value);
+                        }
+                        else {
+                            pJointInfo->SerializeJSON(value, _allocator);
+                        }
+
+                        jointsValue.PushBack(value, _allocator);
                     }
 
-                    FOREACHC(itjoint, pbody->GetPassiveJoints()) {
-                        currentJointInfos.push_back(boost::make_shared<KinBody::JointInfo>((*itjoint)->GetInfo()));
+                    typename std::vector<KinBody::JointPtr>::const_iterator itPassiveJoint = vPassiveJoints.begin();
+                    for(;itPassiveJoint!=vPassiveJoints.end(); itPassiveJoint++){
+                        KinBody::JointInfoPtr pJointInfo = boost::make_shared<KinBody::JointInfo>((*itPassiveJoint)->GetInfo());
+                        rapidjson::Value value;
+                        if (!!bodyInfo._referenceInfo) {
+                            _SerializeInfoJSON(*pJointInfo, bodyInfo._referenceInfo->_vJointInfos, value);
+                        }
+                        else {
+                            pJointInfo->SerializeJSON(value, _allocator);
+                        }
+                        jointsValue.PushBack(value, _allocator);
                     }
-
-                    _SerializeInfoJSON(currentJointInfos, pbody->GetInfo()._vJointInfos, jointsValue);
 
                     if (jointsValue.Size() > 0) {
                         bodyValue.AddMember("joints", jointsValue, _allocator);
@@ -223,19 +239,23 @@ protected:
                 // robot
                 if (pbody->IsRobot()) {
                     RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
-
+                    const RobotBase::RobotBaseInfo& robotInfo = probot->GetInfo();
                     // manipulators
                     if (probot->GetManipulators().size() > 0) {
                         rapidjson::Value manipulatorsValue;
                         manipulatorsValue.SetArray();
 
-                        std::vector<RobotBase::ManipulatorInfoPtr> currentManipulatorInfos;
                         FOREACHC(itmanip, probot->GetManipulators()) {
-                            currentManipulatorInfos.push_back(boost::make_shared<RobotBase::ManipulatorInfo>((*itmanip)->GetInfo()));
+                            RobotBase::ManipulatorInfoPtr pManipInfo = boost::make_shared<RobotBase::ManipulatorInfo>((*itmanip)->GetInfo());
+                            rapidjson::Value value;
+                            if (!!robotInfo._referenceInfo) {
+                                _SerializeInfoJSON(*pManipInfo, robotInfo._referenceInfo->_vManipInfos, value);
+                            }
+                            else {
+                                pManipInfo->SerializeJSON(value, _allocator);
+                            }
+                            manipulatorsValue.PushBack(value, _allocator);
                         }
-
-                        _SerializeInfoJSON(currentManipulatorInfos, probot->GetInfo()._vManipInfos, manipulatorsValue);
-
                         if (manipulatorsValue.Size() > 0) {
                             bodyValue.AddMember("manipulators", manipulatorsValue, _allocator);
                         }
@@ -244,12 +264,17 @@ protected:
                     if (probot->GetAttachedSensors().size() > 0) {
                         rapidjson::Value attachedSensorsValue;
                         attachedSensorsValue.SetArray();
-
-                        std::vector<RobotBase::AttachedSensorInfoPtr> currentAttachedSensorInfos;
                         FOREACHC(itattachedsensor, probot->GetAttachedSensors()) {
-                            currentAttachedSensorInfos.push_back(boost::make_shared<RobotBase::AttachedSensorInfo>((*itattachedsensor)->GetInfo()));
+                            RobotBase::AttachedSensorInfoPtr pAttachedSensorInfo = boost::make_shared<RobotBase::AttachedSensorInfo>((*itattachedsensor)->GetInfo());
+                            rapidjson::Value value;
+                            if (!!robotInfo._referenceInfo) {
+                                _SerializeInfoJSON(*pAttachedSensorInfo, robotInfo._referenceInfo->_vAttachedSensorInfos, value);
+                            }
+                            else {
+                                pAttachedSensorInfo->SerializeJSON(value, _allocator);
+                            }
+                            attachedSensorsValue.PushBack(value, _allocator);
                         }
-                        _SerializeInfoJSON(currentAttachedSensorInfos, probot->GetInfo()._vAttachedSensorInfos, attachedSensorsValue);
 
                         if (attachedSensorsValue.Size() > 0) {
                             bodyValue.AddMember("attachedSensors", attachedSensorsValue, _allocator);
@@ -260,13 +285,39 @@ protected:
                         rapidjson::Value connectedBodiesValue;
                         connectedBodiesValue.SetArray();
 
-                        std::vector<RobotBase::ConnectedBodyInfoPtr> currentConnectedBodyInfos;
                         FOREACHC(itconnectedbody, probot->GetConnectedBodies()) {
-                            currentConnectedBodyInfos.push_back(boost::make_shared<RobotBase::ConnectedBodyInfo>((*itconnectedbody)->GetInfo()));
+                            RobotBase::ConnectedBodyInfoPtr pConnectedBodyInfo = boost::make_shared<RobotBase::ConnectedBodyInfo>((*itconnectedbody)->GetInfo());
+                            rapidjson::Value value;
+                            if (!!robotInfo._referenceInfo) {
+                                _SerializeInfoJSON(*pConnectedBodyInfo, robotInfo._referenceInfo->_vConnectedBodyInfos, value);
+                            }
+                            else {
+                                pConnectedBodyInfo->SerializeJSON(value, _allocator);
+                            }
+                            connectedBodiesValue.PushBack(value, _allocator);
                         }
-                        _SerializeInfoJSON(currentConnectedBodyInfos, probot->GetInfo()._vConnectedBodyInfos, connectedBodiesValue);
                         if (connectedBodiesValue.Size() > 0) {
                             bodyValue.AddMember("connectedBodies", connectedBodiesValue, _allocator);
+                        }
+                    }
+
+                    // gripperinfo
+                    if (probot->GetGripperInfos().size() > 0) {
+                        rapidjson::Value gripperInfosValue;
+                        gripperInfosValue.SetArray();
+                        FOREACHC(itgripperinfo, probot->GetGripperInfos()) {
+                            rapidjson::Value value;
+                            if (!!robotInfo._referenceInfo) {
+                                _SerializeInfoJSON(**itgripperinfo, robotInfo._referenceInfo->_vGripperInfos, value);
+                            }
+                            else {
+                                (*itgripperinfo)->SerializeJSON(value, _allocator);
+                            }
+                            gripperInfosValue.PushBack(value, _allocator);
+                        }
+
+                        if (gripperInfosValue.Size() > 0) {
+                            bodyValue.AddMember("gripperInfos", gripperInfosValue, _allocator);
                         }
                     }
                     OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "isRobot", true, _allocator);

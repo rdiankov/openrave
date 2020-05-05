@@ -433,6 +433,18 @@ void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson:
         }
         value.AddMember("connectedBodies", rConnectedBodyInfoValues, allocator);
     }
+
+    if (_vGripperInfos.size() > 0) {
+        rapidjson::Value rGripperInfoValues;
+        rGripperInfoValues.SetArray();
+        rGripperInfoValues.Reserve(_vGripperInfos.size(), allocator);
+        FOREACHC(it, _vGripperInfos) {
+            rapidjson::Value gripperInfoValue;
+            (*it)->SerializeJSON(gripperInfoValue, allocator, fUnitScale, options);
+            rGripperInfoValues.PushBack(gripperInfoValue, allocator);
+        }
+        value.AddMember("grippers", rGripperInfoValues, allocator);
+    }
 }
 
 void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
@@ -490,6 +502,16 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
             ConnectedBodyInfoPtr pConnectedBodyInfo(new ConnectedBodyInfo());
             pConnectedBodyInfo->DeserializeJSON(value["connectedBodies"][iConnectedBodyInfo], fUnitScale);
             _vConnectedBodyInfos.push_back(pConnectedBodyInfo);
+        }
+    }
+
+    _vGripperInfos.clear();
+    if (value.HasMember("grippers")) {
+        _vGripperInfos.reserve(value["grippers"].Size());
+        for (size_t iGripperInfo = 0; iGripperInfo < value["grippers"].Size(); iGripperInfo++) {
+            GripperInfoPtr pGripperInfo(new GripperInfo());
+            pGripperInfo->DeserializeJSON(value["grippers"][iGripperInfo], fUnitScale);
+            _vGripperInfos.push_back(pGripperInfo);
         }
     }
 }
@@ -578,6 +600,7 @@ bool RobotBase::InitFromInfo(const RobotBaseInfoConstPtr& info)
     std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(info->_vJointInfos.begin(), info->_vJointInfos.end());
     std::vector<RobotBase::ManipulatorInfoConstPtr> vManipInfosConst(info->_vManipInfos.begin(), info->_vManipInfos.end());
     std::vector<RobotBase::AttachedSensorInfoConstPtr> vAttachedSensorInfosConst(info->_vAttachedSensorInfos.begin(), info->_vAttachedSensorInfos.end());
+
     SetInfo(*info);
     if( !RobotBase::Init(vLinkInfosConst, vJointInfosConst, vManipInfosConst, vAttachedSensorInfosConst, info->_uri) ) {
         return false;
@@ -587,6 +610,12 @@ bool RobotBase::InitFromInfo(const RobotBaseInfoConstPtr& info)
     FOREACHC(itconnectedbodyinfo, info->_vConnectedBodyInfos) {
         ConnectedBodyPtr newconnectedbody(new ConnectedBody(shared_robot(),**itconnectedbodyinfo));
         _vecConnectedBodies.push_back(newconnectedbody);
+    }
+
+    _vecGripperInfos.clear();
+    FOREACH(itgripperinfo, info->_vGripperInfos) {
+        GripperInfoPtr newGripperInfo(new GripperInfo( **itgripperinfo));
+        shared_robot()->AddGripperInfo(newGripperInfo); // TODO: removedumplicate or not?
     }
     return true;
 }

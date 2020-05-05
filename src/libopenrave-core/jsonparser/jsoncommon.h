@@ -67,6 +67,8 @@ void SerializeDiffJSON(const KinBody::JointInfo& coverInfo, const KinBody::Joint
 void SerializeDiffJSON(const RobotBase::ManipulatorInfo& coverInfo, const RobotBase::ManipulatorInfo& baseInfo, rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0);
 void SerializeDiffJSON(const RobotBase::AttachedSensorInfo& coverInfo, const RobotBase::AttachedSensorInfo& baseInfo, rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0);
 void SerializeDiffJSON(const RobotBase::ConnectedBodyInfo& coverInfo, const RobotBase::ConnectedBodyInfo& baseInfo, rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0);
+void SerializeDiffJSON(const RobotBase::GripperInfo& coverInfo, const RobotBase::GripperInfo& baseInfo, rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0);
+
 void DeserializeDiffJSON(KinBody::LinkInfo& targetInfo, const rapidjson::Value& value, dReal fUnitScale=1.0);
 void DeserializeDiffJSON(KinBody::JointInfo& targetInfo, const rapidjson::Value& value, dReal fUnitScale=1.0);
 void DeserializeDiffJSON(RobotBase::ManipulatorInfo& targetInfo, const rapidjson::Value& value, dReal fUnitScale=1.0);
