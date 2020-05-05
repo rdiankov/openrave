@@ -458,7 +458,7 @@ protected:
                     if( itnode == itendnode ) {
                         // last point, should be NSS_Reached (not NSS_SuccessfulWithDeviation)
                         if( neighstatus != NSS_Reached ) {
-                            RAVELOG_WARN_FORMAT("env=%d, iter=%d/%d, expecting last point to be within constraints, but was not, cannot shortcut.", GetEnv()->GetId()%itercount%numiters%neighstatus);
+                            RAVELOG_WARN_FORMAT("env=%d, iter=%d/%d, expecting last point to be within constraints, but was not, cannot shortcut, unreached neighstatus=%d.", GetEnv()->GetId()%itercount%numiters%neighstatus);
                             bSuccess = false;
                             break;
                         }
