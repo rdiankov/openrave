@@ -724,9 +724,7 @@ public:
         virtual ~RobotBaseInfo() {}
 
         virtual const RobotBaseInfo& operator=(const RobotBaseInfo& other) {
-            _id = other._id;
-            _vLinkInfos = other._vLinkInfos;
-            _vJointInfos = other._vJointInfos;
+            KinBodyInfo::operator=(other);
             _vManipInfos = other._vManipInfos;
             _vAttachedSensorInfos = other._vAttachedSensorInfos;
             _vConnectedBodyInfos = other._vConnectedBodyInfos;
@@ -740,7 +738,6 @@ public:
         std::vector<AttachedSensorInfoPtr> _vAttachedSensorInfos; ///< list of pointers to AttachedSensorInfo
         std::vector<ConnectedBodyInfoPtr> _vConnectedBodyInfos; ///< list of pointers to ConnectedBodyInfo
         std::vector<GripperInfoPtr> _vGripperInfos; ///< list of pointers to GripperInfo
-        std::string _id;   ///< unique id for robotbaseinfo
         boost::shared_ptr<RobotBaseInfo> _referenceInfo;
 
 private:
