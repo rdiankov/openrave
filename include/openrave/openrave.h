@@ -272,12 +272,14 @@ enum InterfaceType
     PT_Trajectory=11, ///< describes \ref TrajectoryBase
     PT_Viewer=12, ///< describes \ref ViewerBase
     PT_SpaceSampler=13, ///< describes \ref SamplerBase
-    PT_NumberOfInterfaces=13 ///< number of interfaces, do not forget to update
+    PT_ForwardKinematicsSolver=14, ///< describes \ref RobotPoseDescriberBase interface
+    PT_NumberOfInterfaces=14 ///< number of interfaces, do not forget to update
 };
 
 class CollisionReport;
 class InterfaceBase;
 class IkSolverBase;
+class RobotPoseDescriberBase;
 class TrajectoryBase;
 class ControllerBase;
 class PlannerBase;
@@ -315,6 +317,9 @@ typedef boost::weak_ptr<ControllerBase> ControllerBaseWeakPtr;
 typedef boost::shared_ptr<IkSolverBase> IkSolverBasePtr;
 typedef boost::shared_ptr<IkSolverBase const> IkSolverBaseConstPtr;
 typedef boost::weak_ptr<IkSolverBase> IkSolverBaseWeakPtr;
+typedef boost::shared_ptr<RobotPoseDescriberBase> RobotPoseDescriberBasePtr;
+typedef boost::shared_ptr<RobotPoseDescriberBase const> RobotPoseDescriberBaseConstPtr;
+typedef boost::weak_ptr<RobotPoseDescriberBase> RobotPoseDescriberBaseWeakPtr;
 typedef boost::shared_ptr<PhysicsEngineBase> PhysicsEngineBasePtr;
 typedef boost::shared_ptr<PhysicsEngineBase const> PhysicsEngineBaseConstPtr;
 typedef boost::weak_ptr<PhysicsEngineBase> PhysicsEngineBaseWeakPtr;
@@ -2408,6 +2413,7 @@ OPENRAVE_API ConfigurationSpecification RaveGetAffineConfigurationSpecification(
 #include <openrave/sensor.h>
 #include <openrave/robot.h>
 #include <openrave/iksolver.h>
+#include <openrave/fksolver.h>
 #include <openrave/planner.h>
 #include <openrave/controller.h>
 #include <openrave/physicsengine.h>

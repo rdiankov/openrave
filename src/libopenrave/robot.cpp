@@ -1637,6 +1637,18 @@ void RobotBase::SetNonCollidingConfiguration()
     RegrabAll();
 }
 
+uint16_t RobotBase::ComputePostureValue() const
+{
+    ManipulatorConstPtr pmanip = GetActiveManipulator();
+    return ComputePostureValue(pmanip->GetBase(), pmanip->GetEndEffector());
+}
+
+uint16_t RobotBase::ComputePostureValue(LinkPtr pBaseLink, LinkPtr pEndEffectorLink) const
+{
+    // TODO fill with default implementation
+    return 0;
+}
+
 bool RobotBase::Grab(KinBodyPtr pbody)
 {
     ManipulatorPtr pmanip = GetActiveManipulator();

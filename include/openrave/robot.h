@@ -1042,6 +1042,14 @@ private:
     /// \brief \ref KinBody::SetNonCollidingConfiguration, also regrabs all bodies
     virtual void SetNonCollidingConfiguration();
 
+    /// \brief Computes an interger value to describe current robot posture
+    /// Computes a value using joints between base link and endeffector link of active manipulator
+    virtual uint16_t ComputePostureValue() const;
+
+    /// \brief Computes an interger value to describe current robot posture
+    /// Computes a value using joints between base link and endeffector link
+    virtual uint16_t ComputePostureValue(LinkPtr pBaseLink, LinkPtr pEndEffectorLink) const;
+
     //@}
 
     /** A grabbed body becomes part of the robot and its relative pose with respect to a robot's
@@ -1166,6 +1174,8 @@ protected:
     dReal _fQuatLimitMaxAngle, _fQuatMaxAngleVelocity, _fQuatAngleResolution, _fQuatAngleWeight;
 
     ConfigurationSpecification _activespec;
+    std::map<std::pair<LinkPtr, LinkPtr>, RobotPoseDescriberBasePtr> _mapFkSolver;
+
 private:
     virtual const char* GetHash() const {
         return OPENRAVE_ROBOT_HASH;
