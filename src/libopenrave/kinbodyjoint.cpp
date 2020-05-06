@@ -78,6 +78,12 @@ int KinBody::JointInfo::GetDOF() const
     return int(_type & 0xf);
 }
 
+void KinBody::JointInfo::SerializeDiffJSON(rapidjson::Value& value, const KinBody::JointInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    // TODO
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
+}
+
 void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     int dof = GetDOF();

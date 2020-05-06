@@ -61,6 +61,11 @@ void RobotBase::ConnectedBodyInfo::InitInfoFromBody(RobotBase& robot)
     }
 }
 
+void RobotBase::ConnectedBodyInfo::SerializeDiffJSON(rapidjson::Value& value, const RobotBase::ConnectedBodyInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const {
+    // TODO
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
+}
+
 void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);

@@ -274,22 +274,22 @@ protected:
     template<typename T>
     void _ExtractReference(const rapidjson::Value& bodyValue, T& info, dReal fUnitScale) {
         std::vector<std::string> vBodyReferenceUri;
-        while(true) {
-            std::string referenceUri;
-            OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "referenceUri", referenceUri);
-            if (referenceUri.empty()) {
-                break;
-            }
+        std::string referenceUri;
+        OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "referenceUri", referenceUri);
+        while(!referenceUri.empty()) {
             if (std::find(vBodyReferenceUri.begin(), vBodyReferenceUri.end(), referenceUri) != vBodyReferenceUri.end()) {
                 throw OPENRAVE_EXCEPTION_FORMAT("circular reference found in document %s", referenceUri, ORE_InvalidArguments);
             }
+            rapidjson::Value::ValueIterator itr = _ResolveBodyValue(referenceUri);
             vBodyReferenceUri.push_back(referenceUri);
+            referenceUri.clear();
+            OpenRAVE::JSON::LoadJsonValueByKey(*itr, "referenceUri", referenceUri);
         }
 
         boost::shared_ptr<T> referenceInfo;
         for(std::vector<std::string>::reverse_iterator itUri = vBodyReferenceUri.rbegin(); itUri!=vBodyReferenceUri.rend(); itUri++) {
             rapidjson::Value::ValueIterator itrBodyValue = _ResolveBodyValue(*itUri);
-            if (itUri == (vBodyReferenceUri.rend() - 1) && vBodyReferenceUri.size() > 1){
+            if (vBodyReferenceUri.size() > 0 && itUri == (vBodyReferenceUri.rend() - 1)){
                 // copy to referenceInfo;
                 referenceInfo.reset(new T());
                 *referenceInfo = info;
@@ -303,7 +303,12 @@ protected:
     void _ExtractEnvInfo(const rapidjson::Value& bodyValue, boost::shared_ptr<T> pbody, dReal fUnitScale) {
         if (!!pbody) {
             _ExtractReadableInterfaces(bodyValue, pbody, fUnitScale);
-            pbody->SetName(OpenRAVE::JSON::GetJsonValueByKey<std::string>(bodyValue, "name"));
+            std::string bodyName;
+            OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "name", bodyName);
+            if (!bodyName.empty()) {
+                pbody->SetName(bodyName);
+            }
+
             if (bodyValue.HasMember("transform")) {
                 Transform transform;
                 OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "transform", transform);
@@ -368,6 +373,27 @@ protected:
         _ExtractEnvInfo(bodyValue, robot, fUnitScale);
         probot = robot;
         return true;
+    }
+
+    // Partially Update the Environment
+    bool _ApplyDiff(const rapidjson::Value& bodyValue, const std::string revision, dReal fUnitScale) {
+        if (revision < _penv->_revision) {
+            throw OPENRAVE_EXCEPTION_FORMAT("revision %s is smaller then current revision %s", revision%_penv->_revision, ORE_InvalidArguments);
+        }
+
+        for (rapidjson::Value::ConstValueIterator itr = bodyValue["bodies"].Begin(); itr != bodyValue["bodies"].End(); itr++) {
+            if (itr->HasMember("id")) {
+                std::string bodyId;
+                OpenRAVE::JSON::LoadJsonValueByKey(*itr, "id", bodyId);
+                KinBodyPtr pBody = _penv->GetKinBody(bodyId);  // TODO: bodyName is used
+
+                const rapidjson::Value& value = *itr;
+                if (!!pBody) {
+                    pBody->ApplyDiff(value);
+                }
+            }
+        }
+
     }
 
     // \brief extract rapidjson value and merge into linkinfos
@@ -728,4 +754,6 @@ bool RaveParseJSONData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std
     }
     return reader.ExtractFirst(pprobot);
 }
+
+
 }

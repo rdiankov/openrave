@@ -42,8 +42,8 @@ public:
         }
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
+        virtual void SerializeDiffJSON(rapidjson::Value &value, const RobotBase::ManipulatorInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
-        virtual void SetReferenceInfo(boost::shared_ptr<const ManipulatorInfo> refInfo);
 
         std::string _name;
         std::string _sBaseLinkName, _sEffectorLinkName; ///< name of the base and effector links of the robot used to determine the chain
@@ -72,6 +72,7 @@ public:
         GripperInfo();
         void operator=(const GripperInfo& other);
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
+        virtual void SerializeDiffJSON(rapidjson::Value &value, const RobotBase::GripperInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
 
         std::string gripperid; ///< unique gripperid
@@ -468,6 +469,7 @@ public:
         std::string _sensorname; ///< name of the sensor interface to create, in other words the sensor type
         SensorBase::SensorGeometryPtr _sensorgeometry; ///< the sensor geometry to initialize the sensor with
         virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
+        virtual void SerializeDiffJSON(rapidjson::Value& value, const RobotBase::AttachedSensorInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
 
         // reference architexture
@@ -586,6 +588,7 @@ public:
         /// \brief Updates the infos depending on the robot at the identity and zero position.
         virtual void InitInfoFromBody(RobotBase& robot);
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
+        virtual void SerializeDiffJSON(rapidjson::Value &value, const RobotBase::ConnectedBodyInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
 
         std::string _name; ///< the name of the connected body info

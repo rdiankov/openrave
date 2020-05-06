@@ -25,6 +25,12 @@ void RobotBase::GripperInfo::operator=(const RobotBase::GripperInfo& other) {
     gripperJointNames = other.gripperJointNames;
     _pdocument = other._pdocument;
 }
+
+void RobotBase::GripperInfo::SerializeDiffJSON(rapidjson::Value& value, const RobotBase::GripperInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const {
+    // TODO
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
+}
+
 void RobotBase::GripperInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     value.SetObject();
@@ -46,6 +52,11 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
     // should always create a new _pdocument in case an old one is initialized and copied
     _pdocument.reset(new rapidjson::Document());
     _pdocument->CopyFrom(value, _pdocument->GetAllocator(), true);
+}
+
+void RobotBase::AttachedSensorInfo::SerializeDiffJSON(rapidjson::Value& value, const RobotBase::AttachedSensorInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const {
+    // TODO
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
 }
 
 void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const

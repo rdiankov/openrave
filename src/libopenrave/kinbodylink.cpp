@@ -28,59 +28,123 @@ KinBody::LinkInfo::LinkInfo(const LinkInfo& other)
     *this = other;
 }
 
-void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
-{
-    OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
+void KinBody::LinkInfo::SerializeDiffJSON(rapidjson::Value& value, const KinBody::LinkInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const {
 
-    Transform tmpTransform {_t};
-    Transform tmpMassTransform {_tMassFrame};
-    tmpTransform.trans *= fUnitScale;
-    tmpMassTransform.trans *= fUnitScale;
-
-    OpenRAVE::JSON::SetJsonValueByKey(value, "transform", tmpTransform, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "massTransform", tmpMassTransform, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "mass", _mass, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "intertialMoments", _vinertiamoments, allocator);
-
+    value.SetObject();
+    if (_t != baseInfo._t) {
+        Transform tmpTransform {_t};
+        tmpTransform.trans *= fUnitScale;
+        OpenRAVE::JSON::SetJsonValueByKey(value, "transform", tmpTransform, allocator);
+    }
+    if (_tMassFrame != baseInfo._tMassFrame) {
+        Transform tmpMassTransform {_tMassFrame};
+        tmpMassTransform.trans *= fUnitScale;
+        OpenRAVE::JSON::SetJsonValueByKey(value, "massTransform", tmpMassTransform, allocator);
+    }
+    if (_mass != baseInfo._mass) {
+        OpenRAVE::JSON::SetJsonValueByKey(value, "mass", _mass, allocator);
+    }
+    if (_vinertiamoments != baseInfo._vinertiamoments) {
+        OpenRAVE::JSON::SetJsonValueByKey(value, "intertialMoments", _vinertiamoments, allocator);
+    }
     if (_mapFloatParameters.size() > 0) {
-        OpenRAVE::JSON::SetJsonValueByKey(value, "floatParameters", _mapFloatParameters, allocator);
+        if (_mapFloatParameters != baseInfo._mapFloatParameters) {
+            OpenRAVE::JSON::SetJsonValueByKey(value, "floatParameters", _mapFloatParameters, allocator);
+        }
     }
 
-    if (_mapIntParameters.size() > 0) {
+    if (_mapIntParameters != baseInfo._mapIntParameters) {
         OpenRAVE::JSON::SetJsonValueByKey(value, "intParameters", _mapIntParameters, allocator);
     }
-
-    if (_mapStringParameters.size() > 0) {
+    if (_mapStringParameters != baseInfo._mapStringParameters) {
         OpenRAVE::JSON::SetJsonValueByKey(value, "stringParameters", _mapStringParameters, allocator);
     }
 
-    if (_vForcedAdjacentLinks.size() > 0) {
+    if (_vForcedAdjacentLinks != baseInfo._vForcedAdjacentLinks) {
         OpenRAVE::JSON::SetJsonValueByKey(value, "forcedAdjacentLinks", _vForcedAdjacentLinks, allocator);
     }
 
     if (_vgeometryinfos.size() > 0) {
+        std::vector<KinBody::GeometryInfoPtr> diffGeometries;
+        diffGeometries.reserve(_vgeometryinfos.size());
+
+        FOREACHC(it, _vgeometryinfos) {
+            bool found = false;
+            FOREACHC(itRef, baseInfo._vgeometryinfos) {
+                if ((*it)->_id == (*itRef)->_id) {
+                    found = true;
+                    if ((*it) != (*itRef)) {
+                        diffGeometries.push_back(*it);
+                    }
+                }
+            }
+            if (!found) {
+                diffGeometries.push_back(*it);
+            }
+        }
+        //  add deleted geometries
+        FOREACHC(itRef, baseInfo._vgeometryinfos) {
+            bool found = false;
+            FOREACHC(it, _vgeometryinfos) {
+                if ((*it)->_id == (*itRef)->_id) {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                KinBody::GeometryInfoPtr pGeomInfo(new KinBody::GeometryInfo());
+                pGeomInfo->_id = (*itRef)->_id;
+                pGeomInfo->_bIsDeleted = true;
+                diffGeometries.push_back(pGeomInfo);
+            }
+        }
+
+        diffGeometries.shrink_to_fit();
+
+        // serialize all the different geometries
         rapidjson::Value geometriesValue;
         geometriesValue.SetArray();
-        geometriesValue.Reserve(_vgeometryinfos.size(), allocator);
-        FOREACHC(it, _vgeometryinfos) {
+        geometriesValue.Reserve(diffGeometries.size(), allocator);
+        FOREACHC(it, diffGeometries) {
             rapidjson::Value geometryValue;
             (*it)->SerializeJSON(geometryValue, allocator, fUnitScale, options);
             geometriesValue.PushBack(geometryValue, allocator);
         }
+        if (value.HasMember("geometries")) {
+            value.RemoveMember("geometries");
+        }
         value.AddMember("geometries", geometriesValue, allocator);
     }
 
-    if(_mapExtraGeometries.size() > 0 ) {
+    if (_mapExtraGeometries.size() > 0) {
         rapidjson::Value extraGeometriesValue;
         extraGeometriesValue.SetObject();
+
         FOREACHC(im, _mapExtraGeometries) {
             rapidjson::Value geometriesValue;
             geometriesValue.SetArray();
-            FOREACHC(iv, im->second){
-                if(!!(*iv))
-                {
+            if (baseInfo._mapExtraGeometries.count(im->first) > 0) {
+                FOREACHC(iGeom, (*im).second) {
+                    bool found = false;
                     rapidjson::Value geometryValue;
-                    (*iv)->SerializeJSON(geometryValue, allocator, fUnitScale, options);
+                    FOREACHC(iRefGeom, baseInfo._mapExtraGeometries.find(im->first)->second) {
+                        if ((*iGeom)->_id == (*iRefGeom)->_id) {
+                            found = true;
+                            (*iGeom)->SerializeDiffJSON(geometryValue, **iRefGeom, allocator, fUnitScale, options);
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        (*iGeom)->SerializeJSON(geometryValue, allocator, fUnitScale, options);
+                    }
+                    geometriesValue.PushBack(geometryValue, allocator);
+                }
+            }
+            else{
+                FOREACH(iGeom, (*im).second) {
+                    rapidjson::Value geometryValue;
+                    (*iGeom)->SerializeJSON(geometryValue, allocator, fUnitScale);
                     geometriesValue.PushBack(geometryValue, allocator);
                 }
             }
@@ -88,9 +152,30 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
         }
         value.AddMember("extraGeometries", extraGeometriesValue, allocator);
     }
+    if (_bStatic != baseInfo._bStatic) {
+        OpenRAVE::JSON::SetJsonValueByKey(value, "isStatic", _bStatic, allocator);
+    }
+    if (_bIsEnabled != baseInfo._bIsEnabled) {
+        OpenRAVE::JSON::SetJsonValueByKey(value, "isEnabled", _bIsEnabled, allocator);
+    }
+    // set name and id only if there is difference and some value are set
+    if (value.MemberCount() > 0) {
+        OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
+        OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
+    }
+}
 
-    OpenRAVE::JSON::SetJsonValueByKey(value, "isStatic", _bStatic, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "isEnabled", _bIsEnabled, allocator);
+void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    KinBody::LinkInfo baseInfo;
+    SerializeDiffJSON(value, baseInfo, allocator, fUnitScale, options);
+}
+
+void KinBody::LinkInfo::DeserializeDiffJSON(const rapidjson::Value& value, KinBody::LinkInfo& newInfo) {
+    newInfo._id = _id;
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "name", newInfo._name, _name);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "isEnabled", newInfo._bIsEnabled, _bIsEnabled);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "mass", newInfo._mass, _mass);
 }
 
 void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale)
@@ -165,7 +250,7 @@ void KinBody::LinkInfo::_Update(const KinBody::LinkInfo& other) {
             }
         }
     }
-
+    _id = other._id;
     _name = other._name;
     _t = other._t;
     _tMassFrame = other._tMassFrame;
@@ -724,6 +809,25 @@ void KinBody::Link::_Update(bool parameterschanged, uint32_t extraParametersChan
     if( parameterschanged || extraParametersChanged ) {
         GetParent()->_PostprocessChangedParameters(Prop_LinkGeometry|extraParametersChanged);
     }
+}
+
+bool KinBody::Link::ApplyDiff(const rapidjson::Value& linkValue) {
+    UpdateInfo(); // update before comparing
+    KinBody::LinkInfo newInfo;
+    _info.DeserializeDiffJSON(linkValue, newInfo);  // get a new info into newInfo
+
+    // update current link according to info difference
+    if (newInfo._bIsEnabled != _info._bIsEnabled) {
+        Enable(newInfo._bIsEnabled);
+    }
+
+    if (newInfo._mass != _info._mass) {
+        SetMass(newInfo._mass);
+    }
+
+    // last step to set info to new info. TODO: if any error happens, can always revert back according to current info
+    _info = newInfo;
+    return true;
 }
 
 }

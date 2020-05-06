@@ -136,10 +136,12 @@ public:
     std::vector<KinBody::LinkInfoPtr> _vLinkInfos;
     std::vector<KinBody::JointInfoPtr> _vJointInfos;
     std::string _uri;
+    std::string _id;
 #else
     py::object _vLinkInfos = py::none_();
     py::object _vJointInfos = py::none_();
     py::object _uri = py::none_();
+    py::object _id = py::none_();
 #endif
     virtual std::string __str__();
     virtual py::object __unicode__();
@@ -161,6 +163,7 @@ public:
     KinBodyPtr GetBody();
 
     bool InitFromInfo(const py::object pyKinBodyInfo);
+    bool ApplyDiff(const py::object pyKinBodyValue);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     bool InitFromBoxes(const std::vector<std::vector<dReal> >& vboxes, const bool bDraw = true, const std::string& uri = "");
     bool InitFromSpheres(const std::vector<std::vector<dReal> >& vspheres, const bool bDraw = true, const std::string& uri = "");

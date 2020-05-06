@@ -95,7 +95,8 @@ protected:
             }
         }
         if (referenceInfos.size() > 0 && itRef != referenceInfos.end()) {
-            SerializeDiffJSON(currentInfo, **itRef, value, _allocator);
+            // SerializeDiffJSON(currentInfo, **itRef, value, _allocator);
+            currentInfo.SerializeDiffJSON(value, **itRef, _allocator, fUnitScale, options);
         }
         else {
             currentInfo.SerializeJSON(value, _allocator, fUnitScale, options);
@@ -187,7 +188,9 @@ protected:
                         else {
                             pLinkInfo->SerializeJSON(value, _allocator);
                         }
-                        linksValue.PushBack(value, _allocator);
+                        if (value.MemberCount() > 0){
+                            linksValue.PushBack(value, _allocator);
+                        }
                     }
 
                     if (linksValue.Size() > 0) {
@@ -214,8 +217,9 @@ protected:
                         else {
                             pJointInfo->SerializeJSON(value, _allocator);
                         }
-
-                        jointsValue.PushBack(value, _allocator);
+                        if (value.MemberCount() > 0) {
+                            jointsValue.PushBack(value, _allocator);
+                        }
                     }
 
                     typename std::vector<KinBody::JointPtr>::const_iterator itPassiveJoint = vPassiveJoints.begin();
@@ -228,7 +232,9 @@ protected:
                         else {
                             pJointInfo->SerializeJSON(value, _allocator);
                         }
-                        jointsValue.PushBack(value, _allocator);
+                        if (value.MemberCount() > 0) {
+                            jointsValue.PushBack(value, _allocator);
+                        }
                     }
 
                     if (jointsValue.Size() > 0) {

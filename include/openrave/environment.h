@@ -702,6 +702,8 @@ public:
         return __nUniqueId;
     }
 
+    std::string _revision;  ///< environment current revision
+
 protected:
     virtual const char* GetHash() const {
         return OPENRAVE_ENVIRONMENT_HASH;

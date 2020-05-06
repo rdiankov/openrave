@@ -17,6 +17,12 @@
 #include "libopenrave.h"
 namespace OpenRAVE {
 
+void RobotBase::ManipulatorInfo::SerializeDiffJSON(rapidjson::Value& value, const RobotBase::ManipulatorInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    // TODO
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
+}
+
 void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
@@ -43,13 +49,6 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
     OpenRAVE::JSON::LoadJsonValueByKey(value, "gripperid", _gripperid);
 }
 
-void RobotBase::ManipulatorInfo::SetReferenceInfo(boost::shared_ptr<const ManipulatorInfo> refInfo) {
-    if (!!refInfo ) {
-        _Update(*refInfo);
-        _referenceInfo.reset();
-        _referenceInfo = refInfo;
-    }
-}
 
 void RobotBase::ManipulatorInfo::_Update(const RobotBase::ManipulatorInfo& info) {
     _id = info._id;

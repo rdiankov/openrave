@@ -85,6 +85,7 @@ public:
     void DeserializeJSON(object obj, dReal fUnitScale=1.0);
 
     py::list _vgeometryinfos;
+    object _id = py::none_();
     object _name = py::none_();
     object _t = ReturnTransform(Transform());
     object _tMassFrame = ReturnTransform(Transform());

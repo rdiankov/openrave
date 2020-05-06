@@ -171,6 +171,7 @@ public:
 
         ///< \param multiply all translational values by fUnitScale
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
+        virtual void SerializeDiffJSON(rapidjson::Value &value, const KinBody::GeometryInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
 
         ///< \param multiply all translational values by fUnitScale
         virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
@@ -268,7 +269,9 @@ public:
         const LinkInfo& operator=(const LinkInfo& other);
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
+        virtual void SerializeDiffJSON(rapidjson::Value& value, const KinBody::LinkInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
+        virtual void DeserializeDiffJSON(const rapidjson::Value& value, KinBody::LinkInfo& newInfo);
 
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like
@@ -764,6 +767,7 @@ protected:
             UpdateInfo();
             return _info;
         }
+        virtual bool ApplyDiff(const rapidjson::Value& linkValue);
 
 protected:
         /// \brief Updates the cached information due to changes in the collision data.
@@ -903,6 +907,7 @@ public:
         virtual int GetDOF() const;
 
         virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
+        virtual void SerializeDiffJSON(rapidjson::Value& value, const KinBody::JointInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
 
         JointType _type; /// The joint type
@@ -1657,6 +1662,7 @@ public:
             _referenceUri = other._referenceUri;
             _vLinkInfos = other._vLinkInfos;
             _vJointInfos = other._vJointInfos;
+            _referenceInfo = other._referenceInfo;
             return *this;
         }
 
@@ -2625,6 +2631,7 @@ private:
     virtual inline void SetInfo(const KinBodyInfo& info) {
         _info = info;
     }
+    virtual bool ApplyDiff(const rapidjson::Value& bodyValue);
 
 protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies
@@ -2694,6 +2701,9 @@ protected:
     /// Assumes plink has _info initialized correctly, so will be initializing the other data depending on it.
     /// Can only be called before internal robot hierarchy is initialized
     virtual void _InitAndAddJoint(JointPtr pjoint);
+
+
+
 
     std::string _name; ///< name of body
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints

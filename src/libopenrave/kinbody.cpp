@@ -5064,4 +5064,54 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
     }
 }
 
+bool KinBody::ApplyDiff(const rapidjson::Value& bodyValue) {
+    // links
+    bool success = true;
+    if (bodyValue.HasMember("links")) {
+        for(rapidjson::Value::ConstValueIterator itLinkValue = bodyValue["links"].Begin(); itLinkValue != bodyValue["links"].End(); itLinkValue++){
+            const rapidjson::Value& linkValue = *itLinkValue;
+            std::string linkId;
+            OpenRAVE::JSON::LoadJsonValueByKey(linkValue, "id", linkId);
+            bool isExistingLink = false;
+            std::set<std::string> deleteLinks;
+            for(std::vector<LinkPtr>::iterator itLink = _veclinks.begin(); itLink != _veclinks.end(); ++itLink) {
+                if ((*itLink)->_info._id == linkId) {
+                    isExistingLink = true;
+                    bool isDeleted = false;
+                    if (linkValue.HasMember("__delete__")) {
+                        OpenRAVE::JSON::LoadJsonValueByKey(linkValue, "__delete__", isDeleted);
+                    }
+                    if (isDeleted){
+                        // TODO: remove old link
+                        deleteLinks.insert(linkId);
+                    }
+                    else { // update existing link;
+                        success = (*itLink)->ApplyDiff(linkValue);
+                        if (!success) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            if (deleteLinks.size() > 0) {
+                _veclinks.erase(std::remove_if(_veclinks.begin(), _veclinks.end(),
+                                              [deleteLinks](LinkPtr& link){
+                                                  return deleteLinks.find(link->_info._id) != deleteLinks.end();
+                                              }), _veclinks.end());
+            }
+            if (!isExistingLink) { // add new link
+                LinkPtr plink(new Link(shared_kinbody()));
+                plink->_info.DeserializeJSON(linkValue);
+                _InitAndAddLink(plink);
+            }
+        }
+    }
+
+    // joints
+    if (bodyValue.HasMember("joints")) {
+    }
+
+    return true;
+}
+
 } // end namespace OpenRAVE

@@ -263,6 +263,7 @@ void PyLinkInfo::_Update(const KinBody::LinkInfo& info) {
     FOREACHC(itgeominfo, info._vgeometryinfos) {
         _vgeometryinfos.append(PyGeometryInfoPtr(new PyGeometryInfo(**itgeominfo)));
     }
+    _id = ConvertStringToUnicode(info._id);
     _name = ConvertStringToUnicode(info._name);
     _t = ReturnTransform(info._t);
     _tMassFrame = ReturnTransform(info._tMassFrame);
@@ -314,6 +315,9 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
     for(size_t i = 0; i < info._vgeometryinfos.size(); ++i) {
         PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(_vgeometryinfos[i]);
         info._vgeometryinfos[i] = pygeom->GetGeometryInfo();
+    }
+    if( !IS_PYTHONOBJECT_NONE(_name) ) {
+        info._id = py::extract<std::string>(_id);
     }
     if( !IS_PYTHONOBJECT_NONE(_name) ) {
         info._name = py::extract<std::string>(_name);
@@ -2053,10 +2057,15 @@ PyKinBody::PyKinBodyInfo::PyKinBodyInfo(const KinBody::KinBodyInfo& info) {
 KinBody::KinBodyInfoPtr PyKinBody::PyKinBodyInfo::GetKinBodyInfo() const {
     KinBody::KinBodyInfoPtr pInfo(new KinBody::KinBodyInfo());
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+    pInfo->_id = _id;
     pInfo->_uri = _uri;
     pInfo->_vLinkInfos = std::vector<KinBody::LinkInfoPtr>(begin(_vLinkInfos), end(_vLinkInfos));
     pInfo->_vJointInfos = std::vector<KinBody::JointInfoPtr>(begin(_vJointInfos), end(_vJointInfos));
 #else
+    if (!IS_PYTHONOBJECT_NONE(_id)) {
+        pInfo->_id = py::extract<std::string>(_id);
+    }
+
     if (!IS_PYTHONOBJECT_NONE(_uri)) {
         pInfo->_uri = py::extract<std::string>(_uri);
     }
@@ -2094,10 +2103,12 @@ void PyKinBody::PyKinBodyInfo::DeserializeJSON(py::object obj, dReal fUnitScale)
 
 void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+    _id = info._id;
     _uri = info._uri;
     _vLinkInfos = std::vector<KinBody::LinkInfoPtr>(begin(info._vLinkInfos), end(info._vLinkInfos));
     _vJointInfos = std::vector<KinBody::JointInfoPtr>(begin(info._vJointInfos), end(info._vJointInfos));
 #else
+    _id = ConvertStringToUnicode(info._id);
     _uri = ConvertStringToUnicode(info._uri);
     py::list vLinkInfos;
     FOREACHC(itLinkInfo, info._vLinkInfos) {
@@ -2162,6 +2173,13 @@ bool PyKinBody::InitFromInfo(const object pyKinBodyInfo)
         return _pbody->InitFromInfo(pKinBodyInfo);
     }
     return false;
+}
+
+bool PyKinBody::ApplyDiff(const object pyKinBodyValue)
+{
+    rapidjson::Document doc;
+    toRapidJSONValue(pyKinBodyValue, doc, doc.GetAllocator());
+    return _pbody->ApplyDiff(doc);
 }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -4350,6 +4368,7 @@ void init_openravepy_kinbody()
     object linkinfo = class_<PyLinkInfo, OPENRAVE_SHARED_PTR<PyLinkInfo> >("LinkInfo", DOXY_CLASS(KinBody::LinkInfo))
 #endif
                       .def_readwrite("_vgeometryinfos",&PyLinkInfo::_vgeometryinfos)
+                      .def_readwrite("_id", &PyLinkInfo::_id)
                       .def_readwrite("_name",&PyLinkInfo::_name)
                       .def_readwrite("_t",&PyLinkInfo::_t)
                       .def_readwrite("_tMassFrame",&PyLinkInfo::_tMassFrame)
@@ -4611,6 +4630,7 @@ void init_openravepy_kinbody()
 #endif
                          .def_readwrite("_vLinkInfos",&PyKinBody::PyKinBodyInfo::_vLinkInfos)
                          .def_readwrite("_vJointInfos",&PyKinBody::PyKinBodyInfo::_vJointInfos)
+                         .def_readwrite("_id", &PyKinBody::PyKinBodyInfo::_id)
                          .def_readwrite("_uri", &PyKinBody::PyKinBodyInfo::_uri)
                          .def("__str__",&PyKinBody::PyKinBodyInfo::__str__)
                          .def("__unicode__",&PyKinBody::PyKinBodyInfo::__unicode__)
@@ -4710,6 +4730,17 @@ void init_openravepy_kinbody()
 #else
                          .def("InitFromInfo",&PyKinBody::InitFromInfo, DOXY_FN(KinBody, InitFromInfo))
 #endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                         .def("ApplyDiff", &PyKinBody::ApplyDiff,
+                              "info"_a,
+                              DOXY_FN(KinBody, ApplyDiff))
+#else
+                         .def("ApplyDiff",&PyKinBody::ApplyDiff, DOXY_FN(KinBody, ApplyDiff))
+#endif
+
+
+
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("InitFromBoxes", &PyKinBody::InitFromBoxes,
                               "boxes"_a,
