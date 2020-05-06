@@ -338,12 +338,6 @@ public:
         if( !pnode ) {
             return ET_Failed;
         }
-        if( pnode->_transformComputed == 0) {
-            if( !_fkfn(VectorWrapper<dReal>(pnode->q, pnode->q + _dof), pnode->pose) ) {
-                return ET_Failed;
-            }
-            pnode->_transformComputed = 1;
-        }
         plastnode = pnode;
 
         bool bHasAdded = false;
@@ -352,10 +346,6 @@ public:
 
         _vCurConfig.resize(_dof);
         std::copy(pnode->q, pnode->q + _dof, _vCurConfig.begin());
-        _curpose.rot = pnode->pose.rot;
-        _curpose.trans = pnode->pose.trans;
-
-        _newpose.rot = _curpose.rot;
 
         // Suppose vdirection is normalized.
         _vstepdirection = vdirection * _fWorkspaceStepLength;
@@ -363,7 +353,15 @@ public:
         // Extend the tree
         int maxExtensionIters = 100;
         for( int iter = 0; iter < maxExtensionIters; ++iter ) {
-            _newpose.trans = _curpose.trans + _curpose.rotate(_vstepdirection);
+            if( pnode->_transformComputed == 0) {
+                if( !_fkfn(VectorWrapper<dReal>(pnode->q, pnode->q + _dof), pnode->pose) ) {
+                    return ET_Failed;
+                }
+                pnode->_transformComputed = 1;
+            }
+            _newpose.rot = pnode->pose.rot;
+            _newpose.trans = pnode->pose.trans + pnode->pose.rotate(_vstepdirection);
+
             if( !_ikfn(_newpose, _vCurConfig, _vNewConfig) ) {
                 return bHasAdded ? ET_Success : ET_Failed;
             }
@@ -903,7 +901,7 @@ private:
     boost::function<bool(const std::vector<dReal>&, Transform&)> _fkfn; ///< forward kinematics function
     boost::function<bool(const Transform&, const std::vector<dReal>&, std::vector<dReal>&)> _ikfn; ///< inverse kinematics function
     std::vector<dReal> _vAccumWeights; ///< weights for each level of the tree, used for sampling tree nodes.
-    Transform _curpose, _newpose;
+    Transform _newpose;
     Vector _vstepdirection;
 };
 
