@@ -32,6 +32,9 @@ public:
         _usenn = 1;
         _userdata = 0;
         _transformComputed = 0;
+#ifdef _DEBUG
+        _bFromWorkspaceExtension = 0;
+#endif
     }
 
     NodeWithTransform(NodeWithTransform* pparent, const dReal* pconfig, int ndof) : rrtparent(pparent) {
@@ -41,6 +44,9 @@ public:
         _usenn = 1;
         _userdata = 0;
         _transformComputed = 0;
+#ifdef _DEBUG
+        _bFromWorkspaceExtension = 0;
+#endif
     }
 
     /// \brief Initialize a node with a parent node, a config, and a corresponding transform
@@ -54,6 +60,9 @@ public:
         _usenn = 1;
         _userdata = 0;
         _transformComputed = 1;
+#ifdef _DEBUG
+        _bFromWorkspaceExtension = 0;
+#endif
     }
 
     NodeWithTransform(NodeWithTransform* pparent, const dReal* pconfig, int ndof, const Transform& pose) : rrtparent(pparent) {
@@ -66,6 +75,9 @@ public:
         _usenn = 1;
         _userdata = 0;
         _transformComputed = 1;
+#ifdef _DEBUG
+        _bFromWorkspaceExtension = 0;
+#endif
     }
 
     ~NodeWithTransform() {
@@ -80,6 +92,7 @@ public:
 
 #ifdef _DEBUG
     int id;
+    uint8_t _bFromWorkspaceExtension;
 #endif
 
     uint8_t _transformComputed; ///< if 1, the transform corresponding to this node (`pose`) has been computed.
@@ -259,7 +272,6 @@ public:
                 }
             }
 
-            int iAdded = 0; // number of nodes added to the tree
             if( _constraintreturn->_bHasRampDeviatedFromInterpolation ) {
                 // Since the path checked by CheckPathAllConstraints can be different from the
                 // straight line connecting _vNewConfig and _vCurConfig, we add all checked
@@ -274,7 +286,6 @@ public:
                             bHasAdded = true;
                             pnode = pnewnode;
                             plastnode = pnode;
-                            ++iAdded;
                         }
                         else {
                             break;
@@ -291,7 +302,6 @@ public:
                             bHasAdded = true;
                             pnode = pnewnode;
                             plastnode = pnode;
-                            ++iAdded;
                         }
                         else {
                             break;
@@ -382,7 +392,6 @@ public:
                 }
             }
 
-            int iAdded = 0; // number of nodes added to the tree
             if( _constraintreturn->_bHasRampDeviatedFromInterpolation ) {
                 // Since the path checked by CheckPathAllConstraints can be different from the
                 // straight line connecting _vNewConfig and _vCurConfig, we add all checked
@@ -394,10 +403,12 @@ public:
                                   _vNewConfig.begin());
                         NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0);
                         if( !!pnewnode ) {
+#ifdef _DEBUG
+                            pnewnode->_bFromWorkspaceExtension = 1;
+#endif
                             bHasAdded = true;
                             pnode = pnewnode;
                             plastnode = pnode;
-                            ++iAdded;
                         }
                         else {
                             break;
@@ -411,10 +422,12 @@ public:
                                   _vNewConfig.begin());
                         NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0);
                         if( !!pnewnode ) {
+#ifdef _DEBUG
+                            pnewnode->_bFromWorkspaceExtension = 1;
+#endif
                             bHasAdded = true;
                             pnode = pnewnode;
                             plastnode = pnode;
-                            ++iAdded;
                         }
                         else {
                             break;
@@ -428,6 +441,9 @@ public:
                 // Since the final configuration is dircetly _vNewConfig, simply add only _vNewConfig to the tree
                 NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0);
                 if( !!pnewnode ) {
+#ifdef _DEBUG
+                    pnewnode->_bFromWorkspaceExtension = 1;
+#endif
                     pnode = pnewnode;
                     plastnode = pnode;
                     bHasAdded = true;
@@ -817,6 +833,39 @@ public:
         pnode->id = GetNewStaticId();
 #endif
         return pnode;
+    }
+
+    void DumpTree(std::ostream& o) const
+    {
+        o << _numnodes;
+#ifdef _DEBUG
+        o << ",1"; // dump nodes with _bFromWorkspaceExtension
+#endif
+        o << endl;
+
+        // first organize all nodes into a vector struct with indices
+        std::vector<NodePtr> vnodes; vnodes.reserve(_numnodes);
+        FOREACHC(itchildren, _vsetLevelNodes) {
+            vnodes.insert(vnodes.end(), itchildren->begin(), itchildren->end());
+        }
+        // there's a bug here when using FOREACHC
+        //FOREACHC(itnode,vnodes) {
+        for(size_t inode = 0; inode < vnodes.size(); ++inode) {
+            NodePtr node = vnodes[inode];
+#ifdef _DEBUG
+            o << (int)node->_bFromWorkspaceExtension << ","; // dump nodes with _bFromWorkspaceExtension
+#endif
+            for(int i = 0; i < _dof; ++i) {
+                o << node->q[i] << ",";
+            }
+            typename std::vector<NodePtr>::iterator itnode = find(vnodes.begin(), vnodes.end(), node->rrtparent);
+            if( itnode == vnodes.end() ) {
+                o << "-1" << endl;
+            }
+            else {
+                o << (size_t)(itnode-vnodes.begin()) << endl;
+            }
+        }
     }
 
 private:
