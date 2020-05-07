@@ -1637,16 +1637,23 @@ void RobotBase::SetNonCollidingConfiguration()
     RegrabAll();
 }
 
-uint16_t RobotBase::ComputePostureValue() const
+bool RobotBase::ComputePostureValue(std::vector<uint16_t>& values) const
 {
     ManipulatorConstPtr pmanip = GetActiveManipulator();
     return ComputePostureValue(pmanip->GetBase(), pmanip->GetEndEffector());
 }
 
-uint16_t RobotBase::ComputePostureValue(LinkPtr pBaseLink, LinkPtr pEndEffectorLink) const
+bool RobotBase::ComputePostureValue(LinkPtr pBaseLink, LinkPtr pEndEffectorLink, std::vector<uint16_t>& values) const
 {
     // TODO fill with default implementation
-    return 0;
+    const std::pair<LinkPtr, LinkPtr> kinematicChain(make_pair(pBaseLink, pEndEffectorLink));
+    const std::map<std::pair<LinkPtr, LinkPtr>, RobotPoseDescriberBasePtr>::const_iterator itPoseDecriber = robotPoseDescribers.find(kinematicChain);
+    if (itPoseDecriber != robotPoseDescribers.end())
+    {
+        return itPoseDecriber->ComputePostureValue(values);
+    }
+    
+    throw OPENRAVE_EXCEPTION_FORMAT(_("failed to find robot pose describer for links from \"%s\" to \"%s\" for robot \"%s\""), GetName()%pBaseLink->GetName()%pEndEffectorLink->GetName(), ORE_InvalidArguments);
 }
 
 bool RobotBase::Grab(KinBodyPtr pbody)

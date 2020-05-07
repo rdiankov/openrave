@@ -27,13 +27,13 @@ namespace OpenRAVE {
 /** \brief <b>[interface]</b> Base class for all Forward Kinematic solvers. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_fksolver.
    \ingroup interfaces
  */
-class OPENRAVE_API RobotPoseDescriberBase : public InterfaceBase
+class OPENRAVE_API RobotPostureDescriberBase : public InterfaceBase
 {
 public:
-    RobotPoseDescriberBase(EnvironmentBasePtr penv) : InterfaceBase(PT_ForwardKinematicsSolver, penv) {
+    RobotPostureDescriberBase(EnvironmentBasePtr penv) : InterfaceBase(PT_ForwardKinematicsSolver, penv) {
     }
 
-    virtual ~RobotPoseDescriberBase() {
+    virtual ~RobotPostureDescriberBase() {
     }
 
     virtual bool Init(OpenRAVE::RobotBase::LinkPtr pBaseLink, OpenRAVE::RobotBase::LinkPtr pEndEffectorLink);
@@ -43,9 +43,13 @@ public:
         return PT_ForwardKinematicsSolver;
     }
 
+    /// \brief Checks if this class can be used to compute posture values for this robot
+    /// \return true if can handle this kinematics chain
+    virtual bool CanDescribePostureValueFor(LinkPtr pBaseLink, LinkPtr pEndEffectorLink) const;
+
     /// \brief Computes an integer value to describe current robot posture
     /// Computes a value describing descrete posture of robot kinematics between base link and endeffector link
-    virtual uint16_t ComputePostureValue() const;
+    virtual void ComputePostureValue(std::vector<uint16_t>& values) const;
 };
 
 } // end namespace OpenRAVE
