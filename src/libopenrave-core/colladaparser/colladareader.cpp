@@ -3440,10 +3440,10 @@ public:
                         openravejson::ParseJson(rGripperInfo, pjson_data->getCharData());
                         dReal fUnitScale=1.0;
                         pGripperInfo->DeserializeJSON(rGripperInfo, fUnitScale);
-                        // do not let json_data in collada override name attribute of <extra>
-                        pGripperInfo->name = _ConvertToOpenRAVEName(grippername);
-                        probot->_vecGripperInfos.push_back(pGripperInfo);
                     }
+                    // do not let json_data in collada override name attribute of <extra>
+                    pGripperInfo->name = _ConvertToOpenRAVEName(grippername);
+                    probot->_vecGripperInfos.push_back(pGripperInfo);
                 }
                 else {
                     RAVELOG_WARN_FORMAT("cannot create robot %s gripperInfo %s", probot->GetName()%grippername);
