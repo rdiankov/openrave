@@ -163,7 +163,7 @@ inline void ParseJson(rapidjson::Document& d, const std::string& str) {
         }
         throw openravejson::OpenRAVEJSONException((boost::format("Json string is invalid (offset %u) %s str=%s")%((unsigned)d.GetErrorOffset())%GetParseError_En(d.GetParseError())%substr).str(), openravejson::ORJE_InvalidArguments);
     }
-    d.Swap(tempDoc);
+    tempDoc.Swap(d);
 }
 
 inline void ParseJson(rapidjson::Document& d, std::istream& is) {
@@ -174,7 +174,7 @@ inline void ParseJson(rapidjson::Document& d, std::istream& is) {
     if (tempDoc.HasParseError()) {
         throw openravejson::OpenRAVEJSONException((boost::format("Json stream is invalid (offset %u) %s")%((unsigned)tempDoc.GetErrorOffset())%GetParseError_En(tempDoc.GetParseError())).str(), openravejson::ORJE_InvalidArguments);
     }
-    d.Swap(tempDoc);
+    tempDoc.Swap(d);
 }
 
 class JsonSerializable {
@@ -872,7 +872,7 @@ inline void SetJsonValueByKey(rapidjson::Document& d, const char* key, const T& 
 {
     rapidjson::Value v;
     SetJsonValueByKey(v, key, t, d.GetAllocator());
-    d.Swap(v);
+    v.Swap(d);
 }
 
 template<class T>
@@ -880,7 +880,7 @@ inline void SetJsonValueByKey(rapidjson::Document& d, const std::string& key, co
 {
     rapidjson::Value v;
     SetJsonValueByKey(v, key.c_str(), t, d.GetAllocator());
-    d.Swap(v);
+    v.Swap(d);
 }
 
 template<class T>
