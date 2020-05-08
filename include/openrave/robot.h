@@ -1044,20 +1044,25 @@ private:
 
     /// \brief Sets robot posture describer for kinematics state between pBaseLink and pEndEffectorLink
     /// Computes a value using joints between base link and endeffector link of active manipulator
-    virtual bool SetRobotPostureDescriber(LinkPtr pBaseLink, LinkPtr pEndEffectorLink, RobotPoseDescriberBase pDescriber);
+    virtual bool SetRobotPostureDescriber(LinkPtr pBaseLink, LinkPtr pEndEffectorLink, RobotPostureDescriberBasePtr pDescriber);
 
     /// \brief Gets robot posture describer for kinematics state between pBaseLink and pEndEffectorLink
-    virtual RobotPoseDescriberBase GetRobotPostureDescriber(LinkPtr pBaseLink, LinkPtr pEndEffectorLink) const;
+    virtual RobotPostureDescriberBasePtr GetRobotPostureDescriber(LinkPtr pBaseLink, LinkPtr pEndEffectorLink) const;
     
     /// \brief Computes an interger value to describe current robot posture
     /// Computes a value describing the states of links between base and endeffector of active manipulator
-    /// \return vector of integer value which describe posture of this robot. These value
-    virtual void ComputePostureValue(std::vector<int>& posturevalues) const;
+    /// \return vector of integer value which describe posture of this robot.
+    virtual bool ComputePostureValue(std::vector<uint16_t>& posturevalues) const;
+
+    /// \brief Computes an interger value to describe current robot posture
+    /// Computes a value describing the states of links between base and endeffector of specified manipulator
+    /// \return vector of integer value which describe posture of this robot.
+    virtual bool ComputePostureValue(ManipulatorConstPtr pmanip, std::vector<uint16_t>& values) const;
 
     /// \brief Computes an interger value to describe current robot posture
     /// Computes a value describing the states of links between base and endeffector
-    /// \return vector of integer value which describe posture of this robot. These value
-    virtual void ComputePostureValue(LinkPtr pBaseLink, LinkPtr pEndEffectorLink, std::vector<int>& posturevalues) const;
+    /// \return vector of integer value which describe posture of this robot.
+    virtual bool ComputePostureValue(LinkPtr pBaseLink, LinkPtr pEndEffectorLink, std::vector<uint16_t>& posturevalues) const;
 
     //@}
 
@@ -1183,7 +1188,7 @@ protected:
     dReal _fQuatLimitMaxAngle, _fQuatMaxAngleVelocity, _fQuatAngleResolution, _fQuatAngleWeight;
 
     ConfigurationSpecification _activespec;
-    std::map<std::pair<LinkPtr, LinkPtr>, RobotPostureDescriberBasePtr> _robotPostureDescribers;q
+    std::map<std::pair<LinkPtr, LinkPtr>, RobotPostureDescriberBasePtr> _robotPostureDescribers;
 
 private:
     virtual const char* GetHash() const {
