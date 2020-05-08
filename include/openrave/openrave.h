@@ -31,7 +31,7 @@
 
 #pragma warning(disable:4251) // needs to have dll-interface to be used by clients of class
 #pragma warning(disable:4190) // C-linkage specified, but returns UDT 'boost::shared_ptr<T>' which is incompatible with C
-#pragma warning(disable:4819) //The file contains a character that cannot be represented in the current code page (932). Save the file in Unicode format to prevent data loss using native typeof
+#pragma warning(disable:4819) //The file contains a character that cannot be represented in the current code page (932). Save the file in Unicode format to prevent data loss using native typof
 
 // needed to get typeof working
 //#include <boost/typeof/std/string.hpp>
@@ -272,12 +272,14 @@ enum InterfaceType
     PT_Trajectory=11, ///< describes \ref TrajectoryBase
     PT_Viewer=12, ///< describes \ref ViewerBase
     PT_SpaceSampler=13, ///< describes \ref SamplerBase
-    PT_NumberOfInterfaces=13 ///< number of interfaces, do not forget to update
+    PT_ForwardKinematicsSolver=14, ///< describes \ref RobotPostureDescriberBase interface
+    PT_NumberOfInterfaces=14 ///< number of interfaces, do not forget to update
 };
 
 class CollisionReport;
 class InterfaceBase;
 class IkSolverBase;
+class RobotPostureDescriberBase;
 class TrajectoryBase;
 class ControllerBase;
 class PlannerBase;
@@ -315,6 +317,9 @@ typedef boost::weak_ptr<ControllerBase> ControllerBaseWeakPtr;
 typedef boost::shared_ptr<IkSolverBase> IkSolverBasePtr;
 typedef boost::shared_ptr<IkSolverBase const> IkSolverBaseConstPtr;
 typedef boost::weak_ptr<IkSolverBase> IkSolverBaseWeakPtr;
+typedef boost::shared_ptr<RobotPostureDescriberBase> RobotPostureDescriberBasePtr;
+typedef boost::shared_ptr<RobotPostureDescriberBase const> RobotPostureDescriberBaseConstPtr;
+typedef boost::weak_ptr<RobotPostureDescriberBase> RobotPostureDescriberBaseWeakPtr;
 typedef boost::shared_ptr<PhysicsEngineBase> PhysicsEngineBasePtr;
 typedef boost::shared_ptr<PhysicsEngineBase const> PhysicsEngineBaseConstPtr;
 typedef boost::weak_ptr<PhysicsEngineBase> PhysicsEngineBaseWeakPtr;
@@ -2408,6 +2413,7 @@ OPENRAVE_API ConfigurationSpecification RaveGetAffineConfigurationSpecification(
 #include <openrave/sensor.h>
 #include <openrave/robot.h>
 #include <openrave/iksolver.h>
+#include <openrave/fksolver.h>
 #include <openrave/planner.h>
 #include <openrave/controller.h>
 #include <openrave/physicsengine.h>

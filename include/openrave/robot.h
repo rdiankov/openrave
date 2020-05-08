@@ -1042,6 +1042,28 @@ private:
     /// \brief \ref KinBody::SetNonCollidingConfiguration, also regrabs all bodies
     virtual void SetNonCollidingConfiguration();
 
+    /// \brief Sets robot posture describer for kinematics state between pBaseLink and pEndEffectorLink
+    /// Computes a value using joints between base link and endeffector link of active manipulator
+    virtual bool SetRobotPostureDescriber(LinkPtr pBaseLink, LinkPtr pEndEffectorLink, RobotPostureDescriberBasePtr pDescriber);
+
+    /// \brief Gets robot posture describer for kinematics state between pBaseLink and pEndEffectorLink
+    virtual RobotPostureDescriberBasePtr GetRobotPostureDescriber(LinkPtr pBaseLink, LinkPtr pEndEffectorLink) const;
+    
+    /// \brief Computes an interger value to describe current robot posture
+    /// Computes a value describing the states of links between base and endeffector of active manipulator
+    /// \return vector of integer value which describe posture of this robot.
+    virtual bool ComputePostureValue(std::vector<uint16_t>& posturevalues) const;
+
+    /// \brief Computes an interger value to describe current robot posture
+    /// Computes a value describing the states of links between base and endeffector of specified manipulator
+    /// \return vector of integer value which describe posture of this robot.
+    virtual bool ComputePostureValue(ManipulatorConstPtr pmanip, std::vector<uint16_t>& values) const;
+
+    /// \brief Computes an interger value to describe current robot posture
+    /// Computes a value describing the states of links between base and endeffector
+    /// \return vector of integer value which describe posture of this robot.
+    virtual bool ComputePostureValue(LinkPtr pBaseLink, LinkPtr pEndEffectorLink, std::vector<uint16_t>& posturevalues) const;
+
     //@}
 
     /** A grabbed body becomes part of the robot and its relative pose with respect to a robot's
@@ -1166,6 +1188,8 @@ protected:
     dReal _fQuatLimitMaxAngle, _fQuatMaxAngleVelocity, _fQuatAngleResolution, _fQuatAngleWeight;
 
     ConfigurationSpecification _activespec;
+    std::map<std::pair<LinkPtr, LinkPtr>, RobotPostureDescriberBasePtr> _robotPostureDescribers;
+
 private:
     virtual const char* GetHash() const {
         return OPENRAVE_ROBOT_HASH;
