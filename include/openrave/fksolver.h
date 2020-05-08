@@ -45,7 +45,7 @@ public:
 
     /// \brief Checks if this class can be used to compute posture values for this robot
     /// \return true if can handle this kinematics chain
-    virtual bool CanDescribePostureValueFor(OpenRAVE::RobotBase::LinkPtr pBaseLink, OpenRAVE::RobotBase::LinkPtr pEndEffectorLink) const;
+    virtual bool Supports(OpenRAVE::RobotBase::LinkPtr pBaseLink, OpenRAVE::RobotBase::LinkPtr pEndEffectorLink) const;
 
     /// \brief Computes an integer value to describe current robot posture
     /// Computes a value describing descrete posture of robot kinematics between base link and endeffector link

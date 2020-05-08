@@ -1651,7 +1651,7 @@ bool RobotBase::SetRobotPostureDescriber(LinkPtr pBaseLink, LinkPtr pEndEffector
         return true;
     }
         
-    if (pDescriber->CanDescribePostureValueFor(pBaseLink, pEndEffectorLink)) {
+    if (pDescriber->Supports(pBaseLink, pEndEffectorLink)) {
         const std::pair<LinkPtr, LinkPtr> kinematicChain(make_pair(pBaseLink, pEndEffectorLink));
         _robotPostureDescribers[kinematicChain] = pDescriber;
         return true;
