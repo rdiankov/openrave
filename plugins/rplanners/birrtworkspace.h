@@ -32,9 +32,7 @@ public:
         _usenn = 1;
         _userdata = 0;
         _transformComputed = 0;
-#ifdef _DEBUG
         _bFromWorkspaceExtension = 0;
-#endif
     }
 
     NodeWithTransform(NodeWithTransform* pparent, const dReal* pconfig, int ndof) : rrtparent(pparent) {
@@ -44,9 +42,7 @@ public:
         _usenn = 1;
         _userdata = 0;
         _transformComputed = 0;
-#ifdef _DEBUG
         _bFromWorkspaceExtension = 0;
-#endif
     }
 
     /// \brief Initialize a node with a parent node, a config, and a corresponding transform
@@ -60,9 +56,7 @@ public:
         _usenn = 1;
         _userdata = 0;
         _transformComputed = 1;
-#ifdef _DEBUG
         _bFromWorkspaceExtension = 0;
-#endif
     }
 
     NodeWithTransform(NodeWithTransform* pparent, const dReal* pconfig, int ndof, const Transform& pose) : rrtparent(pparent) {
@@ -75,9 +69,7 @@ public:
         _usenn = 1;
         _userdata = 0;
         _transformComputed = 1;
-#ifdef _DEBUG
         _bFromWorkspaceExtension = 0;
-#endif
     }
 
     ~NodeWithTransform() {
@@ -90,10 +82,8 @@ public:
     uint8_t _usenn; ///< if 1, then include this node in the nearest neighbor search. otherwise, ignore this node.
     uint8_t _userdata;
 
-#ifdef _DEBUG
     int id;
     uint8_t _bFromWorkspaceExtension;
-#endif
 
     uint8_t _transformComputed; ///< if 1, the transform corresponding to this node (`pose`) has been computed.
     Transform pose; ///< a transform corresponding to this node.
@@ -319,6 +309,9 @@ public:
                     plastnode = pnode;
                     bHasAdded = true;
                 }
+                else {
+                    break;
+                }
             }
 
             if( bHasAdded && bOneStep ) {
@@ -349,6 +342,7 @@ public:
 
         // Suppose vdirection is normalized.
         _vstepdirection = vdirection * _fWorkspaceStepLength;
+        bool bDirectionComputed = false;
 
         // Extend the tree
         int maxExtensionIters = 100;
@@ -360,7 +354,11 @@ public:
                 pnode->_transformComputed = 1;
             }
             _newpose.rot = pnode->pose.rot;
-            _newpose.trans = pnode->pose.trans + pnode->pose.rotate(_vstepdirection);
+            if( !bDirectionComputed ) {
+                _vstepdirection = quatRotate(pnode->pose.rot, _vstepdirection);
+                bDirectionComputed = true;
+            }
+            _newpose.trans = pnode->pose.trans + _vstepdirection;
 
             if( !_ikfn(_newpose, _vCurConfig, _vNewConfig) ) {
                 return bHasAdded ? ET_Success : ET_Failed;
@@ -401,9 +399,7 @@ public:
                                   _vNewConfig.begin());
                         NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0);
                         if( !!pnewnode ) {
-#ifdef _DEBUG
                             pnewnode->_bFromWorkspaceExtension = 1;
-#endif
                             bHasAdded = true;
                             pnode = pnewnode;
                             plastnode = pnode;
@@ -420,9 +416,7 @@ public:
                                   _vNewConfig.begin());
                         NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0);
                         if( !!pnewnode ) {
-#ifdef _DEBUG
                             pnewnode->_bFromWorkspaceExtension = 1;
-#endif
                             bHasAdded = true;
                             pnode = pnewnode;
                             plastnode = pnode;
@@ -439,12 +433,13 @@ public:
                 // Since the final configuration is dircetly _vNewConfig, simply add only _vNewConfig to the tree
                 NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0);
                 if( !!pnewnode ) {
-#ifdef _DEBUG
                     pnewnode->_bFromWorkspaceExtension = 1;
-#endif
                     pnode = pnewnode;
                     plastnode = pnode;
                     bHasAdded = true;
+                }
+                else {
+                    break;
                 }
             }
 
@@ -464,7 +459,7 @@ public:
         for( int ilevel = 0; ilevel < _maxlevel; ++ilevel ) {
             if( fSampledValue <= _vAccumWeights[ilevel] ) {
                 // Select ilevel
-                std::set<NodePtr>& setLevelChildren = _vsetLevelNodes.at(ilevel);
+                std::set<NodePtr, NodeComparator>& setLevelChildren = _vsetLevelNodes.at(ilevel);
                 size_t numLevelNodes = setLevelChildren.size();
                 int iSelectedNode = floorf((fSampledValue - fPrevLevelBound)*numLevelNodes/(_vAccumWeights[ilevel] - fPrevLevelBound));
                 typename std::set<NodePtr>::iterator itnode = setLevelChildren.begin();
@@ -582,9 +577,7 @@ public:
         void* pmemory = _pNodesPool->malloc();
         NodePtr pnode = new (pmemory) Node(pparent, vconfig);
         pnode->_userdata = userdata;
-#ifdef _DEBUG
         pnode->id = GetNewStaticId();
-#endif
         return pnode;
     }
 
@@ -595,9 +588,7 @@ public:
         void* pmemory = _pNodesPool->malloc();
         NodePtr pnode = new (pmemory) Node(pparent, vconfig, pose);
         pnode->_userdata = userdata;
-#ifdef _DEBUG
         pnode->id = GetNewStaticId();
-#endif
         return pnode;
     }
 
@@ -825,20 +816,19 @@ public:
     {
         // allocate memory for the structur and the internal state vectors
         void* pmemory = _pNodesPool->malloc();
-        NodePtr pnode = new (pmemory) Node(refnode->rrtparent, refnode->q, _dof);
+        NodePtr pnode = new (pmemory) Node(refnode->rrtparent, refnode->q, _dof, refnode->pose);
+        // NodePtr pnode = new (pmemory) Node(refnode->rrtparent, refnode->q, _dof);
         pnode->_userdata = refnode->_userdata;
-#ifdef _DEBUG
         pnode->id = GetNewStaticId();
-#endif
+        pnode->_transformComputed = refnode->_transformComputed;
+        pnode->_bFromWorkspaceExtension = refnode->_bFromWorkspaceExtension;
         return pnode;
     }
 
     void DumpTree(std::ostream& o) const
     {
         o << _numnodes;
-#ifdef _DEBUG
         o << ",1"; // dump nodes with _bFromWorkspaceExtension
-#endif
         o << endl;
 
         // first organize all nodes into a vector struct with indices
@@ -850,9 +840,7 @@ public:
         //FOREACHC(itnode,vnodes) {
         for(size_t inode = 0; inode < vnodes.size(); ++inode) {
             NodePtr node = vnodes[inode];
-#ifdef _DEBUG
             o << (int)node->_bFromWorkspaceExtension << ","; // dump nodes with _bFromWorkspaceExtension
-#endif
             for(int i = 0; i < _dof; ++i) {
                 o << node->q[i] << ",";
             }
@@ -866,6 +854,17 @@ public:
         }
     }
 
+    /// \brief A comparator provided to std::set to make sure that the behavior of insertion into _vsetLevelNodes
+    /// remains the same among different runs.
+    class NodeComparator
+    {
+public:
+        bool operator()(const NodePtr& pnodel, const NodePtr& pnoder)
+        {
+            return pnodel->id < pnoder->id;
+        }
+    };
+
 private:
     boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;
     boost::weak_ptr<PlannerBase> _planner;
@@ -876,7 +875,7 @@ private:
     // cover tree data structures
     boost::shared_ptr< boost::pool<> > _pNodesPool; ///< pool nodes are created from
 
-    std::vector< std::set<NodePtr> > _vsetLevelNodes; ///< _vsetLevelNodes[enc(level)][node] holds the indices of the children of "node" of a given the level. enc(level) maps (-inf,inf) into [0,inf) so it can be indexed by the vector. Every node has an entry in a map here. If the node doesn't hold any children, then it is at the leaf of the tree. _vsetLevelNodes.at(_EncodeLevel(_maxlevel)) is the root.
+    std::vector< std::set<NodePtr, NodeComparator> > _vsetLevelNodes; ///< _vsetLevelNodes[enc(level)][node] holds the indices of the children of "node" of a given the level. enc(level) maps (-inf,inf) into [0,inf) so it can be indexed by the vector. Every node has an entry in a map here. If the node doesn't hold any children, then it is at the leaf of the tree. _vsetLevelNodes.at(_EncodeLevel(_maxlevel)) is the root.
 
     dReal _maxdistance; ///< maximum possible distance between two states. used to balance the tree. Has to be > 0.
     dReal _mindistance; ///< minimum possible distance between two states until they are declared the same
@@ -1086,13 +1085,14 @@ public:
             return false;
         }
 
-        dReal fMinConfigDist = 1e30;
+        dReal fMinConfigDist = std::numeric_limits<dReal>::infinity();
         dReal fCurConfigDist;
         IkReturnPtr bestikret;
         for( const IkReturnPtr& ikret : _vcacheikreturns ) {
             fCurConfigDist = _parameters->_distmetricfn(vrefconfig, ikret->_vsolution);
             if( fCurConfigDist < fMinConfigDist ) {
                 bestikret = ikret;
+                fMinConfigDist = fCurConfigDist;
             }
         }
         if( !bestikret ) {
@@ -1171,7 +1171,6 @@ public:
             // same with the original rrt in case _fWorkspaceSamplingBiasProb = 0.
             dReal fSampledValue1 = bSampleGoal ? 0 : _uniformsampler->SampleSequenceOneReal();
             if( fSampledValue1 >= _parameters->_fGoalBiasProb && fSampledValue1 < _parameters->_fGoalBiasProb + _parameters->_fWorkspaceSamplingBiasProb ) {
-                RAVELOG_VERBOSE_FORMAT("env=%d, iter=%d, fSampledValue=%f so doing workspace sampling", _environmentid%(iter/3)%fSampledValue1);
                 // Sample one out of six directions in tool local frame.
                 uint32_t sampleindex = _uniformsampler->SampleSequenceOneUInt32();
                 uint32_t directionindex = sampleindex % 6;
@@ -1209,6 +1208,7 @@ public:
                 }
                 // Sample another number for selecting a node on a tree.
                 dReal fSampledValue2 = _uniformsampler->SampleSequenceOneReal();
+                RAVELOG_VERBOSE_FORMAT("env=%d, iter=%d, fSampledValue=%f so doing workspace sampling. directionindex=%d. fSampledValue2=%f", _environmentid%(iter/3)%fSampledValue1%directionindex%fSampledValue2);
 
                 // Extend A
                 et = TreeA->ExtendWithDirection(_vcachedirection, iConnectedA, fSampledValue2);
