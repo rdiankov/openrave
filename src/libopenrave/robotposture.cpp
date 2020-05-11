@@ -44,20 +44,20 @@ RobotPostureDescriberBasePtr RobotBase::GetRobotPostureDescriber(const std::arra
     return _mRobotPostureDescribers.count(kinematicsChain) ? _mRobotPostureDescribers.at(kinematicsChain) : RobotPostureDescriberBasePtr();
 }
 
-bool RobotBase::ComputePostureValue(std::vector<uint16_t>& values, ManipulatorConstPtr pmanip) const
+bool RobotBase::ComputePostureValues(std::vector<uint16_t>& values, const std::vector<double>& jointvalues, ManipulatorConstPtr pmanip) const
 {
     if(pmanip == nullptr) {
         pmanip = this->GetActiveManipulator();
     }
     const std::array<LinkPtr, 2> kinematicsChain {pmanip->GetBase(), pmanip->GetEndEffector()};
-    return this->ComputePostureValue(values, kinematicsChain);
+    return this->ComputePostureValues(values, kinematicsChain, jointvalues);
 }
 
-bool RobotBase::ComputePostureValue(std::vector<uint16_t>& values, const std::array<LinkPtr, 2>& kinematicsChain) const
+bool RobotBase::ComputePostureValues(std::vector<uint16_t>& values, const std::array<LinkPtr, 2>& kinematicsChain, const std::vector<double>& jointvalues) const
 {
     // TODO fill with default implementation
     if(_mRobotPostureDescribers.count(kinematicsChain)) {
-        return _mRobotPostureDescribers.at(kinematicsChain)->ComputePostureValue(values);
+        return _mRobotPostureDescribers.at(kinematicsChain)->ComputePostureValues(values, jointvalues);
     }
     
     throw OPENRAVE_EXCEPTION_FORMAT(_("failed to find robot posture describer for links from \"%s\" to \"%s\" for robot \"%s\""),

@@ -44,7 +44,7 @@ public:
 
     /// \brief Computes an integer value to describe current robot posture
     /// Computes a value describing descrete posture of robot kinematics between base link and endeffector link
-    virtual bool ComputePostureValue(std::vector<uint16_t>& values) const;
+    virtual bool ComputePostureValues(std::vector<uint16_t>& posturevalues, const std::vector<double>& jointvalues = {}) const;
 
     virtual const std::vector<KinBody::JointPtr>& GetJoints() const final;
 

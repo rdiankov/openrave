@@ -1064,12 +1064,16 @@ private:
     /// \param [out] posturevalues    robot posture values at the current dof values
     /// \param [in]  pmanip           pointer to manipulator; if null, then use the active manipulator
     /// \return vector of integer value which describe posture of this robot.
-    virtual bool ComputePostureValue(std::vector<uint16_t>& posturevalues, ManipulatorConstPtr pmanip = ManipulatorConstPtr()) const;
+    virtual bool ComputePostureValues(std::vector<uint16_t>& posturevalues,
+                                      const std::vector<double>& jointvalues = {},
+                                      ManipulatorConstPtr pmanip = ManipulatorConstPtr()) const;
 
     /// \brief Computes an interger value to describe current robot posture
     /// Computes a value describing the states of links between base and endeffector
     /// \return vector of integer value which describe posture of this robot.
-    virtual bool ComputePostureValue(std::vector<uint16_t>& posturevalues, const std::array<LinkPtr, 2>& kinematicsChain) const;
+    virtual bool ComputePostureValues(std::vector<uint16_t>& posturevalues,
+                                      const std::array<LinkPtr, 2>& kinematicsChain,
+                                      const std::vector<double>& jointvalues = {}) const;
 
     //@}
 

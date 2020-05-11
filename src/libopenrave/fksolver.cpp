@@ -43,7 +43,7 @@ bool RobotPostureDescriberBase::Supports(const std::array<OpenRAVE::RobotBase::L
 }
 
 
-bool RobotPostureDescriberBase::ComputePostureValue(std::vector<uint16_t>& values) const {
+bool RobotPostureDescriberBase::ComputePostureValues(std::vector<uint16_t>& values, const std::vector<double>& jointvalues) const {
     return true; // TO-DO
 }
 

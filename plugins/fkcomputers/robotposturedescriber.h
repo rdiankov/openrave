@@ -21,7 +21,7 @@ public:
 
     /// \brief Computes an integer value to describe current robot posture
     /// Computes a value describing descrete posture of robot kinematics between base link and endeffector link
-    virtual bool ComputePostureValue(std::vector<uint16_t>& values) const override;
+    virtual bool ComputePostureValues(std::vector<uint16_t>& values, const std::vector<double>& jointvalues = {}) const override;
 };
 
 } // namespace OpenRAVE
