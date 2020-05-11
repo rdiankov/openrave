@@ -1095,6 +1095,10 @@ public:
                 fMinConfigDist = fCurConfigDist;
             }
         }
+        if( fMinConfigDist > PI ) {
+            RAVELOG_VERBOSE_FORMAT("env=%d, fMinConfigDist=%f > PI, the linear workspace path might not have continuous ik solutions so terminating.", _environmentid%fMinConfigDist);
+            return false;
+        }
         if( !bestikret ) {
             RAVELOG_WARN_FORMAT("env=%d, !bestikret is true even though _vcacheikreturns.size()=%d", _environmentid%_vcacheikreturns.size());
             return false;
