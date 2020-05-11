@@ -16,7 +16,8 @@
 
 #include <openrave/plugin.h> // OPENRAVE_PLUGIN_API
 #include <openrave/fksolver.h> // RobotPostureDescriberBasePtr
-#include "plugindefs.h" //  FKCOMPUTERS_MODULE_NAME, ROBOTPOSTUREDESCRIBER_MODULE_NAME 
+#include "plugindefs.h" //  FKCOMPUTERS_MODULE_NAME, ROBOTPOSTUREDESCRIBER_MODULE_NAME
+#include "robotposturedescriber.h"
 // #include <boost/lexical_cast.hpp>
 
 using OpenRAVE::PLUGININFO;
@@ -26,7 +27,15 @@ using OpenRAVE::InterfaceType;
 using OpenRAVE::InterfaceBasePtr;
 using OpenRAVE::ModuleBasePtr;
 using OpenRAVE::EnvironmentBasePtr;
+using OpenRAVE::RobotBasePtr;
+using LinkPtr = OpenRAVE::RobotBase::LinkPtr;
+
+using OpenRAVE::OpenRAVEErrorCode;
+using OpenRAVE::OpenRAVEErrorCode::ORE_InvalidArguments;  // 0x01
+
+// forward kinematics
 using OpenRAVE::RobotPostureDescriberBasePtr;
+using OpenRAVE::RobotPostureDescriber;
 
 class FkComputerModule : public OpenRAVE::ModuleBase
 {
@@ -41,7 +50,22 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     switch(type) {
     case PT_ForwardKinematicsSolver: {
         if( interfacename == ROBOTPOSTUREDESCRIBER_MODULE_NAME ) {
-            return RobotPostureDescriberBasePtr();
+            // take robot name, base link name, ee link name
+            std::string robotname, baselinkname, eelinkname;
+            sinput >> robotname >> baselinkname >> eelinkname;
+
+            const RobotBasePtr probot = penv->GetRobot(robotname);
+            if(probot == nullptr) {
+                throw OPENRAVE_EXCEPTION_FORMAT("interfacename=%s, env=%d has no robot %s", interfacename % penv->GetId() % robotname, ORE_InvalidArguments);
+            }
+            const LinkPtr baselink = probot->GetLink(baselinkname);
+            const LinkPtr eelink = probot->GetLink(eelinkname);
+            if(baselink == nullptr || eelink == nullptr) {
+                throw OPENRAVE_EXCEPTION_FORMAT("interfacename=%s, env=%d, robot %s has no link %s or %s", interfacename % penv->GetId() % robotname % baselinkname % eelink, ORE_InvalidArguments);   
+            }
+
+            const std::array<LinkPtr, 2> kinematicsChain {baselink, eelink};
+            return RobotPostureDescriberBasePtr(new RobotPostureDescriber(penv, kinematicsChain));
         }
         // may support other type of forward kinematics computing modules?
         break;

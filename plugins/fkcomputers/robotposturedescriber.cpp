@@ -2,7 +2,12 @@
 
 namespace OpenRAVE {
 
-RobotPostureDescriber::RobotPostureDescriber(EnvironmentBasePtr penv) : RobotPostureDescriberBase(penv) {}
+RobotPostureDescriber::RobotPostureDescriber(EnvironmentBasePtr penv,
+                                            const std::array<RobotBase::LinkPtr, 2>& kinematicsChain) :
+    RobotPostureDescriberBase(penv) {
+    this->Init(kinematicsChain);
+}
+
 RobotPostureDescriber::~RobotPostureDescriber() {}
 
 bool RobotPostureDescriber::Init(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain) {

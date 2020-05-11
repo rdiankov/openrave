@@ -8,7 +8,8 @@ namespace OpenRAVE {
 class OPENRAVE_API RobotPostureDescriber : public RobotPostureDescriberBase
 {
 public:
-    RobotPostureDescriber(EnvironmentBasePtr penv);
+	RobotPostureDescriber() = delete;
+    RobotPostureDescriber(EnvironmentBasePtr penv, const std::array<RobotBase::LinkPtr, 2>& kinematicsChain);
     virtual ~RobotPostureDescriber();
 
     /// \brief Initialize with a kinematics chain
