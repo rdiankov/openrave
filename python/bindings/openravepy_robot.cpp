@@ -397,6 +397,7 @@ inline std::vector<RobotBase::ConnectedBodyInfoPtr> ExtractConnectedBodyInfoArra
 RobotBase::RobotBaseInfoPtr PyRobotBase::PyRobotBaseInfo::GetRobotBaseInfo() const {
     RobotBase::RobotBaseInfoPtr pInfo(new RobotBase::RobotBaseInfo);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+    pInfo->_id = _id;
     pInfo->_uri = _uri;
     pInfo->_vLinkInfos = std::vector<KinBody::LinkInfoPtr>(begin(_vLinkInfos), end(_vLinkInfos));
     pInfo->_vJointInfos = std::vector<KinBody::JointInfoPtr>(begin(_vJointInfos), end(_vJointInfos));
@@ -404,6 +405,9 @@ RobotBase::RobotBaseInfoPtr PyRobotBase::PyRobotBaseInfo::GetRobotBaseInfo() con
     pInfo->_vAttachedSensorInfos = std::vector<RobotBase::AttachedSensorInfoPtr>(begin(_vAttachedSensorInfos), end(_vAttachedSensorInfos));
     pInfo->_vConnectedBodyInfos = std::vector<RobotBase::ConnectedBodyInfoPtr>(begin(_vConnectedBodyInfos), end(_vConnectedBodyInfos));
 #else
+    if (!IS_PYTHONOBJECT_NONE(_id)) {
+        pInfo->_id = py::extract<std::string>(_id);
+    }
     if (!IS_PYTHONOBJECT_NONE(_uri)) {
         pInfo->_uri = py::extract<std::string>(_uri);
     }
