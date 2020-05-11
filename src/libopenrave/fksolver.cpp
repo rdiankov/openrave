@@ -37,6 +37,10 @@ InterfaceType RobotPostureDescriberBase::GetInterfaceTypeStatic() {
     return PT_ForwardKinematicsSolver;
 }
 
+const std::vector<KinBody::JointPtr>& RobotPostureDescriberBase::GetJoints() const {
+	return _vjoints;
+}
+
 bool RobotPostureDescriberBase::Supports(const std::array<OpenRAVE::RobotBase::LinkPtr, 2>& kinematicsChain) const {
     return true; // TO-DO
 }

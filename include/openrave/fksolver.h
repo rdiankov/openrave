@@ -46,11 +46,16 @@ public:
     /// Computes a value describing descrete posture of robot kinematics between base link and endeffector link
     virtual bool ComputePostureValue(std::vector<uint16_t>& values) const;
 
+    virtual const std::vector<KinBody::JointPtr>& GetJoints() const final;
+
     /// \return the static interface type this class points to (used for safe casting)
     static InterfaceType GetInterfaceTypeStatic();
 
 private:
     virtual const char* GetHash() const final;
+
+protected:
+    std::vector<KinBody::JointPtr> _vjoints; ///< joints from baselink to eelink
 };
 
 } // end namespace OpenRAVE
