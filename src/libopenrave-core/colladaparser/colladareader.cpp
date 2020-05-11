@@ -3434,16 +3434,16 @@ public:
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
                 if( !!tec ) {
                     RobotBase::GripperInfoPtr pGripperInfo(new RobotBase::GripperInfo());
-                    pGripperInfo->name = _ConvertToOpenRAVEName(grippername);
-
                     daeElementRef pjson_data = tec->getChild("json_data");
                     if( !!pjson_data ) {
                         rapidjson::Document rGripperInfo;
                         openravejson::ParseJson(rGripperInfo, pjson_data->getCharData());
                         dReal fUnitScale=1.0;
                         pGripperInfo->DeserializeJSON(rGripperInfo, fUnitScale);
-                        probot->_vecGripperInfos.push_back(pGripperInfo);
                     }
+                    // do not let json_data in collada override name attribute of <extra>
+                    pGripperInfo->name = _ConvertToOpenRAVEName(grippername);
+                    probot->_vecGripperInfos.push_back(pGripperInfo);
                 }
                 else {
                     RAVELOG_WARN_FORMAT("cannot create robot %s gripperInfo %s", probot->GetName()%grippername);
