@@ -49,7 +49,9 @@ public:
     virtual const std::vector<KinBody::JointPtr>& GetJoints() const final;
 
     /// \return the static interface type this class points to (used for safe casting)
-    static InterfaceType GetInterfaceTypeStatic();
+    static InterfaceType GetInterfaceTypeStatic() {
+        return PT_ForwardKinematicsSolver;
+    }
 
 private:
     virtual const char* GetHash() const final;

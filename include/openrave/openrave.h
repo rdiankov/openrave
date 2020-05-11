@@ -2576,6 +2576,7 @@ OPENRAVE_API SensorBasePtr RaveCreateSensor(EnvironmentBasePtr env, const std::s
 OPENRAVE_API CollisionCheckerBasePtr RaveCreateCollisionChecker(EnvironmentBasePtr env, const std::string& name);
 OPENRAVE_API ViewerBasePtr RaveCreateViewer(EnvironmentBasePtr env, const std::string& name);
 OPENRAVE_API SpaceSamplerBasePtr RaveCreateSpaceSampler(EnvironmentBasePtr env, const std::string& name);
+OPENRAVE_API RobotPostureDescriberBasePtr RaveCreateFkSolver(EnvironmentBasePtr env, const std::string& name);
 OPENRAVE_API KinBodyPtr RaveCreateKinBody(EnvironmentBasePtr env, const std::string& name="");
 /// \brief Return an empty trajectory instance.
 OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr env, const std::string& name="");

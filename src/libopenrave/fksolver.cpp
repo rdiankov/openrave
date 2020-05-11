@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
+#include <openrave/fksolver.h>
 
 namespace OpenRAVE {
 
@@ -29,12 +30,8 @@ const char* RobotPostureDescriberBase::GetHash() const {
     return OPENRAVE_FORWARDKINEMATICSSOLVER_HASH;
 }
 
-bool RobotPostureDescriberBase::Init(const std::array<OpenRAVE::RobotBase::LinkPtr, 2>& kinematicsChain){
+bool RobotPostureDescriberBase::Init(const std::array<OpenRAVE::RobotBase::LinkPtr, 2>& kinematicsChain) {
     return true; // TO-DO
-}
-
-InterfaceType RobotPostureDescriberBase::GetInterfaceTypeStatic() {
-    return PT_ForwardKinematicsSolver;
 }
 
 const std::vector<KinBody::JointPtr>& RobotPostureDescriberBase::GetJoints() const {

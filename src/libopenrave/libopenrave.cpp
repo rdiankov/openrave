@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
+#include <openrave/fksolver.h> // RobotPostureDescriberBase
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/utility.hpp>
@@ -1303,6 +1304,10 @@ TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, int dof)
 SpaceSamplerBasePtr RaveCreateSpaceSampler(EnvironmentBasePtr penv, const std::string& name)
 {
     return RaveGlobal::instance()->GetDatabase()->CreateSpaceSampler(penv, name);
+}
+
+RobotPostureDescriberBasePtr RaveCreateFkSolver(EnvironmentBasePtr penv, const std::string& name) {
+    return RaveGlobal::instance()->GetDatabase()->CreateFkSolver(penv, name);
 }
 
 UserDataPtr RaveRegisterInterface(InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn)
