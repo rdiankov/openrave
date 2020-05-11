@@ -14,9 +14,9 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <openrave/openrave.h>
-#include <openrave/plugin.h>
-#include "plugindefs.h"
+#include <openrave/plugin.h> // OPENRAVE_PLUGIN_API
+#include <openrave/fksolver.h> // RobotPostureDescriberBasePtr
+#include "plugindefs.h" //  FKCOMPUTERS_MODULE_NAME, ROBOTPOSTUREDESCRIBER_MODULE_NAME 
 // #include <boost/lexical_cast.hpp>
 
 using OpenRAVE::PLUGININFO;

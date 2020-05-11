@@ -22,6 +22,8 @@
 #ifndef OPENRAVE_FKSOLVER_H
 #define OPENRAVE_FKSOLVER_H
 
+#include <openrave/openrave.h>
+
 namespace OpenRAVE {
 
 /** \brief <b>[interface]</b> Base class for all Forward Kinematic solvers. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_fksolver.
@@ -36,9 +38,6 @@ public:
     /// \brief Initialize with a kinematics chain
     virtual bool Init(const std::array<OpenRAVE::RobotBase::LinkPtr, 2>& kinematicsChain);
 
-    /// \return the static interface type this class points to (used for safe casting)
-    static InterfaceType GetInterfaceTypeStatic();
-
     /// \brief Checks if this class can be used to compute posture values for this robot
     /// \return true if can handle this kinematics chain
     virtual bool Supports(const std::array<OpenRAVE::RobotBase::LinkPtr, 2>& kinematicsChain) const;
@@ -47,8 +46,11 @@ public:
     /// Computes a value describing descrete posture of robot kinematics between base link and endeffector link
     virtual bool ComputePostureValue(std::vector<uint16_t>& values) const;
 
+    /// \return the static interface type this class points to (used for safe casting)
+    static InterfaceType GetInterfaceTypeStatic();
+
 private:
-    virtual const char* GetHash() const;
+    virtual const char* GetHash() const final;
 };
 
 } // end namespace OpenRAVE

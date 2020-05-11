@@ -2413,7 +2413,7 @@ OPENRAVE_API ConfigurationSpecification RaveGetAffineConfigurationSpecification(
 #include <openrave/sensor.h>
 #include <openrave/robot.h>
 #include <openrave/iksolver.h>
-#include <openrave/fksolver.h>
+// #include <openrave/fksolver.h>
 #include <openrave/planner.h>
 #include <openrave/controller.h>
 #include <openrave/physicsengine.h>
