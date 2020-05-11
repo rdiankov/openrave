@@ -2444,6 +2444,7 @@ inline const char* RaveGetInterfaceHash(InterfaceType type)
     case PT_Trajectory: return OPENRAVE_TRAJECTORY_HASH;
     case PT_Viewer: return OPENRAVE_VIEWER_HASH;
     case PT_SpaceSampler: return OPENRAVE_SPACESAMPLER_HASH;
+    case PT_ForwardKinematicsSolver: return OPENRAVE_FORWARDKINEMATICSSOLVER_HASH;
     default:
         throw openrave_exception("failed to find openrave interface type",ORE_InvalidArguments);
         return NULL;

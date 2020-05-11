@@ -18,12 +18,15 @@
 
 namespace OpenRAVE {
 
-
 RobotPostureDescriberBase::RobotPostureDescriberBase(EnvironmentBasePtr penv) : InterfaceBase(PT_ForwardKinematicsSolver, penv)
 {
 }
 
 RobotPostureDescriberBase::~RobotPostureDescriberBase() {
+}
+
+const char* RobotPostureDescriberBase::GetHash() const {
+    return OPENRAVE_FORWARDKINEMATICSSOLVER_HASH;
 }
 
 bool RobotPostureDescriberBase::Init(const std::array<OpenRAVE::RobotBase::LinkPtr, 2>& kinematicsChain){

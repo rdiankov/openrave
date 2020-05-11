@@ -375,6 +375,7 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
         _mapinterfacenames[PT_Trajectory] = "trajectory";
         _mapinterfacenames[PT_Viewer] = "viewer";
         _mapinterfacenames[PT_SpaceSampler] = "spacesampler";
+        _mapinterfacenames[PT_ForwardKinematicsSolver] = "fksolver";
         BOOST_ASSERT(_mapinterfacenames.size()==PT_NumberOfInterfaces);
 
         _mapikparameterization[IKP_Transform6D] = "Transform6D";
