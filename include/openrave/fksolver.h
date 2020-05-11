@@ -30,22 +30,18 @@ namespace OpenRAVE {
 class OPENRAVE_API RobotPostureDescriberBase : public InterfaceBase
 {
 public:
-    RobotPostureDescriberBase(EnvironmentBasePtr penv) : InterfaceBase(PT_ForwardKinematicsSolver, penv) {
-    }
+    RobotPostureDescriberBase(EnvironmentBasePtr penv);
+    virtual ~RobotPostureDescriberBase();
 
-    virtual ~RobotPostureDescriberBase() {
-    }
+    /// \brief Initialize with a kinematics chain
+    virtual bool Init(const std::array<OpenRAVE::RobotBase::LinkPtr, 2>& kinematicsChain);
 
-    virtual bool Init(OpenRAVE::RobotBase::LinkPtr pBaseLink, OpenRAVE::RobotBase::LinkPtr pEndEffectorLink);
-
-    /// return the static interface type this class points to (used for safe casting)
-    static inline InterfaceType GetInterfaceTypeStatic() {
-        return PT_ForwardKinematicsSolver;
-    }
+    /// \return the static interface type this class points to (used for safe casting)
+    static InterfaceType GetInterfaceTypeStatic();
 
     /// \brief Checks if this class can be used to compute posture values for this robot
     /// \return true if can handle this kinematics chain
-    virtual bool Supports(OpenRAVE::RobotBase::LinkPtr pBaseLink, OpenRAVE::RobotBase::LinkPtr pEndEffectorLink) const;
+    virtual bool Supports(const std::array<OpenRAVE::RobotBase::LinkPtr, 2>& kinematicsChain) const;
 
     /// \brief Computes an integer value to describe current robot posture
     /// Computes a value describing descrete posture of robot kinematics between base link and endeffector link

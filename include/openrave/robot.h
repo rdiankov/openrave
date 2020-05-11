@@ -1042,27 +1042,34 @@ private:
     /// \brief \ref KinBody::SetNonCollidingConfiguration, also regrabs all bodies
     virtual void SetNonCollidingConfiguration();
 
-    /// \brief Sets robot posture describer for kinematics state between pBaseLink and pEndEffectorLink
-    /// Computes a value using joints between base link and endeffector link of active manipulator
-    virtual bool SetRobotPostureDescriber(LinkPtr pBaseLink, LinkPtr pEndEffectorLink, RobotPostureDescriberBasePtr pDescriber);
+    /// \brief Unregisters the robot posture describer associated with a kinematics chain from kinematicsChain[0] (pBaseLink) to kinematicsChain[1] (pEndEffectorLink)
+    /// \param [in] kinematicsChain    a pair of links, pBaseLink and pEndEffectorLink
+    /// \return true if the unregistering is successful
+    virtual bool UnregisterRobotPostureDescriber(const std::array<LinkPtr, 2>& kinematicsChain);
 
-    /// \brief Gets robot posture describer for kinematics state between pBaseLink and pEndEffectorLink
-    virtual RobotPostureDescriberBasePtr GetRobotPostureDescriber(LinkPtr pBaseLink, LinkPtr pEndEffectorLink) const;
-    
-    /// \brief Computes an interger value to describe current robot posture
-    /// Computes a value describing the states of links between base and endeffector of active manipulator
-    /// \return vector of integer value which describe posture of this robot.
-    virtual bool ComputePostureValue(std::vector<uint16_t>& posturevalues) const;
+    /// \brief Sets robot posture describer for a kinematics chain from kinematicsChain[0] (pBaseLink) to kinematicsChain[1] (pEndEffectorLink)
+    /// \param [in] kinematicsChain    a pair of links, pBaseLink and pEndEffectorLink
+    /// \param [in] pDescriber         pointer to a robot poseture describer
+    /// \return true if either (1) pDescriber is not null and supports kinematicsChain, or (2) kinematicsChain is null and we register the describer for kinematicsChain.
+    virtual bool SetRobotPostureDescriber(const std::array<LinkPtr, 2>& kinematicsChain, RobotPostureDescriberBasePtr pDescriber);
+
+    /// \brief Gets robot posture describer for kinematics state for a kinematics chain from pBaseLink to pEndEffectorLink
+    /// \param [in] kinematicsChain    a pair of pBaseLink and pEndEffectorLink
+    /// \return a non-null pointer to a robot posture describer if this describer was previously registered; otherwise a null pointer
+    virtual RobotPostureDescriberBasePtr GetRobotPostureDescriber(const std::array<LinkPtr, 2>& kinematicsChain) const;
 
     /// \brief Computes an interger value to describe current robot posture
     /// Computes a value describing the states of links between base and endeffector of specified manipulator
+    /// If the manipulator is not specified, then we use the active one.
+    /// \param [out] posturevalues    robot posture values at the current dof values
+    /// \param [in]  pmanip           pointer to manipulator; if null, then use the active manipulator
     /// \return vector of integer value which describe posture of this robot.
-    virtual bool ComputePostureValue(ManipulatorConstPtr pmanip, std::vector<uint16_t>& values) const;
+    virtual bool ComputePostureValue(std::vector<uint16_t>& posturevalues, ManipulatorConstPtr pmanip = ManipulatorConstPtr()) const;
 
     /// \brief Computes an interger value to describe current robot posture
     /// Computes a value describing the states of links between base and endeffector
     /// \return vector of integer value which describe posture of this robot.
-    virtual bool ComputePostureValue(LinkPtr pBaseLink, LinkPtr pEndEffectorLink, std::vector<uint16_t>& posturevalues) const;
+    virtual bool ComputePostureValue(std::vector<uint16_t>& posturevalues, const std::array<LinkPtr, 2>& kinematicsChain) const;
 
     //@}
 
@@ -1188,7 +1195,7 @@ protected:
     dReal _fQuatLimitMaxAngle, _fQuatMaxAngleVelocity, _fQuatAngleResolution, _fQuatAngleWeight;
 
     ConfigurationSpecification _activespec;
-    std::map<std::pair<LinkPtr, LinkPtr>, RobotPostureDescriberBasePtr> _robotPostureDescribers;
+    std::map<std::array<LinkPtr, 2>, RobotPostureDescriberBasePtr> _mRobotPostureDescribers;
 
 private:
     virtual const char* GetHash() const {
