@@ -140,6 +140,7 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
         fjointmult = fUnitScale;
     }
 
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "anchors", _vanchor, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "parentLinkName", _linkname0, allocator);
