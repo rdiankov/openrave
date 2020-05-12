@@ -61,12 +61,6 @@ void RobotBase::ConnectedBodyInfo::InitInfoFromBody(RobotBase& robot)
     }
 }
 
-
-void RobotBase::ConnectedBodyInfo::SerializeDiffJSON(rapidjson::Value& value, const RobotBase::ConnectedBodyInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const {
-    // TODO
-    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
-}
-
 void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
@@ -663,11 +657,11 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 pnewgripperInfo.reset(new RobotBase::GripperInfo());
             }
             *pnewgripperInfo = *connectedBodyInfo._vGripperInfos[iGripperInfo];
-            pnewgripperInfo->gripperid = connectedBody._nameprefix + pnewgripperInfo->gripperid;
+            pnewgripperInfo->name = connectedBody._nameprefix + pnewgripperInfo->name;
 
             FOREACH(ittestgripperInfo, _vecGripperInfos) {
-                if( pnewgripperInfo->gripperid == (*ittestgripperInfo)->gripperid ) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, got resolved gripperInfo with same name %s!", connectedBody.GetName()%GetName()%pnewgripperInfo->gripperid, ORE_InvalidArguments);
+                if( pnewgripperInfo->name == (*ittestgripperInfo)->name ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, got resolved gripperInfo with same name %s!", connectedBody.GetName()%GetName()%pnewgripperInfo->name, ORE_InvalidArguments);
                 }
             }
 
@@ -683,12 +677,12 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 }
                 
                 if( !bFoundJoint ) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for gripperInfo %s, could not find joint %s in connected body joint infos!", connectedBody.GetName()%GetName()%pnewgripperInfo->gripperid%gripperJointName, ORE_InvalidArguments);
+                    throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for gripperInfo %s, could not find joint %s in connected body joint infos!", connectedBody.GetName()%GetName()%pnewgripperInfo->name%gripperJointName, ORE_InvalidArguments);
                 }
             }
 
             _vecGripperInfos.push_back(pnewgripperInfo);
-            connectedBody._vResolvedGripperInfoNames[iGripperInfo].first = pnewgripperInfo->gripperid;
+            connectedBody._vResolvedGripperInfoNames[iGripperInfo].first = pnewgripperInfo->name;
         }
 
         connectedBody._dummyPassiveJointName = connectedBody._nameprefix + "_dummyconnectedbody__";
@@ -766,7 +760,7 @@ void RobotBase::_DeinitializeConnectedBodiesInformation()
         for(int iresolvedGripperInfo = 0; iresolvedGripperInfo < (int)connectedBody._vResolvedGripperInfoNames.size(); ++iresolvedGripperInfo) {
             GripperInfoPtr presolvedGripperInfo = GetGripperInfo(connectedBody._vResolvedGripperInfoNames[iresolvedGripperInfo].first);
             if( !!presolvedGripperInfo ) {
-                RemoveGripperInfo(presolvedGripperInfo->gripperid);
+                RemoveGripperInfo(presolvedGripperInfo->name);
             }
             connectedBody._vResolvedGripperInfoNames[iresolvedGripperInfo].first.clear();
         }

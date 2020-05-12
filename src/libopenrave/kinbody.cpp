@@ -129,8 +129,7 @@ bool KinBody::KinBodyInfo::operator==(const KinBody::KinBodyInfo& other) const {
     bool equal = (_id == other._id
               &&  _uri == other._uri
               &&  _name == other._name
-              &&  _referenceUri == other._referenceUri
-              &&  _referenceInfo == other._referenceInfo);
+              &&  _referenceUri == other._referenceUri);
 
     if (!equal) return false;
 }
@@ -143,20 +142,6 @@ void KinBody::KinBodyInfo::_Update(const KinBody::KinBodyInfo& other) {
 
     _vLinkInfos = other._vLinkInfos;
     _vJointInfos = other._vJointInfos;
-    // _vLinkInfos.clear();
-    // _vLinkInfos.reserve(other._vLinkInfos.size());
-    // FOREACHC(itLinkInfo, other._vLinkInfos) {
-    //     KinBody::LinkInfoPtr pLinkInfo(new KinBody::LinkInfo(**itLinkInfo));
-    //     _vLinkInfos.push_back(pLinkInfo);
-    // }
-    // TODO
-    // _vJointInfos.clear();
-    // _vJointInfos.reserve(other._vJointInfos.size());
-    // FOREACHC(itJointInfo, other._vJointInfos) {
-    //     KinBody::JointInfoPtr pJointInfo(new KinBody::JointInfo(**itJointInfo));
-    //     _vJointInfos.push_back(pJointInfo);
-    // }
-    // _referenceInfo = other._referenceInfo;
 }
 
 void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
@@ -216,62 +201,6 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         }
     }
 }
-
-// void KinBody::KinBodyInfo::DeserializeDiffJSON(const rapidjson::Value& value, KinBody::KinBodyInfo& newInfo, dReal fUntiScale)
-// {
-
-//     OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", newInfo._uri, _uri);
-//     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", newInfo._name, _name);
-
-//     newInfo._vLinkInfos.reserve(_vLinkInfos.size());
-//     FOREACHC(itLink, _vLinkInfos) {
-//         KinBody::LinkInfoPtr pInfo(new KinBody::LinkInfo(**itLink));
-//         newInfo._vLinkInfos.push_back(pInfo);
-//     }
-//     if (value.HasMember("links")) {
-//         for(rapidjson::Value::ConstValueIterator itLinkValue = value["links"].Begin(); itLinkValue != value["links"].End(); ++itLinkValue) {
-//             std::string linkId;
-//             OpenRAVE::JSON::LoadJsonValueByKey(*itLinkValue, "id", linkId);
-//             bool foundLink = false;
-
-//             for(std::vector<KinBody::LinkInfoPtr>::iterator itLinkInfo = newInfo._vLinkInfos.begin(); itLinkInfo != newInfo._vLinkInfos.end(); itLinkInfo++) {
-//                 if((*itLinkInfo)->_id == linkId){
-//                     foundLink = true;
-//                     if (OpenRAVE::JSON::GetJsonValueByKey<bool>(*itLinkValue, "__delete__", false)) {
-//                         newInfo._vLinkInfos.erase(itLinkInfo);
-//                         break;
-//                     }
-//                     (*itLinkInfo)->DeserializeDiffJSON(*itLinkValue);
-//                 }
-//             }
-//             if (!foundLink) {
-//                 KinBody::LinkInfoPtr pLinkInfo(new KinBody::LinkInfo());
-//                 pLinkInfo->DeserializeJSON(*itLinkValue);
-//                 newInfo._vLinkInfos.push_back(pLinkInfo);
-//             }
-//         }
-//     }
-
-//     newInfo._vJointInfos = _vJointInfos;
-//     if (value.HasMember("joints")) {
-//         for(rapidjson::Value::ConstValueIterator itJointValue = value["joints"].Begin(); itJointValue != value["joints"].End(); ++itJointValue) {
-//             std::string jointId;
-//             OpenRAVE::JSON::LoadJsonValueByKey(*itJointValue, "id", jointId);
-//             bool foundJoint = false;
-//             for(size_t iJoint = 0; iJoint < _vJointInfos.size(); ++iJoint) {
-//                 if(_vJointInfos[iJoint]->_id == jointId) {
-//                     foundJoint =  true;
-//                     if(OpenRAVE::JSON::GetJsonValueByKey<bool>(*itJointValue, "__delete__", false)) {
-//                         break;
-//                     }
-//                     KinBody::JointInfoPtr pJointInfo(new KinBody::JointInfo());
-//                 }
-//             }
-//         }
-//     }
-
-// }
-
 
 KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)
 {
@@ -4856,6 +4785,21 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                 pgrabbed->_listNonCollidingLinks.push_back(_veclinks.at((*itlinkref)->GetIndex()));
             }
             _vGrabbedBodies.push_back(pgrabbed);
+        }
+    }
+
+    // Clone self-collision checker
+    _selfcollisionchecker.reset();
+    if( !!r->_selfcollisionchecker ) {
+        _selfcollisionchecker = RaveCreateCollisionChecker(GetEnv(), r->_selfcollisionchecker->GetXMLId());
+        _selfcollisionchecker->SetCollisionOptions(r->_selfcollisionchecker->GetCollisionOptions());
+        _selfcollisionchecker->SetGeometryGroup(r->_selfcollisionchecker->GetGeometryGroup());
+        if( GetEnvironmentId() != 0 ) {
+            // This body has been added to the environment already so can call InitKinBody.
+            _selfcollisionchecker->InitKinBody(shared_kinbody());
+        }
+        else {
+            // InitKinBody will be called when the body is added to the environment.
         }
     }
 

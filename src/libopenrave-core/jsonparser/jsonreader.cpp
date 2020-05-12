@@ -303,7 +303,6 @@ protected:
             }
             _Merge(info, itrBodyValue, fUnitScale);
         }
-        info._referenceInfo = referenceInfo;
     }
 
     template<typename T>

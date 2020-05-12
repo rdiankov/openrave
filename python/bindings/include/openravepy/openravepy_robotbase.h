@@ -80,7 +80,7 @@ public:
 
         void SetName(const std::string& s);
 
-        object GetGripperId() const;
+        object GetGripperName() const;
         
         PyRobotBasePtr GetRobot();
 
@@ -326,9 +326,9 @@ public:
     void SetConnectedBodyActiveStates(object oactivestates);
 
     bool AddGripperInfo(object oGripperInfo, bool removeduplicate=false);
-    bool RemoveGripperInfo(const std::string& gripperid);
+    bool RemoveGripperInfo(const std::string& name);
 
-    object GetGripperInfo(const std::string& gripperid);
+    object GetGripperInfo(const std::string& name);
     object GetGripperInfos();
 
     object GetController() const;

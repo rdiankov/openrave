@@ -177,7 +177,6 @@ public:
 
         ///< \param multiply all translational values by fUnitScale
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void SerializeDiffJSON(rapidjson::Value &value, const KinBody::GeometryInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
 
         ///< \param multiply all translational values by fUnitScale
         virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
@@ -231,7 +230,7 @@ public:
         TriMesh _meshcollision;
 
         GeometryType _type; ///< the type of geometry primitive
-
+        std::string _id;   ///< unique id of the geometry
         std::string _name; ///< the name of the geometry
 
         /// \brief filename for render model (optional)
@@ -251,12 +250,6 @@ public:
         float _fTransparency; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
         bool _bVisible; ///< if true, geometry is visible as part of the 3d model (default is true)
         bool _bModifiable; ///< if true, object geometry can be dynamically modified (default is true)
-
-        // reference architecture
-        std::string _id;
-        bool _bIsDeleted;
-        boost::shared_ptr<GeometryInfo> _referenceInfo;
-
 private:
         void _Update(const KinBody::GeometryInfo& info);
 
@@ -280,10 +273,7 @@ public:
         }
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void SerializeDiffJSON(rapidjson::Value& value, const KinBody::LinkInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
-        // virtual void DeserializeDiffJSON(const rapidjson::Value& value, LinkInfo& newInfo);
-        // virtual void DeserializeDiffJSON(const rapidjson::Value& value);
 
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like
@@ -939,7 +929,6 @@ public:
         virtual int GetDOF() const;
 
         virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void SerializeDiffJSON(rapidjson::Value& value, const KinBody::JointInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
 
         JointType _type; /// The joint type
@@ -1711,8 +1700,6 @@ public:
 
         std::vector<LinkInfoPtr> _vLinkInfos; ///< list of pointers to LinkInfo
         std::vector<JointInfoPtr> _vJointInfos; ///< list of pointers to JointInfo
-
-        boost::shared_ptr<KinBodyInfo> _referenceInfo;
 
 protected:
         void _Update(const KinBodyInfo& other);

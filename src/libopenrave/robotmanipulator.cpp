@@ -17,12 +17,6 @@
 #include "libopenrave.h"
 namespace OpenRAVE {
 
-void RobotBase::ManipulatorInfo::SerializeDiffJSON(rapidjson::Value& value, const RobotBase::ManipulatorInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
-{
-    // TODO
-    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
-}
-
 void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
@@ -33,7 +27,7 @@ void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value& value, rapidjso
     OpenRAVE::JSON::SetJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "ikSolverType", _sIkSolverXMLId, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "gripperJointNames", _vGripperJointNames, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "gripperid", _gripperid, allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(value, "grippername", _grippername, allocator);
 }
 
 void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
@@ -46,7 +40,7 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
     OpenRAVE::JSON::LoadJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "ikSolverType", _sIkSolverXMLId);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "gripperJointNames", _vGripperJointNames);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "gripperid", _gripperid);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "grippername", _grippername);
 }
 
 
@@ -127,8 +121,8 @@ uint8_t RobotBase::Manipulator::ApplyDiff(const rapidjson::Value& manipValue, Ro
         OpenRAVE::JSON::LoadJsonValueByKey(manipValue, "gripperJointNames", newInfo._vGripperJointNames);
         applyResult |= ApplyDiffResult::ADR_RELOAD;
     }
-    if (manipValue.HasMember("gripperid")) {
-        OpenRAVE::JSON::LoadJsonValueByKey(manipValue, "gripperid", newInfo._gripperid);
+    if (manipValue.HasMember("grippername")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(manipValue, "grippername", newInfo._grippername);
         applyResult |= ApplyDiffResult::ADR_RELOAD;
     }
 
@@ -170,10 +164,10 @@ void RobotBase::Manipulator::SetChuckingDirection(const std::vector<dReal>& chuc
 
 void RobotBase::Manipulator::SetLocalToolTransform(const Transform& t)
 {
-    _info._sIkSolverXMLId.resize(0);
     // only reset the iksolver if transform is different. note that the correct way is to see if the hash changes, but that could take too much computation. also hashes truncate the numbers.
     if( !!__pIkSolver && TransformDistance2(_info._tLocalTool, t) > g_fEpsilonLinear ) {
         __pIkSolver.reset();
+        _info._sIkSolverXMLId.resize(0);
     }
     _info._tLocalTool = t;
     __hashkinematicsstructure.resize(0);
@@ -184,13 +178,12 @@ void RobotBase::Manipulator::SetLocalToolTransform(const Transform& t)
 
 void RobotBase::Manipulator::SetLocalToolDirection(const Vector& direction)
 {
-    _info._sIkSolverXMLId.resize(0);
-    __pIkSolver.reset();
-    // only reset the iksolver if transform is different. note that the correct way is to see if the hash changes, but that could take too much computation. also hashes truncate the numbers.
+    // only reset the iksolver if direction is different. note that the correct way is to see if the hash changes, but that could take too much computation. also hashes truncate the numbers.
     if( (_info._vdirection-direction).lengthsqr3() > g_fEpsilonLinear ) {
         // only reset if direction is actually used
         if( !!__pIkSolver && (__pIkSolver->Supports(IKP_TranslationDirection5D) || __pIkSolver->Supports(IKP_Direction3D)) ) {
             __pIkSolver.reset();
+            _info._sIkSolverXMLId.resize(0);
         }
     }
     _info._vdirection = direction*(1/RaveSqrt(direction.lengthsqr3())); // should normalize

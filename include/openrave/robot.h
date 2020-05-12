@@ -42,7 +42,6 @@ public:
         }
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void SerializeDiffJSON(rapidjson::Value &value, const RobotBase::ManipulatorInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
 
         std::string _name;
@@ -52,7 +51,7 @@ public:
         Vector _vdirection;
         std::string _sIkSolverXMLId; ///< xml id of the IkSolver interface to attach
         std::vector<std::string> _vGripperJointNames;         ///< names of the gripper joints
-        std::string _gripperid; ///< associates the manipulator with a GripperInfo
+        std::string _grippername; ///< associates the manipulator with a GripperInfo
 
         std::string _id; ///< unique id for manipulator info
         boost::shared_ptr<ManipulatorInfo const> _referenceInfo;
@@ -72,15 +71,13 @@ public:
         GripperInfo();
         void operator=(const GripperInfo& other);
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void SerializeDiffJSON(rapidjson::Value &value, const RobotBase::GripperInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
 
         virtual inline const std::string GetId() const {
             return _id;
         }
-
-        std::string gripperid; ///< unique gripperid
-        std::string& _id; /// < alias to griiperid
+        std::string& _id; /// < alias to griipername
+        std::string name; ///< unique name
         std::string grippertype; ///< gripper type
         std::vector<std::string> gripperJointNames; ///< names of the gripper joints
 
@@ -168,8 +165,8 @@ public:
             return __pEffector;
         }
 
-        virtual std::string GetGripperId() const {
-            return _info._gripperid;
+        virtual std::string GetGripperName() const {
+            return _info._grippername;
         }
 
         /// \brief Release all bodies grabbed by the end effector of this manipualtor
@@ -487,7 +484,6 @@ public:
         std::string _sensorname; ///< name of the sensor interface to create, in other words the sensor type
         SensorBase::SensorGeometryPtr _sensorgeometry; ///< the sensor geometry to initialize the sensor with
         virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void SerializeDiffJSON(rapidjson::Value& value, const RobotBase::AttachedSensorInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
 
         // reference architexture
@@ -609,7 +605,6 @@ public:
         /// \brief Updates the infos depending on the robot at the identity and zero position.
         virtual void InitInfoFromBody(RobotBase& robot);
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void SerializeDiffJSON(rapidjson::Value &value, const RobotBase::ConnectedBodyInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
 
         std::string _name; ///< the name of the connected body info
@@ -855,8 +850,8 @@ private:
         return _vecGripperInfos;
     }
 
-    /// \brief Returns a GriperInfo that matches with gripperid
-    virtual GripperInfoPtr GetGripperInfo(const std::string& gripperid) const;
+    /// \brief Returns a GriperInfo that matches with name
+    virtual GripperInfoPtr GetGripperInfo(const std::string& name) const;
 
     // \brief gets the active states of all connected bodies
     virtual void GetConnectedBodyActiveStates(std::vector<uint8_t>& activestates) const;
@@ -1096,12 +1091,12 @@ private:
 
     /// \brief adds a GripperInfo to the list
     ///
-    /// \throw openrave_exception If removeduplicate is false and there exists a manipulator with the same gripperid, will throw an exception
+    /// \throw openrave_exception If removeduplicate is false and there exists a manipulator with the same name, will throw an exception
     /// \return true if added a new gripper
     virtual bool AddGripperInfo(GripperInfoPtr gripperinfo, bool removeduplicate=false);
 
     /// \brief removes a gripper from the robot list. if successful, returns true
-    virtual bool RemoveGripperInfo(const std::string& gripperid);
+    virtual bool RemoveGripperInfo(const std::string& name);
 
     /** \brief Calculates the translation jacobian with respect to a link.
 

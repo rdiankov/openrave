@@ -480,83 +480,15 @@ inline void LoadJsonValue(const rapidjson::Value& v, KinBody::GeometryInfo::Side
     }
 }
 
-void KinBody::GeometryInfo::SerializeDiffJSON(rapidjson::Value& value, const KinBody::GeometryInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
-{
-    // TODO
-    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
-
-    Transform tscaled = _t;
-    tscaled.trans *= fUnitScale;
-    OpenRAVE::JSON::SetJsonValueByKey(value, "transform", tscaled, allocator);
-
-    switch(_type) {
-    case GT_Box:
-        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "box", allocator);
-        OpenRAVE::JSON::SetJsonValueByKey(value, "halfExtents", _vGeomData*fUnitScale, allocator);
-        break;
-
-    case GT_Container:
-        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "container", allocator);
-        OpenRAVE::JSON::SetJsonValueByKey(value, "outerExtents", _vGeomData*fUnitScale, allocator);
-        OpenRAVE::JSON::SetJsonValueByKey(value, "innerExtents", _vGeomData2*fUnitScale, allocator);
-        OpenRAVE::JSON::SetJsonValueByKey(value, "bottomCross", _vGeomData3*fUnitScale, allocator);
-        OpenRAVE::JSON::SetJsonValueByKey(value, "bottom", _vGeomData4*fUnitScale, allocator);
-        break;
-
-    case GT_Cage: {
-        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "cage", allocator);
-        OpenRAVE::JSON::SetJsonValueByKey(value, "baseExtents", _vGeomData*fUnitScale, allocator);
-
-        std::vector<SideWall> vScaledSideWalls = _vSideWalls;
-        FOREACH(itwall, vScaledSideWalls) {
-            itwall->transf.trans *= fUnitScale;
-            itwall->vExtents *= fUnitScale;
-        }
-        if( _vGeomData2.x > g_fEpsilon ) {
-            OpenRAVE::JSON::SetJsonValueByKey(value, "innerSizeX", _vGeomData2.x*fUnitScale, allocator);
-        }
-        if( _vGeomData2.y > g_fEpsilon ) {
-            OpenRAVE::JSON::SetJsonValueByKey(value, "innerSizeY", _vGeomData2.y*fUnitScale, allocator);
-        }
-        if( _vGeomData2.z > g_fEpsilon ) {
-            OpenRAVE::JSON::SetJsonValueByKey(value, "innerSizeZ", _vGeomData2.z*fUnitScale, allocator);
-        }
-        OpenRAVE::JSON::SetJsonValueByKey(value, "sideWalls", vScaledSideWalls, allocator);
-        break;
-    }
-    case GT_Sphere:
-        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "sphere", allocator);
-        OpenRAVE::JSON::SetJsonValueByKey(value, "radius", _vGeomData.x*fUnitScale, allocator);
-        break;
-
-    case GT_Cylinder:
-        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "cylinder", allocator);
-        OpenRAVE::JSON::SetJsonValueByKey(value, "radius", _vGeomData.x*fUnitScale, allocator);
-        OpenRAVE::JSON::SetJsonValueByKey(value, "height", _vGeomData.y*fUnitScale, allocator);
-        break;
-
-    case GT_TriMesh:
-        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "trimesh", allocator);
-        OpenRAVE::JSON::SetJsonValueByKey(value, "mesh", _meshcollision, allocator);
-        break;
-
-    default:
-        break;
-    }
-
-    OpenRAVE::JSON::SetJsonValueByKey(value, "transparency", _fTransparency, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "visible", _bVisible, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "diffuseColor", _vDiffuseColor, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "ambientColor", _vAmbientColor, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "modifiable", _bModifiable, allocator);
-}
-
-
 void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options) const
 {
     OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
+
+    std::string name = _name;
+    if (name.empty()) {
+        name = _id;
+    }
+    OpenRAVE::JSON::SetJsonValueByKey(value, "name", name, allocator);
 
     Transform tscaled = _t;
     tscaled.trans *= fUnitScale;
@@ -624,74 +556,6 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Do
     OpenRAVE::JSON::SetJsonValueByKey(value, "modifiable", _bModifiable, allocator);
 }
 
-// void KinBody::GeometryInfo::DeserializeDiffGeomData(const rapidjson::Value& value, std::string typestr, KinBody::GeometryInfo& newInfo) {
-//     if (typestr == "box") {
-//         newInfo._type = GT_Box;
-//         OpenRAVE::JSON::LoadJsonValueByKey(value, "halfExtents", newInfo._vGeomData, _vGeomData);
-//         // _vGeomData *= fUnitScale;
-//     }
-//     else if (typestr == "container") {
-//         newInfo._type = GT_Container;
-//         OpenRAVE::JSON::LoadJsonValueByKey(value, "outerExtents", newInfo._vGeomData, _vGeomData);
-//         OpenRAVE::JSON::LoadJsonValueByKey(value, "innerExtents", newInfo._vGeomData2, _vGeomData2);
-
-//         if (_type != GT_Container) {
-//             _vGeomData3 = Vector();
-//             _vGeomData4 = Vector();
-//         }
-//         OpenRAVE::JSON::LoadJsonValueByKey(value, "bottomCross", newInfo._vGeomData3, _vGeomData3);
-//         OpenRAVE::JSON::LoadJsonValueByKey(value, "bottom", newInfo._vGeomData4, _vGeomData4);
-
-//         // _vGeomData *= fUnitScale;
-//         // _vGeomData2 *= fUnitScale;
-//         // _vGeomData3 *= fUnitScale;
-//         // _vGeomData4 *= fUnitScale;
-//     }
-//     else if (typestr == "cage") {
-//         newInfo._type = GT_Cage;
-//         OpenRAVE::JSON::LoadJsonValueByKey(value, "baseExtents", newInfo._vGeomData, _vGeomData);
-//         // _vGeomData *= fUnitScale;
-
-//         if (_type != GT_Cage) {
-//             _vGeomData2 = Vector();
-//         }
-//         OpenRAVE::JSON::LoadJsonValueByKey(value, "innerSizeX", newInfo._vGeomData2.x, _vGeomData2.x);
-//         OpenRAVE::JSON::LoadJsonValueByKey(value, "innerSizeY", newInfo._vGeomData2.y, _vGeomData2.y);
-//         OpenRAVE::JSON::LoadJsonValueByKey(value, "innerSizeZ", newInfo._vGeomData2.z, _vGeomData2.z);
-//         // _vGeomData2 *= fUnitScale;
-
-//         OpenRAVE::JSON::LoadJsonValueByKey(value, "sideWalls", newInfo._vSideWalls, _vSideWalls);
-//         // FOREACH(itsidewall, newInfo._vSideWalls) {
-//         //     itsidewall->transf.trans *= fUnitScale;
-//         //     itsidewall->vExtents *= fUnitScale;
-//         // }
-//     }
-//     else if (typestr == "sphere") {
-//         newInfo._type = GT_Sphere;
-//         OpenRAVE::JSON::LoadJsonValueByKey(value, "radius", newInfo._vGeomData.x, _vGeomData.x);
-//         // _vGeomData *= fUnitScale;
-//     }
-//     else if (typestr == "cylinder") {
-//         newInfo._type = GT_Cylinder;
-//         OpenRAVE::JSON::LoadJsonValueByKey(value, "radius", newInfo._vGeomData.x, _vGeomData.x);
-//         OpenRAVE::JSON::LoadJsonValueByKey(value, "height", newInfo._vGeomData.y, _vGeomData.y);
-
-//         // _vGeomData.x *= fUnitScale;
-//         // _vGeomData.y *= fUnitScale;
-
-//     }
-//     else if (typestr == "trimesh" or typestr == "mesh") {
-//         newInfo._type = GT_TriMesh;
-//         OpenRAVE::JSON::LoadJsonValueByKey(value, "mesh", newInfo._meshcollision, _meshcollision);
-
-//         // FOREACH(itvertex, _meshcollision.vertices) {
-//         //     *itvertex *= fUnitScale;
-//         // }
-//     }
-//     else {
-//         throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported geometry type \"%s\"", typestr, ORE_InvalidArguments);
-//     }
-// }
 inline std::string KinBody::Link::Geometry::GetGeometryTypeString(const GeometryType& type) {
     if (type == GT_Box) {
         return "box";
@@ -766,35 +630,13 @@ void KinBody::GeometryInfo::DeserializeGeomData(const rapidjson::Value& value, s
 
 }
 
-// void KinBody::GeometryInfo::DeserializeDiffJSON(const rapidjson::Value& value, KinBody::GeometryInfo& newInfo){
-//     newInfo._id = _id;
-//     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", newInfo._name, _name);
-//     OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", newInfo._t, _t);
-//     OpenRAVE::JSON::LoadJsonValueByKey(value, "visible", newInfo._bVisible, _bVisible);
-
-//     std::string typestr;
-//     OpenRAVE::JSON::LoadJsonValueByKey(value, "type", typestr);
-//     if (typestr.empty()) {
-//         switch (_type){
-//         case GT_Box:
-//             typestr = "box";
-//             break;
-//         default:
-//             break;
-//         }
-//     }
-//     DeserializeDiffGeomData(value, typestr, newInfo);
-//     OpenRAVE::JSON::LoadJsonValueByKey(value, "transparency", newInfo._fTransparency, _fTransparency);
-//     OpenRAVE::JSON::LoadJsonValueByKey(value, "visible", newInfo._bVisible, _bVisible);
-//     OpenRAVE::JSON::LoadJsonValueByKey(value, "diffuseColor", newInfo._vDiffuseColor, _vDiffuseColor);
-//     OpenRAVE::JSON::LoadJsonValueByKey(value, "ambientColor", newInfo._vAmbientColor, _vAmbientColor);
-//     OpenRAVE::JSON::LoadJsonValueByKey(value, "modifiable", newInfo._bModifiable, _bModifiable);
-// }
-
 void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale)
 {
     OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name, _id);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
+    if (_name.empty()) {
+        _name = _id;
+    }
     OPENRAVE_ASSERT_OP(_name.size(),>,0);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _t);
 
