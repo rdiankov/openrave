@@ -34,8 +34,7 @@ public:
             if (itatt->first == "prefix") {
                 _prefix = itatt->second;
             }
-            else if (itatt->first == "openravescheme")
-            {
+            else if (itatt->first == "openravescheme") {
                 std::stringstream ss(itatt->second);
                 _vOpenRAVESchemeAliases = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
             }
@@ -88,7 +87,8 @@ public:
     * dof json value format has changed to a mapping with jointId and value as key, {"jointId": "joint0", "value": 1.234}
     * we need to convert dofvalues from mapping to list for openrave ;
     */
-    void _ConvertJointDOFValueFormat(const std::vector<KinBody::JointPtr>& vJoints, std::vector<dReal>& vDOFValues, const rapidjson::Value& rDOFValues) {
+    void _ConvertJointDOFValueFormat(const std::vector<KinBody::JointPtr>& vJoints, std::vector<dReal>& vDOFValues, const rapidjson::Value& rDOFValues)
+    {
         std::map<std::string, dReal> jointDOFValues;
         for(rapidjson::Value::ConstValueIterator itrDOFValue = rDOFValues.Begin(); itrDOFValue != rDOFValues.End(); ++itrDOFValue) {
             std::string jointId;
@@ -104,7 +104,8 @@ public:
     }
 
     /// \brief Extrat all bodies and add them into environment
-    bool ExtractAll() {
+    bool ExtractAll()
+    {
         bool allSucceeded = true;
         dReal fUnitScale = _GetUnitScale();
 
@@ -256,14 +257,14 @@ protected:
         return uri;
     }
 
-    void _ExtractCommon(const rapidjson::Value& bodyValue, KinBody::KinBodyInfo& bodyInfo) {
+    void _ExtractIdAndUri(const rapidjson::Value& bodyValue, KinBody::KinBodyInfo& bodyInfo) {
         OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "id", bodyInfo._id);
         if (bodyInfo._id.empty()) {
             RAVELOG_WARN("info id is empty");
             bodyInfo._id = "body0";
         }
         int suffix = 1;
-        while(_bodyUniqueIds.find(bodyInfo._id) != _bodyUniqueIds.end()) {
+        while (_bodyUniqueIds.find(bodyInfo._id) != _bodyUniqueIds.end()) {
             bodyInfo._id = "body" + std::to_string(suffix);
             suffix += 1;
         }
@@ -279,22 +280,23 @@ protected:
     }
 
     template<typename T>
-    void _ExtractEnvInfo(const rapidjson::Value& bodyValue, boost::shared_ptr<T> pbody, dReal fUnitScale) {
-        if (!!pbody) {
-            _ExtractReadableInterfaces(bodyValue, pbody, fUnitScale);
-            std::string bodyName;
-            OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "name", bodyName);
-            if (!bodyName.empty()) {
-                pbody->SetName(bodyName);
-            }
-
-            if (bodyValue.HasMember("transform")) {
-                Transform transform;
-                OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "transform", transform);
-                transform.trans *= fUnitScale;
-                pbody->SetTransform(transform);
-            }
+    void _ExtractNameAndTransform(const rapidjson::Value& bodyValue, boost::shared_ptr<T> pbody, dReal fUnitScale) {
+        if (!pbody) {
+            return;
         }
+
+        std::string name;
+        OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "name", name);
+        if (!name.empty()) {
+            pbody->SetName(name);
+        }
+
+        Transform transform;
+        if (bodyValue.HasMember("transform")) {
+            OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "transform", transform);
+        }
+        transform.trans *= fUnitScale;
+        pbody->SetTransform(transform);
     }
 
     bool _Extract(const rapidjson::Value& bodyValue, KinBodyPtr& pbody)
@@ -311,8 +313,7 @@ protected:
 
         dReal fUnitScale = _GetUnitScale();
         KinBody::KinBodyInfoPtr kinBodyInfo(new KinBody::KinBodyInfo());
-
-        _ExtractCommon(bodyValue, *kinBodyInfo);
+        _ExtractIdAndUri(bodyValue, *kinBodyInfo);
 
         _ExtractLinks(bodyValue, kinBodyInfo->_vLinkInfos, fUnitScale);
         _ExtractJoints(bodyValue, kinBodyInfo->_vJointInfos, fUnitScale);
@@ -321,7 +322,8 @@ protected:
         if (!body->InitFromInfo(kinBodyInfo)) {
             return false;
         }
-        _ExtractEnvInfo(bodyValue, body, fUnitScale);
+        _ExtractReadableInterfaces(bodyValue, pbody, fUnitScale);
+        _ExtractNameAndTransform(bodyValue, body, fUnitScale);
         pbody = body;
         return true;
     }
@@ -334,7 +336,7 @@ protected:
 
         dReal fUnitScale = _GetUnitScale();
         RobotBase::RobotBaseInfoPtr robotBaseInfo(new RobotBase::RobotBaseInfo());
-        _ExtractCommon(bodyValue, *robotBaseInfo);
+        _ExtractIdAndUri(bodyValue, *robotBaseInfo);
 
         _ExtractLinks(bodyValue, robotBaseInfo->_vLinkInfos, fUnitScale);
         _ExtractJoints(bodyValue, robotBaseInfo->_vJointInfos, fUnitScale);
@@ -347,7 +349,8 @@ protected:
         if (!robot->InitFromInfo(robotBaseInfo)) {
             return false;
         }
-        _ExtractEnvInfo(bodyValue, robot, fUnitScale);
+        _ExtractReadableInterfaces(bodyValue, pbody, fUnitScale);
+        _ExtractNameAndTransform(bodyValue, robot, fUnitScale);
         probot = robot;
         return true;
     }
