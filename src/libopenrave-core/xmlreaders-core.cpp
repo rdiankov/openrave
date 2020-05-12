@@ -502,7 +502,7 @@ static void DefaultStartElementSAXFunc(void *ctx, const xmlChar *name, const xml
     AttributesList listatts;
     if( atts != NULL ) {
         for (int i = 0; (atts[i] != NULL); i+=2) {
-            listatts.push_back(make_pair(string((const char*)atts[i]),string((const char*)atts[i+1])));
+            listatts.emplace_back((const char*)atts[i], (const char*)atts[i+1]);
             std::transform(listatts.back().first.begin(), listatts.back().first.end(), listatts.back().first.begin(), ::tolower);
         }
     }
@@ -905,8 +905,8 @@ public:
             _plink->SetTransform(Transform());
             _processingtag = "";
             AttributesList newatts = atts;
-            newatts.push_back(make_pair("skipgeometry",_bSkipGeometry ? "1" : "0"));
-            newatts.push_back(make_pair("scalegeometry",str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z)));
+            newatts.emplace_back("skipgeometry", _bSkipGeometry ? "1" : "0");
+            newatts.emplace_back("scalegeometry", str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z));
             _pcurreader.reset(new LinkXMLReader(_plink, _pparent, newatts));
             return PE_Support;
         }
@@ -1153,6 +1153,9 @@ public:
                         break;
                     case GT_Box:
                         mass = MASS::GetBoxMassD((*itgeom)->GetBoxExtents(), Vector(), _fMassDensity);
+                        break;
+                    case GT_Cage:
+                        mass = MASS::GetBoxMassD(0.5*(*itgeom)->GetContainerOuterExtents(), Vector(), _fMassDensity);
                         break;
                     case GT_Container:
                         mass = MASS::GetBoxMassD(0.5*(*itgeom)->GetContainerOuterExtents(), Vector(), _fMassDensity);
@@ -2099,8 +2102,8 @@ public:
 
         if( xmlname == "kinbody" ) {
             AttributesList newatts = atts;
-            newatts.push_back(make_pair("skipgeometry",_bSkipGeometry ? "1" : "0"));
-            newatts.push_back(make_pair("scalegeometry",str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z)));
+            newatts.emplace_back("skipgeometry", _bSkipGeometry ? "1" : "0");
+            newatts.emplace_back("scalegeometry", str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z));
             _pcurreader = CreateInterfaceReader(_penv,PT_KinBody,_pinterface, xmlname, newatts);
             return PE_Support;
         }
@@ -2109,8 +2112,8 @@ public:
         if( xmlname == "body" ) {
             _plink.reset();
             AttributesList newatts = atts;
-            newatts.push_back(make_pair("skipgeometry",_bSkipGeometry ? "1" : "0"));
-            newatts.push_back(make_pair("scalegeometry",str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z)));
+            newatts.emplace_back("skipgeometry", _bSkipGeometry ? "1" : "0");
+            newatts.emplace_back("scalegeometry", str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z));
             boost::shared_ptr<LinkXMLReader> plinkreader(new LinkXMLReader(_plink, _pchain, newatts));
             plinkreader->SetMassType(_masstype, _fMassValue, _vMassExtents);
             plinkreader->_fnGetModelsDir = boost::bind(&KinBodyXMLReader::GetModelsDir,this,_1);
@@ -2121,7 +2124,7 @@ public:
         else if( xmlname == "joint" ) {
             _pjoint.reset();
             AttributesList newatts = atts;
-            newatts.push_back(make_pair("scalegeometry",str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z)));
+            newatts.emplace_back("scalegeometry", str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z));
             boost::shared_ptr<JointXMLReader> pjointreader(new JointXMLReader(_pjoint,_pchain, atts));
             pjointreader->_fnGetModelsDir = boost::bind(&KinBodyXMLReader::GetModelsDir,this,_1);
             pjointreader->_fnGetOffsetFrom = boost::bind(&KinBodyXMLReader::GetOffsetFrom,this,_1);
@@ -2699,7 +2702,7 @@ public:
 
             if( !_psensor ) {
                 _psensor.reset(new RobotBase::AttachedSensor(probot));
-                probot->_vecSensors.push_back(_psensor);
+                probot->_vecAttachedSensors.push_back(_psensor);
             }
         }
 
@@ -2886,8 +2889,8 @@ public:
 
         if( xmlname == "robot" ) {
             AttributesList newatts = atts;
-            newatts.push_back(make_pair("skipgeometry",_bSkipGeometry ? "1" : "0"));
-            newatts.push_back(make_pair("scalegeometry",str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z)));
+            newatts.emplace_back("skipgeometry", _bSkipGeometry ? "1" : "0");
+            newatts.emplace_back("scalegeometry", str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z));
             _pcurreader = CreateInterfaceReader(_penv, PT_Robot, _pinterface, xmlname, newatts);
             return PE_Support;
         }
@@ -2895,8 +2898,8 @@ public:
         _CheckInterface();
         if( xmlname == "kinbody" ) {
             AttributesList newatts = atts;
-            newatts.push_back(make_pair("skipgeometry",_bSkipGeometry ? "1" : "0"));
-            newatts.push_back(make_pair("scalegeometry",str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z)));
+            newatts.emplace_back("skipgeometry", _bSkipGeometry ? "1" : "0");
+            newatts.emplace_back("scalegeometry", str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z));
             _pcurreader = CreateInterfaceReader(_penv,PT_KinBody,_pinterface, xmlname, newatts);
         }
         else if( xmlname == "manipulator" ) {
@@ -2987,7 +2990,7 @@ public:
                         vtemp.push_back(*itsensor);
                     }
                 }
-                _probot->GetAttachedSensors().swap(vtemp);
+                _probot->_vecAttachedSensors.swap(vtemp);
             }
             if( _setInitialManipulators.size() > 0 ) {
                 std::vector<RobotBase::ManipulatorPtr> vtemp; vtemp.reserve(_probot->GetManipulators().size());
@@ -2999,7 +3002,7 @@ public:
                         vtemp.push_back(*itmanip);
                     }
                 }
-                _probot->GetManipulators().swap(vtemp);
+                _probot->_vecManipulators.swap(vtemp);
             }
 
             // add prefix
@@ -3016,7 +3019,7 @@ public:
                 vector<KinBody::JointPtr>::iterator itjoint = _probot->_vecjoints.begin()+rootjoffset;
                 list<KinBody::JointPtr> listjoints;
                 while(itjoint != _probot->_vecjoints.end()) {
-                    jointnamepairs.push_back(make_pair((*itjoint)->_info._name, _prefix +(*itjoint)->_info._name));
+                    jointnamepairs.emplace_back((*itjoint)->_info._name,  _prefix +(*itjoint)->_info._name);
                     (*itjoint)->_info._name = _prefix +(*itjoint)->_info._name;
                     listjoints.push_back(*itjoint);
                     ++itjoint;
@@ -3024,7 +3027,7 @@ public:
                 BOOST_ASSERT(rootjpoffset >= 0 && rootjpoffset<=(int)_probot->_vPassiveJoints.size());
                 itjoint = _probot->_vPassiveJoints.begin()+rootjpoffset;
                 while(itjoint != _probot->_vPassiveJoints.end()) {
-                    jointnamepairs.push_back(make_pair((*itjoint)->_info._name, _prefix +(*itjoint)->_info._name));
+                    jointnamepairs.emplace_back((*itjoint)->_info._name,  _prefix +(*itjoint)->_info._name);
                     (*itjoint)->_info._name = _prefix +(*itjoint)->_info._name;
                     listjoints.push_back(*itjoint);
                     ++itjoint;

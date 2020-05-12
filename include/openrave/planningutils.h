@@ -148,7 +148,7 @@ public:
     ///
     /// \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     /// \return PlannerStatus of the status of the smoothing planner
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj);
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, int planningoptions=0);
 
 protected:
     void _UpdateParameters();
@@ -188,7 +188,7 @@ public:
     ///
     /// \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     /// \return PlannerStatus of the status of the smoothing planner
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, bool hastimestamps=false);
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, bool hastimestamps=false, int planningoptions=0);
 
 protected:
     void _UpdateParameters();
@@ -246,7 +246,7 @@ public:
     ///
     /// \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     /// \return PlannerStatus of the status of the smoothing planner
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false);
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false, int planningoptions=0);
 
 protected:
     std::string _plannername, _extraparameters;
@@ -572,7 +572,7 @@ protected:
 class OPENRAVE_API ManipulatorIKGoalSampler
 {
 public:
-    ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPtr pmanip, const std::list<IkParameterization>&listparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal fsampleprob=1, bool searchfreeparameters=true, int ikfilteroptions=IKFO_CheckEnvCollisions);
+    ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPtr pmanip, const std::list<IkParameterization>&listparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal fsampleprob=1, bool searchfreeparameters=true, int ikfilteroptions=IKFO_CheckEnvCollisions, const std::vector<dReal>& freevalues = std::vector<dReal>());
     virtual ~ManipulatorIKGoalSampler() {
     }
 
@@ -623,6 +623,7 @@ protected:
     int _tempikindex; ///< if _vikreturns.size() > 0, points to the original ik index of those solutions
     int _ikfilteroptions;
     bool _searchfreeparameters;
+    std::vector<dReal> _vfreegoalvalues;
 };
 
 typedef boost::shared_ptr<ManipulatorIKGoalSampler> ManipulatorIKGoalSamplerPtr;

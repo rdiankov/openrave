@@ -70,9 +70,7 @@
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/lu.hpp>
 
-#if OPENRAVE_RAPIDJSON
 #include <rapidjson/error/en.h>
-#endif
 
 #include "next_combination.h"
 
@@ -191,7 +189,10 @@ public:
             LOAD_IKFUNCTION0(ComputeIk2);
             LOAD_IKFUNCTION(ComputeFk);
             LOAD_IKFUNCTION(GetNumFreeParameters);
-            LOAD_IKFUNCTION(GetFreeParameters);
+            LOAD_IKFUNCTION0(GetFreeIndices);
+            if( !ikfunctions->_GetFreeIndices ) {
+                ikfunctions->_GetFreeIndices = (typename ikfast::IkFastFunctions<T>::GetFreeIndicesFn)SysLoadSym(plib, "GetFreeParameters"); \
+            }
             LOAD_IKFUNCTION(GetNumJoints);
             LOAD_IKFUNCTION(GetIkRealSize);
             LOAD_IKFUNCTION(GetIkFastVersion);
@@ -324,9 +325,7 @@ public:
                         "return the type of inverse kinematics solver (IkParamterization::Type)");
 #ifdef Boost_IOSTREAMS_FOUND
 
-#if OPENRAVE_RAPIDJSON
         RegisterJSONCommand("LoadIKFastFromXMLId",boost::bind(&IkFastModule::_LoadIKFastFromXMLIdCommand, this, _1, _2, _3), "Loads ikfast module from xmlid");
-#endif
 
         RegisterCommand("LoadIKFastSolver",boost::bind(&IkFastModule::LoadIKFastSolver,this,_1,_2),
                         "Dynamically calls the inversekinematics.py script to generate an ik solver for a robot, or to load an existing one\n"
@@ -354,7 +353,6 @@ public:
     int main(const string& cmd)
     {
         if( cmd.size() > 0 ) {
-#if OPENRAVE_RAPIDJSON
             rapidjson::Document document;  ///< contains entire rapid json document to parse parameters.
             if (document.Parse(cmd.c_str(), cmd.size()).HasParseError()) {
                 throw OPENRAVE_EXCEPTION_FORMAT("Failed to parse cmd (offset %u): %s, data=%s", ((unsigned)document.GetErrorOffset())%(GetParseError_En(document.GetParseError()))%cmd, ORE_InvalidState);
@@ -368,7 +366,6 @@ public:
                     _platform = root["platform"].GetString();
                 }
             }
-#endif
         }
         return 0;
     }
@@ -390,7 +387,7 @@ public:
         }
         boost::trim(libraryname);
         if( !sinput ||( libraryname.size() == 0) ||( ikname.size() == 0) ) {
-            RAVELOG_DEBUG("bad input\n");
+            RAVELOG_DEBUG_FORMAT("bad input, ikname=%s, libraryname=%s", ikname%libraryname);
             return false;
         }
 
@@ -440,7 +437,6 @@ public:
 
 #ifdef Boost_IOSTREAMS_FOUND
 
-#if OPENRAVE_RAPIDJSON
     bool _LoadIKFastFromXMLIdCommand(const rapidjson::Value& input, rapidjson::Value& output, rapidjson::Document::AllocatorType& allocator)
     {
         if( !input.HasMember("xmlid") ) {
@@ -458,8 +454,12 @@ public:
 
         std::vector<std::string> vikfasttokens;
         utils::TokenizeString(vtokens[1], ".", vikfasttokens);
-        if( vikfasttokens.size() != 4 || vikfasttokens[0] != "ikfast" ) {
+        if( vikfasttokens.size() != 4 ) {
             RAVELOG_WARN_FORMAT("not enough tokens for: %s", xmlid);
+            return false;
+        }
+        if( vikfasttokens[0] != "ikfast" ) {
+            RAVELOG_WARN_FORMAT("not enough an ikfast solver: %s", xmlid);
             return false;
         }
 
@@ -518,8 +518,6 @@ public:
         // if not forcing the ik, then return true as long as a valid ik solver is set
         return bsuccess;
     }
-
-#endif
 
     bool LoadIKFastSolver(ostream& sout, istream& sinput)
     {
@@ -618,13 +616,13 @@ public:
 
                 // create a temporary file and store COLLADA kinematics representation
                 AttributesList atts;
-                atts.push_back(make_pair(string("skipwrite"), string("visual readable sensors physics")));
-                atts.push_back(make_pair(string("target"), probot->GetName()));
+                atts.emplace_back("skipwrite", "visual readable sensors physics");
+                atts.emplace_back("target",  probot->GetName());
                 string tempfilename = RaveGetHomeDirectory() + str(boost::format("/testikfastrobot%d.dae")%(RaveRandomInt()%1000));
                 // file not found, so create
                 RAVELOG_INFO(str(boost::format("Generating inverse kinematics %s for manip %s:%s, hash=%s, saving intermediate data to %s, will take several minutes...\n")%striktype%probot->GetName()%pmanip->GetName()%pmanip->GetInverseKinematicsStructureHash(iktype)%tempfilename));
                 GetEnv()->Save(tempfilename,EnvironmentBase::SO_Body,atts);
-                string cmdgen = str(boost::format("openrave.py --database inversekinematics --usecached --robot=\"%s\" --manipname=%s --iktype=%s")%tempfilename%pmanip->GetName()%striktype);
+                string cmdgen = str(boost::format("openrave.py --database inversekinematics --usecached --robot=\"%s\" --manipname=%s --iktype=%s --filepermissions=%i")%tempfilename%pmanip->GetName()%striktype%0777);
                 // use raw system call, popen causes weird crash in the inversekinematics compiler
                 int generateexit = system(cmdgen.c_str());
                 //FILE* pipe = MYPOPEN(cmdgen.c_str(), "r");
@@ -783,7 +781,7 @@ public:
                 vjoints[j] = RaveRandomDouble()*2*PI;
             }
             for(size_t j = 0; j < vfree.size(); ++j) {
-                vfree[j] = vjoints[ikfunctions->_GetFreeParameters()[j]];
+                vfree[j] = vjoints[ikfunctions->_GetFreeIndices()[j]];
             }
             ikfunctions->_ComputeFk(&vjoints[0],eetrans,eerot);
             solutions.Clear();
@@ -1173,7 +1171,7 @@ public:
                 bool bnoiksolution = false;
                 if( !pmanip->FindIKSolution(twrist, viksolution, filteroptions) ) {
                     if( !bnoiksolution ) {
-                        vnosolutions.push_back(make_pair(twrist,vfreeparameters));
+                        vnosolutions.emplace_back(twrist, vfreeparameters);
                         bnoiksolution = true;
                     }
                     bsuccess = false;
@@ -1198,7 +1196,7 @@ public:
                         RAVELOG_WARN("failed to get freeparameters");
                     }
                     if( twrist.ComputeDistanceSqr(twrist_out) > fthreshold) {
-                        vwrongsolutions.push_back(make_pair(twrist,vfreeparameters_out));
+                        vwrongsolutions.emplace_back(twrist, vfreeparameters_out);
                         bsuccess = false;
                         s.str("");
                         s << "FindIKSolution: Incorrect IK, i = " << i <<" error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
@@ -1237,7 +1235,7 @@ public:
                         *itfree = -1;
                     }
                     if( !bnoiksolution ) {
-                        vnosolutions.push_back(make_pair(twrist,vfreeparameters_out));
+                        vnosolutions.emplace_back(twrist, vfreeparameters_out);
                         bnoiksolution = true;
                     }
                     bsuccess = false;
@@ -1259,7 +1257,7 @@ public:
                             RAVELOG_WARN("failed to get freeparameters");
                         }
                         if(twrist.ComputeDistanceSqr(twrist_out) > fthreshold ) {
-                            vwrongsolutions.push_back(make_pair(twrist,vfreeparameters_out));
+                            vwrongsolutions.emplace_back(twrist, vfreeparameters_out);
                             s.str("");
                             s << "FindIKSolutions: Incorrect IK, i = " << i << " error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
                               << "originalJointValues=[";
@@ -1304,7 +1302,7 @@ public:
                         }
                         s << "]" << std::endl;
                         RAVELOG_VERBOSE(s.str());
-                        vnofullsolutions.push_back(make_pair(twrist,vfreeparameters_real));
+                        vnofullsolutions.emplace_back(twrist, vfreeparameters_real);
                     }
                 }
 
@@ -1318,7 +1316,7 @@ public:
                         robot->SetActiveDOFValues(viksolution, false);
                         twrist_out = pmanip->GetIkParameterization(twrist);
                         if(twrist.ComputeDistanceSqr(twrist_out) > fthreshold ) {
-                            vwrongsolutions.push_back(make_pair(twrist,vfreeparameters));
+                            vwrongsolutions.emplace_back(twrist, vfreeparameters);
                             bsuccess = false;
                             s.str("");
                             s << "FindIKSolution (freeparams): Incorrect IK, i = " << i << " error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
@@ -1348,7 +1346,7 @@ public:
                         for(int j = 0; j < pmanip->GetIkSolver()->GetNumFreeParameters(); ++j) {
                             if( fabsf(vfreeparameters.at(j)-vfreeparameters_out.at(j)) > 0.0001f ) {
                                 RAVELOG_WARN(str(boost::format("free params %d not equal: %f!=%f\n")%j%vfreeparameters[j]%vfreeparameters_out[j]));
-                                vnofullsolutions.push_back(make_pair(twrist,vfreeparameters));
+                                vnofullsolutions.emplace_back(twrist, vfreeparameters);
                                 bsuccess = false;
                                 break;
                             }
@@ -1368,7 +1366,7 @@ public:
                         robot->SetActiveDOFValues(*itsol, false);
                         twrist_out = pmanip->GetIkParameterization(twrist);
                         if(twrist.ComputeDistanceSqr(twrist_out) > fthreshold ) {
-                            vwrongsolutions.push_back(make_pair(twrist,vfreeparameters_out));
+                            vwrongsolutions.emplace_back(twrist, vfreeparameters_out);
                             s.str("");
                             s << "FindIKSolutions (freeparams): Incorrect IK, i = " << i <<" error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
                               << "originalJointValues=[";

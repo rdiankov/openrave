@@ -130,11 +130,12 @@ Planner Parameters\n\
         return true;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr poutputtraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr poutputtraj, int planningoptions) override
     {
         if(!_parameters) {
-            RAVELOG_ERROR("WorkspaceTrajectoryTracker::PlanPath - Error, planner not initialized\n");
-            return PS_Failed;
+            std::string description = "WorkspaceTrajectoryTracker::PlanPath - Error, planner not initialized\n";
+            RAVELOG_ERROR(description);
+            return PlannerStatus(description, PS_Failed);
         }
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -160,8 +161,9 @@ Planner Parameters\n\
         }
         if( _manip->CheckEndEffectorCollision(tlasttrans,_report) ) {
             if( minimumcompletetime >= workspacetraj->GetDuration() ) {
-                RAVELOG_DEBUG(str(boost::format("final configuration colliding: %s\n")%_report->__str__()));
-                return PS_Failed;
+                std::string description = str(boost::format("final configuration colliding: %s\n")%_report->__str__());
+                RAVELOG_DEBUG(description);
+                return PlannerStatus(description, PS_Failed);
             }
         }
 
@@ -185,8 +187,9 @@ Planner Parameters\n\
                         break;
                     }
                 }
-                RAVELOG_WARN(str(boost::format("end effector collision at time %f/%f")%ftime%workspacetraj->GetDuration()));
-                return PS_Failed;
+                std::string description = str(boost::format("end effector collision at time %f/%f")%ftime%workspacetraj->GetDuration());
+                RAVELOG_WARN(description);
+                return PlannerStatus(description, PS_Failed);
             }
             else {
                 if( bPrevInCollision ) {
@@ -201,8 +204,9 @@ Planner Parameters\n\
             fstarttime = workspacetraj->GetDuration();
         }
         if( fstarttime > _parameters->ignorefirstcollision ) {
-            RAVELOG_DEBUG(str(boost::format("initial end effector in collision, start time %f > %f\n")%fstarttime%_parameters->ignorefirstcollision));
-            return PS_Failed;
+            std::string description = str(boost::format("initial end effector in collision, start time %f > %f\n")%fstarttime%_parameters->ignorefirstcollision);
+            RAVELOG_DEBUG(description);
+            return PlannerStatus(description, PS_Failed);
         }
 
         listtransforms.push_back(tlasttrans);
@@ -223,8 +227,9 @@ Planner Parameters\n\
         _tbaseinv = _manip->GetBase()->GetTransform().inverse();
         if( (int)_parameters->vinitialconfig.size() == _parameters->GetDOF() ) {
             if( _parameters->SetStateValues(_parameters->vinitialconfig) != 0 ) {
-                RAVELOG_ERROR("failed to set initial state\n");
-                return PS_Failed;
+                std::string description = "failed to set initial state\n";
+                RAVELOG_ERROR(description);
+                return PlannerStatus(description, PS_Failed);
             }
             _SetPreviousSolution(_parameters->vinitialconfig,false);
             poutputtraj->Insert(poutputtraj->GetNumWaypoints(),_parameters->vinitialconfig,_parameters->_configurationspecification);
@@ -245,12 +250,12 @@ Planner Parameters\n\
             if( !_manip->FindIKSolution(ikparam,vsolution,_filteroptions) ) {
                 if( _filteroptions == 0 ) {
                     // haven't even checked with environment collisions, so a solution really doesn't exist
-                    return PS_Failed;
+                    return PlannerStatus(PS_Failed);
                 }
                 if(( ftime < _parameters->ignorefirstcollision) && bPrevInCollision ) {
                     _filteroptions = 0;
                     if( !_manip->FindIKSolution(ikparam,vsolution,_filteroptions) ) {
-                        return PS_Failed;
+                        return PlannerStatus(PS_Failed);
                     }
                 }
                 else {
@@ -260,7 +265,7 @@ Planner Parameters\n\
                             break;
                         }
                     }
-                    return PS_Failed;
+                    return PlannerStatus(PS_Failed);
                 }
             }
             else {
@@ -269,22 +274,23 @@ Planner Parameters\n\
 
             poutputtraj->Insert(poutputtraj->GetNumWaypoints(),vsolution,_parameters->_configurationspecification);
             if( _parameters->SetStateValues(vsolution) ) {
-                RAVELOG_ERROR("failed to set state\n");
-                return PS_Failed;
+                std::string description = "failed to set state\n";
+                RAVELOG_ERROR(description);
+                return PlannerStatus(description, PS_Failed);
             }
             _SetPreviousSolution(vsolution);
         }
 
         if( bPrevInCollision ) {
-            return PS_Failed;
+            return PlannerStatus("bPrevInCollision" ,PS_Failed);
         }
 
-        if( !_retimerplanner->InitPlan(RobotBasePtr(),_parameters) || !_retimerplanner->PlanPath(poutputtraj) ) {
-            return PS_Failed;
+        if( !_retimerplanner->InitPlan(RobotBasePtr(),_parameters) || !_retimerplanner->PlanPath(poutputtraj).GetStatusCode() ) {
+            return PlannerStatus(PS_Failed);
         }
 
         RAVELOG_DEBUG(str(boost::format("workspace trajectory tracker plan success, path=%d points, traj time=%e computed in %fs\n")%poutputtraj->GetNumWaypoints()%poutputtraj->GetDuration()%((0.001f*(float)(utils::GetMilliTime()-basetime)))));
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     virtual PlannerParametersConstPtr GetParameters() const {

@@ -36,16 +36,6 @@
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/lexical_cast.hpp>
 
-#define LIBXML_SAX1_ENABLED
-#include <libxml/globals.h>
-#include <libxml/xmlerror.h>
-#include <libxml/parser.h>
-#include <libxml/parserInternals.h> // only for xmlNewInputFromFile()
-#include <libxml/tree.h>
-
-#include <libxml/debugXML.h>
-#include <libxml/xmlmemory.h>
-
 #if OPENRAVE_LOG4CXX
 
 #include <log4cxx/layout.h>
@@ -371,7 +361,7 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
 #ifdef USE_CRLIBM
         _bcrlibmInit = false;
 #endif
-        
+
         _mapinterfacenames[PT_Planner] = "planner";
         _mapinterfacenames[PT_Robot] = "robot";
         _mapinterfacenames[PT_SensorSystem] = "sensorsystem";
@@ -805,7 +795,7 @@ protected:
             }
         }
 
-        RAVELOG_WARN(str(boost::format("could not find file %s\n")%filename));
+        RAVELOG_INFO_FORMAT("could not find file %s", filename);
         return std::string();
 #endif
     }
@@ -1883,6 +1873,51 @@ void RaveGetVelocityFromAffineDOFVelocities(Vector& linearvel, Vector& angularve
     }
 }
 
+OpenRAVEException::OpenRAVEException() : std::exception(), _s("unknown exception"), _error(ORE_Failed)
+{
+}
+
+OpenRAVEException::OpenRAVEException(const std::string& s, OpenRAVEErrorCode error) : std::exception()
+{
+    _error = error;
+    _s = "openrave (";
+    _s += RaveGetErrorCodeString(_error);
+    _s += "): ";
+    _s += s;
+}
+
+char const* OpenRAVEException::what() const throw() {
+    return _s.c_str();
+}
+
+const std::string& OpenRAVEException::message() const {
+    return _s;
+}
+
+OpenRAVEErrorCode OpenRAVEException::GetCode() const {
+    return _error;
+}
+
+const char* RaveGetErrorCodeString(OpenRAVEErrorCode error)
+{
+    switch(error) {
+    case ORE_Failed: return "Failed";
+    case ORE_InvalidArguments: return "InvalidArguments";
+    case ORE_EnvironmentNotLocked: return "EnvironmentNotLocked";
+    case ORE_CommandNotSupported: return "CommandNotSupported";
+    case ORE_Assert: return "Assert";
+    case ORE_InvalidPlugin: return "InvalidPlugin";
+    case ORE_InvalidInterfaceHash: return "InvalidInterfaceHash";
+    case ORE_NotImplemented: return "NotImplemented";
+    case ORE_InconsistentConstraints: return "InconsistentConstraints";
+    case ORE_NotInitialized: return "NotInitialized";
+    case ORE_InvalidState: return "InvalidState";
+    case ORE_Timeout: return "Timeout";
+    }
+    // should throw an exception?
+    return "";
+}
+
 void CollisionReport::Reset(int coloptions)
 {
     options = coloptions;
@@ -1905,11 +1940,25 @@ std::string CollisionReport::__str__() const
         FOREACH(itlinkpair, vLinkColliding) {
             s << ", [" << index << "](";
             if( !!itlinkpair->first ) {
-                s << itlinkpair->first->GetParent()->GetName() << ":" << itlinkpair->first->GetName();
+                KinBodyPtr parent = itlinkpair->first->GetParent(true);
+                if( !!parent ) {
+                    s << parent->GetName() << ":" << itlinkpair->first->GetName();
+                }
+                else {
+                    RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", itlinkpair->first->GetName());
+                    s << "[deleted]:" << itlinkpair->first->GetName();
+                }
             }
             s << ")x(";
             if( !!itlinkpair->second ) {
-                s << itlinkpair->second->GetParent()->GetName() << ":" << itlinkpair->second->GetName();
+                KinBodyPtr parent = itlinkpair->second->GetParent(true);
+                if( !!parent ) {
+                    s << parent->GetName() << ":" << itlinkpair->second->GetName();
+                }
+                else {
+                    RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", itlinkpair->second->GetName());
+                    s << "[deleted]:" << itlinkpair->second->GetName();
+                }
             }
             s << ") ";
             ++index;
@@ -1918,11 +1967,25 @@ std::string CollisionReport::__str__() const
     else {
         s << "(";
         if( !!plink1 ) {
-            s << plink1->GetParent()->GetName() << ":" << plink1->GetName();
+            KinBodyPtr parent = plink1->GetParent(true);
+            if( !!parent ) {
+                s << plink1->GetParent()->GetName() << ":" << plink1->GetName();
+            }
+            else {
+                RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", plink1->GetName());
+                s << "[deleted]:" << plink1->GetName();
+            }
         }
         s << ")x(";
         if( !!plink2 ) {
-            s << plink2->GetParent()->GetName() << ":" << plink2->GetName();
+            KinBodyPtr parent = plink2->GetParent(true);
+            if( !!parent ) {
+                s << plink2->GetParent()->GetName() << ":" << plink2->GetName();
+            }
+            else {
+                RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", plink2->GetName());
+                s << "[deleted]:" << plink2->GetName();
+            }
         }
         s << ")";
     }
@@ -2122,7 +2185,11 @@ void Grabbed::ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
         FOREACHC(itgrabbed, pbody->_vGrabbedBodies) {
             boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
             bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkrobot) != _vattachedlinks.end();
-            KinBodyPtr pothergrabbedbody(pgrabbed->_pgrabbedbody);
+            KinBodyPtr pothergrabbedbody = pgrabbed->_pgrabbedbody.lock();
+            if( !pothergrabbedbody ) {
+                RAVELOG_WARN_FORMAT("grabbed body on %s has already been released. ignoring.", pbody->GetName());
+                continue;
+            }
             if( bsamelink ) {
                 pothergrabbedbody->GetLinks().at(0)->GetRigidlyAttachedLinks(vbodyattachedlinks);
             }
@@ -2200,8 +2267,12 @@ void Grabbed::UpdateCollidingLinks()
     FOREACHC(itgrabbed, pbody->_vGrabbedBodies) {
         boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
         bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkrobot) != _vattachedlinks.end();
-        KinBodyPtr pothergrabbedbody(pgrabbed->_pgrabbedbody);
-        if( !!pothergrabbedbody && pothergrabbedbody != pgrabbedbody && pothergrabbedbody->GetLinks().size() > 0 ) {
+        KinBodyPtr pothergrabbedbody = pgrabbed->_pgrabbedbody.lock();
+        if( !pothergrabbedbody ) {
+            RAVELOG_WARN_FORMAT("grabbed body on %s has already been destroyed, ignoring.", pbody->GetName());
+            continue;
+        }
+        if( pothergrabbedbody != pgrabbedbody && pothergrabbedbody->GetLinks().size() > 0 ) {
             if( bsamelink ) {
                 pothergrabbedbody->GetLinks().at(0)->GetRigidlyAttachedLinks(vbodyattachedlinks);
             }
@@ -2232,9 +2303,12 @@ void Grabbed::UpdateCollidingLinks()
     std::set<KinBodyConstPtr> _setgrabbed;
     FOREACHC(itgrabbed, pbody->_vGrabbedBodies) {
         boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
-        KinBodyConstPtr pothergrabbedbody(pgrabbed->_pgrabbedbody);
+        KinBodyConstPtr pothergrabbedbody = pgrabbed->_pgrabbedbody.lock();
         if( !!pothergrabbedbody ) {
             _setgrabbed.insert(pothergrabbedbody);
+        }
+        else {
+            RAVELOG_WARN_FORMAT("grabbed body on %s has already been destroyed, ignoring.", pbody->GetName());
         }
     }
 
@@ -2394,6 +2468,18 @@ void SensorBase::SensorGeometry::Serialize(BaseXMLWriterPtr writer, int options)
     }
 }
 
+void SensorBase::SensorGeometry::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    if(hardware_id.size() > 0) {
+        openravejson::SetJsonValueByKey(value, "hardwareId", hardware_id, allocator);
+    }
+}
+
+void SensorBase::SensorGeometry::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+{
+    openravejson::LoadJsonValueByKey(value, "hardwareId", hardware_id);
+}
+
 void SensorBase::CameraGeomData::Serialize(BaseXMLWriterPtr writer, int options) const
 {
     SensorGeometry::Serialize(writer, options);
@@ -2421,16 +2507,41 @@ void SensorBase::CameraGeomData::Serialize(BaseXMLWriterPtr writer, int options)
     writer->AddChild("gain",atts)->SetCharData(boost::lexical_cast<std::string>(gain));
     //writer->AddChild("format",atts)->SetCharData(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
     if( sensor_reference.size() > 0 ) {
-        atts.push_back(std::make_pair("url", sensor_reference));
+        atts.emplace_back("url",  sensor_reference);
         writer->AddChild("sensor_reference",atts);
         atts.clear();
     }
     if( target_region.size() > 0 ) {
-        atts.push_back(std::make_pair("url", target_region));
+        atts.emplace_back("url",  target_region);
         writer->AddChild("target_region",atts);
         atts.clear();
     }
 }
+
+void SensorBase::CameraGeomData::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    SensorBase::SensorGeometry::SerializeJSON(value, allocator, fUnitScale, options);
+    openravejson::SetJsonValueByKey(value, "sensorReference", sensor_reference, allocator);
+    openravejson::SetJsonValueByKey(value, "targetRegion", target_region, allocator);
+    openravejson::SetJsonValueByKey(value, "intrinstics", intrinsics, allocator);
+    openravejson::SetJsonValueByKey(value, "width", width, allocator);
+    openravejson::SetJsonValueByKey(value, "height", height, allocator);
+    openravejson::SetJsonValueByKey(value, "measurementTime", measurement_time, allocator);
+    openravejson::SetJsonValueByKey(value, "gain", gain, allocator);
+}
+
+void SensorBase::CameraGeomData::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+{
+    SensorBase::SensorGeometry::DeserializeJSON(value, fUnitScale);
+    openravejson::LoadJsonValueByKey(value, "sensorReference", sensor_reference);
+    openravejson::LoadJsonValueByKey(value, "targetRegion", target_region);
+    openravejson::LoadJsonValueByKey(value, "intrinstics", intrinsics);
+    openravejson::LoadJsonValueByKey(value, "width", width);
+    openravejson::LoadJsonValueByKey(value, "height", height);
+    openravejson::LoadJsonValueByKey(value, "measurementTime", measurement_time);
+    openravejson::LoadJsonValueByKey(value, "gain", gain);
+}
+
 
 void SensorBase::Serialize(BaseXMLWriterPtr writer, int options) const
 {
@@ -2517,162 +2628,154 @@ double RaveRandomDouble(IntervalType interval)
     return double(sample.at(0));
 }
 
-namespace LocalXML {
-
-void RaveXMLErrorFunc(void *ctx, const char *msg, ...)
+void IkParameterization::SerializeJSON(rapidjson::Value& rIkParameterization, rapidjson::Document::AllocatorType& alloc, dReal fUnitScale) const
 {
-    va_list args;
-
-    va_start(args, msg);
-    RAVELOG_ERROR("XML Parse error: ");
-    vprintf(msg,args);
-    va_end(args);
+    rIkParameterization.SetObject();
+    openravejson::SetJsonValueByKey(rIkParameterization, "type", GetName(), alloc);
+    switch (_type) {
+    case IKP_Transform6D:
+        openravejson::SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
+        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
+        break;
+    case IKP_Rotation3D:
+        openravejson::SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
+        break;
+    case IKP_Translation3D:
+        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
+        break;
+    case IKP_Direction3D:
+        openravejson::SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
+        break;
+    case IKP_Ray4D:
+        openravejson::SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
+        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
+        break;
+    case IKP_Lookat3D:
+        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
+        break;
+    case IKP_TranslationDirection5D:
+        openravejson::SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
+        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
+        break;
+    case IKP_TranslationXY2D:
+        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
+        break;
+    case IKP_TranslationXYOrientation3D:
+        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
+        break;
+    case IKP_TranslationLocalGlobal6D:
+        openravejson::SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
+        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
+        break;
+    case IKP_TranslationXAxisAngle4D:
+    case IKP_TranslationYAxisAngle4D:
+    case IKP_TranslationZAxisAngle4D:
+    case IKP_TranslationXAxisAngleZNorm4D:
+    case IKP_TranslationYAxisAngleXNorm4D:
+    case IKP_TranslationZAxisAngleYNorm4D:
+        openravejson::SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
+        openravejson::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
+        break;
+    default:
+        throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization %s"), GetName(),ORE_InvalidArguments);
+    }
+    if (_mapCustomData.size() > 0) {
+        // TODO have to scale _mapCustomData by fUnitScale
+        openravejson::SetJsonValueByKey(rIkParameterization, "customData", _mapCustomData, alloc);
+    }
 }
 
-struct XMLREADERDATA
+void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameterization, dReal fUnitScale)
 {
-    XMLREADERDATA(BaseXMLReader& reader, xmlParserCtxtPtr ctxt) : _reader(reader), _ctxt(ctxt) {
+    if (!rIkParameterization.IsObject()) {
+        throw openravejson::OpenRAVEJSONException("Cannot load value of non-object to IkParameterization.", openravejson::ORJE_InvalidArguments);
     }
-    BaseXMLReader& _reader;
-    BaseXMLReaderPtr _pdummy;
-    xmlParserCtxtPtr _ctxt;
-};
-
-void DefaultStartElementSAXFunc(void *ctx, const xmlChar *name, const xmlChar **atts)
-{
-    AttributesList listatts;
-    if( atts != NULL ) {
-        for (int i = 0; (atts[i] != NULL); i+=2) {
-            listatts.push_back(make_pair(string((const char*)atts[i]),string((const char*)atts[i+1])));
-            std::transform(listatts.back().first.begin(), listatts.back().first.end(), listatts.back().first.begin(), ::tolower);
+    _type = IKP_None;
+    if( rIkParameterization.HasMember("type") ) {
+        const char* ptype =  rIkParameterization["type"].GetString();
+        if( !!ptype ) {
+            const std::map<IkParameterizationType,std::string>::const_iterator itend = RaveGetIkParameterizationMap().end();
+            for(std::map<IkParameterizationType,std::string>::const_iterator it = RaveGetIkParameterizationMap().begin(); it != itend; ++it) {
+                if( strcmp(ptype, it->second.c_str()) == 0 ) {
+                    _type = it->first;
+                    break;
+                }
+            }
         }
     }
+    switch (_type) {
+    case IKP_Transform6D:
+    case IKP_Transform6DVelocity:
+        openravejson::LoadJsonValueByKey(rIkParameterization, "rotate", _transform.rot);
+        openravejson::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
+        break;
+    case IKP_Rotation3D:
+    case IKP_Rotation3DVelocity:
+        openravejson::LoadJsonValueByKey(rIkParameterization, "rotate", _transform.rot);
+        break;
+    case IKP_Translation3D:
+        openravejson::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
+        break;
+    case IKP_Translation3DVelocity:
+    case IKP_TranslationXYOrientation3DVelocity:
+        openravejson::LoadJsonValueByKey(rIkParameterization, "rotate", _transform.rot);
+        openravejson::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
+        break;
+    case IKP_Direction3D:
+    case IKP_Direction3DVelocity:
+        openravejson::LoadJsonValueByKey(rIkParameterization, "rotate", _transform.rot);
+        break;
+    case IKP_Ray4D:
+    case IKP_Ray4DVelocity:
+        openravejson::LoadJsonValueByKey(rIkParameterization, "rotate", _transform.rot);
+        openravejson::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
+        break;
+    case IKP_TranslationDirection5D:
+    case IKP_TranslationDirection5DVelocity:
+        openravejson::LoadJsonValueByKey(rIkParameterization, "rotate", _transform.rot);
+        openravejson::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
+        break;
+    case IKP_Lookat3D:
+    case IKP_Lookat3DVelocity:
+        openravejson::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
+        break;
+    case IKP_TranslationXY2D:
+    case IKP_TranslationXY2DVelocity:
+        openravejson::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
+        break;
+    case IKP_TranslationXYOrientation3D:
+        openravejson::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
+        break;
+    case IKP_TranslationLocalGlobal6D:
+    case IKP_TranslationLocalGlobal6DVelocity:
+        openravejson::LoadJsonValueByKey(rIkParameterization, "rotate", _transform.rot);
+        openravejson::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
+        break;
+    case IKP_TranslationXAxisAngle4D:
+    case IKP_TranslationXAxisAngle4DVelocity:
+    case IKP_TranslationYAxisAngle4D:
+    case IKP_TranslationYAxisAngle4DVelocity:
+    case IKP_TranslationZAxisAngle4D:
+    case IKP_TranslationZAxisAngle4DVelocity:
+    case IKP_TranslationXAxisAngleZNorm4D:
+    case IKP_TranslationXAxisAngleZNorm4DVelocity:
+    case IKP_TranslationYAxisAngleXNorm4D:
+    case IKP_TranslationYAxisAngleXNorm4DVelocity:
+    case IKP_TranslationZAxisAngleYNorm4D:
+    case IKP_TranslationZAxisAngleYNorm4DVelocity:
+        openravejson::LoadJsonValueByKey(rIkParameterization, "rotate", _transform.rot);
+        openravejson::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
+        break;
+    default:
+        throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization 0x%x"), _type,ORE_InvalidArguments);
+    }
+    _transform.trans *= fUnitScale;
 
-    XMLREADERDATA* pdata = (XMLREADERDATA*)ctx;
-    string s = (const char*)name;
-    std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-    if( !!pdata->_pdummy ) {
-        RAVELOG_VERBOSE(str(boost::format("unknown field %s\n")%s));
-        pdata->_pdummy->startElement(s,listatts);
-    }
-    else {
-        BaseXMLReader::ProcessElement pestatus = pdata->_reader.startElement(s, listatts);
-        if( pestatus != BaseXMLReader::PE_Support ) {
-            // not handling, so create a temporary class to handle it
-            pdata->_pdummy.reset(new DummyXMLReader(s,"(libxml)"));
-        }
-    }
+    _mapCustomData.clear();
+    openravejson::LoadJsonValueByKey(rIkParameterization, "customData", _mapCustomData);
+    // TODO have to scale _mapCustomData by fUnitScale
 }
 
-void DefaultEndElementSAXFunc(void *ctx, const xmlChar *name)
-{
-    XMLREADERDATA* pdata = (XMLREADERDATA*)ctx;
-    string s = (const char*)name;
-    std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-    if( !!pdata->_pdummy ) {
-        if( pdata->_pdummy->endElement(s) ) {
-            pdata->_pdummy.reset();
-        }
-    }
-    else {
-        if( pdata->_reader.endElement(s) ) {
-            //RAVEPRINT(L"%s size read %d\n", name, data->_ctxt->input->consumed);
-            xmlStopParser(pdata->_ctxt);
-        }
-    }
-}
-
-void DefaultCharactersSAXFunc(void *ctx, const xmlChar *ch, int len)
-{
-    XMLREADERDATA* pdata = (XMLREADERDATA*)ctx;
-    if( !!pdata->_pdummy ) {
-        pdata->_pdummy->characters(string((const char*)ch, len));
-    }
-    else {
-        pdata->_reader.characters(string((const char*)ch, len));
-    }
-}
-
-bool xmlDetectSAX2(xmlParserCtxtPtr ctxt)
-{
-    if (ctxt == NULL) {
-        return false;
-    }
-#ifdef LIBXML_SAX1_ENABLED
-    if (ctxt->sax &&  ctxt->sax->initialized == XML_SAX2_MAGIC && (ctxt->sax->startElementNs != NULL || ctxt->sax->endElementNs != NULL)) {
-        ctxt->sax2 = 1;
-    }
-#else
-    ctxt->sax2 = 1;
-#endif
-
-    ctxt->str_xml = xmlDictLookup(ctxt->dict, BAD_CAST "xml", 3);
-    ctxt->str_xmlns = xmlDictLookup(ctxt->dict, BAD_CAST "xmlns", 5);
-    ctxt->str_xml_ns = xmlDictLookup(ctxt->dict, XML_XML_NAMESPACE, 36);
-    if ( ctxt->str_xml==NULL || ctxt->str_xmlns==NULL || ctxt->str_xml_ns == NULL) {
-        return false;
-    }
-    return true;
-}
-
-bool ParseXMLData(BaseXMLReader& reader, const char* buffer, int size)
-{
-    static xmlSAXHandler s_DefaultSAXHandler = { 0};
-    if( size <= 0 ) {
-        size = strlen(buffer);
-    }
-    if( !s_DefaultSAXHandler.initialized ) {
-        // first time, so init
-        s_DefaultSAXHandler.startElement = DefaultStartElementSAXFunc;
-        s_DefaultSAXHandler.endElement = DefaultEndElementSAXFunc;
-        s_DefaultSAXHandler.characters = DefaultCharactersSAXFunc;
-        s_DefaultSAXHandler.error = RaveXMLErrorFunc;
-        s_DefaultSAXHandler.initialized = 1;
-    }
-
-    xmlSAXHandlerPtr sax = &s_DefaultSAXHandler;
-    int ret = 0;
-    xmlParserCtxtPtr ctxt;
-
-    ctxt = xmlCreateMemoryParserCtxt(buffer, size);
-    if (ctxt == NULL) {
-        return false;
-    }
-    if (ctxt->sax != (xmlSAXHandlerPtr) &xmlDefaultSAXHandler) {
-        xmlFree(ctxt->sax);
-    }
-    ctxt->sax = sax;
-    xmlDetectSAX2(ctxt);
-
-    XMLREADERDATA readerdata(reader, ctxt);
-    ctxt->userData = &readerdata;
-
-    xmlParseDocument(ctxt);
-
-    if (ctxt->wellFormed) {
-        ret = 0;
-    }
-    else {
-        if (ctxt->errNo != 0) {
-            ret = ctxt->errNo;
-        }
-        else {
-            ret = -1;
-        }
-    }
-    if (sax != NULL) {
-        ctxt->sax = NULL;
-    }
-    if (ctxt->myDoc != NULL) {
-        xmlFreeDoc(ctxt->myDoc);
-        ctxt->myDoc = NULL;
-    }
-    xmlFreeParserCtxt(ctxt);
-
-    return ret==0;
-}
-
-}
 
 } // end namespace OpenRAVE
 

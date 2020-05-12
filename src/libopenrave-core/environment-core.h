@@ -216,19 +216,19 @@ public:
     {
         boost::mutex::scoped_lock lockdestroy(_mutexInit);
         if( !_bInit ) {
-            RAVELOG_VERBOSE("environment is already destroyed\n");
+            RAVELOG_VERBOSE_FORMAT("env=%d is already destroyed", GetId());
             return;
         }
 
         // destruction order is *very* important, don't touch it without consultation
         _bInit = false;
 
-        RAVELOG_VERBOSE("Environment destructor\n");
+        RAVELOG_VERBOSE_FORMAT("env=%d destructor", GetId());
         _StopSimulationThread();
 
         // destroy the modules (their destructors could attempt to lock environment, so have to do it before global lock)
         // however, do not clear the _listModules yet
-        RAVELOG_DEBUG("destroy module\n");
+        RAVELOG_DEBUG_FORMAT("env=%d destroy module", GetId());
         list< pair<ModuleBasePtr, std::string> > listModules;
         list<ViewerBasePtr> listViewers = _listViewers;
         {
@@ -425,7 +425,7 @@ public:
         else {
             EnvironmentMutex::scoped_lock lockenv(GetMutex());
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-            _listModules.push_back(make_pair(module, cmdargs));
+            _listModules.emplace_back(module,  cmdargs);
         }
 
         return ret;
@@ -679,6 +679,10 @@ public:
         }
         pbody->_ComputeInternalInformation();
         _pCurrentChecker->InitKinBody(pbody);
+        if( !!pbody->GetSelfCollisionChecker() && pbody->GetSelfCollisionChecker() != _pCurrentChecker ) {
+            // also initialize external collision checker if specified for this body
+            pbody->GetSelfCollisionChecker()->InitKinBody(pbody);
+        }
         _pPhysicsEngine->InitKinBody(pbody);
         // send all the changed callbacks of the body since anything could have changed
         pbody->_PostprocessChangedParameters(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic&~KinBody::Prop_BodyRemoved);
@@ -715,6 +719,10 @@ public:
         }
         robot->_ComputeInternalInformation(); // have to do this after _vecrobots is added since SensorBase::SetName can call EnvironmentBase::GetSensor to initialize itself
         _pCurrentChecker->InitKinBody(robot);
+        if( !!robot->GetSelfCollisionChecker() && robot->GetSelfCollisionChecker() != _pCurrentChecker ) {
+            // also initialize external collision checker if specified for this body
+            robot->GetSelfCollisionChecker()->InitKinBody(robot);
+        }
         _pPhysicsEngine->InitKinBody(robot);
         // send all the changed callbacks of the body since anything could have changed
         robot->_PostprocessChangedParameters(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic&~KinBody::Prop_BodyRemoved);
@@ -1985,7 +1993,7 @@ public:
             }
             for ( size_t ibody = 0; ibody < _vPublishedBodies.size(); ++ibody) {
                 if ( strncmp(_vPublishedBodies[ibody].strname.c_str(), prefix.c_str(), prefix.size()) == 0 ) {
-                    nameTransfPairs.push_back(std::make_pair(_vPublishedBodies[ibody].strname, _vPublishedBodies[ibody].vectrans.at(0)));
+                    nameTransfPairs.emplace_back(_vPublishedBodies[ibody].strname,  _vPublishedBodies[ibody].vectrans.at(0));
                 }
             }
         }
@@ -2001,7 +2009,7 @@ public:
             }
             for ( size_t ibody = 0; ibody < _vPublishedBodies.size(); ++ibody) {
                 if ( strncmp(_vPublishedBodies[ibody].strname.c_str(), prefix.c_str(), prefix.size()) == 0 ) {
-                    nameTransfPairs.push_back(std::make_pair(_vPublishedBodies[ibody].strname, _vPublishedBodies[ibody].vectrans.at(0)));
+                    nameTransfPairs.emplace_back(_vPublishedBodies[ibody].strname,  _vPublishedBodies[ibody].vectrans.at(0));
                 }
             }
         }
@@ -2027,39 +2035,44 @@ public:
     {
         // updated the published bodies, resize dynamically in case an exception occurs
         // when creating an item and bad data is left inside _vPublishedBodies
-        _vPublishedBodies.resize(0);
-        if( _vPublishedBodies.capacity() < _vecbodies.size() ) {
-            _vPublishedBodies.reserve(_vecbodies.size());
-        }
+        _vPublishedBodies.resize(_vecbodies.size());
+        int iwritten = 0;
 
         std::vector<dReal> vdoflastsetvalues;
-        FOREACH(itbody, _vecbodies) {
-            if( (*itbody)->_nHierarchyComputed != 2 ) {
+        for(int ibody = 0; ibody < (int)_vecbodies.size(); ++ibody) {
+            const KinBodyPtr& pbody = _vecbodies[ibody];
+            if( pbody->_nHierarchyComputed != 2 ) {
                 // skip
                 continue;
             }
 
-            _vPublishedBodies.push_back(KinBody::BodyState());
-            KinBody::BodyState& state = _vPublishedBodies.back();
-            state.pbody = *itbody;
-            (*itbody)->GetLinkTransformations(state.vectrans, vdoflastsetvalues);
-            (*itbody)->GetLinkEnableStates(state.vLinkEnableStates);
-            (*itbody)->GetDOFValues(state.jointvalues);
-            state.strname =(*itbody)->GetName();
-            state.uri = (*itbody)->GetURI();
-            state.updatestamp = (*itbody)->GetUpdateStamp();
-            state.environmentid = (*itbody)->GetEnvironmentId();
-            if( (*itbody)->IsRobot() ) {
-                RobotBasePtr probot = RaveInterfaceCast<RobotBase>(*itbody);
+            KinBody::BodyState& state = _vPublishedBodies[iwritten];
+            state.Reset();
+            state.pbody = pbody;
+            pbody->GetLinkTransformations(state.vectrans, vdoflastsetvalues);
+            pbody->GetLinkEnableStates(state.vLinkEnableStates);
+            pbody->GetDOFValues(state.jointvalues);
+            pbody->GetGrabbedInfo(state.vGrabbedInfos);
+            state.strname =pbody->GetName();
+            state.uri = pbody->GetURI();
+            state.updatestamp = pbody->GetUpdateStamp();
+            state.environmentid = pbody->GetEnvironmentId();
+            if( pbody->IsRobot() ) {
+                RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
                 if( !!probot ) {
                     RobotBase::ManipulatorPtr pmanip = probot->GetActiveManipulator();
                     if( !!pmanip ) {
                         state.activeManipulatorName = pmanip->GetName();
                         state.activeManipulatorTransform = pmanip->GetTransform();
                     }
+                    probot->GetConnectedBodyActiveStates(state.vConnectedBodyActiveStates);
                 }
             }
-            _vPublishedBodies.push_back(state);
+            ++iwritten;
+        }
+
+        if( iwritten < _vPublishedBodies.size() ) {
+            _vPublishedBodies.resize(iwritten);
         }
     }
 
@@ -2082,14 +2095,15 @@ protected:
     void _RemoveKinBodyFromIterator(vector<KinBodyPtr>::iterator it)
     {
         // before deleting, make sure no robots are grabbing it!!
-        FOREACH(itrobot, _vecrobots) {
+        FOREACH(itrobot, _vecbodies) {
             KinBody &body = **it;
             if( (*itrobot)->IsGrabbing(body) ) {
-                RAVELOG_WARN("destroy %s already grabbed by robot %s!\n", body.GetName().c_str(), (*itrobot)->GetName().c_str());
+                RAVELOG_WARN_FORMAT("env=%d, remove %s already grabbed by robot %s!", GetId()%body.GetName()%(*itrobot)->GetName());
                 (*itrobot)->Release(body);
             }
         }
 
+        (*it)->ReleaseAllGrabbed();
         if( (*it)->IsRobot() ) {
             vector<RobotBasePtr>::iterator itrobot = std::find(_vecrobots.begin(), _vecrobots.end(), RaveInterfaceCast<RobotBase>(*it));
             if( itrobot != _vecrobots.end() ) {
@@ -2161,7 +2175,7 @@ protected:
                 // clear internal interface lists
                 boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
                 // release all grabbed
-                FOREACH(itrobot,_vecrobots) {
+                FOREACH(itrobot,_vecbodies) {
                     (*itrobot)->ReleaseAllGrabbed();
                 }
                 FOREACH(itbody,_vecbodies) {
@@ -2297,9 +2311,14 @@ protected:
                     KinBodyPtr pnewbody;
                     if( bCheckSharedResources ) {
                         FOREACH(itbody2,vecbodies) {
-                            if( (*itbody2)->GetName() == (*itbody)->GetName() && (*itbody2)->GetKinematicsGeometryHash() == (*itbody)->GetKinematicsGeometryHash() ) {
-                                pnewbody = *itbody2;
-                                break;
+                            if( !(*itbody2) ) {
+                                RAVELOG_WARN_FORMAT("env=%d, a body in vecbodies is not initialized", GetId());
+                            }
+                            else {
+                                if( (*itbody2)->GetName() == (*itbody)->GetName() && (*itbody2)->GetKinematicsGeometryHash() == (*itbody)->GetKinematicsGeometryHash() ) {
+                                    pnewbody = *itbody2;
+                                    break;
+                                }
                             }
                         }
                     }
@@ -2316,7 +2335,7 @@ protected:
                     _mapBodies[pnewbody->GetEnvironmentId()] = pnewbody;
                 }
                 catch(const std::exception &ex) {
-                    RAVELOG_ERROR_FORMAT("failed to clone body %s: %s", (*itbody)->GetName()%ex.what());
+                    RAVELOG_ERROR_FORMAT("env=%d, failed to clone body %s: %s", GetId()%(*itbody)->GetName()%ex.what());
                 }
             }
 
@@ -2487,7 +2506,7 @@ protected:
         listViewers.clear();
 
         if( !bCheckSharedResources ) {
-            if( _bEnableSimulation ) {
+            if( !!_threadSimulation && _bEnableSimulation ) {
                 _StartSimulationThread();
             }
         }
@@ -2544,6 +2563,7 @@ protected:
         boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
         _mapBodies.erase(pbody->_environmentid);
         pbody->_environmentid = 0;
+        pbody->_DeinitializeInternalInformation();
     }
 
     void _StartSimulationThread()

@@ -116,7 +116,7 @@ public:
 
     /// set the gravity direction
     virtual void SetGravity(const Vector& gravity) OPENRAVE_DUMMY_IMPLEMENTATION;
-    virtual Vector GetGravity() OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual const Vector& GetGravity() OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// dynamically simulate system for fTimeElapsed seconds
     /// add torques to the joints of the body. Torques disappear after one timestep of simulation

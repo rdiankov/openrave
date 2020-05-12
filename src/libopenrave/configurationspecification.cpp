@@ -18,6 +18,7 @@
     \brief All definitions that involve ConfigurationSpecification
  */
 #include "libopenrave.h"
+#include <openrave/xmlreaders.h>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/thread/once.hpp>
@@ -239,8 +240,13 @@ std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpec
             uint32_t matchscore=1;
             if( curtokens.size() > 1 && tokens.size() > 1 ) {
                 if( curtokens.at(1) != tokens.at(1) ) {
-                    // both names exist and do not match so cannot go any further!
-                    continue;
+                    if( curtokens.at(0) != "outputSignals" ) { // For outputSignals, the second string is already the signal name
+                        // both names exist and do not match so cannot go any further!
+                        continue;
+                    }
+                }
+                else {
+                    matchscore += 1;
                 }
                 if( curtokens.size() > 2 && tokens.size() > 2 ) {
                     for(size_t i = 2; i < tokens.size(); ++i) {
@@ -1445,7 +1451,9 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
                     }
                     if( vbodyvalues.size() > 0 ) {
                         for(size_t i = 0; i < vdefaultvalues.size(); ++i) {
-                            vdefaultvalues[i] = vbodyvalues.at(vtargetindices[i]);
+                            if( vtargetindices[i] >= 0 ) { // sometimes index can be -1 to indicate that no robot value is mapped. This is used when trying to preserve an output order of values
+                                vdefaultvalues[i] = vbodyvalues.at(vtargetindices[i]);
+                            }
                         }
                     }
                 }
@@ -1874,7 +1882,7 @@ std::istream& operator>>(std::istream& I, ConfigurationSpecification& spec)
             throw OPENRAVE_EXCEPTION_FORMAT(_("error, failed to find </configuration> in %s"),buf.str(),ORE_InvalidArguments);
         }
         ConfigurationSpecification::Reader reader(spec);
-        LocalXML::ParseXMLData(reader, pbuf.c_str(), ppsize);
+        xmlreaders::ParseXMLData(reader, pbuf.c_str(), ppsize);
         BOOST_ASSERT(spec.IsValid());
     }
 

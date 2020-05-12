@@ -249,6 +249,7 @@ void KinBodyItem::Load()
     _osgdata->removeChildren(0, _osgdata->getNumChildren()); // have to remove all the children before creating a new mesh
 
     _veclinks.resize(0);
+    _vecgeoms.resize(_pbody->GetLinks().size());
 
     Transform tbody = _pbody->GetTransform();
     Transform tbodyinv = tbody.inverse();
@@ -278,8 +279,11 @@ void KinBodyItem::Load()
 //        }
 
         _veclinks.push_back(LinkNodes(posglinkroot, posglinktrans));
+        size_t linkindex = itlink - _pbody->GetLinks().begin();
+        _vecgeoms.at(linkindex).resize(0);
 
         for(size_t igeom = 0; igeom < porlink->GetGeometries().size(); ++igeom) {
+            _vecgeoms[linkindex].push_back( GeomNodes(new osg::Group(), new osg::MatrixTransform()) );
             KinBody::Link::GeometryPtr orgeom = porlink->GetGeometries()[igeom];
             if( !orgeom->IsVisible() && _viewmode == VG_RenderOnly ) {
                 continue;
@@ -435,6 +439,7 @@ void KinBodyItem::Load()
                     break;
                 }
                 //  Extract geometry from collision Mesh
+                case GT_Cage:
                 case GT_Container:
                 case GT_TriMesh: {
                     // make triangleMesh
@@ -476,6 +481,8 @@ void KinBodyItem::Load()
                 pgeometryroot->setName(str(boost::format("geom%d")%igeom));
                 //  Apply external transform to local transform
                 posglinktrans->addChild(pgeometryroot);
+
+                _vecgeoms[linkindex][igeom] = GeomNodes(pgeometrydata, pgeometryroot); // overwrite
             }
         }
     }
@@ -813,6 +820,21 @@ KinBody::LinkPtr KinBodyItem::GetLinkFromOSG(OSGNodePtr plinknode) const
     return KinBody::LinkPtr();
 }
 
+KinBody::Link::GeometryPtr KinBodyItem::GetGeomFromOSG(OSGNodePtr pgeomnode) const
+{
+    FindNode search(pgeomnode);
+    for(size_t ilink = 0; ilink < _vecgeoms.size(); ++ilink) {
+        for(size_t igeom = 0; igeom < _vecgeoms.at(ilink).size(); ++igeom) {
+            search.apply(*_vecgeoms[ilink][igeom].second);
+            if( search.IsFound() ) {
+                return _pbody->GetLinks().at(ilink)->GetGeometries().at(igeom);
+            }
+        }
+    }
+
+    return KinBody::Link::GeometryPtr();
+}
+
 RobotItem::RobotItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, RobotBasePtr robot, ViewGeometry viewgeom) : KinBodyItem(osgSceneRoot, osgFigureRoot, robot, viewgeom)
 {
     _probot = robot;
@@ -911,7 +933,7 @@ void RobotItem::Load()
                 //Set the screen alignment - always face the screen
                 text->setAxisAlignment(osgText::Text::SCREEN);
                 text->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
-                text->setCharacterSize(25.0);
+                text->setCharacterSize(50.0);
 
                 text->setColor(osg::Vec4(0,0,0,1));
                 text->setEnableDepthWrites(false);
@@ -965,7 +987,7 @@ void RobotItem::Load()
                 //Set the screen alignment - always face the screen
                 text->setAxisAlignment(osgText::Text::SCREEN);
                 text->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
-                text->setCharacterSize(25.0);
+                text->setCharacterSize(50.0);
 
                 text->setColor(osg::Vec4(0,0,0,1));
                 text->setEnableDepthWrites(false);

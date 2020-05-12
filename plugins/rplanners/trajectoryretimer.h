@@ -101,28 +101,31 @@ public:
         return _parameters;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         // TODO there's a lot of info that is being recomputed which could be cached depending on the configurationspace of the incoming trajectory
         BOOST_ASSERT(!!_parameters && !!ptraj && ptraj->GetEnv()==GetEnv());
         BOOST_ASSERT(_parameters->GetDOF() == _parameters->_configurationspecification.GetDOF());
         std::vector<ConfigurationSpecification::Group>::const_iterator itoldgrouptime = ptraj->GetConfigurationSpecification().FindCompatibleGroup("deltatime",false);
         if( _parameters->_hastimestamps && itoldgrouptime == ptraj->GetConfigurationSpecification()._vgroups.end() ) {
-            RAVELOG_WARN("trajectory does not have timestamps, even though parameters say timestamps are needed\n");
-            return PS_Failed;
+            std::string description = "trajectory does not have timestamps, even though parameters say timestamps are needed\n";
+            RAVELOG_WARN(description);
+            return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
         }
         size_t numpoints = ptraj->GetNumWaypoints();
         if( numpoints == 0 ) {
             // there's nothing to retime...
-            return PS_Failed;
+            std::string description = "there's nothing to retime";
+            return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
         }
         ConfigurationSpecification velspec = _parameters->_configurationspecification.ConvertToVelocitySpecification();
         if( _parameters->_hasvelocities ) {
             // check that all velocity groups are there
             FOREACH(itgroup,velspec._vgroups) {
                 if(ptraj->GetConfigurationSpecification().FindCompatibleGroup(*itgroup,true) == ptraj->GetConfigurationSpecification()._vgroups.end() ) {
-                    RAVELOG_WARN(str(boost::format("trajectory does not have velocity group '%s', even though parameters say is needed")%itgroup->name));
-                    return PS_Failed;
+                    std::string description = str(boost::format("trajectory does not have velocity group '%s', even though parameters say is needed")%itgroup->name);
+                    RAVELOG_WARN(description);
+                    return PlannerStatus(description, PS_Failed);
                 }
             }
         }
@@ -333,11 +336,12 @@ public:
                         // positions, velocities, and timestamps already filled, so check everything
                         FOREACH(itfn, _listcheckvelocityfns) {
                             if( !(*itfn)(itdataprev, itdata, 7) ) {
-                                RAVELOG_VERBOSE_FORMAT("point %d/%d has unreachable velocity", i%numpoints);
+                                std::string description = str(boost::format("point %d/%d has unreachable velocity")%i%numpoints);
+                                RAVELOG_VERBOSE(description);
                                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
                                     (*itfn)(itdataprev, itdata, 7);
                                 }
-                                return PS_Failed;
+                                return PlannerStatus(description, PS_Failed);
                             }
                         }
                     }
@@ -345,8 +349,9 @@ public:
                         FOREACH(itmin, _listmintimefns) {
                             dReal fgrouptime = (*itmin)(itorgdiff, itdataprev, itdata,bUseEndVelocity);
                             if( fgrouptime < 0 ) {
-                                RAVELOG_VERBOSE_FORMAT("point %d/%d has uncomputable minimum time, possibly due to boundary constraints", i%numpoints);
-                                return PS_Failed;
+                                std::string description = str(boost::format("point %d/%d has uncomputable minimum time, possibly due to boundary constraints")%i%numpoints);
+                                RAVELOG_VERBOSE(description);
+                                return PlannerStatus(description, PS_Failed);
                             }
 
                             if( _parameters->_fStepLength > 0 ) {
@@ -364,8 +369,9 @@ public:
                         if( _parameters->_hastimestamps ) {
                             if( *(itdata+_timeoffset) < mintime-g_fEpsilonJointLimit ) {
                                 // this is a commonly occuring message in planning
-                                RAVELOG_VERBOSE(str(boost::format("point %d/%d has unreachable minimum time %e > %e")%i%numpoints%(*(itdata+_timeoffset))%mintime));
-                                return PS_Failed;
+                                std::string description = str(boost::format("point %d/%d has unreachable minimum time %e > %e")%i%numpoints%(*(itdata+_timeoffset))%mintime);
+                                RAVELOG_VERBOSE(description);
+                                return PlannerStatus(description, PS_Failed);
                             }
                         }
                         else {
@@ -374,8 +380,9 @@ public:
                         if( _parameters->_hasvelocities ) {
                             FOREACH(itfn,_listcheckvelocityfns) {
                                 if( !(*itfn)(itdataprev, itdata, 6) ) {
-                                    RAVELOG_WARN(str(boost::format("point %d/%d has unreachable velocity")%i%numpoints));
-                                    return PS_Failed;
+                                    std::string description = str(boost::format("point %d/%d has unreachable velocity")%i%numpoints);
+                                    RAVELOG_WARN(description);
+                                    return PlannerStatus(description, PS_Failed);
                                 }
                             }
                         }
@@ -389,8 +396,9 @@ public:
                     FOREACH(itfn,_listwritefns) {
                         // because the initial time for each ramp could have been stretched to accomodate other points, it is possible for this to fail
                         if( !(*itfn)(itorgdiff, itdataprev, itdata) ) {
-                            RAVELOG_VERBOSE_FORMAT("point %d/%d has unreachable new time %es, probably due to acceleration limtis violated.", i%numpoints%(*(itdata+_timeoffset)));
-                            return PS_Failed;
+                            std::string description = str(boost::format("point %d/%d has unreachable new time %es, probably due to acceleration limtis violated.")%i%numpoints%(*(itdata+_timeoffset)));
+                            RAVELOG_VERBOSE(description);
+                            return PlannerStatus(description, PS_Failed);
                         }
                     }
                     itdataprev = itdata;
@@ -398,11 +406,12 @@ public:
             }
             catch (const std::exception& ex) {
                 string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
-                RAVELOG_WARN(str(boost::format("parabolic planner failed: %s, writing original trajectory to %s")%ex.what()%filename));
+                std::string description = str(boost::format("parabolic planner failed: %s, writing original trajectory to %s")%ex.what()%filename);
+                RAVELOG_WARN(description);
                 ofstream f(filename.c_str());
                 f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                 ptraj->serialize(f);
-                return PS_Failed;
+                return PlannerStatus(description, PS_Failed);
             }
         }
         else {
@@ -415,7 +424,7 @@ public:
         _WriteTrajectory(ptraj,_cachednewspec, _vdata);
         // happens too often for debug message?
         //RAVELOG_VERBOSE(str(boost::format("%s path duration=%es, timestep=%es")%GetXMLId()%ptraj->GetDuration()%_parameters->_fStepLength));
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
 protected:

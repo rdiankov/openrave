@@ -460,12 +460,18 @@ void ParabolicCurve::SetSegment(dReal x0, dReal x1, dReal v0, dReal v1, dReal t)
          We can see that C(a) is a *convex* parabola, i.e., the coefficient of a^2 is strictly
          positive (given that t > 0). Therefore, it always has a minimum and the minimum is at
 
-                 a* = -(2*v0 + t*(x0 - x1) + 2*(v0 - v1)*t^2)/(0.5*t^3 + 2*t).
+                 a* = -(v0*t^2 + t*(x0 - x1) + 2*(v0 - v1))/(0.5*t^3 + 2*t).
 
          >>>> sp.solve(sp.diff(C, a), a)
      */
-    dReal tSqr = t*t;
-    dReal a = -(v0*tSqr + t*(x0 - x1) + 2*(v0 - v1))/(t*(0.5*tSqr + 2));
+    dReal a;
+    if( FuzzyZero(t, g_fRampEpsilon) ) {
+        a = 0;
+    }
+    else {
+        dReal tSqr = t*t;
+        a = -(v0*tSqr + t*(x0 - x1) + 2*(v0 - v1))/(t*(0.5*tSqr + 2));
+    }
 
     if( _ramps.size() != 1) {
         _ramps.resize(1);
@@ -601,7 +607,7 @@ void ParabolicCurve::TrimBack(dReal t)
         _ramps.resize(index);
     }
     else {
-        if( _ramps.size() > index + 1 ) {
+        if( (int)_ramps.size() > index + 1 ) {
             _ramps.resize(index + 1);
         }
         _ramps.back().TrimBack(remainder);

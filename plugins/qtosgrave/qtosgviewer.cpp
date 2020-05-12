@@ -89,6 +89,7 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     _qactChangeViewtoXY = _qactChangeViewtoYZ = _qactChangeViewtoXZ = NULL;
     //osg::setNotifyLevel(osg::DEBUG_FP);
     _userdatakey = std::string("qtosg") + boost::lexical_cast<std::string>(this);
+    debugLevelInfoAct = NULL;
     debugLevelDebugAct = NULL;
     debugLevelVerboseAct = NULL;
 
@@ -341,6 +342,9 @@ void QtOSGViewer::_CreateActions()
 
     pubilshAct = new QAction(tr("Pubilsh Bodies Anytimes"), this);
 
+    debugLevelInfoAct = new QAction(tr("Debug Level (Info)"), this);
+    connect(debugLevelInfoAct, SIGNAL(triggered()), this, SLOT(_SetDebugLevelInfo()));
+
     debugLevelDebugAct = new QAction(tr("Debug Level (Debug)"), this);
     connect(debugLevelDebugAct, SIGNAL(triggered()), this, SLOT(_SetDebugLevelDebug()));
 
@@ -492,6 +496,7 @@ void QtOSGViewer::_CreateMenus()
 
     viewMenu->addAction(viewColAct);
     viewMenu->addAction(pubilshAct);
+    viewMenu->addAction(debugLevelInfoAct);
     viewMenu->addAction(debugLevelDebugAct);
     viewMenu->addAction(debugLevelVerboseAct);
     viewMenu->addAction(showAct);
@@ -602,6 +607,11 @@ void QtOSGViewer::_ProcessAboutDialog()
     msgBox.setStandardButtons(QMessageBox::Ok);
     msgBox.setDefaultButton(QMessageBox::Ok);
     msgBox.exec();
+}
+
+void QtOSGViewer::_SetDebugLevelInfo()
+{
+    RaveSetDebugLevel(Level_Info);
 }
 
 void QtOSGViewer::_SetDebugLevelDebug()
@@ -1136,12 +1146,17 @@ bool QtOSGViewer::_SetItemVisualizationCommand(ostream& sout, istream& sinput)
     std::string itemname, visualizationmode;
     sinput >> itemname >> visualizationmode;
 
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetItemVisualization, this, itemname, visualizationmode));
+    return !!sinput;
+}
+
+void QtOSGViewer::_SetItemVisualization(std::string& itemname, std::string& visualizationmode)
+{
     FOREACH(it, _mapbodies) {
         if( it->second->GetName() == itemname ) {
             it->second->SetVisualizationMode(visualizationmode);
         }
     }
-    return !!sinput;
 }
 
 bool QtOSGViewer::_ShowWorldAxesCommand(ostream& sout, istream& sinput)

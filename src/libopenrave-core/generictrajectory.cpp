@@ -21,8 +21,99 @@
 
 namespace OpenRAVE {
 
+// To distinguish between binary and XML trajectory files
+static const uint16_t MAGIC_NUMBER = 0x62ff;
+static const uint16_t BINARY_TRAJECTORY_VERSION_NUMBER = 0x0003;  // Version number for serialization
+
 static const dReal g_fEpsilonLinear = RavePow(g_fEpsilon,0.9);
 static const dReal g_fEpsilonQuadratic = RavePow(g_fEpsilon,0.45); // should be 0.6...perhaps this is related to parabolic smoother epsilons?
+
+/* Helper functions for binary trajectory file writing */
+inline void WriteBinaryUInt16(std::ostream& f, uint16_t value)
+{
+    f.write((const char*) &value, sizeof(value));
+}
+
+inline void WriteBinaryUInt32(std::ostream& f, uint32_t value)
+{
+    f.write((const char*) &value, sizeof(value));
+}
+
+inline void WriteBinaryInt(std::ostream& f, int value)
+{
+    f.write((const char*) &value, sizeof(value));
+}
+
+inline void WriteBinaryString(std::ostream& f, const std::string& s)
+{
+    BOOST_ASSERT(s.length() <= std::numeric_limits<uint16_t>::max());
+    const uint16_t length = (uint16_t) s.length();
+    WriteBinaryUInt16(f, length);
+    if (length > 0)
+    {
+        f.write(s.c_str(), length);
+    }
+}
+
+inline void WriteBinaryVector(std::ostream&f, const std::vector<dReal>& v)
+{
+    // Indicate number of data points
+    const uint32_t numDataPoints = v.size();
+    WriteBinaryUInt32(f, numDataPoints);
+
+    // Write vector memory block to binary file
+    const uint64_t vectorLengthBytes = numDataPoints*sizeof(dReal);
+    f.write((const char*) &v[0], vectorLengthBytes);
+}
+
+/* Helper functions for binary trajectory file reading */
+inline bool ReadBinaryUInt16(std::istream& f, uint16_t& value)
+{
+    f.read((char*) &value, sizeof(value));
+    return !!f;
+}
+
+inline bool ReadBinaryUInt32(std::istream& f, uint32_t& value)
+{
+    f.read((char*) &value, sizeof(value));
+    return !!f;
+}
+
+inline bool ReadBinaryInt(std::istream& f, int& value)
+{
+    f.read((char*) &value, sizeof(value));
+    return !!f;
+}
+
+inline bool ReadBinaryString(std::istream& f, std::string& s)
+{
+    uint16_t length = 0;
+    ReadBinaryUInt16(f, length);
+    if (length > 0)
+    {
+        s.resize(length);
+        f.read(&s[0], length);
+    }
+    else
+    {
+        s.clear();
+    }
+    return !!f;
+}
+
+inline bool ReadBinaryVector(std::istream& f, std::vector<dReal>& v)
+{
+    // Get number of data points
+    uint32_t numDataPoints = 0;
+    ReadBinaryUInt32(f, numDataPoints);
+    v.resize(numDataPoints);
+
+    // Load binary directly to vector
+    const uint64_t vectorLengthBytes = numDataPoints*sizeof(dReal);
+    f.read((char*) &v[0], vectorLengthBytes);
+
+    return !!f;
+}
 
 class GenericTrajectory : public TrajectoryBase
 {
@@ -73,7 +164,7 @@ public:
             // already init
         }
         else {
-            BOOST_ASSERT(spec.GetDOF()>0 && spec.IsValid());
+            //BOOST_ASSERT(spec.GetDOF()>0 && spec.IsValid()); // when deserializing, can sometimes get invalid spec, but that's ok
             _bInit = false;
             _vgroupinterpolators.resize(0);
             _vgroupvalidators.resize(0);
@@ -81,7 +172,7 @@ public:
             _vddoffsets.resize(0);
             _vdddoffsets.resize(0);
             _vintegraloffsets.resize(0);
-            _spec = spec;
+            _spec = spec; // what if this pointer is the same?
             // order the groups based on computation order
             stable_sort(_spec._vgroups.begin(),_spec._vgroups.end(),boost::bind(&GenericTrajectory::SortGroups,this,_1,_2));
             _timeoffset = -1;
@@ -194,6 +285,7 @@ public:
             std::vector<dReal>::iterator it = std::lower_bound(_vaccumtime.begin(),_vaccumtime.end(),time);
             if( it == _vaccumtime.begin() ) {
                 std::copy(_vtrajdata.begin(),_vtrajdata.begin()+_spec.GetDOF(),data.begin());
+                data.at(_timeoffset) = time;
             }
             else {
                 size_t index = it-_vaccumtime.begin();
@@ -318,26 +410,166 @@ public:
         return _vaccumtime.size() > 0 ? _vaccumtime.back() : 0;
     }
 
-    void serialize(std::ostream& O, int options) const
+    // New feature: Store trajectory file in binary
+    void serialize(std::ostream& O, int options) const override
     {
-        O << "<trajectory>" << endl << _spec;
-        O << "<data count=\"" << GetNumWaypoints() << "\">" << endl;
-        FOREACHC(it,_vtrajdata) {
-            O << *it << " ";
+        if( options & 0x8000 ) {
+            TrajectoryBase::serialize(O, options);
         }
-        O << "</data>" << endl;
-        if( GetDescription().size() > 0 ) {
-            O << "<description><![CDATA[" << GetDescription() << "]]></description>" << endl;
-        }
-        if( GetReadableInterfaces().size() > 0 ) {
-            xmlreaders::StreamXMLWriterPtr writer(new xmlreaders::StreamXMLWriter("readable"));
-            FOREACHC(it, GetReadableInterfaces()) {
-                BaseXMLWriterPtr newwriter = writer->AddChild(it->first);
-                it->second->Serialize(newwriter,options);
+        else {
+            // NOTE: Ignore 'options' argument for now
+
+            // Write binary file header
+            WriteBinaryUInt16(O, MAGIC_NUMBER);
+            WriteBinaryUInt16(O, BINARY_TRAJECTORY_VERSION_NUMBER);
+
+            /* Store meta-data */
+
+            // Indicate size of meta data
+            const ConfigurationSpecification& spec = this->GetConfigurationSpecification();
+            const uint16_t numGroups = spec._vgroups.size();
+            WriteBinaryUInt16(O, numGroups);
+
+            FOREACHC(itgroup, spec._vgroups)
+            {
+                WriteBinaryString(O, itgroup->name);   // Writes group name
+                WriteBinaryInt(O, itgroup->offset);    // Writes offset
+                WriteBinaryInt(O, itgroup->dof);       // Writes dof
+                WriteBinaryString(O, itgroup->interpolation);  // Writes interpolation
             }
-            writer->Serialize(O);
+
+            /* Store data waypoints */
+            WriteBinaryVector(O, this->_vtrajdata);
+
+            WriteBinaryString(O, GetDescription());
+
+            // Readable interfaces, added on BINARY_TRAJECTORY_VERSION_NUMBER=0x0002
+            std::stringstream ss;
+            const uint16_t numReadableInterfaces = GetReadableInterfaces().size();
+            WriteBinaryUInt16(O, numReadableInterfaces);
+            FOREACHC(itReadableInterface, GetReadableInterfaces()) {
+                WriteBinaryString(O, itReadableInterface->first);  // xmlid
+
+                // try to see if the readable interface is a known type
+                ss.str(std::string());
+
+                std::string readerType;
+                xmlreaders::HierarchicalXMLReadablePtr pHierarchical = boost::dynamic_pointer_cast<xmlreaders::HierarchicalXMLReadable>(itReadableInterface->second);
+                xmlreaders::StreamXMLWriterPtr writer;
+                if( !!pHierarchical ) {
+                    readerType = "HierarchicalXMLReadable";
+                    writer.reset(new xmlreaders::StreamXMLWriter("root")); // need to parse with xml, so need a root
+                }
+                else {
+                    writer.reset(new xmlreaders::StreamXMLWriter(std::string()));
+                }
+                itReadableInterface->second->Serialize(writer, options);
+                writer->Serialize(ss);
+
+                WriteBinaryString(O, ss.str());
+                WriteBinaryString(O, readerType);
+            }
         }
-        O << "</trajectory>" << endl;
+    }
+
+    void deserialize(std::istream& I) override
+    {
+        // Check whether binary or XML file
+        stringstream::streampos pos = I.tellg();  // Save old position
+        uint16_t binaryFileHeader = 0;
+        if( !ReadBinaryUInt16(I, binaryFileHeader) ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot read first 2 bytes for deserializing traj, stream might be empty "),ORE_InvalidArguments);
+        }
+
+        // Read binary trajectory files
+        if (binaryFileHeader == MAGIC_NUMBER)
+        {
+            uint16_t versionNumber = 0;
+            ReadBinaryUInt16(I, versionNumber);
+
+            // currently supported versions: 0x0001, 0x0002
+            if (versionNumber > BINARY_TRAJECTORY_VERSION_NUMBER || versionNumber < 0x0001)
+            {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("unsupported trajectory format version %d "),versionNumber,ORE_InvalidArguments);
+            }
+
+            /* Read metadata */
+
+            // Read number of groups
+            uint16_t numGroups = 0;
+            ReadBinaryUInt16(I, numGroups);
+
+            _bInit = false;
+            _spec._vgroups.resize(numGroups);
+            FOREACH(itgroup, _spec._vgroups)
+            {
+                ReadBinaryString(I, itgroup->name);             // Read group name
+                ReadBinaryInt(I, itgroup->offset);              // Read offset
+                ReadBinaryInt(I, itgroup->dof);                 // Read dof
+                ReadBinaryString(I, itgroup->interpolation);    // Read interpolation
+            }
+            this->Init(_spec);
+
+            /* Read trajectory data */
+            ReadBinaryVector(I, this->_vtrajdata);
+            ReadBinaryString(I, __description);
+
+            // clear out existing readable interfaces
+            {
+                const READERSMAP& readableInterfaces = GetReadableInterfaces();
+                for (READERSMAP::const_iterator itReadableInterface = readableInterfaces.begin(); itReadableInterface != readableInterfaces.end(); ++itReadableInterface ) {
+                    SetReadableInterface(itReadableInterface->first, XMLReadablePtr());
+                }
+            }
+            // versions >= 0x0002 have readable interfaces
+            if (versionNumber >= 0x0002)
+            {
+                // read readable interfaces
+                uint16_t numReadableInterfaces = 0;
+                ReadBinaryUInt16(I, numReadableInterfaces);
+                std::string xmlid, readerType;
+                std::string serializedReadableInterface;
+                for (size_t readableInterfaceIndex = 0; readableInterfaceIndex < numReadableInterfaces; ++readableInterfaceIndex)
+                {
+                    ReadBinaryString(I, xmlid);
+                    ReadBinaryString(I, serializedReadableInterface);
+
+                    XMLReadablePtr readableInterface;
+                    if( versionNumber >= 3 ) {
+                        ReadBinaryString(I, readerType);
+                        if( readerType == "HierarchicalXMLReadable" ) {
+                            xmlreaders::HierarchicalXMLReader xmlreader(xmlid, AttributesList());
+                            xmlreaders::ParseXMLData(xmlreader, serializedReadableInterface.c_str(), serializedReadableInterface.size());
+                            if( !!xmlreader.GetHierarchicalReadable() ) {
+                                // should be one root only
+                                if( xmlreader.GetHierarchicalReadable()->_listchildren.size() == 1 ) {
+                                    readableInterface = xmlreader.GetHierarchicalReadable()->_listchildren.front();
+                                }
+                                else {
+                                    RAVELOG_WARN_FORMAT("tried to parse readable interface %s, but got more than one root", xmlid);
+                                    readableInterface = xmlreader.GetHierarchicalReadable();
+                                }
+                            }
+                            else {
+                                readableInterface = xmlreader.GetReadable();
+                            }
+                        }
+                        else {
+                            readableInterface.reset(new xmlreaders::StringXMLReadable(xmlid, serializedReadableInterface));
+                        }
+                    }
+                    else {
+                        readableInterface.reset(new xmlreaders::StringXMLReadable(xmlid, serializedReadableInterface));
+                    }
+                    SetReadableInterface(xmlid, readableInterface);
+                }
+            }
+        }
+        else {
+            // try XML deserialization
+            I.seekg((size_t) pos);                  // Reset to initial positoin
+            TrajectoryBase::deserialize(I);
+        }
     }
 
     void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
@@ -552,6 +784,16 @@ protected:
 
             if( nNeedNeighboringInfo ) {
                 std::vector<ConfigurationSpecification::Group>::const_iterator itderiv = _spec.FindTimeDerivativeGroup(_spec._vgroups[i]);
+
+                // only correct derivative if interpolation is the expected one compared to _spec._vgroups[i].interpolation
+                // this is necessary in order to prevent using wrong information. For example, sometimes position and velocity can both be linear, which means they are decoupled from their interpolation
+                if( itderiv != _spec._vgroups.end() ) {
+                    if( itderiv->interpolation.size() == 0 || itderiv->interpolation != ConfigurationSpecification::GetInterpolationDerivative(_spec._vgroups[i].interpolation) ) {
+                        // not correct interpolation, so remove from being a real derivative
+                        itderiv = _spec._vgroups.end();
+                    }
+                }
+
                 if( itderiv == _spec._vgroups.end() ) {
                     // don't throw an error here since it is unknown if the trajectory will be sampled
                     for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
@@ -563,6 +805,13 @@ protected:
                         _vderivoffsets[_spec._vgroups[i].offset+j] = itderiv->offset+j;
                     }
                     std::vector<ConfigurationSpecification::Group>::const_iterator itdd = _spec.FindTimeDerivativeGroup(*itderiv);
+                    if( itdd != _spec._vgroups.end() ) {
+                        if( itdd->interpolation.size() == 0 || itdd->interpolation != ConfigurationSpecification::GetInterpolationDerivative(itderiv->interpolation) ) {
+                            // not correct interpolation, so remove from being a real derivative
+                            itdd = _spec._vgroups.end();
+                        }
+                    }
+
                     if( itdd == _spec._vgroups.end() ) {
                         // don't throw an error here since it is unknown if the trajectory will be sampled
                         for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
@@ -574,6 +823,13 @@ protected:
                             _vddoffsets[_spec._vgroups[i].offset+j] = itdd->offset+j;
                         }
                         std::vector<ConfigurationSpecification::Group>::const_iterator itddd = _spec.FindTimeDerivativeGroup(*itdd);
+                        if( itddd != _spec._vgroups.end() ) {
+                            if( itddd->interpolation.size() == 0 || itddd->interpolation != ConfigurationSpecification::GetInterpolationDerivative(itdd->interpolation) ) {
+                                // not correct interpolation, so remove from being a real derivative
+                                itddd = _spec._vgroups.end();
+                            }
+                        }
+
                         if( itddd == _spec._vgroups.end() ) {
                             // don't throw an error here since it is unknown if the trajectory will be sampled
                             for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
@@ -588,6 +844,7 @@ protected:
                     }
                 }
                 std::vector<ConfigurationSpecification::Group>::const_iterator itintegral = _spec.FindTimeIntegralGroup(_spec._vgroups[i]);
+                // TODO check interpolation param for consistency
                 if( itintegral == _spec._vgroups.end() ) {
                     // don't throw an error here since it is unknown if the trajectory will be sampled
                     for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
@@ -890,7 +1147,7 @@ protected:
                     dReal dd1 = _vtrajdata[_spec.GetDOF()+offset+ddoffset+i];
                     dReal c5 = (-0.5*dd0 + dd1*0.5)*ideltatime3 - (3*deriv0 + 3*deriv1)*ideltatime4 + px*6*ideltatime5;
                     dReal c4 = (1.5*dd0 - dd1)*ideltatime2 + (8*deriv0 + 7*deriv1)*ideltatime3 - px*15*ideltatime4;
-                    dReal c3 = (-1.5*dd0 + dd1*0.5)*ideltatime + (- 6*deriv0 - 4*deriv1)*ideltatime2 + px*10*ideltatime3;
+                    dReal c3 = (-1.5*dd0 + dd1*0.5)*ideltatime + (-6*deriv0 - 4*deriv1)*ideltatime2 + px*10*ideltatime3;
                     data[g.offset+i] = p0 + deltatime*(deriv0 + deltatime*(0.5*dd0 + deltatime*(c3 + deltatime*(c4 + deltatime*c5))));
                 }
             }
@@ -958,9 +1215,9 @@ protected:
                     //dReal c6 = A[0]*b[0] + A[1]*b[1] + A[2]*b[2];
                     //dReal c5 = A[3]*b[0] + A[4]*b[1] + A[5]*b[2];
                     //dReal c4 = A[6]*b[0] + A[7]*b[1] + A[8]*b[2];
-                    dReal c6 = (-dd0 - dd1)*0.5*ideltatime4 + (- ddd0 + ddd1)/12.0*ideltatime3 + (-deriv0 + deriv1)*ideltatime5;
+                    dReal c6 = (-dd0 - dd1)*0.5*ideltatime4 + (-ddd0 + ddd1)/12.0*ideltatime3 + (-deriv0 + deriv1)*ideltatime5;
                     dReal c5 = (1.6*dd0 + 1.4*dd1)*ideltatime3 + (0.3*ddd0 - ddd1*0.2)*ideltatime2 + (3*deriv0 - 3*deriv1)*ideltatime4;
-                    dReal c4 = (-1.5*dd0 - dd1)*ideltatime2 + (- 0.375*ddd0 + ddd1*0.125)*ideltatime + (-2.5*deriv0 + 2.5*deriv1)*ideltatime3;
+                    dReal c4 = (-1.5*dd0 - dd1)*ideltatime2 + (-0.375*ddd0 + ddd1*0.125)*ideltatime + (-2.5*deriv0 + 2.5*deriv1)*ideltatime3;
                     data[g.offset+i] = p0 + deltatime*(deriv0 + deltatime*(0.5*dd0 + deltatime*(ddd0/6.0 + deltatime*(c4 + deltatime*(c5 + deltatime*c6)))));
                 }
             }

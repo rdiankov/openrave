@@ -146,7 +146,7 @@ public:
        than or equal to t will always be feasible (considering only velocity and acceleration
        limits).
      */
-    bool _CalculateLeastUpperBoundInoperavtiveTimeInterval(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm, dReal am, dReal& t);
+    bool _CalculateLeastUpperBoundInoperativeTimeInterval(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm, dReal am, dReal& t);
 
     /**
        \brief Solve for a switch time t0 \in [l, u]. For more detail, see comments in the

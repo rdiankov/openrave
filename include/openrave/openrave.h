@@ -87,6 +87,8 @@
 #define RAVE_DEPRECATED
 #endif
 
+#include <openrave/smart_ptr.h>
+
 /// The entire %OpenRAVE library
 namespace OpenRAVE {
 
@@ -94,6 +96,8 @@ namespace OpenRAVE {
 #include <openrave/interfacehashes.h>
 
 }
+
+#include <rapidjson/document.h>
 
 #include <openrave/logging.h>
 
@@ -161,54 +165,23 @@ enum OpenRAVEErrorCode {
     ORE_Timeout=11, ///< process timed out
 };
 
-inline const char* GetErrorCodeString(OpenRAVEErrorCode error)
-{
-    switch(error) {
-    case ORE_Failed: return "Failed";
-    case ORE_InvalidArguments: return "InvalidArguments";
-    case ORE_EnvironmentNotLocked: return "EnvironmentNotLocked";
-    case ORE_CommandNotSupported: return "CommandNotSupported";
-    case ORE_Assert: return "Assert";
-    case ORE_InvalidPlugin: return "InvalidPlugin";
-    case ORE_InvalidInterfaceHash: return "InvalidInterfaceHash";
-    case ORE_NotImplemented: return "NotImplemented";
-    case ORE_InconsistentConstraints: return "InconsistentConstraints";
-    case ORE_NotInitialized: return "NotInitialized";
-    case ORE_InvalidState: return "InvalidState";
-    case ORE_Timeout: return "Timeout";
-    }
-    // should throw an exception?
-    return "";
-}
-
 /// \brief Exception that all OpenRAVE internal methods throw; the error codes are held in \ref OpenRAVEErrorCode.
-class OPENRAVE_API openrave_exception : public std::exception
+class OPENRAVE_API OpenRAVEException : public std::exception
 {
 public:
-    openrave_exception() : std::exception(), _s("unknown exception"), _error(ORE_Failed) {
+    OpenRAVEException();
+    OpenRAVEException(const std::string& s, OpenRAVEErrorCode error=ORE_Failed);
+    virtual ~OpenRAVEException() throw() {
     }
-    openrave_exception(const std::string& s, OpenRAVEErrorCode error=ORE_Failed) : std::exception() {
-        _error = error;
-        _s = "openrave (";
-        _s += GetErrorCodeString(_error);
-        _s += "): ";
-        _s += s;
-    }
-    virtual ~openrave_exception() throw() {
-    }
-    char const* what() const throw() {
-        return _s.c_str();
-    }
-    const std::string& message() const {
-        return _s;
-    }
-    OpenRAVEErrorCode GetCode() const {
-        return _error;
-    }
+    char const* what() const throw();
+    const std::string& message() const;
+    OpenRAVEErrorCode GetCode() const;
 private:
     std::string _s;
     OpenRAVEErrorCode _error;
 };
+
+typedef OpenRAVEException openrave_exception;
 
 class OPENRAVE_LOCAL CaseInsensitiveCompare
 {
@@ -277,9 +250,9 @@ typedef boost::weak_ptr<SerializableData> SerializableDataWeakPtr;
 
 #define OPENRAVE_ASSERT_OP_FORMAT0(expr1,op,expr2,s, errorcode) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s %s %s, (eval %s %s %s) %s")%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)%(s)),errorcode); } }
 
-#define OPENRAVE_ASSERT_OP(expr1,op,expr2) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s %s %s, (eval %s %s %s) ")%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)),ORE_Assert); } }
+#define OPENRAVE_ASSERT_OP(expr1,op,expr2) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s %s %s, (eval %s %s %s) ")%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)),OpenRAVE::ORE_Assert); } }
 
-#define OPENRAVE_DUMMY_IMPLEMENTATION { throw OPENRAVE_EXCEPTION_FORMAT0("not implemented",ORE_NotImplemented); }
+#define OPENRAVE_DUMMY_IMPLEMENTATION { throw OPENRAVE_EXCEPTION_FORMAT0("not implemented",OpenRAVE::ORE_NotImplemented); }
 
 /// \brief Enumeration of all the interfaces.
 enum InterfaceType
@@ -381,6 +354,7 @@ class BaseXMLWriter;
 typedef boost::shared_ptr<BaseXMLWriter> BaseXMLWriterPtr;
 typedef boost::shared_ptr<BaseXMLWriter const> BaseXMLWriterConstPtr;
 
+
 ///< Cloning Options for interfaces and environments
 enum CloningOptions {
     Clone_Bodies = 1, ///< clone all the bodies/robots of the environment, exclude attached interfaces like sensors/controllers
@@ -460,6 +434,7 @@ public:
 };
 
 typedef boost::function<BaseXMLReaderPtr(InterfaceBasePtr, const AttributesList&)> CreateXMLReaderFn;
+
 
 /// \brief reads until the tag ends
 class OPENRAVE_API DummyXMLReader : public BaseXMLReader
@@ -824,7 +799,7 @@ protected:
     virtual ConfigurationSpecification ConvertToVelocitySpecification() const;
 
     /** \brief converts all the groups to the corresponding derivative group and returns the specification
-        
+
         The new derivative configuration space will have a one-to-one correspondence with the original configuration.
         The interpolation of each of the groups will correspondingly represent the derivative as returned by \ref GetInterpolationDerivative(deriv).
         Only position specifications will be converted, any other groups will be left untouched.
@@ -1354,6 +1329,167 @@ public:
         return 1e30;
     }
 
+    /// \brief Computes the translational distance squared between two IK parmaeterizations.
+    inline dReal ComputeTransDistanceSqr(const IkParameterization& ikparam) const
+    {
+        BOOST_ASSERT(_type==ikparam.GetType());
+        switch(_type) {
+        case IKP_Transform6D: {
+            return (GetTransform6D().trans-ikparam.GetTransform6D().trans).lengthsqr3();
+        }
+        case IKP_Translation3D:
+            return (GetTranslation3D()-ikparam.GetTranslation3D()).lengthsqr3();
+        case IKP_Ray4D: {
+            Vector pos0 = GetRay4D().pos - GetRay4D().dir*GetRay4D().dir.dot(GetRay4D().pos);
+            Vector pos1 = ikparam.GetRay4D().pos - ikparam.GetRay4D().dir*ikparam.GetRay4D().dir.dot(ikparam.GetRay4D().pos);
+            return (pos0-pos1).lengthsqr3();
+        }
+        case IKP_TranslationDirection5D: {
+            return (GetTranslationDirection5D().pos-ikparam.GetTranslationDirection5D().pos).lengthsqr3();
+        }
+        case IKP_TranslationXY2D: {
+            return (GetTranslationXY2D()-ikparam.GetTranslationXY2D()).lengthsqr2();
+        }
+        case IKP_TranslationXYOrientation3D: {
+            Vector v0 = GetTranslationXYOrientation3D();
+            Vector v1 = ikparam.GetTranslationXYOrientation3D();
+            return (v0-v1).lengthsqr2();
+        }
+        case IKP_TranslationLocalGlobal6D: {
+            std::pair<Vector,Vector> p0 = GetTranslationLocalGlobal6D(), p1 = ikparam.GetTranslationLocalGlobal6D();
+            return (p0.first-p1.first).lengthsqr3();
+        }
+        case IKP_TranslationXAxisAngle4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationXAxisAngle4D(), p1 = ikparam.GetTranslationXAxisAngle4D();
+            return (p0.first-p1.first).lengthsqr3();
+        }
+        case IKP_TranslationYAxisAngle4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationYAxisAngle4D(), p1 = ikparam.GetTranslationYAxisAngle4D();
+            return (p0.first-p1.first).lengthsqr3();
+        }
+        case IKP_TranslationZAxisAngle4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationZAxisAngle4D(), p1 = ikparam.GetTranslationZAxisAngle4D();
+            return (p0.first-p1.first).lengthsqr3();
+        }
+        case IKP_TranslationXAxisAngleZNorm4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationXAxisAngleZNorm4D(), p1 = ikparam.GetTranslationXAxisAngleZNorm4D();
+            return (p0.first-p1.first).lengthsqr3();
+        }
+        case IKP_TranslationYAxisAngleXNorm4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationYAxisAngleXNorm4D(), p1 = ikparam.GetTranslationYAxisAngleXNorm4D();
+            return (p0.first-p1.first).lengthsqr3();
+        }
+        case IKP_TranslationZAxisAngleYNorm4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationZAxisAngleYNorm4D(), p1 = ikparam.GetTranslationZAxisAngleYNorm4D();
+            return (p0.first-p1.first).lengthsqr3();
+        }
+        default:
+            throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", _type,ORE_InvalidArguments);
+        }
+        return 1e30;
+    }
+
+    /// \brief Computes the rotational distance squared between two IK parmaeterizations.
+    inline dReal ComputeRotDistanceSqr(const IkParameterization& ikparam) const
+    {
+        BOOST_ASSERT(_type==ikparam.GetType());
+        switch(_type) {
+        case IKP_Transform6D: {
+            Transform t0 = GetTransform6D(), t1 = ikparam.GetTransform6D();
+            dReal fcos = RaveFabs(t0.rot.dot(t1.rot));
+            dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
+            return facos*facos;
+        }
+        case IKP_Rotation3D: {
+            dReal fcos = RaveFabs(GetRotation3D().dot(ikparam.GetRotation3D()));
+            dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
+            return facos*facos;
+        }
+        case IKP_Direction3D: {
+            dReal fcos = GetDirection3D().dot(ikparam.GetDirection3D());
+            dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
+            return facos*facos;
+        }
+        case IKP_Ray4D: {
+            dReal fcos = GetRay4D().dir.dot(ikparam.GetRay4D().dir);
+            dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
+            return facos*facos;
+        }
+        case IKP_Lookat3D: {
+            Vector v = GetLookat3D()-ikparam.GetLookat3D();
+            dReal s = v.dot3(ikparam.GetLookat3DDirection());
+            if( s >= -1 ) {     // ikparam's lookat is always 1 beyond the origin, this is just the convention for testing...
+                v -= s*ikparam.GetLookat3DDirection();
+            }
+            return v.lengthsqr3();
+        }
+        case IKP_TranslationDirection5D: {
+            dReal fcos = GetTranslationDirection5D().dir.dot(ikparam.GetTranslationDirection5D().dir);
+            dReal facos = fcos >= 1 ? 0 : RaveAcos(fcos);
+            return facos*facos;
+        }
+        case IKP_TranslationXYOrientation3D: {
+            Vector v0 = GetTranslationXYOrientation3D();
+            Vector v1 = ikparam.GetTranslationXYOrientation3D();
+            dReal anglediff = v0.z-v1.z;
+            if (anglediff < dReal(-PI)) {
+                anglediff += dReal(2*PI);
+                while (anglediff < dReal(-PI))
+                    anglediff += dReal(2*PI);
+            }
+            else if (anglediff > dReal(PI)) {
+                anglediff -= dReal(2*PI);
+                while (anglediff > dReal(PI))
+                    anglediff -= dReal(2*PI);
+            }
+            return anglediff*anglediff;
+        }
+        case IKP_TranslationLocalGlobal6D: {
+            std::pair<Vector,Vector> p0 = GetTranslationLocalGlobal6D(), p1 = ikparam.GetTranslationLocalGlobal6D();
+            return (p0.second-p1.second).lengthsqr3();
+        }
+        case IKP_TranslationXAxisAngle4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationXAxisAngle4D(), p1 = ikparam.GetTranslationXAxisAngle4D();
+            // dot product with axis is always in [0,pi]
+            dReal angle0 = RaveFabs(NormalizeCircularAnglePrivate(p0.second, -PI, PI));
+            dReal angle1 = RaveFabs(NormalizeCircularAnglePrivate(p1.second, -PI, PI));
+            return (angle0-angle1)*(angle0-angle1);
+        }
+        case IKP_TranslationYAxisAngle4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationYAxisAngle4D(), p1 = ikparam.GetTranslationYAxisAngle4D();
+            // dot product with axis is always in [0,pi]
+            dReal angle0 = RaveFabs(NormalizeCircularAnglePrivate(p0.second, -PI, PI));
+            dReal angle1 = RaveFabs(NormalizeCircularAnglePrivate(p1.second, -PI, PI));
+            return (angle0-angle1)*(angle0-angle1);
+        }
+        case IKP_TranslationZAxisAngle4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationZAxisAngle4D(), p1 = ikparam.GetTranslationZAxisAngle4D();
+            // dot product with axis is always in [0,pi]
+            dReal angle0 = RaveFabs(NormalizeCircularAnglePrivate(p0.second, -PI, PI));
+            dReal angle1 = RaveFabs(NormalizeCircularAnglePrivate(p1.second, -PI, PI));
+            return (angle0-angle1)*(angle0-angle1);
+        }
+        case IKP_TranslationXAxisAngleZNorm4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationXAxisAngleZNorm4D(), p1 = ikparam.GetTranslationXAxisAngleZNorm4D();
+            dReal anglediff = NormalizeCircularAnglePrivate(p0.second-p1.second, -PI, PI);
+            return anglediff*anglediff;
+        }
+        case IKP_TranslationYAxisAngleXNorm4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationYAxisAngleXNorm4D(), p1 = ikparam.GetTranslationYAxisAngleXNorm4D();
+            dReal anglediff = NormalizeCircularAnglePrivate(p0.second-p1.second, -PI, PI);
+            return anglediff*anglediff;
+        }
+        case IKP_TranslationZAxisAngleYNorm4D: {
+            std::pair<Vector,dReal> p0 = GetTranslationZAxisAngleYNorm4D(), p1 = ikparam.GetTranslationZAxisAngleYNorm4D();
+            dReal anglediff = NormalizeCircularAnglePrivate(p0.second-p1.second, -PI, PI);
+            return anglediff*anglediff;
+        }
+        default:
+            throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", _type,ORE_InvalidArguments);
+        }
+        return 1e30;
+    }
+
     /// \brief fills the iterator with the serialized values of the ikparameterization.
     ///
     /// The container the iterator points to needs to have \ref GetNumberOfValues() available.
@@ -1562,6 +1698,17 @@ public:
         _mapCustomData[name][0] = value;
     }
 
+    /// \brief sets named custom data in the ik parameterization (\see SetCustomValues)
+    inline void SetCustomValue(const std::string& name, dReal value0, dReal value1, dReal value2)
+    {
+        OPENRAVE_ASSERT_OP_FORMAT0( name.size(), >, 0, "name is empty", ORE_InvalidArguments );
+        OPENRAVE_ASSERT_OP_FORMAT0(std::count_if(name.begin(), name.end(), _IsValidCharInName), ==, (int)name.size(), "name has invalid characters",ORE_InvalidArguments);
+        _mapCustomData[name].resize(3);
+        _mapCustomData[name][0] = value0;
+        _mapCustomData[name][1] = value1;
+        _mapCustomData[name][2] = value2;
+    }
+
     /// \brief gets custom data if it exists, returns false if it doesn't
     inline bool GetCustomValues(const std::string& name, std::vector<dReal>& values) const
     {
@@ -1571,6 +1718,15 @@ public:
         }
         values = it->second;
         return true;
+    }
+
+    /// \brief returns the first element of a custom value. If _mapCustomData does not have 'name' and is not > 0, then will return defaultValue
+    inline dReal GetCustomValue(const std::string& name, dReal defaultValue) const {
+        std::map<std::string, std::vector<dReal> >::const_iterator it = _mapCustomData.find(name);
+        if( it != _mapCustomData.end() && it->second.size() > 0 ) {
+            return it->second[0];
+        }
+        return defaultValue;
     }
 
     /// \brief returns a const reference of the custom data key/value pairs
@@ -1922,6 +2078,10 @@ public:
         _mapCustomData.swap(r._mapCustomData);
     }
 
+    void SerializeJSON(rapidjson::Value& rIkParameterization, rapidjson::Document::AllocatorType& alloc, dReal fUnitScale=1.0) const;
+
+    void DeserializeJSON(const rapidjson::Value& rIkParameterization, dReal fUnitScale=1.0);
+
 protected:
     inline static bool _IsValidCharInName(char c) {
         return c < 0 || c >= 33;
@@ -2165,6 +2325,10 @@ enum DOFAffine
     DOF_RotationMask=(DOF_RotationAxis|DOF_Rotation3D|DOF_RotationQuat), ///< mask for all bits representing 3D rotations
     DOF_Transform = (DOF_XYZ|DOF_RotationQuat), ///< translate and rotate freely in 3D space
 };
+
+/** \brief returns a string representation of the error code
+ */
+OPENRAVE_API const char* RaveGetErrorCodeString(OpenRAVEErrorCode error);
 
 /** \brief Given a mask of affine dofs and a dof inside that mask, returns the index where the value could be found.
 
@@ -2495,7 +2659,7 @@ OPENRAVE_API int RaveGetDataAccess();
 
 /// \brief Gets the default viewer type name
 OPENRAVE_API std::string RaveGetDefaultViewerType();
-    
+
 /** \brief Returns the gettext translated string of the given message id
 
     \param domainname translation domain name
@@ -2562,7 +2726,7 @@ typedef void (*PluginExportFn_OnRaveInitialized)();
 /// \brief Called when OpenRAVE global runtime is about to be destroyed. See \ref OnRavePreDestroy.
 /// \ingroup plugin_exports
 typedef void (*PluginExportFn_OnRavePreDestroy)();
-    
+
 /// \deprecated (12/01/01)
 typedef InterfaceBasePtr (*PluginExportFn_CreateInterface)(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr env) RAVE_DEPRECATED;
 
@@ -2576,10 +2740,11 @@ const std::string& IkParameterization::GetName() const
     if( it != RaveGetIkParameterizationMap().end() ) {
         return it->second;
     }
-    throw openrave_exception(str(boost::format("IkParameterization iktype 0x%x not supported")));
+    throw openrave_exception(str(boost::format("IkParameterization iktype 0x%x not supported")%_type));
 }
 
 } // end namespace OpenRAVE
+
 
 BOOST_STATIC_ASSERT(OPENRAVE_VERSION_MAJOR>=0&&OPENRAVE_VERSION_MAJOR<=255);
 BOOST_STATIC_ASSERT(OPENRAVE_VERSION_MINOR>=0&&OPENRAVE_VERSION_MINOR<=255);

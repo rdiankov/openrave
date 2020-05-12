@@ -170,6 +170,8 @@ public slots:
     /// \brief show an about dialog
     void _ProcessAboutDialog();
 
+    void _SetDebugLevelInfo();
+
     void _SetDebugLevelDebug();
 
     void _SetDebugLevelVerbose();
@@ -330,7 +332,7 @@ public:
 
     virtual void _SetCamera(RaveTransform<float> trans, float focalDistance);
     virtual void _SetCameraDistanceToFocus(float focalDistance);
-
+    virtual void _SetItemVisualization(std::string& itemname, std::string& visualizationmode);
     virtual void _SetProjectionMode(const std::string& projectionMode);
     virtual void _SetBkgndColor(const RaveVector<float>& color);
 
@@ -442,6 +444,7 @@ public:
     QAction* viewCamAct;
     QAction* viewColAct;
     QAction* pubilshAct;
+    QAction* debugLevelInfoAct;
     QAction* debugLevelDebugAct;
     QAction* debugLevelVerboseAct;
     QAction* showAct;

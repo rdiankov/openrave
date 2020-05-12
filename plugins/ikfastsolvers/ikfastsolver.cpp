@@ -52,7 +52,7 @@ public:
         _fFreeIncRevolute = PI/8; // arbitrary
         _fFreeIncPrismaticNum = 10.0; // arbitrary
         for(size_t i = 0; i < _vfreeparams.size(); ++i) {
-            _vfreeparams[i] = ikfunctions->_GetFreeParameters()[i];
+            _vfreeparams[i] = ikfunctions->_GetFreeIndices()[i];
         }
         _nTotalDOF = ikfunctions->_GetNumJoints();
         _iktype = static_cast<IkParameterizationType>(ikfunctions->_GetIkType());
@@ -62,6 +62,10 @@ public:
                         "sets the ik threshold for validating returned ik solutions");
         RegisterCommand("SetJacobianRefine",boost::bind(&IkFastSolver<IkReal>::_SetJacobianRefineCommand,this,_1,_2),
                         "sets the allowed workspace error, if ik solver returns above that, then use jacobian inverse to refine.");
+        RegisterCommand("GetJacobianRefine",boost::bind(&IkFastSolver<IkReal>::_GetJacobianRefineCommand,this,_1,_2),
+                        "returns the jaocbian refinement error threshold and max iterations.");
+        RegisterCommand("SetWorkspaceDiscretizedRotationAngle",boost::bind(&IkFastSolver<IkReal>::_SetWorkspaceDiscretizedRotationAngleCommand,this,_1,_2),
+                        "sets the workspace discretization value when using 6D iksolvers to solve for 5D.");
         RegisterCommand("SetDefaultIncrements",boost::bind(&IkFastSolver<IkReal>::_SetDefaultIncrementsCommand,this,_1,_2),
                         "Specify four values (2 pairs). Each pair is the free increment for revolute joint and second is the number of segment to divide free prismatic joints. The first pair is for structural free joints, the second pair is for solutions where axes align");
         RegisterCommand("GetFreeIndices",boost::bind(&IkFastSolver<IkReal>::_GetFreeIndicesCommand,this,_1,_2),
@@ -123,6 +127,13 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
 #endif
     }
 
+    bool _SetWorkspaceDiscretizedRotationAngleCommand(ostream& sout, istream& sinput)
+    {
+        dReal workspaceDiscretizedRotationAngle = 0;
+        sinput >> workspaceDiscretizedRotationAngle;
+        return !!sinput;
+    }
+
     bool _SetDefaultIncrementsCommand(ostream& sout, istream& sinput)
     {
         dReal fFreeIncRevolute=0.1, fFreeIncPrismaticNum=100;
@@ -165,6 +176,16 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
             sout << *it << " ";
         }
         return true;
+    }
+
+    bool _GetJacobianRefineCommand(ostream& sout, istream& sinput)
+    {
+#ifdef OPENRAVE_HAS_LAPACK
+        sout << _jacobinvsolver.GetErrorThresh() << " " << _jacobinvsolver.GetMaxIterations();
+        return true;
+#else
+        return false;
+#endif
     }
 
     bool _GetSolutionIndicesCommand(ostream& sout, istream& sinput)
@@ -487,7 +508,7 @@ public:
 
         void RegisterCollidingEndEffector(const Transform& t, bool bcolliding)
         {
-            _listCollidingTransforms.push_back(std::make_pair(t, bcolliding));
+            _listCollidingTransforms.emplace_back(t,  bcolliding);
         }
 
         int numImpossibleSelfCollisions; ///< a count of the number of self-collisions that most likely mean that the IK itself will fail.
@@ -751,6 +772,12 @@ protected:
         for(size_t i = 0; i < _vfreeparams.size(); ++i) {
             pFreeParameters[i] = (values.at(pmanip->GetArmIndices().at(_vfreeparams[i]))-_qlower.at(_vfreeparams[i])) * *itscale++;
         }
+        return true;
+    }
+
+    virtual bool GetFreeIndices(std::vector<int>& vFreeIndices) const
+    {
+        vFreeIndices = _vfreeparams;
         return true;
     }
 
@@ -1292,7 +1319,7 @@ protected:
                 for(int i = 0; i < iksol.GetDOF(); ++i) {
                     vravesol.at(i) = (dReal)sol[i];
                 }
-                vdists.push_back(make_pair(vdists.size(),_ComputeGeometricConfigDistSqr(probot,vravesol,q0,true)));
+                vdists.emplace_back(vdists.size(),_ComputeGeometricConfigDistSqr(probot,vravesol,q0, true));
             }
 
             std::stable_sort(vdists.begin(),vdists.end(),SortSolutionDistances);
@@ -1344,17 +1371,17 @@ protected:
         return static_cast<IkReturnAction>(allres);
     }
 
-    void _CheckRefineSolution(const IkParameterization& param, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution)
+    void _CheckRefineSolution(const IkParameterization& param, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution, bool bIgnoreJointLimits)
     {
 #ifdef OPENRAVE_HAS_LAPACK
         IkParameterization paramnew = manip.GetIkParameterization(param,false);
         dReal ikworkspacedist = param.ComputeDistanceSqr(paramnew);
         if( _fRefineWithJacobianInverseAllowedError > 0 && ikworkspacedist > _fRefineWithJacobianInverseAllowedError*_fRefineWithJacobianInverseAllowedError ) {
             if( param.GetType() == IKP_Transform6D ) { // only 6d supported for now
-                int ret = _jacobinvsolver.ComputeSolution(param.GetTransform6D(), manip, vsolution);
+                int ret = _jacobinvsolver.ComputeSolution(param.GetTransform6D(), manip, vsolution, bIgnoreJointLimits);
                 if( ret == 2 ) {
                     RAVELOG_VERBOSE("did not converge, try to prioritize translation at least\n");
-                    ret = _jacobinvsolver.ComputeSolutionTranslation(param.GetTransform6D(), manip, vsolution);
+                    ret = _jacobinvsolver.ComputeSolutionTranslation(param.GetTransform6D(), manip, vsolution, bIgnoreJointLimits);
                 }
                 if( ret == 0 ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
@@ -1377,10 +1404,10 @@ protected:
                 tgoal.rot = quatMultiply(quatFromAxisAngle(param.GetTranslationDirection5D().dir, frotanglegoal - frotangle0), tgoal.rot);
 
                 tgoal.trans = param.GetTranslationDirection5D().pos;
-                int ret = _jacobinvsolver.ComputeSolution(tgoal, manip, vsolution);
+                int ret = _jacobinvsolver.ComputeSolution(tgoal, manip, vsolution, bIgnoreJointLimits);
                 if( ret == 2 ) {
                     RAVELOG_VERBOSE("did not converge, try to prioritize translation at least\n");
-                    ret = _jacobinvsolver.ComputeSolutionTranslation(tgoal, manip, vsolution);
+                    ret = _jacobinvsolver.ComputeSolutionTranslation(tgoal, manip, vsolution, bIgnoreJointLimits);
                 }
                 if( ret == 0 ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
@@ -1448,7 +1475,7 @@ protected:
                     return IKRA_Reject;
                 }
             }
-            vravesols.push_back(make_pair(vravesol,0));
+            vravesols.emplace_back(vravesol, 0);
         }
 
         IkParameterization paramnew;
@@ -1470,7 +1497,7 @@ protected:
                     *it += itravesol->second<<16;
                 }
                 probot->SetActiveDOFValues(itravesol->first,false);
-                _CheckRefineSolution(param, *pmanip, itravesol->first);
+                _CheckRefineSolution(param, *pmanip, itravesol->first, !!(filteroptions&IKFO_IgnoreJointLimits));
 
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false); // custom data is copied!
@@ -1510,7 +1537,7 @@ protected:
                     *it += itravesol->second<<16;
                 }
                 probot->SetActiveDOFValues(itravesol->first,false);
-                _CheckRefineSolution(param, *pmanip, itravesol->first);
+                _CheckRefineSolution(param, *pmanip, itravesol->first, !!(filteroptions&IKFO_IgnoreJointLimits));
 
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false);
@@ -1702,7 +1729,7 @@ protected:
             FOREACH(itikreturn, listlocalikreturns) {
                 dReal soldist = _ComputeGeometricConfigDistSqr(probot,(*itikreturn)->_vsolution,boost::get<1>(freeq0check));
                 if( !(bestsolution.dist <= soldist) ) {
-                    vdists.push_back(std::make_pair(vdists.size(), soldist));
+                    vdists.emplace_back(vdists.size(),  soldist);
                     vtempikreturns.push_back(*itikreturn);
                 }
             }
@@ -1749,7 +1776,7 @@ protected:
                 }
 
                 probot->SetActiveDOFValues(localret->_vsolution,false);
-                _CheckRefineSolution(param, *pmanip, localret->_vsolution);
+                _CheckRefineSolution(param, *pmanip, localret->_vsolution, !!(filteroptions&IKFO_IgnoreJointLimits));
 
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false);
@@ -1870,7 +1897,7 @@ protected:
             }
         }
         else {
-            vravesols.push_back(make_pair(vravesol,0));
+            vravesols.emplace_back(vravesol, 0);
         }
 
         std::vector<unsigned int> vsolutionindices;
@@ -1907,7 +1934,7 @@ protected:
                     *it += itravesol->second<<16;
                 }
                 probot->SetActiveDOFValues(itravesol->first,false);
-                _CheckRefineSolution(param, *pmanip, itravesol->first);
+                _CheckRefineSolution(param, *pmanip, itravesol->first, !!(filteroptions&IKFO_IgnoreJointLimits));
 
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false);
@@ -1933,7 +1960,7 @@ protected:
                 }
                 else if( retaction == IKRA_Success ) {
                     localret->_vsolution.swap(itravesol->first);
-                    listlocalikreturns.push_back(std::make_pair(localret, paramnew));
+                    listlocalikreturns.emplace_back(localret,  paramnew);
                 }
             }
             if( listlocalikreturns.size() == 0 ) {
@@ -1947,7 +1974,7 @@ protected:
                     *it += itravesol->second<<16;
                 }
                 probot->SetActiveDOFValues(itravesol->first,false);
-                _CheckRefineSolution(param, *pmanip, itravesol->first);
+                _CheckRefineSolution(param, *pmanip, itravesol->first, !!(filteroptions&IKFO_IgnoreJointLimits));
 
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false);
@@ -1955,7 +1982,7 @@ protected:
                 IkReturnPtr localret(new IkReturn(IKRA_Success));
                 localret->_mapdata["solutionindices"] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
                 localret->_vsolution.swap(itravesol->first);
-                listlocalikreturns.push_back(std::make_pair(localret, paramnew));
+                listlocalikreturns.emplace_back(localret,  paramnew);
             }
         }
 
@@ -2230,7 +2257,7 @@ protected:
         if( !_CheckJointAngles(vravesol) ) {
             return;
         }
-        vravesols.push_back(make_pair(vravesol,0));
+        vravesols.emplace_back(vravesol, 0);
         if( _qbigrangeindices.size() > 0 ) {
             std::vector< std::list<dReal> > vextravalues(_qbigrangeindices.size());
             std::vector< std::list<dReal> >::iterator itextra = vextravalues.begin();
