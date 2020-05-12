@@ -31,11 +31,6 @@
 namespace OpenRAVE
 {
 
-
-template<typename T> void _ExtractInfo(const rapidjson::Value& value, std::vector<OPENRAVE_SHARED_PTR<T>>& infos, dReal fUnitScale=1.0);
-// template<typename T> void _MergeInfo(std::string id, T& info, const rapidjson::Value value, dReal fUnitScale);
-
-
 bool RaveParseJSON(EnvironmentBasePtr penv, const rapidjson::Document& doc, const AttributesList& atts);
 bool RaveParseJSON(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const rapidjson::Document& doc, const AttributesList& atts);
 bool RaveParseJSON(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const rapidjson::Document& doc, const AttributesList& atts);
@@ -62,21 +57,7 @@ void RaveWriteJSONMemory(EnvironmentBasePtr penv, std::vector<char>& output, con
 void RaveWriteJSONMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts);
 void RaveWriteJSONMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts);
 
-void SerializeDiffJSON(const KinBody::LinkInfo& coverInfo, const KinBody::LinkInfo& baseInfo, rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0);
-void SerializeDiffJSON(const KinBody::GeometryInfo& coverInfo, const KinBody::GeometryInfo& baseInfo, rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0);
-void SerializeDiffJSON(const KinBody::JointInfo& coverInfo, const KinBody::JointInfo& baseInfo, rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0);
-void SerializeDiffJSON(const RobotBase::ManipulatorInfo& coverInfo, const RobotBase::ManipulatorInfo& baseInfo, rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0);
-void SerializeDiffJSON(const RobotBase::AttachedSensorInfo& coverInfo, const RobotBase::AttachedSensorInfo& baseInfo, rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0);
-void SerializeDiffJSON(const RobotBase::ConnectedBodyInfo& coverInfo, const RobotBase::ConnectedBodyInfo& baseInfo, rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0);
-void SerializeDiffJSON(const RobotBase::GripperInfo& coverInfo, const RobotBase::GripperInfo& baseInfo, rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0);
 
-void DeserializeDiffJSON(KinBody::LinkInfo& targetInfo, const rapidjson::Value& value, dReal fUnitScale=1.0);
-void DeserializeDiffJSON(KinBody::JointInfo& targetInfo, const rapidjson::Value& value, dReal fUnitScale=1.0);
-void DeserializeDiffJSON(KinBody::GeometryInfo& targetInfo, const rapidjson::Value& value, dReal fUnitScale=1.0);
-void DeserializeDiffJSON(RobotBase::ManipulatorInfo& targetInfo, const rapidjson::Value& value, dReal fUnitScale=1.0);
-void DeserializeDiffJSON(RobotBase::AttachedSensorInfo& targetInfo, const rapidjson::Value& value, dReal fUnitScale=1.0);
-void DeserializeDiffJSON(RobotBase::GripperInfo& targetinfo, const rapidjson::Value& value, dReal fUnitScale=1.0);
-void DeserializeDiffJSON(RobotBase::ConnectedBodyInfo& targetinfo, const rapidjson::Value& value, dReal fUnitScale=1.0);
 }
 
 #endif

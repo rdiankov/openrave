@@ -279,33 +279,6 @@ protected:
     }
 
     template<typename T>
-    void _ExtractReference(const rapidjson::Value& bodyValue, T& info, dReal fUnitScale) {
-        std::vector<std::string> vBodyReferenceUri;
-        std::string referenceUri;
-        OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "referenceUri", referenceUri);
-        while(!referenceUri.empty()) {
-            if (std::find(vBodyReferenceUri.begin(), vBodyReferenceUri.end(), referenceUri) != vBodyReferenceUri.end()) {
-                throw OPENRAVE_EXCEPTION_FORMAT("circular reference found in document %s", referenceUri, ORE_InvalidArguments);
-            }
-            rapidjson::Value::ValueIterator itr = _ResolveBodyValue(referenceUri);
-            vBodyReferenceUri.push_back(referenceUri);
-            referenceUri.clear();
-            OpenRAVE::JSON::LoadJsonValueByKey(*itr, "referenceUri", referenceUri);
-        }
-
-        boost::shared_ptr<T> referenceInfo;
-        for(std::vector<std::string>::reverse_iterator itUri = vBodyReferenceUri.rbegin(); itUri!=vBodyReferenceUri.rend(); itUri++) {
-            rapidjson::Value::ValueIterator itrBodyValue = _ResolveBodyValue(*itUri);
-            if (vBodyReferenceUri.size() > 0 && itUri == (vBodyReferenceUri.rend() - 1)){
-                // copy to referenceInfo;
-                referenceInfo.reset(new T());
-                *referenceInfo = info;
-            }
-            _Merge(info, itrBodyValue, fUnitScale);
-        }
-    }
-
-    template<typename T>
     void _ExtractEnvInfo(const rapidjson::Value& bodyValue, boost::shared_ptr<T> pbody, dReal fUnitScale) {
         if (!!pbody) {
             _ExtractReadableInterfaces(bodyValue, pbody, fUnitScale);
@@ -340,7 +313,6 @@ protected:
         KinBody::KinBodyInfoPtr kinBodyInfo(new KinBody::KinBodyInfo());
 
         _ExtractCommon(bodyValue, *kinBodyInfo);
-        _ExtractReference(bodyValue, *kinBodyInfo, fUnitScale);
 
         _ExtractLinks(bodyValue, kinBodyInfo->_vLinkInfos, fUnitScale);
         _ExtractJoints(bodyValue, kinBodyInfo->_vJointInfos, fUnitScale);
@@ -363,7 +335,6 @@ protected:
         dReal fUnitScale = _GetUnitScale();
         RobotBase::RobotBaseInfoPtr robotBaseInfo(new RobotBase::RobotBaseInfo());
         _ExtractCommon(bodyValue, *robotBaseInfo);
-        _ExtractReference(bodyValue, *robotBaseInfo, fUnitScale);
 
         _ExtractLinks(bodyValue, robotBaseInfo->_vLinkInfos, fUnitScale);
         _ExtractJoints(bodyValue, robotBaseInfo->_vJointInfos, fUnitScale);
@@ -381,36 +352,16 @@ protected:
         return true;
     }
 
-    // Partially Update the Environment
-    // bool _ApplyDiff(const rapidjson::Value& bodyValue, const std::string revision, dReal fUnitScale) {
-    //     if (revision < _penv->_revision) {
-    //         throw OPENRAVE_EXCEPTION_FORMAT("revision %s is smaller then current revision %s", revision%_penv->_revision, ORE_InvalidArguments);
-    //     }
-
-    //     for (rapidjson::Value::ConstValueIterator itr = bodyValue["bodies"].Begin(); itr != bodyValue["bodies"].End(); itr++) {
-    //         if (itr->HasMember("id")) {
-    //             std::string bodyId;
-    //             OpenRAVE::JSON::LoadJsonValueByKey(*itr, "id", bodyId);
-    //             KinBodyPtr pBody = _penv->GetKinBody(bodyId);  // TODO: bodyName is used
-
-    //             const rapidjson::Value& value = *itr;
-    //             if (!!pBody) {
-    //                 pBody->ApplyDiff(value);
-    //             }
-    //         }
-    //     }
-
-    // }
-
     // \brief extract rapidjson value and merge into linkinfos
     void _ExtractLinks(const rapidjson::Value &objectValue, std::vector<KinBody::LinkInfoPtr>& linkinfos, dReal fUnitScale)
     {
         if (objectValue.HasMember("links") && objectValue["links"].IsArray()) {
             linkinfos.reserve(linkinfos.size() + objectValue["links"].Size());
             for (rapidjson::Value::ConstValueIterator itr = objectValue["links"].Begin(); itr != objectValue["links"].End(); ++itr) {
-                _ExtractInfo(*itr, linkinfos, fUnitScale);
+                KinBody::LinkInfoPtr linkinfo(new KinBody::LinkInfo());
+                linkinfo->DeserializeJSON(*itr, fUnitScale);
+                linkinfos.push_back(linkinfo);
             }
-            linkinfos.shrink_to_fit();
         }
     }
 
@@ -419,9 +370,10 @@ protected:
         if (objectValue.HasMember("joints") && objectValue["joints"].IsArray()) {
             jointinfos.reserve(jointinfos.size() + objectValue["joints"].Size());
             for (rapidjson::Value::ConstValueIterator itr = objectValue["joints"].Begin(); itr != objectValue["joints"].End(); ++itr) {
-                _ExtractInfo(*itr, jointinfos, fUnitScale);
+                KinBody::JointInfoPtr jointinfo(new KinBody::JointInfo());
+                jointinfo->DeserializeJSON(*itr, fUnitScale);
+                jointinfos.push_back(jointinfo);
             }
-            jointinfos.shrink_to_fit();
         }
     }
 
@@ -430,9 +382,10 @@ protected:
         if (objectValue.HasMember("manipulators") && objectValue["manipulators"].IsArray()) {
             manipinfos.reserve(manipinfos.size() + objectValue["manipulators"].Size());
             for (rapidjson::Value::ConstValueIterator itr = objectValue["manipulators"].Begin(); itr != objectValue["manipulators"].End(); ++itr) {
-                _ExtractInfo(*itr, manipinfos, fUnitScale);
+                RobotBase::ManipulatorInfoPtr manipinfo(new RobotBase::ManipulatorInfo());
+                manipinfo->DeserializeJSON(*itr, fUnitScale);
+                manipinfos.push_back(manipinfo);
             }
-            manipinfos.shrink_to_fit();
         }
     }
 
@@ -441,9 +394,10 @@ protected:
         if (objectValue.HasMember("attachedSensors") && objectValue["attachedSensors"].IsArray()) {
             attachedsensorinfos.reserve(attachedsensorinfos.size() + objectValue["attachedSensors"].Size());
             for (rapidjson::Value::ConstValueIterator itr = objectValue["attachedSensors"].Begin(); itr != objectValue["attachedSensors"].End(); ++itr) {
-                _ExtractInfo(*itr, attachedsensorinfos, fUnitScale);
+                RobotBase::AttachedSensorInfoPtr attachedsensorinfo(new RobotBase::AttachedSensorInfo());
+                attachedsensorinfo->DeserializeJSON(*itr, fUnitScale);
+                attachedsensorinfos.push_back(attachedsensorinfo);
             }
-            attachedsensorinfos.shrink_to_fit();
         }
     }
 
@@ -469,8 +423,9 @@ protected:
         if (objectValue.HasMember("gripperInfos") && objectValue["gripperInfos"].IsArray()) {
             gripperInfos.reserve(gripperInfos.size() + objectValue["gripperInfos"].Size());
             for (rapidjson::Value::ConstValueIterator itr = objectValue["gripperInfos"].Begin(); itr != objectValue["gripperInfos"].End(); ++itr) {
-                _ExtractInfo(*itr, gripperInfos, fUnitScale);
-                gripperInfos.shrink_to_fit();
+                RobotBase::GripperInfoPtr gripperinfo(new RobotBase::GripperInfo());
+                gripperinfo->DeserializeJSON(*itr, fUnitScale);
+                gripperInfos.push_back(gripperinfo);
             }
         }
     }
@@ -512,20 +467,6 @@ protected:
             // notice: in python code, like realtimerobottask3.py, it pass scheme as {openravescene: mujin}. No colon,
             scheme = path.substr(0, colonindex);
             path = path.substr(colonindex + 1);
-        }
-    }
-
-    void _Merge(KinBody::KinBodyInfo& bodyInfo, rapidjson::Value::ConstValueIterator bodyValue, dReal fUnitScale)
-    {
-        if (bodyValue->HasMember("links") && (*bodyValue)["links"].IsArray()) {
-            for (rapidjson::Value::ConstValueIterator itr=(*bodyValue)["links"].Begin(); itr != (*bodyValue)["links"].End(); ++itr) {
-                _ExtractInfo(*itr, bodyInfo._vLinkInfos, fUnitScale);
-            }
-        }
-        if (bodyValue->HasMember("joints") && (*bodyValue)["joints"].IsArray()) {
-            for (rapidjson::Value::ConstValueIterator itr=(*bodyValue)["joints"].Begin(); itr != (*bodyValue)["joints"].End(); ++itr) {
-                _ExtractInfo(*itr, bodyInfo._vJointInfos, fUnitScale);
-            }
         }
     }
 
