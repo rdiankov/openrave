@@ -448,6 +448,49 @@ inline void polyroots(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
     }
 }
 
+
+template<typename T, typename U>
+uint8_t ApplyDiffOnVector(const rapidjson::Value& value, std::vector<boost::shared_ptr<T>>& vec, std::vector<boost::shared_ptr<U>>& vecInfo) {
+    int applyResult = 0;
+    for(rapidjson::Value::ConstValueIterator itValue = value.Begin(); itValue != value.End(); ++itValue) {
+        std::string id;
+        OpenRAVE::JSON::LoadJsonValueByKey(*itValue,"id", id);
+        bool found = false;
+        for(typename std::vector<boost::shared_ptr<T>>::iterator itVec = vec.begin(); itVec!= vec.end(); ++itVec) {
+            if ((*itVec)->GetId() == id) {
+                found = true;
+                // delete
+                if(OpenRAVE::JSON::GetJsonValueByKey<bool>(*itValue, "__delete__", false)) {
+                    typename std::vector<boost::shared_ptr<U>>::iterator itInfo = std::find_if(vecInfo.begin(), vecInfo.end(), [id](boost::shared_ptr<U> pInfo) {return pInfo->_id == id;});
+                    OPENRAVE_ASSERT_FORMAT(itInfo != vecInfo.end(), "delete info with id %s not found", id, ORE_Failed);
+                    vecInfo.erase(itInfo);
+                    applyResult |= ApplyDiffResult::ADR_RELOAD;
+                    break;
+                }
+                // update
+                boost::shared_ptr<U> pInfo(new U());
+                applyResult |= (*itVec)->ApplyDiff(*itValue, *pInfo);
+                typename std::vector<boost::shared_ptr<U>>::iterator itInfo = std::find_if(vecInfo.begin(), vecInfo.end(), [id](boost::shared_ptr<U> pInfo) {return pInfo->_id == id;});
+                OPENRAVE_ASSERT_FORMAT(itInfo != vecInfo.end(), "update info with id %s not found", id, ORE_Failed);
+                (*itInfo) = pInfo;
+                break;
+            }
+        }
+        // add
+        if (!found) {
+            if (OpenRAVE::JSON::GetJsonValueByKey<bool>(*itValue, "__delete__", false)) {
+                continue;
+            }
+            boost::shared_ptr<U> pInfo(new U());
+            pInfo->DeserializeJSON(*itValue);
+            vecInfo.push_back(pInfo);
+            applyResult |= ApplyDiffResult::ADR_RELOAD;
+        }
+    }
+    return applyResult;
+}
+
+
 #ifdef _WIN32
 inline const char *strcasestr(const char *s, const char *find)
 {

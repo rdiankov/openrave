@@ -314,6 +314,48 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
     }
 }
 
+
+uint8_t KinBody::Joint::ApplyDiff(const rapidjson::Value& jointValue, KinBody::JointInfo& newInfo) {
+    newInfo = UpdateAndGetInfo();
+    uint8_t applyResult = 0;
+
+
+    if (jointValue.HasMember("type")) {
+        std::string typestr;
+        OpenRAVE::JSON::LoadJsonValueByKey(jointValue, "type", typestr);
+        applyResult |= ApplyDiffResult::ADR_RELOAD;
+    }
+
+    if (jointValue.HasMember("maxVel")) {
+        std::vector<dReal> vmaxvel;
+        OpenRAVE::JSON::LoadJsonValueByKey(jointValue, "maxVel", vmaxvel);
+        std::copy(vmaxvel.begin(), vmaxvel.end(), newInfo._vmaxvel.begin());
+        SetVelocityLimits(vmaxvel);
+    }
+    if (jointValue.HasMember("hardMaxVel")) {
+        std::vector<dReal> vhardmaxvel;
+        OpenRAVE::JSON::LoadJsonValueByKey(jointValue, "hardMaxVel", vhardmaxvel);
+        std::copy(vhardmaxvel.begin(), vhardmaxvel.end(), newInfo._vhardmaxvel.begin());
+        SetHardVelocityLimits(vhardmaxvel);
+    }
+
+    if (jointValue.HasMember("maxAccel")) {
+        std::vector<dReal> maxAccel;
+        OpenRAVE::JSON::LoadJsonValueByKey(jointValue, "maxAccel", maxAccel);
+        std::copy(maxAccel.begin(), maxAccel.end(), newInfo._vmaxaccel.begin());
+        SetAccelerationLimits(maxAccel);
+    }
+    if (jointValue.HasMember("maxJerk")) {
+        std::vector<dReal> maxJerk;
+        OpenRAVE::JSON::LoadJsonValueByKey(jointValue, "maxJerk", maxJerk);
+        std::copy(maxJerk.begin(), maxJerk.end(), newInfo._vmaxjerk.begin());
+        SetJerkLimits(maxJerk);
+    }
+
+    return applyResult | ApplyDiffResult::ADR_OK;
+
+}
+
 KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& other)
 {
     _id = other._id;
@@ -2068,6 +2110,7 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
     }
 }
 
+
 void KinBody::MimicInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     OpenRAVE::JSON::SetJsonValueByKey(value, "equations", _equations, allocator);
@@ -2077,5 +2120,6 @@ void KinBody::MimicInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
 {
     OpenRAVE::JSON::LoadJsonValueByKey(value, "equations", _equations);
 }
+
 
 }

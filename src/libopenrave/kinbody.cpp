@@ -125,6 +125,39 @@ void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, d
     OpenRAVE::JSON::LoadJsonValueByKey(value, "viscousFriction", viscous_friction);
 }
 
+bool KinBody::KinBodyInfo::operator==(const KinBody::KinBodyInfo& other) const {
+    bool equal = (_id == other._id
+              &&  _uri == other._uri
+              &&  _name == other._name
+              &&  _referenceUri == other._referenceUri
+              &&  _referenceInfo == other._referenceInfo);
+
+    if (!equal) return false;
+}
+
+void KinBody::KinBodyInfo::_Update(const KinBody::KinBodyInfo& other) {
+    _id = other._id;
+    _uri = other._uri;
+    _name = other._name;
+    _referenceUri = other._referenceUri;
+
+    _vLinkInfos = other._vLinkInfos;
+    _vJointInfos = other._vJointInfos;
+    // _vLinkInfos.clear();
+    // _vLinkInfos.reserve(other._vLinkInfos.size());
+    // FOREACHC(itLinkInfo, other._vLinkInfos) {
+    //     KinBody::LinkInfoPtr pLinkInfo(new KinBody::LinkInfo(**itLinkInfo));
+    //     _vLinkInfos.push_back(pLinkInfo);
+    // }
+    // TODO
+    // _vJointInfos.clear();
+    // _vJointInfos.reserve(other._vJointInfos.size());
+    // FOREACHC(itJointInfo, other._vJointInfos) {
+    //     KinBody::JointInfoPtr pJointInfo(new KinBody::JointInfo(**itJointInfo));
+    //     _vJointInfos.push_back(pJointInfo);
+    // }
+    // _referenceInfo = other._referenceInfo;
+}
 
 void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
@@ -159,6 +192,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 {
     OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
     if (_uri.empty()) {
         OPENRAVE_ASSERT_FORMAT0(!_id.empty(), "kinbody uri and id are empty", ORE_Failed);
         _uri = "#" + _id;
@@ -182,6 +216,61 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         }
     }
 }
+
+// void KinBody::KinBodyInfo::DeserializeDiffJSON(const rapidjson::Value& value, KinBody::KinBodyInfo& newInfo, dReal fUntiScale)
+// {
+
+//     OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", newInfo._uri, _uri);
+//     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", newInfo._name, _name);
+
+//     newInfo._vLinkInfos.reserve(_vLinkInfos.size());
+//     FOREACHC(itLink, _vLinkInfos) {
+//         KinBody::LinkInfoPtr pInfo(new KinBody::LinkInfo(**itLink));
+//         newInfo._vLinkInfos.push_back(pInfo);
+//     }
+//     if (value.HasMember("links")) {
+//         for(rapidjson::Value::ConstValueIterator itLinkValue = value["links"].Begin(); itLinkValue != value["links"].End(); ++itLinkValue) {
+//             std::string linkId;
+//             OpenRAVE::JSON::LoadJsonValueByKey(*itLinkValue, "id", linkId);
+//             bool foundLink = false;
+
+//             for(std::vector<KinBody::LinkInfoPtr>::iterator itLinkInfo = newInfo._vLinkInfos.begin(); itLinkInfo != newInfo._vLinkInfos.end(); itLinkInfo++) {
+//                 if((*itLinkInfo)->_id == linkId){
+//                     foundLink = true;
+//                     if (OpenRAVE::JSON::GetJsonValueByKey<bool>(*itLinkValue, "__delete__", false)) {
+//                         newInfo._vLinkInfos.erase(itLinkInfo);
+//                         break;
+//                     }
+//                     (*itLinkInfo)->DeserializeDiffJSON(*itLinkValue);
+//                 }
+//             }
+//             if (!foundLink) {
+//                 KinBody::LinkInfoPtr pLinkInfo(new KinBody::LinkInfo());
+//                 pLinkInfo->DeserializeJSON(*itLinkValue);
+//                 newInfo._vLinkInfos.push_back(pLinkInfo);
+//             }
+//         }
+//     }
+
+//     newInfo._vJointInfos = _vJointInfos;
+//     if (value.HasMember("joints")) {
+//         for(rapidjson::Value::ConstValueIterator itJointValue = value["joints"].Begin(); itJointValue != value["joints"].End(); ++itJointValue) {
+//             std::string jointId;
+//             OpenRAVE::JSON::LoadJsonValueByKey(*itJointValue, "id", jointId);
+//             bool foundJoint = false;
+//             for(size_t iJoint = 0; iJoint < _vJointInfos.size(); ++iJoint) {
+//                 if(_vJointInfos[iJoint]->_id == jointId) {
+//                     foundJoint =  true;
+//                     if(OpenRAVE::JSON::GetJsonValueByKey<bool>(*itJointValue, "__delete__", false)) {
+//                         break;
+//                     }
+//                     KinBody::JointInfoPtr pJointInfo(new KinBody::JointInfo());
+//                 }
+//             }
+//         }
+//     }
+
+// }
 
 
 KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)
@@ -5064,54 +5153,56 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
     }
 }
 
-bool KinBody::ApplyDiff(const rapidjson::Value& bodyValue) {
-    // links
-    bool success = true;
-    if (bodyValue.HasMember("links")) {
-        for(rapidjson::Value::ConstValueIterator itLinkValue = bodyValue["links"].Begin(); itLinkValue != bodyValue["links"].End(); itLinkValue++){
-            const rapidjson::Value& linkValue = *itLinkValue;
-            std::string linkId;
-            OpenRAVE::JSON::LoadJsonValueByKey(linkValue, "id", linkId);
-            bool isExistingLink = false;
-            std::set<std::string> deleteLinks;
-            for(std::vector<LinkPtr>::iterator itLink = _veclinks.begin(); itLink != _veclinks.end(); ++itLink) {
-                if ((*itLink)->_info._id == linkId) {
-                    isExistingLink = true;
-                    bool isDeleted = false;
-                    if (linkValue.HasMember("__delete__")) {
-                        OpenRAVE::JSON::LoadJsonValueByKey(linkValue, "__delete__", isDeleted);
-                    }
-                    if (isDeleted){
-                        // TODO: remove old link
-                        deleteLinks.insert(linkId);
-                    }
-                    else { // update existing link;
-                        success = (*itLink)->ApplyDiff(linkValue);
-                        if (!success) {
-                            return false;
-                        }
-                    }
-                }
-            }
-            if (deleteLinks.size() > 0) {
-                _veclinks.erase(std::remove_if(_veclinks.begin(), _veclinks.end(),
-                                              [deleteLinks](LinkPtr& link){
-                                                  return deleteLinks.find(link->_info._id) != deleteLinks.end();
-                                              }), _veclinks.end());
-            }
-            if (!isExistingLink) { // add new link
-                LinkPtr plink(new Link(shared_kinbody()));
-                plink->_info.DeserializeJSON(linkValue);
-                _InitAndAddLink(plink);
-            }
+void KinBody::UpdateInfo()
+{
+    _info._name = _name;
+    _info._uri = __struri;
+
+    _info._vLinkInfos.resize(_veclinks.size());
+    for(size_t i = 0; i < _info._vLinkInfos.size(); ++i) {
+        _veclinks[i]->UpdateInfo();
+        _info._vLinkInfos[i] = boost::make_shared<KinBody::LinkInfo>(_veclinks[i]->_info);
+    }
+
+    _info._vJointInfos.resize(_vecjoints.size());
+    for(size_t i = 0; i < _info._vJointInfos.size(); ++i) {
+        _vecjoints[i]->UpdateInfo();
+        _info._vJointInfos[i] = boost::make_shared<KinBody::JointInfo>(_vecjoints[i]->_info);
+    }
+}
+
+// Update partially
+uint8_t KinBody::ApplyDiff(const rapidjson::Value& bodyValue, KinBody::KinBodyInfo& newInfo) {
+    if (bodyValue.HasMember("__delete__")) {
+        bool isDeleted = false;
+        OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "__delete__", isDeleted);
+        if (isDeleted) {
+            return ApplyDiffResult::ADR_REMOVE;
         }
     }
+    uint8_t applyResult = 0;
+    newInfo = UpdateAndGetInfo();
 
+    // links
+    if (bodyValue.HasMember("links")) {
+        applyResult |= ApplyDiffOnVector(bodyValue["links"], _veclinks, newInfo._vLinkInfos);
+    }
     // joints
     if (bodyValue.HasMember("joints")) {
+        applyResult |= ApplyDiffOnVector(bodyValue["joints"], _vecjoints, newInfo._vJointInfos);
     }
 
-    return true;
+    if (bodyValue.HasMember("name")){
+        OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "name", newInfo._name);
+        SetName(newInfo._name);
+    }
+
+    if (bodyValue.HasMember("uri")) {
+        // TODO: throw
+    }
+
+    return applyResult | ApplyDiffResult::ADR_OK;
 }
+
 
 } // end namespace OpenRAVE

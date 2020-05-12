@@ -748,6 +748,108 @@ public:
         }
     }
 
+    virtual bool _ApplyKinBodyDiff(KinBody& body, const rapidjson::Value& bodyValue) {
+        KinBody::KinBodyInfoPtr pBodyInfo(new KinBody::KinBodyInfo());
+        uint8_t result = body.ApplyDiff(bodyValue, *pBodyInfo);
+        if (result & ApplyDiffResult::ADR_RELOAD)
+        {
+            RemoveKinBodyByName(body.GetName());
+            KinBodyPtr pNewBody = RaveCreateKinBody(shared_from_this(), "");
+            if (!!pNewBody) {
+                pNewBody->InitFromInfo(pBodyInfo);
+                pNewBody->SetName(pBodyInfo->_name);
+                _AddKinBody(pNewBody, false);
+            }
+            // TODO failed
+        }
+        if (result & ApplyDiffResult::ADR_REMOVE)
+        {
+            RemoveKinBodyByName(body.GetName());
+        }
+        if (result & ApplyDiffResult::ADR_FAILED){
+            // TODO
+        }
+        return true;
+    }
+
+    virtual bool _ApplyRobotDiff(RobotBase& robot, const rapidjson::Value& robotValue) {
+        RobotBase::RobotBaseInfoPtr pRobotInfo(new RobotBase::RobotBaseInfo());
+        uint8_t result = robot.ApplyDiff(robotValue, *pRobotInfo);
+        if (result & ApplyDiffResult::ADR_RELOAD) {
+            RemoveKinBodyByName(robot.GetName());
+            RobotBasePtr pNewRobot = RaveCreateRobot(shared_from_this(), "");
+            if (!!pNewRobot) {
+                pNewRobot->InitFromInfo(pRobotInfo);
+                pNewRobot->SetName(pRobotInfo->_name);
+                _AddRobot(pNewRobot, false);
+            }
+            // TODO failed
+        }
+        if (result & ApplyDiffResult::ADR_REMOVE)
+        {
+            RemoveKinBodyByName(robot.GetName());
+        }
+        if (result & ApplyDiffResult::ADR_FAILED) {
+            // TODO
+        }
+        return true;
+    }
+
+    virtual bool ApplyDiff(const rapidjson::Value& envValue) override{
+        if (envValue.HasMember("bodies")) {
+            for(rapidjson::Value::ConstValueIterator itValue = envValue["bodies"].Begin(); itValue != envValue["bodies"].End(); ++itValue) {
+                std::string bodyId;
+                OpenRAVE::JSON::LoadJsonValueByKey(*itValue, "id", bodyId);
+                bool foundBody = false;
+
+                for(std::vector<KinBodyPtr>::iterator itBody = _vecbodies.begin(); itBody != _vecbodies.end(); itBody++) {
+                    if((*itBody)->GetId() == bodyId) {
+                        foundBody = true;
+                        // save kinbody first
+                        KinBody::KinBodyStateSaver saver(*itBody, 0xFFFFFFFF);
+                        try {
+                            if((*itBody)->IsRobot()) {
+                                _ApplyRobotDiff(*RaveInterfaceCast<RobotBase>(*itBody), *itValue);
+                            }
+                            else {
+                                _ApplyKinBodyDiff(**itBody, *itValue);
+                            }
+                        } catch (...) {
+                            saver.Restore(*itBody);
+                            throw;
+                        }
+                        break;
+                    }
+                }
+                if (!foundBody) {
+                    // error input protect
+                    if (OpenRAVE::JSON::GetJsonValueByKey<bool>(*itValue, "__delete__", false)) {
+                        continue;
+                    }
+                    if (OpenRAVE::JSON::GetJsonValueByKey<bool>(*itValue, "isRobot", false)) {
+                        RobotBasePtr pRobot(new RobotBase(shared_from_this()));
+                        RobotBase::RobotBaseInfoPtr pRobotInfo(new RobotBase::RobotBaseInfo());
+                        pRobotInfo->DeserializeJSON(*itValue);
+                        if(pRobot->InitFromInfo(pRobotInfo)){
+                            pRobot->SetName(pRobotInfo->_name);
+                            _AddRobot(pRobot, false);
+                        }
+                    }
+                    else {
+                        KinBodyPtr pBody(new KinBody(InterfaceType::PT_KinBody, shared_from_this()));
+                        KinBody::KinBodyInfoPtr pBodyInfo(new KinBody::KinBodyInfo());
+                        pBodyInfo->DeserializeJSON(*itValue);
+                        if (pBody->InitFromInfo(pBodyInfo)) {
+                            pBody->SetName(pBodyInfo->_name);
+                            _AddKinBody(pBody, false);
+                        }
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
     virtual void Add(InterfaceBasePtr pinterface, bool bAnonymous, const std::string& cmdargs)
     {
         CHECK_INTERFACE(pinterface);

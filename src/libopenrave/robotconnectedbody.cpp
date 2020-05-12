@@ -61,6 +61,7 @@ void RobotBase::ConnectedBodyInfo::InitInfoFromBody(RobotBase& robot)
     }
 }
 
+
 void RobotBase::ConnectedBodyInfo::SerializeDiffJSON(rapidjson::Value& value, const RobotBase::ConnectedBodyInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const {
     // TODO
     OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
@@ -371,6 +372,13 @@ void RobotBase::ConnectedBody::GetResolvedGripperInfos(std::vector<RobotBase::Gr
     }
 }
 
+uint8_t RobotBase::ConnectedBody::ApplyDiff(const rapidjson::Value& connectedBodyValue, ConnectedBodyInfo& newInfo)
+{
+    int8_t applyResult = 0;
+    return applyResult;
+}
+
+
 RobotBase::ConnectedBodyPtr RobotBase::AddConnectedBody(const RobotBase::ConnectedBodyInfo& connectedBodyInfo, bool removeduplicate)
 {
     if( _nHierarchyComputed != 0 ) {
@@ -444,7 +452,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
 
     FOREACH(itconnectedBody, _vecConnectedBodies) {
         ConnectedBody& connectedBody = **itconnectedBody;
-        const ConnectedBodyInfo& connectedBodyInfo = connectedBody._info;
+        const ConnectedBodyInfo& connectedBodyInfo = connectedBody.GetInfo();
 
         if( !connectedBody.GetAttachingLink() ) {
             throw OPENRAVE_EXCEPTION_FORMAT("ConnectedBody %s for robot %s does not have a valid pointer to link %s", connectedBody.GetName()%GetName()%connectedBodyInfo._linkname, ORE_InvalidArguments);

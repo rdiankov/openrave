@@ -75,6 +75,10 @@ public:
         virtual void SerializeDiffJSON(rapidjson::Value &value, const RobotBase::GripperInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
 
+        virtual inline const std::string GetId() const {
+            return _id;
+        }
+
         std::string gripperid; ///< unique gripperid
         std::string& _id; /// < alias to griiperid
         std::string grippertype; ///< gripper type
@@ -98,9 +102,22 @@ public:
         virtual ~Manipulator();
 
         /// \brief return a serializable info holding everything to initialize a manipulator
-        inline const ManipulatorInfo& GetInfo() const {
+        virtual inline const ManipulatorInfo& GetInfo() const {
             return _info;
         }
+
+        virtual inline const ManipulatorInfo& UpdateAndGetInfo() {
+            UpdateInfo();
+            return GetInfo();
+        }
+
+        virtual void UpdateInfo();
+
+        virtual inline const std::string GetId() const {
+            return _info._id;
+        }
+
+        virtual uint8_t ApplyDiff(const rapidjson::Value& manipValue, RobotBase::ManipulatorInfo& newInfo);
 
         /// \brief Return the transformation of the manipulator frame
         ///
@@ -463,6 +480,7 @@ public:
         virtual ~AttachedSensorInfo() {
         }
 
+        std::string _id;
         std::string _name;
         std::string _linkname; ///< the robot link that the sensor is attached to
         Transform _trelative;         ///< relative transform of the sensor with respect to the attached link
@@ -473,9 +491,7 @@ public:
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
 
         // reference architexture
-        std::string _id;
         boost::shared_ptr<AttachedSensorInfo const> _referenceInfo;
-        bool _bIsDeleted;
 
     };
     typedef boost::shared_ptr<AttachedSensorInfo> AttachedSensorInfoPtr;
@@ -517,6 +533,9 @@ public:
         virtual const std::string& GetName() const {
             return _info._name;
         }
+        virtual inline const std::string& GetId() const {
+            return _info._id;
+        }
 
         /// retrieves the current data from the sensor
         virtual SensorBase::SensorDataPtr GetData() const;
@@ -542,9 +561,11 @@ public:
         }
 
         /// \brief returns the attached sensor info
-        inline const AttachedSensorInfo& GetInfo() const {
+        virtual inline const AttachedSensorInfo& GetInfo() const {
             return _info;
         }
+
+        virtual uint8_t ApplyDiff(const rapidjson::Value& attachedSensorValue, AttachedSensorInfo& newInfo);
 
 private:
         /// \brief compute internal information from user-set info
@@ -685,15 +706,20 @@ public:
             return _info._name;
         }
 
+        virtual inline const std::string GetId() const {
+            return _info._id;
+        }
+
         // virtual void serialize(std::ostream& o, int options) const;
 
         /// \brief return hash of the attached kinbody definition
         // virtual const std::string& GetStructureHash() const;
 
         /// \brief returns the attached kinbody info
-        inline const ConnectedBodyInfo& GetInfo() const {
+        virtual inline const ConnectedBodyInfo& GetInfo() const {
             return _info;
         }
+        virtual uint8_t ApplyDiff(const rapidjson::Value& connectedBodyValue, ConnectedBodyInfo& newInfo);
 
 private:
         ConnectedBodyInfo _info; ///< user specified data (to be serialized and saved), should not contain dynamically generated parameters.
@@ -727,7 +753,13 @@ public:
         virtual ~RobotBaseInfo() {}
 
         virtual const RobotBaseInfo& operator=(const RobotBaseInfo& other) {
-            KinBodyInfo::operator=(other);
+            _id = other._id;
+            _uri = other._uri;
+            _name = other._name;
+            _referenceUri = other._referenceUri;
+
+            _vLinkInfos = other._vLinkInfos;
+            _vJointInfos = other._vJointInfos;
             _vManipInfos = other._vManipInfos;
             _vAttachedSensorInfos = other._vAttachedSensorInfos;
             _vConnectedBodyInfos = other._vConnectedBodyInfos;
@@ -1181,14 +1213,22 @@ private:
         return boost::static_pointer_cast<RobotBase const>(shared_from_this());
     }
 
+    virtual uint8_t ApplyDiff(const rapidjson::Value& robotValue, RobotBaseInfo& newInfo);
+    virtual inline const RobotBaseInfo& UpdateAndGetInfo() {
+        UpdateInfo();
+        return GetInfo();
+    }
     virtual inline const RobotBaseInfo& GetInfo() const {
         return _info;
     }
     virtual inline void SetInfo(const RobotBaseInfo& info) {
         _info = info;
     }
+    virtual void UpdateInfo();
 
-
+    virtual inline const std::string GetId() const {
+        return _info._id;
+    }
 
 protected:
     RobotBase(EnvironmentBasePtr penv);

@@ -113,7 +113,7 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const AttachedSen
     if( (cloningoptions&Clone_Sensors) && !!sensor._psensor ) {
         _psensor = RaveCreateSensor(probot->GetEnv(), sensor._psensor->GetXMLId());
         if( !!_psensor ) {
-            _psensor->SetName(str(boost::format("%s:%s")%probot->GetName()%_info._name)); // need a unique targettable name
+            _psensor->SetName(str(boost::format("%s:%s")%probot->GetName()%GetName())); // need a unique targettable name
             _psensor->Clone(sensor._psensor,cloningoptions);
             if( !!_psensor ) {
                 pdata = _psensor->CreateSensorData();
@@ -147,7 +147,11 @@ RobotBase::AttachedSensor::~AttachedSensor()
 {
 }
 
-
+uint8_t RobotBase::AttachedSensor::ApplyDiff(const rapidjson::Value& attachedSensorValue, AttachedSensorInfo& newInfo)
+{
+    uint8_t applyResult = 0;
+    return applyResult;
+}
 
 //void RobotBase::AttachedSensor::_ComputeInternalInformation()
 //{
@@ -409,6 +413,30 @@ void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson:
 {
     OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "uri", _uri, allocator);
+    if (_vLinkInfos.size() > 0) {
+        rapidjson::Value rLinkInfoValues;
+        rLinkInfoValues.SetArray();
+        rLinkInfoValues.Reserve(_vLinkInfos.size(), allocator);
+        FOREACHC(it, _vLinkInfos) {
+            rapidjson::Value linkInfoValue;
+            (*it)->SerializeJSON(linkInfoValue, allocator, fUnitScale, options);
+            rLinkInfoValues.PushBack(linkInfoValue, allocator);
+        }
+        value.AddMember("links", rLinkInfoValues, allocator);
+    }
+
+    if (_vJointInfos.size() > 0) {
+        rapidjson::Value rJointInfoValues;
+        rJointInfoValues.SetArray();
+        rJointInfoValues.Reserve(_vJointInfos.size(), allocator);
+        FOREACHC(it, _vJointInfos) {
+            rapidjson::Value jointInfoValue;
+            (*it)->SerializeJSON(jointInfoValue, allocator, fUnitScale, options);
+            rJointInfoValues.PushBack(jointInfoValue, allocator);
+        }
+        value.AddMember("joints", rJointInfoValues, allocator);
+    }
+
     if (_vManipInfos.size() > 0) {
         rapidjson::Value rManipInfoValues;
         rManipInfoValues.SetArray();
@@ -462,6 +490,7 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
 {
     OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
     if (_uri.empty()) {
         OPENRAVE_ASSERT_FORMAT0(!_id.empty(), "kinbody uri and id are empty", ORE_Failed); // assert one of _id and _uri is not empty;
         _uri = "#" + _id;
@@ -602,6 +631,7 @@ bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, co
         __hashrobotstructure.resize(0);
     }
     _vecConnectedBodies.clear();
+
     return true;
 }
 
@@ -663,6 +693,86 @@ void RobotBase::SetName(const std::string& newname)
 
         KinBody::SetName(newname);
     }
+}
+
+uint8_t RobotBase::ApplyDiff(const rapidjson::Value& robotValue, RobotBase::RobotBaseInfo& newInfo) {
+    if (robotValue.HasMember("__delete__")) {
+        bool isDeleted = false;
+        OpenRAVE::JSON::LoadJsonValueByKey(robotValue, "__delete__", isDeleted);
+        if (isDeleted) {
+            return ApplyDiffResult::ADR_REMOVE;
+        }
+    }
+    uint8_t applyResult = 0;
+    newInfo = UpdateAndGetInfo();
+
+    // links
+    if (robotValue.HasMember("links")) {
+        applyResult |= ApplyDiffOnVector(robotValue["links"], _veclinks, newInfo._vLinkInfos);
+    }
+
+    // joints
+    if (robotValue.HasMember("joints")) {
+        applyResult |= ApplyDiffOnVector(robotValue["joints"], _vecjoints, newInfo._vJointInfos);
+    }
+
+    // manipulators
+    if (robotValue.HasMember("manipulators")) {
+        applyResult |= ApplyDiffOnVector(robotValue["manipulators"], _vecManipulators, newInfo._vManipInfos);
+    }
+
+    // attachedsensors
+    if (robotValue.HasMember("attachedSensors")) {
+        applyResult |= ApplyDiffOnVector(robotValue["attachedSensors"], _vecAttachedSensors, newInfo._vAttachedSensorInfos);
+    }
+    // connectedbodies
+    if (robotValue.HasMember("connectedBodies")) {
+        applyResult |= ApplyDiffOnVector(robotValue["connectetBodies"], _vecConnectedBodies, newInfo._vConnectedBodyInfos);
+    }
+
+    // // gripperinfos
+    // if (robotValue.HasMember("gripperInfos")) {
+    //     applyResult |= ApplyDiffOnVector(robotValue["grippers"], _vecGripperInfos, newInfo._vGripperInfos);
+    // }
+
+    if (robotValue.HasMember("name")){
+        OpenRAVE::JSON::LoadJsonValueByKey(robotValue, "name", newInfo._name);
+        SetName(newInfo._name);
+    }
+
+    if (robotValue.HasMember("uri")) {
+        // TODO: throw
+    }
+
+    return applyResult | ApplyDiffResult::ADR_OK;
+}
+
+void RobotBase::UpdateInfo() {
+    // _info._name = _name;
+    // _info._uri = __struri;
+
+    // _info._vLinkInfos.resize(_veclinks.size());
+    // for(size_t i = 0; i < _info._vLinkInfos.size(); ++i) {
+    //     _veclinks[i]->UpdateInfo();
+    //     _info._vLinkInfos[i] = boost::make_shared<KinBody::LinkInfo>(_veclinks[i]->_info);
+    // }
+
+    // _info._vJointInfos.resize(_vecjoints.size());
+    // for(size_t i = 0; i < _info._vJointInfos.size(); ++i) {
+    //     _vecjoints[i]->UpdateInfo();
+    //     _info._vJointInfos[i] = boost::make_shared<KinBody::JointInfo>(_vecjoints[i]->_info);
+    // }
+    KinBody::UpdateInfo();
+
+    // TODO
+    _info._vManipInfos.resize(_vecManipulators.size());
+    // for(size_t iManip = 0; iManip < _info._vManipInfos.size(); ++iManip) {
+    //     _vecManipulators[iManip].UpdateInfo();
+    //     _info._vManipInfos[iManip] = boost::make_shared<RobotBase::ManipulatorInfo>(_vecManipulators[iManip]->_info);
+    // }
+    _info._vAttachedSensorInfos.resize(_vecAttachedSensors.size());
+    _info._vConnectedBodyInfos.resize(_vecConnectedBodies.size());
+    _info._vGripperInfos.resize(_vecGripperInfos.size());
 }
 
 void RobotBase::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t bCheckLimits, const std::vector<int>& dofindices)
@@ -2072,7 +2182,7 @@ void RobotBase::_ComputeInternalInformation()
 
     int manipindex=0;
     FOREACH(itmanip,_vecManipulators) {
-        if( (*itmanip)->_info._name.size() == 0 ) {
+        if( (*itmanip)->GetName().size() == 0 ) {
             stringstream ss;
             ss << "manip" << manipindex;
             RAVELOG_WARN(str(boost::format("robot %s has a manipulator with no name, setting to %s\n")%GetName()%ss.str()));

@@ -95,6 +95,62 @@ RobotBase::Manipulator::Manipulator(RobotBasePtr probot, boost::shared_ptr<Robot
 //    }
 }
 
+
+void RobotBase::Manipulator::UpdateInfo() {
+    // TODO
+}
+
+uint8_t RobotBase::Manipulator::ApplyDiff(const rapidjson::Value& manipValue, RobotBase::ManipulatorInfo& newInfo)
+{
+    if (manipValue.HasMember("__delete__")) {
+        if (OpenRAVE::JSON::GetJsonValueByKey<bool>(manipValue, "__delete__")) {
+            return ApplyDiffResult::ADR_REMOVE;
+        }
+    }
+    uint8_t applyResult = 0;
+    newInfo = UpdateAndGetInfo();
+
+
+    if (manipValue.HasMember("baseLinkname")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(manipValue, "baseLinkName", newInfo._sBaseLinkName);
+        applyResult |= ApplyDiffResult::ADR_RELOAD;
+    }
+    if (manipValue.HasMember("effectorLinkName")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(manipValue, "effectorLinkName", newInfo._sEffectorLinkName);
+        applyResult |= ApplyDiffResult::ADR_RELOAD;
+    }
+    if (manipValue.HasMember("ikSolverType")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(manipValue, "ikSolverType", newInfo._sIkSolverXMLId);
+        applyResult |= ApplyDiffResult::ADR_RELOAD;
+    }
+    if (manipValue.HasMember("gripperJointNames")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(manipValue, "gripperJointNames", newInfo._vGripperJointNames);
+        applyResult |= ApplyDiffResult::ADR_RELOAD;
+    }
+    if (manipValue.HasMember("gripperid")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(manipValue, "gripperid", newInfo._gripperid);
+        applyResult |= ApplyDiffResult::ADR_RELOAD;
+    }
+
+    if (manipValue.HasMember("name")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(manipValue, "name", newInfo._name);
+        SetName(newInfo._name);
+    }
+    if (manipValue.HasMember("transform")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(manipValue, "transform", newInfo._tLocalTool);
+        SetLocalToolTransform(newInfo._tLocalTool);
+    }
+    if (manipValue.HasMember("chuckingDirections")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(manipValue, "chuckingDirections", newInfo._vChuckingDirection);
+        SetChuckingDirection(newInfo._vChuckingDirection);
+    }
+    if (manipValue.HasMember("direction")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(manipValue, "direction", newInfo._vdirection);
+        SetLocalToolDirection(newInfo._vdirection);
+    }
+    return applyResult | ApplyDiffResult::ADR_OK;
+}
+
 int RobotBase::Manipulator::GetArmDOF() const
 {
     return static_cast<int>(__varmdofindices.size());

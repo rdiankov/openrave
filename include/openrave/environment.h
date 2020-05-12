@@ -415,6 +415,8 @@ public:
         Add(sensor,bAnonymous);
     }
 
+    virtual bool ApplyDiff(const rapidjson::Value& envValue) = 0;
+
     /// \brief bodycallback(body, action)
     ///
     /// \param body KinBodyPtr
@@ -700,6 +702,14 @@ public:
     /// \brief returns the unique id of the environment
     inline int GetId() const {
         return __nUniqueId;
+    }
+
+    inline std::string GetRevision() const {
+        return _revision;
+    }
+
+    virtual void SetRevision(const std::string revision) {
+        _revision = revision;
     }
 
     std::string _revision;  ///< environment current revision

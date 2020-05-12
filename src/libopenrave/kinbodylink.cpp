@@ -171,12 +171,53 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
     SerializeDiffJSON(value, baseInfo, allocator, fUnitScale, options);
 }
 
-void KinBody::LinkInfo::DeserializeDiffJSON(const rapidjson::Value& value, KinBody::LinkInfo& newInfo) {
-    newInfo._id = _id;
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "name", newInfo._name, _name);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "isEnabled", newInfo._bIsEnabled, _bIsEnabled);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "mass", newInfo._mass, _mass);
-}
+// void KinBody::LinkInfo::DeserializeDiffJSON(const rapidjson::Value& value) {
+//     KinBody::LinkInfo newInfo;
+//     DeserializeDiffJSON(value, newInfo);
+//     _Update(newInfo);
+// }
+
+// void KinBody::LinkInfo::DeserializeDiffJSON(const rapidjson::Value& value, KinBody::LinkInfo& newInfo) {
+//     newInfo._id = _id;
+//     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", newInfo._name, _name);
+//     OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", newInfo._t, _t);
+//     OpenRAVE::JSON::LoadJsonValueByKey(value, "massTransform", newInfo._tMassFrame, _tMassFrame);
+//     OpenRAVE::JSON::LoadJsonValueByKey(value, "mass", newInfo._mass, _mass);
+//     OpenRAVE::JSON::LoadJsonValueByKey(value, "intertialMoments", newInfo._vinertiamoments, _vinertiamoments);
+//     OpenRAVE::JSON::LoadJsonValueByKey(value, "floatParameters", newInfo._mapFloatParameters, _mapFloatParameters);
+//     OpenRAVE::JSON::LoadJsonValueByKey(value, "intParameters", newInfo._mapIntParameters, _mapIntParameters);
+//     OpenRAVE::JSON::LoadJsonValueByKey(value, "stringParameters", newInfo._mapStringParameters, _mapStringParameters);
+//     OpenRAVE::JSON::LoadJsonValueByKey(value, "forcedAdjacentLinks", newInfo._vForcedAdjacentLinks, _vForcedAdjacentLinks);
+
+//     if (value.HasMember("geometries")) {
+//         for(rapidjson::Value::ConstValueIterator itGeomValue = value["geometries"].Begin(); itGeomValue != value["geometries"].End(); ++itGeomValue) {
+//             std::string geomId;
+//             OpenRAVE::JSON::LoadJsonValueByKey(*itGeomValue, "id", geomId);
+//             bool foundGeomtry = false;
+//             for(size_t iGeom = 0; iGeom < _vgeometryinfos.size(); ++iGeom) {
+//                 if ((_vgeometryinfos[iGeom]->_id) == geomId) {
+//                     foundGeomtry = true;
+//                     bool isDeleted = false;
+//                     OpenRAVE::JSON::LoadJsonValueByKey(*itGeomValue, "__delete__", isDeleted);
+//                     if (isDeleted) {
+//                         break;
+//                     }
+//                     KinBody::GeometryInfoPtr pGeomInfo(new KinBody::GeometryInfo());
+//                     _vgeometryinfos[iGeom]->DeserializeDiffJSON(*itGeomValue, *pGeomInfo);
+//                     newInfo._vgeometryinfos.push_back(pGeomInfo);
+//                 }
+//             }
+//             if(!foundGeomtry){
+//                 KinBody::GeometryInfoPtr pGeomInfo(new KinBody::GeometryInfo());
+//                 pGeomInfo->DeserializeJSON(*itGeomValue);
+//                 newInfo._vgeometryinfos.push_back(pGeomInfo);
+//             }
+//         }
+//     }
+
+//     OpenRAVE::JSON::LoadJsonValueByKey(value, "isEnabled", newInfo._bIsEnabled, _bIsEnabled);
+
+// }
 
 void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale)
 {
@@ -229,6 +270,53 @@ const KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& o
     return *this;
 }
 
+template<typename T>
+bool Compare(const std::vector<boost::shared_ptr<T>>& vec1, const std::vector<boost::shared_ptr<T>>& vec2) {
+
+    if (vec1.size() != vec2.size()) return false;
+
+    typedef std::pair<boost::shared_ptr<T>, boost::shared_ptr<T>> SameIDPair;
+    std::vector<SameIDPair> sameItems;
+    sameItems.resize(vec1.size());
+    FOREACHC(itVec1, vec1) {
+        bool found = false;
+        FOREACHC(itVec2, vec2) {
+            if ((*itVec1)->_id == (*itVec2)->_id) {
+                found = true;
+                sameItems.push_back(make_pair(*itVec1, *itVec2));
+                break;
+            }
+        }
+        if (!found) return false;
+    }
+
+    for(typename std::vector<SameIDPair>::iterator itr = sameItems.begin(); itr != sameItems.end(); itr++) {
+        if (*((*itr).first) != *((*itr).second)) {
+            return false;
+        }
+    }
+}
+
+bool KinBody::LinkInfo::operator==(const KinBody::LinkInfo& other) const {
+    bool equal = true;
+    equal = _id == other._id
+            && _name == other._name
+            && _t == other._t
+            && _tMassFrame == other._tMassFrame
+            && _mass == other._mass
+            && _vinertiamoments == other._vinertiamoments
+            && _mapFloatParameters == other._mapFloatParameters
+            && _mapIntParameters == other._mapIntParameters
+            && _mapStringParameters == other._mapStringParameters
+            && _vForcedAdjacentLinks == other._vForcedAdjacentLinks
+            && _bStatic == other._bStatic
+            && _bIsEnabled == other._bIsEnabled;
+
+    equal = (equal && Compare(_vgeometryinfos, other._vgeometryinfos));
+    // TODO: _mapExtraGeometries;
+    return equal;
+}
+
 void KinBody::LinkInfo::_Update(const KinBody::LinkInfo& other) {
     _vgeometryinfos.resize(other._vgeometryinfos.size());
     for( size_t i = 0; i < _vgeometryinfos.size(); ++i ) {
@@ -263,7 +351,6 @@ void KinBody::LinkInfo::_Update(const KinBody::LinkInfo& other) {
     _bStatic = other._bStatic;
     _bIsEnabled = other._bIsEnabled;
 }
-
 
 KinBody::Link::Link(KinBodyPtr parent)
 {
@@ -811,23 +898,72 @@ void KinBody::Link::_Update(bool parameterschanged, uint32_t extraParametersChan
     }
 }
 
-bool KinBody::Link::ApplyDiff(const rapidjson::Value& linkValue) {
-    UpdateInfo(); // update before comparing
-    KinBody::LinkInfo newInfo;
-    _info.DeserializeDiffJSON(linkValue, newInfo);  // get a new info into newInfo
+uint8_t KinBody::Link::ApplyDiff(const rapidjson::Value& linkValue, KinBody::LinkInfo& newInfo) {
+    newInfo = UpdateAndGetInfo();
+    uint8_t applyResult = 0;
 
-    // update current link according to info difference
-    if (newInfo._bIsEnabled != _info._bIsEnabled) {
+    newInfo._vgeometryinfos.reserve(_info._vgeometryinfos.size());
+    FOREACHC(itGeomInfo, _info._vgeometryinfos) {
+        KinBody::GeometryInfoPtr pGeomInfo(new KinBody::GeometryInfo(**itGeomInfo));
+        newInfo._vgeometryinfos.push_back(pGeomInfo);
+    }
+    if (linkValue.HasMember("geometries")) {
+        for(rapidjson::Value::ConstValueIterator itGeomValue = linkValue["geometries"].Begin(); itGeomValue != linkValue["geometries"].End(); ++itGeomValue) {
+            std::string geomId;
+            OpenRAVE::JSON::LoadJsonValueByKey(*itGeomValue, "id", geomId);
+            bool foundGeometry = false;
+            for(std::vector<KinBody::Link::GeometryPtr>::iterator itGeom = _vGeometries.begin(); itGeom!= _vGeometries.end(); itGeom++) {
+                if((*itGeom)->_info._id == geomId) {
+                    foundGeometry = true;
+                    // delete
+                    if(OpenRAVE::JSON::GetJsonValueByKey<bool>(*itGeomValue, "__delete__", false)) {
+                        std::remove_if(newInfo._vgeometryinfos.begin(), newInfo._vgeometryinfos.end(), [geomId](KinBody::GeometryInfoPtr pGeomInfo){return pGeomInfo->_id == geomId;});
+                        RemoveGeometryByName((*itGeom)->GetName(), true);
+                        // TODO: need to do some collision computation?
+                        break;
+                    }
+                    // update
+                    KinBody::GeometryInfoPtr pGeomInfo(new KinBody::GeometryInfo());
+                    applyResult |= (*itGeom)->ApplyDiff(*itGeomValue, *pGeomInfo);
+                    FOREACH(itGeomInfo, newInfo._vgeometryinfos) {
+                        if((*itGeomInfo)->_id == geomId) {
+                            *itGeomInfo = pGeomInfo;
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+
+            if(!foundGeometry){
+                // error input protect
+                if (OpenRAVE::JSON::GetJsonValueByKey<bool>(*itGeomValue, "__delete__", false)) {
+                    continue;
+                }
+                KinBody::GeometryInfoPtr pGeomInfo(new KinBody::GeometryInfo());
+                pGeomInfo->DeserializeJSON(*itGeomValue);
+                newInfo._vgeometryinfos.push_back(pGeomInfo);
+                AddGeometry(pGeomInfo, false);
+            }
+        }
+    }
+
+    if (linkValue.HasMember("isEnabled")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(linkValue, "isEnabled", newInfo._bIsEnabled);
         Enable(newInfo._bIsEnabled);
     }
 
-    if (newInfo._mass != _info._mass) {
+    if (linkValue.HasMember("mass")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(linkValue, "mass", newInfo._mass);
         SetMass(newInfo._mass);
     }
 
-    // last step to set info to new info. TODO: if any error happens, can always revert back according to current info
-    _info = newInfo;
-    return true;
+    if (linkValue.HasMember("transform")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(linkValue, "transform", newInfo._t);
+        SetTransform(newInfo._t);
+    }
+
+    return applyResult | ApplyDiffResult::ADR_OK;
 }
 
 }

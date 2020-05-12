@@ -161,6 +161,12 @@ public:
             _Update(info);
             return *this;
         }
+
+        bool operator==(const GeometryInfo& info) const;
+        bool operator!=(const GeometryInfo& info) const {
+            return !operator==(info);
+        }
+
         /// \brief compute the inner empty volume in the geometry coordinate system
         ///
         /// \return bool true if the geometry has a concept of empty volume nad tInnerEmptyVolume/abInnerEmptyVolume are filled
@@ -177,6 +183,7 @@ public:
         virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
         virtual void DeserializeGeomData(const rapidjson::Value& value, std::string typestr, dReal fUnitScale=1.0);
 
+        // virtual void DeserializeDiffGeomData(const rapidjson::Value& value, std::string typestr, KinBody::GeometryInfo& newInfo);
 
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
 
@@ -267,11 +274,16 @@ public:
 
         LinkInfo(const LinkInfo& other);
         const LinkInfo& operator=(const LinkInfo& other);
+        bool operator==(const LinkInfo& other) const;
+        bool operator!=(const LinkInfo& other) const {
+            return !operator==(other);
+        }
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void SerializeDiffJSON(rapidjson::Value& value, const KinBody::LinkInfo& baseInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
-        virtual void DeserializeDiffJSON(const rapidjson::Value& value, KinBody::LinkInfo& newInfo);
+        // virtual void DeserializeDiffJSON(const rapidjson::Value& value, LinkInfo& newInfo);
+        // virtual void DeserializeDiffJSON(const rapidjson::Value& value);
 
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like
@@ -352,6 +364,9 @@ public:
             inline GeometryType GetType() const {
                 return _info._type;
             }
+
+            inline std::string GetGeometryTypeString(const GeometryType& type);
+
             inline const Vector& GetRenderScale() const {
                 return _info._vRenderScale;
             }
@@ -412,7 +427,7 @@ public:
                 return _info._meshcollision;
             }
 
-            inline const KinBody::GeometryInfo& GetInfo() const {
+            virtual inline const KinBody::GeometryInfo& GetInfo() const {
                 return _info;
             }
 
@@ -468,6 +483,18 @@ public:
             /// \brief sets the name of the geometry
             virtual void SetName(const std::string& name);
 
+            virtual uint8_t ApplyDiff(const rapidjson::Value& geometryValue, KinBody::GeometryInfo& newInfo);
+            uint8_t _ApplyGeomDiff(const rapidjson::Value& geometryValue, KinBody::GeometryInfo& newInfo, dReal fUnitScale=1.0);
+            inline const KinBody::GeometryInfo& UpdateAndGetInfo() {
+                UpdateInfo();
+                return _info;
+            }
+            inline void UpdateInfo() {
+                // TODO
+                RAVELOG_WARN("GeometryInfo UpdateInfo not implemented");
+            }
+
+
 protected:
             boost::weak_ptr<Link> _parent;
             KinBody::GeometryInfo _info; ///< geometry info
@@ -494,6 +521,10 @@ protected:
 
         inline const std::string& GetName() const {
             return _info._name;
+        }
+
+        virtual inline const std::string& GetId() const {
+            return _info._id;
         }
 
         /// \brief Indicates a static body that does not move with respect to the root link.
@@ -767,7 +798,8 @@ protected:
             UpdateInfo();
             return _info;
         }
-        virtual bool ApplyDiff(const rapidjson::Value& linkValue);
+
+        virtual uint8_t ApplyDiff(const rapidjson::Value& linkValue, LinkInfo& newInfo);
 
 protected:
         /// \brief Updates the cached information due to changes in the collision data.
@@ -1023,6 +1055,10 @@ public:
         /// \brief The unique name of the joint
         inline const std::string& GetName() const {
             return _info._name;
+        }
+
+        virtual inline const std::string& GetId() const {
+            return _info._id;
         }
 
         inline dReal GetMaxVel(int iaxis=0) const {
@@ -1317,6 +1353,8 @@ public:
 
         virtual void serialize(std::ostream& o, int options) const;
 
+        virtual uint8_t ApplyDiff(const rapidjson::Value& jointValue, KinBody::JointInfo& newInfo);
+
         /// @name Internal Hierarchy Methods
         //@{
         /// \brief Return the parent link which the joint measures its angle off from (either GetFirstAttached() or GetSecondAttached())
@@ -1425,7 +1463,6 @@ public:
 
         /// \brief Updates several fields in \ref _info depending on the current state of the joint.
         virtual void UpdateInfo();
-
         /// \brief returns the JointInfo structure containing all information.
         ///
         /// Some values in this structure like _vcurrentvalues need to be updated, so make sure to call \ref UpdateInfo() right before this function is called.
@@ -1653,27 +1690,32 @@ public:
 
         virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+        // virtual void DeserializeDiffJSON(const rapidjson::Value& value, KinBody::KinBodyInfo& newInfo, dReal fUntiScale=1.0);
 
         virtual ~KinBodyInfo() {}
 
-        virtual const KinBodyInfo& operator=(const KinBodyInfo& other) {
-            _id = other._id;
-            _uri = other._uri;
-            _referenceUri = other._referenceUri;
-            _vLinkInfos = other._vLinkInfos;
-            _vJointInfos = other._vJointInfos;
-            _referenceInfo = other._referenceInfo;
+        const KinBodyInfo& operator=(const KinBodyInfo& other) {
+            _Update(other);
             return *this;
+        }
+
+        bool operator==(const KinBodyInfo& other) const;
+        bool operator!=(const KinBodyInfo& other) const{
+            return !operator==(other);
         }
 
         std::string _id;
         std::string _uri;
+        std::string _name;
         std::string _referenceUri;  // referenced body info uri
 
         std::vector<LinkInfoPtr> _vLinkInfos; ///< list of pointers to LinkInfo
         std::vector<JointInfoPtr> _vJointInfos; ///< list of pointers to JointInfo
 
         boost::shared_ptr<KinBodyInfo> _referenceInfo;
+
+protected:
+        void _Update(const KinBodyInfo& other);
     };
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
@@ -2628,10 +2670,21 @@ private:
     virtual inline const KinBodyInfo& GetInfo() const {
         return _info;
     }
+
     virtual inline void SetInfo(const KinBodyInfo& info) {
         _info = info;
     }
-    virtual bool ApplyDiff(const rapidjson::Value& bodyValue);
+    virtual void UpdateInfo();
+
+    virtual uint8_t ApplyDiff(const rapidjson::Value& bodyValue, KinBodyInfo& newInfo);
+
+    virtual inline const KinBodyInfo& UpdateAndGetInfo() {
+        UpdateInfo();
+        return GetInfo();
+    }
+    virtual inline const std::string GetId() const {
+        return _info._id;
+    }
 
 protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies

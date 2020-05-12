@@ -2237,7 +2237,15 @@ void PyEnvironmentBase::SetUnit(std::string unitname, dReal unitmult){
 object PyEnvironmentBase::GetUnit() const {
     std::pair<std::string, dReal> unit = _penv->GetUnit();
     return py::make_tuple(unit.first, unit.second);
+}
 
+void PyEnvironmentBase::SetRevision(std::string revision){
+    _penv->SetRevision(revision);
+}
+
+object PyEnvironmentBase::GetRevision() const {
+    std::string revision = _penv->GetRevision();
+    return ConvertStringToUnicode(revision);
 }
 
 bool PyEnvironmentBase::__eq__(PyEnvironmentBasePtr p) {
@@ -2254,6 +2262,13 @@ std::string PyEnvironmentBase::__str__() {
 }
 object PyEnvironmentBase::__unicode__() {
     return ConvertStringToUnicode(__str__());
+}
+
+bool PyEnvironmentBase::ApplyDiff(const object pyEnvValue)
+{
+    rapidjson::Document doc;
+    toRapidJSONValue(pyEnvValue, doc, doc.GetAllocator());
+    return _penv->ApplyDiff(doc);
 }
 
 EnvironmentBasePtr PyEnvironmentBase::GetEnv() const {
@@ -2673,7 +2688,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("Clone",&PyEnvironmentBase::Clone, PY_ARGS("reference","options") DOXY_FN(EnvironmentBase,Clone))
                      .def("SetCollisionChecker",&PyEnvironmentBase::SetCollisionChecker, PY_ARGS("collisionchecker") DOXY_FN(EnvironmentBase,SetCollisionChecker))
                      .def("GetCollisionChecker",&PyEnvironmentBase::GetCollisionChecker, DOXY_FN(EnvironmentBase,GetCollisionChecker))
-
+                     .def("ApplyDiff", &PyEnvironmentBase::ApplyDiff, DOXY_FN(EnvironmentBase, ApplyDiff))
                      .def("CheckCollision",pcolb, PY_ARGS("body") DOXY_FN(EnvironmentBase,CheckCollision "KinBodyConstPtr; CollisionReportPtr"))
                      .def("CheckCollision",pcolbr, PY_ARGS("body","report") DOXY_FN(EnvironmentBase,CheckCollision "KinBodyConstPtr; CollisionReportPtr"))
                      .def("CheckCollision",pcolbb, PY_ARGS("body1","body2") DOXY_FN(EnvironmentBase,CheckCollision "KinBodyConstPtr; KinBodyConstPtr; CollisionReportPtr"))
@@ -2945,6 +2960,8 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("GetUserData",&PyEnvironmentBase::GetUserData, DOXY_FN(InterfaceBase,GetUserData))
                      .def("GetUnit",&PyEnvironmentBase::GetUnit, DOXY_FN(EnvironmentBase,GetUnit))
                      .def("SetUnit",&PyEnvironmentBase::SetUnit, PY_ARGS("unitname","unitmult") DOXY_FN(EnvironmentBase,SetUnit))
+                     .def("GetRevision", &PyEnvironmentBase::GetRevision, DOXY_FN(EnvironmentBase, GetRevision))
+                     .def("SetRevision", &PyEnvironmentBase::SetRevision, PY_ARGS("revision") DOXY_FN(EnvironmentBase, SetRevision))
                      .def("__enter__",&PyEnvironmentBase::__enter__)
                      .def("__exit__",&PyEnvironmentBase::__exit__)
                      .def("__eq__",&PyEnvironmentBase::__eq__)

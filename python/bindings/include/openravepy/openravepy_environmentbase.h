@@ -241,6 +241,9 @@ public:
 
     object GetUnit() const;
 
+    void SetRevision(std::string revision);
+    object GetRevision() const;
+
     bool __eq__(PyEnvironmentBasePtr p);
     bool __ne__(PyEnvironmentBasePtr p);
     std::string __repr__();
@@ -248,6 +251,7 @@ public:
     object __unicode__();
 
     EnvironmentBasePtr GetEnv() const;
+    bool ApplyDiff(const py::object pyEnvValue);
 };
 
 } // namespace openravepy

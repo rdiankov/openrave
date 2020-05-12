@@ -2340,6 +2340,13 @@ typedef struct DOFValue {
 } DOFValue;
 
 
+enum ApplyDiffResult {
+    ADR_OK = 0x1,    ///< caller doesn't need to do anything more
+    ADR_RELOAD = 0x2,  ///< caller should reload info
+    ADR_REMOVE = 0x4,  ///< caller should delete info
+    ADR_FAILED = 0x8, ///< apply diff failed;
+};
+
 /** \brief returns a string representation of the error code
  */
 OPENRAVE_API const char* RaveGetErrorCodeString(OpenRAVEErrorCode error);
@@ -2771,6 +2778,7 @@ const std::string& IkParameterization::GetName() const
     }
     throw openrave_exception(str(boost::format("IkParameterization iktype 0x%x not supported")%_type));
 }
+
 
 } // end namespace OpenRAVE
 

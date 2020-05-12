@@ -33,7 +33,8 @@ namespace OpenRAVE
 
 
 template<typename T> void _ExtractInfo(const rapidjson::Value& value, std::vector<OPENRAVE_SHARED_PTR<T>>& infos, dReal fUnitScale=1.0);
-template<typename T> void _MergeInfo(std::string id, T& info, const rapidjson::Value value, dReal fUnitScale);
+// template<typename T> void _MergeInfo(std::string id, T& info, const rapidjson::Value value, dReal fUnitScale);
+
 
 bool RaveParseJSON(EnvironmentBasePtr penv, const rapidjson::Document& doc, const AttributesList& atts);
 bool RaveParseJSON(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const rapidjson::Document& doc, const AttributesList& atts);

@@ -169,6 +169,7 @@ void PyGeometryInfo::Init(const KinBody::GeometryInfo& info) {
     _vDiffuseColor = toPyVector3(info._vDiffuseColor);
     _vAmbientColor = toPyVector3(info._vAmbientColor);
     _meshcollision = toPyTriMesh(info._meshcollision);
+    _id = ConvertStringToUnicode(info._id);
     _type = info._type;
     _name = ConvertStringToUnicode(info._name);
     _filenamerender = ConvertStringToUnicode(info._filenamerender);
@@ -235,6 +236,10 @@ KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo() {
         ExtractTriMesh(_meshcollision,info._meshcollision);
     }
     info._type = _type;
+
+    if( !IS_PYTHONOBJECT_NONE(_id) ) {
+        info._id = py::extract<std::string>(_id);
+    }
     if( !IS_PYTHONOBJECT_NONE(_name) ) {
         info._name = py::extract<std::string>(_name);
     }
@@ -316,7 +321,7 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
         PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(_vgeometryinfos[i]);
         info._vgeometryinfos[i] = pygeom->GetGeometryInfo();
     }
-    if( !IS_PYTHONOBJECT_NONE(_name) ) {
+    if( !IS_PYTHONOBJECT_NONE(_id) ) {
         info._id = py::extract<std::string>(_id);
     }
     if( !IS_PYTHONOBJECT_NONE(_name) ) {
@@ -720,6 +725,7 @@ PyJointInfo::PyJointInfo(const KinBody::JointInfo& info) {
 
 void PyJointInfo::_Update(const KinBody::JointInfo& info) {
     _type = info._type;
+    _id = ConvertStringToUnicode(info._id);
     _name = ConvertStringToUnicode(info._name);
     _linkname0 = ConvertStringToUnicode(info._linkname0);
     _linkname1 = ConvertStringToUnicode(info._linkname1);
@@ -808,6 +814,10 @@ KinBody::JointInfoPtr PyJointInfo::GetJointInfo() {
     KinBody::JointInfoPtr pinfo(new KinBody::JointInfo());
     KinBody::JointInfo& info = *pinfo;
     info._type = _type;
+
+    if( !IS_PYTHONOBJECT_NONE(_id) ) {
+        info._id = py::extract<std::string>(_id);
+    }
     if( !IS_PYTHONOBJECT_NONE(_name) ) {
         info._name = py::extract<std::string>(_name);
     }
@@ -2179,7 +2189,7 @@ bool PyKinBody::ApplyDiff(const object pyKinBodyValue)
 {
     rapidjson::Document doc;
     toRapidJSONValue(pyKinBodyValue, doc, doc.GetAllocator());
-    return _pbody->ApplyDiff(doc);
+    // _pbody->ApplyDiff(doc, );
 }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -4305,6 +4315,7 @@ void init_openravepy_kinbody()
                           .def_readwrite("_vAmbientColor",&PyGeometryInfo::_vAmbientColor)
                           .def_readwrite("_meshcollision",&PyGeometryInfo::_meshcollision)
                           .def_readwrite("_type",&PyGeometryInfo::_type)
+                          .def_readwrite("_id", &PyGeometryInfo::_id)
                           .def_readwrite("_name",&PyGeometryInfo::_name)
                           .def_readwrite("_filenamerender",&PyGeometryInfo::_filenamerender)
                           .def_readwrite("_filenamecollision",&PyGeometryInfo::_filenamecollision)
@@ -4507,6 +4518,7 @@ void init_openravepy_kinbody()
     object jointinfo = class_<PyJointInfo, OPENRAVE_SHARED_PTR<PyJointInfo> >("JointInfo", DOXY_CLASS(KinBody::JointInfo))
 #endif
                        .def_readwrite("_type",&PyJointInfo::_type)
+                       .def_readwrite("_id", &PyJointInfo::_id)
                        .def_readwrite("_name",&PyJointInfo::_name)
                        .def_readwrite("_linkname0",&PyJointInfo::_linkname0)
                        .def_readwrite("_linkname1",&PyJointInfo::_linkname1)

@@ -107,6 +107,13 @@ public:
     bool ExtractAll() {
         bool allSucceeded = true;
         dReal fUnitScale = _GetUnitScale();
+
+        std::string revision;
+        OpenRAVE::JSON::LoadJsonValueByKey(*_doc, "revision", revision);
+        if (revision.empty()) {
+            revision = "0";
+        }
+        _penv->SetRevision(revision);
         if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()) {
             std::map<KinBodyPtr, std::vector<KinBody::GrabbedInfoConstPtr>> mapKinBodyGrabbedInfos;
             for (rapidjson::Value::ValueIterator itrBodyValue = (*_doc)["bodies"].Begin(); itrBodyValue != (*_doc)["bodies"].End(); ++itrBodyValue) {
@@ -376,25 +383,25 @@ protected:
     }
 
     // Partially Update the Environment
-    bool _ApplyDiff(const rapidjson::Value& bodyValue, const std::string revision, dReal fUnitScale) {
-        if (revision < _penv->_revision) {
-            throw OPENRAVE_EXCEPTION_FORMAT("revision %s is smaller then current revision %s", revision%_penv->_revision, ORE_InvalidArguments);
-        }
+    // bool _ApplyDiff(const rapidjson::Value& bodyValue, const std::string revision, dReal fUnitScale) {
+    //     if (revision < _penv->_revision) {
+    //         throw OPENRAVE_EXCEPTION_FORMAT("revision %s is smaller then current revision %s", revision%_penv->_revision, ORE_InvalidArguments);
+    //     }
 
-        for (rapidjson::Value::ConstValueIterator itr = bodyValue["bodies"].Begin(); itr != bodyValue["bodies"].End(); itr++) {
-            if (itr->HasMember("id")) {
-                std::string bodyId;
-                OpenRAVE::JSON::LoadJsonValueByKey(*itr, "id", bodyId);
-                KinBodyPtr pBody = _penv->GetKinBody(bodyId);  // TODO: bodyName is used
+    //     for (rapidjson::Value::ConstValueIterator itr = bodyValue["bodies"].Begin(); itr != bodyValue["bodies"].End(); itr++) {
+    //         if (itr->HasMember("id")) {
+    //             std::string bodyId;
+    //             OpenRAVE::JSON::LoadJsonValueByKey(*itr, "id", bodyId);
+    //             KinBodyPtr pBody = _penv->GetKinBody(bodyId);  // TODO: bodyName is used
 
-                const rapidjson::Value& value = *itr;
-                if (!!pBody) {
-                    pBody->ApplyDiff(value);
-                }
-            }
-        }
+    //             const rapidjson::Value& value = *itr;
+    //             if (!!pBody) {
+    //                 pBody->ApplyDiff(value);
+    //             }
+    //         }
+    //     }
 
-    }
+    // }
 
     // \brief extract rapidjson value and merge into linkinfos
     void _ExtractLinks(const rapidjson::Value &objectValue, std::vector<KinBody::LinkInfoPtr>& linkinfos, dReal fUnitScale)
