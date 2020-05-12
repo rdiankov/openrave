@@ -64,6 +64,12 @@ bool RobotPostureDescriber::Init(const std::array<RobotBase::LinkPtr, 2>& kinema
     else if (njoints == 4) {
         _posturefn = Compute4DofRobotPostureStates0;
     }
+
+    std::stringstream ss;
+    for(int i : _armindices) {
+        ss << i << ", ";
+    }
+    RAVELOG_WARN(ss.str());
     return static_cast<bool>(_posturefn);
 }
 
@@ -110,7 +116,9 @@ NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Tr
 
 bool AnalyzeSixRevoluteJoints0(const std::vector<KinBody::JointPtr>& joints) {
     if(joints.size() != 6) {
-        throw OPENRAVE_EXCEPTION_FORMAT("number of joints is not 6: %d!=6", joints.size(), ORE_InvalidArguments);
+        // throw OPENRAVE_EXCEPTION_FORMAT("number of joints is not 6: %d!=6", joints.size(), ORE_InvalidArguments);
+        RAVELOG_WARN_FORMAT("Number of joints is not 6: %d!=6", joints.size());
+        return false;
     }
     const Transform tJ1J2 = joints[0]->GetInternalHierarchyRightTransform() * joints[1]->GetInternalHierarchyLeftTransform();
     const Transform tJ2J3 = joints[1]->GetInternalHierarchyRightTransform() * joints[2]->GetInternalHierarchyLeftTransform();
@@ -122,7 +130,24 @@ bool AnalyzeSixRevoluteJoints0(const std::vector<KinBody::JointPtr>& joints) {
         && AnalyzeTransformBetweenNeighbouringJoints(tJ2J3) == NeighbouringTwoJointsRelation::NTJR_PARALLEL
         && AnalyzeTransformBetweenNeighbouringJoints(tJ3J4) == NeighbouringTwoJointsRelation::NTJR_PERPENDICULAR
         && AnalyzeTransformBetweenNeighbouringJoints(tJ4J5) == NeighbouringTwoJointsRelation::NTJR_PERPENDICULAR
-        && AnalyzeTransformBetweenNeighbouringJoints(tJ5J6) == NeighbouringTwoJointsRelation::NTJR_PERPENDICULAR;
+        && AnalyzeTransformBetweenNeighbouringJoints(tJ5J6) == NeighbouringTwoJointsRelation::NTJR_PERPENDICULAR
+        ;
+}
+
+bool AnalyzeFourRevoluteJoints0(const std::vector<KinBody::JointPtr>& joints) {
+    if(joints.size() != 4) {
+        // throw OPENRAVE_EXCEPTION_FORMAT("number of joints is not 6: %d!=6", joints.size(), ORE_InvalidArguments);
+        RAVELOG_WARN_FORMAT("Number of joints is not 4: %d!=4", joints.size());
+        return false;
+    }
+    const Transform tJ1J2 = joints[0]->GetInternalHierarchyRightTransform() * joints[1]->GetInternalHierarchyLeftTransform();
+    const Transform tJ2J3 = joints[1]->GetInternalHierarchyRightTransform() * joints[2]->GetInternalHierarchyLeftTransform();
+    const Transform tJ3J4 = joints[2]->GetInternalHierarchyRightTransform() * joints[3]->GetInternalHierarchyLeftTransform();
+
+    return AnalyzeTransformBetweenNeighbouringJoints(tJ1J2) == NeighbouringTwoJointsRelation::NTJR_PERPENDICULAR
+        && AnalyzeTransformBetweenNeighbouringJoints(tJ2J3) == NeighbouringTwoJointsRelation::NTJR_PARALLEL
+        && AnalyzeTransformBetweenNeighbouringJoints(tJ3J4) == NeighbouringTwoJointsRelation::NTJR_PARALLEL
+        ;
 }
 
 bool RobotPostureDescriber::Supports(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain) const {
@@ -134,7 +159,7 @@ bool RobotPostureDescriber::Supports(const std::array<RobotBase::LinkPtr, 2>& ki
     }
     const KinBodyPtr probot = kinematicsChain[0]->GetParent();
     const std::string robotname = probot->GetName();
-    if(armdof == 4 && robotname == "okuma") {
+    if(armdof == 4 && AnalyzeFourRevoluteJoints0(joints)) {
         return true;
     }
     RAVELOG_WARN_FORMAT("Cannot handle robot %s with armdof=%d for now", robotname % armdof);
