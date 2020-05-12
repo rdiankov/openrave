@@ -4706,7 +4706,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                     _vClosedLoops.back().back().second = _vPassiveJoints.at(itjoint-r->_vPassiveJoints.begin());
                 }
                 else {
-                    throw OPENRAVE_EXCEPTION_FORMAT(_("joint %s in closed loop doesn't belong to anythong?"),(*itjoint)->GetName(), ORE_Assert);
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("joint %s in closed loop doesn't belong to anything?"),(*itjoint)->GetName(), ORE_Assert);
                 }
             }
         }
@@ -4737,12 +4737,20 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _vGrabbedBodies.resize(0);
     FOREACHC(itgrabbedref, r->_vGrabbedBodies) {
         GrabbedConstPtr pgrabbedref = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbedref);
+        if( !pgrabbedref ) {
+            RAVELOG_WARN_FORMAT("env=%d, have uninitialized GrabbedConstPtr in _vGrabbedBodies", GetEnv()->GetId());
+            continue;
+        }
 
         KinBodyPtr pbodyref = pgrabbedref->_pgrabbedbody.lock();
         KinBodyPtr pgrabbedbody;
         if( !!pbodyref ) {
-            pgrabbedbody = GetEnv()->GetBodyFromEnvironmentId(pbodyref->GetEnvironmentId());
-            BOOST_ASSERT(pgrabbedbody->GetName() == pbodyref->GetName());
+            //pgrabbedbody = GetEnv()->GetBodyFromEnvironmentId(pbodyref->GetEnvironmentId());
+            pgrabbedbody = GetEnv()->GetKinBody(pbodyref->GetName());
+            if( !pgrabbedbody ) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("When cloning body '%s', could not find grabbed object '%s' in environmentid=%d"), GetName()%pbodyref->GetName()%pbodyref->GetEnv()->GetId(), ORE_InvalidState);
+            }
+            //BOOST_ASSERT(pgrabbedbody->GetName() == pbodyref->GetName());
 
             GrabbedPtr pgrabbed(new Grabbed(pgrabbedbody,_veclinks.at(KinBody::LinkPtr(pgrabbedref->_plinkrobot)->GetIndex())));
             pgrabbed->_troot = pgrabbedref->_troot;
@@ -4751,6 +4759,21 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                 pgrabbed->_listNonCollidingLinks.push_back(_veclinks.at((*itlinkref)->GetIndex()));
             }
             _vGrabbedBodies.push_back(pgrabbed);
+        }
+    }
+
+    // Clone self-collision checker
+    _selfcollisionchecker.reset();
+    if( !!r->_selfcollisionchecker ) {
+        _selfcollisionchecker = RaveCreateCollisionChecker(GetEnv(), r->_selfcollisionchecker->GetXMLId());
+        _selfcollisionchecker->SetCollisionOptions(r->_selfcollisionchecker->GetCollisionOptions());
+        _selfcollisionchecker->SetGeometryGroup(r->_selfcollisionchecker->GetGeometryGroup());
+        if( GetEnvironmentId() != 0 ) {
+            // This body has been added to the environment already so can call InitKinBody.
+            _selfcollisionchecker->InitKinBody(shared_kinbody());
+        }
+        else {
+            // InitKinBody will be called when the body is added to the environment.
         }
     }
 
@@ -5028,7 +5051,7 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
             if( !!plink1 ) {
                 break;
             }
-            }
+        }
         if( (*itlink)->_info._name == info._linkname1 ) {
             plink1 = *itlink;
             if( !!plink0 ) {

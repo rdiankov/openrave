@@ -124,39 +124,66 @@ object toPyObject(const rapidjson::Value& value)
     }
 }
 
-#define FILL_RAPIDJSON_FROMARRAY_1D(pyarrayvalues, T, rapidjsonsetfn) {  \
-        const T *vdata = reinterpret_cast<T*>(PyArray_DATA(pyarrayvalues)); \
-        for (int i = 0; i < dims[0]; i++) { \
-            rapidjson::Value elementValue; \
-            elementValue.rapidjsonsetfn(vdata[i]); \
-            value.PushBack(elementValue, allocator); \
-        } \
-} \
+using RapidJsonGenericValueUTF8 = rapidjson::GenericValue<rapidjson::UTF8<> >;
+template <typename T>
+using RapidJsonSetFn = RapidJsonGenericValueUTF8&(RapidJsonGenericValueUTF8::*)(T);
 
-#define FILL_RAPIDJSON_FROMARRAY_2D(pyarrayvalues, T, rapidjsonsetfn) {                            \
-        const T *vdata = reinterpret_cast<T*>(PyArray_DATA(pyarrayvalues)); \
-        for (int i = 0; i < dims[0]; i++) { \
-            rapidjson::Value colvalues(rapidjson::kArrayType); \
-            for (int j = 0; j < dims[1]; j++) { \
-                rapidjson::Value elementValue; \
-                elementValue.rapidjsonsetfn(vdata[i*dims[0]+j]); \
-                colvalues.PushBack(elementValue, allocator); \
-            } \
-            value.PushBack(colvalues, allocator); \
-        } \
-} \
-
-#define FILL_RAPIDJSON_FROMARRAY(pyarrayvalues, T, rapidjsonsetfn, ndims) { \
-        if( ndims == 1 ) { \
-            FILL_RAPIDJSON_FROMARRAY_1D(pyarrayvalues, T, rapidjsonsetfn); \
-        } \
-        else if( ndims == 2 ) { \
-            FILL_RAPIDJSON_FROMARRAY_2D(pyarrayvalues, T, rapidjsonsetfn); \
-        } \
-        else { \
-            throw OPENRAVE_EXCEPTION_FORMAT(_("do not support array object with %d dims"), ndims, ORE_InvalidArguments); \
-        } \
+template <typename T>
+void FillRapidJsonFromArray1D(PyArrayObject* pyarr,
+                              rapidjson::Value &value,
+                              rapidjson::Document::AllocatorType& allocator,
+                              RapidJsonSetFn<T> f,
+                              npy_intp const* dims)
+{ 
+    const T *pv = reinterpret_cast<T*>(PyArray_DATA(pyarr));
+    const size_t numel = dims[0];
+    value.Reserve(numel, allocator);
+    for (size_t i = 0; i < numel; ++i) { 
+        rapidjson::Value elementValue; 
+        (elementValue.*f)(pv[i]); 
+        value.PushBack(elementValue, allocator); 
+    }
 }
+
+template <typename T>
+void FillRapidJsonFromArray2D(PyArrayObject* pyarr,
+                              rapidjson::Value &value,
+                              rapidjson::Document::AllocatorType& allocator,
+                              RapidJsonSetFn<T> f,
+                              npy_intp const* dims) 
+{ 
+    const T *pv = reinterpret_cast<T*>(PyArray_DATA(pyarr));
+    value.Reserve(dims[0], allocator);
+    for (int i = 0, ij = 0; i < dims[0]; ++i) { 
+        rapidjson::Value colvalues(rapidjson::kArrayType);
+        colvalues.Reserve(dims[1], allocator);
+        for (int j = 0; j < dims[1]; ++j, ++ij) { 
+            rapidjson::Value elementValue; 
+            (elementValue.*f)(pv[ij]);
+            colvalues.PushBack(elementValue, allocator); 
+        } 
+        value.PushBack(colvalues, allocator); 
+    } 
+}
+
+template <typename T>
+void FillRapidJsonFromArray(PyArrayObject* pyarr,
+                            rapidjson::Value &value,
+                            rapidjson::Document::AllocatorType& allocator,
+                            RapidJsonSetFn<T> f,
+                            const size_t ndims, npy_intp const* dims) 
+{ 
+    if( ndims == 1 ) {
+        FillRapidJsonFromArray1D<T>(pyarr, value, allocator, f, dims);
+    }
+    else if( ndims == 2 ) {
+        FillRapidJsonFromArray2D<T>(pyarr, value, allocator, f, dims);
+    }
+    else {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("do not support array object with %d dims"), ndims, ORE_InvalidArguments);
+    }
+}
+
 
 // convert from python object to rapidjson
 void toRapidJSONValue(const object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator)
@@ -276,10 +303,10 @@ void toRapidJSONValue(const object &obj, rapidjson::Value &value, rapidjson::Doc
         if( ndims > 0 ) {
             if (PyArray_ISFLOAT(pyarrayvalues) ) {
                 if( typeSize == sizeof(float)) {
-                    FILL_RAPIDJSON_FROMARRAY(pyarrayvalues, float, SetFloat, ndims);
+                    FillRapidJsonFromArray<float>(pyarrayvalues, value, allocator, &rapidjson::Value::SetFloat, ndims, dims);
                 }
                 else if( typeSize == sizeof(double)) {
-                    FILL_RAPIDJSON_FROMARRAY(pyarrayvalues, double, SetDouble, ndims);
+                    FillRapidJsonFromArray<double>(pyarrayvalues, value, allocator, &rapidjson::Value::SetDouble, ndims, dims);
                 }
                 else {
                     throw OPENRAVE_EXCEPTION_FORMAT(_("do not support array object float with %d type size"), typeSize, ORE_InvalidArguments);
@@ -288,18 +315,18 @@ void toRapidJSONValue(const object &obj, rapidjson::Value &value, rapidjson::Doc
             else if (PyArray_ISINTEGER(pyarrayvalues) ) {
                 if( typeSize == sizeof(int) ) {
                     if( PyArray_ISSIGNED(pyarrayvalues) ) {
-                        FILL_RAPIDJSON_FROMARRAY(pyarrayvalues, int, SetInt, ndims);
+                        FillRapidJsonFromArray<int>(pyarrayvalues, value, allocator, &rapidjson::Value::SetInt, ndims, dims);
                     }
                     else {
-                        FILL_RAPIDJSON_FROMARRAY(pyarrayvalues, uint32_t, SetUint, ndims);
+                        FillRapidJsonFromArray<uint32_t>(pyarrayvalues, value, allocator, &rapidjson::Value::SetUint, ndims, dims);
                     }
                 }
                 else if( typeSize == sizeof(int64_t) ) {
                     if( PyArray_ISSIGNED(pyarrayvalues) ) {
-                        FILL_RAPIDJSON_FROMARRAY(pyarrayvalues, uint64_t, SetInt64, ndims);
+                        FillRapidJsonFromArray<int64_t>(pyarrayvalues, value, allocator, &rapidjson::Value::SetInt64, ndims, dims);
                     }
                     else {
-                        FILL_RAPIDJSON_FROMARRAY(pyarrayvalues, uint64_t, SetUint64, ndims);
+                        FillRapidJsonFromArray<uint64_t>(pyarrayvalues, value, allocator, &rapidjson::Value::SetUint64, ndims, dims);
                     }
                 }
                 else {

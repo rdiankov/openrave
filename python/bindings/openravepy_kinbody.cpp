@@ -1978,10 +1978,13 @@ RobotBase::GrabbedInfoPtr PyKinBody::PyGrabbedInfo::GetGrabbedInfo() const
     pinfo->_grabbedname = py::extract<std::string>(_grabbedname);
     pinfo->_robotlinkname = py::extract<std::string>(_robotlinkname);
     pinfo->_trelative = ExtractTransform(_trelative);
-    std::vector<int> v = ExtractArray<int>(_setRobotLinksToIgnore);
     pinfo->_setRobotLinksToIgnore.clear();
-    FOREACHC(it,v) {
-        pinfo->_setRobotLinksToIgnore.insert(*it);
+
+    if( !IS_PYTHONOBJECT_NONE(_setRobotLinksToIgnore) ) {
+        std::vector<int> v = ExtractArray<int>(_setRobotLinksToIgnore);
+        FOREACHC(it,v) {
+            pinfo->_setRobotLinksToIgnore.insert(*it);
+        }
     }
 #endif
     return pinfo;
@@ -3136,12 +3139,16 @@ void PyKinBody::SetDOFTorqueLimits(object o)
     _pbody->SetDOFTorqueLimits(values);
 }
 
-void PyKinBody::SetDOFValues(object o)
+void PyKinBody::SetDOFValues(object ovalues)
 {
     if( _pbody->GetDOF() == 0 ) {
         return;
     }
-    std::vector<dReal> values = ExtractArray<dReal>(o);
+    // check before extracting since something can be passing in different objects
+    if( len(ovalues) != _pbody->GetDOF() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("Passed in values to SetDOFValues have %d elements, but robot has %d dof"), ((int)len(ovalues))%_pbody->GetDOF(), ORE_InvalidArguments);
+    }
+    std::vector<dReal> values = ExtractArray<dReal>(ovalues);
     if( (int)values.size() != GetDOF() ) {
         throw openrave_exception(_("values do not equal to body degrees of freedom"));
     }
@@ -3442,10 +3449,10 @@ object PyKinBody::GetGrabbed() const
 object PyKinBody::GetGrabbedInfo() const
 {
     py::list ograbbed;
-    std::vector<RobotBase::GrabbedInfoPtr> vgrabbedinfo;
+    std::vector<RobotBase::GrabbedInfo> vgrabbedinfo;
     _pbody->GetGrabbedInfo(vgrabbedinfo);
     FOREACH(itgrabbed, vgrabbedinfo) {
-        ograbbed.append(PyGrabbedInfoPtr(new PyGrabbedInfo(**itgrabbed)));
+        ograbbed.append(PyGrabbedInfoPtr(new PyGrabbedInfo(*itgrabbed)));
     }
     return ograbbed;
 }
