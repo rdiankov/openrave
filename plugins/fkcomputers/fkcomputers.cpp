@@ -52,37 +52,37 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     switch(type) {
     case PT_ForwardKinematicsSolver: {
         if( interfacename == ROBOTPOSTUREDESCRIBER_MODULE_NAME ) {
-            // take robot name, base link name, ee link name
-            std::string robotname, manipname, baselinkname, eelinkname;
-            sinput >> robotname >> manipname; // baselinkname >> eelinkname;
+            // // take robot name, base link name, ee link name
+            // std::string robotname, manipname, baselinkname, eelinkname;
+            // sinput >> robotname >> manipname; // baselinkname >> eelinkname;
 
-            const RobotBasePtr probot = penv->GetRobot(robotname);
-            if(probot == nullptr) {
-                throw OPENRAVE_EXCEPTION_FORMAT("interfacename=%s, env=%d has no robot %s", interfacename % penv->GetId() % robotname, ORE_InvalidArguments);
-            }
+            // const RobotBasePtr probot = penv->GetRobot(robotname);
+            // if(probot == nullptr) {
+            //     throw OPENRAVE_EXCEPTION_FORMAT("interfacename=%s, env=%d has no robot %s", interfacename % penv->GetId() % robotname, ORE_InvalidArguments);
+            // }
 
-            const ManipulatorPtr pmanip = probot->GetManipulator(manipname);
-            LinkPtr baselink, eelink;
-            if(pmanip == nullptr) {
-                // it's baselink's name
-                baselinkname = manipname;
-                manipname = "";
-                sinput >> eelinkname;
-                baselink = probot->GetLink(baselinkname);
-                eelink = probot->GetLink(eelinkname);
-            }
-            else {
-                // indeed manipulator name
-                baselink = pmanip->GetBase();
-                eelink = pmanip->GetEndEffector();
-            }
+            // const ManipulatorPtr pmanip = probot->GetManipulator(manipname);
+            // LinkPtr baselink, eelink;
+            // if(pmanip == nullptr) {
+            //     // it's baselink's name
+            //     baselinkname = manipname;
+            //     manipname = "";
+            //     sinput >> eelinkname;
+            //     baselink = probot->GetLink(baselinkname);
+            //     eelink = probot->GetLink(eelinkname);
+            // }
+            // else {
+            //     // indeed manipulator name
+            //     baselink = pmanip->GetBase();
+            //     eelink = pmanip->GetEndEffector();
+            // }
 
-            if(baselink == nullptr || eelink == nullptr) {
-                throw OPENRAVE_EXCEPTION_FORMAT("interfacename=%s, env=%d, robot %s has no link %s or %s", interfacename % penv->GetId() % robotname % baselinkname % eelink, ORE_InvalidArguments);   
-            }
+            // if(baselink == nullptr || eelink == nullptr) {
+            //     throw OPENRAVE_EXCEPTION_FORMAT("interfacename=%s, env=%d, robot %s has no link %s or %s", interfacename % penv->GetId() % robotname % baselinkname % eelink, ORE_InvalidArguments);   
+            // }
 
-            const std::array<LinkPtr, 2> kinematicsChain {baselink, eelink};
-            return RobotPostureDescriberBasePtr(new RobotPostureDescriber(penv, kinematicsChain));
+            // const std::array<LinkPtr, 2> kinematicsChain {baselink, eelink};
+            return RobotPostureDescriberBasePtr(new RobotPostureDescriber(penv));
         }
         // may support other type of forward kinematics computing modules?
         break;

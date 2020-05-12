@@ -38,7 +38,8 @@ public:
     /// \brief Initialize with a kinematics chain
     virtual bool Init(const std::array<OpenRAVE::RobotBase::LinkPtr, 2>& kinematicsChain);
 
-    /// \brief Checks if we can use this describer to compute posture values from baselink to eelink prescribed by a kinematics chain
+    /// \brief Checks if we can use this describer to compute posture values from baselink to eelink prescribed by a kinematics chain.
+    ///        When it supports, it sets up the workspace variables for future computations.
     /// \return true if can handle this kinematics chain
     virtual bool Supports(const std::array<OpenRAVE::RobotBase::LinkPtr, 2>& kinematicsChain) const;
 
@@ -50,8 +51,6 @@ public:
     /// Computes a value describing descrete posture of robot kinematics between base link and endeffector link
     virtual bool ComputePostureValues(std::vector<uint16_t>& posturevalues, const std::vector<double>& jointvalues = {}) const;
 
-    virtual const std::vector<KinBody::JointPtr>& GetJoints() const final;
-
     /// \return the static interface type this class points to (used for safe casting)
     static InterfaceType GetInterfaceTypeStatic() {
         return PT_ForwardKinematicsSolver;
@@ -59,9 +58,6 @@ public:
 
 private:
     virtual const char* GetHash() const final;
-
-protected:
-    std::vector<KinBody::JointPtr> _vjoints; ///< joints from baselink to eelink
 };
 
 } // end namespace OpenRAVE
