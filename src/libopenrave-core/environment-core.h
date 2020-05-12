@@ -824,7 +824,6 @@ public:
                             if ((*itValue).HasMember("dofValues")) {
                                 // set dof values;
                                 std::vector<dReal> vDOFValues((*itValue)["dofValues"].Size());
-                                OPENRAVE_ASSERT_OP_FORMAT((*itValue)["dofValues"].Size(), ==, (*itBody)->GetDOF(),"set dof value size %d != body dof size %d", (*itValue)["dofValues"]->Size()%(*itBody)->GetDOF(), ORE_InvalidArguments);
                                 (*itBody)->GetDOFValues(vDOFValues);
                                 for (rapidjson::Value::ConstValueIterator itrDOFValue = (*itValue)["dofValues"].Begin(); itrDOFValue != (*itValue)["dofValues"].End(); ++itrDOFValue) {
                                     std::string jointId;
@@ -846,6 +845,29 @@ public:
                                 }
                                 saver.ClearOption(KinBody::Save_LinkTransformation); // don't restore link transformation if user set dofvalues;
                                 (*itBody)->SetDOFValues(vDOFValues, KinBody::CLA_Nothing);
+                            }
+                            // readable interfaces
+                            if ((*itValue).HasMember("readableInterfaces")) {
+                                for (rapidjson::Value::ConstMemberIterator itr = (*itValue)["readableInterfaces"].MemberBegin(); itr != (*itValue)["readableInterfaces"].MemberEnd(); itr++) {
+                                    // TODO: delete readable inteface ?
+                                    std::string readableInterfaceId = itr->name.GetString();
+                                    BaseJSONReaderPtr pReader = RaveCallJSONReader((*itBody)->GetInterfaceType(), readableInterfaceId, *itBody, AttributesList());
+
+                                    if (!!pReader) {
+                                        pReader->DeserializeJSON(itr->value); // TODO: fUnitScale?
+                                        JSONReadablePtr pReadable = pReader->GetReadable();
+                                        if (!!pReadable) {
+                                            (*itBody)->SetReadableInterface(readableInterfaceId, pReadable);
+                                        }
+                                    }
+                                    else if (itr->value.IsString()) {
+                                        // TODO: current json data is not able to help distinguish the type. So we try to use string readable if the value is string and no reader is found.
+                                        StringReadablePtr pReadable(new StringReadable(readableInterfaceId, itr->value.GetString()));
+                                        if (!!pReadable) {
+                                            (*itBody)->SetReadableInterface(readableInterfaceId, pReadable);
+                                        }
+                                    }
+                                }
                             }
                         } catch (...) {
                             // TODO: need recovery
