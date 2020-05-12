@@ -21,12 +21,8 @@
 #ifndef OPENRAVE_JSON_COMMON_H
 #define OPENRAVE_JSON_COMMON_H
 
-#include <openrave/openrave.h>
-#include <openrave/openravejson.h>
-#include <boost/make_shared.hpp>
-#include <boost/variant/variant.hpp>
-
 #include "../ravep.h"
+#include <openrave/openravejson.h>
 
 namespace OpenRAVE
 {
@@ -57,7 +53,5 @@ void RaveWriteJSONMemory(EnvironmentBasePtr penv, std::vector<char>& output, con
 void RaveWriteJSONMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts);
 void RaveWriteJSONMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts);
 
-
 }
-
 #endif
