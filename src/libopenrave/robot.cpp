@@ -24,7 +24,7 @@ void RobotBase::GripperInfo::SerializeJSON(rapidjson::Value &value, rapidjson::D
     value.SetObject();
     if( !!_pdocument ) {
         BOOST_ASSERT(_pdocument->IsObject());
-        value.CopyFrom(*_pdocument, allocator, true);
+        value.CopyFrom(*_pdocument, allocator);
     }
     openravejson::SetJsonValueByKey(value, "name", name, allocator);
     openravejson::SetJsonValueByKey(value, "grippertype", grippertype, allocator);
@@ -49,7 +49,7 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
 
     // should always create a new _pdocument in case an old one is initialized and copied
     _pdocument.reset(new rapidjson::Document());
-    _pdocument->CopyFrom(value, _pdocument->GetAllocator(), true);
+    _pdocument->CopyFrom(value, _pdocument->GetAllocator());
 }
 
 void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
@@ -2023,10 +2023,6 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 {
     KinBody::Clone(preference,cloningoptions);
     RobotBaseConstPtr r = RaveInterfaceConstCast<RobotBase>(preference);
-    _selfcollisionchecker.reset();
-    if( !!r->_selfcollisionchecker ) {
-        // TODO clone the self collision checker?
-    }
     __hashrobotstructure = r->__hashrobotstructure;
     _vecManipulators.clear();
     _pManipActive.reset();

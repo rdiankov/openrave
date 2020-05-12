@@ -2411,7 +2411,12 @@ private:
 
                 rapidjson::Document rGripperInfo;
                 (*itGripperInfo)->SerializeJSON(rGripperInfo, rGripperInfo.GetAllocator());
-
+                if (rGripperInfo.HasMember("id")) {
+                    rGripperInfo.RemoveMember("id");
+                }
+                if (rGripperInfo.HasMember("name")) {
+                    rGripperInfo.RemoveMember("name");
+                }
                 daeElementRef pjson_data = ptec->add("json_data");
                 std::string sGripperInfoJSON = openravejson::DumpJson(rGripperInfo);
                 pjson_data->setCharData(sGripperInfoJSON.c_str());
