@@ -730,10 +730,35 @@ uint8_t RobotBase::ApplyDiff(const rapidjson::Value& robotValue, RobotBase::Robo
         applyResult |= ApplyDiffOnVector(robotValue["connectetBodies"], _vecConnectedBodies, newInfo._vConnectedBodyInfos);
     }
 
-    // // gripperinfos
-    // if (robotValue.HasMember("gripperInfos")) {
-    //     applyResult |= ApplyDiffOnVector(robotValue["grippers"], _vecGripperInfos, newInfo._vGripperInfos);
-    // }
+    // gripperinfos
+    if (robotValue.HasMember("grippers")) {
+        for(rapidjson::Value::ConstValueIterator itGripperValue = robotValue["grippers"].Begin(); itGripperValue != robotValue["grippers"].End(); itGripperValue++) {
+            std::string grippername; // gripper name is gripper's unique id
+            OpenRAVE::JSON::LoadJsonValueByKey(*itGripperValue, "name", grippername);
+
+            std::vector<RobotBase::GripperInfoPtr>::iterator itGripper = std::find_if(_vecGripperInfos.begin(), _vecGripperInfos.end(), [grippername](RobotBase::GripperInfoPtr pInfo) {return pInfo->name == grippername;});
+            if (itGripper != _vecGripperInfos.end()) {
+                if (OpenRAVE::JSON::GetJsonValueByKey<bool>(*itGripperValue, "__delete__", false)) {
+                    _vecGripperInfos.erase(itGripper);
+                    // TOOD: do we need to reload robot ?
+                    break;
+                }
+                (*itGripper)->DeserializeJSON(*itGripperValue);
+                // TODO: do we need to reload robot ?
+                break;
+            }
+            else {
+                if (OpenRAVE::JSON::GetJsonValueByKey<bool>(*itGripperValue, "__delete__", false)) {
+                    // error input protection
+                    continue;
+                }
+                RobotBase::GripperInfoPtr pGripperInfo(new RobotBase::GripperInfo());
+                pGripperInfo->DeserializeJSON(*itGripperValue);
+                _vecGripperInfos.push_back(pGripperInfo);
+                // TODO: do we need to reload robot?
+            }
+        }
+    }
 
     if (robotValue.HasMember("name")){
         OpenRAVE::JSON::LoadJsonValueByKey(robotValue, "name", newInfo._name);

@@ -806,7 +806,6 @@ public:
                     if((*itBody)->GetId() == bodyId) {
                         foundBody = true;
                         // save kinbody first
-                        KinBody::KinBodyStateSaver saver(*itBody, 0xFFFFFFFF);
                         try {
                             if((*itBody)->IsRobot()) {
                                 _ApplyRobotDiff(*RaveInterfaceCast<RobotBase>(*itBody), *itValue);
@@ -815,7 +814,7 @@ public:
                                 _ApplyKinBodyDiff(**itBody, *itValue);
                             }
                         } catch (...) {
-                            saver.Restore(*itBody);
+                            // TODO: need recovery
                             throw;
                         }
                         break;

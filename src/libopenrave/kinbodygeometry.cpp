@@ -1243,7 +1243,7 @@ uint8_t KinBody::Link::Geometry::ApplyDiff(const rapidjson::Value& geometryValue
         SetAmbientColor(newInfo._vAmbientColor);
     }
     if (geometryValue.HasMember("visible")) {
-        OpenRAVE::JSON::LoadJsonValueByKey(geometryValue, "visible", newInfo._vAmbientColor);
+        OpenRAVE::JSON::LoadJsonValueByKey(geometryValue, "visible", newInfo._bVisible);
         SetVisible(newInfo._bVisible);
     }
 

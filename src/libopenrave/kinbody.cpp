@@ -5141,6 +5141,12 @@ uint8_t KinBody::ApplyDiff(const rapidjson::Value& bodyValue, KinBody::KinBodyIn
         SetName(newInfo._name);
     }
 
+    if (bodyValue.HasMember("transfrom")) {
+        Transform transform;
+        OpenRAVE::JSON::LoadJsonValueByKey(bodyValue, "transfrom", transform);
+        SetTransform(transform);
+    }
+
     if (bodyValue.HasMember("uri")) {
         // TODO: throw
     }

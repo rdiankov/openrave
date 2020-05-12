@@ -30,6 +30,7 @@ KinBody::LinkInfo::LinkInfo(const LinkInfo& other)
 
 void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
 
     Transform tmpTransform {_t};
