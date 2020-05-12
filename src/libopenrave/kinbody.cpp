@@ -4762,6 +4762,21 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         }
     }
 
+    // Clone self-collision checker
+    _selfcollisionchecker.reset();
+    if( !!r->_selfcollisionchecker ) {
+        _selfcollisionchecker = RaveCreateCollisionChecker(GetEnv(), r->_selfcollisionchecker->GetXMLId());
+        _selfcollisionchecker->SetCollisionOptions(r->_selfcollisionchecker->GetCollisionOptions());
+        _selfcollisionchecker->SetGeometryGroup(r->_selfcollisionchecker->GetGeometryGroup());
+        if( GetEnvironmentId() != 0 ) {
+            // This body has been added to the environment already so can call InitKinBody.
+            _selfcollisionchecker->InitKinBody(shared_kinbody());
+        }
+        else {
+            // InitKinBody will be called when the body is added to the environment.
+        }
+    }
+
     _nUpdateStampId++; // update the stamp instead of copying
 }
 
@@ -5036,7 +5051,7 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
             if( !!plink1 ) {
                 break;
             }
-            }
+        }
         if( (*itlink)->_info._name == info._linkname1 ) {
             plink1 = *itlink;
             if( !!plink0 ) {

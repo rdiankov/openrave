@@ -41,7 +41,7 @@ public:
     object _vdirection = py::none_();
     std::string _sIkSolverXMLId;
     object _vGripperJointNames = py::none_();
-    object _gripperid = py::none_();
+    object _grippername = py::none_();
 
 private:
     void _Update(const RobotBase::ManipulatorInfo& info);
