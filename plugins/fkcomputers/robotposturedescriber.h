@@ -25,6 +25,8 @@ public:
     /// Computes a value describing descrete posture of robot kinematics between base link and endeffector link
     virtual bool ComputePostureValues(std::vector<uint16_t>& values, const std::vector<double>& jointvalues = {}) const override;
 
+    virtual const std::vector<KinBody::JointPtr>& GetJoints() const { return _joints; }
+
 protected:
     /// \brief
     virtual void _GetJointsFromKinematicsChain(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain,
@@ -36,6 +38,8 @@ protected:
     double _fTol = 1e-6; ///< tolerance for computing robot posture values
     PostureValueFn _posturefn; ///< function that computes posture values and states for a kinematics chain
 };
+
+typedef boost::shared_ptr<RobotPostureDescriber> RobotPostureDescriberPtr;
 
 void Compute6RRobotPostureStates0  (const std::vector<KinBody::JointPtr>& vjoints, const double fTol, std::vector<uint16_t>& posturestates);
 void Compute4DofRobotPostureStates0(const std::vector<KinBody::JointPtr>& vjoints, const double fTol, std::vector<uint16_t>& posturestates);

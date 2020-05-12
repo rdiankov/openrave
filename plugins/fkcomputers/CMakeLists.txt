@@ -9,6 +9,7 @@ if( OPT_IKFAST_FLOAT32 )
 endif()
 
 file(GLOB fkcomputers_cppfiles "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
+file(GLOB fkcomputers_headers "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
 add_library(fkcomputers SHARED "${fkcomputers_cppfiles}")
 
 if( Boost_IOSTREAMS_FOUND )
@@ -21,6 +22,8 @@ target_link_libraries(fkcomputers PRIVATE boost_assertion_failed)
 set_target_properties(fkcomputers PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
 
 install(TARGETS fkcomputers DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}plugin-fkcomputers)
+install(FILES ${fkcomputers_headers} DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR}/openrave/fkcomputers COMPONENT ${COMPONENT_PREFIX}plugin-fkcomputers)
+
 set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}PLUGIN-FKCOMPUTERS_DISPLAY_NAME "Plugin interfaces to forward kinematics computing programs" PARENT_SCOPE)
 set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}PLUGIN-FKCOMPUTERS_DEPENDS ${COMPONENT_PREFIX}fkcomputers)
 set(PLUGIN_COMPONENT ${COMPONENT_PREFIX}plugin-fkcomputers PARENT_SCOPE)

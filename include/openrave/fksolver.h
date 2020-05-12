@@ -39,7 +39,7 @@ public:
     virtual bool Init(const std::array<OpenRAVE::RobotBase::LinkPtr, 2>& kinematicsChain) = 0;
 
     /// \brief Initialize with a kinematics chain prescribed by a manipulator
-    virtual bool Init(const RobotBase::ManipulatorPtr& pmanip) final;
+    bool Init(const RobotBase::ManipulatorPtr& pmanip);
 
     /// \brief Checks if we can use this describer to compute posture values from baselink to eelink prescribed by a kinematics chain.
     ///        When it supports, it sets up the workspace variables for future computations.
@@ -48,7 +48,7 @@ public:
 
     /// \brief Checks if we can use this describer to compute posture values from baselink to eelink prescribed by a manipulator
     /// \return true if can handle this kinematics chain
-    virtual bool Supports(const RobotBase::ManipulatorPtr& pmanip) const final;
+    bool Supports(const RobotBase::ManipulatorPtr& pmanip) const;
 
     /// \brief Computes an integer value to describe current robot posture
     /// Computes a value describing descrete posture of robot kinematics between base link and endeffector link
@@ -62,6 +62,8 @@ public:
 private:
     virtual const char* GetHash() const final;
 };
+
+typedef boost::shared_ptr<RobotPostureDescriberBase> RobotPostureDescriberBasePtr;
 
 } // end namespace OpenRAVE
 

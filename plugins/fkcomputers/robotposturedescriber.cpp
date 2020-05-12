@@ -68,18 +68,68 @@ bool RobotPostureDescriber::Init(const std::array<RobotBase::LinkPtr, 2>& kinema
 }
 
 void RobotPostureDescriber::_GetJointsFromKinematicsChain(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain,
-                                                          std::vector<KinBody::JointPtr>& vjoints) const {
+                                                          std::vector<KinBody::JointPtr>& joints) const {
     const int baselinkid = kinematicsChain[0]->GetIndex();
     const int eelinkid = kinematicsChain[1]->GetIndex();
     const KinBodyPtr probot = kinematicsChain[0]->GetParent();
-    probot->GetChain(baselinkid, eelinkid, vjoints);
+    probot->GetChain(baselinkid, eelinkid, joints);
+}
+
+// https://stackoverflow.com/questions/12059774/c11-standard-conformant-bitmasks-using-enum-class
+enum class NeighbouringTwoJointsRelation : uint16_t {
+    NTJR_UNKNOWN = 0x0,
+    NTJR_PARALLEL = 0x1,
+    NTJR_PERPENDICULAR = 0x2,
+    NTJR_INTERSECT = 0x4,
+    NTJR_INTERSECT_PERPENDICULAR = 0x2 | 0x4,
+    NTJR_OVERLAP = 0x9, // hence also parallel
+};
+
+inline constexpr NeighbouringTwoJointsRelation operator&(NeighbouringTwoJointsRelation x, NeighbouringTwoJointsRelation y)
+{
+return static_cast<NeighbouringTwoJointsRelation>(static_cast<int>(x) & static_cast<int>(y));
+}
+
+inline constexpr NeighbouringTwoJointsRelation operator|(NeighbouringTwoJointsRelation x, NeighbouringTwoJointsRelation y)
+{
+return static_cast<NeighbouringTwoJointsRelation>(static_cast<int>(x) | static_cast<int>(y));
+}
+
+NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Transform& t) {
+    const double tol = 1e-15;
+    const OpenRAVE::Vector zaxis(0, 0, 1);
+    const double dotprod = t.rotate(zaxis).dot3(zaxis);
+    if (fabs(dotprod) <= tol) {
+        return NeighbouringTwoJointsRelation::NTJR_PERPENDICULAR; // TO-DO: check intersecting
+    }
+    else if(1.0 - fabs(dotprod) <= tol) {
+        return NeighbouringTwoJointsRelation::NTJR_PARALLEL; // TO-DO: check overlapping
+    }
+    return NeighbouringTwoJointsRelation::NTJR_UNKNOWN;
+}
+
+bool AnalyzeSixRevoluteJoints0(const std::vector<KinBody::JointPtr>& joints) {
+    if(joints.size() != 6) {
+        throw OPENRAVE_EXCEPTION_FORMAT("number of joints is not 6: %d!=6", joints.size(), ORE_InvalidArguments);
+    }
+    const Transform tJ1J2 = joints[0]->GetInternalHierarchyRightTransform() * joints[1]->GetInternalHierarchyLeftTransform();
+    const Transform tJ2J3 = joints[1]->GetInternalHierarchyRightTransform() * joints[2]->GetInternalHierarchyLeftTransform();
+    const Transform tJ3J4 = joints[2]->GetInternalHierarchyRightTransform() * joints[3]->GetInternalHierarchyLeftTransform();
+    const Transform tJ4J5 = joints[3]->GetInternalHierarchyRightTransform() * joints[4]->GetInternalHierarchyLeftTransform();
+    const Transform tJ5J6 = joints[4]->GetInternalHierarchyRightTransform() * joints[5]->GetInternalHierarchyLeftTransform();
+
+    return AnalyzeTransformBetweenNeighbouringJoints(tJ1J2) == NeighbouringTwoJointsRelation::NTJR_PERPENDICULAR
+        && AnalyzeTransformBetweenNeighbouringJoints(tJ2J3) == NeighbouringTwoJointsRelation::NTJR_PARALLEL
+        && AnalyzeTransformBetweenNeighbouringJoints(tJ3J4) == NeighbouringTwoJointsRelation::NTJR_PERPENDICULAR
+        && AnalyzeTransformBetweenNeighbouringJoints(tJ4J5) == NeighbouringTwoJointsRelation::NTJR_PERPENDICULAR
+        && AnalyzeTransformBetweenNeighbouringJoints(tJ5J6) == NeighbouringTwoJointsRelation::NTJR_PERPENDICULAR;
 }
 
 bool RobotPostureDescriber::Supports(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain) const {
-    std::vector<KinBody::JointPtr> vjoints;
-    _GetJointsFromKinematicsChain(kinematicsChain, vjoints);
-    const size_t armdof = vjoints.size();
-    if(armdof == 6) {
+    std::vector<KinBody::JointPtr> joints;
+    _GetJointsFromKinematicsChain(kinematicsChain, joints);
+    const size_t armdof = joints.size();
+    if(armdof == 6 && AnalyzeSixRevoluteJoints0(joints)) {
         return true;
     }
     const KinBodyPtr probot = kinematicsChain[0]->GetParent();
@@ -100,27 +150,29 @@ bool RobotPostureDescriber::ComputePostureValues(std::vector<uint16_t>& postures
             return false;
         }
         const KinBody::CheckLimitsAction claoption = KinBody::CheckLimitsAction::CLA_Nothing;
+        const KinBody::KinBodyStateSaver saver(probot); // options = Save_LinkTransformation | Save_LinkEnable
         probot->SetDOFValues(jointvalues, claoption, _armindices);
+        _posturefn(_joints, _fTol, posturestates);
     }
     else {
+        _posturefn(_joints, _fTol, posturestates);
     }
-    _posturefn(_joints, _fTol, posturestates);
     return true;
 }
 
-void Compute6RRobotPostureStates0(const std::vector<KinBody::JointPtr>& vjoints, const double fTol, std::vector<uint16_t>& posturestates) {
-    const Vector axis0 = vjoints[0]->GetAxis();
-    const Vector axis1 = vjoints[1]->GetAxis();
-    // const Vector axis2 = vjoints[2]->GetAxis(); // the same as axis1
-    const Vector axis3 = vjoints[3]->GetAxis();
-    const Vector axis4 = vjoints[4]->GetAxis();
-    const Vector axis5 = vjoints[5]->GetAxis();
-    const Vector anchor0 = vjoints[0]->GetAnchor();
-    const Vector anchor1 = vjoints[1]->GetAnchor();
-    const Vector anchor2 = vjoints[2]->GetAnchor();
-    // const Vector anchor3 = vjoints[3]->GetAnchor();
-    const Vector anchor4 = vjoints[4]->GetAnchor();
-    // const Vector anchor5 = vjoints[5]->GetAnchor();
+void Compute6RRobotPostureStates0(const std::vector<KinBody::JointPtr>& joints, const double fTol, std::vector<uint16_t>& posturestates) {
+    const Vector axis0 = joints[0]->GetAxis();
+    const Vector axis1 = joints[1]->GetAxis();
+    // const Vector axis2 = joints[2]->GetAxis(); // the same as axis1
+    const Vector axis3 = joints[3]->GetAxis();
+    const Vector axis4 = joints[4]->GetAxis();
+    const Vector axis5 = joints[5]->GetAxis();
+    const Vector anchor0 = joints[0]->GetAnchor();
+    const Vector anchor1 = joints[1]->GetAnchor();
+    const Vector anchor2 = joints[2]->GetAnchor();
+    // const Vector anchor3 = joints[3]->GetAnchor();
+    const Vector anchor4 = joints[4]->GetAnchor();
+    // const Vector anchor5 = joints[5]->GetAnchor();
 
     const std::array<double, 3> posturevalues {
         // shoulder: {{0, -1}, {1, -1}, {0, 4}}
@@ -133,15 +185,15 @@ void Compute6RRobotPostureStates0(const std::vector<KinBody::JointPtr>& vjoints,
     compute_robot_posture_states<3>(posturevalues, fTol, posturestates);
 }
 
-void Compute4DofRobotPostureStates0(const std::vector<KinBody::JointPtr>& vjoints, const double fTol, std::vector<uint16_t>& posturestates) {
-    const Vector axis0 = vjoints[0]->GetAxis();
-    const Vector axis1 = vjoints[1]->GetAxis();
-    // const Vector axis2 = vjoints[2]->GetAxis();
-    // const Vector axis3 = vjoints[3]->GetAxis();
-    // const Vector anchor0 = vjoints[0]->GetAnchor();
-    const Vector anchor1 = vjoints[1]->GetAnchor();
-    const Vector anchor2 = vjoints[2]->GetAnchor();
-    const Vector anchor3 = vjoints[3]->GetAnchor();
+void Compute4DofRobotPostureStates0(const std::vector<KinBody::JointPtr>& joints, const double fTol, std::vector<uint16_t>& posturestates) {
+    const Vector axis0 = joints[0]->GetAxis();
+    const Vector axis1 = joints[1]->GetAxis();
+    // const Vector axis2 = joints[2]->GetAxis();
+    // const Vector axis3 = joints[3]->GetAxis();
+    // const Vector anchor0 = joints[0]->GetAnchor();
+    const Vector anchor1 = joints[1]->GetAnchor();
+    const Vector anchor2 = joints[2]->GetAnchor();
+    const Vector anchor3 = joints[3]->GetAnchor();
 
     const std::array<double, 2> posturevalues {
         // j1 pose: {{0, -1}, {1, -1}, {1, 3}}
