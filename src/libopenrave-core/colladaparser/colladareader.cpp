@@ -3588,13 +3588,13 @@ public:
                 AttributesList atts;
                 std::string schemes;
                 FOREACH(ialias, _vOpenRAVESchemeAliases) {
-                    schemes += *ialias;
-                    if (ialias != _vOpenRAVESchemeAliases.end() -1) {
-                        schemes += " ";
+                    if( schemes.size() > 0 ) {
+                        schemes += ' ';
                     }
+                    schemes += *ialias;
                 }
                 if (!schemes.empty()) {
-                    RAVELOG_DEBUG_FORMAT("inherit parent reader's openravescheme %s", schemes);
+                    RAVELOG_VERBOSE_FORMAT("inherit parent reader's openravescheme %s", schemes);
                     atts.emplace_back("openravescheme", schemes);
                 }
 
