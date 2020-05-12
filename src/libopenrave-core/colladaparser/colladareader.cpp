@@ -3586,11 +3586,16 @@ public:
                 RobotBasePtr pbody;
 
                 AttributesList atts;
-                if (!_vOpenRAVESchemeAliases.empty()) {
-                  stringstream ss;
-                  std::copy(_vOpenRAVESchemeAliases.begin(), _vOpenRAVESchemeAliases.end(), std::ostream_iterator<std::string>(ss));
-                  atts.emplace_back("openravescheme", ss.str());
-                  RAVELOG_DEBUG_FORMAT("inherit parent reader's openravescheme %s", ss.str());
+                std::string schemes;
+                FOREACH(ialias, _vOpenRAVESchemeAliases) {
+                    schemes += *ialias;
+                    if (ialias != _vOpenRAVESchemeAliases.end() -1) {
+                        schemes += " ";
+                    }
+                }
+                if (!schemes.empty()) {
+                    RAVELOG_DEBUG_FORMAT("inherit parent reader's openravescheme %s", schemes);
+                    atts.emplace_back("openravescheme", schemes);
                 }
 
                 if( reader.InitFromURI(url, atts) ) {
