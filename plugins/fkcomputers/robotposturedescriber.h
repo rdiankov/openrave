@@ -30,7 +30,9 @@ protected:
     virtual void _GetJointsFromKinematicsChain(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain,
                                                std::vector<KinBody::JointPtr>& vjoints) const;
 
-    std::vector<KinBody::JointPtr> _vjoints; ///< joints from baselink to eelink
+    std::array<RobotBase::LinkPtr, 2> _kinematicsChain; ///< base link and ee link
+    std::vector<KinBody::JointPtr> _joints; ///< joints from baselink to eelink
+    std::vector<int> _armindices;
     double _fTol = 1e-6; ///< tolerance for computing robot posture values
     PostureValueFn _posturefn; ///< function that computes posture values and states for a kinematics chain
 };

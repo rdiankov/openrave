@@ -29,9 +29,9 @@ inline void compute_robot_posture_states(const std::array<double, N>& postureval
             }
         }
         else if (singlestates[i] == 2) {
-            const size_t ninds = posturestates.size();
+            const size_t nstates = posturestates.size();
             posturestates.insert(end(posturestates), begin(posturestates), end(posturestates));
-            for(size_t j = ninds; j < 2 * ninds; ++j) {
+            for(size_t j = nstates; j < 2 * nstates; ++j) {
                 posturestates[j] |= 1;
             }
         }
@@ -39,7 +39,7 @@ inline void compute_robot_posture_states(const std::array<double, N>& postureval
 }
 
 RobotPostureDescriber::RobotPostureDescriber(EnvironmentBasePtr penv,
-                                            const double fTol) :
+                                             const double fTol) :
     RobotPostureDescriberBase(penv),
     _fTol(fTol) 
 {
@@ -51,11 +51,17 @@ bool RobotPostureDescriber::Init(const std::array<RobotBase::LinkPtr, 2>& kinema
     if(!this->Supports(kinematicsChain)) {
         return false;
     }
-    _GetJointsFromKinematicsChain(kinematicsChain, _vjoints);
-    if(_vjoints.size() == 6) {
+    _kinematicsChain = kinematicsChain;
+    _GetJointsFromKinematicsChain(_kinematicsChain, _joints);
+
+    const size_t njoints = _joints.size();
+    for(const JointPtr& joint : _joints) {
+        _armindices.push_back(joint->GetDOFIndex());
+    }
+    if(njoints == 6) {
         _posturefn = Compute6RRobotPostureStates0;
     }
-    else {
+    else if (njoints == 4) {
         _posturefn = Compute4DofRobotPostureStates0;
     }
     return static_cast<bool>(_posturefn);
@@ -87,7 +93,18 @@ bool RobotPostureDescriber::Supports(const std::array<RobotBase::LinkPtr, 2>& ki
 
 
 bool RobotPostureDescriber::ComputePostureValues(std::vector<uint16_t>& posturestates, const std::vector<double>& jointvalues) const {
-    _posturefn(_vjoints, _fTol, posturestates);
+    if(!jointvalues.empty()) {
+        const KinBodyPtr probot = _kinematicsChain[0]->GetParent();
+        if(jointvalues.size() != _joints.size()) {
+            throw OPENRAVE_EXCEPTION_FORMAT("jointvalues size does not match joint size: %d!=%d", jointvalues.size() % _joints.size(), ORE_InvalidArguments);
+            return false;
+        }
+        const KinBody::CheckLimitsAction claoption = KinBody::CheckLimitsAction::CLA_Nothing;
+        probot->SetDOFValues(jointvalues, claoption, _armindices);
+    }
+    else {
+    }
+    _posturefn(_joints, _fTol, posturestates);
     return true;
 }
 
