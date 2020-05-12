@@ -70,7 +70,6 @@ void RobotPostureDescriber::_GetJointsFromKinematicsChain(const std::array<Robot
 }
 
 bool RobotPostureDescriber::Supports(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain) const {
-
     std::vector<KinBody::JointPtr> vjoints;
     _GetJointsFromKinematicsChain(kinematicsChain, vjoints);
     const size_t armdof = vjoints.size();

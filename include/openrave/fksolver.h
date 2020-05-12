@@ -36,12 +36,15 @@ public:
     virtual ~RobotPostureDescriberBase();
 
     /// \brief Initialize with a kinematics chain
-    virtual bool Init(const std::array<OpenRAVE::RobotBase::LinkPtr, 2>& kinematicsChain);
+    virtual bool Init(const std::array<OpenRAVE::RobotBase::LinkPtr, 2>& kinematicsChain) = 0;
+
+    /// \brief Initialize with a kinematics chain prescribed by a manipulator
+    virtual bool Init(const RobotBase::ManipulatorPtr& pmanip) final;
 
     /// \brief Checks if we can use this describer to compute posture values from baselink to eelink prescribed by a kinematics chain.
     ///        When it supports, it sets up the workspace variables for future computations.
     /// \return true if can handle this kinematics chain
-    virtual bool Supports(const std::array<OpenRAVE::RobotBase::LinkPtr, 2>& kinematicsChain) const;
+    virtual bool Supports(const std::array<OpenRAVE::RobotBase::LinkPtr, 2>& kinematicsChain) const = 0;
 
     /// \brief Checks if we can use this describer to compute posture values from baselink to eelink prescribed by a manipulator
     /// \return true if can handle this kinematics chain
@@ -49,7 +52,7 @@ public:
 
     /// \brief Computes an integer value to describe current robot posture
     /// Computes a value describing descrete posture of robot kinematics between base link and endeffector link
-    virtual bool ComputePostureValues(std::vector<uint16_t>& posturevalues, const std::vector<double>& jointvalues = {}) const;
+    virtual bool ComputePostureValues(std::vector<uint16_t>& posturevalues, const std::vector<double>& jointvalues = {}) const = 0;
 
     /// \return the static interface type this class points to (used for safe casting)
     static InterfaceType GetInterfaceTypeStatic() {
