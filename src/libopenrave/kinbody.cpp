@@ -147,7 +147,11 @@ void KinBody::KinBodyInfo::_Update(const KinBody::KinBodyInfo& other) {
 void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "uri", _uri, allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
+    if (!_referenceUri.empty()) {
+        OpenRAVE::JSON::SetJsonValueByKey(value, "referenceUri", _referenceUri, allocator);
+    }
+    // OpenRAVE::JSON::SetJsonValueByKey(value, "uri", _uri, allocator); // deprecated
     if (_vLinkInfos.size() > 0) {
         rapidjson::Value rLinkInfoValues;
         rLinkInfoValues.SetArray();
@@ -176,12 +180,9 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
 void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
     OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
-    if (_uri.empty()) {
-        OPENRAVE_ASSERT_FORMAT0(!_id.empty(), "kinbody uri and id are empty", ORE_Failed);
-        _uri = "#" + _id;
-    }
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "referenceUri", _referenceUri);
+    // OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri); // deprecated
     _vLinkInfos.clear();
     if (value.HasMember("links")) {
         _vLinkInfos.reserve(value["links"].Size());

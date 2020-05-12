@@ -66,43 +66,6 @@ public:
 
 protected:
 
-    // \brief find out missing part in current info based on referenced info and set them as deleted in valueArray
-    template<typename T>
-    void _SerializeDeletedInfoJSON(const std::vector<T>& current, const std::vector<T>& referenced, rapidjson::Value& valueArray) {
-        FOREACH(rItr, referenced) {
-            bool found = false;
-            FOREACH(itr, current) {
-                if ((*rItr)->_id == (*itr)->_id) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                rapidjson::Value value;
-                OpenRAVE::JSON::SetJsonValueByKey(value, "id", (*rItr)->_id, _allocator);
-                OpenRAVE::JSON::SetJsonValueByKey(value, "__deleted__", true, _allocator);
-                valueArray.PushBack(value, _allocator);
-            }
-        }
-    }
-
-    template<typename T>
-    void _SerializeInfoJSON(const T& currentInfo, const std::vector<boost::shared_ptr<T>>& referenceInfos, rapidjson::Value& value, dReal fUnitScale=1.0, int options=0) {
-        typename std::vector<boost::shared_ptr<T>>::const_iterator itRef = referenceInfos.begin();
-        for (itRef = referenceInfos.begin(); itRef != referenceInfos.end(); itRef++) {
-            if ((*itRef)->_id == currentInfo._id) {
-                break;
-            }
-        }
-        if (referenceInfos.size() > 0 && itRef != referenceInfos.end()) {
-            // SerializeDiffJSON(currentInfo, **itRef, value, _allocator);
-            currentInfo.SerializeDiffJSON(value, **itRef, _allocator, fUnitScale, options);
-        }
-        else {
-            currentInfo.SerializeJSON(value, _allocator, fUnitScale, options);
-        }
-    }
-
     virtual void _Write(const std::list<KinBodyPtr>& listbodies) {
         _rScene.SetObject();
         _mapBodyIds.clear();
@@ -146,6 +109,11 @@ protected:
                     }
                     OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "dofValues", dofValues, _allocator);
                 }
+
+                KinBody::KinBodyStateSaver saver(pbody);
+                vector<dReal> vZeros(pbody->GetDOF());
+                pbody->SetDOFValues(vZeros, KinBody::CLA_Nothing);
+                pbody->SetTransform(Transform());
 
                 // grabbed info
                 std::vector<KinBody::GrabbedInfoPtr> vGrabbedInfo;
