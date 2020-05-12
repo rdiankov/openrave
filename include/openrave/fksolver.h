@@ -38,9 +38,13 @@ public:
     /// \brief Initialize with a kinematics chain
     virtual bool Init(const std::array<OpenRAVE::RobotBase::LinkPtr, 2>& kinematicsChain);
 
-    /// \brief Checks if this class can be used to compute posture values for this robot
+    /// \brief Checks if we can use this describer to compute posture values from baselink to eelink prescribed by a kinematics chain
     /// \return true if can handle this kinematics chain
     virtual bool Supports(const std::array<OpenRAVE::RobotBase::LinkPtr, 2>& kinematicsChain) const;
+
+    /// \brief Checks if we can use this describer to compute posture values from baselink to eelink prescribed by a manipulator
+    /// \return true if can handle this kinematics chain
+    virtual bool Supports(const RobotBase::ManipulatorPtr& pmanip) const final;
 
     /// \brief Computes an integer value to describe current robot posture
     /// Computes a value describing descrete posture of robot kinematics between base link and endeffector link

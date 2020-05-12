@@ -30,7 +30,7 @@ const char* RobotPostureDescriberBase::GetHash() const {
     return OPENRAVE_FORWARDKINEMATICSSOLVER_HASH;
 }
 
-bool RobotPostureDescriberBase::Init(const std::array<OpenRAVE::RobotBase::LinkPtr, 2>& kinematicsChain) {
+bool RobotPostureDescriberBase::Init(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain) {
     return true; // TO-DO
 }
 
@@ -38,10 +38,14 @@ const std::vector<KinBody::JointPtr>& RobotPostureDescriberBase::GetJoints() con
 	return _vjoints;
 }
 
-bool RobotPostureDescriberBase::Supports(const std::array<OpenRAVE::RobotBase::LinkPtr, 2>& kinematicsChain) const {
+bool RobotPostureDescriberBase::Supports(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain) const {
     return true; // TO-DO
 }
 
+bool RobotPostureDescriberBase::Supports(const RobotBase::ManipulatorPtr& pmanip) const {
+	const std::array<RobotBase::LinkPtr, 2> kinematicsChain {pmanip->GetBase(), pmanip->GetEndEffector()};
+	return this->Supports(kinematicsChain);
+}
 
 bool RobotPostureDescriberBase::ComputePostureValues(std::vector<uint16_t>& values, const std::vector<double>& jointvalues) const {
     return true; // TO-DO
