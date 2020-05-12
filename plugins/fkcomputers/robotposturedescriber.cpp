@@ -74,7 +74,7 @@ bool RobotPostureDescriber::Init(const std::array<RobotBase::LinkPtr, 2>& kinema
 }
 
 void RobotPostureDescriber::_GetJointsFromKinematicsChain(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain,
-                                                          std::vector<KinBody::JointPtr>& joints) const {
+                                                          std::vector<JointPtr>& joints) const {
     const int baselinkid = kinematicsChain[0]->GetIndex();
     const int eelinkid = kinematicsChain[1]->GetIndex();
     const KinBodyPtr probot = kinematicsChain[0]->GetParent();
@@ -114,12 +114,31 @@ NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Tr
     return NeighbouringTwoJointsRelation::NTJR_UNKNOWN;
 }
 
-bool AnalyzeSixRevoluteJoints0(const std::vector<KinBody::JointPtr>& joints) {
+bool EnsureJointsArePurelyRevolute(const std::vector<JointPtr>& joints) {
+    std::stringstream ss;
+    for(size_t i = 0; i < joints.size(); ++i) {
+        const JointPtr& joint = joints[i];
+        if(!joint->IsRevolute(0) || joint->IsCircular(0) || joint->GetDOF() != 1) {
+            ss << joint->GetDOFIndex() << ",";
+        }
+    }
+    if(!ss.str().empty()) {
+        RAVELOG_WARN_FORMAT("Joints with DOF indices %s are not purely revolute with 1 dof each", ss.str());
+        return false;
+    }
+}
+
+bool AnalyzeSixRevoluteJoints0(const std::vector<JointPtr>& joints) {
     if(joints.size() != 6) {
         // throw OPENRAVE_EXCEPTION_FORMAT("number of joints is not 6: %d!=6", joints.size(), ORE_InvalidArguments);
         RAVELOG_WARN_FORMAT("Number of joints is not 6: %d!=6", joints.size());
         return false;
     }
+
+    if(!EnsureJointsArePurelyRevolute(joints)) {
+        return false;
+    }
+
     const Transform tJ1J2 = joints[0]->GetInternalHierarchyRightTransform() * joints[1]->GetInternalHierarchyLeftTransform();
     const Transform tJ2J3 = joints[1]->GetInternalHierarchyRightTransform() * joints[2]->GetInternalHierarchyLeftTransform();
     const Transform tJ3J4 = joints[2]->GetInternalHierarchyRightTransform() * joints[3]->GetInternalHierarchyLeftTransform();
@@ -134,12 +153,17 @@ bool AnalyzeSixRevoluteJoints0(const std::vector<KinBody::JointPtr>& joints) {
         ;
 }
 
-bool AnalyzeFourRevoluteJoints0(const std::vector<KinBody::JointPtr>& joints) {
+bool AnalyzeFourRevoluteJoints0(const std::vector<JointPtr>& joints) {
     if(joints.size() != 4) {
-        // throw OPENRAVE_EXCEPTION_FORMAT("number of joints is not 6: %d!=6", joints.size(), ORE_InvalidArguments);
+        // throw OPENRAVE_EXCEPTION_FORMAT("number of joints is not 4: %d!=4", joints.size(), ORE_InvalidArguments);
         RAVELOG_WARN_FORMAT("Number of joints is not 4: %d!=4", joints.size());
         return false;
     }
+
+    if(!EnsureJointsArePurelyRevolute(joints)) {
+        return false;
+    }
+
     const Transform tJ1J2 = joints[0]->GetInternalHierarchyRightTransform() * joints[1]->GetInternalHierarchyLeftTransform();
     const Transform tJ2J3 = joints[1]->GetInternalHierarchyRightTransform() * joints[2]->GetInternalHierarchyLeftTransform();
     const Transform tJ3J4 = joints[2]->GetInternalHierarchyRightTransform() * joints[3]->GetInternalHierarchyLeftTransform();
@@ -151,7 +175,7 @@ bool AnalyzeFourRevoluteJoints0(const std::vector<KinBody::JointPtr>& joints) {
 }
 
 bool RobotPostureDescriber::Supports(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain) const {
-    std::vector<KinBody::JointPtr> joints;
+    std::vector<JointPtr> joints;
     _GetJointsFromKinematicsChain(kinematicsChain, joints);
     const size_t armdof = joints.size();
     if(armdof == 6 && AnalyzeSixRevoluteJoints0(joints)) {
@@ -185,7 +209,7 @@ bool RobotPostureDescriber::ComputePostureValues(std::vector<uint16_t>& postures
     return true;
 }
 
-void Compute6RRobotPostureStates0(const std::vector<KinBody::JointPtr>& joints, const double fTol, std::vector<uint16_t>& posturestates) {
+void Compute6RRobotPostureStates0(const std::vector<JointPtr>& joints, const double fTol, std::vector<uint16_t>& posturestates) {
     const Vector axis0 = joints[0]->GetAxis();
     const Vector axis1 = joints[1]->GetAxis();
     // const Vector axis2 = joints[2]->GetAxis(); // the same as axis1
@@ -210,7 +234,7 @@ void Compute6RRobotPostureStates0(const std::vector<KinBody::JointPtr>& joints, 
     compute_robot_posture_states<3>(posturevalues, fTol, posturestates);
 }
 
-void Compute4DofRobotPostureStates0(const std::vector<KinBody::JointPtr>& joints, const double fTol, std::vector<uint16_t>& posturestates) {
+void Compute4DofRobotPostureStates0(const std::vector<JointPtr>& joints, const double fTol, std::vector<uint16_t>& posturestates) {
     const Vector axis0 = joints[0]->GetAxis();
     const Vector axis1 = joints[1]->GetAxis();
     // const Vector axis2 = joints[2]->GetAxis();
