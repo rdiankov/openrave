@@ -1,3 +1,4 @@
+#include "neighbouringtwojointsrelations.h" // NeighbouringTwoJointsRelations
 #include "robotposturedescriber.h" // RobotPostureDescriber
 
 namespace OpenRAVE {
@@ -81,52 +82,26 @@ void RobotPostureDescriber::_GetJointsFromKinematicsChain(const std::array<Robot
     probot->GetChain(baselinkid, eelinkid, joints);
 }
 
-// https://stackoverflow.com/questions/12059774/c11-standard-conformant-bitmasks-using-enum-class
-enum class NeighbouringTwoJointsRelation : uint16_t {
-    NTJR_UNKNOWN                 = 0x0,
-    NTJR_PARALLEL                = 0x1,
-    NTJR_PERPENDICULAR           = 0x2,
-    NTJR_INTERSECT               = 0x4,
-    NTJR_OVERLAP                 = NTJR_INTERSECT | NTJR_PARALLEL,      // 0x5
-    NTJR_INTERSECT_PERPENDICULAR = NTJR_INTERSECT | NTJR_PERPENDICULAR, // 0x6
-};
-
-inline constexpr NeighbouringTwoJointsRelation operator&(NeighbouringTwoJointsRelation x, NeighbouringTwoJointsRelation y) {
-return static_cast<NeighbouringTwoJointsRelation>(static_cast<int>(x) & static_cast<int>(y));
-}
-
-inline constexpr NeighbouringTwoJointsRelation operator|(NeighbouringTwoJointsRelation x, NeighbouringTwoJointsRelation y) {
-return static_cast<NeighbouringTwoJointsRelation>(static_cast<int>(x) | static_cast<int>(y));
-}
-
-inline NeighbouringTwoJointsRelation& operator&=(NeighbouringTwoJointsRelation & x, NeighbouringTwoJointsRelation y) {
-    return x = x & y;
-}
-
-inline NeighbouringTwoJointsRelation& operator|=(NeighbouringTwoJointsRelation & x, NeighbouringTwoJointsRelation y) {
-    return x = x | y;
-}
-
-NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Transform& t) {
+NeighbouringTwoJointsRelations AnalyzeTransformBetweenNeighbouringJoints(const Transform& t) {
     const double tol = 1e-15;
     const Vector zaxis0(0, 0, 1); // z-axis of the first joint
     const Vector zaxis1 = t.rotate(zaxis0); // z-axis of the second joint
     const double dotprod = zaxis1.dot3(zaxis0);
 
-    NeighbouringTwoJointsRelation o = NeighbouringTwoJointsRelation::NTJR_UNKNOWN;
+    NeighbouringTwoJointsRelations o = NeighbouringTwoJointsRelations::NTJR_UNKNOWN;
     if(1.0 - fabs(dotprod) <= tol) {
-        o |= NeighbouringTwoJointsRelation::NTJR_PARALLEL; // TO-DO: check overlapping
+        o |= NeighbouringTwoJointsRelations::NTJR_PARALLEL; // TO-DO: check overlapping
         if(zaxis0.cross(t.trans).lengthsqr3() <= tol) {
-            o |= NeighbouringTwoJointsRelation::NTJR_INTERSECT;
+            o |= NeighbouringTwoJointsRelations::NTJR_INTERSECT;
         }
     }
     else {
         // not parallel
         if (fabs(dotprod) <= tol) {
-            o |= NeighbouringTwoJointsRelation::NTJR_PERPENDICULAR;
+            o |= NeighbouringTwoJointsRelations::NTJR_PERPENDICULAR;
         }
         if(fabs(zaxis0.cross(zaxis1).dot3(t.trans)) <= tol) {
-            o |= NeighbouringTwoJointsRelation::NTJR_INTERSECT;
+            o |= NeighbouringTwoJointsRelations::NTJR_INTERSECT;
         }
     }
 
@@ -168,11 +143,11 @@ bool AnalyzeSixRevoluteJoints0(const std::vector<JointPtr>& joints) {
     const Transform tJ4J5 = joints[3]->GetInternalHierarchyRightTransform() * joints[4]->GetInternalHierarchyLeftTransform();
     const Transform tJ5J6 = joints[4]->GetInternalHierarchyRightTransform() * joints[5]->GetInternalHierarchyLeftTransform();
 
-    return AnalyzeTransformBetweenNeighbouringJoints(tJ1J2) == NeighbouringTwoJointsRelation::NTJR_PERPENDICULAR
-        && AnalyzeTransformBetweenNeighbouringJoints(tJ2J3) == NeighbouringTwoJointsRelation::NTJR_PARALLEL
-        && AnalyzeTransformBetweenNeighbouringJoints(tJ3J4) == NeighbouringTwoJointsRelation::NTJR_PERPENDICULAR
-        && AnalyzeTransformBetweenNeighbouringJoints(tJ4J5) == NeighbouringTwoJointsRelation::NTJR_INTERSECT_PERPENDICULAR
-        && AnalyzeTransformBetweenNeighbouringJoints(tJ5J6) == NeighbouringTwoJointsRelation::NTJR_INTERSECT_PERPENDICULAR
+    return AnalyzeTransformBetweenNeighbouringJoints(tJ1J2) == NeighbouringTwoJointsRelations::NTJR_PERPENDICULAR
+        && AnalyzeTransformBetweenNeighbouringJoints(tJ2J3) == NeighbouringTwoJointsRelations::NTJR_PARALLEL
+        && AnalyzeTransformBetweenNeighbouringJoints(tJ3J4) == NeighbouringTwoJointsRelations::NTJR_PERPENDICULAR
+        && AnalyzeTransformBetweenNeighbouringJoints(tJ4J5) == NeighbouringTwoJointsRelations::NTJR_INTERSECT_PERPENDICULAR
+        && AnalyzeTransformBetweenNeighbouringJoints(tJ5J6) == NeighbouringTwoJointsRelations::NTJR_INTERSECT_PERPENDICULAR
         ;
 }
 
@@ -191,9 +166,9 @@ bool AnalyzeFourRevoluteJoints0(const std::vector<JointPtr>& joints) {
     const Transform tJ2J3 = joints[1]->GetInternalHierarchyRightTransform() * joints[2]->GetInternalHierarchyLeftTransform();
     const Transform tJ3J4 = joints[2]->GetInternalHierarchyRightTransform() * joints[3]->GetInternalHierarchyLeftTransform();
 
-    return AnalyzeTransformBetweenNeighbouringJoints(tJ1J2) == NeighbouringTwoJointsRelation::NTJR_INTERSECT_PERPENDICULAR
-        && AnalyzeTransformBetweenNeighbouringJoints(tJ2J3) == NeighbouringTwoJointsRelation::NTJR_PARALLEL
-        && AnalyzeTransformBetweenNeighbouringJoints(tJ3J4) == NeighbouringTwoJointsRelation::NTJR_PARALLEL
+    return AnalyzeTransformBetweenNeighbouringJoints(tJ1J2) == NeighbouringTwoJointsRelations::NTJR_INTERSECT_PERPENDICULAR
+        && AnalyzeTransformBetweenNeighbouringJoints(tJ2J3) == NeighbouringTwoJointsRelations::NTJR_PARALLEL
+        && AnalyzeTransformBetweenNeighbouringJoints(tJ3J4) == NeighbouringTwoJointsRelations::NTJR_PARALLEL
         ;
 }
 
