@@ -795,23 +795,57 @@ public:
         return true;
     }
 
-    virtual bool ApplyDiff(const rapidjson::Value& envValue) override{
+    virtual bool ApplyDiff(const rapidjson::Value& envValue) override
+    {
         if (envValue.HasMember("bodies")) {
-            for(rapidjson::Value::ConstValueIterator itValue = envValue["bodies"].Begin(); itValue != envValue["bodies"].End(); ++itValue) {
+            for (rapidjson::Value::ConstValueIterator itValue = envValue["bodies"].Begin(); itValue != envValue["bodies"].End(); ++itValue) {
                 std::string bodyId;
                 OpenRAVE::JSON::LoadJsonValueByKey(*itValue, "id", bodyId);
                 bool foundBody = false;
 
-                for(std::vector<KinBodyPtr>::iterator itBody = _vecbodies.begin(); itBody != _vecbodies.end(); itBody++) {
+                for (std::vector<KinBodyPtr>::iterator itBody = _vecbodies.begin(); itBody != _vecbodies.end(); itBody++) {
                     if((*itBody)->GetId() == bodyId) {
                         foundBody = true;
                         // save kinbody first
                         try {
+                            // save dof value first
+                            KinBody::KinBodyStateSaver saver(*itBody);
+                            std::vector<dReal> vZeroDOF((*itBody)->GetDOF());
+                            (*itBody)->SetDOFValues(vZeroDOF);
+
                             if((*itBody)->IsRobot()) {
                                 _ApplyRobotDiff(*RaveInterfaceCast<RobotBase>(*itBody), *itValue);
                             }
                             else {
                                 _ApplyKinBodyDiff(**itBody, *itValue);
+                            }
+
+                            // DOF Values
+                            if ((*itValue).HasMember("dofValues")) {
+                                // set dof values;
+                                std::vector<dReal> vDOFValues((*itValue)["dofValues"].Size());
+                                OPENRAVE_ASSERT_OP_FORMAT((*itValue)["dofValues"].Size(), ==, (*itBody)->GetDOF(),"set dof value size %d != body dof size %d", (*itValue)["dofValues"]->Size()%(*itBody)->GetDOF(), ORE_InvalidArguments);
+                                (*itBody)->GetDOFValues(vDOFValues);
+                                for (rapidjson::Value::ConstValueIterator itrDOFValue = (*itValue)["dofValues"].Begin(); itrDOFValue != (*itValue)["dofValues"].End(); ++itrDOFValue) {
+                                    std::string jointId;
+                                    dReal dofValue;
+                                    OpenRAVE::JSON::LoadJsonValueByKey(*itrDOFValue, "jointId", jointId);
+                                    OpenRAVE::JSON::LoadJsonValueByKey(*itrDOFValue, "value", dofValue);
+
+                                    bool foundJoint = false;
+                                    for(std::vector<KinBody::JointPtr>::const_iterator itJoint = (*itBody)->GetJoints().begin(); itJoint != (*itBody)->GetJoints().end(); ++itJoint) {
+                                        if ((*itJoint)->GetId() == jointId) {
+                                            foundJoint = true;
+                                            vDOFValues[(*itJoint)->GetJointIndex()] = dofValue;
+                                            break;
+                                        }
+                                    }
+                                    if (!foundJoint) {
+                                        throw OPENRAVE_EXCEPTION_FORMAT(_("cannot set joint dof value %f. joint %s is not found"), dofValue%jointId,ORE_InvalidArguments);
+                                    }
+                                }
+                                saver.ClearOption(KinBody::Save_LinkTransformation); // don't restore link transformation if user set dofvalues;
+                                (*itBody)->SetDOFValues(vDOFValues, KinBody::CLA_Nothing);
                             }
                         } catch (...) {
                             // TODO: need recovery

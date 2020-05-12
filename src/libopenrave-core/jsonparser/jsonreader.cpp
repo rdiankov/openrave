@@ -120,11 +120,19 @@ public:
                 KinBodyPtr pbody;
                 if (_Extract(*itrBodyValue, pbody)) {
                     _penv->Add(pbody, true);
+
                     // set dof values
                     if (itrBodyValue->HasMember("dofValues") && (*itrBodyValue)["dofValues"].IsObject()) {
                         std::vector<dReal> vDOFValues {};
                         _ConvertJointDOFValueFormat(pbody->GetJoints(), vDOFValues, (*itrBodyValue)["dofValues"]);
                         pbody->SetDOFValues(vDOFValues, KinBody::CLA_Nothing);
+                    }
+
+                    // set transform
+                    if (itrBodyValue->HasMember("transform")) {
+                        Transform transform;
+                        OpenRAVE::JSON::LoadJsonValueByKey(*itrBodyValue, "transform", transform);
+                        pbody->SetTransform(transform);
                     }
 
                     // parse grabbed infos

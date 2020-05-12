@@ -110,8 +110,11 @@ protected:
                     OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "dofValues", dofValues, _allocator);
                 }
 
+                OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "name", pbody->GetName(), _allocator);
+                OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "transform", pbody->GetTransform(), _allocator);
+
                 KinBody::KinBodyStateSaver saver(pbody);
-                vector<dReal> vZeros(pbody->GetDOF());
+                vector<dReal> vZeros(pbody->GetDOF(), 0);
                 pbody->SetDOFValues(vZeros, KinBody::CLA_Nothing);
                 pbody->SetTransform(Transform());
 
@@ -137,7 +140,6 @@ protected:
                 OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "name", pbody->GetName(), _allocator);
                 OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "referenceUri", (*itbody)->GetInfo()._referenceUri, _allocator);
 
-                const KinBody::KinBodyInfo& bodyInfo = pbody->GetInfo();
                 // links
                 {
                     rapidjson::Value linksValue;
@@ -186,7 +188,6 @@ protected:
                 // robot
                 if (pbody->IsRobot()) {
                     RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
-                    const RobotBase::RobotBaseInfo& robotInfo = probot->GetInfo();
                     // manipulators
                     if (probot->GetManipulators().size() > 0) {
                         rapidjson::Value manipulatorsValue;
@@ -271,9 +272,6 @@ protected:
                 }
                 // finally push to the bodiesValue array if bodyValue is not empty
                 if (bodyValue.MemberCount() > 0) {
-                    // name and transform
-                    OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "name", pbody->GetName(), _allocator);
-                    OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "transform", pbody->GetTransform(), _allocator);
                     bodiesValue.PushBack(bodyValue, _allocator);
                 }
             }
