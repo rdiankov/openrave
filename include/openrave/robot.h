@@ -103,9 +103,6 @@ public:
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
 
-        inline const std::string& GetId() const {
-            return _id;
-        }
         std::string _id; /// < unique id
         std::string name; ///< unique name
         std::string grippertype; ///< gripper type
@@ -140,9 +137,7 @@ public:
 
         virtual void UpdateInfo();
 
-        virtual const std::string& GetId() const {
-            return _info._id;
-        }
+        virtual void ExtractInfo(RobotBase::ManipulatorInfo& info) const;
 
         /// \brief Return the transformation of the manipulator frame
         ///
@@ -576,9 +571,6 @@ public:
         virtual const std::string& GetName() const {
             return _info._name;
         }
-        virtual const std::string& GetId() const {
-            return _info._id;
-        }
 
         /// retrieves the current data from the sensor
         virtual SensorBase::SensorDataPtr GetData() const;
@@ -607,6 +599,8 @@ public:
         virtual inline const AttachedSensorInfo& GetInfo() const {
             return _info;
         }
+
+        virtual void ExtractInfo(RobotBase::AttachedSensorInfo& info) const;
 
 private:
         /// \brief compute internal information from user-set info
@@ -776,10 +770,6 @@ public:
             return _info._name;
         }
 
-        virtual const std::string& GetId() const {
-            return _info._id;
-        }
-
         // virtual void serialize(std::ostream& o, int options) const;
 
         /// \brief return hash of the attached kinbody definition
@@ -789,6 +779,8 @@ public:
         inline const ConnectedBodyInfo& GetInfo() const {
             return _info;
         }
+
+        virtual void ExtractInfo(RobotBase::ConnectedBodyInfo& info) const;
 
 private:
         ConnectedBodyInfo _info; ///< user specified data (to be serialized and saved), should not contain dynamically generated parameters.
@@ -1310,9 +1302,7 @@ private:
     }
     virtual void UpdateInfo();
 
-    virtual const std::string& GetId() const {
-        return _info._id;
-    }
+    virtual void ExtractInfo(RobotBaseInfo& info) const;
 
 protected:
     RobotBase(EnvironmentBasePtr penv);

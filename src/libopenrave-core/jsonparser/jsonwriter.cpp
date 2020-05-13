@@ -86,7 +86,8 @@ protected:
                     pBody->SetTransform(Transform()); // TODO: is this necessary
 
                     if (!pBody->IsRobot()) {
-                        KinBody::KinBodyInfo info = pBody->GetInfo(); // TODO: this is a copy
+                        KinBody::KinBodyInfo info;
+                        pBody->ExtractInfo(info);
                         info._referenceUri = _CanonicalizeURI(info._referenceUri);
                         if (info._id.empty()) {
                             // TODO: dedup
@@ -95,7 +96,8 @@ protected:
                         info.SerializeJSON(bodyValue, _allocator);
                     } else {
                         RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pBody);
-                        RobotBase::RobotBaseInfo info = pRobot->GetInfo(); // TODO: this is a copy
+                        RobotBase::RobotBaseInfo info;
+                        pRobot->ExtractInfo(info);
                         info._referenceUri = _CanonicalizeURI(info._referenceUri);
                         if (info._id.empty()) {
                             // TODO: dedup

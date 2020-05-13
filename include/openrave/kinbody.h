@@ -488,8 +488,12 @@ public:
                 return _info._meshcollision;
             }
 
-            virtual inline const KinBody::GeometryInfo& GetInfo() const {
+            inline const KinBody::GeometryInfo& GetInfo() const {
                 return _info;
+            }
+
+            virtual void ExtractInfo(KinBody::GeometryInfo& info) const {
+                info = _info;
             }
 
             /// cage
@@ -570,10 +574,6 @@ protected:
 
         inline const std::string& GetName() const {
             return _info._name;
-        }
-
-        inline const std::string& GetId() const {
-            return _info._id;
         }
 
         /// \brief Indicates a static body that does not move with respect to the root link.
@@ -848,6 +848,8 @@ protected:
             return _info;
         }
 
+        virtual void ExtractInfo(KinBody::LinkInfo& info) const;
+
 protected:
         /// \brief Updates the cached information due to changes in the collision data.
         ///
@@ -1106,10 +1108,6 @@ public:
         /// \brief The unique name of the joint
         inline const std::string& GetName() const {
             return _info._name;
-        }
-
-        inline const std::string& GetId() const {
-            return _info._id;
         }
 
         inline dReal GetMaxVel(int iaxis=0) const {
@@ -1525,6 +1523,8 @@ public:
             return _info;
         }
 
+        virtual void ExtractInfo(KinBody::JointInfo& info) const;
+
 protected:
         JointInfo _info;
 
@@ -1768,6 +1768,7 @@ public:
             _referenceUri = other._referenceUri;
             _vLinkInfos = other._vLinkInfos;
             _vJointInfos = other._vJointInfos;
+            _vGrabbedInfos = other._vGrabbedInfos;
             // TODO: deep copy infos
             return *this;
         }
@@ -1777,7 +1778,8 @@ public:
                 && _name == other._name
                 && _referenceUri == other._referenceUri
                 && _vLinkInfos == other._vLinkInfos
-                && _vJointInfos == other._vJointInfos;
+                && _vJointInfos == other._vJointInfos
+                && _vGrabbedInfos == other._vGrabbedInfos;
             // TODO: deep compare infos
         }
         bool operator!=(const KinBodyInfo& other) const{
@@ -1795,6 +1797,7 @@ public:
 
         std::vector<LinkInfoPtr> _vLinkInfos; ///< list of pointers to LinkInfo
         std::vector<JointInfoPtr> _vJointInfos; ///< list of pointers to JointInfo
+        std::vector<GrabbedInfoPtr> _vGrabbedInfos; ///< list of pointers to GrabbedInfo
     };
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
@@ -2756,9 +2759,8 @@ private:
         UpdateInfo();
         return GetInfo();
     }
-    virtual const std::string& GetId() const {
-        return _info._id;
-    }
+
+    virtual void ExtractInfo(KinBodyInfo& info) const;
 
 protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies

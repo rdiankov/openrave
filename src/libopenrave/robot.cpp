@@ -211,6 +211,22 @@ void RobotBase::AttachedSensor::UpdateInfo(SensorBase::SensorType type)
     }
 }
 
+void RobotBase::AttachedSensor::ExtractInfo(AttachedSensorInfo& info) const
+{
+    info = _info;
+    info._sensorname.clear();
+    info._sensorgeometry.reset();
+    if( !!_psensor ) {
+        info._sensorname = _psensor->GetXMLId();
+        info._sensorgeometry = boost::const_pointer_cast<SensorBase::SensorGeometry>(_psensor->GetSensorGeometry(SensorBase::ST_Invalid));
+    }
+    info._linkname.clear();
+    LinkPtr prealattachedlink = pattachedlink.lock();
+    if( !!prealattachedlink ) {
+        info._linkname = prealattachedlink->GetName();
+    }
+}
+
 void RobotBase::AttachedSensor::serialize(std::ostream& o, int options) const
 {
     o << (pattachedlink.expired() ? -1 : LinkPtr(pattachedlink)->GetIndex()) << " ";
@@ -2354,6 +2370,35 @@ const std::string& RobotBase::GetRobotStructureHash() const
 void RobotBase::UpdateInfo()
 {
     // TODO: update _info
+}
+
+void RobotBase::ExtractInfo(RobotBaseInfo& info) const
+{
+    KinBody::ExtractInfo(info);
+
+    info._vManipulatorInfos.resize(_vecManipulators.size());
+    for(size_t i = 0; i < _info._vManipulatorInfos.size(); ++i) {
+        info._vManipulatorInfos[i].reset(new RobotBase::ManipulatorInfo());
+        _vecManipulators[i]->ExtractInfo(*info._vManipulatorInfos[i]);
+    }
+
+    info._vAttachedSensorInfos.resize(_vecAttachedSensors.size());
+    for(size_t i = 0; i < _info._vAttachedSensorInfos.size(); ++i) {
+        info._vAttachedSensorInfos[i].reset(new RobotBase::AttachedSensorInfo());
+        _vecAttachedSensors[i]->ExtractInfo(*info._vAttachedSensorInfos[i]);
+    }
+
+    info._vConnectedBodyInfos.resize(_vecConnectedBodies.size());
+    for(size_t i = 0; i < _info._vConnectedBodyInfos.size(); ++i) {
+        info._vConnectedBodyInfos[i].reset(new RobotBase::ConnectedBodyInfo());
+        _vecConnectedBodies[i]->ExtractInfo(*info._vConnectedBodyInfos[i]);
+    }
+
+    info._vGripperInfos.resize(_vecGripperInfos.size());
+    for(size_t i = 0; i < _info._vGripperInfos.size(); ++i) {
+        info._vGripperInfos[i].reset(new RobotBase::GripperInfo());
+        *info._vGripperInfos[i] = *_vecGripperInfos[i];
+    }
 }
 
 } // end namespace OpenRAVE

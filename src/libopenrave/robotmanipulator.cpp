@@ -74,8 +74,14 @@ RobotBase::Manipulator::Manipulator(RobotBasePtr probot, boost::shared_ptr<Robot
 //    }
 }
 
-void RobotBase::Manipulator::UpdateInfo() {
+void RobotBase::Manipulator::UpdateInfo()
+{
     // TODO: update _info
+}
+
+void RobotBase::Manipulator::ExtractInfo(RobotBase::ManipulatorInfo& info) const
+{
+    info = _info;
 }
 
 int RobotBase::Manipulator::GetArmDOF() const
