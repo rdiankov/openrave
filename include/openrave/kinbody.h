@@ -351,8 +351,6 @@ public:
                 return _info._type;
             }
 
-            inline std::string GetGeometryTypeString(const GeometryType& type);
-
             inline const Vector& GetRenderScale() const {
                 return _info._vRenderScale;
             }

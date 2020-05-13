@@ -556,9 +556,20 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Do
     OpenRAVE::JSON::SetJsonValueByKey(value, "modifiable", _bModifiable, allocator);
 }
 
-inline std::string KinBody::Link::Geometry::GetGeometryTypeString(const GeometryType& type) {
-    if (type == GT_Box) {
+inline std::string _GetGeometryTypeString(const GeometryType& geometryType) {
+    switch(geometryType) {
+    case GT_Box:
         return "box";
+    case GT_Container:
+        return "container";
+    case GT_Cage:
+        return "cage";
+    case GT_Sphere:
+        return "sphere";
+    case GT_Cylinder:
+        return "cylinder";
+    case GT_TriMesh:
+        return "trimesh";
     }
     return "";
 }
@@ -1101,7 +1112,7 @@ uint8_t KinBody::Link::Geometry::GetSideWallExists() const
 uint8_t KinBody::Link::Geometry::_ApplyGeomDiff(const rapidjson::Value& geometryValue, KinBody::GeometryInfo& newInfo, dReal fUnitScale)
 {
     uint8_t applyResult = 0;
-    std::string typestr = GetGeometryTypeString(newInfo._type);
+    std::string typestr = _GetGeometryTypeString(newInfo._type);
     if (geometryValue.HasMember("type")) {
         OpenRAVE::JSON::LoadJsonValueByKey(geometryValue, "type", typestr);
         newInfo.DeserializeGeomData(geometryValue, typestr, fUnitScale);
