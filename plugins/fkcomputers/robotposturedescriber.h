@@ -25,12 +25,19 @@ public:
     /// Computes a value describing descrete posture of robot kinematics between base link and endeffector link
     virtual bool ComputePostureValues(std::vector<uint16_t>& values, const std::vector<double>& jointvalues = {}) const override;
 
-    virtual const std::vector<KinBody::JointPtr>& GetJoints() const { return _joints; }
+    /// \brief Set the tolerance for determining whether a robot posture value is close to 0 (i.e. singularity, branch point)
+    bool SetPostureValueThreshold(const double fTol);
+
+    const std::vector<KinBody::JointPtr>& GetJoints() const { return _joints; }
 
 protected:
-    /// \brief
-    virtual void _GetJointsFromKinematicsChain(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain,
-                                               std::vector<KinBody::JointPtr>& vjoints) const;
+    /// \brief Gets joints along a kinematics chain from baselink to eelink
+    void _GetJointsFromKinematicsChain(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain,
+                                       std::vector<KinBody::JointPtr>& vjoints) const;
+
+    /// \brief `SendCommand` APIs
+    bool _SetPostureValueThresholdCommand(std::ostream& ssout, std::istream& ssin);
+    bool _GetPostureValueThresholdCommand(std::ostream& ssout, std::istream& ssin) const;
 
     std::array<RobotBase::LinkPtr, 2> _kinematicsChain; ///< base link and ee link
     std::vector<KinBody::JointPtr> _joints; ///< joints from baselink to eelink

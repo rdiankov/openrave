@@ -14,7 +14,7 @@ public:
 
 private:
     /// \brief Python `SendCommand` API that loads a robot posture describer onto a (base link, end-effector link) pair, or onto a manipulator that prescribes the pair
-    bool _LoadRobotPostureDescriber(std::ostream& ssout, std::istream& ssin);
+    bool _LoadRobotPostureDescriberCommand(std::ostream& ssout, std::istream& ssin);
 };
 
 } // namepspace OpenRAVE

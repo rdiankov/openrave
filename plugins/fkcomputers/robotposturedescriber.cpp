@@ -44,6 +44,14 @@ RobotPostureDescriber::RobotPostureDescriber(EnvironmentBasePtr penv,
     RobotPostureDescriberBase(penv),
     _fTol(fTol) 
 {
+    // `SendCommand` APIs
+    this->RegisterCommand("SetPostureValueThreshold",
+                          boost::bind(&RobotPostureDescriber::_SetPostureValueThresholdCommand, this, _1, _2),
+                          "Sets the tolerance for determining whether a robot posture value is close to 0 and hence would have hybrid states");
+
+    this->RegisterCommand("GetPostureValueThreshold",
+                          boost::bind(&RobotPostureDescriber::_GetPostureValueThresholdCommand, this, _1, _2),
+                          "Gets the tolerance for determining whether a robot posture value is close to 0 and hence would have hybrid states");
 }
 
 RobotPostureDescriber::~RobotPostureDescriber() {}
@@ -66,11 +74,11 @@ bool RobotPostureDescriber::Init(const std::array<RobotBase::LinkPtr, 2>& kinema
         _posturefn = Compute4DofRobotPostureStates0;
     }
 
-    std::stringstream ss;
-    for(int i : _armindices) {
-        ss << i << ", ";
-    }
-    RAVELOG_WARN(ss.str());
+    // std::stringstream ss;
+    // for(int i : _armindices) {
+    //     ss << i << ", ";
+    // }
+    // RAVELOG_WARN(ss.str());
     return static_cast<bool>(_posturefn);
 }
 
@@ -80,6 +88,14 @@ void RobotPostureDescriber::_GetJointsFromKinematicsChain(const std::array<Robot
     const int eelinkid = kinematicsChain[1]->GetIndex();
     const KinBodyPtr probot = kinematicsChain[0]->GetParent();
     probot->GetChain(baselinkid, eelinkid, joints);
+    for(std::vector<JointPtr>::iterator it = begin(joints); it != end(joints);) {
+        if((*it)->IsStatic() || (*it)->GetDOFIndex()==-1) {
+            it = joints.erase(it);
+        }
+        else {
+            ++it;
+        }
+    }
 }
 
 NeighbouringTwoJointsRelations AnalyzeTransformBetweenNeighbouringJoints(const Transform& t) {
@@ -105,10 +121,10 @@ NeighbouringTwoJointsRelations AnalyzeTransformBetweenNeighbouringJoints(const T
         }
     }
 
-    std::stringstream ss;
-    ss << std::setprecision(16);
-    ss << "o = " << static_cast<int>(o) << ", t = " << t;
-    RAVELOG_WARN_FORMAT("%s", ss.str());
+    // std::stringstream ss;
+    // ss << std::setprecision(16);
+    // ss << "o = " << static_cast<int>(o) << ", t = " << t;
+    // RAVELOG_WARN_FORMAT("%s", ss.str());
     return o;
 }
 
@@ -124,6 +140,7 @@ bool EnsureAllJointsPurelyRevolute(const std::vector<JointPtr>& joints) {
         RAVELOG_WARN_FORMAT("Joints with DOF indices %s are not purely revolute with 1 dof each", ss.str());
         return false;
     }
+    return true;
 }
 
 bool AnalyzeSixRevoluteJoints0(const std::vector<JointPtr>& joints) {
@@ -134,6 +151,7 @@ bool AnalyzeSixRevoluteJoints0(const std::vector<JointPtr>& joints) {
     }
 
     if(!EnsureAllJointsPurelyRevolute(joints)) {
+        RAVELOG_WARN("Not all joints are purely revolute");
         return false;
     }
 
@@ -159,6 +177,7 @@ bool AnalyzeFourRevoluteJoints0(const std::vector<JointPtr>& joints) {
     }
 
     if(!EnsureAllJointsPurelyRevolute(joints)) {
+        RAVELOG_WARN("Not all joints are purely revolute");
         return false;
     }
 
@@ -184,7 +203,10 @@ bool RobotPostureDescriber::Supports(const std::array<RobotBase::LinkPtr, 2>& ki
     if(armdof == 4 && AnalyzeFourRevoluteJoints0(joints)) {
         return true;
     }
-    RAVELOG_WARN_FORMAT("Cannot handle robot %s with armdof=%d for now", robotname % armdof);
+
+    const std::string baselinkname = kinematicsChain[0]->GetName();
+    const std::string eelinkname = kinematicsChain[1]->GetName();
+    RAVELOG_WARN_FORMAT("Cannot handle robot %s with armdof=%d for now: baselink=%s, eelink=%s", robotname % armdof % baselinkname % eelinkname);
     return false;
 }
 
@@ -193,7 +215,7 @@ bool RobotPostureDescriber::ComputePostureValues(std::vector<uint16_t>& postures
     if(!jointvalues.empty()) {
         const KinBodyPtr probot = _kinematicsChain[0]->GetParent();
         if(jointvalues.size() != _joints.size()) {
-            throw OPENRAVE_EXCEPTION_FORMAT("jointvalues size does not match joint size: %d!=%d", jointvalues.size() % _joints.size(), ORE_InvalidArguments);
+            RAVELOG_WARN_FORMAT("jointvalues size does not match joint size: %d!=%d", jointvalues.size() % _joints.size());
             return false;
         }
         const KinBody::CheckLimitsAction claoption = KinBody::CheckLimitsAction::CLA_Nothing;
@@ -204,6 +226,26 @@ bool RobotPostureDescriber::ComputePostureValues(std::vector<uint16_t>& postures
     else {
         _posturefn(_joints, _fTol, posturestates);
     }
+    return true;
+}
+
+bool RobotPostureDescriber::SetPostureValueThreshold(double fTol) {
+    if(fTol < 0.0) {
+        RAVELOG_WARN_FORMAT("Cannot set fTol=%.4d<0.0; do not change its value", fTol);
+        return false;
+    }
+    _fTol = fTol;
+    return true;
+}
+
+bool RobotPostureDescriber::_SetPostureValueThresholdCommand(std::ostream& ssout, std::istream& ssin) {
+    double fTol = 0.0;
+    ssin >> fTol;
+    return this->SetPostureValueThreshold(fTol);
+}
+
+bool RobotPostureDescriber::_GetPostureValueThresholdCommand(std::ostream& ssout, std::istream& ssin) const {
+    ssout << _fTol;
     return true;
 }
 
