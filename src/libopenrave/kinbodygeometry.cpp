@@ -570,8 +570,9 @@ inline std::string _GetGeometryTypeString(const GeometryType& geometryType) {
         return "cylinder";
     case GT_TriMesh:
         return "trimesh";
+    default:
+        return "";
     }
-    return "";
 }
 
 void KinBody::GeometryInfo::DeserializeGeomData(const rapidjson::Value& value, std::string typestr, dReal fUnitScale){
