@@ -169,6 +169,7 @@ void PyGeometryInfo::Init(const KinBody::GeometryInfo& info) {
     _vDiffuseColor = toPyVector3(info._vDiffuseColor);
     _vAmbientColor = toPyVector3(info._vAmbientColor);
     _meshcollision = toPyTriMesh(info._meshcollision);
+    _id = ConvertStringToUnicode(info._id);
     _type = info._type;
     _name = ConvertStringToUnicode(info._name);
     _filenamerender = ConvertStringToUnicode(info._filenamerender);
@@ -235,6 +236,10 @@ KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo() {
         ExtractTriMesh(_meshcollision,info._meshcollision);
     }
     info._type = _type;
+
+    if( !IS_PYTHONOBJECT_NONE(_id) ) {
+        info._id = py::extract<std::string>(_id);
+    }
     if( !IS_PYTHONOBJECT_NONE(_name) ) {
         info._name = py::extract<std::string>(_name);
     }
@@ -263,6 +268,7 @@ void PyLinkInfo::_Update(const KinBody::LinkInfo& info) {
     FOREACHC(itgeominfo, info._vgeometryinfos) {
         _vgeometryinfos.append(PyGeometryInfoPtr(new PyGeometryInfo(**itgeominfo)));
     }
+    _id = ConvertStringToUnicode(info._id);
     _name = ConvertStringToUnicode(info._name);
     _t = ReturnTransform(info._t);
     _tMassFrame = ReturnTransform(info._tMassFrame);
@@ -314,6 +320,9 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
     for(size_t i = 0; i < info._vgeometryinfos.size(); ++i) {
         PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(_vgeometryinfos[i]);
         info._vgeometryinfos[i] = pygeom->GetGeometryInfo();
+    }
+    if( !IS_PYTHONOBJECT_NONE(_id) ) {
+        info._id = py::extract<std::string>(_id);
     }
     if( !IS_PYTHONOBJECT_NONE(_name) ) {
         info._name = py::extract<std::string>(_name);
@@ -403,6 +412,7 @@ PyLinkInfoPtr toPyLinkInfo(const KinBody::LinkInfo& linkinfo)
 {
     return PyLinkInfoPtr(new PyLinkInfo(linkinfo));
 }
+
 
 PyElectricMotorActuatorInfo::PyElectricMotorActuatorInfo() {
 }
@@ -715,6 +725,7 @@ PyJointInfo::PyJointInfo(const KinBody::JointInfo& info) {
 
 void PyJointInfo::_Update(const KinBody::JointInfo& info) {
     _type = info._type;
+    _id = ConvertStringToUnicode(info._id);
     _name = ConvertStringToUnicode(info._name);
     _linkname0 = ConvertStringToUnicode(info._linkname0);
     _linkname1 = ConvertStringToUnicode(info._linkname1);
@@ -803,6 +814,10 @@ KinBody::JointInfoPtr PyJointInfo::GetJointInfo() {
     KinBody::JointInfoPtr pinfo(new KinBody::JointInfo());
     KinBody::JointInfo& info = *pinfo;
     info._type = _type;
+
+    if( !IS_PYTHONOBJECT_NONE(_id) ) {
+        info._id = py::extract<std::string>(_id);
+    }
     if( !IS_PYTHONOBJECT_NONE(_name) ) {
         info._name = py::extract<std::string>(_name);
     }
@@ -2045,13 +2060,22 @@ py::object PyKinBody::PyGrabbedInfo::__unicode__() {
 PyKinBody::PyKinBodyInfo::PyKinBodyInfo() {
 }
 
+PyKinBody::PyKinBodyInfo::PyKinBodyInfo(const KinBody::KinBodyInfo& info) {
+    _Update(info);
+}
+
 KinBody::KinBodyInfoPtr PyKinBody::PyKinBodyInfo::GetKinBodyInfo() const {
     KinBody::KinBodyInfoPtr pInfo(new KinBody::KinBodyInfo());
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+    pInfo->_id = _id;
     pInfo->_uri = _uri;
     pInfo->_vLinkInfos = std::vector<KinBody::LinkInfoPtr>(begin(_vLinkInfos), end(_vLinkInfos));
     pInfo->_vJointInfos = std::vector<KinBody::JointInfoPtr>(begin(_vJointInfos), end(_vJointInfos));
 #else
+    if (!IS_PYTHONOBJECT_NONE(_id)) {
+        pInfo->_id = py::extract<std::string>(_id);
+    }
+
     if (!IS_PYTHONOBJECT_NONE(_uri)) {
         pInfo->_uri = py::extract<std::string>(_uri);
     }
@@ -2089,10 +2113,12 @@ void PyKinBody::PyKinBodyInfo::DeserializeJSON(py::object obj, dReal fUnitScale)
 
 void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+    _id = info._id;
     _uri = info._uri;
     _vLinkInfos = std::vector<KinBody::LinkInfoPtr>(begin(info._vLinkInfos), end(info._vLinkInfos));
     _vJointInfos = std::vector<KinBody::JointInfoPtr>(begin(info._vJointInfos), end(info._vJointInfos));
 #else
+    _id = ConvertStringToUnicode(info._id);
     _uri = ConvertStringToUnicode(info._uri);
     py::list vLinkInfos;
     FOREACHC(itLinkInfo, info._vLinkInfos) {
@@ -3554,6 +3580,11 @@ PyStateRestoreContextBase* PyKinBody::CreateKinBodyStateSaver(object options)
     return CreateStateSaver(options);
 }
 
+object PyKinBody::GetInfo() const {
+    return py::to_object(boost::shared_ptr<PyKinBody::PyKinBodyInfo>(new PyKinBody::PyKinBodyInfo(_pbody->GetInfo())));
+}
+
+
 PyStateRestoreContextBase* PyKinBody::CreateStateSaver(object options)
 {
     PyKinBodyStateSaverPtr saver;
@@ -4277,6 +4308,7 @@ void init_openravepy_kinbody()
                           .def_readwrite("_vAmbientColor",&PyGeometryInfo::_vAmbientColor)
                           .def_readwrite("_meshcollision",&PyGeometryInfo::_meshcollision)
                           .def_readwrite("_type",&PyGeometryInfo::_type)
+                          .def_readwrite("_id", &PyGeometryInfo::_id)
                           .def_readwrite("_name",&PyGeometryInfo::_name)
                           .def_readwrite("_filenamerender",&PyGeometryInfo::_filenamerender)
                           .def_readwrite("_filenamecollision",&PyGeometryInfo::_filenamecollision)
@@ -4340,6 +4372,7 @@ void init_openravepy_kinbody()
     object linkinfo = class_<PyLinkInfo, OPENRAVE_SHARED_PTR<PyLinkInfo> >("LinkInfo", DOXY_CLASS(KinBody::LinkInfo))
 #endif
                       .def_readwrite("_vgeometryinfos",&PyLinkInfo::_vgeometryinfos)
+                      .def_readwrite("_id", &PyLinkInfo::_id)
                       .def_readwrite("_name",&PyLinkInfo::_name)
                       .def_readwrite("_t",&PyLinkInfo::_t)
                       .def_readwrite("_tMassFrame",&PyLinkInfo::_tMassFrame)
@@ -4478,6 +4511,7 @@ void init_openravepy_kinbody()
     object jointinfo = class_<PyJointInfo, OPENRAVE_SHARED_PTR<PyJointInfo> >("JointInfo", DOXY_CLASS(KinBody::JointInfo))
 #endif
                        .def_readwrite("_type",&PyJointInfo::_type)
+                       .def_readwrite("_id", &PyJointInfo::_id)
                        .def_readwrite("_name",&PyJointInfo::_name)
                        .def_readwrite("_linkname0",&PyJointInfo::_linkname0)
                        .def_readwrite("_linkname1",&PyJointInfo::_linkname1)
@@ -4601,6 +4635,7 @@ void init_openravepy_kinbody()
 #endif
                          .def_readwrite("_vLinkInfos",&PyKinBody::PyKinBodyInfo::_vLinkInfos)
                          .def_readwrite("_vJointInfos",&PyKinBody::PyKinBodyInfo::_vJointInfos)
+                         .def_readwrite("_id", &PyKinBody::PyKinBodyInfo::_id)
                          .def_readwrite("_uri", &PyKinBody::PyKinBodyInfo::_uri)
                          .def("__str__",&PyKinBody::PyKinBodyInfo::__str__)
                          .def("__unicode__",&PyKinBody::PyKinBodyInfo::__unicode__)
@@ -5048,6 +5083,7 @@ void init_openravepy_kinbody()
 #else
                          .def("CreateKinBodyStateSaver",&PyKinBody::CreateKinBodyStateSaver, CreateKinBodyStateSaver_overloads(PY_ARGS("options") "Creates an object that can be entered using 'with' and returns a KinBodyStateSaver")[return_value_policy<manage_new_object>()])
 #endif
+                         .def("GetInfo", &PyKinBody::GetInfo, DOXY_FN(KinBody, GetInfo))
                          .def("__enter__",&PyKinBody::__enter__)
                          .def("__exit__",&PyKinBody::__exit__)
                          .def("__repr__",&PyKinBody::__repr__)

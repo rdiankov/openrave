@@ -24,45 +24,6 @@
 
 namespace OpenRAVE {
 
-
-KinBody::JointInfo::JointControlInfo_RobotController::JointControlInfo_RobotController() : robotId(-1)
-{
-    robotControllerDOFIndex[0] = robotControllerDOFIndex[1] = robotControllerDOFIndex[2] = -1;
-}
-
-KinBody::JointInfo::JointControlInfo_IO::JointControlInfo_IO() : deviceId(-1)
-{
-}
-
-KinBody::JointInfo::JointControlInfo_ExternalDevice::JointControlInfo_ExternalDevice()
-{
-}
-
-KinBody::JointInfo::JointInfo() : _type(JointNone), _bIsActive(true), _controlMode(JCM_None) {
-    for(size_t i = 0; i < _vaxes.size(); ++i) {
-        _vaxes[i] = Vector(0,0,1);
-    }
-    std::fill(_vresolution.begin(), _vresolution.end(), 0.02);
-    std::fill(_vmaxvel.begin(), _vmaxvel.end(), 10);
-    std::fill(_vhardmaxvel.begin(), _vhardmaxvel.end(), 0); // Default hard limits is 0. if 0, the user should not use the hard limit value.
-    std::fill(_vmaxaccel.begin(), _vmaxaccel.end(), 50);
-    std::fill(_vhardmaxaccel.begin(), _vhardmaxaccel.end(), 0); // Default hard limits is 0. if 0, the user should not use the hard limit value.
-    std::fill(_vmaxjerk.begin(), _vmaxjerk.end(), 50*1000); // Set negligibly large jerk by default which can change acceleration between min and max within a typical time step.
-    std::fill(_vhardmaxjerk.begin(), _vhardmaxjerk.end(), 0); // Default hard limits is 0. if 0, the user should not use the hard limit value.
-    std::fill(_vmaxtorque.begin(), _vmaxtorque.end(), 0); // set max torque to 0 to notify the system that dynamics parameters might not be valid.
-    std::fill(_vmaxinertia.begin(), _vmaxinertia.end(), 0);
-    std::fill(_vweights.begin(), _vweights.end(), 1);
-    std::fill(_voffsets.begin(), _voffsets.end(), 0);
-    std::fill(_vlowerlimit.begin(), _vlowerlimit.end(), 0);
-    std::fill(_vupperlimit.begin(), _vupperlimit.end(), 0);
-    std::fill(_bIsCircular.begin(), _bIsCircular.end(), 0);
-}
-
-KinBody::JointInfo::JointInfo(const JointInfo& other)
-{
-    *this = other;
-}
-
 int KinBody::JointInfo::GetDOF() const
 {
     if(_type & KinBody::JointSpecialBit) {
@@ -83,16 +44,44 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
     int dof = GetDOF();
 
     switch (_type) {
-    case JointRevolute:
+    case JointRevolute: // jointHinge and jointRevolute have same value
         OpenRAVE::JSON::SetJsonValueByKey(value, "type", "revolute", allocator);
         break;
-    case JointPrismatic:
+    case JointPrismatic: // jointSlider and jointPrismatic have same value
         OpenRAVE::JSON::SetJsonValueByKey(value, "type", "prismatic", allocator);
+        break;
+    case JointRR:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "rr", allocator);
+        break;
+    case JointRP:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "rp", allocator);
+        break;
+    case JointPR:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "pr", allocator);
+        break;
+    case JointPP:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "pp", allocator);
+        break;
+    case JointSpecialBit:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "specialbit", allocator);
+        break;
+    case JointUniversal:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "universal", allocator);
+        break;
+    case JointHinge2:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "hinge2", allocator);
+        break;
+    case JointSpherical:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "spherical", allocator);
+        break;
+    case JointTrajectory:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "trajectory", allocator);
         break;
     case JointNone:
         break;
     default:
-        OpenRAVE::JSON::SetJsonValueByKey(value, "type", static_cast<int>(_type), allocator);
+        RAVELOG_WARN(str(boost::format("Unknow JointType %d")%static_cast<int>(_type)));
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", static_cast<int>(_type), allocator);  // TODO: should we raise error here ?
         break;
     }
 
@@ -106,6 +95,7 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
         fjointmult = fUnitScale;
     }
 
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "anchors", _vanchor, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "parentLinkName", _linkname0, allocator);
@@ -188,20 +178,28 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
     std::string typestr;
     OpenRAVE::JSON::LoadJsonValueByKey(value, "type", typestr);
 
-    if (typestr == "revolute")
-    {
-        _type = JointType::JointRevolute;
-    }
-    else if (typestr == "prismatic")
-    {
-        _type = JointType::JointPrismatic;
-    }
-    else
-    {
+    std::map<std::string, KinBody::JointType> jointTypeMapping = {
+        {"revolute", JointType::JointRevolute},
+        {"prismatic", JointType::JointPrismatic},
+        {"rr", JointType::JointRR},
+        {"rp", JointType::JointRP},
+        {"pr", JointType::JointPR},
+        {"pp", JointType::JointPP},
+        {"specialbit", JointType::JointSpecialBit},
+        {"universal", JointType::JointUniversal},
+        {"hinge2", JointType::JointHinge2},
+        {"spherical", JointType::JointSpherical},
+        {"trajectory", JointType::JointTrajectory},
+        {"", JointType::JointNone}  //  TODO: do we allow empty?
+    };
+
+    if (jointTypeMapping.find(typestr) == jointTypeMapping.end()) {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported joint type \"%s\"", typestr, ORE_InvalidArguments);
     }
-
+    _type = jointTypeMapping[typestr];
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
+
     OpenRAVE::JSON::LoadJsonValueByKey(value, "parentLinkName", _linkname0);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "anchors", _vanchor);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "childLinkName", _linkname1);
@@ -266,8 +264,46 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
     }
 }
 
+bool KinBody::JointInfo::operator==(const KinBody::JointInfo& other) const
+{
+    return _type == other._type
+        && _id == other._id
+        && _name == other._name
+        && _linkname0 == other._linkname0
+        && _linkname1 == other._linkname1
+        && _vanchor == other._vanchor
+        && _vaxes == other._vaxes
+        && _vcurrentvalues == other._vcurrentvalues
+        && _vresolution == other._vresolution
+        && _vmaxvel == other._vmaxvel
+        && _vhardmaxvel == other._vhardmaxvel
+        && _vmaxaccel == other._vmaxaccel
+        && _vhardmaxaccel == other._vhardmaxaccel
+        && _vmaxjerk == other._vmaxjerk
+        && _vhardmaxjerk == other._vhardmaxjerk
+        && _vmaxtorque == other._vmaxtorque
+        && _vmaxinertia == other._vmaxinertia
+        && _vweights == other._vweights
+        && _voffsets == other._voffsets
+        && _vlowerlimit == other._vlowerlimit
+        && _vupperlimit == other._vupperlimit
+        && _trajfollow == other._trajfollow
+        && _vmimic == other._vmimic
+        && _mapFloatParameters == other._mapFloatParameters
+        && _mapIntParameters == other._mapIntParameters
+        && _mapStringParameters == other._mapStringParameters
+        && _infoElectricMotor == other._infoElectricMotor
+        && _bIsCircular == other._bIsCircular
+        && _bIsActive == other._bIsActive
+        && _controlMode == other._controlMode
+        && _jci_robotcontroller == other._jci_robotcontroller
+        && _jci_io == other._jci_io
+        && _jci_externaldevice == other._jci_externaldevice;
+}
+
 KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& other)
 {
+    _id = other._id;
     _type = other._type;
     _name = other._name;
     _linkname0 = other._linkname0;
@@ -320,6 +356,9 @@ KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& othe
     _bIsActive = other._bIsActive;
 
     _controlMode = other._controlMode;
+    _jci_robotcontroller.reset();
+    _jci_io.reset();
+    _jci_externaldevice.reset();
     if( _controlMode == KinBody::JCM_RobotController ) {
         if( !other._jci_robotcontroller ) {
             _jci_robotcontroller.reset();
@@ -346,9 +385,6 @@ KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& othe
     }
     return *this;
 }
-
-
-
 
 static void fparser_polyroots2(vector<dReal>& rawroots, const vector<dReal>& rawcoeffs)
 {
@@ -2022,6 +2058,7 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
     }
 }
 
+
 void KinBody::MimicInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     OpenRAVE::JSON::SetJsonValueByKey(value, "equations", _equations, allocator);
@@ -2031,5 +2068,6 @@ void KinBody::MimicInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
 {
     OpenRAVE::JSON::LoadJsonValueByKey(value, "equations", _equations);
 }
+
 
 }

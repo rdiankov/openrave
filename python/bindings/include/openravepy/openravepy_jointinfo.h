@@ -59,6 +59,7 @@ public:
     object _vAmbientColor = toPyVector3(Vector(0,0,0));
     object _meshcollision = py::none_();
     GeometryType _type = GT_None;
+    object _id = py::none_();
     object _name = py::none_();
     object _filenamerender = py::none_();
     object _filenamecollision = py::none_();
@@ -85,6 +86,7 @@ public:
     void DeserializeJSON(object obj, dReal fUnitScale=1.0);
 
     py::list _vgeometryinfos;
+    object _id = py::none_();
     object _name = py::none_();
     object _t = ReturnTransform(Transform());
     object _tMassFrame = ReturnTransform(Transform());
@@ -183,6 +185,7 @@ public:
     void DeserializeJSON(object obj, dReal fUnitScale=1.0);
 
     KinBody::JointType _type = KinBody::JointNone;
+    object _id = py::none_();
     object _name = py::none_();
     object _linkname0 = py::none_(), _linkname1 = py::none_();
     object _vanchor = toPyVector3(Vector());

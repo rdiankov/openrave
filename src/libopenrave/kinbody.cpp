@@ -61,26 +61,6 @@ protected:
 
 typedef boost::shared_ptr<ChangeCallbackData> ChangeCallbackDataPtr;
 
-ElectricMotorActuatorInfo::ElectricMotorActuatorInfo()
-{
-    gear_ratio = 0;
-    assigned_power_rating = 0;
-    max_speed = 0;
-    no_load_speed = 0;
-    stall_torque = 0;
-    max_instantaneous_torque = 0;
-    nominal_torque = 0;
-    rotor_inertia = 0;
-    torque_constant = 0;
-    nominal_voltage = 0;
-    speed_constant = 0;
-    starting_current = 0;
-    terminal_resistance = 0;
-    coloumb_friction = 0;
-    viscous_friction = 0;
-}
-
-
 void ElectricMotorActuatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     OpenRAVE::JSON::SetJsonValueByKey(value, "modelType", model_type, allocator);
@@ -127,7 +107,13 @@ void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, d
 
 void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    OpenRAVE::JSON::SetJsonValueByKey(value, "uri", _uri, allocator);
+    value.SetObject();
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
+    if (!_referenceUri.empty()) {
+        OpenRAVE::JSON::SetJsonValueByKey(value, "referenceUri", _referenceUri, allocator);
+    }
+    // OpenRAVE::JSON::SetJsonValueByKey(value, "uri", _uri, allocator); // deprecated
     if (_vLinkInfos.size() > 0) {
         rapidjson::Value rLinkInfoValues;
         rLinkInfoValues.SetArray();
@@ -155,7 +141,14 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
 
 void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "referenceUri", _referenceUri);
+    // OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri); // deprecated
+    bool isRobot = false;
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "isRobot", isRobot);
+    BOOST_ASSERT(!isRobot);
+
 
     _vLinkInfos.clear();
     if (value.HasMember("links")) {
@@ -460,7 +453,13 @@ bool KinBody::InitFromInfo(const KinBodyInfoConstPtr& info)
 {
     std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(info->_vLinkInfos.begin(), info->_vLinkInfos.end());
     std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(info->_vJointInfos.begin(), info->_vJointInfos.end());
-    return KinBody::Init(vLinkInfosConst, vJointInfosConst, info->_uri);
+    
+    if( !KinBody::Init(vLinkInfosConst, vJointInfosConst, info->_uri) ) {
+        return false;
+    }
+
+    _info = *info;
+    return true;
 }
 
 void KinBody::SetName(const std::string& newname)
@@ -5068,6 +5067,24 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
     }
     else {
         _vPassiveJoints.push_back(pjoint);
+    }
+}
+
+void KinBody::UpdateInfo()
+{
+    _info._name = _name;
+    _info._uri = __struri;
+
+    _info._vLinkInfos.resize(_veclinks.size());
+    for(size_t i = 0; i < _info._vLinkInfos.size(); ++i) {
+        _veclinks[i]->UpdateInfo();
+        _info._vLinkInfos[i] = boost::make_shared<KinBody::LinkInfo>(_veclinks[i]->_info);
+    }
+
+    _info._vJointInfos.resize(_vecjoints.size());
+    for(size_t i = 0; i < _info._vJointInfos.size(); ++i) {
+        _vecjoints[i]->UpdateInfo();
+        _info._vJointInfos[i] = boost::make_shared<KinBody::JointInfo>(_vecjoints[i]->_info);
     }
 }
 

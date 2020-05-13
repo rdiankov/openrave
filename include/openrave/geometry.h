@@ -224,6 +224,16 @@ public:
         x = (T)r.x; y = (T)r.y; z = (T)r.z; w = (T)r.w; return *this;
     }
 
+    template <typename U>
+    bool operator==(const RaveVector<U>& r) const{
+        return x == r.x && y == r.y && z == r.z && w == r.w;
+    }
+
+    template <typename U>
+    bool operator!=(const RaveVector<U>& r) const{
+        return x != r.x || y != r.y || z != r.z || w != r.w;
+    }
+
     // SCALAR FUNCTIONS
     template <typename U> inline T dot(const RaveVector<U> &v) const {
         return x*v.x + y*v.y + z*v.z + w*v.w;
@@ -450,6 +460,13 @@ public:
     inline RaveTransform<T>& operator*= (const RaveTransform<T>&right) {
         *this = operator*(right);
         return *this;
+    }
+
+    inline bool operator== (const RaveTransform<T>& right) const{
+        return trans == right.trans && rot == right.rot;
+    }
+    inline bool operator!= (const RaveTransform<T>& right) const{
+        return !operator==(right);
     }
 
     inline RaveTransform<T> inverse() const {

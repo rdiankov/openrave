@@ -19,6 +19,29 @@
 
 namespace OpenRAVE {
 
+RobotBase::GripperInfo& RobotBase::GripperInfo::operator=(const RobotBase::GripperInfo& other)
+{
+    name = other.name;
+    grippertype = other.grippertype;
+    gripperJointNames = other.gripperJointNames;
+    _pdocument.reset();
+    if (!!other._pdocument) {
+        _pdocument.reset(new rapidjson::Document());
+        _pdocument->CopyFrom(*other._pdocument, _pdocument->GetAllocator());
+    }
+    return *this;
+}
+
+bool RobotBase::GripperInfo::operator==(const RobotBase::GripperInfo& other) const
+{
+    return _id == other._id
+        && name == other.name
+        && grippertype == other.grippertype
+        && gripperJointNames == other.gripperJointNames
+        && _pdocument == other._pdocument;
+    // TODO: deep compare _pdocument
+}
+
 void RobotBase::GripperInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     value.SetObject();
@@ -26,6 +49,7 @@ void RobotBase::GripperInfo::SerializeJSON(rapidjson::Value &value, rapidjson::D
         BOOST_ASSERT(_pdocument->IsObject());
         value.CopyFrom(*_pdocument, allocator);
     }
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "name", name, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "grippertype", grippertype, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "gripperJointNames", gripperJointNames, allocator);
@@ -33,16 +57,16 @@ void RobotBase::GripperInfo::SerializeJSON(rapidjson::Value &value, rapidjson::D
 
 void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
+    _id.clear();
     name.clear();
     grippertype.clear();
     gripperJointNames.clear();
 
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", name);
-    if( name.size() == 0 ) {
-        OpenRAVE::JSON::LoadJsonValueByKey(value, "id", name);
-        if( name.size() > 0 ) {
-            RAVELOG_WARN_FORMAT("gripperInfo %s got old tag 'id', when it should be 'name'", name);
-        }
+    if( name.size() == 0 && _id.size() > 0 ) {
+        name = _id;
+        RAVELOG_WARN_FORMAT("gripperInfo %s got old tag 'id', when it should be 'name'", name);
     }
     OpenRAVE::JSON::LoadJsonValueByKey(value, "grippertype", grippertype);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "gripperJointNames", gripperJointNames);
@@ -54,6 +78,7 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
 
 void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "linkName", _linkname, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "transform", _trelative, allocator);
@@ -69,6 +94,7 @@ void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapid
 
 void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "linkName", _linkname);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _trelative);
@@ -139,8 +165,6 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const RobotBase::
 RobotBase::AttachedSensor::~AttachedSensor()
 {
 }
-
-
 
 //void RobotBase::AttachedSensor::_ComputeInternalInformation()
 //{
@@ -400,17 +424,49 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
 
 void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    OpenRAVE::JSON::SetJsonValueByKey(value, "uri", _uri, allocator);
-    if (_vManipInfos.size() > 0) {
-        rapidjson::Value rManipInfoValues;
-        rManipInfoValues.SetArray();
-        rManipInfoValues.Reserve(_vManipInfos.size(), allocator);
-        FOREACHC(it, _vManipInfos) {
+    value.SetObject();
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
+    if (!_referenceUri.empty()) {
+        OpenRAVE::JSON::SetJsonValueByKey(value, "referenceUri", _referenceUri, allocator);
+    }
+    // OpenRAVE::JSON::SetJsonValueByKey(value, "uri", _uri, allocator); // deprecated
+    OpenRAVE::JSON::SetJsonValueByKey(value, "isRobot", true, allocator);
+
+    if (_vLinkInfos.size() > 0) {
+        rapidjson::Value rLinkInfoValues;
+        rLinkInfoValues.SetArray();
+        rLinkInfoValues.Reserve(_vLinkInfos.size(), allocator);
+        FOREACHC(it, _vLinkInfos) {
+            rapidjson::Value linkInfoValue;
+            (*it)->SerializeJSON(linkInfoValue, allocator, fUnitScale, options);
+            rLinkInfoValues.PushBack(linkInfoValue, allocator);
+        }
+        value.AddMember("links", rLinkInfoValues, allocator);
+    }
+
+    if (_vJointInfos.size() > 0) {
+        rapidjson::Value rJointInfoValues;
+        rJointInfoValues.SetArray();
+        rJointInfoValues.Reserve(_vJointInfos.size(), allocator);
+        FOREACHC(it, _vJointInfos) {
+            rapidjson::Value jointInfoValue;
+            (*it)->SerializeJSON(jointInfoValue, allocator, fUnitScale, options);
+            rJointInfoValues.PushBack(jointInfoValue, allocator);
+        }
+        value.AddMember("joints", rJointInfoValues, allocator);
+    }
+
+    if (_vManipulatorInfos.size() > 0) {
+        rapidjson::Value rManipulatorInfoValues;
+        rManipulatorInfoValues.SetArray();
+        rManipulatorInfoValues.Reserve(_vManipulatorInfos.size(), allocator);
+        FOREACHC(it, _vManipulatorInfos) {
             rapidjson::Value manipInfoValue;
             (*it)->SerializeJSON(manipInfoValue, allocator, fUnitScale, options);
-            rManipInfoValues.PushBack(manipInfoValue, allocator);
+            rManipulatorInfoValues.PushBack(manipInfoValue, allocator);
         }
-        value.AddMember("manipulators", rManipInfoValues, allocator);
+        value.AddMember("manipulators", rManipulatorInfoValues, allocator);
     }
 
     if (_vAttachedSensorInfos.size() > 0) {
@@ -436,19 +492,56 @@ void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson:
         }
         value.AddMember("connectedBodies", rConnectedBodyInfoValues, allocator);
     }
+
+    if (_vGripperInfos.size() > 0) {
+        rapidjson::Value rGripperInfoValues;
+        rGripperInfoValues.SetArray();
+        rGripperInfoValues.Reserve(_vGripperInfos.size(), allocator);
+        FOREACHC(it, _vGripperInfos) {
+            rapidjson::Value gripperInfoValue;
+            (*it)->SerializeJSON(gripperInfoValue, allocator, fUnitScale, options);
+            rGripperInfoValues.PushBack(gripperInfoValue, allocator);
+        }
+        value.AddMember("gripperInfos", rGripperInfoValues, allocator);
+    }
 }
 
 void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "referenceUri", _referenceUri);
+    // OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri); // deprecated
+    bool isRobot = false;
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "isRobot", isRobot);
+    BOOST_ASSERT(isRobot);
+    
+    _vLinkInfos.clear();
+    if (value.HasMember("links")) {
+        _vLinkInfos.reserve(value["links"].Size());
+        for (size_t iLinkInfo = 0; iLinkInfo < value["links"].Size(); iLinkInfo++) {
+            LinkInfoPtr pLinkInfo(new LinkInfo());
+            pLinkInfo->DeserializeJSON(value["links"][iLinkInfo], fUnitScale);
+            _vLinkInfos.push_back(pLinkInfo);
+        }
+    }
+    _vJointInfos.clear();
+    if (value.HasMember("joints")) {
+        _vJointInfos.reserve(value["joints"].Size());
+        for (size_t iJointInfo = 0; iJointInfo < value["joints"].Size(); iJointInfo++) {
+            JointInfoPtr pJointInfo(new JointInfo());
+            pJointInfo->DeserializeJSON(value["joints"][iJointInfo], fUnitScale);
+            _vJointInfos.push_back(pJointInfo);
+        }
+    }
 
-    _vManipInfos.clear();
+    _vManipulatorInfos.clear();
     if (value.HasMember("manipulators")) {
-        _vManipInfos.reserve(value["manipulators"].Size());
-        for (size_t iManipInfo = 0; iManipInfo < value["manipulators"].Size(); iManipInfo++) {
-            ManipulatorInfoPtr pManipInfo(new ManipulatorInfo());
-            pManipInfo->DeserializeJSON(value["manipulators"][iManipInfo], fUnitScale);
-            _vManipInfos.push_back(pManipInfo);
+        _vManipulatorInfos.reserve(value["manipulators"].Size());
+        for (size_t iManipulatorInfo = 0; iManipulatorInfo < value["manipulators"].Size(); iManipulatorInfo++) {
+            ManipulatorInfoPtr pManipulatorInfo(new ManipulatorInfo());
+            pManipulatorInfo->DeserializeJSON(value["manipulators"][iManipulatorInfo], fUnitScale);
+            _vManipulatorInfos.push_back(pManipulatorInfo);
         }
     }
 
@@ -469,6 +562,16 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
             ConnectedBodyInfoPtr pConnectedBodyInfo(new ConnectedBodyInfo());
             pConnectedBodyInfo->DeserializeJSON(value["connectedBodies"][iConnectedBodyInfo], fUnitScale);
             _vConnectedBodyInfos.push_back(pConnectedBodyInfo);
+        }
+    }
+
+    _vGripperInfos.clear();
+    if (value.HasMember("gripperInfos")) {
+        _vGripperInfos.reserve(value["gripperInfos"].Size());
+        for (size_t iGripperInfo = 0; iGripperInfo < value["gripperInfos"].Size(); iGripperInfo++) {
+            GripperInfoPtr pGripperInfo(new GripperInfo());
+            pGripperInfo->DeserializeJSON(value["gripperInfos"][iGripperInfo], fUnitScale);
+            _vGripperInfos.push_back(pGripperInfo);
         }
     }
 }
@@ -548,6 +651,7 @@ bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, co
         __hashrobotstructure.resize(0);
     }
     _vecConnectedBodies.clear();
+
     return true;
 }
 
@@ -555,9 +659,10 @@ bool RobotBase::InitFromInfo(const RobotBaseInfoConstPtr& info)
 {
     std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(info->_vLinkInfos.begin(), info->_vLinkInfos.end());
     std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(info->_vJointInfos.begin(), info->_vJointInfos.end());
-    std::vector<RobotBase::ManipulatorInfoConstPtr> vManipInfosConst(info->_vManipInfos.begin(), info->_vManipInfos.end());
+    std::vector<RobotBase::ManipulatorInfoConstPtr> vManipulatorInfosConst(info->_vManipulatorInfos.begin(), info->_vManipulatorInfos.end());
     std::vector<RobotBase::AttachedSensorInfoConstPtr> vAttachedSensorInfosConst(info->_vAttachedSensorInfos.begin(), info->_vAttachedSensorInfos.end());
-    if( !RobotBase::Init(vLinkInfosConst, vJointInfosConst, vManipInfosConst, vAttachedSensorInfosConst, info->_uri) ) {
+
+    if( !RobotBase::Init(vLinkInfosConst, vJointInfosConst, vManipulatorInfosConst, vAttachedSensorInfosConst, info->_uri) ) {
         return false;
     }
 
@@ -566,6 +671,14 @@ bool RobotBase::InitFromInfo(const RobotBaseInfoConstPtr& info)
         ConnectedBodyPtr newconnectedbody(new ConnectedBody(shared_robot(),**itconnectedbodyinfo));
         _vecConnectedBodies.push_back(newconnectedbody);
     }
+
+    _vecGripperInfos.clear();
+    FOREACH(itgripperinfo, info->_vGripperInfos) {
+        GripperInfoPtr newGripperInfo(new GripperInfo( **itgripperinfo));
+        _vecGripperInfos.push_back(newGripperInfo);
+    }
+
+    _info = *info;
     return true;
 }
 
@@ -2236,6 +2349,11 @@ const std::string& RobotBase::GetRobotStructureHash() const
         __hashrobotstructure = utils::GetMD5HashString(ss.str());
     }
     return __hashrobotstructure;
+}
+
+void RobotBase::UpdateInfo()
+{
+    // TODO: update _info
 }
 
 } // end namespace OpenRAVE
