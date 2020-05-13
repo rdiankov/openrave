@@ -870,7 +870,14 @@ void RobotBase::UpdateInfo() {
         _info._vAttachedSensorInfos[iAttachedSensor] = boost::make_shared<RobotBase::AttachedSensorInfo>(_vecAttachedSensors[iAttachedSensor]->_info);
     }
     _info._vConnectedBodyInfos.resize(_vecConnectedBodies.size());
+    for (size_t iConnectedBody = 0; iConnectedBody < _info._vConnectedBodyInfos.size(); ++iConnectedBody) {
+        _vecConnectedBodies[iConnectedBody]->UpdateInfo();
+        _info._vConnectedBodyInfos[iConnectedBody] = boost::make_shared<RobotBase::ConnectedBodyInfo>(_vecConnectedBodies[iConnectedBody]->_info);
+    }
     _info._vGripperInfos.resize(_vecGripperInfos.size());
+    for (size_t iGripperInfo = 0; iGripperInfo < _info._vGripperInfos.size(); ++iGripperInfo) {
+        _info._vGripperInfos[iGripperInfo] = _vecGripperInfos[iGripperInfo];
+    }
 }
 
 void RobotBase::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t bCheckLimits, const std::vector<int>& dofindices)

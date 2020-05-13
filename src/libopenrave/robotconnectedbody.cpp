@@ -365,7 +365,12 @@ void RobotBase::ConnectedBody::GetResolvedGripperInfos(std::vector<RobotBase::Gr
 uint8_t RobotBase::ConnectedBody::ApplyDiff(const rapidjson::Value& connectedBodyValue, ConnectedBodyInfo& newInfo)
 {
     int8_t applyResult = 0;
-    return applyResult;
+
+    return applyResult | ApplyDiffResult::ADR_OK;
+}
+
+void RobotBase::ConnectedBody::UpdateInfo() {
+    //  TODO
 }
 
 

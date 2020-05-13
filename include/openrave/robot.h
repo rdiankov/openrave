@@ -795,6 +795,8 @@ public:
         virtual inline const ConnectedBodyInfo& GetInfo() const {
             return _info;
         }
+
+        virtual void UpdateInfo();
         virtual uint8_t ApplyDiff(const rapidjson::Value& connectedBodyValue, ConnectedBodyInfo& newInfo);
 
 private:
