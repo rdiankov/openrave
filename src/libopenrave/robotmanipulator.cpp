@@ -125,8 +125,14 @@ uint8_t RobotBase::Manipulator::ApplyDiff(const rapidjson::Value& manipValue, Ro
     return applyResult | ApplyDiffResult::ADR_OK;
 }
 
-void RobotBase::Manipulator::UpdateInfo() {
+void RobotBase::Manipulator::UpdateInfo()
+{
     // TODO: update _info
+}
+
+void RobotBase::Manipulator::ExtractInfo(RobotBase::ManipulatorInfo& info) const
+{
+    info = _info;
 }
 
 int RobotBase::Manipulator::GetArmDOF() const

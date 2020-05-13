@@ -489,8 +489,12 @@ public:
                 return _info._meshcollision;
             }
 
-            virtual inline const KinBody::GeometryInfo& GetInfo() const {
+            inline const KinBody::GeometryInfo& GetInfo() const {
                 return _info;
+            }
+
+            virtual void ExtractInfo(KinBody::GeometryInfo& info) const {
+                info = _info;
             }
 
             /// cage
@@ -583,10 +587,6 @@ protected:
 
         inline const std::string& GetName() const {
             return _info._name;
-        }
-
-        inline const std::string& GetId() const {
-            return _info._id;
         }
 
         /// \brief Indicates a static body that does not move with respect to the root link.
@@ -862,6 +862,7 @@ protected:
         }
 
         virtual uint8_t ApplyDiff(const rapidjson::Value& linkValue, LinkInfo& newInfo);
+        virtual void ExtractInfo(KinBody::LinkInfo& info) const;
 
 protected:
         /// \brief Updates the cached information due to changes in the collision data.
@@ -1121,10 +1122,6 @@ public:
         /// \brief The unique name of the joint
         inline const std::string& GetName() const {
             return _info._name;
-        }
-
-        inline const std::string& GetId() const {
-            return _info._id;
         }
 
         inline dReal GetMaxVel(int iaxis=0) const {
@@ -1542,6 +1539,8 @@ public:
             return _info;
         }
 
+        virtual void ExtractInfo(KinBody::JointInfo& info) const;
+
 protected:
         JointInfo _info;
 
@@ -1630,6 +1629,30 @@ private:
     class OPENRAVE_API GrabbedInfo
     {
 public:
+        GrabbedInfo() {}
+        GrabbedInfo(const GrabbedInfo& other) {
+            *this = other;
+        }
+        GrabbedInfo& operator=(const GrabbedInfo& other) {
+            _grabbedname = other._grabbedname;
+            _robotlinkname = other._robotlinkname;
+            _trelative = other._trelative;
+            _setRobotLinksToIgnore = other._setRobotLinksToIgnore;
+            return *this;
+        }
+        bool operator==(const GrabbedInfo& other) const {
+            return _grabbedname == other._grabbedname
+                && _robotlinkname == other._robotlinkname
+                && _trelative == other._trelative
+                && _setRobotLinksToIgnore == other._setRobotLinksToIgnore;
+        }
+        bool operator!=(const GrabbedInfo& other) const{
+            return !operator==(other);
+        }
+
+        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
+        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+
         /// \brief resets the info
         inline void Reset() {
             _grabbedname.clear();
@@ -1642,8 +1665,6 @@ public:
         std::string _robotlinkname;  ///< the name of the body link that is grabbing the body
         Transform _trelative; ///< transform of first link of body relative to _robotlinkname's transform. In other words, grabbed->GetTransform() == bodylink->GetTransform()*trelative
         std::set<int> _setRobotLinksToIgnore; ///< links of the body to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the body and the relative position of the grabbed body.
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
     };
     typedef boost::shared_ptr<GrabbedInfo> GrabbedInfoPtr;
     typedef boost::shared_ptr<GrabbedInfo const> GrabbedInfoConstPtr;
@@ -1763,6 +1784,7 @@ public:
             _referenceUri = other._referenceUri;
             _vLinkInfos = other._vLinkInfos;
             _vJointInfos = other._vJointInfos;
+            _vGrabbedInfos = other._vGrabbedInfos;
             // TODO: deep copy infos
             return *this;
         }
@@ -1772,7 +1794,8 @@ public:
                 && _name == other._name
                 && _referenceUri == other._referenceUri
                 && _vLinkInfos == other._vLinkInfos
-                && _vJointInfos == other._vJointInfos;
+                && _vJointInfos == other._vJointInfos
+                && _vGrabbedInfos == other._vGrabbedInfos;
             // TODO: deep compare infos
         }
         bool operator!=(const KinBodyInfo& other) const{
@@ -1790,6 +1813,7 @@ public:
 
         std::vector<LinkInfoPtr> _vLinkInfos; ///< list of pointers to LinkInfo
         std::vector<JointInfoPtr> _vJointInfos; ///< list of pointers to JointInfo
+        std::vector<GrabbedInfoPtr> _vGrabbedInfos; ///< list of pointers to GrabbedInfo
     };
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
@@ -2754,9 +2778,8 @@ private:
         UpdateInfo();
         return GetInfo();
     }
-    virtual const std::string& GetId() const {
-        return _info._id;
-    }
+
+    virtual void ExtractInfo(KinBodyInfo& info) const;
 
 protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies

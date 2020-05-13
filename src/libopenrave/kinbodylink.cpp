@@ -712,6 +712,15 @@ void KinBody::Link::UpdateInfo()
     }
 }
 
+void KinBody::Link::ExtractInfo(KinBody::LinkInfo& info) const {
+    info = _info;
+    info._vgeometryinfos.resize(_vGeometries.size());
+    for (size_t i = 0; i < info._vgeometryinfos.size(); ++i) {
+        info._vgeometryinfos[i].reset(new KinBody::GeometryInfo());
+        _vGeometries[i]->ExtractInfo(*info._vgeometryinfos[i]);
+    }
+}
+
 void KinBody::Link::_Update(bool parameterschanged, uint32_t extraParametersChanged)
 {
     // if there's only one trimesh geometry and it has identity offset, then copy it directly

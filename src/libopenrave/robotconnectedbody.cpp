@@ -373,6 +373,11 @@ void RobotBase::ConnectedBody::UpdateInfo() {
     //  TODO
 }
 
+void RobotBase::ConnectedBody::ExtractInfo(RobotBase::ConnectedBodyInfo& info) const
+{
+    info = _info;
+    // TODO
+}
 
 RobotBase::ConnectedBodyPtr RobotBase::AddConnectedBody(const RobotBase::ConnectedBodyInfo& connectedBodyInfo, bool removeduplicate)
 {

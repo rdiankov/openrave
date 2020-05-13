@@ -5128,4 +5128,24 @@ uint8_t KinBody::ApplyDiff(const rapidjson::Value& bodyValue, KinBody::KinBodyIn
     return applyResult | ApplyDiffResult::ADR_OK;
 }
 
+void KinBody::ExtractInfo(KinBodyInfo& info) const {
+    info = _info;
+    info._uri = __struri;
+
+    info._vLinkInfos.resize(_veclinks.size());
+    for(size_t i = 0; i < info._vLinkInfos.size(); ++i) {
+        info._vLinkInfos[i].reset(new KinBody::LinkInfo());
+        _veclinks[i]->ExtractInfo(*info._vLinkInfos[i]);
+    }
+
+    info._vJointInfos.resize(_vecjoints.size());
+    for(size_t i = 0; i < _info._vJointInfos.size(); ++i) {
+        info._vJointInfos[i].reset(new KinBody::JointInfo());
+        _vecjoints[i]->ExtractInfo(*info._vJointInfos[i]);
+    }
+
+    info._vGrabbedInfos.resize(0);
+    GetGrabbedInfo(info._vGrabbedInfos);
+}
+
 } // end namespace OpenRAVE
