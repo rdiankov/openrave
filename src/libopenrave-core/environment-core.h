@@ -631,13 +631,13 @@ public:
         }
     }
 
-    virtual void SerializeJSON(rapidjson::Value& rScene, rapidjson::Document::AllocatorType& allocator, SelectionOptions options, const AttributesList& atts)
+    virtual void SerializeJSON(rapidjson::Value& rEnvironment, rapidjson::Document::AllocatorType& allocator, SelectionOptions options, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         std::list<KinBodyPtr> listbodies;
         switch(options) {
         case SO_Everything:
-            RaveWriteJSON(shared_from_this(), rScene, allocator, atts);
+            RaveWriteJSON(shared_from_this(), rEnvironment, allocator, atts);
             return;
 
         case SO_Body: {
@@ -684,10 +684,10 @@ public:
         }
 
         if( listbodies.size() == 1 ) {
-            RaveWriteJSON(listbodies.front(), rScene, allocator, atts);
+            RaveWriteJSON(listbodies.front(), rEnvironment, allocator, atts);
         }
         else {
-            RaveWriteJSON(listbodies, rScene, allocator, atts);
+            RaveWriteJSON(listbodies, rEnvironment, allocator, atts);
         }
     }
 

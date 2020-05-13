@@ -29,13 +29,10 @@ namespace OpenRAVE {
 class JSONReader {
 public:
 
-    JSONReader(const AttributesList& atts, EnvironmentBasePtr penv): _penv(penv), _prefix("")
+    JSONReader(const AttributesList& atts, EnvironmentBasePtr penv): _penv(penv)
     {
         FOREACHC(itatt, atts) {
-            if (itatt->first == "prefix") {
-                _prefix = itatt->second;
-            }
-            else if (itatt->first == "openravescheme") {
+            if (itatt->first == "openravescheme") {
                 std::stringstream ss(itatt->second);
                 _vOpenRAVESchemeAliases = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
             }
@@ -432,7 +429,6 @@ protected:
 
     dReal _fGlobalScale;
     EnvironmentBasePtr _penv;
-    std::string _prefix;
     std::string _filename;
     std::string _uri;
     std::vector<std::string> _vOpenRAVESchemeAliases;
@@ -558,22 +554,17 @@ public:
 
     MsgPackReader(const AttributesList& atts, EnvironmentBasePtr penv): JSONReader(atts, penv) {}
     virtual ~MsgPackReader() {}
+
 protected:
 
     /// \brief open and cache a msgpack document
     virtual boost::shared_ptr<rapidjson::Document> _OpenDocument(const std::string& filename) override
     {
-        if (_docs.find(filename) != _docs.end()) {
-            return _docs[filename];
-        }
-
         boost::shared_ptr<rapidjson::Document> doc;
         doc.reset(new rapidjson::Document);
         
         std::ifstream ifs(filename.c_str());
         OpenRAVE::MsgPack::ParseMsgPack(*doc, ifs);
-        
-        _docs[filename] = doc;
         return doc;
     }
 
@@ -584,8 +575,6 @@ protected:
         doc.reset(new rapidjson::Document);
 
         OpenRAVE::MsgPack::ParseMsgPack(*doc, data);
-
-        _docs[""] = doc;
         return doc;
     }
 };

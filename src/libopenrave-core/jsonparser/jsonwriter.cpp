@@ -27,19 +27,9 @@ namespace OpenRAVE {
 class EnvironmentJSONWriter
 {
 public:
-    EnvironmentJSONWriter(const AttributesList& atts, rapidjson::Value& rScene, rapidjson::Document::AllocatorType& allocator) : _bExternalRefAllBodies(false), _rScene(rScene), _allocator(allocator) {
+    EnvironmentJSONWriter(const AttributesList& atts, rapidjson::Value& rEnvironment, rapidjson::Document::AllocatorType& allocator) : _rEnvironment(rEnvironment), _allocator(allocator) {
         FOREACHC(itatt,atts) {
-            if( itatt->first == "externalref" ) {
-                if( itatt->second == "*" ) {
-                    _bExternalRefAllBodies = true;
-                }
-                else {
-                    stringstream ss(itatt->second);
-                    std::list<string> newelts((istream_iterator<string>(ss)), istream_iterator<string>());
-                    _listExternalRefExports.splice(_listExternalRefExports.end(),newelts);
-                }
-            }
-            else if( itatt->first == "openravescheme" ) {
+            if( itatt->first == "openravescheme" ) {
                 _vForceResolveOpenRAVEScheme = itatt->second;
             }
         }
@@ -68,11 +58,11 @@ public:
 protected:
 
     virtual void _Write(const std::list<KinBodyPtr>& listbodies) {
-        _rScene.SetObject();
+        _rEnvironment.SetObject();
         _mapBodyIds.clear();
         if (listbodies.size() > 0) {
             EnvironmentBaseConstPtr penv = listbodies.front()->GetEnv();
-            OpenRAVE::JSON::SetJsonValueByKey(_rScene, "unit", penv->GetUnit(), _allocator);
+            OpenRAVE::JSON::SetJsonValueByKey(_rEnvironment, "unit", penv->GetUnit(), _allocator);
 
             int globalId = 0;
             FOREACHC(itbody, listbodies) {
@@ -278,7 +268,7 @@ protected:
             }
 
             if (bodiesValue.Size() > 0) {
-                _rScene.AddMember("bodies", bodiesValue, _allocator);
+                _rEnvironment.AddMember("bodies", bodiesValue, _allocator);
             }
         }
     }
@@ -333,12 +323,10 @@ protected:
     }
 
     std::string _vForceResolveOpenRAVEScheme; ///< if specified, writer will attempt to convert a local system URI (**file:/**) to a a relative path with respect to $OPENRAVE_DATA paths and use **customscheme** as the scheme
-    std::list<std::string> _listExternalRefExports; ///< body names to try to export externally
-    bool _bExternalRefAllBodies; ///< if true, attempts to externally write all bodies
 
     std::map<int, int> _mapBodyIds; ///< map from body environment id to unique json ids
 
-    rapidjson::Value& _rScene;
+    rapidjson::Value& _rEnvironment;
     rapidjson::Document::AllocatorType& _allocator;
 };
 
@@ -426,21 +414,21 @@ void RaveWriteJSONMemory(const std::list<KinBodyPtr>& listbodies, std::vector<ch
     OpenRAVE::JSON::DumpJson(doc, output);
 }
 
-void RaveWriteJSON(EnvironmentBasePtr penv, rapidjson::Value& rScene, rapidjson::Document::AllocatorType& allocator, const AttributesList& atts)
+void RaveWriteJSON(EnvironmentBasePtr penv, rapidjson::Value& rEnvironment, rapidjson::Document::AllocatorType& allocator, const AttributesList& atts)
 {
-    EnvironmentJSONWriter jsonwriter(atts, rScene, allocator);
+    EnvironmentJSONWriter jsonwriter(atts, rEnvironment, allocator);
     jsonwriter.Write(penv);
 }
 
-void RaveWriteJSON(KinBodyPtr pbody, rapidjson::Value& rScene, rapidjson::Document::AllocatorType& allocator, const AttributesList& atts)
+void RaveWriteJSON(KinBodyPtr pbody, rapidjson::Value& rEnvironment, rapidjson::Document::AllocatorType& allocator, const AttributesList& atts)
 {
-    EnvironmentJSONWriter jsonwriter(atts, rScene, allocator);
+    EnvironmentJSONWriter jsonwriter(atts, rEnvironment, allocator);
     jsonwriter.Write(pbody);
 }
 
-void RaveWriteJSON(const std::list<KinBodyPtr>& listbodies, rapidjson::Value& rScene, rapidjson::Document::AllocatorType& allocator, const AttributesList& atts)
+void RaveWriteJSON(const std::list<KinBodyPtr>& listbodies, rapidjson::Value& rEnvironment, rapidjson::Document::AllocatorType& allocator, const AttributesList& atts)
 {
-    EnvironmentJSONWriter jsonwriter(atts, rScene, allocator);
+    EnvironmentJSONWriter jsonwriter(atts, rEnvironment, allocator);
     jsonwriter.Write(listbodies);
 }
 
