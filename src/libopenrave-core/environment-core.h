@@ -832,6 +832,7 @@ public:
                                         throw OPENRAVE_EXCEPTION_FORMAT(_("cannot set joint dof value %f. joint %s is not found"), dofValue%jointId,ORE_InvalidArguments);
                                     }
                                 }
+                                saver.Release();
                                 saver.SetRestoreOnDestructor(false); // don't restore link transformation if user set dofvalues;
                                 (*itBody)->SetDOFValues(vDOFValues, KinBody::CLA_Nothing);
                             }
