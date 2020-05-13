@@ -241,7 +241,7 @@ public:
 
     object GetUnit() const;
 
-    void SetRevision(std::string revision);
+    void SetRevision(const uint64_t revision);
     object GetRevision() const;
 
     bool __eq__(PyEnvironmentBasePtr p);

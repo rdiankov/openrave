@@ -481,7 +481,7 @@ public:
             }
             inline void UpdateInfo() {
                 // TODO
-                RAVELOG_WARN("GeometryInfo UpdateInfo not implemented");
+                RAVELOG_WARN("Geometry UpdateInfo not implemented");
             }
 
 
@@ -1733,10 +1733,6 @@ public:
         /// \brief sets whether the state saver will restore the state on destruction. by default this is true.
         virtual void SetRestoreOnDestructor(bool restore);
 
-        /// \brief remove options
-        virtual void ClearOption(int options) {
-            _options &= (~options);
-        }
 protected:
         KinBodyPtr _pbody;
         int _options;         ///< saved options

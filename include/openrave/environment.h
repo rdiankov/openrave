@@ -704,15 +704,15 @@ public:
         return __nUniqueId;
     }
 
-    inline std::string GetRevision() const {
+    inline uint64_t GetRevision() const {
         return _revision;
     }
 
-    virtual void SetRevision(const std::string revision) {
+    virtual void SetRevision(const uint64_t revision) {
         _revision = revision;
     }
 
-    std::string _revision;  ///< environment current revision
+    uint64_t _revision;  ///< environment current revision
 
 protected:
     virtual const char* GetHash() const {

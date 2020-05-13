@@ -129,7 +129,9 @@ bool KinBody::KinBodyInfo::operator==(const KinBody::KinBodyInfo& other) const {
     bool equal = (_id == other._id
               &&  _uri == other._uri
               &&  _name == other._name
-              &&  _referenceUri == other._referenceUri);
+              &&  _referenceUri == other._referenceUri
+              && _vLinkInfos == other._vLinkInfos
+              && _vJointInfos == other._vJointInfos);
 
     if (!equal) return false;
 }

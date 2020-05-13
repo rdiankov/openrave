@@ -108,11 +108,8 @@ public:
         bool allSucceeded = true;
         dReal fUnitScale = _GetUnitScale();
 
-        std::string revision;
+        uint64_t revision = 0;
         OpenRAVE::JSON::LoadJsonValueByKey(*_doc, "revision", revision);
-        if (revision.empty()) {
-            revision = "0";
-        }
         _penv->SetRevision(revision);
         if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()) {
             std::map<KinBodyPtr, std::vector<KinBody::GrabbedInfoConstPtr>> mapKinBodyGrabbedInfos;
@@ -122,7 +119,7 @@ public:
                     _penv->Add(pbody, true);
 
                     // set dof values
-                    if (itrBodyValue->HasMember("dofValues") && (*itrBodyValue)["dofValues"].IsObject()) {
+                    if (itrBodyValue->HasMember("dofValues") && (*itrBodyValue)["dofValues"].IsArray()) {
                         std::vector<dReal> vDOFValues {};
                         _ConvertJointDOFValueFormat(pbody->GetJoints(), vDOFValues, (*itrBodyValue)["dofValues"]);
                         pbody->SetDOFValues(vDOFValues, KinBody::CLA_Nothing);

@@ -2239,13 +2239,13 @@ object PyEnvironmentBase::GetUnit() const {
     return py::make_tuple(unit.first, unit.second);
 }
 
-void PyEnvironmentBase::SetRevision(std::string revision){
+void PyEnvironmentBase::SetRevision(const uint64_t revision){
     _penv->SetRevision(revision);
 }
 
 object PyEnvironmentBase::GetRevision() const {
-    std::string revision = _penv->GetRevision();
-    return ConvertStringToUnicode(revision);
+    uint64_t revision = _penv->GetRevision();
+    return py::to_object(revision);
 }
 
 bool PyEnvironmentBase::__eq__(PyEnvironmentBasePtr p) {

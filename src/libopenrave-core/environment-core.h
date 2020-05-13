@@ -806,10 +806,9 @@ public:
                 for (std::vector<KinBodyPtr>::iterator itBody = _vecbodies.begin(); itBody != _vecbodies.end(); itBody++) {
                     if((*itBody)->GetId() == bodyId) {
                         foundBody = true;
-                        // save kinbody first
                         try {
                             // save dof value first
-                            KinBody::KinBodyStateSaver saver(*itBody);
+                            KinBody::KinBodyStateSaver saver(*itBody, KinBody::Save_LinkTransformation);
                             std::vector<dReal> vZeroDOF((*itBody)->GetDOF());
                             (*itBody)->SetDOFValues(vZeroDOF);
 
@@ -843,7 +842,7 @@ public:
                                         throw OPENRAVE_EXCEPTION_FORMAT(_("cannot set joint dof value %f. joint %s is not found"), dofValue%jointId,ORE_InvalidArguments);
                                     }
                                 }
-                                saver.ClearOption(KinBody::Save_LinkTransformation); // don't restore link transformation if user set dofvalues;
+                                saver.SetRestoreOnDestructor(false); // don't restore link transformation if user set dofvalues;
                                 (*itBody)->SetDOFValues(vDOFValues, KinBody::CLA_Nothing);
                             }
                             // readable interfaces
