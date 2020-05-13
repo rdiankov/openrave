@@ -3587,7 +3587,7 @@ PyStateRestoreContextBase* PyKinBody::CreateKinBodyStateSaver(object options)
     return CreateStateSaver(options);
 }
 
-object PyKinBody::GetInfo() {
+object PyKinBody::GetInfo() const {
     return py::to_object(boost::shared_ptr<PyKinBody::PyKinBodyInfo>(new PyKinBody::PyKinBodyInfo(_pbody->GetInfo())));
 }
 

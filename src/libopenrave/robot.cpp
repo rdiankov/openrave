@@ -643,7 +643,6 @@ bool RobotBase::InitFromInfo(const RobotBaseInfoConstPtr& info)
     std::vector<RobotBase::ManipulatorInfoConstPtr> vManipInfosConst(info->_vManipInfos.begin(), info->_vManipInfos.end());
     std::vector<RobotBase::AttachedSensorInfoConstPtr> vAttachedSensorInfosConst(info->_vAttachedSensorInfos.begin(), info->_vAttachedSensorInfos.end());
 
-    SetInfo(*info);
     if( !RobotBase::Init(vLinkInfosConst, vJointInfosConst, vManipInfosConst, vAttachedSensorInfosConst, info->_uri) ) {
         return false;
     }
@@ -659,6 +658,8 @@ bool RobotBase::InitFromInfo(const RobotBaseInfoConstPtr& info)
         GripperInfoPtr newGripperInfo(new GripperInfo( **itgripperinfo));
         shared_robot()->AddGripperInfo(newGripperInfo); // TODO: removedumplicate or not?
     }
+
+    _info = *info;
     return true;
 }
 

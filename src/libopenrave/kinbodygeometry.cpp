@@ -562,6 +562,7 @@ inline std::string KinBody::Link::Geometry::GetGeometryTypeString(const Geometry
     }
     return "";
 }
+
 void KinBody::GeometryInfo::DeserializeGeomData(const rapidjson::Value& value, std::string typestr, dReal fUnitScale){
     if (typestr == "box") {
         _type = GT_Box;

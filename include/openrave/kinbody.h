@@ -246,8 +246,9 @@ public:
         float _fTransparency; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
         bool _bVisible; ///< if true, geometry is visible as part of the 3d model (default is true)
         bool _bModifiable; ///< if true, object geometry can be dynamically modified (default is true)
-private:
-        void _Update(const KinBody::GeometryInfo& info);
+
+protected:
+        virtual void _Update(const KinBody::GeometryInfo& info);
 
     };
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
@@ -2658,9 +2659,6 @@ private:
         return _info;
     }
 
-    virtual inline void SetInfo(const KinBodyInfo& info) {
-        _info = info;
-    }
     virtual void UpdateInfo();
 
     virtual uint8_t ApplyDiff(const rapidjson::Value& bodyValue, KinBodyInfo& newInfo);

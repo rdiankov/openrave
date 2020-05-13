@@ -1207,9 +1207,6 @@ private:
     virtual inline const RobotBaseInfo& GetInfo() const {
         return _info;
     }
-    virtual inline void SetInfo(const RobotBaseInfo& info) {
-        _info = info;
-    }
     virtual void UpdateInfo();
 
     virtual inline const std::string GetId() const {
