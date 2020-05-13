@@ -139,42 +139,14 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     OpenRAVE::JSON::LoadJsonValueByKey(value, "isEnabled", _bIsEnabled);
 }
 
-const KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& other)
+KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& other)
 {
     _Update(other);
     return *this;
 }
 
-template<typename T>
-bool Compare(const std::vector<boost::shared_ptr<T>>& vec1, const std::vector<boost::shared_ptr<T>>& vec2) {
-
-    if (vec1.size() != vec2.size()) return false;
-
-    typedef std::pair<boost::shared_ptr<T>, boost::shared_ptr<T>> SameIDPair;
-    std::vector<SameIDPair> sameItems;
-    sameItems.resize(vec1.size());
-    FOREACHC(itVec1, vec1) {
-        bool found = false;
-        FOREACHC(itVec2, vec2) {
-            if ((*itVec1)->_id == (*itVec2)->_id) {
-                found = true;
-                sameItems.push_back(make_pair(*itVec1, *itVec2));
-                break;
-            }
-        }
-        if (!found) return false;
-    }
-
-    for(typename std::vector<SameIDPair>::iterator itr = sameItems.begin(); itr != sameItems.end(); itr++) {
-        if (*((*itr).first) != *((*itr).second)) {
-            return false;
-        }
-    }
-}
-
 bool KinBody::LinkInfo::operator==(const KinBody::LinkInfo& other) const {
-    bool equal = true;
-    equal = _id == other._id
+    return _id == other._id
             && _name == other._name
             && _t == other._t
             && _tMassFrame == other._tMassFrame
@@ -185,11 +157,9 @@ bool KinBody::LinkInfo::operator==(const KinBody::LinkInfo& other) const {
             && _mapStringParameters == other._mapStringParameters
             && _vForcedAdjacentLinks == other._vForcedAdjacentLinks
             && _bStatic == other._bStatic
-            && _bIsEnabled == other._bIsEnabled;
-
-    equal = (equal && Compare(_vgeometryinfos, other._vgeometryinfos));
-    // TODO: _mapExtraGeometries;
-    return equal;
+            && _bIsEnabled == other._bIsEnabled
+            && _vgeometryinfos == other._vgeometryinfos;
+    // TODO: _mapExtraGeometries
 }
 
 void KinBody::LinkInfo::_Update(const KinBody::LinkInfo& other) {

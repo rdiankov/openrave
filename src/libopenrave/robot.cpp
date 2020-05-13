@@ -18,12 +18,21 @@
 #define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "robot %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetName()%_nHierarchyComputed, ORE_NotInitialized);
 
 namespace OpenRAVE {
-RobotBase::GripperInfo::GripperInfo(): _id(name) {}
-void RobotBase::GripperInfo::operator=(const RobotBase::GripperInfo& other) {
+
+RobotBase::GripperInfo::GripperInfo()
+{
+}
+
+RobotBase::GripperInfo& RobotBase::GripperInfo::operator=(const RobotBase::GripperInfo& other)
+{
     name = other.name;
     grippertype = other.grippertype;
     gripperJointNames = other.gripperJointNames;
-    _pdocument = other._pdocument;
+    _pdocument.reset();
+    if (!!other._pdocument) {
+        _pdocument.reset(new rapidjson::Document());
+        _pdocument->CopyFrom(*other._pdocument, _pdocument->GetAllocator());
+    }
 }
 
 void RobotBase::GripperInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
@@ -33,6 +42,7 @@ void RobotBase::GripperInfo::SerializeJSON(rapidjson::Value &value, rapidjson::D
         BOOST_ASSERT(_pdocument->IsObject());
         value.CopyFrom(*_pdocument, allocator);
     }
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "name", name, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "grippertype", grippertype, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "gripperJointNames", gripperJointNames, allocator);
@@ -40,16 +50,16 @@ void RobotBase::GripperInfo::SerializeJSON(rapidjson::Value &value, rapidjson::D
 
 void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
+    _id.clear();
     name.clear();
     grippertype.clear();
     gripperJointNames.clear();
 
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", name);
-    if( name.size() == 0 ) {
-        OpenRAVE::JSON::LoadJsonValueByKey(value, "id", name);
-        if( name.size() > 0 ) {
-            RAVELOG_WARN_FORMAT("gripperInfo %s got old tag 'id', when it should be 'name'", name);
-        }
+    if( name.size() == 0 && _id.size() > 0 ) {
+        name = _id;
+        RAVELOG_WARN_FORMAT("gripperInfo %s got old tag 'id', when it should be 'name'", name);
     }
     OpenRAVE::JSON::LoadJsonValueByKey(value, "grippertype", grippertype);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "gripperJointNames", gripperJointNames);
@@ -61,6 +71,7 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
 
 void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "linkName", _linkname, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "transform", _trelative, allocator);
@@ -76,6 +87,7 @@ void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapid
 
 void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "linkName", _linkname);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _trelative);
@@ -656,7 +668,7 @@ bool RobotBase::InitFromInfo(const RobotBaseInfoConstPtr& info)
     _vecGripperInfos.clear();
     FOREACH(itgripperinfo, info->_vGripperInfos) {
         GripperInfoPtr newGripperInfo(new GripperInfo( **itgripperinfo));
-        shared_robot()->AddGripperInfo(newGripperInfo); // TODO: removedumplicate or not?
+        _vecGripperInfos.push_back(newGripperInfo);
     }
 
     _info = *info;

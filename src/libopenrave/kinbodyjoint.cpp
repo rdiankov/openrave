@@ -237,12 +237,7 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
     }
     _type = jointTypeMapping[typestr];
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
-    if (value.HasMember("id")) {
-        OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
-    }
-    else {
-        _id = _name;
-    }
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
 
     OpenRAVE::JSON::LoadJsonValueByKey(value, "parentLinkName", _linkname0);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "anchors", _vanchor);

@@ -56,7 +56,8 @@ public:
         std::string _id; ///< unique id for manipulator info
 
 private:
-        void _Update(const ManipulatorInfo& info);
+        /// \brief shared update method for both copy constructor and assign operator
+        void _Update(const ManipulatorInfo& other);
 
     };
     typedef boost::shared_ptr<ManipulatorInfo> ManipulatorInfoPtr;
@@ -67,14 +68,14 @@ private:
     {
 public:
         GripperInfo();
-        void operator=(const GripperInfo& other);
+        GripperInfo& operator=(const GripperInfo& other);
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
 
-        virtual inline const std::string GetId() const {
+        inline const std::string& GetId() const {
             return _id;
         }
-        std::string& _id; /// < alias to griipername
+        std::string _id; /// < unique id
         std::string name; ///< unique name
         std::string grippertype; ///< gripper type
         std::vector<std::string> gripperJointNames; ///< names of the gripper joints
@@ -108,7 +109,7 @@ public:
 
         virtual void UpdateInfo();
 
-        virtual inline const std::string GetId() const {
+        virtual const std::string& GetId() const {
             return _info._id;
         }
 
@@ -524,7 +525,8 @@ public:
         virtual const std::string& GetName() const {
             return _info._name;
         }
-        virtual inline const std::string& GetId() const {
+
+        virtual const std::string& GetId() const {
             return _info._id;
         }
 
@@ -693,7 +695,8 @@ public:
             return _info._name;
         }
 
-        virtual inline const std::string GetId() const {
+
+        virtual const std::string& GetId() const {
             return _info._id;
         }
 
@@ -738,8 +741,7 @@ private:
 public:
         RobotBaseInfo() : KinBodyInfo() {}
         virtual ~RobotBaseInfo() {}
-
-        virtual const RobotBaseInfo& operator=(const RobotBaseInfo& other) {
+        RobotBaseInfo& operator=(const RobotBaseInfo& other) {
             _id = other._id;
             _uri = other._uri;
             _name = other._name;
@@ -762,7 +764,8 @@ public:
         std::vector<GripperInfoPtr> _vGripperInfos; ///< list of pointers to GripperInfo
 
 private:
-        void _Update(const RobotBase::RobotBaseInfo& info);
+        /// \brief shared update method for both copy constructor and assign operator
+        void _Update(const RobotBase::RobotBaseInfo& other);
     };
     typedef boost::shared_ptr<RobotBaseInfo> RobotBaseInfoPtr;
     typedef boost::shared_ptr<RobotBaseInfo const> RobotBaseInfoConstPtr;
@@ -1200,16 +1203,17 @@ private:
     }
 
     virtual uint8_t ApplyDiff(const rapidjson::Value& robotValue, RobotBaseInfo& newInfo);
-    virtual inline const RobotBaseInfo& UpdateAndGetInfo() {
+
+    virtual const RobotBaseInfo& UpdateAndGetInfo() {
         UpdateInfo();
         return GetInfo();
     }
-    virtual inline const RobotBaseInfo& GetInfo() const {
+    virtual const RobotBaseInfo& GetInfo() const {
         return _info;
     }
     virtual void UpdateInfo();
 
-    virtual inline const std::string GetId() const {
+    virtual const std::string& GetId() const {
         return _info._id;
     }
 

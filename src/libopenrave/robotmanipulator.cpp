@@ -88,11 +88,6 @@ RobotBase::Manipulator::Manipulator(RobotBasePtr probot, boost::shared_ptr<Robot
 //    }
 }
 
-
-void RobotBase::Manipulator::UpdateInfo() {
-    // TODO
-}
-
 uint8_t RobotBase::Manipulator::ApplyDiff(const rapidjson::Value& manipValue, RobotBase::ManipulatorInfo& newInfo)
 {
     if (manipValue.HasMember("__delete__")) {
@@ -142,6 +137,10 @@ uint8_t RobotBase::Manipulator::ApplyDiff(const rapidjson::Value& manipValue, Ro
         SetLocalToolDirection(newInfo._vdirection);
     }
     return applyResult | ApplyDiffResult::ADR_OK;
+}
+
+void RobotBase::Manipulator::UpdateInfo() {
+    // TODO: update _info
 }
 
 int RobotBase::Manipulator::GetArmDOF() const

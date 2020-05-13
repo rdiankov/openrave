@@ -80,7 +80,6 @@ ElectricMotorActuatorInfo::ElectricMotorActuatorInfo()
     viscous_friction = 0;
 }
 
-
 void ElectricMotorActuatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     OpenRAVE::JSON::SetJsonValueByKey(value, "modelType", model_type, allocator);
@@ -127,11 +126,11 @@ void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, d
 
 bool KinBody::KinBodyInfo::operator==(const KinBody::KinBodyInfo& other) const {
     return _id == other._id
-       &&  _uri == other._uri
-       &&  _name == other._name
-       &&  _referenceUri == other._referenceUri
-       && _vLinkInfos == other._vLinkInfos
-       && _vJointInfos == other._vJointInfos;
+        && _uri == other._uri
+        && _name == other._name
+        && _referenceUri == other._referenceUri
+        && _vLinkInfos == other._vLinkInfos
+        && _vJointInfos == other._vJointInfos;
 }
 
 void KinBody::KinBodyInfo::_Update(const KinBody::KinBodyInfo& other) {
@@ -5159,6 +5158,5 @@ uint8_t KinBody::ApplyDiff(const rapidjson::Value& bodyValue, KinBody::KinBodyIn
 
     return applyResult | ApplyDiffResult::ADR_OK;
 }
-
 
 } // end namespace OpenRAVE

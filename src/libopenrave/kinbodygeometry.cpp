@@ -575,7 +575,7 @@ inline std::string _GetGeometryTypeString(const GeometryType& geometryType) {
     }
 }
 
-void KinBody::GeometryInfo::DeserializeGeomData(const rapidjson::Value& value, std::string typestr, dReal fUnitScale){
+void KinBody::GeometryInfo::DeserializeGeomData(const rapidjson::Value& value, std::string typestr, dReal fUnitScale) {
     if (typestr == "box") {
         _type = GT_Box;
         OpenRAVE::JSON::LoadJsonValueByKey(value, "halfExtents", _vGeomData);
@@ -640,7 +640,6 @@ void KinBody::GeometryInfo::DeserializeGeomData(const rapidjson::Value& value, s
     else {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported geometry type \"%s\"", typestr, ORE_InvalidArguments);
     }
-
 }
 
 void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale)

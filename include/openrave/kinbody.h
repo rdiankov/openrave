@@ -135,7 +135,13 @@ public:
     {
 public:
         GeometryInfo();
-        virtual ~GeometryInfo() {
+        GeometryInfo& operator=(const GeometryInfo& info) {
+            _Update(info);
+            return *this;
+        }
+        bool operator==(const GeometryInfo& info) const;
+        bool operator!=(const GeometryInfo& info) const {
+            return !operator==(info);
         }
 
         /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
@@ -153,16 +159,6 @@ public:
         }
         inline const Vector& GetBoxExtents() const {
             return _vGeomData;
-        }
-
-        const GeometryInfo& operator=(const GeometryInfo& info){
-            _Update(info);
-            return *this;
-        }
-
-        bool operator==(const GeometryInfo& info) const;
-        bool operator!=(const GeometryInfo& info) const {
-            return !operator==(info);
         }
 
         /// \brief compute the inner empty volume in the geometry coordinate system
@@ -247,8 +243,9 @@ public:
         bool _bVisible; ///< if true, geometry is visible as part of the 3d model (default is true)
         bool _bModifiable; ///< if true, object geometry can be dynamically modified (default is true)
 
-protected:
-        virtual void _Update(const KinBody::GeometryInfo& info);
+private:
+        /// \brief shared update method for both copy constructor and assign operator
+        virtual void _Update(const KinBody::GeometryInfo& other);
 
     };
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
@@ -263,7 +260,7 @@ public:
         }
 
         LinkInfo(const LinkInfo& other);
-        const LinkInfo& operator=(const LinkInfo& other);
+        LinkInfo& operator=(const LinkInfo& other);
         bool operator==(const LinkInfo& other) const;
         bool operator!=(const LinkInfo& other) const {
             return !operator==(other);
@@ -305,6 +302,7 @@ public:
         bool __padding0, __padding1; // for 4-byte alignment
 
 private:
+        /// \brief shared update method for both copy constructor and assign operator
         void _Update(const KinBody::LinkInfo& other);
     };
     typedef boost::shared_ptr<LinkInfo> LinkInfoPtr;
@@ -507,7 +505,7 @@ protected:
             return _info._name;
         }
 
-        virtual inline const std::string& GetId() const {
+        inline const std::string& GetId() const {
             return _info._id;
         }
 
@@ -1040,7 +1038,7 @@ public:
             return _info._name;
         }
 
-        virtual inline const std::string& GetId() const {
+        inline const std::string& GetId() const {
             return _info._id;
         }
 
@@ -1677,7 +1675,7 @@ public:
 
         virtual ~KinBodyInfo() {}
 
-        const KinBodyInfo& operator=(const KinBodyInfo& other) {
+        KinBodyInfo& operator=(const KinBodyInfo& other) {
             _Update(other);
             return *this;
         }
@@ -1695,7 +1693,8 @@ public:
         std::vector<LinkInfoPtr> _vLinkInfos; ///< list of pointers to LinkInfo
         std::vector<JointInfoPtr> _vJointInfos; ///< list of pointers to JointInfo
 
-protected:
+private:
+        /// \brief shared update method for both copy constructor and assign operator
         void _Update(const KinBodyInfo& other);
     };
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
@@ -2649,7 +2648,7 @@ private:
         return boost::static_pointer_cast<KinBody const>(shared_from_this());
     }
 
-    virtual inline const KinBodyInfo& GetInfo() const {
+    virtual const KinBodyInfo& GetInfo() const {
         return _info;
     }
 
@@ -2657,11 +2656,11 @@ private:
 
     virtual uint8_t ApplyDiff(const rapidjson::Value& bodyValue, KinBodyInfo& newInfo);
 
-    virtual inline const KinBodyInfo& UpdateAndGetInfo() {
+    virtual const KinBodyInfo& UpdateAndGetInfo() {
         UpdateInfo();
         return GetInfo();
     }
-    virtual inline const std::string GetId() const {
+    virtual const std::string& GetId() const {
         return _info._id;
     }
 
