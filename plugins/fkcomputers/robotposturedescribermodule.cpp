@@ -16,7 +16,7 @@
 
 #include <openrave/plugin.h> // OPENRAVE_PLUGIN_API
 #include <openrave/fksolver.h> // RobotPostureDescriberBasePtr
-#include "plugindefs.h" //  FKCOMPUTERS_MODULE_NAME, ROBOTPOSTUREDESCRIBER_MODULE_NAME
+#include "plugindefs.h" //  ROBOTPOSTUREDESCRIBER_MODULE_NAME, ROBOTPOSTUREDESCRIBER_CLASS_NAME
 #include "robotposturedescriber.h"
 #include "robotposturedescribermodule.h"
 
@@ -88,7 +88,7 @@ bool RobotPostureDescriberModule::_LoadRobotPostureDescriberCommand(std::ostream
         return false;
     }
 
-    const RobotPostureDescriberBasePtr probotposture = RaveCreateFkSolver(penv, ROBOTPOSTUREDESCRIBER_MODULE_NAME);
+    const RobotPostureDescriberBasePtr probotposture = RaveCreateFkSolver(penv, ROBOTPOSTUREDESCRIBER_CLASS_NAME);
     if(probotposture == nullptr) {
         RAVELOG_WARN_FORMAT("env=%d, cannot create robot posture describer for robot %s from links %s to %s (manipname=\"%s\")", envId % robotname % baselinkname % eelinkname % manipname);
         return false;
@@ -114,13 +114,13 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 {    
     switch(type) {
     case PT_ForwardKinematicsSolver: {
-        if( interfacename == ROBOTPOSTUREDESCRIBER_MODULE_NAME ) {
+        if( interfacename == ROBOTPOSTUREDESCRIBER_CLASS_NAME ) {
             return RobotPostureDescriberBasePtr(new RobotPostureDescriber(penv));
         }
         break;
     }
     case PT_Module: {
-        if( interfacename == FKCOMPUTERS_MODULE_NAME) {
+        if( interfacename == ROBOTPOSTUREDESCRIBER_MODULE_NAME) {
             return ModuleBasePtr(new RobotPostureDescriberModule(penv));
         }
         break;
@@ -135,8 +135,8 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 
 void GetPluginAttributesValidated(PLUGININFO& info)
 {
-    info.interfacenames[PT_Module].push_back(FKCOMPUTERS_MODULE_NAME);
-    info.interfacenames[PT_ForwardKinematicsSolver].push_back(ROBOTPOSTUREDESCRIBER_MODULE_NAME);
+    info.interfacenames[PT_Module].push_back(ROBOTPOSTUREDESCRIBER_MODULE_NAME);
+    info.interfacenames[PT_ForwardKinematicsSolver].push_back(ROBOTPOSTUREDESCRIBER_CLASS_NAME);
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()

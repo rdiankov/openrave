@@ -50,10 +50,10 @@ bool RobotPostureDescriber::Init(const std::array<RobotBase::LinkPtr, 2>& kinema
 
 void RobotPostureDescriber::_GetJointsFromKinematicsChain(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain,
                                                           std::vector<JointPtr>& joints) const {
-    const int baselinkid = kinematicsChain[0]->GetIndex();
-    const int eelinkid = kinematicsChain[1]->GetIndex();
+    const int baselinkind = kinematicsChain[0]->GetIndex();
+    const int eelinkind = kinematicsChain[1]->GetIndex();
     const KinBodyPtr probot = kinematicsChain[0]->GetParent();
-    probot->GetChain(baselinkid, eelinkid, joints);
+    probot->GetChain(baselinkind, eelinkind, joints);
     for(std::vector<JointPtr>::iterator it = begin(joints); it != end(joints);) {
         if((*it)->IsStatic() || (*it)->GetDOFIndex()==-1) {
             it = joints.erase(it);
@@ -199,7 +199,7 @@ bool RobotPostureDescriber::ComputePostureValues(std::vector<uint16_t>& postures
 
 bool RobotPostureDescriber::SetPostureValueThreshold(double fTol) {
     if(fTol < 0.0) {
-        RAVELOG_WARN_FORMAT("Cannot set fTol=%.4d<0.0; do not change its value", fTol);
+        RAVELOG_WARN_FORMAT("Cannot set fTol=%.4d<0.0; do not change its current value %.4e", fTol % _fTol);
         return false;
     }
     _fTol = fTol;
