@@ -135,7 +135,13 @@ public:
     {
 public:
         GeometryInfo();
-        virtual ~GeometryInfo() {
+        GeometryInfo& operator=(const GeometryInfo& info) {
+            _Update(info);
+            return *this;
+        }
+        bool operator==(const GeometryInfo& info) const;
+        bool operator!=(const GeometryInfo& info) const {
+            return !operator==(info);
         }
 
         /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
@@ -215,7 +221,7 @@ public:
         TriMesh _meshcollision;
 
         GeometryType _type; ///< the type of geometry primitive
-
+        std::string _id;   ///< unique id of the geometry
         std::string _name; ///< the name of the geometry
 
         /// \brief filename for render model (optional)
@@ -235,6 +241,11 @@ public:
         float _fTransparency; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
         bool _bVisible; ///< if true, geometry is visible as part of the 3d model (default is true)
         bool _bModifiable; ///< if true, object geometry can be dynamically modified (default is true)
+
+private:
+        /// \brief shared update method for both copy constructor and assign operator
+        virtual void _Update(const KinBody::GeometryInfo& other);
+
     };
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
     typedef boost::shared_ptr<GeometryInfo const> GeometryInfoConstPtr;
@@ -249,6 +260,10 @@ public:
 
         LinkInfo(const LinkInfo& other);
         LinkInfo& operator=(const LinkInfo& other);
+        bool operator==(const LinkInfo& other) const;
+        bool operator!=(const LinkInfo& other) const {
+            return !operator==(other);
+        }
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
@@ -258,6 +273,8 @@ public:
         /// self -  self-collision specific geometry. By default, this type of geometry will be always set
         std::map< std::string, std::vector<GeometryInfoPtr> > _mapExtraGeometries;
 
+        ///\brief unique id of the link
+        std::string _id;
         /// \brief unique link name
         std::string _name;
         /// the current transformation of the link with respect to the body coordinate system
@@ -282,6 +299,10 @@ public:
         /// \true false if the link is disabled. disabled links do not participate in collision detection
         bool _bIsEnabled;
         bool __padding0, __padding1; // for 4-byte alignment
+
+private:
+        /// \brief shared update method for both copy constructor and assign operator
+        void _Update(const KinBody::LinkInfo& other);
     };
     typedef boost::shared_ptr<LinkInfo> LinkInfoPtr;
     typedef boost::shared_ptr<LinkInfo const> LinkInfoConstPtr;
@@ -326,6 +347,7 @@ public:
             inline GeometryType GetType() const {
                 return _info._type;
             }
+
             inline const Vector& GetRenderScale() const {
                 return _info._vRenderScale;
             }
@@ -386,7 +408,7 @@ public:
                 return _info._meshcollision;
             }
 
-            inline const KinBody::GeometryInfo& GetInfo() const {
+            virtual inline const KinBody::GeometryInfo& GetInfo() const {
                 return _info;
             }
 
@@ -468,6 +490,10 @@ protected:
 
         inline const std::string& GetName() const {
             return _info._name;
+        }
+
+        inline const std::string& GetId() const {
+            return _info._id;
         }
 
         /// \brief Indicates a static body that does not move with respect to the root link.
@@ -883,6 +909,8 @@ public:
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
 
         JointType _type; /// The joint type
+
+        std::string _id;   // joint unique id
         std::string _name;         ///< the unique joint name
         std::string _linkname0, _linkname1; ///< attaching links, all axes and anchors are defined in the link pointed to by _linkname0 coordinate system. _linkname0 is usually the parent link.
         Vector _vanchor; ///< the anchor of the rotation axes defined in _linkname0's coordinate system. this is only used to construct the internal left/right matrices. passed into Joint::_ComputeInternalInformation
@@ -960,6 +988,7 @@ public:
         JointControlInfo_RobotControllerPtr _jci_robotcontroller;
         JointControlInfo_IOPtr _jci_io;
         JointControlInfo_ExternalDevicePtr _jci_externaldevice;
+
     };
     typedef boost::shared_ptr<JointInfo> JointInfoPtr;
     typedef boost::shared_ptr<JointInfo const> JointInfoConstPtr;
@@ -992,6 +1021,10 @@ public:
         /// \brief The unique name of the joint
         inline const std::string& GetName() const {
             return _info._name;
+        }
+
+        inline const std::string& GetId() const {
+            return _info._id;
         }
 
         inline dReal GetMaxVel(int iaxis=0) const {
@@ -1394,7 +1427,6 @@ public:
 
         /// \brief Updates several fields in \ref _info depending on the current state of the joint.
         virtual void UpdateInfo();
-
         /// \brief returns the JointInfo structure containing all information.
         ///
         /// Some values in this structure like _vcurrentvalues need to be updated, so make sure to call \ref UpdateInfo() right before this function is called.
@@ -1622,12 +1654,31 @@ public:
 
         virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+        // virtual void DeserializeDiffJSON(const rapidjson::Value& value, KinBody::KinBodyInfo& newInfo, dReal fUntiScale=1.0);
 
         virtual ~KinBodyInfo() {}
 
+        KinBodyInfo& operator=(const KinBodyInfo& other) {
+            _Update(other);
+            return *this;
+        }
+
+        bool operator==(const KinBodyInfo& other) const;
+        bool operator!=(const KinBodyInfo& other) const{
+            return !operator==(other);
+        }
+
+        std::string _id;
         std::string _uri;
+        std::string _name;
+        std::string _referenceUri;  // referenced body info uri
+
         std::vector<LinkInfoPtr> _vLinkInfos; ///< list of pointers to LinkInfo
         std::vector<JointInfoPtr> _vJointInfos; ///< list of pointers to JointInfo
+
+private:
+        /// \brief shared update method for both copy constructor and assign operator
+        void _Update(const KinBodyInfo& other);
     };
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
@@ -2579,6 +2630,20 @@ private:
         return boost::static_pointer_cast<KinBody const>(shared_from_this());
     }
 
+    virtual const KinBodyInfo& GetInfo() const {
+        return _info;
+    }
+
+    virtual void UpdateInfo();
+
+    virtual const KinBodyInfo& UpdateAndGetInfo() {
+        UpdateInfo();
+        return GetInfo();
+    }
+    virtual const std::string& GetId() const {
+        return _info._id;
+    }
+
 protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies
     KinBody(InterfaceType type, EnvironmentBasePtr penv);
@@ -2648,6 +2713,9 @@ protected:
     /// Can only be called before internal robot hierarchy is initialized
     virtual void _InitAndAddJoint(JointPtr pjoint);
 
+
+
+
     std::string _name; ///< name of body
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints
     std::vector<JointPtr> _vTopologicallySortedJoints; ///< \see GetDependencyOrderedJoints
@@ -2685,6 +2753,9 @@ protected:
     uint32_t _nHierarchyComputed; ///< 2 if the joint heirarchy and other cached information is computed. 1 if the hierarchy information is computing
     bool _bMakeJoinedLinksAdjacent; ///< if true, then automatically add adjacent links to the adjacency list so that their self-collisions are ignored.
     bool _bAreAllJoints1DOFAndNonCircular; ///< if true, then all controllable joints  of the robot are guaranteed to be either revolute or prismatic and non-circular. This allows certain functions that do operations on the joint values (like SubtractActiveDOFValues) to be optimized without calling Joint functions.
+
+    KinBodyInfo _info; // kinbody info
+
 private:
     mutable std::string __hashkinematics;
     mutable std::vector<dReal> _vTempJoints;

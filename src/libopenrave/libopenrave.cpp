@@ -2684,53 +2684,8 @@ void IkParameterization::SerializeJSON(rapidjson::Value& rIkParameterization, ra
 {
     rIkParameterization.SetObject();
     OpenRAVE::JSON::SetJsonValueByKey(rIkParameterization, "type", GetName(), alloc);
-    switch (_type) {
-    case IKP_Transform6D:
-        OpenRAVE::JSON::SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
-        OpenRAVE::JSON::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
-        break;
-    case IKP_Rotation3D:
-        OpenRAVE::JSON::SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
-        break;
-    case IKP_Translation3D:
-        OpenRAVE::JSON::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
-        break;
-    case IKP_Direction3D:
-        OpenRAVE::JSON::SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
-        break;
-    case IKP_Ray4D:
-        OpenRAVE::JSON::SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
-        OpenRAVE::JSON::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
-        break;
-    case IKP_Lookat3D:
-        OpenRAVE::JSON::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
-        break;
-    case IKP_TranslationDirection5D:
-        OpenRAVE::JSON::SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
-        OpenRAVE::JSON::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
-        break;
-    case IKP_TranslationXY2D:
-        OpenRAVE::JSON::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
-        break;
-    case IKP_TranslationXYOrientation3D:
-        OpenRAVE::JSON::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
-        break;
-    case IKP_TranslationLocalGlobal6D:
-        OpenRAVE::JSON::SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
-        OpenRAVE::JSON::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
-        break;
-    case IKP_TranslationXAxisAngle4D:
-    case IKP_TranslationYAxisAngle4D:
-    case IKP_TranslationZAxisAngle4D:
-    case IKP_TranslationXAxisAngleZNorm4D:
-    case IKP_TranslationYAxisAngleXNorm4D:
-    case IKP_TranslationZAxisAngleYNorm4D:
-        OpenRAVE::JSON::SetJsonValueByKey(rIkParameterization, "rotate", _transform.rot, alloc);
-        OpenRAVE::JSON::SetJsonValueByKey(rIkParameterization, "translate", _transform.trans*fUnitScale, alloc);
-        break;
-    default:
-        throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization %s"), GetName(),ORE_InvalidArguments);
-    }
+    OpenRAVE::JSON::SetJsonValueByKey(rIkParameterization, "transform", _transform, alloc);
+
     if (_mapCustomData.size() > 0) {
         // TODO have to scale _mapCustomData by fUnitScale
         OpenRAVE::JSON::SetJsonValueByKey(rIkParameterization, "customData", _mapCustomData, alloc);
@@ -2747,80 +2702,20 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
         const char* ptype =  rIkParameterization["type"].GetString();
         if( !!ptype ) {
             const std::map<IkParameterizationType,std::string>::const_iterator itend = RaveGetIkParameterizationMap().end();
+            bool foundType = false;
             for(std::map<IkParameterizationType,std::string>::const_iterator it = RaveGetIkParameterizationMap().begin(); it != itend; ++it) {
                 if( strcmp(ptype, it->second.c_str()) == 0 ) {
                     _type = it->first;
+                    foundType = true;
                     break;
                 }
             }
+            if (!foundType) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization %s"), ptype, ORE_InvalidArguments);
+            }
         }
     }
-    switch (_type) {
-    case IKP_Transform6D:
-    case IKP_Transform6DVelocity:
-        OpenRAVE::JSON::LoadJsonValueByKey(rIkParameterization, "rotate", _transform.rot);
-        OpenRAVE::JSON::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
-        break;
-    case IKP_Rotation3D:
-    case IKP_Rotation3DVelocity:
-        OpenRAVE::JSON::LoadJsonValueByKey(rIkParameterization, "rotate", _transform.rot);
-        break;
-    case IKP_Translation3D:
-        OpenRAVE::JSON::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
-        break;
-    case IKP_Translation3DVelocity:
-    case IKP_TranslationXYOrientation3DVelocity:
-        OpenRAVE::JSON::LoadJsonValueByKey(rIkParameterization, "rotate", _transform.rot);
-        OpenRAVE::JSON::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
-        break;
-    case IKP_Direction3D:
-    case IKP_Direction3DVelocity:
-        OpenRAVE::JSON::LoadJsonValueByKey(rIkParameterization, "rotate", _transform.rot);
-        break;
-    case IKP_Ray4D:
-    case IKP_Ray4DVelocity:
-        OpenRAVE::JSON::LoadJsonValueByKey(rIkParameterization, "rotate", _transform.rot);
-        OpenRAVE::JSON::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
-        break;
-    case IKP_TranslationDirection5D:
-    case IKP_TranslationDirection5DVelocity:
-        OpenRAVE::JSON::LoadJsonValueByKey(rIkParameterization, "rotate", _transform.rot);
-        OpenRAVE::JSON::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
-        break;
-    case IKP_Lookat3D:
-    case IKP_Lookat3DVelocity:
-        OpenRAVE::JSON::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
-        break;
-    case IKP_TranslationXY2D:
-    case IKP_TranslationXY2DVelocity:
-        OpenRAVE::JSON::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
-        break;
-    case IKP_TranslationXYOrientation3D:
-        OpenRAVE::JSON::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
-        break;
-    case IKP_TranslationLocalGlobal6D:
-    case IKP_TranslationLocalGlobal6DVelocity:
-        OpenRAVE::JSON::LoadJsonValueByKey(rIkParameterization, "rotate", _transform.rot);
-        OpenRAVE::JSON::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
-        break;
-    case IKP_TranslationXAxisAngle4D:
-    case IKP_TranslationXAxisAngle4DVelocity:
-    case IKP_TranslationYAxisAngle4D:
-    case IKP_TranslationYAxisAngle4DVelocity:
-    case IKP_TranslationZAxisAngle4D:
-    case IKP_TranslationZAxisAngle4DVelocity:
-    case IKP_TranslationXAxisAngleZNorm4D:
-    case IKP_TranslationXAxisAngleZNorm4DVelocity:
-    case IKP_TranslationYAxisAngleXNorm4D:
-    case IKP_TranslationYAxisAngleXNorm4DVelocity:
-    case IKP_TranslationZAxisAngleYNorm4D:
-    case IKP_TranslationZAxisAngleYNorm4DVelocity:
-        OpenRAVE::JSON::LoadJsonValueByKey(rIkParameterization, "rotate", _transform.rot);
-        OpenRAVE::JSON::LoadJsonValueByKey(rIkParameterization, "translate", _transform.trans);
-        break;
-    default:
-        throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization 0x%x"), _type,ORE_InvalidArguments);
-    }
+    OpenRAVE::JSON::LoadJsonValueByKey(rIkParameterization, "transform", _transform);
     _transform.trans *= fUnitScale;
 
     _mapCustomData.clear();

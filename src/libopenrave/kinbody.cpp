@@ -80,7 +80,6 @@ ElectricMotorActuatorInfo::ElectricMotorActuatorInfo()
     viscous_friction = 0;
 }
 
-
 void ElectricMotorActuatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     OpenRAVE::JSON::SetJsonValueByKey(value, "modelType", model_type, allocator);
@@ -125,9 +124,31 @@ void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, d
     OpenRAVE::JSON::LoadJsonValueByKey(value, "viscousFriction", viscous_friction);
 }
 
+bool KinBody::KinBodyInfo::operator==(const KinBody::KinBodyInfo& other) const {
+    return _id == other._id
+        && _uri == other._uri
+        && _name == other._name
+        && _referenceUri == other._referenceUri;
+}
+
+void KinBody::KinBodyInfo::_Update(const KinBody::KinBodyInfo& other) {
+    _id = other._id;
+    _uri = other._uri;
+    _name = other._name;
+    _referenceUri = other._referenceUri;
+
+    _vLinkInfos = other._vLinkInfos;
+    _vJointInfos = other._vJointInfos;
+}
+
 void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    OpenRAVE::JSON::SetJsonValueByKey(value, "uri", _uri, allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
+    if (!_referenceUri.empty()) {
+        OpenRAVE::JSON::SetJsonValueByKey(value, "referenceUri", _referenceUri, allocator);
+    }
+    // OpenRAVE::JSON::SetJsonValueByKey(value, "uri", _uri, allocator); // deprecated
     if (_vLinkInfos.size() > 0) {
         rapidjson::Value rLinkInfoValues;
         rLinkInfoValues.SetArray();
@@ -155,8 +176,10 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
 
 void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri);
-
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "referenceUri", _referenceUri);
+    // OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri); // deprecated
     _vLinkInfos.clear();
     if (value.HasMember("links")) {
         _vLinkInfos.reserve(value["links"].Size());
@@ -460,7 +483,13 @@ bool KinBody::InitFromInfo(const KinBodyInfoConstPtr& info)
 {
     std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(info->_vLinkInfos.begin(), info->_vLinkInfos.end());
     std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(info->_vJointInfos.begin(), info->_vJointInfos.end());
-    return KinBody::Init(vLinkInfosConst, vJointInfosConst, info->_uri);
+    
+    if( !KinBody::Init(vLinkInfosConst, vJointInfosConst, info->_uri) ) {
+        return false;
+    }
+
+    _info = *info;
+    return true;
 }
 
 void KinBody::SetName(const std::string& newname)
@@ -5068,6 +5097,24 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
     }
     else {
         _vPassiveJoints.push_back(pjoint);
+    }
+}
+
+void KinBody::UpdateInfo()
+{
+    _info._name = _name;
+    _info._uri = __struri;
+
+    _info._vLinkInfos.resize(_veclinks.size());
+    for(size_t i = 0; i < _info._vLinkInfos.size(); ++i) {
+        _veclinks[i]->UpdateInfo();
+        _info._vLinkInfos[i] = boost::make_shared<KinBody::LinkInfo>(_veclinks[i]->_info);
+    }
+
+    _info._vJointInfos.resize(_vecjoints.size());
+    for(size_t i = 0; i < _info._vJointInfos.size(); ++i) {
+        _vecjoints[i]->UpdateInfo();
+        _info._vJointInfos[i] = boost::make_shared<KinBody::JointInfo>(_vecjoints[i]->_info);
     }
 }
 

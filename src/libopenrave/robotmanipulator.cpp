@@ -43,6 +43,20 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
     OpenRAVE::JSON::LoadJsonValueByKey(value, "grippername", _grippername);
 }
 
+
+void RobotBase::ManipulatorInfo::_Update(const RobotBase::ManipulatorInfo& info) {
+    _id = info._id;
+
+    _name = info._name;
+    _sBaseLinkName = info._sEffectorLinkName;
+    _tLocalTool = info._tLocalTool;
+    _vChuckingDirection = info._vChuckingDirection;
+    _vdirection = info._vdirection;
+    _sIkSolverXMLId = info._sIkSolverXMLId;
+    _vGripperJointNames = info._vGripperJointNames;
+}
+
+
 RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::ManipulatorInfo& info) : _info(info), __probot(probot) {
 }
 RobotBase::Manipulator::~Manipulator() {
@@ -72,6 +86,10 @@ RobotBase::Manipulator::Manipulator(RobotBasePtr probot, boost::shared_ptr<Robot
 //        //__pIkSolver = RaveCreateIkSolver(probot->GetEnv(), _info._sIkSolverXMLId);
 //        // cannot call __pIkSolver->Init since this is the constructor...
 //    }
+}
+
+void RobotBase::Manipulator::UpdateInfo() {
+    // TODO: update _info
 }
 
 int RobotBase::Manipulator::GetArmDOF() const

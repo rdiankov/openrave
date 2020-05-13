@@ -303,19 +303,22 @@ void PyRobotBase::PyRobotBaseInfo::_Update(const RobotBase::RobotBaseInfo& info)
 #else
     py::list vManipInfos;
     FOREACHC(itManipInfo, info._vManipInfos) {
-        vManipInfos.append(*itManipInfo);
+        PyManipulatorInfoPtr pmanipinfo = toPyManipulatorInfo(**itManipInfo);
+        vManipInfos.append(pmanipinfo);
     }
     _vManipInfos = vManipInfos;
 
     py::list vAttachedSensorInfos;
     FOREACHC(itAttachedSensorInfo, info._vAttachedSensorInfos) {
-        vAttachedSensorInfos.append(*itAttachedSensorInfo);
+        PyAttachedSensorInfoPtr pattachedsensorinfo = toPyAttachedSensorInfo(**itAttachedSensorInfo);
+        vAttachedSensorInfos.append(pattachedsensorinfo);
     }
     _vAttachedSensorInfos = vAttachedSensorInfos;
 
     py::list vConnectedBodyInfos;
     FOREACHC(itConnectedBodyInfo, info._vConnectedBodyInfos) {
-        vConnectedBodyInfos.append(*itConnectedBodyInfo);
+        PyConnectedBodyInfoPtr pconnectedbodyinfo = toPyConnectedBodyInfo(**itConnectedBodyInfo);
+        vConnectedBodyInfos.append(pconnectedbodyinfo);
     }
     _vConnectedBodyInfos = vConnectedBodyInfos;
 #endif
@@ -405,6 +408,7 @@ inline std::vector<RobotBase::ConnectedBodyInfoPtr> ExtractConnectedBodyInfoArra
 RobotBase::RobotBaseInfoPtr PyRobotBase::PyRobotBaseInfo::GetRobotBaseInfo() const {
     RobotBase::RobotBaseInfoPtr pInfo(new RobotBase::RobotBaseInfo);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+    pInfo->_id = _id;
     pInfo->_uri = _uri;
     pInfo->_vLinkInfos = std::vector<KinBody::LinkInfoPtr>(begin(_vLinkInfos), end(_vLinkInfos));
     pInfo->_vJointInfos = std::vector<KinBody::JointInfoPtr>(begin(_vJointInfos), end(_vJointInfos));
@@ -412,6 +416,9 @@ RobotBase::RobotBaseInfoPtr PyRobotBase::PyRobotBaseInfo::GetRobotBaseInfo() con
     pInfo->_vAttachedSensorInfos = std::vector<RobotBase::AttachedSensorInfoPtr>(begin(_vAttachedSensorInfos), end(_vAttachedSensorInfos));
     pInfo->_vConnectedBodyInfos = std::vector<RobotBase::ConnectedBodyInfoPtr>(begin(_vConnectedBodyInfos), end(_vConnectedBodyInfos));
 #else
+    if (!IS_PYTHONOBJECT_NONE(_id)) {
+        pInfo->_id = py::extract<std::string>(_id);
+    }
     if (!IS_PYTHONOBJECT_NONE(_uri)) {
         pInfo->_uri = py::extract<std::string>(_uri);
     }
@@ -1411,6 +1418,10 @@ PyManipulatorPtr PyRobotBase::GetManipulator(const string& manipname)
     return PyManipulatorPtr();
 }
 
+object PyRobotBase::GetInfo() const {
+    return py::to_object(boost::shared_ptr<PyRobotBase::PyRobotBaseInfo>(new PyRobotBase::PyRobotBaseInfo(_probot->GetInfo())));
+}
+
 PyManipulatorPtr PyRobotBase::SetActiveManipulator(const std::string& manipname) {
     _probot->SetActiveManipulator(manipname);
     return GetActiveManipulator();
@@ -2360,6 +2371,7 @@ void init_openravepy_robot()
 #else
                       .def("InitFromInfo",&PyRobotBase::InitFromInfo, DOXY_FN(RobotBase, InitFromInfo))
 #endif
+                      .def("GetInfo", &PyRobotBase::GetInfo, DOXY_FN(RobotBase, GetInfo))
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                        .def("AddAttachedSensor",&PyRobotBase::AddAttachedSensor,

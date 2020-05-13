@@ -440,16 +440,41 @@ inline void SaveJsonValue(rapidjson::Value& v, const KinBody::GeometryInfo::Side
     v.SetObject();
     OpenRAVE::JSON::SetJsonValueByKey(v, "transform", t.transf, alloc);
     OpenRAVE::JSON::SetJsonValueByKey(v, "halfExtents", t.vExtents, alloc);
-    OpenRAVE::JSON::SetJsonValueByKey(v, "type", (int)t.type, alloc);
+    switch (t.type) {
+    case KinBody::GeometryInfo::SideWallType::SWT_NX:
+        OpenRAVE::JSON::SetJsonValueByKey(v, "type", "nx", alloc);
+        break;
+    case KinBody::GeometryInfo::SideWallType::SWT_PX:
+        OpenRAVE::JSON::SetJsonValueByKey(v, "type", "px", alloc);
+        break;
+    case KinBody::GeometryInfo::SideWallType::SWT_NY:
+        OpenRAVE::JSON::SetJsonValueByKey(v, "type", "ny", alloc);
+        break;
+    case KinBody::GeometryInfo::SideWallType::SWT_PY:
+        OpenRAVE::JSON::SetJsonValueByKey(v, "type", "py", alloc);
+        break;
+    default:
+        throw OPENRAVE_EXCEPTION_FORMAT(_("unrecognized sidewall type %d for saving to json"), t.type, ORE_InvalidArguments);
+    }
 }
 
 inline void LoadJsonValue(const rapidjson::Value& v, KinBody::GeometryInfo::SideWall& t) {
     if(v.IsObject()) {
         OpenRAVE::JSON::LoadJsonValueByKey(v, "transform", t.transf);
         OpenRAVE::JSON::LoadJsonValueByKey(v, "halfExtents", t.vExtents);
-        int type = 0;
+        std::string type = "";
         OpenRAVE::JSON::LoadJsonValueByKey(v, "type", type);
-        t.type = (KinBody::GeometryInfo::SideWallType)type;
+        std::map<std::string, KinBody::GeometryInfo::SideWallType> sideWallTypeMapping = {
+            {"nx", KinBody::GeometryInfo::SideWallType::SWT_NX},
+            {"px", KinBody::GeometryInfo::SideWallType::SWT_PX},
+            {"ny", KinBody::GeometryInfo::SideWallType::SWT_NY},
+            {"py", KinBody::GeometryInfo::SideWallType::SWT_PY},
+        };
+
+        if (sideWallTypeMapping.find(type) == sideWallTypeMapping.end()) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("unrecognized sidewall type %s for loading from json"), type, ORE_InvalidArguments);
+        }
+        t.type = sideWallTypeMapping[type];
     } else {
         throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to OpenRAVE::Geometry::SideWall", OpenRAVE::JSON::GetJsonTypeName(v), OpenRAVE::ORE_InvalidArguments);
     }
@@ -457,8 +482,13 @@ inline void LoadJsonValue(const rapidjson::Value& v, KinBody::GeometryInfo::Side
 
 void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options) const
 {
-    // RAVE_SERIALIZEJSON_ADDMEMBER(allocator, "sid", sid);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
+
+    std::string name = _name;
+    if (name.empty()) {
+        name = _id;
+    }
+    OpenRAVE::JSON::SetJsonValueByKey(value, "name", name, allocator);
 
     Transform tscaled = _t;
     tscaled.trans *= fUnitScale;
@@ -526,17 +556,33 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Do
     OpenRAVE::JSON::SetJsonValueByKey(value, "modifiable", _bModifiable, allocator);
 }
 
+inline std::string _GetGeometryTypeString(const GeometryType& geometryType) {
+    switch(geometryType) {
+    case GT_Box:
+        return "box";
+    case GT_Container:
+        return "container";
+    case GT_Cage:
+        return "cage";
+    case GT_Sphere:
+        return "sphere";
+    case GT_Cylinder:
+        return "cylinder";
+    case GT_TriMesh:
+        return "trimesh";
+    }
+    return "";
+}
 
 void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale)
 {
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _t);
-
     _t.trans *= fUnitScale;
 
     std::string typestr;
     OpenRAVE::JSON::LoadJsonValueByKey(value, "type", typestr);
-
     if (typestr == "box") {
         _type = GT_Box;
         OpenRAVE::JSON::LoadJsonValueByKey(value, "halfExtents", _vGeomData);
@@ -601,12 +647,58 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
     else {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported geometry type \"%s\"", typestr, ORE_InvalidArguments);
     }
-
     OpenRAVE::JSON::LoadJsonValueByKey(value, "transparency", _fTransparency);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "visible", _bVisible);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "diffuseColor", _vDiffuseColor);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "ambientColor", _vAmbientColor);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "modifiable", _bModifiable);
+}
+
+bool KinBody::GeometryInfo::operator==(const KinBody::GeometryInfo& info) const {
+    return _t == info._t
+        && _vGeomData == info._vGeomData
+        && _vGeomData2 == info._vGeomData2
+        && _vGeomData3 == info._vGeomData3
+        && _vGeomData4 == info._vGeomData4
+        // && _vSideWalls == info._vSideWalls
+        && _vDiffuseColor == info._vDiffuseColor
+        && _vAmbientColor == info._vAmbientColor
+        // && _meshcollision == info._meshcollision
+        && _id == info._id
+        && _name == info._name
+        && _type == info._type
+        && _filenamerender == info._filenamerender
+        && _filenamecollision == info._filenamecollision
+        && _vRenderScale == info._vRenderScale
+        && _vCollisionScale == info._vCollisionScale
+        && _fTransparency == info._fTransparency
+        && _bVisible == info._bVisible
+        && _bModifiable == info._bModifiable;
+}
+
+void KinBody::GeometryInfo::_Update(const KinBody::GeometryInfo& info) {
+
+    _t = info._t;
+    _vGeomData = info._vGeomData;
+    _vGeomData2 = info._vGeomData2;
+    _vGeomData3 = info._vGeomData3;
+    _vGeomData4 = info._vGeomData4;
+    _vSideWalls = info._vSideWalls;
+
+    _vDiffuseColor = info._vDiffuseColor;
+    _vAmbientColor = info._vAmbientColor;
+    _meshcollision = info._meshcollision;
+
+    _id = info._id;
+    _name = info._name;
+    _type = info._type;
+    _filenamerender = info._filenamerender;
+    _filenamecollision = info._filenamecollision;
+    _vRenderScale = info._vRenderScale;
+    _vCollisionScale = info._vCollisionScale;
+    _fTransparency = info._fTransparency;
+    _bVisible = info._bVisible;
+    _bModifiable = info._bModifiable;
 }
 
 AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const
@@ -1001,7 +1093,6 @@ void KinBody::Link::Geometry::SetName(const std::string& name)
     LinkPtr parent(_parent);
     _info._name = name;
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkGeometry);
-
 }
 
 uint8_t KinBody::Link::Geometry::GetSideWallExists() const

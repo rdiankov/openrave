@@ -436,6 +436,7 @@ public:
 
     PyStateRestoreContextBase* CreateRobotStateSaver(object options=py::none_());
     bool InitFromInfo(const py::object pyRobotBaseInfo);
+    py::object GetInfo() const;
 
     virtual std::string __repr__();
     virtual std::string __str__();

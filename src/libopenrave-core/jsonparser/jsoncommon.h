@@ -22,6 +22,7 @@
 #define OPENRAVE_JSON_COMMON_H
 
 #include "../ravep.h"
+#include <openrave/openravejson.h>
 
 namespace OpenRAVE
 {

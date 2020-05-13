@@ -2259,7 +2259,6 @@ public:
         _unit = unit;
     }
 
-
 protected:
 
     /// \brief assumes environment and _mutexInterfaces are locked

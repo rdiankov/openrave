@@ -83,16 +83,44 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
     int dof = GetDOF();
 
     switch (_type) {
-    case JointRevolute:
+    case JointRevolute: // jointHinge and jointRevolute have same value
         OpenRAVE::JSON::SetJsonValueByKey(value, "type", "revolute", allocator);
         break;
-    case JointPrismatic:
+    case JointPrismatic: // jointSlider and jointPrismatic have same value
         OpenRAVE::JSON::SetJsonValueByKey(value, "type", "prismatic", allocator);
+        break;
+    case JointRR:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "rr", allocator);
+        break;
+    case JointRP:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "rp", allocator);
+        break;
+    case JointPR:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "pr", allocator);
+        break;
+    case JointPP:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "pp", allocator);
+        break;
+    case JointSpecialBit:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "specialbit", allocator);
+        break;
+    case JointUniversal:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "universal", allocator);
+        break;
+    case JointHinge2:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "hinge2", allocator);
+        break;
+    case JointSpherical:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "spherical", allocator);
+        break;
+    case JointTrajectory:
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", "trajectory", allocator);
         break;
     case JointNone:
         break;
     default:
-        OpenRAVE::JSON::SetJsonValueByKey(value, "type", static_cast<int>(_type), allocator);
+        RAVELOG_WARN(str(boost::format("Unknow JointType %d")%static_cast<int>(_type)));
+        OpenRAVE::JSON::SetJsonValueByKey(value, "type", static_cast<int>(_type), allocator);  // TODO: should we raise error here ?
         break;
     }
 
@@ -106,6 +134,7 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
         fjointmult = fUnitScale;
     }
 
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "anchors", _vanchor, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "parentLinkName", _linkname0, allocator);
@@ -188,20 +217,28 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
     std::string typestr;
     OpenRAVE::JSON::LoadJsonValueByKey(value, "type", typestr);
 
-    if (typestr == "revolute")
-    {
-        _type = JointType::JointRevolute;
-    }
-    else if (typestr == "prismatic")
-    {
-        _type = JointType::JointPrismatic;
-    }
-    else
-    {
+    std::map<std::string, KinBody::JointType> jointTypeMapping = {
+        {"revolute", JointType::JointRevolute},
+        {"prismatic", JointType::JointPrismatic},
+        {"rr", JointType::JointRR},
+        {"rp", JointType::JointRP},
+        {"pr", JointType::JointPR},
+        {"pp", JointType::JointPP},
+        {"specialbit", JointType::JointSpecialBit},
+        {"universal", JointType::JointUniversal},
+        {"hinge2", JointType::JointHinge2},
+        {"spherical", JointType::JointSpherical},
+        {"trajectory", JointType::JointTrajectory},
+        {"", JointType::JointNone}  //  TODO: do we allow empty?
+    };
+
+    if (jointTypeMapping.find(typestr) == jointTypeMapping.end()) {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported joint type \"%s\"", typestr, ORE_InvalidArguments);
     }
-
+    _type = jointTypeMapping[typestr];
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
+
     OpenRAVE::JSON::LoadJsonValueByKey(value, "parentLinkName", _linkname0);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "anchors", _vanchor);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "childLinkName", _linkname1);
@@ -268,6 +305,7 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
 
 KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& other)
 {
+    _id = other._id;
     _type = other._type;
     _name = other._name;
     _linkname0 = other._linkname0;
@@ -346,9 +384,6 @@ KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& othe
     }
     return *this;
 }
-
-
-
 
 static void fparser_polyroots2(vector<dReal>& rawroots, const vector<dReal>& rawcoeffs)
 {
@@ -2022,6 +2057,7 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
     }
 }
 
+
 void KinBody::MimicInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     OpenRAVE::JSON::SetJsonValueByKey(value, "equations", _equations, allocator);
@@ -2031,5 +2067,6 @@ void KinBody::MimicInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
 {
     OpenRAVE::JSON::LoadJsonValueByKey(value, "equations", _equations);
 }
+
 
 }

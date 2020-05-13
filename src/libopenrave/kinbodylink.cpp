@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
+
 #include <algorithm>
 
 namespace OpenRAVE {
@@ -29,6 +30,7 @@ KinBody::LinkInfo::LinkInfo(const LinkInfo& other)
 
 void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
 
     Transform tmpTransform {_t};
@@ -94,6 +96,7 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
 
 void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale)
 {
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _t);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "massTransform", _tMassFrame);
@@ -138,6 +141,28 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
 
 KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& other)
 {
+    _Update(other);
+    return *this;
+}
+
+bool KinBody::LinkInfo::operator==(const KinBody::LinkInfo& other) const {
+    return _id == other._id
+            && _name == other._name
+            && _t == other._t
+            && _tMassFrame == other._tMassFrame
+            && _mass == other._mass
+            && _vinertiamoments == other._vinertiamoments
+            && _mapFloatParameters == other._mapFloatParameters
+            && _mapIntParameters == other._mapIntParameters
+            && _mapStringParameters == other._mapStringParameters
+            && _vForcedAdjacentLinks == other._vForcedAdjacentLinks
+            && _bStatic == other._bStatic
+            && _bIsEnabled == other._bIsEnabled
+            && _vgeometryinfos == other._vgeometryinfos;
+    // TODO: _mapExtraGeometries
+}
+
+void KinBody::LinkInfo::_Update(const KinBody::LinkInfo& other) {
     _vgeometryinfos.resize(other._vgeometryinfos.size());
     for( size_t i = 0; i < _vgeometryinfos.size(); ++i ) {
         if( !other._vgeometryinfos[i] ) {
@@ -158,7 +183,7 @@ KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& other)
             }
         }
     }
-
+    _id = other._id;
     _name = other._name;
     _t = other._t;
     _tMassFrame = other._tMassFrame;
@@ -170,8 +195,6 @@ KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& other)
     _vForcedAdjacentLinks = other._vForcedAdjacentLinks;
     _bStatic = other._bStatic;
     _bIsEnabled = other._bIsEnabled;
-
-    return *this;
 }
 
 KinBody::Link::Link(KinBodyPtr parent)

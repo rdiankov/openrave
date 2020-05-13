@@ -52,6 +52,13 @@ public:
         std::string _sIkSolverXMLId; ///< xml id of the IkSolver interface to attach
         std::vector<std::string> _vGripperJointNames;         ///< names of the gripper joints
         std::string _grippername; ///< associates the manipulator with a GripperInfo
+
+        std::string _id; ///< unique id for manipulator info
+
+private:
+        /// \brief shared update method for both copy constructor and assign operator
+        void _Update(const ManipulatorInfo& other);
+
     };
     typedef boost::shared_ptr<ManipulatorInfo> ManipulatorInfoPtr;
     typedef boost::shared_ptr<ManipulatorInfo const> ManipulatorInfoConstPtr;
@@ -60,9 +67,15 @@ public:
     class OPENRAVE_API GripperInfo
     {
 public:
+        GripperInfo();
+        GripperInfo& operator=(const GripperInfo& other);
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
 
+        inline const std::string& GetId() const {
+            return _id;
+        }
+        std::string _id; /// < unique id
         std::string name; ///< unique name
         std::string grippertype; ///< gripper type
         std::vector<std::string> gripperJointNames; ///< names of the gripper joints
@@ -85,8 +98,19 @@ public:
         virtual ~Manipulator();
 
         /// \brief return a serializable info holding everything to initialize a manipulator
-        inline const ManipulatorInfo& GetInfo() const {
+        virtual inline const ManipulatorInfo& GetInfo() const {
             return _info;
+        }
+
+        virtual inline const ManipulatorInfo& UpdateAndGetInfo() {
+            UpdateInfo();
+            return GetInfo();
+        }
+
+        virtual void UpdateInfo();
+
+        virtual const std::string& GetId() const {
+            return _info._id;
         }
 
         /// \brief Return the transformation of the manipulator frame
@@ -450,6 +474,7 @@ public:
         virtual ~AttachedSensorInfo() {
         }
 
+        std::string _id;
         std::string _name;
         std::string _linkname; ///< the robot link that the sensor is attached to
         Transform _trelative;         ///< relative transform of the sensor with respect to the attached link
@@ -498,6 +523,9 @@ public:
         virtual const std::string& GetName() const {
             return _info._name;
         }
+        virtual const std::string& GetId() const {
+            return _info._id;
+        }
 
         /// retrieves the current data from the sensor
         virtual SensorBase::SensorDataPtr GetData() const;
@@ -523,7 +551,7 @@ public:
         }
 
         /// \brief returns the attached sensor info
-        inline const AttachedSensorInfo& GetInfo() const {
+        virtual inline const AttachedSensorInfo& GetInfo() const {
             return _info;
         }
 
@@ -571,7 +599,7 @@ public:
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
 
-
+        std::string _id; ///< unique id of the connected body
         std::string _name; ///< the name of the connected body info
         std::string _linkname; ///< the robot link that the body is attached to
         std::string _uri;  //< the uri where the connected body came from. this is used when writing back to the filename.
@@ -662,6 +690,10 @@ public:
             return _info._name;
         }
 
+        virtual const std::string& GetId() const {
+            return _info._id;
+        }
+
         // virtual void serialize(std::ostream& o, int options) const;
 
         /// \brief return hash of the attached kinbody definition
@@ -703,13 +735,31 @@ public:
         RobotBaseInfo() : KinBodyInfo() {}
         virtual ~RobotBaseInfo() {}
 
+        RobotBaseInfo& operator=(const RobotBaseInfo& other) {
+            _id = other._id;
+            _uri = other._uri;
+            _name = other._name;
+            _referenceUri = other._referenceUri;
+
+            _vLinkInfos = other._vLinkInfos;
+            _vJointInfos = other._vJointInfos;
+            _vManipInfos = other._vManipInfos;
+            _vAttachedSensorInfos = other._vAttachedSensorInfos;
+            _vConnectedBodyInfos = other._vConnectedBodyInfos;
+            _vGripperInfos = other._vGripperInfos;
+            return *this;
+        }
+
         virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
         std::vector<ManipulatorInfoPtr> _vManipInfos; ///< list of pointers to ManipulatorInfo
         std::vector<AttachedSensorInfoPtr> _vAttachedSensorInfos; ///< list of pointers to AttachedSensorInfo
         std::vector<ConnectedBodyInfoPtr> _vConnectedBodyInfos; ///< list of pointers to ConnectedBodyInfo
+        std::vector<GripperInfoPtr> _vGripperInfos; ///< list of pointers to GripperInfo
+
 private:
-        void _Update(const RobotBase::RobotBaseInfo& info);
+        /// \brief shared update method for both copy constructor and assign operator
+        void _Update(const RobotBase::RobotBaseInfo& other);
     };
     typedef boost::shared_ptr<RobotBaseInfo> RobotBaseInfoPtr;
     typedef boost::shared_ptr<RobotBaseInfo const> RobotBaseInfoConstPtr;
@@ -1146,6 +1196,19 @@ private:
         return boost::static_pointer_cast<RobotBase const>(shared_from_this());
     }
 
+    virtual const RobotBaseInfo& UpdateAndGetInfo() {
+        UpdateInfo();
+        return GetInfo();
+    }
+    virtual const RobotBaseInfo& GetInfo() const {
+        return _info;
+    }
+    virtual void UpdateInfo();
+
+    virtual const std::string& GetId() const {
+        return _info._id;
+    }
+
 protected:
     RobotBase(EnvironmentBasePtr penv);
 
@@ -1186,6 +1249,8 @@ protected:
     dReal _fQuatLimitMaxAngle, _fQuatMaxAngleVelocity, _fQuatAngleResolution, _fQuatAngleWeight;
 
     ConfigurationSpecification _activespec;
+
+    RobotBaseInfo _info;
 private:
     virtual const char* GetHash() const {
         return OPENRAVE_ROBOT_HASH;

@@ -76,6 +76,7 @@
 #include <boost/format.hpp>
 #include <boost/array.hpp>
 #include <boost/multi_array.hpp>
+#include <boost/make_shared.hpp>
 //#include <boost/cstdint.hpp>
 
 #endif
@@ -2764,6 +2765,7 @@ const std::string& IkParameterization::GetName() const
     }
     throw openrave_exception(str(boost::format("IkParameterization iktype 0x%x not supported")%_type));
 }
+
 
 } // end namespace OpenRAVE
 

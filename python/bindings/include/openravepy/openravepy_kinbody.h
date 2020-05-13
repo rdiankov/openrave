@@ -128,6 +128,7 @@ public:
 {
 public:
     PyKinBodyInfo();
+    PyKinBodyInfo(const KinBody::KinBodyInfo& info);
     py::object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
     void DeserializeJSON(py::object obj, dReal fUnitScale=1.0);
     KinBody::KinBodyInfoPtr GetKinBodyInfo() const;
@@ -135,10 +136,12 @@ public:
     std::vector<KinBody::LinkInfoPtr> _vLinkInfos;
     std::vector<KinBody::JointInfoPtr> _vJointInfos;
     std::string _uri;
+    std::string _id;
 #else
     py::object _vLinkInfos = py::none_();
     py::object _vJointInfos = py::none_();
     py::object _uri = py::none_();
+    py::object _id = py::none_();
 #endif
     virtual std::string __str__();
     virtual py::object __unicode__();
@@ -146,7 +149,6 @@ public:
 protected:
     void _Update(const KinBody::KinBodyInfo& info);
 }; // class PyKinBodyInfo
-typedef OPENRAVE_SHARED_PTR<PyKinBodyInfo> PyKinBodyInfoPtr;
 
 
 protected:
@@ -301,6 +303,9 @@ public:
     std::string serialize(int options) const;
     std::string GetKinematicsGeometryHash() const;
     PyStateRestoreContextBase* CreateKinBodyStateSaver(py::object options=py::none_());
+
+    py::object GetInfo() const;
+
     virtual PyStateRestoreContextBase* CreateStateSaver(py::object options);
     virtual std::string __repr__();
     virtual std::string __str__();
