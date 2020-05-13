@@ -20,14 +20,6 @@
 
 namespace OpenRAVE {
 
-KinBody::LinkInfo::LinkInfo() : _mass(0), _bStatic(false), _bIsEnabled(true) {
-}
-
-KinBody::LinkInfo::LinkInfo(const LinkInfo& other)
-{
-    *this = other;
-}
-
 void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
@@ -139,12 +131,6 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     OpenRAVE::JSON::LoadJsonValueByKey(value, "isEnabled", _bIsEnabled);
 }
 
-KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& other)
-{
-    _Update(other);
-    return *this;
-}
-
 bool KinBody::LinkInfo::operator==(const KinBody::LinkInfo& other) const {
     return _id == other._id
             && _name == other._name
@@ -162,7 +148,7 @@ bool KinBody::LinkInfo::operator==(const KinBody::LinkInfo& other) const {
     // TODO: _mapExtraGeometries
 }
 
-void KinBody::LinkInfo::_Update(const KinBody::LinkInfo& other) {
+KinBody::LinkInfo& KinBody::LinkInfo::operator=(const LinkInfo& other) {
     _vgeometryinfos.resize(other._vgeometryinfos.size());
     for( size_t i = 0; i < _vgeometryinfos.size(); ++i ) {
         if( !other._vgeometryinfos[i] ) {
@@ -195,6 +181,7 @@ void KinBody::LinkInfo::_Update(const KinBody::LinkInfo& other) {
     _vForcedAdjacentLinks = other._vForcedAdjacentLinks;
     _bStatic = other._bStatic;
     _bIsEnabled = other._bIsEnabled;
+    return *this;
 }
 
 KinBody::Link::Link(KinBodyPtr parent)

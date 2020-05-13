@@ -609,7 +609,7 @@ OPENRAVEPY_API bool ExtractTriMesh(py::object o, TriMesh& mesh);
 OPENRAVEPY_API inline std::vector<KinBody::LinkInfoPtr> ExtractLinkInfoArray(py::object pyLinkInfoList);
 OPENRAVEPY_API inline std::vector<KinBody::JointInfoPtr> ExtractJointInfoArray(py::object pyJointInfoList);
 OPENRAVEPY_API inline std::vector<RobotBase::AttachedSensorInfoPtr> ExtractAttachedSensorInfoArray(py::object pyAttachedSensorInfoList);
-OPENRAVEPY_API inline std::vector<RobotBase::ManipulatorInfoPtr> ExtractManipInfoArray(py::object pyManipList);
+OPENRAVEPY_API inline std::vector<RobotBase::ManipulatorInfoPtr> ExtractManipulatorInfoArray(py::object pyManipList);
 OPENRAVEPY_API inline std::vector<RobotBase::ConnectedBodyInfoPtr> ExtractConnectedBodyInfoArray(py::object pyConnectedBodyInfoList);
 
 

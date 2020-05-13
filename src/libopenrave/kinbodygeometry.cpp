@@ -165,16 +165,6 @@ void AppendBoxTriangulation(const Vector& pos, const Vector& ex, TriMesh& tri)
     tri.indices.insert(tri.indices.end(), &indices[0], &indices[nindices]);
 }
 
-KinBody::GeometryInfo::GeometryInfo()
-{
-    _vDiffuseColor = Vector(1,1,1);
-    _type = GT_None;
-    _fTransparency = 0;
-    _vRenderScale = _vCollisionScale = Vector(1,1,1);
-    _bVisible = true;
-    _bModifiable = true;
-}
-
 bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
 {
     if( _type == GT_TriMesh || _type == GT_None ) {
@@ -570,7 +560,7 @@ inline std::string _GetGeometryTypeString(const GeometryType& geometryType) {
         return "cylinder";
     case GT_TriMesh:
         return "trimesh";
-    default:
+    case GT_None:
         return "";
     }
 }
@@ -657,53 +647,6 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
     OpenRAVE::JSON::LoadJsonValueByKey(value, "diffuseColor", _vDiffuseColor);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "ambientColor", _vAmbientColor);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "modifiable", _bModifiable);
-}
-
-bool KinBody::GeometryInfo::operator==(const KinBody::GeometryInfo& info) const {
-    return _t == info._t
-        && _vGeomData == info._vGeomData
-        && _vGeomData2 == info._vGeomData2
-        && _vGeomData3 == info._vGeomData3
-        && _vGeomData4 == info._vGeomData4
-        // && _vSideWalls == info._vSideWalls
-        && _vDiffuseColor == info._vDiffuseColor
-        && _vAmbientColor == info._vAmbientColor
-        // && _meshcollision == info._meshcollision
-        && _id == info._id
-        && _name == info._name
-        && _type == info._type
-        && _filenamerender == info._filenamerender
-        && _filenamecollision == info._filenamecollision
-        && _vRenderScale == info._vRenderScale
-        && _vCollisionScale == info._vCollisionScale
-        && _fTransparency == info._fTransparency
-        && _bVisible == info._bVisible
-        && _bModifiable == info._bModifiable;
-}
-
-void KinBody::GeometryInfo::_Update(const KinBody::GeometryInfo& info) {
-
-    _t = info._t;
-    _vGeomData = info._vGeomData;
-    _vGeomData2 = info._vGeomData2;
-    _vGeomData3 = info._vGeomData3;
-    _vGeomData4 = info._vGeomData4;
-    _vSideWalls = info._vSideWalls;
-
-    _vDiffuseColor = info._vDiffuseColor;
-    _vAmbientColor = info._vAmbientColor;
-    _meshcollision = info._meshcollision;
-
-    _id = info._id;
-    _name = info._name;
-    _type = info._type;
-    _filenamerender = info._filenamerender;
-    _filenamecollision = info._filenamecollision;
-    _vRenderScale = info._vRenderScale;
-    _vCollisionScale = info._vCollisionScale;
-    _fTransparency = info._fTransparency;
-    _bVisible = info._bVisible;
-    _bModifiable = info._bModifiable;
 }
 
 AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const
