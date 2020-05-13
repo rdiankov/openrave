@@ -748,50 +748,30 @@ public:
         }
     }
 
-    virtual bool _ApplyKinBodyDiff(KinBody& body, const rapidjson::Value& bodyValue) {
+    virtual bool _ApplyKinBodyDiff(KinBodyPtr pBody, const rapidjson::Value& bodyValue) {
         KinBody::KinBodyInfoPtr pBodyInfo(new KinBody::KinBodyInfo());
-        uint8_t result = body.ApplyDiff(bodyValue, *pBodyInfo);
+        uint8_t result = pBody->ApplyDiff(bodyValue, *pBodyInfo);
         if (result & ApplyDiffResult::ADR_RELOAD)
         {
-            RemoveKinBodyByName(body.GetName());
-            KinBodyPtr pNewBody = RaveCreateKinBody(shared_from_this(), "");
-            if (!!pNewBody) {
-                pNewBody->InitFromInfo(pBodyInfo);
-                pNewBody->SetName(pBodyInfo->_name);
-                _AddKinBody(pNewBody, false);
-            }
-            // TODO failed
+            EnvironmentKinBodyReloader reloader(pBody, shared_from_this());
+            RemoveKinBodyByName(pBody->GetName());
+            pBody->InitFromInfo(pBodyInfo);
+            pBody->SetName(pBodyInfo->_name);
         }
-        if (result & ApplyDiffResult::ADR_REMOVE)
-        {
-            RemoveKinBodyByName(body.GetName());
-        }
-        if (result & ApplyDiffResult::ADR_FAILED){
-            // TODO
-        }
+        // TODO failed
         return true;
     }
 
-    virtual bool _ApplyRobotDiff(RobotBase& robot, const rapidjson::Value& robotValue) {
+    virtual bool _ApplyRobotDiff(RobotBasePtr pRobot, const rapidjson::Value& robotValue) {
         RobotBase::RobotBaseInfoPtr pRobotInfo(new RobotBase::RobotBaseInfo());
-        uint8_t result = robot.ApplyDiff(robotValue, *pRobotInfo);
+        uint8_t result = pRobot->ApplyDiff(robotValue, *pRobotInfo);
         if (result & ApplyDiffResult::ADR_RELOAD) {
-            RemoveKinBodyByName(robot.GetName());
-            RobotBasePtr pNewRobot = RaveCreateRobot(shared_from_this(), "");
-            if (!!pNewRobot) {
-                pNewRobot->InitFromInfo(pRobotInfo);
-                pNewRobot->SetName(pRobotInfo->_name);
-                _AddRobot(pNewRobot, false);
-            }
-            // TODO failed
+            EnvironmentKinBodyReloader reloader(pRobot, shared_from_this());
+            RemoveKinBodyByName(pRobot->GetName());
+            pRobot->InitFromInfo(pRobotInfo);
+            pRobot->SetName(pRobotInfo->_name);
         }
-        if (result & ApplyDiffResult::ADR_REMOVE)
-        {
-            RemoveKinBodyByName(robot.GetName());
-        }
-        if (result & ApplyDiffResult::ADR_FAILED) {
-            // TODO
-        }
+        // TODO failed
         return true;
     }
 
@@ -803,6 +783,16 @@ public:
                 OpenRAVE::JSON::LoadJsonValueByKey(*itValue, "id", bodyId);
                 bool foundBody = false;
 
+                if (OpenRAVE::JSON::GetJsonValueByKey<bool>((*itValue), "__delete__", false)) {
+                    for (std::vector<KinBodyPtr>::iterator itBody = _vecbodies.begin(); itBody != _vecbodies.end(); itBody++) {
+                        if ((*itBody)->GetId() == bodyId) {
+                            RemoveKinBodyByName((*itBody)->GetName());
+                            break;
+                        }
+                    }
+                    continue;
+                }
+
                 for (std::vector<KinBodyPtr>::iterator itBody = _vecbodies.begin(); itBody != _vecbodies.end(); itBody++) {
                     if((*itBody)->GetId() == bodyId) {
                         foundBody = true;
@@ -813,10 +803,10 @@ public:
                             (*itBody)->SetDOFValues(vZeroDOF);
 
                             if((*itBody)->IsRobot()) {
-                                _ApplyRobotDiff(*RaveInterfaceCast<RobotBase>(*itBody), *itValue);
+                                _ApplyRobotDiff(RaveInterfaceCast<RobotBase>(*itBody), *itValue);
                             }
                             else {
-                                _ApplyKinBodyDiff(**itBody, *itValue);
+                                _ApplyKinBodyDiff(*itBody, *itValue);
                             }
 
                             // DOF Values
@@ -845,6 +835,7 @@ public:
                                 saver.SetRestoreOnDestructor(false); // don't restore link transformation if user set dofvalues;
                                 (*itBody)->SetDOFValues(vDOFValues, KinBody::CLA_Nothing);
                             }
+
                             // readable interfaces
                             if ((*itValue).HasMember("readableInterfaces")) {
                                 for (rapidjson::Value::ConstMemberIterator itr = (*itValue)["readableInterfaces"].MemberBegin(); itr != (*itValue)["readableInterfaces"].MemberEnd(); itr++) {

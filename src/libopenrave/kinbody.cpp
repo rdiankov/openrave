@@ -5107,6 +5107,7 @@ void KinBody::UpdateInfo()
     _info._name = _name;
     _info._uri = __struri;
 
+    // TODO: do we need this update ?
     _info._vLinkInfos.resize(_veclinks.size());
     for(size_t i = 0; i < _info._vLinkInfos.size(); ++i) {
         _veclinks[i]->UpdateInfo();

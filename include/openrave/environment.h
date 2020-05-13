@@ -26,6 +26,7 @@ namespace OpenRAVE {
 
 typedef boost::recursive_try_mutex EnvironmentMutex;
 
+
 /** \brief Maintains a world state, which serves as the gateway to all functions offered through %OpenRAVE. See \ref arch_environment.
  */
 class OPENRAVE_API EnvironmentBase : public boost::enable_shared_from_this<EnvironmentBase>
@@ -722,6 +723,23 @@ protected:
 private:
     UserDataPtr __pUserData;         ///< \see GetUserData
     int __nUniqueId;         ///< \see RaveGetEnvironmentId
+};
+
+
+/** \brief Helper class to re-add the kinbody into environemnt
+*/
+class OPENRAVE_API EnvironmentKinBodyReloader
+{
+public:
+    EnvironmentKinBodyReloader(KinBodyPtr pBody, EnvironmentBasePtr penv): _pBody(pBody), _penv(penv) {}
+    virtual ~EnvironmentKinBodyReloader() {
+        if (!!_penv && !!_pBody) {
+            _penv->Add(_pBody, false);
+        }
+    }
+private:
+    KinBodyPtr _pBody;
+    EnvironmentBasePtr _penv;
 };
 
 } // end namespace OpenRAVE

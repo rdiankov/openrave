@@ -839,6 +839,12 @@ uint8_t RobotBase::ApplyDiff(const rapidjson::Value& robotValue, RobotBase::Robo
         SetName(newInfo._name);
     }
 
+    if (robotValue.HasMember("transfrom")) {
+        Transform transform;
+        OpenRAVE::JSON::LoadJsonValueByKey(robotValue, "transfrom", transform);
+        SetTransform(transform);
+    }
+
     if (robotValue.HasMember("uri")) {
         // TODO: throw
     }
@@ -851,19 +857,7 @@ void RobotBase::UpdateInfo() {
     _info._uri = __struri;
 
     // TODO: do we need this update ?
-    _info._vLinkInfos.resize(_veclinks.size());
-    for(size_t i = 0; i < _info._vLinkInfos.size(); ++i) {
-        _veclinks[i]->UpdateInfo();
-        _info._vLinkInfos[i] = boost::make_shared<KinBody::LinkInfo>(_veclinks[i]->_info);
-    }
-
-    _info._vJointInfos.resize(_vecjoints.size());
-    for(size_t i = 0; i < _info._vJointInfos.size(); ++i) {
-        _vecjoints[i]->UpdateInfo();
-        _info._vJointInfos[i] = boost::make_shared<KinBody::JointInfo>(_vecjoints[i]->_info);
-    }
     KinBody::UpdateInfo();
-
     _info._vManipInfos.resize(_vecManipulators.size());
     for (size_t iManip = 0; iManip < _info._vManipInfos.size(); ++iManip) {
         _vecManipulators[iManip]->UpdateInfo();
