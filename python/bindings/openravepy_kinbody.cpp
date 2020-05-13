@@ -2185,13 +2185,6 @@ bool PyKinBody::InitFromInfo(const object pyKinBodyInfo)
     return false;
 }
 
-bool PyKinBody::ApplyDiff(const object pyKinBodyValue)
-{
-    rapidjson::Document doc;
-    toRapidJSONValue(pyKinBodyValue, doc, doc.GetAllocator());
-    // _pbody->ApplyDiff(doc, );
-}
-
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 bool PyKinBody::InitFromBoxes(const std::vector<std::vector<dReal> >& vboxes, const bool bDraw, const std::string& uri)
 #else
@@ -4742,16 +4735,6 @@ void init_openravepy_kinbody()
 #else
                          .def("InitFromInfo",&PyKinBody::InitFromInfo, DOXY_FN(KinBody, InitFromInfo))
 #endif
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-                         .def("ApplyDiff", &PyKinBody::ApplyDiff,
-                              "info"_a,
-                              DOXY_FN(KinBody, ApplyDiff))
-#else
-                         .def("ApplyDiff",&PyKinBody::ApplyDiff, DOXY_FN(KinBody, ApplyDiff))
-#endif
-
-
-
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("InitFromBoxes", &PyKinBody::InitFromBoxes,
