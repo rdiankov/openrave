@@ -17,6 +17,7 @@
 #include "jsoncommon.h"
 
 #include <openrave/openravejson.h>
+#include <openrave/openravemsgpack.h>
 #include <openrave/openrave.h>
 #include <rapidjson/istreamwrapper.h>
 #include <string>
@@ -28,13 +29,10 @@ namespace OpenRAVE {
 class JSONReader {
 public:
 
-    JSONReader(const AttributesList& atts, EnvironmentBasePtr penv): _penv(penv), _prefix("")
+    JSONReader(const AttributesList& atts, EnvironmentBasePtr penv): _penv(penv)
     {
         FOREACHC(itatt, atts) {
-            if (itatt->first == "prefix") {
-                _prefix = itatt->second;
-            }
-            else if (itatt->first == "openravescheme") {
+            if (itatt->first == "openravescheme") {
                 std::stringstream ss(itatt->second);
                 _vOpenRAVESchemeAliases = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
             }
@@ -408,7 +406,7 @@ protected:
     }
 
     /// \brief open and cache a json document
-    boost::shared_ptr<rapidjson::Document> _OpenDocument(const std::string& filename)
+    virtual boost::shared_ptr<rapidjson::Document> _OpenDocument(const std::string& filename)
     {
         std::ifstream ifs(filename.c_str());
         rapidjson::IStreamWrapper isw(ifs);
@@ -416,26 +414,25 @@ protected:
         doc.reset(new rapidjson::Document);
         rapidjson::ParseResult ok = doc->ParseStream<rapidjson::kParseFullPrecisionFlag>(isw);
         if (!ok) {
-            throw OPENRAVE_EXCEPTION_FORMAT("failed parse json document \"%s\"", filename, ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT("failed to parse json document \"%s\"", filename, ORE_InvalidArguments);
         }
         return doc;
     }
 
     /// \brief parse and cache a json document
-    boost::shared_ptr<rapidjson::Document> _ParseDocument(const std::string& data)
+    virtual boost::shared_ptr<rapidjson::Document> _ParseDocument(const std::string& data)
     {
         boost::shared_ptr<rapidjson::Document> doc;
         doc.reset(new rapidjson::Document);
         rapidjson::ParseResult ok = doc->Parse<rapidjson::kParseFullPrecisionFlag>(data.c_str());
         if (!ok) {
-            throw OPENRAVE_EXCEPTION_FORMAT0("failed parse json document", ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT0("failed to parse json document", ORE_InvalidArguments);
         }
         return doc;
     }
 
     dReal _fGlobalScale;
     EnvironmentBasePtr _penv;
-    std::string _prefix;
     std::string _filename;
     std::string _uri;
     std::vector<std::string> _vOpenRAVESchemeAliases;
@@ -556,5 +553,118 @@ bool RaveParseJSONData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std
     return reader.ExtractFirst(pprobot);
 }
 
+class MsgPackReader : public JSONReader {
+public:
+
+    MsgPackReader(const AttributesList& atts, EnvironmentBasePtr penv): JSONReader(atts, penv) {}
+    virtual ~MsgPackReader() {}
+
+protected:
+
+    /// \brief open and cache a msgpack document
+    virtual boost::shared_ptr<rapidjson::Document> _OpenDocument(const std::string& filename) override
+    {
+        boost::shared_ptr<rapidjson::Document> doc;
+        doc.reset(new rapidjson::Document);
+        
+        std::ifstream ifs(filename.c_str());
+        OpenRAVE::MsgPack::ParseMsgPack(*doc, ifs);
+        return doc;
+    }
+
+    /// \brief parse and cache a msgpack document
+    virtual boost::shared_ptr<rapidjson::Document> _ParseDocument(const std::string& data) override
+    {
+        boost::shared_ptr<rapidjson::Document> doc;
+        doc.reset(new rapidjson::Document);
+
+        OpenRAVE::MsgPack::ParseMsgPack(*doc, data);
+        return doc;
+    }
+};
+
+bool RaveParseMsgPackFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts)
+{
+    MsgPackReader reader(atts, penv);
+    std::string fullFilename = RaveFindLocalFile(filename);
+    if (fullFilename.size() == 0 || !reader.InitFromFile(fullFilename)) {
+        return false;
+    }
+    return reader.ExtractAll();
+}
+
+bool RaveParseMsgPackFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename, const AttributesList& atts)
+{
+    MsgPackReader reader(atts, penv);
+    std::string fullFilename = RaveFindLocalFile(filename);
+    if (fullFilename.size() == 0 || !reader.InitFromFile(fullFilename)) {
+        return false;
+    }
+    return reader.ExtractFirst(ppbody);
+}
+
+bool RaveParseMsgPackFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename, const AttributesList& atts)
+{
+    MsgPackReader reader(atts, penv);
+    std::string fullFilename = RaveFindLocalFile(filename);
+    if (fullFilename.size() == 0 || !reader.InitFromFile(fullFilename)) {
+        return false;
+    }
+    return reader.ExtractFirst(pprobot);
+}
+
+bool RaveParseMsgPackURI(EnvironmentBasePtr penv, const std::string& uri, const AttributesList& atts)
+{
+    MsgPackReader reader(atts, penv);
+    if (!reader.InitFromURI(uri)) {
+        return false;
+    }
+    return reader.ExtractAll();
+}
+
+bool RaveParseMsgPackURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const AttributesList& atts)
+{
+    MsgPackReader reader(atts, penv);
+    if (!reader.InitFromURI(uri)) {
+        return false;
+    }
+    return reader.ExtractOne(ppbody, uri);
+}
+
+bool RaveParseMsgPackURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts)
+{
+    MsgPackReader reader(atts, penv);
+    if (!reader.InitFromURI(uri)) {
+        return false;
+    }
+    return reader.ExtractOne(pprobot, uri);
+}
+
+bool RaveParseMsgPackData(EnvironmentBasePtr penv, const std::string& data, const AttributesList& atts)
+{
+    MsgPackReader reader(atts, penv);
+    if (!reader.InitFromData(data)) {
+        return false;
+    }
+    return reader.ExtractAll();
+}
+
+bool RaveParseMsgPackData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data, const AttributesList& atts)
+{
+    MsgPackReader reader(atts, penv);
+    if (!reader.InitFromData(data)) {
+        return false;
+    }
+    return reader.ExtractFirst(ppbody);
+}
+
+bool RaveParseMsgPackData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data, const AttributesList& atts)
+{
+    MsgPackReader reader(atts, penv);
+    if (!reader.InitFromData(data)) {
+        return false;
+    }
+    return reader.ExtractFirst(pprobot);
+}
 
 }

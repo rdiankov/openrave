@@ -827,7 +827,7 @@ private:
 public:
         RobotBaseInfo() : KinBodyInfo() {}
         virtual ~RobotBaseInfo() {}
-        RobotBaseInfo(const RobotBaseInfo& other) {
+        RobotBaseInfo(const RobotBaseInfo& other) : KinBodyInfo() {
             *this = other;
         };
         RobotBaseInfo& operator=(const RobotBaseInfo& other) {

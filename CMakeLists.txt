@@ -52,6 +52,7 @@ option(OPT_IKFAST_FLOAT32 "Set to ON to allow loading of ikfast shared objects c
 option(OPT_FLANN "Temporary switch to force building of flann" OFF)
 option(OPT_CBINDINGS "Build the C-bindings libraries libopenrave_c and libopenrave-core_c" ON)
 option(OPT_LOG4CXX "Use log4cxx for logging" ON)
+option(OPT_MSGPACK "Support msgpack format" ON)
 
 set(PACKAGE_VERSION "0" CACHE STRING "the package-specific version used for uploading the sources")
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
@@ -543,6 +544,14 @@ find_package(RapidJSON)
 if( RAPIDJSON_FOUND )
 else()
   message(FATAL_ERROR "rapidjson library not found")
+endif()
+
+set(OPENRAVE_MSGPACK 0)
+if( OPT_MSGPACK )
+pkg_check_modules(msgpack msgpack)
+if( msgpack_FOUND )
+  set(OPENRAVE_MSGPACK 1)
+endif()
 endif()
 
 find_package(LibXml2)
