@@ -33,6 +33,7 @@ public:
     object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
     void DeserializeJSON(object obj, dReal fUnitScale=1.0);
 
+    object _id = py::none_();
     object _name = py::none_();
     object _sBaseLinkName = py::none_();
     object _sEffectorLinkName = py::none_();
@@ -78,6 +79,7 @@ public:
     object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
     void DeserializeJSON(object obj, dReal fUnitScale=1.0);
 
+    object _id = py::none_();
     object _name = py::none_();
     object _linkname = py::none_();
     object _trelative = py::none_();
