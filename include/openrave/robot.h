@@ -1046,17 +1046,20 @@ private:
     /// \param [in] kinematicsChain    a pair of links, pBaseLink and pEndEffectorLink
     /// \return true if the unregistering is successful
     virtual bool UnregisterRobotPostureDescriber(const std::array<LinkPtr, 2>& kinematicsChain);
+    virtual bool UnregisterRobotPostureDescriber(const ManipulatorConstPtr pmanip);
 
     /// \brief Sets robot posture describer for a kinematics chain from kinematicsChain[0] (pBaseLink) to kinematicsChain[1] (pEndEffectorLink)
     /// \param [in] kinematicsChain    a pair of links, pBaseLink and pEndEffectorLink
     /// \param [in] pDescriber         pointer to a robot poseture describer
     /// \return true if either (1) pDescriber is not null and supports kinematicsChain, or (2) kinematicsChain is null and we register the describer for kinematicsChain.
     virtual bool SetRobotPostureDescriber(const std::array<LinkPtr, 2>& kinematicsChain, RobotPostureDescriberBasePtr pDescriber);
+    virtual bool SetRobotPostureDescriber(ManipulatorConstPtr pmanip, RobotPostureDescriberBasePtr pDescriber);
 
     /// \brief Gets robot posture describer for kinematics state for a kinematics chain from pBaseLink to pEndEffectorLink
     /// \param [in] kinematicsChain    a pair of pBaseLink and pEndEffectorLink
     /// \return a non-null pointer to a robot posture describer if this describer was previously registered; otherwise a null pointer
     virtual RobotPostureDescriberBasePtr GetRobotPostureDescriber(const std::array<LinkPtr, 2>& kinematicsChain) const;
+    virtual RobotPostureDescriberBasePtr GetRobotPostureDescriber(ManipulatorConstPtr pmanip) const;
 
     /// \brief Computes an interger value to describe current robot posture
     /// Computes a value describing the states of links between base and endeffector of specified manipulator
@@ -1065,8 +1068,8 @@ private:
     /// \param [in]  pmanip           pointer to manipulator; if null, then use the active manipulator
     /// \return vector of integer value which describe posture of this robot.
     virtual bool ComputePostureValues(std::vector<uint16_t>& posturevalues,
-                                      const std::vector<double>& jointvalues = {},
-                                      ManipulatorConstPtr pmanip = ManipulatorConstPtr()) const;
+                                      ManipulatorConstPtr pmanip = ManipulatorConstPtr(),
+                                      const std::vector<double>& jointvalues = {}) const;
 
     /// \brief Computes an interger value to describe current robot posture
     /// Computes a value describing the states of links between base and endeffector

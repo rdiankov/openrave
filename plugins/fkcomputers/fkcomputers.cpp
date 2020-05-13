@@ -18,6 +18,8 @@
 #include <openrave/fksolver.h> // RobotPostureDescriberBasePtr
 #include "plugindefs.h" //  FKCOMPUTERS_MODULE_NAME, ROBOTPOSTUREDESCRIBER_MODULE_NAME
 #include "robotposturedescriber.h"
+#include "robotposturedescribermodule.h"
+
 // #include <boost/lexical_cast.hpp>
 
 using OpenRAVE::PLUGININFO;
@@ -37,59 +39,87 @@ using OpenRAVE::OpenRAVEErrorCode::ORE_InvalidArguments;  // 0x01
 // forward kinematics
 using OpenRAVE::RobotPostureDescriberBasePtr;
 using OpenRAVE::RobotPostureDescriber;
+using OpenRAVE::RobotPostureDescriberModule;
 
+namespace OpenRAVE {
 
-class FkComputerModule : public OpenRAVE::ModuleBase
+RobotPostureDescriberModule::RobotPostureDescriberModule(const EnvironmentBasePtr& penv) : ModuleBase(penv)
 {
-public:
-    FkComputerModule() = delete; // disable default constructor
-    FkComputerModule(const OpenRAVE::EnvironmentBasePtr& penv) : OpenRAVE::ModuleBase(penv) {}
-    virtual ~FkComputerModule() = default;
-};
+    __description =
+        ":Interface Author: Guangning Tan & Kei Usui & Rosen Diankov\n\n"
+        "Loads a robot posture describer onto a (base link, end-effector link) pair, or onto a manipulator that prescribes the pair";
 
-InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
+    // `SendCommand` APIs
+    this->RegisterCommand("LoadRobotPostureDescriber",
+                          boost::bind(&RobotPostureDescriberModule::_LoadRobotPostureDescriber, this, _1, _2),
+                          "Loads a robot posture describer onto a (base link, end-effector link) pair, or onto a manipulator that prescribes the pair");
+}
+
+bool RobotPostureDescriberModule::_LoadRobotPostureDescriber(std::ostream& ssout, std::istream& ssin) {
+    std::string robotname, manipname, baselinkname, eelinkname;
+    ssin >> robotname >> manipname;
+
+    const EnvironmentBasePtr penv = GetEnv();
+    const int envId = penv->GetId();
+    const RobotBasePtr probot = penv->GetRobot(robotname);
+    if(probot == nullptr) {
+        RAVELOG_WARN_FORMAT("env=%d has no robot %s", envId % robotname);
+        return false;
+    }
+
+    const ManipulatorPtr pmanip = probot->GetManipulator(manipname);
+    LinkPtr baselink, eelink;
+    if(pmanip == nullptr) {
+        baselinkname = manipname; // manipname is in fact the baselink's name
+        manipname = ""; // reset
+        ssin >> eelinkname;
+        baselink = probot->GetLink(baselinkname);
+        eelink = probot->GetLink(eelinkname);
+    }
+    else {
+        baselink = pmanip->GetBase();
+        eelink = pmanip->GetEndEffector();
+    }
+
+    if(baselink == nullptr || eelink == nullptr) {
+        RAVELOG_WARN_FORMAT("env=%d, robot %s has no link %s or %s", envId % robotname % baselinkname % eelinkname);
+        return false;
+    }
+
+    const RobotPostureDescriberBasePtr probotposture = RaveCreateFkSolver(penv, ROBOTPOSTUREDESCRIBER_MODULE_NAME);
+    if(probotposture == nullptr) {
+        RAVELOG_WARN_FORMAT("env=%d, cannot create robot posture describer for robot %s from links %s to %s", envId % robotname % baselinkname % eelinkname);
+        return false;
+    }
+
+    const std::array<LinkPtr, 2> kinematicsChain {baselink, eelink};
+    if(!probotposture->Init(kinematicsChain)) {
+        RAVELOG_WARN_FORMAT("env=%d, cannot initialize robot posture describer for robot %s from links %s to %s", envId % robotname % baselinkname % eelinkname);
+    }
+
+    const bool bset = probot->SetRobotPostureDescriber(kinematicsChain, probotposture);
+    if(!bset) {
+        RAVELOG_WARN_FORMAT("env=%d, cannot set robot posture describer for robot %s from links %s to %s", envId % robotname % baselinkname % eelinkname);
+        return false;
+    }
+
+    return true;
+}
+
+} // namespace OpenRAVE
+
+InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& ssin, EnvironmentBasePtr penv)
 {    
     switch(type) {
     case PT_ForwardKinematicsSolver: {
         if( interfacename == ROBOTPOSTUREDESCRIBER_MODULE_NAME ) {
-            // // take robot name, base link name, ee link name
-            // std::string robotname, manipname, baselinkname, eelinkname;
-            // sinput >> robotname >> manipname; // baselinkname >> eelinkname;
-
-            // const RobotBasePtr probot = penv->GetRobot(robotname);
-            // if(probot == nullptr) {
-            //     throw OPENRAVE_EXCEPTION_FORMAT("interfacename=%s, env=%d has no robot %s", interfacename % penv->GetId() % robotname, ORE_InvalidArguments);
-            // }
-
-            // const ManipulatorPtr pmanip = probot->GetManipulator(manipname);
-            // LinkPtr baselink, eelink;
-            // if(pmanip == nullptr) {
-            //     // it's baselink's name
-            //     baselinkname = manipname;
-            //     manipname = "";
-            //     sinput >> eelinkname;
-            //     baselink = probot->GetLink(baselinkname);
-            //     eelink = probot->GetLink(eelinkname);
-            // }
-            // else {
-            //     // indeed manipulator name
-            //     baselink = pmanip->GetBase();
-            //     eelink = pmanip->GetEndEffector();
-            // }
-
-            // if(baselink == nullptr || eelink == nullptr) {
-            //     throw OPENRAVE_EXCEPTION_FORMAT("interfacename=%s, env=%d, robot %s has no link %s or %s", interfacename % penv->GetId() % robotname % baselinkname % eelink, ORE_InvalidArguments);   
-            // }
-
-            // const std::array<LinkPtr, 2> kinematicsChain {baselink, eelink};
             return RobotPostureDescriberBasePtr(new RobotPostureDescriber(penv));
         }
-        // may support other type of forward kinematics computing modules?
         break;
     }
     case PT_Module: {
         if( interfacename == FKCOMPUTERS_MODULE_NAME) {
-            return ModuleBasePtr(new FkComputerModule(penv));
+            return ModuleBasePtr(new RobotPostureDescriberModule(penv));
         }
         break;
     }

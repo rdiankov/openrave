@@ -23,6 +23,15 @@ bool RobotBase::UnregisterRobotPostureDescriber(const std::array<LinkPtr, 2>& ki
     return this->SetRobotPostureDescriber(kinematicsChain, nullptr);
 }
 
+bool RobotBase::UnregisterRobotPostureDescriber(ManipulatorConstPtr pmanip) {
+    if(pmanip == nullptr) {
+        pmanip = this->GetActiveManipulator();
+    }
+    const std::array<LinkPtr, 2> kinematicsChain {pmanip->GetBase(), pmanip->GetEndEffector()};
+    return this->UnregisterRobotPostureDescriber(kinematicsChain);
+}
+
+
 bool RobotBase::SetRobotPostureDescriber(const std::array<LinkPtr, 2>& kinematicsChain, RobotPostureDescriberBasePtr pDescriber)
 {
     if (!pDescriber) {
@@ -39,18 +48,27 @@ bool RobotBase::SetRobotPostureDescriber(const std::array<LinkPtr, 2>& kinematic
     return false;
 }
 
-RobotPostureDescriberBasePtr RobotBase::GetRobotPostureDescriber(const std::array<LinkPtr, 2>& kinematicsChain) const
-{
-    return _mRobotPostureDescribers.count(kinematicsChain) ? _mRobotPostureDescribers.at(kinematicsChain) : RobotPostureDescriberBasePtr();
-}
-
-bool RobotBase::ComputePostureValues(std::vector<uint16_t>& values, const std::vector<double>& jointvalues, ManipulatorConstPtr pmanip) const
+bool RobotBase::SetRobotPostureDescriber(ManipulatorConstPtr pmanip, RobotPostureDescriberBasePtr pDescriber)
 {
     if(pmanip == nullptr) {
         pmanip = this->GetActiveManipulator();
     }
     const std::array<LinkPtr, 2> kinematicsChain {pmanip->GetBase(), pmanip->GetEndEffector()};
-    return this->ComputePostureValues(values, kinematicsChain, jointvalues);
+    return this->SetRobotPostureDescriber(kinematicsChain, pDescriber);
+}
+
+RobotPostureDescriberBasePtr RobotBase::GetRobotPostureDescriber(const std::array<LinkPtr, 2>& kinematicsChain) const
+{
+    return _mRobotPostureDescribers.count(kinematicsChain) ? _mRobotPostureDescribers.at(kinematicsChain) : RobotPostureDescriberBasePtr();
+}
+
+RobotPostureDescriberBasePtr RobotBase::GetRobotPostureDescriber(ManipulatorConstPtr pmanip) const
+{
+    if(pmanip == nullptr) {
+        pmanip = this->GetActiveManipulator();
+    }
+    const std::array<LinkPtr, 2> kinematicsChain {pmanip->GetBase(), pmanip->GetEndEffector()};
+    return this->GetRobotPostureDescriber(kinematicsChain);
 }
 
 bool RobotBase::ComputePostureValues(std::vector<uint16_t>& values, const std::array<LinkPtr, 2>& kinematicsChain, const std::vector<double>& jointvalues) const
@@ -63,6 +81,15 @@ bool RobotBase::ComputePostureValues(std::vector<uint16_t>& values, const std::a
     throw OPENRAVE_EXCEPTION_FORMAT(_("failed to find robot posture describer for links from \"%s\" to \"%s\" for robot \"%s\""),
                                     GetName() % kinematicsChain[0]->GetName() % kinematicsChain[1]->GetName(), ORE_InvalidArguments);
     return false;
+}
+
+bool RobotBase::ComputePostureValues(std::vector<uint16_t>& values, ManipulatorConstPtr pmanip, const std::vector<double>& jointvalues) const
+{
+    if(pmanip == nullptr) {
+        pmanip = this->GetActiveManipulator();
+    }
+    const std::array<LinkPtr, 2> kinematicsChain {pmanip->GetBase(), pmanip->GetEndEffector()};
+    return this->ComputePostureValues(values, kinematicsChain, jointvalues);
 }
 
 } // end namespace OpenRAVE
