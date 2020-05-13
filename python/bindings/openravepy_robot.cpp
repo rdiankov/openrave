@@ -135,6 +135,7 @@ PyAttachedSensorInfo::PyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& 
 }
 
 void PyAttachedSensorInfo::_Update(const RobotBase::AttachedSensorInfo& info) {
+    _id = ConvertStringToUnicode(info._id);
     _name = ConvertStringToUnicode(info._name);
     _linkname = ConvertStringToUnicode(info._linkname);
     _trelative = ReturnTransform(info._trelative);
@@ -145,6 +146,7 @@ void PyAttachedSensorInfo::_Update(const RobotBase::AttachedSensorInfo& info) {
 RobotBase::AttachedSensorInfoPtr PyAttachedSensorInfo::GetAttachedSensorInfo() const
 {
     RobotBase::AttachedSensorInfoPtr pinfo(new RobotBase::AttachedSensorInfo());
+    pinfo->_id = py::extract<std::string>(_id);
     pinfo->_name = py::extract<std::string>(_name);
     pinfo->_linkname = py::extract<std::string>(_linkname);
     pinfo->_trelative = ExtractTransform(_trelative);
@@ -2257,6 +2259,7 @@ void init_openravepy_robot()
 #else
     object attachedsensorinfo = class_<PyAttachedSensorInfo, OPENRAVE_SHARED_PTR<PyAttachedSensorInfo> >("AttachedSensorInfo", DOXY_CLASS(RobotBase::AttachedSensorInfo))
 #endif
+                                .def_readwrite("_id", &PyAttachedSensorInfo::_id)
                                 .def_readwrite("_name", &PyAttachedSensorInfo::_name)
                                 .def_readwrite("_linkname", &PyAttachedSensorInfo::_linkname)
                                 .def_readwrite("_trelative", &PyAttachedSensorInfo::_trelative)

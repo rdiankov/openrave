@@ -33,6 +33,7 @@ RobotBase::GripperInfo& RobotBase::GripperInfo::operator=(const RobotBase::Gripp
         _pdocument.reset(new rapidjson::Document());
         _pdocument->CopyFrom(*other._pdocument, _pdocument->GetAllocator());
     }
+    return *this;
 }
 
 void RobotBase::GripperInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
@@ -69,6 +70,17 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
     _pdocument->CopyFrom(value, _pdocument->GetAllocator());
 }
 
+RobotBase::AttachedSensorInfo& RobotBase::AttachedSensorInfo::operator=(const RobotBase::AttachedSensorInfo& other)
+{
+    _id = other._id;
+    _name = other._name;
+    _linkname = other._linkname;
+    _trelative = other._trelative;
+    _sensorname = other._sensorname;
+    _sensorgeometry = other._sensorgeometry;
+    return *this;
+}
+
 void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
@@ -89,6 +101,9 @@ void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& valu
 {
     OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
+    if (_id.empty()) {
+        _id = _name;
+    }
     OpenRAVE::JSON::LoadJsonValueByKey(value, "linkName", _linkname);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _trelative);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "type", _sensorname);
@@ -143,6 +158,9 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const RobotBase::
     _info = info;
     _probot = probot;
     pattachedlink = probot->GetLink(_info._linkname);
+    if (pattachedlink.expired()) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("attached link %s not found"), _info._linkname, ORE_InvalidArguments);
+    }
     if( !!probot ) {
         _psensor = RaveCreateSensor(probot->GetEnv(), _info._sensorname);
         if( !!_psensor ) {
@@ -161,8 +179,50 @@ RobotBase::AttachedSensor::~AttachedSensor()
 
 uint8_t RobotBase::AttachedSensor::ApplyDiff(const rapidjson::Value& attachedSensorValue, AttachedSensorInfo& newInfo)
 {
+    if (attachedSensorValue.HasMember("__delete__")) {
+        if (OpenRAVE::JSON::GetJsonValueByKey<bool>(attachedSensorValue, "__delete__", false)) {
+            return ApplyDiffResult::ADR_REMOVE;
+        }
+    }
     uint8_t applyResult = 0;
-    return applyResult;
+
+    newInfo = UpdateAndGetInfo(pdata->GetType());
+
+    if (attachedSensorValue.HasMember("name")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(attachedSensorValue, "name", newInfo._name);
+        applyResult |= ApplyDiffResult::ADR_RELOAD;
+    }
+
+    if (attachedSensorValue.HasMember("linkName")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(attachedSensorValue, "linkName", newInfo._linkname);
+        applyResult |= ApplyDiffResult::ADR_RELOAD;
+    }
+    if (attachedSensorValue.HasMember("type")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(attachedSensorValue, "type", newInfo._sensorname);
+        applyResult |= ApplyDiffResult::ADR_RELOAD;
+    }
+
+    if (attachedSensorValue.HasMember("sensorGeometry")) {
+        BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Sensor, newInfo._sensorname, InterfaceBasePtr(), AttributesList());
+        if (!!pReader) {
+            pReader->DeserializeJSON(attachedSensorValue["sensorGeometry"]);
+            JSONReadablePtr pReadable = pReader->GetReadable();
+            if (!!pReadable) {
+                newInfo._sensorgeometry = OPENRAVE_DYNAMIC_POINTER_CAST<SensorBase::SensorGeometry>(pReadable);
+            }
+        }
+        else {
+            RAVELOG_WARN_FORMAT("failed to get json reader for sensor type \"%s\"", newInfo._sensorname);
+        }
+        applyResult |= ApplyDiffResult::ADR_RELOAD;
+    }
+
+    if (attachedSensorValue.HasMember("transform")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(attachedSensorValue, "transform", newInfo._trelative);
+        SetRelativeTransform(newInfo._trelative);
+    }
+
+    return applyResult | ApplyDiffResult::ADR_OK;
 }
 
 //void RobotBase::AttachedSensor::_ComputeInternalInformation()
@@ -787,29 +847,33 @@ uint8_t RobotBase::ApplyDiff(const rapidjson::Value& robotValue, RobotBase::Robo
 }
 
 void RobotBase::UpdateInfo() {
-    // _info._name = _name;
-    // _info._uri = __struri;
+    _info._name = _name;
+    _info._uri = __struri;
 
-    // _info._vLinkInfos.resize(_veclinks.size());
-    // for(size_t i = 0; i < _info._vLinkInfos.size(); ++i) {
-    //     _veclinks[i]->UpdateInfo();
-    //     _info._vLinkInfos[i] = boost::make_shared<KinBody::LinkInfo>(_veclinks[i]->_info);
-    // }
+    // TODO: do we need this update ?
+    _info._vLinkInfos.resize(_veclinks.size());
+    for(size_t i = 0; i < _info._vLinkInfos.size(); ++i) {
+        _veclinks[i]->UpdateInfo();
+        _info._vLinkInfos[i] = boost::make_shared<KinBody::LinkInfo>(_veclinks[i]->_info);
+    }
 
-    // _info._vJointInfos.resize(_vecjoints.size());
-    // for(size_t i = 0; i < _info._vJointInfos.size(); ++i) {
-    //     _vecjoints[i]->UpdateInfo();
-    //     _info._vJointInfos[i] = boost::make_shared<KinBody::JointInfo>(_vecjoints[i]->_info);
-    // }
+    _info._vJointInfos.resize(_vecjoints.size());
+    for(size_t i = 0; i < _info._vJointInfos.size(); ++i) {
+        _vecjoints[i]->UpdateInfo();
+        _info._vJointInfos[i] = boost::make_shared<KinBody::JointInfo>(_vecjoints[i]->_info);
+    }
     KinBody::UpdateInfo();
 
-    // TODO
     _info._vManipInfos.resize(_vecManipulators.size());
-    // for(size_t iManip = 0; iManip < _info._vManipInfos.size(); ++iManip) {
-    //     _vecManipulators[iManip].UpdateInfo();
-    //     _info._vManipInfos[iManip] = boost::make_shared<RobotBase::ManipulatorInfo>(_vecManipulators[iManip]->_info);
-    // }
+    for (size_t iManip = 0; iManip < _info._vManipInfos.size(); ++iManip) {
+        _vecManipulators[iManip]->UpdateInfo();
+        _info._vManipInfos[iManip] = boost::make_shared<RobotBase::ManipulatorInfo>(_vecManipulators[iManip]->_info);
+    }
     _info._vAttachedSensorInfos.resize(_vecAttachedSensors.size());
+    for (size_t iAttachedSensor = 0; iAttachedSensor < _info._vAttachedSensorInfos.size(); ++iAttachedSensor) {
+        _vecAttachedSensors[iAttachedSensor]->UpdateInfo();
+        _info._vAttachedSensorInfos[iAttachedSensor] = boost::make_shared<RobotBase::AttachedSensorInfo>(_vecAttachedSensors[iAttachedSensor]->_info);
+    }
     _info._vConnectedBodyInfos.resize(_vecConnectedBodies.size());
     _info._vGripperInfos.resize(_vecGripperInfos.size());
 }

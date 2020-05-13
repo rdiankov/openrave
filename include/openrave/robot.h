@@ -485,6 +485,8 @@ public:
         virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
 
+        virtual AttachedSensorInfo& operator=(const AttachedSensorInfo& other);
+
     };
     typedef boost::shared_ptr<AttachedSensorInfo> AttachedSensorInfoPtr;
     typedef boost::shared_ptr<AttachedSensorInfo const> AttachedSensorInfoConstPtr;
@@ -548,7 +550,7 @@ public:
         /// \brief returns the attached sensor info
         ///
         /// \param type the type of sensor geometry that should be updated in _info
-        inline const AttachedSensorInfo& UpdateAndGetInfo(SensorBase::SensorType type=SensorBase::ST_Invalid) {
+        virtual inline const AttachedSensorInfo& UpdateAndGetInfo(SensorBase::SensorType type=SensorBase::ST_Invalid) {
             UpdateInfo(type);
             return _info;
         }
