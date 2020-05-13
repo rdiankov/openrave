@@ -634,12 +634,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
 {
     OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
-    if (_name.empty()) {
-        _name = _id;
-    }
-    OPENRAVE_ASSERT_OP(_name.size(),>,0);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _t);
-
     _t.trans *= fUnitScale;
 
     std::string typestr;
