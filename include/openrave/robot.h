@@ -819,7 +819,7 @@ private:
     {
 public:
         RobotBaseInfo() : KinBodyInfo() {}
-        RobotBaseInfo(const RobotBaseInfo& other) {
+        RobotBaseInfo(const RobotBaseInfo& other) : KinBodyInfo() {
             *this = other;
         };
         RobotBaseInfo& operator=(const RobotBaseInfo& other) {
