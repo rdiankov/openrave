@@ -1613,6 +1613,30 @@ private:
     class OPENRAVE_API GrabbedInfo
     {
 public:
+        GrabbedInfo() {}
+        GrabbedInfo(const GrabbedInfo& other) {
+            *this = other;
+        }
+        GrabbedInfo& operator=(const GrabbedInfo& other) {
+            _grabbedname = other._grabbedname;
+            _robotlinkname = other._robotlinkname;
+            _trelative = other._trelative;
+            _setRobotLinksToIgnore = other._setRobotLinksToIgnore;
+            return *this;
+        }
+        bool operator==(const GrabbedInfo& other) const {
+            return _grabbedname == other._grabbedname
+                && _robotlinkname == other._robotlinkname
+                && _trelative == other._trelative
+                && _setRobotLinksToIgnore == other._setRobotLinksToIgnore;
+        }
+        bool operator!=(const GrabbedInfo& other) const{
+            return !operator==(other);
+        }
+
+        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
+        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+
         /// \brief resets the info
         inline void Reset() {
             _grabbedname.clear();
@@ -1625,8 +1649,6 @@ public:
         std::string _robotlinkname;  ///< the name of the body link that is grabbing the body
         Transform _trelative; ///< transform of first link of body relative to _robotlinkname's transform. In other words, grabbed->GetTransform() == bodylink->GetTransform()*trelative
         std::set<int> _setRobotLinksToIgnore; ///< links of the body to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the body and the relative position of the grabbed body.
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
     };
     typedef boost::shared_ptr<GrabbedInfo> GrabbedInfoPtr;
     typedef boost::shared_ptr<GrabbedInfo const> GrabbedInfoConstPtr;
