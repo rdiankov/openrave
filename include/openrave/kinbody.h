@@ -22,8 +22,6 @@
 #ifndef OPENRAVE_KINBODY_H
 #define OPENRAVE_KINBODY_H
 
-#include <boost/make_shared.hpp>
-
 namespace OpenRAVE {
 
 class OpenRAVEFunctionParserReal;
@@ -182,8 +180,6 @@ public:
         virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
         virtual void DeserializeGeomData(const rapidjson::Value& value, std::string typestr, dReal fUnitScale=1.0);
 
-        // virtual void DeserializeDiffGeomData(const rapidjson::Value& value, std::string typestr, KinBody::GeometryInfo& newInfo);
-
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
 
         /// for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
@@ -280,6 +276,8 @@ public:
         /// self -  self-collision specific geometry. By default, this type of geometry will be always set
         std::map< std::string, std::vector<GeometryInfoPtr> > _mapExtraGeometries;
 
+        ///\brief unique id of the link
+        std::string _id;
         /// \brief unique link name
         std::string _name;
         /// the current transformation of the link with respect to the body coordinate system
@@ -304,9 +302,6 @@ public:
         /// \true false if the link is disabled. disabled links do not participate in collision detection
         bool _bIsEnabled;
         bool __padding0, __padding1; // for 4-byte alignment
-
-        // reference architecture
-        std::string _id;
 
 private:
         void _Update(const KinBody::LinkInfo& other);
