@@ -36,9 +36,37 @@ public:
     class OPENRAVE_API ManipulatorInfo
     {
 public:
-        ManipulatorInfo() : _vdirection(0,0,1) {
+        ManipulatorInfo() {}
+        ManipulatorInfo(const ManipulatorInfo& other) {
+            *this = other;
+        };
+        ManipulatorInfo& operator=(const ManipulatorInfo& other) {
+            _name = other._name;
+            _sBaseLinkName = other._sBaseLinkName;
+            _sEffectorLinkName = other._sEffectorLinkName;
+            _tLocalTool = other._tLocalTool;
+            _vChuckingDirection = other._vChuckingDirection;
+            _vdirection = other._vdirection;
+            _sIkSolverXMLId = other._sIkSolverXMLId;
+            _vGripperJointNames = other._vGripperJointNames;
+            _grippername = other._grippername;
+            _id = other._id;
+            return *this;
         }
-        virtual ~ManipulatorInfo() {
+        bool operator==(const ManipulatorInfo& other) const {
+            return _name == other._name
+                && _sBaseLinkName == other._sBaseLinkName
+                && _sEffectorLinkName == other._sEffectorLinkName
+                && _tLocalTool == other._tLocalTool
+                && _vChuckingDirection == other._vChuckingDirection
+                && _vdirection == other._vdirection
+                && _sIkSolverXMLId == other._sIkSolverXMLId
+                && _vGripperJointNames == other._vGripperJointNames
+                && _grippername == other._grippername
+                && _id == other._id;
+        }
+        bool operator!=(const ManipulatorInfo& other) const {
+            return !operator==(other);
         }
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
@@ -48,17 +76,12 @@ public:
         std::string _sBaseLinkName, _sEffectorLinkName; ///< name of the base and effector links of the robot used to determine the chain
         Transform _tLocalTool;
         std::vector<dReal> _vChuckingDirection; ///< the normal direction to move joints for the hand to grasp something
-        Vector _vdirection;
+        Vector _vdirection = Vector(0,0,1);
         std::string _sIkSolverXMLId; ///< xml id of the IkSolver interface to attach
         std::vector<std::string> _vGripperJointNames;         ///< names of the gripper joints
         std::string _grippername; ///< associates the manipulator with a GripperInfo
 
         std::string _id; ///< unique id for manipulator info
-
-private:
-        /// \brief shared update method for both copy constructor and assign operator
-        void _Update(const ManipulatorInfo& other);
-
     };
     typedef boost::shared_ptr<ManipulatorInfo> ManipulatorInfoPtr;
     typedef boost::shared_ptr<ManipulatorInfo const> ManipulatorInfoConstPtr;
@@ -67,8 +90,16 @@ private:
     class OPENRAVE_API GripperInfo
     {
 public:
-        GripperInfo();
+        GripperInfo() {};
+        GripperInfo(const GripperInfo& other) {
+            *this = other;
+        };
         GripperInfo& operator=(const GripperInfo& other);
+        bool operator==(const GripperInfo& other) const;
+        bool operator!=(const GripperInfo& other) const {
+            return !operator==(other);
+        }
+
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
 
@@ -469,9 +500,31 @@ private:
     class OPENRAVE_API AttachedSensorInfo
     {
 public:
-        AttachedSensorInfo() {
+        AttachedSensorInfo() {}
+        AttachedSensorInfo(const AttachedSensorInfo& other) {
+            *this = other;
+        };
+        AttachedSensorInfo& operator=(const AttachedSensorInfo& other) {
+            _id = other._id;
+            _name = other._name;
+            _linkname = other._linkname;
+            _trelative = other._trelative;
+            _sensorname = other._sensorname;
+            _sensorgeometry = other._sensorgeometry;
+            // TODO: deep copy _sensorgeometry
+            return *this;
         }
-        virtual ~AttachedSensorInfo() {
+        bool operator==(const AttachedSensorInfo& other) const {
+            return _id == other._id
+                && _name == other._name
+                && _linkname == other._linkname
+                && _trelative == other._trelative
+                && _sensorname == other._sensorname
+                && _sensorgeometry == other._sensorgeometry;
+            // TODO: deep compare _sensorgeometry
+        }
+        bool operator!=(const AttachedSensorInfo& other) const {
+            return !operator==(other);
         }
 
         std::string _id;
@@ -590,8 +643,41 @@ private:
     class OPENRAVE_API ConnectedBodyInfo
     {
 public:
-        ConnectedBodyInfo();
-        virtual ~ConnectedBodyInfo() {
+        ConnectedBodyInfo() {}
+        ConnectedBodyInfo(const ConnectedBodyInfo& other) {
+            *this = other;
+        };
+        ConnectedBodyInfo& operator=(const ConnectedBodyInfo& other) {
+            _id = other._id;
+            _name = other._name;
+            _linkname = other._linkname;
+            _uri = other._uri;
+            _trelative = other._trelative;
+            _vLinkInfos = other._vLinkInfos;
+            _vJointInfos = other._vJointInfos;
+            _vManipulatorInfos = other._vManipulatorInfos;
+            _vAttachedSensorInfos = other._vAttachedSensorInfos;
+            _vGripperInfos = other._vGripperInfos;
+            _bIsActive = other._bIsActive;
+            // TODO: deep copy child infos
+            return *this;
+        }
+        bool operator==(const ConnectedBodyInfo& other) const {
+            return _id == other._id
+                && _name == other._name
+                && _linkname == other._linkname
+                && _uri == other._uri
+                && _trelative == other._trelative
+                && _vLinkInfos == other._vLinkInfos
+                && _vJointInfos == other._vJointInfos
+                && _vManipulatorInfos == other._vManipulatorInfos
+                && _vAttachedSensorInfos == other._vAttachedSensorInfos
+                && _vGripperInfos == other._vGripperInfos
+                && _bIsActive == other._bIsActive;
+            // TODO: deep compare child infos
+        }
+        bool operator!=(const ConnectedBodyInfo& other) const {
+            return !operator==(other);
         }
 
         /// \brief Updates the infos depending on the robot at the identity and zero position.
@@ -609,7 +695,7 @@ public:
         std::vector<RobotBase::ManipulatorInfoPtr> _vManipulatorInfos; ///< extracted manip infos representing the connected body. The names are the original "desired" names.
         std::vector<RobotBase::AttachedSensorInfoPtr> _vAttachedSensorInfos; ///< extracted sensor infos representing the connected body. The names are the original "desired" names.
         std::vector<RobotBase::GripperInfoPtr> _vGripperInfos; ///< extracted gripper infos representing the connected body. The names are the original "desired" names.
-        bool _bIsActive; ///< if true, then add the connected body. Otherwise do not add it.
+        bool _bIsActive = false; ///< if true, then add the connected body. Otherwise do not add it.
     };
     typedef boost::shared_ptr<ConnectedBodyInfo> ConnectedBodyInfoPtr;
     typedef boost::shared_ptr<ConnectedBodyInfo const> ConnectedBodyInfoConstPtr;
@@ -712,7 +798,7 @@ private:
         KinBody::JointPtr _pDummyJointCache; ///< cached Joint used for _dummyPassiveJointName
         std::vector< std::pair<std::string, RobotBase::LinkPtr> > _vResolvedLinkNames; ///< for every entry in _info._vLinkInfos, the resolved link names added to the robot. Also serves as cache for pointers
         std::vector< std::pair<std::string, RobotBase::JointPtr> > _vResolvedJointNames; ///< for every entry in _info._vJointInfos, the resolved link names. Also serves as cache for pointers.
-        std::vector< std::pair<std::string, RobotBase::ManipulatorPtr> > _vResolvedManipulatorNames; ///< for every entry in _info._vManipInfos. Also serves as cache for pointers
+        std::vector< std::pair<std::string, RobotBase::ManipulatorPtr> > _vResolvedManipulatorNames; ///< for every entry in _info._vManipulatorInfos. Also serves as cache for pointers
         std::vector< std::pair<std::string, RobotBase::AttachedSensorPtr> > _vResolvedAttachedSensorNames; ///< for every entry in _info._vAttachedSensorResolvedNames. Also serves as cache for pointers
         std::vector< std::pair<std::string, RobotBase::GripperInfoPtr> > _vResolvedGripperInfoNames; ///< for every entry in _info._vGripperInfos. Also serves as cache for pointers
 
@@ -733,8 +819,9 @@ private:
     {
 public:
         RobotBaseInfo() : KinBodyInfo() {}
-        virtual ~RobotBaseInfo() {}
-
+        RobotBaseInfo(const RobotBaseInfo& other) {
+            *this = other;
+        };
         RobotBaseInfo& operator=(const RobotBaseInfo& other) {
             _id = other._id;
             _uri = other._uri;
@@ -743,16 +830,34 @@ public:
 
             _vLinkInfos = other._vLinkInfos;
             _vJointInfos = other._vJointInfos;
-            _vManipInfos = other._vManipInfos;
+            _vManipulatorInfos = other._vManipulatorInfos;
             _vAttachedSensorInfos = other._vAttachedSensorInfos;
             _vConnectedBodyInfos = other._vConnectedBodyInfos;
             _vGripperInfos = other._vGripperInfos;
+            // TODO: deep copy infos
             return *this;
+        }
+        bool operator==(const RobotBaseInfo& other) const {
+            return _id == other._id
+                && _uri == other._uri
+                && _name == other._name
+                && _referenceUri == other._referenceUri
+                && _vLinkInfos == other._vLinkInfos
+                && _vJointInfos == other._vJointInfos
+                && _vManipulatorInfos == other._vManipulatorInfos
+                && _vAttachedSensorInfos == other._vAttachedSensorInfos
+                && _vConnectedBodyInfos == other._vConnectedBodyInfos
+                && _vGripperInfos == other._vGripperInfos;
+            // TODO: deep compare infos
+        }
+        bool operator!=(const RobotBaseInfo& other) const{
+            return !operator==(other);
         }
 
         virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
-        std::vector<ManipulatorInfoPtr> _vManipInfos; ///< list of pointers to ManipulatorInfo
+
+        std::vector<ManipulatorInfoPtr> _vManipulatorInfos; ///< list of pointers to ManipulatorInfo
         std::vector<AttachedSensorInfoPtr> _vAttachedSensorInfos; ///< list of pointers to AttachedSensorInfo
         std::vector<ConnectedBodyInfoPtr> _vConnectedBodyInfos; ///< list of pointers to ConnectedBodyInfo
         std::vector<GripperInfoPtr> _vGripperInfos; ///< list of pointers to GripperInfo

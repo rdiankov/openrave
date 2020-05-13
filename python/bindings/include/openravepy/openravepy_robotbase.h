@@ -40,11 +40,11 @@ public:
     void DeserializeJSON(py::object obj, dReal fUnitScale=1.0);
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    std::vector<RobotBase::ManipulatorInfoPtr> _vManipInfos;
+    std::vector<RobotBase::ManipulatorInfoPtr> _vManipulatorInfos;
     std::vector<RobotBase::AttachedSensorInfoPtr> _vAttachedSensorInfos;
     std::vector<RobotBase::ConnectedBodyInfoPtr> _vConnectedBodyInfos;
 #else
-    py::object _vManipInfos = py::none_();
+    py::object _vManipulatorInfos = py::none_();
     py::object _vAttachedSensorInfos = py::none_();
     py::object _vConnectedBodyInfos = py::none_();
 #endif

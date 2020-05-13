@@ -19,10 +19,6 @@
 
 namespace OpenRAVE {
 
-RobotBase::ConnectedBodyInfo::ConnectedBodyInfo() : _bIsActive(false)
-{
-}
-
 void RobotBase::ConnectedBodyInfo::InitInfoFromBody(RobotBase& robot)
 {
     _vLinkInfos.clear();

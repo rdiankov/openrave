@@ -297,16 +297,16 @@ void PyRobotBase::PyRobotBaseInfo::DeserializeJSON(py::object obj, dReal fUnitSc
 void PyRobotBase::PyRobotBaseInfo::_Update(const RobotBase::RobotBaseInfo& info) {
     PyKinBody::PyKinBodyInfo::_Update(info);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    _vManipInfos = info._vManipInfos;
+    _vManipulatorInfos = info._vManipulatorInfos;
     _vAttachedSensorInfos = info._vAttachedSensorInfos;
     _vConnectedBodyInfos = info._vConnectedBodyInfos;
 #else
-    py::list vManipInfos;
-    FOREACHC(itManipInfo, info._vManipInfos) {
-        PyManipulatorInfoPtr pmanipinfo = toPyManipulatorInfo(**itManipInfo);
-        vManipInfos.append(pmanipinfo);
+    py::list vManipulatorInfos;
+    FOREACHC(itManipulatorInfo, info._vManipulatorInfos) {
+        PyManipulatorInfoPtr pmanipinfo = toPyManipulatorInfo(**itManipulatorInfo);
+        vManipulatorInfos.append(pmanipinfo);
     }
-    _vManipInfos = vManipInfos;
+    _vManipulatorInfos = vManipulatorInfos;
 
     py::list vAttachedSensorInfos;
     FOREACHC(itAttachedSensorInfo, info._vAttachedSensorInfos) {
@@ -325,20 +325,20 @@ void PyRobotBase::PyRobotBaseInfo::_Update(const RobotBase::RobotBaseInfo& info)
 }
 
 
-inline std::vector<RobotBase::ManipulatorInfoPtr> ExtractManipInfoArray(object pyManipList)
+inline std::vector<RobotBase::ManipulatorInfoPtr> ExtractManipulatorInfoArray(object pyManipList)
 {
     if( IS_PYTHONOBJECT_NONE(pyManipList) ) {
         return {};
     }
-    std::vector<RobotBase::ManipulatorInfoPtr> vManipInfos;
+    std::vector<RobotBase::ManipulatorInfoPtr> vManipulatorInfos;
     try {
         const size_t arraySize = len(pyManipList);
-        vManipInfos.resize(arraySize);
+        vManipulatorInfos.resize(arraySize);
 
-        for(size_t iManipInfo = 0; iManipInfo < arraySize; iManipInfo++) {
-            extract_<OPENRAVE_SHARED_PTR<PyManipulatorInfo>> pymanipinfo(pyManipList[iManipInfo]);
+        for(size_t iManipulatorInfo = 0; iManipulatorInfo < arraySize; iManipulatorInfo++) {
+            extract_<OPENRAVE_SHARED_PTR<PyManipulatorInfo>> pymanipinfo(pyManipList[iManipulatorInfo]);
             if (pymanipinfo.check()) {
-                vManipInfos[iManipInfo] = ((OPENRAVE_SHARED_PTR<PyManipulatorInfo>)pymanipinfo)->GetManipulatorInfo();
+                vManipulatorInfos[iManipulatorInfo] = ((OPENRAVE_SHARED_PTR<PyManipulatorInfo>)pymanipinfo)->GetManipulatorInfo();
             }
             else{
                 throw openrave_exception(_("Bad ManipulatorInfo"));
@@ -348,7 +348,7 @@ inline std::vector<RobotBase::ManipulatorInfoPtr> ExtractManipInfoArray(object p
     catch(...) {
         RAVELOG_WARN("Cannot do ExtractArray for ManipulatorInfo");
     }
-    return vManipInfos;
+    return vManipulatorInfos;
 }
 
 inline std::vector<RobotBase::AttachedSensorInfoPtr> ExtractAttachedSensorInfoArray(object pyAttachedSensorInfoList)
@@ -412,7 +412,7 @@ RobotBase::RobotBaseInfoPtr PyRobotBase::PyRobotBaseInfo::GetRobotBaseInfo() con
     pInfo->_uri = _uri;
     pInfo->_vLinkInfos = std::vector<KinBody::LinkInfoPtr>(begin(_vLinkInfos), end(_vLinkInfos));
     pInfo->_vJointInfos = std::vector<KinBody::JointInfoPtr>(begin(_vJointInfos), end(_vJointInfos));
-    pInfo->_vManipInfos = std::vector<RobotBase::ManipulatorInfoPtr>(begin(_vManipInfos), end(_vManipInfos));
+    pInfo->_vManipulatorInfos = std::vector<RobotBase::ManipulatorInfoPtr>(begin(_vManipulatorInfos), end(_vManipulatorInfos));
     pInfo->_vAttachedSensorInfos = std::vector<RobotBase::AttachedSensorInfoPtr>(begin(_vAttachedSensorInfos), end(_vAttachedSensorInfos));
     pInfo->_vConnectedBodyInfos = std::vector<RobotBase::ConnectedBodyInfoPtr>(begin(_vConnectedBodyInfos), end(_vConnectedBodyInfos));
 #else
@@ -434,11 +434,11 @@ RobotBase::RobotBaseInfoPtr PyRobotBase::PyRobotBaseInfo::GetRobotBaseInfo() con
     FOREACHC(it, vJointInfos) {
         pInfo->_vJointInfos.push_back(*it);
     }
-    std::vector<RobotBase::ManipulatorInfoPtr> vManipInfos = ExtractManipInfoArray(_vManipInfos);
-    pInfo->_vManipInfos.clear();
-    pInfo->_vManipInfos.reserve(vManipInfos.size());
-    FOREACHC(it, vManipInfos) {
-        pInfo->_vManipInfos.push_back(*it);
+    std::vector<RobotBase::ManipulatorInfoPtr> vManipulatorInfos = ExtractManipulatorInfoArray(_vManipulatorInfos);
+    pInfo->_vManipulatorInfos.clear();
+    pInfo->_vManipulatorInfos.reserve(vManipulatorInfos.size());
+    FOREACHC(it, vManipulatorInfos) {
+        pInfo->_vManipulatorInfos.push_back(*it);
     }
 
     std::vector<RobotBase::AttachedSensorInfoPtr> vAttachedSensorInfos = ExtractAttachedSensorInfoArray(_vAttachedSensorInfos);
@@ -1374,7 +1374,7 @@ bool PyRobotBase::Init(object olinkinfos, object ojointinfos, object omanipinfos
     for(size_t i = 0; i < vmanipinfos.size(); ++i) {
         PyManipulatorInfoPtr pymanip = py::extract<PyManipulatorInfoPtr>(omanipinfos[i]);
         if( !pymanip ) {
-            throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.ManipInfo"),ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.ManipulatorInfo"),ORE_InvalidArguments);
         }
         vmanipinfos[i] = pymanip->GetManipulatorInfo();
     }
@@ -1988,15 +1988,15 @@ class RobotBaseInfo_pickle_suite
 public:
     static py::tuple getstate(const PyRobotBase::PyRobotBaseInfo& r)
     {
-        return py::make_tuple(r._vManipInfos, r._vAttachedSensorInfos, r._vConnectedBodyInfos);
+        return py::make_tuple(r._vManipulatorInfos, r._vAttachedSensorInfos, r._vConnectedBodyInfos);
     }
     static void setstate(PyRobotBase::PyRobotBaseInfo& r, py::tuple state) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        r._vManipInfos.clear();
-        py::tuple pyManipInfos = extract_<py::tuple>(state[0]);
-        r._vManipInfos.reserve(len(pyManipInfos));
-        for(size_t iState = 0; iState < len(pyManipInfos); iState++) {
-            r._vManipInfos.push_back(extract_<RobotBase::ManipulatorInfoPtr>(pyManipInfos[iState]));
+        r._vManipulatorInfos.clear();
+        py::tuple pyManipulatorInfos = extract_<py::tuple>(state[0]);
+        r._vManipulatorInfos.reserve(len(pyManipulatorInfos));
+        for(size_t iState = 0; iState < len(pyManipulatorInfos); iState++) {
+            r._vManipulatorInfos.push_back(extract_<RobotBase::ManipulatorInfoPtr>(pyManipulatorInfos[iState]));
         }
 
         py::tuple pyAttachedSensorInfos = extract_<py::tuple>(state[1]);
@@ -2013,7 +2013,7 @@ public:
             r._vConnectedBodyInfos.push_back(extract_<RobotBase::ConnectedBodyInfoPtr>(pyConnectedBodyInfos[iState]));
         }
 #else
-        r._vManipInfos = extract_<py::tuple>(state[0]);
+        r._vManipulatorInfos = extract_<py::tuple>(state[0]);
         r._vAttachedSensorInfos = extract_<py::tuple>(state[1]);
         r._vConnectedBodyInfos = extract_<py::tuple>(state[2]);
 #endif
@@ -2157,7 +2157,7 @@ void init_openravepy_robot()
 #else
     object robotbaseinfo = class_<PyRobotBase::PyRobotBaseInfo, OPENRAVE_SHARED_PTR<PyRobotBase::PyRobotBaseInfo>, bases<PyKinBody::PyKinBodyInfo> >("RobotBaseInfo", DOXY_CLASS(RobotBase::RobotBaseInfo))
 #endif
-                         .def_readwrite("_vManipInfos",&PyRobotBase::PyRobotBaseInfo::_vManipInfos)
+                         .def_readwrite("_vManipulatorInfos",&PyRobotBase::PyRobotBaseInfo::_vManipulatorInfos)
                          .def_readwrite("_vAttachedSensorInfos",&PyRobotBase::PyRobotBaseInfo::_vAttachedSensorInfos)
                          .def_readwrite("_vConnectedBodyInfos",&PyRobotBase::PyRobotBaseInfo::_vConnectedBodyInfos)
                          .def("__str__",&PyRobotBase::PyRobotBaseInfo::__str__)

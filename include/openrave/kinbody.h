@@ -44,33 +44,80 @@ enum GeometryType {
 class OPENRAVE_API ElectricMotorActuatorInfo
 {
 public:
-    ElectricMotorActuatorInfo();
+    ElectricMotorActuatorInfo() {};
+    ElectricMotorActuatorInfo(const ElectricMotorActuatorInfo& other) {
+        *this = other;
+    }
+    ElectricMotorActuatorInfo& operator=(const ElectricMotorActuatorInfo& other) {
+        model_type = other.model_type;
+        assigned_power_rating = other.assigned_power_rating;
+        max_speed = other.max_speed;
+        no_load_speed = other.no_load_speed;
+        stall_torque = other.stall_torque;
+        max_instantaneous_torque = other.max_instantaneous_torque;
+        nominal_speed_torque_points = other.nominal_speed_torque_points;
+        max_speed_torque_points = other.max_speed_torque_points;
+        nominal_torque = other.nominal_torque;
+        rotor_inertia = other.rotor_inertia;
+        torque_constant = other.torque_constant;
+        nominal_voltage = other.nominal_voltage;
+        speed_constant = other.speed_constant;
+        starting_current = other.starting_current;
+        terminal_resistance = other.terminal_resistance;
+        gear_ratio = other.gear_ratio;
+        coloumb_friction = other.coloumb_friction;
+        viscous_friction = other.viscous_friction;
+        return *this;
+    }
+    bool operator==(const ElectricMotorActuatorInfo& other) const {
+        return model_type == other.model_type
+            && assigned_power_rating == other.assigned_power_rating
+            && max_speed == other.max_speed
+            && no_load_speed == other.no_load_speed
+            && stall_torque == other.stall_torque
+            && max_instantaneous_torque == other.max_instantaneous_torque
+            && nominal_speed_torque_points == other.nominal_speed_torque_points
+            && max_speed_torque_points == other.max_speed_torque_points
+            && nominal_torque == other.nominal_torque
+            && rotor_inertia == other.rotor_inertia
+            && torque_constant == other.torque_constant
+            && nominal_voltage == other.nominal_voltage
+            && speed_constant == other.speed_constant
+            && starting_current == other.starting_current
+            && terminal_resistance == other.terminal_resistance
+            && gear_ratio == other.gear_ratio
+            && coloumb_friction == other.coloumb_friction
+            && viscous_friction == other.viscous_friction;
+    }
+    bool operator!=(const ElectricMotorActuatorInfo& other) const {
+        return !operator==(other);
+    }
 
     virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
     virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
 
     std::string model_type; ///< the type of actuator it is. Usually the motor model name is ok, but can include other info like gear box, etc
     //@{ from motor data sheet
-    dReal assigned_power_rating; ///< the nominal power the electric motor can safely produce. Units are **Mass * Distance² * Time-³**
-    dReal max_speed; ///< the maximum speed of the motor **Time-¹**
-    dReal no_load_speed; ///< specifies the speed of the motor powered by the nominal voltage when the motor provides zero torque. Units are **Time-¹**.
-    dReal stall_torque; ///< the maximum torque achievable by the motor at the nominal voltage. This torque is achieved at zero velocity (stall). Units are **Mass * Distance * Time-²**.
-    dReal max_instantaneous_torque; ///< the maximum instantenous torque achievable by the motor when voltage <= nominal voltage. Motor going between nominal_torque and max_instantaneous_torque can overheat, so should not be driven at it for a long time. Units are **Mass * Distance * Time-²**.
+    dReal assigned_power_rating = 0; ///< the nominal power the electric motor can safely produce. Units are **Mass * Distance² * Time-³**
+    dReal max_speed = 0; ///< the maximum speed of the motor **Time-¹**
+    dReal no_load_speed = 0; ///< specifies the speed of the motor powered by the nominal voltage when the motor provides zero torque. Units are **Time-¹**.
+    dReal stall_torque = 0; ///< the maximum torque achievable by the motor at the nominal voltage. This torque is achieved at zero velocity (stall). Units are **Mass * Distance * Time-²**.
+    dReal max_instantaneous_torque = 0; ///< the maximum instantenous torque achievable by the motor when voltage <= nominal voltage. Motor going between nominal_torque and max_instantaneous_torque can overheat, so should not be driven at it for a long time. Units are **Mass * Distance * Time-²**.
     std::vector<std::pair<dReal, dReal> > nominal_speed_torque_points; ///< the speed and torque achievable when the motor is powered by the nominal voltage. Given the speed, the max torque can be computed. If not specified, the speed-torque curve will just be a line connecting the no load speed and the stall torque directly (ideal). Should be ordered from increasing speed.
     std::vector<std::pair<dReal, dReal> > max_speed_torque_points; ///< the speed and torque achievable when the motor is powered by the max voltage/current. Given the speed, the max torque can be computed. If not specified, the speed-torque curve will just be a line connecting the no load speed and the max_instantaneous_torque directly (ideal). Should be ordered from increasing speed.
-    dReal nominal_torque; ///< the maximum torque the motor can provide continuously without overheating. Units are **Mass * Distance * Time-²**.
-    dReal rotor_inertia; ///< the inertia of the rotating element about the axis of rotation. Units are **Mass * Distance²**.
-    dReal torque_constant; ///< specifies the proportion relating current to torque. Units are **Mass * Distance * Time-¹ * Charge-¹**.
-    dReal nominal_voltage; ///< the nominal voltage the electric motor can safely produce. Units are **Mass * Distance² * Time-² * Charge**.
-    dReal speed_constant; ///< the constant of proportionality relating speed to voltage. Units are **Mass-¹ * Distance-² * Time * Charge-¹**.
-    dReal starting_current; ///< specifies the current through the motor at zero velocity, equal to the nominal voltage divided by the terminal resistance. Also called the stall current.  Units are **Time-¹ * Charge**.
-    dReal terminal_resistance; ///< the resistance of the motor windings. Units are **Mass * Distance² * Time-¹ * Charge-²**.
+    dReal nominal_torque = 0; ///< the maximum torque the motor can provide continuously without overheating. Units are **Mass * Distance * Time-²**.
+    dReal rotor_inertia = 0; ///< the inertia of the rotating element about the axis of rotation. Units are **Mass * Distance²**.
+    dReal torque_constant = 0; ///< specifies the proportion relating current to torque. Units are **Mass * Distance * Time-¹ * Charge-¹**.
+    dReal nominal_voltage = 0; ///< the nominal voltage the electric motor can safely produce. Units are **Mass * Distance² * Time-² * Charge**.
+    dReal speed_constant = 0; ///< the constant of proportionality relating speed to voltage. Units are **Mass-¹ * Distance-² * Time * Charge-¹**.
+    dReal starting_current = 0; ///< specifies the current through the motor at zero velocity, equal to the nominal voltage divided by the terminal resistance. Also called the stall current.  Units are **Time-¹ * Charge**.
+    dReal terminal_resistance = 0; ///< the resistance of the motor windings. Units are **Mass * Distance² * Time-¹ * Charge-²**.
     //@}
 
     //@{ depending on gear box
-    dReal gear_ratio; ///< specifies the ratio between the input speed of the transmission (the speed of the motor shaft) and the output speed of the transmission.
-    dReal coloumb_friction; ///< static coloumb friction on each joint after the gear box. Units are **Mass * Distance * Time-²**.
-    dReal viscous_friction; ///< viscous friction on each joint after the gear box. Units are **Mass * Distance * Time-²**.
+    dReal gear_ratio = 0; ///< specifies the ratio between the input speed of the transmission (the speed of the motor shaft) and the output speed of the transmission.
+    dReal coloumb_friction = 0; ///< static coloumb friction on each joint after the gear box. Units are **Mass * Distance * Time-²**.
+    dReal viscous_friction = 0; ///< viscous friction on each joint after the gear box. Units are **Mass * Distance * Time-²**.
     //@}
 };
 
@@ -134,14 +181,55 @@ public:
     class OPENRAVE_API GeometryInfo
     {
 public:
-        GeometryInfo();
-        GeometryInfo& operator=(const GeometryInfo& info) {
-            _Update(info);
+        GeometryInfo() {}
+        GeometryInfo(const GeometryInfo& other) {
+            *this = other;
+        }
+        GeometryInfo& operator=(const GeometryInfo& other) {
+            _t = other._t;
+            _vGeomData = other._vGeomData;
+            _vGeomData2 = other._vGeomData2;
+            _vGeomData3 = other._vGeomData3;
+            _vGeomData4 = other._vGeomData4;
+            _vSideWalls = other._vSideWalls;
+            _vDiffuseColor = other._vDiffuseColor;
+            _vAmbientColor = other._vAmbientColor;
+            _meshcollision = other._meshcollision;
+            _type = other._type;
+            _id = other._id;
+            _name = other._name;
+            _filenamerender = other._filenamerender;
+            _filenamecollision = other._filenamecollision;
+            _vRenderScale = other._vRenderScale;
+            _vCollisionScale = other._vCollisionScale;
+            _fTransparency = other._fTransparency;
+            _bVisible = other._bVisible;
+            _bModifiable = other._bModifiable;
             return *this;
         }
-        bool operator==(const GeometryInfo& info) const;
-        bool operator!=(const GeometryInfo& info) const {
-            return !operator==(info);
+        bool operator==(const GeometryInfo& other) const {
+            return _t == other._t
+                && _vGeomData == other._vGeomData
+                && _vGeomData2 == other._vGeomData2
+                && _vGeomData3 == other._vGeomData3
+                && _vGeomData4 == other._vGeomData4
+                // && _vSideWalls == other._vSideWalls
+                && _vDiffuseColor == other._vDiffuseColor
+                && _vAmbientColor == other._vAmbientColor
+                // && _meshcollision == other._meshcollision
+                && _id == other._id
+                && _name == other._name
+                && _type == other._type
+                && _filenamerender == other._filenamerender
+                && _filenamecollision == other._filenamecollision
+                && _vRenderScale == other._vRenderScale
+                && _vCollisionScale == other._vCollisionScale
+                && _fTransparency == other._fTransparency
+                && _bVisible == other._bVisible
+                && _bModifiable == other._bModifiable;
+        }
+        bool operator!=(const GeometryInfo& other) const {
+            return !operator==(other);
         }
 
         /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
@@ -211,7 +299,8 @@ public:
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height
         ///< for trimesh, none
-        RaveVector<float> _vDiffuseColor, _vAmbientColor; ///< hints for how to color the meshes
+        RaveVector<float> _vDiffuseColor = Vector(1,1,1);
+        RaveVector<float> _vAmbientColor; ///< hints for how to color the meshes
 
         /// \brief trimesh representation of the collision data of this object in this local coordinate system
         ///
@@ -220,7 +309,7 @@ public:
         /// If empty, will be automatically computed from the geometry's type and render data
         TriMesh _meshcollision;
 
-        GeometryType _type; ///< the type of geometry primitive
+        GeometryType _type = GT_None; ///< the type of geometry primitive
         std::string _id;   ///< unique id of the geometry
         std::string _name; ///< the name of the geometry
 
@@ -236,15 +325,11 @@ public:
         /// The user should call _meshcollision = *env->ReadTrimeshURI(_filenamecollision) by themselves.
         std::string _filenamecollision;
 
-        Vector _vRenderScale; ///< render scale of the object (x,y,z) from _filenamerender
-        Vector _vCollisionScale; ///< render scale of the object (x,y,z) from _filenamecollision
-        float _fTransparency; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
-        bool _bVisible; ///< if true, geometry is visible as part of the 3d model (default is true)
-        bool _bModifiable; ///< if true, object geometry can be dynamically modified (default is true)
-
-private:
-        /// \brief shared update method for both copy constructor and assign operator
-        virtual void _Update(const KinBody::GeometryInfo& other);
+        Vector _vRenderScale = Vector(1,1,1); ///< render scale of the object (x,y,z) from _filenamerender
+        Vector _vCollisionScale = Vector(1,1,1); ///< render scale of the object (x,y,z) from _filenamecollision
+        float _fTransparency = 0; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
+        bool _bVisible = true; ///< if true, geometry is visible as part of the 3d model (default is true)
+        bool _bModifiable = true; ///< if true, object geometry can be dynamically modified (default is true)
 
     };
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
@@ -254,11 +339,10 @@ private:
     class OPENRAVE_API LinkInfo
     {
 public:
-        LinkInfo();
-        virtual ~LinkInfo() {
+        LinkInfo() {};
+        LinkInfo(const LinkInfo& other) {
+            *this = other;
         }
-
-        LinkInfo(const LinkInfo& other);
         LinkInfo& operator=(const LinkInfo& other);
         bool operator==(const LinkInfo& other) const;
         bool operator!=(const LinkInfo& other) const {
@@ -282,7 +366,7 @@ public:
         /// the frame for inertia and center of mass of the link in the link's coordinate system
         Transform _tMassFrame;
         /// mass of link
-        dReal _mass;
+        dReal _mass = 0;
         /// inertia along the axes of _tMassFrame
         Vector _vinertiamoments;
         std::map<std::string, std::vector<dReal> > _mapFloatParameters; ///< custom key-value pairs that could not be fit in the current model
@@ -294,15 +378,11 @@ public:
         ///
         //// Static should be used when an object has infinite mass and
         /// shouldn't be affected by physics (including gravity). Collision still works.
-        bool _bStatic;
+        bool _bStatic = false;
 
         /// \true false if the link is disabled. disabled links do not participate in collision detection
-        bool _bIsEnabled;
+        bool _bIsEnabled = true;
         bool __padding0, __padding1; // for 4-byte alignment
-
-private:
-        /// \brief shared update method for both copy constructor and assign operator
-        void _Update(const KinBody::LinkInfo& other);
     };
     typedef boost::shared_ptr<LinkInfo> LinkInfoPtr;
     typedef boost::shared_ptr<LinkInfo const> LinkInfoConstPtr;
@@ -896,45 +976,50 @@ public:
     class OPENRAVE_API JointInfo
     {
 public:
-        JointInfo();
-        virtual ~JointInfo() {
+        JointInfo() {}
+        JointInfo(const JointInfo& other) {
+            *this = other;
         }
-
-        JointInfo(const JointInfo& other);
         JointInfo& operator=(const JointInfo& other);
+        bool operator==(const JointInfo& other) const;
+        bool operator!=(const JointInfo& other) const {
+            return !operator==(other);
+        }
 
         virtual int GetDOF() const;
 
         virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
 
-        JointType _type; /// The joint type
+        JointType _type = JointNone; /// The joint type
 
         std::string _id;   // joint unique id
         std::string _name;         ///< the unique joint name
         std::string _linkname0, _linkname1; ///< attaching links, all axes and anchors are defined in the link pointed to by _linkname0 coordinate system. _linkname0 is usually the parent link.
         Vector _vanchor; ///< the anchor of the rotation axes defined in _linkname0's coordinate system. this is only used to construct the internal left/right matrices. passed into Joint::_ComputeInternalInformation
-        boost::array<Vector,3> _vaxes;                ///< axes in _linkname0's or environment coordinate system used to define joint movement. passed into Joint::_ComputeInternalInformation
+        boost::array<Vector,3> _vaxes = {Vector(0,0,1), Vector(0,0,1), Vector(0,0,1)};                ///< axes in _linkname0's or environment coordinate system used to define joint movement. passed into Joint::_ComputeInternalInformation
         std::vector<dReal> _vcurrentvalues; ///< joint values at initialization. passed into Joint::_ComputeInternalInformation
 
-        boost::array<dReal,3> _vresolution;              ///< interpolation resolution
-        boost::array<dReal,3> _vmaxvel;                  ///< the soft maximum velocity (rad/s) to move the joint when planning
-        boost::array<dReal,3> _vhardmaxvel;              ///< the hard maximum velocity, robot cannot exceed this velocity. used for verification checking
-        boost::array<dReal,3> _vmaxaccel;                ///< the soft maximum acceleration (rad/s^2) of the joint
-        boost::array<dReal,3> _vhardmaxaccel;            ///< the hard maximum acceleration (rad/s^2), robot cannot exceed this acceleration. used for verification checking
-        boost::array<dReal,3> _vmaxjerk;                 ///< the soft maximum jerk (rad/s^3) of the joint
-        boost::array<dReal,3> _vhardmaxjerk;             ///< the hard maximum jerk (rad/s^3), robot cannot exceed this jerk. used for verification checking
-        boost::array<dReal,3> _vmaxtorque;               ///< maximum torque (N.m, kg m^2/s^2) that should be applied to the joint. Usually this is computed from the motor nominal torque and gear ratio. Ignore if values are 0.
-        boost::array<dReal,3> _vmaxinertia;             ///< maximum inertia (kg m^2) that the joint can exhibit. Usually this is set for safety reasons. Ignore if values are 0.
-        boost::array<dReal,3> _vweights;                ///< the weights of the joint for computing distance metrics.
+        boost::array<dReal,3> _vresolution = {0.02, 0.02, 0.02};              ///< interpolation resolution
+        boost::array<dReal,3> _vmaxvel = {10, 10, 10};                  ///< the soft maximum velocity (rad/s) to move the joint when planning
+        boost::array<dReal,3> _vhardmaxvel = {0, 0, 0};              ///< the hard maximum velocity, robot cannot exceed this velocity. used for verification checking. Default hard limits is 0. if 0, the user should not use the hard limit value.
+        boost::array<dReal,3> _vmaxaccel = {50, 50, 50};                ///< the soft maximum acceleration (rad/s^2) of the joint
+        boost::array<dReal,3> _vhardmaxaccel = {0, 0, 0};            ///< the hard maximum acceleration (rad/s^2), robot cannot exceed this acceleration. used for verification checking. Default hard limits is 0. if 0, the user should not use the hard limit value.
+        boost::array<dReal,3> _vmaxjerk = {50*1000, 50*1000, 50*1000};                 ///< the soft maximum jerk (rad/s^3) of the joint
+        // Set negligibly large jerk by default which can change acceleration between min and max within a typical time step.
+        boost::array<dReal,3> _vhardmaxjerk = {0, 0, 0};             ///< the hard maximum jerk (rad/s^3), robot cannot exceed this jerk. used for verification checking. Default hard limits is 0. if 0, the user should not use the hard limit value.
+        boost::array<dReal,3> _vmaxtorque = {0, 0, 0};               ///< maximum torque (N.m, kg m^2/s^2) that should be applied to the joint. Usually this is computed from the motor nominal torque and gear ratio. Ignore if values are 0. Set max torque to 0 to notify the system that dynamics parameters might not be valid.
+        boost::array<dReal,3> _vmaxinertia = {0, 0, 0};             ///< maximum inertia (kg m^2) that the joint can exhibit. Usually this is set for safety reasons. Ignore if values are 0.
+        boost::array<dReal,3> _vweights = {1, 1, 1};                ///< the weights of the joint for computing distance metrics.
 
         /// \brief internal offset parameter that determines the branch the angle centers on
         ///
         /// Wrap offsets are needed for rotation joints since the range is limited to 2*pi.
         /// This allows the wrap offset to be set so the joint can function in [-pi+offset,pi+offset]..
         /// \param iaxis the axis to get the offset from
-        boost::array<dReal,3> _voffsets;
-        boost::array<dReal,3> _vlowerlimit, _vupperlimit;         ///< joint limits
+        boost::array<dReal,3> _voffsets = {0, 0, 0};
+        boost::array<dReal,3> _vlowerlimit = {0, 0, 0};
+        boost::array<dReal,3> _vupperlimit = {0, 0, 0};         ///< joint limits
         TrajectoryBasePtr _trajfollow; ///< used if joint type is JointTrajectory
 
         boost::array<MimicInfoPtr,3> _vmimic;          ///< the mimic properties of each of the joint axes. It is theoretically possible for a multi-dof joint to have one axes mimiced and the others free. When cloning, is it ok to copy this and assume it is constant?
@@ -951,25 +1036,25 @@ public:
         /// at its lower limit. The most common identification on revolute joints at -pi and pi. 'circularity' means the
         /// joint does not stop at limits.
         /// Although currently not developed, it could be possible to support identification for joints that are not revolute.
-        boost::array<uint8_t, 3> _bIsCircular;
+        boost::array<uint8_t, 3> _bIsCircular = {0, 0, 0};
 
-        bool _bIsActive;                 ///< if true, should belong to the DOF of the body, unless it is a mimic joint (_ComputeInternalInformation decides this)
+        bool _bIsActive = true;                 ///< if true, should belong to the DOF of the body, unless it is a mimic joint (_ComputeInternalInformation decides this)
 
         /// \brief _controlMode specifies how this joint is controlled. For possible control modes, see enum JointControlMode.
-        JointControlMode _controlMode;
+        JointControlMode _controlMode = JCM_None;
 
         struct JointControlInfo_RobotController
         {
-            JointControlInfo_RobotController();
-            int robotId;
-            boost::array<int16_t, 3> robotControllerDOFIndex; ///< indicates which DOF in the robot controller controls which joint axis. -1 if not specified/not valid.
+            JointControlInfo_RobotController() {};
+            int robotId = -1;
+            boost::array<int16_t, 3> robotControllerDOFIndex = {-1, -1, -1}; ///< indicates which DOF in the robot controller controls which joint axis. -1 if not specified/not valid.
         };
         typedef boost::shared_ptr<JointControlInfo_RobotController> JointControlInfo_RobotControllerPtr;
 
         struct JointControlInfo_IO
         {
-            JointControlInfo_IO();
-            int deviceId;
+            JointControlInfo_IO() {};
+            int deviceId = -1;
             boost::array< std::vector<std::string>, 3 > vMoveIONames;       ///< io names for controlling positions of this joint.
             boost::array< std::vector<std::string>, 3 > vUpperLimitIONames; ///< io names for detecting if the joint is at its upper limit
             boost::array< std::vector<uint8_t>, 3 > vUpperLimitSensorIsOn;  ///< if true, the corresponding upper limit sensor reads 1 when the joint is at its upper limit. otherwise, the upper limit sensor reads 0 when the joint is at its upper limit. the default value is 1.
@@ -980,7 +1065,7 @@ public:
 
         struct JointControlInfo_ExternalDevice
         {
-            JointControlInfo_ExternalDevice();
+            JointControlInfo_ExternalDevice() {};
             std::string externalDeviceId; ///< id for the external device
         };
         typedef boost::shared_ptr<JointControlInfo_ExternalDevice> JointControlInfo_ExternalDevicePtr;
@@ -1651,22 +1736,35 @@ private:
     {
 public:
         KinBodyInfo() {}
+        KinBodyInfo(const KinBodyInfo& other) {
+            *this = other;
+        }
+        KinBodyInfo& operator=(const KinBodyInfo& other) {
+            _id = other._id;
+            _uri = other._uri;
+            _name = other._name;
+            _referenceUri = other._referenceUri;
+            _vLinkInfos = other._vLinkInfos;
+            _vJointInfos = other._vJointInfos;
+            // TODO: deep copy infos
+            return *this;
+        }
+        bool operator==(const KinBodyInfo& other) const {
+            return _id == other._id
+                && _uri == other._uri
+                && _name == other._name
+                && _referenceUri == other._referenceUri
+                && _vLinkInfos == other._vLinkInfos
+                && _vJointInfos == other._vJointInfos;
+            // TODO: deep compare infos
+        }
+        bool operator!=(const KinBodyInfo& other) const{
+            return !operator==(other);
+        }
 
         virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
         // virtual void DeserializeDiffJSON(const rapidjson::Value& value, KinBody::KinBodyInfo& newInfo, dReal fUntiScale=1.0);
-
-        virtual ~KinBodyInfo() {}
-
-        KinBodyInfo& operator=(const KinBodyInfo& other) {
-            _Update(other);
-            return *this;
-        }
-
-        bool operator==(const KinBodyInfo& other) const;
-        bool operator!=(const KinBodyInfo& other) const{
-            return !operator==(other);
-        }
 
         std::string _id;
         std::string _uri;
@@ -1675,10 +1773,6 @@ public:
 
         std::vector<LinkInfoPtr> _vLinkInfos; ///< list of pointers to LinkInfo
         std::vector<JointInfoPtr> _vJointInfos; ///< list of pointers to JointInfo
-
-private:
-        /// \brief shared update method for both copy constructor and assign operator
-        void _Update(const KinBodyInfo& other);
     };
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
