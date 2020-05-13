@@ -46,7 +46,6 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
 
 void RobotBase::ManipulatorInfo::_Update(const RobotBase::ManipulatorInfo& info) {
     _id = info._id;
-    _bIsDeleted = _bIsDeleted;
 
     _name = info._name;
     _sBaseLinkName = info._sEffectorLinkName;

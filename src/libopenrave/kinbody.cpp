@@ -126,14 +126,12 @@ void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, d
 }
 
 bool KinBody::KinBodyInfo::operator==(const KinBody::KinBodyInfo& other) const {
-    bool equal = (_id == other._id
-              &&  _uri == other._uri
-              &&  _name == other._name
-              &&  _referenceUri == other._referenceUri
-              && _vLinkInfos == other._vLinkInfos
-              && _vJointInfos == other._vJointInfos);
-
-    if (!equal) return false;
+    return _id == other._id
+       &&  _uri == other._uri
+       &&  _name == other._name
+       &&  _referenceUri == other._referenceUri
+       && _vLinkInfos == other._vLinkInfos
+       && _vJointInfos == other._vJointInfos;
 }
 
 void KinBody::KinBodyInfo::_Update(const KinBody::KinBodyInfo& other) {
@@ -488,8 +486,13 @@ bool KinBody::InitFromInfo(const KinBodyInfoConstPtr& info)
 {
     std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(info->_vLinkInfos.begin(), info->_vLinkInfos.end());
     std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(info->_vJointInfos.begin(), info->_vJointInfos.end());
-    SetInfo(*info);
-    return KinBody::Init(vLinkInfosConst, vJointInfosConst, info->_uri);
+    
+    if( !KinBody::Init(vLinkInfosConst, vJointInfosConst, info->_uri) ) {
+        return false;
+    }
+
+    _info = *info;
+    return true;
 }
 
 void KinBody::SetName(const std::string& newname)

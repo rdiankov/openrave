@@ -22,8 +22,6 @@
 #ifndef OPENRAVE_KINBODY_H
 #define OPENRAVE_KINBODY_H
 
-#include <boost/make_shared.hpp>
-
 namespace OpenRAVE {
 
 class OpenRAVEFunctionParserReal;
@@ -182,8 +180,6 @@ public:
         virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
         virtual void DeserializeGeomData(const rapidjson::Value& value, std::string typestr, dReal fUnitScale=1.0);
 
-        // virtual void DeserializeDiffGeomData(const rapidjson::Value& value, std::string typestr, KinBody::GeometryInfo& newInfo);
-
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
 
         /// for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
@@ -250,8 +246,9 @@ public:
         float _fTransparency; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
         bool _bVisible; ///< if true, geometry is visible as part of the 3d model (default is true)
         bool _bModifiable; ///< if true, object geometry can be dynamically modified (default is true)
-private:
-        void _Update(const KinBody::GeometryInfo& info);
+
+protected:
+        virtual void _Update(const KinBody::GeometryInfo& info);
 
     };
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
@@ -280,6 +277,8 @@ public:
         /// self -  self-collision specific geometry. By default, this type of geometry will be always set
         std::map< std::string, std::vector<GeometryInfoPtr> > _mapExtraGeometries;
 
+        ///\brief unique id of the link
+        std::string _id;
         /// \brief unique link name
         std::string _name;
         /// the current transformation of the link with respect to the body coordinate system
@@ -304,9 +303,6 @@ public:
         /// \true false if the link is disabled. disabled links do not participate in collision detection
         bool _bIsEnabled;
         bool __padding0, __padding1; // for 4-byte alignment
-
-        // reference architecture
-        std::string _id;
 
 private:
         void _Update(const KinBody::LinkInfo& other);
@@ -354,8 +350,6 @@ public:
             inline GeometryType GetType() const {
                 return _info._type;
             }
-
-            inline std::string GetGeometryTypeString(const GeometryType& type);
 
             inline const Vector& GetRenderScale() const {
                 return _info._vRenderScale;
@@ -2659,9 +2653,6 @@ private:
         return _info;
     }
 
-    virtual inline void SetInfo(const KinBodyInfo& info) {
-        _info = info;
-    }
     virtual void UpdateInfo();
 
     virtual uint8_t ApplyDiff(const rapidjson::Value& bodyValue, KinBodyInfo& newInfo);
