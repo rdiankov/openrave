@@ -140,7 +140,6 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
         value.AddMember("grabbed", rGrabbedInfoValues, allocator);
     }
 
-    // OpenRAVE::JSON::SetJsonValueByKey(value, "uri", _uri, allocator); // deprecated
     if (_vLinkInfos.size() > 0) {
         rapidjson::Value rLinkInfoValues;
         rLinkInfoValues.SetArray();
@@ -171,12 +170,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "referenceUri", _referenceUri);
-    // OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri); // deprecated
-    bool isRobot = false;
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "isRobot", isRobot);
-    BOOST_ASSERT(!isRobot);
 
-    _vGrabbedInfos.clear();
     if (value.HasMember("grabbed")) {
         _vGrabbedInfos.reserve(value["grabbed"].Size());
         for (size_t iGrabbedInfo = 0; iGrabbedInfo < value["grabbed"].Size(); iGrabbedInfo++) {
@@ -186,7 +180,6 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         }
     }
 
-    _vLinkInfos.clear();
     if (value.HasMember("links")) {
         _vLinkInfos.reserve(value["links"].Size());
         for (size_t iLinkInfo = 0; iLinkInfo < value["links"].Size(); iLinkInfo++) {
@@ -196,7 +189,6 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         }
     }
 
-    _vJointInfos.clear();
     if (value.HasMember("joints")) {
         _vJointInfos.reserve(value["joints"].Size());
         for (size_t iJointInfo = 0; iJointInfo < value["joints"].Size(); iJointInfo++) {
@@ -206,8 +198,8 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         }
     }
 
-    _dofValues.resize(0);
     if (value.HasMember("dofValues")) {
+        _dofValues.resize(0);
         std::string jointId;
         dReal dofValue;
         for(rapidjson::Value::ConstValueIterator itr = value["dofValues"].Begin(); itr != value["dofValues"].End(); ++itr) {

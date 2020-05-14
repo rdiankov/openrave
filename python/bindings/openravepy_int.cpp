@@ -965,9 +965,9 @@ py::object PyEnvironmentBase::PyEnvironmentBaseInfo::SerializeJSON(dReal fUnitSc
 void PyEnvironmentBase::PyEnvironmentBaseInfo::DeserializeJSON(py::object obj, dReal fUnitScale) {
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
-    EnvironmentBase::EnvironmentBaseInfo info;
-    info.DeserializeJSON(doc, fUnitScale);
-    _Update(info);
+    EnvironmentBase::EnvironmentBaseInfoPtr pInfo = GetEnvironmentBaseInfo();
+    pInfo->DeserializeJSON(doc, fUnitScale);
+    _Update(*pInfo);
 }
 
 void PyEnvironmentBase::PyEnvironmentBaseInfo::_Update(const EnvironmentBase::EnvironmentBaseInfo& info) {
