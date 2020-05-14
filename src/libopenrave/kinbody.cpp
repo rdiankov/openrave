@@ -172,29 +172,50 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     OpenRAVE::JSON::LoadJsonValueByKey(value, "referenceUri", _referenceUri);
 
     if (value.HasMember("grabbed")) {
-        _vGrabbedInfos.reserve(value["grabbed"].Size());
-        for (size_t iGrabbedInfo = 0; iGrabbedInfo < value["grabbed"].Size(); iGrabbedInfo++) {
-            GrabbedInfoPtr pGrabbedInfo(new GrabbedInfo());
-            pGrabbedInfo->DeserializeJSON(value["grabbed"][iGrabbedInfo], fUnitScale);
-            _vGrabbedInfos.push_back(pGrabbedInfo);
+        _vGrabbedInfos.reserve(value["grabbed"].Size() + _vGrabbedInfos.size());
+        size_t iGrabbed = 0;
+        for (rapidjson::Value::ConstValueIterator it = value["grabbed"].Begin(); it != value["grabbed"].End(); ++it, ++iGrabbed) {
+            const rapidjson::Value& grabbedValue = *it;
+            std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(grabbedValue, "id");
+            if (id.empty()) {
+                id = OpenRAVE::JSON::GetStringJsonValueByKey(grabbedValue, "grabbedName");
+            }
+            if (id.empty()) {
+                id = boost::str(boost::format("grabbed%d") % iGrabbed);
+            }
+            UpdateOrCreateInfo(grabbedValue, id, _vGrabbedInfos, fUnitScale);
         }
     }
 
     if (value.HasMember("links")) {
-        _vLinkInfos.reserve(value["links"].Size());
-        for (size_t iLinkInfo = 0; iLinkInfo < value["links"].Size(); iLinkInfo++) {
-            LinkInfoPtr pLinkInfo(new LinkInfo());
-            pLinkInfo->DeserializeJSON(value["links"][iLinkInfo], fUnitScale);
-            _vLinkInfos.push_back(pLinkInfo);
+        _vLinkInfos.reserve(value["links"].Size() + _vLinkInfos.size());
+        size_t iLink = 0;
+        for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it, ++iLink) {
+            const rapidjson::Value& linkValue = *it;
+            std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(linkValue, "id");
+            if (id.empty()) {
+                id = OpenRAVE::JSON::GetStringJsonValueByKey(linkValue, "name");
+            }
+            if (id.empty()) {
+                id = boost::str(boost::format("link%d") % iLink);
+            }
+            UpdateOrCreateInfo(linkValue, id, _vLinkInfos, fUnitScale);
         }
     }
 
     if (value.HasMember("joints")) {
-        _vJointInfos.reserve(value["joints"].Size());
-        for (size_t iJointInfo = 0; iJointInfo < value["joints"].Size(); iJointInfo++) {
-            JointInfoPtr pJointInfo(new JointInfo());
-            pJointInfo->DeserializeJSON(value["joints"][iJointInfo], fUnitScale);
-            _vJointInfos.push_back(pJointInfo);
+        _vJointInfos.reserve(value["joints"].Size() + _vJointInfos.size());
+        size_t iJoint = 0;
+        for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it, ++iJoint) {
+            const rapidjson::Value& jointValue = *it;
+            std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(jointValue, "id");
+            if (id.empty()) {
+                id = OpenRAVE::JSON::GetStringJsonValueByKey(jointValue, "name");
+            }
+            if (id.empty()) {
+                id = boost::str(boost::format("joint%d") % iJoint);
+            }
+            UpdateOrCreateInfo(jointValue, id, _vJointInfos, fUnitScale);
         }
     }
 
