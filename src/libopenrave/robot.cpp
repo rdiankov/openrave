@@ -24,7 +24,7 @@ void RobotBase::GripperInfo::SerializeJSON(rapidjson::Value &value, rapidjson::D
     value.SetObject();
     if( !!_pdocument ) {
         BOOST_ASSERT(_pdocument->IsObject());
-        value.CopyFrom(*_pdocument, allocator);
+        value.CopyFrom(*_pdocument, allocator, true); // need to copy the const strings
     }
     openravejson::SetJsonValueByKey(value, "name", name, allocator);
     openravejson::SetJsonValueByKey(value, "grippertype", grippertype, allocator);
@@ -49,7 +49,7 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
 
     // should always create a new _pdocument in case an old one is initialized and copied
     _pdocument.reset(new rapidjson::Document());
-    _pdocument->CopyFrom(value, _pdocument->GetAllocator());
+    _pdocument->CopyFrom(value, _pdocument->GetAllocator(), true); // need to copy the const strings
 }
 
 void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
@@ -2052,7 +2052,7 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         GripperInfoPtr& pGripperInfo = *itGripperInfo;
         if( !!pGripperInfo && !!pGripperInfo->_pdocument) {
             boost::shared_ptr<rapidjson::Document> pnewdocument(new rapidjson::Document());
-            pnewdocument->CopyFrom(*pGripperInfo->_pdocument, pnewdocument->GetAllocator());
+            pnewdocument->CopyFrom(*pGripperInfo->_pdocument, pnewdocument->GetAllocator(), true); // need to copy the const strings
             pGripperInfo->_pdocument = pnewdocument;
         }
     }
