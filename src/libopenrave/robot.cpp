@@ -528,7 +528,7 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
     }
 
     if (value.HasMember("attachedSensors")) {
-        _vAttachedSensorInfos.reserve(value["attachedSensors"].Size());
+        _vAttachedSensorInfos.reserve(value["attachedSensors"].Size() + _vAttachedSensorInfos.size());
         size_t iAttachedSensor = 0;
         for (rapidjson::Value::ConstValueIterator it = value["attachedSensors"].Begin(); it != value["attachedSensors"].End(); ++it, ++iAttachedSensor) {
             const rapidjson::Value& attachedSensorValue = *it;
