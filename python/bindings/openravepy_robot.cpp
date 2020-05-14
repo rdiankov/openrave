@@ -493,13 +493,13 @@ bool PyRobotBase::InitFromInfo(const object pyRobotBaseInfo)
 
 std::string PyRobotBase::PyRobotBaseInfo::__str__() {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    return boost::str(boost::format("<robotbaseinfo: %s>")%_uri);
+    return boost::str(boost::format("<RobotBaseInfo: %s>")%_uri);
 #else
     std::string uri = "";
     if (!IS_PYTHONOBJECT_NONE(_uri)) {
         uri = extract<std::string>(_uri);
     }
-    return boost::str(boost::format("<robotbaseinfo: %s")%uri);
+    return boost::str(boost::format("<RobotBaseInfo: %s")%uri);
 #endif
 }
 
@@ -1996,48 +1996,6 @@ void PyRobotBase::__enter__()
     _listStateSavers.push_back(OPENRAVE_SHARED_PTR<void>(new RobotBase::RobotStateSaver(_probot)));
 }
 
-class RobotBaseInfo_pickle_suite
-#ifndef USE_PYBIND11_PYTHON_BINDINGS
-    : public pickle_suite
-#endif
-{
-public:
-    static py::tuple getstate(const PyRobotBase::PyRobotBaseInfo& r)
-    {
-        return py::make_tuple(r._vManipulatorInfos, r._vAttachedSensorInfos, r._vConnectedBodyInfos);
-    }
-    static void setstate(PyRobotBase::PyRobotBaseInfo& r, py::tuple state) {
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        r._vManipulatorInfos.clear();
-        py::tuple pyManipulatorInfos = extract_<py::tuple>(state[0]);
-        r._vManipulatorInfos.reserve(len(pyManipulatorInfos));
-        for(size_t iState = 0; iState < len(pyManipulatorInfos); iState++) {
-            r._vManipulatorInfos.push_back(extract_<RobotBase::ManipulatorInfoPtr>(pyManipulatorInfos[iState]));
-        }
-
-        py::tuple pyAttachedSensorInfos = extract_<py::tuple>(state[1]);
-        r._vAttachedSensorInfos.clear();
-        r._vAttachedSensorInfos.reserve(len(pyAttachedSensorInfos));
-        for(size_t iState = 0; iState < len(pyAttachedSensorInfos); iState++) {
-            r._vAttachedSensorInfos.push_back(extract_<RobotBase::AttachedSensorInfoPtr>(pyAttachedSensorInfos[iState]));
-        }
-
-        py::tuple pyConnectedBodyInfos = extract_<py::tuple>(state[2]);
-        r._vConnectedBodyInfos.clear();
-        r._vConnectedBodyInfos.reserve(len(pyConnectedBodyInfos));
-        for(size_t iState = 0; iState < len(pyConnectedBodyInfos); iState++) {
-            r._vConnectedBodyInfos.push_back(extract_<RobotBase::ConnectedBodyInfoPtr>(pyConnectedBodyInfos[iState]));
-        }
-#else
-        r._vManipulatorInfos = extract_<py::tuple>(state[0]);
-        r._vAttachedSensorInfos = extract_<py::tuple>(state[1]);
-        r._vConnectedBodyInfos = extract_<py::tuple>(state[2]);
-#endif
-    }
-
-};
-
-
 class ManipulatorInfo_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
     : public pickle_suite
@@ -2192,27 +2150,6 @@ void init_openravepy_robot()
 #else
                          .def("SerializeJSON", &PyRobotBase::PyRobotBaseInfo::SerializeJSON, PyRobotBaseInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(RobotBase::RobotBaseInfo, SerializeJSON)))
                          .def("DeserializeJSON", &PyRobotBase::PyRobotBaseInfo::DeserializeJSON, PyRobotBaseInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(RobotBase::RobotBaseInfo, DeserializeJSON)))
-#endif
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-                         // https://pybind11.readthedocs.io/en/stable/advanced/classes.html#pickling-support
-                         .def(py::pickle(
-                                  // __getstate__
-                                  [](const PyRobotBase::PyRobotBaseInfo &pyinfo) {
-                                        return RobotBaseInfo_pickle_suite::getstate(pyinfo);
-                                  },
-                                  // __setstate__
-                                  [](py::tuple state) {
-                                        if (state.size() != 3) {
-                                            RAVELOG_WARN("Invalid state!");
-                                        }
-                                        /* Create a new C++ instance */
-                                        PyRobotBase::PyRobotBaseInfo pyinfo;
-                                        RobotBaseInfo_pickle_suite::setstate(pyinfo, state);
-                                        return pyinfo;
-                                    }
-                         ))
-#else
-                         .def_pickle(RobotBaseInfo_pickle_suite())
 #endif
     ;
 

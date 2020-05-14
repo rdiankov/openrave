@@ -2230,13 +2230,13 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
 
 std::string PyKinBody::PyKinBodyInfo::__str__() {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    return boost::str(boost::format("<kinbodyinfo: %s>")%_uri);
+    return boost::str(boost::format("<KinBodyInfo: %s>")%_uri);
 #else
     std::string uri = "";
     if (!IS_PYTHONOBJECT_NONE(_uri)) {
         uri = extract<std::string>(_uri);
     }
-    return boost::str(boost::format("<kinbodyinfo: %s>")%uri);
+    return boost::str(boost::format("<KinBodyInfo: %s>")%uri);
 #endif
 }
 
@@ -4148,41 +4148,6 @@ public:
     }
 };
 
-class KinBodyInfo_pickle_suite
-#ifndef USE_PYBIND11_PYTHON_BINDINGS
-    : public pickle_suite
-#endif
-{
-public:
-    static py::tuple getstate(const PyKinBody::PyKinBodyInfo& r)
-    {
-        return py::make_tuple(r._uri, r._vLinkInfos, r._vJointInfos);
-    }
-    static void setstate(PyKinBody::PyKinBodyInfo& r, py::tuple state) {
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        r._uri = extract<std::string>(state[0]);
-
-        py::tuple pyKinBodyInfos = extract_<py::tuple>(state[1]);
-        r._vLinkInfos.clear();
-        r._vLinkInfos.reserve(len(pyKinBodyInfos));
-        for(size_t iState=0; iState < len(pyKinBodyInfos); iState++) {
-            r._vLinkInfos.push_back(extract_<KinBody::LinkInfoPtr>(pyKinBodyInfos[iState]));
-        }
-
-        py::tuple pyJointInfos = extract_<py::tuple>(state[2]);
-        r._vJointInfos.clear();
-        r._vJointInfos.reserve(len(pyJointInfos));
-        for(size_t iState=0; iState < len(pyJointInfos); iState++) {
-            r._vJointInfos.push_back(extract_<KinBody::JointInfoPtr>(pyJointInfos[iState]));
-        }
-#else
-        r._uri = state[0];
-        r._vLinkInfos = extract_<py::list>(state[1]);
-        r._vJointInfos = extract_<py::list>(state[2]);
-#endif
-    }
-};
-
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(IsMimic_overloads, IsMimic, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicEquation_overloads, GetMimicEquation, 0, 3)
@@ -4753,29 +4718,6 @@ void init_openravepy_kinbody()
 #else
                           .def("SerializeJSON", &PyKinBody::PyKinBodyInfo::SerializeJSON, PyKinBodyInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(KinBody::KinBodyInfo, SerializeJSON)))
                           .def("DeserializeJSON", &PyKinBody::PyKinBodyInfo::DeserializeJSON, PyKinBodyInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(KinBody::KinBodyInfo, DeserializeJSON)))
-#endif
-
-
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-                         // https://pybind11.readthedocs.io/en/stable/advanced/classes.html#pickling-support
-                         .def(py::pickle(
-                                  // __getstate__
-                                  [](const PyKinBody::PyKinBodyInfo &pyinfo) {
-                                      return KinBodyInfo_pickle_suite::getstate(pyinfo);
-                                  },
-                                  // __setstate__
-                                  [](py::tuple state) {
-                                      if (state.size() != 3) {
-                                          RAVELOG_WARN("Invalid state!");
-                                      }
-                                      /* Create a new C++ instance */
-                                      PyKinBody::PyKinBodyInfo pyinfo;
-                                      KinBodyInfo_pickle_suite::setstate(pyinfo, state);
-                                      return pyinfo;
-                                  }
-                         ))
-#else
-                         .def_pickle(KinBodyInfo_pickle_suite())
 #endif
     ;
 

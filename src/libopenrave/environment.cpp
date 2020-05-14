@@ -20,11 +20,11 @@ void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& value
 {
     value.SetObject();
 
-    if (_vKinBodyInfos.size() > 0) {
+    if (_vBodyInfos.size() > 0) {
         rapidjson::Value rBodiesValue;
         rBodiesValue.SetArray();
-        rBodiesValue.Reserve(_vKinBodyInfos.size(), allocator);
-        FOREACHC(it, _vKinBodyInfos) {
+        rBodiesValue.Reserve(_vBodyInfos.size(), allocator);
+        FOREACHC(it, _vBodyInfos) {
             rapidjson::Value bodyValue;
             (*it)->SerializeJSON(bodyValue, allocator, fUnitScale, options);
             rBodiesValue.PushBack(bodyValue, allocator);
@@ -35,18 +35,18 @@ void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& value
 
 void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
-    _vKinBodyInfos.clear();
+    _vBodyInfos.clear();
     if (value.HasMember("bodies")) {
-        _vKinBodyInfos.reserve(value["bodies"].Size());
+        _vBodyInfos.reserve(value["bodies"].Size());
         for (size_t iBodyInfo = 0; iBodyInfo < value["bodies"].Size(); iBodyInfo++) {
             if (OpenRAVE::JSON::GetJsonValueByKey<bool>(value["bodies"][iBodyInfo], "isRobot")) {
                 RobotBase::RobotBaseInfoPtr pRobotBaseInfo(new RobotBase::RobotBaseInfo());
                 pRobotBaseInfo->DeserializeJSON(value["bodies"][iBodyInfo], fUnitScale);
-                _vKinBodyInfos.push_back(pRobotBaseInfo);
+                _vBodyInfos.push_back(pRobotBaseInfo);
             } else {
                 KinBody::KinBodyInfoPtr pKinBodyInfo(new KinBody::KinBodyInfo());
                 pKinBodyInfo->DeserializeJSON(value["bodies"][iBodyInfo], fUnitScale);
-                _vKinBodyInfos.push_back(pKinBodyInfo);
+                _vBodyInfos.push_back(pKinBodyInfo);
             }
         }
     }

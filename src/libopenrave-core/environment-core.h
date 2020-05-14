@@ -2349,14 +2349,25 @@ public:
     }
 
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-    virtual void ExtractInfo(EnvironmentBaseInfoPtr& info) const
+    virtual void ExtractInfo(EnvironmentBaseInfo& info)
     {
-
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        info._vBodyInfos.resize(_vecbodies.size());
+        for(size_t i = 0; i < info._vBodyInfos.size(); ++i) {
+            if (_vecbodies[i]->IsRobot()) {
+                info._vBodyInfos[i].reset(new RobotBase::RobotBaseInfo());
+                _vecbodies[i]->ExtractInfo(*info._vBodyInfos[i]);
+            } else {
+                info._vBodyInfos[i].reset(new KinBody::KinBodyInfo());
+                _vecbodies[i]->ExtractInfo(*info._vBodyInfos[i]);
+            }
+        }
     }
 
     /// \brief update EnvironmentBase according to new EnvironmentBaseInfo, returns false if update cannot be performed and requires InitFromInfo
-    virtual bool UpdateFromInfo(const EnvironmentBaseInfoPtr& info)
+    virtual bool UpdateFromInfo(const EnvironmentBaseInfo& info)
     {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
         return true;
     }
 

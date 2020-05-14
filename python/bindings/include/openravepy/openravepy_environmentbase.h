@@ -29,6 +29,29 @@ class PyEnvironmentBase : public OPENRAVE_ENABLE_SHARED_FROM_THIS<PyEnvironmentB
     boost::mutex _envmutex;
     std::list<OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_lock> > _listenvlocks, _listfreelocks;
 #endif
+
+public:
+    class PyEnvironmentBaseInfo
+{
+public:
+    PyEnvironmentBaseInfo();
+    PyEnvironmentBaseInfo(const EnvironmentBase::EnvironmentBaseInfo& info);
+    py::object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
+    void DeserializeJSON(py::object obj, dReal fUnitScale=1.0);
+    EnvironmentBase::EnvironmentBaseInfoPtr GetEnvironmentBaseInfo() const;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos;
+#else
+    py::object _vBodyInfos = py::none_();
+#endif
+    virtual std::string __str__();
+    virtual py::object __unicode__();
+
+protected:
+    void _Update(const EnvironmentBase::EnvironmentBaseInfo& info);
+}; // class PyEnvironmentBaseInfo
+
 protected:
     EnvironmentBasePtr _penv;
 
@@ -240,6 +263,8 @@ public:
     void SetUnit(std::string unitname, dReal unitmult);
 
     object GetUnit() const;
+
+    py::object ExtractInfo() const;
 
     bool __eq__(PyEnvironmentBasePtr p);
     bool __ne__(PyEnvironmentBasePtr p);
