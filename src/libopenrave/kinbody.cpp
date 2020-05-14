@@ -163,6 +163,12 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
         }
         value.AddMember("joints", rJointInfoValues, allocator);
     }
+
+    if (_docReadableInterfaces.IsObject() && _docReadableInterfaces.MemberCount() > 0) {
+        rapidjson::Value readableInterfacesValue;
+        readableInterfacesValue.CopyFrom(_docReadableInterfaces, allocator, true);
+        value.AddMember("readableInterfaces", readableInterfacesValue, allocator);
+    }
 }
 
 void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
@@ -233,6 +239,29 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
                         break;
                     }
                 }
+            }
+        }
+    }
+
+    if (value.HasMember("readableInterfaces")) {
+        if (!_docReadableInterfaces.IsObject()) {
+            _docReadableInterfaces.SetObject();
+        }
+        // two level merging
+        for (rapidjson::Value::ConstMemberIterator it = value["readableInterfaces"].MemberBegin(); it != value["readableInterfaces"].MemberEnd(); ++it) {
+            if (!it->value.IsObject()) {
+                // if readableInterface is not a dict, no need to merge
+                OpenRAVE::JSON::SetJsonValueByKey(_docReadableInterfaces, it->name.GetString(), it->value);
+                continue;
+            }
+            if (!_docReadableInterfaces.HasMember(it->name.GetString()) || !_docReadableInterfaces[it->name.GetString()].IsObject()) {
+                // if old readable interface does not exist or is not a dict, set directly
+                OpenRAVE::JSON::SetJsonValueByKey(_docReadableInterfaces, it->name.GetString(), it->value);
+                continue;
+            }
+            // second level merging
+            for (rapidjson::Value::ConstMemberIterator it2 = it->value.MemberBegin(); it2 != it->value.MemberEnd(); ++it2) {
+                OpenRAVE::JSON::SetJsonValueByKey(_docReadableInterfaces[it->name.GetString()], it2->name.GetString(), it2->value, _docReadableInterfaces.GetAllocator());
             }
         }
     }
@@ -5164,16 +5193,29 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
     SetTransform(Transform());
 
     info._vLinkInfos.resize(_veclinks.size());
-    for(size_t i = 0; i < info._vLinkInfos.size(); ++i) {
-        info._vLinkInfos[i].reset(new KinBody::LinkInfo());
-        _veclinks[i]->ExtractInfo(*info._vLinkInfos[i]);
+    for(size_t iLinkInfo = 0; iLinkInfo < info._vLinkInfos.size(); ++iLinkInfo) {
+        info._vLinkInfos[iLinkInfo].reset(new KinBody::LinkInfo());
+        _veclinks[iLinkInfo]->ExtractInfo(*info._vLinkInfos[iLinkInfo]);
     }
 
     info._vJointInfos.resize(_vecjoints.size());
-    for(size_t i = 0; i < info._vJointInfos.size(); ++i) {
-        info._vJointInfos[i].reset(new KinBody::JointInfo());
-        _vecjoints[i]->ExtractInfo(*info._vJointInfos[i]);
+    for(size_t iJointInfo = 0; iJointInfo < info._vJointInfos.size(); ++iJointInfo) {
+        info._vJointInfos[iJointInfo].reset(new KinBody::JointInfo());
+        _vecjoints[iJointInfo]->ExtractInfo(*info._vJointInfos[iJointInfo]);
     }
+
+    rapidjson::Document docReadableInterfaces;
+    docReadableInterfaces.SetObject();
+    const READERSMAP& mapReadableInterfaces = GetReadableInterfaces();
+    FOREACHC(itReadableInterface, mapReadableInterfaces) {
+        JSONReadablePtr pReadable = OPENRAVE_DYNAMIC_POINTER_CAST<JSONReadable>(itReadableInterface->second);
+        if (!!pReadable) {
+            rapidjson::Value readableValue;
+            pReadable->SerializeJSON(readableValue, docReadableInterfaces.GetAllocator());
+            docReadableInterfaces.AddMember(rapidjson::Value(itReadableInterface->first.c_str(), docReadableInterfaces.GetAllocator()).Move(), readableValue, docReadableInterfaces.GetAllocator());
+        }
+    }
+    info._docReadableInterfaces.Swap(docReadableInterfaces);
 }
 
 bool KinBody::UpdateFromInfo(const KinBodyInfo& info)

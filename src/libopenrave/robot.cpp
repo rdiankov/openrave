@@ -57,11 +57,6 @@ void RobotBase::GripperInfo::SerializeJSON(rapidjson::Value &value, rapidjson::D
 
 void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
-    // _id.clear();
-    // name.clear();
-    // grippertype.clear();
-    // gripperJointNames.clear();
-
     OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", name);
     if( name.size() == 0 && _id.size() > 0 ) {
