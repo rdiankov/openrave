@@ -492,9 +492,18 @@ public:
                 return _info;
             }
 
-            virtual void ExtractInfo(KinBody::GeometryInfo& info) const {
-                info = _info;
+            inline const KinBody::GeometryInfo& UpdateAndGetInfo() {
+                UpdateInfo();
+                return _info;
             }
+
+            virtual void UpdateInfo();
+
+            /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
+            virtual void ExtractInfo(KinBody::GeometryInfo& info) const;
+
+            /// \brief update Geometry according to new GeometryInfo, returns false if update cannot be performed and requires InitFromInfo
+            virtual bool UpdateFromInfo(const KinBody::GeometryInfo& info);
 
             /// cage
             //@{
@@ -848,7 +857,11 @@ protected:
             return _info;
         }
 
+        /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
         virtual void ExtractInfo(KinBody::LinkInfo& info) const;
+
+        /// \brief update Link according to new LinkInfo, returns false if update cannot be performed and requires InitFromInfo
+        virtual bool UpdateFromInfo(const KinBody::LinkInfo& info);
 
 protected:
         /// \brief Updates the cached information due to changes in the collision data.
@@ -1523,7 +1536,11 @@ public:
             return _info;
         }
 
+        /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
         virtual void ExtractInfo(KinBody::JointInfo& info) const;
+
+        /// \brief update Joint according to new JointInfo, returns false if update cannot be performed and requires InitFromInfo
+        virtual bool UpdateFromInfo(const KinBody::JointInfo& info);
 
 protected:
         JointInfo _info;
@@ -1618,6 +1635,7 @@ public:
             *this = other;
         }
         GrabbedInfo& operator=(const GrabbedInfo& other) {
+            _id = other._id;
             _grabbedname = other._grabbedname;
             _robotlinkname = other._robotlinkname;
             _trelative = other._trelative;
@@ -1625,7 +1643,8 @@ public:
             return *this;
         }
         bool operator==(const GrabbedInfo& other) const {
-            return _grabbedname == other._grabbedname
+            return _id == other._id
+                && _grabbedname == other._grabbedname
                 && _robotlinkname == other._robotlinkname
                 && _trelative == other._trelative
                 && _setRobotLinksToIgnore == other._setRobotLinksToIgnore;
@@ -1639,12 +1658,14 @@ public:
 
         /// \brief resets the info
         inline void Reset() {
+            _id.clear();
             _grabbedname.clear();
             _robotlinkname.clear();
             _trelative = Transform();
             _setRobotLinksToIgnore.clear();
         }
 
+        std::string _id; ///< unique id of the grabbed info
         std::string _grabbedname; ///< the name of the body to grab
         std::string _robotlinkname;  ///< the name of the body link that is grabbing the body
         Transform _trelative; ///< transform of first link of body relative to _robotlinkname's transform. In other words, grabbed->GetTransform() == bodylink->GetTransform()*trelative
@@ -1766,6 +1787,8 @@ public:
             _uri = other._uri;
             _name = other._name;
             _referenceUri = other._referenceUri;
+            _dofValues = other._dofValues;
+            _transform = other._transform;
             _vLinkInfos = other._vLinkInfos;
             _vJointInfos = other._vJointInfos;
             _vGrabbedInfos = other._vGrabbedInfos;
@@ -1777,6 +1800,8 @@ public:
                 && _uri == other._uri
                 && _name == other._name
                 && _referenceUri == other._referenceUri
+                && _dofValues == other._dofValues
+                && _transform == other._transform
                 && _vLinkInfos == other._vLinkInfos
                 && _vJointInfos == other._vJointInfos
                 && _vGrabbedInfos == other._vGrabbedInfos;
@@ -1788,16 +1813,18 @@ public:
 
         virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
-        // virtual void DeserializeDiffJSON(const rapidjson::Value& value, KinBody::KinBodyInfo& newInfo, dReal fUntiScale=1.0);
 
         std::string _id;
         std::string _uri;
         std::string _name;
         std::string _referenceUri;  // referenced body info uri
 
+        Transform _transform; ///< transform of the base link
+        std::vector< std::pair<int, dReal> > _dofValues; ///< mapping from jointIndex to dofValue
+        std::vector<GrabbedInfoPtr> _vGrabbedInfos; ///< list of pointers to GrabbedInfo
+
         std::vector<LinkInfoPtr> _vLinkInfos; ///< list of pointers to LinkInfo
         std::vector<JointInfoPtr> _vJointInfos; ///< list of pointers to JointInfo
-        std::vector<GrabbedInfoPtr> _vGrabbedInfos; ///< list of pointers to GrabbedInfo
     };
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
@@ -2749,18 +2776,11 @@ private:
         return boost::static_pointer_cast<KinBody const>(shared_from_this());
     }
 
-    virtual const KinBodyInfo& GetInfo() const {
-        return _info;
-    }
+    /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
+    virtual void ExtractInfo(KinBodyInfo& info);
 
-    virtual void UpdateInfo();
-
-    virtual const KinBodyInfo& UpdateAndGetInfo() {
-        UpdateInfo();
-        return GetInfo();
-    }
-
-    virtual void ExtractInfo(KinBodyInfo& info) const;
+    /// \brief update KinBody according to new KinBodyInfo, returns false if update cannot be performed and requires InitFromInfo
+    virtual bool UpdateFromInfo(const KinBodyInfo& info);
 
 protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies
@@ -2830,9 +2850,6 @@ protected:
     /// Assumes plink has _info initialized correctly, so will be initializing the other data depending on it.
     /// Can only be called before internal robot hierarchy is initialized
     virtual void _InitAndAddJoint(JointPtr pjoint);
-
-
-
 
     std::string _name; ///< name of body
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints

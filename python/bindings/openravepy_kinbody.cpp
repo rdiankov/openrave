@@ -1985,11 +1985,13 @@ RobotBase::GrabbedInfoPtr PyKinBody::PyGrabbedInfo::GetGrabbedInfo() const
 {
     RobotBase::GrabbedInfoPtr pinfo(new RobotBase::GrabbedInfo());
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+    pinfo->_id = _id;
     pinfo->_grabbedname = _grabbedname;
     pinfo->_robotlinkname = _robotlinkname;
     pinfo->_trelative = ExtractTransform(_trelative);
     pinfo->_setRobotLinksToIgnore = std::set<int>(begin(_setRobotLinksToIgnore), end(_setRobotLinksToIgnore));
 #else
+    pinfo->_id = py::extract<std::string>(_id);
     pinfo->_grabbedname = py::extract<std::string>(_grabbedname);
     pinfo->_robotlinkname = py::extract<std::string>(_robotlinkname);
     pinfo->_trelative = ExtractTransform(_trelative);
@@ -2034,9 +2036,11 @@ std::string PyKinBody::PyGrabbedInfo::__str__() {
 
 void PyKinBody::PyGrabbedInfo::_Update(const RobotBase::GrabbedInfo& info) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+    _id = info._id;
     _grabbedname = info._grabbedname;
     _robotlinkname = info._robotlinkname;
 #else
+    _id = ConvertStringToUnicode(info._id);
     _grabbedname = ConvertStringToUnicode(info._grabbedname);
     _robotlinkname = ConvertStringToUnicode(info._robotlinkname);
 #endif
@@ -3580,8 +3584,10 @@ PyStateRestoreContextBase* PyKinBody::CreateKinBodyStateSaver(object options)
     return CreateStateSaver(options);
 }
 
-object PyKinBody::GetInfo() const {
-    return py::to_object(boost::shared_ptr<PyKinBody::PyKinBodyInfo>(new PyKinBody::PyKinBodyInfo(_pbody->GetInfo())));
+object PyKinBody::ExtractInfo() const {
+    KinBody::KinBodyInfo info;
+    _pbody->ExtractInfo(info);
+    return py::to_object(boost::shared_ptr<PyKinBody::PyKinBodyInfo>(new PyKinBody::PyKinBodyInfo(info)));
 }
 
 
@@ -4583,6 +4589,7 @@ void init_openravepy_kinbody()
 #else
     object grabbedinfo = class_<PyKinBody::PyGrabbedInfo, OPENRAVE_SHARED_PTR<PyKinBody::PyGrabbedInfo> >("GrabbedInfo", DOXY_CLASS(KinBody::GrabbedInfo))
 #endif
+                         .def_readwrite("_id",&PyKinBody::PyGrabbedInfo::_id)
                          .def_readwrite("_grabbedname",&PyKinBody::PyGrabbedInfo::_grabbedname)
                          .def_readwrite("_robotlinkname",&PyKinBody::PyGrabbedInfo::_robotlinkname)
                          .def_readwrite("_trelative",&PyKinBody::PyGrabbedInfo::_trelative)
@@ -5083,7 +5090,7 @@ void init_openravepy_kinbody()
 #else
                          .def("CreateKinBodyStateSaver",&PyKinBody::CreateKinBodyStateSaver, CreateKinBodyStateSaver_overloads(PY_ARGS("options") "Creates an object that can be entered using 'with' and returns a KinBodyStateSaver")[return_value_policy<manage_new_object>()])
 #endif
-                         .def("GetInfo", &PyKinBody::GetInfo, DOXY_FN(KinBody, GetInfo))
+                         .def("ExtractInfo", &PyKinBody::ExtractInfo, DOXY_FN(KinBody, ExtractInfo))
                          .def("__enter__",&PyKinBody::__enter__)
                          .def("__exit__",&PyKinBody::__exit__)
                          .def("__repr__",&PyKinBody::__repr__)

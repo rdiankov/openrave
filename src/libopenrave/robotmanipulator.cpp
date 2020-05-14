@@ -81,7 +81,15 @@ void RobotBase::Manipulator::UpdateInfo()
 
 void RobotBase::Manipulator::ExtractInfo(RobotBase::ManipulatorInfo& info) const
 {
+    // TODO
     info = _info;
+}
+
+bool RobotBase::Manipulator::UpdateFromInfo(const RobotBase::ManipulatorInfo& info)
+{
+    // TODO
+    _info = info;
+    return true;
 }
 
 int RobotBase::Manipulator::GetArmDOF() const

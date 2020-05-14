@@ -108,9 +108,11 @@ private:
 public:
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+    std::string _id;
     std::string _grabbedname;
     std::string _robotlinkname;
 #else
+    py::object _id = py::none_();
     py::object _grabbedname = py::none_();
     py::object _robotlinkname = py::none_();
 #endif
@@ -304,7 +306,7 @@ public:
     std::string GetKinematicsGeometryHash() const;
     PyStateRestoreContextBase* CreateKinBodyStateSaver(py::object options=py::none_());
 
-    py::object GetInfo() const;
+    py::object ExtractInfo() const;
 
     virtual PyStateRestoreContextBase* CreateStateSaver(py::object options);
     virtual std::string __repr__();

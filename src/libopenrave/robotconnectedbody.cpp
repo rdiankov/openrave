@@ -368,6 +368,13 @@ void RobotBase::ConnectedBody::ExtractInfo(RobotBase::ConnectedBodyInfo& info) c
     // TODO
 }
 
+bool RobotBase::ConnectedBody::UpdateFromInfo(const RobotBase::ConnectedBodyInfo& info)
+{
+    // TODO
+    _info = info;
+    return true;
+}
+
 RobotBase::ConnectedBodyPtr RobotBase::AddConnectedBody(const RobotBase::ConnectedBodyInfo& connectedBodyInfo, bool removeduplicate)
 {
     if( _nHierarchyComputed != 0 ) {

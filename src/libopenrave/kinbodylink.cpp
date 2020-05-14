@@ -719,6 +719,12 @@ void KinBody::Link::ExtractInfo(KinBody::LinkInfo& info) const {
     }
 }
 
+bool KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info)
+{
+    BOOST_ASSERT(info._id == _info._id);
+    return true;
+}
+
 void KinBody::Link::_Update(bool parameterschanged, uint32_t extraParametersChanged)
 {
     // if there's only one trimesh geometry and it has identity offset, then copy it directly

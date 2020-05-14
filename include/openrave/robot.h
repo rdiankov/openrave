@@ -137,7 +137,11 @@ public:
 
         virtual void UpdateInfo();
 
+        /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
         virtual void ExtractInfo(RobotBase::ManipulatorInfo& info) const;
+
+        /// \brief update Manipulator according to new ManipulatorInfo, returns false if update cannot be performed and requires InitFromInfo
+        virtual bool UpdateFromInfo(const RobotBase::ManipulatorInfo& info);
 
         /// \brief Return the transformation of the manipulator frame
         ///
@@ -600,7 +604,11 @@ public:
             return _info;
         }
 
+        /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
         virtual void ExtractInfo(RobotBase::AttachedSensorInfo& info) const;
+
+        /// \brief update AttachedSensor according to new AttachedSensorInfo, returns false if update cannot be performed and requires InitFromInfo
+        virtual bool UpdateFromInfo(const RobotBase::AttachedSensorInfo& info);
 
 private:
         /// \brief compute internal information from user-set info
@@ -780,7 +788,11 @@ public:
             return _info;
         }
 
+        /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
         virtual void ExtractInfo(RobotBase::ConnectedBodyInfo& info) const;
+
+        /// \brief update ConnectedBody according to new ConnectedBodyInfo, returns false if update cannot be performed and requires InitFromInfo
+        virtual bool UpdateFromInfo(const RobotBase::ConnectedBodyInfo& info);
 
 private:
         ConnectedBodyInfo _info; ///< user specified data (to be serialized and saved), should not contain dynamically generated parameters.
@@ -819,7 +831,8 @@ public:
             _uri = other._uri;
             _name = other._name;
             _referenceUri = other._referenceUri;
-
+            _dofValues = other._dofValues;
+            _transform = other._transform;
             _vLinkInfos = other._vLinkInfos;
             _vJointInfos = other._vJointInfos;
             _vManipulatorInfos = other._vManipulatorInfos;
@@ -834,6 +847,8 @@ public:
                 && _uri == other._uri
                 && _name == other._name
                 && _referenceUri == other._referenceUri
+                && _dofValues == other._dofValues
+                && _transform == other._transform
                 && _vLinkInfos == other._vLinkInfos
                 && _vJointInfos == other._vJointInfos
                 && _vManipulatorInfos == other._vManipulatorInfos
@@ -1293,16 +1308,11 @@ private:
         return boost::static_pointer_cast<RobotBase const>(shared_from_this());
     }
 
-    virtual const RobotBaseInfo& UpdateAndGetInfo() {
-        UpdateInfo();
-        return GetInfo();
-    }
-    virtual const RobotBaseInfo& GetInfo() const {
-        return _info;
-    }
-    virtual void UpdateInfo();
+    /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
+    virtual void ExtractInfo(RobotBaseInfo& info);
 
-    virtual void ExtractInfo(RobotBaseInfo& info) const;
+    /// \brief update RobotBase according to new RobotBaseInfo, returns false if update cannot be performed and requires InitFromInfo
+    virtual bool UpdateFromInfo(const RobotBaseInfo& info);
 
 protected:
     RobotBase(EnvironmentBasePtr penv);

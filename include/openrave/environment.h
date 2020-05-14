@@ -702,6 +702,41 @@ public:
         return __nUniqueId;
     }
 
+    /// \brief info structure used to initialize environment
+    class OPENRAVE_API EnvironmentBaseInfo
+    {
+public:
+        EnvironmentBaseInfo() {}
+        EnvironmentBaseInfo(const EnvironmentBaseInfo& other) {
+            *this = other;
+        }
+        EnvironmentBaseInfo& operator=(const EnvironmentBaseInfo& other) {
+            _vKinBodyInfos = other._vKinBodyInfos;
+            // TODO: deep copy infos
+            return *this;
+        }
+        bool operator==(const EnvironmentBaseInfo& other) const {
+            return _vKinBodyInfos == other._vKinBodyInfos;
+            // TODO: deep compare infos
+        }
+        bool operator!=(const EnvironmentBaseInfo& other) const{
+            return !operator==(other);
+        }
+
+        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
+        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+
+        std::vector<KinBody::KinBodyInfoPtr> _vKinBodyInfos; ///< list of pointers to KinBodyInfo
+    };
+    typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;
+    typedef boost::shared_ptr<EnvironmentBaseInfo const> EnvironmentBaseInfoConstPtr;
+
+    /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
+    virtual void ExtractInfo(EnvironmentBaseInfoPtr& info) const = 0;
+
+    /// \brief update EnvironmentBase according to new EnvironmentBaseInfo, returns false if update cannot be performed and requires InitFromInfo
+    virtual bool UpdateFromInfo(const EnvironmentBaseInfoPtr& info) = 0;
+
 protected:
     virtual const char* GetHash() const {
         return OPENRAVE_ENVIRONMENT_HASH;

@@ -342,6 +342,7 @@ void KinBody::GetGrabbedInfo(std::vector<GrabbedInfo>& vgrabbedinfo) const
         // sometimes bodies can be removed before they are Released, this is ok and can happen during exceptions and stack unwinding
         if( !!pgrabbedbody ) {
             KinBody::GrabbedInfo& outputinfo = vgrabbedinfo[igrabbed];
+            outputinfo._id = 
             outputinfo._grabbedname = pgrabbedbody->GetName();
             outputinfo._robotlinkname = pgrabbed->_plinkrobot->GetName();
             outputinfo._trelative = pgrabbed->_troot;
@@ -357,17 +358,22 @@ void KinBody::GetGrabbedInfo(std::vector<GrabbedInfo>& vgrabbedinfo) const
 
 void KinBody::GrabbedInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "grabbedName", _grabbedname, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "robotLinkName", _robotlinkname, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "transform", _trelative, allocator);
+    Transform transform = _trelative;
+    transform.trans *= fUnitScale;
+    OpenRAVE::JSON::SetJsonValueByKey(value, "transform", transform, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "robotLinksToIgnoreSet", _setRobotLinksToIgnore, allocator);
 }
 
 void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "grabbedName", _grabbedname);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "robotLinkName", _robotlinkname);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _trelative);
+    _trelative.trans *= fUnitScale;
     OpenRAVE::JSON::LoadJsonValueByKey(value, "robotLinksToIgnoreSet", _setRobotLinksToIgnore);
 }
 

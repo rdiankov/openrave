@@ -113,6 +113,32 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
     if (!_referenceUri.empty()) {
         OpenRAVE::JSON::SetJsonValueByKey(value, "referenceUri", _referenceUri, allocator);
     }
+
+    if (_dofValues.size() > 0) {
+        rapidjson::Value dofValues;
+        dofValues.SetArray();
+        dofValues.Reserve(_dofValues.size(), allocator);
+        FOREACHC(itDofValue, _dofValues) {
+            rapidjson::Value dofValue;
+            OpenRAVE::JSON::SetJsonValueByKey(dofValue, "jointId", _vJointInfos[itDofValue->first]->_id, allocator);
+            OpenRAVE::JSON::SetJsonValueByKey(dofValue, "value", itDofValue->second, allocator);
+            dofValues.PushBack(dofValue, allocator);
+        }
+        value.AddMember("dofValues", dofValues, allocator);
+    }
+
+    if (_vGrabbedInfos.size() > 0) {
+        rapidjson::Value rGrabbedInfoValues;
+        rGrabbedInfoValues.SetArray();
+        rGrabbedInfoValues.Reserve(_vGrabbedInfos.size(), allocator);
+        FOREACHC(it, _vGrabbedInfos) {
+            rapidjson::Value grabbedInfoValue;
+            (*it)->SerializeJSON(grabbedInfoValue, allocator, fUnitScale, options);
+            rGrabbedInfoValues.PushBack(grabbedInfoValue, allocator);
+        }
+        value.AddMember("grabbed", rGrabbedInfoValues, allocator);
+    }
+
     // OpenRAVE::JSON::SetJsonValueByKey(value, "uri", _uri, allocator); // deprecated
     if (_vLinkInfos.size() > 0) {
         rapidjson::Value rLinkInfoValues;
@@ -149,6 +175,15 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     OpenRAVE::JSON::LoadJsonValueByKey(value, "isRobot", isRobot);
     BOOST_ASSERT(!isRobot);
 
+    _vGrabbedInfos.clear();
+    if (value.HasMember("grabbed")) {
+        _vGrabbedInfos.reserve(value["grabbed"].Size());
+        for (size_t iGrabbedInfo = 0; iGrabbedInfo < value["grabbed"].Size(); iGrabbedInfo++) {
+            GrabbedInfoPtr pGrabbedInfo(new GrabbedInfo());
+            pGrabbedInfo->DeserializeJSON(value["grabbed"][iGrabbedInfo], fUnitScale);
+            _vGrabbedInfos.push_back(pGrabbedInfo);
+        }
+    }
 
     _vLinkInfos.clear();
     if (value.HasMember("links")) {
@@ -159,6 +194,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
             _vLinkInfos.push_back(pLinkInfo);
         }
     }
+
     _vJointInfos.clear();
     if (value.HasMember("joints")) {
         _vJointInfos.reserve(value["joints"].Size());
@@ -166,6 +202,24 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
             JointInfoPtr pJointInfo(new JointInfo());
             pJointInfo->DeserializeJSON(value["joints"][iJointInfo], fUnitScale);
             _vJointInfos.push_back(pJointInfo);
+        }
+    }
+
+    _dofValues.resize(0);
+    if (value.HasMember("dofValues")) {
+        std::string jointId;
+        dReal dofValue;
+        for(rapidjson::Value::ConstValueIterator itr = value["dofValues"].Begin(); itr != value["dofValues"].End(); ++itr) {
+            if (itr->IsObject() && itr->HasMember("jointId") && itr->HasMember("value")) {
+                OpenRAVE::JSON::LoadJsonValueByKey(*itr, "jointId", jointId);
+                OpenRAVE::JSON::LoadJsonValueByKey(*itr, "value", dofValue);
+                for (size_t iJointInfo = 0; iJointInfo < _vJointInfos.size(); iJointInfo++) {
+                    if (_vJointInfos[iJointInfo]->_id == jointId) {
+                        _dofValues.emplace_back(iJointInfo, dofValue);
+                        break;
+                    }
+                }
+            }
         }
     }
 }
@@ -5070,27 +5124,29 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
     }
 }
 
-void KinBody::UpdateInfo()
+void KinBody::ExtractInfo(KinBodyInfo& info)
 {
-    _info._name = _name;
-    _info._uri = __struri;
-
-    _info._vLinkInfos.resize(_veclinks.size());
-    for(size_t i = 0; i < _info._vLinkInfos.size(); ++i) {
-        _veclinks[i]->UpdateInfo();
-        _info._vLinkInfos[i] = boost::make_shared<KinBody::LinkInfo>(_veclinks[i]->_info);
-    }
-
-    _info._vJointInfos.resize(_vecjoints.size());
-    for(size_t i = 0; i < _info._vJointInfos.size(); ++i) {
-        _vecjoints[i]->UpdateInfo();
-        _info._vJointInfos[i] = boost::make_shared<KinBody::JointInfo>(_vecjoints[i]->_info);
-    }
-}
-
-void KinBody::ExtractInfo(KinBodyInfo& info) const {
     info = _info;
+    info._name = _name;
     info._uri = __struri;
+
+    info._dofValues.resize(0);
+    std::vector<dReal> vDOFValues;
+    GetDOFValues(vDOFValues);
+    for (size_t idof = 0; idof < vDOFValues.size(); ++idof) {
+        JointPtr pJoint = GetJointFromDOFIndex(idof);
+        info._dofValues.emplace_back(pJoint->GetDOFIndex(), vDOFValues[idof]);
+    }
+
+    info._transform = GetTransform();
+
+    info._vGrabbedInfos.resize(0);
+    GetGrabbedInfo(info._vGrabbedInfos);
+
+    KinBody::KinBodyStateSaver saver(shared_kinbody());
+    vector<dReal> vZeros(GetDOF(), 0);
+    SetDOFValues(vZeros, KinBody::CLA_Nothing);
+    SetTransform(Transform());
 
     info._vLinkInfos.resize(_veclinks.size());
     for(size_t i = 0; i < info._vLinkInfos.size(); ++i) {
@@ -5103,9 +5159,12 @@ void KinBody::ExtractInfo(KinBodyInfo& info) const {
         info._vJointInfos[i].reset(new KinBody::JointInfo());
         _vecjoints[i]->ExtractInfo(*info._vJointInfos[i]);
     }
+}
 
-    info._vGrabbedInfos.resize(0);
-    GetGrabbedInfo(info._vGrabbedInfos);
+bool KinBody::UpdateFromInfo(const KinBodyInfo& info)
+{
+    BOOST_ASSERT(info._id == _info._id);
+    return true;
 }
 
 } // end namespace OpenRAVE
