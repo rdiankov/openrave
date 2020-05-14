@@ -3584,7 +3584,20 @@ public:
                 }
 
                 RobotBasePtr pbody;
-                if( reader.InitFromURI(uri, AttributesList()) ) {
+                AttributesList atts;
+                std::string schemes;
+                FOREACH(ialias, _vOpenRAVESchemeAliases) {
+                    if( schemes.size() > 0 ) {
+                        schemes += ' ';
+                    }
+                    schemes += *ialias;
+                }
+                if (!schemes.empty()) {
+                    RAVELOG_VERBOSE_FORMAT("inherit parent reader's openravescheme %s", schemes);
+                    atts.emplace_back("openravescheme", schemes);
+                }
+
+                if( reader.InitFromURI(url, atts) ) {
                     reader.Extract();
                     std::vector<RobotBasePtr> robots;
                     tempenv->GetRobots(robots);
