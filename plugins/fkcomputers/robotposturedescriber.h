@@ -23,7 +23,7 @@ public:
 
     /// \brief Computes an integer value to describe current robot posture
     /// Computes a value describing descrete posture of robot kinematics between base link and endeffector link
-    virtual bool ComputePostureValues(std::vector<uint16_t>& values, const std::vector<double>& jointvalues = {}) const override;
+    virtual bool ComputePostureValues(std::vector<uint16_t>& values, const std::vector<double>& jointvalues = {}) override;
 
     /// \brief Set the tolerance for determining whether a robot posture value is close to 0 (i.e. singularity, branch point)
     bool SetPostureValueThreshold(const double fTol);

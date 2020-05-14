@@ -179,7 +179,7 @@ bool RobotPostureDescriber::Supports(const std::array<RobotBase::LinkPtr, 2>& ki
 }
 
 
-bool RobotPostureDescriber::ComputePostureValues(std::vector<uint16_t>& posturestates, const std::vector<double>& jointvalues) const {
+bool RobotPostureDescriber::ComputePostureValues(std::vector<uint16_t>& posturestates, const std::vector<double>& jointvalues) {
     if(!jointvalues.empty()) {
         const KinBodyPtr probot = _kinematicsChain[0]->GetParent();
         if(jointvalues.size() != _joints.size()) {
