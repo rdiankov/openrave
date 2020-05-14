@@ -426,7 +426,8 @@ bool KinBody::GeometryInfo::ComputeInnerEmptyVolume(Transform& tInnerEmptyVolume
     }
 }
 
-inline void SaveJsonValue(rapidjson::Value& v, const KinBody::GeometryInfo::SideWall& t, rapidjson::Document::AllocatorType& alloc) {
+inline void SaveJsonValue(rapidjson::Value& v, const KinBody::GeometryInfo::SideWall& t, rapidjson::Document::AllocatorType& alloc)
+{
     v.SetObject();
     OpenRAVE::JSON::SetJsonValueByKey(v, "transform", t.transf, alloc);
     OpenRAVE::JSON::SetJsonValueByKey(v, "halfExtents", t.vExtents, alloc);
@@ -448,7 +449,8 @@ inline void SaveJsonValue(rapidjson::Value& v, const KinBody::GeometryInfo::Side
     }
 }
 
-inline void LoadJsonValue(const rapidjson::Value& v, KinBody::GeometryInfo::SideWall& t) {
+inline void LoadJsonValue(const rapidjson::Value& v, KinBody::GeometryInfo::SideWall& t)
+{
     if(v.IsObject()) {
         OpenRAVE::JSON::LoadJsonValueByKey(v, "transform", t.transf);
         OpenRAVE::JSON::LoadJsonValueByKey(v, "halfExtents", t.vExtents);
@@ -546,7 +548,8 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Do
     OpenRAVE::JSON::SetJsonValueByKey(value, "modifiable", _bModifiable, allocator);
 }
 
-inline std::string _GetGeometryTypeString(const GeometryType& geometryType) {
+inline std::string _GetGeometryTypeString(const GeometryType& geometryType)
+{
     switch(geometryType) {
     case GT_Box:
         return "box";
@@ -1198,6 +1201,22 @@ uint8_t KinBody::Link::Geometry::ApplyDiff(const rapidjson::Value& geometryValue
     }
 
     return applyResult | ApplyDiffResult::ADR_OK;
+}
+
+void KinBody::Link::Geometry::UpdateInfo()
+{
+}
+
+void KinBody::Link::Geometry::ExtractInfo(KinBody::GeometryInfo& info) const
+{
+    info = _info;
+}
+
+bool KinBody::Link::Geometry::UpdateFromInfo(const KinBody::GeometryInfo& info)
+{
+    BOOST_ASSERT(info._id == _info._id);
+    _info = info;
+    return true;
 }
 
 }

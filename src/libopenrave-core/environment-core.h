@@ -2501,6 +2501,18 @@ public:
         _unit = unit;
     }
 
+    /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
+    virtual void ExtractInfo(EnvironmentBaseInfoPtr& info) const
+    {
+
+    }
+
+    /// \brief update EnvironmentBase according to new EnvironmentBaseInfo, returns false if update cannot be performed and requires InitFromInfo
+    virtual bool UpdateFromInfo(const EnvironmentBaseInfoPtr& info)
+    {
+        return true;
+    }
+
 protected:
 
     /// \brief assumes environment and _mutexInterfaces are locked

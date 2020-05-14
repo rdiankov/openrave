@@ -2075,6 +2075,12 @@ void KinBody::Joint::ExtractInfo(KinBody::JointInfo& info) const
     GetValues(info._vcurrentvalues);
 }
 
+bool KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& info)
+{
+    BOOST_ASSERT(info._id == _info._id);
+    return true;
+}
+
 void KinBody::Joint::serialize(std::ostream& o, int options) const
 {
     if( options & SO_Kinematics ) {

@@ -145,6 +145,23 @@ protected:
                     bodyValue.AddMember("grabbed", grabbedsValue, _allocator);
                 }
 
+                // readable interface
+                if (pBody->GetReadableInterfaces().size() > 0) {
+                    rapidjson::Value readableInterfacesValue;
+                    readableInterfacesValue.SetObject();
+                    FOREACHC(it, pBody->GetReadableInterfaces()) {
+                        JSONReadablePtr pReadable = OPENRAVE_DYNAMIC_POINTER_CAST<JSONReadable>(it->second);
+                        if (!!pReadable) {
+                            rapidjson::Value readableValue;
+                            pReadable->SerializeJSON(readableValue, _allocator);
+                            readableInterfacesValue.AddMember(rapidjson::Value(it->first.c_str(), _allocator).Move(), readableValue, _allocator);
+                        }
+                    }
+                    if (readableInterfacesValue.MemberCount() > 0) {
+                        bodyValue.AddMember("readableInterfaces", readableInterfacesValue, _allocator);
+                    }
+                }
+
                 // finally push to the bodiesValue array if bodyValue is not empty
                 if (bodyValue.MemberCount() > 0) {
                     bodiesValue.PushBack(bodyValue, _allocator);
