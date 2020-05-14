@@ -2458,31 +2458,31 @@ void RobotBase::ExtractInfo(RobotBaseInfo& info)
     }
 
     info._vJointInfos.resize(_vecjoints.size());
-    for(size_t i = 0; i < _info._vJointInfos.size(); ++i) {
+    for(size_t i = 0; i < info._vJointInfos.size(); ++i) {
         info._vJointInfos[i].reset(new KinBody::JointInfo());
         _vecjoints[i]->ExtractInfo(*info._vJointInfos[i]);
     }
 
     info._vManipulatorInfos.resize(_vecManipulators.size());
-    for(size_t i = 0; i < _info._vManipulatorInfos.size(); ++i) {
+    for(size_t i = 0; i < info._vManipulatorInfos.size(); ++i) {
         info._vManipulatorInfos[i].reset(new RobotBase::ManipulatorInfo());
         _vecManipulators[i]->ExtractInfo(*info._vManipulatorInfos[i]);
     }
 
     info._vAttachedSensorInfos.resize(_vecAttachedSensors.size());
-    for(size_t i = 0; i < _info._vAttachedSensorInfos.size(); ++i) {
+    for(size_t i = 0; i < info._vAttachedSensorInfos.size(); ++i) {
         info._vAttachedSensorInfos[i].reset(new RobotBase::AttachedSensorInfo());
         _vecAttachedSensors[i]->ExtractInfo(*info._vAttachedSensorInfos[i]);
     }
 
     info._vConnectedBodyInfos.resize(_vecConnectedBodies.size());
-    for(size_t i = 0; i < _info._vConnectedBodyInfos.size(); ++i) {
+    for(size_t i = 0; i < info._vConnectedBodyInfos.size(); ++i) {
         info._vConnectedBodyInfos[i].reset(new RobotBase::ConnectedBodyInfo());
         _vecConnectedBodies[i]->ExtractInfo(*info._vConnectedBodyInfos[i]);
     }
 
     info._vGripperInfos.resize(_vecGripperInfos.size());
-    for(size_t i = 0; i < _info._vGripperInfos.size(); ++i) {
+    for(size_t i = 0; i < info._vGripperInfos.size(); ++i) {
         info._vGripperInfos[i].reset(new RobotBase::GripperInfo());
         *info._vGripperInfos[i] = *_vecGripperInfos[i];
     }
