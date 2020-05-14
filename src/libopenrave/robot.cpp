@@ -57,10 +57,10 @@ void RobotBase::GripperInfo::SerializeJSON(rapidjson::Value &value, rapidjson::D
 
 void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
-    _id.clear();
-    name.clear();
-    grippertype.clear();
-    gripperJointNames.clear();
+    // _id.clear();
+    // name.clear();
+    // grippertype.clear();
+    // gripperJointNames.clear();
 
     OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", name);
@@ -71,9 +71,16 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
     OpenRAVE::JSON::LoadJsonValueByKey(value, "grippertype", grippertype);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "gripperJointNames", gripperJointNames);
 
+    // value may used for partial update
+    if (!!_pdocument) {
+        OpenRAVE::JSON::UpdateJson(*_pdocument, value);
+        return;
+    }
+
     // should always create a new _pdocument in case an old one is initialized and copied
     _pdocument.reset(new rapidjson::Document());
     _pdocument->CopyFrom(value, _pdocument->GetAllocator(), true); // need to copy the const strings
+
 }
 
 void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const

@@ -103,6 +103,7 @@ public:
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
 
+
         std::string _id; /// < unique id
         std::string name; ///< unique name
         std::string grippertype; ///< gripper type
