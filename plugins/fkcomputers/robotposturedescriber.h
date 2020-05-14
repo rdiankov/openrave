@@ -22,7 +22,7 @@ public:
     virtual bool Supports(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain) const override;
 
     /// \brief Computes an integer value to describe current robot posture
-    /// Computes a value describing descrete posture of robot kinematics between base link and endeffector link
+    /// Computes a value describing descrete posture of robot kinematics between baselink and eelink
     virtual bool ComputePostureValues(std::vector<uint16_t>& values, const std::vector<double>& jointvalues = {}) override;
 
     /// \brief Set the tolerance for determining whether a robot posture value is close to 0 (i.e. singularity, branch point)
@@ -38,10 +38,11 @@ protected:
     /// \brief `SendCommand` APIs
     bool _SetPostureValueThresholdCommand(std::ostream& ssout, std::istream& ssin);
     bool _GetPostureValueThresholdCommand(std::ostream& ssout, std::istream& ssin) const;
+    bool _GetArmIndicesCommand(std::ostream& ssout, std::istream& ssin) const;
 
-    std::array<RobotBase::LinkPtr, 2> _kinematicsChain; ///< base link and ee link
+    std::array<RobotBase::LinkPtr, 2> _kinematicsChain; ///< baselink and eelink
     std::vector<KinBody::JointPtr> _joints; ///< joints from baselink to eelink
-    std::vector<int> _armindices;
+    std::vector<int> _armindices; ///< dof indices from baselink to eelink
     double _fTol = 1e-6; ///< tolerance for computing robot posture values
     PostureValueFn _posturefn; ///< function that computes posture values and states for a kinematics chain
 };

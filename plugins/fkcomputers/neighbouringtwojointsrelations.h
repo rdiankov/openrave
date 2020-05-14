@@ -1,11 +1,12 @@
 #ifndef PLUGINS_FKCOMPUTERS_NEIGHBOURINGTWOJOINTSRELATIONS
 #define PLUGINS_FKCOMPUTERS_NEIGHBOURINGTWOJOINTSRELATIONS
 #include <cstdint> // uint16_t
+#include <type_traits> // underlying_type
 
 namespace OpenRAVE {
 
 // https://stackoverflow.com/questions/12059774/c11-standard-conformant-bitmasks-using-enum-class
-enum class NeighbouringTwoJointsRelations : uint16_t {
+enum class NeighbouringTwoJointsRelation : uint16_t {
     NTJR_UNKNOWN                 = 0x0,
     NTJR_PARALLEL                = 0x1,
     NTJR_PERPENDICULAR           = 0x2,
@@ -14,19 +15,35 @@ enum class NeighbouringTwoJointsRelations : uint16_t {
     NTJR_INTERSECT_PERPENDICULAR = NTJR_INTERSECT | NTJR_PERPENDICULAR, // 0x6
 };
 
-inline constexpr NeighbouringTwoJointsRelations operator&(NeighbouringTwoJointsRelations x, NeighbouringTwoJointsRelations y) {
-return static_cast<NeighbouringTwoJointsRelations>(static_cast<int>(x) & static_cast<int>(y));
+enum class RobotPostureSupportType : uint16_t {
+    RPST_NOSUPPORT   = 0x0,
+    RPST_6R_GENERAL  = 0x1,
+    RPST_4R_SPECIAL_0  = 0x2,
+};
+
+template <typename T>
+inline constexpr T operator&(T x, T y)
+{
+    using UT = typename std::underlying_type<T>::type;
+    return static_cast<T>(static_cast<UT>(x) & static_cast<UT>(y));
 }
 
-inline constexpr NeighbouringTwoJointsRelations operator|(NeighbouringTwoJointsRelations x, NeighbouringTwoJointsRelations y) {
-return static_cast<NeighbouringTwoJointsRelations>(static_cast<int>(x) | static_cast<int>(y));
+template <typename T>
+inline constexpr T operator|(T x, T y)
+{
+    using UT = typename std::underlying_type<T>::type;
+    return static_cast<T>(static_cast<UT>(x) | static_cast<UT>(y));
 }
 
-inline NeighbouringTwoJointsRelations& operator&=(NeighbouringTwoJointsRelations& x, NeighbouringTwoJointsRelations y) {
+template <typename T>
+inline T operator&=(T& x, T y)
+{
     return x = x & y;
 }
 
-inline NeighbouringTwoJointsRelations& operator|=(NeighbouringTwoJointsRelations& x, NeighbouringTwoJointsRelations y) {
+template <typename T>
+inline T operator|=(T& x, T y)
+{
     return x = x | y;
 }
 

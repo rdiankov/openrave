@@ -1,5 +1,6 @@
-#include "neighbouringtwojointsrelations.h" // NeighbouringTwoJointsRelations
+#include "neighbouringtwojointsrelations.h" // NeighbouringTwoJointsRelation
 #include "robotposturedescriber.h" // RobotPostureDescriber
+#include "openraveplugindefs.h" // SerializeValues
 
 namespace OpenRAVE {
 
@@ -18,12 +19,17 @@ RobotPostureDescriber::RobotPostureDescriber(EnvironmentBasePtr penv,
     this->RegisterCommand("GetPostureValueThreshold",
                           boost::bind(&RobotPostureDescriber::_GetPostureValueThresholdCommand, this, _1, _2),
                           "Gets the tolerance for determining whether a robot posture value is close to 0 and hence would have hybrid states");
+
+    this->RegisterCommand("GetArmIndices",
+                          boost::bind(&RobotPostureDescriber::_GetArmIndicesCommand, this, _1, _2),
+                          "Gets the shared object library name for computing the robot posture values and states");
 }
 
 RobotPostureDescriber::~RobotPostureDescriber() {}
 
 bool RobotPostureDescriber::Init(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain) {
     if(!this->Supports(kinematicsChain)) {
+        RAVELOG_WARN("Does not support kinematics chain");
         return false;
     }
     _kinematicsChain = kinematicsChain;
@@ -64,26 +70,26 @@ void RobotPostureDescriber::_GetJointsFromKinematicsChain(const std::array<Robot
     }
 }
 
-NeighbouringTwoJointsRelations AnalyzeTransformBetweenNeighbouringJoints(const Transform& t) {
+NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Transform& t) {
     const double tol = 1e-15;
     const Vector zaxis0(0, 0, 1); // z-axis of the first joint
     const Vector zaxis1 = t.rotate(zaxis0); // z-axis of the second joint
     const double dotprod = zaxis1.dot3(zaxis0);
 
-    NeighbouringTwoJointsRelations o = NeighbouringTwoJointsRelations::NTJR_UNKNOWN;
+    NeighbouringTwoJointsRelation o = NeighbouringTwoJointsRelation::NTJR_UNKNOWN;
     if(1.0 - fabs(dotprod) <= tol) {
-        o |= NeighbouringTwoJointsRelations::NTJR_PARALLEL; // TO-DO: check overlapping
+        o |= NeighbouringTwoJointsRelation::NTJR_PARALLEL; // TO-DO: check overlapping
         if(zaxis0.cross(t.trans).lengthsqr3() <= tol) {
-            o |= NeighbouringTwoJointsRelations::NTJR_INTERSECT;
+            o |= NeighbouringTwoJointsRelation::NTJR_INTERSECT;
         }
     }
     else {
         // not parallel
         if (fabs(dotprod) <= tol) {
-            o |= NeighbouringTwoJointsRelations::NTJR_PERPENDICULAR;
+            o |= NeighbouringTwoJointsRelation::NTJR_PERPENDICULAR;
         }
         if(fabs(zaxis0.cross(zaxis1).dot3(t.trans)) <= tol) {
-            o |= NeighbouringTwoJointsRelations::NTJR_INTERSECT;
+            o |= NeighbouringTwoJointsRelation::NTJR_INTERSECT;
         }
     }
 
@@ -127,13 +133,13 @@ bool AnalyzeSixRevoluteJoints0(const std::vector<JointPtr>& joints) {
     const Transform tJ4J5 = joints[3]->GetInternalHierarchyRightTransform() * joints[4]->GetInternalHierarchyLeftTransform();
     const Transform tJ5J6 = joints[4]->GetInternalHierarchyRightTransform() * joints[5]->GetInternalHierarchyLeftTransform();
 
-    return ((AnalyzeTransformBetweenNeighbouringJoints(tJ1J2) & NeighbouringTwoJointsRelations::NTJR_PERPENDICULAR) != NeighbouringTwoJointsRelations::NTJR_UNKNOWN)
-        && AnalyzeTransformBetweenNeighbouringJoints(tJ2J3) == NeighbouringTwoJointsRelations::NTJR_PARALLEL
-        && ((AnalyzeTransformBetweenNeighbouringJoints(tJ3J4) & NeighbouringTwoJointsRelations::NTJR_PERPENDICULAR) != NeighbouringTwoJointsRelations::NTJR_UNKNOWN)
-        && AnalyzeTransformBetweenNeighbouringJoints(tJ4J5) == NeighbouringTwoJointsRelations::NTJR_INTERSECT_PERPENDICULAR
-        // && AnalyzeTransformBetweenNeighbouringJoints(tJ5J6) == NeighbouringTwoJointsRelations::NTJR_INTERSECT_PERPENDICULAR
+    return ((AnalyzeTransformBetweenNeighbouringJoints(tJ1J2) & NeighbouringTwoJointsRelation::NTJR_PERPENDICULAR) != NeighbouringTwoJointsRelation::NTJR_UNKNOWN)
+        && AnalyzeTransformBetweenNeighbouringJoints(tJ2J3) == NeighbouringTwoJointsRelation::NTJR_PARALLEL
+        && ((AnalyzeTransformBetweenNeighbouringJoints(tJ3J4) & NeighbouringTwoJointsRelation::NTJR_PERPENDICULAR) != NeighbouringTwoJointsRelation::NTJR_UNKNOWN)
+        && AnalyzeTransformBetweenNeighbouringJoints(tJ4J5) == NeighbouringTwoJointsRelation::NTJR_INTERSECT_PERPENDICULAR
+        // && AnalyzeTransformBetweenNeighbouringJoints(tJ5J6) == NeighbouringTwoJointsRelation::NTJR_INTERSECT_PERPENDICULAR
         // TGN: not necessarily intersect?
-        && ((AnalyzeTransformBetweenNeighbouringJoints(tJ5J6) & NeighbouringTwoJointsRelations::NTJR_PERPENDICULAR) != NeighbouringTwoJointsRelations::NTJR_UNKNOWN)
+        && ((AnalyzeTransformBetweenNeighbouringJoints(tJ5J6) & NeighbouringTwoJointsRelation::NTJR_PERPENDICULAR) != NeighbouringTwoJointsRelation::NTJR_UNKNOWN)
         ;
 }
 
@@ -153,13 +159,17 @@ bool AnalyzeFourRevoluteJoints0(const std::vector<JointPtr>& joints) {
     const Transform tJ2J3 = joints[1]->GetInternalHierarchyRightTransform() * joints[2]->GetInternalHierarchyLeftTransform();
     const Transform tJ3J4 = joints[2]->GetInternalHierarchyRightTransform() * joints[3]->GetInternalHierarchyLeftTransform();
 
-    return AnalyzeTransformBetweenNeighbouringJoints(tJ1J2) == NeighbouringTwoJointsRelations::NTJR_INTERSECT_PERPENDICULAR
-        && AnalyzeTransformBetweenNeighbouringJoints(tJ2J3) == NeighbouringTwoJointsRelations::NTJR_PARALLEL
-        && AnalyzeTransformBetweenNeighbouringJoints(tJ3J4) == NeighbouringTwoJointsRelations::NTJR_PARALLEL
+    return AnalyzeTransformBetweenNeighbouringJoints(tJ1J2) == NeighbouringTwoJointsRelation::NTJR_INTERSECT_PERPENDICULAR
+        && AnalyzeTransformBetweenNeighbouringJoints(tJ2J3) == NeighbouringTwoJointsRelation::NTJR_PARALLEL
+        && AnalyzeTransformBetweenNeighbouringJoints(tJ3J4) == NeighbouringTwoJointsRelation::NTJR_PARALLEL
         ;
 }
 
 bool RobotPostureDescriber::Supports(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain) const {
+    if( kinematicsChain[0] == nullptr || kinematicsChain[1] == nullptr ) {
+        RAVELOG_WARN("kinematics chain is not valid as having nullptr");
+        return false;
+    }
     std::vector<JointPtr> joints;
     _GetJointsFromKinematicsChain(kinematicsChain, joints);
     const size_t armdof = joints.size();
@@ -215,6 +225,11 @@ bool RobotPostureDescriber::_SetPostureValueThresholdCommand(std::ostream& ssout
 bool RobotPostureDescriber::_GetPostureValueThresholdCommand(std::ostream& ssout, std::istream& ssin) const {
     ssout << _fTol;
     return true;
+}
+
+bool RobotPostureDescriber::_GetArmIndicesCommand(std::ostream& ssout, std::istream& ssin) const {
+    SerializeValues(ssout, _armindices, ' ');
+    return !_armindices.empty();
 }
 
 } // namespace OpenRAVE
