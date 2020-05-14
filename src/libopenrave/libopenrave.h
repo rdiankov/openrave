@@ -470,6 +470,38 @@ inline const char *strcasestr(const char *s, const char *find)
 }
 #endif
 
+///* \brief Update current info from json value. Create a new one if there is no id matched.
+template<typename T>
+void UpdateOrCreateInfo(const rapidjson::Value& value, const std::string id, std::vector<boost::shared_ptr<T>>& vInfos, dReal fUnitScale) {
+    typename std::vector<boost::shared_ptr<T>>::iterator itExistingInfo = vInfos.end();
+    FOREACH(itInfo, vInfos) {
+        if ((*itInfo)->_id == id) {
+            itExistingInfo = itInfo;
+            break;
+        }
+    }
+    bool isDeleted = OpenRAVE::JSON::GetJsonValueByKey<bool>(value, "__delete__", false);
+    if (itExistingInfo != vInfos.end()) {
+        if (isDeleted) {
+            vInfos.erase(itExistingInfo);
+            return;
+        }
+        (*itExistingInfo)->DeserializeJSON(value, fUnitScale);
+        (*itExistingInfo)->_id = id;
+        return;
+    }
+    if (isDeleted) {
+        return;
+    }
+    boost::shared_ptr<T> pNewInfo(new T());
+    pNewInfo->DeserializeJSON(value, fUnitScale);
+    pNewInfo->_id = id;
+    vInfos.push_back(pNewInfo);
+}
+
+
+
+
 } // end OpenRAVE namespace
 
 // need the prototypes in order to keep them free of the OpenRAVE namespace
