@@ -137,14 +137,22 @@ public:
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     std::vector<KinBody::LinkInfoPtr> _vLinkInfos;
     std::vector<KinBody::JointInfoPtr> _vJointInfos;
+    std::vector<KinBody::GrabbedInfoPtr> _vGrabbedInfos;
     std::string _uri;
     std::string _id;
+    std::string _name;
+    std::string _referenceUri;
 #else
     py::object _vLinkInfos = py::none_();
     py::object _vJointInfos = py::none_();
+    py::object _vGrabbedInfos = py::none_();
     py::object _uri = py::none_();
+    py::object _referenceUri = py::none_();
     py::object _id = py::none_();
+    py::object _name = py::none_();
 #endif
+    py::object _transform = ReturnTransform(Transform());
+    py::object _dofValues = py::none_();
     virtual std::string __str__();
     virtual py::object __unicode__();
 

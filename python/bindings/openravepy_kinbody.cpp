@@ -109,6 +109,65 @@ inline std::vector<KinBody::JointInfoPtr> ExtractJointInfoArray(object pyJointIn
     return vJointInfos;
 }
 
+inline std::vector<KinBody::GrabbedInfoPtr> ExtractGrabbedInfoArray(object pyGrabbedInfoList)
+{
+    if( IS_PYTHONOBJECT_NONE(pyGrabbedInfoList) ) {
+        return {};
+    }
+    std::vector<KinBody::GrabbedInfoPtr> vGrabbedInfos;
+    try {
+        const size_t arraySize = len(pyGrabbedInfoList);
+        vGrabbedInfos.resize(arraySize);
+
+        for(size_t iGrabbedInfo = 0; iGrabbedInfo < arraySize; iGrabbedInfo++) {
+            extract_<OPENRAVE_SHARED_PTR<PyKinBody::PyGrabbedInfo>> pygrabbedinfo(pyGrabbedInfoList[iGrabbedInfo]);
+            if (pygrabbedinfo.check()) {
+                vGrabbedInfos[iGrabbedInfo] = ((OPENRAVE_SHARED_PTR<PyKinBody::PyGrabbedInfo>)pygrabbedinfo)->GetGrabbedInfo();
+            }
+            else {
+                throw openrave_exception(_("Bad GrabbedInfo"));
+            }
+        }
+    }
+    catch(...) {
+        RAVELOG_WARN("Cannot do ExtractArray for GrabbedInfos");
+    }
+    return vGrabbedInfos;
+}
+
+inline std::vector< std::pair<int, dReal> > ExtractDOFValuesArray(object pyDOFValuesList)
+{
+    if( IS_PYTHONOBJECT_NONE(pyDOFValuesList) ) {
+        return {};
+    }
+    std::vector< std::pair<int, dReal> > vDOFValues;
+    try {
+        const size_t arraySize = len(pyDOFValuesList);
+        vDOFValues.resize(arraySize);
+
+        for(size_t iDOFValue = 0; iDOFValue < arraySize; iDOFValue++) {
+            vDOFValues[iDOFValue].first = py::extract<int>(pyDOFValuesList[iDOFValue][0]);
+            vDOFValues[iDOFValue].second = py::extract<dReal>(pyDOFValuesList[iDOFValue][1]);
+        }
+    }
+    catch(...) {
+        RAVELOG_WARN("Cannot do ExtractArray for DOFValues");
+    }
+    return vDOFValues;
+}
+
+inline py::object ReturnDOFValues(const std::vector< std::pair<int, dReal> >& vDOFValues)
+{
+    py::list pyDOFValuesList;
+    FOREACHC(it, vDOFValues) {
+        py::list pyDOFValue;
+        pyDOFValue.append(it->first);
+        pyDOFValue.append(it->second);
+        pyDOFValuesList.append(pyDOFValue);
+    }
+    return pyDOFValuesList;
+}
+
 template <typename T>
 object GetCustomParameters(const std::map<std::string, std::vector<T> >& parameters, object oname, int index)
 {
@@ -2072,16 +2131,27 @@ KinBody::KinBodyInfoPtr PyKinBody::PyKinBodyInfo::GetKinBodyInfo() const {
     KinBody::KinBodyInfoPtr pInfo(new KinBody::KinBodyInfo());
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     pInfo->_id = _id;
+    pInfo->_name = _name;
     pInfo->_uri = _uri;
+    pInfo->_referenceUri = _referenceUri;
     pInfo->_vLinkInfos = std::vector<KinBody::LinkInfoPtr>(begin(_vLinkInfos), end(_vLinkInfos));
     pInfo->_vJointInfos = std::vector<KinBody::JointInfoPtr>(begin(_vJointInfos), end(_vJointInfos));
+    pInfo->_vGrabbedInfos = std::vector<KinBody::GrabbedInfoPtr>(begin(_vGrabbedInfos), end(_vGrabbedInfos));
 #else
     if (!IS_PYTHONOBJECT_NONE(_id)) {
         pInfo->_id = py::extract<std::string>(_id);
     }
 
+    if (!IS_PYTHONOBJECT_NONE(_name)) {
+        pInfo->_name = py::extract<std::string>(_name);
+    }
+
     if (!IS_PYTHONOBJECT_NONE(_uri)) {
         pInfo->_uri = py::extract<std::string>(_uri);
+    }
+
+    if (!IS_PYTHONOBJECT_NONE(_referenceUri)) {
+        pInfo->_referenceUri = py::extract<std::string>(_referenceUri);
     }
 
     std::vector<KinBody::LinkInfoPtr> vLinkInfo = ExtractLinkInfoArray(_vLinkInfos);
@@ -2096,7 +2166,15 @@ KinBody::KinBodyInfoPtr PyKinBody::PyKinBodyInfo::GetKinBodyInfo() const {
     FOREACHC(it, vJointInfos) {
         pInfo->_vJointInfos.push_back(*it);
     }
+    std::vector<KinBody::GrabbedInfoPtr> vGrabbedInfos = ExtractGrabbedInfoArray(_vGrabbedInfos);
+    pInfo->_vGrabbedInfos.clear();
+    pInfo->_vGrabbedInfos.reserve(vGrabbedInfos.size());
+    FOREACHC(it, vGrabbedInfos) {
+        pInfo->_vGrabbedInfos.push_back(*it);
+    }
 #endif
+    pInfo->_transform = ExtractTransform(_transform);
+    pInfo->_dofValues = ExtractDOFValuesArray(_dofValues);
     return pInfo;
 }
 
@@ -2118,12 +2196,17 @@ void PyKinBody::PyKinBodyInfo::DeserializeJSON(py::object obj, dReal fUnitScale)
 void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     _id = info._id;
+    _name = info._name;
     _uri = info._uri;
+    _referenceUri = info._referenceUri;
     _vLinkInfos = std::vector<KinBody::LinkInfoPtr>(begin(info._vLinkInfos), end(info._vLinkInfos));
     _vJointInfos = std::vector<KinBody::JointInfoPtr>(begin(info._vJointInfos), end(info._vJointInfos));
+    _vGrabbedInfos = std::vector<KinBody::GrabbedInfoPtr>(begin(info._vGrabbedInfos), end(info._vGrabbedInfos));
 #else
     _id = ConvertStringToUnicode(info._id);
+    _name = ConvertStringToUnicode(info._name);
     _uri = ConvertStringToUnicode(info._uri);
+    _referenceUri = ConvertStringToUnicode(info._referenceUri);
     py::list vLinkInfos;
     FOREACHC(itLinkInfo, info._vLinkInfos) {
         PyLinkInfo info = PyLinkInfo(**itLinkInfo);
@@ -2137,7 +2220,16 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
         vJointInfos.append(info);
     }
     _vJointInfos = vJointInfos;
+
+    py::list vGrabbedInfos;
+    FOREACHC(itGrabbedInfo, info._vGrabbedInfos) {
+        PyKinBody::PyGrabbedInfo info = PyKinBody::PyGrabbedInfo(**itGrabbedInfo);
+        vGrabbedInfos.append(info);
+    }
+    _vGrabbedInfos = vGrabbedInfos;
 #endif
+    _transform = ReturnTransform(info._transform);
+    _dofValues = ReturnDOFValues(info._dofValues);
 }
 
 std::string PyKinBody::PyKinBodyInfo::__str__() {
@@ -4642,8 +4734,13 @@ void init_openravepy_kinbody()
 #endif
                          .def_readwrite("_vLinkInfos",&PyKinBody::PyKinBodyInfo::_vLinkInfos)
                          .def_readwrite("_vJointInfos",&PyKinBody::PyKinBodyInfo::_vJointInfos)
+                         .def_readwrite("_vGrabbedInfos",&PyKinBody::PyKinBodyInfo::_vGrabbedInfos)
                          .def_readwrite("_id", &PyKinBody::PyKinBodyInfo::_id)
+                         .def_readwrite("_name", &PyKinBody::PyKinBodyInfo::_name)
                          .def_readwrite("_uri", &PyKinBody::PyKinBodyInfo::_uri)
+                         .def_readwrite("_referenceUri", &PyKinBody::PyKinBodyInfo::_referenceUri)
+                         .def_readwrite("_dofValues", &PyKinBody::PyKinBodyInfo::_dofValues)
+                         .def_readwrite("_transform", &PyKinBody::PyKinBodyInfo::_transform)
                          .def("__str__",&PyKinBody::PyKinBodyInfo::__str__)
                          .def("__unicode__",&PyKinBody::PyKinBodyInfo::__unicode__)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
