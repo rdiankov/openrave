@@ -620,30 +620,31 @@ bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, co
     return true;
 }
 
-bool RobotBase::InitFromInfo(const RobotBaseInfoConstPtr& info)
+bool RobotBase::InitFromInfo(const RobotBaseInfo& info)
 {
-    std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(info->_vLinkInfos.begin(), info->_vLinkInfos.end());
-    std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(info->_vJointInfos.begin(), info->_vJointInfos.end());
-    std::vector<RobotBase::ManipulatorInfoConstPtr> vManipulatorInfosConst(info->_vManipulatorInfos.begin(), info->_vManipulatorInfos.end());
-    std::vector<RobotBase::AttachedSensorInfoConstPtr> vAttachedSensorInfosConst(info->_vAttachedSensorInfos.begin(), info->_vAttachedSensorInfos.end());
+    std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(info._vLinkInfos.begin(), info._vLinkInfos.end());
+    std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(info._vJointInfos.begin(), info._vJointInfos.end());
+    std::vector<RobotBase::ManipulatorInfoConstPtr> vManipulatorInfosConst(info._vManipulatorInfos.begin(), info._vManipulatorInfos.end());
+    std::vector<RobotBase::AttachedSensorInfoConstPtr> vAttachedSensorInfosConst(info._vAttachedSensorInfos.begin(), info._vAttachedSensorInfos.end());
 
-    if( !RobotBase::Init(vLinkInfosConst, vJointInfosConst, vManipulatorInfosConst, vAttachedSensorInfosConst, info->_uri) ) {
+    if( !RobotBase::Init(vLinkInfosConst, vJointInfosConst, vManipulatorInfosConst, vAttachedSensorInfosConst, info._uri) ) {
         return false;
     }
 
     _vecConnectedBodies.clear();
-    FOREACHC(itconnectedbodyinfo, info->_vConnectedBodyInfos) {
+    FOREACHC(itconnectedbodyinfo, info._vConnectedBodyInfos) {
         ConnectedBodyPtr newconnectedbody(new ConnectedBody(shared_robot(),**itconnectedbodyinfo));
         _vecConnectedBodies.push_back(newconnectedbody);
     }
 
     _vecGripperInfos.clear();
-    FOREACH(itgripperinfo, info->_vGripperInfos) {
+    FOREACH(itgripperinfo, info._vGripperInfos) {
         GripperInfoPtr newGripperInfo(new GripperInfo( **itgripperinfo));
         _vecGripperInfos.push_back(newGripperInfo);
     }
 
-    _info = *info;
+    _info = info;
+    _name = info._name;
     return true;
 }
 

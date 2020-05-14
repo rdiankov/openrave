@@ -486,7 +486,7 @@ bool PyRobotBase::InitFromInfo(const object pyRobotBaseInfo)
 {
     RobotBase::RobotBaseInfoPtr pRobotBaseInfo = ExtractRobotBaseInfo(pyRobotBaseInfo);
     if(!!pRobotBaseInfo) {
-        return _probot->InitFromInfo(pRobotBaseInfo);
+        return _probot->InitFromInfo(*pRobotBaseInfo);
     }
     return false;
 }

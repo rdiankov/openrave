@@ -51,6 +51,7 @@ public:
 protected:
     void _Update(const EnvironmentBase::EnvironmentBaseInfo& info);
 }; // class PyEnvironmentBaseInfo
+typedef OPENRAVE_SHARED_PTR<PyEnvironmentBaseInfo> PyEnvironmentBaseInfoPtr;
 
 protected:
     EnvironmentBasePtr _penv;
@@ -265,6 +266,7 @@ public:
     object GetUnit() const;
 
     py::object ExtractInfo() const;
+    bool UpdateFromInfo(PyEnvironmentBaseInfoPtr info);
 
     bool __eq__(PyEnvironmentBasePtr p);
     bool __ne__(PyEnvironmentBasePtr p);

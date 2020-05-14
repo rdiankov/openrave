@@ -2368,6 +2368,69 @@ public:
     virtual bool UpdateFromInfo(const EnvironmentBaseInfo& info)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        FOREACHC(itBodyInfo, info._vBodyInfos) {
+            // find existing body in the env
+            std::vector<KinBodyPtr>::iterator itExistingBody = _vecbodies.end();
+            FOREACH(itBody, _vecbodies) {
+                if ((*itBody)->_info._id == (*itBodyInfo)->_id) {
+                    itExistingBody = itBody;
+                    break;
+                }
+            }
+
+            KinBody::KinBodyInfoPtr pKinBodyInfo = *itBodyInfo;
+            RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
+
+            if (itExistingBody != _vecbodies.end()) {
+                // update existing body or robot
+                bool updateSucceeded = false;
+                KinBodyPtr pBody = *itExistingBody;
+                if (!!pRobotBaseInfo && pBody->IsRobot()) {
+                    RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pBody);
+                    updateSucceeded = pRobot->UpdateFromInfo(*pRobotBaseInfo);
+                }
+                else if (!pRobotBaseInfo && !pBody->IsRobot()) {
+                    updateSucceeded = pBody->UpdateFromInfo(*pKinBodyInfo);
+                }
+
+                if (updateSucceeded) {
+                    continue;
+                }
+
+                {
+                    boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+                    _RemoveKinBodyFromIterator(itExistingBody);
+                }
+
+                if (!!pRobotBaseInfo && pBody->IsRobot()) {
+                    RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pBody);
+                    pRobot->InitFromInfo(*pRobotBaseInfo);
+                    _AddRobot(pRobot, true);
+                    continue;
+                }
+                else if (!pRobotBaseInfo && !pBody->IsRobot()) {
+                    pBody->InitFromInfo(*pKinBodyInfo);
+                    _AddKinBody(pBody, true);
+                    continue;
+                }
+            }
+
+            // for new body or robot
+            if (!!pRobotBaseInfo) {
+                RobotBasePtr pRobot = RaveCreateRobot(shared_from_this(), "GenericRobot");
+                if( !pRobot ) {
+                    pRobot = RaveCreateRobot(shared_from_this(), "");
+                }
+                pRobot->InitFromInfo(*pRobotBaseInfo);
+                _AddRobot(pRobot, true);
+            }
+            else {
+                KinBodyPtr pBody = RaveCreateKinBody(shared_from_this(), "");
+                pBody->InitFromInfo(*pKinBodyInfo);
+                _AddKinBody(pBody, true);
+            }
+        }
+        UpdatePublishedBodies();
         return true;
     }
 

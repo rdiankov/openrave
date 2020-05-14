@@ -48,31 +48,31 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
             std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(bodyValue, "id");
             if (id.empty()) {
                 id = OpenRAVE::JSON::GetStringJsonValueByKey(bodyValue, "name");
-                RAVELOG_WARN_FORMAT("used name as id for body: %s", id);
+                RAVELOG_DEBUG_FORMAT("used name as id for body: %s", id);
             }
             if (id.empty()) {
                 id = boost::str(boost::format("body%d")%iBody);
-                RAVELOG_WARN_FORMAT("assigned new id for body: %s", id);
+                RAVELOG_DEBUG_FORMAT("assigned new id for body: %s", id);
             }
 
             // then find previous body
-            bool existingIsRobot = false;
+            bool isExistingRobot = false;
             std::vector<KinBody::KinBodyInfoPtr>::iterator itExistingBodyInfo = _vBodyInfos.end();
             FOREACH(itBodyInfo, _vBodyInfos) {
                 if ((*itBodyInfo)->_id == id ) {
                     itExistingBodyInfo = itBodyInfo;
-                    existingIsRobot = !!OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(*itBodyInfo);
-                    RAVELOG_WARN_FORMAT("found existing body: %s, isRobot = %d", id%existingIsRobot);
+                    isExistingRobot = !!OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(*itBodyInfo);
+                    RAVELOG_DEBUG_FORMAT("found existing body: %s, isRobot = %d", id%isExistingRobot);
                     break;
                 }
             }
 
             bool isDeleted = OpenRAVE::JSON::GetJsonValueByKey<bool>(bodyValue, "__deleted__", false);
             if (isDeleted) {
-                RAVELOG_WARN_FORMAT("deleted body: %s", id);
+                RAVELOG_DEBUG_FORMAT("deleted body: %s", id);
             }
-            bool isRobot = OpenRAVE::JSON::GetJsonValueByKey<bool>(bodyValue, "isRobot", existingIsRobot);
-            RAVELOG_WARN_FORMAT("body: %s, isRobot = %d", id%isRobot);
+            bool isRobot = OpenRAVE::JSON::GetJsonValueByKey<bool>(bodyValue, "isRobot", isExistingRobot);
+            RAVELOG_DEBUG_FORMAT("body: %s, isRobot = %d", id%isRobot);
             if (isRobot) {
                 if (itExistingBodyInfo == _vBodyInfos.end()) {
                     // in case no such id
@@ -97,7 +97,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
                     pRobotBaseInfo.reset(new RobotBase::RobotBaseInfo());
                     *itExistingBodyInfo = pRobotBaseInfo;
                     *((KinBody::KinBodyInfo*)pRobotBaseInfo.get()) = *pKinBodyInfo;
-                    RAVELOG_WARN_FORMAT("replaced body as a robot: %s", id);
+                    RAVELOG_DEBUG_FORMAT("replaced body as a robot: %s", id);
                 }
                 pRobotBaseInfo->DeserializeJSON(bodyValue, fUnitScale);
                 pRobotBaseInfo->_id = id;
@@ -126,7 +126,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
                     pKinBodyInfo.reset(new KinBody::KinBodyInfo());
                     *itExistingBodyInfo = pKinBodyInfo;
                     *pKinBodyInfo = *((KinBody::KinBodyInfo*)pRobotBaseInfo.get());
-                    RAVELOG_WARN_FORMAT("replaced robot as a body: %s", id);
+                    RAVELOG_DEBUG_FORMAT("replaced robot as a body: %s", id);
                 }
                 pKinBodyInfo->DeserializeJSON(bodyValue, fUnitScale);
                 pKinBodyInfo->_id = id;

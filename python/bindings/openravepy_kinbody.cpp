@@ -2272,7 +2272,7 @@ bool PyKinBody::InitFromInfo(const object pyKinBodyInfo)
     KinBody::KinBodyInfoPtr pKinBodyInfo;
     pKinBodyInfo = ExtractKinBodyInfo(pyKinBodyInfo);
     if(!!pKinBodyInfo) {
-        return _pbody->InitFromInfo(pKinBodyInfo);
+        return _pbody->InitFromInfo(*pKinBodyInfo);
     }
     return false;
 }

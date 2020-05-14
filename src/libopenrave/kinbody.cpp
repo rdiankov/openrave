@@ -496,16 +496,17 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
     return true;
 }
 
-bool KinBody::InitFromInfo(const KinBodyInfoConstPtr& info)
+bool KinBody::InitFromInfo(const KinBodyInfo& info)
 {
-    std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(info->_vLinkInfos.begin(), info->_vLinkInfos.end());
-    std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(info->_vJointInfos.begin(), info->_vJointInfos.end());
+    std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(info._vLinkInfos.begin(), info._vLinkInfos.end());
+    std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(info._vJointInfos.begin(), info._vJointInfos.end());
     
-    if( !KinBody::Init(vLinkInfosConst, vJointInfosConst, info->_uri) ) {
+    if( !KinBody::Init(vLinkInfosConst, vJointInfosConst, info._uri) ) {
         return false;
     }
 
-    _info = *info;
+    _info = info;
+    _name = info._name;
     return true;
 }
 

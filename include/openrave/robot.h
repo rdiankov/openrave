@@ -930,7 +930,7 @@ private:
     virtual bool Init(const std::vector<LinkInfoConstPtr>& linkinfos, const std::vector<JointInfoConstPtr>& jointinfos, const std::vector<ManipulatorInfoConstPtr>& manipinfos, const std::vector<AttachedSensorInfoConstPtr>& attachedsensorinfos, const std::string& uri=std::string());
 
     /// \brief initializes a robot with info structure
-    virtual bool InitFromInfo(const RobotBaseInfoConstPtr& info);
+    virtual bool InitFromInfo(const RobotBaseInfo& info);
 
     /// \brief Returns the manipulators of the robot
     virtual const std::vector<ManipulatorPtr>& GetManipulators() const;
