@@ -364,6 +364,7 @@ void KinBody::GrabbedInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
     Transform transform = _trelative;
     transform.trans *= fUnitScale;
     OpenRAVE::JSON::SetJsonValueByKey(value, "transform", transform, allocator);
+    // TOOD: change to ignoreRobotLinkNames
     OpenRAVE::JSON::SetJsonValueByKey(value, "robotLinksToIgnoreSet", _setRobotLinksToIgnore, allocator);
 }
 
@@ -374,6 +375,7 @@ void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     OpenRAVE::JSON::LoadJsonValueByKey(value, "robotLinkName", _robotlinkname);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _trelative);
     _trelative.trans *= fUnitScale;
+    // TOOD: change to ignoreRobotLinkNames
     OpenRAVE::JSON::LoadJsonValueByKey(value, "robotLinksToIgnoreSet", _setRobotLinksToIgnore);
 }
 

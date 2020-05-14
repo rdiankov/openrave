@@ -3597,7 +3597,7 @@ public:
                     atts.emplace_back("openravescheme", schemes);
                 }
 
-                if( reader.InitFromURI(url, atts) ) {
+                if( reader.InitFromURI(uri, atts) ) {
                     reader.Extract();
                     std::vector<RobotBasePtr> robots;
                     tempenv->GetRobots(robots);
