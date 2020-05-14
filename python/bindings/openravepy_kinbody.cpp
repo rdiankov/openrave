@@ -57,7 +57,7 @@ KinBody::KinBodyInfoPtr ExtractKinBodyInfo(object obj)
     return NULL;
 }
 
-inline std::vector<KinBody::LinkInfoPtr> ExtractLinkInfoArray(object pyLinkInfoList)
+std::vector<KinBody::LinkInfoPtr> ExtractLinkInfoArray(object pyLinkInfoList)
 {
     if( IS_PYTHONOBJECT_NONE(pyLinkInfoList) ) {
         return {};
@@ -83,7 +83,7 @@ inline std::vector<KinBody::LinkInfoPtr> ExtractLinkInfoArray(object pyLinkInfoL
     return vLinkInfos;
 }
 
-inline std::vector<KinBody::JointInfoPtr> ExtractJointInfoArray(object pyJointInfoList)
+std::vector<KinBody::JointInfoPtr> ExtractJointInfoArray(object pyJointInfoList)
 {
     if( IS_PYTHONOBJECT_NONE(pyJointInfoList) ) {
         return {};
@@ -109,7 +109,7 @@ inline std::vector<KinBody::JointInfoPtr> ExtractJointInfoArray(object pyJointIn
     return vJointInfos;
 }
 
-inline std::vector<KinBody::GrabbedInfoPtr> ExtractGrabbedInfoArray(object pyGrabbedInfoList)
+std::vector<KinBody::GrabbedInfoPtr> ExtractGrabbedInfoArray(object pyGrabbedInfoList)
 {
     if( IS_PYTHONOBJECT_NONE(pyGrabbedInfoList) ) {
         return {};
@@ -135,7 +135,7 @@ inline std::vector<KinBody::GrabbedInfoPtr> ExtractGrabbedInfoArray(object pyGra
     return vGrabbedInfos;
 }
 
-inline std::vector< std::pair<int, dReal> > ExtractDOFValuesArray(object pyDOFValuesList)
+std::vector< std::pair<int, dReal> > ExtractDOFValuesArray(object pyDOFValuesList)
 {
     if( IS_PYTHONOBJECT_NONE(pyDOFValuesList) ) {
         return {};
@@ -156,7 +156,7 @@ inline std::vector< std::pair<int, dReal> > ExtractDOFValuesArray(object pyDOFVa
     return vDOFValues;
 }
 
-inline py::object ReturnDOFValues(const std::vector< std::pair<int, dReal> >& vDOFValues)
+py::object ReturnDOFValues(const std::vector< std::pair<int, dReal> >& vDOFValues)
 {
     py::list pyDOFValuesList;
     FOREACHC(it, vDOFValues) {
@@ -2141,19 +2141,15 @@ KinBody::KinBodyInfoPtr PyKinBody::PyKinBodyInfo::GetKinBodyInfo() const {
     if (!IS_PYTHONOBJECT_NONE(_id)) {
         pInfo->_id = py::extract<std::string>(_id);
     }
-
     if (!IS_PYTHONOBJECT_NONE(_name)) {
         pInfo->_name = py::extract<std::string>(_name);
     }
-
     if (!IS_PYTHONOBJECT_NONE(_uri)) {
         pInfo->_uri = py::extract<std::string>(_uri);
     }
-
     if (!IS_PYTHONOBJECT_NONE(_referenceUri)) {
         pInfo->_referenceUri = py::extract<std::string>(_referenceUri);
     }
-
     std::vector<KinBody::LinkInfoPtr> vLinkInfo = ExtractLinkInfoArray(_vLinkInfos);
     pInfo->_vLinkInfos.clear();
     pInfo->_vLinkInfos.reserve(vLinkInfo.size());

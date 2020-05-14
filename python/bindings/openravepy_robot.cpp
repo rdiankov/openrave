@@ -325,7 +325,7 @@ void PyRobotBase::PyRobotBaseInfo::_Update(const RobotBase::RobotBaseInfo& info)
 }
 
 
-inline std::vector<RobotBase::ManipulatorInfoPtr> ExtractManipulatorInfoArray(object pyManipList)
+std::vector<RobotBase::ManipulatorInfoPtr> ExtractManipulatorInfoArray(object pyManipList)
 {
     if( IS_PYTHONOBJECT_NONE(pyManipList) ) {
         return {};
@@ -351,7 +351,7 @@ inline std::vector<RobotBase::ManipulatorInfoPtr> ExtractManipulatorInfoArray(ob
     return vManipulatorInfos;
 }
 
-inline std::vector<RobotBase::AttachedSensorInfoPtr> ExtractAttachedSensorInfoArray(object pyAttachedSensorInfoList)
+std::vector<RobotBase::AttachedSensorInfoPtr> ExtractAttachedSensorInfoArray(object pyAttachedSensorInfoList)
 {
     if( IS_PYTHONOBJECT_NONE(pyAttachedSensorInfoList) ) {
         return {};
@@ -377,8 +377,7 @@ inline std::vector<RobotBase::AttachedSensorInfoPtr> ExtractAttachedSensorInfoAr
     return vAttachedSensorInfos;
 }
 
-
-inline std::vector<RobotBase::ConnectedBodyInfoPtr> ExtractConnectedBodyInfoArray(object pyConnectedBodyInfoList)
+std::vector<RobotBase::ConnectedBodyInfoPtr> ExtractConnectedBodyInfoArray(object pyConnectedBodyInfoList)
 {
     if( IS_PYTHONOBJECT_NONE(pyConnectedBodyInfoList) ) {
         return {};
@@ -409,9 +408,12 @@ RobotBase::RobotBaseInfoPtr PyRobotBase::PyRobotBaseInfo::GetRobotBaseInfo() con
     RobotBase::RobotBaseInfoPtr pInfo(new RobotBase::RobotBaseInfo);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     pInfo->_id = _id;
+    pInfo->_name = _name;
     pInfo->_uri = _uri;
+    pInfo->_referenceUri = _referenceUri;
     pInfo->_vLinkInfos = std::vector<KinBody::LinkInfoPtr>(begin(_vLinkInfos), end(_vLinkInfos));
     pInfo->_vJointInfos = std::vector<KinBody::JointInfoPtr>(begin(_vJointInfos), end(_vJointInfos));
+    pInfo->_vGrabbedInfos = std::vector<KinBody::GrabbedInfoPtr>(begin(_vGrabbedInfos), end(_vGrabbedInfos));
     pInfo->_vManipulatorInfos = std::vector<RobotBase::ManipulatorInfoPtr>(begin(_vManipulatorInfos), end(_vManipulatorInfos));
     pInfo->_vAttachedSensorInfos = std::vector<RobotBase::AttachedSensorInfoPtr>(begin(_vAttachedSensorInfos), end(_vAttachedSensorInfos));
     pInfo->_vConnectedBodyInfos = std::vector<RobotBase::ConnectedBodyInfoPtr>(begin(_vConnectedBodyInfos), end(_vConnectedBodyInfos));
@@ -419,8 +421,14 @@ RobotBase::RobotBaseInfoPtr PyRobotBase::PyRobotBaseInfo::GetRobotBaseInfo() con
     if (!IS_PYTHONOBJECT_NONE(_id)) {
         pInfo->_id = py::extract<std::string>(_id);
     }
+    if (!IS_PYTHONOBJECT_NONE(_name)) {
+        pInfo->_name = py::extract<std::string>(_name);
+    }
     if (!IS_PYTHONOBJECT_NONE(_uri)) {
         pInfo->_uri = py::extract<std::string>(_uri);
+    }
+    if (!IS_PYTHONOBJECT_NONE(_referenceUri)) {
+        pInfo->_referenceUri = py::extract<std::string>(_referenceUri);
     }
     std::vector<KinBody::LinkInfoPtr> vLinkInfos = ExtractLinkInfoArray(_vLinkInfos);
     pInfo->_vLinkInfos.clear();
@@ -434,20 +442,24 @@ RobotBase::RobotBaseInfoPtr PyRobotBase::PyRobotBaseInfo::GetRobotBaseInfo() con
     FOREACHC(it, vJointInfos) {
         pInfo->_vJointInfos.push_back(*it);
     }
+    std::vector<KinBody::GrabbedInfoPtr> vGrabbedInfos = ExtractGrabbedInfoArray(_vGrabbedInfos);
+    pInfo->_vGrabbedInfos.clear();
+    pInfo->_vGrabbedInfos.reserve(vGrabbedInfos.size());
+    FOREACHC(it, vGrabbedInfos) {
+        pInfo->_vGrabbedInfos.push_back(*it);
+    }
     std::vector<RobotBase::ManipulatorInfoPtr> vManipulatorInfos = ExtractManipulatorInfoArray(_vManipulatorInfos);
     pInfo->_vManipulatorInfos.clear();
     pInfo->_vManipulatorInfos.reserve(vManipulatorInfos.size());
     FOREACHC(it, vManipulatorInfos) {
         pInfo->_vManipulatorInfos.push_back(*it);
     }
-
     std::vector<RobotBase::AttachedSensorInfoPtr> vAttachedSensorInfos = ExtractAttachedSensorInfoArray(_vAttachedSensorInfos);
     pInfo->_vAttachedSensorInfos.clear();
     pInfo->_vAttachedSensorInfos.reserve(vAttachedSensorInfos.size());
     FOREACHC(it, vAttachedSensorInfos) {
         pInfo->_vAttachedSensorInfos.push_back(*it);
     }
-
     std::vector<RobotBase::ConnectedBodyInfoPtr> vConnectedBodyInfos = ExtractConnectedBodyInfoArray(_vConnectedBodyInfos);
     pInfo->_vConnectedBodyInfos.clear();
     pInfo->_vConnectedBodyInfos.reserve(vConnectedBodyInfos.size());
@@ -455,6 +467,8 @@ RobotBase::RobotBaseInfoPtr PyRobotBase::PyRobotBaseInfo::GetRobotBaseInfo() con
         pInfo->_vConnectedBodyInfos.push_back(*it);
     }
 #endif
+    pInfo->_transform = ExtractTransform(_transform);
+    pInfo->_dofValues = ExtractDOFValuesArray(_dofValues);
     return pInfo;
 }
 
