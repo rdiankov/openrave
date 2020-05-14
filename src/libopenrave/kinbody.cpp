@@ -113,6 +113,7 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
     if (!_referenceUri.empty()) {
         OpenRAVE::JSON::SetJsonValueByKey(value, "referenceUri", _referenceUri, allocator);
     }
+    OpenRAVE::JSON::SetJsonValueByKey(value, "transform", _transform, allocator);
 
     if (_dofValues.size() > 0) {
         rapidjson::Value dofValues;

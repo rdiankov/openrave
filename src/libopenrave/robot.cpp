@@ -453,7 +453,7 @@ void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson:
     if (!_referenceUri.empty()) {
         OpenRAVE::JSON::SetJsonValueByKey(value, "referenceUri", _referenceUri, allocator);
     }
-    // OpenRAVE::JSON::SetJsonValueByKey(value, "uri", _uri, allocator); // deprecated
+    OpenRAVE::JSON::SetJsonValueByKey(value, "transform", _transform, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "isRobot", true, allocator);
 
     if (_dofValues.size() > 0) {
