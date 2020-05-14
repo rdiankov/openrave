@@ -1988,7 +1988,7 @@ private:
     virtual bool Init(const std::vector<LinkInfoConstPtr>& linkinfos, const std::vector<JointInfoConstPtr>& jointinfos, const std::string& uri=std::string());
 
     /// \brief initializes an complex kinematics body from info structure
-    virtual bool InitFromInfo(const KinBodyInfoConstPtr& info);
+    virtual bool InitFromInfo(const KinBodyInfo& info);
 
     /// \brief Sets new geometries for all the links depending on the stored extra geometries each link has.
     ///

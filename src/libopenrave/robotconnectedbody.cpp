@@ -125,52 +125,82 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
     OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _trelative);
 
     if(value.HasMember("links")) {
-        _vLinkInfos.clear();
-        _vLinkInfos.reserve(value["links"].Size());
-        for (size_t i = 0; i < value["links"].Size(); ++i) {
-            LinkInfoPtr linkinfo(new LinkInfo());
-            linkinfo->DeserializeJSON(value["links"][i]);
-            _vLinkInfos.push_back(linkinfo);
+        _vLinkInfos.reserve(value["links"].Size() + _vLinkInfos.size());
+        size_t iLink = 0;
+        for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it, ++iLink) {
+            const rapidjson::Value& linkValue = *it;
+            std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(linkValue, "id");
+            if (id.empty()) {
+                id = OpenRAVE::JSON::GetStringJsonValueByKey(linkValue, "name");
+            }
+            if (id.empty()) {
+                id = boost::str(boost::format("link%d") % iLink);
+            }
+            UpdateOrCreateInfo(linkValue, id, _vLinkInfos, fUnitScale);
         }
     }
 
     if(value.HasMember("joints")) {
-        _vJointInfos.clear();
-        _vJointInfos.reserve(value["joints"].Size());
-        for (size_t i = 0; i < value["joints"].Size(); ++i) {
-            JointInfoPtr jointinfo(new JointInfo());
-            jointinfo->DeserializeJSON(value["joints"][i]);
-            _vJointInfos.push_back(jointinfo);
+        _vJointInfos.reserve(value["joints"].Size() + _vJointInfos.size());
+        size_t iJoint = 0;
+        for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it, ++iJoint) {
+            const rapidjson::Value& jointValue = *it;
+            std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(jointValue, "id");
+            if (id.empty()) {
+                id = OpenRAVE::JSON::GetStringJsonValueByKey(jointValue, "name");
+            }
+            if (id.empty()) {
+                id = boost::str(boost::format("joint%d") % iJoint);
+            }
+            UpdateOrCreateInfo(jointValue, id, _vJointInfos, fUnitScale);
         }
     }
 
     if(value.HasMember("manipulators")) {
-        _vManipulatorInfos.clear();
-        _vManipulatorInfos.reserve(value["manipulators"].Size());
-        for (size_t i = 0; i < value["manipulators"].Size(); ++i) {
-            ManipulatorInfoPtr manipulatorinfo(new ManipulatorInfo());
-            manipulatorinfo->DeserializeJSON(value["manipulators"][i]);
-            _vManipulatorInfos.push_back(manipulatorinfo);
+        _vManipulatorInfos.reserve(value["manipulators"].Size() + _vManipulatorInfos.size());
+        size_t iManipualtor = 0;
+        for (rapidjson::Value::ConstValueIterator it = value["manipulators"].Begin(); it != value["manipulators"].End(); ++it, ++iManipualtor) {
+            const rapidjson::Value& manipulatorValue = *it;
+            std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(manipulatorValue, "id");
+            if (id.empty()) {
+                id = OpenRAVE::JSON::GetStringJsonValueByKey(manipulatorValue, "name");
+            }
+            if (id.empty()) {
+                id = boost::str(boost::format("manipulator%d") % iManipualtor);
+            }
+            UpdateOrCreateInfo(manipulatorValue, id, _vManipulatorInfos, fUnitScale);
         }
     }
 
     if(value.HasMember("attachedSensors")) {
-        _vAttachedSensorInfos.clear();
-        _vAttachedSensorInfos.reserve(value["attachedSensors"].Size());
-        for (size_t i = 0; i < value["attachedSensors"].Size(); ++i) {
-            AttachedSensorInfoPtr attachedsensorinfo(new AttachedSensorInfo());
-            attachedsensorinfo->DeserializeJSON(value["attachedSensors"][i]);
-            _vAttachedSensorInfos.push_back(attachedsensorinfo);
+        _vAttachedSensorInfos.reserve(value["attachedSensors"].Size() + _vAttachedSensorInfos.size());
+        size_t iAttachedSensor = 0;
+        for (rapidjson::Value::ConstValueIterator it = value["attachedSensors"].Begin(); it != value["attachedSensors"].End(); ++it, ++iAttachedSensor) {
+            const rapidjson::Value& attachedSensorValue = *it;
+            std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(attachedSensorValue, "id");
+            if (id.empty()) {
+                id = OpenRAVE::JSON::GetStringJsonValueByKey(attachedSensorValue, "name");
+            }
+            if (id.empty()) {
+                id = boost::str(boost::format("attachedSensor%d") % iAttachedSensor);
+            }
+            UpdateOrCreateInfo(attachedSensorValue, id, _vAttachedSensorInfos, fUnitScale);
         }
     }
 
     if(value.HasMember("gripperInfos")) {
-        _vGripperInfos.clear();
-        _vGripperInfos.reserve(value["gripperInfos"].Size());
-        for (size_t igripperInfo = 0; igripperInfo < value["gripperInfos"].Size(); ++igripperInfo) {
-            GripperInfoPtr gripperInfo(new GripperInfo());
-            gripperInfo->DeserializeJSON(value["gripperInfos"][igripperInfo]);
-            _vGripperInfos.push_back(gripperInfo);
+        _vGripperInfos.reserve(value["gripperInfos"].Size() + _vGripperInfos.size());
+        size_t iGripperInfo = 0;
+        for (rapidjson::Value::ConstValueIterator it = value["gripperInfos"].Begin(); it != value["gripperInfos"].End(); ++it, ++iGripperInfo) {
+            const rapidjson::Value& gripperInfoValue = *it;
+            std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(gripperInfoValue, "id");
+            if (id.empty()) {
+                id = OpenRAVE::JSON::GetStringJsonValueByKey(gripperInfoValue, "name");
+            }
+            if (id.empty()) {
+                id = boost::str(boost::format("gripperInfo%d") % iGripperInfo);
+            }
+            UpdateOrCreateInfo(gripperInfoValue, id, _vGripperInfos, fUnitScale);
         }
     }
 

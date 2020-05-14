@@ -84,7 +84,7 @@ public:
     /// \brief Set a new readable interface and return the previously set interface if it exists. <b>[multi-thread safe]</b>
     virtual ReadablePtr SetReadableInterface(const std::string& id, ReadablePtr readable);
 
-    /// \brief cleras the readable interfaces
+    /// \brief clears the readable interfaces
     virtual void ClearReadableInterfaces();
 
     /// \brief Documentation of the interface in reStructuredText format. See \ref writing_plugins_doc. <b>[multi-thread safe]</b>

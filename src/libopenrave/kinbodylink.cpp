@@ -102,27 +102,40 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     _t.trans *= fUnitScale;
     _tMassFrame.trans *= fUnitScale;
 
-    _vgeometryinfos.clear();
     if (value.HasMember("geometries")) {
-        _vgeometryinfos.reserve(value["geometries"].Size());
-        for (size_t i = 0; i < value["geometries"].Size(); ++i) {
-            GeometryInfoPtr pGeometryInfo(new GeometryInfo());
-            pGeometryInfo->DeserializeJSON(value["geometries"][i], fUnitScale);
-            _vgeometryinfos.push_back(pGeometryInfo);
+        _vgeometryinfos.reserve(value["geometries"].Size() + _vgeometryinfos.size());
+
+        size_t iGeometry = 0;
+        for (rapidjson::Value::ConstValueIterator it = value["geometries"].Begin(); it != value["geometries"].End(); ++it, ++iGeometry) {
+            const rapidjson::Value& geometryValue = *it;
+            std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(geometryValue, "id");
+            if (id.empty()) {
+                id = OpenRAVE::JSON::GetStringJsonValueByKey(geometryValue, "name");
+            }
+            if (id.empty()) {
+                id = boost::str(boost::format("geometry%d") % iGeometry);
+            }
+            UpdateOrCreateInfo(geometryValue, id, _vgeometryinfos, fUnitScale);
         }
     }
 
-    _mapExtraGeometries.clear();
     if (value.HasMember("extraGeometries")) {
         for (rapidjson::Value::ConstMemberIterator it = value["extraGeometries"].MemberBegin(); it != value["extraGeometries"].MemberEnd(); ++it) {
-            _mapExtraGeometries[it->name.GetString()] = std::vector<GeometryInfoPtr>();
+            if (_mapExtraGeometries.find(it->name.GetString()) == _mapExtraGeometries.end()) {
+                _mapExtraGeometries[it->name.GetString()] = std::vector<GeometryInfoPtr>();
+            }
             std::vector<GeometryInfoPtr>& vgeometries = _mapExtraGeometries[it->name.GetString()];
-            vgeometries.reserve(it->value.Size());
-
-            for(rapidjson::Value::ConstValueIterator im = it->value.Begin(); im != it->value.End(); ++im) {
-                GeometryInfoPtr pInfo (new GeometryInfo());
-                pInfo->DeserializeJSON(*im, fUnitScale);
-                vgeometries.push_back(pInfo);
+            vgeometries.reserve(it->value.Size() + vgeometries.size());
+            size_t iGeometry = 0;
+            for(rapidjson::Value::ConstValueIterator im = it->value.Begin(); im != it->value.End(); ++im, ++iGeometry) {
+                std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(*im, "id");
+                if (id.empty()) {
+                    id = OpenRAVE::JSON::GetStringJsonValueByKey(*im, "name");
+                }
+                if (id.empty()) {
+                    id = boost::str(boost::format("geometry%d") % iGeometry);
+                }
+                UpdateOrCreateInfo(*im, id, vgeometries, fUnitScale);
             }
         }
     }

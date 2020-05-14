@@ -306,7 +306,7 @@ protected:
         _EnsureUniqueIdAndUri(*pKinBodyInfo);
 
         KinBodyPtr pBody = RaveCreateKinBody(_penv, "");
-        if (!pBody->InitFromInfo(pKinBodyInfo)) {
+        if (!pBody->InitFromInfo(*pKinBodyInfo)) {
             return false;
         }
         pBody->SetName(pKinBodyInfo->_name);
@@ -327,8 +327,11 @@ protected:
         pRobotBaseInfo->DeserializeJSON(bodyValue, fUnitScale);
         _EnsureUniqueIdAndUri(*pRobotBaseInfo);
 
-        RobotBasePtr pRobot = RaveCreateRobot(_penv, "");
-        if (!pRobot->InitFromInfo(pRobotBaseInfo)) {
+        RobotBasePtr pRobot = RaveCreateRobot(_penv, "GenericRobot");
+        if (!pRobot) {
+            pRobot = RaveCreateRobot(_penv, "");
+        }
+        if (!pRobot->InitFromInfo(*pRobotBaseInfo)) {
             return false;
         }
         pRobot->SetName(pRobotBaseInfo->_name);
