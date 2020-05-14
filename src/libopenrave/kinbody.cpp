@@ -5154,7 +5154,7 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
     }
 
     info._vJointInfos.resize(_vecjoints.size());
-    for(size_t i = 0; i < _info._vJointInfos.size(); ++i) {
+    for(size_t i = 0; i < info._vJointInfos.size(); ++i) {
         info._vJointInfos[i].reset(new KinBody::JointInfo());
         _vecjoints[i]->ExtractInfo(*info._vJointInfos[i]);
     }
