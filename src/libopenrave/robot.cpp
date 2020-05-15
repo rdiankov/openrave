@@ -24,30 +24,19 @@ RobotBase::GripperInfo& RobotBase::GripperInfo::operator=(const RobotBase::Gripp
     name = other.name;
     grippertype = other.grippertype;
     gripperJointNames = other.gripperJointNames;
-    _pdocument.reset();
-    if (!!other._pdocument) {
-        _pdocument.reset(new rapidjson::Document());
-        _pdocument->CopyFrom(*other._pdocument, _pdocument->GetAllocator());
+    rapidjson::Document docGripperInfo;
+    if (other._docGripperInfo.IsObject()) {
+        docGripperInfo.CopyFrom(other._docGripperInfo, docGripperInfo.GetAllocator());
     }
+    _docGripperInfo.Swap(docGripperInfo);
     return *this;
-}
-
-bool RobotBase::GripperInfo::operator==(const RobotBase::GripperInfo& other) const
-{
-    return _id == other._id
-        && name == other.name
-        && grippertype == other.grippertype
-        && gripperJointNames == other.gripperJointNames
-        && _pdocument == other._pdocument;
-    // TODO: deep compare _pdocument
 }
 
 void RobotBase::GripperInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     value.SetObject();
-    if( !!_pdocument ) {
-        BOOST_ASSERT(_pdocument->IsObject());
-        value.CopyFrom(*_pdocument, allocator, true); // need to copy the const strings
+    if( _docGripperInfo.IsObject() ) {
+        value.CopyFrom(_docGripperInfo, allocator, true); // need to copy the const strings
     }
     OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "name", name, allocator);
@@ -66,16 +55,20 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
     OpenRAVE::JSON::LoadJsonValueByKey(value, "grippertype", grippertype);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "gripperJointNames", gripperJointNames);
 
-    // value may used for partial update
-    if (!!_pdocument) {
-        OpenRAVE::JSON::UpdateJson(*_pdocument, value);
-        return;
+    rapidjson::Document docGripperInfo;
+    docGripperInfo.SetObject();
+    if (_docGripperInfo.IsObject()) {
+        // value may used for partial update, so retain original key values
+        docGripperInfo.CopyFrom(_docGripperInfo, docGripperInfo.GetAllocator(), true); // need to copy the const strings
     }
-
-    // should always create a new _pdocument in case an old one is initialized and copied
-    _pdocument.reset(new rapidjson::Document());
-    _pdocument->CopyFrom(value, _pdocument->GetAllocator(), true); // need to copy the const strings
-
+    for (rapidjson::Value::ConstMemberIterator it = value.MemberBegin(); it != value.MemberEnd(); ++it) {
+        const std::string& name = it->name.GetString();
+        if (name == "id" || name == "name" || name == "grippertype" || name == "gripperJointNames") {
+            continue;
+        }
+        OpenRAVE::JSON::SetJsonValueByKey(docGripperInfo, name, it->value);
+    }
+    _docGripperInfo.Swap(docGripperInfo);
 }
 
 void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
@@ -101,7 +94,6 @@ void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& valu
     OpenRAVE::JSON::LoadJsonValueByKey(value, "linkName", _linkname);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _trelative);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "type", _sensorname);
-
 
     if (value.HasMember("sensorGeometry")) {
         if (!_docSensorGeometry.IsObject()) {
@@ -665,7 +657,7 @@ bool RobotBase::InitFromInfo(const RobotBaseInfo& info)
 
     _vecGripperInfos.clear();
     FOREACH(itgripperinfo, info._vGripperInfos) {
-        GripperInfoPtr newGripperInfo(new GripperInfo( **itgripperinfo));
+        GripperInfoPtr newGripperInfo(new GripperInfo(**itgripperinfo));
         _vecGripperInfos.push_back(newGripperInfo);
     }
 
@@ -2262,15 +2254,9 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     }
     _UpdateAttachedSensors();
 
-    // gripper infos, have to recreate the _pdocument
-    _vecGripperInfos = r->_vecGripperInfos;
-    FOREACH(itGripperInfo, _vecGripperInfos) {
-        GripperInfoPtr& pGripperInfo = *itGripperInfo;
-        if( !!pGripperInfo && !!pGripperInfo->_pdocument) {
-            boost::shared_ptr<rapidjson::Document> pnewdocument(new rapidjson::Document());
-            pnewdocument->CopyFrom(*pGripperInfo->_pdocument, pnewdocument->GetAllocator(), true); // need to copy the const strings
-            pGripperInfo->_pdocument = pnewdocument;
-        }
+    _vecGripperInfos.clear();
+    FOREACH(itGripperInfo, r->_vecGripperInfos) {
+        _vecGripperInfos.push_back(GripperInfoPtr(new GripperInfo(**itGripperInfo))); // deep copy
     }
 
     _vActiveDOFIndices = r->_vActiveDOFIndices;
@@ -2345,40 +2331,8 @@ const std::string& RobotBase::GetRobotStructureHash() const
 
 void RobotBase::ExtractInfo(RobotBaseInfo& info)
 {
-    info = _info;
-    info._name = _name;
-    info._uri = __struri;
-
-    info._dofValues.resize(0);
-    std::vector<dReal> vDOFValues;
-    GetDOFValues(vDOFValues);
-    for (size_t idof = 0; idof < vDOFValues.size(); ++idof) {
-        JointPtr pJoint = GetJointFromDOFIndex(idof);
-        info._dofValues.emplace_back(pJoint->GetDOFIndex(), vDOFValues[idof]);
-    }
-
-    info._transform = GetTransform();
-
-    info._vGrabbedInfos.resize(0);
-    GetGrabbedInfo(info._vGrabbedInfos);
-
-    RobotBase::RobotStateSaver saver(shared_robot());
-    vector<dReal> vZeros(GetDOF(), 0);
-    SetDOFValues(vZeros, KinBody::CLA_Nothing);
-    SetTransform(Transform());
-
-    info._vLinkInfos.resize(_veclinks.size());
-    for(size_t i = 0; i < info._vLinkInfos.size(); ++i) {
-        info._vLinkInfos[i].reset(new KinBody::LinkInfo());
-        _veclinks[i]->ExtractInfo(*info._vLinkInfos[i]);
-    }
-
-    info._vJointInfos.resize(_vecjoints.size());
-    for(size_t i = 0; i < info._vJointInfos.size(); ++i) {
-        info._vJointInfos[i].reset(new KinBody::JointInfo());
-        _vecjoints[i]->ExtractInfo(*info._vJointInfos[i]);
-    }
-
+    KinBody::ExtractInfo(info);
+    
     info._vManipulatorInfos.resize(_vecManipulators.size());
     for(size_t i = 0; i < info._vManipulatorInfos.size(); ++i) {
         info._vManipulatorInfos[i].reset(new RobotBase::ManipulatorInfo());
@@ -2399,8 +2353,7 @@ void RobotBase::ExtractInfo(RobotBaseInfo& info)
 
     info._vGripperInfos.resize(_vecGripperInfos.size());
     for(size_t i = 0; i < info._vGripperInfos.size(); ++i) {
-        info._vGripperInfos[i].reset(new RobotBase::GripperInfo());
-        *info._vGripperInfos[i] = *_vecGripperInfos[i];
+        info._vGripperInfos[i].reset(new RobotBase::GripperInfo(*_vecGripperInfos[i]));
     }
 }
 

@@ -95,7 +95,13 @@ public:
             *this = other;
         };
         GripperInfo& operator=(const GripperInfo& other);
-        bool operator==(const GripperInfo& other) const;
+        bool operator==(const GripperInfo& other) const {
+            return _id == other._id
+                && name == other.name
+                && grippertype == other.grippertype
+                && gripperJointNames == other.gripperJointNames
+                && _docGripperInfo == other._docGripperInfo;
+        }
         bool operator!=(const GripperInfo& other) const {
             return !operator==(other);
         }
@@ -109,7 +115,7 @@ public:
         std::string grippertype; ///< gripper type
         std::vector<std::string> gripperJointNames; ///< names of the gripper joints
 
-        boost::shared_ptr<rapidjson::Document> _pdocument;  ///< contains entire rapid json document to hold custom parameters
+        rapidjson::Document _docGripperInfo; ///< contains entire rapid json document to hold custom parameters
     };
     typedef boost::shared_ptr<GripperInfo> GripperInfoPtr;
     typedef boost::shared_ptr<GripperInfo const> GripperInfoConstPtr;
@@ -510,7 +516,11 @@ public:
             _linkname = other._linkname;
             _trelative = other._trelative;
             _sensorname = other._sensorname;
-            // TODO: deep copy _docSensorGeometry
+            rapidjson::Document docSensorGeometry;
+            if (other._docSensorGeometry.IsObject()) {
+                docSensorGeometry.CopyFrom(other._docSensorGeometry, docSensorGeometry.GetAllocator());
+            }
+            _docSensorGeometry.Swap(docSensorGeometry);
             return *this;
         }
         bool operator==(const AttachedSensorInfo& other) const {
@@ -518,8 +528,8 @@ public:
                 && _name == other._name
                 && _linkname == other._linkname
                 && _trelative == other._trelative
-                && _sensorname == other._sensorname;
-            // TODO: deep compare _docSensorGeometry
+                && _sensorname == other._sensorname
+                && _docSensorGeometry == other._docSensorGeometry;
         }
         bool operator!=(const AttachedSensorInfo& other) const {
             return !operator==(other);
@@ -826,13 +836,7 @@ public:
             *this = other;
         };
         RobotBaseInfo& operator=(const RobotBaseInfo& other) {
-            _id = other._id;
-            _uri = other._uri;
-            _name = other._name;
-            _referenceUri = other._referenceUri;
-            _dofValues = other._dofValues;
-            _transform = other._transform;
-            _vLinkInfos = other._vLinkInfos;
+            KinBodyInfo::operator=(other);
             _vJointInfos = other._vJointInfos;
             _vManipulatorInfos = other._vManipulatorInfos;
             _vAttachedSensorInfos = other._vAttachedSensorInfos;
@@ -842,14 +846,7 @@ public:
             return *this;
         }
         bool operator==(const RobotBaseInfo& other) const {
-            return _id == other._id
-                && _uri == other._uri
-                && _name == other._name
-                && _referenceUri == other._referenceUri
-                && _dofValues == other._dofValues
-                && _transform == other._transform
-                && _vLinkInfos == other._vLinkInfos
-                && _vJointInfos == other._vJointInfos
+            return KinBodyInfo::operator==(other)
                 && _vManipulatorInfos == other._vManipulatorInfos
                 && _vAttachedSensorInfos == other._vAttachedSensorInfos
                 && _vConnectedBodyInfos == other._vConnectedBodyInfos

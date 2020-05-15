@@ -1792,6 +1792,11 @@ public:
             _vLinkInfos = other._vLinkInfos;
             _vJointInfos = other._vJointInfos;
             _vGrabbedInfos = other._vGrabbedInfos;
+            rapidjson::Document docReadableInterfaces;
+            if (other._docReadableInterfaces.IsObject()) {
+                docReadableInterfaces.CopyFrom(other._docReadableInterfaces, docReadableInterfaces.GetAllocator());
+            }
+            _docReadableInterfaces.Swap(docReadableInterfaces);
             // TODO: deep copy infos
             return *this;
         }
@@ -1804,7 +1809,8 @@ public:
                 && _transform == other._transform
                 && _vLinkInfos == other._vLinkInfos
                 && _vJointInfos == other._vJointInfos
-                && _vGrabbedInfos == other._vGrabbedInfos;
+                && _vGrabbedInfos == other._vGrabbedInfos
+                && _docReadableInterfaces == other._docReadableInterfaces;
             // TODO: deep compare infos
         }
         bool operator!=(const KinBodyInfo& other) const{

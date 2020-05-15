@@ -5170,9 +5170,10 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
 
 void KinBody::ExtractInfo(KinBodyInfo& info)
 {
-    info = _info;
-    info._name = _name;
+    info._id = _info._id;
     info._uri = __struri;
+    info._name = _name;
+    info._referenceUri = _info._referenceUri;
 
     info._dofValues.resize(0);
     std::vector<dReal> vDOFValues;
