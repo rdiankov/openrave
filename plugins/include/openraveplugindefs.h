@@ -99,6 +99,18 @@ inline std::ostream& SerializeValues(std::ostream& O, const std::vector<T>& valu
     return O;
 }
 
+template <typename T, size_t N>
+inline std::ostream& SerializeValues(std::ostream& O, const std::array<T, N>& values, char delim=',')
+{
+    if(N != 0) {
+        O << values[0];
+        for(size_t i = 1; i < N; ++i) {
+            O << delim << values[i];
+        }
+    }
+    return O;
+}
+
 inline std::ostream& SerializeTransform(std::ostream& O, const Transform& t, char delim=',')
 {
     O << t.rot.x << delim << t.rot.y << delim << t.rot.z << delim << t.rot.w << delim << t.trans.x << delim << t.trans.y << delim << t.trans.z;
