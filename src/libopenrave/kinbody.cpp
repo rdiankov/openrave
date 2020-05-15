@@ -5281,17 +5281,15 @@ UpdateFromInfoResult KinBody::UpdateFromInfo(const KinBodyInfo& info)
         return UFIR_RequireRemoveFromEnvironment;
     }
 
-
-    KinBody::KinBodyInfo currentInfo;
-    ExtractInfo(currentInfo);
-
     // grabbedinfos
     bool resetGrabbed = false;
-    if (currentInfo._vGrabbedInfos.size() != info._vGrabbedInfos.size()) {
+    std::vector<KinBody::GrabbedInfoPtr> vGrabbedInfos;
+    GetGrabbedInfo(vGrabbedInfos);
+    if (vGrabbedInfos.size() != info._vGrabbedInfos.size()) {
         resetGrabbed = true;
     }
     else {
-        FOREACHC(itExistingGrabbedInfo, currentInfo._vGrabbedInfos) {
+        FOREACHC(itExistingGrabbedInfo, vGrabbedInfos) {
             bool foundGrabbedInfo = false;
             FOREACHC(itGrabbedInfo, info._vGrabbedInfos) {
                 // find existing grabbedinfo
@@ -5318,19 +5316,17 @@ UpdateFromInfoResult KinBody::UpdateFromInfo(const KinBodyInfo& info)
     }
 
     // name
-    if (currentInfo._name != info._name) {
+    if (GetName() != info._name) {
         SetName(info._name);
     }
 
     // transform
-    if (currentInfo._transform != info._transform) {
+    if (GetTransform() != info._transform) {
         SetTransform(info._transform);
     }
 
-    // dofValues
-    if (currentInfo._dofValues != info._dofValues) {
-        // TODO
-    }
+    // TODO: dofValues
+
 
     // TODO: readable interfaces
 
