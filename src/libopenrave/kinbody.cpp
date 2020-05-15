@@ -5193,6 +5193,8 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
     SetDOFValues(vZeros, KinBody::CLA_Nothing);
     SetTransform(Transform());
 
+    // TODO: need to avoid extracting info for links and joints belonging to connected bodies
+
     info._vLinkInfos.resize(_veclinks.size());
     for(size_t iLinkInfo = 0; iLinkInfo < info._vLinkInfos.size(); ++iLinkInfo) {
         info._vLinkInfos[iLinkInfo].reset(new KinBody::LinkInfo());

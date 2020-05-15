@@ -63,24 +63,24 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
         value.AddMember("geometries", geometriesValue, allocator);
     }
 
-    if(_mapExtraGeometries.size() > 0 ) {
-        rapidjson::Value extraGeometriesValue;
-        extraGeometriesValue.SetObject();
-        FOREACHC(im, _mapExtraGeometries) {
-            rapidjson::Value geometriesValue;
-            geometriesValue.SetArray();
-            FOREACHC(iv, im->second){
-                if(!!(*iv))
-                {
-                    rapidjson::Value geometryValue;
-                    (*iv)->SerializeJSON(geometryValue, allocator);
-                    geometriesValue.PushBack(geometryValue, allocator);
-                }
-            }
-            extraGeometriesValue.AddMember(rapidjson::Value(im->first.c_str(), allocator).Move(), geometriesValue, allocator);
-        }
-        value.AddMember("extraGeometries", extraGeometriesValue, allocator);
-    }
+    // if(_mapExtraGeometries.size() > 0 ) {
+    //     rapidjson::Value extraGeometriesValue;
+    //     extraGeometriesValue.SetObject();
+    //     FOREACHC(im, _mapExtraGeometries) {
+    //         rapidjson::Value geometriesValue;
+    //         geometriesValue.SetArray();
+    //         FOREACHC(iv, im->second){
+    //             if(!!(*iv))
+    //             {
+    //                 rapidjson::Value geometryValue;
+    //                 (*iv)->SerializeJSON(geometryValue, allocator);
+    //                 geometriesValue.PushBack(geometryValue, allocator);
+    //             }
+    //         }
+    //         extraGeometriesValue.AddMember(rapidjson::Value(im->first.c_str(), allocator).Move(), geometriesValue, allocator);
+    //     }
+    //     value.AddMember("extraGeometries", extraGeometriesValue, allocator);
+    // }
 
     OpenRAVE::JSON::SetJsonValueByKey(value, "isStatic", _bStatic, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "isEnabled", _bIsEnabled, allocator);
@@ -119,26 +119,27 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
         }
     }
 
-    if (value.HasMember("extraGeometries")) {
-        for (rapidjson::Value::ConstMemberIterator it = value["extraGeometries"].MemberBegin(); it != value["extraGeometries"].MemberEnd(); ++it) {
-            if (_mapExtraGeometries.find(it->name.GetString()) == _mapExtraGeometries.end()) {
-                _mapExtraGeometries[it->name.GetString()] = std::vector<GeometryInfoPtr>();
-            }
-            std::vector<GeometryInfoPtr>& vgeometries = _mapExtraGeometries[it->name.GetString()];
-            vgeometries.reserve(it->value.Size() + vgeometries.size());
-            size_t iGeometry = 0;
-            for(rapidjson::Value::ConstValueIterator im = it->value.Begin(); im != it->value.End(); ++im, ++iGeometry) {
-                std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(*im, "id");
-                if (id.empty()) {
-                    id = OpenRAVE::JSON::GetStringJsonValueByKey(*im, "name");
-                }
-                if (id.empty()) {
-                    id = boost::str(boost::format("geometry%d") % iGeometry);
-                }
-                UpdateOrCreateInfo(*im, id, vgeometries, fUnitScale);
-            }
-        }
-    }
+    _mapExtraGeometries.clear();
+    // if (value.HasMember("extraGeometries")) {
+    //     for (rapidjson::Value::ConstMemberIterator it = value["extraGeometries"].MemberBegin(); it != value["extraGeometries"].MemberEnd(); ++it) {
+    //         if (_mapExtraGeometries.find(it->name.GetString()) == _mapExtraGeometries.end()) {
+    //             _mapExtraGeometries[it->name.GetString()] = std::vector<GeometryInfoPtr>();
+    //         }
+    //         std::vector<GeometryInfoPtr>& vgeometries = _mapExtraGeometries[it->name.GetString()];
+    //         vgeometries.reserve(it->value.Size() + vgeometries.size());
+    //         size_t iGeometry = 0;
+    //         for(rapidjson::Value::ConstValueIterator im = it->value.Begin(); im != it->value.End(); ++im, ++iGeometry) {
+    //             std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(*im, "id");
+    //             if (id.empty()) {
+    //                 id = OpenRAVE::JSON::GetStringJsonValueByKey(*im, "name");
+    //             }
+    //             if (id.empty()) {
+    //                 id = boost::str(boost::format("geometry%d") % iGeometry);
+    //             }
+    //             UpdateOrCreateInfo(*im, id, vgeometries, fUnitScale);
+    //         }
+    //     }
+    // }
 
     OpenRAVE::JSON::LoadJsonValueByKey(value, "isStatic", _bStatic);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "isEnabled", _bIsEnabled);

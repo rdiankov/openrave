@@ -2171,6 +2171,9 @@ KinBody::KinBodyInfoPtr PyKinBody::PyKinBodyInfo::GetKinBodyInfo() const {
 #endif
     pInfo->_transform = ExtractTransform(_transform);
     pInfo->_dofValues = ExtractDOFValuesArray(_dofValues);
+    rapidjson::Document docReadableInterfaces;
+    toRapidJSONValue(_readableInterfaces, docReadableInterfaces, docReadableInterfaces.GetAllocator());
+    docReadableInterfaces.Swap(pInfo->_docReadableInterfaces);
     return pInfo;
 }
 
@@ -2226,6 +2229,7 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
 #endif
     _transform = ReturnTransform(info._transform);
     _dofValues = ReturnDOFValues(info._dofValues);
+    _readableInterfaces = toPyObject(info._docReadableInterfaces);
 }
 
 std::string PyKinBody::PyKinBodyInfo::__str__() {
@@ -4701,6 +4705,7 @@ void init_openravepy_kinbody()
                          .def_readwrite("_uri", &PyKinBody::PyKinBodyInfo::_uri)
                          .def_readwrite("_referenceUri", &PyKinBody::PyKinBodyInfo::_referenceUri)
                          .def_readwrite("_dofValues", &PyKinBody::PyKinBodyInfo::_dofValues)
+                         .def_readwrite("_readableInterfaces", &PyKinBody::PyKinBodyInfo::_readableInterfaces)
                          .def_readwrite("_transform", &PyKinBody::PyKinBodyInfo::_transform)
                          .def("__str__",&PyKinBody::PyKinBodyInfo::__str__)
                          .def("__unicode__",&PyKinBody::PyKinBodyInfo::__unicode__)
