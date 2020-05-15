@@ -317,25 +317,6 @@ void PyIkParameterization::MultiplyTransformRight(object otrans)
 {
     _param.MultiplyTransformRight(ExtractTransform(otrans));
 }
-py::object PyIkParameterization::SerializeJSON(dReal fUnitScale)
-{
-    rapidjson::Document doc;
-    _param.SerializeJSON(doc, doc.GetAllocator(), fUnitScale);
-    return toPyObject(doc);
-}
-void PyIkParameterization::DeserializeJSON(py::object obj, dReal fUnitScale)
-{
-    rapidjson::Document doc;
-    toRapidJSONValue(obj, doc, doc.GetAllocator());
-    IkParameterization ikparam;
-    ikparam.DeserializeJSON(doc, fUnitScale);
-    _Update(ikparam);
-}
-
-void PyIkParameterization::_Update(const IkParameterization &ikparam)
-{
-    _param = ikparam;
-}
 
 py::object PyIkParameterization::SerializeJSON(dReal fUnitScale)
 {
