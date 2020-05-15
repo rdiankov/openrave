@@ -359,7 +359,7 @@ protected:
         params->_minimumgoalpaths = _minimumgoalpaths;
         params->_nMaxIterations = 4000;     // max iterations before failure
         dReal jitter = 0.04;
-        int dynamicsConstraints=0;
+        int usedynamicsconstraints=0;
         std::vector<dReal> vinitialconfig;
         string cmd;
         while(!sinput.eof()) {
@@ -428,8 +428,8 @@ protected:
                 }
                 boost::trim(params->_sPostProcessingPlanner);
             }
-            else if( cmd == "dynamicsConstraints" ) {
-                sinput >> dynamicsConstraints;
+            else if( cmd == "usedynamicsconstraints" ) {
+                sinput >> usedynamicsconstraints;
             }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
@@ -451,7 +451,7 @@ protected:
             params->vinitialconfig.swap(vinitialconfig);
         }
 
-        if( dynamicsConstraints ) {
+        if( usedynamicsconstraints ) {
             // use dynamics constraints, so remove the old path constraint function
             params->_checkpathconstraintsfn.clear();
             std::list<KinBodyPtr> listCheckBodies;
