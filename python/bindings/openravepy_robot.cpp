@@ -139,7 +139,7 @@ void PyAttachedSensorInfo::_Update(const RobotBase::AttachedSensorInfo& info) {
     _linkname = ConvertStringToUnicode(info._linkname);
     _trelative = ReturnTransform(info._trelative);
     _sensorname = ConvertStringToUnicode(info._sensorname);
-    _sensorgeometry = toPySensorGeometry(info._sensorgeometry);
+    _sensorgeometry = toPySensorGeometry(info._sensorname, info._docSensorGeometry);
 }
 
 RobotBase::AttachedSensorInfoPtr PyAttachedSensorInfo::GetAttachedSensorInfo() const
@@ -149,9 +149,14 @@ RobotBase::AttachedSensorInfoPtr PyAttachedSensorInfo::GetAttachedSensorInfo() c
     pinfo->_linkname = py::extract<std::string>(_linkname);
     pinfo->_trelative = ExtractTransform(_trelative);
     pinfo->_sensorname = py::extract<std::string>(_sensorname);
+    rapidjson::Document docSensorGeometry;
     if(!!_sensorgeometry) {
-        pinfo->_sensorgeometry = _sensorgeometry->GetGeometry();
+        SensorBase::SensorGeometryPtr sensorGeometry = _sensorgeometry->GetGeometry();
+        if(!!sensorGeometry) {
+            sensorGeometry->SerializeJSON(docSensorGeometry, docSensorGeometry.GetAllocator());
+        }
     }
+    pinfo->_docSensorGeometry.Swap(docSensorGeometry);
     return pinfo;
 }
 
