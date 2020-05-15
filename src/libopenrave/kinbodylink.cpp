@@ -736,6 +736,56 @@ void KinBody::Link::ExtractInfo(KinBody::LinkInfo& info) const {
 UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info)
 {
     BOOST_ASSERT(info._id == _info._id);
+
+    KinBody::LinkInfo currentInfo;
+    ExtractInfo(currentInfo);
+
+    // name
+    if (currentInfo._name != info._name) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // geometries
+    FOREACHC(itGeometryInfo, info._vgeometryinfos) {
+        std::vector<KinBody::Link::GeometryPtr>::iterator itExistingGeometry = _vGeometries.end();
+        FOREACH(itGeometry, _vGeometries) {
+            if ((*itGeometry)->_info._id == (*itGeometryInfo)->_id) {
+                itExistingGeometry = itGeometry;
+                break;
+            }
+        }
+
+        KinBody::GeometryInfoPtr pGeometryInfo = *itGeometryInfo;
+        if (itExistingGeometry != _vGeometries.end()) {
+            // update current geometry
+            UpdateFromInfoResult updateFromGeometryInfoResult = UFIR_Success;
+            KinBody::Link::GeometryPtr pGeometry = *itExistingGeometry;
+            updateFromGeometryInfoResult = pGeometry->UpdateFromInfo(*pGeometryInfo);
+            if (updateFromGeometryInfoResult == UFIR_Success) {
+                continue;
+            }
+            return UFIR_RequireRemoveFromEnvironment;
+        }
+        // new geometry is added;
+        AddGeometry(pGeometryInfo, true); // TODO: add to groups?
+    }
+
+    // TODO: remove geometry need more discussion about _vgeometryinfo
+    // FOREACH_NOINC(itGeometry, _vGeometries) {
+    //     bool stillExists = false;
+    //     FOREACHC(itGeometryInfo, info._vgeometryinfos) {
+    //         if ((*itGeometry)->_info._id == (*itGeometryInfo)->_id) {
+    //             stillExists = true;
+    //             break;
+    //         }
+    //     }
+    //     if (stillExists) {
+    //         ++itGeometry;
+    //         continue;
+    //     }
+    //     RemoveGeometryByName((*itGeometry)->_info._name, true); // TODO: remove from all group?
+    // }
+
     return UFIR_Success;
 }
 

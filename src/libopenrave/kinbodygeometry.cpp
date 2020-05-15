@@ -640,7 +640,10 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         }
     }
     else {
-        throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported geometry type \"%s\"", typestr, ORE_InvalidArguments);
+        // this maybe a partial deserialize json. so only throw error if _type is not initialized
+        if (_type == GT_None) {
+            throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported geometry type \"%s\"", typestr, ORE_InvalidArguments);
+        }
     }
     OpenRAVE::JSON::LoadJsonValueByKey(value, "transparency", _fTransparency);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "visible", _bVisible);
