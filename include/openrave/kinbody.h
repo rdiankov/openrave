@@ -27,6 +27,13 @@ namespace OpenRAVE {
 class OpenRAVEFunctionParserReal;
 typedef boost::shared_ptr< OpenRAVEFunctionParserReal > OpenRAVEFunctionParserRealPtr;
 
+/// \brief Result of UpdateFromInfo() call
+enum UpdateFromInfoResult {
+    UFIR_Success = 0, ///< Updated successfully
+    UFIR_RequireRemoveFromEnvironment, ///< Failed to update, require the kinbody to be removed from environment before update can succeed
+    UFIR_RequireReinitialize, ///< Failed to update, require InitFromInfo() to be called before update can succeed
+};
+
 /// \brief The type of geometry primitive.
 enum GeometryType {
     GT_None = 0,
@@ -503,7 +510,7 @@ public:
             virtual void ExtractInfo(KinBody::GeometryInfo& info) const;
 
             /// \brief update Geometry according to new GeometryInfo, returns false if update cannot be performed and requires InitFromInfo
-            virtual bool UpdateFromInfo(const KinBody::GeometryInfo& info);
+            virtual UpdateFromInfoResult UpdateFromInfo(const KinBody::GeometryInfo& info);
 
             /// cage
             //@{
@@ -861,7 +868,7 @@ protected:
         virtual void ExtractInfo(KinBody::LinkInfo& info) const;
 
         /// \brief update Link according to new LinkInfo, returns false if update cannot be performed and requires InitFromInfo
-        virtual bool UpdateFromInfo(const KinBody::LinkInfo& info);
+        virtual UpdateFromInfoResult UpdateFromInfo(const KinBody::LinkInfo& info);
 
 protected:
         /// \brief Updates the cached information due to changes in the collision data.
@@ -1540,7 +1547,7 @@ public:
         virtual void ExtractInfo(KinBody::JointInfo& info) const;
 
         /// \brief update Joint according to new JointInfo, returns false if update cannot be performed and requires InitFromInfo
-        virtual bool UpdateFromInfo(const KinBody::JointInfo& info);
+        virtual UpdateFromInfoResult UpdateFromInfo(const KinBody::JointInfo& info);
 
 protected:
         JointInfo _info;
@@ -2788,7 +2795,7 @@ private:
     virtual void ExtractInfo(KinBodyInfo& info);
 
     /// \brief update KinBody according to new KinBodyInfo, returns false if update cannot be performed and requires InitFromInfo
-    virtual bool UpdateFromInfo(const KinBodyInfo& info);
+    virtual UpdateFromInfoResult UpdateFromInfo(const KinBodyInfo& info);
 
 protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies

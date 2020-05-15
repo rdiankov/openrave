@@ -266,7 +266,7 @@ public:
     object GetUnit() const;
 
     py::object ExtractInfo() const;
-    bool UpdateFromInfo(PyEnvironmentBaseInfoPtr info);
+    void UpdateFromInfo(PyEnvironmentBaseInfoPtr info);
 
     bool __eq__(PyEnvironmentBasePtr p);
     bool __ne__(PyEnvironmentBasePtr p);

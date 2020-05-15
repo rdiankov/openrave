@@ -85,11 +85,11 @@ void RobotBase::Manipulator::ExtractInfo(RobotBase::ManipulatorInfo& info) const
     info = _info;
 }
 
-bool RobotBase::Manipulator::UpdateFromInfo(const RobotBase::ManipulatorInfo& info)
+UpdateFromInfoResult RobotBase::Manipulator::UpdateFromInfo(const RobotBase::ManipulatorInfo& info)
 {
     // TODO
     _info = info;
-    return true;
+    return UFIR_Success;
 }
 
 int RobotBase::Manipulator::GetArmDOF() const

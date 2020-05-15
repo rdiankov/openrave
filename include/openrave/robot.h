@@ -148,7 +148,7 @@ public:
         virtual void ExtractInfo(RobotBase::ManipulatorInfo& info) const;
 
         /// \brief update Manipulator according to new ManipulatorInfo, returns false if update cannot be performed and requires InitFromInfo
-        virtual bool UpdateFromInfo(const RobotBase::ManipulatorInfo& info);
+        virtual UpdateFromInfoResult UpdateFromInfo(const RobotBase::ManipulatorInfo& info);
 
         /// \brief Return the transformation of the manipulator frame
         ///
@@ -617,7 +617,7 @@ public:
         virtual void ExtractInfo(RobotBase::AttachedSensorInfo& info) const;
 
         /// \brief update AttachedSensor according to new AttachedSensorInfo, returns false if update cannot be performed and requires InitFromInfo
-        virtual bool UpdateFromInfo(const RobotBase::AttachedSensorInfo& info);
+        virtual UpdateFromInfoResult UpdateFromInfo(const RobotBase::AttachedSensorInfo& info);
 
 private:
         /// \brief compute internal information from user-set info
@@ -801,7 +801,7 @@ public:
         virtual void ExtractInfo(RobotBase::ConnectedBodyInfo& info) const;
 
         /// \brief update ConnectedBody according to new ConnectedBodyInfo, returns false if update cannot be performed and requires InitFromInfo
-        virtual bool UpdateFromInfo(const RobotBase::ConnectedBodyInfo& info);
+        virtual UpdateFromInfoResult UpdateFromInfo(const RobotBase::ConnectedBodyInfo& info);
 
 private:
         ConnectedBodyInfo _info; ///< user specified data (to be serialized and saved), should not contain dynamically generated parameters.
@@ -1308,7 +1308,7 @@ private:
     virtual void ExtractInfo(RobotBaseInfo& info);
 
     /// \brief update RobotBase according to new RobotBaseInfo, returns false if update cannot be performed and requires InitFromInfo
-    virtual bool UpdateFromInfo(const RobotBaseInfo& info);
+    virtual UpdateFromInfoResult UpdateFromInfo(const RobotBaseInfo& info);
 
 protected:
     RobotBase(EnvironmentBasePtr penv);

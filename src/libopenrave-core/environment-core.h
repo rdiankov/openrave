@@ -2365,7 +2365,7 @@ public:
     }
 
     /// \brief update EnvironmentBase according to new EnvironmentBaseInfo, returns false if update cannot be performed and requires InitFromInfo
-    virtual bool UpdateFromInfo(const EnvironmentBaseInfo& info)
+    virtual void UpdateFromInfo(const EnvironmentBaseInfo& info)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         FOREACHC(itBodyInfo, info._vBodyInfos) {
@@ -2383,17 +2383,17 @@ public:
 
             if (itExistingBody != _vecbodies.end()) {
                 // update existing body or robot
-                bool updateSucceeded = false;
+                UpdateFromInfoResult updateFromInfoResult = UFIR_Success;
                 KinBodyPtr pBody = *itExistingBody;
                 if (!!pRobotBaseInfo && pBody->IsRobot()) {
                     RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pBody);
-                    updateSucceeded = pRobot->UpdateFromInfo(*pRobotBaseInfo);
+                    updateFromInfoResult = pRobot->UpdateFromInfo(*pRobotBaseInfo);
                 }
                 else if (!pRobotBaseInfo && !pBody->IsRobot()) {
-                    updateSucceeded = pBody->UpdateFromInfo(*pKinBodyInfo);
+                    updateFromInfoResult = pBody->UpdateFromInfo(*pKinBodyInfo);
                 }
 
-                if (updateSucceeded) {
+                if (updateFromInfoResult == UFIR_Success) {
                     continue;
                 }
 
@@ -2404,12 +2404,22 @@ public:
 
                 if (!!pRobotBaseInfo && pBody->IsRobot()) {
                     RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pBody);
-                    pRobot->InitFromInfo(*pRobotBaseInfo);
+                    if (updateFromInfoResult == UFIR_RequireRemoveFromEnvironment) {
+                        updateFromInfoResult = pRobot->UpdateFromInfo(*pRobotBaseInfo);
+                    }
+                    if (updateFromInfoResult != UFIR_Success) {
+                        pRobot->InitFromInfo(*pRobotBaseInfo);
+                    }
                     _AddRobot(pRobot, true);
                     continue;
                 }
                 else if (!pRobotBaseInfo && !pBody->IsRobot()) {
-                    pBody->InitFromInfo(*pKinBodyInfo);
+                    if (updateFromInfoResult == UFIR_RequireRemoveFromEnvironment) {
+                        updateFromInfoResult = pBody->UpdateFromInfo(*pKinBodyInfo);
+                    }
+                    if (updateFromInfoResult != UFIR_Success) {
+                        pBody->InitFromInfo(*pKinBodyInfo);
+                    }
                     _AddKinBody(pBody, true);
                     continue;
                 }
@@ -2430,8 +2440,27 @@ public:
                 _AddKinBody(pBody, true);
             }
         }
+
+        // remove extra bodies
+        FOREACH_NOINC(itBody, _vecbodies) {
+            bool stillExists = false;
+            FOREACHC(itBodyInfo, info._vBodyInfos) {
+                if ((*itBody)->_info._id == (*itBodyInfo)->_id) {
+                    stillExists = true;
+                    break;
+                }
+            }
+            if (stillExists) {
+                ++itBody;
+                continue;
+            }
+            {
+                boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+                _RemoveKinBodyFromIterator(itBody);
+            }
+        }
+
         UpdatePublishedBodies();
-        return true;
     }
 
 protected:

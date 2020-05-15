@@ -733,10 +733,10 @@ void KinBody::Link::ExtractInfo(KinBody::LinkInfo& info) const {
     }
 }
 
-bool KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info)
+UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info)
 {
     BOOST_ASSERT(info._id == _info._id);
-    return true;
+    return UFIR_Success;
 }
 
 void KinBody::Link::_Update(bool parameterschanged, uint32_t extraParametersChanged)

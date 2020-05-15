@@ -217,11 +217,11 @@ void RobotBase::AttachedSensor::ExtractInfo(AttachedSensorInfo& info) const
     }
 }
 
-bool RobotBase::AttachedSensor::UpdateFromInfo(const RobotBase::AttachedSensorInfo& info)
+UpdateFromInfoResult RobotBase::AttachedSensor::UpdateFromInfo(const RobotBase::AttachedSensorInfo& info)
 {
     // TODO
     _info = info;
-    return true;
+    return UFIR_Success;
 }
 
 void RobotBase::AttachedSensor::serialize(std::ostream& o, int options) const
@@ -2357,11 +2357,11 @@ void RobotBase::ExtractInfo(RobotBaseInfo& info)
     }
 }
 
-bool RobotBase::UpdateFromInfo(const RobotBaseInfo& info)
+UpdateFromInfoResult RobotBase::UpdateFromInfo(const RobotBaseInfo& info)
 {
     // TODO
     BOOST_ASSERT(info._id == _info._id);
-    return true;
+    return UFIR_Success;
 }
 
 } // end namespace OpenRAVE

@@ -5221,10 +5221,10 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
     info._docReadableInterfaces.Swap(docReadableInterfaces);
 }
 
-bool KinBody::UpdateFromInfo(const KinBodyInfo& info)
+UpdateFromInfoResult KinBody::UpdateFromInfo(const KinBodyInfo& info)
 {
     BOOST_ASSERT(info._id == _info._id);
-    return true;
+    return UFIR_Success;
 }
 
 } // end namespace OpenRAVE

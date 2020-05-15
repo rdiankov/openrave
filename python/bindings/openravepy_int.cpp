@@ -2339,9 +2339,9 @@ object PyEnvironmentBase::ExtractInfo() const {
     return py::to_object(boost::shared_ptr<PyEnvironmentBase::PyEnvironmentBaseInfo>(new PyEnvironmentBase::PyEnvironmentBaseInfo(info)));
 }
 
-bool PyEnvironmentBase::UpdateFromInfo(PyEnvironmentBaseInfoPtr info) {
+void PyEnvironmentBase::UpdateFromInfo(PyEnvironmentBaseInfoPtr info) {
     EnvironmentBase::EnvironmentBaseInfoPtr pInfo = info->GetEnvironmentBaseInfo();
-    return _penv->UpdateFromInfo(*pInfo);
+    _penv->UpdateFromInfo(*pInfo);
 }
 
 bool PyEnvironmentBase::__eq__(PyEnvironmentBasePtr p) {

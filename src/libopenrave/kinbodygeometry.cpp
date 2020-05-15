@@ -1061,11 +1061,11 @@ void KinBody::Link::Geometry::ExtractInfo(KinBody::GeometryInfo& info) const
     info = _info;
 }
 
-bool KinBody::Link::Geometry::UpdateFromInfo(const KinBody::GeometryInfo& info)
+UpdateFromInfoResult KinBody::Link::Geometry::UpdateFromInfo(const KinBody::GeometryInfo& info)
 {
     BOOST_ASSERT(info._id == _info._id);
     _info = info;
-    return true;
+    return UFIR_Success;
 }
 
 }

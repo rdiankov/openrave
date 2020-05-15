@@ -734,8 +734,8 @@ public:
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
     virtual void ExtractInfo(EnvironmentBaseInfo& info) = 0;
 
-    /// \brief update EnvironmentBase according to new EnvironmentBaseInfo, returns false if update cannot be performed and requires InitFromInfo
-    virtual bool UpdateFromInfo(const EnvironmentBaseInfo& info) = 0;
+    /// \brief update EnvironmentBase according to new EnvironmentBaseInfo
+    virtual void UpdateFromInfo(const EnvironmentBaseInfo& info) = 0;
 
 protected:
     virtual const char* GetHash() const {
