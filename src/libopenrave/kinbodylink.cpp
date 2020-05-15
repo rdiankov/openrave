@@ -737,11 +737,8 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
 {
     BOOST_ASSERT(info._id == _info._id);
 
-    KinBody::LinkInfo currentInfo;
-    ExtractInfo(currentInfo);
-
     // name
-    if (currentInfo._name != info._name) {
+    if (GetName() != info._name) {
         return UFIR_RequireRemoveFromEnvironment;
     }
 
