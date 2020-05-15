@@ -57,11 +57,6 @@ void RobotBase::GripperInfo::SerializeJSON(rapidjson::Value &value, rapidjson::D
 
 void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
-    // _id.clear();
-    // name.clear();
-    // grippertype.clear();
-    // gripperJointNames.clear();
-
     OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", name);
     if( name.size() == 0 && _id.size() > 0 ) {
@@ -85,17 +80,17 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
 
 void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
+    value.SetObject();
     OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "linkName", _linkname, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "transform", _trelative, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "type", _sensorname, allocator);
 
-    if(!!_sensorgeometry)
-    {
-        rapidjson::Value sensorGeometryValue;
-        _sensorgeometry->SerializeJSON(sensorGeometryValue, allocator, fUnitScale, options);
-        OpenRAVE::JSON::SetJsonValueByKey(value, "sensorGeometry", sensorGeometryValue, allocator);
+    if (_docSensorGeometry.IsObject() && _docSensorGeometry.MemberCount() > 0) {
+        rapidjson::Value sensorGeometry;
+        sensorGeometry.CopyFrom(_docSensorGeometry, allocator, true);
+        value.AddMember("sensorGeometry", sensorGeometry, allocator);
     }
 }
 
@@ -110,21 +105,12 @@ void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& valu
     OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _trelative);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "type", _sensorname);
 
-    // if (!!_sensorgeometry) {
-    //     _sensorgeometry.reset();
-    // }
 
     if (value.HasMember("sensorGeometry")) {
-        BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Sensor, _sensorname, InterfaceBasePtr(), AttributesList());
-        if (!!pReader) {
-            pReader->DeserializeJSON(value["sensorGeometry"], fUnitScale);
-            JSONReadablePtr pReadable = pReader->GetReadable();
-            if (!!pReadable) {
-                _sensorgeometry = OPENRAVE_DYNAMIC_POINTER_CAST<SensorBase::SensorGeometry>(pReadable);
-            }
-        } else {
-            RAVELOG_WARN_FORMAT("failed to get json reader for sensor type \"%s\"", _sensorname);
+        if (!_docSensorGeometry.IsObject()) {
+            _docSensorGeometry.SetObject();
         }
+        OpenRAVE::JSON::UpdateJson(_docSensorGeometry, value["sensorGeometry"]);
     }
 }
 
@@ -167,8 +153,18 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const RobotBase::
         _psensor = RaveCreateSensor(probot->GetEnv(), _info._sensorname);
         if( !!_psensor ) {
             _psensor->SetName(str(boost::format("%s:%s")%probot->GetName()%_info._name)); // need a unique targettable name
-            if(!!_info._sensorgeometry) {
-                _psensor->SetSensorGeometry(_info._sensorgeometry);
+            if(_info._docSensorGeometry.IsObject()) {
+                BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Sensor, _info._sensorname, InterfaceBasePtr(), AttributesList());
+                if (!!pReader) {
+                    pReader->DeserializeJSON(_info._docSensorGeometry);
+                    JSONReadablePtr pReadable = pReader->GetReadable();
+                    if (!!pReadable) {
+                        SensorBase::SensorGeometryPtr sensorGeometry = OPENRAVE_DYNAMIC_POINTER_CAST<SensorBase::SensorGeometry>(pReadable);
+                        _psensor->SetSensorGeometry(sensorGeometry);
+                    }
+                } else {
+                    RAVELOG_WARN_FORMAT("failed to get json reader for sensor type \"%s\"", _info._sensorname);
+                }
             }
             pdata = _psensor->CreateSensorData();
         }
@@ -227,23 +223,6 @@ uint8_t RobotBase::AttachedSensor::ApplyDiff(const rapidjson::Value& attachedSen
     return applyResult | ApplyDiffResult::ADR_OK;
 }
 
-//void RobotBase::AttachedSensor::_ComputeInternalInformation()
-//{
-//    RobotBasePtr probot = _probot.lock();
-//    _psensor.reset();
-//    pdata.reset();
-//    if( !!probot ) {
-//        _psensor = RaveCreateSensor(probot->GetEnv(), _info._sensorname);
-//        if( !!_psensor ) {
-//            _psensor->SetName(str(boost::format("%s:%s")%probot->GetName()%_info._name)); // need a unique targettable name
-//            if(!!_info._sensorgeometry) {
-//                _psensor->SetSensorGeometry(_info._sensorgeometry);
-//            }
-//            pdata = _psensor->CreateSensorData();
-//        }
-//    }
-//}
-
 SensorBase::SensorDataPtr RobotBase::AttachedSensor::GetData() const
 {
     if( !!_psensor && _psensor->GetSensorData(pdata) ) {
@@ -260,12 +239,16 @@ void RobotBase::AttachedSensor::SetRelativeTransform(const Transform& t)
 
 void RobotBase::AttachedSensor::UpdateInfo(SensorBase::SensorType type)
 {
+    rapidjson::Document docSensorGeometry;
     if( !!_psensor ) {
         _info._sensorname = _psensor->GetXMLId();
-        // TODO try to get the sensor geometry...?
-        _info._sensorgeometry = boost::const_pointer_cast<SensorBase::SensorGeometry>(_psensor->GetSensorGeometry(type));
-        //_info._sensorgeometry
+        SensorBase::SensorGeometryPtr sensorGeometry = boost::const_pointer_cast<SensorBase::SensorGeometry>(_psensor->GetSensorGeometry(type));
+        if (!!sensorGeometry) {
+            sensorGeometry->SerializeJSON(docSensorGeometry, docSensorGeometry.GetAllocator());
+        }
     }
+    _info._docSensorGeometry.Swap(docSensorGeometry);
+
     LinkPtr prealattachedlink = pattachedlink.lock();
     if( !!prealattachedlink ) {
         _info._linkname = prealattachedlink->GetName();
@@ -274,14 +257,22 @@ void RobotBase::AttachedSensor::UpdateInfo(SensorBase::SensorType type)
 
 void RobotBase::AttachedSensor::ExtractInfo(AttachedSensorInfo& info) const
 {
-    info = _info;
+    info._id = _info._id;
+    info._name = _info._name;
+    info._trelative = _info._trelative;
     info._sensorname.clear();
-    info._sensorgeometry.reset();
+    info._linkname.clear();
+
+    rapidjson::Document docSensorGeometry;
     if( !!_psensor ) {
         info._sensorname = _psensor->GetXMLId();
-        info._sensorgeometry = boost::const_pointer_cast<SensorBase::SensorGeometry>(_psensor->GetSensorGeometry(SensorBase::ST_Invalid));
+        SensorBase::SensorGeometryPtr sensorGeometry = boost::const_pointer_cast<SensorBase::SensorGeometry>(_psensor->GetSensorGeometry(SensorBase::ST_Invalid));
+        if (!!sensorGeometry) {
+            sensorGeometry->SerializeJSON(docSensorGeometry, docSensorGeometry.GetAllocator());
+        }
     }
-    info._linkname.clear();
+    info._docSensorGeometry.Swap(docSensorGeometry);
+
     LinkPtr prealattachedlink = pattachedlink.lock();
     if( !!prealattachedlink ) {
         info._linkname = prealattachedlink->GetName();

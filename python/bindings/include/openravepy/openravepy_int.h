@@ -709,7 +709,7 @@ public:
 
 typedef OPENRAVE_SHARED_PTR<PySensorGeometry> PySensorGeometryPtr;
 
-OPENRAVEPY_API PySensorGeometryPtr toPySensorGeometry(SensorBase::SensorGeometryPtr);
+OPENRAVEPY_API PySensorGeometryPtr toPySensorGeometry(const std::string& sensorname, const rapidjson::Document& docSensorGeometry);
 
 OPENRAVEPY_API bool ExtractIkReturn(py::object o, IkReturn& ikfr);
 OPENRAVEPY_API py::object toPyIkReturn(const IkReturn& ret);

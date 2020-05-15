@@ -512,8 +512,7 @@ public:
             _linkname = other._linkname;
             _trelative = other._trelative;
             _sensorname = other._sensorname;
-            _sensorgeometry = other._sensorgeometry;
-            // TODO: deep copy _sensorgeometry
+            // TODO: deep copy _docSensorGeometry
             return *this;
         }
         bool operator==(const AttachedSensorInfo& other) const {
@@ -521,23 +520,22 @@ public:
                 && _name == other._name
                 && _linkname == other._linkname
                 && _trelative == other._trelative
-                && _sensorname == other._sensorname
-                && _sensorgeometry == other._sensorgeometry;
-            // TODO: deep compare _sensorgeometry
+                && _sensorname == other._sensorname;
+            // TODO: deep compare _docSensorGeometry
         }
         bool operator!=(const AttachedSensorInfo& other) const {
             return !operator==(other);
         }
+
+        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
+        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
 
         std::string _id;
         std::string _name;
         std::string _linkname; ///< the robot link that the sensor is attached to
         Transform _trelative;         ///< relative transform of the sensor with respect to the attached link
         std::string _sensorname; ///< name of the sensor interface to create, in other words the sensor type
-        SensorBase::SensorGeometryPtr _sensorgeometry; ///< the sensor geometry to initialize the sensor with
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
-
+        rapidjson::Document _docSensorGeometry; ///< the sensor geometry to initialize the sensor with
     };
     typedef boost::shared_ptr<AttachedSensorInfo> AttachedSensorInfoPtr;
     typedef boost::shared_ptr<AttachedSensorInfo const> AttachedSensorInfoConstPtr;
