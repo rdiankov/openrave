@@ -118,7 +118,7 @@ public:
     IkParameterization _param;
 
 private:
-    void _Update(const IkParameterization &ikparam);
+    void _Update(const IkParameterization& ikparam);
 };
 
 } // namespace openravepy
