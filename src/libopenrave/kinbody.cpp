@@ -265,6 +265,10 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
             }
         }
     }
+
+    if (value.HasMember("transform")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _transform);
+    }
 }
 
 KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)
@@ -550,7 +554,6 @@ bool KinBody::InitFromInfo(const KinBodyInfo& info)
 {
     std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(info._vLinkInfos.begin(), info._vLinkInfos.end());
     std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(info._vJointInfos.begin(), info._vJointInfos.end());
-    
     if( !KinBody::Init(vLinkInfosConst, vJointInfosConst, info._uri) ) {
         return false;
     }
@@ -5224,6 +5227,79 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
 UpdateFromInfoResult KinBody::UpdateFromInfo(const KinBodyInfo& info)
 {
     BOOST_ASSERT(info._id == _info._id);
+
+    // links
+    FOREACHC(itLinkInfo, info._vLinkInfos) {
+        // find existing link in body
+        std::vector<KinBody::LinkPtr>::iterator itExistingLink = _veclinks.end();
+        FOREACH(itLink, _veclinks) {
+            if ((*itLink)->_info._id == (*itLinkInfo)->_id) {
+                itExistingLink = itLink;
+                break;
+            }
+        }
+
+        KinBody::LinkInfoPtr pLinkInfo = *itLinkInfo;
+        if (itExistingLink != _veclinks.end()) {
+            // update existing link
+            UpdateFromInfoResult updateFromLinkInfoResult = UFIR_Success;
+            KinBody::LinkPtr pLink = *itExistingLink;
+            updateFromLinkInfoResult = pLink->UpdateFromInfo(*pLinkInfo);
+            if (updateFromLinkInfoResult == UFIR_Success) {
+                continue;
+            }
+            // link update failed.
+            return UFIR_RequireRemoveFromEnvironment;
+        }
+        // new links is added
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // joints
+    FOREACHC(itJointInfo, info._vJointInfos) {
+        // find exsiting joint in body
+        std::vector<KinBody::JointPtr>::iterator itExistingJoint = _vecjoints.end();
+        FOREACH(itJoint, _vecjoints) {
+            if ((*itJoint)->_info._id == (*itJointInfo)->_id) {
+                itExistingJoint = itJoint;
+                break;
+            }
+        }
+        KinBody::JointInfoPtr pJointInfo = *itJointInfo;
+        if (itExistingJoint != _vecjoints.end()) {
+            // update current joint
+            UpdateFromInfoResult updateFromJointInfoResult = UFIR_Success;
+            KinBody::JointPtr pJoint = *itExistingJoint;
+            updateFromJointInfoResult = pJoint->UpdateFromInfo(*pJointInfo);
+            if (updateFromJointInfoResult == UFIR_Success) {
+                continue;
+            }
+            // joint update failed;
+            return UFIR_RequireRemoveFromEnvironment;
+        }
+        // new joints is added
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // grabbedinfos
+
+    KinBody::KinBodyInfo currentInfo;
+    ExtractInfo(currentInfo);
+
+    if (currentInfo._name != info._name) {
+        SetName(info._name);
+    }
+
+    if (currentInfo._transform != info._transform) {
+        SetTransform(info._transform);
+    }
+
+    if (currentInfo._dofValues != info._dofValues) {
+        // TODO
+    }
+
+    // TODO: readable interfaces
+
     return UFIR_Success;
 }
 
