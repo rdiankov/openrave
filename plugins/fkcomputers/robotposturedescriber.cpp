@@ -134,7 +134,7 @@ bool AnalyzeSixRevoluteJoints0(const std::vector<JointPtr>& joints) {
     const Transform tJ5J6 = joints[4]->GetInternalHierarchyRightTransform() * joints[5]->GetInternalHierarchyLeftTransform();
 
     return ((AnalyzeTransformBetweenNeighbouringJoints(tJ1J2) & NeighbouringTwoJointsRelation::NTJR_PERPENDICULAR) != NeighbouringTwoJointsRelation::NTJR_UNKNOWN)
-        && AnalyzeTransformBetweenNeighbouringJoints(tJ2J3) == NeighbouringTwoJointsRelation::NTJR_PARALLEL
+        && ((AnalyzeTransformBetweenNeighbouringJoints(tJ2J3) & NeighbouringTwoJointsRelation::NTJR_PARALLEL)      != NeighbouringTwoJointsRelation::NTJR_UNKNOWN)
         && ((AnalyzeTransformBetweenNeighbouringJoints(tJ3J4) & NeighbouringTwoJointsRelation::NTJR_PERPENDICULAR) != NeighbouringTwoJointsRelation::NTJR_UNKNOWN)
         && ((AnalyzeTransformBetweenNeighbouringJoints(tJ4J5) & NeighbouringTwoJointsRelation::NTJR_PERPENDICULAR) != NeighbouringTwoJointsRelation::NTJR_UNKNOWN)
         && ((AnalyzeTransformBetweenNeighbouringJoints(tJ5J6) & NeighbouringTwoJointsRelation::NTJR_PERPENDICULAR) != NeighbouringTwoJointsRelation::NTJR_UNKNOWN)
