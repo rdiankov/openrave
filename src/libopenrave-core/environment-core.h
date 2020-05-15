@@ -2521,53 +2521,67 @@ public:
     virtual bool UpdateFromInfo(const EnvironmentBaseInfo& info)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        FOREACHC(itBodyInfo, info._vBodyInfos) {
-            // find existing body in the env
-            std::vector<KinBodyPtr>::iterator itExistingBody = _vecbodies.end();
-            FOREACH(itBody, _vecbodies) {
-                if ((*itBody)->_info._id == (*itBodyInfo)->_id) {
-                    itExistingBody = itBody;
+
+        // separate and map existing bodies with new info.
+        std::vector<std::pair<std::string, KinBody::KinBodyInfoPtr>> updateGroup;  //<<< a mapping between existing body name and new KinbodyInfo
+        std::vector<KinBody::KinBodyInfoPtr> addGroup;  ///<< contains new info to be added into environment
+        std::vector<std::string> deleteGroup;   //<<< a vector of body names to be removed from environment
+
+        std::vector<bool> bIsNewInfo(info._vBodyInfos.size(), true);
+        FOREACHC(itBody, _vecbodies) {
+            bool isDeleted = true;
+            FOREACHC(itBodyInfo, info._vBodyInfos) {
+                if ((*itBody)->GetInfo()._id == (*itBodyInfo)->_id) {
+                    updateGroup.push_back(std::make_pair((*itBody)->GetName(), *itBodyInfo));
+                    bIsNewInfo[itBodyInfo - info._vBodyInfos.begin()] = false;
+                    isDeleted = false;
                     break;
                 }
             }
-
-            KinBody::KinBodyInfoPtr pKinBodyInfo = *itBodyInfo;
-            RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
-
-            if (itExistingBody != _vecbodies.end()) {
-                // update existing body or robot
-                bool updateSucceeded = false;
-                KinBodyPtr pBody = *itExistingBody;
-                if (!!pRobotBaseInfo && pBody->IsRobot()) {
-                    RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pBody);
-                    updateSucceeded = pRobot->UpdateFromInfo(*pRobotBaseInfo);
-                }
-                else if (!pRobotBaseInfo && !pBody->IsRobot()) {
-                    updateSucceeded = pBody->UpdateFromInfo(*pKinBodyInfo);
-                }
-
-                if (updateSucceeded) {
-                    continue;
-                }
-
-                {
-                    boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-                    _RemoveKinBodyFromIterator(itExistingBody);
-                }
-
-                if (!!pRobotBaseInfo && pBody->IsRobot()) {
-                    RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pBody);
-                    pRobot->InitFromInfo(*pRobotBaseInfo);
-                    _AddRobot(pRobot, true);
-                    continue;
-                }
-                else if (!pRobotBaseInfo && !pBody->IsRobot()) {
-                    pBody->InitFromInfo(*pKinBodyInfo);
-                    _AddKinBody(pBody, true);
-                    continue;
-                }
+            if (isDeleted) {
+                // delete non-existing bodies in new info;
+                deleteGroup.push_back((*itBody)->GetName());
             }
+        }
 
+        for(size_t iInfo = 0; iInfo < bIsNewInfo.size(); iInfo++) {
+            if (bIsNewInfo[iInfo]) {
+                addGroup.push_back(*(info._vBodyInfos.begin() + iInfo));
+            }
+        }
+
+        // update bodies
+        for(std::vector<std::pair<std::string, KinBody::KinBodyInfoPtr>>::iterator it = updateGroup.begin(); it != updateGroup.end(); it++){
+            const std::string& kinbodyName = it->first;
+            KinBody::KinBodyInfoPtr& pKinBodyInfo = it->second;
+
+            RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
+            KinBodyPtr pBody = GetKinBody(kinbodyName);
+
+            // update existing body or robot
+            bool updateSucceeded = false;
+            if (!!pRobotBaseInfo && pBody->IsRobot()) {
+                RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pBody);
+                updateSucceeded = pRobot->UpdateFromInfo(*pRobotBaseInfo);
+            }
+            else if (!pRobotBaseInfo && !pBody->IsRobot()) {
+                updateSucceeded = pBody->UpdateFromInfo(*pKinBodyInfo);
+            }
+            if (!updateSucceeded) {
+                deleteGroup.push_back(kinbodyName);
+                addGroup.push_back(pKinBodyInfo);
+            }
+        }
+
+        // delete bodies
+        for(std::vector<std::string>::iterator it = deleteGroup.begin(); it != deleteGroup.end(); it++) {
+            RemoveKinBodyByName(*it);
+        }
+
+        // add bodies
+        for(std::vector<KinBody::KinBodyInfoPtr>::iterator it = addGroup.begin(); it != addGroup.end(); it++) {
+            KinBody::KinBodyInfoPtr& pKinBodyInfo = *it;
+            RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
             // for new body or robot
             if (!!pRobotBaseInfo) {
                 RobotBasePtr pRobot = RaveCreateRobot(shared_from_this(), "GenericRobot");
@@ -2595,8 +2609,8 @@ protected:
     void _RemoveKinBodyFromIterator(vector<KinBodyPtr>::iterator it)
     {
         // before deleting, make sure no robots are grabbing it!!
+        KinBody &body = **it;
         FOREACH(itrobot, _vecbodies) {
-            KinBody &body = **it;
             if( (*itrobot)->IsGrabbing(body) ) {
                 RAVELOG_WARN_FORMAT("env=%d, remove %s already grabbed by robot %s!", GetId()%body.GetName()%(*itrobot)->GetName());
                 (*itrobot)->Release(body);
