@@ -104,6 +104,9 @@ public:
 
     void MultiplyTransformRight(object otrans);
 
+    py::object SerializeJSON(dReal fUnitScale=1.0);
+    void DeserializeJSON(py::object obj, dReal fUnitScale=1.0);
+
     std::string __repr__();
     std::string __str__();
     object __unicode__();
@@ -113,6 +116,8 @@ public:
     PyIkParameterizationPtr __rmul__(object otrans);
 
     IkParameterization _param;
+private:
+    void _Update(const IkParameterization& ikparam);
 };
 
 } // namespace openravepy
