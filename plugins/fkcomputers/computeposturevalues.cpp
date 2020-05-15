@@ -1,4 +1,5 @@
 #include "robotposturedescriber.h"
+#include "openraveplugindefs.h" // SerializeValues
 
 namespace OpenRAVE {
 
@@ -61,6 +62,13 @@ void Compute6RRobotPostureStates0(const std::vector<JointPtr>& joints, const dou
         axis3.cross(axis4).dot(axis5)
     };
     compute_robot_posture_states<3>(posturevalues, fTol, posturestates);
+    // std::stringstream ss;
+    // ss << std::setprecision(16) << std::endl;
+    // ss << "posturevalues = [";
+    // SerializeValues(ss, posturevalues, ' ') << "]" << std::endl;
+    // ss << "posturestates = [";
+    // SerializeValues(ss, posturestates, ' ') << "]" << std::endl;
+    // RAVELOG_WARN(ss.str());
 }
 
 void Compute4DofRobotPostureStates0(const std::vector<JointPtr>& joints, const double fTol, std::vector<uint16_t>& posturestates) {

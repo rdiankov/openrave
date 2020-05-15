@@ -71,7 +71,7 @@ void RobotPostureDescriber::_GetJointsFromKinematicsChain(const std::array<Robot
 }
 
 NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Transform& t) {
-    const double tol = 1e-15;
+    const double tol = 2e-15; // increase for densowave-VS087A4-AV6
     const Vector zaxis0(0, 0, 1); // z-axis of the first joint
     const Vector zaxis1 = t.rotate(zaxis0); // z-axis of the second joint
     const double dotprod = zaxis1.dot3(zaxis0);
@@ -95,7 +95,7 @@ NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Tr
 
     // std::stringstream ss;
     // ss << std::setprecision(16);
-    // ss << "o = " << static_cast<int>(o) << ", t = " << t;
+    // ss << "o = " << static_cast<int>(o) << ", t = " << t << ", dotprod = " << dotprod;
     // RAVELOG_WARN_FORMAT("%s", ss.str());
     return o;
 }
