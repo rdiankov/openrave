@@ -743,6 +743,7 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
     }
 
     // geometries
+    bool isGeometryChanged = false;
     FOREACHC(itGeometryInfo, info._vgeometryinfos) {
         std::vector<KinBody::Link::GeometryPtr>::iterator itExistingGeometry = _vGeometries.end();
         FOREACH(itGeometry, _vGeometries) {
@@ -765,23 +766,27 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
         }
         // new geometry is added;
         AddGeometry(pGeometryInfo, true); // TODO: add to groups?
+        isGeometryChanged = true;
     }
 
-    // TODO: remove geometry need more discussion about _vgeometryinfo
-    // FOREACH_NOINC(itGeometry, _vGeometries) {
-    //     bool stillExists = false;
-    //     FOREACHC(itGeometryInfo, info._vgeometryinfos) {
-    //         if ((*itGeometry)->_info._id == (*itGeometryInfo)->_id) {
-    //             stillExists = true;
-    //             break;
-    //         }
-    //     }
-    //     if (stillExists) {
-    //         ++itGeometry;
-    //         continue;
-    //     }
-    //     RemoveGeometryByName((*itGeometry)->_info._name, true); // TODO: remove from all group?
-    // }
+
+    FOREACHC(itGeometry, _vGeometries) {
+        bool stillExists = false;
+        FOREACHC(itGeometryInfo, info._vgeometryinfos) {
+            if ((*itGeometry)->_info._id == (*itGeometryInfo)->_id) {
+                stillExists = true;
+                break;
+            }
+        }
+        if (stillExists) {
+            continue;
+        }
+        _vGeometries.erase(itGeometry);
+        isGeometryChanged = true;
+    }
+    if (isGeometryChanged) {
+        _Update(true, Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
+    }
 
     return UFIR_Success;
 }
