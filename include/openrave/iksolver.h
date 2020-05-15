@@ -181,6 +181,13 @@ public:
      */
     virtual bool GetFreeParameters(std::vector<dReal>& vFreeParameters) const = 0;
 
+    /** \brief gets the indices of the free parameters from the current robot configuration
+
+        \param[out] Indices of the free parameters
+        \return true if succeeded
+     */
+    virtual bool GetFreeIndices(std::vector<int>& vFreeIndices) const = 0;
+
     /** \brief Return a joint configuration for the given end effector transform.
 
         \param[in] param the pose the end effector has to achieve in the manipulator base's coordinate system. Note that the end effector pose takes into account the grasp coordinate frame for the RobotBase::Manipulator

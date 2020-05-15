@@ -328,7 +328,7 @@ protected:
         }
 
         TrajectoryBasePtr poutputtraj = RaveCreateTrajectory(GetEnv(),"");
-        if( !planner->PlanPath(poutputtraj) ) {
+        if( !planner->PlanPath(poutputtraj).GetStatusCode() ) {
             return false;
         }
         if( params->ignorefirstcollision == 0 && (RaveGetDebugLevel() & Level_VerifyPlans) ) {
@@ -453,7 +453,6 @@ protected:
 
         if( dynamicsConstraints ) {
             // use dynamics constraints, so remove the old path constraint function
-            params->_checkpathconstraintsfn.clear();
             std::list<KinBodyPtr> listCheckBodies;
             listCheckBodies.push_back(robot);
             planningutils::DynamicsCollisionConstraintPtr dynamics(new planningutils::DynamicsCollisionConstraint(params, listCheckBodies, 0xffffffff));
@@ -527,7 +526,7 @@ protected:
                 return false;
             }
 
-            if( !rrtplanner->PlanPath(ptraj) ) {
+            if( !rrtplanner->PlanPath(ptraj).GetStatusCode() ) {
                 RAVELOG_WARN("PlanPath failed\n");
             }
             else {
@@ -858,7 +857,7 @@ protected:
                 return false;
             }
 
-            if( rrtplanner->PlanPath(ptraj) ) {
+            if( rrtplanner->PlanPath(ptraj).GetStatusCode() ) {
                 bSuccess = true;
                 RAVELOG_DEBUG("finished planning\n");
                 break;

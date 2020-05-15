@@ -194,6 +194,7 @@ public:
             std::vector<dReal>::iterator it = std::lower_bound(_vaccumtime.begin(),_vaccumtime.end(),time);
             if( it == _vaccumtime.begin() ) {
                 std::copy(_vtrajdata.begin(),_vtrajdata.begin()+_spec.GetDOF(),data.begin());
+                data.at(_timeoffset) = time;
             }
             else {
                 size_t index = it-_vaccumtime.begin();
@@ -552,6 +553,16 @@ protected:
 
             if( nNeedNeighboringInfo ) {
                 std::vector<ConfigurationSpecification::Group>::const_iterator itderiv = _spec.FindTimeDerivativeGroup(_spec._vgroups[i]);
+
+                // only correct derivative if interpolation is the expected one compared to _spec._vgroups[i].interpolation
+                // this is necessary in order to prevent using wrong information. For example, sometimes position and velocity can both be linear, which means they are decoupled from their interpolation
+                if( itderiv != _spec._vgroups.end() ) {
+                    if( itderiv->interpolation.size() == 0 || itderiv->interpolation != ConfigurationSpecification::GetInterpolationDerivative(_spec._vgroups[i].interpolation) ) {
+                        // not correct interpolation, so remove from being a real derivative
+                        itderiv = _spec._vgroups.end();
+                    }
+                }
+
                 if( itderiv == _spec._vgroups.end() ) {
                     // don't throw an error here since it is unknown if the trajectory will be sampled
                     for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
@@ -563,6 +574,13 @@ protected:
                         _vderivoffsets[_spec._vgroups[i].offset+j] = itderiv->offset+j;
                     }
                     std::vector<ConfigurationSpecification::Group>::const_iterator itdd = _spec.FindTimeDerivativeGroup(*itderiv);
+                    if( itdd != _spec._vgroups.end() ) {
+                        if( itdd->interpolation.size() == 0 || itdd->interpolation != ConfigurationSpecification::GetInterpolationDerivative(itderiv->interpolation) ) {
+                            // not correct interpolation, so remove from being a real derivative
+                            itdd = _spec._vgroups.end();
+                        }
+                    }
+
                     if( itdd == _spec._vgroups.end() ) {
                         // don't throw an error here since it is unknown if the trajectory will be sampled
                         for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
@@ -574,6 +592,13 @@ protected:
                             _vddoffsets[_spec._vgroups[i].offset+j] = itdd->offset+j;
                         }
                         std::vector<ConfigurationSpecification::Group>::const_iterator itddd = _spec.FindTimeDerivativeGroup(*itdd);
+                        if( itddd != _spec._vgroups.end() ) {
+                            if( itddd->interpolation.size() == 0 || itddd->interpolation != ConfigurationSpecification::GetInterpolationDerivative(itdd->interpolation) ) {
+                                // not correct interpolation, so remove from being a real derivative
+                                itddd = _spec._vgroups.end();
+                            }
+                        }
+
                         if( itddd == _spec._vgroups.end() ) {
                             // don't throw an error here since it is unknown if the trajectory will be sampled
                             for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
@@ -588,6 +613,7 @@ protected:
                     }
                 }
                 std::vector<ConfigurationSpecification::Group>::const_iterator itintegral = _spec.FindTimeIntegralGroup(_spec._vgroups[i]);
+                // TODO check interpolation param for consistency
                 if( itintegral == _spec._vgroups.end() ) {
                     // don't throw an error here since it is unknown if the trajectory will be sampled
                     for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
@@ -977,27 +1003,6 @@ protected:
 
     void _ValidateLinear(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime)
     {
-        // If both g and the derivative of g has linear interpolation, then skip _ValidateLinear
-        const string& groupname = g.name;
-        if( groupname.size() >= 12 && groupname.substr(0, 12) == "joint_values" ) {
-            std::vector<ConfigurationSpecification::Group>::const_iterator itcompatgroup = _spec.FindCompatibleGroup("joint_velocities");
-            if( itcompatgroup != _spec._vgroups.end() ) {
-                if( itcompatgroup->interpolation == "linear" ) {
-                    // Skip validation
-                    return;
-                }
-            }
-        }
-        else if( groupname.size() >= 16 && groupname.substr(0, 16) == "joint_velocities" ) {
-            std::vector<ConfigurationSpecification::Group>::const_iterator itcompatgroup = _spec.FindCompatibleGroup("joint_accelerations");
-            if( itcompatgroup != _spec._vgroups.end() ) {
-                if( itcompatgroup->interpolation == "linear" ) {
-                    // Skip validation
-                    return;
-                }
-            }
-        }
-
         size_t offset = ipoint*_spec.GetDOF();
         int derivoffset = _vderivoffsets[g.offset];
         if( derivoffset >= 0 ) {

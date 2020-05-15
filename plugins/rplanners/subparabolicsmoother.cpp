@@ -65,11 +65,11 @@ public:
         return _parameters;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         BOOST_ASSERT(!!_parameters && !!ptraj);
         if( ptraj->GetNumWaypoints() < 2 ) {
-            return PS_Failed;
+            return PlannerStatus(PS_Failed);
         }
 
         // save velocities
@@ -146,7 +146,7 @@ public:
 
             PlannerProgress progress; progress._iteration=0;
             if( _CallCallbacks(progress) == PA_Interrupt ) {
-                return PS_Interrupted;
+                return PlannerStatus(PS_Interrupted);
             }
 
             int numshortcuts=0;
@@ -157,7 +157,7 @@ public:
 
             progress._iteration=1;
             if( _CallCallbacks(progress) == PA_Interrupt ) {
-                return PS_Interrupted;
+                return PlannerStatus(PS_Interrupted);
             }
 
             ConfigurationSpecification oldspec = parameters->_configurationspecification;
@@ -238,7 +238,7 @@ public:
                     _bUsePerturbation = true; // re-enable
                     progress._iteration=2;
                     if( _CallCallbacks(progress) == PA_Interrupt ) {
-                        return PS_Interrupted;
+                        return PlannerStatus(PS_Interrupted);
                     }
                 }
 
@@ -294,7 +294,7 @@ public:
             else {
                 RAVELOG_WARN(str(boost::format("parabolic planner failed: %s")%ex.what()));
             }
-            return PS_Failed;
+            return PlannerStatus(PS_Failed);
         }
         RAVELOG_DEBUG(str(boost::format("path optimizing - computation time=%fs\n")%(0.001f*(float)(utils::GetMilliTime()-basetime))));
         return _ProcessPostPlanners(RobotBasePtr(),ptraj);

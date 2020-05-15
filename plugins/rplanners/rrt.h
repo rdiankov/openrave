@@ -355,13 +355,12 @@ Some python code to display data::\n\
         return true;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         _goalindex = -1;
         _startindex = -1;
         if(!_parameters) {
-            RAVELOG_ERROR("BirrtPlanner::PlanPath - Error, planner not initialized\n");
-            return PS_Failed;
+            return PlannerStatus("BirrtPlanner::PlanPath - Error, planner not initialized\n", PS_Failed);
         }
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -386,7 +385,7 @@ Some python code to display data::\n\
             // have to check callbacks at the beginning since code can continue
             callbackaction = _CallCallbacks(progress);
             if( callbackaction ==  PA_Interrupt ) {
-                return PS_Interrupted;
+                return PlannerStatus("Planning was interrupted", PS_Interrupted);
             }
             else if( callbackaction == PA_ReturnWithAnySolution ) {
                 if( _vgoalpaths.size() > 0 ) {
@@ -509,8 +508,7 @@ Some python code to display data::\n\
         if( _vgoalpaths.size() == 0 ) {
             std::string description = str(boost::format(_("env=%d, plan failed in %fs, iter=%d, nMaxIterations=%d"))%GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime))%(iter/3)%_parameters->_nMaxIterations);
             RAVELOG_WARN(description);
-            _plannerError = PlannerBase::PlannerError(description);
-            return PS_Failed;
+            return PlannerStatus(description, PS_Failed);
         }
 
         vector<GOALPATH>::iterator itbest = _vgoalpaths.begin();
@@ -525,8 +523,12 @@ Some python code to display data::\n\
             ptraj->Init(_parameters->_configurationspecification);
         }
         ptraj->Insert(ptraj->GetNumWaypoints(), itbest->qall, _parameters->_configurationspecification);
-        RAVELOG_DEBUG_FORMAT("env=%d, plan success, iters=%d, path=%d points, computation time=%fs\n", GetEnv()->GetId()%progress._iteration%ptraj->GetNumWaypoints()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
-        return _ProcessPostPlanners(_robot,ptraj);
+        std::string description = str(boost::format(_("env=%d, plan success, iters=%d, path=%d points, computation time=%fs\n"))%GetEnv()->GetId()%progress._iteration%ptraj->GetNumWaypoints()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
+        RAVELOG_DEBUG(description);
+        PlannerStatus status = _ProcessPostPlanners(_robot,ptraj);
+        //TODO should use accessor to change description
+        status.description = description;
+        return status;
     }
 
     virtual void _ExtractPath(GOALPATH& goalpath, NodeBase* iConnectedForward, NodeBase* iConnectedBackward)
@@ -721,11 +723,12 @@ public:
         return true;
     }
 
-    PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         if(!_parameters) {
-            RAVELOG_WARN("RrtPlanner::PlanPath - Error, planner not initialized\n");
-            return PS_Failed;
+            std::string description = "RrtPlanner::PlanPath - Error, planner not initialized\n";
+            RAVELOG_WARN(description);
+            return PlannerStatus(description, PS_Failed);
         }
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -836,7 +839,7 @@ public:
                 if( bfound ) {
                     if( iter >= _parameters->_nMinIterations ) {
                         // check how many times we've got a goal?
-                        if( numfoundgoals >= _parameters->_minimumgoalpaths ) {
+                        if( numfoundgoals >= (int)_parameters->_minimumgoalpaths ) {
                             break;
                         }
                     }
@@ -860,7 +863,7 @@ public:
             progress._iteration = iter;
             callbackaction = _CallCallbacks(progress);
             if( callbackaction ==  PA_Interrupt ) {
-                return PS_Interrupted;
+                return PlannerStatus(PS_Interrupted);
             }
             else if( callbackaction == PA_ReturnWithAnySolution ) {
                 if( !!bestGoalNode ) {
@@ -870,8 +873,9 @@ public:
         }
 
         if( !bestGoalNode ) {
-            RAVELOG_DEBUG_FORMAT("plan failed, %fs",(0.001f*(float)(utils::GetMilliTime()-basetime)));
-            return PS_Failed;
+            std::string description = str(boost::format("env=%d, plan failed, %fs")%GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
+            RAVELOG_DEBUG(description);
+            return PlannerStatus(description, PS_Failed);
         }
 
         const int dof = _parameters->GetDOF();
@@ -943,12 +947,12 @@ public:
         return true;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         _goalindex = -1;
         _startindex = -1;
         if( !_parameters ) {
-            return PS_Failed;
+            return PlannerStatus(PS_Failed);
         }
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         vector<dReal> vSampleConfig;
@@ -994,7 +998,7 @@ public:
         FOREACH(itnode, vnodes) {
             ptraj->Insert(ptraj->GetNumWaypoints(), _treeForward.GetVectorConfig(*itnode), _parameters->_configurationspecification);
         }
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     virtual PlannerParametersConstPtr GetParameters() const {

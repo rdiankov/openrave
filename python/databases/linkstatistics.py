@@ -160,11 +160,16 @@ class LinkStatisticsModel(DatabaseGenerator):
                         weights[dofindex] = jointspheres[ijoint][1]
                         totalweight += jointspheres[ijoint][1]
                         numweights += 1
-                for ijoint in range(len(self.robot.GetJoints())):
-                    if ijoint in jointspheres:
-                        dofindex = self.robot.GetJoints()[ijoint].GetDOFIndex()
-                        weights[dofindex] *= weightmult*numweights/totalweight
-                
+
+                # avoid division by zero, and let small weights be handled below
+                if totalweight > 1e-7:
+                    for ijoint in range(len(self.robot.GetJoints())):
+                        if ijoint in jointspheres:
+                            dofindex = self.robot.GetJoints()[ijoint].GetDOFIndex()
+                            weights[dofindex] *= weightmult*numweights/totalweight
+                else:
+                    log.debug('total weight (%s) for robot %s is too small, so do not normalize', totalweight, self.robot.GetName())
+                    
                 # shouldn't have small weights...
                 for idof in range(self.robot.GetDOF()):
                     if weights[idof] <= 1e-7:
@@ -217,11 +222,12 @@ class LinkStatisticsModel(DatabaseGenerator):
             for childlink in childlinks:
                 Tlink = childlink.GetTransform()
                 localaabb = childlink.ComputeLocalAABB()
-                spherepos = dot(Tlink[:3,:3], localaabb.pos()) + Tlink[:3,3]
-                extensiondist = linalg.norm(j.GetAnchor() - spherepos)
+                linkpos = dot(Tlink[:3,:3], localaabb.pos()) + Tlink[:3,3]
+                extensiondist = linalg.norm(j.GetAnchor() - linkpos)
                 linkradius = linalg.norm(localaabb.extents())
                 sphereradius = max(sphereradius, linkradius+extensiondist)
-            
+
+            spherepos = j.GetAnchor()
             # process any child joints
             minpos = spherepos - sphereradius*ones([1,1,1])
             maxpos = spherepos + sphereradius*ones([1,1,1])

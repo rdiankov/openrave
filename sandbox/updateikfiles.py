@@ -78,7 +78,7 @@ IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, std::istream& sinput, co
     ikfunctions->_ComputeIk = IKFAST_NAMESPACE::ComputeIk;
     ikfunctions->_ComputeFk = IKFAST_NAMESPACE::ComputeFk;
     ikfunctions->_GetNumFreeParameters = IKFAST_NAMESPACE::GetNumFreeParameters;
-    ikfunctions->_GetFreeParameters = IKFAST_NAMESPACE::GetFreeParameters;
+    ikfunctions->_GetFreeIndices = IKFAST_NAMESPACE::GetFreeIndices;
     ikfunctions->_GetNumJoints = IKFAST_NAMESPACE::GetNumJoints;
     ikfunctions->_GetIkRealSize = IKFAST_NAMESPACE::GetIkRealSize;
     ikfunctions->_GetIkFastVersion = IKFAST_NAMESPACE::GetIkFastVersion;

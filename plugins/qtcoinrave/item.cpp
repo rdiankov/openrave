@@ -260,6 +260,7 @@ void KinBodyItem::Load()
                     psep->addChild(cy);
                     break;
                 }
+                case GT_Cage:
                 case GT_Container:
                 case GT_TriMesh: {
                     // actually don't set to dual-sided rendering since flipped triangles can cause problems with collision and user should know about it
@@ -548,7 +549,7 @@ void RobotItem::Load()
     FOREACHC(itmanip, _probot->GetManipulators()) {
         if( !!(*itmanip)->GetEndEffector() ) {
             _vEndEffectors[index]._index = index;
-            Vector vdirection = (*itmanip)->GetDirection();
+            Vector vdirection = (*itmanip)->GetLocalToolDirection();
             CreateAxis(_vEndEffectors[index],(*itmanip)->GetName(),&vdirection);
         }
         ++index;

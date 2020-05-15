@@ -247,7 +247,7 @@ protected:
                 }
                 if( node->mFramePivot->mAttribute & 4 ) {
                     // end effector?
-                    _listendeffectors.push_back(make_pair(pchildlink,pchildlink->_info._t.inverse()*tflipyz*tpivot*tflipyz.inverse()));
+                    _listendeffectors.emplace_back(pchildlink, pchildlink->_info._t.inverse()*tflipyz*tpivot*tflipyz.inverse());
                 }
                 if( node->mFramePivot->mAttribute & 8 ) {
                     // also used, possibly revolute joint type?

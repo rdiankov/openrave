@@ -585,7 +585,7 @@ int CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const Ve
 
     //do a bisection thingie
     list<pair<int,int> > segs;
-    segs.push_back(pair<int,int>(0,divs.size()-1));
+    segs.emplace_back(0,divs.size()-1);
     Vector q1,q2, dq1, dq2;
     while(!segs.empty()) {
         int i=segs.front().first;
@@ -616,8 +616,8 @@ int CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const Ve
             if( retconf != 0 ) {
                 return retconf;
             }
-            segs.push_back(pair<int,int>(i,k));
-            segs.push_back(pair<int,int>(k,j));
+            segs.emplace_back(i,k);
+            segs.emplace_back(k,j);
         }
     }
     return 0;

@@ -101,11 +101,11 @@ public:
         return fmaxtime;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         BOOST_ASSERT(!!_parameters && !!ptraj );
         if( ptraj->GetNumWaypoints() < 2 ) {
-            return PS_Failed;
+            return PlannerStatus(PS_Failed);
         }
 
         RobotBase::RobotStateSaverPtr statesaver;
@@ -151,7 +151,7 @@ public:
                 dReal totalshiftdist = _ComputePathDurationOnVelocity(listsimplepath);
                 dReal newdist1 = _OptimizePathSingleGroupShift(listsimplepath, totalshiftdist, parameters->_nMaxIterations*10);
                 if( newdist1 < 0 ) {
-                    return PS_Interrupted;
+                    return PlannerStatus(PS_Interrupted);
                 }
                 RAVELOG_DEBUG_FORMAT("env=%d, path optimizing shift smoothing - dist %f->%f computation time=%fs", GetEnv()->GetId()%totalshiftdist%newdist1%(0.001f*(float)(utils::GetMilliTime()-basetime1)));
 
@@ -171,24 +171,24 @@ public:
                     if( listpath.size() > 0 ) {
                         dist = parameters->_distmetricfn(listpath.back().first, *itvalues);
                         if( dist > 0 ) {
-                            listpath.push_back(make_pair(*itvalues,dist));
+                            listpath.emplace_back(*itvalues, dist);
                             totaldist += dist;
                         }
                     }
                     else {
                         vtrajdata = *itvalues;
-                        listpath.push_back(make_pair(*itvalues,0));
+                        listpath.emplace_back(*itvalues, 0);
                     }
                 }
             }
             else {
-                listpath.push_back(make_pair(vtrajdata,0));
+                listpath.emplace_back(vtrajdata, 0);
                 for(size_t i = 1; i < ptraj->GetNumWaypoints(); ++i) {
                     ptraj->GetWaypoint(i,vtrajdata,parameters->_configurationspecification);
                     dReal dist;
                     dist = parameters->_distmetricfn(listpath.back().first, vtrajdata);
                     if( dist > 0 ) {
-                        listpath.push_back(make_pair(vtrajdata,dist));
+                        listpath.emplace_back(vtrajdata, dist);
                         totaldist += dist;
                     }
                 }
@@ -199,13 +199,13 @@ public:
                 if( _nUseSingleDOFSmoothing == 1 ) {
                     dReal newdist1 = _OptimizePath(listpath, totaldist, parameters->_nMaxIterations*8/10);
                     if( newdist1 < 0 ) {
-                        return PS_Interrupted;
+                        return PlannerStatus(PS_Interrupted);
                     }
                     RAVELOG_DEBUG_FORMAT("env=%d, path optimizing first stage - dist %f->%f, computation time=%fs, num=%d", GetEnv()->GetId()%totaldist%newdist1%(0.001f*(float)(utils::GetMilliTime()-basetime))%listpath.size());
                     uint32_t basetime2 = utils::GetMilliTime();
                     dReal newdist2 = _OptimizePathSingleDOF(listpath, newdist1, parameters->_nMaxIterations*2/10);
                     if( newdist2 < 0 ) {
-                        return PS_Interrupted;
+                        return PlannerStatus(PS_Interrupted);
                     }
                     RAVELOG_DEBUG_FORMAT("env=%d, path optimizing second stage - dist %f->%f computation time=%fs, num=%d", GetEnv()->GetId()%newdist1%newdist2%(0.001f*(float)(utils::GetMilliTime()-basetime2))%listpath.size());
                 }
@@ -216,11 +216,11 @@ public:
                     while(nCurIterations < parameters->_nMaxIterations) {
                         dReal newdist1 = _OptimizePathSingleGroup(listpath, totaldist, nIterationGroup);
                         if( newdist1 < 0 ) {
-                            return PS_Interrupted;
+                            return PlannerStatus(PS_Interrupted);
                         }
                         dReal newdist2 = _OptimizePath(listpath,  newdist1, nIterationGroup);
                         if( newdist2 < 0 ) {
-                            return PS_Interrupted;
+                            return PlannerStatus(PS_Interrupted);
                         }
                         RAVELOG_DEBUG_FORMAT("env=%d, path optimizing second stage - dist %f->%f computation time=%fs", GetEnv()->GetId()%totaldist%newdist2%(0.001f*(float)(utils::GetMilliTime()-basetime1)));
                         totaldist = newdist2;
@@ -234,7 +234,7 @@ public:
 
                 if( listpath.size() <= 1 ) {
                     // trajectory contains similar points, so at least add another point and send to the next post-processing stage
-                    listpath.push_back(make_pair(vtrajdata,0));
+                    listpath.emplace_back(vtrajdata, 0);
                 }
                 ptraj->Init(parameters->_configurationspecification);
                 FOREACH(it, listpath) {
@@ -251,10 +251,10 @@ public:
         if( parameters->_sPostProcessingPlanner.size() == 0 ) {
             // no other planner so at least retime
             PlannerStatus status = _linearretimer->PlanPath(ptraj);
-            if( status != PS_HasSolution ) {
+            if( status.GetStatusCode() != PS_HasSolution ) {
                 return status;
             }
-            return PS_HasSolution;
+            return PlannerStatus(PS_HasSolution);
         }
 
         // leave to post processing to set timing (like parabolicsmoother)
@@ -769,21 +769,21 @@ protected:
     {
         SampleInfo() : fabsnodedist(0), fdeltadist(0), inode(0) {
         }
-        SampleInfo(std::list< vector<dReal> >::const_iterator itnode, const vector<dReal>& vsample, dReal fabsnodedist, dReal fdeltadist, int inode) : itnode(itnode), vsample(vsample), fabsnodedist(fabsnodedist), fdeltadist(fdeltadist), inode(inode) {
+        SampleInfo(std::list< vector<dReal> >::iterator itnode, const vector<dReal>& vsample, dReal fabsnodedist, dReal fdeltadist, int inode) : itnode(itnode), vsample(vsample), fabsnodedist(fabsnodedist), fdeltadist(fdeltadist), inode(inode) {
         }
-        std::list< vector<dReal> >::const_iterator itnode;
+        std::list< vector<dReal> >::iterator itnode;
         vector<dReal> vsample; /// the interpolated data
         dReal fabsnodedist; // absolute distance of itnode
         dReal fdeltadist; // the delta distance between itnode and itnode+1
         int inode; /// index of the node from listpath.begin()
     };
 
-    SampleInfo _SampleBasedOnVelocity(const list< vector<dReal> >& listpath, dReal fsearchdist)
+    SampleInfo _SampleBasedOnVelocity(list< vector<dReal> >& listpath, dReal fsearchdist)
     {
         int inode = 0;
         dReal fcurdist = 0;
-        list< vector<dReal> >::const_iterator itprev = listpath.begin();
-        list< vector<dReal> >::const_iterator it = itprev; ++it;
+        list< vector<dReal> >::iterator itprev = listpath.begin();
+        list< vector<dReal> >::iterator it = itprev; ++it;
         while(it != listpath.end() ) {
             dReal fdeltadist = _ComputeExpectedVelocity(*itprev, *it);
             if( fsearchdist >= fcurdist && fsearchdist < fcurdist+fdeltadist ) {

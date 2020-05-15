@@ -402,7 +402,7 @@ public:
     virtual void SetTransform(const Transform& trans) = 0;
 
     /// \brief the position of the sensor in the world coordinate system
-    virtual Transform GetTransform() = 0;
+    virtual const Transform& GetTransform() = 0;
 
     /// \brief Register a callback whenever new sensor data comes in.
     ///
