@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2012-2019 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2012-2020 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -2136,7 +2136,8 @@ protected:
                     }
                 }
 
-                size_t islowdowntry = 0;
+                size_t islowdowntry = 0; // counting how many times we slow down vellimits/accellimits in this shortcut iteration
+                size_t islowdowntryduetomanip = 0; // counting how many times we slow down vellimits/accellimits due to tool speed/accel constraints
                 for (islowdowntry = 0; islowdowntry < maxSlowdowns; ++islowdowntry) {
 #ifdef SMOOTHER1_TIMING_DEBUG
                     _nCallsInterpolator += 1;
@@ -2313,55 +2314,59 @@ protected:
                         break;
                     }
                     else if (retcheck.retcode == CFO_CheckTimeBasedConstraints) {
-                        // CFO_CheckTimeBasedConstraints can be returned becasue of two things: torque limit violation and manipulator constraint violation.
+                        // CFO_CheckTimeBasedConstraints can be caused by the following
+                        // - torque limit violation
+                        // - manipulator speed/accel constraint violation
+                        // - joint velocity adjustment done in SegmentFeasible2
                         dReal fOverallTimeMult = 1.0; ///< overall time mult change. use it to estimate the next possible ramp duration so can quick prune this solution
                         nNumTimeBasedConstraintsFailed++;
 
-                        // Modifiy vellimits and accellimits
+                        // Scale down vellimits and/or accellimits based on which constraints are violated.
+                        // In case manip speed is exceeded, only vellimits is scaled down. Otherwise, both vellimits and accellimits are scaled down.
                         if (_bmanipconstraints && !!_manipconstraintchecker) {
                             // Manipulator constraints is enabled. Time-based constraint violation is likely because manipulator constraints.
-                            if (islowdowntry == 0) {
+                            if (islowdowntryduetomanip == 0 && (retcheck.fMaxManipAccel > _parameters->maxmanipaccel || retcheck.fMaxManipSpeed > _parameters->maxmanipspeed)) {
+                                ++islowdowntryduetomanip;
                                 // Try computing estimates of velocity and acceleration first before scaling down
-                                {
-                                    // Use the original GetMaxVelocitiesAccelerations
-                                    if (_parameters->SetStateValues(x0) != 0) {
-                                        RAVELOG_WARN_FORMAT("env=%d, state setting error", GetEnv()->GetId());
-                                        break;
-                                    }
-                                    vellimits2 = vellimits;
-                                    accellimits2 = accellimits;
-                                    _manipconstraintchecker->GetMaxVelocitiesAccelerations(dx0, vellimits, accellimits);
-                                    if (_parameters->SetStateValues(x1) != 0) {
-                                        RAVELOG_WARN_FORMAT("env=%d, state setting error", GetEnv()->GetId());
-                                        break;
-                                    }
-                                    _manipconstraintchecker->GetMaxVelocitiesAccelerations(dx1, vellimits, accellimits);
+                                // Use the original GetMaxVelocitiesAccelerations
+                                if (_parameters->SetStateValues(x0) != 0) {
+                                    RAVELOG_WARN_FORMAT("env=%d, state setting error", GetEnv()->GetId());
+                                    break;
+                                }
+                                vellimits2 = vellimits;
+                                accellimits2 = accellimits;
+                                _manipconstraintchecker->GetMaxVelocitiesAccelerations(dx0, vellimits, accellimits);
+                                if (_parameters->SetStateValues(x1) != 0) {
+                                    RAVELOG_WARN_FORMAT("env=%d, state setting error", GetEnv()->GetId());
+                                    break;
+                                }
+                                _manipconstraintchecker->GetMaxVelocitiesAccelerations(dx1, vellimits, accellimits);
 
-                                    for (size_t j = 0; j < _parameters->_vConfigVelocityLimit.size(); ++j) {
-                                        dReal fminvel = max(RaveFabs(dx0[j]), RaveFabs(dx1[j]));
-                                        if (vellimits[j] < fminvel) {
-                                            vellimits[j] = fminvel;
-                                        }
+                                for (size_t j = 0; j < _parameters->_vConfigVelocityLimit.size(); ++j) {
+                                    dReal fminvel = max(RaveFabs(dx0[j]), RaveFabs(dx1[j]));
+                                    if (vellimits[j] < fminvel) {
+                                        vellimits[j] = fminvel;
+                                    }
 
-                                        dReal fv = vellimits[j]/vellimits2[j];
-                                        if( fOverallTimeMult > fv ) {
-                                            fOverallTimeMult = fv;
-                                        }
-                                        dReal fa = RaveSqrt(accellimits[j]/accellimits2[j]);
-                                        if( fOverallTimeMult > fa ) {
-                                            fOverallTimeMult = fa;
-                                        }
+                                    dReal fv = vellimits[j]/vellimits2[j];
+                                    if( fOverallTimeMult > fv ) {
+                                        fOverallTimeMult = fv;
+                                    }
+                                    dReal fa = RaveSqrt(accellimits[j]/accellimits2[j]);
+                                    if( fOverallTimeMult > fa ) {
+                                        fOverallTimeMult = fa;
                                     }
                                 }
                             }
                             else {
                                 // After computing the new velocity and acceleration limits and it doesn't work, we gradually scale dof velocities/accelerations down.
                                 if (retcheck.fMaxManipAccel > _parameters->maxmanipaccel) {
+                                    ++islowdowntryduetomanip;
                                     dReal faccelmult = retcheck.fTimeBasedSurpassMult*retcheck.fTimeBasedSurpassMult;
                                     fcuraccelmult *= faccelmult;
                                     if (fcuraccelmult < 0.0001) {
 #ifdef SMOOTHER1_PROGRESS_DEBUG
-                                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter = %d/%d: fcurACCELmult (%.15e) is too small. continue to the next iteration", GetEnv()->GetId()%iters%numIters%fcuraccelmult);
+                                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter = %d/%d: fcuraccelmult (%.15e) is too small. continue to the next iteration", GetEnv()->GetId()%iters%numIters%fcuraccelmult);
 #endif
                                         break;
                                     }
@@ -2385,7 +2390,8 @@ protected:
                                     }
                                     fOverallTimeMult = retcheck.fTimeBasedSurpassMult;
                                 }
-                                else if (retcheck.fMaxManipSpeed > _parameters->maxmanipspeed ) {
+                                else if (retcheck.fMaxManipSpeed > _parameters->maxmanipspeed) {
+                                    ++islowdowntryduetomanip;
                                     // If the velocity limit is violated, we don't scale down dof accelerations
                                     dReal fvelmult = retcheck.fTimeBasedSurpassMult;
                                     fcurvelmult *= fvelmult;
@@ -2403,16 +2409,25 @@ protected:
                                 }
                                 else {
                                     dReal fvelmult = retcheck.fTimeBasedSurpassMult;
+                                    dReal faccelmult = retcheck.fTimeBasedSurpassMult*retcheck.fTimeBasedSurpassMult;
                                     fcurvelmult *= fvelmult;
+                                    fcuraccelmult *= faccelmult;
                                     if (fcurvelmult < 0.01) {
 #ifdef SMOOTHER1_PROGRESS_DEBUG
                                         RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter = %d/%d: fcurvelmult (%.15e) is too small. continue to the next iteration", GetEnv()->GetId()%iters%numIters%fcurvelmult);
 #endif
                                         break;
                                     }
+                                    if (fcuraccelmult < 0.0001) {
+#ifdef SMOOTHER1_PROGRESS_DEBUG
+                                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter = %d/%d: faccelmult (%.15e) is too small. continue to the next iteration", GetEnv()->GetId()%iters%numIters%fcuraccelmult);
+#endif
+                                        break;
+                                    }
                                     for (size_t j = 0; j < accellimits.size(); ++j) {
                                         dReal fminvel = max(RaveFabs(dx0[j]), RaveFabs(dx1[j]));
                                         vellimits[j] = max(fminvel, fvelmult * vellimits[j]);
+                                        accellimits[j] *= faccelmult;
                                     }
                                     fOverallTimeMult = retcheck.fTimeBasedSurpassMult;
                                 }
@@ -2434,7 +2449,7 @@ protected:
                             }
                             if (fcuraccelmult < 0.0001) {
 #ifdef SMOOTHER1_PROGRESS_DEBUG
-                                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter = %d/%d: fcurACCELmult (%.15e) is too small. continue to the next iteration", GetEnv()->GetId()%iters%numIters%fcuraccelmult);
+                                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter = %d/%d: fcuraccelmult (%.15e) is too small. continue to the next iteration", GetEnv()->GetId()%iters%numIters%fcuraccelmult);
 #endif
                                 break;
                             }
@@ -2624,12 +2639,13 @@ protected:
         dReal tshortcuttotal = 0.000001f*(float)(tshortcutend - tshortcutstart);
 #endif
         if (iters == numIters) {
-            RAVELOG_DEBUG_FORMAT("env=%d, finished at shortcut iter=%d (normal exit), successful=%d, slowdowns=%d, nCutoffIters=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%shortcuts%numslowdowns%originalEndTime%nCutoffIters%endTime%(originalEndTime - endTime));
+            RAVELOG_DEBUG_FORMAT("env=%d, finished at shortcut iter=%d (normal exit), successful=%d, slowdowns=%d, nCutoffIters=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%shortcuts%numslowdowns%nCutoffIters%originalEndTime%endTime%(originalEndTime - endTime));
         }
         else if (score/currentBestScore < cutoffRatio) {
             RAVELOG_DEBUG_FORMAT("env=%d, finished at shortcut iter=%d (current score %.15e falls below %.15e), successful=%d, slowdowns=%d, nCutoffIters=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%(score/currentBestScore)%cutoffRatio%shortcuts%numslowdowns%nCutoffIters%originalEndTime%endTime%(originalEndTime - endTime));
         }
-        else if (nItersFromPrevSuccessful > nCutoffIters) {
+        else {
+            // terminating reason: nItersFromPrevSuccessful + nNumTimeBasedConstraintsFailed > nCutoffIters
             RAVELOG_DEBUG_FORMAT("env=%d, finished at shortcut iter=%d (did not make progress in the last %d iterations), successful=%d, slowdowns=%d, nCutoffIters=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%nCutoffIters%shortcuts%numslowdowns%nCutoffIters%originalEndTime%endTime%(originalEndTime - endTime));
         }
 
