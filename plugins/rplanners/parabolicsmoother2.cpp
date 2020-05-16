@@ -1815,6 +1815,7 @@ protected:
                 size_t maxSlowDownTries = 100;
                 std::fill(velReductionFactors.begin(), velReductionFactors.end(), 1); // Reset reductionfactors
                 std::fill(accelReductionFactors.begin(), accelReductionFactors.end(), 1); // Reset reductionfactors
+                size_t iSlowDownDueToManip = 0;
                 for (size_t iSlowDown = 0; iSlowDown < maxSlowDownTries; ++iSlowDown) {
 #ifdef SMOOTHER2_TIMING_DEBUG
                     _nCallsInterpolator += 1;
@@ -2043,7 +2044,8 @@ protected:
                         // In case manip speed is exceeded, only vellimits is scaled down. Otherwise, both vellimits and accellimits are scaled down.
                         if( _bmanipconstraints && _manipconstraintchecker ) {
                             // Scale down vellimits and accellimits independently according to the violated constraint (manipspeed/manipaccel)
-                            if( iSlowDown == 0 && !_bUseNewHeuristic ) {
+                            if( iSlowDownDueToManip == 0 && (retcheck.fMaxManipAccel > _parameters->maxmanipaccel || retcheck.fMaxManipSpeed > _parameters->maxmanipspeed) && !_bUseNewHeuristic ) {
+                                ++iSlowDownDueToManip;
                                 // Try computing estimates of vellimits and accellimits before scaling down
 
                                 {// Need to make sure that x0, x1, v0, v1 hold the correct values
@@ -2088,6 +2090,7 @@ protected:
                                 dReal fVelMult, fAccelMult;
                                 bool maxManipSpeedViolated = false, maxManipAccelViolated = false;
                                 if( retcheck.fMaxManipAccel > _parameters->maxmanipaccel ) {
+                                    ++iSlowDownDueToManip;
                                     // Manipaccel is violated. We scale both vellimits and accellimits down.
                                     maxManipAccelViolated = true;
                                     if( _bUseNewHeuristic && retcheck.vReductionFactors.size() > 0 ) {
@@ -2148,6 +2151,7 @@ protected:
                                     }
                                 }
                                 else if( retcheck.fMaxManipSpeed > _parameters->maxmanipspeed ) {
+                                    ++iSlowDownDueToManip;
                                     // Manipspeed is violated. We don't scale down accellimits.
                                     maxManipSpeedViolated = true;
                                     if( _bUseNewHeuristic && retcheck.vReductionFactors.size() > 0 && !(retcheck.fMaxManipAccel > _parameters->maxmanipaccel)) {
@@ -2234,10 +2238,20 @@ protected:
                                     }
                                     else {
                                         fVelMult = retcheck.fTimeBasedSurpassMult;
+                                        fAccelMult = retcheck.fTimeBasedSurpassMult*retcheck.fTimeBasedSurpassMult;
                                         fCurVelMult *= fVelMult;
+                                        fCurAccelMult *= fAccelMult;
                                         if( fCurVelMult < 0.01 ) {
 #ifdef SMOOTHER2_PROGRESS_DEBUG
-                                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d: modified ramps exceed vellimits but fCurVelMult is too small (%.15e). continue to the next iteration", _environmentid%iters%numIters%fCurVelMult);
+                                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d: modified ramps exceed vellimits/accellimits but fCurVelMult is too small (%.15e). continue to the next iteration", _environmentid%iters%numIters%fCurVelMult);
+                                            ++vShortcutStats[SS_Check2Failed];
+                                            shortcutprogress << SS_Check2Failed << "\n";
+#endif
+                                            break;
+                                        }
+                                        if( fCurAccelMult < 0.0001 ) {
+#ifdef SMOOTHER2_PROGRESS_DEBUG
+                                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d: modified ramps exceed vellimits/accellimits but fCurAccelMult is too small (%.15e). continue to the next iteration", _environmentid%iters%numIters%fCurAccelMult);
                                             ++vShortcutStats[SS_Check2Failed];
                                             shortcutprogress << SS_Check2Failed << "\n";
 #endif
@@ -2246,6 +2260,7 @@ protected:
                                         for (size_t j = 0; j < vellimits.size(); ++j) {
                                             dReal fMinVel = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
                                             vellimits[j] = max(fMinVel, fVelMult * vellimits[j]);
+                                            accellimits[j] *= fAccelMult;
                                         }
                                     }
                                 }
@@ -2871,7 +2886,10 @@ protected:
                         break;
                     }
                     else if( retcheck.retcode == CFO_CheckTimeBasedConstraints ) {
-                        // CFO_CheckTimeBasedConstraints can be returned because of two things: torque limit violation and manip constraint violation
+                        // CFO_CheckTimeBasedConstraints can be caused by the following
+                        // - torque limit violation
+                        // - manipulator speed/accel constraint violation
+                        // - joint velocity adjustment done in SegmentFeasible2
                         nTimeBasedConstraintsFailed++;
 
                         // Scale down vellimits and/or accellimits
