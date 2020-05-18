@@ -1306,8 +1306,8 @@ SpaceSamplerBasePtr RaveCreateSpaceSampler(EnvironmentBasePtr penv, const std::s
     return RaveGlobal::instance()->GetDatabase()->CreateSpaceSampler(penv, name);
 }
 
-PostureDescriberBasePtr RaveCreateFkSolver(EnvironmentBasePtr penv, const std::string& name) {
-    return RaveGlobal::instance()->GetDatabase()->CreateFkSolver(penv, name);
+PostureDescriberBasePtr RaveCreatePostureDescriber(EnvironmentBasePtr penv, const std::string& name) {
+    return RaveGlobal::instance()->GetDatabase()->CreatePostureDescriber(penv, name);
 }
 
 UserDataPtr RaveRegisterInterface(InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn)

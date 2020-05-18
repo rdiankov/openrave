@@ -88,7 +88,7 @@ bool PostureDescriberModule::_LoadPostureDescriberCommand(std::ostream& ssout, s
         return false;
     }
 
-    const PostureDescriberBasePtr probotposture = RaveCreateFkSolver(penv, POSTUREDESCRIBER_CLASS_NAME);
+    const PostureDescriberBasePtr probotposture = RaveCreatePostureDescriber(penv, POSTUREDESCRIBER_CLASS_NAME);
     if(probotposture == nullptr) {
         RAVELOG_WARN_FORMAT("env=%d, cannot create robot posture describer for robot %s from links %s to %s (manipname=\"%s\")", envId % robotname % baselinkname % eelinkname % manipname);
         return false;
