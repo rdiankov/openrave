@@ -219,8 +219,40 @@ void RobotBase::AttachedSensor::ExtractInfo(AttachedSensorInfo& info) const
 
 UpdateFromInfoResult RobotBase::AttachedSensor::UpdateFromInfo(const RobotBase::AttachedSensorInfo& info)
 {
-    // TODO
-    _info = info;
+    // TODO: test
+    BOOST_ASSERT(info._id == _info._id);
+
+    // _name
+    if (GetName() != info._name) {
+        return UFIR_RequireRemoveFromEnvironment; // no SetName function defeined now. Maybe add later.
+    }
+
+    // _linkname
+    KinBody::LinkPtr attachingLink = GetAttachingLink();
+    if (!!attachingLink) {
+        if (attachingLink->GetName() != info._linkname) {
+            return UFIR_RequireRemoveFromEnvironment;
+        }
+    }
+    else if (!info._linkname.empty()) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // sensor name
+    if (_info._sensorname != info._sensorname) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // sensor geometry
+    if (_info._docSensorGeometry != info._docSensorGeometry) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // _trelative
+    if (GetRelativeTransform() != info._trelative) {
+        SetRelativeTransform(info._trelative);
+    }
+
     return UFIR_Success;
 }
 
