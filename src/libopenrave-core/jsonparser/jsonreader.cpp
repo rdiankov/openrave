@@ -114,7 +114,7 @@ public:
                     _penv->Add(pbody, true);
 
                     // set dof values
-                    if (itrBodyValue->HasMember("dofValues") && (*itrBodyValue)["dofValues"].IsObject()) {
+                    if (itrBodyValue->HasMember("dofValues") && (*itrBodyValue)["dofValues"].IsArray()) {
                         std::vector<dReal> vDOFValues {};
                         _ConvertJointDOFValueFormat(pbody->GetJoints(), vDOFValues, (*itrBodyValue)["dofValues"]);
                         pbody->SetDOFValues(vDOFValues, KinBody::CLA_Nothing);

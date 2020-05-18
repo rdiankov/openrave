@@ -127,6 +127,7 @@ protected:
                         OpenRAVE::JSON::SetJsonValueByKey(jointDOFValue, "value", vDOFValues[iDOF], _allocator);
                         dofValues.PushBack(jointDOFValue, _allocator);
                     }
+                    OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "dofValues", dofValues, _allocator);
                 }
 
                 OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "transform", pBody->GetTransform(), _allocator);
