@@ -1752,6 +1752,19 @@ PyStateRestoreContextBase* PyRobotBase::CreateRobotStateSaver(object options) {
     return CreateStateSaver(options);
 }
 
+bool PyRobotBase::SetPostureDescriber(PyManipulatorPtr pymanip, PyPostureDescriberPtr pydescriber) {
+    return _probot->SetPostureDescriber(pymanip->GetManipulator(), pydescriber->GetPostureDescriber());
+}
+
+PyPostureDescriberPtr PyRobotBase::GetPostureDescriber(PyManipulatorPtr pymanip) {
+    PostureDescriberBasePtr pDescriber = _probot->GetPostureDescriber(pymanip->GetManipulator());
+    if(pDescriber == nullptr) {
+        return PyPostureDescriberPtr();
+    }
+    PyPostureDescriberPtr pyDescriber(new PyPostureDescriber(pDescriber, toPyEnvironment(pymanip->GetRobot())));
+    return pyDescriber;
+}
+
 std::string PyRobotBase::__repr__() {
     return boost::str(boost::format("RaveGetEnvironment(%d).GetRobot('%s')")%RaveGetEnvironmentId(_probot->GetEnv())%_probot->GetName());
 }
@@ -2207,6 +2220,10 @@ void init_openravepy_robot()
 #else
                        .def("CreateRobotStateSaver",&PyRobotBase::CreateRobotStateSaver, CreateRobotStateSaver_overloads(PY_ARGS("options") "Creates an object that can be entered using 'with' and returns a RobotStateSaver")[return_value_policy<manage_new_object>()])
 #endif
+                       // posture describer
+                       .def("SetPostureDescriber", &PyRobotBase::SetPostureDescriber, DOXY_FN(RobotBase, SetPostureDescriber))
+                       .def("GetPostureDescriber", &PyRobotBase::GetPostureDescriber, DOXY_FN(RobotBase, GetPostureDescriber))
+
                        .def("__repr__", &PyRobotBase::__repr__)
                        .def("__str__", &PyRobotBase::__str__)
                        .def("__unicode__", &PyRobotBase::__unicode__)

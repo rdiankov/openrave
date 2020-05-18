@@ -46,6 +46,12 @@ public:
 
     /// \brief Initialize with a kinematics chain prescribed by a manipulator
     bool Init(PyRobotBase::PyManipulatorPtr pmanip);
+
+    /// \brief compute posture states
+    object ComputePostureStates();
+
+private:
+    std::vector<uint16_t> _posturestates; // cache
 };
 
 using PyPostureDescriberPtr = OPENRAVE_SHARED_PTR<PyPostureDescriber>;

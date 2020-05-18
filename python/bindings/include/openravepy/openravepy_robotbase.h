@@ -411,6 +411,9 @@ public:
 
     PyStateRestoreContextBase* CreateRobotStateSaver(object options=py::none_());
 
+    bool SetPostureDescriber(PyManipulatorPtr pymanip, PyPostureDescriberPtr pydescriber);
+    PyPostureDescriberPtr GetPostureDescriber(PyManipulatorPtr pymanip);
+
     virtual std::string __repr__();
     virtual std::string __str__();
     virtual object __unicode__();

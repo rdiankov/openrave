@@ -82,6 +82,12 @@ bool PyPostureDescriber::Init(PyRobotBase::PyManipulatorPtr pmanip) {
     return _pDescriber->Init(pmanip->GetManipulator());
 }
 
+object PyPostureDescriber::ComputePostureStates()
+{
+    _pDescriber->ComputePostureStates(_posturestates);
+    return toPyArray<uint16_t>(_posturestates);
+}
+
 PyPostureDescriberPtr GetPostureDescriber(PyRobotBase::PyManipulatorPtr pymanip) {
     const ManipulatorPtr pmanip = pymanip->GetManipulator();
     const RobotBasePtr probot = pmanip->GetRobot();
@@ -91,8 +97,7 @@ PyPostureDescriberPtr GetPostureDescriber(PyRobotBase::PyManipulatorPtr pymanip)
         return PyPostureDescriberPtr();
     }
     pDescriber->Init(pmanip);
-    probot->SetPostureDescriber(pmanip, pDescriber);
-
+    probot->SetPostureDescriber(pmanip, pDescriber); // set explicitly
     PyPostureDescriberPtr pyDescriber(new PyPostureDescriber(pDescriber, toPyEnvironment(pymanip->GetRobot())));
     return pyDescriber;
 }
@@ -105,14 +110,19 @@ void init_openravepy_posturedescriber()
 {
     bool (PyPostureDescriber::*InitWithTwoLinks)(PyLinkPtr, PyLinkPtr)       = &PyPostureDescriber::Init;
     bool (PyPostureDescriber::*InitWithManip)(PyRobotBase::PyManipulatorPtr) = &PyPostureDescriber::Init;
+    bool (PyPostureDescriber::*SupportsWithTwoLinks)(PyLinkPtr, PyLinkPtr)       const = &PyPostureDescriber::Supports;
+    bool (PyPostureDescriber::*SupportsWithManip)(PyRobotBase::PyManipulatorPtr) const = &PyPostureDescriber::Supports;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyPostureDescriber, OPENRAVE_SHARED_PTR<PyPostureDescriber>, PyInterfaceBase>(m, "PostureDescriber", DOXY_CLASS(PostureDescriberBase))
 #else
     class_<PyPostureDescriber, OPENRAVE_SHARED_PTR<PyPostureDescriber>, bases<PyInterfaceBase> >("PostureDescriber", DOXY_CLASS(PostureDescriberBase), no_init)
 #endif
+    .def("Supports", SupportsWithTwoLinks, PY_ARGS("baselink", "eelink") DOXY_FN(PostureDescriberBase, Supports "const std::array<RobotBase::LinkPtr, 2>& kinematicsChain"))
+    .def("Supports", SupportsWithManip,    PY_ARGS("manipulator")        DOXY_FN(PostureDescriberBase, Supports "const RobotBase::ManipulatorPtr& pmanip"))
     .def("Init", InitWithTwoLinks, PY_ARGS("baselink", "eelink") DOXY_FN(PostureDescriberBase, Init "const std::array<RobotBase::LinkPtr, 2>& kinematicsChain"))
     .def("Init", InitWithManip,    PY_ARGS("manipulator")        DOXY_FN(PostureDescriberBase, Init "const RobotBase::ManipulatorPtr& pmanip"))
+    .def("ComputePostureStates", &PyPostureDescriber::ComputePostureStates, DOXY_FN(PostureDescriberBase, ComputePostureStates ""))
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
