@@ -15,9 +15,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <openrave/plugin.h> // OPENRAVE_PLUGIN_API
-#include <openrave/posturedescriber.h> // PostureDescriberBasePtr
+#include <openrave/posturedescriberbase.h> // PostureDescriberBasePtr
+#include <openrave/posturedescriber.h> // PostureDescriber
 #include "plugindefs.h" //  POSTUREDESCRIBER_MODULE_NAME, POSTUREDESCRIBER_CLASS_NAME
-#include "posturedescriber.h"
 #include "posturedescribermodule.h"
 
 // #include <boost/lexical_cast.hpp>

@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
-#include <openrave/posturedescriber.h> // PostureDescriberBase
+#include <openrave/posturedescriberbase.h> // PostureDescriberBase
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/utility.hpp>
@@ -376,7 +376,7 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
         _mapinterfacenames[PT_Trajectory] = "trajectory";
         _mapinterfacenames[PT_Viewer] = "viewer";
         _mapinterfacenames[PT_SpaceSampler] = "spacesampler";
-        _mapinterfacenames[PT_PostureDescriber] = "fksolver";
+        _mapinterfacenames[PT_PostureDescriber] = "posturedescriber";
         BOOST_ASSERT(_mapinterfacenames.size()==PT_NumberOfInterfaces);
 
         _mapikparameterization[IKP_Transform6D] = "Transform6D";

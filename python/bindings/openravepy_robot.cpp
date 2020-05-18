@@ -24,6 +24,7 @@
 #include <openravepy/openravepy_iksolverbase.h>
 #include <openravepy/openravepy_manipulatorinfo.h>
 #include <openravepy/openravepy_robotbase.h>
+#include <openravepy/openravepy_posturedescriber.h> // PyPostureDescriber
 
 namespace openravepy {
 
@@ -433,6 +434,21 @@ object PyRobotBase::PyManipulator::GetFreeParameters() const {
     std::vector<dReal> values;
     _pmanip->GetIkSolver()->GetFreeParameters(values);
     return toPyArray(values);
+}
+
+bool PyRobotBase::PyManipulator::SetPostureDescriber(PyPostureDescriberPtr pydescriber) {
+    RobotBasePtr probot = _pmanip->GetRobot();
+    return probot->SetPostureDescriber(_pmanip, pydescriber->GetPostureDescriber());
+}
+
+PyPostureDescriberPtr PyRobotBase::PyManipulator::GetPostureDescriber() {
+    RobotBasePtr probot = _pmanip->GetRobot();
+    PostureDescriberBasePtr pDescriber = probot->GetPostureDescriber(_pmanip);
+    if(pDescriber == nullptr) {
+        return PyPostureDescriberPtr();
+    }
+    PyPostureDescriberPtr pyDescriber(new PyPostureDescriber(pDescriber, toPyEnvironment(this->GetRobot())));
+    return pyDescriber;
 }
 
 bool PyRobotBase::PyManipulator::_FindIKSolution(const IkParameterization& ikparam, std::vector<dReal>& solution, int filteroptions, bool releasegil) const
@@ -2230,6 +2246,9 @@ void init_openravepy_robot()
         .def("SetIKSolver",&PyRobotBase::PyManipulator::SetIkSolver, DOXY_FN(RobotBase::Manipulator,SetIkSolver))
         .def("GetNumFreeParameters",&PyRobotBase::PyManipulator::GetNumFreeParameters, DOXY_FN(RobotBase::Manipulator,GetNumFreeParameters))
         .def("GetFreeParameters",&PyRobotBase::PyManipulator::GetFreeParameters, DOXY_FN(RobotBase::Manipulator,GetFreeParameters))
+        // posture describer
+        .def("SetPostureDescriber", &PyRobotBase::PyManipulator::SetPostureDescriber, DOXY_FN(RobotBase::Manipulator, SetPostureDescriber))
+        .def("GetPostureDescriber", &PyRobotBase::PyManipulator::GetPostureDescriber, DOXY_FN(RobotBase::Manipulator, GetPostureDescriber))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("FindIKSolution", pmanipik,
              "param"_a,

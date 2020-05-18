@@ -18,7 +18,7 @@
 #define OPENRAVEPY_POSTUREDESCRIBER_H
 
 #define NO_IMPORT_ARRAY
-#include <openrave/posturedescriber.h>
+#include <openrave/posturedescriberbase.h> // PostureDescriberBase
 #include <openravepy/openravepy_int.h>
 #include <openravepy/openravepy_robotbase.h> // PyRobotBase::PyManipulatorPtr
 
@@ -33,6 +33,8 @@ public:
     PyPostureDescriber(PostureDescriberBasePtr pDescriber, PyEnvironmentBasePtr pyenv);
     ~PyPostureDescriber();
 
+    PostureDescriberBasePtr GetPostureDescriber() const;
+
     /// \brief Initialize with a kinematics chain
     bool Supports(PyLinkPtr pBaseLink, PyLinkPtr pEndEffectorLink) const;
 
@@ -45,6 +47,8 @@ public:
     /// \brief Initialize with a kinematics chain prescribed by a manipulator
     bool Init(PyRobotBase::PyManipulatorPtr pmanip);
 };
+
+using PyPostureDescriberPtr = OPENRAVE_SHARED_PTR<PyPostureDescriber>;
 
 } // openravepy
 

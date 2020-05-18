@@ -1,4 +1,4 @@
-#include "posturedescriber.h"
+#include <openrave/posturedescriber.h>
 #include "openraveplugindefs.h" // SerializeValues
 
 namespace OpenRAVE {

@@ -1,5 +1,5 @@
+#include <openrave/posturedescriber.h> // PostureDescriber
 #include "posturesupporttypes.h" // NeighbouringTwoJointsRelation
-#include "posturedescriber.h" // PostureDescriber
 #include "openraveplugindefs.h" // SerializeValues
 
 namespace OpenRAVE {
@@ -7,7 +7,7 @@ namespace OpenRAVE {
 using JointPtr = OpenRAVE::KinBody::JointPtr;
 
 PostureDescriber::PostureDescriber(EnvironmentBasePtr penv,
-                                             const double fTol) :
+                                   const double fTol) :
     PostureDescriberBase(penv),
     _fTol(fTol) 
 {

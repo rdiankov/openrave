@@ -117,6 +117,7 @@ class PyAttachedSensorInfo;
 class PyConnectedBodyInfo;
 class PyLink;
 class PyJoint;
+class PyPostureDescriber;
 
 typedef OPENRAVE_SHARED_PTR<PyInterfaceBase> PyInterfaceBasePtr;
 typedef OPENRAVE_SHARED_PTR<PyInterfaceBase const> PyInterfaceBaseConstPtr;
@@ -167,6 +168,8 @@ typedef OPENRAVE_SHARED_PTR<PyLink> PyLinkPtr;
 typedef OPENRAVE_SHARED_PTR<PyLink const> PyLinkConstPtr;
 typedef OPENRAVE_SHARED_PTR<PyJoint> PyJointPtr;
 typedef OPENRAVE_SHARED_PTR<PyJoint const> PyJointConstPtr;
+typedef OPENRAVE_SHARED_PTR<PyPostureDescriber> PyPostureDescriberPtr;
+typedef OPENRAVE_SHARED_PTR<PyPostureDescriber const> PyPostureDescriberConstPtr;
 
 inline uint64_t GetMicroTime()
 {

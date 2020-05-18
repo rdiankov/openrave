@@ -175,7 +175,7 @@ elseif( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
 
     ## openrave bindings
     add_library(openravepy_int SHARED ${openravepy_int_cpp_files})
-    target_link_libraries(openravepy_int PUBLIC ${OPENRAVEPY_LINKED_LIBRARIES} libopenrave libopenrave-core PRIVATE boost_assertion_failed)
+    target_link_libraries(openravepy_int PUBLIC ${OPENRAVEPY_LINKED_LIBRARIES} libopenrave libopenrave-core posturedescriber PRIVATE boost_assertion_failed)
     add_dependencies(openravepy_int libopenrave libopenrave-core)
     set_target_properties(openravepy_int PROPERTIES PREFIX "" COMPILE_FLAGS "${OPENRAVEPY_COMPILE_FLAGS}")
     if( WIN32 )

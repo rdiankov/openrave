@@ -17,7 +17,8 @@
 #define NO_IMPORT_ARRAY
 #include <openravepy/openravepy_int.h>
 #include <openravepy/openravepy_environmentbase.h>
-#include <openravepy/openravepy_posturedescriber.h>
+#include <openravepy/openravepy_posturedescriber.h> // PyPostureDescriber
+#include <openrave/posturedescriber.h> // PostureDescriber
 #include <openrave/utils.h>
 
 namespace openravepy {
@@ -47,17 +48,21 @@ using py::def;
 
 using ManipulatorPtr = OpenRAVE::RobotBase::ManipulatorPtr;
 using LinkPtr = OpenRAVE::RobotBase::LinkPtr;
+using OpenRAVE::PostureDescriberBase;
 using OpenRAVE::PostureDescriberBasePtr;
+using OpenRAVE::PostureDescriber;
+using OpenRAVE::PostureDescriberPtr;
 
 namespace numeric = py::numeric;
 
 PyPostureDescriber::PyPostureDescriber(PostureDescriberBasePtr pDescriber, PyEnvironmentBasePtr pyenv)
     : PyInterfaceBase(pDescriber, pyenv),
     _pDescriber(pDescriber) {
-
 }
 
 PyPostureDescriber::~PyPostureDescriber() {}
+
+PostureDescriberBasePtr PyPostureDescriber::GetPostureDescriber() const { return _pDescriber; }
 
 bool PyPostureDescriber::Supports(PyLinkPtr pBaseLink, PyLinkPtr pEndEffectorLink) const {
     const std::array<LinkPtr, 2> kinematicsChain {pBaseLink->GetLink(), pEndEffectorLink->GetLink()};
@@ -77,6 +82,21 @@ bool PyPostureDescriber::Init(PyRobotBase::PyManipulatorPtr pmanip) {
     return _pDescriber->Init(pmanip->GetManipulator());
 }
 
+PyPostureDescriberPtr GetPostureDescriber(PyRobotBase::PyManipulatorPtr pymanip) {
+    const ManipulatorPtr pmanip = pymanip->GetManipulator();
+    const RobotBasePtr probot = pmanip->GetRobot();
+    const EnvironmentBasePtr penv = probot->GetEnv();
+    PostureDescriberBasePtr pDescriber(new PostureDescriber(penv));
+    if(!pDescriber->Supports(pmanip)) {
+        return PyPostureDescriberPtr();
+    }
+    pDescriber->Init(pmanip);
+    probot->SetPostureDescriber(pmanip, pDescriber);
+
+    PyPostureDescriberPtr pyDescriber(new PyPostureDescriber(pDescriber, toPyEnvironment(pymanip->GetRobot())));
+    return pyDescriber;
+}
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 void init_openravepy_posturedescriber(py::module& m)
 #else
@@ -94,6 +114,12 @@ void init_openravepy_posturedescriber()
     .def("Init", InitWithTwoLinks, PY_ARGS("baselink", "eelink") DOXY_FN(PostureDescriberBase, Init "const std::array<RobotBase::LinkPtr, 2>& kinematicsChain"))
     .def("Init", InitWithManip,    PY_ARGS("manipulator")        DOXY_FN(PostureDescriberBase, Init "const RobotBase::ManipulatorPtr& pmanip"))
     ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetPostureDescriber", GetPostureDescriber, PY_ARGS("manip") DOXY_FN1(GetPostureDescriber));
+#else
+    def("GetPostureDescriber", GetPostureDescriber, PY_ARGS("manip") DOXY_FN1(GetPostureDescriber));
+#endif
 }
 
 } // namespace openravepy

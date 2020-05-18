@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2014 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2020 Guangning Tan, Kei Usui & Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
-#include <openrave/posturedescriber.h>
+#include <openrave/posturedescriberbase.h>
 
 namespace OpenRAVE {
 

@@ -86,6 +86,9 @@ public:
 
         object GetFreeParameters() const;
 
+        bool SetPostureDescriber(PyPostureDescriberPtr pydescriber);
+        PyPostureDescriberPtr GetPostureDescriber();
+
         bool _FindIKSolution(const IkParameterization& ikparam, std::vector<dReal>& solution, int filteroptions, bool releasegil) const;
         bool _FindIKSolution(const IkParameterization& ikparam, const std::vector<dReal>& vFreeParameters, std::vector<dReal>& solution, int filteroptions, bool releasegil) const;
         bool _FindIKSolution(const IkParameterization& ikparam, int filteroptions, IkReturn& ikreturn, bool releasegil) const;
