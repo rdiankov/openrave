@@ -838,7 +838,11 @@ void init_openravepy_viewer();
 #endif
 OPENRAVEPY_API ViewerBasePtr GetViewer(PyViewerBasePtr);
 OPENRAVEPY_API PyInterfaceBasePtr toPyViewer(ViewerBasePtr, PyEnvironmentBasePtr);
-
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_openravepy_posturedescriber(py::module& m);
+#else
+void init_openravepy_posturedescriber();
+#endif
 OPENRAVEPY_API int pyGetIntFromPy(py::object olevel, int defaultvalue);
 OPENRAVEPY_API py::object toPyPlannerStatus(const PlannerStatus&);
     
