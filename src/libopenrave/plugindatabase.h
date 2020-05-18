@@ -427,8 +427,8 @@ protected:
     SpaceSamplerBasePtr CreateSpaceSampler(EnvironmentBasePtr penv, const std::string& name) {
         return RaveInterfaceCast<SpaceSamplerBase>(Create(penv, PT_SpaceSampler, name));
     }
-    RobotPostureDescriberBasePtr CreateFkSolver(EnvironmentBasePtr penv, const std::string& name) {
-        return RaveInterfaceCast<RobotPostureDescriberBase>(Create(penv, PT_ForwardKinematicsSolver, name));
+    PostureDescriberBasePtr CreateFkSolver(EnvironmentBasePtr penv, const std::string& name) {
+        return RaveInterfaceCast<PostureDescriberBase>(Create(penv, PT_PostureDescriber, name));
     }
 
     virtual bool Init(bool bLoadAllPlugins)

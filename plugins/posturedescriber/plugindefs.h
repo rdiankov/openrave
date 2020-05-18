@@ -1,0 +1,7 @@
+#ifndef PLUGINS_FKCOMPUTERS_PLUGINDEFS_H
+#define PLUGINS_FKCOMPUTERS_PLUGINDEFS_H
+
+#define POSTUREDESCRIBER_CLASS_NAME  "posturedescriber" // PostureDescriber
+#define POSTUREDESCRIBER_MODULE_NAME "posturedescriber" // PostureDescriberModule
+
+#endif // PLUGINS_FKCOMPUTERS_PLUGINDEFS_H

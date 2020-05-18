@@ -15,27 +15,27 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
-#include <openrave/fksolver.h>
+#include <openrave/posturedescriber.h>
 
 namespace OpenRAVE {
 
-RobotPostureDescriberBase::RobotPostureDescriberBase(EnvironmentBasePtr penv) : InterfaceBase(PT_ForwardKinematicsSolver, penv)
+PostureDescriberBase::PostureDescriberBase(EnvironmentBasePtr penv) : InterfaceBase(PT_PostureDescriber, penv)
 {
 }
 
-RobotPostureDescriberBase::~RobotPostureDescriberBase() {
+PostureDescriberBase::~PostureDescriberBase() {
 }
 
-const char* RobotPostureDescriberBase::GetHash() const {
-    return OPENRAVE_FORWARDKINEMATICSSOLVER_HASH;
+const char* PostureDescriberBase::GetHash() const {
+    return OPENRAVE_POSTUREDESCRIBER_HASH;
 }
 
-bool RobotPostureDescriberBase::Supports(const RobotBase::ManipulatorPtr& pmanip) const {
+bool PostureDescriberBase::Supports(const RobotBase::ManipulatorPtr& pmanip) const {
     const std::array<RobotBase::LinkPtr, 2> kinematicsChain {pmanip->GetBase(), pmanip->GetEndEffector()};
     return this->Supports(kinematicsChain);
 }
 
-bool RobotPostureDescriberBase::Init(const RobotBase::ManipulatorPtr& pmanip) {
+bool PostureDescriberBase::Init(const RobotBase::ManipulatorPtr& pmanip) {
     const std::array<RobotBase::LinkPtr, 2> kinematicsChain {pmanip->GetBase(), pmanip->GetEndEffector()};
     return this->Supports(kinematicsChain) ? this->Init(kinematicsChain) : false;
 }

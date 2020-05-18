@@ -33,7 +33,7 @@ set(CPACK_COMPONENT_${PLUGINS_BASE_UPPER}_DISPLAY_NAME "Essential plugins for mo
 set(CPACK_COMPONENT_${PLUGINS_BASE_UPPER}_DEPENDS ${COMPONENT_PREFIX}base PARENT_SCOPE)
 set(PLUGIN_COMPONENTS ${PLUGINS_BASE})
 
-set(PLUGINS basecontrollers baserobots basesamplers basesensors bulletrave mobyrave configurationcache grasper ikfastsolvers logging pqprave rmanipulation rplanners textserver fkcomputers)
+set(PLUGINS basecontrollers baserobots basesamplers basesensors bulletrave mobyrave configurationcache grasper ikfastsolvers logging pqprave rmanipulation rplanners textserver posturedescriber)
 if( OPT_QTOSG_VIEWER )
   set(PLUGINS ${PLUGINS} qtosgrave)
 endif()

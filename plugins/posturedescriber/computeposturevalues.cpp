@@ -1,4 +1,4 @@
-#include "robotposturedescriber.h"
+#include "posturedescriber.h"
 #include "openraveplugindefs.h" // SerializeValues
 
 namespace OpenRAVE {

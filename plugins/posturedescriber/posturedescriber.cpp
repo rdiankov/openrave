@@ -1,33 +1,33 @@
-#include "neighbouringtwojointsrelations.h" // NeighbouringTwoJointsRelation
-#include "robotposturedescriber.h" // RobotPostureDescriber
+#include "posturesupporttypes.h" // NeighbouringTwoJointsRelation
+#include "posturedescriber.h" // PostureDescriber
 #include "openraveplugindefs.h" // SerializeValues
 
 namespace OpenRAVE {
 
 using JointPtr = OpenRAVE::KinBody::JointPtr;
 
-RobotPostureDescriber::RobotPostureDescriber(EnvironmentBasePtr penv,
+PostureDescriber::PostureDescriber(EnvironmentBasePtr penv,
                                              const double fTol) :
-    RobotPostureDescriberBase(penv),
+    PostureDescriberBase(penv),
     _fTol(fTol) 
 {
     // `SendCommand` APIs
     this->RegisterCommand("SetPostureValueThreshold",
-                          boost::bind(&RobotPostureDescriber::_SetPostureValueThresholdCommand, this, _1, _2),
+                          boost::bind(&PostureDescriber::_SetPostureValueThresholdCommand, this, _1, _2),
                           "Sets the tolerance for determining whether a robot posture value is close to 0 and hence would have hybrid states");
 
     this->RegisterCommand("GetPostureValueThreshold",
-                          boost::bind(&RobotPostureDescriber::_GetPostureValueThresholdCommand, this, _1, _2),
+                          boost::bind(&PostureDescriber::_GetPostureValueThresholdCommand, this, _1, _2),
                           "Gets the tolerance for determining whether a robot posture value is close to 0 and hence would have hybrid states");
 
     this->RegisterCommand("GetArmIndices",
-                          boost::bind(&RobotPostureDescriber::_GetArmIndicesCommand, this, _1, _2),
+                          boost::bind(&PostureDescriber::_GetArmIndicesCommand, this, _1, _2),
                           "Gets the shared object library name for computing the robot posture values and states");
 }
 
-RobotPostureDescriber::~RobotPostureDescriber() {}
+PostureDescriber::~PostureDescriber() {}
 
-bool RobotPostureDescriber::Init(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain) {
+bool PostureDescriber::Init(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain) {
     if(!this->Supports(kinematicsChain)) {
         RAVELOG_WARN("Does not support kinematics chain");
         return false;
@@ -54,7 +54,7 @@ bool RobotPostureDescriber::Init(const std::array<RobotBase::LinkPtr, 2>& kinema
     return static_cast<bool>(_posturefn);
 }
 
-void RobotPostureDescriber::_GetJointsFromKinematicsChain(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain,
+void PostureDescriber::_GetJointsFromKinematicsChain(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain,
                                                           std::vector<JointPtr>& joints) const {
     const int baselinkind = kinematicsChain[0]->GetIndex();
     const int eelinkind = kinematicsChain[1]->GetIndex();
@@ -163,7 +163,7 @@ bool AnalyzeFourRevoluteJoints0(const std::vector<JointPtr>& joints) {
         ;
 }
 
-bool RobotPostureDescriber::Supports(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain) const {
+bool PostureDescriber::Supports(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain) const {
     if( kinematicsChain[0] == nullptr || kinematicsChain[1] == nullptr ) {
         RAVELOG_WARN("kinematics chain is not valid as having nullptr");
         return false;
@@ -187,7 +187,7 @@ bool RobotPostureDescriber::Supports(const std::array<RobotBase::LinkPtr, 2>& ki
 }
 
 
-bool RobotPostureDescriber::ComputePostureValues(std::vector<uint16_t>& posturestates, const std::vector<double>& jointvalues) {
+bool PostureDescriber::ComputePostureStates(std::vector<uint16_t>& posturestates, const std::vector<double>& jointvalues) {
     if(!jointvalues.empty()) {
         const KinBodyPtr probot = _kinematicsChain[0]->GetParent();
         if(jointvalues.size() != _joints.size()) {
@@ -205,7 +205,7 @@ bool RobotPostureDescriber::ComputePostureValues(std::vector<uint16_t>& postures
     return true;
 }
 
-bool RobotPostureDescriber::SetPostureValueThreshold(double fTol) {
+bool PostureDescriber::SetPostureValueThreshold(double fTol) {
     if(fTol < 0.0) {
         RAVELOG_WARN_FORMAT("Cannot set fTol=%.4d<0.0; do not change its current value %.4e", fTol % _fTol);
         return false;
@@ -214,18 +214,18 @@ bool RobotPostureDescriber::SetPostureValueThreshold(double fTol) {
     return true;
 }
 
-bool RobotPostureDescriber::_SetPostureValueThresholdCommand(std::ostream& ssout, std::istream& ssin) {
+bool PostureDescriber::_SetPostureValueThresholdCommand(std::ostream& ssout, std::istream& ssin) {
     double fTol = 0.0;
     ssin >> fTol;
     return this->SetPostureValueThreshold(fTol);
 }
 
-bool RobotPostureDescriber::_GetPostureValueThresholdCommand(std::ostream& ssout, std::istream& ssin) const {
+bool PostureDescriber::_GetPostureValueThresholdCommand(std::ostream& ssout, std::istream& ssin) const {
     ssout << _fTol;
     return true;
 }
 
-bool RobotPostureDescriber::_GetArmIndicesCommand(std::ostream& ssout, std::istream& ssin) const {
+bool PostureDescriber::_GetArmIndicesCommand(std::ostream& ssout, std::istream& ssin) const {
     SerializeValues(ssout, _armindices, ' ');
     return !_armindices.empty();
 }

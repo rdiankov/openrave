@@ -272,14 +272,14 @@ enum InterfaceType
     PT_Trajectory=11, ///< describes \ref TrajectoryBase
     PT_Viewer=12, ///< describes \ref ViewerBase
     PT_SpaceSampler=13, ///< describes \ref SamplerBase
-    PT_ForwardKinematicsSolver=14, ///< describes \ref RobotPostureDescriberBase interface
+    PT_PostureDescriber=14, ///< describes \ref PostureDescriberBase interface
     PT_NumberOfInterfaces=14 ///< number of interfaces, do not forget to update
 };
 
 class CollisionReport;
 class InterfaceBase;
 class IkSolverBase;
-class RobotPostureDescriberBase;
+class PostureDescriberBase;
 class TrajectoryBase;
 class ControllerBase;
 class PlannerBase;
@@ -317,9 +317,9 @@ typedef boost::weak_ptr<ControllerBase> ControllerBaseWeakPtr;
 typedef boost::shared_ptr<IkSolverBase> IkSolverBasePtr;
 typedef boost::shared_ptr<IkSolverBase const> IkSolverBaseConstPtr;
 typedef boost::weak_ptr<IkSolverBase> IkSolverBaseWeakPtr;
-typedef boost::shared_ptr<RobotPostureDescriberBase> RobotPostureDescriberBasePtr;
-typedef boost::shared_ptr<RobotPostureDescriberBase const> RobotPostureDescriberBaseConstPtr;
-typedef boost::weak_ptr<RobotPostureDescriberBase> RobotPostureDescriberBaseWeakPtr;
+typedef boost::shared_ptr<PostureDescriberBase> PostureDescriberBasePtr;
+typedef boost::shared_ptr<PostureDescriberBase const> PostureDescriberBaseConstPtr;
+typedef boost::weak_ptr<PostureDescriberBase> PostureDescriberBaseWeakPtr;
 typedef boost::shared_ptr<PhysicsEngineBase> PhysicsEngineBasePtr;
 typedef boost::shared_ptr<PhysicsEngineBase const> PhysicsEngineBaseConstPtr;
 typedef boost::weak_ptr<PhysicsEngineBase> PhysicsEngineBaseWeakPtr;
@@ -2413,7 +2413,7 @@ OPENRAVE_API ConfigurationSpecification RaveGetAffineConfigurationSpecification(
 #include <openrave/sensor.h>
 #include <openrave/robot.h>
 #include <openrave/iksolver.h>
-// #include <openrave/fksolver.h>
+// #include <openrave/posturedescriber.h>
 #include <openrave/planner.h>
 #include <openrave/controller.h>
 #include <openrave/physicsengine.h>
@@ -2444,7 +2444,7 @@ inline const char* RaveGetInterfaceHash(InterfaceType type)
     case PT_Trajectory: return OPENRAVE_TRAJECTORY_HASH;
     case PT_Viewer: return OPENRAVE_VIEWER_HASH;
     case PT_SpaceSampler: return OPENRAVE_SPACESAMPLER_HASH;
-    case PT_ForwardKinematicsSolver: return OPENRAVE_FORWARDKINEMATICSSOLVER_HASH;
+    case PT_PostureDescriber: return OPENRAVE_POSTUREDESCRIBER_HASH;
     default:
         throw openrave_exception("failed to find openrave interface type",ORE_InvalidArguments);
         return NULL;
@@ -2576,7 +2576,7 @@ OPENRAVE_API SensorBasePtr RaveCreateSensor(EnvironmentBasePtr env, const std::s
 OPENRAVE_API CollisionCheckerBasePtr RaveCreateCollisionChecker(EnvironmentBasePtr env, const std::string& name);
 OPENRAVE_API ViewerBasePtr RaveCreateViewer(EnvironmentBasePtr env, const std::string& name);
 OPENRAVE_API SpaceSamplerBasePtr RaveCreateSpaceSampler(EnvironmentBasePtr env, const std::string& name);
-OPENRAVE_API RobotPostureDescriberBasePtr RaveCreateFkSolver(EnvironmentBasePtr env, const std::string& name);
+OPENRAVE_API PostureDescriberBasePtr RaveCreateFkSolver(EnvironmentBasePtr env, const std::string& name);
 OPENRAVE_API KinBodyPtr RaveCreateKinBody(EnvironmentBasePtr env, const std::string& name="");
 /// \brief Return an empty trajectory instance.
 OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr env, const std::string& name="");

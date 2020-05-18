@@ -1,18 +1,18 @@
-#ifndef PLUGINS_FKCOMPUTERS_ROBOTPOSTUREDESCRIBER_H
-#define PLUGINS_FKCOMPUTERS_ROBOTPOSTUREDESCRIBER_H
+#ifndef PLUGINS_POSTUREDESCRIBER_POSTUREDESCRIBER_H
+#define PLUGINS_POSTUREDESCRIBER_POSTUREDESCRIBER_H
 
-#include <openrave/fksolver.h> // RobotPostureDescriberBasePtr
+#include <openrave/posturedescriber.h> // PostureDescriberBasePtr
 
 namespace OpenRAVE {
 
 using PostureValueFn = std::function<void(const std::vector<KinBody::JointPtr>& vjoints, const double fTol, std::vector<uint16_t>& posturestates)>;
 
-class OPENRAVE_API RobotPostureDescriber : public RobotPostureDescriberBase
+class OPENRAVE_API PostureDescriber : public PostureDescriberBase
 {
 public:
-    RobotPostureDescriber() = delete;
-    RobotPostureDescriber(EnvironmentBasePtr penv, const double fTol = 1e-6);
-    virtual ~RobotPostureDescriber();
+    PostureDescriber() = delete;
+    PostureDescriber(EnvironmentBasePtr penv, const double fTol = 1e-6);
+    virtual ~PostureDescriber();
 
     /// \brief Initialize with a kinematics chain
     virtual bool Init(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain) override;
@@ -23,7 +23,7 @@ public:
 
     /// \brief Computes an integer value to describe current robot posture
     /// Computes a value describing descrete posture of robot kinematics between baselink and eelink
-    virtual bool ComputePostureValues(std::vector<uint16_t>& values, const std::vector<double>& jointvalues = {}) override;
+    virtual bool ComputePostureStates(std::vector<uint16_t>& values, const std::vector<double>& jointvalues = {}) override;
 
     /// \brief Set the tolerance for determining whether a robot posture value is close to 0 (i.e. singularity, branch point)
     bool SetPostureValueThreshold(const double fTol);
@@ -47,11 +47,11 @@ protected:
     PostureValueFn _posturefn; ///< function that computes posture values and states for a kinematics chain
 };
 
-typedef boost::shared_ptr<RobotPostureDescriber> RobotPostureDescriberPtr;
+typedef boost::shared_ptr<PostureDescriber> PostureDescriberPtr;
 
 OPENRAVE_API void Compute6RRobotPostureStates0  (const std::vector<KinBody::JointPtr>& vjoints, const double fTol, std::vector<uint16_t>& posturestates);
 OPENRAVE_API void Compute4DofRobotPostureStates0(const std::vector<KinBody::JointPtr>& vjoints, const double fTol, std::vector<uint16_t>& posturestates);
 
 } // namespace OpenRAVE
 
-#endif // PLUGINS_FKCOMPUTERS_ROBOTPOSTUREDESCRIBER_H
+#endif // PLUGINS_POSTUREDESCRIBER_POSTUREDESCRIBER_H

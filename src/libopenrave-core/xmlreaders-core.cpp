@@ -3508,6 +3508,7 @@ BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, InterfaceType ty
     case PT_Trajectory: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Trajectory>(penv,pinterface,xmltag,atts));
     case PT_Viewer: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Viewer>(penv,pinterface,xmltag,atts));
     case PT_SpaceSampler: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_SpaceSampler>(penv,pinterface,xmltag,atts));
+    case PT_PostureDescriber: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_PostureDescriber>(penv,pinterface,xmltag,atts));
     }
 
     throw openrave_exception(str(boost::format(_("could not create interface of type %d"))%type),ORE_InvalidArguments);

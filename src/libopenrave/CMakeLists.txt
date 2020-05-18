@@ -1,6 +1,6 @@
 cmake_policy(SET CMP0005 NEW)
 set(openrave_lib_SOURCES configurationspecification.cpp controller.cpp fparsermulti.h iksolver.cpp interface.cpp kinbody.cpp kinbodycollision.cpp kinbodygeometry.cpp kinbodygrab.cpp kinbodyjoint.cpp kinbodylink.cpp  kinbodystatesaver.cpp libopenrave.cpp libopenrave.h openravemathextra.cpp planner.cpp plannerparameters.cpp planningutils.cpp plugindatabase.h robot.cpp
-  fksolver.cpp robotposture.cpp
+  posturedescriber.cpp robotposture.cpp
   robotconnectedbody.cpp robotmanipulator.cpp sensorsystem.cpp trajectory.cpp utils.cpp xmlreaders.cpp ${rave_header_files}
 )
 

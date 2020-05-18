@@ -14,26 +14,26 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-/** \file fksolver.h
+/** \file posturedescriber.h
     \brief Forward kinematics related definitions.
 
     Automatically included with \ref openrave.h
  */
-#ifndef OPENRAVE_FKSOLVER_H
-#define OPENRAVE_FKSOLVER_H
+#ifndef OPENRAVE_POSTUREDESCRIBERBASE_H
+#define OPENRAVE_POSTUREDESCRIBERBASE_H
 
 #include <openrave/openrave.h>
 
 namespace OpenRAVE {
 
-/** \brief <b>[interface]</b> Base class for all Forward Kinematic solvers. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_fksolver.
+/** \brief <b>[interface]</b> Base class for robot posture describers. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_fksolver.
    \ingroup interfaces
  */
-class OPENRAVE_API RobotPostureDescriberBase : public InterfaceBase
+class OPENRAVE_API PostureDescriberBase : public InterfaceBase
 {
 public:
-    RobotPostureDescriberBase(EnvironmentBasePtr penv);
-    virtual ~RobotPostureDescriberBase();
+    PostureDescriberBase(EnvironmentBasePtr penv);
+    virtual ~PostureDescriberBase();
 
     /// \brief Initialize with a kinematics chain
     virtual bool Init(const std::array<OpenRAVE::RobotBase::LinkPtr, 2>& kinematicsChain) = 0;
@@ -52,19 +52,19 @@ public:
 
     /// \brief Computes an integer value to describe current robot posture
     /// Computes a value describing descrete posture of robot kinematics between base link and endeffector link
-    virtual bool ComputePostureValues(std::vector<uint16_t>& posturevalues, const std::vector<double>& jointvalues = {}) = 0;
+    virtual bool ComputePostureStates(std::vector<uint16_t>& posturevalues, const std::vector<double>& jointvalues = {}) = 0;
 
     /// \return the static interface type this class points to (used for safe casting)
     static InterfaceType GetInterfaceTypeStatic() {
-        return PT_ForwardKinematicsSolver;
+        return PT_PostureDescriber;
     }
 
 private:
     virtual const char* GetHash() const final;
 };
 
-typedef boost::shared_ptr<RobotPostureDescriberBase> RobotPostureDescriberBasePtr;
+typedef boost::shared_ptr<PostureDescriberBase> PostureDescriberBasePtr;
 
 } // end namespace OpenRAVE
 
-#endif
+#endif // OPENRAVE_POSTUREDESCRIBERBASE_H

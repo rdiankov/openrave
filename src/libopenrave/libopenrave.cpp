@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
-#include <openrave/fksolver.h> // RobotPostureDescriberBase
+#include <openrave/posturedescriber.h> // PostureDescriberBase
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/utility.hpp>
@@ -376,7 +376,7 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
         _mapinterfacenames[PT_Trajectory] = "trajectory";
         _mapinterfacenames[PT_Viewer] = "viewer";
         _mapinterfacenames[PT_SpaceSampler] = "spacesampler";
-        _mapinterfacenames[PT_ForwardKinematicsSolver] = "fksolver";
+        _mapinterfacenames[PT_PostureDescriber] = "fksolver";
         BOOST_ASSERT(_mapinterfacenames.size()==PT_NumberOfInterfaces);
 
         _mapikparameterization[IKP_Transform6D] = "Transform6D";
@@ -1306,7 +1306,7 @@ SpaceSamplerBasePtr RaveCreateSpaceSampler(EnvironmentBasePtr penv, const std::s
     return RaveGlobal::instance()->GetDatabase()->CreateSpaceSampler(penv, name);
 }
 
-RobotPostureDescriberBasePtr RaveCreateFkSolver(EnvironmentBasePtr penv, const std::string& name) {
+PostureDescriberBasePtr RaveCreateFkSolver(EnvironmentBasePtr penv, const std::string& name) {
     return RaveGlobal::instance()->GetDatabase()->CreateFkSolver(penv, name);
 }
 

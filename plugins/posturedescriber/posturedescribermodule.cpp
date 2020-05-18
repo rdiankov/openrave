@@ -15,16 +15,16 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <openrave/plugin.h> // OPENRAVE_PLUGIN_API
-#include <openrave/fksolver.h> // RobotPostureDescriberBasePtr
-#include "plugindefs.h" //  ROBOTPOSTUREDESCRIBER_MODULE_NAME, ROBOTPOSTUREDESCRIBER_CLASS_NAME
-#include "robotposturedescriber.h"
-#include "robotposturedescribermodule.h"
+#include <openrave/posturedescriber.h> // PostureDescriberBasePtr
+#include "plugindefs.h" //  POSTUREDESCRIBER_MODULE_NAME, POSTUREDESCRIBER_CLASS_NAME
+#include "posturedescriber.h"
+#include "posturedescribermodule.h"
 
 // #include <boost/lexical_cast.hpp>
 
 using OpenRAVE::PLUGININFO;
 using OpenRAVE::PT_Module;
-using OpenRAVE::PT_ForwardKinematicsSolver;
+using OpenRAVE::PT_PostureDescriber;
 using OpenRAVE::InterfaceType;
 using OpenRAVE::InterfaceBasePtr;
 using OpenRAVE::ModuleBasePtr;
@@ -37,25 +37,25 @@ using OpenRAVE::OpenRAVEErrorCode;
 using OpenRAVE::OpenRAVEErrorCode::ORE_InvalidArguments;  // 0x01
 
 // forward kinematics
-using OpenRAVE::RobotPostureDescriberBasePtr;
-using OpenRAVE::RobotPostureDescriber;
-using OpenRAVE::RobotPostureDescriberModule;
+using OpenRAVE::PostureDescriberBasePtr;
+using OpenRAVE::PostureDescriber;
+using OpenRAVE::PostureDescriberModule;
 
 namespace OpenRAVE {
 
-RobotPostureDescriberModule::RobotPostureDescriberModule(const EnvironmentBasePtr& penv) : ModuleBase(penv)
+PostureDescriberModule::PostureDescriberModule(const EnvironmentBasePtr& penv) : ModuleBase(penv)
 {
     __description =
         ":Interface Author: Guangning Tan & Kei Usui & Rosen Diankov\n\n"
         "Loads a robot posture describer onto a (base link, end-effector link) pair, or onto a manipulator that prescribes the pair";
 
     // `SendCommand` APIs
-    this->RegisterCommand("LoadRobotPostureDescriber",
-                          boost::bind(&RobotPostureDescriberModule::_LoadRobotPostureDescriberCommand, this, _1, _2),
+    this->RegisterCommand("LoadPostureDescriber",
+                          boost::bind(&PostureDescriberModule::_LoadPostureDescriberCommand, this, _1, _2),
                           "Loads a robot posture describer onto a (base link, end-effector link) pair, or onto a manipulator that prescribes the pair");
 }
 
-bool RobotPostureDescriberModule::_LoadRobotPostureDescriberCommand(std::ostream& ssout, std::istream& ssin) {
+bool PostureDescriberModule::_LoadPostureDescriberCommand(std::ostream& ssout, std::istream& ssin) {
     std::string robotname, manipname, baselinkname, eelinkname;
     ssin >> robotname >> manipname;
 
@@ -88,7 +88,7 @@ bool RobotPostureDescriberModule::_LoadRobotPostureDescriberCommand(std::ostream
         return false;
     }
 
-    const RobotPostureDescriberBasePtr probotposture = RaveCreateFkSolver(penv, ROBOTPOSTUREDESCRIBER_CLASS_NAME);
+    const PostureDescriberBasePtr probotposture = RaveCreateFkSolver(penv, POSTUREDESCRIBER_CLASS_NAME);
     if(probotposture == nullptr) {
         RAVELOG_WARN_FORMAT("env=%d, cannot create robot posture describer for robot %s from links %s to %s (manipname=\"%s\")", envId % robotname % baselinkname % eelinkname % manipname);
         return false;
@@ -99,7 +99,7 @@ bool RobotPostureDescriberModule::_LoadRobotPostureDescriberCommand(std::ostream
         RAVELOG_WARN_FORMAT("env=%d, cannot initialize robot posture describer for robot %s from links %s to %s (manipname=\"%s\")", envId % robotname % baselinkname % eelinkname % manipname);
     }
 
-    const bool bset = probot->SetRobotPostureDescriber(kinematicsChain, probotposture);
+    const bool bset = probot->SetPostureDescriber(kinematicsChain, probotposture);
     if(!bset) {
         RAVELOG_WARN_FORMAT("env=%d, cannot set robot posture describer for robot %s from links %s to %s (manipname=\"%s\")", envId % robotname % baselinkname % eelinkname % manipname);
         return false;
@@ -113,15 +113,15 @@ bool RobotPostureDescriberModule::_LoadRobotPostureDescriberCommand(std::ostream
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& ssin, EnvironmentBasePtr penv)
 {    
     switch(type) {
-    case PT_ForwardKinematicsSolver: {
-        if( interfacename == ROBOTPOSTUREDESCRIBER_CLASS_NAME ) {
-            return RobotPostureDescriberBasePtr(new RobotPostureDescriber(penv));
+    case PT_PostureDescriber: {
+        if( interfacename == POSTUREDESCRIBER_CLASS_NAME ) {
+            return PostureDescriberBasePtr(new PostureDescriber(penv));
         }
         break;
     }
     case PT_Module: {
-        if( interfacename == ROBOTPOSTUREDESCRIBER_MODULE_NAME) {
-            return ModuleBasePtr(new RobotPostureDescriberModule(penv));
+        if( interfacename == POSTUREDESCRIBER_MODULE_NAME) {
+            return ModuleBasePtr(new PostureDescriberModule(penv));
         }
         break;
     }
@@ -135,8 +135,8 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 
 void GetPluginAttributesValidated(PLUGININFO& info)
 {
-    info.interfacenames[PT_Module].push_back(ROBOTPOSTUREDESCRIBER_MODULE_NAME);
-    info.interfacenames[PT_ForwardKinematicsSolver].push_back(ROBOTPOSTUREDESCRIBER_CLASS_NAME);
+    info.interfacenames[PT_Module].push_back(POSTUREDESCRIBER_MODULE_NAME);
+    info.interfacenames[PT_PostureDescriber].push_back(POSTUREDESCRIBER_CLASS_NAME);
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()
