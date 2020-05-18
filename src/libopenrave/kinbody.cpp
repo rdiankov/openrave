@@ -5204,10 +5204,15 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
         _veclinks[iLinkInfo]->ExtractInfo(*info._vLinkInfos[iLinkInfo]);
     }
 
-    info._vJointInfos.resize(_vecjoints.size());
-    for(size_t iJointInfo = 0; iJointInfo < info._vJointInfos.size(); ++iJointInfo) {
+    info._vJointInfos.resize(_vecjoints.size() + _vPassiveJoints.size());
+    for(size_t iJointInfo = 0; iJointInfo < _vecjoints.size(); iJointInfo++) {
         info._vJointInfos[iJointInfo].reset(new KinBody::JointInfo());
         _vecjoints[iJointInfo]->ExtractInfo(*info._vJointInfos[iJointInfo]);
+    }
+
+    for(size_t iJointInfo = 0; iJointInfo < _vPassiveJoints.size(); iJointInfo++) {
+        info._vJointInfos[_vecjoints.size() + iJointInfo].reset(new KinBody::JointInfo());
+        _vPassiveJoints[iJointInfo]->ExtractInfo(*info._vJointInfos[_vecjoints.size() + iJointInfo]);
     }
 
     rapidjson::Document docReadableInterfaces;
