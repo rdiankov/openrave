@@ -87,8 +87,44 @@ void RobotBase::Manipulator::ExtractInfo(RobotBase::ManipulatorInfo& info) const
 
 UpdateFromInfoResult RobotBase::Manipulator::UpdateFromInfo(const RobotBase::ManipulatorInfo& info)
 {
-    // TODO
-    _info = info;
+    BOOST_ASSERT(info._id == _info._id);
+    // TODO: test
+    if (_info._sBaseLinkName != info._sBaseLinkName) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    if (_info._sEffectorLinkName != info._sEffectorLinkName) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    if (_info._grippername != info._grippername) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    if (_info._vGripperJointNames != info._vGripperJointNames) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    if (info._sIkSolverXMLId != info._sIkSolverXMLId) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    if (GetName() != info._name) {
+        SetName(info._name);
+    }
+
+    if (GetChuckingDirection() != info._vChuckingDirection) {
+        SetChuckingDirection(info._vChuckingDirection);
+    }
+
+    if (GetLocalToolTransform() != info._tLocalTool) {
+        SetLocalToolTransform(info._tLocalTool);
+    }
+
+    if (GetLocalToolDirection() != info._vdirection) {
+        SetLocalToolDirection(info._vdirection);
+    }
+
     return UFIR_Success;
 }
 
