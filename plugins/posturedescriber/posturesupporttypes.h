@@ -7,18 +7,18 @@ namespace OpenRAVE {
 
 // https://stackoverflow.com/questions/12059774/c11-standard-conformant-bitmasks-using-enum-class
 enum class NeighbouringTwoJointsRelation : uint16_t {
-    NTJR_UNKNOWN                 = 0x0,
-    NTJR_PARALLEL                = 0x1,
-    NTJR_PERPENDICULAR           = 0x2,
-    NTJR_INTERSECT               = 0x4,
-    NTJR_OVERLAP                 = NTJR_INTERSECT | NTJR_PARALLEL,      // 0x5
-    NTJR_INTERSECT_PERPENDICULAR = NTJR_INTERSECT | NTJR_PERPENDICULAR, // 0x6
+    NTJR_Unknown                 = 0x0,
+    NTJR_Parallel                = 0x1,
+    NTJR_Perpendicular           = 0x2,
+    NTJR_Intersect               = 0x4,
+    NTJR_Overlap                 = NTJR_Intersect | NTJR_Parallel,      // 0x5
+    NTJR_Intersect_Perpendicular = NTJR_Intersect | NTJR_Perpendicular, // 0x6
 };
 
 enum class RobotPostureSupportType : uint16_t {
-    RPST_NOSUPPORT   = 0x0,
-    RPST_6R_GENERAL  = 0x1,
-    RPST_4R_SPECIAL_0  = 0x2,
+    RPST_NoSupport  = 0x0,
+    RPST_6R_General = 0x1,
+    RPST_4R_Type_A  = 0x2,
 };
 
 template <typename T>

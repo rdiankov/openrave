@@ -49,8 +49,8 @@ protected:
 
 typedef boost::shared_ptr<PostureDescriber> PostureDescriberPtr;
 
-OPENRAVE_API void Compute6RRobotPostureStates0  (const std::vector<KinBody::JointPtr>& vjoints, const double fTol, std::vector<uint16_t>& posturestates);
-OPENRAVE_API void Compute4DofRobotPostureStates0(const std::vector<KinBody::JointPtr>& vjoints, const double fTol, std::vector<uint16_t>& posturestates);
+OPENRAVE_API void ComputePostureStates6RGeneral  (const std::vector<KinBody::JointPtr>& vjoints, const double fTol, std::vector<uint16_t>& posturestates);
+OPENRAVE_API void ComputePostureStates4RTypeA(const std::vector<KinBody::JointPtr>& vjoints, const double fTol, std::vector<uint16_t>& posturestates);
 
 } // namespace OpenRAVE
 

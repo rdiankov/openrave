@@ -39,7 +39,7 @@ inline void compute_robot_posture_states(const std::array<double, N>& postureval
     }
 }
 
-void Compute6RRobotPostureStates0(const std::vector<JointPtr>& joints, const double fTol, std::vector<uint16_t>& posturestates) {
+void ComputePostureStates6RGeneral(const std::vector<JointPtr>& joints, const double fTol, std::vector<uint16_t>& posturestates) {
     const Vector axis0 = joints[0]->GetAxis();
     const Vector axis1 = joints[1]->GetAxis();
     // const Vector axis2 = joints[2]->GetAxis(); // the same as axis1
@@ -71,7 +71,7 @@ void Compute6RRobotPostureStates0(const std::vector<JointPtr>& joints, const dou
     // RAVELOG_WARN(ss.str());
 }
 
-void Compute4DofRobotPostureStates0(const std::vector<JointPtr>& joints, const double fTol, std::vector<uint16_t>& posturestates) {
+void ComputePostureStates4RTypeA(const std::vector<JointPtr>& joints, const double fTol, std::vector<uint16_t>& posturestates) {
     const Vector axis0 = joints[0]->GetAxis();
     const Vector axis1 = joints[1]->GetAxis();
     // const Vector axis2 = joints[2]->GetAxis();
