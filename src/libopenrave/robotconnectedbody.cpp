@@ -69,7 +69,7 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
     FOREACH(it, _vLinkInfos)
     {
         rapidjson::Value info;
-        (*it)->SerializeJSON(info, allocator, options);
+        (*it)->SerializeJSON(info, allocator, fUnitScale, options);
         linkInfosValue.PushBack(info, allocator);
     }
     value.AddMember("links", linkInfosValue, allocator);
@@ -79,7 +79,7 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
     FOREACH(it, _vJointInfos)
     {
         rapidjson::Value v;
-        (*it)->SerializeJSON(v, allocator, options);
+        (*it)->SerializeJSON(v, allocator, fUnitScale, options);
         jointInfosValue.PushBack(v, allocator);
     }
     value.AddMember("joints", jointInfosValue, allocator);
@@ -89,7 +89,7 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
     FOREACH(it, _vManipulatorInfos)
     {
         rapidjson::Value info;
-        (*it)->SerializeJSON(info, allocator, options);
+        (*it)->SerializeJSON(info, allocator, fUnitScale, options);
         manipulatorInfosValue.PushBack(info, allocator);
     }
     value.AddMember("manipulators", manipulatorInfosValue, allocator);
@@ -99,7 +99,7 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
     FOREACH(it, _vAttachedSensorInfos)
     {
         rapidjson::Value info;
-        (*it)->SerializeJSON(info, allocator, options);
+        (*it)->SerializeJSON(info, allocator, fUnitScale, options);
         attachedSensorInfosValue.PushBack(info, allocator);
     }
     value.AddMember("attachedSensors", attachedSensorInfosValue, allocator);
@@ -109,7 +109,7 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
     FOREACH(it, _vGripperInfos)
     {
         rapidjson::Value info;
-        (*it)->SerializeJSON(info, allocator, options);
+        (*it)->SerializeJSON(info, allocator, fUnitScale, options);
         rGripperInfos.PushBack(info, allocator);
     }
     value.AddMember("gripperInfos", rGripperInfos, allocator);
