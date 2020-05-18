@@ -2391,8 +2391,106 @@ void RobotBase::ExtractInfo(RobotBaseInfo& info)
 
 UpdateFromInfoResult RobotBase::UpdateFromInfo(const RobotBaseInfo& info)
 {
-    // TODO
-    BOOST_ASSERT(info._id == _info._id);
+    // TODO: test
+    KinBody::UpdateFromInfo(info);
+
+    // manipulators
+    FOREACHC(itManipulatorInfo, info._vManipulatorInfos) {
+        // find existing manipulator in robot
+        std::vector<RobotBase::ManipulatorPtr>::iterator itExistingManipulator = _vecManipulators.end();
+        FOREACHC(itManipulator, _vecManipulators) {
+            if ((*itManipulator)->_info._id == (*itManipulatorInfo)->_id) {
+                itExistingManipulator = itManipulator;
+                break;
+            }
+        }
+        RobotBase::ManipulatorInfoPtr pManipulatorInfo = *itManipulatorInfo;
+        if (itExistingManipulator != _vecManipulators.end()) {
+            // update existing manipulator
+            UpdateFromInfoResult updateFromManipulatorInfoResult = UFIR_Success;
+            RobotBase::ManipulatorPtr pManipulator = *itExistingManipulator;
+            updateFromManipulatorInfoResult = pManipulator->UpdateFromInfo(*pManipulatorInfo);
+
+            if (updateFromManipulatorInfoResult == UFIR_Success) {
+                continue;
+            }
+
+            // manipulator update failed;  TODO: more detailed handling
+            return UFIR_RequireRemoveFromEnvironment;
+        }
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // attachedsensors
+    FOREACHC(itAttachedSensorInfo, info._vAttachedSensorInfos) {
+        // find existing attachedsensor in robot
+        std::vector<RobotBase::AttachedSensorPtr>::iterator itExistingAttachedSensor = _vecAttachedSensors.end();
+        FOREACHC(itAttachedSensor, _vecAttachedSensors) {
+            if ((*itAttachedSensor)->_info._id == (*itAttachedSensorInfo)->_id) {
+                itExistingAttachedSensor = itAttachedSensor;
+                break;
+            }
+        }
+        RobotBase::AttachedSensorInfoPtr pAttachedSensorInfo = *itAttachedSensorInfo;
+        if (itExistingAttachedSensor != _vecAttachedSensors.end()) {
+            // update existing attachedsensor
+            UpdateFromInfoResult updateFromAttachedSensorInfoResult = UFIR_Success;
+            RobotBase::AttachedSensorPtr pAttachedSensor = *itExistingAttachedSensor;
+            updateFromAttachedSensorInfoResult = pAttachedSensor->UpdateFromInfo(*pAttachedSensorInfo);
+            if (updateFromAttachedSensorInfoResult == UFIR_Success) {
+                continue;
+            }
+            // attachedsensor update failed;  TODO: more detailed handling
+            return UFIR_RequireRemoveFromEnvironment;
+        }
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // connectedbodies
+    FOREACHC(itConnectedBodyInfo, info._vConnectedBodyInfos) {
+        // find existing connectedbody in robot
+        std::vector<RobotBase::ConnectedBodyPtr>::iterator itExistingConnectedBody = _vecConnectedBodies.end();
+        FOREACHC(itConnectedBody, _vecConnectedBodies) {
+            if ((*itConnectedBody)->_info._id == (*itConnectedBodyInfo)->_id) {
+                itExistingConnectedBody = itConnectedBody;
+                break;
+            }
+        }
+        RobotBase::ConnectedBodyInfoPtr pConnectedBodyInfo = *itConnectedBodyInfo;
+        if (itExistingConnectedBody != _vecConnectedBodies.end()) {
+            // update existing connectedbody
+            UpdateFromInfoResult updateFromConnectedBodyInfoResult = UFIR_Success;
+            RobotBase::ConnectedBodyPtr pConnectedBody = *itExistingConnectedBody;
+            updateFromConnectedBodyInfoResult = pConnectedBody->UpdateFromInfo(*pConnectedBodyInfo);
+            if (updateFromConnectedBodyInfoResult == UFIR_Success) {
+                continue;
+            }
+            // connectedbody update failed;  TODO: more detailed handling
+            return UFIR_RequireRemoveFromEnvironment;
+        }
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+
+    // gripperinfos
+    FOREACHC(itGripperInfo, info._vGripperInfos) {
+        // find exisiting gripperinfo in robot
+        typename std::vector<RobotBase::GripperInfoPtr>::iterator itExistingGripperInfo;
+        for(itExistingGripperInfo = _vecGripperInfos.begin(); itExistingGripperInfo != _vecGripperInfos.end(); itExistingGripperInfo++) {
+            if ((*itExistingGripperInfo)->_id == (*itGripperInfo)->_id) {
+                // find existing gripperinfo
+                if ((*itExistingGripperInfo) != (*itGripperInfo)) {
+                    return UFIR_RequireRemoveFromEnvironment;
+                }
+                break;
+            }
+        }
+        if (itExistingGripperInfo == _vecGripperInfos.end()) {
+            // new gripper info
+            return UFIR_RequireRemoveFromEnvironment;
+        }
+    }
+
     return UFIR_Success;
 }
 
