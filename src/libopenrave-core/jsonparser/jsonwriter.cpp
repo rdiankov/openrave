@@ -194,6 +194,9 @@ protected:
 
     std::string _CanonicalizeURI(const std::string& uri)
     {
+        if (uri.empty()) {
+            return uri;
+        }
         std::string scheme, path, fragment;
         _ParseURI(uri, scheme, path, fragment);
 

@@ -400,8 +400,102 @@ void RobotBase::ConnectedBody::ExtractInfo(RobotBase::ConnectedBodyInfo& info) c
 
 UpdateFromInfoResult RobotBase::ConnectedBody::UpdateFromInfo(const RobotBase::ConnectedBodyInfo& info)
 {
-    // TODO
-    _info = info;
+    // TODO: test
+    BOOST_ASSERT(info._id == _info._id);
+    // name
+    if (_info._name != info._name) {
+       return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // linkname
+    if (_info._linkname != info._linkname) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // _trelative
+    if (GetRelativeTransform() != info._trelative) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // _vLinkInfos, links has orders, so only compare one by one
+    std::vector<KinBody::LinkPtr> links;
+    GetResolvedLinks(links);
+    if (links.size() != info._vLinkInfos.size()) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+    for(size_t iLink = 0; iLink < links.size(); iLink++) {
+        KinBody::LinkInfo linkInfo;
+        links[iLink]->ExtractInfo(linkInfo);  // might be slow
+        if (linkInfo != (*info._vLinkInfos[iLink])) {
+            return UFIR_RequireRemoveFromEnvironment;
+        }
+    }
+
+    // _vJointInfos
+    std::vector<KinBody::JointPtr> joints;
+    GetResolvedJoints(joints);
+    std::vector<KinBody::JointInfoPtr> jointInfos;
+    jointInfos.reserve(joints.size());
+    for(std::vector<KinBody::JointPtr>::iterator itJoint = joints.begin(); itJoint != joints.end(); itJoint++) {
+        KinBody::JointInfoPtr pJointInfo(new KinBody::JointInfo());
+        (*itJoint)->ExtractInfo(*pJointInfo);  // might be slow
+        jointInfos.push_back(pJointInfo);
+    }
+    std::vector<KinBody::JointInfoPtr> diffJointInfo;
+    GetInfoVectorDiff(jointInfos, info._vJointInfos, diffJointInfo);
+    if (diffJointInfo.size() > 0) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // _vManipulatorInfos
+    std::vector<RobotBase::ManipulatorPtr> manipulators;
+    GetResolvedManipulators(manipulators);
+
+    std::vector<RobotBase::ManipulatorInfoPtr> manipulatorInfos;
+    manipulatorInfos.reserve(manipulators.size());
+    for(std::vector<RobotBase::ManipulatorPtr>::iterator itManip = manipulators.begin(); itManip != manipulators.end(); itManip++) {
+        RobotBase::ManipulatorInfoPtr pManipInfo(new RobotBase::ManipulatorInfo());
+        (*itManip)->ExtractInfo(*pManipInfo);
+        manipulatorInfos.push_back(pManipInfo);
+    }
+    std::vector<RobotBase::ManipulatorInfoPtr> diffManipInfo;
+    GetInfoVectorDiff(manipulatorInfos, info._vManipulatorInfos, diffManipInfo);
+
+    if (diffManipInfo.size() > 0) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // _vAttachedSensorInfos
+    std::vector<RobotBase::AttachedSensorPtr> attachedSensors;
+    GetResolvedAttachedSensors(attachedSensors);
+    std::vector<RobotBase::AttachedSensorInfoPtr> attachedSensorInfos;
+    attachedSensorInfos.reserve(attachedSensors.size());
+    for(std::vector<RobotBase::AttachedSensorPtr>::iterator itAttachedSensor = attachedSensors.begin(); itAttachedSensor != attachedSensors.end(); itAttachedSensor++) {
+        RobotBase::AttachedSensorInfoPtr pAttachedSensorInfo(new RobotBase::AttachedSensorInfo());
+        (*itAttachedSensor)->ExtractInfo(*pAttachedSensorInfo);
+        attachedSensorInfos.push_back(pAttachedSensorInfo);
+    }
+    std::vector<RobotBase::AttachedSensorInfoPtr> diffAttachedSensorInfo;
+    GetInfoVectorDiff(attachedSensorInfos, info._vAttachedSensorInfos, diffAttachedSensorInfo);
+
+    if (diffAttachedSensorInfo.size() > 0) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // _vGripperInfos
+    std::vector<RobotBase::GripperInfoPtr> gripperInfos;
+    GetResolvedGripperInfos(gripperInfos);
+    std::vector<RobotBase::GripperInfoPtr> diffGripperInfo;
+    GetInfoVectorDiff(gripperInfos, info._vGripperInfos, diffGripperInfo);
+    if (diffGripperInfo.size() > 0) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // _bIsActive
+    if (IsActive() != info._bIsActive) {
+        SetActive(info._bIsActive);
+    }
+
     return UFIR_Success;
 }
 
