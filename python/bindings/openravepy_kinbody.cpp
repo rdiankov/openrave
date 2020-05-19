@@ -1166,8 +1166,8 @@ public:
         std::pair<dReal, dReal> values = _pjoint->GetInstantaneousTorqueLimits(iaxis);
         return boost::python::make_tuple(values.first, values.second);
     }
-    object GetNominalTorqueLimits(int iaxis=0, int torquelimitmode=1) const {
-        std::pair<dReal, dReal> values = _pjoint->GetNominalTorqueLimits(iaxis, torquelimitmode);
+    object GetNominalTorqueLimits(int iaxis=0) const {
+        std::pair<dReal, dReal> values = _pjoint->GetNominalTorqueLimits(iaxis);
         return boost::python::make_tuple(values.first, values.second);
     }
 
@@ -3301,7 +3301,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxAccel_overloads, GetMaxAccel, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxJerk_overloads, GetMaxJerk, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxTorque_overloads, GetMaxTorque, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetInstantaneousTorqueLimits_overloads, GetInstantaneousTorqueLimits, 0, 1)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetNominalTorqueLimits_overloads, GetNominalTorqueLimits, 0, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetNominalTorqueLimits_overloads, GetNominalTorqueLimits, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxInertia_overloads, GetMaxInertia, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetLinkTransformations_overloads, GetLinkTransformations, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetLinkTransformations_overloads, SetLinkTransformations, 1, 2)

@@ -1285,13 +1285,13 @@ std::pair<dReal, dReal> KinBody::Joint::GetInstantaneousTorqueLimits(int iaxis) 
     }
 }
 
-std::pair<dReal, dReal> KinBody::Joint::GetNominalTorqueLimits(int iaxis, int torquelimitmode) const
+std::pair<dReal, dReal> KinBody::Joint::GetNominalTorqueLimits(int iaxis) const
 {
     if( !_info._infoElectricMotor ) {
         return std::make_pair(-_info._vmaxtorque.at(iaxis), _info._vmaxtorque.at(iaxis));
     }
     else {
-        if( _info._infoElectricMotor->nominal_speed_torque_points.size() > 0 && torquelimitmode == 1) {
+        if( _info._infoElectricMotor->nominal_speed_torque_points.size() > 0) {
             dReal fMaxTorqueAtZeroSpeed = _info._infoElectricMotor->nominal_speed_torque_points.at(0).second*_info._infoElectricMotor->gear_ratio;
             if( _info._infoElectricMotor->nominal_speed_torque_points.size() == 1 ) {
                 // doesn't matter what the velocity is
