@@ -31,7 +31,7 @@ class PyRobotBase : public PyKinBody
 protected:
     RobotBasePtr _probot;
 public:
-    RobotBasePtr GetRobot();
+    RobotBasePtr GetRobot() const;
     class PyManipulator
     {
         RobotBase::ManipulatorPtr _pmanip;
@@ -54,7 +54,7 @@ public:
 
         object GetGripperName() const;
         
-        PyRobotBasePtr GetRobot();
+        PyRobotBasePtr GetRobot() const;
 
         bool SetIkSolver(PyIkSolverBasePtr iksolver);
         object GetIkSolver();
@@ -86,8 +86,10 @@ public:
 
         object GetFreeParameters() const;
 
-        bool SetPostureDescriber(PyPostureDescriberPtr pydescriber);
-        PyPostureDescriberPtr GetPostureDescriber();
+        // posture describer
+        bool SetPostureDescriber(PyPostureDescriberPtr pydescriber) const;
+        PyPostureDescriberPtr GetPostureDescriber() const;
+        object ComputePostureStates() const;
 
         bool _FindIKSolution(const IkParameterization& ikparam, std::vector<dReal>& solution, int filteroptions, bool releasegil) const;
         bool _FindIKSolution(const IkParameterization& ikparam, const std::vector<dReal>& vFreeParameters, std::vector<dReal>& solution, int filteroptions, bool releasegil) const;
@@ -411,8 +413,10 @@ public:
 
     PyStateRestoreContextBase* CreateRobotStateSaver(object options=py::none_());
 
-    bool SetPostureDescriber(PyManipulatorPtr pymanip, PyPostureDescriberPtr pydescriber);
-    PyPostureDescriberPtr GetPostureDescriber(PyManipulatorPtr pymanip);
+    // posture describer
+    bool SetPostureDescriber(PyManipulatorPtr pymanip, PyPostureDescriberPtr pydescriber) const;
+    PyPostureDescriberPtr GetPostureDescriber(PyManipulatorPtr pymanip) const;
+    object ComputePostureStates(PyManipulatorPtr pymanip) const;
 
     virtual std::string __repr__();
     virtual std::string __str__();

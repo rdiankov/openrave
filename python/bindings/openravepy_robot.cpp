@@ -269,7 +269,7 @@ PyConnectedBodyInfoPtr toPyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo&
     return PyConnectedBodyInfoPtr(new PyConnectedBodyInfo(connectedBodyInfo));
 }
 
-RobotBasePtr PyRobotBase::GetRobot() {
+RobotBasePtr PyRobotBase::GetRobot() const {
     return _probot;
 }
 
@@ -321,7 +321,7 @@ void PyRobotBase::PyManipulator::SetName(const std::string& s) {
     _pmanip->SetName(s);
 }
 
-PyRobotBasePtr PyRobotBase::PyManipulator::GetRobot() {
+PyRobotBasePtr PyRobotBase::PyManipulator::GetRobot() const {
     return PyRobotBasePtr(new PyRobotBase(_pmanip->GetRobot(),_pyenv));
 }
 
@@ -436,12 +436,12 @@ object PyRobotBase::PyManipulator::GetFreeParameters() const {
     return toPyArray(values);
 }
 
-bool PyRobotBase::PyManipulator::SetPostureDescriber(PyPostureDescriberPtr pydescriber) {
+bool PyRobotBase::PyManipulator::SetPostureDescriber(PyPostureDescriberPtr pydescriber) const {
     RobotBasePtr probot = _pmanip->GetRobot();
     return probot->SetPostureDescriber(_pmanip, pydescriber->GetPostureDescriber());
 }
 
-PyPostureDescriberPtr PyRobotBase::PyManipulator::GetPostureDescriber() {
+PyPostureDescriberPtr PyRobotBase::PyManipulator::GetPostureDescriber() const {
     RobotBasePtr probot = _pmanip->GetRobot();
     PostureDescriberBasePtr pDescriber = probot->GetPostureDescriber(_pmanip);
     if(pDescriber == nullptr) {
@@ -449,6 +449,17 @@ PyPostureDescriberPtr PyRobotBase::PyManipulator::GetPostureDescriber() {
     }
     PyPostureDescriberPtr pyDescriber(new PyPostureDescriber(pDescriber, toPyEnvironment(this->GetRobot())));
     return pyDescriber;
+}
+
+object PyRobotBase::PyManipulator::ComputePostureStates() const {
+    RobotBasePtr probot = _pmanip->GetRobot();
+    PostureDescriberBasePtr pDescriber = probot->GetPostureDescriber(_pmanip);
+    if(pDescriber == nullptr) {
+        return py::empty_array_astype<uint16_t>();
+    }
+    std::vector<uint16_t> posturestates;
+    pDescriber->ComputePostureStates(posturestates);
+    return toPyArray<uint16_t>(posturestates);
 }
 
 bool PyRobotBase::PyManipulator::_FindIKSolution(const IkParameterization& ikparam, std::vector<dReal>& solution, int filteroptions, bool releasegil) const
@@ -1752,17 +1763,27 @@ PyStateRestoreContextBase* PyRobotBase::CreateRobotStateSaver(object options) {
     return CreateStateSaver(options);
 }
 
-bool PyRobotBase::SetPostureDescriber(PyManipulatorPtr pymanip, PyPostureDescriberPtr pydescriber) {
+bool PyRobotBase::SetPostureDescriber(PyManipulatorPtr pymanip, PyPostureDescriberPtr pydescriber) const {
     return _probot->SetPostureDescriber(pymanip->GetManipulator(), pydescriber->GetPostureDescriber());
 }
 
-PyPostureDescriberPtr PyRobotBase::GetPostureDescriber(PyManipulatorPtr pymanip) {
+PyPostureDescriberPtr PyRobotBase::GetPostureDescriber(PyManipulatorPtr pymanip) const {
     PostureDescriberBasePtr pDescriber = _probot->GetPostureDescriber(pymanip->GetManipulator());
     if(pDescriber == nullptr) {
         return PyPostureDescriberPtr();
     }
     PyPostureDescriberPtr pyDescriber(new PyPostureDescriber(pDescriber, toPyEnvironment(pymanip->GetRobot())));
     return pyDescriber;
+}
+
+object PyRobotBase::ComputePostureStates(PyManipulatorPtr pymanip) const {
+    PostureDescriberBasePtr pDescriber = _probot->GetPostureDescriber(pymanip->GetManipulator());
+    if(pDescriber == nullptr) {
+        return py::empty_array_astype<uint16_t>();
+    }
+    std::vector<uint16_t> posturestates;
+    pDescriber->ComputePostureStates(posturestates);
+    return toPyArray<uint16_t>(posturestates);
 }
 
 std::string PyRobotBase::__repr__() {
@@ -2221,8 +2242,9 @@ void init_openravepy_robot()
                        .def("CreateRobotStateSaver",&PyRobotBase::CreateRobotStateSaver, CreateRobotStateSaver_overloads(PY_ARGS("options") "Creates an object that can be entered using 'with' and returns a RobotStateSaver")[return_value_policy<manage_new_object>()])
 #endif
                        // posture describer
-                       .def("SetPostureDescriber", &PyRobotBase::SetPostureDescriber, DOXY_FN(RobotBase, SetPostureDescriber))
-                       .def("GetPostureDescriber", &PyRobotBase::GetPostureDescriber, DOXY_FN(RobotBase, GetPostureDescriber))
+                       .def("SetPostureDescriber", &PyRobotBase::SetPostureDescriber, PY_ARGS("manip", "describer") DOXY_FN(RobotBase, SetPostureDescriber))
+                       .def("GetPostureDescriber", &PyRobotBase::GetPostureDescriber, PY_ARGS("manip") DOXY_FN(RobotBase, GetPostureDescriber))
+                       .def("ComputePostureStates", &PyRobotBase::ComputePostureStates, PY_ARGS("manip") DOXY_FN(RobotBase, ComputePostureStates))
 
                        .def("__repr__", &PyRobotBase::__repr__)
                        .def("__str__", &PyRobotBase::__str__)
@@ -2264,8 +2286,9 @@ void init_openravepy_robot()
         .def("GetNumFreeParameters",&PyRobotBase::PyManipulator::GetNumFreeParameters, DOXY_FN(RobotBase::Manipulator,GetNumFreeParameters))
         .def("GetFreeParameters",&PyRobotBase::PyManipulator::GetFreeParameters, DOXY_FN(RobotBase::Manipulator,GetFreeParameters))
         // posture describer
-        .def("SetPostureDescriber", &PyRobotBase::PyManipulator::SetPostureDescriber, DOXY_FN(RobotBase::Manipulator, SetPostureDescriber))
+        .def("SetPostureDescriber", &PyRobotBase::PyManipulator::SetPostureDescriber, PY_ARGS("describer") DOXY_FN(RobotBase::Manipulator, SetPostureDescriber))
         .def("GetPostureDescriber", &PyRobotBase::PyManipulator::GetPostureDescriber, DOXY_FN(RobotBase::Manipulator, GetPostureDescriber))
+        .def("ComputePostureStates", &PyRobotBase::PyManipulator::ComputePostureStates, DOXY_FN(RobotBase::Manipulator, GetPostureDescriber))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("FindIKSolution", pmanipik,
              "param"_a,
