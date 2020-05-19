@@ -870,17 +870,13 @@ inline void SetJsonValueByKey(rapidjson::Value& v, const U& key, const T& t, rap
 template<class T>
 inline void SetJsonValueByKey(rapidjson::Document& d, const char* key, const T& t)
 {
-    rapidjson::Value v;
-    SetJsonValueByKey(v, key, t, d.GetAllocator());
-    v.Swap(d);
+    SetJsonValueByKey(d, key, t, d.GetAllocator());
 }
 
 template<class T>
 inline void SetJsonValueByKey(rapidjson::Document& d, const std::string& key, const T& t)
 {
-    rapidjson::Value v;
-    SetJsonValueByKey(v, key.c_str(), t, d.GetAllocator());
-    v.Swap(d);
+    SetJsonValueByKey(d, key.c_str(), t, d.GetAllocator());
 }
 
 template<class T>
