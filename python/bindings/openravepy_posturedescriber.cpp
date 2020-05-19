@@ -18,7 +18,6 @@
 #include <openravepy/openravepy_int.h>
 #include <openravepy/openravepy_environmentbase.h>
 #include <openravepy/openravepy_posturedescriber.h> // PyPostureDescriber
-#include <openrave/posturedescriber.h> // PostureDescriber
 #include <openrave/utils.h>
 
 namespace openravepy {
@@ -50,8 +49,7 @@ using ManipulatorPtr = OpenRAVE::RobotBase::ManipulatorPtr;
 using LinkPtr = OpenRAVE::RobotBase::LinkPtr;
 using OpenRAVE::PostureDescriberBase;
 using OpenRAVE::PostureDescriberBasePtr;
-using OpenRAVE::PostureDescriber;
-using OpenRAVE::PostureDescriberPtr;
+using OpenRAVE::RaveCreatePostureDescriber;
 
 namespace numeric = py::numeric;
 
@@ -92,7 +90,13 @@ PyPostureDescriberPtr GetPostureDescriber(PyRobotBase::PyManipulatorPtr pymanip)
     const ManipulatorPtr pmanip = pymanip->GetManipulator();
     const RobotBasePtr probot = pmanip->GetRobot();
     const EnvironmentBasePtr penv = probot->GetEnv();
-    PostureDescriberBasePtr pDescriber(new PostureDescriber(penv));
+    const std::string interfacename = "posturedescriber";
+    std::vector<int> armindices;
+    // fe743742269c7dbfe548cb1f3412f658
+    const std::string chainhash = ComputeKinematicsChainHash(pmanip, armindices);
+    // posturedescriber.motoman-gp8l.fe743742269c7dbfe548cb1f3412f658.L0.L6
+    const std::string describername = interfacename + "." + probot->GetName() + "." + chainhash + "." + pmanip->GetBase()->GetName() + "." + pmanip->GetEndEffector()->GetName();
+    PostureDescriberBasePtr pDescriber = RaveCreatePostureDescriber(penv, interfacename + " " + describername);
     if(!pDescriber->Supports(pmanip)) {
         return PyPostureDescriberPtr();
     }

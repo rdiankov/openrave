@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
-#include <openrave/posturedescriberbase.h>
+#include <openrave/posturedescriber.h>
 
 namespace OpenRAVE {
 
@@ -31,13 +31,91 @@ const char* PostureDescriberBase::GetHash() const {
 }
 
 bool PostureDescriberBase::Supports(const RobotBase::ManipulatorPtr& pmanip) const {
-    const std::array<RobotBase::LinkPtr, 2> kinematicsChain {pmanip->GetBase(), pmanip->GetEndEffector()};
+    const LinkPair kinematicsChain {pmanip->GetBase(), pmanip->GetEndEffector()};
     return this->Supports(kinematicsChain);
 }
 
 bool PostureDescriberBase::Init(const RobotBase::ManipulatorPtr& pmanip) {
-    const std::array<RobotBase::LinkPtr, 2> kinematicsChain {pmanip->GetBase(), pmanip->GetEndEffector()};
+    const LinkPair kinematicsChain {pmanip->GetBase(), pmanip->GetEndEffector()};
     return this->Supports(kinematicsChain) ? this->Init(kinematicsChain) : false;
 }
 
+std::string ComputeKinematicsChainHash(const RobotBase::ManipulatorPtr& pmanip, std::vector<int>& armindices) {
+    const LinkPair kinematicsChain {pmanip->GetBase(), pmanip->GetEndEffector()};
+    const std::string s = ComputeKinematicsChainHash(kinematicsChain, armindices);
+    return s;
 }
+
+std::string ComputeKinematicsChainHash(const LinkPair& kinematicsChain, std::vector<int>& armindices)
+{
+    std::ostringstream ss;
+    ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION); // SERIALIZATION_PRECISION = 4 from libopenrave.h 
+
+    const RobotBase::LinkPtr& baselink = kinematicsChain[0];
+    const RobotBase::LinkPtr& eelink = kinematicsChain[1];
+    const int baselinkind = baselink->GetIndex();
+    const int eelinkind = eelink->GetIndex();
+    const KinBodyPtr probot = baselink->GetParent();
+
+    Transform tcur;
+    std::vector<RobotBase::JointPtr> joints;
+    probot->GetChain(baselinkind, eelinkind, joints);
+
+    armindices.clear();
+    for(auto joint : joints) {
+        const int dofindex = joint->GetDOFIndex();
+        if(joint->IsStatic() || dofindex==-1) {
+        }
+        else {
+            armindices.push_back(dofindex);
+        }
+    }
+    const std::set<int> indexset(begin(armindices), end(armindices));
+
+    // due to back compat issues, have to compute the end effector transform first
+    for(const RobotBase::JointPtr& joint : joints) {
+        tcur = tcur * joint->GetInternalHierarchyLeftTransform() * joint->GetInternalHierarchyRightTransform();
+    }
+    // treat it like 6D transform IK by not inlucding the local tool transform!
+    SerializeRound(ss, tcur);
+    ss << armindices.size() << " ";
+
+    tcur = Transform();
+    int index = 0;
+    for(const RobotBase::JointPtr& joint : joints) {
+        if( !joint->IsStatic() ) {
+            ss << joint->GetType() << " ";
+        }
+
+        const int dofindex = joint->GetDOFIndex();
+        if( dofindex >= 0 && indexset.count(dofindex) ) {
+            tcur = tcur * joint->GetInternalHierarchyLeftTransform();
+            for(int idof = 0; idof < joint->GetDOF(); ++idof) {
+                SerializeRound3(ss, tcur.trans);
+                SerializeRound3(ss, tcur.rotate(joint->GetInternalHierarchyAxis(idof)));
+            }
+            tcur = tcur * joint->GetInternalHierarchyRightTransform();
+        }
+        else {
+            // not sure if this is correct for a mimic joint...
+            tcur = tcur * joint->GetInternalHierarchyLeftTransform() * joint->GetInternalHierarchyRightTransform();
+            if( joint->IsMimic() ) {
+                for(int idof = 0; idof < joint->GetDOF(); ++idof) {
+                    if( joint->IsMimic(idof) ) {
+                        ss << "mimic " << index << " ";
+                        for(int ieq = 0; ieq < 3; ++ieq) {
+                            ss << joint->GetMimicEquation(idof, ieq) << " ";
+                        }
+                    }
+                }
+            }
+        }
+        index += 1;
+    }
+
+    const std::string chainhash = OpenRAVE::utils::GetMD5HashString(ss.str()); // kinematics chain hash
+    return chainhash;
+}
+
+
+} // namespace OpenRAVE

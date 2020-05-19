@@ -1,57 +1,77 @@
-#ifndef PLUGINS_POSTUREDESCRIBER_POSTUREDESCRIBER_H
-#define PLUGINS_POSTUREDESCRIBER_POSTUREDESCRIBER_H
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2020 Rosen Diankov <rosen.diankov@gmail.com>
+//
+// This file is part of OpenRAVE.
+// OpenRAVE is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+/** \file posturedescriber.h
+    \brief Forward kinematics related definitions.
 
-#include <openrave/posturedescriberbase.h> // PostureDescriberBasePtr
+    Automatically included with \ref openrave.h
+ */
+#ifndef OPENRAVE_POSTUREDESCRIBERBASE_H
+#define OPENRAVE_POSTUREDESCRIBERBASE_H
+
+#include <openrave/openrave.h>
 
 namespace OpenRAVE {
 
-using PostureValueFn = std::function<void(const std::vector<KinBody::JointPtr>& vjoints, const double fTol, std::vector<uint16_t>& posturestates)>;
+using LinkPair = std::array<RobotBase::LinkPtr, 2>;
 
-class OPENRAVE_API PostureDescriber : public PostureDescriberBase
+/** \brief <b>[interface]</b> Base class for robot posture describers. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_fksolver.
+   \ingroup interfaces
+ */
+class OPENRAVE_API PostureDescriberBase : public InterfaceBase
 {
 public:
-    PostureDescriber() = delete;
-    PostureDescriber(EnvironmentBasePtr penv, const double fTol = 1e-6);
-    virtual ~PostureDescriber();
+    PostureDescriberBase(EnvironmentBasePtr penv);
+    virtual ~PostureDescriberBase();
 
     /// \brief Initialize with a kinematics chain
-    virtual bool Init(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain) override;
+    virtual bool Init(const LinkPair& kinematicsChain) = 0;
 
-    /// \brief Checks if this class can be used to compute posture values for this robot
+    /// \brief Initialize with a kinematics chain prescribed by a manipulator
+    bool Init(const RobotBase::ManipulatorPtr& pmanip);
+
+    /// \brief Checks if we can use this describer to compute posture values from baselink to eelink prescribed by a kinematics chain.
+    ///        When it supports, it sets up the workspace variables for future computations.
     /// \return true if can handle this kinematics chain
-    virtual bool Supports(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain) const override;
+    virtual bool Supports(const LinkPair& kinematicsChain) const = 0;
+
+    /// \brief Checks if we can use this describer to compute posture values from baselink to eelink prescribed by a manipulator
+    /// \return true if can handle this kinematics chain
+    bool Supports(const RobotBase::ManipulatorPtr& pmanip) const;
 
     /// \brief Computes an integer value to describe current robot posture
-    /// Computes a value describing descrete posture of robot kinematics between baselink and eelink
-    virtual bool ComputePostureStates(std::vector<uint16_t>& values, const std::vector<double>& jointvalues = {}) override;
+    /// Computes a value describing descrete posture of robot kinematics between base link and endeffector link
+    virtual bool ComputePostureStates(std::vector<uint16_t>& posturestates, const std::vector<double>& jointvalues = {}) = 0;
 
-    /// \brief Set the tolerance for determining whether a robot posture value is close to 0 (i.e. singularity, branch point)
-    bool SetPostureValueThreshold(const double fTol);
+    /// \return the static interface type this class points to (used for safe casting)
+    static InterfaceType GetInterfaceTypeStatic() {
+        return PT_PostureDescriber;
+    }
 
-    const std::vector<KinBody::JointPtr>& GetJoints() const { return _joints; }
-
-protected:
-    /// \brief Gets joints along a kinematics chain from baselink to eelink
-    void _GetJointsFromKinematicsChain(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain,
-                                       std::vector<KinBody::JointPtr>& vjoints) const;
-
-    /// \brief `SendCommand` APIs
-    bool _SetPostureValueThresholdCommand(std::ostream& ssout, std::istream& ssin);
-    bool _GetPostureValueThresholdCommand(std::ostream& ssout, std::istream& ssin) const;
-    bool _GetArmIndicesCommand(std::ostream& ssout, std::istream& ssin) const;
-
-    std::array<RobotBase::LinkPtr, 2> _kinematicsChain; ///< baselink and eelink
-    std::vector<KinBody::JointPtr> _joints; ///< joints from baselink to eelink
-    std::vector<int> _armindices; ///< dof indices from baselink to eelink
-    double _fTol = 1e-6; ///< tolerance for computing robot posture values
-    PostureValueFn _posturefn; ///< function that computes posture values and states for a kinematics chain
+private:
+    virtual const char* GetHash() const final;
 };
 
-typedef boost::shared_ptr<PostureDescriber> PostureDescriberPtr;
+using PostureDescriberBasePtr = boost::shared_ptr<PostureDescriberBase>;
 
-OPENRAVE_API void ComputePostureStates6RGeneral  (const std::vector<KinBody::JointPtr>& vjoints, const double fTol, std::vector<uint16_t>& posturestates);
-OPENRAVE_API void ComputePostureStates4RTypeA(const std::vector<KinBody::JointPtr>& vjoints, const double fTol, std::vector<uint16_t>& posturestates);
+// refer to libopenrave.h and
+// void RobotBase::Manipulator::serialize(std::ostream& o, int options, IkParameterizationType iktype) const
+OPENRAVE_API std::string ComputeKinematicsChainHash(const LinkPair& kinematicsChain, std::vector<int>& armindices);
+OPENRAVE_API std::string ComputeKinematicsChainHash(const RobotBase::ManipulatorPtr& pmanip, std::vector<int>& armindices);
 
-} // namespace OpenRAVE
+} // end namespace OpenRAVE
 
-#endif // PLUGINS_POSTUREDESCRIBER_POSTUREDESCRIBER_H
+#endif // OPENRAVE_POSTUREDESCRIBERBASE_H

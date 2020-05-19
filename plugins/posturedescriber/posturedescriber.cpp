@@ -1,4 +1,4 @@
-#include <openrave/posturedescriber.h> // PostureDescriber
+#include "posturedescriber.h" // PostureDescriber
 #include "posturesupporttypes.h" // NeighbouringTwoJointsRelation
 #include "openraveplugindefs.h" // SerializeValues
 

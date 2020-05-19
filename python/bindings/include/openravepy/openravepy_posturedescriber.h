@@ -18,7 +18,7 @@
 #define OPENRAVEPY_POSTUREDESCRIBER_H
 
 #define NO_IMPORT_ARRAY
-#include <openrave/posturedescriberbase.h> // PostureDescriberBase
+#include <openrave/posturedescriber.h> // PostureDescriberBase
 #include <openravepy/openravepy_int.h>
 #include <openravepy/openravepy_robotbase.h> // PyRobotBase::PyManipulatorPtr
 
