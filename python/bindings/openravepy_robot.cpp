@@ -455,6 +455,7 @@ object PyRobotBase::PyManipulator::ComputePostureStates() const {
     RobotBasePtr probot = _pmanip->GetRobot();
     PostureDescriberBasePtr pDescriber = probot->GetPostureDescriber(_pmanip);
     if(pDescriber == nullptr) {
+        RAVELOG_WARN_FORMAT("Robot %s has not loaded a posture describer on manipulator %s", probot->GetName() % _pmanip->GetName());
         return py::empty_array_astype<uint16_t>();
     }
     std::vector<uint16_t> posturestates;
@@ -465,6 +466,7 @@ object PyRobotBase::PyManipulator::ComputePostureStates(object pyjointvalues) co
     RobotBasePtr probot = _pmanip->GetRobot();
     PostureDescriberBasePtr pDescriber = probot->GetPostureDescriber(_pmanip);
     if(pDescriber == nullptr) {
+        RAVELOG_WARN_FORMAT("Robot %s has not loaded a posture describer on manipulator %s", probot->GetName() % _pmanip->GetName());
         return py::empty_array_astype<uint16_t>();
     }
     std::vector<uint16_t> posturestates;
@@ -1787,8 +1789,10 @@ PyPostureDescriberPtr PyRobotBase::GetPostureDescriber(PyManipulatorPtr pymanip)
 }
 
 object PyRobotBase::ComputePostureStates(PyManipulatorPtr pymanip) const {
-    PostureDescriberBasePtr pDescriber = _probot->GetPostureDescriber(pymanip->GetManipulator());
+    const RobotBase::ManipulatorPtr pmanip = pymanip->GetManipulator();
+    PostureDescriberBasePtr pDescriber = _probot->GetPostureDescriber(pmanip);
     if(pDescriber == nullptr) {
+        RAVELOG_WARN_FORMAT("Robot %s has not loaded a posture describer on manipulator %s", _probot->GetName() % pmanip->GetName());
         return py::empty_array_astype<uint16_t>();
     }
     std::vector<uint16_t> posturestates;
@@ -1796,8 +1800,10 @@ object PyRobotBase::ComputePostureStates(PyManipulatorPtr pymanip) const {
 }
 
 object PyRobotBase::ComputePostureStates(PyManipulatorPtr pymanip, object pyjointvalues) const {
-    PostureDescriberBasePtr pDescriber = _probot->GetPostureDescriber(pymanip->GetManipulator());
+    const RobotBase::ManipulatorPtr pmanip = pymanip->GetManipulator();
+    PostureDescriberBasePtr pDescriber = _probot->GetPostureDescriber(pmanip);
     if(pDescriber == nullptr) {
+        RAVELOG_WARN_FORMAT("Robot %s has not loaded a posture describer on manipulator %s", _probot->GetName() % pmanip->GetName());
         return py::empty_array_astype<uint16_t>();
     }
     const std::vector<dReal> vjointvalues = ExtractArray<dReal>(pyjointvalues);
