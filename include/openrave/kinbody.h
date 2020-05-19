@@ -37,6 +37,12 @@ enum GeometryType {
     GT_Container=5, ///< a container shaped geometry that has inner and outer extents. container opens on +Z.
 };
 
+enum DynamicsConstraints {
+    DC_IgnoreTorque        = 0, ///< Do no check torque limits
+    DC_NominalTorque       = 1, ///< Compute and check torque limits using nominal torque
+    DC_InstantaneousTorque = 2, ///< Compute and check torque limits using instantaneous torque
+};
+
 /// \brief holds parameters for an electric motor
 ///
 /// all speed is in revolutions/second
@@ -907,7 +913,7 @@ public:
         ///
         /// If _infoElectricMotor is filled, the will compute the nominal torque limits depending on the current speed of the joint.
         /// \return min and max of torque limits
-        std::pair<dReal, dReal> GetNominalTorqueLimits(int iaxis=0, int torquelimitmode=1) const;
+        std::pair<dReal, dReal> GetNominalTorqueLimits(int iaxis=0) const;
 
         inline dReal GetMaxInertia(int iaxis=0) const {
             return _info._vmaxinertia[iaxis];
