@@ -53,6 +53,16 @@ using OpenRAVE::RaveCreatePostureDescriber;
 
 namespace numeric = py::numeric;
 
+template <typename T>
+py::list StdVecToPyList(const std::vector<T>& v) {
+    py::list l;
+    const size_t N = v.size();
+    for(size_t i = 0; i < N; i++) {
+        l.append(v[i]);
+    }
+    return l;
+};
+
 PyPostureDescriber::PyPostureDescriber(PostureDescriberBasePtr pDescriber, PyEnvironmentBasePtr pyenv)
     : PyInterfaceBase(pDescriber, pyenv),
     _pDescriber(pDescriber) {
@@ -82,13 +92,15 @@ bool PyPostureDescriber::Init(PyRobotBase::PyManipulatorPtr pmanip) {
 
 object PyPostureDescriber::ComputePostureStates()
 {
-    return (_pDescriber->ComputePostureStates(_posturestates)) ? toPyArray<uint16_t>(_posturestates) : py::empty_array_astype<uint16_t>();
+    // return (_pDescriber->ComputePostureStates(_posturestates)) ? toPyArray<uint16_t>(_posturestates) : py::empty_array_astype<uint16_t>();
+    return StdVecToPyList<uint16_t>(_pDescriber->ComputePostureStates(_posturestates) ? _posturestates : std::vector<uint16_t>());
 }
 
 object PyPostureDescriber::ComputePostureStates(object pyjointvalues)
 {
     const std::vector<dReal> vjointvalues = ExtractArray<dReal>(pyjointvalues);
-    return (_pDescriber->ComputePostureStates(_posturestates, vjointvalues)) ? toPyArray<uint16_t>(_posturestates) : py::empty_array_astype<uint16_t>();
+    // return (_pDescriber->ComputePostureStates(_posturestates, vjointvalues)) ? toPyArray<uint16_t>(_posturestates) : py::empty_array_astype<uint16_t>();
+    return StdVecToPyList<uint16_t>(_pDescriber->ComputePostureStates(_posturestates, vjointvalues) ? _posturestates : std::vector<uint16_t>());
 }
 
 PyPostureDescriberPtr GetPostureDescriber(PyRobotBase::PyManipulatorPtr pymanip) {

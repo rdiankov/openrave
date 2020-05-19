@@ -41,7 +41,7 @@ public:
     virtual bool Init(const LinkPair& kinematicsChain) = 0;
 
     /// \brief Initialize with a kinematics chain prescribed by a manipulator
-    bool Init(const RobotBase::ManipulatorPtr& pmanip);
+    virtual bool Init(const RobotBase::ManipulatorPtr& pmanip);
 
     /// \brief Checks if we can use this describer to compute posture values from baselink to eelink prescribed by a kinematics chain.
     ///        When it supports, it sets up the workspace variables for future computations.
@@ -50,7 +50,7 @@ public:
 
     /// \brief Checks if we can use this describer to compute posture values from baselink to eelink prescribed by a manipulator
     /// \return true if can handle this kinematics chain
-    bool Supports(const RobotBase::ManipulatorPtr& pmanip) const;
+    virtual bool Supports(const RobotBase::ManipulatorPtr& pmanip) const;
 
     /// \brief Computes an integer value to describe current robot posture
     /// Computes a value describing descrete posture of robot kinematics between base link and endeffector link

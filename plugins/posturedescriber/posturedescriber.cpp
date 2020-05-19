@@ -1,5 +1,5 @@
 #include "posturedescriber.h" // PostureDescriber
-#include "posturesupporttypes.h" // NeighbouringTwoJointsRelation
+#include "posturesupporttype.h" // NeighbouringTwoJointsRelation
 #include "openraveplugindefs.h" // SerializeValues
 
 namespace OpenRAVE {
@@ -190,10 +190,16 @@ bool PostureDescriber::Supports(const std::array<RobotBase::LinkPtr, 2>& kinemat
 
 
 bool PostureDescriber::ComputePostureStates(std::vector<uint16_t>& posturestates, const std::vector<double>& jointvalues) {
+    if(!_posturefn) {
+        RAVELOG_WARN("No supported posture describer; _posturefn is not set");
+        posturestates.clear();
+        return false;
+    }
     if(!jointvalues.empty()) {
         const KinBodyPtr probot = _kinematicsChain[0]->GetParent();
         if(jointvalues.size() != _joints.size()) {
             RAVELOG_WARN_FORMAT("jointvalues size does not match joint size: %d!=%d", jointvalues.size() % _joints.size());
+            posturestates.clear();
             return false;
         }
         const KinBody::CheckLimitsAction claoption = KinBody::CheckLimitsAction::CLA_Nothing;
