@@ -90,6 +90,7 @@ public:
         bool SetPostureDescriber(PyPostureDescriberPtr pydescriber) const;
         PyPostureDescriberPtr GetPostureDescriber() const;
         object ComputePostureStates() const;
+        object ComputePostureStates(object pyjointvalues) const;
 
         bool _FindIKSolution(const IkParameterization& ikparam, std::vector<dReal>& solution, int filteroptions, bool releasegil) const;
         bool _FindIKSolution(const IkParameterization& ikparam, const std::vector<dReal>& vFreeParameters, std::vector<dReal>& solution, int filteroptions, bool releasegil) const;
@@ -417,6 +418,7 @@ public:
     bool SetPostureDescriber(PyManipulatorPtr pymanip, PyPostureDescriberPtr pydescriber) const;
     PyPostureDescriberPtr GetPostureDescriber(PyManipulatorPtr pymanip) const;
     object ComputePostureStates(PyManipulatorPtr pymanip) const;
+    object ComputePostureStates(PyManipulatorPtr pymanip, object pyjointvalues) const;
 
     virtual std::string __repr__();
     virtual std::string __str__();

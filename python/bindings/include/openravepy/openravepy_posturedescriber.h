@@ -50,6 +50,9 @@ public:
     /// \brief compute posture states
     object ComputePostureStates();
 
+    /// \brief compute posture states given joint values
+    object ComputePostureStates(object pyjointvalues);
+
 private:
     std::vector<uint16_t> _posturestates; // cache
 };

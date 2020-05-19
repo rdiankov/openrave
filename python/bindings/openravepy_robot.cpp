@@ -458,8 +458,18 @@ object PyRobotBase::PyManipulator::ComputePostureStates() const {
         return py::empty_array_astype<uint16_t>();
     }
     std::vector<uint16_t> posturestates;
-    pDescriber->ComputePostureStates(posturestates);
-    return toPyArray<uint16_t>(posturestates);
+    return pDescriber->ComputePostureStates(posturestates) ? toPyArray<uint16_t>(posturestates) : py::empty_array_astype<uint16_t>();
+}
+
+object PyRobotBase::PyManipulator::ComputePostureStates(object pyjointvalues) const {
+    RobotBasePtr probot = _pmanip->GetRobot();
+    PostureDescriberBasePtr pDescriber = probot->GetPostureDescriber(_pmanip);
+    if(pDescriber == nullptr) {
+        return py::empty_array_astype<uint16_t>();
+    }
+    std::vector<uint16_t> posturestates;
+    const std::vector<dReal> vjointvalues = ExtractArray<dReal>(pyjointvalues);
+    return pDescriber->ComputePostureStates(posturestates, vjointvalues) ? toPyArray<uint16_t>(posturestates) : py::empty_array_astype<uint16_t>();
 }
 
 bool PyRobotBase::PyManipulator::_FindIKSolution(const IkParameterization& ikparam, std::vector<dReal>& solution, int filteroptions, bool releasegil) const
@@ -1782,8 +1792,17 @@ object PyRobotBase::ComputePostureStates(PyManipulatorPtr pymanip) const {
         return py::empty_array_astype<uint16_t>();
     }
     std::vector<uint16_t> posturestates;
-    pDescriber->ComputePostureStates(posturestates);
-    return toPyArray<uint16_t>(posturestates);
+    return pDescriber->ComputePostureStates(posturestates) ? toPyArray<uint16_t>(posturestates) : py::empty_array_astype<uint16_t>();
+}
+
+object PyRobotBase::ComputePostureStates(PyManipulatorPtr pymanip, object pyjointvalues) const {
+    PostureDescriberBasePtr pDescriber = _probot->GetPostureDescriber(pymanip->GetManipulator());
+    if(pDescriber == nullptr) {
+        return py::empty_array_astype<uint16_t>();
+    }
+    const std::vector<dReal> vjointvalues = ExtractArray<dReal>(pyjointvalues);
+    std::vector<uint16_t> posturestates;
+    return pDescriber->ComputePostureStates(posturestates, vjointvalues) ? toPyArray<uint16_t>(posturestates) : py::empty_array_astype<uint16_t>();
 }
 
 std::string PyRobotBase::__repr__() {
@@ -2060,6 +2079,10 @@ void init_openravepy_robot()
         bool (PyRobotBase::*setcontroller2)(PyControllerBasePtr,object,int) = &PyRobotBase::SetController;
         bool (PyRobotBase::*setcontroller3)(PyControllerBasePtr) = &PyRobotBase::SetController;
         bool (PyRobotBase::*initrobot)(object, object, object, object, const std::string&) = &PyRobotBase::Init;
+
+        object (PyRobotBase::*PyRobotBaseComputePostureStates)               (PyManipulatorPtr        ) const = &PyRobotBase::ComputePostureStates;
+        object (PyRobotBase::*PyRobotBaseComputePostureStatesWithJointValues)(PyManipulatorPtr, object) const = &PyRobotBase::ComputePostureStates;
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         scope_ robot = class_<PyRobotBase, OPENRAVE_SHARED_PTR<PyRobotBase>, PyKinBody>(m, "Robot", DOXY_CLASS(RobotBase))
 #else
@@ -2244,7 +2267,8 @@ void init_openravepy_robot()
                        // posture describer
                        .def("SetPostureDescriber", &PyRobotBase::SetPostureDescriber, PY_ARGS("manip", "describer") DOXY_FN(RobotBase, SetPostureDescriber))
                        .def("GetPostureDescriber", &PyRobotBase::GetPostureDescriber, PY_ARGS("manip") DOXY_FN(RobotBase, GetPostureDescriber))
-                       .def("ComputePostureStates", &PyRobotBase::ComputePostureStates, PY_ARGS("manip") DOXY_FN(RobotBase, ComputePostureStates))
+                       .def("ComputePostureStates", PyRobotBaseComputePostureStates,                                     DOXY_FN(RobotBase::Manipulator, GetPostureDescriber))
+                       .def("ComputePostureStates", PyRobotBaseComputePostureStatesWithJointValues, PY_ARGS("dofvalues") DOXY_FN(RobotBase::Manipulator, GetPostureDescriber))
 
                        .def("__repr__", &PyRobotBase::__repr__)
                        .def("__str__", &PyRobotBase::__str__)
@@ -2265,6 +2289,9 @@ void init_openravepy_robot()
         bool (PyRobotBase::PyManipulator::*pCheckEndEffectorSelfCollision1)(object,PyCollisionReportPtr,int,bool) const = &PyRobotBase::PyManipulator::CheckEndEffectorSelfCollision;
         bool (PyRobotBase::PyManipulator::*pCheckIndependentCollision1)() const = &PyRobotBase::PyManipulator::CheckIndependentCollision;
         bool (PyRobotBase::PyManipulator::*pCheckIndependentCollision2)(PyCollisionReportPtr) const = &PyRobotBase::PyManipulator::CheckIndependentCollision;
+
+        object (PyRobotBase::PyManipulator::*PyManipulatorComputePostureStates)               (      ) const = &PyRobotBase::PyManipulator::ComputePostureStates;
+        object (PyRobotBase::PyManipulator::*PyManipulatorComputePostureStatesWithJointValues)(object) const = &PyRobotBase::PyManipulator::ComputePostureStates;
 
         std::string GetIkParameterization_doc = std::string(DOXY_FN(RobotBase::Manipulator,GetIkParameterization "const IkParameterization; bool")) + std::string(DOXY_FN(RobotBase::Manipulator,GetIkParameterization "IkParameterizationType; bool"));
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -2288,7 +2315,8 @@ void init_openravepy_robot()
         // posture describer
         .def("SetPostureDescriber", &PyRobotBase::PyManipulator::SetPostureDescriber, PY_ARGS("describer") DOXY_FN(RobotBase::Manipulator, SetPostureDescriber))
         .def("GetPostureDescriber", &PyRobotBase::PyManipulator::GetPostureDescriber, DOXY_FN(RobotBase::Manipulator, GetPostureDescriber))
-        .def("ComputePostureStates", &PyRobotBase::PyManipulator::ComputePostureStates, DOXY_FN(RobotBase::Manipulator, GetPostureDescriber))
+        .def("ComputePostureStates", PyManipulatorComputePostureStates,                                     DOXY_FN(RobotBase::Manipulator, GetPostureDescriber))
+        .def("ComputePostureStates", PyManipulatorComputePostureStatesWithJointValues, PY_ARGS("dofvalues") DOXY_FN(RobotBase::Manipulator, GetPostureDescriber))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("FindIKSolution", pmanipik,
              "param"_a,
