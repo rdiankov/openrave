@@ -480,7 +480,7 @@ void UpdateOrCreateInfo(const rapidjson::Value& value, const std::string id, std
             break;
         }
     }
-    bool isDeleted = OpenRAVE::JSON::GetJsonValueByKey<bool>(value, "__delete__", false);
+    bool isDeleted = OpenRAVE::JSON::GetJsonValueByKey<bool>(value, "__deleted__", false);
     if (itExistingInfo != vInfos.end()) {
         if (isDeleted) {
             vInfos.erase(itExistingInfo);
