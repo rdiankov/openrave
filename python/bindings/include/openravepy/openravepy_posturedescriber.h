@@ -24,7 +24,7 @@
 
 namespace openravepy {
 
-class PyPostureDescriber : public PyInterfaceBase
+class OPENRAVEPY_API PyPostureDescriber : public PyInterfaceBase
 {
 protected:
     PostureDescriberBasePtr _pDescriber;
@@ -58,6 +58,7 @@ private:
 };
 
 using PyPostureDescriberPtr = OPENRAVE_SHARED_PTR<PyPostureDescriber>;
+OPENRAVEPY_API PyPostureDescriberPtr GeneratePostureDescriber(const PyRobotBase::PyManipulatorPtr& pymanip);
 
 } // openravepy
 

@@ -103,7 +103,7 @@ object PyPostureDescriber::ComputePostureStates(object pyjointvalues)
     return StdVecToPyList<uint16_t>(_pDescriber->ComputePostureStates(_posturestates, vjointvalues) ? _posturestates : std::vector<uint16_t>());
 }
 
-PyPostureDescriberPtr GetPostureDescriber(PyRobotBase::PyManipulatorPtr pymanip) {
+PyPostureDescriberPtr GeneratePostureDescriber(const PyRobotBase::PyManipulatorPtr& pymanip) {
     const ManipulatorPtr pmanip = pymanip->GetManipulator();
     const RobotBasePtr probot = pmanip->GetRobot();
     const EnvironmentBasePtr penv = probot->GetEnv();
@@ -150,9 +150,9 @@ void init_openravepy_posturedescriber()
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    m.def("GetPostureDescriber", GetPostureDescriber, PY_ARGS("manip") DOXY_FN1(GetPostureDescriber));
+    m.def("GeneratePostureDescriber", GeneratePostureDescriber, PY_ARGS("manip") DOXY_FN1(GeneratePostureDescriber));
 #else
-    def("GetPostureDescriber", GetPostureDescriber, PY_ARGS("manip") DOXY_FN1(GetPostureDescriber));
+    def("GeneratePostureDescriber", GeneratePostureDescriber, PY_ARGS("manip") DOXY_FN1(GeneratePostureDescriber));
 #endif
 }
 
