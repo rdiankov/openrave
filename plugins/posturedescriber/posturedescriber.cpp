@@ -125,11 +125,11 @@ Vector GetVectorFromInfo(const std::vector<JointPtr>& joints, const std::array<i
 }
 
 template <size_t N>
-PostureValueFn PostureValuesFunctionGenerator(const std::array<std::array<std::array<int, 2>, 3>, N>& postureforms) {
+PostureValueFn PostureValuesFunctionGenerator(const std::array<PostureFormulation, N>& postureforms) {
     return [=](const std::vector<JointPtr>& joints, const double fTol, std::vector<uint16_t>& posturestates) {
         std::array<double, N> posturevalues;
         for(size_t i = 0; i < N; ++i) {
-            const std::array<std::array<int, 2>, 3>& postureform = postureforms[i];
+            const PostureFormulation& postureform = postureforms[i];
             // for(size_t j = 0; j < 3; ++j) {
             //     std::cout << postureform[j][0] << ", " << postureform[j][1] << "; ";
             // }
