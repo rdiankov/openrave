@@ -130,10 +130,6 @@ PostureValueFn PostureValuesFunctionGenerator(const std::array<PostureFormulatio
         std::array<double, N> posturevalues;
         for(size_t i = 0; i < N; ++i) {
             const PostureFormulation& postureform = postureforms[i];
-            // for(size_t j = 0; j < 3; ++j) {
-            //     std::cout << postureform[j][0] << ", " << postureform[j][1] << "; ";
-            // }
-            // std::cout << std::endl;
             posturevalues[i] = GetVectorFromInfo(joints, postureform[0]).
                          cross(GetVectorFromInfo(joints, postureform[1])).
                            dot(GetVectorFromInfo(joints, postureform[2]));
@@ -156,7 +152,6 @@ bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
     const RobotPostureSupportType supporttype = DeriveRobotPostureSupportType(_joints);
     switch(supporttype) {
         case RobotPostureSupportType::RPST_6R_General: {
-            // _posturefn = ComputePostureStates6RGeneral;
             const PostureFormulation
             shoulderform {{
                 {0, -1},
@@ -183,7 +178,6 @@ bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
             break;
         }
         case RobotPostureSupportType::RPST_4R_Type_A: {
-            // _posturefn = ComputePostureStates4RTypeA;
             const PostureFormulation
             j1form {{
               {0, -1},
@@ -206,12 +200,6 @@ bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
             return false;
         }
     }
-
-    // std::stringstream ss;
-    // for(int i : _armindices) {
-    //     ss << i << ", ";
-    // }
-    // RAVELOG_WARN(ss.str());
     return static_cast<bool>(_posturefn);
 }
 

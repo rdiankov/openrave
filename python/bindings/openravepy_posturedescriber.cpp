@@ -107,7 +107,7 @@ PyPostureDescriberPtr GeneratePostureDescriber(const PyRobotBase::PyManipulatorP
     const ManipulatorPtr pmanip = pymanip->GetManipulator();
     const RobotBasePtr probot = pmanip->GetRobot();
     const EnvironmentBasePtr penv = probot->GetEnv();
-    const std::string interfacename = "posturedescriber";
+    const std::string interfacename = "posturedescriber"; // POSTUREDESCRIBER_CLASS_NAME
     std::vector<int> armindices;
     // fe743742269c7dbfe548cb1f3412f658
     const std::string chainhash = ComputeKinematicsChainHash(pmanip, armindices);
@@ -146,7 +146,7 @@ void init_openravepy_posturedescriber()
     .def("Init",                 InitWithTwoLinks,                    PY_ARGS("baselink", "eelink") DOXY_FN(PostureDescriberBase, Init "const std::array<RobotBase::LinkPtr, 2>& kinematicsChain"))
     .def("Init",                 InitWithManip,                       PY_ARGS("manipulator")        DOXY_FN(PostureDescriberBase, Init "const RobotBase::ManipulatorPtr& pmanip"))
     .def("ComputePostureStates", ComputePostureStates,                                              DOXY_FN(PostureDescriberBase, ComputePostureStates ""))
-    .def("ComputePostureStates", ComputePostureStatesWithJointValues, PY_ARGS("jointvalues")        DOXY_FN(PostureDescriberBase, ComputePostureStates ""))
+    .def("ComputePostureStates", ComputePostureStatesWithJointValues, PY_ARGS("jointvalues")        DOXY_FN(PostureDescriberBase, ComputePostureStates "const std::vector<double>& jointvalues"))
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
