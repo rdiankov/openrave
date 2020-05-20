@@ -53,16 +53,6 @@ using OpenRAVE::RaveCreatePostureDescriber;
 
 namespace numeric = py::numeric;
 
-template <typename T>
-py::list StdVecToPyList(const std::vector<T>& v) {
-    py::list l;
-    const size_t N = v.size();
-    for(size_t i = 0; i < N; i++) {
-        l.append(v[i]);
-    }
-    return l;
-};
-
 PyPostureDescriber::PyPostureDescriber(PostureDescriberBasePtr pDescriber, PyEnvironmentBasePtr pyenv)
     : PyInterfaceBase(pDescriber, pyenv),
     _pDescriber(pDescriber) {

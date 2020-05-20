@@ -463,7 +463,7 @@ object PyRobotBase::PyManipulator::ComputePostureStates() const {
         return py::empty_array_astype<uint16_t>();
     }
     std::vector<uint16_t> posturestates;
-    return pDescriber->ComputePostureStates(posturestates) ? toPyArray<uint16_t>(posturestates) : py::empty_array_astype<uint16_t>();
+    return StdVecToPyList<uint16_t>(pDescriber->ComputePostureStates(posturestates) ? posturestates : std::vector<uint16_t>());
 }
 
 object PyRobotBase::PyManipulator::ComputePostureStates(object pyjointvalues) const {
@@ -475,7 +475,7 @@ object PyRobotBase::PyManipulator::ComputePostureStates(object pyjointvalues) co
     }
     std::vector<uint16_t> posturestates;
     const std::vector<dReal> vjointvalues = ExtractArray<dReal>(pyjointvalues);
-    return pDescriber->ComputePostureStates(posturestates, vjointvalues) ? toPyArray<uint16_t>(posturestates) : py::empty_array_astype<uint16_t>();
+    return StdVecToPyList<uint16_t>(pDescriber->ComputePostureStates(posturestates, vjointvalues) ? posturestates : std::vector<uint16_t>());
 }
 
 bool PyRobotBase::PyManipulator::_FindIKSolution(const IkParameterization& ikparam, std::vector<dReal>& solution, int filteroptions, bool releasegil) const
@@ -1811,7 +1811,7 @@ object PyRobotBase::ComputePostureStates(PyManipulatorPtr pymanip) const {
         return py::empty_array_astype<uint16_t>();
     }
     std::vector<uint16_t> posturestates;
-    return pDescriber->ComputePostureStates(posturestates) ? toPyArray<uint16_t>(posturestates) : py::empty_array_astype<uint16_t>();
+    return StdVecToPyList<uint16_t>(pDescriber->ComputePostureStates(posturestates) ? posturestates : std::vector<uint16_t>());
 }
 
 object PyRobotBase::ComputePostureStates(PyManipulatorPtr pymanip, object pyjointvalues) const {
@@ -1823,7 +1823,7 @@ object PyRobotBase::ComputePostureStates(PyManipulatorPtr pymanip, object pyjoin
     }
     const std::vector<dReal> vjointvalues = ExtractArray<dReal>(pyjointvalues);
     std::vector<uint16_t> posturestates;
-    return pDescriber->ComputePostureStates(posturestates, vjointvalues) ? toPyArray<uint16_t>(posturestates) : py::empty_array_astype<uint16_t>();
+    return StdVecToPyList<uint16_t>(pDescriber->ComputePostureStates(posturestates, vjointvalues) ? posturestates : std::vector<uint16_t>());
 }
 
 std::string PyRobotBase::__repr__() {

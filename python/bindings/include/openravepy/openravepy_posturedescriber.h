@@ -33,24 +33,31 @@ public:
     PyPostureDescriber(PostureDescriberBasePtr pDescriber, PyEnvironmentBasePtr pyenv);
     ~PyPostureDescriber();
 
+    /// \brief Gets the underlying posture describer pointer
     PostureDescriberBasePtr GetPostureDescriber() const;
 
-    /// \brief Initialize with a kinematics chain
+    /// \brief Initializes with a kinematics chain from baselink to eelink
+    /// \return true if there exists a posture describer that supports the kinematics chain from baselink to eelink
     bool Supports(PyLinkPtr pBaseLink, PyLinkPtr pEndEffectorLink) const;
 
-    /// \brief Initialize with a kinematics chain prescribed by a manipulator
+    /// \brief Initializes with a kinematics chain prescribed by a manipulator
+    /// \return true if there exists a posture describer that supports the kinematics chain for the manipulator
     bool Supports(PyRobotBase::PyManipulatorPtr pmanip) const;
 
-    /// \brief Initialize with a kinematics chain
+    /// \brief Initializes with a kinematics chain from baselink to eelink
+    /// \return true if a posture describer is successfully initialized for the kinematics chain from baselink to eelink
     bool Init(PyLinkPtr pBaseLink, PyLinkPtr pEndEffectorLink);
 
-    /// \brief Initialize with a kinematics chain prescribed by a manipulator
+    /// \brief Initializes with a kinematics chain prescribed by a manipulator
+    /// \return true if a posture describer is successfully initialized for the kinematics chain for the manipulator
     bool Init(PyRobotBase::PyManipulatorPtr pmanip);
 
-    /// \brief compute posture states
+    /// \brief Computes posture states at the current dof values using the describer set at the manipulator
+    /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
     object ComputePostureStates();
 
-    /// \brief compute posture states given joint values
+    /// \brief Computes posture states at the input dof values using the describer set at the manipulator
+    /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
     object ComputePostureStates(object pyjointvalues);
 
 private:
@@ -59,6 +66,17 @@ private:
 
 using PyPostureDescriberPtr = OPENRAVE_SHARED_PTR<PyPostureDescriber>;
 OPENRAVEPY_API PyPostureDescriberPtr GeneratePostureDescriber(const PyRobotBase::PyManipulatorPtr& pymanip);
+
+// to-do, put to bindings.h
+template <typename T>
+inline py::list StdVecToPyList(const std::vector<T>& v) {
+    py::list l;
+    const size_t N = v.size();
+    for(size_t i = 0; i < N; i++) {
+        l.append(v[i]);
+    }
+    return l;
+};
 
 } // openravepy
 
