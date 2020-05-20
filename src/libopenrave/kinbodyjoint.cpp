@@ -2038,6 +2038,228 @@ void KinBody::Joint::ExtractInfo(KinBody::JointInfo& info) const
 UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& info)
 {
     BOOST_ASSERT(info._id == _info._id);
+    bool isDiff = false;
+    // _name TODO: maybe just change the _info._name
+    if (GetName() != info._name) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // _type
+    if (GetType() != info._type) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // _linkname0
+    // _linkname1
+    if (GetFirstAttached()->GetName() != info._linkname0 || GetSecondAttached()->GetName() != info._linkname1) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // TODO: maybe only need to call _ComputeInternalInformation?
+    // _vanchor
+    if (_info._vanchor != info._vanchor) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // _vaxes
+    if (_info._vaxes != info._vaxes) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // _vcurrentvalues(not needed)
+
+    // _vresolution
+    std::vector<dReal> resolutions;
+    GetResolutions(resolutions);
+    for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
+        if (resolutions[iaxis] != info._vresolution[iaxis]) {
+            return UFIR_RequireRemoveFromEnvironment;
+        }
+    }
+
+    // _vmaxvel
+    if (_info._vmaxvel != info._vmaxvel) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // _vhardmaxvel
+    std::vector<dReal> vHardVelocityLimits;
+    GetHardVelocityLimits(vHardVelocityLimits);
+    for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
+        if (vHardVelocityLimits[iaxis] != info._vhardmaxvel[iaxis]) {
+            vHardVelocityLimits[iaxis] = info._vhardmaxvel[iaxis];
+            isDiff = true;
+        }
+    }
+    if (isDiff) {
+        SetHardVelocityLimits(vHardVelocityLimits);
+        isDiff = false;
+    }
+    // _vmaxaccel
+    if (_info._vmaxaccel != info._vmaxaccel) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // _vhardmaxaccel
+    std::vector<dReal> vHardAccelerationLimits;
+    GetHardAccelerationLimits(vHardAccelerationLimits);
+    for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
+        if (vHardAccelerationLimits[iaxis] != info._vhardmaxaccel[iaxis]) {
+            vHardAccelerationLimits[iaxis] = info._vhardmaxaccel[iaxis];
+            isDiff = true;
+        }
+    }
+    if (isDiff) {
+        SetHardAccelerationLimits(vHardAccelerationLimits);
+        isDiff = false;
+    }
+
+    // _vmaxjerk
+    if (_info._vmaxjerk != info._vmaxjerk) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // _vhardmaxjerk
+    std::vector<dReal> vHardJerkLimits;
+    GetHardJerkLimits(vHardJerkLimits);
+    for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
+        if (vHardJerkLimits[iaxis] != info._vhardmaxjerk[iaxis]) {
+            vHardJerkLimits[iaxis] = info._vhardmaxjerk[iaxis];
+            isDiff = true;
+        }
+    }
+    if (isDiff) {
+        SetHardJerkLimits(vHardJerkLimits);
+        isDiff = false;
+    }
+
+    // _vmaxtorque
+    std::vector<dReal> vMaxTorque;
+
+    GetTorqueLimits(vMaxTorque);
+    for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
+        if (vMaxTorque[iaxis] != info._vmaxtorque[iaxis]) {
+            vMaxTorque[iaxis] = info._vmaxtorque[iaxis];
+            isDiff = true;
+        }
+    }
+    if (isDiff) {
+        SetTorqueLimits(vMaxTorque);
+        isDiff = false;
+    }
+
+    // _vmaxinertia
+    std::vector<dReal> vMaxInertialLimits;
+    GetInertiaLimits(vMaxInertialLimits);
+    for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
+        if (vMaxInertialLimits[iaxis] != info._vmaxinertia[iaxis]) {
+            vMaxInertialLimits[iaxis] = info._vmaxinertia[iaxis];
+            isDiff = true;
+        }
+    }
+    if (isDiff) {
+        SetInertiaLimits(vMaxInertialLimits);
+        isDiff = false;
+    }
+
+    // _vweights
+    std::vector<dReal> vWeights;
+    GetWeights(vWeights);
+
+    for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
+        if (vWeights[iaxis] != info._vweights[iaxis]) {
+            vWeights[iaxis] = info._vweights[iaxis];
+            isDiff = true;
+        }
+    }
+    if (isDiff) {
+        SetWeights(vWeights);
+        isDiff = false;
+    }
+
+    // _voffsets
+    if (_info._voffsets != info._voffsets) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // _vlowerlimit
+    // _vupperlimit
+    std::vector<dReal> vUpperLimit;
+    std::vector<dReal> vLowerLimit;
+    GetLimits(vLowerLimit, vUpperLimit, false);
+    for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
+        if (vUpperLimit[iaxis] != info._vupperlimit[iaxis] || vLowerLimit[iaxis] != info._vlowerlimit[iaxis]) {
+            SetLimits(vLowerLimit, vUpperLimit);
+            break;
+        }
+    }
+
+    for(int iaxis = 0; iaxis < GetDOF(); iaxis++){
+        if (info._vupperlimit[iaxis] != vUpperLimit[iaxis] || info._vlowerlimit[iaxis] != vLowerLimit[iaxis]) {
+            SetLimits(vLowerLimit, vUpperLimit);
+            break;
+        }
+    }
+
+    // TODO: _trajfollow
+
+    // _vmimic
+    if (_info._vmimic != info._vmimic) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // _mapFloatParameters
+    const std::map<std::string, std::vector<dReal>> floatParameters = GetFloatParameters();
+    for(std::map<std::string, std::vector<dReal>>::const_iterator it = info._mapFloatParameters.begin(); it != info._mapFloatParameters.end(); it++) {
+        typename std::map<std::string, std::vector<dReal>>::const_iterator itExisting = floatParameters.end();
+        itExisting = floatParameters.find(it->first);
+        if (itExisting == floatParameters.end() || itExisting->second != it->second) {
+            SetFloatParameters(it->first, it->second);
+        }
+    }
+
+    // _mapIntParameters
+    const std::map<std::string, std::vector<int>> intParameters = GetIntParameters();
+    for(std::map<std::string, std::vector<int>>::const_iterator it = info._mapIntParameters.begin(); it != info._mapIntParameters.end(); it++) {
+        typename std::map<std::string, std::vector<int>>::const_iterator itExisting = intParameters.end();
+        itExisting = intParameters.find(it->first);
+        if (itExisting == intParameters.end() || itExisting->second != it->second) {
+            SetIntParameters(it->first, it->second);
+        }
+    }
+
+    // _mapStringParameters
+    const std::map<std::string, std::string> stringParameters = GetStringParameters();
+    for(std::map<std::string, std::string>::const_iterator it = info._mapStringParameters.begin(); it != info._mapStringParameters.end(); it++) {
+        typename std::map<std::string, std::string>::const_iterator itExisting = stringParameters.end();
+        itExisting = stringParameters.find(it->first);
+        if (itExisting == stringParameters.end() || itExisting->second != it->second) {
+            SetStringParameters(it->first, it->second);
+        }
+    }
+
+    //TODO: _infoElectricMotor
+
+    // _bIsCircular
+    if (_info._bIsCircular != info._bIsCircular) {
+        _info._bIsCircular = info._bIsCircular;
+    }
+
+    // _bIsActive
+    if (_info._bIsActive != info._bIsActive) {
+        _info._bIsActive = info._bIsActive;
+    }
+
+    // _controlMode
+    if (GetControlMode() != _info._controlMode) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    //TODO: _jci_robotcontroller
+
+    //TODO: _jci_io
+
+    //TODO: _jci_externaldevice
     return UFIR_Success;
 }
 
