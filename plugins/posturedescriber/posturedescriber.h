@@ -84,13 +84,6 @@ inline void compute_robot_posture_states(const std::array<double, N>& postureval
         }
     }
 }
-
-// OPENRAVE_API bool EnsureAllJointsPurelyRevolute(const std::vector<KinBody::JointPtr>& joints);
-// OPENRAVE_API NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Transform& t);
-// OPENRAVE_API RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<KinBody::JointPtr> joints);
-// OPENRAVE_API void ComputePostureStates6RGeneral(const std::vector<KinBody::JointPtr>& vjoints, const double fTol, std::vector<uint16_t>& posturestates);
-// OPENRAVE_API void ComputePostureStates4RTypeA(const std::vector<KinBody::JointPtr>& vjoints, const double fTol, std::vector<uint16_t>& posturestates);
-
 } // namespace OpenRAVE
 
 #endif // PLUGINS_POSTUREDESCRIBER_POSTUREDESCRIBER_H
