@@ -1,5 +1,4 @@
 #include "posturedescriber.h" // PostureDescriber
-#include "posturesupporttype.h" // NeighbouringTwoJointsRelation
 #include "openraveplugindefs.h" // SerializeValues
 
 namespace OpenRAVE {
@@ -118,7 +117,32 @@ RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr
     return RobotPostureSupportType::RPST_NoSupport;
 }
 
-bool PostureDescriber::Init(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain) {
+Vector GetVectorFromInfo(const std::vector<JointPtr>& joints, const std::array<int, 2>& vecinfo) {
+    // std::cout << "GetVectorFromInfo: " << vecinfo[0] << ", " << vecinfo[1] << std::endl;
+    return (vecinfo[1]==-1) ? 
+    /* joint axis   */ joints[vecinfo[0]]->GetAxis() :
+    /* joint anchor */ (joints[vecinfo[1]]->GetAnchor()-joints[vecinfo[0]]->GetAnchor());
+}
+
+template <size_t N>
+PostureValueFn PostureValuesFunctionGenerator(const std::array<std::array<std::array<int, 2>, 3>, N>& postureforms) {
+    return [=](const std::vector<JointPtr>& joints, const double fTol, std::vector<uint16_t>& posturestates) {
+        std::array<double, N> posturevalues;
+        for(size_t i = 0; i < N; ++i) {
+            const std::array<std::array<int, 2>, 3>& postureform = postureforms[i];
+            // for(size_t j = 0; j < 3; ++j) {
+            //     std::cout << postureform[j][0] << ", " << postureform[j][1] << "; ";
+            // }
+            // std::cout << std::endl;
+            posturevalues[i] = GetVectorFromInfo(joints, postureform[0]).
+                         cross(GetVectorFromInfo(joints, postureform[1])).
+                           dot(GetVectorFromInfo(joints, postureform[2]));
+        }
+        compute_robot_posture_states<N>(posturevalues, fTol, posturestates);
+    };
+}
+
+bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
     if(!this->Supports(kinematicsChain)) {
         RAVELOG_WARN("Does not support kinematics chain");
         return false;
@@ -132,11 +156,50 @@ bool PostureDescriber::Init(const std::array<RobotBase::LinkPtr, 2>& kinematicsC
     const RobotPostureSupportType supporttype = DeriveRobotPostureSupportType(_joints);
     switch(supporttype) {
         case RobotPostureSupportType::RPST_6R_General: {
-            _posturefn = ComputePostureStates6RGeneral;
+            // _posturefn = ComputePostureStates6RGeneral;
+            const PostureFormulation
+            shoulderform {{
+                {0, -1},
+                {1, -1},
+                {0, 4},
+            }},
+            elbowform {{
+                {1, -1},
+                {1, 2},
+                {2, 4}
+            }},
+            wristform {{
+                {3, -1},
+                {4, -1},
+                {5, -1}
+            }}
+            ;
+            const std::array<PostureFormulation, 3> postureforms = {
+                shoulderform,
+                elbowform,
+                wristform
+            };
+            _posturefn = PostureValuesFunctionGenerator<3>(postureforms);
             break;
         }
         case RobotPostureSupportType::RPST_4R_Type_A: {
-            _posturefn = ComputePostureStates4RTypeA;
+            // _posturefn = ComputePostureStates4RTypeA;
+            const PostureFormulation
+            j1form {{
+              {0, -1},
+              {1, -1},
+              {1, 3},
+            }},
+            elbowform {{
+              {1, -1},
+              {1, 2},
+              {2, 3}
+            }};
+            const std::array<PostureFormulation, 2> postureforms = {
+                j1form,
+                elbowform
+            };
+            _posturefn = PostureValuesFunctionGenerator<2>(postureforms);
             break;
         }
         default: {
