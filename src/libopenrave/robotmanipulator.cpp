@@ -77,6 +77,7 @@ RobotBase::Manipulator::Manipulator(RobotBasePtr probot, boost::shared_ptr<Robot
 void RobotBase::Manipulator::UpdateInfo()
 {
     // TODO: update _info
+    RAVELOG_WARN_FORMAT0("Manipulator UpdateInfo is not implemented");
 }
 
 void RobotBase::Manipulator::ExtractInfo(RobotBase::ManipulatorInfo& info) const
