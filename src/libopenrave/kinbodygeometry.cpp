@@ -576,8 +576,8 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
     OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _t);
     _t.trans *= fUnitScale;
 
-    std::string typestr;
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "type", typestr);
+    std::string typestr = _GetGeometryTypeString(_type);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "type", typestr, typestr);
     if (typestr == "box") {
         _type = GT_Box;
         OpenRAVE::JSON::LoadJsonValueByKey(value, "halfExtents", _vGeomData);
