@@ -21,7 +21,7 @@
 
 namespace OpenRAVE {
 
-using LinkPair = std::array<RobotBase::LinkPtr, 2>; ///< a baselink-eelink pair
+using LinkPair = RobotBase::LinkPair; ///< a baselink-eelink pair
 
 /** \brief <b>[interface]</b> Base class for robot posture describers. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_fksolver.
    \ingroup interfaces
@@ -49,10 +49,10 @@ public:
     virtual bool Init(const RobotBase::ManipulatorPtr& pmanip);
 
     /// \brief Computes posture state integers for a kinematics chain at either the current of specified dof values.
-    /// \param [in]  jointvalues     if empty, then use the current dof values; otherwise these specified dof values must have the same size as the number of dofs in the kinematics chain.
-    /// \param [out] posturestates   posture states, whose size is a power of 2. Always non-empty if (1) this class is properly initialized AND (2) jointvalues is either empty or has the correct size.
-    /// \return true if (1) this describer class is properly initialized AND (2) jointvalues is either empty or has the correct size.
-    virtual bool ComputePostureStates(std::vector<uint16_t>& posturestates, const std::vector<double>& jointvalues = {}) = 0;
+    /// \param [in]  dofvalues       if empty, then use the current dof values; otherwise these specified dof values must have the same size as the number of dofs in the kinematics chain.
+    /// \param [out] posturestates   posture states, whose size is a power of 2. Always non-empty if (1) this class is properly initialized AND (2) dofvalues is either empty or has the correct size.
+    /// \return true if (1) this describer class is properly initialized AND (2) dofvalues is either empty or has the correct size.
+    virtual bool ComputePostureStates(std::vector<uint16_t>& posturestates, const std::vector<double>& dofvalues = {}) = 0;
 
     /// \return the static interface type this class points to (used for safe casting)
     static InterfaceType GetInterfaceTypeStatic() {

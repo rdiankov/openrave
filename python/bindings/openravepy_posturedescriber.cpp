@@ -87,14 +87,14 @@ bool PyPostureDescriber::Init(PyManipulatorPtr pmanip) {
 object PyPostureDescriber::ComputePostureStates()
 {
     // return (_pDescriber->ComputePostureStates(_posturestates)) ? toPyArray<uint16_t>(_posturestates) : py::empty_array_astype<uint16_t>();
-    return StdVecToPyList<uint16_t>(_pDescriber->ComputePostureStates(_posturestates) ? _posturestates : std::vector<uint16_t>());
+    return StdVectorToPyList<uint16_t>(_pDescriber->ComputePostureStates(_posturestates) ? _posturestates : std::vector<uint16_t>());
 }
 
-object PyPostureDescriber::ComputePostureStates(object pyjointvalues)
+object PyPostureDescriber::ComputePostureStates(object pydofvalues)
 {
-    const std::vector<dReal> vjointvalues = ExtractArray<dReal>(pyjointvalues);
-    // return (_pDescriber->ComputePostureStates(_posturestates, vjointvalues)) ? toPyArray<uint16_t>(_posturestates) : py::empty_array_astype<uint16_t>();
-    return StdVecToPyList<uint16_t>(_pDescriber->ComputePostureStates(_posturestates, vjointvalues) ? _posturestates : std::vector<uint16_t>());
+    const std::vector<dReal> dofvalues = ExtractArray<dReal>(pydofvalues);
+    // return (_pDescriber->ComputePostureStates(_posturestates, dofvalues)) ? toPyArray<uint16_t>(_posturestates) : py::empty_array_astype<uint16_t>();
+    return StdVectorToPyList<uint16_t>(_pDescriber->ComputePostureStates(_posturestates, dofvalues) ? _posturestates : std::vector<uint16_t>());
 }
 
 PyPostureDescriberPtr GeneratePostureDescriber(const PyManipulatorPtr& pymanip) {
@@ -142,8 +142,8 @@ void init_openravepy_posturedescriber()
        .def("Init",                 InitWithTwoLinks,                    PY_ARGS("baselink", "eelink") DOXY_FN(PostureDescriberBase, Init "const std::array<RobotBase::LinkPtr, 2>& kinematicsChain"))
        .def("Init",                 InitWithManip,                       PY_ARGS("manipulator")        DOXY_FN(PostureDescriberBase, Init "const RobotBase::ManipulatorPtr& pmanip"))
      */
-    .def("ComputePostureStates", ComputePostureStates,                                              DOXY_FN(PostureDescriberBase, ComputePostureStates ""))
-    .def("ComputePostureStates", ComputePostureStatesWithJointValues, PY_ARGS("jointvalues")        DOXY_FN(PostureDescriberBase, ComputePostureStates "const std::vector<double>& jointvalues"))
+    .def("ComputePostureStates", ComputePostureStates,                                            DOXY_FN(PostureDescriberBase, ComputePostureStates ""))
+    .def("ComputePostureStates", ComputePostureStatesWithJointValues, PY_ARGS("dofvalues")        DOXY_FN(PostureDescriberBase, ComputePostureStates "const std::vector<double>& dofvalues"))
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

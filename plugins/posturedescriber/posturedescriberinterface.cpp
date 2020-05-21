@@ -257,22 +257,22 @@ bool PostureDescriber::Supports(const LinkPair& kinematicsChain) const {
 }
 
 
-bool PostureDescriber::ComputePostureStates(std::vector<uint16_t>& posturestates, const std::vector<double>& jointvalues) {
+bool PostureDescriber::ComputePostureStates(std::vector<uint16_t>& posturestates, const std::vector<double>& dofvalues) {
     if(!_posturefn) {
         RAVELOG_WARN("No supported posture describer; _posturefn is not set");
         posturestates.clear();
         return false;
     }
-    if(!jointvalues.empty()) {
+    if(!dofvalues.empty()) {
         const KinBodyPtr probot = _kinematicsChain[0]->GetParent();
-        if(jointvalues.size() != _joints.size()) {
-            RAVELOG_WARN_FORMAT("jointvalues size does not match joint size: %d!=%d", jointvalues.size() % _joints.size());
+        if(dofvalues.size() != _joints.size()) {
+            RAVELOG_WARN_FORMAT("dof values size does not match joint size: %d!=%d", dofvalues.size() % _joints.size());
             posturestates.clear();
             return false;
         }
         const KinBody::CheckLimitsAction claoption = KinBody::CheckLimitsAction::CLA_Nothing;
         const KinBody::KinBodyStateSaver saver(probot); // options = Save_LinkTransformation | Save_LinkEnable
-        probot->SetDOFValues(jointvalues, claoption, _armindices);
+        probot->SetDOFValues(dofvalues, claoption, _armindices);
         _posturefn(_joints, _fTol, posturestates);
     }
     else {

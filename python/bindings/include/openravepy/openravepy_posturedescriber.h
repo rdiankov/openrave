@@ -69,7 +69,7 @@ OPENRAVEPY_API PyPostureDescriberPtr GeneratePostureDescriber(const PyRobotBase:
 
 // to-do, put to bindings.h
 template <typename T>
-inline py::list StdVecToPyList(const std::vector<T>& v) {
+inline py::list StdVectorToPyList(const std::vector<T>& v) {
     py::list l;
     const size_t N = v.size();
     for(size_t i = 0; i < N; i++) {
