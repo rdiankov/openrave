@@ -1961,7 +1961,6 @@ protected:
         ParabolicRamp::Vector x0, x1, dx0, dx1;
         ParabolicRamp::DynamicPath &intermediate = _cacheintermediate, &intermediate2 = _cacheintermediate2;
         std::vector<dReal>& vellimits = _cachevellimits, &accellimits = _cacheaccellimits;
-        std::vector<dReal>& vellimits2 = _cachevellimits2, &accellimits2 = _cacheaccellimits2;
         vellimits.resize(_parameters->_vConfigVelocityLimit.size());
         accellimits.resize(_parameters->_vConfigAccelerationLimit.size());
         std::vector<ParabolicRamp::ParabolicRampND>& accumoutramps = _cacheaccumoutramps, &outramps = _cacheoutramps, &outramps2 = _cacheoutramps2;
@@ -2318,7 +2317,6 @@ protected:
                         // - torque limit violation
                         // - manipulator speed/accel constraint violation
                         // - joint velocity adjustment done in SegmentFeasible2
-                        dReal fOverallTimeMult = 1.0; ///< overall time mult change. use it to estimate the next possible ramp duration so can quick prune this solution
                         nNumTimeBasedConstraintsFailed++;
 
                         // Scale down vellimits and/or accellimits based on which constraints are violated.
@@ -2333,8 +2331,6 @@ protected:
                                     RAVELOG_WARN_FORMAT("env=%d, state setting error", GetEnv()->GetId());
                                     break;
                                 }
-                                vellimits2 = vellimits;
-                                accellimits2 = accellimits;
                                 _manipconstraintchecker->GetMaxVelocitiesAccelerations(dx0, vellimits, accellimits);
                                 if (_parameters->SetStateValues(x1) != 0) {
                                     RAVELOG_WARN_FORMAT("env=%d, state setting error", GetEnv()->GetId());
@@ -2346,15 +2342,6 @@ protected:
                                     dReal fminvel = max(RaveFabs(dx0[j]), RaveFabs(dx1[j]));
                                     if (vellimits[j] < fminvel) {
                                         vellimits[j] = fminvel;
-                                    }
-
-                                    dReal fv = vellimits[j]/vellimits2[j];
-                                    if( fOverallTimeMult > fv ) {
-                                        fOverallTimeMult = fv;
-                                    }
-                                    dReal fa = RaveSqrt(accellimits[j]/accellimits2[j]);
-                                    if( fOverallTimeMult > fa ) {
-                                        fOverallTimeMult = fa;
                                     }
                                 }
                             }
@@ -2388,7 +2375,6 @@ protected:
                                     for (size_t j = 0; j < accellimits.size(); ++j) {
                                         accellimits[j] *= faccelmult;
                                     }
-                                    fOverallTimeMult = retcheck.fTimeBasedSurpassMult;
                                 }
                                 else if (retcheck.fMaxManipSpeed > _parameters->maxmanipspeed) {
                                     ++islowdowntryduetomanip;
@@ -2405,7 +2391,6 @@ protected:
                                         dReal fminvel = max(RaveFabs(dx0[j]), RaveFabs(dx1[j]));
                                         vellimits[j] = max(fminvel, fvelmult * vellimits[j]);
                                     }
-                                    fOverallTimeMult = retcheck.fTimeBasedSurpassMult;
                                 }
                                 else {
                                     dReal fvelmult = retcheck.fTimeBasedSurpassMult;
@@ -2429,7 +2414,6 @@ protected:
                                         vellimits[j] = max(fminvel, fvelmult * vellimits[j]);
                                         accellimits[j] *= faccelmult;
                                     }
-                                    fOverallTimeMult = retcheck.fTimeBasedSurpassMult;
                                 }
 
                                 numslowdowns += 1;
@@ -2438,7 +2422,6 @@ protected:
                         }
                         else {
                             // Scale vellimits and accellimits down using the usual procedure as in _Shortcut
-                            fOverallTimeMult = retcheck.fTimeBasedSurpassMult;
                             fcurvelmult *= retcheck.fTimeBasedSurpassMult;
                             fcuraccelmult *= retcheck.fTimeBasedSurpassMult*retcheck.fTimeBasedSurpassMult;
                             if (fcurvelmult < 0.01) {
@@ -2462,7 +2445,6 @@ protected:
                             }
                         }
 
-                        // dReal expectedRampTimeAfterSlowDown = newramptime/fOverallTimeMult; // 2019/04/26: do not use this estimation since it does not really reflect the actual duration of the next iteration and the interpolation itself does not take much time anyway.
                         dReal expectedRampTimeAfterSlowDown = newramptime;
                         if (expectedRampTimeAfterSlowDown + mintimestep > t2 - t1) {
                             // Reject this shortcut since it did not (and will not) make any significant improvement.
@@ -2784,7 +2766,7 @@ protected:
     std::vector<ParabolicRamp::ParabolicRampND> _cacheaccumoutramps, _cacheoutramps, _cacheoutramps2;
     std::vector<dReal> _cachetrajpoints, _cacheswitchtimes;
     vector<ParabolicRamp::Vector> _cachepath;
-    std::vector<dReal> _cachevellimits, _cacheaccellimits, _cachevellimits2, _cacheaccellimits2;
+    std::vector<dReal> _cachevellimits, _cacheaccellimits;
     std::vector<dReal> _x0cache, _dx0cache, _x1cache, _dx1cache;
     std::vector<bool> _vVisitedDiscretizationCache; ///< use bool to be memory efficient
     //@}
