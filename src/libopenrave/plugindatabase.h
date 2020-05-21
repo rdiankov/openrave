@@ -44,6 +44,19 @@
 
 #endif
 
+#ifndef _RAVE_DISPLAY
+#define _RAVE_DISPLAY(RUNCODE)                                               \
+{                                                                              \
+    printf(                                                                    \
+        "\n%s:%d, [ %s "                                                       \
+        "]\n-----------------------------------------------------------------" \
+        "--------------\n",                                                    \
+        __FILE__, __LINE__, __func__ /*__PRETTY_FUNCTION__*/);                 \
+    RUNCODE;                                                                   \
+    printf("\n");                                                              \
+}
+#endif // _RAVE_DISPLAY
+
 //#define INTERFACE_PREDELETER boost::bind(&RaveDatabase::_InterfaceDestroyCallbackShared,shared_from_this(),_1)
 
 #define INTERFACE_PREDELETER boost::function<void(void const*)>()
@@ -261,15 +274,28 @@ public:
             if( name.size() == 0 ) {
                 return false;
             }
-            std::map<InterfaceType, std::vector<std::string> >::iterator itregisterednames = _infocached.interfacenames.find(type);
-            if( itregisterednames == _infocached.interfacenames.end() ) {
+            _RAVE_DISPLAY(
+                for(auto keyvalue : _infocached.interfacenames) {
+                    std::cout << keyvalue.first << ": ";
+                    for(auto value : keyvalue.second) {
+                        std::cout << value << ", ";
+                    }
+                    std::cout << std::endl;
+                }
+            );
+
+            if(!_infocached.interfacenames.count(type)) {
                 return false;
             }
-            FOREACH(it,itregisterednames->second) {
-                if(( name.size() >= it->size()) &&( _strnicmp(name.c_str(),it->c_str(),it->size()) == 0) ) {
+            
+            auto names = _infocached.interfacenames.at(type);
+
+            for(const std::string& name_ : names) {
+                if(( name.size() >= name_.size()) &&( _strnicmp(name.c_str(), name_.c_str(), name_.size()) == 0) ) {
                     return true;
                 }
             }
+
             return false;
         }
 
@@ -548,6 +574,9 @@ protected:
 
     InterfaceBasePtr Create(EnvironmentBasePtr penv, InterfaceType type, const std::string& _name)
     {
+        if(_name == "fcl_") {
+            _RAVE_DISPLAY(std::cout << _name << std::endl;);
+        }
         std::string name=_name;
         InterfaceBasePtr pointer;
         if( name.size() == 0 ) {
@@ -586,6 +615,7 @@ protected:
             FOREACH(it, listRegisteredInterfaces) {
                 RegisteredInterfacePtr registration = it->lock();
                 if( !!registration ) {
+                    _RAVE_DISPLAY(std::cout << registration->_name << std::endl;)
                     if(( nInterfaceNameLength >= registration->_name.size()) &&( _strnicmp(name.c_str(),registration->_name.c_str(),registration->_name.size()) == 0) ) {
                         std::stringstream sinput(name);
                         std::string interfacename;
@@ -613,6 +643,7 @@ protected:
                 const char* hash = RaveGetInterfaceHash(type);
                 list<PluginPtr>::iterator itplugin = listplugins.begin();
                 while(itplugin != listplugins.end()) {
+                    _RAVE_DISPLAY(std::cout << (*itplugin)->GetName() << std::endl;)
                     pointer = (*itplugin)->CreateInterface(type, name, hash, penv);
                     if( !!pointer ) {
                         if( strcmp(pointer->GetHash(), hash) ) {
@@ -822,6 +853,7 @@ protected:
         FOREACHC(it,_listRegisteredInterfaces) {
             RegisteredInterfacePtr registration = it->lock();
             if( !!registration ) {
+                _RAVE_DISPLAY(std::cout << "pushback " << registration->_name;);
                 interfacenames[registration->_type].push_back(registration->_name);
             }
         }
@@ -905,6 +937,7 @@ protected:
 
     PluginPtr _LoadPlugin(const string& _libraryname)
     {
+        _RAVE_DISPLAY(std::cout << "load plugin " << _libraryname;);
         string libraryname = _libraryname;
         void* plibrary = _SysLoadLibrary(libraryname,OPENRAVE_LAZY_LOADING);
         if( plibrary == NULL ) {
@@ -1013,6 +1046,7 @@ protected:
 
     static void* _SysLoadLibrary(const std::string& lib, bool bLazy=false)
     {
+        _RAVE_DISPLAY(std::cout << "loading library " << lib;);
         // check if file exists first
         if( !ifstream(lib.c_str()) ) {
             return NULL;
@@ -1039,6 +1073,7 @@ protected:
 
     static void* _SysLoadSym(void* lib, const std::string& sym)
     {
+        _RAVE_DISPLAY(std::cout << "loading symbol " << sym;);
 #ifdef _WIN32
         return GetProcAddress((HINSTANCE)lib, sym.c_str());
 #else
