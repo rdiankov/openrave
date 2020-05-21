@@ -21,7 +21,7 @@
 
 namespace OpenRAVE {
 
-using LinkPair = std::array<RobotBase::LinkPtr, 2>;
+using LinkPair = std::array<RobotBase::LinkPtr, 2>; ///< a baselink-eelink pair
 
 /** \brief <b>[interface]</b> Base class for robot posture describers. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_fksolver.
    \ingroup interfaces
@@ -32,23 +32,26 @@ public:
     PostureDescriberBase(EnvironmentBasePtr penv);
     virtual ~PostureDescriberBase();
 
-    /// \brief Initialize with a kinematics chain
-    virtual bool Init(const LinkPair& kinematicsChain) = 0;
-
-    /// \brief Initialize with a kinematics chain prescribed by a manipulator
-    virtual bool Init(const RobotBase::ManipulatorPtr& pmanip);
-
-    /// \brief Checks if we can use this describer to compute posture values from baselink to eelink prescribed by a kinematics chain.
-    ///        When it supports, it sets up the workspace variables for future computations.
-    /// \return true if can handle this kinematics chain
+    /// \brief Checks if we can use a describer class to compute posture values for a kinematics chain from baselink to eelink.
+    /// \return true if this describer class can support the posture description of this kinematics chain.
     virtual bool Supports(const LinkPair& kinematicsChain) const = 0;
 
-    /// \brief Checks if we can use this describer to compute posture values from baselink to eelink prescribed by a manipulator
-    /// \return true if can handle this kinematics chain
+    /// \brief Checks if we can use a describer class to compute posture values for a kinematics chain from the manipulator's baselink to its eelink.
+    /// \return true if this describer class can support the posture description of this kinematics chain.
     virtual bool Supports(const RobotBase::ManipulatorPtr& pmanip) const;
 
-    /// \brief Computes an integer value to describe current robot posture
-    /// Computes a value describing descrete posture of robot kinematics between base link and endeffector link
+    /// \brief Initializes class members for a kinematics chain from baselink to eelink, provided this class supports the posture description.
+    /// \return true if this describer class can support the posture description AND the initialization is successful.
+    virtual bool Init(const LinkPair& kinematicsChain) = 0;
+
+    /// \brief Initializes class members for a kinematics chain from the manipulator's baselink to its eelink, provided this class supports the posture description.
+    /// \return true if this describer class can support the posture description AND the initialization is successful.
+    virtual bool Init(const RobotBase::ManipulatorPtr& pmanip);
+
+    /// \brief Computes posture state integers for a kinematics chain at either the current of specified dof values.
+    /// \param [in]  jointvalues     if empty, then use the current dof values; otherwise these specified dof values must have the same size as the number of dofs in the kinematics chain.
+    /// \param [out] posturestates   posture states, whose size is a power of 2. Always non-empty if (1) this class is properly initialized AND (2) jointvalues is either empty or has the correct size.
+    /// \return true if (1) this describer class is properly initialized AND (2) jointvalues is either empty or has the correct size.
     virtual bool ComputePostureStates(std::vector<uint16_t>& posturestates, const std::vector<double>& jointvalues = {}) = 0;
 
     /// \return the static interface type this class points to (used for safe casting)
@@ -62,12 +65,14 @@ private:
 
 using PostureDescriberBasePtr = boost::shared_ptr<PostureDescriberBase>;
 
+///< \brief Acquires from the manipulator the kinematics chain in the form of a baselink-eelink pair.
 OPENRAVE_API LinkPair GetKinematicsChain(const RobotBase::ManipulatorPtr& pmanip);
 OPENRAVE_API LinkPair GetKinematicsChain(const RobotBase::ManipulatorConstPtr& pmanip);
 
-// refer to libopenrave.h and
-// void RobotBase::Manipulator::serialize(std::ostream& o, int options, IkParameterizationType iktype) const
+///< \brief Computes a kinematics hash from the baselink to eelink.
 OPENRAVE_API std::string ComputeKinematicsChainHash(const LinkPair& kinematicsChain, std::vector<int>& armindices);
+
+///< \brief Computes a kinematics hash from the manipulator's baselink to its eelink.
 OPENRAVE_API std::string ComputeKinematicsChainHash(const RobotBase::ManipulatorPtr& pmanip, std::vector<int>& armindices);
 
 } // end namespace OpenRAVE
