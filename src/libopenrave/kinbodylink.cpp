@@ -742,6 +742,26 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
         return UFIR_RequireRemoveFromEnvironment;
     }
 
+    // _bIsEnable
+    if (IsEnabled() != info._bIsEnabled) {
+        Enable(info._bIsEnabled);
+    }
+
+    // _bStatic
+    if (IsStatic() != info._bStatic) {
+        SetStatic(info._bStatic);
+    }
+
+    // _mass
+    if (GetMass() != info._mass) {
+        SetMass(info._mass);
+    }
+
+    // inertiamoments
+    if (_info._vinertiamoments != info._vinertiamoments) {
+        SetPrincipalMomentsOfInertia(info._vinertiamoments);
+    }
+
     // geometries
     bool isGeometryChanged = false;
     FOREACHC(itGeometryInfo, info._vgeometryinfos) {
@@ -768,7 +788,6 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
         AddGeometry(pGeometryInfo, true); // TODO: add to groups?
         isGeometryChanged = true;
     }
-
 
     FOREACHC(itGeometry, _vGeometries) {
         bool stillExists = false;

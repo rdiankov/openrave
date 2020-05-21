@@ -2039,7 +2039,7 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
 {
     BOOST_ASSERT(info._id == _info._id);
     bool isDiff = false;
-    // _name TODO: maybe just change the _info._name
+    // _name
     if (GetName() != info._name) {
         return UFIR_RequireRemoveFromEnvironment;
     }
@@ -2069,10 +2069,8 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
     // _vcurrentvalues(not needed)
 
     // _vresolution
-    std::vector<dReal> resolutions;
-    GetResolutions(resolutions);
     for (int iaxis = 0; iaxis < GetDOF(); iaxis++) {
-        if (resolutions[iaxis] != info._vresolution[iaxis]) {
+        if (GetResolution(iaxis) != info._vresolution[iaxis]) {
             return UFIR_RequireRemoveFromEnvironment;
         }
     }

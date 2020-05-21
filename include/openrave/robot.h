@@ -72,6 +72,7 @@ public:
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
 
+        std::string _id; ///< unique id for manipulator info
         std::string _name;
         std::string _sBaseLinkName, _sEffectorLinkName; ///< name of the base and effector links of the robot used to determine the chain
         Transform _tLocalTool;
@@ -80,8 +81,6 @@ public:
         std::string _sIkSolverXMLId; ///< xml id of the IkSolver interface to attach
         std::vector<std::string> _vGripperJointNames;         ///< names of the gripper joints
         std::string _grippername; ///< associates the manipulator with a GripperInfo
-
-        std::string _id; ///< unique id for manipulator info
     };
     typedef boost::shared_ptr<ManipulatorInfo> ManipulatorInfoPtr;
     typedef boost::shared_ptr<ManipulatorInfo const> ManipulatorInfoConstPtr;
@@ -837,7 +836,6 @@ public:
         };
         RobotBaseInfo& operator=(const RobotBaseInfo& other) {
             KinBodyInfo::operator=(other);
-            _vJointInfos = other._vJointInfos;
             _vManipulatorInfos = other._vManipulatorInfos;
             _vAttachedSensorInfos = other._vAttachedSensorInfos;
             _vConnectedBodyInfos = other._vConnectedBodyInfos;
@@ -867,7 +865,7 @@ public:
 
 private:
         /// \brief shared update method for both copy constructor and assign operator
-        void _Update(const RobotBase::RobotBaseInfo& other);
+        // void _Update(const RobotBase::RobotBaseInfo& other);
     };
     typedef boost::shared_ptr<RobotBaseInfo> RobotBaseInfoPtr;
     typedef boost::shared_ptr<RobotBaseInfo const> RobotBaseInfoConstPtr;
@@ -1351,7 +1349,7 @@ protected:
 
     ConfigurationSpecification _activespec;
 
-    RobotBaseInfo _info;
+    RobotBaseInfo _robotBaseInfo;
 private:
     virtual const char* GetHash() const {
         return OPENRAVE_ROBOT_HASH;

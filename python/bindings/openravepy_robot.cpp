@@ -64,6 +64,7 @@ PyManipulatorInfo::PyManipulatorInfo(const RobotBase::ManipulatorInfo& info) {
 }
 
 void PyManipulatorInfo::_Update(const RobotBase::ManipulatorInfo& info) {
+    _id = ConvertStringToUnicode(info._id);
     _name = ConvertStringToUnicode(info._name);
     _sBaseLinkName = ConvertStringToUnicode(info._sBaseLinkName);
     _sEffectorLinkName = ConvertStringToUnicode(info._sEffectorLinkName);
@@ -82,6 +83,7 @@ void PyManipulatorInfo::_Update(const RobotBase::ManipulatorInfo& info) {
 RobotBase::ManipulatorInfoPtr PyManipulatorInfo::GetManipulatorInfo() const
 {
     RobotBase::ManipulatorInfoPtr pinfo(new RobotBase::ManipulatorInfo());
+    pinfo->_id = py::extract<std::string>(_id);
     pinfo->_name = py::extract<std::string>(_name);
     pinfo->_sBaseLinkName = py::extract<std::string>(_sBaseLinkName);
     pinfo->_sEffectorLinkName = py::extract<std::string>(_sEffectorLinkName);
@@ -135,6 +137,7 @@ PyAttachedSensorInfo::PyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& 
 }
 
 void PyAttachedSensorInfo::_Update(const RobotBase::AttachedSensorInfo& info) {
+    _id = ConvertStringToUnicode(info._id);
     _name = ConvertStringToUnicode(info._name);
     _linkname = ConvertStringToUnicode(info._linkname);
     _trelative = ReturnTransform(info._trelative);
@@ -145,6 +148,7 @@ void PyAttachedSensorInfo::_Update(const RobotBase::AttachedSensorInfo& info) {
 RobotBase::AttachedSensorInfoPtr PyAttachedSensorInfo::GetAttachedSensorInfo() const
 {
     RobotBase::AttachedSensorInfoPtr pinfo(new RobotBase::AttachedSensorInfo());
+    pinfo->_id = py::extract<std::string>(_id);
     pinfo->_name = py::extract<std::string>(_name);
     pinfo->_linkname = py::extract<std::string>(_linkname);
     pinfo->_trelative = ExtractTransform(_trelative);
@@ -191,6 +195,7 @@ PyConnectedBodyInfo::PyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& inf
 
 void PyConnectedBodyInfo::_Update(const RobotBase::ConnectedBodyInfo& info)
 {
+    _id = ConvertStringToUnicode(info._id);
     _name = ConvertStringToUnicode(info._name);
     _linkname = ConvertStringToUnicode(info._linkname);
     _trelative = ReturnTransform(info._trelative);
@@ -234,6 +239,9 @@ void PyConnectedBodyInfo::_Update(const RobotBase::ConnectedBodyInfo& info)
 RobotBase::ConnectedBodyInfoPtr PyConnectedBodyInfo::GetConnectedBodyInfo() const
 {
     RobotBase::ConnectedBodyInfoPtr pinfo(new RobotBase::ConnectedBodyInfo());
+    if( !IS_PYTHONOBJECT_NONE(_id) ) {
+        pinfo->_id = py::extract<std::string>(_id);
+    }
     if( !IS_PYTHONOBJECT_NONE(_name) ) {
         pinfo->_name = py::extract<std::string>(_name);
     }
@@ -2165,6 +2173,7 @@ void init_openravepy_robot()
 #else
     object manipulatorinfo = class_<PyManipulatorInfo, OPENRAVE_SHARED_PTR<PyManipulatorInfo> >("ManipulatorInfo", DOXY_CLASS(RobotBase::ManipulatorInfo))
 #endif
+                             .def_readwrite("_id",&PyManipulatorInfo::_id)
                              .def_readwrite("_name",&PyManipulatorInfo::_name)
                              .def_readwrite("_sBaseLinkName",&PyManipulatorInfo::_sBaseLinkName)
                              .def_readwrite("_sEffectorLinkName",&PyManipulatorInfo::_sEffectorLinkName)
@@ -2215,6 +2224,7 @@ void init_openravepy_robot()
 #else
     object attachedsensorinfo = class_<PyAttachedSensorInfo, OPENRAVE_SHARED_PTR<PyAttachedSensorInfo> >("AttachedSensorInfo", DOXY_CLASS(RobotBase::AttachedSensorInfo))
 #endif
+                                .def_readwrite("_id", &PyAttachedSensorInfo::_id)
                                 .def_readwrite("_name", &PyAttachedSensorInfo::_name)
                                 .def_readwrite("_linkname", &PyAttachedSensorInfo::_linkname)
                                 .def_readwrite("_trelative", &PyAttachedSensorInfo::_trelative)
@@ -2243,6 +2253,7 @@ void init_openravepy_robot()
 #else
     object connectedbodyinfo = class_<PyConnectedBodyInfo, OPENRAVE_SHARED_PTR<PyConnectedBodyInfo> >("ConnectedBodyInfo", DOXY_CLASS(RobotBase::ConnectedBodyInfo))
 #endif
+                               .def_readwrite("_id", &PyConnectedBodyInfo::_id)
                                .def_readwrite("_name", &PyConnectedBodyInfo::_name)
                                .def_readwrite("_linkname", &PyConnectedBodyInfo::_linkname)
                                .def_readwrite("_trelative", &PyConnectedBodyInfo::_trelative)

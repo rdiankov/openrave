@@ -43,7 +43,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
         size_t iBody = 0;
         for (rapidjson::Value::ConstValueIterator it = value["bodies"].Begin(); it != value["bodies"].End(); ++it, ++iBody) {
             const rapidjson::Value& bodyValue = *it;
-            
+
             // first figure an id
             std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(bodyValue, "id");
             if (id.empty()) {

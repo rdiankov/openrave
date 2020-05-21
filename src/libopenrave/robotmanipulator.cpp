@@ -19,6 +19,7 @@ namespace OpenRAVE {
 
 void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "transform", _tLocalTool, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "chuckingDirections", _vChuckingDirection, allocator);
@@ -32,6 +33,7 @@ void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value& value, rapidjso
 
 void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _tLocalTool);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "chuckingDirections", _vChuckingDirection);

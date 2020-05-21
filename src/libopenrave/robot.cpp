@@ -694,6 +694,7 @@ bool RobotBase::InitFromInfo(const RobotBaseInfo& info)
     }
 
     _info = info;
+    _robotBaseInfo = info;
     _name = info._name;
     return true;
 }
@@ -2364,9 +2365,9 @@ const std::string& RobotBase::GetRobotStructureHash() const
 void RobotBase::ExtractInfo(RobotBaseInfo& info)
 {
     KinBody::ExtractInfo(info);
-    
-    info._id = _info._id;
-    info._referenceUri = _info._referenceUri;
+
+    // info._id = _info._id;
+    // info._referenceUri = _info._referenceUri;
     info._vManipulatorInfos.resize(_vecManipulators.size());
     for(size_t i = 0; i < info._vManipulatorInfos.size(); ++i) {
         info._vManipulatorInfos[i].reset(new RobotBase::ManipulatorInfo());
@@ -2394,7 +2395,10 @@ void RobotBase::ExtractInfo(RobotBaseInfo& info)
 UpdateFromInfoResult RobotBase::UpdateFromInfo(const RobotBaseInfo& info)
 {
     // TODO: test
-    KinBody::UpdateFromInfo(info);
+    UpdateFromInfoResult updateFromInfoResult = KinBody::UpdateFromInfo(info);
+    if (updateFromInfoResult != UFIR_Success) {
+        return updateFromInfoResult;
+    }
 
     // manipulators
     FOREACHC(itManipulatorInfo, info._vManipulatorInfos) {

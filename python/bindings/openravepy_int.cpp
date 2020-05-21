@@ -976,7 +976,7 @@ void PyEnvironmentBase::PyEnvironmentBaseInfo::_Update(const EnvironmentBase::En
 #else
     py::list vBodyInfos;
     FOREACHC(itBodyInfo, info._vBodyInfos) {
-        OPENRAVE_SHARED_PTR<RobotBase::RobotBaseInfo> pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(*itBodyInfo);
+        RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(*itBodyInfo);
         if (!!pRobotBaseInfo) {
             PyRobotBase::PyRobotBaseInfo info = PyRobotBase::PyRobotBaseInfo(*pRobotBaseInfo);
             vBodyInfos.append(info);

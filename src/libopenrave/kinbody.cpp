@@ -5256,9 +5256,25 @@ UpdateFromInfoResult KinBody::UpdateFromInfo(const KinBodyInfo& info)
             // link update failed.
             return UFIR_RequireRemoveFromEnvironment;
         }
+
         // new links is added
-        return UFIR_RequireRemoveFromEnvironment;
+        return UFIR_RequireReinitialize;
     }
+
+    // delete links
+    FOREACH(itLink, _veclinks) {
+        bool foundLink = false;
+        FOREACHC(itLinkInfo, info._vLinkInfos) {
+            if ((*itLink)->_info._id == (*itLinkInfo)->_id) {
+                foundLink = true;
+                break;
+            }
+        }
+        if (!foundLink) {
+            return UFIR_RequireReinitialize;
+        }
+    }
+
 
     // joints
     FOREACHC(itJointInfo, info._vJointInfos) {
@@ -5270,8 +5286,18 @@ UpdateFromInfoResult KinBody::UpdateFromInfo(const KinBodyInfo& info)
                 break;
             }
         }
+
+        if (itExistingJoint == _vecjoints.end()) {
+            FOREACH(itJoint, _vPassiveJoints) {
+                if ((*itJoint)->_info._id == (*itJointInfo)->_id) {
+                    itExistingJoint = itJoint;
+                    break;
+                }
+            }
+        }
+
         KinBody::JointInfoPtr pJointInfo = *itJointInfo;
-        if (itExistingJoint != _vecjoints.end()) {
+        if (itExistingJoint != _vecjoints.end() || itExistingJoint != _vPassiveJoints.end()) {
             // update current joint
             UpdateFromInfoResult updateFromJointInfoResult = UFIR_Success;
             KinBody::JointPtr pJoint = *itExistingJoint;
@@ -5282,8 +5308,22 @@ UpdateFromInfoResult KinBody::UpdateFromInfo(const KinBodyInfo& info)
             // joint update failed;
             return UFIR_RequireRemoveFromEnvironment;
         }
-        // new joints is added
-        return UFIR_RequireRemoveFromEnvironment;
+        // new joints is added or deleted
+        return UFIR_RequireReinitialize;
+    }
+
+    // delete joints
+    FOREACH(itJoint, _vecjoints) {
+        bool foundJoint = false;
+        FOREACHC(itJointInfo, info._vJointInfos) {
+            if ((*itJoint)->_info._id == (*itJointInfo)->_id) {
+                foundJoint = true;
+                break;
+            }
+        }
+        if (!foundJoint) {
+            return UFIR_RequireReinitialize;
+        }
     }
 
     // grabbedinfos
@@ -5330,11 +5370,29 @@ UpdateFromInfoResult KinBody::UpdateFromInfo(const KinBodyInfo& info)
         SetTransform(info._transform);
     }
 
-    // TODO: dofValues
-
+    // dof values
+    std::vector<dReal> dofValues;
+    GetDOFValues(dofValues);
+    bool bDOFChanged = false;
+    for(std::vector<std::pair<int, dReal>>::const_iterator it = info._dofValues.begin(); it != info._dofValues.end(); it++) {
+        std::vector<dReal> vValue;
+        _vecjoints[it->first]->GetValues(vValue);
+        // TODO: any case for multiple dofValues in one joint?
+        if (vValue.size() == 1) {
+            if (vValue[0] != it->second) {
+                dofValues[_vecjoints[it->first]->GetDOFIndex()] = it->second;
+                bDOFChanged = true;
+            }
+        }
+        else {
+            return UFIR_RequireRemoveFromEnvironment;
+        }
+    }
+    if (bDOFChanged) {
+        SetDOFValues(dofValues);
+    }
 
     // TODO: readable interfaces
-
     return UFIR_Success;
 }
 
