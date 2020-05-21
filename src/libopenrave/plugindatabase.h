@@ -73,6 +73,19 @@ const char s_filesep = '/';
 
 namespace OpenRAVE {
 
+std::string PrintPLUGININFO(const PLUGININFO& p) {
+    std::stringstream ss;
+    ss << "version = " << p.version << std::endl;
+    for(auto keyvalue : p.interfacenames) {
+        ss << keyvalue.first << ": ";
+        for(auto value : keyvalue.second) {
+            ss << value << ", ";
+        }
+        ss << std::endl;
+    }
+    return ss.str();
+}
+
 /// \brief database of interfaces from plugins
 class RaveDatabase : public boost::enable_shared_from_this<RaveDatabase>
 {
@@ -275,19 +288,13 @@ public:
                 return false;
             }
             _RAVE_DISPLAY(
-                for(auto keyvalue : _infocached.interfacenames) {
-                    std::cout << keyvalue.first << ": ";
-                    for(auto value : keyvalue.second) {
-                        std::cout << value << ", ";
-                    }
-                    std::cout << std::endl;
-                }
+                std::cout << "_infocached = " << PrintPLUGININFO(_infocached);
             );
 
             if(!_infocached.interfacenames.count(type)) {
                 return false;
             }
-            
+
             auto names = _infocached.interfacenames.at(type);
 
             for(const std::string& name_ : names) {
@@ -1003,13 +1010,15 @@ protected:
             }
 
             if( p->pfnGetPluginAttributesNew != NULL ) {
-                p->pfnGetPluginAttributesNew(&p->_infocached, sizeof(p->_infocached),OPENRAVE_PLUGININFO_HASH);
+                p->pfnGetPluginAttributesNew(&p->_infocached, sizeof(p->_infocached), OPENRAVE_PLUGININFO_HASH);
+                _RAVE_DISPLAY(std::cout << "p->_infocached = " << PrintPLUGININFO(p->_infocached););
             }
             else {
                 if( !p->pfnGetPluginAttributes(&p->_infocached, sizeof(p->_infocached)) ) {
                     RAVELOG_WARN(str(boost::format("%s: GetPluginAttributes failed\n")%libraryname));
                     return PluginPtr();
                 }
+                _RAVE_DISPLAY(std::cout << "p->_infocached = " << PrintPLUGININFO(p->_infocached););
             }
         }
         catch(const std::exception& ex) {
