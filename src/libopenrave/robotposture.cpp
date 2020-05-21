@@ -14,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 #include "libopenrave.h"
 #include <openrave/posturedescriber.h>
 
@@ -68,11 +69,11 @@ PostureDescriberBasePtr RobotBase::GetPostureDescriber(ManipulatorConstPtr pmani
     return this->GetPostureDescriber(GetKinematicsChain(pmanip));
 }
 
-bool RobotBase::ComputePostureStates(std::vector<uint16_t>& values, const LinkPair& kinematicsChain, const std::vector<double>& jointvalues) const
+bool RobotBase::ComputePostureStates(std::vector<uint16_t>& posturestates, const LinkPair& kinematicsChain, const std::vector<double>& jointvalues) const
 {
     // TODO fill with default implementation
     if(_mPostureDescribers.count(kinematicsChain)) {
-        return _mPostureDescribers.at(kinematicsChain)->ComputePostureStates(values, jointvalues);
+        return _mPostureDescribers.at(kinematicsChain)->ComputePostureStates(posturestates, jointvalues);
     }
     
     throw OPENRAVE_EXCEPTION_FORMAT(_("failed to find robot posture describer for links from \"%s\" to \"%s\" for robot \"%s\""),
@@ -80,12 +81,12 @@ bool RobotBase::ComputePostureStates(std::vector<uint16_t>& values, const LinkPa
     return false;
 }
 
-bool RobotBase::ComputePostureStates(std::vector<uint16_t>& values, ManipulatorConstPtr pmanip, const std::vector<double>& jointvalues) const
+bool RobotBase::ComputePostureStates(std::vector<uint16_t>& posturestates, ManipulatorConstPtr pmanip, const std::vector<double>& jointvalues) const
 {
     if(pmanip == nullptr) {
         pmanip = this->GetActiveManipulator();
     }
-    return this->ComputePostureStates(values, GetKinematicsChain(pmanip), jointvalues);
+    return this->ComputePostureStates(posturestates, GetKinematicsChain(pmanip), jointvalues);
 }
 
 } // end namespace OpenRAVE

@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2020 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2020 Guangning Tan, Kei Usui, Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -18,7 +18,7 @@
 #include <openrave/posturedescriber.h> // PostureDescriberBasePtr
 #include "posturedescriberinterface.h" // PostureDescriber
 #include "plugindefs.h" //  POSTUREDESCRIBER_MODULE_NAME, POSTUREDESCRIBER_CLASS_NAME
-#include "posturedescribermodule.h"
+#include "posturedescribermodule.h" // PostureDescriberModule
 
 // #include <boost/lexical_cast.hpp>
 

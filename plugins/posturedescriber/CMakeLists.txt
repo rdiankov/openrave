@@ -1,6 +1,6 @@
-##############################################
-# forward kinematics computers openrave plugin
-##############################################
+###################################
+# posture describer openrave plugin
+###################################
 if( Boost_IOSTREAMS_FOUND )
   set(PLUGIN_COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} -DBoost_IOSTREAMS_FOUND")
 endif()
