@@ -23,7 +23,7 @@
 
 namespace OpenRAVE {
 
-class PostureDescriberModule : public ModuleBase
+class OPENRAVE_API PostureDescriberModule : public ModuleBase
 {
 public:
     PostureDescriberModule() = delete; // disable default constructor
