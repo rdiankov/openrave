@@ -69,11 +69,11 @@ PostureDescriberBasePtr RobotBase::GetPostureDescriber(ManipulatorConstPtr pmani
     return this->GetPostureDescriber(GetKinematicsChain(pmanip));
 }
 
-bool RobotBase::ComputePostureStates(std::vector<uint16_t>& posturestates, const LinkPair& kinematicsChain, const std::vector<double>& jointvalues) const
+bool RobotBase::ComputePostureStates(std::vector<uint16_t>& posturestates, const LinkPair& kinematicsChain, const std::vector<double>& dofvalues) const
 {
     // TODO fill with default implementation
     if(_mPostureDescribers.count(kinematicsChain)) {
-        return _mPostureDescribers.at(kinematicsChain)->ComputePostureStates(posturestates, jointvalues);
+        return _mPostureDescribers.at(kinematicsChain)->ComputePostureStates(posturestates, dofvalues);
     }
 
     throw OPENRAVE_EXCEPTION_FORMAT(_("failed to find robot posture describer for links from \"%s\" to \"%s\" for robot \"%s\""),
@@ -81,12 +81,12 @@ bool RobotBase::ComputePostureStates(std::vector<uint16_t>& posturestates, const
     return false;
 }
 
-bool RobotBase::ComputePostureStates(std::vector<uint16_t>& posturestates, ManipulatorConstPtr pmanip, const std::vector<double>& jointvalues) const
+bool RobotBase::ComputePostureStates(std::vector<uint16_t>& posturestates, ManipulatorConstPtr pmanip, const std::vector<double>& dofvalues) const
 {
     if(pmanip == nullptr) {
         pmanip = this->GetActiveManipulator();
     }
-    return this->ComputePostureStates(posturestates, GetKinematicsChain(pmanip), jointvalues);
+    return this->ComputePostureStates(posturestates, GetKinematicsChain(pmanip), dofvalues);
 }
 
 } // end namespace OpenRAVE

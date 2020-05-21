@@ -1042,55 +1042,57 @@ private:
     /// \brief \ref KinBody::SetNonCollidingConfiguration, also regrabs all bodies
     virtual void SetNonCollidingConfiguration();
 
-    /// \brief Sets a robot posture describer for a kinematics chain from the base link to end-effector link
-    /// \param [in] kinematicsChain    a kinematics chain described by a pair of links, pBaseLink and pEndEffectorLink
-    /// \param [in] pDescriber         a robot poseture describer
-    /// \return true if either (1) pDescriber is not null and supports the kinematics chain, or (2) pDescriber is null and we successfully register the describer for the kinematics chain.
-    virtual bool SetPostureDescriber(const std::array<LinkPtr, 2>& kinematicsChain, PostureDescriberBasePtr pDescriber);
+    using LinkPair = std::array<LinkPtr, 2>; ///< a (base link, end-effector link) pair. We henceforth write baselink and eelink for brevity.
 
-    /// \brief Sets a robot posture describer for a kinematics chain prescribed by a manipulator.
-    /// \param [in] pmanip        manipulator that prescribes a kinematics chain by its base link and end-effector link
-    /// \param [in] pDescriber    pointer to a robot poseture describer
+    /// \brief Registers a posture describer for a kinematics chain from baselink to eelink
+    /// \param [in] kinematicsChain    a kinematics chain prescribed by a baselink-eelink pair
+    /// \param [in] pDescriber         a robot posture describer
+    /// \return true if either (1) pDescriber is not null and supports the kinematics chain, or (2) pDescriber is null and we successfully register the describer for the kinematics chain.
+    virtual bool SetPostureDescriber(const LinkPair& kinematicsChain, PostureDescriberBasePtr pDescriber);
+
+    /// \brief Registers a robot posture describer for a kinematics chain from the manipulator's baselink to its eelink.
+    /// \param [in] pmanip        manipulator that prescribes a kinematics chain by its baselink and eelink
+    /// \param [in] pDescriber    pointer to a robot posture describer
     /// \return true if either (1) pDescriber is not null and supports the kinematics chain of pmanip, or (2) pDescriber is null and we successfully register the describer for pmanip.
     virtual bool SetPostureDescriber(ManipulatorConstPtr pmanip, PostureDescriberBasePtr pDescriber);
 
-    /// \brief Gets robot posture describer for kinematics state for a kinematics chain from pBaseLink to pEndEffectorLink
-    /// \param [in] kinematicsChain    a pair of pBaseLink and pEndEffectorLink
+    /// \brief Gets robot posture describer for a kinematics chain from baselink to eelink
+    /// \param [in] kinematicsChain    a kinematics chain prescribed by a baselink-eelink pair
     /// \return a non-null pointer to a robot posture describer if this describer was previously registered; otherwise a null pointer
-    virtual PostureDescriberBasePtr GetPostureDescriber(const std::array<LinkPtr, 2>& kinematicsChain) const;
+    virtual PostureDescriberBasePtr GetPostureDescriber(const LinkPair& kinematicsChain) const;
 
-    /// \brief Gets robot posture describer for kinematics state for a kinematics chain prescribed by a manipulator.
-    /// \param [in] pmanip        manipulator that prescribes a kinematics chain by its base link and end-effector link
+    /// \brief Gets robot posture describer for a kinematics chain from the manipulator's baselink to its eelink.
+    /// \param [in] pmanip        manipulator that prescribes a kinematics chain by its baselink and eelink
     /// \return a non-null pointer to a robot posture describer if this describer was previously registered; otherwise a null pointer
     virtual PostureDescriberBasePtr GetPostureDescriber(ManipulatorConstPtr pmanip) const;
 
-    /// \brief Unregisters the robot posture describer associated with a kinematics chain from kinematicsChain[0] (pBaseLink) to kinematicsChain[1] (pEndEffectorLink)
-    /// \param [in] kinematicsChain    a pair of links, pBaseLink and pEndEffectorLink
+    /// \brief Unregisters the robot posture describer for a kinematics chain from baselink to eelink
+    /// \param [in] kinematicsChain    a kinematics chain prescribed by a baselink-eelink pair
     /// \return true if the unregistering is successful
-    virtual bool UnregisterPostureDescriber(const std::array<LinkPtr, 2>& kinematicsChain);
+    virtual bool UnregisterPostureDescriber(const LinkPair& kinematicsChain);
 
-    /// \brief Unregisters the robot posture describer associated with a kinematics chain prescribed by a manipulator.
-    /// \param [in] pmanip        manipulator that prescribes a kinematics chain by its base link and end-effector link
+    /// \brief Unregisters the robot posture describer for a kinematics chain from the manipulator's baselink to its eelink.
+    /// \param [in] pmanip        manipulator that prescribes a kinematics chain by its baselink and eelink
     /// \return true if the unregistering is successful
     virtual bool UnregisterPostureDescriber(const ManipulatorConstPtr pmanip);
 
-    /// \brief Computes posture states to describe the current posture of a kinematics chain at a set of joint values
-    /// Computes integers describing the states of links between base and end-effector.
-    /// \param [out] posturevalues     robot posture values at the current dof values
-    /// \param [in]  kinematicsChain   a pair of links, pBaseLink and pEndEffectorLink
-    /// \param [in]  dofvalues         dof values set along the kinematics chain from base link to end-effector link
-    /// \return vector of integer value which describe posture of this robot.
+    /// \brief Computes posture states to describe the posture of a kinematics chain at the current or specified dof values.
+    /// Computes posture state integers for describing the posture of links between baselink and eelink.
+    /// \param [out] posturevalues     a vector of robot posture state (unsigned) integers at the current of specified dof values
+    /// \param [in]  kinematicsChain   a kinematics chain prescribed by a baselink-eelink pair
+    /// \param [in]  dofvalues         dof values set along the kinematics chain from base link to end-effector link; its size should be either 0 (i.e., using the current dof values) or the same size of the dofs of the kinematics chain
+    /// \return true if the registered posture describer successfully computes a vector of posture state values for describing the posture of the kinematics chain.
     virtual bool ComputePostureStates(std::vector<uint16_t>& posturevalues,
-                                      const std::array<LinkPtr, 2>& kinematicsChain,
+                                      const LinkPair& kinematicsChain,
                                       const std::vector<double>& dofvalues = {}) const;
 
-    /// \brief Computes posture states to describe the current posture of a kinematics chain prescribed by a manipulator at a set of joint values
-    /// Computes integers describing the states of links between base and end-effector of a specified manipulator
-    /// If the manipulator is not specified, then we use the active one.
-    /// \param [out] posturevalues    robot posture values at the current dof values
-    /// \param [in]  pmanip           pointer to manipulator; if null, then use the active manipulator
-    /// \param [in]  dofvalues        dof values set along the kinematics chain prescribed by the manipulator
-    /// \return vector of integer value which describe posture of this robot.
+    /// \brief Computes posture states to describe the posture of a kinematics chain (prescribed by the manipulator) at the current or specified dof values.
+    /// Computes posture state integers for describing the posture of links between the manipulator's baselink and its eelink.
+    /// If the manipulator is not specified, then we use the active manipulator.
+    /// \param [out] posturevalues     a vector of robot posture state (unsigned) integers at the current of specified dof values
+    /// \param [in]  kinematicsChain   a kinematics chain prescribed by a baselink-eelink pair
+    /// \param [in]  dofvalues         dof values set along the kinematics chain from base link to end-effector link; its size should be either 0 (i.e., using the current dof values) or the same size of the dofs of the kinematics chain
+    /// \return true if the registered posture describer successfully computes a vector of posture state values for describing the posture of the kinematics chain.
     virtual bool ComputePostureStates(std::vector<uint16_t>& posturevalues,
                                       ManipulatorConstPtr pmanip = ManipulatorConstPtr(),
                                       const std::vector<double>& dofvalues = {}) const;
@@ -1221,7 +1223,7 @@ protected:
     dReal _fQuatLimitMaxAngle, _fQuatMaxAngleVelocity, _fQuatAngleResolution, _fQuatAngleWeight;
 
     ConfigurationSpecification _activespec;
-    std::map<std::array<LinkPtr, 2>, PostureDescriberBasePtr> _mPostureDescribers;
+    std::map<LinkPair, PostureDescriberBasePtr> _mPostureDescribers;
 
 private:
     virtual const char* GetHash() const {
