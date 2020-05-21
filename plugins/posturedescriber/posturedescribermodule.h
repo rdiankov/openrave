@@ -1,7 +1,7 @@
 #ifndef PLUGINS_FKCOMPUTERS_POSTUREDESCRIBERMODULE_H
 #define PLUGINS_FKCOMPUTERS_POSTUREDESCRIBERMODULE_H
 
-#include "posturedescriber.h"
+#include "posturedescriberinterface.h"
 
 namespace OpenRAVE {
 

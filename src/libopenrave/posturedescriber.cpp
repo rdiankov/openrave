@@ -117,5 +117,12 @@ std::string ComputeKinematicsChainHash(const LinkPair& kinematicsChain, std::vec
     return chainhash;
 }
 
+LinkPair GetKinematicsChain(const RobotBase::ManipulatorPtr& pmanip) {
+    return {pmanip->GetBase(), pmanip->GetEndEffector()};
+}
+
+LinkPair GetKinematicsChain(const RobotBase::ManipulatorConstPtr& pmanip) {
+    return {pmanip->GetBase(), pmanip->GetEndEffector()};
+}
 
 } // namespace OpenRAVE

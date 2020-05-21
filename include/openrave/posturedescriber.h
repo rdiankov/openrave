@@ -19,8 +19,8 @@
 
     Automatically included with \ref openrave.h
  */
-#ifndef OPENRAVE_POSTUREDESCRIBERBASE_H
-#define OPENRAVE_POSTUREDESCRIBERBASE_H
+#ifndef OPENRAVE_POSTUREDESCRIBER_H
+#define OPENRAVE_POSTUREDESCRIBER_H
 
 #include <openrave/openrave.h>
 
@@ -67,6 +67,9 @@ private:
 
 using PostureDescriberBasePtr = boost::shared_ptr<PostureDescriberBase>;
 
+OPENRAVE_API LinkPair GetKinematicsChain(const RobotBase::ManipulatorPtr& pmanip);
+OPENRAVE_API LinkPair GetKinematicsChain(const RobotBase::ManipulatorConstPtr& pmanip);
+
 // refer to libopenrave.h and
 // void RobotBase::Manipulator::serialize(std::ostream& o, int options, IkParameterizationType iktype) const
 OPENRAVE_API std::string ComputeKinematicsChainHash(const LinkPair& kinematicsChain, std::vector<int>& armindices);
@@ -74,4 +77,4 @@ OPENRAVE_API std::string ComputeKinematicsChainHash(const RobotBase::Manipulator
 
 } // end namespace OpenRAVE
 
-#endif // OPENRAVE_POSTUREDESCRIBERBASE_H
+#endif // OPENRAVE_POSTUREDESCRIBER_H

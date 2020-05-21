@@ -2286,11 +2286,11 @@ void init_openravepy_robot()
                        .def("CreateRobotStateSaver",&PyRobotBase::CreateRobotStateSaver, CreateRobotStateSaver_overloads(PY_ARGS("options") "Creates an object that can be entered using 'with' and returns a RobotStateSaver")[return_value_policy<manage_new_object>()])
 #endif
                        // posture describer
-                       .def("GeneratePostureDescriber", &PyRobotBase::GeneratePostureDescriber, PY_ARGS("manip") DOXY_FN(RobotBase, GeneratePostureDescriber))
-                       .def("SetPostureDescriber", &PyRobotBase::SetPostureDescriber, PY_ARGS("manip", "describer") DOXY_FN(RobotBase, SetPostureDescriber))
-                       .def("GetPostureDescriber", &PyRobotBase::GetPostureDescriber, PY_ARGS("manip") DOXY_FN(RobotBase, GetPostureDescriber))
-                       .def("ComputePostureStates", PyRobotBaseComputePostureStates,                                     DOXY_FN(RobotBase::Manipulator, GetPostureDescriber))
-                       .def("ComputePostureStates", PyRobotBaseComputePostureStatesWithJointValues, PY_ARGS("dofvalues") DOXY_FN(RobotBase::Manipulator, GetPostureDescriber))
+                       .def("GeneratePostureDescriber", &PyRobotBase::GeneratePostureDescriber        , PY_ARGS("manip")              DOXY_FN(RobotBase             , GeneratePostureDescriber))
+                       .def("SetPostureDescriber",      &PyRobotBase::SetPostureDescriber             , PY_ARGS("manip", "describer") DOXY_FN(RobotBase             , SetPostureDescriber))
+                       .def("GetPostureDescriber",      &PyRobotBase::GetPostureDescriber             , PY_ARGS("manip")              DOXY_FN(RobotBase             , GetPostureDescriber))
+                       .def("ComputePostureStates",     PyRobotBaseComputePostureStates               ,                               DOXY_FN(RobotBase::Manipulator, GetPostureDescriber))
+                       .def("ComputePostureStates",     PyRobotBaseComputePostureStatesWithJointValues, PY_ARGS("dofvalues")          DOXY_FN(RobotBase::Manipulator, GetPostureDescriber))
 
                        .def("__repr__", &PyRobotBase::__repr__)
                        .def("__str__", &PyRobotBase::__str__)
@@ -2334,12 +2334,14 @@ void init_openravepy_robot()
         .def("SetIKSolver",&PyRobotBase::PyManipulator::SetIkSolver, DOXY_FN(RobotBase::Manipulator,SetIkSolver))
         .def("GetNumFreeParameters",&PyRobotBase::PyManipulator::GetNumFreeParameters, DOXY_FN(RobotBase::Manipulator,GetNumFreeParameters))
         .def("GetFreeParameters",&PyRobotBase::PyManipulator::GetFreeParameters, DOXY_FN(RobotBase::Manipulator,GetFreeParameters))
+
         // posture describer
-        .def("GeneratePostureDescriber", &PyRobotBase::PyManipulator::GeneratePostureDescriber, DOXY_FN(RobotBase::Manipulator, GeneratePostureDescriber))
-        .def("SetPostureDescriber", &PyRobotBase::PyManipulator::SetPostureDescriber, PY_ARGS("describer") DOXY_FN(RobotBase::Manipulator, SetPostureDescriber))
-        .def("GetPostureDescriber", &PyRobotBase::PyManipulator::GetPostureDescriber, DOXY_FN(RobotBase::Manipulator, GetPostureDescriber))
-        .def("ComputePostureStates", PyManipulatorComputePostureStates,                                     DOXY_FN(RobotBase::Manipulator, GetPostureDescriber))
-        .def("ComputePostureStates", PyManipulatorComputePostureStatesWithJointValues, PY_ARGS("dofvalues") DOXY_FN(RobotBase::Manipulator, GetPostureDescriber))
+        .def("GeneratePostureDescriber", &PyRobotBase::PyManipulator::GeneratePostureDescriber,                                     DOXY_FN(RobotBase::Manipulator, GeneratePostureDescriber))
+        .def("SetPostureDescriber",      &PyRobotBase::PyManipulator::SetPostureDescriber     , PY_ARGS("describer")                DOXY_FN(RobotBase::Manipulator, SetPostureDescriber))
+        .def("GetPostureDescriber",      &PyRobotBase::PyManipulator::GetPostureDescriber     ,                                     DOXY_FN(RobotBase::Manipulator, GetPostureDescriber))
+        .def("ComputePostureStates",     PyManipulatorComputePostureStates                    ,                                     DOXY_FN(RobotBase::Manipulator, GetPostureDescriber))
+        .def("ComputePostureStates",     PyManipulatorComputePostureStatesWithJointValues     , PY_ARGS("dofvalues")                DOXY_FN(RobotBase::Manipulator, GetPostureDescriber))
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("FindIKSolution", pmanipik,
              "param"_a,

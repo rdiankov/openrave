@@ -1,5 +1,5 @@
-#ifndef PLUGINS_POSTUREDESCRIBER_POSTUREDESCRIBER_H
-#define PLUGINS_POSTUREDESCRIBER_POSTUREDESCRIBER_H
+#ifndef PLUGINS_POSTUREDESCRIBER_POSTUREDESCRIBERINTERFACE_H
+#define PLUGINS_POSTUREDESCRIBER_POSTUREDESCRIBERINTERFACE_H
 
 #include <openrave/posturedescriber.h> // PostureDescriberBasePtr
 #include "posturesupporttype.h" // NeighbouringTwoJointsRelation, RobotPostureSupportType
@@ -86,4 +86,4 @@ inline void compute_robot_posture_states(const std::array<double, N>& postureval
 }
 } // namespace OpenRAVE
 
-#endif // PLUGINS_POSTUREDESCRIBER_POSTUREDESCRIBER_H
+#endif // PLUGINS_POSTUREDESCRIBER_POSTUREDESCRIBERINTERFACE_H

@@ -16,7 +16,7 @@
 
 #include <openrave/plugin.h> // OPENRAVE_PLUGIN_API
 #include <openrave/posturedescriber.h> // PostureDescriberBasePtr
-#include "posturedescriber.h" // PostureDescriber
+#include "posturedescriberinterface.h" // PostureDescriber
 #include "plugindefs.h" //  POSTUREDESCRIBER_MODULE_NAME, POSTUREDESCRIBER_CLASS_NAME
 #include "posturedescribermodule.h"
 
@@ -94,7 +94,7 @@ bool PostureDescriberModule::_LoadPostureDescriberCommand(std::ostream& ssout, s
         return false;
     }
 
-    const std::array<LinkPtr, 2> kinematicsChain {baselink, eelink};
+    const LinkPair kinematicsChain {baselink, eelink};
     if(!probotposture->Init(kinematicsChain)) {
         RAVELOG_WARN_FORMAT("env=%d, cannot initialize robot posture describer for robot %s from links %s to %s (manipname=\"%s\")", envId % robotname % baselinkname % eelinkname % manipname);
     }
