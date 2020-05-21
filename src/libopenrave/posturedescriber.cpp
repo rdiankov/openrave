@@ -46,6 +46,8 @@ std::string ComputeKinematicsChainHash(const RobotBase::ManipulatorPtr& pmanip, 
     return s;
 }
 
+// refer to libopenrave.h and
+// void RobotBase::Manipulator::serialize(std::ostream& o, int options, IkParameterizationType iktype) const
 std::string ComputeKinematicsChainHash(const LinkPair& kinematicsChain, std::vector<int>& armindices)
 {
     std::ostringstream ss;
@@ -62,17 +64,15 @@ std::string ComputeKinematicsChainHash(const LinkPair& kinematicsChain, std::vec
     probot->GetChain(baselinkind, eelinkind, joints);
 
     armindices.clear();
-    for(auto joint : joints) {
+    for(const RobotBase::JointPtr& joint : joints) {
         const int dofindex = joint->GetDOFIndex();
-        if(joint->IsStatic() || dofindex==-1) {
-        }
-        else {
+        if(!(joint->IsStatic() || dofindex==-1)) {
             armindices.push_back(dofindex);
         }
     }
     const std::set<int> indexset(begin(armindices), end(armindices));
 
-    // due to back compat issues, have to compute the end effector transform first
+    // due to backward compatibility issues, we have to compute the end effector transform first
     for(const RobotBase::JointPtr& joint : joints) {
         tcur = tcur * joint->GetInternalHierarchyLeftTransform() * joint->GetInternalHierarchyRightTransform();
     }
