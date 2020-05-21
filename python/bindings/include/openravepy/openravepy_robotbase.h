@@ -53,7 +53,7 @@ public:
         void SetName(const std::string& s);
 
         object GetGripperName() const;
-        
+
         PyRobotBasePtr GetRobot() const;
 
         bool SetIkSolver(PyIkSolverBasePtr iksolver);
@@ -433,7 +433,7 @@ public:
     /// \brief Generates a posture describer for this manipulator
     /// \return the describer if we have successfully generated one at the manipulator; None (nullptr) otherwise
     PyPostureDescriberPtr GeneratePostureDescriber(PyManipulatorPtr pymanip) const;
-    
+
     /// \brief Sets the posture describer for this manipulator
     /// \return true if the describer is successfully set
     bool SetPostureDescriber(PyManipulatorPtr pymanip, PyPostureDescriberPtr pydescriber) const;

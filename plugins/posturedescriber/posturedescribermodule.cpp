@@ -111,7 +111,7 @@ bool PostureDescriberModule::_LoadPostureDescriberCommand(std::ostream& ssout, s
 } // namespace OpenRAVE
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& ssin, EnvironmentBasePtr penv)
-{    
+{
     switch(type) {
     case PT_PostureDescriber: {
         if( interfacename == POSTUREDESCRIBER_CLASS_NAME ) {

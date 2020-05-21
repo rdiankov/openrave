@@ -59,9 +59,12 @@ PyPostureDescriber::PyPostureDescriber(PostureDescriberBasePtr pDescriber, PyEnv
     _pDescriber(pDescriber) {
 }
 
-PyPostureDescriber::~PyPostureDescriber() {}
+PyPostureDescriber::~PyPostureDescriber() {
+}
 
-PostureDescriberBasePtr PyPostureDescriber::GetPostureDescriber() const { return _pDescriber; }
+PostureDescriberBasePtr PyPostureDescriber::GetPostureDescriber() const {
+    return _pDescriber;
+}
 
 bool PyPostureDescriber::Supports(PyLinkPtr pBaseLink, PyLinkPtr pEndEffectorLink) const {
     const LinkPair kinematicsChain {pBaseLink->GetLink(), pEndEffectorLink->GetLink()};
@@ -134,11 +137,11 @@ void init_openravepy_posturedescriber()
 #endif
     // We may not want the user to call with these interfaces.
     /*
-    .def("Supports",             SupportsWithTwoLinks,                PY_ARGS("baselink", "eelink") DOXY_FN(PostureDescriberBase, Supports "const std::array<RobotBase::LinkPtr, 2>& kinematicsChain"))
-    .def("Supports",             SupportsWithManip,                   PY_ARGS("manipulator")        DOXY_FN(PostureDescriberBase, Supports "const RobotBase::ManipulatorPtr& pmanip"))
-    .def("Init",                 InitWithTwoLinks,                    PY_ARGS("baselink", "eelink") DOXY_FN(PostureDescriberBase, Init "const std::array<RobotBase::LinkPtr, 2>& kinematicsChain"))
-    .def("Init",                 InitWithManip,                       PY_ARGS("manipulator")        DOXY_FN(PostureDescriberBase, Init "const RobotBase::ManipulatorPtr& pmanip"))
-    */
+       .def("Supports",             SupportsWithTwoLinks,                PY_ARGS("baselink", "eelink") DOXY_FN(PostureDescriberBase, Supports "const std::array<RobotBase::LinkPtr, 2>& kinematicsChain"))
+       .def("Supports",             SupportsWithManip,                   PY_ARGS("manipulator")        DOXY_FN(PostureDescriberBase, Supports "const RobotBase::ManipulatorPtr& pmanip"))
+       .def("Init",                 InitWithTwoLinks,                    PY_ARGS("baselink", "eelink") DOXY_FN(PostureDescriberBase, Init "const std::array<RobotBase::LinkPtr, 2>& kinematicsChain"))
+       .def("Init",                 InitWithManip,                       PY_ARGS("manipulator")        DOXY_FN(PostureDescriberBase, Init "const RobotBase::ManipulatorPtr& pmanip"))
+     */
     .def("ComputePostureStates", ComputePostureStates,                                              DOXY_FN(PostureDescriberBase, ComputePostureStates ""))
     .def("ComputePostureStates", ComputePostureStatesWithJointValues, PY_ARGS("jointvalues")        DOXY_FN(PostureDescriberBase, ComputePostureStates "const std::vector<double>& jointvalues"))
     ;

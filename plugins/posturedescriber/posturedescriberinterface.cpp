@@ -24,7 +24,7 @@ using JointPtr = OpenRAVE::KinBody::JointPtr;
 PostureDescriber::PostureDescriber(EnvironmentBasePtr penv,
                                    const double fTol) :
     PostureDescriberBase(penv),
-    _fTol(fTol) 
+    _fTol(fTol)
 {
     // `SendCommand` APIs
     this->RegisterCommand("SetPostureValueThreshold",
@@ -40,7 +40,8 @@ PostureDescriber::PostureDescriber(EnvironmentBasePtr penv,
                           "Gets the shared object library name for computing the robot posture values and states");
 }
 
-PostureDescriber::~PostureDescriber() {}
+PostureDescriber::~PostureDescriber() {
+}
 
 bool EnsureAllJointsPurelyRevolute(const std::vector<JointPtr>& joints) {
     std::stringstream ss;
@@ -99,12 +100,12 @@ RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr
         const Transform tJ4J5 = joints[3]->GetInternalHierarchyRightTransform() * joints[4]->GetInternalHierarchyLeftTransform();
         const Transform tJ5J6 = joints[4]->GetInternalHierarchyRightTransform() * joints[5]->GetInternalHierarchyLeftTransform();
         if(
-               ((AnalyzeTransformBetweenNeighbouringJoints(tJ1J2) & NeighbouringTwoJointsRelation::NTJR_Perpendicular) != NeighbouringTwoJointsRelation::NTJR_Unknown)
+            ((AnalyzeTransformBetweenNeighbouringJoints(tJ1J2) & NeighbouringTwoJointsRelation::NTJR_Perpendicular) != NeighbouringTwoJointsRelation::NTJR_Unknown)
             && ((AnalyzeTransformBetweenNeighbouringJoints(tJ2J3) & NeighbouringTwoJointsRelation::NTJR_Parallel)      != NeighbouringTwoJointsRelation::NTJR_Unknown)
             && ((AnalyzeTransformBetweenNeighbouringJoints(tJ3J4) & NeighbouringTwoJointsRelation::NTJR_Perpendicular) != NeighbouringTwoJointsRelation::NTJR_Unknown)
             && ((AnalyzeTransformBetweenNeighbouringJoints(tJ4J5) & NeighbouringTwoJointsRelation::NTJR_Perpendicular) != NeighbouringTwoJointsRelation::NTJR_Unknown)
             && ((AnalyzeTransformBetweenNeighbouringJoints(tJ5J6) & NeighbouringTwoJointsRelation::NTJR_Perpendicular) != NeighbouringTwoJointsRelation::NTJR_Unknown)
-        ) {
+            ) {
             return RobotPostureSupportType::RPST_6R_General;
         }
         else {
@@ -120,10 +121,10 @@ RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr
         const Transform tJ2J3 = joints[1]->GetInternalHierarchyRightTransform() * joints[2]->GetInternalHierarchyLeftTransform();
         const Transform tJ3J4 = joints[2]->GetInternalHierarchyRightTransform() * joints[3]->GetInternalHierarchyLeftTransform();
         if(
-               AnalyzeTransformBetweenNeighbouringJoints(tJ1J2) == NeighbouringTwoJointsRelation::NTJR_Intersect_Perpendicular
+            AnalyzeTransformBetweenNeighbouringJoints(tJ1J2) == NeighbouringTwoJointsRelation::NTJR_Intersect_Perpendicular
             && AnalyzeTransformBetweenNeighbouringJoints(tJ2J3) == NeighbouringTwoJointsRelation::NTJR_Parallel
             && AnalyzeTransformBetweenNeighbouringJoints(tJ3J4) == NeighbouringTwoJointsRelation::NTJR_Parallel
-        ) {
+            ) {
             return RobotPostureSupportType::RPST_4R_Type_A;
         }
         else {
@@ -135,22 +136,22 @@ RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr
 
 Vector GetVectorFromInfo(const std::vector<JointPtr>& joints, const std::array<int, 2>& vecinfo) {
     // std::cout << "GetVectorFromInfo: " << vecinfo[0] << ", " << vecinfo[1] << std::endl;
-    return (vecinfo[1]==-1) ? 
-    /* joint axis   */ joints[vecinfo[0]]->GetAxis() :
-    /* joint anchor */ (joints[vecinfo[1]]->GetAnchor()-joints[vecinfo[0]]->GetAnchor());
+    return (vecinfo[1]==-1) ?
+           /* joint axis   */ joints[vecinfo[0]]->GetAxis() :
+           /* joint anchor */ (joints[vecinfo[1]]->GetAnchor()-joints[vecinfo[0]]->GetAnchor());
 }
 
 template <size_t N>
 PostureValueFn PostureValuesFunctionGenerator(const std::array<PostureFormulation, N>& postureforms) {
-    return [=](const std::vector<JointPtr>& joints, const double fTol, std::vector<uint16_t>& posturestates) {
-        std::array<double, N> posturevalues;
-        for(size_t i = 0; i < N; ++i) {
-            const PostureFormulation& postureform = postureforms[i];
-            posturevalues[i] = GetVectorFromInfo(joints, postureform[0]).
-                         cross(GetVectorFromInfo(joints, postureform[1])).
-                           dot(GetVectorFromInfo(joints, postureform[2]));
-        }
-        compute_robot_posture_states<N>(posturevalues, fTol, posturestates);
+    return [=](const std::vector<JointPtr>&joints, const double fTol, std::vector<uint16_t>&posturestates) {
+               std::array<double, N> posturevalues;
+               for(size_t i = 0; i < N; ++i) {
+                   const PostureFormulation& postureform = postureforms[i];
+                   posturevalues[i] = GetVectorFromInfo(joints, postureform[0]).
+                                      cross(GetVectorFromInfo(joints, postureform[1])).
+                                      dot(GetVectorFromInfo(joints, postureform[2]));
+               }
+               compute_robot_posture_states<N>(posturevalues, fTol, posturestates);
     };
 }
 
@@ -167,65 +168,65 @@ bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
 
     const RobotPostureSupportType supporttype = DeriveRobotPostureSupportType(_joints);
     switch(supporttype) {
-        case RobotPostureSupportType::RPST_6R_General: {
-            const PostureFormulation
+    case RobotPostureSupportType::RPST_6R_General: {
+        const PostureFormulation
             shoulderform {{
-                {0, -1},
-                {1, -1},
-                {0, 4},
-            }},
-            elbowform {{
-                {1, -1},
-                {1, 2},
-                {2, 4}
-            }},
-            wristform {{
-                {3, -1},
-                {4, -1},
-                {5, -1}
-            }}
-            ;
-            const std::array<PostureFormulation, 3> postureforms = {
-                shoulderform,
-                elbowform,
-                wristform
-            };
-            _posturefn = PostureValuesFunctionGenerator<3>(postureforms);
-            break;
-        }
-        case RobotPostureSupportType::RPST_4R_Type_A: {
-            const PostureFormulation
+                              {0, -1},
+                              {1, -1},
+                              {0, 4},
+                          }},
+        elbowform {{
+                       {1, -1},
+                       {1, 2},
+                       {2, 4}
+                   }},
+        wristform {{
+                       {3, -1},
+                       {4, -1},
+                       {5, -1}
+                   }}
+        ;
+        const std::array<PostureFormulation, 3> postureforms = {
+            shoulderform,
+            elbowform,
+            wristform
+        };
+        _posturefn = PostureValuesFunctionGenerator<3>(postureforms);
+        break;
+    }
+    case RobotPostureSupportType::RPST_4R_Type_A: {
+        const PostureFormulation
             j1form {{
-              {0, -1},
-              {1, -1},
-              {1, 3},
-            }},
-            elbowform {{
-              {1, -1},
-              {1, 2},
-              {2, 3}
-            }};
-            const std::array<PostureFormulation, 2> postureforms = {
-                j1form,
-                elbowform
-            };
-            _posturefn = PostureValuesFunctionGenerator<2>(postureforms);
-            break;
-        }
-        default: {
-            return false;
-        }
+                        {0, -1},
+                        {1, -1},
+                        {1, 3},
+                    }},
+        elbowform {{
+                       {1, -1},
+                       {1, 2},
+                       {2, 3}
+                   }};
+        const std::array<PostureFormulation, 2> postureforms = {
+            j1form,
+            elbowform
+        };
+        _posturefn = PostureValuesFunctionGenerator<2>(postureforms);
+        break;
+    }
+    default: {
+        return false;
+    }
     }
     return static_cast<bool>(_posturefn);
 }
 
-void PostureDescriber::_GetJointsFromKinematicsChain(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain,
-                                                          std::vector<JointPtr>& joints) const {
+void PostureDescriber::_GetJointsFromKinematicsChain(const LinkPair& kinematicsChain,
+                                                     std::vector<JointPtr>& joints) const {
     const int baselinkind = kinematicsChain[0]->GetIndex();
     const int eelinkind = kinematicsChain[1]->GetIndex();
     const KinBodyPtr probot = kinematicsChain[0]->GetParent();
     probot->GetChain(baselinkind, eelinkind, joints);
-    for(std::vector<JointPtr>::iterator it = begin(joints); it != end(joints);) {
+    for(std::vector<JointPtr>::iterator it = begin(joints); it != end(joints); ) {
         if((*it)->IsStatic() || (*it)->GetDOFIndex()==-1) {
             it = joints.erase(it);
         }
@@ -235,7 +236,7 @@ void PostureDescriber::_GetJointsFromKinematicsChain(const std::array<RobotBase:
     }
 }
 
-bool PostureDescriber::Supports(const std::array<RobotBase::LinkPtr, 2>& kinematicsChain) const {
+bool PostureDescriber::Supports(const LinkPair& kinematicsChain) const {
     if( kinematicsChain[0] == nullptr || kinematicsChain[1] == nullptr ) {
         RAVELOG_WARN("kinematics chain is not valid as having nullptr");
         return false;

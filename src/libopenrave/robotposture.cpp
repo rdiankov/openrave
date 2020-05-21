@@ -40,7 +40,7 @@ bool RobotBase::SetPostureDescriber(const LinkPair& kinematicsChain, PostureDesc
         }
         return true;
     }
-        
+
     if (pDescriber->Supports(kinematicsChain)) {
         _mPostureDescribers[kinematicsChain] = pDescriber;
         return true;
@@ -75,7 +75,7 @@ bool RobotBase::ComputePostureStates(std::vector<uint16_t>& posturestates, const
     if(_mPostureDescribers.count(kinematicsChain)) {
         return _mPostureDescribers.at(kinematicsChain)->ComputePostureStates(posturestates, jointvalues);
     }
-    
+
     throw OPENRAVE_EXCEPTION_FORMAT(_("failed to find robot posture describer for links from \"%s\" to \"%s\" for robot \"%s\""),
                                     GetName() % kinematicsChain[0]->GetName() % kinematicsChain[1]->GetName(), ORE_InvalidArguments);
     return false;

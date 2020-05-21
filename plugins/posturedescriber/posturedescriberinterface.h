@@ -45,7 +45,9 @@ public:
     /// \brief Set the tolerance for determining whether a robot posture value is close to 0 (i.e. singularity, branch point)
     bool SetPostureValueThreshold(const double fTol);
 
-    const std::vector<KinBody::JointPtr>& GetJoints() const { return _joints; }
+    const std::vector<KinBody::JointPtr>& GetJoints() const {
+        return _joints;
+    }
 
 protected:
     /// \brief Gets joints along a kinematics chain from baselink to eelink
