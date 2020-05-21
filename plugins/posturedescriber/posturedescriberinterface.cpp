@@ -17,6 +17,8 @@
 #include "posturedescriberinterface.h" // PostureDescriber
 #include "openraveplugindefs.h" // SerializeValues
 
+// #define POSTUREDESCRIBER_DEBUG
+
 namespace OpenRAVE {
 
 using JointPtr = OpenRAVE::KinBody::JointPtr;
@@ -43,7 +45,9 @@ PostureDescriber::PostureDescriber(EnvironmentBasePtr penv,
 PostureDescriber::~PostureDescriber() {
 }
 
-bool EnsureAllJointsPurelyRevolute(const std::vector<JointPtr>& joints) {
+/// \brief Checks whether all joints are purely revolute (not prismatic nor circular).
+/// \return true if all joints are purely revolute
+bool CheckAllJointsPurelyRevolute(const std::vector<JointPtr>& joints) {
     std::stringstream ss;
     for(size_t i = 0; i < joints.size(); ++i) {
         const JointPtr& joint = joints[i];
@@ -58,8 +62,10 @@ bool EnsureAllJointsPurelyRevolute(const std::vector<JointPtr>& joints) {
     return true;
 }
 
-NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Transform& t) {
-    const double tol = 2e-15; // increase for densowave-VS087A4-AV6
+/// \brief Derives the relation between joint axes of two consecutive joints using the transform between them
+/// \return a NeighbouringTwoJointsRelation enum for the joint axes' relation
+NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Transform& t, const double tol = 2e-15) {
+    // tol was increased for densowave-VS087A4-AV6
     const Vector zaxis0(0, 0, 1); // z-axis of the first joint
     const Vector zaxis1 = t.rotate(zaxis0); // z-axis of the second joint
     const double dotprod = zaxis1.dot3(zaxis0);
@@ -81,16 +87,20 @@ NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Tr
         }
     }
 
-    // std::stringstream ss;
-    // ss << std::setprecision(16);
-    // ss << "o = " << static_cast<int>(o) << ", t = " << t << ", dotprod = " << dotprod;
-    // RAVELOG_WARN_FORMAT("%s", ss.str());
+#if defined(POSTUREDESCRIBER_DEBUG)
+    std::stringstream ss;
+    ss << std::setprecision(16);
+    ss << "o = " << static_cast<int>(o) << ", t = " << t << ", dotprod = " << dotprod;
+    RAVELOG_WARN_FORMAT("%s", ss.str());
+#endif // defined(POSTUREDESCRIBER_DEBUG)
     return o;
 }
 
+/// \brief Derives the robot posture support type for a sequence of joints along a kinematics chain
+/// \return a RobotPostureSupportType enum for the kinematics chain
 RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr> joints) {
     if(joints.size() == 6) {
-        if(!EnsureAllJointsPurelyRevolute(joints)) {
+        if(!CheckAllJointsPurelyRevolute(joints)) {
             RAVELOG_WARN("Not all joints are purely revolute");
             return RobotPostureSupportType::RPST_NoSupport;
         }
@@ -106,14 +116,14 @@ RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr
             && ((AnalyzeTransformBetweenNeighbouringJoints(tJ4J5) & NeighbouringTwoJointsRelation::NTJR_Perpendicular) != NeighbouringTwoJointsRelation::NTJR_Unknown)
             && ((AnalyzeTransformBetweenNeighbouringJoints(tJ5J6) & NeighbouringTwoJointsRelation::NTJR_Perpendicular) != NeighbouringTwoJointsRelation::NTJR_Unknown)
             ) {
-            return RobotPostureSupportType::RPST_6R_General;
+            return RobotPostureSupportType::RPST_6R_General; ///< general 6R robots with the last joint axes intersecting at a point
         }
         else {
-            return RobotPostureSupportType::RPST_NoSupport;
+            return RobotPostureSupportType::RPST_NoSupport; ///< unsupported
         }
     }
     else if(joints.size() == 4) {
-        if(!EnsureAllJointsPurelyRevolute(joints)) {
+        if(!CheckAllJointsPurelyRevolute(joints)) {
             RAVELOG_WARN("Not all joints are purely revolute");
             return RobotPostureSupportType::RPST_NoSupport;
         }
@@ -125,15 +135,17 @@ RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr
             && AnalyzeTransformBetweenNeighbouringJoints(tJ2J3) == NeighbouringTwoJointsRelation::NTJR_Parallel
             && AnalyzeTransformBetweenNeighbouringJoints(tJ3J4) == NeighbouringTwoJointsRelation::NTJR_Parallel
             ) {
-            return RobotPostureSupportType::RPST_4R_Type_A;
+            return RobotPostureSupportType::RPST_4R_Type_A; ///< a special type of 4R robot the last three parallel joint axes perpendicular to the first joint axis
         }
         else {
-            return RobotPostureSupportType::RPST_NoSupport;
+            return RobotPostureSupportType::RPST_NoSupport; ///< unsupported
         }
     }
     return RobotPostureSupportType::RPST_NoSupport;
 }
 
+/// \brief Obtains either a joint axis or a translate between two joint anchors.
+/// \return a joint axis, if vecinfo[1]==-1; otherwise a translate between two joint anchors.
 Vector GetVectorFromInfo(const std::vector<JointPtr>& joints, const std::array<int, 2>& vecinfo) {
     // std::cout << "GetVectorFromInfo: " << vecinfo[0] << ", " << vecinfo[1] << std::endl;
     return (vecinfo[1]==-1) ?
@@ -141,9 +153,12 @@ Vector GetVectorFromInfo(const std::vector<JointPtr>& joints, const std::array<i
            /* joint anchor */ (joints[vecinfo[1]]->GetAnchor()-joints[vecinfo[0]]->GetAnchor());
 }
 
+/// \brief Generates a posture value function from a N-vector (array) of posture formulations.
+/// Each posture value is a triple product in form (a x b) ∙ c, where each vector is either a joint axis or a translate between two joint anchors.
+/// \return a posture value function, PostureValueFn=std::function<...> converted from a lambda expression.
 template <size_t N>
 PostureValueFn PostureValuesFunctionGenerator(const std::array<PostureFormulation, N>& postureforms) {
-    return [=](const std::vector<JointPtr>&joints, const double fTol, std::vector<uint16_t>&posturestates) {
+    return [= /* pass postureforms *by value* */](const std::vector<JointPtr>&joints, const double fTol, std::vector<uint16_t>&posturestates) {
                std::array<double, N> posturevalues;
                for(size_t i = 0; i < N; ++i) {
                    const PostureFormulation& postureform = postureforms[i];

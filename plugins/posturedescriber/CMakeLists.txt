@@ -1,6 +1,15 @@
 ###################################
 # posture describer openrave plugin
 ###################################
+
+set(POSTUREDESCRIBER_CLASS_NAME "posturedescriber")
+set(POSTUREDESCRIBER_MODULE_NAME "posturedescriber")
+
+configure_file(plugindefs.h.in
+			   "${CMAKE_CURRENT_SOURCE_DIR}/plugindefs.h"
+			   @ONLY
+)
+
 if( Boost_IOSTREAMS_FOUND )
   set(PLUGIN_COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} -DBoost_IOSTREAMS_FOUND")
 endif()

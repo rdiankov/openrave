@@ -20,28 +20,10 @@
 #include "plugindefs.h" //  POSTUREDESCRIBER_MODULE_NAME, POSTUREDESCRIBER_CLASS_NAME
 #include "posturedescribermodule.h" // PostureDescriberModule
 
-// #include <boost/lexical_cast.hpp>
-
-using OpenRAVE::PLUGININFO;
-using OpenRAVE::PT_Module;
-using OpenRAVE::PT_PostureDescriber;
-using OpenRAVE::InterfaceType;
-using OpenRAVE::InterfaceBasePtr;
-using OpenRAVE::ModuleBasePtr;
-using OpenRAVE::EnvironmentBasePtr;
-using OpenRAVE::RobotBasePtr;
-using ManipulatorPtr = OpenRAVE::RobotBase::ManipulatorPtr;
-using LinkPtr = OpenRAVE::RobotBase::LinkPtr;
-
-using OpenRAVE::OpenRAVEErrorCode;
-using OpenRAVE::OpenRAVEErrorCode::ORE_InvalidArguments;  // 0x01
-
-// forward kinematics
-using OpenRAVE::PostureDescriberBasePtr;
-using OpenRAVE::PostureDescriber;
-using OpenRAVE::PostureDescriberModule;
-
 namespace OpenRAVE {
+
+using ManipulatorPtr = RobotBase::ManipulatorPtr;
+using LinkPtr = RobotBase::LinkPtr;
 
 PostureDescriberModule::PostureDescriberModule(const EnvironmentBasePtr& penv) : ModuleBase(penv)
 {
@@ -88,7 +70,7 @@ bool PostureDescriberModule::_LoadPostureDescriberCommand(std::ostream& ssout, s
         return false;
     }
 
-    const PostureDescriberBasePtr probotposture = RaveCreatePostureDescriber(penv, POSTUREDESCRIBER_CLASS_NAME);
+    const PostureDescriberBasePtr probotposture = RaveCreatePostureDescriber(penv, this->interfacename);
     if(probotposture == nullptr) {
         RAVELOG_WARN_FORMAT("env=%d, cannot create robot posture describer for robot %s from links %s to %s (manipname=\"%s\")", envId % robotname % baselinkname % eelinkname % manipname);
         return false;
@@ -109,6 +91,19 @@ bool PostureDescriberModule::_LoadPostureDescriberCommand(std::ostream& ssout, s
 }
 
 } // namespace OpenRAVE
+
+using OpenRAVE::PLUGININFO;
+using OpenRAVE::PT_Module;
+using OpenRAVE::PT_PostureDescriber;
+using OpenRAVE::InterfaceType;
+using OpenRAVE::InterfaceBasePtr;
+using OpenRAVE::ModuleBasePtr;
+using OpenRAVE::EnvironmentBasePtr;
+
+// posture describer interfaces
+using OpenRAVE::PostureDescriber;
+using OpenRAVE::PostureDescriberBasePtr;
+using OpenRAVE::PostureDescriberModule;
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& ssin, EnvironmentBasePtr penv)
 {
