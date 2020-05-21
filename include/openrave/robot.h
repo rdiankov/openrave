@@ -1223,7 +1223,7 @@ protected:
     dReal _fQuatLimitMaxAngle, _fQuatMaxAngleVelocity, _fQuatAngleResolution, _fQuatAngleWeight;
 
     ConfigurationSpecification _activespec;
-    std::map<LinkPair, PostureDescriberBasePtr> _mPostureDescribers;
+    std::map<LinkPair, PostureDescriberBasePtr> _mPostureDescribers; ///< maps a baselink-eelink pair to a posture describer that is capable of describing the kinematics chain; several manipulators can be attached to the same end-effector with different local tool transforms & directions, while they share the same baselink-eelink pair and the 6D IK hash, so we only need one describer for all these manipulators.
 
 private:
     virtual const char* GetHash() const {

@@ -32,11 +32,12 @@ enum class NeighbouringTwoJointsRelation : uint16_t {
 };
 
 enum class RobotPostureSupportType : uint16_t {
-    RPST_NoSupport  = 0x0,
-    RPST_6R_General = 0x1,
-    RPST_4R_Type_A  = 0x2,
+    RPST_NoSupport  = 0x0, ///< unsupported
+    RPST_6R_General = 0x1, ///< general 6R robots with the last joint axes intersecting at a point
+    RPST_4R_Type_A  = 0x2, ///< a special type of 4R robot the last three parallel joint axes perpendicular to the first joint axis
 };
 
+/// can do bit operations with enum class
 template <typename T>
 inline constexpr T operator&(T x, T y)
 {
