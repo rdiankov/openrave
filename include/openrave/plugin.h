@@ -52,6 +52,7 @@ OpenRAVE::InterfaceBasePtr CreateInterfaceValidated(OpenRAVE::InterfaceType type
     Only use when \ref rave/plugin.h is included.
     \param[out] info Holds information on what services this plugin provides.
  */
+__attribute__ ((visibility ("hidden"))) 
 void GetPluginAttributesValidated(OpenRAVE::PLUGININFO& info);
 
 /// \brief <b>[export]</b> Definition of a plugin export. Requires \ref CreateInterfaceValidated to be defined.

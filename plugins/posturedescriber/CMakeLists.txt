@@ -28,6 +28,9 @@ else()
 endif()
 
 target_link_libraries(posturedescriber PRIVATE boost_assertion_failed)
-set_target_properties(posturedescriber PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
+set_target_properties(posturedescriber PROPERTIES 
+	COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} -fvisibility=hidden"
+	LINK_FLAGS "${PLUGIN_LINK_FLAGS}"
+)
 
-install(TARGETS posturedescriber DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR})
+install(TARGETS posturedescriber DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${PLUGINS_BASE})

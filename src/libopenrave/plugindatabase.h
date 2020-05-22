@@ -44,6 +44,8 @@
 
 #endif
 
+// #define PLUGINDATABASE_H_DEBUG
+
 #ifndef _RAVE_DISPLAY
 #define _RAVE_DISPLAY(RUNCODE)                                               \
 {                                                                              \
@@ -287,9 +289,11 @@ public:
             if( name.size() == 0 ) {
                 return false;
             }
+#if defined(PLUGINDATABASE_H_DEBUG)
             _RAVE_DISPLAY(
                 std::cout << "_infocached = " << PrintPLUGININFO(_infocached);
             );
+#endif
 
             if(!_infocached.interfacenames.count(type)) {
                 return false;
@@ -581,9 +585,11 @@ protected:
 
     InterfaceBasePtr Create(EnvironmentBasePtr penv, InterfaceType type, const std::string& _name)
     {
+#if defined(PLUGINDATABASE_H_DEBUG)
         if(_name == "fcl_") {
             _RAVE_DISPLAY(std::cout << _name << std::endl;);
         }
+#endif
         std::string name=_name;
         InterfaceBasePtr pointer;
         if( name.size() == 0 ) {
@@ -622,7 +628,9 @@ protected:
             FOREACH(it, listRegisteredInterfaces) {
                 RegisteredInterfacePtr registration = it->lock();
                 if( !!registration ) {
+#if defined(PLUGINDATABASE_H_DEBUG)
                     _RAVE_DISPLAY(std::cout << registration->_name << std::endl;)
+#endif
                     if(( nInterfaceNameLength >= registration->_name.size()) &&( _strnicmp(name.c_str(),registration->_name.c_str(),registration->_name.size()) == 0) ) {
                         std::stringstream sinput(name);
                         std::string interfacename;
@@ -650,7 +658,9 @@ protected:
                 const char* hash = RaveGetInterfaceHash(type);
                 list<PluginPtr>::iterator itplugin = listplugins.begin();
                 while(itplugin != listplugins.end()) {
+#if defined(PLUGINDATABASE_H_DEBUG)
                     _RAVE_DISPLAY(std::cout << (*itplugin)->GetName() << std::endl;)
+#endif
                     pointer = (*itplugin)->CreateInterface(type, name, hash, penv);
                     if( !!pointer ) {
                         if( strcmp(pointer->GetHash(), hash) ) {
@@ -860,7 +870,9 @@ protected:
         FOREACHC(it,_listRegisteredInterfaces) {
             RegisteredInterfacePtr registration = it->lock();
             if( !!registration ) {
+#if defined(PLUGINDATABASE_H_DEBUG)
                 _RAVE_DISPLAY(std::cout << "pushback " << registration->_name;);
+#endif
                 interfacenames[registration->_type].push_back(registration->_name);
             }
         }
@@ -944,7 +956,9 @@ protected:
 
     PluginPtr _LoadPlugin(const string& _libraryname)
     {
+#if defined(PLUGINDATABASE_H_DEBUG)
         _RAVE_DISPLAY(std::cout << "load plugin " << _libraryname;);
+#endif
         string libraryname = _libraryname;
         void* plibrary = _SysLoadLibrary(libraryname,OPENRAVE_LAZY_LOADING);
         if( plibrary == NULL ) {
@@ -1011,14 +1025,18 @@ protected:
 
             if( p->pfnGetPluginAttributesNew != NULL ) {
                 p->pfnGetPluginAttributesNew(&p->_infocached, sizeof(p->_infocached), OPENRAVE_PLUGININFO_HASH);
+#if defined(PLUGINDATABASE_H_DEBUG)
                 _RAVE_DISPLAY(std::cout << "p->_infocached = " << PrintPLUGININFO(p->_infocached););
+#endif
             }
             else {
                 if( !p->pfnGetPluginAttributes(&p->_infocached, sizeof(p->_infocached)) ) {
                     RAVELOG_WARN(str(boost::format("%s: GetPluginAttributes failed\n")%libraryname));
                     return PluginPtr();
                 }
+#if defined(PLUGINDATABASE_H_DEBUG)
                 _RAVE_DISPLAY(std::cout << "p->_infocached = " << PrintPLUGININFO(p->_infocached););
+#endif
             }
         }
         catch(const std::exception& ex) {
@@ -1055,7 +1073,9 @@ protected:
 
     static void* _SysLoadLibrary(const std::string& lib, bool bLazy=false)
     {
+#if defined(PLUGINDATABASE_H_DEBUG)
         _RAVE_DISPLAY(std::cout << "loading library " << lib;);
+#endif
         // check if file exists first
         if( !ifstream(lib.c_str()) ) {
             return NULL;
@@ -1082,7 +1102,9 @@ protected:
 
     static void* _SysLoadSym(void* lib, const std::string& sym)
     {
+#if defined(PLUGINDATABASE_H_DEBUG)
         _RAVE_DISPLAY(std::cout << "loading symbol " << sym;);
+#endif
 #ifdef _WIN32
         return GetProcAddress((HINSTANCE)lib, sym.c_str());
 #else
