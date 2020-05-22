@@ -132,6 +132,7 @@ void GetPluginAttributesValidated(PLUGININFO& info)
 {
     info.interfacenames[PT_Module].push_back(POSTUREDESCRIBER_MODULE_NAME);
     info.interfacenames[PT_PostureDescriber].push_back(POSTUREDESCRIBER_CLASS_NAME);
+    std::cout << "here ";
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()
