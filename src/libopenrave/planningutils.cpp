@@ -2113,7 +2113,7 @@ void DynamicsCollisionConstraint::SetFilterMask(int filtermask)
     _filtermask = filtermask;
 }
 
-void DynamicsCollisionConstraint::SetTorqueLimitMode(DynamicsConstraints torquelimitmode)
+void DynamicsCollisionConstraint::SetTorqueLimitMode(DynamicsConstraintsType torquelimitmode)
 {
     _torquelimitmode = torquelimitmode;
 }
