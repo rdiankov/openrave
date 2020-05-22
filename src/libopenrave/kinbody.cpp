@@ -5263,14 +5263,14 @@ UpdateFromInfoResult KinBody::UpdateFromInfo(const KinBodyInfo& info)
 
     // delete links
     FOREACH(itLink, _veclinks) {
-        bool foundLink = false;
+        bool stillExists = false;
         FOREACHC(itLinkInfo, info._vLinkInfos) {
             if ((*itLink)->_info._id == (*itLinkInfo)->_id) {
-                foundLink = true;
+                stillExists = true;
                 break;
             }
         }
-        if (!foundLink) {
+        if (!stillExists) {
             return UFIR_RequireReinitialize;
         }
     }
@@ -5314,14 +5314,14 @@ UpdateFromInfoResult KinBody::UpdateFromInfo(const KinBodyInfo& info)
 
     // delete joints
     FOREACH(itJoint, _vecjoints) {
-        bool foundJoint = false;
+        bool stillExists = false;
         FOREACHC(itJointInfo, info._vJointInfos) {
             if ((*itJoint)->_info._id == (*itJointInfo)->_id) {
-                foundJoint = true;
+                stillExists = true;
                 break;
             }
         }
-        if (!foundJoint) {
+        if (!stillExists) {
             return UFIR_RequireReinitialize;
         }
     }

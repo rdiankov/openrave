@@ -2356,7 +2356,7 @@ public:
         for(size_t i = 0; i < info._vBodyInfos.size(); ++i) {
             if (_vecbodies[i]->IsRobot()) {
                 info._vBodyInfos[i].reset(new RobotBase::RobotBaseInfo());
-                _vecbodies[i]->ExtractInfo(*info._vBodyInfos[i]);
+                RaveInterfaceCast<RobotBase>(_vecbodies[i])->ExtractInfo(*(OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(info._vBodyInfos[i])));
             } else {
                 info._vBodyInfos[i].reset(new KinBody::KinBodyInfo());
                 _vecbodies[i]->ExtractInfo(*info._vBodyInfos[i]);
@@ -2380,11 +2380,12 @@ public:
 
             KinBody::KinBodyInfoPtr pKinBodyInfo = *itBodyInfo;
             RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
+            KinBodyPtr pBody;
 
             if (itExistingBody != _vecbodies.end()) {
                 // update existing body or robot
                 UpdateFromInfoResult updateFromInfoResult = UFIR_Success;
-                KinBodyPtr pBody = *itExistingBody;
+                pBody = *itExistingBody;
                 if (!!pRobotBaseInfo && pBody->IsRobot()) {
                     RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pBody);
                     updateFromInfoResult = pRobot->UpdateFromInfo(*pRobotBaseInfo);
@@ -2409,9 +2410,9 @@ public:
                     }
                     if (updateFromInfoResult != UFIR_Success) {
                         pRobot->InitFromInfo(*pRobotBaseInfo);
+
                     }
                     _AddRobot(pRobot, true);
-                    continue;
                 }
                 else if (!pRobotBaseInfo && !pBody->IsRobot()) {
                     if (updateFromInfoResult == UFIR_RequireRemoveFromEnvironment) {
@@ -2421,24 +2422,37 @@ public:
                         pBody->InitFromInfo(*pKinBodyInfo);
                     }
                     _AddKinBody(pBody, true);
-                    continue;
                 }
-            }
-
-            // for new body or robot
-            if (!!pRobotBaseInfo) {
-                RobotBasePtr pRobot = RaveCreateRobot(shared_from_this(), "GenericRobot");
-                if( !pRobot ) {
-                    pRobot = RaveCreateRobot(shared_from_this(), "");
-                }
-                pRobot->InitFromInfo(*pRobotBaseInfo);
-                _AddRobot(pRobot, true);
             }
             else {
-                KinBodyPtr pBody = RaveCreateKinBody(shared_from_this(), "");
-                pBody->InitFromInfo(*pKinBodyInfo);
-                _AddKinBody(pBody, true);
+                // for new body or robot
+                if (!!pRobotBaseInfo) {
+                    RobotBasePtr pRobot = RaveCreateRobot(shared_from_this(), "GenericRobot");
+                    if( !pRobot ) {
+                        pRobot = RaveCreateRobot(shared_from_this(), "");
+                    }
+                    pRobot->InitFromInfo(*pRobotBaseInfo);
+                    _AddRobot(pRobot, true);
+                }
+                else {
+                    pBody = RaveCreateKinBody(shared_from_this(), "");
+                    pBody->InitFromInfo(*pKinBodyInfo);
+                    _AddKinBody(pBody, true);
+                }
             }
+            // dof value
+            std::vector<dReal> vDOFValues;
+            vDOFValues.resize(pKinBodyInfo->_dofValues.size());
+            FOREACH(it, pKinBodyInfo->_dofValues) {
+                int dofIndex = pBody->_vecjoints[(*it).first]->GetDOFIndex();
+                vDOFValues[dofIndex] = (*it).second;
+            }
+            pBody->SetDOFValues(vDOFValues, KinBody::CLA_Nothing);
+            // transform
+            pBody->SetTransform(pKinBodyInfo->_transform);
+            // grabbed infos
+            std::vector<KinBody::GrabbedInfoConstPtr> grabbedInfo(pKinBodyInfo->_vGrabbedInfos.begin(), pKinBodyInfo->_vGrabbedInfos.end());
+            pBody->ResetGrabbed(grabbedInfo);
         }
 
         // remove extra bodies

@@ -1067,7 +1067,77 @@ void KinBody::Link::Geometry::ExtractInfo(KinBody::GeometryInfo& info) const
 UpdateFromInfoResult KinBody::Link::Geometry::UpdateFromInfo(const KinBody::GeometryInfo& info)
 {
     BOOST_ASSERT(info._id == _info._id);
-    _info = info;
+
+    if (GetName() != info._name) {
+        SetName(info._name);
+    }
+
+    if (GetType() != info._type) {
+        RAVELOG_ERROR("%d, %d", GetType()%info._type);
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    if (GetTransform() != info._t) {
+        return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    if (GetType() == GT_Box) {
+        if (GetBoxExtents() != info._vGeomData) {
+            return UFIR_RequireRemoveFromEnvironment;
+        }
+    }
+    else if (GetType() == GT_Container) {
+        if (GetContainerOuterExtents() != info._vGeomData || GetContainerInnerExtents() != info._vGeomData2 || GetContainerBottomCross() != info._vGeomData3 || GetContainerBottom() != info._vGeomData4) {
+            return UFIR_RequireRemoveFromEnvironment;
+        }
+    }
+    else if (GetType() == GT_Cage) {
+        // TODO
+        // return UFIR_RequireRemoveFromEnvironment;
+    }
+    else if (GetType() == GT_Sphere) {
+        // TODO
+        // return UFIR_RequireRemoveFromEnvironment;
+    }
+    else if (GetType() == GT_Cylinder) {
+        // TODO
+        if (GetCylinderRadius() != _info._vGeomData.x || GetCylinderHeight() != _info._vGeomData.y) {
+            return UFIR_RequireRemoveFromEnvironment;
+        }
+    }
+    else if (GetType() == GT_TriMesh) {
+        // TODO
+        // if (GetCollisionMesh() != info._meshcollision) {
+        //     return UFIR_RequireRemoveFromEnvironment;
+        // }
+        // return UFIR_RequireRemoveFromEnvironment;
+    }
+
+    // transparency
+    if (GetTransparency() != info._fTransparency) {
+        SetTransparency(info._fTransparency);
+    }
+
+    // visible
+    if (IsVisible() != info._bVisible) {
+        SetVisible(info._bVisible);
+    }
+
+    // diffuseColor
+    if (GetDiffuseColor() != info._vDiffuseColor) {
+        SetDiffuseColor(info._vDiffuseColor);
+    }
+
+    // ambientColor
+    if (GetAmbientColor() != info._vAmbientColor) {
+        SetAmbientColor(info._vAmbientColor);
+    }
+
+    // modifiable
+    if (IsModifiable() != info._bModifiable) {
+        _info._bModifiable = info._bModifiable;
+    }
+
     return UFIR_Success;
 }
 
