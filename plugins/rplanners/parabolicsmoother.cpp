@@ -269,6 +269,8 @@ public:
             return OPENRAVE_PLANNER_STATUS(PS_Failed);
         }
 
+        _basetime = utils::GetMilliTime();
+
         // should always set the seed since smoother can be called with different trajectories even though InitPlan was only called once
         if( !!_uniformsampler ) {
             _uniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
@@ -300,8 +302,6 @@ public:
         }
 
         std::stringstream ssinitial;
-
-
         std::vector<uint8_t> venablestates;
         FOREACH(itbody, vusedbodies) {
             KinBody::KinBodyStateSaverPtr statesaver;
@@ -1505,6 +1505,7 @@ protected:
                 tloopstart = utils::GetMicroTime();
 #endif
                 size_t islowdowntry = 0;
+                bool bShortcutTimeExceeded = false;
                 for(islowdowntry = 0; islowdowntry < 4; ++islowdowntry ) {
 #ifdef OPENRAVE_TIMING_DEBUGGING
                     tinterpstart = utils::GetMicroTime();
@@ -1532,6 +1533,15 @@ protected:
 
                     if( _CallCallbacks(_progress) == PA_Interrupt ) {
                         return -1;
+                    }
+
+                    if (_parameters->_nMaxPlanningTime > 0) {
+                        uint32_t elapsedtime = utils::GetMilliTime() - _basetime;
+                        if( elapsedtime >= _parameters->_nMaxPlanningTime ) {
+                            bShortcutTimeExceeded = true;
+                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut time exceeded (%dms) so breaking. iter=%d < %d", GetEnv()->GetId()%elapsedtime%iters%numIters);
+                            break;
+                        }
                     }
 
                     iIterProgress += 0x1000;
@@ -1742,6 +1752,10 @@ protected:
                 tloopend = utils::GetMicroTime();
                 slowdownlooptime += 0.000001f*(float)(tloopend - tloopstart);
 #endif
+                if (bShortcutTimeExceeded) {
+                    break;
+                }
+
                 if( !bsuccess ) {
                     continue;
                 }
@@ -1873,6 +1887,9 @@ protected:
         }
         else if (nItersFromPrevSuccessful > nCutoffIters) {
             RAVELOG_INFO_FORMAT("env=%d, finished at shortcut iter=%d (did not make progress in the last %d iterations), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%nCutoffIters%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
+        }
+        else {
+            RAVELOG_INFO_FORMAT("env=%d, finished at shortcut iter=%d, successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
         }
         RAVELOG_INFO_FORMAT("env=%d, shortcutting time = %.15e s.; numiters = %d; avg. time per iteration = %.15e s.", GetEnv()->GetId()%tshortcuttotal%iters%(tshortcuttotal/iters));
         RAVELOG_INFO_FORMAT("env=%d, measured %d slow-down loops, %.15e sec. = %.15e sec./loop", GetEnv()->GetId()%nslowdownloops%slowdownlooptime%(slowdownlooptime/nslowdownloops));
@@ -2137,6 +2154,7 @@ protected:
 
                 size_t islowdowntry = 0; // counting how many times we slow down vellimits/accellimits in this shortcut iteration
                 size_t islowdowntryduetomanip = 0; // counting how many times we slow down vellimits/accellimits due to tool speed/accel constraints
+                bool bShortcutTimeExceeded = false;
                 for (islowdowntry = 0; islowdowntry < maxSlowdowns; ++islowdowntry) {
 #ifdef SMOOTHER1_TIMING_DEBUG
                     _nCallsInterpolator += 1;
@@ -2168,6 +2186,15 @@ protected:
 
                     if (_CallCallbacks(_progress) == PA_Interrupt) {
                         return -1;
+                    }
+
+                    if (_parameters->_nMaxPlanningTime > 0) {
+                        uint32_t elapsedtime = utils::GetMilliTime() - _basetime;
+                        if( elapsedtime >= _parameters->_nMaxPlanningTime ) {
+                            bShortcutTimeExceeded = true;
+                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut time exceeded (%dms) so breaking. iter=%d < %d", GetEnv()->GetId()%elapsedtime%iters%numIters);
+                            break;
+                        }
                     }
 
                     // The initial interpolation is successful. Now check constraints.
@@ -2467,6 +2494,9 @@ protected:
                 tloopend = utils::GetMicroTime();
                 slowdownlooptime += 0.000001f*(float)(tloopend - tloopstart);
 #endif
+                if (bShortcutTimeExceeded) {
+                    break;
+                }
 
                 if (!bsuccess) {
                     continue;
@@ -2626,9 +2656,11 @@ protected:
         else if (score/currentBestScore < cutoffRatio) {
             RAVELOG_DEBUG_FORMAT("env=%d, finished at shortcut iter=%d (current score %.15e falls below %.15e), successful=%d, slowdowns=%d, nCutoffIters=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%(score/currentBestScore)%cutoffRatio%shortcuts%numslowdowns%nCutoffIters%originalEndTime%endTime%(originalEndTime - endTime));
         }
-        else {
-            // terminating reason: nItersFromPrevSuccessful + nNumTimeBasedConstraintsFailed > nCutoffIters
+        else if (nItersFromPrevSuccessful + nNumTimeBasedConstraintsFailed > nCutoffIters) {
             RAVELOG_DEBUG_FORMAT("env=%d, finished at shortcut iter=%d (did not make progress in the last %d iterations), successful=%d, slowdowns=%d, nCutoffIters=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%nCutoffIters%shortcuts%numslowdowns%nCutoffIters%originalEndTime%endTime%(originalEndTime - endTime));
+        }
+        else {
+            RAVELOG_DEBUG_FORMAT("env=%d, finished at shortcut iter=%d, successful=%d, slowdowns=%d, nCutoffIters=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%shortcuts%numslowdowns%nCutoffIters%originalEndTime%endTime%(originalEndTime - endTime));
         }
 
 #ifdef OPENRAVE_TIMING_DEBUGGING
@@ -2760,6 +2792,7 @@ protected:
     ConstraintFilterReturnPtr _constraintreturn;
     MyRampFeasibilityChecker _feasibilitychecker;
     boost::shared_ptr<ManipConstraintChecker> _manipconstraintchecker;
+    uint32_t _basetime; ///< timestamp at the beginning of PlanPath. used for checking computation time.
 
     //@{ cache
     ParabolicRamp::DynamicPath _cacheintermediate, _cacheintermediate2, _cachedynamicpath;

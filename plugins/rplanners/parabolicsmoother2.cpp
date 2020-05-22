@@ -482,6 +482,8 @@ public:
             return OPENRAVE_PLANNER_STATUS(PS_Failed);
         }
 
+        _basetime = utils::GetMilliTime();
+
         if( IS_DEBUGLEVEL(_dumplevel) ) {
             // Save parameters for planning
             uint32_t randNum;
@@ -1819,6 +1821,7 @@ protected:
                 std::fill(velReductionFactors.begin(), velReductionFactors.end(), 1); // Reset reductionfactors
                 std::fill(accelReductionFactors.begin(), accelReductionFactors.end(), 1); // Reset reductionfactors
                 size_t iSlowDownDueToManip = 0;
+                bool bShortcutTimeExceeded = false;
                 for (size_t iSlowDown = 0; iSlowDown < maxSlowDownTries; ++iSlowDown) {
 #ifdef SMOOTHER2_TIMING_DEBUG
                     _nCallsInterpolator += 1;
@@ -1867,6 +1870,14 @@ protected:
 
                     if( _CallCallbacks(_progress) == PA_Interrupt ) {
                         return -1;
+                    }
+                    if (_parameters->_nMaxPlanningTime > 0) {
+                        uint32_t elapsedtime = utils::GetMilliTime() - _basetime;
+                        if( elapsedtime >= _parameters->_nMaxPlanningTime ) {
+                            bShortcutTimeExceeded = true;
+                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut time exceeded (%dms) so breaking. iter=%d < %d", _environmentid%elapsedtime%iters%numIters);
+                            break;
+                        }
                     }
                     iIterProgress += 0x1000;
 
@@ -2310,6 +2321,9 @@ protected:
                     }
                     iIterProgress += 0x1000;
                 } // Finished slowing down the shortcut
+                if (bShortcutTimeExceeded) {
+                    break;
+                }
 
                 if( !bSuccess ) {
                     // Shortcut failed. Continue to the next iteration.
@@ -2388,7 +2402,7 @@ protected:
         }
 
         // Report status
-        RAVELOG_DEBUG_FORMAT("env=%d, finished (normal exit), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e", _environmentid%nummerges%numSlowDowns%tOriginal%tTotal%(tOriginal - tTotal));
+        RAVELOG_DEBUG_FORMAT("env=%d, merging ramps finished, successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e", _environmentid%nummerges%numSlowDowns%tOriginal%tTotal%(tOriginal - tTotal));
         _DumpParabolicPath(parabolicpath, _dumplevel, fileindex, 3);
 #ifdef SMOOTHER2_PROGRESS_DEBUG
         curtime = utils::GetMicroTime();
@@ -2671,6 +2685,7 @@ protected:
                 std::fill(velReductionFactors.begin(), velReductionFactors.end(), 1); // Reset reductionfactors
                 std::fill(accelReductionFactors.begin(), accelReductionFactors.end(), 1); // Reset reductionfactors
                 size_t iSlowDownDueToManip = 0;
+                bool bShortcutTimeExceeded = false;
                 for (size_t iSlowDown = 0; iSlowDown < maxSlowDownTries; ++iSlowDown) {
 #ifdef SMOOTHER2_TIMING_DEBUG
                     _nCallsInterpolator += 1;
@@ -2719,6 +2734,14 @@ protected:
 
                     if( _CallCallbacks(_progress) == PA_Interrupt ) {
                         return -1;
+                    }
+                    if (_parameters->_nMaxPlanningTime > 0) {
+                        uint32_t elapsedtime = utils::GetMilliTime() - _basetime;
+                        if( elapsedtime >= _parameters->_nMaxPlanningTime ) {
+                            bShortcutTimeExceeded = true;
+                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut time exceeded (%dms) so breaking. iter=%d < %d", _environmentid%elapsedtime%iters%numIters);
+                            break;
+                        }
                     }
                     iIterProgress += 0x1000;
 
@@ -3190,6 +3213,9 @@ protected:
                     }
                     iIterProgress += 0x1000;
                 } // Finished slowing down the shortcut
+                if (bShortcutTimeExceeded) {
+                    break;
+                }
 
                 if( !bSuccess ) {
                     // Shortcut failed. Continue to the next iteration.
@@ -3289,9 +3315,11 @@ protected:
         else if( score*iCurrentBestScore < cutoffRatio ) {
             RAVELOG_DEBUG_FORMAT("env=%d, finished at shortcut iter=%d (current score falls below %.15e), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e", _environmentid%iters%cutoffRatio%numShortcuts%numSlowDowns%tOriginal%tTotal%(tOriginal - tTotal));
         }
-        else {
-            // terminating reason: nItersFromPrevSuccessful + nTimeBasedConstraintsFailed > nCutoffIters
+        else if( nItersFromPrevSuccessful + nTimeBasedConstraintsFailed > nCutoffIters ) {
             RAVELOG_DEBUG_FORMAT("env=%d, finished at shortcut iter=%d (did not make progress in the last %d iterations and time-based constraints failed %d times), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e", _environmentid%iters%nItersFromPrevSuccessful%nTimeBasedConstraintsFailed%numShortcuts%numSlowDowns%tOriginal%tTotal%(tOriginal - tTotal));
+        }
+        else {
+            RAVELOG_DEBUG_FORMAT("env=%d, finished at shortcut iter=%d, successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e", _environmentid%iters%numShortcuts%numSlowDowns%tOriginal%tTotal%(tOriginal - tTotal));
         }
         _DumpParabolicPath(parabolicpath, _dumplevel, fileindex, 1);
 #ifdef SMOOTHER2_PROGRESS_DEBUG
@@ -3395,6 +3423,7 @@ protected:
     dReal _maxInitialRampTime; ///< max duration of traj segment between two consecutive waypoints
                                /// after calling _SetMileStones. this serves as a cap for how far a
                                /// pair of sampled time instants t0, t1 can be.
+    uint32_t _basetime; ///< timestamp at the beginning of PlanPath. used for checking computation time.
 
     // for logging
     SpaceSamplerBasePtr _logginguniformsampler; ///< used for logging, seed is randomly set
