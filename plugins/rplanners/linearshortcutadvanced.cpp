@@ -132,7 +132,10 @@ public:
         _DumpTrajectory(ptraj, Level_Verbose, 1);
 #endif
 
-        _OptimizePath(listpath);
+        int numshortcuts = _OptimizePath(listpath);
+        if( numshortcuts < 0 ) {
+            return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, Planning was interrupted")%GetEnv()->GetId()), PS_Interrupted);
+        }
 
 #ifdef SHORTCUT_ONEDOF_DEBUG
         TrajectoryBasePtr ptrajbefore = RaveCreateTrajectory(GetEnv(), "");
@@ -145,7 +148,10 @@ public:
         _DumpTrajectory(ptrajbefore, Level_Debug, 1);
 #endif
 
-        _OptimizePathOneDOF(listpath);
+        int numshortcutsonedof = _OptimizePathOneDOF(listpath);
+        if( numshortcutsonedof < 0 ) {
+            return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, Planning was interrupted")%GetEnv()->GetId()), PS_Interrupted);
+        }
 
 #ifdef SHORTCUT_ONEDOF_DEBUG
         FOREACH(it, listpath) {
@@ -171,7 +177,7 @@ public:
             if( status.GetStatusCode() != PS_HasSolution ) {
                 return status;
             }
-            return PlannerStatus(PS_HasSolution);
+            return OPENRAVE_PLANNER_STATUS(PS_HasSolution);
         }
         return _ProcessPostPlanners(RobotBasePtr(),ptraj);
     }
@@ -179,7 +185,7 @@ public:
 protected:
     /// \brief Iteratively pick two nodes in the path then iterpolate a linear path between them. Note that the
     /// interpolated path might not be stirctly linear due to _neighstatefn.
-    void _OptimizePath(list< std::pair< vector<dReal>, dReal> >& listpath)
+    int _OptimizePath(list< std::pair< vector<dReal>, dReal> >& listpath)
     {
         PlannerParametersConstPtr parameters = GetParameters();
         list< std::pair< vector<dReal>, dReal> >::iterator itstartnode, itendnode;
@@ -203,6 +209,11 @@ protected:
         while(iiter > 0 && listpath.size() > 2 ) {
             --iiter;
             ++itercount;
+
+            _progress._iteration = itercount;
+            if( _CallCallbacks(_progress) == PA_Interrupt ) {
+                return -1;
+            }
 
             // pick a random node on the listpath, and a random jump ahead
             uint32_t endIndex = 2+(_puniformsampler->SampleSequenceOneUInt32()%((uint32_t)listpath.size()-2));
@@ -324,16 +335,16 @@ protected:
             }
         }
         RAVELOG_DEBUG_FORMAT("env=%d, linear shortcut finished at iter=%d, successful=%d", GetEnv()->GetId()%itercount%numshortcuts);
+        return numshortcuts;
     }
 
     // Experimental function: shortcut only one DOF at a time. Although some non-default
     // distmetric/neighstatefn/diffstatefn might be used here, we still compute the distance of the
     // shortcut dof simply by taking the difference between two configs.
-    void _OptimizePathOneDOF(list< std::pair< vector<dReal>, dReal> >& listpath)
+    int _OptimizePathOneDOF(list< std::pair< vector<dReal>, dReal> >& listpath)
     {
         int numshortcuts = 0;
         PlannerParametersConstPtr parameters = GetParameters();
-        PlannerProgress progress;
         int ndof = parameters->GetDOF();
         int itercount = 0;
         int nrejected = 0;
@@ -354,7 +365,7 @@ protected:
         for( int iiter = 0; iiter < numiters; ++iiter ) {
             ++itercount;
             if( listpath.size() <= 2 ) {
-                return;
+                return numshortcuts;
             }
             // Sample a DOF to shortcut. Give the last DOF twice as much chance.
             uint32_t idof = _puniformsampler->SampleSequenceOneUInt32()%(ndof + 1);
@@ -396,9 +407,9 @@ protected:
                 continue;
             }
 
-            progress._iteration = iiter;
-            if( _CallCallbacks(progress) == PA_Interrupt ) {
-                return;
+            _progress._iteration = iiter;
+            if( _CallCallbacks(_progress) == PA_Interrupt ) {
+                return -1;
             }
 
             // Main shortcut procedure
@@ -522,8 +533,8 @@ protected:
 
             } while( itnode != itendnode );
 
-            if( _CallCallbacks(progress) == PA_Interrupt ) {
-                return;
+            if( _CallCallbacks(_progress) == PA_Interrupt ) {
+                return -1;
             }
 
             if( !bSuccess || listshortcutpath.size() == 0 ) {
@@ -545,7 +556,7 @@ protected:
             listpath.erase(itstartnode, itendnode);
         }
         RAVELOG_DEBUG_FORMAT("env=%d, shortcut one dof; numshortcuts=%d", GetEnv()->GetId()%numshortcuts);
-        return;
+        return numshortcuts;
     }
 
     /// \brief Subsample the given linear trajectory according to robot config resolution. Subsampling on each linear
@@ -676,6 +687,7 @@ protected:
     PlannerBasePtr _linearretimer;
     ConstraintFilterReturnPtr _filterreturn;
     std::vector<dReal> _vtempdists;
+    PlannerProgress _progress;
 };
 
 PlannerBasePtr CreateShortcutLinearPlanner(EnvironmentBasePtr penv, std::istream& sinput) {
