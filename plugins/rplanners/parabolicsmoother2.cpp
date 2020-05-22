@@ -196,10 +196,10 @@ public:
                     if( IS_DEBUGLEVEL(Level_Verbose) ) {
                         for (size_t idof = 0; idof < q0.size(); ++idof) {
                             if( RaveFabs(q1[idof] - _cacheRampNDVectOut.back().GetX1At(idof)) > RampOptimizer::g_fRampEpsilon ) {
-                                RAVELOG_VERBOSE_FORMAT("rampndVect[%d] idof=%d: end point does not finish at the desired position, diff=%.15e", (iswitch - 1)%idof%RaveFabs(q1[idof] - _cacheRampNDVectOut.back().GetX1At(idof)));
+                                RAVELOG_VERBOSE_FORMAT("env=%d, rampndVect[%d] idof=%d: end point does not finish at the desired position, diff=%.15e", _envid%(iswitch - 1)%idof%RaveFabs(q1[idof] - _cacheRampNDVectOut.back().GetX1At(idof)));
                             }
                             if( RaveFabs(dq1[idof] - _cacheRampNDVectOut.back().GetV1At(idof)) > RampOptimizer::g_fRampEpsilon ) {
-                                RAVELOG_VERBOSE_FORMAT("rampndVect[%d] idof=%d: end point does not finish at the desired velocity, diff=%.15e", (iswitch - 1)%idof%RaveFabs(dq1[idof] - _cacheRampNDVectOut.back().GetV1At(idof)));
+                                RAVELOG_VERBOSE_FORMAT("env=%d, rampndVect[%d] idof=%d: end point does not finish at the desired velocity, diff=%.15e", _envid%(iswitch - 1)%idof%RaveFabs(dq1[idof] - _cacheRampNDVectOut.back().GetV1At(idof)));
                             }
                         }
                     }
@@ -323,11 +323,11 @@ public:
             if( rampndVectOut.size() > 0 ) {
                 for (size_t idof = 0; idof < q0.size(); ++idof) {
                     if( RaveFabs(rampndVect.back().GetX1At(idof) - rampndVectOut.back().GetX1At(idof)) > RampOptimizer::g_fRampEpsilon ) {
-                        RAVELOG_VERBOSE_FORMAT("rampndVectOut idof=%d: end point does not finish at the desired position, diff=%.15e. Rejecting...", idof%RaveFabs(rampndVect.back().GetX1At(idof) - q0[idof]));
+                        RAVELOG_VERBOSE_FORMAT("env=%d, rampndVectOut idof=%d: end point does not finish at the desired position, diff=%.15e. Rejecting...", _envid%idof%RaveFabs(rampndVect.back().GetX1At(idof) - q0[idof]));
                         return RampOptimizer::CheckReturn(CFO_FinalValuesNotReached);
                     }
                     if( RaveFabs(rampndVect.back().GetV1At(idof) - rampndVectOut.back().GetV1At(idof)) > RampOptimizer::g_fRampEpsilon ) {
-                        RAVELOG_VERBOSE_FORMAT("rampndVectOut idof=%d: end point does not finish at the desired velocity, diff=%.15e", idof%RaveFabs(rampndVect.back().GetV1At(idof) - dq0[idof]));
+                        RAVELOG_VERBOSE_FORMAT("env=%d, rampndVectOut idof=%d: end point does not finish at the desired velocity, diff=%.15e", _envid%idof%RaveFabs(rampndVect.back().GetV1At(idof) - dq0[idof]));
                         bDifferentVelocity = true;
                     }
                 }
@@ -479,7 +479,7 @@ public:
         BOOST_ASSERT(!!_parameters && !!ptraj);
 
         if( ptraj->GetNumWaypoints() < 2 ) {
-            return PlannerStatus(PS_Failed);
+            return OPENRAVE_PLANNER_STATUS(PS_Failed);
         }
 
         if( IS_DEBUGLEVEL(_dumplevel) ) {
@@ -542,7 +542,7 @@ public:
         RampOptimizer::RampND& tempRampND = _cacheRampND;
 
         if( _parameters->_hastimestamps && itcompatposgroup->interpolation == "quadratic" ) {
-            RAVELOG_VERBOSE("The initial trajectory is piecewise quadratic");
+            RAVELOG_VERBOSE_FORMAT("env=%d, The initial trajectory is piecewise quadratic", _environmentid);
 
             // Convert the original OpenRAVE trajectory to a parabolicpath
             ptraj->GetWaypoint(0, x0Vect, posSpec);
@@ -562,7 +562,7 @@ public:
             bPathIsPerfectlyModeled = true;
         }
         else if( _parameters->_hastimestamps && itcompatposgroup->interpolation == "cubic" ) {
-            RAVELOG_VERBOSE("The initial trajectory is piecewise cubic");
+            RAVELOG_VERBOSE_FORMAT("env=%d, The initial trajectory is piecewise cubic", _environmentid);
 
             // Convert the original OpenRAVE trajectory to a parabolicpath
             ptraj->GetWaypoint(0, x0Vect, posSpec);
@@ -602,7 +602,7 @@ public:
 #endif
                             std::string description = str(boost::format("env=%d, Failed to initialize from cubic waypoints")%_environmentid);
                             _DumpTrajectory(ptraj, _dumplevel);
-                            return PlannerStatus(description, PS_Failed);
+                            return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
                         }
 #ifdef SMOOTHER2_TIMING_DEBUG
                         // We don't use this stats
@@ -622,11 +622,11 @@ public:
         }
         else {
             if( itcompatposgroup->interpolation.size() == 0 || itcompatposgroup->interpolation == "linear" ) {
-                RAVELOG_VERBOSE("The initial trajectory is piecewise linear");
+                RAVELOG_VERBOSE_FORMAT("env=%d, The initial trajectory is piecewise linear", _environmentid);
                 bPathIsPerfectlyModeled = true;
             }
             else {
-                RAVELOG_VERBOSE("The initial trajectory is with unspecified interpolation");
+                RAVELOG_VERBOSE_FORMAT("env=%d, The initial trajectory is with unspecified interpolation", _environmentid);
             }
 
             std::vector<std::vector<dReal> >& vWaypoints = _cacheWaypointVect;
@@ -683,7 +683,7 @@ public:
                 std::string description = str(boost::format("env=%d, Failed to initialize from piecewise linear waypoints")%_environmentid);
                 RAVELOG_WARN(description);
                 _DumpTrajectory(ptraj, _dumplevel);
-                return PlannerStatus(description, PS_Failed);
+                return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
             }
             RAVELOG_DEBUG_FORMAT("env=%d, Finished initializing linear waypoints via _SetMileStones. #waypoint: %d -> %d", _environmentid%ptraj->GetNumWaypoints()%vWaypoints.size());
         }
@@ -696,8 +696,6 @@ public:
         }
 
         // Main planning loop
-        int numShortcuts = 0;
-        int nummerges = 0;
         try {
             _bUsePerturbation = true;
             _feasibilitychecker.tol = parameters->_vConfigResolution;
@@ -707,11 +705,13 @@ public:
 
             _progress._iteration = 0;
             if( _CallCallbacks(_progress) == PA_Interrupt ) {
-                return PlannerStatus(PS_Interrupted);
+                return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, Planning was interrupted")%_environmentid), PS_Interrupted);
             }
 
             int numShortcuts = 0;
+#ifdef SMOOTHER2_ENABLE_MERGING
             int nummerges = 0;
+#endif
             if( !!parameters->_setstatevaluesfn ) {
                 // TODO: add a check here so that we do merging only when the initial path is linear (i.e. comes directly from a linear smoother or RRT)
 #ifdef SMOOTHER2_TIMING_DEBUG
@@ -719,19 +719,22 @@ public:
 #endif
 #ifdef SMOOTHER2_ENABLE_MERGING
                 nummerges = _MergeConsecutiveSegments(parabolicpath, parameters->_fStepLength*0.99);
+                if( nummerges < 0 ) {
+                    return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, Planning was interrupted")%_environmentid), PS_Interrupted);
+                }
 #endif
                 numShortcuts = _Shortcut(parabolicpath, parameters->_nMaxIterations, this, parameters->_fStepLength*0.99);
 #ifdef SMOOTHER2_TIMING_DEBUG
                 _tShortcutEnd = utils::GetMicroTime();
 #endif
                 if( numShortcuts < 0 ) {
-                    return PlannerStatus(PS_Interrupted);
+                    return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, Planning was interrupted")%_environmentid), PS_Interrupted);
                 }
             }
 
             ++_progress._iteration;
             if( _CallCallbacks(_progress) == PA_Interrupt ) {
-                return PlannerStatus(PS_Interrupted);
+                return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, Planning was interrupted")%_environmentid), PS_Interrupted);
             }
 
             // Now start converting parabolicpath to OpenRAVE trajectory
@@ -936,7 +939,7 @@ public:
                                 }
                                 RAVELOG_WARN(description);
                                 _DumpTrajectory(ptraj, _dumplevel);
-                                return PlannerStatus(description, PS_Failed);
+                                return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
                             }
                         }
                     }
@@ -944,7 +947,7 @@ public:
                     ++_progress._iteration;
 
                     if( _CallCallbacks(_progress) == PA_Interrupt ) {
-                        return PlannerStatus(PS_Interrupted);
+                        return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, Planning was interrupted")%_environmentid), PS_Interrupted);
                     }
                 }// Finished checking constraints
 
@@ -973,7 +976,7 @@ public:
             _DumpTrajectory(ptraj, _dumplevel);
             std::string description = str(boost::format("env=%d, Main planning loop threw exception %s")%_environmentid%ex.what());
             RAVELOG_WARN(description);
-            return PlannerStatus(description, PS_Failed);
+            return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
         }
         RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time = %f s.", _environmentid%(0.001f*(float)(utils::GetMilliTime() - baseTime)));
 
@@ -987,7 +990,7 @@ public:
                 std::string description = str(boost::format("env=%d, Sampling for verification failed: %s")%_environmentid%ex.what());
                 RAVELOG_WARN(description);
                 _DumpTrajectory(ptraj, _dumplevel);
-                return PlannerStatus(description, PS_Failed);
+                return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
             }
         }
         _DumpTrajectory(ptraj, _dumplevel);
