@@ -158,7 +158,7 @@ Vector GetVectorFromInfo(const std::vector<JointPtr>& joints, const std::array<i
 /// \return a posture value function, PostureValueFn=std::function<...> converted from a lambda expression.
 template <size_t N>
 PostureValueFn PostureValuesFunctionGenerator(const std::array<PostureFormulation, N>& postureforms) {
-    return [= /* pass postureforms *by value* */](const std::vector<JointPtr>&joints, const double fTol, std::vector<uint16_t>&posturestates) {
+    return [= /* pass postureforms *by value* */](const std::vector<JointPtr>&joints, const double fTol, std::vector<PostureStateInt>&posturestates) {
                std::array<double, N> posturevalues;
                for(size_t i = 0; i < N; ++i) {
                    const PostureFormulation& postureform = postureforms[i];
@@ -272,7 +272,7 @@ bool PostureDescriber::Supports(const LinkPair& kinematicsChain) const {
 }
 
 
-bool PostureDescriber::ComputePostureStates(std::vector<uint16_t>& posturestates, const std::vector<double>& dofvalues) {
+bool PostureDescriber::ComputePostureStates(std::vector<PostureStateInt>& posturestates, const std::vector<double>& dofvalues) {
     if(!_posturefn) {
         RAVELOG_WARN("No supported posture describer; _posturefn is not set");
         posturestates.clear();

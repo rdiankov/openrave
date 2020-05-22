@@ -22,7 +22,7 @@
 
 namespace OpenRAVE {
 
-using PostureValueFn = std::function<void(const std::vector<KinBody::JointPtr>& vjoints, const double fTol, std::vector<uint16_t>& posturestates)>;
+using PostureValueFn = std::function<void(const std::vector<KinBody::JointPtr>& vjoints, const double fTol, std::vector<PostureStateInt>& posturestates)>;
 
 class OPENRAVE_API PostureDescriber : public PostureDescriberBase
 {
@@ -43,7 +43,7 @@ public:
     /// \param [in]  dofvalues       if empty, then use the current dof values; otherwise these specified dof values must have the same size as the number of dofs in the kinematics chain.
     /// \param [out] posturestates   posture states, whose size is a power of 2. Always non-empty if (1) this class is properly initialized AND (2) dofvalues is either empty or has the correct size.
     /// \return true if (1) this describer class is properly initialized AND (2) dofvalues is either empty or has the correct size.
-    virtual bool ComputePostureStates(std::vector<uint16_t>& values, const std::vector<double>& dofvalues = {}) override;
+    virtual bool ComputePostureStates(std::vector<PostureStateInt>& values, const std::vector<double>& dofvalues = {}) override;
 
     /// \brief Sets the tolerance for determining whether a robot posture value (shoulder, elbow, wrist, etc.) is close to 0
     bool SetPostureValueThreshold(const double fTol);
@@ -81,7 +81,7 @@ using PostureFormulation = std::array<std::array<int, 2>, 3>; ///< a posture val
 /// \param [in] x      a posture value
 /// \param [in] tol    tolerance to determine whether x is considered 0.0, so that this value means a hybrid state.
 /// \return 0 if x is considered positive, 1 if considered negative, and 2 (meaning hybrid states) if considered 0.0
-inline uint16_t compute_single_state(const double x, const double fTol) {
+inline PostureStateInt compute_single_state(const double x, const double fTol) {
     return (x > fTol) ? 0 : (x < -fTol) ? 1 : 2; // >= or <= ?
 }
 
@@ -92,8 +92,8 @@ inline uint16_t compute_single_state(const double x, const double fTol) {
 template <size_t N>
 inline void compute_robot_posture_states(const std::array<double, N>& posturevalues,
                                          const double fTol,
-                                         std::vector<uint16_t>& posturestates) {
-    std::array<uint16_t, N> singlestates;
+                                         std::vector<PostureStateInt>& posturestates) {
+    std::array<PostureStateInt, N> singlestates;
     for(size_t i = 0; i < N; ++i) {
         singlestates[i] = compute_single_state(posturevalues[i], fTol);
     }
@@ -101,11 +101,11 @@ inline void compute_robot_posture_states(const std::array<double, N>& postureval
     posturestates = {0};
     posturestates.reserve(1 << N);
     for(size_t i = 0; i < N; ++i) {
-        for(uint16_t &state : posturestates) {
+        for(PostureStateInt &state : posturestates) {
             state <<= 1;
         }
         if(singlestates[i] == 1) {
-            for(uint16_t &state : posturestates) {
+            for(PostureStateInt &state : posturestates) {
                 state |= 1;
             }
         }

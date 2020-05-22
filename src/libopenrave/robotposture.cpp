@@ -69,7 +69,7 @@ PostureDescriberBasePtr RobotBase::GetPostureDescriber(ManipulatorConstPtr pmani
     return this->GetPostureDescriber(GetKinematicsChain(pmanip));
 }
 
-bool RobotBase::ComputePostureStates(std::vector<uint16_t>& posturestates, const LinkPair& kinematicsChain, const std::vector<double>& dofvalues) const
+bool RobotBase::ComputePostureStates(std::vector<PostureStateInt>& posturestates, const LinkPair& kinematicsChain, const std::vector<double>& dofvalues) const
 {
     // TODO fill with default implementation
     if(_mPostureDescribers.count(kinematicsChain)) {
@@ -81,7 +81,7 @@ bool RobotBase::ComputePostureStates(std::vector<uint16_t>& posturestates, const
     return false;
 }
 
-bool RobotBase::ComputePostureStates(std::vector<uint16_t>& posturestates, ManipulatorConstPtr pmanip, const std::vector<double>& dofvalues) const
+bool RobotBase::ComputePostureStates(std::vector<PostureStateInt>& posturestates, ManipulatorConstPtr pmanip, const std::vector<double>& dofvalues) const
 {
     if(pmanip == nullptr) {
         pmanip = this->GetActiveManipulator();

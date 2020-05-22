@@ -86,15 +86,15 @@ bool PyPostureDescriber::Init(PyManipulatorPtr pmanip) {
 
 object PyPostureDescriber::ComputePostureStates()
 {
-    // return (_pDescriber->ComputePostureStates(_posturestates)) ? toPyArray<uint16_t>(_posturestates) : py::empty_array_astype<uint16_t>();
-    return StdVectorToPyList<uint16_t>(_pDescriber->ComputePostureStates(_posturestates) ? _posturestates : std::vector<uint16_t>());
+    // return (_pDescriber->ComputePostureStates(_posturestates)) ? toPyArray<PostureStateInt>(_posturestates) : py::empty_array_astype<PostureStateInt>();
+    return StdVectorToPyList<PostureStateInt>(_pDescriber->ComputePostureStates(_posturestates) ? _posturestates : std::vector<PostureStateInt>());
 }
 
 object PyPostureDescriber::ComputePostureStates(object pydofvalues)
 {
     const std::vector<dReal> dofvalues = ExtractArray<dReal>(pydofvalues);
-    // return (_pDescriber->ComputePostureStates(_posturestates, dofvalues)) ? toPyArray<uint16_t>(_posturestates) : py::empty_array_astype<uint16_t>();
-    return StdVectorToPyList<uint16_t>(_pDescriber->ComputePostureStates(_posturestates, dofvalues) ? _posturestates : std::vector<uint16_t>());
+    // return (_pDescriber->ComputePostureStates(_posturestates, dofvalues)) ? toPyArray<PostureStateInt>(_posturestates) : py::empty_array_astype<PostureStateInt>();
+    return StdVectorToPyList<PostureStateInt>(_pDescriber->ComputePostureStates(_posturestates, dofvalues) ? _posturestates : std::vector<PostureStateInt>());
 }
 
 PyPostureDescriberPtr GeneratePostureDescriber(const PyManipulatorPtr& pymanip) {

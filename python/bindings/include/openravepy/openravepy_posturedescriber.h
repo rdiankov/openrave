@@ -61,7 +61,7 @@ public:
     object ComputePostureStates(object pyjointvalues);
 
 private:
-    std::vector<uint16_t> _posturestates; // cache
+    std::vector<PostureStateInt> _posturestates; // cache
 };
 
 using PyPostureDescriberPtr = OPENRAVE_SHARED_PTR<PyPostureDescriber>;
