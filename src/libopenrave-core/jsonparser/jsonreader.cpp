@@ -106,48 +106,15 @@ public:
         bool allSucceeded = true;
         dReal fUnitScale = _GetUnitScale();
 
-        if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()) {
-            std::map<KinBodyPtr, std::vector<KinBody::GrabbedInfoConstPtr>> mapKinBodyGrabbedInfos;
-            for (rapidjson::Value::ValueIterator itrBodyValue = (*_doc)["bodies"].Begin(); itrBodyValue != (*_doc)["bodies"].End(); ++itrBodyValue) {
-                KinBodyPtr pbody;
-                if (_Extract(*itrBodyValue, pbody)) {
-                    _penv->Add(pbody, true);
-
-                    // set dof values
-                    if (itrBodyValue->HasMember("dofValues") && (*itrBodyValue)["dofValues"].IsArray()) {
-                        std::vector<dReal> vDOFValues {};
-                        _ConvertJointDOFValueFormat(pbody->GetJoints(), vDOFValues, (*itrBodyValue)["dofValues"]);
-                        pbody->SetDOFValues(vDOFValues, KinBody::CLA_Nothing);
-                    }
-
-                    // set transform
-                    if (itrBodyValue->HasMember("transform")) {
-                        Transform transform;
-                        OpenRAVE::JSON::LoadJsonValueByKey(*itrBodyValue, "transform", transform);
-                        pbody->SetTransform(transform);
-                    }
-
-                    // parse grabbed infos
-                    if (itrBodyValue->HasMember("grabbed") && (*itrBodyValue)["grabbed"].IsArray()) {
-                        for(rapidjson::Value::ValueIterator itGrabInfo = (*itrBodyValue)["grabbed"].Begin(); itGrabInfo != (*itrBodyValue)["grabbed"].End(); ++itGrabInfo){
-                            KinBody::GrabbedInfoPtr pGrabbedInfo(new KinBody::GrabbedInfo());
-                            pGrabbedInfo->DeserializeJSON(*itGrabInfo, fUnitScale);
-                            mapKinBodyGrabbedInfos[pbody].push_back(pGrabbedInfo);
-                        }
-                    }
-                } else {
-                    allSucceeded = false;
-                }
-            }
-            if (allSucceeded) {
-                // reset grabbed
-                FOREACH(it, mapKinBodyGrabbedInfos) {
-                    it->first->ResetGrabbed(it->second);
-                }
-            }
-            return allSucceeded;
+        EnvironmentBase::EnvironmentBaseInfo envInfo;
+        try {
+            _penv->ExtractInfo(envInfo);
+            envInfo.DeserializeJSON(*_doc);
+            _penv->UpdateFromInfo(envInfo);
+            return true;
+        } catch (...) {
+            return false;
         }
-        return false;
     }
 
     bool ExtractFirst(KinBodyPtr& ppbody) {
