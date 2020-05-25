@@ -61,7 +61,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
         if( (int)params->vinitialconfig.size() % params->GetDOF() ) {
-            RAVELOG_ERROR(str(boost::format("initial config wrong dim: %d %% %d != 0\n")%params->vinitialconfig.size()%params->GetDOF()));
+            RAVELOG_ERROR_FORMAT("env=%d, initial config wrong dim: %d %% %d != 0", GetEnv()->GetId()%params->vinitialconfig.size()%params->GetDOF());
             return false;
         }
 
@@ -74,14 +74,14 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
             std::copy(params->vinitialconfig.begin()+index,params->vinitialconfig.begin()+index+params->GetDOF(),vinitialconfig.begin());
             _filterreturn->Clear();
             if( params->CheckPathAllConstraints(vinitialconfig,vinitialconfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, CFO_FillCollisionReport, _filterreturn) != 0 ) {
-                RAVELOG_DEBUG_FORMAT("initial configuration for rrt does not satisfy constraints: %s", _filterreturn->_report.__str__());
+                RAVELOG_DEBUG_FORMAT("env=%d, initial configuration for rrt does not satisfy constraints: %s", GetEnv()->GetId()%_filterreturn->_report.__str__());
                 continue;
             }
             _vecInitialNodes.push_back(_treeForward.InsertNode(NULL, vinitialconfig, _vecInitialNodes.size()));
         }
 
         if( _treeForward.GetNumNodes() == 0 && !params->_sampleinitialfn ) {
-            RAVELOG_WARN("no initial configurations\n");
+            RAVELOG_WARN_FORMAT("env=%d, no initial configurations", GetEnv()->GetId());
             return false;
         }
 
@@ -187,7 +187,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
                     x1length2 += vdiff1[idof]*vdiff1[idof];
                 }
                 if( RaveFabs(dotproduct * dotproduct - x0length2*x1length2) > g_fEpsilonDotProduct ) {
-                    //RAVELOG_INFO_FORMAT("colinear: %.15e, %.15e", RaveFabs(dotproduct * dotproduct - x0length2*x1length2)%(dotproduct/RaveSqrt(x0length2*x1length2)));
+                    //RAVELOG_INFO_FORMAT("env=%d, colinear: %.15e, %.15e", GetEnv()->GetId()%RaveFabs(dotproduct * dotproduct - x0length2*x1length2)%(dotproduct/RaveSqrt(x0length2*x1length2)));
                     bcolinear = false;
                     break;
                 }
@@ -313,7 +313,7 @@ Some python code to display data::\n\
 
         //read in all goals
         if( (_parameters->vgoalconfig.size() % _parameters->GetDOF()) != 0 ) {
-            RAVELOG_ERROR("BirrtPlanner::InitPlan - Error: goals are improperly specified:\n");
+            RAVELOG_ERROR_FORMAT("env=%d, BirrtPlanner::InitPlan - Error: goals are improperly specified", GetEnv()->GetId());
             _parameters.reset();
             return false;
         }
@@ -338,7 +338,7 @@ Some python code to display data::\n\
         }
 
         if( _treeBackward.GetNumNodes() == 0 && !_parameters->_samplegoalfn ) {
-            RAVELOG_WARN("no goals specified\n");
+            RAVELOG_WARN_FORMAT("env=%d, no goals specified", GetEnv()->GetId());
             _parameters.reset();
             return false;
         }
@@ -360,7 +360,7 @@ Some python code to display data::\n\
         _goalindex = -1;
         _startindex = -1;
         if(!_parameters) {
-            return PlannerStatus("BirrtPlanner::PlanPath - Error, planner not initialized\n", PS_Failed);
+            return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, BirrtPlanner::PlanPath - Error, planner not initialized")%GetEnv()->GetId()), PS_Failed);
         }
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -385,7 +385,7 @@ Some python code to display data::\n\
             // have to check callbacks at the beginning since code can continue
             callbackaction = _CallCallbacks(progress);
             if( callbackaction ==  PA_Interrupt ) {
-                return PlannerStatus("Planning was interrupted", PS_Interrupted);
+                return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, Planning was interrupted")%GetEnv()->GetId()), PS_Interrupted);
             }
             else if( callbackaction == PA_ReturnWithAnySolution ) {
                 if( _vgoalpaths.size() > 0 ) {
@@ -460,7 +460,7 @@ Some python code to display data::\n\
             if( et == ET_Failed ) {
                 // necessary to increment iterator in case spaces are not connected
                 if( iter > 3*_parameters->_nMaxIterations ) {
-                    RAVELOG_WARN("iterations exceeded\n");
+                    RAVELOG_WARN_FORMAT("env=%d, iterations exceeded", GetEnv()->GetId());
                     break;
                 }
                 continue;
@@ -508,7 +508,7 @@ Some python code to display data::\n\
         if( _vgoalpaths.size() == 0 ) {
             std::string description = str(boost::format(_("env=%d, plan failed in %fs, iter=%d, nMaxIterations=%d"))%GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime))%(iter/3)%_parameters->_nMaxIterations);
             RAVELOG_WARN(description);
-            return PlannerStatus(description, PS_Failed);
+            return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
         }
 
         vector<GOALPATH>::iterator itbest = _vgoalpaths.begin();
@@ -693,7 +693,7 @@ public:
                 if(goal_index < (int)_parameters->vgoalconfig.size())
                     vgoal[i] = _parameters->vgoalconfig[goal_index];
                 else {
-                    RAVELOG_ERROR("BirrtPlanner::InitPlan - Error: goals are improperly specified:\n");
+                    RAVELOG_ERROR_FORMAT("env=%d, BasicRrtPlanner::InitPlan - Error: goals are improperly specified", GetEnv()->GetId());
                     _parameters.reset();
                     return false;
                 }
@@ -704,7 +704,7 @@ public:
                 _vecGoals.push_back(vgoal);
             }
             else {
-                RAVELOG_WARN("goal in collision\n");
+                RAVELOG_WARN_FORMAT("env=%d, goal in collision", GetEnv()->GetId());
             }
 
             if(goal_index == (int)_parameters->vgoalconfig.size()) {
@@ -713,22 +713,22 @@ public:
         }
 
         if(( _vecGoals.size() == 0) && !_parameters->_goalfn ) {
-            RAVELOG_WARN("no goals or goal function specified\n");
+            RAVELOG_WARN_FORMAT("env=%d, no goals or goal function specified", GetEnv()->GetId());
             _parameters.reset();
             return false;
         }
 
         _bOneStep = _parameters->_nRRTExtentType == 1;
-        RAVELOG_DEBUG_FORMAT("BasicRrtPlanner initialized _nRRTExtentType=%d", _parameters->_nRRTExtentType);
+        RAVELOG_DEBUG_FORMAT("env=%d, BasicRrtPlanner initialized _nRRTExtentType=%d", GetEnv()->GetId()%_parameters->_nRRTExtentType);
         return true;
     }
 
     PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         if(!_parameters) {
-            std::string description = "RrtPlanner::PlanPath - Error, planner not initialized\n";
+            std::string description = str(boost::format("env=%d, BasicRrtPlanner::PlanPath - Error, planner not initialized")%GetEnv()->GetId());
             RAVELOG_WARN(description);
-            return PlannerStatus(description, PS_Failed);
+            return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
         }
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -759,14 +759,14 @@ public:
             if( !!_parameters->_samplegoalfn ) {
                 vector<dReal> vgoal;
                 if( _parameters->_samplegoalfn(vgoal) ) {
-                    RAVELOG_VERBOSE("found goal\n");
+                    RAVELOG_VERBOSE_FORMAT("env=%d, found goal", GetEnv()->GetId());
                     _vecGoals.push_back(vgoal);
                 }
             }
             if( !!_parameters->_sampleinitialfn ) {
                 vector<dReal> vinitial;
                 if( _parameters->_sampleinitialfn(vinitial) ) {
-                    RAVELOG_VERBOSE("found initial\n");
+                    RAVELOG_VERBOSE_FORMAT("env=%d, found initial", GetEnv()->GetId());
                     _vecInitialNodes.push_back(_treeForward.InsertNode(NULL, vinitial, _vecInitialNodes.size()));
                 }
             }
@@ -848,14 +848,14 @@ public:
 
             // check if reached any goals
             if( iter > _parameters->_nMaxIterations ) {
-                RAVELOG_WARN("iterations exceeded %d\n", _parameters->_nMaxIterations);
+                RAVELOG_WARN_FORMAT("env=%d, iterations exceeded %d\n", GetEnv()->GetId()%_parameters->_nMaxIterations);
                 break;
             }
 
             if( !!bestGoalNode && _parameters->_nMaxPlanningTime > 0 ) {
                 uint32_t elapsedtime = utils::GetMilliTime()-basetime;
                 if( elapsedtime >= _parameters->_nMaxPlanningTime ) {
-                    RAVELOG_VERBOSE_FORMAT("time exceeded (%dms) so breaking with bestdist=%f", elapsedtime%fBestGoalNodeDist);
+                    RAVELOG_VERBOSE_FORMAT("env=%d, time exceeded (%dms) so breaking with bestdist=%f", GetEnv()->GetId()%elapsedtime%fBestGoalNodeDist);
                     break;
                 }
             }
@@ -863,7 +863,7 @@ public:
             progress._iteration = iter;
             callbackaction = _CallCallbacks(progress);
             if( callbackaction ==  PA_Interrupt ) {
-                return PlannerStatus(PS_Interrupted);
+                return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, Planning was interrupted")%GetEnv()->GetId()), PS_Interrupted);
             }
             else if( callbackaction == PA_ReturnWithAnySolution ) {
                 if( !!bestGoalNode ) {
@@ -875,7 +875,7 @@ public:
         if( !bestGoalNode ) {
             std::string description = str(boost::format("env=%d, plan failed, %fs")%GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
             RAVELOG_DEBUG(description);
-            return PlannerStatus(description, PS_Failed);
+            return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
         }
 
         const int dof = _parameters->GetDOF();
@@ -943,7 +943,7 @@ public:
             _parameters.reset();
             return false;
         }
-        RAVELOG_DEBUG("ExplorationPlanner::InitPlan - RRT Planner Initialized\n");
+        RAVELOG_DEBUG_FORMAT("env=%d, ExplorationPlanner::InitPlan - RRT Planner Initialized", GetEnv()->GetId());
         return true;
     }
 
@@ -952,7 +952,7 @@ public:
         _goalindex = -1;
         _startindex = -1;
         if( !_parameters ) {
-            return PlannerStatus(PS_Failed);
+            return OPENRAVE_PLANNER_STATUS(PS_Failed);
         }
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         vector<dReal> vSampleConfig;
@@ -975,7 +975,7 @@ public:
                 if( GetParameters()->CheckPathAllConstraints(_treeForward.GetVectorConfig(pnode), vSampleConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) == 0 ) {
                     _treeForward.InsertNode(pnode, vSampleConfig, 0);
                     GetEnv()->UpdatePublishedBodies();
-                    RAVELOG_DEBUG_FORMAT("size %d", _treeForward.GetNumNodes());
+                    RAVELOG_DEBUG_FORMAT("env=%d, size %d", GetEnv()->GetId()%_treeForward.GetNumNodes());
                 }
             }
             else {     // rrt extend
@@ -984,7 +984,7 @@ public:
                 }
                 NodeBasePtr plastnode;
                 if( _treeForward.Extend(vSampleConfig, plastnode, true) == ET_Connected ) {
-                    RAVELOG_DEBUG_FORMAT("size %d", _treeForward.GetNumNodes());
+                    RAVELOG_DEBUG_FORMAT("env=%d, size %d", GetEnv()->GetId()%_treeForward.GetNumNodes());
                 }
             }
         }
@@ -998,7 +998,7 @@ public:
         FOREACH(itnode, vnodes) {
             ptraj->Insert(ptraj->GetNumWaypoints(), _treeForward.GetVectorConfig(*itnode), _parameters->_configurationspecification);
         }
-        return PlannerStatus(PS_HasSolution);
+        return OPENRAVE_PLANNER_STATUS(PS_HasSolution);
     }
 
     virtual PlannerParametersConstPtr GetParameters() const {

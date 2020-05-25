@@ -105,7 +105,7 @@ public:
     /// robot is at the starting solution and solution should already be very close to the goal.
     /// assumes the robot's active dof is already set to the manipulator arm indices
     /// \param ikgoal the goal ik parameterization in the manipulator's base frame
-    /// \param vsolution output if successful
+    /// \param vsolution output if successful. vsolution should be initialized to current robot dof
     /// \return -1 if not changed, 0 if failed, 1 if changed and new succeeded in getting new position
     int ComputeSolution(const IkParameterization& ikgoal, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution, bool bIgnoreJointLimits=false)
     {
@@ -505,9 +505,9 @@ public:
     /// \param tgoal the goal in the manipulator's base frame
     /// \param vsolution output if successful
     /// \return -1 if not changed, 0 if failed, 1 if changed and new succeeded in getting new position
-    int ComputeSolution(const Transform& tgoal, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution)
+    int ComputeSolution(const Transform& tgoal, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution, bool bIgnoreJointLimits=false)
     {
-        return ComputeSolution(IkParameterization(tgoal, IKP_Transform6D), manip, vsolution);
+        return ComputeSolution(IkParameterization(tgoal, IKP_Transform6D), manip, vsolution, bIgnoreJointLimits);
     }
     
     int ComputeSolutionTranslation(const Transform& tgoal, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution)
