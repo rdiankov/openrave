@@ -1073,7 +1073,6 @@ UpdateFromInfoResult KinBody::Link::Geometry::UpdateFromInfo(const KinBody::Geom
     }
 
     if (GetType() != info._type) {
-        RAVELOG_ERROR("%d, %d", GetType()%info._type);
         return UFIR_RequireRemoveFromEnvironment;
     }
 
@@ -1097,7 +1096,7 @@ UpdateFromInfoResult KinBody::Link::Geometry::UpdateFromInfo(const KinBody::Geom
     }
     else if (GetType() == GT_Sphere) {
         // TODO
-        // return UFIR_RequireRemoveFromEnvironment;
+        return UFIR_RequireRemoveFromEnvironment;
     }
     else if (GetType() == GT_Cylinder) {
         // TODO
