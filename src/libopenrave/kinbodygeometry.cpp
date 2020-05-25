@@ -1092,7 +1092,7 @@ UpdateFromInfoResult KinBody::Link::Geometry::UpdateFromInfo(const KinBody::Geom
     }
     else if (GetType() == GT_Cage) {
         // TODO
-        // return UFIR_RequireRemoveFromEnvironment;
+        return UFIR_RequireRemoveFromEnvironment;
     }
     else if (GetType() == GT_Sphere) {
         // TODO
