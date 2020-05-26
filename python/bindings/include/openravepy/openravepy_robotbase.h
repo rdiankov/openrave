@@ -86,26 +86,26 @@ public:
 
         object GetFreeParameters() const;
 
-        /* ========== posture describer ========== */
-        /// \brief Generates a posture describer for this manipulator
-        /// \return the describer if we have successfully generated one at the manipulator; None (nullptr) otherwise
-        PyPostureDescriberPtr GeneratePostureDescriber() const;
+        // /* ========== posture describer ========== */
+        // /// \brief Generates a posture describer for this manipulator
+        // /// \return the describer if we have successfully generated one at the manipulator; None (nullptr) otherwise
+        // PyPostureDescriberPtr GeneratePostureDescriber() const;
 
-        /// \brief Sets the posture describer for this manipulator
-        /// \return true if the describer is successfully set
-        bool SetPostureDescriber(PyPostureDescriberPtr pydescriber) const;
+        // /// \brief Sets the posture describer for this manipulator
+        // /// \return true if the describer is successfully set
+        // bool SetPostureDescriber(PyPostureDescriberPtr pydescriber) const;
 
-        /// \brief Gets the posture describer for this manipulator
-        /// \return the describer if we have set one at the manipulator; None (nullptr) otherwise
-        PyPostureDescriberPtr GetPostureDescriber() const;
+        // /// \brief Gets the posture describer for this manipulator
+        // /// \return the describer if we have set one at the manipulator; None (nullptr) otherwise
+        // PyPostureDescriberPtr GetPostureDescriber() const;
 
-        /// \brief Computes posture states at the current dof values using the describer set at the manipulator
-        /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
-        object ComputePostureStates() const;
+        // /// \brief Computes posture states at the current dof values using the describer set at the manipulator
+        // /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
+        // object ComputePostureStates() const;
 
-        /// \brief Computes posture states at the input dof values using the describer set at the manipulator
-        /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
-        object ComputePostureStates(object pyjointvalues) const;
+        // /// \brief Computes posture states at the input dof values using the describer set at the manipulator
+        // /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
+        // object ComputePostureStates(object pyjointvalues) const;
 
         bool _FindIKSolution(const IkParameterization& ikparam, std::vector<dReal>& solution, int filteroptions, bool releasegil) const;
         bool _FindIKSolution(const IkParameterization& ikparam, const std::vector<dReal>& vFreeParameters, std::vector<dReal>& solution, int filteroptions, bool releasegil) const;
@@ -429,26 +429,26 @@ public:
 
     PyStateRestoreContextBase* CreateRobotStateSaver(object options=py::none_());
 
-    /* ========== posture describer ========== */
-    /// \brief Generates a posture describer for this manipulator
-    /// \return the describer if we have successfully generated one at the manipulator; None (nullptr) otherwise
-    PyPostureDescriberPtr GeneratePostureDescriber(PyManipulatorPtr pymanip) const;
+    // /* ========== posture describer ========== */
+    // /// \brief Generates a posture describer for this manipulator
+    // /// \return the describer if we have successfully generated one at the manipulator; None (nullptr) otherwise
+    // PyPostureDescriberPtr GeneratePostureDescriber(PyManipulatorPtr pymanip) const;
 
-    /// \brief Sets the posture describer for this manipulator
-    /// \return true if the describer is successfully set
-    bool SetPostureDescriber(PyManipulatorPtr pymanip, PyPostureDescriberPtr pydescriber) const;
+    // /// \brief Sets the posture describer for this manipulator
+    // /// \return true if the describer is successfully set
+    // bool SetPostureDescriber(PyManipulatorPtr pymanip, PyPostureDescriberPtr pydescriber) const;
 
-    /// \brief Gets the posture describer for this manipulator
-    /// \return the describer if we have set one at the manipulator; None (nullptr) otherwise
-    PyPostureDescriberPtr GetPostureDescriber(PyManipulatorPtr pymanip) const;
+    // /// \brief Gets the posture describer for this manipulator
+    // /// \return the describer if we have set one at the manipulator; None (nullptr) otherwise
+    // PyPostureDescriberPtr GetPostureDescriber(PyManipulatorPtr pymanip) const;
 
-    /// \brief Computes posture states at the current dof values using the describer set at the manipulator
-    /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
-    object ComputePostureStates(PyManipulatorPtr pymanip) const;
+    // /// \brief Computes posture states at the current dof values using the describer set at the manipulator
+    // /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
+    // object ComputePostureStates(PyManipulatorPtr pymanip) const;
 
-    /// \brief Computes posture states at the input dof values using the describer set at the manipulator
-    /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
-    object ComputePostureStates(PyManipulatorPtr pymanip, object pyjointvalues) const;
+    // /// \brief Computes posture states at the input dof values using the describer set at the manipulator
+    // /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
+    // object ComputePostureStates(PyManipulatorPtr pymanip, object pyjointvalues) const;
 
     virtual std::string __repr__();
     virtual std::string __str__();

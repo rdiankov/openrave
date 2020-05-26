@@ -4,12 +4,14 @@ if(NOT OPENRAVE_DISABLE_ASSERT_HANDLER)
 endif()
 
 # all cpp files for python bindings
-set(openravepy_int_cpp_files openravepy_int.cpp openravepy_kinbody.cpp openravepy_robot.cpp openravepy_global.cpp
-    openravepy_collisionchecker.cpp openravepy_controller.cpp openravepy_ikparameterization.cpp openravepy_iksolver.cpp
-    openravepy_module.cpp openravepy_physicsengine.cpp openravepy_planner.cpp openravepy_planningutils.cpp
-    openravepy_posturedescriber.cpp
-    openravepy_sensor.cpp openravepy_sensorsystem.cpp openravepy_spacesampler.cpp openravepy_trajectory.cpp
-    openravepy_viewer.cpp bindings.cpp docstrings.cpp)
+set(openravepy_int_cpp_files
+  openravepy_int.cpp openravepy_kinbody.cpp openravepy_robot.cpp openravepy_global.cpp 
+    openravepy_collisionchecker.cpp openravepy_controller.cpp openravepy_ikparameterization.cpp openravepy_iksolver.cpp 
+    openravepy_module.cpp openravepy_physicsengine.cpp openravepy_planner.cpp openravepy_planningutils.cpp 
+    # openravepy_posturedescriber.cpp
+    openravepy_sensor.cpp openravepy_sensorsystem.cpp openravepy_spacesampler.cpp openravepy_trajectory.cpp 
+    openravepy_viewer.cpp bindings.cpp docstrings.cpp
+  ) 
 
 if( NOT(PYTHONLIBS_FOUND OR PYTHON_LIBRARIES ) )
   message(STATUS "failed to find development python headers please install them")
@@ -175,7 +177,9 @@ elseif( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
 
     ## openrave bindings
     add_library(openravepy_int SHARED ${openravepy_int_cpp_files})
-    target_link_libraries(openravepy_int PUBLIC ${OPENRAVEPY_LINKED_LIBRARIES} libopenrave libopenrave-core posturedescriber PRIVATE boost_assertion_failed)
+    target_link_libraries(openravepy_int PUBLIC ${OPENRAVEPY_LINKED_LIBRARIES} libopenrave libopenrave-core #posturedescriber
+      PRIVATE boost_assertion_failed
+    )
     add_dependencies(openravepy_int libopenrave libopenrave-core)
     set_target_properties(openravepy_int PROPERTIES PREFIX "" COMPILE_FLAGS "${OPENRAVEPY_COMPILE_FLAGS}")
     if( WIN32 )
