@@ -2295,23 +2295,6 @@ void DynamicsCollisionConstraint::_PrintOnFailure(const std::string& prefix)
     }
 }
 
-inline std::ostream& RaveSerializeTransform(std::ostream& O, const Transform& t, char delim=',')
-{
-    O << t.rot.x << delim << t.rot.y << delim << t.rot.z << delim << t.rot.w << delim << t.trans.x << delim << t.trans.y << delim << t.trans.z;
-    return O;
-}
-
-inline std::ostream& RaveSerializeValues(std::ostream& O, const std::vector<dReal>& values, char delim=',')
-{
-    for(size_t i = 0; i < values.size(); ++i) {
-        if( i > 0 ) {
-            O << delim;
-        }
-        O << values[i];
-    }
-    return O;
-}
-
 int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeelapsed, IntervalType interval, int options, ConstraintFilterReturnPtr filterreturn)
 {
     int maskoptions = options&_filtermask;
@@ -2755,13 +2738,13 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 if( dqscale <= 0.01 ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                     ss << "x0=[";
-                    RaveSerializeValues(ss, q0);
+                    SerializeValues(ss, q0);
                     ss << "]; x1=[";
-                    RaveSerializeValues(ss, q1);
+                    SerializeValues(ss, q1);
                     ss << "]; dx0=[";
-                    RaveSerializeValues(ss, dq0);
+                    SerializeValues(ss, dq0);
                     ss << "]; dx1=[";
-                    RaveSerializeValues(ss, dq1);
+                    SerializeValues(ss, dq1);
                     ss << "]; deltatime=" << timeelapsed;
                     RAVELOG_WARN_FORMAT("got very small dqscale %f, so returning failure %s", dqscale%ss.str());
                     if( !!filterreturn ) {
@@ -2772,13 +2755,13 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 if( numRepeating > numSteps*2 ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                     ss << "x0=[";
-                    RaveSerializeValues(ss, q0);
+                    SerializeValues(ss, q0);
                     ss << "]; x1=[";
-                    RaveSerializeValues(ss, q1);
+                    SerializeValues(ss, q1);
                     ss << "]; dx0=[";
-                    RaveSerializeValues(ss, dq0);
+                    SerializeValues(ss, dq0);
                     ss << "]; dx1=[";
-                    RaveSerializeValues(ss, dq1);
+                    SerializeValues(ss, dq1);
                     ss << "]; deltatime=" << timeelapsed;
                     RAVELOG_WARN_FORMAT("num repeating is %d/%d, dqscale=%f, iScaledIndex=%d, nLargestStepIndex=%d, timestep=%f, fBestNewStep=%f, fLargestStep=%f, so returning failure %s", numRepeating%(numSteps*2)%dqscale%iScaledIndex%nLargestStepIndex%timestep%fBestNewStep%fLargestStep%ss.str());
                     if( !!filterreturn ) {
@@ -2816,13 +2799,13 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     {
                         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                         ss << "x0=[";
-                        RaveSerializeValues(ss, q0);
+                        SerializeValues(ss, q0);
                         ss << "]; x1=[";
-                        RaveSerializeValues(ss, q1);
+                        SerializeValues(ss, q1);
                         ss << "]; dx0=[";
-                        RaveSerializeValues(ss, dq0);
+                        SerializeValues(ss, dq0);
                         ss << "]; dx1=[";
-                        RaveSerializeValues(ss, dq1);
+                        SerializeValues(ss, dq1);
                         ss << "]; deltatime=" << timeelapsed;
                         RAVELOG_WARN_FORMAT("timestep %.15e > total time of ramp %.15e, step %d/%d %s", timestep%timeelapsed%istep%numSteps%ss.str());
                     }

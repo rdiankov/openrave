@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <openrave/posturedescriberinterface.h> // PostureDescriber
+#include "libopenrave.h"
 
 // #define POSTUREDESCRIBER_DEBUG
 
@@ -316,12 +317,7 @@ bool PostureDescriber::_GetPostureValueThresholdCommand(std::ostream& ssout, std
 }
 
 bool PostureDescriber::_GetArmIndicesCommand(std::ostream& ssout, std::istream& ssin) const {
-    if(!_armindices.empty()) {
-        ssout << _armindices[0];
-        for(size_t i = 1; i < _armindices.size(); ++i) {
-            ssout << " " << _armindices[i];
-        }
-    }
+    SerializeValues(ssout, _armindices, ' ');
     return !_armindices.empty();
 }
 

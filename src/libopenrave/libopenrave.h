@@ -239,6 +239,24 @@ inline void SerializeRound(std::ostream& o, const RaveTransformMatrix<T>& t)
     SerializeRound(o,t.trans);
 }
 
+inline std::ostream& SerializeTransform(std::ostream& O, const Transform& t, char delim=',')
+{
+    O << t.rot.x << delim << t.rot.y << delim << t.rot.z << delim << t.rot.w << delim << t.trans.x << delim << t.trans.y << delim << t.trans.z;
+    return O;
+}
+
+template <typename T>
+inline std::ostream& SerializeValues(std::ostream& O, const std::vector<T>& values, char delim=',')
+{
+    if(!values.empty()) {
+        O << values[0];
+        for(size_t i = 1; i < values.size(); ++i) {
+            O << delim << values[i];
+        }
+    }
+    return O;
+}
+
 inline int CountCircularBranches(dReal angle)
 {
     if( angle > PI ) {
