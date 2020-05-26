@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <openrave/plugin.h> // OPENRAVE_PLUGIN_API
-#include <openrave/posturedescriber.h> // PostureDescriberBasePtr
+#include <openrave/posturedescriberinterface.h> // PostureDescriberBasePtr
 #include "posturedescribermodule.h" // PostureDescriberModule
 
 namespace OpenRAVE {
@@ -100,6 +100,7 @@ using OpenRAVE::EnvironmentBasePtr;
 
 // posture describer interfaces
 using OpenRAVE::PostureDescriberBasePtr;
+using OpenRAVE::PostureDescriber;
 using OpenRAVE::PostureDescriberModule;
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& ssin, EnvironmentBasePtr penv)
@@ -107,8 +108,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     switch(type) {
     case PT_PostureDescriber: {
         if( interfacename == "posturedescriber" ) {
-            const PostureDescriberBasePtr pdescriber = RaveCreatePostureDescriber(penv, interfacename);
-            return pdescriber;
+            return PostureDescriberBasePtr(new PostureDescriber(penv));
         }
         break;
     }

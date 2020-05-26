@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef RAVE_POSTUREDESCRIBER_PLUGINDEFS_H
-#define RAVE_POSTUREDESCRIBER_PLUGINDEFS_H
+#ifndef OPENRAVE_POSTUREDESCRIBERINTERFACE_H
+#define OPENRAVE_POSTUREDESCRIBERINTERFACE_H
 
 #define POSTUREDESCRIBER_CLASS_NAME   "posturedescriber"  // PostureDescriber
 #define POSTUREDESCRIBER_MODULE_NAME  "posturedescriber" // PostureDescriberModule
@@ -166,4 +166,4 @@ inline void compute_robot_posture_states(const std::array<double, N>& postureval
 
 } // namespace OpenRAVE
 
-#endif // RAVE_POSTUREDESCRIBER_PLUGINDEFS_H
+#endif // OPENRAVE_POSTUREDESCRIBERINTERFACE_H
