@@ -117,7 +117,7 @@ class PyAttachedSensorInfo;
 class PyConnectedBodyInfo;
 class PyLink;
 class PyJoint;
-// class PyPostureDescriber;
+class PyPostureDescriber;
 
 typedef OPENRAVE_SHARED_PTR<PyInterfaceBase> PyInterfaceBasePtr;
 typedef OPENRAVE_SHARED_PTR<PyInterfaceBase const> PyInterfaceBaseConstPtr;
@@ -168,8 +168,8 @@ typedef OPENRAVE_SHARED_PTR<PyLink> PyLinkPtr;
 typedef OPENRAVE_SHARED_PTR<PyLink const> PyLinkConstPtr;
 typedef OPENRAVE_SHARED_PTR<PyJoint> PyJointPtr;
 typedef OPENRAVE_SHARED_PTR<PyJoint const> PyJointConstPtr;
-// typedef OPENRAVE_SHARED_PTR<PyPostureDescriber> PyPostureDescriberPtr;
-// typedef OPENRAVE_SHARED_PTR<PyPostureDescriber const> PyPostureDescriberConstPtr;
+typedef OPENRAVE_SHARED_PTR<PyPostureDescriber> PyPostureDescriberPtr;
+typedef OPENRAVE_SHARED_PTR<PyPostureDescriber const> PyPostureDescriberConstPtr;
 
 inline uint64_t GetMicroTime()
 {
@@ -846,6 +846,8 @@ void init_openravepy_posturedescriber(py::module& m);
 #else
 void init_openravepy_posturedescriber();
 #endif
+OPENRAVEPY_API PostureDescriberBasePtr GetPostureDescriber(PyPostureDescriberPtr);
+OPENRAVEPY_API PyInterfaceBasePtr toPyPostureDescriber(PostureDescriberBasePtr, PyEnvironmentBasePtr);
 OPENRAVEPY_API int pyGetIntFromPy(py::object olevel, int defaultvalue);
 OPENRAVEPY_API py::object toPyPlannerStatus(const PlannerStatus&);
     

@@ -899,6 +899,7 @@ PyInterfaceBasePtr PyEnvironmentBase::_toPyInterface(InterfaceBasePtr pinterface
     case PT_Trajectory: return openravepy::toPyTrajectory(OPENRAVE_STATIC_POINTER_CAST<TrajectoryBase>(pinterface),shared_from_this());
     case PT_Viewer: return openravepy::toPyViewer(OPENRAVE_STATIC_POINTER_CAST<ViewerBase>(pinterface),shared_from_this());
     case PT_SpaceSampler: return openravepy::toPySpaceSampler(OPENRAVE_STATIC_POINTER_CAST<SpaceSamplerBase>(pinterface),shared_from_this());
+    // case PT_PostureDescriber: return openravepy::toPyPostureDescriber(OPENRAVE_STATIC_POINTER_CAST<PostureDescriberBase>(pinterface),shared_from_this());
     }
     return PyInterfaceBasePtr();
 }
@@ -3016,7 +3017,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
     openravepy::init_openravepy_sensorsystem(m);
     openravepy::init_openravepy_spacesampler(m);
     openravepy::init_openravepy_viewer(m);
-    // openravepy::init_openravepy_posturedescriber(m);
+    openravepy::init_openravepy_posturedescriber(m);
 #else
     openravepy::init_openravepy_global();
     openravepy::InitPlanningUtils();
@@ -3035,7 +3036,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
     openravepy::init_openravepy_sensorsystem();
     openravepy::init_openravepy_spacesampler();
     openravepy::init_openravepy_viewer();
-    // openravepy::init_openravepy_posturedescriber();
+    openravepy::init_openravepy_posturedescriber();
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

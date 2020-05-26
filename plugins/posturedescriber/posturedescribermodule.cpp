@@ -16,7 +16,6 @@
 
 #include <openrave/plugin.h> // OPENRAVE_PLUGIN_API
 #include <openrave/posturedescriber.h> // PostureDescriberBasePtr
-// #include "plugindefs.h" //  POSTUREDESCRIBER_MODULE_NAME, POSTUREDESCRIBER_CLASS_NAME
 #include "posturedescribermodule.h" // PostureDescriberModule
 
 namespace OpenRAVE {

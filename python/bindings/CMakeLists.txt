@@ -8,7 +8,7 @@ set(openravepy_int_cpp_files
   openravepy_int.cpp openravepy_kinbody.cpp openravepy_robot.cpp openravepy_global.cpp 
     openravepy_collisionchecker.cpp openravepy_controller.cpp openravepy_ikparameterization.cpp openravepy_iksolver.cpp 
     openravepy_module.cpp openravepy_physicsengine.cpp openravepy_planner.cpp openravepy_planningutils.cpp 
-    # openravepy_posturedescriber.cpp
+    openravepy_posturedescriber.cpp
     openravepy_sensor.cpp openravepy_sensorsystem.cpp openravepy_spacesampler.cpp openravepy_trajectory.cpp 
     openravepy_viewer.cpp bindings.cpp docstrings.cpp
   ) 

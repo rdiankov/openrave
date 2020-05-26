@@ -117,16 +117,35 @@ PyPostureDescriberPtr GeneratePostureDescriber(const PyManipulatorPtr& pymanip) 
     return pyDescriber;
 }
 
+PostureDescriberBasePtr GetPostureDescriber(PyPostureDescriberPtr pydescriber)
+{
+    return !pydescriber ? PostureDescriberBasePtr() : pydescriber->GetPostureDescriber();
+}
+
+PyInterfaceBasePtr toPyPostureDescriber(PostureDescriberBasePtr pdescriber, PyEnvironmentBasePtr pyenv)
+{
+    return !pdescriber ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyPostureDescriber(pdescriber,pyenv));
+}
+
+PyPostureDescriberPtr RaveCreatePostureDescriber(PyEnvironmentBasePtr pyenv, const std::string& name)
+{
+    PostureDescriberBasePtr p = OpenRAVE::RaveCreatePostureDescriber(GetEnvironment(pyenv), name);
+    if( !p ) {
+        return PyPostureDescriberPtr();
+    }
+    return PyPostureDescriberPtr(new PyPostureDescriber(p, pyenv));
+}
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 void init_openravepy_posturedescriber(py::module& m)
 #else
 void init_openravepy_posturedescriber()
 #endif
 {
-    bool (PyPostureDescriber::*InitWithTwoLinks)(PyLinkPtr, PyLinkPtr)           = &PyPostureDescriber::Init;
-    bool (PyPostureDescriber::*InitWithManip)(PyManipulatorPtr)                  = &PyPostureDescriber::Init;
-    bool (PyPostureDescriber::*SupportsWithTwoLinks)(PyLinkPtr, PyLinkPtr) const = &PyPostureDescriber::Supports;
-    bool (PyPostureDescriber::*SupportsWithManip)(PyManipulatorPtr)        const = &PyPostureDescriber::Supports;
+    // bool (PyPostureDescriber::*InitWithTwoLinks)(PyLinkPtr, PyLinkPtr)           = &PyPostureDescriber::Init;
+    // bool (PyPostureDescriber::*InitWithManip)(PyManipulatorPtr)                  = &PyPostureDescriber::Init;
+    // bool (PyPostureDescriber::*SupportsWithTwoLinks)(PyLinkPtr, PyLinkPtr) const = &PyPostureDescriber::Supports;
+    // bool (PyPostureDescriber::*SupportsWithManip)(PyManipulatorPtr)        const = &PyPostureDescriber::Supports;
     object (PyPostureDescriber::*ComputePostureStates)()                         = &PyPostureDescriber::ComputePostureStates;
     object (PyPostureDescriber::*ComputePostureStatesWithJointValues)(object)    = &PyPostureDescriber::ComputePostureStates;
 

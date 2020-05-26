@@ -15,12 +15,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-#ifndef PLUGINS_FKCOMPUTERS_POSTUREDESCRIBERMODULE_H
-#define PLUGINS_FKCOMPUTERS_POSTUREDESCRIBERMODULE_H
+#ifndef PLUGINS_POSTUREDESCRIBERMODULE_H
+#define PLUGINS_POSTUREDESCRIBERMODULE_H
 
-#include <string> // string
 #include <openrave/openrave.h>
-// #include "plugindefs.h" // POSTUREDESCRIBER_CLASS_NAME
 
 namespace OpenRAVE {
 
@@ -40,4 +38,4 @@ private:
 
 } // namepspace OpenRAVE
 
-#endif // PLUGINS_FKCOMPUTERS_POSTUREDESCRIBERMODULE_H
+#endif // PLUGINS_POSTUREDESCRIBERMODULE_H
