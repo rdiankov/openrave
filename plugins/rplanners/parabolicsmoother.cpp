@@ -1977,10 +1977,13 @@ protected:
         int nEndTimeDiscretization = 0;
         int numslowdowns = 0;
         bool bExpectModifiedConfigurations = _parameters->fCosManipAngleThresh > -1 + g_fEpsilonLinear; // gripper constraints enabled
+        uint64_t tsPrevSuccessful = utils::GetMicroTime();
+        dReal diff = 0;
         size_t nItersFromPrevSuccessful = 0;
         size_t nCutoffIters = std::max(_parameters->nshortcutcycles, min(100, numIters/2));
         size_t nNumTimeBasedConstraintsFailed = 0;
         dReal cutoffRatio = _parameters->durationImprovementCutoffRatio;
+        dReal computationCostPenalty = _parameters->computationCostPenalty;
         dReal score = 1;
         dReal currentBestScore = 1.0;
 #ifdef OPENRAVE_TIMING_DEBUGGING
@@ -1995,6 +1998,14 @@ protected:
             if (nItersFromPrevSuccessful + nNumTimeBasedConstraintsFailed > nCutoffIters) { // the same time based constraints can fail all the time meaning that the trajectory is already pretty optimal. This check makes smoother easier to stop when there's no improvement
                 // No progess for already nCutoffIters. Stop right away
                 RAVELOG_DEBUG_FORMAT("env=%d, no progress for shortcutting, so break %d + %d > %d", GetEnv()->GetId()%nItersFromPrevSuccessful%nNumTimeBasedConstraintsFailed%nCutoffIters);
+                break;
+            }
+
+            dReal computationCost = 0.000001f*(dReal)(utils::GetMicroTime() - tsPrevSuccessful);
+            if ((shortcuts > 5) && (diff > 0) && (computationCost * computationCostPenalty > diff)) {
+                // We have already shortcut for a bit. The last shortcut costs more time
+                // to compute than the diff execution time. Stop here.
+                RAVELOG_DEBUG_FORMAT("env=%d, computation cost is too high, so break cost(%.15e) * penalty(%f) > diff(%.15e); shortcuts=%d endTime: %.15e -> %.15e",GetEnv()->GetId()%computationCost%computationCostPenalty%diff%shortcuts%originalEndTime%endTime);
                 break;
             }
 
@@ -2550,7 +2561,7 @@ protected:
                     rampStartTime[i] = endTime;
                     endTime += ramps[i].endTime;
                 }
-                dReal diff = dummyEndTime - endTime;
+                diff = dummyEndTime - endTime;
                 vVisitedDiscretization.clear(); // have to clear so that can recreate the visited nodes
 #ifdef SMOOTHER_PROGRESS_DEBUG
                 RAVELOG_DEBUG_FORMAT("env=%d: shortcut iter=%d/%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%numIters%numslowdowns%dummyEndTime%endTime%diff);
@@ -2607,6 +2618,7 @@ protected:
                     currentBestScore = score;
                 }
                 nItersFromPrevSuccessful = 0;
+                tsPrevSuccessful = utils::GetMicroTime();
                 if ((score/currentBestScore < cutoffRatio) && (shortcuts > 5)) {
                     // We have already shortcut for a bit. The progress just made is below the
                     // cutoff. If we continue, it is unlikely that we will make much more
