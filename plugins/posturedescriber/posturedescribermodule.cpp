@@ -57,6 +57,11 @@ bool PostureDescriberModule::_LoadPostureDescriberCommand(std::ostream& ssout, s
         eelink = probot->GetLink(eelinkname);
     }
     else {
+        ssin >> eelinkname;
+        if(ssin) {
+            throw OPENRAVE_EXCEPTION_FORMAT("Have already taken manipname=%s; cannot take a third argument (eelinkname=)%s",
+                                            manipname % eelinkname, OpenRAVEErrorCode::ORE_InvalidArguments);
+        }
         baselink = pmanip->GetBase();
         eelink = pmanip->GetEndEffector();
         baselinkname = baselink->GetName();

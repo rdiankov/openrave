@@ -1051,7 +1051,7 @@ private:
     virtual bool SetPostureDescriber(const LinkPair& kinematicsChain, PostureDescriberBasePtr pDescriber);
 
     /// \brief Registers a robot posture describer for a kinematics chain from the manipulator's baselink to its eelink.
-    /// \param [in] pmanip        manipulator that prescribes a kinematics chain by its baselink and eelink
+    /// \param [in] pmanip        manipulator that prescribes a kinematics chain from its baselink to its eelink
     /// \param [in] pDescriber    pointer to a robot posture describer
     /// \return true if either (1) pDescriber is not null and supports the kinematics chain of pmanip, or (2) pDescriber is null and we successfully register the describer for pmanip.
     virtual bool SetPostureDescriber(ManipulatorConstPtr pmanip, PostureDescriberBasePtr pDescriber);
@@ -1062,7 +1062,7 @@ private:
     virtual PostureDescriberBasePtr GetPostureDescriber(const LinkPair& kinematicsChain) const;
 
     /// \brief Gets robot posture describer for a kinematics chain from the manipulator's baselink to its eelink.
-    /// \param [in] pmanip        manipulator that prescribes a kinematics chain by its baselink and eelink
+    /// \param [in]  pmanip    manipulator that prescribes a kinematics chain from its baselink to its eelink
     /// \return a non-null pointer to a robot posture describer if this describer was previously registered; otherwise a null pointer
     virtual PostureDescriberBasePtr GetPostureDescriber(ManipulatorConstPtr pmanip) const;
 
@@ -1072,11 +1072,11 @@ private:
     virtual bool UnregisterPostureDescriber(const LinkPair& kinematicsChain);
 
     /// \brief Unregisters the robot posture describer for a kinematics chain from the manipulator's baselink to its eelink.
-    /// \param [in] pmanip        manipulator that prescribes a kinematics chain by its baselink and eelink
+    /// \param [in]  pmanip    manipulator that prescribes a kinematics chain from its baselink to its eelink
     /// \return true if the unregistering is successful
     virtual bool UnregisterPostureDescriber(const ManipulatorConstPtr pmanip);
 
-    using PostureStateInt = uint32_t;
+    using PostureStateInt = uint32_t; ///< each posture state is an unsigned 32-bit integer, The number of "features" we use to describe a kinematics chain is the number of the lowest bits we use in a posture state integer. The closer a feature is closer to the robot's base, the more significant (higher) its corresponding bit is. For example, to describe the kinematics chain of a general 6R (six-revolute-joint) robot, we use three features: shoulder, elbow, and wrist. Hence we use the last 3 bits, where the most significant bit is for the shoulder, while the least for the wrist.
 
     /// \brief Computes posture states to describe the posture of a kinematics chain at the current or specified dof values.
     /// Computes posture state integers for describing the posture of links between baselink and eelink.
@@ -1092,14 +1092,12 @@ private:
     /// Computes posture state integers for describing the posture of links between the manipulator's baselink and its eelink.
     /// If the manipulator is not specified, then we use the active manipulator.
     /// \param [out] posturevalues     a vector of robot posture state (unsigned) integers at the current of specified dof values
-    /// \param [in]  kinematicsChain   a kinematics chain prescribed by a baselink-eelink pair
+    /// \param [in]  pmanip            manipulator that prescribes a kinematics chain from its baselink to its eelink
     /// \param [in]  dofvalues         dof values set along the kinematics chain from base link to end-effector link; its size should be either 0 (i.e., using the current dof values) or the same size of the dofs of the kinematics chain
     /// \return true if the registered posture describer successfully computes a vector of posture state values for describing the posture of the kinematics chain.
     virtual bool ComputePostureStates(std::vector<PostureStateInt>& posturevalues,
-                                      ManipulatorConstPtr pmanip = ManipulatorConstPtr(),
+                                      ManipulatorConstPtr pmanip,
                                       const std::vector<double>& dofvalues = {}) const;
-
-
 
     //@}
 

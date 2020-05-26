@@ -26,7 +26,7 @@ bool RobotBase::UnregisterPostureDescriber(const LinkPair& kinematicsChain) {
 
 bool RobotBase::UnregisterPostureDescriber(ManipulatorConstPtr pmanip) {
     if(pmanip == nullptr) {
-        pmanip = this->GetActiveManipulator();
+        throw OPENRAVE_EXCEPTION_FORMAT0("Input manipulator cannot be null", OpenRAVEErrorCode::ORE_InvalidArguments);
     }
     return this->UnregisterPostureDescriber(GetKinematicsChain(pmanip));
 }
@@ -34,7 +34,7 @@ bool RobotBase::UnregisterPostureDescriber(ManipulatorConstPtr pmanip) {
 
 bool RobotBase::SetPostureDescriber(const LinkPair& kinematicsChain, PostureDescriberBasePtr pDescriber)
 {
-    if (pDescriber != nullptr) {
+    if (pDescriber == nullptr) {
         if (_mPostureDescribers.count(kinematicsChain)) {
             _mPostureDescribers.erase(kinematicsChain); // remove instead of setting null solver
         }
@@ -51,7 +51,7 @@ bool RobotBase::SetPostureDescriber(const LinkPair& kinematicsChain, PostureDesc
 bool RobotBase::SetPostureDescriber(ManipulatorConstPtr pmanip, PostureDescriberBasePtr pDescriber)
 {
     if(pmanip == nullptr) {
-        pmanip = this->GetActiveManipulator();
+        throw OPENRAVE_EXCEPTION_FORMAT0("Input manipulator cannot be null", OpenRAVEErrorCode::ORE_InvalidArguments);
     }
     return this->SetPostureDescriber(GetKinematicsChain(pmanip), pDescriber);
 }
@@ -64,7 +64,7 @@ PostureDescriberBasePtr RobotBase::GetPostureDescriber(const LinkPair& kinematic
 PostureDescriberBasePtr RobotBase::GetPostureDescriber(ManipulatorConstPtr pmanip) const
 {
     if(pmanip == nullptr) {
-        pmanip = this->GetActiveManipulator();
+        throw OPENRAVE_EXCEPTION_FORMAT0("Input manipulator cannot be null", OpenRAVEErrorCode::ORE_InvalidArguments);
     }
     return this->GetPostureDescriber(GetKinematicsChain(pmanip));
 }
@@ -84,7 +84,7 @@ bool RobotBase::ComputePostureStates(std::vector<PostureStateInt>& posturestates
 bool RobotBase::ComputePostureStates(std::vector<PostureStateInt>& posturestates, ManipulatorConstPtr pmanip, const std::vector<double>& dofvalues) const
 {
     if(pmanip == nullptr) {
-        pmanip = this->GetActiveManipulator();
+        throw OPENRAVE_EXCEPTION_FORMAT0("Input manipulator cannot be null", OpenRAVEErrorCode::ORE_InvalidArguments);
     }
     return this->ComputePostureStates(posturestates, GetKinematicsChain(pmanip), dofvalues);
 }

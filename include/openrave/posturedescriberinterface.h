@@ -126,7 +126,7 @@ using PostureFormulation = std::array<std::array<int, 2>, 3>; ///< a posture val
 /// \param [in] x      a posture value
 /// \param [in] tol    tolerance to determine whether x is considered 0.0, so that this value means a hybrid state.
 /// \return 0 if x is considered positive, 1 if considered negative, and 2 (meaning hybrid states) if considered 0.0
-inline PostureStateInt compute_single_state(const double x, const double fTol) {
+inline PostureStateInt compute_feature_state(const double x, const double fTol) {
     return (x > fTol) ? 0 : (x < -fTol) ? 1 : 2; // >= or <= ?
 }
 
@@ -140,7 +140,7 @@ inline void compute_robot_posture_states(const std::array<double, N>& postureval
                                          std::vector<PostureStateInt>& posturestates) {
     std::array<PostureStateInt, N> singlestates;
     for(size_t i = 0; i < N; ++i) {
-        singlestates[i] = compute_single_state(posturevalues[i], fTol);
+        singlestates[i] = compute_feature_state(posturevalues[i], fTol);
     }
 
     posturestates = {0};
