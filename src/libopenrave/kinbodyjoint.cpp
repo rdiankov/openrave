@@ -2236,7 +2236,21 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
         }
     }
 
-    //TODO: _infoElectricMotor
+    // _infoElectricMotor
+    if (!!_info._infoElectricMotor) {
+        if (!!info._infoElectricMotor) {
+            // both are not empty, compare the content
+            if (*(_info._infoElectricMotor) != *(info._infoElectricMotor)) {
+                *_info._infoElectricMotor = *info._infoElectricMotor;
+            }
+        }
+        else {
+            _info._infoElectricMotor.reset();
+        }
+    }
+    else if (!!info._infoElectricMotor) {
+        _info._infoElectricMotor.reset(new ElectricMotorActuatorInfo(*info._infoElectricMotor));
+    }
 
     // _bIsCircular
     if (_info._bIsCircular != info._bIsCircular) {

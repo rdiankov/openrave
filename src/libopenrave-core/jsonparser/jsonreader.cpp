@@ -107,14 +107,10 @@ public:
         dReal fUnitScale = _GetUnitScale();
 
         EnvironmentBase::EnvironmentBaseInfo envInfo;
-        try {
-            _penv->ExtractInfo(envInfo);
-            envInfo.DeserializeJSON(*_doc);
-            _penv->UpdateFromInfo(envInfo);
-            return true;
-        } catch (...) {
-            return false;
-        }
+        _penv->ExtractInfo(envInfo);
+        envInfo.DeserializeJSON(*_doc);
+        _penv->UpdateFromInfo(envInfo);
+        return true;
     }
 
     bool ExtractFirst(KinBodyPtr& ppbody) {
