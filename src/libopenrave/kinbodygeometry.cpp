@@ -1106,10 +1106,7 @@ UpdateFromInfoResult KinBody::Link::Geometry::UpdateFromInfo(const KinBody::Geom
     }
     else if (GetType() == GT_TriMesh) {
         // TODO
-        // if (GetCollisionMesh() != info._meshcollision) {
-        //     return UFIR_RequireRemoveFromEnvironment;
-        // }
-        // return UFIR_RequireRemoveFromEnvironment;
+        return UFIR_RequireRemoveFromEnvironment;
     }
 
     // transparency

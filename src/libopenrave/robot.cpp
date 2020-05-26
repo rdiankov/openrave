@@ -2366,8 +2366,6 @@ void RobotBase::ExtractInfo(RobotBaseInfo& info)
 {
     KinBody::ExtractInfo(info);
 
-    // info._id = _info._id;
-    // info._referenceUri = _info._referenceUri;
     info._vManipulatorInfos.resize(_vecManipulators.size());
     for(size_t i = 0; i < info._vManipulatorInfos.size(); ++i) {
         info._vManipulatorInfos[i].reset(new RobotBase::ManipulatorInfo());
@@ -2420,7 +2418,6 @@ UpdateFromInfoResult RobotBase::UpdateFromInfo(const RobotBaseInfo& info)
             if (updateFromManipulatorInfoResult == UFIR_Success) {
                 continue;
             }
-
             // manipulator update failed;  TODO: more detailed handling
             return UFIR_RequireRemoveFromEnvironment;
         }
