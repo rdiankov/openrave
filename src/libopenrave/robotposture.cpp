@@ -34,7 +34,7 @@ bool RobotBase::UnregisterPostureDescriber(ManipulatorConstPtr pmanip) {
 
 bool RobotBase::SetPostureDescriber(const LinkPair& kinematicsChain, PostureDescriberBasePtr pDescriber)
 {
-    if (pDescriber != nullptr) {
+    if (pDescriber == nullptr) {
         if (_mPostureDescribers.count(kinematicsChain)) {
             _mPostureDescribers.erase(kinematicsChain); // remove instead of setting null solver
         }
