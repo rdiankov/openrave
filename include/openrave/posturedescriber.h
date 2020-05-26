@@ -68,6 +68,9 @@ public:
     /// \return true if (1) this describer class is properly initialized AND (2) dofvalues is either empty or has the correct size.
     virtual bool ComputePostureStates(std::vector<PostureStateInt>& posturestates, const std::vector<double>& dofvalues = {}) = 0;
 
+    /// \brief Gets the key used in map data (of type CustomData) in IkReturn
+    virtual std::string GetMapDataKey() const = 0;
+
     /// \return the static interface type this class points to (used for safe casting)
     static InterfaceType GetInterfaceTypeStatic() {
         return PT_PostureDescriber;

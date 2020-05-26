@@ -93,6 +93,9 @@ public:
     /// \brief Sets the tolerance for determining whether a robot posture value (shoulder, elbow, wrist, etc.) is close to 0
     bool SetPostureValueThreshold(const double fTol);
 
+    /// \brief Gets the key used in map data (of type CustomData) in IkReturn
+    virtual std::string GetMapDataKey() const override;
+
     const std::vector<KinBody::JointPtr>& GetJoints() const {
         return _joints;
     }

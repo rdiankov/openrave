@@ -23,6 +23,8 @@
 #include "jacobianinverse.h"
 #endif
 
+using PostureStateInt = OpenRAVE::RobotBase::PostureStateInt;
+
 template <typename IkReal>
 class IkFastSolver : public IkSolverBase
 {
@@ -1437,8 +1439,17 @@ protected:
 
         int nSameStateRepeatCount = 0;
         _nSameStateRepeatCount = 0;
-        std::vector<unsigned int> vsolutionindices;
-        iksol.GetSolutionIndices(vsolutionindices);
+
+        std::vector<PostureStateInt> vsolutionindices;
+        std::string solutionIndicesName = "solutionindices";
+        const PostureDescriberBasePtr pDescriber = probot->GetPostureDescriber(_pmanip);
+        if (pDescriber != nullptr) {
+            pDescriber->ComputePostureStates(vsolutionindices, vravesol);
+            solutionIndicesName = pDescriber->GetKey();
+        }
+        else {
+            iksol.GetSolutionIndices(vsolutionindices);
+        }
 
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
