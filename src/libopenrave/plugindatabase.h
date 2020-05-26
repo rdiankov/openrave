@@ -44,6 +44,21 @@
 
 #endif
 
+#define PLUGINDATABASE_H_DEBUG
+
+#ifndef _RAVE_DISPLAY
+#define _RAVE_DISPLAY(RUNCODE)                                               \
+{                                                                              \
+    printf(                                                                    \
+        "\n%s:%d, [ %s "                                                       \
+        "]\n-----------------------------------------------------------------" \
+        "--------------\n",                                                    \
+        __FILE__, __LINE__, __func__ /*__PRETTY_FUNCTION__*/);                 \
+    RUNCODE;                                                                   \
+    printf("\n");                                                              \
+}
+#endif // _RAVE_DISPLAY
+
 //#define INTERFACE_PREDELETER boost::bind(&RaveDatabase::_InterfaceDestroyCallbackShared,shared_from_this(),_1)
 
 #define INTERFACE_PREDELETER boost::function<void(void const*)>()
@@ -59,6 +74,19 @@ const char s_filesep = '/';
 #endif
 
 namespace OpenRAVE {
+
+std::string PrintPLUGININFO(const PLUGININFO& p) {
+    std::stringstream ss;
+    ss << "version = " << p.version << std::endl;
+    for(auto keyvalue : p.interfacenames) {
+        ss << keyvalue.first << ": ";
+        for(auto value : keyvalue.second) {
+            ss << value << ", ";
+        }
+        ss << std::endl;
+    }
+    return ss.str();
+}
 
 /// \brief database of interfaces from plugins
 class RaveDatabase : public boost::enable_shared_from_this<RaveDatabase>
@@ -261,15 +289,24 @@ public:
             if( name.size() == 0 ) {
                 return false;
             }
-            std::map<InterfaceType, std::vector<std::string> >::iterator itregisterednames = _infocached.interfacenames.find(type);
-            if( itregisterednames == _infocached.interfacenames.end() ) {
+#if defined(PLUGINDATABASE_H_DEBUG)
+            _RAVE_DISPLAY(
+                std::cout << "_infocached = " << PrintPLUGININFO(_infocached);
+            );
+#endif
+
+            if(!_infocached.interfacenames.count(type)) {
                 return false;
             }
-            FOREACH(it,itregisterednames->second) {
-                if(( name.size() >= it->size()) &&( _strnicmp(name.c_str(),it->c_str(),it->size()) == 0) ) {
+
+            auto names = _infocached.interfacenames.at(type);
+
+            for(const std::string& name_ : names) {
+                if(( name.size() >= name_.size()) &&( _strnicmp(name.c_str(), name_.c_str(), name_.size()) == 0) ) {
                     return true;
                 }
             }
+
             return false;
         }
 
@@ -548,6 +585,11 @@ protected:
 
     InterfaceBasePtr Create(EnvironmentBasePtr penv, InterfaceType type, const std::string& _name)
     {
+#if defined(PLUGINDATABASE_H_DEBUG)
+        if(_name == "fcl_") {
+            _RAVE_DISPLAY(std::cout << _name << std::endl;);
+        }
+#endif
         std::string name=_name;
         InterfaceBasePtr pointer;
         if( name.size() == 0 ) {
@@ -586,6 +628,9 @@ protected:
             FOREACH(it, listRegisteredInterfaces) {
                 RegisteredInterfacePtr registration = it->lock();
                 if( !!registration ) {
+#if defined(PLUGINDATABASE_H_DEBUG)
+                    _RAVE_DISPLAY(std::cout << registration->_name << std::endl;)
+#endif
                     if(( nInterfaceNameLength >= registration->_name.size()) &&( _strnicmp(name.c_str(),registration->_name.c_str(),registration->_name.size()) == 0) ) {
                         std::stringstream sinput(name);
                         std::string interfacename;
@@ -613,6 +658,9 @@ protected:
                 const char* hash = RaveGetInterfaceHash(type);
                 list<PluginPtr>::iterator itplugin = listplugins.begin();
                 while(itplugin != listplugins.end()) {
+#if defined(PLUGINDATABASE_H_DEBUG)
+                    _RAVE_DISPLAY(std::cout << (*itplugin)->GetName() << std::endl;)
+#endif
                     pointer = (*itplugin)->CreateInterface(type, name, hash, penv);
                     if( !!pointer ) {
                         if( strcmp(pointer->GetHash(), hash) ) {
@@ -822,6 +870,9 @@ protected:
         FOREACHC(it,_listRegisteredInterfaces) {
             RegisteredInterfacePtr registration = it->lock();
             if( !!registration ) {
+#if defined(PLUGINDATABASE_H_DEBUG)
+                _RAVE_DISPLAY(std::cout << "pushback " << registration->_name;);
+#endif
                 interfacenames[registration->_type].push_back(registration->_name);
             }
         }
@@ -905,6 +956,9 @@ protected:
 
     PluginPtr _LoadPlugin(const string& _libraryname)
     {
+#if defined(PLUGINDATABASE_H_DEBUG)
+        _RAVE_DISPLAY(std::cout << "load plugin " << _libraryname;);
+#endif
         string libraryname = _libraryname;
         void* plibrary = _SysLoadLibrary(libraryname,OPENRAVE_LAZY_LOADING);
         if( plibrary == NULL ) {
@@ -970,13 +1024,19 @@ protected:
             }
 
             if( p->pfnGetPluginAttributesNew != NULL ) {
-                p->pfnGetPluginAttributesNew(&p->_infocached, sizeof(p->_infocached),OPENRAVE_PLUGININFO_HASH);
+                p->pfnGetPluginAttributesNew(&p->_infocached, sizeof(p->_infocached), OPENRAVE_PLUGININFO_HASH);
+#if defined(PLUGINDATABASE_H_DEBUG)
+                _RAVE_DISPLAY(std::cout << "p->_infocached = " << PrintPLUGININFO(p->_infocached););
+#endif
             }
             else {
                 if( !p->pfnGetPluginAttributes(&p->_infocached, sizeof(p->_infocached)) ) {
                     RAVELOG_WARN(str(boost::format("%s: GetPluginAttributes failed\n")%libraryname));
                     return PluginPtr();
                 }
+#if defined(PLUGINDATABASE_H_DEBUG)
+                _RAVE_DISPLAY(std::cout << "p->_infocached = " << PrintPLUGININFO(p->_infocached););
+#endif
             }
         }
         catch(const std::exception& ex) {
@@ -1013,6 +1073,9 @@ protected:
 
     static void* _SysLoadLibrary(const std::string& lib, bool bLazy=false)
     {
+#if defined(PLUGINDATABASE_H_DEBUG)
+        _RAVE_DISPLAY(std::cout << "loading library " << lib;);
+#endif
         // check if file exists first
         if( !ifstream(lib.c_str()) ) {
             return NULL;
@@ -1039,6 +1102,9 @@ protected:
 
     static void* _SysLoadSym(void* lib, const std::string& sym)
     {
+#if defined(PLUGINDATABASE_H_DEBUG)
+        _RAVE_DISPLAY(std::cout << "loading symbol " << sym;);
+#endif
 #ifdef _WIN32
         return GetProcAddress((HINSTANCE)lib, sym.c_str());
 #else
