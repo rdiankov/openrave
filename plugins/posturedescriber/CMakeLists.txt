@@ -15,7 +15,7 @@ add_library(posturedescriber SHARED "${posturedescriber_cppfiles}")
 
 target_link_libraries(posturedescriber PUBLIC libopenrave PRIVATE boost_assertion_failed)
 set_target_properties(posturedescriber PROPERTIES
-	COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} -fvisibility=hidden"
+	COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}"
 	LINK_FLAGS "${PLUGIN_LINK_FLAGS}"
 )
 
