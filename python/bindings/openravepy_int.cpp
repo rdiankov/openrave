@@ -3016,7 +3016,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
     openravepy::init_openravepy_sensorsystem(m);
     openravepy::init_openravepy_spacesampler(m);
     openravepy::init_openravepy_viewer(m);
-    openravepy::init_openravepy_posturedescriber(m);
+    // openravepy::init_openravepy_posturedescriber(m);
 #else
     openravepy::init_openravepy_global();
     openravepy::InitPlanningUtils();
@@ -3035,7 +3035,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
     openravepy::init_openravepy_sensorsystem();
     openravepy::init_openravepy_spacesampler();
     openravepy::init_openravepy_viewer();
-    openravepy::init_openravepy_posturedescriber();
+    // openravepy::init_openravepy_posturedescriber();
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

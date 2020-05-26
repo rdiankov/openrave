@@ -16,8 +16,7 @@
 
 #include <openrave/plugin.h> // OPENRAVE_PLUGIN_API
 #include <openrave/posturedescriber.h> // PostureDescriberBasePtr
-#include "posturedescriberinterface.h" // PostureDescriber
-#include "plugindefs.h" //  POSTUREDESCRIBER_MODULE_NAME, POSTUREDESCRIBER_CLASS_NAME
+// #include "plugindefs.h" //  POSTUREDESCRIBER_MODULE_NAME, POSTUREDESCRIBER_CLASS_NAME
 #include "posturedescribermodule.h" // PostureDescriberModule
 
 namespace OpenRAVE {
@@ -101,7 +100,6 @@ using OpenRAVE::ModuleBasePtr;
 using OpenRAVE::EnvironmentBasePtr;
 
 // posture describer interfaces
-using OpenRAVE::PostureDescriber;
 using OpenRAVE::PostureDescriberBasePtr;
 using OpenRAVE::PostureDescriberModule;
 
@@ -109,13 +107,14 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 {
     switch(type) {
     case PT_PostureDescriber: {
-        if( interfacename == POSTUREDESCRIBER_CLASS_NAME ) {
-            return PostureDescriberBasePtr(new PostureDescriber(penv));
+        if( interfacename == "posturedescriber" ) {
+            const PostureDescriberBasePtr pdescriber = RaveCreatePostureDescriber(penv, interfacename);
+            return pdescriber;
         }
         break;
     }
     case PT_Module: {
-        if( interfacename == POSTUREDESCRIBER_MODULE_NAME) {
+        if( interfacename == "posturedescriber") {
             return ModuleBasePtr(new PostureDescriberModule(penv));
         }
         break;
@@ -130,8 +129,8 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 
 void GetPluginAttributesValidated(PLUGININFO& info)
 {
-    info.interfacenames[PT_Module].push_back(POSTUREDESCRIBER_MODULE_NAME);
-    info.interfacenames[PT_PostureDescriber].push_back(POSTUREDESCRIBER_CLASS_NAME);
+    info.interfacenames[PT_Module].push_back("posturedescriber");
+    info.interfacenames[PT_PostureDescriber].push_back("posturedescriber");
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()

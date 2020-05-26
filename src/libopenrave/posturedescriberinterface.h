@@ -14,13 +14,58 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef PLUGINS_POSTUREDESCRIBER_POSTUREDESCRIBERINTERFACE_H
-#define PLUGINS_POSTUREDESCRIBER_POSTUREDESCRIBERINTERFACE_H
+#ifndef RAVE_POSTUREDESCRIBER_PLUGINDEFS_H
+#define RAVE_POSTUREDESCRIBER_PLUGINDEFS_H
+
+#define POSTUREDESCRIBER_CLASS_NAME   "posturedescriber"  // PostureDescriber
+#define POSTUREDESCRIBER_MODULE_NAME  "posturedescriber" // PostureDescriberModule
 
 #include <openrave/posturedescriber.h> // PostureDescriberBasePtr
-#include "posturesupporttype.h" // NeighbouringTwoJointsRelation, RobotPostureSupportType
 
 namespace OpenRAVE {
+
+// https://stackoverflow.com/questions/12059774/c11-standard-conformant-bitmasks-using-enum-class
+enum class NeighbouringTwoJointsRelation : uint16_t {
+    NTJR_Unknown                 = 0x0,
+    NTJR_Parallel                = 0x1,
+    NTJR_Perpendicular           = 0x2,
+    NTJR_Intersect               = 0x4,
+    NTJR_Overlap                 = NTJR_Intersect | NTJR_Parallel,      // 0x5
+    NTJR_Intersect_Perpendicular = NTJR_Intersect | NTJR_Perpendicular, // 0x6
+};
+
+enum class RobotPostureSupportType : uint16_t {
+    RPST_NoSupport  = 0x0, ///< unsupported
+    RPST_6R_General = 0x1, ///< general 6R robots with the last joint axes intersecting at a point
+    RPST_4R_Type_A  = 0x2, ///< a special type of 4R robot the last three parallel joint axes perpendicular to the first joint axis
+};
+
+/// can do bit operations with enum class
+template <typename T>
+inline constexpr T operator&(T x, T y)
+{
+    using UT = typename std::underlying_type<T>::type;
+    return static_cast<T>(static_cast<UT>(x) & static_cast<UT>(y));
+}
+
+template <typename T>
+inline constexpr T operator|(T x, T y)
+{
+    using UT = typename std::underlying_type<T>::type;
+    return static_cast<T>(static_cast<UT>(x) | static_cast<UT>(y));
+}
+
+template <typename T>
+inline T operator&=(T& x, T y)
+{
+    return x = x & y;
+}
+
+template <typename T>
+inline T operator|=(T& x, T y)
+{
+    return x = x | y;
+}
 
 using PostureValueFn = std::function<void(const std::vector<KinBody::JointPtr>& vjoints, const double fTol, std::vector<PostureStateInt>& posturestates)>;
 
@@ -118,6 +163,7 @@ inline void compute_robot_posture_states(const std::array<double, N>& postureval
         }
     }
 }
+
 } // namespace OpenRAVE
 
-#endif // PLUGINS_POSTUREDESCRIBER_POSTUREDESCRIBERINTERFACE_H
+#endif // RAVE_POSTUREDESCRIBER_PLUGINDEFS_H

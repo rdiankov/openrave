@@ -19,7 +19,8 @@
 #define PLUGINS_FKCOMPUTERS_POSTUREDESCRIBERMODULE_H
 
 #include <string> // string
-#include "plugindefs.h" // POSTUREDESCRIBER_CLASS_NAME
+#include <openrave/openrave.h>
+// #include "plugindefs.h" // POSTUREDESCRIBER_CLASS_NAME
 
 namespace OpenRAVE {
 
@@ -30,7 +31,7 @@ public:
     PostureDescriberModule(const EnvironmentBasePtr& penv);
     virtual ~PostureDescriberModule() = default;
 
-    std::string interfacename = POSTUREDESCRIBER_CLASS_NAME;
+    std::string interfacename = "posturedescriber";
 
 private:
     /// \brief Python `SendCommand` API that loads a robot posture describer onto a (base link, end-effector link) pair, or onto a manipulator that prescribes the pair
