@@ -86,22 +86,23 @@ bool PyPostureDescriber::Init(PyManipulatorPtr pmanip) {
 
 object PyPostureDescriber::ComputePostureStates()
 {
-    // return (_pDescriber->ComputePostureStates(_posturestates)) ? toPyArray<PostureStateInt>(_posturestates) : py::empty_array_astype<PostureStateInt>();
     return StdVectorToPyList<PostureStateInt>(_pDescriber->ComputePostureStates(_posturestates) ? _posturestates : std::vector<PostureStateInt>());
 }
 
 object PyPostureDescriber::ComputePostureStates(object pydofvalues)
 {
     const std::vector<dReal> dofvalues = ExtractArray<dReal>(pydofvalues);
-    // return (_pDescriber->ComputePostureStates(_posturestates, dofvalues)) ? toPyArray<PostureStateInt>(_posturestates) : py::empty_array_astype<PostureStateInt>();
     return StdVectorToPyList<PostureStateInt>(_pDescriber->ComputePostureStates(_posturestates, dofvalues) ? _posturestates : std::vector<PostureStateInt>());
 }
 
 PyPostureDescriberPtr GeneratePostureDescriber(const PyManipulatorPtr& pymanip) {
+    return GeneratePostureDescriber(pymanip, "posturedescriber"); // default
+}
+
+PyPostureDescriberPtr GeneratePostureDescriber(const PyManipulatorPtr& pymanip, const std::string& interfacename) {
     const ManipulatorPtr pmanip = pymanip->GetManipulator();
     const RobotBasePtr probot = pmanip->GetRobot();
     const EnvironmentBasePtr penv = probot->GetEnv();
-    const std::string interfacename = "posturedescriber"; // POSTUREDESCRIBER_CLASS_NAME
     std::vector<int> armindices;
     // fe743742269c7dbfe548cb1f3412f658
     const std::string chainhash = ComputeKinematicsChainHash(pmanip, armindices);
@@ -166,10 +167,14 @@ void init_openravepy_posturedescriber()
     .def("ComputePostureStates", ComputePostureStatesWithJointValues, PY_ARGS("dofvalues")        DOXY_FN(PostureDescriberBase, ComputePostureStates "const std::vector<double>& dofvalues"))
     ;
 
+    PyPostureDescriberPtr (*GeneratePostureDescriberDefault    )(const PyManipulatorPtr&                    ) = &GeneratePostureDescriber;
+    PyPostureDescriberPtr (*GeneratePostureDescriberByInterface)(const PyManipulatorPtr&, const std::string&) = &GeneratePostureDescriber;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    m.def("GeneratePostureDescriber", GeneratePostureDescriber, PY_ARGS("manip") DOXY_FN1(GeneratePostureDescriber));
+    m.def("GeneratePostureDescriber", GeneratePostureDescriberDefault    , PY_ARGS("manip")                  DOXY_FN1(GeneratePostureDescriber));
+    m.def("GeneratePostureDescriber", GeneratePostureDescriberByInterface, PY_ARGS("manip", "interfacename") DOXY_FN1(GeneratePostureDescriber));
 #else
-    def("GeneratePostureDescriber", GeneratePostureDescriber, PY_ARGS("manip") DOXY_FN1(GeneratePostureDescriber));
+    def("GeneratePostureDescriber", GeneratePostureDescriberDefault    , PY_ARGS("manip")                  DOXY_FN1(GeneratePostureDescriber));
+    def("GeneratePostureDescriber", GeneratePostureDescriberByInterface, PY_ARGS("manip", "interfacename") DOXY_FN1(GeneratePostureDescriber));
 #endif
 }
 
