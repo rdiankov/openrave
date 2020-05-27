@@ -109,11 +109,17 @@ PyPostureDescriberPtr GeneratePostureDescriber(const PyManipulatorPtr& pymanip, 
     // posturedescriber.motoman-gp8l.fe743742269c7dbfe548cb1f3412f658.L0.L6
     const std::string describername = interfacename + "." + probot->GetName() + "." + chainhash + "." + pmanip->GetBase()->GetName() + "." + pmanip->GetEndEffector()->GetName();
     PostureDescriberBasePtr pDescriber = RaveCreatePostureDescriber(penv, interfacename + " " + describername);
+    if(pDescriber == nullptr) {
+        RAVELOG_WARN_FORMAT("Can not generate posture describer interface \"%s\" for manpulator %s of robot %s", interfacename % pmanip->GetName() % probot->GetName());        
+    }
     if(!pDescriber->Supports(pmanip)) {
-        RAVELOG_WARN_FORMAT("Can not generate posture describer interface \"%s\" for manpulator %s of robot %s", interfacename % pmanip->GetName() % probot->GetName());
+        RAVELOG_WARN_FORMAT("Posture describer interface \"%s\" does not support manpulator %s of robot %s", interfacename % pmanip->GetName() % probot->GetName());
         return PyPostureDescriberPtr();
     }
-    pDescriber->Init(pmanip);
+    if(!pDescriber->Init(pmanip)) {
+        RAVELOG_WARN_FORMAT("Cannot initialize posture describer interface \"%s\" for manpulator %s of robot %s", interfacename % pmanip->GetName() % probot->GetName());
+        return PyPostureDescriberPtr();
+    }
     probot->SetPostureDescriber(pmanip, pDescriber); // set explicitly
     PyPostureDescriberPtr pyDescriber(new PyPostureDescriber(pDescriber, toPyEnvironment(pymanip->GetRobot())));
     return pyDescriber;
