@@ -30,6 +30,7 @@ protected:
     PostureDescriberBasePtr _pDescriber;
 
 public:
+    PyPostureDescriber() = delete;
     PyPostureDescriber(PostureDescriberBasePtr pDescriber, PyEnvironmentBasePtr pyenv);
     ~PyPostureDescriber();
 
@@ -59,6 +60,8 @@ public:
     /// \brief Computes posture states at the input dof values using the describer set at the manipulator
     /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
     object ComputePostureStates(object pyjointvalues);
+
+    std::string GetMapDataKey() const;
 
 private:
     std::vector<PostureStateInt> _posturestates; // cache

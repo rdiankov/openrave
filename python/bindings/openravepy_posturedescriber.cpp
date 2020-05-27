@@ -95,6 +95,10 @@ object PyPostureDescriber::ComputePostureStates(object pydofvalues)
     return StdVectorToPyList<PostureStateInt>(_pDescriber->ComputePostureStates(_posturestates, dofvalues) ? _posturestates : std::vector<PostureStateInt>());
 }
 
+std::string PyPostureDescriber::GetMapDataKey() const {
+    return _pDescriber->GetMapDataKey();
+}
+
 PyPostureDescriberPtr GeneratePostureDescriber(const PyManipulatorPtr& pymanip) {
     return GeneratePostureDescriber(pymanip, "posturedescriber"); // default
 }
@@ -171,6 +175,7 @@ void init_openravepy_posturedescriber()
      */
     .def("ComputePostureStates", ComputePostureStates,                                            DOXY_FN(PostureDescriberBase, ComputePostureStates ""))
     .def("ComputePostureStates", ComputePostureStatesWithJointValues, PY_ARGS("dofvalues")        DOXY_FN(PostureDescriberBase, ComputePostureStates "const std::vector<double>& dofvalues"))
+    .def("GetMapDataKey"       , &PyPostureDescriber::GetMapDataKey,                              DOXY_FN(PostureDescriberBase, GetMapDataKey ""))
     ;
 
     PyPostureDescriberPtr (*GeneratePostureDescriberDefault    )(const PyManipulatorPtr&                    ) = &GeneratePostureDescriber;
