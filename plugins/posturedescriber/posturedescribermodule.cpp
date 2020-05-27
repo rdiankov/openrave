@@ -112,13 +112,13 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 {
     switch(type) {
     case PT_PostureDescriber: {
-        if( interfacename == "posturedescriber" ) {
+        if( interfacename == POSTUREDESCRIBER_CLASS_NAME ) {
             return PostureDescriberBasePtr(new PostureDescriber(penv));
         }
         break;
     }
     case PT_Module: {
-        if( interfacename == "posturedescriber") {
+        if( interfacename == POSTUREDESCRIBER_MODULE_NAME) {
             return ModuleBasePtr(new PostureDescriberModule(penv));
         }
         break;
@@ -133,8 +133,8 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 
 void GetPluginAttributesValidated(PLUGININFO& info)
 {
-    info.interfacenames[PT_Module].push_back("posturedescriber");
-    info.interfacenames[PT_PostureDescriber].push_back("posturedescriber");
+    info.interfacenames[PT_Module].push_back(POSTUREDESCRIBER_MODULE_NAME);
+    info.interfacenames[PT_PostureDescriber].push_back(POSTUREDESCRIBER_CLASS_NAME);
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()

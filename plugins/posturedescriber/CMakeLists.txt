@@ -5,6 +5,11 @@
 set(POSTUREDESCRIBER_CLASS_NAME "posturedescriber")
 set(POSTUREDESCRIBER_MODULE_NAME "posturedescriber")
 
+configure_file(plugindefs.h.in
+			   "${CMAKE_CURRENT_SOURCE_DIR}/plugindefs.h"
+			   @ONLY
+)
+
 file(GLOB posturedescriber_cppfiles "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
 add_library(posturedescriber SHARED "${posturedescriber_cppfiles}")
 

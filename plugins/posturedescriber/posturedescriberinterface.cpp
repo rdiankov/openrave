@@ -15,6 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "posturedescriberinterface.h" // PostureDescriber
+#include "plugindefs.h" // POSTUREDESCRIBER_CLASS_NAME
+#include "openraveplugindefs.h" // SerializeValues
 
 // #define POSTUREDESCRIBER_DEBUG
 
@@ -345,7 +347,7 @@ bool PostureDescriber::SetPostureValueThreshold(double fTol) {
 }
 
 std::string PostureDescriber::GetMapDataKey() const {
-    return "posturedescriber";
+    return std::string(POSTUREDESCRIBER_CLASS_NAME);
 }
 
 bool PostureDescriber::_SetPostureValueThresholdCommand(std::ostream& ssout, std::istream& ssin) {
@@ -360,12 +362,7 @@ bool PostureDescriber::_GetPostureValueThresholdCommand(std::ostream& ssout, std
 }
 
 bool PostureDescriber::_GetArmIndicesCommand(std::ostream& ssout, std::istream& ssin) const {
-    if(!_armindices.empty()) {
-        ssout << _armindices[0];
-        for(size_t i = 1; i < _armindices.size(); ++i) {
-            ssout << " " << _armindices[i];
-        }
-    }
+    SerializeValues(ssout, _armindices);
     return !_armindices.empty();
 }
 
