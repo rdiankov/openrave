@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <openrave/plugin.h> // OPENRAVE_PLUGIN_API
-#include <openrave/posturedescriberinterface.h> // PostureDescriberBasePtr
+#include "posturedescriberinterface.h" // PostureDescriberBasePtr
 #include "posturedescribermodule.h" // PostureDescriberModule
 
 namespace OpenRAVE {

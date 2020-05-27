@@ -109,6 +109,7 @@ PyPostureDescriberPtr GeneratePostureDescriber(const PyManipulatorPtr& pymanip) 
     const std::string describername = interfacename + "." + probot->GetName() + "." + chainhash + "." + pmanip->GetBase()->GetName() + "." + pmanip->GetEndEffector()->GetName();
     PostureDescriberBasePtr pDescriber = RaveCreatePostureDescriber(penv, interfacename + " " + describername);
     if(!pDescriber->Supports(pmanip)) {
+        RAVELOG_WARN_FORMAT("Can not generate posture describer interface \"%s\" for manpulator %s of robot %s", interfacename % pmanip->GetName() % probot->GetName());
         return PyPostureDescriberPtr();
     }
     pDescriber->Init(pmanip);

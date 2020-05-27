@@ -19,6 +19,8 @@
 #include <boost/tuple/tuple.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <openrave/posturedescriber.h>
+
 #ifdef OPENRAVE_HAS_LAPACK
 #include "jacobianinverse.h"
 #endif
@@ -1442,17 +1444,16 @@ protected:
 
         std::vector<PostureStateInt> vsolutionindices;
         std::string solutionIndicesName = "solutionindices";
-        const PostureDescriberBasePtr pDescriber = probot->GetPostureDescriber(_pmanip);
+        const RobotBase::ManipulatorPtr pmanip(_pmanip);
+        const RobotBasePtr probot = pmanip->GetRobot();
+        const PostureDescriberBasePtr pDescriber = probot->GetPostureDescriber(pmanip);
         if (pDescriber != nullptr) {
             pDescriber->ComputePostureStates(vsolutionindices, vravesol);
-            solutionIndicesName = pDescriber->GetKey();
+            solutionIndicesName = pDescriber->GetMapDataKey();
         }
         else {
             iksol.GetSolutionIndices(vsolutionindices);
         }
-
-        RobotBase::ManipulatorPtr pmanip(_pmanip);
-        RobotBasePtr probot = pmanip->GetRobot();
 
         std::vector< std::pair<std::vector<dReal>, int> > vravesols;
         list<IkReturnPtr> listlocalikreturns; // orderd with respect to vravesols
