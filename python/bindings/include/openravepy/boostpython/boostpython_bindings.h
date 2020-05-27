@@ -226,6 +226,16 @@ struct int_from_number
     }
 };
 
+template <typename T>
+inline py::list StdVectorToPyList(const std::vector<T>& v) {
+    py::list l;
+    const size_t N = v.size();
+    for(size_t i = 0; i < N; i++) {
+        l.append(v[i]);
+    }
+    return l;
+};
+
 }
 
 #endif

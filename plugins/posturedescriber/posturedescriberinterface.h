@@ -18,9 +18,51 @@
 #define PLUGINS_POSTUREDESCRIBER_POSTUREDESCRIBERINTERFACE_H
 
 #include <openrave/posturedescriber.h> // PostureDescriberBasePtr
-#include "posturesupporttype.h" // NeighbouringTwoJointsRelation, RobotPostureSupportType
 
 namespace OpenRAVE {
+
+// https://stackoverflow.com/questions/12059774/c11-standard-conformant-bitmasks-using-enum-class
+enum class NeighbouringTwoJointsRelation : uint16_t {
+    NTJR_Unknown                 = 0x0,
+    NTJR_Parallel                = 0x1,
+    NTJR_Perpendicular           = 0x2,
+    NTJR_Intersect               = 0x4,
+    NTJR_Overlap                 = NTJR_Intersect | NTJR_Parallel,      // 0x5
+    NTJR_Intersect_Perpendicular = NTJR_Intersect | NTJR_Perpendicular, // 0x6
+};
+
+enum class RobotPostureSupportType : uint16_t {
+    RPST_NoSupport  = 0x0, ///< unsupported
+    RPST_6R_General = 0x1, ///< general 6R robots with the last joint axes intersecting at a point
+    RPST_4R_Type_A  = 0x2, ///< a special type of 4R robot the last three parallel joint axes perpendicular to the first joint axis
+};
+
+/// can do bit operations with enum class
+template <typename T>
+inline constexpr T operator&(T x, T y)
+{
+    using UT = typename std::underlying_type<T>::type;
+    return static_cast<T>(static_cast<UT>(x) & static_cast<UT>(y));
+}
+
+template <typename T>
+inline constexpr T operator|(T x, T y)
+{
+    using UT = typename std::underlying_type<T>::type;
+    return static_cast<T>(static_cast<UT>(x) | static_cast<UT>(y));
+}
+
+template <typename T>
+inline T operator&=(T& x, T y)
+{
+    return x = x & y;
+}
+
+template <typename T>
+inline T operator|=(T& x, T y)
+{
+    return x = x | y;
+}
 
 using PostureValueFn = std::function<void(const std::vector<KinBody::JointPtr>& vjoints, const double fTol, std::vector<PostureStateInt>& posturestates)>;
 
@@ -47,6 +89,9 @@ public:
 
     /// \brief Sets the tolerance for determining whether a robot posture value (shoulder, elbow, wrist, etc.) is close to 0
     bool SetPostureValueThreshold(const double fTol);
+
+    /// \brief Gets the key used in map data (of type CustomData) in IkReturn
+    virtual std::string GetMapDataKey() const override;
 
     const std::vector<KinBody::JointPtr>& GetJoints() const {
         return _joints;
@@ -81,7 +126,7 @@ using PostureFormulation = std::array<std::array<int, 2>, 3>; ///< a posture val
 /// \param [in] x      a posture value
 /// \param [in] tol    tolerance to determine whether x is considered 0.0, so that this value means a hybrid state.
 /// \return 0 if x is considered positive, 1 if considered negative, and 2 (meaning hybrid states) if considered 0.0
-inline PostureStateInt compute_single_state(const double x, const double fTol) {
+inline PostureStateInt compute_feature_state(const double x, const double fTol) {
     return (x > fTol) ? 0 : (x < -fTol) ? 1 : 2; // >= or <= ?
 }
 
@@ -95,7 +140,7 @@ inline void compute_robot_posture_states(const std::array<double, N>& postureval
                                          std::vector<PostureStateInt>& posturestates) {
     std::array<PostureStateInt, N> singlestates;
     for(size_t i = 0; i < N; ++i) {
-        singlestates[i] = compute_single_state(posturevalues[i], fTol);
+        singlestates[i] = compute_feature_state(posturevalues[i], fTol);
     }
 
     posturestates = {0};
@@ -118,6 +163,7 @@ inline void compute_robot_posture_states(const std::array<double, N>& postureval
         }
     }
 }
+
 } // namespace OpenRAVE
 
 #endif // PLUGINS_POSTUREDESCRIBER_POSTUREDESCRIBERINTERFACE_H

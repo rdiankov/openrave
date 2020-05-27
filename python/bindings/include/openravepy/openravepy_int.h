@@ -846,6 +846,8 @@ void init_openravepy_posturedescriber(py::module& m);
 #else
 void init_openravepy_posturedescriber();
 #endif
+OPENRAVEPY_API PostureDescriberBasePtr GetPostureDescriber(PyPostureDescriberPtr);
+OPENRAVEPY_API PyInterfaceBasePtr toPyPostureDescriber(PostureDescriberBasePtr, PyEnvironmentBasePtr);
 OPENRAVEPY_API int pyGetIntFromPy(py::object olevel, int defaultvalue);
 OPENRAVEPY_API py::object toPyPlannerStatus(const PlannerStatus&);
     

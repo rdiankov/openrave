@@ -15,9 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <openrave/plugin.h> // OPENRAVE_PLUGIN_API
-#include <openrave/posturedescriber.h> // PostureDescriberBasePtr
-#include "posturedescriberinterface.h" // PostureDescriber
-#include "plugindefs.h" //  POSTUREDESCRIBER_MODULE_NAME, POSTUREDESCRIBER_CLASS_NAME
+#include "posturedescriberinterface.h" // PostureDescriberBasePtr
 #include "posturedescribermodule.h" // PostureDescriberModule
 
 namespace OpenRAVE {
@@ -59,6 +57,11 @@ bool PostureDescriberModule::_LoadPostureDescriberCommand(std::ostream& ssout, s
         eelink = probot->GetLink(eelinkname);
     }
     else {
+        ssin >> eelinkname;
+        if(ssin) {
+            throw OPENRAVE_EXCEPTION_FORMAT("Have already taken manipname=%s; cannot take a third argument (eelinkname=)%s",
+                                            manipname % eelinkname, OpenRAVEErrorCode::ORE_InvalidArguments);
+        }
         baselink = pmanip->GetBase();
         eelink = pmanip->GetEndEffector();
         baselinkname = baselink->GetName();
@@ -101,8 +104,8 @@ using OpenRAVE::ModuleBasePtr;
 using OpenRAVE::EnvironmentBasePtr;
 
 // posture describer interfaces
-using OpenRAVE::PostureDescriber;
 using OpenRAVE::PostureDescriberBasePtr;
+using OpenRAVE::PostureDescriber;
 using OpenRAVE::PostureDescriberModule;
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& ssin, EnvironmentBasePtr penv)

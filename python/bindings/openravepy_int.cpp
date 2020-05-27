@@ -899,6 +899,7 @@ PyInterfaceBasePtr PyEnvironmentBase::_toPyInterface(InterfaceBasePtr pinterface
     case PT_Trajectory: return openravepy::toPyTrajectory(OPENRAVE_STATIC_POINTER_CAST<TrajectoryBase>(pinterface),shared_from_this());
     case PT_Viewer: return openravepy::toPyViewer(OPENRAVE_STATIC_POINTER_CAST<ViewerBase>(pinterface),shared_from_this());
     case PT_SpaceSampler: return openravepy::toPySpaceSampler(OPENRAVE_STATIC_POINTER_CAST<SpaceSamplerBase>(pinterface),shared_from_this());
+    // case PT_PostureDescriber: return openravepy::toPyPostureDescriber(OPENRAVE_STATIC_POINTER_CAST<PostureDescriberBase>(pinterface),shared_from_this());
     }
     return PyInterfaceBasePtr();
 }
