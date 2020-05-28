@@ -5394,18 +5394,20 @@ UpdateFromInfoResult KinBody::UpdateFromInfo(const KinBodyInfo& info)
 
     // TODO: clear and reset all readable interfaces for now.
     ClearReadableInterfaces();
-    for (rapidjson::Value::ConstMemberIterator it = info._docReadableInterfaces.MemberBegin(); it != info._docReadableInterfaces.MemberEnd(); it++) {
-        BaseJSONReaderPtr pReader = RaveCallJSONReader(GetInterfaceType(), it->name.GetString(), shared_from_this(), AttributesList());
-        if (!!pReader) {
-            pReader->DeserializeJSON(it->value);
-            JSONReadablePtr pReadable = pReader->GetReadable();
-            if (!!pReadable) {
+    if (info._docReadableInterfaces.IsObject() && info._docReadableInterfaces.MemberCount() > 0) {
+        for (rapidjson::Value::ConstMemberIterator it = info._docReadableInterfaces.MemberBegin(); it != info._docReadableInterfaces.MemberEnd(); it++) {
+            BaseJSONReaderPtr pReader = RaveCallJSONReader(GetInterfaceType(), it->name.GetString(), shared_from_this(), AttributesList());
+            if (!!pReader) {
+                pReader->DeserializeJSON(it->value);
+                JSONReadablePtr pReadable = pReader->GetReadable();
+                if (!!pReadable) {
+                    SetReadableInterface(it->name.GetString(), pReadable);
+                }
+            }
+            else {
+                StringReadablePtr pReadable(new StringReadable(it->name.GetString(), it->value.GetString()));
                 SetReadableInterface(it->name.GetString(), pReadable);
             }
-        }
-        else {
-            StringReadablePtr pReadable(new StringReadable(it->name.GetString(), it->value.GetString()));
-            SetReadableInterface(it->name.GetString(), pReadable);
         }
     }
 
