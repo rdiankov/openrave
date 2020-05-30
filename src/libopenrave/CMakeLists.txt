@@ -1,8 +1,5 @@
 cmake_policy(SET CMP0005 NEW)
-set(openrave_lib_SOURCES configurationspecification.cpp controller.cpp fparsermulti.h iksolver.cpp interface.cpp kinbody.cpp kinbodycollision.cpp kinbodygeometry.cpp kinbodygrab.cpp kinbodyjoint.cpp kinbodylink.cpp  kinbodystatesaver.cpp libopenrave.cpp libopenrave.h openravemathextra.cpp planner.cpp plannerparameters.cpp planningutils.cpp plugindatabase.h robot.cpp
-  posturedescriber.cpp robotposture.cpp
-  robotconnectedbody.cpp robotmanipulator.cpp sensorsystem.cpp trajectory.cpp utils.cpp xmlreaders.cpp ${rave_header_files}
-)
+set(openrave_lib_SOURCES configurationspecification.cpp controller.cpp fparsermulti.h iksolver.cpp interface.cpp kinbody.cpp kinbodycollision.cpp kinbodygeometry.cpp kinbodygrab.cpp kinbodyjoint.cpp kinbodylink.cpp  kinbodystatesaver.cpp libopenrave.cpp libopenrave.h openravemathextra.cpp planner.cpp plannerparameters.cpp planningutils.cpp plugindatabase.h posturedescriber.cpp robot.cpp robotconnectedbody.cpp robotmanipulator.cpp robotposture.cpp sensorsystem.cpp trajectory.cpp utils.cpp xmlreaders.cpp ${rave_header_files})
 
 check_function_exists(asinh HAS_ASINH)
 check_function_exists(acosh HAS_ACOSH)
@@ -39,7 +36,6 @@ if( MSVC )
   install(TARGETS libopenrave EXPORT openrave-targets RUNTIME DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base LIBRARY DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base ARCHIVE DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}base)
 else()
   install(TARGETS libopenrave EXPORT openrave-targets DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}base)
-  install(FILES "libopenrave.h" DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR}/openrave)
 endif()
 
 if( OPT_CBINDINGS )
