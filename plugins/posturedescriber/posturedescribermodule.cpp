@@ -73,18 +73,18 @@ bool PostureDescriberModule::_LoadPostureDescriberCommand(std::ostream& ssout, s
         return false;
     }
 
-    const PostureDescriberBasePtr probotposture = RaveCreatePostureDescriber(penv, this->interfacename);
-    if(probotposture == nullptr) {
+    const PostureDescriberBasePtr pDescriber = RaveCreatePostureDescriber(penv, this->interfacename);
+    if(pDescriber == nullptr) {
         RAVELOG_WARN_FORMAT("env=%d, cannot create robot posture describer for robot %s from links %s to %s (manipname=\"%s\")", envId % robotname % baselinkname % eelinkname % manipname);
         return false;
     }
 
     const LinkPair kinematicsChain {baselink, eelink};
-    if(!probotposture->Init(kinematicsChain)) {
+    if(!pDescriber->Init(kinematicsChain)) {
         RAVELOG_WARN_FORMAT("env=%d, cannot initialize robot posture describer for robot %s from links %s to %s (manipname=\"%s\")", envId % robotname % baselinkname % eelinkname % manipname);
     }
 
-    const bool bset = probot->SetPostureDescriber(kinematicsChain, probotposture);
+    const bool bset = probot->SetPostureDescriber(kinematicsChain, pDescriber);
     if(!bset) {
         RAVELOG_WARN_FORMAT("env=%d, cannot set robot posture describer for robot %s from links %s to %s (manipname=\"%s\")", envId % robotname % baselinkname % eelinkname % manipname);
         return false;
