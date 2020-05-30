@@ -33,8 +33,8 @@ enum class NeighbouringTwoJointsRelation : uint16_t {
 
 enum class RobotPostureSupportType : uint16_t {
     RPST_NoSupport  = 0x0, ///< unsupported
-    RPST_6R_General = 0x1, ///< general 6R robots with the last joint axes intersecting at a point
-    RPST_4R_Type_A  = 0x2, ///< a special type of 4R robot the last three parallel joint axes perpendicular to the first joint axis
+    RPST_6R_General = 0x1, ///< general 6R robots whose last three joint axes intersecting at a point
+    RPST_4R_Type_A  = 0x2, ///< a special type of 4R robot whose last three parallel joint axes are perpendicular to the first joint axis
 };
 
 /// can do bit operations with enum class
@@ -64,7 +64,9 @@ inline T operator|=(T& x, T y)
     return x = x | y;
 }
 
-using PostureValueFn = std::function<void(const std::vector<KinBody::JointPtr>& vjoints, const double fTol, std::vector<PostureStateInt>& posturestates)>;
+using PostureValueFn = std::function<void(const std::vector<KinBody::JointPtr>& vjoints,
+                                          const double fTol,
+                                          std::vector<PostureStateInt>& posturestates)>;
 
 class OPENRAVE_API PostureDescriber : public PostureDescriberBase
 {
@@ -93,6 +95,7 @@ public:
     /// \brief Gets the key used in map data (of type CustomData) in IkReturn
     virtual std::string GetMapDataKey() const override;
 
+    /// \brief Gets joints (with nonzero dofs) along the kinematics chain from baselink to eelink
     const std::vector<KinBody::JointPtr>& GetJoints() const {
         return _joints;
     }
@@ -120,14 +123,14 @@ protected:
 };
 
 using PostureDescriberPtr = boost::shared_ptr<PostureDescriber>;
-using PostureFormulation = std::array<std::array<int, 2>, 3>; ///< a posture value is computed by a triple product
+using PostureFormulation = std::array<std::array<int, 2>, 3>; ///< a posture value is computed by a triple product (a x b) ∙ c
 
 /// \brief determines whether a robot posture value can be considered as 0.0, postive, or negative
 /// \param [in] x      a posture value
 /// \param [in] tol    tolerance to determine whether x is considered 0.0, so that this value means a hybrid state.
 /// \return 0 if x is considered positive, 1 if considered negative, and 2 (meaning hybrid states) if considered 0.0
 inline PostureStateInt compute_feature_state(const double x, const double fTol) {
-    return (x > fTol) ? 0 : (x < -fTol) ? 1 : 2; // >= or <= ?
+    return (x > fTol) ? 0 : (x < -fTol) ? 1 : 2; // TGN: >= or <= ?
 }
 
 /// \brief Computes a vector of posture state integers using N posture values.

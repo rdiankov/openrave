@@ -31,19 +31,15 @@ const char* PostureDescriberBase::GetHash() const {
 }
 
 bool PostureDescriberBase::Supports(const RobotBase::ManipulatorPtr& pmanip) const {
-    const LinkPair kinematicsChain {pmanip->GetBase(), pmanip->GetEndEffector()};
-    return this->Supports(kinematicsChain);
+    return this->Supports(GetKinematicsChain(pmanip));
 }
 
 bool PostureDescriberBase::Init(const RobotBase::ManipulatorPtr& pmanip) {
-    const LinkPair kinematicsChain {pmanip->GetBase(), pmanip->GetEndEffector()};
-    return this->Supports(kinematicsChain) ? this->Init(kinematicsChain) : false;
+    return this->Supports(GetKinematicsChain(pmanip)) ? this->Init(GetKinematicsChain(pmanip)) : false;
 }
 
 std::string ComputeKinematicsChainHash(const RobotBase::ManipulatorPtr& pmanip, std::vector<int>& armindices) {
-    const LinkPair kinematicsChain {pmanip->GetBase(), pmanip->GetEndEffector()};
-    const std::string s = ComputeKinematicsChainHash(kinematicsChain, armindices);
-    return s;
+    return ComputeKinematicsChainHash(GetKinematicsChain(pmanip), armindices);
 }
 
 // refer to libopenrave.h and
@@ -59,7 +55,7 @@ std::string ComputeKinematicsChainHash(const LinkPair& kinematicsChain, std::vec
     const int eelinkind = eelink->GetIndex();
     const KinBodyPtr probot = baselink->GetParent();
 
-    Transform tcur;
+    // collect armindices
     std::vector<RobotBase::JointPtr> joints;
     probot->GetChain(baselinkind, eelinkind, joints);
 
@@ -70,16 +66,16 @@ std::string ComputeKinematicsChainHash(const LinkPair& kinematicsChain, std::vec
             armindices.push_back(dofindex);
         }
     }
+    ss << armindices.size() << " ";
     const std::set<int> indexset(begin(armindices), end(armindices));
 
     // due to backward compatibility issues, we have to compute the end effector transform first
+    Transform tcur;
     for(const RobotBase::JointPtr& joint : joints) {
         tcur = tcur * joint->GetInternalHierarchyLeftTransform() * joint->GetInternalHierarchyRightTransform();
     }
     // treat it like 6D transform IK by not inlucding the local tool transform!
     SerializeRound(ss, tcur);
-    ss << armindices.size() << " ";
-
     tcur = Transform();
     int index = 0;
     for(const RobotBase::JointPtr& joint : joints) {
