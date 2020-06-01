@@ -785,7 +785,7 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
             return UFIR_RequireRemoveFromEnvironment;
         }
         // new geometry is added;
-        AddGeometry(pGeometryInfo, true); // TODO: add to groups?
+        AddGeometry(pGeometryInfo, false); // TODO: add to groups?
         isGeometryChanged = true;
     }
 
@@ -800,7 +800,15 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
         if (stillExists) {
             continue;
         }
+
+        FOREACH(itGeometryInfo, _info._vgeometryinfos) {
+            if ((*itGeometryInfo)->_name == (*itGeometry)->GetName()) {
+                _info._vgeometryinfos.erase(itGeometryInfo);
+                break;
+            }
+        }
         _vGeometries.erase(itGeometry);
+
         isGeometryChanged = true;
     }
     if (isGeometryChanged) {

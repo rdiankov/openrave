@@ -224,28 +224,28 @@ UpdateFromInfoResult RobotBase::AttachedSensor::UpdateFromInfo(const RobotBase::
 
     // _name
     if (GetName() != info._name) {
-        return UFIR_RequireRemoveFromEnvironment; // no SetName function defeined now. Maybe add later.
+        return UFIR_RequireReinitialize; // no SetName function defeined now. Maybe add later.
     }
 
     // _linkname
     KinBody::LinkPtr attachingLink = GetAttachingLink();
     if (!!attachingLink) {
         if (attachingLink->GetName() != info._linkname) {
-            return UFIR_RequireRemoveFromEnvironment;
+            return UFIR_RequireReinitialize;
         }
     }
     else if (!info._linkname.empty()) {
-        return UFIR_RequireRemoveFromEnvironment;
+        return UFIR_RequireReinitialize;
     }
 
     // sensor name
     if (_info._sensorname != info._sensorname) {
-        return UFIR_RequireRemoveFromEnvironment;
+        return UFIR_RequireReinitialize;
     }
 
     // sensor geometry
     if (_info._docSensorGeometry != info._docSensorGeometry) {
-        return UFIR_RequireRemoveFromEnvironment;
+        return UFIR_RequireReinitialize;
     }
 
     // _trelative
@@ -2440,7 +2440,7 @@ UpdateFromInfoResult RobotBase::UpdateFromInfo(const RobotBaseInfo& info)
                 continue;
             }
             // manipulator update failed;  TODO: more detailed handling
-            return UFIR_RequireRemoveFromEnvironment;
+            return updateFromManipulatorInfoResult;
         }
         return UFIR_RequireRemoveFromEnvironment;
     }
@@ -2465,7 +2465,7 @@ UpdateFromInfoResult RobotBase::UpdateFromInfo(const RobotBaseInfo& info)
                 continue;
             }
             // attachedsensor update failed;  TODO: more detailed handling
-            return UFIR_RequireRemoveFromEnvironment;
+            return updateFromAttachedSensorInfoResult;
         }
         return UFIR_RequireRemoveFromEnvironment;
     }
@@ -2490,7 +2490,7 @@ UpdateFromInfoResult RobotBase::UpdateFromInfo(const RobotBaseInfo& info)
                 continue;
             }
             // connectedbody update failed;  TODO: more detailed handling
-            return UFIR_RequireRemoveFromEnvironment;
+            return updateFromConnectedBodyInfoResult;
         }
         return UFIR_RequireRemoveFromEnvironment;
     }
@@ -2504,14 +2504,14 @@ UpdateFromInfoResult RobotBase::UpdateFromInfo(const RobotBaseInfo& info)
             if ((*itExistingGripperInfo)->_id == (*itGripperInfo)->_id) {
                 // find existing gripperinfo
                 if ((*itExistingGripperInfo) != (*itGripperInfo)) {
-                    return UFIR_RequireRemoveFromEnvironment;
+                    return UFIR_RequireReinitialize;
                 }
                 break;
             }
         }
         if (itExistingGripperInfo == _vecGripperInfos.end()) {
             // new gripper info
-            return UFIR_RequireRemoveFromEnvironment;
+            return UFIR_RequireReinitialize;
         }
     }
 
