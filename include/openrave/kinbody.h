@@ -39,6 +39,7 @@ enum GeometryType {
 };
 
 enum DynamicsConstraintsType {
+    DC_Unknown = -1, ///< constraints type is not set.
     DC_IgnoreTorque        = 0, ///< Do no check torque limits
     DC_NominalTorque       = 1, ///< Compute and check torque limits using nominal torque
     DC_InstantaneousTorque = 2, ///< Compute and check torque limits using instantaneous torque
