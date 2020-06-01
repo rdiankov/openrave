@@ -2333,6 +2333,15 @@ object PyEnvironmentBase::GetUnit() const {
     return py::make_tuple(unit.first, unit.second);
 }
 
+void PyEnvironmentBase::SetRevision(const uint64_t revision) {
+    _penv->SetRevision(revision);
+}
+
+object PyEnvironmentBase::GetRevision() const {
+    uint64_t revision = _penv->GetRevision();
+    return py::to_object(revision);
+}
+
 object PyEnvironmentBase::ExtractInfo() const {
     EnvironmentBase::EnvironmentBaseInfo info;
     _penv->ExtractInfo(info);
@@ -3078,6 +3087,8 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("GetUserData",&PyEnvironmentBase::GetUserData, DOXY_FN(InterfaceBase,GetUserData))
                      .def("GetUnit",&PyEnvironmentBase::GetUnit, DOXY_FN(EnvironmentBase,GetUnit))
                      .def("SetUnit",&PyEnvironmentBase::SetUnit, PY_ARGS("unitname","unitmult") DOXY_FN(EnvironmentBase,SetUnit))
+                     .def("GetRevision", &PyEnvironmentBase::GetRevision, DOXY_FN(EnvironmentBase, GetRevision))
+                     .def("SetRevision", &PyEnvironmentBase::SetRevision, PY_ARGS("revision") DOXY_FN(EnvironmentBase, SetRevision))
                      .def("ExtractInfo",&PyEnvironmentBase::ExtractInfo, DOXY_FN(EnvironmentBase,ExtractInfo))
                      .def("UpdateFromInfo",&PyEnvironmentBase::UpdateFromInfo, PY_ARGS("info") DOXY_FN(EnvironmentBase,UpdateFromInfo))
                      .def("__enter__",&PyEnvironmentBase::__enter__)
