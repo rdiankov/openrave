@@ -202,9 +202,8 @@ transformInversePoints = TransformInversePoints # deprecated
 def ComputePoseArrayDistSqr(pose0, posearray, quatweight=1.0):
     """computes the squared distance between pose0 and all poses in posearray
     """
-    pose0tiled = tile(pose0, (len(posearray),1))
+    pose0tiled = numpy.tile(pose0, (len(posearray),1))
     diff2 = numpy.abs(pose0tiled - posearray)**2
-    qdists0 = numpy.sum(pose0tiled[:,0:4], 1)
-    qdists1 = numpy.sum((pose0tiled[:,0:4]-posearray[:,0:4])**2, 1)
-    return minimum(qdists0, qdists1)*quatweight + numpy.sum(diff2[:, 4:7], 1)
-
+    qdists0 = numpy.sum(diff2[:,0:4], 1)
+    qdists1 = numpy.sum((pose0tiled[:,0:4]+posearray[:,0:4])**2, 1)
+    return numpy.minimum(qdists0, qdists1)*quatweight + numpy.sum(diff2[:, 4:7], 1)
