@@ -731,6 +731,16 @@ public:
     typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;
     typedef boost::shared_ptr<EnvironmentBaseInfo const> EnvironmentBaseInfoConstPtr;
 
+    inline uint64_t GetRevision() const {
+        return _revision;
+    }
+
+    virtual void SetRevision(const uint64_t revision) {
+        _revision = revision;
+    }
+
+    uint64_t _revision;  ///< environment current revision
+
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
     virtual void ExtractInfo(EnvironmentBaseInfo& info) = 0;
 
