@@ -73,6 +73,9 @@ public:
     void Reset();
     void Destroy();
 
+    object GetRevision() const;
+    void SetRevision(const uint64_t revision);
+
     PyEnvironmentBasePtr CloneSelf(int options);
 
     void Clone(PyEnvironmentBasePtr pyreference, int options);

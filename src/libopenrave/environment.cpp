@@ -38,6 +38,11 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
 {
     // for DeserializeJSON, there are two possibilities: 1. full json passed in 2. diff json passed in
     // for example, do not clear _vBodyInfos.clear(), since we could be dealing with partial json
+
+    if (value.HasMember("revision")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(value, "revision", _revision);
+    }
+
     if (value.HasMember("bodies")) {
         _vBodyInfos.reserve(_vBodyInfos.size() + value["bodies"].Size());
         size_t iBody = 0;

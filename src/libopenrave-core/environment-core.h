@@ -2368,6 +2368,10 @@ public:
     virtual void UpdateFromInfo(const EnvironmentBaseInfo& info)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
+
+        // TODO: revision error checking ?
+        SetRevision(info._revision);
+
         FOREACHC(itBodyInfo, info._vBodyInfos) {
             // find existing body in the env
             std::vector<KinBodyPtr>::iterator itExistingBody = _vecbodies.end();
