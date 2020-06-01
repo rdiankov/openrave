@@ -459,7 +459,7 @@ object PyRobotBase::PyManipulator::ComputePostureStates() const {
     const RobotBasePtr probot = _pmanip->GetRobot();
     const PostureDescriberBasePtr pDescriber = probot->GetPostureDescriber(_pmanip);
     if(pDescriber == nullptr) {
-        RAVELOG_WARN_FORMAT("Robot %s has not loaded a posture describer on manipulator %s", probot->GetName() % _pmanip->GetName());
+        throw OPENRAVE_EXCEPTION_FORMAT("Robot %s has not loaded a posture describer on manipulator %s", probot->GetName() % _pmanip->GetName(), ORE_InvalidArguments);
         return py::list();
     }
     std::vector<PostureStateInt> posturestates;
@@ -470,7 +470,7 @@ object PyRobotBase::PyManipulator::ComputePostureStates(object pydofvalues) cons
     RobotBasePtr probot = _pmanip->GetRobot();
     PostureDescriberBasePtr pDescriber = probot->GetPostureDescriber(_pmanip);
     if(pDescriber == nullptr) {
-        RAVELOG_WARN_FORMAT("Robot %s has not loaded a posture describer on manipulator %s", probot->GetName() % _pmanip->GetName());
+        throw OPENRAVE_EXCEPTION_FORMAT("Robot %s has not loaded a posture describer on manipulator %s", probot->GetName() % _pmanip->GetName(), ORE_InvalidArguments);
         return py::list();
     }
     std::vector<PostureStateInt> posturestates;
@@ -1791,6 +1791,9 @@ PyPostureDescriberPtr PyRobotBase::GeneratePostureDescriber(PyManipulatorPtr pym
 }
 
 bool PyRobotBase::SetPostureDescriber(PyManipulatorPtr pymanip, PyPostureDescriberPtr pydescriber) const {
+    if(pydescriber == nullptr) {
+        return _probot->UnregisterPostureDescriber(pymanip->GetManipulator());
+    }    
     return _probot->SetPostureDescriber(pymanip->GetManipulator(), pydescriber->GetPostureDescriber());
 }
 
@@ -1807,7 +1810,7 @@ object PyRobotBase::ComputePostureStates(PyManipulatorPtr pymanip) const {
     const RobotBase::ManipulatorPtr pmanip = pymanip->GetManipulator();
     PostureDescriberBasePtr pDescriber = _probot->GetPostureDescriber(pmanip);
     if(pDescriber == nullptr) {
-        RAVELOG_WARN_FORMAT("Robot %s has not loaded a posture describer on manipulator %s", _probot->GetName() % pmanip->GetName());
+        throw OPENRAVE_EXCEPTION_FORMAT("Robot %s has not loaded a posture describer on manipulator %s", _probot->GetName() % pmanip->GetName(), ORE_InvalidArguments);
         return py::list();
     }
     std::vector<PostureStateInt> posturestates;
@@ -1818,7 +1821,7 @@ object PyRobotBase::ComputePostureStates(PyManipulatorPtr pymanip, object pydofv
     const RobotBase::ManipulatorPtr pmanip = pymanip->GetManipulator();
     PostureDescriberBasePtr pDescriber = _probot->GetPostureDescriber(pmanip);
     if(pDescriber == nullptr) {
-        RAVELOG_WARN_FORMAT("Robot %s has not loaded a posture describer on manipulator %s", _probot->GetName() % pmanip->GetName());
+        throw OPENRAVE_EXCEPTION_FORMAT("Robot %s has not loaded a posture describer on manipulator %s", _probot->GetName() % pmanip->GetName(), ORE_InvalidArguments);
         return py::list();
     }
     const std::vector<dReal> vdofvalues = ExtractArray<dReal>(pydofvalues);
