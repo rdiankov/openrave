@@ -115,11 +115,14 @@ protected:
     /// \brief Gets the dof indices along a kinematics chain from baselink to eelink
     bool _GetArmIndicesCommand(std::ostream& ssout, std::istream& ssin) const;
 
+    bool _GetSupportTypeCommand(std::ostream& ssout, std::istream& ssin) const;
+
     LinkPair _kinematicsChain; ///< the baselink-eelink pair of a kinematics chain
     std::vector<KinBody::JointPtr> _joints; ///< non-static joints from baselink to eelink
     std::vector<int> _armindices; ///< dof indices from baselink to eelink
     double _fTol = 1e-6; ///< tolerance for determining if a robot posture value is considered 0
     PostureValueFn _posturefn; ///< function that computes posture values and states for a kinematics chain
+    RobotPostureSupportType _supporttype = RobotPostureSupportType::RPST_NoSupport;
 };
 
 using PostureDescriberPtr = boost::shared_ptr<PostureDescriber>;

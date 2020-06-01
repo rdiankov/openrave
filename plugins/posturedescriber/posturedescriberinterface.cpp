@@ -41,6 +41,10 @@ PostureDescriber::PostureDescriber(EnvironmentBasePtr penv,
     this->RegisterCommand("GetArmIndices",
                           boost::bind(&PostureDescriber::_GetArmIndicesCommand, this, _1, _2),
                           "Gets the shared object library name for computing the robot posture values and states");
+
+    this->RegisterCommand("GetSupportType",
+                          boost::bind(&PostureDescriber::_GetSupportTypeCommand, this, _1, _2),
+                          "Gets the robot posture support type");
 }
 
 PostureDescriber::~PostureDescriber() {
@@ -220,8 +224,8 @@ bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
         _armindices.push_back(joint->GetDOFIndex()); // collect arm indices
     }
 
-    const RobotPostureSupportType supporttype = DeriveRobotPostureSupportType(_joints);
-    switch(supporttype) {
+    _supporttype = DeriveRobotPostureSupportType(_joints);
+    switch(_supporttype) {
     case RobotPostureSupportType::RPST_6R_General: {
         const PostureFormulation
             shoulderform {{
@@ -364,6 +368,11 @@ bool PostureDescriber::_GetPostureValueThresholdCommand(std::ostream& ssout, std
 bool PostureDescriber::_GetArmIndicesCommand(std::ostream& ssout, std::istream& ssin) const {
     SerializeValues(ssout, _armindices);
     return !_armindices.empty();
+}
+
+bool PostureDescriber::_GetSupportTypeCommand(std::ostream& ssout, std::istream& ssin) const {
+    ssout << static_cast<int>(_supporttype);
+    return _supporttype != RobotPostureSupportType::RPST_NoSupport;
 }
 
 } // namespace OpenRAVE

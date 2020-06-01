@@ -99,6 +99,45 @@ std::string PyPostureDescriber::GetMapDataKey() const {
     return _pDescriber->GetMapDataKey();
 }
 
+py::list PyPostureDescriber::Explain(object pystates) const {
+    py::list l;
+    std::stringstream ssout, ssin;
+    ssin << "GetSupportType";
+    if(!_pDescriber->SendCommand(ssout, ssin)) {
+        RAVELOG_WARN("Unsupported posture type, cannot explain");
+        return l;
+    }
+    uint16_t supporttype = 0;
+    ssout >> supporttype;
+    std::vector<std::string> vfeatures;
+    switch(supporttype) {
+        case 1: {
+            vfeatures = {"shoulder", "elbow", "wrist"};
+            break;
+        }
+        case 2: {
+            vfeatures = {"shoulder", "elbow"};
+            break;
+        }
+        default: {
+            RAVELOG_WARN("Unsupported posture type, cannot explain");
+            return l;
+        }
+    }
+
+    const std::vector<PostureStateInt> vstates = ExtractArray<PostureStateInt>(pystates);
+    for(const PostureStateInt states : vstates) {
+        py::dict d;
+        int pow2 = 1 << (vfeatures.size() - 1);
+        for(const std::string& feature : vfeatures) {
+            d[feature] = states & pow2;
+            pow2 >>= 1;
+        }
+        l.append(d);
+    }
+    return l;
+}
+
 PyPostureDescriberPtr GeneratePostureDescriber(const PyManipulatorPtr& pymanip) {
     return GeneratePostureDescriber(pymanip, "posturedescriber"); // default
 }
@@ -114,7 +153,7 @@ PyPostureDescriberPtr GeneratePostureDescriber(const PyManipulatorPtr& pymanip, 
     const std::string describername = interfacename + "." + probot->GetName() + "." + chainhash + "." + pmanip->GetBase()->GetName() + "." + pmanip->GetEndEffector()->GetName();
     PostureDescriberBasePtr pDescriber = RaveCreatePostureDescriber(penv, interfacename + " " + describername);
     if(pDescriber == nullptr) {
-        RAVELOG_WARN_FORMAT("Can not generate posture describer interface \"%s\" for manpulator %s of robot %s", interfacename % pmanip->GetName() % probot->GetName());        
+        RAVELOG_WARN_FORMAT("Can not generate posture describer interface \"%s\" for manpulator %s of robot %s", interfacename % pmanip->GetName() % probot->GetName());
     }
     if(!pDescriber->Supports(pmanip)) {
         RAVELOG_WARN_FORMAT("Posture describer interface \"%s\" does not support manpulator %s of robot %s", interfacename % pmanip->GetName() % probot->GetName());
@@ -166,14 +205,15 @@ void init_openravepy_posturedescriber()
 #else
     class_<PyPostureDescriber, OPENRAVE_SHARED_PTR<PyPostureDescriber>, bases<PyInterfaceBase> >("PostureDescriber", DOXY_CLASS(PostureDescriberBase), no_init)
 #endif
-    .def("Supports",             SupportsWithTwoLinks,                PY_ARGS("baselink", "eelink") DOXY_FN(PostureDescriberBase, Supports "const std::array<RobotBase::LinkPtr, 2>& kinematicsChain"))
-    .def("Supports",             SupportsWithManip,                   PY_ARGS("manipulator")        DOXY_FN(PostureDescriberBase, Supports "const RobotBase::ManipulatorPtr& pmanip"))
-    .def("Init",                 InitWithTwoLinks,                    PY_ARGS("baselink", "eelink") DOXY_FN(PostureDescriberBase, Init "const std::array<RobotBase::LinkPtr, 2>& kinematicsChain"))
-    .def("Init",                 InitWithManip,                       PY_ARGS("manipulator")        DOXY_FN(PostureDescriberBase, Init "const RobotBase::ManipulatorPtr& pmanip"))
+    .def("Supports",             SupportsWithTwoLinks               , PY_ARGS("baselink", "eelink") DOXY_FN(PostureDescriberBase, Supports "const std::array<RobotBase::LinkPtr, 2>& kinematicsChain"))
+    .def("Supports",             SupportsWithManip                  , PY_ARGS("manipulator")        DOXY_FN(PostureDescriberBase, Supports "const RobotBase::ManipulatorPtr& pmanip"))
+    .def("Init",                 InitWithTwoLinks                   , PY_ARGS("baselink", "eelink") DOXY_FN(PostureDescriberBase, Init "const std::array<RobotBase::LinkPtr, 2>& kinematicsChain"))
+    .def("Init",                 InitWithManip                      , PY_ARGS("manipulator")        DOXY_FN(PostureDescriberBase, Init "const RobotBase::ManipulatorPtr& pmanip"))
 
-    .def("ComputePostureStates", ComputePostureStates,                                            DOXY_FN(PostureDescriberBase, ComputePostureStates ""))
-    .def("ComputePostureStates", ComputePostureStatesWithJointValues, PY_ARGS("dofvalues")        DOXY_FN(PostureDescriberBase, ComputePostureStates "const std::vector<double>& dofvalues"))
-    .def("GetMapDataKey"       , &PyPostureDescriber::GetMapDataKey,                              DOXY_FN(PostureDescriberBase, GetMapDataKey ""))
+    .def("ComputePostureStates", ComputePostureStates               ,                               DOXY_FN(PostureDescriberBase, ComputePostureStates ""))
+    .def("ComputePostureStates", ComputePostureStatesWithJointValues, PY_ARGS("dofvalues")          DOXY_FN(PostureDescriberBase, ComputePostureStates "const std::vector<double>& dofvalues"))
+    .def("GetMapDataKey"       , &PyPostureDescriber::GetMapDataKey ,                               DOXY_FN(PostureDescriberBase, GetMapDataKey ""))
+    .def("Explain"             , &PyPostureDescriber::Explain       , PY_ARGS("posturestates")      DOXY_FN(PostureDescriberBase, Explain ""))
     ;
 
     PyPostureDescriberPtr (*GeneratePostureDescriberDefault    )(const PyManipulatorPtr&                    ) = &GeneratePostureDescriber;
