@@ -43,7 +43,7 @@ enum DynamicsConstraintsType {
     DC_NominalTorque       = 1, ///< Compute and check torque limits using nominal torque
     DC_InstantaneousTorque = 2, ///< Compute and check torque limits using instantaneous torque
 };
-    
+
 /// \brief holds parameters for an electric motor
 ///
 /// all speed is in revolutions/second
