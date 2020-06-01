@@ -45,6 +45,8 @@ enum DynamicsConstraintsType {
     DC_InstantaneousTorque = 2, ///< Compute and check torque limits using instantaneous torque
 };
 
+OPENRAVE_API const char* GetDynamicsConstraintsTypeString(DynamicsConstraintsType type);
+
 /// \brief holds parameters for an electric motor
 ///
 /// all speed is in revolutions/second
