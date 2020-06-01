@@ -86,6 +86,7 @@ public:
 
     /// \brief clears the readable interfaces
     virtual void ClearReadableInterfaces();
+    virtual void ClearReadableInterface(const std::string& id);
 
     /// \brief Documentation of the interface in reStructuredText format. See \ref writing_plugins_doc. <b>[multi-thread safe]</b>
     virtual const std::string& GetDescription() const {

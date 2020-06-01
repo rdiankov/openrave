@@ -156,6 +156,31 @@ std::vector< std::pair<int, dReal> > ExtractDOFValuesArray(object pyDOFValuesLis
     return vDOFValues;
 }
 
+
+std::map<std::string, JSONReadablePtr> ExtractReadableInterfaces(object pyReadableInterfaces) {
+    if (IS_PYTHONOBJECT_NONE(pyReadableInterfaces)) {
+        return {};
+    }
+
+    py::dict pyReadableInterfacesDict = (py::dict)pyReadableInterfaces;
+    std::map<std::string, JSONReadablePtr> mReadableInterfaces;
+    try {
+
+        py::list keys = py::list(pyReadableInterfacesDict.keys());
+        for(size_t iKey = 0; iKey < len(keys); iKey++) {
+            std::string name = py::extract<std::string>(keys[iKey]);
+            ReadablePtr pReadable = ExtractReadable(pyReadableInterfacesDict[name]);
+            mReadableInterfaces[name] = boost::dynamic_pointer_cast<JSONReadable>(pReadable);
+            // Readable pValue = py::extract<Readable>(pyReadableInterfacesDict[name]);
+            // mReadableInterfaces[name] = pValue;
+        }
+    }
+    catch (...) {
+        RAVELOG_WARN("Cannot do Extract mapping for readableinterfaces");
+    }
+    return mReadableInterfaces;
+}
+
 py::object ReturnDOFValues(const std::vector< std::pair<int, dReal> >& vDOFValues)
 {
     py::list pyDOFValuesList;
@@ -166,6 +191,15 @@ py::object ReturnDOFValues(const std::vector< std::pair<int, dReal> >& vDOFValue
         pyDOFValuesList.append(pyDOFValue);
     }
     return pyDOFValuesList;
+}
+
+py::object ReturnReadableInterfaces(const std::map<std::string, JSONReadablePtr>& mReadableInterfaces)
+{
+    py::dict pyReadableInterfaces;
+    FOREACHC(it, mReadableInterfaces) {
+        pyReadableInterfaces[it->first] = toPyReadable(it->second);
+    }
+    return pyReadableInterfaces;
 }
 
 template <typename T>
@@ -2171,9 +2205,9 @@ KinBody::KinBodyInfoPtr PyKinBody::PyKinBodyInfo::GetKinBodyInfo() const {
 #endif
     pInfo->_transform = ExtractTransform(_transform);
     pInfo->_dofValues = ExtractDOFValuesArray(_dofValues);
-    rapidjson::Document docReadableInterfaces;
-    toRapidJSONValue(_readableInterfaces, docReadableInterfaces, docReadableInterfaces.GetAllocator());
-    docReadableInterfaces.Swap(pInfo->_docReadableInterfaces);
+
+    pInfo->_mReadableInterfaces = ExtractReadableInterfaces(_readableInterfaces);
+    // pInfo->_mReadableInterfaces = Extract(_readableInterfaces);
     return pInfo;
 }
 
@@ -2229,7 +2263,7 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
 #endif
     _transform = ReturnTransform(info._transform);
     _dofValues = ReturnDOFValues(info._dofValues);
-    _readableInterfaces = toPyObject(info._docReadableInterfaces);
+    _readableInterfaces = ReturnReadableInterfaces(info._mReadableInterfaces);
 }
 
 std::string PyKinBody::PyKinBodyInfo::__str__() {

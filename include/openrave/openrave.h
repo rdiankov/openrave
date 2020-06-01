@@ -434,13 +434,15 @@ public:
 };
 
 /// base class for json readable interfaces
-class OPENRAVE_API JSONReadable : virtual public Readable
+class OPENRAVE_API JSONReadable : virtual public Readable, public boost::enable_shared_from_this<JSONReadable>
 {
 public:
     JSONReadable() { }
     virtual ~JSONReadable() {}
     virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const = 0;
     virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) = 0;
+    virtual bool operator==(const JSONReadable& other) = 0;//{ throw OPENRAVE_EXCEPTION_FORMAT0("does not support compare JSONReadable Base", ORE_InvalidArguments); };
+    virtual bool operator!=(const JSONReadable& other) = 0;//{ return !operator==(other); }
 };
 typedef boost::shared_ptr<JSONReadable> JSONReadablePtr;
 typedef boost::shared_ptr<JSONReadable const> JSONReadableConstPtr;
@@ -599,6 +601,17 @@ public:
     virtual void Serialize(BaseXMLWriterPtr wirter, int options=0) const;
     virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
     virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+    virtual bool operator==(const JSONReadable& other) {
+        boost::shared_ptr<const StringReadable> pOther = boost::dynamic_pointer_cast<const StringReadable>(other.shared_from_this());
+        if (!pOther) {
+            return false;
+        }
+
+        return _data == pOther->_data;
+    }
+    virtual bool operator!=(const JSONReadable& other) {
+        return !operator==(other);
+    }
 
     const std::string& GetData() const;
     std::string _data;
@@ -2089,6 +2102,16 @@ public:
     void SerializeJSON(rapidjson::Value& rIkParameterization, rapidjson::Document::AllocatorType& alloc, dReal fUnitScale=1.0) const;
 
     void DeserializeJSON(const rapidjson::Value& rIkParameterization, dReal fUnitScale=1.0);
+
+    virtual bool operator==(const IkParameterization& other) const {
+        return _type == other._type
+            && _transform == other._transform
+            && _mapCustomData == other._mapCustomData;
+    }
+
+    virtual bool operator!=(const IkParameterization& other) const {
+        return !operator==(other);
+    }
 
 protected:
     inline static bool _IsValidCharInName(char c) {

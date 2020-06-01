@@ -862,10 +862,9 @@ public:
         std::vector<AttachedSensorInfoPtr> _vAttachedSensorInfos; ///< list of pointers to AttachedSensorInfo
         std::vector<ConnectedBodyInfoPtr> _vConnectedBodyInfos; ///< list of pointers to ConnectedBodyInfo
         std::vector<GripperInfoPtr> _vGripperInfos; ///< list of pointers to GripperInfo
+protected:
+        virtual void _DeserializeReadableInterface(const std::string id, const rapidjson::Value& value);
 
-private:
-        /// \brief shared update method for both copy constructor and assign operator
-        // void _Update(const RobotBase::RobotBaseInfo& other);
     };
     typedef boost::shared_ptr<RobotBaseInfo> RobotBaseInfoPtr;
     typedef boost::shared_ptr<RobotBaseInfo const> RobotBaseInfoConstPtr;

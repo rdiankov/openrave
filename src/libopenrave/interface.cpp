@@ -291,4 +291,9 @@ void InterfaceBase::ClearReadableInterfaces()
     __mapReadableInterfaces.clear();
 }
 
+void InterfaceBase::ClearReadableInterface(const std::string& id) {
+    boost::unique_lock<boost::shared_mutex> lock(_mutexInterface);
+    __mapReadableInterfaces.erase(id);
+}
+
 }

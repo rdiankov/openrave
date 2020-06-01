@@ -506,6 +506,19 @@ private:
 public:
         dReal fSpinSpeed;
         Vector vSpinAxis, vSpinPos;
+        virtual bool operator==(const JSONReadable& other) {
+            boost::shared_ptr<const SpinningLaserGeomData> pOther = boost::dynamic_pointer_cast<const SpinningLaserGeomData>(other.shared_from_this());
+            if (!pOther) {
+                return false;
+            }
+            return LaserGeomData::operator==(other)
+                && fSpinSpeed == pOther->fSpinSpeed
+                && vSpinAxis == pOther->vSpinAxis
+                && vSpinPos == pOther->vSpinPos;
+        }
+        virtual bool operator!=(const SpinningLaserGeomData& other) {
+            return !operator==(other);
+        }
     };
 
 public:

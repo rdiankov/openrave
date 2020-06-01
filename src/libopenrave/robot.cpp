@@ -591,6 +591,23 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
     }
 }
 
+
+void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(std::string id, const rapidjson::Value& value) {
+    RobotBasePtr pRobotBase;
+    BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Robot, id, pRobotBase, AttributesList());
+    if (!!pReader) {
+        pReader->DeserializeJSON(value);
+        JSONReadablePtr pReadable = pReader->GetReadable();
+        if (!!pReadable) {
+            _mReadableInterfaces[id] = pReadable;
+        }
+    }
+    else if (value.IsString()) {
+        StringReadablePtr pReadable(new StringReadable(id, value.GetString()));
+        _mReadableInterfaces[id] = pReadable;
+    }
+}
+
 RobotBase::RobotBase(EnvironmentBasePtr penv) : KinBody(PT_Robot, penv)
 {
     _nAffineDOFs = 0;
@@ -674,6 +691,7 @@ bool RobotBase::InitFromInfo(const RobotBaseInfo& info)
 {
     std::vector<KinBody::LinkInfoConstPtr> vLinkInfosConst(info._vLinkInfos.begin(), info._vLinkInfos.end());
     std::vector<KinBody::JointInfoConstPtr> vJointInfosConst(info._vJointInfos.begin(), info._vJointInfos.end());
+
     std::vector<RobotBase::ManipulatorInfoConstPtr> vManipulatorInfosConst(info._vManipulatorInfos.begin(), info._vManipulatorInfos.end());
     std::vector<RobotBase::AttachedSensorInfoConstPtr> vAttachedSensorInfosConst(info._vAttachedSensorInfos.begin(), info._vAttachedSensorInfos.end());
 
@@ -696,6 +714,9 @@ bool RobotBase::InitFromInfo(const RobotBaseInfo& info)
     _info = info;
     _robotBaseInfo = info;
     _name = info._name;
+    FOREACH(it, info._mReadableInterfaces) {
+        SetReadableInterface(it->first, it->second);
+    }
     return true;
 }
 

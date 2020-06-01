@@ -1799,11 +1799,7 @@ public:
             _vLinkInfos = other._vLinkInfos;
             _vJointInfos = other._vJointInfos;
             _vGrabbedInfos = other._vGrabbedInfos;
-            rapidjson::Document docReadableInterfaces;
-            if (other._docReadableInterfaces.IsObject()) {
-                docReadableInterfaces.CopyFrom(other._docReadableInterfaces, docReadableInterfaces.GetAllocator());
-            }
-            _docReadableInterfaces.Swap(docReadableInterfaces);
+            _mReadableInterfaces = other._mReadableInterfaces;
             // TODO: deep copy infos
             return *this;
         }
@@ -1817,7 +1813,7 @@ public:
                 && _vLinkInfos == other._vLinkInfos
                 && _vJointInfos == other._vJointInfos
                 && _vGrabbedInfos == other._vGrabbedInfos
-                && _docReadableInterfaces == other._docReadableInterfaces;
+                && _mReadableInterfaces == other._mReadableInterfaces;
             // TODO: deep compare infos
         }
         bool operator!=(const KinBodyInfo& other) const{
@@ -1839,7 +1835,10 @@ public:
         std::vector<LinkInfoPtr> _vLinkInfos; ///< list of pointers to LinkInfo
         std::vector<JointInfoPtr> _vJointInfos; ///< list of pointers to JointInfo
 
-        rapidjson::Document _docReadableInterfaces; ///< readable interface mapping
+        std::map<std::string, JSONReadablePtr> _mReadableInterfaces; ///< readable interface mapping
+protected:
+        virtual void _DeserializeReadableInterface(const std::string id, const rapidjson::Value& value);
+
     };
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;

@@ -668,6 +668,16 @@ class OrientedBox
 public:
     RaveTransform<T> transform;
     RaveVector<T> extents;
+
+    virtual bool operator==(const OrientedBox& other) const {
+        return transform == other.transform
+            && extents == other.extents;
+    }
+
+    virtual bool operator!=(const OrientedBox& other) const {
+        return !operator==(other);
+    }
+
 };
 
 /// \brief An oriented bounding box.
@@ -740,6 +750,17 @@ public:
         fy = r.fy;
         cx = r.cx;
         cy = r.cy;
+    }
+    template<typename U>
+    bool operator==(const RaveCameraIntrinsics<U>& r)
+    {
+        return distortion_model == r.distortion_model
+            && distortion_coeffs == r.distortion_coeffs
+            && focal_length == r.focal_length
+            && fx == r.fx
+            && fy == r.fy
+            && cx == r.cx
+            && cy == r.cy;
     }
 
     T fx,fy, cx,cy;
