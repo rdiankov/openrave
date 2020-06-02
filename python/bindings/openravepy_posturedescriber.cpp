@@ -132,6 +132,10 @@ py::dict PyPostureDescriber::Explain(object pystates) const {
             vfeatures = {"shoulder", "elbow"};
             break;
         }
+        case 3: {
+            vfeatures = {"elbow"};
+            break;
+        }
         default: {
             RAVELOG_WARN("Unsupported posture type, cannot explain");
             return d;

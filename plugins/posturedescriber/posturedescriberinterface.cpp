@@ -50,13 +50,44 @@ PostureDescriber::PostureDescriber(EnvironmentBasePtr penv,
 PostureDescriber::~PostureDescriber() {
 }
 
+inline bool IsActiveRevolute(const JointPtr& joint) {
+    return joint->IsRevolute(0) && !joint->IsCircular(0) && joint->GetDOF() == 1;
+}
+
+inline bool IsActivePrismatic(const JointPtr& joint) {
+    return joint->IsPrismatic(0) && joint->GetDOF() == 1;
+}
+
+bool CheckJointTypes(const std::vector<JointPtr>& joints, const std::string& typestr) {
+    const size_t njoints = joints.size();
+    if(njoints != typestr.size()) {
+        throw OPENRAVE_EXCEPTION_FORMAT("Size mismatch: %d != %d", joints.size() % typestr.size(), ORE_InvalidArguments);
+    }
+    for(size_t i = 0; i < njoints; ++i) {
+        if(typestr[i] == 'P') {
+            if(!IsActivePrismatic(joints[i])) {
+                return false;
+            }
+        }
+        else if(typestr[i] == 'R') {
+            if(!IsActiveRevolute(joints[i])) {
+                return false;
+            }
+        }
+        else {
+            return false;
+        }
+    }
+    return true;
+}
+
 /// \brief Checks whether all joints are purely revolute (not prismatic nor circular).
 /// \return true if all joints are purely revolute
 bool CheckAllJointsPurelyRevolute(const std::vector<JointPtr>& joints) {
     std::stringstream ss;
     for(size_t i = 0; i < joints.size(); ++i) {
         const JointPtr& joint = joints[i];
-        if(!joint->IsRevolute(0) || joint->IsCircular(0) || joint->GetDOF() != 1) {
+        if(!(IsActiveRevolute(joint))) {
             ss << joint->GetDOFIndex() << ",";
         }
     }
@@ -255,7 +286,7 @@ bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
     }
     case RobotPostureSupportType::RPST_4R_Type_A: {
         const PostureFormulation
-            j1form {{
+            shoulderform {{
                         {0, -1},
                         {1, -1},
                         {1, 3},
@@ -266,7 +297,7 @@ bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
                        {2, 3}
                    }};
         const std::array<PostureFormulation, 2> postureforms = {
-            j1form,
+            shoulderform,
             elbowform
         };
         _posturefn = PostureValuesFunctionGenerator<2>(postureforms);

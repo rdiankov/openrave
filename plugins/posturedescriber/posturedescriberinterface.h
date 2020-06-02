@@ -32,9 +32,10 @@ enum class NeighbouringTwoJointsRelation : uint16_t {
 };
 
 enum class RobotPostureSupportType : uint16_t {
-    RPST_NoSupport  = 0x0, ///< unsupported
-    RPST_6R_General = 0x1, ///< general 6R robots whose last three joint axes intersecting at a point
-    RPST_4R_Type_A  = 0x2, ///< a special type of 4R robot whose last three parallel joint axes are perpendicular to the first joint axis
+    RPST_NoSupport    = 0x0, ///< unsupported
+    RPST_6R_General   = 0x1, ///< general 6R robots whose last three joint axes intersecting at a point
+    RPST_4R_Type_A    = 0x2, ///< a special type of 4R robot whose last three parallel joint axes are perpendicular to the first joint axis
+    RPST_RRR_Parallel = 0x3, ///< a type of robot that has only three revolute joints whose axes are parallel
 };
 
 /// can do bit operations with enum class
