@@ -86,13 +86,26 @@ bool PyPostureDescriber::Init(PyManipulatorPtr pmanip) {
 
 object PyPostureDescriber::ComputePostureStates()
 {
-    return StdVectorToPyList<PostureStateInt>(_pDescriber->ComputePostureStates(_posturestates) ? _posturestates : std::vector<PostureStateInt>());
+    if(!_pDescriber->ComputePostureStates(_posturestates)) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("Failed to compute posture", ORE_Failed);
+    }
+    return StdVectorToPyList<PostureStateInt>(_posturestates);
 }
 
 object PyPostureDescriber::ComputePostureStates(object pydofvalues)
 {
     const std::vector<dReal> dofvalues = ExtractArray<dReal>(pydofvalues);
-    return StdVectorToPyList<PostureStateInt>(_pDescriber->ComputePostureStates(_posturestates, dofvalues) ? _posturestates : std::vector<PostureStateInt>());
+    if(!_pDescriber->ComputePostureStates(_posturestates, dofvalues)) {
+        std::stringstream ss;
+        if(!dofvalues.empty()) {
+            ss << dofvalues[0];
+        }
+        for(size_t idof = 1; idof < dofvalues.size(); ++idof) {
+            ss << ", " << dofvalues[idof];
+        }
+        throw OPENRAVE_EXCEPTION_FORMAT("Failed to compute posture for dof values: %s", ss.str(), ORE_Failed);
+    }
+    return StdVectorToPyList<PostureStateInt>(_posturestates);
 }
 
 std::string PyPostureDescriber::GetMapDataKey() const {
