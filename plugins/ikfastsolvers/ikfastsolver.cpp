@@ -291,7 +291,11 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
             }
         }
         if( !bfound ) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("manipulator %s not found in robot"), pmanip->GetName(), ORE_InvalidArguments);
+            std::stringstream smanipnames;
+            FOREACH(itmanip, probot->GetManipulators()) {
+                smanipnames << (*itmanip)->GetName() << ", ";
+            }
+            throw OPENRAVE_EXCEPTION_FORMAT(_("manipulator '%s' not found in robot '%s' (%d) with manips [%s]"), pmanip->GetName()%probot->GetName()%probot->GetEnvironmentId()%smanipnames.str(), ORE_InvalidArguments);
         }
 
         _cblimits = probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IkReal>::SetJointLimits,boost::bind(&utils::sptr_from<IkFastSolver<IkReal> >, weak_solver())));
