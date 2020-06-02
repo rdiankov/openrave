@@ -344,24 +344,9 @@ void PostureDescriber::_GetJointsFromKinematicsChain(const LinkPair& kinematicsC
             it = joints.erase(it);
         }
         else {
-            // if((*it)->IsPrismatic(0)) {
-            //     typestr.push_back('P');
-            // }
-            // else if((*it)->IsRevolute(0)){
-            //     typestr.push_back('R');
-            // }
             ++it;
         }
     }
-    // const size_t firstR = typestr.find_first_of('R');
-    // if(firstR == std::string::npos) {
-    //     RAVELOG_WARN("No revolute joints at all");
-    //     joints.clear();
-    //     return;
-    // }
-    // const size_t lastR = typestr.find_last_of('R');
-    // joints = std::vector<JointPtr>(begin(joints) + firstR, begin(joints) + lastR + 1);
-    // RAVELOG_VERBOSE_FORMAT("typestr = %s, firstR = %d, lastR = %d; final typestr = %s", typestr % firstR % lastR % typestr.substr(firstR, lastR-firstR+1));
 }
 
 bool PostureDescriber::Supports(const LinkPair& kinematicsChain) const {
@@ -369,6 +354,16 @@ bool PostureDescriber::Supports(const LinkPair& kinematicsChain) const {
         RAVELOG_WARN("kinematics chain is not valid as having nullptr");
         return false;
     }
+
+    if(_posturefn && _kinematicsChain[0] && _kinematicsChain[1]) {
+        if(kinematicsChain != _kinematicsChain) {
+            throw OPENRAVE_EXCEPTION_FORMAT("This describer has already been used by %s from baselink %s to eelink %s",
+                _kinematicsChain[0]->GetParent()->GetName() % _kinematicsChain[0]->GetName() % _kinematicsChain[1]->GetName(),
+                ORE_InvalidArguments                
+            );
+        }
+    }
+
     std::vector<JointPtr> joints;
     _GetJointsFromKinematicsChain(kinematicsChain, joints);
     const RobotPostureSupportType supporttype = DeriveRobotPostureSupportType(joints);

@@ -118,7 +118,7 @@ protected:
 
     bool _GetSupportTypeCommand(std::ostream& ssout, std::istream& ssin) const;
 
-    LinkPair _kinematicsChain; ///< the baselink-eelink pair of a kinematics chain
+    LinkPair _kinematicsChain {nullptr, nullptr}; ///< the baselink-eelink pair of a kinematics chain
     std::vector<KinBody::JointPtr> _joints; ///< non-static joints from baselink to eelink
     std::vector<int> _armindices; ///< dof indices from baselink to eelink
     double _fTol = 1e-6; ///< tolerance for determining if a robot posture value is considered 0
