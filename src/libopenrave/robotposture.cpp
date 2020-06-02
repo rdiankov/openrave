@@ -71,14 +71,11 @@ PostureDescriberBasePtr RobotBase::GetPostureDescriber(ManipulatorConstPtr pmani
 
 bool RobotBase::ComputePostureStates(std::vector<PostureStateInt>& posturestates, const LinkPair& kinematicsChain, const std::vector<double>& dofvalues) const
 {
-    // TODO fill with default implementation
-    if(_mPostureDescribers.count(kinematicsChain)) {
-        return _mPostureDescribers.at(kinematicsChain)->ComputePostureStates(posturestates, dofvalues);
+    if(!_mPostureDescribers.count(kinematicsChain)) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to find robot posture describer for links from \"%s\" to \"%s\" for robot \"%s\""),
+                                        GetName() % kinematicsChain[0]->GetName() % kinematicsChain[1]->GetName(), ORE_InvalidArguments);
     }
-
-    throw OPENRAVE_EXCEPTION_FORMAT(_("failed to find robot posture describer for links from \"%s\" to \"%s\" for robot \"%s\""),
-                                    GetName() % kinematicsChain[0]->GetName() % kinematicsChain[1]->GetName(), ORE_InvalidArguments);
-    return false;
+    return _mPostureDescribers.at(kinematicsChain)->ComputePostureStates(posturestates, dofvalues);
 }
 
 bool RobotBase::ComputePostureStates(std::vector<PostureStateInt>& posturestates, ManipulatorConstPtr pmanip, const std::vector<double>& dofvalues) const
