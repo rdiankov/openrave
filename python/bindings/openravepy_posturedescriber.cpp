@@ -99,13 +99,13 @@ std::string PyPostureDescriber::GetMapDataKey() const {
     return _pDescriber->GetMapDataKey();
 }
 
-py::list PyPostureDescriber::Explain(object pystates) const {
-    py::list l;
+py::dict PyPostureDescriber::Explain(object pystates) const {
+    py::dict d;
     std::stringstream ssout, ssin;
     ssin << "GetSupportType";
     if(!_pDescriber->SendCommand(ssout, ssin)) {
         RAVELOG_WARN("Unsupported posture type, cannot explain");
-        return l;
+        return d;
     }
     uint16_t supporttype = 0;
     ssout >> supporttype;
@@ -121,21 +121,26 @@ py::list PyPostureDescriber::Explain(object pystates) const {
         }
         default: {
             RAVELOG_WARN("Unsupported posture type, cannot explain");
-            return l;
+            return d;
         }
     }
 
-    const std::vector<PostureStateInt> vstates = ExtractArray<PostureStateInt>(pystates);
-    for(const PostureStateInt states : vstates) {
-        py::dict d;
+    std::vector<PostureStateInt> vstates = ExtractArray<PostureStateInt>(pystates);
+    const std::set<PostureStateInt> sstates(begin(vstates), end(vstates));
+    vstates = std::vector<PostureStateInt>(begin(sstates), end(sstates));
+    for(const PostureStateInt state : vstates) {
+        py::list l;
         int pow2 = 1 << (vfeatures.size() - 1);
         for(const std::string& feature : vfeatures) {
-            d[feature] = states & pow2;
+            py::list p;
+            p.append(feature);
+            p.append(state & pow2 ? 1 : 0);
             pow2 >>= 1;
+            l.append(p);
         }
-        l.append(d);
+        d[state] = l;
     }
-    return l;
+    return d;
 }
 
 PyPostureDescriberPtr GeneratePostureDescriber(const PyManipulatorPtr& pymanip) {

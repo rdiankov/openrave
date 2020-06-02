@@ -63,7 +63,7 @@ public:
 
     std::string GetMapDataKey() const;
 
-    py::list Explain(object pystates) const;
+    py::dict Explain(object pystates) const;
 
 private:
     std::vector<PostureStateInt> _posturestates; // cache
