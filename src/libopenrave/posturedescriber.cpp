@@ -34,6 +34,7 @@ bool PostureDescriberBase::Supports(const RobotBase::ManipulatorPtr& pmanip) con
     return this->Supports(GetKinematicsChain(pmanip));
 }
 
+// lets just call this->Init(GetKinematicsChain(pmanip))
 bool PostureDescriberBase::Init(const RobotBase::ManipulatorPtr& pmanip) {
     return this->Supports(GetKinematicsChain(pmanip)) ? this->Init(GetKinematicsChain(pmanip)) : false;
 }

@@ -57,7 +57,7 @@ inline bool IsActiveRevolute(const JointPtr& joint) {
 inline bool IsActivePrismatic(const JointPtr& joint) {
     return joint->IsPrismatic(0) && joint->GetDOF() == 1;
 }
-
+    // replace typestr with JointType
 bool CheckJointTypes(const std::vector<JointPtr>& joints, const std::string& typestr) {
     const size_t njoints = joints.size();
     if(njoints != typestr.size()) {
@@ -134,6 +134,7 @@ NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Tr
 
 /// \brief Derives the robot posture support type for a sequence of joints along a kinematics chain
 /// \return a RobotPostureSupportType enum for the kinematics chain
+    // const ref
 RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr> joints) {
     if(joints.size() == 6) {
         if(!CheckAllJointsPurelyRevolute(joints)) {
@@ -249,8 +250,12 @@ bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
         RAVELOG_WARN("Does not support kinematics chain");
         return false;
     }
+
+    destory();
+    
     _kinematicsChain = kinematicsChain;
     _GetJointsFromKinematicsChain(_kinematicsChain, _joints);
+    // what happens if Init is called multiple times? _armindices gets longer and longer?
     for(const JointPtr& joint : _joints) {
         _armindices.push_back(joint->GetDOFIndex()); // collect arm indices
     }
@@ -259,6 +264,7 @@ bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
     switch(_supporttype) {
     case RobotPostureSupportType::RPST_6R_General: {
         const PostureFormulation
+            // comment out
             shoulderform {{
                               {0, -1},
                               {1, -1},
@@ -327,6 +333,7 @@ void PostureDescriber::_GetJointsFromKinematicsChain(const LinkPair& kinematicsC
     }
 }
 
+    // new line before { at the begging of function
 bool PostureDescriber::Supports(const LinkPair& kinematicsChain) const {
     if( kinematicsChain[0] == nullptr || kinematicsChain[1] == nullptr ) {
         RAVELOG_WARN("kinematics chain is not valid as having nullptr");
@@ -340,6 +347,7 @@ bool PostureDescriber::Supports(const LinkPair& kinematicsChain) const {
     }
 
     const KinBodyPtr probot = kinematicsChain[0]->GetParent();
+    // minor, const ref?
     const std::string robotname = probot->GetName();
     const std::string baselinkname = kinematicsChain[0]->GetName();
     const std::string eelinkname = kinematicsChain[1]->GetName();
@@ -363,7 +371,7 @@ bool PostureDescriber::ComputePostureStates(std::vector<PostureStateInt>& postur
         }
         const KinBody::CheckLimitsAction claoption = KinBody::CheckLimitsAction::CLA_Nothing;
         const KinBody::KinBodyStateSaver saver(probot); // options = Save_LinkTransformation | Save_LinkEnable
-        probot->SetDOFValues(dofvalues, claoption, _armindices);
+        probot->SetDOFValues(dofvalues, claoption, _armindices); // why specifying _armindices?  is it correct to check dofvalues.size() != _joints.size()
         _posturefn(_joints, _fTol, posturestates);
     }
     else {

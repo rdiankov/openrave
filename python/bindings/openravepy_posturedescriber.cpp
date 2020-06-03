@@ -112,6 +112,8 @@ std::string PyPostureDescriber::GetMapDataKey() const {
     return _pDescriber->GetMapDataKey();
 }
 
+// should take just one state, not states
+// why logic is in python? each describer class have to implement this
 py::dict PyPostureDescriber::Explain(object pystates) const {
     py::dict d;
     std::stringstream ssout, ssin;

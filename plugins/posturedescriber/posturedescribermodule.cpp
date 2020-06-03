@@ -23,6 +23,7 @@ namespace OpenRAVE {
 using ManipulatorPtr = RobotBase::ManipulatorPtr;
 using LinkPtr = RobotBase::LinkPtr;
 
+    // consistency, EnvironmentBasePtr by const ref or by value
 PostureDescriberModule::PostureDescriberModule(const EnvironmentBasePtr& penv) : ModuleBase(penv)
 {
     __description =
@@ -46,7 +47,7 @@ bool PostureDescriberModule::_LoadPostureDescriberCommand(std::ostream& ssout, s
         RAVELOG_WARN_FORMAT("env=%d has no robot %s", envId % robotname);
         return false;
     }
-
+    // throw this away and use json?
     const ManipulatorPtr pmanip = probot->GetManipulator(manipname);
     LinkPtr baselink, eelink;
     if(pmanip == nullptr) {

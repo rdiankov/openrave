@@ -2466,7 +2466,7 @@ protected:
     //@{
     // cache for current Solve call. This has to be saved/restored if any user functions are called (like filters) since the filters themselves can potentially call into this ik solver.
     std::vector<unsigned int> _vsolutionindices; ///< holds the indices of the current solution, this is not multi-thread safe
-    std::string _solutionIndicesName = "solutionindices"; ///< name of solution indices 
+    std::string _solutionIndicesName = "solutionindices"; ///< name of solution indices  // static member?
     int _nSameStateRepeatCount;
     //@}
 

@@ -19,6 +19,8 @@
 
 #include <openrave/openrave.h>
 
+// todo __description
+
 namespace OpenRAVE {
 
 using LinkPair = RobotBase::LinkPair; ///< a baselink-eelink pair
@@ -56,6 +58,7 @@ public:
 
     /// \brief Initializes class members for a kinematics chain from baselink to eelink, provided this class supports the posture description.
     /// \return true if this describer class can support the posture description AND the initialization is successful.
+    // comment about kinematicsChain requirement that they cannot be prismatic?
     virtual bool Init(const LinkPair& kinematicsChain) = 0;
 
     /// \brief Initializes class members for a kinematics chain from the manipulator's baselink to its eelink, provided this class supports the posture description.
