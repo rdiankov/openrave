@@ -5393,17 +5393,24 @@ UpdateFromInfoResult KinBody::UpdateFromInfo(const KinBodyInfo& info)
     GetDOFValues(dofValues);
     bool bDOFChanged = false;
     for(std::vector<std::pair<std::string, dReal>>::const_iterator it = info._dofValues.begin(); it != info._dofValues.end(); it++) {
-        std::vector<dReal> vValue;
-        GetJoint(it->first)->GetValues(vValue);
-        // TODO: any case for multiple dofValues in one joint?
-        if (vValue.size() == 1) {
-            if (vValue[0] != it->second) {
-                dofValues[GetJoint(it->first)->GetDOFIndex()] = it->second;
-                bDOFChanged = true;
+        // find the joint in the active chain
+        JointPtr joint;
+        FOREACHC(itJoint,_vecjoints) {
+            if ((*itJoint)->GetName() == it->first) {
+                joint = *itJoint;
+                break
             }
         }
-        else {
-            return UFIR_RequireRemoveFromEnvironment;
+        if (!joint) {
+            continue
+        }
+        int axis = 0; // TODO: handle multiple axis on one joint, get this index from the json
+        if (axis >= joint.GetDOF()) {
+            continue
+        }
+        if (dofValues[joint->GetDOFIndex()+axis] != it->second) {
+            dofValues[joint->GetDOFIndex()+axis] = it->second;
+            bDOFChanged = true;
         }
     }
     if (bDOFChanged) {
