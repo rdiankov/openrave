@@ -71,6 +71,9 @@ public:
     /// \brief Gets the key used in map data (of type CustomData) in IkReturn
     virtual std::string GetMapDataKey() const = 0;
 
+    /// \brief Cleans internal setup after before calling Init
+    virtual void Destroy() = 0;
+
     /// \return the static interface type this class points to (used for safe casting)
     static InterfaceType GetInterfaceTypeStatic() {
         return PT_PostureDescriber;
@@ -82,9 +85,10 @@ private:
 
 using PostureDescriberBasePtr = boost::shared_ptr<PostureDescriberBase>;
 
-///< \brief Acquires from the manipulator the kinematics chain in the form of a baselink-eelink pair.
-OPENRAVE_API LinkPair GetKinematicsChain(const RobotBase::ManipulatorPtr& pmanip);
-OPENRAVE_API LinkPair GetKinematicsChain(const RobotBase::ManipulatorConstPtr& pmanip);
+///< \brief Acquires from the manipulator the essential kinematics chain in the form of a link pair.
+/// An essential kinematics chain, if not empty, is always such that both the first joint and the last joint are active and revolute.
+OPENRAVE_API LinkPair GetEssentialKinematicsChain(const RobotBase::ManipulatorPtr& pmanip);
+OPENRAVE_API LinkPair GetEssentialKinematicsChain(const RobotBase::ManipulatorConstPtr& pmanip);
 
 ///< \brief Computes a kinematics hash from the baselink to eelink.
 OPENRAVE_API std::string ComputeKinematicsChainHash(const LinkPair& kinematicsChain, std::vector<int>& armindices);

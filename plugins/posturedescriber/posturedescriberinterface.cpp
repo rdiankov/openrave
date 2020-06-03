@@ -23,8 +23,9 @@
 namespace OpenRAVE {
 
 using JointPtr = OpenRAVE::KinBody::JointPtr;
+using LinkPtr = OpenRAVE::KinBody::LinkPtr;
 
-PostureDescriber::PostureDescriber(EnvironmentBasePtr penv,
+PostureDescriber::PostureDescriber(const EnvironmentBasePtr& penv,
                                    const double fTol) :
     PostureDescriberBase(penv),
     _fTol(fTol)
@@ -50,33 +51,15 @@ PostureDescriber::PostureDescriber(EnvironmentBasePtr penv,
 PostureDescriber::~PostureDescriber() {
 }
 
-inline bool IsActiveRevolute(const JointPtr& joint) {
-    return joint->IsRevolute(0) && !joint->IsCircular(0) && joint->GetDOF() == 1;
-}
-
-inline bool IsActivePrismatic(const JointPtr& joint) {
-    return joint->IsPrismatic(0) && joint->GetDOF() == 1;
-}
-
-/// \brief Checks whether joints match the string that specifies their types.
+/// \brief Checks whether joints match the their expected joint types
 /// \return true the joint types match
-bool CheckJointTypes(const std::vector<JointPtr>& joints, const std::string& typestr) {
+bool CheckJointTypes(const std::vector<JointPtr>& joints, const std::vector<KinBody::JointType>& jointtypes) {
     const size_t njoints = joints.size();
-    if(njoints != typestr.size()) {
-        throw OPENRAVE_EXCEPTION_FORMAT("Size mismatch: %d != %d", joints.size() % typestr.size(), ORE_InvalidArguments);
+    if(njoints != jointtypes.size()) {
+        throw OPENRAVE_EXCEPTION_FORMAT("Size mismatch: %d != %d", joints.size() % jointtypes.size(), ORE_InvalidArguments);
     }
     for(size_t i = 0; i < njoints; ++i) {
-        if(typestr[i] == 'P') {
-            if(!IsActivePrismatic(joints[i])) {
-                return false;
-            }
-        }
-        else if(typestr[i] == 'R') {
-            if(!IsActiveRevolute(joints[i])) {
-                return false;
-            }
-        }
-        else {
+        if(joints[i]->GetType() != jointtypes[i]) {
             return false;
         }
     }
@@ -119,11 +102,13 @@ NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Tr
 
 /// \brief Derives the robot posture support type for a sequence of joints along a kinematics chain
 /// \return a RobotPostureSupportType enum for the kinematics chain
-RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr> joints) {
+    // const ref
+RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr>& joints) {
     const size_t njoints = joints.size();
     switch(njoints) {
         case 6: {
-            if(!CheckJointTypes(joints, "RRRRRR")) {
+            const std::vector<KinBody::JointType> jointtypes(njoints, KinBody::JointType::JointRevolute);
+            if(!CheckJointTypes(joints, jointtypes)) {
                 RAVELOG_WARN("Not all 6 joints are purely revolute");
                 return RobotPostureSupportType::RPST_NoSupport;
             }
@@ -146,7 +131,8 @@ RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr
         }
 
         case 4: {
-            if(!CheckJointTypes(joints, "RRRR")) {
+            const std::vector<KinBody::JointType> jointtypes(njoints, KinBody::JointType::JointRevolute);
+            if(!CheckJointTypes(joints, jointtypes)) {
                 RAVELOG_WARN("Not all 4 joints are purely revolute");
                 return RobotPostureSupportType::RPST_NoSupport;
             }
@@ -164,7 +150,8 @@ RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr
         }
 
         case 3: {
-            if(!CheckJointTypes(joints, "RRR")) {
+            const std::vector<KinBody::JointType> jointtypes(njoints, KinBody::JointType::JointRevolute);
+            if(!CheckJointTypes(joints, jointtypes)) {
                 RAVELOG_WARN("Not all 3 joints are purely revolute");
                 return RobotPostureSupportType::RPST_NoSupport;
             }
@@ -257,6 +244,11 @@ bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
         RAVELOG_WARN("Does not support kinematics chain");
         return false;
     }
+
+    this->Destroy(); // clear internal contents
+
+    // TGN to Kei: what if the user set this describer at some robot, and then Init with something else
+    
     _kinematicsChain = kinematicsChain;
     _GetJointsFromKinematicsChain(_kinematicsChain, _joints);
     for(const JointPtr& joint : _joints) {
@@ -350,18 +342,12 @@ void PostureDescriber::_GetJointsFromKinematicsChain(const LinkPair& kinematicsC
 }
 
 bool PostureDescriber::Supports(const LinkPair& kinematicsChain) const {
-    if( kinematicsChain[0] == nullptr || kinematicsChain[1] == nullptr ) {
+    const LinkPtr baselink = kinematicsChain[0];
+    const LinkPtr eelink = kinematicsChain[1];
+
+    if( baselink == nullptr || eelink == nullptr ) {
         RAVELOG_WARN("kinematics chain is not valid as having nullptr");
         return false;
-    }
-
-    if(_posturefn && _kinematicsChain[0] && _kinematicsChain[1]) {
-        if(kinematicsChain != _kinematicsChain) {
-            throw OPENRAVE_EXCEPTION_FORMAT("This describer has already been used by %s from baselink %s to eelink %s",
-                _kinematicsChain[0]->GetParent()->GetName() % _kinematicsChain[0]->GetName() % _kinematicsChain[1]->GetName(),
-                ORE_InvalidArguments                
-            );
-        }
     }
 
     std::vector<JointPtr> joints;
@@ -372,9 +358,10 @@ bool PostureDescriber::Supports(const LinkPair& kinematicsChain) const {
     }
 
     const KinBodyPtr probot = kinematicsChain[0]->GetParent();
-    const std::string robotname = probot->GetName();
-    const std::string baselinkname = kinematicsChain[0]->GetName();
-    const std::string eelinkname = kinematicsChain[1]->GetName();
+    // minor, const ref?
+    const std::string& robotname = probot->GetName();
+    const std::string& baselinkname = baselink->GetName();
+    const std::string& eelinkname = eelink->GetName();
     RAVELOG_WARN_FORMAT("Cannot handle robot %s with armdof=%d for now: baselink=%s, eelink=%s", robotname % joints.size() % baselinkname % eelinkname);
     return false;
 }
@@ -415,6 +402,14 @@ bool PostureDescriber::SetPostureValueThreshold(double fTol) {
 
 std::string PostureDescriber::GetMapDataKey() const {
     return std::string(POSTUREDESCRIBER_CLASS_NAME);
+}
+
+void PostureDescriber::Destroy() {
+    _kinematicsChain  = {nullptr, nullptr};
+    _joints.clear();
+    _armindices.clear();
+    _posturefn = nullptr;
+    _supporttype = RobotPostureSupportType::RPST_NoSupport;
 }
 
 bool PostureDescriber::_SetPostureValueThresholdCommand(std::ostream& ssout, std::istream& ssin) {

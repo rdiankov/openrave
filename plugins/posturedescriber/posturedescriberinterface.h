@@ -73,7 +73,7 @@ class OPENRAVE_API PostureDescriber : public PostureDescriberBase
 {
 public:
     PostureDescriber() = delete;
-    PostureDescriber(EnvironmentBasePtr penv, const double fTol = 1e-6);
+    PostureDescriber(const EnvironmentBasePtr& penv, const double fTol = 1e-6);
     virtual ~PostureDescriber();
 
     /// \brief Checks if we can use this describer class to compute posture values for a kinematics chain from baselink to eelink.
@@ -100,6 +100,9 @@ public:
     const std::vector<KinBody::JointPtr>& GetJoints() const {
         return _joints;
     }
+
+    /// \brief Cleans internal setup after before calling Init
+    virtual void Destroy() override;
 
 protected:
     /// \brief Gets joints along a kinematics chain from baselink to eelink
