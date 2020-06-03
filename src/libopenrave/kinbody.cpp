@@ -5398,15 +5398,15 @@ UpdateFromInfoResult KinBody::UpdateFromInfo(const KinBodyInfo& info)
         FOREACHC(itJoint,_vecjoints) {
             if ((*itJoint)->GetName() == it->first) {
                 joint = *itJoint;
-                break
+                break;
             }
         }
         if (!joint) {
-            continue
+            continue;
         }
         int axis = 0; // TODO: handle multiple axis on one joint, get this index from the json
-        if (axis >= joint.GetDOF()) {
-            continue
+        if (axis >= joint->GetDOF()) {
+            continue;
         }
         if (dofValues[joint->GetDOFIndex()+axis] != it->second) {
             dofValues[joint->GetDOFIndex()+axis] = it->second;
