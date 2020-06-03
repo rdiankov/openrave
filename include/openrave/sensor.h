@@ -423,6 +423,7 @@ public:
         /// LuGre friction model?
         class Friction
         {
+public:
             dReal sigma_0;         ///< the stiffness coefficient of the contacting surfaces
             dReal sigma_1;         ///< the friction damping coefficient.
             dReal mu_s;         ///< static friction coefficient

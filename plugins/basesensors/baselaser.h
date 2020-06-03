@@ -516,7 +516,7 @@ public:
                 && vSpinAxis == pOther->vSpinAxis
                 && vSpinPos == pOther->vSpinPos;
         }
-        virtual bool operator!=(const SpinningLaserGeomData& other) {
+        virtual bool operator!=(const JSONReadable& other) {
             return !operator==(other);
         }
     };

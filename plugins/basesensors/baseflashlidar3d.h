@@ -124,7 +124,7 @@ public:
             }
             return width == pOther->width && height == pOther->height;
         }
-        bool operator!=(const BaseFlashLidar3DGeom& other) {
+        bool operator!=(const JSONReadable& other) {
             return !operator==(other);
         }
         int width, height;         // dimensions in number of lasers

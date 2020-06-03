@@ -268,9 +268,9 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _transform);
     }
 }
+
 void KinBody::KinBodyInfo::_DeserializeReadableInterface(std::string id, const rapidjson::Value& value) {
-    KinBodyPtr pKinBody;
-    BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_KinBody, id, pKinBody, AttributesList());
+    BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_KinBody, id, KinBodyPtr(), AttributesList());
     if (!!pReader) {
         pReader->DeserializeJSON(value);
         JSONReadablePtr pReadable = pReader->GetReadable();
@@ -5383,14 +5383,40 @@ UpdateFromInfoResult KinBody::UpdateFromInfo(const KinBodyInfo& info)
         SetName(info._name);
     }
 
-    rapidjson::Document doc;
+    // transform
+    if (GetTransform() != info._transform) {
+        SetTransform(info._transform);
+    }
+
+    // dof values
+    std::vector<dReal> dofValues;
+    GetDOFValues(dofValues);
+    bool bDOFChanged = false;
+    for(std::vector<std::pair<std::string, dReal>>::const_iterator it = info._dofValues.begin(); it != info._dofValues.end(); it++) {
+        std::vector<dReal> vValue;
+        GetJoint(it->first)->GetValues(vValue);
+        // TODO: any case for multiple dofValues in one joint?
+        if (vValue.size() == 1) {
+            if (vValue[0] != it->second) {
+                dofValues[GetJoint(it->first)->GetDOFIndex()] = it->second;
+                bDOFChanged = true;
+            }
+        }
+        else {
+            return UFIR_RequireRemoveFromEnvironment;
+        }
+    }
+    if (bDOFChanged) {
+        SetDOFValues(dofValues);
+    }
+
     FOREACH(it, info._mReadableInterfaces) {
         JSONReadablePtr pReadable = boost::dynamic_pointer_cast<JSONReadable>(GetReadableInterface(it->first));
         if (!!pReadable) {
             if ( (*(it->second)) != (*pReadable)) {
-                rapidjson::Value rReadable;
-                it->second->SerializeJSON(rReadable, doc.GetAllocator());
-                pReadable->DeserializeJSON(rReadable);
+                rapidjson::Document docReadable;
+                it->second->SerializeJSON(docReadable, docReadable.GetAllocator());
+                pReadable->DeserializeJSON(docReadable);
             }
         }
         else {
@@ -5401,14 +5427,14 @@ UpdateFromInfoResult KinBody::UpdateFromInfo(const KinBodyInfo& info)
 
     // delete readableInterface
     FOREACH(itExisting, GetReadableInterfaces()) {
-        bool found = false;
+        bool bFound = false;
         FOREACHC(it, info._mReadableInterfaces) {
-            if (itExisting->first  == it->first) {
-                found = true;
+            if (itExisting->first == it->first) {
+                bFound = true;
                 break;
             }
         }
-        if (!found) {
+        if (!bFound) {
             ClearReadableInterface(itExisting->first);
         }
     }

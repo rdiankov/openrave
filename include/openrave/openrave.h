@@ -437,12 +437,12 @@ public:
 class OPENRAVE_API JSONReadable : virtual public Readable, public boost::enable_shared_from_this<JSONReadable>
 {
 public:
-    JSONReadable() { }
+    JSONReadable() {}
     virtual ~JSONReadable() {}
     virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const = 0;
     virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) = 0;
-    virtual bool operator==(const JSONReadable& other) = 0;//{ throw OPENRAVE_EXCEPTION_FORMAT0("does not support compare JSONReadable Base", ORE_InvalidArguments); };
-    virtual bool operator!=(const JSONReadable& other) = 0;//{ return !operator==(other); }
+    virtual bool operator==(const JSONReadable& other) = 0;
+    virtual bool operator!=(const JSONReadable& other) = 0;
 };
 typedef boost::shared_ptr<JSONReadable> JSONReadablePtr;
 typedef boost::shared_ptr<JSONReadable const> JSONReadableConstPtr;

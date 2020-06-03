@@ -79,27 +79,6 @@ public:
         return true;
     }
 
-    /*
-    * dofValue format migration
-    * dof json value format has changed to a mapping with jointId and value as key, {"jointId": "joint0", "value": 1.234}
-    * we need to convert dofvalues from mapping to list for openrave ;
-    */
-    void _ConvertJointDOFValueFormat(const std::vector<KinBody::JointPtr>& vJoints, std::vector<dReal>& vDOFValues, const rapidjson::Value& rDOFValues)
-    {
-        std::map<std::string, dReal> jointDOFValues;
-        for(rapidjson::Value::ConstValueIterator itrDOFValue = rDOFValues.Begin(); itrDOFValue != rDOFValues.End(); ++itrDOFValue) {
-            std::string jointId;
-            dReal dofValue;
-            OpenRAVE::JSON::LoadJsonValueByKey(*itrDOFValue, "jointId", jointId);
-            OpenRAVE::JSON::LoadJsonValueByKey(*itrDOFValue, "value", dofValue);
-            jointDOFValues[jointId] = dofValue;
-        }
-        vDOFValues.resize(vJoints.size());
-        FOREACH(itJoint, vJoints) {
-            vDOFValues[(*itJoint)->GetDOFIndex()] = jointDOFValues[(*itJoint)->GetInfo()._id];
-        }
-    }
-
     /// \brief Extrat all bodies and add them into environment
     bool ExtractAll()
     {
@@ -140,12 +119,12 @@ public:
             return ExtractFirst(ppbody);
         }
 
-        // find the body by uri
+        // find the body by uri fragment
         if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()) {
             for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
-                std::string bodyUri;
-                OpenRAVE::JSON::LoadJsonValueByKey(*itr, "uri", bodyUri);
-                if (bodyUri == std::string("#") + fragment) {
+                std::string bodyId;
+                OpenRAVE::JSON::LoadJsonValueByKey(*itr, "id", bodyId);
+                if (bodyId == fragment) {
                     return _Extract(*itr, ppbody);
                 }
             }
@@ -160,20 +139,13 @@ public:
             return ExtractFirst(pprobot);
         }
 
-        // find the body by uri
+        // find the body by uri fragment
         if (_doc->HasMember("bodies") && (*_doc)["bodies"].IsArray()) {
             for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr) {
-                std::string bodyUri;
-                OpenRAVE::JSON::LoadJsonValueByKey(*itr, "uri", bodyUri);
-                if (bodyUri.empty()) {
-                    std::string id;
-                    OpenRAVE::JSON::LoadJsonValueByKey(*itr, "id", id);
-                    if (!id.empty()) {
-                        bodyUri = "#" + id;
-                    }
-                }
-                if (bodyUri == std::string("#") + fragment) {
-                    return _Extract(*itr, pprobot); // TODO: change to iterator
+                std::string bodyId;
+                OpenRAVE::JSON::LoadJsonValueByKey(*itr, "id", bodyId);
+                if (bodyId == fragment) {
+                    return _Extract(*itr, pprobot);
                 }
             }
         }

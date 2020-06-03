@@ -670,14 +670,12 @@ public:
     RaveVector<T> extents;
 
     virtual bool operator==(const OrientedBox& other) const {
-        return transform == other.transform
-            && extents == other.extents;
+        return transform == other.transform && extents == other.extents;
     }
 
     virtual bool operator!=(const OrientedBox& other) const {
         return !operator==(other);
     }
-
 };
 
 /// \brief An oriented bounding box.
@@ -740,8 +738,7 @@ public:
     }
 
     template <typename U>
-    RaveCameraIntrinsics<T>& operator=(const RaveCameraIntrinsics<U>&r)
-    {
+    RaveCameraIntrinsics<T>& operator=(const RaveCameraIntrinsics<U>&r) {
         distortion_model = r.distortion_model;
         distortion_coeffs.resize(r.distortion_coeffs.size());
         std::copy(r.distortion_coeffs.begin(),r.distortion_coeffs.end(),distortion_coeffs.begin());
@@ -751,9 +748,9 @@ public:
         cx = r.cx;
         cy = r.cy;
     }
+
     template<typename U>
-    bool operator==(const RaveCameraIntrinsics<U>& r)
-    {
+    bool operator==(const RaveCameraIntrinsics<U>& r) {
         return distortion_model == r.distortion_model
             && distortion_coeffs == r.distortion_coeffs
             && focal_length == r.focal_length
@@ -761,6 +758,11 @@ public:
             && fy == r.fy
             && cx == r.cx
             && cy == r.cy;
+    }
+
+    template<typename U>
+    bool operator!=(const RaveCameraIntrinsics<U>& other) const {
+        return !operator==(other);
     }
 
     T fx,fy, cx,cy;

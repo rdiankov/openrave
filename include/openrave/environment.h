@@ -740,7 +740,7 @@ public:
         _revision = revision;
     }
 
-    uint64_t _revision;  ///< environment current revision
+    uint64_t _revision = 0;  ///< environment current revision
 
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
     virtual void ExtractInfo(EnvironmentBaseInfo& info) = 0;

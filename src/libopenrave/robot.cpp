@@ -591,10 +591,8 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
     }
 }
 
-
 void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(std::string id, const rapidjson::Value& value) {
-    RobotBasePtr pRobotBase;
-    BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Robot, id, pRobotBase, AttributesList());
+    BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Robot, id, RobotBasePtr(), AttributesList());
     if (!!pReader) {
         pReader->DeserializeJSON(value);
         JSONReadablePtr pReadable = pReader->GetReadable();
