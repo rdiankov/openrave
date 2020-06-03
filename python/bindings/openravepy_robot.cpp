@@ -24,7 +24,7 @@
 #include <openravepy/openravepy_iksolverbase.h>
 #include <openravepy/openravepy_manipulatorinfo.h>
 #include <openravepy/openravepy_robotbase.h>
-#include <openravepy/openravepy_posturedescriber.h> // PyPostureDescriber
+#include <openravepy/openravepy_posturedescriber.h> // PyPostureDescriberBase
 
 namespace openravepy {
 
@@ -436,22 +436,22 @@ object PyRobotBase::PyManipulator::GetFreeParameters() const {
     return toPyArray(values);
 }
 
-PyPostureDescriberPtr PyRobotBase::PyManipulator::GeneratePostureDescriber() const {
+PyPostureDescriberBasePtr PyRobotBase::PyManipulator::GeneratePostureDescriber() const {
     return openravepy::GeneratePostureDescriber(GetRobot()->_GetManipulator(_pmanip));
 }
 
-bool PyRobotBase::PyManipulator::SetPostureDescriber(PyPostureDescriberPtr pydescriber) const {
+bool PyRobotBase::PyManipulator::SetPostureDescriber(PyPostureDescriberBasePtr pydescriber) const {
     RobotBasePtr probot = _pmanip->GetRobot();
     return probot->SetPostureDescriber(_pmanip, pydescriber->GetPostureDescriber());
 }
 
-PyPostureDescriberPtr PyRobotBase::PyManipulator::GetPostureDescriber() const {
+PyPostureDescriberBasePtr PyRobotBase::PyManipulator::GetPostureDescriber() const {
     RobotBasePtr probot = _pmanip->GetRobot();
     PostureDescriberBasePtr pDescriber = probot->GetPostureDescriber(_pmanip);
     if(pDescriber == nullptr) {
-        return PyPostureDescriberPtr();
+        return PyPostureDescriberBasePtr();
     }
-    PyPostureDescriberPtr pyDescriber(new PyPostureDescriber(pDescriber, toPyEnvironment(this->GetRobot())));
+    PyPostureDescriberBasePtr pyDescriber(new PyPostureDescriberBase(pDescriber, toPyEnvironment(this->GetRobot())));
     return pyDescriber;
 }
 
@@ -1779,30 +1779,30 @@ PyStateRestoreContextBase* PyRobotBase::CreateRobotStateSaver(object options) {
     return CreateStateSaver(options);
 }
 
-PyPostureDescriberPtr PyRobotBase::GeneratePostureDescriber(PyManipulatorPtr pymanip) const {
+PyPostureDescriberBasePtr PyRobotBase::GeneratePostureDescriber(PyManipulatorPtr pymanip) const {
     const RobotBase::ManipulatorPtr pmanip = pymanip->GetManipulator();
     const RobotBasePtr probot = pmanip->GetRobot();
     if(_probot != probot) {
         const std::string currrobotname = _probot->GetName();
         RAVELOG_WARN_FORMAT("Manipulator %s does not belong to robot %s; robots not consistent %s!=%s", pmanip->GetName() % currrobotname % probot->GetName() % currrobotname);
-        return PyPostureDescriberPtr();
+        return PyPostureDescriberBasePtr();
     }
     return openravepy::GeneratePostureDescriber(pymanip);
 }
 
-bool PyRobotBase::SetPostureDescriber(PyManipulatorPtr pymanip, PyPostureDescriberPtr pydescriber) const {
+bool PyRobotBase::SetPostureDescriber(PyManipulatorPtr pymanip, PyPostureDescriberBasePtr pydescriber) const {
     if(pydescriber == nullptr) {
         return _probot->UnregisterPostureDescriber(pymanip->GetManipulator());
     }    
     return _probot->SetPostureDescriber(pymanip->GetManipulator(), pydescriber->GetPostureDescriber());
 }
 
-PyPostureDescriberPtr PyRobotBase::GetPostureDescriber(PyManipulatorPtr pymanip) const {
+PyPostureDescriberBasePtr PyRobotBase::GetPostureDescriber(PyManipulatorPtr pymanip) const {
     PostureDescriberBasePtr pDescriber = _probot->GetPostureDescriber(pymanip->GetManipulator());
     if(pDescriber == nullptr) {
-        return PyPostureDescriberPtr();
+        return PyPostureDescriberBasePtr();
     }
-    PyPostureDescriberPtr pyDescriber(new PyPostureDescriber(pDescriber, toPyEnvironment(pymanip->GetRobot())));
+    PyPostureDescriberBasePtr pyDescriber(new PyPostureDescriberBase(pDescriber, toPyEnvironment(pymanip->GetRobot())));
     return pyDescriber;
 }
 

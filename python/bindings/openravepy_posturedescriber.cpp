@@ -17,7 +17,7 @@
 #define NO_IMPORT_ARRAY
 #include <openravepy/openravepy_int.h>
 #include <openravepy/openravepy_environmentbase.h>
-#include <openravepy/openravepy_posturedescriber.h> // PyPostureDescriber
+#include <openravepy/openravepy_posturedescriber.h> // PyPostureDescriberBase
 #include <openrave/utils.h>
 #include <openrave/openravejson.h> // openravejson
 
@@ -55,37 +55,37 @@ using PyManipulatorPtr = PyRobotBase::PyManipulatorPtr;
 
 namespace numeric = py::numeric;
 
-PyPostureDescriber::PyPostureDescriber(PostureDescriberBasePtr pDescriber, PyEnvironmentBasePtr pyenv)
+PyPostureDescriberBase::PyPostureDescriberBase(PostureDescriberBasePtr pDescriber, PyEnvironmentBasePtr pyenv)
     : PyInterfaceBase(pDescriber, pyenv),
     _pDescriber(pDescriber) {
 }
 
-PyPostureDescriber::~PyPostureDescriber() {
+PyPostureDescriberBase::~PyPostureDescriberBase() {
 }
 
-PostureDescriberBasePtr PyPostureDescriber::GetPostureDescriber() const {
+PostureDescriberBasePtr PyPostureDescriberBase::GetPostureDescriber() const {
     return _pDescriber;
 }
 
-bool PyPostureDescriber::Supports(PyLinkPtr pBaseLink, PyLinkPtr pEndEffectorLink) const {
+bool PyPostureDescriberBase::Supports(PyLinkPtr pBaseLink, PyLinkPtr pEndEffectorLink) const {
     const LinkPair kinematicsChain {pBaseLink->GetLink(), pEndEffectorLink->GetLink()};
     return _pDescriber->Supports(kinematicsChain);
 }
 
-bool PyPostureDescriber::Supports(PyManipulatorPtr pmanip) const {
+bool PyPostureDescriberBase::Supports(PyManipulatorPtr pmanip) const {
     return _pDescriber->Supports(pmanip->GetManipulator());
 }
 
-bool PyPostureDescriber::Init(PyLinkPtr pBaseLink, PyLinkPtr pEndEffectorLink) {
+bool PyPostureDescriberBase::Init(PyLinkPtr pBaseLink, PyLinkPtr pEndEffectorLink) {
     const LinkPair kinematicsChain {pBaseLink->GetLink(), pEndEffectorLink->GetLink()};
     return _pDescriber->Init(kinematicsChain);
 }
 
-bool PyPostureDescriber::Init(PyManipulatorPtr pmanip) {
+bool PyPostureDescriberBase::Init(PyManipulatorPtr pmanip) {
     return _pDescriber->Init(pmanip->GetManipulator());
 }
 
-object PyPostureDescriber::ComputePostureStates()
+object PyPostureDescriberBase::ComputePostureStates()
 {
     if(!_pDescriber->ComputePostureStates(_posturestates)) {
         throw OPENRAVE_EXCEPTION_FORMAT0("Failed to compute posture", ORE_Failed);
@@ -93,7 +93,7 @@ object PyPostureDescriber::ComputePostureStates()
     return StdVectorToPyList<PostureStateInt>(_posturestates);
 }
 
-object PyPostureDescriber::ComputePostureStates(object pydofvalues)
+object PyPostureDescriberBase::ComputePostureStates(object pydofvalues)
 {
     const std::vector<dReal> dofvalues = ExtractArray<dReal>(pydofvalues);
     if(!_pDescriber->ComputePostureStates(_posturestates, dofvalues)) {
@@ -109,22 +109,22 @@ object PyPostureDescriber::ComputePostureStates(object pydofvalues)
     return StdVectorToPyList<PostureStateInt>(_posturestates);
 }
 
-std::string PyPostureDescriber::GetMapDataKey() const {
+std::string PyPostureDescriberBase::GetMapDataKey() const {
     return _pDescriber->GetMapDataKey();
 }
 
-py::object PyPostureDescriber::Interpret(const PostureStateInt state) const {
+py::object PyPostureDescriberBase::Interpret(const PostureStateInt state) const {
     rapidjson::Document rIn, rOut;
     openravejson::SetJsonValueByKey(rIn, "posturestate", state, rIn.GetAllocator());
     _pDescriber->SendJSONCommand("Interpret", rIn, rOut);
     return toPyObject(rOut);
 }
 
-PyPostureDescriberPtr GeneratePostureDescriber(const PyManipulatorPtr& pymanip) {
+PyPostureDescriberBasePtr GeneratePostureDescriber(const PyManipulatorPtr& pymanip) {
     return GeneratePostureDescriber(pymanip, "posturedescriber"); // default
 }
 
-PyPostureDescriberPtr GeneratePostureDescriber(const PyManipulatorPtr& pymanip, const std::string& interfacename) {
+PyPostureDescriberBasePtr GeneratePostureDescriber(const PyManipulatorPtr& pymanip, const std::string& interfacename) {
     const ManipulatorPtr pmanip = pymanip->GetManipulator();
     const RobotBasePtr probot = pmanip->GetRobot();
     const EnvironmentBasePtr penv = probot->GetEnv();
@@ -140,34 +140,34 @@ PyPostureDescriberPtr GeneratePostureDescriber(const PyManipulatorPtr& pymanip, 
     }
     if(!pDescriber->Supports(pmanip)) {
         RAVELOG_WARN_FORMAT("Posture describer interface \"%s\" does not support manpulator %s of robot %s", interfacename % pmanip->GetName() % probot->GetName());
-        return PyPostureDescriberPtr();
+        return PyPostureDescriberBasePtr();
     }
     if(!pDescriber->Init(pmanip)) {
         RAVELOG_WARN_FORMAT("Cannot initialize posture describer interface \"%s\" for manpulator %s of robot %s", interfacename % pmanip->GetName() % probot->GetName());
-        return PyPostureDescriberPtr();
+        return PyPostureDescriberBasePtr();
     }
     probot->SetPostureDescriber(pmanip, pDescriber); // set explicitly
-    PyPostureDescriberPtr pyDescriber(new PyPostureDescriber(pDescriber, toPyEnvironment(pymanip->GetRobot())));
+    PyPostureDescriberBasePtr pyDescriber(new PyPostureDescriberBase(pDescriber, toPyEnvironment(pymanip->GetRobot())));
     return pyDescriber;
 }
 
-PostureDescriberBasePtr GetPostureDescriber(PyPostureDescriberPtr pydescriber)
+PostureDescriberBasePtr GetPostureDescriber(PyPostureDescriberBasePtr pydescriber)
 {
     return !pydescriber ? PostureDescriberBasePtr() : pydescriber->GetPostureDescriber();
 }
 
-PyInterfaceBasePtr toPyPostureDescriber(PostureDescriberBasePtr pdescriber, PyEnvironmentBasePtr pyenv)
+PyInterfaceBasePtr toPyPostureDescriberBase(PostureDescriberBasePtr pdescriber, PyEnvironmentBasePtr pyenv)
 {
-    return !pdescriber ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyPostureDescriber(pdescriber,pyenv));
+    return !pdescriber ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyPostureDescriberBase(pdescriber,pyenv));
 }
 
-PyPostureDescriberPtr RaveCreatePostureDescriber(PyEnvironmentBasePtr pyenv, const std::string& name)
+PyPostureDescriberBasePtr RaveCreatePostureDescriber(PyEnvironmentBasePtr pyenv, const std::string& name)
 {
     PostureDescriberBasePtr p = OpenRAVE::RaveCreatePostureDescriber(GetEnvironment(pyenv), name);
     if( !p ) {
-        return PyPostureDescriberPtr();
+        return PyPostureDescriberBasePtr();
     }
-    return PyPostureDescriberPtr(new PyPostureDescriber(p, pyenv));
+    return PyPostureDescriberBasePtr(new PyPostureDescriberBase(p, pyenv));
 }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -176,32 +176,32 @@ void init_openravepy_posturedescriber(py::module& m)
 void init_openravepy_posturedescriber()
 #endif
 {
-    bool (PyPostureDescriber::*InitWithTwoLinks)(PyLinkPtr, PyLinkPtr)           = &PyPostureDescriber::Init;
-    bool (PyPostureDescriber::*InitWithManip)(PyManipulatorPtr)                  = &PyPostureDescriber::Init;
-    bool (PyPostureDescriber::*SupportsWithTwoLinks)(PyLinkPtr, PyLinkPtr) const = &PyPostureDescriber::Supports;
-    bool (PyPostureDescriber::*SupportsWithManip)(PyManipulatorPtr)        const = &PyPostureDescriber::Supports;
-    object (PyPostureDescriber::*ComputePostureStates)()                         = &PyPostureDescriber::ComputePostureStates;
-    object (PyPostureDescriber::*ComputePostureStatesWithJointValues)(object)    = &PyPostureDescriber::ComputePostureStates;
+    bool (PyPostureDescriberBase::*InitWithTwoLinks)(PyLinkPtr, PyLinkPtr)           = &PyPostureDescriberBase::Init;
+    bool (PyPostureDescriberBase::*InitWithManip)(PyManipulatorPtr)                  = &PyPostureDescriberBase::Init;
+    bool (PyPostureDescriberBase::*SupportsWithTwoLinks)(PyLinkPtr, PyLinkPtr) const = &PyPostureDescriberBase::Supports;
+    bool (PyPostureDescriberBase::*SupportsWithManip)(PyManipulatorPtr)        const = &PyPostureDescriberBase::Supports;
+    object (PyPostureDescriberBase::*ComputePostureStates)()                         = &PyPostureDescriberBase::ComputePostureStates;
+    object (PyPostureDescriberBase::*ComputePostureStatesWithJointValues)(object)    = &PyPostureDescriberBase::ComputePostureStates;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    class_<PyPostureDescriber, OPENRAVE_SHARED_PTR<PyPostureDescriber>, PyInterfaceBase>(m, "PostureDescriber", DOXY_CLASS(PostureDescriberBase))
+    class_<PyPostureDescriberBase, OPENRAVE_SHARED_PTR<PyPostureDescriberBase>, PyInterfaceBase>(m, "PostureDescriber", DOXY_CLASS(PostureDescriberBase))
 #else
-    class_<PyPostureDescriber, OPENRAVE_SHARED_PTR<PyPostureDescriber>, bases<PyInterfaceBase> >("PostureDescriber", DOXY_CLASS(PostureDescriberBase), no_init)
+    class_<PyPostureDescriberBase, OPENRAVE_SHARED_PTR<PyPostureDescriberBase>, bases<PyInterfaceBase> >("PostureDescriber", DOXY_CLASS(PostureDescriberBase), no_init)
 #endif
-    .def("Supports",             SupportsWithTwoLinks               , PY_ARGS("baselink", "eelink") DOXY_FN(PostureDescriberBase, Supports "const std::array<RobotBase::LinkPtr, 2>& kinematicsChain"))
-    .def("Supports",             SupportsWithManip                  , PY_ARGS("manipulator")        DOXY_FN(PostureDescriberBase, Supports "const RobotBase::ManipulatorPtr& pmanip"))
-    .def("Init",                 InitWithTwoLinks                   , PY_ARGS("baselink", "eelink") DOXY_FN(PostureDescriberBase, Init "const std::array<RobotBase::LinkPtr, 2>& kinematicsChain"))
-    .def("Init",                 InitWithManip                      , PY_ARGS("manipulator")        DOXY_FN(PostureDescriberBase, Init "const RobotBase::ManipulatorPtr& pmanip"))
+    .def("Supports",             SupportsWithTwoLinks                   , PY_ARGS("baselink", "eelink") DOXY_FN(PostureDescriberBase, Supports "const std::array<RobotBase::LinkPtr, 2>& kinematicsChain"))
+    .def("Supports",             SupportsWithManip                      , PY_ARGS("manipulator")        DOXY_FN(PostureDescriberBase, Supports "const RobotBase::ManipulatorPtr& pmanip"))
+    .def("Init",                 InitWithTwoLinks                       , PY_ARGS("baselink", "eelink") DOXY_FN(PostureDescriberBase, Init "const std::array<RobotBase::LinkPtr, 2>& kinematicsChain"))
+    .def("Init",                 InitWithManip                          , PY_ARGS("manipulator")        DOXY_FN(PostureDescriberBase, Init "const RobotBase::ManipulatorPtr& pmanip"))
 
-    .def("ComputePostureStates", ComputePostureStates               ,                               DOXY_FN(PostureDescriberBase, ComputePostureStates ""))
-    .def("ComputePostureStates", ComputePostureStatesWithJointValues, PY_ARGS("dofvalues")          DOXY_FN(PostureDescriberBase, ComputePostureStates "const std::vector<double>& dofvalues"))
-    .def("GetMapDataKey"       , &PyPostureDescriber::GetMapDataKey ,                               DOXY_FN(PostureDescriberBase, GetMapDataKey ""))
-    .def("Interpret"           , &PyPostureDescriber::Interpret     , PY_ARGS("posturestate")       DOXY_FN(PostureDescriberBase, Interpret ""))
+    .def("ComputePostureStates", ComputePostureStates                   ,                               DOXY_FN(PostureDescriberBase, ComputePostureStates ""))
+    .def("ComputePostureStates", ComputePostureStatesWithJointValues    , PY_ARGS("dofvalues")          DOXY_FN(PostureDescriberBase, ComputePostureStates "const std::vector<double>& dofvalues"))
+    .def("GetMapDataKey"       , &PyPostureDescriberBase::GetMapDataKey ,                               DOXY_FN(PostureDescriberBase, GetMapDataKey ""))
+    .def("Interpret"           , &PyPostureDescriberBase::Interpret     , PY_ARGS("posturestate")       DOXY_FN(PostureDescriberBase, Interpret ""))
     ;
 
-    PyPostureDescriberPtr (*GeneratePostureDescriberDefault    )(const PyManipulatorPtr&                    ) = &GeneratePostureDescriber;
-    PyPostureDescriberPtr (*GeneratePostureDescriberByInterface)(const PyManipulatorPtr&, const std::string&) = &GeneratePostureDescriber;
-    PyPostureDescriberPtr (*openravepyRaveCreatePostureDescriber)(PyEnvironmentBasePtr pyenv, const std::string& name) = &RaveCreatePostureDescriber;
+    PyPostureDescriberBasePtr (*GeneratePostureDescriberDefault    )(const PyManipulatorPtr&                    ) = &GeneratePostureDescriber;
+    PyPostureDescriberBasePtr (*GeneratePostureDescriberByInterface)(const PyManipulatorPtr&, const std::string&) = &GeneratePostureDescriber;
+    PyPostureDescriberBasePtr (*openravepyRaveCreatePostureDescriber)(PyEnvironmentBasePtr pyenv, const std::string& name) = &RaveCreatePostureDescriber;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("GeneratePostureDescriber"  , GeneratePostureDescriberDefault       , PY_ARGS("manip")                  DOXY_FN1(GeneratePostureDescriber));
