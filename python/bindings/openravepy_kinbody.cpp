@@ -135,18 +135,18 @@ std::vector<KinBody::GrabbedInfoPtr> ExtractGrabbedInfoArray(object pyGrabbedInf
     return vGrabbedInfos;
 }
 
-std::vector< std::pair<int, dReal> > ExtractDOFValuesArray(object pyDOFValuesList)
+std::vector< std::pair<std::string, dReal> > ExtractDOFValuesArray(object pyDOFValuesList)
 {
     if( IS_PYTHONOBJECT_NONE(pyDOFValuesList) ) {
         return {};
     }
-    std::vector< std::pair<int, dReal> > vDOFValues;
+    std::vector< std::pair<std::string, dReal> > vDOFValues;
     try {
         const size_t arraySize = len(pyDOFValuesList);
         vDOFValues.resize(arraySize);
 
         for(size_t iDOFValue = 0; iDOFValue < arraySize; iDOFValue++) {
-            vDOFValues[iDOFValue].first = py::extract<int>(pyDOFValuesList[iDOFValue][0]);
+            vDOFValues[iDOFValue].first = py::extract<std::string>(pyDOFValuesList[iDOFValue][0]);
             vDOFValues[iDOFValue].second = py::extract<dReal>(pyDOFValuesList[iDOFValue][1]);
         }
     }
@@ -181,7 +181,7 @@ std::map<std::string, JSONReadablePtr> ExtractReadableInterfaces(object pyReadab
     return mReadableInterfaces;
 }
 
-py::object ReturnDOFValues(const std::vector< std::pair<int, dReal> >& vDOFValues)
+py::object ReturnDOFValues(const std::vector< std::pair<std::string, dReal> >& vDOFValues)
 {
     py::list pyDOFValuesList;
     FOREACHC(it, vDOFValues) {
@@ -1114,7 +1114,8 @@ void PyJointInfo::DeserializeJSON(object obj, dReal fUnitScale)
 {
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
-    KinBody::JointInfo info;
+    KinBody::JointInfoPtr pCurrentInfo = GetJointInfo();
+    KinBody::JointInfo info = *pCurrentInfo;
     info.DeserializeJSON(doc, fUnitScale);
     _Update(info);
 }
@@ -2207,7 +2208,6 @@ KinBody::KinBodyInfoPtr PyKinBody::PyKinBodyInfo::GetKinBodyInfo() const {
     pInfo->_dofValues = ExtractDOFValuesArray(_dofValues);
 
     pInfo->_mReadableInterfaces = ExtractReadableInterfaces(_readableInterfaces);
-    // pInfo->_mReadableInterfaces = Extract(_readableInterfaces);
     return pInfo;
 }
 
@@ -2221,7 +2221,8 @@ py::object PyKinBody::PyKinBodyInfo::SerializeJSON(dReal fUnitScale, py::object 
 void PyKinBody::PyKinBodyInfo::DeserializeJSON(py::object obj, dReal fUnitScale) {
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
-    KinBody::KinBodyInfo info;
+    KinBody::KinBodyInfoPtr pCurrentInfo = GetKinBodyInfo();
+    KinBody::KinBodyInfo info = *pCurrentInfo;
     info.DeserializeJSON(doc, fUnitScale);
     _Update(info);
 }

@@ -2448,11 +2448,17 @@ public:
             if (!!pBody) {
                 // dof value
                 std::vector<dReal> vDOFValues;
-                vDOFValues.resize(pKinBodyInfo->_dofValues.size());
+                pBody->GetDOFValues(vDOFValues);
+
                 FOREACH(it, pKinBodyInfo->_dofValues) {
-                    int dofIndex = pBody->_vecjoints[(*it).first]->GetDOFIndex();
-                    vDOFValues[dofIndex] = (*it).second;
+                    FOREACH(itJoint, pBody->_vecjoints) {
+                        if ((*itJoint)->GetName() == it->first) {
+                            vDOFValues[(*itJoint)->GetDOFIndex()] = (*it).second;
+                            break;
+                        }
+                    }
                 }
+
                 pBody->SetDOFValues(vDOFValues, KinBody::CLA_Nothing);
                 // transform
                 pBody->SetTransform(pKinBodyInfo->_transform);

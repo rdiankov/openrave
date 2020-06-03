@@ -255,7 +255,37 @@ RobotBase::ConnectedBodyInfoPtr PyConnectedBodyInfo::GetConnectedBodyInfo() cons
         pinfo->_uri = py::extract<std::string>(_uri);
     }
     pinfo->_bIsActive = _bIsActive;
+
     // extract all the infos
+    // links
+    std::vector<KinBody::LinkInfoPtr> vLinkInfo = ExtractLinkInfoArray(_linkInfos);
+    pinfo->_vLinkInfos.clear();
+    pinfo->_vLinkInfos.reserve(vLinkInfo.size());
+    FOREACHC(it, vLinkInfo) {
+        pinfo->_vLinkInfos.push_back(*it);
+    }
+    // joints
+    std::vector<KinBody::JointInfoPtr> vJointInfos = ExtractJointInfoArray(_jointInfos);
+    pinfo->_vJointInfos.clear();
+    pinfo->_vJointInfos.reserve(vJointInfos.size());
+    FOREACHC(it, vJointInfos) {
+        pinfo->_vJointInfos.push_back(*it);
+    }
+    // manipulators
+    std::vector<RobotBase::ManipulatorInfoPtr> vManipulatorInfos = ExtractManipulatorInfoArray(_manipulatorInfos);
+    pinfo->_vManipulatorInfos.clear();
+    pinfo->_vManipulatorInfos.reserve(vManipulatorInfos.size());
+    FOREACHC(it, vManipulatorInfos) {
+        pinfo->_vManipulatorInfos.push_back(*it);
+    }
+    // attachedsensors
+    std::vector<RobotBase::AttachedSensorInfoPtr> vAttachedSensorInfos = ExtractAttachedSensorInfoArray(_attachedSensorInfos);
+    pinfo->_vAttachedSensorInfos.clear();
+    pinfo->_vAttachedSensorInfos.reserve(vAttachedSensorInfos.size());
+    FOREACHC(it, vAttachedSensorInfos) {
+        pinfo->_vAttachedSensorInfos.push_back(*it);
+    }
+    // TODO: gripperinfos
     return pinfo;
 }
 
@@ -271,7 +301,8 @@ void PyConnectedBodyInfo::DeserializeJSON(object obj, dReal fUnitScale)
 {
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
-    RobotBase::ConnectedBodyInfo info;
+    RobotBase::ConnectedBodyInfoPtr pCurrentInfo = GetConnectedBodyInfo();
+    RobotBase::ConnectedBodyInfo info = *pCurrentInfo;
     info.DeserializeJSON(doc, fUnitScale);
     _Update(info);
 }
@@ -302,7 +333,8 @@ py::object PyRobotBase::PyRobotBaseInfo::SerializeJSON(dReal fUnitScale, py::obj
 void PyRobotBase::PyRobotBaseInfo::DeserializeJSON(py::object obj, dReal fUnitScale) {
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
-    RobotBase::RobotBaseInfo info;
+    RobotBase::RobotBaseInfoPtr pCurrentInfo = GetRobotBaseInfo();
+    RobotBase::RobotBaseInfo info = *pCurrentInfo;
     info.DeserializeJSON(doc, fUnitScale);
     _Update(info);
 }

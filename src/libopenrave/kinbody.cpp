@@ -121,7 +121,17 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
         dofValues.Reserve(_dofValues.size(), allocator);
         FOREACHC(itDofValue, _dofValues) {
             rapidjson::Value dofValue;
-            OpenRAVE::JSON::SetJsonValueByKey(dofValue, "jointId", _vJointInfos[itDofValue->first]->_id, allocator);
+            std::string jointId = "";
+            FOREACHC(itJointInfo, _vJointInfos) {
+                if ((*itJointInfo)->_name == itDofValue->first) {
+                    jointId = (*itJointInfo)->_name;
+                    break;
+                }
+            }
+            if (jointId.empty()) {
+                throw OPENRAVE_EXCEPTION_FORMAT0(_("joint is missing id and name"), ORE_InvalidArguments);
+            }
+            OpenRAVE::JSON::SetJsonValueByKey(dofValue, "jointId", jointId, allocator);
             OpenRAVE::JSON::SetJsonValueByKey(dofValue, "value", itDofValue->second, allocator);
             dofValues.PushBack(dofValue, allocator);
         }
@@ -240,7 +250,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
                 OpenRAVE::JSON::LoadJsonValueByKey(*itr, "value", dofValue);
                 for (size_t iJointInfo = 0; iJointInfo < _vJointInfos.size(); iJointInfo++) {
                     if (_vJointInfos[iJointInfo]->_id == jointId) {
-                        _dofValues.emplace_back(iJointInfo, dofValue);
+                        _dofValues.emplace_back(_vJointInfos[iJointInfo]->_name, dofValue);
                         break;
                     }
                 }
@@ -5187,14 +5197,21 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
 
     info._dofValues.resize(0);
     std::vector<dReal> vDOFValues;
+    std::set<std::string> activeJointNames;
     GetDOFValues(vDOFValues);
     for (size_t idof = 0; idof < vDOFValues.size(); ++idof) {
         JointPtr pJoint = GetJointFromDOFIndex(idof);
-        info._dofValues.emplace_back(pJoint->GetDOFIndex(), vDOFValues[idof]);
+        info._dofValues.emplace_back(pJoint->GetName(), vDOFValues[idof]);
+        activeJointNames.insert(pJoint->GetName());
+    }
+    // need to copy the inactive joint values for later reference.
+    FOREACH(it, _info._dofValues) {
+        if (activeJointNames.find(it->first) == activeJointNames.end()) {
+            info._dofValues.emplace_back(it->first, it->second);
+        }
     }
 
     info._transform = GetTransform();
-
     info._vGrabbedInfos.resize(0);
     GetGrabbedInfo(info._vGrabbedInfos);
 
@@ -5221,6 +5238,7 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
         info._vJointInfos[_vecjoints.size() + iJointInfo].reset(new KinBody::JointInfo());
         _vPassiveJoints[iJointInfo]->ExtractInfo(*info._vJointInfos[_vecjoints.size() + iJointInfo]);
     }
+
 
     FOREACHC(it, GetReadableInterfaces()) {
         JSONReadablePtr pReadable = boost::dynamic_pointer_cast<JSONReadable>(it->second);
@@ -5255,7 +5273,7 @@ UpdateFromInfoResult KinBody::UpdateFromInfo(const KinBodyInfo& info)
                 continue;
             }
             // link update failed.
-            return UFIR_RequireRemoveFromEnvironment;
+            return updateFromLinkInfoResult;
         }
 
         // new links is added
@@ -5306,7 +5324,7 @@ UpdateFromInfoResult KinBody::UpdateFromInfo(const KinBodyInfo& info)
                 continue;
             }
             // joint update failed;
-            return UFIR_RequireRemoveFromEnvironment;
+            return updateFromJointInfoResult;
         }
         // new joints is added or deleted
         return UFIR_RequireReinitialize;
@@ -5364,34 +5382,6 @@ UpdateFromInfoResult KinBody::UpdateFromInfo(const KinBodyInfo& info)
     if (GetName() != info._name) {
         SetName(info._name);
     }
-
-    // transform
-    if (GetTransform() != info._transform) {
-        SetTransform(info._transform);
-    }
-
-    // dof values
-    std::vector<dReal> dofValues;
-    GetDOFValues(dofValues);
-    bool bDOFChanged = false;
-    for(std::vector<std::pair<int, dReal>>::const_iterator it = info._dofValues.begin(); it != info._dofValues.end(); it++) {
-        std::vector<dReal> vValue;
-        _vecjoints[it->first]->GetValues(vValue);
-        // TODO: any case for multiple dofValues in one joint?
-        if (vValue.size() == 1) {
-            if (vValue[0] != it->second) {
-                dofValues[_vecjoints[it->first]->GetDOFIndex()] = it->second;
-                bDOFChanged = true;
-            }
-        }
-        else {
-            return UFIR_RequireRemoveFromEnvironment;
-        }
-    }
-    if (bDOFChanged) {
-        SetDOFValues(dofValues);
-    }
-
 
     rapidjson::Document doc;
     FOREACH(it, info._mReadableInterfaces) {

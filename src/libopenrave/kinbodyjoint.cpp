@@ -175,28 +175,33 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
 
 void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
-    std::string typestr;
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "type", typestr);
+    // two cases to update type:
+    // 1. empty joininfo with type equals to JointNone
+    // 2. non-empty jointInfo with non-empty typestr partial update
+    if (value.HasMember("type") || _type == JointType::JointNone) {
+        std::string typestr;
+        OpenRAVE::JSON::LoadJsonValueByKey(value, "type", typestr);
+        std::map<std::string, KinBody::JointType> jointTypeMapping = {
+            {"revolute", JointType::JointRevolute},
+            {"prismatic", JointType::JointPrismatic},
+            {"rr", JointType::JointRR},
+            {"rp", JointType::JointRP},
+            {"pr", JointType::JointPR},
+            {"pp", JointType::JointPP},
+            {"specialbit", JointType::JointSpecialBit},
+            {"universal", JointType::JointUniversal},
+            {"hinge2", JointType::JointHinge2},
+            {"spherical", JointType::JointSpherical},
+            {"trajectory", JointType::JointTrajectory},
+            // {"", JointType::JointNone}  //  TODO: do we allow empty?
+        };
 
-    std::map<std::string, KinBody::JointType> jointTypeMapping = {
-        {"revolute", JointType::JointRevolute},
-        {"prismatic", JointType::JointPrismatic},
-        {"rr", JointType::JointRR},
-        {"rp", JointType::JointRP},
-        {"pr", JointType::JointPR},
-        {"pp", JointType::JointPP},
-        {"specialbit", JointType::JointSpecialBit},
-        {"universal", JointType::JointUniversal},
-        {"hinge2", JointType::JointHinge2},
-        {"spherical", JointType::JointSpherical},
-        {"trajectory", JointType::JointTrajectory},
-        {"", JointType::JointNone}  //  TODO: do we allow empty?
-    };
-
-    if (jointTypeMapping.find(typestr) == jointTypeMapping.end()) {
-        throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported joint type \"%s\"", typestr, ORE_InvalidArguments);
+        if (jointTypeMapping.find(typestr) == jointTypeMapping.end()) {
+            throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported joint type \"%s\"", typestr, ORE_InvalidArguments);
+        }
+        _type = jointTypeMapping[typestr];
     }
-    _type = jointTypeMapping[typestr];
+
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
 
@@ -483,6 +488,11 @@ bool KinBody::Joint::IsCircular() const
 bool KinBody::Joint::IsCircular(int iaxis) const
 {
     return static_cast<bool>(_info._bIsCircular.at(iaxis));
+}
+
+bool KinBody::Joint::IsActive() const
+{
+    return _info._bIsActive;
 }
 
 bool KinBody::Joint::IsRevolute(int iaxis) const
@@ -2254,12 +2264,12 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
 
     // _bIsCircular
     if (_info._bIsCircular != info._bIsCircular) {
-        _info._bIsCircular = info._bIsCircular;
+        return UFIR_RequireReinitialize;
     }
 
     // _bIsActive
     if (_info._bIsActive != info._bIsActive) {
-        _info._bIsActive = info._bIsActive;
+        return UFIR_RequireReinitialize;
     }
 
     // _controlMode

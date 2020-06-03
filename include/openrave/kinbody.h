@@ -1224,6 +1224,9 @@ public:
         /// \brief Return true if any of the joint axes has an identification at some of its lower and upper limits.
         virtual bool IsCircular() const;
 
+        /// \brief Return true if joint is active
+        virtual bool IsActive() const;
+
         /// \brief Return true if joint axis has an identification at some of its lower and upper limits.
         ///
         /// An identification of the lower and upper limits means that once the joint reaches its upper limits, it is also
@@ -1829,7 +1832,7 @@ public:
         std::string _referenceUri;  // referenced body info uri
 
         Transform _transform; ///< transform of the base link
-        std::vector< std::pair<int, dReal> > _dofValues; ///< mapping from jointIndex to dofValue
+        std::vector< std::pair<std::string, dReal> > _dofValues; ///< mapping from jointName to dofValue
         std::vector<GrabbedInfoPtr> _vGrabbedInfos; ///< list of pointers to GrabbedInfo
 
         std::vector<LinkInfoPtr> _vLinkInfos; ///< list of pointers to LinkInfo
