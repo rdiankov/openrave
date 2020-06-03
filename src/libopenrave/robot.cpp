@@ -709,8 +709,6 @@ bool RobotBase::InitFromInfo(const RobotBaseInfo& info)
         _vecGripperInfos.push_back(newGripperInfo);
     }
 
-    _info = info;
-    _robotBaseInfo = info;
     _name = info._name;
     FOREACH(it, info._mReadableInterfaces) {
         SetReadableInterface(it->first, it->second);

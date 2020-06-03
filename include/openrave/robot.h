@@ -1348,7 +1348,6 @@ protected:
 
     ConfigurationSpecification _activespec;
 
-    RobotBaseInfo _robotBaseInfo;
 private:
     virtual const char* GetHash() const {
         return OPENRAVE_ROBOT_HASH;

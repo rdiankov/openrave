@@ -2906,7 +2906,8 @@ protected:
     bool _bMakeJoinedLinksAdjacent; ///< if true, then automatically add adjacent links to the adjacency list so that their self-collisions are ignored.
     bool _bAreAllJoints1DOFAndNonCircular; ///< if true, then all controllable joints  of the robot are guaranteed to be either revolute or prismatic and non-circular. This allows certain functions that do operations on the joint values (like SubtractActiveDOFValues) to be optimized without calling Joint functions.
 
-    KinBodyInfo _info; // kinbody info
+    std::string _id; ///< unique id of the KinBody
+    std::string _referenceUri; ///< reference uri saved from InitFromInfo
 
 private:
     mutable std::string __hashkinematics;

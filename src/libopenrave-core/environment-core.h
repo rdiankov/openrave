@@ -2376,7 +2376,7 @@ public:
             // find existing body in the env
             std::vector<KinBodyPtr>::iterator itExistingBody = _vecbodies.end();
             FOREACH(itBody, _vecbodies) {
-                if ((*itBody)->_info._id == (*itBodyInfo)->_id) {
+                if ((*itBody)->_id == (*itBodyInfo)->_id) {
                     itExistingBody = itBody;
                     break;
                 }
@@ -2472,7 +2472,7 @@ public:
         FOREACH_NOINC(itBody, _vecbodies) {
             bool stillExists = false;
             FOREACHC(itBodyInfo, info._vBodyInfos) {
-                if ((*itBody)->_info._id == (*itBodyInfo)->_id) {
+                if ((*itBody)->_id == (*itBodyInfo)->_id) {
                     stillExists = true;
                     break;
                 }

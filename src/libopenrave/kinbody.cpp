@@ -571,8 +571,9 @@ bool KinBody::InitFromInfo(const KinBodyInfo& info)
         return false;
     }
 
-    _info = info;
+    _id = info._id;
     _name = info._name;
+    _referenceUri = info._referenceUri;
 
     FOREACH(it, info._mReadableInterfaces) {
         SetReadableInterface(it->first, it->second);
@@ -5190,10 +5191,10 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
 
 void KinBody::ExtractInfo(KinBodyInfo& info)
 {
-    info._id = _info._id;
+    info._id = _id;
     info._uri = __struri;
     info._name = _name;
-    info._referenceUri = _info._referenceUri;
+    info._referenceUri = _referenceUri;
 
     info._dofValues.resize(0);
     std::vector<dReal> vDOFValues;
@@ -5203,12 +5204,6 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
         JointPtr pJoint = GetJointFromDOFIndex(idof);
         info._dofValues.emplace_back(pJoint->GetName(), vDOFValues[idof]);
         activeJointNames.insert(pJoint->GetName());
-    }
-    // need to copy the inactive joint values for later reference.
-    FOREACH(it, _info._dofValues) {
-        if (activeJointNames.find(it->first) == activeJointNames.end()) {
-            info._dofValues.emplace_back(it->first, it->second);
-        }
     }
 
     info._transform = GetTransform();
@@ -5250,7 +5245,7 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
 
 UpdateFromInfoResult KinBody::UpdateFromInfo(const KinBodyInfo& info)
 {
-    BOOST_ASSERT(info._id == _info._id);
+    BOOST_ASSERT(info._id == _id);
 
     // links
     FOREACHC(itLinkInfo, info._vLinkInfos) {

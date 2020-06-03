@@ -203,7 +203,7 @@ public:
             }
             return hardware_id == pOther->hardware_id;
         }
-        virtual bool operator!=(const SensorGeometry& r) {
+        virtual bool operator!=(const JSONReadable& r) {
             return !operator==(r);
         }
         std::string hardware_id; ///< optional hardware identifier of the sensor
