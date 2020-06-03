@@ -137,7 +137,6 @@ protected:
 };
 
 using PostureDescriberPtr = boost::shared_ptr<PostureDescriber>;
-using PostureFormulation = std::array<std::array<int, 2>, 3>; ///< a posture value is computed by a triple product (a x b) ∙ c
 
 /// \brief determines whether a robot posture value can be considered as 0.0, postive, or negative
 /// \param [in] x      a posture value

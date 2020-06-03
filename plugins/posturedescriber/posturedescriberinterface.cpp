@@ -186,32 +186,6 @@ RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr
     return RobotPostureSupportType::RPST_NoSupport;
 }
 
-/// \brief Obtains either a joint axis or a translate between two joint anchors.
-/// \return a joint axis, if vecinfo[1]==-1; otherwise a translate between two joint anchors.
-Vector GetVectorFromInfo(const std::vector<JointPtr>& joints, const std::array<int, 2>& vecinfo) {
-    // std::cout << "GetVectorFromInfo: " << vecinfo[0] << ", " << vecinfo[1] << std::endl;
-    return (vecinfo[1]==-1) ?
-           /* joint axis   */ joints[vecinfo[0]]->GetAxis() :
-           /* joint anchor */ (joints[vecinfo[1]]->GetAnchor()-joints[vecinfo[0]]->GetAnchor());
-}
-
-/// \brief Generates a posture value function from a N-vector (array) of posture formulations.
-/// Each posture value is a triple product in form (a x b) ∙ c, where each vector is either a joint axis or a translate between two joint anchors.
-/// \return a posture value function, PostureValueFn=std::function<...> converted from a lambda expression.
-template <size_t N>
-PostureValueFn PostureValuesFunctionGenerator(const std::array<PostureFormulation, N>& postureforms) {
-    return [= /* pass postureforms *by value* */](const std::vector<JointPtr>&joints, const double fTol, std::vector<PostureStateInt>&posturestates) {
-               std::array<double, N> posturevalues;
-               for(size_t i = 0; i < N; ++i) {
-                   const PostureFormulation& postureform = postureforms[i];
-                   posturevalues[i] = GetVectorFromInfo(joints, postureform[0]).
-                                      cross(GetVectorFromInfo(joints, postureform[1])).
-                                      dot(GetVectorFromInfo(joints, postureform[2]));
-               }
-               compute_robot_posture_states<N>(posturevalues, fTol, posturestates);
-    };
-}
-
 void ComputePostureStates6RGeneral(const std::vector<JointPtr>& joints, const double fTol, std::vector<PostureStateInt>& posturestates) {
     const Vector axis0 = joints[0]->GetAxis();
     const Vector axis1 = joints[1]->GetAxis();
@@ -242,12 +216,25 @@ void ComputePostureStates4RTypeA(const std::vector<JointPtr>& joints, const doub
     const Vector anchor3 = joints[3]->GetAnchor();
 
     const std::array<double, 2> posturevalues {
-        // j1 pose: {{0, -1}, {1, -1}, {1, 3}}
+        // shoulder pose: {{0, -1}, {1, -1}, {1, 3}}
         axis0.cross(axis1).dot(anchor3-anchor1),
         // elbow: {{1, -1}, {1, 2}, {2, 3}}
         axis1.cross(anchor2-anchor1).dot(anchor3-anchor2),
     };
     compute_robot_posture_states<2>(posturevalues, fTol, posturestates);
+}
+
+void ComputePostureStatesRRRParallel(const std::vector<JointPtr>& joints, const double fTol, std::vector<PostureStateInt>& posturestates) {
+    const Vector axis0 = joints[0]->GetAxis();
+    const Vector anchor0 = joints[0]->GetAnchor();
+    const Vector anchor1 = joints[1]->GetAnchor();
+    const Vector anchor2 = joints[2]->GetAnchor();
+
+    const std::array<double, 1> posturevalues {
+        // elbow: {{0, -1}, {0, 1}, {1, 2}}
+        axis0.cross(anchor1-anchor0).dot(anchor2-anchor1),
+    };
+    compute_robot_posture_states<1>(posturevalues, fTol, posturestates);
 }
 
 bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
@@ -269,63 +256,15 @@ bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
     _supporttype = DeriveRobotPostureSupportType(_joints);
     switch(_supporttype) {
     case RobotPostureSupportType::RPST_6R_General: {
-        const PostureFormulation
-            shoulderform {{
-                              {0, -1},
-                              {1, -1},
-                              {0, 4},
-                          }},
-        elbowform {{
-                       {1, -1},
-                       {1, 2},
-                       {2, 4}
-                   }},
-        wristform {{
-                       {3, -1},
-                       {4, -1},
-                       {5, -1}
-                   }}
-        ;
-        const std::array<PostureFormulation, 3> postureforms = {
-            shoulderform,
-            elbowform,
-            wristform
-        };
-        _posturefn = PostureValuesFunctionGenerator<3>(postureforms);
         _posturefn = ComputePostureStates6RGeneral;
         break;
     }
     case RobotPostureSupportType::RPST_4R_Type_A: {
-        const PostureFormulation
-            shoulderform {{
-                        {0, -1},
-                        {1, -1},
-                        {1, 3},
-                    }},
-        elbowform {{
-                       {1, -1},
-                       {1, 2},
-                       {2, 3}
-                   }};
-        const std::array<PostureFormulation, 2> postureforms = {
-            shoulderform,
-            elbowform
-        };
-        _posturefn = PostureValuesFunctionGenerator<2>(postureforms);
         _posturefn = ComputePostureStates4RTypeA;
         break;
     }
     case RobotPostureSupportType::RPST_RRR_Parallel: {
-        const PostureFormulation
-        elbowform {{
-                       {0, -1},
-                       {0, 1},
-                       {1, 2}
-                   }};
-        const std::array<PostureFormulation, 1> postureforms = {
-            elbowform
-        };
-        _posturefn = PostureValuesFunctionGenerator<1>(postureforms);
+        _posturefn = ComputePostureStatesRRRParallel;
         break;
     }
     default: {

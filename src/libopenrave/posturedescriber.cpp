@@ -142,17 +142,20 @@ LinkPair ExtractEssentialKinematicsChain(const LinkPair& kinematicsChain) {
         }
     }
 
-    std::vector<JointPtr>::iterator itFirstR = find_if(begin(joints), end(joints), [](const JointPtr& pjoint) { return pjoint->IsRevolute(0); });
+    const std::vector<JointPtr>::const_iterator itFirstR = find_if(begin(joints), end(joints),
+        [](const JointPtr& pjoint) { return pjoint->IsRevolute(0); }
+    );
     if(itFirstR == end(joints)) {
         RAVELOG_WARN("No revolute joints at all");
         joints.clear();
         return {nullptr, nullptr};
     }
 
-    std::vector<JointPtr>::reverse_iterator ritLastR = find_if(joints.rbegin(), joints.rend(), [](const JointPtr& pjoint) { return pjoint->IsRevolute(0); });
-    std::vector<JointPtr>::iterator itLastRNext = ritLastR.base();
-    joints = std::vector<JointPtr>(itFirstR, itLastRNext);
-    return {joints[0]->GetHierarchyParentLink(), joints.back()->GetHierarchyChildLink()};
+    const std::vector<JointPtr>::const_reverse_iterator ritLastR = find_if(joints.rbegin(), joints.rend(), 
+        [](const JointPtr& pjoint) { return pjoint->IsRevolute(0); }
+    );
+    const std::vector<JointPtr>::const_iterator itLastR = (ritLastR + 1).base(); // don't forget to add 1
+    return {(*itFirstR)->GetHierarchyParentLink(), (*itLastR)->GetHierarchyChildLink()};
 }
 
 LinkPair GetKinematicsChain(const RobotBase::ManipulatorConstPtr& pmanip) {
