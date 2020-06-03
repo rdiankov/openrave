@@ -19,6 +19,9 @@
 
 namespace OpenRAVE {
 
+using JointPtr = OpenRAVE::KinBody::JointPtr;
+using LinkPtr = OpenRAVE::KinBody::LinkPtr;
+
 PostureDescriberBase::PostureDescriberBase(EnvironmentBasePtr penv) : InterfaceBase(PT_PostureDescriber, penv)
 {
 }
@@ -114,12 +117,50 @@ std::string ComputeKinematicsChainHash(const LinkPair& kinematicsChain, std::vec
     return chainhash;
 }
 
+LinkPair GetKinematicsChainHelper(const RobotBase::ManipulatorConstPtr& pmanip) {
+    // links subject to later change
+    const LinkPtr baselink = pmanip->GetBase();
+    const LinkPtr eelink = pmanip->GetEndEffector();
+    const int baselinkind = baselink->GetIndex();
+    const int eelinkind = eelink->GetIndex();
+
+    const KinBodyPtr probot = baselink->GetParent();
+    std::vector<JointPtr> joints;
+    probot->GetChain(baselinkind, eelinkind, joints);
+
+    std::string typestr;
+    for(std::vector<JointPtr>::iterator it = begin(joints); it != end(joints); ) {
+        if((*it)->IsStatic() || (*it)->GetDOFIndex()==-1) {
+            it = joints.erase(it);
+        }
+        else {
+            if((*it)->IsPrismatic(0)) {
+                typestr.push_back('P');
+            }
+            else if((*it)->IsRevolute(0)){
+                typestr.push_back('R');
+            }
+            ++it;
+        }
+    }
+    const size_t firstR = typestr.find_first_of('R');
+    if(firstR == std::string::npos) {
+        RAVELOG_WARN("No revolute joints at all");
+        joints.clear();
+        return {nullptr, nullptr};
+    }
+    const size_t lastR = typestr.find_last_of('R');
+    joints = std::vector<JointPtr>(begin(joints) + firstR, begin(joints) + lastR + 1);
+    return {joints[0]->GetHierarchyParentLink(), joints.back()->GetHierarchyChildLink()};
+
+}
+
 LinkPair GetKinematicsChain(const RobotBase::ManipulatorPtr& pmanip) {
-    return {pmanip->GetBase(), pmanip->GetEndEffector()};
+    return GetKinematicsChainHelper(pmanip);
 }
 
 LinkPair GetKinematicsChain(const RobotBase::ManipulatorConstPtr& pmanip) {
-    return {pmanip->GetBase(), pmanip->GetEndEffector()};
+    return GetKinematicsChainHelper(pmanip);
 }
 
 } // namespace OpenRAVE
