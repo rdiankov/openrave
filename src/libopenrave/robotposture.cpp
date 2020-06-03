@@ -54,7 +54,6 @@ bool RobotBase::SetPostureDescriber(const LinkPair& kinematicsChain, PostureDesc
         throw OPENRAVE_EXCEPTION_FORMAT("Describer does not support kinematics chain from \"%s\" to eelink \"%s\"",
                                         baselink->GetName() % eelink->GetName(),
                                         OpenRAVEErrorCode::ORE_InvalidArguments);
-        return false;
     }
 
     const LinkPair& kinematicsChainDescribed = pDescriber->GetEssentialKinematicsChain();
@@ -64,7 +63,6 @@ bool RobotBase::SetPostureDescriber(const LinkPair& kinematicsChain, PostureDesc
                                         kinematicsChainDescribed[0]->GetName() % kinematicsChainDescribed[1]->GetName() %
                                         baselink->GetName() % eelink->GetName(),
                                         OpenRAVEErrorCode::ORE_InvalidArguments);
-        return false;
     }
 
     _mPostureDescribers[kinematicsChain] = pDescriber;
@@ -104,7 +102,16 @@ bool RobotBase::ComputePostureStates(std::vector<PostureStateInt>& posturestates
         throw OPENRAVE_EXCEPTION_FORMAT(_("failed to find robot posture describer for links from \"%s\" to \"%s\" for robot \"%s\""),
                                         GetName() % kinematicsChain[0]->GetName() % kinematicsChain[1]->GetName(), ORE_InvalidArguments);
     }
-    return _mPostureDescribers.at(kinematicsChain)->ComputePostureStates(posturestates, dofvalues);
+    const PostureDescriberBasePtr& pDescriber = _mPostureDescribers.at(kinematicsChain);
+    const LinkPair& kinematicsChainDescribed = pDescriber->GetEssentialKinematicsChain();
+    if(kinematicsChainDescribed != kinematicsChain) {
+        throw OPENRAVE_EXCEPTION_FORMAT("Kinematics chains do not match: describer has baselink \"%s\" and eelink \"%s\"; "
+                                        "input has baselink \"%s\" and eelink \"%s\"",
+                                        kinematicsChainDescribed[0]->GetName() % kinematicsChainDescribed[1]->GetName() %
+                                        kinematicsChain[0]->GetName() % kinematicsChain[1]->GetName(),
+                                        OpenRAVEErrorCode::ORE_InvalidArguments);
+    }
+    return pDescriber->ComputePostureStates(posturestates, dofvalues);
 }
 
 bool RobotBase::ComputePostureStates(std::vector<PostureStateInt>& posturestates, ManipulatorConstPtr pmanip, const std::vector<double>& dofvalues) const

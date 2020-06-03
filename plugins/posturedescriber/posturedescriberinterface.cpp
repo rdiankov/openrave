@@ -62,7 +62,7 @@ PostureDescriber::PostureDescriber(const EnvironmentBasePtr& penv,
 PostureDescriber::~PostureDescriber() {
 }
 
-/// \brief Checks whether joints match the their expected joint types
+/// \brief Checks whether joints match their expected joint types
 /// \return true the joint types match
 bool CheckJointTypes(const std::vector<JointPtr>& joints, const std::vector<KinBody::JointType>& jointtypes) {
     const size_t njoints = joints.size();
@@ -116,9 +116,9 @@ NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Tr
     // const ref
 RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr>& joints) {
     const size_t njoints = joints.size();
+    const std::vector<KinBody::JointType> jointtypes(njoints, KinBody::JointType::JointRevolute); ///< so far these are all revolute
     switch(njoints) {
         case 6: {
-            const std::vector<KinBody::JointType> jointtypes(njoints, KinBody::JointType::JointRevolute);
             if(!CheckJointTypes(joints, jointtypes)) {
                 RAVELOG_WARN("Not all 6 joints are purely revolute");
                 return RobotPostureSupportType::RPST_NoSupport;
@@ -142,7 +142,6 @@ RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr
         }
 
         case 4: {
-            const std::vector<KinBody::JointType> jointtypes(njoints, KinBody::JointType::JointRevolute);
             if(!CheckJointTypes(joints, jointtypes)) {
                 RAVELOG_WARN("Not all 4 joints are purely revolute");
                 return RobotPostureSupportType::RPST_NoSupport;
@@ -161,7 +160,6 @@ RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr
         }
 
         case 3: {
-            const std::vector<KinBody::JointType> jointtypes(njoints, KinBody::JointType::JointRevolute);
             if(!CheckJointTypes(joints, jointtypes)) {
                 RAVELOG_WARN("Not all 3 joints are purely revolute");
                 return RobotPostureSupportType::RPST_NoSupport;
@@ -244,8 +242,6 @@ bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
     }
 
     this->Destroy(); // clear internal contents
-
-    // TGN to Kei: what if the user set this describer at some robot, and then Init with something else
     
     _kinematicsChain = kinematicsChain;
     _GetJointsFromKinematicsChain(_kinematicsChain, _joints);

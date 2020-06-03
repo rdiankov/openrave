@@ -71,7 +71,7 @@ public:
     /// \brief Gets the key used in map data (of type CustomData) in IkReturn
     virtual std::string GetMapDataKey() const = 0;
 
-    /// \brief Cleans internal setup after before calling Init
+    /// \brief Cleans internal setup in the early stage of doing initializaion by Init()
     virtual void Destroy() = 0;
 
     /// \brief Gets essential kinematics chain associated with this describer
