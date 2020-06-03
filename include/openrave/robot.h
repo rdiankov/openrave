@@ -1099,6 +1099,11 @@ private:
                                       ManipulatorConstPtr pmanip,
                                       const std::vector<double>& dofvalues = {}) const;
 
+    /// \brief Ensures we have always mapped a manipulator to its "essential kinematics chain"---starting with a baselink-eelink pair, we exclude any static joints in between,
+    /// and also the first and last few prismatic joints. So the first and last joints in the essential kinematics chain are always revolute.
+    /// \param [in] pmanip    manipulator that, if not mapped yet, will be mapped to its essential kinematics chain
+    virtual void EnsureEssentialKinematicsChainRegisteredOnManipulator(ManipulatorConstPtr pmanip);
+
     //@}
 
     /** A grabbed body becomes part of the robot and its relative pose with respect to a robot's
