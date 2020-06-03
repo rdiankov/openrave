@@ -124,6 +124,10 @@ protected:
 
     bool _GetSupportTypeCommand(std::ostream& ssout, std::istream& ssin) const;
 
+    /* ========== `SendJSONCommand` APIs ========== */
+    /// \brief `SendJSONCommand` API
+    bool _ExplainJSONCommand(const rapidjson::Value& input, rapidjson::Value& output, rapidjson::Document::AllocatorType& allocator);
+
     LinkPair _kinematicsChain {nullptr, nullptr}; ///< the baselink-eelink pair of a kinematics chain
     std::vector<KinBody::JointPtr> _joints; ///< non-static joints from baselink to eelink
     std::vector<int> _armindices; ///< dof indices from baselink to eelink

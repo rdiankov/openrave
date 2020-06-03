@@ -19,6 +19,7 @@
 #include <openravepy/openravepy_environmentbase.h>
 #include <openravepy/openravepy_posturedescriber.h> // PyPostureDescriber
 #include <openrave/utils.h>
+#include <openrave/openravejson.h> // openravejson
 
 namespace openravepy {
 
@@ -112,52 +113,11 @@ std::string PyPostureDescriber::GetMapDataKey() const {
     return _pDescriber->GetMapDataKey();
 }
 
-py::dict PyPostureDescriber::Explain(object pystates) const {
-    py::dict d;
-    std::stringstream ssout, ssin;
-    ssin << "GetSupportType";
-    if(!_pDescriber->SendCommand(ssout, ssin)) {
-        RAVELOG_WARN("Unsupported posture type, cannot explain");
-        return d;
-    }
-    uint16_t supporttype = 0;
-    ssout >> supporttype;
-    std::vector<std::string> vfeatures;
-    switch(supporttype) {
-        case 1: {
-            vfeatures = {"shoulder", "elbow", "wrist"};
-            break;
-        }
-        case 2: {
-            vfeatures = {"shoulder", "elbow"};
-            break;
-        }
-        case 3: {
-            vfeatures = {"elbow"};
-            break;
-        }
-        default: {
-            RAVELOG_WARN("Unsupported posture type, cannot explain");
-            return d;
-        }
-    }
-
-    std::vector<PostureStateInt> vstates = ExtractArray<PostureStateInt>(pystates);
-    const std::set<PostureStateInt> sstates(begin(vstates), end(vstates));
-    vstates = std::vector<PostureStateInt>(begin(sstates), end(sstates));
-    for(const PostureStateInt state : vstates) {
-        py::list l;
-        int pow2 = 1 << (vfeatures.size() - 1);
-        for(const std::string& feature : vfeatures) {
-            py::list p;
-            p.append(feature);
-            p.append(state & pow2 ? 1 : 0);
-            pow2 >>= 1;
-            l.append(p);
-        }
-        d[state] = l;
-    }
-    return d;
+py::object PyPostureDescriber::Explain(const PostureStateInt state) const {
+    rapidjson::Document rIn, rOut;
+    openravejson::SetJsonValueByKey(rIn, "posturestate", state, rIn.GetAllocator());
+    _pDescriber->SendJSONCommand("Explain", rIn, rOut);
+    return toPyObject(rOut);
 }
 
 PyPostureDescriberPtr GeneratePostureDescriber(const PyManipulatorPtr& pymanip) {

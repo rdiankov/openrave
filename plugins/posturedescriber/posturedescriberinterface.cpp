@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <openrave/openrave.h>
+#include <openrave/openravejson.h> // openravejson
 #include "posturedescriberinterface.h" // PostureDescriber
 #include "plugindefs.h" // POSTUREDESCRIBER_CLASS_NAME
 #include "openraveplugindefs.h" // SerializeValues
@@ -46,6 +48,11 @@ PostureDescriber::PostureDescriber(const EnvironmentBasePtr& penv,
     this->RegisterCommand("GetSupportType",
                           boost::bind(&PostureDescriber::_GetSupportTypeCommand, this, _1, _2),
                           "Gets the robot posture support type");
+
+    // `SendJSONCommand` APIs
+    this->RegisterJSONCommand("Explain",
+                              boost::bind(&PostureDescriber::_ExplainJSONCommand, this, _1, _2, _3),
+                              "Explain posture states");
 }
 
 PostureDescriber::~PostureDescriber() {
@@ -435,6 +442,48 @@ bool PostureDescriber::_GetArmIndicesCommand(std::ostream& ssout, std::istream& 
 bool PostureDescriber::_GetSupportTypeCommand(std::ostream& ssout, std::istream& ssin) const {
     ssout << static_cast<int>(_supporttype);
     return _supporttype != RobotPostureSupportType::RPST_NoSupport;
+}
+
+bool PostureDescriber::_ExplainJSONCommand(const rapidjson::Value& input,
+                                           rapidjson::Value& output,
+                                           rapidjson::Document::AllocatorType& allocator) {
+    std::vector<std::string> vfeatures;
+    switch(_supporttype) {
+        case RobotPostureSupportType::RPST_6R_General: {
+            vfeatures = {"shoulder", "elbow", "wrist"};
+            break;
+        }
+        case RobotPostureSupportType::RPST_4R_Type_A: {
+            vfeatures = {"shoulder", "elbow"};
+            break;
+        }
+        case RobotPostureSupportType::RPST_RRR_Parallel: {
+            vfeatures = {"elbow"};
+            break;
+        }
+        default: {
+            RAVELOG_WARN("Unsupported posture type, cannot explain");
+            return false;
+        }
+    }
+
+    if (!input.HasMember("posturestate")) {
+        RAVELOG_WARN("RapidJSON input does not have posturestate");
+        return false;
+    }
+    const int state = input["posturestate"].GetInt();
+    int pow2 = (1 << vfeatures.size());
+    if(state < 0 || state >= pow2 ) {
+        RAVELOG_WARN_FORMAT("Posture state should be in range [0, %d); now it is %d", pow2 % state);
+        return false;
+    }
+
+    for(const std::string& feature : vfeatures) {
+        pow2 >>= 1;
+        openravejson::SetJsonValueByKey(output, feature.c_str(), (state & pow2) ? 1 : 0, allocator);
+    }
+
+    return true;
 }
 
 } // namespace OpenRAVE
