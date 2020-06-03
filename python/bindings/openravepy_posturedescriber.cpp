@@ -173,7 +173,7 @@ PyPostureDescriberPtr GeneratePostureDescriber(const PyManipulatorPtr& pymanip, 
     std::vector<int> armindices;
     // fe743742269c7dbfe548cb1f3412f658
     const std::string chainhash = ComputeKinematicsChainHash(pmanip, armindices);
-    const LinkPair linkpair = GetKinematicsChain(pmanip);
+    const LinkPair linkpair = GetEssentialKinematicsChain(pmanip);
     // posturedescriber.motoman-gp8l.fe743742269c7dbfe548cb1f3412f658.L0.L6
     const std::string describername = interfacename + "." + probot->GetName() + "." + chainhash + "." + linkpair[0]->GetName() + "." + linkpair[1]->GetName();
     const PostureDescriberBasePtr pDescriber = RaveCreatePostureDescriber(penv, interfacename + " " + describername);

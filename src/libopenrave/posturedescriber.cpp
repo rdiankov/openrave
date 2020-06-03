@@ -34,16 +34,15 @@ const char* PostureDescriberBase::GetHash() const {
 }
 
 bool PostureDescriberBase::Supports(const RobotBase::ManipulatorPtr& pmanip) const {
-    return this->Supports(GetKinematicsChain(pmanip));
+    return this->Supports(GetEssentialKinematicsChain(pmanip));
 }
 
-// lets just call this->Init(GetKinematicsChain(pmanip))
 bool PostureDescriberBase::Init(const RobotBase::ManipulatorPtr& pmanip) {
-    return this->Supports(GetKinematicsChain(pmanip)) ? this->Init(GetKinematicsChain(pmanip)) : false;
+    return this->Init(GetEssentialKinematicsChain(pmanip));
 }
 
 std::string ComputeKinematicsChainHash(const RobotBase::ManipulatorPtr& pmanip, std::vector<int>& armindices) {
-    return ComputeKinematicsChainHash(GetKinematicsChain(pmanip), armindices);
+    return ComputeKinematicsChainHash(GetEssentialKinematicsChain(pmanip), armindices);
 }
 
 // refer to libopenrave.h and
@@ -117,10 +116,15 @@ std::string ComputeKinematicsChainHash(const LinkPair& kinematicsChain, std::vec
     return chainhash;
 }
 
-LinkPair GetKinematicsChainHelper(const RobotBase::ManipulatorConstPtr& pmanip) {
-    // links subject to later change
-    const LinkPtr baselink = pmanip->GetBase();
-    const LinkPtr eelink = pmanip->GetEndEffector();
+LinkPair ExtractEssentialKinematicsChain(const LinkPair& kinematicsChain_in) {
+    const LinkPtr baselink = kinematicsChain_in[0];
+    const LinkPtr eelink = kinematicsChain_in[1];
+
+    if( baselink == nullptr || eelink == nullptr ) {
+        RAVELOG_WARN("kinematics chain is not valid as having nullptr");
+        return {nullptr, nullptr};
+    }
+
     const int baselinkind = baselink->GetIndex();
     const int eelinkind = eelink->GetIndex();
 
@@ -152,15 +156,18 @@ LinkPair GetKinematicsChainHelper(const RobotBase::ManipulatorConstPtr& pmanip) 
     const size_t lastR = typestr.find_last_of('R');
     joints = std::vector<JointPtr>(begin(joints) + firstR, begin(joints) + lastR + 1);
     return {joints[0]->GetHierarchyParentLink(), joints.back()->GetHierarchyChildLink()};
-
-}
-
-LinkPair GetKinematicsChain(const RobotBase::ManipulatorPtr& pmanip) {
-    return GetKinematicsChainHelper(pmanip);
 }
 
 LinkPair GetKinematicsChain(const RobotBase::ManipulatorConstPtr& pmanip) {
-    return GetKinematicsChainHelper(pmanip);
+    return {pmanip->GetBase(), pmanip->GetEndEffector()};
+}
+
+LinkPair GetEssentialKinematicsChain(const RobotBase::ManipulatorPtr& pmanip) {
+    return ExtractEssentialKinematicsChain(GetKinematicsChain(pmanip));
+}
+
+LinkPair GetEssentialKinematicsChain(const RobotBase::ManipulatorConstPtr& pmanip) {
+    return ExtractEssentialKinematicsChain(GetKinematicsChain(pmanip));
 }
 
 } // namespace OpenRAVE
