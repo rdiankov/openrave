@@ -116,9 +116,9 @@ std::string ComputeKinematicsChainHash(const LinkPair& kinematicsChain, std::vec
     return chainhash;
 }
 
-LinkPair ExtractEssentialKinematicsChain(const LinkPair& kinematicsChain_in) {
-    const LinkPtr baselink = kinematicsChain_in[0];
-    const LinkPtr eelink = kinematicsChain_in[1];
+LinkPair ExtractEssentialKinematicsChain(const LinkPair& kinematicsChain) {
+    const LinkPtr baselink = kinematicsChain[0];
+    const LinkPtr eelink = kinematicsChain[1];
 
     if( baselink == nullptr || eelink == nullptr ) {
         RAVELOG_WARN("kinematics chain is not valid as having nullptr");
@@ -138,23 +138,20 @@ LinkPair ExtractEssentialKinematicsChain(const LinkPair& kinematicsChain_in) {
             it = joints.erase(it);
         }
         else {
-            if((*it)->IsPrismatic(0)) {
-                typestr.push_back('P');
-            }
-            else if((*it)->IsRevolute(0)){
-                typestr.push_back('R');
-            }
             ++it;
         }
     }
-    const size_t firstR = typestr.find_first_of('R');
-    if(firstR == std::string::npos) {
+
+    std::vector<JointPtr>::iterator itFirstR = find_if(begin(joints), end(joints), [](const JointPtr& pjoint) { return pjoint->IsRevolute(0); });
+    if(itFirstR == end(joints)) {
         RAVELOG_WARN("No revolute joints at all");
         joints.clear();
         return {nullptr, nullptr};
     }
-    const size_t lastR = typestr.find_last_of('R');
-    joints = std::vector<JointPtr>(begin(joints) + firstR, begin(joints) + lastR + 1);
+
+    std::vector<JointPtr>::reverse_iterator ritLastR = find_if(joints.rbegin(), joints.rend(), [](const JointPtr& pjoint) { return pjoint->IsRevolute(0); });
+    std::vector<JointPtr>::iterator itLastRNext = ritLastR.base();
+    joints = std::vector<JointPtr>(itFirstR, itLastRNext);
     return {joints[0]->GetHierarchyParentLink(), joints.back()->GetHierarchyChildLink()};
 }
 

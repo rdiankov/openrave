@@ -32,6 +32,10 @@ PostureDescriber::PostureDescriber(const EnvironmentBasePtr& penv,
     PostureDescriberBase(penv),
     _fTol(fTol)
 {
+    __description =
+        ":Interface Author: Guangning Tan & Kei Usui & Rosen Diankov\n\n"
+        "Posture describer for a kinematics chain using the geometry of joint axes and anchors";
+
     // `SendCommand` APIs
     this->RegisterCommand("SetPostureValueThreshold",
                           boost::bind(&PostureDescriber::_SetPostureValueThresholdCommand, this, _1, _2),

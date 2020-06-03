@@ -33,8 +33,10 @@ public:
     std::string interfacename = POSTUREDESCRIBER_MODULE_NAME;
 
 private:
-    /// \brief Python `SendCommand` API that loads a robot posture describer onto a (base link, end-effector link) pair, or onto a manipulator that prescribes the pair
-    bool _LoadPostureDescriberCommand(std::ostream& ssout, std::istream& ssin);
+    /// \brief `SendJSONCommand` API that loads a robot posture describer onto a (base link, end-effector link) pair, or onto a manipulator that prescribes the pair
+    bool _LoadPostureDescriberJSONCommand(const rapidjson::Value& input,
+			                              rapidjson::Value& output,
+			                              rapidjson::Document::AllocatorType& allocator);
 };
 
 } // namepspace OpenRAVE
