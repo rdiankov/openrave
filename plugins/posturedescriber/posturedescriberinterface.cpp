@@ -445,8 +445,8 @@ bool PostureDescriber::_GetSupportTypeCommand(std::ostream& ssout, std::istream&
 }
 
 bool PostureDescriber::_InterpretJSONCommand(const rapidjson::Value& input,
-                                           rapidjson::Value& output,
-                                           rapidjson::Document::AllocatorType& allocator) {
+                                             rapidjson::Value& output,
+                                             rapidjson::Document::AllocatorType& allocator) {
     std::vector<std::string> vfeatures;
     switch(_supporttype) {
         case RobotPostureSupportType::RPST_6R_General: {
@@ -478,12 +478,14 @@ bool PostureDescriber::_InterpretJSONCommand(const rapidjson::Value& input,
         return false;
     }
 
-    std::vector<std::pair<std::string, PostureStateInt> > vpairs;
+    std::map<std::string, PostureStateInt> mfeaturestate;
     for(const std::string& feature : vfeatures) {
         pow2 >>= 1;
-        vpairs.emplace_back(feature, (state & pow2) ? 1 : 0);
+        mfeaturestate[feature] = (state & pow2) ? 1 : 0;
     }
-    openravejson::SetJsonValueByKey(output, "interpretation", vpairs, allocator);
+
+    openravejson::SetJsonValueByKey(output,       "features",     vfeatures, allocator);
+    openravejson::SetJsonValueByKey(output, "interpretation", mfeaturestate, allocator);
 
     return true;
 }
