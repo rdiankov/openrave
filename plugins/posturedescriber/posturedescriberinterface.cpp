@@ -50,9 +50,9 @@ PostureDescriber::PostureDescriber(const EnvironmentBasePtr& penv,
                           "Gets the robot posture support type");
 
     // `SendJSONCommand` APIs
-    this->RegisterJSONCommand("Explain",
-                              boost::bind(&PostureDescriber::_ExplainJSONCommand, this, _1, _2, _3),
-                              "Explain posture states");
+    this->RegisterJSONCommand("Interpret",
+                              boost::bind(&PostureDescriber::_InterpretJSONCommand, this, _1, _2, _3),
+                              "Interpret a single posture state");
 }
 
 PostureDescriber::~PostureDescriber() {
@@ -444,7 +444,7 @@ bool PostureDescriber::_GetSupportTypeCommand(std::ostream& ssout, std::istream&
     return _supporttype != RobotPostureSupportType::RPST_NoSupport;
 }
 
-bool PostureDescriber::_ExplainJSONCommand(const rapidjson::Value& input,
+bool PostureDescriber::_InterpretJSONCommand(const rapidjson::Value& input,
                                            rapidjson::Value& output,
                                            rapidjson::Document::AllocatorType& allocator) {
     std::vector<std::string> vfeatures;
@@ -478,10 +478,12 @@ bool PostureDescriber::_ExplainJSONCommand(const rapidjson::Value& input,
         return false;
     }
 
+    std::vector<std::pair<std::string, PostureStateInt> > vpairs;
     for(const std::string& feature : vfeatures) {
         pow2 >>= 1;
-        openravejson::SetJsonValueByKey(output, feature.c_str(), (state & pow2) ? 1 : 0, allocator);
+        vpairs.emplace_back(feature, (state & pow2) ? 1 : 0);
     }
+    openravejson::SetJsonValueByKey(output, "interpretation", vpairs, allocator);
 
     return true;
 }

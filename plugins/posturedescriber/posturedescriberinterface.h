@@ -126,7 +126,7 @@ protected:
 
     /* ========== `SendJSONCommand` APIs ========== */
     /// \brief `SendJSONCommand` API
-    bool _ExplainJSONCommand(const rapidjson::Value& input, rapidjson::Value& output, rapidjson::Document::AllocatorType& allocator);
+    bool _InterpretJSONCommand(const rapidjson::Value& input, rapidjson::Value& output, rapidjson::Document::AllocatorType& allocator);
 
     LinkPair _kinematicsChain {nullptr, nullptr}; ///< the baselink-eelink pair of a kinematics chain
     std::vector<KinBody::JointPtr> _joints; ///< non-static joints from baselink to eelink
