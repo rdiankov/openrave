@@ -28,9 +28,11 @@ bool RobotBase::UnregisterPostureDescriber(ManipulatorConstPtr pmanip) {
     if(pmanip == nullptr) {
         throw OPENRAVE_EXCEPTION_FORMAT0("Input manipulator cannot be null", OpenRAVEErrorCode::ORE_InvalidArguments);
     }
-    return this->UnregisterPostureDescriber(GetEssentialKinematicsChain(pmanip));
+    if(!_mEssentialLinkPairs.count(pmanip)) {
+        _mEssentialLinkPairs[pmanip] = ExtractEssentialKinematicsChain(pmanip);
+    }
+    return this->UnregisterPostureDescriber(ExtractEssentialKinematicsChain(pmanip));
 }
-
 
 bool RobotBase::SetPostureDescriber(const LinkPair& kinematicsChain, PostureDescriberBasePtr pDescriber)
 {
@@ -41,11 +43,28 @@ bool RobotBase::SetPostureDescriber(const LinkPair& kinematicsChain, PostureDesc
         return true;
     }
 
-    if (pDescriber->Supports(kinematicsChain)) {
-        _mPostureDescribers[kinematicsChain] = pDescriber;
-        return true;
+    const LinkPtr& baselink = kinematicsChain[0];
+    const LinkPtr& eelink = kinematicsChain[1];
+
+    if (!pDescriber->Supports(kinematicsChain)) {
+        throw OPENRAVE_EXCEPTION_FORMAT("Describer does not support kinematics chain from \"%s\" to eelink \"%s\"",
+                                        baselink->GetName() % eelink->GetName(),
+                                        OpenRAVEErrorCode::ORE_InvalidArguments);
+        return false;
     }
-    return false;
+
+    const LinkPair& kinematicsChainDescribed = pDescriber->GetEssentialKinematicsChain();
+    if(kinematicsChainDescribed != kinematicsChain) {
+        throw OPENRAVE_EXCEPTION_FORMAT("Kinematics chains do not match: describer has baselink \"%s\" and eelink \"%s\"; "
+                                        "input has baselink \"%s\" and eelink \"%s\"",
+                                        kinematicsChainDescribed[0]->GetName() % kinematicsChainDescribed[1]->GetName() %
+                                        baselink->GetName() % eelink->GetName(),
+                                        OpenRAVEErrorCode::ORE_InvalidArguments);
+        return false;
+    }
+
+    _mPostureDescribers[kinematicsChain] = pDescriber;
+    return true;
 }
 
 bool RobotBase::SetPostureDescriber(ManipulatorConstPtr pmanip, PostureDescriberBasePtr pDescriber)
@@ -53,7 +72,10 @@ bool RobotBase::SetPostureDescriber(ManipulatorConstPtr pmanip, PostureDescriber
     if(pmanip == nullptr) {
         throw OPENRAVE_EXCEPTION_FORMAT0("Input manipulator cannot be null", OpenRAVEErrorCode::ORE_InvalidArguments);
     }
-    return this->SetPostureDescriber(GetEssentialKinematicsChain(pmanip), pDescriber);
+    if(!_mEssentialLinkPairs.count(pmanip)) {
+        _mEssentialLinkPairs[pmanip] = ExtractEssentialKinematicsChain(pmanip);
+    }
+    return this->SetPostureDescriber(_mEssentialLinkPairs.at(pmanip), pDescriber);
 }
 
 PostureDescriberBasePtr RobotBase::GetPostureDescriber(const LinkPair& kinematicsChain) const
@@ -66,7 +88,12 @@ PostureDescriberBasePtr RobotBase::GetPostureDescriber(ManipulatorConstPtr pmani
     if(pmanip == nullptr) {
         throw OPENRAVE_EXCEPTION_FORMAT0("Input manipulator cannot be null", OpenRAVEErrorCode::ORE_InvalidArguments);
     }
-    return this->GetPostureDescriber(GetEssentialKinematicsChain(pmanip));
+    if(!_mEssentialLinkPairs.count(pmanip)) {
+        throw OPENRAVE_EXCEPTION_FORMAT("Have not included the mapping from manipulator %s to its essential kinematics chain yet",
+                                        pmanip->GetName(),
+                                        OpenRAVEErrorCode::ORE_InvalidArguments);
+    }
+    return this->GetPostureDescriber(_mEssentialLinkPairs.at(pmanip));
 }
 
 bool RobotBase::ComputePostureStates(std::vector<PostureStateInt>& posturestates, const LinkPair& kinematicsChain, const std::vector<double>& dofvalues) const
@@ -83,7 +110,12 @@ bool RobotBase::ComputePostureStates(std::vector<PostureStateInt>& posturestates
     if(pmanip == nullptr) {
         throw OPENRAVE_EXCEPTION_FORMAT0("Input manipulator cannot be null", OpenRAVEErrorCode::ORE_InvalidArguments);
     }
-    return this->ComputePostureStates(posturestates, GetEssentialKinematicsChain(pmanip), dofvalues);
+    if(!_mEssentialLinkPairs.count(pmanip)) {
+        throw OPENRAVE_EXCEPTION_FORMAT("Have not included the mapping from manipulator %s to its essential kinematics chain yet",
+                                        pmanip->GetName(),
+                                        OpenRAVEErrorCode::ORE_InvalidArguments);
+    }
+    return this->ComputePostureStates(posturestates, _mEssentialLinkPairs.at(pmanip), dofvalues);
 }
 
 } // end namespace OpenRAVE

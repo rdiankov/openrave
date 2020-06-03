@@ -1224,6 +1224,7 @@ protected:
 
     ConfigurationSpecification _activespec;
     std::map<LinkPair, PostureDescriberBasePtr> _mPostureDescribers; ///< maps a baselink-eelink pair to a posture describer that is capable of describing the kinematics chain; several manipulators can be attached to the same end-effector with different local tool transforms & directions, while they share the same baselink-eelink pair and the 6D IK hash, so we only need one describer for all these manipulators.
+    std::map<ManipulatorConstPtr, LinkPair> _mEssentialLinkPairs; ///< maps a manipulator to its essential link pair, formed by its baselink-eelink pair, but excluding any static joints and the first, last few prismatic joints
 
 private:
     virtual const char* GetHash() const {

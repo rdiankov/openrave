@@ -96,6 +96,9 @@ public:
     /// \brief Gets the key used in map data (of type CustomData) in IkReturn
     virtual std::string GetMapDataKey() const override;
 
+    /// \brief Gets essential kinematics chain associated with this describer
+    virtual const LinkPair& GetEssentialKinematicsChain() const override;
+
     /// \brief Gets joints (with nonzero dofs) along the kinematics chain from baselink to eelink
     const std::vector<KinBody::JointPtr>& GetJoints() const {
         return _joints;

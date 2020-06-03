@@ -34,15 +34,15 @@ const char* PostureDescriberBase::GetHash() const {
 }
 
 bool PostureDescriberBase::Supports(const RobotBase::ManipulatorPtr& pmanip) const {
-    return this->Supports(GetEssentialKinematicsChain(pmanip));
+    return this->Supports(ExtractEssentialKinematicsChain(pmanip));
 }
 
 bool PostureDescriberBase::Init(const RobotBase::ManipulatorPtr& pmanip) {
-    return this->Init(GetEssentialKinematicsChain(pmanip));
+    return this->Init(ExtractEssentialKinematicsChain(pmanip));
 }
 
 std::string ComputeKinematicsChainHash(const RobotBase::ManipulatorPtr& pmanip, std::vector<int>& armindices) {
-    return ComputeKinematicsChainHash(GetEssentialKinematicsChain(pmanip), armindices);
+    return ComputeKinematicsChainHash(ExtractEssentialKinematicsChain(pmanip), armindices);
 }
 
 // refer to libopenrave.h and
@@ -162,11 +162,11 @@ LinkPair GetKinematicsChain(const RobotBase::ManipulatorConstPtr& pmanip) {
     return {pmanip->GetBase(), pmanip->GetEndEffector()};
 }
 
-LinkPair GetEssentialKinematicsChain(const RobotBase::ManipulatorPtr& pmanip) {
+LinkPair ExtractEssentialKinematicsChain(const RobotBase::ManipulatorPtr& pmanip) {
     return ExtractEssentialKinematicsChain(GetKinematicsChain(pmanip));
 }
 
-LinkPair GetEssentialKinematicsChain(const RobotBase::ManipulatorConstPtr& pmanip) {
+LinkPair ExtractEssentialKinematicsChain(const RobotBase::ManipulatorConstPtr& pmanip) {
     return ExtractEssentialKinematicsChain(GetKinematicsChain(pmanip));
 }
 

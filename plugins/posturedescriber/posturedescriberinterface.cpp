@@ -404,6 +404,10 @@ std::string PostureDescriber::GetMapDataKey() const {
     return std::string(POSTUREDESCRIBER_CLASS_NAME);
 }
 
+const LinkPair& PostureDescriber::GetEssentialKinematicsChain() const {
+    return _kinematicsChain;
+}
+
 void PostureDescriber::Destroy() {
     _kinematicsChain  = {nullptr, nullptr};
     _joints.clear();
