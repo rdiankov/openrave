@@ -30,13 +30,17 @@ public:
     PostureDescriberModule(const EnvironmentBasePtr& penv);
     virtual ~PostureDescriberModule() = default;
 
-    std::string interfacename = POSTUREDESCRIBER_MODULE_NAME;
-
 private:
+    std::string _interfacename = POSTUREDESCRIBER_MODULE_NAME;
+
+    /// \brief `SendCommand` APIs
+    bool _SetInterfaceNameCommand(std::ostream& ssout, std::istream& ssin);
+    bool _GetInterfaceNameCommand(std::ostream& ssout, std::istream& ssin) const;
+
     /// \brief `SendJSONCommand` API that loads a robot posture describer onto a (base link, end-effector link) pair, or onto a manipulator that prescribes the pair
     bool _LoadPostureDescriberJSONCommand(const rapidjson::Value& input,
-			                              rapidjson::Value& output,
-			                              rapidjson::Document::AllocatorType& allocator);
+                                          rapidjson::Value& output,
+                                          rapidjson::Document::AllocatorType& allocator);
 };
 
 } // namepspace OpenRAVE
