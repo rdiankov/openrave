@@ -42,7 +42,7 @@ bool PostureDescriberModule::_LoadPostureDescriberJSONCommand(const rapidjson::V
     const int envId = penv->GetId();
 
     if(!input.HasMember("robotname")) {
-        throw OPENRAVE_EXCEPTION_FORMAT("env=%d, Rapidjson input has no robotname", envId, OpenRAVEErrorCode::ORE_InvalidArguments);
+        RAVELOG_WARN_FORMAT("env=%d, Rapidjson input has no robotname", envId);
         return false;
     }
 
@@ -56,33 +56,34 @@ bool PostureDescriberModule::_LoadPostureDescriberJSONCommand(const rapidjson::V
             baselinkname = input["baselinkname"].GetString();
             RAVELOG_WARN_FORMAT("We have manipulator \"%s\", so ignore baselinkname %s", manipname % baselinkname);
         }
-        if(input.HasMember("eelinkname")) {
-            eelinkname = input["eelinkname"].GetString();
-            RAVELOG_WARN_FORMAT("We have manipulator \"%s\", so ignore eelinkname %s", manipname % eelinkname);
+        if(input.HasMember("endeffectorlinkname")) {
+            eelinkname = input["endeffectorlinkname"].GetString();
+            RAVELOG_WARN_FORMAT("We have manipulator \"%s\", so ignore endeffectorlinkname %s", manipname % eelinkname);
         }
     }
-    else {
-        if(!(input.HasMember("baselinkname") && input.HasMember("eelinkname"))) {
-            throw OPENRAVE_EXCEPTION_FORMAT0("We have neither manipulator nor the (baselinkname, eelinkname) pair", OpenRAVEErrorCode::ORE_InvalidArguments);
-        }
+    else if((input.HasMember("baselinkname") && input.HasMember("endeffectorlinkname"))) {
         baselinkname = input["baselinkname"].GetString();
-        eelinkname = input["eelinkname"].GetString();
+        eelinkname = input["endeffectorlinkname"].GetString();
+    }
+    else {
+        RAVELOG_WARN("We have neither manipulator nor the (baselinkname, endeffectorlinkname) pair");
+        return false;
     }
 
     const RobotBasePtr probot = penv->GetRobot(robotname);
     if(probot == nullptr) {
-        throw OPENRAVE_EXCEPTION_FORMAT("env=%d has no robot %s", envId % robotname, OpenRAVEErrorCode::ORE_InvalidArguments);
+        RAVELOG_WARN_FORMAT("env=%d has no robot %s", envId % robotname);
     }
     
     if(bUseManip) {
         const ManipulatorPtr pmanip = probot->GetManipulator(manipname);
         if(pmanip == nullptr) {
-            throw OPENRAVE_EXCEPTION_FORMAT("env=%d, robot %s has no manipulator %s", envId % robotname % manipname, OpenRAVEErrorCode::ORE_InvalidArguments);
+            RAVELOG_WARN_FORMAT("env=%d, robot %s has no manipulator %s", envId % robotname % manipname);
         }
         const PostureDescriberBasePtr pDescriber = RaveCreatePostureDescriber(penv, this->interfacename);
         if(pDescriber == nullptr) {
-            throw OPENRAVE_EXCEPTION_FORMAT("env=%d, cannot create robot posture describer interface %s for robot %s, manipulator %s",
-                                            envId % this->interfacename % robotname % manipname, OpenRAVEErrorCode::ORE_InvalidArguments);
+            RAVELOG_WARN_FORMAT("env=%d, cannot create robot posture describer interface %s for robot %s, manipulator %s",
+                                            envId % this->interfacename % robotname % manipname);
         }
         if(!pDescriber->Init(pmanip)) {
             RAVELOG_WARN_FORMAT("env=%d, cannot initialize robot posture describer for robot %s, manipulator %s", envId % robotname % manipname);
@@ -97,12 +98,12 @@ bool PostureDescriberModule::_LoadPostureDescriberJSONCommand(const rapidjson::V
         const LinkPtr baselink = probot->GetLink(baselinkname);
         const LinkPtr eelink = probot->GetLink(eelinkname);
         if(baselink == nullptr || eelink == nullptr) {
-            throw OPENRAVE_EXCEPTION_FORMAT("env=%d, robot %s has no link %s or %s", envId % robotname % baselinkname % eelinkname, OpenRAVEErrorCode::ORE_InvalidArguments);
+            RAVELOG_WARN_FORMAT("env=%d, robot %s has no link %s or %s", envId % robotname % baselinkname % eelinkname);
         }
         const PostureDescriberBasePtr pDescriber = RaveCreatePostureDescriber(penv, this->interfacename);
         if(pDescriber == nullptr) {
-            throw OPENRAVE_EXCEPTION_FORMAT("env=%d, cannot create robot posture describer interface %s for robot %s, from baselink %s to eelink %s",
-                                            envId % interfacename % robotname % baselinkname % eelinkname, OpenRAVEErrorCode::ORE_InvalidArguments);
+            RAVELOG_WARN_FORMAT("env=%d, cannot create robot posture describer interface %s for robot %s, from baselink %s to eelink %s",
+                                            envId % interfacename % robotname % baselinkname % eelinkname);
         }
 
         const LinkPair kinematicsChain_init {baselink, eelink};
@@ -110,6 +111,11 @@ bool PostureDescriberModule::_LoadPostureDescriberJSONCommand(const rapidjson::V
         if(kinematicsChain_init != kinematicsChain) {
             RAVELOG_INFO_FORMAT("Extracted essential kinematics chain: was from baselink \"%s\" to eelink \"%s\"; now from baselink \"%s\" to eelink \"%s\"",
                                 kinematicsChain_init[0]->GetName() % kinematicsChain_init[1]->GetName() % kinematicsChain[0]->GetName() % kinematicsChain[1]->GetName());
+        }
+
+        if(!pDescriber->Init(kinematicsChain)) {
+            RAVELOG_WARN_FORMAT("env=%d, cannot initialize robot posture describer for robot %s from baselink \"%s\" to eelink \"%s\"", envId % robotname % kinematicsChain[0]->GetName() % kinematicsChain[1]->GetName());
+            return false;
         }
 
         if(!probot->SetPostureDescriber(kinematicsChain, pDescriber)) {

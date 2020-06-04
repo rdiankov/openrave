@@ -436,8 +436,8 @@ object PyRobotBase::PyManipulator::GetFreeParameters() const {
     return toPyArray(values);
 }
 
-PyPostureDescriberBasePtr PyRobotBase::PyManipulator::GeneratePostureDescriber() const {
-    return openravepy::GeneratePostureDescriber(GetRobot()->_GetManipulator(_pmanip));
+PyPostureDescriberBasePtr PyRobotBase::PyManipulator::GeneratePostureDescriber(const bool load) const {
+    return openravepy::GeneratePostureDescriber(GetRobot()->_GetManipulator(_pmanip), "", load);
 }
 
 bool PyRobotBase::PyManipulator::SetPostureDescriber(PyPostureDescriberBasePtr pydescriber) const {
@@ -463,7 +463,7 @@ object PyRobotBase::PyManipulator::ComputePostureStates() const {
         return py::list();
     }
     std::vector<PostureStateInt> posturestates;
-    return StdVectorToPyList<PostureStateInt>(pDescriber->ComputePostureStates(posturestates) ? posturestates : std::vector<PostureStateInt>());
+    return pDescriber->ComputePostureStates(posturestates) ? StdVectorToPyList<PostureStateInt>(posturestates) : py::list();
 }
 
 object PyRobotBase::PyManipulator::ComputePostureStates(object pydofvalues) const {
@@ -475,7 +475,7 @@ object PyRobotBase::PyManipulator::ComputePostureStates(object pydofvalues) cons
     }
     std::vector<PostureStateInt> posturestates;
     const std::vector<dReal> vdofvalues = ExtractArray<dReal>(pydofvalues);
-    return StdVectorToPyList<PostureStateInt>(pDescriber->ComputePostureStates(posturestates, vdofvalues) ? posturestates : std::vector<PostureStateInt>());
+    return pDescriber->ComputePostureStates(posturestates, vdofvalues) ? StdVectorToPyList<PostureStateInt>(posturestates) : py::list();
 }
 
 bool PyRobotBase::PyManipulator::_FindIKSolution(const IkParameterization& ikparam, std::vector<dReal>& solution, int filteroptions, bool releasegil) const
@@ -1779,7 +1779,7 @@ PyStateRestoreContextBase* PyRobotBase::CreateRobotStateSaver(object options) {
     return CreateStateSaver(options);
 }
 
-PyPostureDescriberBasePtr PyRobotBase::GeneratePostureDescriber(PyManipulatorPtr pymanip) const {
+PyPostureDescriberBasePtr PyRobotBase::GeneratePostureDescriber(PyManipulatorPtr pymanip, const bool load) const {
     const RobotBase::ManipulatorPtr pmanip = pymanip->GetManipulator();
     const RobotBasePtr probot = pmanip->GetRobot();
     if(_probot != probot) {
@@ -1787,7 +1787,7 @@ PyPostureDescriberBasePtr PyRobotBase::GeneratePostureDescriber(PyManipulatorPtr
         RAVELOG_WARN_FORMAT("Manipulator %s does not belong to robot %s; robots not consistent %s!=%s", pmanip->GetName() % currrobotname % probot->GetName() % currrobotname);
         return PyPostureDescriberBasePtr();
     }
-    return openravepy::GeneratePostureDescriber(pymanip);
+    return openravepy::GeneratePostureDescriber(pymanip, "", load);
 }
 
 bool PyRobotBase::SetPostureDescriber(PyManipulatorPtr pymanip, PyPostureDescriberBasePtr pydescriber) const {
@@ -1814,7 +1814,7 @@ object PyRobotBase::ComputePostureStates(PyManipulatorPtr pymanip) const {
         return py::list();
     }
     std::vector<PostureStateInt> posturestates;
-    return StdVectorToPyList<PostureStateInt>(pDescriber->ComputePostureStates(posturestates) ? posturestates : std::vector<PostureStateInt>());
+    return pDescriber->ComputePostureStates(posturestates) ? StdVectorToPyList<PostureStateInt>(posturestates) : py::list();
 }
 
 object PyRobotBase::ComputePostureStates(PyManipulatorPtr pymanip, object pydofvalues) const {
@@ -1826,7 +1826,7 @@ object PyRobotBase::ComputePostureStates(PyManipulatorPtr pymanip, object pydofv
     }
     const std::vector<dReal> vdofvalues = ExtractArray<dReal>(pydofvalues);
     std::vector<PostureStateInt> posturestates;
-    return StdVectorToPyList<PostureStateInt>(pDescriber->ComputePostureStates(posturestates, vdofvalues) ? posturestates : std::vector<PostureStateInt>());
+    return pDescriber->ComputePostureStates(posturestates, vdofvalues) ? StdVectorToPyList<PostureStateInt>(posturestates) : py::list();
 }
 
 std::string PyRobotBase::__repr__() {
@@ -1948,6 +1948,10 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyConnectedBodyInfo_SerializeJSON_overloa
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyManipulatorInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyAttachedSensorInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyConnectedBodyInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 2)
+
+// posture
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyRobotBaseGeneratePostureDescriber_overloads  , GeneratePostureDescriber, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyManipulatorGeneratePostureDescriber_overloads, GeneratePostureDescriber, 0, 1)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -2289,7 +2293,7 @@ void init_openravepy_robot()
                        .def("CreateRobotStateSaver",&PyRobotBase::CreateRobotStateSaver, CreateRobotStateSaver_overloads(PY_ARGS("options") "Creates an object that can be entered using 'with' and returns a RobotStateSaver")[return_value_policy<manage_new_object>()])
 #endif
                        // posture describer
-                       .def("GeneratePostureDescriber", &PyRobotBase::GeneratePostureDescriber        , PY_ARGS("manip")              DOXY_FN(RobotBase             , GeneratePostureDescriber))
+                       .def("GeneratePostureDescriber", &PyRobotBase::GeneratePostureDescriber        , PyRobotBaseGeneratePostureDescriber_overloads(PY_ARGS("manip", "load") DOXY_FN(RobotBase, GeneratePostureDescriber)))
                        .def("SetPostureDescriber",      &PyRobotBase::SetPostureDescriber             , PY_ARGS("manip", "describer") DOXY_FN(RobotBase             , SetPostureDescriber))
                        .def("GetPostureDescriber",      &PyRobotBase::GetPostureDescriber             , PY_ARGS("manip")              DOXY_FN(RobotBase             , GetPostureDescriber))
                        .def("ComputePostureStates",     PyRobotBaseComputePostureStates               ,                               DOXY_FN(RobotBase::Manipulator, GetPostureDescriber))
@@ -2339,7 +2343,7 @@ void init_openravepy_robot()
         .def("GetFreeParameters",&PyRobotBase::PyManipulator::GetFreeParameters, DOXY_FN(RobotBase::Manipulator,GetFreeParameters))
 
         // posture describer
-        .def("GeneratePostureDescriber", &PyRobotBase::PyManipulator::GeneratePostureDescriber,                                     DOXY_FN(RobotBase::Manipulator, GeneratePostureDescriber))
+        .def("GeneratePostureDescriber", &PyRobotBase::PyManipulator::GeneratePostureDescriber, PyManipulatorGeneratePostureDescriber_overloads(PY_ARGS("load") DOXY_FN(RobotBase::Manipulator, GeneratePostureDescriber)))
         .def("SetPostureDescriber",      &PyRobotBase::PyManipulator::SetPostureDescriber     , PY_ARGS("describer")                DOXY_FN(RobotBase::Manipulator, SetPostureDescriber))
         .def("GetPostureDescriber",      &PyRobotBase::PyManipulator::GetPostureDescriber     ,                                     DOXY_FN(RobotBase::Manipulator, GetPostureDescriber))
         .def("ComputePostureStates",     PyManipulatorComputePostureStates                    ,                                     DOXY_FN(RobotBase::Manipulator, GetPostureDescriber))
