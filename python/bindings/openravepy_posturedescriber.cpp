@@ -156,9 +156,18 @@ PostureDescriberBasePtr GetPostureDescriber(PyPostureDescriberBasePtr pydescribe
     return !pydescriber ? PostureDescriberBasePtr() : pydescriber->GetPostureDescriber();
 }
 
-PyInterfaceBasePtr toPyPostureDescriberBase(PostureDescriberBasePtr pdescriber, PyEnvironmentBasePtr pyenv)
+PyInterfaceBasePtr toPyPostureDescriberBase(PostureDescriberBasePtr pDescriber, PyEnvironmentBasePtr pyenv)
 {
-    return !pdescriber ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyPostureDescriberBase(pdescriber,pyenv));
+    return !pDescriber ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyPostureDescriberBase(pDescriber,pyenv));
+}
+
+object toPyTrajectory(PostureDescriberBasePtr pDescriber, object opyenv)
+{
+    extract_<PyEnvironmentBasePtr> pyenv(opyenv);
+    if( pyenv.check() ) {
+        return py::to_object(toPyPostureDescriberBase(pDescriber, (PyEnvironmentBasePtr)pyenv));
+    }
+    return py::none_();
 }
 
 PyPostureDescriberBasePtr RaveCreatePostureDescriber(PyEnvironmentBasePtr pyenv, const std::string& name)
