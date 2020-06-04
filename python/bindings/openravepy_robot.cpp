@@ -463,7 +463,7 @@ object PyRobotBase::PyManipulator::ComputePostureStates() const {
         return py::list();
     }
     std::vector<PostureStateInt> posturestates;
-    return StdVectorToPyList<PostureStateInt>(pDescriber->ComputePostureStates(posturestates) ? posturestates : std::vector<PostureStateInt>());
+    return pDescriber->ComputePostureStates(posturestates) ? StdVectorToPyList<PostureStateInt>(posturestates) : py::list();
 }
 
 object PyRobotBase::PyManipulator::ComputePostureStates(object pydofvalues) const {
@@ -475,7 +475,7 @@ object PyRobotBase::PyManipulator::ComputePostureStates(object pydofvalues) cons
     }
     std::vector<PostureStateInt> posturestates;
     const std::vector<dReal> vdofvalues = ExtractArray<dReal>(pydofvalues);
-    return StdVectorToPyList<PostureStateInt>(pDescriber->ComputePostureStates(posturestates, vdofvalues) ? posturestates : std::vector<PostureStateInt>());
+    return pDescriber->ComputePostureStates(posturestates, vdofvalues) ? StdVectorToPyList<PostureStateInt>(posturestates) : py::list();
 }
 
 bool PyRobotBase::PyManipulator::_FindIKSolution(const IkParameterization& ikparam, std::vector<dReal>& solution, int filteroptions, bool releasegil) const
@@ -1814,7 +1814,7 @@ object PyRobotBase::ComputePostureStates(PyManipulatorPtr pymanip) const {
         return py::list();
     }
     std::vector<PostureStateInt> posturestates;
-    return StdVectorToPyList<PostureStateInt>(pDescriber->ComputePostureStates(posturestates) ? posturestates : std::vector<PostureStateInt>());
+    return pDescriber->ComputePostureStates(posturestates) ? StdVectorToPyList<PostureStateInt>(posturestates) : py::list();
 }
 
 object PyRobotBase::ComputePostureStates(PyManipulatorPtr pymanip, object pydofvalues) const {
@@ -1826,7 +1826,7 @@ object PyRobotBase::ComputePostureStates(PyManipulatorPtr pymanip, object pydofv
     }
     const std::vector<dReal> vdofvalues = ExtractArray<dReal>(pydofvalues);
     std::vector<PostureStateInt> posturestates;
-    return StdVectorToPyList<PostureStateInt>(pDescriber->ComputePostureStates(posturestates, vdofvalues) ? posturestates : std::vector<PostureStateInt>());
+    return pDescriber->ComputePostureStates(posturestates, vdofvalues) ? StdVectorToPyList<PostureStateInt>(posturestates) : py::list();
 }
 
 std::string PyRobotBase::__repr__() {

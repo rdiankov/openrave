@@ -190,6 +190,10 @@ void init_openravepy_posturedescriber(py::module& m)
 void init_openravepy_posturedescriber()
 #endif
 {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    using namespace py::literals;  // "..."_a
+#endif
+
     bool (PyPostureDescriberBase::*InitWithTwoLinks)(PyLinkPtr, PyLinkPtr)           = &PyPostureDescriberBase::Init;
     bool (PyPostureDescriberBase::*InitWithManip)(PyManipulatorPtr)                  = &PyPostureDescriberBase::Init;
     bool (PyPostureDescriberBase::*SupportsWithTwoLinks)(PyLinkPtr, PyLinkPtr) const = &PyPostureDescriberBase::Supports;
@@ -216,9 +220,12 @@ void init_openravepy_posturedescriber()
     PyPostureDescriberBasePtr (*openravepyRaveCreatePostureDescriber)(PyEnvironmentBasePtr pyenv, const std::string& name) = &RaveCreatePostureDescriber;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    m.def("GeneratePostureDescriber"  , GeneratePostureDescriberDefault               , PY_ARGS("manip"                         ) DOXY_FN1(GeneratePostureDescriber));
-    m.def("GeneratePostureDescriber"  , GeneratePostureDescriberByInterface           , PY_ARGS("manip", "interfacename"        ) DOXY_FN1(GeneratePostureDescriber));
-    m.def("GeneratePostureDescriber"  , GeneratePostureDescriberByInterfaceWithLoad   , PY_ARGS("manip", "interfacename", "load") DOXY_FN1(GeneratePostureDescriber));
+    m.def("GeneratePostureDescriber", &GeneratePostureDescriber,
+          "manip"_a,
+          "interfacename"_a = "",
+          "load"_a = false,
+          DOXY_FN1(GeneratePostureDescriber)
+    );
     m.def("RaveCreatePostureDescriber", openravepyRaveCreatePostureDescriber          , PY_ARGS("env", "name")                    DOXY_FN1(RaveCreatePostureDescriber));
 #else
     def("GeneratePostureDescriber"  , GeneratePostureDescriber, GeneratePostureDescriber_overloads(PY_ARGS("manip", "interfacename", "load") DOXY_FN1(GeneratePostureDescriber)));
