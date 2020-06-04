@@ -260,7 +260,7 @@ public:
     }
 
     void SetTorqueLimitMode(int torquelimitmode) {
-        _pconstraints->SetTorqueLimitMode(torquelimitmode);
+        _pconstraints->SetTorqueLimitMode(static_cast<DynamicsConstraintsType>(torquelimitmode));
     }
 
 
