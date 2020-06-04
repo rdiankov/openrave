@@ -24,15 +24,15 @@
 
 namespace openravepy {
 
-class OPENRAVEPY_API PyPostureDescriber : public PyInterfaceBase
+class OPENRAVEPY_API PyPostureDescriberBase : public PyInterfaceBase
 {
 protected:
     PostureDescriberBasePtr _pDescriber;
 
 public:
-    PyPostureDescriber() = delete;
-    PyPostureDescriber(PostureDescriberBasePtr pDescriber, PyEnvironmentBasePtr pyenv);
-    ~PyPostureDescriber();
+    PyPostureDescriberBase() = delete;
+    PyPostureDescriberBase(PostureDescriberBasePtr pDescriber, PyEnvironmentBasePtr pyenv);
+    ~PyPostureDescriberBase();
 
     /// \brief Gets the underlying posture describer pointer
     PostureDescriberBasePtr GetPostureDescriber() const;
@@ -55,25 +55,27 @@ public:
 
     /// \brief Computes posture states at the current dof values using the describer set at the manipulator
     /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
-    object ComputePostureStates();
+    py::object ComputePostureStates();
 
     /// \brief Computes posture states at the input dof values using the describer set at the manipulator
     /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
-    object ComputePostureStates(object pyjointvalues);
+    py::object ComputePostureStates(py::object pyjointvalues);
 
+    /// \brief Gets the "solution indices name" we use in the custom data map of IkReturn
     std::string GetMapDataKey() const;
 
-    py::dict Explain(object pystates) const;
+    /// \brief Interprets what a posture state means in the describer
+    py::object Interpret(const PostureStateInt state) const;
 
 private:
     std::vector<PostureStateInt> _posturestates; // cache
 };
 
-using PyPostureDescriberPtr = OPENRAVE_SHARED_PTR<PyPostureDescriber>;
+using PyPostureDescriberBasePtr = OPENRAVE_SHARED_PTR<PyPostureDescriberBase>;
 /// \brief generates a default posture describer in openrave
-OPENRAVEPY_API PyPostureDescriberPtr GeneratePostureDescriber(const PyRobotBase::PyManipulatorPtr& pymanip);
+OPENRAVEPY_API PyPostureDescriberBasePtr GeneratePostureDescriber(const PyRobotBase::PyManipulatorPtr& pymanip);
 ///\brief generates a posture describer specified by interface name
-OPENRAVEPY_API PyPostureDescriberPtr GeneratePostureDescriber(const PyRobotBase::PyManipulatorPtr& pymanip,
+OPENRAVEPY_API PyPostureDescriberBasePtr GeneratePostureDescriber(const PyRobotBase::PyManipulatorPtr& pymanip,
                                                               const std::string& interfacename);
 } // openravepy
 

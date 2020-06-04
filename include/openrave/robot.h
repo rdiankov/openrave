@@ -1099,6 +1099,11 @@ private:
                                       ManipulatorConstPtr pmanip,
                                       const std::vector<double>& dofvalues = {}) const;
 
+    /// \brief Ensures we have always mapped a manipulator to its "essential kinematics chain"---starting with a baselink-eelink pair, we exclude any static joints in between,
+    /// and also the first and last few prismatic joints. So the first and last joints in the essential kinematics chain are always revolute.
+    /// \param [in] pmanip    manipulator that, if not mapped yet, will be mapped to its essential kinematics chain
+    virtual void EnsureEssentialKinematicsChainRegisteredOnManipulator(ManipulatorConstPtr pmanip);
+
     //@}
 
     /** A grabbed body becomes part of the robot and its relative pose with respect to a robot's
@@ -1224,6 +1229,7 @@ protected:
 
     ConfigurationSpecification _activespec;
     std::map<LinkPair, PostureDescriberBasePtr> _mPostureDescribers; ///< maps a baselink-eelink pair to a posture describer that is capable of describing the kinematics chain; several manipulators can be attached to the same end-effector with different local tool transforms & directions, while they share the same baselink-eelink pair and the 6D IK hash, so we only need one describer for all these manipulators.
+    std::map<ManipulatorConstPtr, LinkPair> _mEssentialLinkPairs; ///< maps a manipulator to its essential link pair, formed by its baselink-eelink pair, but excluding any static joints and the first, last few prismatic joints
 
 private:
     virtual const char* GetHash() const {

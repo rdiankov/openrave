@@ -1792,7 +1792,7 @@ protected:
                 IkReturnPtr localret = *ittestreturn;
                 _vsolutionindices.resize(0);
                 FOREACH(it, localret->_mapdata[solutionIndicesNameLocal]) {
-                    _vsolutionindices.push_back((unsigned int)(*it+0.5)); // round
+                    _vsolutionindices.push_back((PostureStateInt)(*it+0.5)); // round
                 }
 
                 probot->SetActiveDOFValues(localret->_vsolution,false);
@@ -2162,8 +2162,8 @@ protected:
             while(ittestreturn != listlocalikreturns.end()) {
                 IkReturnPtr localret = ittestreturn->first;
                 _vsolutionindices.resize(0);
-                FOREACH(it, localret->_mapdata["solutionindices"]) {
-                    _vsolutionindices.push_back((unsigned int)(*it+0.5)); // round
+                FOREACH(it, localret->_mapdata[solutionIndicesNameLocal]) {
+                    _vsolutionindices.push_back((PostureStateInt)(*it+0.5)); // round
                 }
 
                 probot->SetActiveDOFValues(localret->_vsolution,false);
@@ -2465,7 +2465,7 @@ protected:
 
     //@{
     // cache for current Solve call. This has to be saved/restored if any user functions are called (like filters) since the filters themselves can potentially call into this ik solver.
-    std::vector<unsigned int> _vsolutionindices; ///< holds the indices of the current solution, this is not multi-thread safe
+    std::vector<PostureStateInt> _vsolutionindices; ///< holds the indices of the current solution, this is not multi-thread safe
     int _nSameStateRepeatCount;
     //@}
 

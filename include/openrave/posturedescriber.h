@@ -19,8 +19,6 @@
 
 #include <openrave/openrave.h>
 
-// todo __description
-
 namespace OpenRAVE {
 
 using LinkPair = RobotBase::LinkPair; ///< a baselink-eelink pair
@@ -58,7 +56,6 @@ public:
 
     /// \brief Initializes class members for a kinematics chain from baselink to eelink, provided this class supports the posture description.
     /// \return true if this describer class can support the posture description AND the initialization is successful.
-    // comment about kinematicsChain requirement that they cannot be prismatic?
     virtual bool Init(const LinkPair& kinematicsChain) = 0;
 
     /// \brief Initializes class members for a kinematics chain from the manipulator's baselink to its eelink, provided this class supports the posture description.
@@ -74,8 +71,11 @@ public:
     /// \brief Gets the key used in map data (of type CustomData) in IkReturn
     virtual std::string GetMapDataKey() const = 0;
 
-    /// \brief Cleans internal setup after before calling Init
+    /// \brief Cleans internal setup in the early stage of doing initializaion by Init()
     virtual void Destroy() = 0;
+
+    /// \brief Gets essential kinematics chain associated with this describer
+    virtual const LinkPair& GetEssentialKinematicsChain() const = 0;
 
     /// \return the static interface type this class points to (used for safe casting)
     static InterfaceType GetInterfaceTypeStatic() {
@@ -90,8 +90,12 @@ using PostureDescriberBasePtr = boost::shared_ptr<PostureDescriberBase>;
 
 ///< \brief Acquires from the manipulator the essential kinematics chain in the form of a link pair.
 /// An essential kinematics chain, if not empty, is always such that both the first joint and the last joint are active and revolute.
-OPENRAVE_API LinkPair GetEssentialKinematicsChain(const RobotBase::ManipulatorPtr& pmanip);
-OPENRAVE_API LinkPair GetEssentialKinematicsChain(const RobotBase::ManipulatorConstPtr& pmanip);
+OPENRAVE_API LinkPair ExtractEssentialKinematicsChain(const LinkPair& kinematicsChain);
+OPENRAVE_API LinkPair ExtractEssentialKinematicsChain(const RobotBase::ManipulatorPtr& pmanip);
+OPENRAVE_API LinkPair ExtractEssentialKinematicsChain(const RobotBase::ManipulatorConstPtr& pmanip);
+
+///< \brief Acquires from the manipulator the baselink-eelink pair.
+OPENRAVE_API LinkPair GetKinematicsChain(const RobotBase::ManipulatorConstPtr& pmanip);
 
 ///< \brief Computes a kinematics hash from the baselink to eelink.
 OPENRAVE_API std::string ComputeKinematicsChainHash(const LinkPair& kinematicsChain, std::vector<int>& armindices);

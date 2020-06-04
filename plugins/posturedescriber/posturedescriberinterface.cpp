@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <openrave/openrave.h>
+#include <openrave/openravejson.h> // openravejson
 #include "posturedescriberinterface.h" // PostureDescriber
 #include "plugindefs.h" // POSTUREDESCRIBER_CLASS_NAME
 #include "openraveplugindefs.h" // SerializeValues
@@ -30,6 +32,10 @@ PostureDescriber::PostureDescriber(const EnvironmentBasePtr& penv,
     PostureDescriberBase(penv),
     _fTol(fTol)
 {
+    __description =
+        ":Interface Author: Guangning Tan & Kei Usui & Rosen Diankov\n\n"
+        "Posture describer for a kinematics chain using the geometry of joint axes and anchors";
+
     // `SendCommand` APIs
     this->RegisterCommand("SetPostureValueThreshold",
                           boost::bind(&PostureDescriber::_SetPostureValueThresholdCommand, this, _1, _2),
@@ -46,12 +52,17 @@ PostureDescriber::PostureDescriber(const EnvironmentBasePtr& penv,
     this->RegisterCommand("GetSupportType",
                           boost::bind(&PostureDescriber::_GetSupportTypeCommand, this, _1, _2),
                           "Gets the robot posture support type");
+
+    // `SendJSONCommand` APIs
+    this->RegisterJSONCommand("Interpret",
+                              boost::bind(&PostureDescriber::_InterpretJSONCommand, this, _1, _2, _3),
+                              "Interpret a single posture state");
 }
 
 PostureDescriber::~PostureDescriber() {
 }
 
-/// \brief Checks whether joints match the their expected joint types
+/// \brief Checks whether joints match their expected joint types
 /// \return true the joint types match
 bool CheckJointTypes(const std::vector<JointPtr>& joints, const std::vector<KinBody::JointType>& jointtypes) {
     const size_t njoints = joints.size();
@@ -105,9 +116,9 @@ NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Tr
     // const ref
 RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr>& joints) {
     const size_t njoints = joints.size();
+    const std::vector<KinBody::JointType> jointtypes(njoints, KinBody::JointType::JointRevolute); ///< so far these are all revolute
     switch(njoints) {
         case 6: {
-            const std::vector<KinBody::JointType> jointtypes(njoints, KinBody::JointType::JointRevolute);
             if(!CheckJointTypes(joints, jointtypes)) {
                 RAVELOG_WARN("Not all 6 joints are purely revolute");
                 return RobotPostureSupportType::RPST_NoSupport;
@@ -131,7 +142,6 @@ RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr
         }
 
         case 4: {
-            const std::vector<KinBody::JointType> jointtypes(njoints, KinBody::JointType::JointRevolute);
             if(!CheckJointTypes(joints, jointtypes)) {
                 RAVELOG_WARN("Not all 4 joints are purely revolute");
                 return RobotPostureSupportType::RPST_NoSupport;
@@ -150,7 +160,6 @@ RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr
         }
 
         case 3: {
-            const std::vector<KinBody::JointType> jointtypes(njoints, KinBody::JointType::JointRevolute);
             if(!CheckJointTypes(joints, jointtypes)) {
                 RAVELOG_WARN("Not all 3 joints are purely revolute");
                 return RobotPostureSupportType::RPST_NoSupport;
@@ -173,32 +182,6 @@ RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr
     }
 
     return RobotPostureSupportType::RPST_NoSupport;
-}
-
-/// \brief Obtains either a joint axis or a translate between two joint anchors.
-/// \return a joint axis, if vecinfo[1]==-1; otherwise a translate between two joint anchors.
-Vector GetVectorFromInfo(const std::vector<JointPtr>& joints, const std::array<int, 2>& vecinfo) {
-    // std::cout << "GetVectorFromInfo: " << vecinfo[0] << ", " << vecinfo[1] << std::endl;
-    return (vecinfo[1]==-1) ?
-           /* joint axis   */ joints[vecinfo[0]]->GetAxis() :
-           /* joint anchor */ (joints[vecinfo[1]]->GetAnchor()-joints[vecinfo[0]]->GetAnchor());
-}
-
-/// \brief Generates a posture value function from a N-vector (array) of posture formulations.
-/// Each posture value is a triple product in form (a x b) ∙ c, where each vector is either a joint axis or a translate between two joint anchors.
-/// \return a posture value function, PostureValueFn=std::function<...> converted from a lambda expression.
-template <size_t N>
-PostureValueFn PostureValuesFunctionGenerator(const std::array<PostureFormulation, N>& postureforms) {
-    return [= /* pass postureforms *by value* */](const std::vector<JointPtr>&joints, const double fTol, std::vector<PostureStateInt>&posturestates) {
-               std::array<double, N> posturevalues;
-               for(size_t i = 0; i < N; ++i) {
-                   const PostureFormulation& postureform = postureforms[i];
-                   posturevalues[i] = GetVectorFromInfo(joints, postureform[0]).
-                                      cross(GetVectorFromInfo(joints, postureform[1])).
-                                      dot(GetVectorFromInfo(joints, postureform[2]));
-               }
-               compute_robot_posture_states<N>(posturevalues, fTol, posturestates);
-    };
 }
 
 void ComputePostureStates6RGeneral(const std::vector<JointPtr>& joints, const double fTol, std::vector<PostureStateInt>& posturestates) {
@@ -231,12 +214,25 @@ void ComputePostureStates4RTypeA(const std::vector<JointPtr>& joints, const doub
     const Vector anchor3 = joints[3]->GetAnchor();
 
     const std::array<double, 2> posturevalues {
-        // j1 pose: {{0, -1}, {1, -1}, {1, 3}}
+        // shoulder pose: {{0, -1}, {1, -1}, {1, 3}}
         axis0.cross(axis1).dot(anchor3-anchor1),
         // elbow: {{1, -1}, {1, 2}, {2, 3}}
         axis1.cross(anchor2-anchor1).dot(anchor3-anchor2),
     };
     compute_robot_posture_states<2>(posturevalues, fTol, posturestates);
+}
+
+void ComputePostureStatesRRRParallel(const std::vector<JointPtr>& joints, const double fTol, std::vector<PostureStateInt>& posturestates) {
+    const Vector axis0 = joints[0]->GetAxis();
+    const Vector anchor0 = joints[0]->GetAnchor();
+    const Vector anchor1 = joints[1]->GetAnchor();
+    const Vector anchor2 = joints[2]->GetAnchor();
+
+    const std::array<double, 1> posturevalues {
+        // elbow: {{0, -1}, {0, 1}, {1, 2}}
+        axis0.cross(anchor1-anchor0).dot(anchor2-anchor1),
+    };
+    compute_robot_posture_states<1>(posturevalues, fTol, posturestates);
 }
 
 bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
@@ -246,12 +242,9 @@ bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
     }
 
     this->Destroy(); // clear internal contents
-
-    // TGN to Kei: what if the user set this describer at some robot, and then Init with something else
     
     _kinematicsChain = kinematicsChain;
     _GetJointsFromKinematicsChain(_kinematicsChain, _joints);
-    // what happens if Init is called multiple times? _armindices gets longer and longer?
     for(const JointPtr& joint : _joints) {
         _armindices.push_back(joint->GetDOFIndex()); // collect arm indices
     }
@@ -259,64 +252,15 @@ bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
     _supporttype = DeriveRobotPostureSupportType(_joints);
     switch(_supporttype) {
     case RobotPostureSupportType::RPST_6R_General: {
-        const PostureFormulation
-            // comment out
-            shoulderform {{
-                              {0, -1},
-                              {1, -1},
-                              {0, 4},
-                          }},
-        elbowform {{
-                       {1, -1},
-                       {1, 2},
-                       {2, 4}
-                   }},
-        wristform {{
-                       {3, -1},
-                       {4, -1},
-                       {5, -1}
-                   }}
-        ;
-        const std::array<PostureFormulation, 3> postureforms = {
-            shoulderform,
-            elbowform,
-            wristform
-        };
-        _posturefn = PostureValuesFunctionGenerator<3>(postureforms);
         _posturefn = ComputePostureStates6RGeneral;
         break;
     }
     case RobotPostureSupportType::RPST_4R_Type_A: {
-        const PostureFormulation
-            shoulderform {{
-                        {0, -1},
-                        {1, -1},
-                        {1, 3},
-                    }},
-        elbowform {{
-                       {1, -1},
-                       {1, 2},
-                       {2, 3}
-                   }};
-        const std::array<PostureFormulation, 2> postureforms = {
-            shoulderform,
-            elbowform
-        };
-        _posturefn = PostureValuesFunctionGenerator<2>(postureforms);
         _posturefn = ComputePostureStates4RTypeA;
         break;
     }
     case RobotPostureSupportType::RPST_RRR_Parallel: {
-        const PostureFormulation
-        elbowform {{
-                       {0, -1},
-                       {0, 1},
-                       {1, 2}
-                   }};
-        const std::array<PostureFormulation, 1> postureforms = {
-            elbowform
-        };
-        _posturefn = PostureValuesFunctionGenerator<1>(postureforms);
+        _posturefn = ComputePostureStatesRRRParallel;
         break;
     }
     default: {
@@ -343,7 +287,6 @@ void PostureDescriber::_GetJointsFromKinematicsChain(const LinkPair& kinematicsC
     }
 }
 
-    // new line before { at the begging of function
 bool PostureDescriber::Supports(const LinkPair& kinematicsChain) const {
     const LinkPtr baselink = kinematicsChain[0];
     const LinkPtr eelink = kinematicsChain[1];
@@ -407,6 +350,10 @@ std::string PostureDescriber::GetMapDataKey() const {
     return std::string(POSTUREDESCRIBER_CLASS_NAME);
 }
 
+const LinkPair& PostureDescriber::GetEssentialKinematicsChain() const {
+    return _kinematicsChain;
+}
+
 void PostureDescriber::Destroy() {
     _kinematicsChain  = {nullptr, nullptr};
     _joints.clear();
@@ -434,6 +381,52 @@ bool PostureDescriber::_GetArmIndicesCommand(std::ostream& ssout, std::istream& 
 bool PostureDescriber::_GetSupportTypeCommand(std::ostream& ssout, std::istream& ssin) const {
     ssout << static_cast<int>(_supporttype);
     return _supporttype != RobotPostureSupportType::RPST_NoSupport;
+}
+
+bool PostureDescriber::_InterpretJSONCommand(const rapidjson::Value& input,
+                                             rapidjson::Value& output,
+                                             rapidjson::Document::AllocatorType& allocator) {
+    std::vector<std::string> vfeatures;
+    switch(_supporttype) {
+        case RobotPostureSupportType::RPST_6R_General: {
+            vfeatures = {"shoulder", "elbow", "wrist"};
+            break;
+        }
+        case RobotPostureSupportType::RPST_4R_Type_A: {
+            vfeatures = {"shoulder", "elbow"};
+            break;
+        }
+        case RobotPostureSupportType::RPST_RRR_Parallel: {
+            vfeatures = {"elbow"};
+            break;
+        }
+        default: {
+            RAVELOG_WARN("Unsupported posture type, cannot explain");
+            return false;
+        }
+    }
+
+    if (!input.HasMember("posturestate")) {
+        RAVELOG_WARN("RapidJSON input does not have posturestate");
+        return false;
+    }
+    const int state = input["posturestate"].GetInt();
+    int pow2 = (1 << vfeatures.size());
+    if(state < 0 || state >= pow2 ) {
+        RAVELOG_WARN_FORMAT("Posture state should be in range [0, %d); now it is %d", pow2 % state);
+        return false;
+    }
+
+    std::map<std::string, PostureStateInt> mfeaturestate;
+    for(const std::string& feature : vfeatures) {
+        pow2 >>= 1;
+        mfeaturestate[feature] = (state & pow2) ? 1 : 0;
+    }
+
+    openravejson::SetJsonValueByKey(output,       "features",     vfeatures, allocator);
+    openravejson::SetJsonValueByKey(output, "interpretation", mfeaturestate, allocator);
+
+    return true;
 }
 
 } // namespace OpenRAVE

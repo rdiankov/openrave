@@ -96,6 +96,9 @@ public:
     /// \brief Gets the key used in map data (of type CustomData) in IkReturn
     virtual std::string GetMapDataKey() const override;
 
+    /// \brief Gets essential kinematics chain associated with this describer
+    virtual const LinkPair& GetEssentialKinematicsChain() const override;
+
     /// \brief Gets joints (with nonzero dofs) along the kinematics chain from baselink to eelink
     const std::vector<KinBody::JointPtr>& GetJoints() const {
         return _joints;
@@ -121,6 +124,10 @@ protected:
 
     bool _GetSupportTypeCommand(std::ostream& ssout, std::istream& ssin) const;
 
+    /* ========== `SendJSONCommand` APIs ========== */
+    /// \brief `SendJSONCommand` API
+    bool _InterpretJSONCommand(const rapidjson::Value& input, rapidjson::Value& output, rapidjson::Document::AllocatorType& allocator);
+
     LinkPair _kinematicsChain {nullptr, nullptr}; ///< the baselink-eelink pair of a kinematics chain
     std::vector<KinBody::JointPtr> _joints; ///< non-static joints from baselink to eelink
     std::vector<int> _armindices; ///< dof indices from baselink to eelink
@@ -130,7 +137,6 @@ protected:
 };
 
 using PostureDescriberPtr = boost::shared_ptr<PostureDescriber>;
-using PostureFormulation = std::array<std::array<int, 2>, 3>; ///< a posture value is computed by a triple product (a x b) ∙ c
 
 /// \brief determines whether a robot posture value can be considered as 0.0, postive, or negative
 /// \param [in] x      a posture value

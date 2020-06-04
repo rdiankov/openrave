@@ -117,7 +117,7 @@ class PyAttachedSensorInfo;
 class PyConnectedBodyInfo;
 class PyLink;
 class PyJoint;
-class PyPostureDescriber;
+class PyPostureDescriberBase;
 
 typedef OPENRAVE_SHARED_PTR<PyInterfaceBase> PyInterfaceBasePtr;
 typedef OPENRAVE_SHARED_PTR<PyInterfaceBase const> PyInterfaceBaseConstPtr;
@@ -168,8 +168,8 @@ typedef OPENRAVE_SHARED_PTR<PyLink> PyLinkPtr;
 typedef OPENRAVE_SHARED_PTR<PyLink const> PyLinkConstPtr;
 typedef OPENRAVE_SHARED_PTR<PyJoint> PyJointPtr;
 typedef OPENRAVE_SHARED_PTR<PyJoint const> PyJointConstPtr;
-typedef OPENRAVE_SHARED_PTR<PyPostureDescriber> PyPostureDescriberPtr;
-typedef OPENRAVE_SHARED_PTR<PyPostureDescriber const> PyPostureDescriberConstPtr;
+typedef OPENRAVE_SHARED_PTR<PyPostureDescriberBase> PyPostureDescriberBasePtr;
+typedef OPENRAVE_SHARED_PTR<PyPostureDescriberBase const> PyPostureDescriberBaseConstPtr;
 
 inline uint64_t GetMicroTime()
 {
@@ -771,6 +771,8 @@ void init_openravepy_module();
 #endif
 OPENRAVEPY_API ModuleBasePtr GetModule(PyModuleBasePtr);
 OPENRAVEPY_API PyInterfaceBasePtr toPyModule(ModuleBasePtr, PyEnvironmentBasePtr);
+
+// physics engine
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 void init_openravepy_physicsengine(py::module& m);
 #else
@@ -778,6 +780,8 @@ void init_openravepy_physicsengine();
 #endif
 OPENRAVEPY_API PhysicsEngineBasePtr GetPhysicsEngine(PyPhysicsEngineBasePtr);
 OPENRAVEPY_API PyInterfaceBasePtr toPyPhysicsEngine(PhysicsEngineBasePtr, PyEnvironmentBasePtr);
+
+// planner
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 void init_openravepy_planner(py::module& m);
 #else
@@ -787,8 +791,9 @@ OPENRAVEPY_API PlannerBasePtr GetPlanner(PyPlannerBasePtr);
 OPENRAVEPY_API PyInterfaceBasePtr toPyPlanner(PlannerBasePtr, PyEnvironmentBasePtr);
 OPENRAVEPY_API PlannerBase::PlannerParametersPtr GetPlannerParameters(py::object);
 OPENRAVEPY_API PlannerBase::PlannerParametersConstPtr GetPlannerParametersConst(py::object);
-
 OPENRAVEPY_API py::object toPyPlannerParameters(PlannerBase::PlannerParametersPtr params);
+
+// robot
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 void init_openravepy_robot(py::module& m);
 #else
@@ -799,6 +804,8 @@ OPENRAVEPY_API RobotBasePtr GetRobot(PyRobotBasePtr);
 OPENRAVEPY_API PyInterfaceBasePtr toPyRobot(RobotBasePtr, PyEnvironmentBasePtr);
 OPENRAVEPY_API RobotBase::ManipulatorPtr GetRobotManipulator(py::object);
 OPENRAVEPY_API py::object toPyRobotManipulator(RobotBase::ManipulatorPtr, PyEnvironmentBasePtr);
+
+// sensor
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 void init_openravepy_sensor(py::module& m);
 #else
@@ -814,6 +821,8 @@ void init_openravepy_sensorsystem();
 #endif
 OPENRAVEPY_API SensorSystemBasePtr GetSensorSystem(PySensorSystemBasePtr);
 OPENRAVEPY_API PyInterfaceBasePtr toPySensorSystem(SensorSystemBasePtr, PyEnvironmentBasePtr);
+
+// space sampelr
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 void init_openravepy_spacesampler(py::module& m);
 #else
@@ -821,6 +830,8 @@ void init_openravepy_spacesampler();
 #endif
 OPENRAVEPY_API SpaceSamplerBasePtr GetSpaceSampler(PySpaceSamplerBasePtr);
 OPENRAVEPY_API PyInterfaceBasePtr toPySpaceSampler(SpaceSamplerBasePtr, PyEnvironmentBasePtr);
+
+// trajectory
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 void init_openravepy_trajectory(py::module& m);
 #else
@@ -830,10 +841,13 @@ OPENRAVEPY_API TrajectoryBasePtr GetTrajectory(py::object);
 OPENRAVEPY_API TrajectoryBasePtr GetTrajectory(PyTrajectoryBasePtr);
 OPENRAVEPY_API PyInterfaceBasePtr toPyTrajectory(TrajectoryBasePtr, PyEnvironmentBasePtr);
 OPENRAVEPY_API py::object toPyTrajectory(TrajectoryBasePtr, py::object opyenv);
-OPENRAVEPY_API PyEnvironmentBasePtr toPyEnvironment(PyTrajectoryBasePtr);
+
 // input can be class derived from PyInterfaceBase
+OPENRAVEPY_API PyEnvironmentBasePtr toPyEnvironment(PyTrajectoryBasePtr);
 OPENRAVEPY_API py::object toPyEnvironment(py::object opyinterface);
 OPENRAVEPY_API PyEnvironmentBasePtr toPyEnvironment(PyKinBodyPtr);
+
+// viewer
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 void init_openravepy_viewer(py::module& m);
 #else
@@ -841,16 +855,21 @@ void init_openravepy_viewer();
 #endif
 OPENRAVEPY_API ViewerBasePtr GetViewer(PyViewerBasePtr);
 OPENRAVEPY_API PyInterfaceBasePtr toPyViewer(ViewerBasePtr, PyEnvironmentBasePtr);
+
+// posture describer
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 void init_openravepy_posturedescriber(py::module& m);
 #else
 void init_openravepy_posturedescriber();
 #endif
-OPENRAVEPY_API PostureDescriberBasePtr GetPostureDescriber(PyPostureDescriberPtr);
-OPENRAVEPY_API PyInterfaceBasePtr toPyPostureDescriber(PostureDescriberBasePtr, PyEnvironmentBasePtr);
+OPENRAVEPY_API PostureDescriberBasePtr GetPostureDescriber(PyPostureDescriberBasePtr);
+OPENRAVEPY_API PyInterfaceBasePtr toPyPostureDescriberBase(PostureDescriberBasePtr, PyEnvironmentBasePtr);
+OPENRAVEPY_API py::object toPyPostureDescriberBase(PostureDescriberBasePtr, py::object opyenv);
+
 OPENRAVEPY_API int pyGetIntFromPy(py::object olevel, int defaultvalue);
 OPENRAVEPY_API py::object toPyPlannerStatus(const PlannerStatus&);
-    
+
+// configuration specification
 OPENRAVEPY_API PyConfigurationSpecificationPtr toPyConfigurationSpecification(const ConfigurationSpecification&);
 OPENRAVEPY_API const ConfigurationSpecification& GetConfigurationSpecification(PyConfigurationSpecificationPtr);
 

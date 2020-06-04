@@ -34,15 +34,15 @@ const char* PostureDescriberBase::GetHash() const {
 }
 
 bool PostureDescriberBase::Supports(const RobotBase::ManipulatorPtr& pmanip) const {
-    return this->Supports(GetEssentialKinematicsChain(pmanip));
+    return this->Supports(ExtractEssentialKinematicsChain(pmanip));
 }
 
 bool PostureDescriberBase::Init(const RobotBase::ManipulatorPtr& pmanip) {
-    return this->Init(GetEssentialKinematicsChain(pmanip));
+    return this->Init(ExtractEssentialKinematicsChain(pmanip));
 }
 
 std::string ComputeKinematicsChainHash(const RobotBase::ManipulatorPtr& pmanip, std::vector<int>& armindices) {
-    return ComputeKinematicsChainHash(GetEssentialKinematicsChain(pmanip), armindices);
+    return ComputeKinematicsChainHash(ExtractEssentialKinematicsChain(pmanip), armindices);
 }
 
 // refer to libopenrave.h and
@@ -116,9 +116,9 @@ std::string ComputeKinematicsChainHash(const LinkPair& kinematicsChain, std::vec
     return chainhash;
 }
 
-LinkPair ExtractEssentialKinematicsChain(const LinkPair& kinematicsChain_in) {
-    const LinkPtr baselink = kinematicsChain_in[0];
-    const LinkPtr eelink = kinematicsChain_in[1];
+LinkPair ExtractEssentialKinematicsChain(const LinkPair& kinematicsChain) {
+    const LinkPtr baselink = kinematicsChain[0];
+    const LinkPtr eelink = kinematicsChain[1];
 
     if( baselink == nullptr || eelink == nullptr ) {
         RAVELOG_WARN("kinematics chain is not valid as having nullptr");
@@ -138,35 +138,35 @@ LinkPair ExtractEssentialKinematicsChain(const LinkPair& kinematicsChain_in) {
             it = joints.erase(it);
         }
         else {
-            if((*it)->IsPrismatic(0)) {
-                typestr.push_back('P');
-            }
-            else if((*it)->IsRevolute(0)){
-                typestr.push_back('R');
-            }
             ++it;
         }
     }
-    const size_t firstR = typestr.find_first_of('R');
-    if(firstR == std::string::npos) {
+
+    const std::vector<JointPtr>::const_iterator itFirstR = find_if(begin(joints), end(joints),
+        [](const JointPtr& pjoint) { return pjoint->IsRevolute(0); }
+    );
+    if(itFirstR == end(joints)) {
         RAVELOG_WARN("No revolute joints at all");
         joints.clear();
         return {nullptr, nullptr};
     }
-    const size_t lastR = typestr.find_last_of('R');
-    joints = std::vector<JointPtr>(begin(joints) + firstR, begin(joints) + lastR + 1);
-    return {joints[0]->GetHierarchyParentLink(), joints.back()->GetHierarchyChildLink()};
+
+    const std::vector<JointPtr>::const_reverse_iterator ritLastR = find_if(joints.rbegin(), joints.rend(), 
+        [](const JointPtr& pjoint) { return pjoint->IsRevolute(0); }
+    );
+    const std::vector<JointPtr>::const_iterator itLastR = (ritLastR + 1).base(); // don't forget to add 1
+    return {(*itFirstR)->GetHierarchyParentLink(), (*itLastR)->GetHierarchyChildLink()};
 }
 
 LinkPair GetKinematicsChain(const RobotBase::ManipulatorConstPtr& pmanip) {
     return {pmanip->GetBase(), pmanip->GetEndEffector()};
 }
 
-LinkPair GetEssentialKinematicsChain(const RobotBase::ManipulatorPtr& pmanip) {
+LinkPair ExtractEssentialKinematicsChain(const RobotBase::ManipulatorPtr& pmanip) {
     return ExtractEssentialKinematicsChain(GetKinematicsChain(pmanip));
 }
 
-LinkPair GetEssentialKinematicsChain(const RobotBase::ManipulatorConstPtr& pmanip) {
+LinkPair ExtractEssentialKinematicsChain(const RobotBase::ManipulatorConstPtr& pmanip) {
     return ExtractEssentialKinematicsChain(GetKinematicsChain(pmanip));
 }
 

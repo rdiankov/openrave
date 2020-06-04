@@ -89,15 +89,15 @@ public:
         /* ========== posture describer ========== */
         /// \brief Generates a posture describer for this manipulator
         /// \return the describer if we have successfully generated one at the manipulator; None (nullptr) otherwise
-        PyPostureDescriberPtr GeneratePostureDescriber() const;
+        PyPostureDescriberBasePtr GeneratePostureDescriber() const;
 
         /// \brief Sets the posture describer for this manipulator
         /// \return true if the describer is successfully set
-        bool SetPostureDescriber(PyPostureDescriberPtr pydescriber) const;
+        bool SetPostureDescriber(PyPostureDescriberBasePtr pydescriber) const;
 
         /// \brief Gets the posture describer for this manipulator
         /// \return the describer if we have set one at the manipulator; None (nullptr) otherwise
-        PyPostureDescriberPtr GetPostureDescriber() const;
+        PyPostureDescriberBasePtr GetPostureDescriber() const;
 
         /// \brief Computes posture states at the current dof values using the describer set at the manipulator
         /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
@@ -432,15 +432,15 @@ public:
     /* ========== posture describer ========== */
     /// \brief Generates a posture describer for this manipulator
     /// \return the describer if we have successfully generated one at the manipulator; None (nullptr) otherwise
-    PyPostureDescriberPtr GeneratePostureDescriber(PyManipulatorPtr pymanip) const;
+    PyPostureDescriberBasePtr GeneratePostureDescriber(PyManipulatorPtr pymanip) const;
 
     /// \brief Sets the posture describer for this manipulator
     /// \return true if the describer is successfully set
-    bool SetPostureDescriber(PyManipulatorPtr pymanip, PyPostureDescriberPtr pydescriber) const;
+    bool SetPostureDescriber(PyManipulatorPtr pymanip, PyPostureDescriberBasePtr pydescriber) const;
 
     /// \brief Gets the posture describer for this manipulator
     /// \return the describer if we have set one at the manipulator; None (nullptr) otherwise
-    PyPostureDescriberPtr GetPostureDescriber(PyManipulatorPtr pymanip) const;
+    PyPostureDescriberBasePtr GetPostureDescriber(PyManipulatorPtr pymanip) const;
 
     /// \brief Computes posture states at the current dof values using the describer set at the manipulator
     /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
