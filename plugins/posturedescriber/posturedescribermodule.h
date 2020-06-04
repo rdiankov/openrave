@@ -30,10 +30,10 @@ public:
     PostureDescriberModule(const EnvironmentBasePtr& penv);
     virtual ~PostureDescriberModule() = default;
 
-    std::string interfacename = POSTUREDESCRIBER_MODULE_NAME;
-
 private:
-	/// \brief `SendCommand` APIs
+    std::string _interfacename = POSTUREDESCRIBER_MODULE_NAME;
+
+    /// \brief `SendCommand` APIs
     bool _SetInterfaceNameCommand(std::ostream& ssout, std::istream& ssin);
     bool _GetInterfaceNameCommand(std::ostream& ssout, std::istream& ssin) const;
 

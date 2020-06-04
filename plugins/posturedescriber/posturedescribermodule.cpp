@@ -44,12 +44,12 @@ PostureDescriberModule::PostureDescriberModule(const EnvironmentBasePtr& penv) :
 }
 
 bool PostureDescriberModule::_SetInterfaceNameCommand(std::ostream& ssout, std::istream& ssin) {
-    ssin >> this->interfacename;
+    ssin >> _interfacename;
     return !!ssin;
 }
 
 bool PostureDescriberModule::_GetInterfaceNameCommand(std::ostream& ssout, std::istream& ssin) const {
-    ssout << this->interfacename;
+    ssout << _interfacename;
     return true;
 }
 
@@ -60,7 +60,7 @@ bool PostureDescriberModule::_LoadPostureDescriberJSONCommand(const rapidjson::V
     const int envId = penv->GetId();
 
     if(input.HasMember("interfacename")) {
-        this->interfacename = input["interfacename"].GetString();
+        _interfacename = input["interfacename"].GetString();
     }
 
     if(!input.HasMember("robotname")) {
@@ -102,10 +102,10 @@ bool PostureDescriberModule::_LoadPostureDescriberJSONCommand(const rapidjson::V
         if(pmanip == nullptr) {
             RAVELOG_WARN_FORMAT("env=%d, robot %s has no manipulator %s", envId % robotname % manipname);
         }
-        const PostureDescriberBasePtr pDescriber = RaveCreatePostureDescriber(penv, this->interfacename);
+        const PostureDescriberBasePtr pDescriber = RaveCreatePostureDescriber(penv, _interfacename);
         if(pDescriber == nullptr) {
             RAVELOG_WARN_FORMAT("env=%d, cannot create robot posture describer interface %s for robot %s, manipulator %s",
-                                            envId % this->interfacename % robotname % manipname);
+                                            envId % _interfacename % robotname % manipname);
         }
         if(!pDescriber->Init(pmanip)) {
             RAVELOG_WARN_FORMAT("env=%d, cannot initialize robot posture describer for robot %s, manipulator %s", envId % robotname % manipname);
@@ -122,10 +122,10 @@ bool PostureDescriberModule::_LoadPostureDescriberJSONCommand(const rapidjson::V
         if(baselink == nullptr || eelink == nullptr) {
             RAVELOG_WARN_FORMAT("env=%d, robot %s has no link %s or %s", envId % robotname % baselinkname % eelinkname);
         }
-        const PostureDescriberBasePtr pDescriber = RaveCreatePostureDescriber(penv, this->interfacename);
+        const PostureDescriberBasePtr pDescriber = RaveCreatePostureDescriber(penv, _interfacename);
         if(pDescriber == nullptr) {
             RAVELOG_WARN_FORMAT("env=%d, cannot create robot posture describer interface %s for robot %s, from baselink %s to eelink %s",
-                                            envId % interfacename % robotname % baselinkname % eelinkname);
+                                            envId % _interfacename % robotname % baselinkname % eelinkname);
         }
 
         const LinkPair kinematicsChain_init {baselink, eelink};
