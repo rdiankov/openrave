@@ -219,7 +219,6 @@ void RobotBase::AttachedSensor::ExtractInfo(AttachedSensorInfo& info) const
 
 UpdateFromInfoResult RobotBase::AttachedSensor::UpdateFromInfo(const RobotBase::AttachedSensorInfo& info)
 {
-    // TODO: test
     BOOST_ASSERT(info._id == _info._id);
 
     // _name
@@ -2412,7 +2411,6 @@ void RobotBase::ExtractInfo(RobotBaseInfo& info)
 
 UpdateFromInfoResult RobotBase::UpdateFromInfo(const RobotBaseInfo& info)
 {
-    // TODO: test
     UpdateFromInfoResult updateFromInfoResult = KinBody::UpdateFromInfo(info);
     if (updateFromInfoResult != UFIR_Success) {
         return updateFromInfoResult;
@@ -2438,7 +2436,7 @@ UpdateFromInfoResult RobotBase::UpdateFromInfo(const RobotBaseInfo& info)
             if (updateFromManipulatorInfoResult == UFIR_Success) {
                 continue;
             }
-            // manipulator update failed;  TODO: more detailed handling
+            // manipulator update failed;
             return updateFromManipulatorInfoResult;
         }
         return UFIR_RequireRemoveFromEnvironment;
@@ -2463,7 +2461,7 @@ UpdateFromInfoResult RobotBase::UpdateFromInfo(const RobotBaseInfo& info)
             if (updateFromAttachedSensorInfoResult == UFIR_Success) {
                 continue;
             }
-            // attachedsensor update failed;  TODO: more detailed handling
+            // attachedsensor update failed;
             return updateFromAttachedSensorInfoResult;
         }
         return UFIR_RequireRemoveFromEnvironment;
@@ -2488,7 +2486,7 @@ UpdateFromInfoResult RobotBase::UpdateFromInfo(const RobotBaseInfo& info)
             if (updateFromConnectedBodyInfoResult == UFIR_Success) {
                 continue;
             }
-            // connectedbody update failed;  TODO: more detailed handling
+            // connectedbody update failed;
             return updateFromConnectedBodyInfoResult;
         }
         return UFIR_RequireRemoveFromEnvironment;
