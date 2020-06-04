@@ -1059,12 +1059,12 @@ private:
     /// \brief Gets robot posture describer for a kinematics chain from baselink to eelink
     /// \param [in] kinematicsChain    a kinematics chain prescribed by a baselink-eelink pair
     /// \return a non-null pointer to a robot posture describer if this describer was previously registered; otherwise a null pointer
-    virtual PostureDescriberBasePtr GetPostureDescriber(const LinkPair& kinematicsChain) const;
+    virtual PostureDescriberBasePtr GetPostureDescriber(const LinkPair& kinematicsChain);
 
     /// \brief Gets robot posture describer for a kinematics chain from the manipulator's baselink to its eelink.
     /// \param [in]  pmanip    manipulator that prescribes a kinematics chain from its baselink to its eelink
     /// \return a non-null pointer to a robot posture describer if this describer was previously registered; otherwise a null pointer
-    virtual PostureDescriberBasePtr GetPostureDescriber(ManipulatorConstPtr pmanip) const;
+    virtual PostureDescriberBasePtr GetPostureDescriber(ManipulatorConstPtr pmanip);
 
     /// \brief Unregisters the robot posture describer for a kinematics chain from baselink to eelink
     /// \param [in] kinematicsChain    a kinematics chain prescribed by a baselink-eelink pair

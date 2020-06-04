@@ -78,21 +78,21 @@ bool RobotBase::SetPostureDescriber(ManipulatorConstPtr pmanip, PostureDescriber
     return this->SetPostureDescriber(_mEssentialLinkPairs.at(pmanip), pDescriber);
 }
 
-PostureDescriberBasePtr RobotBase::GetPostureDescriber(const LinkPair& kinematicsChain) const
+PostureDescriberBasePtr RobotBase::GetPostureDescriber(const LinkPair& kinematicsChain)
 {
-    return _mPostureDescribers.count(kinematicsChain) ? _mPostureDescribers.at(kinematicsChain) : PostureDescriberBasePtr();
+    if(_mPostureDescribers.count(kinematicsChain)) {
+        return _mPostureDescribers.at(kinematicsChain);
+    }
+    const LinkPair essentialKinematicsChain = ExtractEssentialKinematicsChain(kinematicsChain);
+    return _mPostureDescribers.count(essentialKinematicsChain) ? _mPostureDescribers.at(essentialKinematicsChain) : PostureDescriberBasePtr();
 }
 
-PostureDescriberBasePtr RobotBase::GetPostureDescriber(ManipulatorConstPtr pmanip) const
+PostureDescriberBasePtr RobotBase::GetPostureDescriber(ManipulatorConstPtr pmanip)
 {
     if(pmanip == nullptr) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("Input manipulator cannot be null", OpenRAVEErrorCode::ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0("Input manipulator cannot be nullptr", OpenRAVEErrorCode::ORE_InvalidArguments);
     }
-    if(!_mEssentialLinkPairs.count(pmanip)) {
-        throw OPENRAVE_EXCEPTION_FORMAT("Have not included the mapping from manipulator %s to its essential kinematics chain yet",
-                                        pmanip->GetName(),
-                                        OpenRAVEErrorCode::ORE_InvalidArguments);
-    }
+    this->EnsureEssentialKinematicsChainRegisteredOnManipulator(pmanip);
     return this->GetPostureDescriber(_mEssentialLinkPairs.at(pmanip));
 }
 
@@ -100,7 +100,7 @@ bool RobotBase::ComputePostureStates(std::vector<PostureStateInt>& posturestates
 {
     if(!_mPostureDescribers.count(kinematicsChain)) {
         throw OPENRAVE_EXCEPTION_FORMAT(_("failed to find robot posture describer for links from \"%s\" to \"%s\" for robot \"%s\""),
-                                        GetName() % kinematicsChain[0]->GetName() % kinematicsChain[1]->GetName(), ORE_InvalidArguments);
+                                        GetName() % kinematicsChain[0]->GetName() % kinematicsChain[1]->GetName(), OpenRAVEErrorCode::ORE_InvalidArguments);
     }
     const PostureDescriberBasePtr& pDescriber = _mPostureDescribers.at(kinematicsChain);
     const LinkPair& kinematicsChainDescribed = pDescriber->GetEssentialKinematicsChain();
