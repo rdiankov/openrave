@@ -2209,7 +2209,7 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
         }
     }
 
-    // TODO: _trajfollow
+    // TODO: _trajfollow (not needed?)
 
     // _vmimic
     if (_info._vmimic != info._vmimic) {
@@ -2272,16 +2272,10 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
         return UFIR_RequireReinitialize;
     }
 
-    // _controlMode
+    // _controlMode, it will reset _jci_robotcontroller, _jci_io, _jci_externaldevice
     if (GetControlMode() != _info._controlMode) {
         return UFIR_RequireRemoveFromEnvironment;
     }
-
-    //TODO: _jci_robotcontroller
-
-    //TODO: _jci_io
-
-    //TODO: _jci_externaldevice
     return UFIR_Success;
 }
 
