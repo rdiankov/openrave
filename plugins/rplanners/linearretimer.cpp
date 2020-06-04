@@ -110,7 +110,7 @@ protected:
             bestmintime = max(bestmintime,mintime);
         }
         else if( affinedofs & DOF_Rotation3D ) {
-            RAVELOG_WARN("_ComputeMinimumTimeAffine does not support DOF_Rotation3D\n");
+            RAVELOG_WARN_FORMAT("env=%d, _ComputeMinimumTimeAffine does not support DOF_Rotation3D", GetEnv()->GetId());
         }
         return bestmintime;
     }
@@ -133,7 +133,7 @@ protected:
                 }
             }
             else if( affinedofs & DOF_Rotation3D ) {
-                RAVELOG_WARN("_ComputeMinimumTimeAffine does not support DOF_Rotation3D\n");
+                RAVELOG_WARN_FORMAT("env=%d, _ComputeMinimumTimeAffine does not support DOF_Rotation3D", GetEnv()->GetId());
             }
         }
         else {
@@ -219,7 +219,7 @@ protected:
             return max(angmintime,transmintime);
         }
         default:
-            throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization 0x%x"), ikparam.GetType(),ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, does not support parameterization 0x%x"), GetEnv()->GetId()%ikparam.GetType(),ORE_InvalidArguments);
         }
     }
 
