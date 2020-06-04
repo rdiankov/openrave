@@ -89,7 +89,7 @@ public:
         /* ========== posture describer ========== */
         /// \brief Generates a posture describer for this manipulator
         /// \return the describer if we have successfully generated one at the manipulator; None (nullptr) otherwise
-        PyPostureDescriberBasePtr GeneratePostureDescriber() const;
+        PyPostureDescriberBasePtr GeneratePostureDescriber(const bool load = false) const;
 
         /// \brief Sets the posture describer for this manipulator
         /// \return true if the describer is successfully set
@@ -432,7 +432,7 @@ public:
     /* ========== posture describer ========== */
     /// \brief Generates a posture describer for this manipulator
     /// \return the describer if we have successfully generated one at the manipulator; None (nullptr) otherwise
-    PyPostureDescriberBasePtr GeneratePostureDescriber(PyManipulatorPtr pymanip) const;
+    PyPostureDescriberBasePtr GeneratePostureDescriber(PyManipulatorPtr pymanip, const bool load = false) const;
 
     /// \brief Sets the posture describer for this manipulator
     /// \return true if the describer is successfully set
