@@ -159,7 +159,6 @@ bool KinBody::LinkInfo::operator==(const KinBody::LinkInfo& other) const {
             && _bStatic == other._bStatic
             && _bIsEnabled == other._bIsEnabled
             && _vgeometryinfos == other._vgeometryinfos;
-    // TODO: _mapExtraGeometries
 }
 
 KinBody::LinkInfo& KinBody::LinkInfo::operator=(const LinkInfo& other) {
