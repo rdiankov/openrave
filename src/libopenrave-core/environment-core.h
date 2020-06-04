@@ -2452,8 +2452,8 @@ public:
 
                 FOREACH(it, pKinBodyInfo->_dofValues) {
                     FOREACH(itJoint, pBody->_vecjoints) {
-                        if ((*itJoint)->GetName() == it->first) {
-                            vDOFValues[(*itJoint)->GetDOFIndex()] = (*it).second;
+                        if ((*itJoint)->GetName() == it->first.first) {
+                            vDOFValues[(*itJoint)->GetDOFIndex()+it->first.second] = (*it).second;
                             break;
                         }
                     }

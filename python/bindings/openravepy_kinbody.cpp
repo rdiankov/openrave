@@ -135,19 +135,20 @@ std::vector<KinBody::GrabbedInfoPtr> ExtractGrabbedInfoArray(object pyGrabbedInf
     return vGrabbedInfos;
 }
 
-std::vector< std::pair<std::string, dReal> > ExtractDOFValuesArray(object pyDOFValuesList)
+std::vector<std::pair<std::pair<std::string, int>, dReal>> ExtractDOFValuesArray(object pyDOFValuesList)
 {
     if( IS_PYTHONOBJECT_NONE(pyDOFValuesList) ) {
         return {};
     }
-    std::vector< std::pair<std::string, dReal> > vDOFValues;
+    std::vector<std::pair<std::pair<std::string, int>, dReal>> vDOFValues;
     try {
         const size_t arraySize = len(pyDOFValuesList);
         vDOFValues.resize(arraySize);
 
         for(size_t iDOFValue = 0; iDOFValue < arraySize; iDOFValue++) {
-            vDOFValues[iDOFValue].first = py::extract<std::string>(pyDOFValuesList[iDOFValue][0]);
-            vDOFValues[iDOFValue].second = py::extract<dReal>(pyDOFValuesList[iDOFValue][1]);
+            vDOFValues[iDOFValue].first.first = py::extract<std::string>(pyDOFValuesList[iDOFValue][0]);
+            vDOFValues[iDOFValue].first.second = py::extract<int>(pyDOFValuesList[iDOFValue][1]);
+            vDOFValues[iDOFValue].second = py::extract<dReal>(pyDOFValuesList[iDOFValue][2]);
         }
     }
     catch(...) {
@@ -181,12 +182,13 @@ std::map<std::string, JSONReadablePtr> ExtractReadableInterfaces(object pyReadab
     return mReadableInterfaces;
 }
 
-py::object ReturnDOFValues(const std::vector< std::pair<std::string, dReal> >& vDOFValues)
+py::object ReturnDOFValues(const std::vector<std::pair<std::pair<std::string, int>, dReal>>& vDOFValues)
 {
     py::list pyDOFValuesList;
     FOREACHC(it, vDOFValues) {
         py::list pyDOFValue;
-        pyDOFValue.append(it->first);
+        pyDOFValue.append(it->first.first);
+        pyDOFValue.append(it->first.second);
         pyDOFValue.append(it->second);
         pyDOFValuesList.append(pyDOFValue);
     }

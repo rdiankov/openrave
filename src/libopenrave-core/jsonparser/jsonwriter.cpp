@@ -119,11 +119,10 @@ protected:
                     for(size_t iDOF=0; iDOF<vDOFValues.size(); iDOF++) {
                         rapidjson::Value jointDOFValue;
                         KinBody::JointPtr pJoint = pBody->GetJointFromDOFIndex(iDOF);
-                        std::string jointId = pJoint->GetInfo()._id;
-                        if (jointId.empty()) {
-                            jointId = pJoint->GetInfo()._name;
-                        }
-                        OpenRAVE::JSON::SetJsonValueByKey(jointDOFValue, "jointId", jointId, _allocator);
+                        std::string jointName = pJoint->GetName();
+                        int jointAxis = iDOF - pJoint->GetDOFIndex();
+                        OpenRAVE::JSON::SetJsonValueByKey(jointDOFValue, "jointName", jointName, _allocator);
+                        OpenRAVE::JSON::SetJsonValueByKey(jointDOFValue, "jointAxis", jointAxis, _allocator);
                         OpenRAVE::JSON::SetJsonValueByKey(jointDOFValue, "value", vDOFValues[iDOF], _allocator);
                         dofValues.PushBack(jointDOFValue, _allocator);
                     }

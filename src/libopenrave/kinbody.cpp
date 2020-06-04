@@ -121,17 +121,8 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Doc
         dofValues.Reserve(_dofValues.size(), allocator);
         FOREACHC(itDofValue, _dofValues) {
             rapidjson::Value dofValue;
-            std::string jointId = "";
-            FOREACHC(itJointInfo, _vJointInfos) {
-                if ((*itJointInfo)->_name == itDofValue->first) {
-                    jointId = (*itJointInfo)->_name;
-                    break;
-                }
-            }
-            if (jointId.empty()) {
-                throw OPENRAVE_EXCEPTION_FORMAT0(_("joint is missing id and name"), ORE_InvalidArguments);
-            }
-            OpenRAVE::JSON::SetJsonValueByKey(dofValue, "jointId", jointId, allocator);
+            OpenRAVE::JSON::SetJsonValueByKey(dofValue, "jointName", itDofValue->first.first, allocator);
+            OpenRAVE::JSON::SetJsonValueByKey(dofValue, "jointAxis", itDofValue->first.second, allocator);
             OpenRAVE::JSON::SetJsonValueByKey(dofValue, "value", itDofValue->second, allocator);
             dofValues.PushBack(dofValue, allocator);
         }
@@ -242,18 +233,15 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 
     if (value.HasMember("dofValues")) {
         _dofValues.resize(0);
-        std::string jointId;
-        dReal dofValue;
         for(rapidjson::Value::ConstValueIterator itr = value["dofValues"].Begin(); itr != value["dofValues"].End(); ++itr) {
-            if (itr->IsObject() && itr->HasMember("jointId") && itr->HasMember("value")) {
-                OpenRAVE::JSON::LoadJsonValueByKey(*itr, "jointId", jointId);
+            if (itr->IsObject() && itr->HasMember("jointName") && itr->HasMember("value")) {
+                std::string jointName;
+                int jointAxis = 0;
+                dReal dofValue;
+                OpenRAVE::JSON::LoadJsonValueByKey(*itr, "jointName", jointName);
+                OpenRAVE::JSON::LoadJsonValueByKey(*itr, "jointAxis", jointAxis);
                 OpenRAVE::JSON::LoadJsonValueByKey(*itr, "value", dofValue);
-                for (size_t iJointInfo = 0; iJointInfo < _vJointInfos.size(); iJointInfo++) {
-                    if (_vJointInfos[iJointInfo]->_id == jointId) {
-                        _dofValues.emplace_back(_vJointInfos[iJointInfo]->_name, dofValue);
-                        break;
-                    }
-                }
+                _dofValues.emplace_back(std::make_pair(jointName, jointAxis), dofValue);
             }
         }
     }
@@ -5198,12 +5186,11 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
 
     info._dofValues.resize(0);
     std::vector<dReal> vDOFValues;
-    std::set<std::string> activeJointNames;
     GetDOFValues(vDOFValues);
     for (size_t idof = 0; idof < vDOFValues.size(); ++idof) {
         JointPtr pJoint = GetJointFromDOFIndex(idof);
-        info._dofValues.emplace_back(pJoint->GetName(), vDOFValues[idof]);
-        activeJointNames.insert(pJoint->GetName());
+        int jointAxis = idof - pJoint->GetDOFIndex();
+        info._dofValues.emplace_back(std::make_pair(pJoint->GetName(), jointAxis), vDOFValues[idof]);
     }
 
     info._transform = GetTransform();
@@ -5387,11 +5374,11 @@ UpdateFromInfoResult KinBody::UpdateFromInfo(const KinBodyInfo& info)
     std::vector<dReal> dofValues;
     GetDOFValues(dofValues);
     bool bDOFChanged = false;
-    for(std::vector<std::pair<std::string, dReal>>::const_iterator it = info._dofValues.begin(); it != info._dofValues.end(); it++) {
+    for(std::vector<std::pair<std::pair<std::string, int>, dReal>>::const_iterator it = info._dofValues.begin(); it != info._dofValues.end(); it++) {
         // find the joint in the active chain
         JointPtr joint;
         FOREACHC(itJoint,_vecjoints) {
-            if ((*itJoint)->GetName() == it->first) {
+            if ((*itJoint)->GetName() == it->first.first) {
                 joint = *itJoint;
                 break;
             }
@@ -5399,12 +5386,11 @@ UpdateFromInfoResult KinBody::UpdateFromInfo(const KinBodyInfo& info)
         if (!joint) {
             continue;
         }
-        int axis = 0; // TODO: handle multiple axis on one joint, get this index from the json
-        if (axis >= joint->GetDOF()) {
+        if (it->first.second >= joint->GetDOF()) {
             continue;
         }
-        if (dofValues[joint->GetDOFIndex()+axis] != it->second) {
-            dofValues[joint->GetDOFIndex()+axis] = it->second;
+        if (dofValues[joint->GetDOFIndex()+it->first.second] != it->second) {
+            dofValues[joint->GetDOFIndex()+it->first.second] = it->second;
             bDOFChanged = true;
         }
     }
