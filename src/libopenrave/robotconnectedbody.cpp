@@ -207,6 +207,57 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
     OpenRAVE::JSON::LoadJsonValueByKey(value, "isActive", _bIsActive);
 }
 
+
+bool RobotBase::ConnectedBodyInfo::operator==(const RobotBase::ConnectedBodyInfo& other) const {
+    return _id == other._id
+        && _name == other._name
+        && _linkname == other._linkname
+        && _uri == other._uri
+        && _trelative == other._trelative
+        && _vLinkInfos == other._vLinkInfos
+        && _vJointInfos == other._vJointInfos
+        && _vManipulatorInfos == other._vManipulatorInfos
+        && _vAttachedSensorInfos == other._vAttachedSensorInfos
+        && _vGripperInfos == other._vGripperInfos
+        && _bIsActive == other._bIsActive
+        && IsInfoVectorEqual(_vLinkInfos, other._vLinkInfos)
+        && IsInfoVectorEqual(_vJointInfos, other._vJointInfos)
+        && IsInfoVectorEqual(_vManipulatorInfos, other._vManipulatorInfos)
+        && IsInfoVectorEqual(_vAttachedSensorInfos, other._vAttachedSensorInfos)
+        && IsInfoVectorEqual(_vGripperInfos, other._vGripperInfos);
+}
+
+RobotBase::ConnectedBodyInfo& RobotBase::ConnectedBodyInfo::operator=(const RobotBase::ConnectedBodyInfo& other) {
+    _id = other._id;
+    _name = other._name;
+    _linkname = other._linkname;
+    _uri = other._uri;
+    _trelative = other._trelative;
+    _vLinkInfos.resize(other._vLinkInfos.size());
+    for (size_t iLink = 0; iLink < other._vLinkInfos.size(); iLink++) {
+        _vLinkInfos[iLink].reset(new LinkInfo(*other._vLinkInfos[iLink]));
+    }
+    _vJointInfos.resize(other._vJointInfos.size());
+    for (size_t iJoint = 0; iJoint < other._vJointInfos.size(); iJoint++) {
+        _vJointInfos[iJoint].reset(new JointInfo(*other._vJointInfos[iJoint]));
+    }
+    _vManipulatorInfos.resize(other._vManipulatorInfos.size());
+    for (size_t iManipulator = 0; iManipulator < other._vManipulatorInfos.size(); iManipulator++) {
+        _vManipulatorInfos[iManipulator].reset(new ManipulatorInfo(*other._vManipulatorInfos[iManipulator]));
+    }
+    _vAttachedSensorInfos.resize(other._vAttachedSensorInfos.size());
+    for (size_t iAttachedSensor = 0; iAttachedSensor < other._vAttachedSensorInfos.size(); iAttachedSensor++) {
+        _vAttachedSensorInfos[iAttachedSensor].reset(new AttachedSensorInfo(*other._vAttachedSensorInfos[iAttachedSensor]));
+    }
+    _vGripperInfos.resize(other._vGripperInfos.size());
+    for (size_t iGripperInfo = 0; iGripperInfo < other._vGripperInfos.size(); iGripperInfo++) {
+        _vGripperInfos[iGripperInfo].reset(new GripperInfo(*other._vGripperInfos[iGripperInfo]));
+    }
+    _bIsActive = other._bIsActive;
+    return *this;
+}
+
+
 RobotBase::ConnectedBody::ConnectedBody(OpenRAVE::RobotBasePtr probot) : _pattachedrobot(probot)
 {
 }
@@ -400,7 +451,6 @@ void RobotBase::ConnectedBody::ExtractInfo(RobotBase::ConnectedBodyInfo& info) c
 
 UpdateFromInfoResult RobotBase::ConnectedBody::UpdateFromInfo(const RobotBase::ConnectedBodyInfo& info)
 {
-    // TODO: test
     BOOST_ASSERT(info._id == _info._id);
     // name
     if (_info._name != info._name) {

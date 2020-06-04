@@ -657,35 +657,8 @@ public:
         ConnectedBodyInfo(const ConnectedBodyInfo& other) {
             *this = other;
         };
-        ConnectedBodyInfo& operator=(const ConnectedBodyInfo& other) {
-            _id = other._id;
-            _name = other._name;
-            _linkname = other._linkname;
-            _uri = other._uri;
-            _trelative = other._trelative;
-            _vLinkInfos = other._vLinkInfos;
-            _vJointInfos = other._vJointInfos;
-            _vManipulatorInfos = other._vManipulatorInfos;
-            _vAttachedSensorInfos = other._vAttachedSensorInfos;
-            _vGripperInfos = other._vGripperInfos;
-            _bIsActive = other._bIsActive;
-            // TODO: deep copy child infos
-            return *this;
-        }
-        bool operator==(const ConnectedBodyInfo& other) const {
-            return _id == other._id
-                && _name == other._name
-                && _linkname == other._linkname
-                && _uri == other._uri
-                && _trelative == other._trelative
-                && _vLinkInfos == other._vLinkInfos
-                && _vJointInfos == other._vJointInfos
-                && _vManipulatorInfos == other._vManipulatorInfos
-                && _vAttachedSensorInfos == other._vAttachedSensorInfos
-                && _vGripperInfos == other._vGripperInfos
-                && _bIsActive == other._bIsActive;
-            // TODO: deep compare child infos
-        }
+        ConnectedBodyInfo& operator=(const ConnectedBodyInfo& other);
+        bool operator==(const ConnectedBodyInfo& other) const;
         bool operator!=(const ConnectedBodyInfo& other) const {
             return !operator==(other);
         }

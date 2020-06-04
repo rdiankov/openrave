@@ -502,7 +502,6 @@ void UpdateOrCreateInfo(const rapidjson::Value& value, const std::string id, std
 /// \brief helper function to compare two info(shared_ptr) vectors and copy the diff into vecDiffOut;
 template<typename T>
 void GetInfoVectorDiff(const std::vector<boost::shared_ptr<T>>& oldInfos, const std::vector<boost::shared_ptr<T>>& newInfos, std::vector<boost::shared_ptr<T>>& vecDiffOut) {
-    // TODO: test
     vecDiffOut.reserve(oldInfos.size() + newInfos.size());
     std::vector<bool> existingNewInfo(newInfos.size(), false);
     for(typename std::vector<boost::shared_ptr<T>>::const_iterator itOldInfo = oldInfos.begin(); itOldInfo != oldInfos.end(); itOldInfo++) {
@@ -527,6 +526,31 @@ void GetInfoVectorDiff(const std::vector<boost::shared_ptr<T>>& oldInfos, const 
             vecDiffOut.push_back(newInfos[iFound]);
         }
     }
+}
+
+template<typename T>
+bool IsInfoVectorEqual(const std::vector<boost::shared_ptr<T>>& oldInfos, const std::vector<boost::shared_ptr<T>>& newInfos) {
+    if (oldInfos.size() != newInfos.size()) {
+        return false;
+    }
+
+    for (size_t iOld = 0; iOld < oldInfos.size(); iOld++) {
+        bool bFound = false;
+        for (size_t iNew = 0; iNew < newInfos.size(); iNew++) {
+            if (oldInfos[iOld]->_id == newInfos[iNew]->_id) {
+                bFound = true;
+                if ((*oldInfos[iOld]) != (*newInfos[iNew])) {
+                    return false;
+                }
+                break;
+            }
+        }
+        if (!bFound) {
+            return false;
+        }
+    }
+    return true;
+
 }
 
 } // end OpenRAVE namespace
