@@ -213,9 +213,6 @@ void init_openravepy_posturedescriber()
     .def("Interpret"           , &PyPostureDescriberBase::Interpret     , PY_ARGS("posturestate")       DOXY_FN(PostureDescriberBase, Interpret ""))
     ;
 
-    // PyPostureDescriberBasePtr (*GeneratePostureDescriberDefault            )(const PyManipulatorPtr&                                ) = &GeneratePostureDescriber;
-    // PyPostureDescriberBasePtr (*GeneratePostureDescriberByInterface        )(const PyManipulatorPtr&, const std::string&            ) = &GeneratePostureDescriber;
-    // PyPostureDescriberBasePtr (*GeneratePostureDescriberByInterfaceWithLoad)(const PyManipulatorPtr&, const std::string&, const bool) = &GeneratePostureDescriber;
     PyPostureDescriberBasePtr (*openravepyRaveCreatePostureDescriber)(PyEnvironmentBasePtr pyenv, const std::string& name) = &RaveCreatePostureDescriber;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

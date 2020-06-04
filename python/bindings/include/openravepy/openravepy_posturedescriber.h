@@ -72,12 +72,6 @@ private:
 };
 
 using PyPostureDescriberBasePtr = OPENRAVE_SHARED_PTR<PyPostureDescriberBase>;
-// /// \brief generates a default posture describer in openrave
-// OPENRAVEPY_API PyPostureDescriberBasePtr GeneratePostureDescriber(const PyRobotBase::PyManipulatorPtr& pymanip);
-// /// \brief generates a posture describer specified by interface name
-// OPENRAVEPY_API PyPostureDescriberBasePtr GeneratePostureDescriber(const PyRobotBase::PyManipulatorPtr& pymanip,
-//                                                                   const std::string& interfacename);
-
 /// \brief generates a posture describer specified by interface name, and load automatically if required
 OPENRAVEPY_API PyPostureDescriberBasePtr GeneratePostureDescriber(const PyRobotBase::PyManipulatorPtr& pymanip,
                                                                   std::string interfacename = "",
