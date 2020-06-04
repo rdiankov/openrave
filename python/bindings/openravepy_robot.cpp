@@ -441,7 +441,10 @@ PyPostureDescriberBasePtr PyRobotBase::PyManipulator::GeneratePostureDescriber(c
 }
 
 bool PyRobotBase::PyManipulator::SetPostureDescriber(PyPostureDescriberBasePtr pydescriber) const {
-    RobotBasePtr probot = _pmanip->GetRobot();
+    const RobotBasePtr probot = _pmanip->GetRobot();
+    if(pydescriber == nullptr) {
+        return probot->UnregisterPostureDescriber(_pmanip);
+    }    
     return probot->SetPostureDescriber(_pmanip, pydescriber->GetPostureDescriber());
 }
 

@@ -30,9 +30,27 @@ PostureDescriberModule::PostureDescriberModule(const EnvironmentBasePtr& penv) :
         "Loads a robot posture describer onto a kinematics chain, either in form of a (base link, end-effector link) pair, or in form of a manipulator";
 
     // `SendCommand` APIs
+    this->RegisterCommand("GetInterfaceName",
+                          boost::bind(&PostureDescriberModule::_GetInterfaceNameCommand, this, _1, _2),
+                          "Gets the interface name of the posture describer plugin");
+    this->RegisterCommand("SetInterfaceName",
+                          boost::bind(&PostureDescriberModule::_SetInterfaceNameCommand, this, _1, _2),
+                          "Sets the interface name of the posture describer plugin");
+
+    // `SendJSONCommand` APIs
     this->RegisterJSONCommand("LoadPostureDescriber",
                               boost::bind(&PostureDescriberModule::_LoadPostureDescriberJSONCommand, this, _1, _2, _3),
                               "Loads a robot posture describer onto a (base link, end-effector link) pair, or onto a manipulator that prescribes the pair");
+}
+
+bool PostureDescriberModule::_SetInterfaceNameCommand(std::ostream& ssout, std::istream& ssin) {
+    ssin >> this->interfacename;
+    return !!ssin;
+}
+
+bool PostureDescriberModule::_GetInterfaceNameCommand(std::ostream& ssout, std::istream& ssin) const {
+    ssout << this->interfacename;
+    return true;
 }
 
 bool PostureDescriberModule::_LoadPostureDescriberJSONCommand(const rapidjson::Value& input,
@@ -40,6 +58,10 @@ bool PostureDescriberModule::_LoadPostureDescriberJSONCommand(const rapidjson::V
                                                               rapidjson::Document::AllocatorType& allocator) {
     const EnvironmentBasePtr penv = GetEnv();
     const int envId = penv->GetId();
+
+    if(input.HasMember("interfacename")) {
+        this->interfacename = input["interfacename"].GetString();
+    }
 
     if(!input.HasMember("robotname")) {
         RAVELOG_WARN_FORMAT("env=%d, Rapidjson input has no robotname", envId);
