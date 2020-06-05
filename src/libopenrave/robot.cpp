@@ -481,7 +481,7 @@ void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson:
             (*it)->SerializeJSON(manipInfoValue, allocator, fUnitScale, options);
             rManipulatorInfoValues.PushBack(manipInfoValue, allocator);
         }
-        value.AddMember("manipulators", rManipulatorInfoValues, allocator);
+        value.AddMember("tools", rManipulatorInfoValues, allocator);  // NOTICE: manipulator is changed name to tools in json scene
     }
 
     if (_vAttachedSensorInfos.size() > 0) {
@@ -525,17 +525,17 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
 {
     KinBody::KinBodyInfo::DeserializeJSON(value, fUnitScale);
 
-    if (value.HasMember("manipulators")) {
-        _vManipulatorInfos.reserve(value["manipulators"].Size() + _vManipulatorInfos.size());
-        size_t iManipualtor = 0;
-        for (rapidjson::Value::ConstValueIterator it = value["manipulators"].Begin(); it != value["manipulators"].End(); ++it, ++iManipualtor) {
+    if (value.HasMember("tools")) {
+        _vManipulatorInfos.reserve(value["tools"].Size() + _vManipulatorInfos.size());
+        size_t iManipulator = 0;
+        for (rapidjson::Value::ConstValueIterator it = value["tools"].Begin(); it != value["tools"].End(); ++it, ++iManipulator) {
             const rapidjson::Value& manipulatorValue = *it;
             std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(manipulatorValue, "id");
             if (id.empty()) {
                 id = OpenRAVE::JSON::GetStringJsonValueByKey(manipulatorValue, "name");
             }
             if (id.empty()) {
-                id = boost::str(boost::format("manipulator%d") % iManipualtor);
+                id = boost::str(boost::format("tool%d") % iManipulator);
             }
             UpdateOrCreateInfo(manipulatorValue, id, _vManipulatorInfos, fUnitScale);
         }

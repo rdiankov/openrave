@@ -92,7 +92,7 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
         (*it)->SerializeJSON(info, allocator, fUnitScale, options);
         manipulatorInfosValue.PushBack(info, allocator);
     }
-    value.AddMember("manipulators", manipulatorInfosValue, allocator);
+    value.AddMember("tools", manipulatorInfosValue, allocator);
 
     rapidjson::Value attachedSensorInfosValue;
     attachedSensorInfosValue.SetArray();
@@ -156,17 +156,17 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
         }
     }
 
-    if(value.HasMember("manipulators")) {
-        _vManipulatorInfos.reserve(value["manipulators"].Size() + _vManipulatorInfos.size());
+    if(value.HasMember("tools")) {
+        _vManipulatorInfos.reserve(value["tools"].Size() + _vManipulatorInfos.size());
         size_t iManipualtor = 0;
-        for (rapidjson::Value::ConstValueIterator it = value["manipulators"].Begin(); it != value["manipulators"].End(); ++it, ++iManipualtor) {
+        for (rapidjson::Value::ConstValueIterator it = value["tool"].Begin(); it != value["tool"].End(); ++it, ++iManipualtor) {
             const rapidjson::Value& manipulatorValue = *it;
             std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(manipulatorValue, "id");
             if (id.empty()) {
                 id = OpenRAVE::JSON::GetStringJsonValueByKey(manipulatorValue, "name");
             }
             if (id.empty()) {
-                id = boost::str(boost::format("manipulator%d") % iManipualtor);
+                id = boost::str(boost::format("tool%d") % iManipualtor);
             }
             UpdateOrCreateInfo(manipulatorValue, id, _vManipulatorInfos, fUnitScale);
         }
