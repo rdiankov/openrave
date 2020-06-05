@@ -42,7 +42,11 @@ bool PostureDescriberBase::Init(const RobotBase::ManipulatorPtr& pmanip) {
 }
 
 std::string ComputeKinematicsChainHash(const RobotBase::ManipulatorPtr& pmanip, std::vector<int>& armindices) {
-    return ComputeKinematicsChainHash(ExtractEssentialKinematicsChain(pmanip), armindices);
+    const LinkPair kinematicsChain = ExtractEssentialKinematicsChain(pmanip);
+    if(kinematicsChain == LinkPair({nullptr, nullptr})) {
+        return "";
+    }
+    return ComputeKinematicsChainHash(kinematicsChain, armindices);
 }
 
 // refer to libopenrave.h and

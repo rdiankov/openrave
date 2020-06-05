@@ -124,10 +124,14 @@ PyPostureDescriberBasePtr GeneratePostureDescriber(const PyManipulatorPtr& pyman
     const ManipulatorPtr pmanip = pymanip->GetManipulator();
     const RobotBasePtr probot = pmanip->GetRobot();
     const EnvironmentBasePtr penv = probot->GetEnv();
-    std::vector<int> armindices;
-    // fe743742269c7dbfe548cb1f3412f658
-    const std::string chainhash = ComputeKinematicsChainHash(pmanip, armindices);
     const LinkPair linkpair = ExtractEssentialKinematicsChain(pmanip);
+    if(linkpair == LinkPair({nullptr, nullptr})) {
+        RAVELOG_WARN_FORMAT("The essential kinematics chain is empty for manpulator %s of robot %s", pmanip->GetName() % probot->GetName());
+        return PyPostureDescriberBasePtr();
+    }
+    // fe743742269c7dbfe548cb1f3412f658
+    std::vector<int> armindices;
+    const std::string chainhash = ComputeKinematicsChainHash(linkpair, armindices);    
     // posturedescriber.motoman-gp8l.fe743742269c7dbfe548cb1f3412f658.L0.L6
     if(interfacename.empty()) {
         interfacename = "posturedescriber"; ///< default to OpenRAVE's posture describer
