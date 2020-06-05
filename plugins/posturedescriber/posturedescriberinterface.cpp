@@ -79,8 +79,8 @@ bool CheckJointTypes(const std::vector<JointPtr>& joints, const std::vector<KinB
 
 /// \brief Derives the relation between joint axes of two consecutive joints using the transform between them
 /// \return a NeighbouringTwoJointsRelation enum for the joint axes' relation
-NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Transform& t, const double tol = 2e-15) {
-    // tol was increased for densowave-VS087A4-AV6
+NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Transform& t, const double tol = 4e-15) {
+    // tol was increased for densowave-VS087A4-AV6 (2e-15), and then RV-35FM (4e-15)
     const Vector zaxis0(0, 0, 1); // z-axis of the first joint
     const Vector zaxis1 = t.rotate(zaxis0); // z-axis of the second joint
     const double dotprod = zaxis1.dot3(zaxis0);
@@ -106,7 +106,7 @@ NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Tr
     std::stringstream ss;
     ss << std::setprecision(16);
     ss << "o = " << static_cast<int>(o) << ", t = " << t << ", dotprod = " << dotprod;
-    RAVELOG_VERBOSE_FORMAT("%s", ss.str());
+    RAVELOG_INFO_FORMAT("%s", ss.str());
 #endif // defined(POSTUREDESCRIBER_DEBUG)
     return o;
 }
@@ -304,7 +304,6 @@ bool PostureDescriber::Supports(const LinkPair& kinematicsChain) const {
     }
 
     const KinBodyPtr probot = kinematicsChain[0]->GetParent();
-    // minor, const ref?
     const std::string& robotname = probot->GetName();
     const std::string& baselinkname = baselink->GetName();
     const std::string& eelinkname = eelink->GetName();
