@@ -1698,6 +1698,17 @@ public:
         _mapCustomData[name][0] = value;
     }
 
+    /// \brief sets named custom data in the ik parameterization (\see SetCustomValues)
+    inline void SetCustomValue(const std::string& name, dReal value0, dReal value1, dReal value2)
+    {
+        OPENRAVE_ASSERT_OP_FORMAT0( name.size(), >, 0, "name is empty", ORE_InvalidArguments );
+        OPENRAVE_ASSERT_OP_FORMAT0(std::count_if(name.begin(), name.end(), _IsValidCharInName), ==, (int)name.size(), "name has invalid characters",ORE_InvalidArguments);
+        _mapCustomData[name].resize(3);
+        _mapCustomData[name][0] = value0;
+        _mapCustomData[name][1] = value1;
+        _mapCustomData[name][2] = value2;
+    }
+
     /// \brief gets custom data if it exists, returns false if it doesn't
     inline bool GetCustomValues(const std::string& name, std::vector<dReal>& values) const
     {

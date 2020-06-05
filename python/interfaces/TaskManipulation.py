@@ -191,14 +191,15 @@ class TaskManipulation:
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise PlanningError('CloseFingers')
-        resvalues = res.split()
+        resvalues = res
         if outputfinal:
-            final = array([float64(resvalues[i]) for i in range(dof)])
-            resvalues=resvalues[dof:]
+            resvaluesSplit = resvalues.split()
+            final = array([float64(resvaluesSplit[i]) for i in range(dof)])
+            resvalues = resvalues[sum(len(resvaluesSplit[i])+1 for i in range(dof)):]
         else:
             final=None
         if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
-            traj = ' '.join(resvalues)
+            traj = resvalues
             if outputtrajobj is not None and outputtrajobj:
                 newtraj = RaveCreateTrajectory(self.prob.GetEnv(),'')
                 newtraj.deserialize(traj)
@@ -235,14 +236,15 @@ class TaskManipulation:
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise PlanningError('ReleaseFingers')
-        resvalues = res.split()
+        resvalues = res
         if outputfinal:
-            final = array([float64(resvalues[i]) for i in range(dof)])
-            resvalues=resvalues[len(final):]
+            resvaluesSplit = resvalues.split()
+            final = array([float64(resvaluesSplit[i]) for i in range(dof)])
+            resvalues = resvalues[sum(len(resvaluesSplit[i])+1 for i in range(dof)):]
         else:
             final=None
         if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
-            traj = ' '.join(resvalues)
+            traj = resvalues
             if outputtrajobj is not None and outputtrajobj:
                 newtraj = RaveCreateTrajectory(self.prob.GetEnv(),'')
                 newtraj.deserialize(traj)
@@ -274,14 +276,15 @@ class TaskManipulation:
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise PlanningError('ReleaseActive')
-        resvalues = res.split()
+        resvalues = res
         if outputfinal:
-            final = array([float64(resvalues[i]) for i in range(self.robot.GetActiveDOF())])
-            resvalues=resvalues[len(final):]
+            resvaluesSplit = resvalues.split()
+            final = array([float64(resvaluesSplit[i]) for i in range(self.robot.GetActiveDOF())])
+            resvalues = resvalues[sum(len(resvaluesSplit[i])+1 for i in range(self.robot.GetActiveDOF())):]
         else:
             final=None
         if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
-            traj = ' '.join(resvalues)
+            traj = resvalues
             if outputtrajobj is not None and outputtrajobj:
                 newtraj = RaveCreateTrajectory(self.prob.GetEnv(),'')
                 newtraj.deserialize(traj)
