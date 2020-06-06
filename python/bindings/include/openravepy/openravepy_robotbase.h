@@ -53,6 +53,7 @@ public:
         void SetName(const std::string& s);
 
         object GetGripperName() const;
+        object GetToolChangerConnectedBodyToolName() const;
 
         PyRobotBasePtr GetRobot() const;
 

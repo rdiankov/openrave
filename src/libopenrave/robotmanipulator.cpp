@@ -28,6 +28,7 @@ void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value& value, rapidjso
     openravejson::SetJsonValueByKey(value, "iksolverType", _sIkSolverXMLId, allocator);
     openravejson::SetJsonValueByKey(value, "gripperJointNames", _vGripperJointNames, allocator);
     openravejson::SetJsonValueByKey(value, "grippername", _grippername, allocator);
+    openravejson::SetJsonValueByKey(value, "toolChangerConnectedBodyToolName", _toolChangerConnectedBodyToolName, allocator);
 }
 
 void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
