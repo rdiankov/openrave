@@ -743,6 +743,9 @@ private:
             if( IsForceWrite("gripper_info") ) {
                 _WriteGripperInfos(probot, articulated_system_motion);
             }
+            if( IsForceWrite("connected_body") ) {
+                _WriteConnectedBodies(probot, articulated_system_motion, vlinksidrefs);
+            }
         }
         if( IsForceWrite("jointlimit") ) {
             RAVELOG_WARN("do not support jointlimit writing\n");
@@ -1132,6 +1135,9 @@ private:
             }
             if( IsWrite("gripper_info") ) {
                 _WriteGripperInfos(probot, articulated_system_motion);
+            }
+            if( IsWrite("connected_body") ) {
+                _WriteConnectedBodies(probot, articulated_system_motion, vlinksidrefs);
             }
         }
 
@@ -2404,7 +2410,6 @@ private:
     void _WriteGripperInfos(RobotBasePtr probot, daeElementRef parent)
     {
         if (probot->GetGripperInfos().size() > 0) {
-            std::map<RobotBase::GripperInfoPtr, std::string> mapAttachedSensorIDs;
             FOREACHC(itGripperInfo, probot->GetGripperInfos()) {
                 domExtraRef pextra = daeSafeCast<domExtra>(parent->add(COLLADA_ELEMENT_EXTRA));
                 pextra->setName((*itGripperInfo)->name.c_str());
@@ -2423,6 +2428,28 @@ private:
                 daeElementRef pjson_data = ptec->add("json_data");
                 std::string sGripperInfoJSON = openravejson::DumpJson(rGripperInfo);
                 pjson_data->setCharData(sGripperInfoJSON.c_str());
+            }
+        }
+    }
+
+    void _WriteConnectedBodies(RobotBasePtr probot, daeElementRef parent, const std::vector<std::string>& vlinksidrefs)
+    {
+        if (probot->GetConnectedBodies().size() > 0) {
+            FOREACHC(itConnectedBody, probot->GetConnectedBodies()) {
+                domExtraRef pextra = daeSafeCast<domExtra>(parent->add(COLLADA_ELEMENT_EXTRA));
+                pextra->setName((*itConnectedBody)->GetName().c_str());
+                pextra->setType("connect_body");
+                domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
+                ptec->setProfile("OpenRAVE");
+
+                daeElementRef frame_origin = ptec->add("frame_origin");
+                frame_origin->setAttribute("link",vlinksidrefs.at((*itConnectedBody)->GetAttachingLink()->GetIndex()).c_str());
+                _WriteTransformation(frame_origin,(*itConnectedBody)->GetRelativeTransform());
+
+                daeElementRef instance_body = ptec->add("instance_body");
+                instance_body->setAttribute("url",(*itConnectedBody)->GetInfo()._url.c_str());
+
+                ptec->add("active")->add("bool")->setCharData((*itConnectedBody)->IsActive() ? "true" : "false");
             }
         }
     }
