@@ -466,6 +466,35 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
     }
 }
 
+RobotBase::RobotBaseInfo& RobotBase::RobotBaseInfo::operator=(const RobotBase::RobotBaseInfo& other) {
+    KinBodyInfo::operator=(other);
+    _vManipulatorInfos.resize(other._vManipulatorInfos.size());
+    for(size_t iManipulator = 0; iManipulator < other._vManipulatorInfos.size(); iManipulator++) {
+        _vManipulatorInfos[iManipulator].reset(new ManipulatorInfo(*other._vManipulatorInfos[iManipulator]));
+    }
+    _vAttachedSensorInfos.resize(other._vAttachedSensorInfos.size());
+    for(size_t iAttachedSensor = 0; iAttachedSensor < other._vAttachedSensorInfos.size(); iAttachedSensor++) {
+        _vAttachedSensorInfos[iAttachedSensor].reset(new AttachedSensorInfo(*other._vAttachedSensorInfos[iAttachedSensor]));
+    }
+    _vGripperInfos.resize(other._vGripperInfos.size());
+    for(size_t iGripperInfo = 0; iGripperInfo < other._vGripperInfos.size(); iGripperInfo++) {
+        _vGripperInfos[iGripperInfo].reset(new GripperInfo(*other._vGripperInfos[iGripperInfo]));
+    }
+    _vConnectedBodyInfos.resize(other._vConnectedBodyInfos.size());
+    for(size_t iConnectedBody = 0; iConnectedBody < other._vConnectedBodyInfos.size(); iConnectedBody++) {
+        _vConnectedBodyInfos[iConnectedBody].reset(new ConnectedBodyInfo(*other._vConnectedBodyInfos[iConnectedBody]));
+    }
+    return *this;
+}
+
+bool RobotBase::RobotBaseInfo::operator==(const RobotBaseInfo& other) const {
+    return KinBody::KinBodyInfo::operator==(other)
+        && IsInfoVectorEqual(_vManipulatorInfos, other._vManipulatorInfos)
+        && IsInfoVectorEqual(_vAttachedSensorInfos, other._vAttachedSensorInfos)
+        && IsInfoVectorEqual(_vConnectedBodyInfos, other._vConnectedBodyInfos)
+        && IsInfoVectorEqual(_vGripperInfos, other._vGripperInfos);
+}
+
 void RobotBase::RobotBaseInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     KinBody::KinBodyInfo::SerializeJSON(value, allocator, fUnitScale, options);

@@ -812,23 +812,8 @@ public:
         RobotBaseInfo(const RobotBaseInfo& other) : KinBodyInfo(other) {
             *this = other;
         };
-        RobotBaseInfo& operator=(const RobotBaseInfo& other) {
-            KinBodyInfo::operator=(other);
-            _vManipulatorInfos = other._vManipulatorInfos;
-            _vAttachedSensorInfos = other._vAttachedSensorInfos;
-            _vConnectedBodyInfos = other._vConnectedBodyInfos;
-            _vGripperInfos = other._vGripperInfos;
-            // TODO: deep copy infos
-            return *this;
-        }
-        bool operator==(const RobotBaseInfo& other) const {
-            return KinBodyInfo::operator==(other)
-                && _vManipulatorInfos == other._vManipulatorInfos
-                && _vAttachedSensorInfos == other._vAttachedSensorInfos
-                && _vConnectedBodyInfos == other._vConnectedBodyInfos
-                && _vGripperInfos == other._vGripperInfos;
-            // TODO: deep compare infos
-        }
+        RobotBaseInfo& operator=(const RobotBaseInfo& other);
+        bool operator==(const RobotBaseInfo& other) const;
         bool operator!=(const RobotBaseInfo& other) const{
             return !operator==(other);
         }
