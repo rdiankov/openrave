@@ -721,6 +721,9 @@ public:
         /// Has one-to-one correspondence with _info._vJointInfos
         virtual void GetResolvedJoints(std::vector<KinBody::JointPtr>& joints);
 
+        /// \brief gets the resolved dummy passive joint added by connected body.
+        virtual KinBody::JointPtr GetResolvedDummyPassiveJoint();
+
         /// \brief gets the resolved links added to the robot.
         ///
         /// Has one-to-one correspondence with _info._vManipulatorInfos
