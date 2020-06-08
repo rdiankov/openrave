@@ -465,7 +465,6 @@ void RobotBase::ConnectedBody::GetResolvedGripperInfos(std::vector<RobotBase::Gr
 void RobotBase::ConnectedBody::ExtractInfo(RobotBase::ConnectedBodyInfo& info) const
 {
     info = _info;
-    // TODO
 }
 
 UpdateFromInfoResult RobotBase::ConnectedBody::UpdateFromInfo(const RobotBase::ConnectedBodyInfo& info)
@@ -641,10 +640,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
 
     FOREACH(itconnectedBody, _vecConnectedBodies) {
         ConnectedBody& connectedBody = **itconnectedBody;
-
-        ConnectedBodyInfo _tempConnectedBodyInfo;
-        connectedBody.ExtractInfo(_tempConnectedBodyInfo);  // connectbody could change and connectedbody._info becomes outdated
-        const ConnectedBodyInfo& connectedBodyInfo = _tempConnectedBodyInfo;  // keep the const as original code
+        const ConnectedBodyInfo& connectedBodyInfo = connectedBody._info;
 
         if( !connectedBody.GetAttachingLink() ) {
             throw OPENRAVE_EXCEPTION_FORMAT("ConnectedBody %s for robot %s does not have a valid pointer to link %s", connectedBody.GetName()%GetName()%connectedBodyInfo._linkname, ORE_InvalidArguments);

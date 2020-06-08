@@ -5214,52 +5214,34 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
     SetTransform(Transform());
 
     // need to avoid extracting info for links and joints belonging to connected bodies
-    RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(shared_from_this());
     std::vector<bool> isConnectedLink(_veclinks.size(), false);  // indicate which link comes from connectedbody
     std::vector<bool> isConnectedJoint(_vecjoints.size(), false); // indicate which joint comes from connectedbody
     std::vector<bool> isConnectedPassiveJoint(_vPassiveJoints.size(), false); // indicate which passive joint comes from connectedbody
 
-    if (IsRobot() && !!pRobot) {
-        const std::vector<RobotBase::ConnectedBodyPtr> vecConnectedBodies = pRobot->GetConnectedBodies();
+    if (IsRobot()) {
+        RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(shared_from_this());
         std::vector<KinBody::LinkPtr> resolvedLinks;
         std::vector<KinBody::JointPtr> resolvedJoints;
-        KinBody::JointPtr resolvedDummyJoint;
-        FOREACHC(itConnectedBody, vecConnectedBodies) {
-            if ((*itConnectedBody)->IsActive()) {
-                (*itConnectedBody)->GetResolvedLinks(resolvedLinks);
-                (*itConnectedBody)->GetResolvedJoints(resolvedJoints);
-                resolvedDummyJoint = (*itConnectedBody)->GetResolvedDummyPassiveJoint();
+        FOREACHC(itConnectedBody, pRobot->GetConnectedBodies()) {
+            (*itConnectedBody)->GetResolvedLinks(resolvedLinks);
+            (*itConnectedBody)->GetResolvedJoints(resolvedJoints);
+            KinBody::JointPtr resolvedDummyJoint = (*itConnectedBody)->GetResolvedDummyPassiveJoint();
 
-                FOREACHC(itLink, _veclinks) {
-                    FOREACHC(itConnectedLink, resolvedLinks) {
-                        if ((*itLink)->GetName() == (*itConnectedLink)->GetName()) {
-                            isConnectedLink[itLink-_veclinks.begin()] = true;
-                            break;
-                        }
-                    }
+            FOREACHC(itLink, _veclinks) {
+                if (std::find(resolvedLinks.begin(), resolvedLinks.end(), *itLink) != resolvedLinks.end()) {
+                    isConnectedLink[itLink-_veclinks.begin()] = true;
                 }
-                FOREACHC(itJoint, _vecjoints) {
-                    FOREACHC(itConnectedJoint, resolvedJoints) {
-                        if ((*itJoint)->GetName() == (*itConnectedJoint)->GetName()) {
-                            isConnectedJoint[itJoint-_vecjoints.begin()] = true;
-                            break;
-                        }
-                    }
-                    if (!!resolvedDummyJoint && (*itJoint)->GetName() == resolvedDummyJoint->GetName()) {
-                        isConnectedJoint[itJoint-_vecjoints.begin()] = true;
-                    }
+            }
+            FOREACHC(itJoint, _vecjoints) {
+                if (std::find(resolvedJoints.begin(), resolvedJoints.end(), *itJoint) != resolvedJoints.end()) {
+                    isConnectedJoint[itJoint-_vecjoints.begin()] = true;
                 }
-
-                FOREACHC(itJoint, _vPassiveJoints) {
-                    FOREACHC(itConnectedJoint, resolvedJoints) {
-                        if ((*itJoint)->GetName() == (*itConnectedJoint)->GetName()) {
-                            isConnectedPassiveJoint[itJoint-_vPassiveJoints.begin()] = true;
-                            break;
-                        }
-                    }
-                    if (!!resolvedDummyJoint && (*itJoint)->GetName() == resolvedDummyJoint->GetName()) {
-                        isConnectedPassiveJoint[itJoint-_vPassiveJoints.begin()] = true;
-                    }
+            }
+            FOREACHC(itPassiveJoint, _vPassiveJoints) {
+                if (std::find(resolvedJoints.begin(), resolvedJoints.end(), *itPassiveJoint) != resolvedJoints.end()) {
+                    isConnectedPassiveJoint[itPassiveJoint-_vPassiveJoints.begin()] = true;
+                } else if (resolvedDummyJoint == *itPassiveJoint) {
+                    isConnectedPassiveJoint[itPassiveJoint-_vPassiveJoints.begin()] = true;
                 }
             }
         }

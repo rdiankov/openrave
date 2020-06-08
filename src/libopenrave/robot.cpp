@@ -2423,34 +2423,22 @@ void RobotBase::ExtractInfo(RobotBaseInfo& info)
         std::vector<RobotBase::ManipulatorPtr> resolvedManipulators;
         std::vector<RobotBase::AttachedSensorPtr> resolvedAttachedSensors;
         std::vector<RobotBase::GripperInfoPtr> resolvedGripperInfos;
-
-        if ((*itConnectedBody)->IsActive()) {
-            (*itConnectedBody)->GetResolvedManipulators(resolvedManipulators);
-            (*itConnectedBody)->GetResolvedAttachedSensors(resolvedAttachedSensors);
-            (*itConnectedBody)->GetResolvedGripperInfos(resolvedGripperInfos);
-        }
+        (*itConnectedBody)->GetResolvedManipulators(resolvedManipulators);
+        (*itConnectedBody)->GetResolvedAttachedSensors(resolvedAttachedSensors);
+        (*itConnectedBody)->GetResolvedGripperInfos(resolvedGripperInfos);
         FOREACHC(itManipulator, _vecManipulators) {
-            FOREACHC(itConnectedManipulator, resolvedManipulators) {
-                if ((*itManipulator)->GetName() == (*itConnectedManipulator)->GetName()) {
-                    isConnectedManipulator[itManipulator - _vecManipulators.begin()] = true;
-                    break;
-                }
+            if (std::find(resolvedManipulators.begin(), resolvedManipulators.end(), *itManipulator) != resolvedManipulators.end()) {
+                isConnectedManipulator[itManipulator - _vecManipulators.begin()] = true;
             }
         }
         FOREACHC(itAttachedSensor, _vecAttachedSensors) {
-            FOREACHC(itConnectedAttachedSensor, resolvedAttachedSensors) {
-                if ((*itAttachedSensor)->GetName() == (*itConnectedAttachedSensor)->GetName()) {
-                    isConnectedAttachedSensor[itAttachedSensor - _vecAttachedSensors.begin()] = true;
-                    break;
-                }
+            if (std::find(resolvedAttachedSensors.begin(), resolvedAttachedSensors.end(), *itAttachedSensor) != resolvedAttachedSensors.end()) {
+                isConnectedAttachedSensor[itAttachedSensor - _vecAttachedSensors.begin()] = true;
             }
         }
         FOREACHC(itGripperInfo, _vecGripperInfos) {
-            FOREACHC(itConnectedGripperInfo, resolvedGripperInfos) {
-                if ((*itGripperInfo)->name == (*itConnectedGripperInfo)->name) {
-                    isConnectedGripperInfo[itGripperInfo - _vecGripperInfos.begin()] = true;
-                    break;
-                }
+            if (std::find(resolvedGripperInfos.begin(), resolvedGripperInfos.end(), *itGripperInfo) != resolvedGripperInfos.end()) {
+                isConnectedGripperInfo[itGripperInfo - _vecGripperInfos.begin()] = true;
             }
         }
     }
