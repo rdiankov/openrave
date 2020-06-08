@@ -5223,10 +5223,12 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
         const std::vector<RobotBase::ConnectedBodyPtr> vecConnectedBodies = pRobot->GetConnectedBodies();
         std::vector<KinBody::LinkPtr> resolvedLinks;
         std::vector<KinBody::JointPtr> resolvedJoints;
+        KinBody::JointPtr resolvedDummyJoint;
         FOREACHC(itConnectedBody, vecConnectedBodies) {
             if ((*itConnectedBody)->IsActive()) {
                 (*itConnectedBody)->GetResolvedLinks(resolvedLinks);
                 (*itConnectedBody)->GetResolvedJoints(resolvedJoints);
+                resolvedDummyJoint = (*itConnectedBody)->GetResolvedDummyPassiveJoint();
 
                 FOREACHC(itLink, _veclinks) {
                     FOREACHC(itConnectedLink, resolvedLinks) {
@@ -5239,48 +5241,57 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
                 FOREACHC(itJoint, _vecjoints) {
                     FOREACHC(itConnectedJoint, resolvedJoints) {
                         if ((*itJoint)->GetName() == (*itConnectedJoint)->GetName()) {
-                            isConnectedLink[itJoint-_vecjoints.begin()] = true;
+                            isConnectedJoint[itJoint-_vecjoints.begin()] = true;
                             break;
                         }
+                    }
+                    if (!!resolvedDummyJoint && (*itJoint)->GetName() == resolvedDummyJoint->GetName()) {
+                        isConnectedJoint[itJoint-_vecjoints.begin()] = true;
                     }
                 }
 
                 FOREACHC(itJoint, _vPassiveJoints) {
                     FOREACHC(itConnectedJoint, resolvedJoints) {
                         if ((*itJoint)->GetName() == (*itConnectedJoint)->GetName()) {
-                            isConnectedPassiveJoint[itJoint-_vecjoints.begin()] = true;
+                            isConnectedPassiveJoint[itJoint-_vPassiveJoints.begin()] = true;
                             break;
                         }
+                    }
+                    if (!!resolvedDummyJoint && (*itJoint)->GetName() == resolvedDummyJoint->GetName()) {
+                        isConnectedPassiveJoint[itJoint-_vPassiveJoints.begin()] = true;
                     }
                 }
             }
         }
     }
 
-    info._vLinkInfos.resize(_veclinks.size());
-    for(size_t iLinkInfo = 0; iLinkInfo < info._vLinkInfos.size(); ++iLinkInfo) {
-        if (isConnectedLink[iLinkInfo]) {
+    info._vLinkInfos.reserve(_veclinks.size());
+    for(size_t iLink = 0; iLink < _veclinks.size(); ++iLink) {
+        if (isConnectedLink[iLink]) {
             continue;
         }
-        info._vLinkInfos[iLinkInfo].reset(new KinBody::LinkInfo());
-        _veclinks[iLinkInfo]->ExtractInfo(*info._vLinkInfos[iLinkInfo]);
+        KinBody::LinkInfoPtr pLinkInfo(new KinBody::LinkInfo());
+        info._vLinkInfos.push_back(pLinkInfo);
+        _veclinks[iLink]->ExtractInfo(*(info._vLinkInfos.back()));
     }
 
-    info._vJointInfos.resize(_vecjoints.size() + _vPassiveJoints.size());
-    for(size_t iJointInfo = 0; iJointInfo < _vecjoints.size(); iJointInfo++) {
-        if (isConnectedJoint[iJointInfo]) {
+    info._vJointInfos.reserve(_vecjoints.size() + _vPassiveJoints.size());
+    for(size_t iJoint = 0; iJoint < _vecjoints.size(); iJoint++) {
+        if (isConnectedJoint[iJoint]) {
             continue;
         }
-        info._vJointInfos[iJointInfo].reset(new KinBody::JointInfo());
-        _vecjoints[iJointInfo]->ExtractInfo(*info._vJointInfos[iJointInfo]);
+        KinBody::JointInfoPtr pJointInfo(new KinBody::JointInfo());
+        info._vJointInfos.push_back(pJointInfo);
+        _vecjoints[iJoint]->ExtractInfo(*(info._vJointInfos.back()));
     }
 
-    for(size_t iJointInfo = 0; iJointInfo < _vPassiveJoints.size(); iJointInfo++) {
-        if (isConnectedPassiveJoint[iJointInfo]) {
+    for(size_t iJoint = 0; iJoint < _vPassiveJoints.size(); iJoint++) {
+        if (isConnectedPassiveJoint[iJoint]) {
             continue;
         }
-        info._vJointInfos[_vecjoints.size() + iJointInfo].reset(new KinBody::JointInfo());
-        _vPassiveJoints[iJointInfo]->ExtractInfo(*info._vJointInfos[_vecjoints.size() + iJointInfo]);
+        KinBody::JointInfoPtr pJointInfo(new KinBody::JointInfo());
+        info._vJointInfos.push_back(pJointInfo);
+        _vPassiveJoints[iJoint]->ExtractInfo(*(info._vJointInfos.back()));
     }
 
 

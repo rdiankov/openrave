@@ -72,7 +72,9 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
         (*it)->SerializeJSON(info, allocator, fUnitScale, options);
         linkInfosValue.PushBack(info, allocator);
     }
-    value.AddMember("links", linkInfosValue, allocator);
+    if (linkInfosValue.Size() > 0) {
+        value.AddMember("links", linkInfosValue, allocator);
+    }
 
     rapidjson::Value jointInfosValue;
     jointInfosValue.SetArray();
@@ -82,7 +84,9 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
         (*it)->SerializeJSON(v, allocator, fUnitScale, options);
         jointInfosValue.PushBack(v, allocator);
     }
-    value.AddMember("joints", jointInfosValue, allocator);
+    if (jointInfosValue.Size()) {
+        value.AddMember("joints", jointInfosValue, allocator);
+    }
 
     rapidjson::Value manipulatorInfosValue;
     manipulatorInfosValue.SetArray();
@@ -92,7 +96,9 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
         (*it)->SerializeJSON(info, allocator, fUnitScale, options);
         manipulatorInfosValue.PushBack(info, allocator);
     }
-    value.AddMember("tools", manipulatorInfosValue, allocator);
+    if (manipulatorInfosValue.Size() > 0) {
+        value.AddMember("tools", manipulatorInfosValue, allocator);
+    }
 
     rapidjson::Value attachedSensorInfosValue;
     attachedSensorInfosValue.SetArray();
@@ -102,7 +108,9 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
         (*it)->SerializeJSON(info, allocator, fUnitScale, options);
         attachedSensorInfosValue.PushBack(info, allocator);
     }
-    value.AddMember("attachedSensors", attachedSensorInfosValue, allocator);
+    if (attachedSensorInfosValue.Size() > 0) {
+        value.AddMember("attachedSensors", attachedSensorInfosValue, allocator);
+    }
 
     rapidjson::Value rGripperInfos;
     rGripperInfos.SetArray();
@@ -112,7 +120,9 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
         (*it)->SerializeJSON(info, allocator, fUnitScale, options);
         rGripperInfos.PushBack(info, allocator);
     }
-    value.AddMember("gripperInfos", rGripperInfos, allocator);
+    if (rGripperInfos.Size() > 0) {
+        value.AddMember("gripperInfos", rGripperInfos, allocator);
+    }
 
     OpenRAVE::JSON::SetJsonValueByKey(value, "isActive", _bIsActive, allocator);
 }
