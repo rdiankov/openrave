@@ -395,6 +395,15 @@ void RobotBase::ConnectedBody::GetResolvedJoints(std::vector<KinBody::JointPtr>&
     }
 }
 
+KinBody::JointPtr RobotBase::ConnectedBody::GetResolvedDummyPassiveJoint()
+{
+    RobotBasePtr pattachedrobot = _pattachedrobot.lock();
+    if( !!pattachedrobot ) {
+        return pattachedrobot->GetJoint(_dummyPassiveJointName);
+    }
+    return KinBody::JointPtr();
+}
+
 void RobotBase::ConnectedBody::GetResolvedManipulators(std::vector<RobotBase::ManipulatorPtr>& manipulators)
 {
     manipulators.resize(_vResolvedManipulatorNames.size());

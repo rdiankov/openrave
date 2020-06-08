@@ -1341,16 +1341,60 @@ private:
             kmout->noderoot = pnoderoot;
         }
 
+        // note which links and joints are part of connected bodies
+        std::vector<uint8_t> vConnectedLinks; vConnectedLinks.resize(pbody->GetLinks().size(),0);
+        std::vector<uint8_t> vConnectedJoints; vConnectedJoints.resize(pbody->GetJoints().size(),0);
+        std::vector<uint8_t> vConnectedPassiveJoints; vConnectedPassiveJoints.resize(pbody->GetPassiveJoints().size(),0);
+        if( pbody->IsRobot() ) {
+            RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
+            FOREACH(itconnectedBody, probot->GetConnectedBodies()) {
+                RobotBase::ConnectedBody& connectedBody = **itconnectedBody;
+                std::vector<KinBody::LinkPtr> vResolvedLinks;
+                connectedBody.GetResolvedLinks(vResolvedLinks);
+                FOREACHC(itResolvedLink, vResolvedLinks) {
+                    vConnectedLinks.at((*itResolvedLink)->GetIndex()) = 1;
+                }
+
+                std::vector<KinBody::JointPtr> vResolvedJoints;
+                connectedBody.GetResolvedJoints(vResolvedJoints);
+                FOREACHC(itResolvedJoint, vResolvedJoints) {
+                    for(int ijointindex = 0; ijointindex < (int)pbody->GetJoints().size(); ++ijointindex) {
+                        if( pbody->GetJoints()[ijointindex] == *itResolvedJoint ) {
+                            vConnectedJoints[ijointindex] = 1;
+                        }
+                    }
+                    for(int ijointindex = 0; ijointindex < (int)pbody->GetPassiveJoints().size(); ++ijointindex) {
+                        if( pbody->GetPassiveJoints()[ijointindex] == *itResolvedJoint ) {
+                            vConnectedPassiveJoints[ijointindex] = 1;
+                        }
+                    }
+                }
+
+                KinBody::JointPtr pResolvedDummyPassiveJoint = connectedBody.GetResolvedDummyPassiveJoint();
+                for(int ijointindex = 0; ijointindex < (int)pbody->GetPassiveJoints().size(); ++ijointindex) {
+                    if( pbody->GetPassiveJoints()[ijointindex] == pResolvedDummyPassiveJoint ) {
+                        vConnectedPassiveJoints[ijointindex] = 1;
+                    }
+                }
+            }
+        }
+
         //  Declare all the joints
         vector< pair<int,KinBody::JointConstPtr> > vjoints;
-        vjoints.reserve(pbody->GetJoints().size()+pbody->GetPassiveJoints().size());
-        FOREACHC(itj, pbody->GetJoints() ) {
-            vjoints.emplace_back((*itj)->GetJointIndex(), *itj);
+        vjoints.reserve(vConnectedJoints.size()+vConnectedPassiveJoints.size());
+        for(int ijoint = 0; ijoint < (int)vConnectedJoints.size(); ++ijoint) {
+            if (!vConnectedJoints[ijoint]) {
+                KinBody::JointConstPtr pjoint = pbody->GetJoints()[ijoint];
+                vjoints.emplace_back(vjoints.size(), pjoint);
+            }
         }
-        int index=pbody->GetJoints().size();
-        FOREACHC(itj, pbody->GetPassiveJoints()) {
-            vjoints.emplace_back(index++, *itj);
+        for(int ipassivejoint = 0; ipassivejoint < (int)vConnectedPassiveJoints.size(); ++ipassivejoint) {
+            if (!vConnectedPassiveJoints[ipassivejoint]) {
+                KinBody::JointConstPtr ppassivejoint = pbody->GetPassiveJoints()[ipassivejoint];
+                vjoints.emplace_back(vjoints.size(), ppassivejoint);
+            }
         }
+
         vector<dReal> lmin, lmax;
         vector<domJointRef> vdomjoints(vjoints.size());
         kmout->pbody = pbody;
@@ -1407,8 +1451,10 @@ private:
         }
 
         list<int> listunusedlinks;
-        FOREACHC(itlink,pbody->GetLinks()) {
-            listunusedlinks.push_back((*itlink)->GetIndex());
+        for(int ilink = 0; ilink < (int)vConnectedLinks.size(); ++ilink) {
+            if (!vConnectedLinks[ilink]) {
+                listunusedlinks.push_back(pbody->GetLinks()[ilink]->GetIndex());
+            }
         }
 
         daeElementRef nodehead = _nodesLib;
