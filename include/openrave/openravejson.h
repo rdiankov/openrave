@@ -215,6 +215,23 @@ inline void LoadJsonValue(const rapidjson::Value& v, int& t) {
     }
 }
 
+inline void LoadJsonValue(const rapidjson::Value& v, int8_t& t) {
+    if (v.IsInt()) {
+        t = v.GetInt();
+    }
+    else if (v.IsUint()) {
+        t = v.GetUint();
+    }
+    else if (v.IsString()) {
+        t = boost::lexical_cast<unsigned int>(v.GetString());
+    }
+    else if (v.IsBool()) {
+        t = v.GetBool() ? 1 : 0;
+    } else {
+        throw openravejson::OpenRAVEJSONException("Cannot convert json type " + GetJsonString(v) + " to Int", openravejson::ORJE_InvalidArguments);
+    }
+}
+
 inline void LoadJsonValue(const rapidjson::Value& v, uint8_t& t) {
     if (v.IsUint()) {
         t = v.GetUint();

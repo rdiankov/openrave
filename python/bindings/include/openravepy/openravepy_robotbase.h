@@ -200,9 +200,9 @@ public:
 
         object GetInfo();
 
-        bool SetActive(bool active);
+        bool SetActive(int active);
 
-        bool IsActive();
+        int IsActive();
         object GetTransform() const;
         object GetTransformPose() const;
 

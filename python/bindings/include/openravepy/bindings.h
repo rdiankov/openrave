@@ -52,8 +52,8 @@
 // apparently there's a problem with higher versions of C++
 #if __cplusplus > 199711L || defined(__GXX_EXPERIMENTAL_CXX0X__)
 #include <typeinfo>
-#define FOREACH(it, v) for(decltype((v).begin()) it = (v).begin(); it != (v).end(); (it)++)
-#define FOREACH_NOINC(it, v) for(decltype((v).begin()) it = (v).begin(); it != (v).end(); )
+#define FOREACH(it, v) for(decltype((v).begin())it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACH_NOINC(it, v) for(decltype((v).begin())it = (v).begin(); it != (v).end(); )
 #else
 #define FOREACH(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); (it)++)
 #define FOREACH_NOINC(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); )
@@ -73,15 +73,15 @@
 
 #ifndef _RAVE_DISPLAY
 #define _RAVE_DISPLAY(RUNCODE)                                               \
-{                                                                              \
-    printf(                                                                    \
-        "\n%s:%d, [ %s "                                                       \
-        "]\n-----------------------------------------------------------------" \
-        "--------------\n",                                                    \
-        __FILE__, __LINE__, __func__ /*__PRETTY_FUNCTION__*/);                 \
-    RUNCODE;                                                                   \
-    printf("\n");                                                              \
-}
+    {                                                                              \
+        printf(                                                                    \
+            "\n%s:%d, [ %s "                                                       \
+            "]\n-----------------------------------------------------------------" \
+            "--------------\n",                                                    \
+            __FILE__, __LINE__, __func__ /*__PRETTY_FUNCTION__*/);                 \
+        RUNCODE;                                                                   \
+        printf("\n");                                                              \
+    }
 #endif // _RAVE_DISPLAY
 
 namespace openravepy {
@@ -107,6 +107,12 @@ template <>
 struct select_dtype<int>
 {
     static constexpr char type[] = "i4";
+};
+
+template <>
+struct select_dtype<int8_t>
+{
+    static constexpr char type[] = "i1";
 };
 
 template <>
@@ -159,6 +165,12 @@ template <>
 struct select_npy_type<int>
 {
     static constexpr NPY_TYPES type = NPY_INT;
+};
+
+template <>
+struct select_npy_type<int8_t>
+{
+    static constexpr NPY_TYPES type = NPY_INT8;
 };
 
 template <>
