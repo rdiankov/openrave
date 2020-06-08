@@ -81,6 +81,7 @@ public:
         std::string _sIkSolverXMLId; ///< xml id of the IkSolver interface to attach
         std::vector<std::string> _vGripperJointNames;         ///< names of the gripper joints
         std::string _grippername; ///< associates the manipulator with a GripperInfo
+        std::string _toolChangerConnectedBodyToolName; ///< When this parameter is non-empty, then this manipulator's end effector points to the mounting link of a tool changer system, then all the connected bodies that are mounted on this link become mutually exclusive in the sense that only one can be connected at a time. The value of the parameter targets a tool (manipulator) name inside those related connected bodies to select when the tool changing is complete.
     };
     typedef boost::shared_ptr<ManipulatorInfo> ManipulatorInfoPtr;
     typedef boost::shared_ptr<ManipulatorInfo const> ManipulatorInfoConstPtr;
@@ -198,8 +199,12 @@ public:
             return __pEffector;
         }
 
-        virtual std::string GetGripperName() const {
+        virtual const std::string& GetGripperName() const {
             return _info._grippername;
+        }
+
+        virtual const std::string& GetToolChangerConnectedBodyToolName() const {
+            return _info._toolChangerConnectedBodyToolName;
         }
 
         /// \brief Release all bodies grabbed by the end effector of this manipualtor

@@ -29,6 +29,7 @@ void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value& value, rapidjso
     OpenRAVE::JSON::SetJsonValueByKey(value, "ikSolverType", _sIkSolverXMLId, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "gripperJointNames", _vGripperJointNames, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "grippername", _grippername, allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(value, "toolChangerConnectedBodyToolName", _toolChangerConnectedBodyToolName, allocator);
 }
 
 void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
@@ -43,6 +44,7 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
     OpenRAVE::JSON::LoadJsonValueByKey(value, "ikSolverType", _sIkSolverXMLId);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "gripperJointNames", _vGripperJointNames);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "grippername", _grippername);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "toolChangerConnectedBodyToolName", _toolChangerConnectedBodyToolName);
 }
 
 RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::ManipulatorInfo& info) : _info(info), __probot(probot) {

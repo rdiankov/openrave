@@ -858,8 +858,8 @@ public:
                         (*itmanip)->_info._name = _prefix + (*itmanip)->_info._name;
                         (*itmanip)->_info._sBaseLinkName = _prefix + (*itmanip)->_info._sBaseLinkName;
                         (*itmanip)->_info._sEffectorLinkName = _prefix + (*itmanip)->_info._sEffectorLinkName;
-                        FOREACH(itgrippername,(*itmanip)->_info._vGripperJointNames) {
-                            *itgrippername = _prefix + *itgrippername;
+                        FOREACH(itGripperJointName,(*itmanip)->_info._vGripperJointNames) {
+                            *itGripperJointName = _prefix + *itGripperJointName;
                         }
                     }
                 }
@@ -3241,6 +3241,14 @@ public:
                         }
                     }
 
+                    daeElementRef pToolChangerConnectedBodyToolName = tec->getChild("toolChangerConnectedBodyToolName");
+                    if( !!pToolChangerConnectedBodyToolName ) {
+                        manipinfo._toolChangerConnectedBodyToolName = pToolChangerConnectedBodyToolName->getCharData();
+                    }
+                    else{
+                        manipinfo._toolChangerConnectedBodyToolName.clear();
+                    }
+
                     daeElementRef pframe_tip = tec->getChild("frame_tip");
                     if( !!pframe_tip ) {
                         domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pframe_tip->getAttribute("link"), as).resolve().elt);
@@ -3318,7 +3326,7 @@ public:
                                 }
                             }
                         }
-                        else if((pmanipchild->getElementName() != string("frame_origin"))&&(pmanipchild->getElementName() != string("frame_tip"))&&(pmanipchild->getElementName() != string("grippername"))) {
+                        else if( pmanipchild->getElementName() != string("frame_origin") && pmanipchild->getElementName() != string("frame_tip") && pmanipchild->getElementName() != string("grippername") && pmanipchild->getElementName() != string("toolChangerConnectedBodyToolName") ) {
                             RAVELOG_WARN(str(boost::format("unrecognized tag <%s> in manipulator '%s'")%pmanipchild->getElementName()%manipinfo._name));
                         }
                     }

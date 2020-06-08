@@ -2322,6 +2322,9 @@ private:
             }
             daeElementRef pgrippername = ptec->add("grippername");
             pgrippername->setCharData((*itmanip)->GetGripperName().c_str());
+
+            daeElementRef pToolChangerConnectedBodyToolName = ptec->add("toolChangerConnectedBodyToolName");
+            pToolChangerConnectedBodyToolName->setCharData((*itmanip)->GetToolChangerConnectedBodyToolName().c_str());
         }
     }
 
