@@ -2549,7 +2549,7 @@ private:
                 _WriteTransformation(frame_origin,(*itConnectedBody)->GetRelativeTransform());
 
                 daeElementRef instance_body = ptec->add("instance_body");
-                instance_body->setAttribute("url",(*itConnectedBody)->GetInfo()._url.c_str());
+                instance_body->setAttribute("url",(*itConnectedBody)->GetInfo()._uri.c_str());
 
                 ptec->add("active")->add("bool")->setCharData((*itConnectedBody)->IsActive() ? "true" : "false");
             }
