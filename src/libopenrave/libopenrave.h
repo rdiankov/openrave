@@ -60,6 +60,19 @@
 
 #endif
 
+#ifndef _RAVE_DISPLAY
+#define _RAVE_DISPLAY(RUNCODE)                                               \
+{                                                                              \
+    printf(                                                                    \
+        "\n%s:%d, [ %s "                                                       \
+        "]\n-----------------------------------------------------------------" \
+        "--------------\n",                                                    \
+        __FILE__, __LINE__, __func__ /*__PRETTY_FUNCTION__*/);                 \
+    RUNCODE;                                                                   \
+    printf("\n");                                                              \
+}
+#endif // _RAVE_DISPLAY
+
 //template <typename T>
 //class openraveconst_iteratorbegin : public T::const_iterator
 //{

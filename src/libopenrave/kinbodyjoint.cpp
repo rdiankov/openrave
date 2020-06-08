@@ -1746,12 +1746,21 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
         }
         dofformat.dofindex = -1;
         JointPtr pjoint = dofformat.GetJoint(*parent);
+
+        _RAVE_DISPLAY(std::cout << "this joint is " << this->GetName() << ", parent joint is " << pjoint->GetName() << ", current dofformat = " << dofformat.to_string() 
+        )
+
         if((pjoint->GetDOFIndex() >= 0)&& !pjoint->IsMimic(dofformat.axis) ) {
             dofformat.dofindex = pjoint->GetDOFIndex()+dofformat.axis;
             MIMIC::DOFHierarchy h;
             h.dofindex = dofformat.dofindex;
             h.dofformatindex = mimic->_vdofformat.size();
             mimic->_vmimicdofs.push_back(h);
+
+            _RAVE_DISPLAY(std::cout << "add DOFHierarchy h into mimic->_vmimicdofs: " << h.to_string();)
+        }
+        else {
+            _RAVE_DISPLAY(std::cout << "dofindex = " << pjoint->GetDOFIndex() << ", axis " << dofformat.axis << " is mimic = " << pjoint->IsMimic(dofformat.axis) << ", so do not add into mimic->_vmimicdofs";)
         }
         mimic->_vdofformat.push_back(dofformat);
     }
@@ -1827,70 +1836,104 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     parent->_PostprocessChangedParameters(Prop_JointMimic);
 }
 
-void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> >& vpartials, int iaxis, std::map< std::pair<MIMIC::DOFFormat, int>, dReal >& mapcachedpartials) const
+void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> >& vpartials,
+                                               const int iaxis,
+                                               std::map< std::pair<MIMIC::DOFFormat, int>, dReal >& mapcachedpartials) const
 {
-    vpartials.resize(0);
+    vpartials.clear(); // this is a cache, so we clear
     if( dofindex >= 0 ) {
-        vpartials.emplace_back(dofindex+iaxis, 1.0);
-        return;
+        vpartials.emplace_back(dofindex + iaxis, 1.0); // active joint
+        return; // do nothing more
     }
+
     OPENRAVE_ASSERT_FORMAT(!!_vmimic.at(iaxis), "cannot compute partial velocities of joint %s", _info._name, ORE_Failed);
-    KinBodyConstPtr parent(_parent);
+
+    const KinBodyConstPtr parent(_parent);
+
+    _RAVE_DISPLAY(std::cout << "this joint is " << this->GetName() << " with index " << this->GetJointIndex() << "; parent is " << parent->GetName();)
+
+    // set up thisdofformat
     MIMIC::DOFFormat thisdofformat;
     thisdofformat.dofindex = -1; // always -1 since it is mimiced
-    thisdofformat.axis = iaxis;
-    thisdofformat.jointindex = jointindex;
+    thisdofformat.axis = iaxis; // input
+    thisdofformat.jointindex = this->GetJointIndex();
     if( jointindex < 0 ) {
-        // this is a weird computation... have to figure out the passive joint index given where it is in parent->GetPassiveJoints()
-        thisdofformat.jointindex = parent->GetJoints().size() + (find(parent->GetPassiveJoints().begin(),parent->GetPassiveJoints().end(),shared_from_this()) - parent->GetPassiveJoints().begin());
+        const size_t nActiveJoints = parent->GetJoints().size();
+        const std::vector<JointPtr>& vPassiveJoints = parent->GetPassiveJoints();
+        // figure out the passive joint index in vPassiveJoints
+        thisdofformat.jointindex = nActiveJoints + (find(begin(vPassiveJoints), end(vPassiveJoints), shared_from_this()) - begin(vPassiveJoints));
     }
-    std::vector<std::pair<int,dReal> > vtemppartials;
-    vector<dReal> vtempvalues;
-    FOREACHC(itmimicdof, _vmimic[iaxis]->_vmimicdofs) {
-        std::pair<MIMIC::DOFFormat, int> key = make_pair(thisdofformat,itmimicdof->dofindex);
-        std::map< std::pair<MIMIC::DOFFormat, int>, dReal >::iterator it = mapcachedpartials.find(key);
-        if( it == mapcachedpartials.end() ) {
+
+    _RAVE_DISPLAY(std::cout << thisdofformat.to_string(); );
+
+    
+    std::vector<std::pair<int, dReal> > vtemppartials;
+    std::vector<dReal> vtempvalues;
+
+    const MimicPtr pmimic = _vmimic[iaxis];
+
+    _RAVE_DISPLAY(std::cout << "pmimic = " << pmimic->to_string(););
+
+    for(const MIMIC::DOFHierarchy& mimicdof : pmimic->_vmimicdofs) {
+
+        _RAVE_DISPLAY(std::cout << mimicdof.to_string(); );
+
+        const std::pair<MIMIC::DOFFormat, int> key {thisdofformat, mimicdof.dofindex};
+        if( !mapcachedpartials.count(key) ) {
             // not in the cache so compute using the chain rule
             if( vtempvalues.empty() ) {
-                FOREACHC(itdofformat, _vmimic[iaxis]->_vdofformat) {
-                    vtempvalues.push_back(itdofformat->GetJoint(*parent)->GetValue(itdofformat->axis));
+                for(MIMIC::DOFFormat& dofformat : pmimic->_vdofformat) {
+                    const JointConstPtr pparentjoint = dofformat.GetJoint(*parent);
+                    _RAVE_DISPLAY(std::cout << "parent joint is " << pparentjoint->GetName());
+                    vtempvalues.push_back(pparentjoint->GetValue(dofformat.axis));
                 }
             }
-            dReal fvel = _vmimic[iaxis]->_velfns.at(itmimicdof->dofformatindex)->Eval(vtempvalues.empty() ? NULL : &vtempvalues[0]);
-            const MIMIC::DOFFormat& dofformat = _vmimic[iaxis]->_vdofformat.at(itmimicdof->dofformatindex);
-            if( dofformat.GetJoint(*parent)->IsMimic(dofformat.axis) ) {
-                dofformat.GetJoint(*parent)->_ComputePartialVelocities(vtemppartials,dofformat.axis,mapcachedpartials);
+            OpenRAVEFunctionParserRealPtr velfn = pmimic->_velfns.at(mimicdof.dofformatindex);
+            dReal fvel = velfn->Eval(vtempvalues.empty() ? NULL : &vtempvalues[0]);
+            _RAVE_DISPLAY(std::cout << "fvel = " << fvel)
+            const MIMIC::DOFFormat& dofformat = pmimic->_vdofformat.at(mimicdof.dofformatindex);
+            const JointConstPtr pparentjoint = dofformat.GetJoint(*parent);
+            _RAVE_DISPLAY(std::cout << "parent joint is " << pparentjoint->GetName());
+            if( pparentjoint->IsMimic(dofformat.axis) ) {
+                // recursion
+                _RAVE_DISPLAY(std::cout << this->GetName() << " calls recursion with parent joint " + pparentjoint->GetName();)
+
+                pparentjoint->_ComputePartialVelocities(vtemppartials, dofformat.axis, mapcachedpartials);
                 dReal fpartial = 0;
-                FOREACHC(itpartial,vtemppartials) {
-                    if( itpartial->first == itmimicdof->dofindex ) {
-                        fpartial += itpartial->second;
+                for(std::pair<int, dReal>& partial : vtemppartials) {
+                    if( partial.first == mimicdof.dofindex ) {
+                        fpartial += partial.second;
                     }
                 }
+                _RAVE_DISPLAY(std::cout << "fpartial = " << fpartial)
                 fvel *= fpartial;
             }
+
             // before pushing back, check for repetition
             bool badd = true;
-            FOREACH(itpartial,vpartials) {
-                if( itpartial->first == itmimicdof->dofindex ) {
-                    itpartial->second += fvel;
+            for(std::pair<int, dReal>& partial : vpartials) {
+                if( partial.first == mimicdof.dofindex ) {
+                    partial.second += fvel;
                     badd = false;
                     break;
                 }
             }
             if( badd ) {
-                vpartials.emplace_back(itmimicdof->dofindex,  fvel);
+                vpartials.emplace_back(mimicdof.dofindex, fvel);
+                mapcachedpartials[key] = fvel; // TGN adds
             }
         }
         else {
+            // mapcachedpartials has key
             bool badd = true;
-            FOREACH(itpartial,vpartials) {
-                if( itpartial->first == itmimicdof->dofindex ) {
+            for(std::pair<int, dReal>& partial : vpartials) {
+                if( partial.first == mimicdof.dofindex ) {
                     badd = false;
                     break;
                 }
             }
             if( badd ) {
-                vpartials.emplace_back(itmimicdof->dofindex,  it->second);
+                vpartials.emplace_back(mimicdof.dofindex, mapcachedpartials.at(key));
             }
         }
     }
