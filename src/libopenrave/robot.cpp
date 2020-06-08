@@ -727,7 +727,7 @@ bool RobotBase::InitFromInfo(const RobotBaseInfo& info)
 
     _vecConnectedBodies.clear();
     FOREACHC(itconnectedbodyinfo, info._vConnectedBodyInfos) {
-        ConnectedBodyPtr newconnectedbody(new ConnectedBody(shared_robot(),**itconnectedbodyinfo));
+        ConnectedBodyPtr newconnectedbody(new ConnectedBody(shared_robot(), **itconnectedbodyinfo));
         _vecConnectedBodies.push_back(newconnectedbody);
     }
 
