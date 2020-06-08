@@ -5213,21 +5213,72 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
     SetDOFValues(vZeros, KinBody::CLA_Nothing);
     SetTransform(Transform());
 
-    // TODO: need to avoid extracting info for links and joints belonging to connected bodies
+    // need to avoid extracting info for links and joints belonging to connected bodies
+    RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(shared_from_this());
+    std::vector<bool> isConnectedLink(_veclinks.size(), false);  // indicate which link comes from connectedbody
+    std::vector<bool> isConnectedJoint(_vecjoints.size(), false); // indicate which joint comes from connectedbody
+    std::vector<bool> isConnectedPassiveJoint(_vPassiveJoints.size(), false); // indicate which passive joint comes from connectedbody
+
+    if (IsRobot() && !!pRobot) {
+        const std::vector<RobotBase::ConnectedBodyPtr> vecConnectedBodies = pRobot->GetConnectedBodies();
+        std::vector<KinBody::LinkPtr> resolvedLinks;
+        std::vector<KinBody::JointPtr> resolvedJoints;
+        FOREACHC(itConnectedBody, vecConnectedBodies) {
+            if ((*itConnectedBody)->IsActive()) {
+                (*itConnectedBody)->GetResolvedLinks(resolvedLinks);
+                (*itConnectedBody)->GetResolvedJoints(resolvedJoints);
+
+                FOREACHC(itLink, _veclinks) {
+                    FOREACHC(itConnectedLink, resolvedLinks) {
+                        if ((*itLink)->GetName() == (*itConnectedLink)->GetName()) {
+                            isConnectedLink[itLink-_veclinks.begin()] = true;
+                            break;
+                        }
+                    }
+                }
+                FOREACHC(itJoint, _vecjoints) {
+                    FOREACHC(itConnectedJoint, resolvedJoints) {
+                        if ((*itJoint)->GetName() == (*itConnectedJoint)->GetName()) {
+                            isConnectedLink[itJoint-_vecjoints.begin()] = true;
+                            break;
+                        }
+                    }
+                }
+
+                FOREACHC(itJoint, _vPassiveJoints) {
+                    FOREACHC(itConnectedJoint, resolvedJoints) {
+                        if ((*itJoint)->GetName() == (*itConnectedJoint)->GetName()) {
+                            isConnectedPassiveJoint[itJoint-_vecjoints.begin()] = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     info._vLinkInfos.resize(_veclinks.size());
     for(size_t iLinkInfo = 0; iLinkInfo < info._vLinkInfos.size(); ++iLinkInfo) {
+        if (isConnectedLink[iLinkInfo]) {
+            continue;
+        }
         info._vLinkInfos[iLinkInfo].reset(new KinBody::LinkInfo());
         _veclinks[iLinkInfo]->ExtractInfo(*info._vLinkInfos[iLinkInfo]);
     }
 
     info._vJointInfos.resize(_vecjoints.size() + _vPassiveJoints.size());
     for(size_t iJointInfo = 0; iJointInfo < _vecjoints.size(); iJointInfo++) {
+        if (isConnectedJoint[iJointInfo]) {
+            continue;
+        }
         info._vJointInfos[iJointInfo].reset(new KinBody::JointInfo());
         _vecjoints[iJointInfo]->ExtractInfo(*info._vJointInfos[iJointInfo]);
     }
 
     for(size_t iJointInfo = 0; iJointInfo < _vPassiveJoints.size(); iJointInfo++) {
+        if (isConnectedPassiveJoint[iJointInfo]) {
+            continue;
+        }
         info._vJointInfos[_vecjoints.size() + iJointInfo].reset(new KinBody::JointInfo());
         _vPassiveJoints[iJointInfo]->ExtractInfo(*info._vJointInfos[_vecjoints.size() + iJointInfo]);
     }

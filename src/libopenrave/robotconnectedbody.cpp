@@ -622,7 +622,10 @@ void RobotBase::_ComputeConnectedBodiesInformation()
 
     FOREACH(itconnectedBody, _vecConnectedBodies) {
         ConnectedBody& connectedBody = **itconnectedBody;
-        const ConnectedBodyInfo& connectedBodyInfo = connectedBody._info;
+
+        ConnectedBodyInfo _tempConnectedBodyInfo;
+        connectedBody.ExtractInfo(_tempConnectedBodyInfo);  // connectbody could change and connectedbody._info becomes outdated
+        const ConnectedBodyInfo& connectedBodyInfo = _tempConnectedBodyInfo;  // keep the const as original code
 
         if( !connectedBody.GetAttachingLink() ) {
             throw OPENRAVE_EXCEPTION_FORMAT("ConnectedBody %s for robot %s does not have a valid pointer to link %s", connectedBody.GetName()%GetName()%connectedBodyInfo._linkname, ORE_InvalidArguments);

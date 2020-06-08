@@ -2414,26 +2414,77 @@ void RobotBase::ExtractInfo(RobotBaseInfo& info)
 {
     KinBody::ExtractInfo(info);
 
+
+    // need to avoid extracting info from connectedbodies
+    std::vector<bool> isConnectedManipulator(_vecManipulators.size(), false);
+    std::vector<bool> isConnectedAttachedSensor(_vecAttachedSensors.size(), false);
+    std::vector<bool> isConnectedGripperInfo(_vecConnectedBodies.size(), false);
+
+    FOREACHC(itConnectedBody, _vecConnectedBodies) {
+        std::vector<RobotBase::ManipulatorPtr> resolvedManipulators;
+        std::vector<RobotBase::AttachedSensorPtr> resolvedAttachedSensors;
+        std::vector<RobotBase::GripperInfoPtr> resolvedGripperInfos;
+
+        if ((*itConnectedBody)->IsActive()) {
+            (*itConnectedBody)->GetResolvedManipulators(resolvedManipulators);
+            (*itConnectedBody)->GetResolvedAttachedSensors(resolvedAttachedSensors);
+            (*itConnectedBody)->GetResolvedGripperInfos(resolvedGripperInfos);
+        }
+        FOREACHC(itManipulator, _vecManipulators) {
+            FOREACHC(itConnectedManipulator, resolvedManipulators) {
+                if ((*itManipulator)->GetName() == (*itConnectedManipulator)->GetName()) {
+                    isConnectedManipulator[itManipulator - _vecManipulators.begin()] = true;
+                    break;
+                }
+            }
+        }
+        FOREACHC(itAttachedSensor, _vecAttachedSensors) {
+            FOREACHC(itConnectedAttachedSensor, resolvedAttachedSensors) {
+                if ((*itAttachedSensor)->GetName() == (*itConnectedAttachedSensor)->GetName()) {
+                    isConnectedAttachedSensor[itAttachedSensor - _vecAttachedSensors.begin()] = true;
+                    break;
+                }
+            }
+        }
+        FOREACHC(itGripperInfo, _vecGripperInfos) {
+            FOREACHC(itConnectedGripperInfo, resolvedGripperInfos) {
+                if ((*itGripperInfo)->name == (*itConnectedGripperInfo)->name) {
+                    isConnectedGripperInfo[itGripperInfo - _vecGripperInfos.begin()] = true;
+                    break;
+                }
+            }
+        }
+    }
+
     info._vManipulatorInfos.resize(_vecManipulators.size());
-    for(size_t i = 0; i < info._vManipulatorInfos.size(); ++i) {
+    for(size_t i = 0; i < _vecManipulators.size(); ++i) {
+        if (isConnectedManipulator[i]) {
+            continue;
+        }
         info._vManipulatorInfos[i].reset(new RobotBase::ManipulatorInfo());
         _vecManipulators[i]->ExtractInfo(*info._vManipulatorInfos[i]);
     }
 
     info._vAttachedSensorInfos.resize(_vecAttachedSensors.size());
-    for(size_t i = 0; i < info._vAttachedSensorInfos.size(); ++i) {
+    for(size_t i = 0; i < _vecAttachedSensors.size(); ++i) {
+        if (isConnectedAttachedSensor[i]) {
+            continue;
+        }
         info._vAttachedSensorInfos[i].reset(new RobotBase::AttachedSensorInfo());
         _vecAttachedSensors[i]->ExtractInfo(*info._vAttachedSensorInfos[i]);
     }
 
     info._vConnectedBodyInfos.resize(_vecConnectedBodies.size());
-    for(size_t i = 0; i < info._vConnectedBodyInfos.size(); ++i) {
+    for(size_t i = 0; i < _vecConnectedBodies.size(); ++i) {
         info._vConnectedBodyInfos[i].reset(new RobotBase::ConnectedBodyInfo());
         _vecConnectedBodies[i]->ExtractInfo(*info._vConnectedBodyInfos[i]);
     }
 
     info._vGripperInfos.resize(_vecGripperInfos.size());
     for(size_t i = 0; i < info._vGripperInfos.size(); ++i) {
+        if (isConnectedGripperInfo[i]) {
+            continue;
+        }
         info._vGripperInfos[i].reset(new RobotBase::GripperInfo(*_vecGripperInfos[i]));
     }
 }
