@@ -562,7 +562,7 @@ UpdateFromInfoResult RobotBase::ConnectedBody::UpdateFromInfo(const RobotBase::C
 
     // _bIsActive
     if (IsActive() != info._bIsActive) {
-        SetActive(info._bIsActive);
+        return UFIR_RequireRemoveFromEnvironment;
     }
 
     return UFIR_Success;
