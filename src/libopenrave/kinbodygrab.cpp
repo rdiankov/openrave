@@ -129,6 +129,19 @@ bool KinBody::Grab(KinBodyPtr pbody, LinkPtr pBodyLinkToGrabWith, const std::set
         return true;
     }
 
+    // double check since collision checkers might not support this case
+    if( pbody->HasAttached() ) {
+        std::set<KinBodyPtr> setAttached;
+        pbody->GetAttached(setAttached);
+        std::stringstream ss;
+        if( setAttached.size() > 1 ) {
+            FOREACH(itbody, setAttached) {
+                ss << (*itbody)->GetName() << ", ";
+            }
+        }
+        RAVELOG_WARN_FORMAT("env=%d, body %s trying to grab body %s with %d attached bodies [%s]", GetEnv()->GetId()%GetName()%pbody->GetName()%setAttached.size()%ss.str());
+    }
+
     GrabbedPtr pgrabbed(new Grabbed(pbody,pBodyLinkToGrabWith));
     Transform t = pBodyLinkToGrabWith->GetTransform();
     Transform tbody = pbody->GetTransform();
