@@ -59,6 +59,7 @@ void RobotBase::ConnectedBodyInfo::InitInfoFromBody(RobotBase& robot)
 
 void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
+    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "linkName", _linkname, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "uri", _uri, allocator);
@@ -129,6 +130,7 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
 
 void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale)
 {
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "linkName", _linkname);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri);
