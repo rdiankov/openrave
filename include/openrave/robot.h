@@ -683,7 +683,7 @@ public:
         std::vector<RobotBase::ManipulatorInfoPtr> _vManipulatorInfos; ///< extracted manip infos representing the connected body. The names are the original "desired" names.
         std::vector<RobotBase::AttachedSensorInfoPtr> _vAttachedSensorInfos; ///< extracted sensor infos representing the connected body. The names are the original "desired" names.
         std::vector<RobotBase::GripperInfoPtr> _vGripperInfos; ///< extracted gripper infos representing the connected body. The names are the original "desired" names.
-        bool _bIsActive = false; ///< if true, then add the connected body. Otherwise do not add it.
+        int8_t _bIsActive; ///< a tri-state describing the state of the connected body. If 1, then connected body is known to be active on the robot. If 0, then known to be non-active. If -1, then the state is unknown, so planning algorithms should be careful . Otherwise do not add it.
     };
     typedef boost::shared_ptr<ConnectedBodyInfo> ConnectedBodyInfoPtr;
     typedef boost::shared_ptr<ConnectedBodyInfo const> ConnectedBodyInfoConstPtr;
@@ -700,10 +700,10 @@ public:
         /// \brief have the connected body to be added to the robot kinematics. The active level has nothing to do with visibility or enabling of the links.
         ///
         /// Can only be called when robot is not added to the environment
-        virtual bool SetActive(bool active);
+        virtual bool SetActive(int8_t active);
 
         /// \brief return true
-        virtual bool IsActive();
+        virtual int8_t IsActive();
 
         /// \brief if the connected body is activated and added to the robot, this is a helper functions to enable/disable all the links
         virtual void SetLinkEnable(bool benable);
@@ -865,7 +865,7 @@ protected:
         std::vector<Transform> _vtManipsLocalTool;
         std::vector<Vector> _vvManipsLocalDirection;
         std::vector<IkSolverBasePtr> _vpManipsIkSolver;
-        std::vector<uint8_t> _vConnectedBodyActiveStates; ///< GetConnectedBodyActiveStates
+        std::vector<int8_t> _vConnectedBodyActiveStates; ///< GetConnectedBodyActiveStates
 private:
         virtual void _RestoreRobot(boost::shared_ptr<RobotBase> robot);
     };
@@ -913,10 +913,10 @@ private:
     virtual GripperInfoPtr GetGripperInfo(const std::string& name) const;
 
     // \brief gets the active states of all connected bodies
-    virtual void GetConnectedBodyActiveStates(std::vector<uint8_t>& activestates) const;
+    virtual void GetConnectedBodyActiveStates(std::vector<int8_t>& activestates) const;
 
     /// \brief sets the active states for connected bodies
-    virtual void SetConnectedBodyActiveStates(const std::vector<uint8_t>& activestates);
+    virtual void SetConnectedBodyActiveStates(const std::vector<int8_t>& activestates);
 
     virtual void SetName(const std::string& name);
 

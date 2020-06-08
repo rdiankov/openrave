@@ -2333,7 +2333,7 @@ public:
             ++iwritten;
         }
 
-        if( iwritten < _vPublishedBodies.size() ) {
+        if( iwritten < (int)_vPublishedBodies.size() ) {
             _vPublishedBodies.resize(iwritten);
         }
     }

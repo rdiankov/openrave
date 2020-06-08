@@ -90,7 +90,7 @@ public:
     object _manipulatorInfos = py::none_();
     object _attachedSensorInfos = py::none_();
     object _gripperInfos = py::none_();
-    bool _bIsActive = false;
+    int _bIsActive = 0;
 
 private:
     void _Update(const RobotBase::ConnectedBodyInfo& info);

@@ -30,6 +30,7 @@ namespace openravepy {
 constexpr char select_dtype<double>::type[];
 constexpr char select_dtype<float>::type[];
 constexpr char select_dtype<int>::type[];
+constexpr char select_dtype<int8_t>::type[];
 constexpr char select_dtype<uint8_t>::type[];
 constexpr char select_dtype<uint16_t>::type[];
 constexpr char select_dtype<uint32_t>::type[];
@@ -249,7 +250,7 @@ void init_python_bindings()
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    class_<PyVoidHandle, OPENRAVE_SHARED_PTR<PyVoidHandle>>(m, "VoidHandle")
+    class_<PyVoidHandle, OPENRAVE_SHARED_PTR<PyVoidHandle> >(m, "VoidHandle")
     .def(init<>())
     // error: static assertion failed: Holder classes are only supported for custom types, so cannot do
     // .def(init<OPENRAVE_SHARED_PTR<void>>(), "handle"_a)
