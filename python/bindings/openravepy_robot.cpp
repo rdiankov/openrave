@@ -1295,7 +1295,7 @@ object PyRobotBase::GetConnectedBodyActiveStates() const
 
 void PyRobotBase::SetConnectedBodyActiveStates(object oactivestates)
 {
-    std::vector<int8_t> activestates = ExtractArray<int8_t>(oactivestates);
+    std::vector<int8_t> activestates = ExtractArrayInt8(oactivestates);
     _probot->SetConnectedBodyActiveStates(activestates);
 }
 

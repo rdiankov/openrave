@@ -238,6 +238,25 @@ public:
     OPENRAVE_SHARED_PTR<void const> _handle;
 };
 
+inline std::vector<int8_t> ExtractArrayInt8(const py::object& o)
+{
+    if( IS_PYTHONOBJECT_NONE(o) ) {
+        return {};
+    }
+    std::vector<int8_t> v;
+    try {
+        const size_t n = len(o);
+        v.resize(n);
+        for(size_t i = 0; i < n; ++i) {
+            v[i] = (int8_t)(py::extract<int>(o[i]));
+        }
+    }
+    catch(...) {
+        RAVELOG_WARN("Cannot do ExtractArray for int");
+    }
+    return v;
+}
+
 template <typename T>
 inline std::vector<T> ExtractArray(const py::object& o)
 {
