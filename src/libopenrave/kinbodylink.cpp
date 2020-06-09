@@ -35,16 +35,41 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
     OpenRAVE::JSON::SetJsonValueByKey(value, "mass", _mass, allocator);
     OpenRAVE::JSON::SetJsonValueByKey(value, "intertialMoments", _vinertiamoments, allocator);
 
-    if (_mapFloatParameters.size() > 0) {
-        OpenRAVE::JSON::SetJsonValueByKey(value, "floatParameters", _mapFloatParameters, allocator);
+    if(_mapFloatParameters.size() > 0)
+    {
+        rapidjson::Value parameters;
+        FOREACHC(it, _mapFloatParameters) {
+            rapidjson::Value parameter;
+            parameter.SetObject();
+            OpenRAVE::JSON::SetJsonValueByKey(parameter, "id", it->first, allocator);
+            OpenRAVE::JSON::SetJsonValueByKey(parameter, "values", it->second, allocator);
+            parameters.PushBack(parameter, allocator);
+        }
+        value.AddMember("floatParameters", parameters, allocator);
     }
-
-    if (_mapIntParameters.size() > 0) {
-        OpenRAVE::JSON::SetJsonValueByKey(value, "intParameters", _mapIntParameters, allocator);
+    if(_mapIntParameters.size() > 0)
+    {
+        rapidjson::Value parameters;
+        FOREACHC(it, _mapIntParameters) {
+            rapidjson::Value parameter;
+            parameter.SetObject();
+            OpenRAVE::JSON::SetJsonValueByKey(parameter, "id", it->first, allocator);
+            OpenRAVE::JSON::SetJsonValueByKey(parameter, "values", it->second, allocator);
+            parameters.PushBack(parameter, allocator);
+        }
+        value.AddMember("intParameters", parameters, allocator);
     }
-
-    if (_mapStringParameters.size() > 0) {
-        OpenRAVE::JSON::SetJsonValueByKey(value, "stringParameters", _mapStringParameters, allocator);
+    if(_mapStringParameters.size() > 0)
+    {
+        rapidjson::Value parameters;
+        FOREACHC(it, _mapStringParameters) {
+            rapidjson::Value parameter;
+            parameter.SetObject();
+            OpenRAVE::JSON::SetJsonValueByKey(parameter, "id", it->first, allocator);
+            OpenRAVE::JSON::SetJsonValueByKey(parameter, "value", it->second, allocator);
+            parameters.PushBack(parameter, allocator);
+        }
+        value.AddMember("stringParameters", parameters, allocator);
     }
 
     if (_vForcedAdjacentLinks.size() > 0) {
@@ -94,9 +119,51 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     OpenRAVE::JSON::LoadJsonValueByKey(value, "massTransform", _tMassFrame);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "mass", _mass);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "intertialMoments", _vinertiamoments);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "floatParameters", _mapFloatParameters);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "intParameters", _mapIntParameters);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "stringParameters", _mapStringParameters);
+
+    if (value.HasMember("floatParameters") && value["floatParameters"].IsArray()) {
+        for (rapidjson::Value::ConstValueIterator it = value["floatParameters"].Begin(); it != value["floatParameters"].End(); ++it) {
+            std::string key;
+            OpenRAVE::JSON::LoadJsonValueByKey(*it, "key", key);
+            if (key.empty()) {
+                continue;
+            }
+            if (!OpenRAVE::JSON::GetJsonValueByKey<bool,bool>(*it, "__deleted__", false)) {
+                OpenRAVE::JSON::LoadJsonValueByKey(*it, "values", _mapFloatParameters[key]);
+            } else {
+                _mapFloatParameters.erase(key);
+            }
+            
+        }
+    }
+    if (value.HasMember("intParameters") && value["intParameters"].IsArray()) {
+        for (rapidjson::Value::ConstValueIterator it = value["intParameters"].Begin(); it != value["intParameters"].End(); ++it) {
+            std::string key;
+            OpenRAVE::JSON::LoadJsonValueByKey(*it, "key", key);
+            if (key.empty()) {
+                continue;
+            }
+            if (!OpenRAVE::JSON::GetJsonValueByKey<bool,bool>(*it, "__deleted__", false)) {
+                OpenRAVE::JSON::LoadJsonValueByKey(*it, "values", _mapIntParameters[key]);
+            } else {
+                _mapIntParameters.erase(key);
+            }
+        }
+    }
+    if (value.HasMember("stringParameters") && value["stringParameters"].IsArray()) {
+        for (rapidjson::Value::ConstValueIterator it = value["stringParameters"].Begin(); it != value["stringParameters"].End(); ++it) {
+            std::string key;
+            OpenRAVE::JSON::LoadJsonValueByKey(*it, "key", key);
+            if (key.empty()) {
+                continue;
+            }
+            if (!OpenRAVE::JSON::GetJsonValueByKey<bool,bool>(*it, "__deleted__", false)) {
+                OpenRAVE::JSON::LoadJsonValueByKey(*it, "value", _mapStringParameters[key]);
+            } else {
+                _mapStringParameters.erase(key);
+            }
+        }
+    }
+
     OpenRAVE::JSON::LoadJsonValueByKey(value, "forcedAdjacentLinks", _vForcedAdjacentLinks);
 
     _t.trans *= fUnitScale;
