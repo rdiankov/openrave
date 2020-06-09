@@ -212,7 +212,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, int8_t& t) {
     else if (v.IsBool()) {
         t = v.GetBool() ? 1 : 0;
     } else {
-        throw openravejson::OpenRAVEJSONException("Cannot convert json type " + GetJsonString(v) + " to Int", openravejson::ORJE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert json type %s to Int", GetJsonString(v), OpenRAVE::ORE_InvalidArguments);
     }
 }
 

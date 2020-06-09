@@ -658,7 +658,7 @@ private:
     class OPENRAVE_API ConnectedBodyInfo
     {
 public:
-        ConnectedBodyInfo() {}
+        ConnectedBodyInfo();
         ConnectedBodyInfo(const ConnectedBodyInfo& other) {
             *this = other;
         };
