@@ -854,6 +854,40 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
         _Update(true, Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
     }
 
+    // _mapFloatParameters
+    const std::map<std::string, std::vector<dReal>> floatParameters = GetFloatParameters();
+    if (floatParameters != info._mapFloatParameters) {
+        FOREACH(itParam, floatParameters) {
+            SetFloatParameters(itParam->first, {}); // erase current parameters
+        }
+
+        FOREACH(itParam, info._mapFloatParameters) {
+            SetFloatParameters(itParam->first, itParam->second);  // update with new info
+        }
+    }
+
+    // _mapIntParameters
+    const std::map<std::string, std::vector<int>> intParameters = GetIntParameters();
+    if (intParameters != info._mapIntParameters) {
+        FOREACH(itParam, intParameters) {
+            SetIntParameters(itParam->first, {});
+        }
+        FOREACH(itParam, info._mapIntParameters) {
+            SetIntParameters(itParam->first, itParam->second);
+        }
+    }
+
+    // _mapStringParameters
+    const std::map<std::string, std::string> stringParameters = GetStringParameters();
+    if (stringParameters != info._mapStringParameters) {
+        FOREACH(itParam, stringParameters) {
+            SetStringParameters(itParam->first, {});
+        }
+        FOREACH(itParam, info._mapStringParameters) {
+            SetStringParameters(itParam->first, itParam->second);
+        }
+    }
+
     return UFIR_Success;
 }
 

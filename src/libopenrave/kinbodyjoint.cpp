@@ -2263,31 +2263,35 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
 
     // _mapFloatParameters
     const std::map<std::string, std::vector<dReal>> floatParameters = GetFloatParameters();
-    for(std::map<std::string, std::vector<dReal>>::const_iterator it = info._mapFloatParameters.begin(); it != info._mapFloatParameters.end(); it++) {
-        typename std::map<std::string, std::vector<dReal>>::const_iterator itExisting = floatParameters.end();
-        itExisting = floatParameters.find(it->first);
-        if (itExisting == floatParameters.end() || itExisting->second != it->second) {
-            SetFloatParameters(it->first, it->second);
+    if (floatParameters != info._mapFloatParameters) {
+        FOREACH(itParam, floatParameters) {
+            SetFloatParameters(itParam->first, {}); // erase current parameters
+        }
+
+        FOREACH(itParam, info._mapFloatParameters) {
+            SetFloatParameters(itParam->first, itParam->second);  // update with new info
         }
     }
 
     // _mapIntParameters
     const std::map<std::string, std::vector<int>> intParameters = GetIntParameters();
-    for(std::map<std::string, std::vector<int>>::const_iterator it = info._mapIntParameters.begin(); it != info._mapIntParameters.end(); it++) {
-        typename std::map<std::string, std::vector<int>>::const_iterator itExisting = intParameters.end();
-        itExisting = intParameters.find(it->first);
-        if (itExisting == intParameters.end() || itExisting->second != it->second) {
-            SetIntParameters(it->first, it->second);
+    if (intParameters != info._mapIntParameters) {
+        FOREACH(itParam, intParameters) {
+            SetIntParameters(itParam->first, {});
+        }
+        FOREACH(itParam, info._mapIntParameters) {
+            SetIntParameters(itParam->first, itParam->second);
         }
     }
 
     // _mapStringParameters
     const std::map<std::string, std::string> stringParameters = GetStringParameters();
-    for(std::map<std::string, std::string>::const_iterator it = info._mapStringParameters.begin(); it != info._mapStringParameters.end(); it++) {
-        typename std::map<std::string, std::string>::const_iterator itExisting = stringParameters.end();
-        itExisting = stringParameters.find(it->first);
-        if (itExisting == stringParameters.end() || itExisting->second != it->second) {
-            SetStringParameters(it->first, it->second);
+    if (stringParameters != info._mapStringParameters) {
+        FOREACH(itParam, stringParameters) {
+            SetStringParameters(itParam->first, {});
+        }
+        FOREACH(itParam, info._mapStringParameters) {
+            SetStringParameters(itParam->first, itParam->second);
         }
     }
 
