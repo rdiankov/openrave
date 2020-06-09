@@ -148,16 +148,17 @@ protected:
                 // readable interface
                 if (pBody->GetReadableInterfaces().size() > 0) {
                     rapidjson::Value readableInterfacesValue;
-                    readableInterfacesValue.SetObject();
+                    readableInterfacesValue.SetArray();
                     FOREACHC(it, pBody->GetReadableInterfaces()) {
                         JSONReadablePtr pReadable = OPENRAVE_DYNAMIC_POINTER_CAST<JSONReadable>(it->second);
                         if (!!pReadable) {
                             rapidjson::Value readableValue;
                             pReadable->SerializeJSON(readableValue, _allocator);
-                            readableInterfacesValue.AddMember(rapidjson::Value(it->first.c_str(), _allocator).Move(), readableValue, _allocator);
+                            OpenRAVE::JSON::SetJsonValueByKey(readableValue, "id", it->first, _allocator);
+                            readableInterfacesValue.PushBack(readableValue, _allocator);
                         }
                     }
-                    if (readableInterfacesValue.MemberCount() > 0) {
+                    if (readableInterfacesValue.Size() > 0) {
                         bodyValue.AddMember("readableInterfaces", readableInterfacesValue, _allocator);
                     }
                 }

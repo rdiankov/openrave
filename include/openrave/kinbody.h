@@ -1849,7 +1849,7 @@ public:
 
         std::map<std::string, JSONReadablePtr> _mReadableInterfaces; ///< readable interface mapping
 protected:
-        virtual void _DeserializeReadableInterface(const std::string id, const rapidjson::Value& value);
+        virtual void _DeserializeReadableInterface(const rapidjson::Value& value);
 
     };
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
