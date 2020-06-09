@@ -1991,7 +1991,7 @@ KinBody::JointPtr KinBody::GetJoint(const std::string& jointname) const
     return JointPtr();
 }
 
-void KinBody::ComputeJacobianTranslation(int linkindex, const Vector& position, std::vector<dReal>& vjacobian,const std::vector<int>& dofindices) const
+void KinBody::ComputeJacobianTranslation(int linkindex, const Vector& tManip, std::vector<dReal>& vjacobian,const std::vector<int>& dofindices) const
 {
     CHECK_INTERNAL_COMPUTATION;
     const int nlinks = _veclinks.size();
@@ -2022,7 +2022,7 @@ void KinBody::ComputeJacobianTranslation(int linkindex, const Vector& position, 
             for(int dof = 0; dof < pjoint->GetDOF(); ++dof) {
                 if( !!affect ) {
                     if( pjoint->IsRevolute(dof) ) {
-                        v = pjoint->GetAxis(dof).cross(position - pjoint->GetAnchor());
+                        v = pjoint->GetAxis(dof).cross(tManip - pjoint->GetAnchor());
                     }
                     else if( pjoint->IsPrismatic(dof) ) {
                         v = pjoint->GetAxis(dof);
@@ -2059,9 +2059,13 @@ void KinBody::ComputeJacobianTranslation(int linkindex, const Vector& position, 
                 if( pjoint->IsMimic(idof) ) {
                     bool bhas = dofindices.empty();
                     if( !bhas ) {
-                        FOREACHC(itmimicdof, pjoint->_vmimic[idof]->_vmimicdofs) {
-                            if( find(dofindices.begin(), dofindices.end(), itmimicdof->dofindex) != dofindices.end() ) {
-                                bhas = true;
+                        const boost::array<MimicPtr, 3>& vmimics = pjoint->_vmimic;
+                        const MimicPtr& pmimic = vmimics[idof];
+                        _RAVE_DISPLAY(std::cout << "pmimic: " << pmimic->to_string();)
+                        const std::vector<Mimic::DOFHierarchy>& vmimicdofs = vmimics[idof]->_vmimicdofs;
+                        for(const Mimic::DOFHierarchy& mimicdof : vmimicdofs) {
+                            bhas = find(dofindices.begin(), dofindices.end(), mimicdof.dofindex) != dofindices.end();
+                            if(bhas) {
                                 break;
                             }
                         }
@@ -2069,7 +2073,7 @@ void KinBody::ComputeJacobianTranslation(int linkindex, const Vector& position, 
                     if( bhas ) {
                         Vector vaxis;
                         if( pjoint->IsRevolute(idof) ) {
-                            vaxis = pjoint->GetAxis(idof).cross(position-pjoint->GetAnchor());
+                            vaxis = pjoint->GetAxis(idof).cross(tManip - pjoint->GetAnchor());
                         }
                         else if( pjoint->IsPrismatic(idof) ) {
                             vaxis = pjoint->GetAxis(idof);
@@ -2083,6 +2087,18 @@ void KinBody::ComputeJacobianTranslation(int linkindex, const Vector& position, 
                         std::map< std::pair<Mimic::DOFFormat, int>, dReal > mapcachedpartials;
 
                         pjoint->_ComputePartialVelocities(vpartials, idof, mapcachedpartials);
+
+                        _RAVE_DISPLAY(std::cout << "vpartials = ";
+                            for(auto partial : vpartials) {
+                                std::cout << partial.first << ", " << partial.second << "; ";
+                            }
+
+                            std::cout << "mapcachedpartials = ";
+                            for(auto keyvalue : mapcachedpartials) {
+                                std::cout << "(" << keyvalue.first.first.to_string() << ", " << keyvalue.first.second << "): " << keyvalue.second << "; ";
+                            }
+                        )
+
                         for(const std::pair<int, dReal>& partial : vpartials) {
                             const Vector v = vaxis * partial.second;
                             int index = partial.first;
@@ -3562,9 +3578,9 @@ void KinBody::_ComputeInternalInformation()
         }
     }
 
-    _vTopologicallySortedJoints.resize(0);
-    _vTopologicallySortedJointsAll.resize(0);
-    _vTopologicallySortedJointIndicesAll.resize(0);
+    _vTopologicallySortedJoints.clear();
+    _vTopologicallySortedJointsAll.clear();
+    _vTopologicallySortedJointIndicesAll.clear();
     _vJointsAffectingLinks.resize(_vecjoints.size()*_veclinks.size());
 
     // compute the all-pairs shortest paths

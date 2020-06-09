@@ -1686,15 +1686,13 @@ void KinBody::Joint::GetMimicDOFIndices(std::vector<int>& vmimicdofs, int iaxis)
 void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, const std::string& veleq, const std::string& acceleq)
 {
     _vmimic.at(iaxis).reset();
-    if( poseq.size() == 0 ) {
+    if( poseq.empty() ) {
         return;
     }
     KinBodyPtr parent(_parent);
     std::vector<std::string> resultVars;
     MimicPtr mimic(new Mimic());
-    mimic->_equations.at(0) = poseq;
-    mimic->_equations.at(1) = veleq;
-    mimic->_equations.at(2) = acceleq;
+    mimic->_equations = {poseq, veleq, acceleq};
 
     // copy equations into the info
     if( !_info._vmimic.at(iaxis) ) {
@@ -1864,7 +1862,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> 
         thisdofformat.jointindex = nActiveJoints + (find(begin(vPassiveJoints), end(vPassiveJoints), shared_from_this()) - begin(vPassiveJoints));
     }
 
-    _RAVE_DISPLAY(std::cout << thisdofformat.to_string(); );
+    _RAVE_DISPLAY(std::cout << "thisdofformat: " << thisdofformat.to_string(); );
 
     
     std::vector<std::pair<int, dReal> > vtemppartials;
@@ -1872,7 +1870,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> 
 
     const MimicPtr pmimic = _vmimic[iaxis];
 
-    _RAVE_DISPLAY(std::cout << "pmimic = " << pmimic->to_string(););
+    _RAVE_DISPLAY(std::cout << "pmimic: " << std::endl << pmimic->to_string(););
 
     for(const MIMIC::DOFHierarchy& mimicdof : pmimic->_vmimicdofs) {
 
