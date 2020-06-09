@@ -2053,7 +2053,7 @@ void KinBody::ComputeJacobianTranslation(int linkindex, const Vector& tManip, st
             // add in the contributions from the passive joint
             const JointPtr& pjoint = _vPassiveJoints.at(jointindex - njoints);
 
-            _RAVE_DISPLAY(std::cout << "working on passive joint " << pjoint->GetName() << " with index " << jointindex;)
+            _RAVE_DISPLAY(std::cout << "working on mimic joint " << pjoint->GetName() << " with index " << jointindex;)
 
             for(int idof = 0; idof < pjoint->GetDOF(); ++idof) {
                 if( pjoint->IsMimic(idof) ) {
