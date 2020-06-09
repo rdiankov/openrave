@@ -624,6 +624,9 @@ public:
         /// Has one-to-one correspondence with _info._vJointInfos
         virtual void GetResolvedJoints(std::vector<KinBody::JointPtr>& joints);
 
+        /// \brief gets the resolved dummy passive joint added by connected body.
+        virtual KinBody::JointPtr GetResolvedDummyPassiveJoint();
+
         /// \brief gets the resolved links added to the robot.
         ///
         /// Has one-to-one correspondence with _info._vManipulatorInfos
@@ -677,17 +680,20 @@ public:
             return _info;
         }
 
+        /// \brief returns true if the connected body can provide a manipulator with the specified resolved name. Function works even though connected body is not active
+        bool CanProvideManipulator(const std::string& resolvedManipulatorName) const;
+
 private:
         ConnectedBodyInfo _info; ///< user specified data (to be serialized and saved), should not contain dynamically generated parameters.
 
-        std::string _nameprefix; ///< the name prefix to use for all the resolved link names.
+        std::string _nameprefix; ///< the name prefix to use for all the resolved link names. Initialized regardless of the active state of the connected body.
         std::string _dummyPassiveJointName; ///< the joint that is used to attach the connected body to the robot link
         KinBody::JointPtr _pDummyJointCache; ///< cached Joint used for _dummyPassiveJointName
-        std::vector< std::pair<std::string, RobotBase::LinkPtr> > _vResolvedLinkNames; ///< for every entry in _info._vLinkInfos, the resolved link names added to the robot. Also serves as cache for pointers
-        std::vector< std::pair<std::string, RobotBase::JointPtr> > _vResolvedJointNames; ///< for every entry in _info._vJointInfos, the resolved link names. Also serves as cache for pointers.
-        std::vector< std::pair<std::string, RobotBase::ManipulatorPtr> > _vResolvedManipulatorNames; ///< for every entry in _info._vManipInfos. Also serves as cache for pointers
-        std::vector< std::pair<std::string, RobotBase::AttachedSensorPtr> > _vResolvedAttachedSensorNames; ///< for every entry in _info._vAttachedSensorResolvedNames. Also serves as cache for pointers
-        std::vector< std::pair<std::string, RobotBase::GripperInfoPtr> > _vResolvedGripperInfoNames; ///< for every entry in _info._vGripperInfos. Also serves as cache for pointers
+        std::vector< std::pair<std::string, RobotBase::LinkPtr> > _vResolvedLinkNames; ///< for every entry in _info._vLinkInfos, the resolved link names added to the robot. Also serves as cache for pointers. Valid if IsActive() != 0.
+        std::vector< std::pair<std::string, RobotBase::JointPtr> > _vResolvedJointNames; ///< for every entry in _info._vJointInfos, the resolved link names. Also serves as cache for pointers. Valid if IsActive() != 0.
+        std::vector< std::pair<std::string, RobotBase::ManipulatorPtr> > _vResolvedManipulatorNames; ///< for every entry in _info._vManipInfos. Also serves as cache for pointers. Valid if IsActive() != 0.
+        std::vector< std::pair<std::string, RobotBase::AttachedSensorPtr> > _vResolvedAttachedSensorNames; ///< for every entry in _info._vAttachedSensorResolvedNames. Also serves as cache for pointers. Valid if IsActive() != 0.
+        std::vector< std::pair<std::string, RobotBase::GripperInfoPtr> > _vResolvedGripperInfoNames; ///< for every entry in _info._vGripperInfos. Also serves as cache for pointers. Valid if IsActive() != 0.
 
         RobotBaseWeakPtr _pattachedrobot; ///< the robot that the body is attached to
         LinkWeakPtr _pattachedlink;         ///< the robot link that the body is attached to

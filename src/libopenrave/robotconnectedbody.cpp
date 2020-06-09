@@ -237,7 +237,7 @@ bool RobotBase::ConnectedBody::SetActive(int8_t active)
     RobotBasePtr pattachedrobot = _pattachedrobot.lock();
     if( !!pattachedrobot ) {
         if( pattachedrobot->_nHierarchyComputed != 0 ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("Cannot set ConnectedBody %s active to %s since robot %s is still in the environment", _info._name%active%pattachedrobot->GetName(), ORE_InvalidState);
+            throw OPENRAVE_EXCEPTION_FORMAT("Cannot set ConnectedBody %s active to %s since robot %s is still in the environment", _info._name%(int)active%pattachedrobot->GetName(), ORE_InvalidState);
         }
     }
     _info._bIsActive = active;
@@ -318,6 +318,15 @@ void RobotBase::ConnectedBody::GetResolvedJoints(std::vector<KinBody::JointPtr>&
     }
 }
 
+KinBody::JointPtr RobotBase::ConnectedBody::GetResolvedDummyPassiveJoint()
+{
+    RobotBasePtr pattachedrobot = _pattachedrobot.lock();
+    if( !!pattachedrobot ) {
+        return pattachedrobot->GetJoint(_dummyPassiveJointName);
+    }
+    return KinBody::JointPtr();
+}
+
 void RobotBase::ConnectedBody::GetResolvedManipulators(std::vector<RobotBase::ManipulatorPtr>& manipulators)
 {
     manipulators.resize(_vResolvedManipulatorNames.size());
@@ -364,6 +373,30 @@ void RobotBase::ConnectedBody::GetResolvedGripperInfos(std::vector<RobotBase::Gr
             itgripperInfo->reset();
         }
     }
+}
+
+bool RobotBase::ConnectedBody::CanProvideManipulator(const std::string& resolvedManipulatorName) const
+{
+    if( _info._vManipulatorInfos.size() == 0 ) {
+        return false;
+    }
+    if( resolvedManipulatorName.size() <= _nameprefix.size() ) {
+        return false;
+    }
+    if( resolvedManipulatorName.substr(0, _nameprefix.size()) != _nameprefix ) {
+        return false;
+    }
+
+    std::string submanipname = resolvedManipulatorName.substr(_nameprefix.size());
+
+    FOREACH(itmanip, _info._vManipulatorInfos) {
+        const RobotBase::ManipulatorInfo& manipinfo = **itmanip;
+        if( manipinfo._name == submanipname ) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 RobotBase::ConnectedBodyPtr RobotBase::AddConnectedBody(const RobotBase::ConnectedBodyInfo& connectedBodyInfo, bool removeduplicate)
@@ -458,6 +491,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             }
         }
 
+        connectedBody._nameprefix = connectedBody.GetName() + "_";
         if( connectedBody.IsActive() == 0 ) {
             // skip
             continue;
@@ -479,8 +513,6 @@ void RobotBase::_ComputeConnectedBodiesInformation()
         if( !bExists ) {
             throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, the attaching link '%s' on robot does not exist!", connectedBody.GetName()%GetName()%connectedBodyInfo._linkname, ORE_InvalidArguments);
         }
-
-        connectedBody._nameprefix = connectedBody.GetName() + "_";
 
         // Links
         connectedBody._vResolvedLinkNames.resize(connectedBodyInfo._vLinkInfos.size());
@@ -597,7 +629,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                         bFoundJoint = true;
                     }
                 }
-                
+
                 if( !bFoundJoint ) {
                     throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for Manipulator %s, could not find joint %s in connected body joint infos!", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name%gripperJointName, ORE_InvalidArguments);
                 }
@@ -668,7 +700,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                         bFoundJoint = true;
                     }
                 }
-                
+
                 if( !bFoundJoint ) {
                     throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for gripperInfo %s, could not find joint %s in connected body joint infos!", connectedBody.GetName()%GetName()%pnewgripperInfo->name%gripperJointName, ORE_InvalidArguments);
                 }
