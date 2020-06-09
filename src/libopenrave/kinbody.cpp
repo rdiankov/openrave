@@ -3507,7 +3507,7 @@ void KinBody::_ComputeInternalInformation()
             }
         }
         // fill Mimic::_vmimicdofs, check that there are no circular dependencies between the mimic joints
-        std::map<Mimic::DOFFormat, boost::shared_ptr<Mimic> > mapmimic;
+        std::map<Mimic::DOFFormat, MimicPtr > mapmimic;
         for(int ijoints = 0; ijoints < 2; ++ijoints) {
             vector<JointPtr>& vjoints = ijoints ? _vPassiveJoints : _vecjoints;
             int jointindex=0;
@@ -3540,21 +3540,25 @@ void KinBody::_ComputeInternalInformation()
         bool bchanged = true;
         while(bchanged) {
             bchanged = false;
-            FOREACH(itmimic,mapmimic) {
-                boost::shared_ptr<Mimic> mimic = itmimic->second;
+            FOREACH(itmimic, mapmimic) {
+                const MimicPtr& mimic = itmimic->second;
+                _RAVE_DISPLAY(std::cout << "mimic: " << mimic->to_string(););
                 Mimic::DOFHierarchy h;
                 h.dofformatindex = 0;
                 FOREACH(itdofformat,mimic->_vdofformat) {
-                    if( mapmimic.find(*itdofformat) == mapmimic.end() ) {
+                    if( !mapmimic.count(*itdofformat) ) {
                         continue; // this is normal, just means that the parent is a regular dof
                     }
-                    boost::shared_ptr<Mimic> mimicparent = mapmimic[*itdofformat];
+                    const MimicPtr& mimicparent = mapmimic[*itdofformat];
+                    _RAVE_DISPLAY(std::cout << "mimicparent: " << mimicparent->to_string(););
+
                     FOREACH(itmimicdof, mimicparent->_vmimicdofs) {
                         if( mimicparent->_vdofformat[itmimicdof->dofformatindex] == itmimic->first ) {
                             JointPtr pjoint = itmimic->first.GetJoint(*this);
                             JointPtr pjointparent = itdofformat->GetJoint(*this);
                             throw OPENRAVE_EXCEPTION_FORMAT(_("joint index %s uses a mimic joint %s that also depends on %s! this is not allowed"), pjoint->GetName()%pjointparent->GetName()%pjoint->GetName(), ORE_Failed);
                         }
+
                         h.dofindex = itmimicdof->dofindex;
                         if( find(mimic->_vmimicdofs.begin(),mimic->_vmimicdofs.end(),h) == mimic->_vmimicdofs.end() ) {
                             mimic->_vmimicdofs.push_back(h);
