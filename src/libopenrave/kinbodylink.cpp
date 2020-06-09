@@ -118,8 +118,16 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
 {
     OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _t);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "massTransform", _tMassFrame);
+
+    if (value.HasMember("transform")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _t);
+        _t.trans *= fUnitScale;  // partial update should only mutliply fUnitScale once if the key is in value
+    }
+    if (value.HasMember("massTransform")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(value, "massTransform", _tMassFrame);
+        _tMassFrame.trans *= fUnitScale;
+    }
+
     OpenRAVE::JSON::LoadJsonValueByKey(value, "mass", _mass);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "intertialMoments", _vinertiamoments);
 
@@ -149,9 +157,6 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     }
 
     OpenRAVE::JSON::LoadJsonValueByKey(value, "forcedAdjacentLinks", _vForcedAdjacentLinks);
-
-    _t.trans *= fUnitScale;
-    _tMassFrame.trans *= fUnitScale;
 
     if (value.HasMember("geometries")) {
         _vgeometryinfos.reserve(value["geometries"].Size() + _vgeometryinfos.size());
@@ -855,6 +860,40 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
     }
     if (isGeometryChanged) {
         _Update(true, Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
+    }
+
+    // _mapFloatParameters
+    const std::map<std::string, std::vector<dReal>> floatParameters = GetFloatParameters();
+    if (floatParameters != info._mapFloatParameters) {
+        FOREACH(itParam, floatParameters) {
+            SetFloatParameters(itParam->first, {}); // erase current parameters
+        }
+
+        FOREACH(itParam, info._mapFloatParameters) {
+            SetFloatParameters(itParam->first, itParam->second);  // update with new info
+        }
+    }
+
+    // _mapIntParameters
+    const std::map<std::string, std::vector<int>> intParameters = GetIntParameters();
+    if (intParameters != info._mapIntParameters) {
+        FOREACH(itParam, intParameters) {
+            SetIntParameters(itParam->first, {});
+        }
+        FOREACH(itParam, info._mapIntParameters) {
+            SetIntParameters(itParam->first, itParam->second);
+        }
+    }
+
+    // _mapStringParameters
+    const std::map<std::string, std::string> stringParameters = GetStringParameters();
+    if (stringParameters != info._mapStringParameters) {
+        FOREACH(itParam, stringParameters) {
+            SetStringParameters(itParam->first, {});
+        }
+        FOREACH(itParam, info._mapStringParameters) {
+            SetStringParameters(itParam->first, itParam->second);
+        }
     }
 
     return UFIR_Success;

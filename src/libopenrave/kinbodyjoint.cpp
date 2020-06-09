@@ -229,6 +229,16 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
         _type = jointTypeMapping[typestr];
     }
 
+    // deserializing partial json only multply fUnitScale if value exists
+    // multiply fUnitScale on maxVel, maxAccel, lowerLimit, upperLimit
+    dReal fjointmult = fUnitScale;
+    if(_type == JointRevolute) {
+        fjointmult = 1;
+    }
+    else if(_type == JointPrismatic) {
+        fjointmult = fUnitScale;
+    }
+
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
 
@@ -238,9 +248,20 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
     OpenRAVE::JSON::LoadJsonValueByKey(value, "axes", _vaxes);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "currentValues", _vcurrentvalues);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "resolutions", _vresolution);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "maxVel", _vmaxvel);
+
+    if (value.HasMember("maxVel")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(value, "maxVel", _vmaxvel);
+        for(size_t ic = 0; ic < _vaxes.size(); ic++) {
+            _vmaxvel[ic] *= fjointmult;
+        }
+    }
     OpenRAVE::JSON::LoadJsonValueByKey(value, "hardMaxVel", _vhardmaxvel);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "maxAccel", _vmaxaccel);
+    if (value.HasMember("maxAccel")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(value, "maxAccel", _vmaxaccel);
+        for(size_t ic = 0; ic < _vaxes.size(); ic++) {
+            _vmaxaccel[ic] *= fjointmult;
+        }
+    }
     OpenRAVE::JSON::LoadJsonValueByKey(value, "hardMaxAccel", _vhardmaxaccel);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "maxJerk", _vmaxjerk);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "hardMaxJerk", _vhardmaxjerk);
@@ -248,31 +269,23 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
     OpenRAVE::JSON::LoadJsonValueByKey(value, "maxInertia", _vmaxinertia);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "weights", _vweights);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "offsets", _voffsets);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "lowerLimit", _vlowerlimit);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "upperLimit", _vupperlimit);
+
+    if (value.HasMember("lowerLimit")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(value, "lowerLimit", _vlowerlimit);
+        for(size_t ic = 0; ic < _vaxes.size(); ic++) {
+            _vlowerlimit[ic] *= fjointmult;
+        }
+    }
+    if (value.HasMember("upperLimit")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(value, "upperLimit", _vupperlimit);
+        for(size_t ic = 0; ic < _vaxes.size(); ic++) {
+            _vupperlimit[ic] *= fjointmult;
+        }
+    }
     OpenRAVE::JSON::LoadJsonValueByKey(value, "isCircular", _bIsCircular);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "isActive", _bIsActive);
 
-    // TODO: this mult is not correct if deserializing partial json
-    // multiply fUnitScale on maxVel, maxAccel, lowerLimit, upperLimit
-    dReal fjointmult = fUnitScale;
-    if(_type == JointRevolute)
-    {
-        fjointmult = 1;
-    }
-    else if(_type == JointPrismatic)
-    {
-        fjointmult = fUnitScale;
-    }
-    for(size_t ic = 0; ic < _vaxes.size(); ic++)
-    {
-        _vmaxvel[ic] *= fjointmult;
-        _vmaxaccel[ic] *= fjointmult;
-        _vlowerlimit[ic] *= fjointmult;
-        _vupperlimit[ic] *= fjointmult;
-    }
 
-    
     if (value.HasMember("mimics") && value["mimics"].IsArray())
     {
         boost::array<MimicInfoPtr, 3> newmimic;
@@ -2266,31 +2279,35 @@ UpdateFromInfoResult KinBody::Joint::UpdateFromInfo(const KinBody::JointInfo& in
 
     // _mapFloatParameters
     const std::map<std::string, std::vector<dReal>> floatParameters = GetFloatParameters();
-    for(std::map<std::string, std::vector<dReal>>::const_iterator it = info._mapFloatParameters.begin(); it != info._mapFloatParameters.end(); it++) {
-        typename std::map<std::string, std::vector<dReal>>::const_iterator itExisting = floatParameters.end();
-        itExisting = floatParameters.find(it->first);
-        if (itExisting == floatParameters.end() || itExisting->second != it->second) {
-            SetFloatParameters(it->first, it->second);
+    if (floatParameters != info._mapFloatParameters) {
+        FOREACH(itParam, floatParameters) {
+            SetFloatParameters(itParam->first, {}); // erase current parameters
+        }
+
+        FOREACH(itParam, info._mapFloatParameters) {
+            SetFloatParameters(itParam->first, itParam->second);  // update with new info
         }
     }
 
     // _mapIntParameters
     const std::map<std::string, std::vector<int>> intParameters = GetIntParameters();
-    for(std::map<std::string, std::vector<int>>::const_iterator it = info._mapIntParameters.begin(); it != info._mapIntParameters.end(); it++) {
-        typename std::map<std::string, std::vector<int>>::const_iterator itExisting = intParameters.end();
-        itExisting = intParameters.find(it->first);
-        if (itExisting == intParameters.end() || itExisting->second != it->second) {
-            SetIntParameters(it->first, it->second);
+    if (intParameters != info._mapIntParameters) {
+        FOREACH(itParam, intParameters) {
+            SetIntParameters(itParam->first, {});
+        }
+        FOREACH(itParam, info._mapIntParameters) {
+            SetIntParameters(itParam->first, itParam->second);
         }
     }
 
     // _mapStringParameters
     const std::map<std::string, std::string> stringParameters = GetStringParameters();
-    for(std::map<std::string, std::string>::const_iterator it = info._mapStringParameters.begin(); it != info._mapStringParameters.end(); it++) {
-        typename std::map<std::string, std::string>::const_iterator itExisting = stringParameters.end();
-        itExisting = stringParameters.find(it->first);
-        if (itExisting == stringParameters.end() || itExisting->second != it->second) {
-            SetStringParameters(it->first, it->second);
+    if (stringParameters != info._mapStringParameters) {
+        FOREACH(itParam, stringParameters) {
+            SetStringParameters(itParam->first, {});
+        }
+        FOREACH(itParam, info._mapStringParameters) {
+            SetStringParameters(itParam->first, itParam->second);
         }
     }
 
