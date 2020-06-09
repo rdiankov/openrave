@@ -2772,11 +2772,11 @@ const std::string& StringReadable::GetData() const
 
 void StringReadable::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    OpenRAVE::JSON::SaveJsonValue(value, _data, allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(value, "string", _data, allocator);
 }
 void StringReadable::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
-    OpenRAVE::JSON::LoadJsonValue(value, _data);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "string", _data);
 }
 
 } // end namespace OpenRAVE

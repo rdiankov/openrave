@@ -475,12 +475,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, KinBody::GeometryInfo::Side
 void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options) const
 {
     OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
-
-    std::string name = _name;
-    if (name.empty()) {
-        name = _id;
-    }
-    OpenRAVE::JSON::SetJsonValueByKey(value, "name", name, allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
 
     Transform tscaled = _t;
     tscaled.trans *= fUnitScale;
