@@ -624,7 +624,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             OpenRAVE::JSON::LoadJsonValueByKey(value, "innerSizeZ", _vGeomData2.z);
             _vGeomData2.z *= fUnitScale;
         }
-        if (value.HasValue("sideWalls")) {
+        if (value.HasMember("sideWalls")) {
             OpenRAVE::JSON::LoadJsonValueByKey(value, "sideWalls", _vSideWalls);
             FOREACH(itsidewall, _vSideWalls) {
                 itsidewall->transf.trans *= fUnitScale;
@@ -637,7 +637,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         if (value.HasMember("radius")) {
             OpenRAVE::JSON::LoadJsonValueByKey(value, "radius", _vGeomData.x);
             _vGeomData *= fUnitScale;
-        ]
+        }
     }
     else if (typestr == "cylinder") {
         _type = GT_Cylinder;

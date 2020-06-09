@@ -2724,7 +2724,7 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
             }
         }
     }
-    if (value.HasMember("transform")) {
+    if (rIkParameterization.HasMember("transform")) {
         OpenRAVE::JSON::LoadJsonValueByKey(rIkParameterization, "transform", _transform);
         _transform.trans *= fUnitScale;
     }
