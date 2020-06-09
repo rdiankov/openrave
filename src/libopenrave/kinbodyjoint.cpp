@@ -229,16 +229,13 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
         _type = jointTypeMapping[typestr];
     }
 
-
     // deserializing partial json only multply fUnitScale if value exists
     // multiply fUnitScale on maxVel, maxAccel, lowerLimit, upperLimit
     dReal fjointmult = fUnitScale;
-    if(_type == JointRevolute)
-    {
+    if(_type == JointRevolute) {
         fjointmult = 1;
     }
-    else if(_type == JointPrismatic)
-    {
+    else if(_type == JointPrismatic) {
         fjointmult = fUnitScale;
     }
 
