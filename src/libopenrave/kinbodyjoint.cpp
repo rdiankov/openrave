@@ -154,7 +154,7 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
         FOREACHC(it, _mapFloatParameters) {
             rapidjson::Value parameter;
             parameter.SetObject();
-            OpenRAVE::JSON::SetJsonValueByKey(parameter, "id", it->first, allocator);
+            OpenRAVE::JSON::SetJsonValueByKey(parameter, "key", it->first, allocator);
             OpenRAVE::JSON::SetJsonValueByKey(parameter, "values", it->second, allocator);
             parameters.PushBack(parameter, allocator);
         }
@@ -166,7 +166,7 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
         FOREACHC(it, _mapIntParameters) {
             rapidjson::Value parameter;
             parameter.SetObject();
-            OpenRAVE::JSON::SetJsonValueByKey(parameter, "id", it->first, allocator);
+            OpenRAVE::JSON::SetJsonValueByKey(parameter, "key", it->first, allocator);
             OpenRAVE::JSON::SetJsonValueByKey(parameter, "values", it->second, allocator);
             parameters.PushBack(parameter, allocator);
         }
@@ -178,7 +178,7 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
         FOREACHC(it, _mapStringParameters) {
             rapidjson::Value parameter;
             parameter.SetObject();
-            OpenRAVE::JSON::SetJsonValueByKey(parameter, "id", it->first, allocator);
+            OpenRAVE::JSON::SetJsonValueByKey(parameter, "key", it->first, allocator);
             OpenRAVE::JSON::SetJsonValueByKey(parameter, "value", it->second, allocator);
             parameters.PushBack(parameter, allocator);
         }
@@ -282,46 +282,27 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
     }
 
     if (value.HasMember("floatParameters") && value["floatParameters"].IsArray()) {
+        _mapFloatParameters.clear();
         for (rapidjson::Value::ConstValueIterator it = value["floatParameters"].Begin(); it != value["floatParameters"].End(); ++it) {
-            std::string id;
-            OpenRAVE::JSON::LoadJsonValueByKey(*it, "id", id);
-            if (id.empty()) {
-                continue;
-            }
-            if (!OpenRAVE::JSON::GetJsonValueByKey<bool,bool>(*it, "__deleted__", false)) {
-                OpenRAVE::JSON::LoadJsonValueByKey(*it, "values", _mapFloatParameters[id]);
-            } else {
-                _mapFloatParameters.erase(id);
-            }
-            
+            std::string key;
+            OpenRAVE::JSON::LoadJsonValueByKey(*it, "key", key);
+            OpenRAVE::JSON::LoadJsonValueByKey(*it, "values", _mapFloatParameters[key]);
         }
     }
     if (value.HasMember("intParameters") && value["intParameters"].IsArray()) {
+        _mapIntParameters.clear();
         for (rapidjson::Value::ConstValueIterator it = value["intParameters"].Begin(); it != value["intParameters"].End(); ++it) {
-            std::string id;
-            OpenRAVE::JSON::LoadJsonValueByKey(*it, "id", id);
-            if (id.empty()) {
-                continue;
-            }
-            if (!OpenRAVE::JSON::GetJsonValueByKey<bool,bool>(*it, "__deleted__", false)) {
-                OpenRAVE::JSON::LoadJsonValueByKey(*it, "values", _mapIntParameters[id]);
-            } else {
-                _mapIntParameters.erase(id);
-            }
+            std::string key;
+            OpenRAVE::JSON::LoadJsonValueByKey(*it, "key", key);
+            OpenRAVE::JSON::LoadJsonValueByKey(*it, "values", _mapIntParameters[key]);
         }
     }
     if (value.HasMember("stringParameters") && value["stringParameters"].IsArray()) {
+        _mapStringParameters.clear();
         for (rapidjson::Value::ConstValueIterator it = value["stringParameters"].Begin(); it != value["stringParameters"].End(); ++it) {
-            std::string id;
-            OpenRAVE::JSON::LoadJsonValueByKey(*it, "id", id);
-            if (id.empty()) {
-                continue;
-            }
-            if (!OpenRAVE::JSON::GetJsonValueByKey<bool,bool>(*it, "__deleted__", false)) {
-                OpenRAVE::JSON::LoadJsonValueByKey(*it, "value", _mapStringParameters[id]);
-            } else {
-                _mapStringParameters.erase(id);
-            }
+            std::string key;
+            OpenRAVE::JSON::LoadJsonValueByKey(*it, "key", key);
+            OpenRAVE::JSON::LoadJsonValueByKey(*it, "value", _mapStringParameters[key]);
         }
     }
 

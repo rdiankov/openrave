@@ -2729,12 +2729,12 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
     _mapCustomData.clear();
     if (rIkParameterization.HasMember("customData") && rIkParameterization["customData"].IsArray()) {
         for (rapidjson::Value::ConstValueIterator it = rIkParameterization["customData"].Begin(); it != rIkParameterization["customData"].End(); ++it) {
-            std::string id;
-            OpenRAVE::JSON::LoadJsonValueByKey(*it, "id", id);
-            if (id.empty()) {
+            std::string key;
+            OpenRAVE::JSON::LoadJsonValueByKey(*it, "key", key);
+            if (key.empty()) {
                 continue;
             }
-            OpenRAVE::JSON::LoadJsonValueByKey(*it, "values", _mapCustomData[id]);
+            OpenRAVE::JSON::LoadJsonValueByKey(*it, "values", _mapCustomData[key]);
         }
     }
     // TODO have to scale _mapCustomData by fUnitScale
