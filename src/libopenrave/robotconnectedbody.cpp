@@ -19,6 +19,10 @@
 
 namespace OpenRAVE {
 
+RobotBase::ConnectedBodyInfo::ConnectedBodyInfo() : _bIsActive(0)
+{
+}
+
 void RobotBase::ConnectedBodyInfo::InitInfoFromBody(RobotBase& robot)
 {
     _vLinkInfos.clear();
@@ -125,7 +129,7 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &value, rapidj
         value.AddMember("gripperInfos", rGripperInfos, allocator);
     }
 
-    OpenRAVE::JSON::SetJsonValueByKey(value, "isActive", _bIsActive, allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(value, "isActive", (int)_bIsActive, allocator);
 }
 
 void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale)
@@ -317,7 +321,7 @@ RobotBase::ConnectedBody::~ConnectedBody()
 {
 }
 
-bool RobotBase::ConnectedBody::SetActive(bool active)
+bool RobotBase::ConnectedBody::SetActive(int8_t active)
 {
     if (_info._bIsActive == active) {
         return false;
@@ -333,7 +337,7 @@ bool RobotBase::ConnectedBody::SetActive(bool active)
     return true; // changed
 }
 
-bool RobotBase::ConnectedBody::IsActive()
+int8_t RobotBase::ConnectedBody::IsActive()
 {
     return _info._bIsActive;
 }
@@ -661,7 +665,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             }
         }
 
-        if( !connectedBody.IsActive() ) {
+        if( connectedBody.IsActive() == 0 ) {
             // skip
             continue;
         }
@@ -997,7 +1001,7 @@ void RobotBase::_DeinitializeConnectedBodiesInformation()
     _vPassiveJoints.resize(iwritepassiveJoint);
 }
 
-void RobotBase::GetConnectedBodyActiveStates(std::vector<uint8_t>& activestates) const
+void RobotBase::GetConnectedBodyActiveStates(std::vector<int8_t>& activestates) const
 {
     activestates.resize(_vecConnectedBodies.size());
     for(size_t iconnectedbody = 0; iconnectedbody < _vecConnectedBodies.size(); ++iconnectedbody) {
@@ -1005,11 +1009,11 @@ void RobotBase::GetConnectedBodyActiveStates(std::vector<uint8_t>& activestates)
     }
 }
 
-void RobotBase::SetConnectedBodyActiveStates(const std::vector<uint8_t>& activestates)
+void RobotBase::SetConnectedBodyActiveStates(const std::vector<int8_t>& activestates)
 {
     OPENRAVE_ASSERT_OP(activestates.size(),==,_vecConnectedBodies.size());
     for(size_t iconnectedbody = 0; iconnectedbody < _vecConnectedBodies.size(); ++iconnectedbody) {
-        _vecConnectedBodies[iconnectedbody]->SetActive(!!activestates[iconnectedbody]);
+        _vecConnectedBodies[iconnectedbody]->SetActive(activestates[iconnectedbody]);
     }
 }
 
