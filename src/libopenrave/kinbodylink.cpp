@@ -122,44 +122,43 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
 
     if (value.HasMember("floatParameters") && value["floatParameters"].IsArray()) {
         for (rapidjson::Value::ConstValueIterator it = value["floatParameters"].Begin(); it != value["floatParameters"].End(); ++it) {
-            std::string key;
-            OpenRAVE::JSON::LoadJsonValueByKey(*it, "key", key);
-            if (key.empty()) {
+            std::string id;
+            OpenRAVE::JSON::LoadJsonValueByKey(*it, "id", id);
+            if (id.empty()) {
                 continue;
             }
             if (!OpenRAVE::JSON::GetJsonValueByKey<bool,bool>(*it, "__deleted__", false)) {
-                OpenRAVE::JSON::LoadJsonValueByKey(*it, "values", _mapFloatParameters[key]);
+                OpenRAVE::JSON::LoadJsonValueByKey(*it, "values", _mapFloatParameters[id]);
             } else {
-                _mapFloatParameters.erase(key);
+                _mapFloatParameters.erase(id);
             }
-            
         }
     }
     if (value.HasMember("intParameters") && value["intParameters"].IsArray()) {
         for (rapidjson::Value::ConstValueIterator it = value["intParameters"].Begin(); it != value["intParameters"].End(); ++it) {
-            std::string key;
-            OpenRAVE::JSON::LoadJsonValueByKey(*it, "key", key);
-            if (key.empty()) {
+            std::string id;
+            OpenRAVE::JSON::LoadJsonValueByKey(*it, "id", id);
+            if (id.empty()) {
                 continue;
             }
             if (!OpenRAVE::JSON::GetJsonValueByKey<bool,bool>(*it, "__deleted__", false)) {
-                OpenRAVE::JSON::LoadJsonValueByKey(*it, "values", _mapIntParameters[key]);
+                OpenRAVE::JSON::LoadJsonValueByKey(*it, "values", _mapIntParameters[id]);
             } else {
-                _mapIntParameters.erase(key);
+                _mapIntParameters.erase(id);
             }
         }
     }
     if (value.HasMember("stringParameters") && value["stringParameters"].IsArray()) {
         for (rapidjson::Value::ConstValueIterator it = value["stringParameters"].Begin(); it != value["stringParameters"].End(); ++it) {
-            std::string key;
-            OpenRAVE::JSON::LoadJsonValueByKey(*it, "key", key);
-            if (key.empty()) {
+            std::string id;
+            OpenRAVE::JSON::LoadJsonValueByKey(*it, "id", id);
+            if (id.empty()) {
                 continue;
             }
             if (!OpenRAVE::JSON::GetJsonValueByKey<bool,bool>(*it, "__deleted__", false)) {
-                OpenRAVE::JSON::LoadJsonValueByKey(*it, "value", _mapStringParameters[key]);
+                OpenRAVE::JSON::LoadJsonValueByKey(*it, "value", _mapStringParameters[id]);
             } else {
-                _mapStringParameters.erase(key);
+                _mapStringParameters.erase(id);
             }
         }
     }

@@ -2680,15 +2680,23 @@ double RaveRandomDouble(IntervalType interval)
     return double(sample.at(0));
 }
 
-void IkParameterization::SerializeJSON(rapidjson::Value& rIkParameterization, rapidjson::Document::AllocatorType& alloc, dReal fUnitScale) const
+void IkParameterization::SerializeJSON(rapidjson::Value& rIkParameterization, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale) const
 {
     rIkParameterization.SetObject();
-    OpenRAVE::JSON::SetJsonValueByKey(rIkParameterization, "type", GetName(), alloc);
-    OpenRAVE::JSON::SetJsonValueByKey(rIkParameterization, "transform", _transform, alloc);
+    OpenRAVE::JSON::SetJsonValueByKey(rIkParameterization, "type", GetName(), allocator);
+    OpenRAVE::JSON::SetJsonValueByKey(rIkParameterization, "transform", _transform, allocator);
 
     if (_mapCustomData.size() > 0) {
         // TODO have to scale _mapCustomData by fUnitScale
-        OpenRAVE::JSON::SetJsonValueByKey(rIkParameterization, "customData", _mapCustomData, alloc);
+        rapidjson::Value parameters;
+        FOREACHC(it, _mapCustomData) {
+            rapidjson::Value parameter;
+            parameter.SetObject();
+            OpenRAVE::JSON::SetJsonValueByKey(parameter, "id", it->first, allocator);
+            OpenRAVE::JSON::SetJsonValueByKey(parameter, "values", it->second, allocator);
+            parameters.PushBack(parameter, allocator);
+        }
+        rIkParameterization.AddMember("customData", parameters, allocator);
     }
 }
 
@@ -2719,8 +2727,15 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
     _transform.trans *= fUnitScale;
 
     _mapCustomData.clear();
-    if (rIkParameterization.HasMember("customData")) {
-       OpenRAVE::JSON::LoadJsonValueByKey(rIkParameterization, "customData", _mapCustomData);
+    if (rIkParameterization.HasMember("customData") && rIkParameterization["customData"].IsArray()) {
+        for (rapidjson::Value::ConstValueIterator it = rIkParameterization["customData"].Begin(); it != rIkParameterization["customData"].End(); ++it) {
+            std::string id;
+            OpenRAVE::JSON::LoadJsonValueByKey(*it, "id", id);
+            if (id.empty()) {
+                continue;
+            }
+            OpenRAVE::JSON::LoadJsonValueByKey(*it, "values", _mapCustomData[id]);
+        }
     }
     // TODO have to scale _mapCustomData by fUnitScale
 }
