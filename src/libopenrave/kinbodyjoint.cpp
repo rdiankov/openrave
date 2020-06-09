@@ -226,31 +226,8 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
         _type = jointTypeMapping[typestr];
     }
 
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
 
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "parentLinkName", _linkname0);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "anchors", _vanchor);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "childLinkName", _linkname1);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "axes", _vaxes);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "currentValues", _vcurrentvalues);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "resolutions", _vresolution);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "maxVel", _vmaxvel);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "hardMaxVel", _vhardmaxvel);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "maxAccel", _vmaxaccel);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "hardMaxAccel", _vhardmaxaccel);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "maxJerk", _vmaxjerk);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "hardMaxJerk", _vhardmaxjerk);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "maxTorque", _vmaxtorque);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "maxInertia", _vmaxinertia);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "weights", _vweights);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "offsets", _voffsets);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "lowerLimit", _vlowerlimit);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "upperLimit", _vupperlimit);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "isCircular", _bIsCircular);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "isActive", _bIsActive);
-
-    // TODO: this mult is not correct if deserializing partial json
+    // deserializing partial json only multply fUnitScale if value exists
     // multiply fUnitScale on maxVel, maxAccel, lowerLimit, upperLimit
     dReal fjointmult = fUnitScale;
     if(_type == JointRevolute)
@@ -261,15 +238,54 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
     {
         fjointmult = fUnitScale;
     }
-    for(size_t ic = 0; ic < _vaxes.size(); ic++)
-    {
-        _vmaxvel[ic] *= fjointmult;
-        _vmaxaccel[ic] *= fjointmult;
-        _vlowerlimit[ic] *= fjointmult;
-        _vupperlimit[ic] *= fjointmult;
-    }
 
-    
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
+
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "parentLinkName", _linkname0);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "anchors", _vanchor);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "childLinkName", _linkname1);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "axes", _vaxes);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "currentValues", _vcurrentvalues);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "resolutions", _vresolution);
+
+    if (value.HasMember("maxVel")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(value, "maxVel", _vmaxvel);
+        for(size_t ic = 0; ic < _vaxes.size(); ic++) {
+            _vmaxvel[ic] *= fjointmult;
+        }
+    }
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "hardMaxVel", _vhardmaxvel);
+    if (value.HasMember("maxAccel")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(value, "maxAccel", _vmaxaccel);
+        for(size_t ic = 0; ic < _vaxes.size(); ic++) {
+            _vmaxaccel[ic] *= fjointmult;
+        }
+    }
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "hardMaxAccel", _vhardmaxaccel);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "maxJerk", _vmaxjerk);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "hardMaxJerk", _vhardmaxjerk);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "maxTorque", _vmaxtorque);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "maxInertia", _vmaxinertia);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "weights", _vweights);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "offsets", _voffsets);
+
+    if (value.HasMember("lowerLimit")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(value, "lowerLimit", _vlowerlimit);
+        for(size_t ic = 0; ic < _vaxes.size(); ic++) {
+            _vlowerlimit[ic] *= fjointmult;
+        }
+    }
+    if (value.HasMember("upperLimit")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(value, "upperLimit", _vupperlimit);
+        for(size_t ic = 0; ic < _vaxes.size(); ic++) {
+            _vupperlimit[ic] *= fjointmult;
+        }
+    }
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "isCircular", _bIsCircular);
+    OpenRAVE::JSON::LoadJsonValueByKey(value, "isActive", _bIsActive);
+
+
     if (value.HasMember("mimics") && value["mimics"].IsArray())
     {
         boost::array<MimicInfoPtr, 3> newmimic;

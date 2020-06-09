@@ -373,8 +373,10 @@ void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "grabbedName", _grabbedname);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "robotLinkName", _robotlinkname);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _trelative);
-    _trelative.trans *= fUnitScale;
+    if (value.HasMember("transform")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _trelative);
+        _trelative.trans *= fUnitScale;
+    }
     OpenRAVE::JSON::LoadJsonValueByKey(value, "ignoreRobotLinkNames", _setRobotLinksToIgnore);
 }
 

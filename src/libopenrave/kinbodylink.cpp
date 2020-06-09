@@ -115,8 +115,16 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
 {
     OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _t);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "massTransform", _tMassFrame);
+
+    if (value.HasMember("transform")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _t);
+        _t.trans *= fUnitScale;  // partial update should only mutliply fUnitScale once if the key is in value
+    }
+    if (value.HasMember("massTransform")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(value, "massTransform", _tMassFrame);
+        _tMassFrame.trans *= fUnitScale;
+    }
+
     OpenRAVE::JSON::LoadJsonValueByKey(value, "mass", _mass);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "intertialMoments", _vinertiamoments);
 
@@ -146,9 +154,6 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     }
 
     OpenRAVE::JSON::LoadJsonValueByKey(value, "forcedAdjacentLinks", _vForcedAdjacentLinks);
-
-    _t.trans *= fUnitScale;
-    _tMassFrame.trans *= fUnitScale;
 
     if (value.HasMember("geometries")) {
         _vgeometryinfos.reserve(value["geometries"].Size() + _vgeometryinfos.size());

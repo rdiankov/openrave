@@ -2723,8 +2723,10 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
             }
         }
     }
-    OpenRAVE::JSON::LoadJsonValueByKey(rIkParameterization, "transform", _transform);
-    _transform.trans *= fUnitScale;
+    if (value.HasMember("transform")) {
+        OpenRAVE::JSON::LoadJsonValueByKey(rIkParameterization, "transform", _transform);
+        _transform.trans *= fUnitScale;
+    }
 
     _mapCustomData.clear();
     if (rIkParameterization.HasMember("customData") && rIkParameterization["customData"].IsArray()) {
