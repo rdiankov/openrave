@@ -151,6 +151,7 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
     if(_mapFloatParameters.size() > 0)
     {
         rapidjson::Value parameters;
+        parameters.SetArray();
         FOREACHC(it, _mapFloatParameters) {
             rapidjson::Value parameter;
             parameter.SetObject();
@@ -163,6 +164,7 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
     if(_mapIntParameters.size() > 0)
     {
         rapidjson::Value parameters;
+        parameters.SetArray();
         FOREACHC(it, _mapIntParameters) {
             rapidjson::Value parameter;
             parameter.SetObject();
@@ -175,6 +177,7 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
     if(_mapStringParameters.size() > 0)
     {
         rapidjson::Value parameters;
+        parameters.SetArray();
         FOREACHC(it, _mapStringParameters) {
             rapidjson::Value parameter;
             parameter.SetObject();

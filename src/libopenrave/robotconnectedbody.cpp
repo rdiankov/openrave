@@ -140,7 +140,7 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
     OpenRAVE::JSON::LoadJsonValueByKey(value, "uri", _uri);
     OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _trelative);
 
-    if(value.HasMember("links")) {
+    if(value.HasMember("links") && value["links"].IsArray()) {
         _vLinkInfos.reserve(value["links"].Size() + _vLinkInfos.size());
         size_t iLink = 0;
         for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it, ++iLink) {
@@ -156,7 +156,7 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
         }
     }
 
-    if(value.HasMember("joints")) {
+    if(value.HasMember("joints") && value["joints"].IsArray()) {
         _vJointInfos.reserve(value["joints"].Size() + _vJointInfos.size());
         size_t iJoint = 0;
         for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it, ++iJoint) {
@@ -172,10 +172,10 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
         }
     }
 
-    if(value.HasMember("tools")) {
+    if(value.HasMember("tools") && value["tools"].IsArray()) {
         _vManipulatorInfos.reserve(value["tools"].Size() + _vManipulatorInfos.size());
         size_t iManipualtor = 0;
-        for (rapidjson::Value::ConstValueIterator it = value["tool"].Begin(); it != value["tool"].End(); ++it, ++iManipualtor) {
+        for (rapidjson::Value::ConstValueIterator it = value["tools"].Begin(); it != value["tools"].End(); ++it, ++iManipualtor) {
             const rapidjson::Value& manipulatorValue = *it;
             std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(manipulatorValue, "id");
             if (id.empty()) {
@@ -188,7 +188,7 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
         }
     }
 
-    if(value.HasMember("attachedSensors")) {
+    if(value.HasMember("attachedSensors") && value["attachedSensors"].IsArray()) {
         _vAttachedSensorInfos.reserve(value["attachedSensors"].Size() + _vAttachedSensorInfos.size());
         size_t iAttachedSensor = 0;
         for (rapidjson::Value::ConstValueIterator it = value["attachedSensors"].Begin(); it != value["attachedSensors"].End(); ++it, ++iAttachedSensor) {
@@ -204,7 +204,7 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
         }
     }
 
-    if(value.HasMember("gripperInfos")) {
+    if(value.HasMember("gripperInfos") && value["gripperInfos"].IsArray()) {
         _vGripperInfos.reserve(value["gripperInfos"].Size() + _vGripperInfos.size());
         size_t iGripperInfo = 0;
         for (rapidjson::Value::ConstValueIterator it = value["gripperInfos"].Begin(); it != value["gripperInfos"].End(); ++it, ++iGripperInfo) {

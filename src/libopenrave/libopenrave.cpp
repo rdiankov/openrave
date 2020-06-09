@@ -2689,6 +2689,7 @@ void IkParameterization::SerializeJSON(rapidjson::Value& rIkParameterization, ra
     if (_mapCustomData.size() > 0) {
         // TODO have to scale _mapCustomData by fUnitScale
         rapidjson::Value parameters;
+        parameters.SetArray();
         FOREACHC(it, _mapCustomData) {
             rapidjson::Value parameter;
             parameter.SetObject();
