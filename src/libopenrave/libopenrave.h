@@ -485,13 +485,13 @@ public:
 
     /// \brief Check if the given id is unique, otherwise it will assign a unique one and udpate the set
     void AssignIdIfNotUnique(std::string& id) {
-        if (IsUnique(id)) {
+        if (!id.empty() && IsUnique(id)) {
             _sUniqueId.insert(id);
             return;
         }
         std::string tempId = id;
         int count = 0;
-        while (!IsUnique(tempId)) {
+        while (tempId.empty() || !IsUnique(tempId)) {
             tempId = (id.empty() ? _prefix : id) + std::to_string(count);
             count++;
         }
