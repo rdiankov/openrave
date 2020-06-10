@@ -1850,11 +1850,29 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     parent->_PostprocessChangedParameters(Prop_JointMimic);
 }
 
-void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> >& vpartials,
+std::string to_string(const std::map< std::pair<KinBody::Mimic::DOFFormat, int>, dReal >& m) {
+    std::stringstream ss;
+    for(auto keyvalue : m) {
+        ss << "(" << keyvalue.first.first.to_string() << ", " << keyvalue.first.second << "): " << keyvalue.second << "; ";
+    }
+    return ss.str();
+}
+
+std::string to_string(const std::vector<std::pair<int, dReal> >& v) {
+    std::stringstream ss;
+    for(auto p : v) {
+        ss << "(" << p.first << ", " << p.second << "), ";
+    }
+    return ss.str();
+}
+
+void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal> >& vpartials,
                                                const int iaxis,
-                                               std::map< std::pair<MIMIC::DOFFormat, int>, dReal >& mapcachedpartials) const
+                                               std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mapcachedpartials) const
 {
     vpartials.clear(); // this is a cache, so we clear
+    // mapcachedpartials.clear(); // this is cache; clear
+
     if( dofindex >= 0 ) {
         vpartials.emplace_back(dofindex + iaxis, 1.0); // active joint
         return; // do nothing more
@@ -1881,76 +1899,72 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> 
     _RAVE_DISPLAY(std::cout << "thisdofformat: " << thisdofformat.to_string(); );
 
     
-    std::vector<std::pair<int, dReal> > vtemppartials;
-    std::vector<dReal> vtempvalues;
+    
+    
 
-    const MimicPtr pmimic = _vmimic[iaxis];
+    const MimicPtr& pmimic = _vmimic[iaxis];
 
     _RAVE_DISPLAY(std::cout << "pmimic: " << std::endl << pmimic->to_string(););
 
-    for(const MIMIC::DOFHierarchy& mimicdof : pmimic->_vmimicdofs) {
+    // backward differentiation
+    // compute d(P_mimic)/d(connecting_mimic),
+    // compute d(J_mimic)/d(arm1_mimic), d(J_mimic)/d(connecting_mimic),
+    std::vector<dReal> vtempvalues; ///< collect joint values to evaluate the velocity funtions
+    for(const MIMIC::DOFFormat& dofformat : pmimic->_vdofformat) {
+        const JointConstPtr dependedjoint = dofformat.GetJoint(*parent);
+        _RAVE_DISPLAY(std::cout << "parent joint is " << dependedjoint->GetName());
+        vtempvalues.push_back(dependedjoint->GetValue(dofformat.axis));
+    }
+    _RAVE_DISPLAY(
+        std::cout << "vtempvalues = ";
+        for(auto v : vtempvalues) {
+            std::cout << v << ", ";
+        }
+        std::cout << std::endl;
+    );
 
-        _RAVE_DISPLAY(std::cout << mimicdof.to_string(); );
+    // std::vector<std::pair<int, dReal> > vtemppartials; // collect
 
-        const std::pair<MIMIC::DOFFormat, int> key {thisdofformat, mimicdof.dofindex};
-        if( !mapcachedpartials.count(key) ) {
-            // not in the cache so compute using the chain rule
-            if( vtempvalues.empty() ) {
-                for(MIMIC::DOFFormat& dofformat : pmimic->_vdofformat) {
-                    const JointConstPtr pparentjoint = dofformat.GetJoint(*parent);
-                    _RAVE_DISPLAY(std::cout << "parent joint is " << pparentjoint->GetName());
-                    vtempvalues.push_back(pparentjoint->GetValue(dofformat.axis));
-                }
-            }
-            OpenRAVEFunctionParserRealPtr velfn = pmimic->_velfns.at(mimicdof.dofformatindex);
-            dReal fvel = velfn->Eval(vtempvalues.empty() ? NULL : &vtempvalues[0]);
-            _RAVE_DISPLAY(std::cout << "fvel = " << fvel)
-            const MIMIC::DOFFormat& dofformat = pmimic->_vdofformat.at(mimicdof.dofformatindex);
-            const JointConstPtr pparentjoint = dofformat.GetJoint(*parent);
-            _RAVE_DISPLAY(std::cout << "parent joint is " << pparentjoint->GetName());
-            if( pparentjoint->IsMimic(dofformat.axis) ) {
-                // recursion
-                _RAVE_DISPLAY(std::cout << this->GetName() << " calls recursion with parent joint " + pparentjoint->GetName();)
+    std::map< std::pair<MIMIC::DOFFormat, int>, dReal > localmap;
 
-                pparentjoint->_ComputePartialVelocities(vtemppartials, dofformat.axis, mapcachedpartials);
-                dReal fpartial = 0;
-                for(std::pair<int, dReal>& partial : vtemppartials) {
-                    if( partial.first == mimicdof.dofindex ) {
-                        fpartial += partial.second;
-                    }
-                }
-                _RAVE_DISPLAY(std::cout << "fpartial = " << fpartial)
-                fvel *= fpartial;
-            }
+    const size_t nvars = pmimic->_vdofformat.size(); ///< number of joints on which this joint depends on
+    for(size_t ivar = 0; ivar < nvars; ++ivar) {
+        const MIMIC::DOFFormat& dofformat = pmimic->_vdofformat[ivar];
+        const JointConstPtr dependedjoint = dofformat.GetJoint(*parent); ///< a joint on which this joint depends on
+        const int jointindex = dofformat.jointindex; ///< index of depended joint
+        const OpenRAVEFunctionParserRealPtr velfn = pmimic->_velfns.at(ivar); ///< function that evaluates the partial derivative ∂z/∂x
+        const dReal fvel = velfn->Eval(vtempvalues.empty() ? NULL : &vtempvalues[0]); ///< value of ∂z/∂x
+        _RAVE_DISPLAY(std::cout << "fvel = " << fvel;);
 
-            // before pushing back, check for repetition
-            bool badd = true;
-            for(std::pair<int, dReal>& partial : vpartials) {
-                if( partial.first == mimicdof.dofindex ) {
-                    partial.second += fvel;
-                    badd = false;
-                    break;
-                }
-            }
-            if( badd ) {
-                vpartials.emplace_back(mimicdof.dofindex, fvel);
-                mapcachedpartials[key] = fvel; // TGN adds
+        if(dependedjoint->IsMimic(dofformat.axis)) {
+            // depended joint is also mimic; go down the dependency tree and collect partial derivatives by chain rule
+            _RAVE_DISPLAY(std::cout << this->GetName() << " calls recursion with depended joint " + dependedjoint->GetName();)
+
+            std::vector<std::pair<int, dReal> > vLocalIndexPartialPairs;
+            dependedjoint->_ComputePartialVelocities(vLocalIndexPartialPairs, iaxis, mapcachedpartials); ///< recursion: computes ∂y/∂x
+            for(const std::pair<int, dReal>& pIndexPartial : vLocalIndexPartialPairs) {
+                localmap[{thisdofformat, pIndexPartial.first}] += fvel * pIndexPartial.second; ///< dz/dx += ∂z/∂y * ∂y/∂x
             }
         }
         else {
-            // mapcachedpartials has key
-            bool badd = true;
-            for(std::pair<int, dReal>& partial : vpartials) {
-                if( partial.first == mimicdof.dofindex ) {
-                    badd = false;
-                    break;
-                }
-            }
-            if( badd ) {
-                vpartials.emplace_back(mimicdof.dofindex, mapcachedpartials.at(key));
-            }
+            // depended joint is active
+            localmap[{thisdofformat, jointindex}] += fvel; ///< dz/dx += ∂z/∂x
         }
     }
+
+    for(auto keyvalue : localmap) {
+        const int dependedJointIndex = keyvalue.first.second;
+        const dReal partialDerivative = keyvalue.second;
+        vpartials.emplace_back(dependedJointIndex, partialDerivative);
+    }
+
+    _RAVE_DISPLAY(
+        std::cout << "localmap: " << to_string(localmap) << std::endl;
+        std::cout << "mapcachedpartials: " << to_string(mapcachedpartials) << std::endl;
+        std::cout << "vpartials = " << to_string(vpartials);
+    )
+
+    mapcachedpartials.insert(begin(localmap), end(localmap));
 }
 
 int KinBody::Joint::_Eval(int axis, uint32_t timederiv, const std::vector<dReal>& vdependentvalues, std::vector<dReal>& voutput)

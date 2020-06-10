@@ -2057,20 +2057,20 @@ void KinBody::ComputeJacobianTranslation(int linkindex, const Vector& tManip, st
 
             for(int idof = 0; idof < pjoint->GetDOF(); ++idof) {
                 if( pjoint->IsMimic(idof) ) {
-                    bool bhas = dofindices.empty();
-                    if( !bhas ) {
-                        const boost::array<MimicPtr, 3>& vmimics = pjoint->_vmimic;
-                        const MimicPtr& pmimic = vmimics[idof];
-                        _RAVE_DISPLAY(std::cout << "pmimic: " << pmimic->to_string();)
-                        const std::vector<Mimic::DOFHierarchy>& vmimicdofs = vmimics[idof]->_vmimicdofs;
-                        for(const Mimic::DOFHierarchy& mimicdof : vmimicdofs) {
-                            bhas = find(dofindices.begin(), dofindices.end(), mimicdof.dofindex) != dofindices.end();
-                            if(bhas) {
-                                break;
-                            }
-                        }
-                    }
-                    if( bhas ) {
+                    // bool bhas = dofindices.empty();
+                    // if( !bhas ) {
+                    //     const boost::array<MimicPtr, 3>& vmimics = pjoint->_vmimic;
+                    //     const MimicPtr& pmimic = vmimics[idof];
+                    //     _RAVE_DISPLAY(std::cout << "pmimic: " << pmimic->to_string();)
+                    //     const std::vector<Mimic::DOFHierarchy>& vmimicdofs = vmimics[idof]->_vmimicdofs;
+                    //     for(const Mimic::DOFHierarchy& mimicdof : vmimicdofs) {
+                    //         bhas = find(dofindices.begin(), dofindices.end(), mimicdof.dofindex) != dofindices.end();
+                    //         if(bhas) {
+                    //             break;
+                    //         }
+                    //     }
+                    // }
+                    // if( bhas ) {
                         Vector vaxis;
                         if( pjoint->IsRevolute(idof) ) {
                             vaxis = pjoint->GetAxis(idof).cross(tManip - pjoint->GetAnchor());
@@ -2109,11 +2109,12 @@ void KinBody::ComputeJacobianTranslation(int linkindex, const Vector& tManip, st
                                 }
                                 index = itindex - dofindices.begin();
                             }
+                            _RAVE_DISPLAY(std::cout << "index = " << index;)
                             vjacobian[                index] += v.x;
                             vjacobian[    dofstride + index] += v.y;
                             vjacobian[2 * dofstride + index] += v.z;
                         }
-                    }
+                    // }
                 }
             }
         }
