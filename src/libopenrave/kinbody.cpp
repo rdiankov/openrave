@@ -204,9 +204,6 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
             if (id.empty()) {
                 id = OpenRAVE::JSON::GetStringJsonValueByKey(grabbedValue, "grabbedName");
             }
-            if (id.empty()) {
-                id = boost::str(boost::format("grabbed%d") % iGrabbed);
-            }
             UpdateOrCreateInfo(grabbedValue, id, _vGrabbedInfos, fUnitScale);
         }
     }
@@ -220,9 +217,6 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
             if (id.empty()) {
                 id = OpenRAVE::JSON::GetStringJsonValueByKey(linkValue, "name");
             }
-            if (id.empty()) {
-                id = boost::str(boost::format("link%d") % iLink);
-            }
             UpdateOrCreateInfo(linkValue, id, _vLinkInfos, fUnitScale);
         }
     }
@@ -235,9 +229,6 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
             std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(jointValue, "id");
             if (id.empty()) {
                 id = OpenRAVE::JSON::GetStringJsonValueByKey(jointValue, "name");
-            }
-            if (id.empty()) {
-                id = boost::str(boost::format("joint%d") % iJoint);
             }
             UpdateOrCreateInfo(jointValue, id, _vJointInfos, fUnitScale);
         }

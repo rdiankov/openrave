@@ -563,9 +563,6 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
             if (id.empty()) {
                 id = OpenRAVE::JSON::GetStringJsonValueByKey(manipulatorValue, "name");
             }
-            if (id.empty()) {
-                id = boost::str(boost::format("tool%d") % iManipulator);
-            }
             UpdateOrCreateInfo(manipulatorValue, id, _vManipulatorInfos, fUnitScale);
         }
     }
@@ -578,9 +575,6 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
             std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(attachedSensorValue, "id");
             if (id.empty()) {
                 id = OpenRAVE::JSON::GetStringJsonValueByKey(attachedSensorValue, "name");
-            }
-            if (id.empty()) {
-                id = boost::str(boost::format("attachedSensor%d") % iAttachedSensor);
             }
             UpdateOrCreateInfo(attachedSensorValue, id, _vAttachedSensorInfos, fUnitScale);
         }
@@ -595,9 +589,6 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
             if (id.empty()) {
                 id = OpenRAVE::JSON::GetStringJsonValueByKey(connectedBodyValue, "name");
             }
-            if (id.empty()) {
-                id = boost::str(boost::format("connectedBody%d") % iConnectedBody);
-            }
             UpdateOrCreateInfo(connectedBodyValue, id, _vConnectedBodyInfos, fUnitScale);
         }
     }
@@ -610,9 +601,6 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
             std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(gripperInfoValue, "id");
             if (id.empty()) {
                 id = OpenRAVE::JSON::GetStringJsonValueByKey(gripperInfoValue, "name");
-            }
-            if (id.empty()) {
-                id = boost::str(boost::format("gripperInfo%d") % iGripperInfo);
             }
             UpdateOrCreateInfo(gripperInfoValue, id, _vGripperInfos, fUnitScale);
         }

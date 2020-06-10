@@ -470,6 +470,50 @@ inline const char *strcasestr(const char *s, const char *find)
 }
 #endif
 
+
+/// \brief A local uid generator
+class UIDGenerator {
+public:
+    UIDGenerator() {
+        _prefix.clear();
+        _sUniqueId.clear();
+    }
+    UIDGenerator(std::string prefix): _prefix(prefix) {
+        _sUniqueId.clear();
+    }
+    virtual ~UIDGenerator() {}
+
+    /// \brief Check if the given id is unique, otherwise it will assign a unique one and udpate the set
+    void AssignIdIfNotUnique(std::string& id) {
+        if (IsUnique(id)) {
+            _sUniqueId.insert(id);
+            return;
+        }
+        std::string tempId = id;
+        int count = 0;
+        while (!IsUnique(tempId)) {
+            tempId = (id.empty() ? _prefix : id) + std::to_string(count);
+            count++;
+        }
+        _sUniqueId.insert(tempId);
+        id = tempId;
+    }
+
+    void Update(const std::string id) {
+        if (IsUnique(id)) {
+            _sUniqueId.insert(id);
+            return;
+        }
+        throw OPENRAVE_EXCEPTION_FORMAT("Update failed. Found same id %s in set.", id, ORE_InvalidArguments);
+    }
+private:
+    bool IsUnique(const std::string& id) {
+        return _sUniqueId.count(id) == 0;
+    }
+    std::string _prefix;
+    std::set<std::string> _sUniqueId;
+};
+
 ///* \brief Update current info from json value. Create a new one if there is no id matched.
 template<typename T>
 void UpdateOrCreateInfo(const rapidjson::Value& value, const std::string id, std::vector<boost::shared_ptr<T>>& vInfos, dReal fUnitScale) {

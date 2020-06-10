@@ -159,17 +159,21 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     OpenRAVE::JSON::LoadJsonValueByKey(value, "forcedAdjacentLinks", _vForcedAdjacentLinks);
 
     if (value.HasMember("geometries")) {
+        UIDGenerator geometryIdGenerator("geometry");
         _vgeometryinfos.reserve(value["geometries"].Size() + _vgeometryinfos.size());
+        FOREACHC(itGeometry, _vgeometryinfos) {
+            geometryIdGenerator.AssignIdIfNotUnique((*itGeometry)->_id);
+        }
 
         size_t iGeometry = 0;
         for (rapidjson::Value::ConstValueIterator it = value["geometries"].Begin(); it != value["geometries"].End(); ++it, ++iGeometry) {
             const rapidjson::Value& geometryValue = *it;
             std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(geometryValue, "id");
             if (id.empty()) {
-                id = OpenRAVE::JSON::GetStringJsonValueByKey(geometryValue, "name");
-            }
-            if (id.empty()) {
-                id = boost::str(boost::format("geometry%d") % iGeometry);
+                // OpenRAVE internally doesn't care about geometries name is duplicated or not.
+                // so if no id is set by user, we should assign a unique one instead of using geometry name in case of wrongly update current geometry with the same name.
+                // for other infos, like link, joints, etc. We fall back to use name if id is empty becasue OpenRAVE requires the unique name when we initialize those infos.
+                geometryIdGenerator.AssignIdIfNotUnique(id);
             }
             UpdateOrCreateInfo(geometryValue, id, _vgeometryinfos, fUnitScale);
         }
