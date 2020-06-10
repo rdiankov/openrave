@@ -3434,12 +3434,12 @@ void KinBody::_ComputeInternalInformation()
     uint64_t starttime = utils::GetMicroTime();
     _nHierarchyComputed = 1;
 
-    int lindex=0;
+    int lindex = 0;
     const int nlinks = _veclinks.size();
-    FOREACH(itlink,_veclinks) {
-        (*itlink)->_index = lindex; // always reset, necessary since index cannot be initialized by custom links
-        (*itlink)->_vParentLinks.clear();
-        if((nlinks > 1)&&((*itlink)->GetName().size() == 0)) {
+    for(const LinkPtr& plink : _veclinks) {
+        plink->_index = lindex; // always reset, necessary since index cannot be initialized by custom links
+        plink->_vParentLinks.clear();
+        if(nlinks > 1 && plink->GetName().empty()) {
             RAVELOG_WARN(str(boost::format("%s link index %d has no name")%GetName()%lindex));
         }
         lindex++;
@@ -3447,52 +3447,61 @@ void KinBody::_ComputeInternalInformation()
 
     {
         // move any enabled passive joints to the regular joints list
-        vector<JointPtr>::iterator itjoint = _vPassiveJoints.begin();
-        while(itjoint != _vPassiveJoints.end()) {
+        
+        for(std::vector<JointPtr>::iterator it = _vPassiveJoints.begin();
+            it != _vPassiveJoints.end();
+        ) {
             bool bmimic = false;
-            for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
-                if( !!(*itjoint)->_vmimic[idof] ) {
-                    bmimic = true;
-                }
-            }
-            if( !bmimic && (*itjoint)->_info._bIsActive ) {
-                _vecjoints.push_back(*itjoint);
-                itjoint = _vPassiveJoints.erase(itjoint);
-            }
-            else {
-                ++itjoint;
-            }
-        }
-        // move any mimic joints to the passive joints
-        itjoint = _vecjoints.begin();
-        while(itjoint != _vecjoints.end()) {
-            bool bmimic = false;
-            for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
-                if( !!(*itjoint)->_vmimic[idof] ) {
+            const JointPtr& pjoint = *it;
+            for(int idof = 0; idof < pjoint->GetDOF(); ++idof) {
+                if( !!pjoint->_vmimic[idof] ) {
                     bmimic = true;
                     break;
                 }
             }
-            if( bmimic || !(*itjoint)->_info._bIsActive ) {
-                _vPassiveJoints.push_back(*itjoint);
-                itjoint = _vecjoints.erase(itjoint);
+            if( !bmimic && pjoint->_info._bIsActive ) {
+                _vecjoints.push_back(pjoint);
+                it = _vPassiveJoints.erase(it);
             }
             else {
-                ++itjoint;
+                ++it;
             }
         }
-        int jointindex=0;
-        int dofindex=0;
-        FOREACH(itjoint,_vecjoints) {
-            (*itjoint)->jointindex = jointindex++;
-            (*itjoint)->dofindex = dofindex;
-            (*itjoint)->_info._bIsActive = true;
-            dofindex += (*itjoint)->GetDOF();
+
+        // move any mimic joints to the passive joints
+        for(std::vector<JointPtr>::iterator it = _vecjoints.begin();
+            it != _vecjoints.end();
+        ) {
+            bool bmimic = false;
+            const JointPtr& pjoint = *it;
+            for(int idof = 0; idof < pjoint->GetDOF(); ++idof) {
+                if( !!pjoint->_vmimic[idof] ) {
+                    bmimic = true;
+                    break;
+                }
+            }
+            if( bmimic || !pjoint->_info._bIsActive ) {
+                _vPassiveJoints.push_back(pjoint);
+                it = _vecjoints.erase(it);
+            }
+            else {
+                ++it;
+            }
         }
-        FOREACH(itjoint,_vPassiveJoints) {
-            (*itjoint)->jointindex = -1;
-            (*itjoint)->dofindex = -1;
-            (*itjoint)->_info._bIsActive = false;
+
+        int jointindex = 0;
+        int dofindex = 0;
+        for(const JointPtr& pjoint : _vecjoints) {
+            pjoint->jointindex = jointindex++;
+            pjoint->dofindex = dofindex;
+            pjoint->_info._bIsActive = true;
+            dofindex += pjoint->GetDOF();
+        }
+
+        for(const JointPtr& pjoint : _vPassiveJoints) {
+            pjoint->jointindex = -1;
+            pjoint->dofindex = -1;
+            pjoint->_info._bIsActive = false;
         }
     }
 
@@ -3507,10 +3516,10 @@ void KinBody::_ComputeInternalInformation()
         }
         vorder[i] = i;
     }
-    std::sort(vorder.begin(), vorder.end(), utils::index_cmp<vector<int>&>(vJointIndices));
+    std::sort(vorder.begin(), vorder.end(), utils::index_cmp<std::vector<int>&>(vJointIndices));
     _vDOFOrderedJoints.clear();
-    FOREACH(it,vorder) {
-        _vDOFOrderedJoints.push_back(_vecjoints.at(*it));
+    for(size_t orderi : vorder) {
+        _vDOFOrderedJoints.push_back(_vecjoints.at(orderi));
     }
 
     try {
@@ -3687,10 +3696,10 @@ void KinBody::_ComputeInternalInformation()
                     if(j == i || j == k) {
                         continue;
                     }
-                    const uint32_t kcost = vcosts[k*nlinks+i] + vcosts[j*nlinks+k];
+                    const uint32_t kcost = vcosts[k * nlinks + i] + vcosts[j * nlinks + k];
                     if( vcosts[j*nlinks+i] > kcost ) {
                         vcosts[j*nlinks+i] = kcost;
-                        _vAllPairsShortestPaths[j*nlinks+i] = _vAllPairsShortestPaths[k*nlinks+i];
+                        _vAllPairsShortestPaths[j * nlinks + i] = _vAllPairsShortestPaths[k * nlinks+i];
                     }
                 }
             }
@@ -3777,16 +3786,24 @@ void KinBody::_ComputeInternalInformation()
             }
             S.pop_front();
         }
+
         // fill each link's parent links
-        FOREACH(itlink,_veclinks) {
-            if( (*itlink)->GetIndex() > 0 && vuniquepaths.at((*itlink)->GetIndex()).size() == 0 ) {
-                RAVELOG_WARN(str(boost::format("_ComputeInternalInformation: %s has incomplete kinematics! link %s not connected to root %s")%GetName()%(*itlink)->GetName()%_veclinks.at(0)->GetName()));
+        for(const LinkPtr& plink : _veclinks) {
+            if( plink->GetIndex() > 0 && vuniquepaths.at(plink->GetIndex()).size() == 0 ) {
+                RAVELOG_WARN(str(boost::format("_ComputeInternalInformation: %s has incomplete kinematics! link %s not connected to root %s")%GetName()%plink->GetName()%_veclinks.at(0)->GetName()));
             }
-            FOREACH(itpath, vuniquepaths.at((*itlink)->GetIndex())) {
-                OPENRAVE_ASSERT_OP(itpath->back(),==,(*itlink)->GetIndex());
-                int parentindex = *---- itpath->end();
-                if( find((*itlink)->_vParentLinks.begin(),(*itlink)->_vParentLinks.end(),parentindex) == (*itlink)->_vParentLinks.end() ) {
-                    (*itlink)->_vParentLinks.push_back(parentindex);
+            // vuniquepaths is std::vector< std::list< std::list<int> > >
+            // vuniquepaths.at(plink->GetIndex()) is std::list<std::list<int> >
+            // itpath is std::list<std::list<int> >::iterator
+            // (*itpath) is std::list<int>
+            // (*itpath).end() is std::list<int>::iterator
+            // (----(itpath->end())) is still std::list<int>::iterator
+            // *(----(itpath->end())) is an int
+            FOREACH(itpath, vuniquepaths.at(plink->GetIndex())) {
+                OPENRAVE_ASSERT_OP(itpath->back(),==,plink->GetIndex());
+                int parentindex = *(--(-- (itpath->end())));
+                if( find(plink->_vParentLinks.begin(), plink->_vParentLinks.end(), parentindex) == plink->_vParentLinks.end() ) {
+                    plink->_vParentLinks.push_back(parentindex);
                 }
             }
         }
