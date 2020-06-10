@@ -3453,17 +3453,18 @@ void KinBody::_ComputeInternalInformation()
         }
     }
 
-    vector<size_t> vorder(_vecjoints.size());
-    vector<int> vJointIndices(_vecjoints.size());
-    _vDOFIndices.resize(GetDOF());
-    for(size_t i = 0; i < _vecjoints.size(); ++i) {
+    const size_t nActiveJoints = _vecjoints.size();
+    std::vector<size_t> vorder(nActiveJoints);
+    std::vector<int> vJointIndices(nActiveJoints);
+    _vDOFIndices.resize(this->GetDOF());
+    for(size_t i = 0; i < nActiveJoints; ++i) {
         vJointIndices[i] = _vecjoints[i]->dofindex;
         for(int idof = 0; idof < _vecjoints[i]->GetDOF(); ++idof) {
-            _vDOFIndices.at(vJointIndices[i]+idof) = i;
+            _vDOFIndices.at(vJointIndices[i] + idof) = i;
         }
         vorder[i] = i;
     }
-    sort(vorder.begin(), vorder.end(), utils::index_cmp<vector<int>&>(vJointIndices));
+    std::sort(vorder.begin(), vorder.end(), utils::index_cmp<vector<int>&>(vJointIndices));
     _vDOFOrderedJoints.clear();
     FOREACH(it,vorder) {
         _vDOFOrderedJoints.push_back(_vecjoints.at(*it));
@@ -3487,77 +3488,100 @@ void KinBody::_ComputeInternalInformation()
                 }
             }
         }
+
         // fill Mimic::_vmimicdofs, check that there are no circular dependencies between the mimic joints
-        std::map<Mimic::DOFFormat, MimicPtr > mapmimic;
-        for(int ijoints = 0; ijoints < 2; ++ijoints) {
-            vector<JointPtr>& vjoints = ijoints ? _vPassiveJoints : _vecjoints;
-            int jointindex=0;
-            FOREACH(itjoint,vjoints) {
-                Mimic::DOFFormat dofformat;
-                if( ijoints ) {
-                    dofformat.dofindex = -1;
-                    dofformat.jointindex = jointindex+(int)_vecjoints.size();
+        std::map<Mimic::DOFFormat, MimicPtr> mapmimic; ///< collects if thisdofformat.jointaxis depends on a mimic joint
+        for(bool bPassiveJoints : {false, true}) {
+            const std::vector<JointPtr>& vjoints = bPassiveJoints ? _vPassiveJoints : _vecjoints;
+            const int njoints = vjoints.size();
+            for(int ijoint = 0; ijoint < njoints; ++ijoint) {
+                const JointPtr& pjoint = vjoints[ijoint];
+
+                Mimic::DOFFormat thisdofformat; ///< construct for pjoint
+                if( bPassiveJoints ) {
+                    thisdofformat.dofindex   = -1; ///< mimic dofindex = -1, ...
+                    thisdofformat.jointindex = ijoint + (int)nActiveJoints; ///< but has a generalized joint index
                 }
                 else {
-                    dofformat.dofindex = (*itjoint)->GetDOFIndex();
-                    dofformat.jointindex = (*itjoint)->GetJointIndex();
+                    thisdofformat.dofindex   = pjoint->GetDOFIndex();  ///< >= 0
+                    thisdofformat.jointindex = pjoint->GetJointIndex(); ///< in [0, nActiveJoints)
                 }
-                for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
-                    dofformat.axis = idof;
-                    if( !!(*itjoint)->_vmimic[idof] ) {
-                        // only add if depends on mimic joints
-                        FOREACH(itdofformat,(*itjoint)->_vmimic[idof]->_vdofformat) {
-                            JointPtr pjoint = itdofformat->GetJoint(*this);
-                            if( pjoint->IsMimic(itdofformat->axis) ) {
-                                mapmimic[dofformat] = (*itjoint)->_vmimic[idof];
+
+                const int ndof = pjoint->GetDOF();
+                const boost::array<MimicPtr, 3>& vmimic = pjoint->_vmimic;
+                for(int idof = 0; idof < ndof; ++idof) {
+                    const MimicPtr& pmimic = vmimic[idof]; // enumerate
+                    thisdofformat.axis = idof;
+                    if( !!pmimic ) {
+                        // only add if pjoint depends on mimic joints
+                        // TGN: Can an active joint depend on mimic joints??? If not, why need vjoints = _vecjoints?
+                        for(const Mimic::DOFFormat& dofformat : pmimic->_vdofformat) {
+                            const JointPtr pjointDepended = dofformat.GetJoint(*this);
+                            if( pjointDepended->IsMimic(dofformat.axis) ) {
+                                mapmimic[thisdofformat] = pmimic; ///< pjoint
+                                RAVELOG_DEBUG_FORMAT("mimic joint %s depends on mimic joint %s; thisdofformat: %s; pmimic: %s",
+                                                     pjoint->GetName() % pjointDepended->GetName() % thisdofformat.to_string() % pmimic->to_string()
+                                );
                                 break;
                             }
                         }
                     }
                 }
-                ++jointindex;
             }
         }
+
         bool bchanged = true;
         while(bchanged) {
             bchanged = false;
-            FOREACH(itmimic, mapmimic) {
-                const MimicPtr& mimic = itmimic->second;
-                _RAVE_DISPLAY(std::cout << "mimic: " << mimic->to_string(););
-                Mimic::DOFHierarchy h;
-                h.dofformatindex = 0;
-                FOREACH(itdofformat,mimic->_vdofformat) {
-                    if( !mapmimic.count(*itdofformat) ) {
-                        continue; // this is normal, just means that the parent is a regular dof
-                    }
-                    const MimicPtr& mimicparent = mapmimic[*itdofformat];
-                    _RAVE_DISPLAY(std::cout << "mimicparent: " << mimicparent->to_string(););
+            for(const std::pair<const Mimic::DOFFormat, MimicPtr>& keyvalue : mapmimic) {
+                const Mimic::DOFFormat& thisdofformat = keyvalue.first;
+                const MimicPtr& pmimic = keyvalue.second;
+                std::vector<Mimic::DOFHierarchy>& vmimicdofs = pmimic->_vmimicdofs; ///< collect information of joints on which pmimic depends on
+                const std::vector<Mimic::DOFFormat>& vdofformat = pmimic->_vdofformat; ///<
 
-                    FOREACH(itmimicdof, mimicparent->_vmimicdofs) {
-                        if( mimicparent->_vdofformat[itmimicdof->dofformatindex] == itmimic->first ) {
-                            JointPtr pjoint = itmimic->first.GetJoint(*this);
-                            JointPtr pjointparent = itdofformat->GetJoint(*this);
-                            throw OPENRAVE_EXCEPTION_FORMAT(_("joint index %s uses a mimic joint %s that also depends on %s! this is not allowed"), pjoint->GetName()%pjointparent->GetName()%pjoint->GetName(), ORE_Failed);
+                const JointPtr pjoint = thisdofformat.GetJoint(*this); ///< pjoint depends on all [dofformat.GetJoint(*this) for dofformat in vdofformat]
+                const int ndofformat = vdofformat.size();
+                for(int idofformat = 0; idofformat < ndofformat; ++idofformat) {
+                    const Mimic::DOFFormat& dofformat = vdofformat[idofformat];
+                    const JointPtr pjointDepended = dofformat.GetJoint(*this);
+                    if( !mapmimic.count(dofformat) ) {
+                        continue; // this means pjointDepended depends on active joints only
+                    }
+
+                    const MimicPtr& pmimicDepended = mapmimic.at(dofformat); // dofformat.jointindex depends on pmimicDepended
+                    RAVELOG_DEBUG_FORMAT("pmimicDepended: %s", pmimicDepended->to_string());
+
+                    const std::vector<Mimic::DOFHierarchy>&   vmimicdofsDepended = pmimicDepended->_vmimicdofs;
+                    const std::vector<Mimic::DOFFormat>& vmimicdofformatDepended = pmimicDepended->_vdofformat;
+
+                    for(const Mimic::DOFHierarchy& mimicdofDepended : vmimicdofsDepended) {
+                        if( vmimicdofformatDepended[mimicdofDepended.dofformatindex] == thisdofformat ) {
+                            // pjointDepended also depends on pjoint that depends on pjointDepended ==> circular dependency!!!
+                            throw OPENRAVE_EXCEPTION_FORMAT(_("joint index %s uses a mimic joint %s that also depends on %s! this is not allowed"), 
+                                                            pjoint->GetName() % pjointDepended->GetName() % pjoint->GetName(), ORE_Failed);
                         }
 
-                        h.dofindex = itmimicdof->dofindex;
-                        if( find(mimic->_vmimicdofs.begin(),mimic->_vmimicdofs.end(),h) == mimic->_vmimicdofs.end() ) {
-                            mimic->_vmimicdofs.push_back(h);
+                        // append a `DOFHierarchy` object in vmimicdofs based on vdofformat
+                        Mimic::DOFHierarchy h;
+                        h.dofformatindex = idofformat;
+                        h.dofindex = mimicdofDepended.dofindex;
+                        if( find(vmimicdofs.begin(), vmimicdofs.end(), h) == vmimicdofs.end() ) {
+                            vmimicdofs.push_back(h);
                             bchanged = true;
                         }
                     }
-                    ++h.dofformatindex;
                 }
             }
         }
     }
     catch(const std::exception& ex) {
         RAVELOG_ERROR(str(boost::format("failed to set mimic equations on kinematics body %s: %s\n")%GetName()%ex.what()));
-        for(int ijoints = 0; ijoints < 2; ++ijoints) {
-            vector<JointPtr>& vjoints = ijoints ? _vPassiveJoints : _vecjoints;
-            FOREACH(itjoint,vjoints) {
-                for(int i = 0; i < (*itjoint)->GetDOF(); ++i) {
-                    (*itjoint)->_vmimic[i].reset();
+        for(bool bPassiveJoints : {false, true}) {
+            const std::vector<JointPtr>& vjoints = bPassiveJoints ? _vPassiveJoints : _vecjoints;
+            for(const JointPtr& pjoint : vjoints) {
+                const int ndof = pjoint->GetDOF();
+                for(int idof = 0; idof < ndof; ++idof) {
+                    pjoint->_vmimic[idof].reset();
                 }
             }
         }
@@ -3566,7 +3590,7 @@ void KinBody::_ComputeInternalInformation()
     _vTopologicallySortedJoints.clear();
     _vTopologicallySortedJointsAll.clear();
     _vTopologicallySortedJointIndicesAll.clear();
-    _vJointsAffectingLinks.resize(_vecjoints.size()*_veclinks.size());
+    _vJointsAffectingLinks.resize(_vecjoints.size() * _veclinks.size());
 
     // compute the all-pairs shortest paths
     {
