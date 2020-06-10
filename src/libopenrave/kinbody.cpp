@@ -2048,8 +2048,8 @@ void KinBody::ComputeJacobianTranslation(int linkindex, const Vector& tManip, st
                     index = dofindex + idof;
                 }
                 vjacobian[index                ] += v.x;
-                vjacobian[index +     dofstride] += v.y;
-                vjacobian[index + 2 * dofstride] += v.z;
+                vjacobian[index + dofstride    ] += v.y;
+                vjacobian[index + dofstride * 2] += v.z;
             }
         }
         else {
@@ -2088,9 +2088,9 @@ void KinBody::ComputeJacobianTranslation(int linkindex, const Vector& tManip, st
                         OPENRAVE_ASSERT_OP_FORMAT(index, >=, 0, "index should be >= 0; now %d", index, ORE_InvalidArguments);
                         RAVELOG_VERBOSE_FORMAT("Collecting linear velocity Jacobian w.r.t index %d (dof index %d) by the influence of joint %s", index % dofindex % pjoint->GetName());
                         const dReal partialderiv = pDofindexPartial.second;
-                        vjacobian[                index] += v.x * partialderiv;
-                        vjacobian[    dofstride + index] += v.y * partialderiv;
-                        vjacobian[2 * dofstride + index] += v.z * partialderiv;
+                        vjacobian[index                ] += v.x * partialderiv;
+                        vjacobian[index + dofstride    ] += v.y * partialderiv;
+                        vjacobian[index + dofstride * 2] += v.z * partialderiv;
                     }
                 }
             }
@@ -2261,8 +2261,8 @@ void KinBody::ComputeJacobianAxisAngle(int linkindex, std::vector<dReal>& vjacob
                         index = dofindex + dof;
                     }
                     vjacobian[index                ] += v.x;
-                    vjacobian[index +     dofstride] += v.y;
-                    vjacobian[index + 2 * dofstride] += v.z;
+                    vjacobian[index + dofstride    ] += v.y;
+                    vjacobian[index + dofstride * 2] += v.z;
                 }
             }
         }
@@ -2300,9 +2300,9 @@ void KinBody::ComputeJacobianAxisAngle(int linkindex, std::vector<dReal>& vjacob
                         OPENRAVE_ASSERT_OP_FORMAT(index, >=, 0, "index should be >= 0; now %d", index, ORE_InvalidArguments);
                         RAVELOG_VERBOSE_FORMAT("Collecting linear velocity Jacobian w.r.t index %d (dof index %d) by the influence of joint %s", index % dofindex % pjoint->GetName());
                         const dReal partialderiv = pDofindexPartial.second;
-                        vjacobian[                index] += v.x * partialderiv;
-                        vjacobian[    dofstride + index] += v.y * partialderiv;
-                        vjacobian[2 * dofstride + index] += v.z * partialderiv;
+                        vjacobian[index                ] += v.x * partialderiv;
+                        vjacobian[index + dofstride    ] += v.y * partialderiv;
+                        vjacobian[index + dofstride * 2] += v.z * partialderiv;
                     }
                 }
             }
