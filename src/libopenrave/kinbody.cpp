@@ -2101,17 +2101,18 @@ void KinBody::ComputeJacobianTranslation(int linkindex, const Vector& tManip, st
 
 void KinBody::CalculateJacobian(int linkindex, const Vector& trans, boost::multi_array<dReal,2>& mjacobian) const
 {
-    mjacobian.resize(boost::extents[3][GetDOF()]);
-    if( GetDOF() == 0 ) {
+    const size_t ndof = this->GetDOF();
+    mjacobian.resize(boost::extents[3][ndof]);
+    if( ndof == 0 ) {
         return;
     }
     std::vector<dReal> vjacobian;
-    ComputeJacobianTranslation(linkindex,trans,vjacobian);
-    OPENRAVE_ASSERT_OP((int)vjacobian.size(),==,3*GetDOF());
-    vector<dReal>::const_iterator itsrc = vjacobian.begin();
-    FOREACH(itdst,mjacobian) {
-        std::copy(itsrc,itsrc+GetDOF(),itdst->begin());
-        itsrc += GetDOF();
+    ComputeJacobianTranslation(linkindex, trans, vjacobian);
+    OPENRAVE_ASSERT_OP(vjacobian.size(), ==, 3*ndof);
+    std::vector<dReal>::const_iterator itsrc = vjacobian.begin();
+    FOREACH(itdst, mjacobian) {
+        std::copy(itsrc, itsrc + ndof, itdst->begin());
+        itsrc += ndof;
     }
 }
 
@@ -2214,17 +2215,18 @@ void KinBody::CalculateRotationJacobian(int linkindex, const Vector& q, std::vec
 
 void KinBody::CalculateRotationJacobian(int linkindex, const Vector& q, boost::multi_array<dReal,2>& mjacobian) const
 {
-    mjacobian.resize(boost::extents[4][GetDOF()]);
-    if( GetDOF() == 0 ) {
+    const size_t ndof = this->GetDOF();
+    mjacobian.resize(boost::extents[4][ndof]);
+    if( ndof == 0 ) {
         return;
     }
     std::vector<dReal> vjacobian;
-    CalculateRotationJacobian(linkindex,q,vjacobian);
-    OPENRAVE_ASSERT_OP((int)vjacobian.size(),==,4*GetDOF());
-    vector<dReal>::const_iterator itsrc = vjacobian.begin();
-    FOREACH(itdst,mjacobian) {
-        std::copy(itsrc,itsrc+GetDOF(),itdst->begin());
-        itsrc += GetDOF();
+    CalculateRotationJacobian(linkindex, q, vjacobian);
+    OPENRAVE_ASSERT_OP(vjacobian.size(), ==, 4 * ndof);
+    std::vector<dReal>::const_iterator itsrc = vjacobian.begin();
+    FOREACH(itdst, mjacobian) {
+        std::copy(itsrc, itsrc+ndof, itdst->begin());
+        itsrc += ndof;
     }
 }
 
@@ -2333,17 +2335,18 @@ void KinBody::ComputeJacobianAxisAngle(int linkindex, std::vector<dReal>& vjacob
 
 void KinBody::CalculateAngularVelocityJacobian(int linkindex, boost::multi_array<dReal,2>& mjacobian) const
 {
-    mjacobian.resize(boost::extents[3][GetDOF()]);
-    if( GetDOF() == 0 ) {
+    const size_t ndof = this->GetDOF();
+    mjacobian.resize(boost::extents[3][ndof]);
+    if( ndof == 0 ) {
         return;
     }
     std::vector<dReal> vjacobian;
-    ComputeJacobianAxisAngle(linkindex,vjacobian);
-    OPENRAVE_ASSERT_OP((int)vjacobian.size(),==,3*GetDOF());
-    vector<dReal>::const_iterator itsrc = vjacobian.begin();
-    FOREACH(itdst,mjacobian) {
-        std::copy(itsrc,itsrc+GetDOF(),itdst->begin());
-        itsrc += GetDOF();
+    ComputeJacobianAxisAngle(linkindex, vjacobian);
+    OPENRAVE_ASSERT_OP(vjacobian.size(), ==, 3 * ndof);
+    std::vector<dReal>::const_iterator itsrc = vjacobian.begin();
+    FOREACH(itdst, mjacobian) {
+        std::copy(itsrc, itsrc + ndof, itdst->begin());
+        itsrc += ndof;
     }
 }
 
@@ -3119,7 +3122,7 @@ void KinBody::GetLinkAccelerations(const std::vector<dReal>&vDOFAccelerations, s
     }
     else {
         std::vector<dReal> vDOFVelocities;
-        std::vector<pair<Vector, Vector> > vLinkVelocities;
+        std::vector<std::pair<Vector, Vector> > vLinkVelocities;
         _ComputeDOFLinkVelocities(vDOFVelocities,vLinkVelocities);
         _ComputeLinkAccelerations(vDOFVelocities, vDOFAccelerations, vLinkVelocities, vLinkAccelerations, externalaccelerations);
     }
@@ -3616,12 +3619,8 @@ void KinBody::_ComputeInternalInformation()
 
     // compute the all-pairs shortest paths
     {
-        _vAllPairsShortestPaths.resize(nlinks*nlinks);
-        FOREACH(it,_vAllPairsShortestPaths) {
-            it->first = -1;
-            it->second = -1;
-        }
-        vector<uint32_t> vcosts(nlinks*nlinks,0x3fffffff); // initialize to 2^30-1 since we'll be adding
+        _vAllPairsShortestPaths.resize(nlinks*nlinks, {-1, -1});
+        std::vector<uint32_t> vcosts(nlinks*nlinks,0x3fffffff); // initialize to 2^30-1 since we'll be adding
         for(size_t i = 0; i < nlinks; ++i) {
             vcosts[i*nlinks+i] = 0;
         }
@@ -3635,7 +3634,7 @@ void KinBody::_ComputeInternalInformation()
                 vcosts[index] = 1;
             }
         }
-        int jointindex = (int)_vecjoints.size();
+        int jointindex = nActiveJoints;
         FOREACHC(itjoint,_vPassiveJoints) {
             if( !!(*itjoint)->GetFirstAttached() && !!(*itjoint)->GetSecondAttached() ) {
                 int index = (*itjoint)->GetFirstAttached()->GetIndex()*nlinks+(*itjoint)->GetSecondAttached()->GetIndex();
