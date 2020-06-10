@@ -2169,39 +2169,35 @@ private:
     /// \param position position in world space where to compute derivatives from.
     /// \param jacobian 3xDOF matrix
     /// \param dofindices the dof indices to compute the jacobian for. If empty, will compute for all the dofs
-    virtual void ComputeJacobianTranslation(int linkindex, const Vector& position, std::vector<dReal>& jacobian, const std::vector<int>& dofindices=std::vector<int>()) const;
+    virtual void ComputeJacobianTranslation(const int linkindex, const Vector& position, std::vector<dReal>& jacobian, const std::vector<int>& dofindices = {}) const;
 
     /// \brief calls std::vector version of ComputeJacobian internally
-    virtual void CalculateJacobian(int linkindex, const Vector& position, std::vector<dReal>& jacobian) const {
-        ComputeJacobianTranslation(linkindex,position,jacobian);
-    }
+    virtual void CalculateJacobian(const int linkindex, const Vector& position, std::vector<dReal>& jacobian) const;
 
     /// \brief calls std::vector version of ComputeJacobian internally, a little inefficient since it copies memory
-    virtual void CalculateJacobian(int linkindex, const Vector& position, boost::multi_array<dReal,2>& jacobian) const;
+    virtual void CalculateJacobian(const int linkindex, const Vector& position, boost::multi_array<dReal, 2>& jacobian) const;
 
     /// \brief Computes the rotational jacobian as a quaternion with respect to an initial rotation.
     ///
     /// \param linkindex of the link that the rotation is attached to
     /// \param qInitialRot the rotation in world space whose derivative to take from.
     /// \param jacobian 4xDOF matrix
-    virtual void CalculateRotationJacobian(int linkindex, const Vector& quat, std::vector<dReal>& jacobian) const;
+    virtual void CalculateRotationJacobian(const int linkindex, const Vector& quat, std::vector<dReal>& jacobian) const;
 
     /// \brief calls std::vector version of CalculateRotationJacobian internally, a little inefficient since it copies memory
-    virtual void CalculateRotationJacobian(int linkindex, const Vector& quat, boost::multi_array<dReal,2>& jacobian) const;
+    virtual void CalculateRotationJacobian(const int linkindex, const Vector& quat, boost::multi_array<dReal, 2>& jacobian) const;
 
     /// \brief Computes the angular velocity jacobian of a specified link about the axes of world coordinates.
     ///
     /// \param linkindex of the link that the rotation is attached to
     /// \param vjacobian 3xDOF matrix
-    virtual void ComputeJacobianAxisAngle(int linkindex, std::vector<dReal>& jacobian, const std::vector<int>& dofindices=std::vector<int>()) const;
+    virtual void ComputeJacobianAxisAngle(const int linkindex, std::vector<dReal>& jacobian, const std::vector<int>& dofindices = {}) const;
 
     /// \brief Computes the angular velocity jacobian of a specified link about the axes of world coordinates.
-    virtual void CalculateAngularVelocityJacobian(int linkindex, std::vector<dReal>& jacobian) const {
-        ComputeJacobianAxisAngle(linkindex,jacobian);
-    }
+    virtual void CalculateAngularVelocityJacobian(const int linkindex, std::vector<dReal>& jacobian) const;
 
     /// \brief calls std::vector version of CalculateAngularVelocityJacobian internally, a little inefficient since it copies memory
-    virtual void CalculateAngularVelocityJacobian(int linkindex, boost::multi_array<dReal,2>& jacobian) const;
+    virtual void CalculateAngularVelocityJacobian(const int linkindex, boost::multi_array<dReal, 2>& jacobian) const;
 
     /** \brief Computes the DOFx3xDOF hessian of the linear translation
 
