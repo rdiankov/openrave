@@ -383,15 +383,16 @@ bool RobotBase::ConnectedBody::CanProvideManipulator(const std::string& resolved
     if( resolvedManipulatorName.size() <= _nameprefix.size() ) {
         return false;
     }
-    if( resolvedManipulatorName.substr(0, _nameprefix.size()) != _nameprefix ) {
+    if( strncmp(resolvedManipulatorName.c_str(), _nameprefix.c_str(), _nameprefix.size()) == 0 ) {
         return false;
     }
 
-    std::string submanipname = resolvedManipulatorName.substr(_nameprefix.size());
-
+    const char* pStartCheckName = resolvedManipulatorName.c_str() + _nameprefix.size();
+    int nCheckNameLength = resolvedManipulatorName.size() - _nameprefix.size();
+    //std::string submanipname = resolvedManipulatorName.substr(_nameprefix.size());
     FOREACH(itmanip, _info._vManipulatorInfos) {
         const RobotBase::ManipulatorInfo& manipinfo = **itmanip;
-        if( manipinfo._name == submanipname ) {
+        if( (int)manipinfo._name.size() == nCheckNameLength && strncmp(manipinfo._name.c_str(), pStartCheckName, nCheckNameLength) == 0 ) {
             return true;
         }
     }
@@ -454,6 +455,59 @@ bool RobotBase::RemoveConnectedBody(RobotBase::ConnectedBody &connectedBody)
         }
     }
     return false;
+}
+
+/// \brief Match field names with matchFieldSuffix with case insensitivity
+bool MatchFieldsCaseInsensitive(const char* pfieldname, const std::string& matchFieldSuffix)
+{
+    if( !pfieldname ) {
+        return false;
+    }
+
+    int fieldlength = strlen(pfieldname);
+    if( fieldlength < (int)matchFieldSuffix.size() ) {
+        return false;
+    }
+
+    return _strnicmp(pfieldname + (fieldlength - (int)matchFieldSuffix.size()), matchFieldSuffix.c_str(), matchFieldSuffix.size()) == 0;
+}
+
+typedef boost::function<bool (const char*)> FieldMatcher;
+
+/// \brief recursive looks for field names that match with fieldMatcherFn and sets a new prefixed value.
+void RecursivePrefixMatchingField(const std::string& nameprefix, const FieldMatcher& fieldMatcherFn, rapidjson::Value& rValue, rapidjson::Document::AllocatorType& allocator, bool bIsMatching)
+{
+    switch (rValue.GetType()) {
+    case rapidjson::kObjectType: {
+        for (rapidjson::Value::MemberIterator it = rValue.MemberBegin(); it != rValue.MemberEnd(); ++it) {
+            bool bSubIsMatching = fieldMatcherFn(it->name.GetString());
+            RecursivePrefixMatchingField(nameprefix, fieldMatcherFn, it->value, allocator, bSubIsMatching);
+        }
+        break;
+    }
+    case rapidjson::kArrayType: {
+        for (rapidjson::Value::ValueIterator it = rValue.Begin(); it != rValue.End(); ++it) {
+            RecursivePrefixMatchingField(nameprefix, fieldMatcherFn, *it, allocator, bIsMatching);
+        }
+        break;
+    }
+    case rapidjson::kStringType: {
+        if( bIsMatching ) {
+            std::string newname = nameprefix + std::string(rValue.GetString());
+            rValue.SetString(newname.c_str(), allocator);
+        }
+        break;
+    }
+    case rapidjson::kTrueType:
+    case rapidjson::kFalseType:
+    case rapidjson::kNumberType:
+    case rapidjson::kNullType:
+        // skip
+        break;
+    default: {
+        RAVELOG_WARN_FORMAT("unsupported JSON type: %s", openravejson::DumpJson(rValue));
+    }
+    }
 }
 
 void RobotBase::_ComputeConnectedBodiesInformation()
@@ -704,6 +758,15 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 if( !bFoundJoint ) {
                     throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for gripperInfo %s, could not find joint %s in connected body joint infos!", connectedBody.GetName()%GetName()%pnewgripperInfo->name%gripperJointName, ORE_InvalidArguments);
                 }
+            }
+
+            // look recursively for fields that end in "linkname" (case insensitive) and resolve their names
+            if( !!connectedBodyInfo._vGripperInfos[iGripperInfo]->_pdocument ) {
+                boost::shared_ptr<rapidjson::Document> pnewdocument(new rapidjson::Document());
+                pnewdocument->CopyFrom(*connectedBodyInfo._vGripperInfos[iGripperInfo]->_pdocument, pnewdocument->GetAllocator());
+                RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("linkname")), *pnewdocument, pnewdocument->GetAllocator(), false);
+                RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("linknames")), *pnewdocument, pnewdocument->GetAllocator(), false);
+                pnewgripperInfo->_pdocument = pnewdocument;
             }
 
             _vecGripperInfos.push_back(pnewgripperInfo);
