@@ -220,9 +220,9 @@ public:
 
         object GetInfo();
 
-        bool SetActive(bool active);
+        bool SetActive(int active);
 
-        bool IsActive();
+        int IsActive();
         object GetTransform() const;
         object GetTransformPose() const;
 
@@ -242,6 +242,8 @@ public:
         object GetResolvedAttachedSensors();
 
         object GetResolvedGripperInfos();
+
+        bool CanProvideManipulator(const std::string& resolvedManipulatorName);
 
         std::string __repr__();
 

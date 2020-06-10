@@ -232,7 +232,7 @@ void PyConnectedBodyInfo::_Update(const RobotBase::ConnectedBodyInfo& info)
     }
     _gripperInfos = gripperInfos;
 
-    _bIsActive = info._bIsActive;
+    _bIsActive = (int)info._bIsActive;
 }
 
 RobotBase::ConnectedBodyInfoPtr PyConnectedBodyInfo::GetConnectedBodyInfo() const
@@ -250,7 +250,7 @@ RobotBase::ConnectedBodyInfoPtr PyConnectedBodyInfo::GetConnectedBodyInfo() cons
     if( !IS_PYTHONOBJECT_NONE(_url) ) {
         pinfo->_url = py::extract<std::string>(_url);
     }
-    pinfo->_bIsActive = _bIsActive;
+    pinfo->_bIsActive = (int)_bIsActive;
     // extract all the infos
     return pinfo;
 }
@@ -1029,11 +1029,11 @@ object PyRobotBase::PyConnectedBody::GetInfo() {
     return py::to_object(PyConnectedBodyInfoPtr(new PyConnectedBodyInfo(_pconnected->GetInfo())));
 }
 
-bool PyRobotBase::PyConnectedBody::SetActive(bool active) {
+bool PyRobotBase::PyConnectedBody::SetActive(int active) {
     return _pconnected->SetActive(active);
 }
 
-bool PyRobotBase::PyConnectedBody::IsActive() {
+int PyRobotBase::PyConnectedBody::IsActive() {
     return _pconnected->IsActive();
 }
 object PyRobotBase::PyConnectedBody::GetTransform() const {
@@ -1113,6 +1113,11 @@ object PyRobotBase::PyConnectedBody::GetResolvedGripperInfos()
         pyGripperInfos.append(toPyObject(rGripperInfo));
     }
     return pyGripperInfos;
+}
+
+bool PyRobotBase::PyConnectedBody::CanProvideManipulator(const std::string& resolvedManipulatorName)
+{
+    return _pconnected->CanProvideManipulator(resolvedManipulatorName);
 }
 
 std::string PyRobotBase::PyConnectedBody::__repr__() {
@@ -1334,14 +1339,14 @@ PyConnectedBodyPtr PyRobotBase::GetConnectedBody(const std::string& bodyname)
 
 object PyRobotBase::GetConnectedBodyActiveStates() const
 {
-    std::vector<uint8_t> activestates;
+    std::vector<int8_t> activestates;
     _probot->GetConnectedBodyActiveStates(activestates);
     return toPyArray(activestates);
 }
 
 void PyRobotBase::SetConnectedBodyActiveStates(object oactivestates)
 {
-    std::vector<uint8_t> activestates = ExtractArray<uint8_t>(oactivestates);
+    std::vector<int8_t> activestates = ExtractArrayInt8(oactivestates);
     _probot->SetConnectedBodyActiveStates(activestates);
 }
 
@@ -2572,6 +2577,7 @@ void init_openravepy_robot()
         .def("GetResolvedManipulators",&PyRobotBase::PyConnectedBody::GetResolvedManipulators, DOXY_FN(RobotBase::ConnectedBody,GetResolvedManipulators))
         .def("GetResolvedAttachedSensors",&PyRobotBase::PyConnectedBody::GetResolvedAttachedSensors, DOXY_FN(RobotBase::ConnectedBody,GetResolvedAttachedSensors))
         .def("GetResolvedGripperInfos",&PyRobotBase::PyConnectedBody::GetResolvedGripperInfos, DOXY_FN(RobotBase::ConnectedBody,GetResolvedGripperInfos))
+        .def("CanProvideManipulator", &PyRobotBase::PyConnectedBody::CanProvideManipulator, DOXY_FN(RobotBase::ConnectedBody,CanProvideManipulator))
         .def("__str__",&PyRobotBase::PyConnectedBody::__str__)
         .def("__repr__",&PyRobotBase::PyConnectedBody::__repr__)
         .def("__unicode__",&PyRobotBase::PyConnectedBody::__unicode__)

@@ -586,7 +586,7 @@ public:
         std::vector<RobotBase::ManipulatorInfoPtr> _vManipulatorInfos; ///< extracted manip infos representing the connected body. The names are the original "desired" names.
         std::vector<RobotBase::AttachedSensorInfoPtr> _vAttachedSensorInfos; ///< extracted sensor infos representing the connected body. The names are the original "desired" names.
         std::vector<RobotBase::GripperInfoPtr> _vGripperInfos; ///< extracted gripper infos representing the connected body. The names are the original "desired" names.
-        bool _bIsActive; ///< if true, then add the connected body. Otherwise do not add it.
+        int8_t _bIsActive; ///< a tri-state describing the state of the connected body. If 1, then connected body is known to be active on the robot. If 0, then known to be non-active. If -1, then the state is unknown, so planning algorithms should be careful . Otherwise do not add it.
     };
     typedef boost::shared_ptr<ConnectedBodyInfo> ConnectedBodyInfoPtr;
     typedef boost::shared_ptr<ConnectedBodyInfo const> ConnectedBodyInfoConstPtr;
@@ -603,10 +603,10 @@ public:
         /// \brief have the connected body to be added to the robot kinematics. The active level has nothing to do with visibility or enabling of the links.
         ///
         /// Can only be called when robot is not added to the environment
-        virtual bool SetActive(bool active);
+        virtual bool SetActive(int8_t active);
 
         /// \brief return true
-        virtual bool IsActive();
+        virtual int8_t IsActive();
 
         /// \brief if the connected body is activated and added to the robot, this is a helper functions to enable/disable all the links
         virtual void SetLinkEnable(bool benable);
@@ -623,6 +623,9 @@ public:
         ///
         /// Has one-to-one correspondence with _info._vJointInfos
         virtual void GetResolvedJoints(std::vector<KinBody::JointPtr>& joints);
+
+        /// \brief gets the resolved dummy passive joint added by connected body.
+        virtual KinBody::JointPtr GetResolvedDummyPassiveJoint();
 
         /// \brief gets the resolved links added to the robot.
         ///
@@ -677,17 +680,20 @@ public:
             return _info;
         }
 
+        /// \brief returns true if the connected body can provide a manipulator with the specified resolved name. Function works even though connected body is not active
+        bool CanProvideManipulator(const std::string& resolvedManipulatorName) const;
+
 private:
         ConnectedBodyInfo _info; ///< user specified data (to be serialized and saved), should not contain dynamically generated parameters.
 
-        std::string _nameprefix; ///< the name prefix to use for all the resolved link names.
+        std::string _nameprefix; ///< the name prefix to use for all the resolved link names. Initialized regardless of the active state of the connected body.
         std::string _dummyPassiveJointName; ///< the joint that is used to attach the connected body to the robot link
         KinBody::JointPtr _pDummyJointCache; ///< cached Joint used for _dummyPassiveJointName
-        std::vector< std::pair<std::string, RobotBase::LinkPtr> > _vResolvedLinkNames; ///< for every entry in _info._vLinkInfos, the resolved link names added to the robot. Also serves as cache for pointers
-        std::vector< std::pair<std::string, RobotBase::JointPtr> > _vResolvedJointNames; ///< for every entry in _info._vJointInfos, the resolved link names. Also serves as cache for pointers.
-        std::vector< std::pair<std::string, RobotBase::ManipulatorPtr> > _vResolvedManipulatorNames; ///< for every entry in _info._vManipInfos. Also serves as cache for pointers
-        std::vector< std::pair<std::string, RobotBase::AttachedSensorPtr> > _vResolvedAttachedSensorNames; ///< for every entry in _info._vAttachedSensorResolvedNames. Also serves as cache for pointers
-        std::vector< std::pair<std::string, RobotBase::GripperInfoPtr> > _vResolvedGripperInfoNames; ///< for every entry in _info._vGripperInfos. Also serves as cache for pointers
+        std::vector< std::pair<std::string, RobotBase::LinkPtr> > _vResolvedLinkNames; ///< for every entry in _info._vLinkInfos, the resolved link names added to the robot. Also serves as cache for pointers. Valid if IsActive() != 0.
+        std::vector< std::pair<std::string, RobotBase::JointPtr> > _vResolvedJointNames; ///< for every entry in _info._vJointInfos, the resolved link names. Also serves as cache for pointers. Valid if IsActive() != 0.
+        std::vector< std::pair<std::string, RobotBase::ManipulatorPtr> > _vResolvedManipulatorNames; ///< for every entry in _info._vManipInfos. Also serves as cache for pointers. Valid if IsActive() != 0.
+        std::vector< std::pair<std::string, RobotBase::AttachedSensorPtr> > _vResolvedAttachedSensorNames; ///< for every entry in _info._vAttachedSensorResolvedNames. Also serves as cache for pointers. Valid if IsActive() != 0.
+        std::vector< std::pair<std::string, RobotBase::GripperInfoPtr> > _vResolvedGripperInfoNames; ///< for every entry in _info._vGripperInfos. Also serves as cache for pointers. Valid if IsActive() != 0.
 
         RobotBaseWeakPtr _pattachedrobot; ///< the robot that the body is attached to
         LinkWeakPtr _pattachedlink;         ///< the robot link that the body is attached to
@@ -731,7 +737,7 @@ protected:
         std::vector<Transform> _vtManipsLocalTool;
         std::vector<Vector> _vvManipsLocalDirection;
         std::vector<IkSolverBasePtr> _vpManipsIkSolver;
-        std::vector<uint8_t> _vConnectedBodyActiveStates; ///< GetConnectedBodyActiveStates
+        std::vector<int8_t> _vConnectedBodyActiveStates; ///< GetConnectedBodyActiveStates
 private:
         virtual void _RestoreRobot(boost::shared_ptr<RobotBase> robot);
     };
@@ -777,10 +783,10 @@ private:
     virtual GripperInfoPtr GetGripperInfo(const std::string& name) const;
 
     // \brief gets the active states of all connected bodies
-    virtual void GetConnectedBodyActiveStates(std::vector<uint8_t>& activestates) const;
+    virtual void GetConnectedBodyActiveStates(std::vector<int8_t>& activestates) const;
 
     /// \brief sets the active states for connected bodies
-    virtual void SetConnectedBodyActiveStates(const std::vector<uint8_t>& activestates);
+    virtual void SetConnectedBodyActiveStates(const std::vector<int8_t>& activestates);
 
     virtual void SetName(const std::string& name);
 
