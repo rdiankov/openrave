@@ -1741,8 +1741,6 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
         throw OPENRAVE_EXCEPTION_FORMAT(_("failed to set equation '%s' on %s:%s, at %d. Error is %s\n"), poseq % parent->GetName() % GetName() % ret % posfn->ErrorMsg(), ORE_InvalidArguments);
     }
 
-    // _RAVE_DISPLAY(std::cout << "working on mimic joint " << GetName() << ", pmimic: " << pmimic->to_string();)
-
     // process the depended joint variables
     for(const std::string& var : resultVars) {
         OPENRAVE_ASSERT_FORMAT(var.find("joint") == 0, "equation '%s' uses unknown variable", poseq, ORE_InvalidArguments);
@@ -1759,32 +1757,20 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
         }
         dofformat.dofindex = -1;
         const JointPtr pjoint = dofformat.GetJoint(*parent); ///< the joint which pmimic depends on
-
-        // _RAVE_DISPLAY(
-        //     std::cout << "this mimic joint is " << this->GetName() << "; it depends on joint " << pjoint->GetName() << ", current dofformat: " << dofformat.to_string() 
-        // )
-
         if((pjoint->GetDOFIndex() >= 0)&& !pjoint->IsMimic(dofformat.axis) ) {
             // pjoint is active, non-mimic
             Mimic::DOFHierarchy h;
             h.dofindex = dofformat.dofindex = pjoint->GetDOFIndex() + dofformat.axis;
             h.dofformatindex = pmimic->_vdofformat.size();
             pmimic->_vmimicdofs.push_back(h);
-
-            // _RAVE_DISPLAY(std::cout << "add DOFHierarchy h into pmimic->_vmimicdofs: " << h.to_string();)
-        }
-        else {
-            // _RAVE_DISPLAY(std::cout << "dofindex = " << pjoint->GetDOFIndex() << ", axis " << dofformat.axis << " is mimic = " << pjoint->IsMimic(dofformat.axis) << ", so do not add into mimic->_vmimicdofs";)
         }
         pmimic->_vdofformat.push_back(dofformat);
     }
 
-    // _RAVE_DISPLAY(std::cout << "finished working on mimic joint " << GetName() << ", pmimic: " << pmimic->to_string();)
-
     // need to set sVars to resultVars since that's what the user will be feeding with the input
-    stringstream sVars;
+    std::stringstream sVars;
     if( !resultVars.empty() ) {
-        sVars << resultVars.at(0);
+        sVars << resultVars[0];
         for(size_t i = 1; i < resultVars.size(); ++i) {
             sVars << "," << resultVars[i];
         }
@@ -2001,10 +1987,33 @@ KinBody::JointPtr KinBody::Joint::MIMIC::DOFFormat::GetJoint(KinBody &parent) co
     return jointindex < numjoints ? parent.GetJoints().at(jointindex) : parent.GetPassiveJoints().at(jointindex-numjoints);
 }
 
+std::string KinBody::Joint::MIMIC::DOFFormat::to_string() const { 
+    return boost::str(boost::format("jointindex = %d, dofindex = %d, axis = %d") % jointindex % dofindex % axis);
+}
+
 KinBody::JointConstPtr KinBody::Joint::MIMIC::DOFFormat::GetJoint(const KinBody &parent) const
 {
     int numjoints = (int)parent.GetJoints().size();
     return jointindex < numjoints ? parent.GetJoints().at(jointindex) : parent.GetPassiveJoints().at(jointindex-numjoints);
+}
+
+std::string KinBody::Joint::MIMIC::DOFHierarchy::to_string() const {
+    return boost::str(boost::format("dofindex = %d, dofformatindex = %d") % dofindex % dofformatindex);
+}
+
+std::string KinBody::Joint::MIMIC::to_string() const {
+    std::stringstream ss;
+    ss << "_equations = ";
+    for(size_t i = 0; i < 3; ++i) { 
+        if(!_equations[i].empty()) {
+            ss << "[" << i << "]: " << _equations[i] << '\n'; 
+        }
+    }
+    ss << "_vdofformat = ";
+    for(size_t i = 0; i < _vdofformat.size(); ++i) { ss << "[" << i << "]: " << _vdofformat[i].to_string() << '\n'; }
+    ss << "_vmimicdofs = ";
+    for(size_t i = 0; i < _vmimicdofs.size(); ++i) { ss << "[" << i << "]: " << _vmimicdofs[i].to_string() << '\n'; }
+    return ss.str();
 }
 
 void KinBody::Joint::SetFloatParameters(const std::string& key, const std::vector<dReal>& parameters)

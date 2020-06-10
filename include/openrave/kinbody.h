@@ -854,9 +854,9 @@ public:
             bool operator ==(const DOFFormat& r) const;
             boost::shared_ptr<Joint> GetJoint(KinBody &parent) const;
             boost::shared_ptr<Joint const> GetJoint(const KinBody &parent) const;
-
-            std::string to_string() const { return "jointindex = " + std::to_string(jointindex) + ", dofindex = " + std::to_string(dofindex) + ", axis = " + std::to_string(axis); }
+            std::string to_string() const;
         };
+
         struct DOFHierarchy
         {
             int16_t dofindex;         ///< >=0 dof index
@@ -864,27 +864,13 @@ public:
             bool operator ==(const DOFHierarchy& r) const {
                 return dofindex==r.dofindex && dofformatindex == r.dofformatindex;
             }
-
-            std::string to_string() const { return "dofindex = " + std::to_string(dofindex) + ", dofformatindex = " + std::to_string(dofformatindex); }
+            std::string to_string() const;
         };
+        
+        std::string to_string() const;
 
         /// @name automatically set
         //@{
-        std::string to_string() const {
-            std::stringstream ss;
-            ss << "_equations = ";
-            for(size_t i = 0; i < 3; ++i) { 
-                if(!_equations[i].empty()) {
-                    ss << "[" << i << "]: " << _equations[i] << '\n'; 
-                }
-            }
-            ss << "_vdofformat = ";
-            for(size_t i = 0; i < _vdofformat.size(); ++i) { ss << "[" << i << "]: " << _vdofformat[i].to_string() << '\n'; }
-            ss << "_vmimicdofs = ";
-            for(size_t i = 0; i < _vmimicdofs.size(); ++i) { ss << "[" << i << "]: " << _vmimicdofs[i].to_string() << '\n'; }
-            return ss.str();
-        }
-
         std::vector< DOFFormat > _vdofformat;         ///< the format of the values the equation takes order is important.
         std::vector<DOFHierarchy> _vmimicdofs;         ///< all dof indices that the equations depends on. DOFHierarchy::dofindex can repeat
         OpenRAVEFunctionParserRealPtr _posfn;
