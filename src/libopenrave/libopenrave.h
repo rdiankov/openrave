@@ -499,13 +499,6 @@ public:
         id = tempId;
     }
 
-    void Update(const std::string id) {
-        if (IsUnique(id)) {
-            _sUniqueId.insert(id);
-            return;
-        }
-        throw OPENRAVE_EXCEPTION_FORMAT("Update failed. Found same id %s in set.", id, ORE_InvalidArguments);
-    }
 private:
     bool IsUnique(const std::string& id) {
         return _sUniqueId.count(id) == 0;
