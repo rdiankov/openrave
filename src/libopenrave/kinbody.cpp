@@ -3464,22 +3464,25 @@ void KinBody::_ComputeInternalInformation()
         vorder[i] = i;
     }
     sort(vorder.begin(), vorder.end(), utils::index_cmp<vector<int>&>(vJointIndices));
-    _vDOFOrderedJoints.resize(0);
+    _vDOFOrderedJoints.clear();
     FOREACH(it,vorder) {
         _vDOFOrderedJoints.push_back(_vecjoints.at(*it));
     }
 
     try {
         // initialize all the mimic equations
-        for(int ijoints = 0; ijoints < 2; ++ijoints) {
-            vector<JointPtr>& vjoints = ijoints ? _vPassiveJoints : _vecjoints;
-            FOREACH(itjoint,vjoints) {
-                for(int i = 0; i < (*itjoint)->GetDOF(); ++i) {
-                    if( !!(*itjoint)->_vmimic[i] ) {
-                        std::string poseq = (*itjoint)->_vmimic[i]->_equations[0];
-                        std::string veleq = (*itjoint)->_vmimic[i]->_equations[1];
-                        std::string acceleq = (*itjoint)->_vmimic[i]->_equations[2]; // have to copy since memory can become invalidated
-                        (*itjoint)->SetMimicEquations(i,poseq,veleq,acceleq);
+        for(bool bPassiveJoints : {false, true}) {
+            const std::vector<JointPtr>& vjoints = bPassiveJoints ? _vPassiveJoints : _vecjoints;
+            for(const JointPtr& pjoint : vjoints) {
+                const int ndof = pjoint->GetDOF();
+                const boost::array<MimicPtr, 3>& vmimic = pjoint->_vmimic;
+                for(int idof = 0; idof < ndof; ++idof) {
+                    const MimicPtr& pmimic = vmimic[idof];
+                    if( !!pmimic ) {
+                        const std::string poseq = pmimic->_equations[0];
+                        const std::string veleq = pmimic->_equations[1];
+                        const std::string acceleq = pmimic->_equations[2]; // have to copy since memory can become invalidated
+                        pjoint->SetMimicEquations(idof, poseq, veleq, acceleq);
                     }
                 }
             }

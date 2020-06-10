@@ -1689,10 +1689,9 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     if( poseq.empty() ) {
         return;
     }
-    KinBodyPtr parent(_parent);
-    std::vector<std::string> resultVars;
-    MimicPtr pmimic(new Mimic());
-    pmimic->_equations = {poseq, veleq, acceleq};
+    
+    const MimicPtr pmimic(new Mimic());
+    pmimic->_equations = {poseq, veleq, acceleq}; ///< joint value, partial derivatives w.r.t depended joints, second-order derivatives (?)
 
     // copy equations into the info
     if( !_info._vmimic.at(iaxis) ) {
@@ -1700,13 +1699,11 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     }
     _info._vmimic.at(iaxis)->_equations = pmimic->_equations;
 
-    OpenRAVEFunctionParserRealPtr posfn = CreateJointFunctionParser();
-    pmimic->_posfn = posfn;
-
     // because openrave joint names can hold symbols like '-' and '.' can affect the equation, so first do a search and replace
+    const KinBodyPtr parent(_parent);
     const std::vector<JointPtr>& vActiveJoints = parent->GetJoints();
     const int nActiveJoints = vActiveJoints.size();
-    std::vector< std::pair<std::string, std::string> > jointnamepairs;
+    std::vector< std::pair<std::string, std::string> > jointnamepairs; ///< map an active/mimic joint's name to a string "joint%d"
     jointnamepairs.reserve(nActiveJoints);
 
     for(const JointPtr& pjoint : vActiveJoints) {
@@ -1717,7 +1714,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
         }
     }
 
-    int index = nActiveJoints;
+    int index = nActiveJoints; ///< generalized joint index
     const std::vector<JointPtr>& vPassiveJoints = parent->GetPassiveJoints();
     for(const JointPtr& pjoint : vPassiveJoints) {
         const std::string& jointname = pjoint->GetName();
@@ -1733,20 +1730,25 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
         mapinvnames[p.second] = p.first;
     }
 
-    std::string eq;
+    /* ========== Create evaluation function pointers from mimic equations ========== */
+    std::string eq; ///< converted from poseq into formulas in "joint%d"
+    std::vector<std::string> resultVars; ///< joint variables (in form "joint%d") that this joint depends on
+    pmimic->_posfn = CreateJointFunctionParser();
+    const OpenRAVEFunctionParserRealPtr& posfn = pmimic->_posfn; // alias
     int ret = posfn->ParseAndDeduceVariables(utils::SearchAndReplace(eq, poseq, jointnamepairs), resultVars);
+    RAVELOG_DEBUG_FORMAT("Input mimic_pos = %s\nConverted into eq = %s", poseq % eq);
     if( ret >= 0 ) {
         throw OPENRAVE_EXCEPTION_FORMAT(_("failed to set equation '%s' on %s:%s, at %d. Error is %s\n"), poseq % parent->GetName() % GetName() % ret % posfn->ErrorMsg(), ORE_InvalidArguments);
     }
 
-    _RAVE_DISPLAY(std::cout << "working on mimic joint " << GetName() << ", pmimic: " << pmimic->to_string();)
+    // _RAVE_DISPLAY(std::cout << "working on mimic joint " << GetName() << ", pmimic: " << pmimic->to_string();)
 
-    // process the variables
+    // process the depended joint variables
     for(const std::string& var : resultVars) {
         OPENRAVE_ASSERT_FORMAT(var.find("joint") == 0, "equation '%s' uses unknown variable", poseq, ORE_InvalidArguments);
 
-        MIMIC::DOFFormat dofformat;
-        const size_t axisindex = var.find('_'); // ?
+        Mimic::DOFFormat dofformat;
+        const size_t axisindex = var.find('_'); // XXX_mimic
         if( axisindex != std::string::npos ) {
             dofformat.jointindex = boost::lexical_cast<uint16_t>(var.substr(5, axisindex-5));
             dofformat.axis = boost::lexical_cast<uint8_t>(var.substr(axisindex+1));
@@ -1758,25 +1760,26 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
         dofformat.dofindex = -1;
         const JointPtr pjoint = dofformat.GetJoint(*parent); ///< the joint which pmimic depends on
 
-        _RAVE_DISPLAY(std::cout << "this mimic joint is " << this->GetName() << "; it depends on joint " << pjoint->GetName() << ", current dofformat: " << dofformat.to_string() 
-        )
+        // _RAVE_DISPLAY(
+        //     std::cout << "this mimic joint is " << this->GetName() << "; it depends on joint " << pjoint->GetName() << ", current dofformat: " << dofformat.to_string() 
+        // )
 
         if((pjoint->GetDOFIndex() >= 0)&& !pjoint->IsMimic(dofformat.axis) ) {
             // pjoint is active, non-mimic
-            MIMIC::DOFHierarchy h;
+            Mimic::DOFHierarchy h;
             h.dofindex = dofformat.dofindex = pjoint->GetDOFIndex() + dofformat.axis;
             h.dofformatindex = pmimic->_vdofformat.size();
             pmimic->_vmimicdofs.push_back(h);
 
-            _RAVE_DISPLAY(std::cout << "add DOFHierarchy h into pmimic->_vmimicdofs: " << h.to_string();)
+            // _RAVE_DISPLAY(std::cout << "add DOFHierarchy h into pmimic->_vmimicdofs: " << h.to_string();)
         }
         else {
-            _RAVE_DISPLAY(std::cout << "dofindex = " << pjoint->GetDOFIndex() << ", axis " << dofformat.axis << " is mimic = " << pjoint->IsMimic(dofformat.axis) << ", so do not add into mimic->_vmimicdofs";)
+            // _RAVE_DISPLAY(std::cout << "dofindex = " << pjoint->GetDOFIndex() << ", axis " << dofformat.axis << " is mimic = " << pjoint->IsMimic(dofformat.axis) << ", so do not add into mimic->_vmimicdofs";)
         }
         pmimic->_vdofformat.push_back(dofformat);
     }
 
-    _RAVE_DISPLAY(std::cout << "finished working on mimic joint " << GetName() << ", pmimic: " << pmimic->to_string();)
+    // _RAVE_DISPLAY(std::cout << "finished working on mimic joint " << GetName() << ", pmimic: " << pmimic->to_string();)
 
     // need to set sVars to resultVars since that's what the user will be feeding with the input
     stringstream sVars;
@@ -1789,7 +1792,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
 
     for(int itype = 1; itype < 3; ++itype) {
         if(itype == 2 && pmimic->_equations[itype].empty()) {
-            // mimic_accel
+            // ignore empty mimic_accel
             continue;
         }
 
@@ -1819,7 +1822,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
                 varname = sequation.substr(0,nameendindex);
                 sequation = sequation.substr(nameendindex);
             }
-            vector<string>::iterator itnameindex = find(resultVars.begin(),resultVars.end(),varname);
+            std::vector<string>::iterator itnameindex = find(resultVars.begin(),resultVars.end(),varname);
             OPENRAVE_ASSERT_FORMAT(itnameindex != resultVars.end(), "variable %s from velocity equation is not referenced in the position, skipping...", mapinvnames[varname],ORE_InvalidArguments);
 
             OpenRAVEFunctionParserRealPtr fn = CreateJointFunctionParser();
@@ -1881,7 +1884,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
     );
 
     /* ========== Set up information about this mimic joint z ========== */
-    MIMIC::DOFFormat thisdofformat;
+    Mimic::DOFFormat thisdofformat;
     thisdofformat.dofindex = -1; ///< dofindex being -1 means it is a mimic joint
     thisdofformat.axis = iaxis;  ///< from input
     thisdofformat.jointindex = this->GetJointIndex(); ///< mimic joint has jointindex < 0, because it does not belong to _vecjoints
@@ -1897,22 +1900,22 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
 
     /* ========== Collect values of joints on which joint z depends ========== */
     const MimicPtr& pmimic = _vmimic[iaxis];
-    const std::vector<MIMIC::DOFFormat>& vdofformats = pmimic->_vdofformat; ///< collection of information of joints
+    const std::vector<Mimic::DOFFormat>& vdofformats = pmimic->_vdofformat; ///< collection of information of joints
 
     std::stringstream ss;
     ss << "pmimic: " << pmimic->to_string() << "depended joints are ";
     std::vector<dReal> vDependedJointValues; ///< collect values of joints on which this joint *directly* depends on
-    for(const MIMIC::DOFFormat& dofformat : vdofformats) {
+    for(const Mimic::DOFFormat& dofformat : vdofformats) {
         const JointConstPtr dependedjoint = dofformat.GetJoint(*parent); ///< say joint y
         vDependedJointValues.push_back(dependedjoint->GetValue(dofformat.axis));
         ss << dependedjoint->GetName() << ", ";
     }
     RAVELOG_VERBOSE(ss.str());
 
-    std::map< std::pair<MIMIC::DOFFormat, int>, dReal > localmap;
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > localmap;
     const size_t nvars = vdofformats.size(); ///< number of joints on which this joint depends on
     for(size_t ivar = 0; ivar < nvars; ++ivar) {
-        const MIMIC::DOFFormat& dofformat = vdofformats[ivar]; ///< information about the ivar-th depended joint
+        const Mimic::DOFFormat& dofformat = vdofformats[ivar]; ///< information about the ivar-th depended joint
         const JointConstPtr dependedjoint = dofformat.GetJoint(*parent); ///< a joint on which this joint depends on
         const int jointindex = dofformat.jointindex; ///< index of this depended joint
         const OpenRAVEFunctionParserRealPtr velfn = pmimic->_velfns.at(ivar); ///< function that evaluates the partial derivative ∂z/∂x
@@ -1937,7 +1940,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
     }
 
     // collect results in vpartials
-    for(const std::pair<const std::pair<MIMIC::DOFFormat, int>, dReal>& keyvalue : localmap) {
+    for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : localmap) {
         const int dependedJointIndex = keyvalue.first.second;
         const dReal partialDerivative = keyvalue.second;
         vpartials.emplace_back(dependedJointIndex, partialDerivative); // collect all dz/dx
