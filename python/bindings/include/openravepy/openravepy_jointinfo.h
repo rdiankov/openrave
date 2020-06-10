@@ -196,7 +196,7 @@ public:
     object _vhardmaxvel = toPyVector3(Vector(0,0,0));
     object _vmaxaccel = toPyVector3(Vector(50,50,50));
     object _vhardmaxaccel = toPyVector3(Vector(0,0,0));
-    object _vmaxjerk = toPyVector3(Vector(2e6,2e6,2e6));
+    object _vmaxjerk = toPyVector3(Vector(5e4, 5e4, 5e4));  // default value should keep the same as Joint in cpp
     object _vhardmaxjerk= toPyVector3(Vector(0, 0, 0));
     object _vmaxtorque = toPyVector3(Vector(1e5,1e5,1e5));
     object _vmaxinertia = toPyVector3(Vector(1e5,1e5,1e5));
