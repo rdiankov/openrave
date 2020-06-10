@@ -251,6 +251,8 @@ public:
 
         object GetResolvedGripperInfos();
 
+        bool CanProvideManipulator(const std::string& resolvedManipulatorName);
+
         std::string __repr__();
 
         std::string __str__();
