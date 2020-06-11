@@ -1783,12 +1783,12 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
 
         std::vector<OpenRAVEFunctionParserRealPtr> vfns(nVars);
         /* 
-            extract from `eq` the partial derivative formulas ∂z/∂xi for joint z:=z(x0,x1,...xn) defined in `poseq`.
+            extract from `eq` the partial derivative formulas ∂z/∂xi for joint z:=z(x1,x2,...xn) defined in `poseq`.
             `eq` takes form
         
             c0:=......; c1:=......; ......;
-            |x0 formula_∂z_∂x0
-            |x1 formula_∂z_∂x1
+            |x0 formula_∂z_∂x1
+            |x1 formula_∂z_∂x2
             ......
 
             where xi's are joints on which z depends, and ci are common subexpressions in formulas ∂z/∂xi.
