@@ -367,6 +367,7 @@ Some python code to display data::\n\
         uint32_t basetime = utils::GetMilliTime();
 
         // the main planning loop
+        PlannerStatus planningstatus();
         PlannerParameters::StateSaver savestate(_parameters);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
@@ -456,6 +457,13 @@ Some python code to display data::\n\
             // extend A
             ExtendType et = TreeA->Extend(_sampleConfig, iConnectedA);
 
+            if (et == ET_Failed && IS_DEBUGLEVEL(Level_Verbose)) {
+                std::vector<dReal> robotJointValues;
+                this->_getstatefn(robotJointValues); // Making the assumption that _getstatefn is shared throughout planning, e.g. shares same _getstatefn as DynamicsCollisionConstraint checker
+                planningstatus.vRobotJointValues.push_back(robotJointValues); // Is this slow?
+                planningstatus.vCollisionReports.push_back(this->_treeForward.GetCollisionReportString());
+            }
+
             // although check isn't necessary, having it improves running times
             if( et == ET_Failed ) {
                 // necessary to increment iterator in case spaces are not connected
@@ -467,6 +475,13 @@ Some python code to display data::\n\
             }
 
             et = TreeB->Extend(TreeA->GetVectorConfig(iConnectedA), iConnectedB);     // extend B toward A
+
+            if (et == ET_FAILED && IS_DEBUGLEVEL(Level_Verbose)) {
+                std::vector<dReal> robotJointValues;
+                this->_getstatefn(robotJointValues); // Making the assumption that _getstatefn is shared throughout planning, e.g. shares same _getstatefn as DynamicsCollisionConstraint checker
+                planningstatus.vRobotJointValues.push_back(robotJointValues); // Is this slow?
+                planningstatus.vCollisionReports.push_back(this->_treeBackward.GetCollisionReportString());
+            }
 
             if( et == ET_Connected ) {
                 // connected, process goal

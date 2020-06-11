@@ -487,15 +487,20 @@ class OPENRAVE_API PlannerStatus
 {
 public:
     PlannerStatus();
-    PlannerStatus(const int statusCode);
-    PlannerStatus(const std::string& description, const int statusCode, CollisionReportPtr report=CollisionReportPtr());
-    PlannerStatus(const std::string& description, const int statusCode, const IkParameterization& ikparam, CollisionReportPtr report=CollisionReportPtr());
-    PlannerStatus(const std::string& description, const int statusCode, const std::vector<dReal>& jointValues, CollisionReportPtr report=CollisionReportPtr());
+    PlannerStatus(const std::string& description, const int statusCode);
+
+    // PlannerStatus();
+    // PlannerStatus(const int statusCode);
+    // PlannerStatus(const std::string& description, const int statusCode, CollisionReportPtr report=CollisionReportPtr());
+    // PlannerStatus(const std::string& description, const int statusCode, const IkParameterization& ikparam, CollisionReportPtr report=CollisionReportPtr());
+    // PlannerStatus(const std::string& description, const int statusCode, const std::vector<dReal>& jointValues, CollisionReportPtr report=CollisionReportPtr());
+    
     virtual ~PlannerStatus();
 
     PlannerStatus& SetErrorOrigin(const std::string& errorOrigin);
     PlannerStatus& SetPlannerParameters(PlannerParametersConstPtr parameters);
 
+    // TODO: Need to fix because of redefined member variables!
     void SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Document::AllocatorType& alloc) const;
 
     inline uint32_t GetStatusCode() const {
@@ -507,14 +512,18 @@ public:
         return statusCode&PS_HasSolution;
     }
 
-    PlannerParametersConstPtr parameters; ///< parameters used in the planner
-    std::string description;        ///< Optional, the description of how/why the error happended. Displayed to the user by the UI. It will automatically be filled with a generic message corresponding to statusCode if not provided.
-    uint32_t statusCode; // combination of PS_X fields (PlannerStatusCode)
-    IkParameterization ikparam;      // Optional,  the ik parameter that failed to find a solution.
-    std::vector<dReal> jointValues; // Optional,  the robot's joint values in rad or m
-    CollisionReportPtr report;       ///< Optional,  collision report at the time of the error. Ideally should contents contacts information.
+    PlannerParametersConstPtr parameters;   ///< parameters used in the planner
+    std::string description;                ///< Optional, the description of how/why the error happended. Displayed to the user by the UI. It will automatically be filled with a generic message corresponding to statusCode if not provided.
+    uint32_t statusCode;                    // combination of PS_X fields (PlannerStatusCode)
+    IkParameterization ikparam;             // Optional, the ik parameter that failed to find a solution.
+    // IMPORTANT: indices of vRobotJointValues and vCollisionReportString should correspond to each other!
+    std::vector<std::vector<dReal>> vRobotJointValues;  // Records robot joint values at all collisions
+    std::vector<std::string> vCollisionReportString;    // Records all collision reports
 
-    std::string errorOrigin;        // Auto, a string representing the code path of the error. Automatically filled on construction.
+    // std::vector<dReal> jointValues;      // Optional, the robot's joint values in rad or m
+    // CollisionReportPtr report;           ///< Optional,  collision report at the time of the error. Ideally should contents contacts information.
+
+    std::string errorOrigin;                // Auto, a string representing the code path of the error. Automatically filled on construction.
 };
 
 #define OPENRAVE_PLANNER_STATUS(...) PlannerStatus(__VA_ARGS__).SetErrorOrigin(str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__)).SetPlannerParameters(_parameters);

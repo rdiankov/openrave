@@ -99,7 +99,16 @@ int AddStatesWithLimitCheck(std::vector<dReal>& q, const std::vector<dReal>& qde
     return status;
 }
 
-PlannerStatus::PlannerStatus() : statusCode(0)
+PlannerStatus::PlannerStatus() {}
+
+// To maintain backwards compatibility...
+PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, CollisionReportPtr report) : description(description), statusCode(statusCode)
+{
+    // not sure if this works...
+    errorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
+}
+
+/*PlannerStatus::PlannerStatus() : statusCode(0)
 {
 }
 
@@ -163,7 +172,7 @@ PlannerStatus::PlannerStatus(const std::string& description, const int statusCod
     PlannerStatus(description, statusCode, report)
 {
     this->jointValues = jointValues;
-}
+}*/
 
 PlannerStatus::~PlannerStatus() {
 }
@@ -180,6 +189,7 @@ PlannerStatus& PlannerStatus::SetPlannerParameters(PlannerParametersConstPtr par
     return *this;
 }
 
+// TODO: FIX!
 void PlannerStatus::SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Document::AllocatorType& alloc) const
 {
     rPlannerStatus.SetObject();

@@ -448,6 +448,11 @@ public:
         return bHasAdded ? ET_Sucess : ET_Failed;
     }
 
+    // Covnert to boost shared pointer, e.g. CollisionReportPtr?
+    std::string GetCollisionReportString() {
+        return this->_constraintreturn->_report.__str__();
+    }
+
     virtual int GetNumNodes() const {
         return _numnodes;
     }
