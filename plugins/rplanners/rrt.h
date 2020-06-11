@@ -460,8 +460,8 @@ Some python code to display data::\n\
             if (et == ET_Failed && IS_DEBUGLEVEL(Level_Verbose)) {
                 std::vector<dReal> robotJointValues;
                 this->_getstatefn(robotJointValues); // Making the assumption that _getstatefn is shared throughout planning, e.g. shares same _getstatefn as DynamicsCollisionConstraint checker
-                planningstatus.vRobotJointValues.push_back(robotJointValues); // Is this slow?
-                planningstatus.vCollisionReports.push_back(this->_treeForward.GetCollisionReportString());
+                planningstatus.vRobotJointValues.push_back(robotJointValues);                           // Is this slow?
+                planningstatus.vCollisionReports.push_back(this->_treeForward.GetCollisionBodies());    // Is this slow?
             }
 
             // although check isn't necessary, having it improves running times
@@ -479,8 +479,8 @@ Some python code to display data::\n\
             if (et == ET_FAILED && IS_DEBUGLEVEL(Level_Verbose)) {
                 std::vector<dReal> robotJointValues;
                 this->_getstatefn(robotJointValues); // Making the assumption that _getstatefn is shared throughout planning, e.g. shares same _getstatefn as DynamicsCollisionConstraint checker
-                planningstatus.vRobotJointValues.push_back(robotJointValues); // Is this slow?
-                planningstatus.vCollisionReports.push_back(this->_treeBackward.GetCollisionReportString());
+                planningstatus.vRobotJointValues.push_back(robotJointValues);                           // Is this slow?
+                planningstatus.vCollisionReports.push_back(this->_treeBackward.GetCollisionBodies());   // Is this slow?
             }
 
             if( et == ET_Connected ) {

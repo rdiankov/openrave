@@ -448,9 +448,14 @@ public:
         return bHasAdded ? ET_Sucess : ET_Failed;
     }
 
-    // Covnert to boost shared pointer, e.g. CollisionReportPtr?
-    std::string GetCollisionReportString() {
-        return this->_constraintreturn->_report.__str__();
+    // Maybe convert to shared boost pointer?
+    std::vector< std:pair <std::string, std::string> > GetCollisionBodies() {
+        std::vector< std:pair <std::string, std::string> > collidingBodies;
+        FOREACH(itlinkpair, vLinkColliding)
+        {
+            collidingBodies.emplace_back(std::make_pair(itlinkpair->first->GetParent(true)->GetName(), itlinkpair->second->GetParent(true)->GetName()));
+        }
+        return collidingBodies;
     }
 
     virtual int GetNumNodes() const {

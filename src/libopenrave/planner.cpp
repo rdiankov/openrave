@@ -101,25 +101,7 @@ int AddStatesWithLimitCheck(std::vector<dReal>& q, const std::vector<dReal>& qde
 
 PlannerStatus::PlannerStatus() {}
 
-// To maintain backwards compatibility...
-PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, CollisionReportPtr report) : description(description), statusCode(statusCode)
-{
-    // not sure if this works...
-    errorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
-}
-
-/*PlannerStatus::PlannerStatus() : statusCode(0)
-{
-}
-
-PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, CollisionReportPtr report) :
-    description(description),
-    statusCode(statusCode),
-    report(report)
-{
-    // not sure if this works...
-    errorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
-}
+PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, CollisionReportPtr report) : description(description), statusCode(statusCode) {}
 
 PlannerStatus::PlannerStatus(const int statusCode) :
     PlannerStatus("", statusCode)
@@ -172,7 +154,7 @@ PlannerStatus::PlannerStatus(const std::string& description, const int statusCod
     PlannerStatus(description, statusCode, report)
 {
     this->jointValues = jointValues;
-}*/
+}
 
 PlannerStatus::~PlannerStatus() {
 }
@@ -189,7 +171,6 @@ PlannerStatus& PlannerStatus::SetPlannerParameters(PlannerParametersConstPtr par
     return *this;
 }
 
-// TODO: FIX!
 void PlannerStatus::SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Document::AllocatorType& alloc) const
 {
     rPlannerStatus.SetObject();
@@ -231,6 +212,26 @@ void PlannerStatus::SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Docu
         ss << ikparam;
         openravejson::SetJsonValueByKey(rPlannerStatus, "ikparam", ss.str(), alloc);
     }
+}
+
+void PlannerStatus::SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Document::AllocatorType& alloc) const
+{
+    rPlannerStatus.SetObject();
+
+    openravejson::SetJsonValueByKey(rPlannerStatus, "description", description, alloc);
+    openravejson::SetJsonValueByKey(rPlannerStatus, "statusCode", statusCode, alloc);
+    openravejson::SetJsonValueByKey(rPlannerStatus, "robotjointvalues", vRobotJointValues, alloc);  // Are we allowed to pass higher dimensional vectors?
+    openravejson::SetJsonValueByKey(rPlannerStatus, "collidingbodies", vCollidingBodies, alloc);    // Are we allowed to pass higher dimensional vectors?
+
+    //Eventually, serialization could be in openravejson.h?
+    if (ikparam.GetType() != IKP_None) {
+        std::stringstream ss;
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+        ss << ikparam;
+        openravejson::SetJsonValueByKey(rPlannerStatus, "ikparam", ss.str(), alloc);
+    }
+
+    openravejson::SetJsonValueByKey(rPlannerStatus, "errorOrigin", errorOrigin, alloc);
 }
 
 PlannerParameters::StateSaver::StateSaver(PlannerParametersPtr params) : _params(params)
