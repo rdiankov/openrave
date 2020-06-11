@@ -138,48 +138,6 @@ protected:
 
 using PostureDescriberPtr = boost::shared_ptr<PostureDescriber>;
 
-/// \brief determines whether a robot posture value can be considered as 0.0, postive, or negative
-/// \param [in] x      a posture value
-/// \param [in] tol    tolerance to determine whether x is considered 0.0, so that this value means a hybrid state.
-/// \return 0 if x is considered positive, 1 if considered negative, and 2 (meaning hybrid states) if considered 0.0
-inline PostureStateInt compute_feature_state(const double x, const double fTol) {
-    return (x > fTol) ? 0 : (x < -fTol) ? 1 : 2; // TGN: >= or <= ?
-}
-
-/// \brief Computes a vector of posture state integers using N posture values.
-/// \param [in]  posturevalues    an array of posture values
-/// \param [in]  tol              tolerance to determine whether x is considered 0.0, so that this value means a hybrid state.
-/// \param [out] posturestates    a vector of posture state (unsigned) integers, whose size is always a power of 2
-template <size_t N>
-inline void compute_robot_posture_states(const std::array<double, N>& posturevalues,
-                                         const double fTol,
-                                         std::vector<PostureStateInt>& posturestates) {
-    std::array<PostureStateInt, N> singlestates;
-    for(size_t i = 0; i < N; ++i) {
-        singlestates[i] = compute_feature_state(posturevalues[i], fTol);
-    }
-
-    posturestates = {0};
-    posturestates.reserve(1 << N);
-    for(size_t i = 0; i < N; ++i) {
-        for(PostureStateInt &state : posturestates) {
-            state <<= 1;
-        }
-        if(singlestates[i] == 1) {
-            for(PostureStateInt &state : posturestates) {
-                state |= 1;
-            }
-        }
-        else if (singlestates[i] == 2) {
-            const size_t nstates = posturestates.size();
-            posturestates.insert(end(posturestates), begin(posturestates), end(posturestates));
-            for(size_t j = nstates; j < 2 * nstates; ++j) {
-                posturestates[j] |= 1;
-            }
-        }
-    }
-}
-
 } // namespace OpenRAVE
 
 #endif // PLUGINS_POSTUREDESCRIBER_POSTUREDESCRIBERINTERFACE_H

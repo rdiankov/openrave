@@ -124,9 +124,10 @@ PyPostureDescriberBasePtr GeneratePostureDescriber(const PyManipulatorPtr& pyman
     const ManipulatorPtr pmanip = pymanip->GetManipulator();
     const RobotBasePtr probot = pmanip->GetRobot();
     const EnvironmentBasePtr penv = probot->GetEnv();
-    const LinkPair linkpair = ExtractEssentialKinematicsChain(pmanip);
-    if(linkpair == LinkPair({nullptr, nullptr})) {
-        RAVELOG_WARN_FORMAT("The essential kinematics chain is empty for manpulator %s of robot %s", pmanip->GetName() % probot->GetName());
+    const LinkPair linkpair = ExtractEssentialKinematicsChain(pmanip); // if extraction fails, i.e. no revolute joint, then linkpair is {nullptr, nullptr}
+    if(linkpair.first == nullptr || linkpair.second == nullptr) {
+        RAVELOG_WARN_FORMAT("The essential kinematics chain is not valid (linkpair contains nullptr) for manpulator %s of robot %s",
+                            pmanip->GetName() % probot->GetName());
         return PyPostureDescriberBasePtr();
     }
     // fe743742269c7dbfe548cb1f3412f658

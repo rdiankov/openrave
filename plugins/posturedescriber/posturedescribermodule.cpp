@@ -63,15 +63,21 @@ bool PostureDescriberModule::_LoadPostureDescriberJSONCommand(const rapidjson::V
         _interfacename = input["interfacename"].GetString();
     }
 
+    // check robot
     if(!input.HasMember("robotname")) {
         RAVELOG_WARN_FORMAT("env=%d, Rapidjson input has no robotname", envId);
         return false;
     }
-
     const std::string robotname = input["robotname"].GetString();
+    const RobotBasePtr probot = penv->GetRobot(robotname);
+    if(probot == nullptr) {
+        RAVELOG_WARN_FORMAT("env=%d has no robot %s", envId % robotname);
+        return false;
+    }
+
+    // check manipulator, or link pair    
     const bool bUseManip = input.HasMember("manipname");
     const std::string manipname = bUseManip ? input["manipname"].GetString() : std::string();
-
     std::string baselinkname, eelinkname;
     if(bUseManip) {
         if(input.HasMember("baselinkname")) {
@@ -91,21 +97,18 @@ bool PostureDescriberModule::_LoadPostureDescriberJSONCommand(const rapidjson::V
         RAVELOG_WARN("We have neither manipulator nor the (baselinkname, endeffectorlinkname) pair");
         return false;
     }
-
-    const RobotBasePtr probot = penv->GetRobot(robotname);
-    if(probot == nullptr) {
-        RAVELOG_WARN_FORMAT("env=%d has no robot %s", envId % robotname);
-    }
     
     if(bUseManip) {
         const ManipulatorPtr pmanip = probot->GetManipulator(manipname);
         if(pmanip == nullptr) {
             RAVELOG_WARN_FORMAT("env=%d, robot %s has no manipulator %s", envId % robotname % manipname);
+            return false;
         }
         const PostureDescriberBasePtr pDescriber = RaveCreatePostureDescriber(penv, _interfacename);
         if(pDescriber == nullptr) {
             RAVELOG_WARN_FORMAT("env=%d, cannot create robot posture describer interface %s for robot %s, manipulator %s",
                                             envId % _interfacename % robotname % manipname);
+            return false;
         }
         if(!pDescriber->Init(pmanip)) {
             RAVELOG_WARN_FORMAT("env=%d, cannot initialize robot posture describer for robot %s, manipulator %s", envId % robotname % manipname);
@@ -121,11 +124,13 @@ bool PostureDescriberModule::_LoadPostureDescriberJSONCommand(const rapidjson::V
         const LinkPtr eelink = probot->GetLink(eelinkname);
         if(baselink == nullptr || eelink == nullptr) {
             RAVELOG_WARN_FORMAT("env=%d, robot %s has no link %s or %s", envId % robotname % baselinkname % eelinkname);
+            return false;
         }
         const PostureDescriberBasePtr pDescriber = RaveCreatePostureDescriber(penv, _interfacename);
         if(pDescriber == nullptr) {
             RAVELOG_WARN_FORMAT("env=%d, cannot create robot posture describer interface %s for robot %s, from baselink %s to eelink %s",
                                             envId % _interfacename % robotname % baselinkname % eelinkname);
+            return false;
         }
 
         const LinkPair kinematicsChain_init {baselink, eelink};

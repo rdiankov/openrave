@@ -20,7 +20,7 @@
 
 namespace OpenRAVE {
 
-void RobotBase::EnsureEssentialKinematicsChainRegisteredOnManipulator(ManipulatorConstPtr pmanip) {
+void RobotBase::_EnsureEssentialKinematicsChainRegisteredOnManipulator(ManipulatorConstPtr pmanip) {
     if(!_mEssentialLinkPairs.count(pmanip)) {
         _mEssentialLinkPairs[pmanip] = ExtractEssentialKinematicsChain(pmanip);
     }
@@ -34,7 +34,7 @@ bool RobotBase::UnregisterPostureDescriber(ManipulatorConstPtr pmanip) {
     if(pmanip == nullptr) {
         throw OPENRAVE_EXCEPTION_FORMAT0("Input manipulator cannot be null", OpenRAVEErrorCode::ORE_InvalidArguments);
     }
-    this->EnsureEssentialKinematicsChainRegisteredOnManipulator(pmanip);
+    _EnsureEssentialKinematicsChainRegisteredOnManipulator(pmanip);
     return this->UnregisterPostureDescriber(_mEssentialLinkPairs.at(pmanip));
 }
 
@@ -74,7 +74,7 @@ bool RobotBase::SetPostureDescriber(ManipulatorConstPtr pmanip, PostureDescriber
     if(pmanip == nullptr) {
         throw OPENRAVE_EXCEPTION_FORMAT0("Input manipulator cannot be null", OpenRAVEErrorCode::ORE_InvalidArguments);
     }
-    this->EnsureEssentialKinematicsChainRegisteredOnManipulator(pmanip);
+    _EnsureEssentialKinematicsChainRegisteredOnManipulator(pmanip);
     return this->SetPostureDescriber(_mEssentialLinkPairs.at(pmanip), pDescriber);
 }
 
@@ -92,7 +92,7 @@ PostureDescriberBasePtr RobotBase::GetPostureDescriber(ManipulatorConstPtr pmani
     if(pmanip == nullptr) {
         throw OPENRAVE_EXCEPTION_FORMAT0("Input manipulator cannot be nullptr", OpenRAVEErrorCode::ORE_InvalidArguments);
     }
-    this->EnsureEssentialKinematicsChainRegisteredOnManipulator(pmanip);
+    _EnsureEssentialKinematicsChainRegisteredOnManipulator(pmanip);
     return this->GetPostureDescriber(_mEssentialLinkPairs.at(pmanip));
 }
 

@@ -184,6 +184,48 @@ RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr
     return RobotPostureSupportType::RPST_NoSupport;
 }
 
+/// \brief determines whether a robot posture value can be considered as 0.0, postive, or negative
+/// \param [in] x      a posture value
+/// \param [in] tol    tolerance to determine whether x is considered 0.0, so that this value means a hybrid state.
+/// \return 0 if x is considered positive, 1 if considered negative, and 2 (meaning hybrid states) if considered 0.0
+inline PostureStateInt ComputeFeatureState(const double x, const double fTol) {
+    return (x > fTol) ? 0 : (x < -fTol) ? 1 : 2; // TGN: >= or <= ?
+}
+
+/// \brief Computes a vector of posture state integers using N posture values.
+/// \param [in]  posturevalues    an array of posture values
+/// \param [in]  tol              tolerance to determine whether x is considered 0.0, so that this value means a hybrid state.
+/// \param [out] posturestates    a vector of posture state (unsigned) integers, whose size is always a power of 2
+template <size_t N>
+inline void ComputeRobotPostureStates(const std::array<double, N>& posturevalues,
+                                      const double fTol,
+                                      std::vector<PostureStateInt>& posturestates) {
+    std::array<PostureStateInt, N> singlestates;
+    for(size_t i = 0; i < N; ++i) {
+        singlestates[i] = ComputeFeatureState(posturevalues[i], fTol);
+    }
+
+    posturestates = {0};
+    posturestates.reserve(1 << N);
+    for(size_t i = 0; i < N; ++i) {
+        for(PostureStateInt &state : posturestates) {
+            state <<= 1;
+        }
+        if(singlestates[i] == 1) {
+            for(PostureStateInt &state : posturestates) {
+                state |= 1;
+            }
+        }
+        else if (singlestates[i] == 2) {
+            const size_t nstates = posturestates.size();
+            posturestates.insert(end(posturestates), begin(posturestates), end(posturestates));
+            for(size_t j = nstates; j < 2 * nstates; ++j) {
+                posturestates[j] |= 1;
+            }
+        }
+    }
+}
+
 void ComputePostureStates6RGeneral(const std::vector<JointPtr>& joints, const double fTol, std::vector<PostureStateInt>& posturestates) {
     const Vector axis0 = joints[0]->GetAxis();
     const Vector axis1 = joints[1]->GetAxis();
@@ -195,6 +237,9 @@ void ComputePostureStates6RGeneral(const std::vector<JointPtr>& joints, const do
     const Vector anchor2 = joints[2]->GetAnchor();
     const Vector anchor4 = joints[4]->GetAnchor();
 
+    // project anchor2 onto axis3, and move along axis3 by one unit
+    
+
     const std::array<double, 3> posturevalues {
         // shoulder: {{0, -1}, {1, -1}, {0, 4}}
         axis0.cross(axis1).dot(anchor4-anchor0),
@@ -203,7 +248,7 @@ void ComputePostureStates6RGeneral(const std::vector<JointPtr>& joints, const do
         // wrist: {3, -1}, {4, -1}, {5, -1}}
         axis3.cross(axis4).dot(axis5)
     };
-    compute_robot_posture_states<3>(posturevalues, fTol, posturestates);
+    ComputeRobotPostureStates<3>(posturevalues, fTol, posturestates);
 }
 
 void ComputePostureStates4RTypeA(const std::vector<JointPtr>& joints, const double fTol, std::vector<PostureStateInt>& posturestates) {
@@ -219,7 +264,7 @@ void ComputePostureStates4RTypeA(const std::vector<JointPtr>& joints, const doub
         // elbow: {{1, -1}, {1, 2}, {2, 3}}
         axis1.cross(anchor2-anchor1).dot(anchor3-anchor2),
     };
-    compute_robot_posture_states<2>(posturevalues, fTol, posturestates);
+    ComputeRobotPostureStates<2>(posturevalues, fTol, posturestates);
 }
 
 void ComputePostureStatesRRRParallel(const std::vector<JointPtr>& joints, const double fTol, std::vector<PostureStateInt>& posturestates) {
@@ -232,7 +277,7 @@ void ComputePostureStatesRRRParallel(const std::vector<JointPtr>& joints, const 
         // elbow: {{0, -1}, {0, 1}, {1, 2}}
         axis0.cross(anchor1-anchor0).dot(anchor2-anchor1),
     };
-    compute_robot_posture_states<1>(posturevalues, fTol, posturestates);
+    ComputeRobotPostureStates<1>(posturevalues, fTol, posturestates);
 }
 
 bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
