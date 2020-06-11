@@ -472,26 +472,26 @@ inline const char *strcasestr(const char *s, const char *find)
 
 
 /// \brief A local uid generator
-class UIDGenerator {
+class UniqueIDGenerator {
 public:
-    UIDGenerator() {
+    UniqueIDGenerator() {
         _prefix.clear();
         _sUniqueId.clear();
     }
-    UIDGenerator(std::string prefix): _prefix(prefix) {
+    UniqueIDGenerator(std::string prefix): _prefix(prefix) {
         _sUniqueId.clear();
     }
-    virtual ~UIDGenerator() {}
+    virtual ~UniqueIDGenerator() {}
 
     /// \brief Check if the given id is unique, otherwise it will assign a unique one and udpate the set
-    void AssignIdIfNotUnique(std::string& id) {
-        if (!id.empty() && IsUnique(id)) {
+    void EnsureUniqueID(std::string& id) {
+        if (!id.empty() && _IsUnique(id)) {
             _sUniqueId.insert(id);
             return;
         }
         std::string tempId = id;
         int count = 0;
-        while (tempId.empty() || !IsUnique(tempId)) {
+        while (tempId.empty() || !_IsUnique(tempId)) {
             tempId = (id.empty() ? _prefix : id) + std::to_string(count);
             count++;
         }
@@ -500,8 +500,8 @@ public:
     }
 
 private:
-    bool IsUnique(const std::string& id) {
-        return _sUniqueId.count(id) == 0;
+    bool _IsUnique(const std::string& id) {
+        return _sUniqueId.find(id) == _sUniqueId.end();
     }
     std::string _prefix;
     std::set<std::string> _sUniqueId;

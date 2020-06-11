@@ -159,10 +159,10 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     OpenRAVE::JSON::LoadJsonValueByKey(value, "forcedAdjacentLinks", _vForcedAdjacentLinks);
 
     if (value.HasMember("geometries")) {
-        UIDGenerator geometryIdGenerator("geometry");
+        UniqueIDGenerator geometryIdGenerator("geometry");
         _vgeometryinfos.reserve(value["geometries"].Size() + _vgeometryinfos.size());
         FOREACHC(itGeometry, _vgeometryinfos) {
-            geometryIdGenerator.AssignIdIfNotUnique((*itGeometry)->_id);
+            geometryIdGenerator.EnsureUniqueID((*itGeometry)->_id);
         }
 
         size_t iGeometry = 0;
@@ -173,7 +173,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
                 // OpenRAVE internally doesn't care about geometries name is duplicated or not.
                 // so if no id is set by user, we should assign a unique one instead of using geometry name in case of wrongly update current geometry with the same name.
                 // for other infos, like link, joints, etc. We fall back to use name if id is empty becasue OpenRAVE requires the unique name when we initialize those infos.
-                geometryIdGenerator.AssignIdIfNotUnique(id);
+                geometryIdGenerator.EnsureUniqueID(id);
             }
             UpdateOrCreateInfo(geometryValue, id, _vgeometryinfos, fUnitScale);
         }
