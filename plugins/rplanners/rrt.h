@@ -367,7 +367,7 @@ Some python code to display data::\n\
         uint32_t basetime = utils::GetMilliTime();
 
         // the main planning loop
-        PlannerStatus planningstatus();
+        PlannerStatus planningstatus;
         PlannerParameters::StateSaver savestate(_parameters);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
@@ -459,9 +459,9 @@ Some python code to display data::\n\
 
             if (et == ET_Failed && IS_DEBUGLEVEL(Level_Verbose)) {
                 std::vector<dReal> robotJointValues;
-                this->_getstatefn(robotJointValues); // Making the assumption that _getstatefn is shared throughout planning, e.g. shares same _getstatefn as DynamicsCollisionConstraint checker
+                this->_parameters->_getstatefn(robotJointValues); // Making the assumption that _getstatefn is shared throughout planning, e.g. shares same _getstatefn as DynamicsCollisionConstraint checker
                 planningstatus.vRobotJointValues.push_back(robotJointValues);                           // Is this slow?
-                planningstatus.vCollisionReports.push_back(this->_treeForward.GetCollisionBodies());    // Is this slow?
+                planningstatus.vCollidingBodies.push_back(this->_treeForward.GetCollisionBodies());    // Is this slow?
             }
 
             // although check isn't necessary, having it improves running times
@@ -476,11 +476,11 @@ Some python code to display data::\n\
 
             et = TreeB->Extend(TreeA->GetVectorConfig(iConnectedA), iConnectedB);     // extend B toward A
 
-            if (et == ET_FAILED && IS_DEBUGLEVEL(Level_Verbose)) {
+            if (et == ET_Failed && IS_DEBUGLEVEL(Level_Verbose)) {
                 std::vector<dReal> robotJointValues;
-                this->_getstatefn(robotJointValues); // Making the assumption that _getstatefn is shared throughout planning, e.g. shares same _getstatefn as DynamicsCollisionConstraint checker
+                this->_parameters->_getstatefn(robotJointValues); // Making the assumption that _getstatefn is shared throughout planning, e.g. shares same _getstatefn as DynamicsCollisionConstraint checker
                 planningstatus.vRobotJointValues.push_back(robotJointValues);                           // Is this slow?
-                planningstatus.vCollisionReports.push_back(this->_treeBackward.GetCollisionBodies());   // Is this slow?
+                planningstatus.vCollidingBodies.push_back(this->_treeBackward.GetCollisionBodies());   // Is this slow?
             }
 
             if( et == ET_Connected ) {

@@ -487,7 +487,7 @@ class OPENRAVE_API PlannerStatus
 {
 public:
     PlannerStatus();
-    PlannerStatus(const std::string& description, const int statusCode);
+    PlannerStatus(const int statusCode);
     PlannerStatus(const std::string& description, const int statusCode, CollisionReportPtr report=CollisionReportPtr());
     PlannerStatus(const std::string& description, const int statusCode, const IkParameterization& ikparam, CollisionReportPtr report=CollisionReportPtr());
     PlannerStatus(const std::string& description, const int statusCode, const std::vector<dReal>& jointValues, CollisionReportPtr report=CollisionReportPtr());
