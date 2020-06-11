@@ -2022,9 +2022,9 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
         if( jointindex < nActiveJoints ) {
             // active joint
             const JointPtr& pjoint = _vecjoints.at(jointindex);
-
-            RAVELOG_VERBOSE_FORMAT("Working with active joint %s with (generalized) joint index %d", pjoint->GetName() % jointindex);
-
+#if defined(DEBUG_KINBODYJOINT_CALCULATEJACOBIAN)
+            RAVELOG_VERBOSE_FORMAT("Working with active joint %s with joint index %d", pjoint->GetName() % jointindex);
+#endif
             const int dofindex = pjoint->GetDOFIndex();
             const int ndof = pjoint->GetDOF();
             const int8_t affect = this->DoesAffect(pjoint->GetJointIndex(), linkindex);
@@ -2061,8 +2061,9 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
         else {
             // add in the contributions from the passive joint
             const JointPtr& pjoint = _vPassiveJoints.at(jointindex - nActiveJoints);
-            RAVELOG_VERBOSE_FORMAT("Working with mimic joint %s with generalized joint index %d", pjoint->GetName() % jointindex);
-
+#if defined(DEBUG_KINBODYJOINT_CALCULATEJACOBIAN)
+            RAVELOG_VERBOSE_FORMAT("Working with mimic joint %s with (generalized) joint index %d", pjoint->GetName() % jointindex);
+#endif
             const int ndof = pjoint->GetDOF();
             for(int idof = 0; idof < ndof; ++idof) {
                 if( pjoint->IsMimic(idof) ) {
@@ -2091,7 +2092,9 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
                             index = itindex - dofindices.begin(); ///< index of an active joint
                         }
                         OPENRAVE_ASSERT_OP_FORMAT(index, >=, 0, "index should be >= 0; now %d", index, ORE_InvalidArguments);
+#if defined(DEBUG_KINBODYJOINT_CALCULATEJACOBIAN)
                         RAVELOG_VERBOSE_FORMAT("Collecting linear velocity Jacobian w.r.t index %d (dof index %d) by the influence of joint %s", index % dofindex % pjoint->GetName());
+#endif
                         const dReal partialderiv = dofindexDerivativePair.second;
                         vjacobian[index                ] += v.x * partialderiv;
                         vjacobian[index + dofstride    ] += v.y * partialderiv;
@@ -2160,6 +2163,9 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
         if( jointindex < nActiveJoints ) {
             // active joint
             const JointPtr& pjoint = _vecjoints.at(jointindex);
+#if defined(DEBUG_KINBODYJOINT_CALCULATEJACOBIAN)
+            RAVELOG_VERBOSE_FORMAT("Working with active joint %s with joint index %d", pjoint->GetName() % jointindex);
+#endif
             const int dofindex = pjoint->GetDOFIndex();
             const int ndof = pjoint->GetDOF();
             const int8_t affect = DoesAffect(pjoint->GetJointIndex(), linkindex);
@@ -2185,6 +2191,9 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
         else {
             // add in the contributions from the passive joint
             const JointPtr& pjoint = _vPassiveJoints.at(jointindex - nActiveJoints);
+#if defined(DEBUG_KINBODYJOINT_CALCULATEJACOBIAN)
+            RAVELOG_VERBOSE_FORMAT("Working with mimic joint %s with (generalized) joint index %d", pjoint->GetName() % jointindex);
+#endif
             const int ndof = pjoint->GetDOF();
             for(int idof = 0; idof < ndof; ++idof) {
                 if( pjoint->IsMimic(idof) ) {
@@ -2212,7 +2221,9 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
                             continue;
                         }
                         OPENRAVE_ASSERT_OP_FORMAT(dofindex, >=, 0, "dofindex should be >= 0; now %d", dofindex, ORE_InvalidArguments);
-                        RAVELOG_VERBOSE_FORMAT("Collecting rotation Jacobian w.r.t dof index %d by the influence of joint %s", dofindex % pjoint->GetName());
+#if defined(DEBUG_KINBODYJOINT_CALCULATEJACOBIAN)
+                        RAVELOG_VERBOSE_FORMAT("Collecting quaternion velocity Jacobian w.r.t dof index %d by the influence of joint %s", dofindex % pjoint->GetName());
+#endif
                         const dReal partialderiv = dofindexDerivativePair.second;
                         v *= partialderiv;
                         vjacobian[dofindex + idof                ] += dReal(0.5) * (-quat.y * v.x - quat.z * v.y - quat.w * v.z);
@@ -2276,6 +2287,9 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
         if( jointindex < nActiveJoints ) {
             // active joint
             const JointPtr& pjoint = _vecjoints.at(jointindex);
+#if defined(DEBUG_KINBODYJOINT_CALCULATEJACOBIAN)
+            RAVELOG_VERBOSE_FORMAT("Working with active joint %s with joint index %d", pjoint->GetName() % jointindex);
+#endif
             const int dofindex = pjoint->GetDOFIndex();
             const int ndof = pjoint->GetDOF();
             const int8_t affect = this->DoesAffect(pjoint->GetJointIndex(), linkindex);
@@ -2311,6 +2325,9 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
         else {
             // add in the contributions from the passive joint
             const JointPtr& pjoint = _vPassiveJoints.at(jointindex - nActiveJoints);
+#if defined(DEBUG_KINBODYJOINT_CALCULATEJACOBIAN)
+            RAVELOG_VERBOSE_FORMAT("Working with mimic joint %s with (generalized) joint index %d", pjoint->GetName() % jointindex);
+#endif
             const int ndof = pjoint->GetDOF();
             for(int idof = 0; idof < ndof; ++idof) {
                 if( pjoint->IsMimic(idof) ) {
@@ -2340,7 +2357,9 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
                             index = itindex - dofindices.begin(); ///< index of an active joint
                         }
                         OPENRAVE_ASSERT_OP_FORMAT(index, >=, 0, "index should be >= 0; now %d", index, ORE_InvalidArguments);
-                        RAVELOG_VERBOSE_FORMAT("Collecting linear velocity Jacobian w.r.t index %d (dof index %d) by the influence of joint %s", index % dofindex % pjoint->GetName());
+#if defined(DEBUG_KINBODYJOINT_CALCULATEJACOBIAN)
+                        RAVELOG_VERBOSE_FORMAT("Collecting angular velocity Jacobian w.r.t index %d (dof index %d) by the influence of joint %s", index % dofindex % pjoint->GetName());
+#endif
                         const dReal partialderiv = dofindexDerivativePair.second;
                         vjacobian[index                ] += v.x * partialderiv;
                         vjacobian[index + dofstride    ] += v.y * partialderiv;

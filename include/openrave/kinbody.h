@@ -2708,4 +2708,7 @@ private:
 
 } // end namespace OpenRAVE
 
+///< to debug Jacobian computations with complex mimic joint dependencies
+#define DEBUG_KINBODYJOINT_CALCULATEJACOBIAN
+
 #endif

@@ -1882,14 +1882,18 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
         // this is the *generalized* joint index for a mimic joint
         thisdofformat.jointindex = nActiveJoints + (find(begin(vPassiveJoints), end(vPassiveJoints), shared_from_this()) - begin(vPassiveJoints));
     }
+#if defined(DEBUG_KINBODYJOINT_CALCULATEJACOBIAN)
     RAVELOG_VERBOSE_FORMAT("Joint %s has dofformat: %s", this->GetName() % thisdofformat.to_string());
+#endif
 
     const std::map< std::pair<Mimic::DOFFormat, int>, dReal >::const_iterator mit = find_if(begin(mTotalderivativepairValue), end(mTotalderivativepairValue),
         [&thisdofformat](const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal> &keyvalue) {
             const bool bfound = keyvalue.first.first == thisdofformat;
+#if defined(DEBUG_KINBODYJOINT_CALCULATEJACOBIAN)
             if(bfound) {
                 RAVELOG_VERBOSE_FORMAT("Found cached %s", thisdofformat.to_string());
             }
+#endif
             return bfound;
         }
     );
@@ -1902,7 +1906,9 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
                 vDofindexDerivativePairs.emplace_back(dependedJointIndex, partialDerivative); // collect all dz/dx
             }
         }
+#if defined(DEBUG_KINBODYJOINT_CALCULATEJACOBIAN)
         RAVELOG_VERBOSE_FORMAT("mTotalderivativepairValue: %s\nvDofindexDerivativePairs: %s", to_string(mTotalderivativepairValue) % to_string(vDofindexDerivativePairs));
+#endif
         return;
     }
 
@@ -1910,15 +1916,23 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
     const MimicPtr& pmimic = _vmimic[iaxis];
     const std::vector<Mimic::DOFFormat>& vdofformats = pmimic->_vdofformat; ///< collection of information of joints
 
-    std::stringstream ss;
-    ss << "pmimic: " << pmimic->to_string() << "depended joints are ";
     std::vector<dReal> vDependedJointValues; ///< collect values of joints on which this joint *directly* depends on
     for(const Mimic::DOFFormat& dofformat : vdofformats) {
         const JointConstPtr dependedjoint = dofformat.GetJoint(*parent); ///< say joint y
         vDependedJointValues.push_back(dependedjoint->GetValue(dofformat.axis));
-        ss << dependedjoint->GetName() << ", ";
     }
-    RAVELOG_VERBOSE(ss.str());
+
+#if defined(DEBUG_KINBODYJOINT_CALCULATEJACOBIAN)
+    {
+        std::stringstream ss;
+        ss << "pmimic: " << pmimic->to_string() << "depended joints are ";
+        for(const Mimic::DOFFormat& dofformat : vdofformats) {
+            const JointConstPtr dependedjoint = dofformat.GetJoint(*parent); ///< say joint y
+            ss << dependedjoint->GetName() << ", ";
+        }
+        RAVELOG_VERBOSE(ss.str());
+    }
+#endif
 
     std::map< std::pair<Mimic::DOFFormat, int>, dReal > localmap;
     const size_t nvars = vdofformats.size(); ///< number of joints on which this joint depends on
@@ -1928,13 +1942,16 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
         const int jointindex = dofformat.jointindex; ///< index of this depended joint
         const OpenRAVEFunctionParserRealPtr velfn = pmimic->_velfns.at(ivar); ///< function that evaluates the partial derivative ∂z/∂x
         const dReal fvel = velfn->Eval(vDependedJointValues.empty() ? NULL : &vDependedJointValues[0]); ///< value of ∂z/∂x
-        
+
+#if defined(DEBUG_KINBODYJOINT_CALCULATEJACOBIAN)
         RAVELOG_VERBOSE_FORMAT("∂(J%d)/∂(J%d) = ∂(%s)/∂(%s) = %.8e", thisdofformat.jointindex % jointindex % this->GetName() % dependedjoint->GetName() % fvel);
+#endif
 
         if(dependedjoint->IsMimic(dofformat.axis)) {
             // depended joint is also mimic; go down the dependency tree and collect partial derivatives by chain rule
+#if defined(DEBUG_KINBODYJOINT_CALCULATEJACOBIAN)
             RAVELOG_VERBOSE_FORMAT("Joint \"%s\" calls recursion _ComputePartialVelocities on joint \"%s\"", this->GetName() % dependedjoint->GetName());
-
+#endif
             std::vector<std::pair<int, dReal> > vLocalIndexPartialPairs;
             dependedjoint->_ComputePartialVelocities(vLocalIndexPartialPairs, iaxis, mTotalderivativepairValue); ///< recursion: computes ∂y/∂x
             for(const std::pair<int, dReal>& pIndexPartial : vLocalIndexPartialPairs) {
@@ -1954,12 +1971,14 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
         vDofindexDerivativePairs.emplace_back(dependedJointIndex, partialDerivative); // collect all total derivatives dz/dx
     }
 
+#if defined(DEBUG_KINBODYJOINT_CALCULATEJACOBIAN)
+    RAVELOG_VERBOSE_FORMAT("localmap: %s\nmTotalderivativepairValue: %s\nvDofindexDerivativePairs: %s", to_string(localmap) % to_string(mTotalderivativepairValue) % to_string(vDofindexDerivativePairs));
+#endif
+
     mTotalderivativepairValue.insert(
         std::make_move_iterator(begin(localmap)),
         std::make_move_iterator(end(localmap))
     );
-
-    RAVELOG_VERBOSE_FORMAT("localmap: %s\nmTotalderivativepairValue: %s\nvDofindexDerivativePairs: %s", to_string(localmap) % to_string(mTotalderivativepairValue) % to_string(vDofindexDerivativePairs));
 }
 
 int KinBody::Joint::_Eval(int axis, uint32_t timederiv, const std::vector<dReal>& vdependentvalues, std::vector<dReal>& voutput)
