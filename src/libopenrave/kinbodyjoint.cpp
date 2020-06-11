@@ -21,7 +21,6 @@
 
 #include "fparsermulti.h"
 
-
 namespace OpenRAVE {
 
 
@@ -1734,11 +1733,11 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     std::string eq; ///< converted from poseq into formulas in "joint%d"
     std::vector<std::string> resultVars; ///< joint variables (in form "joint%d") that this joint depends on
     pmimic->_posfn = CreateJointFunctionParser();
-    const OpenRAVEFunctionParserRealPtr& posfn = pmimic->_posfn; // alias
-    int ret = posfn->ParseAndDeduceVariables(utils::SearchAndReplace(eq, poseq, jointnamepairs), resultVars);
+    int ret = pmimic->_posfn->ParseAndDeduceVariables(utils::SearchAndReplace(eq, poseq, jointnamepairs), resultVars);
+    const size_t nVars = resultVars.size();
     RAVELOG_DEBUG_FORMAT("Input mimic_pos = %s\nConverted into eq = %s", poseq % eq);
     if( ret >= 0 ) {
-        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to set equation '%s' on %s:%s, at %d. Error is %s\n"), poseq % parent->GetName() % GetName() % ret % posfn->ErrorMsg(), ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to set equation '%s' on %s:%s, at %d. Error is %s\n"), poseq % parent->GetName() % GetName() % ret % pmimic->_posfn->ErrorMsg(), ORE_InvalidArguments);
     }
 
     // process the depended joint variables
@@ -1746,7 +1745,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
         OPENRAVE_ASSERT_FORMAT(var.find("joint") == 0, "equation '%s' uses unknown variable", poseq, ORE_InvalidArguments);
 
         Mimic::DOFFormat dofformat;
-        const size_t axisindex = var.find('_'); // XXX_mimic
+        const size_t axisindex = var.find('_'); // joint1_1 means axis 1 for joint1
         if( axisindex != std::string::npos ) {
             dofformat.jointindex = boost::lexical_cast<uint16_t>(var.substr(5, axisindex-5));
             dofformat.axis = boost::lexical_cast<uint8_t>(var.substr(axisindex+1));
@@ -1769,9 +1768,9 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
 
     // need to set sVars to resultVars since that's what the user will be feeding with the input
     std::stringstream sVars;
-    if( !resultVars.empty() ) {
+    if( !!nVars ) {
         sVars << resultVars[0];
-        for(size_t i = 1; i < resultVars.size(); ++i) {
+        for(size_t i = 1; i < nVars; ++i) {
             sVars << "," << resultVars[i];
         }
     }
@@ -1782,36 +1781,53 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
             continue;
         }
 
-        std::vector<OpenRAVEFunctionParserRealPtr> vfns(resultVars.size());
-        // extract the equations
+        std::vector<OpenRAVEFunctionParserRealPtr> vfns(nVars);
+        /* 
+            extract from `eq` the partial derivative formulas ∂z/∂xi for joint z:=z(x0,x1,...xn) defined in `poseq`.
+            `eq` takes form
+        
+            c0:=......; c1:=......; ......;
+            |x0 formula_∂z_∂x0
+            |x1 formula_∂z_∂x1
+            ......
+
+            where xi's are joints on which z depends, and ci are common subexpressions in formulas ∂z/∂xi.
+
+        */
         utils::SearchAndReplace(eq, pmimic->_equations[itype], jointnamepairs);
         size_t index = eq.find('|');
+        const std::string sCommonSubexpressions = (index != std::string::npos) ? eq.substr(0, index) : ""; ///< common subexpressions
+
         while(index != std::string::npos) {
-            size_t startindex = index+1;
-            index = eq.find('|',startindex);
-            string sequation;
+            size_t startindex = index + 1;
+            index = eq.find('|', startindex); // check if we specify another partial derivative
+            std::string sequation; ///< takes form "|xi formula_∂z_∂xi"
             if( index != std::string::npos) {
-                sequation = eq.substr(startindex,index-startindex);
+                sequation = eq.substr(startindex, index - startindex); // extract up to the next '|'
             }
             else {
-                sequation = eq.substr(startindex);
+                sequation = eq.substr(startindex); // extract till the end
             }
+
             boost::trim(sequation);
-            size_t nameendindex = sequation.find(' ');
-            string varname;
+            size_t nameendindex = sequation.find(' '); // a space right after "|xi"
+            std::string varname;
             if( nameendindex == std::string::npos ) {
                 RAVELOG_WARN(str(boost::format("invalid equation syntax '%s' for joint %s")%sequation%_info._name));
                 varname = sequation;
                 sequation = "0";
             }
             else {
-                varname = sequation.substr(0,nameendindex);
+                varname = sequation.substr(0, nameendindex); // variable for the depended joint xi
                 sequation = sequation.substr(nameendindex);
             }
-            std::vector<string>::iterator itnameindex = find(resultVars.begin(),resultVars.end(),varname);
+
+            // ensure varname is indeed in the variable list
+            std::vector<string>::iterator itnameindex = find(resultVars.begin(), resultVars.end(), varname);
             OPENRAVE_ASSERT_FORMAT(itnameindex != resultVars.end(), "variable %s from velocity equation is not referenced in the position, skipping...", mapinvnames[varname],ORE_InvalidArguments);
 
             OpenRAVEFunctionParserRealPtr fn = CreateJointFunctionParser();
+            sequation = sCommonSubexpressions + sequation; ///< compute common subexpressions
             ret = fn->Parse(sequation, sVars.str());
             if( ret >= 0 ) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("failed to set equation '%s' on %s:%s, at %d. Error is %s"), sequation%parent->GetName()%GetName()%ret%fn->ErrorMsg(),ORE_InvalidArguments);
@@ -1819,7 +1835,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
             vfns.at(itnameindex-resultVars.begin()) = fn;
         }
         // check if anything is missing
-        for(size_t j = 0; j < resultVars.size(); ++j) {
+        for(size_t j = 0; j < nVars; ++j) {
             if( !vfns[j] ) {
                 // print a message instead of throwing an exception since it might be common for only position equations to be specified
                 RAVELOG_WARN(str(boost::format("SetMimicEquations: missing variable %s from partial derivatives of joint %s!")%mapinvnames[resultVars[j]]%_info._name));
