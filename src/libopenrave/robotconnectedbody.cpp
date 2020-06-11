@@ -383,7 +383,7 @@ bool RobotBase::ConnectedBody::CanProvideManipulator(const std::string& resolved
     if( resolvedManipulatorName.size() <= _nameprefix.size() ) {
         return false;
     }
-    if( strncmp(resolvedManipulatorName.c_str(), _nameprefix.c_str(), _nameprefix.size()) == 0 ) {
+    if( strncmp(resolvedManipulatorName.c_str(), _nameprefix.c_str(), _nameprefix.size()) != 0 ) {
         return false;
     }
 
@@ -645,6 +645,9 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 pnewmanipulator->_info = *connectedBodyInfo._vManipulatorInfos[imanipulator];
             }
             pnewmanipulator->_info._name = connectedBody._nameprefix + pnewmanipulator->_info._name;
+            if( pnewmanipulator->_info._grippername.size() > 0 ) {
+                pnewmanipulator->_info._grippername = connectedBody._nameprefix + pnewmanipulator->_info._grippername;
+            }
 
             FOREACH(ittestmanipulator, _vecManipulators) {
                 if( pnewmanipulator->_info._name == (*ittestmanipulator)->GetName() ) {
