@@ -383,7 +383,7 @@ bool RobotBase::ConnectedBody::CanProvideManipulator(const std::string& resolved
     if( resolvedManipulatorName.size() <= _nameprefix.size() ) {
         return false;
     }
-    if( strncmp(resolvedManipulatorName.c_str(), _nameprefix.c_str(), _nameprefix.size()) == 0 ) {
+    if( strncmp(resolvedManipulatorName.c_str(), _nameprefix.c_str(), _nameprefix.size()) != 0 ) {
         return false;
     }
 
