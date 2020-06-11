@@ -161,11 +161,13 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     if (value.HasMember("geometries")) {
         UniqueIDGenerator geometryIdGenerator("geometry");
         _vgeometryinfos.reserve(value["geometries"].Size() + _vgeometryinfos.size());
-
-
+        // 4 steps for checking id
+        // 1. check existing geometryInfo's id
         FOREACHC(itGeometry, _vgeometryinfos) {
             geometryIdGenerator.EnsureUniqueID((*itGeometry)->_id);
         }
+
+        // 2. reserve id namespace
         for (rapidjson::Value::ConstValueIterator it = value["geometries"].Begin(); it != value["geometries"].End(); ++it) {
             const rapidjson::Value& geometryValue = *it;
             std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(geometryValue, "id");
@@ -176,6 +178,9 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
             const rapidjson::Value& geometryValue = *it;
             std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(geometryValue, "id");
             if (id.empty()) {
+                // 3. set name to id if id is empty
+                id = OpenRAVE::JSON::GetStringJsonValueByKey(geometryValue, "name");
+                // 4. ensure the id is unique
                 geometryIdGenerator.EnsureUniqueID(id);
             }
             UpdateOrCreateInfo(geometryValue, id, _vgeometryinfos, fUnitScale);
