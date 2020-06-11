@@ -475,10 +475,7 @@ inline const char *strcasestr(const char *s, const char *find)
 class UniqueIDGenerator {
 public:
     UniqueIDGenerator() = delete;
-    UniqueIDGenerator(std::string prefix): _prefix(prefix) {
-        _sUniqueId.clear();
-        _sReservedId.clear();
-    }
+    UniqueIDGenerator(std::string prefix): _prefix(prefix) {}
     virtual ~UniqueIDGenerator() {}
 
     /// \brief Check if the given id is unique, otherwise it will assign a unique one and udpate the set
@@ -495,21 +492,19 @@ public:
         // 2. id is empty
         // 3. id has conflicted with updated id
         while (_IsReserved(tempId) || tempId.empty() || !_IsUnique(tempId)) {
-            tempId = (id.empty() ? _prefix : id) + std::to_string(count);
+            tempId = str(boost::format("%s%d")%(id.empty()?_prefix:id)%count);
             count++;
         }
         _sUniqueId.insert(tempId);
         id = tempId;
     }
-    // reserve the id namespace.
-    bool ReserveUniqueID(const std::string id) {
+    /// \brief Reserve the id namespace
+    void ReserveUniqueID(const std::string id) {
         if (id.empty() || _IsReserved(id)) {
-            return false;
+            return;
         }
         _sReservedId.insert(id);
-        return true;
     }
-
 
 private:
     bool _IsUnique(const std::string& id) {

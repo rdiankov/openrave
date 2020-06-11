@@ -210,8 +210,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 
     if (value.HasMember("links")) {
         _vLinkInfos.reserve(value["links"].Size() + _vLinkInfos.size());
-        size_t iLink = 0;
-        for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it, ++iLink) {
+        for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it) {
             const rapidjson::Value& linkValue = *it;
             std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(linkValue, "id");
             if (id.empty()) {
