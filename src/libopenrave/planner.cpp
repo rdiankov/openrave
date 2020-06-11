@@ -101,7 +101,10 @@ int AddStatesWithLimitCheck(std::vector<dReal>& q, const std::vector<dReal>& qde
 
 PlannerStatus::PlannerStatus() {}
 
-PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, CollisionReportPtr report) : description(description), statusCode(statusCode) {}
+PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, CollisionReportPtr report) :
+    description(description),
+    statusCode(statusCode),
+    report(report) {}
 
 PlannerStatus::PlannerStatus(const int statusCode) :
     PlannerStatus("", statusCode)
