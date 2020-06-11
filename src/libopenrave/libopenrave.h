@@ -477,9 +477,11 @@ public:
     UniqueIDGenerator() {
         _prefix.clear();
         _sUniqueId.clear();
+        _sReservedId.clear();
     }
     UniqueIDGenerator(std::string prefix): _prefix(prefix) {
         _sUniqueId.clear();
+        _sReservedId.clear();
     }
     virtual ~UniqueIDGenerator() {}
 
@@ -491,7 +493,12 @@ public:
         }
         std::string tempId = id;
         int count = 0;
-        while (tempId.empty() || !_IsUnique(tempId)) {
+
+        // situations for generating a new id
+        // 1. same id has been reserved by others
+        // 2. id is empty
+        // 3. id has conflicted with updated id
+        while (_IsReserved(tempId) || tempId.empty() || !_IsUnique(tempId)) {
             tempId = (id.empty() ? _prefix : id) + std::to_string(count);
             count++;
         }
@@ -499,12 +506,25 @@ public:
         id = tempId;
     }
 
+    bool ReserveUniqueID(const std::string id) {
+        if (id.empty() || _IsReserved(id)) {
+            return false;
+        }
+        _sReservedId.insert(id);
+        return true;
+    }
+
+
 private:
     bool _IsUnique(const std::string& id) {
         return _sUniqueId.find(id) == _sUniqueId.end();
     }
+    bool _IsReserved(const std::string& id) {
+        return _sReservedId.find(id) != _sReservedId.end();
+    }
     std::string _prefix;
     std::set<std::string> _sUniqueId;
+    std::set<std::string> _sReservedId;
 };
 
 ///* \brief Update current info from json value. Create a new one if there is no id matched.
