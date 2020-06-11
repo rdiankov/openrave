@@ -2225,11 +2225,10 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
                         RAVELOG_VERBOSE_FORMAT("Collecting quaternion velocity Jacobian w.r.t dof index %d by the influence of joint %s", dofindex % pjoint->GetName());
 #endif
                         const dReal partialderiv = dofindexDerivativePair.second;
-                        v *= partialderiv;
-                        vjacobian[dofindex + idof                ] += dReal(0.5) * (-quat.y * v.x - quat.z * v.y - quat.w * v.z);
-                        vjacobian[dofindex + idof + dofstride    ] += dReal(0.5) * ( quat.x * v.x - quat.z * v.z + quat.w * v.y);
-                        vjacobian[dofindex + idof + dofstride * 2] += dReal(0.5) * ( quat.x * v.y + quat.y * v.z - quat.w * v.x);
-                        vjacobian[dofindex + idof + dofstride * 3] += dReal(0.5) * ( quat.x * v.z - quat.y * v.y + quat.z * v.x);
+                        vjacobian[dofindex + idof                ] += dReal(0.5) * partialderiv * (-quat.y * v.x - quat.z * v.y - quat.w * v.z);
+                        vjacobian[dofindex + idof + dofstride    ] += dReal(0.5) * partialderiv * ( quat.x * v.x - quat.z * v.z + quat.w * v.y);
+                        vjacobian[dofindex + idof + dofstride * 2] += dReal(0.5) * partialderiv * ( quat.x * v.y + quat.y * v.z - quat.w * v.x);
+                        vjacobian[dofindex + idof + dofstride * 3] += dReal(0.5) * partialderiv * ( quat.x * v.z - quat.y * v.y + quat.z * v.x);
                     }
                 }
             }
