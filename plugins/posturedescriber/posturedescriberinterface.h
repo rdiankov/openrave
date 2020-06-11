@@ -65,9 +65,12 @@ inline T operator|=(T& x, T y)
     return x = x | y;
 }
 
-using PostureValueFn = std::function<void(const std::vector<KinBody::JointPtr>& vjoints,
+using PostureValueFn = std::function<void(const std::vector<KinBody::JointPtr>& joints,
                                           const double fTol,
-                                          std::vector<PostureStateInt>& posturestates)>;
+                                          std::vector<double>& posturevalues,
+                                          std::vector<PostureStateInt>& featurestates,
+                                          std::vector<PostureStateInt>& posturestates ///< most needed
+                                          )>;
 
 class OPENRAVE_API PostureDescriber : public PostureDescriberBase
 {
@@ -122,6 +125,7 @@ protected:
     /// \brief Gets the dof indices along a kinematics chain from baselink to eelink
     bool _GetArmIndicesCommand(std::ostream& ssout, std::istream& ssin) const;
 
+    /// \brief Gets robot posture support type cast into int
     bool _GetSupportTypeCommand(std::ostream& ssout, std::istream& ssin) const;
 
     /* ========== `SendJSONCommand` APIs ========== */
@@ -134,6 +138,11 @@ protected:
     double _fTol = 1e-6; ///< tolerance for determining if a robot posture value is considered 0
     PostureValueFn _posturefn; ///< function that computes posture values and states for a kinematics chain
     RobotPostureSupportType _supporttype = RobotPostureSupportType::RPST_NoSupport;
+
+    /* ========== cached values ========== */
+    std::vector<double> _posturevalues; ///< cached posture values
+    std::vector<PostureStateInt> _featurestates; ///< cached feature states
+    std::vector<PostureStateInt> _posturestates; ///< cached posture states
 };
 
 using PostureDescriberPtr = boost::shared_ptr<PostureDescriber>;
