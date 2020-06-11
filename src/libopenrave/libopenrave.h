@@ -474,11 +474,7 @@ inline const char *strcasestr(const char *s, const char *find)
 /// \brief A local uid generator
 class UniqueIDGenerator {
 public:
-    UniqueIDGenerator() {
-        _prefix.clear();
-        _sUniqueId.clear();
-        _sReservedId.clear();
-    }
+    UniqueIDGenerator() = delete;
     UniqueIDGenerator(std::string prefix): _prefix(prefix) {
         _sUniqueId.clear();
         _sReservedId.clear();
@@ -505,7 +501,7 @@ public:
         _sUniqueId.insert(tempId);
         id = tempId;
     }
-
+    // reserve the id namespace.
     bool ReserveUniqueID(const std::string id) {
         if (id.empty() || _IsReserved(id)) {
             return false;
