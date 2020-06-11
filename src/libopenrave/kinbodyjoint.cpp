@@ -1855,13 +1855,13 @@ std::string to_string(const std::vector<std::pair<int, dReal> >& v) {
     return ss.str();
 }
 
-void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal> >& vpartials,
+void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal> >& vDofindexDerivativePairs,
                                                const int iaxis,
-                                               std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mapcachedpartials) const
+                                               std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mTotalderivativepairValue) const
 {
-    OPENRAVE_ASSERT_FORMAT(vpartials.empty(), "Expect empty vpartials; now it has size %d", vpartials.size(), ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(vDofindexDerivativePairs.empty(), "Expect empty vDofindexDerivativePairs; now it has size %d", vDofindexDerivativePairs.size(), ORE_InvalidArguments);
     if( this->dofindex >= 0 ) {
-        vpartials.emplace_back(this->dofindex + iaxis, 1.0); // this joint is active; return immediately
+        vDofindexDerivativePairs.emplace_back(this->dofindex + iaxis, 1.0); // this joint is active; return immediately
         return;
     }
 
@@ -1869,7 +1869,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
                            this->GetName() % iaxis, ORE_Failed
     );
 
-    /* ========== Set up information about this mimic joint z ========== */
+    /* ========== Set up information about this mimic joint, call it z ========== */
     Mimic::DOFFormat thisdofformat;
     thisdofformat.dofindex = -1; ///< dofindex being -1 means it is a mimic joint
     thisdofformat.axis = iaxis;  ///< from input
@@ -1883,6 +1883,28 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
         thisdofformat.jointindex = nActiveJoints + (find(begin(vPassiveJoints), end(vPassiveJoints), shared_from_this()) - begin(vPassiveJoints));
     }
     RAVELOG_VERBOSE_FORMAT("Joint %s has dofformat: %s", this->GetName() % thisdofformat.to_string());
+
+    const std::map< std::pair<Mimic::DOFFormat, int>, dReal >::const_iterator mit = find_if(begin(mTotalderivativepairValue), end(mTotalderivativepairValue),
+        [&thisdofformat](const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal> &keyvalue) {
+            const bool bfound = keyvalue.first.first == thisdofformat;
+            if(bfound) {
+                RAVELOG_VERBOSE_FORMAT("Found cached %s", thisdofformat.to_string());
+            }
+            return bfound;
+        }
+    );
+    const bool bCached = mit != end(mTotalderivativepairValue);
+    if(bCached) {
+        for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal> &keyvalue : mTotalderivativepairValue) {
+            if(keyvalue.first.first == thisdofformat) {
+                const int dependedJointIndex = keyvalue.first.second;
+                const dReal partialDerivative = keyvalue.second;
+                vDofindexDerivativePairs.emplace_back(dependedJointIndex, partialDerivative); // collect all dz/dx
+            }
+        }
+        RAVELOG_VERBOSE_FORMAT("mTotalderivativepairValue: %s\nvDofindexDerivativePairs: %s", to_string(mTotalderivativepairValue) % to_string(vDofindexDerivativePairs));
+        return;
+    }
 
     /* ========== Collect values of joints on which joint z depends ========== */
     const MimicPtr& pmimic = _vmimic[iaxis];
@@ -1914,7 +1936,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
             RAVELOG_VERBOSE_FORMAT("Joint \"%s\" calls recursion _ComputePartialVelocities on joint \"%s\"", this->GetName() % dependedjoint->GetName());
 
             std::vector<std::pair<int, dReal> > vLocalIndexPartialPairs;
-            dependedjoint->_ComputePartialVelocities(vLocalIndexPartialPairs, iaxis, mapcachedpartials); ///< recursion: computes ∂y/∂x
+            dependedjoint->_ComputePartialVelocities(vLocalIndexPartialPairs, iaxis, mTotalderivativepairValue); ///< recursion: computes ∂y/∂x
             for(const std::pair<int, dReal>& pIndexPartial : vLocalIndexPartialPairs) {
                 localmap[{thisdofformat, pIndexPartial.first}] += fvel * pIndexPartial.second; ///< dz/dx += ∂z/∂y * ∂y/∂x
             }
@@ -1925,18 +1947,19 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
         }
     }
 
-    // collect results in vpartials
+    // collect results in vDofindexDerivativePairs
     for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal>& keyvalue : localmap) {
         const int dependedJointIndex = keyvalue.first.second;
         const dReal partialDerivative = keyvalue.second;
-        vpartials.emplace_back(dependedJointIndex, partialDerivative); // collect all dz/dx
+        vDofindexDerivativePairs.emplace_back(dependedJointIndex, partialDerivative); // collect all total derivatives dz/dx
     }
 
-    RAVELOG_VERBOSE_FORMAT("localmap: %s\nmapcachedpartials: %s\nvpartials: %s", to_string(localmap) % to_string(mapcachedpartials) % to_string(vpartials));
-
-    mapcachedpartials.insert(std::make_move_iterator(begin(localmap)),
-                             std::make_move_iterator(end(localmap))
+    mTotalderivativepairValue.insert(
+        std::make_move_iterator(begin(localmap)),
+        std::make_move_iterator(end(localmap))
     );
+
+    RAVELOG_VERBOSE_FORMAT("localmap: %s\nmTotalderivativepairValue: %s\nvDofindexDerivativePairs: %s", to_string(localmap) % to_string(mTotalderivativepairValue) % to_string(vDofindexDerivativePairs));
 }
 
 int KinBody::Joint::_Eval(int axis, uint32_t timederiv, const std::vector<dReal>& vdependentvalues, std::vector<dReal>& voutput)
@@ -1988,7 +2011,7 @@ KinBody::JointPtr KinBody::Joint::MIMIC::DOFFormat::GetJoint(KinBody &parent) co
 }
 
 std::string KinBody::Joint::MIMIC::DOFFormat::to_string() const { 
-    return boost::str(boost::format("jointindex = %d, dofindex = %d, axis = %d") % jointindex % dofindex % axis);
+    return "jointindex = " + std::to_string(jointindex) + ", dofindex = " + std::to_string(dofindex) + ", axis = " + std::to_string(axis);
 }
 
 KinBody::JointConstPtr KinBody::Joint::MIMIC::DOFFormat::GetJoint(const KinBody &parent) const
@@ -1998,7 +2021,7 @@ KinBody::JointConstPtr KinBody::Joint::MIMIC::DOFFormat::GetJoint(const KinBody 
 }
 
 std::string KinBody::Joint::MIMIC::DOFHierarchy::to_string() const {
-    return boost::str(boost::format("dofindex = %d, dofformatindex = %d") % dofindex % dofformatindex);
+    return "dofindex = " + std::to_string(dofindex) + ", dofformatindex = " + std::to_string(dofformatindex);
 }
 
 std::string KinBody::Joint::MIMIC::to_string() const {

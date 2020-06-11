@@ -2009,6 +2009,9 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
     }
     std::fill(vjacobian.begin(), vjacobian.end(), 0.0);
 
+    std::vector<std::pair<int, dReal> > vDofindexDerivativePairs; ///< vector of (dof index, total derivative) pairs
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mTotalderivativepairValue; ///< map a joint pair (z, x) to the total derivative dz/dx
+
     Vector v; ///< cache for a column of the linear velocity Jacobian
     const int offset = linkindex * nlinks;
     for(int curlink = 0;
@@ -2074,13 +2077,12 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
                                                   ;
 
                     // compute the partial derivatives of this mimic joint w.r.t all joints on which it directly/undirectly depends, by chain rule
-                    std::vector<std::pair<int, dReal> > vDofindexPartialPairs; ///< vector of (dof index, partial derivative) pairs
-                    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mapcachedpartials;
-                    pjoint->_ComputePartialVelocities(vDofindexPartialPairs, idof, mapcachedpartials);
+                    vDofindexDerivativePairs.clear(); ///< vector of (dof index, total derivative) pairs
+                    pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mTotalderivativepairValue);
 
-                    for(const std::pair<int, dReal>& pDofindexPartial : vDofindexPartialPairs) {
+                    for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
                         int index = -1;
-                        const int dofindex = pDofindexPartial.first;
+                        const int dofindex = dofindexDerivativePair.first;
                         if( !dofindices.empty() ) {
                             const std::vector<int>::const_iterator itindex = find(dofindices.begin(), dofindices.end(), dofindex);
                             if( itindex == dofindices.end() ) {
@@ -2090,7 +2092,7 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
                         }
                         OPENRAVE_ASSERT_OP_FORMAT(index, >=, 0, "index should be >= 0; now %d", index, ORE_InvalidArguments);
                         RAVELOG_VERBOSE_FORMAT("Collecting linear velocity Jacobian w.r.t index %d (dof index %d) by the influence of joint %s", index % dofindex % pjoint->GetName());
-                        const dReal partialderiv = pDofindexPartial.second;
+                        const dReal partialderiv = dofindexDerivativePair.second;
                         vjacobian[index                ] += v.x * partialderiv;
                         vjacobian[index + dofstride    ] += v.y * partialderiv;
                         vjacobian[index + dofstride * 2] += v.z * partialderiv;
@@ -2144,7 +2146,10 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
     }
     std::fill(vjacobian.begin(), vjacobian.end(), 0.0);
 
-    Vector v; ///< cache
+    std::vector<std::pair<int, dReal> > vDofindexDerivativePairs; ///< vector of (dof index, total derivative) pairs
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mTotalderivativepairValue; ///< map a joint pair (z, x) to the total derivative dz/dx
+
+    Vector v; ///< cache for a column of the quaternion velocity Jacobian
     const int offset = linkindex * nlinks;
 
     for(int curlink = 0;
@@ -2195,12 +2200,11 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
                     v = pjoint->GetAxis(idof);
 
                     // compute the partial derivatives of this mimic joint w.r.t all joints on which it directly/undirectly depends, by chain rule
-                    std::vector<std::pair<int, dReal> > vDofindexPartialPairs; ///< vector of (dof index, partial derivative) pairs
-                    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mapcachedpartials;
-                    pjoint->_ComputePartialVelocities(vDofindexPartialPairs, idof, mapcachedpartials);
+                    vDofindexDerivativePairs.clear(); ///< vector of (dof index, total derivative) pairs
+                    pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mTotalderivativepairValue);
 
-                    for(const std::pair<int, dReal>& pDofindexPartial : vDofindexPartialPairs) {
-                        const int dofindex = pDofindexPartial.first;
+                    for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
+                        const int dofindex = dofindexDerivativePair.first;
                         if(dofindex + idof >= dofstride) {
                             RAVELOG_WARN_FORMAT("dofindex + idof = %d + %d >= %d = dofstride",
                                                 dofindex % idof % dofstride
@@ -2209,7 +2213,7 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
                         }
                         OPENRAVE_ASSERT_OP_FORMAT(dofindex, >=, 0, "dofindex should be >= 0; now %d", dofindex, ORE_InvalidArguments);
                         RAVELOG_VERBOSE_FORMAT("Collecting rotation Jacobian w.r.t dof index %d by the influence of joint %s", dofindex % pjoint->GetName());
-                        const dReal partialderiv = pDofindexPartial.second;
+                        const dReal partialderiv = dofindexDerivativePair.second;
                         v *= partialderiv;
                         vjacobian[dofindex + idof                ] += dReal(0.5) * (-quat.y * v.x - quat.z * v.y - quat.w * v.z);
                         vjacobian[dofindex + idof + dofstride    ] += dReal(0.5) * ( quat.x * v.x - quat.z * v.z + quat.w * v.y);
@@ -2257,6 +2261,9 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
         return;
     }
     std::fill(vjacobian.begin(), vjacobian.end(), 0.0);
+
+    std::vector<std::pair<int, dReal> > vDofindexDerivativePairs; ///< vector of (dof index, total derivative) pairs
+    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mTotalderivativepairValue; ///< map a joint pair (z, x) to the total derivative dz/dx
 
     Vector v; ///< cache for a column of the angular velocity Jacobian
     const int offset = linkindex * nlinks;
@@ -2319,13 +2326,12 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
                     v = pjoint->GetAxis(idof);
 
                     // compute the partial derivatives of this mimic joint w.r.t all joints on which it directly/undirectly depends, by chain rule
-                    std::vector<std::pair<int, dReal> > vDofindexPartialPairs; ///< vector of (dof index, partial derivative) pairs
-                    std::map< std::pair<Mimic::DOFFormat, int>, dReal > mapcachedpartials;
-                    pjoint->_ComputePartialVelocities(vDofindexPartialPairs, idof, mapcachedpartials);
+                    vDofindexDerivativePairs.clear(); ///< vector of (dof index, total derivative) pairs
+                    pjoint->_ComputePartialVelocities(vDofindexDerivativePairs, idof, mTotalderivativepairValue);
 
-                    for(const std::pair<int, dReal>& pDofindexPartial : vDofindexPartialPairs) {
+                    for(const std::pair<int, dReal>& dofindexDerivativePair : vDofindexDerivativePairs) {
                         int index = -1;
-                        const int dofindex = pDofindexPartial.first;
+                        const int dofindex = dofindexDerivativePair.first;
                         if( !dofindices.empty() ) {
                             const std::vector<int>::const_iterator itindex = find(dofindices.begin(), dofindices.end(), dofindex);
                             if( itindex == dofindices.end() ) {
@@ -2335,7 +2341,7 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
                         }
                         OPENRAVE_ASSERT_OP_FORMAT(index, >=, 0, "index should be >= 0; now %d", index, ORE_InvalidArguments);
                         RAVELOG_VERBOSE_FORMAT("Collecting linear velocity Jacobian w.r.t index %d (dof index %d) by the influence of joint %s", index % dofindex % pjoint->GetName());
-                        const dReal partialderiv = pDofindexPartial.second;
+                        const dReal partialderiv = dofindexDerivativePair.second;
                         vjacobian[index                ] += v.x * partialderiv;
                         vjacobian[index + dofstride    ] += v.y * partialderiv;
                         vjacobian[index + dofstride * 2] += v.z * partialderiv;
