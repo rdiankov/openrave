@@ -249,8 +249,6 @@ void ComputePostureStates6RGeneral(const std::vector<JointPtr>& joints,
 
     // project anchor2 onto axis3, and move along axis3 by one unit
 
-    posturevalues.resize(3);
-    featurestates.resize(3);
     posturevalues.at(0) = axis0.cross(axis1).dot(anchor4-anchor0);           ///< shoulder: {{0, -1}, {1, -1}, {0,  4}}
     posturevalues.at(1) = axis1.cross(anchor2-anchor1).dot(anchor4-anchor2); ///<    elbow: {{1, -1}, {1,  2}, {2,  4}}
     posturevalues.at(2) = axis3.cross(axis4).dot(axis5);                     ///<    wrist: {{3, -1}, {4, -1}, {5, -1}}
@@ -269,8 +267,6 @@ void ComputePostureStates4RTypeA(const std::vector<JointPtr>& joints,
     const Vector anchor2 = joints[2]->GetAnchor();
     const Vector anchor3 = joints[3]->GetAnchor();
 
-    posturevalues.resize(2);
-    featurestates.resize(2);
     posturevalues.at(0) = axis0.cross(axis1).dot(anchor3-anchor1);           ///< shoulder: {{0, -1}, {1, -1}, {1, 3}}
     posturevalues.at(1) = axis1.cross(anchor2-anchor1).dot(anchor3-anchor2); ///<    elbow: {{1, -1}, {1,  2}, {2, 3}}
     ComputeRobotPostureStates(fTol, posturestates, featurestates, posturevalues);
@@ -287,8 +283,6 @@ void ComputePostureStatesRRRParallel(const std::vector<JointPtr>& joints,
     const Vector anchor1 = joints[1]->GetAnchor();
     const Vector anchor2 = joints[2]->GetAnchor();
 
-    posturevalues.resize(1);
-    featurestates.resize(1);
     posturevalues.at(0) = axis0.cross(anchor1-anchor0).dot(anchor2-anchor1); ///< elbow: {{0, -1}, {0, 1}, {1, 2}}
     ComputeRobotPostureStates(fTol, posturevalues, featurestates, posturestates);
 }
@@ -311,14 +305,20 @@ bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
     switch(_supporttype) {
     case RobotPostureSupportType::RPST_6R_General: {
         _posturefn = ComputePostureStates6RGeneral;
+        _posturevalues.resize(3);
+        _featurestates.resize(3);        
         break;
     }
     case RobotPostureSupportType::RPST_4R_Type_A: {
         _posturefn = ComputePostureStates4RTypeA;
+        _posturevalues.resize(2);
+        _featurestates.resize(2);        
         break;
     }
     case RobotPostureSupportType::RPST_RRR_Parallel: {
         _posturefn = ComputePostureStatesRRRParallel;
+        _posturevalues.resize(1);
+        _featurestates.resize(1);
         break;
     }
     default: {
