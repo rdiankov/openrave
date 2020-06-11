@@ -53,6 +53,10 @@ PostureDescriber::PostureDescriber(const EnvironmentBasePtr& penv,
                           boost::bind(&PostureDescriber::_GetSupportTypeCommand, this, _1, _2),
                           "Gets the robot posture support type");
 
+    this->RegisterCommand("ComputePostureValues",
+                          boost::bind(&PostureDescriber::_ComputePostureValuesCommand, this, _1, _2),
+                          "Compute the posture values for all features");
+
     // `SendJSONCommand` APIs
     this->RegisterJSONCommand("Interpret",
                               boost::bind(&PostureDescriber::_InterpretJSONCommand, this, _1, _2, _3),
@@ -435,6 +439,16 @@ bool PostureDescriber::_GetArmIndicesCommand(std::ostream& ssout, std::istream& 
 bool PostureDescriber::_GetSupportTypeCommand(std::ostream& ssout, std::istream& ssin) const {
     ssout << static_cast<int>(_supporttype);
     return _supporttype != RobotPostureSupportType::RPST_NoSupport;
+}
+
+bool PostureDescriber::_ComputePostureValuesCommand(std::ostream& ssout, std::istream& ssin) const {
+    if(!_posturefn) {
+        RAVELOG_WARN("No supported posture describer; _posturefn is not set");
+        return false;
+    }
+    _posturefn(_joints, _fTol, _posturevalues, _featurestates, _posturestates); // compute using all cached variables
+    SerializeValues(ssout, _posturevalues);
+    return !_posturestates.empty();
 }
 
 bool PostureDescriber::_InterpretJSONCommand(const rapidjson::Value& input,

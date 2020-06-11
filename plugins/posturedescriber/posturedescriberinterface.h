@@ -128,6 +128,9 @@ protected:
     /// \brief Gets robot posture support type cast into int
     bool _GetSupportTypeCommand(std::ostream& ssout, std::istream& ssin) const;
 
+    /// \brief Computes posture values
+    bool _ComputePostureValuesCommand(std::ostream& ssout, std::istream& ssin) const;
+
     /* ========== `SendJSONCommand` APIs ========== */
     /// \brief `SendJSONCommand` API
     bool _InterpretJSONCommand(const rapidjson::Value& input, rapidjson::Value& output, rapidjson::Document::AllocatorType& allocator);
@@ -140,7 +143,7 @@ protected:
     RobotPostureSupportType _supporttype = RobotPostureSupportType::RPST_NoSupport;
 
     /* ========== cached values ========== */
-    std::vector<double> _posturevalues; ///< cached posture values
+    std::vector<double>          _posturevalues; ///< cached posture values
     std::vector<PostureStateInt> _featurestates; ///< cached feature states
     std::vector<PostureStateInt> _posturestates; ///< cached posture states
 };
