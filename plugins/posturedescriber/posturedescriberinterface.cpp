@@ -17,7 +17,6 @@
 #include <openrave/openrave.h>
 #include <openrave/openravejson.h> // openravejson
 #include "posturedescriberinterface.h" // PostureDescriber
-#include "plugindefs.h" // POSTUREDESCRIBER_CLASS_NAME
 #include "openraveplugindefs.h" // SerializeValues
 
 // #define POSTUREDESCRIBER_DEBUG
@@ -52,6 +51,10 @@ PostureDescriber::PostureDescriber(const EnvironmentBasePtr& penv,
     this->RegisterCommand("GetSupportType",
                           boost::bind(&PostureDescriber::_GetSupportTypeCommand, this, _1, _2),
                           "Gets the robot posture support type");
+
+    this->RegisterCommand("ComputePostureValues",
+                          boost::bind(&PostureDescriber::_ComputePostureValuesCommand, this, _1, _2),
+                          "Compute the posture values for all features");
 
     // `SendJSONCommand` APIs
     this->RegisterJSONCommand("Interpret",
@@ -196,13 +199,14 @@ inline PostureStateInt ComputeFeatureState(const double x, const double fTol) {
 /// \param [in]  posturevalues    an array of posture values
 /// \param [in]  tol              tolerance to determine whether x is considered 0.0, so that this value means a hybrid state.
 /// \param [out] posturestates    a vector of posture state (unsigned) integers, whose size is always a power of 2
-template <size_t N>
-inline void ComputeRobotPostureStates(const std::array<double, N>& posturevalues,
-                                      const double fTol,
-                                      std::vector<PostureStateInt>& posturestates) {
-    std::array<PostureStateInt, N> singlestates;
+inline void ComputeRobotPostureStates(const double fTol,
+                                      const std::vector<double>& posturevalues,
+                                      std::vector<PostureStateInt>& featurestates,
+                                      std::vector<PostureStateInt>& posturestates
+                                      ) {
+    const size_t N = posturevalues.size();
     for(size_t i = 0; i < N; ++i) {
-        singlestates[i] = ComputeFeatureState(posturevalues[i], fTol);
+        featurestates.at(i) = ComputeFeatureState(posturevalues.at(i), fTol);
     }
 
     posturestates = {0};
@@ -211,22 +215,27 @@ inline void ComputeRobotPostureStates(const std::array<double, N>& posturevalues
         for(PostureStateInt &state : posturestates) {
             state <<= 1;
         }
-        if(singlestates[i] == 1) {
+        if(featurestates.at(i) == 1) {
             for(PostureStateInt &state : posturestates) {
                 state |= 1;
             }
         }
-        else if (singlestates[i] == 2) {
+        else if (featurestates.at(i) == 2) {
             const size_t nstates = posturestates.size();
             posturestates.insert(end(posturestates), begin(posturestates), end(posturestates));
             for(size_t j = nstates; j < 2 * nstates; ++j) {
-                posturestates[j] |= 1;
+                posturestates.at(j) |= 1;
             }
         }
     }
 }
 
-void ComputePostureStates6RGeneral(const std::vector<JointPtr>& joints, const double fTol, std::vector<PostureStateInt>& posturestates) {
+void ComputePostureStates6RGeneral(const std::vector<JointPtr>& joints,
+                                   const double fTol,
+                                   std::vector<double>& posturevalues,
+                                   std::vector<PostureStateInt>& featurestates,
+                                   std::vector<PostureStateInt>& posturestates
+                                   ) {
     const Vector axis0 = joints[0]->GetAxis();
     const Vector axis1 = joints[1]->GetAxis();
     const Vector axis3 = joints[3]->GetAxis();
@@ -235,49 +244,46 @@ void ComputePostureStates6RGeneral(const std::vector<JointPtr>& joints, const do
     const Vector anchor0 = joints[0]->GetAnchor();
     const Vector anchor1 = joints[1]->GetAnchor();
     const Vector anchor2 = joints[2]->GetAnchor();
-    const Vector anchor4 = joints[4]->GetAnchor();
-
-    // project anchor2 onto axis3, and move along axis3 by one unit
+    const Vector anchor3 = joints[3]->GetAnchor();
+    // instead of using J5's anchor (anchor4) directly, we project it onto J4's axis (axis3)
+    const Vector anchor4 = anchor3 + (joints[4]->GetAnchor() - anchor3).dot(axis3) * axis3;
     
-
-    const std::array<double, 3> posturevalues {
-        // shoulder: {{0, -1}, {1, -1}, {0, 4}}
-        axis0.cross(axis1).dot(anchor4-anchor0),
-        // elbow: {{1, -1}, {1, 2}, {2, 4}}
-        axis1.cross(anchor2-anchor1).dot(anchor4-anchor2),
-        // wrist: {3, -1}, {4, -1}, {5, -1}}
-        axis3.cross(axis4).dot(axis5)
-    };
-    ComputeRobotPostureStates<3>(posturevalues, fTol, posturestates);
+    posturevalues.at(0) = axis0.cross(axis1).dot(anchor4-anchor0);           ///< shoulder: {{0, -1}, {1, -1}, {0,  4}}
+    posturevalues.at(1) = axis1.cross(anchor2-anchor1).dot(anchor4-anchor2); ///<    elbow: {{1, -1}, {1,  2}, {2,  4}}
+    posturevalues.at(2) = axis3.cross(axis4).dot(axis5);                     ///<    wrist: {{3, -1}, {4, -1}, {5, -1}}
+    ComputeRobotPostureStates(fTol, posturevalues, featurestates, posturestates);
 }
 
-void ComputePostureStates4RTypeA(const std::vector<JointPtr>& joints, const double fTol, std::vector<PostureStateInt>& posturestates) {
+void ComputePostureStates4RTypeA(const std::vector<JointPtr>& joints,
+                                 const double fTol,
+                                 std::vector<double>& posturevalues,
+                                 std::vector<PostureStateInt>& featurestates,
+                                 std::vector<PostureStateInt>& posturestates
+                                 ) {
     const Vector axis0 = joints[0]->GetAxis();
     const Vector axis1 = joints[1]->GetAxis();
     const Vector anchor1 = joints[1]->GetAnchor();
     const Vector anchor2 = joints[2]->GetAnchor();
     const Vector anchor3 = joints[3]->GetAnchor();
 
-    const std::array<double, 2> posturevalues {
-        // shoulder pose: {{0, -1}, {1, -1}, {1, 3}}
-        axis0.cross(axis1).dot(anchor3-anchor1),
-        // elbow: {{1, -1}, {1, 2}, {2, 3}}
-        axis1.cross(anchor2-anchor1).dot(anchor3-anchor2),
-    };
-    ComputeRobotPostureStates<2>(posturevalues, fTol, posturestates);
+    posturevalues.at(0) = axis0.cross(axis1).dot(anchor3-anchor1);           ///< shoulder: {{0, -1}, {1, -1}, {1, 3}}
+    posturevalues.at(1) = axis1.cross(anchor2-anchor1).dot(anchor3-anchor2); ///<    elbow: {{1, -1}, {1,  2}, {2, 3}}
+    ComputeRobotPostureStates(fTol, posturevalues, featurestates, posturestates);
 }
 
-void ComputePostureStatesRRRParallel(const std::vector<JointPtr>& joints, const double fTol, std::vector<PostureStateInt>& posturestates) {
+void ComputePostureStatesRRRParallel(const std::vector<JointPtr>& joints,
+                                     const double fTol,
+                                     std::vector<double>& posturevalues,
+                                     std::vector<PostureStateInt>& featurestates,
+                                     std::vector<PostureStateInt>& posturestates
+                                     ) {
     const Vector axis0 = joints[0]->GetAxis();
     const Vector anchor0 = joints[0]->GetAnchor();
     const Vector anchor1 = joints[1]->GetAnchor();
     const Vector anchor2 = joints[2]->GetAnchor();
 
-    const std::array<double, 1> posturevalues {
-        // elbow: {{0, -1}, {0, 1}, {1, 2}}
-        axis0.cross(anchor1-anchor0).dot(anchor2-anchor1),
-    };
-    ComputeRobotPostureStates<1>(posturevalues, fTol, posturestates);
+    posturevalues.at(0) = axis0.cross(anchor1-anchor0).dot(anchor2-anchor1); ///< elbow: {{0, -1}, {0, 1}, {1, 2}}
+    ComputeRobotPostureStates(fTol, posturevalues, featurestates, posturestates);
 }
 
 bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
@@ -298,14 +304,20 @@ bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
     switch(_supporttype) {
     case RobotPostureSupportType::RPST_6R_General: {
         _posturefn = ComputePostureStates6RGeneral;
+        _posturevalues.resize(3);
+        _featurestates.resize(3);        
         break;
     }
     case RobotPostureSupportType::RPST_4R_Type_A: {
         _posturefn = ComputePostureStates4RTypeA;
+        _posturevalues.resize(2);
+        _featurestates.resize(2);        
         break;
     }
     case RobotPostureSupportType::RPST_RRR_Parallel: {
         _posturefn = ComputePostureStatesRRRParallel;
+        _posturevalues.resize(1);
+        _featurestates.resize(1);
         break;
     }
     default: {
@@ -373,10 +385,11 @@ bool PostureDescriber::ComputePostureStates(std::vector<PostureStateInt>& postur
         const KinBody::CheckLimitsAction claoption = KinBody::CheckLimitsAction::CLA_Nothing;
         const KinBody::KinBodyStateSaver saver(probot); // options = Save_LinkTransformation | Save_LinkEnable
         probot->SetDOFValues(dofvalues, claoption, _armindices);
-        _posturefn(_joints, _fTol, posturestates);
+        _posturefn(_joints, _fTol, _posturevalues, _featurestates, posturestates);
+        // restore KinBodyState automatically
     }
     else {
-        _posturefn(_joints, _fTol, posturestates);
+        _posturefn(_joints, _fTol, _posturevalues, _featurestates, posturestates);
     }
     return true;
 }
@@ -391,7 +404,7 @@ bool PostureDescriber::SetPostureValueThreshold(double fTol) {
 }
 
 std::string PostureDescriber::GetMapDataKey() const {
-    return std::string(POSTUREDESCRIBER_CLASS_NAME);
+    return _posturestatename;
 }
 
 const LinkPair& PostureDescriber::GetEssentialKinematicsChain() const {
@@ -425,6 +438,16 @@ bool PostureDescriber::_GetArmIndicesCommand(std::ostream& ssout, std::istream& 
 bool PostureDescriber::_GetSupportTypeCommand(std::ostream& ssout, std::istream& ssin) const {
     ssout << static_cast<int>(_supporttype);
     return _supporttype != RobotPostureSupportType::RPST_NoSupport;
+}
+
+bool PostureDescriber::_ComputePostureValuesCommand(std::ostream& ssout, std::istream& ssin) {
+    if(!_posturefn) {
+        RAVELOG_WARN("No supported posture describer; _posturefn is not set");
+        return false;
+    }
+    _posturefn(_joints, _fTol, _posturevalues, _featurestates, _posturestates); // compute using all cached variables
+    SerializeValues(ssout, _posturevalues);
+    return !_posturestates.empty();
 }
 
 bool PostureDescriber::_InterpretJSONCommand(const rapidjson::Value& input,

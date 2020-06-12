@@ -20,7 +20,6 @@
 #include <boost/lexical_cast.hpp>
 
 #include <openrave/posturedescriber.h>
-#include "openraveplugindefs.h" // SerializeValues
 
 #ifdef OPENRAVE_HAS_LAPACK
 #include "jacobianinverse.h"
@@ -1458,7 +1457,12 @@ protected:
             }
             else {
                 std::stringstream ss;
-                SerializeValues(ss, vravesol);
+                if(!vravesol.empty()) {
+                    ss << vravesol.at(0);
+                    for(size_t i = 1; i < vravesol.size(); ++i) {
+                        ss << ", " << vravesol.at(i);
+                    }
+                }
                 RAVELOG_ERROR_FORMAT("Cannot compute posture states for vravesol [%s] of size %d; use solutionIndicesNameLocal %s", 
                                      ss.str() % vravesol.size() % solutionIndicesNameLocal);
             }

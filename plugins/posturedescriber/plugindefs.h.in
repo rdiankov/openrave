@@ -19,5 +19,6 @@
 
 #define POSTUREDESCRIBER_CLASS_NAME   "@POSTUREDESCRIBER_CLASS_NAME@"  // PostureDescriber
 #define POSTUREDESCRIBER_MODULE_NAME  "@POSTUREDESCRIBER_MODULE_NAME@" // PostureDescriberModule
+#define POSTUREDESCRIBER_STATE_NAME   "@POSTUREDESCRIBER_STATE_NAME@"  // key in std::map<std::string, std::vector<dReal> > IkReturn::_mapdata
 
 #endif // PLUGINS_POSTUREDESCRIBER_PLUGINDEFS_H

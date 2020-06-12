@@ -2,8 +2,9 @@
 # posture describer openrave plugin
 ###################################
 
-set(POSTUREDESCRIBER_CLASS_NAME "posturedescriber")
+set(POSTUREDESCRIBER_CLASS_NAME  "posturedescriber")
 set(POSTUREDESCRIBER_MODULE_NAME "posturedescriber")
+set(POSTUREDESCRIBER_STATE_NAME  "posturestates"   )
 
 configure_file(plugindefs.h.in
 			   "${CMAKE_CURRENT_SOURCE_DIR}/plugindefs.h"
