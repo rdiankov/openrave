@@ -616,7 +616,7 @@ OPENRAVE_API IkParameterizationType RaveGetIkTypeFromUniqueId(int uniqueid);
    </configuration>
    \endcode
  */
-class OPENRAVE_API ConfigurationSpecification
+class OPENRAVE_API ConfigurationSpecification: public boost::enable_shared_from_this<ConfigurationSpecification>
 {
 public:
 

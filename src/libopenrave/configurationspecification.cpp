@@ -147,6 +147,11 @@ bool ConfigurationSpecification::operator!=(const ConfigurationSpecification& r)
     return !this->operator==(r);
 }
 
+bool CompareGroupsOfIndices(const ConfigurationSpecification& spec, int igroup0, int igroup1)
+{
+    return spec._vgroups[igroup0].offset < spec._vgroups[igroup1].offset;
+}
+
 void ConfigurationSpecification::LoadFromJson(const rapidjson::Value& rValue) {
     if (rValue.HasMember("groups")) {
         _vgroups.resize(rValue["groups"].Size());
@@ -166,7 +171,7 @@ void ConfigurationSpecification::SaveToJson(rapidjson::Value& rValue, rapidjson:
     for (int i = 0; i < (int)vgroupindices.size(); ++i) {
         vgroupindices[i] = i;
     }
-    std::sort(vgroupindices.begin(), vgroupindices.end(), boost::bind(CompareGroupsOfIndices, boost::ref(spec), _1, _2));
+    std::sort(vgroupindices.begin(), vgroupindices.end(), boost::bind(CompareGroupsOfIndices, boost::ref(*shared_from_this()), _1, _2));
 
     rValue.SetObject();
 
@@ -1878,11 +1883,6 @@ void ConfigurationSpecification::Reader::characters(const std::string& ch)
     else {
         _preader->characters(ch);
     }
-}
-
-bool CompareGroupsOfIndices(const ConfigurationSpecification& spec, int igroup0, int igroup1)
-{
-    return spec._vgroups[igroup0].offset < spec._vgroups[igroup1].offset;
 }
 
 std::ostream& operator<<(std::ostream& O, const ConfigurationSpecification &spec)
