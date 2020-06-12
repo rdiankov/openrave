@@ -1349,6 +1349,10 @@ private:
             RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
             FOREACH(itconnectedBody, probot->GetConnectedBodies()) {
                 RobotBase::ConnectedBody& connectedBody = **itconnectedBody;
+                if( (*itconnectedBody)->IsActive() == 0 ) {
+                    // not active, so will not be mapped onto real robot
+                    continue;
+                }
                 std::vector<KinBody::LinkPtr> vResolvedLinks;
                 connectedBody.GetResolvedLinks(vResolvedLinks);
                 FOREACHC(itResolvedLink, vResolvedLinks) {
@@ -1786,6 +1790,10 @@ private:
         if( pbody->IsRobot() ) {
             RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
             FOREACH(itConnectedBody, probot->GetConnectedBodies()) {
+                if( (*itConnectedBody)->IsActive() == 0 ) {
+                    // not active, so will not be mapped onto real robot
+                    continue;
+                }
                 std::vector<KinBody::LinkPtr> vResolvedLinks;
                 (*itConnectedBody)->GetResolvedLinks(vResolvedLinks);
                 vConnectedLinks.insert(vConnectedLinks.end(), vResolvedLinks.begin(), vResolvedLinks.end());
@@ -2335,6 +2343,10 @@ private:
     {
         std::vector<RobotBase::ManipulatorPtr> vConnectedManipulators;
         FOREACH(itConnectedBody, probot->GetConnectedBodies()) {
+            if( (*itConnectedBody)->IsActive() == 0 ) {
+                // not active, so will not be mapped onto real robot
+                continue;
+            }
             std::vector<RobotBase::ManipulatorPtr> vResolvedManipulators;
             (*itConnectedBody)->GetResolvedManipulators(vResolvedManipulators);
             vConnectedManipulators.insert(vConnectedManipulators.end(), vResolvedManipulators.begin(), vResolvedManipulators.end());
@@ -2407,6 +2419,10 @@ private:
         if (probot->GetAttachedSensors().size() > 0) {
             std::vector<RobotBase::AttachedSensorPtr> vConnectedAttachedSensors;
             FOREACH(itConnectedBody, probot->GetConnectedBodies()) {
+                if( (*itConnectedBody)->IsActive() == 0 ) {
+                    // not active, so will not be mapped onto real robot
+                    continue;
+                }
                 std::vector<RobotBase::AttachedSensorPtr> vResolvedAttachedSensors;
                 (*itConnectedBody)->GetResolvedAttachedSensors(vResolvedAttachedSensors);
                 vConnectedAttachedSensors.insert(vConnectedAttachedSensors.end(), vResolvedAttachedSensors.begin(), vResolvedAttachedSensors.end());
@@ -2499,6 +2515,10 @@ private:
         if (probot->GetGripperInfos().size() > 0) {
             std::vector<RobotBase::GripperInfoPtr> vConnectedGripperInfos;
             FOREACH(itConnectedBody, probot->GetConnectedBodies()) {
+                if( (*itConnectedBody)->IsActive() == 0 ) {
+                    // not active, so will not be mapped onto real robot
+                    continue;
+                }
                 std::vector<RobotBase::GripperInfoPtr> vResolvedGripperInfos;
                 (*itConnectedBody)->GetResolvedGripperInfos(vResolvedGripperInfos);
                 vConnectedGripperInfos.insert(vConnectedGripperInfos.end(), vResolvedGripperInfos.begin(), vResolvedGripperInfos.end());
@@ -2573,6 +2593,10 @@ private:
             if( pbody->IsRobot() ) {
                 RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
                 FOREACH(itConnectedBody, probot->GetConnectedBodies()) {
+                    if( (*itConnectedBody)->IsActive() == 0 ) {
+                        // not active, so will not be mapped onto real robot
+                        continue;
+                    }
                     std::vector<KinBody::LinkPtr> vResolvedLinks;
                     (*itConnectedBody)->GetResolvedLinks(vResolvedLinks);
                     vConnectedLinks.insert(vConnectedLinks.end(), vResolvedLinks.begin(), vResolvedLinks.end());
