@@ -386,7 +386,9 @@ Some python code to display data::\n\
             // have to check callbacks at the beginning since code can continue
             callbackaction = _CallCallbacks(progress);
             if( callbackaction ==  PA_Interrupt ) {
-                return PlannerStatus("Planning was interrupted", PS_Interrupted);
+                planningstatus.description = "Planning was interrupted";
+                planningstatus.statusCode = PS_Interrupted;
+                return planningstatus;
             }
             else if( callbackaction == PA_ReturnWithAnySolution ) {
                 if( _vgoalpaths.size() > 0 ) {
@@ -523,7 +525,9 @@ Some python code to display data::\n\
         if( _vgoalpaths.size() == 0 ) {
             std::string description = str(boost::format(_("env=%d, plan failed in %fs, iter=%d, nMaxIterations=%d"))%GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime))%(iter/3)%_parameters->_nMaxIterations);
             RAVELOG_WARN(description);
-            return PlannerStatus(description, PS_Failed);
+            planningstatus.description = description;
+            planningstatus.statusCode = PS_Failed;
+            return planningstatus;
         }
 
         vector<GOALPATH>::iterator itbest = _vgoalpaths.begin();
@@ -543,6 +547,7 @@ Some python code to display data::\n\
         PlannerStatus status = _ProcessPostPlanners(_robot,ptraj);
         //TODO should use accessor to change description
         status.description = description;
+        // Special case...no need to transfer collision information?
         return status;
     }
 
