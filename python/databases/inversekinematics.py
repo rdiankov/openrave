@@ -326,7 +326,12 @@ class InverseKinematicsModel(DatabaseGenerator):
         try:
             filename = self.getstatsfilename(True)
             if len(filename) == 0:
-                return checkforloaded and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype) # might have ik already loaded
+                hasloaded = checkforloaded and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype) # might have ik already loaded
+                if hasloaded:
+                    if self.iksolver is	None:
+                        log.debug('setting self.iksolver to %s', self.manip.GetIkSolver())
+                        self.iksolver = self.manip.GetIkSolver()
+            
             with open(filename, 'r') as f:
                 modelversion,self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc = pickle.load(f)
             if modelversion != self.getversion():
@@ -1074,6 +1079,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             if compiler.compiler_type == 'unix':
                 compile_flags.append('-O3')
                 compile_flags.append('-fPIC')
+                compile_flags.append('-std=c++11')
         return compiler,compile_flags
     
     @staticmethod

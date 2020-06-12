@@ -23,6 +23,8 @@ using namespace ColladaDOM150;
 #include <boost/algorithm/string.hpp>
 #include <ctime>
 
+#include <openrave/openravejson.h>
+
 #define LIBXML_SAX1_ENABLED
 #include <libxml/globals.h>
 #include <libxml/xmlerror.h>
@@ -738,6 +740,12 @@ private:
             if( IsForceWrite("sensor") ) {
                 _WriteAttachedSensors(probot, articulated_system_motion, vlinksidrefs);
             }
+            if( IsForceWrite("gripper_info") ) {
+                _WriteGripperInfos(probot, articulated_system_motion);
+            }
+            if( IsForceWrite("connected_body") ) {
+                _WriteConnectedBodies(probot, articulated_system_motion, vlinksidrefs);
+            }
         }
         if( IsForceWrite("jointlimit") ) {
             RAVELOG_WARN("do not support jointlimit writing\n");
@@ -1125,6 +1133,12 @@ private:
             if( IsWrite("sensor") ) {
                 _WriteAttachedSensors(probot, articulated_system_motion, vlinksidrefs);
             }
+            if( IsWrite("gripper_info") ) {
+                _WriteGripperInfos(probot, articulated_system_motion);
+            }
+            if( IsWrite("connected_body") ) {
+                _WriteConnectedBodies(probot, articulated_system_motion, vlinksidrefs);
+            }
         }
 
         return iasout;
@@ -1327,16 +1341,64 @@ private:
             kmout->noderoot = pnoderoot;
         }
 
+        // note which links and joints are part of connected bodies
+        std::vector<uint8_t> vConnectedLinks; vConnectedLinks.resize(pbody->GetLinks().size(),0);
+        std::vector<uint8_t> vConnectedJoints; vConnectedJoints.resize(pbody->GetJoints().size(),0);
+        std::vector<uint8_t> vConnectedPassiveJoints; vConnectedPassiveJoints.resize(pbody->GetPassiveJoints().size(),0);
+        if( pbody->IsRobot() ) {
+            RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
+            FOREACH(itconnectedBody, probot->GetConnectedBodies()) {
+                RobotBase::ConnectedBody& connectedBody = **itconnectedBody;
+                if( (*itconnectedBody)->IsActive() == 0 ) {
+                    // not active, so will not be mapped onto real robot
+                    continue;
+                }
+                std::vector<KinBody::LinkPtr> vResolvedLinks;
+                connectedBody.GetResolvedLinks(vResolvedLinks);
+                FOREACHC(itResolvedLink, vResolvedLinks) {
+                    vConnectedLinks.at((*itResolvedLink)->GetIndex()) = 1;
+                }
+
+                std::vector<KinBody::JointPtr> vResolvedJoints;
+                connectedBody.GetResolvedJoints(vResolvedJoints);
+                FOREACHC(itResolvedJoint, vResolvedJoints) {
+                    for(int ijointindex = 0; ijointindex < (int)pbody->GetJoints().size(); ++ijointindex) {
+                        if( pbody->GetJoints()[ijointindex] == *itResolvedJoint ) {
+                            vConnectedJoints[ijointindex] = 1;
+                        }
+                    }
+                    for(int ijointindex = 0; ijointindex < (int)pbody->GetPassiveJoints().size(); ++ijointindex) {
+                        if( pbody->GetPassiveJoints()[ijointindex] == *itResolvedJoint ) {
+                            vConnectedPassiveJoints[ijointindex] = 1;
+                        }
+                    }
+                }
+
+                KinBody::JointPtr pResolvedDummyPassiveJoint = connectedBody.GetResolvedDummyPassiveJoint();
+                for(int ijointindex = 0; ijointindex < (int)pbody->GetPassiveJoints().size(); ++ijointindex) {
+                    if( pbody->GetPassiveJoints()[ijointindex] == pResolvedDummyPassiveJoint ) {
+                        vConnectedPassiveJoints[ijointindex] = 1;
+                    }
+                }
+            }
+        }
+
         //  Declare all the joints
         vector< pair<int,KinBody::JointConstPtr> > vjoints;
-        vjoints.reserve(pbody->GetJoints().size()+pbody->GetPassiveJoints().size());
-        FOREACHC(itj, pbody->GetJoints() ) {
-            vjoints.emplace_back((*itj)->GetJointIndex(), *itj);
+        vjoints.reserve(vConnectedJoints.size()+vConnectedPassiveJoints.size());
+        for(int ijoint = 0; ijoint < (int)vConnectedJoints.size(); ++ijoint) {
+            if (!vConnectedJoints[ijoint]) {
+                KinBody::JointConstPtr pjoint = pbody->GetJoints()[ijoint];
+                vjoints.emplace_back(vjoints.size(), pjoint);
+            }
         }
-        int index=pbody->GetJoints().size();
-        FOREACHC(itj, pbody->GetPassiveJoints()) {
-            vjoints.emplace_back(index++, *itj);
+        for(int ipassivejoint = 0; ipassivejoint < (int)vConnectedPassiveJoints.size(); ++ipassivejoint) {
+            if (!vConnectedPassiveJoints[ipassivejoint]) {
+                KinBody::JointConstPtr ppassivejoint = pbody->GetPassiveJoints()[ipassivejoint];
+                vjoints.emplace_back(vjoints.size(), ppassivejoint);
+            }
         }
+
         vector<dReal> lmin, lmax;
         vector<domJointRef> vdomjoints(vjoints.size());
         kmout->pbody = pbody;
@@ -1393,8 +1455,10 @@ private:
         }
 
         list<int> listunusedlinks;
-        FOREACHC(itlink,pbody->GetLinks()) {
-            listunusedlinks.push_back((*itlink)->GetIndex());
+        for(int ilink = 0; ilink < (int)vConnectedLinks.size(); ++ilink) {
+            if (!vConnectedLinks[ilink]) {
+                listunusedlinks.push_back(pbody->GetLinks()[ilink]->GetIndex());
+            }
         }
 
         daeElementRef nodehead = _nodesLib;
@@ -1721,7 +1785,26 @@ private:
         pmout->pmodel->setId(pmodelid.c_str());
         pmout->pmodel->setName(pbody->GetName().c_str());
         Transform tbaseinv = pbody->GetTransform().inverse();
+
+        std::vector<KinBody::LinkPtr> vConnectedLinks;
+        if( pbody->IsRobot() ) {
+            RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
+            FOREACH(itConnectedBody, probot->GetConnectedBodies()) {
+                if( (*itConnectedBody)->IsActive() == 0 ) {
+                    // not active, so will not be mapped onto real robot
+                    continue;
+                }
+                std::vector<KinBody::LinkPtr> vResolvedLinks;
+                (*itConnectedBody)->GetResolvedLinks(vResolvedLinks);
+                vConnectedLinks.insert(vConnectedLinks.end(), vResolvedLinks.begin(), vResolvedLinks.end());
+            }
+        }
+
         FOREACHC(itlink,pbody->GetLinks()) {
+            if (std::find(vConnectedLinks.begin(), vConnectedLinks.end(), *itlink) != vConnectedLinks.end()) {
+                // skip links that are part of the connected body
+                continue;
+            }
             domRigid_bodyRef rigid_body = daeSafeCast<domRigid_body>(pmout->pmodel->add(COLLADA_ELEMENT_RIGID_BODY));
             string rigidsid = str(boost::format("rigid%d")%(*itlink)->GetIndex());
             pmout->vrigidbodysids.push_back(rigidsid);
@@ -2258,7 +2341,22 @@ private:
 
     void _WriteManipulators(RobotBasePtr probot, daeElementRef parent, const std::vector<std::string>& vlinksidrefs, const std::vector<std::string>& vdofsidrefs)
     {
+        std::vector<RobotBase::ManipulatorPtr> vConnectedManipulators;
+        FOREACH(itConnectedBody, probot->GetConnectedBodies()) {
+            if( (*itConnectedBody)->IsActive() == 0 ) {
+                // not active, so will not be mapped onto real robot
+                continue;
+            }
+            std::vector<RobotBase::ManipulatorPtr> vResolvedManipulators;
+            (*itConnectedBody)->GetResolvedManipulators(vResolvedManipulators);
+            vConnectedManipulators.insert(vConnectedManipulators.end(), vResolvedManipulators.begin(), vResolvedManipulators.end());
+        }
+
         FOREACHC(itmanip, probot->GetManipulators()) {
+            if (std::find(vConnectedManipulators.begin(), vConnectedManipulators.end(), *itmanip) != vConnectedManipulators.end()) {
+                // skip manipulators that are part of the connected body
+                continue;
+            }
             domExtraRef pextra = daeSafeCast<domExtra>(parent->add(COLLADA_ELEMENT_EXTRA));
             pextra->setName((*itmanip)->GetName().c_str());
             pextra->setType("manipulator");
@@ -2308,15 +2406,35 @@ private:
                 piksolverinterface->setCharData(iksolver->GetXMLId().c_str());
                 // TODO add the free joints
             }
+            daeElementRef pgrippername = ptec->add("grippername");
+            pgrippername->setCharData((*itmanip)->GetGripperName().c_str());
+
+            daeElementRef pToolChangerConnectedBodyToolName = ptec->add("toolChangerConnectedBodyToolName");
+            pToolChangerConnectedBodyToolName->setCharData((*itmanip)->GetToolChangerConnectedBodyToolName().c_str());
         }
     }
 
     void _WriteAttachedSensors(RobotBasePtr probot, daeElementRef parent, const std::vector<std::string>& vlinksidrefs)
     {
         if (probot->GetAttachedSensors().size() > 0) {
+            std::vector<RobotBase::AttachedSensorPtr> vConnectedAttachedSensors;
+            FOREACH(itConnectedBody, probot->GetConnectedBodies()) {
+                if( (*itConnectedBody)->IsActive() == 0 ) {
+                    // not active, so will not be mapped onto real robot
+                    continue;
+                }
+                std::vector<RobotBase::AttachedSensorPtr> vResolvedAttachedSensors;
+                (*itConnectedBody)->GetResolvedAttachedSensors(vResolvedAttachedSensors);
+                vConnectedAttachedSensors.insert(vConnectedAttachedSensors.end(), vResolvedAttachedSensors.begin(), vResolvedAttachedSensors.end());
+            }
+
             std::map<RobotBase::AttachedSensorPtr, std::string> mapAttachedSensorIDs;
             size_t sensorindex = 0;
             FOREACHC(itattachedsensor, probot->GetAttachedSensors()) {
+                if (std::find(vConnectedAttachedSensors.begin(), vConnectedAttachedSensors.end(), *itattachedsensor) != vConnectedAttachedSensors.end()) {
+                    // skip attached sensors that are part of the connected body
+                    continue;
+                }
                 SensorBasePtr popenravesensor = (*itattachedsensor)->GetSensor();
                 if( !!popenravesensor ) {
                     string strsensor = str(boost::format("robot%d_sensor%d")%_mapBodyIds[probot->GetEnvironmentId()]%sensorindex);
@@ -2326,6 +2444,10 @@ private:
             }
 
             FOREACHC(itattachedsensor, probot->GetAttachedSensors()) {
+                if (std::find(vConnectedAttachedSensors.begin(), vConnectedAttachedSensors.end(), *itattachedsensor) != vConnectedAttachedSensors.end()) {
+                    // skip attached sensors that are part of the connected body
+                    continue;
+                }
                 domExtraRef pextra = daeSafeCast<domExtra>(parent->add(COLLADA_ELEMENT_EXTRA));
                 pextra->setName((*itattachedsensor)->GetName().c_str());
                 pextra->setType("attach_sensor");
@@ -2388,6 +2510,68 @@ private:
         }
     }
 
+    void _WriteGripperInfos(RobotBasePtr probot, daeElementRef parent)
+    {
+        if (probot->GetGripperInfos().size() > 0) {
+            std::vector<RobotBase::GripperInfoPtr> vConnectedGripperInfos;
+            FOREACH(itConnectedBody, probot->GetConnectedBodies()) {
+                if( (*itConnectedBody)->IsActive() == 0 ) {
+                    // not active, so will not be mapped onto real robot
+                    continue;
+                }
+                std::vector<RobotBase::GripperInfoPtr> vResolvedGripperInfos;
+                (*itConnectedBody)->GetResolvedGripperInfos(vResolvedGripperInfos);
+                vConnectedGripperInfos.insert(vConnectedGripperInfos.end(), vResolvedGripperInfos.begin(), vResolvedGripperInfos.end());
+            }
+
+            FOREACHC(itGripperInfo, probot->GetGripperInfos()) {
+                if (std::find(vConnectedGripperInfos.begin(), vConnectedGripperInfos.end(), *itGripperInfo) != vConnectedGripperInfos.end()) {
+                    // skip attached sensors that are part of the connected body
+                    continue;
+                }
+                domExtraRef pextra = daeSafeCast<domExtra>(parent->add(COLLADA_ELEMENT_EXTRA));
+                pextra->setName((*itGripperInfo)->name.c_str());
+                pextra->setType("gripper_info");
+                domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
+                ptec->setProfile("OpenRAVE");
+
+                rapidjson::Document rGripperInfo;
+                (*itGripperInfo)->SerializeJSON(rGripperInfo, rGripperInfo.GetAllocator());
+                if (rGripperInfo.HasMember("id")) {
+                    rGripperInfo.RemoveMember("id");
+                }
+                if (rGripperInfo.HasMember("name")) {
+                    rGripperInfo.RemoveMember("name");
+                }
+                daeElementRef pjson_data = ptec->add("json_data");
+                std::string sGripperInfoJSON = openravejson::DumpJson(rGripperInfo);
+                pjson_data->setCharData(sGripperInfoJSON.c_str());
+            }
+        }
+    }
+
+    void _WriteConnectedBodies(RobotBasePtr probot, daeElementRef parent, const std::vector<std::string>& vlinksidrefs)
+    {
+        if (probot->GetConnectedBodies().size() > 0) {
+            FOREACHC(itConnectedBody, probot->GetConnectedBodies()) {
+                domExtraRef pextra = daeSafeCast<domExtra>(parent->add(COLLADA_ELEMENT_EXTRA));
+                pextra->setName((*itConnectedBody)->GetName().c_str());
+                pextra->setType("connect_body");
+                domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
+                ptec->setProfile("OpenRAVE");
+
+                daeElementRef frame_origin = ptec->add("frame_origin");
+                frame_origin->setAttribute("link",vlinksidrefs.at((*itConnectedBody)->GetAttachingLink()->GetIndex()).c_str());
+                _WriteTransformation(frame_origin,(*itConnectedBody)->GetRelativeTransform());
+
+                daeElementRef instance_body = ptec->add("instance_body");
+                instance_body->setAttribute("url",(*itConnectedBody)->GetInfo()._url.c_str());
+
+                ptec->add("active")->add("bool")->setCharData((*itConnectedBody)->IsActive() ? "true" : "false");
+            }
+        }
+    }
+
     void _WriteCollisionData(KinBodyPtr pbody, daeElementRef parent, const std::vector<std::string>& vlinksidrefs, bool bWriteIgnoreLinkPair=true)
     {
         // collision data
@@ -2405,7 +2589,25 @@ private:
             }
         }
         if( IsWrite("link_collision_state") ) {
+            std::vector<KinBody::LinkPtr> vConnectedLinks;
+            if( pbody->IsRobot() ) {
+                RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
+                FOREACH(itConnectedBody, probot->GetConnectedBodies()) {
+                    if( (*itConnectedBody)->IsActive() == 0 ) {
+                        // not active, so will not be mapped onto real robot
+                        continue;
+                    }
+                    std::vector<KinBody::LinkPtr> vResolvedLinks;
+                    (*itConnectedBody)->GetResolvedLinks(vResolvedLinks);
+                    vConnectedLinks.insert(vConnectedLinks.end(), vResolvedLinks.begin(), vResolvedLinks.end());
+                }
+            }
+
             FOREACHC(itlink,pbody->GetLinks()) {
+                if (std::find(vConnectedLinks.begin(), vConnectedLinks.end(), *itlink) != vConnectedLinks.end()) {
+                    // skip links that are part of the connected body
+                    continue;
+                }
                 daeElementRef link_collision_state = ptec->add("link_collision_state");
                 link_collision_state->setAttribute("link",vlinksidrefs.at((*itlink)->GetIndex()).c_str());
                 link_collision_state->add("bool")->setCharData((*itlink)->IsEnabled() ? "true" : "false");

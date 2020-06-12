@@ -19,8 +19,42 @@
 
 namespace OpenRAVE {
 
+void RobotBase::GripperInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    value.SetObject();
+    if( !!_pdocument ) {
+        BOOST_ASSERT(_pdocument->IsObject());
+        value.CopyFrom(*_pdocument, allocator, true); // need to copy the const strings
+    }
+    openravejson::SetJsonValueByKey(value, "name", name, allocator);
+    openravejson::SetJsonValueByKey(value, "grippertype", grippertype, allocator);
+    openravejson::SetJsonValueByKey(value, "gripperJointNames", gripperJointNames, allocator);
+}
+
+void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+{
+    name.clear();
+    grippertype.clear();
+    gripperJointNames.clear();
+
+    openravejson::LoadJsonValueByKey(value, "name", name);
+    if( name.size() == 0 ) {
+        openravejson::LoadJsonValueByKey(value, "id", name);
+        if( name.size() > 0 ) {
+            RAVELOG_WARN_FORMAT("gripperInfo %s got old tag 'id', when it should be 'name'", name);
+        }
+    }
+    openravejson::LoadJsonValueByKey(value, "grippertype", grippertype);
+    openravejson::LoadJsonValueByKey(value, "gripperJointNames", gripperJointNames);
+
+    // should always create a new _pdocument in case an old one is initialized and copied
+    _pdocument.reset(new rapidjson::Document());
+    _pdocument->CopyFrom(value, _pdocument->GetAllocator(), true); // need to copy the const strings
+}
+
 void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
+    value.SetObject();
     openravejson::SetJsonValueByKey(value, "name", _name, allocator);
     openravejson::SetJsonValueByKey(value, "linkName", _linkname, allocator);
     openravejson::SetJsonValueByKey(value, "transform", _trelative, allocator);
@@ -270,7 +304,7 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
     if( _vConnectedBodyActiveStates.size() == probot->_vecConnectedBodies.size() ) {
         bool bchanged = false;
         for(size_t iconnectedbody = 0; iconnectedbody < probot->_vecConnectedBodies.size(); ++iconnectedbody) {
-            if( probot->_vecConnectedBodies[iconnectedbody]->IsActive() != (!!_vConnectedBodyActiveStates[iconnectedbody]) ) {
+            if( probot->_vecConnectedBodies[iconnectedbody]->IsActive() != _vConnectedBodyActiveStates[iconnectedbody] ) {
                 bchanged = true;
                 break;
             }
@@ -1777,6 +1811,51 @@ bool RobotBase::RemoveAttachedSensor(RobotBase::AttachedSensor &attsensor)
     return false;
 }
 
+bool RobotBase::AddGripperInfo(GripperInfoPtr gripperInfo, bool removeduplicate)
+{
+    if( !gripperInfo ) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("Cannot add invalid gripperInfo to robot %s."),GetName(),ORE_InvalidArguments);
+    }
+    if( gripperInfo->name.size() == 0 ) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("Cannot add gripperInfo to robot %s since its name is empty."),GetName(),ORE_InvalidArguments);
+    }
+
+    for(int igripper = 0; igripper < (int)_vecGripperInfos.size(); ++igripper) {
+        if( _vecGripperInfos[igripper]->name == gripperInfo->name ) {
+            if( removeduplicate ) {
+                _vecGripperInfos[igripper] = gripperInfo;
+            }
+            else {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("gripper with name %s already exists"),gripperInfo->name,ORE_InvalidArguments);
+            }
+        }
+    }
+
+    _vecGripperInfos.push_back(gripperInfo);
+    return true;
+}
+
+bool RobotBase::RemoveGripperInfo(const std::string& name)
+{
+    for(int igripper = 0; igripper < (int)_vecGripperInfos.size(); ++igripper) {
+        if( _vecGripperInfos[igripper]->name == name ) {
+            _vecGripperInfos.erase(_vecGripperInfos.begin()+igripper);
+            return true;
+        }
+    }
+    return false;
+}
+
+RobotBase::GripperInfoPtr RobotBase::GetGripperInfo(const std::string& name) const
+{
+    FOREACHC(itGripperInfo, _vecGripperInfos) {
+        if( (*itGripperInfo)->name == name ) {
+            return *itGripperInfo;
+        }
+    }
+    return RobotBase::GripperInfoPtr();
+}
+
 void RobotBase::SimulationStep(dReal fElapsedTime)
 {
     KinBody::SimulationStep(fElapsedTime);
@@ -1944,10 +2023,6 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 {
     KinBody::Clone(preference,cloningoptions);
     RobotBaseConstPtr r = RaveInterfaceConstCast<RobotBase>(preference);
-    _selfcollisionchecker.reset();
-    if( !!r->_selfcollisionchecker ) {
-        // TODO clone the self collision checker?
-    }
     __hashrobotstructure = r->__hashrobotstructure;
     _vecManipulators.clear();
     _pManipActive.reset();
@@ -1970,6 +2045,17 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         _vecAttachedSensors.push_back(AttachedSensorPtr(new AttachedSensor(shared_robot(),**itsensor,cloningoptions)));
     }
     _UpdateAttachedSensors();
+
+    // gripper infos, have to recreate the _pdocument
+    _vecGripperInfos = r->_vecGripperInfos;
+    FOREACH(itGripperInfo, _vecGripperInfos) {
+        GripperInfoPtr& pGripperInfo = *itGripperInfo;
+        if( !!pGripperInfo && !!pGripperInfo->_pdocument) {
+            boost::shared_ptr<rapidjson::Document> pnewdocument(new rapidjson::Document());
+            pnewdocument->CopyFrom(*pGripperInfo->_pdocument, pnewdocument->GetAllocator(), true); // need to copy the const strings
+            pGripperInfo->_pdocument = pnewdocument;
+        }
+    }
 
     _vActiveDOFIndices = r->_vActiveDOFIndices;
     _activespec = r->_activespec;
