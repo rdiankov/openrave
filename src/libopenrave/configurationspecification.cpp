@@ -171,7 +171,7 @@ void ConfigurationSpecification::SaveToJson(rapidjson::Value& rValue, rapidjson:
     for (int i = 0; i < (int)vgroupindices.size(); ++i) {
         vgroupindices[i] = i;
     }
-    std::sort(vgroupindices.begin(), vgroupindices.end(), boost::bind(CompareGroupsOfIndices, boost::ref(*shared_from_this()), _1, _2));
+    std::sort(vgroupindices.begin(), vgroupindices.end(), boost::bind(CompareGroupsOfIndices, boost::ref(*this), _1, _2));
 
     rValue.SetObject();
 
