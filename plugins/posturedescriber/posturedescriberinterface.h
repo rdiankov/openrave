@@ -141,6 +141,7 @@ protected:
     double _fTol = 1e-6; ///< tolerance for determining if a robot posture value is considered 0
     PostureValueFn _posturefn; ///< function that computes posture values and states for a kinematics chain
     RobotPostureSupportType _supporttype = RobotPostureSupportType::RPST_NoSupport;
+    std::string _posturestatename = POSTUREDESCRIBER_STATE_NAME;
 
     /* ========== cached values ========== */
     std::vector<double>          _posturevalues; ///< cached posture values

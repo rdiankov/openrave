@@ -405,7 +405,7 @@ bool PostureDescriber::SetPostureValueThreshold(double fTol) {
 }
 
 std::string PostureDescriber::GetMapDataKey() const {
-    return std::string(POSTUREDESCRIBER_CLASS_NAME);
+    return _posturestatename;
 }
 
 const LinkPair& PostureDescriber::GetEssentialKinematicsChain() const {
