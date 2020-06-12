@@ -17,7 +17,6 @@
 #include <openrave/openrave.h>
 #include <openrave/openravejson.h> // openravejson
 #include "posturedescriberinterface.h" // PostureDescriber
-#include "plugindefs.h" // POSTUREDESCRIBER_CLASS_NAME
 #include "openraveplugindefs.h" // SerializeValues
 
 // #define POSTUREDESCRIBER_DEBUG
@@ -245,10 +244,10 @@ void ComputePostureStates6RGeneral(const std::vector<JointPtr>& joints,
     const Vector anchor0 = joints[0]->GetAnchor();
     const Vector anchor1 = joints[1]->GetAnchor();
     const Vector anchor2 = joints[2]->GetAnchor();
-    const Vector anchor4 = joints[4]->GetAnchor();
-
-    // project anchor2 onto axis3, and move along axis3 by one unit
-
+    const Vector anchor3 = joints[3]->GetAnchor();
+    // instead of using J5's anchor (anchor4) directly, we project it onto J4's axis (axis3)
+    const Vector anchor4 = anchor3 + (joints[4]->GetAnchor() - anchor3).dot(axis3) * axis3;
+    
     posturevalues.at(0) = axis0.cross(axis1).dot(anchor4-anchor0);           ///< shoulder: {{0, -1}, {1, -1}, {0,  4}}
     posturevalues.at(1) = axis1.cross(anchor2-anchor1).dot(anchor4-anchor2); ///<    elbow: {{1, -1}, {1,  2}, {2,  4}}
     posturevalues.at(2) = axis3.cross(axis4).dot(axis5);                     ///<    wrist: {{3, -1}, {4, -1}, {5, -1}}

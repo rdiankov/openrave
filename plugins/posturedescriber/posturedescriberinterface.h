@@ -18,6 +18,7 @@
 #define PLUGINS_POSTUREDESCRIBER_POSTUREDESCRIBERINTERFACE_H
 
 #include <openrave/posturedescriber.h> // PostureDescriberBasePtr
+#include "plugindefs.h" // POSTUREDESCRIBER_CLASS_NAME, POSTUREDESCRIBER_MODULE_NAME, POSTUREDESCRIBER_STATE_NAME
 
 namespace OpenRAVE {
 
