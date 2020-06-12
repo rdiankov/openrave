@@ -269,7 +269,7 @@ void ComputePostureStates4RTypeA(const std::vector<JointPtr>& joints,
 
     posturevalues.at(0) = axis0.cross(axis1).dot(anchor3-anchor1);           ///< shoulder: {{0, -1}, {1, -1}, {1, 3}}
     posturevalues.at(1) = axis1.cross(anchor2-anchor1).dot(anchor3-anchor2); ///<    elbow: {{1, -1}, {1,  2}, {2, 3}}
-    ComputeRobotPostureStates(fTol, posturestates, featurestates, posturevalues);
+    ComputeRobotPostureStates(fTol, posturevalues, featurestates, posturestates);
 }
 
 void ComputePostureStatesRRRParallel(const std::vector<JointPtr>& joints,
@@ -441,7 +441,7 @@ bool PostureDescriber::_GetSupportTypeCommand(std::ostream& ssout, std::istream&
     return _supporttype != RobotPostureSupportType::RPST_NoSupport;
 }
 
-bool PostureDescriber::_ComputePostureValuesCommand(std::ostream& ssout, std::istream& ssin) const {
+bool PostureDescriber::_ComputePostureValuesCommand(std::ostream& ssout, std::istream& ssin) {
     if(!_posturefn) {
         RAVELOG_WARN("No supported posture describer; _posturefn is not set");
         return false;

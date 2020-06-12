@@ -129,7 +129,7 @@ protected:
     bool _GetSupportTypeCommand(std::ostream& ssout, std::istream& ssin) const;
 
     /// \brief Computes posture values
-    bool _ComputePostureValuesCommand(std::ostream& ssout, std::istream& ssin) const;
+    bool _ComputePostureValuesCommand(std::ostream& ssout, std::istream& ssin);
 
     /* ========== `SendJSONCommand` APIs ========== */
     /// \brief `SendJSONCommand` API
