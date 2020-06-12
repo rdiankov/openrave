@@ -386,9 +386,7 @@ Some python code to display data::\n\
             // have to check callbacks at the beginning since code can continue
             callbackaction = _CallCallbacks(progress);
             if( callbackaction ==  PA_Interrupt ) {
-                planningstatus.description = "Planning was interrupted";
-                planningstatus.statusCode = PS_Interrupted;
-                return planningstatus;
+                return PlannerStatus("Planning was interrupted", PS_Interrupted);
             }
             else if( callbackaction == PA_ReturnWithAnySolution ) {
                 if( _vgoalpaths.size() > 0 ) {
