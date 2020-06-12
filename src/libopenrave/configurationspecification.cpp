@@ -147,6 +147,43 @@ bool ConfigurationSpecification::operator!=(const ConfigurationSpecification& r)
     return !this->operator==(r);
 }
 
+void ConfigurationSpecification::LoadFromJson(const rapidjson::Value& rValue) {
+    if (rValue.HasMember("groups")) {
+        _vgroups.resize(rValue["groups"].Size());
+        size_t iGroup = 0;
+        for (rapidjson::Value::ConstValueIterator it = rValue["groups"].Begin(); it != rValue["groups"].End(); it++, iGroup++) {
+            ConfigurationSpecification::Group& group = _vgroups[iGroup];
+            openravejson::LoadJsonValueByKey(*it, "name", group.name);
+            openravejson::LoadJsonValueByKey(*it, "offset", group.offset);
+            openravejson::LoadJsonValueByKey(*it, "dof", group.dof);
+            openravejson::LoadJsonValueByKey(*it, "interpolation", group.interpolation);
+        }
+    }
+}
+
+void ConfigurationSpecification::SaveToJson(rapidjson::Value& rValue, rapidjson::Document::AllocatorType& alloc) const {
+    std::vector<int> vgroupindices(_vgroups.size());
+    for (int i = 0; i < (int)vgroupindices.size(); ++i) {
+        vgroupindices[i] = i;
+    }
+    rValue.SetObject();
+
+    rapidjson::Value rGroups;
+    rGroups.SetArray();
+    rGroups.Reserve(_vgroups.size(), alloc);
+    for(size_t iGroup = 0; iGroup < vgroupindices.size(); iGroup++) {
+        int iGroupIndex = vgroupindices[iGroup];
+        const ConfigurationSpecification::Group& group = _vgroups[iGroupIndex];
+        rapidjson::Value rGroup;
+        openravejson::SetJsonValueByKey(rGroup, "name", group.name, alloc);
+        openravejson::SetJsonValueByKey(rGroup, "offset", group.offset, alloc);
+        openravejson::SetJsonValueByKey(rGroup, "dof", group.dof, alloc);
+        openravejson::SetJsonValueByKey(rGroup, "interpolation", group.interpolation, alloc);
+        rGroups.PushBack(rGroup, alloc);
+    }
+    openravejson::SetJsonValueByKey(rValue, "groups", rGroups, alloc);
+}
+
 const ConfigurationSpecification::Group& ConfigurationSpecification::GetGroupFromName(const std::string& name) const
 {
     size_t bestmatch=0xffffffff;

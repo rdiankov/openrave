@@ -713,6 +713,13 @@ protected:
     virtual bool operator==(const ConfigurationSpecification& r) const;
     virtual bool operator!=(const ConfigurationSpecification& r) const;
 
+    /// \brief JSON serializable
+    virtual void LoadFromJson(const rapidjson::Value& rValue);
+    virtual void SaveToJson(rapidjson::Value& rValue, rapidjson::Document::AllocatorType& alloc) const;
+    virtual void SaveToJson(rapidjson::Document& d) const {
+        SaveToJson(d, d.GetAllocator());
+    }
+
     /// \brief return the group whose name begins with a particular string.
     ///
     /// If multiple groups exist that begin with the same string, then the shortest one is returned.
