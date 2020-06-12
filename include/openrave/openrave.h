@@ -714,6 +714,7 @@ protected:
     virtual bool operator!=(const ConfigurationSpecification& r) const;
 
     /// \brief JSON serializable
+    /// TODO: Ideally we should make it a subclass of openravejson::JsonSerializable, but it requires a lot changes to fix the header files for now.
     virtual void LoadFromJson(const rapidjson::Value& rValue);
     virtual void SaveToJson(rapidjson::Value& rValue, rapidjson::Document::AllocatorType& alloc) const;
     virtual void SaveToJson(rapidjson::Document& d) const {
