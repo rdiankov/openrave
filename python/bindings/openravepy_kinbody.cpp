@@ -2983,12 +2983,16 @@ void PyKinBody::SetDOFTorqueLimits(object o)
     _pbody->SetDOFTorqueLimits(values);
 }
 
-void PyKinBody::SetDOFValues(object o)
+void PyKinBody::SetDOFValues(object ovalues)
 {
     if( _pbody->GetDOF() == 0 ) {
         return;
     }
-    std::vector<dReal> values = ExtractArray<dReal>(o);
+    // check before extracting since something can be passing in different objects
+    if( len(ovalues) != _pbody->GetDOF() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("Passed in values to SetDOFValues have %d elements, but robot has %d dof"), ((int)len(ovalues))%_pbody->GetDOF(), ORE_InvalidArguments);
+    }
+    std::vector<dReal> values = ExtractArray<dReal>(ovalues);
     if( (int)values.size() != GetDOF() ) {
         throw openrave_exception(_("values do not equal to body degrees of freedom"));
     }

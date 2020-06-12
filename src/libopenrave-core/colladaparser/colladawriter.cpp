@@ -2316,8 +2316,8 @@ private:
                 piksolverinterface->setCharData(iksolver->GetXMLId().c_str());
                 // TODO add the free joints
             }
-            daeElementRef gripperid = ptec->add("gripperid");
-            gripperid->setCharData((*itmanip)->GetGripperId().c_str());
+            daeElementRef pgrippername = ptec->add("grippername");
+            pgrippername->setCharData((*itmanip)->GetGripperName().c_str());
         }
     }
 
@@ -2404,14 +2404,19 @@ private:
             std::map<RobotBase::GripperInfoPtr, std::string> mapAttachedSensorIDs;
             FOREACHC(itGripperInfo, probot->GetGripperInfos()) {
                 domExtraRef pextra = daeSafeCast<domExtra>(parent->add(COLLADA_ELEMENT_EXTRA));
-                pextra->setName((*itGripperInfo)->gripperid.c_str());
+                pextra->setName((*itGripperInfo)->name.c_str());
                 pextra->setType("gripper_info");
                 domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
                 ptec->setProfile("OpenRAVE");
 
                 rapidjson::Document rGripperInfo;
                 (*itGripperInfo)->SerializeJSON(rGripperInfo, rGripperInfo.GetAllocator());
-
+                if (rGripperInfo.HasMember("id")) {
+                    rGripperInfo.RemoveMember("id");
+                }
+                if (rGripperInfo.HasMember("name")) {
+                    rGripperInfo.RemoveMember("name");
+                }
                 daeElementRef pjson_data = ptec->add("json_data");
                 std::string sGripperInfoJSON = openravejson::DumpJson(rGripperInfo);
                 pjson_data->setCharData(sGripperInfoJSON.c_str());

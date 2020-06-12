@@ -19,7 +19,7 @@
 #include <openrave/mathextra.h>
 
 namespace rplanners {
-    
+
 /**
    t,dt,v0,v1,px = symbols('t,dt,v0,v1,px')
 
@@ -196,7 +196,7 @@ protected:
                     if( times[iroot] > 0 && times[iroot] < deltatime ) {
                         dReal pos = c0 + times[iroot] * (c1 + times[iroot] * (c2 + times[iroot]*c3));
                         if( pos < info->_vConfigLowerLimit[i]-g_fEpsilonJointLimit || pos > info->_vConfigUpperLimit[i]+g_fEpsilonJointLimit ) {
-                            RAVELOG_VERBOSE_FORMAT("pos constraints dof=%d, %e (limit) < %e < %e (limit)", i%info->_vConfigLowerLimit[i]%pos%info->_vConfigUpperLimit[i]);
+                            RAVELOG_VERBOSE_FORMAT("env=%d, pos constraints dof=%d, %e (limit) < %e < %e (limit)", GetEnv()->GetId()%i%info->_vConfigLowerLimit[i]%pos%info->_vConfigUpperLimit[i]);
                             return false;
                         }
                     }
@@ -208,11 +208,11 @@ protected:
             if(checkoptions&4) {
                 // check acceleration limits
                 if( RaveFabs(a0) > info->_vConfigAccelerationLimit.at(i)+g_fEpsilonJointLimit ) {
-                    RAVELOG_VERBOSE_FORMAT("acceleration constraints dof=%d, abs(%e) > %e (limit)", i%a0%(info->_vConfigAccelerationLimit.at(i)));
+                    RAVELOG_VERBOSE_FORMAT("env=%d, acceleration constraints dof=%d, abs(%e) > %e (limit)", GetEnv()->GetId()%i%a0%(info->_vConfigAccelerationLimit.at(i)));
                     return false;
                 }
                 if( RaveFabs(a0+a1*deltatime) > info->_vConfigAccelerationLimit.at(i)+g_fEpsilonJointLimit ) {
-                    RAVELOG_VERBOSE_FORMAT("acceleration constraints dof=%d, abs(%e) > %e (limit)", i%(a0+a1*deltatime)%(info->_vConfigAccelerationLimit.at(i)));
+                    RAVELOG_VERBOSE_FORMAT("env=%d, acceleration constraints dof=%d, abs(%e) > %e (limit)", GetEnv()->GetId()%i%(a0+a1*deltatime)%(info->_vConfigAccelerationLimit.at(i)));
                     return false;
                 }
             }
@@ -222,17 +222,17 @@ protected:
                     if( vtime > 0 && vtime < deltatime ) {
                         dReal vellimit = c1 + vtime * (2*c2 + vtime * 3*c3 );
                         if( RaveFabs(vellimit) > info->_vConfigVelocityLimit.at(i)+g_fEpsilonJointLimit ) {
-                            RAVELOG_VERBOSE_FORMAT("velocity constraints dof=%d, abs(%e) > %e (limit)", i%vellimit%info->_vConfigVelocityLimit.at(i));
+                            RAVELOG_VERBOSE_FORMAT("env=%d, velocity constraints dof=%d, abs(%e) > %e (limit)", GetEnv()->GetId()%i%vellimit%info->_vConfigVelocityLimit.at(i));
                             return false;
                         }
                     }
                 }
                 if( RaveFabs(v0) > info->_vConfigVelocityLimit[i]+g_fEpsilonJointLimit ) {
-                    RAVELOG_VERBOSE_FORMAT("velocity constraints dof=%d, abs(%e) > %e (limit)", i%v0%info->_vConfigVelocityLimit[i]);
+                    RAVELOG_VERBOSE_FORMAT("env=%d, velocity constraints dof=%d, abs(%e) > %e (limit)", GetEnv()->GetId()%i%v0%info->_vConfigVelocityLimit[i]);
                     return false;
                 }
                 if( RaveFabs(v1) > info->_vConfigVelocityLimit[i]+g_fEpsilonJointLimit ) {
-                    RAVELOG_VERBOSE_FORMAT("velocity constraints dof=%d, abs(%e) > %e (limit)", i%v1%info->_vConfigVelocityLimit[i]);
+                    RAVELOG_VERBOSE_FORMAT("env=%d, velocity constraints dof=%d, abs(%e) > %e (limit)", GetEnv()->GetId()%i%v1%info->_vConfigVelocityLimit[i]);
                     return false;
                 }
             }
