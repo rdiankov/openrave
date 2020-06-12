@@ -211,7 +211,11 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
 
     virtual IkReturnAction CallFilters(const IkParameterization& param, IkReturnPtr ikreturn, int minpriority, int maxpriority) {
         // have to convert to the manipulator's base coordinate system
-        RobotBase::ManipulatorPtr pmanip(_pmanip);
+        RobotBase::ManipulatorPtr pmanip = _pmanip.lock();
+        if( !pmanip ) {
+            RAVELOG_WARN_FORMAT("env=%d iksolver points to removed manip '%s', passing through", GetEnv()->GetId()%_manipname);
+            return IKRA_Success; // pass through
+        }
         std::vector<dReal> vsolution;
         pmanip->GetRobot()->GetDOFValues(vsolution, pmanip->GetArmIndices());
         // do sanity check to make sure that current robot manip is consistent with param
@@ -231,7 +235,12 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
 
     virtual void SetJointLimits()
     {
-        RobotBase::ManipulatorPtr pmanip(_pmanip);
+        RobotBase::ManipulatorPtr pmanip = _pmanip.lock();
+        if( !pmanip ) {
+            RAVELOG_WARN_FORMAT("env=%d iksolver points to removed manip '%s'", GetEnv()->GetId()%_manipname);
+            return;
+        }
+
         RobotBasePtr probot = pmanip->GetRobot();
         RobotBase::RobotStateSaver saver(probot);
         probot->SetActiveDOFs(pmanip->GetArmIndices());
@@ -280,9 +289,11 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
         RobotBasePtr probot = pmanip->GetRobot();
         bool bfound = false;
         _pmanip.reset();
+        _manipname.clear();
         FOREACHC(itmanip,probot->GetManipulators()) {
             if( *itmanip == pmanip ) {
                 _pmanip = *itmanip;
+                _manipname = (*itmanip)->GetName();
                 bfound = true;
             }
         }
@@ -786,7 +797,7 @@ protected:
     }
 
     virtual RobotBase::ManipulatorPtr GetManipulator() const {
-        return RobotBase::ManipulatorPtr(_pmanip);
+        return _pmanip.lock();
     }
 
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
@@ -795,6 +806,7 @@ protected:
         boost::shared_ptr< IkFastSolver<IkReal> const > r = boost::dynamic_pointer_cast<IkFastSolver<IkReal> const>(preference);
 
         _pmanip.reset();
+        _manipname.clear();
         _cblimits.reset();
         _vchildlinks.resize(0);
         _vchildlinkindices.resize(0);
@@ -805,6 +817,9 @@ protected:
             if( !!probot ) {
                 RobotBase::ManipulatorPtr pmanip = probot->GetManipulator(rmanip->GetName());
                 _pmanip = pmanip;
+                if( !!pmanip ) {
+                    _manipname = pmanip->GetName();
+                }
                 _cblimits = probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IkReal>::SetJointLimits,boost::bind(&utils::sptr_from<IkFastSolver<IkReal> >, weak_solver())));
 
                 if( !!pmanip ) {
@@ -2411,6 +2426,7 @@ protected:
     }
 
     RobotBase::ManipulatorWeakPtr _pmanip;
+    std::string _manipname; ///< name of the manipluator being set, this is for book keeping purposes
     std::vector<int> _vfreeparams; ///< the indices into _pmanip->GetArmIndices() for the free indices of this IK
     std::vector<uint8_t> _vfreerevolute, _vjointrevolute; // 0 if not revolute, 1 if revolute and not circular, 2 if circular
     std::vector<dReal> _vfreeparamscales;
