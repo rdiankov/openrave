@@ -461,7 +461,7 @@ Some python code to display data::\n\
                 std::vector<dReal> robotJointValues;
                 this->_parameters->_getstatefn(robotJointValues); // Making the assumption that _getstatefn is shared throughout planning, e.g. shares same _getstatefn as DynamicsCollisionConstraint checker
                 planningstatus.vRobotJointValues.push_back(robotJointValues);                           // Is this slow?
-                planningstatus.vCollidingBodies.push_back(this->_treeForward.GetCollisionBodies());    // Is this slow?
+                planningstatus.vCollidingBodies.push_back(this->_treeForward.GetCollisionBodies());     // Is this slow?
             }
 
             // although check isn't necessary, having it improves running times
@@ -480,7 +480,7 @@ Some python code to display data::\n\
                 std::vector<dReal> robotJointValues;
                 this->_parameters->_getstatefn(robotJointValues); // Making the assumption that _getstatefn is shared throughout planning, e.g. shares same _getstatefn as DynamicsCollisionConstraint checker
                 planningstatus.vRobotJointValues.push_back(robotJointValues);                           // Is this slow?
-                planningstatus.vCollidingBodies.push_back(this->_treeBackward.GetCollisionBodies());   // Is this slow?
+                planningstatus.vCollidingBodies.push_back(this->_treeBackward.GetCollisionBodies());    // Is this slow?
             }
 
             if( et == ET_Connected ) {
@@ -523,7 +523,9 @@ Some python code to display data::\n\
         if( _vgoalpaths.size() == 0 ) {
             std::string description = str(boost::format(_("env=%d, plan failed in %fs, iter=%d, nMaxIterations=%d"))%GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime))%(iter/3)%_parameters->_nMaxIterations);
             RAVELOG_WARN(description);
-            return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
+            planningstatus.descrption = description;
+            planningstatus.statusCode = PS_Failed;
+            return planningstatus;
         }
 
         vector<GOALPATH>::iterator itbest = _vgoalpaths.begin();
@@ -543,7 +545,7 @@ Some python code to display data::\n\
         PlannerStatus status = _ProcessPostPlanners(_robot,ptraj);
         //TODO should use accessor to change description
         status.description = description;
-        // Special case...no need to transfer collision information?
+        // Special case. No need to transfer collision information?
         return status;
     }
 
