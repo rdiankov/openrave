@@ -458,10 +458,7 @@ Some python code to display data::\n\
             ExtendType et = TreeA->Extend(_sampleConfig, iConnectedA);
 
             if (et == ET_Failed && IS_DEBUGLEVEL(Level_Verbose)) {
-                std::vector<dReal> robotJointValues;
-                this->_parameters->_getstatefn(robotJointValues); // Making the assumption that _getstatefn is shared throughout planning, e.g. shares same _getstatefn as DynamicsCollisionConstraint checker
-                planningstatus.vRobotJointValues.push_back(robotJointValues);                           // Is this slow?
-                planningstatus.vCollidingBodies.push_back(this->_treeForward.GetCollisionBodies());     // Is this slow?
+                planningstatus.UpdatePlannerStatusInfo(this->_treeForward.GetConstraintReport()->_report);
             }
 
             // although check isn't necessary, having it improves running times
@@ -477,10 +474,7 @@ Some python code to display data::\n\
             et = TreeB->Extend(TreeA->GetVectorConfig(iConnectedA), iConnectedB);     // extend B toward A
 
             if (et == ET_Failed && IS_DEBUGLEVEL(Level_Verbose)) {
-                std::vector<dReal> robotJointValues;
-                this->_parameters->_getstatefn(robotJointValues); // Making the assumption that _getstatefn is shared throughout planning, e.g. shares same _getstatefn as DynamicsCollisionConstraint checker
-                planningstatus.vRobotJointValues.push_back(robotJointValues);                           // Is this slow?
-                planningstatus.vCollidingBodies.push_back(this->_treeBackward.GetCollisionBodies());    // Is this slow?
+                planningstatus.UpdatePlannerStatusInfo(this->_treeBackward.GetConstraintReport()->_report);
             }
 
             if( et == ET_Connected ) {
@@ -523,8 +517,18 @@ Some python code to display data::\n\
         if( _vgoalpaths.size() == 0 ) {
             std::string description = str(boost::format(_("env=%d, plan failed in %fs, iter=%d, nMaxIterations=%d"))%GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime))%(iter/3)%_parameters->_nMaxIterations);
             RAVELOG_WARN(description);
-            planningstatus.descrption = description;
+            planningstatus.description = description;
             planningstatus.statusCode = PS_Failed;
+
+            if (IS_DEBUGLEVEL(Level_Verbose)) {
+                std::cout << "TEST" << std::endl;
+                std::map< std::pair<KinBody::LinkConstPtr,KinBody::LinkConstPtr>, unsigned int >::iterator it = planningstatus.mCollidingLinksCount.begin();
+                while (it != planningstatus.mCollidingLinksCount.end()) {
+                    std::cout << "linkpair:: " << it->first.first->GetName() << ":" << it->first.second->GetName() << endl;
+                    std::cout << "collisioncount:: " << it->second << endl;
+                }
+            }
+
             return planningstatus;
         }
 

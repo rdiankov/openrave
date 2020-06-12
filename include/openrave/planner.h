@@ -497,6 +497,7 @@ public:
     PlannerStatus& SetErrorOrigin(const std::string& errorOrigin);
     PlannerStatus& SetPlannerParameters(PlannerParametersConstPtr parameters);
 
+    void UpdatePlannerStatusInfo(CollisionReport& collisionReport);
     void SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Document::AllocatorType& alloc) const;
 
     inline uint32_t GetStatusCode() const {
@@ -514,10 +515,7 @@ public:
     IkParameterization ikparam;             // Optional, the ik parameter that failed to find a solution.
     std::vector<dReal> jointValues;         // Optional, the robot's joint values in rad or m
     CollisionReportPtr report;              ///< Optional,  collision report at the time of the error. Ideally should contents contacts information.
-    // IMPORTANT: indices of vRobotJointValues and vCollidingBodies should correspond with each other!
-    std::vector< std::vector<dReal> > vRobotJointValues;                                 // Records robot joint values at all collisions
-    std::vector< std::vector< std::pair<std::string, std::string> > > vCollidingBodies;  // Records all collision reports
-
+    std::map< std::pair<KinBody::LinkConstPtr,KinBody::LinkConstPtr>, unsigned int> mCollidingLinksCount; // Counter for colliding links
     std::string errorOrigin;                // Auto, a string representing the code path of the error. Automatically filled on construction.
 };
 

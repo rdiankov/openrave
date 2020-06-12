@@ -174,6 +174,16 @@ PlannerStatus& PlannerStatus::SetPlannerParameters(PlannerParametersConstPtr par
     return *this;
 }
 
+void PlannerStatus::UpdatePlannerStatusInfo(CollisionReport& collisionReport)
+{
+    FOREACH(itlinkpair, collisionReport.vLinkColliding) {
+        if (mCollidingLinksCount.find(*itlinkpair) == mCollidingLinksCount.end()) {
+            mCollidingLinksCount[*itlinkpair] = 0;
+        }
+        mCollidingLinksCount[*itlinkpair] += 1;
+    }
+}
+
 void PlannerStatus::SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Document::AllocatorType& alloc) const
 {
     rPlannerStatus.SetObject();
@@ -215,9 +225,6 @@ void PlannerStatus::SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Docu
         ss << ikparam;
         openravejson::SetJsonValueByKey(rPlannerStatus, "ikparam", ss.str(), alloc);
     }
-
-    openravejson::SetJsonValueByKey(rPlannerStatus, "robotjointvalues", vRobotJointValues, alloc);  // Are we allowed to pass higher dimensional vectors?
-    openravejson::SetJsonValueByKey(rPlannerStatus, "collidingbodies", vCollidingBodies, alloc);    // Are we allowed to pass higher dimensional vectors?
 }
 
 PlannerParameters::StateSaver::StateSaver(PlannerParametersPtr params) : _params(params)

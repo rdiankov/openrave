@@ -448,7 +448,7 @@ public:
         return bHasAdded ? ET_Sucess : ET_Failed;
     }
 
-    // Maybe convert to shared boost pointer?
+/*    // Maybe convert to shared boost pointer?
     std::vector< std::pair<std::string,std::string> > GetCollisionBodies() {
         std::vector< std::pair<std::string,std::string> > collidingBodies;
         FOREACH(itlinkpair, this->_constraintreturn->_report.vLinkColliding)
@@ -456,7 +456,7 @@ public:
             collidingBodies.emplace_back(std::make_pair(itlinkpair->first->GetParent(true)->GetName(), itlinkpair->second->GetParent(true)->GetName()));
         }
         return collidingBodies;
-    }
+    }*/
 
     virtual int GetNumNodes() const {
         return _numnodes;
@@ -615,6 +615,10 @@ public:
         FOREACHC(itchildren, _vsetLevelNodes) {
             vnodes.insert(vnodes.end(), itchildren->begin(), itchildren->end());
         }
+    }
+
+    ConstraintFilterReturnPtr GetConstraintReport() {
+        return this->_constraintreturn;
     }
 
 private:
