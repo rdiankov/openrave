@@ -498,7 +498,6 @@ public:
     PlannerStatus& SetPlannerParameters(PlannerParametersConstPtr parameters);
 
     void SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Document::AllocatorType& alloc) const;
-    void SaveToJson2(rapidjson::Value& rPlannerStatus, rapidjson::Document::AllocatorType& alloc) const;
 
     inline uint32_t GetStatusCode() const {
         return statusCode;

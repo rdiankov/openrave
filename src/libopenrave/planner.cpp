@@ -215,26 +215,9 @@ void PlannerStatus::SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Docu
         ss << ikparam;
         openravejson::SetJsonValueByKey(rPlannerStatus, "ikparam", ss.str(), alloc);
     }
-}
 
-void PlannerStatus::SaveToJson2(rapidjson::Value& rPlannerStatus, rapidjson::Document::AllocatorType& alloc) const
-{
-    rPlannerStatus.SetObject();
-
-    openravejson::SetJsonValueByKey(rPlannerStatus, "description", description, alloc);
-    openravejson::SetJsonValueByKey(rPlannerStatus, "statusCode", statusCode, alloc);
     openravejson::SetJsonValueByKey(rPlannerStatus, "robotjointvalues", vRobotJointValues, alloc);  // Are we allowed to pass higher dimensional vectors?
     openravejson::SetJsonValueByKey(rPlannerStatus, "collidingbodies", vCollidingBodies, alloc);    // Are we allowed to pass higher dimensional vectors?
-
-    //Eventually, serialization could be in openravejson.h?
-    if (ikparam.GetType() != IKP_None) {
-        std::stringstream ss;
-        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
-        ss << ikparam;
-        openravejson::SetJsonValueByKey(rPlannerStatus, "ikparam", ss.str(), alloc);
-    }
-
-    openravejson::SetJsonValueByKey(rPlannerStatus, "errorOrigin", errorOrigin, alloc);
 }
 
 PlannerParameters::StateSaver::StateSaver(PlannerParametersPtr params) : _params(params)
