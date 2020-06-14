@@ -182,6 +182,7 @@ void ConfigurationSpecification::SaveToJson(rapidjson::Value& rValue, rapidjson:
         int iGroupIndex = vgroupindices[iGroup];
         const ConfigurationSpecification::Group& group = _vgroups[iGroupIndex];
         rapidjson::Value rGroup;
+        rGroup.SetObject();
         openravejson::SetJsonValueByKey(rGroup, "name", group.name, alloc);
         openravejson::SetJsonValueByKey(rGroup, "offset", group.offset, alloc);
         openravejson::SetJsonValueByKey(rGroup, "dof", group.dof, alloc);
