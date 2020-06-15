@@ -470,6 +470,54 @@ inline const char *strcasestr(const char *s, const char *find)
 }
 #endif
 
+
+/// \brief A local uid generator
+class UniqueIDGenerator {
+public:
+    UniqueIDGenerator() = delete;
+    UniqueIDGenerator(std::string prefix): _prefix(prefix) {}
+    virtual ~UniqueIDGenerator() {}
+
+    /// \brief Check if the given id is unique, otherwise it will assign a unique one and udpate the set
+    void EnsureUniqueID(std::string& id) {
+        if (!id.empty() && _IsUnique(id)) {
+            _sUniqueId.insert(id);
+            return;
+        }
+        std::string tempId = id;
+        int count = 0;
+
+        // situations for generating a new id
+        // 1. same id has been reserved by others
+        // 2. id is empty
+        // 3. id has conflicted with updated id
+        while (_IsReserved(tempId) || tempId.empty() || !_IsUnique(tempId)) {
+            tempId = str(boost::format("%s%d")%(id.empty()?_prefix:id)%count);
+            count++;
+        }
+        _sUniqueId.insert(tempId);
+        id = tempId;
+    }
+    /// \brief Reserve the id namespace
+    void ReserveUniqueID(const std::string id) {
+        if (id.empty() || _IsReserved(id)) {
+            return;
+        }
+        _sReservedId.insert(id);
+    }
+
+private:
+    bool _IsUnique(const std::string& id) {
+        return _sUniqueId.find(id) == _sUniqueId.end();
+    }
+    bool _IsReserved(const std::string& id) {
+        return _sReservedId.find(id) != _sReservedId.end();
+    }
+    std::string _prefix;
+    std::set<std::string> _sUniqueId;
+    std::set<std::string> _sReservedId;
+};
+
 ///* \brief Update current info from json value. Create a new one if there is no id matched.
 template<typename T>
 void UpdateOrCreateInfo(const rapidjson::Value& value, const std::string id, std::vector<boost::shared_ptr<T>>& vInfos, dReal fUnitScale) {

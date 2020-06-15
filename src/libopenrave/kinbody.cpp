@@ -204,24 +204,28 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
             if (id.empty()) {
                 id = OpenRAVE::JSON::GetStringJsonValueByKey(grabbedValue, "grabbedName");
             }
-            if (id.empty()) {
-                id = boost::str(boost::format("grabbed%d") % iGrabbed);
-            }
             UpdateOrCreateInfo(grabbedValue, id, _vGrabbedInfos, fUnitScale);
         }
     }
 
     if (value.HasMember("links")) {
         _vLinkInfos.reserve(value["links"].Size() + _vLinkInfos.size());
-        size_t iLink = 0;
-        for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it, ++iLink) {
+        UniqueIDGenerator linkIdGenerator("link");
+        FOREACHC(itLink, _vLinkInfos) {
+            linkIdGenerator.EnsureUniqueID((*itLink)->_id);
+        }
+        for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it) {
+            const rapidjson::Value& linkValue = *it;
+            std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(linkValue, "id");
+            linkIdGenerator.ReserveUniqueID(id);
+        }
+
+        for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it) {
             const rapidjson::Value& linkValue = *it;
             std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(linkValue, "id");
             if (id.empty()) {
                 id = OpenRAVE::JSON::GetStringJsonValueByKey(linkValue, "name");
-            }
-            if (id.empty()) {
-                id = boost::str(boost::format("link%d") % iLink);
+                linkIdGenerator.EnsureUniqueID(id);
             }
             UpdateOrCreateInfo(linkValue, id, _vLinkInfos, fUnitScale);
         }
@@ -229,15 +233,23 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 
     if (value.HasMember("joints")) {
         _vJointInfos.reserve(value["joints"].Size() + _vJointInfos.size());
-        size_t iJoint = 0;
-        for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it, ++iJoint) {
+
+        UniqueIDGenerator jointIdGenerator("joint");
+        FOREACHC(itJoint, _vJointInfos) {
+            jointIdGenerator.EnsureUniqueID((*itJoint)->_id);
+        }
+        for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it) {
+            const rapidjson::Value& jointValue = *it;
+            std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(jointValue, "id");
+            jointIdGenerator.ReserveUniqueID(id);
+        }
+
+        for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it) {
             const rapidjson::Value& jointValue = *it;
             std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(jointValue, "id");
             if (id.empty()) {
                 id = OpenRAVE::JSON::GetStringJsonValueByKey(jointValue, "name");
-            }
-            if (id.empty()) {
-                id = boost::str(boost::format("joint%d") % iJoint);
+                jointIdGenerator.EnsureUniqueID(id);
             }
             UpdateOrCreateInfo(jointValue, id, _vJointInfos, fUnitScale);
         }

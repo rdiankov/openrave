@@ -2372,6 +2372,13 @@ public:
         // TODO: revision error checking ?
         SetRevision(info._revision);
 
+        // fall back to use name if id is empty
+        FOREACH(itBodyInfo, info._vBodyInfos) {
+            if ((*itBodyInfo)->_id.empty()) {
+                (*itBodyInfo)->_id = (*itBodyInfo)->_name;
+            }
+        }
+
         FOREACHC(itBodyInfo, info._vBodyInfos) {
             // find existing body in the env
             std::vector<KinBodyPtr>::iterator itExistingBody = _vecbodies.end();
