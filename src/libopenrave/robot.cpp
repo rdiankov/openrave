@@ -304,7 +304,7 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
     if( _vConnectedBodyActiveStates.size() == probot->_vecConnectedBodies.size() ) {
         bool bchanged = false;
         for(size_t iconnectedbody = 0; iconnectedbody < probot->_vecConnectedBodies.size(); ++iconnectedbody) {
-            if( probot->_vecConnectedBodies[iconnectedbody]->IsActive() != (!!_vConnectedBodyActiveStates[iconnectedbody]) ) {
+            if( probot->_vecConnectedBodies[iconnectedbody]->IsActive() != _vConnectedBodyActiveStates[iconnectedbody] ) {
                 bchanged = true;
                 break;
             }

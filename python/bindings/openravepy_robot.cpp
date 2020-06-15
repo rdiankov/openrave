@@ -77,6 +77,7 @@ void PyManipulatorInfo::_Update(const RobotBase::ManipulatorInfo& info) {
     }
     _vGripperJointNames = vGripperJointNames;
     _grippername = ConvertStringToUnicode(info._grippername);
+    _toolChangerConnectedBodyToolName = ConvertStringToUnicode(info._toolChangerConnectedBodyToolName);
 }
 
 RobotBase::ManipulatorInfoPtr PyManipulatorInfo::GetManipulatorInfo() const
@@ -101,6 +102,13 @@ RobotBase::ManipulatorInfoPtr PyManipulatorInfo::GetManipulatorInfo() const
     else {
         RAVELOG_WARN_FORMAT("python manipulator %s has grippername that is None", pinfo->_name);
         pinfo->_grippername.clear();
+    }
+    if( !IS_PYTHONOBJECT_NONE(_toolChangerConnectedBodyToolName) ) {
+        pinfo->_toolChangerConnectedBodyToolName = py::extract<std::string>(_toolChangerConnectedBodyToolName);
+    }
+    else {
+        RAVELOG_WARN_FORMAT("python manipulator %s has toolChangerConnectedBodyToolName that is None", pinfo->_name);
+        pinfo->_toolChangerConnectedBodyToolName.clear();
     }
     return pinfo;
 }
@@ -223,7 +231,7 @@ void PyConnectedBodyInfo::_Update(const RobotBase::ConnectedBodyInfo& info)
     }
     _gripperInfos = gripperInfos;
 
-    _bIsActive = info._bIsActive;
+    _bIsActive = (int)info._bIsActive;
 }
 
 RobotBase::ConnectedBodyInfoPtr PyConnectedBodyInfo::GetConnectedBodyInfo() const
@@ -241,7 +249,7 @@ RobotBase::ConnectedBodyInfoPtr PyConnectedBodyInfo::GetConnectedBodyInfo() cons
     if( !IS_PYTHONOBJECT_NONE(_url) ) {
         pinfo->_url = py::extract<std::string>(_url);
     }
-    pinfo->_bIsActive = _bIsActive;
+    pinfo->_bIsActive = (int)_bIsActive;
     // extract all the infos
     return pinfo;
 }
@@ -314,6 +322,10 @@ object PyRobotBase::PyManipulator::GetName() const {
 
 object PyRobotBase::PyManipulator::GetGripperName() const {
     return ConvertStringToUnicode(_pmanip->GetGripperName());
+}
+
+object PyRobotBase::PyManipulator::GetToolChangerConnectedBodyToolName() const {
+    return ConvertStringToUnicode(_pmanip->GetToolChangerConnectedBodyToolName());
 }
 
 void PyRobotBase::PyManipulator::SetName(const std::string& s) {
@@ -971,11 +983,11 @@ object PyRobotBase::PyConnectedBody::GetInfo() {
     return py::to_object(PyConnectedBodyInfoPtr(new PyConnectedBodyInfo(_pconnected->GetInfo())));
 }
 
-bool PyRobotBase::PyConnectedBody::SetActive(bool active) {
+bool PyRobotBase::PyConnectedBody::SetActive(int active) {
     return _pconnected->SetActive(active);
 }
 
-bool PyRobotBase::PyConnectedBody::IsActive() {
+int PyRobotBase::PyConnectedBody::IsActive() {
     return _pconnected->IsActive();
 }
 object PyRobotBase::PyConnectedBody::GetTransform() const {
@@ -1055,6 +1067,11 @@ object PyRobotBase::PyConnectedBody::GetResolvedGripperInfos()
         pyGripperInfos.append(toPyObject(rGripperInfo));
     }
     return pyGripperInfos;
+}
+
+bool PyRobotBase::PyConnectedBody::CanProvideManipulator(const std::string& resolvedManipulatorName)
+{
+    return _pconnected->CanProvideManipulator(resolvedManipulatorName);
 }
 
 std::string PyRobotBase::PyConnectedBody::__repr__() {
@@ -1276,14 +1293,14 @@ PyConnectedBodyPtr PyRobotBase::GetConnectedBody(const std::string& bodyname)
 
 object PyRobotBase::GetConnectedBodyActiveStates() const
 {
-    std::vector<uint8_t> activestates;
+    std::vector<int8_t> activestates;
     _probot->GetConnectedBodyActiveStates(activestates);
     return toPyArray(activestates);
 }
 
 void PyRobotBase::SetConnectedBodyActiveStates(object oactivestates)
 {
-    std::vector<uint8_t> activestates = ExtractArray<uint8_t>(oactivestates);
+    std::vector<int8_t> activestates = ExtractArrayInt8(oactivestates);
     _probot->SetConnectedBodyActiveStates(activestates);
 }
 
@@ -1762,7 +1779,7 @@ class ManipulatorInfo_pickle_suite
 public:
     static py::tuple getstate(const PyManipulatorInfo& r)
     {
-        return py::make_tuple(r._name, r._sBaseLinkName, r._sEffectorLinkName, r._tLocalTool, r._vChuckingDirection, r._vdirection, r._sIkSolverXMLId, r._vGripperJointNames, r._grippername);
+        return py::make_tuple(r._name, r._sBaseLinkName, r._sEffectorLinkName, r._tLocalTool, r._vChuckingDirection, r._vdirection, r._sIkSolverXMLId, r._vGripperJointNames, r._grippername, r._toolChangerConnectedBodyToolName);
     }
     static void setstate(PyManipulatorInfo& r, py::tuple state) {
         r._name = state[0];
@@ -1778,6 +1795,12 @@ public:
         }
         else {
             r._grippername = py::none_();
+        }
+        if( len(state) > 9 ) {
+            r._toolChangerConnectedBodyToolName = state[9];
+        }
+        else {
+            r._toolChangerConnectedBodyToolName = py::none_();
         }
     }
 };
@@ -1896,6 +1919,7 @@ void init_openravepy_robot()
                              .def_readwrite("_sIkSolverXMLId",&PyManipulatorInfo::_sIkSolverXMLId)
                              .def_readwrite("_vGripperJointNames",&PyManipulatorInfo::_vGripperJointNames)
                              .def_readwrite("_grippername",&PyManipulatorInfo::_grippername)
+                             .def_readwrite("_toolChangerConnectedBodyToolName",&PyManipulatorInfo::_toolChangerConnectedBodyToolName)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                              .def("SerializeJSON", &PyManipulatorInfo::SerializeJSON,
                                   "unitScale"_a = 1.0,
@@ -2224,6 +2248,7 @@ void init_openravepy_robot()
         .def("GetName",&PyRobotBase::PyManipulator::GetName, DOXY_FN(RobotBase::Manipulator,GetName))
         .def("SetName",&PyRobotBase::PyManipulator::SetName, PY_ARGS("name") DOXY_FN(RobotBase::Manipulator,SetName))
         .def("GetGripperName",&PyRobotBase::PyManipulator::GetGripperName, DOXY_FN(RobotBase::Manipulator,GetGripperName))
+        .def("GetToolChangerConnectedBodyToolName",&PyRobotBase::PyManipulator::GetToolChangerConnectedBodyToolName, DOXY_FN(RobotBase::Manipulator,GetToolChangerConnectedBodyToolName))
         .def("GetRobot",&PyRobotBase::PyManipulator::GetRobot, DOXY_FN(RobotBase::Manipulator,GetRobot))
         .def("SetIkSolver",&PyRobotBase::PyManipulator::SetIkSolver, DOXY_FN(RobotBase::Manipulator,SetIkSolver))
         .def("GetIkSolver",&PyRobotBase::PyManipulator::GetIkSolver, DOXY_FN(RobotBase::Manipulator,GetIkSolver))
@@ -2430,6 +2455,7 @@ void init_openravepy_robot()
         .def("GetResolvedManipulators",&PyRobotBase::PyConnectedBody::GetResolvedManipulators, DOXY_FN(RobotBase::ConnectedBody,GetResolvedManipulators))
         .def("GetResolvedAttachedSensors",&PyRobotBase::PyConnectedBody::GetResolvedAttachedSensors, DOXY_FN(RobotBase::ConnectedBody,GetResolvedAttachedSensors))
         .def("GetResolvedGripperInfos",&PyRobotBase::PyConnectedBody::GetResolvedGripperInfos, DOXY_FN(RobotBase::ConnectedBody,GetResolvedGripperInfos))
+        .def("CanProvideManipulator", &PyRobotBase::PyConnectedBody::CanProvideManipulator, DOXY_FN(RobotBase::ConnectedBody,CanProvideManipulator))
         .def("__str__",&PyRobotBase::PyConnectedBody::__str__)
         .def("__repr__",&PyRobotBase::PyConnectedBody::__repr__)
         .def("__unicode__",&PyRobotBase::PyConnectedBody::__unicode__)
