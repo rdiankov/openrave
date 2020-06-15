@@ -457,8 +457,9 @@ Some python code to display data::\n\
             // extend A
             ExtendType et = TreeA->Extend(_sampleConfig, iConnectedA);
 
+            // Maybe should be able to pass options to CheckCollisionConstraint function in SpatialTree and also use it as a check here!
             if (et == ET_Failed && IS_DEBUGLEVEL(Level_Verbose)) {
-                planningstatus.UpdatePlannerStatusInfo(this->_treeForward.GetConstraintReport()->_report);
+                planningstatus.UpdatePlannerStatusInfo(_treeForward.GetConstraintReport()->_report);
             }
 
             // although check isn't necessary, having it improves running times
@@ -473,8 +474,9 @@ Some python code to display data::\n\
 
             et = TreeB->Extend(TreeA->GetVectorConfig(iConnectedA), iConnectedB);     // extend B toward A
 
+            // Maybe should be able to pass options to CheckCollisionConstraint function in SpatialTree and also use it as a check here!
             if (et == ET_Failed && IS_DEBUGLEVEL(Level_Verbose)) {
-                planningstatus.UpdatePlannerStatusInfo(this->_treeBackward.GetConstraintReport()->_report);
+                planningstatus.UpdatePlannerStatusInfo(_treeBackward.GetConstraintReport()->_report);
             }
 
             if( et == ET_Connected ) {
@@ -520,14 +522,17 @@ Some python code to display data::\n\
             planningstatus.description = description;
             planningstatus.statusCode = PS_Failed;
 
+            /*
             if (IS_DEBUGLEVEL(Level_Verbose)) {
-                std::cout << "TEST" << std::endl;
-                std::map< std::pair<KinBody::LinkConstPtr,KinBody::LinkConstPtr>, unsigned int >::iterator it = planningstatus.mCollidingLinksCount.begin();
-                while (it != planningstatus.mCollidingLinksCount.end()) {
-                    std::cout << "linkpair:: " << it->first.first->GetName() << ":" << it->first.second->GetName() << endl;
-                    std::cout << "collisioncount:: " << it->second << endl;
+                std::cout << "Map size: " << planningstatus.mCollidingLinksCount.size() << std::endl;
+                FOREACHC(linkpaircount, planningstatus.mCollidingLinksCount) {
+                    if (linkpaircount->second > 1) {
+                        std::cout << linkpaircount->first.first->GetParent(true)->GetName() << ":" << linkpaircount->first.first->GetName() << ":::" << linkpaircount->first.second->GetParent(true)->GetName() << ":" << linkpaircount->first.second->GetName() << std::endl;
+                        std::cout << "collisioncount:: " << linkpaircount->second << endl;
+                    }
                 }
             }
+            */
 
             return planningstatus;
         }

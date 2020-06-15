@@ -174,13 +174,15 @@ PlannerStatus& PlannerStatus::SetPlannerParameters(PlannerParametersConstPtr par
     return *this;
 }
 
+// This assumes that collisionReport plink1 and plink2 fields are populated! Current implementation does not check if vLinkColliding is populated (when is it populated)?
 void PlannerStatus::UpdatePlannerStatusInfo(CollisionReport& collisionReport)
-{
-    FOREACH(itlinkpair, collisionReport.vLinkColliding) {
-        if (mCollidingLinksCount.find(*itlinkpair) == mCollidingLinksCount.end()) {
-            mCollidingLinksCount[*itlinkpair] = 0;
+{      
+    if (!!collisionReport.plink1 && !!collisionReport.plink2) {
+        std::pair<KinBody::LinkConstPtr,KinBody::LinkConstPtr> collisionPair(collisionReport.plink1, collisionReport.plink2);
+        if (mCollidingLinksCount.find(collisionPair) == mCollidingLinksCount.end()) {
+            mCollidingLinksCount[collisionPair] = 0;
         }
-        mCollidingLinksCount[*itlinkpair] += 1;
+        mCollidingLinksCount[collisionPair] += 1;
     }
 }
 

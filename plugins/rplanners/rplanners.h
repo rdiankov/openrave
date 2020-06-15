@@ -618,7 +618,7 @@ public:
     }
 
     ConstraintFilterReturnPtr GetConstraintReport() {
-        return this->_constraintreturn;
+        return _constraintreturn;
     }
 
 private:
