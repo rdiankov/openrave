@@ -649,10 +649,18 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 pnewmanipulator->_info._grippername = connectedBody._nameprefix + pnewmanipulator->_info._grippername;
             }
 
+            bool bHasSameTool = false;
             FOREACH(ittestmanipulator, _vecManipulators) {
                 if( pnewmanipulator->_info._name == (*ittestmanipulator)->GetName() ) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, got resolved manipulator with same name %s!", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name, ORE_InvalidArguments);
+                    bHasSameTool = true;
+                    break;
                 }
+            }
+
+            if( bHasSameTool ) {
+                RAVELOG_INFO_FORMAT("When adding ConnectedBody %s for robot %s, got resolved manipulator with same name '%s'. Perhaps trying to overwrite? For now, passing through.", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name);
+                pnewmanipulator.reset(); // will not be adding it
+                continue;
             }
 
             {

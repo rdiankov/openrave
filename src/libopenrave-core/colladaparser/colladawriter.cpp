@@ -2296,6 +2296,8 @@ private:
                 RAVELOG_DEBUG_FORMAT("physics info is not written to body %s, so cannot write any grabbed bodies", pbody->GetName());
                 continue;
             }
+            boost::shared_ptr<instance_physics_model_output> ipmout = (*itias)->ipmout;
+
             FOREACHC(itgrabbed,vGrabbedBodies) {
                 boost::shared_ptr<instance_articulated_system_output> grabbedias;
                 FOREACHC(itias2,listModelDatabase) {
@@ -2305,7 +2307,7 @@ private:
                     }
                 }
                 if( !grabbedias ) {
-                    RAVELOG_WARN(str(boost::format("grabbed body %s not saved in COLLADA so cannot reference")%(*itgrabbed)->GetName()));
+                    RAVELOG_WARN_FORMAT("grabbed body %s not saved in COLLADA so cannot reference", (*itgrabbed)->GetName());
                     continue;
                 }
 
@@ -2320,7 +2322,13 @@ private:
                 daeElementRef pconstraint = ptec->add("rigid_constraint");
                 pconstraint->setAttribute("sid",str(boost::format("grab%d")%idynamicconstraint).c_str());
                 idynamicconstraint++;
-                string rigid_body = str(boost::format("%s/%s")%(*itias)->ipmout->ipm->getSid()%(*itias)->ipmout->pmout->vrigidbodysids.at(pgrabbinglink->GetIndex()));
+
+                if( !ipmout->pmout ) {
+                    RAVELOG_WARN_FORMAT("do not have referenced physics module for %s", pbody->GetName());
+                    continue;
+                }
+
+                string rigid_body = str(boost::format("%s/%s")%ipmout->ipm->getSid()%ipmout->pmout->vrigidbodysids.at(pgrabbinglink->GetIndex()));
                 pconstraint->add("ref_attachment")->setAttribute("rigid_body",rigid_body.c_str());
                 rigid_body = str(boost::format("%s/%s")%grabbedias->ipmout->ipm->getSid()%grabbedias->ipmout->pmout->vrigidbodysids.at(0));
                 pconstraint->add("attachment")->setAttribute("rigid_body",rigid_body.c_str());
@@ -2331,7 +2339,7 @@ private:
                     daeElementRef pconstrainttec = pconstraint->add("technique");
                     pconstrainttec->setAttribute("profile","OpenRAVE");
                     FOREACHC(itignorelink, listIgnoreLinks) {
-                        string linksid = (*itias)->ipmout->pmout->vrigidbodysids.at((*itignorelink)->GetIndex());
+                        string linksid = ipmout->pmout->vrigidbodysids.at((*itignorelink)->GetIndex());
                         pconstrainttec->add("ignore_link")->setAttribute("link",linksid.c_str());
                     }
                 }
