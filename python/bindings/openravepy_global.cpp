@@ -466,17 +466,17 @@ int PyConfigurationSpecification::GetDOF() const {
 bool PyConfigurationSpecification::IsValid() const {
     return _spec.IsValid();
 }
-void PyConfigurationSpecification::LoadFromJson(object obj) {
+void PyConfigurationSpecification::DeserializeJSON(object obj) {
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
     ConfigurationSpecification spec;
-    spec.LoadFromJson(doc);
+    spec.DeserializeJSON(doc);
     _Update(spec);
 }
 
-object PyConfigurationSpecification::SaveToJson() {
+object PyConfigurationSpecification::SerializeJSON() {
     rapidjson::Document doc;
-    _spec.SaveToJson(doc);
+    _spec.SerializeJSON(doc);
     return toPyObject(doc);
 }
 
@@ -1590,8 +1590,8 @@ void init_openravepy_global()
             .def(init<const std::string&>(py::args("xmldata")) )
             .def("GetGroupFromName",&PyConfigurationSpecification::GetGroupFromName, return_value_policy<copy_const_reference>(), DOXY_FN(ConfigurationSpecification,GetGroupFromName))
 #endif
-            .def("SaveToJson", &PyConfigurationSpecification::SaveToJson, DOXY_FN(ConfigurationSpecification, SaveToJson))
-            .def("LoadFromJson", &PyConfigurationSpecification::LoadFromJson, PY_ARGS("obj") DOXY_FN(ConfigurationSpecification, LoadFromJson))
+            .def("SerializeJSON", &PyConfigurationSpecification::SerializeJSON, DOXY_FN(ConfigurationSpecification, SerializeJSON))
+            .def("DeserializeJSON", &PyConfigurationSpecification::DeserializeJSON, PY_ARGS("obj") DOXY_FN(ConfigurationSpecification, DeserializeJSON))
             .def("FindCompatibleGroup",&PyConfigurationSpecification::FindCompatibleGroup, DOXY_FN(ConfigurationSpecification,FindCompatibleGroup))
             .def("FindTimeDerivativeGroup",&PyConfigurationSpecification::FindTimeDerivativeGroup, DOXY_FN(ConfigurationSpecification,FindTimeDerivativeGroup))
             .def("GetDOF",&PyConfigurationSpecification::GetDOF,DOXY_FN(ConfigurationSpecification,GetDOF))

@@ -152,7 +152,7 @@ bool CompareGroupsOfIndices(const ConfigurationSpecification& spec, int igroup0,
     return spec._vgroups[igroup0].offset < spec._vgroups[igroup1].offset;
 }
 
-void ConfigurationSpecification::LoadFromJson(const rapidjson::Value& rValue) {
+void ConfigurationSpecification::DeserializeJSON(const rapidjson::Value& rValue) {
     if (rValue.HasMember("groups")) {
         _vgroups.resize(rValue["groups"].Size());
         size_t iGroup = 0;
@@ -166,7 +166,7 @@ void ConfigurationSpecification::LoadFromJson(const rapidjson::Value& rValue) {
     }
 }
 
-void ConfigurationSpecification::SaveToJson(rapidjson::Value& rValue, rapidjson::Document::AllocatorType& alloc) const {
+void ConfigurationSpecification::SerializeJSON(rapidjson::Value& rValue, rapidjson::Document::AllocatorType& alloc) const {
     std::vector<int> vgroupindices(_vgroups.size());
     for (int i = 0; i < (int)vgroupindices.size(); ++i) {
         vgroupindices[i] = i;

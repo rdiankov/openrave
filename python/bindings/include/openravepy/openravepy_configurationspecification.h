@@ -33,8 +33,8 @@ public:
     PyConfigurationSpecification(PyConfigurationSpecificationPtr pyspec);
     virtual ~PyConfigurationSpecification();
 
-    void LoadFromJson(py::object obj);
-    py::object SaveToJson();
+    void DeserializeJSON(py::object obj);
+    py::object SerializeJSON();
 
     int GetDOF() const;
 

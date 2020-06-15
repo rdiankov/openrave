@@ -715,10 +715,10 @@ protected:
 
     /// \brief JSON serializable
     /// TODO: Ideally we should make it a subclass of openravejson::JsonSerializable, but it requires a lot changes to fix the header files for now.
-    virtual void LoadFromJson(const rapidjson::Value& rValue);
-    virtual void SaveToJson(rapidjson::Value& rValue, rapidjson::Document::AllocatorType& alloc) const;
-    virtual void SaveToJson(rapidjson::Document& d) const {
-        SaveToJson(d, d.GetAllocator());
+    virtual void DeserializeJSON(const rapidjson::Value& rValue);
+    virtual void SerializeJSON(rapidjson::Value& rValue, rapidjson::Document::AllocatorType& alloc) const;
+    virtual void SerializeJSON(rapidjson::Document& d) const {
+        SerializeJSON(d, d.GetAllocator());
     }
 
     /// \brief return the group whose name begins with a particular string.
