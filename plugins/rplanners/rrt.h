@@ -367,6 +367,7 @@ Some python code to display data::\n\
         uint32_t basetime = utils::GetMilliTime();
 
         // the main planning loop
+        bool savePlannerStatus = (planningoptions & PO_StatusDetail);
         PlannerStatus planningstatus;
         PlannerParameters::StateSaver savestate(_parameters);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
@@ -455,10 +456,10 @@ Some python code to display data::\n\
             }
 
             // extend A
-            ExtendType et = TreeA->Extend(_sampleConfig, iConnectedA);
+            ExtendType et = TreeA->Extend(_sampleConfig, iConnectedA, false, savePlannerStatus);
 
             // Maybe should be able to pass options to CheckCollisionConstraint function in SpatialTree and also use it as a check here!
-            if (et == ET_Failed && IS_DEBUGLEVEL(Level_Verbose)) {
+            if (et == ET_Failed && savePlannerStatus) {
                 planningstatus.UpdatePlannerStatusInfo(_treeForward.GetConstraintReport()->_report);
             }
 
@@ -472,10 +473,10 @@ Some python code to display data::\n\
                 continue;
             }
 
-            et = TreeB->Extend(TreeA->GetVectorConfig(iConnectedA), iConnectedB);     // extend B toward A
+            et = TreeB->Extend(TreeA->GetVectorConfig(iConnectedA), iConnectedB, false, savePlannerStatus);     // extend B toward A
 
             // Maybe should be able to pass options to CheckCollisionConstraint function in SpatialTree and also use it as a check here!
-            if (et == ET_Failed && IS_DEBUGLEVEL(Level_Verbose)) {
+            if (et == ET_Failed && savePlannerStatus) {
                 planningstatus.UpdatePlannerStatusInfo(_treeBackward.GetConstraintReport()->_report);
             }
 
@@ -521,7 +522,7 @@ Some python code to display data::\n\
             RAVELOG_WARN(description);
             planningstatus.description = description;
             planningstatus.statusCode = PS_Failed;
-            
+
             return planningstatus;
         }
 

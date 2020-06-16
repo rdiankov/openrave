@@ -126,7 +126,7 @@ public:
 
     /// extends toward pNewConfig
     /// \return true if extension reached pNewConfig
-    virtual ExtendType Extend(const std::vector<dReal>& pTargetConfig, NodeBasePtr& lastnode, bool bOneStep=false) = 0;
+    virtual ExtendType Extend(const std::vector<dReal>& pTargetConfig, NodeBasePtr& lastnode, bool bOneStep=false, bool saveStatusData=false) = 0;
 
     /// \brief the dof configured for
     virtual int GetDOF() = 0;
@@ -305,7 +305,7 @@ public:
         RAVELOG_VERBOSE("computed in %fs", (1e-9*(utils::GetNanoPerformanceTime()-starttime)));
     }
 
-    virtual ExtendType Extend(const vector<dReal>& vTargetConfig, NodeBasePtr& lastnode, bool bOneStep=false)
+    virtual ExtendType Extend(const vector<dReal>& vTargetConfig, NodeBasePtr& lastnode, bool bOneStep=false, bool saveStatusData=false)
     {
         // get the nearest neighbor
         std::pair<NodePtr, dReal> nn = _FindNearestNode(vTargetConfig);
@@ -361,13 +361,14 @@ public:
             }
 
             // necessary to pass in _constraintreturn since _neighstatefn can have constraints and it can change the interpolation. Use _constraintreturn->_bHasRampDeviatedFromInterpolation to figure out if something changed.
+            int constraintCheckerOptions = saveStatusData ? 0xffff|CFO_FillCheckedConfiguration|CFO_FillCollisionReport : 0xffff|CFO_FillCheckedConfiguration;
             if( _fromgoal ) {
-                if( params->CheckPathAllConstraints(_vNewConfig, _vCurConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenEnd, 0xffff|CFO_FillCheckedConfiguration, _constraintreturn) != 0 ) {
+                if( params->CheckPathAllConstraints(_vNewConfig, _vCurConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenEnd, constraintCheckerOptions, _constraintreturn) != 0 ) {
                     return bHasAdded ? ET_Sucess : ET_Failed;
                 }
             }
             else {
-                if( params->CheckPathAllConstraints(_vCurConfig, _vNewConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, 0xffff|CFO_FillCheckedConfiguration, _constraintreturn) != 0 ) {
+                if( params->CheckPathAllConstraints(_vCurConfig, _vNewConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, constraintCheckerOptions, _constraintreturn) != 0 ) {
                     return bHasAdded ? ET_Sucess : ET_Failed;
                 }
             }

@@ -62,6 +62,7 @@ enum PlannerStatusCode
 enum PlanningOptions
 {
     PO_NoStatusDetail = 1, ///< if set, then do not output any PlannerStatus details, just the finish code. This allows system to be faster.
+    PO_StatusDetail = 2 /// If set, outputs all PlannerStatus details. This will cause the system to be slower.
 };
 
 /// \brief action to send to the planner while it is planning. This is usually done by the user-specified planner callback function
