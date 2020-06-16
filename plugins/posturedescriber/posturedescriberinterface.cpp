@@ -82,7 +82,7 @@ bool CheckJointTypes(const std::vector<JointPtr>& joints, const std::vector<KinB
 
 /// \brief Derives the relation between joint axes of two consecutive joints using the transform between them
 /// \return a NeighbouringTwoJointsRelation enum for the joint axes' relation
-NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Transform& t, const double tol = 4e-15) {
+NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Transform& t, const double tol) {
     // tol was increased for densowave-VS087A4-AV6 (2e-15), and then RV-35FM (4e-15)
     const Vector zaxis0(0, 0, 1); // z-axis of the first joint
     const Vector zaxis1 = t.rotate(zaxis0); // z-axis of the second joint
@@ -90,9 +90,9 @@ NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Tr
 
     NeighbouringTwoJointsRelation o = NeighbouringTwoJointsRelation::NTJR_Unknown;
     if(1.0 - fabs(dotprod) <= tol) {
-        o |= NeighbouringTwoJointsRelation::NTJR_Parallel; // TO-DO: check overlapping
+        o |= NeighbouringTwoJointsRelation::NTJR_Parallel;
         if(zaxis0.cross(t.trans).lengthsqr3() <= tol) {
-            o |= NeighbouringTwoJointsRelation::NTJR_Intersect;
+            o |= NeighbouringTwoJointsRelation::NTJR_Intersect; // NeighbouringTwoJointsRelation::NTJR_Overlap
         }
     }
     else {
@@ -101,7 +101,7 @@ NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Tr
             o |= NeighbouringTwoJointsRelation::NTJR_Perpendicular;
         }
         if(fabs(zaxis0.cross(zaxis1).dot3(t.trans)) <= tol) {
-            o |= NeighbouringTwoJointsRelation::NTJR_Intersect;
+            o |= NeighbouringTwoJointsRelation::NTJR_Intersect; // NeighbouringTwoJointsRelation::NTJR_Intersect_Perpendicular
         }
     }
 
@@ -117,7 +117,7 @@ NeighbouringTwoJointsRelation AnalyzeTransformBetweenNeighbouringJoints(const Tr
 /// \brief Derives the robot posture support type for a sequence of joints along a kinematics chain
 /// \return a RobotPostureSupportType enum for the kinematics chain
     // const ref
-RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr>& joints) {
+RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr>& joints, const double tol) {
     const size_t njoints = joints.size();
     const std::vector<KinBody::JointType> jointtypes(njoints, KinBody::JointType::JointRevolute); ///< so far these are all revolute
     switch(njoints) {
@@ -132,13 +132,28 @@ RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr
             const Transform tJ4J5 = joints[3]->GetInternalHierarchyRightTransform() * joints[4]->GetInternalHierarchyLeftTransform();
             const Transform tJ5J6 = joints[4]->GetInternalHierarchyRightTransform() * joints[5]->GetInternalHierarchyLeftTransform();
             if(
-                   ((AnalyzeTransformBetweenNeighbouringJoints(tJ1J2) & NeighbouringTwoJointsRelation::NTJR_Perpendicular) != NeighbouringTwoJointsRelation::NTJR_Unknown)
-                && ((AnalyzeTransformBetweenNeighbouringJoints(tJ2J3) & NeighbouringTwoJointsRelation::NTJR_Parallel)      != NeighbouringTwoJointsRelation::NTJR_Unknown)
-                && ((AnalyzeTransformBetweenNeighbouringJoints(tJ3J4) & NeighbouringTwoJointsRelation::NTJR_Perpendicular) != NeighbouringTwoJointsRelation::NTJR_Unknown)
-                && ((AnalyzeTransformBetweenNeighbouringJoints(tJ4J5) == NeighbouringTwoJointsRelation::NTJR_Intersect_Perpendicular))
-                && ((AnalyzeTransformBetweenNeighbouringJoints(tJ5J6) == NeighbouringTwoJointsRelation::NTJR_Intersect_Perpendicular))
+                   ((AnalyzeTransformBetweenNeighbouringJoints(tJ1J2, tol) & NeighbouringTwoJointsRelation::NTJR_Perpendicular) != NeighbouringTwoJointsRelation::NTJR_Unknown)
+                && ((AnalyzeTransformBetweenNeighbouringJoints(tJ2J3, tol) & NeighbouringTwoJointsRelation::NTJR_Parallel)      != NeighbouringTwoJointsRelation::NTJR_Unknown)
+                && ((AnalyzeTransformBetweenNeighbouringJoints(tJ3J4, tol) & NeighbouringTwoJointsRelation::NTJR_Perpendicular) != NeighbouringTwoJointsRelation::NTJR_Unknown)
+                && ((AnalyzeTransformBetweenNeighbouringJoints(tJ4J5, tol) == NeighbouringTwoJointsRelation::NTJR_Intersect_Perpendicular))
+                && ((AnalyzeTransformBetweenNeighbouringJoints(tJ5J6, tol) == NeighbouringTwoJointsRelation::NTJR_Intersect_Perpendicular))
                 ) {
-                return RobotPostureSupportType::RPST_6R_General; ///< general 6R robots with the last joint axes intersecting at a point
+                const Vector J4axis(0, 0, 1); // z-axis of the first joint
+                const Vector J5axis = tJ4J5.rotate(J4axis);
+                // J5 = 0;
+                Transform tJ5;
+                Transform tJ4J6 = tJ4J5 * tJ5 * tJ5J6;
+                Vector J6axis_0 = tJ4J6.rotate(J4axis);
+                const double triprod0 = J4axis.cross(J6axis_0).dot(tJ4J6.trans);
+                tJ5.rot = quatFromAxisAngle(J4axis, M_PI/2.0);
+                tJ4J6 = tJ4J5 * tJ5 * tJ5J6;
+                Vector J6axis_1 = tJ4J6.rotate(J4axis);
+                const double triprod1 = J4axis.cross(J6axis_1).dot(tJ4J6.trans);
+                
+                if (fabs(triprod0) < tol && fabs(triprod1) < tol)
+                {
+                    return RobotPostureSupportType::RPST_6R_General; ///< general 6R robots with the last joint axes intersecting at a point
+                }
             }
 
             break;
@@ -153,9 +168,9 @@ RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr
             const Transform tJ2J3 = joints[1]->GetInternalHierarchyRightTransform() * joints[2]->GetInternalHierarchyLeftTransform();
             const Transform tJ3J4 = joints[2]->GetInternalHierarchyRightTransform() * joints[3]->GetInternalHierarchyLeftTransform();
             if(
-                   AnalyzeTransformBetweenNeighbouringJoints(tJ1J2) == NeighbouringTwoJointsRelation::NTJR_Intersect_Perpendicular
-                && AnalyzeTransformBetweenNeighbouringJoints(tJ2J3) == NeighbouringTwoJointsRelation::NTJR_Parallel
-                && AnalyzeTransformBetweenNeighbouringJoints(tJ3J4) == NeighbouringTwoJointsRelation::NTJR_Parallel
+                   AnalyzeTransformBetweenNeighbouringJoints(tJ1J2, tol) == NeighbouringTwoJointsRelation::NTJR_Intersect_Perpendicular
+                && AnalyzeTransformBetweenNeighbouringJoints(tJ2J3, tol) == NeighbouringTwoJointsRelation::NTJR_Parallel
+                && AnalyzeTransformBetweenNeighbouringJoints(tJ3J4, tol) == NeighbouringTwoJointsRelation::NTJR_Parallel
                 ) {
                 return RobotPostureSupportType::RPST_4R_Type_A; ///< a special type of 4R robot the last three parallel joint axes perpendicular to the first joint axis
             }
@@ -171,8 +186,8 @@ RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr
             const Transform tJ1J2 = joints[0]->GetInternalHierarchyRightTransform() * joints[1]->GetInternalHierarchyLeftTransform();
             const Transform tJ2J3 = joints[1]->GetInternalHierarchyRightTransform() * joints[2]->GetInternalHierarchyLeftTransform();
             if(
-                   ((AnalyzeTransformBetweenNeighbouringJoints(tJ1J2) & NeighbouringTwoJointsRelation::NTJR_Parallel) != NeighbouringTwoJointsRelation::NTJR_Unknown)
-                && ((AnalyzeTransformBetweenNeighbouringJoints(tJ2J3) & NeighbouringTwoJointsRelation::NTJR_Parallel) != NeighbouringTwoJointsRelation::NTJR_Unknown)
+                   ((AnalyzeTransformBetweenNeighbouringJoints(tJ1J2, tol) & NeighbouringTwoJointsRelation::NTJR_Parallel) != NeighbouringTwoJointsRelation::NTJR_Unknown)
+                && ((AnalyzeTransformBetweenNeighbouringJoints(tJ2J3, tol) & NeighbouringTwoJointsRelation::NTJR_Parallel) != NeighbouringTwoJointsRelation::NTJR_Unknown)
                 ) {
                 return RobotPostureSupportType::RPST_RRR_Parallel; ///< a type of robot that has only three revolute joints whose axes are parallel
             }
@@ -300,7 +315,7 @@ bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
         _armindices.push_back(joint->GetDOFIndex()); // collect arm indices
     }
 
-    _supporttype = DeriveRobotPostureSupportType(_joints);
+    _supporttype = DeriveRobotPostureSupportType(_joints, _fGeometryTol);
     switch(_supporttype) {
     case RobotPostureSupportType::RPST_6R_General: {
         _posturefn = ComputePostureStates6RGeneral;
@@ -359,7 +374,7 @@ bool PostureDescriber::Supports(const LinkPair& kinematicsChain) const {
 
     std::vector<JointPtr> joints;
     _GetJointsFromKinematicsChain(kinematicsChain, joints);
-    const RobotPostureSupportType supporttype = DeriveRobotPostureSupportType(joints);
+    const RobotPostureSupportType supporttype = DeriveRobotPostureSupportType(joints, _fGeometryTol);
     if(supporttype != RobotPostureSupportType::RPST_NoSupport) {
         return true;
     }
