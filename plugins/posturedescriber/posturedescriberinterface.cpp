@@ -333,10 +333,14 @@ void PostureDescriber::_GetJointsFromKinematicsChain(const LinkPair& kinematicsC
     const int eelinkind = kinematicsChain[1]->GetIndex();
     const KinBodyPtr probot = kinematicsChain[0]->GetParent();
     probot->GetChain(baselinkind, eelinkind, joints);
-    // std::string typestr;
     for(std::vector<JointPtr>::iterator it = begin(joints); it != end(joints); ) {
-        if((*it)->IsStatic() || (*it)->GetDOFIndex()==-1) {
+        if((*it)->IsStatic()) {
             it = joints.erase(it);
+        }
+        else if((*it)->IsMimic()) {
+            RAVELOG_WARN_FORMAT("Do not support mimic joint %s in kinematics chain", (*it)->GetName());
+            joints.clear();
+            return;
         }
         else {
             ++it;
