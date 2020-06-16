@@ -99,12 +99,16 @@ int AddStatesWithLimitCheck(std::vector<dReal>& q, const std::vector<dReal>& qde
     return status;
 }
 
-PlannerStatus::PlannerStatus() {}
+PlannerStatus::PlannerStatus(): statusCode(0)
+{
+}
 
 PlannerStatus::PlannerStatus(const std::string& description, const int statusCode, CollisionReportPtr report) :
     description(description),
     statusCode(statusCode),
-    report(report) {}
+    report(report)
+{
+}
 
 PlannerStatus::PlannerStatus(const int statusCode) :
     PlannerStatus("", statusCode)
@@ -175,14 +179,16 @@ PlannerStatus& PlannerStatus::SetPlannerParameters(PlannerParametersConstPtr par
 }
 
 // This assumes that collisionReport plink1 and plink2 fields are populated! Current implementation does not check if vLinkColliding is populated (when is it populated)?
-void PlannerStatus::UpdatePlannerStatusInfo(CollisionReport& collisionReport)
+void PlannerStatus::IncrementCollisionPairCount(CollisionReport& collisionReport)
 {      
     if (!!collisionReport.plink1 && !!collisionReport.plink2) {
         std::pair<KinBody::LinkConstPtr,KinBody::LinkConstPtr> collisionPair(collisionReport.plink1, collisionReport.plink2);
-        if (mCollidingLinksCount.find(collisionPair) == mCollidingLinksCount.end()) {
-            mCollidingLinksCount[collisionPair] = 0;
+        std::map< std::pair<KinBody::LinkConstPtr,KinBody::LinkConstPtr>, unsigned int >::iterator collideLinkPairKey = mCollidingLinksCount.find(collisionPair);
+        if (collideLinkPairKey != mCollidingLinksCount.end()) {
+            collideLinkPairKey->second += 1;
+        } else {
+            mCollidingLinksCount[collisionPair] = 1;
         }
-        mCollidingLinksCount[collisionPair] += 1;
     }
 }
 

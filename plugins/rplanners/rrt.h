@@ -460,7 +460,7 @@ Some python code to display data::\n\
 
             // Maybe should be able to pass options to CheckCollisionConstraint function in SpatialTree and also use it as a check here!
             if (et == ET_Failed && savePlannerStatus) {
-                planningstatus.UpdatePlannerStatusInfo(_treeForward.GetConstraintReport()->_report);
+                planningstatus.IncrementCollisionPairCount(_treeForward.GetConstraintReport()->_report);
             }
 
             // although check isn't necessary, having it improves running times
@@ -477,7 +477,7 @@ Some python code to display data::\n\
 
             // Maybe should be able to pass options to CheckCollisionConstraint function in SpatialTree and also use it as a check here!
             if (et == ET_Failed && savePlannerStatus) {
-                planningstatus.UpdatePlannerStatusInfo(_treeBackward.GetConstraintReport()->_report);
+                planningstatus.IncrementCollisionPairCount(_treeBackward.GetConstraintReport()->_report);
             }
 
             if( et == ET_Connected ) {

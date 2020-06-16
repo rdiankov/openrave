@@ -608,7 +608,7 @@ public:
         }
     }
 
-    ConstraintFilterReturnPtr GetConstraintReport() {
+    ConstraintFilterReturnPtr GetConstraintReport() const {
         return _constraintreturn;
     }
 

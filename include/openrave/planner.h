@@ -498,7 +498,7 @@ public:
     PlannerStatus& SetErrorOrigin(const std::string& errorOrigin);
     PlannerStatus& SetPlannerParameters(PlannerParametersConstPtr parameters);
 
-    void UpdatePlannerStatusInfo(CollisionReport& collisionReport); // This assumes that collisionReport plink1 and plink2 fields are populated!
+    void IncrementCollisionPairCount(CollisionReport& collisionReport); // This assumes that collisionReport plink1 and plink2 fields are populated!
     void SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Document::AllocatorType& alloc) const;
 
     inline uint32_t GetStatusCode() const {
