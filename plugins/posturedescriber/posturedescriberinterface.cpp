@@ -139,23 +139,20 @@ RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr
                 && ((AnalyzeTransformBetweenNeighbouringJoints(tJ5J6, tol) == NeighbouringTwoJointsRelation::NTJR_Intersect_Perpendicular))
                 ) {
                 const Vector J4axis(0, 0, 1); // z-axis of the first joint
-                const Vector J5axis = tJ4J5.rotate(J4axis);
-                // J5 = 0;
-                Transform tJ5;
-                Transform tJ4J6 = tJ4J5 * tJ5 * tJ5J6;
-                Vector J6axis_0 = tJ4J6.rotate(J4axis);
-                const double triprod0 = J4axis.cross(J6axis_0).dot(tJ4J6.trans);
-                tJ5.rot = quatFromAxisAngle(J4axis, M_PI/2.0);
-                tJ4J6 = tJ4J5 * tJ5 * tJ5J6;
-                Vector J6axis_1 = tJ4J6.rotate(J4axis);
-                const double triprod1 = J4axis.cross(J6axis_1).dot(tJ4J6.trans);
-                
-                if (fabs(triprod0) < tol && fabs(triprod1) < tol)
-                {
-                    return RobotPostureSupportType::RPST_6R_General; ///< general 6R robots with the last joint axes intersecting at a point
+                Transform tJ5, tJ4J6;
+                Vector J6axis;
+                double triprod = 0.0;
+                for(int i = 0; i < 4; ++i) {
+                    tJ5.rot = quatFromAxisAngle(J4axis, /*J5 = */M_PI/2.0 * i);
+                    tJ4J6 = tJ4J5 * tJ5 * tJ5J6;
+                    J6axis = tJ4J6.rotate(J4axis);
+                    triprod = J4axis.cross(J6axis).dot(tJ4J6.trans);
+                    if(fabs(triprod) > tol) {
+                        return RobotPostureSupportType::RPST_NoSupport;
+                    }
                 }
+                return RobotPostureSupportType::RPST_6R_General; ///< general 6R robots with the last joint axes intersecting at a point
             }
-
             break;
         }
 
