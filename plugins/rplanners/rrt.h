@@ -521,19 +521,7 @@ Some python code to display data::\n\
             RAVELOG_WARN(description);
             planningstatus.description = description;
             planningstatus.statusCode = PS_Failed;
-
-            /*
-            if (IS_DEBUGLEVEL(Level_Verbose)) {
-                std::cout << "Map size: " << planningstatus.mCollidingLinksCount.size() << std::endl;
-                FOREACHC(linkpaircount, planningstatus.mCollidingLinksCount) {
-                    if (linkpaircount->second > 1) {
-                        std::cout << linkpaircount->first.first->GetParent(true)->GetName() << ":" << linkpaircount->first.first->GetName() << ":::" << linkpaircount->first.second->GetParent(true)->GetName() << ":" << linkpaircount->first.second->GetName() << std::endl;
-                        std::cout << "collisioncount:: " << linkpaircount->second << endl;
-                    }
-                }
-            }
-            */
-
+            
             return planningstatus;
         }
 
