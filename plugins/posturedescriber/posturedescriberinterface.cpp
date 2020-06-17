@@ -123,7 +123,7 @@ RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr
     switch(njoints) {
         case 6: {
             if(!CheckJointTypes(joints, jointtypes)) {
-                RAVELOG_WARN("Not all 6 joints are purely revolute");
+                RAVELOG_WARN_FORMAT("Not all %d joints are purely revolute", njoints);
                 return RobotPostureSupportType::RPST_NoSupport;
             }
             const Transform tJ1J2 = joints[0]->GetInternalHierarchyRightTransform() * joints[1]->GetInternalHierarchyLeftTransform();
@@ -138,14 +138,20 @@ RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr
                 && ((AnalyzeTransformBetweenNeighbouringJoints(tJ4J5, tol) == NeighbouringTwoJointsRelation::NTJR_Intersect_Perpendicular))
                 && ((AnalyzeTransformBetweenNeighbouringJoints(tJ5J6, tol) == NeighbouringTwoJointsRelation::NTJR_Intersect_Perpendicular))
                 ) {
-                const Vector J4axis(0, 0, 1); // z-axis of the first joint
+
+                // Test J4's and J6's axes also intersect by rotating J5 by 0, pi/2, pi, 3*pi/2
+                // All transforms and vectors below are in J4 frame
+                const Vector zaxis(0, 0, 1);
+                const Vector& J4axis = zaxis;
                 Transform tJ5, tJ4J6;
                 Vector J6axis;
                 double triprod = 0.0;
-                for(int i = 0; i < 4; ++i) {
-                    tJ5.rot = quatFromAxisAngle(J4axis, /*J5 = */M_PI/2.0 * i);
+                const int nRotations = 4;
+                const double fIncrement = M_PI * 2.0/(double) nRotations;
+                for(int i = 0; i < nRotations; ++i) {
+                    tJ5.rot = quatFromAxisAngle(zaxis, /*J5 = */fIncrement * i);
                     tJ4J6 = tJ4J5 * tJ5 * tJ5J6;
-                    J6axis = tJ4J6.rotate(J4axis);
+                    J6axis = tJ4J6.rotate(zaxis);
                     triprod = J4axis.cross(J6axis).dot(tJ4J6.trans);
                     if(fabs(triprod) > tol) {
                         return RobotPostureSupportType::RPST_NoSupport;
@@ -158,7 +164,7 @@ RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr
 
         case 4: {
             if(!CheckJointTypes(joints, jointtypes)) {
-                RAVELOG_WARN("Not all 4 joints are purely revolute");
+                RAVELOG_WARN_FORMAT("Not all %d joints are purely revolute", njoints);
                 return RobotPostureSupportType::RPST_NoSupport;
             }
             const Transform tJ1J2 = joints[0]->GetInternalHierarchyRightTransform() * joints[1]->GetInternalHierarchyLeftTransform();
@@ -176,7 +182,7 @@ RobotPostureSupportType DeriveRobotPostureSupportType(const std::vector<JointPtr
 
         case 3: {
             if(!CheckJointTypes(joints, jointtypes)) {
-                RAVELOG_WARN("Not all 3 joints are purely revolute");
+                RAVELOG_WARN_FORMAT("Not all %d joints are purely revolute", njoints);
                 return RobotPostureSupportType::RPST_NoSupport;
             }
 
@@ -345,14 +351,29 @@ void PostureDescriber::_GetJointsFromKinematicsChain(const LinkPair& kinematicsC
     const int eelinkind = kinematicsChain[1]->GetIndex();
     const KinBodyPtr probot = kinematicsChain[0]->GetParent();
     probot->GetChain(baselinkind, eelinkind, joints);
-    for(std::vector<JointPtr>::iterator it = begin(joints); it != end(joints); ) {
-        if((*it)->IsStatic()) {
-            it = joints.erase(it);
+
+    // Step 1: Check whether all mimic joints are "virtual", in the sense that we can combine each with its next active joint
+    int njoints = joints.size();
+    for(int ijoint = 0; ijoint < njoints - 1; ++ijoint) {
+        const JointPtr& currJoint = joints[ijoint];
+        if(!currJoint->IsMimic()) {
+            continue;
         }
-        else if((*it)->IsMimic()) {
-            RAVELOG_WARN_FORMAT("Do not support mimic joint %s in kinematics chain", (*it)->GetName());
+        const JointPtr& nextJoint = joints[ijoint + 1];
+        const Transform t = currJoint->GetInternalHierarchyRightTransform() * nextJoint->GetInternalHierarchyLeftTransform();
+        if(t.trans.lengthsqr3() > _fTol) {
+            std::stringstream ss;
+            ss << "Transform between mimic joint " << currJoint->GetName() << " and its next joint " << nextJoint->GetName() << " has a nonzero translate, so we cannot support; transform is " << t;
+            RAVELOG_WARN_FORMAT("%s", ss.str());
             joints.clear();
             return;
+        }
+    }
+
+    // Step 2: Remove static and mimic joints
+    for(std::vector<JointPtr>::iterator it = begin(joints); it != end(joints); ) {
+        if((*it)->IsStatic() || (*it)->IsMimic() || (*it)->GetDOFIndex()==-1) {
+            it = joints.erase(it);
         }
         else {
             ++it;
