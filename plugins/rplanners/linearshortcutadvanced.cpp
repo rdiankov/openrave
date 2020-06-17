@@ -18,7 +18,7 @@
 
 // #define SHORTCUT_ONEDOF_DEBUG
 // #define PROGRESS_DEBUG
-#define LINEAR_SMOOTHER_DEBUG
+// #define LINEAR_SMOOTHER_DEBUG
 
 class ShortcutLinearPlanner : public PlannerBase
 {
@@ -244,7 +244,7 @@ protected:
 
             // check if the nodes can be connected by a straight line
             _filterreturn->Clear();
-            int ret = parameters->CheckPathAllConstraints(itstartnode->first, itendnode->first, std::vector<dReal>(), std::vector<dReal>(), 0, IT_Open, 0xffff|CFO_FillCheckedConfiguration|CFO_UseTighterNeighStateConstraints, _filterreturn);
+            int ret = parameters->CheckPathAllConstraints(itstartnode->first, itendnode->first, std::vector<dReal>(), std::vector<dReal>(), 0, IT_Open, 0xffff|CFO_FillCheckedConfiguration|CFO_UseTighterNeighStateConstraintsForShortcutting, _filterreturn);
             if ( ret != 0 ) {
 #ifdef PROGRESS_DEBUG
                 ss.str(""); ss.clear();
@@ -459,7 +459,7 @@ protected:
                         break;
                     }
 
-                    int neighstatus = parameters->_neighstatefn(vnextconfig, vdeltaconfig, NSO_TighterConstraints);
+                    int neighstatus = parameters->_neighstatefn(vnextconfig, vdeltaconfig, NSO_TighterConstraintsForShortcutting);
                     if( neighstatus == NSS_Failed ) {
                         RAVELOG_DEBUG_FORMAT("env=%d, iter=%d/%d, failed neighstatus %d", GetEnv()->GetId()%itercount%numiters%neighstatus);
                         bSuccess = false;
@@ -477,7 +477,7 @@ protected:
                 }
 
                 _filterreturn->Clear();
-                int ret = parameters->CheckPathAllConstraints(vcurconfig, vnextconfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, 0xffff|CFO_FillCheckedConfiguration|CFO_UseTighterNeighStateConstraints, _filterreturn);
+                int ret = parameters->CheckPathAllConstraints(vcurconfig, vnextconfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, 0xffff|CFO_FillCheckedConfiguration|CFO_UseTighterNeighStateConstraintsForShortcutting, _filterreturn);
                 if ( ret != 0 ) {
 #ifdef PROGRESS_DEBUG
                     ss.str(""); ss.clear();
@@ -617,10 +617,10 @@ protected:
                     FOREACHC(it, dq2) {
                         *it *= mult;
                     }
-                    neighstatus = parameters->_neighstatefn(qcur, dq2, NSO_TighterConstraints);
+                    neighstatus = parameters->_neighstatefn(qcur, dq2, NSO_TighterConstraintsForShortcutting);
                 }
                 else {
-                    neighstatus = parameters->_neighstatefn(qcur, dq, NSO_TighterConstraints);
+                    neighstatus = parameters->_neighstatefn(qcur, dq, NSO_TighterConstraintsForShortcutting);
                 }
                 if( neighstatus == NSS_SuccessfulWithDeviation ) {
                     RAVELOG_WARN_FORMAT("env=%d, neighstatefn returned different configuration than qcur, stop subsampling segment (%d, %d) at step %d/%d, numwaypoints=%d", GetEnv()->GetId()%(ipoint - 1)%ipoint%f%numSteps%ptraj->GetNumWaypoints());

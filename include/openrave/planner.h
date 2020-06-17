@@ -37,8 +37,8 @@ enum ConstraintFilterOptions
     CFO_CheckWithPerturbation=0x00010000, ///< when checking collisions, perturbs all the joint values a little and checks again. This forces the line to be away from grazing collisions.
     CFO_FillCheckedConfiguration=0x00020000, ///< if set, will fill \ref ConstraintFilterReturn::_configurations and \ref ConstraintFilterReturn::_configurationtimes
     CFO_FillCollisionReport=0x00040000, ///< if set, will fill \ref ConstraintFilterReturn::_report if in environment or self-collision
-    CFO_UseTighterNeighStateConstraints=0x00080000, ///< if set, will use \ref NSO_TighterConstraints for the _neighstatefn
-    CFO_UseMoreTighterNeighStateConstraints=0x00100000, ///< if set, will use \ref NSO_MoreTighterConstraints for the _neighstatefn
+    CFO_UseTighterNeighStateConstraintsForShortcutting=0x00080000, ///< if set, will use \ref NSO_TighterConstraintsForShortcutting for the _neighstatefn
+    CFO_UseTighterNeighStateConstraintsForSampling=0x00100000, ///< if set, will use \ref NSO_TighterConstraintsForSampling for the _neighstatefn
     CFO_FinalValuesNotReached=0x40000000, ///< if set, then the final values of the interpolation have not been reached, although a close interpolation has been computed. This happens when manipulator constraints are used.
     CFO_StateSettingError=0x80000000, ///< error when the state setting function (or neighbor function) breaks
     CFO_RecommendedOptions = 0x0000ffff, ///< recommended options that all plugins should use by default
@@ -81,8 +81,8 @@ enum NeighborStateOptions
 {
     NSO_GoalToInitial=1, ///< if set, then q is coming from a goal state, else it is coming from an initial state.
     NSO_OnlyHardConstraints=2, ///< if set, then the new neighbor should be as close as possible to q+qdelta. This is used in smoothers when the path is already determined and user just wants to verify that hard constraints are met only; do not modify q+qdelta unless hard constraints fail.
-    NSO_TighterConstraints=4, ///< if set, then the new neighbor should be as close as possible to q+qdelta. the new neighbor needs to preserve tighter constraint than hard constraint to give a room for the later processing. This is used in shortcutter when the path is already determined and user just wants to verify that tighter constraints are met only; do not modify q+qdelta unless tighter constraints fail.
-    NSO_MoreTighterConstraints=8, ///< if set, then the new neighbor needs to preserve more tighter constraint than NSO_TighterConstraints to give a room for the later processing. and if set, then it can prioritize the constraints and only use q+qdelta as a hint.
+    NSO_TighterConstraintsForShortcutting=4, ///< if set, then the new neighbor should be as close as possible to q+qdelta. the new neighbor needs to preserve tighter constraint than hard constraint to give a room for the later processing. This is used in shortcutter when the path is already determined and user just wants to verify that tighter constraints are met only; do not modify q+qdelta unless tighter constraints fail.
+    NSO_TighterConstraintsForSampling=8, ///< if set, then the new neighbor needs to preserve more tighter constraint than NSO_TighterConstraintsForShortcutting to give a room for the later processing. and if set, then it can prioritize the constraints and only use q+qdelta as a hint.
 };
 
 /// \brief the status of _neighstatefn method. The first bit indicates if _neighstatefn call is successful. The second bit indicates, in case the call is successful, if the returned state is obtained from linear interpolation.

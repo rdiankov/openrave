@@ -2330,11 +2330,11 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     //     }
     // }
     int neighstateoptions = NSO_OnlyHardConstraints;
-    if( options&CFO_UseMoreTighterNeighStateConstraints ) {
-        neighstateoptions = NSO_MoreTighterConstraints;
+    if( options&CFO_UseTighterNeighStateConstraintsForSampling ) {
+        neighstateoptions = NSO_TighterConstraintsForSampling;
     }
-    else if( options&CFO_UseTighterNeighStateConstraints ) {
-        neighstateoptions = NSO_TighterConstraints;
+    else if( options&CFO_UseTighterNeighStateConstraintsForShortcutting ) {
+        neighstateoptions = NSO_TighterConstraintsForShortcutting;
     }
 
     // bHasRampDeviatedFromInterpolation indicates if all the checked configurations deviate from the expected interpolation connecting q0 and q1.
