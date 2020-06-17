@@ -62,7 +62,7 @@ enum PlannerStatusCode
 enum PlanningOptions
 {
     PO_NoStatusDetail = 1, ///< if set, then do not output any PlannerStatus details, just the finish code. This allows system to be faster.
-    PO_StatusDetail = 2 /// If set, outputs all PlannerStatus details. This will cause the system to be slower.
+    PO_AddCollisionReport = 1 << 1 /// If set, Fill in collision to aid in planning failure debugging. This will slow down the system.
 };
 
 /// \brief action to send to the planner while it is planning. This is usually done by the user-specified planner callback function
@@ -498,7 +498,7 @@ public:
     PlannerStatus& SetErrorOrigin(const std::string& errorOrigin);
     PlannerStatus& SetPlannerParameters(PlannerParametersConstPtr parameters);
 
-    void IncrementCollisionPairCount(CollisionReport& collisionReport); // This assumes that collisionReport plink1 and plink2 fields are populated!
+    void AddCollisionReport(const CollisionReport& collisionReport); // This assumes that collisionReport plink1 and plink2 fields are populated!
     void SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Document::AllocatorType& alloc) const;
 
     inline uint32_t GetStatusCode() const {

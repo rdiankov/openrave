@@ -365,9 +365,13 @@ Some python code to display data::\n\
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         uint32_t basetime = utils::GetMilliTime();
+        
+        int constraintFilterOptions = 0xffff|CFO_FillCheckedConfiguration;
+        if (planningoptions & PO_AddCollisionReport) {
+            constraintFilterOptions = constraintFilterOptions|CFO_FillCollisionReport;
+        }
 
         // the main planning loop
-        bool savePlannerStatus = (planningoptions & PO_StatusDetail);
         PlannerStatus planningstatus;
         PlannerParameters::StateSaver savestate(_parameters);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
@@ -456,11 +460,11 @@ Some python code to display data::\n\
             }
 
             // extend A
-            ExtendType et = TreeA->Extend(_sampleConfig, iConnectedA, false, savePlannerStatus);
+            ExtendType et = TreeA->Extend(_sampleConfig, iConnectedA, false, constraintFilterOptions);
 
             // Maybe should be able to pass options to CheckCollisionConstraint function in SpatialTree and also use it as a check here!
-            if (et == ET_Failed && savePlannerStatus) {
-                planningstatus.IncrementCollisionPairCount(_treeForward.GetConstraintReport()->_report);
+            if (et == ET_Failed && constraintFilterOptions) {
+                planningstatus.AddCollisionReport(_treeForward.GetConstraintReport()->_report);
             }
 
             // although check isn't necessary, having it improves running times
@@ -473,11 +477,11 @@ Some python code to display data::\n\
                 continue;
             }
 
-            et = TreeB->Extend(TreeA->GetVectorConfig(iConnectedA), iConnectedB, false, savePlannerStatus);     // extend B toward A
+            et = TreeB->Extend(TreeA->GetVectorConfig(iConnectedA), iConnectedB, false, constraintFilterOptions);     // extend B toward A
 
             // Maybe should be able to pass options to CheckCollisionConstraint function in SpatialTree and also use it as a check here!
-            if (et == ET_Failed && savePlannerStatus) {
-                planningstatus.IncrementCollisionPairCount(_treeBackward.GetConstraintReport()->_report);
+            if (et == ET_Failed && constraintFilterOptions) {
+                planningstatus.AddCollisionReport(_treeBackward.GetConstraintReport()->_report);
             }
 
             if( et == ET_Connected ) {
