@@ -108,6 +108,8 @@ PlannerStatus::PlannerStatus(const std::string& description, const int statusCod
     statusCode(statusCode),
     report(report)
 {
+    // not sure if this works...    
+    errorOrigin = str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__);
 }
 
 PlannerStatus::PlannerStatus(const int statusCode) :
