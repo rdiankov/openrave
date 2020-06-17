@@ -368,7 +368,6 @@ Some python code to display data::\n\
         
         int constraintFilterOptions = 0xffff|CFO_FillCheckedConfiguration;
         if (planningoptions & PO_AddCollisionReport) {
-            std::cout << "2" << std::endl;
             constraintFilterOptions = constraintFilterOptions|CFO_FillCollisionReport;
         }
 
