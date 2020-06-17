@@ -516,8 +516,14 @@ public:
     IkParameterization ikparam;             // Optional, the ik parameter that failed to find a solution.
     std::vector<dReal> jointValues;         // Optional, the robot's joint values in rad or m
     CollisionReportPtr report;              ///< Optional,  collision report at the time of the error. Ideally should contents contacts information.
-    std::map< std::pair<KinBody::LinkConstPtr,KinBody::LinkConstPtr>, unsigned int > mCollidingLinksCount; // Counter for colliding links
     std::string errorOrigin;                // Auto, a string representing the code path of the error. Automatically filled on construction.
+
+    std::map< std::pair<KinBody::LinkConstPtr,KinBody::LinkConstPtr>, unsigned int > mCollidingLinksCount; // Counter for colliding links
+    uint32_t numIterations;
+    uint32_t maxNumIterations;
+    uint32_t elapsedPlanningTime;
+    uint32_t maxPlanningTime;
+
 };
 
 #define OPENRAVE_PLANNER_STATUS(...) PlannerStatus(__VA_ARGS__).SetErrorOrigin(str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__)).SetPlannerParameters(_parameters);

@@ -527,6 +527,11 @@ Some python code to display data::\n\
             planningstatus.description = description;
             planningstatus.statusCode = PS_Failed;
 
+            planningstatus.numIterations = iter/3;
+            planningstatus.maxNumIterations = _parameters->_nMaxIterations;
+            planningstatus.elapsedPlanningTime = utils::GetMilliTime() - basetime;
+            planningstatus.maxPlanningTime = _parameters->_nMaxPlanningTime;
+
             return planningstatus;
         }
 
