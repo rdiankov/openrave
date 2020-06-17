@@ -1349,6 +1349,10 @@ private:
             RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
             FOREACH(itconnectedBody, probot->GetConnectedBodies()) {
                 RobotBase::ConnectedBody& connectedBody = **itconnectedBody;
+                if( (*itconnectedBody)->IsActive() == 0 ) {
+                    // not active, so will not be mapped onto real robot
+                    continue;
+                }
                 std::vector<KinBody::LinkPtr> vResolvedLinks;
                 connectedBody.GetResolvedLinks(vResolvedLinks);
                 FOREACHC(itResolvedLink, vResolvedLinks) {
@@ -1786,6 +1790,10 @@ private:
         if( pbody->IsRobot() ) {
             RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
             FOREACH(itConnectedBody, probot->GetConnectedBodies()) {
+                if( (*itConnectedBody)->IsActive() == 0 ) {
+                    // not active, so will not be mapped onto real robot
+                    continue;
+                }
                 std::vector<KinBody::LinkPtr> vResolvedLinks;
                 (*itConnectedBody)->GetResolvedLinks(vResolvedLinks);
                 vConnectedLinks.insert(vConnectedLinks.end(), vResolvedLinks.begin(), vResolvedLinks.end());
@@ -2288,6 +2296,8 @@ private:
                 RAVELOG_DEBUG_FORMAT("physics info is not written to body %s, so cannot write any grabbed bodies", pbody->GetName());
                 continue;
             }
+            boost::shared_ptr<instance_physics_model_output> ipmout = (*itias)->ipmout;
+
             FOREACHC(itgrabbed,vGrabbedBodies) {
                 boost::shared_ptr<instance_articulated_system_output> grabbedias;
                 FOREACHC(itias2,listModelDatabase) {
@@ -2297,7 +2307,7 @@ private:
                     }
                 }
                 if( !grabbedias ) {
-                    RAVELOG_WARN(str(boost::format("grabbed body %s not saved in COLLADA so cannot reference")%(*itgrabbed)->GetName()));
+                    RAVELOG_WARN_FORMAT("grabbed body %s not saved in COLLADA so cannot reference", (*itgrabbed)->GetName());
                     continue;
                 }
 
@@ -2312,7 +2322,13 @@ private:
                 daeElementRef pconstraint = ptec->add("rigid_constraint");
                 pconstraint->setAttribute("sid",str(boost::format("grab%d")%idynamicconstraint).c_str());
                 idynamicconstraint++;
-                string rigid_body = str(boost::format("%s/%s")%(*itias)->ipmout->ipm->getSid()%(*itias)->ipmout->pmout->vrigidbodysids.at(pgrabbinglink->GetIndex()));
+
+                if( !ipmout->pmout ) {
+                    RAVELOG_WARN_FORMAT("do not have referenced physics module for %s", pbody->GetName());
+                    continue;
+                }
+
+                string rigid_body = str(boost::format("%s/%s")%ipmout->ipm->getSid()%ipmout->pmout->vrigidbodysids.at(pgrabbinglink->GetIndex()));
                 pconstraint->add("ref_attachment")->setAttribute("rigid_body",rigid_body.c_str());
                 rigid_body = str(boost::format("%s/%s")%grabbedias->ipmout->ipm->getSid()%grabbedias->ipmout->pmout->vrigidbodysids.at(0));
                 pconstraint->add("attachment")->setAttribute("rigid_body",rigid_body.c_str());
@@ -2323,8 +2339,14 @@ private:
                     daeElementRef pconstrainttec = pconstraint->add("technique");
                     pconstrainttec->setAttribute("profile","OpenRAVE");
                     FOREACHC(itignorelink, listIgnoreLinks) {
-                        string linksid = (*itias)->ipmout->pmout->vrigidbodysids.at((*itignorelink)->GetIndex());
-                        pconstrainttec->add("ignore_link")->setAttribute("link",linksid.c_str());
+                        KinBody::LinkConstPtr& pignorelink = *itignorelink;
+                        if( pignorelink->GetIndex() < (int)ipmout->pmout->vrigidbodysids.size() ) {
+                            string linksid = ipmout->pmout->vrigidbodysids.at(pignorelink->GetIndex());
+                            pconstrainttec->add("ignore_link")->setAttribute("link",linksid.c_str());
+                        }
+                        else {
+                            RAVELOG_WARN_FORMAT("could not get linksid of link %s (index %d) when vrigidbodysids.size=%d", pignorelink->GetName()%pignorelink->GetIndex()%ipmout->pmout->vrigidbodysids.size());
+                        }
                     }
                 }
             }
@@ -2335,6 +2357,10 @@ private:
     {
         std::vector<RobotBase::ManipulatorPtr> vConnectedManipulators;
         FOREACH(itConnectedBody, probot->GetConnectedBodies()) {
+            if( (*itConnectedBody)->IsActive() == 0 ) {
+                // not active, so will not be mapped onto real robot
+                continue;
+            }
             std::vector<RobotBase::ManipulatorPtr> vResolvedManipulators;
             (*itConnectedBody)->GetResolvedManipulators(vResolvedManipulators);
             vConnectedManipulators.insert(vConnectedManipulators.end(), vResolvedManipulators.begin(), vResolvedManipulators.end());
@@ -2411,6 +2437,10 @@ private:
         if (probot->GetAttachedSensors().size() > 0) {
             std::vector<RobotBase::AttachedSensorPtr> vConnectedAttachedSensors;
             FOREACH(itConnectedBody, probot->GetConnectedBodies()) {
+                if( (*itConnectedBody)->IsActive() == 0 ) {
+                    // not active, so will not be mapped onto real robot
+                    continue;
+                }
                 std::vector<RobotBase::AttachedSensorPtr> vResolvedAttachedSensors;
                 (*itConnectedBody)->GetResolvedAttachedSensors(vResolvedAttachedSensors);
                 vConnectedAttachedSensors.insert(vConnectedAttachedSensors.end(), vResolvedAttachedSensors.begin(), vResolvedAttachedSensors.end());
@@ -2503,6 +2533,10 @@ private:
         if (probot->GetGripperInfos().size() > 0) {
             std::vector<RobotBase::GripperInfoPtr> vConnectedGripperInfos;
             FOREACH(itConnectedBody, probot->GetConnectedBodies()) {
+                if( (*itConnectedBody)->IsActive() == 0 ) {
+                    // not active, so will not be mapped onto real robot
+                    continue;
+                }
                 std::vector<RobotBase::GripperInfoPtr> vResolvedGripperInfos;
                 (*itConnectedBody)->GetResolvedGripperInfos(vResolvedGripperInfos);
                 vConnectedGripperInfos.insert(vConnectedGripperInfos.end(), vResolvedGripperInfos.begin(), vResolvedGripperInfos.end());
@@ -2577,6 +2611,10 @@ private:
             if( pbody->IsRobot() ) {
                 RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
                 FOREACH(itConnectedBody, probot->GetConnectedBodies()) {
+                    if( (*itConnectedBody)->IsActive() == 0 ) {
+                        // not active, so will not be mapped onto real robot
+                        continue;
+                    }
                     std::vector<KinBody::LinkPtr> vResolvedLinks;
                     (*itConnectedBody)->GetResolvedLinks(vResolvedLinks);
                     vConnectedLinks.insert(vConnectedLinks.end(), vResolvedLinks.begin(), vResolvedLinks.end());
