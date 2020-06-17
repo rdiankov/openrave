@@ -368,6 +368,7 @@ Some python code to display data::\n\
         
         int constraintFilterOptions = 0xffff|CFO_FillCheckedConfiguration;
         if (planningoptions & PO_AddCollisionReport) {
+            std::cout << "2" << std::endl;
             constraintFilterOptions = constraintFilterOptions|CFO_FillCollisionReport;
         }
 
@@ -463,7 +464,7 @@ Some python code to display data::\n\
             ExtendType et = TreeA->Extend(_sampleConfig, iConnectedA, false, constraintFilterOptions);
 
             // Maybe should be able to pass options to CheckCollisionConstraint function in SpatialTree and also use it as a check here!
-            if (et == ET_Failed && constraintFilterOptions) {
+            if (et == ET_Failed && (constraintFilterOptions&CFO_FillCollisionReport)) {
                 planningstatus.AddCollisionReport(_treeForward.GetConstraintReport()->_report);
             }
 
@@ -480,7 +481,7 @@ Some python code to display data::\n\
             et = TreeB->Extend(TreeA->GetVectorConfig(iConnectedA), iConnectedB, false, constraintFilterOptions);     // extend B toward A
 
             // Maybe should be able to pass options to CheckCollisionConstraint function in SpatialTree and also use it as a check here!
-            if (et == ET_Failed && constraintFilterOptions) {
+            if (et == ET_Failed && (constraintFilterOptions&CFO_FillCollisionReport)) {
                 planningstatus.AddCollisionReport(_treeBackward.GetConstraintReport()->_report);
             }
 
