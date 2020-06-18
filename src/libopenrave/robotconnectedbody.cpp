@@ -704,7 +704,7 @@ void RecursivePrefixMatchingField(const std::string& nameprefix, const FieldMatc
         // skip
         break;
     default: {
-        RAVELOG_WARN_FORMAT("unsupported JSON type: %s", openravejson::DumpJson(rValue));
+        RAVELOG_WARN_FORMAT("unsupported JSON type: %s", OpenRAVE::JSON::DumpJson(rValue));
     }
     }
 }
@@ -971,12 +971,12 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             }
 
             // look recursively for fields that end in "linkname" (case insensitive) and resolve their names
-            if( !!connectedBodyInfo._vGripperInfos[iGripperInfo]->_pdocument ) {
-                boost::shared_ptr<rapidjson::Document> pnewdocument(new rapidjson::Document());
-                pnewdocument->CopyFrom(*connectedBodyInfo._vGripperInfos[iGripperInfo]->_pdocument, pnewdocument->GetAllocator());
-                RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("linkname")), *pnewdocument, pnewdocument->GetAllocator(), false);
-                RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("linknames")), *pnewdocument, pnewdocument->GetAllocator(), false);
-                pnewgripperInfo->_pdocument = pnewdocument;
+            if ( connectedBodyInfo._vGripperInfos[iGripperInfo]->_docGripperInfo.IsObject()) {
+                rapidjson::Document newGripperInfoDoc;
+                newGripperInfoDoc.CopyFrom(connectedBodyInfo._vGripperInfos[iGripperInfo]->_docGripperInfo, newGripperInfoDoc.GetAllocator());
+                RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("linkname")), newGripperInfoDoc, newGripperInfoDoc.GetAllocator(), false);
+                RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("linknames")), newGripperInfoDoc, newGripperInfoDoc.GetAllocator(), false);
+                pnewgripperInfo->_docGripperInfo.Swap(newGripperInfoDoc);
             }
 
             _vecGripperInfos.push_back(pnewgripperInfo);
