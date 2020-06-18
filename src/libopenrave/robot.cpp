@@ -378,14 +378,14 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
                         RAVELOG_WARN_FORMAT("manip %s is not found in saved state. Maybe newly added?", manipName);
                         continue;
                     }
-                    int manipIndex = distance(_vManipsName.cbegin(), it);
-                    if (manipIndex != imanip) {
-                        RAVELOG_INFO_FORMAT("manip %s was previously at index %d, but changed to index %d.", manipName%imanip%manipIndex);
+                    int indexAtSaveTime = distance(_vManipsName.cbegin(), it);
+                    if (indexAtSaveTime != imanip) {
+                        RAVELOG_INFO_FORMAT("manip %s was previously at index %d, but changed to index %d.", manipName%imanip%indexAtSaveTime);
                     }
                     if( !!pmanip ) {
-                        pmanip->SetLocalToolTransform(_vtManipsLocalTool.at(manipIndex));
-                        pmanip->SetLocalToolDirection(_vvManipsLocalDirection.at(manipIndex));
-                        pmanip->SetIkSolver(_vpManipsIkSolver.at(manipIndex));
+                        pmanip->SetLocalToolTransform(_vtManipsLocalTool.at(indexAtSaveTime));
+                        pmanip->SetLocalToolDirection(_vvManipsLocalDirection.at(indexAtSaveTime));
+                        pmanip->SetIkSolver(_vpManipsIkSolver.at(indexAtSaveTime));
                     }
                 }
             }
