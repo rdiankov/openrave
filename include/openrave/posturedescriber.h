@@ -68,8 +68,8 @@ public:
     /// \return true if (1) this describer class is properly initialized AND (2) dofvalues is either empty or has the correct size.
     virtual bool ComputePostureStates(std::vector<PostureStateInt>& posturestates,
                                      const std::vector<double>& dofvalues = {},
-                                     const KinBody::CheckLimitsAction claoption = KinBody::CheckLimitsAction::CLA_Nothing,
-                                     const std::vector<int>& dofindices = {}
+                                     const std::vector<int>& dofindices = {},
+                                     const KinBody::CheckLimitsAction claoption = KinBody::CheckLimitsAction::CLA_Nothing
                                      ) = 0;
 
     /// \brief Gets the key used in map data (of type CustomData) in IkReturn

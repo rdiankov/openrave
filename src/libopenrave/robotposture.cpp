@@ -99,8 +99,8 @@ PostureDescriberBasePtr RobotBase::GetPostureDescriber(ManipulatorConstPtr pmani
 bool RobotBase::ComputePostureStates(std::vector<PostureStateInt>& posturestates,
                                      const LinkPair& kinematicsChain,
                                      const std::vector<double>& dofvalues,
-                                     const KinBody::CheckLimitsAction claoption,
-                                     const std::vector<int>& dofindices) const
+                                     const std::vector<int>& dofindices,
+                                     const KinBody::CheckLimitsAction claoption) const
 {
     if(!_mPostureDescribers.count(kinematicsChain)) {
         throw OPENRAVE_EXCEPTION_FORMAT(_("failed to find robot posture describer for links from \"%s\" to \"%s\" for robot \"%s\""),
@@ -115,12 +115,13 @@ bool RobotBase::ComputePostureStates(std::vector<PostureStateInt>& posturestates
                                         kinematicsChain[0]->GetName() % kinematicsChain[1]->GetName(),
                                         OpenRAVEErrorCode::ORE_InvalidArguments);
     }
-    return pDescriber->ComputePostureStates(posturestates, dofvalues, claoption, dofindices);
+    return pDescriber->ComputePostureStates(posturestates, dofvalues, dofindices, claoption);
 }
 
 bool RobotBase::ComputePostureStates(std::vector<PostureStateInt>& posturestates,
                                      ManipulatorConstPtr pmanip,
                                      const std::vector<double>& dofvalues,
+                                     const std::vector<int>& dofindices,
                                      const KinBody::CheckLimitsAction claoption) const
 {
     if(pmanip == nullptr) {
@@ -131,7 +132,7 @@ bool RobotBase::ComputePostureStates(std::vector<PostureStateInt>& posturestates
                                         pmanip->GetName(),
                                         OpenRAVEErrorCode::ORE_InvalidArguments);
     }
-    return this->ComputePostureStates(posturestates, _mEssentialLinkPairs.at(pmanip), dofvalues, claoption, pmanip->GetArmIndices());
+    return this->ComputePostureStates(posturestates, _mEssentialLinkPairs.at(pmanip), dofvalues, dofindices.empty() ? pmanip->GetArmIndices() : dofindices, claoption);
 }
 
 } // end namespace OpenRAVE

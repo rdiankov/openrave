@@ -89,7 +89,7 @@ object PyPostureDescriberBase::ComputePostureStates(object pydofvalues, uint32_t
 {
     const std::vector<dReal> dofvalues = IS_PYTHONOBJECT_NONE(pydofvalues) ? std::vector<dReal>() : ExtractArray<dReal>(pydofvalues);
     const std::vector<int> dofindices = IS_PYTHONOBJECT_NONE(pydofindices) ? std::vector<int>() : ExtractArray<int>(pydofindices);
-    if(!_pDescriber->ComputePostureStates(_posturestates, dofvalues, static_cast<OpenRAVE::KinBody::CheckLimitsAction>(claoptions), dofindices)) {
+    if(!_pDescriber->ComputePostureStates(_posturestates, dofvalues, dofindices, static_cast<OpenRAVE::KinBody::CheckLimitsAction>(claoptions))) {
         std::stringstream ss;
         ss << "dofvalues = [";
         if(!dofvalues.empty()) {
@@ -219,12 +219,12 @@ void init_openravepy_posturedescriber()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .def("ComputePostureStates", &PyPostureDescriberBase::ComputePostureStates,
         "dofvalues"_a = py::none_(),
-        "claoptions"_a = static_cast<uint32_t>(OpenRAVE::KinBody::CheckLimitsAction::CLA_Nothing),
         "dofindices"_a = py::none_(),
+        "claoptions"_a = static_cast<uint32_t>(OpenRAVE::KinBody::CheckLimitsAction::CLA_Nothing),
         DOXY_FN(PostureDescriberBase, ComputePostureStates "")
     )
 #else
-    .def("ComputePostureStates", &PyPostureDescriberBase::ComputePostureStates, ComputePostureStates_overloads(PY_ARGS("dofvalues", "claoptions", "dofindices") DOXY_FN(PostureDescriberBase, ComputePostureStates "")))
+    .def("ComputePostureStates", &PyPostureDescriberBase::ComputePostureStates, ComputePostureStates_overloads(PY_ARGS("dofvalues", "dofindices", "claoptions") DOXY_FN(PostureDescriberBase, ComputePostureStates "")))
 #endif
     .def("GetMapDataKey"       , &PyPostureDescriberBase::GetMapDataKey ,                               DOXY_FN(PostureDescriberBase, GetMapDataKey ""))
     .def("Interpret"           , &PyPostureDescriberBase::Interpret     , PY_ARGS("posturestate")       DOXY_FN(PostureDescriberBase, Interpret ""))

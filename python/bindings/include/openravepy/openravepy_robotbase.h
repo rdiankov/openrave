@@ -103,8 +103,8 @@ public:
         /// \brief Computes posture states at the input (current if empty) dof values using the describer set at the manipulator
         /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
         object ComputePostureStates(object pyjointvalues = py::none_(),
-                                    uint32_t claoptions = KinBody::CheckLimitsAction::CLA_Nothing,
-                                    object pydofindices = py::none_()
+                                    object pydofindices = py::none_(),
+                                    uint32_t claoptions = KinBody::CheckLimitsAction::CLA_Nothing
                                     );
 
 private:
@@ -452,8 +452,8 @@ public:
     /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
     object ComputePostureStates(PyManipulatorPtr pymanip,
                                 object pyjointvalues = py::none_(),
-                                uint32_t claoptions = KinBody::CheckLimitsAction::CLA_Nothing,
-                                object pydofindices = py::none_());
+                                object pydofindices = py::none_(),
+                                uint32_t claoptions = KinBody::CheckLimitsAction::CLA_Nothing);
 
     virtual std::string __repr__();
     virtual std::string __str__();

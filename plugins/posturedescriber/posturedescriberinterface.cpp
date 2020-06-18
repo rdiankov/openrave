@@ -407,8 +407,8 @@ bool PostureDescriber::Supports(const LinkPair& kinematicsChain) const {
 
 bool PostureDescriber::ComputePostureStates(std::vector<PostureStateInt>& posturestates,
                                             const std::vector<double>& dofvalues,
-                                            const KinBody::CheckLimitsAction claoption, /* = CLA_CheckLimits*/
-                                            const std::vector<int>& dofindices
+                                            const std::vector<int>& dofindices,
+                                            const KinBody::CheckLimitsAction claoption
                                             ) {
     if(!_posturefn) {
         RAVELOG_WARN("No supported posture describer; _posturefn is not set");
