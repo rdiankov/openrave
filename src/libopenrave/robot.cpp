@@ -380,7 +380,7 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
                     }
                     int indexAtSaveTime = distance(_vManipsName.cbegin(), it);
                     if (indexAtSaveTime != imanip) {
-                        RAVELOG_INFO_FORMAT("manip %s was previously at index %d, but changed to index %d.", manipName%imanip%indexAtSaveTime);
+                        RAVELOG_DEBUG_FORMAT("manip %s was previously at index %d, but changed to index %d.", manipName%imanip%indexAtSaveTime);
                     }
                     if( !!pmanip ) {
                         pmanip->SetLocalToolTransform(_vtManipsLocalTool.at(indexAtSaveTime));
