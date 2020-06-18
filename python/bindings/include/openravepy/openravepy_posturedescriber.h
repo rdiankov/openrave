@@ -53,13 +53,11 @@ public:
     /// \return true if a posture describer is successfully initialized for the kinematics chain for the manipulator
     bool Init(PyRobotBase::PyManipulatorPtr pmanip);
 
-    /// \brief Computes posture states at the current dof values using the describer set at the manipulator
+    /// \brief Computes posture states at the input (current if empty) dof values using the describer set at the manipulator
     /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
-    py::object ComputePostureStates();
-
-    /// \brief Computes posture states at the input dof values using the describer set at the manipulator
-    /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
-    py::object ComputePostureStates(py::object pyjointvalues);
+    py::object ComputePostureStates(py::object pydofvalues = py::none_(),
+                                    uint32_t claoptions = KinBody::CheckLimitsAction::CLA_Nothing,
+                                    py::object pydofindices = py::none_());
 
     /// \brief Gets the "solution indices name" we use in the custom data map of IkReturn
     std::string GetMapDataKey() const;

@@ -92,7 +92,11 @@ public:
     /// \param [in]  dofvalues       if empty, then use the current dof values; otherwise these specified dof values must have the same size as the number of dofs in the kinematics chain.
     /// \param [out] posturestates   posture states, whose size is a power of 2. Always non-empty if (1) this class is properly initialized AND (2) dofvalues is either empty or has the correct size.
     /// \return true if (1) this describer class is properly initialized AND (2) dofvalues is either empty or has the correct size.
-    virtual bool ComputePostureStates(std::vector<PostureStateInt>& values, const std::vector<double>& dofvalues = {}) override;
+    virtual bool ComputePostureStates(std::vector<PostureStateInt>& posturestates,
+                                     const std::vector<double>& dofvalues = {},
+                                     const KinBody::CheckLimitsAction claoption = KinBody::CheckLimitsAction::CLA_Nothing,
+                                     const std::vector<int>& dofindices = {}
+                                     ) override;
 
     /// \brief Sets the tolerance for determining whether a robot posture value (shoulder, elbow, wrist, etc.) is close to 0
     bool SetPostureValueThreshold(const double fTol);

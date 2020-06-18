@@ -85,25 +85,27 @@ bool PyPostureDescriberBase::Init(PyManipulatorPtr pmanip) {
     return _pDescriber->Init(pmanip->GetManipulator());
 }
 
-object PyPostureDescriberBase::ComputePostureStates()
+object PyPostureDescriberBase::ComputePostureStates(object pydofvalues, uint32_t claoptions, object pydofindices)
 {
-    if(!_pDescriber->ComputePostureStates(_posturestates)) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("Failed to compute posture", ORE_Failed);
-    }
-    return StdVectorToPyList<PostureStateInt>(_posturestates);
-}
-
-object PyPostureDescriberBase::ComputePostureStates(object pydofvalues)
-{
-    const std::vector<dReal> dofvalues = ExtractArray<dReal>(pydofvalues);
-    if(!_pDescriber->ComputePostureStates(_posturestates, dofvalues)) {
+    const std::vector<dReal> dofvalues = IS_PYTHONOBJECT_NONE(pydofvalues) ? std::vector<dReal>() : ExtractArray<dReal>(pydofvalues);
+    const std::vector<int> dofindices = IS_PYTHONOBJECT_NONE(pydofindices) ? std::vector<int>() : ExtractArray<int>(pydofindices);
+    if(!_pDescriber->ComputePostureStates(_posturestates, dofvalues, static_cast<OpenRAVE::KinBody::CheckLimitsAction>(claoptions), dofindices)) {
         std::stringstream ss;
+        ss << "dofvalues = [";
         if(!dofvalues.empty()) {
             ss << dofvalues[0];
         }
         for(size_t idof = 1; idof < dofvalues.size(); ++idof) {
             ss << ", " << dofvalues[idof];
         }
+        ss << "], dofindices = [";
+        if(!dofindices.empty()) {
+            ss << dofindices[0];
+        }
+        for(size_t idof = 1; idof < dofindices.size(); ++idof) {
+            ss << ", " << dofindices[idof];
+        }
+        ss << "]";
         throw OPENRAVE_EXCEPTION_FORMAT("Failed to compute posture for dof values: %s", ss.str(), ORE_Failed);
     }
     return StdVectorToPyList<PostureStateInt>(_posturestates);
@@ -187,6 +189,7 @@ PyPostureDescriberBasePtr RaveCreatePostureDescriber(PyEnvironmentBasePtr pyenv,
 
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
 BOOST_PYTHON_FUNCTION_OVERLOADS(GeneratePostureDescriber_overloads, GeneratePostureDescriber, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputePostureStates_overloads, ComputePostureStates, 0, 3)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -203,8 +206,6 @@ void init_openravepy_posturedescriber()
     bool (PyPostureDescriberBase::*InitWithManip)(PyManipulatorPtr)                  = &PyPostureDescriberBase::Init;
     bool (PyPostureDescriberBase::*SupportsWithTwoLinks)(PyLinkPtr, PyLinkPtr) const = &PyPostureDescriberBase::Supports;
     bool (PyPostureDescriberBase::*SupportsWithManip)(PyManipulatorPtr)        const = &PyPostureDescriberBase::Supports;
-    object (PyPostureDescriberBase::*ComputePostureStates)()                         = &PyPostureDescriberBase::ComputePostureStates;
-    object (PyPostureDescriberBase::*ComputePostureStatesWithJointValues)(object)    = &PyPostureDescriberBase::ComputePostureStates;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyPostureDescriberBase, OPENRAVE_SHARED_PTR<PyPostureDescriberBase>, PyInterfaceBase>(m, "PostureDescriber", DOXY_CLASS(PostureDescriberBase))
@@ -215,9 +216,16 @@ void init_openravepy_posturedescriber()
     .def("Supports",             SupportsWithManip                      , PY_ARGS("manipulator")        DOXY_FN(PostureDescriberBase, Supports "const RobotBase::ManipulatorPtr& pmanip"))
     .def("Init",                 InitWithTwoLinks                       , PY_ARGS("baselink", "eelink") DOXY_FN(PostureDescriberBase, Init "const std::array<RobotBase::LinkPtr, 2>& kinematicsChain"))
     .def("Init",                 InitWithManip                          , PY_ARGS("manipulator")        DOXY_FN(PostureDescriberBase, Init "const RobotBase::ManipulatorPtr& pmanip"))
-
-    .def("ComputePostureStates", ComputePostureStates                   ,                               DOXY_FN(PostureDescriberBase, ComputePostureStates ""))
-    .def("ComputePostureStates", ComputePostureStatesWithJointValues    , PY_ARGS("dofvalues")          DOXY_FN(PostureDescriberBase, ComputePostureStates "const std::vector<double>& dofvalues"))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def("ComputePostureStates", &PyPostureDescriberBase::ComputePostureStates,
+        "dofvalues"_a = py::none_(),
+        "claoptions"_a = static_cast<uint32_t>(OpenRAVE::KinBody::CheckLimitsAction::CLA_Nothing),
+        "dofindices"_a = py::none_(),
+        DOXY_FN(PostureDescriberBase, ComputePostureStates "")
+    )
+#else
+    .def("ComputePostureStates", &PyPostureDescriberBase::ComputePostureStates, ComputePostureStates_overloads(PY_ARGS("dofvalues", "claoptions", "dofindices") DOXY_FN(PostureDescriberBase, ComputePostureStates "")))
+#endif
     .def("GetMapDataKey"       , &PyPostureDescriberBase::GetMapDataKey ,                               DOXY_FN(PostureDescriberBase, GetMapDataKey ""))
     .def("Interpret"           , &PyPostureDescriberBase::Interpret     , PY_ARGS("posturestate")       DOXY_FN(PostureDescriberBase, Interpret ""))
     ;

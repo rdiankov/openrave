@@ -405,8 +405,11 @@ bool PostureDescriber::Supports(const LinkPair& kinematicsChain) const {
     return false;
 }
 
-
-bool PostureDescriber::ComputePostureStates(std::vector<PostureStateInt>& posturestates, const std::vector<double>& dofvalues) {
+bool PostureDescriber::ComputePostureStates(std::vector<PostureStateInt>& posturestates,
+                                            const std::vector<double>& dofvalues,
+                                            const KinBody::CheckLimitsAction claoption, /* = CLA_CheckLimits*/
+                                            const std::vector<int>& dofindices
+                                            ) {
     if(!_posturefn) {
         RAVELOG_WARN("No supported posture describer; _posturefn is not set");
         posturestates.clear();
@@ -414,14 +417,18 @@ bool PostureDescriber::ComputePostureStates(std::vector<PostureStateInt>& postur
     }
     if(!dofvalues.empty()) {
         const KinBodyPtr probot = _kinematicsChain[0]->GetParent();
-        if(dofvalues.size() != _joints.size()) {
-            RAVELOG_WARN_FORMAT("dof values size does not match joint size: %d!=%d", dofvalues.size() % _joints.size());
-            posturestates.clear();
-            return false;
-        }
-        const KinBody::CheckLimitsAction claoption = KinBody::CheckLimitsAction::CLA_Nothing;
         const KinBody::KinBodyStateSaver saver(probot); // options = Save_LinkTransformation | Save_LinkEnable
-        probot->SetDOFValues(dofvalues, claoption, _armindices);
+        if(dofindices.empty()) {
+            if(dofvalues.size() != _joints.size()) {
+                RAVELOG_WARN_FORMAT("dof values size does not match number of joints in the essential kinematics chain: %d!=%d", dofvalues.size() % _joints.size());
+                posturestates.clear();
+                return false;
+            }
+            probot->SetDOFValues(dofvalues, claoption, _armindices);
+        }
+        else {
+            probot->SetDOFValues(dofvalues, claoption, dofindices);
+        }
         _posturefn(_joints, _fTol, _posturevalues, _featurestates, posturestates);
         // restore KinBodyState automatically
     }

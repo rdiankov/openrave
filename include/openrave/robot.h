@@ -1097,7 +1097,9 @@ private:
     /// \return true if the registered posture describer successfully computes a vector of posture state values for describing the posture of the kinematics chain.
     virtual bool ComputePostureStates(std::vector<PostureStateInt>& posturevalues,
                                       const LinkPair& kinematicsChain,
-                                      const std::vector<double>& dofvalues = {}) const;
+                                      const std::vector<double>& dofvalues = {},
+                                      const KinBody::CheckLimitsAction claoption = KinBody::CheckLimitsAction::CLA_Nothing,
+                                      const std::vector<int>& dofindices = {}) const;
 
     /// \brief Computes posture states to describe the posture of a kinematics chain (prescribed by the manipulator) at the current or specified dof values.
     /// Computes posture state integers for describing the posture of links between the manipulator's baselink and its eelink.
@@ -1108,7 +1110,8 @@ private:
     /// \return true if the registered posture describer successfully computes a vector of posture state values for describing the posture of the kinematics chain.
     virtual bool ComputePostureStates(std::vector<PostureStateInt>& posturevalues,
                                       ManipulatorConstPtr pmanip,
-                                      const std::vector<double>& dofvalues = {}) const;
+                                      const std::vector<double>& dofvalues = {},
+                                      const KinBody::CheckLimitsAction claoption = KinBody::CheckLimitsAction::CLA_Nothing) const;
 
     //@}
 

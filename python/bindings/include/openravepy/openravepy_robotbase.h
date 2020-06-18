@@ -100,13 +100,12 @@ public:
         /// \return the describer if we have set one at the manipulator; None (nullptr) otherwise
         PyPostureDescriberBasePtr GetPostureDescriber() const;
 
-        /// \brief Computes posture states at the current dof values using the describer set at the manipulator
+        /// \brief Computes posture states at the input (current if empty) dof values using the describer set at the manipulator
         /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
-        object ComputePostureStates() const;
-
-        /// \brief Computes posture states at the input dof values using the describer set at the manipulator
-        /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
-        object ComputePostureStates(object pyjointvalues) const;
+        object ComputePostureStates(object pyjointvalues = py::none_(),
+                                    uint32_t claoptions = KinBody::CheckLimitsAction::CLA_Nothing,
+                                    object pydofindices = py::none_()
+                                    ) const;
 
         bool _FindIKSolution(const IkParameterization& ikparam, std::vector<dReal>& solution, int filteroptions, bool releasegil) const;
         bool _FindIKSolution(const IkParameterization& ikparam, const std::vector<dReal>& vFreeParameters, std::vector<dReal>& solution, int filteroptions, bool releasegil) const;
@@ -445,13 +444,12 @@ public:
     /// \return the describer if we have set one at the manipulator; None (nullptr) otherwise
     PyPostureDescriberBasePtr GetPostureDescriber(PyManipulatorPtr pymanip) const;
 
-    /// \brief Computes posture states at the current dof values using the describer set at the manipulator
+    /// \brief Computes posture states at the input (current if empty) dof values using the describer set at the manipulator
     /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
-    object ComputePostureStates(PyManipulatorPtr pymanip) const;
-
-    /// \brief Computes posture states at the input dof values using the describer set at the manipulator
-    /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
-    object ComputePostureStates(PyManipulatorPtr pymanip, object pyjointvalues) const;
+    object ComputePostureStates(PyManipulatorPtr pymanip,
+                                object pyjointvalues = py::none_(),
+                                uint32_t claoptions = KinBody::CheckLimitsAction::CLA_Nothing,
+                                object pydofindices = py::none_()) const;
 
     virtual std::string __repr__();
     virtual std::string __str__();
