@@ -105,8 +105,9 @@ public:
         object ComputePostureStates(object pyjointvalues = py::none_(),
                                     uint32_t claoptions = KinBody::CheckLimitsAction::CLA_Nothing,
                                     object pydofindices = py::none_()
-                                    ) const;
+                                    );
 
+private:
         bool _FindIKSolution(const IkParameterization& ikparam, std::vector<dReal>& solution, int filteroptions, bool releasegil) const;
         bool _FindIKSolution(const IkParameterization& ikparam, const std::vector<dReal>& vFreeParameters, std::vector<dReal>& solution, int filteroptions, bool releasegil) const;
         bool _FindIKSolution(const IkParameterization& ikparam, int filteroptions, IkReturn& ikreturn, bool releasegil) const;
@@ -117,6 +118,7 @@ public:
         bool _FindIKSolutions(const IkParameterization& ikparam, int filteroptions, std::vector<IkReturnPtr>& vikreturns, bool releasegil) const;
         bool _FindIKSolutions(const IkParameterization& ikparam, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& vikreturns, bool releasegil) const;
 
+public:
         object FindIKSolution(object oparam, int filteroptions, bool ikreturn=false, bool releasegil=false) const;
 
         object FindIKSolution(object oparam, object freeparams, int filteroptions, bool ikreturn=false, bool releasegil=false) const;
@@ -166,6 +168,8 @@ public:
     };
     typedef OPENRAVE_SHARED_PTR<PyManipulator> PyManipulatorPtr;
     PyManipulatorPtr _GetManipulator(RobotBase::ManipulatorPtr pmanip);
+
+    std::vector<OpenRAVE::RobotBase::PostureStateInt> posturestates; // cache
 
     class PyAttachedSensor
     {
@@ -449,7 +453,7 @@ public:
     object ComputePostureStates(PyManipulatorPtr pymanip,
                                 object pyjointvalues = py::none_(),
                                 uint32_t claoptions = KinBody::CheckLimitsAction::CLA_Nothing,
-                                object pydofindices = py::none_()) const;
+                                object pydofindices = py::none_());
 
     virtual std::string __repr__();
     virtual std::string __str__();
