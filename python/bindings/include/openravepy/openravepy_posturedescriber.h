@@ -63,6 +63,7 @@ public:
     std::string GetMapDataKey() const;
 
     bool IsInitialized() const;
+    bool Load() const;
 
     /// \brief Interprets what a posture state means in the describer
     py::object Interpret(const PostureStateInt state) const;

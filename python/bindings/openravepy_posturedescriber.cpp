@@ -119,6 +119,18 @@ bool PyPostureDescriberBase::IsInitialized() const {
     return _pDescriber->IsInitialized();
 }
 
+bool PyPostureDescriberBase::Load() const {
+    if(this->IsInitialized()) {
+         const LinkPair& kinematicsChain = _pDescriber->GetEssentialKinematicsChain();
+         const KinBodyPtr pbody = kinematicsChain[0]->GetParent();
+         const RobotBasePtr probot = boost::static_pointer_cast<RobotBase>(pbody);
+         if(probot->SetPostureDescriber(kinematicsChain, _pDescriber)) {
+            return true;
+         }
+    }
+    return false;
+}
+
 py::object PyPostureDescriberBase::Interpret(const PostureStateInt state) const {
     rapidjson::Document rIn, rOut;
     openravejson::SetJsonValueByKey(rIn, "posturestate", state, rIn.GetAllocator());
@@ -232,6 +244,7 @@ void init_openravepy_posturedescriber()
 #endif
     .def("GetMapDataKey"       , &PyPostureDescriberBase::GetMapDataKey ,                               DOXY_FN(PostureDescriberBase, GetMapDataKey ""))
     .def("IsInitialized"       , &PyPostureDescriberBase::IsInitialized ,                               DOXY_FN(PostureDescriberBase, IsInitialized ""))
+    .def("load"                , &PyPostureDescriberBase::Load ,                                        DOXY_FN(PostureDescriberBase, Load ""))
     .def("Interpret"           , &PyPostureDescriberBase::Interpret     , PY_ARGS("posturestate")       DOXY_FN(PostureDescriberBase, Interpret ""))
     ;
 
