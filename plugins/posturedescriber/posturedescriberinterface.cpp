@@ -322,26 +322,25 @@ bool PostureDescriber::Init(const LinkPair& kinematicsChain) {
     switch(_supporttype) {
     case RobotPostureSupportType::RPST_6R_General: {
         _posturefn = ComputePostureStates6RGeneral;
-        _posturevalues.resize(3);
-        _featurestates.resize(3);        
+        _nfeatures = 3;
         break;
     }
     case RobotPostureSupportType::RPST_4R_Type_A: {
         _posturefn = ComputePostureStates4RTypeA;
-        _posturevalues.resize(2);
-        _featurestates.resize(2);        
+        _nfeatures = 2;
         break;
     }
     case RobotPostureSupportType::RPST_RRR_Parallel: {
         _posturefn = ComputePostureStatesRRRParallel;
-        _posturevalues.resize(1);
-        _featurestates.resize(1);
+        _nfeatures = 1;
         break;
     }
     default: {
         return false;
     }
     }
+    _posturevalues.resize(_nfeatures);
+    _featurestates.resize(_nfeatures); ///< cache
     return static_cast<bool>(_posturefn);
 }
 
@@ -451,6 +450,10 @@ std::string PostureDescriber::GetMapDataKey() const {
     return _posturestatename;
 }
 
+bool PostureDescriber::IsInitialized() const {
+    return static_cast<bool>(_posturefn);
+}
+
 const LinkPair& PostureDescriber::GetEssentialKinematicsChain() const {
     return _kinematicsChain;
 }
@@ -459,6 +462,7 @@ void PostureDescriber::Destroy() {
     _kinematicsChain  = {nullptr, nullptr};
     _joints.clear();
     _armindices.clear();
+    _nfeatures = 0;
     _posturefn = nullptr;
     _supporttype = RobotPostureSupportType::RPST_NoSupport;
 }

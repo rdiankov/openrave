@@ -62,6 +62,8 @@ public:
     /// \brief Gets the "solution indices name" we use in the custom data map of IkReturn
     std::string GetMapDataKey() const;
 
+    bool IsInitialized() const;
+
     /// \brief Interprets what a posture state means in the describer
     py::object Interpret(const PostureStateInt state) const;
 

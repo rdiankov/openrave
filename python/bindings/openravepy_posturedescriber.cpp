@@ -115,6 +115,10 @@ std::string PyPostureDescriberBase::GetMapDataKey() const {
     return _pDescriber->GetMapDataKey();
 }
 
+bool PyPostureDescriberBase::IsInitialized() const {
+    return _pDescriber->IsInitialized();
+}
+
 py::object PyPostureDescriberBase::Interpret(const PostureStateInt state) const {
     rapidjson::Document rIn, rOut;
     openravejson::SetJsonValueByKey(rIn, "posturestate", state, rIn.GetAllocator());
@@ -227,6 +231,7 @@ void init_openravepy_posturedescriber()
     .def("ComputePostureStates", &PyPostureDescriberBase::ComputePostureStates, ComputePostureStates_overloads(PY_ARGS("dofvalues", "dofindices", "claoptions") DOXY_FN(PostureDescriberBase, ComputePostureStates "")))
 #endif
     .def("GetMapDataKey"       , &PyPostureDescriberBase::GetMapDataKey ,                               DOXY_FN(PostureDescriberBase, GetMapDataKey ""))
+    .def("IsInitialized"       , &PyPostureDescriberBase::IsInitialized ,                               DOXY_FN(PostureDescriberBase, IsInitialized ""))
     .def("Interpret"           , &PyPostureDescriberBase::Interpret     , PY_ARGS("posturestate")       DOXY_FN(PostureDescriberBase, Interpret ""))
     ;
 

@@ -75,6 +75,9 @@ public:
     /// \brief Gets the key used in map data (of type CustomData) in IkReturn
     virtual std::string GetMapDataKey() const = 0;
 
+    /// \brief Checks if the posture describer has been initialzied
+    virtual bool IsInitialized() const = 0;
+
     /// \brief Cleans internal setup in the early stage of doing initializaion by Init()
     virtual void Destroy() = 0;
 
