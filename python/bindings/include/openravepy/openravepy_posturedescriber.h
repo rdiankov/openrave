@@ -56,8 +56,8 @@ public:
     /// \brief Computes posture states at the input (current if empty) dof values using the describer set at the manipulator
     /// \return a py::list of posture states (integers) if a supportive posture describer is loaded onto the manipulator; else an empty list
     py::object ComputePostureStates(py::object pydofvalues = py::none_(),
-                                    uint32_t claoptions = KinBody::CheckLimitsAction::CLA_Nothing,
-                                    py::object pydofindices = py::none_());
+                                    py::object pydofindices = py::none_(),
+                                    uint32_t claoptions = KinBody::CheckLimitsAction::CLA_Nothing);
 
     /// \brief Gets the "solution indices name" we use in the custom data map of IkReturn
     std::string GetMapDataKey() const;

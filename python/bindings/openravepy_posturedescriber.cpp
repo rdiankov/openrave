@@ -85,7 +85,7 @@ bool PyPostureDescriberBase::Init(PyManipulatorPtr pmanip) {
     return _pDescriber->Init(pmanip->GetManipulator());
 }
 
-object PyPostureDescriberBase::ComputePostureStates(object pydofvalues, uint32_t claoptions, object pydofindices)
+object PyPostureDescriberBase::ComputePostureStates(object pydofvalues, object pydofindices, uint32_t claoptions)
 {
     const std::vector<dReal> dofvalues = IS_PYTHONOBJECT_NONE(pydofvalues) ? std::vector<dReal>() : ExtractArray<dReal>(pydofvalues);
     const std::vector<int> dofindices = IS_PYTHONOBJECT_NONE(pydofindices) ? std::vector<int>() : ExtractArray<int>(pydofindices);
