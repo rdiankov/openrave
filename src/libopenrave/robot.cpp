@@ -317,12 +317,14 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
         _vtManipsLocalTool.resize(vmanips.size());
         _vvManipsLocalDirection.resize(vmanips.size());
         _vpManipsIkSolver.resize(vmanips.size());
+        _vManipsName.resize(vmanips.size());
         for(int imanip = 0; imanip < (int)vmanips.size(); ++imanip) {
             RobotBase::ManipulatorPtr pmanip = vmanips[imanip];
             if( !!pmanip ) {
                 _vtManipsLocalTool[imanip] = pmanip->GetLocalToolTransform();
                 _vvManipsLocalDirection[imanip] = pmanip->GetLocalToolDirection();
                 _vpManipsIkSolver[imanip] = pmanip->GetIkSolver();
+                _vManipsName[imanip] = pmanip->GetName();
             }
         }
     }
@@ -452,10 +454,20 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
             if(vmanips.size() == _vtManipsLocalTool.size()) {
                 for(int imanip = 0; imanip < (int)vmanips.size(); ++imanip) {
                     RobotBase::ManipulatorPtr pmanip = vmanips[imanip];
+                    const std::string manipName = pmanip->GetName();
+                    const vector<string>::const_iterator it = find(_vManipsName.begin(), _vManipsName.end(), manipName);
+                    if (it == _vManipsName.end()) {
+                        RAVELOG_WARN_FORMAT("manip %s is not found in saved state. Maybe newly added?", manipName);
+                        continue;
+                    }
+                    int indexAtSaveTime = distance(_vManipsName.cbegin(), it);
+                    if (indexAtSaveTime != imanip) {
+                        RAVELOG_DEBUG_FORMAT("manip %s was previously at index %d, but changed to index %d.", manipName%imanip%indexAtSaveTime);
+                    }
                     if( !!pmanip ) {
-                        pmanip->SetLocalToolTransform(_vtManipsLocalTool.at(imanip));
-                        pmanip->SetLocalToolDirection(_vvManipsLocalDirection.at(imanip));
-                        pmanip->SetIkSolver(_vpManipsIkSolver.at(imanip));
+                        pmanip->SetLocalToolTransform(_vtManipsLocalTool.at(indexAtSaveTime));
+                        pmanip->SetLocalToolDirection(_vvManipsLocalDirection.at(indexAtSaveTime));
+                        pmanip->SetIkSolver(_vpManipsIkSolver.at(indexAtSaveTime));
                     }
                 }
             }
