@@ -738,6 +738,7 @@ protected:
         std::vector<Vector> _vvManipsLocalDirection;
         std::vector<IkSolverBasePtr> _vpManipsIkSolver;
         std::vector<int8_t> _vConnectedBodyActiveStates; ///< GetConnectedBodyActiveStates
+        std::vector<std::string> _vManipsName; ///< name of manipulators in the order other states are stored.
 private:
         virtual void _RestoreRobot(boost::shared_ptr<RobotBase> robot);
     };
