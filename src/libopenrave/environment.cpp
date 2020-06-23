@@ -40,7 +40,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
     // for example, do not clear _vBodyInfos.clear(), since we could be dealing with partial json
 
     if (value.HasMember("revision")) {
-        OpenRAVE::JSON::LoadJsonValueByKey(value, "revision", _revision);
+        OpenRAVE::orjson::LoadJsonValueByKey(value, "revision", _revision);
     }
 
     if (value.HasMember("bodies")) {
@@ -50,9 +50,9 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
             const rapidjson::Value& bodyValue = *it;
 
             // first figure an id
-            std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(bodyValue, "id");
+            std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(bodyValue, "id");
             if (id.empty()) {
-                id = OpenRAVE::JSON::GetStringJsonValueByKey(bodyValue, "name");
+                id = OpenRAVE::orjson::GetStringJsonValueByKey(bodyValue, "name");
                 RAVELOG_DEBUG_FORMAT("used name as id for body: %s", id);
             }
             if (id.empty()) {
@@ -72,11 +72,11 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
                 }
             }
 
-            bool isDeleted = OpenRAVE::JSON::GetJsonValueByKey<bool>(bodyValue, "__deleted__", false);
+            bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(bodyValue, "__deleted__", false);
             if (isDeleted) {
                 RAVELOG_DEBUG_FORMAT("deleted body: %s", id);
             }
-            bool isRobot = OpenRAVE::JSON::GetJsonValueByKey<bool>(bodyValue, "isRobot", isExistingRobot);
+            bool isRobot = OpenRAVE::orjson::GetJsonValueByKey<bool>(bodyValue, "isRobot", isExistingRobot);
             RAVELOG_DEBUG_FORMAT("body: %s, isRobot = %d", id%isRobot);
             if (isRobot) {
                 if (itExistingBodyInfo == _vBodyInfos.end()) {

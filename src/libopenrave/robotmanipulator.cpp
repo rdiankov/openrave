@@ -19,32 +19,32 @@ namespace OpenRAVE {
 
 void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "transform", _tLocalTool, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "chuckingDirections", _vChuckingDirection, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "direction", _vdirection, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "baseLinkName", _sBaseLinkName, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "ikSolverType", _sIkSolverXMLId, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "gripperJointNames", _vGripperJointNames, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "grippername", _grippername, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "toolChangerConnectedBodyToolName", _toolChangerConnectedBodyToolName, allocator);
+    OpenRAVE::orjson::SetJsonValueByKey(value, "id", _id, allocator);
+    OpenRAVE::orjson::SetJsonValueByKey(value, "name", _name, allocator);
+    OpenRAVE::orjson::SetJsonValueByKey(value, "transform", _tLocalTool, allocator);
+    OpenRAVE::orjson::SetJsonValueByKey(value, "chuckingDirections", _vChuckingDirection, allocator);
+    OpenRAVE::orjson::SetJsonValueByKey(value, "direction", _vdirection, allocator);
+    OpenRAVE::orjson::SetJsonValueByKey(value, "baseLinkName", _sBaseLinkName, allocator);
+    OpenRAVE::orjson::SetJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName, allocator);
+    OpenRAVE::orjson::SetJsonValueByKey(value, "ikSolverType", _sIkSolverXMLId, allocator);
+    OpenRAVE::orjson::SetJsonValueByKey(value, "gripperJointNames", _vGripperJointNames, allocator);
+    OpenRAVE::orjson::SetJsonValueByKey(value, "grippername", _grippername, allocator);
+    OpenRAVE::orjson::SetJsonValueByKey(value, "toolChangerConnectedBodyToolName", _toolChangerConnectedBodyToolName, allocator);
 }
 
 void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _tLocalTool);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "chuckingDirections", _vChuckingDirection);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "direction", _vdirection);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "baseLinkName", _sBaseLinkName);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "ikSolverType", _sIkSolverXMLId);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "gripperJointNames", _vGripperJointNames);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "grippername", _grippername);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "toolChangerConnectedBodyToolName", _toolChangerConnectedBodyToolName);
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "id", _id);
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "name", _name);
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "transform", _tLocalTool);
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "chuckingDirections", _vChuckingDirection);
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "direction", _vdirection);
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "baseLinkName", _sBaseLinkName);
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName);
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "ikSolverType", _sIkSolverXMLId);
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "gripperJointNames", _vGripperJointNames);
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "grippername", _grippername);
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "toolChangerConnectedBodyToolName", _toolChangerConnectedBodyToolName);
 }
 
 RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::ManipulatorInfo& info) : _info(info), __probot(probot) {

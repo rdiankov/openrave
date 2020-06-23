@@ -43,7 +43,7 @@
 
 namespace OpenRAVE {
 
-namespace JSON {
+namespace orjson {
 
 /// \brief gets a string of the Value type for debugging purposes
 inline std::string GetJsonTypeName(const rapidjson::Value& v) {
@@ -896,7 +896,7 @@ inline void ValidateJsonString(const std::string& str) {
 template<class T> inline std::string GetJsonString(const T& t) {
     rapidjson::Document d;
     SaveJsonValue(d, t);
-    return OpenRAVE::JSON::DumpJson(d);
+    return OpenRAVE::orjson::DumpJson(d);
 }
 
 /** update a json object with another one, new key-value pair will be added, existing ones will be overwritten

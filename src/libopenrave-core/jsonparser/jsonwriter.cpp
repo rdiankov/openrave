@@ -62,7 +62,7 @@ protected:
         _mapBodyIds.clear();
         if (listbodies.size() > 0) {
             EnvironmentBaseConstPtr penv = listbodies.front()->GetEnv();
-            OpenRAVE::JSON::SetJsonValueByKey(_rEnvironment, "unit", penv->GetUnit(), _allocator);
+            OpenRAVE::orjson::SetJsonValueByKey(_rEnvironment, "unit", penv->GetUnit(), _allocator);
 
             int globalId = 0;
             FOREACHC(itbody, listbodies) {
@@ -121,15 +121,15 @@ protected:
                         KinBody::JointPtr pJoint = pBody->GetJointFromDOFIndex(iDOF);
                         std::string jointName = pJoint->GetName();
                         int jointAxis = iDOF - pJoint->GetDOFIndex();
-                        OpenRAVE::JSON::SetJsonValueByKey(jointDOFValue, "jointName", jointName, _allocator);
-                        OpenRAVE::JSON::SetJsonValueByKey(jointDOFValue, "jointAxis", jointAxis, _allocator);
-                        OpenRAVE::JSON::SetJsonValueByKey(jointDOFValue, "value", vDOFValues[iDOF], _allocator);
+                        OpenRAVE::orjson::SetJsonValueByKey(jointDOFValue, "jointName", jointName, _allocator);
+                        OpenRAVE::orjson::SetJsonValueByKey(jointDOFValue, "jointAxis", jointAxis, _allocator);
+                        OpenRAVE::orjson::SetJsonValueByKey(jointDOFValue, "value", vDOFValues[iDOF], _allocator);
                         dofValues.PushBack(jointDOFValue, _allocator);
                     }
-                    OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "dofValues", dofValues, _allocator);
+                    OpenRAVE::orjson::SetJsonValueByKey(bodyValue, "dofValues", dofValues, _allocator);
                 }
 
-                OpenRAVE::JSON::SetJsonValueByKey(bodyValue, "transform", pBody->GetTransform(), _allocator);
+                OpenRAVE::orjson::SetJsonValueByKey(bodyValue, "transform", pBody->GetTransform(), _allocator);
 
                 // grabbed info
                 std::vector<KinBody::GrabbedInfoPtr> vGrabbedInfo;
@@ -154,7 +154,7 @@ protected:
                         if (!!pReadable) {
                             rapidjson::Value readableValue;
                             pReadable->SerializeJSON(readableValue, _allocator);
-                            OpenRAVE::JSON::SetJsonValueByKey(readableValue, "id", it->first, _allocator);
+                            OpenRAVE::orjson::SetJsonValueByKey(readableValue, "id", it->first, _allocator);
                             readableInterfacesValue.PushBack(readableValue, _allocator);
                         }
                     }
@@ -242,7 +242,7 @@ void RaveWriteJSONFile(EnvironmentBasePtr penv, const std::string& filename, con
 
     EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(penv);
-    OpenRAVE::JSON::DumpJson(doc, ofstream);
+    OpenRAVE::orjson::DumpJson(doc, ofstream);
 }
 
 void RaveWriteJSONFile(KinBodyPtr pbody, const std::string& filename, const AttributesList& atts)
@@ -252,7 +252,7 @@ void RaveWriteJSONFile(KinBodyPtr pbody, const std::string& filename, const Attr
 
     EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(pbody);
-    OpenRAVE::JSON::DumpJson(doc, ofstream);
+    OpenRAVE::orjson::DumpJson(doc, ofstream);
 }
 
 void RaveWriteJSONFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename, const AttributesList& atts)
@@ -262,7 +262,7 @@ void RaveWriteJSONFile(const std::list<KinBodyPtr>& listbodies, const std::strin
 
     EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(listbodies);
-    OpenRAVE::JSON::DumpJson(doc, ofstream);
+    OpenRAVE::orjson::DumpJson(doc, ofstream);
 }
 
 void RaveWriteJSONStream(EnvironmentBasePtr penv, ostream& os, const AttributesList& atts)
@@ -271,7 +271,7 @@ void RaveWriteJSONStream(EnvironmentBasePtr penv, ostream& os, const AttributesL
 
     EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(penv);
-    OpenRAVE::JSON::DumpJson(doc, os);
+    OpenRAVE::orjson::DumpJson(doc, os);
 }
 
 void RaveWriteJSONStream(KinBodyPtr pbody, ostream& os, const AttributesList& atts)
@@ -280,7 +280,7 @@ void RaveWriteJSONStream(KinBodyPtr pbody, ostream& os, const AttributesList& at
 
     EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(pbody);
-    OpenRAVE::JSON::DumpJson(doc, os);
+    OpenRAVE::orjson::DumpJson(doc, os);
 }
 
 void RaveWriteJSONStream(const std::list<KinBodyPtr>& listbodies, ostream& os, const AttributesList& atts)
@@ -289,7 +289,7 @@ void RaveWriteJSONStream(const std::list<KinBodyPtr>& listbodies, ostream& os, c
 
     EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(listbodies);
-    OpenRAVE::JSON::DumpJson(doc, os);
+    OpenRAVE::orjson::DumpJson(doc, os);
 }
 
 void RaveWriteJSONMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts)
@@ -298,7 +298,7 @@ void RaveWriteJSONMemory(EnvironmentBasePtr penv, std::vector<char>& output, con
 
     EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(penv);
-    OpenRAVE::JSON::DumpJson(doc, output);
+    OpenRAVE::orjson::DumpJson(doc, output);
 }
 
 void RaveWriteJSONMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts)
@@ -307,7 +307,7 @@ void RaveWriteJSONMemory(KinBodyPtr pbody, std::vector<char>& output, const Attr
 
     EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(pbody);
-    OpenRAVE::JSON::DumpJson(doc, output);
+    OpenRAVE::orjson::DumpJson(doc, output);
 }
 
 void RaveWriteJSONMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts)
@@ -316,7 +316,7 @@ void RaveWriteJSONMemory(const std::list<KinBodyPtr>& listbodies, std::vector<ch
 
     EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(listbodies);
-    OpenRAVE::JSON::DumpJson(doc, output);
+    OpenRAVE::orjson::DumpJson(doc, output);
 }
 
 void RaveWriteJSON(EnvironmentBasePtr penv, rapidjson::Value& rEnvironment, rapidjson::Document::AllocatorType& allocator, const AttributesList& atts)

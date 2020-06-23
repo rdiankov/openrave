@@ -2562,7 +2562,7 @@ private:
                     rGripperInfo.RemoveMember("name");
                 }
                 daeElementRef pjson_data = ptec->add("json_data");
-                std::string sGripperInfoJSON = OpenRAVE::JSON::DumpJson(rGripperInfo);
+                std::string sGripperInfoJSON = OpenRAVE::orjson::DumpJson(rGripperInfo);
                 pjson_data->setCharData(sGripperInfoJSON.c_str());
             }
         }

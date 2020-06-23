@@ -22,18 +22,18 @@ namespace OpenRAVE {
 
 void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    OpenRAVE::JSON::SetJsonValueByKey(value, "id", _id, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "name", _name, allocator);
+    OpenRAVE::orjson::SetJsonValueByKey(value, "id", _id, allocator);
+    OpenRAVE::orjson::SetJsonValueByKey(value, "name", _name, allocator);
 
     Transform tmpTransform {_t};
     Transform tmpMassTransform {_tMassFrame};
     tmpTransform.trans *= fUnitScale;
     tmpMassTransform.trans *= fUnitScale;
 
-    OpenRAVE::JSON::SetJsonValueByKey(value, "transform", tmpTransform, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "massTransform", tmpMassTransform, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "mass", _mass, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "intertialMoments", _vinertiamoments, allocator);
+    OpenRAVE::orjson::SetJsonValueByKey(value, "transform", tmpTransform, allocator);
+    OpenRAVE::orjson::SetJsonValueByKey(value, "massTransform", tmpMassTransform, allocator);
+    OpenRAVE::orjson::SetJsonValueByKey(value, "mass", _mass, allocator);
+    OpenRAVE::orjson::SetJsonValueByKey(value, "intertialMoments", _vinertiamoments, allocator);
 
     if(_mapFloatParameters.size() > 0)
     {
@@ -42,8 +42,8 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
         FOREACHC(it, _mapFloatParameters) {
             rapidjson::Value parameter;
             parameter.SetObject();
-            OpenRAVE::JSON::SetJsonValueByKey(parameter, "key", it->first, allocator);
-            OpenRAVE::JSON::SetJsonValueByKey(parameter, "values", it->second, allocator);
+            OpenRAVE::orjson::SetJsonValueByKey(parameter, "key", it->first, allocator);
+            OpenRAVE::orjson::SetJsonValueByKey(parameter, "values", it->second, allocator);
             parameters.PushBack(parameter, allocator);
         }
         value.AddMember("floatParameters", parameters, allocator);
@@ -55,8 +55,8 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
         FOREACHC(it, _mapIntParameters) {
             rapidjson::Value parameter;
             parameter.SetObject();
-            OpenRAVE::JSON::SetJsonValueByKey(parameter, "key", it->first, allocator);
-            OpenRAVE::JSON::SetJsonValueByKey(parameter, "values", it->second, allocator);
+            OpenRAVE::orjson::SetJsonValueByKey(parameter, "key", it->first, allocator);
+            OpenRAVE::orjson::SetJsonValueByKey(parameter, "values", it->second, allocator);
             parameters.PushBack(parameter, allocator);
         }
         value.AddMember("intParameters", parameters, allocator);
@@ -68,15 +68,15 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
         FOREACHC(it, _mapStringParameters) {
             rapidjson::Value parameter;
             parameter.SetObject();
-            OpenRAVE::JSON::SetJsonValueByKey(parameter, "key", it->first, allocator);
-            OpenRAVE::JSON::SetJsonValueByKey(parameter, "value", it->second, allocator);
+            OpenRAVE::orjson::SetJsonValueByKey(parameter, "key", it->first, allocator);
+            OpenRAVE::orjson::SetJsonValueByKey(parameter, "value", it->second, allocator);
             parameters.PushBack(parameter, allocator);
         }
         value.AddMember("stringParameters", parameters, allocator);
     }
 
     if (_vForcedAdjacentLinks.size() > 0) {
-        OpenRAVE::JSON::SetJsonValueByKey(value, "forcedAdjacentLinks", _vForcedAdjacentLinks, allocator);
+        OpenRAVE::orjson::SetJsonValueByKey(value, "forcedAdjacentLinks", _vForcedAdjacentLinks, allocator);
     }
 
     if (_vgeometryinfos.size() > 0) {
@@ -110,53 +110,53 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
     //     value.AddMember("extraGeometries", extraGeometriesValue, allocator);
     // }
 
-    OpenRAVE::JSON::SetJsonValueByKey(value, "isStatic", _bStatic, allocator);
-    OpenRAVE::JSON::SetJsonValueByKey(value, "isEnabled", _bIsEnabled, allocator);
+    OpenRAVE::orjson::SetJsonValueByKey(value, "isStatic", _bStatic, allocator);
+    OpenRAVE::orjson::SetJsonValueByKey(value, "isEnabled", _bIsEnabled, allocator);
 }
 
 void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale)
 {
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "id", _id);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "name", _name);
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "id", _id);
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "name", _name);
 
     if (value.HasMember("transform")) {
-        OpenRAVE::JSON::LoadJsonValueByKey(value, "transform", _t);
+        OpenRAVE::orjson::LoadJsonValueByKey(value, "transform", _t);
         _t.trans *= fUnitScale;  // partial update should only mutliply fUnitScale once if the key is in value
     }
     if (value.HasMember("massTransform")) {
-        OpenRAVE::JSON::LoadJsonValueByKey(value, "massTransform", _tMassFrame);
+        OpenRAVE::orjson::LoadJsonValueByKey(value, "massTransform", _tMassFrame);
         _tMassFrame.trans *= fUnitScale;
     }
 
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "mass", _mass);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "intertialMoments", _vinertiamoments);
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "mass", _mass);
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "intertialMoments", _vinertiamoments);
 
     if (value.HasMember("floatParameters") && value["floatParameters"].IsArray()) {
         _mapFloatParameters.clear();
         for (rapidjson::Value::ConstValueIterator it = value["floatParameters"].Begin(); it != value["floatParameters"].End(); ++it) {
             std::string key;
-            OpenRAVE::JSON::LoadJsonValueByKey(*it, "key", key);
-            OpenRAVE::JSON::LoadJsonValueByKey(*it, "values", _mapFloatParameters[key]);
+            OpenRAVE::orjson::LoadJsonValueByKey(*it, "key", key);
+            OpenRAVE::orjson::LoadJsonValueByKey(*it, "values", _mapFloatParameters[key]);
         }
     }
     if (value.HasMember("intParameters") && value["intParameters"].IsArray()) {
         _mapIntParameters.clear();
         for (rapidjson::Value::ConstValueIterator it = value["intParameters"].Begin(); it != value["intParameters"].End(); ++it) {
             std::string key;
-            OpenRAVE::JSON::LoadJsonValueByKey(*it, "key", key);
-            OpenRAVE::JSON::LoadJsonValueByKey(*it, "values", _mapIntParameters[key]);
+            OpenRAVE::orjson::LoadJsonValueByKey(*it, "key", key);
+            OpenRAVE::orjson::LoadJsonValueByKey(*it, "values", _mapIntParameters[key]);
         }
     }
     if (value.HasMember("stringParameters") && value["stringParameters"].IsArray()) {
         _mapStringParameters.clear();
         for (rapidjson::Value::ConstValueIterator it = value["stringParameters"].Begin(); it != value["stringParameters"].End(); ++it) {
             std::string key;
-            OpenRAVE::JSON::LoadJsonValueByKey(*it, "key", key);
-            OpenRAVE::JSON::LoadJsonValueByKey(*it, "value", _mapStringParameters[key]);
+            OpenRAVE::orjson::LoadJsonValueByKey(*it, "key", key);
+            OpenRAVE::orjson::LoadJsonValueByKey(*it, "value", _mapStringParameters[key]);
         }
     }
 
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "forcedAdjacentLinks", _vForcedAdjacentLinks);
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "forcedAdjacentLinks", _vForcedAdjacentLinks);
 
     if (value.HasMember("geometries")) {
         UniqueIDGenerator geometryIdGenerator("geometry");
@@ -170,16 +170,16 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
         // 2. reserve id namespace
         for (rapidjson::Value::ConstValueIterator it = value["geometries"].Begin(); it != value["geometries"].End(); ++it) {
             const rapidjson::Value& geometryValue = *it;
-            std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(geometryValue, "id");
+            std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(geometryValue, "id");
             geometryIdGenerator.ReserveUniqueID(id);
         }
 
         for (rapidjson::Value::ConstValueIterator it = value["geometries"].Begin(); it != value["geometries"].End(); ++it) {
             const rapidjson::Value& geometryValue = *it;
-            std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(geometryValue, "id");
+            std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(geometryValue, "id");
             if (id.empty()) {
                 // 3. set name to id if id is empty
-                id = OpenRAVE::JSON::GetStringJsonValueByKey(geometryValue, "name");
+                id = OpenRAVE::orjson::GetStringJsonValueByKey(geometryValue, "name");
                 // 4. ensure the id is unique
                 geometryIdGenerator.EnsureUniqueID(id);
             }
@@ -197,9 +197,9 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     //         vgeometries.reserve(it->value.Size() + vgeometries.size());
     //         size_t iGeometry = 0;
     //         for(rapidjson::Value::ConstValueIterator im = it->value.Begin(); im != it->value.End(); ++im, ++iGeometry) {
-    //             std::string id = OpenRAVE::JSON::GetStringJsonValueByKey(*im, "id");
+    //             std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(*im, "id");
     //             if (id.empty()) {
-    //                 id = OpenRAVE::JSON::GetStringJsonValueByKey(*im, "name");
+    //                 id = OpenRAVE::orjson::GetStringJsonValueByKey(*im, "name");
     //             }
     //             if (id.empty()) {
     //                 id = boost::str(boost::format("geometry%d") % iGeometry);
@@ -209,8 +209,8 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     //     }
     // }
 
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "isStatic", _bStatic);
-    OpenRAVE::JSON::LoadJsonValueByKey(value, "isEnabled", _bIsEnabled);
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "isStatic", _bStatic);
+    OpenRAVE::orjson::LoadJsonValueByKey(value, "isEnabled", _bIsEnabled);
 }
 
 bool KinBody::LinkInfo::operator==(const KinBody::LinkInfo& other) const {
