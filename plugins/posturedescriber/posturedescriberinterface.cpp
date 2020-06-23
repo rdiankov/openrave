@@ -479,7 +479,7 @@ bool PostureDescriber::_GetPostureValueThresholdCommand(std::ostream& ssout, std
 }
 
 bool PostureDescriber::_GetArmIndicesCommand(std::ostream& ssout, std::istream& ssin) const {
-    SerializeValues(ssout, _armindices);
+    SerializeValues(ssout, _armindices, ' ');
     return !_armindices.empty();
 }
 
@@ -494,7 +494,7 @@ bool PostureDescriber::_ComputePostureValuesCommand(std::ostream& ssout, std::is
         return false;
     }
     _posturefn(_joints, _fTol, _posturevalues, _featurestates, _posturestates); // compute using all cached variables
-    SerializeValues(ssout, _posturevalues);
+    SerializeValues(ssout, _posturevalues, ' ');
     return !_posturestates.empty();
 }
 
