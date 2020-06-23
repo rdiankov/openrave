@@ -128,6 +128,9 @@ public:
         _bEnableSimulation = true;     // need to start by default
         _unit = std::make_pair("meter",1.0); //default unit settings
 
+        _vRapidJsonLoadBuffer.resize(4000000);
+        _prLoadEnvAlloc.reset(new rapidjson::MemoryPoolAllocator<>(&_vRapidJsonLoadBuffer[0], _vRapidJsonLoadBuffer.size()));
+
         _handlegenericrobot = RaveRegisterInterface(PT_Robot,"GenericRobot", RaveGetInterfaceHash(PT_Robot), GetHash(), CreateGenericRobot);
         _handlegenerictrajectory = RaveRegisterInterface(PT_Trajectory,"GenericTrajectory", RaveGetInterfaceHash(PT_Trajectory), GetHash(), CreateGenericTrajectory);
         _handlemulticontroller = RaveRegisterInterface(PT_Controller,"GenericMultiController", RaveGetInterfaceHash(PT_Controller), GetHash(), CreateMultiController);
@@ -459,10 +462,12 @@ public:
             return RaveParseColladaURI(shared_from_this(), uri, atts);
         }
         else if ( _IsJSONURI(uri) ) {
-            return RaveParseJSONURI(shared_from_this(), uri, atts);
+            _ClearRapidJsonBuffer();
+            return RaveParseJSONURI(shared_from_this(), uri, atts, *_prLoadEnvAlloc);
         }
         else if ( _IsMsgPackURI(uri) ) {
-            return RaveParseMsgPackURI(shared_from_this(), uri, atts);
+            _ClearRapidJsonBuffer();
+            return RaveParseMsgPackURI(shared_from_this(), uri, atts, *_prLoadEnvAlloc);
         }
 
         RAVELOG_WARN("load failed on uri %s\n", uri.c_str());
@@ -486,12 +491,14 @@ public:
             }
         }
         else if( _IsJSONFile(filename) ) {
-            if( RaveParseJSONFile(shared_from_this(), filename, atts) ){
+            _ClearRapidJsonBuffer();
+            if( RaveParseJSONFile(shared_from_this(), filename, atts, *_prLoadEnvAlloc) ){
                 return true;
             }
         }
         else if( _IsMsgPackFile(filename) ) {
-            if( RaveParseMsgPackFile(shared_from_this(), filename, atts) ){
+            _ClearRapidJsonBuffer();
+            if( RaveParseMsgPackFile(shared_from_this(), filename, atts, *_prLoadEnvAlloc) ){
                 return true;
             }
         }
@@ -531,15 +538,17 @@ public:
             return RaveParseColladaData(shared_from_this(), data, atts);
         }
         if( _IsJSONData(data) ) {
-            return RaveParseJSONData(shared_from_this(), data, atts);
+            _ClearRapidJsonBuffer();
+            return RaveParseJSONData(shared_from_this(), data, atts, *_prLoadEnvAlloc);
         }
         if( _IsMsgPackData(data) ) {
-            return RaveParseMsgPackData(shared_from_this(), data, atts);
+            _ClearRapidJsonBuffer();
+            return RaveParseMsgPackData(shared_from_this(), data, atts, *_prLoadEnvAlloc);
         }
         return _ParseXMLData(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),atts),data);
     }
 
-    virtual bool LoadJSON(const rapidjson::Document& doc, const AttributesList& atts)
+    virtual bool LoadJSON(const rapidjson::Value& doc, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         return RaveParseJSON(shared_from_this(), doc, atts);
@@ -552,10 +561,12 @@ public:
         switch(options) {
         case SO_Everything:
             if( _IsJSONFile(filename) ) {
-                RaveWriteJSONFile(shared_from_this(),filename,atts);
+                _ClearRapidJsonBuffer();
+                RaveWriteJSONFile(shared_from_this(),filename,atts,*_prLoadEnvAlloc);
             }
             else if( _IsMsgPackFile(filename) ) {
-                RaveWriteMsgPackFile(shared_from_this(),filename,atts);
+                _ClearRapidJsonBuffer();
+                RaveWriteMsgPackFile(shared_from_this(),filename,atts,*_prLoadEnvAlloc);
             }
             else {
                 RaveWriteColladaFile(shared_from_this(),filename,atts);
@@ -607,18 +618,22 @@ public:
 
         if( _IsJSONFile(filename) ) {
             if( listbodies.size() == 1 ) {
-                RaveWriteJSONFile(listbodies.front(),filename,atts);
+                _ClearRapidJsonBuffer();
+                RaveWriteJSONFile(listbodies.front(),filename,atts,*_prLoadEnvAlloc);
             }
             else {
-                RaveWriteJSONFile(listbodies,filename,atts);
+                _ClearRapidJsonBuffer();
+                RaveWriteJSONFile(listbodies,filename,atts,*_prLoadEnvAlloc);
             }
         }
         else if( _IsMsgPackFile(filename) ) {
             if( listbodies.size() == 1 ) {
-                RaveWriteMsgPackFile(listbodies.front(),filename,atts);
+                _ClearRapidJsonBuffer();
+                RaveWriteMsgPackFile(listbodies.front(),filename,atts,*_prLoadEnvAlloc);
             }
             else {
-                RaveWriteMsgPackFile(listbodies,filename,atts);
+                _ClearRapidJsonBuffer();
+                RaveWriteMsgPackFile(listbodies,filename,atts,*_prLoadEnvAlloc);
             }
         }
         else {
@@ -705,10 +720,12 @@ public:
                 RaveWriteColladaMemory(shared_from_this(), output, atts);
             }
             else if (filetype == "json") {
-                RaveWriteJSONMemory(shared_from_this(), output, atts);
+                _ClearRapidJsonBuffer();
+                RaveWriteJSONMemory(shared_from_this(), output, atts,*_prLoadEnvAlloc);
             }
             else if (filetype == "msgpack") {
-                RaveWriteMsgPackMemory(shared_from_this(), output, atts);
+                _ClearRapidJsonBuffer();
+                RaveWriteMsgPackMemory(shared_from_this(), output, atts,*_prLoadEnvAlloc);
             }
             return;
 
@@ -760,10 +777,12 @@ public:
                 RaveWriteColladaMemory(listbodies.front(), output, atts);
             }
             else if (filetype == "json") {
-                RaveWriteJSONMemory(listbodies.front(), output, atts);
+                _ClearRapidJsonBuffer();
+                RaveWriteJSONMemory(listbodies.front(), output, atts,*_prLoadEnvAlloc);
             }
             else if (filetype == "msgpack") {
-                RaveWriteMsgPackMemory(listbodies.front(), output, atts);
+                _ClearRapidJsonBuffer();
+                RaveWriteMsgPackMemory(listbodies.front(), output, atts,*_prLoadEnvAlloc);
             }
         }
         else {
@@ -771,10 +790,12 @@ public:
                 RaveWriteColladaMemory(listbodies, output, atts);
             }
             else if (filetype == "json") {
-                RaveWriteJSONMemory(listbodies, output, atts);
+                _ClearRapidJsonBuffer();
+                RaveWriteJSONMemory(listbodies, output, atts,*_prLoadEnvAlloc);
             }
             else if (filetype == "msgpack") {
-                RaveWriteMsgPackMemory(listbodies, output, atts);
+                _ClearRapidJsonBuffer();
+                RaveWriteMsgPackMemory(listbodies, output, atts,*_prLoadEnvAlloc);
             }
         }
     }
@@ -1367,12 +1388,14 @@ public:
             }
         }
         else if( _IsJSONURI(filename) ) {
-            if( !RaveParseJSONURI(shared_from_this(), robot, filename, atts) ) {
+            _ClearRapidJsonBuffer();
+            if( !RaveParseJSONURI(shared_from_this(), robot, filename, atts, *_prLoadEnvAlloc) ) {
                 return RobotBasePtr();
             }
         }
         else if( _IsMsgPackURI(filename) ) {
-            if( !RaveParseMsgPackURI(shared_from_this(), robot, filename, atts) ) {
+            _ClearRapidJsonBuffer();
+            if( !RaveParseMsgPackURI(shared_from_this(), robot, filename, atts, *_prLoadEnvAlloc) ) {
                 return RobotBasePtr();
             }
         }
@@ -1382,12 +1405,14 @@ public:
             }
         }
         else if( _IsJSONFile(filename) ) {
-            if( !RaveParseJSONFile(shared_from_this(), robot, filename, atts) ) {
+            _ClearRapidJsonBuffer();
+            if( !RaveParseJSONFile(shared_from_this(), robot, filename, atts, *_prLoadEnvAlloc) ) {
                 return RobotBasePtr();
             }
         }
         else if( _IsMsgPackFile(filename) ) {
-            if( !RaveParseMsgPackFile(shared_from_this(), robot, filename, atts) ) {
+            _ClearRapidJsonBuffer();
+            if( !RaveParseMsgPackFile(shared_from_this(), robot, filename, atts, *_prLoadEnvAlloc) ) {
                 return RobotBasePtr();
             }
         }
@@ -1473,12 +1498,14 @@ public:
             }
         }
         else if( _IsJSONData(data) ) {
-            if( !RaveParseJSONData(shared_from_this(), robot, data, atts) ) {
+            _ClearRapidJsonBuffer();
+            if( !RaveParseJSONData(shared_from_this(), robot, data, atts, *_prLoadEnvAlloc) ) {
                 return RobotBasePtr();
             }
         }
         else if( _IsMsgPackData(data) ) {
-            if( !RaveParseMsgPackData(shared_from_this(), robot, data, atts) ) {
+            _ClearRapidJsonBuffer();
+            if( !RaveParseMsgPackData(shared_from_this(), robot, data, atts, *_prLoadEnvAlloc) ) {
                 return RobotBasePtr();
             }
         }
@@ -1540,12 +1567,14 @@ public:
             }
         }
         else if( _IsJSONURI(filename) ) {
-            if( !RaveParseJSONURI(shared_from_this(), body, filename, atts) ) {
+            _ClearRapidJsonBuffer();
+            if( !RaveParseJSONURI(shared_from_this(), body, filename, atts, *_prLoadEnvAlloc) ) {
                 return KinBodyPtr();
             }
         }
         else if( _IsMsgPackURI(filename) ) {
-            if( !RaveParseMsgPackURI(shared_from_this(), body, filename, atts) ) {
+            _ClearRapidJsonBuffer();
+            if( !RaveParseMsgPackURI(shared_from_this(), body, filename, atts, *_prLoadEnvAlloc) ) {
                 return KinBodyPtr();
             }
         }
@@ -1555,12 +1584,14 @@ public:
             }
         }
         else if( _IsJSONFile(filename) ) {
-            if( !RaveParseJSONFile(shared_from_this(), body, filename, atts) ) {
+            _ClearRapidJsonBuffer();
+            if( !RaveParseJSONFile(shared_from_this(), body, filename, atts, *_prLoadEnvAlloc) ) {
                 return KinBodyPtr();
             }
         }
         else if( _IsMsgPackFile(filename) ) {
-            if( !RaveParseMsgPackFile(shared_from_this(), body, filename, atts) ) {
+            _ClearRapidJsonBuffer();
+            if( !RaveParseMsgPackFile(shared_from_this(), body, filename, atts, *_prLoadEnvAlloc) ) {
                 return KinBodyPtr();
             }
         }
@@ -1644,12 +1675,14 @@ public:
             }
         }
         else if( _IsJSONData(data) ) {
-            if( !RaveParseJSONData(shared_from_this(), body, data, atts) ) {
+            _ClearRapidJsonBuffer();
+            if( !RaveParseJSONData(shared_from_this(), body, data, atts, *_prLoadEnvAlloc) ) {
                 return RobotBasePtr();
             }
         }
         else if( _IsMsgPackData(data) ) {
-            if( !RaveParseMsgPackData(shared_from_this(), body, data, atts) ) {
+            _ClearRapidJsonBuffer();
+            if( !RaveParseMsgPackData(shared_from_this(), body, data, atts, *_prLoadEnvAlloc) ) {
                 return RobotBasePtr();
             }
         }
@@ -1755,12 +1788,14 @@ public:
                     }
                 }
                 else if( bIsJSONURI ) {
-                    if( !RaveParseJSONURI(shared_from_this(), pbody, filename, atts) ) {
+                    _ClearRapidJsonBuffer();
+                    if( !RaveParseJSONURI(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
                         return InterfaceBasePtr();
                     }
                 }
                 else if( bIsMsgPackURI ) {
-                    if( !RaveParseMsgPackURI(shared_from_this(), pbody, filename, atts) ) {
+                    _ClearRapidJsonBuffer();
+                    if( !RaveParseMsgPackURI(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
                         return InterfaceBasePtr();
                     }
                 }
@@ -1770,12 +1805,14 @@ public:
                     }
                 }
                 else if( bIsJSONFile ) {
-                    if( !RaveParseJSONFile(shared_from_this(), pbody, filename, atts) ) {
+                    _ClearRapidJsonBuffer();
+                    if( !RaveParseJSONFile(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
                         return InterfaceBasePtr();
                     }
                 }
                 else if( bIsMsgPackFile ) {
-                    if( !RaveParseMsgPackFile(shared_from_this(), pbody, filename, atts) ) {
+                    _ClearRapidJsonBuffer();
+                    if( !RaveParseMsgPackFile(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
                         return InterfaceBasePtr();
                     }
                 }
@@ -1795,12 +1832,14 @@ public:
                     }
                 }
                 else if( bIsJSONURI ) {
-                    if( !RaveParseJSONURI(shared_from_this(), probot, filename, atts) ) {
+                    _ClearRapidJsonBuffer();
+                    if( !RaveParseJSONURI(shared_from_this(), probot, filename, atts, *_prLoadEnvAlloc) ) {
                         return InterfaceBasePtr();
                     }
                 }
                 else if( bIsMsgPackURI ) {
-                    if( !RaveParseMsgPackURI(shared_from_this(), probot, filename, atts) ) {
+                    _ClearRapidJsonBuffer();
+                    if( !RaveParseMsgPackURI(shared_from_this(), probot, filename, atts, *_prLoadEnvAlloc) ) {
                         return InterfaceBasePtr();
                     }
                 }
@@ -1810,12 +1849,14 @@ public:
                     }
                 }
                 else if( bIsJSONFile ) {
-                    if( !RaveParseJSONFile(shared_from_this(), probot, filename, atts) ) {
+                    _ClearRapidJsonBuffer();
+                    if( !RaveParseJSONFile(shared_from_this(), probot, filename, atts, *_prLoadEnvAlloc) ) {
                         return InterfaceBasePtr();
                     }
                 }
                 else if( bIsMsgPackFile ) {
-                    if( !RaveParseMsgPackFile(shared_from_this(), probot, filename, atts) ) {
+                    _ClearRapidJsonBuffer();
+                    if( !RaveParseMsgPackFile(shared_from_this(), probot, filename, atts, *_prLoadEnvAlloc) ) {
                         return InterfaceBasePtr();
                     }
                 }
@@ -3252,6 +3293,12 @@ protected:
         return data.size() > 0 && !std::isprint(data[0]);
     }
 
+    void _ClearRapidJsonBuffer()
+    {
+        // TODO resize smartly
+        _prLoadEnvAlloc->Clear();
+    }
+
     std::vector<RobotBasePtr> _vecrobots;      ///< robots (possibly controlled)
     std::vector<KinBodyPtr> _vecbodies;     ///< all objects that are collidable (includes robots)
 
@@ -3288,6 +3335,9 @@ protected:
     std::list<UserDataWeakPtr> _listRegisteredCollisionCallbacks;     ///< see EnvironmentBase::RegisterCollisionCallback
     std::list<UserDataWeakPtr> _listRegisteredBodyCallbacks;     ///< see EnvironmentBase::RegisterBodyCallback
 
+    std::vector<uint8_t> _vRapidJsonLoadBuffer;
+    boost::shared_ptr<rapidjson::MemoryPoolAllocator<> > _prLoadEnvAlloc; ///< allocator used for loading environments
+    
     bool _bInit;                   ///< environment is initialized
     bool _bEnableSimulation;            ///< enable simulation loop
     bool _bShutdownSimulation; ///< if true, the simulation thread should shutdown

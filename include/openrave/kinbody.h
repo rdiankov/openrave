@@ -109,8 +109,8 @@ public:
         return !operator==(other);
     }
 
-    virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-    virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+    virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const;
+    virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale);
 
     std::string model_type; ///< the type of actuator it is. Usually the motor model name is ok, but can include other info like gear box, etc
     //@{ from motor data sheet
@@ -274,10 +274,10 @@ public:
         AABB ComputeAABB(const Transform& tGeometryWorld) const;
 
         ///< \param multiply all translational values by fUnitScale
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
+        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const;
 
         ///< \param multiply all translational values by fUnitScale
-        virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
+        virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale);
 
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
 
@@ -365,8 +365,8 @@ public:
             return !operator==(other);
         }
 
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale=1.0);
+        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const;
+        virtual void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale);
 
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like
@@ -962,8 +962,8 @@ private:
     {
 public:
         boost::array< std::string, 3>  _equations;         ///< the original equations
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const;
+        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale);
     };
     typedef boost::shared_ptr<MimicInfo> MimicInfoPtr;
     typedef boost::shared_ptr<MimicInfo const> MimicInfoConstPtr;
@@ -1019,8 +1019,8 @@ public:
 
         virtual int GetDOF() const;
 
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const;
+        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale);
 
         JointType _type = JointNone; /// The joint type
 
@@ -1672,8 +1672,8 @@ public:
             return !operator==(other);
         }
 
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const;
+        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale);
 
         /// \brief resets the info
         inline void Reset() {
@@ -1832,8 +1832,8 @@ public:
             return !operator==(other);
         }
 
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const;
+        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale);
 
         std::string _id;
         std::string _uri;

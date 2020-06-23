@@ -229,7 +229,7 @@ public:
     virtual bool LoadData(const std::string& data, const AttributesList& atts = AttributesList()) = 0;
 
     /// \brief loads a scene from rapidjson document
-    virtual bool LoadJSON(const rapidjson::Document& doc, const AttributesList& atts = AttributesList()) = 0;
+    virtual bool LoadJSON(const rapidjson::Value& doc, const AttributesList& atts = AttributesList()) = 0;
 
     virtual bool LoadXMLData(const std::string& data, const AttributesList& atts = AttributesList()) {
         return LoadData(data,atts);
@@ -237,9 +237,9 @@ public:
 
     /** \brief Saves a scene depending on the filename extension. Default is in COLLADA format
 
-        \param filename the filename to save the results at
+        \param filename the filename to save the results at. Use the suffix extension of the filename to figure out the type to save. Supports: "dae", "json", "msgpack"
         \param options controls what to save
-        \param atts attributes that refine further options. For collada parsing, the options are passed through
+        \param atts attributes that refine further options. For collada-dom parsing, the options are passed through
         \code
         DAE::getIOPlugin()->setOption(key,value).
         \endcode
@@ -262,7 +262,7 @@ public:
 
     /** \brief Saves a scene depending on the filename extension.
 
-        \param filetype the type of file to save, can be collada
+        \param filetype the type of file to save, can be: "collada", "json", "msgpack"
         \param output the output data if saving is successful
         \param options controls what to save
         \param atts attributes that refine further options. For collada parsing, the options are passed through
@@ -723,8 +723,8 @@ public:
             return !operator==(other);
         }
 
-        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const;
-        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0);
+        virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const;
+        virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale);
 
         std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos; ///< list of pointers to KinBodyInfo
         uint64_t _revision;
