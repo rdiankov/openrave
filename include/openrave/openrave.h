@@ -88,7 +88,7 @@
 #endif
 
 #include <openrave/smart_ptr.h>
-#include <openrave/exception.h>
+#include <openrave/openraveexception.h>
 
 /// The entire %OpenRAVE library
 namespace OpenRAVE {

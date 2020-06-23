@@ -19,7 +19,7 @@
 #define OPENRAVE_JSON_H
 
 #include <openrave/config.h>
-#include <openrave/exception.h>
+#include <openrave/openraveexception.h>
 
 #include <array>
 #include <boost/shared_ptr.hpp>
