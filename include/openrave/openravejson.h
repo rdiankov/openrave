@@ -953,13 +953,6 @@ template<class T> inline std::string GetJsonString(const T& t) {
     return openravejson::DumpJson(d);
 }
 
-template<class T>
-inline std::string SerializeJsonToString(const T& t) {
-    rapidjson::Document d;
-    t.SerializeJSON(d, d.GetAllocator());
-    return openravejson::DumpJson(d);
-}
-
 /** update a json object with another one, new key-value pair will be added, existing ones will be overwritten
  */
 inline void UpdateJson(rapidjson::Document& a, const rapidjson::Value& b) {

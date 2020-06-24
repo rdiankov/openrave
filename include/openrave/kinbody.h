@@ -847,15 +847,13 @@ public:
 
         struct DOFFormat
         {
-            int16_t jointindex;         ///< the index into the joints, if >= GetJoints.size(), then points to the passive joints
-            int16_t dofindex : 14;         ///< if >= 0, then points to a DOF of the robot that is NOT mimiced
-            uint8_t axis : 2;         ///< the axis of the joint index
+            int16_t jointindex = -1; ///< the index into the joints, if >= GetJoints.size(), then points to the passive joints
+            int16_t dofindex = -1; ///< if >= 0, then points to a DOF of the robot that is NOT mimiced
+            uint8_t axis = 0; ///< the axis of the joint index
             bool operator <(const DOFFormat& r) const;
             bool operator ==(const DOFFormat& r) const;
             boost::shared_ptr<Joint> GetJoint(KinBody &parent) const;
             boost::shared_ptr<Joint const> GetJoint(const KinBody &parent) const;
-            void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) const;
-            void DeserializeJSON(const rapidjson::Value& value);
         };
 
         struct DOFHierarchy
@@ -865,12 +863,7 @@ public:
             bool operator ==(const DOFHierarchy& r) const {
                 return dofindex==r.dofindex && dofformatindex == r.dofformatindex;
             }
-            void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) const;
-            void DeserializeJSON(const rapidjson::Value& value);
         };
-        
-        void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) const;
-        void DeserializeJSON(const rapidjson::Value& value);
 
         /// @name automatically set
         //@{

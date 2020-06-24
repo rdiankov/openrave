@@ -1855,22 +1855,6 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     parent->_PostprocessChangedParameters(Prop_JointMimic);
 }
 
-std::string to_string(const std::map< std::pair<KinBody::Mimic::DOFFormat, int>, dReal >& m) {
-    std::stringstream ss;
-    for(const std::pair<const std::pair<KinBody::Mimic::DOFFormat, int>, dReal>& keyvalue : m) {
-        ss << "(" << openravejson::SerializeJsonToString(keyvalue.first.first) << ", " << keyvalue.first.second << "): " << keyvalue.second << "; ";
-    }
-    return ss.str();
-}
-
-std::string to_string(const std::vector<std::pair<int, dReal> >& v) {
-    std::stringstream ss;
-    for(const std::pair<int, dReal>& p : v) {
-        ss << "(" << p.first << ", " << p.second << "), ";
-    }
-    return ss.str();
-}
-
 void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal> >& vDofindexDerivativePairs,
                                                const int iaxis,
                                                std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mTotalderivativepairValue) const
@@ -1898,15 +1882,12 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
         // this is the *generalized* joint index for a mimic joint
         thisdofformat.jointindex = nActiveJoints + (find(begin(vPassiveJoints), end(vPassiveJoints), shared_from_this()) - begin(vPassiveJoints));
     }
-    if( IS_DEBUGLEVEL(Level_Verbose) ) {
-        RAVELOG_VERBOSE_FORMAT("Joint %s has dofformat: %s", this->GetName() % openravejson::SerializeJsonToString(thisdofformat));
-    }
 
     const std::map< std::pair<Mimic::DOFFormat, int>, dReal >::const_iterator mit = find_if(begin(mTotalderivativepairValue), end(mTotalderivativepairValue),
         [&thisdofformat](const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal> &keyvalue) {
             const bool bfound = keyvalue.first.first == thisdofformat;
             if( IS_DEBUGLEVEL(Level_Verbose) && bfound ) {
-                RAVELOG_VERBOSE_FORMAT("Found cached %s", openravejson::SerializeJsonToString(thisdofformat));
+                RAVELOG_VERBOSE_FORMAT("Found cached derivatives of jointindex %d with respect to others", thisdofformat.jointindex);
             }
             return bfound;
         }
@@ -1919,9 +1900,6 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
                 const dReal partialDerivative = keyvalue.second;
                 vDofindexDerivativePairs.emplace_back(dependedJointIndex, partialDerivative); // collect all dz/dx
             }
-        }
-        if( IS_DEBUGLEVEL(Level_Verbose) ) {
-            RAVELOG_VERBOSE_FORMAT("mTotalderivativepairValue: %s\nvDofindexDerivativePairs: %s", to_string(mTotalderivativepairValue) % to_string(vDofindexDerivativePairs));
         }
         return;
     }
@@ -1938,7 +1916,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
 
     if( IS_DEBUGLEVEL(Level_Verbose) ) {
         std::stringstream ss;
-        ss << "pmimic: " << openravejson::SerializeJsonToString(*pmimic) << "depended joints are ";
+        ss << "joint \"" << this->GetName() << "\" of jointindex " << thisdofformat.jointindex << " depends on joints ";
         for(const Mimic::DOFFormat& dofformat : vdofformats) {
             const JointConstPtr dependedjoint = dofformat.GetJoint(*parent); ///< say joint y
             ss << dependedjoint->GetName() << ", ";
@@ -1981,10 +1959,6 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
         const int dependedJointIndex = keyvalue.first.second;
         const dReal partialDerivative = keyvalue.second;
         vDofindexDerivativePairs.emplace_back(dependedJointIndex, partialDerivative); // collect all total derivatives dz/dx
-    }
-
-    if( IS_DEBUGLEVEL(Level_Verbose) )  {
-        RAVELOG_VERBOSE_FORMAT("localmap: %s\nmTotalderivativepairValue: %s\nvDofindexDerivativePairs: %s", to_string(localmap) % to_string(mTotalderivativepairValue) % to_string(vDofindexDerivativePairs));
     }
 
     mTotalderivativepairValue.insert(
@@ -2041,47 +2015,10 @@ KinBody::JointPtr KinBody::Joint::MIMIC::DOFFormat::GetJoint(KinBody &parent) co
     return jointindex < numjoints ? parent.GetJoints().at(jointindex) : parent.GetPassiveJoints().at(jointindex-numjoints);
 }
 
-void KinBody::Joint::MIMIC::DOFFormat::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) const
-{
-    openravejson::SetJsonValueByKey(value, "jointindex", jointindex, allocator);
-    openravejson::SetJsonValueByKey(value,   "dofindex",   dofindex, allocator);
-    openravejson::SetJsonValueByKey(value,       "axis",       axis, allocator);
-}
-
-void KinBody::Joint::MIMIC::DOFFormat::DeserializeJSON(const rapidjson::Value& value) {
-    openravejson::LoadJsonValueByKey(value, "jointindex", jointindex);
-    openravejson::LoadJsonValueByKey(value,   "dofindex",   dofindex);
-    openravejson::LoadJsonValueByKey(value,       "axis",       axis);
-}
-
 KinBody::JointConstPtr KinBody::Joint::MIMIC::DOFFormat::GetJoint(const KinBody &parent) const
 {
     int numjoints = (int)parent.GetJoints().size();
     return jointindex < numjoints ? parent.GetJoints().at(jointindex) : parent.GetPassiveJoints().at(jointindex-numjoints);
-}
-
-void KinBody::Joint::MIMIC::DOFHierarchy::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) const
-{
-    openravejson::SetJsonValueByKey(value,       "dofindex",       dofindex, allocator);
-    openravejson::SetJsonValueByKey(value, "dofformatindex", dofformatindex, allocator);
-}
-
-void KinBody::Joint::MIMIC::DOFHierarchy::DeserializeJSON(const rapidjson::Value& value) {
-    openravejson::LoadJsonValueByKey(value,       "dofindex",       dofindex);
-    openravejson::LoadJsonValueByKey(value, "dofformatindex", dofformatindex);
-}
-
-void KinBody::Joint::MIMIC::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) const
-{
-    openravejson::SetJsonValueByKey(value, "_vdofformat", _vdofformat, allocator);
-    openravejson::SetJsonValueByKey(value, "_vmimicdofs", _vmimicdofs, allocator);
-    openravejson::SetJsonValueByKey(value,  "_equations",  _equations, allocator);
-}
-
-void KinBody::Joint::MIMIC::DeserializeJSON(const rapidjson::Value& value) {
-    openravejson::LoadJsonValueByKey(value, "_vdofformat", _vdofformat);
-    openravejson::LoadJsonValueByKey(value, "_vmimicdofs", _vmimicdofs);
-    openravejson::LoadJsonValueByKey(value,  "_equations",  _equations);
 }
 
 void KinBody::Joint::SetFloatParameters(const std::string& key, const std::vector<dReal>& parameters)
