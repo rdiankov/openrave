@@ -3337,7 +3337,8 @@ protected:
 
     std::vector<uint8_t> _vRapidJsonLoadBuffer;
     boost::shared_ptr<rapidjson::MemoryPoolAllocator<> > _prLoadEnvAlloc; ///< allocator used for loading environments
-    
+    std::map<std::string, rapidjson::Value> _mExpandedBodyValue;  ///< map of bodyId and expandedBodyValue
+
     bool _bInit;                   ///< environment is initialized
     bool _bEnableSimulation;            ///< enable simulation loop
     bool _bShutdownSimulation; ///< if true, the simulation thread should shutdown

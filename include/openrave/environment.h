@@ -727,6 +727,7 @@ public:
         virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale);
 
         std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos; ///< list of pointers to KinBodyInfo
+
         uint64_t _revision;
     };
     typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;
@@ -747,6 +748,9 @@ public:
 
     /// \brief update EnvironmentBase according to new EnvironmentBaseInfo
     virtual void UpdateFromInfo(const EnvironmentBaseInfo& info) = 0;
+
+    std::map<std::string, rapidjson::Value> _mExpandedBodyValue;  ///< map of bodyId and expandedBodyValue
+
 
 protected:
     virtual const char* GetHash() const {

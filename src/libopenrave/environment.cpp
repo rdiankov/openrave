@@ -76,6 +76,7 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSON(const rapidjson::Valu
             if (isDeleted) {
                 RAVELOG_DEBUG_FORMAT("deleted body: %s", id);
             }
+
             bool isRobot = OpenRAVE::orjson::GetJsonValueByKey<bool>(bodyValue, "isRobot", isExistingRobot);
             RAVELOG_DEBUG_FORMAT("body: %s, isRobot = %d", id%isRobot);
             if (isRobot) {
