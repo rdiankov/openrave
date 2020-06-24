@@ -3588,7 +3588,7 @@ void KinBody::_ComputeInternalInformation()
                             if( pjointDepended->IsMimic(dofformat.axis) ) {
                                 mapmimic[thisdofformat] = pmimic; ///< pjoint depends on pjointDepended
                                 RAVELOG_DEBUG_FORMAT("mimic joint %s depends on mimic joint %s; thisdofformat: %s; pmimic: %s",
-                                                     pjoint->GetName() % pjointDepended->GetName() % thisdofformat.to_string() % pmimic->to_string()
+                                                     pjoint->GetName() % pjointDepended->GetName() % openravejson::SerializeJsonToString(thisdofformat) % openravejson::SerializeJsonToString(*pmimic)
                                 );
                                 break;
                             }
@@ -3617,7 +3617,7 @@ void KinBody::_ComputeInternalInformation()
                     }
 
                     const MimicPtr& pmimicDepended = mapmimic.at(dofformat); // dofformat.jointindex depends on pmimicDepended
-                    RAVELOG_DEBUG_FORMAT("pmimicDepended: %s", pmimicDepended->to_string());
+                    RAVELOG_DEBUG_FORMAT("pmimicDepended: %s", openravejson::SerializeJsonToString(*pmimicDepended));
 
                     const std::vector<Mimic::DOFHierarchy>&   vmimicdofsDepended = pmimicDepended->_vmimicdofs;
                     const std::vector<Mimic::DOFFormat>& vmimicdofformatDepended = pmimicDepended->_vdofformat;
@@ -3649,7 +3649,7 @@ void KinBody::_ComputeInternalInformation()
             for(const JointPtr& pjoint : vjoints) {
                 const int ndof = pjoint->GetDOF();
                 for(int idof = 0; idof < ndof; ++idof) {
-                    pjoint->_vmimic[i].reset();
+                    pjoint->_vmimic[idof].reset();
                 }
             }
         }

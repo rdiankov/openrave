@@ -854,7 +854,7 @@ public:
             bool operator ==(const DOFFormat& r) const;
             boost::shared_ptr<Joint> GetJoint(KinBody &parent) const;
             boost::shared_ptr<Joint const> GetJoint(const KinBody &parent) const;
-            std::string to_string() const;
+            void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) const;
         };
 
         struct DOFHierarchy
@@ -864,10 +864,10 @@ public:
             bool operator ==(const DOFHierarchy& r) const {
                 return dofindex==r.dofindex && dofformatindex == r.dofformatindex;
             }
-            std::string to_string() const;
+            void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) const;
         };
         
-        std::string to_string() const;
+        void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) const;
 
         /// @name automatically set
         //@{

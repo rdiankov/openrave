@@ -1858,7 +1858,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
 std::string to_string(const std::map< std::pair<KinBody::Mimic::DOFFormat, int>, dReal >& m) {
     std::stringstream ss;
     for(const std::pair<const std::pair<KinBody::Mimic::DOFFormat, int>, dReal>& keyvalue : m) {
-        ss << "(" << keyvalue.first.first.to_string() << ", " << keyvalue.first.second << "): " << keyvalue.second << "; ";
+        ss << "(" << openravejson::SerializeJsonToString(keyvalue.first.first) << ", " << keyvalue.first.second << "): " << keyvalue.second << "; ";
     }
     return ss.str();
 }
@@ -1899,14 +1899,14 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
         thisdofformat.jointindex = nActiveJoints + (find(begin(vPassiveJoints), end(vPassiveJoints), shared_from_this()) - begin(vPassiveJoints));
     }
     if( IS_DEBUGLEVEL(Level_Verbose) ) {
-        RAVELOG_VERBOSE_FORMAT("Joint %s has dofformat: %s", this->GetName() % thisdofformat.to_string());
+        RAVELOG_VERBOSE_FORMAT("Joint %s has dofformat: %s", this->GetName() % openravejson::SerializeJsonToString(thisdofformat));
     }
 
     const std::map< std::pair<Mimic::DOFFormat, int>, dReal >::const_iterator mit = find_if(begin(mTotalderivativepairValue), end(mTotalderivativepairValue),
         [&thisdofformat](const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal> &keyvalue) {
             const bool bfound = keyvalue.first.first == thisdofformat;
             if( IS_DEBUGLEVEL(Level_Verbose) && bfound ) {
-                RAVELOG_VERBOSE_FORMAT("Found cached %s", thisdofformat.to_string());
+                RAVELOG_VERBOSE_FORMAT("Found cached %s", openravejson::SerializeJsonToString(thisdofformat));
             }
             return bfound;
         }
@@ -1938,7 +1938,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
 
     if( IS_DEBUGLEVEL(Level_Verbose) ) {
         std::stringstream ss;
-        ss << "pmimic: " << pmimic->to_string() << "depended joints are ";
+        ss << "pmimic: " << openravejson::SerializeJsonToString(*pmimic) << "depended joints are ";
         for(const Mimic::DOFFormat& dofformat : vdofformats) {
             const JointConstPtr dependedjoint = dofformat.GetJoint(*parent); ///< say joint y
             ss << dependedjoint->GetName() << ", ";
@@ -2041,8 +2041,11 @@ KinBody::JointPtr KinBody::Joint::MIMIC::DOFFormat::GetJoint(KinBody &parent) co
     return jointindex < numjoints ? parent.GetJoints().at(jointindex) : parent.GetPassiveJoints().at(jointindex-numjoints);
 }
 
-std::string KinBody::Joint::MIMIC::DOFFormat::to_string() const { 
-    return "jointindex = " + std::to_string(jointindex) + ", dofindex = " + std::to_string(dofindex) + ", axis = " + std::to_string(axis);
+void KinBody::Joint::MIMIC::DOFFormat::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) const
+{
+    openravejson::SetJsonValueByKey(value, "jointindex", jointindex, allocator);
+    openravejson::SetJsonValueByKey(value,   "dofindex",   dofindex, allocator);
+    openravejson::SetJsonValueByKey(value,       "axis",       axis, allocator);
 }
 
 KinBody::JointConstPtr KinBody::Joint::MIMIC::DOFFormat::GetJoint(const KinBody &parent) const
@@ -2051,23 +2054,17 @@ KinBody::JointConstPtr KinBody::Joint::MIMIC::DOFFormat::GetJoint(const KinBody 
     return jointindex < numjoints ? parent.GetJoints().at(jointindex) : parent.GetPassiveJoints().at(jointindex-numjoints);
 }
 
-std::string KinBody::Joint::MIMIC::DOFHierarchy::to_string() const {
-    return "dofindex = " + std::to_string(dofindex) + ", dofformatindex = " + std::to_string(dofformatindex);
+void KinBody::Joint::MIMIC::DOFHierarchy::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) const
+{
+    openravejson::SetJsonValueByKey(value,       "dofindex",       dofindex, allocator);
+    openravejson::SetJsonValueByKey(value, "dofformatindex", dofformatindex, allocator);
 }
 
-std::string KinBody::Joint::MIMIC::to_string() const {
-    std::stringstream ss;
-    ss << "_equations = ";
-    for(size_t i = 0; i < 3; ++i) { 
-        if(!_equations[i].empty()) {
-            ss << "[" << i << "]: " << _equations[i] << '\n'; 
-        }
-    }
-    ss << "_vdofformat = ";
-    for(size_t i = 0; i < _vdofformat.size(); ++i) { ss << "[" << i << "]: " << _vdofformat[i].to_string() << '\n'; }
-    ss << "_vmimicdofs = ";
-    for(size_t i = 0; i < _vmimicdofs.size(); ++i) { ss << "[" << i << "]: " << _vmimicdofs[i].to_string() << '\n'; }
-    return ss.str();
+void KinBody::Joint::MIMIC::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) const
+{
+    openravejson::SetJsonValueByKey(value, "_vdofformat", _vdofformat, allocator);
+    openravejson::SetJsonValueByKey(value, "_vmimicdofs", _vmimicdofs, allocator);
+    openravejson::SetJsonValueByKey(value,  "_equations",  _equations, allocator);
 }
 
 void KinBody::Joint::SetFloatParameters(const std::string& key, const std::vector<dReal>& parameters)

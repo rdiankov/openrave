@@ -339,11 +339,6 @@ inline void LoadJsonValue(const rapidjson::Value& v, IkParameterization& t) {
     t.DeserializeJSON(v);
 }
 
-/// \brief serialize an OpenRAVE IkParameterization as json
-inline void SaveJsonValue(rapidjson::Value &v, const IkParameterization& t, rapidjson::Document::AllocatorType& alloc) {
-    t.SerializeJSON(v, alloc);
-}
-
 template<class T, size_t N>
 inline void LoadJsonValue(const rapidjson::Value& v, boost::array<T, N>& t) {
     if (v.IsArray()) {
@@ -497,6 +492,9 @@ inline void LoadJsonValue(const rapidjson::Value& v, TriMesh& t)
 /*JsonWrapper<T>::SaveToJson(v, t, alloc);*/
 /*}*/
 
+template<typename T>
+void SaveJsonValueForward(rapidjson::Value&, const T&, rapidjson::Document::AllocatorType&);
+
 inline void SaveJsonValue(rapidjson::Value& v, const JsonSerializable& t, rapidjson::Document::AllocatorType& alloc) {
     t.SaveToJson(v, alloc);
 }
@@ -597,7 +595,7 @@ inline void SaveJsonValue(rapidjson::Value& v, const std::vector<T>& t, rapidjso
     v.Reserve(t.size(), alloc);
     for (size_t ivec = 0; ivec < t.size(); ++ivec) {
         rapidjson::Value tmpv;
-        SaveJsonValue(tmpv, t[ivec], alloc);
+        SaveJsonValueForward(tmpv, t[ivec], alloc);
         v.PushBack(tmpv, alloc);
     }
 }
@@ -679,6 +677,7 @@ inline void SaveJsonValue(rapidjson::Value& v, const std::vector<double>& t, rap
         v.PushBack(t[ivec], alloc);
     }
 }
+
 template<>
 inline void SaveJsonValue(rapidjson::Value& v, const std::vector<double>& t, rapidjson::Document::AllocatorType& alloc, size_t n) {
     v.SetArray();
@@ -725,6 +724,7 @@ inline void SaveJsonValue(rapidjson::Document& v, const T& t) {
     SaveJsonValue(tempDoc, t, tempDoc.GetAllocator());
     v.Swap(tempDoc);
 }
+
 template<class T> void inline LoadJsonValueByKey(const rapidjson::Value& v, const char* key, T& t);
 inline void LoadJsonValue(const rapidjson::Value& v, SensorBase::CameraIntrinsics& t) {
     if (!v.IsObject()) {
@@ -851,6 +851,42 @@ inline void SaveJsonValue(rapidjson::Value &rTriMesh, const TriMesh& t, rapidjso
     SetJsonValueByKey(rTriMesh, "indices", t.indices, alloc);
 }
 
+template<typename T>
+struct HasSerializeJSON
+{
+    template<typename U,
+             void(U::*)(rapidjson::Value&,
+                        rapidjson::Document::AllocatorType&) const
+            >
+    struct SFINAEHelper {};
+
+    template<typename U>
+    static char TestHasSerializeJSON(SFINAEHelper<U, &U::SerializeJSON>*);
+
+    template<typename U>
+    static int TestHasSerializeJSON(...);
+
+    static const bool Has = sizeof(TestHasSerializeJSON<T>(0)) == sizeof(char);
+};
+
+template<typename T>
+void SaveJsonValueForward(rapidjson::Value& v, const T& t, rapidjson::Document::AllocatorType& alloc, std::true_type)
+{
+    t.SerializeJSON(v, alloc);
+}
+
+template<typename T>
+void SaveJsonValueForward(rapidjson::Value& v, const T& t, rapidjson::Document::AllocatorType& alloc, std::false_type)
+{
+    SaveJsonValue(v, t, alloc);
+}
+
+template<typename T>
+void SaveJsonValueForward(rapidjson::Value& v, const T& t, rapidjson::Document::AllocatorType& alloc)
+{
+    SaveJsonValueForward(v, t, alloc, std::integral_constant<bool, HasSerializeJSON<T>::Has>());
+}
+
 template<class T, class U>
 inline void SetJsonValueByKey(rapidjson::Value& v, const U& key, const T& t, rapidjson::Document::AllocatorType& alloc)
 {
@@ -858,6 +894,7 @@ inline void SetJsonValueByKey(rapidjson::Value& v, const U& key, const T& t, rap
         v.SetObject();
     }
     if (v.HasMember(key)) {
+        // want to call `t.SerializeJSON(v[key], alloc);`
         SaveJsonValue(v[key], t, alloc);
     }
     else {
@@ -913,6 +950,13 @@ inline void ValidateJsonString(const std::string& str) {
 template<class T> inline std::string GetJsonString(const T& t) {
     rapidjson::Document d;
     SaveJsonValue(d, t);
+    return openravejson::DumpJson(d);
+}
+
+template<class T>
+inline std::string SerializeJsonToString(const T& t) {
+    rapidjson::Document d;
+    t.SerializeJSON(d, d.GetAllocator());
     return openravejson::DumpJson(d);
 }
 
