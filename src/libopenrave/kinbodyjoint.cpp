@@ -1688,7 +1688,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     if( poseq.empty() ) {
         return;
     }
-    
+
     const MimicPtr pmimic(new Mimic());
     pmimic->_equations = {poseq, veleq, acceleq}; ///< joint value, partial derivatives w.r.t depended joints, second-order derivatives (?)
 
@@ -1782,18 +1782,18 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
         }
 
         std::vector<OpenRAVEFunctionParserRealPtr> vfns(nVars);
-        /* 
+        /*
             extract from `eq` the partial derivative formulas ∂z/∂xi for joint z:=z(x1,x2,...xn) defined in `poseq`.
             `eq` takes form
-        
+
             c0:=......; c1:=......; ......;
-            |x0 formula_∂z_∂x1
-            |x1 formula_∂z_∂x2
+         |x0 formula_∂z_∂x1
+         |x1 formula_∂z_∂x2
             ......
 
             where xi's are joints on which z depends, and ci are common subexpressions in formulas ∂z/∂xi.
 
-        */
+         */
         utils::SearchAndReplace(eq, pmimic->_equations[itype], jointnamepairs);
         size_t index = eq.find('|');
         const std::string sCommonSubexpressions = (index != std::string::npos) ? eq.substr(0, index) : ""; ///< common subexpressions
@@ -1867,7 +1867,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
 
     OPENRAVE_ASSERT_FORMAT(!!_vmimic.at(iaxis), "Cannot compute partial velocities of joint %s because its axis %d is not mimic",
                            this->GetName() % iaxis, ORE_Failed
-    );
+                           );
 
     /* ========== Set up information about this mimic joint, call it z ========== */
     Mimic::DOFFormat thisdofformat;
@@ -1884,14 +1884,14 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
     }
 
     const std::map< std::pair<Mimic::DOFFormat, int>, dReal >::const_iterator mit = find_if(begin(mTotalderivativepairValue), end(mTotalderivativepairValue),
-        [&thisdofformat](const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal> &keyvalue) {
+                                                                                            [&thisdofformat](const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal> &keyvalue) {
             const bool bfound = keyvalue.first.first == thisdofformat;
             if( IS_DEBUGLEVEL(Level_Verbose) && bfound ) {
                 RAVELOG_VERBOSE_FORMAT("Found cached derivatives of jointindex %d with respect to others", thisdofformat.jointindex);
             }
             return bfound;
         }
-    );
+                                                                                            );
     const bool bCached = mit != end(mTotalderivativepairValue);
     if(bCached) {
         for(const std::pair<const std::pair<Mimic::DOFFormat, int>, dReal> &keyvalue : mTotalderivativepairValue) {
@@ -1964,7 +1964,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int, dReal>
     mTotalderivativepairValue.insert(
         std::make_move_iterator(begin(localmap)),
         std::make_move_iterator(end(localmap))
-    );
+        );
 }
 
 int KinBody::Joint::_Eval(int axis, uint32_t timederiv, const std::vector<dReal>& vdependentvalues, std::vector<dReal>& voutput)

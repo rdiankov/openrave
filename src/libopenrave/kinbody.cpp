@@ -2001,7 +2001,7 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
     const int nActiveJoints = _vecjoints.size();
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < nlinks, "body %s bad link index %d (num links %d)",
                            this->GetName() % linkindex % nlinks, ORE_InvalidArguments
-    );
+                           );
     const size_t dofstride = dofindices.empty() ? this->GetDOF() : dofindices.size();
     vjacobian.resize(3 * dofstride);
     if( dofstride == 0 ) {
@@ -2017,7 +2017,7 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
     for(int curlink = 0;
         _vAllPairsShortestPaths[offset + curlink].first >= 0;     // parent link is still available
         curlink = _vAllPairsShortestPaths[offset + curlink].first // get index of parent link
-    ) {
+        ) {
         const int jointindex = _vAllPairsShortestPaths[offset + curlink].second; ///< generalized joint index, which counts in [_vecjoints, _vPassiveJoints]
         if( jointindex < nActiveJoints ) {
             // active joint
@@ -2040,8 +2040,8 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
 
                 // formula for active joint's linear velocity Jacobian
                 v = pjoint->IsPrismatic(idof) ? pjoint->GetAxis(idof) // prismatic
-                                              : pjoint->GetAxis(idof).cross(position - pjoint->GetAnchor()) // revolute
-                                              ;
+                    : pjoint->GetAxis(idof).cross(position - pjoint->GetAnchor()) // revolute
+                ;
 
                 int index = -1;
                 if( !dofindices.empty() ) {
@@ -2074,8 +2074,8 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
 
                     // if this joint were active, then this is its column in the linear velocity Jacobian
                     v = pjoint->IsPrismatic(idof) ? pjoint->GetAxis(idof) // prismatic
-                                                  : pjoint->GetAxis(idof).cross(position - pjoint->GetAnchor()) // revolute
-                                                  ;
+                        : pjoint->GetAxis(idof).cross(position - pjoint->GetAnchor()) // revolute
+                    ;
 
                     // compute the partial derivatives of this mimic joint w.r.t all joints on which it directly/undirectly depends, by chain rule
                     vDofindexDerivativePairs.clear(); ///< vector of (dof index, total derivative) pairs
@@ -2103,7 +2103,7 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
                 }
             }
         }
-        
+
     }
 }
 
@@ -2141,7 +2141,7 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
     const int nActiveJoints = _vecjoints.size();
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < nlinks, "body %s bad link index %d (num links %d)",
                            this->GetName() % linkindex % nlinks, ORE_InvalidArguments
-    );
+                           );
     const int dofstride = GetDOF();
     vjacobian.resize(4 * dofstride);
     if( dofstride == 0 ) {
@@ -2156,9 +2156,9 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
     const int offset = linkindex * nlinks;
 
     for(int curlink = 0;
-          _vAllPairsShortestPaths[offset+curlink].first >= 0;     // parent link is still available
-          curlink = _vAllPairsShortestPaths[offset+curlink].first // get index of parent link
-    ) {
+        _vAllPairsShortestPaths[offset+curlink].first >= 0;     // parent link is still available
+        curlink = _vAllPairsShortestPaths[offset+curlink].first // get index of parent link
+        ) {
         const int jointindex = _vAllPairsShortestPaths[offset+curlink].second;
         if( jointindex < nActiveJoints ) {
             // active joint
@@ -2177,7 +2177,7 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
                 if( pjoint->IsPrismatic(idof) ) {
                     continue;
                 }
-                else if (!pjoint->IsRevolute(idof)){
+                else if (!pjoint->IsRevolute(idof)) {
                     RAVELOG_WARN("CalculateRotationJacobian only supports revolute and prismatic joints, but not this joint type %d", pjoint->GetType());
                     continue;
                 }
@@ -2201,7 +2201,7 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
                     if( pjoint->IsPrismatic(idof) ) {
                         continue;
                     }
-                    else if (!pjoint->IsRevolute(idof)){
+                    else if (!pjoint->IsRevolute(idof)) {
                         RAVELOG_WARN("CalculateRotationJacobian only supports revolute and prismatic joints, but not this joint type %d", pjoint->GetType());
                         continue;
                     }
@@ -2218,7 +2218,7 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
                         if(dofindex + idof >= dofstride) {
                             RAVELOG_WARN_FORMAT("dofindex + idof = %d + %d >= %d = dofstride",
                                                 dofindex % idof % dofstride
-                            );
+                                                );
                             continue;
                         }
                         OPENRAVE_ASSERT_OP_FORMAT(dofindex, >=, 0, "dofindex should be >= 0; now %d", dofindex, ORE_InvalidArguments);
@@ -2266,7 +2266,7 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
     const int nActiveJoints = _vecjoints.size();
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < nlinks, "body %s bad link index %d (num links %d)",
                            this->GetName() % linkindex % nlinks, ORE_InvalidArguments
-    );
+                           );
     const size_t dofstride = dofindices.empty() ? this->GetDOF() : dofindices.size();
     vjacobian.resize(3 * dofstride);
     if( dofstride == 0 ) {
@@ -2279,11 +2279,11 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
 
     Vector v; ///< cache for a column of the angular velocity Jacobian
     const int offset = linkindex * nlinks;
-    
+
     for(int curlink = 0;
         _vAllPairsShortestPaths[offset + curlink].first >= 0;     // parent link is still available
         curlink = _vAllPairsShortestPaths[offset + curlink].first // get index of parent link
-    ) {
+        ) {
         const int jointindex = _vAllPairsShortestPaths[offset + curlink].second;
         if( jointindex < nActiveJoints ) {
             // active joint
@@ -3620,7 +3620,7 @@ void KinBody::_ComputeInternalInformation()
 
                     for(const Mimic::DOFHierarchy& mimicdofDepended : vmimicdofsDepended) {
                         if( vmimicdofformatDepended[mimicdofDepended.dofformatindex] == thisdofformat ) {
-                            throw OPENRAVE_EXCEPTION_FORMAT(_("joint %s depends on a mimic joint %s that also depends on %s; circular dependency!!!"), 
+                            throw OPENRAVE_EXCEPTION_FORMAT(_("joint %s depends on a mimic joint %s that also depends on %s; circular dependency!!!"),
                                                             pjoint->GetName() % pjointDepended->GetName() % pjoint->GetName(), ORE_Failed);
                         }
 
